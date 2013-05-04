@@ -6431,11 +6431,14 @@
 
 ;;;; pattern matching helpers
 
-(define (convert-pattern pattern keys)
+(define (convert-pattern pattern-stx literals)
   ;;This function is used both by  the transformer of the non-core macro
   ;;WITH-SYNTAX and  by the transformer  of the core  macro SYNTAX-CASE.
-  ;;Transform  the syntax  object  PATTERN,  representing a  SYNTAX-CASE
+  ;;Transform the syntax object  PATTERN-STX, representing a SYNTAX-CASE
   ;;pattern, into a pattern in the format recognised by SYNTAX-DISPATCH.
+  ;;
+  ;;LITERALS is null or a  list of identifiers representing the literals
+  ;;from a SYNTAX-CASE use.
   ;;
   ;;Return  2   values:  the  pattern  for   SYNTAX-DISPATCH,  an  alist
   ;;representing the pattern variables:
@@ -6463,29 +6466,30 @@
   ;;  #(vector p)                     |  #(x ...) if p matches (x ...)
   ;;  #(atom <object>)                |  <object> with "equal?"
   ;;
-  (define (cvt* p* n ids)
+  (define (%convert* p* ellipsis-nesting-level ids)
     (if (null? p*)
 	(values '() ids)
       (receive (y ids)
-	  (cvt* (cdr p*) n ids)
+	  (%convert* (cdr p*) ellipsis-nesting-level ids)
 	(receive (x ids)
-	    (cvt (car p*) n ids)
+	    (%convert (car p*) ellipsis-nesting-level ids)
 	  (values (cons x y) ids)))))
 
-  (define (cvt p n ids)
+  (define (%convert p ellipsis-nesting-level ids)
     (syntax-match p ()
       (id
        (identifier? id)
-       (cond ((bound-id-member? p keys)
+       (cond ((bound-id-member? p literals)
 	      (values `#(free-id ,p) ids))
 	     ((free-id=? p (scheme-stx '_))
 	      (values '_ ids))
 	     (else
-	      (values 'any (cons (cons p n) ids)))))
+	      (values 'any (cons (cons p ellipsis-nesting-level) ids)))))
 
       ((p dots)
        (ellipsis? dots)
-       (let-values (((p ids) (cvt p (+ n 1) ids)))
+       (receive (p ids)
+	   (%convert p (+ ellipsis-nesting-level 1) ids)
 	 (values (if (eq? p 'any)
 		     'each-any
 		   `#(each ,p))
@@ -6493,16 +6497,21 @@
 
       ((x dots ys ... . z)
        (ellipsis? dots)
-       (let-values (((z ids) (cvt z n ids)))
-	 (let-values (((ys ids) (cvt* ys n ids)))
-	   (let-values (((x ids) (cvt x (+ n 1) ids)))
-	     (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
+       (receive (z ids)
+	   (%convert z ellipsis-nesting-level ids)
+	 (receive (ys ids)
+	     (%convert* ys ellipsis-nesting-level ids)
+	   (receive (x ids)
+	       (%convert x (+ ellipsis-nesting-level 1) ids)
+	     (values `#(each+ ,x ,(reverse ys) ,z)
+		     ids)))))
 
       ((x . y)
-       (let-values (((y ids) (cvt y n ids)))
-	 (let-values (((x ids) (cvt x n ids)))
-	   (values (cons x y)
-		   ids))))
+       (receive (y ids)
+	   (%convert y ellipsis-nesting-level ids)
+	 (receive (x ids)
+	     (%convert x ellipsis-nesting-level ids)
+	   (values (cons x y) ids))))
 
       (()
        (values '() ids))
@@ -6510,14 +6519,14 @@
       (#(p ...)
        (not (<stx>? p))
        (receive (p ids)
-	   (cvt p n ids)
+	   (%convert p ellipsis-nesting-level ids)
 	 (values `#(vector ,p) ids)))
 
       (datum
        (values `#(atom ,(syntax->datum datum))
 	       ids))))
 
-  (cvt pattern 0 '()))
+  (%convert pattern-stx 0 '()))
 
 (module (ellipsis? underscore?)
 
