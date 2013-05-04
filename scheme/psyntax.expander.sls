@@ -6429,11 +6429,26 @@
     ))
 
 
-(define convert-pattern
+;;;; pattern matching helpers
+
+(define (convert-pattern pattern keys)
   ;;This function is used both by  the transformer of the non-core macro
-  ;;WITH-SYNTAX and by the transformer of the core macro SYNTAX-CASE.
+  ;;WITH-SYNTAX and  by the transformer  of the core  macro SYNTAX-CASE.
+  ;;Transform  the syntax  object  PATTERN,  representing a  SYNTAX-CASE
+  ;;pattern, into a pattern in the format recognised by SYNTAX-DISPATCH.
   ;;
-  ;;Return syntax-dispatch pattern & ids.
+  ;;Return  2   values:  the  pattern  for   SYNTAX-DISPATCH,  an  alist
+  ;;representing the pattern variables:
+  ;;
+  ;;* The  keys of the alist  are symbols representing the  names of the
+  ;;  pattern  variables.
+  ;;
+  ;;*  The  values   of  the  alist  are   non-negative  exact  integers
+  ;;   representing  the ellipsis  nesting  level  of the  corresponding
+  ;;  pattern variable.  See SYNTAX-TRANSFORMER for details.
+  ;;
+  ;;The returned  pattern for  SYNTAX-DISPATCH is a  symbolic expression
+  ;;with the following format:
   ;;
   ;; P in pattern:                    |  matches:
   ;;----------------------------------+---------------------------
@@ -6448,53 +6463,75 @@
   ;;  #(vector p)                     |  #(x ...) if p matches (x ...)
   ;;  #(atom <object>)                |  <object> with "equal?"
   ;;
-  (lambda (pattern keys)
-    (define cvt*
-      (lambda (p* n ids)
-	(if (null? p*)
-	    (values '() ids)
-	  (let-values (((y ids) (cvt* (cdr p*) n ids)))
-	    (let-values (((x ids) (cvt (car p*) n ids)))
-	      (values (cons x y) ids))))))
-    (define cvt
-      (lambda (p n ids)
-	(syntax-match p ()
-	  (id (identifier? id)
-	      (cond
-               ((bound-id-member? p keys)
-                (values `#(free-id ,p) ids))
-               ((free-id=? p (scheme-stx '_))
-                (values '_ ids))
-               (else (values 'any (cons (cons p n) ids)))))
-	  ((p dots) (ellipsis? dots)
-	   (let-values (((p ids) (cvt p (+ n 1) ids)))
-	     (values
-	      (if (eq? p 'any) 'each-any `#(each ,p))
-	      ids)))
-	  ((x dots ys ... . z) (ellipsis? dots)
-	   (let-values (((z ids) (cvt z n ids)))
-	     (let-values (((ys ids) (cvt* ys n ids)))
-	       (let-values (((x ids) (cvt x (+ n 1) ids)))
-		 (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
-	  ((x . y)
-	   (let-values (((y ids) (cvt y n ids)))
-	     (let-values (((x ids) (cvt x n ids)))
-	       (values (cons x y) ids))))
-	  (() (values '() ids))
-	  (#(p ...) (not (<stx>? p))
-	   (let-values (((p ids) (cvt p n ids)))
-	     (values `#(vector ,p) ids)))
-	  (datum
-	   (values `#(atom ,(syntax->datum datum)) ids)))))
-    (cvt pattern 0 '())))
+  (define (cvt* p* n ids)
+    (if (null? p*)
+	(values '() ids)
+      (receive (y ids)
+	  (cvt* (cdr p*) n ids)
+	(receive (x ids)
+	    (cvt (car p*) n ids)
+	  (values (cons x y) ids)))))
 
-(define ellipsis?
-  (lambda (x)
-    (and (identifier? x) (free-id=? x (scheme-stx '...)))))
+  (define (cvt p n ids)
+    (syntax-match p ()
+      (id
+       (identifier? id)
+       (cond ((bound-id-member? p keys)
+	      (values `#(free-id ,p) ids))
+	     ((free-id=? p (scheme-stx '_))
+	      (values '_ ids))
+	     (else
+	      (values 'any (cons (cons p n) ids)))))
 
-(define underscore?
-  (lambda (x)
-    (and (identifier? x) (free-id=? x (scheme-stx '_)))))
+      ((p dots)
+       (ellipsis? dots)
+       (let-values (((p ids) (cvt p (+ n 1) ids)))
+	 (values (if (eq? p 'any)
+		     'each-any
+		   `#(each ,p))
+		 ids)))
+
+      ((x dots ys ... . z)
+       (ellipsis? dots)
+       (let-values (((z ids) (cvt z n ids)))
+	 (let-values (((ys ids) (cvt* ys n ids)))
+	   (let-values (((x ids) (cvt x (+ n 1) ids)))
+	     (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
+
+      ((x . y)
+       (let-values (((y ids) (cvt y n ids)))
+	 (let-values (((x ids) (cvt x n ids)))
+	   (values (cons x y)
+		   ids))))
+
+      (()
+       (values '() ids))
+
+      (#(p ...)
+       (not (<stx>? p))
+       (receive (p ids)
+	   (cvt p n ids)
+	 (values `#(vector ,p) ids)))
+
+      (datum
+       (values `#(atom ,(syntax->datum datum))
+	       ids))))
+
+  (cvt pattern 0 '()))
+
+(module (ellipsis? underscore?)
+
+  (define (ellipsis? x)
+    (%free-identifier-and-symbol? x '...))
+
+  (define (underscore? x)
+    (%free-identifier-and-symbol? x '_))
+
+  (define (%free-identifier-and-symbol? x sym)
+    (and (identifier? x)
+	 (free-id=? x (scheme-stx sym))))
+
+  #| end of module |# )
 
 (define (%verify-literals literals use-stx)
   ;;Verify that  identifiers selected as literals  are: identifiers, not
