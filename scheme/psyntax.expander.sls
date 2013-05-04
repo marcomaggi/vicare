@@ -6467,13 +6467,67 @@
 
 ;;;; pattern matching
 
-(define syntax-dispatch
-  (lambda (e p)
-    (define stx^
-      (lambda (e m* s* ae*)
-	(if (and (null? m*) (null? s*) (null? ae*))
-	    e
-	  (mkstx e m* s* ae*))))
+(module (syntax-dispatch)
+
+  (define (syntax-dispatch e p)
+    (match e p '() '() '() '()))
+
+  (define (match e p m* s* ae* r)
+    (cond ((not r) #f)
+	  ((eq? p '_) r)
+	  ((eq? p 'any) (cons (stx^ e m* s* ae*) r))
+	  ((<stx>? e)
+	   (and (not (top-marked? m*))
+		(let-values (((m* s* ae*) (join-wraps m* s* ae* e)))
+		  (match (<stx>-expr e) p m* s* ae* r))))
+	  ((annotation? e)
+	   (match (annotation-expression e) p m* s* ae* r))
+	  (else
+	   (match* e p m* s* ae* r))))
+
+  (define (match* e p m* s* ae* r)
+    (cond ((null? p)
+	   (and (null? e) r))
+	  ((pair? p)
+	   (and (pair? e)
+		(match (car e) (car p) m* s* ae*
+		       (match (cdr e) (cdr p) m* s* ae* r))))
+	  ((eq? p 'each-any)
+	   (let ((l (match-each-any e m* s* ae*))) (and l (cons l r))))
+	  (else
+	   (case (vector-ref p 0)
+	     ((each)
+	      (if (null? e)
+		  (match-empty (vector-ref p 1) r)
+		(let ((r* (match-each e (vector-ref p 1) m* s* ae*)))
+		  (and r* (combine r* r)))))
+	     ((free-id)
+	      (and (symbol? e)
+		   (top-marked? m*)
+		   (free-id=? (stx^ e m* s* ae*) (vector-ref p 1))
+		   r))
+	     ((scheme-id)
+	      (and (symbol? e)
+		   (top-marked? m*)
+		   (free-id=? (stx^ e m* s* ae*)
+			      (scheme-stx (vector-ref p 1)))
+		   r))
+	     ((each+)
+	      (let-values (((xr* y-pat r)
+			    (match-each+ e (vector-ref p 1)
+					 (vector-ref p 2) (vector-ref p 3) m* s* ae* r)))
+		(and r
+		     (null? y-pat)
+		     (if (null? xr*)
+			 (match-empty (vector-ref p 1) r)
+		       (combine xr* r)))))
+	     ((atom) (and (equal? (vector-ref p 1) (strip e m*)) r))
+	     ((vector)
+	      (and (vector? e)
+		   (match (vector->list e) (vector-ref p 1) m* s* ae* r)))
+	     (else
+	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
+
     (define match-each
       (lambda (e p m* s* ae*)
 	(cond
@@ -6490,6 +6544,7 @@
 	 ((annotation? e)
 	  (match-each (annotation-expression e) p m* s* ae*))
 	 (else #f))))
+
     (define match-each+
       (lambda (e x-pat y-pat z-pat m* s* ae* r)
 	(let f ((e e) (m* m*) (s* s*) (ae* ae*))
@@ -6515,6 +6570,7 @@
 	   ((annotation? e)
 	    (f (annotation-expression e) m* s* ae*))
 	   (else (values '() y-pat (match e z-pat m* s* ae* r)))))))
+
     (define match-each-any
       (lambda (e m* s* ae*)
 	(cond
@@ -6529,6 +6585,7 @@
 	 ((annotation? e)
 	  (match-each-any (annotation-expression e) m* s* ae*))
 	 (else #f))))
+
     (define match-empty
       (lambda (p r)
 	(cond
@@ -6550,67 +6607,20 @@
 	    ((scheme-id atom) r)
 	    ((vector) (match-empty (vector-ref p 1) r))
 	    (else (assertion-violation 'syntax-dispatch "invalid pattern" p)))))))
+
+    (define stx^
+      (lambda (e m* s* ae*)
+	(if (and (null? m*) (null? s*) (null? ae*))
+	    e
+	  (mkstx e m* s* ae*))))
+
     (define combine
       (lambda (r* r)
 	(if (null? (car r*))
 	    r
 	  (cons (map car r*) (combine (map cdr r*) r)))))
-    (define match*
-      (lambda (e p m* s* ae* r)
-	(cond
-	 ((null? p) (and (null? e) r))
-	 ((pair? p)
-	  (and (pair? e)
-	       (match (car e) (car p) m* s* ae*
-		      (match (cdr e) (cdr p) m* s* ae* r))))
-	 ((eq? p 'each-any)
-	  (let ((l (match-each-any e m* s* ae*))) (and l (cons l r))))
-	 (else
-	  (case (vector-ref p 0)
-	    ((each)
-	     (if (null? e)
-		 (match-empty (vector-ref p 1) r)
-	       (let ((r* (match-each e (vector-ref p 1) m* s* ae*)))
-		 (and r* (combine r* r)))))
-	    ((free-id)
-	     (and (symbol? e)
-		  (top-marked? m*)
-		  (free-id=? (stx^ e m* s* ae*) (vector-ref p 1))
-		  r))
-	    ((scheme-id)
-	     (and (symbol? e)
-		  (top-marked? m*)
-		  (free-id=? (stx^ e m* s* ae*)
-			     (scheme-stx (vector-ref p 1)))
-		  r))
-	    ((each+)
-	     (let-values (((xr* y-pat r)
-			   (match-each+ e (vector-ref p 1)
-					(vector-ref p 2) (vector-ref p 3) m* s* ae* r)))
-	       (and r
-		    (null? y-pat)
-		    (if (null? xr*)
-			(match-empty (vector-ref p 1) r)
-		      (combine xr* r)))))
-	    ((atom) (and (equal? (vector-ref p 1) (strip e m*)) r))
-	    ((vector)
-	     (and (vector? e)
-		  (match (vector->list e) (vector-ref p 1) m* s* ae* r)))
-	    (else (assertion-violation 'syntax-dispatch "invalid pattern" p)))))))
-    (define match
-      (lambda (e p m* s* ae* r)
-	(cond
-	 ((not r) #f)
-	 ((eq? p '_) r)
-	 ((eq? p 'any) (cons (stx^ e m* s* ae*) r))
-	 ((<stx>? e)
-	  (and (not (top-marked? m*))
-               (let-values (((m* s* ae*) (join-wraps m* s* ae* e)))
-                 (match (<stx>-expr e) p m* s* ae* r))))
-	 ((annotation? e)
-	  (match (annotation-expression e) p m* s* ae* r))
-	 (else (match* e p m* s* ae* r)))))
-    (match e p '() '() '() '())))
+
+  #| end of module: SYNTAX-DISPATCH |# )
 
 
 (define (do-macro-call transformer expr r rib)
