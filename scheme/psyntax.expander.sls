@@ -6052,119 +6052,168 @@
   ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
   ;;LEXENV.EXPAND.
   ;;
+  ;;Notice  that   the  parsing   of  the   patterns  is   performed  by
+  ;;CONVERT-PATTERN at  expand time and  the actual pattern  matching is
+  ;;performed by SYNTAX-DISPATCH at run time.
+  ;;
   (define (syntax-case-transformer use-stx lexenv.run lexenv.expand)
     (syntax-match use-stx ()
-      ((_ ?expr (?keys ...) ?clauses* ...)
-       (begin
-	 (%verify-literals ?keys use-stx)
-	 (let* ( ;;The identifier to  which the result of evaluating the
-		;;?EXPR is bound.
-		(expr.id    (gensym-for-lexical-var 'tmp))
-		;;The full SYNTAX-CASE  pattern matching code, generated
-		;;and transformed to core language.
-		(body.core  (%gen-syntax-case expr.id ?keys ?clauses* lexenv.run lexenv.expand))
-		;;The ?EXPR transformed to core language.
-		(expr.core  (chi-expr ?expr lexenv.run lexenv.expand)))
-	   ;;Return a form like:
-	   ;;
-	   ;;   ((lambda (expr.id) body.core) expr.core)
-	   ;;
-	   (build-application no-source
-			      (build-lambda no-source (list expr.id) body.core)
-			      (list expr.core)))))
+      ((_ ?expr (?literal* ...) ?clauses* ...)
+       (%verify-literals ?literal* use-stx)
+       (let* ( ;;The identifier to  which the result of evaluating the
+	      ;;?EXPR is bound.
+	      (expr.id    (gensym-for-lexical-var 'tmp))
+	      ;;The full SYNTAX-CASE  pattern matching code, generated
+	      ;;and transformed to core language.
+	      (body.core  (%gen-syntax-case expr.id ?literal* ?clauses*
+					    lexenv.run lexenv.expand))
+	      ;;The ?EXPR transformed to core language.
+	      (expr.core  (chi-expr ?expr lexenv.run lexenv.expand)))
+	 ;;Return a form like:
+	 ;;
+	 ;;   ((lambda (expr.id) body.core) expr.core)
+	 ;;
+	 (build-application no-source
+	   (build-lambda no-source (list expr.id) body.core)
+	   (list expr.core))))
       ))
 
-  (define (%gen-syntax-case expr.id keys clauses lexenv.run lexenv.expand)
-    ;;Recursive  functions.  Generate  and return  the full  SYNTAX-CASE
-    ;;pattern matching in the core language.
+  (define (%gen-syntax-case expr.id literals clauses lexenv.run lexenv.expand)
+    ;;Recursive function.  Generate and return the full pattern matching
+    ;;code in the core language to match the given CLAUSES.
     ;;
-    (if (null? clauses)
-	;;No pattern matched the input  expression: return code to raise
-	;;a syntax error.
+    (syntax-match clauses ()
+      ;;No pattern matched the input  expression: return code to raise a
+      ;;syntax error.
+      ;;
+      (()
+       (build-application no-source
+	 (build-primref no-source 'syntax-error)
+	 (list (build-lexical-reference no-source expr.id))))
+
+      ;;The pattern  is a standalone  identifier, neither a  literal nor
+      ;;the ellipsis,  and it  has no  fender.  A  standalone identifier
+      ;;with no fender matches everything,  so it is useless to generate
+      ;;the code  for the next clauses:  the code generated here  is the
+      ;;last one.
+      ;;
+      (((?pattern ?output-expr) . ?unused-clauses)
+       (and (identifier? ?pattern)
+	    (not (bound-id-member? ?pattern literals))
+	    (not (ellipsis? ?pattern)))
+       (if (free-id=? ?pattern (scheme-stx '_))
+	   ;;The clause is:
+	   ;;
+	   ;;   (_ ?output-expr)
+	   ;;
+	   ;;the underscore  identifier matches everything and  binds no
+	   ;;pattern variables.
+	   (chi-expr ?output-expr lexenv.run lexenv.expand)
+	 ;;The clause is:
+	 ;;
+	 ;;   (?id ?output-expr)
+	 ;;
+	 ;;a standalone identifier matches everything  and binds it to a
+	 ;;pattern variable whose name is ?ID.
+	 (let ((label (gensym-for-label ?pattern))
+	       (lex   (gensym-for-lexical-var ?pattern)))
+	   ;;The expression  must be  expanded in a  lexical environment
+	   ;;augmented with the pattern variable.
+	   (define output-expr^
+	     (push-lexical-contour (make-full-rib (list ?pattern) (list label))
+				   ?output-expr))
+	   (define lexenv.run^
+	     ;;Push a pattern variable entry to the lexical environment.
+	     ;;The ellipsis nesting level is 0.
+	     (cons (cons label (make-binding 'syntax (cons lex 0)))
+		   lexenv.run))
+	   (define output-expr.core
+	     (chi-expr output-expr^ lexenv.run^ lexenv.expand))
+	   (build-application no-source
+	     (build-lambda no-source
+	       (list lex)
+	       output-expr.core)
+	     (list (build-lexical-reference no-source expr.id))))))
+
+      ;;The  pattern is  neither  a standalone  pattern  variable nor  a
+      ;;standalone underscore.  It has no fender, which is equivalent to
+      ;;having a "#t" as fender.
+      ;;
+      (((?pattern ?output-expr) . ?next-clauses)
+       (%gen-clause expr.id literals
+		    ?pattern #t #;fender ?output-expr
+		    lexenv.run lexenv.expand
+		    ?next-clauses))
+
+      ;;The pattern has a fender.
+      ;;
+      (((?pattern ?fender ?output-expr) . ?next-clauses)
+       (%gen-clause expr.id literals
+		    ?pattern ?fender ?output-expr
+		    lexenv.run lexenv.expand
+		    ?next-clauses))
+      ))
+
+  (define (%gen-clause expr.id literals
+		       pattern-stx fender-stx output-expr-stx
+		       lexenv.run lexenv.expand
+		       next-clauses)
+    ;;Generate  the  code needed  to  match  the clause  represented  by
+    ;;PATTERN-STX, FENDER-STX and  OUTPUT-EXPR-STX; recursively generate
+    ;;the code to match the other clauses in NEXT-CLAUSES.
+    ;;
+    (receive (p pvars)
+	(convert-pattern pattern-stx literals)
+      (unless (distinct-bound-ids? (map car pvars))
+	(%invalid-ids-error (map car pvars) pattern-stx "pattern variable"))
+      (unless (for-all (lambda (x)
+			 (not (ellipsis? (car x))))
+		pvars)
+	(stx-error pattern-stx "misplaced ellipsis in syntax-case pattern"))
+      ;;When there is a fender, we build the output form (pseudo-code):
+      ;;
+      ;;  ((lambda (y)
+      ;;      (if (if y
+      ;;              (fender-matches?)
+      ;;            #f)
+      ;;          (output-expr)
+      ;;        (next-clause))
+      ;;   (syntax-dispatch expr.id pattern))
+      ;;
+      ;;When there is no fender, build the output form (pseudo-code):
+      ;;
+      ;;  ((lambda (tmp)
+      ;;      (if tmp
+      ;;          (output-expr)
+      ;;        (next-clause))
+      ;;   (syntax-dispatch expr.id pattern))
+      ;;
+      ;;
+      (let* ((tmp-sym  (gensym-for-lexical-var 'tmp))
+	     (test     (if (eq? fender-stx #t)
+			   ;;There is no fender.
+			   tmp-sym
+			 ;;There is a fender.
+			 (build-conditional no-source
+			   (build-lexical-reference no-source tmp-sym)
+			   (%build-dispatch-call pvars fender-stx tmp-sym
+						 lexenv.run lexenv.expand)
+			   (build-data no-source #f))))
+	     (conseq    (%build-dispatch-call pvars output-expr-stx
+					      (build-lexical-reference no-source tmp-sym)
+					      lexenv.run lexenv.expand))
+	     (altern    (%gen-syntax-case expr.id literals next-clauses
+					  lexenv.run lexenv.expand)))
 	(build-application no-source
-			   (build-primref no-source 'syntax-error)
-			   (list (build-lexical-reference no-source expr.id)))
-      (syntax-match (car clauses) ()
-	((?pattern ?expr)
-	 (if (and (identifier? ?pattern)
-		  (not (bound-id-member? ?pattern keys))
-		  (not (ellipsis? ?pattern)))
-	     ;;The pattern is a standalone identifier, neither a literal
-	     ;;nor the ellipsis.
-	     (if (free-id=? ?pattern (scheme-stx '_))
-		 ;;The clause is:
-		 ;;
-		 ;;   (_ ?expr)
-		 ;;
-		 ;;the underscore identifier  matches anything and binds
-		 ;;no pattern variables.
-		 (chi-expr ?expr lexenv.run lexenv.expand)
-	       ;;The clause is:
-	       ;;
-	       ;;   (?id ?expr)
-	       ;;
-	       ;;the pattern is a  standalone identifier: match anything
-	       ;;and bind it to a pattern variable whose name is ?ID.
-	       (let ((label (gensym-for-label ?pattern))
-		     (lex   (gensym-for-lexical-var ?pattern)))
-		 ;;The  expression   must  be  expanded  in   a  lexical
-		 ;;environment augmented with the pattern variable.
-		 (define expr^
-		   (push-lexical-contour (make-full-rib (list ?pattern) (list label)) ?expr))
-		 (define lexenv.run^
-		   ;;Push  a  pattern  variable  entry  to  the  lexical
-		   ;;environment.  The ellipsis nesting level is 0.
-		   (cons (cons label (make-binding 'syntax (cons lex 0)))
-			 lexenv.run))
-		 (define expr.core
-		   (chi-expr expr^ lexenv.run^ lexenv.expand))
-		 (build-application no-source
-				    (build-lambda no-source (list lex) expr.core)
-				    (list (build-lexical-reference no-source expr.id)))))
-	   ;;The pattern is neither a  standalone pattern variable nor a
-	   ;;standalone underscore.
-	   (%gen-clause expr.id keys (cdr clauses) lexenv.run lexenv.expand
-			?pattern #t #;fender ?expr)))
-
-	((?pattern ?fender ?expr)
-	 (%gen-clause expr.id keys (cdr clauses)
-		      lexenv.run lexenv.expand ?pattern ?fender ?expr)))))
-
-  (define (%gen-clause expr.id keys clauses lexenv.run lexenv.expand pat fender expr)
-    (let-values (((p pvars) (convert-pattern pat keys)))
-      (cond
-       ((not (distinct-bound-ids? (map car pvars)))
-	(%invalid-ids-error (map car pvars) pat "pattern variable"))
-       ((not (for-all (lambda (x)
-			(not (ellipsis? (car x))))
-	       pvars))
-	(stx-error pat "misplaced ellipsis in syntax-case pattern"))
-       (else
-	(let ((y (gensym-for-lexical-var 'tmp)))
-	  (let ((test (cond ((eq? fender #t) y)
-			    (else
-			     (let ((call
-				    (%build-dispatch-call
-				     pvars fender y lexenv.run lexenv.expand)))
-			       (build-conditional no-source
-						  (build-lexical-reference no-source y)
-						  call
-						  (build-data no-source #f)))))))
-	    (let ((conseq
-		   (%build-dispatch-call pvars expr
-					 (build-lexical-reference no-source y)
-					 lexenv.run lexenv.expand)))
-	      (let ((altern
-		     (%gen-syntax-case expr.id keys clauses lexenv.run lexenv.expand)))
-		(build-application no-source
-				   (build-lambda no-source (list y)
-						 (build-conditional no-source test conseq altern))
-				   (list
-				    (build-application no-source
-						       (build-primref no-source 'syntax-dispatch)
-						       (list
-							(build-lexical-reference no-source expr.id)
-							(build-data no-source p)))))))))))))
+	  (build-lambda no-source
+	    (list tmp-sym)
+	    (build-conditional no-source
+	      test conseq altern))
+	  (list
+	   (build-application no-source
+	     (build-primref no-source 'syntax-dispatch)
+	     (list (build-lexical-reference no-source expr.id)
+		   (build-data no-source p))))))))
 
   (define (%build-dispatch-call pvars expr y lexenv.run lexenv.expand)
     (let ((ids (map car pvars))
@@ -6179,8 +6228,8 @@
 			       lexenv.run)
 			      lexenv.expand)))
 	  (build-application no-source
-			     (build-primref no-source 'apply)
-			     (list (build-lambda no-source new-vars body) y))))))
+	    (build-primref no-source 'apply)
+	    (list (build-lambda no-source new-vars body) y))))))
 
   (define (%invalid-ids-error id* e class)
     (let find ((id* id*)
@@ -6382,8 +6431,8 @@
 
 (define (%verify-literals literals use-stx)
   ;;Verify that  identifiers selected as literals  are: identifiers, not
-  ;;ellipsisi,  not  usderscore.    If  successful:  return  unspecified
-  ;;values, else raise a syntax violation
+  ;;ellipsisi, not usderscore.  If successful: return true, else raise a
+  ;;syntax violation
   ;;
   ;;LITERALS is  a list  of literals  from SYNTAX-CASE  or SYNTAX-RULES.
   ;;USE-STX  is a  syntax  object  representing the  full  macro use  of
@@ -6395,7 +6444,8 @@
 			(ellipsis? x)
 			(underscore? x))
 		(syntax-violation #f "invalid literal" use-stx x)))
-    literals))
+    literals)
+  #t)
 
 (define (ellipsis-map proc ls . ls*)
   (define who '...)
@@ -7393,3 +7443,8 @@
 )
 
 ;;; end of file
+;;Local Variables:
+;;eval: (put 'build-application 'scheme-indent-function 1)
+;;eval: (put 'build-conditional 'scheme-indent-function 1)
+;;eval: (put 'build-lambda 'scheme-indent-function 1)
+;;End:
