@@ -6180,6 +6180,10 @@
     ;;        (match-next-clauses))
     ;;   (syntax-dispatch expr.id pattern))
     ;;
+    ;;notice that the  return value of SYNTAX-DISPATCH is:  false if the
+    ;;pattern did not match, otherwise the list of values to be bound to
+    ;;the pattern variables.
+    ;;
     (receive (p pvars)
 	(convert-pattern pattern-stx literals)
       (unless (distinct-bound-ids? (map car pvars))
@@ -6210,7 +6214,21 @@
     ;;Generate the  code that tests  the fender: if the  fender succeeds
     ;;run the output expression, else try to match the next clauses.
     ;;
-    (define (%build-call expr-stx)
+    ;;When there is a fender, we build the output form (pseudo-code):
+    ;;
+    ;;   (if (if y
+    ;;           (fender-matches?)
+    ;;         #f)
+    ;;       (output-expr)
+    ;;     (match-next-clauses))
+    ;;
+    ;;when there is no fender, build the output form (pseudo-code):
+    ;;
+    ;;   (if tmp
+    ;;       (output-expr)
+    ;;     (match-next-clauses))
+    ;;
+    (define-inline (%build-call expr-stx)
       (%build-dispatch-call pvars expr-stx tmp-sym lexenv.run lexenv.expand))
     (let ((test     (if (eq? fender-stx #t)
 			;;There is no fender.
@@ -6225,22 +6243,60 @@
       (build-conditional no-source
 	test conseq altern)))
 
-  (define (%build-dispatch-call pvars expr tmp-sym lexenv.run lexenv.expand)
-    (let ((ids (map car pvars))
-	  (levels (map cdr pvars)))
-      (let ((labels (map gensym-for-label ids))
-	    (new-vars (map gensym-for-lexical-var ids)))
-	(let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
-			      (append
-			       (map (lambda (label var level)
-				      (cons label (make-binding 'syntax (cons var level))))
-				 labels new-vars (map cdr pvars))
-			       lexenv.run)
-			      lexenv.expand)))
-	  (build-application no-source
-	    (build-primref no-source 'apply)
-	    (list (build-lambda no-source new-vars body)
-		  (build-lexical-reference no-source tmp-sym)))))))
+  (define (%build-dispatch-call pvars.levels expr.stx tmp-sym lexenv.run lexenv.expand)
+    ;;Generate  code to  evaluate EXPR.STX  in an  environment augmented
+    ;;with the pattern variables defined by PVARS.LEVELS.  Return a core
+    ;;language expression representing the following pseudo-code:
+    ;;
+    ;;   (apply (lambda (pattern-var ...) expr) tmp)
+    ;;
+    (define ids
+      ;;For each pattern variable: the identifier representing its name.
+      (map car pvars.levels))
+    (define labels
+      ;;For each pattern variable: a gensym used as label in the lexical
+      ;;environment.
+      (map gensym-for-label ids))
+    (define names
+      ;;For each pattern variable: a gensym used as unique variable name
+      ;;in the lexical environment.
+      (map gensym-for-lexical-var ids))
+    (define levels
+      ;;For  each pattern  variable: an  exact integer  representing the
+      ;;ellipsis nesting level.  See SYNTAX-TRANSFORMER for details.
+      (map cdr pvars.levels))
+    (define bindings
+      ;;For each pattern variable: a binding to be pushed on the lexical
+      ;;environment.
+      (map (lambda (label name level)
+	     (cons label (make-binding 'syntax (cons name level))))
+	labels names levels))
+    (define expr.core
+      ;;Expand the  expression in  a lexical environment  augmented with
+      ;;the pattern variables.
+      ;;
+      ;;NOTE We could have created a syntax object:
+      ;;
+      ;;  #`(lambda (pvar ...) #,expr.stx)
+      ;;
+      ;;and then  expanded it:  EXPR.STX would have  been expanded  in a
+      ;;lexical environment augmented with the PVAR bindings.
+      ;;
+      ;;Instead we have chosen to push  the PVAR bindings on the lexical
+      ;;environment "by hand", then to  expand EXPR.STX in the augmented
+      ;;environment,  finally   to  put  the  resulting   core  language
+      ;;expression in a core language LAMBDA syntax.
+      ;;
+      ;;The two methods are fully equivalent;  the one we have chosen is
+      ;;a bit faster.
+      ;;
+      (chi-expr (push-lexical-contour (make-full-rib ids labels) expr.stx)
+		(append bindings lexenv.run)
+		lexenv.expand))
+    (build-application no-source
+      (build-primref no-source 'apply)
+      (list (build-lambda no-source names expr.core)
+	    (build-lexical-reference no-source tmp-sym))))
 
   (define (%invalid-ids-error id* e class)
     (let find ((id* id*)
