@@ -6438,13 +6438,14 @@
   ;;pattern, into a pattern in the format recognised by SYNTAX-DISPATCH.
   ;;
   ;;LITERALS is null or a  list of identifiers representing the literals
-  ;;from a SYNTAX-CASE use.
+  ;;from a SYNTAX-CASE use.  Notice that the ellipsis and the underscore
+  ;;identifiers cannot be literals.
   ;;
   ;;Return  2   values:  the  pattern  for   SYNTAX-DISPATCH,  an  alist
   ;;representing the pattern variables:
   ;;
-  ;;* The  keys of the alist  are symbols representing the  names of the
-  ;;  pattern  variables.
+  ;;* The  keys of the alist  are identifiers representing the  names of
+  ;;  the pattern variables.
   ;;
   ;;*  The  values   of  the  alist  are   non-negative  exact  integers
   ;;   representing  the ellipsis  nesting  level  of the  corresponding
@@ -6466,65 +6467,67 @@
   ;;  #(vector p)                     |  #(x ...) if p matches (x ...)
   ;;  #(atom <object>)                |  <object> with "equal?"
   ;;
-  (define (%convert* p* ellipsis-nesting-level ids)
-    (if (null? p*)
-	(values '() ids)
-      (receive (y ids)
-	  (%convert* (cdr p*) ellipsis-nesting-level ids)
-	(receive (x ids)
-	    (%convert (car p*) ellipsis-nesting-level ids)
-	  (values (cons x y) ids)))))
+  (define (%convert* pattern* ellipsis-nesting-level pvars.levels)
+    (if (null? pattern*)
+	(values '() pvars.levels)
+      (receive (y pvars.levels)
+	  (%convert* (cdr pattern*) ellipsis-nesting-level pvars.levels)
+	(receive (x pvars.levels)
+	    (%convert (car pattern*) ellipsis-nesting-level pvars.levels)
+	  (values (cons x y) pvars.levels)))))
 
-  (define (%convert p ellipsis-nesting-level ids)
+  (define (%convert p ellipsis-nesting-level pvars.levels)
     (syntax-match p ()
-      (id
-       (identifier? id)
-       (cond ((bound-id-member? p literals)
-	      (values `#(free-id ,p) ids))
-	     ((free-id=? p (scheme-stx '_))
-	      (values '_ ids))
+      (?id
+       (identifier? ?id)
+       (cond ((bound-id-member? ?id literals)
+	      (values `#(free-id ,?id) pvars.levels))
+	     ((free-id=? ?id (scheme-stx '_))
+	      (values '_ pvars.levels))
 	     (else
-	      (values 'any (cons (cons p ellipsis-nesting-level) ids)))))
+	      ;;It is a pattern variable.
+	      (values 'any (cons (cons ?id ellipsis-nesting-level)
+				 pvars.levels)))))
 
       ((p dots)
        (ellipsis? dots)
-       (receive (p ids)
-	   (%convert p (+ ellipsis-nesting-level 1) ids)
+       (receive (p pvars.levels)
+	   (%convert p (+ ellipsis-nesting-level 1) pvars.levels)
 	 (values (if (eq? p 'any)
 		     'each-any
 		   `#(each ,p))
-		 ids)))
+		 pvars.levels)))
 
       ((x dots ys ... . z)
        (ellipsis? dots)
-       (receive (z ids)
-	   (%convert z ellipsis-nesting-level ids)
-	 (receive (ys ids)
-	     (%convert* ys ellipsis-nesting-level ids)
-	   (receive (x ids)
-	       (%convert x (+ ellipsis-nesting-level 1) ids)
+       (receive (z pvars.levels)
+	   (%convert z ellipsis-nesting-level pvars.levels)
+	 (receive (ys pvars.levels)
+	     (%convert* ys ellipsis-nesting-level pvars.levels)
+	   (receive (x pvars.levels)
+	       (%convert x (+ ellipsis-nesting-level 1) pvars.levels)
 	     (values `#(each+ ,x ,(reverse ys) ,z)
-		     ids)))))
+		     pvars.levels)))))
 
       ((x . y)
-       (receive (y ids)
-	   (%convert y ellipsis-nesting-level ids)
-	 (receive (x ids)
-	     (%convert x ellipsis-nesting-level ids)
-	   (values (cons x y) ids))))
+       (receive (y pvars.levels)
+	   (%convert y ellipsis-nesting-level pvars.levels)
+	 (receive (x pvars.levels)
+	     (%convert x ellipsis-nesting-level pvars.levels)
+	   (values (cons x y) pvars.levels))))
 
       (()
-       (values '() ids))
+       (values '() pvars.levels))
 
-      (#(p ...)
-       (not (<stx>? p))
-       (receive (p ids)
-	   (%convert p ellipsis-nesting-level ids)
-	 (values `#(vector ,p) ids)))
+      (#(?item* ...)
+       (not (<stx>? ?item*))
+       (receive (item* pvars.levels)
+	   (%convert ?item* ellipsis-nesting-level pvars.levels)
+	 (values `#(vector ,item*) pvars.levels)))
 
-      (datum
-       (values `#(atom ,(syntax->datum datum))
-	       ids))))
+      (?datum
+       (values `#(atom ,(syntax->datum ?datum))
+	       pvars.levels))))
 
   (%convert pattern-stx 0 '()))
 
