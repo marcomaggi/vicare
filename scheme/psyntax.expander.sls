@@ -6210,23 +6210,22 @@
     ;;Generate the  code that tests  the fender: if the  fender succeeds
     ;;run the output expression, else try to match the next clauses.
     ;;
+    (define (%build-call expr-stx)
+      (%build-dispatch-call pvars expr-stx tmp-sym lexenv.run lexenv.expand))
     (let ((test     (if (eq? fender-stx #t)
 			;;There is no fender.
 			tmp-sym
 		      ;;There is a fender.
 		      (build-conditional no-source
 			(build-lexical-reference no-source tmp-sym)
-			(%build-dispatch-call pvars fender-stx tmp-sym
-					      lexenv.run lexenv.expand)
+			(%build-call fender-stx)
 			(build-data no-source #f))))
-	  (conseq    (%build-dispatch-call pvars output-expr-stx
-					   (build-lexical-reference no-source tmp-sym)
-					   lexenv.run lexenv.expand))
+	  (conseq    (%build-call output-expr-stx))
 	  (altern    (%gen-syntax-case expr.id literals next-clauses lexenv.run lexenv.expand)))
       (build-conditional no-source
 	test conseq altern)))
 
-  (define (%build-dispatch-call pvars expr y lexenv.run lexenv.expand)
+  (define (%build-dispatch-call pvars expr tmp-sym lexenv.run lexenv.expand)
     (let ((ids (map car pvars))
 	  (levels (map cdr pvars)))
       (let ((labels (map gensym-for-label ids))
@@ -6240,7 +6239,8 @@
 			      lexenv.expand)))
 	  (build-application no-source
 	    (build-primref no-source 'apply)
-	    (list (build-lambda no-source new-vars body) y))))))
+	    (list (build-lambda no-source new-vars body)
+		  (build-lexical-reference no-source tmp-sym)))))))
 
   (define (%invalid-ids-error id* e class)
     (let find ((id* id*)
