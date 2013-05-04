@@ -254,6 +254,63 @@ syntax involves creating a continuation.
 @end deffn
 
 
+@deffn Syntax for (@meta{init} @meta{test} @meta{post}) @metao{body} @meta{body} @dots{}
+This is an iteration syntax similar to the C language @code{for}:
+
+@example
+(import (vicare))
+
+(for ((define i 0) (< i 3) (set! i (+ 1 i)))
+  (display i)
+  (display #\space))
+@print{} 0 1 2
+
+(define i)
+(for ((set! i 0) (< i 3) (set! i (+ 1 i)))
+  (display i)
+  (display #\space))
+@print{} 0 1 2
+
+(for ((begin
+        (define i 5)
+        (define j 10))
+      (positive? i)
+      (begin
+        (set! i (+ -1 i))
+        (set! j (+ -1 j))))
+  (display i)
+  (display #\space)
+  (display j)
+  (display #\space))
+@print{} 5 10 4 9 3 8 2 7 1 6
+@end example
+
+The form @meta{init} can be a sequence of definitions and expressions;
+it is evaluated first and only once; its return values are discarded.
+The region of bindings defined by @meta{init} includes the @meta{test},
+@meta{post} and @meta{body} forms.
+
+The form @meta{test} must be an expression; it is evaluated at the
+beginning of each iteration: if the result is true the next iteration
+takes place, else the loop terminates.
+
+The forms @meta{body} must be expressions; they are evaluated at each
+iteration when the @meta{test} evaluates to true; the return values are
+discarded.
+
+The form @meta{post} must be an expression; it is evaluated at the end
+of each iteration after the @meta{body} forms; the return values are
+discarded.
+
+The syntax @func{continue} can be used in the body to immediately
+restart the next iteration by evaluating @meta{test} and consequently
+the @meta{body} forms.
+
+The syntax @func{break} can be used in the body to immediately break out
+of the loop and return to the continuation of @func{for}.
+@end deffn
+
+
 @deffn {Fluid Syntax} continue
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
 jump immediately to the next iteration.  Being a fluid syntax: it is
