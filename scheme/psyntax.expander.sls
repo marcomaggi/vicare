@@ -6651,24 +6651,25 @@
 	(else
 	 (assertion-violation 'syntax-dispatch "invalid pattern" pattern))))))
 
-  (define (%match-each e p mark* subst* annotated-expr*)
+  (define (%match-each expr pattern mark* subst* annotated-expr*)
     ;;Recursive function.   The expression  matches if it  is a  list in
-    ;;which every item matches PATTERN.
+    ;;which  every item  matches  PATTERN.   Return null  or  a list  of
+    ;;sublists, each sublist being a list of pattern variable values.
     ;;
-    (cond ((pair? e)
-	   (let ((first (%match (car e) p mark* subst* annotated-expr* '())))
+    (cond ((pair? expr)
+	   (let ((first (%match (car expr) pattern mark* subst* annotated-expr* '())))
 	     (and first
-		  (let ((rest (%match-each (cdr e) p mark* subst* annotated-expr*)))
+		  (let ((rest (%match-each (cdr expr) pattern mark* subst* annotated-expr*)))
 		    (and rest (cons first rest))))))
-	  ((null? e)
+	  ((null? expr)
 	   '())
-	  ((<stx>? e)
+	  ((<stx>? expr)
 	   (and (not (top-marked? mark*))
-		(receive (mark* subst* annotated-expr*)
-		    (join-wraps mark* subst* annotated-expr* e)
-		  (%match-each (<stx>-expr e) p mark* subst* annotated-expr*))))
-	  ((annotation? e)
-	   (%match-each (annotation-expression e) p mark* subst* annotated-expr*))
+		(receive (mark*^ subst*^ annotated-expr*^)
+		    (join-wraps mark* subst* annotated-expr* expr)
+		  (%match-each (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^))))
+	  ((annotation? expr)
+	   (%match-each (annotation-expression expr) pattern mark* subst* annotated-expr*))
 	  (else #f)))
 
   (define (%match-each+ e x-pat y-pat z-pat mark* subst* annotated-expr* pvar*)
