@@ -26,7 +26,8 @@
     pretty-print*			bignum?
     module				import
     vector-exists
-    define-inline			receive
+    define-inline			define-syntax-rule
+    begin0				receive
     real-pathname			file-modification-time
 
     ;; runtime options

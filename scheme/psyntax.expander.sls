@@ -6464,6 +6464,63 @@
 	ls*)))
   (apply map proc ls ls*))
 
+(module (syntax-transpose)
+  ;;
+  ;;
+  (define who 'syntax-transpose)
+
+  (define (syntax-transpose object base-id new-id)
+    (unless (identifier? base-id)
+      (%synner "not an identifier" base-id))
+    (unless (identifier? new-id)
+      (%synner "not an identifier" new-id))
+    (unless (free-identifier=? base-id new-id)
+      (%synner "not the same identifier" base-id new-id))
+    (receive (mark* subst* annotated-expr*)
+	(diff (car ($<stx>-mark* base-id))
+	      ($<stx>-mark*   new-id)
+	      ($<stx>-subst*  new-id)
+	      ($<stx>-ae*     new-id)
+	      (lambda ()
+		(%synner "unmatched identifiers" base-id new-id)))
+      (if (and (null? mark*)
+	       (null? subst*))
+	  object
+	(mkstx object mark* subst* annotated-expr*))))
+
+  (define (diff base.mark new.mark* new.subst* new.annotated-expr* error)
+    (if (null? new.mark*)
+	(error)
+      (let ((new.mark1 (car new.mark*)))
+	(if (eq? base.mark new.mark1)
+	    (values '() (final new.subst*) '())
+	  (receive (subst1* subst2*)
+	      (split new.subst*)
+	    (receive (nm* ns* nae*)
+		(diff base.mark (cdr new.mark*) subst2* (cdr new.annotated-expr*) error)
+	      (values (cons new.mark1 nm*)
+		      (append subst1* ns*)
+		      (cons (car new.annotated-expr*) nae*))))))))
+
+  (define (split s*)
+    (cond
+     ((eq? (car s*) 'shift)
+      (values (list 'shift) (cdr s*)))
+     (else
+      (let-values (((subst1* subst2*)
+		    (split (cdr s*))))
+	(values (cons (car s*) subst1*) subst2*)))))
+
+  (define (final s*)
+    (cond
+     ((or (null? s*) (eq? (car s*) 'shift)) '())
+     (else (cons (car s*) (final (cdr s*))))))
+
+  (define-syntax-rule (%synner ?message ?irritant ...)
+    (assertion-violation who ?message ?irritant ...))
+
+  #| end of module: SYNTAX-TRANSPOSE |# )
+
 
 ;;;; pattern matching
 
@@ -6757,6 +6814,31 @@
   #| end of module: SYNTAX-DISPATCH |# )
 
 
+;;;; chi procedures: macro calls
+
+(define (chi-macro p e r rib)
+  (do-macro-call (non-core-macro-transformer p) e r rib))
+
+(define (chi-local-macro p e r rib)
+  (do-macro-call (local-macro-transformer p) e r rib))
+
+(define (chi-global-macro p e r rib)
+  (let ((lib (car p))
+	(loc (cdr p)))
+    (unless (eq? lib '*interaction*)
+      (visit-library lib))
+    (let ((x (symbol-value loc)))
+      (let ((transformer
+	     (cond
+	      ((procedure? x) x)
+	      ((and (pair? x)
+		    (eq? (car x) 'macro!)
+		    (procedure? (cdr x)))
+	       (cdr x))
+	      (else (assertion-violation 'chi-global-macro
+		      "BUG: not a procedure" x)))))
+	(do-macro-call transformer e r rib)))))
+
 (define (do-macro-call transformer expr r rib)
   (define (return x)
     (let f ((x x))
@@ -6790,30 +6872,7 @@
       (return x))))
 
 
-;;;; chi procedures
-
-(define (chi-macro p e r rib)
-  (do-macro-call (non-core-macro-transformer p) e r rib))
-
-(define (chi-local-macro p e r rib)
-  (do-macro-call (local-macro-transformer p) e r rib))
-
-(define (chi-global-macro p e r rib)
-  (let ((lib (car p))
-	(loc (cdr p)))
-    (unless (eq? lib '*interaction*)
-      (visit-library lib))
-    (let ((x (symbol-value loc)))
-      (let ((transformer
-	     (cond
-	      ((procedure? x) x)
-	      ((and (pair? x)
-		    (eq? (car x) 'macro!)
-		    (procedure? (cdr x)))
-	       (cdr x))
-	      (else (assertion-violation 'chi-global-macro
-		      "BUG: not a procedure" x)))))
-	(do-macro-call transformer e r rib)))))
+;;;; chi procedures: expressions
 
 (define chi-expr*
   (lambda (e* r mr)
@@ -7036,117 +7095,9 @@
 			 (reverse lex*) (reverse rhs*)
 			 (build-sequence no-source init*)))))))
 
-(define parse-module
-  (lambda (e)
-    (syntax-match e ()
-      ((_ (export* ...) b* ...)
-       (begin
-	 (unless (for-all identifier? export*)
-	   (stx-error e "module exports must be identifiers"))
-	 (values #f (list->vector export*) b*)))
-      ((_ name (export* ...) b* ...)
-       (begin
-	 (unless (identifier? name)
-	   (stx-error e "module name must be an identifier"))
-	 (unless (for-all identifier? export*)
-	   (stx-error e "module exports must be identifiers"))
-	 (values name (list->vector export*) b*))))))
-
-(define-record module-interface (first-mark exp-id-vec exp-lab-vec))
-
-(define (module-interface-exp-id* iface id)
-  (define (diff-marks ls x)
-    (when (null? ls) (error 'diff-marks "BUG: should not happen"))
-    (let ((a (car ls)))
-      (if (eq? a x)
-	  '()
-	(cons a (diff-marks (cdr ls) x)))))
-  (let ((diff
-	 (diff-marks (<stx>-mark* id) (module-interface-first-mark iface)))
-	(id-vec (module-interface-exp-id-vec iface)))
-    (if (null? diff)
-	id-vec
-      (vector-map
-	  (lambda (x)
-	    (make-<stx> (<stx>-expr x) (append diff (<stx>-mark* x)) '() '()))
-	id-vec))))
-
-(define (syntax-transpose object base-id new-id)
-  (define who 'syntax-transpose)
-  (define (err msg . args) (apply assertion-violation who msg args))
-  (define (split s*)
-    (cond
-     ((eq? (car s*) 'shift)
-      (values (list 'shift) (cdr s*)))
-     (else
-      (let-values (((s1* s2*) (split (cdr s*))))
-	(values (cons (car s*) s1*) s2*)))))
-  (define (final s*)
-    (cond
-     ((or (null? s*) (eq? (car s*) 'shift)) '())
-     (else (cons (car s*) (final (cdr s*))))))
-  (define (diff m m* s* ae*)
-    (if (null? m*)
-	(err "unmatched identifiers" base-id new-id)
-      (let ((m1 (car m*)))
-	(if (eq? m m1)
-	    (values '() (final s*) '())
-	  (let-values (((s1* s2*) (split s*)))
-	    (let-values (((nm* ns* nae*)
-			  (diff m (cdr m*) s2* (cdr ae*))))
-	      (values (cons m1 nm*)
-		      (append s1* ns*)
-		      (cons (car ae*) nae*))))))))
-  (unless (identifier? base-id) (err "not an identifier" base-id))
-  (unless (identifier? new-id) (err "not an identifier" new-id))
-  (unless (free-identifier=? base-id new-id)
-    (err "not the same identifier" base-id new-id))
-  (let-values (((m* s* ae*)
-		(diff (car (<stx>-mark* base-id))
-		      (<stx>-mark* new-id)
-		      (<stx>-subst* new-id)
-		      (<stx>-ae* new-id))))
-    (if (and (null? m*) (null? s*))
-	object
-      (mkstx object m* s* ae*))))
-
-(define (chi-internal-module e r mr lex* rhs* mod** kwd*)
-  (let-values (((name exp-id* e*) (parse-module e)))
-    (let* ((rib (make-empty-rib))
-	   (e*  (map (lambda (x)
-		       (push-lexical-contour rib x))
-		  (syntax->list e*))))
-      (let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
-		    (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
-	(let* ((exp-id*  (vector-append exp-id* (list->vector _exp*)))
-	       (exp-lab* (vector-map
-			     (lambda (x)
-			       (or (id->label (make-<stx> (identifier->symbol x)
-							  (<stx>-mark* x)
-							  (list rib)
-							  '()))
-				   (stx-error x "cannot find module export")))
-			   exp-id*))
-	       (mod** (cons e* mod**)))
-	  (if (not name) ;;; explicit export
-	      (values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
-	    (let ((lab (gensym-for-label 'module))
-		  (iface
-		   (make-module-interface
-		    (car (<stx>-mark* name))
-		    (vector-map
-			(lambda (x)
-			  (make-<stx> (<stx>-expr x) (<stx>-mark* x) '() '()))
-		      exp-id*)
-		    exp-lab*)))
-	      (values lex* rhs*
-		      (vector name) ;;; FIXME: module cannot
-		      (vector lab)  ;;;  export itself yet
-		      (cons (cons lab (cons '$module iface)) r)
-		      (cons (cons lab (cons '$module iface)) mr)
-		      mod** kwd*))))))))
-
 
+;;;; chi procedures: body
+
 (module (chi-body*)
 
   (define (chi-body* e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
@@ -7355,7 +7306,79 @@
        (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
+  (define (chi-internal-module e r mr lex* rhs* mod** kwd*)
+    (let-values (((name exp-id* e*) (parse-module e)))
+      (let* ((rib (make-empty-rib))
+	     (e*  (map (lambda (x)
+			 (push-lexical-contour rib x))
+		    (syntax->list e*))))
+	(let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
+		      (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
+	  (let* ((exp-id*  (vector-append exp-id* (list->vector _exp*)))
+		 (exp-lab* (vector-map
+			       (lambda (x)
+				 (or (id->label (make-<stx> (identifier->symbol x)
+							    (<stx>-mark* x)
+							    (list rib)
+							    '()))
+				     (stx-error x "cannot find module export")))
+			     exp-id*))
+		 (mod** (cons e* mod**)))
+	    (if (not name) ;;; explicit export
+		(values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
+	      (let ((lab (gensym-for-label 'module))
+		    (iface
+		     (make-module-interface
+		      (car (<stx>-mark* name))
+		      (vector-map
+			  (lambda (x)
+			    (make-<stx> (<stx>-expr x) (<stx>-mark* x) '() '()))
+			exp-id*)
+		      exp-lab*)))
+		(values lex* rhs*
+			(vector name) ;;; FIXME: module cannot
+			(vector lab)  ;;;  export itself yet
+			(cons (cons lab (cons '$module iface)) r)
+			(cons (cons lab (cons '$module iface)) mr)
+			mod** kwd*))))))))
+
   #| end of module: CHI-BODY* |# )
+
+
+(define parse-module
+  (lambda (e)
+    (syntax-match e ()
+      ((_ (export* ...) b* ...)
+       (begin
+	 (unless (for-all identifier? export*)
+	   (stx-error e "module exports must be identifiers"))
+	 (values #f (list->vector export*) b*)))
+      ((_ name (export* ...) b* ...)
+       (begin
+	 (unless (identifier? name)
+	   (stx-error e "module name must be an identifier"))
+	 (unless (for-all identifier? export*)
+	   (stx-error e "module exports must be identifiers"))
+	 (values name (list->vector export*) b*))))))
+
+(define-record module-interface (first-mark exp-id-vec exp-lab-vec))
+
+(define (module-interface-exp-id* iface id)
+  (define (diff-marks ls x)
+    (when (null? ls) (error 'diff-marks "BUG: should not happen"))
+    (let ((a (car ls)))
+      (if (eq? a x)
+	  '()
+	(cons a (diff-marks (cdr ls) x)))))
+  (let ((diff
+	 (diff-marks (<stx>-mark* id) (module-interface-first-mark iface)))
+	(id-vec (module-interface-exp-id-vec iface)))
+    (if (null? diff)
+	id-vec
+      (vector-map
+	  (lambda (x)
+	    (make-<stx> (<stx>-expr x) (append diff (<stx>-mark* x)) '() '()))
+	id-vec))))
 
 
 (define (rev-map-append f ls ac)
