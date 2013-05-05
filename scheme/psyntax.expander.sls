@@ -6829,60 +6829,64 @@
 
 ;;;; chi procedures: macro calls
 
-(define (chi-macro p e r rib)
-  (do-macro-call (non-core-macro-transformer p) e r rib))
+(module (chi-macro chi-local-macro chi-global-macro)
 
-(define (chi-local-macro p e r rib)
-  (do-macro-call (local-macro-transformer p) e r rib))
+  (define (chi-macro p e r rib)
+    (%do-macro-call (non-core-macro-transformer p) e r rib))
 
-(define (chi-global-macro p e r rib)
-  (let ((lib (car p))
-	(loc (cdr p)))
-    (unless (eq? lib '*interaction*)
-      (visit-library lib))
-    (let ((x (symbol-value loc)))
-      (let ((transformer
-	     (cond
-	      ((procedure? x) x)
-	      ((and (pair? x)
-		    (eq? (car x) 'macro!)
-		    (procedure? (cdr x)))
-	       (cdr x))
-	      (else (assertion-violation 'chi-global-macro
-		      "BUG: not a procedure" x)))))
-	(do-macro-call transformer e r rib)))))
+  (define (chi-local-macro p e r rib)
+    (%do-macro-call (local-macro-transformer p) e r rib))
 
-(define (do-macro-call transformer expr r rib)
-  (define (return x)
-    (let f ((x x))
-        ;;; don't feed me cycles.
-      (unless (<stx>? x)
-	(cond
-	 ((pair? x) (f (car x)) (f (cdr x)))
-	 ((vector? x) (vector-for-each f x))
-	 ((symbol? x)
-	  (syntax-violation #f
-	    "raw symbol encountered in output of macro"
-	    expr x)))))
-    (add-mark (gen-mark) rib x expr))
-  (let ((x (transformer (add-mark anti-mark #f expr #f))))
-    (if (procedure? x)
-	(return
-	 (x (lambda (id)
-	      (unless (identifier? id)
-		(assertion-violation 'rho "not an identifier" id))
-	      (let ((label (id->label id)))
-		(let ((binding (label->binding label r)))
-		  (case (car binding)
-		    ((local-ctv) (cadr binding))
-		    ((global-ctv)
-		     (let ((lib (cadr binding))
-			   (loc (cddr binding)))
-		       (unless (eq? lib '*interaction*)
-			 (visit-library lib))
-		       (symbol-value loc)))
-		    (else #f)))))))
-      (return x))))
+  (define (chi-global-macro p e r rib)
+    (let ((lib (car p))
+	  (loc (cdr p)))
+      (unless (eq? lib '*interaction*)
+	(visit-library lib))
+      (let ((x (symbol-value loc)))
+	(let ((transformer (cond ((procedure? x)
+				  x)
+				 ((and (pair? x)
+				       (eq? (car x) 'macro!)
+				       (procedure? (cdr x)))
+				  (cdr x))
+				 (else
+				  (assertion-violation 'chi-global-macro
+				    "Vicare: internal error: not a procedure" x)))))
+	  (%do-macro-call transformer e r rib)))))
+
+  (define (%do-macro-call transformer expr r rib)
+    (define (return x)
+      (let f ((x x))
+	;;Don't feed me cycles.
+	(unless (<stx>? x)
+	  (cond
+	   ((pair? x) (f (car x)) (f (cdr x)))
+	   ((vector? x) (vector-for-each f x))
+	   ((symbol? x)
+	    (syntax-violation #f
+	      "raw symbol encountered in output of macro"
+	      expr x)))))
+      (add-mark (gen-mark) rib x expr))
+    (let ((x (transformer (add-mark anti-mark #f expr #f))))
+      (if (procedure? x)
+	  (return
+	   (x (lambda (id)
+		(unless (identifier? id)
+		  (assertion-violation 'rho "not an identifier" id))
+		(let ((label (id->label id)))
+		  (let ((binding (label->binding label r)))
+		    (case (car binding)
+		      ((local-ctv) (cadr binding))
+		      ((global-ctv)
+		       (let ((lib (cadr binding))
+			     (loc (cddr binding)))
+			 (unless (eq? lib '*interaction*)
+			   (visit-library lib))
+			 (symbol-value loc)))
+		      (else #f)))))))
+	(return x))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: expressions
