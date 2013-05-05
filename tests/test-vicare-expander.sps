@@ -1835,6 +1835,27 @@
   #t)
 
 
+;; (parametrise ((check-test-name	'syntax-transpose))
+
+;;   (define id #f)
+;;   (define ciao 1)
+
+;;   (check
+;;       (let ((id 3))
+;; 	(define-syntax doit
+;; 	  (lambda (stx)
+;; 	    (syntax-case stx ()
+;; 	      ((_ ?id)
+;; 	       (begin
+;; 		 (check-pretty-print #'id)
+;; 		 (check-pretty-print #'?id)
+;; 		 (syntax-transpose #'ciao #'id #'?id))))))
+;; 	(doit id))
+;;     => #f)
+
+;;   #t)
+
+
 ;;;; done
 
 (check-report)
