@@ -6502,19 +6502,29 @@
 		      (append subst1* ns*)
 		      (cons (car new.annotated-expr*) nae*))))))))
 
-  (define (split s*)
-    (cond
-     ((eq? (car s*) 'shift)
-      (values (list 'shift) (cdr s*)))
-     (else
-      (let-values (((subst1* subst2*)
-		    (split (cdr s*))))
-	(values (cons (car s*) subst1*) subst2*)))))
+  (define (split subst*)
+    ;;Non-tail recursive  function.  Split  SUBST* and return  2 values:
+    ;;the prefix  of SUBST*  up to  and including  the first  shift, the
+    ;;suffix of SUBST* from the first shift excluded to the end.
+    ;;
+    (if (eq? (car subst*) 'shift)
+	(values (list 'shift)
+		(cdr subst*))
+      (receive (subst1* subst2*)
+	  (split (cdr subst*))
+	(values (cons (car subst*) subst1*)
+		subst2*))))
 
-  (define (final s*)
-    (cond
-     ((or (null? s*) (eq? (car s*) 'shift)) '())
-     (else (cons (car s*) (final (cdr s*))))))
+  (define (final subst*)
+    ;;Non-tail recursive  function.  Return the  prefix of SUBST*  up to
+    ;;and not including  the first shift.  The returned prefix  is a new
+    ;;list spine sharing the cars with SUBST*.
+    ;;
+    (if (or (null? subst*)
+	    (eq? (car subst*) 'shift))
+	'()
+      (cons (car subst*)
+	    (final (cdr subst*)))))
 
   (define-syntax-rule (%synner ?message ?irritant ...)
     (assertion-violation who ?message ?irritant ...))
