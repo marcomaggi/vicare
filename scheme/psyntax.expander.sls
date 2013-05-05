@@ -6465,7 +6465,10 @@
   (apply map proc ls ls*))
 
 (module (syntax-transpose)
-  ;;
+  ;;Mh... what  does this do?   Take BASE-ID  and NEW-ID, which  must be
+  ;;FREE-IDENTIFIER=?, compute the difference  between their marks, push
+  ;;such difference  on top of the  marks of OBJECT, return  the result.
+  ;;What for?  (Marco Maggi; Sun May 5, 2013)
   ;;
   (define who 'syntax-transpose)
 
