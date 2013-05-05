@@ -6471,9 +6471,12 @@
   ;;Perform  the actual  matching between  an input  symbolic expression
   ;;being a  (wrapped, unwrapped  or partially unwrapped)  syntax object
   ;;and a  pattern symbolic expression.   If the expression  matches the
-  ;;pattern  return  a  list  of  values to  be  bound  to  the  pattern
-  ;;variables; else return  false.  The order of values  in the returned
-  ;;list is established by the pattern.
+  ;;pattern return null or  a list of syntax objects to  be bound to the
+  ;;pattern variables; else return false.
+  ;;
+  ;;The order of  syntax objects in the returned list  is established by
+  ;;the pattern and it is the  same order in which the pattern variables
+  ;;appear in the alist returned by CONVERT-PATTERN.
   ;;
   ;;The pattern  for SYNTAX-DISPATCH is  a symbolic expression  with the
   ;;following format:
@@ -6492,69 +6495,76 @@
   ;;  #(atom <object>)                |  <object> with "equal?"
   ;;
   (define (syntax-dispatch expr pattern)
-    (%match expr pattern '() '() '() '()))
+    (%match expr pattern '() #;mark* '() #;subst* '() #;annotated-expr*
+	    '() #;pvar* ))
 
-  (define (%match e p mark* subst* annotated-expr* r)
-    (cond ((not r)
+  (define (%match expr pattern mark* subst* annotated-expr* pvar*)
+    (cond ((not pvar*)
+	   ;;No match.
 	   #f)
-	  ((eq? p '_)
-	   r)
-	  ((eq? p 'any)
-	   (cons (%make-syntax-object e mark* subst* annotated-expr*) r))
-	  ((<stx>? e)
+	  ((eq? pattern '_)
+	   ;;Match anything, bind nothing.
+	   pvar*)
+	  ((eq? pattern 'any)
+	   ;;Match anything, bind a pattern variable.
+	   (cons (%make-syntax-object expr mark* subst* annotated-expr*)
+		 pvar*))
+	  ((<stx>? expr)
+	   ;;Visit the syntax object.
 	   (and (not (top-marked? mark*))
-		(receive (mark* subst* annotated-expr*)
-		    (join-wraps mark* subst* annotated-expr* e)
-		  (%match (<stx>-expr e) p mark* subst* annotated-expr* r))))
-	  ((annotation? e)
-	   (%match (annotation-expression e) p mark* subst* annotated-expr* r))
+		(receive (mark*^ subst*^ annotated-expr*^)
+		    (join-wraps mark* subst* annotated-expr* expr)
+		  (%match (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^ pvar*))))
+	  ((annotation? expr)
+	   ;;Visit the ANNOTATION struct.
+	   (%match (annotation-expression expr) pattern mark* subst* annotated-expr* pvar*))
 	  (else
-	   (%match* e p mark* subst* annotated-expr* r))))
+	   (%match* expr pattern mark* subst* annotated-expr* pvar*))))
 
-  (define (%match* e p mark* subst* annotated-expr* r)
+  (define (%match* e p mark* subst* annotated-expr* pvar*)
     (cond ((null? p)
-	   (and (null? e) r))
+	   (and (null? e) pvar*))
 	  ((pair? p)
 	   (and (pair? e)
 		(%match (car e) (car p) mark* subst* annotated-expr*
-			(%match (cdr e) (cdr p) mark* subst* annotated-expr* r))))
+			(%match (cdr e) (cdr p) mark* subst* annotated-expr* pvar*))))
 	  ((eq? p 'each-any)
 	   (let ((l (%match-each-any e mark* subst* annotated-expr*)))
-	     (and l (cons l r))))
+	     (and l (cons l pvar*))))
 	  (else
 	   (case (vector-ref p 0)
 	     ((each)
 	      (if (null? e)
-		  (%match-empty (vector-ref p 1) r)
-		(let ((r* (%match-each e (vector-ref p 1) mark* subst* annotated-expr*)))
-		  (and r* (%combine r* r)))))
+		  (%match-empty (vector-ref p 1) pvar*)
+		(let ((pvar** (%match-each e (vector-ref p 1) mark* subst* annotated-expr*)))
+		  (and pvar** (%combine pvar** pvar*)))))
 	     ((free-id)
 	      (and (symbol? e)
 		   (top-marked? mark*)
 		   (free-id=? (%make-syntax-object e mark* subst* annotated-expr*) (vector-ref p 1))
-		   r))
+		   pvar*))
 	     ((scheme-id)
 	      (and (symbol? e)
 		   (top-marked? mark*)
 		   (free-id=? (%make-syntax-object e mark* subst* annotated-expr*)
 			      (scheme-stx (vector-ref p 1)))
-		   r))
+		   pvar*))
 	     ((each+)
-	      (receive (xr* y-pat r)
+	      (receive (xr* y-pat pvar*)
 		  (%match-each+ e (vector-ref p 1)
-				(vector-ref p 2) (vector-ref p 3) mark* subst* annotated-expr* r)
-		(and r
+				(vector-ref p 2) (vector-ref p 3) mark* subst* annotated-expr* pvar*)
+		(and pvar*
 		     (null? y-pat)
 		     (if (null? xr*)
-			 (%match-empty (vector-ref p 1) r)
-		       (%combine xr* r)))))
+			 (%match-empty (vector-ref p 1) pvar*)
+		       (%combine xr* pvar*)))))
 	     ((atom)
 	      (and (equal? (vector-ref p 1)
 			   (strip e mark*))
-		   r))
+		   pvar*))
 	     ((vector)
 	      (and (vector? e)
-		   (%match (vector->list e) (vector-ref p 1) mark* subst* annotated-expr* r)))
+		   (%match (vector->list e) (vector-ref p 1) mark* subst* annotated-expr* pvar*)))
 	     (else
 	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
 
@@ -6575,31 +6585,31 @@
 	   (%match-each (annotation-expression e) p mark* subst* annotated-expr*))
 	  (else #f)))
 
-  (define (%match-each+ e x-pat y-pat z-pat mark* subst* annotated-expr* r)
+  (define (%match-each+ e x-pat y-pat z-pat mark* subst* annotated-expr* pvar*)
     (let loop ((e e) (mark* mark*) (subst* subst*) (annotated-expr* annotated-expr*))
       (cond ((pair? e)
-	     (receive (xr* y-pat r)
+	     (receive (xr* y-pat pvar*)
 		 (loop (cdr e) mark* subst* annotated-expr*)
-	       (if r
+	       (if pvar*
 		   (if (null? y-pat)
 		       (let ((xr (%match (car e) x-pat mark* subst* annotated-expr* '())))
 			 (if xr
-			     (values (cons xr xr*) y-pat r)
+			     (values (cons xr xr*) y-pat pvar*)
 			   (values #f #f #f)))
 		     (values '()
 			     (cdr y-pat)
-			     (%match (car e) (car y-pat) mark* subst* annotated-expr* r)))
+			     (%match (car e) (car y-pat) mark* subst* annotated-expr* pvar*)))
 		 (values #f #f #f))))
 	    ((<stx>? e)
 	     (if (top-marked? mark*)
-		 (values '() y-pat (%match e z-pat mark* subst* annotated-expr* r))
+		 (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))
 	       (receive (mark* subst* annotated-expr*)
 		   (join-wraps mark* subst* annotated-expr* e)
 		 (loop (<stx>-expr e) mark* subst* annotated-expr*))))
 	    ((annotation? e)
 	     (loop (annotation-expression e) mark* subst* annotated-expr*))
 	    (else
-	     (values '() y-pat (%match e z-pat mark* subst* annotated-expr* r))))))
+	     (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))))))
 
   (define (%match-each-any e mark* subst* annotated-expr*)
     (cond ((pair? e)
@@ -6616,31 +6626,31 @@
 	   (%match-each-any (annotation-expression e) mark* subst* annotated-expr*))
 	  (else #f)))
 
-  (define (%match-empty p r)
+  (define (%match-empty p pvar*)
     (cond ((null? p)
-	   r)
+	   pvar*)
 	  ((eq? p '_)
-	   r)
+	   pvar*)
 	  ((eq? p 'any)
-	   (cons '() r))
+	   (cons '() pvar*))
 	  ((pair? p)
-	   (%match-empty (car p) (%match-empty (cdr p) r)))
+	   (%match-empty (car p) (%match-empty (cdr p) pvar*)))
 	  ((eq? p 'each-any)
-	   (cons '() r))
+	   (cons '() pvar*))
 	  (else
 	   (case (vector-ref p 0)
 	     ((each)
-	      (%match-empty (vector-ref p 1) r))
+	      (%match-empty (vector-ref p 1) pvar*))
 	     ((each+)
 	      (%match-empty (vector-ref p 1)
 			    (%match-empty (reverse (vector-ref p 2))
-					  (%match-empty (vector-ref p 3) r))))
+					  (%match-empty (vector-ref p 3) pvar*))))
 	     ((free-id atom)
-	      r)
+	      pvar*)
 	     ((scheme-id atom)
-	      r)
+	      pvar*)
 	     ((vector)
-	      (%match-empty (vector-ref p 1) r))
+	      (%match-empty (vector-ref p 1) pvar*))
 	     (else
 	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
 
@@ -6651,11 +6661,11 @@
 	stx
       (mkstx stx mark* subst* annotated-expr*)))
 
-  (define (%combine r* r)
-    (if (null? (car r*))
-	r
-      (cons (map car r*)
-	    (%combine (map cdr r*) r))))
+  (define (%combine pvar** pvar*)
+    (if (null? (car pvar**))
+	pvar*
+      (cons (map car pvar**)
+	    (%combine (map cdr pvar**) pvar*))))
 
   #| end of module: SYNTAX-DISPATCH |# )
 
