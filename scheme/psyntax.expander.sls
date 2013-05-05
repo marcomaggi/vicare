@@ -6521,54 +6521,140 @@
 	  (else
 	   (%match* expr pattern mark* subst* annotated-expr* pvar*))))
 
-  (define (%match* e p mark* subst* annotated-expr* pvar*)
-    (cond ((null? p)
-	   (and (null? e) pvar*))
-	  ((pair? p)
-	   (and (pair? e)
-		(%match (car e) (car p) mark* subst* annotated-expr*
-			(%match (cdr e) (cdr p) mark* subst* annotated-expr* pvar*))))
-	  ((eq? p 'each-any)
-	   (let ((l (%match-each-any e mark* subst* annotated-expr*)))
-	     (and l (cons l pvar*))))
-	  (else
-	   (case (vector-ref p 0)
-	     ((each)
-	      (if (null? e)
-		  (%match-empty (vector-ref p 1) pvar*)
-		(let ((pvar** (%match-each e (vector-ref p 1) mark* subst* annotated-expr*)))
-		  (and pvar** (%combine pvar** pvar*)))))
-	     ((free-id)
-	      (and (symbol? e)
-		   (top-marked? mark*)
-		   (free-id=? (%make-syntax-object e mark* subst* annotated-expr*) (vector-ref p 1))
-		   pvar*))
-	     ((scheme-id)
-	      (and (symbol? e)
-		   (top-marked? mark*)
-		   (free-id=? (%make-syntax-object e mark* subst* annotated-expr*)
-			      (scheme-stx (vector-ref p 1)))
-		   pvar*))
-	     ((each+)
-	      (receive (xr* y-pat pvar*)
-		  (%match-each+ e (vector-ref p 1)
-				(vector-ref p 2) (vector-ref p 3) mark* subst* annotated-expr* pvar*)
-		(and pvar*
-		     (null? y-pat)
-		     (if (null? xr*)
-			 (%match-empty (vector-ref p 1) pvar*)
-		       (%combine xr* pvar*)))))
-	     ((atom)
-	      (and (equal? (vector-ref p 1)
-			   (strip e mark*))
-		   pvar*))
-	     ((vector)
-	      (and (vector? e)
-		   (%match (vector->list e) (vector-ref p 1) mark* subst* annotated-expr* pvar*)))
-	     (else
-	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
+  (define (%match* expr pattern mark* subst* annotated-expr* pvar*)
+    (cond
+     ;;End of list pattern: match the end of a list expression.
+     ;;
+     ((null? pattern)
+      (and (null? expr)
+	   pvar*))
+
+     ;;Match a pair expression.
+     ;;
+     ((pair? pattern)
+      (and (pair? expr)
+	   (%match (car expr) (car pattern) mark* subst* annotated-expr*
+		   (%match (cdr expr) (cdr pattern) mark* subst* annotated-expr* pvar*))))
+
+     ;;Match any  proper list  expression and  bind a  pattern variable.
+     ;;This happens when the original pattern symbolic expression is:
+     ;;
+     ;;   (?var ...)
+     ;;
+     ;;everything  in the  proper  list  must be  bound  to the  pattern
+     ;;variable ?VAR.
+     ;;
+     ((eq? pattern 'each-any)
+      (let ((l (%match-each-any expr mark* subst* annotated-expr*)))
+	(and l (cons l pvar*))))
+
+     (else
+      ;;Here we expect the PATTERN to be a vector of the format:
+      ;;
+      ;;   #(?symbol ?stuff ...)
+      ;;
+      ;;where ?SYMBOL is a symbol.
+      ;;
+      (case (vector-ref pattern 0)
+
+	;;The pattern is:
+	;;
+	;;   #(each ?sub-pattern)
+	;;
+	;;the expression  matches if it  is a  list in which  every item
+	;;matches ?SUB-PATTERN.
+	;;
+	((each)
+	 (if (null? expr)
+	     (%match-empty (vector-ref pattern 1) pvar*)
+	   (let ((pvar** (%match-each expr (vector-ref pattern 1)
+				      mark* subst* annotated-expr*)))
+	     (and pvar**
+		  (%combine pvar** pvar*)))))
+
+	;;The pattern is:
+	;;
+	;;   #(free-id ?literal)
+	;;
+	;;the  expression  matches  if  it is  an  identifier  equal  to
+	;;?LITERAL according to FREE-IDENTIFIER=?.
+	;;
+	((free-id)
+	 (and (symbol? expr)
+	      (top-marked? mark*)
+	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+			 (vector-ref pattern 1))
+	      pvar*))
+
+	;;The pattern is:
+	;;
+	;;   #(scheme-id ?symbol)
+	;;
+	;;the  expression matches  if it  is an  identifier equal  to an
+	;;identifier    having   ?SYMBOL    as    name   according    to
+	;;FREE-IDENTIFIER=?.
+	;;
+	((scheme-id)
+	 (and (symbol? expr)
+	      (top-marked? mark*)
+	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+			 (scheme-stx (vector-ref pattern 1)))
+	      pvar*))
+
+	;;The pattern is:
+	;;
+	;;   #(each+ p1 (p2_1 ... p2_n) p3)
+	;;
+	;;which originally was:
+	;;
+	;;   (p1 ?ellipsis p2_1 ... p2_n . p3)
+	;;
+	;;the expression matches if ...
+	;;
+	((each+)
+	 (receive (xr* y-pat pvar*)
+	     (%match-each+ expr
+			   (vector-ref pattern 1)
+			   (vector-ref pattern 2)
+			   (vector-ref pattern 3)
+			   mark* subst* annotated-expr* pvar*)
+	   (and pvar*
+		(null? y-pat)
+		(if (null? xr*)
+		    (%match-empty (vector-ref pattern 1) pvar*)
+		  (%combine xr* pvar*)))))
+
+	;;The pattern is:
+	;;
+	;;  #(atom ?object)
+	;;
+	;;the  expression matches  if it  is  a single  object equal  to
+	;;?OBJECT according to EQUAL?.
+	;;
+	((atom)
+	 (and (equal? (vector-ref pattern 1)
+		      (strip expr mark*))
+	      pvar*))
+
+	;;The pattern is:
+	;;
+	;;   #(vector ?sub-pattern)
+	;;
+	;;the expression matches if it is a vector whose items match the
+	;;?SUB-PATTERN.
+	;;
+	((vector)
+	 (and (vector? expr)
+	      (%match (vector->list expr) (vector-ref pattern 1)
+		      mark* subst* annotated-expr* pvar*)))
+
+	(else
+	 (assertion-violation 'syntax-dispatch "invalid pattern" pattern))))))
 
   (define (%match-each e p mark* subst* annotated-expr*)
+    ;;Recursive function.   The expression  matches if it  is a  list in
+    ;;which every item matches PATTERN.
+    ;;
     (cond ((pair? e)
 	   (let ((first (%match (car e) p mark* subst* annotated-expr* '())))
 	     (and first
