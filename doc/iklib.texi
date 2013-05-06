@@ -766,7 +766,7 @@ Return a new condition object of type @condition{i/o-eagain}.
 @end defun
 
 
-@defun i/o-again-error? @var{obj}
+@defun i/o-eagain-error? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{i/o-eagain}.
 @end defun
