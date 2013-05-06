@@ -628,7 +628,7 @@ Options:
       (if (%config.dry-run? options-set)
 	  (log "requested dry run")
 	(begin
-	  (sel.readable master-sock schedule-incoming-connection-event)
+	  (schedule-incoming-connection-event)
 	  ;;We return from this form only when it is time to exit the process.
 	  (sel.enter)))
       (void)))
@@ -638,13 +638,17 @@ Options:
     ;;socket with a pending connection:  accept the connection, create a
     ;;server socket, enter the procedure that handles incoming data.
     ;;
-    (import NETWORKING)
-    (receive (server-sock server-port)
-	(net.make-server-sock master-sock)
-      (sel.readable server-sock (lambda ()
-				  (import ECHO-SERVER)
-				  (proto.start-session server-sock server-port)))
-      (void)))
+    (import NETWORKING LOGGING)
+    (guard (E (else
+	       #;(debug-print E)
+	       (log-condition-message "while accepting connection: ~a" E)
+	       (raise E)))
+      (receive (server-sock server-port)
+	  (net.make-server-sock master-sock)
+	(sel.readable server-sock (lambda ()
+				    (import ECHO-SERVER)
+				    (proto.start-session server-sock server-port)))
+	(void))))
 
   (define (%config.dry-run? options-set)
     (enum-set-member? (server-loop-option dry-run) options-set))
@@ -685,13 +689,14 @@ Options:
     ;;
     (receive (server-sock client-address)
 	(px.accept master-sock)
-      (let ((id (string-append
-		 (px.inet-ntop AF_INET (px.sockaddr_in.in_addr client-address))
-		 ":"
-		 (number->string (px.sockaddr_in.in_port client-address)))))
-	(log "accepted connection from: ~a\n" id)
+      (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
+	     (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
+	     (remote-port         (px.sockaddr_in.in_port client-address))
+	     (remote-port.str     (number->string remote-port))
+	     (port-id             (string-append remote-address.str ":" remote-port.str)))
+	(log "accepted connection from: ~a" port-id)
 	(%socket-set-non-blocking server-sock)
-	(let ((server-port (make-binary-socket-input/output-port server-sock id)))
+	(let ((server-port (make-binary-socket-input/output-port server-sock port-id)))
 	  (values server-sock server-port)))))
 
 ;;; --------------------------------------------------------------------
@@ -754,33 +759,47 @@ Options:
   (import LOGGING NETWORKING (prefix (vicare net channels) chan.))
 
   (define (proto.start-session server-sock server-port)
-    (define chan
-      (chan.open-input/output-channel server-port))
-    (chan.channel-set-message-terminators! chan #ve(ascii "\r\n") #ve(ascii "\n"))
-    (chan.channel-recv-begin! chan)
-    (%process-incoming-data server-sock server-port chan))
+    (guard (E (else
+	       #;(debug-print E)
+	       (log-condition-message "while starting session: ~a" E)
+	       (raise E)))
+      (let ((chan (chan.open-input/output-channel server-port)))
+	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
+	(chan.channel-recv-begin! chan)
+	(%process-incoming-data server-sock server-port chan))))
 
   (define (%process-incoming-data server-sock server-port chan)
-    (cond ((chan.channel-recv-message-portion! chan)
-	   => (lambda (dummy)
-		(let* ((data.bv  (chan.channel-recv-end! chan))
-		       (data.str (string->utf8 data.bv)))
-		  (log "received: ~a" data.str)
-		  (%send-message chan data.bv)
-		  (when (string=? "quit" data.str)
-		    (%stop-session server-port chan)))
-		(chan.channel-recv-begin! chan))))
-    (sel.readable server-sock
-		  (lambda ()
-		    (%process-incoming-data server-sock server-port chan))))
+    (guard (E (else
+	       #;(debug-print E)
+	       (log-condition-message "while processing incoming data: ~a" E)
+	       (raise E)))
+      (cond ((chan.channel-recv-message-portion! chan)
+	     => (lambda (dummy)
+		  (let* ((data.bv  (chan.channel-recv-end! chan))
+			 (data.str (utf8->string data.bv)))
+		    #;(log "received: ~a" data.str)
+		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
+		    (when (string=? "quit" data.str)
+		      (log "closing connection")
+		      (%stop-session server-port chan)))
+		  (chan.channel-recv-begin! chan))))
+      (sel.readable server-sock
+		    (lambda ()
+		      (%process-incoming-data server-sock server-port chan)))))
 
   (define (%stop-session server-port chan)
     (chan.close-channel chan)
     (net.close-server-port server-port))
 
   (define (%send-message chan data)
+    ;;Send the list  of bytevectors DATA through the  channel; perform a
+    ;;full send operation.  Return unspecified values.
+    ;;
     (chan.channel-send-begin! chan)
-    (chan.channel-send-message-portion! chan data)
+    (for-each-in-order
+	(lambda (bv)
+	  (chan.channel-send-message-portion! chan bv))
+      data)
     (chan.channel-send-end! chan))
 
   #| end of module: ECHO-SERVER |# )

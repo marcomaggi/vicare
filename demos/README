@@ -10,6 +10,8 @@ examples with Vicare Scheme.
 HTTP server
 -----------
 
+		 *THIS PROGRAM is NOT FINISHED*
+
 The script "httpd.sps"  is a *toy* web server  capable of serving
 pages  from a  customisable  document root  directory.  Start  it
 with:
