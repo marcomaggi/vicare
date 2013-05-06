@@ -599,7 +599,14 @@
 		 (%recv-loop chan)))))))
 
   (define (%read-bytevector chan)
-    (get-bytevector-n ($channel-connect-in-port chan) 4096))
+    (guard (E ((i/o-eagain-error? E)
+	       ;;If reading causes an EWOULDBLOCK error, we handle it as
+	       ;;EOF.
+	       #;(pretty-print 'would-block (current-error-port))
+	       (eof-object))
+	      (else
+	       (raise E)))
+      (get-bytevector-some ($channel-connect-in-port chan))))
 
   (module (%received-message-terminator?)
 
