@@ -452,7 +452,7 @@
 
 (module COMMAND-LINE-ARGS
   (parse-command-line-arguments)
-  (import (srfi :37))
+  (import (srfi :37 args-fold))
 
   (define (parse-command-line-arguments seed argv)
     (args-fold (cdr argv) program-options
