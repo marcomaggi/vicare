@@ -49,8 +49,8 @@
 (define root-server?
   (make-parameter #t))
 
-;;An instance of  record type "<options>" holding  global server options
-;;configured from the command line.
+;;An instance  of record  type "<global-options>" holding  global server
+;;options configured from the command line.
 ;;
 (define options
   (make-parameter #f))
@@ -70,43 +70,48 @@
 
 (define (main argv)
   (import PID-FILE LOGGING DAEMONISATION SERVER-EVENTS-LOOP)
-  (parametrise
-      ((logging		#t)
-       (sel.logging	log)
-       (options		(make-<options> argv)))
-    (when (options.daemonise?)
-      (daemonise))
-    (with-compensations
-      (compensate
-	  (open-log-file options.log-file)
-	(with
-	 (guard (E (else
-		    (debug-print E)))
-	   (when (root-server?)
-	     (close-log-file)))))
-      (let ((pid (px.getpid)))
-	(log-prefix (format "vicare echod[~a]: " pid))
-	(log "*** starting ECHO server, pid=~a" pid))
-      (log "listening to: ~a:~a" (options.server-interface) (options.server-port))
-      (compensate
-	  (create-pid-file options.pid-file log)
-	(with
-	 (guard (E (else
-		    (debug-print E)))
-	   (when (root-server?)
-	     (remove-pid-file)))))
-      (enter-event-loop (options.server-interface) (options.server-port)
-			(options.server-loop-config))
-      (log "exiting ECHO server"))
-    ;;First get out of WITH-COMPENSATIONS, then exit!!!
-    (exit 0)))
+  ;;We *must* catch the exceptions, else the compensations will not run.
+  ;;Log lines  specific to the  raised error  should be output  near the
+  ;;cause of the erorr, where we can better explain what we were doing.
+  (guard (E (else
+	     (log "exiting ECHO server because of error")
+	     (exit 1)))
+    (parametrise
+	((logging	#t)
+	 (sel.logging	log)
+	 (options	(make-<global-options> argv)))
+      (when (options.daemonise?)
+	(daemonise))
+      (with-compensations
+	(compensate
+	    (open-log-file options.log-file)
+	  (with
+	   (guard (E (else
+		      (debug-print E)))
+	     (when (root-server?)
+	       (close-log-file)))))
+	(let ((pid (px.getpid)))
+	  (log-prefix (format "vicare echod[~a]: " pid))
+	  (log "*** starting ECHO server, pid=~a" pid))
+	(compensate
+	    (create-pid-file options.pid-file log)
+	  (with
+	   (guard (E (else
+		      (debug-print E)))
+	     (when (root-server?)
+	       (remove-pid-file)))))
+	(enter-event-loop (options.server-interface) (options.server-port)
+			  (options.server-loop-config))
+	(log "exiting ECHO server"))
+      ;;First get out of WITH-COMPENSATIONS, then exit!!!
+      (exit 0))))
 
 
 ;;;; type definitions
 
 ;;Hold global server options configured from the command line.
 ;;
-(define-record-type <options>
+(define-record-type <global-options>
   (fields (mutable server-interface)
 		;A string representing the  server interface to bind to.
 		;Defaults to "localhost".
@@ -142,19 +147,19 @@
 	 (parse-command-line-arguments self argv)
 
 	 ;; validate server interface, more validation later
-	 (let ((interface ($<options>-server-interface self)))
+	 (let ((interface ($<global-options>-server-interface self)))
 	   (unless (and (string? interface)
 			(not (zero? (string-length interface))))
 	     (%err "invalid server interface: \"~a\"" interface)))
 
 	 ;; validate server port
-	 (let ((port ($<options>-server-port self)))
+	 (let ((port ($<global-options>-server-port self)))
 	   (import NETWORKING)
 	   (cond ((not (net.network-port? port))
 		  (%err "invalid server port: \"~a\"" port))))
 
 	 ;; validate pid file
-	 (let ((filename ($<options>-pid-file self)))
+	 (let ((filename ($<global-options>-pid-file self)))
 	   (cond ((not filename)
 		  (void))
 		 ((not (string? filename))
@@ -165,10 +170,10 @@
 		  (let ((filename (absolutise-pathname filename)))
 		    (if (file-exists? filename)
 			(%err "selected PID file pathname already exists: ~a" filename)
-		      (<options>-pid-file-set! self filename))))))
+		      (<global-options>-pid-file-set! self filename))))))
 
 	 ;; validate log file
-	 (let ((filename ($<options>-log-file self)))
+	 (let ((filename ($<global-options>-log-file self)))
 	   (cond ((not filename)
 		  (void))
 		 ((not (string? filename))
@@ -184,40 +189,40 @@
 			       (not (and (px.file-is-regular-file? filename)
 					 (px.file-writable? filename))))
 		      (%err "selected log file pathname not writable" filename))
-		    (<options>-log-file-set! self filename)))))
+		    (<global-options>-log-file-set! self filename)))))
 
 	 self)))))
 
 ;;; --------------------------------------------------------------------
 
-(define (<options>-increment-verbosity! opts)
-  (<options>-verbosity-set! opts (+ +1 (<options>-verbosity opts))))
+(define (<global-options>-increment-verbosity! opts)
+  (<global-options>-verbosity-set! opts (+ +1 (<global-options>-verbosity opts))))
 
-(define (<options>-decrement-verbosity! opts)
-  (<options>-verbosity-set! opts (+ -1 (<options>-verbosity opts))))
+(define (<global-options>-decrement-verbosity! opts)
+  (<global-options>-verbosity-set! opts (+ -1 (<global-options>-verbosity opts))))
 
 ;;; --------------------------------------------------------------------
 
 (define (options.server-interface)
-  ($<options>-server-interface (options)))
+  ($<global-options>-server-interface (options)))
 
 (define (options.server-port)
-  ($<options>-server-port (options)))
+  ($<global-options>-server-port (options)))
 
 (define (options.pid-file)
-  ($<options>-pid-file (options)))
+  ($<global-options>-pid-file (options)))
 
 (define (options.log-file)
-  ($<options>-log-file (options)))
+  ($<global-options>-log-file (options)))
 
 (define (options.verbosity)
-  ($<options>-verbosity (options)))
+  ($<global-options>-verbosity (options)))
 
 (define (options.daemonise?)
-  ($<options>-daemonise? (options)))
+  ($<global-options>-daemonise? (options)))
 
 (define (options.server-loop-config)
-  ($<options>-server-loop-config (options)))
+  ($<global-options>-server-loop-config (options)))
 
 
 ;;;; log file handling
@@ -494,40 +499,40 @@ Options:
   (define (interface-option-processor option name operand seed)
     ;;Select the interface to bind to.  We will validate this later.
     ;;
-    (<options>-server-interface-set! seed operand)
+    (<global-options>-server-interface-set! seed operand)
     seed)
 
   (define (port-option-processor option name operand seed)
     (let ((port (string->number operand)))
       (unless port
 	(invalid-option-value name operand))
-      (<options>-server-port-set! seed port))
+      (<global-options>-server-port-set! seed port))
     seed)
 
   (define (pid-file-option-processor option name operand seed)
-    (<options>-pid-file-set! seed operand)
+    (<global-options>-pid-file-set! seed operand)
     seed)
 
   (define (log-file-option-processor option name operand seed)
-    (<options>-log-file-set! seed operand)
+    (<global-options>-log-file-set! seed operand)
     seed)
 
   (define (daemon-option-processor option name operand seed)
-    (<options>-daemonise?-set! seed #t)
+    (<global-options>-daemonise?-set! seed #t)
     seed)
 
   (define (dry-run-option-processor option name operand seed)
     (import SERVER-EVENTS-LOOP)
-    (<options>-server-loop-config-set! seed (enum-set-union
+    (<global-options>-server-loop-config-set! seed (enum-set-union
 					     (server-loop-config dry-run)
-					     (<options>-server-loop-config seed)))
+					     (<global-options>-server-loop-config seed)))
     seed)
 
 ;;; --------------------------------------------------------------------
 ;;; auxiliary options
 
   (define (verbosity-option-processor option name operand seed)
-    (<options>-increment-verbosity! seed)
+    (<global-options>-increment-verbosity! seed)
     seed)
 
   (define (help-option-processor option name operand seed)
@@ -628,6 +633,7 @@ Options:
       (if (%config.dry-run? options-set)
 	  (log "requested dry run")
 	(begin
+	  (log "listening to: ~a:~a" interface port)
 	  (schedule-incoming-connection-event)
 	  ;;We return from this form only when it is time to exit the process.
 	  (sel.enter)))
@@ -769,6 +775,10 @@ Options:
 	(%process-incoming-data server-sock server-port chan))))
 
   (define (%process-incoming-data server-sock server-port chan)
+    (define (%reschedule)
+      (sel.readable server-sock
+		    (lambda ()
+		      (%process-incoming-data server-sock server-port chan))))
     (guard (E (else
 	       #;(debug-print E)
 	       (log-condition-message "while processing incoming data: ~a" E)
@@ -777,15 +787,17 @@ Options:
 	     => (lambda (dummy)
 		  (let* ((data.bv  (chan.channel-recv-end! chan))
 			 (data.str (utf8->string data.bv)))
-		    #;(log "received: ~a" data.str)
+		    (log "received: ~a" (ascii->string (uri-encode data.bv)))
 		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
-		    (when (string=? "quit" data.str)
-		      (log "closing connection")
-		      (%stop-session server-port chan)))
-		  (chan.channel-recv-begin! chan))))
-      (sel.readable server-sock
-		    (lambda ()
-		      (%process-incoming-data server-sock server-port chan)))))
+		    (if (%received-quit? data.bv)
+			(begin
+			  (log "closing connection")
+			  (%stop-session server-port chan))
+		      (begin
+			(chan.channel-recv-begin! chan)
+			(%reschedule))))))
+	    (else
+	     (%reschedule)))))
 
   (define (%stop-session server-port chan)
     (chan.close-channel chan)
@@ -801,6 +813,22 @@ Options:
 	  (chan.channel-send-message-portion! chan bv))
       data)
     (chan.channel-send-end! chan))
+
+  (define (%received-quit? bv)
+    ;;We know that the last bytes of BV must represent \n or \r\n.
+    ;;
+    (let ((bv.len (bytevector-length bv)))
+      (cond ((and (fx<= 2 bv.len)
+		  (fx=? (char->integer #\return)
+			(bytevector-u8-ref bv (fx- bv.len 2)))
+		  (fx=? (char->integer #\newline)
+			(bytevector-u8-ref bv (fx- bv.len 1))))
+	     (bytevector=? bv #ve(ascii "quit\r\n")))
+	    ((and (fx<= 1 bv.len)
+		  (fx=? (char->integer #\newline)
+			(bytevector-u8-ref bv (fx- bv.len 1))))
+	     (bytevector=? bv #ve(ascii "quit\n")))
+	    (else #f))))
 
   #| end of module: ECHO-SERVER |# )
 
