@@ -411,14 +411,19 @@
     ;;Daemonise  the current  process.  Block  all interprocess  signals
     ;;while doing it.
     ;;
-    (with-compensations
-      (compensate
-	  (px.signal-bub-init)
-	(with
-	 (px.signal-bub-final)))
-      (%exit-parent-keep-children)
-      (%replace-standard-ports)
-      (%detach-from-terminal-and-become-session-leader)))
+    (import LOGGING)
+    (guard (E (else
+	       #;(debug-print E)
+	       (log-condition-message "while daemonising server: ~a" E)
+	       (raise E)))
+      (with-compensations
+	(compensate
+	    (px.signal-bub-init)
+	  (with
+	   (px.signal-bub-final)))
+	(%exit-parent-keep-children)
+	(%replace-standard-ports)
+	(%detach-from-terminal-and-become-session-leader))))
 
   (define (%exit-parent-keep-children)
     (let ((pid (px.fork)))
