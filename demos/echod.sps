@@ -117,7 +117,7 @@
 		;Defaults to "localhost".
 	  (mutable server-port)
 		;An exact integer representing the server port to listen
-		;to.  Defaults to 8080.
+		;to.  Defaults to 8081.
 	  (mutable pid-file)
 		;False or a string representing  the pathname of the PID
 		;file.
@@ -140,7 +140,7 @@
        (import COMMAND-LINE-ARGS SERVER-EVENTS-LOOP)
        (define-syntax-rule (%err ?template . ?args)
 	 (error-message-and-exit BAD-OPTION-EXIT-STATUS ?template . ?args))
-       (let ((self (maker "localhost" 8080
+       (let ((self (maker "localhost" 8081
 			  #f #;pid-file #f #;log-file
 			  #f #;daemonise? (server-loop-config)
 			  0 #;verbosity )))
@@ -649,11 +649,12 @@ Options:
 	       #;(debug-print E)
 	       (log-condition-message "while accepting connection: ~a" E)
 	       (raise E)))
-      (receive (server-sock server-port)
+      (receive (server-sock server-port client-address)
 	  (net.make-server-sock master-sock)
-	(sel.readable server-sock (lambda ()
-				    (import ECHO-SERVER)
-				    (proto.start-session server-sock server-port)))
+	(sel.readable server-sock
+		      (lambda ()
+			(import ECHO-SERVER)
+			(proto.start-session server-sock server-port client-address)))
 	(void))))
 
   (define (%config.dry-run? options-set)
@@ -689,9 +690,15 @@ Options:
     ;;socket  with  a  pending  connection: accept  the  connection  and
     ;;configure the resulting server socket descriptor to non-blocking.
     ;;
-    ;;Return  2   values:  the   server  socket  descriptor,   a  Scheme
-    ;;input/output  binary port  wrapping the  descriptor.  Closing  the
-    ;;Scheme port will also close the server socket.
+    ;;Return 3 values:
+    ;;
+    ;;1. The server socket descriptor.
+    ;;
+    ;;2.  A Scheme  input/output  binary port  wrapping the  descriptor.
+    ;;   Closing the Scheme port will also close the server socket.
+    ;;
+    ;;3.  A  bytevector  representing  the  client  address  as  "struct
+    ;;   sockaddr".
     ;;
     (receive (server-sock client-address)
 	(px.accept master-sock)
@@ -700,10 +707,9 @@ Options:
 	     (remote-port         (px.sockaddr_in.in_port client-address))
 	     (remote-port.str     (number->string remote-port))
 	     (port-id             (string-append remote-address.str ":" remote-port.str)))
-	(log "accepted connection from: ~a" port-id)
 	(%socket-set-non-blocking server-sock)
 	(let ((server-port (make-binary-socket-input/output-port server-sock port-id)))
-	  (values server-sock server-port)))))
+	  (values server-sock server-port client-address)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -764,21 +770,30 @@ Options:
   (proto.start-session)
   (import LOGGING NETWORKING (prefix (vicare net channels) chan.))
 
-  (define (proto.start-session server-sock server-port)
+  (define (proto.start-session server-sock server-port client-address)
     (guard (E (else
 	       #;(debug-print E)
 	       (log-condition-message "while starting session: ~a" E)
 	       (raise E)))
+      (define connection-id
+	(gensym->unique-string (gensym)))
+      (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
+	     (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
+	     (remote-port         (px.sockaddr_in.in_port client-address))
+	     (remote-port.str     (number->string remote-port)))
+	(log "accepted connection from: ~a:~a, connection-id=~a"
+	     remote-address.str remote-port.str connection-id))
       (let ((chan (chan.open-input/output-channel server-port)))
 	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
+	(%send-message chan '(#ve(ascii "Vicare ECHO daemon.\r\n")))
 	(chan.channel-recv-begin! chan)
-	(%process-incoming-data server-sock server-port chan))))
+	(%process-incoming-data server-sock server-port chan connection-id))))
 
-  (define (%process-incoming-data server-sock server-port chan)
+  (define (%process-incoming-data server-sock server-port chan connection-id)
     (define (%reschedule)
       (sel.readable server-sock
 		    (lambda ()
-		      (%process-incoming-data server-sock server-port chan))))
+		      (%process-incoming-data server-sock server-port chan connection-id))))
     (guard (E (else
 	       #;(debug-print E)
 	       (log-condition-message "while processing incoming data: ~a" E)
@@ -787,11 +802,12 @@ Options:
 	     => (lambda (dummy)
 		  (let* ((data.bv  (chan.channel-recv-end! chan))
 			 (data.str (utf8->string data.bv)))
-		    (log "received: ~a" (ascii->string (uri-encode data.bv)))
+		    (log "connection ~a echoing: ~a"
+			 connection-id (ascii->string (uri-encode data.bv)))
 		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
 		    (if (%received-quit? data.bv)
 			(begin
-			  (log "closing connection")
+			  (log "closing connection ~a" connection-id)
 			  (%stop-session server-port chan))
 		      (begin
 			(chan.channel-recv-begin! chan)
