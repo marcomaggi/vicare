@@ -3915,12 +3915,9 @@
 	 (with-exception-handler
 	     (lambda (E)
 	       (run-compensations)
-	       (compensations #f)
 	       (raise E))
 	   (lambda ()
-	     (begin0
-		 (begin ,?body0 ,@?body*)
-	       (compensations #f)))))))
+	     ,?body0 ,@?body*)))))
     ))
 
 (define (with-compensations-macro expr-stx)
@@ -3931,13 +3928,11 @@
 	 (with-exception-handler
 	     (lambda (E)
 	       (run-compensations)
-	       (compensations #f)
 	       (raise E))
 	   (lambda ()
 	     (begin0
 		 (begin ,?body0 ,@?body*)
-	       (run-compensations)
-	       (compensations #f)))))))
+	       (run-compensations)))))))
     ))
 
 (define (push-compensation-macro expr-stx)

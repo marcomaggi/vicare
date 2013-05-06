@@ -37,14 +37,18 @@
 		  push-compensation-thunk))
 
   (define compensations
-    (make-parameter '()))
+    (make-parameter #f))
 
   (define (run-compensations)
-    (for-each
-	(lambda (closure)
-	  (guard (E (else #f))
-	    (closure)))
-      (compensations))
+    (guard (E (else
+	       (assertion-violation 'run-compensations
+		 "expected null or proper list in compensations parameter"
+		 (compensations))))
+      (for-each-in-order
+	  (lambda (closure)
+	    (guard (E (else #f))
+	      (closure)))
+	(compensations)))
     (compensations '())
     (void))
 

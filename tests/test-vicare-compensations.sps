@@ -395,6 +395,57 @@
   #t)
 
 
+(parametrise ((check-test-name	'nesting))
+
+  (check
+      (with-result
+       (with-compensations
+	 (compensate
+	     (add-result 1.1)
+	   (with
+	    (add-result 1.2)))
+	 (add-result 1.3)
+	 (with-compensations
+	   (compensate
+	       (add-result 2.1)
+	     (with
+	      (add-result 2.2)))
+	   (add-result 2.3)
+	   2.4)
+	 1.4))
+    => '(1.4 (1.1 1.3 2.1 2.3 2.2 1.2)))
+
+  (check
+      (with-result
+       (with-compensations
+	 (compensate
+	     (add-result 1.1)
+	   (with
+	    (add-result 1.2)))
+	 (add-result 1.3)
+	 (with-compensations
+	   (compensate
+	       (add-result 2.1)
+	     (with
+	      (add-result 2.2)))
+	   (add-result 2.3)
+	   2.4)
+	 (with-compensations
+	   (compensate
+	       (add-result 3.1)
+	     (with
+	      (add-result 3.2)))
+	   (add-result 3.3)
+	   3.4)
+	 1.4))
+    => '(1.4 (1.1 1.3
+		  2.1 2.3 2.2
+		  3.1 3.3 3.2
+		  1.2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'syntax-errors))
 
   (check	;missing WITH
