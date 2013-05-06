@@ -244,7 +244,7 @@
   (with-arguments-validation (who)
       ((channel		chan)
        (terminators	terminators))
-    ($channel-expiration-time-set! chan terminators)
+    ($channel-message-terminators-set! chan terminators)
     (void)))
 
 
