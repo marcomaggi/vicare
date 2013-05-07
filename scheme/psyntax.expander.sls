@@ -3925,14 +3925,14 @@
     ((_ ?body0 ?body* ...)
      (bless
       `(parametrise ((compensations '()))
-	 (with-exception-handler
-	     (lambda (E)
-	       (run-compensations)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-		 (begin ,?body0 ,@?body*)
-	       (run-compensations)))))))
+	 (begin0
+	     (with-exception-handler
+		 (lambda (E)
+		   (run-compensations)
+		   (raise E))
+	       (lambda ()
+		 ,?body0 ,@?body*))
+	   (run-compensations)))))
     ))
 
 (define (push-compensation-macro expr-stx)
