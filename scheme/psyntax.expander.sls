@@ -3932,6 +3932,8 @@
 		   (raise E))
 	       (lambda ()
 		 ,?body0 ,@?body*))
+	   ;;Better   run  the   cleanup   compensations   out  of   the
+	   ;;WITH-EXCEPTION-HANDLER.
 	   (run-compensations)))))
     ))
 
