@@ -68,43 +68,76 @@
 
 ;;;; main function
 
-(define (main argv)
-  (import PID-FILE LOGGING DAEMONISATION SERVER-EVENTS-LOOP)
-  ;;We *must* catch the exceptions, else the compensations will not run.
-  ;;Log lines  specific to the  raised error  should be output  near the
-  ;;cause of the erorr, where we can better explain what we were doing.
-  (guard (E (else
-	     (log "exiting ECHO server because of error")
-	     (exit 1)))
-    (parametrise
-	((logging	#t)
-	 (sel.logging	log)
-	 (options	(make-<global-options> argv)))
+(module (main)
+
+  (define (main argv)
+    (import LOGGING DAEMONISATION)
+    ;;We catch the exceptions to exit with an error status.  If we catch
+    ;;an exception here: we cannot log a message because we have already
+    ;;closed the log file.
+    ;;
+    ;;Log lines specific  to the raised error should be  output near the
+    ;;cause  of the  error, where  we can  better explain  what we  were
+    ;;doing.
+    ;;
+    (guard (E (else (exit 1)))
+      ;;Set configuration  parameters; it is useless  to use PARAMETRISE
+      ;;here.
+      (logging		#t)
+      (sel.logging	log)
+      (options		(make-<global-options> argv))
       (when (options.daemonise?)
 	(daemonise))
       (with-compensations
-	(compensate
-	    (open-log-file options.log-file)
-	  (with
-	   (guard (E (else
-		      (debug-print E)))
-	     (when (root-server?)
-	       (close-log-file)))))
-	(let ((pid (px.getpid)))
-	  (log-prefix (format "vicare echod[~a]: " pid))
-	  (log "*** starting ECHO server, pid=~a" pid))
-	(compensate
-	    (create-pid-file options.pid-file log)
-	  (with
-	   (guard (E (else
-		      (debug-print E)))
-	     (when (root-server?)
-	       (remove-pid-file)))))
-	(enter-event-loop (options.server-interface) (options.server-port)
-			  (options.server-loop-config))
+	(%main.open-log-file/c)
+	(%main.log-server-start)
+	(%main.open-pid-file/c)
+	(%main.enter-event-loop)
 	(log "exiting ECHO server"))
-      ;;First get out of WITH-COMPENSATIONS, then exit!!!
-      (exit 0))))
+      ;;First get out of WITH-COMPENSATIONS, then exit.
+      (exit 0)))
+
+  (define (%main.open-log-file/c)
+    (import LOGGING)
+    (compensate
+	(open-log-file options.log-file)
+      (with
+       (guard (E (else
+		  #;(debug-print E)
+		  (void)))
+	 (when (root-server?)
+	   (close-log-file))))))
+
+  (define (%main.open-pid-file/c)
+    (import LOGGING PID-FILE)
+    (compensate
+	(create-pid-file options.pid-file log)
+      (with
+       (guard (E (else
+		  (debug-print E)))
+	 (when (root-server?)
+	   (remove-pid-file))))))
+
+  (define (%main.log-server-start)
+    (import LOGGING)
+    (let ((pid (px.getpid)))
+      (log-prefix (format "vicare echod[~a]: " pid))
+      (log "*** starting ECHO server, pid=~a" pid)))
+
+  (define (%main.enter-event-loop)
+    ;;Catch the exceptions here to log the event: exit because of error.
+    ;;Then raise again  the exception to run the  compensations and exit
+    ;;with error code.
+    ;;
+    (import LOGGING SERVER-EVENTS-LOOP)
+    (guard (E (else
+	       (log "exiting ECHO server because of error")
+	       (raise E)))
+      (enter-event-loop (options.server-interface)
+			(options.server-port)
+			(options.server-loop-config))))
+
+  #| end of module: MAIN |# )
 
 
 ;;;; type definitions
@@ -623,7 +656,10 @@ Options:
     (with-compensations
       (define master-sock
 	(compensate
-	    (net.make-master-sock interface port)
+	    (guard (E (else
+		       (log-condition-message "while creating master socket: ~a" E)
+		       (raise E)))
+	      (net.make-master-sock interface port))
 	  (with
 	   (net.close-master-sock master-sock))))
       (define (schedule-incoming-connection-event)
@@ -686,6 +722,7 @@ Options:
 	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
       (%socket-set-non-blocking master-sock)
       (px.setsockopt/linger master-sock #t 3)
+      #;(px.setsockopt/int master-sock SOL_SOCKET SO_REUSEADDR #t)
       (px.bind   master-sock sockaddr)
       (px.listen master-sock 10)
       master-sock))
