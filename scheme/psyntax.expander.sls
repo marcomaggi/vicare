@@ -3907,51 +3907,56 @@
       (lambda (stx)
 	(syntax-error 'with "syntax \"with\" out of context"))))))
 
-(define (with-compensations/on-error-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(let ((store (let ((stack '()))
-		      (case-lambda
-		       (()
-			stack)
-		       ((false/thunk)
-			(if false/thunk
-			    (set! stack (cons false/thunk stack))
-			  (set! stack '())))))))
-	 (parametrise ((compensations store))
-	   (with-exception-handler
-	       (lambda (E)
-		 (run-compensations-store store)
-		 (raise E))
-	     (lambda ()
-	       ,?body0 ,@?body*))))))
-    ))
+(module (with-compensations/on-error-macro
+	 with-compensations-macro)
 
-(define (with-compensations-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(let ((store (let ((stack '()))
-		      (case-lambda
-		       (()
-			stack)
-		       ((false/thunk)
-			(if false/thunk
-			    (set! stack (cons false/thunk stack))
-			  (set! stack '())))))))
-	 (parametrise ((compensations store))
-	   (begin0
-	       (with-exception-handler
-		   (lambda (E)
-		     (run-compensations-store store)
-		     (raise E))
-		 (lambda ()
-		   ,?body0 ,@?body*))
-	     ;;Better  run   the  cleanup   compensations  out   of  the
-	     ;;WITH-EXCEPTION-HANDLER.
-	     (run-compensations-store store))))))
-    ))
+  (define (with-compensations/on-error-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?body0 ?body* ...)
+       (bless
+	`(let ,(%make-store-binding)
+	   (parametrise ((compensations store))
+	     ,(%make-with-exception-handler ?body0 ?body*)))))
+      ))
+
+  (define (with-compensations-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?body0 ?body* ...)
+       (bless
+	`(let ,(%make-store-binding)
+	   (parametrise ((compensations store))
+	     (begin0
+		 ,(%make-with-exception-handler ?body0 ?body*)
+	       ;;Better  run  the  cleanup   compensations  out  of  the
+	       ;;WITH-EXCEPTION-HANDLER.
+	       (run-compensations-store store))))))
+      ))
+
+  (define (%make-store-binding)
+    '((store (let ((stack '()))
+	       (case-lambda
+		(()
+		 stack)
+		((false/thunk)
+		 (if false/thunk
+		     (set! stack (cons false/thunk stack))
+		   (set! stack '()))))))))
+
+  (define (%make-with-exception-handler body0 body*)
+    ;;We really have to close the handler upon the STORE function, it is
+    ;;wrong to access the COMPENSATIONS parameter from the handler.  The
+    ;;dynamic environment  is synchronised with continuations:  when the
+    ;;handler is called by  RAISE or RAISE-CONTINUABLE, the continuation
+    ;;is the one of the RAISE or RAISE-CONTINUABLE forms.
+    ;;
+    `(with-exception-handler
+	 (lambda (E)
+	   (run-compensations-store store)
+	   (raise E))
+       (lambda ()
+	 ,body0 ,@body*)))
+
+  #| end of module |# )
 
 (define (push-compensation-macro expr-stx)
   (syntax-match expr-stx ()
