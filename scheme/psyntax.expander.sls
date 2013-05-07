@@ -3872,7 +3872,7 @@
        ))))
 
 
-;;;; module non-core-macro-transformer: compensations
+;;;; module non-core-macro-transformer: UNWIND-PROTECT
 
 (define (unwind-protect-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
