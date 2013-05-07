@@ -3911,30 +3911,46 @@
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
      (bless
-      `(parametrise ((compensations '()))
-	 (with-exception-handler
-	     (lambda (E)
-	       (run-compensations)
-	       (raise E))
-	   (lambda ()
-	     ,?body0 ,@?body*)))))
+      `(let ((store (let ((stack '()))
+		      (case-lambda
+		       (()
+			stack)
+		       ((false/thunk)
+			(if false/thunk
+			    (set! stack (cons false/thunk stack))
+			  (set! stack '())))))))
+	 (parametrise ((compensations store))
+	   (with-exception-handler
+	       (lambda (E)
+		 (run-compensations-store store)
+		 (raise E))
+	     (lambda ()
+	       ,?body0 ,@?body*))))))
     ))
 
 (define (with-compensations-macro expr-stx)
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
      (bless
-      `(parametrise ((compensations '()))
-	 (begin0
-	     (with-exception-handler
-		 (lambda (E)
-		   (run-compensations)
-		   (raise E))
-	       (lambda ()
-		 ,?body0 ,@?body*))
-	   ;;Better   run  the   cleanup   compensations   out  of   the
-	   ;;WITH-EXCEPTION-HANDLER.
-	   (run-compensations)))))
+      `(let ((store (let ((stack '()))
+		      (case-lambda
+		       (()
+			stack)
+		       ((false/thunk)
+			(if false/thunk
+			    (set! stack (cons false/thunk stack))
+			  (set! stack '())))))))
+	 (parametrise ((compensations store))
+	   (begin0
+	       (with-exception-handler
+		   (lambda (E)
+		     (run-compensations-store store)
+		     (raise E))
+		 (lambda ()
+		   ,?body0 ,@?body*))
+	     ;;Better  run   the  cleanup   compensations  out   of  the
+	     ;;WITH-EXCEPTION-HANDLER.
+	     (run-compensations-store store))))))
     ))
 
 (define (push-compensation-macro expr-stx)
@@ -3945,6 +3961,9 @@
     ))
 
 (define (compensate-macro expr-stx)
+  (define who 'compensate)
+  (define (%synner message subform)
+    (syntax-violation who message expr-stx subform))
   (syntax-match expr-stx ()
     ((_ ?alloc0 ?form* ...)
      (let ()
@@ -3952,13 +3971,17 @@
        (define alloc*
 	 (let recur ((form-stx ?form*))
 	   (syntax-match form-stx (with)
-	     (()
-	      (syntax-violation 'compensate "invalid compensation syntax" expr-stx))
-
 	     (((with ?release0 ?release* ...))
 	      (begin
 		(set! free `(push-compensation ,?release0 ,@?release*))
 		'()))
+
+	     (()
+	      (%synner "invalid compensation syntax: missing WITH keyword" form-stx))
+
+	     (((with))
+	      (%synner "invalid compensation syntax: empty WITH keyword"
+		       (bless '(with))))
 
 	     ((?alloc ?form* ...)
 	      (cons ?alloc (recur ?form*)))

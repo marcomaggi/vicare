@@ -2031,8 +2031,9 @@
     (compensate					i v $language)
     (with					i v $language)
     (push-compensation				i v $language)
-    (compensations				i v $language)
     (run-compensations				i v $language)
+    (compensations)
+    (run-compensations-store)
     (push-compensation-thunk			i v $language)
 ;;;
     (port-id					i v $language)

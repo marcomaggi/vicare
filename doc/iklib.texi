@@ -484,6 +484,19 @@ with the compensations stack such code can be written:
     (make-use-of port)))
 @end example
 
+@noindent
+or:
+
+@example
+(with-compensations
+  (define port
+    (compensate
+        (open-file-input-port "/tmp/proof.1")
+      (with
+        (close-port port))))
+  (make-use-of port))
+@end example
+
 Compensation forms are embedded in a closure and pushed on a stack, so
 that, in case of error, it is possible to evaluate them in
 allocation--reversed order.
@@ -675,12 +688,6 @@ compensations stack.
 @defun push-compensation-thunk @var{thunk}
 Push the given thunk on the current compensations stack.
 @end defun
-
-
-@deffn Parameter compensations
-Holds the stack of compensation thunks.  This parameter is exposed in
-the public @api{} for debugging purposes, we should never mess with it.
-@end deffn
 
 @c page
 @node iklib conditions

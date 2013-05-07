@@ -30,34 +30,62 @@
   (export
     compensations
     run-compensations
+    run-compensations-store
     push-compensation-thunk)
   (import (except (ikarus)
 		  compensations
 		  run-compensations
 		  push-compensation-thunk))
 
+  (define %invalid-compensations-store
+    (case-lambda
+     (()
+      (assertion-violation 'compensations
+	"attempt to retrieve compensations outside of compensations environment"))
+     ((false/compensation-thunk)
+      (assertion-violation 'compensations
+	"attempt to register compensation outside of compensations environment"))))
+
+  ;;References a function which:
+  ;;
+  ;;*  When  called  with  no  arguments returns  the  list  of  current
+  ;;compensation thunks.
+  ;;
+  ;;* When called with a #f argument: resets to null the list of current
+  ;;compensation thunks.
+  ;;
+  ;;*  When called  with a  thunk  argument: pushes  it on  the list  of
+  ;;compensation thunks.
+  ;;
   (define compensations
-    (make-parameter #f))
+    (make-parameter %invalid-compensations-store))
 
   (define (run-compensations)
+    ;;Run the compensations in the current compensations store.
+    ;;
+    (run-compensations-store (compensations)))
+
+  (define (run-compensations-store store)
+    ;;Run  the  compensations  in  the  STORE, which  must  be  a  store
+    ;;function.  After running reset the compensations stack to empty.
+    ;;
     (guard (E (else
-	       (assertion-violation 'run-compensations
+	       (assertion-violation 'run-compensations-store
 		 "expected null or proper list in compensations parameter"
-		 (compensations))))
+		 (store))))
       (for-each-in-order
 	  (lambda (closure)
 	    (guard (E (else #f))
 	      (closure)))
-	(compensations)))
-    (compensations '())
+	(store)))
+    (store #f)
     (void))
 
-  (define (push-compensation-thunk thunk)
-    (define who 'push-compensation-thunk)
-    (assert (procedure? thunk))
-    (if (compensations)
-	(compensations (cons thunk (compensations)))
-      (error who "attempt to push compensation thunk out of context" thunk)))
+  (define (push-compensation-thunk compensation-thunk)
+    ;;Push a compensation thunk on the current store.
+    ;;
+    (assert (procedure? compensation-thunk))
+    ((compensations) compensation-thunk))
 
   #| end of library |# )
 
