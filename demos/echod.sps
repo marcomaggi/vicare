@@ -86,11 +86,12 @@
       (logging		#t)
       (sel.logging	log)
       (options		(make-<global-options> argv))
-      (when (options.daemonise?)
-	(daemonise))
       (with-compensations
 	(%main.open-log-file/c)
 	(%main.log-server-start)
+	;;First daemonise, then open the PID file.
+	(when (options.daemonise?)
+	  (daemonise))
 	(%main.open-pid-file/c)
 	(%main.enter-event-loop)
 	(log "exiting ECHO server"))
@@ -102,9 +103,7 @@
     (compensate
 	(open-log-file options.log-file)
       (with
-       (guard (E (else
-		  #;(debug-print E)
-		  (void)))
+       (guard (E (else (void)))
 	 (when (root-server?)
 	   (close-log-file))))))
 
@@ -113,8 +112,8 @@
     (compensate
 	(create-pid-file options.pid-file log)
       (with
-       (guard (E (else
-		  (debug-print E)))
+       (guard-log-raise
+	   (condition-message "error removing PID file: ~a")
 	 (when (root-server?)
 	   (remove-pid-file))))))
 
@@ -267,7 +266,8 @@
    open-log-file
    close-log-file
    log
-   log-condition-message)
+   log-condition-message
+   guard-log-raise)
 
   ;;False or a textual output port to which log messages must be written.
   ;;
@@ -347,7 +347,16 @@
 		      (condition-message cnd)
 		    "unknown error")))
 
+  (define-syntax guard-log-raise
+    (syntax-rules (condition-message)
+      ((_ (condition-message ?template) ?body0 ?body ...)
+       (guard (E (else
+		  (log-condition-message ?template E)
+		  (raise E)))
+	 ?body0 ?body ...))))
+
 ;;; --------------------------------------------------------------------
+;;; private stuff
 
   (define (%format-and-print port template args)
     ;;Format a  line of text and  display it to the  given textual port.
@@ -391,6 +400,14 @@
 		      (condition-message cnd)
 		    "unknown error")))
 
+  (define-syntax guard-log-raise
+    (syntax-rules (condition-message)
+      ((_ (condition-message ?template) ?body0 ?body ...)
+       (guard (E (else
+		  (log-condition-message ?template E)
+		  (raise E)))
+	 ?body0 ?body ...))))
+
 ;;; --------------------------------------------------------------------
 
   (define (create-pid-file ptn-thunk log-func)
@@ -421,8 +438,8 @@
     (define pid-file ((pathname-thunk)))
     (when (and pid-file (file-exists? pid-file))
       (log "removing PID file: ~a" ((pathname-thunk)))
-      (guard (E (else
-		 (log-condition-message "error removing pid file: ~a" E)))
+      (guard-log-raise
+	  (condition-message "error removing pid file: ~a")
 	(with-input-from-file pid-file
 	  (lambda ()
 	    (unless (string=? (string-append (number->string (px.getpid)) "\n")
@@ -445,10 +462,8 @@
     ;;while doing it.
     ;;
     (import LOGGING)
-    (guard (E (else
-	       #;(debug-print E)
-	       (log-condition-message "while daemonising server: ~a" E)
-	       (raise E)))
+    (guard-log-raise
+	(condition-message "while daemonising server: ~a")
       (with-compensations
 	(compensate
 	    (px.signal-bub-init)
@@ -649,6 +664,12 @@ Options:
     ;;socket bound  to the  given interface  and enter  the SEL  loop to
     ;;accept incoming connections.  Return unspecified values.
     ;;
+    ;;INTERFACE must  be a string  representing the server  interface to
+    ;;bind to; for example "localhost".
+    ;;
+    ;;PORT  must be  an exact  integer representing  the server  port to
+    ;;listen to; for example 8081.
+    ;;
     ;;OPTIONS-SET must be an ENUM-SET  of type SERVER-OPTION; it is used
     ;;to configure the server loop.
     ;;
@@ -656,9 +677,8 @@ Options:
     (with-compensations
       (define master-sock
 	(compensate
-	    (guard (E (else
-		       (log-condition-message "while creating master socket: ~a" E)
-		       (raise E)))
+	    (guard-log-raise
+		(condition-message "while creating master socket: ~a")
 	      (net.make-master-sock interface port))
 	  (with
 	   (net.close-master-sock master-sock))))
@@ -686,10 +706,8 @@ Options:
     ;;server socket, enter the procedure that handles incoming data.
     ;;
     (import NETWORKING LOGGING)
-    (guard (E (else
-	       #;(debug-print E)
-	       (log-condition-message "while accepting connection: ~a" E)
-	       (raise E)))
+    (guard-log-raise
+	(condition-message "while accepting connection: ~a")
       (receive (server-sock server-port client-address)
 	  (net.make-server-sock master-sock)
 	(sel.readable server-sock
@@ -718,11 +736,17 @@ Options:
     ;;and bind it  to the interface and port.  Return  the master socket
     ;;descriptor.
     ;;
+    ;;INTERFACE must  be a string  representing the server  interface to
+    ;;bind to; for example "localhost".
+    ;;
+    ;;PORT  must be  an exact  integer representing  the server  port to
+    ;;listen to; for example 8081.
+    ;;
     (let ((sockaddr    (%make-sockaddr interface (number->string port)))
 	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
       (%socket-set-non-blocking master-sock)
-      (px.setsockopt/linger master-sock #t 3)
-      #;(px.setsockopt/int master-sock SOL_SOCKET SO_REUSEADDR #t)
+      (px.setsockopt/linger master-sock #t 1)
+      (px.setsockopt/int    master-sock SOL_SOCKET SO_REUSEADDR #t)
       (px.bind   master-sock sockaddr)
       (px.listen master-sock 10)
       master-sock))
@@ -813,33 +837,32 @@ Options:
   (import LOGGING NETWORKING (prefix (vicare net channels) chan.))
 
   (define (proto.start-session server-sock server-port client-address)
-    (guard (E (else
-	       #;(debug-print E)
-	       (log-condition-message "while starting session: ~a" E)
-	       (raise E)))
+    (guard-log-raise
+	(condition-message "while starting session: ~a")
       (define connection-id
 	(gensym->unique-string (gensym)))
-      (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
-	     (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
-	     (remote-port         (px.sockaddr_in.in_port client-address))
-	     (remote-port.str     (number->string remote-port)))
-	(log "accepted connection from: ~a:~a, connection-id=~a"
-	     remote-address.str remote-port.str connection-id))
+      (%log-accepted-connection client-address connection-id)
       (let ((chan (chan.open-input/output-channel server-port)))
 	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
 	(%send-message chan '(#ve(ascii "Vicare ECHO daemon.\r\n")))
 	(chan.channel-recv-begin! chan)
 	(%process-incoming-data server-sock server-port chan connection-id))))
 
+  (define (%log-accepted-connection client-address connection-id)
+    (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
+	   (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
+	   (remote-port         (px.sockaddr_in.in_port client-address))
+	   (remote-port.str     (number->string remote-port)))
+      (log "accepted connection from: ~a:~a, connection-id=~a"
+	   remote-address.str remote-port.str connection-id)))
+
   (define (%process-incoming-data server-sock server-port chan connection-id)
     (define (%reschedule)
       (sel.readable server-sock
 		    (lambda ()
 		      (%process-incoming-data server-sock server-port chan connection-id))))
-    (guard (E (else
-	       #;(debug-print E)
-	       (log-condition-message "while processing incoming data: ~a" E)
-	       (raise E)))
+    (guard-log-raise
+	(condition-message "while processing incoming data: ~a")
       (cond ((chan.channel-recv-message-portion! chan)
 	     => (lambda (dummy)
 		  (let* ((data.bv  (chan.channel-recv-end! chan))
@@ -901,7 +924,9 @@ Options:
     (sel.receive-signal SIGQUIT %sigquit-handler)
     (sel.receive-signal SIGINT  %sigint-handler)
     (sel.receive-signal SIGTSTP %sigtstp-handler)
-    (sel.receive-signal SIGCONT %sigcont-handler))
+    (sel.receive-signal SIGCONT %sigcont-handler)
+    (sel.receive-signal SIGUSR1 %sigusr1-handler)
+    (sel.receive-signal SIGUSR2 %sigusr2-handler))
 
   (define (%sigterm-handler)
     (import LOGGING)
@@ -910,7 +935,21 @@ Options:
     (sel.leave-asap))
 
   (define (%sigquit-handler)
-    ;;SIGQUIT comes from Ctrl-\.
+    ;;SIGQUIT comes from Ctrl-\.  The documentation of the GNU C Library
+    ;;has this to say about SIGQUIT:
+    ;;
+    ;;   The SIGQUIT  signal  is  similar to  SIGINT,  except that  it's
+    ;;  controlled by  a different key and produces a  core dump when it
+    ;;  terminates the  process, just like a program  error signal.  You
+    ;;  can think of this as a program error condition "detected" by the
+    ;;  user.
+    ;;
+    ;;  Certain kinds of cleanups  are best omitted in handling SIGQUIT.
+    ;;  For example,  if the program creates temporary  files, it should
+    ;;  handle the other termination  requests by deleting the temporary
+    ;;  files.  But it is better for SIGQUIT not to delete them, so that
+    ;;  the user can examine them in conjunction with the core dump.
+    ;;
     (import LOGGING)
     (sel.receive-signal SIGQUIT %sigquit-handler)
     (log "received SIGQUIT")
@@ -924,27 +963,45 @@ Options:
     (sel.leave-asap))
 
   (define (%sigtstp-handler)
-    ;;SIGTSTP  comes from  Ctrl-Z.   We should  put  some program  state
-    ;;cleanup in this  handler.  Finally we send ourselves  a SIGSTOP to
-    ;;suspend the process.
+    ;;SIGTSTP  comes from  Ctrl-Z.   We should  put  some process  state
+    ;;suspension  finalisation   in  this  handler.   Finally   we  send
+    ;;ourselves a SIGSTOP to suspend the process.
     (import LOGGING)
-    (guard (E (else
-	       (log "error in SIGTSTP handler: ~s\n" E)
-	       (exit 1)))
+    (guard-log-raise
+	(condition-message "error in SIGTSTP handler: ~a")
       (sel.receive-signal SIGTSTP %sigtstp-handler)
       (log "received SIGTSTP")
       (px.kill (px.getpid) SIGSTOP)))
 
   (define (%sigcont-handler)
     ;;SIGCONT comes from the controlling process and allows us to resume
-    ;;the program.   We should put  some state reinitialisation  in this
-    ;;handler.
+    ;;the program.  We should put some process state reinitialisation in
+    ;;this handler.
     (import LOGGING)
-    (guard (E (else
-	       (log "error in SIGCONT handler: ~s\n" E)
-	       (exit 1)))
+    (guard-log-raise
+	(condition-message "error in SIGCONT handler: ~a")
       (sel.receive-signal SIGCONT %sigcont-handler)
       (log "received SIGCONT")))
+
+  (define (%sigusr1-handler)
+    ;;SIGUSR1  is  explicitly  sent  by  someone  to  perform  a  custom
+    ;;procedure.
+    ;;
+    (import LOGGING)
+    (guard-log-raise
+	(condition-message "error in SIGUSR1 handler: ~a")
+      (sel.receive-signal SIGUSR1 %sigusr1-handler)
+      (log "received SIGUSR1")))
+
+  (define (%sigusr2-handler)
+    ;;SIGUSR2  is  explicitly  sent  by  someone  to  perform  a  custom
+    ;;procedure.
+    ;;
+    (import LOGGING)
+    (guard-log-raise
+	(condition-message "error in SIGUSR2 handler: ~a")
+      (sel.receive-signal SIGUSR2 %sigusr2-handler)
+      (log "received SIGUSR2")))
 
   #| end of module: INTERPROCESS-SIGNALS |# )
 
@@ -990,3 +1047,6 @@ Options:
 (main (command-line))
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'guard-log-raise 'scheme-indent-function 1)
+;; End:
