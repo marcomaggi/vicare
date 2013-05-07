@@ -9,7 +9,7 @@
 ;;;	This event  loop implementation is inspired  by the architecture
 ;;;	of the event loop of Tcl, <http://www.tcl.tk>.
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -50,46 +50,35 @@
     task-fragment		do-one-task-event)
   (import (vicare)
     (prefix (vicare posix) px.)
-    (prefix (vicare unsafe operations) unsafe.)
+    (prefix (vicare unsafe operations) $)
     (vicare language-extensions syntaxes)
-    (vicare platform constants))
+    (vicare arguments validation)
+    (vicare platform constants)
+    (vicare platform utilities))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
 (define-argument-validation (port/file-descriptor who obj)
-  (or (and (port? obj) (port-fd obj)) (%file-descriptor? obj))
+  (or (and (port? obj)
+	   (port-fd obj))
+      (px.file-descriptor? obj))
   (assertion-violation who "expected port or fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signum who obj)
   (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj NSIG))
+       ($fx>= obj 0)
+       ($fx<= obj NSIG))
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 
 ;;;; helpers
-
-(define-inline (%file-descriptor? obj)
-  ;;Do  what   is  possible  to  recognise   fixnums  representing  file
-  ;;descriptors.
-  ;;
-  (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<  obj FD_SETSIZE)))
 
 (define-syntax %catch
   (syntax-rules ()
     ((_ . ?body)
      (guard (E (else #f))
        . ?body))))
-
-(define-inline (%fxincr! ?fxvar)
-  (set! ?fxvar (unsafe.fxadd1 ?fxvar)))
 
 (define logging
   (make-parameter #f
@@ -101,7 +90,7 @@
 
 (define (%log template . args)
   (when (logging)
-    (let ((line (string-append "vicare SEL: " (apply format template args))))
+    (let ((line (string-append "Vicare SEL: " (apply format template args))))
       (if (procedure? (logging))
 	  ((logging) line)
 	(let ((port (current-error-port)))
@@ -283,14 +272,15 @@
 (define (serve-interprocess-signals)
   (px.signal-bub-acquire)
   (for-each (lambda (signum)
-	      (%log "start evaluation of signal handler for ~a" signum)
+	      (define signame (posix-signal->symbol signum))
+	      (%log "start evaluation of signal handler for ~a" signame)
 	      (with-event-sources (SOURCES)
-		(let ((handlers (unsafe.vector-ref SOURCES.signal-handlers signum)))
-		  (unsafe.vector-set! SOURCES.signal-handlers signum '())
+		(let ((handlers ($vector-ref SOURCES.signal-handlers signum)))
+		  ($vector-set! SOURCES.signal-handlers signum '())
 		  (for-each (lambda (thunk)
 			      (%catch (thunk)))
 		    handlers)))
-	      (%log "finished evaluation of signal handler for ~a" signum))
+	      (%log "finished evaluation of signal handler for ~a" signame))
     (px.signal-bub-all-delivered)))
 
 (define (receive-signal signum handler-thunk)
@@ -299,9 +289,9 @@
       ((signum		signum)
        (procedure	handler-thunk))
     (with-event-sources (SOURCES)
-      (unsafe.vector-set! SOURCES.signal-handlers signum
+      ($vector-set! SOURCES.signal-handlers signum
 			  (cons handler-thunk
-				(unsafe.vector-ref SOURCES.signal-handlers signum))))))
+				($vector-ref SOURCES.signal-handlers signum))))))
 
 
 ;;;; file descriptor events
@@ -345,15 +335,15 @@
       (set! SOURCES.fds.rev-head '()))
     (if (null? SOURCES.fds.tail)
 	#f
-      (if (unsafe.fx< SOURCES.fds.count SOURCES.fds.watermark)
-	  (let ((E (unsafe.car SOURCES.fds.tail)))
-	    (set! SOURCES.fds.tail (unsafe.cdr SOURCES.fds.tail))
+      (if ($fx< SOURCES.fds.count SOURCES.fds.watermark)
+	  (let ((E ($car SOURCES.fds.tail)))
+	    (set! SOURCES.fds.tail ($cdr SOURCES.fds.tail))
 	    (if (%catch ((fd-entry-query E)))
 		(guard (E (else
 			   ;;;(pretty-print E (current-error-port))
 			   #f))
 		  ((fd-entry-handler E))
-		  (%fxincr! SOURCES.fds.count)
+		  ($fxincr! SOURCES.fds.count)
 		  #t)
 	      (begin
 		(set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
@@ -419,10 +409,10 @@
 		port/fd)))
       (with-event-sources (SOURCES)
 	(set! SOURCES.fds.tail (remp (lambda (E)
-				       (unsafe.fx= fd (fd-entry-fd E)))
+				       ($fx= fd (fd-entry-fd E)))
 				 SOURCES.fds.tail))
 	(set! SOURCES.fds.rev-head (remp (lambda (E)
-					   (unsafe.fx= fd (fd-entry-fd E)))
+					   ($fx= fd (fd-entry-fd E)))
 				     SOURCES.fds.rev-head))))))
 
 
@@ -454,8 +444,8 @@
       (set! SOURCES.tasks.rev-head '()))
     (if (null? SOURCES.tasks.tail)
 	#f
-      (let ((thunk (unsafe.car SOURCES.tasks.tail)))
-	(set! SOURCES.tasks.tail (unsafe.cdr SOURCES.tasks.tail))
+      (let ((thunk ($car SOURCES.tasks.tail)))
+	(set! SOURCES.tasks.tail ($cdr SOURCES.tasks.tail))
 	(let ((rv (thunk)))
 	  (when rv
 	    (set! SOURCES.tasks.rev-head (cons rv SOURCES.tasks.rev-head)))
