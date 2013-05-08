@@ -71,7 +71,9 @@
 (module (main)
 
   (define (main argv)
-    (import LOGGING DAEMONISATION)
+    (import LOGGING DAEMONISATION
+	    (prefix (vicare posix pid-files)
+		    pidfile.))
     ;;We catch the exceptions to exit with an error status.  If we catch
     ;;an exception here: we cannot log a message because we have already
     ;;closed the log file.
@@ -83,12 +85,17 @@
     (guard (E (else (exit 1)))
       ;;Set configuration  parameters; it is useless  to use PARAMETRISE
       ;;here.
-      (logging		#t)
       (sel.logging	log)
-      (options		(make-<global-options> argv))
+      (options
+       (guard (E (else
+		  (error-message-and-exit 1 "parsing options: ~a" (condition-message E))))
+	 (make-<global-options> argv)))
+      (logging (options.log-file))
+      (pidfile.pid-pathname  (options.pid-file))
+      (pidfile.log-procedure log)
       (with-compensations
 	(%main.open-log-file/c)
-	(%main.log-server-start)
+	(%main.log-server-start-messages)
 	;;First daemonise, then open the PID file.
 	(when (options.daemonise?)
 	  (daemonise))
@@ -101,23 +108,28 @@
   (define (%main.open-log-file/c)
     (import LOGGING)
     (compensate
-	(open-log-file options.log-file)
+	(guard (E (else
+		   (error-message-and-exit 1 "opening log file: ~a" (condition-message E))))
+	  (open-log-file options.log-file))
       (with
        (guard (E (else (void)))
 	 (when (root-server?)
 	   (close-log-file))))))
 
   (define (%main.open-pid-file/c)
-    (import LOGGING PID-FILE)
+    ;;Create the PID file, if requested, and push a compensation for its
+    ;;removal.  When this  function is called: the log  facility must be
+    ;;already set up and running; error messages are logged.
+    ;;
+    (import (prefix (vicare posix pid-files)
+		    pidfile.))
     (compensate
-	(create-pid-file options.pid-file log)
+	(pidfile.create-pid-file)
       (with
-       (guard-log-raise
-	   (condition-message "error removing PID file: ~a")
-	 (when (root-server?)
-	   (remove-pid-file))))))
+       (when (root-server?)
+	 (pidfile.remove-pid-file)))))
 
-  (define (%main.log-server-start)
+  (define (%main.log-server-start-messages)
     (import LOGGING)
     (let ((pid (px.getpid)))
       (log-prefix (format "vicare echod[~a]: " pid))
@@ -152,10 +164,11 @@
 		;to.  Defaults to 8081.
 	  (mutable pid-file)
 		;False or a string representing  the pathname of the PID
-		;file.
+		;file.  When false: no PID file is created.
 	  (mutable log-file)
 		;False or a string representing  the pathname of the log
-		;file.
+		;file.   As  special case:  if  the  string is  "-"  log
+		;messages should go to stderr.
 	  (mutable daemonise?)
 		;Boolean, true if the server must be daemonised.
 	  (mutable server-loop-config)
@@ -242,9 +255,18 @@
   ($<global-options>-server-port (options)))
 
 (define (options.pid-file)
+  ;;Return false if no PID file must be created.  Return a string if the
+  ;;PID file must be created; the  string represents the pathname of the
+  ;;PID file.
+  ;;
   ($<global-options>-pid-file (options)))
 
 (define (options.log-file)
+  ;;Return  false if  logging  must  be disabled.   Return  a string  if
+  ;;logging must be  enabled; the string represents the  pathname of the
+  ;;log file; as special case: if  the string is "-" log messages should
+  ;;go to stderr.
+  ;;
   ($<global-options>-log-file (options)))
 
 (define (options.verbosity)
@@ -268,6 +290,13 @@
    log
    log-condition-message
    guard-log-raise)
+
+  ;;Boolean; true if logging is enabled, false otherwise.
+  ;;
+  (define logging
+    (make-parameter #f
+      (lambda (obj)
+	(if obj #t #f))))
 
   ;;False or a textual output port to which log messages must be written.
   ;;
@@ -324,13 +353,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;Boolean; true if logging is enabled, false otherwise.
-  ;;
-  (define logging
-    (make-parameter #f
-      (lambda (obj)
-	(if obj #t #f))))
-
   (define (log template . args)
     ;;If  logging is  enabled: format  a log  line and  write it  to the
     ;;current log port.  Return unspecified values.
@@ -367,89 +389,6 @@
     (newline port))
 
   #| end of module: LOGGING |# )
-
-
-;;;; PID file handling
-
-(module PID-FILE
-  (create-pid-file remove-pid-file)
-
-  (define pathname-thunk
-    ;;It must be  set to a thunk returning a  Scheme string representing
-    ;;the PID file pathname, or false if no PID file must be created.
-    ;;
-    (make-parameter #f
-      (lambda (obj)
-	(assert (procedure? obj))
-	obj)))
-
-  (define log-proc
-    ;;It must be  set to a function accepting  FORMAT-like arguments and
-    ;;logging the result.
-    ;;
-    (make-parameter #f
-      (lambda (obj)
-	(assert (procedure? obj))
-	obj)))
-
-  (define (log template . args)
-    (apply (log-proc) template args))
-
-  (define (log-condition-message template cnd)
-    (log template (if (message-condition? cnd)
-		      (condition-message cnd)
-		    "unknown error")))
-
-  (define-syntax guard-log-raise
-    (syntax-rules (condition-message)
-      ((_ (condition-message ?template) ?body0 ?body ...)
-       (guard (E (else
-		  (log-condition-message ?template E)
-		  (raise E)))
-	 ?body0 ?body ...))))
-
-;;; --------------------------------------------------------------------
-
-  (define (create-pid-file ptn-thunk log-func)
-    ;;Create the  PID file and  write the PID  number in it,  followed a
-    ;;newline.  Fail raising an exception if the file already exists.
-    ;;
-    (define who 'create-pid-file)
-    (pathname-thunk ptn-thunk)
-    (log-proc log-func)
-    (let ((pid-file ((pathname-thunk))))
-      (when pid-file
-	(if (file-exists? pid-file)
-	    (begin
-	      (log "selected PID file pathname already exists: ~a" pid-file)
-	      (error who "selected PID file pathname already exists" pid-file))
-	  (begin
-	    (log "creating PID file: ~a" ((pathname-thunk)))
-	    (with-output-to-file pid-file
-	      (lambda ()
-		(display (px.getpid))
-		(newline))))))))
-
-  (define (remove-pid-file)
-    ;;Remove  the PID  file.  Fail  if  the selected  pathname does  not
-    ;;contain this process' PID followed by  a newline.  If the PID file
-    ;;does not exists: do nothing.
-    ;;
-    (define pid-file ((pathname-thunk)))
-    (when (and pid-file (file-exists? pid-file))
-      (log "removing PID file: ~a" ((pathname-thunk)))
-      (guard-log-raise
-	  (condition-message "error removing pid file: ~a")
-	(with-input-from-file pid-file
-	  (lambda ()
-	    (unless (string=? (string-append (number->string (px.getpid)) "\n")
-			      ;;A valid PID file  does not contain a lot
-			      ;;of characters; let's say 16 at most.
-			      (get-string-n (current-input-port) 16))
-	      (error #f "corrupted PID file contents, avoiding removal"))))
-	(delete-file pid-file))))
-
-  #| end of module: PID-FILE |# )
 
 
 ;;;; process daemonisation
@@ -518,27 +457,42 @@
   (define-constant HELP-SCREEN
     "Usage: echod.sps [vicare options] -- [options]
 Options:
-   -I IFACE, --interface IFACE
+   -I IFACE
+   --interface IFACE
 \tSelect the server interface to bind to.
-   -P PORT, --port PORT
+
+   -P PORT
+   --port PORT
 \tSelect the server port to listen to (1...65535)
+
    --pid-file /path/to/pid-file
-\tSelect the pathname for the PID file.
+\tSelect the pathname for the PID file.  When not given
+\tno PID file is created.
+
    --log-file /path/to/log-file
 \tSelect the pathname for the log file.  Use \"-\" to log
-\ton the error port.
+\ton the error port.  When not given no log file is created.
+
    --daemon
 \tTurn the server process into a daemon.
+
    --dry-run
 \tCreate the master socket, bind it to the interface, then
 \tshut it down and exit.
-   -V, --version
+
+   -V
+   --version
 \tPrint version informations and exit.
+
    --version-only
 \tPrint version number only and exit.
-   -v, --verbose
+
+   -v
+   --verbose
 \tPrint verbose messages.
-   -h, --help
+
+   -h
+   --help
 \tPrint this help screen and exit.\n")
 
   (define-constant VERSION-SCREEN
