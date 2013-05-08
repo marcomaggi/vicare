@@ -5492,7 +5492,7 @@ prefixing the bindings as follows:
 
 @example
 (import (prefix (vicare posix pid-files)
-                pid-file.))
+                pidfile.))
 @end example
 
 @menu
@@ -5507,28 +5507,30 @@ prefixing the bindings as follows:
 @subsection Introduction to @acronym{PID} files
 
 
-The @acronym{PID} file is a textual file in @ascii{} encoding created at
-start time and deleted at exit time; it contains a string representing
-the @acronym{PID} number of the current process followed by a newline
-character.
+A @acronym{PID} file is a textual file in @ascii{} encoding created at
+process start time and deleted at process exit time; it contains a
+string representing the @acronym{PID} number of the current process
+followed by a newline character.
 
 The @acronym{PID} file is especially useful whenever a server is
 executed as daemon: it allows for quick retrieval of the @acronym{PID}
-number, which can be used to send interprocess signals to the daemon,
-for example to shut it down, or to restart it, or to update its
-configuration, or whatever.
+number, which can be used to send interprocess signals to the daemon;
+for example: to shut it down, to restart it, to update its
+configuration.
 
 When a @acronym{PID} file is used: the creator process should refuse to
 start if the @acronym{PID} file already exists, because it may mean that
 a program instance is already in execution.
 
-The @acronym{PID} file must be created after the daemonisation process
-has completed: this way we correctly store the @acronym{PID} of the
-daemon process, rather than the @acronym{PID} of the starting process.
+The @acronym{PID} file must be created after a server daemonisation
+process has completed: this way we correctly store the @acronym{PID} of
+the daemon process, rather than the @acronym{PID} of the starting
+process.
 
-Logging operations related to the @acronym{PID} file rely on the
-function referenced by an internal parameter; we just need to configure
-this parameter with an appropriate function.
+All the operations performed by this library are logged.  Logging
+operations related to the @acronym{PID} file rely on the function
+referenced by an internal parameter; we just need to configure this
+parameter with an appropriate function.
 
 @c page
 @node posix pid-files config
@@ -5547,7 +5549,7 @@ then changing the current process directory.  When set to @false{}: no
 @end deffn
 
 
-@deffn file-existence-procedure
+@deffn Parameter file-existence-procedure
 Hold a function that tests @acronym{PID} file existence.  It is
 initialised to @file{file-exists?}.
 @end deffn
@@ -5611,12 +5613,6 @@ pid-files}.
 If requested: create the @acronym{PID} file and write the @acronym{PID}
 number in it, followed a newline.  Return unspecified values.
 
-The file pathname is retrieved from the parameter @func{pid-pathname}.
-The file existence is tested using the procedure referenced by the
-parameter @func{file-existence-procedure}.  The file is created using
-the procedure referenced by the parameter
-@func{textual-contents-writing-procedure}.
-
 This function makes use of the following parameters:
 
 @table @func
@@ -5649,7 +5645,7 @@ the underlying procedure.
 
 @defun remove-pid-file
 Remove the @acronym{PID} file, if any; if @acronym{PID} file use is
-disable: do nothing.  Return unspecified values.
+disabled: do nothing.  Return unspecified values.
 
 This function makes use of the following parameters:
 
@@ -5748,11 +5744,11 @@ Return @true{} if @var{obj} is an instance of
 
 
 @deftp {Condition Type} &pid-file-already-exists
-Base condition type used to tag compound condition objects as
-@acronym{PID} file ``already exists'' errors: it must be used whenever
-upon attempting to create a @acronym{PID} file, a file with the selected
-pathname already exists.  It is derived from @condition{pid-file-error}.
-It has no fields.
+Condition type used to tag compound condition objects as ``@acronym{PID}
+file already exists'' errors: it must be used whenever, upon attempting
+to create a @acronym{PID} file, a file with the selected pathname
+already exists.  It is derived from @condition{pid-file-error}.  It has
+no fields.
 @end deftp
 
 
@@ -5773,9 +5769,9 @@ Return @true{} if @var{obj} is an instance of
 
 
 @deftp {Condition Type} &pid-file-missing
-Base condition type used to tag compound condition objects as
-@acronym{PID} file ``missing'' errors: it must be used whenever the
-@acronym{PID} file does not exist but it should.  It is derived from
+Condition type used to tag compound condition objects as ``@acronym{PID}
+file missing'' errors: it must be used whenever the @acronym{PID} file
+does not exist but it should.  It is derived from
 @condition{pid-file-error}.  It has no fields.
 @end deftp
 
@@ -5797,9 +5793,9 @@ Return @true{} if @var{obj} is an instance of
 
 
 @deftp {Condition Type} &pid-file-creation
-Base condition type used to tag compound condition objects as
-@acronym{PID} file ``creation'' errors: it must be used whenever an
-error occurs while creating a @acronym{PID} file.  It is derived from
+Condition type used to tag compound condition objects as ``@acronym{PID}
+file creation'' errors: it must be used whenever an error occurs while
+creating a @acronym{PID} file.  It is derived from
 @condition{pid-file-error}.  It has no fields.
 @end deftp
 
@@ -5821,9 +5817,9 @@ Return @true{} if @var{obj} is an instance of
 
 
 @deftp {Condition Type} &pid-file-removal
-Base condition type used to tag compound condition objects as
-@acronym{PID} file ``removal'' errors: it must be used whenever an
-error occurs while creating a @acronym{PID} file.  It is derived from
+Condition type used to tag compound condition objects as ``@acronym{PID}
+file removal'' errors: it must be used whenever an error occurs while
+removing a @acronym{PID} file.  It is derived from
 @condition{pid-file-error}.  It has no fields.
 @end deftp
 
@@ -5845,9 +5841,9 @@ Return @true{} if @var{obj} is an instance of
 
 
 @deftp {Condition Type} &pid-file-invalid-contents
-Base condition type used to tag compound condition objects as
-@acronym{PID} file ``invalid contents'' errors: it must be used whenever
-the @acronym{PID} file does not contain the @acronym{PID} of the current
+Condition type used to tag compound condition objects as ``@acronym{PID}
+file invalid contents'' errors: it must be used whenever the
+@acronym{PID} file does not contain the @acronym{PID} of the current
 process.  It is derived from @condition{pid-file-error}.  It has no
 fields.
 @end deftp
