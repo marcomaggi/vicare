@@ -30,7 +30,7 @@
   (prefix (vicare posix)
 	  px.)
   (prefix (vicare posix pid-files)
-	  pid-file.)
+	  pidfile.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -40,16 +40,16 @@
 ;;; helpers
 
 (define (clean-pid-file)
-  (when (and (pid-file.pid-pathname)
-	     (file-exists? (pid-file.pid-pathname)))
-    (delete-file (pid-file.pid-pathname))))
+  (when (and (pidfile.pid-pathname)
+	     (file-exists? (pidfile.pid-pathname)))
+    (delete-file (pidfile.pid-pathname))))
 
 (define (read-pid-file)
-  ((pid-file.textual-contents-reading-procedure)
-   (pid-file.pid-pathname)))
+  ((pidfile.textual-contents-reading-procedure)
+   (pidfile.pid-pathname)))
 
 (define (pid-file-exists?)
-  (file-exists? (pid-file.pid-pathname)))
+  (file-exists? (pidfile.pid-pathname)))
 
 (define (log-procedure template . args)
   (add-result (apply format template args)))
@@ -63,56 +63,56 @@
   (check	;creation and removal
       (with-result
        (parametrise
-	   ((pid-file.pid-pathname "./pid-file.001"))
+	   ((pidfile.pid-pathname "./pidfile.001"))
 	 (clean-pid-file)
 	 (begin0
 	     (begin
-	       (pid-file.create-pid-file)
+	       (pidfile.create-pid-file)
 	       (begin0
 		   (read-pid-file)
-		 (pid-file.remove-pid-file)))
+		 (pidfile.remove-pid-file)))
 	   (add-result (pid-file-exists?)))))
     => `(,CONTENTS (#f)))
 
   (check	;creation and removal with logging
       (with-result
-       (parametrise ((pid-file.pid-pathname	"./pid-file.002")
-		     (pid-file.log-procedure	log-procedure))
+       (parametrise ((pidfile.pid-pathname	"./pidfile.002")
+		     (pidfile.log-procedure	log-procedure))
 	 (clean-pid-file)
 	 (begin0
 	     (begin
-	       (pid-file.create-pid-file)
+	       (pidfile.create-pid-file)
 	       (begin0
-		   ((pid-file.textual-contents-reading-procedure)
-		    (pid-file.pid-pathname))
-		 (pid-file.remove-pid-file)))
+		   ((pidfile.textual-contents-reading-procedure)
+		    (pidfile.pid-pathname))
+		 (pidfile.remove-pid-file)))
 	   (add-result (pid-file-exists?)))))
     => `(,CONTENTS
-	 ("creating PID file: ./pid-file.002"
-	  "removing PID file: ./pid-file.002"
+	 ("creating PID file: ./pidfile.002"
+	  "removing PID file: ./pidfile.002"
 	  #f)))
 
   (check	;disabled
-      (parametrise ((pid-file.pid-pathname	#f)
-		    #;(pid-file.log-procedure	log-procedure))
+      (parametrise ((pidfile.pid-pathname	#f)
+		    #;(pidfile.log-procedure	log-procedure))
 	(clean-pid-file)
-        (pid-file.create-pid-file)
-	(pid-file.remove-pid-file))
+        (pidfile.create-pid-file)
+	(pidfile.remove-pid-file))
     => (void))
 
   (check	;compensated
       (with-result
-       (parametrise ((pid-file.pid-pathname	"./pid-file.003")
-		     (pid-file.log-procedure	log-procedure))
+       (parametrise ((pidfile.pid-pathname	"./pidfile.003")
+		     (pidfile.log-procedure	log-procedure))
 	 (clean-pid-file)
 	 (begin0
 	     (with-compensations
-	       (pid-file.setup-compensated-pid-file-creation)
+	       (pidfile.setup-compensated-pid-file-creation)
 	       (read-pid-file))
 	   (add-result (pid-file-exists?)))))
     => `(,CONTENTS
-	 ("creating PID file: ./pid-file.003"
-	  "removing PID file: ./pid-file.003"
+	 ("creating PID file: ./pidfile.003"
+	  "removing PID file: ./pidfile.003"
 	  #f)))
 
   #t)
@@ -122,36 +122,36 @@
 
   (check	;file already exists
       (with-result
-       (guard (E ((pid-file.pid-file-already-exists-condition? E)
+       (guard (E ((pidfile.pid-file-already-exists-condition? E)
 		  #t)
 		 (else E))
 	 (parametrise
-	     ((pid-file.pid-pathname	"./pid-file.101")
-	      (pid-file.log-procedure	log-procedure)
-	      (pid-file.file-existence-procedure (lambda (pathname) #t)))
+	     ((pidfile.pid-pathname	"./pidfile.101")
+	      (pidfile.log-procedure	log-procedure)
+	      (pidfile.file-existence-procedure (lambda (pathname) #t)))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file))))
+	   (pidfile.create-pid-file))))
     => `(#t
 	 ("while creating PID file: selected PID file pathname already exists")))
 
   (check	;file already exists
       (with-result
-       (guard (E ((and (pid-file.pid-file-creation-condition? E)
+       (guard (E ((and (pidfile.pid-file-creation-condition? E)
 		       (i/o-write-error? E))
 		  #t)
 		 (else E))
 	 (parametrise
-	     ((pid-file.pid-pathname	"./pid-file.102")
-	      (pid-file.log-procedure	log-procedure)
-	      (pid-file.textual-contents-writing-procedure
+	     ((pidfile.pid-pathname	"./pidfile.102")
+	      (pidfile.log-procedure	log-procedure)
+	      (pidfile.textual-contents-writing-procedure
 	       (lambda (pathname contents)
 		 (raise
 		  (condition (make-i/o-write-error)
 			     (make-message-condition "error writing file"))))))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file))))
+	   (pidfile.create-pid-file))))
     => `(#t
-	 ("creating PID file: ./pid-file.102"
+	 ("creating PID file: ./pidfile.102"
 	  "while creating PID file: error writing file")))
 
   #t)
@@ -162,81 +162,81 @@
   (check	;file already exists
       (with-result
        (parametrise
-	   ((pid-file.pid-pathname	"./pid-file.201")
-	    (pid-file.log-procedure	log-procedure))
-	 (guard (E ((pid-file.pid-file-missing-condition? E)
+	   ((pidfile.pid-pathname	"./pidfile.201")
+	    (pidfile.log-procedure	log-procedure))
+	 (guard (E ((pidfile.pid-file-missing-condition? E)
 		    #t)
 		   (else E))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file)
+	   (pidfile.create-pid-file)
 	   (clean-pid-file)
-	   (pid-file.remove-pid-file))))
+	   (pidfile.remove-pid-file))))
     => `(#t
-	 ("creating PID file: ./pid-file.201"
+	 ("creating PID file: ./pidfile.201"
 	  "while removing PID file: expected PID file does not exist")))
 
   (check	;error reading
       (with-result
        (parametrise
-	   ((pid-file.pid-pathname	"./pid-file.202")
-	    (pid-file.log-procedure	log-procedure)
-	    (pid-file.textual-contents-reading-procedure
+	   ((pidfile.pid-pathname	"./pidfile.202")
+	    (pidfile.log-procedure	log-procedure)
+	    (pidfile.textual-contents-reading-procedure
 	     (lambda (pathname)
 	       (raise
 		(condition (make-i/o-read-error)
 			   (make-message-condition "error writing file"))))))
-	 (guard (E ((and (pid-file.pid-file-removal-condition? E)
+	 (guard (E ((and (pidfile.pid-file-removal-condition? E)
 			 (i/o-read-error? E))
 		    (clean-pid-file)
 		    #t)
 		   (else E))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file)
-	   (pid-file.remove-pid-file))))
+	   (pidfile.create-pid-file)
+	   (pidfile.remove-pid-file))))
     => `(#t
-	 ("creating PID file: ./pid-file.202"
+	 ("creating PID file: ./pidfile.202"
 	  "while removing PID file: error writing file")))
 
   (check	;invalid contents
       (with-result
        (parametrise
-	     ((pid-file.pid-pathname	"./pid-file.203")
-	      (pid-file.log-procedure	log-procedure)
-	      (pid-file.textual-contents-reading-procedure
+	     ((pidfile.pid-pathname	"./pidfile.203")
+	      (pidfile.log-procedure	log-procedure)
+	      (pidfile.textual-contents-reading-procedure
 	       (lambda (pathname)
 		 "ciao\n")))
-	 (guard (E ((pid-file.pid-file-invalid-contents-condition? E)
+	 (guard (E ((pidfile.pid-file-invalid-contents-condition? E)
 		    (clean-pid-file)
 		    #t)
 		   (else E))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file)
-	   (pid-file.remove-pid-file))))
+	   (pidfile.create-pid-file)
+	   (pidfile.remove-pid-file))))
     => `(#t
-	 ("creating PID file: ./pid-file.203"
+	 ("creating PID file: ./pidfile.203"
 	  "while removing PID file: corrupted PID file contents, avoiding removal")))
 
   (check	;error removing
       (with-result
        (parametrise
-	   ((pid-file.pid-pathname	"./pid-file.204")
-	    (pid-file.log-procedure	log-procedure)
-	    (pid-file.file-removal-procedure
+	   ((pidfile.pid-pathname	"./pidfile.204")
+	    (pidfile.log-procedure	log-procedure)
+	    (pidfile.file-removal-procedure
 	     (lambda (pathname)
 	       (raise
 		(condition (make-i/o-filename-error pathname)
 			   (make-message-condition "error removing file"))))))
-	 (guard (E ((and (pid-file.pid-file-removal-condition? E)
+	 (guard (E ((and (pidfile.pid-file-removal-condition? E)
 			 (i/o-filename-error? E))
 		    (clean-pid-file)
 		    #t)
 		   (else E))
 	   (clean-pid-file)
-	   (pid-file.create-pid-file)
-	   (pid-file.remove-pid-file))))
+	   (pidfile.create-pid-file)
+	   (pidfile.remove-pid-file))))
     => `(#t
-	 ("creating PID file: ./pid-file.204"
-	  "removing PID file: ./pid-file.204"
+	 ("creating PID file: ./pidfile.204"
+	  "removing PID file: ./pidfile.204"
 	  "while removing PID file: error removing file")))
 
   #t)
