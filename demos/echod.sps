@@ -30,7 +30,7 @@
 #!vicare
 (import (except (vicare)
 		log)
-  (prefix (vicare simple-event-loop)
+  (prefix (vicare posix simple-event-loop)
 	  sel.)
   (prefix (vicare posix)
 	  px.)
@@ -814,7 +814,11 @@ Options:
     (define (%reschedule)
       (sel.readable server-sock
 		    (lambda ()
-		      (%process-incoming-data server-sock server-port chan connection-id))))
+		      (%process-incoming-data server-sock server-port chan connection-id))
+		    (time-from-now (make-time 5 0))
+		    (lambda ()
+		      (log "connection ~a expired" connection-id)
+		      (%stop-session connection-id server-port chan))))
     (guard-log-raise
 	(condition-message "while processing incoming data: ~a")
       (cond ((chan.channel-recv-message-portion! chan)
@@ -825,16 +829,15 @@ Options:
 			 connection-id (ascii->string (uri-encode data.bv)))
 		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
 		    (if (%received-quit? data.bv)
-			(begin
-			  (log "closing connection ~a" connection-id)
-			  (%stop-session server-port chan))
+			(%stop-session connection-id server-port chan)
 		      (begin
 			(chan.channel-recv-begin! chan)
 			(%reschedule))))))
 	    (else
 	     (%reschedule)))))
 
-  (define (%stop-session server-port chan)
+  (define (%stop-session connection-id server-port chan)
+    (log "closing connection ~a" connection-id)
     (chan.close-channel chan)
     (net.close-server-port server-port))
 
