@@ -5480,15 +5480,15 @@ rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
 @section Simple event loop (@sel{})
 
 
-@cindex Library @library{vicare simple-event-loop}
-@cindex @library{vicare simple-event-loop}, library
+@cindex Library @library{vicare posix simple-event-loop}
+@cindex @library{vicare posix simple-event-loop}, library
 
 
-The library @library{vicare simple-event-loop} implements an event loop
-capable of serving: file descriptors, interprocess signals, batch task
-execution.  The library is available if @value{PRJNAME} is configured
-with the @posix{} @api{} enabled.  The @sel{} makes use of the @bub{}
-@api{} for interprocess signals.
+The library @library{vicare posix simple-event-loop} implements an event
+loop capable of serving: file descriptors, interprocess signals, batch
+task execution.  The library is available if @value{PRJNAME} is
+configured with the @posix{} @api{} enabled.  The @sel{} makes use of
+the @bub{} @api{} for interprocess signals.
 
 When importing this library it is suggested to prefix the bindings as
 follows:
@@ -5496,7 +5496,7 @@ follows:
 @example
 (import (vicare)
   (prefix (vicare posix) px.)
-  (prefix (vicare simple-event-loop) sel.))
+  (prefix (vicare posix simple-event-loop) sel.))
 @end example
 
 @noindent

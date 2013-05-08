@@ -310,7 +310,7 @@ TESTS	+= \
 	test-vicare-posix-sigwait.sps		\
 	\
 	test-vicare-shared-memory.sps		\
-	test-vicare-sel.sps			\
+	test-vicare-posix-sel.sps		\
 	test-vicare-posix-pid-files.sps
 endif
 
@@ -547,7 +547,7 @@ EXTRA_DIST = \
 	test-vicare-posix-semaphores.sps		\
 	test-vicare-posix-sigwait.sps			\
 	test-vicare-posix-pid-files.sps			\
-	test-vicare-sel.sps				\
+	test-vicare-posix-sel.sps			\
 	\
 	test-vicare-promises.sps			\
 	test-vicare-time.sps				\

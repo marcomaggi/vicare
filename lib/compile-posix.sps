@@ -3,6 +3,6 @@
 #!r6rs
 (import (only (vicare posix))
   (only (vicare posix pid-files))
-  (only (vicare simple-event-loop)))
+  (only (vicare posix simple-event-loop)))
 
 ;;; end of file

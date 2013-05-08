@@ -27,7 +27,7 @@
 
 
 #!r6rs
-(library (vicare simple-event-loop)
+(library (vicare posix simple-event-loop)
   (export
 
     ;; event loop control

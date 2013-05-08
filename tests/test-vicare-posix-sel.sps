@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (prefix (vicare simple-event-loop) sel.)
+  (prefix (vicare posix simple-event-loop) sel.)
   (vicare platform constants)
   (vicare language-extensions syntaxes)
   (vicare checks))

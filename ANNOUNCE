@@ -97,6 +97,7 @@ Notes for revision 0.3d0
      (vicare flonum-formatter)
      (vicare flonum-parser)
      (vicare weak-hashtables)
+     (vicare simple-event-looop)
 
   have been renamed to:
 
@@ -112,6 +113,7 @@ Notes for revision 0.3d0
      (vicare numerics flonum-formatter)
      (vicare numerics flonum-parser)
      (vicare containers weak-hashtables)
+     (vicare posix simple-event-looop)
 
 * BACKWARDS  INCOMPATIBILITY  The  library  (vicare  include)  has  been
   removed.
