@@ -5577,12 +5577,22 @@ wrapping a file descriptor; other Scheme port types are not supported.
 
 
 @defun readable @var{port/fd} @var{handler}
+@defunx readable @var{port/fd} @var{handler} @var{expiration-time} @var{expiration-handler}
 @defunx writable @var{port/fd} @var{handler}
+@defunx writable @var{port/fd} @var{handler} @var{expiration-time} @var{expiration-handler}
 @defunx exception @var{port/fd} @var{handler}
+@defunx exception @var{port/fd} @var{handler} @var{expiration-time} @var{expiration-handler}
 Register the thunk @var{handler} to be called whenever the port or file
 descriptor @var{port/fd} becomes readable, writable or receives an
 exceptional notification.  Every handler is called @strong{once} and
 removed from the loop.
+
+When @var{expiration-time} and @var{expiration-handler} are used:
+@var{expiration-time} must be a @code{time} struct as defined by the
+library @library{vicare}; @var{expiration-handler} must be a thunk.
+Whenever the port or file descriptor is queried for events: if the event
+did not happen and the current time is past the expiration time, the
+expiration handler is invoked.
 @end defun
 
 

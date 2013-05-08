@@ -319,7 +319,21 @@
 ;;
 
 (define-struct fd-entry
-  (fd query handler))
+  (fd
+		;A fixnum representing a file descriptor.
+   query
+		;A thunk to  be called to query the  file descriptor for
+		;the expected event.
+   handler
+		;A  thunk  to  be  called whenever  the  expected  event
+		;happens.
+   expiration-time
+		;False  or  a  TIME  struct,  as  defined  by  (vicare),
+		;representing the expiration time for this event.
+   expiration-handler
+		;False  or a  thunk  to be  called  whenever this  event
+		;expires.
+   ))
 
 (define (do-one-fd-event)
   ;;Consume one event, if any, and  return.  Return a boolean, #t if one
@@ -338,67 +352,105 @@
       (if ($fx< SOURCES.fds.count SOURCES.fds.watermark)
 	  (let ((E ($car SOURCES.fds.tail)))
 	    (set! SOURCES.fds.tail ($cdr SOURCES.fds.tail))
-	    (if (%catch ((fd-entry-query E)))
-		(guard (E (else
-			   ;;;(pretty-print E (current-error-port))
-			   #f))
-		  ((fd-entry-handler E))
-		  ($fxincr! SOURCES.fds.count)
-		  #t)
-	      (begin
-		(set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
-		(if (null? SOURCES.fds.tail)
-		    (begin
-		      (set! SOURCES.fds.count 0)
-		      #f)
-		  (do-one-fd-event)))))
+	    (cond
+	     ;;Check whether the event happened.   If it has: invoke the
+	     ;;associated handler.
+	     ;;
+	     ((%catch (($fd-entry-query E)))
+	      (guard (E (else
+			 ;;(pretty-print E (current-error-port))
+			 #f))
+		(($fd-entry-handler E))
+		($fxincr! SOURCES.fds.count)
+		#t))
+
+	     ;;If an expiration time has  been set: check it against the
+	     ;;current  time.   If  this  even is  expired:  invoke  the
+	     ;;associated handler.
+	     ;;
+	     ((let ((T ($fd-entry-expiration-time E)))
+		(and T (time<=? T (current-time))))
+	      ($fxincr! SOURCES.fds.count)
+	      (($fd-entry-expiration-handler E))
+	      #t)
+
+	     ;;The event  did not happen;  re-enqueue the event  for the
+	     ;;next loop.
+	     ;;
+	     (else
+	      (set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
+	      (if (null? SOURCES.fds.tail)
+		  (begin
+		    (set! SOURCES.fds.count 0)
+		    #f)
+		(do-one-fd-event)))))
 	(begin
 	  (set! SOURCES.fds.count 0)
 	  #f)))))
 
-(define (%enqueue-fd-event-source fd query-thunk handler-thunk)
+(define (%enqueue-fd-event-source fd query-thunk handler-thunk
+				  expiration-time expiration-thunk)
   ;;Enqueue a new entry for a file descriptor event.
   ;;
   (with-event-sources (SOURCES)
-    (set! SOURCES.fds.rev-head (cons (make-fd-entry fd query-thunk handler-thunk)
+    (set! SOURCES.fds.rev-head (cons (make-fd-entry fd query-thunk handler-thunk
+						    expiration-time expiration-thunk)
 				     SOURCES.fds.rev-head))))
 
-(define (readable port/fd handler-thunk)
-  (define who 'readable)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd
-				(lambda ()
-				  (px.select-fd-readable? fd 0 0))
-				handler-thunk))))
+(define readable
+  (case-lambda
+   ((port/fd handler-thunk)
+    (readable port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'readable)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd
+				  (lambda ()
+				    (px.select-fd-readable? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
-(define (writable port/fd handler-thunk)
-  (define who 'writable)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd (lambda ()
-				     (px.select-fd-writable? fd 0 0))
-				handler-thunk))))
+(define writable
+  (case-lambda
+   ((port/fd handler-thunk)
+    (writable port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'writable)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd (lambda ()
+				       (px.select-fd-writable? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
-(define (exception port/fd handler-thunk)
-  (define who 'exception)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd (lambda ()
-				     (px.select-fd-exceptional? fd 0 0))
-				handler-thunk))))
+(define exception
+  (case-lambda
+   ((port/fd handler-thunk)
+    (exception port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'exception)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd (lambda ()
+				       (px.select-fd-exceptional? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
 (define (forget-fd port/fd)
   (define who 'exception)
@@ -409,10 +461,10 @@
 		port/fd)))
       (with-event-sources (SOURCES)
 	(set! SOURCES.fds.tail (remp (lambda (E)
-				       ($fx= fd (fd-entry-fd E)))
+				       ($fx= fd ($fd-entry-fd E)))
 				 SOURCES.fds.tail))
 	(set! SOURCES.fds.rev-head (remp (lambda (E)
-					   ($fx= fd (fd-entry-fd E)))
+					   ($fx= fd ($fd-entry-fd E)))
 				     SOURCES.fds.rev-head))))))
 
 
