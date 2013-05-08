@@ -58,6 +58,7 @@ syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
 
 External libraries
 
+* posix sel::                   Simple event loop.
 * posix pid-files::             Creating @acronym{PID} files.
 @end menu
 
@@ -5473,6 +5474,151 @@ There seems to be no real advantage (in a Scheme @api{}) to use these
 rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
 @ref{posix fd, pipe} for details.
 @end table
+
+@c page
+@node posix sel
+@section Simple event loop (@sel{})
+
+
+@cindex Library @library{vicare simple-event-loop}
+@cindex @library{vicare simple-event-loop}, library
+
+
+The library @library{vicare simple-event-loop} implements an event loop
+capable of serving: file descriptors, interprocess signals, batch task
+execution.  The library is available if @value{PRJNAME} is configured
+with the @posix{} @api{} enabled.  The @sel{} makes use of the @bub{}
+@api{} for interprocess signals.
+
+When importing this library it is suggested to prefix the bindings as
+follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (prefix (vicare simple-event-loop) sel.))
+@end example
+
+@noindent
+in practice the @sel{} can be used only along with @library{vicare
+posix}.
+
+Exceptions raised by registered event handlers are catched with
+@func{guard} and silently discarded; it is our responsibility to handle
+errors appropriately in the handlers.
+
+
+@deffn Parameter logging
+When set to @true{} causes debugging messages to be displayed on the
+current error port.  When set to a procedure: such procedure is called
+with a single argument whenever a log message must be reported; such
+single argument is a string representing a log line (@strong{without}
+terminating newline).  When set to @false{} nothing happens.
+@end deffn
+
+
+@defun initialise
+@defunx finalise
+Initialise or finalise the infrastructure of @sel{}.  Prior to entering
+the loop we must call @func{initialise}.
+
+@func{initialise} calls @func{signal-bub-init} and @func{finalise} calls
+@func{signal-bub-final} from @library{vicare posix}.
+@end defun
+
+
+@defun do-one-event
+Serve all the events associated to pending received interprocess
+signals, then serve a single event from file descriptors or fragmented
+tasks.  Return @true{} if one event from file descriptors or fragmented
+tasks was served, return @false{} otherwise.
+@end defun
+
+
+@defun enter
+@defunx leave-asap
+Enter or leave the event loop.  @func{enter} starts servicing events
+from the registered event sources, indefinitely until @func{leave-asap}
+is called.
+@end defun
+
+
+@defun busy?
+Return a boolean, @true{} if at least one event source is registered.
+In this context: interprocess signals do @strong{not} count as event
+source.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Interprocess signals
+
+
+@defun receive-signal @var{signum} @var{handler}
+Register the thunk @var{handler} to be called whenever the signal
+@var{signum} is received.  Any number of handlers can be associated to a
+single signal.  Every handler is called @strong{once} and removed from
+the loop.
+@end defun
+
+
+@defun serve-interprocess-signals
+Serve all the pending events for received interprocess signals.  Return
+unspecified values.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading File descriptor events
+
+
+@sel{} can interface with both raw file descriptors and Scheme ports
+wrapping a file descriptor; other Scheme port types are not supported.
+
+
+@defun readable @var{port/fd} @var{handler}
+@defunx writable @var{port/fd} @var{handler}
+@defunx exception @var{port/fd} @var{handler}
+Register the thunk @var{handler} to be called whenever the port or file
+descriptor @var{port/fd} becomes readable, writable or receives an
+exceptional notification.  Every handler is called @strong{once} and
+removed from the loop.
+@end defun
+
+
+@defun forget-fd @var{port/fd}
+Remove all the registered handlers associated to the port or file
+descriptor @var{port/fd}.
+@end defun
+
+
+@defun do-one-fd-event
+Serve one file descriptor event, if any.  Return a boolean, @true{} if
+an event was served.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Fragmented tasks
+
+
+A @dfn{fragmented task} is a thunk performing a portion of a job.  If
+the thunk returns @false{}: the job is finished.  If the thunk returns a
+procedure: a portion of job was finished and the returned procedure is a
+thunk to call to execute the next portion.
+
+
+@defun task-fragment @var{thunk}
+Register the @var{thunk} as fragment of a task.  When @var{thunk} is
+evaluated: if its return value is a procedure, that procedure is
+automatically registered as task fragment.
+@end defun
+
+
+@defun do-one-task-event
+Evaluate one task event, if any.  Return a boolean, @true{} if a task
+was run.
+@end defun
 
 @c page
 @node posix pid-files
