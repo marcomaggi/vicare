@@ -13,15 +13,25 @@ examples with Vicare Scheme.
 1.1 ECHO server
 ---------------
 
-The script "echod.sps" implement the classic echo demo server: if
-we connect to it and send it strings, it will just echo them back
-to the client.  By default is listens to localhost:8081.
+SYNOPSIS
+
+   vicare echod.sps [vicare options] [-- [echod options]]
+
+DESCRIPTION
+
+The script "echod.sps" implements the  classic echo server: if we
+connect to it and send it strings, it will just echo them back to
+the client.  By default it listens to localhost:8081.
 
   Internally it makes use of the following notable libraries:
 
    (vicare posix)
+   (vicare posix pid-files)
    (vicare simple-event-loop)
    (srfi :37 args-fold)
+
+this demo  program is  especially a  demonstration of  the Simple
+Event Loop library.
 
 
 1.2 SHELLD server
