@@ -55,6 +55,10 @@ syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
 * posix misc::                  Miscellaneous functions.
 * posix args::                  Arguments validation clauses.
 * posix not::                   @posix{} functions not interfaced.
+
+External libraries
+
+* posix pid-files::             Creating @acronym{PID} files.
 @end menu
 
 @c page
@@ -5469,5 +5473,376 @@ There seems to be no real advantage (in a Scheme @api{}) to use these
 rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
 @ref{posix fd, pipe} for details.
 @end table
+
+@c page
+@node posix pid-files
+@section Creating @acronym{PID} files
+
+
+@cindex @library{vicare posix pid-files} library
+@cindex Library @library{vicare posix pid-files}
+@cindex Creating @acronym{PID} files
+@cindex @acronym{PID} files creation
+
+
+The library @library{vicare posix pid-files} implements facilities for
+the creation of @acronym{PID} files, built on top of the library
+@library{vicare posix}.  It is suggested to import this library
+prefixing the bindings as follows:
+
+@example
+(import (prefix (vicare posix pid-files)
+                pid-file.))
+@end example
+
+@menu
+* posix pid-files intro::       Introduction to @acronym{PID} files.
+* posix pid-files config::      Library configuration parameters.
+* posix pid-files api::         @acronym{PID} files programming @api{}.
+* posix pid-files conditions::  Condition object types.
+@end menu
+
+@c page
+@node posix pid-files intro
+@subsection Introduction to @acronym{PID} files
+
+
+The @acronym{PID} file is a textual file in @ascii{} encoding created at
+start time and deleted at exit time; it contains a string representing
+the @acronym{PID} number of the current process followed by a newline
+character.
+
+The @acronym{PID} file is especially useful whenever a server is
+executed as daemon: it allows for quick retrieval of the @acronym{PID}
+number, which can be used to send interprocess signals to the daemon,
+for example to shut it down, or to restart it, or to update its
+configuration, or whatever.
+
+When a @acronym{PID} file is used: the creator process should refuse to
+start if the @acronym{PID} file already exists, because it may mean that
+a program instance is already in execution.
+
+The @acronym{PID} file must be created after the daemonisation process
+has completed: this way we correctly store the @acronym{PID} of the
+daemon process, rather than the @acronym{PID} of the starting process.
+
+Logging operations related to the @acronym{PID} file rely on the
+function referenced by an internal parameter; we just need to configure
+this parameter with an appropriate function.
+
+@c page
+@node posix pid-files config
+@subsection Library configuration parameters
+
+
+The following bindings are exported by the library @library{vicare posix
+pid-files}.
+
+
+@deffn Parameter pid-pathname
+Hold @false{} or a string representing the @acronym{PID} file
+@strong{absolute} pathname; beware of setting a relative pathname and
+then changing the current process directory.  When set to @false{}: no
+@acronym{PID} file is created.  It is initialised to @false{}.
+@end deffn
+
+
+@deffn file-existence-procedure
+Hold a function that tests @acronym{PID} file existence.  It is
+initialised to @file{file-exists?}.
+@end deffn
+
+
+@deffn Parameter textual-contents-reading-procedure
+Hold a function that reads the @acronym{PID} file contents and returns
+them as a Scheme string.  It is initialised to:
+
+@example
+(lambda (pid-pathname)
+  (with-input-from-file pid-pathname
+    (lambda ()
+      ;;A valid PID file does not contain a lot of
+      ;;characters; let's say 32 at most.
+      (get-string-n (current-input-port) 32))))
+@end example
+@end deffn
+
+
+@deffn Parameter textual-contents-writing-procedure
+Hold a function that writes the @acronym{PID} file.  It is initialised
+to:
+
+@example
+(lambda (pid-pathname contents)
+  (with-output-to-file pid-pathname
+    (lambda ()
+      (display contents))))
+@end example
+@end deffn
+
+
+@deffn Parameter file-removal-procedure
+Hold a function that removes the @acronym{PID} file.  It is initialised
+to @func{delete-file}.
+@end deffn
+
+
+@deffn Parameter log-procedure
+Hold a function accepting @func{format}--like arguments and logging the
+result:
+
+@example
+((log-procedure) @meta{template-string} @meta{arg} ...)
+@end example
+
+If set to @false{}: logging is disabled.  It is initialised to @false{}.
+@end deffn
+
+@c page
+@node posix pid-files api
+@subsection @acronym{PID} files programming @api{}
+
+
+The following bindings are exported by the library @library{vicare posix
+pid-files}.
+
+
+@defun create-pid-file
+If requested: create the @acronym{PID} file and write the @acronym{PID}
+number in it, followed a newline.  Return unspecified values.
+
+The file pathname is retrieved from the parameter @func{pid-pathname}.
+The file existence is tested using the procedure referenced by the
+parameter @func{file-existence-procedure}.  The file is created using
+the procedure referenced by the parameter
+@func{textual-contents-writing-procedure}.
+
+This function makes use of the following parameters:
+
+@table @func
+@item pid-pathname
+When @false{} do nothing.  Else use the string value as @acronym{PID}
+file pathname.
+
+@item file-existence-procedure
+Use the referenced procedure to test for @acronym{PID} file existence.
+
+@item textual-contents-writing-procedure
+Use the referenced procedure to write the @acronym{PID} file contents.
+@end table
+
+Raised exceptions:
+
+@itemize
+@item
+If the file already exists, raise an exception with condition
+components: @condition{pid-file-already-exists}, @condition{who},
+@condition{message}, @condition{irritants}.
+
+@item
+If creating the file fails, add a condition object of type
+@condition{pid-file-creation} to whatever condition object is raised by
+the underlying procedure.
+@end itemize
+@end defun
+
+
+@defun remove-pid-file
+Remove the @acronym{PID} file, if any; if @acronym{PID} file use is
+disable: do nothing.  Return unspecified values.
+
+This function makes use of the following parameters:
+
+@table @func
+@item pid-pathname
+When @false{} do nothing.  Else use the string value as @acronym{PID}
+file pathname.
+
+@item file-existence-procedure
+Use the referenced procedure to test for @acronym{PID} file existence.
+
+@item textual-contents-reading-procedure
+Use the referenced procedure to read the @acronym{PID} file contents.
+
+@item file-removal-procedure
+Use the referenced procedure to remove the @acronym{PID} file.
+@end table
+
+Raised exceptions:
+
+@itemize
+@item
+If the file does not exist, raise an exception with condition
+components: @condition{pid-file-missing}, @condition{who},
+@condition{message}, @condition{irritants}.
+
+@item
+If reading the file fails, add a condition object of type
+@condition{pid-file-creation} to whatever condition object is raised by
+the underlying procedure.
+
+@item
+If the file contents are invalid, raise an exception with condition
+component: @condition{pid-file-invalid-contents}, @condition{who},
+@condition{message}, @condition{irritants}.
+
+@item
+If removing the file fails, add a condition object of type
+@condition{pid-file-removal} to whatever condition object is raised by
+the underlying procedure.
+@end itemize
+@end defun
+
+@c page
+@node posix pid-files conditions
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{vicare posix
+pid-files}.
+
+@c ------------------------------------------------------------
+
+@subsubheading @acronym{PID} file errors
+
+@deftp {Condition Type} &pid-file-error
+Base condition type used to tag compound condition objects as
+@acronym{PID} file errors.  It is derived from @condition{error}.  It
+has no fields.
+@end deftp
+
+
+@defun make-pid-file-error-condition
+Build and return a new condition object of type
+@condition{pid-file-error}.
+@end defun
+
+
+@defun pid-file-error-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-error}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Already exists errors
+
+
+@deftp {Condition Type} &pid-file-already-exists
+Base condition type used to tag compound condition objects as
+@acronym{PID} file ``already exists'' errors: it must be used whenever
+upon attempting to create a @acronym{PID} file, a file with the selected
+pathname already exists.  It is derived from @condition{pid-file-error}.
+It has no fields.
+@end deftp
+
+
+@defun make-pid-file-already-exists-condition
+Build and return a new condition object of type
+@condition{pid-file-already-exists}.
+@end defun
+
+
+@defun pid-file-already-exists-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-already-exists}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Missing file errors
+
+
+@deftp {Condition Type} &pid-file-missing
+Base condition type used to tag compound condition objects as
+@acronym{PID} file ``missing'' errors: it must be used whenever the
+@acronym{PID} file does not exist but it should.  It is derived from
+@condition{pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-pid-file-missing-condition
+Build and return a new condition object of type
+@condition{pid-file-missing}.
+@end defun
+
+
+@defun pid-file-missing-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-missing}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Creation errors
+
+
+@deftp {Condition Type} &pid-file-creation
+Base condition type used to tag compound condition objects as
+@acronym{PID} file ``creation'' errors: it must be used whenever an
+error occurs while creating a @acronym{PID} file.  It is derived from
+@condition{pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-pid-file-creation-condition
+Build and return a new condition object of type
+@condition{pid-file-creation}.
+@end defun
+
+
+@defun pid-file-creation-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-creation}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Removal errors
+
+
+@deftp {Condition Type} &pid-file-removal
+Base condition type used to tag compound condition objects as
+@acronym{PID} file ``removal'' errors: it must be used whenever an
+error occurs while creating a @acronym{PID} file.  It is derived from
+@condition{pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-pid-file-removal-condition
+Build and return a new condition object of type
+@condition{pid-file-removal}.
+@end defun
+
+
+@defun pid-file-removal-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-removal}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Invalid contents errors
+
+
+@deftp {Condition Type} &pid-file-invalid-contents
+Base condition type used to tag compound condition objects as
+@acronym{PID} file ``invalid contents'' errors: it must be used whenever
+the @acronym{PID} file does not contain the @acronym{PID} of the current
+process.  It is derived from @condition{pid-file-error}.  It has no
+fields.
+@end deftp
+
+
+@defun make-pid-file-invalid-contents-condition
+Build and return a new condition object of type
+@condition{pid-file-invalid-contents}.
+@end defun
+
+
+@defun pid-file-invalid-contents-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{pid-file-invalid-contents}.
+@end defun
 
 @c end of file

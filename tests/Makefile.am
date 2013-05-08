@@ -310,7 +310,8 @@ TESTS	+= \
 	test-vicare-posix-sigwait.sps		\
 	\
 	test-vicare-shared-memory.sps		\
-	test-vicare-sel.sps
+	test-vicare-sel.sps			\
+	test-vicare-posix-pid-files.sps
 endif
 
 if WANT_GLIBC
@@ -545,6 +546,8 @@ EXTRA_DIST = \
 	test-vicare-posix-shared-memory.sps		\
 	test-vicare-posix-semaphores.sps		\
 	test-vicare-posix-sigwait.sps			\
+	test-vicare-posix-pid-files.sps			\
+	test-vicare-sel.sps				\
 	\
 	test-vicare-promises.sps			\
 	test-vicare-time.sps				\
@@ -552,7 +555,6 @@ EXTRA_DIST = \
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
-	test-vicare-sel.sps				\
 	test-vicare-shared-memory.sps			\
 	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
