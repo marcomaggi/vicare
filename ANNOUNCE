@@ -244,6 +244,9 @@ Notes for revision 0.3d0
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
 
+* Added  library (vicare  posix pid-files),  see the  documentation node
+  "posix pid-files".
+
 
 Notes for revision 0.2d20
 -------------------------
