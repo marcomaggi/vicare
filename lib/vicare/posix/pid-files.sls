@@ -60,6 +60,7 @@
     log-procedure
 
     ;; creation and removal
+    setup-compensated-pid-file-creation
     create-pid-file
     remove-pid-file
 
@@ -245,7 +246,13 @@
       obj)))
 
 
-;;;; creation
+;;;; creation and removal
+
+(define (setup-compensated-pid-file-creation)
+  (compensate
+      (create-pid-file)
+    (with
+     (remove-pid-file))))
 
 (define (create-pid-file)
   ;;If requested:  create the PID file  and write the PID  number in it,
@@ -264,9 +271,6 @@
 	    ((textual-contents-writing-procedure) (pid-pathname) (%make-pid-file-contents)))))))
   (void))
 
-
-;;;; removal
-
 (define (remove-pid-file)
   ;;Remove the PID  file registered in the dynamic  environment, if any.
   ;;Return unspecified values.
@@ -282,7 +286,7 @@
       ;;Check that the PID file contains the current process' PID number
       ;;followed by a newline.
       (let ((contents (guard-condition-raise
-			  (make-pid-file-creation-condition)
+			  (make-pid-file-removal-condition)
 			((textual-contents-reading-procedure) (pid-pathname)))))
 	(unless (string=? (%make-pid-file-contents) contents)
 	  (%error-corrupted-pid-file-contents who (pid-pathname))))

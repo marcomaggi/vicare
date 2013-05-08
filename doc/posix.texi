@@ -5678,7 +5678,7 @@ components: @condition{pid-file-missing}, @condition{who},
 
 @item
 If reading the file fails, add a condition object of type
-@condition{pid-file-creation} to whatever condition object is raised by
+@condition{pid-file-removal} to whatever condition object is raised by
 the underlying procedure.
 
 @item
@@ -5691,6 +5691,25 @@ If removing the file fails, add a condition object of type
 @condition{pid-file-removal} to whatever condition object is raised by
 the underlying procedure.
 @end itemize
+@end defun
+
+
+@defun setup-compensated-pid-file-creation
+Call the function @func{create-pid-file} and push a call to
+@func{remove-pid-file} to the current compensations stack.  @ref{iklib
+compensations, Compensation stacks}.
+
+Beware of creating the compensation stack @strong{inside} the dynamic
+environment configuration for @acronym{PID} file creation; in the
+following example the @func{with-compensations} syntax must be inside
+the @func{parametrise} syntax:
+
+@example
+(parametrise ((pid-pathname "..."))
+  (with-compensations
+   (setup-compensated-pid-file-creation)
+   ...))
+@end example
 @end defun
 
 @c page
