@@ -5460,6 +5460,12 @@ Return true if @var{obj} is a non--negative fixnum less than the value
 of @code{FD_SETSIZE}.
 @end defun
 
+
+@defun network-port-number? @var{obj}
+Return true if @var{obj} is a fixnum integer in the range of network
+ports @math{[1, 65535]}.
+@end defun
+
 @c page
 @node posix args
 @section Arguments validation clauses
@@ -5474,6 +5480,13 @@ clause is @strong{not} the name of the exported binding.
 @deffnx {Validation Clause} file-descriptor/false @var{obj}
 Succeed if @var{obj} satisfies the @func{file-descriptor?} predicate or,
 for the second clause, it is @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} network-port-number @var{obj}
+@deffnx {Validation Clause} network-port-number/false @var{obj}
+Succeed if @var{obj} satisfies the @func{network-port-number?} predicate
+or, for the second clause, it is @false{}.
 @end deffn
 
 @c page
