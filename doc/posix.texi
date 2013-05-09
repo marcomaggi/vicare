@@ -6054,15 +6054,20 @@ to @false{}.
 
 
 @deffn Parameter log-port
-A textual output port to which log messages must be written.  The port
-is expected to have @code{line} buffering, but this is not required.  It
-is initialised to the value of the parameter @func{current-output-port}
-at the time the library is instantiated.
+A textual output port to which log messages must be written; the port is
+expected to have @code{line} buffering, but this is not required.  It is
+initialised to the value of the parameter @func{current-output-port} at
+the time the library is instantiated.
+
+This parameter is configured by calls to @func{open-logging}.
 @end deffn
 
 
 @deffn Parameter log-prefix
-A string representing the prefix for every log message.
+A string representing the prefix for every log message; it can be the
+empty string.  It is initialised to the empty string.  It is useful to
+include the ID of the current process in this prefix string, @ref{posix
+pid, getpid}.
 @end deffn
 
 
@@ -6070,6 +6075,9 @@ A string representing the prefix for every log message.
 False or a Scheme string representing the log file pathname.  The
 special string @code{"-"} means: log to the error port.  It is
 initialised to @code{"-"}.
+
+If desired, this parameter should be configured before calling
+@func{open-logging}.
 @end deffn
 
 @c page
@@ -6086,7 +6094,28 @@ If logging is enabled: format a log message and write it to the current
 log port; return unspecified values.
 
 @var{template} must be a @func{format}--like string expecting as many
-values as there are @var{arg} arguments.
+values as there are @var{arg} arguments.  It is usual, but not
+mandatory, to output log messages as single lines.
+
+A log message is composed as follows:
+
+@enumerate
+@item
+The current prefix referenced by the parameter @func{log-prefix}.
+
+@item
+A date string, almost in @iso{} 8601 format.
+
+@item
+A colon character followed by a space character.
+
+@item
+The result of formatting @var{template} with the given @var{arg}
+arguments.
+
+@item
+A newline character.
+@end enumerate
 @end defun
 
 
@@ -6100,8 +6129,8 @@ the condition message.
 
 @deffn Syntax with-logging-handler (condition-message @meta{template}) @metao{body} @meta{body} @dots{}
 @deffnx {Auxiliary Syntax} condition-message
-Evaluate the @meta{body} forms; in case of exception log a message and
-raise it again.
+Evaluate the @meta{body} forms; in case of exception: log a message with
+@func{log-condition-message} and raise it again.
 
 @func{condition-message} must be the identifier exported by the library
 @rsixlibrary{rnrs}.  @meta{template} must be an expression evaluating to
