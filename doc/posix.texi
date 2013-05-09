@@ -6065,6 +6065,7 @@ library @library{vicare posix}.
 @menu
 * posix lock-pid-files intro::  Introduction to lock @acronym{PID} files.
 * posix lock-pid-files api::    Programming interface to lock @acronym{PID} files.
+* posix lock-pid-files cond::   Condition object types.
 @end menu
 
 @c page
@@ -6132,6 +6133,98 @@ and logging the resulting string:
 @example
 (@var{log} @meta{template-string} @meta{arg} ...)
 @end example
+@end defun
+
+@c page
+@node posix lock-pid-files cond
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{vicare posix
+lock-pid-files}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic error
+
+@deftp {Condition Type} &lock-pid-file-error
+Condition object type used to tag exceptions raised in lock
+@acronym{PID} files operations.  It is derived from @condition{error}.
+It has no fields.
+@end deftp
+
+
+@defun make-lock-pid-file-condition
+Build and return a new instance of @condition{lock-pid-file-error}.
+@end defun
+
+
+@defun lock-pid-file-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{lock-pid-file-error}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Lock file creation error
+
+@deftp {Condition Type} &lock-pid-file-creation
+Condition object type used to tag exceptions raised in lock
+@acronym{PID} files creation operations.  It is derived from
+@condition{lock-pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-lock-pid-file-condition
+Build and return a new instance of @condition{lock-pid-file-creation}.
+@end defun
+
+
+@defun lock-pid-file-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{lock-pid-file-creation}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Lock file removal error
+
+@deftp {Condition Type} &lock-pid-file-removal
+Condition object type used to tag exceptions raised in lock
+@acronym{PID} files removal operations.  It is derived from
+@condition{lock-pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-lock-pid-file-condition
+Build and return a new instance of @condition{lock-pid-file-removal}.
+@end defun
+
+
+@defun lock-pid-file-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{lock-pid-file-removal}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Lock file locking error
+
+@deftp {Condition Type} &lock-pid-file-locking
+Condition object type used to tag exceptions raised in lock
+@acronym{PID} files locking and content writing operations.  It is
+derived from @condition{lock-pid-file-error}.  It has no fields.
+@end deftp
+
+
+@defun make-lock-pid-file-condition
+Build and return a new instance of @condition{lock-pid-file-locking}.
+@end defun
+
+
+@defun lock-pid-file-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{lock-pid-file-locking}, else return @false{}.
 @end defun
 
 @c page
@@ -6254,7 +6347,6 @@ Evaluate the @meta{body} forms; in case of exception: log a message with
 a string template suitable to be used as first argument to
 @func{log-condition-message}.
 @end deffn
-
 
 @c page
 @node posix daemonisations

@@ -62,7 +62,9 @@
     => CONTENTS)
 
   (check	;error locking twice
-      (guard (E ((errno-condition? E)
+      (guard (E ((and (errno-condition? E)
+		      (lock-pid-file-error-condition? E)
+		      (lock-pid-file-creation-condition? E))
 		 (condition-errno E))
 		(else E))
 	(with-lock-pid-file "lock-pid-file.004" values
@@ -98,7 +100,9 @@
 
   (check
       (with-result
-       (guard (E ((errno-condition? E)
+       (guard (E ((and (errno-condition? E)
+		       (lock-pid-file-error-condition? E)
+		       (lock-pid-file-creation-condition? E))
 		  (condition-errno E))
 		 (else E))
 	 (with-lock-pid-file "lock-pid-file.102"

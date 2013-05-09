@@ -27,11 +27,51 @@
 
 #!r6rs
 (library (vicare posix lock-pid-files)
-  (export with-lock-pid-file)
+  (export
+    with-lock-pid-file
+
+    &lock-pid-file-error
+    make-lock-pid-file-error-condition
+    lock-pid-file-error-condition?
+
+    &lock-pid-file-creation
+    make-lock-pid-file-creation-condition
+    lock-pid-file-creation-condition?
+
+    &lock-pid-file-removal
+    make-lock-pid-file-removal-condition
+    lock-pid-file-removal-condition?
+
+    &lock-pid-file-locking
+    make-lock-pid-file-locking-condition
+    lock-pid-file-locking-condition?)
   (import (vicare)
     (prefix (vicare posix) px.)
     (vicare platform constants)
     (vicare arguments validation))
+
+
+;;;; condition object types
+
+(define-condition-type &lock-pid-file-error
+    &error
+  make-lock-pid-file-error-condition
+  lock-pid-file-error-condition?)
+
+(define-condition-type &lock-pid-file-creation
+    &lock-pid-file-error
+  make-lock-pid-file-creation-condition
+  lock-pid-file-creation-condition?)
+
+(define-condition-type &lock-pid-file-removal
+    &lock-pid-file-error
+  make-lock-pid-file-removal-condition
+  lock-pid-file-removal-condition?)
+
+(define-condition-type &lock-pid-file-locking
+    &lock-pid-file-error
+  make-lock-pid-file-locking-condition
+  lock-pid-file-locking-condition?)
 
 
 (define (with-lock-pid-file lock-pathname log thunk)
@@ -43,12 +83,12 @@
 		    "non-described exception")))
 
   (define-syntax with-logging-handler
-    (syntax-rules (condition-message)
-      ((_ (condition-message ?template) ?body0 ?body ...)
+    (syntax-rules (condition-message condition)
+      ((_ (condition ?condition) (condition-message ?template) ?body0 ?body ...)
        (with-exception-handler
 	   (lambda (E)
 	     (log-condition-message ?template E)
-	     (raise E))
+	     (raise (condition E ?condition)))
 	 (lambda () ?body0 ?body ...)))))
 
   (with-arguments-validation (who)
@@ -59,6 +99,7 @@
       (define fd
 	(compensate
 	  (with-logging-handler
+	      (condition (make-lock-pid-file-creation-condition))
 	      (condition-message "while creating lock PID file: ~a")
 	    (log "creating lock PID file: ~a" lock-pathname)
 	    (px.open lock-pathname
@@ -66,11 +107,13 @@
 		     (fxior S_IRUSR S_IWUSR)))
 	  (with
 	   (with-logging-handler
+	       (condition (make-lock-pid-file-removal-condition))
 	       (condition-message "while removing lock PID file: ~a")
 	     (px.close fd)
 	     (log "removing lock PID file: ~a" lock-pathname)
 	     (delete-file lock-pathname)))))
       (with-logging-handler
+	  (condition (make-lock-pid-file-locking-condition))
 	  (condition-message "while locking PID file: ~a")
 	;;This locks the file or fail raising an exception.
 	(px.lockf fd F_TLOCK 0)
@@ -84,3 +127,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-logging-handler 'scheme-indent-function 2)
+;; End:
