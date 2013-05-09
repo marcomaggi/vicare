@@ -60,6 +60,7 @@ External libraries
 
 * posix sel::                   Simple event loop.
 * posix pid-files::             Creating @acronym{PID} files.
+* posix daemonisations::        Turn the process into a daemon.
 @end menu
 
 @c page
@@ -1749,9 +1750,8 @@ Simple example of process writing to itself through a pipe:
 @end example
 
 @noindent
-here is how to fork a process and setup stdin and stdout in the children
-to use newly created pipe file descriptors to communicate with the
-parent:
+here is how to fork a process and setup stdin and stdout in the child to
+use newly created pipe file descriptors to communicate with the parent:
 
 @example
 #!r6rs
@@ -1788,8 +1788,8 @@ parent:
 @end example
 
 @noindent
-here is how to fork a process and setup stdin and stdout in the children
-to use newly created pipe file descriptors, through Scheme ports, to
+here is how to fork a process and setup stdin and stdout in the child to
+use newly created pipe file descriptors, through Scheme ports, to
 communicate with the parent:
 
 @example
@@ -3553,7 +3553,7 @@ returned value may be the empty bytevector or string.
 Interface to the C function @cfunc{setsid}, @glibcref{Process Group
 Functions, setsid}.  Create a new session, making the current process
 the group leader with no controlling terminal.  If successful return a
-fixnum representing the new process groups ID, else raise an exception.
+fixnum representing the new process group ID, else raise an exception.
 @end defun
 
 
@@ -6014,6 +6014,60 @@ Build and return a new condition object of type
 @defun pid-file-invalid-contents-condition? @var{obj}
 Return @true{} if @var{obj} is an instance of
 @condition{pid-file-invalid-contents}.
+@end defun
+
+@c page
+@node posix daemonisations
+@section Turn the process into a daemon
+
+
+@cindex Library @library{vicare posix daemonisations}
+@cindex @library{vicare posix daemonisations}, library
+@cindex Daemon process
+@cindex Turn a process into a daemon
+@cindex Daemon service process
+
+
+The library @library{vicare posix daemonisations} implements facilities
+that turn a running process into a daemon; it is build on top of
+@library{vicare posix}.
+
+
+@defun daemonise
+Turn the current process into a daemon.  If successful: return a fixnum
+representing the new process group ID, else raise an exception.  Follow
+this procedure:
+
+@enumerate
+@item
+Block all interprocess signals using @func{signal-bub-init} from
+@library{vicare posix}.  @ref{posix signal, signal-bub-init}.
+
+@item
+Fork the process using @func{fork} from @library{vicare posix}; exit the
+parent process with status code @math{0}.  The daemon process is the
+child.  @ref{posix process, fork}.
+
+@item
+Close the Scheme ports referenced by the parameters
+@func{current-input-port}, @func{current-output-port},
+@func{current-error-port}.
+
+@item
+Open a new textual, input/output Scheme port, using the native
+transcoder, reading from and writing to the @file{/dev/null} device.
+Set such port value for the parameters @func{current-input-port},
+@func{current-output-port}, @func{current-error-port}.
+
+@item
+Detach the process from the controlling terminal and become session
+leader; this is done with a call to @func{setsid} from @library{vicare
+posix}.  @ref{posix job, setsid}.
+
+@item
+Unblock all interprocess signals using @func{signal-bub-final} from
+@library{vicare posix}.  @ref{posix signal, signal-bub-final}.
+@end enumerate
 @end defun
 
 @c end of file

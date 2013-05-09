@@ -181,9 +181,11 @@ dist_pkglibexec_SCRIPTS		+= compile-ffi.sps
 endif
 
 if WANT_POSIX
-nobase_dist_libvicare_DATA	+= vicare/posix.sls		\
-				   vicare/posix/pid-files.sls	\
-				   vicare/posix/simple-event-loop.sls
+nobase_dist_libvicare_DATA	+= \
+	vicare/posix.sls			\
+	vicare/posix/pid-files.sls		\
+	vicare/posix/daemonisations.sls		\
+	vicare/posix/simple-event-loop.sls
 dist_pkglibexec_SCRIPTS		+= compile-posix.sps
 endif
 

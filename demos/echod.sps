@@ -97,8 +97,7 @@
 	(%main.open-log-file/c)
 	(%main.log-server-start-messages)
 	;;First daemonise, then open the PID file.
-	(when (options.daemonise?)
-	  (daemonise))
+	(%main.daemonise)
 	(%main.open-pid-file/c)
 	(%main.enter-event-loop)
 	(log "exiting ECHO server"))
@@ -115,6 +114,13 @@
        (guard (E (else (void)))
 	 (when (root-server?)
 	   (close-log-file))))))
+
+  (define (%main.daemonise)
+    (import LOGGING (vicare posix daemonisation))
+    (when (options.daemonise?)
+      (guard-log-raise
+	  (condition-message "while daemonising server: ~a")
+	(daemonise))))
 
   (define (%main.open-pid-file/c)
     ;;Create the PID file, if requested, and push a compensation for its
@@ -395,47 +401,6 @@
 
 (module DAEMONISATION
   (daemonise)
-
-  (define (daemonise)
-    ;;Daemonise  the current  process.  Block  all interprocess  signals
-    ;;while doing it.
-    ;;
-    (import LOGGING)
-    (guard-log-raise
-	(condition-message "while daemonising server: ~a")
-      (with-compensations
-	(compensate
-	    (px.signal-bub-init)
-	  (with
-	   (px.signal-bub-final)))
-	(%exit-parent-keep-children)
-	(%replace-standard-ports)
-	(%detach-from-terminal-and-become-session-leader))))
-
-  (define (%exit-parent-keep-children)
-    (let ((pid (px.fork)))
-      (unless (zero? pid)
-	;;We are in the parent.
-	(exit 0))
-      ;;We are in the children.
-      (void)))
-
-  (define (%replace-standard-ports)
-    (let ((port (open-file-input/output-port "/dev/null"
-					     (file-options no-create
-							   no-fail
-							   no-truncate)
-					     (buffer-mode none)
-					     (native-transcoder))))
-      (define (%replace-port port-parameter)
-	(close-port (port-parameter))
-	(port-parameter port))
-      (%replace-port current-input-port)
-      (%replace-port current-output-port)
-      (%replace-port current-error-port)))
-
-  (define (%detach-from-terminal-and-become-session-leader)
-    (px.setsid))
 
   #| end of module: DAMONISATION |# )
 
