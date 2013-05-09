@@ -36,7 +36,7 @@
     (vicare arguments validation))
 
 
-(define (make-master-sock interface port)
+(define (make-master-sock interface port max-pending-connections)
   ;;Given a string INTERFACE representing  a network interface to listen
   ;;to and a  network PORT number: open a master  server socket and bind
   ;;it to the interface and port.  Return the master socket descriptor.
@@ -47,17 +47,21 @@
   ;;PORT must be an exact integer representing the server port to listen
   ;;to; for example 8081.
   ;;
+  ;;MAX-PENDING-CONNECTIONS must  be a non-negative  fixnum representing
+  ;;the maximum number of pending connections.
+  ;;
   (define who 'make-master-sock)
   (with-arguments-validation (who)
       ((non-empty-string	interface)
-       (px.network-port-number	port))
+       (px.network-port-number	port)
+       (non-negative-fixnum	max-pending-connections))
     (let ((sockaddr    (%make-sockaddr interface (number->string port)))
 	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
       (%socket-set-non-blocking master-sock)
       (px.setsockopt/linger master-sock #t 1)
       (px.setsockopt/int    master-sock SOL_SOCKET SO_REUSEADDR #t)
       (px.bind   master-sock sockaddr)
-      (px.listen master-sock 10)
+      (px.listen master-sock max-pending-connections)
       master-sock)))
 
 (define (close-master-sock sock)

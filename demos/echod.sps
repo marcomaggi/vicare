@@ -482,7 +482,7 @@ Options:
 	(compensate
 	    (log.with-logging-handler
 		(condition-message "while creating master socket: ~a")
-	      (net.make-master-sock interface port))
+	      (net.make-master-sock interface port 10))
 	  (with
 	   (net.close-master-sock master-sock))))
       (define (schedule-incoming-connection-event)

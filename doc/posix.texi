@@ -6457,23 +6457,30 @@ The following bindings are exported by the library @library{vicare posix
 tcp-server-sockets}.
 
 
-@defun make-master-sock @var{interface} @var{port}
+@defun make-master-sock @var{interface} @var{port} @var{max-pending-connections}
 Given a string @var{interface} representing a network interface to
 listen to and a network @var{port} number: open a master server socket,
-@ip{} version 4, @tcp{} protocol, and bind it to the interface and port.
-Return the master socket descriptor.
-
-The socket is configured to linger for @math{1} second
-(@code{SO_LINGER}) and the address is configured to be reused
-(@code{SO_REUSEADDR}).
+@ip{} version 4, @tcp{} protocol, bind it to the interface and port,
+enable it to listen for connections.  Return the master socket
+descriptor.
 
 @var{interface} must be a string representing the server interface to
 bind to; for example @code{localhost}.  @var{interface} is used as first
-argument in call to @func{getaddrinfo}, @ref{posix socket addresses
+argument in calls to @func{getaddrinfo}, @ref{posix socket addresses
 info, getaddrinfo}.
 
 @var{port} must be an exact integer representing the server port to
 listen to; for example 8081.
+
+@var{max-pending-connections} must be a non-negative fixnum representing
+the maximum number of pending connections.
+
+The returned socket is configured to linger for @math{1} second
+(@code{SO_LINGER}) and the address is configured to be reused
+(@code{SO_REUSEADDR}).
+
+Whenever the returned socket becomes readable: it means that at least
+one incoming connection is pending.
 @end defun
 
 
