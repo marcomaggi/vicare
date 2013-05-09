@@ -311,7 +311,8 @@ TESTS	+= \
 	\
 	test-vicare-shared-memory.sps		\
 	test-vicare-posix-sel.sps		\
-	test-vicare-posix-pid-files.sps
+	test-vicare-posix-pid-files.sps		\
+	test-vicare-posix-log-files.sps
 endif
 
 if WANT_GLIBC
@@ -546,6 +547,7 @@ EXTRA_DIST = \
 	test-vicare-posix-shared-memory.sps		\
 	test-vicare-posix-semaphores.sps		\
 	test-vicare-posix-sigwait.sps			\
+	test-vicare-posix-log-files.sps			\
 	test-vicare-posix-pid-files.sps			\
 	test-vicare-posix-sel.sps			\
 	\

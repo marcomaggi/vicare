@@ -28,12 +28,15 @@
 
 
 #!vicare
-(import (except (vicare)
-		log)
-  (prefix (vicare posix simple-event-loop)
-	  sel.)
+(import (vicare)
   (prefix (vicare posix)
 	  px.)
+  (prefix (vicare posix simple-event-loop)
+	  sel.)
+  (prefix (vicare posix log-files)
+	  log.)
+  (prefix (vicare posix pid-files)
+	  pidfile.)
   (vicare platform constants)
   (vicare language-extensions syntaxes))
 
@@ -71,9 +74,6 @@
 (module (main)
 
   (define (main argv)
-    (import LOGGING
-	    (prefix (vicare posix pid-files)
-		    pidfile.))
     ;;We catch the exceptions to exit with an error status.  If we catch
     ;;an exception here: we cannot log a message because we have already
     ;;closed the log file.
@@ -85,14 +85,15 @@
     (guard (E (else (exit 1)))
       ;;Set configuration  parameters; it is useless  to use PARAMETRISE
       ;;here.
-      (sel.logging	log)
       (options
        (guard (E (else
 		  (error-message-and-exit 1 "parsing options: ~a" (condition-message E))))
 	 (make-<global-options> argv)))
-      (logging (options.log-file))
-      (pidfile.pid-pathname  (options.pid-file))
-      (pidfile.log-procedure log)
+      (log.logging-enabled?	(options.log-file))
+      (log.log-pathname		(options.log-file))
+      (pidfile.pid-pathname	(options.pid-file))
+      (pidfile.log-procedure	log.log)
+      (sel.logging		log.log)
       (with-compensations
 	(%main.open-log-file/c)
 	(%main.log-server-start-messages)
@@ -100,48 +101,44 @@
 	(%main.daemonise)
 	(%main.open-pid-file/c)
 	(%main.enter-event-loop)
-	(log "exiting ECHO server"))
+	(log.log "exiting ECHO server"))
       ;;First get out of WITH-COMPENSATIONS, then exit.
       (exit 0)))
 
   (define (%main.open-log-file/c)
-    (import LOGGING)
     (compensate
 	(guard (E (else
 		   (error-message-and-exit 1 "opening log file: ~a" (condition-message E))))
-	  (open-log-file options.log-file))
+	  (log.open-logging))
       (with
        (guard (E (else (void)))
 	 (when (root-server?)
-	   (close-log-file))))))
+	   (log.close-logging))))))
 
   (define (%main.log-server-start-messages)
-    (import LOGGING)
     (let ((pid (px.getpid)))
-      (log-prefix (format "vicare echod[~a]: " pid))
-      (log "*** starting ECHO server, pid=~a" pid)))
+      (log.log-prefix (format "vicare echod[~a]: " pid))
+      (log.log "*** starting ECHO server, pid=~a" pid)))
 
   (define (%main.daemonise)
-    (import LOGGING (vicare posix daemonisations))
+    (import (vicare posix daemonisations))
     (when (options.daemonise?)
-      (guard-log-raise
+      (log.with-logging-handler
 	  (condition-message "while daemonising server: ~a")
-	(log "daemonising process")
+	(log.log "daemonising process")
 	;;This returns the  new process group ID.  It is  not used here,
 	;;but it might be useful in other servers.
 	(begin0
 	    (daemonise)
 	  (let ((pid (px.getpid)))
-	    (log-prefix (format "vicare echod[~a]: " pid))
-	    (log "after daemonisation pid=~a" pid))))))
+	    (log.log-prefix (format "vicare echod[~a]: " pid))
+	    (log.log "after daemonisation pid=~a" pid))))))
 
   (define (%main.open-pid-file/c)
     ;;Create the PID file, if requested, and push a compensation for its
     ;;removal.  When this  function is called: the log  facility must be
     ;;already set up and running; error messages are logged.
     ;;
-    (import (prefix (vicare posix pid-files)
-		    pidfile.))
     (compensate
 	(pidfile.create-pid-file)
       (with
@@ -153,10 +150,9 @@
     ;;Then raise again  the exception to run the  compensations and exit
     ;;with error code.
     ;;
-    (import LOGGING SERVER-EVENTS-LOOP)
-    (guard (E (else
-	       (log "exiting ECHO server because of error")
-	       (raise E)))
+    (import SERVER-EVENTS-LOOP)
+    (log.with-logging-handler
+	(condition-message "exiting ECHO server because of error: ~a")
       (enter-event-loop (options.server-interface)
 			(options.server-port)
 			(options.server-loop-config))))
@@ -292,118 +288,6 @@
   ($<global-options>-server-loop-config (options)))
 
 
-;;;; log file handling
-
-(module LOGGING
-  (logging
-   log-port
-   log-prefix
-   open-log-file
-   close-log-file
-   log
-   log-condition-message
-   guard-log-raise)
-
-  ;;Boolean; true if logging is enabled, false otherwise.
-  ;;
-  (define logging
-    (make-parameter #f
-      (lambda (obj)
-	(if obj #t #f))))
-
-  ;;False or a textual output port to which log messages must be written.
-  ;;
-  (define log-port
-    (make-parameter #f))
-
-  ;;A string representing the prefix for every log file line.
-  ;;
-  (define log-prefix
-    (make-parameter "vicare server: "))
-
-  (define pathname-thunk
-    ;;It must be  set to a thunk returning a  Scheme string representing
-    ;;the log  file pathname, or false  if no PID file  must be created.
-    ;;The special string "-" means: log to the current error port.
-    ;;
-    (make-parameter #f
-      (lambda (obj)
-	(assert (procedure? obj))
-	obj)))
-
-;;; --------------------------------------------------------------------
-
-  (define (open-log-file ptn-thunk)
-    ;;If logging  is enabled: configure  the log port.  If  the selected
-    ;;pathname is  "-" assume the  log messages  must go to  the current
-    ;;error port.  Otherwise open a log file.
-    ;;
-    (when (logging)
-      (pathname-thunk ptn-thunk)
-      (let ((log-file ((pathname-thunk))))
-	(if (string=? "-" log-file)
-	    (log-port (current-error-port))
-	  (let ((size (if (file-exists? log-file)
-			  (px.file-size log-file)
-			0)))
-	    (when log-file
-	      (log-port (open-file-output-port log-file
-					       (file-options no-fail no-truncate)
-					       (buffer-mode line)
-					       (native-transcoder)))
-	      (set-port-position! (log-port) size))))))
-    (void))
-
-  (define (close-log-file)
-    ;;Close the  log port unless it  is the current error  port.  Notice
-    ;;that the LOGGING parameter is ignored.
-    ;;
-    (when (and (log-port)
-	       (not (equal? (log-port)
-			    (current-error-port))))
-      (close-port (log-port)))
-    (void))
-
-;;; --------------------------------------------------------------------
-
-  (define (log template . args)
-    ;;If  logging is  enabled: format  a log  line and  write it  to the
-    ;;current log port.  Return unspecified values.
-    ;;
-    (when (and (logging)
-	       (log-port))
-      (let* ((date	(px.strftime/string "%F-T%T%Z" (px.localtime (px.time))))
-	     (template	(string-append (format "~a: " date) template)))
-	(%format-and-print (log-port) template args)))
-    (void))
-
-  (define (log-condition-message template cnd)
-    (log template (if (message-condition? cnd)
-		      (condition-message cnd)
-		    "unknown error")))
-
-  (define-syntax guard-log-raise
-    (syntax-rules (condition-message)
-      ((_ (condition-message ?template) ?body0 ?body ...)
-       (guard (E (else
-		  (log-condition-message ?template E)
-		  (raise E)))
-	 ?body0 ?body ...))))
-
-;;; --------------------------------------------------------------------
-;;; private stuff
-
-  (define (%format-and-print port template args)
-    ;;Format a  line of text and  display it to the  given textual port.
-    ;;We expect the port to have buffer mode set to "line".
-    ;;
-    (fprintf port (log-prefix))
-    (apply fprintf port template args)
-    (newline port))
-
-  #| end of module: LOGGING |# )
-
-
 ;;;; command line arguments parsing
 
 (module COMMAND-LINE-ARGS
@@ -495,8 +379,8 @@ Options:
   (define (dry-run-option-processor option name operand seed)
     (import SERVER-EVENTS-LOOP)
     (<global-options>-server-loop-config-set! seed (enum-set-union
-					     (server-loop-config dry-run)
-					     (<global-options>-server-loop-config seed)))
+						    (server-loop-config dry-run)
+						    (<global-options>-server-loop-config seed)))
     seed)
 
 ;;; --------------------------------------------------------------------
@@ -591,11 +475,11 @@ Options:
     ;;OPTIONS-SET must be an ENUM-SET  of type SERVER-OPTION; it is used
     ;;to configure the server loop.
     ;;
-    (import NETWORKING LOGGING INTERPROCESS-SIGNALS)
+    (import NETWORKING INTERPROCESS-SIGNALS)
     (with-compensations
       (define master-sock
 	(compensate
-	    (guard-log-raise
+	    (log.with-logging-handler
 		(condition-message "while creating master socket: ~a")
 	      (net.make-master-sock interface port))
 	  (with
@@ -610,9 +494,9 @@ Options:
 	 (sel.finalise)))
       (initialise-signal-handlers)
       (if (%config.dry-run? options-set)
-	  (log "requested dry run")
+	  (log.log "requested dry run")
 	(begin
-	  (log "listening to: ~a:~a" interface port)
+	  (log.log "listening to: ~a:~a" interface port)
 	  (schedule-incoming-connection-event)
 	  ;;We return from this form only when it is time to exit the process.
 	  (sel.enter)))
@@ -623,8 +507,8 @@ Options:
     ;;socket with a pending connection:  accept the connection, create a
     ;;server socket, enter the procedure that handles incoming data.
     ;;
-    (import NETWORKING LOGGING)
-    (guard-log-raise
+    (import NETWORKING)
+    (log.with-logging-handler
 	(condition-message "while accepting connection: ~a")
       (receive (server-sock server-port client-address)
 	  (net.make-server-sock master-sock)
@@ -646,7 +530,6 @@ Options:
   (net.network-port?
    net.make-master-sock		net.make-server-sock
    net.close-master-sock	net.close-server-port)
-  (import LOGGING)
 
   (define (net.make-master-sock interface port)
     ;;Given  a  string INTERFACE  representing  a  network interface  to
@@ -755,7 +638,7 @@ Options:
   (import LOGGING NETWORKING (prefix (vicare net channels) chan.))
 
   (define (proto.start-session server-sock server-port client-address)
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "while starting session: ~a")
       (define connection-id
 	(gensym->unique-string (gensym)))
@@ -771,8 +654,8 @@ Options:
 	   (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
 	   (remote-port         (px.sockaddr_in.in_port client-address))
 	   (remote-port.str     (number->string remote-port)))
-      (log "accepted connection from: ~a:~a, connection-id=~a"
-	   remote-address.str remote-port.str connection-id)))
+      (log.log "accepted connection from: ~a:~a, connection-id=~a"
+	       remote-address.str remote-port.str connection-id)))
 
   (define (%process-incoming-data server-sock server-port chan connection-id)
     (define (%reschedule)
@@ -781,16 +664,16 @@ Options:
 		      (%process-incoming-data server-sock server-port chan connection-id))
 		    (time-from-now (make-time 5 0))
 		    (lambda ()
-		      (log "connection ~a expired" connection-id)
+		      (log.log "connection ~a expired" connection-id)
 		      (%stop-session connection-id server-port chan))))
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "while processing incoming data: ~a")
       (cond ((chan.channel-recv-message-portion! chan)
 	     => (lambda (dummy)
 		  (let* ((data.bv  (chan.channel-recv-end! chan))
 			 (data.str (utf8->string data.bv)))
-		    (log "connection ~a echoing: ~a"
-			 connection-id (ascii->string (uri-encode data.bv)))
+		    (log.log "connection ~a echoing: ~a"
+			     connection-id (ascii->string (uri-encode data.bv)))
 		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
 		    (if (%received-quit? data.bv)
 			(%stop-session connection-id server-port chan)
@@ -801,7 +684,7 @@ Options:
 	     (%reschedule)))))
 
   (define (%stop-session connection-id server-port chan)
-    (log "closing connection ~a" connection-id)
+    (log.log "closing connection ~a" connection-id)
     (chan.close-channel chan)
     (net.close-server-port server-port))
 
@@ -850,9 +733,8 @@ Options:
     (sel.receive-signal SIGUSR2 %sigusr2-handler))
 
   (define (%sigterm-handler)
-    (import LOGGING)
     (sel.receive-signal SIGTERM %sigterm-handler)
-    (log "received SIGTERM")
+    (log.log "received SIGTERM")
     (sel.leave-asap))
 
   (define (%sigquit-handler)
@@ -871,58 +753,52 @@ Options:
     ;;  files.  But it is better for SIGQUIT not to delete them, so that
     ;;  the user can examine them in conjunction with the core dump.
     ;;
-    (import LOGGING)
     (sel.receive-signal SIGQUIT %sigquit-handler)
-    (log "received SIGQUIT")
+    (log.log "received SIGQUIT")
     (sel.leave-asap))
 
   (define (%sigint-handler)
     ;;SIGINT comes from Ctrl-C.
-    (import LOGGING)
     (sel.receive-signal SIGINT %sigint-handler)
-    (log "received SIGINT")
+    (log.log "received SIGINT")
     (sel.leave-asap))
 
   (define (%sigtstp-handler)
     ;;SIGTSTP  comes from  Ctrl-Z.   We should  put  some process  state
     ;;suspension  finalisation   in  this  handler.   Finally   we  send
     ;;ourselves a SIGSTOP to suspend the process.
-    (import LOGGING)
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "error in SIGTSTP handler: ~a")
       (sel.receive-signal SIGTSTP %sigtstp-handler)
-      (log "received SIGTSTP")
+      (log.log "received SIGTSTP")
       (px.kill (px.getpid) SIGSTOP)))
 
   (define (%sigcont-handler)
     ;;SIGCONT comes from the controlling process and allows us to resume
     ;;the program.  We should put some process state reinitialisation in
     ;;this handler.
-    (import LOGGING)
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "error in SIGCONT handler: ~a")
       (sel.receive-signal SIGCONT %sigcont-handler)
-      (log "received SIGCONT")))
+      (log.log "received SIGCONT")))
 
   (define (%sigusr1-handler)
     ;;SIGUSR1  is  explicitly  sent  by  someone  to  perform  a  custom
     ;;procedure.
     ;;
-    (import LOGGING)
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "error in SIGUSR1 handler: ~a")
       (sel.receive-signal SIGUSR1 %sigusr1-handler)
-      (log "received SIGUSR1")))
+      (log.log "received SIGUSR1")))
 
   (define (%sigusr2-handler)
     ;;SIGUSR2  is  explicitly  sent  by  someone  to  perform  a  custom
     ;;procedure.
     ;;
-    (import LOGGING)
-    (guard-log-raise
+    (log.with-logging-handler
 	(condition-message "error in SIGUSR2 handler: ~a")
       (sel.receive-signal SIGUSR2 %sigusr2-handler)
-      (log "received SIGUSR2")))
+      (log.log "received SIGUSR2")))
 
   #| end of module: INTERPROCESS-SIGNALS |# )
 
@@ -969,5 +845,5 @@ Options:
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'guard-log-raise 'scheme-indent-function 1)
+;; eval: (put 'log.with-logging-handler 'scheme-indent-function 1)
 ;; End:

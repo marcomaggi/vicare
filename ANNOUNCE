@@ -249,6 +249,9 @@ Notes for revision 0.3d0
 * Added  library (vicare  posix pid-files),  see the  documentation node
   "posix pid-files".
 
+* Added  library (vicare  posix log-files),  see the  documentation node
+  "posix log-files".
+
 * Added  library (vicare  posix daemonisations),  see the  documentation
   node "posix daemonisations".
 

@@ -60,6 +60,7 @@ External libraries
 
 * posix sel::                   Simple event loop.
 * posix pid-files::             Creating @acronym{PID} files.
+* posix log-files::             Logging facilities.
 * posix daemonisations::        Turn the process into a daemon.
 @end menu
 
@@ -5508,7 +5509,7 @@ Exceptions raised by registered event handlers are catched with
 errors appropriately in the handlers.
 
 
-@deffn Parameter logging
+@deffn Parameter log-procedure
 When set to @true{} causes debugging messages to be displayed on the
 current error port.  When set to a procedure: such procedure is called
 with a single argument whenever a log message must be reported; such
@@ -6017,6 +6018,99 @@ Return @true{} if @var{obj} is an instance of
 @end defun
 
 @c page
+@node posix log-files
+@section Logging facilities
+
+
+@cindex Library @library{vicare posix log-files}
+@cindex @library{vicare posix log-files}, library
+@cindex Log files
+@cindex Logging facilities
+@cindex File, logging
+
+
+The library @library{vicare posix log-files} implements logging
+facilities, optionally to log files; it is built on top of
+@library{vicare posix}.
+
+@menu
+* posix log-files config::      Configuring logging facilities.
+* posix log-files api::         Logging programming interface.
+@end menu
+
+@c page
+@node posix log-files config
+@subsection Configuring logging facilities
+
+
+The following bindings are exported by the library @library{vicare posix
+log-files}.
+
+
+@deffn Parameter logging-enabled?
+Boolean: true if logging is enabled, false otherwise.  It is initialised
+to @false{}.
+@end deffn
+
+
+@deffn Parameter log-port
+A textual output port to which log messages must be written.  The port
+is expected to have @code{line} buffering, but this is not required.  It
+is initialised to the value of the parameter @func{current-output-port}
+at the time the library is instantiated.
+@end deffn
+
+
+@deffn Parameter log-prefix
+A string representing the prefix for every log message.
+@end deffn
+
+
+@deffn Parameter log-pathname
+False or a Scheme string representing the log file pathname.  The
+special string @code{"-"} means: log to the error port.  It is
+initialised to @code{"-"}.
+@end deffn
+
+@c page
+@node posix log-files api
+@subsection Logging programming interface
+
+
+The following bindings are exported by the library @library{vicare posix
+log-files}.
+
+
+@defun log @var{template} @var{arg} @dots{}
+If logging is enabled: format a log message and write it to the current
+log port; return unspecified values.
+
+@var{template} must be a @func{format}--like string expecting as many
+values as there are @var{arg} arguments.
+@end defun
+
+
+@defun log-condition-message @var{template} @var{condition}
+If logging is enabled: format a log message extracting the message from
+the condition object @var{condition}; return unspecified values.  The
+template is expected to contain a @code{~a} sequence to be replaced by
+the condition message.
+@end defun
+
+
+@deffn Syntax with-logging-handler (condition-message @meta{template}) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} condition-message
+Evaluate the @meta{body} forms; in case of exception log a message and
+raise it again.
+
+@func{condition-message} must be the identifier exported by the library
+@rsixlibrary{rnrs}.  @meta{template} must be an expression evaluating to
+a string template suitable to be used as first argument to
+@func{log-condition-message}.
+@end deffn
+
+
+@c page
 @node posix daemonisations
 @section Turn the process into a daemon
 
@@ -6038,6 +6132,9 @@ Process daemonisation is usually performed in the early phase of a
 process start up, before the any actual work is performed.  The
 daemonisation involves forking a child process and exiting the parent
 process; this changes the ID of the surviving process.
+
+The following bindings are exported by the library @library{vicare posix
+daemonisations}.
 
 
 @defun daemonise
