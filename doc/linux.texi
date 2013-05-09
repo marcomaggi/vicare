@@ -40,6 +40,7 @@ behaviour is undefined.
 * linux timerfd::               Timer expiration handling through
                                 file descriptors.
 * linux inotify::               Monitoring file system events.
+* linux daemonisation::         Turning a process into a daemon.
 @end menu
 
 @c page
@@ -832,5 +833,26 @@ event on a file:
      (px.close fd)
      (delete-file pathname)))
 @end example
+
+@c page
+@node linux daemonisation
+@section Turning a process into a daemon
+
+
+The following bindings are exported by the library @library{vicare
+linux}.
+
+
+@defun daemon @var{nochdir} @var{noclose}
+Interface to the C language function @cfunc{daemon}, @manpage{daemon}.
+Turn the current process into a daemon.  If an error occurs raise an
+exception.
+
+If @var{nochdir} is @false{}: change the current working directory to
+the root directory.
+
+If @var{noclose} is @false{}: redirect @code{stdin}, @code{stdout} and
+@code{stderr} to @file{/dev/null}.
+@end defun
 
 @c end of file

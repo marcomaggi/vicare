@@ -345,6 +345,9 @@
     posix-getrusage			posix-RLIM_INFINITY
     linux-prlimit
 
+    ;; daemonisation
+    linux-daemon
+
     ;; mathematics
     glibc-csin		glibc-ccos	glibc-ctan
     glibc-casin		glibc-cacos	glibc-catan
@@ -1968,6 +1971,12 @@
 
 (define-inline (linux-prlimit pid resource new-limit old-limit)
   (foreign-call "ikrt_linux_prlimit" pid resource new-limit old-limit))
+
+
+;;;; daemonisation
+
+(define-inline (linux-daemon nochdir noclose)
+  (foreign-call "ikrt_linux_daemon" nochdir noclose))
 
 
 ;;;; mathematics

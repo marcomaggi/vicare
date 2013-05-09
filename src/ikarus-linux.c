@@ -740,4 +740,26 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
 #endif
 }
 
+
+/** --------------------------------------------------------------------
+ ** Daemonisation.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_daemon (ikptr s_nochdir, ikptr s_noclose)
+/* Interface  to  the  C  function "daemon()".   Daemonise  the  current
+   process; if  successful return zero,  else return an  encoded "errno"
+   value. */
+{
+#ifdef HAVE_DAEMON
+  int		rv;
+  errno = 0;
+  rv    = daemon(IK_BOOLEAN_TO_INT(s_nochdir),
+		 IK_BOOLEAN_TO_INT(s_noclose));
+  return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 /* end of file */

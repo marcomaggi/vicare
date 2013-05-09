@@ -106,6 +106,9 @@
     struct-inotify-event-cookie		set-struct-inotify-event-cookie!
     struct-inotify-event-len		set-struct-inotify-event-len!
     struct-inotify-event-name		set-struct-inotify-event-name!
+
+    ;; daemonisation
+    daemon
     )
   (import (vicare)
     (vicare language-extensions syntaxes)
@@ -597,6 +600,16 @@
 	       rv)
 	      (else
 	       (%raise-errno-error who rv fd event))))))))
+
+
+;;;; daemonisation
+
+(define (daemon nochdir noclose)
+  (define who 'daemon)
+  (let ((rv (capi.linux-daemon nochdir noclose)))
+    (if (unsafe.fx<= 0 rv)
+	rv
+      (%raise-errno-error who rv nochdir noclose))))
 
 
 ;;;; done

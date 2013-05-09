@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -107,6 +107,7 @@ main (int argc, const char *const argv[])
     HAVE_CTAN\n\
     HAVE_CTANH\n\
     HAVE_CTERMID\n\
+    HAVE_DAEMON\n\
     HAVE_DECL_ENVIRON\n\
     HAVE_DIRENT_H\n\
     HAVE_DIRFD\n\
@@ -776,6 +777,13 @@ printf("(define-inline-constant HAVE_CTANH %s)\n",
   );
 printf("(define-inline-constant HAVE_CTERMID %s)\n",
 #ifdef HAVE_CTERMID
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_DAEMON %s)\n",
+#ifdef HAVE_DAEMON
   "#t"
 #else
   "#f"

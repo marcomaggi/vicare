@@ -1388,6 +1388,7 @@ int main (void)
   AC_CHECK_FUNCS([timerfd_create timerfd_settime timerfd_gettime])
   AC_CHECK_FUNCS([prlimit])
   AC_CHECK_FUNCS([inotify_init inotify_init1 inotify_add_watch inotify_rm_watch])
+  AC_CHECK_FUNCS([daemon])
 ])
 
 dnl --------------------------------------------------------------------
