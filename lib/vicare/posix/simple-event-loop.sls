@@ -34,7 +34,7 @@
     initialise			finalise
     busy?			do-one-event
     enter			leave-asap
-    logging
+    log-procedure
 
     ;; interprocess signals
     receive-signal		serve-interprocess-signals
@@ -80,7 +80,7 @@
      (guard (E (else #f))
        . ?body))))
 
-(define logging
+(define log-procedure
   (make-parameter #f
     (lambda (obj)
       (if (or (boolean? obj)
@@ -89,10 +89,10 @@
 	#f))))
 
 (define (%log template . args)
-  (when (logging)
+  (when (log-procedure)
     (let ((line (string-append "Vicare SEL: " (apply format template args))))
-      (if (procedure? (logging))
-	  ((logging) line)
+      (if (procedure? (log-procedure))
+	  ((log-procedure) line)
 	(let ((port (current-error-port)))
 	  (display line port)
 	  (newline port)
