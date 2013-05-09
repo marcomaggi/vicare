@@ -209,7 +209,7 @@
 	 ;; validate server port
 	 (let ((port ($<global-options>-server-port self)))
 	   (import NETWORKING)
-	   (cond ((not (net.network-port? port))
+	   (cond ((not (net.network-port-number? port))
 		  (%err "invalid server port: \"~a\"" port))))
 
 	 ;; validate pid file
@@ -528,7 +528,7 @@ Options:
 ;;;; sockets handling
 
 (module NETWORKING
-  (net.network-port?
+  (net.network-port-number?
    net.make-master-sock		net.make-server-sock-and-port
    net.close-master-sock	net.close-server-port)
 
@@ -622,7 +622,7 @@ Options:
     (let ((x (px.fcntl sock F_GETFL 0)))
       (px.fcntl sock F_SETFL (bitwise-ior x O_NONBLOCK))))
 
-  (define (net.network-port? obj)
+  (define (net.network-port-number? obj)
     ;;Return true  if OBJ is  an exact integer  in the range  of network
     ;;ports.
     ;;
