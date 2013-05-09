@@ -33,6 +33,7 @@
     logging-enabled?
     log-port
     log-prefix
+    log-pathname
 
     ;; log file
     open-logging

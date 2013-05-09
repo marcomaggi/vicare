@@ -93,7 +93,7 @@
       (log.log-pathname		(options.log-file))
       (pidfile.pid-pathname	(options.pid-file))
       (pidfile.log-procedure	log.log)
-      (sel.logging		log.log)
+      (sel.log-procedure	log.log)
       (with-compensations
 	(%main.open-log-file/c)
 	(%main.log-server-start-messages)
@@ -635,7 +635,7 @@ Options:
 
 (module ECHO-SERVER
   (proto.start-session)
-  (import LOGGING NETWORKING (prefix (vicare net channels) chan.))
+  (import NETWORKING (prefix (vicare net channels) chan.))
 
   (define (proto.start-session server-sock server-port client-address)
     (log.with-logging-handler
