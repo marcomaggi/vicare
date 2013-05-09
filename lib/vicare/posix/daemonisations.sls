@@ -43,6 +43,8 @@
       (with
        (px.signal-bub-final)))
     (%exit-parent-keep-child)
+    (%change-directory-to-root)
+    (%set-umask-to-zero)
     (%replace-standard-ports)
     (%detach-from-terminal-and-become-session-leader)))
 
@@ -53,6 +55,12 @@
       (exit 0))
     ;;We are in the child.
     (void)))
+
+(define (%change-directory-to-root)
+  (px.chdir "/"))
+
+(define (%set-umask-to-zero)
+  (px.umask 0))
 
 (define (%replace-standard-ports)
   (let ((port (open-file-input/output-port "/dev/null"

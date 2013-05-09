@@ -6182,6 +6182,12 @@ parent process with status code @math{0}.  The daemon process is the
 child.  @ref{posix process, fork}.
 
 @item
+Change the current working directory to root.  @ref{posix dir, chdir}.
+
+@item
+Set the current umask to zero.  @ref{posix file, umask}.
+
+@item
 Close the Scheme ports referenced by the parameters
 @func{current-input-port}, @func{current-output-port},
 @func{current-error-port}.
