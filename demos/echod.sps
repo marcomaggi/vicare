@@ -511,11 +511,12 @@ Options:
     (log.with-logging-handler
 	(condition-message "while accepting connection: ~a")
       (receive (server-sock server-port client-address)
-	  (net.make-server-sock master-sock)
-	(sel.readable server-sock
+	  (net.make-server-sock-and-port master-sock)
+	;;We never use the SERVER-SOCK in this application.
+	(sel.readable server-port
 		      (lambda ()
 			(import ECHO-SERVER)
-			(proto.start-session server-sock server-port client-address)))
+			(proto.start-session server-port client-address)))
 	(void))))
 
   (define (%config.dry-run? options-set)
@@ -528,7 +529,7 @@ Options:
 
 (module NETWORKING
   (net.network-port?
-   net.make-master-sock		net.make-server-sock
+   net.make-master-sock		net.make-server-sock-and-port
    net.close-master-sock	net.close-server-port)
 
   (define (net.make-master-sock interface port)
@@ -552,7 +553,7 @@ Options:
       (px.listen master-sock 10)
       master-sock))
 
-  (define (net.make-server-sock master-sock)
+  (define (net.make-server-sock-and-port master-sock)
     ;;Given  the  socket  descriptor MASTER-SOCK  representing  a  bound
     ;;socket  with  a  pending  connection: accept  the  connection  and
     ;;configure the resulting server socket descriptor to non-blocking.
@@ -591,7 +592,7 @@ Options:
     ;;Close  the  Scheme  port  wrapping a  server  connection's  socket
     ;;descriptor; closing the port will also shut down the socket.  PORT
     ;;must   be   the    return   value   of   a    previous   call   to
-    ;;NET.MAKE-SERVER-SOCK.
+    ;;NET.MAKE-SERVER-SOCK-AND-PORT.
     ;;
     (close-port port))
 
@@ -637,7 +638,7 @@ Options:
   (proto.start-session)
   (import NETWORKING (prefix (vicare net channels) chan.))
 
-  (define (proto.start-session server-sock server-port client-address)
+  (define (proto.start-session server-port client-address)
     (log.with-logging-handler
 	(condition-message "while starting session: ~a")
       (define connection-id
@@ -647,7 +648,7 @@ Options:
 	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
 	(%send-message chan '(#ve(ascii "Vicare ECHO daemon.\r\n")))
 	(chan.channel-recv-begin! chan)
-	(%process-incoming-data server-sock server-port chan connection-id))))
+	(%process-incoming-data server-port chan connection-id))))
 
   (define (%log-accepted-connection client-address connection-id)
     (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
@@ -657,11 +658,11 @@ Options:
       (log.log "accepted connection from: ~a:~a, connection-id=~a"
 	       remote-address.str remote-port.str connection-id)))
 
-  (define (%process-incoming-data server-sock server-port chan connection-id)
+  (define (%process-incoming-data server-port chan connection-id)
     (define (%reschedule)
-      (sel.readable server-sock
+      (sel.readable server-port
 		    (lambda ()
-		      (%process-incoming-data server-sock server-port chan connection-id))
+		      (%process-incoming-data server-port chan connection-id))
 		    (time-from-now (make-time 5 0))
 		    (lambda ()
 		      (log.log "connection ~a expired" connection-id)
