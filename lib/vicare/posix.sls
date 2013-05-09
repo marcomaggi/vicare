@@ -22,6 +22,8 @@
     (rename (posix.errno->string	errno->string))
     strerror
     h_errno->string			h_strerror
+    &errno				make-errno-condition
+    errno-condition?			condition-errno
 
     ;; interprocess singnal codes handling
     interprocess-signal->string

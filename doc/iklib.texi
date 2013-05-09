@@ -697,6 +697,7 @@ Push the given thunk on the current compensations stack.
 @menu
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
+* iklib conditions errno::      Reporting @code{errno} exceptions.
 @end menu
 
 @c page
@@ -776,6 +777,36 @@ Return a new condition object of type @condition{i/o-eagain}.
 @defun i/o-eagain-error? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{i/o-eagain}.
+@end defun
+
+@c page
+@node iklib conditions errno
+@subsection Reporting @code{errno} exceptions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Condition Type} &errno
+Condition object type representing system errors described by an encoded
+@code{errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-errno-condition @var{errno}
+Build and return a new @condition{errno} condition object holding the
+given encoded @code{errno} value.
+@end defun
+
+
+@defun errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{errno}.
+@end defun
+
+
+@defun condition-errno @var{obj}
+Accessor for the encoded @code{errno} value in @var{obj}, which must be
+an instance of @condition{errno}.
 @end defun
 
 @c page
