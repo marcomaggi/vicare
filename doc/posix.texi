@@ -1879,9 +1879,9 @@ language type @code{off_t}.
 
 
 @defun lockf @var{fd} @var{cmd} @var{len}
-Interface to the C function @cfunc{lockf}, @manpage{lockf}.  Apply, test
-or remove a @posix{} lock on a section of an open file; if successful
-return unspecified values, else raise an exception
+Interface to the C function @cfunc{lockf}, @manpage{lockf, lockf}.
+Apply, test or remove a @posix{} lock on a section of an open file; if
+successful return unspecified values, else raise an exception
 
 The file is selected by the file descriptor @var{fd}.  The action by the
 signed integer @var{cmd}.  The file section is from the current position

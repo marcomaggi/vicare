@@ -844,9 +844,9 @@ linux}.
 
 
 @defun daemon @var{nochdir} @var{noclose}
-Interface to the C language function @cfunc{daemon}, @manpage{daemon}.
-Turn the current process into a daemon.  If an error occurs raise an
-exception.
+Interface to the C language function @cfunc{daemon}, @manpage{daemon,
+daemon}.  Turn the current process into a daemon.  If an error occurs
+raise an exception.
 
 If @var{nochdir} is @false{}: change the current working directory to
 the root directory.
