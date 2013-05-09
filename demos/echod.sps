@@ -71,7 +71,7 @@
 (module (main)
 
   (define (main argv)
-    (import LOGGING DAEMONISATION
+    (import LOGGING
 	    (prefix (vicare posix pid-files)
 		    pidfile.))
     ;;We catch the exceptions to exit with an error status.  If we catch
@@ -115,12 +115,25 @@
 	 (when (root-server?)
 	   (close-log-file))))))
 
+  (define (%main.log-server-start-messages)
+    (import LOGGING)
+    (let ((pid (px.getpid)))
+      (log-prefix (format "vicare echod[~a]: " pid))
+      (log "*** starting ECHO server, pid=~a" pid)))
+
   (define (%main.daemonise)
-    (import LOGGING (vicare posix daemonisation))
+    (import LOGGING (vicare posix daemonisations))
     (when (options.daemonise?)
       (guard-log-raise
 	  (condition-message "while daemonising server: ~a")
-	(daemonise))))
+	(log "daemonising process")
+	;;This returns the  new process group ID.  It is  not used here,
+	;;but it might be useful in other servers.
+	(begin0
+	    (daemonise)
+	  (let ((pid (px.getpid)))
+	    (log-prefix (format "vicare echod[~a]: " pid))
+	    (log "after daemonisation pid=~a" pid))))))
 
   (define (%main.open-pid-file/c)
     ;;Create the PID file, if requested, and push a compensation for its
@@ -134,12 +147,6 @@
       (with
        (when (root-server?)
 	 (pidfile.remove-pid-file)))))
-
-  (define (%main.log-server-start-messages)
-    (import LOGGING)
-    (let ((pid (px.getpid)))
-      (log-prefix (format "vicare echod[~a]: " pid))
-      (log "*** starting ECHO server, pid=~a" pid)))
 
   (define (%main.enter-event-loop)
     ;;Catch the exceptions here to log the event: exit because of error.
@@ -395,14 +402,6 @@
     (newline port))
 
   #| end of module: LOGGING |# )
-
-
-;;;; process daemonisation
-
-(module DAEMONISATION
-  (daemonise)
-
-  #| end of module: DAMONISATION |# )
 
 
 ;;;; command line arguments parsing
