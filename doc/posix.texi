@@ -6030,7 +6030,14 @@ Return @true{} if @var{obj} is an instance of
 
 The library @library{vicare posix daemonisations} implements facilities
 that turn a running process into a daemon; it is build on top of
-@library{vicare posix}.
+@library{vicare posix}.  A @dfn{daemon process} is a process that runs
+in the background with no controlling process, usually to provide
+networking service.
+
+Process daemonisation is usually performed in the early phase of a
+process start up, before the any actual work is performed.  The
+daemonisation involves forking a child process and exiting the parent
+process; this changes the ID of the surviving process.
 
 
 @defun daemonise
