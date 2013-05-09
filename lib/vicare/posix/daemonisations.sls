@@ -37,16 +37,17 @@
   ;;Daemonise  the  current process.   If  successful:  return a  fixnum
   ;;representing the new process group ID, else raise an exception.
   ;;
-  (with-compensations
-    (compensate
-	(px.signal-bub-init)
-      (with
-       (px.signal-bub-final)))
-    (%exit-parent-keep-child)
-    (%change-directory-to-root)
-    (%set-umask-to-zero)
-    (%replace-standard-ports)
-    (%detach-from-terminal-and-become-session-leader)))
+  (unless (= 1 (px.getppid))
+    (with-compensations
+      (compensate
+	  (px.signal-bub-init)
+	(with
+	 (px.signal-bub-final)))
+      (%exit-parent-keep-child)
+      (%change-directory-to-root)
+      (%set-umask-to-zero)
+      (%replace-standard-ports)
+      (%detach-from-terminal-and-become-session-leader))))
 
 (define (%exit-parent-keep-child)
   (let ((pid (px.fork)))

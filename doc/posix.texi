@@ -6173,6 +6173,11 @@ this procedure:
 
 @enumerate
 @item
+Check the ID of the parent process: if it is @code{1} assume this
+process is already a daemon and return doing nothing else.  @code{1} is
+the ID of the @command{init} process.  @ref{posix pid, getppid}.
+
+@item
 Block all interprocess signals using @func{signal-bub-init} from
 @library{vicare posix}.  @ref{posix signal, signal-bub-init}.
 
@@ -6195,7 +6200,7 @@ Close the Scheme ports referenced by the parameters
 @item
 Open a new textual, input/output Scheme port, using the native
 transcoder, reading from and writing to the @file{/dev/null} device.
-Set such port value for the parameters @func{current-input-port},
+Store such port value in the parameters @func{current-input-port},
 @func{current-output-port}, @func{current-error-port}.
 
 @item
