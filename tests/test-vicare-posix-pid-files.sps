@@ -34,7 +34,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare: PID files\n")
+(check-display "*** testing Vicare: PID files\n")
 
 
 ;;; helpers
