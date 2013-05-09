@@ -157,14 +157,6 @@
 	      (make-message-condition "corrupted PID file contents, avoiding removal")
 	      (make-irritants-condition (list pid-pathname)))))
 
-(define-syntax guard-condition-raise
-  (syntax-rules ()
-    ((_ ?condition ?body0 ?body ...)
-     (guard (E (else
-		(raise (condition E ?condition))))
-       ?body0 ?body ...))
-    ))
-
 
 ;;;; configuration
 
@@ -260,13 +252,13 @@
   ;;
   (define who 'create-pid-file)
   (when (pid-pathname)
-    (guard-log-raise
+    (with-logging-handler
 	(condition-message "while creating PID file: ~a")
       (if ((file-existence-procedure) (pid-pathname))
 	  (%error-pid-file-already-exists who (pid-pathname))
 	(begin
 	  (log "creating PID file: ~a" (pid-pathname))
-	  (guard-condition-raise
+	  (with-condition-handler
 	      (make-pid-file-creation-condition)
 	    ((textual-contents-writing-procedure) (pid-pathname) (%make-pid-file-contents)))))))
   (void))
@@ -277,7 +269,7 @@
   ;;
   (define who 'remove-pid-file)
   (when (pid-pathname)
-    (guard-log-raise
+    (with-logging-handler
 	(condition-message "while removing PID file: ~a")
       ;;Preliminary check for file existence.  Almost always if the file
       ;;does not exist we can check it before attempting to access it.
@@ -285,14 +277,14 @@
 	(%error-pid-file-missing who (pid-pathname)))
       ;;Check that the PID file contains the current process' PID number
       ;;followed by a newline.
-      (let ((contents (guard-condition-raise
+      (let ((contents (with-condition-handler
 			  (make-pid-file-removal-condition)
 			((textual-contents-reading-procedure) (pid-pathname)))))
 	(unless (string=? (%make-pid-file-contents) contents)
 	  (%error-corrupted-pid-file-contents who (pid-pathname))))
       ;;Remove the PID file.
       (log "removing PID file: ~a" (pid-pathname))
-      (guard-condition-raise
+      (with-condition-handler
 	  (make-pid-file-removal-condition)
 	((file-removal-procedure) (pid-pathname)))))
   (void))
@@ -312,16 +304,27 @@
 		    (condition-message cnd)
 		  "unknown error")))
 
-(define-syntax guard-log-raise
-  ;;Similar to  GUARD: catch an  exception, log a message,  re-raise the
-  ;;exception.
+(define-syntax with-logging-handler
+  ;;Evaluate the  body forms;  in case  of exception  log a  message and
+  ;;raise again.
   ;;
   (syntax-rules (condition-message)
     ((_ (condition-message ?template) ?body0 ?body ...)
-     (guard (E (else
-		(log-condition-message ?template E)
-		(raise E)))
-       ?body0 ?body ...))))
+     (with-exception-handler
+	 (lambda (E)
+	   (log-condition-message ?template E)
+	   (raise-continuable E))
+       (lambda () ?body0 ?body ...)))
+    ))
+
+(define-syntax with-condition-handler
+  (syntax-rules ()
+    ((_ ?condition ?body0 ?body ...)
+     (with-exception-handler
+	 (lambda (E)
+	   (raise-continuable (condition E ?condition)))
+       (lambda () ?body0 ?body ...)))
+    ))
 
 
 ;;;; done
@@ -330,7 +333,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'guard-log-raise 'scheme-indent-function 1)
-;; eval: (put 'guard-condition-raise 'scheme-indent-function 1)
+;; eval: (put 'with-logging-handler 'scheme-indent-function 1)
+;; eval: (put 'with-condition-handler 'scheme-indent-function 1)
 ;; End:
 
