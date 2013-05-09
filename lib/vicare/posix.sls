@@ -156,6 +156,7 @@
     dup					dup2
     pipe				mkfifo
     truncate				ftruncate
+    lockf
 
     sizeof-fd-set			make-fd-set-bytevector
     make-fd-set-pointer			make-fd-set-memory-block
@@ -2024,6 +2025,19 @@
     (let ((rv (capi.posix-ftruncate fd length)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv fd length)))))
+
+;;; --------------------------------------------------------------------
+
+(define (lockf fd cmd len)
+  (define who 'lockf)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (signed-int	cmd)
+       (off_t		len))
+    (let ((rv (capi.posix-lockf fd cmd len)))
+      (if (unsafe.fx<= 0 rv)
+	  rv
+	(%raise-errno-error who rv fd cmd len)))))
 
 
 ;;;; file descriptor sets

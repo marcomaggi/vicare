@@ -1268,6 +1268,7 @@ previous call to @func{telldir}.  Return unspecified values.
 * posix fd pipe::               File descriptor pipes.
 * posix fd fifo::               File descriptor fifos.
 * posix fd trunc::              Truncating files.
+* posix fd lock::               Locking files.
 @end menu
 
 @c page
@@ -1869,6 +1870,24 @@ values, else raise an exception.
 
 @var{length} must be non--negative exact integer in the range of the C
 language type @code{off_t}.
+@end defun
+
+@c page
+@node posix fd lock
+@subsection Locking files
+
+
+@defun lockf @var{fd} @var{cmd} @var{len}
+Interface to the C function @cfunc{lockf}, @manpage{lockf}.  Apply, test
+or remove a @posix{} lock on a section of an open file; if successful
+return unspecified values, else raise an exception
+
+The file is selected by the file descriptor @var{fd}.  The action by the
+signed integer @var{cmd}.  The file section is from the current position
+up to @var{len} bytes.
+
+@var{cmd} must be one of the constants: @code{F_LOCK}, @code{F_TLOCK},
+@code{F_ULOCK}, @code{F_TEST}.
 @end defun
 
 @c page

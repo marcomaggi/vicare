@@ -219,6 +219,7 @@
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
     posix-truncate			posix-ftruncate
+    posix-lockf
 
     posix-sizeof-fd-set			posix-make-fd-set-bytevector
     posix-make-fd-set-pointer		posix-make-fd-set-memory-block!
@@ -1293,6 +1294,11 @@
 
 (define-inline (posix-ftruncate fd length)
   (foreign-call "ikrt_posix_ftruncate" fd length))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-lockf fd cmd len)
+  (foreign-call "ikrt_posix_lockf" fd cmd len))
 
 ;;; --------------------------------------------------------------------
 

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -68,7 +68,11 @@
        (px.system (string-append "echo 123 > " ptn))
        (unwind-protect
 	   (begin . ?body)
-	 (px.system (string-append "rm -f " ptn)))))))
+	 (remove-tmp-file ptn))))))
+
+(define (remove-tmp-file pathname)
+  (when (file-exists? pathname)
+    (delete-file pathname)))
 
 
 (parametrise ((check-test-name	'errno-strings))
@@ -777,6 +781,36 @@
 	    (px.close fd)
 	    (px.system "rm -f tmp"))))
     => #t)
+
+;;; --------------------------------------------------------------------
+;;; lockf
+
+  (check
+      (with-compensations
+	(remove-tmp-file "tmp")
+	(push-compensation (remove-tmp-file "tmp"))
+	(letrec ((fd (compensate
+			 (px.open "tmp"
+				  (fxior O_CREAT O_EXCL O_RDWR)
+				  (fxior S_IRUSR S_IWUSR))
+		       (with
+			(px.close fd)))))
+	  (px.lockf fd F_TEST 0)))
+    => 0)
+
+  (check
+      (with-compensations
+	(remove-tmp-file "tmp")
+	(push-compensation (remove-tmp-file "tmp"))
+	(letrec ((fd (compensate
+			 (px.open "tmp"
+				  (fxior O_CREAT O_EXCL O_RDWR)
+				  (fxior S_IRUSR S_IWUSR))
+		       (with
+			(px.close fd)))))
+	  (px.lockf fd F_TLOCK 0)
+	  (px.lockf fd F_TEST 0)))
+    => 0)
 
 ;;; --------------------------------------------------------------------
 ;;; pipe

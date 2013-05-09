@@ -218,6 +218,7 @@ main (int argc, const char *const argv[])
     HAVE_LIMITS_H\n\
     HAVE_LINK\n\
     HAVE_LISTEN\n\
+    HAVE_LOCKF\n\
     HAVE_LOCALTIME_R\n\
     HAVE_LSEEK\n\
     HAVE_LSTAT\n\
@@ -1554,6 +1555,13 @@ printf("(define-inline-constant HAVE_LINK %s)\n",
   );
 printf("(define-inline-constant HAVE_LISTEN %s)\n",
 #ifdef HAVE_LISTEN
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_LOCKF %s)\n",
+#ifdef HAVE_LOCKF
   "#t"
 #else
   "#f"

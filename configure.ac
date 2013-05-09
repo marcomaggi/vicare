@@ -335,7 +335,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])
-  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo truncate ftruncate])
+  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo truncate ftruncate lockf])
   AC_CHECK_FUNCS([msync mremap madvise mlock munlock mlockall munlockall mprotect])
   AC_CHECK_TYPES([struct sockaddr_un],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct sockaddr_in],,,[VICARE_INCLUDES])
@@ -1332,6 +1332,11 @@ AM_COND_IF([WANT_POSIX],
 AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_TESTS([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])],
   [VICARE_CONSTANT_FALSES([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])])
+
+# For "lockf()".
+AM_COND_IF([WANT_POSIX],
+  [VICARE_CONSTANT_TESTS([F_LOCK F_TLOCK F_ULOCK F_TEST])],
+  [VICARE_CONSTANT_FALSES([F_LOCK F_TLOCK F_ULOCK F_TEST])])
 
 AC_CACHE_SAVE
 

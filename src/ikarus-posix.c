@@ -1958,6 +1958,23 @@ ikrt_posix_ftruncate (ikptr s_fd, ikptr s_length)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_lockf (ikptr s_fd, ikptr s_cmd, ikptr s_len)
+{
+#ifdef HAVE_LOCKF
+  int	cmd  = ik_integer_to_int(s_cmd);
+  off_t	len  = ik_integer_to_off_t(s_len);
+  int	rv;
+  errno = 0;
+  rv	= lockf(IK_NUM_TO_FD(s_fd), cmd, len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** File descriptor sets.
