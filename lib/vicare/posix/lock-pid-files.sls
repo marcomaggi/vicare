@@ -48,7 +48,7 @@
        (with-exception-handler
 	   (lambda (E)
 	     (log-condition-message ?template E)
-	     (raise-continuable E))
+	     (raise E))
 	 (lambda () ?body0 ?body ...)))))
 
   (with-arguments-validation (who)

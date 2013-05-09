@@ -60,6 +60,7 @@ External libraries
 
 * posix sel::                   Simple event loop.
 * posix pid-files::             Creating @acronym{PID} files.
+* posix lock-pid-files::        Creating lock @acronym{PID} files.
 * posix log-files::             Logging facilities.
 * posix daemonisations::        Turn the process into a daemon.
 @end menu
@@ -5671,6 +5672,11 @@ prefixing the bindings as follows:
                 pidfile.))
 @end example
 
+Notice that this library only creates @acronym{PID} files, not lock
+files; when lock files are needed we should use the library
+@library{vicare posix lock-pid-files}, @ref{posix lock-pid-files} for
+details.
+
 @menu
 * posix pid-files intro::       Introduction to @acronym{PID} files.
 * posix pid-files config::      Library configuration parameters.
@@ -5702,6 +5708,10 @@ The @acronym{PID} file must be created after a server daemonisation
 process has completed: this way we correctly store the @acronym{PID} of
 the daemon process, rather than the @acronym{PID} of the starting
 process.
+
+The @acronym{PID} file must be created after a process has changed its
+user and group IDs to drop special privileges: this way the file is
+created with appropriate owner and group.
 
 All the operations performed by this library are logged.  Logging
 operations related to the @acronym{PID} file rely on the function
@@ -6034,6 +6044,94 @@ Build and return a new condition object of type
 @defun pid-file-invalid-contents-condition? @var{obj}
 Return @true{} if @var{obj} is an instance of
 @condition{pid-file-invalid-contents}.
+@end defun
+
+@c page
+@node posix lock-pid-files
+@section Creating lock @acronym{PID} files
+
+
+@cindex @library{vicare posix lock-pid-files} library
+@cindex Library @library{vicare posix lock-pid-files}
+@cindex Creating lock @acronym{PID} files
+@cindex Lock @acronym{PID} files creation
+@cindex @acronym{PID} and lock files creation
+
+
+The library @library{vicare posix lock-pid-files} implements facilities
+for the creation of lock @acronym{PID} files, built on top of the
+library @library{vicare posix}.
+
+@menu
+* posix lock-pid-files intro::  Introduction to lock @acronym{PID} files.
+* posix lock-pid-files api::    Programming interface to lock @acronym{PID} files.
+@end menu
+
+@c page
+@node posix lock-pid-files intro
+@subsection Introduction to @acronym{PID} files
+
+
+A lock @acronym{PID} file is a textual file in @ascii{} encoding created
+at process start time and deleted at process exit time; it contains a
+string representing the @acronym{PID} number of the current process
+followed by a newline character.
+
+The lock @acronym{PID} file is especially useful whenever a server is
+executed as daemon:
+
+@itemize
+@item
+It allows the execution of a single instance of the daemon, causing
+instances launched later to recognise themselves as such and so exit.
+
+@item
+It allows for quick retrieval of the @acronym{PID} number, which can be
+used to send interprocess signals to the daemon; for example: to shut it
+down, to restart it, to update its configuration.
+@end itemize
+
+The lock @acronym{PID} file must be created after a server daemonisation
+process has completed: this way we correctly store the @acronym{PID} of
+the daemon process, rather than the @acronym{PID} of the starting
+process.
+
+The lock @acronym{PID} file must be created after a process has changed
+its user and group IDs to drop special privileges: this way the file is
+created with appropriate owner and group.
+
+All the operations performed by this library are logged; logging
+operations related to the lock @acronym{PID} file rely on a function
+handed as argument.
+
+@c page
+@node posix lock-pid-files api
+@subsection Programming interface to lock @acronym{PID} files
+
+
+The following bindings are exported by the library @library{vicare posix
+lock-pid-files}.
+
+
+@defun with-lock-pid-file @var{lock-pathname} @var{log} @var{thunk}
+Evaluate @var{thunk} while a lock @acronym{PID} file has been created
+and locked; upon returning from the @var{thunk} the lock file is closed
+and deleted.  Return the return value of @var{thunk}; if @var{thunk}
+raises an exception the lock file is closed and deleted, then the
+exception raised again in a non--continuable fashion.
+
+Reentering the evaluation of @var{thunk} by returning to continuations
+multiple time causes undefined behaviour.
+
+@var{lock-pathname} must be a non--empty string representing the
+pathname of the lock file.
+
+@var{log} must be a procedure accepting @func{format}--like arguments
+and logging the resulting string:
+
+@example
+(@var{log} @meta{template-string} @meta{arg} ...)
+@end example
 @end defun
 
 @c page
