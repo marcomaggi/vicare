@@ -258,6 +258,9 @@ Notes for revision 0.3d0
 * Added  library (vicare  posix daemonisations),  see the  documentation
   node "posix daemonisations".
 
+* Added library (vicare posix tcp-server-sockets), see the documentation
+  node "posix tcp-server-sockets".
+
 
 Notes for revision 0.2d20
 -------------------------

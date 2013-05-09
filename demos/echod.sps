@@ -37,6 +37,8 @@
 	  log.)
   (prefix (vicare posix pid-files)
 	  pidfile.)
+  (prefix (vicare posix tcp-server-sockets)
+	  net.)
   (vicare platform constants)
   (vicare language-extensions syntaxes))
 
@@ -208,7 +210,6 @@
 
 	 ;; validate server port
 	 (let ((port ($<global-options>-server-port self)))
-	   (import NETWORKING)
 	   (cond ((not (px.network-port-number? port))
 		  (%err "invalid server port: \"~a\"" port))))
 
@@ -475,7 +476,7 @@ Options:
     ;;OPTIONS-SET must be an ENUM-SET  of type SERVER-OPTION; it is used
     ;;to configure the server loop.
     ;;
-    (import NETWORKING INTERPROCESS-SIGNALS)
+    (import INTERPROCESS-SIGNALS)
     (with-compensations
       (define master-sock
 	(compensate
@@ -507,7 +508,6 @@ Options:
     ;;socket with a pending connection:  accept the connection, create a
     ;;server socket, enter the procedure that handles incoming data.
     ;;
-    (import NETWORKING)
     (log.with-logging-handler
 	(condition-message "while accepting connection: ~a")
       (receive (server-sock server-port client-address)
@@ -522,113 +522,14 @@ Options:
   (define (%config.dry-run? options-set)
     (enum-set-member? (server-loop-option dry-run) options-set))
 
-  #| end of module: NETWORKING |# )
-
-
-;;;; sockets handling
-
-(module NETWORKING
-  (net.make-master-sock		net.make-server-sock-and-port
-   net.close-master-sock	net.close-server-port)
-
-  (define (net.make-master-sock interface port)
-    ;;Given  a  string INTERFACE  representing  a  network interface  to
-    ;;listen to and  a network PORT number: open a  master server socket
-    ;;and bind it  to the interface and port.  Return  the master socket
-    ;;descriptor.
-    ;;
-    ;;INTERFACE must  be a string  representing the server  interface to
-    ;;bind to; for example "localhost".
-    ;;
-    ;;PORT  must be  an exact  integer representing  the server  port to
-    ;;listen to; for example 8081.
-    ;;
-    (let ((sockaddr    (%make-sockaddr interface (number->string port)))
-	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-      (%socket-set-non-blocking master-sock)
-      (px.setsockopt/linger master-sock #t 1)
-      (px.setsockopt/int    master-sock SOL_SOCKET SO_REUSEADDR #t)
-      (px.bind   master-sock sockaddr)
-      (px.listen master-sock 10)
-      master-sock))
-
-  (define (net.make-server-sock-and-port master-sock)
-    ;;Given  the  socket  descriptor MASTER-SOCK  representing  a  bound
-    ;;socket  with  a  pending  connection: accept  the  connection  and
-    ;;configure the resulting server socket descriptor to non-blocking.
-    ;;
-    ;;Return 3 values:
-    ;;
-    ;;1. The server socket descriptor.
-    ;;
-    ;;2.  A Scheme  input/output  binary port  wrapping the  descriptor.
-    ;;   Closing the Scheme port will also close the server socket.
-    ;;
-    ;;3.  A  bytevector  representing  the  client  address  as  "struct
-    ;;   sockaddr".
-    ;;
-    (receive (server-sock client-address)
-	(px.accept master-sock)
-      (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
-	     (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
-	     (remote-port         (px.sockaddr_in.in_port client-address))
-	     (remote-port.str     (number->string remote-port))
-	     (port-id             (string-append remote-address.str ":" remote-port.str)))
-	(%socket-set-non-blocking server-sock)
-	(let ((server-port (make-binary-socket-input/output-port server-sock port-id)))
-	  (values server-sock server-port client-address)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (net.close-master-sock sock)
-    ;;Close the master socket descriptor, shutting down listening to the
-    ;;bound interface.  SOCK must be the return value of a previous call
-    ;;to NET.MAKE-MASTER-SOCK.
-    ;;
-    (px.close sock))
-
-  (define (net.close-server-port port)
-    ;;Close  the  Scheme  port  wrapping a  server  connection's  socket
-    ;;descriptor; closing the port will also shut down the socket.  PORT
-    ;;must   be   the    return   value   of   a    previous   call   to
-    ;;NET.MAKE-SERVER-SOCK-AND-PORT.
-    ;;
-    (close-port port))
-
-;;; --------------------------------------------------------------------
-
-  (define (%make-sockaddr interface port)
-    ;;Given  a  string INTERFACE  representing  a  network interface  to
-    ;;listen to and a network PORT number: query the system for SOCKADDR
-    ;;structures  representing such  interface and  port and  supporting
-    ;;IPv4.
-    ;;
-    ;;Return  a Scheme  bytevector  holding the  first matching  "struct
-    ;;sockaddr"; if no address can be determined: raise an exception.
-    ;;
-    (let* ((hints (px.make-struct-addrinfo 0 AF_INET SOCK_STREAM 0 0 #f #f))
-	   (infos (px.getaddrinfo interface port hints)))
-      #;(debug-print infos)
-      (if (null? infos)
-	  (error 'make-sockaddr "unable to acquire master socket address")
-	(px.struct-addrinfo-ai_addr (car infos)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%socket-set-non-blocking sock)
-    ;;Configure the given socket descriptor for non-blocking mode.
-    ;;
-    (let ((x (px.fcntl sock F_GETFL 0)))
-      (px.fcntl sock F_SETFL (bitwise-ior x O_NONBLOCK))))
-
-  #| end of module: SOCKETS |# )
+  #| end of module: SERVER-EVENTS-LOOP |# )
 
 
 ;;;; ECHO server
 
 (module ECHO-SERVER
   (proto.start-session)
-  (import NETWORKING (prefix (vicare net channels) chan.))
+  (import (prefix (vicare net channels) chan.))
 
   (define (proto.start-session server-port client-address)
     (log.with-logging-handler

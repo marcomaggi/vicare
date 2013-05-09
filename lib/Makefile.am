@@ -187,7 +187,8 @@ nobase_dist_libvicare_DATA	+= \
 	vicare/posix/lock-pid-files.sls		\
 	vicare/posix/log-files.sls		\
 	vicare/posix/daemonisations.sls		\
-	vicare/posix/simple-event-loop.sls
+	vicare/posix/simple-event-loop.sls	\
+	vicare/posix/tcp-server-sockets.sls
 dist_pkglibexec_SCRIPTS		+= compile-posix.sps
 endif
 

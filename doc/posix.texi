@@ -63,6 +63,7 @@ External libraries
 * posix lock-pid-files::        Creating lock @acronym{PID} files.
 * posix log-files::             Logging facilities.
 * posix daemonisations::        Turn the process into a daemon.
+* posix tcp-server-sockets::    @tcp{} server sockets.
 @end menu
 
 @c page
@@ -6434,6 +6435,79 @@ posix}.  @ref{posix job, setsid}.
 Unblock all interprocess signals using @func{signal-bub-final} from
 @library{vicare posix}.  @ref{posix signal, signal-bub-final}.
 @end enumerate
+@end defun
+
+@c page
+@node posix tcp-server-sockets
+@section @tcp{} server sockets
+
+
+@cindex Library @library{vicare posix tcp-server-sockets}
+@cindex @library{vicare posix tcp-server-sockets}, library
+@cindex @tcp{} server sockets
+@cindex Server sockets, @tcp{}.
+@cindex Sockets, @tcp{} servers.
+
+
+The library @library{vicare posix tcp-server-sockets} implements
+facilities to create @tcp{} sockets to be used by networking servers; it
+is build on top of @library{vicare posix}.
+
+The following bindings are exported by the library @library{vicare posix
+tcp-server-sockets}.
+
+
+@defun make-master-sock @var{interface} @var{port}
+Given a string @var{interface} representing a network interface to
+listen to and a network @var{port} number: open a master server socket,
+@ip{} version 4, @tcp{} protocol, and bind it to the interface and port.
+Return the master socket descriptor.
+
+The socket is configured to linger for @math{1} second
+(@code{SO_LINGER}) and the address is configured to be reused
+(@code{SO_REUSEADDR}).
+
+@var{interface} must be a string representing the server interface to
+bind to; for example @code{localhost}.  @var{interface} is used as first
+argument in call to @func{getaddrinfo}, @ref{posix socket addresses
+info, getaddrinfo}.
+
+@var{port} must be an exact integer representing the server port to
+listen to; for example 8081.
+@end defun
+
+
+@defun close-master-sock @var{master-sock}
+Close the master socket descriptor returned by a previous call to
+@func{make-master-sock}.
+@end defun
+
+
+@defun make-server-sock-and-port @var{master-sock}
+Given the socket descriptor @var{master-sock} representing a master
+socket descriptor, already bound to an address, with a pending
+connection: accept the connection and configure the resulting server
+socket descriptor to non--blocking mode.
+
+Return @math{3} values:
+
+@enumerate
+@item
+The server socket descriptor.
+
+@item
+A Scheme input/output binary port wrapping the descriptor.  Closing the
+Scheme port will also close the server socket.
+
+@item
+A bytevector representing the client address as @code{struct sockaddr}.
+@end enumerate
+@end defun
+
+
+@defun close-server-port @var{server-port}
+Close the Scheme port wrapping a server socket descriptor returned by a
+previous call to @func{make-server-sock-and-port}.
 @end defun
 
 @c end of file

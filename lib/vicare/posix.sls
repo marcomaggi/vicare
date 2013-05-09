@@ -508,11 +508,11 @@
   (assertion-violation who "expected false or fixnum file descriptor as argument" obj))
 
 (define-argument-validation (network-port-number who obj)
-  (%network-port-number? obj)
+  (network-port-number? obj)
   (assertion-violation who "expected fixnum network port as argument" obj))
 
 (define-argument-validation (network-port-number/false who obj)
-  (or (not obj) (%network-port-number? obj))
+  (or (not obj) (network-port-number? obj))
   (assertion-violation who "expected false or fixnum network port as argument" obj))
 
 ;;; --------------------------------------------------------------------
