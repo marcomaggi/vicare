@@ -6463,15 +6463,9 @@ Change the current working directory to root.  @ref{posix dir, chdir}.
 Set the current umask to zero.  @ref{posix file, umask}.
 
 @item
-Close the Scheme ports referenced by the parameters
-@func{current-input-port}, @func{current-output-port},
-@func{current-error-port}.
-
-@item
-Open a new textual, input/output Scheme port, using the native
-transcoder, reading from and writing to the @file{/dev/null} device.
-Store such port value in the parameters @func{current-input-port},
-@func{current-output-port}, @func{current-error-port}.
+Open a new file descriptor reading from and writing to the
+@file{/dev/null} device; close the file descriptors @code{0}, @code{1}
+and @code{2} replacing them with the new file descriptor.
 
 @item
 Detach the process from the controlling terminal and become session

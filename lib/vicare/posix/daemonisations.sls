@@ -30,7 +30,8 @@
   (export daemonise)
   (import (vicare)
     (prefix (vicare posix)
-	    px.))
+	    px.)
+    (vicare platform constants))
 
 
 (define (daemonise)
@@ -64,18 +65,16 @@
   (px.umask 0))
 
 (define (%replace-standard-ports)
-  (let ((port (open-file-input/output-port "/dev/null"
-					   (file-options no-create
-							 no-fail
-							 no-truncate)
-					   (buffer-mode none)
-					   (native-transcoder))))
-    (define (%replace-port port-parameter)
-      (close-port (port-parameter))
-      (port-parameter port))
-    (%replace-port current-input-port)
-    (%replace-port current-output-port)
-    (%replace-port current-error-port)))
+  (let ((fd (px.open "/dev/null"
+		     (fxior O_EXCL O_RDWR)
+		     (fxior S_IRUSR S_IWUSR))))
+    (px.close 0)
+    (px.dup2 fd 0)
+    (px.close 1)
+    (px.dup2 fd 1)
+    (px.close 2)
+    (px.dup2 fd 2)
+    (px.close fd)))
 
 (define (%detach-from-terminal-and-become-session-leader)
   (px.setsid))
