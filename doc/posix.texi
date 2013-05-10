@@ -6313,6 +6313,47 @@ The following bindings are exported by the library @library{vicare posix
 log-files}.
 
 
+@defun open-logging
+If logging is enabled: configure the log port; return unspecified
+values.  If the selected pathname is @code{-} assume the log messages
+must go to the current error port.  Otherwise open a log file.
+
+This function makes use of the following parameters:
+
+@table @func
+@item logging-enabled?
+If set to true consider logging enabled, else do nothing and return.
+
+@item log-pathname
+Used to retrieve the configured log file pathname.
+
+@item log-port
+Used to store the Scheme textual output port to which log messages are
+sent.
+@end table
+@end defun
+
+
+@defun close-logging
+Close the current log port unless it is the current error port or the
+configured log file pathname is a single dash; return unspecified
+values.
+
+This function makes use of the following parameters:
+
+@table @func
+@item log-pathname
+Used to retrieve the configured log file pathname and check if it is a
+single dash.
+
+@item log-port
+Used to retrieve current log port.
+@end table
+
+Notice that the @func{logging-enabled?}  parameter is ignored.
+@end defun
+
+
 @defun log @var{template} @var{arg} @dots{}
 If logging is enabled: format a log message and write it to the current
 log port; return unspecified values.
