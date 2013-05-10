@@ -382,6 +382,8 @@
     input-file-buffer-size		output-file-buffer-size
     input/output-file-buffer-size	input/output-socket-buffer-size
 
+    stdin stdout stderr
+
     ;; predicates
     port? input-port? output-port? input/output-port?
     textual-port? binary-port?
@@ -494,6 +496,7 @@
 		  bytevector-port-buffer-size	string-port-buffer-size
 		  input-file-buffer-size	output-file-buffer-size
 		  input/output-file-buffer-size	input/output-socket-buffer-size
+		  stdin stdout stderr
 
 		  ;; predicates
 		  port? input-port? output-port? input/output-port?
@@ -7663,6 +7666,15 @@
   ;;
   (let ((port (current-input-port)))
     (lambda () port)))
+
+(define stdin
+  (console-input-port))
+
+(define stdout
+  (console-output-port))
+
+(define stderr
+  (console-error-port))
 
 
 ;;;; done

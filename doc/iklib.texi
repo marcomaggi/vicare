@@ -5627,6 +5627,14 @@ is used by the @repl{} and the debugger.
 @end defun
 
 
+@defvr Constant stdin
+@defvrx Constant stdout
+@defvrx Constant stderr
+Bound to the values returned by @func{console-input-port},
+@func{console-output-port}, @func{console-error-port} respectively.
+@end defvr
+
+
 @defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
 @defunx make-binary-file-descriptor-output-port @var{fd} @var{identifier}
 @defunx make-binary-file-descriptor-input/output-port @var{fd} @var{identifier}
