@@ -3698,6 +3698,10 @@ transfer data through Scheme binary ports, typically between processes.
 The following bindings are exported by the library @library{vicare net
 channels}.
 
+@c ------------------------------------------------------------
+
+@subsubheading Base channel type
+
 
 @deftp {@rnrs{6} Record Type} channel
 Record type representing an interprocess connection channel.  Whenever
@@ -3720,6 +3724,54 @@ Validation clause to be used with the facilities of the library
 @false{}.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Binary channel type
+
+
+@deftp {@rnrs{6} Record Type} binary-channel
+Record type representing an interprocess connection binary channel.
+@end deftp
+
+
+@defun binary-channel? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{binary-channel},
+else return @false{}.
+@end defun
+
+
+@deffn {Validation Clause} binary-channel @var{obj}
+@deffnx {Validation Clause} false-or-binary-channel @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  The first form succeeds if
+@var{obj} is an instance of @code{binary-channel}; the second also
+accepts @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Textual channel type
+
+
+@deftp {@rnrs{6} Record Type} textual-channel
+Record type representing an interprocess connection textual channel.
+@end deftp
+
+
+@defun textual-channel? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{textual-channel},
+else return @false{}.
+@end defun
+
+
+@deffn {Validation Clause} textual-channel @var{obj}
+@deffnx {Validation Clause} false-or-textual-channel @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  The first form succeeds if
+@var{obj} is an instance of @code{textual-channel}; the second also
+accepts @false{}.
+@end deffn
+
 @c page
 @node net channels init
 @subsection Constructors and destructors
@@ -3729,24 +3781,24 @@ The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@defun open-input-channel @var{in-port}
-Build and return a new instance of @code{channel} to be used to receive
-messages; the returned channel is inactive.  The channel wraps the
-binary input or input/output port @var{in-port}.
+@defun open-binary-input-channel @var{in-port}
+Build and return a new instance of @code{binary-channel} to be used to
+receive messages; the returned channel is inactive.  The channel wraps
+the binary input or input/output port @var{in-port}.
 @end defun
 
 
-@defun open-output-channel @var{ou-port}
-Build and return a new instance of @code{channel} to be used to send
-messages; the returned channel is inactive.  The channel wraps the
+@defun open-binary-output-channel @var{ou-port}
+Build and return a new instance of @code{binary-channel} to be used to
+send messages; the returned channel is inactive.  The channel wraps the
 binary output or input/output port @var{ou-port}.
 @end defun
 
 
-@defun open-input/output-channel @var{port}
-@defunx open-input/output-channel @var{in-port} @var{ou-port}
-Build and return a new instance of @code{channel} to be used to both
-receive and send messages; the returned channel is inactive.
+@defun open-binary-input/output-channel @var{port}
+@defunx open-binary-input/output-channel @var{in-port} @var{ou-port}
+Build and return a new instance of @code{binary-channel} to be used to
+both receive and send messages; the returned channel is inactive.
 
 The channel wraps the binary input or input/output port @var{in-port},
 used to receive messages, and the binary output or input/output port
@@ -3757,6 +3809,37 @@ When a single argument is given: @var{port} is used for both input and
 output.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun open-textual-input-channel @var{in-port}
+Build and return a new instance of @code{textual-channel} to be used to
+receive messages; the returned channel is inactive.  The channel wraps
+the textual input or input/output port @var{in-port}.
+@end defun
+
+
+@defun open-textual-output-channel @var{ou-port}
+Build and return a new instance of @code{textual-channel} to be used to
+send messages; the returned channel is inactive.  The channel wraps the
+textual output or input/output port @var{ou-port}.
+@end defun
+
+
+@defun open-textual-input/output-channel @var{port}
+@defunx open-textual-input/output-channel @var{in-port} @var{ou-port}
+Build and return a new instance of @code{textual-channel} to be used to
+both receive and send messages; the returned channel is inactive.
+
+The channel wraps the textual input or input/output port @var{in-port},
+used to receive messages, and the textual output or input/output port
+@var{ou-port}, used to send messages.  @var{in-port} and @var{ou-port}
+can be the same port.
+
+When a single argument is given: @var{port} is used for both input and
+output.
+@end defun
+
+@c ------------------------------------------------------------
 
 @defun close-channel @var{chan}
 Finalise a channel closing its connection port; return unspecified
@@ -3807,13 +3890,21 @@ completed.
 
 @defun channel-set-message-terminators! @var{chan} @var{terminators}
 Configure the message terminators; return unspecified values.
-@var{terminators} must be a non--empty list of non--empty bytevectors
-representing possible message terminators.
 
-When not configured: the list of terminators defaults to:
+If @var{chan} is a binary channel: @var{terminators} must be a
+non--empty list of non--empty bytevectors representing possible message
+terminators.  When not configured: the list of terminators defaults to:
 
 @example
 (#ve(ascii "\r\n\r\n") #ve(ascii "\n\n"))
+@end example
+
+If @var{chan} is a textual channel: @var{terminators} must be a
+non--empty list of non--empty strings representing possible message
+terminators.  When not configured: the list of terminators defaults to:
+
+@example
+("\r\n\r\n" "\n\n")
 @end example
 
 The terminators @strong{are not} reset when a message delivery is
@@ -3930,9 +4021,10 @@ error if the channel is not inactive.
 
 
 @defun channel-recv-end! @var{chan}
-Finish receiving a message and return the accumulated octets in a
-bytevector.  It is an error if the channel is not in the course of
-receiving a message.
+Finish receiving a message and: for binary channels return the
+accumulated octets in a bytevector, for textual channels return the
+accumulated characters in a string.  It is an error if the channel is
+not in the course of receiving a message.
 
 After this function is applied to a channel: the channel itself is
 configured as inactive; so it is available to start receiving another
@@ -3945,12 +4037,14 @@ Like @func{channel-recv-end!}, but return @math{2} values:
 
 @enumerate
 @item
-Null or a list of non--empty bytevectors representing the accumulated
-message data in bytevector--reverse order.
+For binary channels: null or a list of non--empty bytevectors
+representing the accumulated message data in bytevector--reverse order.
+For textual channels: null or a list of non--empty strings representing
+the accumulated message data in bytevector--reverse order.
 
 @item
-An exact integer representing the total number of octets in the
-bytevectors.
+An exact integer representing the total number of octets or characters
+in the bytevectors or strings.
 @end enumerate
 @end defun
 
@@ -3998,8 +4092,8 @@ error if the channel is not inactive.
 
 @defun channel-send-end! @var{chan}
 Finish sending a message by flushing the connect port and return the
-total number of octets sent.  It is an error if the channel is not in
-the course of sending a message.
+total number of octets or characters sent.  It is an error if the
+channel is not in the course of sending a message.
 
 After this function is applied to a channel: the channel itself is
 configured as inactive; so it is available to start receiving another
@@ -4012,7 +4106,9 @@ Send a portion of output message through the given channel; return
 unspecified values.  It is an error if the channel is not in the course
 of sending a message.
 
-@var{portion} must be a bytevector representing the message portion.
+For binary channels: @var{portion} must be a bytevector representing the
+message portion.  For textual channels: @var{portion} must be a string
+representing the message portion.
 
 This function does not flush the connection port.
 

@@ -1722,6 +1722,7 @@
     (get-string-all				i v r ip)
     (get-string-n				i v r ip)
     (get-string-n!				i v r ip)
+    (get-string-some				i v $language)
     (get-u8					i v r ip)
     (&i/o					i v r ip is fi)
     (&i/o-decoding				i v r ip)

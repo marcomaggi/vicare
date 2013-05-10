@@ -5793,6 +5793,19 @@ return value of @func{current-input-port} if no @var{port} argument is
 used.
 @end defun
 
+
+@defun get-string-some @var{port}
+Defined by Vicare.  Read from the textual input @var{port}, blocking as
+necessary, until characters are available or until an end of file is
+reached.
+
+If characters become available, @func{get-string-some} returns a freshly
+allocated string containing the initial available characters (at least
+one), and it updates @var{port} to point just past these characters.
+
+If no input characters are available: the EOF object is returned.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation

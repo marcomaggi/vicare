@@ -457,7 +457,8 @@
     get-char lookahead-char read-char peek-char
 
     ;; reading strings
-    get-string-n get-string-n! get-string-all get-line read-line
+    get-string-n get-string-n! get-string-all get-string-some
+    get-line read-line
 
     ;; reading octets
     get-u8 lookahead-u8 lookahead-two-u8
@@ -572,7 +573,8 @@
 		  get-char lookahead-char read-char peek-char
 
 		  ;; reading strings
-		  get-string-n get-string-n! get-string-all get-line read-line
+		  get-string-n get-string-n! get-string-all get-string-some
+		  get-line read-line
 
 		  ;; reading octets
 		  get-u8 lookahead-u8 lookahead-two-u8
@@ -5906,7 +5908,7 @@
 	   (if (eof-object? ch)
 	       (if (unsafe.fx= dst.index dst.start)
 		   ch				;return EOF
-		 (unsafe.fx- dst.index dst.start)) ;return the numbe of chars read
+		 (unsafe.fx- dst.index dst.start)) ;return the number of chars read
 	     (let ((ch (cond ((unsafe.fxzero? ?eol-bits) ;EOL style none
 			      ch)
 			     ((unsafe.char-is-single-char-line-ending? ch)
@@ -6046,6 +6048,117 @@
 		 (%unsafe.string-reverse-and-concatenate who
 							 (cons (substring dst.str 0 count) output.strs)
 							 (unsafe.fx+ count output.len)))))))))
+
+(define (get-string-some port)
+  ;;Defined by  Vicare.  Read from  the textual input PORT,  blocking as
+  ;;necessary, until characters are available or until an end of file is
+  ;;reached.
+  ;;
+  ;;If characters  become available,  GET-STRING-SOME returns  a freshly
+  ;;allocated  string containing  the initial  available characters  (at
+  ;;least one), and it updates PORT to point just past these characters.
+  ;;
+  ;;If no input characters are available: the EOF object is returned.
+  ;;
+  (define who 'get-string-some)
+  (with-arguments-validation (who)
+      ((port          port))
+    (let* ((dst.str	(unsafe.make-string 1024))
+	   (count	(%unsafe.get-string-some! who port dst.str 0 1024)))
+      (cond ((eof-object? count)
+	     count)
+	    ((unsafe.fx= count 1024)
+	     dst.str)
+	    (else
+	     (unsafe.substring dst.str 0 count))))))
+
+(define (%unsafe.get-string-some! who port dst.str dst.start count)
+  ;;Subroutine  of  GET-STRING-SOME.   It  assumes  the  arguments  have
+  ;;already been validated.
+  ;;
+  ;;DST.START  and COUNT  must be  exact, non-negative  integer objects,
+  ;;with  COUNT  representing  the  number of  characters  to  be  read.
+  ;;DST.STR must be a string with at least DST.START+COUNT characters.
+  ;;
+  ;;If COUNT  characters are available before  an end of file,  they are
+  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
+  ;;returned.
+  ;;
+  ;;If fewer characters are available before  an end of file, but one or
+  ;;more can be read, those characters are written into DST.STR starting
+  ;;at index  DST.START and  the number of  characters actually  read is
+  ;;returned as an exact integer object.
+  ;;
+  ;;If no characters can  be read before an end of  file, the EOF object
+  ;;is returned.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
+  ;;fixnums; DST.START+COUNT must be a fixnum.
+  ;;
+  (define-inline (main)
+    (let ((dst.past (+ dst.start count))
+	  (eol-bits (%unsafe.port-eol-style-bits port)))
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	((FAST-GET-CHAR-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-char-tag
+		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	((FAST-GET-LATIN-TAG)
+	 (%get-it eol-bits dst.past
+		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+	((FAST-GET-UTF16LE-TAG)
+	 (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	((FAST-GET-UTF16BE-TAG)
+	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+
+  (define-syntax %get-it
+    (syntax-rules ()
+      ((_ ?eol-bits ?dst.past ?read-char ?peek-char)
+       (let loop ((dst.index dst.start))
+	 (let ((ch (?peek-char port who)))
+	   (if (eof-object? ch)
+	       (if (unsafe.fx= dst.index dst.start)
+		   ch				   ;return EOF
+		 (unsafe.fx- dst.index dst.start)) ;return the number of chars read
+	     (let ((ch (begin
+			 ;;Consume the peeked char.
+			 (?read-char port who)
+			 (cond ((unsafe.fxzero? ?eol-bits) ;EOL style none
+				ch)
+			       ((unsafe.char-is-single-char-line-ending? ch)
+				LINEFEED-CHAR)
+			       ((unsafe.char-is-carriage-return? ch)
+				(let ((ch1 (?peek-char port who)))
+				  (cond ((eof-object? ch1)
+					 (void))
+					((unsafe.char-is-newline-after-carriage-return? ch1)
+					 (?read-char port who)))
+				  LINEFEED-CHAR))
+			       (else ch)))))
+	       (unsafe.string-set! dst.str dst.index ch)
+	       (let ((dst.index (unsafe.fxadd1 dst.index)))
+		 (if (unsafe.fx= dst.index ?dst.past)
+		     (unsafe.fx- dst.index dst.start)
+		   (loop dst.index))))))))))
+
+  (define-inline (%read-utf16le ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+
+  (define-inline (%peek-utf16le ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
+  (define-inline (%read-utf16be ?port ?who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+
+  (define-inline (%peek-utf16be ?port ?who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+  (main))
 
 
 ;;;; string line input
