@@ -367,7 +367,7 @@
   (and (channel? obj)
        ($receiving-channel? obj))
   (assertion-violation who
-    "expected channel in the course of receving a message" obj))
+    "expected channel in the course of receving a message as argument" obj))
 
 (define-argument-validation (not-receiving-channel who chan)
   ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
@@ -376,7 +376,7 @@
   (and (channel? chan)
        (not ($receiving-channel? chan)))
   (assertion-violation who
-    "expected channel not in the course of receving a message" chan))
+    "expected channel not in the course of receving a message as argument" chan))
 
 
 ;;;; predicates and arguments validation: sending messages
@@ -405,7 +405,7 @@
   (and (channel? obj)
        ($sending-channel? obj))
   (assertion-violation who
-    "expected channel in the course of sending a message" obj))
+    "expected channel in the course of sending a message as argument" obj))
 
 (define-argument-validation (not-sending-channel who chan)
   ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
@@ -414,7 +414,7 @@
   (and (channel? chan)
        (not ($sending-channel? chan)))
   (assertion-violation who
-    "expected channel not in the course of sending a message" chan))
+    "expected channel not in the course of sending a message as argument" chan))
 
 
 ;;;; predicates and arguments validation: inactive channel
@@ -443,8 +443,7 @@
   ;;
   (and (channel? obj)
        ($inactive-channel? obj))
-  (assertion-violation who
-    "expected channel in the course of inactive a message" obj))
+  (assertion-violation who "expected inactive channel as argument" obj))
 
 (define-argument-validation (not-inactive-channel who chan)
   ;;Succeed if CHAN  is an instance of CHANNEL and  it is either sending
@@ -452,8 +451,7 @@
   ;;
   (and (channel? chan)
        (not ($inactive-channel? chan)))
-  (assertion-violation who
-    "expected channel not in the course of inactive a message" chan))
+  (assertion-violation who "expected inactive channel as argument" chan))
 
 
 ;;;; predicates and arguments validation: input channel
