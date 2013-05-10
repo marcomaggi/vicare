@@ -473,8 +473,8 @@ Options:
     ;;PORT  must be  an exact  integer representing  the server  port to
     ;;listen to; for example 8081.
     ;;
-    ;;OPTIONS-SET must be an ENUM-SET  of type SERVER-OPTION; it is used
-    ;;to configure the server loop.
+    ;;OPTIONS-SET must be an ENUM-SET  of type SERVER-LOOP-OPTION; it is
+    ;;used to configure the server loop.
     ;;
     (import INTERPROCESS-SIGNALS)
     (with-compensations
