@@ -1,4 +1,4 @@
-;;; -*- coding: utf-8-unix -*-
+;;;!vicare -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: demo program that connects to remote servers
@@ -30,9 +30,10 @@
   (prefix (vicare posix)
 	  px.)
   (prefix (vicare posix simple-event-loop)
-	  px.)
+	  sel.)
   (prefix (vicare posix log-files)
-	  log.))
+	  log.)
+  (vicare platform constants))
 
 
 ;;;; global variables
@@ -67,7 +68,9 @@
     ;;cause  of the  error, where  we can  better explain  what we  were
     ;;doing.
     ;;
-    (guard (E (else (exit 1)))
+    (guard (E (else
+	       (debug-print E)
+	       (exit 1)))
       ;;Set configuration  parameters; it is useless  to use PARAMETRISE
       ;;here.
       (options
@@ -88,7 +91,7 @@
     (guard (E (else
 	       (fprintf (current-error-port)
 			"connect.sps: error while opening log file: ~a\n"
-			(if (condition-message? E)
+			(if (message-condition? E)
 			    (condition-message E)
 			  "unknown error"))))
       (log.setup-compensated-log-file-creation)))
@@ -139,11 +142,11 @@
   (protocol
    (lambda (maker)
      (lambda (argv)
-       (import COMMAND-LINE-ARGS)
+       (import COMMAND-LINE-ARGS CLIENT-CONNECTION-PROCEDURE)
        (define-syntax-rule (%err ?template . ?args)
 	 (error-message-and-exit BAD-OPTION-EXIT-STATUS ?template . ?args))
        (let ((self (maker #f #;interface #f #;port
-			  #f #;log-file (server-loop-config)
+			  #f #;log-file (client-connect-config)
 			  0 #;verbosity )))
 	 (parse-command-line-arguments self argv)
 
@@ -225,7 +228,7 @@
 ;;; --------------------------------------------------------------------
 
   (define-constant HELP-SCREEN
-    "Usage: echod.sps [vicare options] -- [options]
+    "Usage: connect.sps [vicare options] -- [options]
 Options:
    -I IFACE
    --interface IFACE
@@ -286,9 +289,8 @@ Options:
   (define (recv-first-option-processor option name operand seed)
     (import CLIENT-CONNECTION-PROCEDURE)
     (<global-options>-client-connect-config-set!
-     seed (enum-set-union
-	   (client-connect-config recv-first)
-	   (<global-options>-server-loop-config seed)))
+     seed (enum-set-union (client-connect-config recv-first)
+			  (<global-options>-client-connect-config seed)))
     seed)
 
 ;;; --------------------------------------------------------------------
@@ -323,7 +325,7 @@ Options:
      (option '(#\I "interface")	#t #f interface-option-processor)
      (option '(#\P "port")	#t #f port-option-processor)
      (option '("log-file")	#t #f log-file-option-processor)
-     (option '("recv-first")	#t #f recv-first-option-processor)
+     (option '("recv-first")	#f #f recv-first-option-processor)
 
      (option '("version-only")	#f #f version-only-option-processor)
      (option '(#\V "version")	#f #f version-option-processor)
@@ -380,32 +382,33 @@ Options:
     ;;OPTIONS-SET must be an  ENUM-SET of type CLIENT-CONNECT-OPTION; it
     ;;is used to configure the client connection.
     ;;
-    (import INTERPROCESS-SIGNALS)
+    (import INTERPROCESS-SIGNALS CONNECT-CLIENT)
     (with-compensations
+      (compensate
+	  (sel.initialise)
+	(with
+	 (sel.finalise)))
       (initialise-signal-handlers)
       (log.log "connecting to: ~a:~a" interface port)
       (letrec
-	  ((client-port (log.with-logging-handler
+	  ((server-port (log.with-logging-handler
 			    (condition-message "while creating client socket: ~a")
 			  (compensate
-			      (px.tcp-connect interface port)
+			      (px.tcp-connect interface (number->string port))
 			    (with
-			     (close-port client-port))))))
+			     (close-port server-port))))))
 
 	(if (%config.recv-first? options-set)
-	    (sel.readable client-port
-			  (lambda ()
-			    (proto.start-recv-session port)))
-	  (sel.writable client-port
-			(lambda ()
-			  (proto.start-send-session port))))
+	    (proto.start-recv-session server-port)
+	  (proto.start-send-session server-port))
 	;;We return  from this  form only  when it is  time to  exit the
 	;;process.
 	(sel.enter)))
     (void))
 
   (define (%config.recv-first? options-set)
-    (enum-set-member? (server-loop-option recv-first) options-set))
+    (enum-set-member? (client-connect-option recv-first)
+		      options-set))
 
   #| end of module: SERVER-EVENTS-LOOP |# )
 
@@ -413,68 +416,139 @@ Options:
 ;;;; CONNECT client
 
 (module CONNECT-CLIENT
-  (proto.start-session)
+  (proto.start-recv-session proto.start-send-session)
   (import (prefix (vicare net channels) chan.))
 
-  (define (proto.start-recv-session port)
-    (log.with-logging-handler
-	(condition-message "while starting session: ~a")
-      (define connection-id
-	(gensym->unique-string (gensym)))
-      #f))
+  (define-struct connection
+    (term-chan server-chan server-port))
 
-  (define (proto.start-send-session port)
-    (log.with-logging-handler
-	(condition-message "while starting session: ~a")
-      (define connection-id
-	(gensym->unique-string (gensym)))
-      (%log-accepted-connection client-address connection-id)
-      (let ((chan (chan.open-input/output-channel server-port)))
-	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
-	(chan.channel-recv-begin! chan)
-	(%process-incoming-data server-port chan connection-id))))
-
-  (define (%process-incoming-data server-port chan connection-id)
-    (define (%reschedule)
-      (sel.readable server-port
-		    (lambda ()
-		      (%process-incoming-data server-port chan connection-id))
-		    (time-from-now (make-time 5 0))
-		    (lambda ()
-		      (log.log "connection ~a expired" connection-id)
-		      (%stop-session connection-id server-port chan))))
-    (log.with-logging-handler
-	(condition-message "while processing incoming data: ~a")
-      (cond ((chan.channel-recv-message-portion! chan)
-	     => (lambda (dummy)
-		  (let* ((data.bv  (chan.channel-recv-end! chan))
-			 (data.str (utf8->string data.bv)))
-		    (log.log "connection ~a echoing: ~a"
-			     connection-id (ascii->string (uri-encode data.bv)))
-		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
-		    (if (%received-quit? data.bv)
-			(%stop-session connection-id server-port chan)
-		      (begin
-			(chan.channel-recv-begin! chan)
-			(%reschedule))))))
-	    (else
-	     (%reschedule)))))
-
-  (define (%stop-session connection-id server-port chan)
-    (log.log "closing connection ~a" connection-id)
-    (chan.close-channel chan)
-    (net.close-server-port server-port))
-
-  (define (%send-message chan data)
-    ;;Send the list  of bytevectors DATA through the  channel; perform a
-    ;;full send operation.  Return unspecified values.
+  (define (proto.start-recv-session server-port)
+    ;;Start a session in which this client first receives a message from
+    ;;the server.
     ;;
+    (define conn (prepare-connection server-port))
+    (chan.channel-recv-begin! ($connection-server-chan conn))
+    (schedule-server-incoming-data conn))
+
+  (define (proto.start-send-session server-port)
+    ;;Start a session in which this  client first sends a message to the
+    ;;server.  We have to read a message form the terminal.
+    ;;
+    (define conn (prepare-connection server-port))
+    (chan.channel-recv-begin! ($connection-term-chan conn))
+    (schedule-term-incoming-data conn))
+
+  (define (prepare-connection server-port)
+    ;;Prepare the terminal and server channel structures.
+    ;;
+    (log.with-logging-handler
+	(condition-message "while starting session: ~a")
+      (define term-chan
+	(chan.open-textual-input/output-channel stdin stdout))
+      (define server-chan
+	(chan.open-textual-input/output-channel server-port server-port))
+      (file-descriptor-set-non-blocking (port-fd stdin))
+      (file-descriptor-set-non-blocking (port-fd stdout))
+      (file-descriptor-set-non-blocking (port-fd server-port))
+      (chan.channel-set-message-terminators! term-chan   STRING-TERMINATORS)
+      (chan.channel-set-message-terminators! server-chan STRING-TERMINATORS)
+      (make-connection term-chan server-chan server-port)))
+
+  (define (file-descriptor-set-non-blocking fd)
+    (let ((x (px.fcntl fd F_GETFL 0)))
+      (px.fcntl fd F_SETFL (bitwise-ior fd O_NONBLOCK))))
+
+;;; --------------------------------------------------------------------
+
+  (define (schedule-term-incoming-data conn)
+    (sel.readable stdin
+		  (lambda ()
+		    (process-term-incoming-data conn))
+		  (time-from-now (make-time 5 0))
+		  (lambda ()
+		    (log.log "connection expired")
+		    (stop-session conn))))
+
+  (define (schedule-server-incoming-data conn)
+    (sel.readable ($connection-server-port conn)
+		  (lambda ()
+		    (process-server-incoming-data conn))
+		  (time-from-now (make-time 5 0))
+		  (lambda ()
+		    (log.log "connection expired")
+		    (stop-session conn))))
+
+;;; --------------------------------------------------------------------
+
+  (define (process-server-incoming-data conn)
+    ;;To be called when there is incoming data available from the server
+    ;;port.  Read the available data, then:
+    ;;
+    ;;* If  a message  terminator was  read: send  data to  the terminal
+    ;;   channel, schedule  reading form  the terminal  and reenter  the
+    ;;  event loop.
+    ;;
+    ;;* If  more incoming data  from the server is  expected: reschedule
+    ;;  this function and reenter the event loop.
+    ;;
+    (log.with-logging-handler
+	(condition-message "while processing server incoming data: ~a")
+      (define server-chan
+	($connection-server-chan conn))
+      (cond ((chan.channel-recv-message-portion! server-chan)
+	     => (lambda (dummy)
+		  (let* ((data.str (chan.channel-recv-end! server-chan))
+			 (data.enc (ascii->string (uri-encode data.str))))
+		    (log.log "connection recv: ~a" data.enc)
+		    (channel-send ($connection-term-chan conn) data.str)
+		    (chan.channel-recv-begin! ($connection-term-chan conn))
+		    (schedule-term-incoming-data conn))))
+	    (else
+	     (schedule-server-incoming-data conn)))))
+
+  (define (process-term-incoming-data conn)
+    ;;To  be called  when  there  is incoming  data  available from  the
+    ;;terminal port.  Read the available data, then:
+    ;;
+    ;;*  If a  message  terminator was  read: send  data  to the  server
+    ;;  channel, schedule  reading form the server port  and reenter the
+    ;;  event loop.
+    ;;
+    ;;* If more incoming data  from the terminal is expected: reschedule
+    ;;  this function and reenter the event loop.
+    ;;
+    (log.with-logging-handler
+	(condition-message "while processing terminal incoming data: ~a")
+      (define term-chan
+	($connection-term-chan conn))
+      (cond ((chan.channel-recv-message-portion! term-chan)
+	     => (lambda (dummy)
+		  (let ((data.str (chan.channel-recv-end! term-chan)))
+		    (log.log "connection command: ~a" data.str)
+		    (channel-send ($connection-server-chan conn) data.str)
+		    (chan.channel-recv-begin! ($connection-server-chan conn))
+		    (schedule-server-incoming-data conn))))
+	    (else
+	     (schedule-term-incoming-data conn)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (stop-session conn)
+    (with-compensations
+      (push-compensation (sel.leave-asap))
+      (log.log "closing connection")
+      (chan.close-channel ($connection-server-chan conn))
+      (chan.close-channel ($connection-term-chan   conn))
+      (close-port ($connection-server-port conn))))
+
+;;; --------------------------------------------------------------------
+
+  (define (channel-send chan data.str)
     (chan.channel-send-begin! chan)
-    (for-each-in-order
-	(lambda (bv)
-	  (chan.channel-send-message-portion! chan bv))
-      data)
+    (chan.channel-send-message-portion! chan data.str)
     (chan.channel-send-end! chan))
+
+;;; --------------------------------------------------------------------
 
   (define (%received-quit? bv)
     ;;We know that the last bytes of BV must represent \n or \r\n.
@@ -492,7 +566,12 @@ Options:
 	     (bytevector=? bv #ve(ascii "quit\n")))
 	    (else #f))))
 
-  #| end of module: ECHO-SERVER |# )
+;;; --------------------------------------------------------------------
+
+  (define-constant STRING-TERMINATORS
+    '("\r\n" "\n"))
+
+  #| end of module: CONNECT-CLIENT |# )
 
 
 ;;;; interprocess signal handlers
@@ -582,11 +661,6 @@ Options:
 
 ;;;; printing helpers
 
-(define (debug-print . args)
-  ;;This is for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port)))
-
 (module (verbose-message error-message-and-exit)
 
   (define (verbose-message requested-level template . args)
@@ -600,7 +674,7 @@ Options:
 ;;; --------------------------------------------------------------------
 
   (define (%format-and-print port template args)
-    (fprintf port "vicare echod: ")
+    (fprintf port "vicare connect: ")
     (apply fprintf port template args)
     (newline port)
     (flush-output-port port))
