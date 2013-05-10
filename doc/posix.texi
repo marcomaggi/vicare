@@ -6354,6 +6354,12 @@ Notice that the @func{logging-enabled?}  parameter is ignored.
 @end defun
 
 
+@defun setup-compensated-log-file-creation
+Call @func{open-logging} and push a call to @func{close-logging} on the
+current compensations stack.
+@end defun
+
+
 @defun log @var{template} @var{arg} @dots{}
 If logging is enabled: format a log message and write it to the current
 log port; return unspecified values.

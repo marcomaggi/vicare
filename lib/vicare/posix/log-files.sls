@@ -38,6 +38,7 @@
     ;; log file
     open-logging
     close-logging
+    setup-compensated-log-file-creation
 
     ;; logging
     log
@@ -105,6 +106,12 @@
 
 
 ;;;; log files
+
+(define (setup-compensated-log-file-creation)
+  (compensate
+      (open-logging)
+    (with
+     (close-logging))))
 
 (define (open-logging)
   ;;If logging  is enabled: configure  the log port;  return unspecified
