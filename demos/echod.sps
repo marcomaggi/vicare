@@ -537,7 +537,7 @@ Options:
       (define connection-id
 	(gensym->unique-string (gensym)))
       (%log-accepted-connection client-address connection-id)
-      (let ((chan (chan.open-input/output-channel server-port)))
+      (let ((chan (chan.open-binary-input/output-channel server-port)))
 	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
 	(%send-message chan '(#ve(ascii "Vicare ECHO daemon.\r\n")))
 	(chan.channel-recv-begin! chan)
@@ -698,11 +698,6 @@ Options:
 
 
 ;;;; printing helpers
-
-(define (debug-print . args)
-  ;;This is for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port)))
 
 (module (verbose-message error-message-and-exit)
 
