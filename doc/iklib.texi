@@ -4506,6 +4506,13 @@ to go beyond the value of @func{pretty-width}.
 @end deffn
 
 
+@defun debug-print . @var{args}
+Print the given arguments on the current error port using
+@func{pretty-print}.  This is a convenience function, useful while
+debugging code.
+@end defun
+
+
 @deffn Procedure format @var{fmt-string} @var{args} ...
 The procedure @func{format} produces a string formatted according to
 @func{fmt-string} and the supplied arguments.  The format string
