@@ -6255,7 +6255,9 @@ Return @true{} if @var{obj} is an instance of
 
 The library @library{vicare posix log-files} implements logging
 facilities, optionally to log files; it is built on top of
-@library{vicare posix}.
+@library{vicare posix}.  When using a log file for a server: we should
+open the log file after daemonising the server and after dropping
+privileges by changing the user and group ID.
 
 @menu
 * posix log-files config::      Configuring logging facilities.
