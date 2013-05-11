@@ -4051,16 +4051,33 @@ in the bytevectors or strings.
 
 @defun channel-recv-message-portion! @var{chan}
 Receive a portion of input message from the given channel and accumulate
-it in the internal state; return @true{} if a configured message
-terminator was read in the tail of the data, else return @false{}.  It
-is an error if the channel is not in the course of receiving a message.
+it in the internal state; return:
+
+@itemize
+@item
+@true{} if a configured message terminator was read in the tail of the
+data.
+
+@item
+The EOF object if the EOF condition was found on the input port before
+reading a terminator.
+
+@item
+@false{} if neither the terminator nor the EOF were found.  In this case
+we should attempt to receive another message portion later.
+@end itemize
+
+It is an error if the channel is not in the course of receiving a
+message.
 
 After the message terminator has been read: further calls to this
 function always return @true{} without taking any action.
 
-This function performs multiple read operations from the registered
-connection port, until the end--of--file is read or until a configured
-message terminator is found in the tail of read data.
+This function a single read operation from the registered connection
+port; for binary channel it uses @func{get-bytevector-some}, for textual
+channels it uses @func{get-string-some}.  When non--blocking mode is
+desired: this function must be called only when it is known that at
+least one octet or character is available from the input port.
 
 If at the time of this function call the timeout configured for this
 message is expired: a non--continuable exception is raised with compound
