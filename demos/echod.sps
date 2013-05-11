@@ -99,7 +99,9 @@
       (with-compensations
 	(%main.open-log-file/c)
 	(%main.log-server-start-messages)
-	;;First daemonise, then open the PID file.
+	;;First daemonise, then open the  PID file.  We should daemonise
+	;;*before* opening the log file, too; but this is a demo program
+	;;and we want to see a log line about daemonisation.
 	(%main.daemonise)
 	(%main.open-pid-file/c)
 	(%main.enter-event-loop)
