@@ -3477,16 +3477,6 @@
 	     sock (string-append "client TCP socket " hostname ":" service) TCP-TRANSCODER)
 	  (set-port-buffer-mode! port (buffer-mode line))))))
 
-  (define-syntax receive-and-return
-    (syntax-rules ()
-      ((_ (?retval ...) ?producer ?body0 ?body ...)
-       (call-with-values
-	   (lambda () ?producer)
-	 (lambda (?retval ...)
-	   ?body0 ?body ...
-	   (values ?retval ...))))
-      ))
-
   (define-argument-validation (service who obj)
     (or (string? obj)
 	(network-port-number? obj))
@@ -4451,7 +4441,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'receive-and-return 'scheme-indent-function 2)
 ;; eval: (put 'with-pathnames 'scheme-indent-function 1)
 ;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
 ;; eval: (put 'with-bytevectors/or-false 'scheme-indent-function 1)

@@ -3382,6 +3382,7 @@
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive)				receive-macro)
+	     ((receive-and-return)		receive-and-return-macro)
 	     ((begin0)				begin0-macro)
 	     ((xor)				xor-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
@@ -4977,7 +4978,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE, BEGIN0, XOR
+;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
@@ -4985,11 +4986,26 @@
   ;;Return a symbolic expression in the core language.
   ;;
   (syntax-match expr-stx ()
-    ((_ ?formals ?expression ?form0 ?form* ...)
+    ((_ ?formals ?producer-expression ?form0 ?form* ...)
      (bless
       `(call-with-values
-	   (lambda () ,?expression)
+	   (lambda () ,?producer-expression)
 	 (lambda ,?formals ,?form0 ,@?form*))))
+    ))
+
+(define (receive-and-return-macro expr-stx)
+  ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
+     (bless
+      `(call-with-values
+	   (lambda () ,?producer-expression)
+	 (lambda ,?retval*
+	   ,?body0 ,@?body*
+	   (values ,@?retval*)))))
     ))
 
 (define (begin0-macro expr-stx)

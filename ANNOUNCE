@@ -183,7 +183,8 @@ Notes for revision 0.3d0
 
 * Added syntaxes to (vicare):
 
-    receive				begin0
+    receive				receive-and-return
+    begin0
     define-values			define-constant-values
     define-constant			define-inline
     define-integrable			define-syntax-rule

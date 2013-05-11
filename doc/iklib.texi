@@ -143,7 +143,7 @@ acting upon @meta{name}.
 @end deffn
 
 
-@deffn Syntax define-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
+@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.
 
@@ -156,7 +156,7 @@ last one to the given @meta{var} identifiers.
 @end deffn
 
 
-@deffn Syntax define-constant-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
+@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.  Make the @meta{var}
 identifiers immutable.
@@ -171,7 +171,7 @@ identifiers immutable.
 @end deffn
 
 
-@deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} ...
+@deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} @dots{}
 Expect @meta{expression} to evaluate to multiple values and bind such
 values as specified by the @meta{formals}; evaluate the @meta{body} in
 the region of such bindings.  The expansion is:
@@ -179,17 +179,37 @@ the region of such bindings.  The expansion is:
 @example
 (receive @meta{formals}
     @meta{expression}
-  @metao{body} @meta{body} ...)
+  @metao{body} @meta{body} @dots{})
 @expansion{} (call-with-values
         (lambda ()
           @meta{expression})
       (lambda @meta{formals}
-        @metao{body} @meta{body} ...))
+        @metao{body} @meta{body} @dots{}))
 @end example
 @end deffn
 
 
-@deffn Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
+@deffn Syntax receive-and-return (@meta{retval} @dots{}) @meta{expression} @metao{body} @meta{body} @dots{}
+Expect @meta{expression} to evaluate to multiple values and bind such
+values to the identifiers @meta{retval}; evaluate the @meta{body} forms
+in the region of such bindings; return the values bound to
+@meta{retval}.  The expansion is:
+
+@example
+(receive-and-return (@meta{retval} @dots{})
+    @meta{expression}
+  @metao{body} @meta{body} @dots{})
+@expansion{} (call-with-values
+        (lambda ()
+          @meta{expression})
+      (lambda (@meta{retval} @dots{})
+        @metao{body} @meta{body} @dots{}
+        (values @meta{retval} @dots{})))
+@end example
+@end deffn
+
+
+@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
 Similar to @func{define}, but create a binding that is always expanded
 inline and can @strong{neither} be invoked recursively @strong{nor} used
 as function rgument.  This syntax only defines a syntax.
@@ -210,7 +230,7 @@ In the example above, we can think of @code{(incr 2)} as expanding to:
 @end deffn
 
 
-@deffn Syntax define-integrable (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
+@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
 Similar to @func{define}, but create a binding that is always expanded
 inline and @strong{can} be both invoked recursively and used as function
 argument.  This syntax defines both a syntax and a function.
@@ -236,29 +256,29 @@ In the example above, we can think of @code{(incr 2)} as expanding to:
 @end deffn
 
 
-@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest}) @metao{body} @meta{body} ...
+@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
 Convenience syntax to define a @func{syntax-rules} transformer with a
 single clause.  Expand to:
 
 @example
-(define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest})
-  @metao{body} @meta{body} ...)
+(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
+  @metao{body} @meta{body} @dots{})
 @expansion{} (define-syntax @meta{name}
       (syntax-rules ()
-        ((_ @meta{pattern} ... . @meta{rest})
-         (begin @metao{body} @meta{body} ...))))
+        ((_ @meta{pattern} @dots{} . @meta{rest})
+         (begin @metao{body} @meta{body} @dots{}))))
 @end example
 @end deffn
 
 
-@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} ...
+@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
 Define auxiliary syntaxes to be used as literal identifiers by
 @func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
 
 @example
 (define-syntax @metao{name} (syntax-rules ()))
 (define-syntax @meta{name}  (syntax-rules ()))
-...
+@dots{}
 @end example
 @end deffn
 

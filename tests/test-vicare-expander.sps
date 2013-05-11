@@ -292,15 +292,45 @@
 
   (check
       (receive (a b c)
-		(values 1 2 3)
-		(list a b c))
+	  (values 1 2 3)
+	(list a b c))
     => '(1 2 3))
 
   (check
       (receive (a)
-		1
-		a)
+	  1
+	a)
     => 1)
+
+  #t)
+
+
+(parametrise ((check-test-name	'receive-and-return))
+
+  (check
+      (receive (a b c)
+	  (receive-and-return (a b c)
+	      (values 1 2 3)
+	    (vector a b c))
+	(list a b c))
+    => '(1 2 3))
+
+  (check
+      (with-result
+       (receive (a)
+	   (receive-and-return (a)
+	       1
+	     (add-result a))
+	 a))
+    => '(1 (1)))
+
+  (check
+      (with-result
+       (receive-and-return ()
+	   (values)
+	 (add-result 1))
+       #t)
+    => '(#t (1)))
 
   #t)
 
