@@ -169,10 +169,10 @@
 	 ((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS)))))))
 
 (define-constant DEFAULT-BINARY-TERMINATORS
-  '(#ve(ascii "\r\n\r\n") #ve(ascii "\n\n")))
+  '(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
 
 (define-constant DEFAULT-TEXTUAL-TERMINATORS
-  '("\r\n\r\n" "\n\n"))
+  '("\r\n\r\n" "\r\n"))
 
 
 ;;;; unsafe operations
@@ -661,6 +661,10 @@
     ;;false.  It  is an  error if the  channel is not  in the  course of
     ;;receiving a message.
     ;;
+    ;;When non-blocking  mode is desired:  this function must  be called
+    ;;only when  it is known that  at least one octet  is available from
+    ;;the input port.
+    ;;
     ;;If  the  message delivery  timeout  is  expired or  expires  while
     ;;receiving  data:  raise an  exception.   If  the accumulated  data
     ;;exceeds the maximum message size: raise an exception.
@@ -676,43 +680,41 @@
 	    (($channel-message-terminated? chan)
 	     #t)
 	    (else
-	     (%recv-loop chan)))))
+	     (%recv-bytevector chan)))))
 
-  (define (%recv-loop chan)
-    ;;Loop receiving  bytevectors from the  input port, until EOF  or an
-    ;;empty read; we must not accumulate empty bytevectors.
+  (define (%recv-bytevector chan)
+    ;;Receive a  bytevector from the input  port.
     ;;
     ;;Return true if the end of message  is read, which case CHAN is set
     ;;to "message terminated" status; return false if no more input data
     ;;is available for now.  Raise  an exception if: the maximum message
     ;;size is exceeded, the message delivery timeout expires.
     ;;
-    (let ((bv (%read-bytevector chan)))
-      (if (or (eof-object? bv)
-	      ($fxzero? ($bytevector-length bv)))
-	  (begin
-	    #f)
-	(begin
-	  ($channel-message-buffer-push! chan bv)
-	  (cond (($maximum-size-exceeded? chan)
-		 (%error-maximum-message-size-exceeded who chan))
-		(($delivery-timeout-expired? chan)
-		 (%error-message-delivery-timeout-expired who chan))
-		((%received-message-terminator? chan)
-		 ($channel-message-terminated?-set! chan #t)
-		 #t)
+    (define bv
+      (guard (E ((i/o-eagain-error? E)
+		 ;;If reading causes an  EWOULDBLOCK or EAGAIN error, we
+		 ;;interpret it  as: there  are no available  bytes now,
+		 ;;but there may be later.
+		 '#vu8())
 		(else
-		 (%recv-loop chan)))))))
-
-  (define (%read-bytevector chan)
-    (guard (E ((i/o-eagain-error? E)
-	       ;;If reading causes an EWOULDBLOCK error, we handle it as
-	       ;;EOF.
-	       #;(pretty-print 'would-block (current-error-port))
-	       (eof-object))
-	      (else
-	       (raise E)))
-      (get-bytevector-some ($channel-connect-in-port chan))))
+		 (raise E)))
+	(get-bytevector-some ($channel-connect-in-port chan))))
+    (cond ((eof-object? bv)
+	   ;;The EOF was found before reading a message terminator.
+	   bv)
+	  (($fxzero? ($bytevector-length bv))
+	   ;;No bytes availabe, but there may be in the future.
+	   #f)
+	  (else
+	   ($channel-message-buffer-push! chan bv)
+	   (cond (($maximum-size-exceeded? chan)
+		  (%error-maximum-message-size-exceeded who chan))
+		 (($delivery-timeout-expired? chan)
+		  (%error-message-delivery-timeout-expired who chan))
+		 ((%received-message-terminator? chan)
+		  ($channel-message-terminated?-set! chan #t)
+		  #t)
+		 (else #f)))))
 
   (module (%received-message-terminator?)
 
@@ -821,6 +823,10 @@
     ;;false.  It  is an  error if the  channel is not  in the  course of
     ;;receiving a message.
     ;;
+    ;;When non-blocking  mode is desired:  this function must  be called
+    ;;only when  it is known  that at  least one character  is available
+    ;;from the input port.
+    ;;
     ;;If  the  message delivery  timeout  is  expired or  expires  while
     ;;receiving  data:  raise an  exception.   If  the accumulated  data
     ;;exceeds the maximum message size: raise an exception.
@@ -836,43 +842,41 @@
 	    (($channel-message-terminated? chan)
 	     #t)
 	    (else
-	     (%recv-loop chan)))))
+	     (%recv-string chan)))))
 
-  (define (%recv-loop chan)
-    ;;Loop receiving strings from the input  port, until EOF or an empty
-    ;;read; we must not accumulate empty strings.
+  (define (%recv-string chan)
+    ;;Receive a string from the input port.
     ;;
     ;;Return true if the end of message  is read, which case CHAN is set
     ;;to "message terminated" status; return false if no more input data
     ;;is available for now.  Raise  an exception if: the maximum message
     ;;size is exceeded, the message delivery timeout expires.
     ;;
-    (let ((str (%read-string chan)))
-      (if (or (eof-object? str)
-	      ($fxzero? ($string-length str)))
-	  (begin
-	    #f)
-	(begin
-	  ($channel-message-buffer-push! chan str)
-	  (cond (($maximum-size-exceeded? chan)
-		 (%error-maximum-message-size-exceeded who chan))
-		(($delivery-timeout-expired? chan)
-		 (%error-message-delivery-timeout-expired who chan))
-		((%received-message-terminator? chan)
-		 ($channel-message-terminated?-set! chan #t)
-		 #t)
+    (define str
+      (guard (E ((i/o-eagain-error? E)
+		 ;;If reading causes an  EWOULDBLOCK or EAGAIN error, we
+		 ;;interpret it  as: there  are no available  bytes now,
+		 ;;but there may be later.
+		 "")
 		(else
-		 (%recv-loop chan)))))))
-
-  (define (%read-string chan)
-    (guard (E ((i/o-eagain-error? E)
-	       ;;If reading causes an EWOULDBLOCK error, we handle it as
-	       ;;EOF.
-	       #;(pretty-print 'would-block (current-error-port))
-	       (eof-object))
-	      (else
-	       (raise E)))
-      (get-string-some ($channel-connect-in-port chan))))
+		 (raise E)))
+	(get-string-some ($channel-connect-in-port chan))))
+    (cond ((eof-object? str)
+	   ;;The EOF was found before reading a message terminator.
+	   str)
+	  (($fxzero? ($string-length str))
+	   ;;No chars availabe, but there may be in the future.
+	   #f)
+	  (else
+	   ($channel-message-buffer-push! chan str)
+	   (cond (($maximum-size-exceeded? chan)
+		  (%error-maximum-message-size-exceeded who chan))
+		 (($delivery-timeout-expired? chan)
+		  (%error-message-delivery-timeout-expired who chan))
+		 ((%received-message-terminator? chan)
+		  ($channel-message-terminated?-set! chan #t)
+		  #t)
+		 (else #f)))))
 
   (module (%received-message-terminator?)
 

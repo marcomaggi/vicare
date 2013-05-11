@@ -314,7 +314,9 @@ TESTS	+= \
 	test-vicare-posix-sel.sps		\
 	test-vicare-posix-pid-files.sps		\
 	test-vicare-posix-lock-pid-files.sps	\
-	test-vicare-posix-log-files.sps
+	test-vicare-posix-log-files.sps		\
+	\
+	test-vicare-posix-net-channels-binary.sps
 endif
 
 if WANT_GLIBC

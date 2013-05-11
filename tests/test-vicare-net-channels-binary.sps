@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (prefix (vicare net channels)
 	  chan.)
@@ -231,16 +231,18 @@
     (chan.channel-send-end! chan))
 
   (define (recv chan)
-    (define (doit)
-      (chan.channel-recv-message-portion! chan))
     (chan.channel-recv-begin! chan)
-    (let loop ((rv (doit)))
-      (unless rv
-	(yield)
-	(loop (doit))))
-    (let ((bv (chan.channel-recv-end! chan)))
-      ;;(check-pretty-print bv)
-      (ascii->string bv)))
+    (let loop ()
+      (define rv
+	(chan.channel-recv-message-portion! chan))
+      (cond ((not rv)
+	     (yield)
+	     (loop))
+	    ((eof-object? rv)
+	     (eof-object))
+	    (else
+	     (let ((bv (chan.channel-recv-end! chan)))
+	       (ascii->string bv))))))
 
   (define (master-log obj)
     (add-result (list 'master-recv obj)))
@@ -257,6 +259,7 @@
 	     (lambda ()
 	       (let ((chan (chan.open-binary-input/output-channel master.port))
 		     (log  master-log))
+		 (chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n\r\n")))
 		 (send master.port chan
 		       (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
 		 (log (recv chan))
@@ -270,6 +273,7 @@
 	     (lambda ()
 	       (let ((chan (chan.open-binary-input/output-channel slave.port))
 		     (log  slave-log))
+		 (chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n\r\n")))
 		 (log (recv chan))
 		 (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
 		 (log (recv chan))

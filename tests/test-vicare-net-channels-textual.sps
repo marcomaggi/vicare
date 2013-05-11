@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (prefix (vicare net channels)
 	  chan.)
@@ -231,16 +231,17 @@
     (chan.channel-send-end! chan))
 
   (define (recv chan)
-    (define (doit)
-      (chan.channel-recv-message-portion! chan))
     (chan.channel-recv-begin! chan)
-    (let loop ((rv (doit)))
-      (unless rv
-	(yield)
-	(loop (doit))))
-    (let ((str (chan.channel-recv-end! chan)))
-      ;;(check-pretty-print bv)
-      str))
+    (let loop ()
+      (define rv
+	(chan.channel-recv-message-portion! chan))
+      (cond ((not rv)
+	     (yield)
+	     (loop))
+	    ((eof-object? rv)
+	     (eof-object))
+	    (else
+	     (chan.channel-recv-end! chan)))))
 
   (define (master-log obj)
     (add-result (list 'master-recv obj)))
@@ -257,6 +258,7 @@
 	     (lambda ()
 	       (let ((chan (chan.open-textual-input/output-channel master.port))
 		     (log  master-log))
+		 (chan.channel-set-message-terminators! chan '("\r\n\r\n"))
 		 (send master.port chan
 		       (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
 		 (log (recv chan))
@@ -270,6 +272,7 @@
 	     (lambda ()
 	       (let ((chan (chan.open-textual-input/output-channel slave.port))
 		     (log  slave-log))
+		 (chan.channel-set-message-terminators! chan '("\r\n\r\n"))
 		 (log (recv chan))
 		 (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
 		 (log (recv chan))
