@@ -3412,25 +3412,79 @@
 ;;; --------------------------------------------------------------------
 
 (module (tcp-connect)
+  ;;Establish a client network connection  to the remote host identified
+  ;;by the  string HOSTNAME,  connecting to the  port associated  to the
+  ;;string or number SERVICE.
+  ;;
+  ;;If successful return  a textual input/output port  associated to the
+  ;;socket file  descriptor, configured  with "line" buffer  mode, UTF-8
+  ;;transcoder,  and   "none"  end-of-line  translation.    Closing  the
+  ;;returned port will close the connection.
+  ;;
+  ;;This function  makes use of  GETADDRINFO to obtain  possible network
+  ;;interfaces to  connect to  and attempts  to connect  to all  of them
+  ;;stopping at the first success.
+  ;;
+  (define who 'tcp-connect)
 
-  (define (tcp-connect hostname service)
-    (define who 'tcp-connect)
-    (with-arguments-validation (who)
-	((string	hostname)
-	 (string	service))
-      (let ((addrinfos (getaddrinfo hostname service HINTS)))
-	(if (null? addrinfos)
-	    (error who
-	      "unable to determine usable address of remote host"
-	      hostname service)
-	  (let* ((info		(car addrinfos))
-		 (sockaddr	(struct-addrinfo-ai_addr info))
-		 (sock		(socket PF_INET SOCK_STREAM 0)))
-	    (connect sock sockaddr)
-	    (let ((port (make-textual-socket-input/output-port
-			 sock "client socket" TCP-TRANSCODER)))
-	      (set-port-buffer-mode! port (buffer-mode line))
-	      port))))))
+  (define tcp-connect
+    (case-lambda
+     ((hostname service)
+      (tcp-connect hostname service (lambda args (void))))
+     ((hostname service log-procedure)
+      (with-arguments-validation (who)
+	  ((string	hostname)
+	   (service	service)
+	   (procedure	log-procedure))
+	(%attempt-addrinfos hostname service
+			    (socket PF_INET SOCK_STREAM 0)
+			    (getaddrinfo hostname (if (string? service)
+						      service
+						    (number->string service))
+					 HINTS)
+			    log-procedure)))
+     ))
+
+  (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
+    (define (next-addrinfo)
+      (%attempt-addrinfos hostname service sock (cdr addrinfos) log-procedure))
+    (define (log action sockaddr)
+      (log-procedure action hostname service sockaddr))
+    (if (null? addrinfos)
+	(error who "unable to determine usable address of remote host" hostname service)
+      (let* ((info      (car addrinfos))
+	     (sockaddr  (struct-addrinfo-ai_addr info)))
+	(guard (E ((and (errno-condition? E)
+			(memv (condition-errno E) FAILED-CONNECTION-ERRNOS))
+		   (log 'fail sockaddr)
+		   (next-addrinfo))
+		  (else
+		   (raise E)))
+	  (log 'attempt sockaddr)
+	  (connect sock sockaddr)
+	  (log 'success sockaddr))
+	(receive-and-return (port)
+	    (make-textual-socket-input/output-port
+	     sock (string-append "client TCP socket " hostname ":" service) TCP-TRANSCODER)
+	  (set-port-buffer-mode! port (buffer-mode line))))))
+
+  (define-syntax receive-and-return
+    (syntax-rules ()
+      ((_ (?retval ...) ?producer ?body0 ?body ...)
+       (call-with-values
+	   (lambda () ?producer)
+	 (lambda (?retval ...)
+	   ?body0 ?body ...
+	   (values ?retval ...))))
+      ))
+
+  (define-argument-validation (service who obj)
+    (or (string? obj)
+	(network-port-number? obj))
+    (assertion-violation who "expected network service specification as argument" obj))
+
+  (define-constant FAILED-CONNECTION-ERRNOS
+    '(EADDRNOTAVAIL ETIMEDOUT ECONNREFUSED ENETUNREACH))
 
   (define-constant HINTS
     (make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
@@ -4388,6 +4442,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; eval: (put 'receive-and-return 'scheme-indent-function 2)
 ;; eval: (put 'with-pathnames 'scheme-indent-function 1)
 ;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
 ;; eval: (put 'with-bytevectors/or-false 'scheme-indent-function 1)

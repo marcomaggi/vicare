@@ -2919,15 +2919,31 @@ an exact integer representing the @var{linger} field.
 @c ------------------------------------------------------------
 
 @defun tcp-connect @var{hostname} @var{service}
+@defunx tcp-connect @var{hostname} @var{service} @var{log-proc}
 Establish a client connection to the remote host identified by the
 string @var{hostname}, connecting to the port associated to the string
-@var{service}.
+or number @var{service}.
 
 If successful return a textual input/output port associated to the
 socket file descriptor, configured with @code{line} buffer mode,
-@utf{}-8 transcoder, and @code{none} end--of--line translation.
+@utf{}-8 transcoder, and @code{none} end--of--line translation.  Closing
+the returned port will close the connection.
 
-Closing the returned port will close the connection.
+This function makes use of @func{getaddrinfo} to obtain possible network
+interfaces to connect to and attempts to connect to all of them stopping
+at the first success.
+
+The optional argument @var{log-proc} must be a function and it is called
+while attempting to connect to an interface; the arguments are:
+
+@example
+(@var{log-proc} @var{action} @var{hostname} @var{service} @var{sockaddr})
+@end example
+
+@noindent
+where: @var{action} is one of the symbols @code{attempt},
+@code{success}, @code{fail}; @var{sockaddr} is a bytevector holding an
+instance of @code{struct sockaddr} from a @code{struct addrinfo}.
 
 The following example will download the main page from
 @url{http://google.it}:
