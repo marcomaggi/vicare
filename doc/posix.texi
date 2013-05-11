@@ -2945,6 +2945,10 @@ where: @var{action} is one of the symbols @code{attempt},
 @code{success}, @code{fail}; @var{sockaddr} is a bytevector holding an
 instance of @code{struct sockaddr} from a @code{struct addrinfo}.
 
+To actually attempt a connection: make use of the function referenced by
+the parameter @func{tcp-connect.connect-proc}, which is initialised to
+@func{connect}.
+
 The following example will download the main page from
 @url{http://google.it}:
 
@@ -2984,6 +2988,21 @@ The following example will download the main page from
 (close-port p)
 @end example
 @end defun
+
+
+@deffn Parameter tcp-connect.connect-proc
+References a function used by @func{tcp-connect} to actually attempt a
+@tcp{} connection.  It is initialised to @func{connect}.
+
+This parameter allows us to fake a failed connection attempt by
+registering a function that raises an @condition{errno} exception with
+@code{errno} code among:
+
+@example
+EADDRNOTAVAIL   ETIMEDOUT
+ECONNREFUSED    ENETUNREACH
+@end example
+@end deffn
 
 @c page
 @node posix socket misc

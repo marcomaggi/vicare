@@ -245,7 +245,8 @@
     setsockopt/linger			getsockopt/linger
     getnetbyname			getnetbyaddr
     network-entries
-    tcp-connect
+
+    tcp-connect				tcp-connect.connect-proc
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -3411,7 +3412,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (tcp-connect)
+(module (tcp-connect tcp-connect.connect-proc)
   ;;Establish a client network connection  to the remote host identified
   ;;by the  string HOSTNAME,  connecting to the  port associated  to the
   ;;string or number SERVICE.
@@ -3426,6 +3427,14 @@
   ;;stopping at the first success.
   ;;
   (define who 'tcp-connect)
+
+  (define tcp-connect.connect-proc
+    (make-parameter connect
+      (lambda (obj)
+	(define who 'tcp-connect.connect-proc)
+	(with-arguments-validation (who)
+	    ((procedure obj))
+	  obj))))
 
   (define tcp-connect
     (case-lambda
@@ -3461,7 +3470,7 @@
 		  (else
 		   (raise E)))
 	  (log 'attempt sockaddr)
-	  (connect sock sockaddr)
+	  ((tcp-connect.connect-proc) sock sockaddr)
 	  (log 'success sockaddr))
 	(receive-and-return (port)
 	    (make-textual-socket-input/output-port
@@ -3484,7 +3493,7 @@
     (assertion-violation who "expected network service specification as argument" obj))
 
   (define-constant FAILED-CONNECTION-ERRNOS
-    '(EADDRNOTAVAIL ETIMEDOUT ECONNREFUSED ENETUNREACH))
+    (list EADDRNOTAVAIL ETIMEDOUT ECONNREFUSED ENETUNREACH))
 
   (define-constant HINTS
     (make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
