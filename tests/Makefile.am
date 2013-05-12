@@ -299,24 +299,25 @@ endif
 
 if WANT_POSIX
 TESTS	+= \
-	test-vicare-posix-basic.sps		\
-	test-vicare-posix-net.sps		\
-	test-vicare-posix-mmap.sps		\
-	test-vicare-posix-bub.sps		\
-	test-vicare-posix-time.sps		\
-	test-vicare-posix-timers.sps		\
-	test-vicare-posix-message-queue.sps	\
-	test-vicare-posix-shared-memory.sps	\
-	test-vicare-posix-semaphores.sps	\
-	test-vicare-posix-sigwait.sps		\
+	test-vicare-posix-basic.sps			\
+	test-vicare-posix-net.sps			\
+	test-vicare-posix-mmap.sps			\
+	test-vicare-posix-bub.sps			\
+	test-vicare-posix-time.sps			\
+	test-vicare-posix-timers.sps			\
+	test-vicare-posix-message-queue.sps		\
+	test-vicare-posix-shared-memory.sps		\
+	test-vicare-posix-semaphores.sps		\
+	test-vicare-posix-sigwait.sps			\
 	\
-	test-vicare-shared-memory.sps		\
-	test-vicare-posix-sel.sps		\
-	test-vicare-posix-pid-files.sps		\
-	test-vicare-posix-lock-pid-files.sps	\
-	test-vicare-posix-log-files.sps		\
+	test-vicare-shared-memory.sps			\
+	test-vicare-posix-sel.sps			\
+	test-vicare-posix-pid-files.sps			\
+	test-vicare-posix-lock-pid-files.sps		\
+	test-vicare-posix-log-files.sps			\
 	\
-	test-vicare-posix-net-channels-binary.sps
+	test-vicare-posix-net-channels-binary.sps	\
+	test-vicare-posix-net-channels-textual.sps
 endif
 
 if WANT_GLIBC
@@ -556,6 +557,8 @@ EXTRA_DIST = \
 	test-vicare-posix-pid-files.sps			\
 	test-vicare-posix-lock-pid-files.sps		\
 	test-vicare-posix-sel.sps			\
+	test-vicare-posix-net-channels-binary.sps	\
+	test-vicare-posix-net-channels-textual.sps	\
 	\
 	test-vicare-promises.sps			\
 	test-vicare-time.sps				\
