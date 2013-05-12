@@ -1707,6 +1707,14 @@ successful return a fixnum representing the return value of
 @cfunc{ioctl}, else raise an exception.
 @end defun
 
+
+@defun fd-set-non-blocking @var{fd}
+Special interface to the C function @cfunc{fcntl}, @glibcref{Control
+Operations, fcntl}.  Configure the file descriptor @var{fd} in
+non--blocking mode; if successful return unspecified values, else raise
+an exception.
+@end defun
+
 @c page
 @node posix fd dup
 @subsection Duplicating file descriptors

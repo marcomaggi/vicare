@@ -57,7 +57,7 @@
        (non-negative-fixnum	max-pending-connections))
     (let ((sockaddr    (%make-sockaddr interface (number->string port)))
 	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-      (%socket-set-non-blocking master-sock)
+      (px.fd-set-non-blocking master-sock)
       (px.setsockopt/linger master-sock #t 1)
       (px.setsockopt/int    master-sock SOL_SOCKET SO_REUSEADDR #t)
       (px.bind   master-sock sockaddr)
@@ -97,7 +97,7 @@
 	     (remote-port         (px.sockaddr_in.in_port client-address))
 	     (remote-port.str     (number->string remote-port))
 	     (port-id             (string-append remote-address.str ":" remote-port.str)))
-	(%socket-set-non-blocking server-sock)
+	(px.fd-set-non-blocking server-sock)
 	(let ((server-port (make-binary-socket-input/output-port server-sock port-id)))
 	  (values server-sock server-port client-address))))))
 
@@ -126,12 +126,6 @@
     (if (null? infos)
 	(error 'make-sockaddr "unable to acquire master socket address")
       (px.struct-addrinfo-ai_addr (car infos)))))
-
-(define (%socket-set-non-blocking sock)
-  ;;Configure the given socket descriptor for non-blocking mode.
-  ;;
-  (let ((x (px.fcntl sock F_GETFL 0)))
-    (px.fcntl sock F_SETFL (bitwise-ior x O_NONBLOCK))))
 
 
 ;;;; done

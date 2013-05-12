@@ -155,6 +155,7 @@
     select-fd-exceptional?
     poll
     fcntl				ioctl
+    fd-set-non-blocking
     dup					dup2
     pipe				mkfifo
     truncate				ftruncate
@@ -732,6 +733,10 @@
   (raise (condition
 	  (make-error)
 	  (make-errno-condition errno)
+	  (if (or (fx=? errno EAGAIN)
+		  (fx=? errno EWOULDBLOCK))
+	      (make-i/o-eagain)
+	    (condition))
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-irritants-condition irritants))))
@@ -739,6 +744,10 @@
 (define (%raise-errno-error/filename who errno filename . irritants)
   (raise (condition
 	  (make-error)
+	  (if (or (fx=? errno EAGAIN)
+		  (fx=? errno EWOULDBLOCK))
+	      (make-i/o-eagain)
+	    (condition))
 	  (make-errno-condition errno)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
@@ -1988,6 +1997,14 @@
 	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
+
+(define (fd-set-non-blocking fd)
+  (define who 'fd-set-non-blocking)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-set-non-blocking fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
 
 ;;; --------------------------------------------------------------------
 

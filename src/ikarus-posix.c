@@ -1842,7 +1842,7 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
 ikptr
 ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 {
-#ifdef HAVE_ioctl
+#ifdef HAVE_IOCTL
   int		rv = -1;
   errno = 0;
   if (IK_IS_FIXNUM(arg)) {
@@ -1858,6 +1858,21 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
     rv = ioctl(IK_UNFIX(fd), IK_UNFIX(command), val);
   } else
     ik_abort("invalid last argument to ioctl()");
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_set_non_blocking (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) ik_errno_to_code();
+  rv = fcntl(fd, F_SETFL, rv | O_NONBLOCK);
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
