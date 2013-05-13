@@ -898,12 +898,10 @@
       (else
        (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
 
-(define-syntax %select-input/output-fast-tag-from-transcoder
+(define-syntax-rule (%select-input/output-fast-tag-from-transcoder . ?args)
   ;;Return  a fixnum  containing the  tag  attributes for  an input  and
   ;;output port.
-  (syntax-rules ()
-    ((_ . ?args)
-     (%select-output-fast-tag-from-transcoder . ?args))))
+  (%select-output-fast-tag-from-transcoder . ?args))
 
 ;;; --------------------------------------------------------------------
 
@@ -1433,10 +1431,8 @@
 
 ;;;; error helpers
 
-(define-syntax %implementation-violation
-  (syntax-rules ()
-    ((_ ?who ?message . ?irritants)
-     (assertion-violation ?who ?message . ?irritants))))
+(define-syntax-rule (%implementation-violation ?who ?message . ?irritants)
+  (assertion-violation ?who ?message . ?irritants))
 
 (define (%raise-port-position-out-of-range who port new-position)
   (raise (condition
