@@ -4039,7 +4039,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax %flush-bytevector-buffer-and-evaluate
-  (syntax-rules ()
+  (syntax-rules (room-is-needed-for: if-available-room:)
     ((%flush-bytevector-buffer-and-evaluate (?port ?who)
        (room-is-needed-for: ?number-of-bytes)
        (if-available-room: . ?available-body))
@@ -4054,7 +4054,7 @@
 	       (try-again-after-flushing-buffer)))))))))
 
 (define-syntax %flush-string-buffer-and-evaluate
-  (syntax-rules ()
+  (syntax-rules (room-is-needed-for: if-available-room:)
     ((%flush-string-buffer-and-evaluate (?port ?who)
        (room-is-needed-for: ?number-of-chars)
        (if-available-room: . ?available-body))
@@ -4982,25 +4982,23 @@
       ((FAST-GET-UTF16BE-TAG)
        (%get-it %read-utf16be %peek-utf16be))))
 
-  (define-syntax %get-it
-    (syntax-rules ()
-      ((_ ?read-char ?peek-char)
-       (let ((eol-bits (%unsafe.port-eol-style-bits port))
-	     (ch (?read-char port who)))
-	 (cond ((eof-object? ch)
-		ch)		       ;return EOF
-	       (($fxzero? eol-bits) ;EOL style none
-		ch)
-	       (($char-is-single-char-line-ending? ch)
-		LINEFEED-CHAR)
-	       (($char-is-carriage-return? ch)
-		(let ((ch1 (?peek-char port who)))
-		  (cond ((eof-object? ch1)
-			 (void))
-			(($char-is-newline-after-carriage-return? ch1)
-			 (?read-char port who)))
-		  LINEFEED-CHAR))
-	       (else ch))))))
+  (define-syntax-rule (%get-it ?read-char ?peek-char)
+    (let ((eol-bits (%unsafe.port-eol-style-bits port))
+	  (ch (?read-char port who)))
+      (cond ((eof-object? ch)
+	     ch)		    ;return EOF
+	    (($fxzero? eol-bits)    ;EOL style none
+	     ch)
+	    (($char-is-single-char-line-ending? ch)
+	     LINEFEED-CHAR)
+	    (($char-is-carriage-return? ch)
+	     (let ((ch1 (?peek-char port who)))
+	       (cond ((eof-object? ch1)
+		      (void))
+		     (($char-is-newline-after-carriage-return? ch1)
+		      (?read-char port who)))
+	       LINEFEED-CHAR))
+	    (else ch))))
 
   (define (%read-utf16le port who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
@@ -5051,7 +5049,7 @@
       ((FAST-GET-UTF16BE-TAG)
        (%do-it 2 %peek-utf16be %peek-utf16be/offset))))
 
-  (define-syntax %do-it
+  (define-syntax-rule (%do-it ?offset-of-ch2 ?peek-char ?peek-char/offset)
     ;;Actually  perform the  lookahead.   Return the  next char  without
     ;;modifying  the  port position.   If  no  characters are  available
     ;;return the  EOF object.  Remember  that, as mandated by  R6RS, for
@@ -5076,24 +5074,22 @@
     ;;sequences always have a carriage return as first char and we know,
     ;;once the codec has been selected, the offset of such character.
     ;;
-    (syntax-rules ()
-      ((_ ?offset-of-ch2 ?peek-char ?peek-char/offset)
-       (let ((eol-bits (%unsafe.port-eol-style-bits port))
-	     (ch       (?peek-char port who)))
-	 (cond ((eof-object? ch)
-		ch)		       ;return EOF
-	       (($fxzero? eol-bits) ;EOL style none
-		ch)
-	       (($char-is-single-char-line-ending? ch)
-		LINEFEED-CHAR)
-	       (($char-is-carriage-return? ch)
-		(let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
-		  (cond ((eof-object? ch2)
-			 LINEFEED-CHAR)
-			(($char-is-newline-after-carriage-return? ch2)
-			 LINEFEED-CHAR)
-			(else ch))))
-	       (else ch))))))
+    (let ((eol-bits (%unsafe.port-eol-style-bits port))
+	  (ch       (?peek-char port who)))
+      (cond ((eof-object? ch)
+	     ch)		    ;return EOF
+	    (($fxzero? eol-bits)    ;EOL style none
+	     ch)
+	    (($char-is-single-char-line-ending? ch)
+	     LINEFEED-CHAR)
+	    (($char-is-carriage-return? ch)
+	     (let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
+	       (cond ((eof-object? ch2)
+		      LINEFEED-CHAR)
+		     (($char-is-newline-after-carriage-return? ch2)
+		      LINEFEED-CHAR)
+		     (else ch))))
+	    (else ch))))
 
   (define (%peek-char port who)
     (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
@@ -6080,32 +6076,30 @@
 	((FAST-GET-UTF16BE-TAG)
 	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
 
-  (define-syntax %get-it
-    (syntax-rules ()
-      ((_ ?eol-bits ?dst.past ?read-char ?peek-char)
-       (let loop ((dst.index dst.start))
-	 (let ((ch (?read-char port who)))
-	   (if (eof-object? ch)
-	       (if ($fx= dst.index dst.start)
-		   ch				;return EOF
-		 ($fx- dst.index dst.start)) ;return the number of chars read
-	     (let ((ch (cond (($fxzero? ?eol-bits) ;EOL style none
-			      ch)
-			     (($char-is-single-char-line-ending? ch)
-			      LINEFEED-CHAR)
-			     (($char-is-carriage-return? ch)
-			      (let ((ch1 (?peek-char port who)))
-				(cond ((eof-object? ch1)
-				       (void))
-				      (($char-is-newline-after-carriage-return? ch1)
-				       (?read-char port who)))
-				LINEFEED-CHAR))
-			     (else ch))))
-	       ($string-set! dst.str dst.index ch)
-	       (let ((dst.index ($fxadd1 dst.index)))
-		 (if ($fx= dst.index ?dst.past)
-		     ($fx- dst.index dst.start)
-		   (loop dst.index))))))))))
+  (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
+    (let loop ((dst.index dst.start))
+      (let ((ch (?read-char port who)))
+	(if (eof-object? ch)
+	    (if ($fx= dst.index dst.start)
+		ch			     ;return EOF
+	      ($fx- dst.index dst.start)) ;return the number of chars read
+	  (let ((ch (cond (($fxzero? ?eol-bits) ;EOL style none
+			   ch)
+			  (($char-is-single-char-line-ending? ch)
+			   LINEFEED-CHAR)
+			  (($char-is-carriage-return? ch)
+			   (let ((ch1 (?peek-char port who)))
+			     (cond ((eof-object? ch1)
+				    (void))
+				   (($char-is-newline-after-carriage-return? ch1)
+				    (?read-char port who)))
+			     LINEFEED-CHAR))
+			  (else ch))))
+	    ($string-set! dst.str dst.index ch)
+	    (let ((dst.index ($fxadd1 dst.index)))
+	      (if ($fx= dst.index ?dst.past)
+		  ($fx- dst.index dst.start)
+		(loop dst.index))))))))
 
   (define-inline (%read-utf16le ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
@@ -6296,35 +6290,33 @@
 	((FAST-GET-UTF16BE-TAG)
 	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
 
-  (define-syntax %get-it
-    (syntax-rules ()
-      ((_ ?eol-bits ?dst.past ?read-char ?peek-char)
-       (let loop ((dst.index dst.start))
-	 (let ((ch (?peek-char port who)))
-	   (if (eof-object? ch)
-	       (if ($fx= dst.index dst.start)
-		   ch				   ;return EOF
-		 ($fx- dst.index dst.start)) ;return the number of chars read
-	     (let ((ch (begin
-			 ;;Consume the peeked char.
-			 (?read-char port who)
-			 (cond (($fxzero? ?eol-bits) ;EOL style none
-				ch)
-			       (($char-is-single-char-line-ending? ch)
-				LINEFEED-CHAR)
-			       (($char-is-carriage-return? ch)
-				(let ((ch1 (?peek-char port who)))
-				  (cond ((eof-object? ch1)
-					 (void))
-					(($char-is-newline-after-carriage-return? ch1)
-					 (?read-char port who)))
-				  LINEFEED-CHAR))
-			       (else ch)))))
-	       ($string-set! dst.str dst.index ch)
-	       (let ((dst.index ($fxadd1 dst.index)))
-		 (if ($fx= dst.index ?dst.past)
-		     ($fx- dst.index dst.start)
-		   (loop dst.index))))))))))
+  (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
+    (let loop ((dst.index dst.start))
+      (let ((ch (?peek-char port who)))
+	(if (eof-object? ch)
+	    (if ($fx= dst.index dst.start)
+		ch			     ;return EOF
+	      ($fx- dst.index dst.start)) ;return the number of chars read
+	  (let ((ch (begin
+		      ;;Consume the peeked char.
+		      (?read-char port who)
+		      (cond (($fxzero? ?eol-bits) ;EOL style none
+			     ch)
+			    (($char-is-single-char-line-ending? ch)
+			     LINEFEED-CHAR)
+			    (($char-is-carriage-return? ch)
+			     (let ((ch1 (?peek-char port who)))
+			       (cond ((eof-object? ch1)
+				      (void))
+				     (($char-is-newline-after-carriage-return? ch1)
+				      (?read-char port who)))
+			       LINEFEED-CHAR))
+			    (else ch)))))
+	    ($string-set! dst.str dst.index ch)
+	    (let ((dst.index ($fxadd1 dst.index)))
+	      (if ($fx= dst.index ?dst.past)
+		  ($fx- dst.index dst.start)
+		(loop dst.index))))))))
 
   (define-inline (%read-utf16le ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
