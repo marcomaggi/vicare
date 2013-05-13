@@ -5657,6 +5657,7 @@ section.
 
 @menu
 * iklib io non-blocking binary::  Extended binary input functions.
+* iklib io non-blocking textual:: Extended textual input functions.
 @end menu
 
 @c page
@@ -5791,6 +5792,11 @@ If the underlying device is in non--blocking mode and no bytes are
 available: return the would--block object.
 @end itemize
 @end defun
+
+@c page
+@node iklib io non-blocking textual
+@subsubsection Extended textual input functions
+
 
 @c page
 @node iklib io binary

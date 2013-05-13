@@ -1465,6 +1465,7 @@
   if-successful-match:
   if-successful-refill:
   if-empty-buffer-and-refilling-would-block:
+  if-refilling-would-block:
   room-is-needed-for:)
 
 (define-syntax case-errno
@@ -4208,15 +4209,15 @@
 	 (if ($fx< ?buffer.offset port.buffer.used-size)
 	     (begin . ?available-data-body)
 	   (refill-bytevector-buffer-and-evaluate (?port ?who)
-	     (if-end-of-file:					. ?end-of-file-body)
-	     (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
-	     (if-successful-refill:				. ?after-refill-body))))))
+	     (if-end-of-file:		. ?end-of-file-body)
+	     (if-refilling-would-block:	. ?would-block-body)
+	     (if-successful-refill:	. ?after-refill-body))))))
     ))
 
 (define-syntax refill-bytevector-buffer-and-evaluate
   ;;?PORT must be an input port  with a bytevector as buffer; the buffer
-  ;;must be  fully consumed (empty).   Refill the buffer and  evaluate a
-  ;;sequence of forms.
+  ;;can be fully  consumed (empty) or there can be  bytes in it.  Refill
+  ;;the buffer and evaluate a sequence of forms.
   ;;
   ;;The code  in this macro  mutates the  fields of the  ?PORT structure
   ;;representing the buffer  state, so the client forms  must reload the
@@ -4229,14 +4230,16 @@
   ;;  evaluate ?END-OF-FILE-BODY and return its result.
   ;;
   ;;* If  attempting to refill  causes an "&i/o-eagain" exception  to be
-  ;;  raised: evaluate ?WOULD-BLOCK-BODY.  The buffer is still empty.
+  ;;   raised:  evaluate ?WOULD-BLOCK-BODY.   If  the  buffer was  empty
+  ;;  before it  is empty after; if  the buffer had bytes  before it has
+  ;;  them after.
   ;;
   (syntax-rules
-      (if-end-of-file: if-successful-refill: if-empty-buffer-and-refilling-would-block:)
+      (if-end-of-file: if-successful-refill: if-refilling-would-block:)
     ((refill-bytevector-buffer-and-evaluate (?port ?who)
-       (if-end-of-file:					. ?end-of-file-body)
-       (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
-       (if-successful-refill:				. ?after-refill-body))
+       (if-end-of-file:			. ?end-of-file-body)
+       (if-refilling-would-block:	. ?would-block-body)
+       (if-successful-refill:		. ?after-refill-body))
      (let ((count (%unsafe.refill-input-port-bytevector-buffer ?port ?who)))
        (cond ((would-block-object? count)	. ?would-block-body)
 	     (($fxzero? count)			. ?end-of-file-body)
@@ -4370,31 +4373,7 @@
 ;;wrapping the %UNSAFE.REFILL-INPUT-PORT-STRING-BUFFER function.
 ;;
 
-(define-syntax %refill-string-buffer-and-evaluate
-  ;;?PORT must be an input port with a string as buffer; the buffer must
-  ;;be fully  consumed.  Refill  the buffer and  evaluate a  sequence of
-  ;;forms.
-  ;;
-  ;;The code  in this  macro mutates the  fields of the  ?PORT structure
-  ;;representing the buffer  state, so the client forms  must reload the
-  ;;fields they use.
-  ;;
-  ;;If  refilling the buffer  succeeds: evaluate  ?AFTER-REFILL-BODY and
-  ;;return its result.
-  ;;
-  ;;If  refilling  the buffer  finds  the  EOF  with no  new  characters
-  ;;available: evaluate ?END-OF-FILE-BODY and return its result.
-  ;;
-  (syntax-rules (if-end-of-file: if-successful-refill:)
-    ((%refill-string-buffer-and-evaluate (?port ?who)
-       (if-end-of-file:		. ?end-of-file-body)
-       (if-successful-refill:	. ?after-refill-body))
-     (let ((count (%unsafe.refill-input-port-string-buffer ?port ?who)))
-       (if ($fxzero? count)
-	   (begin . ?end-of-file-body)
-	 (begin . ?after-refill-body))))))
-
-(define-syntax %maybe-refill-string-buffer-and-evaluate
+(define-syntax maybe-refill-string-buffer-and-evaluate
   ;;?PORT must  be an input  port with a  string as buffer; there  is no
   ;;constraint on the state of  the buffer.  Refill the buffer if needed
   ;;and evaluate a sequence of forms.
@@ -4403,33 +4382,72 @@
   ;;representing the buffer  state, so the client forms  must reload the
   ;;fields they use.
   ;;
-  ;;If there  are characters  to be consumed  in the buffer  between the
-  ;;offset  ?BUFFER.OFFSET  and  the  end  of the  used  area:  evaluate
-  ;;?AVAILABLE-DATA-BODY and return its result.
+  ;;* If there  are characters to be consumed in  the buffer between the
+  ;;   offset ?BUFFER.OFFSET  and the  end  of the  used area:  evaluate
+  ;;  ?AVAILABLE-DATA-BODY and return its result.
   ;;
-  ;;If ?BUFFER.OFFSET  references the end  of buffer's used  area (there
-  ;;are  no more  characters to  be consumed)  and refilling  the buffer
-  ;;succeeds: evaluate ?AFTER-REFILL-BODY and return its result.
+  ;;* If ?BUFFER.OFFSET references the  end of buffer's used area (there
+  ;;  are  no more characters to  be consumed) refill the buffer.
   ;;
-  ;;If there are  no more characters and refilling  the buffer finds the
-  ;;EOF  with no  new  bytes available:  evaluate ?END-OF-FILE-BODY  and
-  ;;return its result.
+  ;;  -  If refilling  the buffer succeeds:  evaluate ?AFTER-REFILL-BODY
+  ;;    and return its result.
   ;;
-  (syntax-rules (if-end-of-file: if-successful-refill: if-available-data:)
-    ((%maybe-refill-string-buffer-and-evaluate (?port ?who)
-       (data-is-needed-at:	?buffer.offset)
-       (if-end-of-file:		. ?end-of-file-body)
-       (if-successful-refill:	. ?after-refill-body)
-       (if-available-data:	. ?available-data-body))
+  ;;  -  If refilling  the  buffer  finds the  EOF  with  no new  bytes
+  ;;    available: evaluate ?END-OF-FILE-BODY and return its result.
+  ;;
+  ;;  - If attempting to refill causes an "&i/o-eagain" exception to be
+  ;;     raised: evaluate ?WOULD-BLOCK-BODY.  The buffer is still empty.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill: if-available-data:
+				 if-empty-buffer-and-refilling-would-block:)
+    ((maybe-refill-string-buffer-and-evaluate (?port ?who)
+       (data-is-needed-at:				?buffer.offset)
+       (if-end-of-file:					. ?end-of-file-body)
+       (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
+       (if-successful-refill:				. ?after-refill-body)
+       (if-available-data:				. ?available-data-body))
      (let ((port ?port))
        (with-port-having-string-buffer (port)
 	 (if ($fx< ?buffer.offset port.buffer.used-size)
 	     (begin . ?available-data-body)
-	   (%refill-string-buffer-and-evaluate (?port ?who)
-	     (if-end-of-file: . ?end-of-file-body)
-	     (if-successful-refill: . ?after-refill-body))))))))
+	   (refill-string-buffer-and-evaluate (?port ?who)
+	     (if-end-of-file:		. ?end-of-file-body)
+	     (if-refilling-would-block:	. ?would-block-body)
+	     (if-successful-refill:	. ?after-refill-body))))))
+    ))
 
-(define (%unsafe.refill-input-port-string-buffer port who)
+(define-syntax refill-string-buffer-and-evaluate
+  ;;?PORT must be an input port with  a string as buffer; the buffer can
+  ;;be fully  consumed or there can  be chars in it.   Refill the buffer
+  ;;and evaluate a sequence of forms.
+  ;;
+  ;;The code  in this  macro mutates the  fields of the  ?PORT structure
+  ;;representing the buffer  state, so the client forms  must reload the
+  ;;fields they use.
+  ;;
+  ;;* If refilling the  buffer succeeds: evaluate ?AFTER-REFILL-BODY and
+  ;;  return its result.
+  ;;
+  ;;* If refilling the buffer finds the EOF with no new chars available:
+  ;;  evaluate ?END-OF-FILE-BODY and return its result.
+  ;;
+  ;;* If  attempting to refill  causes an "&i/o-eagain" exception  to be
+  ;;   raised:  evaluate ?WOULD-BLOCK-BODY.   If  the  buffer was  empty
+  ;;  before it  is empty after; if  the buffer had bytes  before it has
+  ;;  them after.
+  ;;
+  (syntax-rules (if-end-of-file: if-successful-refill: if-refilling-would-block:)
+    ((refill-string-buffer-and-evaluate (?port ?who)
+       (if-end-of-file:			. ?end-of-file-body)
+       (if-refilling-would-block:	. ?would-block-body)
+       (if-successful-refill:		. ?after-refill-body))
+     (let ((count (%unsafe.refill-input-port-string-buffer ?port ?who)))
+       (cond ((would-block-object? count)	. ?would-block-body)
+	     (($fxzero? count)			. ?end-of-file-body)
+	     (else				. ?after-refill-body))))
+    ))
+
+(module (%unsafe.refill-input-port-string-buffer)
   ;;Assume PORT is  an input port object with a  string as buffer.  Fill
   ;;the input buffer keeping in  it the characters already there but not
   ;;yet  consumed (see the  pictures below);  mutate the  PORT structure
@@ -4442,64 +4460,91 @@
   ;;
   ;;This should be the only function calling the port's READ!  function.
   ;;
-  (with-arguments-validation (who)
-      (($open-port port))
+  ;;If calling PORT.READ!  raises  a "&i/o-eagain" exception: return the
+  ;;would-block object.   In this case:
+  ;;
+  ;;* If  the input buffer was  empty upon entering this  function: upon
+  ;;returning it is still empty.
+  ;;
+  ;;* If the input buffer was holding bytes upon entering this function:
+  ;;upon returning it still holds those bytes.
+  ;;
+  (define (%unsafe.refill-input-port-string-buffer port who)
+    (with-arguments-validation (who)
+	(($open-port port))
+      (with-port-having-string-buffer (port)
+	(if (eq? port.read! all-data-in-buffer)
+	    0
+	  (begin
+	    (%shift-data-in-buffer-to-the-beginning! port who)
+	    (%fill-buffer-with-data-from-device!     port who))))))
+
+  (define (%shift-data-in-buffer-to-the-beginning! port who)
+    ;;Shift to  the beginning  data alraedy  in buffer  but still  to be
+    ;;consumed; commit the new position.  Before:
+    ;;
+    ;;                          cookie.pos
+    ;;                              v           device
+    ;; |----------------------------+-------------|
+    ;;       |**********+###########+---------|
+    ;;                  ^           ^       buffer
+    ;;                index     used size
+    ;;
+    ;;after:
+    ;;
+    ;;                          cookie.pos
+    ;;                              v           device
+    ;; |----------------------------+-------------|
+    ;;                 |+###########+-------------------|
+    ;;                  ^           ^                 buffer
+    ;;                index     used size
+    ;;
     (with-port-having-string-buffer (port)
-      (if (eq? port.read! all-data-in-buffer)
-	  0
-	(let ((buffer port.buffer))
-	  ;;Shift to the  beginning data alraedy in buffer  but still to
-	  ;;be consumed; commit the new position.  Before:
-	  ;;
-	  ;;                          cookie.pos
-	  ;;                              v           device
-	  ;; |----------------------------+-------------|
-	  ;;       |**********+###########+---------|
-	  ;;                  ^           ^       buffer
-	  ;;                index     used size
-	  ;;
-	  ;;after:
-	  ;;
-	  ;;                          cookie.pos
-	  ;;                              v           device
-	  ;; |----------------------------+-------------|
-	  ;;                 |+###########+-------------------|
-	  ;;                  ^           ^                 buffer
-	  ;;                index     used size
-	  ;;
-	  (let ((delta ($fx- port.buffer.used-size port.buffer.index)))
-	    (unless ($fxzero? delta)
-	      ($string-copy!/count buffer port.buffer.index buffer 0 delta))
-	    (set! port.buffer.index     0)
-	    (set! port.buffer.used-size delta))
-	  ;;Fill the buffer with data from the device.  Before:
-	  ;;
-	  ;;                          cookie.pos
-	  ;;                              v           device
-	  ;; |----------------------------+-------------|
-	  ;;                 |+***********+-------------------|
-	  ;;                  ^           ^                 buffer
-	  ;;                index     used size
-	  ;;
-	  ;;after:
-	  ;;
-	  ;;                                        cookie.pos
-	  ;;                                            v
-	  ;; |------------------------------------------|device
-	  ;;                 |+*************************+-----|
-	  ;;                  ^                         ^   buffer
-	  ;;                index                   used size
-	  ;;
-	  (let* ((max   ($fx- port.buffer.size port.buffer.used-size))
-		 (count (port.read! buffer port.buffer.used-size max)))
-	    (unless (fixnum? count)
-	      (assertion-violation who "invalid return value from read! procedure" count))
-	    (unless (and ($fx>= count 0)
-			 ($fx<= count max))
-	      (assertion-violation who "read! returned a value out of range" count))
-	    (port.device.position.incr!  count)
-	    (port.buffer.used-size.incr! count)
-	    count))))))
+      (let* ((buffer  port.buffer)
+	     (delta   ($fx- port.buffer.used-size port.buffer.index)))
+	(unless ($fxzero? delta)
+	  ($string-copy!/count buffer port.buffer.index buffer 0 delta))
+	(set! port.buffer.index     0)
+	(set! port.buffer.used-size delta))))
+
+  (define (%fill-buffer-with-data-from-device! port who)
+    ;;Fill the buffer with data from the device.  Before:
+    ;;
+    ;;                          cookie.pos
+    ;;                              v           device
+    ;; |----------------------------+-------------|
+    ;;                 |+***********+-------------------|
+    ;;                  ^           ^                 buffer
+    ;;                index     used size
+    ;;
+    ;;after:
+    ;;
+    ;;                                        cookie.pos
+    ;;                                            v
+    ;; |------------------------------------------|device
+    ;;                 |+*************************+-----|
+    ;;                  ^                         ^   buffer
+    ;;                index                   used size
+    ;;
+    (with-port-having-string-buffer (port)
+      (guard (E ((i/o-eagain-error? E)
+		 WOULD-BLOCK-OBJECT)
+		(else
+		 (raise E)))
+	(let* ((buffer  port.buffer)
+	       (max     ($fx- port.buffer.size port.buffer.used-size))
+	       (count   (port.read! buffer port.buffer.used-size max)))
+	  (cond ((fixnum? count)
+		 (assertion-violation who "invalid return value from read! procedure" count))
+		((and ($fx>= count 0)
+		      ($fx<= count max))
+		 (assertion-violation who "read! returned a value out of range" count))
+		(else
+		 (port.device.position.incr!  count)
+		 (port.buffer.used-size.incr! count)
+		 count))))))
+
+  #| end of module: %UNSAFE.REFILL-INPUT-PORT-STRING-BUFFER |# )
 
 
 ;;;; byte input functions
@@ -4561,7 +4606,7 @@
       (debug-assert (fx= port.buffer.index port.buffer.used-size))
       (refill-bytevector-buffer-and-evaluate (port who)
 	(if-end-of-file: (eof-object))
-	(if-empty-buffer-and-refilling-would-block:
+	(if-refilling-would-block:
 	 WOULD-BLOCK-OBJECT)
 	(if-successful-refill:
 	 (set! port.buffer.index buffer.offset-after)
@@ -4592,7 +4637,7 @@
 	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:
 		(%maybe-some-data-is-available port 0))
-	       (if-empty-buffer-and-refilling-would-block:
+	       (if-refilling-would-block:
 		(%maybe-some-data-is-available port 1))
 	       (if-successful-refill:
 		(%maybe-some-data-is-available port 2))
@@ -5732,7 +5777,7 @@
 					       port.buffer.used-size)
 				   (list ($bytevector-u8-ref port.buffer buffer.offset-word1))
 				 '()))))
-			(if-empty-buffer-and-refilling-would-block:
+			(if-refilling-would-block:
 			 WOULD-BLOCK-OBJECT)
 			(if-successful-refill:
 			 (recurse))
@@ -5752,7 +5797,7 @@
 		 "unexpected end of file while decoding UTF-16 characters \
                   and expecting a whole 1-word or 2-word character"
 		 `(,($bytevector-u8-ref port.buffer buffer.offset-word0))))
-	       (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
+	       (if-refilling-would-block: WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse))
 	       ))
@@ -5761,7 +5806,7 @@
 	     ;;The input buffer is empty.
 	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
-	       (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
+	       (if-refilling-would-block: WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse))
 	       ))))))
@@ -5902,7 +5947,7 @@
 					       port.buffer.used-size)
 				   (list ($bytevector-u8-ref port.buffer buffer.offset-word1))
 				 '()))))
-			(if-empty-buffer-and-refilling-would-block:
+			(if-refilling-would-block:
 			 WOULD-BLOCK-OBJECT)
 			(if-successful-refill:
 			 (recurse buffer-offset))
@@ -5918,7 +5963,7 @@
 		 "unexpected end of file after byte while decoding UTF-16 characters \
                   and expecting single word character or first word in surrogate pair"
 		 `(,($bytevector-u8-ref port.buffer buffer.offset-word0))))
-	       (if-empty-buffer-and-refilling-would-block:
+	       (if-refilling-would-block:
 		WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse buffer-offset))
@@ -5928,7 +5973,7 @@
 	     ;;The input buffer is empty.
 	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
-	       (if-empty-buffer-and-refilling-would-block:
+	       (if-refilling-would-block:
 		WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse buffer-offset))
@@ -6072,9 +6117,11 @@
 	(port.buffer.index.incr! buffer-index-increment))
       ($string-ref port.buffer buffer.offset))
     (let ((buffer.offset ($fx+ offset port.buffer.index)))
-      (%maybe-refill-string-buffer-and-evaluate (port who)
+      (maybe-refill-string-buffer-and-evaluate (port who)
 	(data-is-needed-at: buffer.offset)
 	(if-end-of-file: (eof-object))
+	(if-empty-buffer-and-refilling-would-block:
+	 WOULD-BLOCK-OBJECT)
 	(if-successful-refill:
 	 ;;After refilling we must reload buffer indexes.
 	 (%available-data ($fx+ offset port.buffer.index)))
@@ -8039,7 +8086,7 @@
 ;;; eval: (put '%flush-string-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put 'refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
-;;; eval: (put '%refill-string-buffer-and-evaluate		'scheme-indent-function 1)
-;;; eval: (put '%maybe-refill-string-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
+;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
 ;;; End:
