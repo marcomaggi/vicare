@@ -1079,11 +1079,13 @@
 		($set-port-fast-attrs! ?port FAST-GET-BYTE-TAG)
 		(retry-after-tagging FAST-GET-BYTE-TAG))
 	       (else
-		(%assert-argument-is-port ?port ?who)
-		(%unsafe.assert-value-is-input-port  ?port ?who)
-		(%unsafe.assert-value-is-binary-port ?port ?who)
-		(%unsafe.assert-value-is-open-port   ?port ?who)
-		(assertion-violation ?who "vicare internal error: corrupted port" ?port)))))))
+		(with-arguments-validation (?who)
+		    ((port	?port))
+		  (%unsafe.assert-value-is-input-port  ?port ?who)
+		  (%unsafe.assert-value-is-binary-port ?port ?who)
+		  (%unsafe.assert-value-is-open-port   ?port ?who)
+		  (assertion-violation ?who "vicare internal error: corrupted port" ?port))))))
+    ))
 
 (define-syntax* (%case-binary-output-port-fast-tag stx)
   ;;Assuming ?PORT  has already been  validated as a port  value, select
