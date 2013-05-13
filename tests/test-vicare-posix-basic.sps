@@ -884,20 +884,6 @@
     => "ciao")
 
 ;;; --------------------------------------------------------------------
-;;; non-blocking mode
-
-  (check
-      (receive (in ou)
-	  (px.pipe)
-	(px.fd-set-non-blocking in)
-	(px.fd-set-non-blocking ou)
-	(guard (E ((i/o-eagain-error? E)
-		   #t)
-		  (else E))
-	  (px.read in (make-bytevector 4))))
-    => #t)
-
-;;; --------------------------------------------------------------------
 ;;; select
 
   (check	;timeout

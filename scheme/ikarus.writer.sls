@@ -35,6 +35,10 @@
 		  printer-integer-radix)
     (only (ikarus system $symbols)
 	  $unbound-object?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Mon May 13, 2013)
+    (only (ikarus.io)
+	  would-block-object?)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
@@ -681,6 +685,7 @@
      ((eq? x (void)) (write-char* "#<void>" p) i)
      ((eof-object? x) (write-char* "#!eof" p) i)
      ((bwp-object? x) (write-char* "#!bwp" p) i)
+     ((would-block-object? x) (write-char* "#!would-block" p) i)
      ((transcoder? x) (write-char* "#<transcoder>" p) i)
      ((struct? x) (write-shared x p m h i write-struct))
      ((code? x) (write-char* "#<code>" p) i)

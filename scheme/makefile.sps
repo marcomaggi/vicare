@@ -1851,6 +1851,8 @@
     (utf-16be-codec				i v $language)
     (utf-16n-codec				i v $language)
     (utf-bom-codec				i v $language)
+    (would-block-object				i v $language)
+    (would-block-object?			i v $language)
     (input-port?				i v r is ip se)
     (output-port?				i v r is ip se)
     (input/output-port?				i v)

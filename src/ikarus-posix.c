@@ -1393,72 +1393,97 @@ ikrt_posix_close (ikptr s_fd)
 #endif
 }
 ikptr
-ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size)
+ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 {
 #ifdef HAVE_READ
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   ssize_t	rv;
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)? IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	   = 0;
-  rv	   = read(IK_NUM_TO_FD(s_fd), buffer, size);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    errno  = 0;
+    rv     = read(IK_NUM_TO_FD(s_fd), buffer, size);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off)
+ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb * pcb)
 {
 #ifdef HAVE_PREAD
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   off_t		off;
   ssize_t	rv;
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = ik_integer_to_off_t(s_off);
-  errno	   = 0;
-  rv	   = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    off	   = ik_integer_to_off_t(s_off);
+    errno  = 0;
+    rv     = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size)
+ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 {
 #ifdef HAVE_WRITE
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   ssize_t	rv;
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	   = 0;
-  rv	   = write(IK_NUM_TO_FD(s_fd), buffer, size);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    errno = 0;
+    rv	  = write(IK_NUM_TO_FD(s_fd), buffer, size);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset)
+ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikpcb * pcb)
 {
 #ifdef HAVE_PWRITE
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   off_t		off;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = ik_integer_to_off_t(s_offset);
-  errno	   = 0;
-  rv	   = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  buffer  = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  bv_size = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	  = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    off   = ik_integer_to_off_t(s_offset);
+    errno = 0;
+    rv	  = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

@@ -5406,6 +5406,7 @@ example in the previous section):
 @menu
 * iklib io pathnames::          Pathnames handling.
 * iklib io codecs::             Transcoders and additional codecs.
+* iklib io non-blocking::       Handling non--blocking devices.
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
@@ -5605,6 +5606,124 @@ procedure.
 
 At present this codec is supported only by input ports.
 @end deffn
+
+@c page
+@node iklib io non-blocking
+@subsection Handling non--blocking devices
+
+
+@cindex Non--blocking mode, input/output ports
+@cindex Input/output ports in non--blocking mode
+@cindex Would--block object
+@cindex Unique objects, would--block object
+
+
+@rnrs{6} defines the input operations on Scheme ports as properly
+blocking when no input data is available; this is fine when the
+underlying device is configured in blocking mode.  @value{PRJNAME}
+extends the Scheme input/output ports to support underlying devices
+configured in non--blocking mode; such ports are typically the ones
+whose underlying device is a @posix{} file or socket descriptor.
+
+The implementation of Scheme ports read from the underlying device
+through a function @func{read!}; if the device is configured in
+non--blocking mode: @func{read!} might raise an exception with condition
+object type @condition{i/o-eagain}, which means: there are no available
+bytes, but this is not the end--of--file.  This scenario corresponds to
+the case in which a @posix{} function failse with @code{errno} set to
+@code{EAGAIN} or @code{EWOULDBLOCK}.
+
+
+@defun would-block-object
+Return a unique object representing the condition ``no bytes, not EOF''
+on a device configured in non--blocking mode.  The would--block object
+can be compared with @func{eq?}.
+@end defun
+
+
+@defun would-block-object? @var{obj}
+Return @true{} if @var{obj} is the would--block object, else return
+@false{}.
+@end defun
+
+
+The functions extended by @value{PRJNAME} behave as described in this
+section.
+
+@menu
+* iklib io non-blocking binary::  Extended binary input functions.
+@end menu
+
+@c page
+@node iklib io non-blocking binary
+@subsubsection Extended binary input functions
+
+
+@defun get-bytevector-n @var{port} @var{count}
+Return the EOF object, the would--block object or a bytevector:
+
+@itemize
+@item
+If @var{count} bytes are available before an end of file: return a
+bytevector of size @var{count}.  The input port is updated to point just
+past the bytes read.
+
+@item
+If fewer than @var{count} bytes are available before an end of file:
+return a bytevector containing those bytes.  The input port is updated
+to point just past the bytes read.
+
+@item
+If an end of file is reached before any bytes are available: return the
+EOF object.
+
+@item
+If the underlying device is in non--blocking mode and fewer than
+@var{count} bytes are available: return a bytevector containing those
+bytes.  The input port is updated to point just past the bytes read.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun get-bytevector-n! @var{port} @var{dst.bv} @var{dst.start} @var{count}
+Return the EOF object, the would--block object or the number of bytes
+written in the given bytevector:
+
+@itemize
+@item
+If @var{count} bytes are available before the end of file: they are
+written into @var{dst.bv} starting at index @var{dst.start}, and the
+result is @var{count}.  The input port is updated to point just past the
+bytes read.
+
+@item
+If fewer than @var{count} bytes are available before the end of file:
+the available bytes are written into @var{dst.bv} starting at index
+@var{dst.start}, and the result is a number object representing the
+number of bytes actually read.  The input port is updated to point just
+past the bytes read.
+
+@item
+If the end of file is reached before any bytes are available: return the
+EOF object.
+
+@item
+If the underlying device is in non--blocking mode and fewer than
+@var{count} bytes are available: the available bytes are written into
+@var{dst.bv} starting at index @var{dst.start}, and the result is a
+number object representing the number of bytes actually read.  The input
+port is updated to point just past the bytes read.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
 
 @c page
 @node iklib io binary

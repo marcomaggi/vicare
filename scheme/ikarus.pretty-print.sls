@@ -30,6 +30,10 @@
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Mon May 13, 2013)
+    (only (ikarus.io)
+	  would-block-object?)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
@@ -347,6 +351,10 @@
      ((unshared-list? x) (boxify-shared x boxify-list))
      ((pair? x)          (boxify-shared x boxify-pair))
      ((bytevector? x)    (boxify-shared x boxify-bytevector))
+     ;;Right now the would block object is a struct instance, so we have
+     ;;to check for  it before checking for structs.   (Marco Maggi; Mon
+     ;;May 13, 2013)
+     ((would-block-object? x) (display x))
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))

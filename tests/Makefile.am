@@ -300,6 +300,7 @@ endif
 if WANT_POSIX
 TESTS	+= \
 	test-vicare-posix-basic.sps			\
+	test-vicare-posix-non-blocking.sps		\
 	test-vicare-posix-net.sps			\
 	test-vicare-posix-mmap.sps			\
 	test-vicare-posix-bub.sps			\
