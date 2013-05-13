@@ -164,7 +164,7 @@
     => `(4 #vu8(99 105 97 111 0 0 0 0 0 0)))
 
   ;;Reading from binary ports with available bytes: GET-BYTEVECTOR-ALL.
-  #;(check
+  (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
@@ -174,7 +174,7 @@
     => '#ve(ascii "ciao"))
 
   ;;Reading from binary ports with available bytes: GET-BYTEVECTOR-SOME.
-  #;(check
+  (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
@@ -187,80 +187,59 @@
 ;;; EAGAIN from empty binary ports
 
   ;;Reading binary port without available bytes causes EAGAIN: GET-U8.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (get-u8 in))))
-  ;;   => #t)
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (get-u8 in)))
+    => (would-block-object))
 
-  ;; ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;; ;;LOOKAHEAD-U8.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #;(debug-print E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (lookahead-u8 in))))
-  ;;   => #t)
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;LOOKAHEAD-U8.
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (lookahead-u8 in)))
+    => (would-block-object))
 
-  ;; ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;; ;;GET-BYTEVECTOR-ALL.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #;(debug-print E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (get-bytevector-all in))))
-  ;;   => #t)
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;GET-BYTEVECTOR-ALL.
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (get-bytevector-all in)))
+    => (would-block-object))
 
-  ;; ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;; ;;GET-BYTEVECTOR-N.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #;(debug-print E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (get-bytevector-n in 1))))
-  ;;   => #t)
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;GET-BYTEVECTOR-N.
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (get-bytevector-n in 1)))
+    => (would-block-object))
 
-  ;; ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;; ;;GET-BYTEVECTOR-N!.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #;(debug-print E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (get-bytevector-n! in (make-bytevector 1) 0 1))))
-  ;;   => #t)
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;GET-BYTEVECTOR-N!.
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (let* ((bv (make-bytevector 1 0))
+		 (rv (get-bytevector-n! in bv 0 1)))
+	    (list rv bv))))
+    => `(,(would-block-object) #vu8(0)))
 
-  ;; ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;; ;;GET-BYTEVECTOR-SOME.
-  ;; (check
-  ;;     (with-compensations
-  ;; 	(receive (in ou)
-  ;; 	    (make-binary-ports)
-  ;; 	  (guard (E ((i/o-eagain-error? E)
-  ;; 		     #;(debug-print E)
-  ;; 		     #t)
-  ;; 		    (else E))
-  ;; 	    (get-bytevector-some in))))
-  ;;   => #t)
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;GET-BYTEVECTOR-SOME.
+  (check
+      (with-compensations
+  	(receive (in ou)
+  	    (make-binary-ports)
+	  (get-bytevector-some in)))
+    => (would-block-object))
 
   #t)
 

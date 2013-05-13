@@ -1539,7 +1539,7 @@
 	    #t)
 	(let retry-after-filling-buffer ()
 	  (let ((buffer.offset ($fx+ number-of-consumed-octets port.buffer.index)))
-	    (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	    (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset)
 	      (if-end-of-file:
 	       (eof-object))
@@ -4168,7 +4168,7 @@
 ;;wrapping the %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER function.
 ;;
 
-(define-syntax %maybe-refill-bytevector-buffer-and-evaluate
+(define-syntax maybe-refill-bytevector-buffer-and-evaluate
   ;;?PORT must be an input port with a bytevector as buffer; there is no
   ;;constraint on  the state  of the  buffer.  If  the buffer  is empty:
   ;;refill it; then evaluate a sequence of forms.
@@ -4197,7 +4197,7 @@
   (syntax-rules
       (if-end-of-file: if-successful-refill: if-available-data:
 		       if-empty-buffer-and-refilling-would-block:)
-    ((%maybe-refill-bytevector-buffer-and-evaluate (?port ?who)
+    ((maybe-refill-bytevector-buffer-and-evaluate (?port ?who)
        (data-is-needed-at:				?buffer.offset)
        (if-end-of-file:					. ?end-of-file-body)
        (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
@@ -4207,13 +4207,13 @@
        (with-port-having-string-buffer (port)
 	 (if ($fx< ?buffer.offset port.buffer.used-size)
 	     (begin . ?available-data-body)
-	   (%refill-bytevector-buffer-and-evaluate (?port ?who)
+	   (refill-bytevector-buffer-and-evaluate (?port ?who)
 	     (if-end-of-file:					. ?end-of-file-body)
 	     (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
 	     (if-successful-refill:				. ?after-refill-body))))))
     ))
 
-(define-syntax %refill-bytevector-buffer-and-evaluate
+(define-syntax refill-bytevector-buffer-and-evaluate
   ;;?PORT must be an input port  with a bytevector as buffer; the buffer
   ;;must be  fully consumed (empty).   Refill the buffer and  evaluate a
   ;;sequence of forms.
@@ -4233,7 +4233,7 @@
   ;;
   (syntax-rules
       (if-end-of-file: if-successful-refill: if-empty-buffer-and-refilling-would-block:)
-    ((%refill-bytevector-buffer-and-evaluate (?port ?who)
+    ((refill-bytevector-buffer-and-evaluate (?port ?who)
        (if-end-of-file:					. ?end-of-file-body)
        (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
        (if-successful-refill:				. ?after-refill-body))
@@ -4551,7 +4551,7 @@
     ;;
     (with-port-having-bytevector-buffer (port)
       (debug-assert (fx= port.buffer.index port.buffer.used-size))
-      (%refill-bytevector-buffer-and-evaluate (port who)
+      (refill-bytevector-buffer-and-evaluate (port who)
 	(if-end-of-file: (eof-object))
 	(if-empty-buffer-and-refilling-would-block:
 	 WOULD-BLOCK-OBJECT)
@@ -4590,7 +4590,7 @@
 	 (if ($fx<= buffer.offset-past port.buffer.used-size)
 	     (values ($bytevector-u8-ref port.buffer buffer.offset-octet0)
 		     ($bytevector-u8-ref port.buffer buffer.offset-octet1))
-	   (%refill-bytevector-buffer-and-evaluate (port who)
+	   (refill-bytevector-buffer-and-evaluate (port who)
 	     (if-end-of-file:       (%maybe-some-data-is-available))
 	     (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	     (if-successful-refill: (%maybe-some-data-is-available))
@@ -4656,7 +4656,7 @@
 				     retry-after-filling-buffer))
 	(define-inline (compose-output)
 	  (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
-	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	(maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at:    port.buffer.index)
 	  ;;The buffer was empty and  after attempting to refill it: EOF
 	  ;;was found without available data.
@@ -4794,7 +4794,7 @@
 	(define-inline (data-available)
 	  (%data-available-in-buffer port dst.bv dst.start dst.index remaining-count
 				     retry-after-filling-buffer))
-	(%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	(maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at: port.buffer.index)
 	  (if-end-of-file:
 	   (if ($fx= dst.index dst.start)
@@ -4815,11 +4815,11 @@
     ;;To be called when data is available in the buffer.
     ;;
     (with-port-having-bytevector-buffer (port)
-      (define count-of-bytes-available-in-buffer
+      (define-constant count-of-bytes-available-in-buffer
 	($fx- port.buffer.used-size port.buffer.index))
-      (define bytes-from-buffer-satisfy-the-request?
+      (define-constant bytes-from-buffer-satisfy-the-request?
 	($fx<= remaining-count count-of-bytes-available-in-buffer))
-      (define amount-to-consume-from-buffer
+      (define-constant amount-to-consume-from-buffer
 	(if bytes-from-buffer-satisfy-the-request?
 	    remaining-count
 	  count-of-bytes-available-in-buffer))
@@ -4838,28 +4838,34 @@
 ;;; --------------------------------------------------------------------
 
 (module (get-bytevector-some)
+  ;;Defined by  R6RS, extended  by Vicare.  Read  from the  binary input
+  ;;PORT, blocking as  necessary, until bytes are available  or until an
+  ;;end of file is reached.
+  ;;
+  ;;Return the EOF object, the would-block object or a bytevector:
+  ;;
+  ;;*  If bytes  are available:  return a  freshly allocated  bytevector
+  ;;containing the  initial available bytes  (at least one),  and update
+  ;;PORT to point just past these bytes.
+  ;;
+  ;;* If no input  bytes are seen before an end of  file is reached: the
+  ;;EOF object is returned.
+  ;;
+  ;;* If the underlying device is  in non-blocking mode and no bytes are
+  ;;available: return the would-block object.
+  ;;
+  (define who 'get-bytevector-some)
 
   (define (get-bytevector-some port)
-    ;;Defined by  R6RS.  Read  from the binary  input PORT,  blocking as
-    ;;necessary, until  bytes are available or  until an end of  file is
-    ;;reached.
-    ;;
-    ;;If bytes  become available, GET-BYTEVECTOR-SOME returns  a freshly
-    ;;allocated bytevector  containing the  initial available  bytes (at
-    ;;least one), and it updates PORT to point just past these bytes.
-    ;;
-    ;;If no input bytes  are seen before an end of  file is reached, the
-    ;;EOF object is returned.
-    ;;
-    (define who 'get-bytevector-some)
     (%case-binary-input-port-fast-tag (port who)
       ((FAST-GET-BYTE-TAG)
        (with-port-having-bytevector-buffer (port)
-	 (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	 (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	   (data-is-needed-at: port.buffer.index)
 	   (if-end-of-file:
 	    (eof-object))
-	   (if-empty-buffer-and-refilling-would-block: '#vu8())
+	   (if-empty-buffer-and-refilling-would-block:
+	    WOULD-BLOCK-OBJECT)
 	   (if-successful-refill:
 	    (%data-available-in-buffer port))
 	   (if-available-data:
@@ -4868,65 +4874,87 @@
 
   (define (%data-available-in-buffer port)
     (with-port-having-bytevector-buffer (port)
-      (define count-of-bytes-available-in-buffer
+      (define-constant count-of-bytes-available-in-buffer
 	($fx- port.buffer.used-size port.buffer.index))
-      (define dst.bv
+      (define-constant dst.bv
 	($make-bytevector count-of-bytes-available-in-buffer))
       ($bytevector-copy!/count port.buffer port.buffer.index
-				     dst.bv      0
-				     count-of-bytes-available-in-buffer)
+			       dst.bv      0
+			       count-of-bytes-available-in-buffer)
       (set! port.buffer.index port.buffer.used-size)
       dst.bv))
 
   #| end of module: GET-BYTEVECTOR-SOME |# )
 
-(define (get-bytevector-all port)
-  ;;Defined by R6RS.   Attempts to read all bytes until  the next end of
-  ;;file, blocking as necessary.
+(module (get-bytevector-all)
+  ;;Defined by  R6RS, modified  by Vicare.  Attempts  to read  all bytes
+  ;;until the next end of file, blocking as necessary.
   ;;
-  ;;If  one  or  more  bytes  are  read,  GET-BYTEVECTOR-ALL  returns  a
-  ;;bytevector  containing  all  bytes  up  to the  next  end  of  file.
-  ;;Otherwise, GET-BYTEVECTOR-ALL returns the EOF object.
+  ;;If  the underlying  device is  in blocking  mode: the  operation may
+  ;;block  indefinitely  waiting  to  see  if  more  bytes  will  become
+  ;;available, even if some bytes are already available.
   ;;
-  ;;The operation  may block indefinitely  waiting to see if  more bytes
-  ;;will become available, even if some bytes are already available.
+  ;;Return the EOF object, the would-block object or a bytevector:
+  ;;
+  ;;* If one or more bytes  are read: return a bytevector containing all
+  ;;bytes up to the next end of file.
+  ;;
+  ;;* If no bytes are available and the end-of-file is found: return the
+  ;;EOF object.
+  ;;
+  ;;* If the underlying device is  in non-blocking mode and no bytes are
+  ;;available: return the would-block object.
   ;;
   (define who 'get-bytevector-all)
-  (%case-binary-input-port-fast-tag (port who)
-    ((FAST-GET-BYTE-TAG)
-     (with-port-having-bytevector-buffer (port)
-       (let retry-after-filling-buffer ((output.len          0)
-					(list-of-bytevectors '()))
-	 (define (%data-available-in-buffer)
-	   (let* ((buffer.used-size	port.buffer.used-size)
-		  (buffer.offset		port.buffer.index)
-		  (amount-of-available	($fx- buffer.used-size buffer.offset))
-		  (output.len		(+ output.len amount-of-available)))
-	     ;;DANGER  This check  must  not be  removed when  compiling
-	     ;;without arguments validation.
-	     (unless (fixnum? output.len)
-	       (%implementation-violation who
-		 "request to read data from port would exceed maximum size of bytevectors"
-		 output.len))
-	     (let ((dst.bv ($make-bytevector amount-of-available)))
-	       ($bytevector-copy!/count port.buffer buffer.offset dst.bv 0 amount-of-available)
-	       (set! port.buffer.index buffer.used-size)
-	       (retry-after-filling-buffer output.len
-					   (cons dst.bv list-of-bytevectors)))))
-	 (define-inline (compose-output)
-	   (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors output.len))
-	 (%maybe-refill-bytevector-buffer-and-evaluate (port who)
-	   (data-is-needed-at: port.buffer.index)
-	   (if-end-of-file: (if (zero? output.len)
-				(eof-object)
-			      (compose-output)))
-	   (if-empty-buffer-and-refilling-would-block:
-	    (if (zero? output.len)
-		'#vu8()
+
+  (define (get-bytevector-all port)
+    (%case-binary-input-port-fast-tag (port who)
+      ((FAST-GET-BYTE-TAG)
+       (with-port-having-bytevector-buffer (port)
+	 (let retry-after-filling-buffer ((output.len  0)
+					  (output.bvs  '()))
+	   (define-inline (compose-output)
+	     (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
+	   (define-inline (data-available)
+	     (%data-available-in-buffer port output.len output.bvs
+					retry-after-filling-buffer))
+	   (maybe-refill-bytevector-buffer-and-evaluate (port who)
+	     (data-is-needed-at: port.buffer.index)
+	     (if-end-of-file:
+	      (if (zero? output.len)
+		  (eof-object)
 		(compose-output)))
-	   (if-successful-refill: (%data-available-in-buffer))
-	   (if-available-data:    (%data-available-in-buffer))
-	   ))))))
+	     (if-empty-buffer-and-refilling-would-block:
+	      (if (zero? output.len)
+		  WOULD-BLOCK-OBJECT
+		(compose-output)))
+	     (if-successful-refill: (data-available))
+	     (if-available-data:    (data-available))
+	     ))))))
+
+  (define (%data-available-in-buffer port output.len output.bvs
+				     retry-after-filling-buffer)
+    (with-port-having-bytevector-buffer (port)
+      (define-constant count-of-bytes-available-in-buffer
+	($fx- port.buffer.used-size port.buffer.index))
+      (define-constant output.len/after-consuming-buffer-bytes
+	(let ((N (+ output.len count-of-bytes-available-in-buffer)))
+	  ;;DANGER This check must not be removed when compiling without
+	  ;;arguments validation.
+	  (if (fixnum? N)
+	      N
+	    (%implementation-violation who
+	      "request to read data from port would exceed maximum size of bytevectors" N))))
+      (define-constant dst.bv
+	($make-bytevector count-of-bytes-available-in-buffer))
+      ($bytevector-copy!/count port.buffer port.buffer.index
+			       dst.bv      0
+			       count-of-bytes-available-in-buffer)
+      (set! port.buffer.index port.buffer.used-size)
+      (retry-after-filling-buffer output.len/after-consuming-buffer-bytes
+				  (cons dst.bv output.bvs))))
+
+  #| end of module: GET-BYTEVECTOR-ALL |# )
 
 
 ;;;; character input
@@ -5170,7 +5198,7 @@
     (define-inline (main)
       (let retry-after-filling-buffer ()
 	(let ((buffer.offset-byte0 port.buffer.index))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte0)
 	    (if-end-of-file: (eof-object))
 	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
@@ -5205,7 +5233,7 @@
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-past  ($fxadd1 buffer.offset-byte1)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
 	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character"
@@ -5238,7 +5266,7 @@
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
 	       (buffer.offset-past  ($fxadd1 buffer.offset-byte2)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
 	    (if-end-of-file:
 	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-byte UTF-8 character"
@@ -5277,7 +5305,7 @@
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 ($fxadd1 buffer.offset-byte2))
 	       (buffer.offset-past  ($fxadd1 buffer.offset-byte3)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte3)
 	    (if-end-of-file:
 	     (apply %unexpected-eof-error "unexpected EOF while decoding 4-byte UTF-8 character"
@@ -5375,7 +5403,7 @@
     (define-inline (main)
       (let retry-after-filling-buffer ()
 	(let ((buffer.offset-byte0 ($fx+ port.buffer.index buffer-offset)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte0)
 	    (if-end-of-file: (eof-object))
 	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
@@ -5405,7 +5433,7 @@
       (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
 	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
@@ -5437,7 +5465,7 @@
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte2)
 	    (if-end-of-file:
 	     (apply %unexpected-eof-error "unexpected EOF while decoding 3-byte UTF-8 character"
@@ -5476,7 +5504,7 @@
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
 	       (buffer.offset-byte3 ($fxadd1 buffer.offset-byte2)))
-	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte3)
 	    (if-end-of-file:
 	     (apply %unexpected-eof-error "unexpected EOF while decoding 4-bytes UTF-8 character"
@@ -5669,7 +5697,7 @@
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
 		      ;;but input  buffer does not hold  the full second
 		      ;;word.
-		      (%refill-bytevector-buffer-and-evaluate (port who)
+		      (refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (set! port.buffer.index port.buffer.used-size)
 			 (%unexpected-eof-error
@@ -5689,7 +5717,7 @@
 
 	    (($fx< buffer.offset-word0 port.buffer.used-size)
 	     ;;There is only 1 byte in the input buffer.
-	     (%refill-bytevector-buffer-and-evaluate (port who)
+	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:
 		;;The  input data  is corrupted  because we  expected at
 		;;least a  16 bits word  to be there before  EOF.  Being
@@ -5708,7 +5736,7 @@
 
 	    (else
 	     ;;The input buffer is empty.
-	     (%refill-bytevector-buffer-and-evaluate (port who)
+	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
 	       (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
@@ -5840,7 +5868,7 @@
 		      ;;WORD0 is  the first of a  UTF-16 surrogate pair,
 		      ;;but  the input  buffer  does not  hold the  full
 		      ;;second word.
-		      (%refill-bytevector-buffer-and-evaluate (port who)
+		      (refill-bytevector-buffer-and-evaluate (port who)
 			(if-end-of-file:
 			 (%unexpected-eof-error
 			  "unexpected end of file while decoding UTF-16 characters \
@@ -5859,7 +5887,7 @@
 
 	    (($fx< buffer.offset-word0 port.buffer.used-size)
 	     ;;There is only 1 byte in the input buffer.
-	     (%refill-bytevector-buffer-and-evaluate (port who)
+	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:
 		;;The  input data  is corrupted  because we  expected at
 		;;least a 16 bits word to be there before EOF.
@@ -5875,7 +5903,7 @@
 
 	    (else
 	     ;;The input buffer is empty.
-	     (%refill-bytevector-buffer-and-evaluate (port who)
+	     (refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
 	       (if-empty-buffer-and-refilling-would-block:
 		WOULD-BLOCK-OBJECT)
@@ -5949,7 +5977,7 @@
 	(port.buffer.index.incr! buffer-index-increment))
       ($fixnum->char ($bytevector-u8-ref port.buffer buffer.offset)))
     (let ((buffer.offset ($fx+ offset port.buffer.index)))
-      (%maybe-refill-bytevector-buffer-and-evaluate (port who)
+      (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: buffer.offset)
 	(if-end-of-file: (eof-object))
 	(if-empty-buffer-and-refilling-would-block:
@@ -7986,8 +8014,8 @@
 ;;; eval: (put '%parse-bom-and-add-fast-tag		'scheme-indent-function 1)
 ;;; eval: (put '%flush-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%flush-string-buffer-and-evaluate	'scheme-indent-function 1)
-;;; eval: (put '%refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
-;;; eval: (put '%maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
+;;; eval: (put 'refill-bytevector-buffer-and-evaluate		'scheme-indent-function 1)
+;;; eval: (put 'maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%maybe-refill-string-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
