@@ -250,6 +250,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined cflonums::       Validating cflonums.
 * args predefined complexes::      Validating complexes.
 * args predefined ports::          Validating input/output ports.
+* args predefined transcoders::    Validating port transcoders.
 * args predefined procedures::     Validating procedures.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -1165,6 +1166,29 @@ Succeed if @var{obj} is an textual or binary port.
 @deffn {Validation Clause} textual-port/false @var{obj}
 @deffnx {Validation Clause} binary-port/false @var{obj}
 Succeed if @var{obj} is @false{} or an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} open-port @var{obj}
+Succeed if @var{obj} is an open port.
+@end deffn
+
+@c page
+@node args predefined transcoders
+@subsubsection Validating port transcoders
+
+
+The following bindings are extranscodered by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} transcoder @var{obj}
+Succeed if @var{obj} is a transcoder.
+@end deffn
+
+
+@deffn {Validation Clause} transcoder/false @var{obj}
+Succeed if @var{obj} is @false{} or a transcoder.
 @end deffn
 
 @c page

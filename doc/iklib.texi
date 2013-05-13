@@ -5534,6 +5534,11 @@ Empty components are discarded.
 The following bindings are exported by the @library{ikarus} library.
 
 
+@defun transcoder? @var{obj}
+Return @true{} if @var{obj} is a transcoder, else return @false{}.
+@end defun
+
+
 @deffn Parameter native-transcoder
 @findex open-input-file
 @findex with-input-from-file
@@ -6029,6 +6034,12 @@ generated the first time this function is applied to @var{port}.
 Return a fixnum associated to @var{port} to be used as hash key.  The
 gensym is generated the first time this function is applied to
 @var{port}.
+@end defun
+
+
+@defun port-closed? @var{port}
+Return @true{} if @var{port} has already been closed, else return
+@false{}.
 @end defun
 
 

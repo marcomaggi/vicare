@@ -235,6 +235,11 @@
     textual-port/false.vicare-arguments-validation
     binary-port.vicare-arguments-validation
     binary-port/false.vicare-arguments-validation
+    open-port.vicare-arguments-validation
+
+    ;; transcoders
+    transcoder.vicare-arguments-validation
+    transcoder/false.vicare-arguments-validation
 
     ;; procedures
     procedure.vicare-arguments-validation
@@ -1376,6 +1381,24 @@
 (define-argument-validation (binary-port/false who obj)
   (or (not obj) (binary-port? obj))
   (assertion-violation who "expected false or binary port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (open-port who obj)
+  (not (port-closed? obj))
+  (assertion-violation who "expected open port as argument" obj))
+
+
+;;;; transcoders
+
+(define-argument-validation (transcoder who obj)
+  (transcoder? obj)
+  (assertion-violation who "expected transcoder as argument" obj))
+
+(define-argument-validation (transcoder/false who obj)
+  (or (not obj) (transcoder? obj))
+  (assertion-violation who
+    "expected false or a transcoder object as transcoder argument" obj))
 
 
 ;;;; procedures

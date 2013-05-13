@@ -621,6 +621,7 @@
     (prefix (vicare unsafe capi)
 	    capi.)
     (vicare unsafe unicode)
+    (vicare arguments validation)
     (vicare platform constants))
 
 
@@ -1080,10 +1081,10 @@
 		(retry-after-tagging FAST-GET-BYTE-TAG))
 	       (else
 		(with-arguments-validation (?who)
-		    ((port	?port))
-		  (%unsafe.assert-value-is-input-port  ?port ?who)
-		  (%unsafe.assert-value-is-binary-port ?port ?who)
-		  (%unsafe.assert-value-is-open-port   ?port ?who)
+		    ((port		?port)
+		     ($input-port	?port)
+		     ($binary-port	?port)
+		     ($open-port	?port))
 		  (assertion-violation ?who "vicare internal error: corrupted port" ?port))))))
     ))
 
@@ -1108,11 +1109,13 @@
 		($set-port-fast-attrs! ?port FAST-PUT-BYTE-TAG)
 		(retry-after-tagging FAST-PUT-BYTE-TAG))
 	       (else
-		(%assert-argument-is-port ?port ?who)
-		(%unsafe.assert-value-is-output-port ?port ?who)
-		(%unsafe.assert-value-is-binary-port ?port ?who)
-		(%unsafe.assert-value-is-open-port   ?port ?who)
-		(assertion-violation ?who "vicare internal error: corrupted port" ?port)))))))
+		(with-arguments-validation (?who)
+		    ((port		?port)
+		     ($output-port	?port)
+		     ($binary-port	?port)
+		     ($open-port	?port))
+		  (assertion-violation ?who "vicare internal error: corrupted port" ?port))))))
+    ))
 
 (define-syntax* (%case-textual-input-port-fast-tag stx)
   ;;For  a port  fast tagged  for input:  select a  body of  code  to be
@@ -1210,11 +1213,12 @@
 	  (identifier? #'?who))
      #'(let retry-after-tagging-port ((m ($port-fast-attrs-or-zero ?port)))
 	 (define (%validate)
-	   (%assert-argument-is-port ?port ?who)
-	   (%unsafe.assert-value-is-textual-port ?port ?who)
-	   (%unsafe.assert-value-is-output-port  ?port ?who)
-	   (%unsafe.assert-value-is-open-port    ?port ?who)
-	   (assertion-violation ?who "unsupported port transcoder" ?port))
+	   (with-arguments-validation (?who)
+	       ((port		?port)
+		($output-port	?port)
+		($textual-port	?port)
+		($open-port	?port))
+	     (assertion-violation ?who "unsupported port transcoder" ?port)))
 	 (define (%reconfigure-as-output fast-attrs)
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
@@ -1273,44 +1277,7 @@
 ;;(define INIT-PUT-UTF16-TAG		#b00000110000110)
 
 
-;;;; assertion helpers
-
-(define-inline (%assert-argument-is-port ?port ?who)
-  (unless (port? ?port)
-    (assertion-violation ?who "expected port as argument" ?port)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%unsafe.assert-value-is-input-port ?port ?who)
-  (unless (%unsafe.input-port? ?port)
-    (assertion-violation ?who "not an input port" ?port)))
-
-(define-inline (%unsafe.assert-value-is-output-port ?port ?who)
-  (unless (%unsafe.output-port? ?port)
-    (assertion-violation ?who "not an output port" ?port)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%unsafe.assert-value-is-binary-port ?port ?who)
-  (unless (%unsafe.binary-port? ?port)
-    (assertion-violation ?who "not a binary port" ?port)))
-
-(define-inline (%unsafe.assert-value-is-textual-port ?port ?who)
-  (unless (%unsafe.textual-port? ?port)
-    (assertion-violation ?who "not a textual port" ?port)))
-
-;;; --------------------------------------------------------------------
-
-(define-inline (%unsafe.assert-value-is-open-port ?port ?who)
-  (when (%unsafe.port-closed? ?port)
-    (assertion-violation ?who "port is closed" ?port)))
-
-
 ;;;; arguments validation
-
-(define-argument-validation (port who obj)
-  (port? obj)
-  (assertion-violation who "expected port as argument" obj))
 
 (define-argument-validation (port-mode who obj)
   (or (eq? obj 'r6rs) (eq? obj 'vicare))
@@ -1318,25 +1285,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (input-port who obj)
-  (input-port? obj)
-  (assertion-violation who "expected input port as argument" obj))
-
 (define-argument-validation ($input-port who obj)
   (%unsafe.input-port? obj)
   (assertion-violation who "expected input port as argument" obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (output-port who obj)
-  (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
-
 (define-argument-validation ($output-port who obj)
   (%unsafe.output-port? obj)
   (assertion-violation who "expected output port as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation ($not-input/output-port who obj)
   (not (%unsafe.input-and-output-port? obj))
@@ -1353,10 +1308,6 @@
   (assertion-violation who "expected textual port as argument" obj))
 
 ;;; --------------------------------------------------------------------
-
-(define-argument-validation (open-port who obj)
-  (not (port-closed? obj))
-  (assertion-violation who "expected open port as argument" obj))
 
 (define-argument-validation ($open-port who obj)
   (not (%unsafe.port-closed? obj))
@@ -1379,15 +1330,6 @@
        (>= position 0))
   (assertion-violation who "invalid value returned by get-position" port position))
 
-(define-argument-validation (transcoder who obj)
-  (transcoder? obj)
-  (assertion-violation who "expected transcoder as argument" obj))
-
-(define-argument-validation (maybe-transcoder who obj)
-  (or (not obj) (transcoder? obj))
-  (assertion-violation who
-    "expected false or a transcoder object as optional transcoder argument" obj))
-
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (octet who obj)
@@ -1395,26 +1337,6 @@
        ($fx>= obj 0)
        ($fx<= obj 255))
   (assertion-violation who "expected fixnum in the range for octets as argument" obj))
-
-(define-argument-validation (char who obj)
-  (char? obj)
-  (assertion-violation who "expected character as argument" obj))
-
-(define-argument-validation (fixnum who obj)
-  (fixnum? obj)
-  (assertion-violation who "expected fixnum as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (port-identifier who obj)
   (string? obj)
@@ -3148,7 +3070,7 @@
     (define who 'open-bytevector-input-port)
     (with-arguments-validation (who)
 	((bytevector        bv)
-	 (maybe-transcoder  maybe-transcoder))
+	 (transcoder/false  maybe-transcoder))
       ;;The input bytevector  is itself the buffer!!!  The  port is in a
       ;;state equivalent to the following:
       ;;
@@ -3162,14 +3084,14 @@
       ;;the device  position equals the bytevector length  and its value
       ;;in the cookie's POS field is never mutated.
       (let* ((bv.len ($bytevector-length bv))
-	     (attributes		($fxior
-					 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
-					 (%select-eol-style-from-transcoder who maybe-transcoder)))
+	     (attributes	($fxior
+				 (%select-input-fast-tag-from-transcoder who maybe-transcoder)
+				 (%select-eol-style-from-transcoder who maybe-transcoder)))
 	     (buffer.index	0)
 	     (buffer.used-size	bv.len)
 	     (buffer		bv)
-	     (transcoder		maybe-transcoder)
-	     (identifier		"*bytevector-input-port*")
+	     (transcoder	maybe-transcoder)
+	     (identifier	"*bytevector-input-port*")
 	     (read!		all-data-in-buffer)
 	     (write!		#f)
 	     (get-position	#t)
@@ -3329,7 +3251,7 @@
     ;;
     (define who 'open-bytevector-output-port)
     (with-arguments-validation (who)
-	((maybe-transcoder maybe-transcoder))
+	((transcoder/false maybe-transcoder))
       ;;The most  common use of  this port type  is to append  bytes and
       ;;finally extract the whole output bytevector:
       ;;
@@ -3530,7 +3452,7 @@
     (define who 'call-with-bytevector-output-port)
     (with-arguments-validation (who)
 	((procedure		proc)
-	 (maybe-transcoder	transcoder))
+	 (transcoder/false	transcoder))
       (let-values (((port extract) (open-bytevector-output-port transcoder)))
 	(proc port)
 	(extract))))))
@@ -7525,7 +7447,7 @@
     (with-arguments-validation (who)
 	((filename		filename)
 	 (file-options		file-options)
-	 (maybe-transcoder	maybe-transcoder))
+	 (transcoder/false	maybe-transcoder))
       (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	     (other-attributes	buffer-mode-attrs)
 	     (fd		(%open-input-file-descriptor filename file-options who))
@@ -7648,7 +7570,7 @@
     (with-arguments-validation (who)
 	((filename		filename)
 	 (file-options		file-options)
-	 (maybe-transcoder	maybe-transcoder))
+	 (transcoder/false	maybe-transcoder))
       (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	     (other-attributes	buffer-mode-attrs)
 	     (fd		(%open-output-file-descriptor filename file-options who))
@@ -7748,7 +7670,7 @@
     (with-arguments-validation (who)
 	((filename		filename)
 	 (file-options		file-options)
-	 (maybe-transcoder	maybe-transcoder))
+	 (transcoder/false	maybe-transcoder))
       (let* ((buffer-mode-attrs	(%buffer-mode->attributes buffer-mode who))
 	     (other-attributes	($fxior INPUT/OUTPUT-PORT-TAG buffer-mode-attrs))
 	     (fd		(%open-input/output-file-descriptor filename file-options who))
