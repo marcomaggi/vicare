@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -1544,7 +1544,7 @@
   if-no-match:
   if-successful-match:
   if-successful-refill:
-  empty-buffer-and-refilling-would-block-handler:
+  if-empty-buffer-and-refilling-would-block:
   room-is-needed-for:)
 
 (define-syntax case-errno
@@ -1621,16 +1621,15 @@
 	  (let ((buffer.offset ($fx+ number-of-consumed-octets port.buffer.index)))
 	    (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	      (data-is-needed-at: buffer.offset)
-	      (if-end-of-file: (eof-object))
+	      (if-end-of-file:
+	       (eof-object))
+	      (if-empty-buffer-and-refilling-would-block:
+	       WOULD-BLOCK-OBJECT)
 	      (if-successful-refill:
 	       (retry-after-filling-buffer))
 	      (if-available-data:
-	       (and ($fx= (car bom)
-				($bytevector-u8-ref port.buffer buffer.offset))
-		    (next-octet-in-bom ($fxadd1 number-of-consumed-octets)
-				       (cdr bom))))
-	      (empty-buffer-and-refilling-would-block-handler:
-	       (lambda (E) WOULD-BLOCK-OBJECT))
+	       (and ($fx= (car bom) ($bytevector-u8-ref port.buffer buffer.offset))
+		    (next-octet-in-bom ($fxadd1 number-of-consumed-octets) (cdr bom))))
 	      )))))))
 
 (define (%unsafe.parse-utf16-bom-and-add-fast-tag who port)
@@ -4272,32 +4271,32 @@
   ;;   -  If refilling  the  buffer  finds the  EOF  with  no new  bytes
   ;;    available: evaluate ?END-OF-FILE-BODY and return its result.
   ;;
-  ;;   - If attempting to refill  the buffer causes an EAGAIN error (the
-  ;;      underlying device  is in  non-blocking mode  and there  are no
-  ;;     available  bytes): raise  an "&i/o-eagain" exception.   In this
-  ;;     case the buffer is left empty.
+  ;;   - If attempting to refill causes an "&i/o-eagain" exception to be
+  ;;     raised: evaluate ?WOULD-BLOCK-BODY.  The buffer is still empty.
   ;;
-  (syntax-rules (if-end-of-file: if-successful-refill: if-available-data:
-				 empty-buffer-and-refilling-would-block-handler:)
+  (syntax-rules
+      (if-end-of-file: if-successful-refill: if-available-data:
+		       if-empty-buffer-and-refilling-would-block:)
     ((%maybe-refill-bytevector-buffer-and-evaluate (?port ?who)
-       (data-is-needed-at:	?buffer.offset)
-       (if-end-of-file:		. ?end-of-file-body)
-       (if-successful-refill:	. ?after-refill-body)
-       (if-available-data:	. ?available-data-body)
-       (empty-buffer-and-refilling-would-block-handler:    ?would-block-handler))
+       (data-is-needed-at:				?buffer.offset)
+       (if-end-of-file:					. ?end-of-file-body)
+       (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
+       (if-successful-refill:				. ?after-refill-body)
+       (if-available-data:				. ?available-data-body))
      (let ((port ?port))
        (with-port-having-string-buffer (port)
 	 (if ($fx< ?buffer.offset port.buffer.used-size)
 	     (begin . ?available-data-body)
 	   (%refill-bytevector-buffer-and-evaluate (?port ?who)
-	     (if-end-of-file:		. ?end-of-file-body)
-	     (if-successful-refill:	. ?after-refill-body)
-	     (empty-buffer-and-refilling-would-block-handler:	?would-block-handler))))))))
+	     (if-end-of-file:					. ?end-of-file-body)
+	     (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
+	     (if-successful-refill:				. ?after-refill-body))))))
+    ))
 
 (define-syntax %refill-bytevector-buffer-and-evaluate
   ;;?PORT must be an input port  with a bytevector as buffer; the buffer
-  ;;must be fully  consumed.  Refill the buffer and  evaluate a sequence
-  ;;of forms.
+  ;;must be  fully consumed (empty).   Refill the buffer and  evaluate a
+  ;;sequence of forms.
   ;;
   ;;The code  in this macro  mutates the  fields of the  ?PORT structure
   ;;representing the buffer  state, so the client forms  must reload the
@@ -4309,25 +4308,19 @@
   ;;* If refilling the buffer finds the EOF with no new bytes available:
   ;;  evaluate ?END-OF-FILE-BODY and return its result.
   ;;
-  ;;* If  attempting to refill  the buffer  causes an EAGAIN  error (the
-  ;;   underlying  device is  in  non-blocking  mode  and there  are  no
-  ;;  available bytes): raise an  "&i/o-eagain" exception.  In this case
-  ;;  the buffer is left empty.
+  ;;* If  attempting to refill  causes an "&i/o-eagain" exception  to be
+  ;;  raised: evaluate ?WOULD-BLOCK-BODY.  The buffer is still empty.
   ;;
-  (syntax-rules (if-end-of-file: if-successful-refill:
-				 empty-buffer-and-refilling-would-block-handler:)
+  (syntax-rules
+      (if-end-of-file: if-successful-refill: if-empty-buffer-and-refilling-would-block:)
     ((%refill-bytevector-buffer-and-evaluate (?port ?who)
-       (if-end-of-file:		. ?end-of-file-body)
-       (if-successful-refill:	. ?after-refill-body)
-       (empty-buffer-and-refilling-would-block-handler:    ?would-block-handler))
-     (guard (E ((i/o-eagain-error? E)
-		(?would-block-handler E))
-	       (else
-		(raise E)))
-       (let ((count (%unsafe.refill-input-port-bytevector-buffer ?port ?who)))
-	 (if ($fxzero? count)
-	     (begin . ?end-of-file-body)
-	   (begin . ?after-refill-body)))))))
+       (if-end-of-file:					. ?end-of-file-body)
+       (if-empty-buffer-and-refilling-would-block:	. ?would-block-body)
+       (if-successful-refill:				. ?after-refill-body))
+     (let ((count (%unsafe.refill-input-port-bytevector-buffer ?port ?who)))
+       (cond ((would-block-object? count)	. ?would-block-body)
+	     (($fxzero? count)			. ?end-of-file-body)
+	     (else				. ?after-refill-body))))))
 
 (module (%unsafe.refill-input-port-bytevector-buffer)
   ;;Assume PORT  is an input  port object  with a bytevector  as buffer.
@@ -4345,19 +4338,14 @@
   ;;there may  still be bytes  to be consumed  in the buffer  unless the
   ;;buffer was already fully consumed before this function call.
   ;;
-  ;;If:
+  ;;If calling PORT.READ!  raises  a "&i/o-eagain" exception: return the
+  ;;would-block object.   In this case:
   ;;
-  ;;1. The port has a file or socket descriptor as underlying device.
+  ;;* If  the input buffer was  empty upon entering this  function: upon
+  ;;returning it is still empty.
   ;;
-  ;;2. The fd is configured in non-blocking mode.
-  ;;
-  ;;3. There are  no available bytes.
-  ;;
-  ;;calling PORT.READ!  will cause  a "&i/o-eagain" exception.  If there
-  ;;are bytes in  the buffer: we just return zero,  signaling that there
-  ;;are  bytes to  be consumed;  else we  re-raise the  exception.  This
-  ;;should  allow  correct  consumption  of  the  available  bytes  from
-  ;;non-blocking ports.
+  ;;* If the input buffer was holding bytes upon entering this function:
+  ;;upon returning it still holds those bytes.
   ;;
   (define (%unsafe.refill-input-port-bytevector-buffer port who)
     (with-arguments-validation (who)
@@ -4426,19 +4414,26 @@
     ;;                  ^                         ^   buffer
     ;;                index                   used size
     ;;
+    ;;If  PORT.READ!  raises  an   "&i/o-again"  exception:  return  the
+    ;;would-block object.
+    ;;
     (with-port-having-bytevector-buffer (port)
-      (let* ((buffer  port.buffer)
-	     (max     ($fx- port.buffer.size port.buffer.used-size))
-	     (count   (port.read! buffer port.buffer.used-size max)))
-	(cond ((not (fixnum? count))
-	       (assertion-violation who "invalid return value from read! procedure" count))
-	      ((not (and ($fx>= count 0)
-			 ($fx<= count max)))
-	       (assertion-violation who "read! returned a value out of range" count))
-	      (else
-	       (port.device.position.incr!  count)
-	       (port.buffer.used-size.incr! count)
-	       count)))))
+     (guard (E ((i/o-eagain-error? E)
+		WOULD-BLOCK-OBJECT)
+	       (else
+		(raise E)))
+       (let* ((buffer  port.buffer)
+	      (max     ($fx- port.buffer.size port.buffer.used-size))
+	      (count   (port.read! buffer port.buffer.used-size max)))
+	 (cond ((not (fixnum? count))
+		(assertion-violation who "invalid return value from read! procedure" count))
+	       ((not (and ($fx>= count 0)
+			  ($fx<= count max)))
+		(assertion-violation who "read! returned a value out of range" count))
+	       (else
+		(port.device.position.incr!  count)
+		(port.buffer.used-size.incr! count)
+		count))))))
 
   #| end of module: %UNSAFE.REFILL-INPUT-PORT-BYTEVECTOR-BUFFER |# )
 
@@ -4638,11 +4633,11 @@
       (debug-assert (fx= port.buffer.index port.buffer.used-size))
       (%refill-bytevector-buffer-and-evaluate (port who)
 	(if-end-of-file: (eof-object))
+	(if-empty-buffer-and-refilling-would-block:
+	 WOULD-BLOCK-OBJECT)
 	(if-successful-refill:
 	 (set! port.buffer.index buffer.offset-after)
 	 ($bytevector-u8-ref port.buffer 0))
-	(empty-buffer-and-refilling-would-block-handler:
-	 (lambda (E) WOULD-BLOCK-OBJECT))
 	)))
 
   #| end of module |# )
@@ -4677,9 +4672,8 @@
 		     ($bytevector-u8-ref port.buffer buffer.offset-octet1))
 	   (%refill-bytevector-buffer-and-evaluate (port who)
 	     (if-end-of-file:       (%maybe-some-data-is-available))
+	     (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	     (if-successful-refill: (%maybe-some-data-is-available))
-	     (empty-buffer-and-refilling-would-block-handler:
-	      (lambda (E) WOULD-BLOCK-OBJECT))
 	     )))))))
 
 
@@ -4749,12 +4743,6 @@
 	  (if-end-of-file: (if (zero? output.len)
 			       (eof-object)
 			     (compose-output)))
-	  ;;The  buffer was  empty,  but after  refilling  it: there  is
-	  ;;available data.
-	  (if-successful-refill: (data-available))
-	  ;;The  buffer  has available  data  without  reading from  the
-	  ;;device.
-	  (if-available-data:    (data-available))
 	  ;;Attempting  to refill  the  buffer  caused an  "&i/o-eagain"
 	  ;;exception.  If  we are  here: the buffer  is now  empty, but
 	  ;;maybe some  data was  available, even  though not  enough to
@@ -4762,11 +4750,16 @@
 	  ;;
 	  ;;If some  data is available  just return it, else  return the
 	  ;;would-block object.
-	  (empty-buffer-and-refilling-would-block-handler:
-	   (lambda (E)
-	     (if (zero? output.len)
-		 WOULD-BLOCK-OBJECT
-	       (compose-output))))
+	  (if-empty-buffer-and-refilling-would-block:
+	   (if (zero? output.len)
+	       WOULD-BLOCK-OBJECT
+	     (compose-output)))
+	  ;;The  buffer was  empty,  but after  refilling  it: there  is
+	  ;;available data.
+	  (if-successful-refill: (data-available))
+	  ;;The  buffer  has available  data  without  reading from  the
+	  ;;device.
+	  (if-available-data:    (data-available))
 	  ))))
 
   (define (%data-available-in-buffer port output.len remaining-count output.bvs
@@ -4887,15 +4880,14 @@
 	   (if ($fx= dst.index dst.start)
 	       (eof-object)
 	     ($fx- dst.index dst.start)))
+	  (if-empty-buffer-and-refilling-would-block:
+	   (if ($fx= dst.index dst.start)
+	       WOULD-BLOCK-OBJECT
+	     ($fx- dst.index dst.start)))
 	  (if-successful-refill:
 	   (data-available))
 	  (if-available-data:
 	   (data-available))
-	  (empty-buffer-and-refilling-would-block-handler:
-	   (lambda (E)
-	     (if ($fx= dst.index dst.start)
-		 WOULD-BLOCK-OBJECT
-	       ($fx- dst.index dst.start))))
 	  ))))
 
   (define (%data-available-in-buffer port dst.bv dst.start dst.index remaining-count
@@ -4947,12 +4939,11 @@
 	   (data-is-needed-at: port.buffer.index)
 	   (if-end-of-file:
 	    (eof-object))
+	   (if-empty-buffer-and-refilling-would-block: '#vu8())
 	   (if-successful-refill:
 	    (%data-available-in-buffer port))
 	   (if-available-data:
 	    (%data-available-in-buffer port))
-	   (empty-buffer-and-refilling-would-block-handler:
-	    (lambda (E) '#vu8()))
 	   )))))
 
   (define (%data-available-in-buffer port)
@@ -5009,13 +5000,12 @@
 	   (if-end-of-file: (if (zero? output.len)
 				(eof-object)
 			      (compose-output)))
+	   (if-empty-buffer-and-refilling-would-block:
+	    (if (zero? output.len)
+		'#vu8()
+		(compose-output)))
 	   (if-successful-refill: (%data-available-in-buffer))
 	   (if-available-data:    (%data-available-in-buffer))
-	   (empty-buffer-and-refilling-would-block-handler:
-	    (lambda (E)
-	      (if (zero? output.len)
-		  '#vu8()
-		(compose-output))))
 	   ))))))
 
 
@@ -5267,6 +5257,7 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte0)
 	    (if-end-of-file: (eof-object))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill: (retry-after-filling-buffer))
 	    (if-available-data:
 	     (let ((byte0 ($bytevector-u8-ref port.buffer buffer.offset-byte0)))
@@ -5286,8 +5277,6 @@
 		     (else
 		      (set! port.buffer.index ($fxadd1 buffer.offset-byte0))
 		      (%error-invalid-byte)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
@@ -5303,7 +5292,9 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
-	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
+	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character"
+				    byte0))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-1-more-byte port.buffer.index))
 	    (if-available-data:
@@ -5323,8 +5314,6 @@
 					  byte0 byte1 N))))
 		     (else
 		      (%error-invalid-second)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (get-3-bytes-character byte0 buffer.offset-byte0)
@@ -5340,6 +5329,7 @@
 		    byte0 (if ($fx< buffer.offset-byte1 port.buffer.used-size)
 			      (list ($bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-2-more-bytes port.buffer.index))
 	    (if-available-data:
@@ -5362,8 +5352,6 @@
 					  byte0 byte1 byte2 N))))
 		     (else
 		      (%error-invalid-second-or-third)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
@@ -5383,6 +5371,7 @@
 					(list ($bytevector-u8-ref port.buffer buffer.offset-byte2))
 				      '()))
 			    '())))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-3-more-bytes port.buffer.index))
 	    (if-available-data:
@@ -5407,8 +5396,6 @@
 					  byte0 byte1 byte2 byte3 N))))
 		     (else
 		      (%error-invalid-second-third-or-fourth)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define (%unexpected-eof-error message . irritants)
@@ -5475,6 +5462,7 @@
 	  (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte0)
 	    (if-end-of-file: (eof-object))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill: (retry-after-filling-buffer))
 	    (if-available-data:
 	     (let ((byte0		($bytevector-u8-ref port.buffer buffer.offset-byte0))
@@ -5495,8 +5483,6 @@
 		      (peek-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (peek-2-bytes-character byte0 buffer.offset-byte0)
@@ -5507,6 +5493,7 @@
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
 	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-1-more-byte port.buffer.index))
 	    (if-available-data:
@@ -5527,8 +5514,6 @@
 					  byte0 byte1 N))))
 		     (else
 		      (%error-invalid-second)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (peek-3-bytes-character byte0 buffer.offset-byte0)
@@ -5543,6 +5528,7 @@
 		    byte0 (if ($fx< buffer.offset-byte1 port.buffer.used-size)
 			      (list ($bytevector-u8-ref port.buffer buffer.offset-byte1))
 			    '())))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-2-more-bytes port.buffer.index))
 	    (if-available-data:
@@ -5566,8 +5552,6 @@
 					  byte0 byte1 byte2 N))))
 		     (else
 		      (%error-invalid-second-or-third)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define-inline (peek-4-bytes-character byte0 buffer.offset-byte0)
@@ -5586,6 +5570,7 @@
 					(list ($bytevector-u8-ref port.buffer buffer.offset-byte2))
 				      '()))
 			    '())))
+	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-3-more-bytes port.buffer.index))
 	    (if-available-data:
@@ -5611,8 +5596,6 @@
 					  byte0 byte1 byte2 N))))
 		     (else
 		      (%error-invalid-second-third-or-fourth)))))
-	    (empty-buffer-and-refilling-would-block-handler:
-	     (lambda (E) WOULD-BLOCK-OBJECT))
 	    ))))
 
     (define (%unexpected-eof-error message . irritants)
@@ -5782,10 +5765,11 @@
 					       port.buffer.used-size)
 				   (list ($bytevector-u8-ref port.buffer buffer.offset-word1))
 				 '()))))
+			(if-empty-buffer-and-refilling-would-block:
+			 WOULD-BLOCK-OBJECT)
 			(if-successful-refill:
 			 (recurse))
-			(empty-buffer-and-refilling-would-block-handler:
-			 (lambda (E) WOULD-BLOCK-OBJECT)))))))
+			)))))
 
 	    (($fx< buffer.offset-word0 port.buffer.used-size)
 	     ;;There is only 1 byte in the input buffer.
@@ -5801,20 +5785,18 @@
 		 "unexpected end of file while decoding UTF-16 characters \
                   and expecting a whole 1-word or 2-word character"
 		 `(,($bytevector-u8-ref port.buffer buffer.offset-word0))))
+	       (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse))
-	       (empty-buffer-and-refilling-would-block-handler:
-		(lambda (E) WOULD-BLOCK-OBJECT))
 	       ))
 
 	    (else
 	     ;;The input buffer is empty.
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
+	       (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse))
-	       (empty-buffer-and-refilling-would-block-handler:
-		(lambda (E) WOULD-BLOCK-OBJECT))
 	       ))))))
 
 (define (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset)
@@ -5953,10 +5935,10 @@
 					       port.buffer.used-size)
 				   (list ($bytevector-u8-ref port.buffer buffer.offset-word1))
 				 '()))))
+			(if-empty-buffer-and-refilling-would-block:
+			 WOULD-BLOCK-OBJECT)
 			(if-successful-refill:
 			 (recurse buffer-offset))
-			(empty-buffer-and-refilling-would-block-handler:
-			 (lambda (E) WOULD-BLOCK-OBJECT))
 			)))))
 
 	    (($fx< buffer.offset-word0 port.buffer.used-size)
@@ -5969,20 +5951,20 @@
 		 "unexpected end of file after byte while decoding UTF-16 characters \
                   and expecting single word character or first word in surrogate pair"
 		 `(,($bytevector-u8-ref port.buffer buffer.offset-word0))))
+	       (if-empty-buffer-and-refilling-would-block:
+		WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse buffer-offset))
-	       (empty-buffer-and-refilling-would-block-handler:
-		(lambda (E) WOULD-BLOCK-OBJECT))
 	       ))
 
 	    (else
 	     ;;The input buffer is empty.
 	     (%refill-bytevector-buffer-and-evaluate (port who)
 	       (if-end-of-file:	(eof-object))
+	       (if-empty-buffer-and-refilling-would-block:
+		WOULD-BLOCK-OBJECT)
 	       (if-successful-refill:
 		(recurse buffer-offset))
-	       (empty-buffer-and-refilling-would-block-handler:
-		(lambda (E) WOULD-BLOCK-OBJECT))
 	       ))))))
 
 ;;; --------------------------------------------------------------------
@@ -6054,12 +6036,12 @@
       (%maybe-refill-bytevector-buffer-and-evaluate (port who)
 	(data-is-needed-at: buffer.offset)
 	(if-end-of-file: (eof-object))
+	(if-empty-buffer-and-refilling-would-block:
+	 WOULD-BLOCK-OBJECT)
 	(if-successful-refill:
 	 ;;After refilling we must reload buffer indexes.
 	 (%available-data ($fx+ offset port.buffer.index)))
 	(if-available-data: (%available-data buffer.offset))
-	(empty-buffer-and-refilling-would-block-handler:
-	 (lambda (E) WOULD-BLOCK-OBJECT))
 	))))
 
 ;;; --------------------------------------------------------------------
