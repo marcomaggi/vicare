@@ -354,7 +354,7 @@
      ;;Right now the would block object is a struct instance, so we have
      ;;to check for  it before checking for structs.   (Marco Maggi; Mon
      ;;May 13, 2013)
-     ((would-block-object? x) (display x))
+     ((would-block-object? x) (format "~s" x))
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))

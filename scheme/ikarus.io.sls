@@ -4507,15 +4507,20 @@
 (module (get-u8 lookahead-u8)
 
   (define (get-u8 port)
-    ;;Defined by R6RS.   Read from the binary input  port PORT, blocking
-    ;;as necessary, until a byte is  available from PORT or until an end
-    ;;of file is  reached.  If a byte becomes  available, GET-U8 returns
-    ;;the byte  as an  octet and  updates PORT to  point just  past that
-    ;;byte.  If no input byte is seen  before an end of file is reached,
-    ;;the EOF object is returned.
+    ;;Defined by R6RS,  extended by Vicare.  Read from  the binary input
+    ;;port PORT, blocking  as necessary, until a byte  is available from
+    ;;PORT  or until  an end  of  file is  reached.
     ;;
-    ;;Here we handle  the case of byte already available  in the buffer,
-    ;;if the buffer is empty: we call a subroutine.
+    ;;Return the EOF object, the would-block object or a fixnum:
+    ;;
+    ;;* If a byte  is available: return the byte as  an octet and update
+    ;;PORT  to point  just past  that byte.
+    ;;
+    ;;* If no input  byte is seen before an end of  file is reached: the
+    ;;EOF object is returned.
+    ;;
+    ;;* If  the underlying device is  in non-blocking mode and  no bytes
+    ;;are available: return the would-block object.
     ;;
     (define who 'get-u8)
     (%case-binary-input-port-fast-tag (port who)
@@ -4523,6 +4528,9 @@
        (with-port-having-bytevector-buffer (port)
 	 (let ((buffer.offset port.buffer.index))
 	   (if ($fx< buffer.offset port.buffer.used-size)
+	       ;;Here we  handle the case  of byte already  available in
+	       ;;the  buffer,  if  the  buffer   is  empty:  we  call  a
+	       ;;subroutine.
 	       (begin
 		 (set! port.buffer.index ($fxadd1 buffer.offset))
 		 ($bytevector-u8-ref port.buffer buffer.offset))
@@ -4532,15 +4540,15 @@
     ;;Defined by R6RS.   The LOOKAHEAD-U8 procedure is  like GET-U8, but
     ;;it does not update PORT to point past the byte.
     ;;
-    ;;Here we handle  the case of byte already available  in the buffer,
-    ;;if the buffer is empty: we call a subroutine.
-    ;;
     (define who 'lookahead-u8)
     (%case-binary-input-port-fast-tag (port who)
       ((FAST-GET-BYTE-TAG)
        (with-port-having-bytevector-buffer (port)
 	 (let ((buffer.offset port.buffer.index))
 	   (if ($fx< buffer.offset port.buffer.used-size)
+	       ;;Here we  handle the case  of byte already  available in
+	       ;;the  buffer,  if  the  buffer   is  empty:  we  call  a
+	       ;;subroutine.
 	       ($bytevector-u8-ref port.buffer buffer.offset)
 	     (%get/peek-u8-from-device port who 0)))))))
 
@@ -4562,13 +4570,35 @@
 
   #| end of module |# )
 
-(define (lookahead-two-u8 port)
+(module (lookahead-two-u8)
   ;;Defined  by Vicare.   Like LOOKAHEAD-U8  but peeks  at 2  octets and
-  ;;return two values: EOF or  a fixnum representing first octet, EOF or
-  ;;a fixnum representing the second octet.
+  ;;return two values:  EOF, would-block or a  fixnum representing first
+  ;;octet; EOF, would-block or a fixnum representing the second octet.
   ;;
   (define who 'lookahead-u8)
-  (define (%maybe-some-data-is-available)
+
+  (define (lookahead-two-u8 port)
+    (%case-binary-input-port-fast-tag (port who)
+      ((FAST-GET-BYTE-TAG)
+       (with-port-having-bytevector-buffer (port)
+	 (let* ((buffer.offset-octet0	port.buffer.index)
+		(buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
+		(buffer.offset-past	($fxadd1 buffer.offset-octet1)))
+	   (if ($fx<= buffer.offset-past port.buffer.used-size)
+	       ;;There are 2 or more bytes available.
+	       (values ($bytevector-u8-ref port.buffer buffer.offset-octet0)
+		       ($bytevector-u8-ref port.buffer buffer.offset-octet1))
+	     ;;There are 0 bytes or 1 byte available.
+	     (refill-bytevector-buffer-and-evaluate (port who)
+	       (if-end-of-file:
+		(%maybe-some-data-is-available port 0))
+	       (if-empty-buffer-and-refilling-would-block:
+		(%maybe-some-data-is-available port 1))
+	       (if-successful-refill:
+		(%maybe-some-data-is-available port 2))
+	       )))))))
+
+  (define (%maybe-some-data-is-available port mode)
     (with-port-having-bytevector-buffer (port)
       (let* ((buffer.offset-octet0	port.buffer.index)
 	     (buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
@@ -4578,23 +4608,16 @@
 		       ($bytevector-u8-ref port.buffer buffer.offset-octet1)))
 	      (($fx<= buffer.offset-octet1 port.buffer.used-size)
 	       (values ($bytevector-u8-ref port.buffer buffer.offset-octet0)
-		       (eof-object)))
+		       (if ($fx= mode 0)
+			   (eof-object)
+			 WOULD-BLOCK-OBJECT)))
 	      (else
-	       (values (eof-object) (eof-object)))))))
-  (%case-binary-input-port-fast-tag (port who)
-    ((FAST-GET-BYTE-TAG)
-     (with-port-having-bytevector-buffer (port)
-       (let* ((buffer.offset-octet0	port.buffer.index)
-	      (buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
-	      (buffer.offset-past	($fxadd1 buffer.offset-octet1)))
-	 (if ($fx<= buffer.offset-past port.buffer.used-size)
-	     (values ($bytevector-u8-ref port.buffer buffer.offset-octet0)
-		     ($bytevector-u8-ref port.buffer buffer.offset-octet1))
-	   (refill-bytevector-buffer-and-evaluate (port who)
-	     (if-end-of-file:       (%maybe-some-data-is-available))
-	     (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
-	     (if-successful-refill: (%maybe-some-data-is-available))
-	     )))))))
+	       (let ((rv (if ($fx= mode 0)
+			     (eof-object)
+			   WOULD-BLOCK-OBJECT)))
+		 (values rv rv)))))))
+
+  #| end of module: LOOKAHEAD-TWO-U8 |# )
 
 
 ;;;; bytevector input functions

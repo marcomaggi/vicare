@@ -5664,6 +5664,30 @@ section.
 @subsubsection Extended binary input functions
 
 
+@defun get-u8 @var{port}
+Return the @eof{} object, the would--block object or a fixnum:
+
+@itemize
+@item
+If a byte is available: return the byte as an octet and update
+@var{port} to point just past that byte.
+
+@item
+If no input byte is seen before an end of file is reached: the @eof{}
+object is returned.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun lookahead-u8 @var{port}
+Like GET-U8, but it does not update @var{PORT} to point past the byte.
+@end defun
+
+
 @defun get-bytevector-n @var{port} @var{count}
 Return the EOF object, the would--block object or a bytevector:
 
@@ -5748,6 +5772,26 @@ available: return the would--block object.
 @end itemize
 @end defun
 
+
+@defun get-bytevector-some @var{port}
+Return the EOF object, the would--block object or a bytevector:
+
+@itemize
+@item
+If bytes are available: return a freshly allocated bytevector containing
+the initial available bytes (at least one), and update @var{port} to
+point just past these bytes.
+
+@item
+If no input bytes are seen before an end of file is reached: the @eof{}
+object is returned.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
 @c page
 @node iklib io binary
 @subsection Additional binary port features
@@ -5758,8 +5802,9 @@ The following bindings are exported by the @library{ikarus} library.
 
 @defun lookahead-two-u8 @var{port}
 Like @func{lookahead-u8} but peeks at @math{2} octets and return two
-values: the @eof{} object or a fixnum representing first octet, the
-@eof{} object or a fixnum representing the second octet.
+values: the @eof{} object, the would--block object or a fixnum
+representing first octet; the @eof{} object, the would--block object or
+a fixnum representing the second octet.
 @end defun
 
 

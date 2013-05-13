@@ -115,6 +115,18 @@
 	    (lookahead-u8 P))))
     => (char->integer #\c))
 
+  ;;Reading from binary ports with available bytes: LOOKAHEAD-TWO-U8.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-binary-file-descriptor-input-port* in "in")))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (receive (a b)
+		(lookahead-two-u8 P)
+	      (list a b)))))
+    => (list (char->integer #\c) (char->integer #\i)))
+
   ;;Reading from  binary ports  with available  bytes: GET-BYTEVECTOR-N.
   ;;Ask exactly as available.
   (check
@@ -202,6 +214,30 @@
   	    (make-binary-ports)
 	  (lookahead-u8 in)))
     => (would-block-object))
+
+  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
+  ;;LOOKAHEAD-TWO-U8.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-binary-ports)
+	  (receive (a b)
+	      (lookahead-two-u8 in)
+	    (list a b))))
+    => (list (would-block-object) (would-block-object)))
+
+  ;;Reading binary port  with not enough available  bytes causes EAGAIN:
+  ;;LOOKAHEAD-TWO-U8.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-binary-file-descriptor-input-port* in "in")))
+	    (px.write ou '#vu8(99))
+	    (receive (a b)
+		(lookahead-two-u8 P)
+	      (list a b)))))
+    => `(99 ,(would-block-object)))
 
   ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
   ;;GET-BYTEVECTOR-ALL.
