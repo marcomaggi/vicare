@@ -5311,275 +5311,169 @@
 
 ;;;; string input
 
-(define (%unsafe.get-string-n! who port dst.str dst.start count)
-  ;;Subroutine  of GET-STRING-N!,  GET-STRING-N and  GET-STRING-ALL.  It
-  ;;assumes the arguments have already been validated.
-  ;;
-  ;;DST.START and  COUNT must  be exact, non--negative  integer objects,
-  ;;with  COUNT  representing  the  number  of characters  to  be  read.
-  ;;DST.STR must be a string with at least DST.START+COUNT characters.
-  ;;
-  ;;If COUNT  characters are available before  an end of  file, they are
-  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
-  ;;returned.
-  ;;
-  ;;If fewer characters are available before  an end of file, but one or
-  ;;more can be read, those characters are written into DST.STR starting
-  ;;at index  DST.START and  the number of  characters actually  read is
-  ;;returned as an exact integer object.
-  ;;
-  ;;If no characters  can be read before an end of  file, the EOF object
-  ;;is returned.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
-  ;;fixnums; DST.START+COUNT must be a fixnum.
-  ;;
-  (define-inline (main)
-    (let ((dst.past (+ dst.start count))
-	  (eol-bits (%unsafe.port-eol-style-bits port)))
-      (%case-textual-input-port-fast-tag (port who)
-	((FAST-GET-UTF8-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
-	((FAST-GET-CHAR-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-char-tag
-		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
-	((FAST-GET-LATIN-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
-	((FAST-GET-UTF16LE-TAG)
-	 (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
-	((FAST-GET-UTF16BE-TAG)
-	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+(module (get-string-n get-string-n! get-string-all)
 
-  (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
-    (let loop ((dst.index dst.start))
-      (let ((ch (?read-char port who)))
-	(if (eof-object? ch)
-	    (if ($fx= dst.index dst.start)
-		ch			     ;return EOF
-	      ($fx- dst.index dst.start)) ;return the number of chars read
-	  (let ((ch (cond (($fxzero? ?eol-bits) ;EOL style none
-			   ch)
-			  (($char-is-single-char-line-ending? ch)
-			   LINEFEED-CHAR)
-			  (($char-is-carriage-return? ch)
-			   (let ((ch1 (?peek-char port who)))
-			     (cond ((eof-object? ch1)
-				    (void))
-				   (($char-is-newline-after-carriage-return? ch1)
-				    (?read-char port who)))
-			     LINEFEED-CHAR))
-			  (else ch))))
-	    ($string-set! dst.str dst.index ch)
-	    (let ((dst.index ($fxadd1 dst.index)))
-	      (if ($fx= dst.index ?dst.past)
-		  ($fx- dst.index dst.start)
-		(loop dst.index))))))))
-
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
-
-  (define-inline (%peek-utf16le ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
-
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
-
-  (define-inline (%peek-utf16be ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
-
-  (main))
-
-(define (get-string-n port requested-count)
-  ;;Defined by  R6RS.  REQUESTED-COUNT  must be an  exact, non--negative
-  ;;integer object, representing the number of characters to be read.
-  ;;
-  ;;The  GET-STRING-N  procedure  reads  from the  textual  input  PORT,
-  ;;blocking   as  necessary,   until  REQUESTED-COUNT   characters  are
-  ;;available, or until an end of file is reached.
-  ;;
-  ;;If  REQUESTED-COUNT characters  are  available before  end of  file,
-  ;;GET-STRING-N  returns a string  consisting of  those REQUESTED-COUNT
-  ;;characters.
-  ;;
-  ;;If fewer characters are available before  an end of file, but one or
-  ;;more  characters   can  be  read,  GET-STRING-N   returns  a  string
-  ;;containing those characters.
-  ;;
-  ;;In either  case, the input  port is updated  to point just  past the
-  ;;characters  read.  If no  characters can  be read  before an  end of
-  ;;file, the end-of-file object is returned.
-  ;;
-  ;;IMPLEMENTATION  RESTRICTION The REQUESTED-COUNT  argument must  be a
-  ;;fixnum.
-  ;;
-  (define who 'get-string-n)
-  (with-arguments-validation (who)
-      ((port          port)
-       (fixnum-count  requested-count))
-    (if ($fxzero? requested-count)
-	""
-      (let* ((dst.str	($make-string requested-count))
-	     (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
-	(cond ((eof-object? count)
-	       count)
-	      (($fx= count requested-count)
-	       dst.str)
-	      (else
-	       ($substring dst.str 0 count)))))))
-
-(define (get-string-n! port dst.str dst.start count)
-  ;;Defined by  R6RS.  DST.START and COUNT must  be exact, non--negative
-  ;;integer objects, with COUNT representing the number of characters to
-  ;;be read.   DST.STR must  be a string  with at  least DST.START+COUNT
-  ;;characters.
-  ;;
-  ;;The GET-STRING-N!   procedure reads from  the textual input  PORT in
-  ;;the same manner as GET-STRING-N.
-  ;;
-  ;;If COUNT  characters are available before  an end of  file, they are
-  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
-  ;;returned.
-  ;;
-  ;;If fewer characters are available before  an end of file, but one or
-  ;;more can be read, those characters are written into DST.STR starting
-  ;;at index  DST.START and  the number of  characters actually  read is
-  ;;returned as an exact integer object.
-  ;;
-  ;;If no characters  can be read before an end of  file, the EOF object
-  ;;is returned.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
-  ;;fixnums.
-  ;;
-  (define who 'get-string-n!)
-  (with-arguments-validation (who)
-      ((port		    port)
-       (string		    dst.str)
-       (fixnum-start-index  dst.start)
-       (fixnum-count	    count)
-       ($start-index-for-string      dst.start dst.str)
-       ($count-from-start-in-string  count dst.start dst.str))
-    (if ($fxzero? count)
-	count
-      (%unsafe.get-string-n! who port dst.str dst.start count))))
-
-(define (get-string-all port)
-  ;;Defined by R6RS.   Read from the textual input PORT  until an end of
-  ;;file,  decoding characters in  the same  manner as  GET-STRING-N and
-  ;;GET-STRING-N!.
-  ;;
-  ;;If  characters  are available  before  the  end  of file,  a  string
-  ;;containing all  the characters decoded  from that data  is returned.
-  ;;If  no  character  precedes the  end  of  file,  the EOF  object  is
-  ;;returned.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The maximum  length of the retuned string
-  ;;is the greatest fixnum.
-  ;;
-  (define who 'get-string-all)
-  (with-arguments-validation (who)
-      ((port port))
-    (let ((dst.len (string-port-buffer-size)))
-      (let next-buffer-string ((output.len	0)
-			       (output.strs	'())
-			       (dst.str		($make-string dst.len)))
-	(let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
+  (define (get-string-n port requested-count)
+    ;;Defined by R6RS.  REQUESTED-COUNT  must be an exact, non--negative
+    ;;integer object, representing the number of characters to be read.
+    ;;
+    ;;The  GET-STRING-N procedure  reads  from the  textual input  PORT,
+    ;;blocking  as  necessary,   until  REQUESTED-COUNT  characters  are
+    ;;available, or until an end of file is reached.
+    ;;
+    ;;If REQUESTED-COUNT  characters are  available before end  of file,
+    ;;GET-STRING-N returns a string  consisting of those REQUESTED-COUNT
+    ;;characters.
+    ;;
+    ;;If fewer characters  are available before an end of  file, but one
+    ;;or  more characters  can be  read, GET-STRING-N  returns a  string
+    ;;containing those characters.
+    ;;
+    ;;In either case,  the input port is updated to  point just past the
+    ;;characters read.   If no characters can  be read before an  end of
+    ;;file, the end-of-file object is returned.
+    ;;
+    ;;IMPLEMENTATION RESTRICTION The REQUESTED-COUNT  argument must be a
+    ;;fixnum.
+    ;;
+    (define who 'get-string-n)
+    (with-arguments-validation (who)
+	((port          port)
+	 (fixnum-count  requested-count))
+      (if ($fxzero? requested-count)
+	  ""
+	(let* ((dst.str	($make-string requested-count))
+	       (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
 	  (cond ((eof-object? count)
-		 (if (null? output.strs)
-		     count
-		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
-		(($fx= count dst.len)
-		 (next-buffer-string ($fx+ output.len dst.len)
-				     (cons dst.str output.strs)
-				     ($make-string dst.len)))
+		 count)
+		(($fx= count requested-count)
+		 dst.str)
 		(else
-		 (%unsafe.string-reverse-and-concatenate who
-							 (cons (substring dst.str 0 count) output.strs)
-							 ($fx+ count output.len)))))))))
+		 ($substring dst.str 0 count)))))))
 
-(define (get-string-some port)
-  ;;Defined by  Vicare.  Read from  the textual input PORT,  blocking as
-  ;;necessary, until characters are available or until an end of file is
-  ;;reached.
-  ;;
-  ;;If characters  become available,  GET-STRING-SOME returns  a freshly
-  ;;allocated  string containing  the initial  available characters  (at
-  ;;least one), and it updates PORT to point just past these characters.
-  ;;
-  ;;If no input characters are available: the EOF object is returned.
-  ;;
-  (define who 'get-string-some)
-  (with-arguments-validation (who)
-      ((port          port))
-    (let* ((dst.str	($make-string 1024))
-	   (count	(%unsafe.get-string-some! who port dst.str 0 1024)))
-      (cond ((eof-object? count)
-	     count)
-	    (($fx= count 1024)
-	     dst.str)
-	    (else
-	     ($substring dst.str 0 count))))))
+  (define (get-string-n! port dst.str dst.start count)
+    ;;Defined by R6RS.  DST.START and COUNT must be exact, non--negative
+    ;;integer objects, with COUNT  representing the number of characters
+    ;;to   be  read.    DST.STR  must   be  a   string  with   at  least
+    ;;DST.START+COUNT characters.
+    ;;
+    ;;The GET-STRING-N!  procedure reads from  the textual input PORT in
+    ;;the same manner as GET-STRING-N.
+    ;;
+    ;;If COUNT characters are available before  an end of file, they are
+    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
+    ;;returned.
+    ;;
+    ;;If fewer characters  are available before an end of  file, but one
+    ;;or more  can be  read, those characters  are written  into DST.STR
+    ;;starting at index DST.START and  the number of characters actually
+    ;;read is returned as an exact integer object.
+    ;;
+    ;;If no characters can be read before an end of file, the EOF object
+    ;;is returned.
+    ;;
+    ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
+    ;;be fixnums.
+    ;;
+    (define who 'get-string-n!)
+    (with-arguments-validation (who)
+	((port		    port)
+	 (string		    dst.str)
+	 (fixnum-start-index  dst.start)
+	 (fixnum-count	    count)
+	 ($start-index-for-string      dst.start dst.str)
+	 ($count-from-start-in-string  count dst.start dst.str))
+      (if ($fxzero? count)
+	  count
+	(%unsafe.get-string-n! who port dst.str dst.start count))))
 
-(define (%unsafe.get-string-some! who port dst.str dst.start count)
-  ;;Subroutine  of  GET-STRING-SOME.   It  assumes  the  arguments  have
-  ;;already been validated.
-  ;;
-  ;;DST.START  and COUNT  must be  exact, non-negative  integer objects,
-  ;;with  COUNT  representing  the  number of  characters  to  be  read.
-  ;;DST.STR must be a string with at least DST.START+COUNT characters.
-  ;;
-  ;;If COUNT  characters are available before  an end of file,  they are
-  ;;written  into DST.STR  starting  at index  DST.START,  and COUNT  is
-  ;;returned.
-  ;;
-  ;;If fewer characters are available before  an end of file, but one or
-  ;;more can be read, those characters are written into DST.STR starting
-  ;;at index  DST.START and  the number of  characters actually  read is
-  ;;returned as an exact integer object.
-  ;;
-  ;;If no characters can  be read before an end of  file, the EOF object
-  ;;is returned.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The DST.START and COUNT arguments must be
-  ;;fixnums; DST.START+COUNT must be a fixnum.
-  ;;
-  (define-inline (main)
-    (let ((dst.past (+ dst.start count))
-	  (eol-bits (%unsafe.port-eol-style-bits port)))
-      (%case-textual-input-port-fast-tag (port who)
-	((FAST-GET-UTF8-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		  %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
-	((FAST-GET-CHAR-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-char-tag
-		  %unsafe.peek-char-from-port-with-fast-get-char-tag))
-	((FAST-GET-LATIN-TAG)
-	 (%get-it eol-bits dst.past
-		  %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		  %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
-	((FAST-GET-UTF16LE-TAG)
-	 (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
-	((FAST-GET-UTF16BE-TAG)
-	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+  (define (get-string-all port)
+    ;;Defined by R6RS.  Read from the textual input PORT until an end of
+    ;;file, decoding characters  in the same manner  as GET-STRING-N and
+    ;;GET-STRING-N!.
+    ;;
+    ;;If  characters are  available before  the  end of  file, a  string
+    ;;containing all the characters decoded  from that data is returned.
+    ;;If  no character  precedes  the end  of file,  the  EOF object  is
+    ;;returned.
+    ;;
+    ;;IMPLEMENTATION  RESTRICTION  The  maximum length  of  the  retuned
+    ;;string is the greatest fixnum.
+    ;;
+    (define who 'get-string-all)
+    (with-arguments-validation (who)
+	((port port))
+      (let ((dst.len (string-port-buffer-size)))
+	(let next-buffer-string ((output.len	0)
+				 (output.strs	'())
+				 (dst.str		($make-string dst.len)))
+	  (let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
+	    (cond ((eof-object? count)
+		   (if (null? output.strs)
+		       count
+		     (%unsafe.string-reverse-and-concatenate who
+		       output.strs output.len)))
+		  (($fx= count dst.len)
+		   (next-buffer-string ($fx+ output.len dst.len)
+				       (cons dst.str output.strs)
+				       ($make-string dst.len)))
+		  (else
+		   (%unsafe.string-reverse-and-concatenate who
+		     (cons (substring dst.str 0 count) output.strs)
+		     ($fx+ count output.len)))))))))
 
-  (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
-    (let loop ((dst.index dst.start))
-      (let ((ch (?peek-char port who)))
-	(if (eof-object? ch)
-	    (if ($fx= dst.index dst.start)
-		ch			     ;return EOF
-	      ($fx- dst.index dst.start)) ;return the number of chars read
-	  (let ((ch (begin
-		      ;;Consume the peeked char.
-		      (?read-char port who)
-		      (cond (($fxzero? ?eol-bits) ;EOL style none
+  (define (%unsafe.get-string-n! who port dst.str dst.start count)
+    ;;Subroutine of GET-STRING-N!,  GET-STRING-N and GET-STRING-ALL.  It
+    ;;assumes the arguments have already been validated.
+    ;;
+    ;;DST.START and COUNT must  be exact, non--negative integer objects,
+    ;;with  COUNT representing  the  number of  characters  to be  read.
+    ;;DST.STR must be a string with at least DST.START+COUNT characters.
+    ;;
+    ;;If COUNT characters are available before  an end of file, they are
+    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
+    ;;returned.
+    ;;
+    ;;If fewer characters  are available before an end of  file, but one
+    ;;or more  can be  read, those characters  are written  into DST.STR
+    ;;starting at index DST.START and  the number of characters actually
+    ;;read is returned as an exact integer object.
+    ;;
+    ;;If no characters can be read before an end of file, the EOF object
+    ;;is returned.
+    ;;
+    ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
+    ;;be fixnums; DST.START+COUNT must be a fixnum.
+    ;;
+    (define-inline (main)
+      (let ((dst.past (+ dst.start count))
+	    (eol-bits (%unsafe.port-eol-style-bits port)))
+	(%case-textual-input-port-fast-tag (port who)
+	  ((FAST-GET-UTF8-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	  ((FAST-GET-CHAR-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-char-tag
+		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	  ((FAST-GET-LATIN-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		    %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+	  ((FAST-GET-UTF16LE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	  ((FAST-GET-UTF16BE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+
+    (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
+      (let loop ((dst.index dst.start))
+	(let ((ch (?read-char port who)))
+	  (if (eof-object? ch)
+	      (if ($fx= dst.index dst.start)
+		  ch			    ;return EOF
+		($fx- dst.index dst.start)) ;return the number of chars read
+	    (let ((ch (cond (($fxzero? ?eol-bits) ;EOL style none
 			     ch)
 			    (($char-is-single-char-line-ending? ch)
 			     LINEFEED-CHAR)
@@ -5590,26 +5484,142 @@
 				     (($char-is-newline-after-carriage-return? ch1)
 				      (?read-char port who)))
 			       LINEFEED-CHAR))
-			    (else ch)))))
-	    ($string-set! dst.str dst.index ch)
-	    (let ((dst.index ($fxadd1 dst.index)))
-	      (if ($fx= dst.index ?dst.past)
-		  ($fx- dst.index dst.start)
-		(loop dst.index))))))))
+			    (else ch))))
+	      ($string-set! dst.str dst.index ch)
+	      (let ((dst.index ($fxadd1 dst.index)))
+		(if ($fx= dst.index ?dst.past)
+		    ($fx- dst.index dst.start)
+		  (loop dst.index))))))))
 
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+    (define-inline (%read-utf16le ?port ?who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
 
-  (define-inline (%peek-utf16le ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+    (define-inline (%peek-utf16le ?port ?who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
 
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+    (define-inline (%read-utf16be ?port ?who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
-  (define-inline (%peek-utf16be ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+    (define-inline (%peek-utf16be ?port ?who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
 
-  (main))
+    (main))
+
+  #| end of module |# )
+
+(module (get-string-some)
+
+  (define (get-string-some port)
+    ;;Defined by Vicare.  Read from  the textual input PORT, blocking as
+    ;;necessary, until characters are available  or until an end of file
+    ;;is reached.
+    ;;
+    ;;If characters become available,  GET-STRING-SOME returns a freshly
+    ;;allocated string  containing the initial available  characters (at
+    ;;least  one),  and  it  updates  PORT  to  point  just  past  these
+    ;;characters.
+    ;;
+    ;;If no input characters are available: the EOF object is returned.
+    ;;
+    (define who 'get-string-some)
+    (with-arguments-validation (who)
+	((port          port))
+      (let* ((dst.str	($make-string 1024))
+	     (count	(%unsafe.get-string-some! who port dst.str 0 1024)))
+	(cond ((eof-object? count)
+	       count)
+	      (($fx= count 1024)
+	       dst.str)
+	      (else
+	       ($substring dst.str 0 count))))))
+
+  (define (%unsafe.get-string-some! who port dst.str dst.start count)
+    ;;Subroutine  of GET-STRING-SOME.   It  assumes  the arguments  have
+    ;;already been validated.
+    ;;
+    ;;DST.START and  COUNT must be exact,  non-negative integer objects,
+    ;;with  COUNT representing  the  number of  characters  to be  read.
+    ;;DST.STR must be a string with at least DST.START+COUNT characters.
+    ;;
+    ;;If COUNT characters are available before  an end of file, they are
+    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
+    ;;returned.
+    ;;
+    ;;If fewer characters  are available before an end of  file, but one
+    ;;or more  can be  read, those characters  are written  into DST.STR
+    ;;starting at index DST.START and  the number of characters actually
+    ;;read is returned as an exact integer object.
+    ;;
+    ;;If no characters can be read before an end of file, the EOF object
+    ;;is returned.
+    ;;
+    ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
+    ;;be fixnums; DST.START+COUNT must be a fixnum.
+    ;;
+    (define-inline (main)
+      (let ((dst.past (+ dst.start count))
+	    (eol-bits (%unsafe.port-eol-style-bits port)))
+	(%case-textual-input-port-fast-tag (port who)
+	  ((FAST-GET-UTF8-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	  ((FAST-GET-CHAR-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-char-tag
+		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	  ((FAST-GET-LATIN-TAG)
+	   (%get-it eol-bits dst.past
+		    %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		    %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+	  ((FAST-GET-UTF16LE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	  ((FAST-GET-UTF16BE-TAG)
+	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+
+    (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
+      (let loop ((dst.index dst.start))
+	(let ((ch (?peek-char port who)))
+	  (if (eof-object? ch)
+	      (if ($fx= dst.index dst.start)
+		  ch			  ;return EOF
+		($fx- dst.index dst.start)) ;return the number of chars read
+	    (let ((ch (begin
+			;;Consume the peeked char.
+			(?read-char port who)
+			(cond (($fxzero? ?eol-bits) ;EOL style none
+			       ch)
+			      (($char-is-single-char-line-ending? ch)
+			       LINEFEED-CHAR)
+			      (($char-is-carriage-return? ch)
+			       (let ((ch1 (?peek-char port who)))
+				 (cond ((eof-object? ch1)
+					(void))
+				       (($char-is-newline-after-carriage-return? ch1)
+					(?read-char port who)))
+				 LINEFEED-CHAR))
+			      (else ch)))))
+	      ($string-set! dst.str dst.index ch)
+	      (let ((dst.index ($fxadd1 dst.index)))
+		(if ($fx= dst.index ?dst.past)
+		    ($fx- dst.index dst.start)
+		  (loop dst.index))))))))
+
+    (define-inline (%read-utf16le ?port ?who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+
+    (define-inline (%peek-utf16le ?port ?who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+
+    (define-inline (%read-utf16be ?port ?who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+
+    (define-inline (%peek-utf16be ?port ?who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+    (main))
+
+  #| end of module |# )
 
 
 ;;;; string line input
@@ -8190,4 +8200,5 @@
 ;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
+;;; eval: (put '%unsafe.string-reverse-and-concatenate		'scheme-indent-function 1)
 ;;; End:
