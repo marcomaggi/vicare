@@ -212,9 +212,14 @@ AC_FUNC_MEMCMP
 AC_FUNC_MMAP
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([bzero memmove memset mmap munmap sqrt strerror getaddrinfo])
-AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
-AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime])
+AC_CHECK_FUNCS([open close read write lseek fcntl],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([bzero memmove memset mmap munmap sqrt strerror getaddrinfo],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([stat lstat realpath unlink mkdir],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
 AC_CHECK_DECLS([environ])
@@ -335,7 +340,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])
-  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo truncate ftruncate lockf])
+  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select ioctl dup dup2 pipe mkfifo truncate ftruncate lockf])
   AC_CHECK_FUNCS([msync mremap madvise mlock munlock mlockall munlockall mprotect])
   AC_CHECK_TYPES([struct sockaddr_un],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct sockaddr_in],,,[VICARE_INCLUDES])

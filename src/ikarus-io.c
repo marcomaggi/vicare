@@ -31,9 +31,13 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
+/* file descriptors */
+#define IK_FD_TO_NUM(fd)		IK_FIX(fd)
+#define IK_NUM_TO_FD(fd)		IK_UNFIX(fd)
+
 
 /** --------------------------------------------------------------------
- ** File descriptors handling for Scheme ports.
+ ** File descriptors handling for Scheme ports: opening and closing.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -41,17 +45,7 @@ ikrt_close_fd (ikptr fd /*, ikpcb* pcb */)
 {
   int   rv;
   errno = 0;
-  rv    = close(IK_UNFIX(fd));
-  return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
-}
-ikptr
-ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
-{
-  off_t         offset;
-  off_t         rv;
-  offset = ik_integer_to_llong(pos);
-  errno  = 0;
-  rv     = lseek(IK_UNFIX(fd), offset, SEEK_SET);
+  rv    = close(IK_NUM_TO_FD(fd));
   return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
 }
 ikptr
@@ -67,7 +61,7 @@ ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
-  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FD_TO_NUM(fd) : ik_errno_to_code();
 }
 ikptr
 ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
@@ -129,7 +123,7 @@ ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno    = 0;
   fd       = open(pathname, flags, mode);
-  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FD_TO_NUM(fd) : ik_errno_to_code();
 }
 ikptr
 ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
@@ -162,8 +156,14 @@ ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   pathname = IK_BYTEVECTOR_DATA_CHARP(pathname_bv);
   errno = 0;
   fd    = open(pathname, flags, mode);
-  return (0 <= fd)? IK_FIX(fd) : ik_errno_to_code();
+  return (0 <= fd)? IK_FD_TO_NUM(fd) : ik_errno_to_code();
 }
+
+
+/** --------------------------------------------------------------------
+ ** File descriptors handling for Scheme ports: reading and writing.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
 {
@@ -171,7 +171,7 @@ ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_co
   uint8_t *     buffer;
   buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
   errno  = 0;
-  rv     = read(IK_UNFIX(fd), buffer, IK_UNFIX(requested_count));
+  rv     = read(IK_NUM_TO_FD(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
 ikptr
@@ -181,8 +181,59 @@ ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_c
   uint8_t *     buffer;
   buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
   errno  = 0;
-  rv     = write(IK_UNFIX(fd), buffer, IK_UNFIX(requested_count));
+  rv     = write(IK_NUM_TO_FD(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+}
+
+
+/** --------------------------------------------------------------------
+ ** File descriptors handling for Scheme ports: port position.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
+{
+  off_t         offset;
+  off_t         rv;
+  offset = ik_integer_to_llong(pos);
+  errno  = 0;
+  rv     = lseek(IK_NUM_TO_FD(fd), offset, SEEK_SET);
+  return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
+}
+
+
+/** --------------------------------------------------------------------
+ ** File descriptors handling for Scheme ports: non-blocking mode.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv | O_NONBLOCK);
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & O_NONBLOCK) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
 }
 
 /* end of file */

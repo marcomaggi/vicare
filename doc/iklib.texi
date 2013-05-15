@@ -5648,8 +5648,22 @@ through a function @func{read!}; if the device is configured in
 non--blocking mode: @func{read!} might raise an exception with condition
 object type @condition{i/o-eagain}, which means: there are no available
 bytes, but this is not the end--of--file.  This scenario corresponds to
-the case in which a @posix{} function failse with @code{errno} set to
+the case in which a @posix{} function fails with @code{errno} set to
 @code{EAGAIN} or @code{EWOULDBLOCK}.
+
+The functions extended by @value{PRJNAME} behave as described in this
+section.
+
+@menu
+* iklib io non-blocking object::  The would--block object.
+* iklib io non-blocking mode::    Ports and non-blocking mode.
+* iklib io non-blocking binary::  Extended binary input functions.
+* iklib io non-blocking textual:: Extended textual input functions.
+@end menu
+
+@c page
+@node iklib io non-blocking object
+@subsubsection The would--block object
 
 
 @defun would-block-object
@@ -5664,14 +5678,27 @@ Return @true{} if @var{obj} is the would--block object, else return
 @false{}.
 @end defun
 
+@c page
+@node iklib io non-blocking mode
+@subsubsection Ports and non-blocking mode
 
-The functions extended by @value{PRJNAME} behave as described in this
-section.
 
-@menu
-* iklib io non-blocking binary::  Extended binary input functions.
-* iklib io non-blocking textual:: Extended textual input functions.
-@end menu
+@defun port-set-non-blocking-mode! @var{port}
+Set non--blocking mode for @var{port}; if successful return unspecified
+values, if an error occurs raise an exception.  @var{port} must have a
+file descriptor as underlying device.
+@end defun
+
+
+@defun port-in-non-blocking-mode? @var{port}
+Query @var{port} for its non--blocking mode; if successful: return
+@true{} if the port is in non--blocking mode, @false{} otherwise.  If an
+error occurs: raise an exception.
+
+@var{port} can be any Scheme port: this function will recognise
+non-blocking mode only for ports having a file descriptor as underlying
+device; for all the other ports the return value is @false{}.
+@end defun
 
 @c page
 @node iklib io non-blocking binary

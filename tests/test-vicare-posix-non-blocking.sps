@@ -63,6 +63,32 @@
   '#vu8(#xF0 #xAF #xA7 #x91))
 
 
+(parametrise ((check-test-name	'setting-mode))
+
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port*  in "in")))
+	    (port-in-non-blocking-mode? inp))))
+    => #f)
+
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port*  in "in")))
+	    (port-set-non-blocking-mode! inp)
+	    (port-in-non-blocking-mode? inp))))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'fd))
 
   ;;Reading from file descriptors with available bytes

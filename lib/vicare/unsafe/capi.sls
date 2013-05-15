@@ -313,6 +313,7 @@
     platform-open-input/output-fd	platform-close-fd
     platform-read-fd			platform-write-fd
     platform-set-position
+    platform-fd-set-non-blocking-mode	platform-fd-ref-non-blocking-mode
 
     ;; users and groups
     posix-getuid			posix-getgid
@@ -1815,6 +1816,18 @@
   ;;or a fixnum representing an ERRNO code.
   ;;
   (foreign-call "ikrt_close_fd" fd))
+
+(define-inline (platform-fd-set-non-blocking-mode fd)
+  ;;Make  use  of  "fcntl()"  to   set  non-blocking  mode  for  a  file
+  ;;descriptor.
+  ;;
+  (foreign-call "ikptr_fd_set_non_blocking_mode" fd))
+
+(define-inline (platform-fd-ref-non-blocking-mode fd)
+  ;;Make use  of "fcntl()" to  query a file descriptor  for non-blocking
+  ;;mode.
+  ;;
+  (foreign-call "ikptr_fd_ref_non_blocking_mode" fd))
 
 
 ;;;; users and groups

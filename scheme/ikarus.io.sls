@@ -487,6 +487,7 @@
     (rename (string->filename-func	string->pathname-func)
 	    (filename->string-func	pathname->string-func))
     port-dump-status
+    port-set-non-blocking-mode!	port-in-non-blocking-mode?
 
     ;; networking
     make-binary-socket-input/output-port
@@ -3977,6 +3978,55 @@
 	     (eof-object? (lookahead-char port)))
 	    (else
 	     (eof-object? (lookahead-u8 port)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (port-fd port)
+  ;;Defined by  Vicare.  If  PORT is  a port with  a file  descriptor as
+  ;;device: return a fixnum representing the device, else return false.
+  ;;
+  (define who 'port-fd)
+  (with-arguments-validation (who)
+      ((port	port))
+    (with-port (port)
+      (and port.fd-device?
+	   port.device))))
+
+(define-argument-validation (port-with-fd who obj)
+  (and (port? obj)
+       (let ((port obj))
+	 (with-port (port) port.fd-device?)))
+  (assertion-violation who "expected port with file descriptor as underlying device" obj))
+
+(define (port-set-non-blocking-mode! port)
+  ;;Defined  by   Vicare.   Set  non-blocking  mode   for  PORT;  return
+  ;;unspecified values.  PORT must have  a file descriptor as underlying
+  ;;device.
+  ;;
+  (define who 'port-set-non-blocking-mode!)
+  (with-arguments-validation (who)
+      ((port-with-fd	port))
+    (let ((rv (capi.platform-fd-set-non-blocking-mode (with-port (port)
+							port.device))))
+      (when ($fx< rv 0)
+	(%raise-io-error who rv port)))))
+
+(define (port-in-non-blocking-mode? port)
+  ;;Defined  by  Vicare.   Query  PORT for  its  non-blocking  mode;  if
+  ;;successful: return true  if the port is in  non-blocking mode, false
+  ;;otherwise.  If an error occurs: raise an exception.
+  ;;
+  (define who 'port-in-non-blocking-mode?)
+  (with-arguments-validation (who)
+      ((port	port))
+    (with-port (port)
+      (and port.fd-device?
+	   (let ((rv (capi.platform-fd-ref-non-blocking-mode port.device)))
+	     (if (boolean? rv)
+		 rv
+	       (%raise-io-error who rv port)))))))
+
+;;; --------------------------------------------------------------------
 
 (define (port-dump-status port)
   (define port
@@ -7783,17 +7833,6 @@
     ((none)	BUFFER-MODE-NONE-TAG)
     (else
      (assertion-violation who "invalid buffer-mode argument" buffer-mode))))
-
-(define (port-fd port)
-  ;;Defined by  Vicare.  If  PORT is  a port with  a file  descriptor as
-  ;;device: return a fixnum representing the device, else return false.
-  ;;
-  (define who 'port-fd)
-  (with-arguments-validation (who)
-      ((port	port))
-    (with-port (port)
-      (and port.fd-device?
-	   port.device))))
 
 
 ;;;; input ports wrapping platform file descriptors
