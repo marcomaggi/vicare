@@ -495,6 +495,11 @@
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
   (import (except (ikarus)
+
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Wed May 15, 2013)
+		  define-syntax
+
 		  ;; would block object
 		  would-block-object			would-block-object?
 
