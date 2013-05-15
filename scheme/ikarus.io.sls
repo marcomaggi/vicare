@@ -6083,7 +6083,8 @@
   ;;character already available in the buffer, for multi-byte characters
   ;;we call the specialised function for reading UTF-8 chars.
   ;;
-  ;;Return the EOF object, the would-block object or a character.
+  ;;Return  the  EOF object,  the  would-block  object or  a  character.
+  ;;Update the port position to point past the consumed character.
   ;;
   (with-port-having-bytevector-buffer (port)
     (let ((buffer.offset-byte0 port.buffer.index))
