@@ -175,13 +175,15 @@
 	      (list rv bv)))))
     => `(4 #vu8(99 105 97 111 0 0 0 0 0 0)))
 
-  ;;Reading from binary ports with available bytes: GET-BYTEVECTOR-ALL.
+  ;;Reading from binary  ports with available bytes and EOF  at the end:
+  ;;GET-BYTEVECTOR-ALL.
   (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
 	  (let ((P (make-binary-file-descriptor-input-port* in "in")))
 	    (px.write ou '#ve(ascii "ciao") 4)
+	    (px.close ou)
 	    (get-bytevector-all P))))
     => '#ve(ascii "ciao"))
 
@@ -283,20 +285,23 @@
 
 (parametrise ((check-test-name	'port-textual))
 
-  ;;Reading from textual port with available characters: GET-STRING-ALL.
+  ;;Reading from textual  port with available characters and  EOF at the
+  ;;end: GET-STRING-ALL.
   (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
 	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
 	    (px.write ou '#ve(ascii "ciao") 4)
+	    (px.close ou)
 	    (get-string-all P))))
     => "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; reading textual ports with full Unicode character available
 
-  ;;Reading textual port with full Unicode character available: GET-STRING-SOME.
+  ;;Reading  textual   port  with  full  Unicode   character  available:
+  ;;GET-STRING-SOME.
   (check
       (with-compensations
 	(receive (in ou)
@@ -315,11 +320,8 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #t)
-		    (else E))
-	    (get-char in))))
-    => #t)
+	  (get-char in)))
+    => (would-block-object))
 
   ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
   ;;LOOKAHEAD-CHAR.
@@ -327,12 +329,8 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (lookahead-char in))))
-    => #t)
+	  (lookahead-char in)))
+    => (would-block-object))
 
   ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
   ;;PEEK-CHAR.
@@ -340,25 +338,18 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (peek-char in))))
-    => #t)
+	  (peek-char in)))
+    => (would-block-object))
 
-  ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
-  ;;GET-STRING-ALL.
-  (check
-      (with-compensations
-	(receive (in ou)
-	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (get-string-all in))))
-    => #t)
+  ;;Reading textual port without available byte with GET-STRING-ALL will
+  ;;block forever.
+  ;;
+  ;; (check
+  ;;     (with-compensations
+  ;; 	(receive (in ou)
+  ;; 	    (make-textual-ports)
+  ;; 	  (get-string-all in)))
+  ;;   => "")
 
   ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
   ;;GET-STRING-N.
@@ -366,12 +357,8 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (get-string-n in 1))))
-    => #t)
+	  (get-string-n in 1)))
+    => (would-block-object))
 
   ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
   ;;GET-STRING-N!.
@@ -379,12 +366,10 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (get-string-n! in (make-string 1) 0 1))))
-    => #t)
+	  (let* ((str (make-string 1 #\0))
+		 (rv  (get-string-n! in str 0 1)))
+	    (list rv str))))
+    => (list (would-block-object) "0"))
 
   ;;Reading  textual   port  without  available  bytes   causes  EAGAIN:
   ;;GET-STRING-SOME.
@@ -392,12 +377,8 @@
       (with-compensations
 	(receive (in ou)
 	    (make-textual-ports)
-	  (guard (E ((i/o-eagain-error? E)
-		     #;(debug-print E)
-		     #t)
-		    (else E))
-	    (get-string-some in))))
-    => #t)
+	  (get-string-some in)))
+    => (would-block-object))
 
 ;;; --------------------------------------------------------------------
 ;;; EAGAIN from textual ports with partial characters
@@ -412,12 +393,8 @@
 	    ;;Write  a  partial  Unicode   charin  UTF-8  encoding:  CJK
 	    ;;COMPATIBILITY IDEOGRAPH 2F9D1.
 	    (px.write ou '#vu8(#xF0 #xAF #xA7))
-	    (guard (E ((i/o-eagain-error? E)
-		       #;(debug-print E)
-		       #t)
-		      (else E))
-	      (get-string-some P)))))
-    => #t)
+	    (get-string-some P))))
+    => (would-block-object))
 
   #t)
 
