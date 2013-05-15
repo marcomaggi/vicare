@@ -5966,14 +5966,18 @@
 		 (number-of-chars	0)
 		 (reverse-chars		'()))
 	(let ((ch (?read-char port who)))
-	  (if (eof-object? ch)
-	      (if (null? reverse-chars)
-		  ch
-		(%unsafe.reversed-chars->string number-of-chars reverse-chars))
-	    (let ((ch (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)))
-	      (if ($char= ch LINEFEED-CHAR)
-		  (%unsafe.reversed-chars->string number-of-chars reverse-chars)
-		(loop port ($fxadd1 number-of-chars) (cons ch reverse-chars)))))))))
+	  (cond ((eof-object? ch)
+		 (if (null? reverse-chars)
+		     ch
+		   (%unsafe.reversed-chars->string number-of-chars reverse-chars)))
+		;;We are waiting for the end of line here.
+		((would-block-object? ch)
+		 (loop port number-of-chars reverse-chars))
+		(else
+		 (let ((ch (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)))
+		   (if ($char= ch LINEFEED-CHAR)
+		       (%unsafe.reversed-chars->string number-of-chars reverse-chars)
+		     (loop port ($fxadd1 number-of-chars) (cons ch reverse-chars))))))))))
 
   (define-syntax-rule (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
     (cond (($fxzero? eol-bits) ;EOL style none
