@@ -1896,7 +1896,8 @@ ikptr_posix_fd_set_non_blocking (ikptr s_fd, ikpcb * pcb)
   int		rv = -1;
   errno = 0;
   rv = fcntl(fd, F_GETFL, 0);
-  if (-1 == rv) ik_errno_to_code();
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
   rv = fcntl(fd, F_SETFL, rv | O_NONBLOCK);
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
