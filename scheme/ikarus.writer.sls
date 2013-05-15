@@ -35,10 +35,6 @@
 		  printer-integer-radix)
     (only (ikarus system $symbols)
 	  $unbound-object?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Mon May 13, 2013)
-    (only (ikarus.io)
-	  would-block-object?)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)

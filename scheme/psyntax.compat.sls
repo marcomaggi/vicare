@@ -54,10 +54,6 @@
     library-stale-warning
     file-locator-resolution-error)
   (import (ikarus)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed May 15, 2013)
-    (only (ikarus.io)
-	  would-block-object?)
     (only (ikarus.reader)
 	  ;;this is not in makefile.sps
 	  read-library-source-file)

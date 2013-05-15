@@ -496,10 +496,6 @@
     make-textual-socket-input/output-port*)
   (import (except (ikarus)
 
-		  ;;FIXME To be removed at the next boot image rotation.
-		  ;;(Marco Maggi; Wed May 15, 2013)
-		  define-syntax
-
 		  ;; would block object
 		  would-block-object			would-block-object?
 
@@ -611,18 +607,13 @@
 		  string->filename-func		filename->string-func
 		  string->pathname-func		pathname->string-func
 		  port-dump-status
+		  port-set-non-blocking-mode!	port-in-non-blocking-mode?
 
 		  ;; networking
 		  make-binary-socket-input/output-port
 		  make-binary-socket-input/output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Thu May 2, 2013)
-    (rename (only (rnrs)
-		  define-syntax)
-	    (define-syntax rnrs.define-syntax))
-
     (only (vicare options)
 	  strict-r6rs)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
@@ -637,19 +628,6 @@
     (vicare unsafe unicode)
     (vicare arguments validation)
     (vicare platform constants))
-
-
-;;;; syntax helpers
-
-;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
-;;Thu May 2, 2013)
-(rnrs.define-syntax define-syntax
-  (syntax-rules ()
-    ((_ (?who ?stx) ?body0 ?body ...)
-     (rnrs.define-syntax ?who (lambda (?stx) ?body0 ?body ...)))
-    ((_ ?who ?expr)
-     (rnrs.define-syntax ?who ?expr))
-    ))
 
 
 ;;;; port attributes
@@ -1476,13 +1454,6 @@
 	  (make-message-condition "attempt to set port position beyond limit")
 	  (make-i/o-invalid-position-error new-position)
 	  (make-irritants-condition (list port)))))
-
-(define (debug-print . args)
-  ;;Print arguments for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port))
-  (newline (current-error-port))
-  (newline (current-error-port)))
 
 
 ;;;; generic helpers
