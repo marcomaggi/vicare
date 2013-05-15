@@ -1444,6 +1444,13 @@
 	  (make-i/o-invalid-position-error new-position)
 	  (make-irritants-condition (list port)))))
 
+(define (debug-print . args)
+  ;;Print arguments for debugging purposes.
+  ;;
+  (pretty-print args (current-error-port))
+  (newline (current-error-port))
+  (newline (current-error-port)))
+
 
 ;;;; generic helpers
 
@@ -2055,16 +2062,21 @@
 
 ;;;; would block object
 
-(define-struct would-block-obj
+(define-struct unique-object
   ())
 
 (define-constant WOULD-BLOCK-OBJECT
-  (make-would-block-obj))
+  (make-unique-object))
 
 (define (would-block-object)
   WOULD-BLOCK-OBJECT)
 
-(define would-block-object? would-block-obj?)
+(define (would-block-object? obj)
+  (eq? obj WOULD-BLOCK-OBJECT))
+
+(define-inline (eof-or-would-block-object? ch)
+  (or (eof-object?         ch)
+      (would-block-object? ch)))
 
 
 ;;;; port's buffer size customisation
@@ -4973,8 +4985,9 @@
   ;;* If no bytes are available and the end-of-file is found: return the
   ;;EOF object.
   ;;
-  ;;* If the underlying device is  in non-blocking mode and no bytes are
-  ;;available: return the would-block object.
+  ;;Even when the underlying device is in non-blocking mode and no bytes
+  ;;are available: this function attempts to read input until the EOF is
+  ;;found.
   ;;
   (define who 'get-bytevector-all)
 
@@ -4996,9 +5009,7 @@
 		  (eof-object)
 		(compose-output)))
 	     (if-empty-buffer-and-refilling-would-block:
-	      (if (zero? output.len)
-		  WOULD-BLOCK-OBJECT
-		(compose-output)))
+	      (retry-after-filling-buffer output.len output.bvs))
 	     (if-successful-refill: (data-available))
 	     (if-available-data:    (data-available))
 	     ))))))
@@ -5115,61 +5126,145 @@
     (define-inline (main)
       (%case-textual-input-port-fast-tag (port who)
 	((FAST-GET-UTF8-TAG)
-	 (%read-it %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		   %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+	 (%read-it 1
+		   %unsafe.read-char-from-port-with-fast-get-utf8-tag
+		   %unsafe.peek-char-from-port-with-fast-get-utf8-tag
+		   %unsafe.peek-char-from-port-with-utf8-codec))
 	((FAST-GET-CHAR-TAG)
-	 (%read-it %unsafe.read-char-from-port-with-fast-get-char-tag
-		   %unsafe.peek-char-from-port-with-fast-get-char-tag))
+	 (%read-it 1
+		   %unsafe.read-char-from-port-with-fast-get-char-tag
+		   %peek-char
+		   %peek-char/offset))
 	((FAST-GET-LATIN-TAG)
-	 (%read-it %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		   %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+	 (%read-it 1
+		   %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		   %peek-latin1
+		   %peek-latin1/offset))
 	((FAST-GET-UTF16LE-TAG)
-	 (%read-it %read-utf16le %peek-utf16le))
+	 (%read-it 2
+		   %read-utf16le
+		   %peek-utf16le
+		   %peek-utf16le/offset))
 	((FAST-GET-UTF16BE-TAG)
-	 (%read-it %read-utf16be %peek-utf16be))))
+	 (%read-it 2
+		   %read-utf16be
+		   %peek-utf16be
+		   %peek-utf16be/offset))))
 
-    (define-syntax-rule (%read-it ?read-char-proc ?peek-char-proc)
-      (let ((ch (?read-char-proc port who)))
-	(cond ((eof-object? ch)
-	       ch) ;return EOF
-	      ((would-block-object? ch)
-	       ch) ;return would-block
-	      ;;If  no end-of-line  conversion  is  configured for  this
-	      ;;port: just return the character.
-	      ((%unsafe.port-eol-style-is-none? port)
-	       ch)
-	      ;;End-of-line  conversion  is  configured for  this  port:
-	      ;;every EOL single char must be converted to #\linefeed.
-	      (($char-is-single-char-line-ending? ch)
-	       LINEFEED-CHAR)
-	      ;;End-of-line conversion is configured  for this port: all
-	      ;;the  EOL  multi  char  sequences  start  with  #\return,
-	      ;;convert them to #\linefeed.
-	      (($char-is-carriage-return? ch)
-	       (let ((ch2 (?peek-char-proc port who)))
-		 (cond
-		  ;;A standalone  #\return followed by EOF:  just return
-		  ;;#\linefeed.
-		  ((eof-object? ch2)
-		   LINEFEED-CHAR)
-		  ;;A  #\return  followed  by  would-block:  return  the
-		  ;;would-block  object; maybe  later another  character
-		  ;;will be available.
-		  ((would-block-object? ch2)
-		   ch2)
-		  ;;A #\return  followed by the closing  character in an
-		  ;;EOL  sequence:  consume  the closing  character  and
-		  ;;return #\linefeed.
-		  (($char-is-newline-after-carriage-return? ch2)
-		   (?read-char-proc port who)
-		   LINEFEED-CHAR)
-		  ;;A #\return followed  by a character *not*  in an EOL
-		  ;;sequence: just  return #\linefeed  and leave  CH2 in
-		  ;;the port for later reading.
-		  (else
-		   LINEFEED-CHAR))))
-	      ;;A character not part of EOL sequences.
-	      (else ch))))
+    (define-syntax-rule (%read-it ?offset-of-ch2 ?read-char-proc
+				  ?peek-char-proc ?peek-char/offset-proc)
+      ;;Actually perform the  reading.  Return the next  char and update
+      ;;the port position to point past  the char.  If no characters are
+      ;;available  return  the EOF  object  or  the would-block  object.
+      ;;Remember  that,  as mandated  by  R6RS,  for input  ports  every
+      ;;line-ending sequence of characters must be converted to linefeed
+      ;;when the EOL style is not NONE.
+      ;;
+      ;;?READ-CHAR-PROC must be the identifier of a macro performing the
+      ;;reading operation for  the next available character;  it is used
+      ;;to read the next single char, which might be the first char in a
+      ;;sequence of 2-chars line-ending.
+      ;;
+      ;;?PEEK-CHAR-PROC must be the identifier of a macro performing the
+      ;;lookahead operation for the next available character; it is used
+      ;;to peek the next single char, which might be the first char in a
+      ;;sequence of 2-chars line-ending.
+      ;;
+      ;;?PEEK-CHAR/OFFSET-PROC  must  be  the   identifier  of  a  macro
+      ;;performing  the  forward  lookahead  operation  for  the  second
+      ;;character in a sequence of 2-chars line-ending.
+      ;;
+      ;;?OFFSET-OF-CH2 is the offset of the second char in a sequence of
+      ;;2-chars line-ending;  for ports having bytevector  buffer: it is
+      ;;expressed  in  bytes; for  ports  having  string buffer:  it  is
+      ;;expressed  in  characters.    Fortunately:  2-chars  line-ending
+      ;;sequences always  have a  carriage return as  first char  and we
+      ;;know,  once the  codec has  been  selected, the  offset of  such
+      ;;character.
+      ;;
+      (let ((ch (?peek-char-proc port who)))
+	(cond
+	 ;;EOF or  would-block without available characters:  return EOF
+	 ;;or would-block object.
+	 ;;
+	 ;;We consume the character because  a "peek char" operation can
+	 ;;return EOF even when there are  bytes in the input buffer: it
+	 ;;happens when  the bytes  do *not*  represent a  valid Unicode
+	 ;;character  in the  context  of the  selected  codec, and  the
+	 ;;transcoder has ERROR-HANDLING-MODE set to "ignore".
+	 ((eof-or-would-block-object? ch)
+	  (?read-char-proc port who))
+	 ;;If  no end-of-line  conversion is  configured for  this port:
+	 ;;consume the character and return it.
+	 ((%unsafe.port-eol-style-is-none? port)
+	  (?read-char-proc port who))
+	 ;;End-of-line conversion is configured for this port: every EOL
+	 ;;single-char  must be  converted to  #\linefeed.  Consume  the
+	 ;;character and return #\linefeed.
+	 (($char-is-single-char-line-ending? ch)
+	  (?read-char-proc port who)
+	  LINEFEED-CHAR)
+	 ;;End-of-line conversion  is configured for this  port: all the
+	 ;;EOL multi-char sequences start with #\return, convert them to
+	 ;;#\linefeed.
+	 (($char-is-carriage-return? ch)
+	  (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
+	    (cond
+	     ;;A  standalone #\return  followed  by EOF:  consume the  2
+	     ;;characters and return #\linefeed.
+	     ;;
+	     ;;See the  case of EOF  above for  the reason we  consume 2
+	     ;;characters.
+	     ((eof-object? ch2)
+	      (?read-char-proc port who)
+	      (?read-char-proc port who)
+	      LINEFEED-CHAR)
+	     ;;A   #\return   followed   by  would-block:   return   the
+	     ;;would-block  object  *without* consuming  any  character;
+	     ;;maybe later another character will be available.
+	     ((would-block-object? ch2)
+	      ch2)
+	     ;;A #\return  followed by the  closing character in  an EOL
+	     ;;sequence: consume both the characters in the sequence and
+	     ;;return #\linefeed.
+	     (($char-is-newline-after-carriage-return? ch2)
+	      (?read-char-proc port who)
+	      (?read-char-proc port who)
+	      LINEFEED-CHAR)
+	     ;;A  #\return  followed by  a  character  *not* in  an  EOL
+	     ;;sequence:   consume  the   first  character   and  return
+	     ;;#\linefeed, leave CH2 in the port for later reading.
+	     (else
+	      (?read-char-proc port who)
+	      LINEFEED-CHAR))))
+	 ;;A character not part of  EOL sequences: consume it and return
+	 ;;it.
+	 (else
+	  (?read-char-proc port who)))))
+
+    ;;
+
+    (define-syntax-rule (%read-char port who)
+      (%unsafe.read-char-from-port-with-fast-get-char-tag port who))
+
+    (define-syntax-rule (%peek-char port who)
+      (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
+
+    (define-syntax-rule (%peek-char/offset port who offset)
+      (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+
+    ;;
+
+    (define-syntax-rule (%read-latin1 port who)
+      (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who))
+
+    (define-syntax-rule (%peek-latin1 port who)
+      (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
+
+    (define-syntax-rule (%peek-latin1/offset port who offset)
+      (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
+
+    ;;
 
     (define-syntax-rule (%read-utf16le port who)
       (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
@@ -5177,11 +5272,19 @@
     (define-syntax-rule (%peek-utf16le port who)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
+    (define-syntax-rule (%peek-utf16le/offset port who offset)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+
+    ;;
+
     (define-syntax-rule (%read-utf16be port who)
       (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
 
     (define-syntax-rule (%peek-utf16be port who)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
+
+    (define-syntax-rule (%peek-utf16be/offset port who offset)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
 
     (main))
 
@@ -5243,10 +5346,8 @@
       ;;character.
       ;;
       (let ((ch (?peek-char-proc port who)))
-	(cond ((eof-object? ch)
-	       ch) ;return EOF
-	      ((would-block-object? ch)
-	       ch) ;return would-block
+	(cond ((eof-or-would-block-object? ch)
+	       ch) ;return EOF object or would-block object
 	      ;;If  no end-of-line  conversion  is  configured for  this
 	      ;;port: just return the character.
 	      ((%unsafe.port-eol-style-is-none? port)
@@ -5280,11 +5381,15 @@
 	      ;;A character not part of EOL sequences.
 	      (else ch))))
 
+    ;;
+
     (define-syntax-rule (%peek-char port who)
       (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char/offset port who offset)
       (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+
+    ;;
 
     (define-syntax-rule (%peek-latin1 port who)
       (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
@@ -5292,11 +5397,15 @@
     (define-syntax-rule (%peek-latin1/offset port who offset)
       (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
 
+    ;;
+
     (define-syntax-rule (%peek-utf16le port who)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
     (define-syntax-rule (%peek-utf16le/offset port who offset)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+
+    ;;
 
     (define-syntax-rule (%peek-utf16be port who)
       (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
@@ -5311,27 +5420,31 @@
 
 ;;;; string input
 
-(module (get-string-n get-string-n! get-string-all)
+(module (get-string-n get-string-n! get-string-all get-string-some)
 
   (define (get-string-n port requested-count)
-    ;;Defined by R6RS.  REQUESTED-COUNT  must be an exact, non--negative
-    ;;integer object, representing the number of characters to be read.
+    ;;Defined by R6RS,  extended by Vicare.  REQUESTED-COUNT  must be an
+    ;;exact, non--negative  integer object,  representing the  number of
+    ;;characters to be read.
     ;;
     ;;The  GET-STRING-N procedure  reads  from the  textual input  PORT,
     ;;blocking  as  necessary,   until  REQUESTED-COUNT  characters  are
     ;;available, or until an end of file is reached.
     ;;
-    ;;If REQUESTED-COUNT  characters are  available before end  of file,
-    ;;GET-STRING-N returns a string  consisting of those REQUESTED-COUNT
-    ;;characters.
+    ;;* If REQUESTED-COUNT characters are  available before end of file:
+    ;;return a  string consisting  of those  REQUESTED-COUNT characters.
+    ;;Update the input port to point just past the characters read.
     ;;
-    ;;If fewer characters  are available before an end of  file, but one
-    ;;or  more characters  can be  read, GET-STRING-N  returns a  string
-    ;;containing those characters.
+    ;;* If fewer characters are available before an end of file, but one
+    ;;or more characters  can be read: return a  string containing those
+    ;;characters.   Update  the  input  port  to  point  just  past  the
+    ;;characters read.
     ;;
-    ;;In either case,  the input port is updated to  point just past the
-    ;;characters read.   If no characters can  be read before an  end of
-    ;;file, the end-of-file object is returned.
+    ;;* If no characters  can be read before an end  of file: return the
+    ;;EOF object.
+    ;;
+    ;;*  If  the  underlying  device  is in  non-blocking  mode  and  no
+    ;;characters are available: return the would-block object.
     ;;
     ;;IMPLEMENTATION RESTRICTION The REQUESTED-COUNT  argument must be a
     ;;fixnum.
@@ -5344,7 +5457,8 @@
 	  ""
 	(let* ((dst.str	($make-string requested-count))
 	       (count	(%unsafe.get-string-n! who port dst.str 0 requested-count)))
-	  (cond ((eof-object? count)
+	  (cond ((eof-or-would-block-object? count)
+		 ;;Return EOF object or would-block object.
 		 count)
 		(($fx= count requested-count)
 		 dst.str)
@@ -5352,50 +5466,64 @@
 		 ($substring dst.str 0 count)))))))
 
   (define (get-string-n! port dst.str dst.start count)
-    ;;Defined by R6RS.  DST.START and COUNT must be exact, non--negative
-    ;;integer objects, with COUNT  representing the number of characters
-    ;;to   be  read.    DST.STR  must   be  a   string  with   at  least
-    ;;DST.START+COUNT characters.
+    ;;Defined by R6RS, extended by  Vicare.  DST.START and COUNT must be
+    ;;exact, non--negative integer objects,  with COUNT representing the
+    ;;number of characters to be read.  DST.STR must be a string with at
+    ;;least DST.START+COUNT characters.
     ;;
     ;;The GET-STRING-N!  procedure reads from  the textual input PORT in
     ;;the same manner as GET-STRING-N.
     ;;
-    ;;If COUNT characters are available before  an end of file, they are
-    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
+    ;;* If  COUNT characters are available  before an end of  file: they
+    ;;are written into DST.STR starting at index DST.START, and COUNT is
     ;;returned.
     ;;
-    ;;If fewer characters  are available before an end of  file, but one
-    ;;or more  can be  read, those characters  are written  into DST.STR
+    ;;* If  fewer than COUNT characters  are available before an  end of
+    ;;file, but  one or more can  be read: those characters  are written
+    ;;into  DST.STR  starting  at  index DST.START  and  the  number  of
+    ;;characters actually read is returned as an exact integer object.
+    ;;
+    ;;* If  no characters  can be read  before an end  of file:  the EOF
+    ;;object is returned.
+    ;;
+    ;;* If the underlying device is  in non-blocking mode and fewer than
+    ;;COUNT characters are available before a would-block condition, but
+    ;;one or more can be read: those characters are written into DST.STR
     ;;starting at index DST.START and  the number of characters actually
     ;;read is returned as an exact integer object.
     ;;
-    ;;If no characters can be read before an end of file, the EOF object
-    ;;is returned.
+    ;;*  If  the  underlying  device  is in  non-blocking  mode  and  no
+    ;;characters are available: return the would-block object.
     ;;
     ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
     ;;be fixnums.
     ;;
     (define who 'get-string-n!)
     (with-arguments-validation (who)
-	((port		    port)
-	 (string		    dst.str)
-	 (fixnum-start-index  dst.start)
-	 (fixnum-count	    count)
-	 ($start-index-for-string      dst.start dst.str)
-	 ($count-from-start-in-string  count dst.start dst.str))
+	((port				port)
+	 (string			dst.str)
+	 (fixnum-start-index		dst.start)
+	 (fixnum-count			count)
+	 ($start-index-for-string	dst.start dst.str)
+	 ($count-from-start-in-string	count dst.start dst.str))
       (if ($fxzero? count)
 	  count
 	(%unsafe.get-string-n! who port dst.str dst.start count))))
 
   (define (get-string-all port)
-    ;;Defined by R6RS.  Read from the textual input PORT until an end of
-    ;;file, decoding characters  in the same manner  as GET-STRING-N and
-    ;;GET-STRING-N!.
+    ;;Defined by R6RS, extended by  Vicare.  Read from the textual input
+    ;;PORT until an end of file,  decoding characters in the same manner
+    ;;as GET-STRING-N and GET-STRING-N!.
     ;;
-    ;;If  characters are  available before  the  end of  file, a  string
+    ;;* If  characters are available  before the  end of file:  a string
     ;;containing all the characters decoded  from that data is returned.
-    ;;If  no character  precedes  the end  of file,  the  EOF object  is
+    ;;Further reading from the port will return the EOF object.
+    ;;
+    ;;* If  no character  precedes the  end of file:  the EOF  object is
     ;;returned.
+    ;;
+    ;;Even  when the  underlying device  is in  non-blocking mode:  this
+    ;;function attempts to read input until the EOF is found.
     ;;
     ;;IMPLEMENTATION  RESTRICTION  The  maximum length  of  the  retuned
     ;;string is the greatest fixnum.
@@ -5403,111 +5531,29 @@
     (define who 'get-string-all)
     (with-arguments-validation (who)
 	((port port))
-      (let ((dst.len (string-port-buffer-size)))
-	(let next-buffer-string ((output.len	0)
-				 (output.strs	'())
-				 (dst.str		($make-string dst.len)))
-	  (let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
-	    (cond ((eof-object? count)
-		   (if (null? output.strs)
-		       count
-		     (%unsafe.string-reverse-and-concatenate who
-		       output.strs output.len)))
-		  (($fx= count dst.len)
-		   (next-buffer-string ($fx+ output.len dst.len)
-				       (cons dst.str output.strs)
-				       ($make-string dst.len)))
-		  (else
-		   (%unsafe.string-reverse-and-concatenate who
-		     (cons (substring dst.str 0 count) output.strs)
-		     ($fx+ count output.len)))))))))
-
-  (define (%unsafe.get-string-n! who port dst.str dst.start count)
-    ;;Subroutine of GET-STRING-N!,  GET-STRING-N and GET-STRING-ALL.  It
-    ;;assumes the arguments have already been validated.
-    ;;
-    ;;DST.START and COUNT must  be exact, non--negative integer objects,
-    ;;with  COUNT representing  the  number of  characters  to be  read.
-    ;;DST.STR must be a string with at least DST.START+COUNT characters.
-    ;;
-    ;;If COUNT characters are available before  an end of file, they are
-    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
-    ;;returned.
-    ;;
-    ;;If fewer characters  are available before an end of  file, but one
-    ;;or more  can be  read, those characters  are written  into DST.STR
-    ;;starting at index DST.START and  the number of characters actually
-    ;;read is returned as an exact integer object.
-    ;;
-    ;;If no characters can be read before an end of file, the EOF object
-    ;;is returned.
-    ;;
-    ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
-    ;;be fixnums; DST.START+COUNT must be a fixnum.
-    ;;
-    (define-inline (main)
-      (let ((dst.past (+ dst.start count))
-	    (eol-bits (%unsafe.port-eol-style-bits port)))
-	(%case-textual-input-port-fast-tag (port who)
-	  ((FAST-GET-UTF8-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
-	  ((FAST-GET-CHAR-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-char-tag
-		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
-	  ((FAST-GET-LATIN-TAG)
-	   (%get-it eol-bits dst.past
-		    %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		    %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
-	  ((FAST-GET-UTF16LE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
-	  ((FAST-GET-UTF16BE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
-
-    (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
-      (let loop ((dst.index dst.start))
-	(let ((ch (?read-char port who)))
-	  (if (eof-object? ch)
-	      (if ($fx= dst.index dst.start)
-		  ch			    ;return EOF
-		($fx- dst.index dst.start)) ;return the number of chars read
-	    (let ((ch (cond (($fxzero? ?eol-bits) ;EOL style none
-			     ch)
-			    (($char-is-single-char-line-ending? ch)
-			     LINEFEED-CHAR)
-			    (($char-is-carriage-return? ch)
-			     (let ((ch1 (?peek-char port who)))
-			       (cond ((eof-object? ch1)
-				      (void))
-				     (($char-is-newline-after-carriage-return? ch1)
-				      (?read-char port who)))
-			       LINEFEED-CHAR))
-			    (else ch))))
-	      ($string-set! dst.str dst.index ch)
-	      (let ((dst.index ($fxadd1 dst.index)))
-		(if ($fx= dst.index ?dst.past)
-		    ($fx- dst.index dst.start)
-		  (loop dst.index))))))))
-
-    (define-inline (%read-utf16le ?port ?who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
-
-    (define-inline (%peek-utf16le ?port ?who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
-
-    (define-inline (%read-utf16be ?port ?who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
-
-    (define-inline (%peek-utf16be ?port ?who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
-
-    (main))
-
-  #| end of module |# )
-
-(module (get-string-some)
+      (let next-buffer-string ((output.len   0)
+			       (output.strs  '())
+			       (dst.len      (string-port-buffer-size))
+			       (dst.str      ($make-string (string-port-buffer-size))))
+	(let ((count (%unsafe.get-string-n! who port dst.str 0 dst.len)))
+	  (cond ((eof-object? count)
+		 (if (null? output.strs)
+		     ;;Return EOF or would-block.
+		     count
+		   ;;Return the accumulated string.
+		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+		((would-block-object? count)
+		 (next-buffer-string output.len output.strs dst.len dst.str))
+		(($fx= count dst.len)
+		 (next-buffer-string ($fx+ output.len dst.len)
+				     (cons dst.str output.strs)
+				     dst.len
+				     ($make-string dst.len)))
+		(else
+		 ;;Some characters were read, but less than COUNT.
+		 (%unsafe.string-reverse-and-concatenate who
+		   (cons ($substring dst.str 0 count) output.strs)
+		   ($fx+ count output.len))))))))
 
   (define (get-string-some port)
     ;;Defined by Vicare.  Read from  the textual input PORT, blocking as
@@ -5519,103 +5565,251 @@
     ;;least  one),  and  it  updates  PORT  to  point  just  past  these
     ;;characters.
     ;;
-    ;;If no input characters are available: the EOF object is returned.
+    ;;If  no input  characters  are  available: the  EOF  object or  the
+    ;;would-block object is returned.
     ;;
     (define who 'get-string-some)
     (with-arguments-validation (who)
 	((port          port))
-      (let* ((dst.str	($make-string 1024))
-	     (count	(%unsafe.get-string-some! who port dst.str 0 1024)))
-	(cond ((eof-object? count)
+      ;;This is like GET-STRING-ALL, but  we do not loop reading strings
+      ;;again  and again:  we are  satisfied  by just  reading the  next
+      ;;DST.LEN characters.
+      (let* ((dst.len   (string-port-buffer-size))
+	     (dst.str	($make-string dst.len))
+	     (count	(%unsafe.get-string-n! who port dst.str 0 dst.len)))
+	(cond ((eof-or-would-block-object? count)
 	       count)
-	      (($fx= count 1024)
+	      (($fx= count dst.len)
 	       dst.str)
 	      (else
 	       ($substring dst.str 0 count))))))
 
-  (define (%unsafe.get-string-some! who port dst.str dst.start count)
-    ;;Subroutine  of GET-STRING-SOME.   It  assumes  the arguments  have
-    ;;already been validated.
+  (define (%unsafe.get-string-n! who port dst.str dst.start count)
+    ;;Subroutine  of  GET-STRING-N!, GET-STRING-N,  GET-STRING-SOME  and
+    ;;GET-STRING-ALL.   It  assumes  the  arguments  have  already  been
+    ;;validated.  NONE.
     ;;
     ;;DST.START and  COUNT must be exact,  non-negative integer objects,
     ;;with  COUNT representing  the  number of  characters  to be  read.
     ;;DST.STR must be a string with at least DST.START+COUNT characters.
     ;;
-    ;;If COUNT characters are available before  an end of file, they are
-    ;;written into  DST.STR starting  at index  DST.START, and  COUNT is
+    ;;* If  COUNT characters are available  before an end of  file: they
+    ;;are written into DST.STR starting at index DST.START, and COUNT is
     ;;returned.
     ;;
-    ;;If fewer characters  are available before an end of  file, but one
-    ;;or more  can be  read, those characters  are written  into DST.STR
+    ;;* If  fewer than COUNT characters  are available before an  end of
+    ;;file, but  one or more can  be read: those characters  are written
+    ;;into  DST.STR  starting  at  index DST.START  and  the  number  of
+    ;;characters actually read is returned as an exact integer object.
+    ;;
+    ;;* If  no characters  can be read  before an end  of file:  the EOF
+    ;;object is returned.
+    ;;
+    ;;* If the underlying device is  in non-blocking mode and fewer than
+    ;;COUNT characters are available before a would-block condition, but
+    ;;one or more can be read: those characters are written into DST.STR
     ;;starting at index DST.START and  the number of characters actually
     ;;read is returned as an exact integer object.
     ;;
-    ;;If no characters can be read before an end of file, the EOF object
-    ;;is returned.
+    ;;*  If  the  underlying  device  is in  non-blocking  mode  and  no
+    ;;characters  can  be  read  before  a  would-block  condition:  the
+    ;;would-block object is returned.
     ;;
     ;;IMPLEMENTATION RESTRICTION The DST.START  and COUNT arguments must
     ;;be fixnums; DST.START+COUNT must be a fixnum.
     ;;
     (define-inline (main)
-      (let ((dst.past (+ dst.start count))
-	    (eol-bits (%unsafe.port-eol-style-bits port)))
+      (let ((dst.past ($fx+ dst.start count)))
 	(%case-textual-input-port-fast-tag (port who)
 	  ((FAST-GET-UTF8-TAG)
-	   (%get-it eol-bits dst.past
+	   (%get-it dst.past
+		    1
 		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag
+		    %unsafe.peek-char-from-port-with-utf8-codec))
 	  ((FAST-GET-CHAR-TAG)
-	   (%get-it eol-bits dst.past
+	   (%get-it dst.past
+		    1
 		    %unsafe.read-char-from-port-with-fast-get-char-tag
-		    %unsafe.peek-char-from-port-with-fast-get-char-tag))
+		    %peek-char
+		    %peek-char/offset))
 	  ((FAST-GET-LATIN-TAG)
-	   (%get-it eol-bits dst.past
+	   (%get-it dst.past
+		    1
 		    %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		    %unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+		    %peek-latin1
+		    %peek-latin1/offset))
 	  ((FAST-GET-UTF16LE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16le %peek-utf16le))
+	   (%get-it dst.past
+		    2
+		    %read-utf16le
+		    %peek-utf16le
+		    %peek-utf16le/offset))
 	  ((FAST-GET-UTF16BE-TAG)
-	   (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
+	   (%get-it dst.past
+		    2
+		    %read-utf16be
+		    %peek-utf16be
+		    %peek-utf16be/offset)))))
 
-    (define-syntax-rule (%get-it ?eol-bits ?dst.past ?read-char ?peek-char)
-      (let loop ((dst.index dst.start))
-	(let ((ch (?peek-char port who)))
-	  (if (eof-object? ch)
-	      (if ($fx= dst.index dst.start)
-		  ch			  ;return EOF
-		($fx- dst.index dst.start)) ;return the number of chars read
-	    (let ((ch (begin
-			;;Consume the peeked char.
-			(?read-char port who)
-			(cond (($fxzero? ?eol-bits) ;EOL style none
-			       ch)
-			      (($char-is-single-char-line-ending? ch)
-			       LINEFEED-CHAR)
-			      (($char-is-carriage-return? ch)
-			       (let ((ch1 (?peek-char port who)))
-				 (cond ((eof-object? ch1)
-					(void))
-				       (($char-is-newline-after-carriage-return? ch1)
-					(?read-char port who)))
-				 LINEFEED-CHAR))
-			      (else ch)))))
-	      ($string-set! dst.str dst.index ch)
-	      (let ((dst.index ($fxadd1 dst.index)))
-		(if ($fx= dst.index ?dst.past)
-		    ($fx- dst.index dst.start)
-		  (loop dst.index))))))))
+    (define-syntax-rule (%get-it ?dst.past ?offset-of-ch2 ?read-char-proc
+				 ?peek-char-proc ?peek-char/offset-proc)
+      ;;Actually perform  the reading.  Loop  reading the next  char and
+      ;;updating the port position; read  chars are stored into DST.STR.
+      ;;If  no characters  are available  return the  EOF object  or the
+      ;;would-block  object.  Remember  that, as  mandated by  R6RS, for
+      ;;input  ports every  line-ending sequence  of characters  must be
+      ;;converted to linefeed when the EOL style is not NONE.
+      ;;
+      ;;?DST.PAST is  the index  one-past the  last position  in DST.STR
+      ;;that must be filled.
+      ;;
+      ;;?READ-CHAR-PROC must be the identifier of a macro performing the
+      ;;reading operation for  the next available character;  it is used
+      ;;to read the next single char, which might be the first char in a
+      ;;sequence of 2-chars line-ending.
+      ;;
+      ;;?PEEK-CHAR-PROC must be the identifier of a macro performing the
+      ;;lookahead operation for the next available character; it is used
+      ;;to peek the next single char, which might be the first char in a
+      ;;sequence of 2-chars line-ending.
+      ;;
+      ;;?PEEK-CHAR/OFFSET-PROC  must  be  the   identifier  of  a  macro
+      ;;performing  the  forward  lookahead  operation  for  the  second
+      ;;character in a sequence of 2-chars line-ending.
+      ;;
+      ;;?OFFSET-OF-CH2 is the offset of the second char in a sequence of
+      ;;2-chars line-ending;  for ports having bytevector  buffer: it is
+      ;;expressed  in  bytes; for  ports  having  string buffer:  it  is
+      ;;expressed  in  characters.    Fortunately:  2-chars  line-ending
+      ;;sequences always  have a  carriage return as  first char  and we
+      ;;know,  once the  codec has  been  selected, the  offset of  such
+      ;;character.
+      ;;
+      (let read-next-char ((dst.index dst.start))
+	(define (%store-char-then-loop-or-return ch)
+	  ($string-set! dst.str dst.index ch)
+	  (let ((dst.index ($fxadd1 dst.index)))
+	    (if ($fx= dst.index ?dst.past)
+		($fx- dst.index dst.start)
+	      (read-next-char dst.index))))
+	(let ((ch (?peek-char-proc port who)))
+	  (cond
+	   ;;EOF or  would-block: if no characters  were previously read
+	   ;;return  the  EOF object  or  the  would-block object,  else
+	   ;;return the number of characters read.
+	   ;;
+	   ;;We consume  the character  because a "peek  char" operation
+	   ;;can  return EOF  even when  there  are bytes  in the  input
+	   ;;buffer:  it happens  when the  bytes do  *not* represent  a
+	   ;;valid  Unicode character  in  the context  of the  selected
+	   ;;codec, and  the transcoder  has ERROR-HANDLING-MODE  set to
+	   ;;"ignore".
+	   ((eof-or-would-block-object? ch)
+	    (if ($fx= dst.index dst.start)
+		;;Return the EOF object or the would-block object.
+		ch
+	      ;;Return the number of chars read.
+	      ($fx- dst.index dst.start)))
+	   ;;If no  end-of-line conversion is configured  for this port:
+	   ;;consume the character, store it and loop.
+	   ((%unsafe.port-eol-style-is-none? port)
+	    (?read-char-proc port who)
+	    (%store-char-then-loop-or-return ch))
+	   ;;End-of-line conversion  is configured for this  port: every
+	   ;;EOL single-char  must be converted to  #\linefeed.  Consume
+	   ;;the character, store #\linefeed and loop.
+	   (($char-is-single-char-line-ending? ch)
+	    (?read-char-proc port who)
+	    (%store-char-then-loop-or-return LINEFEED-CHAR))
+	   ;;End-of-line conversion is configured for this port: all the
+	   ;;EOL multi-char sequences start  with #\return, convert them
+	   ;;to #\linefeed.
+	   (($char-is-carriage-return? ch)
+	    (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
+	      (cond
+	       ;;A  standalone  #\return  followed  by  EOF:  consume  2
+	       ;;characters, store #\linefeed then loop or return.
+	       ;;
+	       ;;See the case  of EOF above for the reason  we consume 2
+	       ;;characters.
+	       ((eof-object? ch2)
+		(?read-char-proc port who)
+		(?read-char-proc port who)
+		(%store-char-then-loop-or-return LINEFEED-CHAR))
+	       ;;A  #\return  followed  by  would-block:  return  object
+	       ;;*without* consuming  the return character;  maybe later
+	       ;;another character will be available.
+	       ((would-block-object? ch2)
+		(if ($fx= dst.index dst.start)
+		    ;;Return the would-block object.
+		    ch
+		  ;;Return the number of chars read.
+		  ($fx- dst.index dst.start)))
+	       ;;A #\return followed by the  closing character in an EOL
+	       ;;sequence: consume both the  characters in the sequence,
+	       ;;store #\linefeed then loop or return.
+	       (($char-is-newline-after-carriage-return? ch2)
+		(?read-char-proc port who)
+		(?read-char-proc port who)
+		(%store-char-then-loop-or-return LINEFEED-CHAR))
+	       ;;A  #\return followed  by a  character *not*  in an  EOL
+	       ;;sequence: consume the first character, store #\linefeed
+	       ;;then loop  or return; leave  CH2 in the port  for later
+	       ;;reading.
+	       (else
+		(?read-char-proc port who)
+		(%store-char-then-loop-or-return LINEFEED-CHAR)))))
+	   ;;A character not part of EOL sequences: consume it, store it
+	   ;;then loop or return.
+	   (else
+	    (?read-char-proc port who)
+	    (%store-char-then-loop-or-return ch))))))
 
-    (define-inline (%read-utf16le ?port ?who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+    ;;
 
-    (define-inline (%peek-utf16le ?port ?who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+    (define-syntax-rule (%read-char port who)
+      (%unsafe.read-char-from-port-with-fast-get-char-tag port who))
 
-    (define-inline (%read-utf16be ?port ?who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+    (define-syntax-rule (%peek-char port who)
+      (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
 
-    (define-inline (%peek-utf16be ?port ?who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+    (define-syntax-rule (%peek-char/offset port who offset)
+      (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+
+    ;;
+
+    (define-syntax-rule (%read-latin1 port who)
+      (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who))
+
+    (define-syntax-rule (%peek-latin1 port who)
+      (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
+
+    (define-syntax-rule (%peek-latin1/offset port who offset)
+      (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
+
+    ;;
+
+    (define-syntax-rule (%read-utf16le port who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
+
+    (define-syntax-rule (%peek-utf16le port who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
+
+    (define-syntax-rule (%peek-utf16le/offset port who offset)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+
+    ;;
+
+    (define-syntax-rule (%read-utf16be port who)
+      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
+
+    (define-syntax-rule (%peek-utf16be port who)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
+
+    (define-syntax-rule (%peek-utf16be/offset port who offset)
+      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
+
 
     (main))
 
@@ -5633,9 +5827,9 @@
   ;;up to  (but not including)  the linefeed character is  returned, and
   ;;the port is updated to point just past the linefeed character.
   ;;
-  ;;If an  end of file is  encountered before any  linefeed character is
-  ;;read, but some characters have  been read and decoded as characters,
-  ;;a string containing those characters is returned.
+  ;;If an  end of file is  encountered before any linefeed  character is
+  ;;read, but  some bytes have  been read  and decoded as  characters, a
+  ;;string containing those characters is returned.
   ;;
   ;;If an end of file is encountered before any characters are read, the
   ;;EOF object is returned.

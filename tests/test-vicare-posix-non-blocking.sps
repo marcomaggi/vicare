@@ -239,14 +239,15 @@
 	      (list a b)))))
     => `(99 ,(would-block-object)))
 
-  ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
-  ;;GET-BYTEVECTOR-ALL.
-  (check
-      (with-compensations
-  	(receive (in ou)
-  	    (make-binary-ports)
-	  (get-bytevector-all in)))
-    => (would-block-object))
+  ;;Reading binary port without  available bytes with GET-BYTEVECTOR-ALL
+  ;;will block forever.
+  ;;
+  ;; (check
+  ;;     (with-compensations
+  ;; 	(receive (in ou)
+  ;; 	    (make-binary-ports)
+  ;; 	  (get-bytevector-all in)))
+  ;;   => (would-block-object))
 
   ;;Reading  binary   port  without   available  bytes   causes  EAGAIN:
   ;;GET-BYTEVECTOR-N.
@@ -280,10 +281,10 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'port-textual))
+(parametrise ((check-test-name	'port-textual))
 
   ;;Reading from textual port with available characters: GET-STRING-ALL.
-  #;(check
+  (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
@@ -296,7 +297,7 @@
 ;;; reading textual ports with full Unicode character available
 
   ;;Reading textual port with full Unicode character available: GET-STRING-SOME.
-  #;(check
+  (check
       (with-compensations
 	(receive (in ou)
 	    (make-pipe)
