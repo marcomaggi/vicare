@@ -331,6 +331,98 @@
 
 (parametrise ((check-test-name	'port-textual))
 
+  ;;Reading from textual port with available characters: GET-CHAR.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "c"))
+	    (px.close ou)
+	    (get-char P))))
+    => #\c)
+
+  ;;Reading from textual port with available characters: LOOKAHEAD-CHAR.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "c"))
+	    (px.close ou)
+	    (lookahead-char P))))
+    => #\c)
+
+  ;;Reading from textual port with available characters: PEEK-CHAR.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "c"))
+	    (px.close ou)
+	    (peek-char P))))
+    => #\c)
+
+  ;;Reading    from   textual    port    with   available    characters:
+  ;;GET-STRING-SOME.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (get-string-some P))))
+    => "ciao")
+
+  ;;Reading from  textual port with available  characters: GET-STRING-N.
+  ;;Require available.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (get-string-n P 4))))
+    => "ciao")
+
+  ;;Reading from  textual port with available  characters: GET-STRING-N.
+  ;;Require more than available.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (get-string-n P 10))))
+    => "ciao")
+
+  ;;Reading from  textual port with available  characters: GET-STRING-N!.
+  ;;Require available.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (let* ((str (make-string 4 #\0))
+		   (rv  (get-string-n! P str 0 4)))
+	      (list rv str)))))
+    => '(4 "ciao"))
+
+  ;;Reading from  textual port with available  characters: GET-STRING-N.
+  ;;Require more than available.
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (let ((P (make-textual-file-descriptor-input-port* in "in" (native-transcoder))))
+	    (px.write ou '#ve(ascii "ciao") 4)
+	    (let* ((str (make-string 10 #\0))
+		   (rv  (get-string-n! P str 0 10)))
+	      (list rv str)))))
+    => '(4 "ciao000000"))
+
   ;;Reading from textual  port with available characters and  EOF at the
   ;;end: GET-STRING-ALL.
   (check
