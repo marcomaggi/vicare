@@ -54,7 +54,8 @@
 	    config.)
     (prefix (only (vicare options)
 		  print-loaded-libraries
-		  report-errors-at-runtime)
+		  report-errors-at-runtime
+		  strict-r6rs)
 	    config.)
     (prefix (only (ikarus.compiler)
 		  $optimize-level
@@ -522,6 +523,14 @@
 	   (config.report-errors-at-runtime #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--strict-r6rs")
+	   (config.strict-r6rs #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-strict-r6rs")
+	   (config.strict-r6rs #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -845,12 +854,20 @@ Other options:
         Disables the effect of --print-loaded-libraries.
 
    --report-errors-at-runtime
-        When possible and meaningful: report errors at runtime rather
-        than at compile time.  Runtime errors reporting is R6RS
+        When possible  and meaningful:  report errors at  runtime rather
+        than  at  compile  time.    Runtime  errors  reporting  is  R6RS
         compliant.  The default is to raise errors at compile time.
 
    --no-report-errors-at-runtime
         Disables the effect of --report-errors-at-runtime.
+
+   --strict-r6rs
+        Strictly follow R6RS specifications: disable Vicare extensions.
+
+   --no-strict-r6rs
+        Do  not  strictly  follow  R6RS  specifications:  enable  Vicare
+        extensions.  Disables the effect  of --strict-r6rs.  This is the
+        default.
 
    -O0
         Turn off the source optimizer.

@@ -224,6 +224,14 @@ default is to raise errors at compile time.
 @item --no-report-errors-at-runtime
 Disables the effect of @option{--report-errors-at-runtime}.
 
+@item --strict-r6rs
+Strictly follow @rnrs{6} specifications: disable Vicare extensions.
+
+@item --no-strict-r6rs
+Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
+extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
+default.
+
 @item -O0
 Turn off use of the source optimizer.
 

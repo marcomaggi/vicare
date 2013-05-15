@@ -31,7 +31,7 @@
     real-pathname			file-modification-time
 
     ;; runtime options
-    report-errors-at-runtime
+    report-errors-at-runtime		strict-r6rs
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -64,7 +64,8 @@
 	  real-pathname
 	  file-modification-time)
     (only (vicare options)
-	  report-errors-at-runtime))
+	  report-errors-at-runtime
+	  strict-r6rs))
 
 
 (define (library-version-mismatch-warning name depname filename)

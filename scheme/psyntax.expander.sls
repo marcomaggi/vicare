@@ -782,11 +782,8 @@
 	   (and (eq? (syntax->datum ?prefix) 'prefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if #f
-	       ;;FIXME At present  there is no way to  disable PREFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "prefix export specification forbidden in R6RS mode")
+	   (if (strict-r6rs)
+	       (%synner "prefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (external*  (map (lambda (id)
 				       (datum->syntax
@@ -803,11 +800,8 @@
 	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if #f
-	       ;;FIXME At present there is no way to disable DEPREFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "deprefix export specification forbidden in R6RS mode")
+	   (if (strict-r6rs)
+	       (%synner "deprefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (prefix.len (string-length prefix.str))
 		    (external*  (map (lambda (id)
@@ -832,11 +826,8 @@
 	   (and (eq? (syntax->datum ?suffix) 'suffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if #f
-	       ;;FIXME At present  there is no way to  disable SUFFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "suffix export specification forbidden in R6RS mode")
+	   (if (strict-r6rs)
+	       (%synner "suffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (external*  (map (lambda (id)
 				       (datum->syntax
@@ -853,11 +844,8 @@
 	   (and (eq? (syntax->datum ?desuffix) 'desuffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if #f
-	       ;;FIXME At present there is no way to disable DESUFFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "desuffix export specification forbidden in R6RS mode")
+	   (if (strict-r6rs)
+	       (%synner "desuffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (suffix.len (string-length suffix.str))
 		    (external*  (map (lambda (id)
@@ -1131,11 +1119,8 @@
 	((?deprefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
 	      (id-stx? ?the-prefix))
-	 (if #f
-	     ;;FIXME At present  there is no way to  disable DEPREFIX to
-	     ;;enforce strict  R6RS compatibility; in future  it may be.
-	     ;;(Marco Maggi; Tue Apr 16, 2013)
-	     (%local-synner "deprefix import specification forbidden in R6RS mode")
+	 (if (strict-r6rs)
+	     (%local-synner "deprefix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
 		  (prefix.len  (string-length prefix.str)))
@@ -1157,22 +1142,21 @@
 	((?suffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?suffix) 'suffix)
 	      (id-stx? ?suffix))
-	 (let ((subst   (%recurse ?import-set))
-	       (suffix  (symbol->string (syntax->datum ?the-suffix))))
-	   (map (lambda (x)
-		  (cons (string->symbol
-			 (string-append (symbol->string (car x)) suffix))
-			(cdr x)))
-	     subst)))
+	 (if (strict-r6rs)
+	     (%local-synner "suffix import specification forbidden in strict R6RS mode")
+	   (let ((subst   (%recurse ?import-set))
+		 (suffix  (symbol->string (syntax->datum ?the-suffix))))
+	     (map (lambda (x)
+		    (cons (string->symbol
+			   (string-append (symbol->string (car x)) suffix))
+			  (cdr x)))
+	       subst))))
 
 	((?desuffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
 	      (id-stx? ?the-suffix))
-	 (if #f
-	     ;;FIXME At present  there is no way to  disable DESUFFIX to
-	     ;;enforce strict  R6RS compatibility; in future  it may be.
-	     ;;(Marco Maggi; Tue Apr 16, 2013)
-	     (%local-synner "desuffix import specification forbidden in R6RS mode")
+	 (if (strict-r6rs)
+	     (%local-synner "desuffix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (suffix.str  (symbol->string (syntax->datum ?the-suffix)))
 		  (suffix.len  (string-length suffix.str)))

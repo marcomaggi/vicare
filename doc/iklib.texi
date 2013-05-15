@@ -1771,8 +1771,8 @@ Example:
 
 @deffn {Export Spec} prefix (@meta{internal} ...) @meta{prefix}
 Prepend the specified prefix to the selected internal symbols and add
-the result to the export list.  This clause is always enabled: there is
-no way to disable it to enforce @rnrs{6} compatibility.
+the result to the export list.  This clause is forbidden when running
+with the command line option @option{--strict-r6rs}.
 
 @example
 (library (demo)
@@ -1787,8 +1787,8 @@ no way to disable it to enforce @rnrs{6} compatibility.
 
 @deffn {Export Spec} deprefix (@meta{internal} ...) @meta{prefix}
 Remove the specified prefix from the selected internal symbols and add
-the result to the export list.  This clause is always enabled: there is
-no way to disable it to enforce @rnrs{6} compatibility.
+the result to the export list.  This clause is forbidden when running
+with the command line option @option{--strict-r6rs}.
 
 @example
 (library (demo)
@@ -1803,8 +1803,8 @@ no way to disable it to enforce @rnrs{6} compatibility.
 
 @deffn {Export Spec} suffix (@meta{internal} ...) @meta{suffix}
 Append the specified suffix to the selected internal symbols and add the
-result to the export list.  This clause is always enabled: there is no
-way to disable it to enforce @rnrs{6} compatibility.
+result to the export list.  This clause is forbidden when running with
+the command line option @option{--strict-r6rs}.
 
 @example
 (library (demo)
@@ -1819,8 +1819,8 @@ way to disable it to enforce @rnrs{6} compatibility.
 
 @deffn {Export Spec} desuffix (@meta{internal} ...) @meta{suffix}
 Remove the specified suffix from the selected internal symbols and add
-the result to the export list.  This clause is always enabled: there is
-no way to disable it to enforce @rnrs{6} compatibility.
+the result to the export list.  This clause is forbidden when running
+with the command line option @option{--strict-r6rs}.
 
 @example
 (library (demo)
@@ -1839,8 +1839,8 @@ no way to disable it to enforce @rnrs{6} compatibility.
 
 @deffn {Import Spec} deprefix @meta{import-spec} @meta{prefix}
 Similar to the import specification @code{prefix}, but remove a prefix
-rather than add it.  This clause is always enabled: there is no way to
-disable it to enforce @rnrs{6} compatibility.
+rather than add it.  This clause is forbidden when running with the
+command line option @option{--strict-r6rs}.
 
 @example
 (import (rnrs)
@@ -1861,15 +1861,15 @@ disable it to enforce @rnrs{6} compatibility.
 
 @deffn {Import Spec} suffix @meta{import-spec} @meta{suffix}
 Similar to the import specification @code{prefix}, but append a suffix
-rather than a prefix.  This clause is always enabled: there is no way to
-disable it to enforce @rnrs{6} compatibility.
+rather than a prefix.  This clause is forbidden when running with the
+command line option @option{--strict-r6rs}.
 @end deffn
 
 
 @deffn {Import Spec} desuffix @meta{import-spec} @meta{suffix}
 Similar to the import specification @code{deprefix}, but remove a suffix
-rather than a prefix.  This clause is always enabled: there is no way to
-disable it to enforce @rnrs{6} compatibility.
+rather than a prefix.  This clause is forbidden when running with the
+command line option @option{--strict-r6rs}.
 @end deffn
 
 @c page

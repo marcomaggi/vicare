@@ -28,7 +28,8 @@
 (library (vicare options)
   (export
     print-loaded-libraries
-    report-errors-at-runtime)
+    report-errors-at-runtime
+    strict-r6rs)
   (import (rnrs))
 
   (define-syntax define-boolean-option
@@ -45,6 +46,7 @@
 
   (define-boolean-option print-loaded-libraries   #f)
   (define-boolean-option report-errors-at-runtime #f)
+  (define-boolean-option strict-r6rs              #f)
   )
 
 ;;; end of file
