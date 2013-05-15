@@ -623,6 +623,8 @@
 		  define-syntax)
 	    (define-syntax rnrs.define-syntax))
 
+    (only (vicare options)
+	  strict-r6rs)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
@@ -4693,14 +4695,17 @@
     ;;
     (with-port-having-bytevector-buffer (port)
       (debug-assert (fx= port.buffer.index port.buffer.used-size))
-      (refill-bytevector-buffer-and-evaluate (port who)
-	(if-end-of-file: (eof-object))
-	(if-refilling-would-block:
-	 WOULD-BLOCK-OBJECT)
-	(if-successful-refill:
-	 (set! port.buffer.index buffer.offset-after)
-	 ($bytevector-u8-ref port.buffer 0))
-	)))
+      (let retry-after-would-block ()
+	(refill-bytevector-buffer-and-evaluate (port who)
+	  (if-end-of-file: (eof-object))
+	  (if-refilling-would-block:
+	   (if (strict-r6rs)
+	       (retry-after-would-block)
+	     WOULD-BLOCK-OBJECT))
+	  (if-successful-refill:
+	   (set! port.buffer.index buffer.offset-after)
+	   ($bytevector-u8-ref port.buffer 0))
+	  ))))
 
   #| end of module |# )
 
@@ -4723,14 +4728,26 @@
 	       (values ($bytevector-u8-ref port.buffer buffer.offset-octet0)
 		       ($bytevector-u8-ref port.buffer buffer.offset-octet1))
 	     ;;There are 0 bytes or 1 byte available.
-	     (refill-bytevector-buffer-and-evaluate (port who)
-	       (if-end-of-file:
-		(%maybe-some-data-is-available port 0))
-	       (if-refilling-would-block:
-		(%maybe-some-data-is-available port 1))
-	       (if-successful-refill:
-		(%maybe-some-data-is-available port 2))
-	       )))))))
+	     (let retry-after-would-block ()
+	       (refill-bytevector-buffer-and-evaluate (port who)
+		 (if-end-of-file:
+		  (%maybe-some-data-is-available port 0))
+		 (if-refilling-would-block:
+		  (receive (rv1 rv2)
+		      (%maybe-some-data-is-available port 1)
+		    (if (and (strict-r6rs)
+			     (or (would-block-object? rv2)
+				 (would-block-object? rv1)))
+			(retry-after-would-block)
+		      (values rv1 rv2))))
+		 (if-successful-refill:
+		  (receive (rv1 rv2)
+		      (%maybe-some-data-is-available port 2)
+		    (if (and (strict-r6rs)
+			     (or (would-block-object? rv2)
+				 (would-block-object? rv1)))
+			(retry-after-would-block)
+		      (values rv1 rv2))))))))))))
 
   (define (%maybe-some-data-is-available port mode)
     (with-port-having-bytevector-buffer (port)
@@ -4829,7 +4846,9 @@
 	  ;;would-block object.
 	  (if-empty-buffer-and-refilling-would-block:
 	   (if (zero? output.len)
-	       WOULD-BLOCK-OBJECT
+	       (if (strict-r6rs)
+		   (retry-after-filling-buffer output.len output.bvs remaining-count)
+		 WOULD-BLOCK-OBJECT)
 	     (compose-output)))
 	  ;;The  buffer was  empty,  but after  refilling  it: there  is
 	  ;;available data.
@@ -4959,7 +4978,9 @@
 	     ($fx- dst.index dst.start)))
 	  (if-empty-buffer-and-refilling-would-block:
 	   (if ($fx= dst.index dst.start)
-	       WOULD-BLOCK-OBJECT
+	       (if (strict-r6rs)
+		   (retry-after-filling-buffer dst.index remaining-count)
+		 WOULD-BLOCK-OBJECT)
 	     ($fx- dst.index dst.start)))
 	  (if-successful-refill:
 	   (data-available))
@@ -5017,17 +5038,20 @@
     (%case-binary-input-port-fast-tag (port who)
       ((FAST-GET-BYTE-TAG)
        (with-port-having-bytevector-buffer (port)
-	 (maybe-refill-bytevector-buffer-and-evaluate (port who)
-	   (data-is-needed-at: port.buffer.index)
-	   (if-end-of-file:
-	    (eof-object))
-	   (if-empty-buffer-and-refilling-would-block:
-	    WOULD-BLOCK-OBJECT)
-	   (if-successful-refill:
-	    (%data-available-in-buffer port))
-	   (if-available-data:
-	    (%data-available-in-buffer port))
-	   )))))
+	 (let retry-after-would-block ()
+	   (maybe-refill-bytevector-buffer-and-evaluate (port who)
+	     (data-is-needed-at: port.buffer.index)
+	     (if-end-of-file:
+	      (eof-object))
+	     (if-empty-buffer-and-refilling-would-block:
+	      (if (strict-r6rs)
+		  (retry-after-would-block)
+		WOULD-BLOCK-OBJECT))
+	     (if-successful-refill:
+	      (%data-available-in-buffer port))
+	     (if-available-data:
+	      (%data-available-in-buffer port))
+	     ))))))
 
   (define (%data-available-in-buffer port)
     (with-port-having-bytevector-buffer (port)
@@ -5256,85 +5280,90 @@
       ;;know,  once the  codec has  been  selected, the  offset of  such
       ;;character.
       ;;
-      (let ((ch (?peek-char-proc port who)))
-	(cond
-	 ;;EOF without available characters: return the EOF object.
-	 ;;
-	 ;;Notice  that: the  peek  char operation  performed above  can
-	 ;;return EOF even when there are  bytes in the input buffer; it
-	 ;;happens when all the following conditions are met:
-	 ;;
-	 ;;1. The bytes do *not*  represent a valid Unicode character in
-	 ;;the context of the selected codec.
-	 ;;
-	 ;;2. The transcoder has ERROR-HANDLING-MODE set to "ignore".
-	 ;;
-	 ;;3. The invalid bytes are followed by an EOF.
-	 ;;
-	 ;;We could just  perform a read operation here  to remove those
-	 ;;characters, but consider the following  case: at the REPL the
-	 ;;user hits "Ctrl-D"  sending a "soft" EOF condition  up to the
-	 ;;port; such EOF is consumed by the peek operation above, so if
-	 ;;we perform a read operation  here the port will block waiting
-	 ;;for more characters.
-	 ;;
-	 ;;We solve by just resetting the input buffer to empty here.
-	 ;;
-	 ((eof-object? ch)
-	  (with-port (port)
-	    (port.buffer.reset-to-empty!))
-	  ch)
-	 ;;Would-block   without   available  characters:   return   the
-	 ;;would-block object.
-	 ((would-block-object? ch)
-	  ch)
-	 ;;If  no end-of-line  conversion is  configured for  this port:
-	 ;;consume the character and return it.
-	 ((%unsafe.port-eol-style-is-none? port)
-	  (?read-char-proc port who))
-	 ;;End-of-line conversion is configured for this port: every EOL
-	 ;;single-char  must be  converted to  #\linefeed.  Consume  the
-	 ;;character and return #\linefeed.
-	 (($char-is-single-char-line-ending? ch)
-	  (?read-char-proc port who)
-	  LINEFEED-CHAR)
-	 ;;End-of-line conversion  is configured for this  port: all the
-	 ;;EOL multi-char sequences start with #\return, convert them to
-	 ;;#\linefeed.
-	 (($char-is-carriage-return? ch)
-	  (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
-	    (cond
-	     ;;A standalone  #\return followed by EOF:  reset the buffer
-	     ;;to empty and return #\linefeed.
-	     ;;
-	     ;;See the  case of EOF  above for  the reason we  reset the
-	     ;;buffer to empty.
-	     ((eof-object? ch2)
-	      (with-port (port)
-		(port.buffer.reset-to-empty!))
-	      LINEFEED-CHAR)
-	     ;;A   #\return   followed   by  would-block:   return   the
-	     ;;would-block  object  *without* consuming  any  character;
-	     ;;maybe later another character will be available.
-	     ((would-block-object? ch2)
-	      ch2)
-	     ;;A #\return  followed by the  closing character in  an EOL
-	     ;;sequence: consume both the characters in the sequence and
-	     ;;return #\linefeed.
-	     (($char-is-newline-after-carriage-return? ch2)
-	      (?read-char-proc port who)
-	      (?read-char-proc port who)
-	      LINEFEED-CHAR)
-	     ;;A  #\return  followed by  a  character  *not* in  an  EOL
-	     ;;sequence:   consume  the   first  character   and  return
-	     ;;#\linefeed, leave CH2 in the port for later reading.
-	     (else
-	      (?read-char-proc port who)
-	      LINEFEED-CHAR))))
-	 ;;A character not part of  EOL sequences: consume it and return
-	 ;;it.
-	 (else
-	  (?read-char-proc port who)))))
+      (let retry-after-would-block ()
+	(let ((ch (?peek-char-proc port who)))
+	  (cond
+	   ;;EOF without available characters: return the EOF object.
+	   ;;
+	   ;;Notice that:  the peek  char operation performed  above can
+	   ;;return EOF even  when there are bytes in  the input buffer;
+	   ;;it happens when all the following conditions are met:
+	   ;;
+	   ;;1. The bytes  do *not* represent a  valid Unicode character
+	   ;;in the context of the selected codec.
+	   ;;
+	   ;;2. The transcoder has ERROR-HANDLING-MODE set to "ignore".
+	   ;;
+	   ;;3. The invalid bytes are followed by an EOF.
+	   ;;
+	   ;;We could just perform a read operation here to remove those
+	   ;;characters, but  consider the  following case: at  the REPL
+	   ;;the user hits "Ctrl-D" sending a "soft" EOF condition up to
+	   ;;the port; such EOF is consumed by the peek operation above,
+	   ;;so if we perform a read  operation here the port will block
+	   ;;waiting for more characters.
+	   ;;
+	   ;;We solve by just resetting the input buffer to empty here.
+	   ;;
+	   ((eof-object? ch)
+	    (with-port (port)
+	      (port.buffer.reset-to-empty!))
+	    ch)
+	   ;;Would-block  without   available  characters:   return  the
+	   ;;would-block object.
+	   ((would-block-object? ch)
+	    (if (strict-r6rs)
+		(retry-after-would-block)
+	      ch))
+	   ;;If no  end-of-line conversion is configured  for this port:
+	   ;;consume the character and return it.
+	   ((%unsafe.port-eol-style-is-none? port)
+	    (?read-char-proc port who))
+	   ;;End-of-line conversion  is configured for this  port: every
+	   ;;EOL single-char  must be converted to  #\linefeed.  Consume
+	   ;;the character and return #\linefeed.
+	   (($char-is-single-char-line-ending? ch)
+	    (?read-char-proc port who)
+	    LINEFEED-CHAR)
+	   ;;End-of-line conversion is configured for this port: all the
+	   ;;EOL multi-char sequences start  with #\return, convert them
+	   ;;to #\linefeed.
+	   (($char-is-carriage-return? ch)
+	    (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
+	      (cond
+	       ;;A standalone #\return followed by EOF: reset the buffer
+	       ;;to empty and return #\linefeed.
+	       ;;
+	       ;;See the case  of EOF above for the reason  we reset the
+	       ;;buffer to empty.
+	       ((eof-object? ch2)
+		(with-port (port)
+		  (port.buffer.reset-to-empty!))
+		LINEFEED-CHAR)
+	       ;;A   #\return  followed   by  would-block:   return  the
+	       ;;would-block object  *without* consuming  any character;
+	       ;;maybe later another character will be available.
+	       ((would-block-object? ch2)
+		(if (strict-r6rs)
+		    (retry-after-would-block)
+		  ch2))
+	       ;;A #\return followed by the  closing character in an EOL
+	       ;;sequence: consume  both the characters in  the sequence
+	       ;;and return #\linefeed.
+	       (($char-is-newline-after-carriage-return? ch2)
+		(?read-char-proc port who)
+		(?read-char-proc port who)
+		LINEFEED-CHAR)
+	       ;;A  #\return followed  by a  character *not*  in an  EOL
+	       ;;sequence:  consume  the   first  character  and  return
+	       ;;#\linefeed, leave CH2 in the port for later reading.
+	       (else
+		(?read-char-proc port who)
+		LINEFEED-CHAR))))
+	   ;;A  character not  part  of EOL  sequences:  consume it  and
+	   ;;return it.
+	   (else
+	    (?read-char-proc port who))))))
 
     ;;
 
@@ -5825,11 +5854,13 @@
 	   ;;characters  were  previously  read return  the  would-block
 	   ;;object, else return the number of characters read.
 	   ((would-block-object? ch)
-	    (if ($fx= dst.index dst.start)
-		;;Return the would-block object.
-		ch
-	      ;;Return the number of chars read.
-	      ($fx- dst.index dst.start)))
+	    (if (strict-r6rs)
+		(read-next-char)
+	      (if ($fx= dst.index dst.start)
+		  ;;Return the would-block object.
+		  ch
+		;;Return the number of chars read.
+		($fx- dst.index dst.start))))
 	   ;;If no  end-of-line conversion is configured  for this port:
 	   ;;consume the character, store it and loop.
 	   ((%unsafe.port-eol-style-is-none? port)
@@ -5860,11 +5891,13 @@
 	       ;;*without* consuming  the return character;  maybe later
 	       ;;another character will be available.
 	       ((would-block-object? ch2)
-		(if ($fx= dst.index dst.start)
-		    ;;Return the would-block object.
-		    ch
-		  ;;Return the number of chars read.
-		  ($fx- dst.index dst.start)))
+		(if (strict-r6rs)
+		    (read-next-char)
+		  (if ($fx= dst.index dst.start)
+		      ;;Return the would-block object.
+		      ch
+		    ;;Return the number of chars read.
+		    ($fx- dst.index dst.start))))
 	       ;;A #\return followed by the  closing character in an EOL
 	       ;;sequence: consume both the  characters in the sequence,
 	       ;;store #\linefeed then loop or return.
