@@ -5870,7 +5870,9 @@ the case in which a @posix{} function fails with @code{errno} set to
 @code{EAGAIN} or @code{EWOULDBLOCK}.
 
 The functions extended by @value{PRJNAME} behave as described in this
-section.
+section.  The extended behaviour is disabled when running with the
+command line @option{--strict-r6rs}: in this case the port will block as
+mandated by @rnrs{6}.
 
 @menu
 * iklib io non-blocking object::  The would--block object.
