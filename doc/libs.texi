@@ -16,7 +16,6 @@
 * wtables::                     Weak hashtables.
 * flonum format::               Formatting flonums.
 * flonum parse::                Parsing flonums.
-* sel::                         Simple event loop.
 * debugging::                   Debugging facilities.
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
@@ -251,6 +250,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined cflonums::       Validating cflonums.
 * args predefined complexes::      Validating complexes.
 * args predefined ports::          Validating input/output ports.
+* args predefined transcoders::    Validating port transcoders.
 * args predefined procedures::     Validating procedures.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -1166,6 +1166,29 @@ Succeed if @var{obj} is an textual or binary port.
 @deffn {Validation Clause} textual-port/false @var{obj}
 @deffnx {Validation Clause} binary-port/false @var{obj}
 Succeed if @var{obj} is @false{} or an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} open-port @var{obj}
+Succeed if @var{obj} is an open port.
+@end deffn
+
+@c page
+@node args predefined transcoders
+@subsubsection Validating port transcoders
+
+
+The following bindings are extranscodered by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} transcoder @var{obj}
+Succeed if @var{obj} is a transcoder.
+@end deffn
+
+
+@deffn {Validation Clause} transcoder/false @var{obj}
+Succeed if @var{obj} is @false{} or a transcoder.
 @end deffn
 
 @c page
@@ -3503,151 +3526,6 @@ Notice how the arguments handed to @var{real-func} match the argument of
 @end defun
 
 @c page
-@node sel
-@section Simple event loop (@sel{})
-
-
-@cindex Library @library{vicare simple-event-loop}
-@cindex @library{vicare simple-event-loop}, library
-
-
-The library @library{vicare simple-event-loop} implements an event loop
-capable of serving: file descriptors, interprocess signals, batch task
-execution.  The library is available if @value{PRJNAME} is configured
-with the @posix{} @api{} enabled.  The @sel{} makes use of the @bub{}
-@api{} for interprocess signals.
-
-When importing this library it is suggested to prefix the bindings as
-follows:
-
-@example
-(import (vicare)
-  (prefix (vicare posix) px.)
-  (prefix (vicare simple-event-loop) sel.))
-@end example
-
-@noindent
-in practice the @sel{} can be used only along with @library{vicare
-posix}.
-
-Exceptions raised by registered event handlers are catched with
-@func{guard} and silently discarded; it is our responsibility to handle
-errors appropriately in the handlers.
-
-
-@deffn Parameter logging
-When set to @true{} causes debugging messages to be displayed on the
-current error port.  When set to a procedure: such procedure is called
-with a single argument whenever a log message must be reported; such
-single argument is a string representing a log line (@strong{without}
-terminating newline).  When set to @false{} nothing happens.
-@end deffn
-
-
-@defun initialise
-@defunx finalise
-Initialise or finalise the infrastructure of @sel{}.  Prior to entering
-the loop we must call @func{initialise}.
-
-@func{initialise} calls @func{signal-bub-init} and @func{finalise} calls
-@func{signal-bub-final} from @library{vicare posix}.
-@end defun
-
-
-@defun do-one-event
-Serve all the events associated to pending received interprocess
-signals, then serve a single event from file descriptors or fragmented
-tasks.  Return @true{} if one event from file descriptors or fragmented
-tasks was served, return @false{} otherwise.
-@end defun
-
-
-@defun enter
-@defunx leave-asap
-Enter or leave the event loop.  @func{enter} starts servicing events
-from the registered event sources, indefinitely until @func{leave-asap}
-is called.
-@end defun
-
-
-@defun busy?
-Return a boolean, @true{} if at least one event source is registered.
-In this context: interprocess signals do @strong{not} count as event
-source.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Interprocess signals
-
-
-@defun receive-signal @var{signum} @var{handler}
-Register the thunk @var{handler} to be called whenever the signal
-@var{signum} is received.  Any number of handlers can be associated to a
-single signal.  Every handler is called @strong{once} and removed from
-the loop.
-@end defun
-
-
-@defun serve-interprocess-signals
-Serve all the pending events for received interprocess signals.  Return
-unspecified values.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading File descriptor events
-
-
-@sel{} can interface with both raw file descriptors and Scheme ports
-wrapping a file descriptor; other Scheme port types are not supported.
-
-
-@defun readable @var{port/fd} @var{handler}
-@defunx writable @var{port/fd} @var{handler}
-@defunx exception @var{port/fd} @var{handler}
-Register the thunk @var{handler} to be called whenever the port or file
-descriptor @var{port/fd} becomes readable, writable or receives an
-exceptional notification.  Every handler is called @strong{once} and
-removed from the loop.
-@end defun
-
-
-@defun forget-fd @var{port/fd}
-Remove all the registered handlers associated to the port or file
-descriptor @var{port/fd}.
-@end defun
-
-
-@defun do-one-fd-event
-Serve one file descriptor event, if any.  Return a boolean, @true{} if
-an event was served.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Fragmented tasks
-
-
-A @dfn{fragmented task} is a thunk performing a portion of a job.  If
-the thunk returns @false{}: the job is finished.  If the thunk returns a
-procedure: a portion of job was finished and the returned procedure is a
-thunk to call to execute the next portion.
-
-
-@defun task-fragment @var{thunk}
-Register the @var{thunk} as fragment of a task.  When @var{thunk} is
-evaluated: if its return value is a procedure, that procedure is
-automatically registered as task fragment.
-@end defun
-
-
-@defun do-one-task-event
-Evaluate one task event, if any.  Return a boolean, @true{} if a task
-was run.
-@end defun
-
-@c page
 @node debugging
 @section Debugging facilities
 
@@ -3844,6 +3722,10 @@ transfer data through Scheme binary ports, typically between processes.
 The following bindings are exported by the library @library{vicare net
 channels}.
 
+@c ------------------------------------------------------------
+
+@subsubheading Base channel type
+
 
 @deftp {@rnrs{6} Record Type} channel
 Record type representing an interprocess connection channel.  Whenever
@@ -3866,6 +3748,54 @@ Validation clause to be used with the facilities of the library
 @false{}.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Binary channel type
+
+
+@deftp {@rnrs{6} Record Type} binary-channel
+Record type representing an interprocess connection binary channel.
+@end deftp
+
+
+@defun binary-channel? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{binary-channel},
+else return @false{}.
+@end defun
+
+
+@deffn {Validation Clause} binary-channel @var{obj}
+@deffnx {Validation Clause} false-or-binary-channel @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  The first form succeeds if
+@var{obj} is an instance of @code{binary-channel}; the second also
+accepts @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Textual channel type
+
+
+@deftp {@rnrs{6} Record Type} textual-channel
+Record type representing an interprocess connection textual channel.
+@end deftp
+
+
+@defun textual-channel? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{textual-channel},
+else return @false{}.
+@end defun
+
+
+@deffn {Validation Clause} textual-channel @var{obj}
+@deffnx {Validation Clause} false-or-textual-channel @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  The first form succeeds if
+@var{obj} is an instance of @code{textual-channel}; the second also
+accepts @false{}.
+@end deffn
+
 @c page
 @node net channels init
 @subsection Constructors and destructors
@@ -3875,24 +3805,24 @@ The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@defun open-input-channel @var{in-port}
-Build and return a new instance of @code{channel} to be used to receive
-messages; the returned channel is inactive.  The channel wraps the
-binary input or input/output port @var{in-port}.
+@defun open-binary-input-channel @var{in-port}
+Build and return a new instance of @code{binary-channel} to be used to
+receive messages; the returned channel is inactive.  The channel wraps
+the binary input or input/output port @var{in-port}.
 @end defun
 
 
-@defun open-output-channel @var{ou-port}
-Build and return a new instance of @code{channel} to be used to send
-messages; the returned channel is inactive.  The channel wraps the
+@defun open-binary-output-channel @var{ou-port}
+Build and return a new instance of @code{binary-channel} to be used to
+send messages; the returned channel is inactive.  The channel wraps the
 binary output or input/output port @var{ou-port}.
 @end defun
 
 
-@defun open-input/output-channel @var{port}
-@defunx open-input/output-channel @var{in-port} @var{ou-port}
-Build and return a new instance of @code{channel} to be used to both
-receive and send messages; the returned channel is inactive.
+@defun open-binary-input/output-channel @var{port}
+@defunx open-binary-input/output-channel @var{in-port} @var{ou-port}
+Build and return a new instance of @code{binary-channel} to be used to
+both receive and send messages; the returned channel is inactive.
 
 The channel wraps the binary input or input/output port @var{in-port},
 used to receive messages, and the binary output or input/output port
@@ -3903,6 +3833,37 @@ When a single argument is given: @var{port} is used for both input and
 output.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun open-textual-input-channel @var{in-port}
+Build and return a new instance of @code{textual-channel} to be used to
+receive messages; the returned channel is inactive.  The channel wraps
+the textual input or input/output port @var{in-port}.
+@end defun
+
+
+@defun open-textual-output-channel @var{ou-port}
+Build and return a new instance of @code{textual-channel} to be used to
+send messages; the returned channel is inactive.  The channel wraps the
+textual output or input/output port @var{ou-port}.
+@end defun
+
+
+@defun open-textual-input/output-channel @var{port}
+@defunx open-textual-input/output-channel @var{in-port} @var{ou-port}
+Build and return a new instance of @code{textual-channel} to be used to
+both receive and send messages; the returned channel is inactive.
+
+The channel wraps the textual input or input/output port @var{in-port},
+used to receive messages, and the textual output or input/output port
+@var{ou-port}, used to send messages.  @var{in-port} and @var{ou-port}
+can be the same port.
+
+When a single argument is given: @var{port} is used for both input and
+output.
+@end defun
+
+@c ------------------------------------------------------------
 
 @defun close-channel @var{chan}
 Finalise a channel closing its connection port; return unspecified
@@ -3953,13 +3914,21 @@ completed.
 
 @defun channel-set-message-terminators! @var{chan} @var{terminators}
 Configure the message terminators; return unspecified values.
-@var{terminators} must be a non--empty list of non--empty bytevectors
-representing possible message terminators.
 
-When not configured: the list of terminators defaults to:
+If @var{chan} is a binary channel: @var{terminators} must be a
+non--empty list of non--empty bytevectors representing possible message
+terminators.  When not configured: the list of terminators defaults to:
 
 @example
 (#ve(ascii "\r\n\r\n") #ve(ascii "\n\n"))
+@end example
+
+If @var{chan} is a textual channel: @var{terminators} must be a
+non--empty list of non--empty strings representing possible message
+terminators.  When not configured: the list of terminators defaults to:
+
+@example
+("\r\n\r\n" "\n\n")
 @end example
 
 The terminators @strong{are not} reset when a message delivery is
@@ -4076,9 +4045,10 @@ error if the channel is not inactive.
 
 
 @defun channel-recv-end! @var{chan}
-Finish receiving a message and return the accumulated octets in a
-bytevector.  It is an error if the channel is not in the course of
-receiving a message.
+Finish receiving a message and: for binary channels return the
+accumulated octets in a bytevector, for textual channels return the
+accumulated characters in a string.  It is an error if the channel is
+not in the course of receiving a message.
 
 After this function is applied to a channel: the channel itself is
 configured as inactive; so it is available to start receiving another
@@ -4091,28 +4061,47 @@ Like @func{channel-recv-end!}, but return @math{2} values:
 
 @enumerate
 @item
-Null or a list of non--empty bytevectors representing the accumulated
-message data in bytevector--reverse order.
+For binary channels: null or a list of non--empty bytevectors
+representing the accumulated message data in bytevector--reverse order.
+For textual channels: null or a list of non--empty strings representing
+the accumulated message data in bytevector--reverse order.
 
 @item
-An exact integer representing the total number of octets in the
-bytevectors.
+An exact integer representing the total number of octets or characters
+in the bytevectors or strings.
 @end enumerate
 @end defun
 
 
 @defun channel-recv-message-portion! @var{chan}
 Receive a portion of input message from the given channel and accumulate
-it in the internal state; return @true{} if a configured message
-terminator was read in the tail of the data, else return @false{}.  It
-is an error if the channel is not in the course of receiving a message.
+it in the internal state; return:
+
+@itemize
+@item
+@true{} if a configured message terminator was read in the tail of the
+data.
+
+@item
+The EOF object if the EOF condition was found on the input port before
+reading a terminator.
+
+@item
+@false{} if neither the terminator nor the EOF were found.  In this case
+we should attempt to receive another message portion later.
+@end itemize
+
+It is an error if the channel is not in the course of receiving a
+message.
 
 After the message terminator has been read: further calls to this
 function always return @true{} without taking any action.
 
-This function performs multiple read operations from the registered
-connection port, until the end--of--file is read or until a configured
-message terminator is found in the tail of read data.
+This function a single read operation from the registered connection
+port; for binary channel it uses @func{get-bytevector-some}, for textual
+channels it uses @func{get-string-some}.  When non--blocking mode is
+desired: this function must be called only when it is known that at
+least one octet or character is available from the input port.
 
 If at the time of this function call the timeout configured for this
 message is expired: a non--continuable exception is raised with compound
@@ -4144,8 +4133,8 @@ error if the channel is not inactive.
 
 @defun channel-send-end! @var{chan}
 Finish sending a message by flushing the connect port and return the
-total number of octets sent.  It is an error if the channel is not in
-the course of sending a message.
+total number of octets or characters sent.  It is an error if the
+channel is not in the course of sending a message.
 
 After this function is applied to a channel: the channel itself is
 configured as inactive; so it is available to start receiving another
@@ -4158,7 +4147,9 @@ Send a portion of output message through the given channel; return
 unspecified values.  It is an error if the channel is not in the course
 of sending a message.
 
-@var{portion} must be a bytevector representing the message portion.
+For binary channels: @var{portion} must be a bytevector representing the
+message portion.  For textual channels: @var{portion} must be a string
+representing the message portion.
 
 This function does not flush the connection port.
 

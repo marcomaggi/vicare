@@ -2,7 +2,7 @@
 
 @ignore
 
-Copyright (c) 2008-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2008-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
 Permission is  granted to copy,  distribute and/or modify  this document
 under the  terms of the GNU  Free Documentation License,  Version 1.3 or
@@ -387,6 +387,10 @@ Revised^6 Report on the algorithmic language Scheme
 @ref{\NODE\,\TITLE\,\TITLE\,nausicaa}
 @end macro
 
+@macro manpage{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,*manpages*}
+@end macro
+
 @c page
 @c ------------------------------------------------------------
 @c RNRS document macros.
@@ -484,7 +488,3 @@ Revised^6 Report on the algorithmic language Scheme
 @end macro
 
 @c end of file
-@c Local Variables:
-@c mode: texinfo
-@c TeX-master: t
-@c End:

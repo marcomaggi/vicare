@@ -137,6 +137,12 @@
 
    Tests are missing.
 
+* Documentation
+
+  The documentation node "capi" should  be fully reviewed.  Does it make
+  sense to have  it at all?  Would  it be better to just  document the C
+  functions in the source code?
+
 * Stuff to think about for the future
 
 ** Introduce immutable datums

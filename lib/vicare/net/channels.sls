@@ -30,10 +30,14 @@
   (export
     ;; record type
     channel
+    binary-channel
+    textual-channel
 
     ;; initialisation and finalisation
-    open-input-channel		open-output-channel
-    open-input/output-channel	close-channel
+    open-binary-input-channel		open-textual-input-channel
+    open-binary-output-channel		open-textual-output-channel
+    open-binary-input/output-channel	open-textual-input/output-channel
+    close-channel
 
     ;; configuration
     channel-set-maximum-message-size!
@@ -44,6 +48,15 @@
     channel?
     channel.vicare-arguments-validation
     false-or-channel.vicare-arguments-validation
+
+    binary-channel?
+    binary-channel.vicare-arguments-validation
+    false-or-binary-channel.vicare-arguments-validation
+
+    textual-channel?
+    textual-channel.vicare-arguments-validation
+    false-or-textual-channel.vicare-arguments-validation
+
     receiving-channel?		receiving-channel.vicare-arguments-validation
     sending-channel?		sending-channel.vicare-arguments-validation
     inactive-channel?		inactive-channel.vicare-arguments-validation
@@ -116,32 +129,59 @@
 	  )
   (protocol
    (lambda (maker)
-     (lambda (in-port ou-port)
+     (lambda (in-port ou-port default-terminators)
        (define who 'channel-constructor)
        (define-argument-validation (one-port who in-port ou-port)
 	 (or in-port ou-port)
 	 (assertion-violation who "both port arguments are false" in-port ou-port))
        (with-arguments-validation (who)
-	   ((binary-port/false	in-port)
-	    (binary-port/false	ou-port)
-	    (input-port/false	in-port)
+	   ((input-port/false	in-port)
 	    (output-port/false	ou-port)
 	    (one-port		in-port ou-port))
 	 (maker in-port ou-port
 		#f #;action #f #;expiration-time
 		'() #;message-buffer 0 #;message-size 4096 #;maximum-message-size
-		DEFAULT-TERMINATORS #;message-terminatosr #f #;message-terminated?
+		default-terminators #;message-terminators #f #;message-terminated?
 		))))))
 
-(define-constant DEFAULT-TERMINATORS
-  '(#ve(ascii "\r\n\r\n") #ve(ascii "\n\n")))
+(define-record-type-extended binary-channel
+  (nongenerative vicare:net:channels:binary-channel)
+  (parent channel)
+  (protocol
+   (lambda (make-channel)
+     (lambda (in-port ou-port)
+       (define who 'binary-channel-constructor)
+       (with-arguments-validation (who)
+	   ((binary-port/false	in-port)
+	    (binary-port/false	ou-port))
+	 ((make-channel in-port ou-port DEFAULT-BINARY-TERMINATORS)))))))
+
+(define-record-type-extended textual-channel
+  (nongenerative vicare:net:channels:textual-channel)
+  (parent channel)
+  (protocol
+   (lambda (make-channel)
+     (lambda (in-port ou-port)
+       (define who 'textual-channel-constructor)
+       (with-arguments-validation (who)
+	   ((textual-port/false	in-port)
+	    (textual-port/false	ou-port))
+	 ((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS)))))))
+
+(define-constant DEFAULT-BINARY-TERMINATORS
+  '(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
+
+(define-constant DEFAULT-TEXTUAL-TERMINATORS
+  '("\r\n\r\n" "\r\n"))
 
 
 ;;;; unsafe operations
 
-(define ($channel-message-buffer-push! chan bv)
-  ($channel-message-buffer-set! chan (cons bv ($channel-message-buffer chan)))
-  ($channel-message-increment-size! chan ($bytevector-length bv)))
+(define ($channel-message-buffer-push! chan data)
+  ($channel-message-buffer-set! chan (cons data ($channel-message-buffer chan)))
+  ($channel-message-increment-size! chan (if (binary-channel? chan)
+					     ($bytevector-length data)
+					   ($string-length data))))
 
 (define ($channel-message-increment-size! chan delta-size)
   ($channel-message-size-set! chan (+ delta-size ($channel-message-size chan))))
@@ -159,32 +199,63 @@
 
 ;;;; initialisation and finalisation
 
-(define (open-input-channel port)
-  (define who 'open-input-channel)
+(define (open-binary-input-channel port)
+  (define who 'open-binary-input-channel)
   (with-arguments-validation (who)
       ((binary-port	port)
        (input-port	port))
-    (make-channel port #f)))
+    (make-binary-channel port #f)))
 
-(define (open-output-channel port)
-  (define who 'open-output-channel)
+(define (open-binary-output-channel port)
+  (define who 'open-binary-output-channel)
   (with-arguments-validation (who)
       ((binary-port	port)
        (output-port	port))
-    (make-channel #f port)))
+    (make-binary-channel #f port)))
 
-(define open-input/output-channel
+(define open-binary-input/output-channel
   (case-lambda
    ((port)
-    (open-input/output-channel port port))
+    (open-binary-input/output-channel port port))
    ((in-port ou-port)
-    (define who 'open-input/output-channel)
+    (define who 'open-binary-input/output-channel)
     (with-arguments-validation (who)
 	((binary-port	in-port)
 	 (binary-port	ou-port)
 	 (input-port	in-port)
 	 (output-port	ou-port))
-      (make-channel in-port ou-port)))))
+      (make-binary-channel in-port ou-port)))))
+
+;;; --------------------------------------------------------------------
+
+(define (open-textual-input-channel port)
+  (define who 'open-textual-input-channel)
+  (with-arguments-validation (who)
+      ((textual-port	port)
+       (input-port	port))
+    (make-textual-channel port #f)))
+
+(define (open-textual-output-channel port)
+  (define who 'open-textual-output-channel)
+  (with-arguments-validation (who)
+      ((textual-port	port)
+       (output-port	port))
+    (make-textual-channel #f port)))
+
+(define open-textual-input/output-channel
+  (case-lambda
+   ((port)
+    (open-textual-input/output-channel port port))
+   ((in-port ou-port)
+    (define who 'open-textual-input/output-channel)
+    (with-arguments-validation (who)
+	((textual-port	in-port)
+	 (textual-port	ou-port)
+	 (input-port	in-port)
+	 (output-port	ou-port))
+      (make-textual-channel in-port ou-port)))))
+
+;;; --------------------------------------------------------------------
 
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
@@ -227,25 +298,47 @@
     ($channel-expiration-time-set! chan expiration-time)
     (void)))
 
-(define (channel-set-message-terminators! chan terminators)
-  ;;TERMINATORS  must  be  a  non-empty list  of  non-empty  bytevectors
-  ;;representing possible message terminators.
-  ;;
-  (define who 'channel-set-expiration-time!)
-  (define-argument-validation (terminators who obj)
-    (and (not (null? terminators))
-	 (list? terminators)
+(module (channel-set-message-terminators!)
+
+  (define (channel-set-message-terminators! chan terminators)
+    ;;TERMINATORS must be  a non-empty list of  non-empty bytevectors or
+    ;;strings representing possible message terminators.
+    ;;
+    (define who 'channel-set-message-terminators!)
+    (cond ((binary-channel? chan)
+	   (with-arguments-validation (who)
+	       ((binary-terminators	terminators))
+	     ($channel-message-terminators-set! chan terminators)))
+	  ((textual-channel? chan)
+	   (with-arguments-validation (who)
+	       ((textual-terminators	terminators))
+	     ($channel-message-terminators-set! chan terminators)))
+	  (else
+	   (assertion-violation who
+	     "expected textual or binary channel as argument" chan)))
+    (void))
+
+  (define-argument-validation (binary-terminators who obj)
+    (and (not (null? obj))
+	 (list? obj)
 	 (for-all (lambda (item)
 		    (and (bytevector? item)
 			 (not ($fxzero? ($bytevector-length item)))))
-	   terminators))
+	   obj))
     (assertion-violation who
       "expected non-empty list of non-empty bytevectors as argument" obj))
-  (with-arguments-validation (who)
-      ((channel		chan)
-       (terminators	terminators))
-    ($channel-expiration-time-set! chan terminators)
-    (void)))
+
+  (define-argument-validation (textual-terminators who obj)
+    (and (not (null? obj))
+	 (list? obj)
+	 (for-all (lambda (item)
+		    (and (string? item)
+			 (not ($fxzero? ($string-length item)))))
+	   obj))
+    (assertion-violation who
+      "expected non-empty list of non-empty strings as argument" obj))
+
+  #| end of module |# )
 
 
 ;;;; predicates and arguments validation: receiving messages
@@ -274,7 +367,7 @@
   (and (channel? obj)
        ($receiving-channel? obj))
   (assertion-violation who
-    "expected channel in the course of receving a message" obj))
+    "expected channel in the course of receving a message as argument" obj))
 
 (define-argument-validation (not-receiving-channel who chan)
   ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
@@ -283,7 +376,7 @@
   (and (channel? chan)
        (not ($receiving-channel? chan)))
   (assertion-violation who
-    "expected channel not in the course of receving a message" chan))
+    "expected channel not in the course of receving a message as argument" chan))
 
 
 ;;;; predicates and arguments validation: sending messages
@@ -312,7 +405,7 @@
   (and (channel? obj)
        ($sending-channel? obj))
   (assertion-violation who
-    "expected channel in the course of sending a message" obj))
+    "expected channel in the course of sending a message as argument" obj))
 
 (define-argument-validation (not-sending-channel who chan)
   ;;Succeed if  CHAN is an  instance of CHANNEL and  it is *not*  in the
@@ -321,7 +414,7 @@
   (and (channel? chan)
        (not ($sending-channel? chan)))
   (assertion-violation who
-    "expected channel not in the course of sending a message" chan))
+    "expected channel not in the course of sending a message as argument" chan))
 
 
 ;;;; predicates and arguments validation: inactive channel
@@ -350,8 +443,7 @@
   ;;
   (and (channel? obj)
        ($inactive-channel? obj))
-  (assertion-violation who
-    "expected channel in the course of inactive a message" obj))
+  (assertion-violation who "expected inactive channel as argument" obj))
 
 (define-argument-validation (not-inactive-channel who chan)
   ;;Succeed if CHAN  is an instance of CHANNEL and  it is either sending
@@ -359,8 +451,7 @@
   ;;
   (and (channel? chan)
        (not ($inactive-channel? chan)))
-  (assertion-violation who
-    "expected channel not in the course of inactive a message" chan))
+  (assertion-violation who "expected inactive channel as argument" chan))
 
 
 ;;;; predicates and arguments validation: input channel
@@ -513,8 +604,8 @@
 
 (define (channel-recv-end! chan)
   ;;Finish receiving  a message and  return the accumulated octets  in a
-  ;;bytevector.  It is an  error if the channel is not  in the course of
-  ;;receiving a message.
+  ;;bytevector or chars in  a string.  It is an error  if the channel is
+  ;;not in the course of receiving a message.
   ;;
   ;;After this function  is applied to a channel: the  channel itself is
   ;;configured  as  inactive; so  it  is  available to  start  receiving
@@ -522,13 +613,16 @@
   ;;
   (let-values (((reverse-buffers total-size)
 		(channel-recv-end!/rbl chan)))
-    ($bytevector-reverse-and-concatenate reverse-buffers total-size)))
+    (if (binary-channel? chan)
+	($bytevector-reverse-and-concatenate reverse-buffers total-size)
+      ($string-reverse-and-concatenate reverse-buffers total-size))))
 
 (define (channel-recv-end!/rbl chan)
   ;;Finish  receiving a  message  and return  the 2  values:  a list  of
-  ;;bytevectors  representing the  data buffers  accumulated in  reverse
-  ;;order, an exact integer representing the  total data size.  It is an
-  ;;error if the channel is not in the course of receiving a message.
+  ;;bytevectors or strings representing  the data buffers accumulated in
+  ;;reverse order,  an exact integer  representing the total  data size.
+  ;;It is an  error if the channel  is not in the course  of receiving a
+  ;;message.
   ;;
   ;;After this function  is applied to a channel: the  channel itself is
   ;;configured  as  inactive; so  it  is  available to  start  receiving
@@ -545,15 +639,31 @@
       ($channel-message-size-set!    chan 0)
       ($channel-message-terminated?-set! chan #f))))
 
-(module (channel-recv-message-portion!)
+(define (channel-recv-message-portion! chan)
+  (define who 'channel-recv-message-portion!)
+  (cond ((binary-channel? chan)
+	 (%channel-recv-binary-message-portion! chan))
+	((textual-channel? chan)
+	 (%channel-recv-textual-message-portion! chan))
+	(else
+	 (assertion-violation who "expected net channel as argument" chan))))
+
+
+;;;; receiving messages: binary message portion
+
+(module (%channel-recv-binary-message-portion!)
 
   (define who 'channel-recv-message-portion!)
 
-  (define (channel-recv-message-portion! chan)
+  (define (%channel-recv-binary-message-portion! chan)
     ;;Receive a portion of input  message from the given channel; return
     ;;true if  the configured message  terminator was read,  else return
     ;;false.  It  is an  error if the  channel is not  in the  course of
     ;;receiving a message.
+    ;;
+    ;;When non-blocking  mode is desired:  this function must  be called
+    ;;only when  it is known that  at least one octet  is available from
+    ;;the input port.
     ;;
     ;;If  the  message delivery  timeout  is  expired or  expires  while
     ;;receiving  data:  raise an  exception.   If  the accumulated  data
@@ -570,36 +680,41 @@
 	    (($channel-message-terminated? chan)
 	     #t)
 	    (else
-	     (%recv-loop chan)))))
+	     (%recv-bytevector chan)))))
 
-  (define (%recv-loop chan)
-    ;;Loop receiving  bytevectors from the  input port, until EOF  or an
-    ;;empty read; we must not accumulate empty bytevectors.
+  (define (%recv-bytevector chan)
+    ;;Receive a  bytevector from the input  port.
     ;;
     ;;Return true if the end of message  is read, which case CHAN is set
     ;;to "message terminated" status; return false if no more input data
     ;;is available for now.  Raise  an exception if: the maximum message
     ;;size is exceeded, the message delivery timeout expires.
     ;;
-    (let ((bv (%read-bytevector chan)))
-      (if (or (eof-object? bv)
-	      ($fxzero? ($bytevector-length bv)))
-	  (begin
-	    #f)
-	(begin
-	  ($channel-message-buffer-push! chan bv)
-	  (cond (($maximum-size-exceeded? chan)
-		 (%error-maximum-message-size-exceeded who chan))
-		(($delivery-timeout-expired? chan)
-		 (%error-message-delivery-timeout-expired who chan))
-		((%received-message-terminator? chan)
-		 ($channel-message-terminated?-set! chan #t)
-		 #t)
+    (define bv
+      (guard (E ((i/o-eagain-error? E)
+		 ;;If reading causes an  EWOULDBLOCK or EAGAIN error, we
+		 ;;interpret it  as: there  are no available  bytes now,
+		 ;;but there may be later.
+		 '#vu8())
 		(else
-		 (%recv-loop chan)))))))
-
-  (define (%read-bytevector chan)
-    (get-bytevector-n ($channel-connect-in-port chan) 4096))
+		 (raise E)))
+	(get-bytevector-some ($channel-connect-in-port chan))))
+    (cond ((eof-object? bv)
+	   ;;The EOF was found before reading a message terminator.
+	   bv)
+	  (($fxzero? ($bytevector-length bv))
+	   ;;No bytes availabe, but there may be in the future.
+	   #f)
+	  (else
+	   ($channel-message-buffer-push! chan bv)
+	   (cond (($maximum-size-exceeded? chan)
+		  (%error-maximum-message-size-exceeded who chan))
+		 (($delivery-timeout-expired? chan)
+		  (%error-message-delivery-timeout-expired who chan))
+		 ((%received-message-terminator? chan)
+		  ($channel-message-terminated?-set! chan #t)
+		  #t)
+		 (else #f)))))
 
   (module (%received-message-terminator?)
 
@@ -696,6 +811,167 @@
   #| end of module: channel-recv-message-portion! |# )
 
 
+;;;; receiving messages: textual message portion
+
+(module (%channel-recv-textual-message-portion!)
+
+  (define who 'channel-recv-message-portion!)
+
+  (define (%channel-recv-textual-message-portion! chan)
+    ;;Receive a portion of input  message from the given channel; return
+    ;;true if  the configured message  terminator was read,  else return
+    ;;false.  It  is an  error if the  channel is not  in the  course of
+    ;;receiving a message.
+    ;;
+    ;;When non-blocking  mode is desired:  this function must  be called
+    ;;only when  it is known  that at  least one character  is available
+    ;;from the input port.
+    ;;
+    ;;If  the  message delivery  timeout  is  expired or  expires  while
+    ;;receiving  data:  raise an  exception.   If  the accumulated  data
+    ;;exceeds the maximum message size: raise an exception.
+    ;;
+    ;;If  CHAN is  already set  to the  "message terminated"  status: do
+    ;;nothing and return true.  If a message terminator is received: set
+    ;;CHAN to "message terminated" status.
+    ;;
+    (with-arguments-validation (who)
+	((receiving-channel	chan))
+      (cond (($delivery-timeout-expired? chan)
+	     (%error-message-delivery-timeout-expired who chan))
+	    (($channel-message-terminated? chan)
+	     #t)
+	    (else
+	     (%recv-string chan)))))
+
+  (define (%recv-string chan)
+    ;;Receive a string from the input port.
+    ;;
+    ;;Return true if the end of message  is read, which case CHAN is set
+    ;;to "message terminated" status; return false if no more input data
+    ;;is available for now.  Raise  an exception if: the maximum message
+    ;;size is exceeded, the message delivery timeout expires.
+    ;;
+    (define str
+      (guard (E ((i/o-eagain-error? E)
+		 ;;If reading causes an  EWOULDBLOCK or EAGAIN error, we
+		 ;;interpret it  as: there  are no available  bytes now,
+		 ;;but there may be later.
+		 "")
+		(else
+		 (raise E)))
+	(get-string-some ($channel-connect-in-port chan))))
+    (cond ((eof-object? str)
+	   ;;The EOF was found before reading a message terminator.
+	   str)
+	  (($fxzero? ($string-length str))
+	   ;;No chars availabe, but there may be in the future.
+	   #f)
+	  (else
+	   ($channel-message-buffer-push! chan str)
+	   (cond (($maximum-size-exceeded? chan)
+		  (%error-maximum-message-size-exceeded who chan))
+		 (($delivery-timeout-expired? chan)
+		  (%error-message-delivery-timeout-expired who chan))
+		 ((%received-message-terminator? chan)
+		  ($channel-message-terminated?-set! chan #t)
+		  #t)
+		 (else #f)))))
+
+  (module (%received-message-terminator?)
+
+    (define (%received-message-terminator? chan)
+      ;;Compare all the message terminators with the strings accumulated
+      ;;in the buffer of CHAN.  If the  tail of the buffer equals one of
+      ;;the terminators: return true, else return false.
+      ;;
+      (let ((terminators ($channel-message-terminators chan))
+	    (buffers     ($channel-message-buffer chan)))
+	(find (lambda (terminator)
+		($terminated-chars-stream? buffers terminator))
+	  terminators)))
+
+    (define ($terminated-chars-stream? reverse-stream terminator)
+      ;;Compare a terminator  with the tail of an chars  stream; if the
+      ;;stream  is terminated  return #t,  else return  #f.  This  is an
+      ;;unsafe  function: it  assumes  the arguments  have been  already
+      ;;validated.
+      ;;
+      ;;TERMINATOR must  be a  non-empty string representing  the stream
+      ;;terminator; the  last char in TERMINATOR  is the last char  in a
+      ;;properly terminated stream.
+      ;;
+      ;;REVERSE-SEQUENCE must  be null  or a  list of  non-empty strings
+      ;;representing the stream of chars in string-reversed order; as if
+      ;;the stream  of chars has  been accumulated (= CONSed)  string by
+      ;;string:
+      ;;
+      ;;* The first  item of REVERSE-SEQUENCE is the last  string in the
+      ;;   stream,  the  last  item of  REVERSE-SEQUENCE  is  the  first
+      ;;  string in the stream.
+      ;;
+      ;;* Every string in REVERSE-SEQUENCE represents a chunk of stream:
+      ;;  the first char  in the string is the first  char in the chunk,
+      ;;  the last char in the string is the last char in the chunk.
+      ;;
+      (define ($string-last-index str)
+	($fxsub1 ($string-length str)))
+      (let loop ((terminator.idx  ($string-last-index terminator))
+		 (buffers         reverse-stream))
+	(cond (($fx= -1 terminator.idx)
+	       #t)
+	      ((null? buffers)
+	       #f)
+	      ((let* ((buf     ($car buffers))
+		      (buf.idx ($string-last-index buf)))
+		 ($compare-string-tails terminator terminator.idx buf buf.idx))
+	       => (lambda (terminator.idx)
+		    (loop ($fxsub1 terminator.idx) ($cdr buffers))))
+	      (else #f))))
+
+    (define ($compare-string-tails A A.idx B B.idx)
+      ;;Recursive function.   Compare the string A,  starting from index
+      ;;A.idx  inclusive, to  the string  B, starting  from index  B.idx
+      ;;inclusive.  If:
+      ;;
+      ;;* All the chars are equal  up to (zero? A.idx) included: return
+      ;;  0.  An example of this case is a call with arguments:
+      ;;
+      ;;     A =    "345"	A.idx = 2
+      ;;     B = "012345"	B.idx = 5
+      ;;
+      ;;  another example of this case:
+      ;;
+      ;;     A = "012345"	A.idx = 5
+      ;;     B = "012345"	B.idx = 5
+      ;;
+      ;;* All the chars are equal  up to (zero?  B.idx) included: return
+      ;;  the  value of A.idx referencing  the last compared char  in A.
+      ;;  An example of this case is a call with arguments:
+      ;;
+      ;;     A = "012345"	A.idx = 5
+      ;;     B =    "345"	B.idx = 2
+      ;;
+      ;;  the returned value is: A.idx == 3.
+      ;;
+      ;;*  Chars having  (positive?  A.idx)  and (positive?   B.idx) are
+      ;;  different: return false.
+      ;;
+      (and ($fx= ($string-ref A A.idx)
+		 ($string-ref B B.idx))
+	   (cond (($fxzero? A.idx)
+		  0)
+		 (($fxzero? B.idx)
+		  A.idx)
+		 (else
+		  ($compare-string-tails A ($fxsub1 A.idx)
+					 B ($fxsub1 B.idx))))))
+
+    #| end of module: %received-message-terminator? |# )
+
+  #| end of module: channel-recv-message-portion! |# )
+
+
 ;;;; sending messages
 
 (define (channel-send-begin! chan)
@@ -714,8 +990,8 @@
 
 (define (channel-send-end! chan)
   ;;Finish sending a message by flushing the connect port and return the
-  ;;total number of octets  sent.  It is an error if  the channel is not
-  ;;in the course of sending a message.
+  ;;total number of octets or chars sent.  It is an error if the channel
+  ;;is not in the course of sending a message.
   ;;
   ;;After this function  is applied to a channel: the  channel itself is
   ;;configured  as  inactive; so  it  is  available to  start  receiving
@@ -741,16 +1017,26 @@
   ;;This function does not flush the connection port.
   ;;
   (define who 'channel-send-message-portion!)
+  (define-argument-validation (portion who obj chan)
+    (if (binary-channel? chan)
+	(bytevector? obj)
+      (string? obj))
+    (assertion-violation who
+      "expected appropriate message portion as argument" obj))
   (with-arguments-validation (who)
       ((sending-channel	chan)
-       (bytevector	portion))
-    ($channel-message-increment-size! chan ($bytevector-length portion))
+       (portion		portion chan))
+    ($channel-message-increment-size! chan (if (binary-channel? chan)
+					       ($bytevector-length portion)
+					     ($string-length portion)))
     (cond (($delivery-timeout-expired? chan)
 	   (%error-message-delivery-timeout-expired who chan))
 	  (($maximum-size-exceeded? chan)
 	   (%error-maximum-message-size-exceeded who chan))
 	  (else
-	   (put-bytevector ($channel-connect-ou-port chan) portion)))))
+	   (if (binary-channel? chan)
+	       (put-bytevector ($channel-connect-ou-port chan) portion)
+	     (put-string ($channel-connect-ou-port chan) portion))))))
 
 
 (define ($bytevector-reverse-and-concatenate list-of-bytevectors full-length)
@@ -771,6 +1057,25 @@
 	     (dst.start ($fx- dst.start src.len)))
 	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
 	(loop dst.bv dst.start (cdr bvs))))))
+
+(define ($string-reverse-and-concatenate list-of-strings full-length)
+  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
+  ;;result.  The resulting string  must have length FULL-LENGTH.  Assume
+  ;;the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.str	($make-string full-length))
+	     (dst.start	full-length)
+	     (strs	list-of-strings))
+    (if (null? strs)
+	dst.str
+      (let* ((src.str    ($car strs))
+	     (src.len   ($string-length src.str))
+	     (dst.start ($fx- dst.start src.len)))
+	($string-copy!/count src.str 0 dst.str dst.start src.len)
+	(loop dst.str dst.start (cdr strs))))))
 
 
 ;;;; done

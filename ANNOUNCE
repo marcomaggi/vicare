@@ -97,6 +97,7 @@ Notes for revision 0.3d0
      (vicare flonum-formatter)
      (vicare flonum-parser)
      (vicare weak-hashtables)
+     (vicare simple-event-looop)
 
   have been renamed to:
 
@@ -112,6 +113,7 @@ Notes for revision 0.3d0
      (vicare numerics flonum-formatter)
      (vicare numerics flonum-parser)
      (vicare containers weak-hashtables)
+     (vicare posix simple-event-looop)
 
 * BACKWARDS  INCOMPATIBILITY  The  library  (vicare  include)  has  been
   removed.
@@ -181,7 +183,8 @@ Notes for revision 0.3d0
 
 * Added syntaxes to (vicare):
 
-    receive				begin0
+    receive				receive-and-return
+    begin0
     define-values			define-constant-values
     define-constant			define-inline
     define-integrable			define-syntax-rule
@@ -253,6 +256,21 @@ Notes for revision 0.3d0
 
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
+
+* Added  library (vicare  posix pid-files),  see the  documentation node
+  "posix pid-files".
+
+* Added  library (vicare  posix lock-pid-files),  see the  documentation
+  node "posix lock-pid-files".
+
+* Added  library (vicare  posix log-files),  see the  documentation node
+  "posix log-files".
+
+* Added  library (vicare  posix daemonisations),  see the  documentation
+  node "posix daemonisations".
+
+* Added library (vicare posix tcp-server-sockets), see the documentation
+  node "posix tcp-server-sockets".
 
 
 Notes for revision 0.2d20

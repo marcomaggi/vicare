@@ -9,7 +9,7 @@
 ;;;	Some tests  are from the  file "scheme/tests/io.ss" file  in the
 ;;;	original Ikarus distribution.
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -46,21 +46,6 @@
 
 
 ;;;; syntax helpers
-
-(define-syntax unwind-protect
-  (syntax-rules ()
-    ((_ ?body ?cleanup0 ?cleanup ...)
-     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
-       (with-exception-handler
-	   (lambda (E)
-	     (cleanup)
-	     (raise E))
-	 (lambda ()
-	   (call-with-values
-	       (lambda () ?body)
-	     (lambda return-values
-	       (cleanup)
-	       (apply values return-values)))))))))
 
 (define-syntax test
   ;;Derived from "scheme/tests/io.ss"

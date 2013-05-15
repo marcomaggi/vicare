@@ -152,6 +152,10 @@
 ;;; select related symbols
     FD_SETSIZE
 
+;;;; for lockf
+    F_LOCK		F_TLOCK
+    F_ULOCK		F_TEST
+
 ;;; poll related symbols
     POLLIN		POLLPRI		POLLOUT
     POLLRDHUP		POLLERR		POLLHUP
@@ -839,6 +843,11 @@
 (define-inline-constant MCL_FUTURE		@VALUEOF_MCL_FUTURE@)
 
 (define-inline-constant FD_SETSIZE		@VALUEOF_FD_SETSIZE@)
+
+(define-inline-constant F_LOCK			@VALUEOF_F_LOCK@)
+(define-inline-constant F_TLOCK			@VALUEOF_F_TLOCK@)
+(define-inline-constant F_ULOCK			@VALUEOF_F_ULOCK@)
+(define-inline-constant F_TEST			@VALUEOF_F_TEST@)
 
 (define-inline-constant POLLIN			@VALUEOF_POLLIN@)
 (define-inline-constant POLLPRI			@VALUEOF_POLLPRI@)

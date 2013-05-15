@@ -18,38 +18,30 @@
 #!r6rs
 (library (ikarus pretty-print)
   (export
-    pretty-print
-    pretty-print*
-    pretty-width)
+    pretty-print		pretty-print*
+    pretty-width
+
+    debug-print-enabled?
+    debug-print			debug-print*)
   (import (except (ikarus)
-		  pretty-print
-		  pretty-print*
-		  pretty-width)
+		  pretty-print		pretty-print*
+		  pretty-width
+
+		  debug-print-enabled?
+		  debug-print			debug-print*)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Mon May 13, 2013)
+    (only (ikarus.io)
+	  would-block-object?)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
 	  print-r6rs-record-instance)
-    (vicare language-extensions syntaxes))
-
-
-;;;; arguments validation
-
-(define-argument-validation (output-port who obj)
-  (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
-
-(define-argument-validation (positive-exact-integer who obj)
-  (and (or (fixnum? obj)
-	   (bignum? obj))
-       (> obj 0))
-  (assertion-violation who "expected positive exact integer as argument" obj))
-
-(define-argument-validation (non-negative-fixnum who obj)
-  (and (fixnum? obj) (fx>=? obj 0))
-  (assertion-violation who "expected non-negative exact integer as argument" obj))
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation))
 
 
 (define (map1ltr f ls)
@@ -361,6 +353,10 @@
      ((unshared-list? x) (boxify-shared x boxify-list))
      ((pair? x)          (boxify-shared x boxify-pair))
      ((bytevector? x)    (boxify-shared x boxify-bytevector))
+     ;;Right now the would block object is a struct instance, so we have
+     ;;to check for  it before checking for structs.   (Marco Maggi; Mon
+     ;;May 13, 2013)
+     ((would-block-object? x) (format "~s" x))
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))
@@ -650,6 +646,22 @@
       ((output-port		port)
        (non-negative-fixnum	start-column))
     (pretty x port start-column ending-newline?)))
+
+(define (debug-print . args)
+  ;;Print arguments for debugging purposes.
+  ;;
+  (pretty-print args (current-error-port))
+  (newline (current-error-port))
+  (newline (current-error-port)))
+
+(define debug-print-enabled?
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
+(define (debug-print* . args)
+  (when (debug-print-enabled?)
+    (apply debug-print args)))
 
 
 ;;;; done

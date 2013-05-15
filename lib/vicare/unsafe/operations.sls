@@ -385,6 +385,8 @@
 
 (define-syntax $fxincr!
   (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
     ((_ ?op 0)
      ?op)
     ((_ ?op 1)

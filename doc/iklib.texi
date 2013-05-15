@@ -145,7 +145,7 @@ acting upon @meta{name}.
 @end deffn
 
 
-@deffn Syntax define-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
+@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.
 
@@ -158,7 +158,7 @@ last one to the given @meta{var} identifiers.
 @end deffn
 
 
-@deffn Syntax define-constant-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
+@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.  Make the @meta{var}
 identifiers immutable.
@@ -173,7 +173,7 @@ identifiers immutable.
 @end deffn
 
 
-@deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} ...
+@deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} @dots{}
 Expect @meta{expression} to evaluate to multiple values and bind such
 values as specified by the @meta{formals}; evaluate the @meta{body} in
 the region of such bindings.  The expansion is:
@@ -181,39 +181,106 @@ the region of such bindings.  The expansion is:
 @example
 (receive @meta{formals}
     @meta{expression}
-  @metao{body} @meta{body} ...)
+  @metao{body} @meta{body} @dots{})
 @expansion{} (call-with-values
         (lambda ()
           @meta{expression})
       (lambda @meta{formals}
-        @metao{body} @meta{body} ...))
+        @metao{body} @meta{body} @dots{}))
 @end example
 @end deffn
 
 
-@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest}) @metao{body} @meta{body} ...
+@deffn Syntax receive-and-return (@meta{retval} @dots{}) @meta{expression} @metao{body} @meta{body} @dots{}
+Expect @meta{expression} to evaluate to multiple values and bind such
+values to the identifiers @meta{retval}; evaluate the @meta{body} forms
+in the region of such bindings; return the values bound to
+@meta{retval}.  The expansion is:
+
+@example
+(receive-and-return (@meta{retval} @dots{})
+    @meta{expression}
+  @metao{body} @meta{body} @dots{})
+@expansion{} (call-with-values
+        (lambda ()
+          @meta{expression})
+      (lambda (@meta{retval} @dots{})
+        @metao{body} @meta{body} @dots{}
+        (values @meta{retval} @dots{})))
+@end example
+@end deffn
+
+
+@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and can @strong{neither} be invoked recursively @strong{nor} used
+as function rgument.  This syntax only defines a syntax.
+
+@example
+(define-inline (incr x)
+  (+ x 1))
+
+(incr 2)        @result{} 3
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+(let ((x 2))
+  (+ x 1))
+@end example
+@end deffn
+
+
+@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and @strong{can} be both invoked recursively and used as function
+argument.  This syntax defines both a syntax and a function.
+
+@example
+(define-integrable (incr x)
+  (+ x 1))
+
+(incr 2)
+@result{} 3
+
+(map incr '(10 20 30)))
+@result{} (11 21 31)
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+((lambda (x)
+   (+ x 1))
+ 2)
+@end example
+@end deffn
+
+
+@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
 Convenience syntax to define a @func{syntax-rules} transformer with a
 single clause.  Expand to:
 
 @example
-(define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest})
-  @metao{body} @meta{body} ...)
+(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
+  @metao{body} @meta{body} @dots{})
 @expansion{} (define-syntax @meta{name}
       (syntax-rules ()
-        ((_ @meta{pattern} ... . @meta{rest})
-         (begin @metao{body} @meta{body} ...))))
+        ((_ @meta{pattern} @dots{} . @meta{rest})
+         (begin @metao{body} @meta{body} @dots{}))))
 @end example
 @end deffn
 
 
-@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} ...
+@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
 Define auxiliary syntaxes to be used as literal identifiers by
 @func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
 
 @example
 (define-syntax @metao{name} (syntax-rules ()))
 (define-syntax @meta{name}  (syntax-rules ()))
-...
+@dots{}
 @end example
 @end deffn
 
@@ -655,6 +722,19 @@ with the compensations stack such code can be written:
     (make-use-of port)))
 @end example
 
+@noindent
+or:
+
+@example
+(with-compensations
+  (define port
+    (compensate
+        (open-file-input-port "/tmp/proof.1")
+      (with
+        (close-port port))))
+  (make-use-of port))
+@end example
+
 Compensation forms are embedded in a closure and pushed on a stack, so
 that, in case of error, it is possible to evaluate them in
 allocation--reversed order.
@@ -847,12 +927,6 @@ compensations stack.
 Push the given thunk on the current compensations stack.
 @end defun
 
-
-@deffn Parameter compensations
-Holds the stack of compensation thunks.  This parameter is exposed in
-the public @api{} for debugging purposes, we should never mess with it.
-@end deffn
-
 @c page
 @node iklib conditions
 @section Additional condition types
@@ -861,6 +935,7 @@ the public @api{} for debugging purposes, we should never mess with it.
 @menu
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
+* iklib conditions errno::      Reporting @code{errno} exceptions.
 @end menu
 
 @c page
@@ -937,9 +1012,39 @@ Return a new condition object of type @condition{i/o-eagain}.
 @end defun
 
 
-@defun i/o-again-error? @var{obj}
+@defun i/o-eagain-error? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{i/o-eagain}.
+@end defun
+
+@c page
+@node iklib conditions errno
+@subsection Reporting @code{errno} exceptions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Condition Type} &errno
+Condition object type representing system errors described by an encoded
+@code{errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-errno-condition @var{errno}
+Build and return a new @condition{errno} condition object holding the
+given encoded @code{errno} value.
+@end defun
+
+
+@defun errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{errno}.
+@end defun
+
+
+@defun condition-errno @var{obj}
+Accessor for the encoded @code{errno} value in @var{obj}, which must be
+an instance of @condition{errno}.
 @end defun
 
 @c page
@@ -4639,6 +4744,26 @@ to go beyond the value of @func{pretty-width}.
 @end deffn
 
 
+@defun debug-print . @var{args}
+Print the given arguments on the current error port using
+@func{pretty-print}.  This is a convenience function, useful while
+debugging code.
+@end defun
+
+
+@deffn Parameter debug-print-enabled?
+When set to true, @func{debug-print*} will print its arguments.  It is
+initialised to @false{}.  We can set this parameter to any value,
+internally the value is normalised to @true{} or @false{}.
+@end deffn
+
+
+@defun debug-print* . @var{args}
+Like @func{debug-print}, but print arguments only when the parameter
+@func{debug-print-enabled?} is set to true.
+@end defun
+
+
 @deffn Procedure format @var{fmt-string} @var{args} ...
 The procedure @func{format} produces a string formatted according to
 @func{fmt-string} and the supplied arguments.  The format string
@@ -5512,6 +5637,7 @@ example in the previous section):
 @menu
 * iklib io pathnames::          Pathnames handling.
 * iklib io codecs::             Transcoders and additional codecs.
+* iklib io non-blocking::       Handling non--blocking devices.
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
@@ -5639,6 +5765,11 @@ Empty components are discarded.
 The following bindings are exported by the @library{ikarus} library.
 
 
+@defun transcoder? @var{obj}
+Return @true{} if @var{obj} is a transcoder, else return @false{}.
+@end defun
+
+
 @deffn Parameter native-transcoder
 @findex open-input-file
 @findex with-input-from-file
@@ -5713,6 +5844,200 @@ At present this codec is supported only by input ports.
 @end deffn
 
 @c page
+@node iklib io non-blocking
+@subsection Handling non--blocking devices
+
+
+@cindex Non--blocking mode, input/output ports
+@cindex Input/output ports in non--blocking mode
+@cindex Would--block object
+@cindex Unique objects, would--block object
+
+
+@rnrs{6} defines the input operations on Scheme ports as properly
+blocking when no input data is available; this is fine when the
+underlying device is configured in blocking mode.  @value{PRJNAME}
+extends the Scheme input/output ports to support underlying devices
+configured in non--blocking mode; such ports are typically the ones
+whose underlying device is a @posix{} file or socket descriptor.
+
+The implementation of Scheme ports read from the underlying device
+through a function @func{read!}; if the device is configured in
+non--blocking mode: @func{read!} might raise an exception with condition
+object type @condition{i/o-eagain}, which means: there are no available
+bytes, but this is not the end--of--file.  This scenario corresponds to
+the case in which a @posix{} function fails with @code{errno} set to
+@code{EAGAIN} or @code{EWOULDBLOCK}.
+
+The functions extended by @value{PRJNAME} behave as described in this
+section.
+
+@menu
+* iklib io non-blocking object::  The would--block object.
+* iklib io non-blocking mode::    Ports and non-blocking mode.
+* iklib io non-blocking binary::  Extended binary input functions.
+* iklib io non-blocking textual:: Extended textual input functions.
+@end menu
+
+@c page
+@node iklib io non-blocking object
+@subsubsection The would--block object
+
+
+@defun would-block-object
+Return a unique object representing the condition ``no bytes, not EOF''
+on a device configured in non--blocking mode.  The would--block object
+can be compared with @func{eq?}.
+@end defun
+
+
+@defun would-block-object? @var{obj}
+Return @true{} if @var{obj} is the would--block object, else return
+@false{}.
+@end defun
+
+@c page
+@node iklib io non-blocking mode
+@subsubsection Ports and non-blocking mode
+
+
+@defun port-set-non-blocking-mode! @var{port}
+Set non--blocking mode for @var{port}; if successful return unspecified
+values, if an error occurs raise an exception.  @var{port} must have a
+file descriptor as underlying device.
+@end defun
+
+
+@defun port-in-non-blocking-mode? @var{port}
+Query @var{port} for its non--blocking mode; if successful: return
+@true{} if the port is in non--blocking mode, @false{} otherwise.  If an
+error occurs: raise an exception.
+
+@var{port} can be any Scheme port: this function will recognise
+non-blocking mode only for ports having a file descriptor as underlying
+device; for all the other ports the return value is @false{}.
+@end defun
+
+@c page
+@node iklib io non-blocking binary
+@subsubsection Extended binary input functions
+
+
+@defun get-u8 @var{port}
+Return the @eof{} object, the would--block object or a fixnum:
+
+@itemize
+@item
+If a byte is available: return the byte as an octet and update
+@var{port} to point just past that byte.
+
+@item
+If no input byte is seen before an end of file is reached: the @eof{}
+object is returned.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun lookahead-u8 @var{port}
+Like GET-U8, but it does not update @var{PORT} to point past the byte.
+@end defun
+
+
+@defun get-bytevector-n @var{port} @var{count}
+Return the @eof{} object, the would--block object or a bytevector:
+
+@itemize
+@item
+If @var{count} bytes are available before an end of file: return a
+bytevector of size @var{count}.  The input port is updated to point just
+past the bytes read.
+
+@item
+If fewer than @var{count} bytes are available before an end of file:
+return a bytevector containing those bytes.  The input port is updated
+to point just past the bytes read.
+
+@item
+If an end of file is reached before any bytes are available: return the
+@eof{} object.
+
+@item
+If the underlying device is in non--blocking mode and fewer than
+@var{count} bytes are available: return a bytevector containing those
+bytes.  The input port is updated to point just past the bytes read.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun get-bytevector-n! @var{port} @var{dst.bv} @var{dst.start} @var{count}
+Return the @eof{} object, the would--block object or the number of bytes
+written in the given bytevector:
+
+@itemize
+@item
+If @var{count} bytes are available before the end of file: they are
+written into @var{dst.bv} starting at index @var{dst.start}, and the
+result is @var{count}.  The input port is updated to point just past the
+bytes read.
+
+@item
+If fewer than @var{count} bytes are available before the end of file:
+the available bytes are written into @var{dst.bv} starting at index
+@var{dst.start}, and the result is a number object representing the
+number of bytes actually read.  The input port is updated to point just
+past the bytes read.
+
+@item
+If the end of file is reached before any bytes are available: return the
+@eof{} object.
+
+@item
+If the underlying device is in non--blocking mode and fewer than
+@var{count} bytes are available: the available bytes are written into
+@var{dst.bv} starting at index @var{dst.start}, and the result is a
+number object representing the number of bytes actually read.  The input
+port is updated to point just past the bytes read.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun get-bytevector-some @var{port}
+Return the @eof{} object, the would--block object or a bytevector:
+
+@itemize
+@item
+If bytes are available: return a freshly allocated bytevector containing
+the initial available bytes (at least one), and update @var{port} to
+point just past these bytes.
+
+@item
+If no input bytes are seen before an end of file is reached: the @eof{}
+object is returned.
+
+@item
+If the underlying device is in non--blocking mode and no bytes are
+available: return the would--block object.
+@end itemize
+@end defun
+
+@c page
+@node iklib io non-blocking textual
+@subsubsection Extended textual input functions
+
+
+@c page
 @node iklib io binary
 @subsection Additional binary port features
 
@@ -5722,8 +6047,9 @@ The following bindings are exported by the @library{ikarus} library.
 
 @defun lookahead-two-u8 @var{port}
 Like @func{lookahead-u8} but peeks at @math{2} octets and return two
-values: the @eof{} object or a fixnum representing first octet, the
-@eof{} object or a fixnum representing the second octet.
+values: the @eof{} object, the would--block object or a fixnum
+representing first octet; the @eof{} object, the would--block object or
+a fixnum representing the second octet.
 @end defun
 
 
@@ -5751,6 +6077,14 @@ It is used by the @repl{} and the debugger.
 Return the default value of the @func{current-error-port} parameter.  It
 is used by the @repl{} and the debugger.
 @end defun
+
+
+@defvr Constant stdin
+@defvrx Constant stdout
+@defvrx Constant stderr
+Bound to the values returned by @func{console-input-port},
+@func{console-output-port}, @func{console-error-port} respectively.
+@end defvr
 
 
 @defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
@@ -5911,6 +6245,19 @@ return value of @func{current-input-port} if no @var{port} argument is
 used.
 @end defun
 
+
+@defun get-string-some @var{port}
+Defined by Vicare.  Read from the textual input @var{port}, blocking as
+necessary, until characters are available or until an end of file is
+reached.
+
+If characters become available, @func{get-string-some} returns a freshly
+allocated string containing the initial available characters (at least
+one), and it updates @var{port} to point just past these characters.
+
+If no input characters are available: the EOF object is returned.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
@@ -5995,6 +6342,12 @@ generated the first time this function is applied to @var{port}.
 Return a fixnum associated to @var{port} to be used as hash key.  The
 gensym is generated the first time this function is applied to
 @var{port}.
+@end defun
+
+
+@defun port-closed? @var{port}
+Return @true{} if @var{port} has already been closed, else return
+@false{}.
 @end defun
 
 

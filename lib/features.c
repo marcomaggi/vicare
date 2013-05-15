@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -107,6 +107,7 @@ main (int argc, const char *const argv[])
     HAVE_CTAN\n\
     HAVE_CTANH\n\
     HAVE_CTERMID\n\
+    HAVE_DAEMON\n\
     HAVE_DECL_ENVIRON\n\
     HAVE_DIRENT_H\n\
     HAVE_DIRFD\n\
@@ -217,6 +218,7 @@ main (int argc, const char *const argv[])
     HAVE_LIMITS_H\n\
     HAVE_LINK\n\
     HAVE_LISTEN\n\
+    HAVE_LOCKF\n\
     HAVE_LOCALTIME_R\n\
     HAVE_LSEEK\n\
     HAVE_LSTAT\n\
@@ -776,6 +778,13 @@ printf("(define-inline-constant HAVE_CTANH %s)\n",
   );
 printf("(define-inline-constant HAVE_CTERMID %s)\n",
 #ifdef HAVE_CTERMID
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_DAEMON %s)\n",
+#ifdef HAVE_DAEMON
   "#t"
 #else
   "#f"
@@ -1546,6 +1555,13 @@ printf("(define-inline-constant HAVE_LINK %s)\n",
   );
 printf("(define-inline-constant HAVE_LISTEN %s)\n",
 #ifdef HAVE_LISTEN
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_LOCKF %s)\n",
+#ifdef HAVE_LOCKF
   "#t"
 #else
   "#f"

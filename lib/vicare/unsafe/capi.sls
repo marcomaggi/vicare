@@ -216,9 +216,11 @@
     posix-select-fd-exceptional?
     posix-poll
     posix-fcntl				posix-ioctl
+    posix-fd-set-non-blocking-mode	posix-fd-ref-non-blocking-mode
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
     posix-truncate			posix-ftruncate
+    posix-lockf
 
     posix-sizeof-fd-set			posix-make-fd-set-bytevector
     posix-make-fd-set-pointer		posix-make-fd-set-memory-block!
@@ -311,6 +313,7 @@
     platform-open-input/output-fd	platform-close-fd
     platform-read-fd			platform-write-fd
     platform-set-position
+    platform-fd-set-non-blocking-mode	platform-fd-ref-non-blocking-mode
 
     ;; users and groups
     posix-getuid			posix-getgid
@@ -344,6 +347,9 @@
     posix-getrlimit			posix-setrlimit
     posix-getrusage			posix-RLIM_INFINITY
     linux-prlimit
+
+    ;; daemonisation
+    linux-daemon
 
     ;; mathematics
     glibc-csin		glibc-ccos	glibc-ctan
@@ -1267,6 +1273,12 @@
 (define-inline (posix-ioctl fd command arg)
   (foreign-call "ikrt_posix_ioctl" fd command arg))
 
+(define-inline (posix-fd-set-non-blocking-mode fd)
+  (foreign-call "ikptr_posix_fd_set_non_blocking_mode" fd))
+
+(define-inline (posix-fd-ref-non-blocking-mode fd)
+  (foreign-call "ikptr_posix_fd_ref_non_blocking_mode" fd))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (posix-dup fd)
@@ -1290,6 +1302,11 @@
 
 (define-inline (posix-ftruncate fd length)
   (foreign-call "ikrt_posix_ftruncate" fd length))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-lockf fd cmd len)
+  (foreign-call "ikrt_posix_lockf" fd cmd len))
 
 ;;; --------------------------------------------------------------------
 
@@ -1803,6 +1820,18 @@
   ;;
   (foreign-call "ikrt_close_fd" fd))
 
+(define-inline (platform-fd-set-non-blocking-mode fd)
+  ;;Make  use  of  "fcntl()"  to   set  non-blocking  mode  for  a  file
+  ;;descriptor.
+  ;;
+  (foreign-call "ikptr_fd_set_non_blocking_mode" fd))
+
+(define-inline (platform-fd-ref-non-blocking-mode fd)
+  ;;Make use  of "fcntl()" to  query a file descriptor  for non-blocking
+  ;;mode.
+  ;;
+  (foreign-call "ikptr_fd_ref_non_blocking_mode" fd))
+
 
 ;;;; users and groups
 
@@ -1968,6 +1997,12 @@
 
 (define-inline (linux-prlimit pid resource new-limit old-limit)
   (foreign-call "ikrt_linux_prlimit" pid resource new-limit old-limit))
+
+
+;;;; daemonisation
+
+(define-inline (linux-daemon nochdir noclose)
+  (foreign-call "ikrt_linux_daemon" nochdir noclose))
 
 
 ;;;; mathematics

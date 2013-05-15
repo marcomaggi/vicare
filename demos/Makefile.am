@@ -2,6 +2,12 @@
 
 EXTRA_DIST	= README \
 	httpd.sps		\
-	run-httpd.sh
+	run-httpd.sh		\
+	\
+	echod.sps		\
+	run-connect.sh		\
+	\
+	connect.sps		\
+	run-connect.sh
 
 ### end of file

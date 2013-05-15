@@ -3261,6 +3261,7 @@
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive)				receive-macro)
+	     ((receive-and-return)		receive-and-return-macro)
 	     ((begin0)				begin0-macro)
 	     ((xor)				xor-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
@@ -3752,7 +3753,7 @@
        ))))
 
 
-;;;; module non-core-macro-transformer: compensations
+;;;; module non-core-macro-transformer: UNWIND-PROTECT
 
 (define (unwind-protect-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
@@ -3787,38 +3788,56 @@
       (lambda (stx)
 	(syntax-error 'with "syntax \"with\" out of context"))))))
 
-(define (with-compensations/on-error-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(parametrise ((compensations '()))
-	 (with-exception-handler
-	     (lambda (E)
-	       (run-compensations)
-	       (compensations #f)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-		 (begin ,?body0 ,@?body*)
-	       (compensations #f)))))))
-    ))
+(module (with-compensations/on-error-macro
+	 with-compensations-macro)
 
-(define (with-compensations-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(parametrise ((compensations '()))
-	 (with-exception-handler
-	     (lambda (E)
-	       (run-compensations)
-	       (compensations #f)
-	       (raise E))
-	   (lambda ()
+  (define (with-compensations/on-error-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?body0 ?body* ...)
+       (bless
+	`(let ,(%make-store-binding)
+	   (parametrise ((compensations store))
+	     ,(%make-with-exception-handler ?body0 ?body*)))))
+      ))
+
+  (define (with-compensations-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?body0 ?body* ...)
+       (bless
+	`(let ,(%make-store-binding)
+	   (parametrise ((compensations store))
 	     (begin0
-		 (begin ,?body0 ,@?body*)
-	       (run-compensations)
-	       (compensations #f)))))))
-    ))
+		 ,(%make-with-exception-handler ?body0 ?body*)
+	       ;;Better  run  the  cleanup   compensations  out  of  the
+	       ;;WITH-EXCEPTION-HANDLER.
+	       (run-compensations-store store))))))
+      ))
+
+  (define (%make-store-binding)
+    '((store (let ((stack '()))
+	       (case-lambda
+		(()
+		 stack)
+		((false/thunk)
+		 (if false/thunk
+		     (set! stack (cons false/thunk stack))
+		   (set! stack '()))))))))
+
+  (define (%make-with-exception-handler body0 body*)
+    ;;We really have to close the handler upon the STORE function, it is
+    ;;wrong to access the COMPENSATIONS parameter from the handler.  The
+    ;;dynamic environment  is synchronised with continuations:  when the
+    ;;handler is called by  RAISE or RAISE-CONTINUABLE, the continuation
+    ;;is the one of the RAISE or RAISE-CONTINUABLE forms.
+    ;;
+    `(with-exception-handler
+	 (lambda (E)
+	   (run-compensations-store store)
+	   (raise E))
+       (lambda ()
+	 ,body0 ,@body*)))
+
+  #| end of module |# )
 
 (define (push-compensation-macro expr-stx)
   (syntax-match expr-stx ()
@@ -3828,6 +3847,9 @@
     ))
 
 (define (compensate-macro expr-stx)
+  (define who 'compensate)
+  (define (%synner message subform)
+    (syntax-violation who message expr-stx subform))
   (syntax-match expr-stx ()
     ((_ ?alloc0 ?form* ...)
      (let ()
@@ -3835,13 +3857,17 @@
        (define alloc*
 	 (let recur ((form-stx ?form*))
 	   (syntax-match form-stx (with)
-	     (()
-	      (syntax-violation 'compensate "invalid compensation syntax" expr-stx))
-
 	     (((with ?release0 ?release* ...))
 	      (begin
 		(set! free `(push-compensation ,?release0 ,@?release*))
 		'()))
+
+	     (()
+	      (%synner "invalid compensation syntax: missing WITH keyword" form-stx))
+
+	     (((with))
+	      (%synner "invalid compensation syntax: empty WITH keyword"
+		       (bless '(with))))
 
 	     ((?alloc ?form* ...)
 	      (cons ?alloc (recur ?form*)))
@@ -4846,7 +4872,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE, BEGIN0, XOR
+;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
@@ -4854,11 +4880,26 @@
   ;;Return a symbolic expression in the core language.
   ;;
   (syntax-match expr-stx ()
-    ((_ ?formals ?expression ?form0 ?form* ...)
+    ((_ ?formals ?producer-expression ?form0 ?form* ...)
      (bless
       `(call-with-values
-	   (lambda () ,?expression)
+	   (lambda () ,?producer-expression)
 	 (lambda ,?formals ,?form0 ,@?form*))))
+    ))
+
+(define (receive-and-return-macro expr-stx)
+  ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
+     (bless
+      `(call-with-values
+	   (lambda () ,?producer-expression)
+	 (lambda ,?retval*
+	   ,?body0 ,@?body*
+	   (values ,@?retval*)))))
     ))
 
 (define (begin0-macro expr-stx)

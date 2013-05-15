@@ -9,7 +9,7 @@
 ;;;	This event  loop implementation is inspired  by the architecture
 ;;;	of the event loop of Tcl, <http://www.tcl.tk>.
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,14 +27,14 @@
 
 
 #!r6rs
-(library (vicare simple-event-loop)
+(library (vicare posix simple-event-loop)
   (export
 
     ;; event loop control
     initialise			finalise
     busy?			do-one-event
     enter			leave-asap
-    logging
+    log-procedure
 
     ;; interprocess signals
     receive-signal		serve-interprocess-signals
@@ -50,37 +50,29 @@
     task-fragment		do-one-task-event)
   (import (vicare)
     (prefix (vicare posix) px.)
-    (prefix (vicare unsafe operations) unsafe.)
+    (prefix (vicare unsafe operations) $)
     (vicare language-extensions syntaxes)
-    (vicare platform constants))
+    (vicare arguments validation)
+    (vicare platform constants)
+    (vicare platform utilities))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
 (define-argument-validation (port/file-descriptor who obj)
-  (or (and (port? obj) (port-fd obj)) (%file-descriptor? obj))
+  (or (and (port? obj)
+	   (port-fd obj))
+      (px.file-descriptor? obj))
   (assertion-violation who "expected port or fixnum file descriptor as argument" obj))
 
 (define-argument-validation (signum who obj)
   (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj NSIG))
+       ($fx>= obj 0)
+       ($fx<= obj NSIG))
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 
 ;;;; helpers
-
-(define-inline (%file-descriptor? obj)
-  ;;Do  what   is  possible  to  recognise   fixnums  representing  file
-  ;;descriptors.
-  ;;
-  (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<  obj FD_SETSIZE)))
 
 (define-syntax %catch
   (syntax-rules ()
@@ -88,10 +80,7 @@
      (guard (E (else #f))
        . ?body))))
 
-(define-inline (%fxincr! ?fxvar)
-  (set! ?fxvar (unsafe.fxadd1 ?fxvar)))
-
-(define logging
+(define log-procedure
   (make-parameter #f
     (lambda (obj)
       (if (or (boolean? obj)
@@ -100,10 +89,10 @@
 	#f))))
 
 (define (%log template . args)
-  (when (logging)
-    (let ((line (string-append "vicare SEL: " (apply format template args))))
-      (if (procedure? (logging))
-	  ((logging) line)
+  (when (log-procedure)
+    (let ((line (string-append "Vicare SEL: " (apply format template args))))
+      (if (procedure? (log-procedure))
+	  ((log-procedure) line)
 	(let ((port (current-error-port)))
 	  (display line port)
 	  (newline port)
@@ -283,14 +272,15 @@
 (define (serve-interprocess-signals)
   (px.signal-bub-acquire)
   (for-each (lambda (signum)
-	      (%log "start evaluation of signal handler for ~a" signum)
+	      (define signame (posix-signal->symbol signum))
+	      (%log "start evaluation of signal handler for ~a" signame)
 	      (with-event-sources (SOURCES)
-		(let ((handlers (unsafe.vector-ref SOURCES.signal-handlers signum)))
-		  (unsafe.vector-set! SOURCES.signal-handlers signum '())
+		(let ((handlers ($vector-ref SOURCES.signal-handlers signum)))
+		  ($vector-set! SOURCES.signal-handlers signum '())
 		  (for-each (lambda (thunk)
 			      (%catch (thunk)))
 		    handlers)))
-	      (%log "finished evaluation of signal handler for ~a" signum))
+	      (%log "finished evaluation of signal handler for ~a" signame))
     (px.signal-bub-all-delivered)))
 
 (define (receive-signal signum handler-thunk)
@@ -299,9 +289,9 @@
       ((signum		signum)
        (procedure	handler-thunk))
     (with-event-sources (SOURCES)
-      (unsafe.vector-set! SOURCES.signal-handlers signum
+      ($vector-set! SOURCES.signal-handlers signum
 			  (cons handler-thunk
-				(unsafe.vector-ref SOURCES.signal-handlers signum))))))
+				($vector-ref SOURCES.signal-handlers signum))))))
 
 
 ;;;; file descriptor events
@@ -329,7 +319,21 @@
 ;;
 
 (define-struct fd-entry
-  (fd query handler))
+  (fd
+		;A fixnum representing a file descriptor.
+   query
+		;A thunk to  be called to query the  file descriptor for
+		;the expected event.
+   handler
+		;A  thunk  to  be  called whenever  the  expected  event
+		;happens.
+   expiration-time
+		;False  or  a  TIME  struct,  as  defined  by  (vicare),
+		;representing the expiration time for this event.
+   expiration-handler
+		;False  or a  thunk  to be  called  whenever this  event
+		;expires.
+   ))
 
 (define (do-one-fd-event)
   ;;Consume one event, if any, and  return.  Return a boolean, #t if one
@@ -345,70 +349,108 @@
       (set! SOURCES.fds.rev-head '()))
     (if (null? SOURCES.fds.tail)
 	#f
-      (if (unsafe.fx< SOURCES.fds.count SOURCES.fds.watermark)
-	  (let ((E (unsafe.car SOURCES.fds.tail)))
-	    (set! SOURCES.fds.tail (unsafe.cdr SOURCES.fds.tail))
-	    (if (%catch ((fd-entry-query E)))
-		(guard (E (else
-			   ;;;(pretty-print E (current-error-port))
-			   #f))
-		  ((fd-entry-handler E))
-		  (%fxincr! SOURCES.fds.count)
-		  #t)
-	      (begin
-		(set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
-		(if (null? SOURCES.fds.tail)
-		    (begin
-		      (set! SOURCES.fds.count 0)
-		      #f)
-		  (do-one-fd-event)))))
+      (if ($fx< SOURCES.fds.count SOURCES.fds.watermark)
+	  (let ((E ($car SOURCES.fds.tail)))
+	    (set! SOURCES.fds.tail ($cdr SOURCES.fds.tail))
+	    (cond
+	     ;;Check whether the event happened.   If it has: invoke the
+	     ;;associated handler.
+	     ;;
+	     ((%catch (($fd-entry-query E)))
+	      (guard (E (else
+			 ;;(pretty-print E (current-error-port))
+			 #f))
+		(($fd-entry-handler E))
+		($fxincr! SOURCES.fds.count)
+		#t))
+
+	     ;;If an expiration time has  been set: check it against the
+	     ;;current  time.   If  this  even is  expired:  invoke  the
+	     ;;associated handler.
+	     ;;
+	     ((let ((T ($fd-entry-expiration-time E)))
+		(and T (time<=? T (current-time))))
+	      ($fxincr! SOURCES.fds.count)
+	      (($fd-entry-expiration-handler E))
+	      #t)
+
+	     ;;The event  did not happen;  re-enqueue the event  for the
+	     ;;next loop.
+	     ;;
+	     (else
+	      (set! SOURCES.fds.rev-head (cons E SOURCES.fds.rev-head))
+	      (if (null? SOURCES.fds.tail)
+		  (begin
+		    (set! SOURCES.fds.count 0)
+		    #f)
+		(do-one-fd-event)))))
 	(begin
 	  (set! SOURCES.fds.count 0)
 	  #f)))))
 
-(define (%enqueue-fd-event-source fd query-thunk handler-thunk)
+(define (%enqueue-fd-event-source fd query-thunk handler-thunk
+				  expiration-time expiration-thunk)
   ;;Enqueue a new entry for a file descriptor event.
   ;;
   (with-event-sources (SOURCES)
-    (set! SOURCES.fds.rev-head (cons (make-fd-entry fd query-thunk handler-thunk)
+    (set! SOURCES.fds.rev-head (cons (make-fd-entry fd query-thunk handler-thunk
+						    expiration-time expiration-thunk)
 				     SOURCES.fds.rev-head))))
 
-(define (readable port/fd handler-thunk)
-  (define who 'readable)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd
-				(lambda ()
-				  (px.select-fd-readable? fd 0 0))
-				handler-thunk))))
+(define readable
+  (case-lambda
+   ((port/fd handler-thunk)
+    (readable port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'readable)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd
+				  (lambda ()
+				    (px.select-fd-readable? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
-(define (writable port/fd handler-thunk)
-  (define who 'writable)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd (lambda ()
-				     (px.select-fd-writable? fd 0 0))
-				handler-thunk))))
+(define writable
+  (case-lambda
+   ((port/fd handler-thunk)
+    (writable port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'writable)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd (lambda ()
+				       (px.select-fd-writable? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
-(define (exception port/fd handler-thunk)
-  (define who 'exception)
-  (with-arguments-validation (who)
-      ((port/file-descriptor	port/fd)
-       (procedure		handler-thunk))
-    (let ((fd (if (port? port/fd)
-		  (port-fd port/fd)
-		port/fd)))
-      (%enqueue-fd-event-source fd (lambda ()
-				     (px.select-fd-exceptional? fd 0 0))
-				handler-thunk))))
+(define exception
+  (case-lambda
+   ((port/fd handler-thunk)
+    (exception port/fd handler-thunk #f #f))
+   ((port/fd handler-thunk expiration-time expiration-thunk)
+    (define who 'exception)
+    (with-arguments-validation (who)
+	((port/file-descriptor	port/fd)
+	 (procedure		handler-thunk)
+	 (time/false		expiration-time)
+	 (procedure/false	expiration-thunk))
+      (let ((fd (if (port? port/fd)
+		    (port-fd port/fd)
+		  port/fd)))
+	(%enqueue-fd-event-source fd (lambda ()
+				       (px.select-fd-exceptional? fd 0 0))
+				  handler-thunk expiration-time expiration-thunk))))))
 
 (define (forget-fd port/fd)
   (define who 'exception)
@@ -419,10 +461,10 @@
 		port/fd)))
       (with-event-sources (SOURCES)
 	(set! SOURCES.fds.tail (remp (lambda (E)
-				       (unsafe.fx= fd (fd-entry-fd E)))
+				       ($fx= fd ($fd-entry-fd E)))
 				 SOURCES.fds.tail))
 	(set! SOURCES.fds.rev-head (remp (lambda (E)
-					   (unsafe.fx= fd (fd-entry-fd E)))
+					   ($fx= fd ($fd-entry-fd E)))
 				     SOURCES.fds.rev-head))))))
 
 
@@ -454,8 +496,8 @@
       (set! SOURCES.tasks.rev-head '()))
     (if (null? SOURCES.tasks.tail)
 	#f
-      (let ((thunk (unsafe.car SOURCES.tasks.tail)))
-	(set! SOURCES.tasks.tail (unsafe.cdr SOURCES.tasks.tail))
+      (let ((thunk ($car SOURCES.tasks.tail)))
+	(set! SOURCES.tasks.tail ($cdr SOURCES.tasks.tail))
 	(let ((rv (thunk)))
 	  (when rv
 	    (set! SOURCES.tasks.rev-head (cons rv SOURCES.tasks.rev-head)))
