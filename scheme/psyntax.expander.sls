@@ -2669,7 +2669,8 @@
       (char?		x)
       (boolean?		x)
       (bytevector?	x)
-      (keyword?		x)))
+      (keyword?		x)
+      (would-block-object? x)))
 
 (module (strip)
   ;;STRIP is used  to remove the wrap  of a syntax object.   It takes an

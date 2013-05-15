@@ -43,6 +43,10 @@
 		  ;; internal functions only for Vicare
 		  read-source-file		read-script-source-file
 		  read-library-source-file)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Wed May 15, 2013)
+    (only (ikarus.io)
+	  would-block-object)
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
@@ -1105,6 +1109,10 @@
 		  (if (port-in-r6rs-mode? port)
 		      (%error-1 "invalid syntax" "#!eof")
 		    `(datum . ,(eof-object))))
+		 ((would-block)
+		  (if (port-in-r6rs-mode? port)
+		      (%error-1 "invalid syntax" "#!would-block")
+		    `(datum . ,(would-block-object))))
 		 (else
 		  ;;If not  recognised, just handle it as  a comment and
 		  ;;read the next datum.

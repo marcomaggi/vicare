@@ -1075,6 +1075,9 @@ a variety of ways including:
 End--of--file marker, @code{#!eof}.
 
 @item
+Would--block object, @code{#!would-block}.
+
+@item
 Gensym syntax, @code{#@{gensym@}}.
 
 @item
