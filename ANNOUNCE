@@ -205,6 +205,13 @@ Notes for revision 0.3d0
 * Added compensations API to (vicare), see the documentation node "iklib
   compensations".
 
+* BACKWARDS INCOMPATIBILITY In the library (vicare posix): the functions
+  READ, PREAD,  RECV and RECVFROM now  accept a generalised C  buffer as
+  argument; the  functions WRITE, PWRITE,  SEND and SENDTO now  accept a
+  generalised C  string as argument.   When the buffer argument  of such
+  functions is  a bytevector: the size  argument must be false,  not the
+  number of bytes.
+
 * The syntax DEFINE-SYNTAX now accepts both the formats:
 
      (define-syntax ?name ?transformer-expr)

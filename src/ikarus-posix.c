@@ -1398,18 +1398,11 @@ ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 #ifdef HAVE_READ
   void *	buffer;
   size_t	size;
-  size_t	bv_size;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
-  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
-  if ((0 <= size) && (size <= bv_size)) {
-    errno  = 0;
-    rv     = read(IK_NUM_TO_FD(s_fd), buffer, size);
-  } else {
-    errno = EINVAL;
-    rv    = -1;
-  }
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno  = 0;
+  rv     = read(IK_NUM_TO_FD(s_fd), buffer, size);
   return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3544,11 +3537,10 @@ ikrt_posix_send (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = send(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  buffer  = IK_GENERALISED_C_BUFFER(s_buffer);
+  size    = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	  = 0;
+  rv	  = send(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3561,11 +3553,10 @@ ikrt_posix_recv (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = recv(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	 = 0;
+  rv	 = recv(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3579,13 +3570,12 @@ ikrt_posix_sendto (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ik
 {
 #ifdef HAVE_SENDTO
   void *		buffer;
+  size_t		size;
   struct sockaddr *	addr;
   socklen_t		addr_len;
-  size_t		size;
   int			rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT != s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  buffer   = IK_GENERALISED_C_BUFFER(s_buffer);
+  size     = ik_generalised_c_buffer_len(s_buffer, s_size);
   addr	   = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
   addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(s_addr);
   errno	   = 0;
@@ -3607,11 +3597,10 @@ ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, 
   void *		buffer;
   size_t		size;
   int			rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	 = 0;
+  rv	 = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
   if (0 <= rv) {
     ikptr	s_pair = ika_pair_alloc(pcb);
     ikptr	s_addr;

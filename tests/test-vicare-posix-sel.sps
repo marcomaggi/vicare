@@ -45,7 +45,7 @@
 
   (define (%recv-fd who fd)
     (let* ((buf (make-bytevector 1024))
-	   (len (px.read fd buf 1024)))
+	   (len (px.read fd buf)))
       (add-result `(,who recv ,(ascii->string (subbytevector-u8 buf 0 len))))))
 
   (define (%send-port who port data-string)

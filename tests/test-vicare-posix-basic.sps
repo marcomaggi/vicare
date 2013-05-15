@@ -723,10 +723,10 @@
 			   (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (begin
-		(px.write fd '#vu8(1 2 3 4) 4)
+		(px.write fd '#vu8(1 2 3 4))
 		(px.lseek fd 0 SEEK_SET)
 		(let ((buffer (make-bytevector 4)))
-		  (list (px.read fd buffer 4) buffer)))
+		  (list (px.read fd buffer) buffer)))
 	    (px.close fd)
 	    (px.system "rm -f tmp"))))
     => '(4 #vu8(1 2 3 4)))
@@ -739,10 +739,10 @@
 			   (fxior S_IRUSR S_IWUSR))))
 	  (unwind-protect
 	      (begin
-		(px.pwrite fd '#vu8(1 2 3 4) 4 0)
+		(px.pwrite fd '#vu8(1 2 3 4) #f 0)
 		(px.lseek fd 0 SEEK_SET)
 		(let ((buffer (make-bytevector 4)))
-		  (list (px.pread fd buffer 4 0) buffer)))
+		  (list (px.pread fd buffer #f 0) buffer)))
 	    (px.close fd)
 	    (px.system "rm -f tmp"))))
     => '(4 #vu8(1 2 3 4)))
@@ -817,9 +817,9 @@
 
   (check
       (let-values (((in ou) (px.pipe)))
-	(px.write ou '#vu8(1 2 3 4) 4)
+	(px.write ou '#vu8(1 2 3 4))
 	(let ((bv (make-bytevector 4)))
-	  (px.read in bv 4)
+	  (px.read in bv)
 	  bv))
     => '#vu8(1 2 3 4))
 
@@ -828,8 +828,8 @@
 		   ((parent-from-child child-stdout)    (px.pipe)))
 	(px.fork (lambda (pid) ;parent
 		   (let ((buf (make-bytevector 1)))
-		     (px.read  parent-from-child buf 1)
-		     (px.write parent-to-child   '#vu8(2) 1)
+		     (px.read  parent-from-child buf)
+		     (px.write parent-to-child   '#vu8(2))
 		     buf))
 		 (lambda () ;child
 		   (begin ;setup stdin
@@ -841,8 +841,8 @@
 		     (px.dup2 child-stdout 1)
 		     (px.close child-stdout))
 		   (let ((buf (make-bytevector 1)))
-		     (px.write 1 '#vu8(1) 1)
-		     (px.read  0 buf 1)
+		     (px.write 1 '#vu8(1))
+		     (px.read  0 buf)
 ;;;		  (check-pretty-print buf)
 		     (assert (equal? buf '#vu8(2)))
 		     (exit 0)))))
@@ -900,7 +900,7 @@
       (let-values (((in ou) (px.pipe)))
 	(unwind-protect
 	    (begin
-	      (px.write ou '#vu8(1) 1)
+	      (px.write ou '#vu8(1))
 	      (let-values (((r w e) (px.select #f `(,in) '() `(,in) 0 0)))
 		(equal? (list r w e)
 			`((,in) () ()))))
@@ -935,7 +935,7 @@
       (let-values (((in ou) (px.pipe)))
 	(unwind-protect
 	    (begin
-	      (px.write ou '#vu8(1) 1)
+	      (px.write ou '#vu8(1))
 	      (let-values (((r w e) (px.select-fd in 0 0)))
 		(equal? (list r w e)
 			`(,in #f #f))))
@@ -973,12 +973,12 @@
       (let-values (((in ou) (px.pipe)))
 	(unwind-protect
 	    (begin
-	      (px.write ou '#vu8(1) 1)
+	      (px.write ou '#vu8(1))
 	      (let* ((vec (vector (vector in POLLIN 0)
 				  (vector ou POLLOUT 0)))
 		     (rv  (px.poll vec 10))
 		     (buf (make-bytevector 1)))
-		(px.read in buf 1)
+		(px.read in buf)
 		(equal? (list rv buf vec)
 			`(2 #vu8(1) #(#(,in ,POLLIN  ,POLLIN)
 				      #(,ou ,POLLOUT ,POLLOUT))))))
@@ -1280,7 +1280,7 @@
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
 ;;;		(check-pretty-print (list r w e))
 		(list (eq? r rfds)
@@ -1330,7 +1330,7 @@
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
 ;;;		(check-pretty-print (list r w e))
 		(list (eq? r rfds)
@@ -1380,7 +1380,7 @@
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
 ;;;		(check-pretty-print (list r w e))
 		(list (eq? r rfds)
@@ -1426,7 +1426,7 @@
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 1)
 	      (px.FD_SET ou fdsets 2)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
 		(list (px.FD_ISSET in fdsets 0)
 		      (px.FD_ISSET in fdsets 1)
@@ -1468,7 +1468,7 @@
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 1)
 	      (px.FD_SET ou fdsets 2)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
 		(list (px.FD_ISSET in fdsets 0)
 		      (px.FD_ISSET in fdsets 1)
@@ -1510,7 +1510,7 @@
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 1)
 	      (px.FD_SET ou fdsets 2)
-	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
 		(list (px.FD_ISSET in fdsets 0)
 		      (px.FD_ISSET in fdsets 1)

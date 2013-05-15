@@ -349,9 +349,9 @@
 
   (check	;socketpair, read, write
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
-	(px.write a '#vu8(1 2 3 4) 4)
+	(px.write a '#vu8(1 2 3 4))
 	(let ((buf (make-bytevector 4)))
-	  (px.read b buf 4)
+	  (px.read b buf)
 	  (px.shutdown a SHUT_RDWR)
 	  (px.shutdown b SHUT_RDWR)
 	  buf))
@@ -359,9 +359,9 @@
 
   (check	;socketpair, send, recv
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
-	(px.send a '#vu8(1 2 3 4) 4 0)
+	(px.send a '#vu8(1 2 3 4) #f 0)
 	(let ((buf (make-bytevector 4)))
-	  (px.recv b buf 4 0)
+	  (px.recv b buf #f 0)
 	  (px.shutdown a SHUT_RDWR)
 	  (px.shutdown b SHUT_RDWR)
 	  buf))
@@ -607,7 +607,7 @@
 		   (let ((buffer (make-bytevector 3)))
 		     (px.bind sock sockaddr1)
 		     (px.nanosleep 1 0) ;give child some time
-		     (px.sendto sock '#vu8(1 2 3) 3 0 sockaddr2)
+		     (px.sendto sock '#vu8(1 2 3) #f 0 sockaddr2)
 		     (let-values (((len sockaddr) (px.recvfrom sock buffer #f 0)))
 		       (add-result len)
 		       (add-result (px.sockaddr_un.pathname/string sockaddr))

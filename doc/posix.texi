@@ -1317,10 +1317,11 @@ an exception.
 @defunx read @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
 read}.  Read bytes from the file descriptor @var{fd} and store them in
-the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
-bytes; if @var{size} is false or not given, read a number of bytes equal
-to the length of @var{buffer}.  If successful return a non--negative
-fixnum representing the number of bytes read, else raise an exception.
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes read, else raise an exception.
+
+@var{buffer} and @var{size} must represent a generalised C buffer,
+@ref{cbuffers buffers, Introduction to generalised C buffers}.
 @end defun
 
 
@@ -1338,11 +1339,14 @@ the start of the file; @var{off} must be a non--negative exact integer.
 @defun write @var{fd} @var{buffer}
 @defunx write @var{fd} @var{buffer} @var{size}
 Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
-write}.  Write bytes to the file descriptor @var{fd} from the bytevector
-@var{buffer}; if @var{size} is a fixnum, read @var{size} bytes; if
-@var{size} is false or not given, read a number of bytes equal to the
-length of @var{buffer}.  If successful return a non--negative fixnum
-representing the number of written bytes, else raise an exception.
+write}.  Write bytes to the file descriptor @var{fd} from @var{buffer}.
+If successful return a non--negative fixnum representing the number of
+written bytes, else raise an exception.
+
+@var{buffer} and @var{size} must represent a generalised C string,
+@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@var{buffer} is a Scheme string: it is converted to a bytevector with
+@func{string->ascii}.
 @end defun
 
 
@@ -2825,23 +2829,26 @@ holding the @code{struct sockaddr}, else raise an exception.
 @defun send @var{sock} @var{buffer} @var{size} @var{flags}
 Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
 Like @cfunc{write} but with the additional argument @var{flags} which
-must be a fixnum: write data from the bytevector @var{buffer} to the
-socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
-@var{size} is false, write a number of bytes equal to the length of
-@var{buffer}.  If successful return a non--negative fixnum representing
-the number of bytes actually sent, else raise an exception.
+must be a fixnum: write data from @var{buffer} to the socket @var{sock}.
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else raise an exception.
+
+@var{buffer} and @var{size} must represent a generalised C string,
+@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@var{buffer} is a Scheme string: it is converted to a bytevector with
+@func{string->ascii}.
 @end defun
 
 
 @defun recv @var{sock} @var{buffer} @var{size} @var{flags}
 Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
 recv}.  Like @cfunc{read} but with the additional argument @var{flags}
-which must be a fixnum: read data from @var{sock} and store it in the
-bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
-bytes; if @var{size} is false, read a number of bytes equal to the
-length of @var{buffer}.  If successful return a non--negative fixnum
-representing the number of bytes actually received, else raise an
-exception.
+which must be a fixnum: read data from @var{sock} and store it in
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually received, else raise an exception.
+
+@var{buffer} and @var{size} must represent a generalised C buffer,
+@ref{cbuffers buffers, Introduction to generalised C buffers}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -2850,11 +2857,13 @@ exception.
 Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
 sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
 which must be a bytevector holding a @code{struct sockaddr}: write data
-from the bytevector @var{buffer} to the socket @var{sock} to the
-destination specified by @var{addr}.
+from @var{buffer} to the socket @var{sock} to the destination specified
+by @var{addr}.
 
-If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
-false, write a number of bytes equal to the length of @var{buffer}.
+@var{buffer} and @var{size} must represent a generalised C string,
+@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@var{buffer} is a Scheme string: it is converted to a bytevector with
+@func{string->ascii}.
 
 If successful return a non--negative fixnum representing the number of
 bytes actually sent, else raise an exception.
@@ -2865,10 +2874,10 @@ bytes actually sent, else raise an exception.
 Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
 Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
 informations about the address of the sender: read data from @var{sock}
-and store it in the bytevector @var{buffer}.
+and store it in @var{buffer}.
 
-If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
-false, read a number of bytes equal to the length of @var{buffer}.
+@var{buffer} and @var{size} must represent a generalised C buffer,
+@ref{cbuffers buffers, Introduction to generalised C buffers}.
 
 If successful return two values: a non--negative fixnum representing the
 number of bytes actually received, a bytevector holding a @code{struct

@@ -33,7 +33,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare: textual net channels with network sockets\n")
+(check-display "*** testing Vicare: textual net channels with network sockets\n")
 
 
 ;;;; helpers
