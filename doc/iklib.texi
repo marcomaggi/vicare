@@ -6042,6 +6042,141 @@ available: return the would--block object.
 @subsubsection Extended textual input functions
 
 
+@defun get-char @var{port}
+Return the @eof{} object, the would--block object or a character:
+
+@itemize
+@item
+If a complete character is available before the next end of file: return
+that character and update the input port to point past the character.
+
+@item
+If an end of file is reached before any character is read: return the
+@eof{} object.
+
+@item
+If the underlying device is in non--blocking mode and no full character
+is available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun read-char
+@defunx read-char @var{port}
+Like @func{get-char}.
+@end defun
+
+
+@defun lookahead-char @var{port}
+Like @func{get-char}, but it does not update @var{port} to point past
+the character.
+@end defun
+
+
+@defun peek-char
+@defunx peek-char @var{port}
+Like @func{lookahead-char}.
+@end defun
+
+
+@defun get-string-n @var{port} @var{requested-count}
+Return the @eof{} object, the would--block object or a string and update
+the input port to point past the consumed characters:
+
+@itemize
+@item
+If @var{requested-count} characters are available before end of file:
+return a string consisting of those @var{requested-count} characters.
+
+@item
+If fewer than @var{requested-count} characters are available before an
+end of file, but one or more characters can be read: return a string
+containing those characters.
+
+@item
+If no characters can be read before an end of file: return the @eof{}
+object.
+
+@item
+If the underlying device is in non--blocking mode and no characters are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun get-string-n! @var{port} @var{dst.str} @var{dst.start} @var{count}
+Return the @eof{} object, the would--block object or a string and update
+the input port to point past the consumed characters:
+
+@itemize
+@item
+If @var{count} characters are available before an end of file: they are
+written into @var{DST.STR} starting at index @var{DST.START}, and
+@var{count} is returned.
+
+@item
+If fewer than @var{count} characters are available before an end of
+file, but one or more can be read: those characters are written into
+@var{dst.str} starting at index @var{dst.start} and the number of
+characters actually read is returned as an exact integer object.
+
+@item
+If no characters can be read before an end of file: the @eof{} object is
+returned.
+
+@item
+If the underlying device is in non--blocking mode and fewer than
+@var{count} characters are available before a would--block condition,
+but one or more can be read: those characters are written into
+@var{dst.str} starting at index @var{dst.start} and the number of
+characters actually read is returned as an exact integer object.
+
+@item
+If the underlying device is in non--blocking mode and no characters are
+available: return the would--block object.
+@end itemize
+@end defun
+
+
+@defun get-string-all @var{port}
+Return the @eof{} object or a string and update the input port to point
+past the consumed characters:
+
+@itemize
+@item
+If characters are available before the end of file: a string containing
+all the characters decoded from that data is returned.  Further reading
+from the port will return the @eof{} object.
+
+@item
+If no character precedes the end of file: the @eof{} object is returned.
+@end itemize
+
+Even when the underlying device is in non--blocking mode: this function
+attempts to read input until the @eof{} is found.
+@end defun
+
+
+@defun get-string-some @var{port}
+Return the @eof{} object, the would--block object or a string and update
+the input port to point past the consumed characters:
+
+@itemize
+@item
+If characters become available before the end of file: return a freshly
+allocated string containing the initial available characters (at least
+one), and update @var{port} to point just past these characters.
+
+@item
+If no input characters are available before the end of file: the @eof{}
+object is returned.
+
+@item
+If no input characters are available before a would--block condition:
+the would--block object is returned.
+@end itemize
+@end defun
+
 @c page
 @node iklib io binary
 @subsection Additional binary port features

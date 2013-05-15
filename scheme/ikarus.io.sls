@@ -5654,13 +5654,16 @@
     ;;necessary, until characters are available  or until an end of file
     ;;is reached.
     ;;
-    ;;If characters become available,  GET-STRING-SOME returns a freshly
-    ;;allocated string  containing the initial available  characters (at
-    ;;least  one),  and  it  updates  PORT  to  point  just  past  these
-    ;;characters.
+    ;;* If characters become available before  the end of file: return a
+    ;;freshly   allocated  string   containing  the   initial  available
+    ;;characters  (at least  one), and  update PORT  to point  just past
+    ;;these characters.
     ;;
-    ;;If  no input  characters  are  available: the  EOF  object or  the
-    ;;would-block object is returned.
+    ;;* If no input characters are available before the end of file: the
+    ;;EOF object is returned.
+    ;;
+    ;;*  If  no input  characters  are  available before  a  would-block
+    ;;condition: the would-block object is returned.
     ;;
     (define who 'get-string-some)
     (with-arguments-validation (who)
