@@ -4533,6 +4533,19 @@ debugging code.
 @end defun
 
 
+@deffn Parameter debug-print-enabled?
+When set to true, @func{debug-print*} will print its arguments.  It is
+initialised to @false{}.  We can set this parameter to any value,
+internally the value is normalised to @true{} or @false{}.
+@end deffn
+
+
+@defun debug-print* . @var{args}
+Like @func{debug-print}, but print arguments only when the parameter
+@func{debug-print-enabled?} is set to true.
+@end defun
+
+
 @deffn Procedure format @var{fmt-string} @var{args} ...
 The procedure @func{format} produces a string formatted according to
 @func{fmt-string} and the supplied arguments.  The format string
@@ -5690,7 +5703,7 @@ Like GET-U8, but it does not update @var{PORT} to point past the byte.
 
 
 @defun get-bytevector-n @var{port} @var{count}
-Return the EOF object, the would--block object or a bytevector:
+Return the @eof{} object, the would--block object or a bytevector:
 
 @itemize
 @item
@@ -5705,7 +5718,7 @@ to point just past the bytes read.
 
 @item
 If an end of file is reached before any bytes are available: return the
-EOF object.
+@eof{} object.
 
 @item
 If the underlying device is in non--blocking mode and fewer than
@@ -5720,7 +5733,7 @@ available: return the would--block object.
 
 
 @defun get-bytevector-n! @var{port} @var{dst.bv} @var{dst.start} @var{count}
-Return the EOF object, the would--block object or the number of bytes
+Return the @eof{} object, the would--block object or the number of bytes
 written in the given bytevector:
 
 @itemize
@@ -5739,7 +5752,7 @@ past the bytes read.
 
 @item
 If the end of file is reached before any bytes are available: return the
-EOF object.
+@eof{} object.
 
 @item
 If the underlying device is in non--blocking mode and fewer than
@@ -5756,7 +5769,7 @@ available: return the would--block object.
 
 
 @defun get-bytevector-all @var{port}
-Return the EOF object, the would--block object or a bytevector:
+Return the @eof{} object, the would--block object or a bytevector:
 
 @itemize
 @item
@@ -5764,18 +5777,19 @@ If one or more bytes are read: return a bytevector containing all bytes
 up to the next end of file.
 
 @item
-If no bytes are available and the end--of--file is found: return the EOF
+If no bytes are available and the end--of--file is found: return the @eof{}
 object.
 
 @item
 If the underlying device is in non--blocking mode and no bytes are
-available: return the would--block object.
+available: this function attempts to read input until the @eof{} is
+found.
 @end itemize
 @end defun
 
 
 @defun get-bytevector-some @var{port}
-Return the EOF object, the would--block object or a bytevector:
+Return the @eof{} object, the would--block object or a bytevector:
 
 @itemize
 @item

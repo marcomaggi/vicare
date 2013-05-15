@@ -18,15 +18,17 @@
 #!r6rs
 (library (ikarus pretty-print)
   (export
-    pretty-print
-    pretty-print*
+    pretty-print		pretty-print*
     pretty-width
-    debug-print)
+
+    debug-print-enabled?
+    debug-print			debug-print*)
   (import (except (ikarus)
-		  pretty-print
-		  pretty-print*
+		  pretty-print		pretty-print*
 		  pretty-width
-		  debug-print)
+
+		  debug-print-enabled?
+		  debug-print			debug-print*)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
@@ -651,6 +653,15 @@
   (pretty-print args (current-error-port))
   (newline (current-error-port))
   (newline (current-error-port)))
+
+(define debug-print-enabled?
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
+(define (debug-print* . args)
+  (when (debug-print-enabled?)
+    (apply debug-print args)))
 
 
 ;;;; done

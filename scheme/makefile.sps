@@ -2001,6 +2001,8 @@
     (pretty-print				i v $language $boot)
     (pretty-print*				i v $language)
     (debug-print				i v $language)
+    (debug-print-enabled?			i v $language)
+    (debug-print*				i v $language)
     (pretty-format				i v $language)
     (pretty-width				i v $language)
     (module					i v $language cm)
