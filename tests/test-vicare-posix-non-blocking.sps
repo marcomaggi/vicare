@@ -41,8 +41,8 @@
       (px.pipe)
     (push-compensation (px.close in))
     (push-compensation (px.close ou))
-    (px.fd-set-non-blocking in)
-    (px.fd-set-non-blocking ou)
+    (px.fd-set-non-blocking-mode! in)
+    (px.fd-set-non-blocking-mode! ou)
     (values in ou)))
 
 (define (make-binary-ports)
@@ -64,6 +64,26 @@
 
 
 (parametrise ((check-test-name	'setting-mode))
+
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-in-non-blocking-mode? in)))
+    => #f)
+
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-set-non-blocking-mode! in)
+	  (px.fd-in-non-blocking-mode? in)))
+    => #t)
+;;; --------------------------------------------------------------------
 
   (check
       (with-compensations

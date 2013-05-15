@@ -57,7 +57,7 @@
        (non-negative-fixnum	max-pending-connections))
     (let ((sockaddr    (%make-sockaddr interface (number->string port)))
 	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-      (px.fd-set-non-blocking master-sock)
+      (px.fd-set-non-blocking-mode! master-sock)
       (px.setsockopt/linger master-sock #t 1)
       (px.setsockopt/int    master-sock SOL_SOCKET SO_REUSEADDR #t)
       (px.bind   master-sock sockaddr)
@@ -97,7 +97,7 @@
 	     (remote-port         (px.sockaddr_in.in_port client-address))
 	     (remote-port.str     (number->string remote-port))
 	     (port-id             (string-append remote-address.str ":" remote-port.str)))
-	(px.fd-set-non-blocking server-sock)
+	(px.fd-set-non-blocking-mode! server-sock)
 	(let ((server-port (make-binary-socket-input/output-port server-sock port-id)))
 	  (values server-sock server-port client-address))))))
 

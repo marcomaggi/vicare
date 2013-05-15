@@ -1889,7 +1889,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 #endif
 }
 ikptr
-ikptr_posix_fd_set_non_blocking (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
@@ -1900,6 +1900,19 @@ ikptr_posix_fd_set_non_blocking (ikptr s_fd, ikpcb * pcb)
   errno = 0;
   rv = fcntl(fd, F_SETFL, rv | O_NONBLOCK);
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & O_NONBLOCK) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

@@ -216,7 +216,7 @@
     posix-select-fd-exceptional?
     posix-poll
     posix-fcntl				posix-ioctl
-    posix-fd-set-non-blocking
+    posix-fd-set-non-blocking-mode	posix-fd-ref-non-blocking-mode
     posix-dup				posix-dup2
     posix-pipe				posix-mkfifo
     posix-truncate			posix-ftruncate
@@ -1273,8 +1273,11 @@
 (define-inline (posix-ioctl fd command arg)
   (foreign-call "ikrt_posix_ioctl" fd command arg))
 
-(define-inline (posix-fd-set-non-blocking fd)
-  (foreign-call "ikptr_posix_fd_set_non_blocking" fd))
+(define-inline (posix-fd-set-non-blocking-mode fd)
+  (foreign-call "ikptr_posix_fd_set_non_blocking_mode" fd))
+
+(define-inline (posix-fd-ref-non-blocking-mode fd)
+  (foreign-call "ikptr_posix_fd_ref_non_blocking_mode" fd))
 
 ;;; --------------------------------------------------------------------
 

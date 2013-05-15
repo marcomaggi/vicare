@@ -155,7 +155,7 @@
     select-fd-exceptional?
     poll
     fcntl				ioctl
-    fd-set-non-blocking
+    fd-set-non-blocking-mode!		fd-in-non-blocking-mode?
     dup					dup2
     pipe				mkfifo
     truncate				ftruncate
@@ -1998,12 +1998,21 @@
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
 
-(define (fd-set-non-blocking fd)
-  (define who 'fd-set-non-blocking)
+(define (fd-set-non-blocking-mode! fd)
+  (define who 'fd-set-non-blocking-mode!)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
-    (let ((rv (capi.posix-fd-set-non-blocking fd)))
+    (let ((rv (capi.posix-fd-set-non-blocking-mode fd)))
       (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-in-non-blocking-mode? fd)
+  (define who 'fd-in-non-blocking-mode?)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-ref-non-blocking-mode fd)))
+      (if (boolean? rv)
+	  rv
 	(%raise-errno-error who rv fd)))))
 
 ;;; --------------------------------------------------------------------
