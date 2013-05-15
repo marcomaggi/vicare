@@ -5795,26 +5795,6 @@ available: return the would--block object.
 @end defun
 
 
-@defun get-bytevector-all @var{port}
-Return the @eof{} object, the would--block object or a bytevector:
-
-@itemize
-@item
-If one or more bytes are read: return a bytevector containing all bytes
-up to the next end of file.
-
-@item
-If no bytes are available and the end--of--file is found: return the @eof{}
-object.
-
-@item
-If the underlying device is in non--blocking mode and no bytes are
-available: this function attempts to read input until the @eof{} is
-found.
-@end itemize
-@end defun
-
-
 @defun get-bytevector-some @var{port}
 Return the @eof{} object, the would--block object or a bytevector:
 

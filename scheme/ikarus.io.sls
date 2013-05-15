@@ -1285,6 +1285,12 @@
   (or (eq? obj 'r6rs) (eq? obj 'vicare))
   (assertion-violation who "expected supported port mode as argument" obj))
 
+(define-argument-validation (port-with-fd who obj)
+  (and (port? obj)
+       (let ((port obj))
+	 (with-port (port) port.fd-device?)))
+  (assertion-violation who "expected port with file descriptor as underlying device" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation ($input-port who obj)
@@ -3992,12 +3998,6 @@
       (and port.fd-device?
 	   port.device))))
 
-(define-argument-validation (port-with-fd who obj)
-  (and (port? obj)
-       (let ((port obj))
-	 (with-port (port) port.fd-device?)))
-  (assertion-violation who "expected port with file descriptor as underlying device" obj))
-
 (define (port-set-non-blocking-mode! port)
   ;;Defined  by   Vicare.   Set  non-blocking  mode   for  PORT;  return
   ;;unspecified values.  PORT must have  a file descriptor as underlying
@@ -5234,16 +5234,36 @@
       ;;
       (let ((ch (?peek-char-proc port who)))
 	(cond
-	 ;;EOF or  would-block without available characters:  return EOF
-	 ;;or would-block object.
+	 ;;EOF without available characters: return the EOF object.
 	 ;;
-	 ;;We consume the character because  a "peek char" operation can
-	 ;;return EOF even when there are  bytes in the input buffer: it
-	 ;;happens when  the bytes  do *not*  represent a  valid Unicode
-	 ;;character  in the  context  of the  selected  codec, and  the
-	 ;;transcoder has ERROR-HANDLING-MODE set to "ignore".
-	 ((eof-or-would-block-object? ch)
-	  (?read-char-proc port who))
+	 ;;Notice  that: the  peek  char operation  performed above  can
+	 ;;return EOF even when there are  bytes in the input buffer; it
+	 ;;happens when all the following conditions are met:
+	 ;;
+	 ;;1. The bytes do *not*  represent a valid Unicode character in
+	 ;;the context of the selected codec.
+	 ;;
+	 ;;2. The transcoder has ERROR-HANDLING-MODE set to "ignore".
+	 ;;
+	 ;;3. The invalid bytes are followed by an EOF.
+	 ;;
+	 ;;We could just  perform a read operation here  to remove those
+	 ;;characters, but consider the following  case: at the REPL the
+	 ;;user hits "Ctrl-D"  sending a "soft" EOF condition  up to the
+	 ;;port; such EOF is consumed by the peek operation above, so if
+	 ;;we perform a read operation  here the port will block waiting
+	 ;;for more characters.
+	 ;;
+	 ;;We solve by just resetting the input buffer to empty here.
+	 ;;
+	 ((eof-object? ch)
+	  (with-port (port)
+	    (port.buffer.reset-to-empty!))
+	  ch)
+	 ;;Would-block   without   available  characters:   return   the
+	 ;;would-block object.
+	 ((would-block-object? ch)
+	  ch)
 	 ;;If  no end-of-line  conversion is  configured for  this port:
 	 ;;consume the character and return it.
 	 ((%unsafe.port-eol-style-is-none? port)
@@ -5260,14 +5280,14 @@
 	 (($char-is-carriage-return? ch)
 	  (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
 	    (cond
-	     ;;A  standalone #\return  followed  by EOF:  consume the  2
-	     ;;characters and return #\linefeed.
+	     ;;A standalone  #\return followed by EOF:  reset the buffer
+	     ;;to empty and return #\linefeed.
 	     ;;
-	     ;;See the  case of EOF  above for  the reason we  consume 2
-	     ;;characters.
+	     ;;See the  case of EOF  above for  the reason we  reset the
+	     ;;buffer to empty.
 	     ((eof-object? ch2)
-	      (?read-char-proc port who)
-	      (?read-char-proc port who)
+	      (with-port (port)
+		(port.buffer.reset-to-empty!))
 	      LINEFEED-CHAR)
 	     ;;A   #\return   followed   by  would-block:   return   the
 	     ;;would-block  object  *without* consuming  any  character;
@@ -5745,19 +5765,44 @@
 	      (read-next-char dst.index))))
 	(let ((ch (?peek-char-proc port who)))
 	  (cond
-	   ;;EOF or  would-block: if no characters  were previously read
-	   ;;return  the  EOF object  or  the  would-block object,  else
-	   ;;return the number of characters read.
+	   ;;EOF  without available  characters: if  no characters  were
+	   ;;previously  read return  the  EOF object,  else return  the
+	   ;;number of characters read.
 	   ;;
-	   ;;We consume  the character  because a "peek  char" operation
-	   ;;can  return EOF  even when  there  are bytes  in the  input
-	   ;;buffer:  it happens  when the  bytes do  *not* represent  a
-	   ;;valid  Unicode character  in  the context  of the  selected
-	   ;;codec, and  the transcoder  has ERROR-HANDLING-MODE  set to
-	   ;;"ignore".
-	   ((eof-or-would-block-object? ch)
+	   ;;Notice  that: the  peek  char operation  performed above  can
+	   ;;return EOF even when there are  bytes in the input buffer; it
+	   ;;happens when all the following conditions are met:
+	   ;;
+	   ;;1. The bytes do *not*  represent a valid Unicode character in
+	   ;;the context of the selected codec.
+	   ;;
+	   ;;2. The transcoder has ERROR-HANDLING-MODE set to "ignore".
+	   ;;
+	   ;;3. The invalid bytes are followed by an EOF.
+	   ;;
+	   ;;We could just  perform a read operation here  to remove those
+	   ;;characters, but consider the following  case: at the REPL the
+	   ;;user hits "Ctrl-D"  sending a "soft" EOF condition  up to the
+	   ;;port; such EOF is consumed by the peek operation above, so if
+	   ;;we perform a read operation  here the port will block waiting
+	   ;;for more characters.
+	   ;;
+	   ;;We solve by just resetting the input buffer to empty here.
+	   ;;
+	   ((eof-object? ch)
+	    (with-port (port)
+	      (port.buffer.reset-to-empty!))
 	    (if ($fx= dst.index dst.start)
-		;;Return the EOF object or the would-block object.
+		;;Return the EOF object object.
+		ch
+	      ;;Return the number of chars read.
+	      ($fx- dst.index dst.start)))
+	   ;;Would-block  with  no  new   characters  available:  if  no
+	   ;;characters  were  previously  read return  the  would-block
+	   ;;object, else return the number of characters read.
+	   ((would-block-object? ch)
+	    (if ($fx= dst.index dst.start)
+		;;Return the would-block object.
 		ch
 	      ;;Return the number of chars read.
 	      ($fx- dst.index dst.start)))
@@ -5778,14 +5823,14 @@
 	   (($char-is-carriage-return? ch)
 	    (let ((ch2 (?peek-char/offset-proc port who ?offset-of-ch2)))
 	      (cond
-	       ;;A  standalone  #\return  followed  by  EOF:  consume  2
-	       ;;characters, store #\linefeed then loop or return.
+	       ;;A standalone #\return followed by EOF: reset the buffer
+	       ;;to empty, store #\linefeed then loop or return.
 	       ;;
-	       ;;See the case  of EOF above for the reason  we consume 2
-	       ;;characters.
+	       ;;See the case  of EOF above for the reason  we reset the
+	       ;;buffer to empty.
 	       ((eof-object? ch2)
-		(?read-char-proc port who)
-		(?read-char-proc port who)
+		(with-port (port)
+		  (port.buffer.reset-to-empty!))
 		(%store-char-then-loop-or-return LINEFEED-CHAR))
 	       ;;A  #\return  followed  by  would-block:  return  object
 	       ;;*without* consuming  the return character;  maybe later
@@ -6057,7 +6102,8 @@
 	($fixnum->char N)))
 
     (define-inline (get-2-bytes-character byte0 buffer.offset-byte0)
-      (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-1-more-byte
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-past  ($fxadd1 buffer.offset-byte1)))
@@ -6090,7 +6136,8 @@
 
     (define-inline (get-3-bytes-character byte0 buffer.offset-byte0)
       ;;After refilling we have to reload buffer indexes.
-      (let retry-after-filling-buffer-for-2-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-2-more-bytes
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
 	       (buffer.offset-past  ($fxadd1 buffer.offset-byte2)))
@@ -6127,7 +6174,8 @@
 	    ))))
 
     (define-inline (get-4-bytes-character byte0 buffer.offset-byte0)
-      (let retry-after-filling-buffer-for-3-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-3-more-bytes
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
@@ -6186,7 +6234,8 @@
 			     (make-message-condition message)
 			     (make-irritants-condition irritants))))
 	  (else
-	   (assertion-violation who "vicare internal error: wrong transcoder error handling mode" mode)))))
+	   (assertion-violation who
+	     "vicare internal error: wrong transcoder error handling mode" mode)))))
 
     (define (%error-handler message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
@@ -6258,13 +6307,15 @@
 	    ))))
 
     (define-inline (peek-2-bytes-character byte0 buffer.offset-byte0)
-      (let retry-after-filling-buffer-for-1-more-byte ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-1-more-byte
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0)))
 	  (maybe-refill-bytevector-buffer-and-evaluate (port who)
 	    (data-is-needed-at: buffer.offset-byte1)
 	    (if-end-of-file:
-	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character" byte0))
+	     (%unexpected-eof-error "unexpected EOF while decoding 2-byte UTF-8 character"
+				    byte0))
 	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
 	    (if-successful-refill:
 	     (retry-after-filling-buffer-for-1-more-byte port.buffer.index))
@@ -6289,7 +6340,8 @@
 	    ))))
 
     (define-inline (peek-3-bytes-character byte0 buffer.offset-byte0)
-      (let retry-after-filling-buffer-for-2-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-2-more-bytes
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1)))
@@ -6327,7 +6379,8 @@
 	    ))))
 
     (define-inline (peek-4-bytes-character byte0 buffer.offset-byte0)
-      (let retry-after-filling-buffer-for-3-more-bytes ((buffer.offset-byte0 buffer.offset-byte0))
+      (let retry-after-filling-buffer-for-3-more-bytes
+	  ((buffer.offset-byte0 buffer.offset-byte0))
 	;;After refilling we have to reload buffer indexes.
 	(let* ((buffer.offset-byte1 ($fxadd1 buffer.offset-byte0))
 	       (buffer.offset-byte2 ($fxadd1 buffer.offset-byte1))
@@ -6339,7 +6392,8 @@
 		    byte0 (if ($fx< buffer.offset-byte1 port.buffer.used-size)
 			      (cons ($bytevector-u8-ref port.buffer buffer.offset-byte1)
 				    (if ($fx< buffer.offset-byte2 port.buffer.used-size)
-					(list ($bytevector-u8-ref port.buffer buffer.offset-byte2))
+					(list ($bytevector-u8-ref port.buffer
+								  buffer.offset-byte2))
 				      '()))
 			    '())))
 	    (if-empty-buffer-and-refilling-would-block: WOULD-BLOCK-OBJECT)
@@ -6352,7 +6406,8 @@
 		   (buffer-offset ($fx+ 4 buffer-offset)))
 	       (define (%error-invalid-second-third-or-fourth)
 		 (%error-handler buffer-offset
-				 "invalid second, third or fourth byte in 4-bytes UTF-8 character"
+				 "invalid second, third or fourth byte \
+                                  in 4-bytes UTF-8 character"
 				 byte0 byte1 byte2 byte3))
 	       (cond ((or (utf-8-invalid-octet? byte1)
 			  (utf-8-invalid-octet? byte2)
@@ -6384,7 +6439,8 @@
 			     (make-message-condition message)
 			     (make-irritants-condition irritants))))
 	  (else
-	   (assertion-violation who "vicare internal error: wrong transcoder error handling mode" mode)))))
+	   (assertion-violation who
+	     "vicare internal error: wrong transcoder error handling mode" mode)))))
 
     (define (%error-handler buffer-offset message . irritants)
       (let ((mode (transcoder-error-handling-mode port.transcoder)))
@@ -6400,7 +6456,8 @@
 			     (make-message-condition message)
 			     (make-irritants-condition irritants))))
 	  (else
-	   (assertion-violation who "vicare internal error: wrong transcoder error handling mode" mode)))))
+	   (assertion-violation who
+	     "vicare internal error: wrong transcoder error handling mode" mode)))))
 
     (main)))
 
