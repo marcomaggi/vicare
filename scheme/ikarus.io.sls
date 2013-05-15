@@ -7581,8 +7581,8 @@
 
 ;;;; platform I/O error handling
 
-(define (%raise-eagain-error who port)
-  ;;Raise an exception to signal  that a system call was interrupted and
+(define (%raise-eagain-error who port port-identifier)
+  ;;Raise an exception to signal that  a system call was interrupted and
   ;;returned the EAGAIN errno code.
   ;;
   (raise
@@ -7591,7 +7591,8 @@
 	      (make-message-condition (strerror EAGAIN))
 	      (if port
 		  (make-i/o-port-error port)
-		(condition)))))
+		(condition))
+	      (make-irritants-condition (list port-identifier)))))
 
 (define %raise-io-error
   ;;Raise a non-continuable  exception describing an input/output
@@ -7722,7 +7723,7 @@
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'read! #f port-identifier))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
@@ -7770,7 +7771,7 @@
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'write! #f port-identifier))
 	    (else
 	     (%raise-io-error 'write! port-identifier count (make-i/o-write-error))))))
 
@@ -7817,7 +7818,7 @@
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'read! #f port-identifier))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
@@ -7826,7 +7827,7 @@
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'write! #f port-identifier))
 	    (else
 	     (%raise-io-error 'write! port-identifier count (make-i/o-write-error))))))
 
@@ -7869,7 +7870,7 @@
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'read! #f port-identifier))
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
@@ -7878,7 +7879,7 @@
       (cond (($fx>= rv 0)
 	     rv)
 	    (($fx= rv EAGAIN)
-	     (%raise-eagain-error who #f))
+	     (%raise-eagain-error 'read! #f port-identifier))
 	    (else
 	     (%raise-io-error 'write! port-identifier rv (make-i/o-write-error))))))
 
