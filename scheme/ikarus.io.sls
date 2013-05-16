@@ -487,7 +487,8 @@
     (rename (string->filename-func	string->pathname-func)
 	    (filename->string-func	pathname->string-func))
     port-dump-status
-    port-set-non-blocking-mode!	port-in-non-blocking-mode?
+    port-set-non-blocking-mode!	port-unset-non-blocking-mode!
+    port-in-non-blocking-mode?
 
     ;; networking
     make-binary-socket-input/output-port
@@ -607,7 +608,8 @@
 		  string->filename-func		filename->string-func
 		  string->pathname-func		pathname->string-func
 		  port-dump-status
-		  port-set-non-blocking-mode!	port-in-non-blocking-mode?
+		  port-set-non-blocking-mode!	port-unset-non-blocking-mode!
+		  port-in-non-blocking-mode?
 
 		  ;; networking
 		  make-binary-socket-input/output-port
@@ -4005,6 +4007,19 @@
       ((port-with-fd	port))
     (let ((rv (capi.platform-fd-set-non-blocking-mode (with-port (port)
 							port.device))))
+      (when ($fx< rv 0)
+	(%raise-io-error who rv port)))))
+
+(define (port-unset-non-blocking-mode! port)
+  ;;Defined  by  Vicare.   Unset  non-blocking  mode  for  PORT;  return
+  ;;unspecified values.  PORT must have  a file descriptor as underlying
+  ;;device.
+  ;;
+  (define who 'port-unset-non-blocking-mode!)
+  (with-arguments-validation (who)
+      ((port-with-fd	port))
+    (let ((rv (capi.platform-fd-unset-non-blocking-mode (with-port (port)
+							  port.device))))
       (when ($fx< rv 0)
 	(%raise-io-error who rv port)))))
 

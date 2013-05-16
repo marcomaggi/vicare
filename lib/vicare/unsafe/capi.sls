@@ -315,7 +315,8 @@
     platform-open-input/output-fd	platform-close-fd
     platform-read-fd			platform-write-fd
     platform-set-position
-    platform-fd-set-non-blocking-mode	platform-fd-ref-non-blocking-mode
+    platform-fd-set-non-blocking-mode	platform-fd-unset-non-blocking-mode
+    platform-fd-ref-non-blocking-mode
 
     ;; users and groups
     posix-getuid			posix-getgid
@@ -1839,6 +1840,12 @@
   ;;descriptor.
   ;;
   (foreign-call "ikptr_fd_set_non_blocking_mode" fd))
+
+(define-inline (platform-fd-unset-non-blocking-mode fd)
+  ;;Make  use  of  "fcntl()"  to  unset non-blocking  mode  for  a  file
+  ;;descriptor.
+  ;;
+  (foreign-call "ikptr_fd_unset_non_blocking_mode" fd))
 
 (define-inline (platform-fd-ref-non-blocking-mode fd)
   ;;Make use  of "fcntl()" to  query a file descriptor  for non-blocking

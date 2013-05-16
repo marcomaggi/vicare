@@ -2054,6 +2054,7 @@
     (port-hash					i v $language)
     (port-fd					i v $language)
     (port-set-non-blocking-mode!		i v $language)
+    (port-unset-non-blocking-mode!		i v $language)
     (port-in-non-blocking-mode?			i v $language)
     (string->filename-func			i v $language)
     (filename->string-func			i v $language)

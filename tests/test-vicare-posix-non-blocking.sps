@@ -65,7 +65,7 @@
 
 (parametrise ((check-test-name	'setting-mode))
 
-  (check
+  (check	;testing
       (with-compensations
 	(receive (in ou)
 	    (px.pipe)
@@ -74,7 +74,7 @@
 	  (px.fd-in-non-blocking-mode? in)))
     => #f)
 
-  (check
+  (check	;setting, testing
       (with-compensations
 	(receive (in ou)
 	    (px.pipe)
@@ -83,9 +83,31 @@
 	  (px.fd-set-non-blocking-mode! in)
 	  (px.fd-in-non-blocking-mode? in)))
     => #t)
+
+  (check	;setting, unsetting, testing
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-set-non-blocking-mode! in)
+	  (px.fd-unset-non-blocking-mode! in)
+	  (px.fd-in-non-blocking-mode? in)))
+    => #f)
+
+  (check	;unsetting, testing
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-unset-non-blocking-mode! in)
+	  (px.fd-in-non-blocking-mode? in)))
+    => #f)
+
 ;;; --------------------------------------------------------------------
 
-  (check
+  (check	;testing
       (with-compensations
 	(receive (in ou)
 	    (px.pipe)
@@ -95,7 +117,7 @@
 	    (port-in-non-blocking-mode? inp))))
     => #f)
 
-  (check
+  (check	;setting, testing
       (with-compensations
 	(receive (in ou)
 	    (px.pipe)
@@ -105,6 +127,29 @@
 	    (port-set-non-blocking-mode! inp)
 	    (port-in-non-blocking-mode? inp))))
     => #t)
+
+  (check	;setting, unsetting, testing
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port*  in "in")))
+	    (port-set-non-blocking-mode! inp)
+	    (port-unset-non-blocking-mode! inp)
+	    (port-in-non-blocking-mode? inp))))
+    => #f)
+
+  (check	;unsetting, testing
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port*  in "in")))
+	    (port-unset-non-blocking-mode! inp)
+	    (port-in-non-blocking-mode? inp))))
+    => #f)
 
   #t)
 

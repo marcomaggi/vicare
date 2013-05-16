@@ -5913,6 +5913,13 @@ file descriptor as underlying device.
 @end defun
 
 
+@defun port-unset-non-blocking-mode! @var{port}
+Unset non--blocking mode for @var{port}; if successful return
+unspecified values, if an error occurs raise an exception.  @var{port}
+must have a file descriptor as underlying device.
+@end defun
+
+
 @defun port-in-non-blocking-mode? @var{port}
 Query @var{port} for its non--blocking mode; if successful: return
 @true{} if the port is in non--blocking mode, @false{} otherwise.  If an

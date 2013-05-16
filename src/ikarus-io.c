@@ -223,6 +223,22 @@ ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
+ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv & (~O_NONBLOCK));
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
 ikptr_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 {
 #ifdef HAVE_FCNTL
