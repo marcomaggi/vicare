@@ -31,13 +31,15 @@ edited by Michael  Sperber, R. Kent Dybvig, Matthew  Flatt and Anton Van
 Straaten.
 
   Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
-programming  language; it is  the creation  of Abdulaziz  Ghuloum, which
+programming language;  it is  the creation  of Abdulaziz  Ghuloum, which
 retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
 fork of Ikarus Scheme, aiming to  become a native compiler for R6 Scheme
 producing  single   threaded  programs  running  on   Intel  x86  32-bit
-processors, with experimental support  for 64-bit machines; it is tested
-only on GNU+Linux,  no official support for other  platforms is present.
-"Vicare" is pronounced the etruscan way.
+processors, with experimental support for  64-bit machines; it is tested
+only on GNU+Linux, no official support for other platforms is present.
+
+  "Vicare" is pronounced  the etruscan way.  The logo of  the project is
+the greek capital letter Upsilon (U+03D2).
 
   Vicare offers arbitrary precision integers through GMP.  It implements
 an optionally included foreign-functions interface based on Libffi.  The
