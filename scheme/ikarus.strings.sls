@@ -66,9 +66,8 @@
 		  uri-encode			uri-decode
 		  uri-normalise-encoding)
     (vicare language-extensions syntaxes)
-    (prefix (except (vicare unsafe operations)
-		    string=)
-	    $))
+    (except (vicare unsafe operations)
+	    $string=))
 
 
 ;;;; arguments validation

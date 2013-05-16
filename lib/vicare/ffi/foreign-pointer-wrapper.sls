@@ -37,8 +37,7 @@
     fields)
   (import (vicare)
     (vicare language-extensions syntaxes)
-    (prefix (vicare unsafe operations)
-	    $)
+    (vicare unsafe operations)
     (vicare arguments validation))
 
   (define-auxiliary-syntaxes

@@ -80,8 +80,7 @@
 		  enum-set?
 		  make-file-options)
     (vicare language-extensions syntaxes)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; record types
@@ -152,11 +151,11 @@
 (define-inline (make-index-to-symbol-map list-of-symbols)
   (list->vector list-of-symbols))
 (define-inline (index-to-symbol-set! vector index value)
-  (unsafe.vector-set! vector index value))
+  ($vector-set! vector index value))
 (define-inline (index-to-symbol-ref vector index)
-  (unsafe.vector-ref vector index))
+  ($vector-ref vector index))
 (define-inline (index-to-symbol-size vector)
-  (unsafe.vector-length vector))
+  ($vector-length vector))
 
 ;;Applied to  an exact integer  representing a bivector: return  true if
 ;;the  rightmost  bit  is set  to  zero.   This  means that  the  symbol
@@ -424,7 +423,7 @@
       (or (zero? set.bitvector)
 	  (if (%rightmost-bit-set-to-zero? set.bitvector)
 	      (next)
-	    (and (proc (unsafe.vector-ref set.index-to-symbol index))
+	    (and (proc ($vector-ref set.index-to-symbol index))
 		 (next)))))))
 
 (define make-file-options

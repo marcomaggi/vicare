@@ -194,10 +194,9 @@
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
-    (prefix (except (vicare unsafe operations)
-		    string-copy!
-		    string-fill!)
-	    $)
+    (except (vicare unsafe operations)
+	    $string-copy!
+	    $string-fill!)
     (only (ikarus system $numerics)
 	  $min-fixnum-fixnum
 	  $add-number-fixnum))

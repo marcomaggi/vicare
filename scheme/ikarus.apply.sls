@@ -18,8 +18,7 @@
   (export apply)
   (import (except (ikarus) apply)
     (vicare language-extensions syntaxes)
-    (prefix (vicare unsafe operations)
-	    unsafe.)
+    (vicare unsafe operations)
     (ikarus system $stack))
 
 
@@ -44,16 +43,16 @@
   ;;
   (define who 'apply)
   (define (%race h t ls n)
-    (cond ((unsafe.fx< CALL-ARGUMENTS-LIMIT n)
+    (cond (($fx< CALL-ARGUMENTS-LIMIT n)
 	   #f)
 	  ((pair? h)
-	   (let ((h (unsafe.cdr h)))
+	   (let ((h ($cdr h)))
 	     (if (pair? h)
 		 (if (not (eq? h t))
-		     (%race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
+		     (%race ($cdr h) ($cdr t) ls ($fx+ n 2))
 		   (assertion-violation who "circular list is invalid as argument" ls))
 	       (if (null? h)
-		   (unsafe.fx+ n 1)
+		   ($fx+ n 1)
 		 (assertion-violation who "improper list is invalid as argument" ls)))))
 	  ((null? h)
 	   n)
@@ -79,14 +78,14 @@
 (define who 'apply)
 
 (define (fixandgo f a0 a1 ls p d)
-  (if (null? (unsafe.cdr d))
-      (let ((last (unsafe.car d)))
-	(unsafe.set-cdr! p last)
+  (if (null? ($cdr d))
+      (let ((last ($car d)))
+	($set-cdr! p last)
 	(with-arguments-validation (who)
 	    ((procedure f ls)
 	     (list	last))
 	  ($$apply f a0 a1 ls)))
-    (fixandgo f a0 a1 ls d (unsafe.cdr d))))
+    (fixandgo f a0 a1 ls d ($cdr d))))
 
 (define apply
   ;;Defined  by  R6RS.   LS  must  be  a list.   PROC  should  accept  N
@@ -131,7 +130,7 @@
     ;;
     ;;  (a2 a3 a4 ... An An+1 An+2 ...)
     ;;
-    (fixandgo f a0 a1 ls ls (unsafe.cdr ls)))
+    (fixandgo f a0 a1 ls ls ($cdr ls)))
    ))
 
 

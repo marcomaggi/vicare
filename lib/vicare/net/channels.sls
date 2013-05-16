@@ -96,8 +96,7 @@
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 ;;;; data structures

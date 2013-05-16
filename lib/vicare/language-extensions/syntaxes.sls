@@ -71,8 +71,7 @@
 	  with-dangerous-arguments-validation
 	  arguments-validation-forms
 	  exact-integer.vicare-arguments-validation)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 ;;;; some defining syntaxes

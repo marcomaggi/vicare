@@ -48,8 +48,7 @@
     :invalid-input-char
     :end-of-input)
   (import (rnrs)
-    (prefix (vicare unsafe operations)
-	    unsafe.)
+    (vicare unsafe operations)
     (only (vicare)
 	  define-auxiliary-syntaxes))
 
@@ -125,10 +124,10 @@
 		 (assertion-violation 'define-parser
 		   "unknown requested public parser operator name"
 		   public-operator-name))
-		((bound-identifier=? public-operator-name (unsafe.car ls1))
-		 (unsafe.car ls2))
+		((bound-identifier=? public-operator-name ($car ls1))
+		 ($car ls2))
 		(else
-		 (loop (unsafe.cdr ls1) (unsafe.cdr ls2)))))))
+		 (loop ($cdr ls1) ($cdr ls2)))))))
     (define (syntax->list stx)
       ;;Given a syntax object STX holding a list, unwrap it and return a
       ;;proper list holding the component syntax objects.
@@ -267,7 +266,7 @@
     ;;against ?CH-VAR.
     ((_ ?device-logic ?device-arg-list ?ch-var ?test-delimiter-form
 	((?char ...) ?then-form) . ?other-operator-clauses)
-     (if (or (unsafe.char= ?char ?ch-var)
+     (if (or ($char= ?char ?ch-var)
 	     ...)
 	 ?then-form
        (%generate-parse-input-char-form ?device-logic ?device-arg-list ?ch-var
@@ -329,11 +328,11 @@
 		   ((_) #f)))
 	  (?next (syntax-rules ()
 		   ((_ ?operator-name ?operator-arg (... ...))
-		    (?operator-name ?input.string ?input.length (unsafe.fxadd1 ?input.index)
+		    (?operator-name ?input.string ?input.length ($fxadd1 ?input.index)
 				    ?operator-arg (... ...))))))
-       (if (unsafe.fx= ?input.index ?input.length) ;end-of-input
+       (if ($fx= ?input.index ?input.length) ;end-of-input
 	   ?end-of-input-kont
-	 (let ((?ch-var (unsafe.string-ref ?input.string ?input.index)))
+	 (let ((?ch-var ($string-ref ?input.string ?input.index)))
 	   ?parse-input-char-kont))))
     ))
 

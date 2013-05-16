@@ -70,8 +70,7 @@
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
     (vicare language-extensions simple-match)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation

@@ -9,7 +9,7 @@
 ;;;	The  code  in   this  library  is  derived  from   the  code  in
 ;;;	"ikarus.symbol-table.sls".
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -37,8 +37,7 @@
     weak-hashtable-keys		weak-hashtable-entries
     weak-hashtable-update!)
   (import (vicare)
-    (prefix (vicare unsafe operations)
-	    unsafe.)
+    (vicare unsafe operations)
     (vicare language-extensions syntaxes))
 
 
@@ -137,15 +136,15 @@
   (%display " init-dim=")	(%display (weak-table-init-dim S))
   (%display " mask=")		(%display (number->string (weak-table-mask S) 2))
   (let* ((buckets (weak-table-buckets S))
-	 (nbucks  (unsafe.vector-length buckets)))
+	 (nbucks  ($vector-length buckets)))
     (%display " num-of-buckets=")	(%display nbucks)
-    (do ((i 0 (unsafe.fxadd1 i)))
-	((unsafe.fx= i nbucks))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i nbucks))
       (%newline)
       (%display " bucket[")
       (%display i)
       (%display "]=")
-      (%display (unsafe.vector-ref buckets i))))
+      (%display ($vector-ref buckets i))))
   (%display "]"))
 
 
@@ -155,40 +154,40 @@
   (fxdiv (greatest-fixnum) 2))
 
 (define-inline (%compute-bucket-index table key)
-  (unsafe.fxand ((weak-table-hash-function table) key) (weak-table-mask table)))
+  ($fxand ((weak-table-hash-function table) key) (weak-table-mask table)))
 
 (define (%clean-bucket-from-bwp-entries table bucket-index)
   ;;Scan the selected bucket and remove all the weak pairs having BWP in
   ;;key position.  Update the size of the table accordingly.
   ;;
   (define-inline (decr! var)
-    (set! var (unsafe.fxsub1 var)))
+    (set! var ($fxsub1 var)))
   (let* ((size    (weak-table-size table))
 	 (buckets (weak-table-buckets table))
-	 (entries (unsafe.vector-ref buckets bucket-index))
+	 (entries ($vector-ref buckets bucket-index))
 	 ;;Remove the leading entries with BWP key.
 	 (entries (let loop ((entries entries))
 		    (cond ((null? entries)
 			   entries)
-			  ((bwp-object? (unsafe.car (unsafe.car entries)))
+			  ((bwp-object? ($car ($car entries)))
 			   (decr! size)
-			   (loop (unsafe.cdr entries)))
+			   (loop ($cdr entries)))
 			  (else
 			   entries)))))
     (unless (null? entries)
       ;;Remove entries in the tail with  BWP key; we know that the first
       ;;HEAD has valid key.
       (let loop ((head entries)
-		 (tail (unsafe.cdr entries)))
+		 (tail ($cdr entries)))
 	(unless (null? tail)
-	  (if (bwp-object? (unsafe.car (unsafe.car tail)))
-	      (let ((tail (unsafe.cdr tail)))
+	  (if (bwp-object? ($car ($car tail)))
+	      (let ((tail ($cdr tail)))
 		(decr! size)
-		(unsafe.set-cdr! head tail)
+		($set-cdr! head tail)
 		(loop head tail))
-	    (loop tail (unsafe.cdr tail))))))
+	    (loop tail ($cdr tail))))))
     (set-weak-table-size! table size)
-    (unsafe.vector-set! buckets bucket-index entries)))
+    ($vector-set! buckets bucket-index entries)))
 
 (define (%intern! table bucket-index key value)
   ;;If KEY is not already interned: insert a new entry holding KEY/VALUE
@@ -197,32 +196,32 @@
   ;;
   (define who 'intern!)
   (let ((number-of-entries (weak-table-size table)))
-    (if (unsafe.fx= number-of-entries (greatest-fixnum))
+    (if ($fx= number-of-entries (greatest-fixnum))
 	(assertion-violation who
 	  "reached maximum number of entries in weak table"
 	  table key value)
       (begin
 	(let* ((buckets (weak-table-buckets table))
-	       (entries (unsafe.vector-ref buckets bucket-index)))
+	       (entries ($vector-ref buckets bucket-index)))
 	  (if (null? entries)
-	      (unsafe.vector-set! buckets bucket-index
+	      ($vector-set! buckets bucket-index
 				  (cons (weak-cons key value) '()))
 	    ;;If  the key is  already interned:  overwrite the  old value;
 	    ;;else append a new weak pair to the chain of entries.
 	    (let loop ((equiv?	(weak-table-equiv-function table))
 		       (prev    entries)
-		       (entries (unsafe.cdr entries)))
+		       (entries ($cdr entries)))
 	      (if (null? entries) ;key not found
-		  (unsafe.set-cdr! prev (cons (weak-cons key value) '()))
-		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		  ($set-cdr! prev (cons (weak-cons key value) '()))
+		(let ((intern-key ($car ($car entries))))
 		  ;;Here it does not matter if INTERN-KEY is BWP.
 		  (if (or (eq?    key intern-key)
 			  (equiv? key intern-key))
-		      (unsafe.set-cdr! (unsafe.car entries) value)
-		    (loop equiv? entries (unsafe.cdr entries))))))))
-	(let ((N (unsafe.fxadd1 number-of-entries)))
+		      ($set-cdr! ($car entries) value)
+		    (loop equiv? entries ($cdr entries))))))))
+	(let ((N ($fxadd1 number-of-entries)))
 	  (set-weak-table-size! table N)
-	  (when (unsafe.fx= N (weak-table-mask table))
+	  (when ($fx= N (weak-table-mask table))
 	    (%extend-table! table)))))))
 
 (define (%unintern! table key bucket-index)
@@ -231,31 +230,31 @@
   ;;
   (let* ((buckets (weak-table-buckets        table))
 	 (equiv?  (weak-table-equiv-function table)))
-    (let ((entries (unsafe.vector-ref buckets bucket-index)))
+    (let ((entries ($vector-ref buckets bucket-index)))
       (if (null? entries) ;empty bucket
 	  (values)	  ;key not found
 	;;Check separately the first entry  because if we have to remove
 	;;it we must also update the value in the bucket.
-	(let ((intern-key (unsafe.car (unsafe.car entries))))
+	(let ((intern-key ($car ($car entries))))
 	  ;;Here it does not matter if INTERN-KEY is BWP.
 	  (if (or (eq?    key intern-key)
 		  (equiv? key intern-key))
 	      (begin
-		(set-weak-table-size! table (unsafe.fxsub1 (weak-table-size table)))
-		(unsafe.vector-set! buckets bucket-index (unsafe.cdr entries)))
+		(set-weak-table-size! table ($fxsub1 (weak-table-size table)))
+		($vector-set! buckets bucket-index ($cdr entries)))
 	    ;;Now check the tail of the chain.
 	    (let loop ((prev    entries)
-		       (entries (unsafe.cdr entries)))
+		       (entries ($cdr entries)))
 	      (if (null? entries)
 		  (values) ;key not found
-		(let ((intern-key (unsafe.car (unsafe.car entries))))
+		(let ((intern-key ($car ($car entries))))
 		  ;;Here it does not matter if INTERN-KEY is BWP.
 		  (if (or (eq?    key intern-key)
 			  (equiv? key intern-key))
 		      (begin
-			(set-weak-table-size! table (unsafe.fxsub1 (weak-table-size table)))
-			(unsafe.set-cdr! prev (unsafe.cdr entries)))
-		    (loop entries (unsafe.cdr entries))))))))))))
+			(set-weak-table-size! table ($fxsub1 (weak-table-size table)))
+			($set-cdr! prev ($cdr entries)))
+		    (loop entries ($cdr entries))))))))))))
 
 (define (%extend-table! table)
   ;;Unless the number  of buckets is already at  its maximum: double the
@@ -263,26 +262,26 @@
   ;;structure.
   ;;
   (let* ((vec1	(weak-table-buckets table))
-	 (len1	(unsafe.vector-length vec1))
+	 (len1	($vector-length vec1))
 	 (hash	(weak-table-hash-function table)))
     ;;Do not allow the vector length to exceed the maximum fixnum.
-    (when (unsafe.fx< len1 MAX-NUMBER-OF-BUCKETS)
+    (when ($fx< len1 MAX-NUMBER-OF-BUCKETS)
       ;;If  we start  with an  even and  power of  2 vector  length, the
       ;;length is always even and power of 2...
-      (let* ((len2	(unsafe.fx+ len1 len1))
+      (let* ((len2	($fx+ len1 len1))
 	     ;;... and the mask is always composed by all the significant
 	     ;;bits set to 1.
-	     (mask	(unsafe.fxsub1 len2))
+	     (mask	($fxsub1 len2))
 	     (vec2	(make-vector len2 '())))
 	(define (%insert p)
 	  (unless (null? p)
-	    (let ((entry (unsafe.car p))
-		  (rest  (unsafe.cdr p)))
+	    (let ((entry ($car p))
+		  (rest  ($cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the
 	      ;;vector.
-	      (let ((idx (unsafe.fxand (hash (unsafe.car entry)) mask)))
-		(unsafe.set-cdr! p (unsafe.vector-ref vec2 idx))
-		(unsafe.vector-set! vec2 idx p))
+	      (let ((idx ($fxand (hash ($car entry)) mask)))
+		($set-cdr! p ($vector-ref vec2 idx))
+		($vector-set! vec2 idx p))
 	      (%insert rest))))
 	;;Insert in the new vector all the entries in the old vector.
 	(vector-for-each %insert vec1)
@@ -309,7 +308,7 @@
       ;;  DIM = 2^(fxlength init-dimension)
       ;;
       (let* ((dim	(fxarithmetic-shift-left 1 (fxlength init-dimension)))
-	     (mask	(unsafe.fxsub1 dim))
+	     (mask	($fxsub1 dim))
 	     (buckets	(make-vector dim '())))
 	(make-weak-table 0 dim mask buckets hash-function equiv-function))))))
 
@@ -331,15 +330,15 @@
 	   (buckets		(weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
-      (let loop ((entries (unsafe.vector-ref buckets bucket-index)))
+      (let loop ((entries ($vector-ref buckets bucket-index)))
 	(if (null? entries)
 	    default
-	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	  (let ((intern-key ($car ($car entries))))
 	    ;;Here it does not matter if INTERN-KEY is BWP.
 	    (if (or (eq?    key intern-key)
 		    (equiv? key intern-key))
-		(unsafe.cdr (unsafe.car entries))
-	      (loop (unsafe.cdr entries)))))))))
+		($cdr ($car entries))
+	      (loop ($cdr entries)))))))))
 
 (define (weak-hashtable-delete! table key)
   (define who 'weak-hashtable-ref)
@@ -357,19 +356,19 @@
 	   (buckets		(weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
-      (let loop ((entries (unsafe.vector-ref buckets bucket-index)))
+      (let loop ((entries ($vector-ref buckets bucket-index)))
 	(if (null? entries)
 	    #f
-	  (let ((intern-key (unsafe.car (unsafe.car entries))))
+	  (let ((intern-key ($car ($car entries))))
 	    ;;Here it does not matter if INTERN-KEY is BWP.
 	    (if (or (eq?    key intern-key)
 		    (equiv? key intern-key))
 		#t
-	      (loop (unsafe.cdr entries)))))))))
+	      (loop ($cdr entries)))))))))
 
 (define (weak-hashtable-clear! table)
   (let* ((dim		(weak-table-init-dim table))
-	 (mask		(unsafe.fxsub1 dim))
+	 (mask		($fxsub1 dim))
 	 (buckets	(make-vector dim '())))
     (set-weak-table-size!     table 0)
     (set-weak-table-buckets!  table buckets)
@@ -378,36 +377,36 @@
 (define (weak-hashtable-keys table)
   (let* ((keys		(make-vector (weak-table-size table)))
 	 (buckets	(weak-table-buckets table))
-	 (dim		(unsafe.vector-length buckets))
+	 (dim		($vector-length buckets))
 	 (count		0))
-    (do ((i 0 (unsafe.fxadd1 i)))
-	((unsafe.fx= i dim)
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i dim)
 	 keys)
       (%clean-bucket-from-bwp-entries table i)
-      (let loop ((entries (unsafe.vector-ref buckets i)))
+      (let loop ((entries ($vector-ref buckets i)))
 	(unless (null? entries)
-	  (unsafe.vector-set! keys count (unsafe.car (unsafe.car entries)))
-	  (set! count (unsafe.fxadd1 count))
-	  (loop (unsafe.cdr entries)))))))
+	  ($vector-set! keys count ($car ($car entries)))
+	  (set! count ($fxadd1 count))
+	  (loop ($cdr entries)))))))
 
 (define (weak-hashtable-entries table)
   (let* ((size		(weak-table-size table))
 	 (keys		(make-vector size))
 	 (vals		(make-vector size))
 	 (buckets	(weak-table-buckets table))
-	 (dim		(unsafe.vector-length buckets))
+	 (dim		($vector-length buckets))
 	 (count		0))
-    (do ((i 0 (unsafe.fxadd1 i)))
-	((unsafe.fx= i dim)
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i dim)
 	 (values keys vals))
       (%clean-bucket-from-bwp-entries table i)
-      (let loop ((entries (unsafe.vector-ref buckets i)))
+      (let loop ((entries ($vector-ref buckets i)))
 	(unless (null? entries)
-	  (let ((entry (unsafe.car entries)))
-	    (unsafe.vector-set! keys count (unsafe.car entry))
-	    (unsafe.vector-set! vals count (unsafe.cdr entry))
-	    (set! count (unsafe.fxadd1 count)))
-	  (loop (unsafe.cdr entries)))))))
+	  (let ((entry ($car entries)))
+	    ($vector-set! keys count ($car entry))
+	    ($vector-set! vals count ($cdr entry))
+	    (set! count ($fxadd1 count)))
+	  (loop ($cdr entries)))))))
 
 (define weak-hashtable-size weak-table-size)
 
@@ -420,19 +419,19 @@
 	   (buckets		(weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
-      (let ((the-entries (unsafe.vector-ref buckets bucket-index)))
+      (let ((the-entries ($vector-ref buckets bucket-index)))
 	(let loop ((entries the-entries))
 	  (if (null? entries)
 	      ;;add a new entry
-	      (unsafe.vector-set! buckets bucket-index (cons (weak-cons key (proc default))
+	      ($vector-set! buckets bucket-index (cons (weak-cons key (proc default))
 							     the-entries))
-	    (let* ((entry      (unsafe.car entries))
-		   (intern-key (unsafe.car entry)))
+	    (let* ((entry      ($car entries))
+		   (intern-key ($car entry)))
 	      ;;Here it does not matter if INTERN-KEY is BWP.
 	      (if (or (eq?    key intern-key)
 		      (equiv? key intern-key))
-		  (set-cdr! entry (proc (unsafe.cdr entry)))
-		(loop (unsafe.cdr entries))))))))))
+		  (set-cdr! entry (proc ($cdr entry)))
+		(loop ($cdr entries))))))))))
 
 
 ;;;; done

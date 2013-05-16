@@ -276,8 +276,7 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 (define-syntax define-argument-validation

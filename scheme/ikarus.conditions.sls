@@ -151,8 +151,7 @@
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; constants
@@ -228,17 +227,17 @@
     (let ((ls (let loop ((x* x*))
 		(cond ((null? x*)
 		       '())
-		      ((&condition? (unsafe.car x*))
-		       (cons (unsafe.car x*) (loop (unsafe.cdr x*))))
-		      ((compound-condition? (unsafe.car x*))
-		       (append (simple-conditions (unsafe.car x*)) (loop (unsafe.cdr x*))))
+		      ((&condition? ($car x*))
+		       (cons ($car x*) (loop ($cdr x*))))
+		      ((compound-condition? ($car x*))
+		       (append (simple-conditions ($car x*)) (loop ($cdr x*))))
 		      (else
 		       (assertion-violation who
-			 EXPECTED_CONDITION_OBJECT_AS_ARGUMENT (unsafe.car x*)))))))
+			 EXPECTED_CONDITION_OBJECT_AS_ARGUMENT ($car x*)))))))
       (cond ((null? ls)
 	     (make-compound-condition '()))
-	    ((null? (unsafe.cdr ls))
-	     (unsafe.car ls))
+	    ((null? ($cdr ls))
+	     ($car ls))
 	    (else
 	     (make-compound-condition ls)))))))
 
@@ -279,8 +278,8 @@
 	    (and (compound-condition? x)
 		 (let loop ((ls (compound-condition-components x)))
 		   (and (pair? ls)
-			(or (p? (unsafe.car ls))
-			    (loop (unsafe.cdr ls)))))))))))
+			(or (p? ($car ls))
+			    (loop ($cdr ls)))))))))))
 
 (define (condition-accessor rtd proc)
   ;;Defined by R6RS.  RTD must  be a record-type descriptor of a subtype
@@ -306,9 +305,9 @@
 	      ((compound-condition? x)
 	       (let loop ((ls (compound-condition-components x)))
 		 (cond ((pair? ls)
-			(if (p? (unsafe.car ls))
-			    (proc (unsafe.car ls))
-			  (loop (unsafe.cdr ls))))
+			(if (p? ($car ls))
+			    (proc ($car ls))
+			  (loop ($cdr ls))))
 		       (else
 			(assertion-violation who
 			  "not a condition of correct type" x rtd)))))
@@ -493,8 +492,8 @@
 		       (display "   " port)
 		       (display i port)
 		       (display ". " port)
-		       (%print-simple-condition (unsafe.car ls) port)
-		       (loop (unsafe.cdr ls) (unsafe.fxadd1 i)))))))
+		       (%print-simple-condition ($car ls) port)
+		       (loop ($cdr ls) ($fxadd1 i)))))))
 	     #;(flush-output-port port))
 	    (else
 	     (display " Non-condition object: " port)
@@ -515,10 +514,10 @@
 			    (cons (cons rtd (record-type-field-names rtd))
 				  accum))
 		    (remp (lambda (a)
-			    (zero? (vector-length (unsafe.cdr a))))
+			    (zero? (vector-length ($cdr a))))
 		      accum))))
 	 (rf-len (fold-left (lambda (sum pair)
-			      (+ sum (unsafe.vector-length (unsafe.cdr pair))))
+			      (+ sum ($vector-length ($cdr pair))))
 		   0
 		   rf)
 		 #;(apply + (map vector-length (map cdr rf)))))
@@ -549,7 +548,7 @@
 		 ;; (begin
 		 ;;   (write ((record-accessor rtd i) x) port)
 		 ;;   (newline port))
-		 (loop (unsafe.fxadd1 i) rtd v))))
+		 (loop ($fxadd1 i) rtd v))))
 	 rf)))))
 
 

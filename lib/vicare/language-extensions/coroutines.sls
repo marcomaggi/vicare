@@ -29,8 +29,7 @@
 (library (vicare language-extensions coroutines)
   (export coroutine yield finish-coroutines)
   (import (vicare)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 (module (empty-queue? enqueue! dequeue!)

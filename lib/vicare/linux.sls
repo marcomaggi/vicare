@@ -120,8 +120,7 @@
 	    px.)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation
@@ -151,8 +150,8 @@
 
 (define-argument-validation (clockid who obj)
   (and (fixnum? obj)
-       (or (unsafe.fx= obj CLOCK_REALTIME)
-	   (unsafe.fx= obj CLOCK_MONOTONIC)))
+       (or ($fx= obj CLOCK_REALTIME)
+	   ($fx= obj CLOCK_MONOTONIC)))
   (assertion-violation who
     (string-append "expected fixnum CLOCK_REALTIME ("
 		   (number->string CLOCK_REALTIME)
@@ -163,8 +162,8 @@
 
 (define-argument-validation (timerfd-settime-flags who obj)
   (and (fixnum? obj)
-       (or (unsafe.fxzero? obj)
-	   (unsafe.fx= obj TFD_TIMER_ABSTIME)))
+       (or ($fxzero? obj)
+	   ($fx= obj TFD_TIMER_ABSTIME)))
   (assertion-violation who
     "expected the fixnum zero or TFD_TIMER_ABSTIME as flags argument"
     obj))
@@ -271,7 +270,7 @@
 	 (rlimit/false	new-rlimit)
 	 (rlimit	old-rlimit))
       (let ((rv (capi.linux-prlimit pid resource new-rlimit old-rlimit)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    old-rlimit
 	  (%raise-errno-error who rv pid resource new-rlimit old-rlimit)))))))
 
@@ -287,7 +286,7 @@
     (with-arguments-validation (who)
 	((signed-int	size))
       (let ((rv (capi.linux-epoll-create size)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv size)))))))
 
@@ -296,7 +295,7 @@
   (with-arguments-validation (who)
       ((signed-int	flags))
     (let ((rv (capi.linux-epoll-create flags)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv flags)))))
 
@@ -312,7 +311,7 @@
 	 (px.file-descriptor	fd)
 	 (pointer/false		event))
       (let ((rv (capi.linux-epoll-ctl epfd op fd event)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv epfd op fd event)))))))
 
 (define (epoll-wait epfd event maxevents timeout-ms)
@@ -323,7 +322,7 @@
        (signed-int		maxevents)
        (signed-int		timeout-ms))
     (let ((rv (capi.linux-epoll-wait epfd event maxevents timeout-ms)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv epfd event maxevents timeout-ms)))))
 
@@ -446,7 +445,7 @@
        (vector-of-signums	mask)
        (fixnum			flags))
     (let ((rv (capi.linux-signalfd fd mask flags)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd mask flags)))))
 
@@ -456,9 +455,9 @@
       ((px.file-descriptor	fd))
     (let* ((info (make-struct-signalfd-siginfo #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f))
 	   (rv   (capi.linux-read-signalfd-siginfo fd info)))
-      (cond ((unsafe.fxzero? rv)
+      (cond (($fxzero? rv)
 	     info)
-	    ((unsafe.fx= rv EAGAIN)
+	    (($fx= rv EAGAIN)
 	     #f)
 	    (else
 	     (%raise-errno-error who rv fd))))))
@@ -476,7 +475,7 @@
 	((clockid		clockid)
 	 (fixnum		flags))
       (let ((rv (capi.linux-timerfd-create clockid flags)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv clockid flags)))))))
 
@@ -492,7 +491,7 @@
 	 (itimerspec		new)
 	 (itimerspec/false	old))
       (let ((rv (capi.linux-timerfd-settime fd flags new old)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    old
 	  (%raise-errno-error who rv fd flags new old)))))))
 
@@ -508,7 +507,7 @@
 	((px.file-descriptor	fd)
 	 (itimerspec		curr))
       (let ((rv (capi.linux-timerfd-gettime fd curr)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    curr
 	  (%raise-errno-error who rv fd curr)))))))
 
@@ -550,7 +549,7 @@
 (define (inotify-init)
   (define who 'inotify-init)
   (let ((rv (capi.linux-inotify-init)))
-    (if (unsafe.fx< 0 rv)
+    (if ($fx< 0 rv)
 	rv
       (%raise-errno-error who rv))))
 
@@ -559,7 +558,7 @@
   (with-arguments-validation (who)
       ((fixnum	flags))
     (let ((rv (capi.linux-inotify-init1 flags)))
-      (if (unsafe.fx< 0 rv)
+      (if ($fx< 0 rv)
 	  rv
 	(%raise-errno-error who rv flags)))))
 
@@ -581,7 +580,7 @@
       ((px.file-descriptor		fd)
        (inotify-watch-descriptor	wd))
     (let ((rv (capi.linux-inotify-rm-watch fd wd)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd wd)))))
 
 (define inotify-read
@@ -596,7 +595,7 @@
       (let ((rv (capi.linux-inotify-read fd event)))
 	(cond ((struct-inotify-event? rv)
 	       event)
-	      ((unsafe.fxzero? rv)
+	      (($fxzero? rv)
 	       rv)
 	      (else
 	       (%raise-errno-error who rv fd event))))))))
@@ -607,7 +606,7 @@
 (define (daemon nochdir noclose)
   (define who 'daemon)
   (let ((rv (capi.linux-daemon nochdir noclose)))
-    (if (unsafe.fx<= 0 rv)
+    (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv nochdir noclose))))
 

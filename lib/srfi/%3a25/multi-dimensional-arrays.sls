@@ -100,7 +100,7 @@
   (import (vicare)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
-    (prefix (vicare unsafe operations) $))
+    (vicare unsafe operations))
 
 
 ;;;; helpers

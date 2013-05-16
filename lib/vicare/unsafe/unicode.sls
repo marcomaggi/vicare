@@ -158,8 +158,7 @@
   (import (rnrs)
     (only (vicare)
 	  define-inline)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; UTF-8 scheme
@@ -220,9 +219,9 @@
   ;;Evaluate to  true if OCTET has a  value that must never  appear in a
   ;;valid UTF-8 stream.
   ;;
-  (or (unsafe.fx= octet #xC0)
-      (unsafe.fx= octet #xC1)
-      (and (unsafe.fx<= #xF5 octet) (unsafe.fx<= octet #xFF))))
+  (or ($fx= octet #xC0)
+      ($fx= octet #xC1)
+      (and ($fx<= #xF5 octet) ($fx<= octet #xFF))))
 
 ;;; -------------------------------------------------------------
 ;;; decoding 1-octet UTF-8 to code points
@@ -231,7 +230,7 @@
   ;;Evaluate to  true if OCTET is  valid as 1-octet UTF-8  encoding of a
   ;;Unicode character.
   ;;
-  (unsafe.fx< octet 128))
+  ($fx< octet 128))
 
 (define-inline (utf-8-decode-single-octet octet)
   ;;Decode the  code point  of a Unicode  character from a  1-octet UTF-8
@@ -243,7 +242,7 @@
   ;;Evaluate to true if CODE-POINT is a valid integer representation for
   ;;a code point decoded from a 2-octets UTF-8 sequence.
   ;;
-  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point #x007F)))
+  (and ($fx<= 0 code-point) ($fx<= code-point #x007F)))
 
 ;;; -------------------------------------------------------------
 ;;; decoding 2-octets UTF-8 to code points
@@ -252,26 +251,26 @@
   ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 2-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra octet0 5) #b110))
+  ($fx= ($fxsra octet0 5) #b110))
 
 (define-inline (utf-8-second-of-two-octets? octet1)
   ;;Evaluate  to true  if  OCTET1 is  valid  as second  of 2-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra octet1 6) #b10))
+  ($fx= ($fxsra octet1 6) #b10))
 
 (define-inline (utf-8-decode-two-octets octet0 octet1)
   ;;Decode the  code point of a  Unicode character from  a 2-octets UTF-8
   ;;encoding.
   ;;
-  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0 #b11111) 6)
-		 (unsafe.fxand octet1 #b111111)))
+  ($fxior ($fxsll ($fxand octet0 #b11111) 6)
+		 ($fxand octet1 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-2-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for
   ;;a code point decoded from a 2-octets UTF-8 sequence.
   ;;
-  (and (unsafe.fx<= #x0080 code-point) (unsafe.fx<= code-point #x07FF)))
+  (and ($fx<= #x0080 code-point) ($fx<= code-point #x07FF)))
 
 ;;; -------------------------------------------------------------
 ;;; decoding 3-octets UTF-8 to code points
@@ -280,28 +279,28 @@
   ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 3-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra octet0 4) #b1110))
+  ($fx= ($fxsra octet0 4) #b1110))
 
 (define-inline (utf-8-second-and-third-of-three-octets? octet1 octet2)
   ;;Evaluate to true if OCTET1 and OCTET2 are valid as second and third of
   ;;3-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (unsafe.fxior octet1 octet2) 6) #b10))
+  ($fx= ($fxsra ($fxior octet1 octet2) 6) #b10))
 
 (define-inline (utf-8-decode-three-octets octet0 octet1 octet2)
   ;;Decode the  code point of a  Unicode character from  a 3-octets UTF-8
   ;;encoding.
   ;;
-  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0   #b1111) 12)
-		 (unsafe.fxsll (unsafe.fxand octet1 #b111111)  6)
-		 (unsafe.fxand octet2 #b111111)))
+  ($fxior ($fxsll ($fxand octet0   #b1111) 12)
+		 ($fxsll ($fxand octet1 #b111111)  6)
+		 ($fxand octet2 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-3-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for
   ;;a code point decoded from a 3-octets UTF-8 sequence.
   ;;
-  (and (unsafe.fx<= #x0800 code-point) (unsafe.fx<= code-point #xFFFF)
-       (or (unsafe.fx< code-point #xD800) (unsafe.fx<  #xDFFF code-point))))
+  (and ($fx<= #x0800 code-point) ($fx<= code-point #xFFFF)
+       (or ($fx< code-point #xD800) ($fx<  #xDFFF code-point))))
 
 ;;; -------------------------------------------------------------
 ;;; decoding 4-octets UTF-8 to code points
@@ -310,34 +309,34 @@
   ;;Evaluate  to  true if  OCTET0  is valid  as  first  of 4-octets  UTF-8
   ;;encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra octet0 3) #b11110))
+  ($fx= ($fxsra octet0 3) #b11110))
 
 (define-inline (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
   ;;Evaluate  to true if  OCTET1, OCTET2  and OCTET3  are valid  as second,
   ;;third and fourth of 4-octets UTF-8 encoding of a Unicode character.
   ;;
-  (unsafe.fx= (unsafe.fxsra (unsafe.fxior octet1 octet2 octet3) 6) #b10))
+  ($fx= ($fxsra ($fxior octet1 octet2 octet3) 6) #b10))
 
 (define-inline (utf-8-decode-four-octets octet0 octet1 octet2 octet3)
   ;;Decode the  code point of a  Unicode character from  a 4-octets UTF-8
   ;;encoding.
   ;;
-  (unsafe.fxior (unsafe.fxsll (unsafe.fxand octet0    #b111) 18)
-		 (unsafe.fxsll (unsafe.fxand octet1 #b111111) 12)
-		 (unsafe.fxsll (unsafe.fxand octet2 #b111111)  6)
-		 (unsafe.fxand octet3 #b111111)))
+  ($fxior ($fxsll ($fxand octet0    #b111) 18)
+		 ($fxsll ($fxand octet1 #b111111) 12)
+		 ($fxsll ($fxand octet2 #b111111)  6)
+		 ($fxand octet3 #b111111)))
 
 (define-inline (utf-8-valid-code-point-from-4-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for
   ;;a code point decoded from a 3-octets UTF-8 sequence.
   ;;
-  (and (unsafe.fx<= #x010000 code-point) (unsafe.fx<= code-point #x10FFFF)))
+  (and ($fx<= #x010000 code-point) ($fx<= code-point #x10FFFF)))
 
 ;;; -------------------------------------------------------------
 ;;; encoding code points to 1-octet UTF-8
 
 (define-inline (utf-8-single-octet-code-point? code-point)
-  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point 127)))
+  (and ($fx<= 0 code-point) ($fx<= code-point 127)))
 
 (define-inline (utf-8-encode-single-octet code-point)
   ;;Encode  the code point  of a  Unicode character  to a  1-octet UTF-8
@@ -349,49 +348,49 @@
 ;;; encoding code points to 2-octet UTF-8
 
 (define-inline (utf-8-two-octets-code-point? code-point)
-  (and (unsafe.fx>  code-point 127)
-       (unsafe.fx<= code-point #x7FF)))
+  (and ($fx>  code-point 127)
+       ($fx<= code-point #x7FF)))
 
 (define-inline (utf-8-encode-first-of-two-octets code-point)
-  (unsafe.fxior #b11000000 (unsafe.fxsra code-point 6)))
+  ($fxior #b11000000 ($fxsra code-point 6)))
 
 (define-inline (utf-8-encode-second-of-two-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  ($fxior #b10000000 ($fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 3-octet UTF-8
 
 (define-inline (utf-8-three-octets-code-point? code-point)
-  (and (unsafe.fx>  code-point #x7FF)
-       (unsafe.fx<= code-point #xFFFF)))
+  (and ($fx>  code-point #x7FF)
+       ($fx<= code-point #xFFFF)))
 
 (define-inline (utf-8-encode-first-of-three-octets code-point)
-  (unsafe.fxior #b11100000 (unsafe.fxsra code-point 12)))
+  ($fxior #b11100000 ($fxsra code-point 12)))
 
 (define-inline (utf-8-encode-second-of-three-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
+  ($fxior #b10000000 ($fxand ($fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-third-of-three-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  ($fxior #b10000000 ($fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 ;;; encoding code points to 4-octet UTF-8
 
 (define-inline (utf-8-four-octets-code-point? code-point)
-  (and (unsafe.fx>  code-point #xFFFF)
-       (unsafe.fx<= code-point #x10FFFF)))
+  (and ($fx>  code-point #xFFFF)
+       ($fx<= code-point #x10FFFF)))
 
 (define-inline (utf-8-encode-first-of-four-octets code-point)
-  (unsafe.fxior #b11110000 (unsafe.fxsra code-point 18)))
+  ($fxior #b11110000 ($fxsra code-point 18)))
 
 (define-inline (utf-8-encode-second-of-four-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 12) #b111111)))
+  ($fxior #b10000000 ($fxand ($fxsra code-point 12) #b111111)))
 
 (define-inline (utf-8-encode-third-of-four-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand (unsafe.fxsra code-point 6) #b111111)))
+  ($fxior #b10000000 ($fxand ($fxsra code-point 6) #b111111)))
 
 (define-inline (utf-8-encode-fourth-of-four-octets code-point)
-  (unsafe.fxior #b10000000 (unsafe.fxand code-point #b111111)))
+  ($fxior #b10000000 ($fxand code-point #b111111)))
 
 ;;; --------------------------------------------------------------------
 
@@ -477,7 +476,7 @@
   ;;Evaluate  to true if  WORD0 is  valid as  single 16-bit  word UTF-16
   ;;encoding of a Unicode character.
   ;;
-  (or (unsafe.fx< word0 #xD800) (unsafe.fx< #xDFFF word0)))
+  (or ($fx< word0 #xD800) ($fx< #xDFFF word0)))
 
 (define-inline (utf-16-decode-single-word word0)
   ;;Decode  the integer  representation of  a Unicode  character  from a
@@ -492,28 +491,28 @@
   ;;Evaluate  to true  if  WORD0 is  valid  as first  16-bit  word in  a
   ;;surrogate pair UTF-16 encoding of a Unicode character.
   ;;
-  (and (unsafe.fx<= #xD800 word0) (unsafe.fx<= word0 #xDBFF)))
+  (and ($fx<= #xD800 word0) ($fx<= word0 #xDBFF)))
 
 (define-inline (utf-16-second-of-two-words? word1)
   ;;Evaluate  to true  if WORD1  is  valid as  second 16-bit  word in  a
   ;;surrogate pair UTF-16 encoding of a Unicode character.
   ;;
-  (and (unsafe.fx<= #xDC00 word1) (unsafe.fx<= word1 #xDFFF)))
+  (and ($fx<= #xDC00 word1) ($fx<= word1 #xDFFF)))
 
 (define-inline (utf-16-decode-surrogate-pair word0 word1)
   ;;Decode  the integer  representation of  a Unicode  character  from a
   ;;surrogate pair UTF-16 encoding.
   ;;
-  (unsafe.fx+ #x10000
-	      (unsafe.fxior (unsafe.fxsll (unsafe.fxand word0 #x3FF) 10)
-			     (unsafe.fxand word1 #x3FF))))
+  ($fx+ #x10000
+	      ($fxior ($fxsll ($fxand word0 #x3FF) 10)
+			     ($fxand word1 #x3FF))))
 
 ;;; --------------------------------------------------------------------
 ;;; 1-word encoding
 
 (define-inline (utf-16-single-word-code-point? code-point)
-  (and (unsafe.fx>= code-point 0)
-       (unsafe.fx<  code-point #x10000)))
+  (and ($fx>= code-point 0)
+       ($fx<  code-point #x10000)))
 
 (define-inline (utf-16-encode-single-word code-point)
   code-point)
@@ -522,14 +521,14 @@
 ;;; 2-word encoding
 
 (define-inline (utf-16-two-words-code-point? code-point)
-  (and (unsafe.fx>= code-point #x10000)
-       (unsafe.fx<  code-point #x10FFFF)))
+  (and ($fx>= code-point #x10000)
+       ($fx<  code-point #x10FFFF)))
 
 (define-inline (utf-16-encode-first-of-two-words code-point)
-  (unsafe.fxior #xD800 (unsafe.fxsra (unsafe.fx- code-point #x10000) 10)))
+  ($fxior #xD800 ($fxsra ($fx- code-point #x10000) 10)))
 
 (define-inline (utf-16-encode-second-of-two-words code-point)
-  (unsafe.fxior #xDC00 (unsafe.fxand (unsafe.fx- code-point #x10000) (- (unsafe.fxsll 1 10) 1))))
+  ($fxior #xDC00 ($fxand ($fx- code-point #x10000) (- ($fxsll 1 10) 1))))
 
 ;;; --------------------------------------------------------------------
 
@@ -583,7 +582,7 @@
   octet)
 
 (define-inline (latin-1-code-point? code-point)
-  (and (unsafe.fx<= 0 code-point) (unsafe.fx<= code-point 255)))
+  (and ($fx<= 0 code-point) ($fx<= code-point 255)))
 
 (define-inline (latin-1-encode code-point)
   code-point)

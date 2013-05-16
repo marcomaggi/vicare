@@ -406,8 +406,7 @@
     (vicare arguments general-c-buffers)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe operations)
-	    $)
+    (vicare unsafe operations)
     (prefix (vicare platform words)
 	    words.))
 

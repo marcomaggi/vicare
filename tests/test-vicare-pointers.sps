@@ -32,7 +32,7 @@
 	  words.)
   (prefix (vicare platform constants)
 	  plat.)
-  (prefix (vicare unsafe operations) $)
+  (vicare unsafe operations)
   (vicare language-extensions syntaxes)
   (vicare checks))
 

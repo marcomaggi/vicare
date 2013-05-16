@@ -52,249 +52,248 @@
 #!r6rs
 (library (vicare unsafe operations)
   (export
-    (rename ($make-struct	make-struct)
-	    ($struct		struct)
-	    ($struct-rtd	struct-rtd)
-	    ($struct/rtd?	struct/rtd?)
-	    ($struct-length	struct-length)
-	    ($struct-ref	struct-ref)
-	    ($struct-set!	struct-set!))
+    $make-struct
+    $struct
+    $struct-rtd
+    $struct/rtd?
+    $struct-length
+    $struct-ref
+    $struct-set!
 
-    (rename ($caar		caar)
-	    ($cadr		cadr)
-	    ($cdar		cdar)
-	    ($cddr		cddr)
+    $caar
+    $cadr
+    $cdar
+    $cddr
 
-	    ($caaar		caaar)
-	    ($caadr		caadr)
-	    ($cadar		cadar)
-	    ($cdaar		cdaar)
-	    ($cdadr		cdadr)
-	    ($cddar		cddar)
-	    ($cdddr		cdddr)
-	    ($caddr		caddr))
+    $caaar
+    $caadr
+    $cadar
+    $cdaar
+    $cdadr
+    $cddar
+    $cdddr
+    $caddr
 
-    (rename ($fxzero?		fxzero?)
-	    ($fxnegative?	fxnegative?)
-	    ($fxpositive?	fxpositive?)
-	    ($fxadd1		fxadd1)		;increment
-	    ($fxsub1		fxsub1)		;decrement
-	    ($fxneg		fxneg)		;negation
-	    ($fxsra		fxsra)		;shift right
-	    ($fxsll		fxsll)		;shift left
-	    ($fxlogor		fxlogor)	;inclusive logic OR
-	    ($fxlogxor		fxlogxor)	;exlusive logic OR
-	    ($fxlogand		fxlogand)	;logic AND
-	    ($fxlognot		fxlognot)	;logic not
-	    ($fxlognot		fxnot)		;logic not
-	    ($fx+		fx+)
-	    ($fx-		fx-)
-	    ($fx*		fx*)
-	    ($fxdiv		fxdiv)
-	    ($fxdiv0		fxdiv0)
-	    ($fxmod		fxmod)
-	    ($fxmod0		fxmod0)
-	    ($fx<		fx<)
-	    ($fx>		fx>)
-	    ($fx>=		fx>=)
-	    ($fx<=		fx<=)
-	    ($fx=		fx=))
+    $fxzero?
+    $fxnegative?
+    $fxpositive?
+    $fxadd1	;increment
+    $fxsub1	;decrement
+    $fxneg	;negation
+    $fxsra	;shift right
+    $fxsll	;shift left
+    $fxlogor	;inclusive logic OR
+    $fxlogxor	;exlusive logic OR
+    $fxlogand	;logic AND
+    $fxlognot	;logic not
+    $fx+
+    $fx-
+    $fx*
+    $fxdiv
+    $fxdiv0
+    $fxmod
+    $fxmod0
+    $fx<
+    $fx>
+    $fx>=
+    $fx<=
+    $fx=
 
-    (rename ($fxand		fxand)		;multiple arguments AND
-	    ($fxior		fxior)		;multiple arguments inclusive OR
-	    ($fxxor		fxxor)		;multiple arguments exclusive OR
-	    ($fxmax		fxmax)		;multiple arguments max
-	    ($fxadd2		fxadd2)
-	    ($fxadd3		fxadd3)
-	    ($fxadd4		fxadd4)
-	    ($fxincr!		fxincr!))
-
-;;; --------------------------------------------------------------------
-
-    (rename ($bignum-positive?		bignum-positive?)
-	    ($bignum-negative?		bignum-negative?)
-	    ($bignum-byte-ref		bignum-byte-ref)
-	    ($bignum-size		bignum-size))
-
-    (rename ($bnbn=			bnbn=)
-	    ($bnbn<			bnbn<)
-	    ($bnbn>			bnbn>)
-	    ($bnbn<=			bnbn<=)
-	    ($bnbn>=			bnbn>=))
+    $fxand	;multiple arguments AND
+    $fxior	;multiple arguments inclusive OR
+    $fxxor	;multiple arguments exclusive OR
+    $fxmax	;multiple arguments max
+    $fxadd2
+    $fxadd3
+    $fxadd4
+    $fxincr!
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($make-ratnum		make-ratnum)
-	    ($ratnum-n			ratnum-n)
-	    ($ratnum-d			ratnum-d)
-	    ($ratnum-num		ratnum-num)
-	    ($ratnum-den		ratnum-den))
+    $bignum-positive?
+    $bignum-negative?
+    $bignum-byte-ref
+    $bignum-size
+
+    $bnbn=
+    $bnbn<
+    $bnbn>
+    $bnbn<=
+    $bnbn>=
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($make-flonum		make-flonum)
-	    ($flonum-u8-ref		flonum-u8-ref)
-	    ($flonum-set!		flonum-set!)
-	    ($fixnum->flonum		fixnum->flonum)
-	    ($fl+			fl+)
-	    ($fl-			fl-)
-	    ($fl*			fl*)
-	    ($fl/			fl/)
-	    ($fl=			fl=)
-	    ($fl<			fl<)
-	    ($fl>			fl>)
-	    ($fl<=			fl<=)
-	    ($fl>=			fl>=)
-	    ($flonum-sbe		flonum-sbe))
+    $make-ratnum
+    $ratnum-n
+    $ratnum-d
+    $ratnum-num
+    $ratnum-den
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($make-cflonum		make-cflonum)
-	    ($cflonum-real		cflonum-real)
-	    ($cflonum-imag		cflonum-imag)
-	    ($make-compnum		make-compnum)
-	    ($compnum-real		compnum-real)
-	    ($compnum-imag		compnum-imag))
+    $make-flonum
+    $flonum-u8-ref
+    $flonum-set!
+    $fixnum->flonum
+    $fl+
+    $fl-
+    $fl*
+    $fl/
+    $fl=
+    $fl<
+    $fl>
+    $fl<=
+    $fl>=
+    $flonum-sbe
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($make-bytevector		make-bytevector)
-	    ($bytevector-length		bytevector-length)
-	    ($bytevector-empty?		bytevector-empty?)
-	    ($bytevector-u8-ref		bytevector-u8-ref)
-	    ($bytevector-s8-ref		bytevector-s8-ref)
-	    ($bytevector-u8-set!	bytevector-u8-set!)
-	    ($bytevector-s8-set!	bytevector-s8-set!)
-	    ($bytevector-ieee-double-native-ref		bytevector-ieee-double-native-ref)
-	    ($bytevector-ieee-double-native-set!	bytevector-ieee-double-native-set!)
-	    ($bytevector-ieee-single-native-ref		bytevector-ieee-single-native-ref)
-	    ($bytevector-ieee-single-native-set!	bytevector-ieee-single-native-set!)
-	    ($bytevector-ieee-single-nonnative-ref	bytevector-ieee-single-nonnative-ref)
-	    ($bytevector-ieee-single-nonnative-set!	bytevector-ieee-single-nonnative-set!)
-	    ($bytevector-ieee-double-nonnative-set!	bytevector-ieee-double-nonnative-set!)
-	    ($bytevector-ieee-double-nonnative-ref	bytevector-ieee-double-nonnative-ref))
-
-    (rename ($bytevector-u16b-ref	bytevector-u16b-ref)
-	    ($bytevector-u16b-set!	bytevector-u16b-set!)
-	    ($bytevector-u16l-ref	bytevector-u16l-ref)
-	    ($bytevector-u16l-set!	bytevector-u16l-set!)
-	    ($bytevector-s16b-ref	bytevector-s16b-ref)
-	    ($bytevector-s16b-set!	bytevector-s16b-set!)
-	    ($bytevector-s16l-ref	bytevector-s16l-ref)
-	    ($bytevector-s16l-set!	bytevector-s16l-set!)
-	    ($bytevector-u16n-ref	bytevector-u16n-ref)
-	    ($bytevector-u16n-set!	bytevector-u16n-set!)
-	    ($bytevector-s16n-ref	bytevector-s16n-ref)
-	    ($bytevector-s16n-set!	bytevector-s16n-set!)
-
-	    ($bytevector-u16-ref	bytevector-u16-ref)
-	    ($bytevector-u16-set!	bytevector-u16-set!)
-
-	    ($bytevector-u32b-ref	bytevector-u32b-ref)
-	    ($bytevector-u32b-set!	bytevector-u32b-set!)
-	    ($bytevector-u32l-ref	bytevector-u32l-ref)
-	    ($bytevector-u32l-set!	bytevector-u32l-set!)
-	    ($bytevector-s32b-ref	bytevector-s32b-ref)
-	    ($bytevector-s32b-set!	bytevector-s32b-set!)
-	    ($bytevector-s32l-ref	bytevector-s32l-ref)
-	    ($bytevector-s32l-set!	bytevector-s32l-set!)
-	    ($bytevector-u32n-ref	bytevector-u32n-ref)
-	    ($bytevector-u32n-set!	bytevector-u32n-set!)
-	    ($bytevector-s32n-ref	bytevector-s32n-ref)
-	    ($bytevector-s32n-set!	bytevector-s32n-set!)
-
-	    ($bytevector-u64b-ref	bytevector-u64b-ref)
-	    ($bytevector-u64b-set!	bytevector-u64b-set!)
-	    ($bytevector-u64l-ref	bytevector-u64l-ref)
-	    ($bytevector-u64l-set!	bytevector-u64l-set!)
-	    ($bytevector-s64b-ref	bytevector-s64b-ref)
-	    ($bytevector-s64b-set!	bytevector-s64b-set!)
-	    ($bytevector-s64l-ref	bytevector-s64l-ref)
-	    ($bytevector-s64l-set!	bytevector-s64l-set!)
-	    ($bytevector-u64n-ref	bytevector-u64n-ref)
-	    ($bytevector-u64n-set!	bytevector-u64n-set!)
-	    ($bytevector-s64n-ref	bytevector-s64n-ref)
-	    ($bytevector-s64n-set!	bytevector-s64n-set!)
-
-	    ($bytevector=			bytevector=)
-	    ($bytevector-fill!			bytevector-fill!)
-	    ($bytevector-copy!			bytevector-copy!)
-	    ($bytevector-copy!/count		bytevector-copy!/count)
-	    ($bytevector-self-copy-forwards!	bytevector-self-copy-forwards!)
-	    ($bytevector-self-copy-backwards!	bytevector-self-copy-backwards!))
+    $make-cflonum
+    $cflonum-real
+    $cflonum-imag
+    $make-compnum
+    $compnum-real
+    $compnum-imag
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($car		car)
-	    ($cdr		cdr)
-	    ($set-car!		set-car!)
-	    ($set-cdr!		set-cdr!))
+    $make-bytevector
+    $bytevector-length
+    $bytevector-empty?
+    $bytevector-u8-ref
+    $bytevector-s8-ref
+    $bytevector-u8-set!
+    $bytevector-s8-set!
+    $bytevector-ieee-double-native-ref
+    $bytevector-ieee-double-native-set!
+    $bytevector-ieee-single-native-ref
+    $bytevector-ieee-single-native-set!
+    $bytevector-ieee-single-nonnative-ref
+    $bytevector-ieee-single-nonnative-set!
+    $bytevector-ieee-double-nonnative-set!
+    $bytevector-ieee-double-nonnative-ref
+
+    $bytevector-u16b-ref
+    $bytevector-u16b-set!
+    $bytevector-u16l-ref
+    $bytevector-u16l-set!
+    $bytevector-s16b-ref
+    $bytevector-s16b-set!
+    $bytevector-s16l-ref
+    $bytevector-s16l-set!
+    $bytevector-u16n-ref
+    $bytevector-u16n-set!
+    $bytevector-s16n-ref
+    $bytevector-s16n-set!
+
+    $bytevector-u16-ref
+    $bytevector-u16-set!
+
+    $bytevector-u32b-ref
+    $bytevector-u32b-set!
+    $bytevector-u32l-ref
+    $bytevector-u32l-set!
+    $bytevector-s32b-ref
+    $bytevector-s32b-set!
+    $bytevector-s32l-ref
+    $bytevector-s32l-set!
+    $bytevector-u32n-ref
+    $bytevector-u32n-set!
+    $bytevector-s32n-ref
+    $bytevector-s32n-set!
+
+    $bytevector-u64b-ref
+    $bytevector-u64b-set!
+    $bytevector-u64l-ref
+    $bytevector-u64l-set!
+    $bytevector-s64b-ref
+    $bytevector-s64b-set!
+    $bytevector-s64l-ref
+    $bytevector-s64l-set!
+    $bytevector-u64n-ref
+    $bytevector-u64n-set!
+    $bytevector-s64n-ref
+    $bytevector-s64n-set!
+
+    $bytevector=
+    $bytevector-fill!
+    $bytevector-copy!
+    $bytevector-copy!/count
+    $bytevector-self-copy-forwards!
+    $bytevector-self-copy-backwards!
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($make-vector	make-vector)
-	    ($vector-length	vector-length)
-	    ($vector-ref	vector-ref)
-	    ($vector-set!	vector-set!))
-
-    (rename ($vector-copy!			vector-copy!)
-	    ($vector-self-copy-forwards!	vector-self-copy-forwards!)
-	    ($vector-self-copy-backwards!	vector-self-copy-backwards!)
-	    ($vector-fill!			vector-fill!)
-	    ($subvector				subvector)
-	    ($vector-clean!			vector-clean!)
-	    ($make-clean-vector			make-clean-vector))
+    $car
+    $cdr
+    $set-car!
+    $set-cdr!
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($char=		char=)
-	    ($char<		char<)
-	    ($char>		char>)
-	    ($char>=		char>=)
-	    ($char<=		char<=)
-	    ($char->fixnum	char->fixnum)
-	    ($fixnum->char	fixnum->char))
+    $make-vector
+    $vector-length
+    $vector-ref
+    $vector-set!
 
-    (rename ($char-is-single-char-line-ending?		char-is-single-char-line-ending?)
-	    ($char-is-carriage-return?			char-is-carriage-return?)
-	    ($char-is-newline-after-carriage-return?	char-is-newline-after-carriage-return?))
-
-;;; --------------------------------------------------------------------
-
-    (rename ($make-string	make-string)
-	    ($string-length	string-length)
-	    ($string-ref	string-ref)
-	    ($string-set!	string-set!)
-	    ($string=		string=))
-
-    (rename ($string-copy!			string-copy!)
-	    ($string-copy!/count		string-copy!/count)
-	    ($string-self-copy-forwards!	string-self-copy-forwards!)
-	    ($string-self-copy-backwards!	string-self-copy-backwards!)
-	    ($string-fill!			string-fill!)
-	    ($substring				substring))
+    $vector-copy!
+    $vector-self-copy-forwards!
+    $vector-self-copy-backwards!
+    $vector-fill!
+    $subvector
+    $vector-clean!
+    $make-clean-vector
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($pointer?				pointer?)
-	    ($pointer=				pointer=))
+    $char=
+    $char<
+    $char>
+    $char>=
+    $char<=
+    $char->fixnum
+    $fixnum->char
+
+    $char-is-single-char-line-ending?
+    $char-is-carriage-return?
+    $char-is-newline-after-carriage-return?
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($memory-block-pointer		memory-block-pointer)
-	    ($memory-block-size			memory-block-size))
+    $make-string
+    $string-length
+    $string-ref
+    $string-set!
+    $string=
+
+    $string-copy!
+    $string-copy!/count
+    $string-self-copy-forwards!
+    $string-self-copy-backwards!
+    $string-fill!
+    $substring
 
 ;;; --------------------------------------------------------------------
 
-    (rename ($closure-code			closure-code)
-	    ($code->closure			code->closure)
-	    ($code-reloc-vector			code-reloc-vector)
-	    ($code-freevars			code-freevars)
-	    ($code-size				code-size)
-	    ($code-annotation			code-annotation)
-	    ($code-ref				code-ref)
-	    ($code-set!				code-set!)
-	    ($set-code-annotation!		set-code-annotation!))
+    $pointer?
+    $pointer=
+
+;;; --------------------------------------------------------------------
+
+    $memory-block-pointer
+    $memory-block-size
+
+;;; --------------------------------------------------------------------
+
+    $closure-code
+    $code->closure
+    $code-reloc-vector
+    $code-freevars
+    $code-size
+    $code-annotation
+    $code-ref
+    $code-set!
+    $set-code-annotation!
 
     #| end of export |# )
   (import (ikarus)

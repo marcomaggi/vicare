@@ -170,9 +170,8 @@
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
     (vicare language-extensions syntaxes)
-    (prefix (except (vicare unsafe operations)
-		    bytevector=)
-	    $))
+    (except (vicare unsafe operations)
+	    $bytevector=))
 
   (module (platform-endianness)
     (include "ikarus.config.ss" #t))

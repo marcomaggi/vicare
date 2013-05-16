@@ -69,8 +69,7 @@
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (prefix (vicare unsafe operations)
-	    $)
+    (vicare unsafe operations)
     (only (ikarus system $numerics)
 	  $add-number-fixnum))
 

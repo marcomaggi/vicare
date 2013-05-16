@@ -31,8 +31,7 @@
   (import (ikarus)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; emergency debugging
@@ -45,7 +44,7 @@
   ;;platform's stderr.
   ;;
   (let ((bv (string->utf8 str)))
-    (capi.platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
+    (capi.platform-write-fd 2 bv 0 ($bytevector-length bv))
     ;;and a newline
     (capi.platform-write-fd 2 '#vu8(10) 0 1)))
 

@@ -21,11 +21,9 @@
     code-entry-adjustment
     assembler-property-key)
   (import (ikarus)
-    #;(rnrs bytevectors)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (prefix (vicare unsafe operations)
-	    $)
+    (vicare unsafe operations)
     (vicare arguments validation)
     (prefix (vicare platform words)
 	    words.)

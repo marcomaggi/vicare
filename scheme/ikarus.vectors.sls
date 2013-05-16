@@ -37,8 +37,7 @@
 		  vector-copy		vector-copy!
 		  vector-resize)
     (vicare arguments validation)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation

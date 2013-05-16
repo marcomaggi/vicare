@@ -50,8 +50,7 @@
     amb-permute				amb-random
     amb-random-fixnum-maker		amb-backtrack-log)
   (import (vicare)
-    (prefix (vicare unsafe operations)
-	    $))
+    (vicare unsafe operations))
 
 
 ;;;; type definitions

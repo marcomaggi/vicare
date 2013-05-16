@@ -37,9 +37,8 @@
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (prefix (only (vicare unsafe operations)
-		  bytevector-length)
-	    $))
+    (only (vicare unsafe operations)
+	  $bytevector-length))
 
 
 ;;;; helpers

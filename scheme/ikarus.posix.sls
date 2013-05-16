@@ -44,8 +44,7 @@
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation
@@ -110,9 +109,9 @@
   (define who 'errno->string)
   (with-arguments-validation (who)
       ((fixnum negated-errno-code))
-    (let ((errno-code (unsafe.fx- 0 negated-errno-code)))
-      (and (unsafe.fx> errno-code 0)
-	   (unsafe.fx< errno-code (vector-length ERRNO-VECTOR))
+    (let ((errno-code ($fx- 0 negated-errno-code)))
+      (and ($fx> errno-code 0)
+	   ($fx< errno-code (vector-length ERRNO-VECTOR))
 	   (vector-ref ERRNO-VECTOR errno-code)))))
 
 (let-syntax
@@ -284,7 +283,7 @@
        (fixnum	  mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkdir pathname.bv mode)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
 (define (mkdir/parents pathname mode)
@@ -297,9 +296,9 @@
 	  (unless (%file-is-directory? who pathname)
 	    (error who "path component is not a directory" pathname))
 	(let-values (((base suffix) (split-file-name pathname)))
-	  (unless (unsafe.fxzero? (unsafe.string-length base))
+	  (unless ($fxzero? ($string-length base))
 	    (next-component base))
-	  (unless (unsafe.fxzero? (unsafe.string-length suffix))
+	  (unless ($fxzero? ($string-length suffix))
 	    (mkdir pathname mode)))))))
 
 (define (%file-is-directory? who pathname)
@@ -331,19 +330,19 @@
     ;;Scan STR starint  at index IDX and up to  STR.LEN for the position
     ;;of the character #\=.  Return the index or STR.LEN.
     ;;
-    (cond ((unsafe.fx= idx str.len)
+    (cond (($fx= idx str.len)
 	   idx)
-	  ((unsafe.char= #\= (unsafe.string-ref str idx))
+	  (($char= #\= ($string-ref str idx))
 	   idx)
 	  (else
-	   (%find-index-of-= str (unsafe.fxadd1 idx) str.len))))
+	   (%find-index-of-= str ($fxadd1 idx) str.len))))
   (map (lambda (bv)
 	 (let* ((str     (utf8->string bv))
-		(str.len (unsafe.string-length str))
+		(str.len ($string-length str))
 		(idx     (%find-index-of-= str 0 str.len)))
 	   (cons (substring str 0 idx)
-		 (if (unsafe.fx< (unsafe.fxadd1 idx) str.len)
-		     (substring str (unsafe.fxadd1 idx) str.len)
+		 (if ($fx< ($fxadd1 idx) str.len)
+		     (substring str ($fxadd1 idx) str.len)
 		   ""))))
     (capi.posix-environ)))
 
@@ -367,7 +366,7 @@
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-unlink pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (split-file-name str)
@@ -397,11 +396,11 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv  pathname))
-      (let* ((timespec (unsafe.make-clean-vector 2))
+      (let* ((timespec ($make-clean-vector 2))
 	     (rv       (capi.posix-file-mtime pathname.bv timespec)))
-	(if (unsafe.fxzero? rv)
-	    (+ (* #e1e9 (unsafe.vector-ref timespec 0))
-	       (unsafe.vector-ref timespec 1))
+	(if ($fxzero? rv)
+	    (+ (* #e1e9 ($vector-ref timespec 0))
+	       ($vector-ref timespec 1))
 	  (%raise-errno-error/filename who rv pathname))))))
 
 
