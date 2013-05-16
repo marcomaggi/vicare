@@ -63,23 +63,26 @@
   '#vu8(#xF0 #xAF #xA7 #x91))
 
 
-(parametrise ((check-test-name	'setting-mode))
+(parametrise ((check-test-name	'fd-setting-mode))
+
+  (define (make-pipe)
+    (receive (in ou)
+	(px.pipe)
+      (push-compensation (px.close in))
+      (push-compensation (px.close ou))
+      (values in ou)))
 
   (check	;testing
       (with-compensations
 	(receive (in ou)
-	    (px.pipe)
-	  (push-compensation (px.close in))
-	  (push-compensation (px.close ou))
+	    (make-pipe)
 	  (px.fd-in-non-blocking-mode? in)))
     => #f)
 
   (check	;setting, testing
       (with-compensations
 	(receive (in ou)
-	    (px.pipe)
-	  (push-compensation (px.close in))
-	  (push-compensation (px.close ou))
+	    (make-pipe)
 	  (px.fd-set-non-blocking-mode! in)
 	  (px.fd-in-non-blocking-mode? in)))
     => #t)
@@ -87,9 +90,7 @@
   (check	;setting, unsetting, testing
       (with-compensations
 	(receive (in ou)
-	    (px.pipe)
-	  (push-compensation (px.close in))
-	  (push-compensation (px.close ou))
+	    (make-pipe)
 	  (px.fd-set-non-blocking-mode! in)
 	  (px.fd-unset-non-blocking-mode! in)
 	  (px.fd-in-non-blocking-mode? in)))
@@ -98,14 +99,48 @@
   (check	;unsetting, testing
       (with-compensations
 	(receive (in ou)
-	    (px.pipe)
-	  (push-compensation (px.close in))
-	  (push-compensation (px.close ou))
+	    (make-pipe)
 	  (px.fd-unset-non-blocking-mode! in)
 	  (px.fd-in-non-blocking-mode? in)))
     => #f)
 
 ;;; --------------------------------------------------------------------
+
+  (check	;with cloexec setting, testing
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (px.fd-set-non-blocking-mode! in)
+	  (px.fd-set-close-on-exec-mode! in)
+	  (list (px.fd-in-non-blocking-mode? in)
+		(px.fd-in-close-on-exec-mode? in))))
+    => '(#t #t))
+
+  (check	;with cloexec setting, testing
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (px.fd-set-non-blocking-mode! in)
+	  (px.fd-set-close-on-exec-mode! in)
+	  (px.fd-unset-close-on-exec-mode! in)
+	  (list (px.fd-in-non-blocking-mode? in)
+		(px.fd-in-close-on-exec-mode? in))))
+    => '(#t #f))
+
+  (check 	;with cloexec setting, testing
+      (with-compensations
+	(receive (in ou)
+	    (make-pipe)
+	  (px.fd-set-non-blocking-mode! in)
+	  (px.fd-set-close-on-exec-mode! in)
+	  (px.fd-unset-non-blocking-mode! in)
+	  (list (px.fd-in-non-blocking-mode? in)
+		(px.fd-in-close-on-exec-mode? in))))
+    => '(#f #t))
+  #t)
+
+
+(parametrise ((check-test-name	'port-setting-mode))
 
   (check	;testing
       (with-compensations

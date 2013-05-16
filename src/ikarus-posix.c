@@ -1886,10 +1886,12 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 
 ikptr
 ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
   rv = fcntl(fd, F_GETFL, 0);
   if (-1 == rv) return ik_errno_to_code();
@@ -1902,10 +1904,12 @@ ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 }
 ikptr
 ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
   rv = fcntl(fd, F_GETFL, 0);
   if (-1 == rv) return ik_errno_to_code();
@@ -1918,10 +1922,12 @@ ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 }
 ikptr
 ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
   rv = fcntl(fd, F_GETFL, 0);
   return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & O_NONBLOCK) : ik_errno_to_code();
@@ -1934,15 +1940,17 @@ ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 
 ikptr
 ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
-  rv = fcntl(fd, F_GETFL, 0);
+  rv = fcntl(fd, F_GETFD, 0);
   if (-1 == rv) return ik_errno_to_code();
   errno = 0;
-  rv = fcntl(fd, F_SETFL, rv | FD_CLOEXEC);
+  rv = fcntl(fd, F_SETFD, rv | FD_CLOEXEC);
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -1950,15 +1958,17 @@ ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
 }
 ikptr
 ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
-  rv = fcntl(fd, F_GETFL, 0);
+  rv = fcntl(fd, F_GETFD, 0);
   if (-1 == rv) return ik_errno_to_code();
   errno = 0;
-  rv = fcntl(fd, F_SETFL, rv & (~FD_CLOEXEC));
+  rv = fcntl(fd, F_SETFD, rv & (~FD_CLOEXEC));
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -1966,12 +1976,14 @@ ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
 }
 ikptr
 ikptr_posix_fd_ref_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
-  int		rv = -1;
+  int		rv;
   errno = 0;
-  rv = fcntl(fd, F_GETFL, 0);
+  rv = fcntl(fd, F_GETFD, 0);
   return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & FD_CLOEXEC) : ik_errno_to_code();
 #else
   feature_failure(__func__);
