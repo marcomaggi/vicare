@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -94,22 +94,22 @@
   (check
       (catch #f
   	(vector-ref '#(c i a o) #\d))
-    => '(#\d))
+    => '(#\d #(c i a o)))
 
   (check
       (catch #f
   	(vector-ref '#(c i a o) 'd))
-    => '(d))
+    => '(d #(c i a o)))
 
   (check
       (catch #f
 	(vector-ref '#() -1))
-    => '(-1))
+    => '(-1 #()))
 
   (check
       (catch #f
 	(vector-ref '#() (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum)) '#()))
 
   (check
       (catch #f
@@ -158,17 +158,17 @@
   (check
       (catch #f
 	(vector-set! (vector 'a 'b 'c) 'a 'b))
-    => '(a))
+    => '(a #(a b c)))
 
   (check
       (catch #f
 	(vector-set! (vector 'a 'b 'c) -1 'a))
-    => '(-1))
+    => '(-1 #(a b c)))
 
   (check
       (catch #f
 	(vector-set! (vector 'a 'b 'c) (+ 1 (greatest-fixnum)) 'a))
-    => (list (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum)) '#(a b c)))
 
   (check
       (catch #f
@@ -391,6 +391,57 @@
       (catch #f
 	(vector-copy 123))
     => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'vector-resize))
+
+  (check
+      (vector-resize '#() 3)
+    => '#(#f #f #f))
+
+  (check
+      (vector-resize '#() 0)
+    => '#())
+
+  (check
+      (vector-resize '#(a b c) 0)
+    => '#())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (vector-resize '#(a) 1)
+    => '#(a))
+
+  (check
+      (vector-resize '#(a b c) 5)
+    => '#(a b c #f #f))
+
+  (check
+      (vector-resize '#(a b c) 5 123)
+    => '#(a b c 123 123))
+
+  (check
+      (vector-resize '#(a b c d e) 3)
+    => '#(a b c))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: vector
+
+  (check
+      (catch #f
+	(vector-resize 123 1))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: new-len
+
+  (check
+      (catch #f
+	(vector-resize '#(1 2 3) -123))
+    => '(-123))
 
   #t)
 

@@ -1315,6 +1315,7 @@
     (vector-append				i v $language)
     (vector-copy				i v $language)
     (vector-copy!				i v $language)
+    (vector-resize				i v $language)
     (vector?					i v r ba se)
     (zero?					i v r ba se)
     (...					i v ne r ba sc se)

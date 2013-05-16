@@ -3348,6 +3348,22 @@ unspecified values.
 @end defun
 
 
+@defun vector-resize @var{vec} @var{new-length}
+@defunx vector-resize @var{vec} @var{new-length} @var{fill}
+Return a new vector of length @var{new-length} whose first slots are
+filled with the items from @var{vec} and whose last slots, if any left,
+are filled with @var{fill}.  When not used: @var{fill} defaults to
+@false{}.
+
+@example
+(vector-resize '#() 0)          @result{} #()
+(vector-resize '#() 3)          @result{} #(#f #f #f)
+(vector-resize '#(1 2 3) 5)     @result{} #(1 2 3 #f #f)
+(vector-resize '#(1 2 3) 2)     @result{} #(1 2)
+@end example
+@end defun
+
+
 @deffn Procedure vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
 @deffnx Procedure vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
 The @var{vec}s should all have the same length, and @var{proc} should
