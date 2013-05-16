@@ -1881,6 +1881,9 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
   feature_failure(__func__);
 #endif
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 {
@@ -1898,6 +1901,22 @@ ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
+ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv & (~O_NONBLOCK));
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
 ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 {
 #ifdef HAVE_FCNTL
@@ -1906,6 +1925,54 @@ ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
   errno = 0;
   rv = fcntl(fd, F_GETFL, 0);
   return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & O_NONBLOCK) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv | FD_CLOEXEC);
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv & (~FD_CLOEXEC));
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_ref_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv = -1;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & FD_CLOEXEC) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

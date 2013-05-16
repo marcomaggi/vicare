@@ -1713,10 +1713,11 @@ successful return a fixnum representing the return value of
 
 
 @defun fd-set-non-blocking-mode! @var{fd}
+@defunx fd-unset-non-blocking-mode! @var{fd}
 Special interface to the C function @cfunc{fcntl}, @glibcref{Control
 Operations, fcntl}.  Configure the file descriptor @var{fd} in
-non--blocking mode; if successful return unspecified values, else raise
-an exception.
+non--blocking mode or blocking mode; if successful return unspecified
+values, else raise an exception.
 @end defun
 
 
@@ -1725,6 +1726,24 @@ Special interface to the C function @cfunc{fcntl}, @glibcref{Control
 Operations, fcntl}.  Query the file descriptor @var{fd} for its
 non--blocking mode; if successful: return @true{} if @var{fd} is in
 non--blocking mode, @false{} otherwise.  If an error occurs: raise an
+exception.
+@end defun
+
+
+@defun fd-set-close-on-exec-mode! @var{fd}
+@defunx fd-unset-close-on-exec-mode! @var{fd}
+Special interface to the C function @cfunc{fcntl}, @glibcref{Control
+Operations, fcntl}.  Configure the file descriptor @var{fd} in ``close
+on exec'' mode or ``do not close on exec'' mode; if successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun fd-in-close-on-exec-mode? @var{fd}
+Special interface to the C function @cfunc{fcntl}, @glibcref{Control
+Operations, fcntl}.  Query the file descriptor @var{fd} for its ``close
+on exec'' mode; if successful: return @true{} if @var{fd} is in ``close
+on exec'' mode, @false{} otherwise.  If an error occurs: raise an
 exception.
 @end defun
 

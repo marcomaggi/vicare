@@ -782,6 +782,36 @@
 	    (px.system "rm -f tmp"))))
     => #t)
 
+  (check	;close on exec test
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-in-close-on-exec-mode? in)))
+    => #f)
+
+  (check	;close on exec setting
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-set-close-on-exec-mode! in)
+	  (px.fd-in-close-on-exec-mode? in)))
+    => #t)
+
+  (check	;close on exec setting and unsetting
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.fd-set-close-on-exec-mode! in)
+	  (px.fd-unset-close-on-exec-mode! in)
+	  (px.fd-in-close-on-exec-mode? in)))
+    => #f)
+
 ;;; --------------------------------------------------------------------
 ;;; lockf
 

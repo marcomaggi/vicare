@@ -155,7 +155,9 @@
     select-fd-exceptional?
     poll
     fcntl				ioctl
-    fd-set-non-blocking-mode!		fd-in-non-blocking-mode?
+    fd-set-non-blocking-mode!		fd-set-close-on-exec-mode!
+    fd-unset-non-blocking-mode!		fd-unset-close-on-exec-mode!
+    fd-in-non-blocking-mode?		fd-in-close-on-exec-mode?
     dup					dup2
     pipe				mkfifo
     truncate				ftruncate
@@ -1997,6 +1999,8 @@
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
 
+;;; --------------------------------------------------------------------
+
 (define (fd-set-non-blocking-mode! fd)
   (define who 'fd-set-non-blocking-mode!)
   (with-arguments-validation (who)
@@ -2005,11 +2009,46 @@
       (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
+(define (fd-unset-non-blocking-mode! fd)
+  (define who 'fd-unset-non-blocking-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-unset-non-blocking-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
 (define (fd-in-non-blocking-mode? fd)
   (define who 'fd-in-non-blocking-mode?)
   (with-arguments-validation (who)
       ((file-descriptor		fd))
     (let ((rv (capi.posix-fd-ref-non-blocking-mode fd)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv fd)))))
+
+;;; --------------------------------------------------------------------
+
+(define (fd-set-close-on-exec-mode! fd)
+  (define who 'fd-set-close-on-exec-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-unset-close-on-exec-mode! fd)
+  (define who 'fd-unset-close-on-exec-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-in-close-on-exec-mode? fd)
+  (define who 'fd-in-close-on-exec-mode?)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-ref-close-on-exec-mode fd)))
       (if (boolean? rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
