@@ -49,6 +49,8 @@
       (push-compensation (close-port port2))
       (push-compensation (chan.close-channel chan1))
       (push-compensation (chan.close-channel chan2))
+      (port-set-non-blocking-mode! port1)
+      (port-set-non-blocking-mode! port2)
       (values chan1 chan2))))
 
 

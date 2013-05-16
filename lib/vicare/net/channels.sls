@@ -770,7 +770,7 @@
 	  (($channel-message-terminated? chan)
 	   #t)
 	  (else
-	   (let ((bv (get-bytevector-some ($channel-connect-in-port chan))))
+	   (let ((bv (get-bytevector-n ($channel-connect-in-port chan) 4096)))
 	     (cond
 	      ;;If  the   EOF  is  found  before   reading  a  message
 	      ;;terminator: return the EOF object.
@@ -927,7 +927,7 @@
 	  (($channel-message-terminated? chan)
 	   #t)
 	  (else
-	   (let ((str (get-string-some ($channel-connect-in-port chan))))
+	   (let ((str (get-string-n ($channel-connect-in-port chan) 1024)))
 	     (cond
 	      ;;If  the   EOF  is  found  before   reading  a  message
 	      ;;terminator: return the EOF object.

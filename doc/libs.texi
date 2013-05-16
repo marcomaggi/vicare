@@ -4131,18 +4131,10 @@ with compound condition object of types: @condition{who},
 @end itemize
 
 This function performs a single read operation from the registered
-connection port; for binary channels it uses @func{get-bytevector-some},
-for textual channels it uses @func{get-string-some}.  When non--blocking
-mode is desired, either:
-
-@itemize
-@item
-The underlying input port must be configured in non--blocking mode.
-
-@item
-This function must be called only when it is known that at least one
-octet or character is available from the input port.
-@end itemize
+connection port; for binary channels it uses @func{get-bytevector-n},
+for textual channels it uses @func{get-string-n}.  When non--blocking
+mode is desired: the underlying input port must be configured in
+non--blocking mode.
 @end defun
 
 @c ------------------------------------------------------------
