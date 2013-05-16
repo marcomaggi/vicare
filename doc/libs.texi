@@ -3708,6 +3708,7 @@ transfer data through Scheme binary ports, typically between processes.
 * net channels types::          Data type definitions.
 * net channels init::           Constructors and destructors.
 * net channels config::         Configuration parameters.
+* net channels inspect::        Channels inspection.
 * net channels preds::          Predicates and arguments validation.
 * net channels recv::           Receiving a message.
 * net channels send::           Sending a message.
@@ -3870,6 +3871,12 @@ Finalise a channel closing its connection port; return unspecified
 values.  A pending message delivery, if any, is aborted.
 @end defun
 
+
+@defun channel-abort! @var{chan}
+Abort the current operation and reset the channel to inactive; return
+unspecified values.
+@end defun
+
 @c page
 @node net channels config
 @subsection Configuration parameters
@@ -3933,6 +3940,20 @@ terminators.  When not configured: the list of terminators defaults to:
 
 The terminators @strong{are not} reset when a message delivery is
 completed.
+@end defun
+
+@c page
+@node net channels inspect
+@subsection Channels inspection
+
+
+The following bindings are exported by the library @library{vicare net
+channels}.
+
+
+@defun channel-connect-in-port @var{chan}
+@defunx channel-connect-ou-port @var{chan}
+Return the input or output port of @var{chan}.
 @end defun
 
 @c page
@@ -4075,44 +4096,65 @@ in the bytevectors or strings.
 
 @defun channel-recv-message-portion! @var{chan}
 Receive a portion of input message from the given channel and accumulate
-it in the internal state; return:
+it in the internal state; it is an error if the channel is not in the
+course of receiving a message.
 
 @itemize
 @item
-@true{} if a configured message terminator was read in the tail of the
-data.
+Return true if a configured message terminator is read from the input
+port or if the channel already read a terminator in a previous
+operation.  If a message terminator is received: set @var{chan} to
+``message terminated'' status.
 
 @item
-The EOF object if the EOF condition was found on the input port before
-reading a terminator.
+Return the @eof{} object if @eof{} is read from the input port before a
+message terminator.
 
 @item
-@false{} if neither the terminator nor the EOF were found.  In this case
-we should attempt to receive another message portion later.
-@end itemize
+Return false if neither a message terminator nor @eof{} is read; in this
+case we need to call this function again later to receive further
+message portions.
 
-It is an error if the channel is not in the course of receiving a
-message.
-
-After the message terminator has been read: further calls to this
-function always return @true{} without taking any action.
-
-This function a single read operation from the registered connection
-port; for binary channel it uses @func{get-bytevector-some}, for textual
-channels it uses @func{get-string-some}.  When non--blocking mode is
-desired: this function must be called only when it is known that at
-least one octet or character is available from the input port.
-
-If at the time of this function call the timeout configured for this
-message is expired: a non--continuable exception is raised with compound
-condition object of types: @condition{who}, @condition{message},
-@condition{channel}, @condition{delivery-timeout-expired}.
-
-If reading data cause the accumulated message to exceed the maximum size
-configured for this message: a non--continuable exception is raised with
+@item
+If upon entering this function the message delivery timeout is expired
+or expires while receiving data: raise a non--continuable exception with
 compound condition object of types: @condition{who},
 @condition{message}, @condition{channel},
+@condition{delivery-timeout-expired}.
+
+@item
+If reading data causes the accumulated message to exceed the maximum
+size configured for this message: raise a non--continuable exception
+with compound condition object of types: @condition{who},
+@condition{message}, @condition{channel},
 @condition{maximum-message-size-exceeded}.
+@end itemize
+
+This function performs a single read operation from the registered
+connection port; for binary channels it uses @func{get-bytevector-some},
+for textual channels it uses @func{get-string-some}.  When non--blocking
+mode is desired, either:
+
+@itemize
+@item
+The underlying input port must be configured in non--blocking mode.
+
+@item
+This function must be called only when it is known that at least one
+octet or character is available from the input port.
+@end itemize
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun channel-recv-full-message @var{chan}
+Attempt to receive a full message through @var{chan}; the channel must
+be inactive.  Return a string or bytevector representing the channel or
+the @eof{} object if the channel connection is closed before a message
+terminator is read.
+
+If an error occurs while receiving a message portion: @var{chan} is left
+in the state it is left by @func{channel-recv-message-portion!}.
 @end defun
 
 @c page
@@ -4163,6 +4205,18 @@ the maximum size configured for this message: a non--continuable
 exception is raised with compound condition object of types:
 @condition{who}, @condition{message}, @condition{channel},
 @condition{maximum-message-size-exceeded}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun channel-send-full-message @var{chan} @var{message-portion} @dots{}
+Attempt to send a full message through @var{chan}; the channel must be
+inactive.  Each @var{message-portion} is sent in the given order.
+
+Return the return value of the internal call to
+@func{channel-send-end!}.  If an error occurs while sending a message
+portion: @var{chan} is left in the state it is left by
+@func{channel-send-message-portion!}.
 @end defun
 
 @c page

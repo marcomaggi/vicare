@@ -33,7 +33,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare: binary net channels with network sockets\n")
+(check-display "*** testing Vicare: binary net channels with POSIX network sockets\n")
 
 
 ;;;; helpers
@@ -45,58 +45,34 @@
 	   (port2 (make-binary-socket-input/output-port sock2 "sock2"))
 	   (chan1 (chan.open-binary-input/output-channel port1 port1))
 	   (chan2 (chan.open-binary-input/output-channel port2 port2)))
-      (values port1 port2 chan1 chan2))))
-
-(define (channel-send-full-message chan full-binary-message)
-  (chan.channel-send-begin! chan)
-  (chan.channel-send-message-portion! chan full-binary-message)
-  (chan.channel-send-end! chan))
-
-(define (channel-recv-full-message chan)
-  (chan.channel-recv-begin! chan)
-  (let loop ()
-    (define rv
-      (chan.channel-recv-message-portion! chan))
-    (cond ((eof-object? rv)
-	   (eof-object))
-	  ((not rv)
-	   (loop))
-	  (else
-	   (chan.channel-recv-end! chan)))))
+      (push-compensation (close-port port1))
+      (push-compensation (close-port port2))
+      (push-compensation (chan.close-channel chan1))
+      (push-compensation (chan.close-channel chan2))
+      (values chan1 chan2))))
 
 
 (parametrise ((check-test-name	'basic))
 
   (check	;transmit full message
       (with-compensations
-	(receive (port1 port2 chan1 chan2)
+	(receive (chan1 chan2)
 	    (make-socket-ports-and-channels)
-	  (push-compensation
-	   (close-port port1)
-	   (close-port port2)
-	   (chan.close-channel chan1)
-	   (chan.close-channel chan2))
-	  (channel-send-full-message chan2 '#ve(ascii "ciao\r\n"))
-	  (channel-recv-full-message chan1)))
+	  (chan.channel-send-full-message chan2 '#ve(ascii "ciao\r\n"))
+	  (chan.channel-recv-full-message chan1)))
     => '#ve(ascii "ciao\r\n"))
 
   (check	;transmit message portion, then close
       (with-compensations
-	(receive (port1 port2 chan1 chan2)
+	(receive (chan1 chan2)
 	    (make-socket-ports-and-channels)
-	  (push-compensation
-	   (close-port port1)
-	   (chan.close-channel chan1))
-
 	  ;;Send  message portion  without  terminator,  then close  the
 	  ;;port.
 	  (chan.channel-send-begin! chan2)
 	  (chan.channel-send-message-portion! chan2 '#ve(ascii "ciao"))
-	  (chan.close-channel chan2)
-	  (close-port port2)
-
+	  (close-port (chan.channel-connect-ou-port chan2))
 	  ;;We expect this reading to get EOF
-	  (channel-recv-full-message chan1)))
+	  (chan.channel-recv-full-message chan1)))
     => (eof-object))
 
   #t)
