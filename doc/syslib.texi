@@ -4996,6 +4996,13 @@ range of the maximum bytevector size.
 @end defun
 
 
+@defun $bytevector-concatenate @var{total-len} @var{bvs}
+Concatenate the bytevectors in the list @var{bvs}, return the result.
+The resulting bytevector must have length @var{total-len}.  Assume the
+arguments have been already validated.
+@end defun
+
+
 @defun $bytevector-reverse-and-concatenate @var{total-len} @var{bvs}
 Reverse the list of bytevectors @var{bvs} and concatenate its items;
 return the result.  The resulting bytevector must have length

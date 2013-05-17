@@ -811,6 +811,7 @@
     ($bytevector-ieee-single-nonnative-set!	$bytes)
     ($bytevector=				$bytes)
     ($bytevector-total-length			$bytes)
+    ($bytevector-concatenate			$bytes)
     ($bytevector-reverse-and-concatenate	$bytes)
 ;;;
     ($flonum-u8-ref				$flonums)

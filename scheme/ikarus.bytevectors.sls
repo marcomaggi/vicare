@@ -94,8 +94,8 @@
     subbytevector-s8		subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
-    $bytevector=
-    $bytevector-total-length	$bytevector-reverse-and-concatenate)
+    $bytevector=		$bytevector-total-length
+    $bytevector-concatenate	$bytevector-reverse-and-concatenate)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
 		  bytevector-copy!	bytevector-fill!
@@ -175,6 +175,7 @@
     (except (vicare unsafe operations)
 	    $bytevector=
 	    $bytevector-total-length
+	    $bytevector-concatenate
 	    $bytevector-reverse-and-concatenate)
     (only (vicare language-extensions syntaxes)
 	  case-endianness big little)
@@ -690,65 +691,19 @@
   ;;Defined by Vicare.  Concatenate  the bytevector arguments and return
   ;;the result.  If no arguments are given: return the empty bytevector.
   ;;
-  (define who 'bytevector-append)
+  (define who 'bytevector-concatenate)
+  (with-arguments-validation (who)
+      ((list-of-bytevectors	list-of-bytevectors))
+    (let ((total-length ($bytevector-total-length 0 list-of-bytevectors)))
+      (with-dangerous-arguments-validation (who)
+	  ((total-length	total-length))
+	($bytevector-concatenate total-length list-of-bytevectors)))))
 
-  (define-inline (main list-of-bvs)
-    (let ((dst.bv    ($make-bytevector (%total-length list-of-bvs 0)))
-	  (dst.start 0))
-      (%copy-bytevectors list-of-bvs dst.bv dst.start)))
-
-  (define (%total-length list-of-bvs accumulated-length)
-    ;;Validate LIST-OF-BVS as a list of bytevectors and return the total
-    ;;length  of   the  bytevectors;  if  LIST-OF-BVS   is  null  return
-    ;;ACCUMULATED-LENGTH.
-    ;;
-    (if (null? list-of-bvs) ;we know that LIST-OF-BVS is a list or null
-	(with-dangerous-arguments-validation (who)
-	    ((total-length accumulated-length))
-	  accumulated-length)
-      (let ((bv ($car list-of-bvs)))
-	(with-arguments-validation (who)
-	    ((bytevector bv))
-	  (%total-length ($cdr list-of-bvs) (+ accumulated-length ($bytevector-length bv)))))))
-
-  (define (%copy-bytevectors list-of-bvs dst.bv dst.start)
-    ;;Copy  the bytes  from  the first  bytevector  in LIST-OF-BVS  into
-    ;;DST.BV starting at DST.START,  then recurse; stop when LIST-OF-BVS
-    ;;is emtpy and return DST.BV.
-    ;;
-    (if (null? list-of-bvs)
-	dst.bv
-      (let* ((src.bv	($car list-of-bvs))
-	     (src.len	($bytevector-length src.bv))
-	     (src.start	0))
-	(%copy-bytevectors ($cdr list-of-bvs) dst.bv
-			   (%copy-bytes src.bv src.start
-					dst.bv dst.start
-					($fx+ dst.start src.len))))))
-
-  (define (%copy-bytes src.bv src.start
-		       dst.bv dst.start
-		       dst.past)
-    ;;Copy the byte at SRC.START  in SRC.BV to the location at DST.START
-    ;;in DST.BV,  then recurse; stop when DST.START  equals DST.PAST and
-    ;;return DST.PAST.
-    ;;
-    (if ($fx= dst.start dst.past)
-	dst.past
-      (begin
-	($bytevector-u8-set! dst.bv dst.start
-			  ($bytevector-u8-ref src.bv src.start))
-	(%copy-bytes src.bv ($fxadd1 src.start)
-		     dst.bv ($fxadd1 dst.start)
-		     dst.past))))
-
-  (main list-of-bytevectors))
-
-
 (define (bytevector-reverse-and-concatenate list-of-bytevectors)
-  ;;Reverse  the LIST-OF-BYTEVECTORS,  concatenate them  and return  the
-  ;;resulting bytevector.  It  is an error if the sum  of the bytevector
-  ;;lengths is not in the range of the maximum bytevector length.
+  ;;Defined  by Vicare.   Reverse  the LIST-OF-BYTEVECTORS,  concatenate
+  ;;them and return the resulting bytevector.  It is an error if the sum
+  ;;of  the bytevector  lengths  is  not in  the  range  of the  maximum
+  ;;bytevector length.
   ;;
   (define who 'bytevector-reverse-and-concatenate)
   (with-arguments-validation (who)
@@ -769,6 +724,24 @@
       total-len
     ($bytevector-total-length (+ total-len ($bytevector-length ($car list-of-bytevectors)))
 			      ($cdr list-of-bytevectors))))
+
+(define ($bytevector-concatenate total-length list-of-bytevectors)
+  ;;Concatenate  the  bytevectors  in  LIST-OF-BYTEVECTORS,  return  the
+  ;;result.   The resulting  bytevector must  have length  TOTAL-LENGTH.
+  ;;Assume the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
+  ;;and the whole bytevector must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-bytevector total-length))
+	     (dst.start	0)
+	     (bvs	list-of-bytevectors))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv   ($car bvs))
+	     (src.len  ($bytevector-length src.bv)))
+	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv ($fx+ dst.start src.len) ($cdr bvs))))))
 
 (define ($bytevector-reverse-and-concatenate total-length list-of-bytevectors)
   ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;

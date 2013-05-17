@@ -224,6 +224,7 @@
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Fri May 17, 2013)
     #;$bytevector-total-length
+    #;$bytevector-concatenate
     #;$bytevector-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
