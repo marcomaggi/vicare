@@ -1148,7 +1148,7 @@
   (for-each-in-order (lambda (portion)
 		       ($channel-send-message-portion! chan portion))
     message-portions)
-  (channel-send-end! chan))
+  ($channel-send-end! chan))
 
 
 ;;;; done
