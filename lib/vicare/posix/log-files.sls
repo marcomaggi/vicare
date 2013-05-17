@@ -162,14 +162,29 @@
       (%format-and-print (log-port) template args)))
   (void))
 
-(define (log-condition-message template cnd)
-  ;;If logging is  enabled: format a log message  extracting the message
-  ;;from the condition object CND.   The template is expected to contain
-  ;;a "~a" sequence to be replaced by the condition message.
-  ;;
-  (log template (if (message-condition? cnd)
-		    (condition-message cnd)
-		  "non-described exception")))
+(module (log-condition-message)
+
+  (define (log-condition-message template cnd)
+    ;;If logging is enabled: format a log message extracting the message
+    ;;from  the  condition object  CND.   The  template is  expected  to
+    ;;contain a "~a" sequence to be replaced by the condition message.
+    ;;
+    (log template (if (message-condition? cnd)
+		      (string-append (condition-message cnd)
+				     (condition-who->string cnd))
+		    "non-described exception")))
+
+  (define (condition-who->string cnd)
+    (if (who-condition? cnd)
+	(let ((who (condition-who cnd)))
+	  (cond ((string? who)
+		 (string-append " (who=" who ")"))
+		((symbol? who)
+		 (string-append " (who=" (symbol->string who) ")"))
+		(else "")))
+      ""))
+
+  #| end of module: LOG-CONDITION-MESSAGE |# )
 
 (define-syntax with-logging-handler
   ;;Evaluate the  body forms;  in case  of exception  log a  message and
