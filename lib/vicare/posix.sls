@@ -170,6 +170,10 @@
     select-from-sets			select-from-sets-array
     fd-set-inspection
 
+    ;; close-on-exec ports
+    port-set-close-on-exec-mode!	port-unset-close-on-exec-mode!
+    port-in-close-on-exec-mode?		close-ports-in-close-on-exec-mode
+
     ;; memory-mapped input/output
     mmap				munmap
     msync				mremap
@@ -518,6 +522,11 @@
 (define-argument-validation (network-port-number/false who obj)
   (or (not obj) (network-port-number? obj))
   (assertion-violation who "expected false or fixnum network port as argument" obj))
+
+(define-argument-validation (port-with-fd who obj)
+  (and (port? obj)
+       (port-fd obj))
+  (assertion-violation who "expected port with file descriptor as underlying device" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -995,6 +1004,7 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execv filename.bv (map string->utf8 argv))))
 	(if ($fx< rv 0)
@@ -1010,6 +1020,7 @@
       ((pathname	filename)
        (list-of-strings	argv)
        (list-of-strings	env))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execve filename.bv
 				   (map string->utf8 argv)
@@ -1026,6 +1037,7 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execvp filename.bv (map string->utf8 argv))))
 	(if ($fx< rv 0)
@@ -2119,6 +2131,60 @@
       (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd cmd len)))))
+
+
+;;;; ports and "close on exec" status
+
+(module (port-set-close-on-exec-mode!
+	 port-unset-close-on-exec-mode!
+	 port-in-close-on-exec-mode?
+	 close-ports-in-close-on-exec-mode)
+  (import (vicare containers weak-hashtables))
+
+  (define-constant TABLE
+    (make-weak-hashtable port-hash eq?))
+
+  (define (port-set-close-on-exec-mode! port)
+    ;;Set close-on-exec mode for PORT; return unspecified values.
+    ;;
+    (define who 'port-set-close-on-exec-mode!)
+    (with-arguments-validation (who)
+	((port	port))
+      (let ((fd (port-fd port)))
+	(and fd
+	     (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+	       (when ($fx< rv 0)
+		 (%raise-errno-error who rv port)))))
+      (weak-hashtable-set! TABLE port #f)))
+
+  (define (port-unset-close-on-exec-mode! port)
+    ;;Unset close-on-exec mode for PORT; return unspecified values.
+    ;;
+    (define who 'port-unset-close-on-exec-mode!)
+    (with-arguments-validation (who)
+	((port	port))
+      (let ((fd (port-fd port)))
+	(and fd
+	     (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+	       (when ($fx< rv 0)
+		 (%raise-errno-error who rv port)))))
+      (weak-hashtable-delete! TABLE port)))
+
+  (define (port-in-close-on-exec-mode? port)
+    ;;Query PORT for its close-on-exec mode; if successful: return true if
+    ;;the port  is in  close-on-exec mode, false  otherwise.  If  an error
+    ;;occurs: raise an exception.
+    ;;
+    (define who 'port-in-close-on-exec-mode?)
+    (with-arguments-validation (who)
+	((port	port))
+      (weak-hashtable-contains? TABLE port)))
+
+  (define (close-ports-in-close-on-exec-mode)
+    (vector-for-each close-port (weak-hashtable-keys TABLE))
+    (weak-hashtable-clear! TABLE))
+
+  #| end of module |# )
 
 
 ;;;; file descriptor sets

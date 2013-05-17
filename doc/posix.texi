@@ -307,6 +307,9 @@ execv}.  @var{filename} must be the pathname of an executable file;
 @var{argv} must be a list of strings representing command line
 arguments.  Execute the command; if the function returns: an error has
 occurred, an exception is raised.
+
+Before executing the command call
+@func{close-ports-in-close-on-exec-mode}.
 @end defun
 
 
@@ -317,6 +320,9 @@ execve}.  @var{filename} must be the pathname of an executable file;
 arguments; @var{env} must be a list of strings representing environment
 variables assignments.  Execute the command; if the function returns: an
 error has occurred, an exception is raised.
+
+Before executing the command call
+@func{close-ports-in-close-on-exec-mode}.
 @end defun
 
 
@@ -326,6 +332,9 @@ execvp}.  @var{filename} must be the pathname of an executable file
 reachable in the current @env{PATH}; @var{argv} must be a list of
 strings representing command line arguments.  Execute the command; if
 the function returns: an error has occurred, an exception is raised.
+
+Before executing the command call
+@func{close-ports-in-close-on-exec-mode}.
 @end defun
 
 
@@ -1711,6 +1720,10 @@ successful return a fixnum representing the return value of
 @cfunc{ioctl}, else raise an exception.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading File descriptors in non--blocking mode
+
 
 @defun fd-set-non-blocking-mode! @var{fd}
 @defunx fd-unset-non-blocking-mode! @var{fd}
@@ -1729,6 +1742,10 @@ non--blocking mode, @false{} otherwise.  If an error occurs: raise an
 exception.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading File descriptors in close--on--exec mode
+
 
 @defun fd-set-close-on-exec-mode! @var{fd}
 @defunx fd-unset-close-on-exec-mode! @var{fd}
@@ -1745,6 +1762,42 @@ Operations, fcntl}.  Query the file descriptor @var{fd} for its ``close
 on exec'' mode; if successful: return @true{} if @var{fd} is in ``close
 on exec'' mode, @false{} otherwise.  If an error occurs: raise an
 exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Ports in close--on--exec mode
+
+
+@defun port-set-close-on-exec-mode! @var{port}
+Register a Scheme @var{port} to be closed if the current process uses
+one of the @code{exec} functions.  If successful: return unspecified
+values, else raise an exception.
+
+@var{port} can be any port: it is @strong{not} required for it to have a
+file descriptor as underlying device.  If the underlying device is a
+file descriptor: this descriptor is configured in close--on--exec mode.
+@end defun
+
+
+@defun port-unset-close-on-exec-mode! @var{port}
+Unregister a Scheme @var{port} so that it is @strong{not} closed if the
+current process uses one of the @code{exec} functions.  If successful:
+return unspecified values, else raise an exception.
+
+If the underlying device is a file descriptor: this descriptor is
+configured @strong{not} to be in close--on--exec mode.
+@end defun
+
+
+@defun port-in-close-on-exec-mode? @var{port}
+Return a boolean: true if @var{port} is in close--on--exec mode, false
+otherwise.
+@end defun
+
+
+@defun close-ports-in-close-on-exec-mode
+Close all the ports registered to be in close--on--exec mode.
 @end defun
 
 @c page

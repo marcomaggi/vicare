@@ -301,6 +301,7 @@ if WANT_POSIX
 TESTS	+= \
 	test-vicare-posix-basic.sps			\
 	test-vicare-posix-non-blocking.sps		\
+	test-vicare-posix-close-on-exec.sps		\
 	test-vicare-posix-sockets.sps			\
 	test-vicare-posix-mmap.sps			\
 	test-vicare-posix-bub.sps			\
@@ -547,6 +548,7 @@ EXTRA_DIST = \
 	test-vicare-posix-basic.sps			\
 	test-vicare-posix-sockets.sps			\
 	test-vicare-posix-non-blocking.sps		\
+	test-vicare-posix-close-on-exec.sps		\
 	test-vicare-posix-mmap.sps			\
 	test-vicare-posix-bub.sps			\
 	test-vicare-posix-time.sps			\
