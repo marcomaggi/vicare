@@ -3567,13 +3567,13 @@
 	  ((string	hostname)
 	   (service	service)
 	   (procedure	log-procedure))
-	(%attempt-addrinfos hostname service
-			    (socket PF_INET SOCK_STREAM 0)
-			    (getaddrinfo hostname (if (string? service)
-						      service
-						    (number->string service))
-					 HINTS)
-			    log-procedure)))
+	(let ((service (if (string? service)
+			   service
+			 (number->string service))))
+	  (%attempt-addrinfos hostname service
+			      (socket PF_INET SOCK_STREAM 0)
+			      (getaddrinfo hostname service HINTS)
+			      log-procedure))))
      ))
 
   (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
