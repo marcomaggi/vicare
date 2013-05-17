@@ -10,7 +10,8 @@ exec "$EXECUTABLE" \
     $VFLAGS                                             \
     --                                                  \
     --verbose                                           \
-    --log-file ~/var/log/vicare-connect.log             \
+    --log-file -                                        \
+    --recv-first                                        \
     --interface localhost                               \
     --port 8081                                         \
     "$@"

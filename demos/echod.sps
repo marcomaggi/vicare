@@ -84,7 +84,9 @@
     ;;cause  of the  error, where  we can  better explain  what we  were
     ;;doing.
     ;;
-    (guard (E (else (exit 1)))
+    (guard (E (else
+	       #;(debug-print E)
+	       (exit 1)))
       ;;Set configuration  parameters; it is useless  to use PARAMETRISE
       ;;here.
       (options
@@ -522,7 +524,7 @@ Options:
       (receive (server-sock server-port client-address)
 	  (net.make-server-sock-and-port master-sock)
 	;;We never use the SERVER-SOCK in this application.
-	(sel.readable server-port
+	(sel.writable server-port
 		      (lambda ()
 			(import ECHO-SERVER)
 			(with-exception-handler
@@ -627,6 +629,7 @@ Options:
   (define (process-outgoing-data conn message-portions)
     (log.with-logging-handler
 	(condition-message "while processing outgoing data: ~a")
+      #;(log.log "sending data: ~a" message-portions)
       (apply chan.channel-send-full-message (connection-channel conn) message-portions)
       (chan.channel-recv-begin! (connection-channel conn))
       (schedule-incoming-data conn)))
