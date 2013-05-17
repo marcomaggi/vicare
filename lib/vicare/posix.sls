@@ -535,10 +535,6 @@
   (or (not obj) (fixnum? obj) (pointer? obj))
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
-
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))

@@ -167,17 +167,17 @@
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) #\a #\b))
-    => '(#\a))
+    => '(#\a "abc"))
 
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) -1 #\a))
-    => '(-1))
+    => '(-1 "abc"))
 
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) (+ 1 (greatest-fixnum)) #\a))
-    => (list (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum)) "abc"))
 
   (check
       (catch #f
@@ -879,6 +879,49 @@
 	(string-append "a" "b" "c" "d" "e" 123))
     => '(123))
 
+
+  #t)
+
+
+(parametrise ((check-test-name	'reverse-and-concatenate))
+
+;;; arguments validation
+
+  (check
+      (catch #f (string-reverse-and-concatenate 123))
+    => '(123))
+
+  (check
+      (catch #f (string-reverse-and-concatenate '(123)))
+    => '((123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-reverse-and-concatenate '())
+    => "")
+
+  (check
+      (string-reverse-and-concatenate '(""))
+    => "")
+
+  (check
+      (string-reverse-and-concatenate '("" ""))
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-reverse-and-concatenate '("123"))
+    => "123")
+
+  (check
+      (string-reverse-and-concatenate '("456" "123"))
+    => "123456")
+
+  (check
+      (string-reverse-and-concatenate '("789" "456" "123"))
+    => "123456789")
 
   #t)
 

@@ -796,6 +796,10 @@
     ($string-set!				$strings)
     ($string-length				$strings)
     ($string=					$strings)
+    ($string-total-length			$strings)
+    ($string-concatenate			$strings)
+    ($string-reverse-and-concatenate		$strings)
+;;
     ($make-bytevector				$bytes)
     ($bytevector-length				$bytes)
     ($bytevector-s8-ref				$bytes)
@@ -1270,6 +1274,7 @@
     (string->number				i v r ba se)
     (string->symbol				i v symbols r ba se)
     (string-append				i v r ba se)
+    (string-reverse-and-concatenate		i v $language)
     (string-copy				i v r ba se)
     (string-for-each				i v r ba)
     (string-length				i v r ba se)

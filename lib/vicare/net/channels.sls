@@ -100,7 +100,11 @@
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Fri May 17, 2013)
     (only (ikarus system $bytevectors)
-	  $bytevector-reverse-and-concatenate))
+	  $bytevector-reverse-and-concatenate)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Fri May 17, 2013)
+    (only (ikarus system $strings)
+	  $string-reverse-and-concatenate))
 
 
 ;;;; data structures
@@ -1145,26 +1149,6 @@
 		       ($channel-send-message-portion! chan portion))
     message-portions)
   (channel-send-end! chan))
-
-
-(define ($string-reverse-and-concatenate full-length list-of-strings)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
-  ;;result.  The resulting string  must have length FULL-LENGTH.  Assume
-  ;;the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
-  ;;
-  (let loop ((dst.str	($make-string full-length))
-	     (dst.start	full-length)
-	     (strs	list-of-strings))
-    (if (null? strs)
-	dst.str
-      (let* ((src.str    ($car strs))
-	     (src.len   ($string-length src.str))
-	     (dst.start ($fx- dst.start src.len)))
-	($string-copy!/count src.str 0 dst.str dst.start src.len)
-	(loop dst.str dst.start (cdr strs))))))
 
 
 ;;;; done

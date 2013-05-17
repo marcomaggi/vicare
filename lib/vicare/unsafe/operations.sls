@@ -221,6 +221,7 @@
     $bytevector-copy!/count
     $bytevector-self-copy-forwards!
     $bytevector-self-copy-backwards!
+
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Fri May 17, 2013)
     #;$bytevector-total-length
@@ -277,6 +278,12 @@
     $string-self-copy-backwards!
     $string-fill!
     $substring
+
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Fri May 17, 2013)
+    #;$string-total-length
+    #;$string-concatenate
+    #;$string-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
 

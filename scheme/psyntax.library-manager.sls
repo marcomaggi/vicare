@@ -73,13 +73,6 @@
     (vicare unsafe operations))
 
 
-;;;; arguments validation
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
-
-
 ;;;; helpers
 
 (define ($fx-non-negative? fx)

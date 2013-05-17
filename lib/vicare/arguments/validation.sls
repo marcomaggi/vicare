@@ -163,6 +163,7 @@
     index-and-count-for-string.vicare-arguments-validation
     start-and-end-for-string.vicare-arguments-validation
     start-and-past-for-string.vicare-arguments-validation
+    list-of-strings.vicare-arguments-validation
 
     ;; vectors
     vector.vicare-arguments-validation
@@ -1066,6 +1067,14 @@
       (and (string? obj)
 	   ($fx< 0 ($string-length obj))))
   (assertion-violation who "expected false or non-empty string as argument" obj))
+
+(define-argument-validation (list-of-strings who obj)
+  (or (null? obj)
+      (and (list? obj)
+	   (for-all string? obj)))
+  (assertion-violation who "expected list of strings as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-string who str idx)
   ;;We assume that STR has already been validated as string.

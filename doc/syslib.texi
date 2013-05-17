@@ -5050,6 +5050,29 @@ Return @true{} if @vari{str} and @varii{str} represent the same string;
 otherwise return @false{}.
 @end deffn
 
+
+@defun $string-total-length @var{init-len} @var{strs}
+Given the list of strings @var{strs}: compute the total length of the
+strings, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+strings in @var{strs}.  The returned value may or may not be in the
+range of the maximum string size.
+@end defun
+
+
+@defun $string-concatenate @var{total-len} @var{strs}
+Concatenate the strings in the list @var{strs}, return the result.  The
+resulting string must have length @var{total-len}.  Assume the arguments
+have been already validated.
+@end defun
+
+
+@defun $string-reverse-and-concatenate @var{total-len} @var{strs}
+Reverse the list of strings @var{strs} and concatenate its items; return
+the result.  The resulting string must have length @var{total-len}.
+Assume the arguments have been already validated.
+@end defun
+
 @c page
 @node syslib ports
 @section Low level port structures

@@ -27,6 +27,7 @@
     string=?
     string<?			string<=?
     string>?			string>=?
+    string-reverse-and-concatenate
     uuid
 
     ;; Vicare specific
@@ -41,7 +42,8 @@
     uri-normalise-encoding
 
     ;; unsafe operations
-    $string=)
+    $string=			$string-total-length
+    $string-concatenate		$string-reverse-and-concatenate)
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
@@ -53,6 +55,7 @@
 		  string=?
 		  string<?			string<=?
 		  string>?			string>=?
+		  string-reverse-and-concatenate
 		  uuid
 
 		  ;; Vicare specific
@@ -65,34 +68,25 @@
 		  string->uri-encoding		uri-encoding->string
 		  uri-encode			uri-decode
 		  uri-normalise-encoding)
-    (vicare language-extensions syntaxes)
+    #;(vicare language-extensions syntaxes)
+    (vicare arguments validation)
     (except (vicare unsafe operations)
-	    $string=))
+	    $string=
+	    $string-total-length
+	    $string-concatenate
+	    $string-reverse-and-concatenate))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (char who obj)
-  (char? obj)
-  (assertion-violation who "expected character as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string length argument" obj))
+
+(define-argument-validation (total-length who obj)
+  (and (fixnum? obj) ($fx<= 0 obj))
+  (assertion-violation who
+    "expected non-negative fixnum as total string length argument" obj))
 
 (define-argument-validation (has-length who str len)
   ($fx= len ($string-length str))
@@ -103,12 +97,6 @@
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string index argument" obj))
-
-(define-argument-validation (index-for-string who idx str)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx< idx ($string-length str))
-  (assertion-violation who "index is out of range for string" idx str))
 
 (define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
@@ -192,8 +180,7 @@
   (define who 'string-ref)
   (with-arguments-validation (who)
       ((string			str)
-       (index			idx)
-       (index-for-string	idx str))
+       (index-for-string	str idx))
     ($string-ref str idx)))
 
 (define (string-set! str idx ch)
@@ -208,8 +195,7 @@
   (define who 'string-set!)
   (with-arguments-validation (who)
       ((string			str)
-       (index			idx)
-       (index-for-string	idx str)
+       (index-for-string	str idx)
        (char			ch))
     ($string-set! str idx ch)))
 
@@ -687,6 +673,68 @@
       (with-arguments-validation (who)
 	  ((length dst.len))
 	(%fill-strings ($make-string dst.len) strs 0))))))
+
+
+(define (string-reverse-and-concatenate list-of-strings)
+  ;;Defined by  Vicare.  Reverse  the LIST-OF-STRINGS,  concatenate them
+  ;;and return the resulting  string.  It is an error if  the sum of the
+  ;;string lengths is not in the range of the maximum string length.
+  ;;
+  (define who 'string-reverse-and-concatenate)
+  (with-arguments-validation (who)
+      ((list-of-strings	list-of-strings))
+    (let ((total-length ($string-total-length 0 list-of-strings)))
+      (with-dangerous-arguments-validation (who)
+	  ((total-length	total-length))
+	($string-reverse-and-concatenate total-length list-of-strings)))))
+
+(define ($string-total-length total-len list-of-strings)
+  ;;Given the LIST-OF-STRINGS: compute the  total length of the strings,
+  ;;add it  to TOTAL-LEN and return  the result.  If TOTAL-LEN  is zero:
+  ;;the returned value is the total length of the strings.  The returned
+  ;;value may or may not be in the range of the maximum string size.
+  ;;
+  (if (null? list-of-strings)
+      total-len
+    ($string-total-length (+ total-len ($string-length ($car list-of-strings)))
+			      ($cdr list-of-strings))))
+
+(define ($string-concatenate total-length list-of-strings)
+  ;;Concatenate the strings in  LIST-OF-STRINGS, return the result.  The
+  ;;resulting  string   must  have  length  TOTAL-LENGTH.    Assume  the
+  ;;arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-string total-length))
+	     (dst.start	0)
+	     (bvs	list-of-strings))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv   ($car bvs))
+	     (src.len  ($string-length src.bv)))
+	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv ($fx+ dst.start src.len) ($cdr bvs))))))
+
+(define ($string-reverse-and-concatenate total-length list-of-strings)
+  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
+  ;;result.  The resulting string must have length TOTAL-LENGTH.  Assume
+  ;;the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-string total-length))
+	     (dst.start	total-length)
+	     (bvs	list-of-strings))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv    ($car bvs))
+	     (src.len   ($string-length src.bv))
+	     (dst.start ($fx- dst.start src.len)))
+	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv dst.start ($cdr bvs))))))
 
 
 (define string-for-each

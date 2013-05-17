@@ -3244,6 +3244,13 @@ Copy @var{count} characters from @var{src.str} starting at
 @end defun
 
 
+@defun string-reverse-and-concatenate @var{strs}
+Reverse the list of strings @var{strs}, concatenate them and return the
+resulting string.  It is an error if the sum of the string lengths is
+not in the range of the maximum string length.
+@end defun
+
+
 @defun string->latin1 @var{string}
 @defunx latin1->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the

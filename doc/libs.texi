@@ -762,6 +762,12 @@ than zero.
 @end deffn
 
 
+@deffn {Validation Clause} list-of-strings @var{obj}
+Succeed if @var{obj} is null or a list of strings.
+@end deffn
+
+@c ------------------------------------------------------------
+
 @deffn {Validation Clause} index-for-string @var{str} @var{idx}
 Succeed if @var{idx} is a fixnum usable as index (not out of range) for
 @var{str}, which is expected to be an already validated string.
@@ -920,6 +926,12 @@ Succeed if @var{obj} is @false{} or a bytevector and its length is
 greater than zero.
 @end deffn
 
+
+@deffn {Validation Clause} list-of-bytevectors @var{obj}
+Succeed if @var{obj} is null or a list of bytevectors.
+@end deffn
+
+@c ------------------------------------------------------------
 
 @deffn {Validation Clause} index-for-bytevector @var{bv} @var{idx}
 Succeed if @var{idx} is a fixnum usable as index (not out of range) for
