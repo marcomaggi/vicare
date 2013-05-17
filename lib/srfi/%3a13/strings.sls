@@ -190,7 +190,8 @@
     (only (vicare)
 	  module
 	  pretty-print
-	  define-auxiliary-syntaxes)
+	  define-auxiliary-syntaxes
+	  receive-and-return)
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
@@ -1770,7 +1771,8 @@
 	(if (stop? seed)
 	    (begin
 	      (display (make-final seed) port)
-	      (begin0-let ((retval (getter)))
+	      (receive-and-return (retval)
+		  (getter)
 		($string-reverse! retval 0 ($string-length retval))))
 	  (begin
 	    (display (seed->char seed) port)
@@ -1881,7 +1883,8 @@
 	      ;;character: the  result is  just the replication  of such
 	      ;;character.
 	      (($fx= 1 str.len)
-	       (begin0-let ((retval ($make-string result.len)))
+	       (receive-and-return (retval)
+		   ($make-string result.len)
 		 ($string-fill! retval ($string-ref str start))))
 
 	      ;;Selected text falls entirely within one span.
@@ -1893,7 +1896,8 @@
 
 	      ;; Selected text requires multiple spans.
 	      (else
-	       (begin0-let ((result ($make-string result.len)))
+	       (receive-and-return (result)
+		   ($make-string result.len)
 		 (%multispan-repcopy! from to result 0 str start past)))))))
 
   (define ($string-xcopy! dst.str dst.start src.str from to src.start src.past)

@@ -934,7 +934,8 @@
   (environ->table (environ)))
 
 (define (environ->table environ)
-  (begin0-let ((table (make-hashtable string-hash string=?)))
+  (receive-and-return (table)
+      (make-hashtable string-hash string=?)
     (for-each (lambda (pair)
 		(hashtable-set! table ($car pair) ($cdr pair)))
       environ)))
@@ -1713,7 +1714,8 @@
       (let ((rv (capi.posix-opendir pathname.bv)))
 	(if (fixnum? rv)
 	    (%raise-errno-error/filename who rv pathname)
-	  (begin0-let ((stream (make-directory-stream pathname rv #f #f)))
+	  (receive-and-return (stream)
+	      (make-directory-stream pathname rv #f #f)
 	    (directory-stream-guardian stream)))))))
 
 (define (fdopendir fd)
@@ -1723,7 +1725,8 @@
     (let ((rv (capi.posix-fdopendir fd)))
       (if (fixnum? rv)
 	  (%raise-errno-error who rv fd)
-	(begin0-let ((stream (make-directory-stream #f rv fd #f)))
+	(receive-and-return (stream)
+	    (make-directory-stream #f rv fd #f)
 	  (directory-stream-guardian stream))))))
 
 (define (readdir stream)

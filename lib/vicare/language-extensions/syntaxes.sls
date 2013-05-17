@@ -34,7 +34,7 @@
     ;; miscellaneous extensions
     define-struct-extended	define-record-type-extended
     let-inline			let*-inline
-    debug-assert		begin0-let
+    debug-assert
     with-pathnames
     with-bytevectors		with-bytevectors/or-false
     callet			callet*
@@ -306,15 +306,6 @@
 
 
 ;;;; other syntaxes
-
-(define-syntax begin0-let
-  (syntax-rules ()
-    ((_ ((?var0 ?init0) (?var ?init) ...) ?form0 ?form ...)
-     (let ((?var0 ?init0)
-	   (?var  ?init)
-	   ...)
-       ?form0 ?form ...
-       ?var0))))
 
 (define-syntax debug-assert
   ;;This is meant to expand to nothing when debugging is turned off.
