@@ -12,7 +12,7 @@ exec "$EXECUTABLE" \
     --verbose                                           \
     --log-file ~/var/log/vicare-connect.log             \
     --interface localhost                               \
-    --port 25                                           \
+    --port 8081                                         \
     "$@"
 
 ### end of file

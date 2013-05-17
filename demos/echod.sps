@@ -488,9 +488,16 @@ Options:
 	  (with
 	   (net.close-master-sock master-sock))))
       (define (schedule-incoming-connection-event)
-	(sel.readable master-sock (lambda ()
-				    (schedule-incoming-connection-event)
-				    (%accept-connection master-sock))))
+	(sel.readable master-sock
+		      (lambda ()
+			(with-exception-handler
+			    (lambda (E)
+			      (log.log "error serving incoming connection: ~a" E)
+			      ;;The SEL will catch and discard this.
+			      (raise E))
+			  (lambda ()
+			    (schedule-incoming-connection-event)
+			    (%accept-connection master-sock))))))
       (compensate
 	  (sel.initialise)
 	(with
@@ -518,7 +525,13 @@ Options:
 	(sel.readable server-port
 		      (lambda ()
 			(import ECHO-SERVER)
-			(proto.start-session server-port client-address)))
+			(with-exception-handler
+			    (lambda (E)
+			      (log.log "error starting connection: ~a" E)
+			      ;;The SEL will catch and discard this.
+			      (raise E))
+			  (lambda ()
+			    (proto.start-session server-port client-address)))))
 	(void))))
 
   (define (%config.dry-run? options-set)
@@ -533,69 +546,94 @@ Options:
   (proto.start-session)
   (import (prefix (vicare net channels) chan.))
 
+  (define-struct connection
+    (id server-port channel client-address))
+
   (define (proto.start-session server-port client-address)
+    (let* ((conn (prepare-connection server-port client-address))
+	   (chan (connection-channel conn)))
+      (log-accepted-connection conn)
+      (schedule-outgoing-data conn GREETINGS-MESSAGE)))
+
+  (define (prepare-connection server-port client-address)
     (log.with-logging-handler
 	(condition-message "while starting session: ~a")
-      (define connection-id
-	(gensym->unique-string (gensym)))
-      (%log-accepted-connection client-address connection-id)
-      (let ((chan (chan.open-binary-input/output-channel server-port)))
-	(chan.channel-set-message-terminators! chan '(#ve(ascii "\r\n") #ve(ascii "\n")))
-	(%send-message chan '(#ve(ascii "Vicare ECHO daemon.\r\n")))
-	(chan.channel-recv-begin! chan)
-	(%process-incoming-data server-port chan connection-id))))
+      (let ((connection-id (gensym->unique-string (gensym)))
+	    (chan          (chan.open-binary-input/output-channel server-port)))
+	(chan.channel-set-message-terminators! chan CHANNEL-TERMINATORS)
+	(make-connection connection-id server-port chan client-address))))
 
-  (define (%log-accepted-connection client-address connection-id)
-    (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
-	   (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
-	   (remote-port         (px.sockaddr_in.in_port client-address))
-	   (remote-port.str     (number->string remote-port)))
-      (log.log "accepted connection from: ~a:~a, connection-id=~a"
-	       remote-address.str remote-port.str connection-id)))
+  (define (close-connection conn)
+    (log.log "closing connection ~a" (connection-id conn))
+    (chan.close-channel (connection-channel conn))
+    (net.close-server-port (connection-server-port conn)))
 
-  (define (%process-incoming-data server-port chan connection-id)
-    (define (%reschedule)
-      (sel.readable server-port
-		    (lambda ()
-		      (%process-incoming-data server-port chan connection-id))
-		    (time-from-now (make-time 5 0))
-		    (lambda ()
-		      (log.log "connection ~a expired" connection-id)
-		      (%stop-session connection-id server-port chan))))
+;;; --------------------------------------------------------------------
+
+  (define (schedule-incoming-data conn)
+    (sel.readable (connection-server-port conn)
+		  (lambda ()
+		    (with-exception-handler
+			(lambda (E)
+			  (log.log "error receiving incoming data: ~a" E)
+			  (close-connection conn)
+			  ;;The SEL will catch and discard this.
+			  (raise E))
+		      (lambda ()
+			(process-incoming-data conn))))
+		  (time-from-now SOCKET-TIMEOUT-TIME)
+		  (lambda ()
+		    (log.log "connection ~a expired" (connection-id conn))
+		    (close-connection conn))))
+
+  (define (process-incoming-data conn)
     (log.with-logging-handler
 	(condition-message "while processing incoming data: ~a")
+      (define chan
+	(connection-channel conn))
       (cond ((chan.channel-recv-message-portion! chan)
-	     => (lambda (dummy)
-		  (let* ((data.bv  (chan.channel-recv-end! chan))
-			 (data.str (utf8->string data.bv)))
-		    (log.log "connection ~a echoing: ~a"
-			     connection-id (ascii->string (uri-encode data.bv)))
-		    (%send-message chan (list #ve(ascii "echo> ") data.bv))
-		    (if (%received-quit? data.bv)
-			(%stop-session connection-id server-port chan)
-		      (begin
-			(chan.channel-recv-begin! chan)
-			(%reschedule))))))
+	     => (lambda (thing)
+		  (if (eof-object? thing)
+		      (close-connection conn)
+		    (let* ((data.bv  (chan.channel-recv-end! chan))
+			   (data.str (utf8->string data.bv)))
+		      (log.log "connection ~a echoing: ~a"
+			       (connection-id conn)
+			       (ascii->string (uri-encode data.bv)))
+		      (if (received-quit? data.bv)
+			  (close-connection conn)
+			(schedule-outgoing-data conn ANSWER-PREFIX data.bv))))))
 	    (else
-	     (%reschedule)))))
+	     (schedule-incoming-data conn)))))
 
-  (define (%stop-session connection-id server-port chan)
-    (log.log "closing connection ~a" connection-id)
-    (chan.close-channel chan)
-    (net.close-server-port server-port))
+;;; --------------------------------------------------------------------
 
-  (define (%send-message chan data)
-    ;;Send the list  of bytevectors DATA through the  channel; perform a
-    ;;full send operation.  Return unspecified values.
-    ;;
-    (chan.channel-send-begin! chan)
-    (for-each-in-order
-	(lambda (bv)
-	  (chan.channel-send-message-portion! chan bv))
-      data)
-    (chan.channel-send-end! chan))
+  (define (schedule-outgoing-data conn . message-portions)
+    (sel.writable (connection-server-port conn)
+		  (lambda ()
+		    (with-exception-handler
+			(lambda (E)
+			  (log.log "error sending outgoing data: ~a" E)
+			  (close-connection conn)
+			  ;;The SEL will catch and discard this.
+			  (raise E))
+		      (lambda ()
+			(process-outgoing-data conn message-portions))))
+		  (time-from-now SOCKET-TIMEOUT-TIME)
+		  (lambda ()
+		    (log.log "connection ~a expired" (connection-id conn))
+		    (close-connection conn))))
 
-  (define (%received-quit? bv)
+  (define (process-outgoing-data conn message-portions)
+    (log.with-logging-handler
+	(condition-message "while processing outgoing data: ~a")
+      (apply chan.channel-send-full-message (connection-channel conn) message-portions)
+      (chan.channel-recv-begin! (connection-channel conn))
+      (schedule-incoming-data conn)))
+
+;;; --------------------------------------------------------------------
+
+  (define (received-quit? bv)
     ;;We know that the last bytes of BV must represent \n or \r\n.
     ;;
     (let ((bv.len (bytevector-length bv)))
@@ -611,6 +649,34 @@ Options:
 	     (bytevector=? bv #ve(ascii "quit\n")))
 	    (else #f))))
 
+;;; --------------------------------------------------------------------
+
+  (define (log-accepted-connection conn)
+    (define-constant client-address
+      (connection-client-address conn))
+    (define-constant id
+      (connection-id conn))
+    (let* ((remote-address.bv   (px.sockaddr_in.in_addr client-address))
+	   (remote-address.str  (px.inet-ntop/string AF_INET remote-address.bv))
+	   (remote-port         (px.sockaddr_in.in_port client-address))
+	   (remote-port.str     (number->string remote-port)))
+      (log.log "accepted connection from: ~a:~a, connection-id=~a"
+	       remote-address.str remote-port.str id)))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant SOCKET-TIMEOUT-TIME
+    (make-time 10 0))
+
+  (define-constant GREETINGS-MESSAGE
+    #ve(ascii "Vicare ECHO daemon.\r\n"))
+
+  (define-constant CHANNEL-TERMINATORS
+    '(#ve(ascii "\r\n") #ve(ascii "\n")))
+
+  (define-constant ANSWER-PREFIX
+    #ve(ascii "echo> "))
+
   #| end of module: ECHO-SERVER |# )
 
 
@@ -625,6 +691,7 @@ Options:
     (sel.receive-signal SIGINT  %sigint-handler)
     (sel.receive-signal SIGTSTP %sigtstp-handler)
     (sel.receive-signal SIGCONT %sigcont-handler)
+    (sel.receive-signal SIGPIPE %sigpipe-handler)
     (sel.receive-signal SIGUSR1 %sigusr1-handler)
     (sel.receive-signal SIGUSR2 %sigusr2-handler))
 
@@ -686,6 +753,15 @@ Options:
 	(condition-message "error in SIGUSR1 handler: ~a")
       (sel.receive-signal SIGUSR1 %sigusr1-handler)
       (log.log "received SIGUSR1")))
+
+  (define (%sigpipe-handler)
+    ;;SIGPIPE is received whenever the  other end of a connection closes
+    ;;the socket.
+    ;;
+    (log.with-logging-handler
+	(condition-message "error in SIGPIPE handler: ~a")
+      (sel.receive-signal SIGPIPE %sigpipe-handler)
+      (log.log "received SIGPIPE")))
 
   (define (%sigusr2-handler)
     ;;SIGUSR2  is  explicitly  sent  by  someone  to  perform  a  custom

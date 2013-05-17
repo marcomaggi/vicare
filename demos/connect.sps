@@ -246,6 +246,10 @@ Options:
 \tStart the client and expect the server to send the first
 \tmessage.
 
+   --send-first
+\tStart the client and expect the client to send the first
+\tmessage.
+
    -V
    --version
 \tPrint version informations and exit.
@@ -293,6 +297,13 @@ Options:
 			  (<global-options>-client-connect-config seed)))
     seed)
 
+  (define (send-first-option-processor option name operand seed)
+    (import CLIENT-CONNECTION-PROCEDURE)
+    (<global-options>-client-connect-config-set!
+     seed (enum-set-difference (<global-options>-client-connect-config seed)
+			       (client-connect-config recv-first)))
+    seed)
+
 ;;; --------------------------------------------------------------------
 ;;; auxiliary options
 
@@ -326,6 +337,7 @@ Options:
      (option '(#\P "port")	#t #f port-option-processor)
      (option '("log-file")	#t #f log-file-option-processor)
      (option '("recv-first")	#f #f recv-first-option-processor)
+     (option '("send-first")	#f #f send-first-option-processor)
 
      (option '("version-only")	#f #f version-only-option-processor)
      (option '(#\V "version")	#f #f version-option-processor)
@@ -394,11 +406,14 @@ Options:
 	  ((server-port (log.with-logging-handler
 			    (condition-message "while creating client socket: ~a")
 			  (compensate
-			      (px.tcp-connect interface (number->string port))
+			      (px.tcp-connect interface port
+					      (lambda (action hostname service sockaddr)
+						(log.log "tcp-connect: ~a ~a ~a"
+							 action hostname service)))
 			    (with
 			     (close-port server-port))))))
 
-	(if (%config.recv-first? options-set)
+	(if (configured-to-recv-first? options-set)
 	    (proto.start-recv-session server-port)
 	  (proto.start-send-session server-port))
 	;;We return  from this  form only  when it is  time to  exit the
@@ -406,9 +421,8 @@ Options:
 	(sel.enter)))
     (void))
 
-  (define (%config.recv-first? options-set)
-    (enum-set-member? (client-connect-option recv-first)
-		      options-set))
+  (define (configured-to-recv-first? options-set)
+    (enum-set-member? (client-connect-option recv-first) options-set))
 
   #| end of module: SERVER-EVENTS-LOOP |# )
 
@@ -420,13 +434,14 @@ Options:
   (import (prefix (vicare net channels) chan.))
 
   (define-struct connection
-    (term-chan server-chan server-port))
+    (terminal-chan server-chan server-port))
 
   (define (proto.start-recv-session server-port)
     ;;Start a session in which this client first receives a message from
     ;;the server.
     ;;
     (define conn (prepare-connection server-port))
+    (log.log "expecting server to send first message")
     (chan.channel-recv-begin! ($connection-server-chan conn))
     (schedule-server-incoming-data conn))
 
@@ -435,48 +450,83 @@ Options:
     ;;server.  We have to read a message form the terminal.
     ;;
     (define conn (prepare-connection server-port))
-    (chan.channel-recv-begin! ($connection-term-chan conn))
-    (schedule-term-incoming-data conn))
+    (log.log "expecting client to send first message")
+    (chan.channel-recv-begin! ($connection-terminal-chan conn))
+    (schedule-terminal-incoming-data conn))
+
+;;; --------------------------------------------------------------------
 
   (define (prepare-connection server-port)
     ;;Prepare the terminal and server channel structures.
     ;;
     (log.with-logging-handler
 	(condition-message "while starting session: ~a")
-      (define term-chan
+      (define terminal-chan
 	(chan.open-textual-input/output-channel stdin stdout))
       (define server-chan
 	(chan.open-textual-input/output-channel server-port server-port))
-      (file-descriptor-set-non-blocking (port-fd stdin))
-      (file-descriptor-set-non-blocking (port-fd stdout))
-      (file-descriptor-set-non-blocking (port-fd server-port))
-      (chan.channel-set-message-terminators! term-chan   STRING-TERMINATORS)
-      (chan.channel-set-message-terminators! server-chan STRING-TERMINATORS)
-      (make-connection term-chan server-chan server-port)))
+      (port-set-non-blocking-mode! server-port)
+      (port-set-non-blocking-mode! stdin)
+      (chan.channel-set-message-terminators! terminal-chan STRING-TERMINATORS)
+      (chan.channel-set-message-terminators! server-chan   STRING-TERMINATORS)
+      (make-connection terminal-chan server-chan server-port)))
 
-  (define (file-descriptor-set-non-blocking fd)
-    (let ((x (px.fcntl fd F_GETFL 0)))
-      (px.fcntl fd F_SETFL (bitwise-ior fd O_NONBLOCK))))
+  (define (close-connection conn)
+    (with-compensations
+      (push-compensation (sel.leave-asap))
+      (log.log "closing connection")
+      (chan.close-channel ($connection-server-chan   conn))
+      (chan.close-channel ($connection-terminal-chan conn))
+      (close-port ($connection-server-port conn))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (schedule-term-incoming-data conn)
-    (sel.readable stdin
-		  (lambda ()
-		    (process-term-incoming-data conn))
-		  (time-from-now (make-time 5 0))
-		  (lambda ()
-		    (log.log "connection expired")
-		    (stop-session conn))))
+  (define (schedule-terminal-incoming-data conn)
+    ;;We do *not* want a timeout when reading from the terminal.
+    ;;
+    (sel.readable stdin (lambda ()
+			  (with-exception-handler
+			      (lambda (E)
+				(log.log "error processing incoming terminal data: ~a" E)
+				;;The  SEL will  catch and  discard this
+				;;exception.
+				(raise E))
+			    (lambda ()
+			      (process-terminal-incoming-data conn))))))
 
   (define (schedule-server-incoming-data conn)
+    ;;We *do* want a timeout when reading from the socket.
     (sel.readable ($connection-server-port conn)
 		  (lambda ()
-		    (process-server-incoming-data conn))
-		  (time-from-now (make-time 5 0))
+		    (with-exception-handler
+			(lambda (E)
+			  (log.log "error processing incoming server data: ~a" E)
+			  ;;The   SEL  will   catch  and   discard  this
+			  ;;exception.
+			  (raise E))
+		      (lambda ()
+			(process-server-incoming-data conn))))
+		  (time-from-now SOCKET-TIMEOUT-TIME)
 		  (lambda ()
 		    (log.log "connection expired")
-		    (stop-session conn))))
+		    (close-connection conn))))
+
+  (define (schedule-server-outgoing-data conn . message-portions)
+    ;;We *do* want a timeout when writing to a socket.
+    (sel.writable ($connection-server-port conn)
+		  (lambda ()
+		    (with-exception-handler
+			(lambda (E)
+			  (log.log "error processing outgoing server data: ~a" E)
+			  ;;The   SEL  will   catch  and   discard  this
+			  ;;exception.
+			  (raise E))
+		      (lambda ()
+			(process-server-outgoing-data conn message-portions))))
+		  (time-from-now SOCKET-TIMEOUT-TIME)
+		  (lambda ()
+		    (log.log "connection expired")
+		    (close-connection conn))))
 
 ;;; --------------------------------------------------------------------
 
@@ -495,18 +545,31 @@ Options:
 	(condition-message "while processing server incoming data: ~a")
       (define server-chan
 	($connection-server-chan conn))
+      (define terminal-chan
+	($connection-terminal-chan conn))
+      (log.log "receiving message portion")
       (cond ((chan.channel-recv-message-portion! server-chan)
-	     => (lambda (dummy)
-		  (let* ((data.str (chan.channel-recv-end! server-chan))
-			 (data.enc (ascii->string (uri-encode data.str))))
-		    (log.log "connection recv: ~a" data.enc)
-		    (channel-send ($connection-term-chan conn) data.str)
-		    (chan.channel-recv-begin! ($connection-term-chan conn))
-		    (schedule-term-incoming-data conn))))
+	     => (lambda (thing)
+		  (if (eof-object? thing)
+		      (close-connection conn)
+		    (let* ((data.str (chan.channel-recv-end! server-chan))
+			   (data.enc (ascii->string (uri-encode (string->ascii data.str)))))
+		      (chan.channel-send-full-message terminal-chan data.str)
+		      (chan.channel-recv-begin! terminal-chan)
+		      (schedule-terminal-incoming-data conn)))))
 	    (else
 	     (schedule-server-incoming-data conn)))))
 
-  (define (process-term-incoming-data conn)
+  (define (process-server-outgoing-data conn message-portions)
+    (log.with-logging-handler
+	(condition-message "while processing server outgoing data: ~a")
+      (define server-chan
+	($connection-server-chan conn))
+      (apply chan.channel-send-full-message server-chan message-portions)
+      (chan.channel-recv-begin! server-chan)
+      (schedule-server-incoming-data conn)))
+
+  (define (process-terminal-incoming-data conn)
     ;;To  be called  when  there  is incoming  data  available from  the
     ;;terminal port.  Read the available data, then:
     ;;
@@ -519,34 +582,20 @@ Options:
     ;;
     (log.with-logging-handler
 	(condition-message "while processing terminal incoming data: ~a")
-      (define term-chan
-	($connection-term-chan conn))
-      (cond ((chan.channel-recv-message-portion! term-chan)
-	     => (lambda (dummy)
-		  (let ((data.str (chan.channel-recv-end! term-chan)))
-		    (log.log "connection command: ~a" data.str)
-		    (channel-send ($connection-server-chan conn) data.str)
-		    (chan.channel-recv-begin! ($connection-server-chan conn))
-		    (schedule-server-incoming-data conn))))
+      (define terminal-chan
+	($connection-terminal-chan conn))
+      (define server-chan
+	($connection-server-chan conn))
+      (cond ((chan.channel-recv-message-portion! terminal-chan)
+	     => (lambda (thing)
+		  (if (eof-object? thing)
+		      (close-connection conn)
+		    (let ((data.str (chan.channel-recv-end! terminal-chan)))
+		      (log.log "sending command: ~a"
+			       (ascii->string (uri-encode (string->ascii data.str))))
+		      (schedule-server-outgoing-data conn data.str)))))
 	    (else
-	     (schedule-term-incoming-data conn)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (stop-session conn)
-    (with-compensations
-      (push-compensation (sel.leave-asap))
-      (log.log "closing connection")
-      (chan.close-channel ($connection-server-chan conn))
-      (chan.close-channel ($connection-term-chan   conn))
-      (close-port ($connection-server-port conn))))
-
-;;; --------------------------------------------------------------------
-
-  (define (channel-send chan data.str)
-    (chan.channel-send-begin! chan)
-    (chan.channel-send-message-portion! chan data.str)
-    (chan.channel-send-end! chan))
+	     (schedule-terminal-incoming-data conn)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -570,6 +619,12 @@ Options:
 
   (define-constant STRING-TERMINATORS
     '("\r\n" "\n"))
+
+  (define-constant SOCKET-TIMEOUT-SECONDS
+    10)
+
+  (define-constant SOCKET-TIMEOUT-TIME
+    (make-time SOCKET-TIMEOUT-SECONDS 0))
 
   #| end of module: CONNECT-CLIENT |# )
 
