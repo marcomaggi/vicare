@@ -7549,7 +7549,7 @@
 		 (?put-char port ch code-point who)))
 	    (?put-char port ch code-point who))
 	  (when flush?
-	    (%unsafe.flush-output-port port)))
+	    (%unsafe.flush-output-port port who)))
 	(next-char ($fxadd1 src.index) src.past))))
   (define-inline (%put-utf16le ?port ?ch ?code-point ?who)
     (%unsafe.put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'little))
