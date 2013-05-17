@@ -1345,12 +1345,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (octet who obj)
-  (and (fixnum? obj)
-       ($fx>= obj 0)
-       ($fx<= obj 255))
-  (assertion-violation who "expected fixnum in the range for octets as argument" obj))
-
 (define-argument-validation (port-identifier who obj)
   (string? obj)
   (assertion-violation who "ID is not a string" obj))

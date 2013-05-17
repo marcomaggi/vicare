@@ -79,6 +79,10 @@
     false-or-promise.vicare-arguments-validation
 
     ;; bit sized integers
+    byte.vicare-arguments-validation
+    false-or-byte.vicare-arguments-validation
+    octet.vicare-arguments-validation
+    false-or-octet.vicare-arguments-validation
     word-u8.vicare-arguments-validation
     word-u8/false.vicare-arguments-validation
     word-s8.vicare-arguments-validation
@@ -179,6 +183,7 @@
     index-and-count-for-bytevector.vicare-arguments-validation
     start-and-end-for-bytevector.vicare-arguments-validation
     start-and-past-for-bytevector.vicare-arguments-validation
+    bytevector-length.vicare-arguments-validation
 
     ;; symbols
     symbol.vicare-arguments-validation
@@ -760,6 +765,24 @@
 
 ;;;; false or bit sized integers
 
+(define-argument-validation (byte who obj)
+  (words.word-s8? obj)
+  (assertion-violation who "expected fixnum representing byte as argument" obj))
+
+(define-argument-validation (false-or-byte who obj)
+  (or (not obj) (words.word-s8? obj))
+  (assertion-violation who "expected false or fixnum representing byte as argument" obj))
+
+(define-argument-validation (octet who obj)
+  (words.word-u8? obj)
+  (assertion-violation who "expected fixnum representing octet as argument" obj))
+
+(define-argument-validation (false-or-octet who obj)
+  (or (not obj) (words.word-u8? obj))
+  (assertion-violation who "expected false or fixnum representing octet as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (word-u8/false who obj)
   (or (not obj) (words.word-u8? obj))
   (assertion-violation who
@@ -1161,6 +1184,11 @@
        ($fx>= idx 0)
        ($fx<= idx ($bytevector-length vec))))
 
+(define-inline (start-index-for-bytevector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<= idx ($bytevector-length vec))))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (bytevector who obj)
@@ -1214,6 +1242,12 @@
   (assertion-violation who
     "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
+
+(define-argument-validation (bytevector-length who len)
+  (and (fixnum? len)
+       ($fx>= len 0))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector length argument" len))
 
 
 ;;;; symbols

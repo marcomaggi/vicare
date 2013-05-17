@@ -169,9 +169,10 @@
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
-    (vicare language-extensions syntaxes)
     (except (vicare unsafe operations)
-	    $bytevector=))
+	    $bytevector=)
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation))
 
   (module (platform-endianness)
     (include "ikarus.config.ss" #t))
@@ -231,44 +232,44 @@
 
 (define-inline (bytevector-cflonum-single-le-set! bv i x)
   (begin
-    (bytevector-ieee-single-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-single-set! bv i          (real-part x) (endianness little))
     (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness little))))
 
 (define-inline (bytevector-cflonum-single-be-set! bv i x)
   (begin
-    (bytevector-ieee-single-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-single-set! bv i          (real-part x) (endianness big))
     (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness big))))
 
 (define-inline (bytevector-cflonum-single-ne-set! bv i x)
   (begin
-    (bytevector-ieee-single-native-set! bv i                (real-part x))
+    (bytevector-ieee-single-native-set! bv i          (real-part x))
     (bytevector-ieee-single-native-set! bv ($fx+ 4 i) (imag-part x))))
 
 (define-inline (bytevector-cflonum-double-le-set! bv i x)
   (begin
-    (bytevector-ieee-double-set! bv i                (real-part x) (endianness little))
+    (bytevector-ieee-double-set! bv i          (real-part x) (endianness little))
     (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness little))))
 
 (define-inline (bytevector-cflonum-double-be-set! bv i x)
   (begin
-    (bytevector-ieee-double-set! bv i                (real-part x) (endianness big))
+    (bytevector-ieee-double-set! bv i          (real-part x) (endianness big))
     (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness big))))
 
 (define-inline (bytevector-cflonum-double-ne-set! bv i x)
   (begin
-    (bytevector-ieee-double-native-set! bv i                (real-part x))
+    (bytevector-ieee-double-native-set! bv i          (real-part x))
     (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x))))
 
 ;;; --------------------------------------------------------------------
 
 (define-inline (bytevector-cflonum-single-le-ref bv i)
   (make-rectangular
-    (bytevector-ieee-single-ref bv i                (endianness little))
+    (bytevector-ieee-single-ref bv i          (endianness little))
     (bytevector-ieee-single-ref bv ($fx+ 4 i) (endianness little))))
 
 (define-inline (bytevector-cflonum-single-be-ref bv i)
   (make-rectangular
-    (bytevector-ieee-single-ref bv i                (endianness big))
+    (bytevector-ieee-single-ref bv i          (endianness big))
     (bytevector-ieee-single-ref bv ($fx+ 4 i) (endianness big))))
 
 (define-inline (bytevector-cflonum-single-ne-ref bv i)
@@ -278,12 +279,12 @@
 
 (define-inline (bytevector-cflonum-double-le-ref bv i)
   (make-rectangular
-    (bytevector-ieee-double-ref bv i                (endianness little))
+    (bytevector-ieee-double-ref bv i          (endianness little))
     (bytevector-ieee-double-ref bv ($fx+ 8 i) (endianness little))))
 
 (define-inline (bytevector-cflonum-double-be-ref bv i)
   (make-rectangular
-    (bytevector-ieee-double-ref bv i                (endianness big))
+    (bytevector-ieee-double-ref bv i          (endianness big))
     (bytevector-ieee-double-ref bv ($fx+ 8 i) (endianness big))))
 
 (define-inline (bytevector-cflonum-double-ne-ref bv i)
@@ -293,15 +294,6 @@
 
 
 ;;;; arguments validation
-
-(define-argument-validation (bytevector who bv)
-  (bytevector? bv)
-  (assertion-violation who "expected bytevector as argument" bv))
-
-(define-argument-validation (bytevector-length who len)
-  (and (fixnum? len) ($fx>= len 0))
-  (assertion-violation who
-    "expected non-negative fixnum as bytevector length argument" len))
 
 (define-argument-validation (total-length who len)
   (fixnum? len)
@@ -333,7 +325,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for who idx bv bytes-per-word)
-  ;;To be  used after INDEX  validation.  This validation if  for getter
+  ;;To be  used after INDEX  validation.  This validation is  for getter
   ;;and setter indexes.  Valid scenarios:
   ;;
   ;;  |...|word
@@ -435,60 +427,6 @@
 		   " start index "			(number->string bv.start)
 		   " and word size "			(number->string bytes-per-word))
     count))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (byte who byte)
-  (words.word-s8? byte)
-  (assertion-violation who
-    "expected fixnum representing byte as argument" byte))
-
-(define-argument-validation (octet who octet)
-  (words.word-u8? octet)
-  (assertion-violation who
-    "expected fixnum representing octet as argument" octet))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (word-s16 who word)
-  (words.word-s16? word)
-  (assertion-violation who
-    "expected exact integer representing signed 16-bit word as argument" word))
-
-(define-argument-validation (word-u16 who word)
-  (words.word-u16? word)
-  (assertion-violation who
-    "expected exact integer representing unsigned 16-bit word as argument" word))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (word-s32 who word)
-  (words.word-s32? word)
-  (assertion-violation who
-    "expected exact integer representing signed 32-bit word as argument" word))
-
-(define-argument-validation (word-u32 who word)
-  (words.word-u32? word)
-  (assertion-violation who
-    "expected exact integer representing unsigned 32-bit word as argument" word))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (word-s64 who word)
-  (words.word-s64? word)
-  (assertion-violation who
-    "expected exact integer representing signed 64-bit word as argument" word))
-
-(define-argument-validation (word-u64 who word)
-  (words.word-u64? word)
-  (assertion-violation who
-    "expected exact integer representing unsigned 64-bit word as argument" word))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (flonum who word)
-  (flonum? word)
-  (assertion-violation who "expected flonum as argument" word))
 
 
 ;;;; main bytevector handling functions

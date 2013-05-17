@@ -451,6 +451,20 @@ The following bindings are exported by the library @library{vicare
 arguments validation}.
 
 
+@deffn {Validation Clause} octet @var{obj}
+@deffnx {Validation Clause} false-or-octet @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an octet.
+@end deffn
+
+
+@deffn {Validation Clause} byte @var{obj}
+@deffnx {Validation Clause} false-or-byte @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an byte.
+@end deffn
+
+
 @deffn {Validation Clause} word-u8 @var{obj}
 @deffnx {Validation Clause} word-u8/false @var{obj}
 Succeed if @var{obj} is an exact integer, or @false{} for the second
@@ -910,6 +924,12 @@ greater than zero.
 @deffn {Validation Clause} index-for-bytevector @var{bv} @var{idx}
 Succeed if @var{idx} is a fixnum usable as index (not out of range) for
 @var{bv}, which is expected to be an already validated bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector-length @var{len}
+Succeed if @var{len} is a non--negative fixnum usable as bytevector
+length.
 @end deffn
 
 

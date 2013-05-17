@@ -40,12 +40,6 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (octet who obj)
-  (and (fixnum? obj)
-       ($fx>= obj 0)
-       ($fx<  obj 256))
-  (assertion-violation who "expected fixnum in range [0, 255] as octet argument" obj))
-
 (define-argument-validation (code-size who obj)
   ($fx-non-negative? obj)
   (assertion-violation who "expected non-negative fixnum as code object size argument" obj))
