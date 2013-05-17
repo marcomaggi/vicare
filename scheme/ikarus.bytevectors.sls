@@ -171,7 +171,8 @@
     (prefix (vicare platform words) words.)
     (except (vicare unsafe operations)
 	    $bytevector=)
-    (vicare language-extensions syntaxes)
+    (only (vicare language-extensions syntaxes)
+	  case-endianness big little)
     (vicare arguments validation))
 
   (module (platform-endianness)
