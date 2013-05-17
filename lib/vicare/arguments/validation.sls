@@ -184,6 +184,7 @@
     start-and-end-for-bytevector.vicare-arguments-validation
     start-and-past-for-bytevector.vicare-arguments-validation
     bytevector-length.vicare-arguments-validation
+    list-of-bytevectors.vicare-arguments-validation
 
     ;; symbols
     symbol.vicare-arguments-validation
@@ -1209,6 +1210,14 @@
       (and (bytevector? obj)
 	   ($fx< 0 ($bytevector-length obj))))
   (assertion-violation who "expected false or non-empty bytevector as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (or (null? obj)
+      (and (list? obj)
+	   (for-all bytevector? obj)))
+  (assertion-violation who "expected list of bytevectors as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-bytevector who vec idx)
   ;;We assume that VEC has already been validated as bytevector.

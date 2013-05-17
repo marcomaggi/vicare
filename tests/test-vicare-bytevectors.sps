@@ -928,6 +928,49 @@
   #t)
 
 
+(parametrise ((check-test-name	'reverse-and-concatenate))
+
+;;; arguments validation
+
+  (check
+      (catch #f (bytevector-reverse-and-concatenate 123))
+    => '(123))
+
+  (check
+      (catch #f (bytevector-append '(123)))
+    => '((123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-reverse-and-concatenate '())
+    => '#vu8())
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8()))
+    => '#vu8())
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8() #vu8()))
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(1 2 3)))
+    => '#vu8(1 2 3))
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(4 5 6) #vu8(1 2 3)))
+    => '#vu8(1 2 3 4 5 6))
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(7 8 9) #vu8(4 5 6) #vu8(1 2 3)))
+    => '#vu8(1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
 (parametrise ((check-test-name	'bytevector-u8-set-bang))
 
   (check

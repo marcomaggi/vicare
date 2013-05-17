@@ -539,10 +539,6 @@
   (and (list? obj) (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
 
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj) (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
-
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))

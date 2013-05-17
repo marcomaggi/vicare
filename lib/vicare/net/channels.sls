@@ -96,7 +96,11 @@
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Fri May 17, 2013)
+    (only (ikarus system $bytevectors)
+	  $bytevector-reverse-and-concatenate))
 
 
 ;;;; data structures
@@ -649,8 +653,8 @@
   (receive (reverse-buffers total-size)
       ($channel-recv-end!/rbl chan)
     (if (binary-channel? chan)
-	($bytevector-reverse-and-concatenate reverse-buffers total-size)
-      ($string-reverse-and-concatenate reverse-buffers total-size))))
+	($bytevector-reverse-and-concatenate total-size reverse-buffers)
+      ($string-reverse-and-concatenate total-size reverse-buffers))))
 
 (define (channel-recv-end!/rbl chan)
   ;;Finish  receiving a  message  and return  the 2  values:  a list  of
@@ -1143,26 +1147,7 @@
   (channel-send-end! chan))
 
 
-(define ($bytevector-reverse-and-concatenate list-of-bytevectors full-length)
-  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
-  ;;return  the  result.   The  resulting bytevector  must  have  length
-  ;;FULL-LENGTH.  Assume the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
-  ;;
-  (let loop ((dst.bv	($make-bytevector full-length))
-	     (dst.start	full-length)
-	     (bvs	list-of-bytevectors))
-    (if (null? bvs)
-	dst.bv
-      (let* ((src.bv    ($car bvs))
-	     (src.len   ($bytevector-length src.bv))
-	     (dst.start ($fx- dst.start src.len)))
-	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(loop dst.bv dst.start (cdr bvs))))))
-
-(define ($string-reverse-and-concatenate list-of-strings full-length)
+(define ($string-reverse-and-concatenate full-length list-of-strings)
   ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
   ;;result.  The resulting string  must have length FULL-LENGTH.  Assume
   ;;the arguments have been already validated.

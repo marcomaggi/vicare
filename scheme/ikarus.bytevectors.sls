@@ -22,6 +22,7 @@
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
+    bytevector-reverse-and-concatenate
 
     bytevector-s8-ref		bytevector-s8-set!
     bytevector-u8-ref		bytevector-u8-set!
@@ -93,12 +94,14 @@
     subbytevector-s8		subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
-    $bytevector=)
+    $bytevector=
+    $bytevector-total-length	$bytevector-reverse-and-concatenate)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
 		  bytevector-copy!	bytevector-fill!
 		  bytevector-copy	bytevector-append
 		  bytevector=?		native-endianness
+		  bytevector-reverse-and-concatenate
 
 		  bytevector-s8-ref	bytevector-s8-set!
 		  bytevector-u8-ref	bytevector-u8-set!
@@ -170,7 +173,9 @@
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
     (except (vicare unsafe operations)
-	    $bytevector=)
+	    $bytevector=
+	    $bytevector-total-length
+	    $bytevector-reverse-and-concatenate)
     (only (vicare language-extensions syntaxes)
 	  case-endianness big little)
     (vicare arguments validation))
@@ -738,6 +743,51 @@
 		     dst.past))))
 
   (main list-of-bytevectors))
+
+
+(define (bytevector-reverse-and-concatenate list-of-bytevectors)
+  ;;Reverse  the LIST-OF-BYTEVECTORS,  concatenate them  and return  the
+  ;;resulting bytevector.  It  is an error if the sum  of the bytevector
+  ;;lengths is not in the range of the maximum bytevector length.
+  ;;
+  (define who 'bytevector-reverse-and-concatenate)
+  (with-arguments-validation (who)
+      ((list-of-bytevectors	list-of-bytevectors))
+    (let ((total-length ($bytevector-total-length 0 list-of-bytevectors)))
+      (with-dangerous-arguments-validation (who)
+	  ((total-length	total-length))
+	($bytevector-reverse-and-concatenate total-length list-of-bytevectors)))))
+
+(define ($bytevector-total-length total-len list-of-bytevectors)
+  ;;Given  the  LIST-OF-BYTEVECTORS: compute  the  total  length of  the
+  ;;bytevectors,  add  it  to  TOTAL-LEN  and  return  the  result.   If
+  ;;TOTAL-LEN is  zero: the returned  value is  the total length  of the
+  ;;bytevectors.  The returned  value may or may not be  in the range of
+  ;;the maximum bytevector size.
+  ;;
+  (if (null? list-of-bytevectors)
+      total-len
+    ($bytevector-total-length (+ total-len ($bytevector-length ($car list-of-bytevectors)))
+			      ($cdr list-of-bytevectors))))
+
+(define ($bytevector-reverse-and-concatenate total-length list-of-bytevectors)
+  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
+  ;;return  the  result.   The  resulting bytevector  must  have  length
+  ;;TOTAL-LENGTH.  Assume the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
+  ;;and the whole bytevector must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-bytevector total-length))
+	     (dst.start	total-length)
+	     (bvs	list-of-bytevectors))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv    ($car bvs))
+	     (src.len   ($bytevector-length src.bv))
+	     (dst.start ($fx- dst.start src.len)))
+	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv dst.start ($cdr bvs))))))
 
 
 ;;;; 8-bit setters and getters

@@ -810,6 +810,8 @@
     ($bytevector-ieee-single-nonnative-ref	$bytes)
     ($bytevector-ieee-single-nonnative-set!	$bytes)
     ($bytevector=				$bytes)
+    ($bytevector-total-length			$bytes)
+    ($bytevector-reverse-and-concatenate	$bytes)
 ;;;
     ($flonum-u8-ref				$flonums)
     ($make-flonum				$flonums)
@@ -1549,6 +1551,7 @@
     (subbytevector-s8				i v $language)
     (subbytevector-s8/count			i v $language)
     (bytevector-append				i v $language)
+    (bytevector-reverse-and-concatenate		i v $language)
     (endianness					i v r bv)
     (native-endianness				i v r bv)
     (sint-list->bytevector			i v r bv)

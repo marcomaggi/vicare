@@ -4986,6 +4986,22 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 Return @true{} if the two arguments are equal.
 @end defun
 
+
+@defun $bytevector-total-length @var{init-len} @var{bvs}
+Given the list of bytevectors @var{bvs}: compute the total length of the
+bytevectors, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+bytevectors in @var{bvs}.  The returned value may or may not be in the
+range of the maximum bytevector size.
+@end defun
+
+
+@defun $bytevector-reverse-and-concatenate @var{total-len} @var{bvs}
+Reverse the list of bytevectors @var{bvs} and concatenate its items;
+return the result.  The resulting bytevector must have length
+@var{total-len}.  Assume the arguments have been already validated.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations

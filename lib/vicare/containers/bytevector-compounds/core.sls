@@ -74,14 +74,6 @@
 	  $add-number-fixnum))
 
 
-;;;; helpers
-
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj)
-       (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
-
-
 ;;;; type definitions
 
 (define-record-type-extended bytevector-compound

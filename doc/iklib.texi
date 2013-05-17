@@ -3222,6 +3222,13 @@ Concatenate the bytevector arguments and return the result.  If no
 arguments are given: return the empty bytevector.
 @end defun
 
+
+@defun bytevector-reverse-and-concatenate @var{bvs}
+Reverse the list of bytevectors @var{bvs}, concatenate them and return
+the resulting bytevector.  It is an error if the sum of the bytevector
+lengths is not in the range of the maximum bytevector length.
+@end defun
+
 @c page
 @node iklib strings
 @section Additional string functions
