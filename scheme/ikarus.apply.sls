@@ -17,22 +17,22 @@
 (library (ikarus apply)
   (export apply)
   (import (except (ikarus) apply)
-    (vicare language-extensions syntaxes)
     (vicare unsafe operations)
+    (vicare arguments validation)
     (ikarus system $stack))
 
 
 ;;;; constants
 
-;;Limit artificially set; notice that  it is the maximum number of items
-;;in the  last argument of APPLY,  not the maximum  number of arguments.
-;;It is known from Issue 7 that a value greater than or equal to 1057112
-;;makes Vicare (and Ikarus) crash (Marco Maggi; Oct 28, 2011).
+;;Limit artificially set; notice that it  is the maximum number of items
+;;in the  last argument of APPLY,  not the maximum number  of arguments.
+;;This limit  attempts to  mitigate the risk  of Scheme  stack overflow,
+;;which is be detected at run time.
 ;;
 ;;As comparison:  LispWorks for Unix  sets this value to  300, LispWorks
 ;;for Windows and LispWorks for Linux set this value to 255.
 ;;
-(define CALL-ARGUMENTS-LIMIT 8192)
+(define-constant CALL-ARGUMENTS-LIMIT 8192)
 
 
 ;;;; helpers
@@ -63,11 +63,7 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-(define-argument-validation (list who obj)
+(define-argument-validation (list-of-arguments who obj)
   (%length-or-raise obj)
   (assertion-violation who
     (string-append "expected proper list as argument with maximum length "
@@ -77,15 +73,15 @@
 
 (define who 'apply)
 
-(define (fixandgo f a0 a1 ls p d)
+(define (fix-and-go f a0 a1 ls p d)
   (if (null? ($cdr d))
       (let ((last ($car d)))
 	($set-cdr! p last)
 	(with-arguments-validation (who)
-	    ((procedure f ls)
-	     (list	last))
+	    ((procedure		f)
+	     (list-of-arguments	last))
 	  ($$apply f a0 a1 ls)))
-    (fixandgo f a0 a1 ls d ($cdr d))))
+    (fix-and-go f a0 a1 ls d ($cdr d))))
 
 (define apply
   ;;Defined  by  R6RS.   LS  must  be  a list.   PROC  should  accept  N
@@ -103,15 +99,14 @@
   (case-lambda
    ((f ls)
     (with-arguments-validation (who)
-	((procedure	f)
-	 (list		ls))
-      (values)
+	((procedure		f)
+	 (list-of-arguments	ls))
       ($$apply f ls)))
 
    ((f a0 ls)
     (with-arguments-validation (who)
-	((procedure f)
-	 (list      ls))
+	((procedure		f)
+	 (list-of-arguments	ls))
       ($$apply f a0 ls)))
 
    ((f a0 a1 ls)
@@ -130,7 +125,7 @@
     ;;
     ;;  (a2 a3 a4 ... An An+1 An+2 ...)
     ;;
-    (fixandgo f a0 a1 ls ls ($cdr ls)))
+    (fix-and-go f a0 a1 ls ls ($cdr ls)))
    ))
 
 
