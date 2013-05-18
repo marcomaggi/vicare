@@ -1001,26 +1001,6 @@ Retrieve or set a custom destructor function associated to @var{struct}.
 Whenever the @var{struct} is finalised: @var{destructor} is applied to
 @var{struct} before the internal state of @var{struct} is finalised.
 
-Notice that @var{destructor} can do anything, not only destroy some
-state associated to @var{struct}; if we do:
-
-@example
-(define @var{struct} ...)
-(set-@meta{type-id}-custom-destructor! @var{struct}
-  (let ((state (make-some-data-struct)))
-    (case-lambda
-      ((stru)
-       (destroy stru))
-      (()
-       state))))
-
-(let ((state ((@meta{type-id}-custom-destructor @var{struct}))))
-  (do-something-with @var{struct} state))
-@end example
-
-@noindent
-we can easily associate values to @var{struct}.
-
 @item (@meta{type-id}-pointer @var{struct})
 Return the pointer object referencing the foreign data structure; if
 @var{struct} has already been finalised: the returned value is @false{}.
@@ -1028,6 +1008,24 @@ Return the pointer object referencing the foreign data structure; if
 @item (@meta{type-id}-pointer-owner? @var{struct})
 Return @true{} if @var{struct} owns the pointer object, otherwise return
 @false{}.
+
+@item (@meta{type-id}-putprop @var{struct} @var{key} @var{value})
+Add a new property @var{key} with @var{value} to the property list of
+@var{struct}.  If @var{key} is already set: the old entry is mutated to
+reference @var{value}.  @var{key} must be a symbol.
+
+@item (@meta{type-id}-getprop @var{struct} @var{key})
+Return the value of the property @var{key} in the property list of
+@var{struct}; if @var{key} is not set return @false{}.  @var{key} must
+be a symbol.
+
+@item (@meta{type-id}-remprop @var{struct} @var{key})
+Remove the property @var{key} from the property list of @var{struct}.
+@var{key} must be a symbol.
+
+@item (@meta{type-id}-property-list @var{struct})
+Return a new association list representing the property list of
+@var{struct}.
 @end table
 
 If the definition of @meta{type-id} includes a clause

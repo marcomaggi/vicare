@@ -800,6 +800,53 @@
   (collect))
 
 
+(parametrise ((check-test-name	'plists))
+
+  (ffi.define-foreign-pointer-wrapper alpha
+    (ffi.foreign-destructor #f)
+    (ffi.collector-struct-type #f))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(alpha-property-list S))
+    => '())
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(alpha-putprop S 'ciao 'salut)
+	(alpha-getprop S 'ciao))
+    => 'salut)
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(alpha-getprop S 'ciao))
+    => #f)
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(alpha-putprop S 'ciao 'salut)
+	(alpha-remprop S 'ciao)
+	(alpha-getprop S 'ciao))
+    => #f)
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(alpha-putprop S 'ciao 'salut)
+	(alpha-putprop S 'hello 'ohayo)
+	(list (alpha-getprop S 'ciao)
+	      (alpha-getprop S 'hello)))
+    => '(salut ohayo))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -208,6 +208,9 @@ Notes for revision 0.3d0
 * The  I/O ports  now have  property lists,  see the  documentation node
   "iklib io plists".
 
+* The foreign  pointer wrapper strucutres  now have property  lists, see
+  the documentation node "ffi foreign wrapper binds".
+
 * BACKWARDS INCOMPATIBILITY In the library (vicare posix): the functions
   READ, PREAD,  RECV and RECVFROM now  accept a generalised C  buffer as
   argument; the  functions WRITE, PWRITE,  SEND and SENDTO now  accept a

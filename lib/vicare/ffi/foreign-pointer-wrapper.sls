@@ -103,13 +103,15 @@
 	       (%make-predicate-definitions type-id))
 	      (DESTRUCTOR-DEFINITION
 	       (%make-finaliser-definitions type-id foreign-destructor
-						   collector-type-id collected-type-ids))
+					    collector-type-id collected-type-ids))
 	      (PRINTER-DEFINITION
 	       (%make-struct-printer-definition type-id))
 	      ((COLLECTED-STRUCTS-DEFINITIONS ...)
 	       (map (lambda (collected-type-id)
 		      (%make-collected-structs-definitions type-id collected-type-id))
-		 collected-type-ids)))
+		 collected-type-ids))
+	      (PLISTS-DEFINITIONS
+	       (%make-plists-definitions type-id)))
 	   (let ((output-form #'(begin
 				  STRUCT-DEFINITION
 				  ARGUMENT-VALIDATIONS
@@ -117,7 +119,8 @@
 				  PREDICATE-DEFINITIONS
 				  DESTRUCTOR-DEFINITION
 				  PRINTER-DEFINITION
-				  COLLECTED-STRUCTS-DEFINITIONS ...)))
+				  COLLECTED-STRUCTS-DEFINITIONS ...
+				  PLISTS-DEFINITIONS)))
 	     #;(pretty-print (syntax->datum output-form) (current-error-port))
 	     output-form))))))
 
@@ -401,7 +404,7 @@
 		  #f))
 	      (module ()
 		(set-rtd-destructor! (type-descriptor #,type-id)
-				     #,unsafe-scheme-destructor))))))
+		  #,unsafe-scheme-destructor))))))
 
     (define (%make-table-destruction struct-id type-id collected-type-id)
       (with-syntax
@@ -532,6 +535,62 @@
 	    (receive (keys vector-of-collected-structs)
 		(hashtable-entries (TABLE-GETTER COLLECTOR-STRUCT))
 	      vector-of-collected-structs))
+	  )))
+
+  (define (%make-plists-definitions type-id)
+    ;;Return a syntax object representing the definition of 4 functions:
+    ;;putprop, getprop, remprop, property-list for the property lists of
+    ;;a foreign pointer wrapper structure.  Property lists are stored in
+    ;;the UID symbol.
+    ;;
+    (with-syntax
+	((PUTPROP
+	  (%id->id type-id
+		   (lambda (type-string)
+		     (string-append type-string "-putprop"))))
+	 (GETPROP
+	  (%id->id type-id
+		   (lambda (type-string)
+		     (string-append type-string "-getprop"))))
+	 (REMPROP
+	  (%id->id type-id
+		   (lambda (type-string)
+		     (string-append type-string "-remprop"))))
+	 (PROPERTY-LIST
+	  (%id->id type-id
+		   (lambda (type-string)
+		     (string-append type-string "-property-list"))))
+	 (PRED-VALIDATOR
+	  (%make-argument-validator-pred-id type-id))
+	 (UNSAFE-GETTER-UID
+	  (%make-unsafe-Getter-id/uid            type-id)))
+      #'(begin
+	  (define (PUTPROP stru key value)
+	    (define who 'PUTPROP)
+	    (with-arguments-validation (who)
+		((PRED-VALIDATOR	stru)
+		 (symbol		key))
+	      (putprop (UNSAFE-GETTER-UID stru) key value)))
+
+	  (define (GETPROP stru key)
+	    (define who 'GETPROP)
+	    (with-arguments-validation (who)
+		((PRED-VALIDATOR	stru)
+		 (symbol		key))
+	      (getprop (UNSAFE-GETTER-UID stru) key)))
+
+	  (define (REMPROP stru key)
+	    (define who 'REMPROP)
+	    (with-arguments-validation (who)
+		((PRED-VALIDATOR	stru)
+		 (symbol		key))
+	      (remprop (UNSAFE-GETTER-UID stru) key)))
+
+	  (define (PROPERTY-LIST stru)
+	    (define who 'PROPERTY-LIST)
+	    (with-arguments-validation (who)
+		((PRED-VALIDATOR	stru))
+	      (property-list (UNSAFE-GETTER-UID stru))))
 	  )))
 
 ;;; --------------------------------------------------------------------
