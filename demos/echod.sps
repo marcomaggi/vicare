@@ -552,10 +552,11 @@ Options:
     (id server-port channel client-address))
 
   (define (proto.start-session server-port client-address)
-    (let* ((conn (prepare-connection server-port client-address))
-	   (chan (connection-channel conn)))
+    (let* ((conn     (prepare-connection server-port client-address))
+	   (chan     (connection-channel conn))
+	   (time.bv  (px.strftime '#ve(ascii "%FT%T%Z") (px.localtime (px.time)))))
       (log-accepted-connection conn)
-      (schedule-outgoing-data conn GREETINGS-MESSAGE)))
+      (schedule-outgoing-data conn GREETINGS-MESSAGE time.bv TERMINATOR)))
 
   (define (prepare-connection server-port client-address)
     (log.with-logging-handler
@@ -672,10 +673,13 @@ Options:
     (make-time 10 0))
 
   (define-constant GREETINGS-MESSAGE
-    #ve(ascii "Vicare ECHO daemon.\r\n"))
+    #ve(ascii "Vicare ECHO daemon "))
 
   (define-constant CHANNEL-TERMINATORS
     '(#ve(ascii "\r\n") #ve(ascii "\n")))
+
+  (define-constant TERMINATOR
+    '#ve(ascii "\r\n"))
 
   (define-constant ANSWER-PREFIX
     #ve(ascii "echo> "))

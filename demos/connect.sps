@@ -228,16 +228,8 @@
 ;;; --------------------------------------------------------------------
 
   (define-constant HELP-SCREEN
-    "Usage: connect.sps [vicare options] -- [options]
+    "Usage: connect.sps [vicare options] -- INTERFACE PORT [options]
 Options:
-   -I IFACE
-   --interface IFACE
-\tSelect the server interface to connect to.
-
-   -P PORT
-   --port PORT
-\tSelect the server port to connect to (1...65535)
-
    --log-file /path/to/log-file
 \tSelect the pathname for the log file.  Use \"-\" to log
 \ton the error port.  When not given no log file is created.
@@ -273,18 +265,21 @@ Options:
 
 ;;; --------------------------------------------------------------------
 
-  (define (interface-option-processor option name operand seed)
-    ;;Select the interface to bind to.  We will validate this later.
-    ;;
-    (<global-options>-server-interface-set! seed operand)
-    seed)
+  (define (argument-processor operand seed)
+    (cond ((not (<global-options>-server-interface seed))
+	   ;;Select the interface to bind to.  We will validate this later.
+	   (<global-options>-server-interface-set! seed operand)
+	   seed)
+	  ((not (<global-options>-server-port seed))
+	   (let ((port (string->number operand)))
+	     (if port
+		 (<global-options>-server-port-set! seed port)
+	       (%err "invalid port argument value: ~a" operand)))
+	   seed)
+	  (else
+	   (%err "invalid command line argument: ~a" operand))))
 
-  (define (port-option-processor option name operand seed)
-    (let ((port (string->number operand)))
-      (unless port
-	(invalid-option-value name operand))
-      (<global-options>-server-port-set! seed port))
-    seed)
+;;; --------------------------------------------------------------------
 
   (define (log-file-option-processor option name operand seed)
     (<global-options>-log-file-set! seed operand)
@@ -333,8 +328,6 @@ Options:
     ;;   names required-arg? optional-arg? option-proc
     ;;
     (list
-     (option '(#\I "interface")	#t #f interface-option-processor)
-     (option '(#\P "port")	#t #f port-option-processor)
      (option '("log-file")	#t #f log-file-option-processor)
      (option '("recv-first")	#f #f recv-first-option-processor)
      (option '("send-first")	#f #f send-first-option-processor)
@@ -347,9 +340,6 @@ Options:
 
 ;;; --------------------------------------------------------------------
 ;;; helper functions
-
-  (define (argument-processor operand seed)
-    (%err "invalid command line argument: ~a" operand))
 
   (define (invalid-option-value option value)
     (%err "invalid value for option \"~a\": ~a" option value))
@@ -547,13 +537,14 @@ Options:
 	($connection-server-chan conn))
       (define terminal-chan
 	($connection-terminal-chan conn))
-      (log.log "receiving message portion")
+      #;(log.log "receiving message portion")
       (cond ((chan.channel-recv-message-portion! server-chan)
 	     => (lambda (thing)
 		  (if (eof-object? thing)
 		      (close-connection conn)
 		    (let* ((data.str (chan.channel-recv-end! server-chan))
 			   (data.enc (ascii->string (uri-encode (string->ascii data.str)))))
+		      (log.log "received: ~a" data.enc)
 		      (chan.channel-send-full-message terminal-chan data.str)
 		      (chan.channel-recv-begin! terminal-chan)
 		      (schedule-terminal-incoming-data conn)))))

@@ -6,14 +6,12 @@ DIRECTORY=$(dirname $(realpath $0))
 EXECUTABLE=$DIRECTORY/connect.sps
 
 exec "$EXECUTABLE" \
-    --debug                                             \
     $VFLAGS                                             \
     --                                                  \
+    localhost 8081                                      \
     --verbose                                           \
     --log-file -                                        \
     --recv-first                                        \
-    --interface localhost                               \
-    --port 8081                                         \
     "$@"
 
 ### end of file
