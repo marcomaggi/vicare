@@ -11585,6 +11585,42 @@
   #t)
 
 
+(parametrise ((check-test-name	'plists))
+
+  (check
+      (let ((P (open-string-input-port "")))
+	(port-property-list P))
+    => '())
+
+  (check
+      (let ((P (open-string-input-port "")))
+	(port-putprop P 'ciao 'salut)
+	(port-getprop P 'ciao))
+    => 'salut)
+
+  (check
+      (let ((P (open-string-input-port "")))
+	(port-getprop P 'ciao))
+    => #f)
+
+  (check
+      (let ((P (open-string-input-port "")))
+	(port-putprop P 'ciao 'salut)
+	(port-remprop P 'ciao)
+	(port-getprop P 'ciao))
+    => #f)
+
+  (check
+      (let ((P (open-string-input-port "")))
+	(port-putprop P 'ciao 'salut)
+	(port-putprop P 'hello 'ohayo)
+	(list (port-getprop P 'ciao)
+	      (port-getprop P 'hello)))
+    => '(salut ohayo))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

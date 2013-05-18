@@ -5674,6 +5674,7 @@ example in the previous section):
 * iklib io binary::             Additional binary port features.
 * iklib io textual::            Additional textual port features.
 * iklib io buffer::             Buffer size customisation.
+* iklib io plists::             Port property lists.
 * iklib io misc::               Miscellaneous port functions.
 @end menu
 
@@ -6484,6 +6485,40 @@ by @func{open-file-input/output-prot}.  It is initialised to
 Hold the buffer size for socket ports.  It is initialised to
 @math{16384}.
 @end deffn
+
+@c page
+@node iklib io plists
+@subsection Port property lists
+
+
+Port property work like symbol property lists; they are a simple way to
+tag I/O ports with values.
+
+
+@defun port-putprop @var{port} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{port}.  If @var{key} is already set: the old entry is mutated to
+reference @var{value}.  @var{key} must be a symbol.
+@end defun
+
+
+@defun port-getprop @var{port} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{port}; if @var{key} is not set return @false{}.  @var{key} must be
+a symbol.
+@end defun
+
+
+@defun port-remprop @var{port} @var{key}
+Remove the property @var{key} from the property list of @var{port}.
+@var{key} must be a symbol.
+@end defun
+
+
+@defun port-property-list @var{port}
+Return a new association list representing the property list of
+@var{port}.
+@end defun
 
 @c page
 @node iklib io misc

@@ -490,6 +490,10 @@
     port-set-non-blocking-mode!	port-unset-non-blocking-mode!
     port-in-non-blocking-mode?
 
+    ;; port properties
+    port-putprop		port-getprop
+    port-remprop		port-property-list
+
     ;; networking
     make-binary-socket-input/output-port
     make-binary-socket-input/output-port*
@@ -610,6 +614,10 @@
 		  port-dump-status
 		  port-set-non-blocking-mode!	port-unset-non-blocking-mode!
 		  port-in-non-blocking-mode?
+
+		  ;; port properties
+		  port-putprop			port-getprop
+		  port-remprop			port-property-list
 
 		  ;; networking
 		  make-binary-socket-input/output-port
@@ -4030,6 +4038,35 @@
 	     (if (boolean? rv)
 		 rv
 	       (%raise-io-error who rv port)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (port-putprop port key value)
+  (define who 'port-putprop)
+  (with-arguments-validation (who)
+      ((port	port)
+       (symbol	key))
+    (putprop (port-uid port) key value)))
+
+(define (port-getprop port key)
+  (define who 'port-getprop)
+  (with-arguments-validation (who)
+      ((port	port)
+       (symbol	key))
+    (getprop (port-uid port) key)))
+
+(define (port-remprop port key)
+  (define who 'port-remprop)
+  (with-arguments-validation (who)
+      ((port	port)
+       (symbol	key))
+    (remprop (port-uid port) key)))
+
+(define (port-property-list port)
+  (define who 'port-property-list)
+  (with-arguments-validation (who)
+      ((port	port))
+    (property-list (port-uid port))))
 
 ;;; --------------------------------------------------------------------
 
