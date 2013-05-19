@@ -549,13 +549,8 @@ Options:
 	      (with
 	       (close-connection conn))))
 	  (log-accepted-connection conn)
-	  (when (wait-for-writable-socket conn (make-timeout))
-	    (send-greetings-message conn)
-	    (session-command conn))))))
-
-  (define (session-command conn)
-    (when (wait-for-readable-socket conn (make-timeout))
-      #f))
+	  (send-greetings-message conn)
+	  (session-loop conn)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -575,9 +570,92 @@ Options:
 ;;; --------------------------------------------------------------------
 
   (define (send-greetings-message conn)
-    (let ((time.bv (px.strftime '#ve(ascii "%FT%T%Z") (px.localtime (px.time)))))
-      (chan.channel-send-full-message ($connection-channel conn)
-				      GREETINGS-MESSAGE time.bv TERMINATOR)))
+    (let* ((time.bv (px.strftime '#ve(ascii "%FT%T%Z") (px.localtime (px.time))))
+	   (message (bytevector-append GREETINGS-MESSAGE time.bv TERMINATOR)))
+      (send-message-to-client conn message)))
+
+  (define (session-loop conn)
+    (let ((command (receive-message-from-client conn)))
+      (send-message-to-shell conn command)
+      (let ((answer (receive-message-from-shell conn)))
+	(send-message-to-client conn answer)
+	(session-loop conn))))
+
+;;; --------------------------------------------------------------------
+
+  (define (send-message-to-client conn message)
+    (define-constant chan
+      ($connection-channel conn))
+    (chan.channel-send-begin! chan)
+    (let loop ()
+      (unless (exit-coroutines?)
+	(when (wait-for-writable-socket conn (make-timeout))
+	  (cond ((chan.channel-send-message-portion! chan message)
+		 => (lambda (rv)
+		      (cond ((eof-object? rv)
+			     (close-connection conn))
+			    ((would-block-object? rv)
+			     (loop))
+			    (else
+			     (chan.channel-send-end! chan)))))
+		(else
+		 (loop)))))))
+
+  (define (receive-message-from-client conn)
+    (define-constant chan
+      ($connection-channel conn))
+    (chan.channel-recv-begin! chan)
+    (let loop ()
+      (unless (exit-coroutines?)
+	(when (wait-for-readable-socket conn (make-timeout))
+	  (cond ((chan.channel-recv-message-portion! chan)
+		 => (lambda (rv)
+		      (cond ((eof-object? rv)
+			     (close-connection conn))
+			    ((would-block-object? rv)
+			     (loop))
+			    (else
+			     (chan.channel-recv-end! chan)))))
+		(else
+		 (loop)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (send-message-to-shell conn message)
+    (define-constant chan
+      ($connection-channel conn))
+    (chan.channel-send-begin! chan)
+    (let loop ()
+      (unless (exit-coroutines?)
+	(when (wait-for-writable-socket conn (make-timeout))
+	  (cond ((chan.channel-send-message-portion! chan message)
+		 => (lambda (rv)
+		      (cond ((eof-object? rv)
+			     (close-connection conn))
+			    ((would-block-object? rv)
+			     (loop))
+			    (else
+			     (chan.channel-send-end! chan)))))
+		(else
+		 (loop)))))))
+
+  (define (receive-message-from-shell conn)
+    (define-constant chan
+      ($connection-channel conn))
+    (chan.channel-recv-begin! chan)
+    (let loop ()
+      (unless (exit-coroutines?)
+	(when (wait-for-readable-socket conn (make-timeout))
+	  (cond ((chan.channel-recv-message-portion! chan)
+		 => (lambda (rv)
+		      (cond ((eof-object? rv)
+			     (close-connection conn))
+			    ((would-block-object? rv)
+			     (loop))
+			    (else
+			     (chan.channel-recv-end! chan)))))
+		(else
+		 (loop)))))))
 
 ;;; --------------------------------------------------------------------
 

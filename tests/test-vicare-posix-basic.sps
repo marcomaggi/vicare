@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -981,6 +981,88 @@
 		      `(#f ,ou #f)))
 	  (px.close in)
 	  (px.close ou)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; select-fd-readable?
+
+  (check	;timeout
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
+	    (px.select-fd-readable? in 0 0)
+	  (px.close in)
+	  (px.close ou)))
+    => #f)
+
+  (check	;read ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
+	    (begin
+	      (px.write ou '#vu8(1))
+	      (px.select-fd-readable? in 0 0))
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; select-fd-writable?
+
+  (check	;timeout
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
+	    (px.select-fd-writable? in 0 0)
+	  (px.close in)
+	  (px.close ou)))
+    => #f)
+
+  (check	;read ready
+      (let-values (((in ou) (px.pipe)))
+	(unwind-protect
+	    (px.select-fd-writable? ou 0 0)
+	  (px.close in)
+	  (px.close ou)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; select-port
+
+  (check	;timeout
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port* in "inp")))
+	    (receive (r w e)
+		(px.select-port inp 0 0)
+	      (list r w e)))))
+    => '(#f #f #f))
+
+  (check	;read ready
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((inp (make-binary-file-descriptor-input-port* in "inp")))
+	    (px.write ou '#vu8(1))
+	    (receive (r w e)
+		(px.select-port inp 0 0)
+	      (equal? (list r w e)
+		      `(,inp #f #f))))))
+    => #t)
+
+  (check	;write ready
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let ((oup (make-binary-file-descriptor-output-port* ou "oup")))
+	    (receive (r w e)
+		(px.select-port oup 0 0)
+	      (equal? (list r w e)
+		      `(#f ,oup #f))))))
     => #t)
 
 ;;; --------------------------------------------------------------------

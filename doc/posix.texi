@@ -1579,15 +1579,18 @@ reading, writing or an exceptional condition.
 
 
 @defun select-fd @var{fd} @var{sec} @var{usec}
+@defunx select-port @var{port} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
 select}.  Wait for read, write or exceptional events on the single file
-descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
-representing timeout seconds and microseconds.
+descriptor @var{fd} or @var{port} having a file descriptor as device.
+@var{sec} and @var{usec} must be fixnums representing timeout seconds
+and microseconds.
 
 If the timeout expires before any event arrives: return @math{3} values
 all being false.  If an error occurs: raise an exception.  Else return
-@math{3} values being false or @var{fd}, respectively, if @var{fd} is
-ready for reading, writing or an exceptional condition.
+@math{3} values being @false{} or @var{fd} or @var{port}, respectively,
+if @var{fd} or @var{port} is ready for reading, writing or an
+exceptional condition.
 @end defun
 
 
@@ -1638,10 +1641,12 @@ error occurs: raise an exception; else return @var{fdsets} itself.
 
 
 @defun select-fd-readable? @var{fd} @var{sec} @var{usec}
+@defunx select-port-readable? @var{port} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
 select}.  Wait for a readable event on the single file descriptor
-@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
-seconds and microseconds.
+@var{fd} or @var{port} having a file descriptor as device.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
 
 If the timeout expires before any event arrives: return @false{}.  If an
 error occurs: raise an exception.  Else return @true{} if the file
@@ -1650,10 +1655,12 @@ descriptor becomes readable.
 
 
 @defun select-fd-writable? @var{fd} @var{sec} @var{usec}
+@defunx select-port-writable? @var{port} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
 select}.  Wait for a writable event on the single file descriptor
-@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
-seconds and microseconds.
+@var{fd} or @var{port} having a file descriptor as device.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
 
 If the timeout expires before any event arrives: return @false{}.  If an
 error occurs: raise an exception.  Else return @true{} if the file
@@ -1662,10 +1669,12 @@ descriptor becomes writable.
 
 
 @defun select-fd-exceptional? @var{fd} @var{sec} @var{usec}
+@defunx select-port-exceptional? @var{port} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
 select}.  Wait for an exceptional event on the single file descriptor
-@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
-seconds and microseconds.
+@var{fd} or @var{port} having a file descriptor as device.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
 
 If the timeout expires before any event arrives: return @false{}.  If an
 error occurs: raise an exception.  Else return @true{} if the file

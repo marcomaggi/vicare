@@ -150,9 +150,11 @@
     write				pwrite
     lseek
     readv				writev
-    select				select-fd
-    select-fd-readable?			select-fd-writable?
-    select-fd-exceptional?
+    select
+    select-fd				select-port
+    select-fd-readable?			select-port-readable?
+    select-fd-writable?			select-port-writable?
+    select-fd-exceptional?		select-port-exceptional?
     poll
     fcntl				ioctl
     fd-set-non-blocking-mode!		fd-set-close-on-exec-mode!
@@ -1914,21 +1916,40 @@
 		($vector-ref rv 1)
 		($vector-ref rv 2))))))
 
+;;; --------------------------------------------------------------------
+
 (define (select-fd fd sec usec)
   (define who 'select-fd)
   (with-arguments-validation (who)
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd fd sec usec)))
-      (cond (($fxzero? rv) ;timeout expired
-	     (values #f #f #f))
-	    (($fx< 0 rv) ;success
-	     (values (if ($fx= 1 ($fxlogand rv 1)) fd #f)
-		     (if ($fx= 2 ($fxlogand rv 2)) fd #f)
-		     (if ($fx= 4 ($fxlogand rv 4)) fd #f)))
-	    (else
-	     (%raise-errno-error who rv fd sec usec))))))
+    ($select-fd who fd sec usec)))
+
+(define (select-port port sec usec)
+  (define who 'select-port)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    (receive (r w e)
+	($select-fd who (port-fd port) sec usec)
+      (values (and r port)
+	      (and w port)
+	      (and e port)))))
+
+(define ($select-fd who fd sec usec)
+  (let ((rv (capi.posix-select-fd fd sec usec)))
+    (cond (($fxzero? rv) ;timeout expired
+	   (values #f #f #f))
+	  (($fx< 0 rv) ;success
+	   (values (if ($fx= 1 ($fxlogand rv 1)) fd #f)
+		   (if ($fx= 2 ($fxlogand rv 2)) fd #f)
+		   (if ($fx= 4 ($fxlogand rv 4)) fd #f)))
+	  (else
+	   (%raise-errno-error who rv fd sec usec)))))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-readable? fd sec usec)
   (define who 'select-fd-readable?)
@@ -1936,10 +1957,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-readable? who fd sec usec)))
+
+(define (select-port-readable? port sec usec)
+  (define who 'select-port-readable?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-readable? who (port-fd port) sec usec)))
+
+(define ($select-fd-readable? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-writable? fd sec usec)
   (define who 'select-fd-writable?)
@@ -1947,10 +1981,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-writable? who fd sec usec)))
+
+(define (select-port-writable? port sec usec)
+  (define who 'select-port-writable?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-writable? who (port-fd port) sec usec)))
+
+(define ($select-fd-writable? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-exceptional? fd sec usec)
   (define who 'select-fd-exceptional?)
@@ -1958,10 +2005,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-exceptional? who fd sec usec)))
+
+(define (select-port-exceptional? port sec usec)
+  (define who 'select-port-exceptional?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-exceptional? who (port-fd port) sec usec)))
+
+(define ($select-fd-exceptional? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (poll fds timeout)
   (define who 'poll)

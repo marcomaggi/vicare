@@ -218,6 +218,13 @@ Notes for revision 0.3d0
   functions is  a bytevector: the size  argument must be false,  not the
   number of bytes.
 
+* Added functions to (vicare posix):
+
+     select-port
+     select-port-readable?
+     select-port-writable?
+     select-port-exceptional?
+
 * The syntax DEFINE-SYNTAX now accepts both the formats:
 
      (define-syntax ?name ?transformer-expr)
