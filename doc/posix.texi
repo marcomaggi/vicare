@@ -1686,12 +1686,37 @@ descriptor receives an exceptional notification.
 @subsection Polling for events
 
 
+The @func{poll} function is an alternative to the @func{select}
+function: it allows to wait for events on file descriptors.  Meaningless
+example:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(define-values (in ou)
+  (px.pipe))
+
+(px.write ou '#vu8(1))
+
+(define vec
+  `#(#(,in ,POLLIN  0)
+     #(,ou ,POLLOUT 0)))
+
+(px.poll vec 10)        @result{} 2
+
+vec @result{} `#(#(,in ,POLLIN ,POLLIN) #(,ou ,POLLOUT ,POLLOUT))
+@end example
+
+
 @defun poll @var{fds} @var{timeout}
-Interface to the C function @cfunc{poll}, see the manual page
-@code{poll(2)}.  Poll for events the file descriptors selected by
-@var{fds}; @var{timeout} must be an exact integer representing the
-timeout in milliseconds.  If successful: return the number of file
-descriptors ready for an event, else raise an exception.
+Interface to the C function @cfunc{poll}, @manpage{poll, Wait for some
+event on a file descriptor}.  Poll for events the file descriptors
+selected by @var{fds}; @var{timeout} must be an exact integer
+representing the timeout in milliseconds.  If successful: return the
+number of file descriptors ready for an event, else raise an exception.
 
 @var{fds} must be a vector of vectors each having @math{3} elements: a
 fixnum representing the file descriptor, a fixnum representing the

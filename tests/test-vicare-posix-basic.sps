@@ -1082,6 +1082,19 @@
     => #t)
 
   (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (let* ((vec `#(#(,in 0 0) #(,ou 0 0)))
+		 (rv  (px.poll vec 10)))
+	    (equal? (list rv vec)
+		    `(0 #(#(,in 0 0)
+			  #(,ou 0 0)))))))
+    => #t)
+
+  (check
       (let-values (((in ou) (px.pipe)))
 	(unwind-protect
 	    (begin
@@ -1097,6 +1110,23 @@
 	  (px.close in)
 	  (px.close ou)))
     => #t)
+
+  (check
+      (with-compensations
+	(receive (in ou)
+	    (px.pipe)
+	  (push-compensation (px.close in))
+	  (push-compensation (px.close ou))
+	  (px.write ou '#vu8(1))
+	  (let* ((vec `#(#(,in ,POLLIN 0)
+			 #(,ou ,POLLOUT 0)))
+		 (rv  (px.poll vec 10))
+		 (buf (make-bytevector 1)))
+	    (let ((res1 (equal? vec `#(#(,in ,POLLIN  ,POLLIN)
+				       #(,ou ,POLLOUT ,POLLOUT)))))
+	      (px.read in buf)
+	      (list res1 rv '#vu8(1))))))
+    => '(#t 2 #vu8(1)))
 
 ;;; --------------------------------------------------------------------
 ;;; truncate and ftruncate
