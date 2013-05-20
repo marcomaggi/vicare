@@ -763,6 +763,12 @@ Return an equivalent of @math{exp(@var{fl}) - 1}.
 Return an equivalent of @math{log(1 + @var{fl})}.
 @end deffn
 
+
+@deffn {Unsafe Operation} $flhypot @vari{fl} @varii{fl}
+Compute the Euclidean distance function: @math{\sqrt(X*X+Y*Y)}.
+@glibcref{Exponents and Logarithms, hypot}.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Power operations

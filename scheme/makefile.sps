@@ -881,6 +881,7 @@
     ($flsqrt					$flonums)
     ($flsquare					$flonums)
     ($flcube					$flonums)
+    ($flhypot					$flonums)
     ($flmax					$flonums)
     ($flmin					$flonums)
 ;;;
@@ -1420,6 +1421,7 @@
     (flinteger?					i v r fl)
     (fllog					i v r fl)
     (fllog1p					i v $language)
+    (flhypot					i v $language)
     (flmax					i v r fl)
     (flmin					i v r fl)
     (flmod					i v r fl)

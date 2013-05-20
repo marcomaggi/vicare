@@ -24,6 +24,14 @@
 #include "internals.h"
 #include <math.h>
 
+static IK_UNUSED void
+feature_failure_ (const char * funcname)
+{
+  ik_abort("called POSIX specific function, %s\n", funcname);
+}
+
+#define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
+
 
 /** --------------------------------------------------------------------
  ** Allocating flonums and cflonums.
@@ -86,6 +94,9 @@ ikrt_fl_round (ikptr x, ikptr y)
 #endif
   return y;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_exp (ikptr x, ikptr y)
 {
@@ -104,15 +115,9 @@ ikrt_flfl_expt (ikptr a, ikptr b, ikptr z)
   IK_FLONUM_DATA(z) = exp(IK_FLONUM_DATA(b) * log(IK_FLONUM_DATA(a)));
   return z;
 }
-ikptr
-ikrt_bytevector_to_flonum (ikptr x, ikpcb* pcb)
-{
-  char *        data = IK_BYTEVECTOR_DATA_CHARP(x);
-  double        v    = strtod(data, NULL);
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = v;
-  return r;
-}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_plus (ikptr x, ikptr y, ikpcb* pcb)
 {
@@ -148,6 +153,9 @@ ikrt_fl_invert (ikptr x, ikpcb* pcb)
   IK_FLONUM_DATA(r) = 1.0 / IK_FLONUM_DATA(x);
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_sin (ikptr x, ikpcb* pcb)
 {
@@ -169,6 +177,9 @@ ikrt_fl_tan (ikptr x, ikpcb* pcb)
   IK_FLONUM_DATA(r) = tan(IK_FLONUM_DATA(x));
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_asin (ikptr x, ikpcb* pcb)
 {
@@ -215,6 +226,9 @@ ikrt_atan2 (ikptr s_imp, ikptr s_rep, ikpcb* pcb)
   IK_FLONUM_DATA(r) = atan2(IK_FLONUM_DATA(s_imp), IK_FLONUM_DATA(s_rep));
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_sqrt (ikptr x, ikpcb* pcb)
 {
@@ -237,47 +251,19 @@ ikrt_fl_log1p (ikptr x, ikpcb* pcb)
   return r;
 }
 ikptr
-ikrt_fx_sin (ikptr x, ikpcb* pcb)
+ikrt_fl_hypot (ikptr x, ikptr y, ikpcb* pcb)
 {
+#ifdef HAVE_HYPOT
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = sin(IK_UNFIX(x));
+  IK_FLONUM_DATA(r) = hypot(IK_FLONUM_DATA(x), IK_FLONUM_DATA(y));
   return r;
+#else
+  feature_failure(__func__);
+#endif
 }
-ikptr
-ikrt_fx_cos (ikptr x, ikpcb* pcb)
-{
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = cos(IK_UNFIX(x));
-  return r;
-}
-ikptr
-ikrt_fx_tan (ikptr x, ikpcb* pcb)
-{
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = tan(IK_UNFIX(x));
-  return r;
-}
-ikptr
-ikrt_fx_asin (ikptr x, ikpcb* pcb)
-{
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = asin(IK_UNFIX(x));
-  return r;
-}
-ikptr
-ikrt_fx_acos (ikptr x, ikpcb* pcb)
-{
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = acos(IK_UNFIX(x));
-  return r;
-}
-ikptr
-ikrt_fx_atan (ikptr x, ikpcb* pcb)
-{
-  IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = atan(IK_UNFIX(x));
-  return r;
-}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_sinh (ikptr x, ikpcb* pcb)
 {
@@ -299,6 +285,9 @@ ikrt_fl_tanh (ikptr x, ikpcb* pcb)
   IK_FLONUM_DATA(r) = tanh(IK_FLONUM_DATA(x));
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fl_asinh (ikptr x, ikpcb* pcb)
 {
@@ -319,6 +308,44 @@ ikrt_fl_atanh (ikptr x, ikpcb* pcb)
   IK_FLONUM_DATA(r) = atanh(IK_FLONUM_DATA(x));
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_bytevector_to_flonum (ikptr x, ikpcb* pcb)
+{
+  char *        data = IK_BYTEVECTOR_DATA_CHARP(x);
+  double        v    = strtod(data, NULL);
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = v;
+  return r;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Flonum functions: comparison.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_fl_equal (ikptr x, ikptr y)
+{
+  return (IK_FLONUM_DATA(x) == IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+}
+ikptr
+ikrt_fl_less_or_equal (ikptr x, ikptr y)
+{
+  return (IK_FLONUM_DATA(x) <= IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+}
+ikptr
+ikrt_fl_less (ikptr x, ikptr y) {
+  return (IK_FLONUM_DATA(x) < IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Fixnum functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_fx_sqrt (ikptr x, ikpcb* pcb)
 {
@@ -333,25 +360,62 @@ ikrt_fx_log (ikptr x, ikpcb* pcb)
   IK_FLONUM_DATA(r) = log(IK_UNFIX(x));
   return r;
 }
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_fx_sin (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = sin(IK_UNFIX(x));
+  return r;
+}
+ikptr
+ikrt_fx_cos (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = cos(IK_UNFIX(x));
+  return r;
+}
+ikptr
+ikrt_fx_tan (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = tan(IK_UNFIX(x));
+  return r;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_fx_asin (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = asin(IK_UNFIX(x));
+  return r;
+}
+ikptr
+ikrt_fx_acos (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = acos(IK_UNFIX(x));
+  return r;
+}
+ikptr
+ikrt_fx_atan (ikptr x, ikpcb* pcb)
+{
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = atan(IK_UNFIX(x));
+  return r;
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_fixnum_to_flonum (ikptr x, ikptr r)
 {
   IK_FLONUM_DATA(r) = IK_UNFIX(x);
   return r;
-}
-ikptr
-ikrt_fl_equal (ikptr x, ikptr y)
-{
-  return (IK_FLONUM_DATA(x) == IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
-}
-ikptr
-ikrt_fl_less_or_equal (ikptr x, ikptr y)
-{
-  return (IK_FLONUM_DATA(x) <= IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
-}
-ikptr
-ikrt_fl_less (ikptr x, ikptr y) {
-  return (IK_FLONUM_DATA(x) < IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
 }
 
 /* end of file */

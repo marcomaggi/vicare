@@ -3626,6 +3626,12 @@ Return a flonum equivalent to @math{log(1 + @var{fl})}.
 Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 @end defun
 
+
+@defun flhypot @vari{fl} @varii{fl}
+Compute the Euclidean distance function: @math{\sqrt(X*X+Y*Y)}.
+@glibcref{Exponents and Logarithms, hypot}.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Hyperbolic functions

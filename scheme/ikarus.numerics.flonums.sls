@@ -59,6 +59,7 @@
     flsquare		$flsquare
     flcube		$flcube
     flsqrt		$flsqrt
+    flhypot		$flhypot
 
     flinteger?
     flnan?		$flnan?
@@ -89,7 +90,7 @@
 		  flasinh		flacosh		flatanh
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
-		  flsquare		flcube
+		  flsquare		flcube		flhypot
 		  flinteger?		flnan?		flfinite?
 		  flinfinite?		fl=?		fl<?
 		  fl>?			fl<=?		fl>=?
@@ -143,6 +144,7 @@
 	    $flsqrt
 	    $flsquare
 	    $flcube
+	    $flhypot
 	    $flmax
 	    $flmin)
     (vicare arguments validation)
@@ -179,6 +181,14 @@
 	   ((flonum	x)
 	    (flonum	y))
 	 (?unsafe-who x y))))))
+
+(define-syntax define-fl-operation/two/forcall
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who ?foreign-who)
+     (begin
+       (define-fl-operation/two ?safe-who ?unsafe-who)
+       (define (?unsafe-who x y)
+	 (foreign-call ?foreign-who x y))))))
 
 
 ;;;; flonums parts
@@ -941,6 +951,7 @@
 	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
 
 (define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
+(define-fl-operation/two/forcall flhypot $flhypot "ikrt_fl_hypot")
 
 (define-fl-operation/two flsquare	$flsquare)
 (define-fl-operation/two flcube		$flcube)
