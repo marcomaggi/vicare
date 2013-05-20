@@ -504,9 +504,10 @@ Options:
 	      (condition-message "while accepting connection: ~a")
 	    (receive (server-sock server-port client-address)
 		(net.make-server-sock-and-port master-sock)
+	      ;;We do not use SERVER-SOCK here, only SERVER-PORT
 	      (coroutine
 		  (lambda ()
-		    (proto.start-session server-sock server-port client-address))))))
+		    (proto.start-session server-port client-address))))))
 	(yield)
 	(unless (exit-coroutines?)
 	  (listening-coroutine master-sock)))))
@@ -534,9 +535,9 @@ Options:
   (import (prefix (vicare net channels) chan.))
 
   (define-struct connection
-    (id server-sock server-port channel client-address))
+    (id server-port channel client-address))
 
-  (define (proto.start-session server-sock server-port client-address)
+  (define (proto.start-session server-port client-address)
     (with-exception-handler
 	(lambda (E)
 	  (log.log "error in session coroutine: ~s" E)
@@ -545,7 +546,7 @@ Options:
 	(with-compensations
 	  (define conn
 	    (compensate
-		(prepare-connection server-sock server-port client-address)
+		(prepare-connection server-port client-address)
 	      (with
 	       (close-connection conn))))
 	  (log-accepted-connection conn)
@@ -554,13 +555,13 @@ Options:
 
 ;;; --------------------------------------------------------------------
 
-  (define (prepare-connection server-sock server-port client-address)
+  (define (prepare-connection server-port client-address)
     (log.with-logging-handler
 	(condition-message "while starting session: ~a")
       (let ((id    (gensym->unique-string (gensym)))
 	    (chan  (chan.open-binary-input/output-channel server-port)))
 	(chan.channel-set-message-terminators! chan CHANNEL-TERMINATORS)
-	(make-connection id server-sock server-port chan client-address))))
+	(make-connection id server-port chan client-address))))
 
   (define (close-connection conn)
     (log.log "closing connection ~a" (connection-id conn))
@@ -664,7 +665,7 @@ Options:
     (define (wait-for-readable-socket conn timeout)
       (cond ((exit-coroutines?)
 	     #f)
-	    ((px.select-fd-readable? ($connection-server-sock conn) 0 0)
+	    ((px.select-port-readable? ($connection-server-port conn) 0 0)
 	     #t)
 	    ((timeout-expired? timeout)
 	     (log.log "connection ~a timed out while reading" ($connection-id conn))
@@ -676,7 +677,7 @@ Options:
     (define (wait-for-writable-socket conn timeout)
       (cond ((exit-coroutines?)
 	     #f)
-	    ((px.select-fd-writable? ($connection-server-sock conn) 0 0)
+	    ((px.select-port-writable? ($connection-server-port conn) 0 0)
 	     #t)
 	    ((timeout-expired? timeout)
 	     (log.log "connection ~a timed out while writing" ($connection-id conn))
