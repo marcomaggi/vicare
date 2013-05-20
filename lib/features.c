@@ -211,6 +211,7 @@ main (int argc, const char *const argv[])
     HAVE_J1\n\
     HAVE_JN\n\
     HAVE_HYPOT\n\
+    HAVE_CBRT\n\
     HAVE_KILL\n\
     HAVE_LGAMMA_R\n\
     HAVE_LIBFFI\n\
@@ -1507,6 +1508,13 @@ printf("(define-inline-constant HAVE_JN %s)\n",
   );
 printf("(define-inline-constant HAVE_HYPOT %s)\n",
 #ifdef HAVE_HYPOT
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_CBRT %s)\n",
+#ifdef HAVE_CBRT
   "#t"
 #else
   "#f"

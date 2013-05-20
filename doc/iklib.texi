@@ -3617,6 +3617,11 @@ Convert between a flonum and its string representation.
 @subsubheading Exponents and logarithms
 
 
+@defun flcbrt @var{fl}
+Return the real cube root function of @var{fl}.
+@end defun
+
+
 @defun fllog1p @var{fl}
 Return a flonum equivalent to @math{log(1 + @var{fl})}.
 @end defun

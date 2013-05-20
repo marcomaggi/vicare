@@ -736,6 +736,11 @@ Compute the inverse hyperbolic functions.  Return flonum objects.
 @subsubheading Exponentials and logarithms
 
 
+@deffn {Unsafe Operation} $flcbrt @var{fl}
+Return the real cube root function of @var{fl}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $flexp @var{fl}
 Return the base @math{e} exponential of the operand.
 @end deffn

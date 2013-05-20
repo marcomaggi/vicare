@@ -59,6 +59,7 @@
     flsquare		$flsquare
     flcube		$flcube
     flsqrt		$flsqrt
+    flcbrt		$flcbrt
     flhypot		$flhypot
 
     flinteger?
@@ -91,6 +92,7 @@
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
 		  flsquare		flcube		flhypot
+		  flcbrt
 		  flinteger?		flnan?		flfinite?
 		  flinfinite?		fl=?		fl<?
 		  fl>?			fl<=?		fl>=?
@@ -142,6 +144,7 @@
 	    $fllog1p
 	    $flexpt
 	    $flsqrt
+	    $flcbrt
 	    $flsquare
 	    $flcube
 	    $flhypot
@@ -951,10 +954,11 @@
 	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
 
 (define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
+(define-fl-operation/one/forcall flcbrt $flcbrt "ikrt_fl_cbrt")
 (define-fl-operation/two/forcall flhypot $flhypot "ikrt_fl_hypot")
 
-(define-fl-operation/two flsquare	$flsquare)
-(define-fl-operation/two flcube		$flcube)
+(define-fl-operation/one flsquare	$flsquare)
+(define-fl-operation/one flcube		$flcube)
 
 (define ($flsquare x)
   ($fl* x x))

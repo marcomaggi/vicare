@@ -237,6 +237,17 @@ ikrt_fl_sqrt (ikptr x, ikpcb* pcb)
   return r;
 }
 ikptr
+ikrt_fl_cbrt (ikptr x, ikpcb* pcb)
+{
+#ifdef HAVE_CBRT
+  IKU_DEFINE_AND_ALLOC_FLONUM(r);
+  IK_FLONUM_DATA(r) = cbrt(IK_FLONUM_DATA(x));
+  return r;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
 ikrt_fl_log (ikptr x, ikpcb* pcb)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);

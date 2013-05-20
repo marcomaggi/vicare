@@ -225,7 +225,7 @@ AC_CHECK_FUNCS([getenv])
 AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
-AC_CHECK_FUNCS([hypot])
+AC_CHECK_FUNCS([hypot cbrt])
 
 AC_CACHE_SAVE
 
