@@ -34,6 +34,7 @@ vicare_scheme_TEXINFOS	= \
 	shmem.texi			\
 	binfmt.texi			\
 	cre2.texi			\
+	history.texi			\
 	references.texi			\
 	\
 	srfi.texi				\
