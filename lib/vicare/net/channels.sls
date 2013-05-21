@@ -44,6 +44,7 @@
     channel-set-maximum-message-size!
     channel-set-expiration-time!
     channel-set-message-terminators!
+    channel-set-maximum-message-portion-size!
 
     ;; getters
     channel-connect-in-port
@@ -140,10 +141,14 @@
 	  (mutable message-terminated?)
 		;A  boolean,  true  if  while receiving  a  message  the
 		;terminator has already been read.
+	  (mutable maximum-message-portion-size)
+		;A positive  fixnum representing  the maximum  number of
+		;units (bytes, characters) read at each "message portion
+		;receive" operation.
 	  )
   (protocol
    (lambda (maker)
-     (lambda (in-port ou-port default-terminators)
+     (lambda (in-port ou-port default-terminators max-portion-size)
        (define who 'channel-constructor)
        (define-argument-validation (one-port who in-port ou-port)
 	 (or in-port ou-port)
@@ -156,6 +161,7 @@
 		#f #;action #f #;expiration-time
 		'() #;message-buffer 0 #;message-size 4096 #;maximum-message-size
 		default-terminators #;message-terminators #f #;message-terminated?
+		max-portion-size #;maximum-message-portion-size
 		))))))
 
 (define-record-type-extended binary-channel
@@ -168,7 +174,7 @@
        (with-arguments-validation (who)
 	   ((binary-port/false	in-port)
 	    (binary-port/false	ou-port))
-	 ((make-channel in-port ou-port DEFAULT-BINARY-TERMINATORS)))))))
+	 ((make-channel in-port ou-port DEFAULT-BINARY-TERMINATORS 4096)))))))
 
 (define-record-type-extended textual-channel
   (nongenerative vicare:net:channels:textual-channel)
@@ -180,7 +186,7 @@
        (with-arguments-validation (who)
 	   ((textual-port/false	in-port)
 	    (textual-port/false	ou-port))
-	 ((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS)))))))
+	 ((make-channel in-port ou-port DEFAULT-TEXTUAL-TERMINATORS 1024)))))))
 
 (define-constant DEFAULT-BINARY-TERMINATORS
   '(#ve(ascii "\r\n\r\n") #ve(ascii "\r\n")))
@@ -307,9 +313,9 @@
 ;;;; configuration
 
 (define (channel-set-maximum-message-size! chan maximum-message-size)
-  ;;MAXIMUM-MESSAGE-SIZE   must   be   a  non-negative   exact   integer
-  ;;representing the inclusive maximum message  size; if the size of the
-  ;;message exceeds this value: message delivery will fail.
+  ;;MAXIMUM-MESSAGE-SIZE must  be a positive exact  integer representing
+  ;;the inclusive maximum  message size in octets or  characters; if the
+  ;;size of the message exceeds this value: message delivery will fail.
   ;;
   (define who 'channel-set-maximum-message-size!)
   (with-arguments-validation (who)
@@ -371,6 +377,18 @@
       "expected non-empty list of non-empty strings as argument" obj))
 
   #| end of module |# )
+
+(define (channel-set-maximum-message-portion-size! chan max-portion-size)
+  ;;MAX-PORTION-SIZE  must   be  a  positive  fixnum   representing  the
+  ;;inclusive  maximum size,  in  octets or  characters, requested  when
+  ;;receiving message portions.
+  ;;
+  (define who 'channel-set-maximum-message-portion-size!)
+  (with-arguments-validation (who)
+      ((channel			chan)
+       (positive-fixnum		max-portion-size))
+    ($channel-maximum-message-portion-size-set! chan max-portion-size)
+    (void)))
 
 
 ;;;; predicates and arguments validation: receiving messages
@@ -736,7 +754,9 @@
 		  ($channel-recv-binary-message-portion! chan)
 		($channel-recv-textual-message-portion! chan))))
       (cond ((eof-object? rv)
-	     (eof-object))
+	     rv)
+	    ((would-block-object? rv)
+	     rv)
 	    ((not rv)
 	     (next-portion))
 	    (else
@@ -772,38 +792,42 @@
     ;;* If the accumulated data  exceeds the maximum message size: raise
     ;;an exception.
     ;;
-    (cond (($delivery-timeout-expired? chan)
-	   (%error-message-delivery-timeout-expired who chan))
-	  (($channel-message-terminated? chan)
-	   #t)
-	  (else
-	   (let ((bv (get-bytevector-n ($channel-connect-in-port chan) 4096)))
-	     (cond
-	      ;;If  the   EOF  is  found  before   reading  a  message
-	      ;;terminator: return the EOF object.
-	      ((eof-object? bv)
-	       bv)
-	      ;;If  reading causes  a  would-block  condition with  no
-	      ;;input  data or  an  empty bytevector  is read:  return
-	      ;;false  to  signal the  need  to  read further  message
-	      ;;portions.
-	      ((or (would-block-object? bv)
-		   ($fxzero? ($bytevector-length bv)))
-	       #f)
-	      ;;If a message portion is  read: push it on the internal
-	      ;;buffer;  check message  size  and timeout  expiration;
-	      ;;return  true  if  the  message  is  terminated,  false
-	      ;;otherwise.
-	      (else
-	       ($channel-message-buffer-push! chan bv)
-	       (cond (($maximum-size-exceeded? chan)
-		      (%error-maximum-message-size-exceeded who chan))
-		     (($delivery-timeout-expired? chan)
-		      (%error-message-delivery-timeout-expired who chan))
-		     ((%received-message-terminator? chan)
-		      ($channel-message-terminated?-set! chan #t)
-		      #t)
-		     (else #f))))))))
+    (cond
+     ;;If the  message is terminated: we  do not care anymore  about the
+     ;;timeout.
+     (($channel-message-terminated? chan)
+      #t)
+     ;;If the message  is not terminated and the  timeout expired: raise
+     ;;an error.
+     (($delivery-timeout-expired? chan)
+      (%error-message-delivery-timeout-expired who chan))
+     (else
+      (let ((bv (get-bytevector-n ($channel-connect-in-port chan)
+				  ($channel-maximum-message-portion-size chan))))
+	(cond
+	 ;;If  the EOF  is found  before reading  a message  terminator:
+	 ;;return the EOF object.
+	 ((eof-object? bv)
+	  bv)
+	 ;;If reading causes a would-block  condition with no input data
+	 ;;or an empty bytevector is  read: return would block to signal
+	 ;;the need to read further message portions.
+	 ((or (would-block-object? bv)
+	      ($fxzero? ($bytevector-length bv)))
+	  #!would-block)
+	 ;;If a message portion is read: push it on the internal buffer;
+	 ;;check message size and timeout expiration; return true if the
+	 ;;message is terminated, false otherwise.
+	 (else
+	  ($channel-message-buffer-push! chan bv)
+	  (cond (($maximum-size-exceeded? chan)
+		 (%error-maximum-message-size-exceeded who chan))
+		(($delivery-timeout-expired? chan)
+		 (%error-message-delivery-timeout-expired who chan))
+		((%received-message-terminator? chan)
+		 ($channel-message-terminated?-set! chan #t)
+		 #t)
+		(else #f))))))))
 
   (module (%received-message-terminator?)
 
@@ -929,37 +953,42 @@
     ;;* If the accumulated data  exceeds the maximum message size: raise
     ;;an exception.
     ;;
-    (cond (($delivery-timeout-expired? chan)
-	   (%error-message-delivery-timeout-expired who chan))
-	  (($channel-message-terminated? chan)
-	   #t)
-	  (else
-	   (let ((str (get-string-n ($channel-connect-in-port chan) 1024)))
-	     (cond
-	      ;;If  the   EOF  is  found  before   reading  a  message
-	      ;;terminator: return the EOF object.
-	      ((eof-object? str)
-	       str)
-	      ;;If  reading causes  a  would-block  condition with  no
-	      ;;input data or an empty string is read: return false to
-	      ;;signal the need to read further message portions.
-	      ((or (would-block-object? str)
-		   ($fxzero? ($string-length str)))
-	       #f)
-	      ;;If a message portion is  read: push it on the internal
-	      ;;buffer;  check message  size  and timeout  expiration;
-	      ;;return  true  if  the  message  is  terminated,  false
-	      ;;otherwise.
-	      (else
-	       ($channel-message-buffer-push! chan str)
-	       (cond (($maximum-size-exceeded? chan)
-		      (%error-maximum-message-size-exceeded who chan))
-		     (($delivery-timeout-expired? chan)
-		      (%error-message-delivery-timeout-expired who chan))
-		     ((%received-message-terminator? chan)
-		      ($channel-message-terminated?-set! chan #t)
-		      #t)
-		     (else #f))))))))
+    (cond
+     ;;If the  message is terminated: we  do not care anymore  about the
+     ;;timeout.
+     (($channel-message-terminated? chan)
+      #t)
+     ;;If the message  is not terminated and the  timeout expired: raise
+     ;;an error.
+     (($delivery-timeout-expired? chan)
+      (%error-message-delivery-timeout-expired who chan))
+     (else
+      (let ((str (get-string-n ($channel-connect-in-port chan)
+			       ($channel-maximum-message-portion-size chan))))
+	(cond
+	 ;;If  the EOF  is found  before reading  a message  terminator:
+	 ;;return the EOF object.
+	 ((eof-object? str)
+	  str)
+	 ;;If reading causes a would-block  condition with no input data
+	 ;;or an empty string is  read: return would-block to signal the
+	 ;;need to read further message portions.
+	 ((or (would-block-object? str)
+	      ($fxzero? ($string-length str)))
+	  #!would-block)
+	 ;;If a message portion is read: push it on the internal buffer;
+	 ;;check message size and timeout expiration; return true if the
+	 ;;message is terminated, false otherwise.
+	 (else
+	  ($channel-message-buffer-push! chan str)
+	  (cond (($maximum-size-exceeded? chan)
+		 (%error-maximum-message-size-exceeded who chan))
+		(($delivery-timeout-expired? chan)
+		 (%error-message-delivery-timeout-expired who chan))
+		((%received-message-terminator? chan)
+		 ($channel-message-terminated?-set! chan #t)
+		 #t)
+		(else #f))))))))
 
   (module (%received-message-terminator?)
 
