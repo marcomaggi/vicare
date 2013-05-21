@@ -540,14 +540,18 @@ Options:
       #;(log.log "receiving message portion")
       (cond ((chan.channel-recv-message-portion! server-chan)
 	     => (lambda (thing)
-		  (if (eof-object? thing)
-		      (close-connection conn)
-		    (let* ((data.str (chan.channel-recv-end! server-chan))
-			   (data.enc (ascii->string (uri-encode (string->ascii data.str)))))
-		      (log.log "received: ~a" data.enc)
-		      (chan.channel-send-full-message terminal-chan data.str)
-		      (chan.channel-recv-begin! terminal-chan)
-		      (schedule-terminal-incoming-data conn)))))
+		  (cond ((eof-object? thing)
+			 (log.log "connection closed by remote host")
+			 (close-connection conn))
+			((would-block-object? thing)
+			 (schedule-server-incoming-data conn))
+			(else
+			 (let* ((data.str (chan.channel-recv-end! server-chan))
+				(data.enc (ascii->string (uri-encode (string->ascii data.str)))))
+			   (log.log "received: ~a" data.enc)
+			   (chan.channel-send-full-message terminal-chan data.str)
+			   (chan.channel-recv-begin! terminal-chan)
+			   (schedule-terminal-incoming-data conn))))))
 	    (else
 	     (schedule-server-incoming-data conn)))))
 
@@ -579,12 +583,15 @@ Options:
 	($connection-server-chan conn))
       (cond ((chan.channel-recv-message-portion! terminal-chan)
 	     => (lambda (thing)
-		  (if (eof-object? thing)
-		      (close-connection conn)
-		    (let ((data.str (chan.channel-recv-end! terminal-chan)))
-		      (log.log "sending command: ~a"
-			       (ascii->string (uri-encode (string->ascii data.str))))
-		      (schedule-server-outgoing-data conn data.str)))))
+		  (cond ((eof-object? thing)
+			 (close-connection conn))
+			((would-block-object? thing)
+			 (schedule-terminal-incoming-data conn))
+			(else
+			 (let ((data.str (chan.channel-recv-end! terminal-chan)))
+			   (log.log "sending command: ~a"
+				    (ascii->string (uri-encode (string->ascii data.str))))
+			   (schedule-server-outgoing-data conn data.str))))))
 	    (else
 	     (schedule-terminal-incoming-data conn)))))
 

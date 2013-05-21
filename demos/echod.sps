@@ -596,16 +596,19 @@ Options:
 	(connection-channel conn))
       (cond ((chan.channel-recv-message-portion! chan)
 	     => (lambda (thing)
-		  (if (eof-object? thing)
-		      (close-connection conn)
-		    (let* ((data.bv  (chan.channel-recv-end! chan))
-			   (data.str (utf8->string data.bv)))
-		      (log.log "connection ~a echoing: ~a"
-			       (connection-id conn)
-			       (ascii->string (uri-encode data.bv)))
-		      (if (received-quit? data.bv)
-			  (close-connection conn)
-			(schedule-outgoing-data conn ANSWER-PREFIX data.bv))))))
+		  (cond ((eof-object? thing)
+			 (close-connection conn))
+			((would-block-object? thing)
+			 (schedule-incoming-data conn))
+			(else
+			 (let* ((data.bv  (chan.channel-recv-end! chan))
+				(data.str (utf8->string data.bv)))
+			   (log.log "connection ~a echoing: ~a"
+				    (connection-id conn)
+				    (ascii->string (uri-encode data.bv)))
+			   (if (received-quit? data.bv)
+			       (close-connection conn)
+			     (schedule-outgoing-data conn ANSWER-PREFIX data.bv)))))))
 	    (else
 	     (schedule-incoming-data conn)))))
 
