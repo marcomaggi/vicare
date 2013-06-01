@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{8} @func{receive}: binding to multiple values
+@cindex @library{srfi :8}, library
+@cindex @library{srfi :8 receive}, library
+@cindex Library @library{srfi :8}
+@cindex Library @library{srfi :8 receive}
 
 
 The library @library{srfi :8} is by John David Stone (Department of

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,10 +29,9 @@
 (library (ikarus.emergency)
   (export emergency-write)
   (import (ikarus)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; emergency debugging
@@ -45,7 +44,7 @@
   ;;platform's stderr.
   ;;
   (let ((bv (string->utf8 str)))
-    (capi.platform-write-fd 2 bv 0 (unsafe.bytevector-length bv))
+    (capi.platform-write-fd 2 bv 0 ($bytevector-length bv))
     ;;and a newline
     (capi.platform-write-fd 2 '#vu8(10) 0 1)))
 

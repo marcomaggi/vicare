@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -167,17 +167,17 @@
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) #\a #\b))
-    => '(#\a))
+    => '(#\a "abc"))
 
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) -1 #\a))
-    => '(-1))
+    => '(-1 "abc"))
 
   (check
       (catch #f
 	(string-set! (string #\a #\b #\c) (+ 1 (greatest-fixnum)) #\a))
-    => (list (+ 1 (greatest-fixnum))))
+    => (list (+ 1 (greatest-fixnum)) "abc"))
 
   (check
       (catch #f
@@ -883,6 +883,49 @@
   #t)
 
 
+(parametrise ((check-test-name	'reverse-and-concatenate))
+
+;;; arguments validation
+
+  (check
+      (catch #f (string-reverse-and-concatenate 123))
+    => '(123))
+
+  (check
+      (catch #f (string-reverse-and-concatenate '(123)))
+    => '((123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-reverse-and-concatenate '())
+    => "")
+
+  (check
+      (string-reverse-and-concatenate '(""))
+    => "")
+
+  (check
+      (string-reverse-and-concatenate '("" ""))
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-reverse-and-concatenate '("123"))
+    => "123")
+
+  (check
+      (string-reverse-and-concatenate '("456" "123"))
+    => "123456")
+
+  (check
+      (string-reverse-and-concatenate '("789" "456" "123"))
+    => "123456789")
+
+  #t)
+
+
 (parametrise ((check-test-name	'string-for-each))
 
   (check
@@ -1279,6 +1322,268 @@
   (check
       (utf16->string (string->utf16n test-string) (native-endianness))
     => test-string)
+
+  #t)
+
+
+(parametrise ((check-test-name	'hex))
+
+  (check
+      (ascii->string (bytevector->hex (string->ascii "ciao mamma")))
+    => "6369616F206D616D6D61")
+
+  (check
+      (bytevector->hex '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+    => (string->ascii "000102030405060708090A0B0C0D0E0F"))
+
+  (check
+      (bytevector->hex '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+    => (string->ascii "101112131415161718191A1B1C1D1E1F"))
+
+;;; --------------------------------------------------------------------
+;;; hex->bytevector
+
+  (check	;upper case
+      (ascii->string (hex->bytevector (string->ascii "6369616F206D616D6D61")))
+    => "ciao mamma")
+
+  (check	;lower case
+      (ascii->string (hex->bytevector (string->ascii "6369616f206d616d6d61")))
+    => "ciao mamma")
+
+  (check	;upper case
+      (hex->bytevector (string->ascii "000102030405060708090A0B0C0D0E0F"))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;lower case
+      (hex->bytevector (string->ascii "000102030405060708090a0b0c0d0e0f"))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;upper case
+      (hex->bytevector (string->ascii "101112131415161718191A1B1C1D1E1F"))
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;lower case
+      (hex->bytevector (string->ascii "101112131415161718191a1b1c1d1e1f"))
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;invalid input
+      (hex->bytevector (string->ascii "101112131415161718191a1Z1c1d1e1f"))
+;;;                                                           ^
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; bytevector->string-hex
+
+  (check
+      (bytevector->string-hex (string->ascii "ciao mamma"))
+    => "6369616F206D616D6D61")
+
+  (check
+      (bytevector->string-hex '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+    => "000102030405060708090A0B0C0D0E0F")
+
+  (check
+      (bytevector->string-hex '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+    => "101112131415161718191A1B1C1D1E1F")
+
+;;; --------------------------------------------------------------------
+;;; string-hex->bytevector
+
+  (check	;upper case
+      (string-hex->bytevector "6369616F206D616D6D61")
+    => (string->ascii "ciao mamma"))
+
+  (check	;lower case
+      (string-hex->bytevector "6369616f206d616d6d61")
+    => (string->ascii "ciao mamma"))
+
+  (check	;upper case
+      (string-hex->bytevector "000102030405060708090A0B0C0D0E0F")
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;lower case
+      (string-hex->bytevector "000102030405060708090a0b0c0d0e0f")
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;upper case
+      (string-hex->bytevector "101112131415161718191A1B1C1D1E1F")
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;lower case
+      (string-hex->bytevector "101112131415161718191a1b1c1d1e1f")
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;invalid input
+      (string-hex->bytevector "101112131415161718191a1Z1c1d1e1f")
+;;;                                                   ^
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'base64))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?ascii ?base64)
+       (begin
+	 (check
+	     (ascii->string (bytevector->base64 (string->ascii ?ascii)))
+	   => ?base64)
+	 (check
+	     (ascii->string (base64->bytevector (string->ascii ?base64)))
+	   => ?ascii)
+	 ))))
+
+;;; --------------------------------------------------------------------
+
+  (doit ""		"")
+  (doit "ABC"		"QUJD")
+  (doit "H"		"SA==")
+  (doit "He"		"SGU=")
+  (doit "Hel"		"SGVs")
+  (doit "Hell"		"SGVsbA==")
+  (doit "Hello"		"SGVsbG8=")
+  (doit "this is a test\n"
+	"dGhpcyBpcyBhIHRlc3QK")
+  (doit "y"		"eQ==")
+  (doit "yy"		"eXk=")
+  (doit "y "		"eSA=")
+  (doit "quickly "	"cXVpY2tseSA=")
+  (doit "and"		"YW5k")
+  (doit "an"		"YW4=")
+  (doit "an "		"YW4g")
+
+  (doit
+   "The short red fox ran quickly"
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHk=")
+
+  (doit
+   "The short red fox ran quickly "
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg")
+
+  (doit
+   "The short red fox ran quickly through the green field and jumped over the tall brown bear\n"
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkgdGhyb3VnaCB0aGUgZ3JlZW4gZmllbGQgYW5kIGp1bXBlZCBvdmVyIHRoZSB0YWxsIGJyb3duIGJlYXIK")
+
+  (doit
+   "Le Poete est semblable au prince des nuees Qui hante la tempete e se rit de l'archer; Exile sul le sol au milieu des huees, Ses ailes de geant l'empechent de marcher."
+   "TGUgUG9ldGUgZXN0IHNlbWJsYWJsZSBhdSBwcmluY2UgZGVzIG51ZWVzIFF1aSBoYW50ZSBsYSB0ZW1wZXRlIGUgc2Ugcml0IGRlIGwnYXJjaGVyOyBFeGlsZSBzdWwgbGUgc29sIGF1IG1pbGlldSBkZXMgaHVlZXMsIFNlcyBhaWxlcyBkZSBnZWFudCBsJ2VtcGVjaGVudCBkZSBtYXJjaGVyLg==")
+
+  #t)
+
+
+(parametrise ((check-test-name	'uri-encoding))
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ raw encoded)
+			(begin
+			  (check
+			      (uri-encode (string->ascii raw))
+			    => (string->ascii encoded))
+			  (check
+			      (uri-decode (string->ascii encoded))
+			    => (string->ascii raw))
+			  )))))
+
+    (doit "." ".")
+    (doit "-" "-")
+    (doit "_" "_")
+    (doit "~" "~")
+    (doit "%" "%25")
+    (doit "?" "%3F")
+    (doit "=" "%3D")
+    (doit "#" "%23")
+
+    (doit "" "")
+    (doit "ciao" "ciao")
+    (doit "cia=o" "cia%3Do")
+    (doit "ci?a=o" "ci%3Fa%3Do")
+
+    (check
+	(uri-encode (string->ascii "ciao"))
+      => '#vu8(99 105 97 111))
+
+    (check
+	(uri-decode '#vu8(99 105 97 111))
+      => '#vu8(99 105 97 111))
+
+;;; --------------------------------------------------------------------
+
+    (let ((all-octets '#vu8(0 1 2 3 4 5 6 7 8 9
+			      10 11 12 13 14 15 16 17 18 19
+			      20 21 22 23 24 25 26 27 28 29
+			      30 31 32 33 34 35 36 37 38 39
+			      40 41 42 43 44 45 46 47 48 49
+			      50 51 52 53 54 55 56 57 58 59
+			      60 61 62 63 64 65 66 67 68 69
+			      70 71 72 73 74 75 76 77 78 79
+			      80 81 82 83 84 85 86 87 88 89
+			      90 91 92 93 94 95 96 97 98 99
+
+			      100 101 102 103 104 105 106 107 108 109
+			      110 111 112 113 114 115 116 117 118 119
+			      120 121 122 123 124 125 126 127 128 129
+			      130 131 132 133 134 135 136 137 138 139
+			      140 141 142 143 144 145 146 147 148 149
+			      150 151 152 153 154 155 156 157 158 159
+			      160 161 162 163 164 165 166 167 168 169
+			      170 171 172 173 174 175 176 177 178 179
+			      180 181 182 183 184 185 186 187 188 189
+			      190 191 192 193 194 195 196 197 198 199
+
+			      200 201 202 203 204 205 206 207 208 209
+			      210 211 212 213 214 215 216 217 218 219
+			      220 221 222 223 224 225 226 227 228 229
+			      230 231 232 233 234 235 236 237 238 239
+			      240 241 242 243 244 245 246 247 248 249
+			      250 251 252 253 254 255))
+	  (all-string "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%7F%80%81%82%83%84%85%86%87%88%89%8A%8B%8C%8D%8E%8F%90%91%92%93%94%95%96%97%98%99%9A%9B%9C%9D%9E%9F%A0%A1%A2%A3%A4%A5%A6%A7%A8%A9%AA%AB%AC%AD%AE%AF%B0%B1%B2%B3%B4%B5%B6%B7%B8%B9%BA%BB%BC%BD%BE%BF%C0%C1%C2%C3%C4%C5%C6%C7%C8%C9%CA%CB%CC%CD%CE%CF%D0%D1%D2%D3%D4%D5%D6%D7%D8%D9%DA%DB%DC%DD%DE%DF%E0%E1%E2%E3%E4%E5%E6%E7%E8%E9%EA%EB%EC%ED%EE%EF%F0%F1%F2%F3%F4%F5%F6%F7%F8%F9%FA%FB%FC%FD%FE%FF"))
+
+      (check
+	  (ascii->string (uri-encode all-octets))
+	=> all-string)
+
+      (check
+	  (uri-decode (string->ascii all-string))
+	=> all-octets))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (uri-normalise-encoding '#vu8())
+    => '#vu8())
+
+  (check
+      (uri-normalise-encoding (string->ascii "ciao"))
+    => (string->ascii "ciao"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "cia%3do"))
+    => (string->ascii "cia%3Do"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "cia%3Do"))
+    => (string->ascii "cia%3Do"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "ci%3fa%3do"))
+    => (string->ascii "ci%3Fa%3Do"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "ci%3Fa%3Do"))
+    => (string->ascii "ci%3Fa%3Do"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "%7Eciao"))
+    => (string->ascii "~ciao"))
+
+  (check
+      (uri-normalise-encoding (string->ascii "ci%5Fao"))
+    => (string->ascii "ci_ao"))
 
   #t)
 

@@ -21,6 +21,9 @@
 .globl _ik_foreign_call
 .globl  ik_asm_reenter
 .globl _ik_asm_reenter
+.globl ik_underflow_handler
+.globl _ik_underflow_handler
+
 
 
 ## ------------------------------------------------------------
@@ -287,25 +290,67 @@ _ik_asm_enter:
   #    in %esp.  The frame pointer is the 3rd word in the PCB
   #    structure (32-bit offset = 8).
   #
-  movl 12(%esp), %eax    # %eax = fixnum being the negated num of args
-  movl 16(%esp), %edi    # %edi = pointer to closure object
+
+  # Preserve registers not preserved by the C call.  According to stuff on
+  # the Net: it is responsibility of the C code caller to preserve EAX, ECX
+  # and EDX; it is responsibility of the assembly callee to preserve ESI, EBP,
+  # EDI, EBX.
   movl %esi, -4(%esp)    # preserve
   movl %ebp, -8(%esp)    # preserve
   movl %edi, -12(%esp)   # preserve
+  movl %ebx, -16(%esp)   # preserve
+  #
+  # When arriving here the situation on the C stack is as follows:
+  #
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 3    | <-- %esp + 4 * wordsize =  16(%esp)
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize =  12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =   8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =   4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =   0(%esp)
+  #    |------------------|
+  #    |    saved ESI     | <-- %esp - 1 * wordsize =  -4(%esp)
+  #    |------------------|
+  #    |    saved EBP     | <-- %esp - 2 * wordsize =  -8(%esp)
+  #    |------------------|
+  #    |    saved EDI     | <-- %esp - 3 * wordsize = -12(%esp)
+  #    |------------------|
+  #    |    saved EBX     | <-- %esp - 4 * wordsize = -16(%esp)
+  #    |------------------|
+  #         low memory
+  #
+
+  movl 12(%esp), %eax    # %eax = fixnum being the negated num of args
+  movl 16(%esp), %edi    # %edi = pointer to closure object
   movl 4(%esp), %esi     # %esi = pointer to PCB
-  movl 0(%esi), %ebp     # %ebp = allocation pointer is at 0(pcb)
-  movl %esp, %ecx        # save the C stack, to be used later
-  subl $16, %esp         # 16 for alignment
-  movl %esp, 24(%esi)    # save %esp in "pcb->system_stack"
+  movl 0(%esi), %ebp     # %ebp = allocation pointer, it is at 0(pcb)
+
+  # Save the C stack in ECX.  To be used later to retrieve the Scheme
+  # code entry point address and actually perform the call.
+  movl %esp, %ecx
+
+  # Decrement ESP so that it references the topmost used word on the C stack,
+  # then store it in "pcb->system_stack" as top of the C stack.  Having ESP
+  # decremented by 16 (4 wordsizes) is also fine for alignment constraints,
+  # required by the C compiler.
+  subl $16, %esp
+  movl %esp, 24(%esi)
+
   movl 8(%esi), %esp     # load scheme stack from "pcb->frame_pointer"
   jmp L_call
   # Notice that there is no livemask bytevector here.
   .long 4			# We can access this data word
-				# by summing "disp_frame_size"
+				# by summing "disp_call_table_size"
 				# to "ik_underflow_handler".
 
   .long 0			# We can access this data word
-				# by summing "disp_frame_offset"
+				# by summing "disp_call_table_offset"
 				# to "ik_underflow_handler".
 
   .long L_multivalue_underflow	# We can access this data word by
@@ -353,7 +398,7 @@ ik_underflow_handler:
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |                      | <-- %esp = pcb->frame_base = pcb->frame_pointer
+  #   |                      | <-- %esp = pcb->frame_base
   #   |----------------------|
   #   | ik_underflow_handler | <-- %esp - wordsize
   #   |----------------------|
@@ -384,14 +429,29 @@ ik_underflow_handler:
   				# representing the negated number of
   				# Scheme return values.
 L_do_underflow:
-  movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
-  movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
-  movl 24(%esi), %esp   # restore C stack from "pcb->system_stack"
-  addl $16, %esp        # 24 for alignment (>= 16)
-  movl -4(%esp), %esi   # restore callee-save registers
-  movl -8(%esp), %ebp   #
-  movl -12(%esp), %edi  #
-  ret                   # back to the C function "ik_exec_code()"
+  # NOTE When coming back here from Scheme code evaluation, it is possible
+  # that "pcb->frame_base" and "pcb->frame_pointer" do not have the same
+  # values as before entering Scheme code.  In particular: the Scheme routines
+  # handling continuations update only "pcb->frame_base", leaving alone
+  # "pcb->frame_pointer".  For this reason here we update "pcb->frame_pointer"
+  # leaving alone "pcb->frame_base".  (Marco Maggi; Mar 28, 2013)
+  movl %esp, 8(%esi)    # save top of scheme stack in "pcb->frame_pointer"
+  movl %ebp, 0(%esi)    # save allocation pointer in "pcb->allocation_pointer"
+
+  # Restore from "pcb->system_stack" the address of the topmost used word
+  # on the C stack and increment it to reference the return address to the
+  # C caller.
+  movl 24(%esi), %esp
+  addl $16, %esp
+
+  # Restore callee-save registers.
+  movl -4(%esp), %esi
+  movl -8(%esp), %ebp
+  movl -12(%esp), %edi
+  movl -16(%esp), %ebx
+
+  # Back to the C caller: the function "ik_exec_code()".
+  ret
 
 L_multivalue_underflow:
   # Here we are back from the Scheme code, but there may be a
@@ -421,14 +481,14 @@ L_multivalue_underflow:
   #   |                       |
   #          low memory
   #
-  # the word referenced by %esp is unused here: it may be one-off the
-  # end of the stack segment or it may be part of an uplevel Scheme
+  # the word referenced by %esp+wordsize is unused here: it may be one-off
+  # the end of the stack segment or it may be part of an uplevel Scheme
   # continuation.  We want to set the Scheme stack as follows:
   #
   #         high memory
   #   |                       |
   #   |-----------------------|
-  #   |                       | <-- %esp = pcb->frame_base
+  #   |                       | <-- %esp = pcb->frame_base = pcb->frame_pointer
   #   |-----------------------|
   #   | ik_underflow_handler  | <-- %esp - 1 * wordsize
   #   |-----------------------|
@@ -497,16 +557,44 @@ _ik_asm_reenter:
   #          low memory
   #
 
+  # Preserve registers not preserved by the C call.  According to stuff on
+  # the Net: it is responsibility of the C code caller to preserve EAX, ECX
+  # and EDX; it is responsibility of the assembly callee to preserve ESI, EDI,
+  # EBP, EBX.
+  movl %esi,  -4(%esp)   #  preserve
+  movl %ebp,  -8(%esp)   #  preserve
+  movl %edi, -12(%esp)   #  preserve
+  movl %ebx, -16(%esp)   #  preserve
+  #
+  # When arriving here the situation on the C stack is as follows:
+  #
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize =  12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =   8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =   4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =   0(%esp)
+  #    |------------------|
+  #    |    saved ESI     | <-- %esp - 1 * wordsize =  -4(%esp)
+  #    |------------------|
+  #    |    saved EBP     | <-- %esp - 2 * wordsize =  -8(%esp)
+  #    |------------------|
+  #    |    saved EDI     | <-- %esp - 3 * wordsize = -12(%esp)
+  #    |------------------|
+  #    |    saved EBX     | <-- %esp - 4 * wordsize = -16(%esp)
+  #    |------------------|
+  #         low memory
+  #
+
   # Make %eax hold a fixnum representing the negated number of args.
   movl 12(%esp), %eax
 
   # Make %ebx reference the top of the Scheme stack.
   movl  8(%esp), %ebx
-
-  # Preserve registers not preserved by the C call.
-  movl %esi, -4(%esp)    #  preserve
-  movl %ebp, -8(%esp)    #  preserve
-  movl %edi, -12(%esp)   #  preserve
 
   # Make %esi reference the PCB.
   movl 4(%esp), %esi
@@ -514,16 +602,18 @@ _ik_asm_reenter:
   # Make %ebp reference the alloc pointer "pcb->allocation_pointer".
   movl 0(%esi), %ebp
 
-  subl $16, %esp         # 24 for alignment
-
-  # Save the C language stack in "pcb->system_stack".
+  # Decrement ESP so that it references the latest used word on the stack,
+  # then store it in "pcb->system_stack" as top of the C stack.  Having ESP
+  # decremented by 16 (4 wordsizes) is also fine for alignment constraints,
+  # required by the C compiler.
+  subl $16, %esp
   movl %esp, 24(%esi)
 
   # Make %esp reference the Scheme stack.
   movl %ebx, %esp
 
   # The machine word -4 is the fixnum -1, which represents
-  # a single argument.  If %eax = -4, then there is a single
+  # a single argument.  If %eax == -4, then there is a single
   # argument to the Scheme continuation.
   cmpl $-4, %eax
   jne L_multi_value_reentry
@@ -538,6 +628,9 @@ L_single_value_reentry:
   # "Scheme return address" we jump directly to the entry point at
   # offset "disp_multivalue_rp" from "Scheme return address",
   # with %eax holding the fixnum being the negated number of args.
+  #
+  #  -9 = - (32-bit call instruction size) - (32-bit wordsize)
+  #
 L_multi_value_reentry:
   movl 0(%esp), %ebx
   jmp *-9(%ebx)
@@ -550,9 +643,9 @@ L_multi_value_reentry:
 #
 # * %edi must contain the address of the C function to call.
 #
-# * %eax must contain the encoded number of arguments to the
-#   C function, excluding the last argument (the "ikpcb * pcb"),
-#   such arguments are on the Scheme stack.
+# * %eax must contain a fixnum representing the encoded number of
+#   arguments to the C function, EXcluding the last argument
+#   (the "ikpcb * pcb"), such arguments are on the Scheme stack.
 #
 # NOTE When we enter this routine to call the C function
 # "ik_stack_overflow()", we enter with a Scheme stack segment
@@ -565,30 +658,164 @@ _ik_foreign_call:
   movl %esp, 8(%esi)
   # Store the Allocation Pointer Register into "pcb->allocation_pointer".
   movl %ebp, 0(%esi)
-  # Save the Frame Pointer Register (FPR, %esp) into EBX.
+  # Save the Frame Pointer Register (FPR, %esp) into EBX.  We will
+  # need it later to transfer the arguments from the Scheme stack to
+  # the C stack.
   movl %esp, %ebx
   # Store in %esp the C stack from "pcb->system_stack".
   movl 24(%esi), %esp    # (movl (pcb-ref 'system-stack) esp)
 
-  # We want that: after pushing the C arguments on the C stack,
-  # %esp is 16-byte aligned.  Every argument will occupy a wordsize
-  # on the Stack, here we want to pad the C stack with zeros as
-  # needed.
+  # Here %esp references the last used word on the C stack: the
+  # "old top of C stack".
+
+  # We want that: after pushing the C arguments on the C stack, %esp is
+  # 16-byte aligned (a calling convention requirement established by
+  # C compilers).  Every argument will occupy a wordsize on the Stack,
+  # here we want to pad the C stack with zeros as needed.
   #
-  # %eax is the index to the last arg,
-  # 0 args require 6 (2) pushes => argc=   0 (0000): %esp +=  -8
-  # 1 args require 5 (1) pushes => argc=  -4 (1100): %esp +=  -4
-  # 2 args require 4 (0) pushes => argc=  -8 (1000): %esp +=   0
-  # 3 args require 3 (3) pushes => argc= -12 (0100): %esp += -12
+  # * If %eax is the fixnum 0 (%eax == 0) the C function has 0 arguments;
+  #   plus the pointer to PCB: 1 argument;  with the return address on
+  #   the stack: 2 words = 8 bytes: 2 padding words are needed.  The C stack
+  #   will be:
+  #
+  #            high memory
+  #      |                      |
+  #      |----------------------|
+  #      |  old top of C stack  |
+  #      |----------------------|           --
+  #      |    padding word      |           .
+  #      |----------------------|           .
+  #      |    padding word      |           .
+  #      |----------------------|           . 16 bytes
+  #      |   pointer to PCB     |           .
+  #      |----------------------|           .
+  #      |    return address    | <-- %esp  .
+  #      |----------------------|           --
+  #      |                      |
+  #             low memory
+  #
+  # * If %eax is the fixnum -1 (%eax == -4) the C function has 1 argument;
+  #   plus the pointer to PCB: 2 arguments;  with the return address on
+  #   the stack: 3 words = 12 bytes: 1 padding word is needed.  The C stack
+  #   will be:
+  #
+  #            high memory
+  #      |                      |
+  #      |----------------------|
+  #      |  old top of C stack  |
+  #      |----------------------|           --
+  #      |    padding word      |           .
+  #      |----------------------|           .
+  #      |   pointer to PCB     |           .
+  #      |----------------------|           . 16 bytes
+  #      |      argument 0      |           .
+  #      |----------------------|           .
+  #      |    return address    | <-- %esp  .
+  #      |----------------------|           --
+  #      |                      |
+  #             low memory
+  #
+  # * If %eax is the fixnum -2 (%eax == -8) the C function has 2 arguments;
+  #   plus the pointer to PCB: 3 arguments;  with the return address on
+  #   the stack: 4 words = 16 bytes: no padding is needed.  The C stack
+  #   will be:
+  #
+  #            high memory
+  #      |                      |
+  #      |----------------------|
+  #      |  old top of C stack  |
+  #      |----------------------|           --
+  #      |   pointer to PCB     |           .
+  #      |----------------------|           .
+  #      |      argument 1      |           .
+  #      |----------------------|           . 16 bytes
+  #      |      argument 0      |           .
+  #      |----------------------|           .
+  #      |    return address    | <-- %esp  .
+  #      |----------------------|           --
+  #      |                      |
+  #             low memory
+  #
+  # * If %eax is the fixnum -3 (%eax == -12) the C function has 3 arguments;
+  #   plus the pointer to PCB: 4 argument;  with the return address on
+  #   the stack: 5 words = 20 bytes: 3 padding words are needed to reach
+  #   the next multiple of 16 which is 32.  The C stack will be:
+  #
+  #            high memory
+  #      |                      |
+  #      |----------------------|
+  #      |  old top of C stack  |
+  #      |----------------------|           --
+  #      |    padding word      |           .
+  #      |----------------------|           .
+  #      |    padding word      |           .
+  #      |----------------------|           . 16 bytes
+  #      |    padding word      |           .
+  #      |----------------------|           .
+  #      |   pointer to PCB     |           .
+  #      |----------------------|           --
+  #      |      argument 2      |           .
+  #      |----------------------|           .
+  #      |      argument 1      |           .
+  #      |----------------------|           . 16 bytes
+  #      |      argument 0      |           .
+  #      |----------------------|           .
+  #      |    return address    | <-- %esp  .
+  #      |----------------------|           --
+  #      |                      |
+  #             low memory
+  #
+  # * If %eax is the fixnum -4 (%eax == -16) the C function has 4 arguments;
+  #   plus the pointer to PCB: 5 arguments;  with the return address on
+  #   the stack: 6 words = 24 bytes: 2 padding words are needed to reach
+  #   the next multiple of 16 which is 32.  This is the same as %eax == 0.
+  #   The C stack will be:
+  #
+  #            high memory
+  #      |                      |
+  #      |----------------------|
+  #      |  old top of C stack  |
+  #      |----------------------|           --
+  #      |    padding word      |           .
+  #      |----------------------|           .
+  #      |    padding word      |           .
+  #      |----------------------|           . 16 bytes
+  #      |   pointer to PCB     |           .
+  #      |----------------------|           .
+  #      |      argument 3      |           .
+  #      |----------------------|           --
+  #      |      argument 2      |           .
+  #      |----------------------|           .
+  #      |      argument 1      |           .
+  #      |----------------------|           . 16 bytes
+  #      |      argument 0      |           .
+  #      |----------------------|           .
+  #      |    return address    | <-- %esp  .
+  #      |----------------------|           --
+  #      |                      |
+  #             low memory
+  #
+  # For the purpose of padding to multiples of 16 bytes: when there
+  # are more than 3 arguments to the C function (EXcluding the PCB
+  # pointer) we are interested in on the arguments count:
+  #
+  #	(mod (- %eax) 16)
+  #
   movl %eax, %ecx
+  # Mask the 15 least significant bits: the ones representing the
+  # the positive number: (mod (- %eax) 16).
   andl $15, %ecx
 check_ecx:
+  # 2 arguments + PCB pointer + return address -> no padding
   cmpl $8, %ecx
   je L_zero
+  # 3 arguments + PCB pointer + return address -> 1 padding word
   cmpl $12, %ecx
   je L_one
+  # 0 arguments + PCB pointer + return address -> 2 padding words
   cmpl $0, %ecx
   je L_two
+  # 1 argument  + PCB pointer + return address -> 3 padding words
   push $0
 L_two:
   push $0
@@ -596,18 +823,23 @@ L_one:
   push $0
 L_zero:
 
-  # Now, the value of %esp is 16-byte aligned.
+  # Now, after pushing the arguments and the return address on the
+  # stack: the value of %esp will be 16-byte aligned.
 
   # When calling a foreign C function: we always push the Process
   # Control Register (%esi, 4 bytes) to the stack; this is the
   # pointer to PCB which is the last argument to every C function.
-  push %esi             # (pushl pcr)
+  push %esi		# (pushl pcr)
 
-  cmpl $0, %eax          # (cmpl (int 0) eax)
-  je L_set               # (je (label Lset))
-  # Remember that when arriving here %ebx references the top of
-  # the Scheme stack.  For 3 arguments, on the Scheme stack we
-  # have:
+  # If there are no arguments: we are done.  Jump to the call
+  # instruction.
+  cmpl $0, %eax		# (cmpl (int 0) eax)
+  je L_set		# (je (label Lset))
+
+  # Remember that when arriving here: %ebx references the top of
+  # the Scheme stack, %eax is the the offset to add to %ebx to
+  # reference topmost argument.  For 2 arguments, on the Scheme
+  # stack we have:
   #
   #         high memory
   #   |                      |
@@ -616,36 +848,36 @@ L_zero:
   #   |----------------------|
   #   |      argument 0      | <-- %ebx - 1 * wordsize
   #   |----------------------|
-  #   |      argument 1      | <-- %ebx - 2 * wordsize
-  #   |----------------------|
-  #   |      argument 2      | <-- %ebx - 3 * wordsize
+  #   |      argument 1      | <-- %ebx - 2 * wordsize = %ebx + %eax
   #   |----------------------|
   #   |                      |
   #          low memory
   #
-  # and %eax set to -12, which is the offset to add to %ebx to
-  # reference "argument 2".
-  #
-  # On the C stack we want:
+  # On the C stack, right before performing the call instruction,
+  # we want:
   #
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |      argument 2      | <-- %esp + 2 * wordsize
+  #   |  old top of C stack  |
   #   |----------------------|
-  #   |      argument 1      | <-- %esp + 1 * wordsize
+  #   |    pointer to PCB    |
+  #   |----------------------|
+  #   |      argument 1      | <-- %esp + 1 * wordsize = %esp - %eax
   #   |----------------------|
   #   |      argument 0      | <-- %esp
   #   |----------------------|
   #   |                      |
   #          low memory
   #
+  # Copy the arguments from the Scheme stack to the C stack.
 L_loop:                  # (label Lloop)
   movl (%ebx,%eax), %ecx # (movl (mem ebx eax) ecx)
   push %ecx              # (pushl ecx)
   addl $4, %eax          # (addl (int 4) eax)
   cmpl $0, %eax          # (cmpl (int 0) eax)
   jne L_loop             # (jne (label Lloop))
+
 L_set:                   # (label Lset)
   call *%edi             # (call cpr)
   # The C functions callable here always return a single argument
@@ -655,6 +887,8 @@ L_set:                   # (label Lset)
   movl 8(%esi), %esp     # (movl (pcb-ref 'frame-pointer) fpr)
   # Load "pcb->allocation_pointer" in the Allocation Pointer Register.
   movl 0(%esi), %ebp     # (movl (pcb-ref 'allocation-pointer) apr)
+
+  # Notice that here we do not need to modify "pcb->system_stack".
 
   # Return to the caller.  If the C function has not touched the
   # Scheme stack: we go back to right after the "call" instruction

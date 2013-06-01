@@ -23,7 +23,16 @@
     eval-core
     symbol-value			set-symbol-value!
     keyword?				pretty-print
-    pretty-print*
+    would-block-object?
+    pretty-print*			bignum?
+    module				import
+    vector-exists
+    define-inline			define-syntax-rule
+    begin0				receive
+    real-pathname			file-modification-time
+
+    ;; runtime options
+    report-errors-at-runtime		strict-r6rs
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -51,7 +60,13 @@
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus system $symbols)
-	  $unintern-gensym))
+	  $unintern-gensym)
+    (only (vicare $posix)
+	  real-pathname
+	  file-modification-time)
+    (only (vicare options)
+	  report-errors-at-runtime
+	  strict-r6rs))
 
 
 (define (library-version-mismatch-warning name depname filename)

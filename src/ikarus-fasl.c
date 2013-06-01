@@ -95,8 +95,11 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       close(fd);
     }
     ikptr val = ik_exec_code(pcb, v, 0, 0);
-    if (val != IK_VOID_OBJECT)
+    if (val != IK_VOID_OBJECT) {
+      ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
+				  __func__, fasl_file);
       ik_print(val);
+    }
   }
   if (p.memp != p.memq)
     ik_abort("fasl-read did not reach EOF");
@@ -456,6 +459,36 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     return rtd;
   }
+  else if (c == '{') { /* { is for struct instances */
+    long	i, num_of_fields = 0, struct_size;
+    ikptr	s_rtd;
+    ikptr	s_struct;
+    fasl_read_buf(p, &num_of_fields, sizeof(long));
+    struct_size = IK_ALIGN((1 + num_of_fields) * sizeof(ikptr));
+    s_struct    = ik_unsafe_alloc(pcb, struct_size) | vector_tag;
+    s_rtd       = do_read(pcb, p);
+    IK_REF(s_struct, 0) = s_rtd;
+    for (i=0; i<num_of_fields; ++i) {
+      IK_FIELD(s_struct, i) = do_read(pcb, p);
+    }
+    if (put_mark_index) {
+      p->marks[put_mark_index] = s_struct;
+    }
+    return s_struct;
+  }
+#if 0
+  else if (c == '"') { /* W is for R6RS record instances */
+    long	i, num_of_fields = 0, record_size;
+    ikptr	s_name   = do_read(pcb, p);
+    ikptr	s_parent = do_read(pcb, p);
+    ikptr	s_uid    = do_read(pcb, p);
+    ikptr	s_sealed = do_read(pcb, p);
+    ikptr	s_opaque = do_read(pcb, p);
+    ikptr	s_count  = do_read(pcb, p);
+    long	num_of_fields = IK_UNFIX(s_count);
+    return s_record;
+  }
+#endif
   else if (c == 'Q') { /* thunk */
     ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
     if (put_mark_index) {

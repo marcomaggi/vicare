@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -71,7 +71,18 @@
     even-exact-integer.vicare-arguments-validation
     odd-exact-integer.vicare-arguments-validation
 
+    ;; keywords
+    keyword.vicare-arguments-validation
+
+    ;; promises
+    promise.vicare-arguments-validation
+    false-or-promise.vicare-arguments-validation
+
     ;; bit sized integers
+    byte.vicare-arguments-validation
+    false-or-byte.vicare-arguments-validation
+    octet.vicare-arguments-validation
+    false-or-octet.vicare-arguments-validation
     word-u8.vicare-arguments-validation
     word-u8/false.vicare-arguments-validation
     word-s8.vicare-arguments-validation
@@ -152,6 +163,7 @@
     index-and-count-for-string.vicare-arguments-validation
     start-and-end-for-string.vicare-arguments-validation
     start-and-past-for-string.vicare-arguments-validation
+    list-of-strings.vicare-arguments-validation
 
     ;; vectors
     vector.vicare-arguments-validation
@@ -172,6 +184,8 @@
     index-and-count-for-bytevector.vicare-arguments-validation
     start-and-end-for-bytevector.vicare-arguments-validation
     start-and-past-for-bytevector.vicare-arguments-validation
+    bytevector-length.vicare-arguments-validation
+    list-of-bytevectors.vicare-arguments-validation
 
     ;; symbols
     symbol.vicare-arguments-validation
@@ -228,6 +242,11 @@
     textual-port/false.vicare-arguments-validation
     binary-port.vicare-arguments-validation
     binary-port/false.vicare-arguments-validation
+    open-port.vicare-arguments-validation
+
+    ;; transcoders
+    transcoder.vicare-arguments-validation
+    transcoder/false.vicare-arguments-validation
 
     ;; procedures
     procedure.vicare-arguments-validation
@@ -237,36 +256,34 @@
     general-c-string?
     general-c-string.vicare-arguments-validation
     general-c-string/false.vicare-arguments-validation
+    general-c-string*.vicare-arguments-validation
 
     general-c-buffer?
     general-c-buffer.vicare-arguments-validation
     general-c-buffer/false.vicare-arguments-validation
+    general-c-buffer*.vicare-arguments-validation
 
     general-c-sticky-buffer?
     general-c-sticky-buffer.vicare-arguments-validation
     general-c-sticky-buffer/false.vicare-arguments-validation
+    general-c-sticky-buffer*.vicare-arguments-validation
+
+    general-c-string.len.vicare-arguments-validation
+    general-c-buffer.len.vicare-arguments-validation
+
+    ;; time objects
+    time.vicare-arguments-validation
+    time/false.vicare-arguments-validation
     )
   (import (ikarus)
-    (for (prefix (vicare installation-configuration)
+    (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
     (only (vicare platform constants)
 	  FD_SETSIZE)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare unsafe-operations)
-	    $))
-
-
-;;; helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
+    (vicare unsafe operations))
 
 
 (define-syntax define-argument-validation
@@ -306,9 +323,9 @@
 	   (with-syntax
 	       ((VALIDATE (%name ctx name ".vicare-arguments-validation")))
 	     #'(begin
-		 (define-inline (the-predicate ?arg ...) ?predicate)
-		 (define-inline (the-error ?who ?arg ...) ?error-handler)
-		 (define-inline (VALIDATE ?who ?arg ... . body)
+		 (define-syntax-rule (the-predicate ?arg ...) ?predicate)
+		 (define-syntax-rule (the-error ?who ?arg ...) ?error-handler)
+		 (define-syntax-rule (VALIDATE ?who ?arg ... . body)
 		   (if (the-predicate ?arg ...)
 		       (begin . body)
 		     (the-error ?who ?arg ...)))))))
@@ -600,6 +617,25 @@
   (assertion-violation who "expected odd exact integer as argument" obj))
 
 
+;;;; keywords
+
+(define-argument-validation (keyword who obj)
+  (keyword? obj)
+  (assertion-violation who "expected keyword as argument" obj))
+
+
+;;;; promises
+
+(define-argument-validation (promise who obj)
+  (promise? obj)
+  (assertion-violation who "expected promise as argument" obj))
+
+(define-argument-validation (false-or-promise who obj)
+  (or (not obj)
+      (promise? obj))
+  (assertion-violation who "expected false or promise as argument" obj))
+
+
 ;;;; C language "int" type
 
 (define-argument-validation (signed-int who obj)
@@ -730,6 +766,24 @@
 
 
 ;;;; false or bit sized integers
+
+(define-argument-validation (byte who obj)
+  (words.word-s8? obj)
+  (assertion-violation who "expected fixnum representing byte as argument" obj))
+
+(define-argument-validation (false-or-byte who obj)
+  (or (not obj) (words.word-s8? obj))
+  (assertion-violation who "expected false or fixnum representing byte as argument" obj))
+
+(define-argument-validation (octet who obj)
+  (words.word-u8? obj)
+  (assertion-violation who "expected fixnum representing octet as argument" obj))
+
+(define-argument-validation (false-or-octet who obj)
+  (or (not obj) (words.word-u8? obj))
+  (assertion-violation who "expected false or fixnum representing octet as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (word-u8/false who obj)
   (or (not obj) (words.word-u8? obj))
@@ -1014,6 +1068,14 @@
 	   ($fx< 0 ($string-length obj))))
   (assertion-violation who "expected false or non-empty string as argument" obj))
 
+(define-argument-validation (list-of-strings who obj)
+  (or (null? obj)
+      (and (list? obj)
+	   (for-all string? obj)))
+  (assertion-violation who "expected list of strings as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (index-for-string who str idx)
   ;;We assume that STR has already been validated as string.
   (index-for-string? str idx)
@@ -1132,6 +1194,11 @@
        ($fx>= idx 0)
        ($fx<= idx ($bytevector-length vec))))
 
+(define-inline (start-index-for-bytevector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<= idx ($bytevector-length vec))))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (bytevector who obj)
@@ -1152,6 +1219,14 @@
       (and (bytevector? obj)
 	   ($fx< 0 ($bytevector-length obj))))
   (assertion-violation who "expected false or non-empty bytevector as argument" obj))
+
+(define-argument-validation (list-of-bytevectors who obj)
+  (or (null? obj)
+      (and (list? obj)
+	   (for-all bytevector? obj)))
+  (assertion-violation who "expected list of bytevectors as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-bytevector who vec idx)
   ;;We assume that VEC has already been validated as bytevector.
@@ -1185,6 +1260,12 @@
   (assertion-violation who
     "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
+
+(define-argument-validation (bytevector-length who len)
+  (and (fixnum? len)
+       ($fx>= len 0))
+  (assertion-violation who
+    "expected non-negative fixnum as bytevector length argument" len))
 
 
 ;;;; symbols
@@ -1352,6 +1433,24 @@
   (or (not obj) (binary-port? obj))
   (assertion-violation who "expected false or binary port as argument" obj))
 
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (open-port who obj)
+  (not (port-closed? obj))
+  (assertion-violation who "expected open port as argument" obj))
+
+
+;;;; transcoders
+
+(define-argument-validation (transcoder who obj)
+  (transcoder? obj)
+  (assertion-violation who "expected transcoder as argument" obj))
+
+(define-argument-validation (transcoder/false who obj)
+  (or (not obj) (transcoder? obj))
+  (assertion-violation who
+    "expected false or a transcoder object as transcoder argument" obj))
+
 
 ;;;; procedures
 
@@ -1366,12 +1465,11 @@
 
 ;;;; generalised C strings
 
-(define-inline (general-c-string? ?obj)
-  (let ((obj ?obj))
-    (or (string?	obj)
-	(bytevector?	obj)
-	(pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-string? obj)
+  (or (string?		obj)
+      (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-string who obj)
   (general-c-string? obj)
@@ -1385,13 +1483,23 @@
       (memory-block? obj))
   (assertion-violation who "expected false or general C string as argument" obj))
 
+(define-argument-validation (general-c-string* who str str.len)
+  (cond ((or (string?       str)
+	     (bytevector?   str)
+	     (memory-block? str))
+	 (not str.len))
+	((pointer? str)
+	 (words.size_t? str.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C string and optional length as arguments" str str.len))
+
 ;;; --------------------------------------------------------------------
 
-(define-inline (general-c-buffer? ?obj)
-  (let ((obj ?obj))
-    (or (bytevector?	obj)
-	(pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-buffer? obj)
+  (or (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-buffer who obj)
   (general-c-buffer? obj)
@@ -1401,12 +1509,21 @@
   (or (not obj) (general-c-buffer? obj))
   (assertion-violation who "expected false or general C buffer as argument" obj))
 
+(define-argument-validation (general-c-buffer* who buf buf.len)
+  (cond ((or (bytevector?   buf)
+	     (memory-block? buf))
+	 (not buf.len))
+	((pointer? buf)
+	 (words.size_t? buf.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C buffer and optional length as arguments" buf buf.len))
+
 ;;; --------------------------------------------------------------------
 
-(define-inline (general-c-sticky-buffer? ?obj)
-  (let ((obj ?obj))
-    (or (pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-sticky-buffer? obj)
+  (or (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-sticky-buffer who obj)
   (general-c-sticky-buffer? obj)
@@ -1415,6 +1532,47 @@
 (define-argument-validation (general-c-sticky-buffer/false who obj)
   (or (not obj) (general-c-sticky-buffer? obj))
   (assertion-violation who "expected general C sticky buffer as argument" obj))
+
+(define-argument-validation (general-c-sticky-buffer* who buf buf.len)
+  (cond ((memory-block? buf)
+	 (not buf.len))
+	((pointer? buf)
+	 (words.size_t? buf.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C sticky buffer and optional length as arguments" buf buf.len))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (general-c-buffer.len who buf buf.len)
+  (if (pointer? buf)
+      (words.size_t? buf.len)
+    (not buf.len))
+  (assertion-violation who
+    "expected false or exact integer in the range of the C language type \"size_t\" \
+     as general C buffer length"
+    buf.len))
+
+(define-argument-validation (general-c-string.len who buf buf.len)
+  (if (pointer? buf)
+      (words.size_t? buf.len)
+    (not buf.len))
+  (assertion-violation who
+    "expected false or exact integer in the range of the C language type \"size_t\" \
+     as general C string length"
+    buf.len))
+
+
+;;;; time objects
+
+(define-argument-validation (time who obj)
+  (time? obj)
+  (assertion-violation who "expected time object as argument" obj))
+
+(define-argument-validation (time/false who obj)
+  (or (not obj)
+      (time? obj))
+  (assertion-violation who "expected false or time object as argument" obj))
 
 
 ;;;; done

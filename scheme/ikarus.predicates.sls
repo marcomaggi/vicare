@@ -57,14 +57,10 @@
     (ikarus system $chars)
     (ikarus system $strings)
     (ikarus system $vectors)
-    (only (ikarus system $compnums)
-	  $cflonum-real
-	  $cflonum-imag
-	  $compnum-imag)
     (only (ikarus system $pointers)
 	  $pointer=)
     (ikarus system $foreign)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand)
     ;;These are the ones implemented as primitive operations.
     (rename (only (ikarus)
@@ -278,6 +274,7 @@
 (define (not x)
   (if x #f #t))
 
+
 (define (eq? x y)
   (sys:eq? x y))
 
@@ -305,19 +302,35 @@
 
 	((compnum? x)
 	 (and (compnum? y)
-	      (= (real-part x) (real-part y))
-	      (= (imag-part x) (imag-part y))))
+	      (and (or (= ($compnum-real x) ($compnum-real y))
+		       (and (flonum? ($compnum-real x))
+			    (flonum? ($compnum-real y))
+			    ($flnan? ($compnum-real x))
+			    ($flnan? ($compnum-real y))))
+		   (or (= ($compnum-imag x) ($compnum-imag y))
+		       (and (flonum? ($compnum-imag x))
+			    (flonum? ($compnum-imag y))
+			    ($flnan? ($compnum-imag x))
+			    ($flnan? ($compnum-imag y)))))))
 
 	((cflonum? x)
 	 (and (cflonum? y)
-	      (= (real-part x) (real-part y))
-	      (= (imag-part x) (imag-part y))))
+	      (and (or ($fl= ($cflonum-real x) ($cflonum-real y))
+		       (and ($flnan? ($cflonum-real x))
+			    ($flnan? ($cflonum-real y))))
+		   (or ($fl= ($cflonum-imag x) ($cflonum-imag y))
+		       (and ($flnan? ($cflonum-imag x))
+			    ($flnan? ($cflonum-imag y)))))))
 
 	((pointer? x)
 	 (and (pointer? y) ($pointer= x y)))
 
 	((keyword? x)
 	 (and (keyword? y) (keyword=? x y)))
+
+	((struct? x)
+	 (and (struct? y)
+	      (struct=? x y)))
 
 	(else #f)))
 

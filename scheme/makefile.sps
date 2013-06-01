@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -306,6 +306,7 @@
     "ikarus.time-and-date.sls"
     "ikarus.sort.sls"
     "ikarus.promises.sls"
+    "ikarus.compensations.sls"
     "ikarus.enumerations.sls"
     "ikarus.command-line.sls"
 ;;; "ikarus.trace.sls"
@@ -395,6 +396,37 @@
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
 ;;;
+    (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
+    (define-integrable			(macro . define-integrable))
+    (define-inline			(macro . define-inline))
+    (define-constant			(macro . define-constant))
+    (define-inline-constant		(macro . define-inline-constant))
+    (define-values			(macro . define-values))
+    (define-constant-values		(macro . define-constant-values))
+    (define-syntax-rule			(macro . define-syntax-rule))
+    (receive				(macro . receive))
+    (receive-and-return			(macro . receive-and-return))
+    (begin0				(macro . begin0))
+    (xor				(macro . xor))
+    (unwind-protect			(macro . unwind-protect))
+    (include				(macro . include))
+;;;
+    (return				($fluid . return))
+    (continue				($fluid . continue))
+    (break				($fluid . break))
+    (while				(macro . while))
+    (until				(macro . until))
+    (for				(macro . for))
+    (define-returnable			(macro . define-returnable))
+    (lambda-returnable			(macro . lambda-returnable))
+    (begin-returnable			(macro . begin-returnable))
+;;;
+    (with-compensations			(macro . with-compensations))
+    (with-compensations/on-error	(macro . with-compensations/on-error))
+    (compensate				(macro . compensate))
+    (with				($fluid . with))
+    (push-compensation			(macro . push-compensation))
+;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
     (&message				($core-rtd . (&message-rtd
@@ -475,14 +507,15 @@
   ;;LIBRARY   is  created   and  included   in  the   starting   set  of
   ;;BOOTSTRAP-COLLECTION.
   ;;
-  ;;The libraries marked as VISIBLE? are installed in the boot image.
+  ;;The  libraries marked  as  VISIBLE?  are listed  by  default by  the
+  ;;function INSTALLED-LIBRARIES.
   ;;
   ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this
   ;;list.
   ;;
   ;; abbr.              name			                visible? required?
   '((i			(ikarus)				#t	#t)
-    (v			(vicare)				#t	#f)
+    (v			(vicare)				#t	#t)
     (cm			(chez modules)				#t	#t)
     (symbols		(ikarus symbols)			#t	#t)
     (parameters		(ikarus parameters)			#t	#t)
@@ -527,7 +560,7 @@
     ($comp		(ikarus system $compnums)		#f	#t)
     ($symbols		(ikarus system $symbols)		#f	#t)
     ($structs		(ikarus system $structs)		#f	#t)
-    ($pointers		(ikarus system $pointers)		#t	#t)
+    ($pointers		(ikarus system $pointers)		#f	#t)
     ($codes		(ikarus system $codes)			#f	#t)
     ($tcbuckets		(ikarus system $tcbuckets)		#f	#t)
     ($arg-list		(ikarus system $arg-list)		#f	#t)
@@ -543,8 +576,8 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    (posix		(vicare $posix)				#t	#t)
-    ($language		(vicare language-extensions)		#f	#f)
+    (posix		(vicare $posix)				#f	#t)
+    ($language		(vicare language-extensions)		#t	#f)
     ))
 
 
@@ -631,6 +664,9 @@
     (console-input-port				i v $language)
     (console-error-port				i v $language)
     (console-output-port			i v $language)
+    (stdin					i v $language)
+    (stdout					i v $language)
+    (stderr					i v $language)
     (reset-input-port!				i v $language)
     (reset-output-port!				i v $language)
     (printf					i v $language)
@@ -659,8 +695,13 @@
     (expand-form-to-core-language		i v $language)
     (expand-library				i v $language)
     (expand-top-level				i v $language)
+;;;
     (environment?				i v $language)
     (environment-symbols			i v $language)
+    (environment-libraries			i v $language)
+    (environment-labels				i v $language)
+    (environment-binding			i v $language)
+;;;
     (time-and-gather				i v $language)
     (stats?					i v $language)
     (stats-user-secs				i v $language)
@@ -682,11 +723,20 @@
     (verbose-timer				i v $language)
 ;;;
     (current-time				i v $language)
+    (time-from-now				i v $language)
     (time?					i v $language)
     (time-second				i v $language)
     (time-nanosecond				i v $language)
     (time-gmt-offset				i v $language)
     (date-string				i v $language)
+    (make-time					i v $language)
+    (time-addition				i v $language)
+    (time-difference				i v $language)
+    (time=?					i v $language)
+    (time<?					i v $language)
+    (time<=?					i v $language)
+    (time>?					i v $language)
+    (time>=?					i v $language)
 ;;;
     (command-line-arguments			i v $language)
     (set-rtd-printer!				i v $language)
@@ -713,7 +763,6 @@
     (struct-reset				i v $language)
     (struct-guardian-logger			i v $language)
     (struct-guardian-log			i v $language)
-    ($struct-guardian				$structs)
     (code?					i v $language)
     (immediate?					i v $language)
     (pointer-value				i v $language)
@@ -747,6 +796,10 @@
     ($string-set!				$strings)
     ($string-length				$strings)
     ($string=					$strings)
+    ($string-total-length			$strings)
+    ($string-concatenate			$strings)
+    ($string-reverse-and-concatenate		$strings)
+;;
     ($make-bytevector				$bytes)
     ($bytevector-length				$bytes)
     ($bytevector-s8-ref				$bytes)
@@ -760,6 +813,10 @@
     ($bytevector-ieee-single-native-set!	$bytes)
     ($bytevector-ieee-single-nonnative-ref	$bytes)
     ($bytevector-ieee-single-nonnative-set!	$bytes)
+    ($bytevector=				$bytes)
+    ($bytevector-total-length			$bytes)
+    ($bytevector-concatenate			$bytes)
+    ($bytevector-reverse-and-concatenate	$bytes)
 ;;;
     ($flonum-u8-ref				$flonums)
     ($make-flonum				$flonums)
@@ -822,8 +879,10 @@
     ($fllog1p					$flonums)
     ($flexpt					$flonums)
     ($flsqrt					$flonums)
+    ($flcbrt					$flonums)
     ($flsquare					$flonums)
     ($flcube					$flonums)
+    ($flhypot					$flonums)
     ($flmax					$flonums)
     ($flmin					$flonums)
 ;;;
@@ -941,6 +1000,8 @@
     ($make-struct				$structs)
     ($struct?					$structs)
     ($struct/rtd?				$structs)
+    ($struct-guardian				$structs)
+    ($record-guardian				$structs)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
@@ -1160,6 +1221,7 @@
     (finite?					i v r ba)
     (floor					i v r ba se)
     (for-each					i v r ba se)
+    (for-each-in-order				i v $language)
     (gcd					i v r ba se)
     (imag-part					i v r ba se)
     (inexact					i v r ba)
@@ -1207,6 +1269,7 @@
     (round					i v r ba se)
     (sin					i v r ba se)
     (sqrt					i v r ba se)
+    (cbrt					i v $language)
     (square					i v $language)
     (cube					i v $language)
     (string					i v r ba se)
@@ -1214,6 +1277,7 @@
     (string->number				i v r ba se)
     (string->symbol				i v symbols r ba se)
     (string-append				i v r ba se)
+    (string-reverse-and-concatenate		i v $language)
     (string-copy				i v r ba se)
     (string-for-each				i v r ba)
     (string-length				i v r ba se)
@@ -1229,6 +1293,19 @@
     (latin1->string				i v $language)
     (string->ascii				i v $language)
     (ascii->string				i v $language)
+    (bytevector->hex				i v $language)
+    (hex->bytevector				i v $language)
+    (string-hex->bytevector			i v $language)
+    (bytevector->string-hex			i v $language)
+    (bytevector->base64				i v $language)
+    (base64->bytevector				i v $language)
+    (string-base64->bytevector			i v $language)
+    (bytevector->string-base64			i v $language)
+    (string->uri-encoding			i v $language)
+    (uri-encoding->string			i v $language)
+    (uri-encode					i v $language)
+    (uri-decode					i v $language)
+    (uri-normalise-encoding			i v $language)
     (symbol->string				i v symbols r ba se)
     (symbol=?					i v symbols r ba)
     (symbol?					i v symbols r ba se)
@@ -1249,6 +1326,7 @@
     (vector-append				i v $language)
     (vector-copy				i v $language)
     (vector-copy!				i v $language)
+    (vector-resize				i v $language)
     (vector?					i v r ba se)
     (zero?					i v r ba se)
     (...					i v ne r ba sc se)
@@ -1345,6 +1423,7 @@
     (flinteger?					i v r fl)
     (fllog					i v r fl)
     (fllog1p					i v $language)
+    (flhypot					i v $language)
     (flmax					i v r fl)
     (flmin					i v r fl)
     (flmod					i v r fl)
@@ -1369,6 +1448,7 @@
     (flasinh					i v $language)
     (flatanh					i v $language)
     (flsqrt					i v r fl)
+    (flcbrt					i v $language)
     (flsquare					i v $language)
     (flcube					i v $language)
     (fltruncate					i v r fl)
@@ -1482,6 +1562,7 @@
     (subbytevector-s8				i v $language)
     (subbytevector-s8/count			i v $language)
     (bytevector-append				i v $language)
+    (bytevector-reverse-and-concatenate		i v $language)
     (endianness					i v r bv)
     (native-endianness				i v r bv)
     (sint-list->bytevector			i v r bv)
@@ -1622,6 +1703,7 @@
     (remp					i v r ls)
     (remv					i v r ls)
     (remove					i v r ls)
+    (make-queue					i v $language)
     (set-car!					i v mp se)
     (set-cdr!					i v mp se)
     (string-set!				i v ms se)
@@ -1636,6 +1718,7 @@
     (modulo					i v r5 se)
     (remainder					i v r5 se)
     (null-environment				i v r5 se)
+    (promise?					i v $language)
     (quotient					i v r5 se)
     (scheme-report-environment			i v r5 se)
     (interaction-environment			i v $language)
@@ -1656,6 +1739,7 @@
     (get-string-all				i v r ip)
     (get-string-n				i v r ip)
     (get-string-n!				i v r ip)
+    (get-string-some				i v $language)
     (get-u8					i v r ip)
     (&i/o					i v r ip is fi)
     (&i/o-decoding				i v r ip)
@@ -1783,6 +1867,8 @@
     (utf-16be-codec				i v $language)
     (utf-16n-codec				i v $language)
     (utf-bom-codec				i v $language)
+    (would-block-object				i v $language)
+    (would-block-object?			i v $language)
     (input-port?				i v r is ip se)
     (output-port?				i v r is ip se)
     (input/output-port?				i v)
@@ -1862,6 +1948,11 @@
     (record-mutator				i v r rp)
     (record-predicate				i v r rp)
     (record-type-descriptor?			i v r rp)
+    (record-destructor-set!			i v $language)
+    (record-destructor				i v $language)
+    (record-guardian-logger			i v $language)
+    (record-guardian-log			i v $language)
+    (record-reset				i v $language)
     (syntax-violation				i v r sc)
     (bound-identifier=?				i v r sc)
     (datum->syntax				i v r sc)
@@ -1925,6 +2016,9 @@
     (current-core-eval				i v $language) ;;; temp
     (pretty-print				i v $language $boot)
     (pretty-print*				i v $language)
+    (debug-print				i v $language)
+    (debug-print-enabled?			i v $language)
+    (debug-print*				i v $language)
     (pretty-format				i v $language)
     (pretty-width				i v $language)
     (module					i v $language cm)
@@ -1935,10 +2029,52 @@
     ($data->transcoder				$transc)
     (make-file-options				i v $language)
 ;;;
+    (define-auxiliary-syntaxes			i v $language)
+    (define-integrable				i v $language)
+    (define-inline				i v $language)
+    (define-constant				i v $language)
+    (define-inline-constant			i v $language)
+    (define-values				i v $language)
+    (define-constant-values			i v $language)
+    (define-syntax-rule				i v $language)
+    (receive					i v $language)
+    (receive-and-return				i v $language)
+    (begin0					i v $language)
+    (xor					i v $language)
+    (unwind-protect				i v $language)
+    (include					i v $language)
+;;;
+    (return					i v $language)
+    (continue					i v $language)
+    (break					i v $language)
+    (while					i v $language)
+    (until					i v $language)
+    (for					i v $language)
+    (define-returnable				i v $language)
+    (lambda-returnable				i v $language)
+    (begin-returnable				i v $language)
+;;;
+    (with-compensations				i v $language)
+    (with-compensations/on-error		i v $language)
+    (compensate					i v $language)
+    (with					i v $language)
+    (push-compensation				i v $language)
+    (run-compensations				i v $language)
+    (compensations)
+    (run-compensations-store)
+    (push-compensation-thunk			i v $language)
+;;;
     (port-id					i v $language)
     (port-uid					i v $language)
     (port-hash					i v $language)
     (port-fd					i v $language)
+    (port-set-non-blocking-mode!		i v $language)
+    (port-unset-non-blocking-mode!		i v $language)
+    (port-in-non-blocking-mode?			i v $language)
+    (port-putprop				i v $language)
+    (port-getprop				i v $language)
+    (port-remprop				i v $language)
+    (port-property-list				i v $language)
     (string->filename-func			i v $language)
     (filename->string-func			i v $language)
     (string->pathname-func			i v $language)
@@ -2038,6 +2174,7 @@
     (strerror					i v $language)
     (errno->string				posix)
     (getenv					i v $language posix)
+    (environ					i v $language posix)
     (mkdir					posix)
     (mkdir/parents				posix)
     (real-pathname				posix)
@@ -2287,6 +2424,37 @@
     (keyword?					i v $language)
     (keyword=?					i v $language)
     (keyword-hash				i v $language)
+
+;;; --------------------------------------------------------------------
+;;; library names
+
+    (library-name?				i v $language)
+    (library-version-numbers?			i v $language)
+    (library-version-number?			i v $language)
+    (library-name-decompose			i v $language)
+    (library-name->identifiers			i v $language)
+    (library-name->version			i v $language)
+    (library-name-identifiers=?			i v $language)
+    (library-name=?				i v $language)
+    (library-name<?				i v $language)
+    (library-name<=?				i v $language)
+    (library-version=?				i v $language)
+    (library-version<?				i v $language)
+    (library-version<=?				i v $language)
+
+;;; --------------------------------------------------------------------
+;;; library references and conformity
+
+    (library-reference?					i v $language)
+    (library-version-reference?				i v $language)
+    (library-sub-version-reference?			i v $language)
+    (library-reference-decompose			i v $language)
+    (library-reference->identifiers			i v $language)
+    (library-reference->version-reference		i v $language)
+    (library-reference-identifiers=?			i v $language)
+    (conforming-sub-version-and-sub-version-reference?	i v $language)
+    (conforming-version-and-version-reference?		i v $language)
+    (conforming-library-name-and-library-reference?	i v $language)
 
 ;;; --------------------------------------------------------------------
 
@@ -2955,10 +3123,10 @@
   ;;installed in the boot image running this program.
   ;;
   ;;To add a REQUIRED? library to a  boot image: first we have to add an
-  ;;entry to  LIBRARY-LEGEND marked as  VISIBLE?  and build  a temporary
-  ;;boot image, then mark the entry as REQUIRED? and using the temporary
-  ;;boot image build another boot  image which will have the new library
-  ;;as REQUIRED?.
+  ;;entry  to  LIBRARY-LEGEND  marked  as  non-REQUIRED?   and  build  a
+  ;;temporary boot image, then mark the entry as REQUIRED? and using the
+  ;;temporary boot  image build another  boot image which will  have the
+  ;;new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
 	 (let next-library-entry ((entries library-legend))

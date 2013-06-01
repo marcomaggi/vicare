@@ -34,12 +34,11 @@
     iconv-encoding-universe
     iconv-encoding-aliases?	iconv-encoding=?)
   (import (vicare)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; helpers
@@ -62,11 +61,11 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (false/index who obj)
-  (or (not obj) (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+  (or (not obj) (and (fixnum? obj) ($fx<= 0 obj)))
   (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 (define-argument-validation (iconv who obj)
@@ -511,7 +510,7 @@
       ((iconv	handle))
     ;;Close the handle and mutate the pointer object to NULL.
     (let ((rv (capi.glibc-iconv-close (iconv-pointer handle))))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(raise-errno-error who rv handle)))))
 
 (define (iconv-closed? handle)

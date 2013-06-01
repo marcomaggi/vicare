@@ -39,9 +39,8 @@
 
     rl-version)
   (import (vicare)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare language-extensions syntaxes)
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation

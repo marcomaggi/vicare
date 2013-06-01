@@ -161,17 +161,10 @@
 		       partition	remove		remp
 		       remq		remv)
 	       expand run)
-    (vicare)
+    (except (vicare)
+	    break)
     (lists low)
     (lists stx))
-
-
-(define-syntax receive
-  (syntax-rules ()
-    ((_ ?formals ?expression ?form0 ?form ...)
-     (call-with-values
-	 (lambda () ?expression)
-       (lambda ?formals ?form0 ?form ...)))))
 
 
 ;;;; constructors

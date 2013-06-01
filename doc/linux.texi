@@ -40,6 +40,7 @@ behaviour is undefined.
 * linux timerfd::               Timer expiration handling through
                                 file descriptors.
 * linux inotify::               Monitoring file system events.
+* linux daemonisation::         Turning a process into a daemon.
 @end menu
 
 @c page
@@ -262,7 +263,7 @@ Here is a meaningless example showing the mechanics of the epoll @api{}:
   (prefix (vicare posix)
           px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let-values (((in ou) (px.pipe)))
   (unwind-protect
@@ -586,7 +587,7 @@ The following program watches a timer as time goes by:
 #!r6rs
 (import (vicare)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect)
   (prefix (vicare posix) px.)
   (prefix (vicare linux) lx.))
@@ -635,7 +636,7 @@ The following example prints the number of timer expirations:
 #!r6rs
 (import (vicare)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect)
   (prefix (vicare posix) px.)
   (prefix (vicare linux) lx.))
@@ -803,7 +804,7 @@ event on a file:
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let* ((infd     (lx.inotify-init))
        (pathname "inotify.test")
@@ -832,5 +833,26 @@ event on a file:
      (px.close fd)
      (delete-file pathname)))
 @end example
+
+@c page
+@node linux daemonisation
+@section Turning a process into a daemon
+
+
+The following bindings are exported by the library @library{vicare
+linux}.
+
+
+@defun daemon @var{nochdir} @var{noclose}
+Interface to the C language function @cfunc{daemon}, @manpage{daemon,
+daemon}.  Turn the current process into a daemon.  If an error occurs
+raise an exception.
+
+If @var{nochdir} is @false{}: change the current working directory to
+the root directory.
+
+If @var{noclose} is @false{}: redirect @code{stdin}, @code{stdout} and
+@code{stderr} to @file{/dev/null}.
+@end defun
 
 @c end of file

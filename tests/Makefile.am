@@ -19,11 +19,16 @@ if WANT_TIME_TESTS
 VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
 endif
 
-# The variable "user_flags"  is for the user to be  set on the command
-# line of "make".
+# The variable "VFLAGS" is for the user  to be set on the command line
+# of "make" or "configure", for example:
+#
+#   make VFLAGS="-g -O2 --print-loaded-libraries"
+#
+VFLAGS		= @VFLAGS@
+
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags) --r6rs-script
+VICARE_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) --r6rs-script
 VICARE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY); export VICARE_FASL_DIRECTORY;	\
@@ -63,7 +68,7 @@ VIE			= $(srcdir)/../scripts/vie
 
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".
-VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) $(user_flags)
 VICARE_TEST_RUN_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
@@ -144,16 +149,23 @@ TESTS			=	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-amb.sps				\
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
+	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-compensations.sps			\
+	test-vicare-cond-expand.sps			\
+	test-vicare-coroutines.sps			\
+	test-vicare-custom-ports.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
+	test-vicare-fasl.sps				\
 	test-vicare-fixnums.sps				\
 	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
@@ -164,8 +176,11 @@ TESTS			=	\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-letrec-syntax.sps			\
+	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-net-channels-binary.sps		\
+	test-vicare-net-channels-textual.sps		\
 	test-vicare-numerics-neg.sps			\
 	test-vicare-numerics-inv.sps			\
 	test-vicare-numerics-add.sps			\
@@ -215,6 +230,7 @@ TESTS			=	\
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
+	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
@@ -225,6 +241,26 @@ TESTS			=	\
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
 	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025-sign-in-exact-rationals.sps
+
+if WANT_SRFI
+TESTS	+= \
 	test-srfi-0-cond-expand.sps			\
 	test-srfi-1-lists.sps				\
 	test-srfi-2-and-let-star.sps			\
@@ -252,44 +288,38 @@ TESTS			=	\
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
-	\
-	test-issue-001-equal-hash.sps			\
-	test-issue-003.sps				\
-	test-issue-006-fxreverse-bit-field.sps		\
-	test-issue-007.sps				\
-	test-issue-008.sps				\
-	test-issue-009.sps				\
-	test-issue-010.sps				\
-	test-issue-012.sps				\
-	test-issue-013.sps				\
-	test-issue-015.sps				\
-	test-issue-017.sps				\
-	test-issue-020.sps				\
-	test-issue-021.sps				\
-	test-issue-022.sps				\
-	test-issue-023.sps				\
-	test-issue-024.sps				\
-	test-issue-025-sign-in-exact-rationals.sps
+	test-srfi-101-functional-pairs.sps
+endif
 
 if WANT_LIBFFI
-TESTS	+= test-vicare-ffi.sps
+TESTS	+= \
+	test-vicare-ffi-core.sps			\
+	test-vicare-ffi-foreign-pointer-wrapper.sps
 endif
 
 if WANT_POSIX
 TESTS	+= \
-	test-vicare-posix-basic.sps		\
-	test-vicare-posix-net.sps		\
-	test-vicare-posix-mmap.sps		\
-	test-vicare-posix-bub.sps		\
-	test-vicare-posix-time.sps		\
-	test-vicare-posix-timers.sps		\
-	test-vicare-posix-message-queue.sps	\
-	test-vicare-posix-shared-memory.sps	\
-	test-vicare-posix-semaphores.sps	\
-	test-vicare-posix-sigwait.sps		\
+	test-vicare-posix-basic.sps			\
+	test-vicare-posix-non-blocking.sps		\
+	test-vicare-posix-close-on-exec.sps		\
+	test-vicare-posix-sockets.sps			\
+	test-vicare-posix-mmap.sps			\
+	test-vicare-posix-bub.sps			\
+	test-vicare-posix-time.sps			\
+	test-vicare-posix-timers.sps			\
+	test-vicare-posix-message-queue.sps		\
+	test-vicare-posix-shared-memory.sps		\
+	test-vicare-posix-semaphores.sps		\
+	test-vicare-posix-sigwait.sps			\
 	\
-	test-vicare-shared-memory.sps		\
-	test-vicare-sel.sps
+	test-vicare-shared-memory.sps			\
+	test-vicare-posix-sel.sps			\
+	test-vicare-posix-pid-files.sps			\
+	test-vicare-posix-lock-pid-files.sps		\
+	test-vicare-posix-log-files.sps			\
+	\
+	test-vicare-posix-net-channels-binary.sps	\
+	test-vicare-posix-net-channels-textual.sps
 endif
 
 if WANT_GLIBC
@@ -323,8 +353,6 @@ VICARE_INSTCHECK_RUN	= \
 
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
-
-XFAIL_TESTS = test-srfi-19-time.sps
 
 #page
 #### extra files to be distributed
@@ -436,17 +464,25 @@ EXTRA_DIST = \
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-amb.sps				\
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
+	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-compensations.sps			\
+	test-vicare-cond-expand.sps			\
+	test-vicare-coroutines.sps			\
+	test-vicare-custom-ports.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
-	test-vicare-ffi.sps				\
+	test-vicare-ffi-core.sps			\
+	test-vicare-ffi-foreign-pointer-wrapper.sps	\
+	test-vicare-fasl.sps				\
 	test-vicare-fixnums.sps				\
 	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
@@ -454,13 +490,17 @@ EXTRA_DIST = \
 	test-vicare-general-c-buffers.sps		\
 	test-vicare-glibc.sps				\
 	test-vicare-keywords.sps			\
+	test-vicare-iconv.sps				\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-linux.sps				\
 	test-vicare-letrec-syntax.sps			\
+	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-net-channels-binary.sps		\
+	test-vicare-net-channels-textual.sps		\
 	test-vicare-numerics-neg.sps			\
 	test-vicare-numerics-inv.sps			\
 	test-vicare-numerics-add.sps			\
@@ -506,7 +546,9 @@ EXTRA_DIST = \
 	test-vicare-pointers.sps			\
 	\
 	test-vicare-posix-basic.sps			\
-	test-vicare-posix-net.sps			\
+	test-vicare-posix-sockets.sps			\
+	test-vicare-posix-non-blocking.sps		\
+	test-vicare-posix-close-on-exec.sps		\
 	test-vicare-posix-mmap.sps			\
 	test-vicare-posix-bub.sps			\
 	test-vicare-posix-time.sps			\
@@ -515,6 +557,12 @@ EXTRA_DIST = \
 	test-vicare-posix-shared-memory.sps		\
 	test-vicare-posix-semaphores.sps		\
 	test-vicare-posix-sigwait.sps			\
+	test-vicare-posix-log-files.sps			\
+	test-vicare-posix-pid-files.sps			\
+	test-vicare-posix-lock-pid-files.sps		\
+	test-vicare-posix-sel.sps			\
+	test-vicare-posix-net-channels-binary.sps	\
+	test-vicare-posix-net-channels-textual.sps	\
 	\
 	test-vicare-promises.sps			\
 	test-vicare-time.sps				\
@@ -522,8 +570,8 @@ EXTRA_DIST = \
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
-	test-vicare-sel.sps				\
 	test-vicare-shared-memory.sps			\
+	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
@@ -561,6 +609,7 @@ EXTRA_DIST = \
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
+	test-srfi-101-functional-pairs.sps		\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\

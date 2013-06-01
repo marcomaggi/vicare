@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare words) words.)
+  (prefix (vicare platform words) words.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -875,11 +875,11 @@
 
   (check
       (catch #f (bytevector-append 123))
-    => '(123))
+    => '((123)))
 
   (check
       (catch #f (bytevector-append '#vu8() 123))
-    => '(123))
+    => '((#vu8() 123)))
 
 ;;; --------------------------------------------------------------------
 
@@ -924,6 +924,49 @@
   (check
       (bytevector-append '#vu8(1 2 3) '#vu8(4 5 6) '#vu8())
     => '#vu8(1 2 3 4 5 6))
+
+  #t)
+
+
+(parametrise ((check-test-name	'reverse-and-concatenate))
+
+;;; arguments validation
+
+  (check
+      (catch #f (bytevector-reverse-and-concatenate 123))
+    => '(123))
+
+  (check
+      (catch #f (bytevector-reverse-and-concatenate '(123)))
+    => '((123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-reverse-and-concatenate '())
+    => '#vu8())
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8()))
+    => '#vu8())
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8() #vu8()))
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(1 2 3)))
+    => '#vu8(1 2 3))
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(4 5 6) #vu8(1 2 3)))
+    => '#vu8(1 2 3 4 5 6))
+
+  (check
+      (bytevector-reverse-and-concatenate '(#vu8(7 8 9) #vu8(4 5 6) #vu8(1 2 3)))
+    => '#vu8(1 2 3 4 5 6 7 8 9))
 
   #t)
 

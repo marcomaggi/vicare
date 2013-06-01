@@ -79,14 +79,12 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
-    ;;Remember that this file defines the primitive operations.
-    (ikarus system $fx)
-    (ikarus system $pairs)
     (only (ikarus system $codes)
 	  $code->closure)
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
     (except (ikarus)
+	    return
 	    current-primitive-locations
 	    eval-core			current-core-eval
 	    compile-core-expr-to-port	compile-core-expr
@@ -106,17 +104,70 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
-    (vicare include)
-    (except (vicare syntactic-extensions)
-	    begin0
+    (except (vicare language-extensions syntaxes)
 	    case-word-size)
     (vicare arguments validation))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare include))
-    (include/verbose "ikarus.config.ss"))
+    (include "ikarus.config.ss" #t))
+
+  (module UNSAFE
+    ;;Remember that this file defines the primitive operations.
+    ($car $cdr $set-car! $set-cdr!
+	  $fx= $fx< $fx> $fx<= $fx>=
+	  $fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
+	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
+	  $fxzero?)
+
+    #;(ikarus system $pairs)
+    (begin
+      (define $car car)
+      (define $cdr cdr)
+      (define-syntax $set-car!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-car! ?var ?val))))
+      (define-syntax $set-cdr!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-cdr! ?var ?val))))
+      #| end of begin |# )
+
+    #;(ikarus system $fx)
+    (begin
+      (define $fxzero?	 fxzero?)
+      (define $fx=	fx=?)
+      (define $fx<	fx<?)
+      (define $fx>	fx>?)
+      (define $fx<=	fx<=?)
+      (define $fx>=	fx>=?)
+      (define $fx+	fx+)
+      (define $fx-	fx-)
+      (define $fx*	fx*)
+      (define $fxdiv	fxdiv)
+      (define $fxlogand	fxand)
+      (define $fxlogor	fxior)
+      (define $fxlognot	fxnot)
+      (define ($fxadd1 x)
+	(fx+ x 1))
+      (define ($fxsub1 x)
+	(fx- x 1))
+      (define ($fxsra x count)
+	(import (prefix (ikarus system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsra x count))
+      (define ($fxsll x count)
+	(import (prefix (ikarus system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsll x count))
+      #| end of begin |# )
+    #| end of module |# )
+
+  (import UNSAFE)
 
 
 ;;;; configuration parameters
@@ -223,15 +274,6 @@
 	       (?func ($car t) ($car T) ...)
 	       (loop  ($cdr t) ($cdr T) ...)))))
       )))
-
-(define-syntax begin0
-  ;;A version of BEGIN0 usable only with single values.
-  ;;
-  (syntax-rules ()
-    ((_ ?form ?body0 ?body ...)
-     (let ((t ?form))
-       ?body0 ?body ...
-       t))))
 
 ;;; --------------------------------------------------------------------
 
@@ -392,6 +434,9 @@
 
 
 ;;;; helper functions
+
+#;(define (dummy)
+  (display "here\n"))
 
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,
@@ -2232,8 +2277,8 @@
   body)
 |#
 
-(include/verbose "ikarus.compiler.optimize-letrec.ss")
-(include/verbose "ikarus.compiler.source-optimizer.ss")
+(include "ikarus.compiler.optimize-letrec.ss"  #t)
+(include "ikarus.compiler.source-optimizer.ss" #t)
 
 
 (module (rewrite-references-and-assignments)
@@ -2275,7 +2320,7 @@
   ;;       ($vector-set! x 0 456)
   ;;       ($vector-ref x 0)))
   ;;
-  ;;Code representing usage of multiple a bindings like:
+  ;;Code representing usage of multiple bindings like:
   ;;
   ;;   (let ((x 1)
   ;;         (y 2))
@@ -2437,8 +2482,8 @@
 	    (values (cons x lhs*) a-lhs* a-rhs*))))))
 
   (define (%bind-assigned lhs* rhs* body)
-    ;;LHS* must be a list of struct instances of type PRELEX represening
-    ;;read-write bindings.
+    ;;LHS*  must  be   a  list  of  struct  instances   of  type  PRELEX
+    ;;representing read-write bindings.
     ;;
     ;;RHS* must be a list  of struct instance representing references to
     ;;temporary bindings holding the binding's values.
@@ -2480,7 +2525,7 @@
 
 ;;;; some other external code
 
-(include/verbose "ikarus.compiler.tag-annotation-analysis.ss")
+(include "ikarus.compiler.tag-annotation-analysis.ss" #t)
 
 
 (module (introduce-vars)
@@ -2786,7 +2831,7 @@
   ;;clause that matches the number of arguments.
   ;;
   ;;This optimisation is possible only  when: a preliminary iteration of
-  ;;the recordized  code let's  us find  bindings whose  right-hand size
+  ;;the  recordized code  let  us find  bindings  whose right-hand  size
   ;;evaluates to  a CASE-LAMBDA,  that is to  a closure  definition with
   ;;known clauses.
   ;;
@@ -3387,7 +3432,7 @@
   (define (Rator x)
     ;;Invoked only when the parameter OPTIMIZE-CP is set to true.
     ;;
-    ;;FIXME Does this look as  an optimization to anyone?  (Marco Maggi;
+    ;;FIXME Does this  look like optimization to  anyone?  (Marco Maggi;
     ;;Oct 13, 2012)
     ;;
     (struct-case x
@@ -4055,10 +4100,10 @@
 ;;truth, generates this sequence:
 ;;
 ;;     jmp L0
-;;     livemask-bytes		;array of bytes
-;;     framesize		;data word, a "long"
-;;     rp_offset		;data word, a fixnum
-;;     multi-value-rp		;data word, assembly label
+;;     livemask-bytes		;array of bytes             |
+;;     framesize		;data word, a "long"        | call
+;;     rp_offset		;data word, a fixnum        | table
+;;     multi-value-rp		;data word, assembly label  |
 ;;     pad-bytes
 ;;   L0:
 ;;     call function-address
@@ -4261,7 +4306,7 @@
 (define (argc-convention n)
   ;;At  run  time:  the  number  of arguments  in  a  function  call  is
   ;;represented by  a negative fixnum  which is the number  of arguments
-  ;;negated.  Example: -2 = 2 arguments.
+  ;;negated.  Example: -2 <-> 2 arguments.
   ;;
   ($fx- 0 ($fxsll n fx-shift)))
 
@@ -4281,13 +4326,14 @@
   (define (thunk?-label x)
     #f)
 
-  (define-auxiliary-syntaxes public-function)
-  (define-auxiliary-syntaxes entry-point-label)
-  (define-auxiliary-syntaxes number-of-free-variables)
-  (define-auxiliary-syntaxes code-annotation)
-  (define-auxiliary-syntaxes definitions)
-  (define-auxiliary-syntaxes local-labels)
-  (define-auxiliary-syntaxes assembly)
+  (define-auxiliary-syntaxes
+    public-function
+    entry-point-label
+    number-of-free-variables
+    code-annotation
+    definitions
+    local-labels
+    assembly)
 
   (define-syntax define-cached
     (lambda (x)
@@ -4341,8 +4387,8 @@
     ;;
     ;;Notice that we do not touch the stack here.
     ;;
-    ;;NOTE This is for debugging purposes,  they are not used by Vicare;
-    ;;see   the  primitive   operations  $MAKE-ANNOTATED-PROCEDURE   and
+    ;;NOTE This is for debugging purposes, it is not used by Vicare; see
+    ;;the    primitive    operations    $MAKE-ANNOTATED-PROCEDURE    and
     ;;$ANNOTATED-PROCEDURE-ANNOTATION  for  more  details  on  annotated
     ;;procedures.
     ;;
@@ -4384,10 +4430,12 @@
     ;;
     ;;   (apply ?function ?arg0 ?arg1 '(?arg2 ?arg3 ?arg4))
     ;;
-    ;;this routine  iterates the list  of arguments pushes on  the stack
-    ;;the Scheme objects: ?ARG2, ?ARG3, ?ARG4.
+    ;;this  routine iterates  the list  of arguments  and pushes  on the
+    ;;stack the Scheme objects: ?ARG2, ?ARG3, ?ARG4.
     ;;
     ;;Before:
+    ;;                  ---
+    ;;           FPR --> | ?return-address
     ;;                  ---
     ;;                   | ?arg0
     ;;                  ---
@@ -4397,6 +4445,8 @@
     ;;                  ---
     ;;
     ;;after:
+    ;;                  ---
+    ;;           FPR --> | ?return-address
     ;;                  ---
     ;;                   | ?arg0
     ;;                  ---
@@ -4424,7 +4474,7 @@
       (movl (mem fpr eax) ebx)
       ;;If EBX holds the Scheme null object ...
       (cmpl (int nil) ebx)
-      ;;... there are no function call arguments to push on the stack.
+      ;;... there are no further arguments to push on the stack.
       (je (label L_apply_done))
 
       (label L_apply_loop)
@@ -4434,7 +4484,7 @@
       (movl (mem off-cdr ebx) ebx)
       ;;Move the car at offset EAX from the frame pointer.
       (movl ecx (mem fpr eax))
-      ;;Decrement EAX  by the  word size:  offset of  the next
+      ;;Decrement  EAX  by the  word  size:  stack  offset of  the  next
       ;;argument, if any.
       (subl (int wordsize) eax)
       ;;If EBX does not hold the Scheme null object ...
@@ -4454,30 +4504,73 @@
 ;;; --------------------------------------------------------------------
 
     ;;SL-CONTINUATION-CODE-LABEL  This  subroutine  is  used  to  resume
-    ;;execution of a previously saved Scheme continuation; it is used to
-    ;;implement the  continuation function  generated by CALL/CC;  it is
-    ;;the entry point  associated to the closure object  returned by the
-    ;;primitive operation $FRAME->CONTINUATION.
+    ;;execution  of  a previously  freezed  stack  frame from  a  Scheme
+    ;;continuation  object; it  is  used to  implement the  continuation
+    ;;escape  function  generated by  CALL/CC;  it  is the  entry  point
+    ;;associated  to  the  closure  object  returned  by  the  primitive
+    ;;operation $FRAME->CONTINUATION.
     ;;
     ;;Upon entering this subroutine:
     ;;
-    ;;**The  Process  Control  Register  (PCR) must  reference  the  PCB
+    ;;*  The  Process Control  Register  (PCR)  must reference  the  PCB
     ;;  structure.
     ;;
-    ;;**The Frame Pointer  Register (FPR) must reference the  top of the
+    ;;* The Frame  Pointer Register (FPR) must reference the  top of the
     ;;  Scheme stack.
     ;;
-    ;;**The Closure  Pointer Register (CPR)  must hold a reference  to a
-    ;;  closure object,  whose first slot for free  variables contains a
-    ;;  reference to the continuation object to resume.  Such closure is
-    ;;  an  internal component of  the continuation function  created by
-    ;;  CALL/CC.
+    ;;* The Closure Pointer Register (CPR)  must hold a reference to the
+    ;;   actual  escape  closure  object,  whose  first  slot  for  free
+    ;;  variables  contains a  reference to  the continuation  object to
+    ;;   resume.
+    ;;
+    ;;* The ARGC-REGISTER must contain a fixnum representing the negated
+    ;;   number  of  arguments  handed  to  the  escape  function;  such
+    ;;  arguments are the values returned to the topmost function in the
+    ;;  continuation.
     ;;
     ;;Before  resuming  execution: we  want  to  set the  Frame  Pointer
     ;;Register to the address of the  highest machine word on the Scheme
-    ;;stack; such memory location contains  the address of the underflow
-    ;;handler: the assembly label  "ik_underflow_handler" defined in the
-    ;;file "ikarus-enter.S".
+    ;;segment,  right  below  the  "frame_base";  such  memory  location
+    ;;contains the address of the  underflow handler: the assembly label
+    ;;"ik_underflow_handler" defined in the file "ikarus-enter.S".
+    ;;
+    ;;Calling the  escape closure throws  away the stack  frames between
+    ;;"pcb->frame_base"  and the  FPR.  Before  rewinding the  stack the
+    ;;scenario is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler |
+    ;;   |----------------------|         --
+    ;;             ...                    .
+    ;;   |----------------------|         . frames that will be thrown away
+    ;;   |  old return address  | <- FPR  .
+    ;;   |----------------------|         --
+    ;;   |      argument 0      |         .
+    ;;   |----------------------|         . frame of the escape function
+    ;;   |      argument 1      |         .
+    ;;   |----------------------|         --
+    ;;   |                      |
+    ;;          low memory
+    ;;
+    ;;after rewinding the stack the scenario is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler | <- FPR
+    ;;   |----------------------|         --
+    ;;   |      argument 0      |         .
+    ;;   |----------------------|         . frame of the escape function
+    ;;   |      argument 1      |         .
+    ;;   |----------------------|         --
+    ;;   |                      |
+    ;;          low memory
     ;;
     ((public-function		sl-continuation-code-label)
      (entry-point-label		SL_continuation_code)
@@ -4490,42 +4583,57 @@
 		   L_cont_mult_move_args
 		   L_cont_mult_copy_loop)
      (assembly
-      ;;Move in EBX the reference to the continuation object.
+      ;;Move in EBX  the reference to the  continuation object contained
+      ;;in the first data slot in the closure object.
       (movl (mem off-closure-data cpr) ebx)
       ;;Move  the   reference  to  continuation  object   in  the  field
       ;;"pcb->next_k" (overwriting the old value!!!).
       (movl ebx (mem pcb-next-continuation pcr))
-      ;;Move in EBX the field "pcb->frame_base".
+      ;;Move in EBX the field  "pcb->frame_base".  Notice that we do not
+      ;;touch "pcb->frame_pointer" here.
       (movl (mem pcb-frame-base pcr) ebx)
       ;;Dispatch according to  the number of arguments to  return to the
       ;;continuation.
       (cmpl (int (argc-convention 1)) eax)
-      (jg (label L_cont_zero_args)) ;jump if greater, more than one arg
-      (jl (label L_cont_mult_args)) ;jump if less, less than one arg
+      (jg (label L_cont_zero_args)) ;jump if -1 > EAX: less than one arg
+      (jl (label L_cont_mult_args)) ;jump if -1 < EAX: more than one arg
 
-      ;;We give one argument to  the continuation.  The situation on the
-      ;;stack when arriving here is:
+      ;;We give one argument to the continuation.  The typical situation
+      ;;on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (FPR)
-      ;;   |----------------------|
-      ;;   |     return value     |
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
+      ;;   |     return value     | <-- FPR - wordisze
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;and "pcb->next_k" references the  continuation object we must go
-      ;;back to.
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the  escape function and EAX  contains the fixnum -1;  but we
+      ;;can already be  at the base of the stack  if the escape function
+      ;;was called in tail position while reinstating previously freezed
+      ;;frames:
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
+      ;;   |----------------------|
+      ;;   |     return value     | <-- FPR - wordisze
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (label L_cont_one_arg)
       ;;Load in EAX the the return value.
-      (movl (mem (fx- 0 wordsize) fpr) eax)
+      (movl (mem (fx- wordsize) fpr) eax)
       ;;Load   in   the   Frame    Pointer   Register   the   value   of
       ;;"pcb->frame_base".
       (movl ebx fpr)
@@ -4533,41 +4641,51 @@
       ;;contains the address of the  highest machine word in the current
       ;;Scheme stack segment.
       (subl (int wordsize) fpr)
-      ;;Jump to the underflow handler.   The situation on the stack when
-      ;;arriving here is:
+      ;;Jump  to  the  underflow   handler  to  actually  reinstate  the
+      ;;continuation.  The situation on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
+      ;;   | ik_underflow_handler | <-- Frame Pointer Register
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  still contains  the encoded  1 as  number of  arguments and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;EAX  contains   the  single   return  value   and  "pcb->next_k"
+      ;;references the continuation object we must go back to.
       ;;
       (ret)
 
-      ;;We give  zero arguments to  the continuation.  The  situation on
-      ;;the stack when arriving here is:
+      ;;We  give  zero  arguments  to  the  continuation.   The  typical
+      ;;situation on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (FPR)
-      ;;   |----------------------|
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  still contains  the encoded  0 as  number of  arguments and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the escape  function and EAX contains the fixnum  0 as number
+      ;;of arguments; but we can already be  at the base of the stack if
+      ;;the  escape   function  was   called  in  tail   position  while
+      ;;reinstating previously freezed frames:
+      ;;
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (label L_cont_zero_args)
       ;;Decrement EBX by a wordsize, so  that it contains the address of
@@ -4592,28 +4710,48 @@
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
+      ;;   | ik_underflow_handler | <-- Frame Pointer Register
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  still  contains  the  zero   as  number  of  arguments  and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;EAX  contains  zero as  number  of  arguments and  "pcb->next_k"
+      ;;references the continuation object we must go back to.
       ;;
       (jmp (mem disp-multivalue-rp ebx))
 
-      ;;We  give  more  than  one argument  to  the  continuation.   The
+      ;;We give more than one argument to the continuation.  The typical
       ;;situation on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
+      ;;   |    return value 0    |
       ;;   |----------------------|
-      ;;   |         ...          |
+      ;;   |    return value 1    |
       ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (%esp)
+      ;;   |    return value 2    |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the  escape function and  EAX contains the encoded  number of
+      ;;arguments; but we can already be at the base of the stack if the
+      ;;escape function  was called  in tail position  while reinstating
+      ;;previously freezed frames:
+      ;;
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
       ;;   |----------------------|
       ;;   |    return value 0    |
       ;;   |----------------------|
@@ -4624,15 +4762,12 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;and EAX still contains the  encoded number of arguments (greater
-      ;;than one).
-      ;;
       (label L_cont_mult_args)
       ;;Decrement EBX by a wordsize, so  that it contains the address of
       ;;the highest machine word in the current Scheme stack segment.
       (subl (int wordsize) ebx)
       ;;If the current frame pointer is already at the base of the stack
-      ;;(FPR == pcb->farme_base - wordsize): we  do not need to copy the
+      ;;(FPR == pcb->frame_base - wordsize): we  do not need to copy the
       ;;return values.
       (cmpl ebx fpr)
       (jne (label L_cont_mult_move_args))
@@ -4663,9 +4798,8 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  still   contains  the  encoded  number   of  arguments  and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;EAX contains  the encoded number of  arguments and "pcb->next_k"
+      ;;references the continuation object we must go back to.
       ;;
       (jmp (mem disp-multivalue-rp ebx))
 
@@ -4695,10 +4829,16 @@
       (movl edx (mem ebx ecx))	;store arg from EDX to dest slot
       (cmpl ecx eax)		;moved all?
       (jne (label L_cont_mult_copy_loop))
-      ;;Store "pcb->frame_base" in the Frame Pointer Register.
+      ;;Store  "pcb->frame_base   -  wordsize"  in  the   Frame  Pointer
+      ;;Register.
       (movl ebx fpr)
-      ;;Load in EBX  the machine word from the address  in EBX.  Now EBX
-      ;;== ik_underflow_handler.
+      ;;Load in EBX  the machine word from the address  in EBX.  This is
+      ;;like the C language code:
+      ;;
+      ;;   EBX = *EBX;
+      ;;
+      ;;Now EBX = ik_underflow_handler.
+      ;;
       (movl (mem 0 ebx) ebx)
       ;;Jump to the multivalue underflow handler, retrieving its address
       ;;by adding its offset  to the address "ik_underflow_handler"; see
@@ -4710,12 +4850,17 @@
       ;;   |----------------------|
       ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
       ;;   |----------------------|
+      ;;   |    return value 0    |
+      ;;   |----------------------|
+      ;;   |    return value 1    |
+      ;;   |----------------------|
+      ;;   |    return value 2    |
+      ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  still   contains  the  encoded  number   of  arguments  and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;EAX contains  the encoded number of  arguments and "pcb->next_k"
+      ;;references the continuation object we must go back to.
       (jmp (mem disp-multivalue-rp ebx))
       ))
 
@@ -4739,7 +4884,7 @@
     ;;         high memory
     ;;   |                      |
     ;;   |----------------------|
-    ;;   |     return address   | <-- Frame Pointer Register (%esp)
+    ;;   |     return address   | <-- Frame Pointer Register
     ;;   |----------------------|
     ;;   |      argument 0      |
     ;;   |----------------------|
@@ -4767,13 +4912,13 @@
       ;;Store on the  stack a reference to the closure  object (from the
       ;;Closure  Pointer Register)  as  first argument  to  the call  to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.
-      (movl cpr (mem ($fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Decode  the incorrect  number  of  arguments, so  that  it is  a
       ;;non-negative fixnum.
       (negl eax)
       ;;Store on the  stack the incorrect number of  arguments as second
       ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl eax (mem ($fx- 0 ($fx* 2 wordsize)) fpr))
+      (movl eax (mem (fx- (fx* 2 wordsize)) fpr))
       ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
       ;;symbol  object  containing a  reference  to  the closure  object
       ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
@@ -4791,10 +4936,10 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;SL-MV-ERROR-RP-LABEL This subroutine is called whenever an attempt
-    ;;to return zero  or 2 or more  values to a single  value context is
-    ;;performed, and  the receiving  function just  wants to  ignore the
-    ;;error.
+    ;;SL-MV-IGNORE-RP-LABEL  This  subroutine   is  called  whenever  an
+    ;;attempt  to return  zero or  2 or  more values  to a  single value
+    ;;context is  performed, and  the receiving  function just  wants to
+    ;;ignore the error.
     ;;
     ((public-function		sl-mv-ignore-rp-label)
      (entry-point-label		SL_multiple_values_ignore_rp)
@@ -4850,11 +4995,11 @@
 ;;; --------------------------------------------------------------------
 
     ;;Implementation of  the function  VALUES.  The arguments  to VALUES
-    ;;are the return values of VALUES.  When arriving from a call:
+    ;;are the return values of VALUES.  When arriving here from a call:
     ;;
     ;;   (values ret-val-0 ret-val-1 ret-val-2)
     ;;
-    ;;here the situation on the Scheme stack is:
+    ;;the situation on the Scheme stack is:
     ;;
     ;;         high memory
     ;;   |                      |
@@ -4881,6 +5026,9 @@
     ;;  and  EAX untouched  and jumps to  the multivalue  assembly label
     ;;  associated to "return address".
     ;;
+    ;;Notice that if the return address is ik_underflow_handler: nothing
+    ;;special needs to be done.
+    ;;
     ((public-function sl-values-label)
      (entry-point-label		SL_values)
      (number-of-free-variables	0)
@@ -4896,8 +5044,9 @@
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
-      ;;Return  many values.   Retrieve  the address  of the  multivalue
-      ;;assembly label by adding DISP-MULTIVALUE-RP to "return address".
+      ;;Return  0,  2 or  more  values.   Retrieve  the address  of  the
+      ;;multivalue  assembly  label   by  adding  DISP-MULTIVALUE-RP  to
+      ;;"return address".
       (label L_values_many_values)
       (movl (mem 0 fpr) ebx)
       (jmp (mem disp-multivalue-rp ebx))
@@ -4905,7 +5054,7 @@
       ;;Return a  single value.  Store  in EAX the single  return value,
       ;;then "ret".
       (label L_values_one_value)
-      (movl (mem (fx- 0 wordsize) fpr) eax)
+      (movl (mem (fx- wordsize) fpr) eax)
       (ret)
       ))
 
@@ -4961,7 +5110,7 @@
       ;;3..Check that EBX actually contains a reference to object tagged
       ;;   as closure; else jump to the appropriate error handler.
       ;;
-      (movl (mem (fx- 0 wordsize) fpr) ebx)
+      (movl (mem (fx- wordsize) fpr) ebx)
       (movl ebx cpr)
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
@@ -4971,8 +5120,26 @@
       ;;   fixnum zero.
       ;;
       ;;5..Call the producer closure in  CPR executing a "call" assembly
-      ;;   instruction.   The situation  on the  stack right  before the
-      ;;   "call" instruction is:
+      ;;   instruction.
+      ;;
+      ;;The situation  on the stack  right before entering  the assembly
+      ;;chunk generated by COMPILE-CALL-TABLE is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |  producer reference  |
+      ;;   |----------------------|
+      ;;   |  consumer reference  |
+      ;;   |----------------------|
+      ;;   |     empty word       |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;and such chunk adjusts the FPR to:
       ;;
       ;;         high memory
       ;;   |                      |
@@ -4988,8 +5155,12 @@
       ;;   |                      |
       ;;          low memory
       ;;
+      ;;before performing the "call"  instruction.  After returning from
+      ;;the call: the  assembly chunk adjusts back the  FPR to reference
+      ;;the CWV return address.
+      ;;
       (movl (int (argc-convention 0)) eax)
-      (compile-call-frame
+      (compile-call-table
        3	;The  frame-words-count is  3  because on  the stack  of
 		;CALL-WITH-VALUES  there  are  3 machine  words:  return
 		;address, producer closure, consumer closure.
@@ -5039,7 +5210,8 @@
       ;;
       ;;Store in EBX a reference to the consumer closure object.
       (movl (mem (fx* -2 wordsize) fpr) ebx)
-      ;;Store in EBX a reference to the consumer closure object.
+      ;;Store in the Continuation Pointer  Register (CPR) a reference to
+      ;;the consumer closure object.
       (movl ebx cpr)
       ;;Check that EBX actually contains  a reference to closure object;
       ;;else jump to the appropriate error handler.
@@ -5048,7 +5220,7 @@
       (jne (label SL_nonprocedure))
       ;;Store the  returned value on  the stack, right below  the return
       ;;address.
-      (movl eax (mem (fx- 0 wordsize) fpr))
+      (movl eax (mem (fx- wordsize) fpr))
       ;;We will call the consumer closure with one argument.
       (movl (int (argc-convention 1)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
@@ -5175,7 +5347,7 @@
       ;;
       (label SL_nonprocedure)
       ;;Put on the stack the offending object.
-      (movl cpr (mem (fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Retrieve the reference  of the error handler closure  and put it
       ;;into CPR.
       (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
@@ -5226,7 +5398,7 @@
       ;;Put on the stack a  reference to the closure object implementing
       ;;CALL-WITH-VALUES,        as       first        argument       to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.
-      (movl cpr (mem (fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Decode the  number of  arguments, so that  it is  a non-negative
       ;;fixnum.
       (negl eax)
@@ -5253,7 +5425,7 @@
 
 ;;;; external code for actual code generation
 
-(include/verbose "ikarus.compiler.altcogen.ss")
+(include "ikarus.compiler.altcogen.ss" #t)
 
 
 (define (unparse-recordized-code x)

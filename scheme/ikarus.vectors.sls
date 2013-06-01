@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2011  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -14,6 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus vectors)
   (export
     make-vector		vector
@@ -23,7 +24,8 @@
     vector-map		vector-for-each
     vector-for-all	vector-exists
     vector-fill!	vector-append
-    vector-copy		vector-copy!)
+    vector-copy		vector-copy!
+    vector-resize)
   (import (except (ikarus)
 		  make-vector		vector
 		  subvector		vector-length
@@ -32,64 +34,36 @@
 		  vector-map		vector-for-each
 		  vector-for-all	vector-exists
 		  vector-fill!		vector-append
-		  vector-copy		vector-copy!)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+		  vector-copy		vector-copy!
+		  vector-resize)
+    (vicare arguments validation)
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (vector who obj)
-  (vector? obj)
-  (assertion-violation who "expected vector as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (length who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as vector length argument" obj))
-
-(define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected fixnum as vector index argument" obj))
-
-(define-argument-validation (index-for who idx vec)
-  (unsafe.fx< idx (unsafe.vector-length vec))
-  (assertion-violation who "index argument is out of range for vector" idx vec))
-
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (start-index-and-length who idx len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= idx len)
+  ($fx<= idx len)
   (assertion-violation who "start index argument out of range for vector" idx len))
 
 (define-argument-validation (end-index-and-length who idx len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= idx len)
+  ($fx<= idx len)
   (assertion-violation who "end index argument out of range for vector" idx len))
 
 (define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= start end)
+  ($fx<= start end)
   (assertion-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (count who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as items count argument" obj))
-
 (define-argument-validation (start-index-and-count-and-length who start count len)
-  (unsafe.fx<= (unsafe.fx+ start count) len)
+  ($fx<= ($fx+ start count) len)
   (assertion-violation who
     (vector-append "count argument out of range for vector of length " (number->string len)
 		   " and start index " (number->string start))
@@ -98,7 +72,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (vector-of-length who vec len)
-  (unsafe.fx= len (unsafe.vector-length vec))
+  ($fx= len ($vector-length vec))
   (assertion-violation who "expected vector arguments with the same length" len vec))
 
 (define-argument-validation (list-of-vectors-of-length who who1 ell len)
@@ -108,11 +82,11 @@
   (let next-vector ((ell ell)
 		    (len len))
     (or (null? ell)
-	(let ((a (unsafe.car ell)))
+	(let ((a ($car ell)))
 	  (with-arguments-validation (who1)
 	      ((vector a))
-	    (and (unsafe.fx= (unsafe.vector-length a) len)
-		 (next-vector (unsafe.cdr ell) len))))))
+	    (and ($fx= ($vector-length a) len)
+		 (next-vector ($cdr ell) len))))))
   (assertion-violation who "expected vector arguments with the same length" len ell))
 
 
@@ -124,10 +98,10 @@
 
 ;;;; helpers
 
-(define (%unsafe.vector-copy! src.vec src.start
+(define (%$vector-copy! src.vec src.start
 			      dst.vec dst.start
 			      src.end)
-  (unsafe.vector-copy! src.vec src.start
+  ($vector-copy! src.vec src.start
 		       dst.vec dst.start
 		       src.end))
 
@@ -139,7 +113,7 @@
   (define who 'vector-length)
   (with-arguments-validation (who)
       ((vector vec))
-    (unsafe.vector-length vec)))
+    ($vector-length vec)))
 
 (define make-vector
   ;;Defined by R6RS.   Return a newly allocated vector  of LEN elements.
@@ -153,16 +127,16 @@
    ((len fill)
     (define who 'make-vector)
     (with-arguments-validation (who)
-	((length len))
-      (let loop ((vec	(unsafe.make-clean-vector len))
+	((non-negative-fixnum	len))
+      (let loop ((vec	($make-clean-vector len))
 		 (i	0)
 		 (len	len)
 		 (fill	fill))
-	(if (unsafe.fx= i len)
+	(if ($fx= i len)
 	    vec
 	  (begin
-	    (unsafe.vector-set! vec i fill)
-	    (loop vec (unsafe.fxadd1 i) len fill))))))))
+	    ($vector-set! vec i fill)
+	    (loop vec ($fxadd1 i) len fill))))))))
 
 (define vector
   ;;Defined  by R6RS.  Return  a newly  allocated vector  whose elements
@@ -172,44 +146,44 @@
    (()
     '#())
    ((one)
-    (let ((vec (unsafe.make-clean-vector 1)))
-      (unsafe.vector-set! vec 0 one)
+    (let ((vec ($make-clean-vector 1)))
+      ($vector-set! vec 0 one)
       vec))
    ((one two)
-    (let ((vec (unsafe.make-clean-vector 2)))
-      (unsafe.vector-set! vec 0 one)
-      (unsafe.vector-set! vec 1 two)
+    (let ((vec ($make-clean-vector 2)))
+      ($vector-set! vec 0 one)
+      ($vector-set! vec 1 two)
       vec))
    ((one two three)
-    (let ((vec (unsafe.make-clean-vector 3)))
-      (unsafe.vector-set! vec 0 one)
-      (unsafe.vector-set! vec 1 two)
-      (unsafe.vector-set! vec 2 three)
+    (let ((vec ($make-clean-vector 3)))
+      ($vector-set! vec 0 one)
+      ($vector-set! vec 1 two)
+      ($vector-set! vec 2 three)
       vec))
    ((one two three four)
-    (let ((vec (unsafe.make-clean-vector 4)))
-      (unsafe.vector-set! vec 0 one)
-      (unsafe.vector-set! vec 1 two)
-      (unsafe.vector-set! vec 2 three)
-      (unsafe.vector-set! vec 3 four)
+    (let ((vec ($make-clean-vector 4)))
+      ($vector-set! vec 0 one)
+      ($vector-set! vec 1 two)
+      ($vector-set! vec 2 three)
+      ($vector-set! vec 3 four)
       vec))
    ((one . ls)
     (define (length ls n)
       (if (null? ls)
 	  n
-	(length (unsafe.cdr ls) (unsafe.fxadd1 n))))
+	(length ($cdr ls) ($fxadd1 n))))
     (define (loop v ls i n)
-      (if (unsafe.fx= i n)
+      (if ($fx= i n)
 	  v
 	(begin
-	  (unsafe.vector-set! v i (unsafe.car ls))
-	  (loop v (unsafe.cdr ls) (unsafe.fxadd1 i) n))))
+	  ($vector-set! v i ($car ls))
+	  (loop v ($cdr ls) ($fxadd1 i) n))))
     (define who 'make-vector)
     (let* ((ls (cons one ls))
 	   (n  (length ls 0)))
       (with-arguments-validation (who)
-	  ((length n))
-	(loop (unsafe.make-clean-vector n) ls 0 n))))))
+	  ((non-negative-fixnum	n))
+	(loop ($make-clean-vector n) ls 0 n))))))
 
 (define (vector-fill! vec fill)
   ;;Defined by  R6RS.  Store  FILL in every  element of VEC  and returns
@@ -220,11 +194,11 @@
       ((vector vec))
     (let f ((vec  vec)
 	    (i    0)
-	    (len  (unsafe.vector-length vec))
+	    (len  ($vector-length vec))
 	    (fill fill))
-      (unless (unsafe.fx= i len)
-	(unsafe.vector-set! vec i fill)
-	(f vec (unsafe.fxadd1 i) len fill)))))
+      (unless ($fx= i len)
+	($vector-set! vec i fill)
+	(f vec ($fxadd1 i) len fill)))))
 
 
 (define (vector-ref vec idx)
@@ -233,10 +207,9 @@
   ;;
   (define who 'vector-ref)
   (with-arguments-validation (who)
-      ((vector		vec)
-       (index		idx)
-       (index-for	idx vec))
-    (unsafe.vector-ref vec idx)))
+      ((vector			vec)
+       (index-for-vector	vec idx))
+    ($vector-ref vec idx)))
 
 (define (vector-set! vec idx new-item)
   ;;Defined by R6RS.  IDX must be  a valid index of VEC.  Store NEW-ITEM
@@ -247,10 +220,9 @@
   ;;
   (define who 'vector-set!)
   (with-arguments-validation (who)
-      ((vector		vec)
-       (index		idx)
-       (index-for	idx vec))
-    (unsafe.vector-set! vec idx new-item)))
+      ((vector			vec)
+       (index-for-vector	vec idx))
+    ($vector-set! vec idx new-item)))
 
 
 (define (vector->list vec)
@@ -259,15 +231,15 @@
   ;;
   (define who 'vector->list)
   (define (f vec idx ls)
-    (if (unsafe.fx< idx 0)
+    (if ($fx< idx 0)
 	ls
-      (f vec (unsafe.fxsub1 idx) (cons (unsafe.vector-ref vec idx) ls))))
+      (f vec ($fxsub1 idx) (cons ($vector-ref vec idx) ls))))
   (with-arguments-validation (who)
       ((vector vec))
-    (let ((len (unsafe.vector-length vec)))
-      (if (unsafe.fxzero? len)
+    (let ((len ($vector-length vec)))
+      (if ($fxzero? len)
 	  '()
-	(f vec (unsafe.fxsub1 len) '())))))
+	(f vec ($fxsub1 len) '())))))
 
 (define (list->vector ls)
   ;;Defined by R6RS.   Return a newly created vector  initialized to the
@@ -276,14 +248,14 @@
   (define who 'list->vector)
   (define (race h t ls n)
     (cond ((pair? h)
-	   (let ((h (unsafe.cdr h)))
+	   (let ((h ($cdr h)))
 	     (cond ((pair? h)
 		    (if (not (eq? h t))
-			(race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
+			(race ($cdr h) ($cdr t) ls ($fx+ n 2))
 		      (assertion-violation who
 			"circular list is invalid as argument" ls)))
 		   ((null? h)
-		    (unsafe.fx+ n 1))
+		    ($fx+ n 1))
 		   (else
 		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
@@ -294,14 +266,14 @@
   (define (fill v i ls)
     (if (null? ls)
 	v
-      (let ((c (unsafe.car ls)))
-	(unsafe.vector-set! v i c)
-	(fill v (unsafe.fxadd1 i) (cdr ls)))))
+      (let ((c ($car ls)))
+	($vector-set! v i c)
+	(fill v ($fxadd1 i) (cdr ls)))))
 
   (let ((n (race ls ls ls 0)))
     (with-arguments-validation (who)
-	((length n))
-      (fill (unsafe.make-clean-vector n) 0 ls))))
+	((non-negative-fixnum	n))
+      (fill ($make-clean-vector n) 0 ls))))
 
 
 (module (vector-map)
@@ -326,14 +298,14 @@
   (define who 'vector-map)
 
   (define (ls->vec ls n)
-    (let f ((v  (unsafe.make-clean-vector n))
+    (let f ((v  ($make-clean-vector n))
 	    (n  n)
 	    (ls ls))
       (if (null? ls)
 	  v
-	(let ((n (unsafe.fxsub1 n)))
-	  (unsafe.vector-set! v n (unsafe.car ls))
-	  (f v n (unsafe.cdr ls))))))
+	(let ((n ($fxsub1 n)))
+	  ($vector-set! v n ($car ls))
+	  (f v n ($cdr ls))))))
 
   (define vector-map
     ;;Notice that R6RS states:
@@ -388,9 +360,9 @@
 		(i  0)
 		(n  (vector-length v))
 		(ac '()))
-	  (if (unsafe.fx= i n)
+	  (if ($fx= i n)
 	      (ls->vec ac n)
-	    (f p v (unsafe.fxadd1 i) n (cons (p (vector-ref v i)) ac))))))
+	    (f p v ($fxadd1 i) n (cons (p (vector-ref v i)) ac))))))
 
      ((p v0 v1)
       (with-arguments-validation (who)
@@ -398,7 +370,7 @@
 	   (vector	v0)
 	   (vector	v1))
 	(let ((n (vector-length v0)))
-	  (unless (unsafe.fx= n (unsafe.vector-length v1))
+	  (unless ($fx= n ($vector-length v1))
 	    (assertion-violation who "length mismatch" v0 v1))
 	  (let f ((p  p)
 		  (v0 v0)
@@ -406,10 +378,10 @@
 		  (i  0)
 		  (n  n)
 		  (ac '()))
-	    (if (unsafe.fx= i n)
+	    (if ($fx= i n)
 		(ls->vec ac n)
-	      (f p v0 v1 (unsafe.fxadd1 i) n
-		 (cons (p (unsafe.vector-ref v0 i) (unsafe.vector-ref v1 i)) ac)))))))
+	      (f p v0 v1 ($fxadd1 i) n
+		 (cons (p ($vector-ref v0 i) ($vector-ref v1 i)) ac)))))))
 
      ((p v0 v1 . v*)
       (with-arguments-validation (who)
@@ -421,15 +393,15 @@
 	      ((vector-of-length          v1 n)
 	       (list-of-vectors-of-length who v* n))
 	    (let f ((p p) (v0 v0) (v1 v1) (v* v*) (i 0) (n n) (ac '()))
-	      (if (unsafe.fx= i n)
+	      (if ($fx= i n)
 		  (ls->vec ac n)
-		(f p v0 v1 v* (unsafe.fxadd1 i) n
-		   (cons (apply p (unsafe.vector-ref v0 i) (unsafe.vector-ref v1 i)
+		(f p v0 v1 v* ($fxadd1 i) n
+		   (cons (apply p ($vector-ref v0 i) ($vector-ref v1 i)
 				(let f ((i i) (v* v*))
 				  (if (null? v*)
 				      '()
-				    (cons (unsafe.vector-ref (unsafe.car v*) i)
-					  (f i (unsafe.cdr v*))))))
+				    (cons ($vector-ref ($car v*) i)
+					  (f i ($cdr v*))))))
 			 ac))))))))
      ))
 
@@ -458,12 +430,12 @@
     (with-arguments-validation (who)
 	((procedure p)
 	 (vector    v))
-      (let f ((p p) (v v) (i 0) (n (unsafe.vector-length v)))
-	(if (unsafe.fx= i n)
+      (let f ((p p) (v v) (i 0) (n ($vector-length v)))
+	(if ($fx= i n)
 	    (void)
 	  (begin
-	    (p (unsafe.vector-ref v i))
-	    (f p v (unsafe.fxadd1 i) n))))))
+	    (p ($vector-ref v i))
+	    (f p v ($fxadd1 i) n))))))
 
    ((p v0 v1)
     (define who 'vector-for-each)
@@ -471,16 +443,16 @@
 	((procedure p)
 	 (vector    v0)
 	 (vector    v1))
-      (let ((n (unsafe.vector-length v0)))
+      (let ((n ($vector-length v0)))
 	(with-arguments-validation (who)
 	    ((vector-of-length v1 n))
 	  (let f ((p p) (v0 v0) (v1 v1) (i 0) (n n))
-	    (if (unsafe.fx= i n)
+	    (if ($fx= i n)
 		(void)
 	      (begin
-		(p (unsafe.vector-ref v0 i)
-		   (unsafe.vector-ref v1 i))
-		(f p v0 v1 (unsafe.fxadd1 i) n))))))))
+		(p ($vector-ref v0 i)
+		   ($vector-ref v1 i))
+		(f p v0 v1 ($fxadd1 i) n))))))))
 
    ((p v0 v1 . v*)
     (define who 'vector-for-each)
@@ -488,21 +460,21 @@
 	((procedure p)
 	 (vector    v0)
 	 (vector    v1))
-      (let ((n (unsafe.vector-length v0)))
+      (let ((n ($vector-length v0)))
 	(with-arguments-validation (who)
 	    ((vector-of-length          v1 n)
 	     (list-of-vectors-of-length who v* n))
 	  (let f ((p p) (v0 v0) (v1 v1) (v* v*) (i 0) (n n))
-	    (if (unsafe.fx= i n)
+	    (if ($fx= i n)
 		(void)
 	      (begin
-		(apply p (unsafe.vector-ref v0 i) (unsafe.vector-ref v1 i)
+		(apply p ($vector-ref v0 i) ($vector-ref v1 i)
 		       (let f ((i i) (v* v*))
 			 (if (null? v*)
 			     '()
-			   (cons (unsafe.vector-ref (unsafe.car v*) i)
-				 (f i (unsafe.cdr v*))))))
-		(f p v0 v1 v* (unsafe.fxadd1 i) n))))))))
+			   (cons ($vector-ref ($car v*) i)
+				 (f i ($cdr v*))))))
+		(f p v0 v1 v* ($fxadd1 i) n))))))))
    ))
 
 
@@ -572,14 +544,14 @@
     (with-arguments-validation (who)
 	((vector vec1)
 	 (vector vec2))
-      (let* ((len1	(unsafe.vector-length vec1))
-	     (len2	(unsafe.vector-length vec2))
+      (let* ((len1	($vector-length vec1))
+	     (len2	($vector-length vec2))
 	     (dst.len	(+ len1 len2)))
 	(with-arguments-validation (who)
-	    ((length dst.len))
-	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
-	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
-	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
+	    ((non-negative-fixnum dst.len))
+	  (let ((dst.vec ($make-clean-vector dst.len)))
+	    (%$vector-copy! vec1 0 dst.vec 0    len1)
+	    (%$vector-copy! vec2 0 dst.vec len1 len2)
 	    dst.vec)))))
 
    ((vec1 vec2 vec3)
@@ -588,16 +560,16 @@
 	((vector vec1)
 	 (vector vec2)
 	 (vector vec3))
-      (let* ((len1	(unsafe.vector-length vec1))
-	     (len2	(unsafe.vector-length vec2))
-	     (len3	(unsafe.vector-length vec3))
+      (let* ((len1	($vector-length vec1))
+	     (len2	($vector-length vec2))
+	     (len3	($vector-length vec3))
 	     (dst.len	(+ len1 len2 len3)))
 	(with-arguments-validation (who)
-	    ((length  dst.len))
-	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
-	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
-	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
-	    (%unsafe.vector-copy! vec3 0 dst.vec (unsafe.fx+ len1 len2) len3)
+	    ((non-negative-fixnum  dst.len))
+	  (let ((dst.vec ($make-clean-vector dst.len)))
+	    (%$vector-copy! vec1 0 dst.vec 0    len1)
+	    (%$vector-copy! vec2 0 dst.vec len1 len2)
+	    (%$vector-copy! vec3 0 dst.vec ($fx+ len1 len2) len3)
 	    dst.vec)))))
 
    ((vec1 vec2 vec3 vec4)
@@ -607,20 +579,20 @@
 	 (vector  vec2)
 	 (vector  vec3)
 	 (vector  vec4))
-      (let* ((len1	(unsafe.vector-length vec1))
-	     (len2	(unsafe.vector-length vec2))
-	     (len3	(unsafe.vector-length vec3))
-	     (len4	(unsafe.vector-length vec4))
+      (let* ((len1	($vector-length vec1))
+	     (len2	($vector-length vec2))
+	     (len3	($vector-length vec3))
+	     (len4	($vector-length vec4))
 	     (dst.len	(+ len1 len2 len3 len4)))
 	(with-arguments-validation (who)
-	    ((length  dst.len))
-	  (let ((dst.vec (unsafe.make-clean-vector dst.len)))
-	    (%unsafe.vector-copy! vec1 0 dst.vec 0    len1)
-	    (%unsafe.vector-copy! vec2 0 dst.vec len1 len2)
-	    (let ((dst.start (unsafe.fx+ len1 len2)))
-	      (%unsafe.vector-copy! vec3 0 dst.vec dst.start len3)
-	      (let ((dst.start (unsafe.fx+ dst.start len3)))
-		(%unsafe.vector-copy! vec4 0 dst.vec dst.start len4)))
+	    ((non-negative-fixnum  dst.len))
+	  (let ((dst.vec ($make-clean-vector dst.len)))
+	    (%$vector-copy! vec1 0 dst.vec 0    len1)
+	    (%$vector-copy! vec2 0 dst.vec len1 len2)
+	    (let ((dst.start ($fx+ len1 len2)))
+	      (%$vector-copy! vec3 0 dst.vec dst.start len3)
+	      (let ((dst.start ($fx+ dst.start len3)))
+		(%$vector-copy! vec4 0 dst.vec dst.start len4)))
 	    dst.vec)))))
 
    ((vec1 . vecs)
@@ -628,25 +600,25 @@
     (define (%length-and-validation vecs len)
       (if (null? vecs)
 	  len
-	(let ((vec (unsafe.car vecs)))
+	(let ((vec ($car vecs)))
 	  (with-arguments-validation (who)
 	      ((vector vec))
-	    (%length-and-validation (unsafe.cdr vecs) (+ len (unsafe.vector-length vec)))))))
+	    (%length-and-validation ($cdr vecs) (+ len ($vector-length vec)))))))
 
     (define (%fill-vectors dst.vec vecs dst.start)
       (if (null? vecs)
 	  dst.vec
-	(let* ((src.vec (unsafe.car vecs))
-	       (src.len (unsafe.vector-length src.vec)))
+	(let* ((src.vec ($car vecs))
+	       (src.len ($vector-length src.vec)))
 	  (begin
-	    (unsafe.vector-copy! src.vec 0 dst.vec dst.start src.len)
-	    (%fill-vectors dst.vec (unsafe.cdr vecs) (unsafe.fx+ dst.start src.len))))))
+	    ($vector-copy! src.vec 0 dst.vec dst.start src.len)
+	    (%fill-vectors dst.vec ($cdr vecs) ($fx+ dst.start src.len))))))
 
     (let* ((vecs    (cons vec1 vecs))
            (dst.len (%length-and-validation vecs 0)))
       (with-arguments-validation (who)
-	  ((length dst.len))
-	(%fill-vectors (unsafe.make-clean-vector dst.len) vecs 0))))))
+	  ((non-negative-fixnum dst.len))
+	(%fill-vectors ($make-clean-vector dst.len) vecs 0))))))
 
 
 (define (subvector vec start end)
@@ -661,15 +633,15 @@
   ;;
   (define who 'subvector)
   (with-arguments-validation (who)
-      ((vector	vec)
-       (index	start)
-       (index	end))
-    (let ((len (unsafe.vector-length vec)))
+      ((vector			vec)
+       (non-negative-fixnum	start)
+       (non-negative-fixnum	end))
+    (let ((len ($vector-length vec)))
       (with-arguments-validation (who)
 	  ((start-index-and-length	start len)
 	   (end-index-and-length	end   len)
 	   (start-and-end-indices	start end))
-	(unsafe.subvector vec start end)))))
+	($subvector vec start end)))))
 
 (define (vector-copy vec)
   ;;Defined by Vicare.  Return a newly allocated copy of the given VEC.
@@ -677,8 +649,33 @@
   (define who 'vector-copy)
   (with-arguments-validation (who)
       ((vector vec))
-    (let ((end (unsafe.vector-length vec)))
-      (unsafe.subvector vec 0 end))))
+    (let ((end ($vector-length vec)))
+      ($subvector vec 0 end))))
+
+(define vector-resize
+  (case-lambda
+   ((vec new-len)
+    (vector-resize vec new-len #f))
+   ((vec new-len fill)
+    (define who 'vector-resize)
+    (with-arguments-validation (who)
+	((vector		vec)
+	 (non-negative-fixnum	new-len))
+      ($vector-resize vec new-len fill)))
+   ))
+
+(define ($vector-resize old-vec new-len fill)
+  (let loop ((new-vec	($make-clean-vector new-len))
+	     (old-len	($vector-length old-vec))
+	     (i		0)
+	     (fill	fill))
+    (if ($fx= i new-len)
+	new-vec
+      (begin
+	(if ($fx< i old-len)
+	    ($vector-set! new-vec i ($vector-ref old-vec i))
+	  ($vector-set! new-vec i fill))
+	(loop new-vec old-len ($fxadd1 i) fill)))))
 
 (define (vector-copy! src.vec src.start dst.vec dst.start count)
   ;;Defined  by  Vicare.  Copy  COUNT  items  from  SRC.VEC starting  at
@@ -687,29 +684,29 @@
   ;;
   (define who 'vector-copy!)
   (with-arguments-validation (who)
-      ((vector		src.vec)
-       (vector		dst.vec)
-       (index		src.start)
-       (index		dst.start)
-       (count		count))
-    (let ((src.len (unsafe.vector-length src.vec))
-	  (dst.len (unsafe.vector-length dst.vec)))
+      ((vector			src.vec)
+       (vector			dst.vec)
+       (non-negative-fixnum	src.start)
+       (non-negative-fixnum	dst.start)
+       (non-negative-fixnum	count))
+    (let ((src.len ($vector-length src.vec))
+	  (dst.len ($vector-length dst.vec)))
       (with-arguments-validation (who)
 	  ((start-index-and-length		src.start src.len)
 	   (start-index-and-length		dst.start dst.len)
 	   (start-index-and-count-and-length	src.start count src.len)
 	   (start-index-and-count-and-length	dst.start count dst.len))
-	(cond ((unsafe.fxzero? count)
+	(cond (($fxzero? count)
 	       (void))
 	      ((eq? src.vec dst.vec)
-	       (cond ((unsafe.fx< dst.start src.start)
-		      (unsafe.vector-self-copy-forwards!  src.vec src.start dst.start count))
-		     ((unsafe.fx> dst.start src.start)
-		      (unsafe.vector-self-copy-backwards! src.vec src.start dst.start count))
+	       (cond (($fx< dst.start src.start)
+		      ($vector-self-copy-forwards!  src.vec src.start dst.start count))
+		     (($fx> dst.start src.start)
+		      ($vector-self-copy-backwards! src.vec src.start dst.start count))
 		     (else (void))))
 	      (else
-	       (let ((src.end (unsafe.fx+ src.start count)))
-		 (unsafe.vector-copy! src.vec src.start dst.vec dst.start src.end))))))))
+	       (let ((src.end ($fx+ src.start count)))
+		 ($vector-copy! src.vec src.start dst.vec dst.start src.end))))))))
 
 
 ;;;; done

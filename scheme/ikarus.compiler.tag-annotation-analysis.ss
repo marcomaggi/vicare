@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(include/verbose "ikarus.compiler.ontology.ss")
+(include "ikarus.compiler.ontology.ss" #t)
 
 (module (introduce-tags tag-analysis-output)
   (define who 'introduce-tags)
@@ -194,10 +194,14 @@
   (define (apply-primcall op rand* env)
     (define (return t)
       (values (make-funcall (make-primref op) rand*) env t))
-    (define-inline (%inject . ?args)
-      (inject op rand* env . ?args))
-    (define-inline (%inject* . ?args)
-      (inject* op rand* env . ?args))
+    (define-syntax %inject
+      (syntax-rules ()
+	((_ . ?args)
+	 (inject op rand* env . ?args))))
+    (define-syntax %inject*
+      (syntax-rules ()
+	((_ . ?args)
+	 (inject* op rand* env . ?args))))
     (case-symbols op
       ((cons)
        (return T:pair))

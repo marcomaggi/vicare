@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{61} a more general @func{cond} clause
+@cindex @library{srfi 61}, library
+@cindex @library{srfi 61 cond}, library
+@cindex Library @library{srfi 61}
+@cindex Library @library{srfi 61 cond}
 
 
 The library @library{srfi :61} are written by Taylor Campbell as the

@@ -9,7 +9,7 @@
 ;;;	Built in  binding to the CRE2  library: a C wrapper  for the RE2
 ;;;	regular expressions library from Google.
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -58,19 +58,17 @@
     match
     )
   (import (vicare)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-argument-validation
-	  with-arguments-validation
-	  define-inline)
-    (prefix (vicare unsafe-operations)
-	    unsafe.)
+	  with-arguments-validation)
+    (vicare unsafe operations)
     (prefix (only (vicare ffi)
 		  dlopen
 		  pointer?
 		  pointer-null?
 		  null-pointer)
 	    ffi.)
-    (prefix (only (vicare words)
+    (prefix (only (vicare platform words)
 		  signed-int?)
 	    words.))
 
@@ -112,11 +110,11 @@
   (assertion-violation who "expected a positive signed int as argument" obj))
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (false/index who obj)
-  (or (not obj) (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+  (or (not obj) (and (fixnum? obj) ($fx<= 0 obj)))
   (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 ;;; --------------------------------------------------------------------

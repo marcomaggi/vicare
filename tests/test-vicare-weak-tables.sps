@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare weak-hashtables)
+  (vicare containers weak-hashtables)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -39,7 +39,7 @@
 
 
 (module (alt-cogen
-	 compile-call-frame
+	 compile-call-table
 	 alt-cogen.introduce-primcalls
 	 alt-cogen.eliminate-fix
 	 alt-cogen.insert-engine-checks
@@ -785,7 +785,7 @@
 
 ;;;; some external code
 
-(include/verbose "pass-specify-rep.ss")
+(include "pass-specify-rep.ss" #t)
 
 
 ;;;; some CPU registers stuff
@@ -840,8 +840,10 @@
   (define-inline (%locals-cons A)
     (locals (cons A (locals))))
 
-  (define-inline (%locals-cons* A0 A ...)
-    (locals (cons* A0 A ... (locals))))
+  (define-syntax %locals-cons*
+    (syntax-rules ()
+      ((_ A0 A ...)
+       (locals (cons* A0 A ... (locals))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -945,58 +947,73 @@
 	  ((primcall op rands)
 	   (case-symbols op
 	     (($call-with-underflow-handler)
-	      ;;This    is    used    by   the    primitive    operation
-	      ;;$SEAL-FRAME-AND-CALL  to  implement  %PRIMITIVE-CALL/CF,
-	      ;;the heart of  CALL/CC.  Remember that %PRIMITIVE-CALL/CF
-	      ;;is used as follows:
+	      ;;This  primitive  is  used  by  the  primitive  operation
+	      ;;$SEAL-FRAME-AND-CALL to  implement the heart  of CALL/CC
+	      ;;(call with current continuation)  and CALL/CF (call with
+	      ;;current frame), file  "ikarus.control.sls".  Let's super
+	      ;;simplify and comment the code  starting with the call to
+	      ;;%PRIMITIVE-CALL/CF which  is the  heart of  both CALL/CC
+	      ;;and CALL/CF.
 	      ;;
-	      ;;   (define (func kont-func) ---)
-	      ;;   (%primitive-call/cf func)
+	      ;;Remember that:
 	      ;;
-	      ;;this "call  with underflow  handler" has the  purpose of
-	      ;;calling the function FUNC.
+	      ;;* FPR stands for Frame Pointer Register;
 	      ;;
-	      ;;When arriving here the situation of the Scheme stack is:
+	      ;;*  PCR  stands  for  Process  Control  Register  and  it
+	      ;;  references the structure PCB defined at the C language
+	      ;;  level;
 	      ;;
-	      ;;        high memory
-	      ;; |                      |
-	      ;; |----------------------|
-	      ;; | ik_underflow_handler |
-	      ;; |----------------------|                           --
-	      ;;           ...                                      .
-	      ;; |----------------------| --                        . full stack
-	      ;; | uplevel return addr  | .                         . continuation
-	      ;; |----------------------| . uplevel                 . size
-	      ;; |   uplevel argument   | . framesize               .
-	      ;; |----------------------| .                         .
-	      ;;           ...            .                         .
-	      ;; |----------------------| --                        .
-	      ;; |    return address    | <-- FPR = pcb->frame_base .
-	      ;; |----------------------|                           --
-	      ;; |  closure ref = FUNC  | --> closure object
-	      ;; |----------------------|
-	      ;; |                      |
-	      ;;        low memory
+	      ;;* CPR  stands for Closure  Pointer Register and  it must
+	      ;;   contain  a  reference  to the  closure  object  being
+	      ;;  executed.
 	      ;;
-	      ;;where   "return  address"   leads  to   the  caller   of
-	      ;;%PRIMITIVE-CALL/CF.  ARGC-REGISTER  contains the encoded
-	      ;;number of arguments, counting the single argument FUNC.
+	      ;;* ARGC-REGISTER stands for Argument Count Register.
+	      ;;
+	      ;;When arriving here  the scenario of the  Scheme stack is
+	      ;;the one left by $SEAL-FRAME-AND-CALL:
+	      ;;
+	      ;;         high memory
+	      ;;   |                      |
+	      ;;   |----------------------|
+	      ;;   | ik_underflow_handler |
+	      ;;   |----------------------|                           --
+	      ;;     ... other frames ...                             .
+	      ;;   |----------------------|                           .
+	      ;;   |      local value     |                           . freezed
+	      ;;   |----------------------|                           . frames
+	      ;;   |      local value     |                           .
+	      ;;   |----------------------|                           .
+	      ;;   |     return address   | <- FPR = pcb->frame_base  .
+	      ;;   |----------------------|                           --
+	      ;;   |         func         | -> closure object
+	      ;;   |----------------------|
+	      ;;             ...
+	      ;;   |----------------------|
+	      ;;   |      free word       | <- pcb->stack_base
+	      ;;   |----------------------|
+	      ;;   |                      |
+	      ;;          low memory
+	      ;;
+	      ;;ARGC-REGISTER contains the  encoded number of arguments,
+	      ;;counting the single argument FUNC to %PRIMITIVE-CALL/CF.
+	      ;;The reference to the just created continuation object is
+	      ;;in   some  CPU   register.   The   raw  memory   pointer
+	      ;;UNDERFLOW-HANDLER is in some CPU register.
 	      ;;
 	      ;;There are 3 operands in RANDS:
 	      ;;
-	      ;;**A representation  of the variable  location containing
-	      ;;  the underflow  handler: a raw memory  address equal to
-	      ;;  the assembly label "ik_underflow_handler".
+	      ;;**A representation  of the  CPU register  containing the
+	      ;;  underflow handler:  a raw memory address  equal to the
+	      ;;  assembly label "ik_underflow_handler".
 	      ;;
 	      ;;**A  representation  of  the stack  location  containing
 	      ;;  FUNC.
 	      ;;
-	      ;;**A representation of the variable location containing a
+	      ;;**A  representation of  the  CPU  register containing  a
 	      ;;  reference  to the continuation object  referencing the
-	      ;;    whole    Scheme   stack    before   the    call   to
-	      ;;  %PRIMITIVE-CALL/CF.  Such  continuation object is also
-	      ;;    the   top   of   the   PCB's   continuations   stack
-	      ;;  "pcb->next_k".
+	      ;;  freezed frames.  Such  continuation object is also the
+	      ;;  "next process continuation" in the PCB, that is: it is
+	      ;;  the value of the field "pcb->next_k".
 	      ;;
 	      (let ((t0			(unique-var 't))
 		    (t1			(unique-var 't))
@@ -1006,91 +1023,96 @@
 		    (kont-object	($caddr rands)))
 		(%locals-cons* t0 t1 t2)
 		(multiple-forms-sequence
-		 ;;Copy the arguments in variable locations.
+		 ;;Copy the arguments in CPU registers.
 		 (V t0 underflow-handler)
 		 (V t1 kont-object)
 		 (V t2 func)
-		 ;;Move  the  underflow  handler on  the  Scheme  stack,
-		 ;;overwriting the argument FUNC.
+		 ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on
+		 ;;the Scheme stack.
 		 (%move-dst<-src (mkfvar 1) t0)
-		 ;;Move  on  the  stack the  reference  to  continuation
-		 ;;object.
+		 ;;Move the the reference  to continuation object in its
+		 ;;reserved  slog on  the Scheme  stack, as  argument to
+		 ;;THE-FUNC.
 		 (%move-dst<-src (mkfvar 2) t1)
 		 ;;When we arrive here the situation on the Scheme stack
 		 ;;is:
 		 ;;
-		 ;;        high memory
-		 ;; |                      |
-		 ;; |----------------------|
-		 ;; | ik_underflow_handler |
-		 ;; |----------------------|              --
-		 ;;           ...                         .
-		 ;; |----------------------| --           .
-		 ;; | uplevel return addr  | .            .
-		 ;; |----------------------| . uplevel    . full stack
-		 ;; |   uplevel argument   | . framesize  . continuation
-		 ;; |----------------------| .            . size
-		 ;;           ...            .            .
-		 ;; |----------------------| --           .
-		 ;; |    return address    | <-- FPR      .
-		 ;; |----------------------|              --
-		 ;; | ik_underflow_handler |
-		 ;; |----------------------|
-		 ;; | continuation object  |
-		 ;; |----------------------|
-		 ;; |                      |
-		 ;;        low memory
+		 ;;         high memory
+		 ;;   |                      |
+		 ;;   |----------------------|
+		 ;;   | ik_underflow_handler |
+		 ;;   |----------------------|                           --
+		 ;;     ... other frames ...                             .
+		 ;;   |----------------------|                           .
+		 ;;   |      local value     |                           . freezed
+		 ;;   |----------------------|                           . frames
+		 ;;   |      local value     |                           .
+		 ;;   |----------------------|                           .
+		 ;;   |     return address   | <- FPR = pcb->frame_base  .
+		 ;;   |----------------------|                           --
+		 ;;   | ik_underflow_handler |
+		 ;;   |----------------------|
+		 ;;   |         kont         | -> continuation object
+		 ;;   |----------------------|
+		 ;;             ...
+		 ;;   |----------------------|
+		 ;;   |      free word       | <- pcb->stack_base
+		 ;;   |----------------------|
+		 ;;   |                      |
+		 ;;          low memory
 		 ;;
-		 ;;Load  the reference  to  closure object  FUNC in  the
-		 ;;Closure Pointer Register (CPR).
+		 ;;Load the reference to closure object FUNC in the CPR.
 		 (%move-dst<-src cpr t2)
-		 ;;Load  in  the  Argument Count  Register  the  encoded
-		 ;;number  of   arguments,  counting   the  continuation
-		 ;;object.
+		 ;;Load   in  ARGC-REGISTER   the   encoded  number   of
+		 ;;arguments, counting the continuation object.
 		 (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention 1)))
-		 ;;Decrement  the  Frame  Pointer Register  so  that  it
-		 ;;points to the underflow handler.
+		 ;;Decrement the FPR so that  it points to the underflow
+		 ;;handler.
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
 		 ;;When we arrive here the situation on the Scheme stack
 		 ;;is:
 		 ;;
-		 ;;       high memory
-		 ;; |                      |
-		 ;; |----------------------|
-		 ;; | ik_underflow_handler |
-		 ;; |----------------------|                     --
-		 ;;           ...                                .
-		 ;; |----------------------| --                  .
-		 ;; | uplevel return addr  | .                   .
-		 ;; |----------------------| . uplevel           . full stack
-		 ;; |   uplevel argument   | . framesize         . continuation
-		 ;; |----------------------| .                   . size
-		 ;;           ...            .                   .
-		 ;; |----------------------| --                  .
-		 ;; |    return address    | <-- pcb->frame_base .
-		 ;; |----------------------|                     --
-		 ;; | ik_underflow_handler | <-- frame pointer register (FPR)
-		 ;; |----------------------|
-		 ;; | continuation object  |
-		 ;; |----------------------|
-		 ;; |                      |
-		 ;;        low memory
+		 ;;         high memory
+		 ;;   |                      |
+		 ;;   |----------------------|
+		 ;;   | ik_underflow_handler |
+		 ;;   |----------------------|                     --
+		 ;;     ... other frames ...                       .
+		 ;;   |----------------------|                     .
+		 ;;   |      local value     |                     . freezed
+		 ;;   |----------------------|                     . frames
+		 ;;   |      local value     |                     .
+		 ;;   |----------------------|                     .
+		 ;;   |     return address   | <- pcb->frame_base  .
+		 ;;   |----------------------|                     --
+		 ;;   | ik_underflow_handler | <- FPR
+		 ;;   |----------------------|
+		 ;;   |         kont         | -> continuation object
+		 ;;   |----------------------|
+		 ;;             ...
+		 ;;   |----------------------|
+		 ;;   |      free word       | <- pcb->stack_base
+		 ;;   |----------------------|
+		 ;;   |                      |
+		 ;;          low memory
 		 ;;
-		 ;;The  following INDIRECT-JUMP  instruction just  jumps
-		 ;;with  "jmp"  to  the   binary  code  in  the  closure
-		 ;;referenced by the CPR, which is FUNC.
+		 ;;The  following  INDIRECT-JUMP  compiles to  a  single
+		 ;;"jmp"  instruction that  jumps  to  the machine  code
+		 ;;entry  point in  the closure  referenced by  the CPR,
+		 ;;which  is FUNC.   By  doing a  "jmp",  rather than  a
+		 ;;"call",  we avoid  pushing  a return  address on  the
+		 ;;Scheme stack.
 		 ;;
-		 ;;Notice that: by inspecting  the call frame of "return
-		 ;;address" we  can obtain  the uplevel  framesize; such
-		 ;;uplevel framesize is <= continuation size.
+		 ;;Notice that the  stack frame of FUNC  starts with the
+		 ;;argument KONT.  The  IK_UNDERFLOW_HANDLER we have put
+		 ;;on the stack does *not* belong to any stack frame.
 		 ;;
-		 ;;If   such  closure   returns   without  calling   the
-		 ;;continuation   function:  it   will  return   to  the
-		 ;;underflow  handler  we have  put  on  the stack;  the
-		 ;;handler  must   pop  the  continuation   object  from
-		 ;;"pcb->next_k",  reinstate the  saved stack,  and jump
-		 ;;back  to the  "return address"  we have  left on  the
-		 ;;stack.
+		 ;;If  the  closure  FUNC   returns  without  calling  a
+		 ;;continuation escape  function: it will return  to the
+		 ;;underflow  handler; such  underflow handler  must pop
+		 ;;the  continuation   object  from   "pcb->next_k"  and
+		 ;;process it as explained in the documentation.
+		 ;;
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else
@@ -1232,7 +1254,7 @@
 
     #| end of module: handle-nontail-call |# )
 
-  (module (alloc-check)
+  (module (alloc-check alloc-check/no-hooks)
 
     (define (alloc-check size)
       (E (make-shortcut
@@ -1243,6 +1265,13 @@
 			  (list (make-constant (make-object (primref->symbol 'do-overflow)))
 				(make-constant off-symbol-record-proc)))
 			(list size)))))
+
+    (define (alloc-check/no-hooks size)
+      (E (make-shortcut
+	  (make-conditional (%test size)
+	      (make-primcall 'nop '())
+	    (make-primcall 'interrupt '()))
+	  (make-forcall "ik_collect" (list size)))))
 
     (define (%test size)
       (if (struct-case size
@@ -1260,21 +1289,6 @@
 			  (list pcr (make-constant pcb-allocation-redline)))
 			apr))
 		size))))
-
-    ;;Commented out by Abdulaziz Ghuloum.
-    ;;
-    ;; (define (alloc-check size)
-    ;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
-    ;; 	   (make-primcall '<=
-    ;; 			  (list (make-primcall 'int+ (list apr size))
-    ;; 				(make-primcall 'mref (list pcr (make-constant 4)))))
-    ;; 	   (make-primcall 'nop '())
-    ;; 	 (make-funcall
-    ;;         (make-primcall 'mref
-    ;; 			 (list
-    ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
-    ;; 			  (make-constant off-symbol-record-proc)))
-    ;;         (list size)))))
 
     #| end of module: alloc-check |# )
 
@@ -1305,10 +1319,43 @@
 
       ((primcall op rands)
        (case-symbols op
+
          ((alloc)
+	  ;;Allocate a Scheme object on  the heap.  First check if there
+	  ;;is  enough room  on  the  heap segment:
+	  ;;
+	  ;;*  If  there  is:  just  increment  the  Allocation  Pointer
+	  ;;  Register (APR) and return the old APR value.
+	  ;;
+	  ;;* If there  is not: run a garbage  collection (complete with
+	  ;;   execution  of  post-GC  hooks) by  calling  the  function
+	  ;;  DO-OVERFLOW, then increment the APR and return the old APR
+	  ;;  after the GC.
+	  ;;
           (S ($car rands)
              (lambda (size)
                (make-seq (alloc-check size)
+			 (S ($cadr rands)
+			    (lambda (tag)
+			      (make-seq (make-seq (%move-dst<-src d apr)
+						  (make-asm-instr 'logor d tag))
+					(make-asm-instr 'int+ apr size))))))))
+
+         ((alloc-no-hooks)
+	  ;;This is like ALLOC, but, if there is the need, run a garbage
+	  ;;collection without executing the post-GC hooks.
+	  ;;
+	  ;;This  simpler  GC  run  does not  touch  the  Scheme  stack,
+	  ;;avoiding the  generation of corrupt continuation  objects by
+	  ;;the  primitive operation  $SEAL-FRAME-AND-CALL (which  was a
+	  ;;cause of issue #35).
+	  ;;
+	  ;;$SEAL-FRAME-AND-CALL should be the only operation making use
+	  ;;of this heap allocation method.
+	  ;;
+          (S ($car rands)
+             (lambda (size)
+               (make-seq (alloc-check/no-hooks size)
 			 (S ($cadr rands)
 			    (lambda (tag)
 			      (make-seq (make-seq (%move-dst<-src d apr)
@@ -3852,20 +3899,21 @@
   #| end of module: chaitin module |# )
 
 
-(define (compile-call-frame frame-words-count livemask-vec multiarg-rp call-sequence)
+(define (compile-call-table frame-words-count livemask-vec multiarg-rp call-sequence)
   ;;To generate a call to a Scheme  function, we need to follow both the
   ;;protocol for  handling multiple return  values, and the  protocol to
   ;;expose  informations  about the  caller's  stack  frame for  garbage
   ;;collection purposes.
   ;;
-  ;;This means generating the following chunk of pseudo-assembly:
+  ;;This   means   generating   the   following   "calling"   chunk   of
+  ;;pseudo-assembly to be included in the body of the caller function:
   ;;
   ;;     jmp L0
-  ;;     livemask-bytes		;array of bytes
-  ;;     framesize		;data word, a "long"
-  ;;     rp_offset		;data word, a fixnum
-  ;;     multi-value-rp		;data word, assembly label
-  ;;     pad-bytes
+  ;;     livemask-bytes		;array of bytes            --
+  ;;     framesize		;data word, a "long"       .
+  ;;     rp_offset		;data word, a fixnum       . call table
+  ;;     multi-value-rp		;data word, assembly label .
+  ;;     pad-bytes                                         --
   ;;   L0:
   ;;     call function-address
   ;;   single-value-rp:		;single value return point
@@ -3876,11 +3924,11 @@
   ;;and remember that the "call" pushes on the stack the return address,
   ;;which is the label SINGLE-VALUE-RP.
   ;;
-  ;;If the called function returns a single value: it puts it in EAX and
+  ;;If the callee function returns a single value: it puts it in EAX and
   ;;performs a "ret"; this will make the execution flow jump back to the
   ;;entry point SINGLE-VALUE-RP.
   ;;
-  ;;If the called function wants to  return zero or 2 or more arguments:
+  ;;If the callee function wants to  return zero or 2 or more arguments:
   ;;it retrieves the address SINGLE-VALUE-RP  from the stack, adds to it
   ;;the    constant    DISP-MULTIVALUE-RP    obtaining    the    address
   ;;MULTI-VALUE-RP, then it performs a "jmp" directly to MULTI-VALUE-RP.
@@ -3897,7 +3945,7 @@
   ;;MULTIARG-RP must  be a symbolic expression  representing the address
   ;;of the multi  value return point: the  assembly label MULTI-VALUE-RP
   ;;in the  pseudo-code above.   This label must  be implemented  in the
-  ;;assembly code generated by the caller of this function.
+  ;;assembly code generated for the caller.
   ;;
   ;;CALL-SEQUENCE  must  be  a   symbolic  expression  representing  the
   ;;assembly code needed to actually  call the closure object.  Examples
@@ -3916,69 +3964,72 @@
   ;;(call (disp EAX EBX))
   ;;	Call the entry point at offset EAX from the address in EBX.
   ;;
-  ;;When the execution  flow arrives on the assembly  chunk generated by
-  ;;this  function: the  Scheme arguments  for the  closure to  call are
-  ;;already  on the  stack.  The  situation on  the Scheme  stack is  as
-  ;;follows:
+  ;;When the  execution flow arrives on  the calling chunk of  code: the
+  ;;Scheme arguments for  the closure to call are already  on the stack;
+  ;;the  Frame  Pointer Register  (FPR)  references  the uplevel  return
+  ;;address.  The situation on the Scheme stack is as follows:
   ;;
   ;;* When FRAME-WORDS-COUNT is 2 or more:
   ;;
   ;;           high memory
-  ;;   |                           |
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    | <-- FPR .
+  ;;   |---------------------------|         --
+  ;;   | uplevel Scheme argument 0 |         .
+  ;;   |---------------------------|         . stack frame described
+  ;;   | uplevel Scheme argument 1 |         . by the call table
+  ;;   |---------------------------|         .
+  ;;   |        empty word         |         .
+  ;;   |---------------------------|         --
+  ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
-  ;;   | uplevel return address    | <-- Frame Pointer Register (FPR)
+  ;;   |      Scheme argument 1    |
   ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 0 |
-  ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 1 |
-  ;;   |---------------------------|  --
-  ;;   |        empty word         |  .
-  ;;   |---------------------------|  . stack frame
-  ;;   |      Scheme argument 0    |  . for the closure
-  ;;   |---------------------------|  . to be called
-  ;;   |      Scheme argument 1    |  .
-  ;;   |---------------------------|  --
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  in this  picture FRAME-WORDS-COUNT is 3,  counting: uplevel return
-  ;;  address, uplevel Scheme argument 0, uplevel Scheme argument 1.
+  ;;  in this picture FRAME-WORDS-COUNT  is 3, counting: return address,
+  ;;  uplevel Scheme argument 0, uplevel Scheme argument 1.
   ;;
   ;;   Before executing  the  "call" assembly  instruction:  we need  to
   ;;  adjust the FPR so that  it references the machine word right above
   ;;  the "empty word":
   ;;
   ;;           high memory
-  ;;   |                           |
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    |         .
+  ;;   |---------------------------|         --
+  ;;   | uplevel Scheme argument 0 |         .
+  ;;   |---------------------------|         .
+  ;;   | uplevel Scheme argument 1 | <- FPR  . stack frame described
+  ;;   |---------------------------|         . by the call table
+  ;;   |        empty word         |         .
+  ;;   |---------------------------|         --
+  ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
-  ;;   | uplevel return address    |
+  ;;   |      Scheme argument 1    |
   ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 0 |
-  ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 1 | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|  --
-  ;;   |        empty word         |  .
-  ;;   |---------------------------|  . stack frame
-  ;;   |      Scheme argument 0    |  . for the closure
-  ;;   |---------------------------|  . to be called
-  ;;   |      Scheme argument 1    |  .
-  ;;   |---------------------------|  --
   ;;   |                           |
   ;;           low memory
   ;;
   ;;  so that right after the "call" the stack looks like this:
   ;;
   ;;           high memory
-  ;;   |                           |
-  ;;   |---------------------------|
-  ;;   | uplevel return address    |
-  ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 0 |
-  ;;   |---------------------------|
-  ;;   | uplevel Scheme argument 1 |
-  ;;   |---------------------------|
-  ;;   |       return address      | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    |         .
+  ;;   |---------------------------|         --
+  ;;   | uplevel Scheme argument 0 |         .
+  ;;   |---------------------------|         .
+  ;;   | uplevel Scheme argument 1 |         . stack frame described
+  ;;   |---------------------------|         . by the call table
+  ;;   |       return address      | <- FPR  .
+  ;;   |---------------------------|         --
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -3993,12 +4044,13 @@
   ;;* When FRAME-WORDS-COUNT is 1:
   ;;
   ;;           high memory
-  ;;   |                           |
-  ;;   |---------------------------|
-  ;;   | uplevel return address    | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|
-  ;;   |        empty word         |
-  ;;   |---------------------------|
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    | <- FPR  .
+  ;;   |---------------------------|         --
+  ;;   |        empty word         |         .  stack frame described
+  ;;   |---------------------------|         -- by the call table
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4006,17 +4058,18 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  only the return  address is there in the uplevel  frame; we do not
-  ;;  need to adjust the FPR, rather we just do the "call" so that right
-  ;;  after it the stack looks like this:
+  ;;  only the return address is the frame; we do not need to adjust the
+  ;;  FPR, rather we just do the "call" so that right after it the stack
+  ;;  looks like this:
   ;;
   ;;           high memory
-  ;;   |                           |
-  ;;   |---------------------------|
-  ;;   | uplevel return address    |
-  ;;   |---------------------------|
-  ;;   |       return address      | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    |         .
+  ;;   |---------------------------|         --
+  ;;   |        empty word         | <- FPR  .  stack frame described
+  ;;   |---------------------------|         -- by the call table
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4027,19 +4080,21 @@
   ;;* When FRAME-WORDS-COUNT is 0:
   ;;
   ;;           high memory
-  ;;   |                           |
-  ;;   |---------------------------|
-  ;;   | uplevel return address    |
-  ;;   |---------------------------|
-  ;;   |     unspecified object    |
-  ;;   |---------------------------|
-  ;;                ...
-  ;;   |     unspecified object    |
-  ;;   |---------------------------|
-  ;;   |       full frame size     | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|
-  ;;   |        empty word         |
-  ;;   |---------------------------|
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    |         .
+  ;;   |---------------------------|         --
+  ;;   |   uplevel Scheme object   |         .
+  ;;   |---------------------------|         .
+  ;;                ...                      .
+  ;;   |---------------------------|         . stack frame described
+  ;;   |   uplevel Scheme object   |         . by the call table
+  ;;   |---------------------------|         .
+  ;;   |    runtime frame size     | <- FPR  .
+  ;;   |---------------------------|         .
+  ;;   |        empty word         |         .
+  ;;   |---------------------------|         --
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4049,23 +4104,27 @@
   ;;
   ;;  an  unspecified number of Scheme  objects is on the  stack and FPR
   ;;  references a fixnum representing the negated number of such words;
-  ;;  we just need to perform  a "call" instruction, so that right after
-  ;;  it the stack looks like this:
+  ;;  the number of Scheme objects on  the stack is not known at compile
+  ;;  time, rather it is computed at runtime.  We just need to perform a
+  ;;  "call"  instruction, so that right  after it the stack  looks like
+  ;;  this:
   ;;
   ;;           high memory
-  ;;   |                           |
-  ;;   |---------------------------|
-  ;;   | uplevel return address    |
-  ;;   |---------------------------|
-  ;;   |     unspecified object    |
-  ;;   |---------------------------|
-  ;;                ...
-  ;;   |     unspecified object    |
-  ;;   |---------------------------|
-  ;;   |       full frame size     |
-  ;;   |---------------------------|
-  ;;   |       return address      | <-- Frame Pointer Register (FPR)
-  ;;   |---------------------------|
+  ;;   |                           |         --
+  ;;               ...                       .
+  ;;   |---------------------------|         . uplevel stack frame
+  ;;   | uplevel return address    |         .
+  ;;   |---------------------------|         --
+  ;;   |   uplevel Scheme object   |         .
+  ;;   |---------------------------|         .
+  ;;                ...                      .
+  ;;   |---------------------------|         . stack frame described
+  ;;   |   uplevel Scheme object   |         . by the call table
+  ;;   |---------------------------|         .
+  ;;   |    runtime frame size     | <- FPR  .
+  ;;   |---------------------------|         .
+  ;;   |        empty word         |         .
+  ;;   |---------------------------|         --
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4298,7 +4357,8 @@
 
     (define (%handle-vararg properized-formals-count accum)
       ;;Generate the assembly code needed to handle the application of a
-      ;;CLAMBDA case accepting a variable number of arguments.
+      ;;CLAMBDA  case accepting  a  variable number  of arguments.   The
+      ;;generated code goes in the body of the callee function.
       ;;
       ;;PROPERIZED-FORMALS-COUNT is a fixnum  representing the number of
       ;;arguments, including the rest argument.  For the function:
@@ -4307,8 +4367,8 @@
       ;;
       ;;this argument is 4.
       ;;
-      ;;ACCUM is a list of assembly instruction representing the body of
-      ;;this CLAMBDA case.
+      ;;ACCUM is a  list of assembly instructions  representing the body
+      ;;of this CLAMBDA case.
       ;;
       ;;Let's say we want to call the function:
       ;;
@@ -4318,9 +4378,9 @@
       ;;this is  the Scheme language,  so the  caller does not  know how
       ;;THE-FUNC  will  handle  its  arguments:  it  can  only  put  the
       ;;arguments  on  the  Scheme  stack.   Right  after  the  assembly
-      ;;instruction "call"  has been  executed: ARGC-REGISTER is  set to
-      ;;the fixnum -3, which is the negated number of arguments, and the
-      ;;Scheme stack is:
+      ;;instruction "call" to THE-FUNC  has been executed: ARGC-REGISTER
+      ;;is  set  to the  fixnum  -3,  which  is  the negated  number  of
+      ;;arguments, and the Scheme stack is:
       ;;
       ;;     high memory
       ;; |                |
@@ -4337,7 +4397,8 @@
       ;;     low memory
       ;;
       ;;The fixnum 1 is right where we need it; the fixnums 2 and 3 must
-      ;;be put into a proper list.  We want to set the stack to:
+      ;;be put into a proper list.  In the body of THE-FUNC we need code
+      ;;that sets the stack to:
       ;;
       ;;     high memory
       ;; |                |
@@ -4352,6 +4413,9 @@
       ;; |----------------|
       ;; |                |
       ;;     low memory
+      ;;
+      ;;knowing  that  "fixnum  3"  will  be ignored  and  the  list  is
+      ;;allocated on the heap.
       ;;
       (define CONTINUE_LABEL	(unique-label))
       (define DONE_LABEL	(unique-label))
@@ -4396,16 +4460,24 @@
        ;;primitive  function  DO-VARARG-OVERFLOW  to allocate  new  heap
        ;;space.
        ;;
-       ;;Advance FPR to cover the plain arguments on the stack.
+       ;;Advance FPR to step over the plain arguments on the stack.
        (addl ARGC-REGISTER fpr)
        (pushl cpr)
        (pushl ARGC-REGISTER)
        ;;Make argc positive.
        (negl ARGC-REGISTER)
        ;;Add 4 words to adjust frame size (see the picture below).
-       (addl (int (fx* 4 wordsize)) ARGC-REGISTER)
+       (addl (int (fx* +4 wordsize)) ARGC-REGISTER)
        ;;Push the frame size.
        (pushl ARGC-REGISTER)
+       ;;Undo adding 4 words.
+       ;;
+       ;;NOTE In the original Ikarus code  the number of bytes needed on
+       ;;the  heap   for  the  rest   list  was  computed   by  doubling
+       ;;ARGC-REGISTER augmented  with 4 word sizes;  this was reserving
+       ;;extra space on the heap.  We  avoid it here.  (Marco Maggi; Mar
+       ;;26, 2013)
+       (addl (int (fx* -4 wordsize)) ARGC-REGISTER)
        ;;Double the  number of arguments  obtaining the number  of bytes
        ;;needed on the heap ...
        (addl ARGC-REGISTER ARGC-REGISTER)
@@ -4413,7 +4485,7 @@
        (movl ARGC-REGISTER (mem (fx* -2 wordsize) fpr))
        ;;DO-VARARG-OVERFLOW is called with one argument.
        (movl (int (argc-convention 1)) ARGC-REGISTER)
-       ;;Load intp  CPR a reference  to the closure  object implementing
+       ;;Load into  CPR a reference  to the closure  object implementing
        ;;DO-VARARG-OVERFLOW.
        (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
        (movl (mem off-symbol-record-proc cpr) cpr)
@@ -4421,29 +4493,32 @@
        ;;
        ;;       high memory
        ;;   |                |
+       ;;   |----------------|
+       ;;   | return address |
        ;;   |----------------|          --
-       ;;   | return address |          .
+       ;;   |    fixnum 1    |          .
        ;;   |----------------|          .
-       ;;   |    fixnum 1    |          . frame size associated
-       ;;   |----------------|          . to this CLAMBDA case
-       ;;   |    fixnum 2    |          .
-       ;;   |----------------|          .
+       ;;   |    fixnum 2    |          . stack frame size for the
+       ;;   |----------------|          . call to DO-VARARG-OVERFLOW
        ;;   |    fixnum 3    |          .
-       ;;   |----------------|          --
-       ;;   |  closure ref   |          .
-       ;;   |----------------|          .
-       ;;   |    arg count   |          . 4 words needed to
-       ;;   |----------------|          . prepare the call
-       ;;   | full frame size| <-- FPR  . to DO-VARARG-OVERFLOW
-       ;;   |----------------|          .
-       ;;   |   empty word   |          .
-       ;;   |----------------|          --
-       ;;   |needed heap room|
+       ;;   |----------------|          .  --
+       ;;   |  closure ref   |          .  .
+       ;;   |----------------|          .  .
+       ;;   |    arg count   |          .  . 4 words needed to
+       ;;   |----------------|          .  . prepare the call
+       ;;   |   framesize    | <-- FPR  .  . to DO-VARARG-OVERFLOW
+       ;;   |----------------|          .  .
+       ;;   |   empty word   |          .  .
+       ;;   |----------------|          -- --
+       ;;   |needed heap room| <- argument for DO-VARARG-OVERFLOW
        ;;   |----------------|
        ;;   |                |
        ;;       low memory
        ;;
-       (compile-call-frame 0	;frame words count
+       ;;the empty  machine word is the  one in which "call"  will store
+       ;;the return address.
+       ;;
+       (compile-call-table 0	;frame words count
 			   '#()	;livemask
 			   '(int 0) ;multivalue return point, NULL because unused
 			   (indirect-cpr-call))
@@ -4453,12 +4528,17 @@
        (popl ARGC-REGISTER)
        ;;Reload pointer to current closure object.
        (popl cpr)
-       ;;Readjust the  frame pointer to  uncover the plain  arguments on
-       ;;the stack.
+       ;;Re-adjust  the  frame  pointer  to step  back  over  the  plain
+       ;;arguments on the stack.
        (subl ARGC-REGISTER fpr)
 
        ;;There is enough room on the heap to allocate the rest list.  We
        ;;allocate it backwards, the list (2 3) is laid out as:
+       ;;
+       ;;          ---- growing heap ---->
+       ;;
+       ;;        tail pair         head pair
+       ;;   |.................|.................|
        ;;
        ;;    fixnum 3    nil   fixnum 2 pair ref
        ;;   |--------|--------|--------|--------| heap
@@ -4629,7 +4709,7 @@
       ;;"call" assembly instruction.
       ;;
       (define (%call-chunk call-sequence)
-	(compile-call-frame frame-words-count mask
+	(compile-call-table frame-words-count mask
 			    ;;Select the multivalue return point label.
 			    (if value
 				(label-address (sl-mv-error-rp-label))

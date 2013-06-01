@@ -1,708 +1,298 @@
-;;;Copyright 2010, 2013 Derick Eddington.  My MIT-style license is in the file
+;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
 ;;;named LICENSE from  the original collection this  file is distributed
 ;;;with.
 
-;;SRFI-19: Time Data Types and Procedures.
-;;
-;;Copyright (C) I/NET, Inc. (2000, 2002, 2003). All Rights Reserved.
-;;
-;;This document  and translations of it  may be copied and  furnished to
-;;others, and derivative  works that comment on or  otherwise explain it
-;;or assist in its implementation may be prepared, copied, published and
-;;distributed, in  whole or  in part, without  restriction of  any kind,
-;;provided  that  the above  copyright  notice  and this  paragraph  are
-;;included  on all  such  copies and  derivative  works.  However,  this
-;;document itself  may not be modified  in any way, such  as by removing
-;;the  copyright  notice  or  references   to  the  Scheme  Request  For
-;;Implementation process or editors, except as needed for the purpose of
-;;developing SRFIs in  which case the procedures  for copyrights defined
-;;in the SRFI  process must be followed, or as  required to translate it
-;;into languages other than English.
-;;
-;;The limited  permissions granted above  are perpetual and will  not be
-;;revoked by the authors or their successors or assigns.
-;;
-;;This document and  the information contained herein is  provided on an
-;;"AS  IS" basis  and  THE  AUTHOR AND  THE  SRFI  EDITORS DISCLAIM  ALL
-;;WARRANTIES,  EXPRESS OR  IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  ANY
-;;WARRANTY THAT THE USE OF THE  INFORMATION HEREIN WILL NOT INFRINGE ANY
-;;RIGHTS OR ANY  IMPLIED WARRANTIES OF MERCHANTABILITY OR  FITNESS FOR A
-;;PARTICULAR PURPOSE.
+;;;SRFI-19: Time Data Types and Procedures.
+;;;
+;;;Copyright (C) I/NET, Inc. (2000, 2002, 2003). All Rights Reserved.
+;;;
+;;;This document and  translations of it may be copied  and furnished to
+;;;others, and derivative works that  comment on or otherwise explain it
+;;;or assist  in its implementation  may be prepared,  copied, published
+;;;and  distributed, in  whole or  in part,  without restriction  of any
+;;;kind, provided that the above copyright notice and this paragraph are
+;;;included  on all  such copies  and derivative  works.  However,  this
+;;;document itself may  not be modified in any way,  such as by removing
+;;;the  copyright  notice  or  references  to  the  Scheme  Request  For
+;;;Implementation process or  editors, except as needed  for the purpose
+;;;of  developing SRFIs  in  which case  the  procedures for  copyrights
+;;;defined  in the  SRFI process  must be  followed, or  as required  to
+;;;translate it into languages other than English.
+;;;
+;;;The limited permissions  granted above are perpetual and  will not be
+;;;revoked by the authors or their successors or assigns.
+;;;
+;;;This document and the information  contained herein is provided on an
+;;;"AS  IS" basis  and  THE AUTHOR  AND THE  SRFI  EDITORS DISCLAIM  ALL
+;;;WARRANTIES,  EXPRESS OR  IMPLIED, INCLUDING  BUT NOT  LIMITED TO  ANY
+;;;WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+;;;RIGHTS OR ANY IMPLIED WARRANTIES  OF MERCHANTABILITY OR FITNESS FOR A
+;;;PARTICULAR PURPOSE.
+
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 
 
 #!r6rs
 (import (vicare)
-  (prefix (srfi :19) srfi.)
-  (prefix (srfi :19 time extensions) srfi.)
+  (prefix (srfi :19)
+	  srfi.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-#;(check-set-mode! 'summary)
 (check-display "*** testing SRFI libraries: SRFI 19, time\n")
 
 
-;;;; helpers
-
-(define UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND (- 63072000 1))
-(define UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 63072000)
-
-(define TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND (- 63072000 1))
-(define TAI-SECONDS-AT-END-OF-BIZARRE-SECOND (+ 63072000 10))
-
-(define NUMBER-OF-NANOSECONDS-IN-A-SECOND	#e1e9)
-
-
-(parametrise ((check-test-name	'constants))
-
-  (check srfi.time-duration	=> 'time-duration)
-  (check srfi.time-monotonic	=> 'time-monotonic)
-  (check srfi.time-process	=> 'time-process)
-  (check srfi.time-tai		=> 'time-tai)
-  (check srfi.time-thread	=> 'time-thread)
-  (check srfi.time-utc		=> 'time-utc)
-
-  #t)
-
-
-(parametrise ((check-test-name	'current))
-
-  (when #f
-    (check-pretty-print (srfi.current-date))
-    (check-pretty-print (srfi.current-time))
-    (check-pretty-print (list 'julian-day (srfi.current-julian-day)
-			      'modified-julian-day (srfi.current-modified-julian-day))))
+(parametrise ((check-test-name	'time-structs))
 
   (check
-      (srfi.date? (srfi.current-date))
+      (srfi.time? (srfi.current-time 'time-tai))
     => #t)
 
   (check
-      (srfi.time? (srfi.current-time))
+      (srfi.time? (srfi.current-time 'time-utc))
     => #t)
 
   (check
-      (number? (srfi.current-julian-day))
-    => #t)
-
-  (check
-      (number? (srfi.current-modified-julian-day))
-    => #t)
-
-  (check
-      (srfi.time-resolution)
-    => #e1e3)
-
-  #t)
-
-
-(parametrise ((check-test-name	'time-object))
-
-  (check
-      (srfi.time? (srfi.make-time srfi.time-utc 1 2))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.time? (srfi.copy-time (srfi.make-time srfi.time-utc 1 2)))
-    => #t)
-
-  (check
-      (let* ((T1 (srfi.make-time srfi.time-utc 1 2))
-	     (T2 (srfi.copy-time T1)))
-	(list (srfi.time-type T2)
-	      (srfi.time-second T2)
-	      (srfi.time-nanosecond T2)))
-    => (list srfi.time-utc 2 1))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.time-type (srfi.make-time srfi.time-utc 1 2))
-    => srfi.time-utc)
-
-  (check
-      (srfi.time-second (srfi.make-time srfi.time-utc 1 2))
-    => 2)
-
-  (check
-      (srfi.time-nanosecond (srfi.make-time srfi.time-utc 1 2))
-    => 1)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((T (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.set-time-type! T srfi.time-tai)
-	(srfi.time-type T))
-    => srfi.time-tai)
-
-  (check
-      (let ((T (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.set-time-second! T 3)
-	(srfi.time-second T))
-    => 3)
-
-  (check
-      (let ((T (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.set-time-nanosecond! T 3)
-	(srfi.time-nanosecond T))
-    => 3)
-
-  #t)
-
-
-(parametrise ((check-test-name	'time-compar))
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 9 0)))
-	(srfi.time=? T1 T2))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 3)))
-	(srfi.time<? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 2)))
-	(srfi.time<? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<? T1 T2))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 3)))
-	(srfi.time<=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 2)))
-	(srfi.time<=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<=? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time<=? T1 T2))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 3)))
-	(srfi.time>? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 2)))
-	(srfi.time>? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>? T1 T2))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 3)))
-	(srfi.time>=? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 2)))
-	(srfi.time>=? T1 T2))
-    => #f)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>=? T1 T2))
-    => #t)
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time>=? T1 T2))
+      (srfi.time? (srfi.current-time 'time-monotonic))
     => #t)
 
   #t)
 
 
-(parametrise ((check-test-name	'time-arith))
+(parametrise ((check-test-name	'time-resolution))
 
-;;; difference
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time-difference T1 T2))
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration 0 0))
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time-difference T1 T2))
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration 1 1))
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 3)))
-	(srfi.time-difference T1 T2))
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration -1 -1))
-
-;;; --------------------------------------------------------------------
-;;; difference!
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time-difference! T1 T2)
-	T1)
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration 0 0))
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 2 3))
-	    (T2 (srfi.make-time srfi.time-utc 1 2)))
-	(srfi.time-difference! T1 T2)
-	T1)
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration 1 1))
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-utc 2 3)))
-	(srfi.time-difference! T1 T2)
-	T1)
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-duration -1 -1))
-
-;;; --------------------------------------------------------------------
-;;; add
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-duration 10 20)))
-	(srfi.add-duration T1 T2))
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-utc 11 22))
-
-;;; --------------------------------------------------------------------
-;;; add!
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 1 2))
-	    (T2 (srfi.make-time srfi.time-duration 10 20)))
-	(srfi.add-duration! T1 T2)
-	T1)
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-utc 11 22))
-
-;;; --------------------------------------------------------------------
-;;; subtract
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 11 22))
-	    (T2 (srfi.make-time srfi.time-duration 1 2)))
-	(srfi.subtract-duration T1 T2))
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-utc 10 20))
-
-;;; --------------------------------------------------------------------
-;;; subtract!
-
-  (check
-      (let ((T1 (srfi.make-time srfi.time-utc 11 22))
-	    (T2 (srfi.make-time srfi.time-duration 1 2)))
-	(srfi.subtract-duration! T1 T2)
-	T1)
-    (=> srfi.time=?)
-    (srfi.make-time srfi.time-utc 10 20))
+  (check (srfi.time-resolution 'time-tai)	=> 1000)
+  (check (srfi.time-resolution 'time-utc)	=> 1000)
+  (check (srfi.time-resolution 'time-monotonic)	=> 1000)
 
   #t)
 
 
-(parametrise ((check-test-name	'leap-second))
+(parametrise ((check-test-name	'time-comparison))
 
-  (let loop ((table srfi.LEAP-SECONDS-TABLE))
-    (unless (null? table)
-      (let ((SEC (leap-seconds-table.utc-leap-second-end (car table))))
-	(check (srfi.utc-seconds-in-leap-second? SEC)		=> #f)
-	(check (srfi.utc-seconds-in-leap-second? (+ -1 SEC))	=> #t)
-	(check (srfi.utc-seconds-in-leap-second? (+ -2 SEC))	=> #f))
-      (loop (cdr table))))
+  (define t1 (srfi.make-time 'time-utc 0 1))
+  (define t2 (srfi.make-time 'time-utc 0 1))
+  (define t3 (srfi.make-time 'time-utc 0 2))
+  (define t11 (srfi.make-time 'time-utc 1001 1))
+  (define t12 (srfi.make-time 'time-utc 1001 1))
+  (define t13 (srfi.make-time 'time-utc 1001 2))
 
-  (let ((SEC 63072000))
-    (check (srfi.utc-seconds-in-leap-second? SEC)		=> #f)
-    (check (srfi.utc-seconds-in-leap-second? (+ -1 SEC))	=> #f)
-    (check (srfi.utc-seconds-in-leap-second? (+ -2 SEC))	=> #f))
-
-;;; --------------------------------------------------------------------
-
-  (let loop ((table UTC-SECONDS-AFTER-LEAP-SECONDS))
-    (unless (null? table)
-      (let* ((entry (car table))
-	     (SEC   (srfi.leap-seconds-table.utc-leap-second-end entry))
-	     (DELTA (srfi.leap-seconds-table.utc-to-tai-increment-after-leap-second entry)))
-	(check (srfi.tai-seconds-in-leap-second? SEC)		=> #f)
-	(check (srfi.tai-seconds-in-leap-second? (+ -1 SEC))	=> #t)
-	(check (srfi.tai-seconds-in-leap-second? (+ -2 DELTA SEC))	=> #f))
-      (loop (cdr table))))
-
-  (let ((SEC 63072000))
-    (check (srfi.tai-seconds-in-leap-second? SEC)		=> #f)
-    (check (srfi.tai-seconds-in-leap-second? (+ -1 SEC))	=> #f)
-    (check (srfi.tai-seconds-in-leap-second? (+ -2 SEC))	=> #f))
+  (check (srfi.time=? t1 t2)	=> #t)
+  (check (srfi.time>? t3 t2)	=> #t)
+  (check (srfi.time<? t2 t3)	=> #t)
+  (check (srfi.time>=? t1 t2)	=> #t)
+  (check (srfi.time>=? t3 t2)	=> #t)
+  (check (srfi.time<=? t1 t2)	=> #t)
+  (check (srfi.time<=? t2 t3)	=> #t)
+  (check (srfi.time=? t11 t12)	=> #t)
+  (check (srfi.time>? t13 t12)	=> #t)
+  (check (srfi.time<? t12 t13)	=> #t)
+  (check (srfi.time>=? t11 t12)	=> #t)
+  (check (srfi.time>=? t13 t12)	=> #t)
+  (check (srfi.time<=? t11 t12)	=> #t)
+  (check (srfi.time<=? t12 t13)	=> #t)
 
   #t)
 
 
-(parametrise ((check-test-name	'utc-to-tai))
+(parametrise ((check-test-name	'time-difference))
 
-  (define utc->tai
-    (case-lambda
-     ((utc-seconds tai-seconds nanoseconds)
-      (utc->tai utc-seconds tai-seconds nanoseconds #f))
-     ((utc-seconds tai-seconds nanoseconds print?)
-      (check
-	  (let* ((UTC (srfi.make-time srfi.time-utc nanoseconds utc-seconds))
-		 (TAI (srfi.time-utc->time-tai UTC)))
-	    (when print?
-	      (check-pretty-print UTC)
-	      (check-pretty-print TAI))
-	    TAI)
-	(=> srfi.time=?)
-	(srfi.make-time srfi.time-tai nanoseconds tai-seconds)))))
-
-  (define utc->tai*
-    (case-lambda
-     ((utc-seconds tai-seconds)
-      (utc->tai* utc-seconds tai-seconds #f))
-     ((utc-seconds tai-seconds print?)
-      (utc->tai utc-seconds tai-seconds 0 print?)
-      (utc->tai utc-seconds tai-seconds #e5e8 print?)
-      (utc->tai utc-seconds tai-seconds (- NUMBER-OF-NANOSECONDS-IN-A-SECOND 1) print?))))
-
-;;; --------------------------------------------------------------------
-
-  ;;The Epoch: 0[TAI] = 0[UTC]
-  #;(let* ((TAI-SECONDS	0)
-	 (UTC-SECONDS	TAI-SECONDS))
-    (utc->tai* UTC-SECONDS TAI-SECONDS))
-
-  ;;One second before the bizarre UTC second: 63072000-12[TAI] = 63072000-2[UTC]
-  #;(let* ((UTC-SECONDS	(- UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 12))
-	 (TAI-SECONDS	UTC-SECONDS))
-    (utc->tai* UTC-SECONDS TAI-SECONDS))
-
-  ;;In the bizarre UTC second:
-  ;;
-  ;;   (63072000-1 0)[TAI]	=>	(63072000-1         0)[UTC]
-  ;;
-  ;;   (63072000+1 0)[TAI]	=>	(63072000-1 100000000)[UTC]
-  ;;   (63072000+2 0)[TAI]	=>	(63072000-1 200000000)[UTC]
-  ;;   (63072010+3 0)[TAI]	=>	(63072000-1 300000000)[UTC]
-  ;;   (63072010+4 0)[TAI]	=>	(63072000-1 400000000)[UTC]
-  ;;   (63072010+5 0)[TAI]	=>	(63072000-1 500000000)[UTC]
-  ;;   (63072010+6 0)[TAI]	=>	(63072000-1 600000000)[UTC]
-  ;;   (63072010+7 0)[TAI]	=>	(63072000-1 700000000)[UTC]
-  ;;   (63072010+8 0)[TAI]	=>	(63072000-1 800000000)[UTC]
-  ;;   (63072010-01 0)[TAI]	=>	(63072000-1 900000000)[UTC]
-  ;;   (63072010    0)[TAI]	=>	(63072000           0)[UTC]
-  ;;
-  (let ()
-    (define (utc->tai utc-seconds utc-nanoseconds tai-seconds tai-nanoseconds print?)
-      (check
-	  (let* ((UTC (srfi.make-time srfi.time-utc utc-nanoseconds utc-seconds))
-		 (TAI (srfi.time-utc->time-tai UTC)))
-	    (when print?
-	      (check-pretty-print UTC)
-	      (check-pretty-print TAI))
-	    TAI)
-	(=> (lambda (a b)
-	      (srfi.quasi-time=? a b 10)))
-	(srfi.make-time srfi.time-tai tai-nanoseconds tai-seconds)))
-    (utc->tai UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 0
-	      TAI-SECONDS-AT-END-OF-BIZARRE-SECOND 0
-	      #f)
-    (do ((i 1 (+ 1 i)))
-	((= i 11))
-      (utc->tai UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND
-		(* NUMBER-OF-NANOSECONDS-IN-A-SECOND (/ i 11))
-		(+ TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND i) 0
-		#f))
-    (utc->tai UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND 0
-	      TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND 0
-	      #f)
-    )
-
-  ;;At the end of the initial delta: 63072010[TAI] = 63072000[UTC]
-  #;(let* ((UTC-SECONDS	UTC-SECONDS-AT-END-OF-BIZARRE-SECOND)
-	 (TAI-SECONDS	(+ 10 UTC-SECONDS)))
+  (let ((t1 (srfi.make-time 'time-utc 0 3000))
+	(t2 (srfi.make-time 'time-utc 0 1000))
+	(t3 (srfi.make-time 'time-duration 0 2000))
+	(t4 (srfi.make-time 'time-duration 0 -2000)))
     (check
-	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc 0 UTC-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
-
-  ;;Right after the initial delta: 63072000+11[TAI] = 63072000+1[UTC]
-  #;(let* ((UTC-SECONDS	(+  1 UTC-SECONDS-AT-END-OF-BIZARRE-SECOND))
-	 (TAI-SECONDS	(+ 11 UTC-SECONDS-AT-END-OF-BIZARRE-SECOND)))
+	(srfi.time=? t3 (srfi.time-difference t1 t2))
+      => #t)
     (check
-	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc 0 UTC-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
+	(srfi.time=? t4 (srfi.time-difference t2 t1))
+      => #t))
 
-  ;;The full table of leap seconds.
-  #;(let loop ((table '((1341100800 . 35)	(1230768000 . 34)	(1136073600 . 33)
-		      (915148800 . 32)	(867715200 . 31)	(820454400 . 30)
-		      (773020800 . 29)	(741484800 . 28)	(709948800 . 27)
-		      (662688000 . 26)	(631152000 . 25)	(567993600 . 24)
-		      (489024000 . 23)	(425865600 . 22)	(394329600 . 21)
-		      (362793600 . 20)	(315532800 . 19)	(283996800 . 18)
-		      (252460800 . 17)	(220924800 . 16)	(189302400 . 15)
-		      (157766400 . 14)	(126230400 . 13)	(94694400 . 12)
-		      (78796800 . 11)	(63072000 . 10))))
-    (unless (null? table)
-      (check
-	  (let* ((UTC-SECONDS	(caar table))
-		 (TAI-SECONDS	(+ UTC-SECONDS (cdar table)))
-		 (UTC		(srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-;;;	      (check-pretty-print UTC)
-	    (srfi.time-utc->time-tai UTC))
-	(=> srfi.time=?)
-	(srfi.make-time srfi.time-tai 0 TAI-SECONDS))
-      (loop (cdr table))))
-
-;;; --------------------------------------------------------------------
-
-  ;;A random time.
-  #;(let* ((UTC-SECONDS	(+ 1000 1341100800))
-	 (UTC-NANOS	500000)
-	 (TAI-SECONDS	(+ 35 UTC-SECONDS))
-	 (TAI-NANOS	UTC-NANOS))
+  (let ((t1 (srfi.make-time srfi.time-utc 1000 3000))
+	(t2 (srfi.make-time srfi.time-utc 0 3000))
+	(t3 (srfi.make-time srfi.time-duration 1000 0))
+	(t4 (srfi.make-time srfi.time-duration 999999000 -1)))
     (check
-	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc UTC-NANOS UTC-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-tai TAI-NANOS TAI-SECONDS)))
+	(srfi.time=? t3 (srfi.time-difference t1 t2))
+      => #t)
+    (check
+	(srfi.time=? t4 (srfi.time-difference t2 t1))
+      => #t))
 
   #t)
 
 
-(parametrise ((check-test-name	'tai-to-utc))
+(parametrise ((check-test-name	'utc-tai-edge))
 
-  (define UTC-SECONDS-AFTER-BIZARRE-SECOND 63072000)
+  (define (test-one-utc-tai-edge utc tai-diff tai-last-diff)
+    (let* ( ;; right on the edge they should be the same
+	   (utc-basic (srfi.make-time 'time-utc 0 utc))
+	   (tai-basic (srfi.make-time 'time-tai 0 (+ utc tai-diff)))
+	   (utc->tai-basic (srfi.time-utc->time-tai utc-basic))
+	   (tai->utc-basic (srfi.time-tai->time-utc tai-basic))
+	   ;; a second before they should be the old diff
+	   (utc-basic-1 (srfi.make-time 'time-utc 0 (- utc 1)))
+	   (tai-basic-1 (srfi.make-time 'time-tai 0 (- (+ utc tai-last-diff) 1)))
+	   (utc->tai-basic-1 (srfi.time-utc->time-tai utc-basic-1))
+	   (tai->utc-basic-1 (srfi.time-tai->time-utc tai-basic-1))
+	   ;; a second later they should be the new diff
+	   (utc-basic+1 (srfi.make-time 'time-utc 0 (+ utc 1)))
+	   (tai-basic+1 (srfi.make-time 'time-tai 0 (+ (+ utc tai-diff) 1)))
+	   (utc->tai-basic+1 (srfi.time-utc->time-tai utc-basic+1))
+	   (tai->utc-basic+1 (srfi.time-tai->time-utc tai-basic+1))
+	   ;; ok, let's move the clock half a month or so plus half a second
+	   (shy (* 15 24 60 60))
+	   (hs (/ (expt 10 9) 2))
+	   ;; a second later they should be the new diff
+	   (utc-basic+2 (srfi.make-time 'time-utc hs (+ utc shy)))
+	   (tai-basic+2 (srfi.make-time 'time-tai hs (+ (+ utc tai-diff) shy)))
+	   (utc->tai-basic+2 (srfi.time-utc->time-tai utc-basic+2))
+	   (tai->utc-basic+2 (srfi.time-tai->time-utc tai-basic+2)))
+      (and (srfi.time=? utc-basic tai->utc-basic)
+	   (srfi.time=? tai-basic utc->tai-basic)
+	   (srfi.time=? utc-basic-1 tai->utc-basic-1)
+	   (srfi.time=? tai-basic-1 utc->tai-basic-1)
+	   (srfi.time=? utc-basic+1 tai->utc-basic+1)
+	   (srfi.time=? tai-basic+1 utc->tai-basic+1)
+	   (srfi.time=? utc-basic+2 tai->utc-basic+2)
+	   (srfi.time=? tai-basic+2 utc->tai-basic+2))))
 
-;;; --------------------------------------------------------------------
-
-  ;;The Epoch: 0[TAI] = 0[UTC]
-  (let* ((TAI-SECONDS	0)
-	 (UTC-SECONDS	TAI-SECONDS))
-    (check
-	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-
-  ;;Right before the initial delta: 63072000-1[TAI] = 63072000-1[UTC]
-  (let* ((UTC-SECONDS	(- UTC-SECONDS-AFTER-BIZARRE-SECOND 1))
-	 (TAI-SECONDS	UTC-SECONDS))
-    (check
-	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-
-  ;;On the initial delta: 63072010[TAI] = 63072000[UTC]
-  (let* ((UTC-SECONDS	UTC-SECONDS-AFTER-BIZARRE-SECOND)
-	 (TAI-SECONDS	(+ 10 UTC-SECONDS)))
-    (check
-	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-
-  ;;Right after the initial delta: 63072000+11[TAI] = 63072000+1[UTC]
-  (let* ((UTC-SECONDS	(+  1 UTC-SECONDS-AFTER-BIZARRE-SECOND))
-	 (TAI-SECONDS	(+ 11 UTC-SECONDS-AFTER-BIZARRE-SECOND)))
-    (check
-	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
-      (=> srfi.time=?)
-      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-
-  ;;The full table.
-  (let loop ((table '((1341100800 . 35)	(1230768000 . 34)	(1136073600 . 33)
-		      (915148800 . 32)	(867715200 . 31)	(820454400 . 30)
-		      (773020800 . 29)	(741484800 . 28)	(709948800 . 27)
-		      (662688000 . 26)	(631152000 . 25)	(567993600 . 24)
-		      (489024000 . 23)	(425865600 . 22)	(394329600 . 21)
-		      (362793600 . 20)	(315532800 . 19)	(283996800 . 18)
-		      (252460800 . 17)	(220924800 . 16)	(189302400 . 15)
-		      (157766400 . 14)	(126230400 . 13)	(94694400 . 12)
-		      (78796800 . 11)	(63072000 . 10))))
-    (unless (null? table)
-      (let* ((UTC-SECONDS	(caar table))
-	     (TAI-SECONDS	(+ UTC-SECONDS (cdar table))))
-	(check
-	    (let ((TAI (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
-;;;	      (check-pretty-print TAI)
-	      (srfi.time-tai->time-utc TAI))
-	  (=> srfi.time=?)
-	  (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
-      (loop (cdr table))))
-
-;;; --------------------------------------------------------------------
-
-  ;;Seconds inside the UTC bizarre second.
-  (do ((i 0 (+ 1 i)))
-      ((= i 11))
-    (let* ((TAI-SECONDS	(+ i 63072000))
-	   (TAI-NANOS	0)
-	   (UTC-SECONDS	TAI-SECONDS)
-	   (UTC-NANOS	(* 1e9 (/ i 10))))
-      (check
-	  (let* ((TAI (srfi.make-time srfi.time-tai TAI-NANOS TAI-SECONDS))
-		 (UTC (srfi.time-tai->time-utc TAI)))
-	    (check-pretty-print TAI)
-	    (check-pretty-print UTC)
-	    UTC)
-	(=> srfi.time=?)
-	(srfi.make-time srfi.time-utc (exact (floor UTC-NANOS)) UTC-SECONDS))))
+  (check (test-one-utc-tai-edge 915148800  32 31)	=> #t)
+  (check (test-one-utc-tai-edge 867715200  31 30)	=> #t)
+  (check (test-one-utc-tai-edge 820454400  30 29)	=> #t)
+  (check (test-one-utc-tai-edge 773020800  29 28)	=> #t)
+  (check (test-one-utc-tai-edge 741484800  28 27)	=> #t)
+  (check (test-one-utc-tai-edge 709948800  27 26)	=> #t)
+  (check (test-one-utc-tai-edge 662688000  26 25)	=> #t)
+  (check (test-one-utc-tai-edge 631152000  25 24)	=> #t)
+  (check (test-one-utc-tai-edge 567993600  24 23)	=> #t)
+  (check (test-one-utc-tai-edge 489024000  23 22)	=> #t)
+  (check (test-one-utc-tai-edge 425865600  22 21)	=> #t)
+  (check (test-one-utc-tai-edge 394329600  21 20)	=> #t)
+  (check (test-one-utc-tai-edge 362793600  20 19)	=> #t)
+  (check (test-one-utc-tai-edge 315532800  19 18)	=> #t)
+  (check (test-one-utc-tai-edge 283996800  18 17)	=> #t)
+  (check (test-one-utc-tai-edge 252460800  17 16)	=> #t)
+  (check (test-one-utc-tai-edge 220924800  16 15)	=> #t)
+  (check (test-one-utc-tai-edge 189302400  15 14)	=> #t)
+  (check (test-one-utc-tai-edge 157766400  14 13)	=> #t)
+  (check (test-one-utc-tai-edge 126230400  13 12)	=> #t)
+  (check (test-one-utc-tai-edge 94694400   12 11)	=> #t)
+  (check (test-one-utc-tai-edge 78796800   11 10)	=> #t)
+  (check (test-one-utc-tai-edge 63072000   10 0)	=> #t)
+  ;; at the epoch
+  (check (test-one-utc-tai-edge 0   0 0)	      	=> #t)
+  ;; close to it ...
+  (check (test-one-utc-tai-edge 10   0 0)	      	=> #t)
+  ;; about now ...
+  (check (test-one-utc-tai-edge 1045789645 32 32)    	=> #t)
 
   #t)
 
 
-(parametrise ((check-test-name	'date-object))
+(parametrise ((check-test-name	'date-comparison))
+
+  (define (tm:date= d1 d2)
+    (and (= (srfi.date-year d1) (srfi.date-year d2))
+	 (= (srfi.date-month d1) (srfi.date-month d2))
+	 (= (srfi.date-day d1) (srfi.date-day d2))
+	 (= (srfi.date-hour d1) (srfi.date-hour d2))
+	 (= (srfi.date-second d1) (srfi.date-second d2))
+	 (= (srfi.date-nanosecond d1) (srfi.date-nanosecond d2))
+	 (= (srfi.date-zone-offset d1) (srfi.date-zone-offset d2))))
 
   (check
-      (let ((D (srfi.make-date 123	;nanosecond
-			       45	;second
-			       10	;minute
-			       6	;hour
-			       22	;day
-			       2	;month
-			       2013	;year
-			       3600	;Rome
-			       )))
-	(srfi.date? D))
+      (tm:date= (srfi.time-tai->date (srfi.make-time srfi.time-tai 0 (+ 915148800 29)) 0)
+		(srfi.make-date 0 58 59 23 31 12 1998 0))
     => #t)
 
-  (let-syntax
-      ((check-leap-second-date
-	(syntax-rules ()
-	  ((_ ?year ?month ?day)
-	   (check
-	       (let ((D (srfi.make-date 0 60 59 23 ?day ?month ?year 0)))
-		 (srfi.date-second D))
-	     => 60)))))
-    ;;All of these are the leap seconds dates.
-    (check-leap-second-date 1972	6	30)
-    (check-leap-second-date 1972	12	31)
-    (check-leap-second-date 1973	12	31)
-    (check-leap-second-date 1974	12	31)
-    (check-leap-second-date 1975	12	31)
-    (check-leap-second-date 1976	12	31)
-    (check-leap-second-date 1977	12	31)
-    (check-leap-second-date 1978	12	31)
-    (check-leap-second-date 1979	12	31)
-    (check-leap-second-date 1981	6	30)
-    (check-leap-second-date 1982	6	30)
-    (check-leap-second-date 1983	6	30)
-    (check-leap-second-date 1985	6	30)
-    (check-leap-second-date 1987	12	31)
-    (check-leap-second-date 1989	12	31)
-    (check-leap-second-date 1990	12	31)
-    (check-leap-second-date 1992	6	30)
-    (check-leap-second-date 1993	6	30)
-    (check-leap-second-date 1994	6	30)
-    (check-leap-second-date 1995	12	31)
-    (check-leap-second-date 1997	6	30)
-    (check-leap-second-date 1998	12	31)
-    (check-leap-second-date 2005	12	31)
-    (check-leap-second-date 2008	12	31)
-    (check-leap-second-date 2012	6	30)
-    #f)
+  (check
+      (tm:date= (srfi.time-tai->date (srfi.make-time srfi.time-tai 0 (+ 915148800 30)) 0)
+		(srfi.make-date 0 59 59 23 31 12 1998 0))
+    => #t)
 
   (check
-      (let ((D (srfi.make-date 0 59 59 23 18 1 2013 0)))
-	(srfi.date-second D))
-    => 59)
+      (tm:date= (srfi.time-tai->date (srfi.make-time srfi.time-tai 0 (+ 915148800 31)) 0)
+		(srfi.make-date 0 60 59 23 31 12 1998 0))
+    => #t)
 
   (check
-      (guard (E ((assertion-violation? E)
-		 (condition-message E))
-		(else E))
-	(let ((D (srfi.make-date 0 60 59 23 18 1 2013 0)))
-	  (srfi.date-second D)))
-    => "expected exact integer in range [0, 59] or [0, 60] as number of seconds argument")
+      (tm:date= (srfi.time-tai->date (srfi.make-time srfi.time-tai 0 (+ 915148800 32)) 0)
+		(srfi.make-date 0 0 0 0 1 1 1999 0))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'date-utc-conversion))
+
+  (check
+      (srfi.time=? (srfi.make-time srfi.time-utc 0 (- 915148800 2))
+		   (srfi.date->time-utc (srfi.make-date 0 58 59 23 31 12 1998 0)))
+    => #t)
+
+  (check
+      (srfi.time=? (srfi.make-time srfi.time-utc 0 (- 915148800 1))
+		   (srfi.date->time-utc (srfi.make-date 0 59 59 23 31 12 1998 0)))
+    => #t)
+
+  ;; yes, I think this is acutally right.
+  (check
+      (srfi.time=? (srfi.make-time srfi.time-utc 0 (- 915148800 0))
+		   (srfi.date->time-utc (srfi.make-date 0 60 59 23 31 12 1998 0)))
+    => #t)
+
+  (check
+      (srfi.time=? (srfi.make-time srfi.time-utc 0 (- 915148800 0))
+		   (srfi.date->time-utc (srfi.make-date 0 0 0 0 1 1 1999 0)))
+    => #t)
+
+  (check
+      (srfi.time=? (srfi.make-time srfi.time-utc 0 (+ 915148800 1))
+		   (srfi.date->time-utc (srfi.make-date 0 1 0 0 1 1 1999 0)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tz-offset-conversion))
+
+  (let ((ct-utc (srfi.make-time srfi.time-utc 6320000 1045944859))
+	(ct-tai (srfi.make-time srfi.time-tai 6320000 1045944891))
+	(cd (srfi.make-date 6320000 19 14 15 22 2 2003 -18000)))
+    (check
+	(srfi.time=? ct-utc (srfi.date->time-utc cd))
+      => #t)
+    (check
+	(srfi.time=? ct-tai (srfi.date->time-tai cd))
+      => #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'date-string))
+
+  (define (printf fmt-str . args)
+    (display (apply format fmt-str args)))
+
+  (define (date->string/all-formats)
+    ;; NOTE: ~x and ~X aren't doing what the SRFI 19 document says they do.
+    ;;       I guess that's a bug in the reference implementation.
+    (define fs
+      '("~~" "~a" "~A" "~b" "~B" "~c" "~d" "~D" "~e" "~f" "~h" "~H" "~I" "~j" "~k"
+	"~l" "~m" "~M" "~n" "~N" "~p" "~r" "~s" "~S" "~t" "~T" "~U" "~V" "~w" "~W"
+	"~x" "~X" "~y" "~Y" "~z" "~Z" "~1" "~2" "~3" "~4" "~5"))
+    (define cd (srfi.current-date))
+    (display "\n;;; Running date->string format exercise\n")
+    (printf "(current-date) => ~s\n" cd)
+    (for-each
+	(lambda (f)
+	  (printf "Format: ~a: " f)
+	  (display (srfi.date->string cd f)) (newline))
+      fs))
+
+  (date->string/all-formats)
+  (flush-output-port (current-output-port))
 
   #t)
 

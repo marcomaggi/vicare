@@ -65,9 +65,8 @@
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
     (ikarus.emergency)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.)
+    (vicare language-extensions syntaxes)
+    (vicare unsafe operations)
     (ikarus system $structs))
 
 
@@ -100,8 +99,8 @@
 
 (define-argument-validation (index who index struct)
   (and (fixnum? index)
-       (unsafe.fx>= index 0)
-       (unsafe.fx<  index (rtd-length ($struct-rtd struct))))
+       ($fx>= index 0)
+       ($fx<  index (rtd-length ($struct-rtd struct))))
   (assertion-violation who
     "expected fixnum in range for structure field as index argument" index struct))
 
@@ -252,7 +251,7 @@
   ;;structure with DISPLAY,  a function to be optionally  applied to the
   ;;field values to print them.
   ;;
-  (define who set-rtd-printer!)
+  (define who 'set-rtd-printer!)
   (with-arguments-validation (who)
       ((rtd	rtd)
        (printer	printer))
@@ -263,7 +262,7 @@
   ;;type  RTD.   The destructor  accepts  a  single argument  being  the
   ;;structure instance.
   ;;
-  (define who set-rtd-destructor!)
+  (define who 'set-rtd-destructor!)
   (with-arguments-validation (who)
       ((rtd		rtd)
        (destructor	destructor))
@@ -280,15 +279,15 @@
   (define who 'struct-constructor)
   (define (%set-fields r f* i n)
     (cond ((null? f*)
-	   (if (unsafe.fx= i n)
+	   (if ($fx= i n)
 	       r
 	     #f))
-	  ((unsafe.fx< i n)
+	  (($fx< i n)
 	   (if (null? f*)
 	       #f
 	     (begin
-	       ($struct-set! r i (unsafe.car f*))
-	       (%set-fields r (unsafe.cdr f*) (unsafe.fxadd1 i) n))))
+	       ($struct-set! r i ($car f*))
+	       (%set-fields r ($cdr f*) ($fxadd1 i) n))))
 	  (else #f)))
   (with-arguments-validation (who)
       ((rtd rtd))
@@ -296,6 +295,8 @@
       (let* ((n (rtd-length rtd))
 	     (r ($make-struct rtd n)))
 	(if (%set-fields r args 0 n)
+	    ;;Notice that  the expander also  has this operation  in its
+	    ;;implementation of DEFINE-STRUCT.
 	    (if (rtd-destructor rtd)
 		($struct-guardian r)
 	      r)
@@ -314,17 +315,17 @@
 
 (define (%field-index i rtd who)
   (cond ((fixnum? i)
-	 (unless (and (unsafe.fx>= i 0) (unsafe.fx< i (rtd-length rtd)))
+	 (unless (and ($fx>= i 0) ($fx< i (rtd-length rtd)))
 	   (assertion-violation who "out of range for rtd" i rtd))
 	 i)
 	((symbol? i)
 	 (letrec ((lookup (lambda (n ls)
 			    (cond ((null? ls)
 				   (assertion-violation who "not a field" rtd))
-				  ((eq? i (unsafe.car ls))
+				  ((eq? i ($car ls))
 				   n)
 				  (else
-				   (lookup (unsafe.fx+ n 1) (unsafe.cdr ls)))))))
+				   (lookup ($fx+ n 1) ($cdr ls)))))))
 	   (lookup 0 (rtd-fields rtd))))
 	(else
 	 (assertion-violation who "not a valid index" i))))
@@ -380,8 +381,8 @@
   (define who 'struct?)
   (if (null? rest)
       ($struct? x)
-    (let ((rtd (unsafe.car rest)))
-      (unless (null? (unsafe.cdr rest))
+    (let ((rtd ($car rest)))
+      (unless (null? ($cdr rest))
 	(assertion-violation who "too many arguments"))
       (unless (rtd? rtd)
 	(assertion-violation who "not an rtd"))

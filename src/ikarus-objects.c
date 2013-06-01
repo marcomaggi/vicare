@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute	it and/or modify
   it under the	terms of the GNU General Public	 License as published by
@@ -30,6 +30,7 @@
 
 #include "internals.h"
 #include <gmp.h>
+#include <ctype.h>	/* for "isxdigit()" */
 
 
 /** --------------------------------------------------------------------
@@ -245,6 +246,345 @@ ik_bytevector_from_utf16z (ikpcb * pcb, const void * _data)
       return IK_FALSE_OBJECT;
   return (most_positive_fixnum <= i)? IK_FALSE_OBJECT : \
     ika_bytevector_from_memory_block(pcb, data, i);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme bytevector conversion to ASCII HEX.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_bytevector_to_hex (ikptr s_in, ikpcb * pcb)
+{
+  static const char table[] = "0123456789ABCDEF";
+  uint8_t *	in	= IK_BYTEVECTOR_DATA_UINT8P(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  char *	ou;
+  long		ou_len;
+  uint8_t	byte;
+  long		i;
+  if ((IK_GREATEST_FIXNUM / 2) > in_len) {
+    pcb->root0 = &s_in;
+    {
+      ou_len = in_len * 2;
+      s_ou   = ika_bytevector_alloc(pcb, ou_len);
+      ou     = IK_BYTEVECTOR_DATA_CHARP(s_ou);
+      for (byte=in[i = 0]; i<in_len; byte=in[++i]) {
+	*ou++ = table[byte >> 4];
+	*ou++ = table[byte & 15];
+      }
+    }
+    pcb->root0 = NULL;
+    return s_ou;
+  } else
+    return IK_FALSE;
+}
+ikptr
+ikrt_bytevector_from_hex (ikptr s_in, ikpcb * pcb)
+{
+  char *	in	= IK_BYTEVECTOR_DATA_CHARP(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  uint8_t *	ou;
+  long		ou_len;
+  long		i;
+  pcb->root0 = &s_in;
+  {
+    ou_len = in_len / 2;
+    s_ou   = ika_bytevector_alloc(pcb, ou_len);
+    ou     = IK_BYTEVECTOR_DATA_UINT8P(s_ou);
+    for (i=0; i<in_len; ++i) {
+      char	value;
+      if (isxdigit(in[i])) {
+	char	ch = in[i] - '0';
+	if (ch > 9)  { ch += ('0' - 'A') + 10; }
+	if (ch > 16) { ch += ('A' - 'a');      }
+	value = (ch & 0xf) << 4;
+      } else {
+	s_ou = IK_FALSE;
+	goto error;
+      }
+      if (isxdigit(in[++i])) {
+	char	ch = in[i] - '0';
+	if (ch > 9)  { ch += ('0' - 'A') + 10; }
+	if (ch > 16) { ch += ('A' - 'a');      }
+	*ou++ = value | (ch & 0xf);
+      } else {
+	s_ou = IK_FALSE;
+	goto error;
+      }
+    }
+  }
+  error:
+  pcb->root0 = NULL;
+  return s_ou;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme bytevector conversion to ASCII Base64.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_bytevector_to_base64 (ikptr s_in, ikpcb * pcb)
+{
+  /* The following is the encoding table  for Base64 as specified by RFC
+     4648. */
+  static const uint8_t table[] = {
+    'A', 'B', 'C',   'D', 'E', 'F',   'G', 'H', 'I',   'J',    /*  0 -  9 */
+    'K', 'L', 'M',   'N', 'O', 'P',   'Q', 'R', 'S',   'T',    /* 10 - 19 */
+    'U', 'V', 'W',   'X', 'Y', 'Z',   'a', 'b', 'c',   'd',    /* 20 - 29 */
+    'e', 'f', 'g',   'h', 'i', 'j',   'k', 'l', 'm',   'n',    /* 30 - 31 */
+    'o', 'p', 'q',   'r', 's', 't',   'u', 'v', 'w',   'x',    /* 40 - 49 */
+    'y', 'z', '0',   '1', '2', '3',   '4', '5', '6',   '7',    /* 50 - 59 */
+    '8', '9', '+',   '/'                                       /* 60 - 63 */
+  };
+  uint8_t *	in	= IK_BYTEVECTOR_DATA_UINT8P(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  uint8_t *	ou;
+  long		ou_len;
+  long		i, j, left;
+  { /* Avoid overflowing.  Every 6 bits of  input binary data, 8 bits of
+       output ASCII  characters; every 3  bytes of input binary  data, 4
+       bytes of  output ASCII characters;  padding with '=' is  added at
+       the end if needed.
+
+       NOTE I subtract 16 from  IK_GREATEST_FIXNUM to be safe, because I
+       am ignorant  about exact integers arithmetic.   (Marco Maggi; Sun
+       Mar 10, 2013) */
+    long	number_of_groups = in_len / 3 + ((in_len % 3)? 1 : 0);
+    if (((IK_GREATEST_FIXNUM-16) / 4) < number_of_groups)
+      return IK_FALSE;
+  }
+  pcb->root0 = &s_in;
+  {
+    ou_len = (in_len / 3) * 4 + ((in_len % 3)? 4 : 0);
+    s_ou   = ika_bytevector_alloc(pcb, ou_len);
+    ou     = IK_BYTEVECTOR_DATA_UINT8P(s_ou);
+    for (i=0, j=0; i<in_len; i+=3) {
+      left = in_len - i;
+      if (left >= 3) {
+	/*
+	 *     in[i+0]  in[i+1]  in[i+2]
+	 *
+	 *    |76543210|76543210|76543210|
+	 *    |--------+--------+--------|
+	 *    |543210  |        |        | ou[j+0]
+	 *    |      54|3210    |        | ou[j+1]
+	 *    |        |    5432|10      | ou[j+2]
+	 *    |        |        |  543210| ou[j+3]
+	 */
+	ou[j++] = table[63 & ((in[i]   >> 2))];
+	ou[j++] = table[63 & ((in[i]   << 4) | (in[i+1] >> 4))];
+	ou[j++] = table[63 & ((in[i+1] << 2) | (in[i+2] >> 6))];
+	ou[j++] = table[63 & ((in[i+1] << 6) | (in[i+2]))];
+      } else {
+	switch (left) {
+	case 2:
+	  /*
+	   *     in[i+0]  in[i+1]
+	   *
+	   *    |76543210|76543210|
+	   *    |--------+--------+
+	   *    |543210  |        |    ou[j+0]
+	   *    |      54|3210    |    ou[j+1]
+	   *    |        |    5432|10  ou[j+2]
+	   */
+	  ou[j++] = table[63 & ((in[i]   >> 2))];
+	  ou[j++] = table[63 & ((in[i]   << 4) | (in[i+1] >> 4))];
+	  ou[j++] = table[63 & ((in[i+1] << 2))];
+	  ou[j++] = '=';
+	  break;
+
+	case 1:
+	  /*
+	   *     in[i+0]
+	   *
+	   *    |76543210|
+	   *    |--------+
+	   *    |543210  |      ou[j+0]
+	   *    |      54|3210  ou[j+1]
+	   */
+	  ou[j++] = table[63 & ((in[i] >> 2))];
+	  ou[j++] = table[63 & ((in[i] << 4))];
+	  ou[j++] = '=';
+	  ou[j++] = '=';
+	  break;
+
+	default: /* case 0: */
+	  break;
+	}
+      }
+    }
+  }
+  pcb->root0 = NULL;
+  return s_ou;
+}
+ikptr
+ikrt_bytevector_from_base64 (ikptr s_in, ikpcb * pcb)
+{
+  /* Decoding tables  for Base64  as specified  by RFC  4648: disallowed
+     input  characters  have  a  value  of  0xFF;  only  128  chars,  as
+     everything above 127 (0x80) is disallowed. */
+  static const uint8_t table[128] = {
+    0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0,	/*   0,   9 */
+    0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0,	/*  10,  19 */
+    0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0,	/*  20,  29 */
+    0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0,	/*  30,  39 */
+    0xFF, 0xFF, 0xFF,   62,   0xFF, 0xFF,   0xFF, 63,   52,     53,	/*  40,  49 */
+    54,   55,   56,     57,   58,   59,     60,   61,   0xFF,   0xFF,   /*  50,  59 */
+    0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0,      1,    2,    3,      4,	/*  60,  69 */
+    5,    6,    7,      8,    9,    10,     11,   12,   13,     14,	/*  70,  79 */
+    15,   16,   17,     18,   19,   20,     21,   22,   23,     24,	/*  80,  89 */
+    25,   0xFF, 0xFF,   0xFF, 0xFF, 0xFF,   0xFF, 26,   27,     28,	/*  90,  99 */
+    29,   30,   31,     32,   33,   34,     35,   36,   37,     38,	/* 100, 109 */
+    39,   40,   41,     42,   43,   44,     45,   46,   47,     48,	/* 110, 119 */
+    49,   50,   51,     0xFF, 0xFF, 0xFF,   0xFF, 0xFF			/* 120, 127 */
+  };
+  uint8_t *	in	= IK_BYTEVECTOR_DATA_VOIDP(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  uint8_t *	ou;
+  long		ou_len;
+  long		i, j;
+  /* Check for invalid input size. */
+  if (in_len % 4) {
+    s_ou = IK_FALSE;
+    goto error;
+  }
+  /* Compute the output size. */
+  ou_len = 3 * (in_len / 4);
+  if ('=' == in[in_len-1]) {
+    if ('=' == in[in_len-2]) {
+      ou_len -= 2;	/* two bytes of padding */
+    } else {
+      --ou_len;	/* one byte of padding */
+    }
+  }
+  pcb->root0 = &s_in;
+  {
+    s_ou = ika_bytevector_alloc(pcb, ou_len);
+    ou   = IK_BYTEVECTOR_DATA_UINT8P(s_ou);
+    for (i=0, j=0; i<in_len; ) {
+      /* Determine the number of characters to decode: 4, 3 or 2. */
+      int	left = 4;
+      if ('=' == in[i+3]) --left; /* At least one pad character. */
+      if ('=' == in[i+2]) --left; /* Two pad characters. */
+      switch (left) {
+      case 4:  /* Full group, no pad characters. */
+	{
+	  uint8_t	A = in[i++];
+	  uint8_t	B = in[i++];
+	  uint8_t	C = in[i++];
+	  uint8_t	D = in[i++];
+	  /* Check that all the input  characters have integer value below
+	     128. */
+	  if ((A >= 128) || (B >= 128) || (C >= 128) || (D >= 128)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  A = table[A];
+	  B = table[B];
+	  C = table[C];
+	  D = table[D];
+	  /* Check that all the input  characters are in the range allowed
+	     for Base64. */
+	  if ((0xFF == A) || (0xFF == B) || (0xFF == C) || (0xFF == D)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  /*
+	   *  in[i+0]  in[i+1]  in[i+2]  in[i+3]
+	   *
+	   * |76543210|76543210|76543210|76543210|
+	   * |--------+--------+--------+--------|
+	   * |  765432|  10    |        |        | ou[j+0]
+	   * |        |    7654|  3210  |        | ou[j+1]
+	   * |        |        |      76|  543210| ou[j+2]
+	   */
+	  ou[j++] = (0xFF & (A << 2)) | (0xFF & (B >> 4));
+	  ou[j++] = (0xFF & (B << 4)) | (0xFF & (C >> 2));
+	  ou[j++] = (0xFF & (C << 6)) | (0xFF & (D));
+	}
+	break;
+
+      case 3: /* Not full group, one pad character. */
+	{
+	  uint8_t	A = in[i++];
+	  uint8_t	B = in[i++];
+	  uint8_t	C = in[i++];
+	  ++i;
+	  /* Check that all the input  characters have integer value below
+	     128. */
+	  if ((A >= 128) || (B >= 128) || (C >= 128)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  A = table[A];
+	  B = table[B];
+	  C = table[C];
+	  /* Check that all the input  characters are in the range allowed
+	     for Base64. */
+	  if ((0xFF == A) || (0xFF == B) || (0xFF == C)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  /*
+	   *  in[i+0]  in[i+1]  in[i+2]
+	   *
+	   * |76543210|76543210|76543210|
+	   * |--------+--------+--------+
+	   * |  765432|  10    |        |  ou[j+0]
+	   * |        |    7654|  3210  |  ou[j+1]
+	   */
+	  ou[j++] = (A << 2) | (B >> 4);
+	  ou[j++] = (B << 4) | (C >> 2);
+	}
+	break;
+
+      case 2: /* Not full group, two pad characters. */
+	{
+	  uint8_t	A = in[i++];
+	  uint8_t	B = in[i++];
+	  i += 2;
+	  /* Check that all the input  characters have integer value below
+	     128. */
+	  if ((A >= 128) || (B >= 128)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  A = table[A];
+	  B = table[B];
+	  /* Check that all the input  characters are in the range allowed
+	     for Base64. */
+	  if ((0xFF == A) || (0xFF == B)) {
+	    s_ou = IK_FALSE;
+	    goto error;
+	  }
+	  /*
+	   *  in[i+0]  in[i+1]
+	   *
+	   * |76543210|76543210|
+	   * |--------+--------+
+	   * |  765432|  10    |  ou[j]
+	   */
+	  ou[j++] = (A << 2) | (B >> 4);
+	}
+	break;
+
+      case 1: /* This is impossible. */
+	break;
+
+      default: /* case 0: */
+	break;
+      }
+    }
+  }
+ error:
+  pcb->root0 = NULL;
+  return s_ou;
 }
 
 
@@ -963,6 +1303,120 @@ ika_compnum_alloc_and_init (ikpcb * pcb)
   IK_REF(s_cn, off_compnum_tag) = compnum_tag;
   memset((void *)(((long)s_cn) + off_compnum_real), 0, 3 * wordsize);
   return s_cn;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_stack_frame_top_to_code_object (ikptr top)
+/* Given a pointer  to the top of  a stack frame: return  a reference to
+   the code object containing the return point. */
+{
+  /* A Scheme stack frame looks like this:
+   *
+   *
+   *       high memory
+   *   |                |
+   *   |----------------|
+   *   | return address | <- uplevel top
+   *   |----------------|         --
+   *   | Scheme object  |         .
+   *   |----------------|         .
+   *   | Scheme object  |         . framesize
+   *   |----------------|         .
+   *   | return address | <- top  .
+   *   |----------------|         --
+   *   |                |
+   *      low memory
+   *
+   * through TOP we  retrieve the return address, which is  a pointer to
+   * the label SINGLE-VALUE-RP in the following assembly code:
+   *
+   *     ;; low memory
+   *
+   *     jmp L0
+   *     livemask-bytes	;array of bytes			|
+   *     framesize	;data word, a "long"		| call
+   *     rp_offset	;data word, a fixnum		| table
+   *     multi-value-rp	;data word, assembly label	|
+   *     pad-bytes
+   *   L0:
+   *     call function-address
+   *   single-value-rp:		;single value return point
+   *     ... instructions...
+   *   multi-value-rp:		;multi value return point
+   *     ... instructions...
+   *
+   *     ;; high memory
+   */
+  ikptr	single_value_rp	= IK_REF(top, 0);
+  /* Through the return  address we retrieve the field  RP_OFFSET in the
+   * call table, which  contains the offset of that very  field from the
+   * beginning of the code.
+   *
+   *    metadata              binary code
+   *   |........|.......................................|
+   *
+   *                          call table  single-value-rp
+   *                          |........|  v
+   *   |--------|-------------+-+-+----+--+-------------| code object
+   *            |...............|^
+   *              field_offset   |
+   *                    |        |
+   *                     --------
+   */
+  long	field_offset	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
+  /* Then we  compute the offset  of the label SINGLE-VALUE-RP  from the
+   * beginning of the code object's entry point.
+   *
+   *    metadata              binary code
+   *   |........|.......................................|
+   *
+   *                          call table  single-value-rp
+   *                          |........|  v
+   *   |--------|-------------+--------+--+-------------| code object
+   *            |.........................|
+   *                     rp_offset
+   *
+   *
+   * NOTE The preprocessor symbol "disp_call_table_offset" is a negative
+   * integer.
+   */
+  long	rp_offset	= field_offset - disp_call_table_offset;
+  /* Then we compute the address of  the entry point in the code object:
+     the address of the first byte of executable code. */
+  ikptr	code_entry	= single_value_rp - rp_offset;
+  /* Finally we compute the tagged pointer to the code object. */
+  ikptr s_code		= code_entry - off_code_data;
+  return s_code;
+}
+
+
+/** --------------------------------------------------------------------
+ ** General C buffers.
+ ** ----------------------------------------------------------------- */
+
+size_t
+ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
+/* Return the number of bytes in a generalised C buffer object.
+
+   S_BUFFER must  be a  bytevector, pointer object,  memory-block struct
+   instance.
+
+   When  S_BUFFER is  a pointer  object: S_BUFFER_LEN  must be  an exact
+   integer representing the number of  bytes available in the referenced
+   memory block.  Otherwise S_BUFFER_LEN is ignored.  */
+{
+  if (IK_IS_POINTER(s_buffer)) {
+    return ik_integer_to_size_t(s_buffer_len);
+  } else if (IK_IS_BYTEVECTOR(s_buffer)) {
+    return IK_BYTEVECTOR_LENGTH(s_buffer);
+  } else { /* it is a memory-block */
+    return IK_MBLOCK_SIZE(s_buffer);
+  }
 }
 
 

@@ -1,0 +1,2287 @@
+@node machinery
+@chapter Introduction to execution machinery
+
+
+The execution machinery of compiled Scheme code is a bit intricated when
+compared with the execution of, say, ``normal'' compiled C code; this is
+because the following features must be implemented:
+
+@table @strong
+@item Closures
+Scheme functions are not just blocks of machine code: they are allowed
+to reference variable values captured at run time.  Multiple closures
+(referencing different instances of the same semantic variables) can
+share the same block of machine code.  Multiple closures (referencing
+different blocks of machine code) can share the same variable values.
+@ref{objects closures, Closure objects}.
+
+@item Tail calls
+Whenever a Scheme function call happens in tail position: it must be
+implemented in such a way that @strong{no} new stack frame is created
+for the callee function; rather the stack frame of the caller is
+destroyed and reused as callee's frame.  This allows the use of tail
+calls as proper idiom to implement all the execution loops, even when
+such loops have an ``infinite'' number of iterations, without the risk
+of overflowing the Scheme stack.
+
+@item Continuations
+Scheme code is allowed to save the current continuation and resume it
+later any number of times.
+@end table
+
+@macro aar{}
+@acronym{AAR}
+@end macro
+
+@macro apr{}
+@acronym{APR}
+@end macro
+
+@macro cpr{}
+@acronym{CPR}
+@end macro
+
+@macro fpr{}
+@acronym{FPR}
+@end macro
+
+@macro pcr{}
+@acronym{PCR}
+@end macro
+
+@menu
+* machinery simplifications::   Simplification assumptions.
+* machinery registers::         Special @cpu{} registers.
+* machinery scheme stack::      Basics of the Scheme stack.
+* machinery call frames::       Basics of function call frames.
+* machinery continuations::     The current continuation.
+* machinery stack overflow::    Scheme stack overflow.
+* machinery call arguments::    Function call arguments.
+* machinery call retvals::      Function call return values.
+* machinery tail calls::        Tail calls optimisation.
+* machinery locals::            Local variables.
+@end menu
+
+@c page
+@node machinery simplifications
+@section Simplification assumptions
+
+
+To make it easy to explain the run time behaviour of @value{PRJNAME}, we
+will assume the validity of the following simplifications:
+
+@enumerate
+@item
+At the start of a user program execution: the Scheme stack is empty.
+This is false because, at @value{PRJNAME} launch time, the boot image is
+loaded and initialised, executing a lot of compiled Scheme code.  But
+starting with an empty stack makes reasoning simpler.
+
+@item
+No expressions and function calls are inlined.  This is false because
+the compiler precomputes some expressions, inlines some function calls
+and removes bindings whenever possible; this makes the executed code
+different from the original Scheme code.  But we want to show sample
+Scheme code as close as possible to the one that gets executed.
+
+@item
+Unless otherwise specified: no tail call optimisation (@acronym{TCO}) is
+performed.  This is false because, whenever it recognises a function
+call in tail position, @value{PRJNAME} always performs the call in such
+a way that the new stack frame overwrites the old one.  But we want to
+show simple functions that create new stack frames.
+
+@item
+The function @func{call/cc} is implemented without subordinate function
+calls.  This is depends upon the function call integration optimisations
+performed by the compiler.  But reasoning about simple function call is
+simpler.
+
+@item
+There is no dynamic environment to be captured by continuations.  This
+is false because whenever @func{dynamic-wind} is used stacks of
+in--guard and out--guard functions are created and captured by
+continuations; the continuation escape function, created by
+@func{call/cc}, does invoke such guard functions to keep the dynamic
+environment synchronised with the execution flow.  But learning about
+continuations alone already introduces enough complications.
+
+@item
+When discussing sample programs we assume that only the code we see is
+executed.  This is false because whenever a user program is run: the
+code is loaded and compiled, then some initialisation is performed
+before running it.  Rather when dissussing the execution of:
+
+@example
+(import (rnrs))
+(define (one a)
+  (+ a 1))
+(one 2)
+@end example
+
+@noindent
+we assume that the first executed code is the expression @code{(one 2)}.
+@end enumerate
+
+@c page
+@node machinery registers
+@section Special @cpu{} registers
+
+
+@cindex Special @cpu{} registers
+@cindex @cpu{} registers with special roles
+
+
+While running Scheme code @value{PRJNAME} assigns a special role to some
+@cpu{} registers.
+
+@table @strong
+@item Accumulator and Arguments count Register, @aar{}
+@cindex Accumulator and Arguments count Register, @aar{}
+@cindex @aar{}, Accumulator and Arguments count Register
+It is used to hold:
+
+@itemize
+@item
+The result of Assembly instructions.
+
+@item
+A fixnum representing the negated number of arguments to the function
+call that is about to happen.
+
+@item
+The return value from a function call that just returned, when such
+function returns a single value.
+
+@item
+A fixnum representing the negated number of return values from a
+function call that just returned, when such function returns @math{0},
+@math{2} or more values.
+@end itemize
+
+@noindent
+it is also used as general purpose register.  On a 32-bit i686 @cpu{} it
+is the register @code{EAX}.
+
+@item Allocation Pointer Register, @apr{}
+@cindex Allocation Pointer Register, @apr{}
+@cindex @apr{}, Allocation Pointer Register
+Holds the address of the first free machine word in the memory segment
+of the Scheme heap nursery.  On a 32-bit i686 @cpu{} it is the register
+@code{EBP}.
+
+@item Closure Pointer Register, @cpr{}
+@cindex Closure Pointer Register, @cpr{}
+@cindex @cpr{}, Closure Pointer Register
+Holds the tagged address of a machine word in the Scheme heap,
+representing the reference to the closure object being executed; when no
+closure is being executed: it is set to zero.  It is used to enter the
+execution of the closure code and to access the free variables the
+closure is closed upon.  On a 32-bit i686 @cpu{} it is the register
+@code{EDI}.
+
+@item Frame Pointer Register, @fpr{}
+@cindex Frame Pointer Register, @fpr{}
+@cindex @fpr{}, Frame Pointer Register
+Holds the address of the machine word in the memory segment of the
+Scheme stack holding the return address of the last performed function
+call.  It is used to access the machine words on the stack containing
+function arguments and local variables.  On a 32-bit i686 @cpu{} it is
+the register @code{ESP}.
+
+@item Process Control Register, @pcr{}
+@cindex Process Control Register, @pcr{}
+@cindex @pcr{}, Process Control Register
+Holds the raw address of a machine word in the C language heap; such
+address references the first word in the @pcb{} data structure.  On a
+32-bit i686 @cpu{} it is the register @code{ESI}.
+@end table
+
+@c page
+@node machinery scheme stack
+@section Basics of the Scheme stack
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.
+
+When running C code: the state of the Scheme stack is represented by the
+fields of the @pcb{} data structure.  When running Scheme code: the
+state of the Scheme stack is represented by the Frame Pointer Register
+(@fpr{}) and some fields of the @pcb{} data structure.
+
+When the execution flow moves from C language code to Scheme language
+code or from Scheme code to C code: Assembly language routines are
+executed to perform some low--level operations.  Such Assembly code
+takes care of synchronising the @pcb{} fields with the @cpu{} registers.
+
+Let's start by taking a look at an empty Scheme stack segment,
+@ref{fig:MSS_stack_size, machinery call frames}.  The stack memory
+segment begins at the machine word referenced by the @pcb{} field
+@code{stack_base} (included) and ends at the machine word referenced by
+the @pcb{} field @code{frame_base} (excluded).  @code{stack_base}
+changes only when the stack overflows, @code{frame_base} changes when
+the stack overflows and every time a continuation object is created.
+
+@float Figure,fig:MSS_stack_size
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|                     --
+           .                                 .
+           .                                 . stack
+           .                                 . segment
+|----------------------|                     . size
+|                      | <- pcb->stack_base  .
+|----------------------|                     --
+|                      |
+       low memory
+@end example
+@caption{Size of the Scheme stack segment.}
+@end float
+
+The stack space is consumed starting from the high memory addresses
+towards the low memory addresses; the first used word on the Scheme
+stack is right below the machine word referenced by @code{frame_base}.
+
+Upon creation: the first machine word on the stack is initialised to the
+address of the Assembly routine @code{ik_underflow_handler}; when the
+execution flow of Scheme code returns to such address: the routine takes
+care of switching from Scheme code to C code and itself returns to a C
+function.
+
+When running C code: the machine word holding the address of the
+underflow handler is referenced by the @pcb{} field
+@code{frame_pointer}, @ref{fig:MSS_empty_stack_C, machinery call
+frames}.  When running Scheme code: the machine word holding the address
+of the underflow handler is referenced by the @fpr{} register,
+@ref{fig:MSS_empty_stack_Scheme, machinery call frames}.
+
+@float Figure,fig:MSS_empty_stack_C
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- pcb->frame_pointer
+|----------------------|
+            .
+            .
+            .
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Empty Scheme stack as represented in the @pcb{} structure while
+running C code.}
+@end float
+
+@float Figure,fig:MSS_empty_stack_Scheme
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- Frame Pointer Register (FPR)
+|----------------------|
+            .
+            .
+            .
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Empty Scheme stack as represented in the @cpu{} registers and
+the @pcb{} structure while running Scheme code.}
+@end float
+
+@c page
+@node machinery call frames
+@section Basics of function call frames
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.
+
+Let's consider the program:
+
+@example
+(import (rnrs))
+(define (one A)
+  (+ A 1))
+(one 2)
+@end example
+
+@noindent
+in which the call to Scheme function generates a stack frame; the form
+@code{(one 2)} is the ``call site'' and we can think of it as generating
+Assembly code containing the chunk:
+
+@example
+(call address_of_one)
+(label return_address)
+@end example
+
+Let's start with an empty Scheme stack represented by @cpu{} registers
+and @pcb{} fields, @ref{fig:MCF_empty_stack_Scheme, machinery call
+frames}.
+
+@float Figure,fig:MCF_empty_stack_Scheme
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- Frame Pointer Register (FPR)
+|----------------------|
+            .
+            .
+            .
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Empty Scheme stack as represented in the @cpu{} registers and
+the @pcb{} structure while running Scheme code.}
+@end float
+
+Running the program means executing the following operations:
+
+@enumerate
+@item
+Prepare to call @func{one}: put the single argument on the stack
+@math{2} machine words below the underflow handler,
+@ref{fig:MCF_one_before, machinery call frames}.
+
+@float Figure,fig:MCF_one_before
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      | <- FPR - 1*wordsize
+|----------------------|
+|    argument A == 2   | <- FPR - 2*wordsize
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Preparing the function call to @func{one} by putting the
+argument on the stack.}
+@end float
+
+@item
+Call @func{one}: execute the Assembly instruction @code{call}; this puts
+the return address on the stack and decrements the @fpr{} by a machine
+word, @ref{fig:MCF_one_after, machinery call frames}.  Notice that the
+stack now contains a single stack frame representing the status of the
+code before the call.
+
+@float Figure,fig:MCF_one_after
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    | <- FPR  . frame of caller
+|----------------------|         --
+|    argument A == 2   |
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right after the function call to @func{one}.}
+@end float
+
+@item
+Prepare to call @func{+}: put the two arguments on the stack @math{2}
+machine words below the return address, @ref{fig:MCF_plus_before,
+compiler machinery call frames}.
+
+@float Figure,fig:MCF_plus_before
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    | <- FPR  . frame of caller
+|----------------------|         --
+|    argument A == 2   |         .
+|----------------------|         . frame of ONE
+|                      |         .
+|----------------------|         --
+|   1st argument == 2  |
+|----------------------|
+|   2nd argument == 1  |
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Preparing the call to @func{+}.}
+@end float
+
+@item
+Adjust the @fpr{} to reference the machine word right above the one that
+will hold the return address, @ref{fig:MCF_plus_adjust, compiler
+machinery call frames}.
+
+@float Figure,fig:MCF_plus_adjust
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    |         . frame of caller
+|----------------------|         --
+|    argument A == 2   | <- FPR
+|----------------------|
+|                      |
+|----------------------|
+|   1st argument == 2  |
+|----------------------|
+|   2nd argument == 1  |
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Adjusting the @fpr{} for the call to @func{+}.}
+@end float
+
+@item
+Call @func{+}: execute the Assembly instruction @code{call}; this puts
+the return address on the stack and decrements the @fpr{} by a machine
+word, @ref{fig:MCF_plus_after, machinery call frames}.  Notice that the
+stack now contains two stack frames representing the status of the code
+before the call.
+
+@float Figure,fig:MCF_plus_after
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    |         . frame of caller
+|----------------------|         --
+|    argument A == 2   |         .
+|----------------------|         . frame of ONE
+|    return address    | <- FPR  .
+|----------------------|         --
+|   1st argument == 2  |
+|----------------------|
+|   2nd argument == 1  |
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right after the call to @func{+}.}
+@end float
+
+@item
+Let's skip how @func{+} performs the addition and just assume that the
+result is stored in the @aar{} register.
+
+@item
+Return from @func{+}: execute the Assembly instruction @code{ret} which:
+loads the machine word from the stack location referenced by @fpr{} into
+the @cpu{}'s Instruction Pointer Register, increments the @fpr{} by a
+machine word, jumps to the code address in the Instruction Pointer
+Register, @ref{fig:MCF_plus_ret, machinery call frames}.
+
+@float Figure,fig:MCF_plus_ret
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    |         . frame of caller
+|----------------------|         --
+|    argument A == 2   | <- FPR  .
+|----------------------|         . frame of ONE
+|    return address    |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+@caption{Stack right after the @code{ret} instruction that returns from
+@func{+}.}
+@end float
+
+@item
+Adjust back the @fpr{} to reference the return address of the caller
+@ref{fig:MCF_caller_adjust, machinery call frames}.
+
+@float Figure,fig:MCF_caller_adjust
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|    return address    | <- FPR  . frame of caller
+|----------------------|         --
+|    argument A == 2   |
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Adjusting the @fpr{} back after returning from @func{+}.}
+@end float
+
+@item
+Return from @func{one}: execute the Assembly instruction @code{ret}
+which: loads the machine word from the stack location referenced by
+@fpr{} into the @cpu{}'s Instruction Pointer Register, increments the
+@fpr{} by a machine word, jumps to the code address in the Instruction
+Pointer Register, @ref{fig:MCF_one_ret, machinery call frames}.  The
+return value is still in the @aar{} register.
+
+@float Figure,fig:MCF_one_ret
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right after the @code{ret} instruction that returns from
+@func{one}.}
+@end float
+
+@item
+The form @code{(one 2)} is the only top--level expression in the
+program, so, after executing it, the execution flow must go back to the
+C code that started the program; we can imagine the Assembly code:
+
+@example
+(call address_of_one)
+(label return_address)
+;; move the return value from AAR to the stack
+(movl AAR (disp (- wordsize) FPR))
+(ret)
+@end example
+
+@noindent
+where @code{(ret)} jumps to the underflow handler.
+@end enumerate
+
+After the program execution: the stack is left empty as it was at the
+beginning; this is because no continuation objects have been created.
+
+@c page
+@node machinery continuations
+@section The current continuation
+
+
+For the original paper presenting an implementation of continuations
+quite similar (but not equal) to the one used by @value{PRJNAME} see
+@ref{bib:HDBControl, references}.
+
+@menu
+* machinery continuations general::  General concept of process
+                                     continuation.
+* machinery continuations without::  Subordinate function calls without
+                                     continuations.
+* machinery continuations immut::    Immutability of the Scheme stack.
+* machinery continuations non::      Subordinate function calls with
+                                     non--invoked continuation.
+* machinery continuations escape::   Subordinate function calls with
+                                     invoked continuation.
+@end menu
+
+@c page
+@node machinery continuations general
+@subsection General concept of process continuation
+
+
+Let's think of a process in execution as having: a table of descriptors,
+a code memory segment, a heap memory segment and a stack memory segment,
+@ref{fig:MCG_process_segments, machinery continuations general}.  The
+Instruction Pointer @cpu{} register (@acronym{IP}) keeps track of the
+next instruction to execute in the code segment; the Stack Pointer
+@cpu{} register (@acronym{SP}) keeps track of the current location on
+the stack; dynamically allocated data goes in the heap segment.
+
+@float Figure,fig:MCG_process_segments
+@example
+|---|---|---| descriptors table
+  |   |   |
+  |   |   |      IP
+  |   |   v      v
+  |   |   |------+---------------| code segment
+  |   v
+  |   |----------------------| heap segment
+  v
+  |----------+-----------| stack segment
+             ^
+             SP
+@end example
+@caption{Memory segments of a process in execution.}
+@end float
+
+One way to implement continuations is to push the current @acronym{IP}
+on the stack segment, duplicate the stack segment itself, finally save
+somewhere the @acronym{SP}; later we can reinstall the saved stack
+segment, reset the @acronym{SP} and perform a @code{ret} assembly
+instruction that will pop the saved @acronym{IP} and resume the
+execution; @ref{fig:MCG_duplicated_stack_segment, machinery
+continuations general}.  Of course we must make sure that the resources
+referenced by the saved stack segment are not released while the
+continuation still exists.
+
+@float Figure,fig:MCG_duplicated_stack_segment
+@example
+|---|---|---| descriptors table
+  |   |   |
+  |   |   |     IP IP1
+  |   |   v      v v
+  |   |   |------+-+--------------| code segment
+  |   v
+  |   |----------------------| heap segment
+  |
+  v           IP1
+  |----------+--+---------| stack segment
+             ^
+             SP
+
+              IP1
+  |----------+--+---------| duplicated stack segment
+             ^
+             SP
+@end example
+@caption{Duplicated stack segment as continuation implementation
+mechanism.}
+@end float
+
+Stack segment duplication is @strong{not} the way @value{PRJNAME}
+implements continuations; but the actual implementation is not
+conceptually different.
+
+@c page
+@node machinery continuations without
+@subsection Subordinate function calls without continuations
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.  Let's look at this simple program that
+does not create explicit continuations:
+
+@example
+(import (rnrs))
+(define (alpha) (beta))
+(define (beta)  (delta))
+(define (delta) 123)
+(alpha)
+@end example
+
+@value{PRJNAME} allocates a memory segment to be used as stack, then
+executes the call to @func{alpha} pushing its stack frame on the stack;
+as subordinate function calls are performed: new stack frames are pushed
+on the stack, @ref{fig:MCW_continuation_stack_grow, machinery
+continuations without}.
+
+@float Figure,fig:MCW_continuation_stack_grow
+@example
+        -- growing direction -->
+
+|----------|---------------------------------------|
+  locals of
+  toplevel
+
+|----------|----------|----------------------------|
+  frame of  locals of
+  toplevel    alpha
+
+|----------|----------|----------|-----------------|
+  frame of   frame of  locals of
+  toplevel    alpha     beta
+
+|----------|----------|----------|-----------|-----|
+  frame of   frame of   frame of   locals of
+  toplevel    alpha      beta       delta
+@end example
+@caption{Scheme stack segment after calling @func{alpha}, @func{beta},
+@func{delta}.}
+@end float
+
+When the functions return the stack rewinds; when there are no more
+stack frames: there is nowhere to return to, so the program terminates,
+@ref{fig:MCW_continuation_stack_rewind, machinery continuations
+without}.
+
+@float Figure,fig:MCW_continuation_stack_rewind
+@example
+        <-- rewind direction --
+
+|----------|----------|----------|-----------------|
+  frame of   frame of   frame of
+  toplevel    alpha      beta
+
+|----------|----------|----------------------------|
+  frame of   frame of
+  toplevel    alpha
+
+|----------|---------------------------------------|
+  frame of
+  toplevel
+@end example
+@caption{Scheme stack segment after returning from @func{delta},
+@func{beta}, @func{alpha}.}
+@end float
+
+@c page
+@node machinery continuations immut
+@subsection Immutability of the Scheme stack
+
+
+Under @value{PRJNAME} machine words on the stack are immutable by
+definition; let's see why.  Scheme has two kinds of values: immediate
+and compound.
+
+@itemize
+@item
+Each instance of an immediate value (boolean, fixnum, character,
+@dots{}) is fully contained in a single machine word; immediate values
+are moved around in @cpu{} registers and memory locations and they are
+immutable; immediate values are put on the stack if it is needed for the
+execution of a program.
+
+@item
+Each instance of a compound value (pair, vector, record, @dots{}) is
+composed of a memory block, allocated on the heap and actually holding
+the data, and a reference to it: a machine word being the tagged address
+of the first word in the memory block.
+
+If we mutate a vector with @func{vector-set!}: we mutate the memory
+block, the reference to such vector is untouched.  References to
+compound values are immutable.
+
+@value{PRJNAME} always allocates compound values' memory blocks on the
+heap, while references are moved around in @cpu{} registers and memory
+locations; references are put on the stack if it is needed for the
+execution of a program.
+@end itemize
+
+Local variables can be mutated, special care is taken to implement them;
+@ref{machinery locals, Local variables}.
+
+@c page
+@node machinery continuations non
+@subsection Subordinate function calls with non--invoked continuation
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.  Let's consider the following program that
+creates a continuation but does @strong{not} call its escape function:
+
+@example
+(import (rnrs))
+(define (alpha A)
+  (beta A))
+(define (beta B)
+  (call/cc
+     (lambda (escape)
+       (+ B 2))))
+(alpha 1)
+@end example
+
+@noindent
+we can understand how the stack grows until right after the call to
+@func{call/cc} but before @func{call/cc} actually does something,
+@ref{fig:MCN_callcc_begin, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_begin
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|  return addr to top  |         . frame of toplevel
+|----------------------|         --
+|    argument A == 1   |         .
+|----------------------|         . frame of alpha
+| return addr to alpha |         .
+|----------------------|         --
+|    argument B == 1   |         .
+|----------------------|         . frame of beta
+| return addr to beta  | <- FPR  .
+|----------------------|         --
+|   closure reference  |         . locals of call/cc
+|----------------------|         .
+|                      |
+       low memory
+@end example
+@caption{Stack right after the call to @code{call/cc} but before
+@func{call/cc} does something.}
+@end float
+
+For convenience we give a name to the closure @code{(lambda (escape) (+
+B 2))}, let's call it @dfn{receiver}@footnote{Springer and Friedman call
+it ``receiver'' in their ``Scheme and the Art of Programming'', The MIT
+Press, 1989.}.  @func{call/cc} creates a continuation object by freezing
+the call frames currently on the stack between @fpr{} and @math{2} words
+below @code{pcb->frame_base}, @ref{fig:MCN_callcc_freezing, machinery
+continuations non}.
+
+@float Figure,fig:MCN_callcc_freezing
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|  return addr to top  |         .
+|----------------------|         .
+|    argument A == 1   |         .
+|----------------------|         . freezed
+| return addr to alpha |         . frames
+|----------------------|         .
+|    argument B == 1   |         .
+|----------------------|         .
+| return addr to beta  | <- FPR  .
+|----------------------|         --
+|       receiver       |         . locals of
+|----------------------|         . call/cc
+|                      |
+       low memory
+@end example
+@caption{Region of stack freezed by @code{call/cc}.}
+@end float
+
+The continuation object references the array of freezed words on the
+stack, keeping a reference to the value of @fpr{} at the time of
+creation.  The continuation object is also a node in a simply linked
+list of continuation objects, whose head is stored in a field of the
+@pcb{}: @code{pcb->next_k}.  In more detail @func{call/cc} does the
+following:
+
+@enumerate
+@item
+Create the continuation object and prepend it to the list in
+@code{pcb->next_k}; let's call this continuation object @math{K_1};
+@ref{fig:MCN_callcc_next_k_K1, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_next_k_K1
+@example
+|--------|---| PCB
+           |
+     next_k --------> |-----|-| K_1
+                             |
+                         next -----> NULL
+@end example
+@caption{Continuation object @math{K_1} inserted as new ``next @pcb{}
+continuation''.}
+@end float
+
+@item
+Create a closure object implementing the escape function associated to
+the continuation object, the one that will be bound to @var{escape} in
+the example; @ref{fig:MCN_callcc_K1_escape, machinery continuations
+non}.  In the closure object: the address of the code entry point
+references the special subroutine @code{SL_continuation_code}, the
+single slot for free variables references the continuation object.
+
+@float Figure,fig:MCN_callcc_K1_escape
+@example
+|-----|-----| closure object
+   |     |
+   |      --------> |------| K_1
+   |
+    --------------> |------| code object
+@end example
+@caption{Closure object implementing the escape function for
+@math{K_1}.}
+@end float
+
+@item
+Prepare the application of the receiver closure to the escape function:
+move the reference to the receiver closure in the @cpr{}; move the
+address of the underflow handler on the stack and set the @fpr{} to
+reference it; set the value of @code{pcb->frame_base} to exclude the
+freezed frames from the stack segment;
+@ref{fig:MCN_callcc_before_receiver, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_before_receiver
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     .
+|    argument A == 1   |                     .
+|----------------------|                     . freezed
+| return addr to alpha |                     . frames
+|----------------------|                     . in K_1
+|    argument B == 1   |                     .
+|----------------------|                     .
+| return addr to beta  | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler | <- FPR              .
+|----------------------|                     . locals of
+|    escape closure    |                     . receiver
+|----------------------|                     . closure
+|                      |
+       low memory
+
+@end example
+@caption{Stack right before the call to the receiver closure.}
+@end float
+
+@item
+Perform a direct jump to the entry point of the receiver closure without
+pushing a return address on the stack.  The @fpr{} is left referencing
+the entry point of the stack underflow handler.
+@end enumerate
+
+In this example, the receiver closure executes @code{(+ B 2)} and
+returns; there is only a single return value: it is put in @aar{} and
+the return from the closure is performed with a @code{ret} Assembly
+instruction.  We skip the details of performing the addition and
+consider the stack right before the @code{ret} Assembly instruction is
+executed by the @cpu{}, @ref{fig:MCN_callcc_after_receiver, machinery
+continuations non}.
+
+@float Figure,fig:MCN_callcc_after_receiver
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     .
+|    argument A == 1   |                     .
+|----------------------|                     . freezed
+| return addr to alpha |                     . frames
+|----------------------|                     . in K_1
+|    argument B == 1   |                     .
+|----------------------|                     .
+| return addr to beta  | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before the receiver closure executes the @code{ret}
+Assembly instruction; the single return value is in @aar{}.}
+@end float
+
+The @fpr{} references the underflow handler, so the @code{ret}
+instruction will cause the execution flow to jump there; the stack
+underflow handler does the following:
+
+@enumerate
+@item
+Detect the presence of a multiframe continuation object as ``next @pcb{}
+continuation'', so split @math{K_1} in two continuation objects: the
+mutated @math{K_1} referencing only the frame of @func{beta} and a new
+continuation object @math{K_2} referencing all the other frames,
+@ref{fig:MCN_callcc_K2_frames, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_K2_frames
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_2
+| return addr to alpha |                     .
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Continuation object @math{K_1} mutated to reference a single
+frame.}
+@end float
+
+@item
+Insert @math{K_2} in the linked list of continuation objects after
+@math{K_1} and register it as the new ``next @pcb{} continuation'',
+@ref{fig:MCN_callcc_next_k_K2, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_next_k_K2
+@example
+|--------|---| PCB
+           |
+     next_k|     |-----|-| K_1
+           |            |
+           |        next -->|
+            --------------->|-----|-| K_2
+                                   |
+                               next -----> NULL
+@end example
+@caption{Continuation object @math{K_2} inserted as new ``next
+continuation''.}
+@end float
+
+@item
+Duplicate the stack frame referenced by @math{K_1} below the address of
+the underflow handler, adjust the @fpr{} to reference the return address
+of the frame, @ref{fig:MCN_callcc_K1_copy, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_K1_copy
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_2
+| return addr to alpha |                     .
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|
+|    argument B == 1   |
+|----------------------|
+| return addr to beta  | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack frame in @math{K_1} duplicated below the underflow
+handler address.}
+@end float
+
+@item
+There is a single return value, so: perform a @code{ret} Assembly
+instruction to go back to the body of @func{beta}.
+@end enumerate
+
+The code of @func{beta} is reentered right after the call to
+@func{call/cc} and the @fpr{} is adjusted to reference the address of
+the stack underflow handler, @ref{fig:MCN_callcc_beta_ret, compiler
+machinery continuations non}.  @func{beta} must return the same return
+value, which is already in the @aar{}: it executes a @code{ret} Assembly
+instruction.
+
+@float Figure,fig:MCN_callcc_beta_ret
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_2
+| return addr to alpha |                     .
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before @func{beta} executes the @code{ret} Assembly
+instruction; the return value is in the @aar{}.}
+@end float
+
+The stack underflow handler is reentered and does the following:
+
+@enumerate
+@item
+Detect the presence of a multiframe continuation object as ``next @pcb{}
+continuation'', so split @math{K_2} in two continuation objects: the
+mutated @math{K_2} referencing only the frame of @func{alpha} and a new
+continuation object @math{K_3} referencing all the other frames,
+@ref{fig:MCN_callcc_K3_frames, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_K3_frames
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |                        freezed
+|----------------------|                     -- frame
+|  return addr to top  |                     .  in K_3
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frames
+| return addr to alpha |                     . in K_2
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Continuation object @math{K_2} mutated to reference a single
+frame.}
+@end float
+
+@item
+Insert @math{K_3} in the linked list of continuation objects after
+@math{K_2} and register it as the new ``next @pcb{} continuation'',
+@ref{fig:MCN_callcc_next_k_K3, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_next_k_K3
+@example
+|-----|---| PCB
+        |
+  next_k|   |-----|-| K_1
+        |          |
+        |      next -->|-----|-| K_2
+        |                     |
+        |                 next ----->|
+         --------------------------->|-----|-| K_3
+                                            |
+                                        next -----> NULL
+@end example
+@caption{Continuation object @math{K_2} inserted as new ``next
+continuation''.}
+@end float
+
+@item
+Duplicate the stack frame referenced by @math{K_2} below the address of
+the underflow handler, adjust the @fpr{} to reference the return address
+of the frame, @ref{fig:MCN_callcc_K2_copy, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_K2_copy
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |                        freezed
+|----------------------|                     -- frames
+|  return addr to top  |                     .  in K_3
+|----------------------|                     --
+|    argument A == 1   |                     .
+|----------------------|                     . frames
+| return addr to alpha |                     . in K_2
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|
+|    argument A == 1   |
+|----------------------|
+| return addr to alpha | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack frame in @math{K_2} duplicated below the underflow
+handler address.}
+@end float
+
+@item
+There is a single return value, so: perform a @code{ret} Assembly
+instruction to go back to the body of @func{alpha}.
+@end enumerate
+
+The code of @func{alpha} is reentered right after the call to
+@func{beta} and the @fpr{} is adjusted to reference the address of the
+stack underflow handler, @ref{fig:MCN_callcc_alpha_ret, compiler
+machinery continuations non}.  @func{alpha} must return the same return
+value, which is already in the @aar{}: it executes a @code{ret} Assembly
+instruction.
+
+@float Figure,fig:MCN_callcc_alpha_ret
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |                        freezed
+|----------------------|                     -- frames
+|  return addr to top  |                     .  in K_3
+|----------------------|                     --
+|    argument A == 1   |                     .
+|----------------------|                     . frames
+| return addr to alpha |                     . in K_2
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before @func{alpha} executes the @code{ret}
+Assembly instruction; the return value is in the @aar{}.}
+@end float
+
+The stack underflow handler is reentered and does the following:
+
+@enumerate
+@item
+Detect the presence of a single--frame continuation object as ``next
+@pcb{} continuation'', so set @code{pcb->next_k} to the next field in
+@math{K_3}, @ref{fig:MCN_callcc_next_k_K3, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_next_k_NULL
+@example
+|-----|---| PCB
+        |
+  next_k|   |-----|-| K_1
+        |          |
+        |      next -->|-----|-| K_2
+        |                     |
+        |                 next ----->|
+         --> NULL                    |-----|-| K_3
+                                            |
+                                        next -----> NULL
+@end example
+@caption{Continuation object @math{K_3} removed from the @pcb{}.}
+@end float
+
+@item
+Duplicate the stack frame referenced by @math{K_3} below the address of
+the underflow handler, adjust the @fpr{} to reference the return address
+of the frame, @ref{fig:MCN_callcc_K3_copy, machinery continuations non}.
+
+@float Figure,fig:MCN_callcc_K3_copy
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |                        freezed
+|----------------------|                     -- frames
+|  return addr to top  |                     .  in K_3
+|----------------------|                     --
+|    argument A == 1   |                     .
+|----------------------|                     . frames
+| return addr to alpha |                     . in K_2
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|
+|  return addr to top  | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack frame in @math{K_3} duplicated below the underflow
+handler address.}
+@end float
+
+@item
+There is a single return value, so: perform a @code{ret} Assembly
+instruction to go back to the top level expression.
+@end enumerate
+
+The code of the top level expression is reentered right after the call
+to @func{alpha} and the @fpr{} is adjusted to reference the address of
+the stack underflow handler, @ref{fig:MCN_callcc_top_ret, compiler
+machinery continuations escape}.  The top level expression is the last
+one in the program, so it returns the return value it receives, which is
+already in the @aar{}: it executes a @code{ret} Assembly instruction.
+
+@float Figure,fig:MCN_callcc_top_ret
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |                        freezed
+|----------------------|                     -- frames
+|  return addr to top  |                     .  in K_3
+|----------------------|                     --
+|    argument A == 1   |                     .
+|----------------------|                     . frames
+| return addr to alpha |                     . in K_2
+|----------------------|                     --
+|    argument B == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to beta  | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before the top level expression executes the
+@code{ret} Assembly instruction; the return value is in the @aar{}.}
+@end float
+
+The underflow handler is reentered again with @cnull{} as ``next @pcb{}
+continuation'': this means the program is terminated, so the underflow
+handler does what is needed.
+
+@c page
+@node machinery continuations escape
+@subsection Subordinate function calls with invoked continuation
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.  Let's consider the following program that
+creates a continuation and invokes its escape function:
+
+@example
+(import (rnrs))
+(define (alpha A)
+  (call/cc
+     (lambda (escape)
+       (beta escape A))))
+(define (beta escape B)
+  (escape (+ B 2)))
+(alpha 1)
+@end example
+
+@noindent
+we can understand how the stack grows until right after the call to
+@func{call/cc} but before @func{call/cc} actually does something,
+@ref{fig:MCE_callcc_begin, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_begin
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|  return addr to top  |         . frame of toplevel
+|----------------------|         --
+|    argument A == 1   |         .
+|----------------------|         . frame of alpha
+| return addr to alpha |         .
+|----------------------|         --
+|      receiver        |         . locals of call/cc
+|----------------------|         .
+|                      |
+       low memory
+@end example
+@caption{Stack right after the call to @code{call/cc} but before
+@func{call/cc} does something.}
+@end float
+
+@func{call/cc} creates a continuation object by freezing the call frames
+currently on the stack between @fpr{} and @math{2} words below
+@code{pcb->frame_base}, @ref{fig:MCE_callcc_freezing, machinery
+continuations escape}.
+
+@float Figure,fig:MCE_callcc_freezing
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|         --
+|  return addr to top  |         .
+|----------------------|         . freezed
+|    argument A == 1   |         . frames
+|----------------------|         .
+| return addr to alpha | <- FPR  .
+|----------------------|         --
+|       receiver       |         . locals of
+|----------------------|         . call/cc
+|                      |
+       low memory
+@end example
+@caption{Region of stack freezed by @code{call/cc}.}
+@end float
+
+The continuation object references the array of freezed words on the
+stack, keeping a reference to the value of @fpr{} at creation time.  The
+continuation object is also a node in a simply linked list of
+continuation objects, whose head is stored in a field of the @pcb{}:
+@code{pcb->next_k}.  In more detail @func{call/cc} does the following:
+
+@enumerate
+@item
+Create the continuation object and prepend it to the list in
+@code{pcb->next_k}; let's call this continuation object @math{K_1};
+@ref{fig:MCE_callcc_next_k_K1, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_next_k_K1
+@example
+|--------|---| PCB
+           |
+     next_k --------> |-----|-| K_1
+                             |
+                         next -----> NULL
+@end example
+@caption{Continuation object @math{K_1} inserted as new ``next @pcb{}
+continuation''.}
+@end float
+
+@item
+Create a closure object implementing the escape function associated to
+the continuation object, the one that will be bound to @var{escape} in
+the example; @ref{fig:MCE_callcc_K1_escape, machinery continuations
+escape}.  In the closure object: the address of the code entry point
+references the special subroutine @code{SL_continuation_code}, the
+single slot for free variables references the continuation object.
+
+@float Figure,fig:MCE_callcc_K1_escape
+@example
+|-----|-----| closure object
+   |     |
+   |      --------> |------| K_1
+   |
+    --------------> |------| code object
+@end example
+@caption{Closure object implementing the escape function for
+@math{K_1}.}
+@end float
+
+@item
+Prepare the application of the receiver closure to the escape function:
+the reference to the receiver closure is moved in the @cpr{}; the
+address of the underflow handler is moved on the stack and the @fpr{} is
+set to reference it; the value of @code{pcb->frame_base} is set to
+exclude the freezed frames from the stack segment;
+@ref{fig:MCE_callcc_before_receiver, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_before_receiver
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_1
+| return addr to alpha | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|                     -- locals of
+|    escape closure    |                     .  receiver
+|----------------------|                     .  closure
+|                      |
+       low memory
+
+@end example
+@caption{Stack right before the call to the receiver closure.}
+@end float
+
+@item
+Perform a direct jump to the entry point of the receiver closure without
+pushing a return address on the stack.  The @fpr{} is left referencing
+the entry point of the stack underflow handler.
+@end enumerate
+
+In this example, the receiver closure calls @func{beta} with @math{2}
+arguments, @ref{fig:MCE_callcc_enter_beta, machinery continuations
+escape}.
+
+@float Figure,fig:MCE_callcc_enter_beta
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_1
+| return addr to alpha | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|                     -- frame of
+| return addr to receiv| <- FPR              .  receiver
+|----------------------|                     --
+|    escape closure    |                     . locals
+|----------------------|                     . in beta
+|    argument B == 1   |                     .
+|----------------------|                     .
+|                      |
+       low memory
+@end example
+@caption{Stack right after the call to @code{beta}.}
+@end float
+
+@func{beta} applies the escape closure to the result of @code{(+ B 2)},
+let's skip the details of performing the addition.  To apply the escape
+closure to the single argument representing the addition: the reference
+to escape function is copied in the @cpr{}, the single argument is
+placed after an empty machine word, the @fpr{} is moved right above the
+empty word, finally a @code{call} Assembly instruction is executed,
+@ref{fig:MCE_callcc_enter_escape, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_enter_escape
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_1
+| return addr to alpha | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|                     -- frame of
+| return addr to receiv| <- FPR              .  receiver
+|----------------------|                     --
+|    escape closure    |                     .
+|----------------------|                     .  frame
+|    argument B == 1   |                     .  of beta
+|----------------------|                     .
+| return addr to beta  | <- FPR              .
+|----------------------|                     --
+|   argument fixnum 3  |                     . locals of
+|----------------------|                     . escape
+|                      |
+       low memory
+@end example
+@caption{Stack right after the call to @code{escape}.}
+@end float
+
+A continuation's escape function is a special subroutine that throws
+away all the stack frames up to, and excluding, the undeflow handler
+address below the @code{pcb->frame_base},
+@ref{fig:MCE_callcc_throw_away, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_throw_away
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     --
+|  return addr to top  |                     .
+|----------------------|                     . freezed
+|    argument A == 1   |                     . frames
+|----------------------|                     . in K_1
+| return addr to alpha | <- pcb->frame_base  .
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right after @code{escape} has thrown away the useless
+stack frames.}
+@end float
+
+The argument of the escape function becomes its return value; in this
+example there is a single return value, so it is moved in the @aar{}.
+The continuation object @math{K_1} in the escape closure is stored in
+@code{pcb->next_k}, becoming the ``next @pcb{} continuation''; the old
+value of @code{pcb->next_k} is simply overwritten: a new list of
+continuations is installed in the @pcb{}.  Finally a @code{ret} Assembly
+instruction is executed.
+
+The @fpr{} references the underflow handler, so the @code{ret}
+instruction will cause the execution flow to jump there; the stack
+underflow handler does the following:
+
+@enumerate
+@item
+Detect the presence of a multiframe continuation object as ``next @pcb{}
+continuation'', so split @math{K_1} in two continuation objects: the
+mutated @math{K_1} referencing only the frame of @func{alpha} and a new
+continuation object @math{K_2} referencing all the other frames,
+@ref{fig:MCE_callcc_K2_frames, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_K2_frames
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     -- freezed
+|  return addr to top  |                     .  frame K_2
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to alpha | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Continuation object @math{K_1} mutated to reference a single
+frame.}
+@end float
+
+@item
+Insert @math{K_2} in the linked list of continuation objects after
+@math{K_1} and register it as the new ``next @pcb{} continuation'',
+@ref{fig:MCE_callcc_next_k_K2, machinery continuations escape}.
+
+@float Figure,fig:MCE_callcc_next_k_K2
+@example
+|--------|---| PCB
+           |
+     next_k|     |-----|-| K_1
+           |            |
+           |        next -->|
+            --------------->|-----|-| K_2
+                                   |
+                               next -----> NULL
+@end example
+@caption{Continuation object @math{K_2} inserted as new ``next
+continuation''.}
+@end float
+
+@item
+Duplicate the stack frame referenced by @math{K_1} below the address of
+the underflow handler, adjust the @fpr{} to reference the return address
+of the frame, @ref{fig:MCE_callcc_K1_copy, machinery continuations
+escape}.
+
+@float Figure,fig:MCE_callcc_K1_copy
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     -- freezed
+|  return addr to top  |                     .  frame K_2
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to alpha | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|
+|    argument A == 1   |
+|----------------------|
+| return addr to alpha | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack frame in @math{K_1} duplicated below the underflow
+handler address.}
+@end float
+
+@item
+There is a single return value, so: perform a @code{ret} Assembly
+instruction to go back to the body of @func{alpha}.
+@end enumerate
+
+The code of @func{alpha} is reentered right after the call to
+@func{call/cc} and the @fpr{} is adjusted to reference the address of
+the stack underflow handler, @ref{fig:MCE_callcc_alpha_ret, compiler
+machinery continuations escape}.  @func{alpha} must return the same
+return value, which is already in the @aar{}: it executes a @code{ret}
+Assembly instruction.
+
+@float Figure,fig:MCE_callcc_alpha_ret
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     -- freezed
+|  return addr to top  |                     .  frame K_2
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to alpha | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before @func{alpha} executes the @code{ret}
+Assembly instruction; the return value is in the @aar{}.}
+@end float
+
+The stack underflow handler is reentered and does the following:
+
+@enumerate
+@item
+Detect the presence of a single--frame continuation object @math{K_2} as
+``next @pcb{} continuation'', so store its next continuation reference
+in @code{pcb->next_k}, @ref{fig:MCE_callcc_next_k_K2, machinery
+continuations escape}.
+
+@float Figure,fig:MCE_callcc_next_k_K3
+@example
+|-----|---| PCB
+        |
+  next_k|   |-----|-| K_1
+        |          |
+        |      next -->|-----|-| K_2
+        |                     |
+        |                 next -----> NULL
+         --> NULL
+@end example
+@caption{Continuation object @math{K_2} removed from the @pcb{}.}
+@end float
+
+@item
+Duplicate the stack frame referenced by @math{K_2} below the address of
+the underflow handler, adjust the @fpr{} to reference the return address
+of the frame, @ref{fig:MCE_callcc_K2_copy, machinery continuations
+escape}.
+
+@float Figure,fig:MCE_callcc_K2_copy
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     -- freezed
+|  return addr to top  |                     .  frame K_2
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to alpha | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler |
+|----------------------|
+|  return addr to top  | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack frame in @math{K_2} duplicated below the underflow
+handler address.}
+@end float
+
+@item
+There is a single return value, so: perform a @code{ret} Assembly
+instruction to go back to the top level expression.
+@end enumerate
+
+The code of the top level expression is reentered right after the call
+to @func{alpha} and the @fpr{} is adjusted to reference the address of
+the stack underflow handler, @ref{fig:MCE_callcc_top_ret, compiler
+machinery continuations escape}.  The top level expression is the last
+one in the program, so it returns the return value it receives, which is
+already in the @aar{}: it executes a @code{ret} Assembly instruction.
+
+@float Figure,fig:MCE_callcc_top_ret
+@example
+      high memory
+|                      |
+|----------------------|
+| ik_underflow_handler |
+|----------------------|                     -- freezed
+|  return addr to top  |                     .  frame K_2
+|----------------------|                     --
+|    argument A == 1   |                     . freezed
+|----------------------|                     . frame
+| return addr to alpha | <- pcb->frame_base  . in K_1
+|----------------------|                     --
+| ik_underflow_handler | <- FPR
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Stack right before the top level expression executes the
+@code{ret} Assembly instruction; the return value is in the @aar{}.}
+@end float
+
+The underflow handler is reentered again with @cnull{} as ``next @pcb{}
+continuation'': this means the program is terminated, so the underflow
+handler does what is needed.
+
+We can understand that this mechanism of duplicating the freezed frames
+can be repeated any number of times, allowing the execution flow to go
+back to a saved continuation any number of times.
+
+@c page
+@node machinery stack overflow
+@section Scheme stack overflow
+
+
+Let's recall how the Scheme stack segment looks,
+@ref{fig:MSO_stack_boundary, machinery stack overflow}.  Function call
+frames are put on the stack starting from high memory addresses, stack
+usage grows towards low memory addresses; at some point the stack runs
+out of space.
+
+@float Figure,fig:MSO_stack_boundary
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|                        --
+| ik_underflow_handler |                        .
+|----------------------|                        .
+           .                                    .
+           .                                    .
+           .                                    .
+|----------------------|                        .
+|                      | <- pcb->frame_redline  . stack
+|----------------------|                        . segment
+           .                                    . size
+           .                                    .
+           .                                    .
+|----------------------|                        .
+|                      | <- pcb->stack_base     .
+|----------------------|                        --
+|                      |
+       low memory
+@end example
+@caption{Stack boundaries as represented by the @pcb{}.}
+@end float
+
+To detect stack usage approaching the end of available stack space: the
+@pcb{} contains a field referencing a machine word @math{2} memory
+chunks (@math{4096} bytes each) above the lower boundary; whenever stack
+usage crosses this ``red line'': a new stack segment needs to be
+allocated and call frames must be put on the new stack;
+@ref{fig:MSO_redline_crossed, machinery stack overflow}.
+
+@float Figure,fig:MSO_redline_crossed
+@example
+      high memory
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|
+           .
+           .
+           .
+|----------------------|                        --
+|     local value      |                        .
+|----------------------|                        .
+|     local value      | <- pcb->frame_redline  .
+|----------------------|                        . framesize
+|     local value      |                        .
+|----------------------|                        .
+|    return address    | <- FPR                 .
+|----------------------|                        --
+|   function argument  |
+|----------------------|
+|   function argument  |
+|----------------------|
+           .
+           .
+           .
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+      low memory
+@end example
+@caption{Scenario on the Scheme stack that triggers the stack overflow;
+we see that: @fpr{} < @code{pcb->frame_redline}.}
+@end float
+
+Scheme functions can be partitioned in: those that may use more stack
+space, those that do not; @value{PRJNAME} recognises this partition and
+inserts a stack overflow check at the beginning of each of the former.
+The pseudo--Assembly performing the check is as follows:
+
+@example
+(label function_entry_point)
+  (cmpl FPR pcb->frame_redline)
+  (jb L0)
+
+(label L1)
+  ... the function body ...
+  (ret)
+
+(label L0)
+  (forcall "ik_stack_overflow")
+  (jmp L1)
+@end example
+
+When stack overflow happens the C function @cfunc{ik_stack_overflow} is
+called through the @code{forcall} primitive instruction and the Assembly
+subroutine @code{ik_foreign_call}; @code{forcall} creates a new stack
+frame and then calls @code{ik_foreign_call} which in turn calls the C
+function, @ref{fig:MSO_forcall_frame, machinery stack overflow}.
+
+@float Figure,fig:MSO_forcall_frame
+@example
+      high memory
+|                      |
+|----------------------|                        --
+|     local value      |                        .
+|----------------------|                        .
+|     local value      | <- pcb->frame_redline  .
+|----------------------|                        . framesize
+|     local value      |                        .
+|----------------------|                        .
+|    return address    |                        .
+|----------------------|                        --
+|   function argument  |                        .
+|----------------------|                        . frame of
+|   function argument  |                        . forcall
+|----------------------|                        .
+|    return address    | <- FPR                 .
+|----------------------|                        --
+|                      |
+      low memory
+@end example
+@caption{Call frame of @code{forcall} on top of the call frame that
+caused the stack underflow.}
+@end float
+
+@cfunc{ik_stack_overflow} does the following:
+
+@enumerate
+@item
+Freeze all the call frames on the stack in a continuation object;
+prepend such object to the list of continuations in the @pcb{}, so that
+it becomes the ``next @pcb{} continuation''.
+
+@item
+Allocate and initialise a new stack segment and register it in the
+@pcb{}.  The frame pointer is set to reference the first machine word on
+the stack, which contains the address of the underflow handler.
+
+@item
+For garbage collection purposes: reconfigure old stack segment's memory
+block as data segment.
+@end enumerate
+
+Upon returning to the caller @code{ik_foreign_call} performs a
+@code{ret} Assembly instruction with the @fpr{} referencing the
+underflow handler; so returning from a stack reallocation is exactly
+like returning to the next @pcb{} continuation.
+
+@c page
+@node machinery call arguments
+@section Function call arguments
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery
+simplifications, Simplification assumptions}.
+
+
+@c page
+@node machinery call retvals
+@section Function call return values
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery
+simplifications, Simplification assumptions}.
+
+@c page
+@node machinery tail calls
+@section Tail calls implementation
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, with the exception that we allow the
+compiler to perform tail calls optimisation (@acronym{TCO}),
+@ref{machinery simplifications, Simplification assumptions}.
+
+@c page
+@node machinery locals
+@section Local variables
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{machinery simplifications,
+Simplification assumptions}.
+
+Local variables are put on the Scheme stack in such a way that the stack
+frame can be left immutable if it is freezed in a Scheme continuation
+object.  Immutable local variables and mutable local variables, before
+the first mutation, are just put in machine words on the stack frame;
+mutable local variables after the first mutation are put in the single
+slot of a Scheme vector whose reference is put on the stack.
+
+@c ------------------------------------------------------------
+
+@subsubheading Immutable local variables only
+
+
+Let's consider the following program in which the function @func{one}
+has only immutable local variables:
+
+@example
+(import (rnrs))
+(define (one A B)
+  (let ((C 3)
+        (D 4))
+    (list A B C D)))
+(one 1 2)
+@end example
+
+@noindent
+right after the call to @func{one} the arguments are on the stack below
+the return address, @ref{fig:ML_arguments_on_stack, machinery
+locals}.
+
+@float Figure,fig:ML_arguments_on_stack
+@example
+      high memory
+|                      |
+|----------------------|         --
+            .                    .
+            .                    . caller
+            .                    . stack frame
+|----------------------|         .
+|    return address    | <- FPR  .
+|----------------------|         --
+|    argument A == 1   |         .
+|----------------------|         . stack frame
+|    argument B == 2   |         . of ONE
+|----------------------|         .
+|                      |
+       low memory
+@end example
+@caption{Stack frame with arguments.}
+@end float
+
+Then the local values are put on the stack, right below the arguments,
+@ref{fig:ML_locals_on_stack, machinery locals}.
+
+@float Figure,fig:ML_locals_on_stack
+@example
+      high memory
+|                      |
+|----------------------|                      --
+            .                                 .
+            .                                 . caller
+            .                                 . stack frame
+|----------------------|                      .
+|    return address    | <- FPR               .
+|----------------------|                      --
+|    argument A == 1   | <- FPR - 1*wordsize  .
+|----------------------|                      .
+|    argument B == 2   | <- FPR - 2*wordsize  .
+|----------------------|                      . stack frame
+|       local C == 3   | <- FPR - 3*wordsize  . of ONE
+|----------------------|                      .
+|       local D == 4   | <- FPR - 4*wordsize  .
+|----------------------|                      .
+|                      |
+       low memory
+@end example
+@caption{Stack frame with arguments and local variables.}
+@end float
+
+We can imagine the function @func{one} compiled to pseudo--code as
+follows:
+
+@example
+(define (one stack-slot-1 stack-slot-2)
+  (let-on-stack ((stack-slot-3 3)
+                 (stack-slot-4 4))
+    (list stack-slot-1
+          stack-slot-2
+          stack-slot-3
+          stack-slot-4)))
+@end example
+
+@noindent
+if the Assembly code needs to copy the value of the local variable
+@code{stack-slot-3} into the @cpu{} register @aar{}, it just does it as
+stack memory access:
+
+@example
+(movl (disp (* -3 wordsize) FPR) AAR)
+@end example
+
+If a continuation object is created with this scenario on the stack:
+everything is ready, because the stack frame never needs to be mutated.
+
+@c ------------------------------------------------------------
+
+@subsubheading Mutable local variables
+
+
+Let's consider the following program in which the function @func{one}
+has both an immutable local variable and a mutable one:
+
+@example
+(import (rnrs))
+(define (one A B)
+  (let ((C 3)
+        (D 4))
+    (display (list A B C D))
+    (set! D 41)
+    (display (list A B C D))
+    (set! D 42)
+    (display (list A B C D))))
+(one 1 2)
+@end example
+
+@noindent
+after the call to @func{one} the arguments and the local variables are
+put on the stack below the return address, @ref{fig:ML_before_mutation,
+compiler machinery locals}.
+
+@float Figure,fig:ML_before_mutation
+@example
+      high memory
+|                      |
+|----------------------|                      --
+            .                                 .
+            .                                 . caller
+            .                                 . stack frame
+|----------------------|                      .
+|    return address    | <- FPR               .
+|----------------------|                      --
+|    argument A == 1   | <- FPR - 1*wordsize  .
+|----------------------|                      .
+|    argument B == 2   | <- FPR - 2*wordsize  .
+|----------------------|                      . stack frame
+|       local C == 3   | <- FPR - 3*wordsize  . of ONE
+|----------------------|                      .
+|       local D == 4   | <- FPR - 4*wordsize  .
+|----------------------|                      .
+|                      |
+       low memory
+@end example
+@caption{Stack frame with arguments and local variables before the first
+local variable mutation.}
+@end float
+
+Before the first local variable mutation (the @code{set!} form): if the
+Assembly code needs to copy the value of the local variable
+@code{stack-slot-4} into the @cpu{} register @aar{}, it just does it as
+stack memory access:
+
+@example
+(movl (disp (* -3 wordsize) FPR) AAR)
+@end example
+
+@noindent
+because the value is just there.  If a continuation object is created
+with this scenario on the stack: everything is ready, because the stack
+frame never needs to be mutated.
+
+When the mutable local variable is assigned: something has to change.
+We can imagine the function @func{one} compiled to pseudo--code as
+follows:
+
+@example
+(define (one stack-slot-1 stack-slot-2)
+  (let-on-stack ((stack-slot-3 3)
+                 (stack-slot-4 4))
+    (display (list stack-slot-1
+                   stack-slot-2
+                   stack-slot-3
+                   stack-slot-4))
+    (set! stack-slot-4 (vector 41))
+    (display (list stack-slot-1
+                   stack-slot-2
+                   stack-slot-3
+                   ($vector-ref stack-slot-4 0)))
+    ($vector-set! stack-slot-4 0 42)
+    (display (list stack-slot-1
+                   stack-slot-2
+                   stack-slot-3
+                   ($vector-ref stack-slot-4 0)))))
+@end example
+
+@noindent
+whenever the local variable assignment happens: a Scheme vector is
+allocated on the heap and filled with the new variable's value; then a
+reference to such object is stored in the stack slot reserved to the
+local variable.  From this point onwards: access to the local variable
+happens through the primitive operations @func{$vector-ref} and
+@func{$vector-set!}.
+
+If a continuation object is created after the local variable first
+mutation: everything is ready, the stack frame does not need to be
+mutated because the mutable location is in the Scheme vector.
+
+@c ------------------------------------------------------------
+
+@subsubheading Mutable arguments
+
+
+Mutable argument bindings are handled in the same way of mutable local
+variables.  Let's consider the following program in which the function
+@func{one} has a mutable argument:
+
+@example
+(import (rnrs))
+(define (one A)
+  (display A)
+  (set! A 2)
+  (display A)
+  (set! A 3)
+  (display A))
+(one 1)
+@end example
+
+@noindent
+We can imagine the function @func{one} compiled to pseudo--code as
+follows:
+
+@example
+(define (one stack-slot-1)
+  (display stack-slot-1)
+  (set! stack-slot-1 (vector 2))
+  (display ($vector-ref stack-slot-1 0))
+  ($vector-set! stack-slot-1 0 3)
+  (display ($vector-ref stack-slot-1 0))
+@end example
+
+@c end of file

@@ -23,16 +23,14 @@
 	    procedure-annotation)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
-    (prefix (vicare unsafe-operations)
-	    $)
-    (except (vicare syntactic-extensions)
+    (vicare unsafe operations)
+    (except (vicare language-extensions syntaxes)
 	    case-word-size)
     (vicare arguments validation))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare include))
     (include/verbose "ikarus.config.ss"))
 
 

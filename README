@@ -8,8 +8,8 @@ Topics
 
   1. Introduction
   2. License
-  4. Install
-  5. Testing
+  3. Install
+  4. Testing
   A. Credits
   B. Bug reports
   C. Resources
@@ -31,13 +31,15 @@ edited by Michael  Sperber, R. Kent Dybvig, Matthew  Flatt and Anton Van
 Straaten.
 
   Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
-programming  language; it is  the creation  of Abdulaziz  Ghuloum, which
+programming language;  it is  the creation  of Abdulaziz  Ghuloum, which
 retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
 fork of Ikarus Scheme, aiming to  become a native compiler for R6 Scheme
 producing  single   threaded  programs  running  on   Intel  x86  32-bit
-processors, with experimental support  for 64-bit machines; it is tested
-only on GNU+Linux,  no official support for other  platforms is present.
-"Vicare" is pronounced the etruscan way.
+processors, with experimental support for  64-bit machines; it is tested
+only on GNU+Linux, no official support for other platforms is present.
+
+  "Vicare" is pronounced  the etruscan way.  The logo of  the project is
+the greek capital letter Upsilon (U+03D2).
 
   Vicare offers arbitrary precision integers through GMP.  It implements
 an optionally included foreign-functions interface based on Libffi.  The
@@ -72,10 +74,10 @@ You should have received a copy  of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-4. Install
+3. Install
 ----------
 
-4.1 Install Vicare
+3.1 Install Vicare
 ------------------
 
 After checking out a revision from the repository, we will have to build
@@ -105,6 +107,19 @@ pthread library using the option:
 
 by default pthread is linked to the executable if found on the host.
 
+  A  bare build  (without  support for  optional  features and  external
+libraries) can be obtained with:
+
+   $ ../configure \
+         --disable-posix	\
+	 --disable-glibc	\
+	 --disable-linux	\
+         --without-pthread	\
+         --without-libffi	\
+         --without-libiconv	\
+         --without-readline	\
+         --without-cre2
+
   To test what a rule will do use the "-n" option; example:
 
    $ make install -n
@@ -126,8 +141,14 @@ directory:
 
 			 $(libdir)/scheme/r6rs
 
+  The variable VFLAGS is available  to the user when running "configure"
+and "make" to add command line options to the execution of "vicare" when
+compiling libraries and running tests; for example:
 
-4.2 Install CRE2
+   $ make VFLAGS="-g -O2 --print-loaded-libraries"
+
+
+3.2 Install CRE2
 ----------------
 
 CRE2 is a  C language wrapper for the RE2  library, which is implemented
@@ -146,7 +167,7 @@ the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
 Autotools.
 
 
-5. Testing
+4. Testing
 ----------
 
 Test  files  are  located  in  the "tests"  directory;  the  files  with

@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{67} compare procedures
+@cindex @library{srfi :67}, library
+@cindex @library{srfi :67 compare-procedures}, library
+@cindex Library @library{srfi :67}
+@cindex Library @library{srfi :67 compare-procedures}
 
 
 The library @library{srfi :67} is by Sebastian Egner and Jens Axel

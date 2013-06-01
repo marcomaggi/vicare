@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,7 @@
 #!r6rs
 (import (vicare)
   (srfi :0)
-  (prefix (srfi private registry)
+  (prefix (vicare language-extensions cond-expand registry)
 	  private.)
   (vicare checks))
 
@@ -127,6 +127,7 @@
   #;(test :95	sorting-and-merging)
   (test :98	os-environment-variables)
   (test :99	records)
+  (test :101	random-access-lists)
 
 ;;; --------------------------------------------------------------------
 

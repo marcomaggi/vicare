@@ -31,10 +31,8 @@
     (ikarus system $stack)
     (ikarus system $pairs)
     (ikarus system $fx)
-    (ikarus.emergency)
     (vicare arguments validation)
-    (only (vicare syntactic-extensions)
-	  define-inline))
+    #;(ikarus.emergency))
 
 
 ;;;; helpers
@@ -55,8 +53,8 @@
     ;;return the  list T.   Attempt to  make this  operation as  fast as
     ;;possible.
     ;;
-    (let ((lx (%unsafe-len x))
-	  (ly (%unsafe-len y)))
+    (let ((lx (%unsafe-length x 0))
+	  (ly (%unsafe-length y 0)))
       (let ((x (if ($fx> lx ly)
 		   (%list-tail x ($fx- lx ly))
 		 x))
@@ -83,19 +81,13 @@
 	x
       (%drop-uncommon-heads ($cdr x) ($cdr y))))
 
-  (module (%unsafe-len)
-
-    (define-inline (%unsafe-len ls)
-      (%len ls 0))
-
-    (define (%len ls n)
-      ;;Return the length of the list LS.
-      ;;
-      (if (null? ls)
-	  n
-	(%len ($cdr ls) ($fxadd1 n))))
-
-    #| end of module: %unsafe-len |# )
+  (define (%unsafe-length ls n)
+    ;;Recursive  function returning  the  length of  the  list LS.   The
+    ;;initial value of N must be 0.
+    ;;
+    (if (null? ls)
+	n
+      (%unsafe-length ($cdr ls) ($fxadd1 n))))
 
   #| end of module: %common-tail |# )
 
@@ -120,19 +112,19 @@
     ;;
     '())
 
-  (define-inline (%current-winders)
+  (define (%current-winders)
     the-winders)
 
-  (define-inline (%winders-set! ?new)
+  (define (%winders-set! ?new)
     (set! the-winders ?new))
 
-  (define-inline (%winders-push! ?in ?out)
+  (define (%winders-push! ?in ?out)
     (set! the-winders (cons (cons ?in ?out) the-winders)))
 
-  (define-inline (%winders-pop!)
+  (define (%winders-pop!)
     (set! the-winders ($cdr the-winders)))
 
-  (define-inline (%winders-eq? ?save)
+  (define (%winders-eq? ?save)
     (eq? ?save the-winders))
 
   #| end of module: winders-handling |# )
@@ -141,78 +133,80 @@
 ;;;; continuations
 
 (define (%primitive-call/cf func)
-  ;;Low level function: call the function FUNC with a description of the
-  ;;current  Scheme stack  frame, stored  in a  continuation object,  as
-  ;;argument.
+  ;;In tail  position: apply FUNC  to a continuation  object referencing
+  ;;the  current  Scheme stack.   Remember  that  this function  can  be
+  ;;inlined, but if it is not it can be called in tail position.
   ;;
-  #;(emergency-write "enter call/cf")
+  ;;Remember that FPR stands for Frame Pointer Register.
+  ;;
+  ;;CASE OF FRAME  POINTER AT BASE.  If the Scheme  stack scenario after
+  ;;entering this function is:
+  ;;
+  ;;          high memory
+  ;;   |                      | <-- pcb->frame_base
+  ;;   |----------------------|
+  ;;   | ik_underflow_handler | <-- FPR
+  ;;   |----------------------|
+  ;;   |         func         | --> closure object
+  ;;   |----------------------|
+  ;;             ...
+  ;;   |----------------------|
+  ;;   |      free word       | <-- pcb->stack_base
+  ;;   |----------------------|
+  ;;   |                      |
+  ;;          low memory
+  ;;
+  ;;there is  no continuation to be  created, because we already  are at
+  ;;the  base of  the stack.   We just  apply FUNC  to the  next process
+  ;;continuation "pcb->next_k"; notice that "pcb->next_k" is not removed
+  ;;from the PCB structure.
+  ;;
+  ;;NOTE Believe it or not: it has  been verified that this case (FPR at
+  ;;the  frame  base) actually  happens,  especially  when running  with
+  ;;debugging mode enabled.  (Marco Maggi; Mar 26, 2013)
+  ;;
+  ;;CASE OF  SOME FRAMES  ON THE  STACK.  If  the Scheme  stack scenario
+  ;;after entering this function is:
+  ;;
+  ;;         high memory
+  ;;   |                      | <-- pcb->frame_base
+  ;;   |----------------------|
+  ;;   | ik_underflow_handler |
+  ;;   |----------------------|
+  ;;     ... other frames ...
+  ;;   |----------------------|          --
+  ;;   |     local value 1    |          .
+  ;;   |----------------------|          .
+  ;;   |     local value 1    |          . frame 1
+  ;;   |----------------------|          .
+  ;;   |   return address 1   |          .
+  ;;   |----------------------|          --
+  ;;   |     local value 0    |          .
+  ;;   |----------------------|          .
+  ;;   |     local value 0    |          . frame 0
+  ;;   |----------------------|          .
+  ;;   |   return address 0   | <-- FPR  .
+  ;;   |----------------------|          --
+  ;;   |         func         | --> closure object
+  ;;   |----------------------|
+  ;;             ...
+  ;;   |----------------------|
+  ;;   |      free word       | <-- pcb->stack_base
+  ;;   |----------------------|
+  ;;   |                      |
+  ;;          low memory
+  ;;
+  ;;we need to  freeze the current stack into a  continuation object and
+  ;;then apply FUNC to such object.
+  ;;
+  ;;
   (if ($fp-at-base)
-      ;;The situation of the Scheme stack is:
-      ;;
-      ;;          high memory
-      ;;   |                      | <-- pcb->frame_base
-      ;;   |----------------------|
-      ;;   |    return address    | <-- frame pointer register (FPR)
-      ;;   |----------------------|
-      ;;   |                      |
-      ;;          low memory
-      ;;
-      ;;so there is no continuation to  be saved, because we already are
-      ;;at the  base of  the stack;  so we just  call the  function FUNC
-      ;;using the current "pcb->next_k"  as continuation object.  Notice
-      ;;that "pcb->next_k" is not removed from the PCB structure.
-      ;;
-      ;;Notice that there  are at least two situations in  which the FPR
-      ;;is  at the  base of  the stack;  one is  when the  execution has
-      ;;rewind the stack until the base of the current stack segment:
-      ;;
-      ;;          high memory
-      ;;   |                      | <-- pcb->frame_base = end of segment
-      ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
-      ;;   |----------------------|
-      ;;   |                      |
-      ;;          low memory
-      ;;
-      ;;the other is when $SEAL-FRAME-AND-CALL has been used to save the
-      ;;current  stack  inside   a  call  to  this   very  function  and
-      ;;$CALL-WITH-UNDERFLOW-HANDLER has  prepared the stack  as follows
-      ;;before calling the argument function FUNC:
-      ;;
-      ;;          high memory
-      ;;   |                      | <-- end of segment
-      ;;   |----------------------|
-      ;;   | ik_underflow_handler |
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- pcb->frame_base
-      ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
-      ;;   |----------------------|
-      ;;   | continuation object  |
-      ;;   |----------------------|
-      ;;   |                      |
-      ;;          low memory
-      ;;
-      (func ($current-frame))
-    ;;The situation of the Scheme stack is:
-    ;;
-    ;;         high memory
-    ;;   |                      | <-- pcb->frame_base
-    ;;   |----------------------|
-    ;;   | ik_underflow_handler |
-    ;;   |----------------------|
-    ;;             ...
-    ;;   |----------------------|
-    ;;   |    return address    | <-- frame pointer register (FPR)
-    ;;   |----------------------|
-    ;;   |                      |
-    ;;          low memory
-    ;;
-    ;;so we  need to save the  current stack into a  continuation object
-    ;;and then call FUNC.
-    ($seal-frame-and-call func)))
+      (begin
+	#;(emergency-write "primitive-call/cf: stack at base")
+	(func ($current-frame)))
+    (begin
+      #;(emergency-write "primitive-call/cf: freezing the stack")
+      ($seal-frame-and-call func))))
 
 (define (call/cf func)
   (define who 'call/cf)
@@ -227,36 +221,40 @@
     (define who 'call/cc)
     (with-arguments-validation (who)
 	((procedure	func))
-      (%primitive-call/cc (lambda (kont)
-			    (let ((save (%current-winders)))
-			      (define-inline (%do-wind-maybe)
-				(unless (%winders-eq? save)
-				  (%do-wind save)))
-			      (func (case-lambda
-				     ((v)
-				      (%do-wind-maybe)
-				      (kont v))
-				     (()
-				      (%do-wind-maybe)
-				      (kont))
-				     ((v1 v2 . v*)
-				      (%do-wind-maybe)
-				      (apply kont v1 v2 v*)))))))))
+      (define (func-with-winders escape-function)
+	(let ((save (%current-winders)))
+	  (define (%do-wind-maybe)
+	    (unless (%winders-eq? save)
+	      (%do-wind save)))
+	  (define escape-function-with-winders
+	    (case-lambda
+	     ((v)
+	      (%do-wind-maybe)
+	      (escape-function v))
+	     (()
+	      (%do-wind-maybe)
+	      (escape-function))
+	     ((v1 v2 . v*)
+	      (%do-wind-maybe)
+	      (apply escape-function v1 v2 v*))))
+	  (func escape-function-with-winders)))
+      (%primitive-call/cc func-with-winders)))
 
-  (define-inline (%primitive-call/cc ?func)
-    (%primitive-call/cf (lambda (frm)
-			  ;;FRM  is  a  continuation object  created  by
-			  ;;%PRIMITIVE-CALL/CF   and    representing   a
-			  ;;snapshot  of the  Scheme  stack right  after
-			  ;;entering %PRIMITIVE-CALL/CF.
-			  ;;
-			  ;;When FRM  arrives here, it has  already been
-			  ;;prepended to the list "pcb->next_k".
-			  ;;
-			  ;;The return value  of $FRAME->CONTINUATION is
-			  ;;a  closure  object  which,  when  evaluated,
-			  ;;resumes the continuation represented by FRM.
-			  (?func ($frame->continuation frm)))))
+  (define (%primitive-call/cc func-with-winders)
+    ;;In tail position: applies  FUNC-WITH-WINDERS to an escape function
+    ;;which, when evaluated, reinstates the current continuation.
+    ;;
+    ;;The argument  FREEZED-FRAMES is  a continuation object  created by
+    ;;%PRIMITIVE-CALL/CF  referencing  the   Scheme  stack  right  after
+    ;;entering this function.  When  FREEZED-FRAMES arrives here, it has
+    ;;already been prepended to the list "pcb->next_k".
+    ;;
+    ;;The  return  value of  $FRAME->CONTINUATION  is  a closure  object
+    ;;which,  when evaluated,  resumes the  continuation represented  by
+    ;;FREEZED-FRAMES.
+    ;;
+    (%primitive-call/cf (lambda (freezed-frames)
+			  (func-with-winders ($frame->continuation freezed-frames)))))
 
   (module (%do-wind)
 

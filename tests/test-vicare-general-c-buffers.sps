@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,6 +32,23 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare general C buffers handling\n")
+
+
+(parametrise ((check-test-name	'utils))
+
+  (check
+      (general-c-buffer-len '#vu8(1 2 3) #f)
+    => 3)
+
+  (check
+      (general-c-buffer-len (make-memory-block (null-pointer) 123) #f)
+    => 123)
+
+  (check
+      (general-c-buffer-len (null-pointer) 123)
+    => 123)
+
+  #t)
 
 
 (parametrise ((check-test-name	'strings))

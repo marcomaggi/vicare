@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi.
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -21,22 +21,19 @@
     code-entry-adjustment
     assembler-property-key)
   (import (ikarus)
-    #;(rnrs bytevectors)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (prefix (vicare unsafe-operations)
-	    $)
+    (vicare unsafe operations)
     (vicare arguments validation)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
-    (except (vicare syntactic-extensions)
+    (except (vicare language-extensions syntaxes)
 	    case-word-size))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare include))
-    (include/verbose "ikarus.config.ss"))
+    (include "ikarus.config.ss" #t))
 
 
 ;;;; Introduction
@@ -1691,7 +1688,7 @@
 		bv))))))
 
   (define-inline (%error message . irritants)
-    (error who message . irritants))
+    (apply error who message irritants))
 
   (define-syntax %store-first-word!
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)

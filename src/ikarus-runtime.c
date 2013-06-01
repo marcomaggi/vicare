@@ -1,6 +1,6 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
  * This program is free software:  you can redistribute it and/or modify
@@ -306,11 +306,32 @@ ik_make_pcb (void)
    * code execution.
    */
   {
-    pcb->stack_base    = ik_mmap(IK_STACKSIZE);
-    pcb->stack_size    = IK_STACKSIZE;
-    pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
-    pcb->frame_base    = pcb->frame_pointer;
-    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
+    pcb->stack_base	= ik_mmap(IK_STACKSIZE);
+    pcb->stack_size	= IK_STACKSIZE;
+    pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
+    pcb->frame_base	= pcb->frame_pointer;
+    if (IK_PROTECT_FROM_STACK_OVERFLOW) {
+      /* Forbid reading  and writing in  the low-address memory  page of
+       * the  stack  segment;  this  should  trigger  a  SIGSEGV  if  an
+       * undetected  Scheme  stack  overflow happens.   Not  a  solution
+       * against stack  overflows, but at  least it should  avoid memory
+       * corruption.
+       *
+       *    stack_base                             frame_base
+       *         v                                     v
+       *  lo mem |-------------------------------------| hi mem
+       *
+       *         |.....|...............................|
+       *       1st page         usable region
+       *
+       * This  configuration  must  be  repeated whenever  a  new  stack
+       * segment is allocated because of detected stack overflow.
+       */
+      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+      pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
+    } else {
+      pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE;
+    }
   }
 
   /* Allocate  and initialise  the page  cache.  The  PCB references  an
@@ -608,7 +629,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
    through "IK_ALIGN()".
 
    If not enough memory is available  on the current heap segment: a new
-   heap segment is  allocated; is such allocation fails:  the process is
+   heap segment is  allocated; if such allocation fails:  the process is
    terminated with exit status EXIT_FAILURE.
 
    This  function  is  meant  to  be used  to  allocate  "small"  memory
@@ -622,6 +643,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
      return the offset. */
   if (new_alloc_ptr < end_ptr) {
     pcb->allocation_pointer = new_alloc_ptr;
+/* write(2, "_", 1); */
     return alloc_ptr;
   } else {
     /* No room in the current heap block: enlarge the heap by allocating
@@ -668,6 +690,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       pcb->heap_size		= new_size;
       pcb->allocation_redline	= heap_ptr + new_size - 2 * IK_CHUNK_SIZE;
       pcb->allocation_pointer	= heap_ptr + requested_size;
+/* write(2, " H ", 3); */
       return heap_ptr;
     }
   }
@@ -682,6 +705,15 @@ ik_debug_message (const char * error_message, ...)
   fprintf(stderr, "*** Vicare debug: ");
   vfprintf(stderr, error_message, ap);
   fprintf(stderr, "\n");
+  va_end(ap);
+}
+void
+ik_debug_message_no_newline (const char * error_message, ...)
+{
+  va_list        ap;
+  va_start(ap, error_message);
+  fprintf(stderr, "*** Vicare debug: ");
+  vfprintf(stderr, error_message, ap);
   va_end(ap);
 }
 void
@@ -722,10 +754,10 @@ ik_stack_overflow (ikpcb* pcb)
  * single stack segment:
  *
  *    stack_base   redline        growth     frame_base
- *         v          v          <------       v
+ *         v          v          <------        v
  *  lo mem |----------+----------------------|-| hi mem
- *                                            |
- *                                             -> ik_underflow_handler
+ *                                            v
+ *                                     ik_underflow_handler
  *
  * where the highest machine word is  set to the address of the assembly
  * label "ik_underflow_handler",  defined in the  file "ikarus-enter.S",
@@ -733,129 +765,138 @@ ik_stack_overflow (ikpcb* pcb)
  * execution completes.
  *
  * When the use  of the stack passes the redline:  this very function is
- * called; the old  stack segment is stored into  a continuation object,
- * saved  in  the  PCB,  and  a  new  stack  segment  is  allocated  and
- * initialised in the same way of the old:
+ * called;  the current  stack segment  is freezed  into a  continuation
+ * object, registered in  the PCB as "next process  continuation"; a new
+ * stack segment  is allocated and  initialised in  the same way  of the
+ * old:
  *
  *    stack_base   redline        growth    frame_base
- *         v          v          <------       v
+ *         v          v          <------        v
  *  lo mem |----------+----------------------|-| hi mem
- *                                            |
- *                                             -> ik_underflow_handler
+ *                                            v
+ *                                     ik_underflow_handler
  *
- * When use of  the new stack segment is finished:  the Scheme code goes
- * back  to the  "ik_underflow_handler"  label, which  will  do what  is
- * needed to  retrieve the  old stack  segment from  the PCB  and resume
- * execution in the old stack.
+ * When  use of  the  new stack  segment is  finished:  the Scheme  code
+ * execution returns to the  "ik_underflow_handler" label, which will do
+ * what is  needed to retrieve the  freezed stack frames and  resume the
+ * continuation.
  *
  * Notice that  "ik_stack_overflow()" is  always called by  the assembly
  * routine "ik_foreign_call"  with code that  does not touch  the Scheme
- * stack  (because "ik_stack_overflow()"  has no  arguments).  So,  upon
- * entering  this function,  the situation  on  the Scheme  stack is  as
- * follows:
+ * stack (because "ik_stack_overflow()" has  no Scheme arguments).  Upon
+ * entering this function, assuming there are 2 frames, the situation on
+ * the old Scheme stack is as follows:
  *
  *         high memory
  *   |                      | <-- pcb->frame_base
  *   |----------------------|
  *   | ik_underflow_handler |
- *   |----------------------|
+ *   |----------------------|                         --
+ *   |    local value 1     |                         .
+ *   |----------------------|                         .
+ *   |    local value 1     |                         . framesize 1
+ *   |----------------------|                         .
+ *   |   return address 1   |                         .
+ *   |----------------------|                         --
+ *   |    local value 0     | <-- pcb->frame_redline  .
+ *   |----------------------|                         .
+ *   |    local value 0     |                         . framesize 0
+ *   |----------------------|                         .
+ *   |   return address 0   | <-- pcb->frame_pointer  .
+ *   |----------------------|                         --
  *             ...
  *   |----------------------|
- *   |                      | <-- pcb->frame-redline
- *   |----------------------|
- *   |    return address    | <-- pcb->frame_pointer
- *   |----------------------|
- *   |      argument 0      |
- *   |----------------------|
- *   |      argument 1      |
+ *   |                      | <-- pcb->stack_base
  *   |----------------------|
  *   |                      |
  *         low memory
  *
- * where the  "return address" and  the arguments  are the frame  of the
- * last    Scheme    function    called,    the    one    that    caused
- * "ik_stack_overflow()" to be called; in a  way or the other we must go
- * back to the execution of that Scheme function.
+ * where  the frame  0  is  the one  that  crossed  the redline  causing
+ * "ik_stack_overflow()" to be called.   Right after initialisation, the
+ * situation of the new Scheme stack is as follows:
+ *
+ *         high memory
+ *   |                      | <-- pcb->frame_base
+ *   |----------------------|
+ *   | ik_underflow_handler | <-- pcb->frame_pointer
+ *   |----------------------|
+ *             ...
+ *   |----------------------|
+ *   |                      | <-- pcb->frame_redline
+ *   |----------------------|
+ *             ...
+ *   |----------------------|
+ *   |                      | <-- pcb->stack_base
+ *   |----------------------|
+ *   |                      |
+ *         low memory
+ *
+ * So  after   returning  from  this  function:   the  assembly  routine
+ * "ik_foreign_call" will return to  the label "ik_underflow_handler and
+ * the underflow handler will do its job.
  */
 #define STACK_DEBUG	0
 {
-  ikptr		underflow_handler;
-#if STACK_DEBUG
-  ik_debug_message_start("%s: entered pcb=0x%016lx", __func__, (long)pcb);
-#endif
+  if (0 || STACK_DEBUG) {
+    ik_debug_message("%s: enter pcb=0x%016lx", __func__, (long)pcb);
+  }
   assert(pcb->frame_pointer <= pcb->frame_base);
-  /* Mark the old Scheme stack segment as "data". */
-  set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
-  /* Retrieve the address of the underflow handler. */
-  underflow_handler = IK_REF(pcb->frame_base, -wordsize);
-  { /* Save the  used portion  of the  old Scheme  stack segment  into a
-     * continuation and store it in the PCB as "next_k".  Notice that we
-     * exclude the  arguments of the  last stack  frame, the one  of the
-     * Scheme  function  that  called "ik_stack_overflow()",  but  those
-     * arguments are still on the stack.
-     *
-     *         high memory
-     *   |                      | <-- pcb->frame_base
-     *   |----------------------|
-     *   | ik_underflow_handler |
-     *   |----------------------|                             --
-     *             ...                                        .
-     *   |----------------------|                             . saved
-     *   |                      | <-- pcb->frame-redline      . stack
-     *   |----------------------|                             . portion
-     *   |    return address    | <-- Frame Pointer Register  .
-     *   |----------------------|                             --
-     *   |      argument 0      |
-     *   |----------------------|
-     *   |      argument 1      |
-     *   |----------------------|
-     *   |                      |
-     *         low memory
-     */
-    ikptr	s_kont;
-    s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
-    IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
-    IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
-    IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
-    IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+  assert(pcb->frame_pointer <= pcb->frame_redline);
+  assert(IK_UNDERFLOW_HANDLER == IK_REF(pcb->frame_base, -wordsize));
+  /* Freeze the  Scheme stack segment  into a continuation  and register
+     the continuation object in the  PCB as "next process continuation".
+     Mark the old Scheme stack segment as "data".*/
+  {
+    ikcont *	kont   = (ikcont*)(long)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+    ikptr	s_kont = ((ikptr)kont) | continuation_primary_tag;
+    kont->tag  = continuation_tag;
+    kont->top  = pcb->frame_pointer;
+    kont->size = pcb->frame_base - pcb->frame_pointer - wordsize;
+    kont->next = pcb->next_k;
     pcb->next_k = s_kont;
-#if STACK_DEBUG
-    ik_debug_message("%s: saved stack continuation:\n\
-\tpcb->stack_base    = 0x%016lx\n\
-\tpcb->stack_size    = %ld bytes, %ld words\n\
-\tpcb->frame_redline = 0x%016lx, delta %ld words\n\
-\tpcb->frame_pointer = 0x%016lx\n\
-\tpcb->frame_base    = 0x%016lx\n\
-\tik_underflow_handler = 0x%016x\n\
-\ts_kont      = 0x%016lx\n\
-\ts_kont.top  = 0x%016lx\n\
-\ts_kont.size = %ld",
-		     __func__,
-		     pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
-		     pcb->frame_redline,
-		     (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
-		     pcb->frame_pointer, pcb->frame_base,
-		     (long)underflow_handler,
-		     (long)s_kont,
-		     IK_REF(s_kont, off_continuation_top),
-		     IK_REF(s_kont, off_continuation_size));
-#endif
+    set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
+    assert(0 != kont->size);
+    if (IK_PROTECT_FROM_STACK_OVERFLOW) {
+      /* Release the protection on the  first low-address memory page in
+	 the stack  segment, which avoids  memory corruption in  case of
+	 undetected Scheme stack overflow. */
+      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_READ|PROT_WRITE);
+    }
   }
-  { /* Allocate a  new memory  segment to  be used  as Scheme  stack and
-       set the PCB accordingly. */
-    pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
-    pcb->stack_size    = IK_STACKSIZE;
-    pcb->frame_base    = pcb->stack_base + pcb->stack_size;
-    pcb->frame_pointer = pcb->frame_base - wordsize;
-    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
-    /* Store the address of the underflow handler in the highest machine
-       word, so that it is referenced by "pcb->frame_pointer". */
-    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  /* Allocate a  new memory segment to  be used as Scheme  stack and set
+     the PCB accordingly. */
+  {
+    pcb->stack_base	= ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
+    pcb->stack_size	= IK_STACKSIZE;
+    pcb->frame_base	= pcb->stack_base + IK_STACKSIZE;
+    pcb->frame_pointer	= pcb->frame_base - wordsize;
+    IK_REF(pcb->frame_pointer, 0) = IK_UNDERFLOW_HANDLER;
+    if (IK_PROTECT_FROM_STACK_OVERFLOW) {
+      /* Forbid reading  and writing in  the low-address memory  page of
+       * the  stack  segment;  this  should  trigger  a  SIGSEGV  if  an
+       * undetected  Scheme  stack  overflow happens.   Not  a  solution
+       * against stack  overflows, but at  least it should  avoid memory
+       * corruption.
+       *
+       *    stack_base                             frame_base
+       *         v                                     v
+       *  lo mem |-------------------------------------| hi mem
+       *
+       *         |.....|...............................|
+       *       1st page         usable region
+       *
+       * This configuration must be performed also when first allocating
+       * the stack segment.
+       */
+      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+      pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
+    } else {
+      pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE;
+    }
   }
-#if STACK_DEBUG
-  ik_debug_message("%s: leave pcb=0x%016lx", __func__, (long)pcb);
-#endif
-  return;
+  if (0 || STACK_DEBUG) {
+    ik_debug_message("%s: leave pcb=0x%016lx", __func__, (long)pcb);
+  }
 }
 
 
@@ -991,7 +1032,7 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
      allocated with "mmap()" with execution protection. */
   ikptr  mem       = ik_mmap_code(memreq, 0, pcb);
   bzero((char*)(long)mem, memreq);
-  IK_REF(mem, disp_code_code_tag)	= code_tag;
+  IK_REF(mem, disp_code_tag)		= code_tag;
   IK_REF(mem, disp_code_code_size)	= s_code_size;
   IK_REF(mem, disp_code_freevars)	= s_freevars;
   IK_REF(mem, disp_code_reloc_vector)	= s_relocation_vector;
@@ -1134,9 +1175,11 @@ ikrt_make_vector2 (ikptr len, ikptr obj, ikpcb* pcb)
 
 ikptr
 ikrt_exit (ikptr status, ikpcb* pcb)
-/* This is nor for the public API. */
+/* This is not for the public API. */
 {
   ik_delete_pcb(pcb);
+  if (total_allocated_pages)
+    ik_debug_message("allocated pages: %d", total_allocated_pages);
   assert(0 == total_allocated_pages);
   exit(IK_IS_FIXNUM(status)? IK_UNFIX(status) : EXIT_FAILURE);
 }

@@ -1,0 +1,2536 @@
+@node lang
+@chapter Language extension libraries
+
+
+@menu
+* keywords::                    More facilities for keyword objects.
+* cond-expand::                 Feature based conditional expansion.
+* include::                     Including source files at expand time.
+* coroutines::                  Running coroutines.
+* amb::                         McCarthy's @func{amb} operator.
+* infix::                       Infix to prefix transformer.
+* simple-match::                Simple destructuring match syntax.
+* syntaxes::                    Language syntactic extensions.
+* custom-ports::                Custom ports.
+@end menu
+
+@c page
+@node keywords
+@section More facilities for keyword objects
+
+
+@cindex Library @library{vicare language-extensions keywords}
+@cindex @library{vicare language-extensions keywords}, library
+
+
+Keywords are disjoint objects which can be read by @value{PRJNAME}'s
+reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
+bindings and keyword objects handling is embedded in @value{PRJNAME}'s
+boot image, but additional facilities are required to make use of
+keywords.
+
+The following bindings are exported by the library @library{vicare
+language-extensions keywords}.  Additionally the following bindings are
+reexported from @library{vicare}:
+
+@example
+symbol->keyword         keyword->symbol
+keyword?                keyword=?
+keyword-hash
+@end example
+
+
+@defun keyword->string @var{keyword}
+@defunx string->keyword @var{string}
+Convert a keyword object to and from a string object.  The string is the
+name of the symbol embedded in the keyword.
+@end defun
+
+
+@deffn Syntax let-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax let*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx {Auxiliary Syntax} with-argument @meta{name} @meta{default} @meta{keyword}
+@deffnx {Auxiliary Syntax} without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given}
+Expand into a @func{let} like form whose bindings are configured from a
+list of arguments and options.
+
+@func{let-keywords} expands into a @func{let} syntax,
+@func{let*-keywords} expands into a @func{let*} syntax,
+@func{letrec-keywords} expands into a @func{letrec} syntax,
+@func{let-keywords} expands into a @func{let} syntax.
+
+@meta{input} must be an expression evaluating to a list of values and
+keywords; keywords must be compliant to the specification in
+@meta{options-spec}.  The same keyword can be present multiple times in
+@meta{input}.
+
+@meta{args} must be an identifier which will be bound to a list of
+values from @meta{input} not matching any of the options specified in
+@meta{options-spec}.
+
+@meta{allow} must be an expression meant to evaluate to @false{} or
+true; when @false{}: keyword values in @meta{input} not matched by
+specifications in @meta{options-spec} will cause an assertion violation;
+when true: keyword values in @meta{input} not matched by specifications
+in @meta{options-spec} will be collected in @meta{args}.
+
+@meta{options-spec} must be null or a list of lists, each with the
+following formats:
+
+@example
+(with-argument @meta{name} @meta{default} @meta{keyword})
+(without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given})
+@end example
+
+@noindent
+such specifications are interpreted as follows:
+
+@itemize
+@item
+The @func{with-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+The @func{without-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+@meta{name} must be an identifier which will become the name of a
+binding in the output @func{let} like syntax.
+
+@item
+@meta{default} must be an expression which will become a the value of
+binding in the output @func{let} like syntax.
+
+@item
+@meta{keyword} must be a keyword object which can be present in
+@meta{input} to mutate the associated @meta{name} binding.
+
+@item
+For keywords with argument: when the @meta{keyword} is present in
+@meta{input}, it must be followed by a value which will become the new
+value of the corresponding @meta{name} binding.
+
+
+@item
+For keywords without argument: when the @meta{keyword} is present in
+@meta{input}, the value resulting from the evaluation of
+@meta{when-given} will become the new value of the corresponding
+@meta{name} binding.
+@end itemize
+
+We can imagine the following macro use:
+
+@example
+(let-keywords @meta{input} args #f
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  (alpha)
+  (beta))
+@end example
+
+@noindent
+to expand to something like:
+
+@example
+(let ((a 1)
+      (b 2))
+  (let ((args @meta{options-parser}))
+    (alpha)
+    (beta)))
+@end example
+
+@noindent
+where @meta{options-parser} is a form which takes care of parsing the
+@meta{input}.
+@end deffn
+
+
+Examples:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare language-extensions keywords))
+
+;; options with arguments
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 ())
+
+;; options without arguments
+(let-keywords '(#:a #:b #:d 4) args #f
+    ((without-argument a #\a #:a #\A)
+     (without-argument b #\b #:b #\B)
+     (without-argument c #\c #:c #\C)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (#\A #\B #\c 4 ())
+
+;; options with arguments, leftover arguments
+(let-keywords '(#:a 1 ciao #:b 2 hello #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 (ciao hello))
+
+;; no options, allow unknown
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #t
+    ()
+  args)
+@result{} (#:a 1 #:b 2 #:d 4)
+
+(let-keywords '(#:a) args #f
+    ()
+  args)
+@error{} unknown option #:a
+
+(let-keywords '(#:a #:b 123) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option value for #:a cannot be a keyword
+
+(let-keywords '(#:a) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option #:a requires argument
+
+;; keywords used multiple times
+(let-keywords '(#:verbose #:verbose #:verbose) args #f
+  ((without-argument verbosity 0 #:verbose (+ 1 verbosity)))
+  verbosity)
+@result{} 3
+@end example
+
+@c page
+@node cond-expand
+@section Feature based conditional expansion
+
+
+@cindex Library @library{vicare language-extensions cond-expand}
+@cindex @library{vicare language-extensions cond-expand}, library
+@cindex Library @library{vicare language-extensions cond-expand helpers}
+@cindex @library{vicare language-extensions cond-expand helpers}, library
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions cond-expand}.
+
+
+@deffn Syntax define-cond-expand @meta{cond-expand} @meta{feature-func} ...
+Expand to the definition of a syntax like @func{cond-expand} supporting
+all the features of the @func{cond-expand} from @ansrfi{0} and in
+addition supporting the features specified by a set of functions.
+@ref{srfi cond-expand vicare, Features supported by @value{PRJNAME}}
+
+@meta{cond-expand} must be an identifier representing the name of the
+new syntax.
+
+The optional @meta{feature-func} arguments must be expressions which,
+evaluated only once at expand time, must return functions; each of such
+functions must accept as single argument an identifier representing a
+feature and must return as single argument: @true{} if the feature is
+supported, @false{} otherwise.
+@end deffn
+
+In the following example we define a @func{cond-expand} syntax just like
+the one exported by @ansrfi{0}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare language-extensions cond-expand))
+
+(define-cond-expand cond-expand)
+
+(cond-expand
+  ((and srfi-0 srfi-1)  #t)
+  (else                 #f))
+@expansion{} #t
+@end example
+
+@noindent
+in the following example we define a @func{cond-expand} that
+additionally recognises the features @func{write} and @func{display}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare language-extensions cond-expand))
+
+(define-cond-expand cond-expand
+  (lambda (id)
+    (free-identifier=? id #'display))
+  (lambda (id)
+    (free-identifier=? id #'write)))
+
+(cond-expand
+  ((or display write)   #t)
+  (else                 #f))
+@expansion{} #t
+@end example
+
+The following bindings are exported by the library @library{vicare
+cond-expand helpers}.
+
+
+@deffn Syntax define-cond-expand-identifiers-helper @meta{who} @meta{feature-clause} ...
+Expand to the definition of a function bound to @meta{who} which can be
+used as feature function in uses of the macro @func{define-cond-expand}.
+
+Each of the optional @meta{feature-clause} must have the following
+format:
+
+@example
+(@meta{feature-id} @meta{expr})
+@end example
+
+@noindent
+where @meta{feature-id} must be the feature identifier and @meta{expr}
+must be an expression.  The generated function compares the given
+identifier with each of @meta{feature-id}, using
+@func{free-identifier=?}:
+
+@itemize
+@item
+If the result is @true{}: evaluate @meta{expr} and return the result.
+
+@item
+If the result is @false{}: move on to the next @meta{feature-id}.
+
+@item
+If no more @meta{feature-id} are left: return @false{}.
+@end itemize
+@end deffn
+
+
+In the following example we define a @func{cond-expand} that
+additionally recognises the features @func{write} and @func{display}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare language-extensions cond-expand)
+  (for (vicare language-extensions cond-expand)
+       expand))
+
+(define-cond-expand cond-expand
+  (let ()
+    (define-cond-expand-identifiers-helper help
+      (display        #t)
+      (write          #t))
+    help))
+
+(cond-expand
+  ((or display write)   #t)
+  (else                 #f))
+@expansion{} #t
+@end example
+
+@c page
+@node include
+@section Including source files at expand time
+
+
+@cindex Library @library{vicare language-extensions include}
+@cindex @library{vicare language-extensions include}, library
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions include}.
+
+
+@deffn Syntax include @var{filename}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  Everything happens
+as if the code was present in place of the @func{include} form.
+@end deffn
+
+
+@deffn Syntax include/lexical-context @var{filename} @var{identifier}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  @var{identifier}
+must be a Scheme identifier and it is used to assign a lexical context
+to the sourced code.
+@end deffn
+
+@c page
+@node coroutines
+@section Running coroutines
+
+
+@cindex Library @library{vicare language-extensions coroutines}
+@cindex @library{vicare language-extensions coroutines}, library
+
+The library @library{vicare language-extensions coroutines} implements
+coroutines on top of Scheme continuations.  The implementation is a
+simple queue of escape functions: whenever coroutine @var{A} yields
+control to the ``next'' coroutine, it enqueues an escape function to its
+current continuation and causes the next escape function to be invoked.
+
+For discussions about other implementations of coroutines and
+continuations see @ref{HFWCoro, references}.
+
+@menu
+* coroutines examples::         Usage examples for coroutines.
+* coroutines api::              Programming interface to coroutines.
+@end menu
+
+@c page
+@node coroutines examples
+@subsection Usage examples for coroutines
+
+
+Coroutines are created by the function @func{coroutine}; a coroutine in
+execution can yield control to the next coroutine with the function
+@func{yield}.  It is possible to enter a loop that runs all the
+coroutines until all of them are finished with the function
+@func{finish-coroutines}.
+
+All the examples in this section are to be considered as Scheme programs
+after the prelude:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions coroutines))
+
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode line))
+@end example
+
+@noindent
+which allows the intertwining of coroutines to be seen by displaying
+strings on the current output port.
+
+@c ------------------------------------------------------------
+
+@subsubheading Two coroutines
+
+The following example runs two coroutines and waits for them to finish:
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+one 1
+two 1
+one 2
+two 2
+one 3
+two 3
+@end example
+
+We see that to exit a coroutine we just return from its start function.
+
+@c ------------------------------------------------------------
+
+@subsubheading The main routine and a subroutine
+
+We can always consider the ordinary control flow of a program as a
+coroutine, the @dfn{main routine}; so the following program produces
+output similar to the one above:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")))
+
+;;This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Main routine alone
+
+It is perfectly all right to call @func{yield} and
+@func{finish-coroutines} from the main routine even when there are no
+subroutines:
+
+@example
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+(finish-coroutines)
+@end example
+
+@noindent
+the output of this program is just:
+
+@example
+main 1
+main 2
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Finishing coroutines
+
+It is possible to call @func{finish-coroutines} from any coroutine, but
+we must be careful because if we let the main routine exit before all
+the routines are finished some computation will not take place.  In the
+following program the subroutine has more steps than the main routine:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")
+      (yield)
+      (display "sub 4\n")
+      (yield)
+      (display "sub 5\n")
+      (finish-coroutines)))
+
+;; This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+@end example
+
+@noindent
+and its output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@noindent
+we see that @samp{sub 4} and @samp{sub 5} are not displayed.
+
+@c ------------------------------------------------------------
+
+@subsubheading Finish coroutines as exit hook
+
+It can be useful to register @func{finish-coroutines} as exit hook, so
+that upon exiting the process all the pending coroutines are correctly
+terminated.
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(exit-hooks (cons finish-coroutines (exit-hooks)))
+(exit)
+@end example
+
+@c page
+@node coroutines api
+@subsection Programming interface to coroutines
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions coroutines}.
+
+
+@defun coroutine @var{thunk}
+Create a new coroutine having @var{thunk} as function and enter it;
+return unspecified values.
+@end defun
+
+
+@defun yield
+Register the current continuation as coroutine, then run the next
+coroutine; return unspecified values.
+@end defun
+
+
+@defun finish-coroutines
+Loop running the next coroutine until there are no more; return
+unspecified values.
+@end defun
+
+@c page
+@node amb
+@section McCarthy's @func{amb} operator
+
+
+@cindex Library @library{vicare language-extensions amb}
+@cindex @library{vicare language-extensions amb}, library
+
+
+The library @library{vicare language-extensions amb} defines McCarthy's
+@func{amb} operator and a set of related utilities.  The @dfn{ambiguous
+operator} allows the execution of depth--first search in a tree of
+choices integrated in the normal control flow of a Scheme program; it is
+built upon continuations.
+
+The @func{amb} operator was briefly defined in:
+
+@quotation
+John McCarthy.  ``A Basis for a Mathematical Theory of Computation''.
+In Computer Programming And Formal Systems by P. Braffort and
+D. Hirschberg (Ed.), 1963.
+@end quotation
+
+@noindent
+and further discussed in:
+
+@quotation
+Ramin Zabih, David McAllester, and David Chapman.  ``Non--deterministic
+Lisp with dependency--directed backtracking''.  In Proc. Proceedings of
+the Sixth National Conference on Artificial Intelligence, pp. 59-64,
+1987.
+@end quotation
+
+@menu
+* amb api::                     Programming interface for @func{amb}.
+* amb examples::                Usage examples for @func{amb}.
+@end menu
+
+@c page
+@node amb api
+@subsection Programming interface for @func{amb}
+
+
+@menu
+* amb api core::                Core @func{amb} syntaxes.
+* amb api random::              Random selection of choices.
+* amb api generator::           Generating choices.
+* amb api utilities::           Utility functions and syntaxes.
+* amb api condition::           Condition object types.
+@end menu
+
+@c page
+@node amb api core
+@subsubsection Core @func{amb} syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions amb}.
+
+
+@deffn Syntax with-ambiguous-choices @metao{body} @meta{body} ...
+Initialise the dynamic environment for a new @func{amb} search and in
+such environment evaluates the @meta{body} forms.  Return the result of
+the last form.
+@end deffn
+
+
+@deffn Syntax with-amb-exhaustion-handler @meta{handler} @meta{thunk}
+Install in the dynamic environment a custom handler for search tree
+exhaustion.  This syntax should be used in the body of
+@func{with-ambiguous-choices}, but before the first use of @func{amb}.
+
+@meta{handler} must be an expression evaluating to a thunk: such thunk
+is called by @func{amb} whenever no more choices are available.
+@meta{thunk} must be an expression evaluating to a thunk: it is
+evaluated while the custom handler is installed.
+@end deffn
+
+
+@deffn Syntax amb @meta{expr} ...
+Evaluate one of the @meta{expr} expressions and return its result; save
+in the dynamic environment a continuation that can be reinstated to
+reject the result of this @meta{expr} and try with the next @meta{expr}.
+The @meta{expr} arguments are tried in the given order: left to right.
+
+If the result of evaluating an @meta{expr} is a promise (produced by
+@func{delay}): the promise is forced to produce the result.
+
+When used with no arguments: reject the result of the most recent
+@var{expr} and reinstate the previous continuation to try the next
+@var{expr}.
+
+When all the choices have been tried: raise a non--continuable exception
+with condition object components @condition{who}, @condition{message},
+@condition{amb-exhaustion}.
+
+It is an error if @func{amb} is used outside the dynamic environment
+prepared by @func{with-ambiguous-choices}.
+@end deffn
+
+@c page
+@node amb api random
+@subsubsection Random selection of choices
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions amb}.
+
+
+@deffn Syntax amb-permute @meta{expr} ...
+Like @func{amb} but permute the order of the given expressions.  The
+permutation determining the selection order is generated at every first
+execution of the expanded code, using the random fixnum generator
+referenced by @func{amb-random-fixnum-maker}.
+
+If we define the following function:
+
+@example
+(define (choose)
+  (amb 1 2 3))
+@end example
+
+@noindent
+a new permutation is generated at every function invocation.
+@end deffn
+
+
+@deffn Syntax amb-permute @meta{expr} ...
+Like @func{amb} but randomly select an expression to evaluate; the same
+expression can be selected multiple times.  This syntax never finishes
+choices.  The next expression to evaluate is selected using the random
+fixnum generator referenced by @func{amb-random-fixnum-maker}.
+@end deffn
+
+
+@deffn Parameter amb-random-fixnum-maker
+Hold a procedure accepting a fixnum as single argument: when applied to
+the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
+It is initialised with @func{random} from the library @library{vicare},
+@ref{iklib misc, random}.
+@end deffn
+
+@c page
+@node amb api generator
+@subsubsection Generating choices
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions amb}.
+
+
+@defun amb-thunk @var{generator-thunk}
+Like @func{amb} but generate the next choice by evaluating a thunk.
+@var{generator-thunk} must be a thunk, which, when evaluated, returns
+the next choice; when no more choices are available
+@var{generator-thunk} must evaluate @code{(amb)}.
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+
+(define-values (empty? enqueue! dequeue!)
+  (make-queue '(1 2 3 4)))
+
+(define (generator)
+  (if (empty?)
+      (amb)
+    (dequeue!)))
+
+(with-ambiguous-choices
+ (let ((R (amb-thunk generator)))
+   (amb-assert (<= 3 R))
+   R))
+@result{} 3
+@end example
+@end defun
+
+@c page
+@node amb api utilities
+@subsubsection Utility functions and syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions amb}.
+
+
+@deffn Syntax amb-assert @meta{expr}
+Evaluate @meta{expr} and if the result is true return it; if the result
+is false reject the latest @func{amb} choice.
+
+@example
+(amb-assert @meta{expr}) @expansion{} (or @meta{expr} (amb))
+@end example
+@end deffn
+
+
+@deffn Parameter amb-backtrack-log
+Hold a thunk to be called every time @func{amb}, or any of its
+derivatives, backtracks to reject a previous choice.  It is initialised
+to @func{void}.
+@end deffn
+
+@c page
+@node amb api condition
+@subsubsection Condition object types
+
+
+@subsubheading Search tree exhaustion
+
+
+@deftp {Condition Type} &amb-exhaustion
+Condition type used to signal the exhaustion of a search tree visited by
+@func{amb}; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-amb-exhaustion
+Build and return a new instance of @condition{amb-exhaustion}.
+@end defun
+
+
+@defun amb-exhaustion? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{amb-exhaustion}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Search not initialised
+
+
+@deftp {Condition Type} &amb-not-initialised
+Condition type used to tag the compound condition object raised whenever
+@func{amb} is used outside the dynamic environment prepared by
+@func{with-ambiguous-choices}; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-amb-not-initialised
+Build and return a new instance of @condition{amb-not-initialised}.
+@end defun
+
+
+@defun amb-not-initialised? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{amb-not-initialised}, else return @false{}.
+@end defun
+
+@c page
+@node amb examples
+@subsection Usage example for @func{amb}
+
+
+@menu
+* amb examples simple::         Introductory examples.
+* amb examples ssc::            Seed, square, cube.
+* amb examples coloring::       Graph coloring.
+@end menu
+
+@c page
+@node amb examples simple
+@subsubsection Introductory examples
+
+
+In all the examples of this section we will assume that the following
+prelude opens the program:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+@end example
+
+The @func{amb} operator requires appropriate initialisation of the
+dynamic environment, so if we just evaluate the following form we will
+get an error:
+
+@example
+(amb)
+@error{} &amb-not-initialised
+@end example
+
+If we initialise the environment and then just call @func{amb}, we get
+an ``exhausted search tree'' error:
+
+@example
+(with-ambiguous-choices
+ (amb))
+@error{} &amb-exhaustion
+@end example
+
+@noindent
+because there are no choices, so the search terminates immediately.
+
+If we apply @func{amb} to some choices, it will return the first one:
+
+@example
+(with-ambiguous-choices
+ (amb 1 2 3))
+@result{} 1
+@end example
+
+If we want to see an actual use of @func{amb}, we have to reject some
+choices.  Let's look at this program:
+
+@example
+(with-ambiguous-choices
+ (let ((X (amb 1 2 3)))
+   (amb-assert (even? X))
+   X))
+@result{} 2
+@end example
+
+@noindent
+this is what happens:
+
+@enumerate
+@item
+@func{amb} returns the result of the first expression: @code{1}.
+
+@item
+@func{amb-assert} rejects @code{1} because it is odd; the execution flow
+jumps back to the form @code{(amb 1 2 3)}.
+
+@item
+@func{amb} returns the result of the next expression: @code{2}.
+
+@item
+@func{amb-assert} accepts @code{2} because it is even.
+
+@item
+The result is @code{2}.
+@end enumerate
+
+@c ------------------------------------------------------------
+
+@subsubheading The custom failure handler
+
+The syntax @func{with-amb-exhaustion-handler} allows us to install a
+custom handler for the event ``exhausted search tree''; the installed
+handler is called by @func{amb} whenever no more choices are available.
+As example, if we want a non--local exit at the end of a failed search,
+we can do:
+
+@example
+(call/cc
+    (lambda (escape)
+      (with-ambiguous-choices
+       (with-amb-exhaustion-handler
+           (lambda ()
+             (escape #t))
+         (lambda ()
+           (amb)
+           #f)))))
+@result{} #t
+@end example
+
+
+@c page
+@node amb examples ssc
+@subsubsection Seed, square, cube
+
+
+Given the seed numbers:
+
+@example
+1 3
+@end example
+
+@noindent
+let's say we want to select the one having the square among:
+
+@example
+5 9 11
+@end example
+
+@noindent
+and the cube among:
+
+@example
+13 27 31
+@end example
+
+@noindent
+we can imagine a search tree, @ref{fig:amb_ssc_tree, amb examples ssc}.
+
+@float Figure,fig:amb_ssc_tree
+@example
+     | A |    | B |    | C |
+
+o----- 1 -----  5 ----- 13
+   |       |        |-- 27
+   |       |         -- 31
+   |       |
+   |       |--  9 ----- 13
+   |       |        |-- 27
+   |       |         -- 31
+   |       |
+   |        -- 11 ----- 13
+   |                |-- 27
+   |                 -- 31
+   |
+    -- 3 -----  5 ----- 13
+           |        |-- 27
+           |         -- 31
+           |
+           |--  9 ----- 13
+           |        |-- 27
+           |         -- 31
+           |
+            -- 11 ----- 13
+                    |-- 27
+                     -- 31
+@end example
+@caption{Search tree for the seed, square, cube problem.}
+@end float
+
+If we assign a selected seed to the variable @math{A}, a selected
+possible square to the variable @math{B} and a selected possible cube to
+the variable @math{C}, we want search for a tuple @math{(A, B, C)}
+satisfying the constraints: @math{A^2 = B}, @math{A^3 = C}.
+
+To select among the seeds we use the syntax:
+
+@example
+(amb 1 3)
+@end example
+
+@noindent
+to select among the possible squares we use the syntax:
+
+@example
+(amb 5 9 11)
+@end example
+
+@noindent
+to select among the possible cubes we use the syntax:
+
+@example
+(amb 13 27 31)
+@end example
+
+@noindent
+and the constraints can be expressed by the predicates:
+
+@example
+(= (square A) B)
+(= (cube   A) C)
+@end example
+
+@noindent
+the resulting program follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+
+(with-ambiguous-choices
+  (let* ((A (amb 1 3))
+         (B (amb 5 9 11)))
+    (amb-assert (= (square A) B))
+    (let ((C (amb 13 27 31)))
+      (amb-assert (= (cube A) C))
+      (list A B C))))
+@result{} (3 9 27)
+@end example
+
+We can modify the program to show the search path:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+
+(define (print . args)
+  (apply fprintf (current-error-port) args))
+
+(with-ambiguous-choices
+ (let ((A (amb 1 3)))
+   (print "A=~a\n" A)
+   (let ((B (amb 5 9 11)))
+     (print "\tB=~a\n" B)
+     (amb-assert (= (square A) B))
+     (let ((C (amb 13 27 31)))
+       (print "\t\tC=~a\n" C)
+       (amb-assert (= (cube A) C))
+       (list A B C)))))
+@result{} (3 9 27)
+@print{} A=1
+@print{}         B=5
+@print{}         B=9
+@print{}         B=11
+@print{} A=3
+@print{}         B=5
+@print{}         B=9
+@print{}                 C=13
+@print{}                 C=27
+@end example
+
+@c page
+@node amb examples coloring
+@subsubsection Graph coloring
+
+
+The following program shows how to select colors to paint European
+nations on map: given a map of nations we want to paint each nation with
+a color different from the one of its neighbors; it is known that 4
+colors are always enough (even though more than 4 colors are
+aesthetically better).  The code is derived from an example in ``Teach
+Yourself Scheme in Fixnum Days'' by Dorai Sitaram.
+
+We start with the prelude:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb)
+  (only (vicare language-extensions syntaxes)
+        define-values))
+@end example
+
+We represent the map with a graph: one node for each nation; nations
+that face each other are connected by a link.  We select the adjacency
+list representation.  We want to make sure that we have correctly
+defined the graph: two nodes connected by a link must be present in the
+adjacency list of each other.  A better graph definition syntax would
+have integrated this check.
+
+@example
+(define-record-type node
+  (fields (immutable name)
+          ;;List of NODE  records representing the adjacency
+          ;;list of this node.
+          (mutable neighbors)
+          ;;Symbol representing this node's color.
+          (mutable color))
+  (protocol (lambda (maker)
+              (lambda (name)
+                (maker name '() #f)))))
+
+(define-syntax define-nodes
+  (syntax-rules ()
+    ((_ ?nodes-var (?node (?neighbor ...)) ...)
+     (begin
+       (define ?node (make-node (quote ?node)))
+       ...
+       (module ()
+         (node-neighbors-set! ?node (list ?neighbor ...))
+         ...)
+       (define ?nodes-var
+         (list ?node ...))
+       (module ()
+         (assert-graph-consistency ?nodes-var))))
+    ))
+
+(define (assert-graph-consistency nodes)
+  ;;Verify that every node is  present in the adjacency list
+  ;;of all its neighbors.
+  ;;
+  (define who 'assert-graph-consistency)
+  (for-each
+      (lambda (node)
+        (for-each
+            (lambda (neighbor)
+              (unless (memq node (node-neighbors neighbor))
+                (assertion-violation who
+                  "incorrect node links"
+                  (node-name node)
+                  (node-name neighbor))))
+          (node-neighbors node)))
+    nodes))
+@end example
+
+We are interested in nations that face each other, even when there is a
+sea between them; for example: it is aesthetically more pleasant if
+France and the United Kingdom are painted in different colors.
+
+@example
+(define-nodes europe-facing-nations
+  (portugal        (spain))
+  (spain           (portugal andorra france))
+  (andorra         (spain france))
+  (france          (spain andorra monaco italy
+                    switzerland germany luxembourg
+                    belgium united-kingdom))
+  (united-kingdom  (france belgium netherlands denmark
+                    norway iceland ireland))
+  (ireland         (united-kingdom iceland))
+  (monaco          (france))
+  (italy           (france greece albania montenegro
+                    croatia slovenia austria switzerland
+                    san-marino))
+  (san-marino      (italy))
+  (switzerland     (france italy austria germany
+                    liechtenstein))
+  (liechtenstein   (switzerland austria))
+  (germany         (france switzerland austria czech-republic
+                    poland sweden denmark netherlands
+                    belgium luxembourg))
+  (belgium         (france luxembourg germany netherlands
+                    united-kingdom))
+  (netherlands     (belgium germany united-kingdom))
+  (luxembourg      (france germany belgium))
+  (austria         (italy slovenia hungary slovakia
+                    czech-republic germany switzerland
+                    liechtenstein))
+  (slovenia        (italy croatia hungary austria))
+  (croatia         (italy montenegro bosnia serbia hungary
+                    slovenia))
+  (bosnia          (croatia montenegro serbia))
+  (montenegro      (croatia italy albania serbia bosnia))
+  (albania         (italy greece macedonia serbia
+                    montenegro))
+  (greece          (italy cyprus bulgaria macedonia albania))
+  (cyprus          (greece))
+  (macedonia       (albania greece bulgaria serbia))
+  (bulgaria        (macedonia greece romania serbia))
+  (serbia          (montenegro albania macedonia bulgaria
+                    romania hungary croatia bosnia))
+  (romania         (serbia bulgaria hungary))
+  (hungary         (slovenia croatia serbia romania slovakia
+                    austria))
+  (slovakia        (austria hungary poland czech-republic))
+  (czech-republic  (germany austria slovakia poland))
+  (poland          (germany czech-republic slovakia sweden))
+  (denmark         (united-kingdom germany sweden norway))
+  (sweden          (norway denmark germany poland finland))
+  (norway          (united-kingdom denmark sweden finland
+                    iceland))
+  (finland         (sweden norway))
+  (iceland         (ireland united-kingdom norway)))
+@end example
+
+The only use of @func{amb} is in the function that selects a color for a
+nation.  We use @func{amb-permute}, rather than the plain @func{amb}, to
+try assigning a different first color to the nations (statistically
+speaking).
+
+@example
+(define (choose-color)
+  ;;Every time we call this function: we start a new choice.
+  ;;
+  (amb-permute 'red 'yellow 'blue 'green))
+@end example
+
+We validate a possible solution with @func{amb-assert}, checking that a
+node/nation has color different from the one of its neighbors:
+
+@example
+(define (validate-all-nodes-color all-nodes)
+  (for-all validate-single-node-color all-nodes))
+@end example
+
+To build a ``better'' starting point, we also want to test the color of
+a single node against the colors of its neighbors while we are building
+the initial choice.  When calling this function: the neighbors may not
+have a color yet: their @code{color} field can be set to @false{}.
+
+@example
+(define (validate-single-node-color node)
+  (amb-assert (not (memq (node-color node)
+                         (map node-color
+                           (node-neighbors node))))))
+@end example
+
+The actual coloring function that selects a color for each nation and
+validates the solution until all the constraints are satisfied:
+
+@example
+(define (color-nations nations)
+  (with-ambiguous-choices
+   ;;Build an initial choice.
+   (for-each
+       (lambda (nation)
+         (node-color-set! nation (choose-color))
+         (validate-single-node-color nation))
+     nations)
+   ;;Validate the choice and backtrack if needed.
+   (validate-all-nodes-color nations)))
+@end example
+
+We also need to display the result:
+
+@example
+(define (print-colors nations)
+  (for-each
+      (lambda (nation)
+        (print "~a: ~a\n"
+               (node-name nation)
+               (node-color nation))
+        (for-each
+            (lambda (neighbor)
+              (print "\t~a: ~a\n"
+                     (node-name neighbor)
+                     (node-color neighbor)))
+          (node-neighbors nation)))
+    europe-facing-nations))
+
+(define (print . args)
+  (apply fprintf (current-error-port) args))
+@end example
+
+Run it:
+
+@example
+(color-nations europe-facing-nations)
+(print-colors  europe-facing-nations)
+@end example
+
+@c page
+@node infix
+@section Infix to prefix transformer
+
+
+@cindex Library @library{vicare language-extensions infix}
+@cindex @library{vicare language-extensions infix}, library
+
+
+The library @library{vicare language-extensions infix} provides the
+@func{infix} macro which converts the traditional infix notation for
+expressions to the equivalent Scheme's prefix notation.
+
+To use the library just import @library{vicare infix} and use the
+@func{infix} macro: it expands to a prefix expression to be evaluated at
+runtime, in the lexical context of the macro use; as a special case
+@code{(infix)} is equivalent to @code{(values)}.
+
+The macro allows us to evaluate forms like:
+
+@example
+(let ((a 1) (b 2) (c 3))
+
+  (infix cos (a) * tan (b) / c)
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix (cos (a) * tan (b) / c))
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix a ? b : c)
+  @expansion{} (if a b c)
+
+ #f)
+@end example
+
+Some interpretation rules:
+
+@itemize
+@item
+Any Scheme value can be element of the input form.
+
+@item
+The following infix operators are supported; in order of descending
+precedence from top to bottom, operators on the same line have equal
+precedence:
+
+@example
+bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+bitwise-not
+bitwise-and bitwise-ior bitwise-xor
+incr! decr!
+(unary +) (unary -)
+expt
+mod mod0
+* / div div0
++ -
+< > <= >= = eq? eqv? equal?
+not
+and or xor
+@end example
+
+@noindent
+remember that the Scheme comparison operators are meant to return a
+boolean value, rather than a number object.
+
+@item
+All the operators are left--associative with the exception of
+@func{expt} which is right--associative and of the unary @func{+},
+@func{-}, @func{incr!}, @func{decr!}, @func{not} and @func{bitwise-not}
+which are non--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The following operators for fixnums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fx+               fx-
+fx*
+fxdiv             fxdiv0
+fxmod             fxmod0
+fx<?              fx>?
+fx<=?             fx>=?
+fx=?
+
+fxand             fxior
+fxxor             fxnot
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+All the operators are left-associative with the exception of FXNOT which
+is non-associative:
+
+@example
+(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
+(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
+@end example
+
+@item
+The following operators for flonums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fl+               fl-
+fl*               fl/
+flexpt
+fl<?              fl>?
+fl<=?             fl>=?
+fl=?
+@end example
+
+All the operators are left--associative with the exception of
+@func{flexpt} which is right--associative:
+
+@example
+;; left-associative
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
+
+;; right-associative
+(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
+(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
+@end example
+
+@item
+@func{incr!} and @func{decr!} are unary operators that can be applied to
+expressions both in prefix and suffix positions.  @library{vicare infix}
+exports the identifiers @func{++} and @func{--} as aliases for
+@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
+mode, but are allowed by the reader when in @code{#!vicare} mode.
+
+When applied in prefix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
+@end example
+
+When applied in suffix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
+@end example
+
+When applied to a non--identifier expression, both in prefix and suffix
+position, @func{incr!} expands to:
+
+@example
+(infix incr! ?expr) @expansion{} (+ ?expr 1)
+(infix ?expr incr!) @expansion{} (+ ?expr 1)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?expr) @expansion{} (- ?expr 1)
+(infix ?expr decr!) @expansion{} (- ?expr 1)
+@end example
+
+@item
+The if-then-else statement involves the identifiers @func{?}  and
+@func{:}.  This statement has the least precedence of all.
+
+@item
+Identifiers which are not operators are interpreted as variable
+references; if an identifier is followed by a list, it is a function
+call.
+
+@item
+Function calls with one or more arguments require the arguments to be
+grouped in a list; there is no special separator in the list of
+arguments.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
+@end example
+
+Notice that grouping the function arguments in a list is a requirement
+of the infix expression grammar.
+
+@item
+Numbers and all the other values are just put there as operands.
+
+@item
+As a special exception: the binding @func{begin} from @library{vicare}
+is recognised in the input form and allows us to nest prefix--notation
+expressions.
+
+@example
+(infix (begin (+ 1 2))) @result{} 3
+
+(infix (begin
+         (let ((a 3))
+           (/ a 4))))
+@result{} 3/4
+
+(let ((a 3))
+  (infix (begin (/ a 4))))
+@result{} 3/4
+
+(let ((a 1) (b 2) (c 3))
+  (infix (1 + a ? (begin
+                    (+ 2 b))
+                : 3 + c - 4))
+  @expansion{} (if (+ 1 a)
+          (begin (+ 2 b))
+        (- (+ 3 c) 4))
+  #f)
+@end example
+
+@item
+The following binding aliases are exported by the library:
+
+@example
+and                               -> &&
+or                                -> !!
+xor                               -> ^^
+not                               -> ~~
+mod                               -> %
+bitwise-and                       -> &
+bitwise-ior                       -> !
+bitwise-xor                       -> ^
+bitwise-not                       -> ~
+bitwise-arithmetic-shift-left     -> <<
+bitwise-arithmetic-shift-right    -> >>
+fxand                             -> fx&
+fxior                             -> fx!
+fxxor                             -> fx^
+fxnot                             -> fx~
+fxarithmetic-shift-left           -> fx<<
+fxarithmetic-shift-right          -> fx>>
+@end example
+@end itemize
+
+@c page
+@node simple-match
+@section Simple destructuring match syntax
+
+
+@cindex Library @library{vicare language-extensions simple-match}
+@cindex @library{vicare language-extensions simple-match}, library
+
+
+The library @library{vicare language-extensions simple-match} provides a
+simple implementation of the destructuring--bind @func{match} syntax; it
+is @strong{not} a fully featured @func{match} syntax.
+
+It has two purposes: being a single macro transformer, without
+dependencies on external libraries, it can be used in the code of
+@value{PRJNAME}'s boot image; being simple, its code can be used as
+starting point to implement more complex destructuring syntaxes.
+
+The supported syntax is @strong{different} from the one of the popular
+matching libraries by Alex Shinn and Andrew Wright.
+
+@menu
+* simple-match syntax::         Pattern matcher generator.
+@end menu
+
+@c page
+@node simple-match syntax
+@subsection Pattern matcher generator
+
+
+The following bindings are exported by the library @library{vicare
+languge-extensions simple-match}.  The auxiliary syntaxes are the
+bindings exported by the library @library{vicare}, which are reexported
+by this library.
+
+
+@deffn Syntax match @meta{expr} @meta{clause} ...
+@deffnx {Auxiliary Syntax} =>
+@deffnx {Auxiliary Syntax} else
+@deffnx {Auxiliary Syntax} let
+@deffnx {Auxiliary Syntax} quote
+@deffnx {Auxiliary Syntax} quasiquote
+@deffnx {Auxiliary Syntax} and
+@deffnx {Auxiliary Syntax} or
+@deffnx {Auxiliary Syntax} not
+@deffnx {Auxiliary Syntax} apply
+@deffnx {Auxiliary Syntax} eval
+@deffnx {Auxiliary Syntax} {...}
+@deffnx {Auxiliary Syntax} _
+Match the symbolic expression @meta{expr} against the @meta{clause}
+arguments.  Each clause must have one of the formats:
+
+@example
+(@meta{pattern} @meta{body} ...)
+(@meta{pattern} (=> @meta{next}) @meta{body} ...)
+(else @metao{body} @meta{body} ...)
+@end example
+
+@meta{expr} is evaluated once and the result is matched against each
+@meta{pattern} in turn; the first to succeed causes the corresponding
+@meta{body} forms to be evaluated as in @func{begin}, and the remaining
+patterns are ignored.  However, if the @meta{next} identifier is
+labeled, it may be used as a continuation to continue matching, allowing
+for additional runtime tests on the pattern.
+
+A clause with no body @code{(@meta{pattern})}, when matching the input
+expression, causes the evaluation of @code{(values)} (which returns zero
+values).
+@end deffn
+
+
+The syntax for the patterns is:
+
+@table @samp
+@item _
+The literal underscore is the wildcard: it matches anything, it does not
+reference any variable.
+
+@example
+(match "ciao"
+  (_            #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  (_            #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ _ _)      #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ 2 _)      #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ 0 _)      #t)
+  (else         #f))
+@result{} #f
+@end example
+
+@item @meta{datum}
+Matches if the input expression equals @meta{datum}.  The pattern
+@meta{datum} can be a boolean, character, fixnum, bignum, ratnum,
+flonum, cflonum, compnum, string or bytevector; such data is compared to
+the input expression using type--specific predicates and unsafe
+accessors.
+
+@example
+(match 1
+  (1            #t)
+  (else         #f))
+@result{} #t
+@end example
+
+@item @meta{variable}
+Variable reference: it matches the value bound to @meta{variable} using
+@func{equal?}.
+
+@example
+(let ((X 1))
+  (match 1
+    (X          #t)
+    (else       #f)))
+@result{} #t
+
+(let ((X 1))
+  (match 1
+    (X          X)
+    (else       #f)))
+@result{} 1
+@end example
+
+@item (let @meta{variable})
+Bind the value of the input expression to @meta{variable}, which must be
+an identifier; the variable is immediately available to be referenced in
+the following subpatterns.  The empty @code{let} pattern is a syntax
+error; the @code{let} pattern with multiple subpatterns is a syntax
+error, with the exception of the variable with ellipsis.
+
+@example
+(match 1
+  ((let X)      X)
+  (else         #f))
+@result{} 1
+
+(match 1
+  ((let X)      #\A)
+  (else         #f))
+@result{} #\A
+
+(match '(1)
+  ((let X)      X)
+  (else         #f))
+@result{} (1)
+
+(match '(1)
+  (((let X))    X)
+  (else         #f))
+@result{} 1
+
+(match '(1 2 3)
+  (((let X) (let Y) (let Z))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 3)
+
+(match '(1 2)
+  (((let X) (let Y) (let Z))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 (2 3))
+  (((let X) (let X) (let X))
+   X)
+  (else #f))
+@result{} 3
+
+(match 123
+  ((and (let X) (eval (positive? X)))
+   X)
+  (else #f))
+@result{} 123
+@end example
+
+@item (let @meta{variable} ...)
+This pattern can appear only as last subpattern of a list or vector
+pattern.  Bind the rest of the input expression to @meta{variable},
+which must be an identifier, as a list; the variable is immediately
+available to be referenced in the following subpatterns.
+
+@example
+(match '(1 2 3 4 5)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 (3 4 5))
+
+(match '(1 2)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 ())
+
+(match '(1 2 . 3)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3 4 . 5)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((let id ...)         #\A)
+   (else                #\B))
+@error{} &syntax
+@end example
+
+@item (quote @meta{datum})
+A quoted datum; it matches if it is equal to the input expression
+according to @func{equal?}.  As special case: if @meta{datum} is a
+symbol, it is compared to the input expression with @func{eq?}.
+
+@example
+(match '(1 2 3)
+  ('(1 2 3)     #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 X 3)
+  ('(1 X 3)     #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 X 3)
+  ((1 'X 3)     #t)
+  (else         #f))
+@result{} #t
+@end example
+
+@item (quasiquote @meta{datum})
+A quasiquoted datum; it matches if it the result of the quasiquotation
+is equal to the input expression according to @func{equal?}.
+
+@example
+(let ((X 2))
+  (match '(2 2)
+    (`(1 ,X)    #\A)
+    (`(2 ,X)    #\B)
+    (`(3 ,X)    #\C)
+    (else       #f)))
+@result{} #\B
+@end example
+
+@item ()
+@itemx (@metai{pattern} --- @metan{pattern})
+Null or proper list of @math{N} elements.
+
+@example
+(match '()
+  (()
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (@metai{pattern} --- @metan{pattern} . @metani{pattern})
+Improper list of @math{N} or more elements.
+
+@example
+(match '(1 . 2)
+  ((1 . 2)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3 . 4)
+  ((1 2 3 . 4)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (@metai{pattern} --- @metan{pattern} @metani{pattern} ...)
+List of @math{N} or more elements with terminating ellipsis; each
+element of remainder must match @metani{pattern}.  The body is evaluated
+once for every element matched by the pattern before the ellipsis and
+the results are returned in a list.
+
+@example
+(match '(1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t)
+
+(match '(1 1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t #t)
+
+(match '(1 1 1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t #t #t)
+
+(match '(1 2)
+  ((0 1 ...)    #t)
+  (else         #f))
+@result{} #f
+
+(match '(1 2 3)
+  (((let X) ...)
+   (+ 10 X))
+  (else #f))
+@result{} (11 12 13)
+
+(match '(1 2 3)
+  (((let X) (let Y) ...)
+   (vector X Y))
+  (else #f))
+@result{} (#(1 2) #(1 3))
+
+(match '((1 2 3) (4 5 6) (7 8 9))
+  ((((let X) (let Y) (let Z)) ...)
+   (vector X Y Z))
+  (else #f))
+@result{} (#(1 2 3) #(4 5 6) #(7 8 9))
+
+(match '((1 2 3)
+         (4 5 6)
+         (7 8 9))
+  ((((let X) (let Y) ...) ...)
+   (vector X Y))
+  (else #f))
+@result{} ((#(1 2) #(1 3))
+    (#(4 5) #(4 6))
+    (#(7 8) #(7 9)))
+@end example
+
+@item #(@metai{pattern} --- @metan{pattern})
+Vector of @math{N} elements.
+
+@example
+(match '#(1 2 3)
+  (#(1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item #(@metai{pattern} --- @metan{pattern} @metani{pattern} ...)
+Vector of @math{N} or more elements with terminating ellipsis; each
+element of remainder must match @metani{pattern}.  The body is evaluated
+once for every element matched by the pattern before the ellipsis and
+the results are returned in a list.
+
+@example
+(match '#(1 1 1)
+  (#(1 ...)       #t)
+  (else           #f))
+@result{} (#t #t #t)
+@end example
+
+@item (and @meta{pattern} ---)
+Matches if each @meta{pattern} matches the input expression.  The empty
+@code{and} succeeds.
+
+@example
+(match 123
+  ((and (apply fixnum?) (apply positive?))
+   #t)
+  (else #f))
+@result{} #t
+
+(match 123
+  ((and (apply fixnum?) (let X))
+   X)
+  (else #f))
+@result{} 123
+
+(match 123
+  ((and (let X) X)
+   X)
+  (else #f))
+@result{} 123
+@end example
+
+@item (or @meta{pattern} ---)
+Matches if at least one @meta{pattern} matches the input expression.
+The empty @code{or} fails.
+
+@example
+(match 1
+  ((or 1 2)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((or (apply fixnum?) (apply bignum?))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@itemx (not @meta{pattern})
+Matches if the subpattern @meta{pattern} does @strong{not} match the
+input expression.  The empty not fails.  The empty @code{not} pattern is
+a syntax error; the @code{not} pattern with multiple subpatterns is a
+syntax error.
+
+@example
+(match 9
+  ((not 1)
+   #t)
+  (else #f))
+@result{} #t
+
+(match "ciao"
+  ((not (apply fixnum?))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (apply @meta{pred} ---)
+Each @meta{pred} subpattern must be an expression; every time this
+pattern is matched against an input expression: @meta{pred} is
+evaluated; the value returned by @meta{pred} must be a predicate
+function.  This pattern matches if all the predicate functions return
+true when applied to the input expression; the empty @code{apply}
+pattern is a syntax error.
+
+@example
+(match 1
+  ((apply fixnum? positive?)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((apply (lambda (x)
+            (and (fixnum?   x)
+                 (positive? x))))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (eval @meta{expr})
+The subpattern @meta{expr} must be expression; every time this pattern
+is matched against an input expression: @meta{expr} is evaluated.  This
+pattern matches if the result of @meta{expr} is true.  The empty
+@code{eval} pattern is a syntax error; the @code{eval} pattern with
+multiple subpatterns is a syntax error.
+
+@example
+(match 1
+  ((eval #t)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((eval #f)    #\A)
+  (else         #f))
+@result{} #t
+
+(match #t
+  ((and (let X) (eval X))
+   #t)
+  (else #f))
+@result{} #t
+
+(match #f
+  ((and (let X) (eval X))
+   #t)
+  (else #f))
+@result{} #f
+
+(match '(1 2)
+  (((let X) (eval X)) ;ignores 2, but consumes it
+   X)
+  (else #f))
+@result{} 1
+
+(match '(1 2 3)
+  (((let X) (eval X) (let Y)) ;ignores 2, but consumes it
+   (vector X Y))
+  (else #f))
+@result{} #(1 3)
+@end example
+@end table
+
+When the escape identifier is present, it is bound to a thunk to be
+evaluated to jump to matching the next pattern or to the ``no match''
+error.
+
+@example
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 0)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  ((1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape)))
+@error{} &error
+@end example
+
+
+@c page
+@node syntaxes
+@section Language syntactic extensions
+
+
+@cindex Library @library{vicare language-extensions syntaxes}
+@cindex @library{vicare language-extensions syntaxes}, library
+
+
+The library @library{vicare language-extensions syntaxes} provides
+bindings to macros that extend the Scheme language implemented by
+@library{vicare} and @library{rnrs}.
+
+@menu
+* syntaxes defines::            Special definitions.
+* syntaxes bindings::           Special local bindings.
+* syntaxes sequencing::         Sequencing execution.
+* syntaxes conversion::         Converting common arguments.
+* syntaxes cases::              Special cases.
+* syntaxes args::               Arguments validation.
+* syntaxes misc::               Miscellaneous syntaxes.
+@end menu
+
+@c page
+@node syntaxes defines
+@subsection Special definitions
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
+Define a function used to convert exact intgers to the corresponding
+symbolic name.  Expand to:
+
+@example
+(define (@meta{who} code)
+  (define who '@meta{who})
+  (with-arguments-validation (who)
+      ((exact-integer      code))
+    (case-integers code
+      ((@meta{code})     '@meta{code})
+      ...
+      (else #f))))
+@end example
+@end defmac
+
+@c page
+@node syntaxes bindings
+@subsection Special local bindings
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@meta{var} (identifier-syntax @meta{expr}))
+             ...)
+  @metao{body} . @meta{body})
+@end example
+@end defmac
+
+
+@defmac {let*-inline} () @metao{body} . @meta{body}
+@defmacx {let*-inline} ((@metao{var} @metao{expr}) (@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@metao{var} (identifier-syntax @meta{expr})))
+  (let*-inline ((@meta{var} @meta{expr})
+                ...)
+    @metao{body} . @meta{body}))
+@end example
+@end defmac
+
+@c page
+@node syntaxes sequencing
+@subsection Sequencing execution
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
+Expand to:
+
+@example
+(let ((@metao{var} @metao{init})
+      (@meta{var}  @meta{init})
+      ...)
+  @metao{form} @meta{form} ...
+  @metao{var})
+@end example
+@end defmac
+
+@c page
+@node syntaxes conversion
+@subsection Converting common arguments
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings representing pathnames; the strings are converted to
+bytevectors.  This macro assumes that the arguments have already been
+validated.  Expand to:
+
+@example
+(let ((@meta{pathname.bv} (let ((pathname @meta{pathname}))
+                      (if (bytevector? pathname)
+                          pathname
+                        ((string->filename-func) pathname))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((@meta{value.bv} (let ((V @meta{value}))
+                   (if (bytevector? V)
+                       V
+                     (string->latin1 V))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors/or-false ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors, strings
+or false; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((?value.bv (let ((V ?value))
+                   (cond ((bytevector? V)
+                          V)
+                         ((string? V)
+                          (string->latin1 V))
+                         (else V))))
+      ...)
+  . ?body)
+@end example
+@end defmac
+
+@c page
+@node syntaxes cases
+@subsection Special cases
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
+If the platform word size is 32-bit expand to @meta{body-32}, else
+expand to @meta{body-64}.
+@end defmac
+
+
+@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
+@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
+@deffnx {Auxiliary Syntax} big
+@deffnx {Auxiliary Syntax} little
+If the platform endianness is little expand to @meta{lit-body}, else
+expand to @meta{big-body}.
+@end deffn
+
+
+@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
+@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only fixnums as datums;
+for maximum speed, it makes use of unsafe operations on fixnums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a fixnum, else the
+behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
+@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only exact integers as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to an exact integer, else
+the behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only symbols as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a symbol, else the
+behaviour is undefined.
+@end deffn
+
+
+@deffn Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only strings as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a string, else the
+behaviour is undefined.
+@end deffn
+
+
+@deffn Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only characters as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a char, else the
+behaviour is undefined.
+@end deffn
+
+@c page
+@node syntaxes args
+@subsection Arguments validation
+
+
+The following bindings are imported and reexported by @library{vicare
+language-extension syntaxes} from the library @library{vicare arguments
+validation}:
+
+@example
+define-argument-validation
+with-arguments-validation
+with-dangerous-arguments-validation
+arguments-validation-forms
+@end example
+
+@c page
+@node syntaxes misc
+@subsection Miscellaneous syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions syntaxes}.
+
+
+@defmac callet @meta{func} @meta{arg} ...
+Expand to a call to @meta{func}, which must evaluate to a function,
+applied to the arguments resulting from processing the @var{arg}
+syntaxes; @var{arg} can be one among:
+
+@example
+@meta{expr}
+(@meta{name} @meta{expr})
+@end example
+
+@noindent
+where @meta{expr} is an expression that will become the actual argument
+and @meta{name} must be an identifier used to comment the meaning of the
+arguments.  Examples:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (printf "ciao ~a" 123)
+@end example
+@end defmac
+
+
+@defmac callet* @meta{func} @meta{arg} ...
+Like @func{callet}, but define local @func{let*} bindings for the
+@var{arg} with name.  Example:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (let* ((string "ciao ~a")
+           (arg    123))
+      (printf string arg))
+@end example
+@end defmac
+
+@c page
+@node custom-ports
+@section Custom ports
+
+
+@cindex Library @library{vicare language-extensions custom-ports}
+@cindex @library{vicare language-extensions custom-ports}, library
+
+The library @library{vicare language-extensions custom-ports} implements
+special custom Scheme input and output ports.
+
+@menu
+* custom-ports pairs::          Port pairs.
+@end menu
+
+@c page
+@node custom-ports pairs
+@subsection Port pairs
+
+
+Port pairs are Scheme ports connected together so that data written to
+one port is read from the other port.
+
+Forking a @value{PRJNAME} process does @strong{not} allow the use of
+port pairs to communicate between processes; it is rather possible to
+use port pairs to communicate among coroutines, @ref{coroutines, Running
+coroutines}.  To communicate between processes we have to use the
+@posix{} library and create pipes (@pxref{posix fd pipe, pipe}) or
+socket pairs (@pxref{posix socket socket, socketpair}).
+
+The following bindings are exported by the library @library{vicare
+language-extensions custom-ports}.
+
+
+@defun open-binary-input-port-pair
+Return two values being binary ports: input the first, output the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-binary-output-port-pair
+Return two values being binary ports: output the first, input the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-binary-input/output-port-pair
+Return two values being binary ports: input/output the first,
+input/output the second.  Such ports are connected together so that data
+written to one port is read from the other port.
+@end defun
+
+
+@defun open-textual-input-port-pair
+Return two values being textual ports: input the first, output the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-textual-output-port-pair
+Return two values being textual ports: output the first, input the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-textual-input/output-port-pair
+Return two values being textual ports: input/output the first,
+input/output the second.  Such ports are connected together so that data
+written to one port is read from the other port.
+@end defun
+
+
+@c end of file

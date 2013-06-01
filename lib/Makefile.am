@@ -1,36 +1,65 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST = \
-	vicare/errno.sls.in			\
-	vicare/platform-constants.sls.in	\
+	vicare/platform/configuration.sls.in	\
 	vicare/platform/constants.sls.in	\
-	vicare/words.sls.in			\
-	vicare/installation-configuration.sls.in
+	vicare/platform/errno.sls.in		\
+	vicare/platform/words.sls.in
 
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
 libvicaredir		= $(libdir)/vicare-scheme
 
 nobase_dist_libvicare_DATA	= \
-	vicare/arguments/validation.sls		\
-	vicare/arguments/general-c-buffers.sls	\
-	vicare/assembler/inspection.sls		\
-	vicare/debugging/compiler.sls		\
-	vicare/flonum-formatter.sls		\
-	vicare/flonum-parser.sls		\
-	vicare/include.sls			\
-	vicare/infix.sls			\
-	vicare/numerics/constants.sls		\
-	vicare/keywords.sls			\
-	vicare/parser-logic.sls			\
-	vicare/syntactic-extensions.sls		\
-	vicare/unsafe-capi.sls			\
-	vicare/unsafe-operations.sls		\
-	vicare/unsafe-unicode.sls		\
-	vicare/platform/utilities.sls		\
-	vicare/weak-hashtables.sls		\
-	vicare/checks.sls			\
+	vicare/unsafe/capi.sls						\
+	vicare/unsafe/operations.sls					\
+	vicare/unsafe/unicode.sls					\
 	\
+	vicare/platform/utilities.sls					\
+	\
+	vicare/language-extensions/cond-expand.sls			\
+	vicare/language-extensions/cond-expand/OS-id-features.sls	\
+	vicare/language-extensions/cond-expand/feature-cond.sls		\
+	vicare/language-extensions/cond-expand/helpers.sls		\
+	vicare/language-extensions/cond-expand/platform-features.sls	\
+	vicare/language-extensions/cond-expand/registry.sls		\
+	\
+	vicare/arguments/general-c-buffers.sls				\
+	vicare/arguments/validation.sls					\
+	\
+	vicare/language-extensions/amb.sls				\
+	vicare/language-extensions/simple-match.sls			\
+	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/coroutines.sls			\
+	vicare/language-extensions/infix.sls				\
+	vicare/language-extensions/keywords.sls				\
+	vicare/language-extensions/custom-ports.sls			\
+	\
+	vicare/numerics/constants.sls					\
+	vicare/numerics/flonum-formatter.sls				\
+	vicare/numerics/flonum-parser.sls				\
+	\
+	vicare/containers/bytevector-compounds.sls			\
+	vicare/containers/bytevector-compounds/core.sls			\
+	vicare/containers/bytevector-compounds/unsafe.sls		\
+	vicare/containers/weak-hashtables.sls				\
+	\
+	vicare/assembler/inspection.sls					\
+	vicare/checks.sls						\
+	vicare/debugging/compiler.sls					\
+	vicare/parser-logic.sls						\
+	\
+	vicare/net/channels.sls
+
+nobase_nodist_libvicare_DATA	= \
+	vicare/platform/configuration.sls	\
+	vicare/platform/constants.sls		\
+	vicare/platform/errno.sls		\
+	vicare/platform/features.sls		\
+	vicare/platform/words.sls
+
+if WANT_SRFI
+nobase_dist_libvicare_DATA	+= \
 	srfi/%3a0.sls					\
 	srfi/%3a0/cond-expand.sls			\
 	\
@@ -63,15 +92,9 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a19.sls					\
 	srfi/%3a19/time.sls				\
-	srfi/%3a19/read-table.sps			\
-	srfi/%3a19/table.scm				\
-	srfi/%3a19/tai-utc.dat				\
-	srfi/%3a19/time/extensions.sls			\
-	srfi/%3a19/time/core.sls			\
 	\
 	srfi/%3a23.sls					\
 	srfi/%3a23/error.sls				\
-	srfi/%3a23/error/tricks.sls			\
 	\
 	srfi/%3a25.sls					\
 	srfi/%3a25/multi-dimensional-arrays.sls		\
@@ -95,7 +118,7 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a37/args-fold.sls			\
 	\
 	srfi/%3a38.sls					\
-	srfi/%3a38/with-shared-structure.vicare.sls	\
+	srfi/%3a38/with-shared-structure.sls		\
 	\
 	srfi/%3a39.sls					\
 	srfi/%3a39/parameters.sls			\
@@ -142,27 +165,30 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a99/records/procedural.sls		\
 	srfi/%3a99/records/syntactic.sls		\
 	\
-	srfi/private/feature-cond.sls			\
-	srfi/private/OS-id-features.sls			\
-	srfi/private/platform-features.vicare.sls	\
-	srfi/private/registry.sls
-
-nobase_nodist_libvicare_DATA	= \
-	vicare/errno.sls			\
-	vicare/installation-configuration.sls	\
-	vicare/platform-constants.sls		\
-	vicare/platform/constants.sls		\
-	vicare/platform/features.sls		\
-	vicare/words.sls
+	srfi/%3a101.sls					\
+	srfi/%3a101/random-access-lists.sls		\
+	srfi/%3a101/random-access-lists/procedures.sls	\
+	srfi/%3a101/random-access-lists/syntax.sls	\
+	srfi/%3a101/random-access-lists/equal.sls
+dist_pkglibexec_SCRIPTS		+= compile-srfi.sps
+endif
 
 if WANT_LIBFFI
-nobase_dist_libvicare_DATA	+= vicare/ffi.sls
+nobase_dist_libvicare_DATA	+= \
+	vicare/ffi.sls				\
+	vicare/ffi/foreign-pointer-wrapper.sls
 dist_pkglibexec_SCRIPTS		+= compile-ffi.sps
 endif
 
 if WANT_POSIX
-nobase_dist_libvicare_DATA	+= vicare/posix.sls	\
-				   vicare/simple-event-loop.sls
+nobase_dist_libvicare_DATA	+= \
+	vicare/posix.sls			\
+	vicare/posix/pid-files.sls		\
+	vicare/posix/lock-pid-files.sls		\
+	vicare/posix/log-files.sls		\
+	vicare/posix/daemonisations.sls		\
+	vicare/posix/simple-event-loop.sls	\
+	vicare/posix/tcp-server-sockets.sls
 dist_pkglibexec_SCRIPTS		+= compile-posix.sps
 endif
 
@@ -207,18 +233,19 @@ VICARE_COMPILE_LIBRARY_PATH	= $(builddir):$(srcdir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
 VICARE_COMPILE_LD_PATH		= $(builddir)/../src/.libs
 
-# The variable "user_flags"  is for the user to be  set on the command
-# line of "make", for example "user_flags=--print-loaded-libraries".
-VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(user_flags)
-if WANT_DEBUG
-VICARE_FLAGS	+= --debug
-endif
+# The variable "VFLAGS" is for the user  to be set on the command line
+# of "make" or "configure", for example:
+#
+#   make VFLAGS="-g -O2 --print-loaded-libraries"
+#
+VFLAGS		= @VFLAGS@
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH)	\
 		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH)		\
 		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH)
+VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 VICARE_INST	= $(bindir)/vicare
@@ -230,6 +257,9 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 vfasl:
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_SRFI
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
@@ -258,6 +288,9 @@ endif
 
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_SRFI
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif

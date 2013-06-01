@@ -22,20 +22,23 @@
     vicare-lib-dir
     scheme-lib-dir
     vicare-version
-    vicare-revision
     bootfile
     host-info)
   (import (except (ikarus)
-		  host-info)
-    (vicare include))
-  (include/verbose "ikarus.config.ss"))
+		  host-info))
+  (include "ikarus.config.ss"))
 
 
 (library (ikarus main)
   (export
+
+    ;; automatic structs finalisation
     $struct-guardian
-    struct-guardian-logger
-    struct-guardian-log)
+    struct-guardian-logger		struct-guardian-log
+
+    ;; automatic R6RS records finalisation
+    $record-guardian
+    record-guardian-logger		record-guardian-log)
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
@@ -43,11 +46,16 @@
 		  $struct-guardian
 		  struct-guardian-logger
 		  struct-guardian-log
+		  $record-guardian
+		  record-guardian-logger
+		  record-guardian-log
 		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
-		  print-loaded-libraries)
+		  print-loaded-libraries
+		  report-errors-at-runtime
+		  strict-r6rs)
 	    config.)
     (prefix (only (ikarus.compiler)
 		  $optimize-level
@@ -86,9 +94,7 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline.)
-    (only (vicare syntactic-extensions)
-	  define-inline))
+	    readline.))
 
 
 ;;;; helpers
@@ -473,7 +479,7 @@
 ;;; --------------------------------------------------------------------
 ;;; Vicare options without argument
 
-	  ((%option= "-d" "--debug")
+	  ((%option= "-d" "-g" "--debug")
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
@@ -507,6 +513,22 @@
 
 	  ((%option= "--no-print-loaded-libraries")
 	   (set-run-time-config-print-libraries! cfg #f)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--report-errors-at-runtime")
+	   (config.report-errors-at-runtime #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-report-errors-at-runtime")
+	   (config.report-errors-at-runtime #f)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--strict-r6rs")
+	   (config.strict-r6rs #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-strict-r6rs")
+	   (config.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -548,7 +570,7 @@
 	       (run-time-config-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "--fasl-path")
+	  ((%option= "-F" "--fasl-path")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--fasl-path requires a directory name")
 	     (begin
@@ -592,6 +614,9 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler options without argument
 
+	  ((%option= "-O3")
+	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 3))))
+
 	  ((%option= "-O2")
 	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 2))))
 
@@ -604,7 +629,7 @@
 	  ((%option= "--enable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))
 
-	  ((%option= "--disable-open-mvcalls-open")
+	  ((%option= "--disable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #f))))
 
 ;;; --------------------------------------------------------------------
@@ -639,10 +664,12 @@
   (unless (= 30 (fixnum-width))
     (%display ", 64-bit"))
   (%newline)
-  (unless (zero? (string-length config.vicare-revision))
-    (%display "Revision ")
-    (%display config.vicare-revision)
-    (%newline))
+  ;;Print the git branch and HEAD commit checksum.
+  (let ((rev (foreign-call "ikrt_get_last_revision")))
+    (unless (zero? (bytevector-length rev))
+      (%display "Revision ")
+      (%display (ascii->string rev))
+      (%newline)))
   (%display "Build ")
   ;;This  LET-SYNTAX looks  weird, but  it  is to  take the  DATE-STRING
   ;;result at expansion-time rather than run-time.
@@ -651,7 +678,7 @@
   (%newline)
   (%display "
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011, 2012 Marco Maggi\n\n"))
+Copyright (c) 2011-2013 Marco Maggi\n\n"))
 
 (define (print-version-screen)
   ;;Print the version screen.
@@ -781,6 +808,7 @@ Other options:
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
 
+   -F DIRECTORY
    --fasl-path DIRECTORY
         Add DIRECTORY to the FASL search path.  This option can  be used
         multiple times.
@@ -808,6 +836,7 @@ Other options:
 	interface is available.
 
    -d
+   -g
    --debug
         Turn  on debugging  mode.  Unhandled  exceptions in  the program
 	will result  in starting the debugger, which  allows stack trace
@@ -824,11 +853,28 @@ Other options:
    --no-print-loaded-libraries
         Disables the effect of --print-loaded-libraries.
 
+   --report-errors-at-runtime
+        When possible  and meaningful:  report errors at  runtime rather
+        than  at  compile  time.    Runtime  errors  reporting  is  R6RS
+        compliant.  The default is to raise errors at compile time.
+
+   --no-report-errors-at-runtime
+        Disables the effect of --report-errors-at-runtime.
+
+   --strict-r6rs
+        Strictly follow R6RS specifications: disable Vicare extensions.
+
+   --no-strict-r6rs
+        Do  not  strictly  follow  R6RS  specifications:  enable  Vicare
+        extensions.  Disables the effect  of --strict-r6rs.  This is the
+        default.
+
    -O0
         Turn off the source optimizer.
 
    -O1
    -O2
+   -O3
         Turn on various levels of compiler optimisations.
 
    --optimizer-passes-count COUNT
@@ -1058,6 +1104,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;must be executed before the initialisation of the symbol table.
   ($initialize-symbol-table!))
 
+
+;;;; automatic struct finalisation
+
 (module ($struct-guardian struct-guardian-logger struct-guardian-log)
   (define %struct-guardian
     (make-guardian))
@@ -1107,14 +1156,16 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (assertion-violation 'struct-guardian-log
 	 "invalid action in struct destruction process" S action))))
 
+  (define FIELD-INDEX-OF-DESTRUCTOR-IN-STD 5)
+
   (define (%struct-guardian-destructor)
     (guard (E (else (void)))
-      (define-inline (%execute ?S ?body0 . ?body)
+      (define-syntax-rule (%execute ?S ?body0 . ?body)
 	(do ((?S (%struct-guardian) (%struct-guardian)))
 	    ((not ?S))
 	  ?body0 . ?body))
       (define-inline (%extract-destructor S)
-	($struct-ref ($struct-rtd S) 5))
+	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
       (define-inline (%call-logger ?logger ?struct ?exception ?action)
 	(guard (E (else (void)))
 	  (?logger ?struct ?exception ?action)))
@@ -1142,6 +1193,114 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		   (struct-reset S))))))))
 
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
+
+  #| end of module |# )
+
+
+;;;; automatic R6RS records finalisation
+
+(module ($record-guardian record-guardian-logger record-guardian-log)
+
+  ;;Whenever a  record instance, with destructor  function registered in
+  ;;its descriptor, is created: it is  registered in this guardian to be
+  ;;destroyed appropriately.
+  (define %record-guardian
+    (make-guardian))
+
+  (define ($record-guardian S)
+    ;;Wrapper for  %RECORD-GUARDIAN that  handles the invocation  of the
+    ;;logger function at record instantiation time.
+    ;;
+    (let ((logger (record-guardian-logger)))
+      (cond ((procedure? logger)
+	     (guard (E (else (void)))
+	       (logger S #f 'registration))
+	     (%record-guardian S))
+	    (logger
+	     (guard (E (else (void)))
+	       (record-guardian-log S #f 'registration))
+	     (%record-guardian S))
+	    (else
+	     (%record-guardian S)))))
+
+  ;;Parameter to select the current logger function.
+  (define record-guardian-logger
+    (make-parameter #f
+      (lambda (obj)
+	(cond ((or (boolean? obj)
+		   (procedure? obj))
+	       obj)
+	      (obj	#t)
+	      (else	#f)))))
+
+  (define (record-guardian-log S E action)
+    ;;Default logger function.   S must be the record  instance.  E must
+    ;;be #f  or a condition object  raised because an error  occurred in
+    ;;the destructor.  ACTION  must be a symbol selecting  the action to
+    ;;perform.
+    ;;
+    (case action
+      ((registration)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: registered record:\n\
+                 ***\t~s\n" S))
+      ((before-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: before destruction:\n\
+                 ***\t~s\n" S))
+      ((after-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: after destruction:\n\
+                 ***\t~s\n" S))
+      ((exception)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: exception:\n\
+                 ***\t~s\n\
+                 ***\t~s\n" S E))
+      (else
+       (assertion-violation 'record-guardian-log
+	 "invalid action in record destruction process" S action))))
+
+  (define FIELD-INDEX-OF-DESTRUCTOR-IN-RTD 12)
+
+  (define (%record-guardian-destructor)
+    ;;The finalisation  function called  to handle the  record instances
+    ;;collected by the guardian.
+    ;;
+    (guard (E (else (void)))
+      (define-syntax-rule (%execute ?S ?body0 . ?body)
+	(do ((?S (%record-guardian) (%record-guardian)))
+	    ((not ?S))
+	  ?body0 . ?body))
+      (define (%extract-destructor S)
+	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-RTD))
+      (define (%call-logger logger record exception action)
+	(guard (E (else (void)))
+	  (logger record exception action)))
+      (let ((logger (record-guardian-logger)))
+	(cond ((procedure? logger)
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger logger S E 'exception)))
+		   (%call-logger logger S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger logger S #f 'after-destruction)
+		   (record-reset S))))
+	      (logger
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger record-guardian-log S E 'exception)))
+		   (%call-logger record-guardian-log S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger record-guardian-log S #f 'after-destruction)
+		   (record-reset S))))
+	      (else
+	       (%execute S
+		 (guard (E (else (void)))
+		   ((%extract-destructor S) S)
+		   (record-reset S))))))))
+
+  (post-gc-hooks (cons %record-guardian-destructor (post-gc-hooks)))
 
   #| end of module |# )
 

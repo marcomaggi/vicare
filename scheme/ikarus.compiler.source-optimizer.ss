@@ -44,18 +44,19 @@
 	 cp0-size-limit)
   (define who 'source-optimize)
 
-  (define cp0-effort-limit
-    (make-parameter 50))
-
-  (define cp0-size-limit
-    (make-parameter 8))
+  (define DEFAULT-CP0-EFFORT-LIMIT	50)
+  (define DEFAULT-CP0-SIZE-LIMIT	8)
+  (define O3-CP0-EFFORT-LIMIT		(* 4 DEFAULT-CP0-EFFORT-LIMIT))
+  (define O3-CP0-SIZE-LIMIT		(* 4 DEFAULT-CP0-SIZE-LIMIT))
+  (define cp0-effort-limit		(make-parameter DEFAULT-CP0-EFFORT-LIMIT))
+  (define cp0-size-limit		(make-parameter DEFAULT-CP0-SIZE-LIMIT))
 
   (define optimize-level
     (make-parameter 0
       (lambda (x)
-	(if (memv x '(0 1 2))
+	(if (memv x '(0 1 2 3))
 	    x
-	  (error 'optimize-level "valid optimization levels are 0, 1, and 2")))))
+	  (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3")))))
 
   (define source-optimizer-passes-count
     (make-parameter 1
@@ -75,6 +76,12 @@
 
     (define (source-optimize expr)
       (case (optimize-level)
+	((3)
+	 ;;This optimisation level is meant to do the most possible.
+	 (parameterize ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
+			(cp0-size-limit		O3-CP0-SIZE-LIMIT)
+			(open-mvcalls		#t))
+	   (%do-one-pass expr (source-optimizer-passes-count))))
 	((2)
 	 (%do-one-pass expr (source-optimizer-passes-count)))
 	((1)

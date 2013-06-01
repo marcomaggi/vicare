@@ -20,8 +20,7 @@
 		  apropos)
     (only (psyntax library-manager)
 	  library-subst library-name)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 (define (apropos key)
@@ -45,21 +44,21 @@
   ;;The matcher closure compares STR2 to  STR1 returning #t if STR1 is a
   ;;substring of STR2, else it returns #f.
   ;;
-  (let ((len1 (unsafe.string-length str1)))
+  (let ((len1 ($string-length str1)))
     (lambda (x)
       (let* ((str2 (symbol->string (car x)))
-	     (len2 (unsafe.string-length str2))
-	     (m    (unsafe.fx- len2 len1)))
+	     (len2 ($string-length str2))
+	     (m    ($fx- len2 len1)))
 	(let outer ((idx2 0))
-	  (and (unsafe.fx<= idx2 m)
+	  (and ($fx<= idx2 m)
 	       (or (let inner ((idx1 0)
 			       (idx2 idx2))
-		     (or (unsafe.fx= idx1 len1)
-			 (and (unsafe.char= (unsafe.string-ref str1 idx1)
-					    (unsafe.string-ref str2 idx2))
-			      (inner (unsafe.fxadd1 idx1)
-				     (unsafe.fxadd1 idx2)))))
-		   (outer (unsafe.fxadd1 idx2)))))))))
+		     (or ($fx= idx1 len1)
+			 (and ($char= ($string-ref str1 idx1)
+					    ($string-ref str2 idx2))
+			      (inner ($fxadd1 idx1)
+				     ($fxadd1 idx2)))))
+		   (outer ($fxadd1 idx2)))))))))
 
 (define ($apropos-list name who)
   (define matcher
@@ -90,11 +89,11 @@
 			    (ls2 (library-name lib2)))
 		   (and (pair? ls2)
 			(or (null? ls1)
-			    (let ((s1 (symbol->string (unsafe.car ls1)))
-				  (s2 (symbol->string (unsafe.car ls2))))
+			    (let ((s1 (symbol->string ($car ls1)))
+				  (s2 (symbol->string ($car ls2))))
 			      (or (string<? s1 s2)
 				  (and (string=? s1 s2)
-				       (loop (unsafe.cdr ls1) (unsafe.cdr ls2)))))))))
+				       (loop ($cdr ls1) ($cdr ls2)))))))))
 	       (installed-libraries))))
 
 

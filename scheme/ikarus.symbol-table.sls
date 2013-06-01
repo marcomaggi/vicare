@@ -27,16 +27,9 @@
     (except (ikarus system $symbols)
 	    $symbol-table-size
 	    $log-symbol-table-status)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
-
-
-;;;; arguments validation
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation)
+    (vicare unsafe operations))
 
 
 ;;;; symbol table data structure
@@ -119,11 +112,11 @@
   ;;
   (define (intern-car x)
     (when (pair? x)
-      (let ((sym (unsafe.car x)))
+      (let ((sym ($car x)))
 	(intern-symbol! sym
-			(unsafe.fxand (symbol-hash sym) (symbol-table-mask THE-SYMBOL-TABLE))
+			($fxand (symbol-hash sym) (symbol-table-mask THE-SYMBOL-TABLE))
 			THE-SYMBOL-TABLE))
-      (intern-car (unsafe.cdr x))))
+      (intern-car ($cdr x))))
   (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
 
 (define (%symbol-table-size)
@@ -160,18 +153,18 @@
   (define (lookup str idx table ls)
     (if (null? ls)
 	(bleed-guardian (intern str idx table) table)
-      (let ((interned-symbol (unsafe.car ls)))
+      (let ((interned-symbol ($car ls)))
 	;;FIXME  Can we  use $SYMBOL-STRING  rather  than SYMBOL->STRING
 	;;here?  (Marco Maggi; Oct 31, 2011)
 	(if (string=? str (symbol->string interned-symbol))
 	    (bleed-guardian interned-symbol table)
-	  (lookup str idx table (unsafe.cdr ls))))))
+	  (lookup str idx table ($cdr ls))))))
 
   (with-arguments-validation (who)
       ((string  str))
-    (let* ((idx (unsafe.fxand (string-hash str)
+    (let* ((idx ($fxand (string-hash str)
 			      (symbol-table-mask THE-SYMBOL-TABLE)))
-	   (list-of-interned-symbols (unsafe.vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
+	   (list-of-interned-symbols ($vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
       (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols))))
 
 
@@ -193,15 +186,15 @@
   ;;removed if garbage collected.
   ;;
   (let ((number-of-interned-symbols (symbol-table-size table)))
-    (if (unsafe.fx= number-of-interned-symbols (greatest-fixnum))
+    (if ($fx= number-of-interned-symbols (greatest-fixnum))
 	(assertion-violation 'intern-symbol!
 	  "reached maximum number of interned symbols" sym)
       (let ((vec (symbol-table-buckets table)))
-	(unsafe.vector-set! vec idx (weak-cons sym (unsafe.vector-ref vec idx)))
+	($vector-set! vec idx (weak-cons sym ($vector-ref vec idx)))
 	((symbol-table-guardian table) sym)
-	(let ((n (unsafe.fxadd1 number-of-interned-symbols)))
+	(let ((n ($fxadd1 number-of-interned-symbols)))
 	  (set-symbol-table-size! table n)
-	  (when (unsafe.fx= n (symbol-table-mask table))
+	  (when ($fx= n (symbol-table-mask table))
 	    (extend-table table)))))))
 
 
@@ -254,17 +247,17 @@
 (define (unintern sym table)
   ;;Remove the interned symbol SYM from TABLE.
   ;;
-  (set-symbol-table-size! table (unsafe.fxsub1 (symbol-table-size table)))
-  (let ((idx (unsafe.fxand (symbol-hash sym) (symbol-table-mask table)))
+  (set-symbol-table-size! table ($fxsub1 (symbol-table-size table)))
+  (let ((idx ($fxand (symbol-hash sym) (symbol-table-mask table)))
 	(vec (symbol-table-buckets table)))
-    (let ((ls (unsafe.vector-ref vec idx)))
-      (if (eq? (unsafe.car ls) sym)
-	  (unsafe.vector-set! vec idx (cdr ls))
+    (let ((ls ($vector-ref vec idx)))
+      (if (eq? ($car ls) sym)
+	  ($vector-set! vec idx (cdr ls))
 	(let loop ((prev ls)
-		   (ls   (unsafe.cdr ls)))
-	  (if (eq? (unsafe.car ls) sym)
-	      (unsafe.set-cdr! prev (unsafe.cdr ls))
-	    (loop ls (unsafe.cdr ls))))))))
+		   (ls   ($cdr ls)))
+	  (if (eq? ($car ls) sym)
+	      ($set-cdr! prev ($cdr ls))
+	    (loop ls ($cdr ls))))))))
 
 
 (define (extend-table table)
@@ -272,25 +265,25 @@
   ;;SYMBOL-TABLE structure.
   ;;
   (let* ((vec1	(symbol-table-buckets table))
-	 (len1	(unsafe.vector-length vec1)))
+	 (len1	($vector-length vec1)))
     ;;Do not allow the vector length to exceed the maximum fixnum.
-    (when (unsafe.fx< len1 MAX-NUMBER-OF-BUCKETS)
+    (when ($fx< len1 MAX-NUMBER-OF-BUCKETS)
       ;;If  we start  with an  even and  power of  2 vector  length, the
       ;;length is always even and power of 2...
-      (let* ((len2	(unsafe.fx+ len1 len1))
+      (let* ((len2	($fx+ len1 len1))
 	     ;;... and the mask is always composed by all the significant
 	     ;;bits set to 1.
-	     (mask	(unsafe.fxsub1 len2))
+	     (mask	($fxsub1 len2))
 	     (vec2	(make-vector len2 '())))
 	(define (insert p)
 	  (unless (null? p)
-	    (let ((a    (unsafe.car p))
-		  (rest (unsafe.cdr p)))
+	    (let ((a    ($car p))
+		  (rest ($cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the
 	      ;;vector.
-	      (let ((idx (unsafe.fxand (symbol-hash a) mask)))
-		(unsafe.set-cdr! p (unsafe.vector-ref vec2 idx))
-		(unsafe.vector-set! vec2 idx p))
+	      (let ((idx ($fxand (symbol-hash a) mask)))
+		($set-cdr! p ($vector-ref vec2 idx))
+		($vector-set! vec2 idx p))
 	      (insert rest))))
 	;;Insert in the new vector all the entries in the old vector.
 	(vector-for-each insert vec1)

@@ -28,8 +28,6 @@
 		  set-code-annotation! procedure-annotation)
     (ikarus system $fx)
     (ikarus system $codes)
-    (only (vicare syntactic-extensions)
-	  define-inline)
     (vicare arguments validation))
 
 
@@ -41,12 +39,6 @@
 
 
 ;;;; arguments validation
-
-(define-argument-validation (octet who obj)
-  (and (fixnum? obj)
-       ($fx>= obj 0)
-       ($fx<  obj 256))
-  (assertion-violation who "expected fixnum in range [0, 255] as octet argument" obj))
 
 (define-argument-validation (code-size who obj)
   ($fx-non-negative? obj)

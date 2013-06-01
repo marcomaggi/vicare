@@ -22,18 +22,13 @@ IKARUS_PREBUILT_BOOT	= $(srcdir)/ikarus.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 VICARE_PREBUILT_BOOT	= $(srcdir)/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 
 CLEANFILES		= $(nodist_pkglib_DATA) ikarus.config.ss vicare.boot
-MAINTAINERCLEANFILES	= last-revision
 
 all: $(nodist_pkglib_DATA)
 
 ## --------------------------------------------------------------------
 
-last-revision:
-	echo 'no-branch/no-commit' >$@
-
-ikarus.config.ss: Makefile last-revision ../config.h
+ikarus.config.ss: Makefile ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
-	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
@@ -51,15 +46,15 @@ ikarus.config.ss: Makefile last-revision ../config.h
 #because  the  fasl  files  are  not generated  by  the  prebuilt  and
 #distributed boot image, and so they cannot be used here.
 #
-$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
+$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
-  $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
+  $(GDB) $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)	\
   $(user_flags) --r6rs-script $(srcdir)/makefile.sps
 
-#$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
+#$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 # 	VICARE_SRC_DIR=$(srcdir)			\
 #   VICARE_BUILD_DIR=$(builddir)			\
 #   VICARE_FASL_DIRECTORY=''				\
@@ -71,9 +66,8 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
 
 .PHONY: boot-image-64-bit
 
-boot-image-64-bit: last-revision
+boot-image-64-bit:
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
-	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>ikarus.config.ss
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
@@ -106,7 +100,7 @@ boot-image-64-bit: last-revision
 #
 # but keep backups of the original one!!!
 #
-try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss last-revision
+try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
    VICARE_BUILD_DIR=$(builddir)				\
    VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY)	\
@@ -117,7 +111,7 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss last-revision
 #page
 #### stuff needed by GNU Automake
 
-EXTRA_DIST= last-revision				\
+EXTRA_DIST= \
 	vicare.boot.4.prebuilt				\
 	vicare.boot.8.prebuilt				\
 	\
@@ -139,6 +133,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.code-objects.sls				\
 	ikarus.codecs.sls				\
 	ikarus.collect.sls				\
+	ikarus.compensations.sls			\
 	ikarus.command-line.sls				\
 	ikarus.conditions.sls				\
 	ikarus.control.sls				\

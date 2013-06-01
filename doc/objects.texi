@@ -385,7 +385,7 @@ continuations.  The first word in the memory block of these types has
 the least significant bits set to a secondary tag.
 
 All the possible values for @math{3}-bit tags in reference values are
-already allocated; new object types can be added only defining a new
+already allocated; new object types can be added only by defining a new
 secondary tag with references tagged as vector.
 
 While the @api{} defines predicates to recognise values, to identify a
@@ -409,9 +409,8 @@ can do:
 @example
 ikptr  X;
 
-if ((vector_tag    == (X & vector_tag)) &&
-    (secondary_tag == (secondary_mask
-                       & IK_REF(X, -vector_tag))))
+if ((vector_tag    == (X & vector_mask)) &&
+    (secondary_tag == (secondary_mask & IK_REF(X, -vector_tag))))
   it_is();
 else
   it_is_not();
@@ -425,7 +424,7 @@ The secondary tags and the associated masks are:
    object           |  tag bits   | tag hex | tag mask
                     |    76543210 |         |    76543210
 --------------------+-------------+---------+-------------
-vector              |  #b??????00 | fixnum  | #b00000111
+vector              |  #b??????00 | fixnum  |    --
 bignum              |  #b????s011 |   #x03  | #b00000111
 structure           |  #b?????101 |   #x05  | #b00000111
 flonum              |  #b00010111 |   #x17  |    --
@@ -2114,7 +2113,7 @@ IK_FIELD(s_stru, 2) = s_field;
 
 @c ------------------------------------------------------------
 
-@subsubheading Operations on vectors
+@subsubheading Operations on structs
 
 
 @deftypefun ikptr ika_struct_alloc_no_init (ikpcb * @var{pcb}, ikptr @var{rtd})
@@ -3987,6 +3986,15 @@ zero.
 the subsequent words in the memory block are the code object's data
 area.
 
+@c ------------------------------------------------------------
+
+@subsubheading Operations
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CODE (@var{X})
+Evaluate to true if @var{X} is a reference to code object.
+@end deftypefn
+
 @c page
 @node objects codes reloc
 @subsection The relocation vector
@@ -4164,9 +4172,9 @@ fragmentation.
 Closure objects are actual procedures: closure objects are the ones for
 which the @func{procedure?} predicate returns @true{}.  A closure object
 is a fixed length memory block referenced by machine words tagged as
-closures; each closure object is associated to a code object that
-implements the procedure.  The memory layout of a closure object is as
-follows:
+closures; each closure object is associated to either a code object that
+implements the procedure or a routine directly coded in assembly.  The
+memory layout of a closure object is as follows:
 
 @example
 |------------------------|-------------| reference to closure
@@ -4267,7 +4275,7 @@ referenced by the slots of the closures:
 @subsubheading Basic operations
 
 Closure objects are allocated on the heap; to perform the allocation and
-initialisation we do:
+initialisation for a closure object without free variables we do:
 
 @example
 ikptr   p_closure;
@@ -4299,27 +4307,28 @@ logic AND) the tag from @ikptr{} references to closure objects.
 
 @defvr {Preprocessor Symbol} disp_closure_code
 Displacement of code pointer.  The number of bytes to add to an
-@strong{untagged} pointer to closure to get the pointer to the first
-byte in the word of the closure's data area.
+@strong{untagged} pointer to closure to get a pointer to the word in the
+memory block holding the binary code entry point.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} disp_closure_data
-Number of bytes needed to hold a closure's memory block.  An integer to
-add to an @strong{untagged} pointer to closure to obtain a pointer to
-the first byte after the closure's memory block.
+Displacement of free variables.  The number of bytes to add to an
+@strong{untagged} pointer to closure to get a pointer to the first word
+in the data area of the memory block.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_closure_code
-An integer to add to a tagged @ikptr{} reference to retrieve the pointer
-to the first byte of the word in the closure's data area.
+An integer to add to a tagged @ikptr{} closure reference to get a
+pointer to the word in the memory block holding the binary code entry
+point.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_closure_data
-An integer to add to a tagged @ikptr{} vector reference to obtain a
-pointer to the first byte after the closure's memory block.
+An integer to add to a tagged @ikptr{} closure reference to get a
+pointer to the first word in the data area of the memory block.
 @end defvr
 
 @c ------------------------------------------------------------
@@ -4331,9 +4340,63 @@ pointer to the first byte after the closure's memory block.
 Evaluate to true if @var{X} is a reference to closure object.
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_ENTRY_POINT (@var{X})
+Given a reference to closure object: return the address of the binary
+code entry point.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_CODE_OBJECT (@var{X})
+Given a reference to closure object: return a reference to the
+associated code object.  @strong{Only works for closures associated to
+code objects.}
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_CLOSURE_NUMBER_OF_FREE_VARS (@var{X})
+Given a reference to closure object: return the number of free
+variables.  @strong{Only works for closures associated to code objects.}
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_FREE_VAR (@var{X}, @var{idx})
+Given a reference to closure object: return a reference to value of the
+free variable at index @var{idx} in the data area.  @var{idx} must be
+less than the number of free variables in this closure object.
+@end deftypefn
+
 @c page
 @node objects continuations
 @section Continuation objects
+
+
+There are two kinds of continuation objects:
+
+@table @strong
+@item Scheme continuations
+Represent a Scheme continuation as defined by @rnrs{6}, a portion of
+Scheme stack whose frames are freezed.  Scheme continuations are
+expliticly created by @func{call/cc}, but also used to represent a
+Scheme stack segment that has run out of space making the frames
+overflow into another stack segment.
+
+@item System continuations
+Represent a C language continuation, a portion of the C language stack.
+They are used by the @ffi{} to save the C execution context just before
+calling back to Scheme from C code, @ref{ffi, Foreign functions
+interface}.
+@end table
+
+@menu
+* objects continuations intro::   Introduction to continuations.
+* objects continuations scheme::  Scheme continuation objects.
+* objects continuations system::  System continuation objects.
+@end menu
+
+@c page
+@node objects continuations intro
+@subsection Introduction to continuations
 
 
 Continuation objects are memory blocks referenced by machine words
@@ -4344,7 +4407,7 @@ tagged as vectors, whose first word is tagged as continuation:
   heap pointer    vector tag
 
 |----------------|----------| first word of continuation
- all set to zero  vector tag
+ all set to zero  continuation tag
 @end example
 
 @noindent
@@ -4355,113 +4418,81 @@ the layout of a continuation memory block is:
   tag   top  size  next
 @end example
 
-To understand the contents of a continuation object, we have to recall
-how the Scheme stack is used:
-
-@example
- high memory
-|            |
-|------------|
-|            | <-- pcb->frame_base
-|------------|
-| used word  | <-- pcb->frame_base - wordsize
-|------------|
-|     .      |
-|     .      |
-|     .      |
-|------------|
-| free word  | <-- pcb->frame_pointer
-|------------|
-|     .      |
-|     .      |
-|     .      |
-|------------|
-| free word  | <-- pcb->stack_base
-|------------|
-|            |
-  low memory
-@end example
-
-@noindent
-and remember that @code{pcb->frame_base} references a word that is
-one--off the end of the stack segment; so the first word in the stack
+Continuation objects are collected in linked lists handled as stacks;
+all such linked lists share a common tail.  The meaning of the fields
 is:
 
-@example
-pcb->frame_base - wordsize
-@end example
-
-@noindent
-A continuation references the portion of the Scheme stack memory segment
-between @code{frame_base} and @code{frame_pointer}.
-
-There are two kinds of continuation objects:
-
-@table @dfn
-@item Scheme continuations
-Represent a Scheme continuation.  They are expliticly created by
-@func{call/cc}, but also used to represent a previous Scheme code
-execution when the allocated Scheme stack runs out of space.
-
-@item system continuations
-Represent a C continuation.  They are used by the @ffi{} to save the C
-execution context just before calling back to Scheme from C code.
-@end table
-
-The fields of a Scheme continuation are:
-
 @table @code
+@item tag
+A machine word containing only the secondary tag for continuation
+objects and all the other bits set to zero.
+
 @item top
-Untagged pointer referencing the first free word on the Scheme stack.
+A machine word representing the memory address of the machine word at
+the top (lowest address) of the stack portion referenced by the
+continuation.
 
 @item size
-Number of bytes used on the Scheme stack, @strong{not} counting the free
-word referenced by the frame pointer.
+The size of the stack portion expressed in number of bytes.
 
 @item next
-Tagged pointer referencing a continuation object; it represents the
-continuation to go back to after the execution of tthis continuation is
-finished.  This ``going back'' is performed by the C function
-@cfunc{ik_exec_code}.
+A machine word being @cnull{} or a reference (tagged pointer) to the
+next continuation object in the linked list.
 @end table
-
-The fields of a Scheme continuation are:
-
-@table @code
-@item top
-Untagged memory pointer referencing the C language stack last saved by
-Scheme code; it is the content of the field @code{pcb->system_stack} at
-the time this system continuation object was created.
-
-@item size
-Unused.
-
-@item next
-Tagged memory pointer referencing the next continuation; it is the
-content of the field @code{pcb->next_k} at the time this system
-continuation object was created.
-@end table
-
-Whatever the kind, usually a continuation is created and then saved in
-the field @code{pcb->next_k} in such a way that continuation objects
-create a linked list:
-
-@example
-        next_k
-|------|------|-----| PCB
-          |
-          v     next
-       |-------|----| continuation
-                  |
-                  v     next
-               |-------|----| continuation
-                          |
-                           --> NULL
-@end example
 
 @c ------------------------------------------------------------
 
 @subsubheading Basic operations
+
+To test if a value of type @code{ikptr} is a reference to a continuation
+object, we should do:
+
+@example
+ikptr   X;
+
+if (continuation_primary_tag == (continuation_primary_mask & X))
+  @{
+    if (continuation_tag == IK_REF(X, 0))
+      it_is_a_scheme_continuation();
+    else if (system_continuation_tag == IK_REF(X, 0))
+      it_is_a_system_continuation();
+    it_is_not();
+  @}
+else
+  it_is_not();
+@end example
+
+A Scheme continuation object is usually allocated as follows:
+
+@example
+ikpcb *     pcb = ...;
+ikptr       s_kont;
+ikcont *    kont;
+
+kont   = (ikcont*)ik_unsafe_alloc(pcb,
+                     IK_ALIGN(continuation_size));
+s_rest = (ikptr)((long)kont) | continuation_primary_tag;
+
+IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
+IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+IK_REF(s_kont, off_continuation_size) = \
+   pcb->frame_base - pcb->frame_pointer - wordsize;
+IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+pcb->next_k = s_kont;
+@end example
+
+
+@defvr {Preprocessor Symbol} continuation_primary_tag
+The tag of an @code{ikptr} machine words referencing the memory block of
+a Scheme or system continuation object.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} continuation_primary_mask
+A bit pattern used to isolate the tag bits in an @code{ikptr} machine
+words referencing the memory block of a Scheme or system continuation
+object.
+@end defvr
 
 
 @defvr {Preprocessor Symbol} continuation_tag
@@ -4482,7 +4513,7 @@ The number of bytes needed to hold a continuation memory block.
 @defvrx {Preprocessor Symbol} disp_continuation_size
 @defvrx {Preprocessor Symbol} disp_continuation_next
 Scheme continuation field displacements.  The number of bytes to add to
-an untagged pointer to Scheme continuations to get the pointer to the
+an untagged pointer to Scheme continuation to get the pointer to the
 first byte in the word holding the specified field.
 @end defvr
 
@@ -4492,7 +4523,7 @@ first byte in the word holding the specified field.
 @defvrx {Preprocessor Symbol} disp_system_continuation_size
 @defvrx {Preprocessor Symbol} disp_system_continuation_next
 System continuation field displacements.  The number of bytes to add to
-an untagged pointer to system continuations to get the pointer to the
+an untagged pointer to system continuation to get the pointer to the
 first byte in the word holding the specified field.
 @end defvr
 
@@ -4517,21 +4548,340 @@ byte in the word holding the specified field.
 @end defvr
 
 
-A Scheme continuation object is usually allocated as follows:
+@deftypefn {Preprocessor Macro} int IK_IS_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to Scheme continuation
+object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_SYSTEM_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to system continuation
+object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_ANY_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to Scheme or system
+continuation object.
+@end deftypefn
+
+@c page
+@node objects continuations scheme
+@subsection Scheme continuation objects
+
+
+To understand the contents of a continuation object, we have to recall
+how the Scheme stack is used, @ref{machinery continuations,
+Continuations implementation}.  We also need to remember that stack
+segments are consumed starting from the highest memory addresses,
+growing towards the lowest memory addresses.
+
+Whenever a Scheme stack segment is allocated, the fields of the @pcb{}
+structure are initialised such that: @code{stack_base} references the
+lowest machine word in the segment, @code{frame_base} references the
+highest word right after the end of the segment, @code{frame_pointer}
+references the highest word of the segment which is initialised to the
+memory address of the assembly routine @code{ik_underflow_handler};
+@ref{fig:kont_empty_stack, objects continuations scheme}.
+
+@float Figure,fig:kont_empty_stack
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <-- pcb->frame_base
+|----------------------|                         --
+| ik_underflow_handler | <-- pcb->frame_pointer  .
+|----------------------|                         .
+          ...                                    .
+|----------------------|                         . stack
+|                      | <-- pcb->frame_redline  . segment
+|----------------------|                         .
+          ...                                    .
+|----------------------|                         .
+|                      | <-- pcb->stack_base     .
+|----------------------|                         --
+|                      |
+      low memory
+@end example
+@caption{Empty Scheme stack segment as it appears right after allocation
+and initialisation.}
+@end float
+
+Whenever Scheme functions are called, and they perform nested calls:
+stack frames are created, starting from the highest machine words; let's
+say there are 2 of them, @ref{fig:kont_two_frames, objects continuations
+scheme}.  The @cpu{}'s Frame Pointer Register (@acronym{FPR}) references
+the return address in the topmost stack frame (while executing Scheme
+code @acronym{FPR} gets out of sync with @code{pcb->frame_pointer}).
+
+@float Figure,fig:kont_two_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|                        | <-- pcb->frame_base
+|------------------------|                       --
+|  ik_underflow_handler  |                       .
+|------------------------|        --             .
+|   local value frame 1  |        .              .
+|------------------------|        .              .
+|   local value frame 1  |        . framesize 1  .
+|------------------------|        .              .
+| return address frame 1 |        .              .
+|------------------------|        --             .
+|   local value frame 0  |        .              .
+|------------------------|        .              . stack
+|   local value frame 0  |        . framesize 0  . segment
+|------------------------|        .              .
+| return address frame 0 | <- FPR .              .
+|------------------------|        --             .
+|     call argument      |                       .
+|------------------------|                       .
+|     call argument      |                       .
+|------------------------|                       .
+           ...                                   .
+|------------------------|                       .
+|                        | <-- pcb->stack_base   .
+|------------------------|                        --
+|                        |
+      low memory
+@end example
+@caption{2 frames on the Scheme stack.}
+@end float
+
+If a continuation object is created now: it ``freezes'' (or ``seals'')
+all the stack frames in the stack segment, so that they will never be
+mutated again; in practice the portion of the Scheme stack referenced by
+the continuation is no more part of the Scheme stack itself, rather the
+stack segment is resized to reference only the portion of memory still
+unused, @ref{fig:kont_freezed_frames, objects continuations scheme}.
+
+@float Figure,fig:kont_freezed_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|  ik_underflow_handler  |
+|------------------------|                       --
+|   local value frame 1  |                       .
+|------------------------|                       .
+|   local value frame 1  |                       .
+|------------------------|                       .
+| return address frame 1 |                       . continuation
+|------------------------|                       . size
+|   local value frame 0  |                       .
+|------------------------|                       .
+|   local value frame 0  |                       .
+|------------------------|                       .
+| return address frame 0 | <- pcb->frame_base    .
+|------------------------|                       --
+|  ik_underflow_handler  | <- FPR                .
+|------------------------|                       .
+|     call argument      |                       .
+|------------------------|                       . stack
+|     call argument      |                       . segment
+|------------------------|                       .
+           ...                                   .
+|------------------------|                       .
+|                        | <-- pcb->stack_base   .
+|------------------------|                       --
+|                        |
+      low memory
+@end example
+@caption{freezed stack frames and resized stack segment.}
+@end float
+
+The field @code{top} of the continuation object is an untagged memory
+pointer referencing the return address in the topmost freezed frame
+(@code{frame 0} in the pictures); such machine word is the address of
+the code execution return point of this continuation, in other words:
+the address of the next assembly instruction to execute when returning
+to this continuation.
+
+The field @code{size} of the continuation object is the number of bytes
+in all the freezed stack frames this continuation references: the sum
+between the all frame sizes.
+
+Notice that the single continuation object referencing all the freezed
+frames is equivalent to two continuation objects each referencing a
+single freezed frame, provided that the continuation object of
+@code{frame 0} has the continuation object of @code{frame 1} as
+@code{next}, @ref{fig:kont_split_frames, objects continuations scheme}.
+
+@float Figure,fig:kont_split_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|  ik_underflow_handler  |
+|------------------------|           --
+|   local value frame 1  |           .
+|------------------------|           . continuation
+|   local value frame 1  |           . size 1
+|------------------------|           .
+| return address frame 1 | <- top 1  .
+|------------------------|           --
+|   local value frame 0  |           .
+|------------------------|           . continuation
+|   local value frame 0  |           . size 0
+|------------------------|           .
+| return address frame 0 | <- top 0  .
+|------------------------|           --
+|                        |
+      low memory
+
+     next_k
+|...|------|...| PCB structure
+       |
+       v
+      tag  top  size next
+     |----|----|----|----| continuation object 0
+                      |
+               -------
+              v
+             tag  top  size next
+            |----|----|----|----| continuation object 1
+                            NULL
+@end example
+@caption{2 chained continuation objects equivalent to the single
+continuation object.}
+@end float
+
+@c page
+@node objects continuations system
+@subsection System continuation objects
+
+
+@value{PRJNAME} is written in both the C language and the Scheme
+language; the runtime system performing heap and stack memory allocation
+and garbage collection is written in the C language.  @value{PRJNAME}
+starts with C code and enters Scheme code when running a Scheme program:
 
 @example
-ikpcb *     pcb = ...;
-ikptr       s_kont;
-
-s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) \
-   | vector_tag;
-IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
-IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
-IK_REF(s_kont, off_continuation_size) = \
-   pcb->frame_base - pcb->frame_pointer - wordsize;
-IK_REF(s_kont, off_continuation_next) = pcb->next_k;
-pcb->next_k = s_kont;
+C code --> Scheme code
 @end example
+
+@noindent
+when the last Scheme function returns: @value{PRJNAME} knowns that it
+has to return to C code because the Scheme stack is initialised with a
+return address to a special routine (the underflow handler) that does
+it.
+
+It is clear that, while running a Scheme program, every now and then
+@value{PRJNAME} must switch between portions of code written in C and
+portions of code written in Scheme; such portions make different use of
+the @cpu{}.
+
+Whenever @value{PRJNAME} leaves C code execution to enter Scheme code
+execution: it saves the current state of the C stack; in practice it
+saves the pointer to the top of the stack in the @pcb{} structure.
+Whenever @value{PRJNAME} leaves Scheme code execution to return to C
+code execution: it saves the current state of the Scheme stack in the
+@pcb{} and restores the state of the C stack from the @pcb{}.
+
+While running Scheme code we can call a C function through the
+primitive, low--level operation @func{foreign-call} (when using the
+@ffi{} callout mechanism we are still using @func{foreign-call}):
+
+@example
+C code --> Scheme code (--> foreign-call) --> C code
+@end example
+
+@noindent
+when leaving Scheme code: the status of the Scheme stack is saved in the
+@pcb{}; the C stack creates no problems: we just retrieve the top of the
+C stack from the @pcb{} and use the stack region below it,
+@ref{fig:kont_cstack_reenter, objects continuations system}.
+
+@float Figure,fig:kont_cstack_reenter
+@example
+
+    --------- stack growing direction ------->
+
+ C stack   C stack  C stack   C stack    C stack
+ frame     frame    frame     frame      frame
+|---------|--------|--------|----------|----------|
+                            ^                     ^
+                       saved top            current top
+
+|...........................|.....................|
+   C stack before entering     C stack after
+   Scheme code                 reentering C code
+@end example
+@caption{The C stack portions used before entering Scheme code and after
+reentering C code with @func{foreign-call}.}
+@end float
+
+Now let's say that, after entering nested C code, we enter nested Scheme
+code:
+
+@example
+C code 1 --> Scheme code 1 --> C code 2 --> Scheme code 2
+@end example
+
+@noindent
+at the transition from @code{C code 2} to @code{Scheme code 2} we must
+save the state of the C stack, but the dedicated fields in the @pcb{}
+are already busy with the status of @code{C code 1}.  @value{PRJNAME}
+solves this problem with continuation objects; at the transition from
+@code{C code 2} to @code{Scheme code 2}:
+
+@enumerate
+@item
+A Scheme continuation object is created to hold the status of
+@code{Scheme code 1} previously saved in the @pcb{}.
+
+@item
+A system continuation object is created to hold the status of @code{C
+code 1} previously saved in the @pcb{}.
+
+@item
+The status of @code{C code 2} is saved in the @pcb{}.
+
+@item
+Execution of @code{Scheme code 2} is entered in a clean Scheme stack
+segment.
+@end enumerate
+
+@noindent
+whenever @code{Scheme code 2} goes back to @code{C code 2}:
+
+@enumerate
+@item
+The Scheme stack segment used by @code{Scheme code 2} is abandoned.
+
+@item
+The status of @code{C code 2} is restored from the system continuation
+object.
+
+@item
+The execution enters @code{C code 2}.
+
+@item
+The status of @code{Scheme code 1} is restored from the Scheme
+continuation object.
+
+@item
+The execution enters @code{Scheme code 1}.
+@end enumerate
+
+In a system continuation object:
+
+@itemize
+@item
+The field @code{top} is an untagged memory pointer referencing the C
+language stack last saved upon exiting C code and entering Scheme code;
+it is the content of the field @code{pcb->system_stack} at the time this
+system continuation object was created.
+
+@item
+The field @code{size} of a system continuation object is unused.
+@end itemize
+
+Upon creation, both Scheme and system continuation objects are prepended
+to the linked list referenced by the field @code{next_k} of the @pcb{}
+structure.
 
 @c page
 @node objects misc
@@ -4539,29 +4889,12 @@ pcb->next_k = s_kont;
 
 
 @menu
-* objects misc func::           Miscellaneous functions.
 * objects misc mblock::         Macros handling @code{memory-block}.
 * objects misc voidp::          Macros extracting @code{void *}.
 * objects misc charp::          Macros extracting @code{char *}.
+* objects misc cbuffers::       Generalised C buffers.
+* objects misc func::           Miscellaneous functions.
 @end menu
-
-@c page
-@node objects misc func
-@subsection Miscellaneous functions
-
-
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
-Copy @var{count} items from @var{src} starting at offset
-@var{src_start}, to @var{dst} starting at offset @var{dst_start};
-@var{src_start}, @var{dst_start} and @var{count} must be non--negative
-fixnums.  Return unspecified values.
-
-Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
-a string.  For bytevectors and pointers: bytes are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
-strings: 32-bit values representing Unicode code points are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in character units.
-@end deftypefun
 
 @c page
 @node objects misc mblock
@@ -4684,65 +5017,136 @@ referencing the data; when @var{obj} is @false{}: the returned value is
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object return a @code{char *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {charp *} IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a @code{memory-block} object return a @code{char *}
 pointer referencing the data; when @var{obj} is @false{}: the returned
 value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
 Given a bytevector object or a pointer object return a @code{char *}
 pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object or a pointer object return a
 @code{char *} pointer referencing the data; when @var{obj} is @false{}:
 the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
 Given a pointer object or @code{memory-block} object return a @code{void
 *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a pointer object or a @code{memory-block} object
 return a @code{char *} pointer referencing the data; when @var{obj} is
 @false{}: the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{char *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object or a pointer object or a
 @code{memory-block} object return a @code{char *} pointer referencing
 the data; when @var{obj} is @false{}: the returned value is @cnull{}.
 @end deftypefn
+
+@c page
+@node objects misc cbuffers
+@subsection Generalised C buffers
+
+
+When interfacing a C language foreign library with @value{PRJNAME}, it
+is often needed to convert Scheme objects to raw memory blocks, possibly
+containing @asciiz{} strings.  Generalised C buffers are meant to be
+used in interfaces to foreign C language libraries, when a pointer to
+raw data is required as argument.  @ref{cbuffers buffers} for details.
+
+Notice that at the C language level only general C buffers exist: Scheme
+strings should be converted to bytevectors at the Scheme level.
+
+
+@deftypefun size_t ik_generalised_c_buffer_len (ikptr @var{buffer}, ikptr @var{buffer_len})
+Return the number of bytes in a generalised C buffer object.
+
+@var{buffer} must be a bytevector, pointer object or @code{memory-block}
+struct instance.
+
+When @var{buffer} is a pointer object: @var{buffer_len} must be an exact
+integer (in the range of the C language type @code{size_t}) representing
+the number of bytes available in the referenced memory block.  Otherwise
+@var{buffer_len} is ignored.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER_OR_FALSE (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{void *} pointer referencing the data.  The second
+macro accepts also @false{} as value and returns @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE (ikptr @var{obj})
+Given a pointer object or a @code{memory-block} object return a
+@code{void *} pointer referencing the data.  The second macro accepts
+also @false{} as value and returns @cnull{}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@deftypefn {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING_OR_FALSE (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{char *} pointer referencing the data.  The second
+macro accepts also @false{} as value and returns @cnull{}.
+@end deftypefn
+
+@c page
+@node objects misc func
+@subsection Miscellaneous functions
+
+
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from @var{src} starting at offset
+@var{src_start}, to @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+
+Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
+a string.  For bytevectors and pointers: bytes are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
+strings: 32-bit values representing Unicode code points are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in character units.
+@end deftypefun
 
 @c page
 @node objects callbacks
@@ -4751,17 +5155,16 @@ the data; when @var{obj} is @false{}: the returned value is @cnull{}.
 
 While writing C language code interfacing with Scheme, if we call a C
 language function which calls back a Scheme function we have to save and
-restore the continuation:
+restore the current system continuation:
 
 @example
 ikpcb * pcb = the_pcb;
-ikptr   sk;
 
-sk = ik_enter_c_function(pcb);
+ik_enter_c_function(pcb);
 @{
   /* place here C code that calls Scheme code */
 @}
-ik_leave_c_function(pcb, sk);
+ik_leave_c_function(pcb);
 @end example
 
 @noindent
@@ -4769,13 +5172,24 @@ else, upon returning from the Scheme code, the execution flow will go to
 the wrong continuation and undefined behaviour ensues.
 
 
-@deftypefun ikptr ik_enter_c_function (ikpcb * @var{pcb})
-Save the current Scheme continuation and return a reference to it.
+@deftypefun void ik_enter_c_function (ikpcb * @var{pcb})
+Save the current Scheme continuation and followed by the current system
+continuation.  A call to this function must be matched by a call to
+@cfunc{ik_leave_c_function}.
 @end deftypefun
 
 
-@deftypefun ikptr ik_leave_c_function (ikpcb * @var{pcb}, ikptr @var{sk})
-Restore the previously saved Scheme continuation @var{sk}.
+@deftypefun void ik_leave_c_function (ikpcb * @var{pcb})
+Restore the previously saved Scheme continuation.  A call to this
+function must be matched by a call to @cfunc{ik_enter_c_function}.
 @end deftypefun
+
+
+Notice that when Scheme calls C then C calls a Scheme: garbage
+collections can happen in the nested Scheme code, so the C code cannot
+rely on the Scheme value to keep their location.  Also, nested C code
+invocations can happen, so the C code calling out to Scheme
+@strong{cannot} use the @code{pcb->root} fields to preserve Scheme
+values.
 
 @c end of file

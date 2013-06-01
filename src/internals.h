@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -189,10 +189,56 @@
 #define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
 #define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
 
-#define call_instruction_size	((wordsize == 4) ? 5 : 10)
-#define disp_frame_size		(- (call_instruction_size + 3 * wordsize))
-#define disp_frame_offset	(- (call_instruction_size + 2 * wordsize))
-#define disp_multivalue_rp	(- (call_instruction_size + 1 * wordsize))
+/*
+ * When compiling Scheme code to  executable machine code: to generate a
+ * "call" instruction to  a Scheme function, we need to  follow both the
+ * protocol for  handling multiple  return values,  and the  protocol to
+ * expose  informations  about  the  caller's stack  frame  for  garbage
+ * collection purposes.
+ *
+ * This means generating the following chunk of pseudo-assembly:
+ *
+ *     jmp L0
+ *     livemask-bytes		;array of bytes             |
+ *     framesize		;data word, a "long"        | call
+ *     rp_offset		;data word, a fixnum        | table
+ *     multi-value-rp		;data word, assembly label  |
+ *     pad-bytes                                            |
+ *   L0:
+ *     call scheme-function-address
+ *   single-value-rp:		;single value return point
+ *     ... instructions...
+ *   multi-value-rp:		;multi value return point
+ *     ... instructions...
+ *
+ * and  remember that  "call" pushes  on the  stack the  return address,
+ * which is the label SINGLE-VALUE-RP.
+ *
+ * If the  callee function returns a  single value: it puts  such in the
+ * CPU's  ARGC-REGISTER  and  performs  a  "ret";  this  will  make  the
+ * execution flow jump back to the entry point SINGLE-VALUE-RP.
+ *
+ * If the callee  function wants to return zero or  2 or more arguments:
+ * it retrieves the address SINGLE-VALUE-RP  from the Scheme stack, adds
+ * to  it   the  constant   DISP_MULTIVALUE_RP  obtaining   the  address
+ * MULTI-VALUE-RP, then  it performs a "jmp"  directly to MULTI-VALUE-RP
+ * (without popping the return address from the stack).
+ *
+ * The constant data values (computed  at compile time) right before the
+ * "call" assembly  instruction are the  "call table": a  data structure
+ * representing  informations  about  this  function  call.   Given  the
+ * address SINGLE-VALUE-RP  we can access  the fields of the  call table
+ * using the following offsets.
+ */
+#define IK_CALL_INSTRUCTION_SIZE	((wordsize == 4) ? 5 : 10)
+#define disp_call_table_size		(- (IK_CALL_INSTRUCTION_SIZE + 3 * wordsize))
+#define disp_call_table_offset		(- (IK_CALL_INSTRUCTION_SIZE + 2 * wordsize))
+#define disp_multivalue_rp		(- (IK_CALL_INSTRUCTION_SIZE + 1 * wordsize))
+
+#define IK_CALLTABLE_FRAMESIZE(RETURN_ADDRESS)	\
+		((long)IK_REF((RETURN_ADDRESS),disp_call_table_size))
+#define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
+		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
 
 /* ------------------------------------------------------------------ */
 
@@ -240,6 +286,13 @@
    offset. */
 #define IK_PAGE_INDEX(x)   \
   (((ik_ulong)(x)) >> IK_PAGESHIFT)
+
+/* Record in  the dirty vector the  side effect of mutating  the machine
+   word at POINTER.   This will make the garbage collector  do the right
+   thing when objects in an old  generation reference objects in a young
+   generation. */
+#define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
+  (((int*)(long)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = -1)
 
 #define IK_ALIGN_TO_NEXT_PAGE(x) \
   (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
@@ -396,41 +449,25 @@ typedef struct ikpcb {
   struct timeval	collect_stime;
   struct timeval	collect_rtime;
 
-  /* Scheme list of object not to be collected. */
+  /* Collection of objects not to be collected. */
   void *		not_to_be_collected;
 
 } ikpcb;
-
-/* This C language data structure  is used to access Scheme continuation
-   objects: given an "ikptr" reference to continuation, we subtract from
-   it "vector_tag"  and the result  is an untagged pointer  to "ikcont".
-   This  struct is  a useful  helper to  be used  inplace of  the IK_REF
-   getter.
-
-   Every "ikcont" struct is a node in a linked list of continuations. */
-typedef struct ikcont {
-  ikptr		tag;
-  ikptr		top;
-  long		size;
-  ikptr		next;	/* pointer to next ikcont structure */
-} ikcont;
-
-/* ------------------------------------------------------------------ */
 
 /* The garbage collection avoidance list  is a linked list of structures
    managed as a stack.  Allocated  structures are never released, so the
    stack continues to grow and never shrinks.
 
-     Every structure contains an array of machine words that is meant to
+   Every structure contains  an array of machine words that  is meant to
    hold references to  "ikptr" values not to be garbage  collected; if a
    slot in the array is not IK_VOID: it contains a "ikptr" value.
 
-     Adding values  requires a linear  search for  a NULL slot  and this
-   sucks plenty; but this way: the  sweep of the garbage collector is as
-   fast   as  possible,   removing  values   requires  only   a  pointer
-   indirection, memory consumption is as small as possible.
+   Adding values requires a linear search for a NULL slot and this sucks
+   plenty; but this  way: the sweep of the garbage  collector is as fast
+   as  possible, removing  values requires  only a  pointer indirection,
+   memory consumption is as small as possible.
 
-     The arrays  implicitly associate  the memory  pointer in  which the
+   The  arrays implicitly  associate  the memory  pointer  in which  the
    "ikptr" is  stored to  the "ikptr"  value itself;  this is  useful to
    store references to  to "ikptr" values in data  structures managed by
    foreign C language libraries. */
@@ -445,6 +482,53 @@ struct ik_gc_avoidance_collection_t {
   /* Pointer to the first word in the free list. */
   ikptr		slots[IK_GC_AVOIDANCE_ARRAY_LEN];
 };
+
+/* The "ikcont"  data structure  is used  to access  Scheme continuation
+   objects: given an "ikptr" reference to continuation, we subtract from
+   it "continuation_primary_tag"  and the result is  an untagged pointer
+   to "ikcont".  This struct  is a useful helper to be  used in place of
+   the IK_REF getter. */
+/* The  following   picture  shows  two   stack  frames  freezed   in  a
+ * continuation object.  Freezed frame 0 is on the top of freezed stack.
+ *
+ *            high memory
+ *    |                        |
+ *    |------------------------|
+ *    |  other return address  |
+ *    |------------------------|        --             --
+ *    |   local value frame 1  |        .              .
+ *    |------------------------|        .              .
+ *    |   local value frame 1  |        . framesize 1  .
+ *    |------------------------|        .              .
+ *    | return address frame 1 |        .              . continuation
+ *    |------------------------|        --             . size
+ *    |   local value frame 0  |        .              .
+ *    |------------------------|        .              .
+ *    |   local value frame 0  |        . framesize 0  .
+ *    |------------------------|        .              .
+ *    | return address frame 0 | <- top .              .
+ *    |------------------------|        --             --
+ *    |                        |
+ *            low memory
+ */
+typedef struct ikcont {
+  /* The field TAG is set to the constant value "continuation_tag". */
+  ikptr		tag;
+  /* The field TOP is a raw memory pointer referencing a machine word on
+     the top  freezed frame; such  machine word contains the  address of
+     the  code execution  return point  of this  continuation, in  other
+     words: the address of the next assembly instruction to execute when
+     returning to this continuation. */
+  ikptr		top;
+  /* The field  SIZE is  the number  of bytes in  all the  freezed stack
+     frames  this continuation  references.  It  is the  sum of  all the
+     freezed frame sizes. */
+  long		size;
+  /* Every "ikcont" struct is a node  in a linked list of continuations.
+     The  field NEXT  is  0  or a  reference  (tagged  pointer) to  next
+     continuation object. */
+  ikptr		next;
+} ikcont;
 
 
 /** --------------------------------------------------------------------
@@ -464,8 +548,6 @@ ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char*);
 ik_private_decl void*	ik_malloc		(int);
 ik_private_decl void	ik_free			(void*, int);
 
-ik_private_decl ikptr	ik_underflow_handler	(ikpcb*);
-
 ik_private_decl ikptr	ik_mmap			(unsigned long);
 ik_private_decl ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*);
 ik_private_decl ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
@@ -482,8 +564,13 @@ ik_private_decl void	ik_relocate_code	(ikptr);
 
 ik_private_decl ikptr	ik_exec_code		(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 
-ik_private_decl ikptr	ik_asm_enter		(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
-ik_private_decl ikptr	ik_asm_reenter		(ikpcb*, ikptr code_object, ikptr val);
+ik_private_decl ikptr	ik_asm_enter		(ikpcb* pcb, ikptr code_object_entry_point,
+						 ikptr s_arg_count, ikptr s_closure);
+ik_private_decl ikptr	ik_asm_reenter		(ikpcb* pcb,
+						 ikptr new_frame_base_pointer,
+						 ikptr s_number_of_return_values);
+ik_private_decl void	ik_underflow_handler	(void);
+#define IK_UNDERFLOW_HANDLER		((ikptr)ik_underflow_handler)
 
 
 /** --------------------------------------------------------------------
@@ -496,6 +583,7 @@ ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
 ik_decl void	ik_debug_message	(const char * error_message, ...);
 ik_decl void	ik_debug_message_start	(const char * error_message, ...);
+ik_decl void	ik_debug_message_no_newline (const char * error_message, ...);
 
 ik_decl ikptr	ik_unsafe_alloc		(ikpcb* pcb, ik_ulong size);
 ik_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);
@@ -503,6 +591,10 @@ ik_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);
 ik_decl void	ik_print		(ikptr x);
 ik_decl void	ik_print_no_newline	(ikptr x);
 ik_decl void	ik_fprint		(FILE*, ikptr x);
+
+ik_private_decl void ik_print_stack_frame (FILE * fh, ikptr top);
+ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames,
+							ikpcb * pcb);
 
 
 /** --------------------------------------------------------------------
@@ -564,6 +656,8 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 
 #define most_positive_fixnum	(((ik_ulong)-1) >> (fx_shift+1))
 #define most_negative_fixnum	(most_positive_fixnum+1)
+#define IK_GREATEST_FIXNUM	most_positive_fixnum
+#define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
 #define IK_FIX(X)	((ikptr)(((long)(X)) << fx_shift))
 #define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
@@ -1076,22 +1170,40 @@ ik_decl int   ik_is_struct	(ikptr R);
  ** Code objects.
  ** ----------------------------------------------------------------- */
 
-/* This	 is the	 primary tag,  in the  machine word  referencing  a code
-   object. */
-#define code_pri_tag		vector_tag
-/* This is the	secondary tag, in the first word  of the referenced heap
-   vector. */
+/* To assert that a machine word X references a code object we do:
+
+     ikptr	X;
+     assert(code_primary_tag == (code_primary_mask & X));
+     assert(code_tag         == IK_REF(X, off_code_tag));
+*/
+#define code_primary_mask	vector_mask
+#define code_primary_tag	vector_tag
 #define code_tag		((ikptr)0x2F)
-#define disp_code_code_tag	0
+
+#define disp_code_tag		0
 #define disp_code_code_size	(1 * wordsize)
 #define disp_code_reloc_vector	(2 * wordsize)
 #define disp_code_freevars	(3 * wordsize)
 #define disp_code_annotation	(4 * wordsize)
 #define disp_code_unused	(5 * wordsize)
 #define disp_code_data		(6 * wordsize)
-#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
-#define off_code_data		(disp_code_data		- code_pri_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
+#define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_freevars	(disp_code_freevars	- code_primary_tag)
+#define off_code_annotation	(disp_code_annotation	- code_primary_tag)
+#define off_code_data		(disp_code_data		- code_primary_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
+
+#define IK_IS_CODE(X)		\
+     ((code_primary_tag == (code_primary_mask & X)) && \
+      (code_tag         == IK_REF(X, off_code_tag)))
+
+/* Given a reference  to code object: return a raw  pointer to the entry
+   point in the code, as "ikptr". */
+#define IK_CODE_ENTRY_POINT(CODE)	((CODE)+off_code_data)
+
+ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
+
+/* ------------------------------------------------------------------ */
 
 /* Accessors for the words of relocation vector's records. */
 #undef  IK_RELOC_RECORD_REF
@@ -1133,10 +1245,21 @@ ik_decl int   ik_is_struct	(ikptr R);
 
 #define IK_IS_CLOSURE(X)	((((long)(X)) & closure_mask) == closure_tag)
 
+#define IK_CLOSURE_ENTRY_POINT(X)	IK_REF((X),off_closure_code)
+#define IK_CLOSURE_CODE_OBJECT(X)	(IK_CLOSURE_ENTRY_POINT(X)-off_code_data)
+#define IK_CLOSURE_NUMBER_OF_FREE_VARS(X)	\
+  IK_UNFIX(IK_REF(IK_CLOSURE_CODE_OBJECT(X), off_code_freevars))
+#define IK_CLOSURE_FREE_VAR(X,IDX)	IK_REF((X),off_closure_data+wordsize*(IDX))
+
 
 /** --------------------------------------------------------------------
  ** Continuation objects.
  ** ----------------------------------------------------------------- */
+
+#define continuation_primary_mask	vector_mask
+#define continuation_primary_tag	vector_tag
+
+/* ------------------------------------------------------------------ */
 
 #define continuation_tag		((ikptr)0x1F)
 #define disp_continuation_tag		0
@@ -1150,6 +1273,18 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_continuation_size		(disp_continuation_size - vector_tag)
 #define off_continuation_next		(disp_continuation_next - vector_tag)
 
+#define IK_CONTINUATION_STRUCT(KONT)	((ikcont *)((long)((KONT) - vector_tag)))
+#define IK_CONTINUATION_TAG(KONT)	IK_REF((KONT),off_continuation_tag)
+#define IK_CONTINUATION_TOP(KONT)	IK_REF((KONT),off_continuation_top)
+#define IK_CONTINUATION_SIZE(KONT)	IK_REF((KONT),off_continuation_size)
+#define IK_CONTINUATION_NEXT(KONT)	IK_REF((KONT),off_continuation_next)
+
+#define IK_IS_CONTINUATION(X)		\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (continuation_tag         == IK_REF((X), off_continuation_tag)))
+
+/* ------------------------------------------------------------------ */
+
 #define system_continuation_tag		((ikptr) 0x11F)
 #define disp_system_continuation_tag	0
 #define disp_system_continuation_top	(1 * wordsize)
@@ -1161,6 +1296,15 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_system_continuation_top	(disp_system_continuation_top	 - vector_tag)
 #define off_system_continuation_next	(disp_system_continuation_next	 - vector_tag)
 #define off_system_continuation_unused	(disp_system_continuation_unused - vector_tag)
+
+#define IK_IS_SYSTEM_CONTINUATION(X)	\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (system_continuation_tag  == IK_REF((X), off_system_continuation_tag)))
+
+/* ------------------------------------------------------------------ */
+
+#define IK_IS_ANY_CONTINUATION(X)	\
+   (IK_IS_CONTINUATION(X) || IK_IS_SYSTEM_CONTINUATION(X))
 
 
 /** --------------------------------------------------------------------
@@ -1187,8 +1331,8 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
 				 ikptr s_count);
 
-ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
-ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+ik_decl void ik_enter_c_function (ikpcb* pcb);
+ik_decl void ik_leave_c_function (ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
@@ -1286,6 +1430,26 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
+/* ------------------------------------------------------------------ */
+
+/* generalised C buffer */
+#define IK_GENERALISED_C_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C buffer or false */
+#define IK_GENERALISED_C_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
+/* ------------------------------------------------------------------ */
+
+/* generalised sticky C buffer */
+#define IK_GENERALISED_C_STICKY_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised sticky C buffer or false */
+#define IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
 
 /** --------------------------------------------------------------------
  ** Special macros extracting "char *" pointers from objects.
@@ -1337,6 +1501,16 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
+/* ------------------------------------------------------------------ */
+
+/* generalised C string */
+#define IK_GENERALISED_C_STRING(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C string or false */
+#define IK_GENERALISED_C_STRING_OR_FALSE(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
 
 /** --------------------------------------------------------------------
  ** Other objects stuff.
@@ -1345,6 +1519,8 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 ikptr	ik_normalize_bignum	(long limbs, int sign, ikptr r);
 
 #define max_digits_per_limb	((wordsize==4)?10:20)
+
+ik_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
 
 
 /** --------------------------------------------------------------------

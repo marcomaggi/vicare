@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{38} representation for data with shared structure
+@cindex @library{srfi :38}, library
+@cindex @library{srfi :38 with-shared-structure}, library
+@cindex Library @library{srfi :38}
+@cindex Library @library{srfi :38 with-shared-structure}
 
 
 The library @library{srfi :38} was written by Ray Dillinger as the

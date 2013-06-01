@@ -45,7 +45,14 @@
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $ratnums)
-    (ikarus system $flonums)
+    (except (ikarus system $flonums)
+	    ;;FIXME  To be  removed  at the  next  boot image  rotation.
+	    ;;(Marco Maggi; Mon May 20, 2013)
+	    $flhypot)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Mon May 20, 2013)
+    (only (ikarus flonums)
+	  $flhypot)
     (rename (only (ikarus generic-arithmetic) #;(ikarus system $numerics)
 		  $abs-fixnum
 		  $abs-bignum
@@ -57,7 +64,7 @@
 	    ($abs-ratnum		$magnitude-ratnum)
 	    ($abs-flonum		$magnitude-flonum))
     (vicare arguments validation)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand))
 
 
@@ -145,8 +152,11 @@
       (sqrt (+ (square x.rep) (square x.imp)))))
 
   (define ($magnitude-cflonum x)
-    ($flsqrt ($fl+ ($flsquare ($cflonum-real x))
-		   ($flsquare ($cflonum-imag x)))))
+    ($flhypot ($cflonum-real x)
+	      ($cflonum-imag x))
+    ;; ($flsqrt ($fl+ ($flsquare ($cflonum-real x))
+    ;; 		   ($flsquare ($cflonum-imag x))))
+    )
 
   #| end of module: magnitude |# )
 

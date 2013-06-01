@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{0} feature based conditional expansion construct
+@cindex @library{srfi :0}, library
+@cindex @library{srfi :0 cond-expand}, library
+@cindex Library @library{srfi :0}
+@cindex Library @library{srfi :0 cond-expand}
 
 
 The library @library{srfi :0} is by Marc Feeley as reference
@@ -543,6 +547,12 @@ as @value{PRJNAME} available features:
 @itemx srfi-99
 @itemx srfi-99-records
 @ansrfi{99} is available.
+
+@item (srfi :101)
+@itemx (srfi :101 random-access-lists)
+@itemx srfi-101
+@itemx srfi-101-random-access-lists
+@ansrfi{101} is available.
 
 @item vicare
 The Scheme implementation is @value{PRJNAME}.

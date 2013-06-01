@@ -28,12 +28,14 @@ command, with no options.
 
 @example
 $ @value{RAWEXECUTABLE}
-Vicare Scheme version 0.1d0+ \
-  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
-   build 2010-05-02)
-Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+Vicare Scheme version 0.3d0
+Revision devel/a59ec3abedf0a80e07d011269ba9aeb134227e41
+Build 2013-04-13
 
-> (+ 2 2)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+Copyright (c) 2011-2013 Marco Maggi
+
+vicare> (+ 2 2)
 4
 @end example
 
@@ -165,7 +167,8 @@ multiple times.
 Add @var{DIRECTORY} to the library search path.  This option can be used
 multiple times.
 
-@item --fasl-path @var{DIRECTORY}
+@item -F @var{DIRECTORY}
+@itemx --fasl-path @var{DIRECTORY}
 Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
 multiple times.
 
@@ -196,6 +199,7 @@ Do not create a readline console input port even if the readline
 interface is available.
 
 @item -d
+@itemx -g
 @itemx --debug
 Turn on debugging mode.  With this unhandled exceptions in the program
 will result in starting the debugger, which allows stack trace
@@ -212,11 +216,28 @@ port.  This is for debugging purposes.
 @item --no-print-loaded-libraries
 Disables the effect of @option{--print-loaded-libraries}.
 
+@item --report-errors-at-runtime
+When possible and meaningful: report errors at runtime rather than at
+compile time.  Runtime errors reporting is @rnrs{6} compliant.  The
+default is to raise errors at compile time.
+
+@item --no-report-errors-at-runtime
+Disables the effect of @option{--report-errors-at-runtime}.
+
+@item --strict-r6rs
+Strictly follow @rnrs{6} specifications: disable Vicare extensions.
+
+@item --no-strict-r6rs
+Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
+extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
+default.
+
 @item -O0
 Turn off use of the source optimizer.
 
-@itemx -O1
+@item -O1
 @itemx -O2
+@itemx -O3
 Turn on various levels of compile optimisations.
 
 @item --optimizer-passes-count @var{COUNT}

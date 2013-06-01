@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{41} streams
+@cindex @library{srfi :41}, library
+@cindex @library{srfi :41 streams}, library
+@cindex Library @library{srfi :41}
+@cindex Library @library{srfi :41 streams}
 
 
 The library @library{srfi :41} is by by Philip L. Bewig as the reference

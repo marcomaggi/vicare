@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -22,6 +22,8 @@
     (rename (posix.errno->string	errno->string))
     strerror
     h_errno->string			h_strerror
+    &errno				make-errno-condition
+    errno-condition?			condition-errno
 
     ;; interprocess singnal codes handling
     interprocess-signal->string
@@ -148,14 +150,20 @@
     write				pwrite
     lseek
     readv				writev
-    select				select-fd
-    select-fd-readable?			select-fd-writable?
-    select-fd-exceptional?
+    select
+    select-fd				select-port
+    select-fd-readable?			select-port-readable?
+    select-fd-writable?			select-port-writable?
+    select-fd-exceptional?		select-port-exceptional?
     poll
     fcntl				ioctl
+    fd-set-non-blocking-mode!		fd-set-close-on-exec-mode!
+    fd-unset-non-blocking-mode!		fd-unset-close-on-exec-mode!
+    fd-in-non-blocking-mode?		fd-in-close-on-exec-mode?
     dup					dup2
     pipe				mkfifo
     truncate				ftruncate
+    lockf
 
     sizeof-fd-set			make-fd-set-bytevector
     make-fd-set-pointer			make-fd-set-memory-block
@@ -163,6 +171,10 @@
     FD_CLR				FD_ISSET
     select-from-sets			select-from-sets-array
     fd-set-inspection
+
+    ;; close-on-exec ports
+    port-set-close-on-exec-mode!	port-unset-close-on-exec-mode!
+    port-in-close-on-exec-mode?		close-ports-in-close-on-exec-mode
 
     ;; memory-mapped input/output
     mmap				munmap
@@ -242,7 +254,8 @@
     setsockopt/linger			getsockopt/linger
     getnetbyname			getnetbyaddr
     network-entries
-    tcp-connect
+
+    tcp-connect				tcp-connect.connect-proc
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -377,28 +390,30 @@
     vicare-executable-as-bytevector	vicare-executable-as-string
 
     ;; miscellaneous functions
-    file-descriptor?
+    file-descriptor?			network-port-number?
 
     ;; validation clauses
     file-descriptor.vicare-arguments-validation
     file-descriptor/false.vicare-arguments-validation
+    network-port-number.vicare-arguments-validation
+    network-port-number/false.vicare-arguments-validation
     )
   (import (except (vicare)
-		  strerror		getenv
+		  strerror
 		  remove		time
 		  read			write
 		  truncate)
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
-    (prefix (vicare unsafe-capi)
+    (vicare arguments general-c-buffers)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (prefix (vicare words)
+    (vicare unsafe operations)
+    (prefix (vicare platform words)
 	    words.))
 
 
@@ -409,8 +424,8 @@
   ;;descriptors.
   ;;
   (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<  obj FD_SETSIZE)))
+       ($fx>= obj 0)
+       ($fx<  obj FD_SETSIZE)))
 
 (define-inline (%message-queue-descriptor? obj)
   (%file-descriptor? obj))
@@ -418,8 +433,8 @@
 (define-inline (%signal-fixnum? ?obj)
   (let ((obj ?obj))
     (and (fixnum? obj)
-	 (unsafe.fx>= obj 0)
-	 (unsafe.fx<= obj NSIG))))
+	 ($fx>= obj 0)
+	 ($fx<= obj NSIG))))
 
 (define (%struct-timespec? obj)
   (and (struct-timespec? obj)
@@ -494,6 +509,29 @@
 
 ;;;; arguments validation
 
+(define-argument-validation (file-descriptor who obj)
+  (file-descriptor? obj)
+  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
+(define-argument-validation (file-descriptor/false who obj)
+  (or (not obj) (file-descriptor? obj))
+  (assertion-violation who "expected false or fixnum file descriptor as argument" obj))
+
+(define-argument-validation (network-port-number who obj)
+  (network-port-number? obj)
+  (assertion-violation who "expected fixnum network port as argument" obj))
+
+(define-argument-validation (network-port-number/false who obj)
+  (or (not obj) (network-port-number? obj))
+  (assertion-violation who "expected false or fixnum network port as argument" obj))
+
+(define-argument-validation (port-with-fd who obj)
+  (and (port? obj)
+       (port-fd obj))
+  (assertion-violation who "expected port with file descriptor as underlying device" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (string-or-bytevector who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
@@ -507,14 +545,6 @@
 (define-argument-validation (fixnum/pointer/false who obj)
   (or (not obj) (fixnum? obj) (pointer? obj))
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
-
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj) (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
 
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
@@ -563,13 +593,13 @@
     "expected exact integer in the range [0, 999999999] as nanoseconds count argument" obj))
 
 (define-argument-validation (secfx who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as seconds count argument" obj))
 
 (define-argument-validation (usecfx who obj)
   (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj 999999))
+       ($fx>= obj 0)
+       ($fx<= obj 999999))
   (assertion-violation who "expected non-negative fixnum as nanoseconds count argument" obj))
 
 (define-argument-validation (directory-stream who obj)
@@ -589,7 +619,7 @@
 (define-argument-validation (select-nfds who obj)
   (or (not obj)
       (%file-descriptor? obj)
-      (unsafe.fx= obj FD_SETSIZE))
+      ($fx= obj FD_SETSIZE))
   (assertion-violation who "expected false or file descriptor as argument" obj))
 
 (define-argument-validation (list-of-fds who obj)
@@ -601,8 +631,8 @@
 
 (define-argument-validation (af-inet who obj)
   (and (fixnum? obj)
-       (or (unsafe.fx= obj AF_INET)
-	   (unsafe.fx= obj AF_INET6)))
+       (or ($fx= obj AF_INET)
+	   ($fx= obj AF_INET6)))
   (assertion-violation who "expected a fixnum among AF_INET and AF_INET6 as argument" obj))
 
 (define-argument-validation (addrinfo/false who obj)
@@ -627,10 +657,10 @@
 
 (define-argument-validation (poll-fds who obj)
   (and (vector? obj) (vector-for-all (lambda (vec)
-				       (and (unsafe.fx= 3 (unsafe.vector-length vec))
-					    (fixnum? (unsafe.vector-ref vec 0))
-					    (fixnum? (unsafe.vector-ref vec 1))
-					    (fixnum? (unsafe.vector-ref vec 2))))
+				       (and ($fx= 3 ($vector-length vec))
+					    (fixnum? ($vector-ref vec 0))
+					    (fixnum? ($vector-ref vec 1))
+					    (fixnum? ($vector-ref vec 2))))
 				     obj))
   (assertion-violation who "expected vector of data for poll as argument" obj))
 
@@ -708,6 +738,10 @@
   (raise (condition
 	  (make-error)
 	  (make-errno-condition errno)
+	  (if (or (fx=? errno EAGAIN)
+		  (fx=? errno EWOULDBLOCK))
+	      (make-i/o-eagain)
+	    (condition))
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-irritants-condition irritants))))
@@ -715,6 +749,10 @@
 (define (%raise-errno-error/filename who errno filename . irritants)
   (raise (condition
 	  (make-error)
+	  (if (or (fx=? errno EAGAIN)
+		  (fx=? errno EWOULDBLOCK))
+	      (make-i/o-eagain)
+	    (condition))
 	  (make-errno-condition errno)
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
@@ -747,9 +785,9 @@
   (define who 'h_errno->string)
   (with-arguments-validation (who)
       ((fixnum negated-h_errno-code))
-    (let ((h_errno-code (unsafe.fx- 0 negated-h_errno-code)))
-      (and (unsafe.fx> h_errno-code 0)
-	   (unsafe.fx< h_errno-code (vector-length H_ERRNO-VECTOR))
+    (let ((h_errno-code ($fx- 0 negated-h_errno-code)))
+      (and ($fx> h_errno-code 0)
+	   ($fx< h_errno-code (vector-length H_ERRNO-VECTOR))
 	   (vector-ref H_ERRNO-VECTOR h_errno-code)))))
 
 (let-syntax
@@ -809,8 +847,8 @@
   (define who 'interprocess-signal->string)
   (with-arguments-validation (who)
       ((fixnum  interprocess-signal-code))
-    (and (unsafe.fx> interprocess-signal-code 0)
-	 (unsafe.fx< interprocess-signal-code (vector-length INTERPROCESS-SIGNAL-VECTOR))
+    (and ($fx> interprocess-signal-code 0)
+	 ($fx< interprocess-signal-code (vector-length INTERPROCESS-SIGNAL-VECTOR))
 	 (vector-ref INTERPROCESS-SIGNAL-VECTOR interprocess-signal-code))))
 
 (let-syntax
@@ -875,13 +913,6 @@
 
 ;;;; operating system environment variables
 
-(define (getenv key)
-  (define who 'getenv)
-  (with-arguments-validation (who)
-      ((string  key))
-    (let ((rv (capi.posix-getenv (string->utf8 key))))
-      (and rv (utf8->string rv)))))
-
 (define setenv
   (case-lambda
    ((key val)
@@ -902,48 +933,27 @@
       ((string  key))
     (capi.posix-unsetenv (string->utf8 key))))
 
-(define (%find-index-of-= str idx str.len)
-  ;;Scan STR starint at index IDX  and up to STR.LEN for the position of
-  ;;the character #\=.  Return the index or STR.LEN.
-  ;;
-  (cond ((unsafe.fx= idx str.len)
-	 idx)
-	((unsafe.char= #\= (unsafe.string-ref str idx))
-	 idx)
-	(else
-	 (%find-index-of-= str (unsafe.fxadd1 idx) str.len))))
-
-(define (environ)
-  (map (lambda (bv)
-	 (let* ((str     (utf8->string bv))
-		(str.len (unsafe.string-length str))
-		(idx     (%find-index-of-= str 0 str.len)))
-	   (cons (substring str 0 idx)
-		 (if (unsafe.fx< (unsafe.fxadd1 idx) str.len)
-		     (substring str (unsafe.fxadd1 idx) str.len)
-		   ""))))
-    (capi.posix-environ)))
-
 (define (environ-table)
   (environ->table (environ)))
 
 (define (environ->table environ)
-  (begin0-let ((table (make-hashtable string-hash string=?)))
+  (receive-and-return (table)
+      (make-hashtable string-hash string=?)
     (for-each (lambda (pair)
-		(hashtable-set! table (unsafe.car pair) (unsafe.cdr pair)))
+		(hashtable-set! table ($car pair) ($cdr pair)))
       environ)))
 
 (define (table->environ table)
   (let-values (((names values) (hashtable-entries table)))
-    (let ((len     (unsafe.vector-length names))
+    (let ((len     ($vector-length names))
 	  (environ '()))
       (let loop ((i       0)
 		 (environ '()))
-	(if (unsafe.fx= i len)
+	(if ($fx= i len)
 	    environ
-	  (loop (unsafe.fxadd1 i)
-		(cons (cons (unsafe.vector-ref names  i)
-			    (unsafe.vector-ref values i))
+	  (loop ($fxadd1 i)
+		(cons (cons ($vector-ref names  i)
+			    ($vector-ref values i))
 		      environ)))))))
 
 
@@ -963,7 +973,7 @@
   (with-arguments-validation (who)
       ((string  x))
     (let ((rv (capi.posix-system (string->utf8 x))))
-      (if (unsafe.fx< rv 0)
+      (if ($fx< rv 0)
 	  (%raise-errno-error who rv x)
 	rv))))
 
@@ -972,7 +982,7 @@
    (()
     (define who 'fork)
     (let ((rv (capi.posix-fork)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv))))
    ((parent-proc child-proc)
@@ -981,9 +991,9 @@
 	((procedure  parent-proc)
 	 (procedure  child-proc))
       (let ((rv (capi.posix-fork)))
-	(cond ((unsafe.fxzero? rv)
+	(cond (($fxzero? rv)
 	       (child-proc))
-	      ((unsafe.fx< rv 0)
+	      (($fx< rv 0)
 	       (%raise-errno-error who rv))
 	      (else
 	       (parent-proc rv))))))))
@@ -996,9 +1006,10 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execv filename.bv (map string->utf8 argv))))
-	(if (unsafe.fx< rv 0)
+	(if ($fx< rv 0)
 	    (%raise-errno-error who rv filename argv)
 	  rv)))))
 
@@ -1011,11 +1022,12 @@
       ((pathname	filename)
        (list-of-strings	argv)
        (list-of-strings	env))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execve filename.bv
 				   (map string->utf8 argv)
 				   (map string->utf8 env))))
-	(if (unsafe.fx< rv 0)
+	(if ($fx< rv 0)
 	    (%raise-errno-error who rv filename argv env)
 	  rv)))))
 
@@ -1027,9 +1039,10 @@
   (with-arguments-validation (who)
       ((pathname	filename)
        (list-of-strings	argv))
+    (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execvp filename.bv (map string->utf8 argv))))
-	(if (unsafe.fx< rv 0)
+	(if ($fx< rv 0)
 	    (%raise-errno-error who rv filename argv)
 	  rv)))))
 
@@ -1042,14 +1055,14 @@
       ((pid	pid)
        (fixnum	options))
     (let ((rv (capi.posix-waitpid pid options)))
-      (if (unsafe.fx< rv 0)
+      (if ($fx< rv 0)
 	  (%raise-errno-error who rv pid options)
 	rv))))
 
 (define (wait)
   (define who 'wait)
   (let ((rv (capi.posix-wait)))
-    (if (unsafe.fx< rv 0)
+    (if ($fx< rv 0)
 	(%raise-errno-error who rv)
       rv)))
 
@@ -1077,7 +1090,7 @@
   (with-arguments-validation (who)
       ((signal	signum))
     (let ((rv (capi.posix-raise signum)))
-      (when (unsafe.fx< rv 0)
+      (when ($fx< rv 0)
 	(%raise-errno-error who rv signum (interprocess-signal->string signum))))))
 
 (define (kill pid signum)
@@ -1086,7 +1099,7 @@
       ((pid	pid)
        (signal	signum))
     (let ((rv (capi.posix-kill pid signum)))
-      (when (unsafe.fx< rv 0)
+      (when ($fx< rv 0)
 	(%raise-errno-error who rv signum (interprocess-signal->string signum))))))
 
 (define (pause)
@@ -1163,7 +1176,7 @@
 	((signal	signo)
 	 (siginfo_t	siginfo))
       (let ((rv (capi.posix-sigwaitinfo signo siginfo)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    (values rv siginfo)
 	  (%raise-errno-error who rv signo siginfo)))))))
 
@@ -1178,7 +1191,7 @@
 	 (siginfo_t	siginfo)
 	 (timespec	timeout))
       (let ((rv (capi.posix-sigtimedwait signo siginfo timeout)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    (values rv siginfo)
 	  (%raise-errno-error who rv signo siginfo timeout)))))))
 
@@ -1255,7 +1268,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
 	     (rv (capi.posix-stat pathname.bv S)))
-	(if (unsafe.fx< rv 0)
+	(if ($fx< rv 0)
 	    (%raise-errno-error/filename who rv pathname)
 	  S)))))
 
@@ -1266,7 +1279,7 @@
     (with-pathnames ((pathname.bv pathname))
       (let* ((S  (%make-stat))
 	     (rv (capi.posix-lstat pathname.bv S)))
-	(if (unsafe.fx< rv 0)
+	(if ($fx< rv 0)
 	    (%raise-errno-error/filename who rv pathname)
 	  S)))))
 
@@ -1276,7 +1289,7 @@
       ((file-descriptor  fd))
     (let* ((S  (%make-stat))
 	   (rv (capi.posix-lstat fd S)))
-      (if (unsafe.fx< rv 0)
+      (if ($fx< rv 0)
 	  (%raise-errno-error who rv fd)
 	S))))
 
@@ -1316,7 +1329,7 @@
 			(define (?who mode)
 			  (with-arguments-validation (?who)
 			      ((fixnum  mode))
-			    (unsafe.fx= ?flag (unsafe.fxand ?flag mode))))
+			    ($fx= ?flag ($fxand ?flag mode))))
 			))))
   (define-file-is S_ISDIR	S_IFDIR)
   (define-file-is S_ISCHR	S_IFCHR)
@@ -1372,11 +1385,11 @@
 			    (with-arguments-validation (who)
 				((pathname  pathname))
 			      (with-pathnames ((pathname.bv  pathname))
-				(let* ((timespec (unsafe.make-clean-vector 2))
+				(let* ((timespec ($make-clean-vector 2))
 				       (rv       (?func pathname.bv timespec)))
-				  (if (unsafe.fxzero? rv)
-				      (+ (* #e1e9 (unsafe.vector-ref timespec 0))
-					 (unsafe.vector-ref timespec 1))
+				  (if ($fxzero? rv)
+				      (+ (* #e1e9 ($vector-ref timespec 0))
+					 ($vector-ref timespec 1))
 				    (%raise-errno-error/filename who rv pathname))))))
 			  ))))
   (define-file-time file-atime	capi.posix-file-atime)
@@ -1394,7 +1407,7 @@
        (gid	  group))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-chown pathname.bv owner group)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname owner group))))))
 
@@ -1405,7 +1418,7 @@
        (pid		owner)
        (gid		group))
     (let ((rv (capi.posix-fchown fd owner group)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd owner group)))))
 
@@ -1418,7 +1431,7 @@
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-chmod pathname.bv mode)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
@@ -1428,7 +1441,7 @@
       ((file-descriptor fd)
        (fixnum		mode))
     (let ((rv (capi.posix-fchmod fd mode)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd mode)))))
 
@@ -1453,7 +1466,7 @@
        (secfx     mtime))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-utime pathname.bv atime mtime)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime mtime))))))
 
@@ -1467,7 +1480,7 @@
        (usecfx    mtime.usec))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-utimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
 
@@ -1481,7 +1494,7 @@
        (usecfx    mtime.usec))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-lutimes pathname.bv atime.sec atime.usec mtime.sec mtime.usec)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname atime.sec atime.usec mtime.sec mtime.usec))))))
 
@@ -1494,7 +1507,7 @@
        (secfx     mtime.sec)
        (usecfx    mtime.usec))
     (let ((rv (capi.posix-futimes fd atime.sec atime.usec mtime.sec mtime.usec)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  rv
 	(%raise-errno-error who rv fd atime.sec atime.usec mtime.sec mtime.usec)))))
 
@@ -1509,7 +1522,7 @@
     (with-pathnames ((old-pathname.bv old-pathname)
 		     (new-pathname.bv new-pathname))
       (let ((rv (capi.posix-link old-pathname.bv new-pathname.bv)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv old-pathname new-pathname))))))
 
@@ -1521,7 +1534,7 @@
     (with-pathnames ((file-pathname.bv file-pathname)
 		     (link-pathname.bv link-pathname))
       (let ((rv (capi.posix-symlink file-pathname.bv link-pathname.bv)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rv
 	  (%raise-errno-error/filename who rv file-pathname link-pathname))))))
 
@@ -1559,7 +1572,7 @@
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-unlink pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (remove pathname)
@@ -1568,7 +1581,7 @@
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-remove pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (rename old-pathname new-pathname)
@@ -1579,7 +1592,7 @@
     (with-pathnames ((old-pathname.bv old-pathname)
 		     (new-pathname.bv new-pathname))
       (let ((rv (capi.posix-rename old-pathname.bv new-pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv old-pathname new-pathname))))))
 
 
@@ -1592,7 +1605,7 @@
        (fixnum	  mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkdir pathname.bv mode)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
 (define (mkdir/parents pathname mode)
@@ -1605,9 +1618,9 @@
 	  (unless (file-is-directory? pathname #f)
 	    (error who "path component is not a directory" pathname))
 	(let-values (((base suffix) (split-file-name pathname)))
-	  (unless (unsafe.fxzero? (unsafe.string-length base))
+	  (unless ($fxzero? ($string-length base))
 	    (next-component base))
-	  (unless (unsafe.fxzero? (unsafe.string-length suffix))
+	  (unless ($fxzero? ($string-length suffix))
 	    (mkdir pathname mode)))))))
 
 (define (split-file-name str)
@@ -1638,7 +1651,7 @@
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-rmdir pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (getcwd)
@@ -1661,7 +1674,7 @@
       ((pathname  pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-chdir pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (fchdir fd)
@@ -1669,7 +1682,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let ((rv (capi.posix-fchdir fd)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
 
@@ -1707,7 +1720,8 @@
       (let ((rv (capi.posix-opendir pathname.bv)))
 	(if (fixnum? rv)
 	    (%raise-errno-error/filename who rv pathname)
-	  (begin0-let ((stream (make-directory-stream pathname rv #f #f)))
+	  (receive-and-return (stream)
+	      (make-directory-stream pathname rv #f #f)
 	    (directory-stream-guardian stream)))))))
 
 (define (fdopendir fd)
@@ -1717,7 +1731,8 @@
     (let ((rv (capi.posix-fdopendir fd)))
       (if (fixnum? rv)
 	  (%raise-errno-error who rv fd)
-	(begin0-let ((stream (make-directory-stream #f rv fd #f)))
+	(receive-and-return (stream)
+	    (make-directory-stream #f rv fd #f)
 	  (directory-stream-guardian stream))))))
 
 (define (readdir stream)
@@ -1745,7 +1760,7 @@
     (unless (directory-stream-closed? stream)
       (set-directory-stream-closed?! stream #t)
       (let ((rv (capi.posix-closedir (directory-stream-pointer stream))))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv stream))))))
 
 ;;; --------------------------------------------------------------------
@@ -1783,7 +1798,7 @@
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-open pathname.bv flags mode)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error/filename who rv pathname flags mode))))))
 
@@ -1792,7 +1807,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let ((rv (capi.posix-close fd)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd)))))
 
 (define read
@@ -1802,23 +1817,21 @@
    ((fd buffer size)
     (define who 'read)
     (with-arguments-validation (who)
-	((file-descriptor  fd)
-	 (bytevector	 buffer)
-	 (fixnum/false	 size))
+	((file-descriptor	fd)
+	 (general-c-buffer*	buffer size))
       (let ((rv (capi.posix-read fd buffer size)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd)))))))
 
 (define (pread fd buffer size off)
   (define who 'pread)
   (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum/false	 size)
+      ((file-descriptor		fd)
+       (general-c-buffer*	buffer size)
        (off_t		 off))
     (let ((rv (capi.posix-pread fd buffer size off)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
 
@@ -1829,25 +1842,25 @@
    ((fd buffer size)
     (define who 'write)
     (with-arguments-validation (who)
-	((file-descriptor  fd)
-	 (bytevector	 buffer)
-	 (fixnum/false	 size))
-      (let ((rv (capi.posix-write fd buffer size)))
-	(if (unsafe.fx<= 0 rv)
-	    rv
-	  (%raise-errno-error who rv fd)))))))
+	((file-descriptor	fd)
+	 (general-c-string*	buffer size))
+      (with-general-c-strings ((buffer^ buffer))
+	(let ((rv (capi.posix-write fd buffer^ size)))
+	  (if ($fx<= 0 rv)
+	      rv
+	    (%raise-errno-error who rv fd))))))))
 
 (define (pwrite fd buffer size off)
   (define who 'pwrite)
   (with-arguments-validation (who)
-      ((file-descriptor  fd)
-       (bytevector	 buffer)
-       (fixnum/false	 size)
-       (off_t		 off))
-    (let ((rv (capi.posix-pwrite fd buffer size off)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(%raise-errno-error who rv fd)))))
+      ((file-descriptor		fd)
+       (general-c-string*	buffer size)
+       (off_t			off))
+    (with-general-c-strings ((buffer^ buffer))
+      (let ((rv (capi.posix-pwrite fd buffer^ size off)))
+	(if ($fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv fd))))))
 
 (define (lseek fd off whence)
   (define who 'lseek)
@@ -1895,13 +1908,15 @@
        (usecfx		usec))
     (let ((rv (capi.posix-select nfds read-fds write-fds except-fds sec usec)))
       (if (fixnum? rv)
-	  (if (unsafe.fxzero? rv)
+	  (if ($fxzero? rv)
 	      (values '() '() '()) ;timeout expired
 	    (%raise-errno-error who rv nfds read-fds write-fds except-fds sec usec))
 	;; success, extract lists of ready fds
-	(values (unsafe.vector-ref rv 0)
-		(unsafe.vector-ref rv 1)
-		(unsafe.vector-ref rv 2))))))
+	(values ($vector-ref rv 0)
+		($vector-ref rv 1)
+		($vector-ref rv 2))))))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd fd sec usec)
   (define who 'select-fd)
@@ -1909,15 +1924,32 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd fd sec usec)))
-      (cond ((unsafe.fxzero? rv) ;timeout expired
-	     (values #f #f #f))
-	    ((unsafe.fx< 0 rv) ;success
-	     (values (if (unsafe.fx= 1 (unsafe.fxlogand rv 1)) fd #f)
-		     (if (unsafe.fx= 2 (unsafe.fxlogand rv 2)) fd #f)
-		     (if (unsafe.fx= 4 (unsafe.fxlogand rv 4)) fd #f)))
-	    (else
-	     (%raise-errno-error who rv fd sec usec))))))
+    ($select-fd who fd sec usec)))
+
+(define (select-port port sec usec)
+  (define who 'select-port)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    (receive (r w e)
+	($select-fd who (port-fd port) sec usec)
+      (values (and r port)
+	      (and w port)
+	      (and e port)))))
+
+(define ($select-fd who fd sec usec)
+  (let ((rv (capi.posix-select-fd fd sec usec)))
+    (cond (($fxzero? rv) ;timeout expired
+	   (values #f #f #f))
+	  (($fx< 0 rv) ;success
+	   (values (if ($fx= 1 ($fxlogand rv 1)) fd #f)
+		   (if ($fx= 2 ($fxlogand rv 2)) fd #f)
+		   (if ($fx= 4 ($fxlogand rv 4)) fd #f)))
+	  (else
+	   (%raise-errno-error who rv fd sec usec)))))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-readable? fd sec usec)
   (define who 'select-fd-readable?)
@@ -1925,10 +1957,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-readable? who fd sec usec)))
+
+(define (select-port-readable? port sec usec)
+  (define who 'select-port-readable?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-readable? who (port-fd port) sec usec)))
+
+(define ($select-fd-readable? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-readable? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-writable? fd sec usec)
   (define who 'select-fd-writable?)
@@ -1936,10 +1981,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-writable? who fd sec usec)))
+
+(define (select-port-writable? port sec usec)
+  (define who 'select-port-writable?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-writable? who (port-fd port) sec usec)))
+
+(define ($select-fd-writable? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-writable? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (select-fd-exceptional? fd sec usec)
   (define who 'select-fd-exceptional?)
@@ -1947,10 +2005,23 @@
       ((file-descriptor	fd)
        (secfx		sec)
        (usecfx		usec))
-    (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
-      (if (fixnum? rv)
-	  (%raise-errno-error who rv fd sec usec)
-	rv))))
+    ($select-fd-exceptional? who fd sec usec)))
+
+(define (select-port-exceptional? port sec usec)
+  (define who 'select-port-exceptional?)
+  (with-arguments-validation (who)
+      ((port-with-fd	port)
+       (secfx		sec)
+       (usecfx		usec))
+    ($select-fd-exceptional? who (port-fd port) sec usec)))
+
+(define ($select-fd-exceptional? who fd sec usec)
+  (let ((rv (capi.posix-select-fd-exceptional? fd sec usec)))
+    (if (fixnum? rv)
+	(%raise-errno-error who rv fd sec usec)
+      rv)))
+
+;;; --------------------------------------------------------------------
 
 (define (poll fds timeout)
   (define who 'poll)
@@ -1958,7 +2029,7 @@
       ((poll-fds	fds)
        (signed-int	timeout))
     (let ((rv (capi.posix-poll fds timeout)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fds timeout)))))
 
@@ -1975,7 +2046,7 @@
 	 (fixnum		command)
 	 (fixnum/pointer/false	arg))
       (let ((rv (capi.posix-fcntl fd command arg)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
 
@@ -1990,9 +2061,63 @@
 	 (fixnum		command)
 	 (fixnum/pointer/false	arg))
       (let ((rv (capi.posix-ioctl fd command arg)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv fd command arg)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (fd-set-non-blocking-mode! fd)
+  (define who 'fd-set-non-blocking-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-set-non-blocking-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-unset-non-blocking-mode! fd)
+  (define who 'fd-unset-non-blocking-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-unset-non-blocking-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-in-non-blocking-mode? fd)
+  (define who 'fd-in-non-blocking-mode?)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-ref-non-blocking-mode fd)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv fd)))))
+
+;;; --------------------------------------------------------------------
+
+(define (fd-set-close-on-exec-mode! fd)
+  (define who 'fd-set-close-on-exec-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-unset-close-on-exec-mode! fd)
+  (define who 'fd-unset-close-on-exec-mode!)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error who rv fd)))))
+
+(define (fd-in-close-on-exec-mode? fd)
+  (define who 'fd-in-close-on-exec-mode?)
+  (with-arguments-validation (who)
+      ((file-descriptor		fd))
+    (let ((rv (capi.posix-fd-ref-close-on-exec-mode fd)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv fd)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2001,7 +2126,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let ((rv (capi.posix-dup fd)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
 
@@ -2011,7 +2136,7 @@
       ((file-descriptor  old)
        (file-descriptor  new))
     (let ((rv (capi.posix-dup2 old new)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv old new)))))
 
 ;;; --------------------------------------------------------------------
@@ -2020,7 +2145,7 @@
   (define who 'pipe)
   (let ((rv (capi.posix-pipe)))
     (if (pair? rv)
-	(values (unsafe.car rv) (unsafe.cdr rv))
+	(values ($car rv) ($cdr rv))
       (%raise-errno-error who rv))))
 
 (define (mkfifo pathname mode)
@@ -2030,7 +2155,7 @@
        (fixnum    mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
 ;;; --------------------------------------------------------------------
@@ -2042,7 +2167,7 @@
        (off_t		length))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-truncate pathname.bv length)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv pathname length))))))
 
 (define (ftruncate fd length)
@@ -2051,8 +2176,75 @@
       ((file-descriptor	fd)
        (off_t		length))
     (let ((rv (capi.posix-ftruncate fd length)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv fd length)))))
+
+;;; --------------------------------------------------------------------
+
+(define (lockf fd cmd len)
+  (define who 'lockf)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (signed-int	cmd)
+       (off_t		len))
+    (let ((rv (capi.posix-lockf fd cmd len)))
+      (if ($fx<= 0 rv)
+	  rv
+	(%raise-errno-error who rv fd cmd len)))))
+
+
+;;;; ports and "close on exec" status
+
+(module (port-set-close-on-exec-mode!
+	 port-unset-close-on-exec-mode!
+	 port-in-close-on-exec-mode?
+	 close-ports-in-close-on-exec-mode)
+  (import (vicare containers weak-hashtables))
+
+  (define-constant TABLE
+    (make-weak-hashtable port-hash eq?))
+
+  (define (port-set-close-on-exec-mode! port)
+    ;;Set close-on-exec mode for PORT; return unspecified values.
+    ;;
+    (define who 'port-set-close-on-exec-mode!)
+    (with-arguments-validation (who)
+	((port	port))
+      (let ((fd (port-fd port)))
+	(and fd
+	     (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+	       (when ($fx< rv 0)
+		 (%raise-errno-error who rv port)))))
+      (weak-hashtable-set! TABLE port #f)))
+
+  (define (port-unset-close-on-exec-mode! port)
+    ;;Unset close-on-exec mode for PORT; return unspecified values.
+    ;;
+    (define who 'port-unset-close-on-exec-mode!)
+    (with-arguments-validation (who)
+	((port	port))
+      (let ((fd (port-fd port)))
+	(and fd
+	     (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+	       (when ($fx< rv 0)
+		 (%raise-errno-error who rv port)))))
+      (weak-hashtable-delete! TABLE port)))
+
+  (define (port-in-close-on-exec-mode? port)
+    ;;Query PORT for its close-on-exec mode; if successful: return true if
+    ;;the port  is in  close-on-exec mode, false  otherwise.  If  an error
+    ;;occurs: raise an exception.
+    ;;
+    (define who 'port-in-close-on-exec-mode?)
+    (with-arguments-validation (who)
+	((port	port))
+      (weak-hashtable-contains? TABLE port)))
+
+  (define (close-ports-in-close-on-exec-mode)
+    (vector-for-each close-port (weak-hashtable-keys TABLE))
+    (weak-hashtable-clear! TABLE))
+
+  #| end of module |# )
 
 
 ;;;; file descriptor sets
@@ -2162,7 +2354,7 @@
        (usecfx			usec))
     (let ((rv (capi.posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
       (if (fixnum? rv)
-	  (if (unsafe.fxzero? rv)
+	  (if ($fxzero? rv)
 	      (values #f #f #f) ;timeout expired
 	    (%raise-errno-error who rv nfds read-fds write-fds except-fds sec usec))
 	;; success
@@ -2177,7 +2369,7 @@
        (usecfx			usec))
     (let ((rv (capi.posix-select-from-sets-array nfds fd-sets sec usec)))
       (if (fixnum? rv)
-	  (if (unsafe.fxzero? rv)
+	  (if ($fxzero? rv)
 	      #f ;timeout expired
 	    (%raise-errno-error who rv nfds fd-sets sec usec))
 	;; success
@@ -2222,7 +2414,7 @@
       ((pointer	address)
        (size_t	length))
     (let ((rv (capi.posix-munmap address length)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
 (define (msync address length flags)
@@ -2232,7 +2424,7 @@
        (size_t	length)
        (fixnum	flags))
     (let ((rv (capi.posix-msync address length flags)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length flags)))))
 
 (define (mremap address length new-length flags)
@@ -2254,7 +2446,7 @@
        (size_t	length)
        (fixnum	advice))
     (let ((rv (capi.posix-madvise address length advice)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length advice)))))
 
 (define (mprotect address length prot)
@@ -2264,7 +2456,7 @@
        (size_t	length)
        (fixnum	prot))
     (let ((rv (capi.posix-mprotect address length prot)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
 (define (mlock address length)
@@ -2273,7 +2465,7 @@
       ((pointer		address)
        (size_t		length))
     (let ((rv (capi.posix-mlock address length)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
 (define (munlock address length)
@@ -2282,7 +2474,7 @@
       ((pointer		address)
        (size_t		length))
     (let ((rv (capi.posix-munlock address length)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv address length)))))
 
 (define (mlockall flags)
@@ -2290,13 +2482,13 @@
   (with-arguments-validation (who)
       ((fixnum		flags))
     (let ((rv (capi.posix-mlockall flags)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv flags)))))
 
 (define (munlockall)
   (define who 'mlock)
   (let ((rv (capi.posix-munlockall)))
-    (unless (unsafe.fxzero? rv)
+    (unless ($fxzero? rv)
       (%raise-errno-error who rv))))
 
 
@@ -2310,7 +2502,7 @@
        (fixnum		mode))
     (with-pathnames ((name.bv name))
       (let ((rv (capi.posix-shm-open name.bv oflag mode)))
-	(if (unsafe.fx<= 0 rv)
+	(if ($fx<= 0 rv)
 	    rv
 	  (%raise-errno-error who rv name oflag mode))))))
 
@@ -2320,7 +2512,7 @@
       ((pathname	name))
     (with-pathnames ((name.bv name))
       (let ((rv (capi.posix-shm-unlink name.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name))))))
 
 
@@ -2353,7 +2545,7 @@
   (with-arguments-validation (who)
       ((semaphore	sem))
     (let ((rv (capi.posix-sem-close sem)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
 (define (sem-unlink name)
@@ -2362,7 +2554,7 @@
       ((pathname	name))
     (with-pathnames ((name.bv name))
       (let ((rv (capi.posix-sem-unlink name.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name.bv))))))
 
 ;;; --------------------------------------------------------------------
@@ -2386,7 +2578,7 @@
   (with-arguments-validation (who)
       ((semaphore	sem))
     (let ((rv (capi.posix-sem-destroy sem)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
 ;;; --------------------------------------------------------------------
@@ -2396,7 +2588,7 @@
   (with-arguments-validation (who)
       ((semaphore	sem))
     (let ((rv (capi.posix-sem-post sem)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
 (define (sem-wait sem)
@@ -2404,7 +2596,7 @@
   (with-arguments-validation (who)
       ((semaphore	sem))
     (let ((rv (capi.posix-sem-wait sem)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sem)))))
 
 (define (sem-trywait sem)
@@ -2466,7 +2658,7 @@
 	 (mq-attr/false	attr))
       (with-pathnames ((name.bv name))
 	(let ((rv (capi.posix-mq-open name.bv oflag mode attr)))
-	  (if (unsafe.fx<= 0 rv)
+	  (if ($fx<= 0 rv)
 	      rv
 	    (%raise-errno-error who rv name oflag mode attr))))))))
 
@@ -2475,7 +2667,7 @@
   (with-arguments-validation (who)
       ((message-queue-descriptor	mq))
     (let ((rv (capi.posix-mq-close mq)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv mq)))))
 
 (define (mq-unlink name)
@@ -2484,7 +2676,7 @@
       ((pathname name))
     (with-pathnames ((name.bv name))
       (let ((rv (capi.posix-mq-unlink name.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error who rv name))))))
 
 (define (mq-send mqd message priority)
@@ -2494,7 +2686,7 @@
        (bytevector			message)
        (unsigned-int			priority))
     (let ((rv (capi.posix-mq-send mqd message priority)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv mqd message priority)))))
 
 (define (mq-timedsend mqd message priority epoch-timeout)
@@ -2505,7 +2697,7 @@
        (unsigned-int			priority)
        (timespec			epoch-timeout))
     (let ((rv (capi.posix-mq-timedsend mqd message priority epoch-timeout)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv mqd message priority epoch-timeout)))))
 
 (define (mq-receive mqd message)
@@ -2540,7 +2732,7 @@
 	 (mq-attr			new-attr)
 	 (mq-attr			old-attr))
       (let ((rv (capi.posix-mq-setattr mqd new-attr old-attr)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    old-attr
 	  (%raise-errno-error who rv new-attr old-attr)))))))
 
@@ -2554,7 +2746,7 @@
 	((message-queue-descriptor	mqd)
 	 (mq-attr			attr))
       (let ((rv (capi.posix-mq-getattr mqd attr)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    attr
 	  (%raise-errno-error who rv attr)))))))
 
@@ -2612,7 +2804,7 @@
     (let* ((sev #f)
 	   (rv  (capi.posix-timer-create clock-id sev)))
       (if (pair? rv)
-	  (unsafe.car rv)
+	  ($car rv)
 	(%raise-errno-error who rv clock-id sev)))))
 
 (define (timer-delete timer-id)
@@ -2620,7 +2812,7 @@
   (with-arguments-validation (who)
       ((timer_t	timer-id))
     (let ((rv (capi.posix-timer-delete timer-id)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv timer-id)))))
 
 (define timer-settime
@@ -2635,7 +2827,7 @@
 	 (itimerspec		new-timer-spec)
 	 (itimerspec/false	old-timer-spec))
       (let ((rv (capi.posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    old-timer-spec
 	  (%raise-errno-error who rv timer-id flags new-timer-spec old-timer-spec)))))))
 
@@ -2649,7 +2841,7 @@
 	((timer_t	timer-id)
 	 (itimerspec	curr-timer-spec))
       (let ((rv (capi.posix-timer-gettime timer-id curr-timer-spec)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    curr-timer-spec
 	  (%raise-errno-error who rv timer-id curr-timer-spec)))))))
 
@@ -2671,7 +2863,7 @@
       ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-getres clock-id T)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
 
@@ -2681,7 +2873,7 @@
       ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-gettime clock-id T)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
 
@@ -2691,7 +2883,7 @@
       ((clockid_t	clock-id)
        (timespec	T))
     (let ((rv (capi.posix-clock-settime clock-id T)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  T
 	(%raise-errno-error who rv clock-id T)))))
 
@@ -2889,7 +3081,7 @@
   (%display (map utf8->string (struct-hostent-h_aliases S)))
 
   (%display " h_addrtype=")
-  (%display (if (unsafe.fx= AF_INET (struct-hostent-h_addrtype S))
+  (%display (if ($fx= AF_INET (struct-hostent-h_addrtype S))
 		"AF_INET" "AF_INET6"))
 
   (%display " h_length=")
@@ -2967,18 +3159,18 @@
   (%display " ai_flags=")	(%display (struct-addrinfo-ai_flags	S))
   (%display " ai_family=")
   (%display (let ((N (struct-addrinfo-ai_family S)))
-	      (cond ((unsafe.fx= N AF_INET)	"AF_INET")
-		    ((unsafe.fx= N AF_INET6)	"AF_INET6")
-		    ((unsafe.fx= N AF_UNSPEC)	"AF_UNSPEC")
+	      (cond (($fx= N AF_INET)	"AF_INET")
+		    (($fx= N AF_INET6)	"AF_INET6")
+		    (($fx= N AF_UNSPEC)	"AF_UNSPEC")
 		    (else			N))))
   (%display " ai_socktype=")
   (%display (let ((N (struct-addrinfo-ai_socktype S)))
-	      (cond ((unsafe.fx= N SOCK_STREAM)		"SOCK_STREAM")
-		    ((unsafe.fx= N SOCK_DGRAM)		"SOCK_DGRAM")
-		    ((unsafe.fx= N SOCK_RAW)		"SOCK_RAW")
-		    ((unsafe.fx= N SOCK_RDM)		"SOCK_RDM")
-		    ((unsafe.fx= N SOCK_SEQPACKET)	"SOCK_SEQPACKET")
-		    ((unsafe.fx= N SOCK_DCCP)		"SOCK_DCCP")
+	      (cond (($fx= N SOCK_STREAM)		"SOCK_STREAM")
+		    (($fx= N SOCK_DGRAM)		"SOCK_DGRAM")
+		    (($fx= N SOCK_RAW)		"SOCK_RAW")
+		    (($fx= N SOCK_RDM)		"SOCK_RDM")
+		    (($fx= N SOCK_SEQPACKET)	"SOCK_SEQPACKET")
+		    (($fx= N SOCK_DCCP)		"SOCK_DCCP")
 		    (else				N))))
   (%display " ai_protocol=")	(%display (struct-addrinfo-ai_protocol	S))
   (%display " ai_addrlen=")	(%display (struct-addrinfo-ai_addrlen	S))
@@ -3120,9 +3312,9 @@
   (%display (map ascii->string (struct-netent-n_aliases S)))
   (%display " n_addrtype=")
   (%display (let ((type (struct-netent-n_addrtype S)))
-	      (cond ((unsafe.fx= type AF_INET)
+	      (cond (($fx= type AF_INET)
 		     "AF_INET")
-		    ((unsafe.fx= type AF_INET6)
+		    (($fx= type AF_INET6)
 		     "AF_INET6")
 		    (else type))))
   (%display " n_net=")
@@ -3173,7 +3365,7 @@
        (fixnum	style)
        (fixnum	protocol))
     (let ((rv (capi.posix-socket namespace style protocol)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv namespace style protocol)))))
 
@@ -3183,7 +3375,7 @@
       ((file-descriptor	sock)
        (fixnum		how))
     (let ((rv (capi.posix-shutdown sock how)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock how)))))
 
 (define (socketpair namespace style protocol)
@@ -3194,7 +3386,7 @@
        (fixnum	protocol))
     (let ((rv (capi.posix-socketpair namespace style protocol)))
       (if (pair? rv)
-	  (values (unsafe.car rv) (unsafe.cdr rv))
+	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv namespace style protocol)))))
 
 ;;; --------------------------------------------------------------------
@@ -3205,7 +3397,7 @@
       ((file-descriptor	sock)
        (bytevector	sockaddr))
     (let ((rv (capi.posix-connect sock sockaddr)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock sockaddr)))))
 
 (define (listen sock max-pending-conns)
@@ -3214,7 +3406,7 @@
       ((file-descriptor	sock)
        (fixnum		max-pending-conns))
     (let ((rv (capi.posix-listen sock max-pending-conns)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock max-pending-conns)))))
 
 (define (accept sock)
@@ -3223,8 +3415,8 @@
       ((file-descriptor	sock))
     (let ((rv (capi.posix-accept sock)))
       (cond ((pair? rv)
-	     (values (unsafe.car rv) (unsafe.cdr rv)))
-	    ((unsafe.fx= rv EWOULDBLOCK)
+	     (values ($car rv) ($cdr rv)))
+	    (($fx= rv EWOULDBLOCK)
 	     (values #f #f))
 	    (else
 	     (%raise-errno-error who rv sock))))))
@@ -3235,7 +3427,7 @@
       ((file-descriptor	sock)
        (bytevector	sockaddr))
     (let ((rv (capi.posix-bind sock sockaddr)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock sockaddr)))))
 
 ;;; --------------------------------------------------------------------
@@ -3263,24 +3455,23 @@
 (define (send sock buffer size flags)
   (define who 'send)
   (with-arguments-validation (who)
-      ((file-descriptor	sock)
-       (bytevector	buffer)
-       (fixnum/false	size)
-       (fixnum		flags))
-    (let ((rv (capi.posix-send sock buffer size flags)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(%raise-errno-error who rv sock buffer size flags)))))
+      ((file-descriptor		sock)
+       (general-c-string*	buffer size)
+       (fixnum			flags))
+    (with-general-c-strings ((buffer^ buffer))
+      (let ((rv (capi.posix-send sock buffer^ size flags)))
+	(if ($fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv sock buffer size flags))))))
 
 (define (recv sock buffer size flags)
   (define who 'recv)
   (with-arguments-validation (who)
-      ((file-descriptor	sock)
-       (bytevector	buffer)
-       (fixnum/false	size)
-       (fixnum		flags))
+      ((file-descriptor		sock)
+       (general-c-buffer*	buffer size)
+       (fixnum			flags))
     (let ((rv (capi.posix-recv sock buffer size flags)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv sock buffer size flags)))))
 
@@ -3289,26 +3480,25 @@
 (define (sendto sock buffer size flags addr)
   (define who 'sendto)
   (with-arguments-validation (who)
-      ((file-descriptor	sock)
-       (bytevector	buffer)
-       (fixnum/false	size)
-       (fixnum		flags)
-       (bytevector	addr))
-    (let ((rv (capi.posix-sendto sock buffer size flags addr)))
-      (if (unsafe.fx<= 0 rv)
-	  rv
-	(%raise-errno-error who rv sock buffer size flags addr)))))
+      ((file-descriptor		sock)
+       (general-c-string*	buffer size)
+       (fixnum			flags)
+       (bytevector		addr))
+    (with-general-c-strings ((buffer^ buffer))
+      (let ((rv (capi.posix-sendto sock buffer^ size flags addr)))
+	(if ($fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv sock buffer size flags addr))))))
 
 (define (recvfrom sock buffer size flags)
   (define who 'recvfrom)
   (with-arguments-validation (who)
-      ((file-descriptor	sock)
-       (bytevector	buffer)
-       (fixnum/false	size)
-       (fixnum		flags))
+      ((file-descriptor		sock)
+       (general-c-buffer*	buffer size)
+       (fixnum			flags))
     (let ((rv (capi.posix-recvfrom sock buffer size flags)))
       (if (pair? rv)
-	  (values (unsafe.car rv) (unsafe.cdr rv))
+	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv sock buffer size flags)))))
 
 ;;; --------------------------------------------------------------------
@@ -3321,7 +3511,7 @@
        (fixnum		option)
        (bytevector	optval))
     (let ((rv (capi.posix-getsockopt sock level option optval)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
 (define (getsockopt/int sock level option)
@@ -3332,7 +3522,7 @@
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/int sock level option)))
       (if (pair? rv)
-	  (unsafe.car rv)
+	  ($car rv)
 	(%raise-errno-error who rv sock level option)))))
 
 (define (getsockopt/size_t sock level option)
@@ -3343,7 +3533,7 @@
        (fixnum		option))
     (let ((rv (capi.posix-getsockopt/size_t sock level option)))
       (if (pair? rv)
-	  (unsafe.car rv)
+	  ($car rv)
 	(%raise-errno-error who rv sock level option)))))
 
 ;;; --------------------------------------------------------------------
@@ -3356,7 +3546,7 @@
        (fixnum		option)
        (bytevector	optval))
     (let ((rv (capi.posix-setsockopt sock level option optval)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
 (define (setsockopt/int sock level option optval)
@@ -3367,7 +3557,7 @@
        (fixnum			option)
        (signed-int/boolean	optval))
     (let ((rv (capi.posix-setsockopt/int sock level option optval)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
 (define (setsockopt/size_t sock level option optval)
@@ -3378,7 +3568,7 @@
        (fixnum	option)
        (size_t	optval))
     (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
 
 ;;; --------------------------------------------------------------------
@@ -3390,7 +3580,7 @@
        (boolean			onoff)
        (fixnum			linger))
     (let ((rv (capi.posix-setsockopt/linger sock onoff linger)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv sock onoff linger)))))
 
 (define (getsockopt/linger sock)
@@ -3399,31 +3589,83 @@
       ((file-descriptor  sock))
     (let ((rv (capi.posix-getsockopt/linger sock)))
       (if (pair? rv)
-	  (values (unsafe.car rv) (unsafe.cdr rv))
+	  (values ($car rv) ($cdr rv))
 	(%raise-errno-error who rv sock)))))
 
 ;;; --------------------------------------------------------------------
 
-(module (tcp-connect)
+(module (tcp-connect tcp-connect.connect-proc)
+  ;;Establish a client network connection  to the remote host identified
+  ;;by the  string HOSTNAME,  connecting to the  port associated  to the
+  ;;string or number SERVICE.
+  ;;
+  ;;If successful return  a textual input/output port  associated to the
+  ;;socket file  descriptor, configured  with "line" buffer  mode, UTF-8
+  ;;transcoder,  and   "none"  end-of-line  translation.    Closing  the
+  ;;returned port will close the connection.
+  ;;
+  ;;This function  makes use of  GETADDRINFO to obtain  possible network
+  ;;interfaces to  connect to  and attempts  to connect  to all  of them
+  ;;stopping at the first success.
+  ;;
+  (define who 'tcp-connect)
 
-  (define (tcp-connect hostname service)
-    (define who 'tcp-connect)
-    (with-arguments-validation (who)
-	((string	hostname)
-	 (string	service))
-      (let ((addrinfos (getaddrinfo hostname service HINTS)))
-	(if (null? addrinfos)
-	    (error who
-	      "unable to determine usable address of remote host"
-	      hostname service)
-	  (let* ((info		(car addrinfos))
-		 (sockaddr	(struct-addrinfo-ai_addr info))
-		 (sock		(socket PF_INET SOCK_STREAM 0)))
-	    (connect sock sockaddr)
-	    (let ((port (make-textual-socket-input/output-port
-			 sock "client socket" TCP-TRANSCODER)))
-	      (set-port-buffer-mode! port (buffer-mode line))
-	      port))))))
+  (define tcp-connect.connect-proc
+    (make-parameter connect
+      (lambda (obj)
+	(define who 'tcp-connect.connect-proc)
+	(with-arguments-validation (who)
+	    ((procedure obj))
+	  obj))))
+
+  (define tcp-connect
+    (case-lambda
+     ((hostname service)
+      (tcp-connect hostname service (lambda args (void))))
+     ((hostname service log-procedure)
+      (with-arguments-validation (who)
+	  ((string	hostname)
+	   (service	service)
+	   (procedure	log-procedure))
+	(let ((service (if (string? service)
+			   service
+			 (number->string service))))
+	  (%attempt-addrinfos hostname service
+			      (socket PF_INET SOCK_STREAM 0)
+			      (getaddrinfo hostname service HINTS)
+			      log-procedure))))
+     ))
+
+  (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
+    (define (next-addrinfo)
+      (%attempt-addrinfos hostname service sock (cdr addrinfos) log-procedure))
+    (define (log action sockaddr)
+      (log-procedure action hostname service sockaddr))
+    (if (null? addrinfos)
+	(error who "unable to determine usable address of remote host" hostname service)
+      (let* ((info      (car addrinfos))
+	     (sockaddr  (struct-addrinfo-ai_addr info)))
+	(guard (E ((and (errno-condition? E)
+			(memv (condition-errno E) FAILED-CONNECTION-ERRNOS))
+		   (log 'fail sockaddr)
+		   (next-addrinfo))
+		  (else
+		   (raise E)))
+	  (log 'attempt sockaddr)
+	  ((tcp-connect.connect-proc) sock sockaddr)
+	  (log 'success sockaddr))
+	(receive-and-return (port)
+	    (make-textual-socket-input/output-port
+	     sock (string-append "client TCP socket " hostname ":" service) TCP-TRANSCODER)
+	  (set-port-buffer-mode! port (buffer-mode line))))))
+
+  (define-argument-validation (service who obj)
+    (or (string? obj)
+	(network-port-number? obj))
+    (assertion-violation who "expected network service specification as argument" obj))
+
+  (define-constant FAILED-CONNECTION-ERRNOS
+    (list EADDRNOTAVAIL ETIMEDOUT ECONNREFUSED ENETUNREACH))
 
   (define-constant HINTS
     (make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
@@ -3463,7 +3705,7 @@
   (with-arguments-validation (who)
       ((fixnum	uid))
     (let ((rv (capi.posix-seteuid uid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv uid)))))
 
 (define (setuid uid)
@@ -3471,7 +3713,7 @@
   (with-arguments-validation (who)
       ((fixnum	uid))
     (let ((rv (capi.posix-setuid uid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv uid)))))
 
 (define (setreuid real-uid effective-uid)
@@ -3480,7 +3722,7 @@
       ((fixnum	real-uid)
        (fixnum	effective-uid))
     (let ((rv (capi.posix-setreuid real-uid effective-uid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv real-uid effective-uid)))))
 
 ;;; --------------------------------------------------------------------
@@ -3490,7 +3732,7 @@
   (with-arguments-validation (who)
       ((fixnum	gid))
     (let ((rv (capi.posix-setegid gid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv gid)))))
 
 (define (setgid gid)
@@ -3498,7 +3740,7 @@
   (with-arguments-validation (who)
       ((fixnum	gid))
     (let ((rv (capi.posix-setgid gid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv gid)))))
 
 (define (setregid real-gid effective-gid)
@@ -3507,7 +3749,7 @@
       ((fixnum	real-gid)
        (fixnum	effective-gid))
     (let ((rv (capi.posix-setregid real-gid effective-gid)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv real-gid effective-gid)))))
 
 ;;; --------------------------------------------------------------------
@@ -3614,7 +3856,7 @@
 (define (setsid)
   (define who 'setsid)
   (let ((rv (capi.posix-setsid)))
-    (if (unsafe.fx<= 0 rv)
+    (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv))))
 
@@ -3623,14 +3865,14 @@
   (with-arguments-validation (who)
       ((fixnum  pid))
     (let ((rv (capi.posix-getsid pid)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv pid)))))
 
 (define (getpgrp)
   (define who 'getpgrp)
   (let ((rv (capi.posix-getpgrp)))
-    (if (unsafe.fx<= 0 rv)
+    (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv))))
 
@@ -3640,7 +3882,7 @@
       ((fixnum  pid)
        (fixnum  pgid))
     (let ((rv (capi.posix-setpgid pid pgid)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv pid pgid)))))
 
@@ -3651,7 +3893,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd))
     (let ((rv (capi.posix-tcgetpgrp fd)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
 
@@ -3661,7 +3903,7 @@
       ((file-descriptor	fd)
        (fixnum		pgid))
     (let ((rv (capi.posix-tcsetpgrp fd pgid)))
-      (unless (unsafe.fx<= 0 rv)
+      (unless ($fx<= 0 rv)
 	(%raise-errno-error who rv fd pgid)))))
 
 (define (tcgetsid fd)
@@ -3669,7 +3911,7 @@
   (with-arguments-validation (who)
       ((file-descriptor	fd))
     (let ((rv (capi.posix-tcgetsid fd)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(%raise-errno-error who rv fd)))))
 
@@ -3873,7 +4115,7 @@
       ((fixnum		which)
        (itimerval	new))
     (let ((rv (capi.posix-setitimer which new)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv which new)))))
 
 (define (getitimer which)
@@ -3884,7 +4126,7 @@
 		 (make-struct-timeval 0 0)
 		 (make-struct-timeval 0 0)))
 	   (rv  (capi.posix-getitimer which old)))
-      (if (unsafe.fxzero? rv)
+      (if ($fxzero? rv)
 	  old
 	(%raise-errno-error who rv which old)))))
 
@@ -4085,7 +4327,7 @@
 	((signed-int	resource)
 	 (rlimit	rlimit))
       (let ((rv (capi.posix-getrlimit resource rlimit)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rlimit
 	  (%raise-errno-error who rv resource rlimit)))))))
 
@@ -4095,7 +4337,7 @@
       ((signed-int	resource)
        (rlimit		rlimit))
     (let ((rv (capi.posix-setrlimit resource rlimit)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(%raise-errno-error who rv resource rlimit)))))
 
 ;;; --------------------------------------------------------------------
@@ -4110,7 +4352,7 @@
 	((signed-int	processes)
 	 (rusage	rusage))
       (let ((rv (capi.posix-getrusage processes rusage)))
-	(if (unsafe.fxzero? rv)
+	(if ($fxzero? rv)
 	    rusage
 	  (%raise-errno-error who rv processes rusage)))))))
 
@@ -4142,22 +4384,22 @@
     (define who 'split-search-path-bytevector)
     (with-arguments-validation (who)
 	((bytevector	path))
-      (let ((path.len (unsafe.bytevector-length path)))
-	(if (unsafe.fxzero? path.len)
+      (let ((path.len ($bytevector-length path)))
+	(if ($fxzero? path.len)
 	    '()
 	  (let next-pathname ((path.index	0)
 			      (pathnames	'()))
-	    (if (unsafe.fx= path.index path.len)
+	    (if ($fx= path.index path.len)
 		(reverse pathnames)
 	      (let ((separator-index (%find-next-separator ASCII-COLON-FX
 							   path path.index path.len)))
 		(if separator-index
-		    (next-pathname (unsafe.fxadd1 separator-index)
-				   (if (unsafe.fx= path.index separator-index)
+		    (next-pathname ($fxadd1 separator-index)
+				   (if ($fx= path.index separator-index)
 				       pathnames
-				     (cons (%unsafe.subbytevector path path.index separator-index)
+				     (cons (%$subbytevector path path.index separator-index)
 					   pathnames)))
-		  (reverse (cons (%unsafe.subbytevector path path.index path.len)
+		  (reverse (cons (%$subbytevector path path.index path.len)
 				 pathnames))))))))))
 
   (define (split-pathname pathname)
@@ -4180,36 +4422,36 @@
     (define who 'split-pathname-bytevector)
     (with-arguments-validation (who)
 	((bytevector	pathname))
-      (let* ((pathname.len	(unsafe.bytevector-length pathname))
-	     (components	(if (unsafe.fxzero? pathname.len)
+      (let* ((pathname.len	($bytevector-length pathname))
+	     (components	(if ($fxzero? pathname.len)
 				    '()
-				  (%unsafe.bytevector-pathname-components pathname pathname.len))))
+				  (%$bytevector-pathname-components pathname pathname.len))))
 	(cond ((null? components)
-	       (cond ((unsafe.fxzero? pathname.len)
+	       (cond (($fxzero? pathname.len)
 		      (values #f '()))
-		     ((unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref pathname 0))
+		     (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
 		      (values #t '()))
 		     (else
 		      (values #f '()))))
-	      ((unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref pathname 0))
+	      (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
 	       (values #t components))
 	      (else
 	       (values #f components))))))
 
-  (define (%unsafe.bytevector-pathname-components pathname.bv pathname.len)
+  (define (%$bytevector-pathname-components pathname.bv pathname.len)
     (let next-component ((pathname.index	0)
 			 (components		'()))
-      (if (unsafe.fx= pathname.index pathname.len)
+      (if ($fx= pathname.index pathname.len)
 	  (reverse components)
 	(let ((separator-index (%find-next-separator ASCII-SLASH-FX
 						     pathname.bv pathname.index pathname.len)))
 	  (if separator-index
-	      (next-component (unsafe.fxadd1 separator-index)
-			      (if (unsafe.fx= pathname.index separator-index)
+	      (next-component ($fxadd1 separator-index)
+			      (if ($fx= pathname.index separator-index)
 				  components
-				(cons (%unsafe.subbytevector pathname.bv pathname.index separator-index)
+				(cons (%$subbytevector pathname.bv pathname.index separator-index)
 				      components)))
-	    (reverse (cons (%unsafe.subbytevector pathname.bv pathname.index pathname.len)
+	    (reverse (cons (%$subbytevector pathname.bv pathname.index pathname.len)
 			   components)))))))
 
   (define (%find-next-separator separator bv bv.start bv.len)
@@ -4218,22 +4460,22 @@
     ;;fixnum being the index of the slash, else return false.
     ;;
     (let next-byte ((bv.index bv.start))
-      (if (unsafe.fx= bv.index bv.len)
+      (if ($fx= bv.index bv.len)
 	  #f
-	(if (unsafe.fx= separator (unsafe.bytevector-u8-ref bv bv.index))
+	(if ($fx= separator ($bytevector-u8-ref bv bv.index))
 	    bv.index
-	  (next-byte (unsafe.fxadd1 bv.index))))))
+	  (next-byte ($fxadd1 bv.index))))))
 
-  (define-inline (%unsafe.subbytevector src.bv src.start src.end)
-    (%unsafe.subbytevector-u8/count src.bv src.start (unsafe.fx- src.end src.start)))
+  (define-inline (%$subbytevector src.bv src.start src.end)
+    (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start)))
 
-  (define (%unsafe.subbytevector-u8/count src.bv src.start dst.len)
-    (let ((dst.bv (unsafe.make-bytevector dst.len)))
-      (do ((dst.index 0         (unsafe.fx+ 1 dst.index))
-	   (src.index src.start (unsafe.fx+ 1 src.index)))
-	  ((unsafe.fx= dst.index dst.len)
+  (define (%$subbytevector-u8/count src.bv src.start dst.len)
+    (let ((dst.bv ($make-bytevector dst.len)))
+      (do ((dst.index 0         ($fx+ 1 dst.index))
+	   (src.index src.start ($fx+ 1 src.index)))
+	  (($fx= dst.index dst.len)
 	   dst.bv)
-	(unsafe.bytevector-u8-set! dst.bv dst.index (unsafe.bytevector-u8-ref src.bv src.index)))))
+	($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
 
   (define-inline-constant ASCII-COLON-FX
     58 #;(char->integer #\:))
@@ -4281,41 +4523,41 @@
     (define who 'find-executable-as-bytevector)
     (with-arguments-validation (who)
 	((bytevector	pathname.bv))
-      (let* ((pathname.len (unsafe.bytevector-length pathname.bv))
-	     (pathname.bv  (if (%unsafe.first-char-is-slash? pathname.bv)
+      (let* ((pathname.len ($bytevector-length pathname.bv))
+	     (pathname.bv  (if (%$first-char-is-slash? pathname.bv)
 			       pathname.bv
-			     (let ((name (%unsafe.name-if-slash-char-found pathname.bv 1 pathname.len)))
+			     (let ((name (%$name-if-slash-char-found pathname.bv 1 pathname.len)))
 			       (if name
 				   (bytevector-append (getcwd) SLASH-BV name)
-				 (%unsafe.path-search pathname.bv))))))
+				 (%$path-search pathname.bv))))))
 	(and pathname.bv
 	     (file-exists? pathname.bv)
 	     (access pathname.bv X_OK)
 	     (file-is-regular-file? pathname.bv)
 	     pathname.bv))))
 
-  (define-inline (%unsafe.first-char-is-slash? bv)
-    (unsafe.fx= ASCII-SLASH-FX (unsafe.bytevector-u8-ref bv 0)))
+  (define-inline (%$first-char-is-slash? bv)
+    ($fx= ASCII-SLASH-FX ($bytevector-u8-ref bv 0)))
 
-  (define (%unsafe.name-if-slash-char-found bv bv.index bv.past)
+  (define (%$name-if-slash-char-found bv bv.index bv.past)
     ;;Scan the bytes in BV from BV.INDEX included to BV.PAST excluded in
     ;;search of  one representing a  slash character in  ASCII encoding.
     ;;When found return BV itself; else return false.
     ;;
-    (and (unsafe.fx< bv.index bv.past)
-	 (if (unsafe.fx= ASCII-SLASH-FX
-			 (unsafe.bytevector-u8-ref bv bv.index))
+    (and ($fx< bv.index bv.past)
+	 (if ($fx= ASCII-SLASH-FX
+			 ($bytevector-u8-ref bv bv.index))
 	     bv
-	   (%unsafe.name-if-slash-char-found bv (unsafe.fxadd1 bv.index) bv.past))))
+	   (%$name-if-slash-char-found bv ($fxadd1 bv.index) bv.past))))
 
-  (define (%unsafe.path-search bv)
+  (define (%$path-search bv)
     ;;
     ;;An unset PATH is equivalent to the search path "/bin:/usr/bin"; an
     ;;empty PATH is equivalent to the search path "."
     ;;
     (let* ((PATH	(capi.posix-getenv #ve(ascii "PATH")))
 	   (PATH-LIST	(if PATH
-			    (if (unsafe.fxzero? (unsafe.bytevector-length PATH))
+			    (if ($fxzero? ($bytevector-length PATH))
 				'(#ve(ascii "."))
 			      (split-search-path-bytevector PATH))
 			  DEFAULT-PATH-LIST)))
@@ -4344,16 +4586,12 @@
 (define (file-descriptor? obj)
   (%file-descriptor? obj))
 
-
-;;;; arguments validation clauses
-
-(define-argument-validation (file-descriptor who obj)
-  (%file-descriptor? obj)
-  (assertion-violation who "expected fixnum file descriptor as argument" obj))
-
-(define-argument-validation (file-descriptor/false who obj)
-  (or (not obj) (%file-descriptor? obj))
-  (assertion-violation who "expected false or fixnum file descriptor as argument" obj))
+(define (network-port-number? N)
+  ;;Return true if N is a fixnum in the range of network ports.
+  ;;
+  (and (fixnum? N)
+       ($fx>= N 1)
+       ($fx<= N 65535)))
 
 
 ;;;; done

@@ -11,7 +11,7 @@
 ;;;	source  files and  FASL files;  dynamically load  foreign shared
 ;;;	library in the appropriate way.
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -35,9 +35,7 @@
     retrieve-filename-foreign-libraries
     autoload-filename-foreign-library)
   (import (ikarus)
-    (prefix (ikarus system $foreign) ffi.)
-    (only (vicare syntactic-extensions)
-	  define-inline))
+    (prefix (ikarus system $foreign) ffi.))
 
 
 ;;;; foreign libraries table

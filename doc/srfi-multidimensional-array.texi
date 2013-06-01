@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{25} multi--dimensional array primitives
+@cindex @library{srfi :25}, library
+@cindex @library{srfi :25 multi-dimensional-arrays}, library
+@cindex Library @library{srfi :25}
+@cindex Library @library{srfi :25 multi-dimensional-arrays}
 
 
 The library @library{srfi :25} is by Jussi Piitulainen as the reference

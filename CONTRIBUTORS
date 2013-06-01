@@ -63,6 +63,15 @@
     Sven Hartrumpf
     Soahc Lanrete
 
+* Mark H Weaver posted on the  guile-devel mailing list a patch to allow
+  SRFI 45 to handle multiple values.
+
+* The original implementation of  the DEFINE-INTEGRABLE macro was posted
+  by "leppie" (Llewellyn Pritchard) on  the Ikarus mailing list; subject
+  "Macro Challenge of Last Year [Difficulty: *****]", 20 Oct 2009.
+
+* The original implementation of the XOR macro is by Derick Eddington.
+
 
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus

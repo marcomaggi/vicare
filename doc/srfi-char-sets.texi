@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{14} character sets
+@cindex @library{srfi :14}, library
+@cindex @library{srfi :14 char-sets}, library
+@cindex Library @library{srfi :14}
+@cindex Library @library{srfi :14 char-sets}
 
 
 The library @library{srfi :14} is by Olin Shivers as the reference

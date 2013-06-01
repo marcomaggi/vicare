@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d21
+Subject: [announce] Vicare Scheme revision 0.3d0
 
                              Vicare Scheme
                              =============
@@ -37,17 +37,260 @@ collection of R6 Scheme libraries:
 	      <http://marcomaggi.github.com/nausicaa.html>
 
 
-Notes for revision 0.2d21
--------------------------
+Notes for revision 0.3d0
+------------------------
+
+* The version  number has been  bumped to 0.3: this  revision introduces
+  backwards INcompatible changes that will force upgrading of almost all
+  the packages binding Vicare to foreign libraries.
+
+* The boot images have been rotated.
 
 * Changed tarball distribution from .bz2 compression to .xz compression.
 
-* Added $STRING= to (ikarus system $strings).
+* Added command line option -g as alias for --debug.
+
+* Added command line option -F as alias for --fasl-path.
+
+* The  script "configure"  and the  makefiles accept  the user  variable
+  VFLAGS  to  set  command  line options  for  "vicare"  when  compiling
+  libraries and  running the test  suite.  VFLAGS is  to be used  in the
+  same way of CFLAGS for the C compiler.
+
+* Some changes to attempt a fix  for Issue #35 have been implemented see
+  "doc/QUEST-FOR-ISSUE-35".
+
+* SRFI 19,  time and date functions,  has been reverted to  the original
+  Eddington's port.
 
 * BACKWARDS INCOMPATIBILITY The iconv functions have been moved from the
   library (vicare glibc) into the library (vicare iconv).  Documentation
   and tests also have been moved into modules independent from the Glibc
   ones.
+
+* BACKWARDS  INCOMPATIBILITY  The  following C  functions  have  changed
+  signature:
+
+      void ik_enter_c_function (ikpcb* pcb);
+      void ik_leave_c_function (ikpcb* pcb);
+
+  which means the  extensions of Vicare binding it  to foreign libraries
+  have to be fixed.
+
+* BACKWARDS INCOMPATIBILITY The  library:
+
+     (vicare platform-constants)
+
+  has been removed; use (vicare platform constants) instead.
+
+* BACKWARDS INCOMPATIBILITY The following libraries:
+
+     (vicare installation-configuration)
+     (vicare words)
+     (vicare errno)
+     (vicare unsafe-operations)
+     (vicare unsafe-unicode)
+     (vicare unsafe-capi)
+     (vicare infix)
+     (vicare keywords)
+     (vicare syntactic-extensions)
+     (vicare flonum-formatter)
+     (vicare flonum-parser)
+     (vicare weak-hashtables)
+     (vicare simple-event-looop)
+
+  have been renamed to:
+
+     (vicare platform configuration)
+     (vicare platform words)
+     (vicare platform errno)
+     (vicare unsafe operations)
+     (vicare unsafe unicode)
+     (vicare unsafe capi)
+     (vicare language-extensions infix)
+     (vicare language-extensions keywords)
+     (vicare language-extensions syntaxes)
+     (vicare numerics flonum-formatter)
+     (vicare numerics flonum-parser)
+     (vicare containers weak-hashtables)
+     (vicare posix simple-event-looop)
+
+* BACKWARDS  INCOMPATIBILITY  The  library  (vicare  include)  has  been
+  removed.
+
+* Added  automatic  finalisation of  R6RS  records  through the  garbage
+  collector  facilities,  see  the  documentation  node  "iklib  records
+  final".
+
+* Added $STRING= to (ikarus system $strings).
+
+* Added  functions to  (vicare) to  convert between  bytevectors holding
+  octets and  strings or bytevectors  holding the ASCII  hexadecimal and
+  base64 encoding of octets:
+
+      hex->bytevector		bytevector->hex
+      string-hex->bytevector	bytevector->string-hex
+      base64->bytevector	bytevector->base64
+      string-base64->bytevector	bytevector->string-base64
+
+* Added  functions to  (vicare) to  convert between  bytevectors holding
+  octets and bytevectors holding the corresponding URI percent encoding.
+
+    string->uri-encoding	uri-encoding->string
+    uri-encode			uri-decode
+    uri-normalise-encoding
+
+* Added functions to (vicare) to manipulate time objects:
+
+      make-time
+      time-addition		time-difference
+      time=?
+      time<?			time<=?
+      time>?			time>=?
+
+* Added   functions  PROMISE?,   FOR-EACH-IN-ORDER  and   MAKE-QUEUE  to
+  (vicare).
+
+* Added functions to  (vicare) to handle R6RS library  names and version
+  numbers:
+
+    library-name?
+    library-version-numbers?		library-version-number?
+    library-name-decompose
+    library-name->identifiers		library-name->version
+    library-name-identifiers=?		library-name=?
+    library-name<?			library-name<=?
+    library-version=?
+    library-version<?			library-version<=?
+
+* Added  functions to  (vicare) to  handle R6RS  library references  and
+  conformity with library names:
+
+    library-reference?			library-version-reference?
+    library-sub-version-reference?	library-sub-version?
+    library-reference-decompose
+    library-reference->identifiers
+    library-reference->version-reference
+    library-reference-identifiers=?
+    conforming-sub-version-and-sub-version-reference?
+    conforming-version-and-version-reference?
+    conforming-library-name-and-library-reference?
+
+* Added functions to (vicare) to inspect environment objects:
+
+    environment-labels			environment-libraries
+    environment-binding
+
+* Added syntaxes to (vicare):
+
+    receive				receive-and-return
+    begin0
+    define-values			define-constant-values
+    define-constant			define-inline
+    define-integrable			define-syntax-rule
+    unwind-protect			xor
+    include
+
+  the  corresponding  syntaxes have  been  removed  from the  standalone
+  syntaxes library.
+
+* Added non-Scheme style syntaxes to (vicare):
+
+    while				until
+    continue				break
+    for
+    return				begin-returnable
+    define-returnable			lambda-returnable
+
+* Added compensations API to (vicare), see the documentation node "iklib
+  compensations".
+
+* The  I/O ports  now have  property lists,  see the  documentation node
+  "iklib io plists".
+
+* The foreign  pointer wrapper strucutres  now have property  lists, see
+  the documentation node "ffi foreign wrapper binds".
+
+* BACKWARDS INCOMPATIBILITY In the library (vicare posix): the functions
+  READ, PREAD,  RECV and RECVFROM now  accept a generalised C  buffer as
+  argument; the  functions WRITE, PWRITE,  SEND and SENDTO now  accept a
+  generalised C  string as argument.   When the buffer argument  of such
+  functions is  a bytevector: the size  argument must be false,  not the
+  number of bytes.
+
+* Added functions to (vicare posix):
+
+     select-port
+     select-port-readable?
+     select-port-writable?
+     select-port-exceptional?
+
+* The syntax DEFINE-SYNTAX now accepts both the formats:
+
+     (define-syntax ?name ?transformer-expr)
+     (define-syntax (?name ?arg) ?body0 ?body ...)
+
+  the  syntax  DEFINE-SYNTAX*  has  been  removed  from  the  standalone
+  syntaxes library.
+
+* Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
+
+     (import (rnrs)
+       (rnrs eval))
+     (eval '(str.length "ciao")
+           (environment
+            '(prefix (deprefix (only (rnrs)
+                                     string-length
+                                     string-append)
+                               string-)
+                     str.)))
+     => 4
+
+* Added  PREFIX,  DEPREFIX,  SUFFIX and  DESUFFIX  export  specification
+  clauses:
+
+     (library (demo)
+       (export
+         (deprefix (yeah.this yeah.that) yeah.)
+         (prefix (these those) yeah.))
+       (import (rnrs))
+       (define (yeah.this) "this")
+       (define (yeah.that) "that")
+       (define (these) "these")
+       (define (those) "those"))
+
+* Added  library  (vicare   language-extensions  cond-expand),  see  the
+  documentation node "cond-expand".
+
+* Added  library  (vicare  language-extensions  custom-ports),  see  the
+  documentation node "custom-ports".
+
+* Added  library   (vicare  language-extensions  coroutines),   see  the
+  documentation node "coroutines".
+
+* Added library (vicare language-extensions  amb), see the documentation
+  node "amb".
+
+* Added  library  (vicare  language-extensions  simple-match),  see  the
+  documentation node "simple-match".
+
+* Added library (vicare  net channels), see the  documentation node "net
+  channels".
+
+* Added  library (vicare  posix pid-files),  see the  documentation node
+  "posix pid-files".
+
+* Added  library (vicare  posix lock-pid-files),  see the  documentation
+  node "posix lock-pid-files".
+
+* Added  library (vicare  posix log-files),  see the  documentation node
+  "posix log-files".
+
+* Added  library (vicare  posix daemonisations),  see the  documentation
+  node "posix daemonisations".
+
+* Added library (vicare posix tcp-server-sockets), see the documentation
+  node "posix tcp-server-sockets".
 
 
 Notes for revision 0.2d20

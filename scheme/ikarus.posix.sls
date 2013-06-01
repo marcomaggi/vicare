@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -24,6 +24,7 @@
     mkdir
     mkdir/parents
     getenv
+    environ
     split-file-name
     real-pathname
     file-modification-time
@@ -35,15 +36,15 @@
 		  delete-file
 		  strerror
 		  getenv
+		  environ
 
 		  vicare-argv0
 		  vicare-argv0-string)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation
@@ -108,9 +109,9 @@
   (define who 'errno->string)
   (with-arguments-validation (who)
       ((fixnum negated-errno-code))
-    (let ((errno-code (unsafe.fx- 0 negated-errno-code)))
-      (and (unsafe.fx> errno-code 0)
-	   (unsafe.fx< errno-code (vector-length ERRNO-VECTOR))
+    (let ((errno-code ($fx- 0 negated-errno-code)))
+      (and ($fx> errno-code 0)
+	   ($fx< errno-code (vector-length ERRNO-VECTOR))
 	   (vector-ref ERRNO-VECTOR errno-code)))))
 
 (let-syntax
@@ -282,7 +283,7 @@
        (fixnum	  mode))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-mkdir pathname.bv mode)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
 
 (define (mkdir/parents pathname mode)
@@ -295,9 +296,9 @@
 	  (unless (%file-is-directory? who pathname)
 	    (error who "path component is not a directory" pathname))
 	(let-values (((base suffix) (split-file-name pathname)))
-	  (unless (unsafe.fxzero? (unsafe.string-length base))
+	  (unless ($fxzero? ($string-length base))
 	    (next-component base))
-	  (unless (unsafe.fxzero? (unsafe.string-length suffix))
+	  (unless ($fxzero? ($string-length suffix))
 	    (mkdir pathname mode)))))))
 
 (define (%file-is-directory? who pathname)
@@ -324,6 +325,27 @@
     (let ((rv (capi.posix-getenv (string->utf8 key))))
       (and rv (utf8->string rv)))))
 
+(define (environ)
+  (define (%find-index-of-= str idx str.len)
+    ;;Scan STR starint  at index IDX and up to  STR.LEN for the position
+    ;;of the character #\=.  Return the index or STR.LEN.
+    ;;
+    (cond (($fx= idx str.len)
+	   idx)
+	  (($char= #\= ($string-ref str idx))
+	   idx)
+	  (else
+	   (%find-index-of-= str ($fxadd1 idx) str.len))))
+  (map (lambda (bv)
+	 (let* ((str     (utf8->string bv))
+		(str.len ($string-length str))
+		(idx     (%find-index-of-= str 0 str.len)))
+	   (cons (substring str 0 idx)
+		 (if ($fx< ($fxadd1 idx) str.len)
+		     (substring str ($fxadd1 idx) str.len)
+		   ""))))
+    (capi.posix-environ)))
+
 (define (file-exists? pathname)
   ;;Defined by R6RS.
   ;;
@@ -344,7 +366,7 @@
       ((pathname pathname))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.posix-unlink pathname.bv)))
-	(unless (unsafe.fxzero? rv)
+	(unless ($fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname))))))
 
 (define (split-file-name str)
@@ -374,11 +396,11 @@
   (with-arguments-validation (who)
       ((pathname  pathname))
     (with-pathnames ((pathname.bv  pathname))
-      (let* ((timespec (unsafe.make-clean-vector 2))
+      (let* ((timespec ($make-clean-vector 2))
 	     (rv       (capi.posix-file-mtime pathname.bv timespec)))
-	(if (unsafe.fxzero? rv)
-	    (+ (* #e1e9 (unsafe.vector-ref timespec 0))
-	       (unsafe.vector-ref timespec 1))
+	(if ($fxzero? rv)
+	    (+ (* #e1e9 ($vector-ref timespec 0))
+	       ($vector-ref timespec 1))
 	  (%raise-errno-error/filename who rv pathname))))))
 
 

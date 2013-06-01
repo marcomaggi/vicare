@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{1} list library
+@cindex @library{srfi :1}, library
+@cindex @library{srfi :1 lists}, library
+@cindex Library @library{srfi :1}
+@cindex Library @library{srfi :1 lists}
 
 
 The library @library{srfi :1} is by Olin Shivers

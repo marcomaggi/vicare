@@ -37,27 +37,6 @@
 (check-display "*** testing SRFI 42: eager comprehensions\n")
 
 
-;;;; helpers
-
-(define-syntax unwind-protect
-  ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where  we do not
-  ;;use continuations to escape from the body.
-  ;;
-  (syntax-rules ()
-    ((_ ?body ?cleanup0 ?cleanup ...)
-     (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
-       (with-exception-handler
-	   (lambda (E)
-	     (cleanup)
-	     (raise E))
-	 (lambda ()
-	   (call-with-values
-	       (lambda () ?body)
-	     (lambda return-values
-	       (cleanup)
-	       (apply values return-values)))))))))
-
-
 ;;;; do-ec
 
 (check

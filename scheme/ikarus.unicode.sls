@@ -31,18 +31,16 @@
     string-foldcase string-titlecase  string-ci<? string-ci<=?
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
-  (import
-      (vicare include)
-    (except (ikarus)
-	    unicode-printable-char?
-	    char-upcase char-downcase char-titlecase char-foldcase
-	    char-whitespace? char-lower-case? char-upper-case?
-	    char-title-case?  char-numeric?
-	    char-alphabetic? char-general-category char-ci<? char-ci<=?
-	    char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
-	    string-foldcase string-titlecase  string-ci<? string-ci<=?
-	    string-ci=? string-ci>? string-ci>=? string-normalize-nfd
-	    string-normalize-nfkd string-normalize-nfc string-normalize-nfkc ))
+  (import (except (ikarus)
+		  unicode-printable-char?
+		  char-upcase char-downcase char-titlecase char-foldcase
+		  char-whitespace? char-lower-case? char-upper-case?
+		  char-title-case?  char-numeric?
+		  char-alphabetic? char-general-category char-ci<? char-ci<=?
+		  char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
+		  string-foldcase string-titlecase  string-ci<? string-ci<=?
+		  string-ci=? string-ci>? string-ci>=? string-normalize-nfd
+		  string-normalize-nfkd string-normalize-nfc string-normalize-nfkc))
 
 
 
@@ -101,8 +99,8 @@
 (define (char- x y)
   (fx- (char->integer x) (char->integer y)))
 
-(include/verbose "unicode/unicode-char-cases.ss")
-(include/verbose "unicode/unicode-charinfo.ss")
+(include "unicode/unicode-char-cases.ss" #t)
+(include "unicode/unicode-charinfo.ss"   #t)
 
 (define-syntax define-char-op
   (syntax-rules ()

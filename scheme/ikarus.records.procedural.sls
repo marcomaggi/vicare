@@ -32,7 +32,9 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?			print-r6rs-record-instance)
+    rtd-subtype?			print-r6rs-record-instance
+    record-reset
+    record-destructor-set!		record-destructor)
   (import (except (ikarus)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -49,11 +51,13 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?				print-r6rs-record-instance)
+		  rtd-subtype?				print-r6rs-record-instance
+		  record-reset
+		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation)
+    (vicare unsafe operations))
 
 
 ;;;; type definitions
@@ -93,7 +97,7 @@
 ;;
 ;;An R6RS record-type descriptor is a struct instance of type <RTD>.  An
 ;;R6RS record instance is a  struct instance whose first word references
-;;its type descriptor, that is a struct instance of type <RTD>.
+;;its type descriptor: a struct instance of type <RTD>.
 ;;
 ;;       RTD ref
 ;;      |-------|---------------| R6RS record instance
@@ -174,6 +178,10 @@
 		;False or an instance of <RCD>.  When an RCD: it is used
 		;whenever  an  RCD  for   a  subtype  is  built  without
 		;specifying a specific RCD.
+   destructor
+		;False  or a  function,  accepting one  argument, to  be
+		;invoked  whenever   the  record  instance   is  garbage
+		;collected.
    ))
 
 (define (%rtd-printer S port sub-printer)
@@ -242,11 +250,14 @@
 	 (S ($make-struct rtd N))
 	 (V (void)))
     (let loop ((i 0))
-      (if (unsafe.fx= i N)
-	  S
+      (if ($fx= i N)
+	  (cond ((<rtd>-destructor rtd)
+	  	 => (lambda (destructor)
+	  	      ($record-guardian S)))
+	  	(else S))
 	(begin
 	  ($struct-set! S i V)
-	  (loop (unsafe.fxadd1 i)))))))
+	  (loop ($fxadd1 i)))))))
 
 (define record-being-built
   ;;Hold the record structure while it is built.
@@ -371,19 +382,19 @@
   ;;Remember that a Vicare vector has at most (greatest-fixnum) items.
   ;;
   (and (vector? V)
-       (let ((V.len (unsafe.vector-length V)))
+       (let ((V.len ($vector-length V)))
 	 (let next-item ((i 0))
-	   (or (unsafe.fx= i V.len)
-	       (let ((item (unsafe.vector-ref V i)))
+	   (or ($fx= i V.len)
+	       (let ((item ($vector-ref V i)))
 		 (and (pair? item)
-		      (let ((A (unsafe.car item)))
+		      (let ((A ($car item)))
 			(or (eq? A 'mutable)
 			    (eq? A 'immutable)))
-		      (let ((D (unsafe.cdr item)))
+		      (let ((D ($cdr item)))
 			(and (pair? D)
-			     (null? (unsafe.cdr D))
-			     (symbol? (unsafe.car D))
-			     (next-item (unsafe.fxadd1 i)))))))))))
+			     (null? ($cdr D))
+			     (symbol? ($car D))
+			     (next-item ($fxadd1 i)))))))))))
 
 (define (%normalise-fields-vector input-vector)
   ;;Parse  the  fields specification  vector  and  return an  equivalent
@@ -400,16 +411,16 @@
   ;;the symbols  MUTABLE and  IMMUTABLE are respectively  converted into
   ;;true and false booleans, lists are converted to pairs.
   ;;
-  (let* ((number-of-fields	(unsafe.vector-length input-vector))
-	 (normalised-vector	(unsafe.make-vector   number-of-fields)))
+  (let* ((number-of-fields	($vector-length input-vector))
+	 (normalised-vector	($make-vector   number-of-fields)))
     (let next-field ((i 0))
-      (if (unsafe.fx= i number-of-fields)
+      (if ($fx= i number-of-fields)
 	  normalised-vector
-	(let* ((item		(unsafe.vector-ref input-vector i))
-	       (mutability	(unsafe.car item))
-	       (name		(unsafe.car (unsafe.cdr item))))
-	  (unsafe.vector-set! normalised-vector i (cons (eq? mutability 'mutable) name))
-	  (next-field (unsafe.fxadd1 i)))))))
+	(let* ((item		($vector-ref input-vector i))
+	       (mutability	($car item))
+	       (name		($car ($cdr item))))
+	  ($vector-set! normalised-vector i (cons (eq? mutability 'mutable) name))
+	  (next-field ($fxadd1 i)))))))
 
 
 ;;;; arguments validation
@@ -485,12 +496,12 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as field index argument" obj))
 
 (define-argument-validation (absolute-field-index who abs-index max-index rtd relative-field-index)
   (and (fixnum? abs-index)
-       (unsafe.fx< abs-index max-index))
+       ($fx< abs-index max-index))
   (assertion-violation who
     (string-append "absolute field index " (number->string abs-index)
 		   " out of range, expected less than " (number->string max-index))
@@ -503,7 +514,7 @@
   ;;We have to remember that the RTD structure holds a normalised vector
   ;;of field specifications.
   ;;
-  (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) relative-field-index))
+  ($car ($vector-ref (<rtd>-fields rtd) relative-field-index))
   (assertion-violation who
     "selected record field is not mutable" relative-field-index rtd))
 
@@ -577,14 +588,14 @@
   (with-arguments-validation (who)
       ((rtd	rtd))
     (let* ((fields-vector	(<rtd>-fields rtd))
-	   (number-of-fields	(unsafe.vector-length fields-vector)))
-      (let next-field ((v (unsafe.make-vector number-of-fields))
+	   (number-of-fields	($vector-length fields-vector)))
+      (let next-field ((v ($make-vector number-of-fields))
 		       (i 0))
-	(if (unsafe.fx= i number-of-fields)
+	(if ($fx= i number-of-fields)
 	    v
 	  (begin
-	    (unsafe.vector-set! v i (unsafe.cdr (unsafe.vector-ref fields-vector i)))
-	    (next-field v (unsafe.fxadd1 i))))))))
+	    ($vector-set! v i ($cdr ($vector-ref fields-vector i)))
+	    (next-field v ($fxadd1 i))))))))
 
 (define (record-field-mutable? rtd field-index)
   ;;Return true if field FIELD-INDEX of RTD is mutable.
@@ -603,7 +614,7 @@
 	    ((fx<? absolute-field-index (<rtd>-total-fields-number rtd))
 	     ;;Remember that the RTD structure holds a normalised vector
 	     ;;of field specifications.
-	     (unsafe.car (unsafe.vector-ref (<rtd>-fields rtd) field-index)))
+	     ($car ($vector-ref (<rtd>-fields rtd) field-index)))
 	    (else
 	     (assertion-violation who
 	       "relative field index out of range for record type" field-index))))))
@@ -649,13 +660,14 @@
     ;;
     ;;Here we do not care if UID is a symbol or false.
     ;;
-    (let ((fields-number (unsafe.vector-length normalised-fields)))
+    (let ((fields-number ($vector-length normalised-fields)))
       (if (not parent)
 	  (make-<rtd> name fields-number fields-number 0
 		      parent sealed? opaque? uid normalised-fields
 		      (void) #;initialiser
 		      #f #;default-protocol
-		      #f #;default-rcd)
+		      #f #;default-rcd
+		      #f #;destructor )
 	(make-<rtd> name
 		    (fx+ fields-number (<rtd>-total-fields-number parent))
 		    fields-number
@@ -663,7 +675,8 @@
 		    parent sealed? (or opaque? (<rtd>-opaque? parent)) uid normalised-fields
 		    (void) #;initialiser
 		    #f #;default-protocol
-		    #f #;default-rcd))))
+		    #f #;default-rcd
+		    #f #;destructor ))))
 
   (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
@@ -824,7 +837,7 @@
 		  ((default-constructor-argnum argnum fields-number all-field-values))
 		(let-values (((parent-fields this-fields)
 			      (%split all-field-values
-				      (unsafe.fx- argnum fields-number))))
+				      ($fx- argnum fields-number))))
 		  (apply (apply make-parent-record parent-fields) this-fields))))))))
     (or (<rtd>-default-protocol rtd)
 	(let ((proto (if (<rtd>-parent rtd)
@@ -844,9 +857,9 @@
 		     (count		count))
       (with-arguments-validation (who)
 	  ((enough-constructor-formals	count field-values))
-	(if (unsafe.fx= 0 count)
+	(if ($fx= 0 count)
 	    (values '() field-values)
-	  (let-values (((tail rest) (next-value (unsafe.cdr field-values) (unsafe.fxsub1 count))))
+	  (let-values (((tail rest) (next-value ($cdr field-values) ($fxsub1 count))))
 	    (values (cons (car field-values) tail) rest))))))
 
 ;;; --------------------------------------------------------------------
@@ -872,7 +885,7 @@
       "expected procedure as constructor value returned by protocol function" obj))
 
   (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields field-values)
-    (and (fixnum? argnum) (unsafe.fx<= this-number-of-fields argnum))
+    (and (fixnum? argnum) ($fx<= this-number-of-fields argnum))
     (assertion-violation who
       (string-append "not enough arguments to record constructor, expected "
 		     (number->string this-number-of-fields)
@@ -881,7 +894,7 @@
       field-values))
 
   (define-argument-validation (enough-constructor-formals who count field-values)
-    (or (unsafe.fx= 0 count) (pair? field-values))
+    (or ($fx= 0 count) (pair? field-values))
     (assertion-violation who "insufficient arguments" field-values))
 
   #| end of module |# )
@@ -1041,7 +1054,42 @@
 				     (%print-fields prtd (upper-rtd prtd))
 				     (<rtd>-total-fields-number prtd))
 				 0))))
-	(%display "]\n"))))))
+	(%display "]"))))))
+
+(define (record-reset x)
+  ;;Reset to #f all the fields of a structure.
+  ;;
+  (define who 'record-reset)
+  (with-arguments-validation (who)
+      ((record x))
+    ;;Remember that the first 2 fields of an R6RS record type descriptor
+    ;;have the  same meaning of  the first 2  fields of a  Vicare struct
+    ;;type descriptor.
+    (let ((len ($struct-ref ($struct-rtd x) 1)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i len))
+	($struct-set! x i (void))))))
+
+
+;;;; non-R6RS extensions: record destructor
+
+(define (record-destructor-set! rtd func)
+  ;;Store a  function as  destructor in  a R6RS  record-type descriptor.
+  ;;Return unspecified values.
+  ;;
+  (define who 'record-destructor-set!)
+  (with-arguments-validation (who)
+      ((rtd		rtd)
+       (procedure	func))
+    ($set-<rtd>-destructor! rtd func)))
+
+(define (record-destructor rtd)
+  ;;Return the value of the destructor field in RTD: #f or a function.
+  ;;
+  (define who 'record-destructor)
+  (with-arguments-validation (who)
+      ((rtd		rtd))
+    ($<rtd>-destructor rtd)))
 
 
 ;;;; done

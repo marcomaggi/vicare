@@ -52,9 +52,8 @@
 
 		  ;; internal functions
 		  $unintern-gensym)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.)
+    (vicare language-extensions syntaxes)
+    (vicare unsafe operations)
     (except (ikarus system $symbols)
 	    $unintern-gensym))
 
@@ -133,7 +132,7 @@
   (make-parameter
       0
     (lambda (x)
-      (if (and (fixnum? x) (unsafe.fx>= x 0))
+      (if (and (fixnum? x) ($fx>= x 0))
 	  x
 	(assertion-violation 'gensym-count "not a valid count" x)))))
 
@@ -230,7 +229,7 @@
 ;;;FIXME What if gensym-count is a bignum?
 	    (let ((str (string-append (gensym-prefix) (fixnum->string ct))))
 	      ($set-symbol-string! x str)
-	      (gensym-count (unsafe.fxadd1 ct))
+	      (gensym-count ($fxadd1 ct))
 	      str))))))
 
 
@@ -247,7 +246,7 @@
     (let ((p ($symbol-plist x)))
       (cond ((assq k p)
 	     => (lambda (x)
-		  (unsafe.set-cdr! x v)))
+		  ($set-cdr! x v)))
 	    (else
 	     ($set-symbol-plist! x (cons (cons k v) p)))))))
 
@@ -261,7 +260,7 @@
        (symbol k))
     (let ((p ($symbol-plist x)))
       (cond ((assq k p)
-	     => unsafe.cdr)
+	     => $cdr)
 	    (else #f)))))
 
 (define (remprop x k)
@@ -273,16 +272,16 @@
        (symbol k))
     (let ((plist ($symbol-plist x)))
       (unless (null? plist)
-	(let ((a (unsafe.car plist)))
-	  (if (eq? (unsafe.car a) k)
-	      ($set-symbol-plist! x (unsafe.cdr plist))
+	(let ((a ($car plist)))
+	  (if (eq? ($car a) k)
+	      ($set-symbol-plist! x ($cdr plist))
 	    (let loop ((q     plist)
-		       (plist (unsafe.cdr plist)))
+		       (plist ($cdr plist)))
 	      (unless (null? plist)
-		(let ((a (unsafe.car plist)))
-		  (if (eq? (unsafe.car a) k)
-		      (unsafe.set-cdr! q (unsafe.cdr plist))
-		    (loop plist (unsafe.cdr plist))))))))))
+		(let ((a ($car plist)))
+		  (if (eq? ($car a) k)
+		      ($set-cdr! q ($cdr plist))
+		    (loop plist ($cdr plist))))))))))
     ))
 
 (define (property-list x)
@@ -300,9 +299,9 @@
 	       (accum '()))
       (if (null? ls)
 	  accum
-	(let ((a (unsafe.car ls)))
-	  (loop (unsafe.cdr ls)
-		(cons (cons (unsafe.car a) (unsafe.cdr a))
+	(let ((a ($car ls)))
+	  (loop ($cdr ls)
+		(cons (cons ($car a) ($cdr a))
 		      accum)))))))
 
 

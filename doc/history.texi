@@ -1,0 +1,20 @@
+@node history
+@appendix History
+
+
+The original version of this document is by Abdulaziz Ghuloum, who wrote
+it in the years 2006-2010, under the title ``Ikarus Scheme User's
+Guide''.
+
+In 2008 the original document in TeX format was transformed in Texinfo
+format by Marco Maggi.
+
+Starting with 2010 the Texinfo document was renamed to ``Vicare Scheme''
+and further developed to be the users's and developer's guide for Vicare
+Scheme, a fork of the original Ikarus Scheme.
+
+The documentation of the @srfi{} libraries was written by the original
+@srfi{} authors, transformed to Texinfo format and adapted for inclusion
+in this document.
+
+@c end of file

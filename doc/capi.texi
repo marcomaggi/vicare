@@ -511,7 +511,6 @@ the environment is empty (no environment variables set) return nil.
 * capi posix port seek::        Handling file descriptor cursor.
 * capi posix port rw::          Reading and writing.
 * capi posix port event::       Handling file descriptor events.
-* capi posix port net::         Handling sockets.
 @end menu
 
 @c page
@@ -670,82 +669,6 @@ If successful return a fixnum representing the return value from
 value of @cfunc{ik_errno_to_code}.  Notice that if the call is
 interrupted by a signal, so it returns with @code{EINTR}, the function
 returns with error without reattempting the call.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_make_fd_nonblocking (ikptr @var{fd})
-Interface to the @cfunc{fcntl} C function.  @glibcref{Control
-Operations, fcntl}.  Set non--blocking mode for a file descriptor.
-
-@var{fd} must be a fixnum representing the file descriptor.
-
-If successful return the raw C language @cnull{} pointer; if an error
-occurs in @cfunc{fcntl} return the return value of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-@c page
-@node capi posix port net
-@subsubsection Handling sockets
-
-
-@deftypefun ikptr ikrt_tcp_connect (ikptr @var{host}, ikptr @var{srvc})
-@deftypefunx ikptr ikrt_ucp_connect (ikptr @var{host}, ikptr @var{srvc})
-Interface to the @cfunc{getaddrinfo}, @cfunc{socket} and @cfunc{connect}
-C functions.  @glibcref{Sockets, Sockets}.  Establish a client
-connection to a remote server using the @code{SOCK_STREAM} or
-@code{SOCK_DGRAM} style.
-
-@var{host} must reference a bytevector holding the remote server
-hostname; @var{srvc} must reference a bytevector holding the service
-specification.
-
-If successful return a fixnum representing the socket; if an error
-occurs resolving the host name and address, return @code{IK_FALSE_OBJECT};
-if an error occurs in one of the C function calls, return the return
-value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_listen (ikptr @var{port-number})
-Interface to the @cfunc{socket}, @cfunc{bind}, @cfunc{listen} and
-@cfunc{setsockopt} C functions.  @glibcref{Sockets, Sockets}.  Create a
-server socket bound to the given port number for the local host, using
-the @code{AF_INET} namespace and the @code{SOCK_STREAM} style; the
-option @code{SO_REUSEADDR} is set for the server socket; at most
-@math{1024} concurrent connections to the socket will be enqueued.
-
-@var{port-number} must be a fixnum representing the port number to use.
-
-If successful return a fixnum representing the server socket; if an
-error occurs in one of the C function calls, return the return value of
-@cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_accept (ikptr @var{sock}, ikptr @var{sockaddr})
-Interface to the @cfunc{accept} C function.  @glibcref{Accepting
-Connections, accept}.  Accept a connection to a server socket.
-
-@var{sock} must be a fixnum representing the server socket;
-@var{sockaddr} must reference a bytevector object which will hold the
-@code{struct sockaddr} describing the client's address.
-
-If successful return a fixnum representing the client socket and fill
-@var{sockaddr} with the client address; if an error occurs in
-@cfunc{accept}, return the return value of @cfunc{ik_errno_to_code}.
-@end deftypefun
-
-
-@deftypefun ikptr ikrt_shutdown (ikptr @var{sock})
-Interface to the @cfunc{shutdown} C function.  @glibcref{Closing a
-Socket, shutdown}.  Close a socket for both reading and writing.
-
-@var{sock} must be a fixnum representing the socket.
-
-If successful return the raw C language @cnull{} pointer; if an error
-occurs in @cfunc{shutdown}, return the return value of
-@cfunc{ik_errno_to_code}.
 @end deftypefun
 
 @c page

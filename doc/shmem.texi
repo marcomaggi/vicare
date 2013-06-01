@@ -23,7 +23,7 @@ The first example just exchanges a signed integer:
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let* ((shmem.len (px.sysconf _SC_PAGESIZE))
        (shmem.ptr (px.mmap #f shmem.len
@@ -60,7 +60,7 @@ The second example exchanges a bytevector of known length:
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let* ((shmem.len (px.sysconf _SC_PAGESIZE))
        (shmem.ptr (px.mmap #f shmem.len
@@ -108,7 +108,7 @@ of memory are enough:
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (define data
   '(1 2 #(3 4) ciao "hello" #vu8(99 98 97)))

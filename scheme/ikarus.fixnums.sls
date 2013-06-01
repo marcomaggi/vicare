@@ -127,7 +127,7 @@
     (ikarus system $pairs)
     (ikarus system $strings)
     (vicare arguments validation)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; helpers

@@ -3,6 +3,16 @@
 
 
 @cindex @ansrfi{99} @acronym{ERR5RS} records
+@cindex @library{srfi :99}, library
+@cindex @library{srfi :99 records}, library
+@cindex @library{srfi :99 records syntactic}, library
+@cindex @library{srfi :99 records procedural}, library
+@cindex @library{srfi :99 records inspection}, library
+@cindex Library @library{srfi :99}
+@cindex Library @library{srfi :99 records}
+@cindex Library @library{srfi :99 records syntactic}
+@cindex Library @library{srfi :99 records procedural}
+@cindex Library @library{srfi :99 records inspection}
 
 
 The library @library{srfi :99} is by y Taro Minowa (Higepon) as the

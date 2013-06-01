@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,7 +29,7 @@
 (import (rename (vicare)
 		(make-record-type-descriptor make-record-type-descriptor*)
 		(make-record-constructor-descriptor make-record-constructor-descriptor*))
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -755,7 +755,27 @@
 	    (lambda (port)
 	      (display (builder 1 2) port)
 	      )))
-    => "#[r6rs-record: rtd-0 a=1 b=2]\n")
+    => "#[r6rs-record: rtd-0 a=1 b=2]")
+
+  #t)
+
+
+(parametrise ((check-test-name	'reset))
+
+  (check
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f) (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd))
+	     (get-a	(record-accessor rtd 0))
+	     (get-b	(record-accessor rtd 1)))
+	(let ((R (builder 1 2)))
+	  (record-reset R)
+	  (list (get-a R)
+		(get-b R))))
+    => `(,(void) ,(void)))
 
   #t)
 

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -35,9 +35,8 @@
 		  readline-enabled?
 		  readline
 		  make-readline-input-port)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare language-extensions syntaxes)
+    (vicare unsafe operations))
 
 
 ;;;; arguments validation
@@ -88,33 +87,33 @@
     (define device-position 0)
     (define (read! str start count)
       (define who 'make-readline-input-port/read!)
-      (let ((buffer.len (unsafe.string-length buffer)))
-	(if (unsafe.fx<= count buffer.len)
+      (let ((buffer.len ($string-length buffer)))
+	(if ($fx<= count buffer.len)
 	    ;;Enough data in the buffer to satisfy the request.
 	    (begin
-	      (unsafe.string-copy!/count buffer 0 str start count)
-	      (set! buffer (unsafe.substring buffer count buffer.len))
+	      ($string-copy!/count buffer 0 str start count)
+	      (set! buffer ($substring buffer count buffer.len))
 	      count)
 	  ;;Read another line.
 	  (let ((rv (readline (and make-prompt (make-prompt)))))
 	    (if rv
-		(let ((rv.len (unsafe.string-length rv)))
+		(let ((rv.len ($string-length rv)))
 		  (set! device-position (+ rv.len device-position))
 		  (if (bignum? (+ 1 buffer.len rv.len))
 		      (error who "input line from readline too long")
 		    (begin
 		      (set! buffer (string-append buffer rv "\n"))
-		      (let* ((buffer.len	(unsafe.string-length buffer))
+		      (let* ((buffer.len	($string-length buffer))
 			     (count		(fxmin count buffer.len)))
-			(unsafe.string-copy!/count buffer 0 str start count)
-			(set! buffer (unsafe.substring buffer count buffer.len))
+			($string-copy!/count buffer 0 str start count)
+			(set! buffer ($substring buffer count buffer.len))
 			count))))
 	      ;;EOF was found: return the available data.
-	      (if (unsafe.fxzero? buffer.len)
+	      (if ($fxzero? buffer.len)
 		  0
 		;;Flush the buffer.
 		(begin
-		  (unsafe.string-copy!/count buffer 0 str start buffer.len)
+		  ($string-copy!/count buffer 0 str start buffer.len)
 		  (set! buffer (string))
 		  buffer.len)))))))
     (define (get-position)

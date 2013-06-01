@@ -20,11 +20,12 @@ install -m 0775 -d "$fasldir"
 
 for item in \
     compile-all.sps             \
+    compile-srfi.sps            \
     compile-ffi.sps             \
-    compile-glibc.sps           \
-    compile-iconv.sps           \
-    compile-linux.sps           \
     compile-posix.sps           \
+    compile-iconv.sps           \
+    compile-glibc.sps           \
+    compile-linux.sps           \
     compile-gcc.sps             \
     compile-readline.sps        \
     compile-cre2.sps
@@ -33,7 +34,7 @@ do
     if test -f "$item"
     then
         echo "*** compiling: $item"
-        vicare --fasl-directory "$fasldir" --compile-dependencies "$item" || true
+        vicare -O2 --fasl-directory "$fasldir" --compile-dependencies "$item" || true
     else echo "*** skipping: $item"
     fi
 done

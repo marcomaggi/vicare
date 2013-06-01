@@ -17,69 +17,76 @@
 
 (library (ikarus strings)
   (export
-    make-string		string
-    substring		string-length
-    string-ref		string-set!
-    string->list	list->string
-    string-append	string-for-each
-    string-copy		string-copy!
+    make-string			string
+    substring			string-length
+    string-ref			string-set!
+    string->list		list->string
+    string-append		string-for-each
+    string-copy			string-copy!
     string-fill!
     string=?
-    string<?		string<=?
-    string>?		string>=?
+    string<?			string<=?
+    string>?			string>=?
+    string-reverse-and-concatenate
     uuid
 
     ;; Vicare specific
-    string->latin1	latin1->string
-    string->ascii	ascii->string
+    string->latin1		latin1->string
+    string->ascii		ascii->string
+    string-hex->bytevector	bytevector->string-hex
+    bytevector->hex		hex->bytevector
+    string-base64->bytevector	bytevector->string-base64
+    bytevector->base64		base64->bytevector
+    string->uri-encoding	uri-encoding->string
+    uri-encode			uri-decode
+    uri-normalise-encoding
 
     ;; unsafe operations
-    $string=)
+    $string=			$string-total-length
+    $string-concatenate		$string-reverse-and-concatenate)
   (import (except (ikarus)
-		  make-string		string
-		  substring		string-length
-		  string-ref		string-set!
-		  string->list		list->string
-		  string-append		string-for-each
-		  string-copy		string-copy!
+		  make-string			string
+		  substring			string-length
+		  string-ref			string-set!
+		  string->list			list->string
+		  string-append			string-for-each
+		  string-copy			string-copy!
 		  string-fill!
 		  string=?
-		  string<?		string<=?
-		  string>?		string>=?
+		  string<?			string<=?
+		  string>?			string>=?
+		  string-reverse-and-concatenate
 		  uuid
 
 		  ;; Vicare specific
-		  string->latin1	latin1->string
-		  string->ascii		ascii->string)
-    (vicare syntactic-extensions)
-    (prefix (except (vicare unsafe-operations)
-		    string=)
-	    $))
+		  string->latin1		latin1->string
+		  string->ascii			ascii->string
+		  bytevector->hex		hex->bytevector
+		  string-hex->bytevector	bytevector->string-hex
+		  string-base64->bytevector	bytevector->string-base64
+		  bytevector->base64		base64->bytevector
+		  string->uri-encoding		uri-encoding->string
+		  uri-encode			uri-decode
+		  uri-normalise-encoding)
+    #;(vicare language-extensions syntaxes)
+    (vicare arguments validation)
+    (except (vicare unsafe operations)
+	    $string=
+	    $string-total-length
+	    $string-concatenate
+	    $string-reverse-and-concatenate))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (char who obj)
-  (char? obj)
-  (assertion-violation who "expected character as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string length argument" obj))
+
+(define-argument-validation (total-length who obj)
+  (and (fixnum? obj) ($fx<= 0 obj))
+  (assertion-violation who
+    "expected non-negative fixnum as total string length argument" obj))
 
 (define-argument-validation (has-length who str len)
   ($fx= len ($string-length str))
@@ -90,12 +97,6 @@
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string index argument" obj))
-
-(define-argument-validation (index-for-string who idx str)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx< idx ($string-length str))
-  (assertion-violation who "index is out of range for string" idx str))
 
 (define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
@@ -179,8 +180,7 @@
   (define who 'string-ref)
   (with-arguments-validation (who)
       ((string			str)
-       (index			idx)
-       (index-for-string	idx str))
+       (index-for-string	str idx))
     ($string-ref str idx)))
 
 (define (string-set! str idx ch)
@@ -195,8 +195,7 @@
   (define who 'string-set!)
   (with-arguments-validation (who)
       ((string			str)
-       (index			idx)
-       (index-for-string	idx str)
+       (index-for-string	str idx)
        (char			ch))
     ($string-set! str idx ch)))
 
@@ -676,6 +675,68 @@
 	(%fill-strings ($make-string dst.len) strs 0))))))
 
 
+(define (string-reverse-and-concatenate list-of-strings)
+  ;;Defined by  Vicare.  Reverse  the LIST-OF-STRINGS,  concatenate them
+  ;;and return the resulting  string.  It is an error if  the sum of the
+  ;;string lengths is not in the range of the maximum string length.
+  ;;
+  (define who 'string-reverse-and-concatenate)
+  (with-arguments-validation (who)
+      ((list-of-strings	list-of-strings))
+    (let ((total-length ($string-total-length 0 list-of-strings)))
+      (with-dangerous-arguments-validation (who)
+	  ((total-length	total-length))
+	($string-reverse-and-concatenate total-length list-of-strings)))))
+
+(define ($string-total-length total-len list-of-strings)
+  ;;Given the LIST-OF-STRINGS: compute the  total length of the strings,
+  ;;add it  to TOTAL-LEN and return  the result.  If TOTAL-LEN  is zero:
+  ;;the returned value is the total length of the strings.  The returned
+  ;;value may or may not be in the range of the maximum string size.
+  ;;
+  (if (null? list-of-strings)
+      total-len
+    ($string-total-length (+ total-len ($string-length ($car list-of-strings)))
+			      ($cdr list-of-strings))))
+
+(define ($string-concatenate total-length list-of-strings)
+  ;;Concatenate the strings in  LIST-OF-STRINGS, return the result.  The
+  ;;resulting  string   must  have  length  TOTAL-LENGTH.    Assume  the
+  ;;arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-string total-length))
+	     (dst.start	0)
+	     (bvs	list-of-strings))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv   ($car bvs))
+	     (src.len  ($string-length src.bv)))
+	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv ($fx+ dst.start src.len) ($cdr bvs))))))
+
+(define ($string-reverse-and-concatenate total-length list-of-strings)
+  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
+  ;;result.  The resulting string must have length TOTAL-LENGTH.  Assume
+  ;;the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
+  ;;the whole string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-string total-length))
+	     (dst.start	total-length)
+	     (bvs	list-of-strings))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv    ($car bvs))
+	     (src.len   ($string-length src.bv))
+	     (dst.start ($fx- dst.start src.len)))
+	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv dst.start ($cdr bvs))))))
+
+
 (define string-for-each
   ;;Defined  by R6RS.  The  STRS must  all have  the same  length.  PROC
   ;;should accept as many arguments as there are STRS.
@@ -871,16 +932,19 @@
   (define who 'ascii->string)
   (with-arguments-validation (who)
       ((string	str))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((bv.len	($string-length str))
-	   (bv		($make-bytevector bv.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i bv.len)
-	   bv)
-	(let ((code-point ($char->fixnum ($string-ref str i))))
-	  (with-arguments-validation (who)
-	      ((ascii	code-point str))
-	    ($bytevector-u8-set! bv i code-point)))))))
+    ($string->ascii who str)))
+
+(define ($string->ascii who str)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((bv.len	($string-length str))
+	 (bv		($make-bytevector bv.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i bv.len)
+	 bv)
+      (let ((code-point ($char->fixnum ($string-ref str i))))
+	(with-arguments-validation (who)
+	    ((ascii	code-point str))
+	  ($bytevector-u8-set! bv i code-point))))))
 
 (define (ascii->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -889,16 +953,335 @@
   (define who 'ascii->string)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((str.len	($bytevector-length bv))
-	   (str		($make-string str.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i str.len)
-	   str)
-	(let ((code-point ($bytevector-u8-ref bv i)))
-	  (with-arguments-validation (who)
-	      ((ascii	code-point bv))
-	    ($string-set! str i ($fixnum->char code-point))))))))
+    ($ascii->string who bv)))
+
+(define ($ascii->string who bv)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((str.len	($bytevector-length bv))
+	 (str		($make-string str.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str.len)
+	 str)
+      (let ((code-point ($bytevector-u8-ref bv i)))
+	(with-arguments-validation (who)
+	    ((ascii	code-point bv))
+	  ($string-set! str i ($fixnum->char code-point)))))))
+
+
+;;;; bytevectors to/from HEX strings
+
+(define (bytevector->hex bv)
+  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector
+  ;;representing the  ASCII HEX encoding  of the octets.   If successful
+  ;;return the encoded bytevector, else return #f.
+  ;;
+  ;;The length of the output bytevector is twice the length of the input
+  ;;bytevector.  An error  occurs if the output  bytevector length would
+  ;;exceed the maximum bytevector length (which is the greatest fixnum).
+  ;;
+  (define who 'bytevector->hex)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_to_hex" bv)))
+
+(define (hex->bytevector bv)
+  ;;Defined by Vicare.  Convert a  bytevector representing the ASCII HEX
+  ;;encoding  of octets  into  a bytevector  of  octets.  If  successful
+  ;;return the encoded bytevector, else return #f.
+  ;;
+  ;;The length of the output bytevector  is half the length of the input
+  ;;bytevector.  An error  occurs if the input  bytevector holds invalid
+  ;;data.
+  ;;
+  (define who 'hex->bytevector)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_from_hex" bv)))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector->string-hex bv)
+  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
+  ;;the HEX representation of the bytes.
+  ;;
+  (define who 'bytevector->string-hex)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (let ((rv (foreign-call "ikrt_bytevector_to_hex" bv)))
+      (and rv ($ascii->string who rv)))))
+
+(define (string-hex->bytevector S)
+  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
+  ;;the byte representation of the HEX sequences.
+  ;;
+  (define who 'string-hex->bytevector)
+  (with-arguments-validation (who)
+      ((string	S))
+    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii who S))))
+
+
+;;;; bytevectors to/from BASE64 strings
+
+(define (bytevector->base64 bv)
+  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector
+  ;;representing the ASCII Base64 encoding of the octets.  If successful
+  ;;return the encoded bytevector, else return #f.
+  ;;
+  ;;An error  occurs if  the output bytevector  length would  exceed the
+  ;;maximum bytevector length (which is the greatest fixnum).
+  ;;
+  (define who 'bytevector->base64)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_to_base64" bv)))
+
+(define (base64->bytevector bv)
+  ;;Defined  by Vicare.   Convert  a bytevector  representing the  ASCII
+  ;;Base64  encoding  of  octets  into   a  bytevector  of  octets.   If
+  ;;successful return the encoded bytevector, else return #f.
+  ;;
+  ;; An error occurs if the input bytevector holds invalid data.
+  ;;
+  (define who 'base64->bytevector)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_from_base64" bv)))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector->string-base64 bv)
+  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
+  ;;the Base64 representation of the bytes.
+  ;;
+  (define who 'bytevector->string-base64)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
+      (and rv ($ascii->string who rv)))))
+
+(define (string-base64->bytevector S)
+  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
+  ;;the byte representation of the Base64 sequences.
+  ;;
+  (define who 'string-base64->bytevector)
+  (with-arguments-validation (who)
+      ((string	S))
+    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii who S))))
+
+
+;;;; bytevectors to/from RFC 3986 URI percent encoding
+
+(define (string->uri-encoding str)
+  (uri-encode (string->utf8 str)))
+
+(define (uri-encoding->string bv)
+  (utf8->string (uri-decode bv)))
+
+(module (uri-encode uri-decode uri-normalise-encoding)
+
+  (define (uri-encode bv)
+    ;;Return   a  percent-encoded   bytevector  representation   of  the
+    ;;bytevector BV according to RFC 3986.
+    ;;
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who 'uri-encode)
+    (with-arguments-validation (who)
+	((bytevector	bv))
+      (let-values (((port getter) (open-bytevector-output-port)))
+	(do ((i 0 ($fxadd1 i)))
+	    (($fx= i ($bytevector-length bv))
+	     (getter))
+	  (let ((chi ($bytevector-u8-ref bv i)))
+	    (if (is-unreserved? chi)
+		(put-u8 port chi)
+	      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi))))))))
+
+  (define (uri-decode bv)
+    ;;Percent-decode the given bytevector according to RFC 3986.
+    ;;
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who 'uri-decode)
+    (with-arguments-validation (who)
+	((bytevector	bv))
+      (let-values (((port getter) (open-bytevector-output-port))
+		   ((buf)         (make-string 2)))
+	(do ((i 0 ($fxadd1 i)))
+	    (($fx= i ($bytevector-length bv))
+	     (getter))
+	  (let ((chi ($bytevector-u8-ref bv i)))
+	    (put-u8 port
+		    (if ($fx= chi $int-percent)
+			(begin
+			  (set! i ($fxadd1 i))
+			  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref bv i)))
+			  (set! i ($fxadd1 i))
+			  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref bv i)))
+			  (string->number buf 16))
+		      chi)))))))
+
+  (define (uri-normalise-encoding in-bv)
+    ;;Normalise  the given  percent-encoded bytevector;  chars that  are
+    ;;encoded  but  should  not  are  decoded.   Return  the  normalised
+    ;;bytevector, in  which percent-encoded characters are  displayed in
+    ;;upper case.
+    ;;
+    ;;We  assume that  IN-BV is  composed by  integers corresponding  to
+    ;;characters in the valid range for URIs.
+    ;;
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who 'uri-normalise-encoded)
+    (with-arguments-validation (who)
+	((bytevector	in-bv))
+      (let-values (((port getter)	(open-bytevector-output-port))
+		   ((buf)		(make-string 2)))
+	(do ((i 0 ($fxadd1 i)))
+	    (($fx= i ($bytevector-length in-bv))
+	     (getter))
+	  (let ((chi ($bytevector-u8-ref in-bv i)))
+	    (if ($fx= chi $int-percent)
+		(begin
+		  (set! i ($fxadd1 i))
+		  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref in-bv i)))
+		  (set! i ($fxadd1 i))
+		  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref in-bv i)))
+		  (let ((chi (string->number (string-upcase buf) 16)))
+		    (if (is-unreserved? chi)
+			(put-u8 port chi)
+		      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
+	      (put-u8 port chi)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (is-unreserved? chi)
+    (or (is-alpha-digit? chi)
+	(= chi $int-dash)
+	(= chi $int-dot)
+	(= chi $int-underscore)
+	(= chi $int-tilde)))
+
+  (define-inline (is-alpha-digit? chi)
+    (or (is-alpha? chi)
+	(is-dec-digit? chi)))
+
+  (define-inline (is-alpha? chi)
+    (or (<= $int-A chi $int-Z)
+	(<= $int-a chi $int-z)))
+
+  (define-inline (is-dec-digit? chi)
+    (<= $int-0 chi $int-9))
+
+  (define-constant $int-a		(char->integer #\a))
+  (define-constant $int-f		(char->integer #\f))
+  (define-constant $int-z		(char->integer #\z))
+  (define-constant $int-A		(char->integer #\A))
+  (define-constant $int-F		(char->integer #\F))
+  (define-constant $int-Z		(char->integer #\Z))
+  (define-constant $int-0		(char->integer #\0))
+  (define-constant $int-9		(char->integer #\9))
+
+  (define-constant $int-percent		(char->integer #\%))
+
+  ;; unreserved
+  (define-constant $int-dash		(char->integer #\-))
+  (define-constant $int-dot		(char->integer #\.))
+  (define-constant $int-underscore	(char->integer #\_))
+  (define-constant $int-tilde		(char->integer #\~))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant PERCENT-ENCODER-TABLE
+    ;;Section 2.1 Percent-Encoding of  RFC 3986 states "For consistency,
+    ;;URI  producers and  normalizers should  use uppercase  hexadecimal
+    ;;digits for all percent-encodings."
+    ;;
+    '#( ;;
+       #ve(ascii "%00") #ve(ascii "%01") #ve(ascii "%02") #ve(ascii "%03")
+       #ve(ascii "%04") #ve(ascii "%05") #ve(ascii "%06") #ve(ascii "%07")
+       #ve(ascii "%08") #ve(ascii "%09") #ve(ascii "%0A") #ve(ascii "%0B")
+       #ve(ascii "%0C") #ve(ascii "%0D") #ve(ascii "%0E") #ve(ascii "%0F")
+
+       #ve(ascii "%10") #ve(ascii "%11") #ve(ascii "%12") #ve(ascii "%13")
+       #ve(ascii "%14") #ve(ascii "%15") #ve(ascii "%16") #ve(ascii "%17")
+       #ve(ascii "%18") #ve(ascii "%19") #ve(ascii "%1A") #ve(ascii "%1B")
+       #ve(ascii "%1C") #ve(ascii "%1D") #ve(ascii "%1E") #ve(ascii "%1F")
+
+       #ve(ascii "%20") #ve(ascii "%21") #ve(ascii "%22") #ve(ascii "%23")
+       #ve(ascii "%24") #ve(ascii "%25") #ve(ascii "%26") #ve(ascii "%27")
+       #ve(ascii "%28") #ve(ascii "%29") #ve(ascii "%2A") #ve(ascii "%2B")
+       #ve(ascii "%2C") #ve(ascii "%2D") #ve(ascii "%2E") #ve(ascii "%2F")
+
+       #ve(ascii "%30") #ve(ascii "%31") #ve(ascii "%32") #ve(ascii "%33")
+       #ve(ascii "%34") #ve(ascii "%35") #ve(ascii "%36") #ve(ascii "%37")
+       #ve(ascii "%38") #ve(ascii "%39") #ve(ascii "%3A") #ve(ascii "%3B")
+       #ve(ascii "%3C") #ve(ascii "%3D") #ve(ascii "%3E") #ve(ascii "%3F")
+
+       #ve(ascii "%40") #ve(ascii "%41") #ve(ascii "%42") #ve(ascii "%43")
+       #ve(ascii "%44") #ve(ascii "%45") #ve(ascii "%46") #ve(ascii "%47")
+       #ve(ascii "%48") #ve(ascii "%49") #ve(ascii "%4A") #ve(ascii "%4B")
+       #ve(ascii "%4C") #ve(ascii "%4D") #ve(ascii "%4E") #ve(ascii "%4F")
+
+       #ve(ascii "%50") #ve(ascii "%51") #ve(ascii "%52") #ve(ascii "%53")
+       #ve(ascii "%54") #ve(ascii "%55") #ve(ascii "%56") #ve(ascii "%57")
+       #ve(ascii "%58") #ve(ascii "%59") #ve(ascii "%5A") #ve(ascii "%5B")
+       #ve(ascii "%5C") #ve(ascii "%5D") #ve(ascii "%5E") #ve(ascii "%5F")
+
+       #ve(ascii "%60") #ve(ascii "%61") #ve(ascii "%62") #ve(ascii "%63")
+       #ve(ascii "%64") #ve(ascii "%65") #ve(ascii "%66") #ve(ascii "%67")
+       #ve(ascii "%68") #ve(ascii "%69") #ve(ascii "%6A") #ve(ascii "%6B")
+       #ve(ascii "%6C") #ve(ascii "%6D") #ve(ascii "%6E") #ve(ascii "%6F")
+
+       #ve(ascii "%70") #ve(ascii "%71") #ve(ascii "%72") #ve(ascii "%73")
+       #ve(ascii "%74") #ve(ascii "%75") #ve(ascii "%76") #ve(ascii "%77")
+       #ve(ascii "%78") #ve(ascii "%79") #ve(ascii "%7A") #ve(ascii "%7B")
+       #ve(ascii "%7C") #ve(ascii "%7D") #ve(ascii "%7E") #ve(ascii "%7F")
+
+       #ve(ascii "%80") #ve(ascii "%81") #ve(ascii "%82") #ve(ascii "%83")
+       #ve(ascii "%84") #ve(ascii "%85") #ve(ascii "%86") #ve(ascii "%87")
+       #ve(ascii "%88") #ve(ascii "%89") #ve(ascii "%8A") #ve(ascii "%8B")
+       #ve(ascii "%8C") #ve(ascii "%8D") #ve(ascii "%8E") #ve(ascii "%8F")
+
+       #ve(ascii "%90") #ve(ascii "%91") #ve(ascii "%92") #ve(ascii "%93")
+       #ve(ascii "%94") #ve(ascii "%95") #ve(ascii "%96") #ve(ascii "%97")
+       #ve(ascii "%98") #ve(ascii "%99") #ve(ascii "%9A") #ve(ascii "%9B")
+       #ve(ascii "%9C") #ve(ascii "%9D") #ve(ascii "%9E") #ve(ascii "%9F")
+
+       #ve(ascii "%A0") #ve(ascii "%A1") #ve(ascii "%A2") #ve(ascii "%A3")
+       #ve(ascii "%A4") #ve(ascii "%A5") #ve(ascii "%A6") #ve(ascii "%A7")
+       #ve(ascii "%A8") #ve(ascii "%A9") #ve(ascii "%AA") #ve(ascii "%AB")
+       #ve(ascii "%AC") #ve(ascii "%AD") #ve(ascii "%AE") #ve(ascii "%AF")
+
+       #ve(ascii "%B0") #ve(ascii "%B1") #ve(ascii "%B2") #ve(ascii "%B3")
+       #ve(ascii "%B4") #ve(ascii "%B5") #ve(ascii "%B6") #ve(ascii "%B7")
+       #ve(ascii "%B8") #ve(ascii "%B9") #ve(ascii "%BA") #ve(ascii "%BB")
+       #ve(ascii "%BC") #ve(ascii "%BD") #ve(ascii "%BE") #ve(ascii "%BF")
+
+       #ve(ascii "%C0") #ve(ascii "%C1") #ve(ascii "%C2") #ve(ascii "%C3")
+       #ve(ascii "%C4") #ve(ascii "%C5") #ve(ascii "%C6") #ve(ascii "%C7")
+       #ve(ascii "%C8") #ve(ascii "%C9") #ve(ascii "%CA") #ve(ascii "%CB")
+       #ve(ascii "%CC") #ve(ascii "%CD") #ve(ascii "%CE") #ve(ascii "%CF")
+
+       #ve(ascii "%D0") #ve(ascii "%D1") #ve(ascii "%D2") #ve(ascii "%D3")
+       #ve(ascii "%D4") #ve(ascii "%D5") #ve(ascii "%D6") #ve(ascii "%D7")
+       #ve(ascii "%D8") #ve(ascii "%D9") #ve(ascii "%DA") #ve(ascii "%DB")
+       #ve(ascii "%DC") #ve(ascii "%DD") #ve(ascii "%DE") #ve(ascii "%DF")
+
+       #ve(ascii "%E0") #ve(ascii "%E1") #ve(ascii "%E2") #ve(ascii "%E3")
+       #ve(ascii "%E4") #ve(ascii "%E5") #ve(ascii "%E6") #ve(ascii "%E7")
+       #ve(ascii "%E8") #ve(ascii "%E9") #ve(ascii "%EA") #ve(ascii "%EB")
+       #ve(ascii "%EC") #ve(ascii "%ED") #ve(ascii "%EE") #ve(ascii "%EF")
+
+       #ve(ascii "%F0") #ve(ascii "%F1") #ve(ascii "%F2") #ve(ascii "%F3")
+       #ve(ascii "%F4") #ve(ascii "%F5") #ve(ascii "%F6") #ve(ascii "%F7")
+       #ve(ascii "%F8") #ve(ascii "%F9") #ve(ascii "%FA") #ve(ascii "%FB")
+       #ve(ascii "%FC") #ve(ascii "%FD") #ve(ascii "%FE") #ve(ascii "%FF")))
+
+  #| end of module |# )
 
 
 ;;;; done

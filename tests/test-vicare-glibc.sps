@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -33,7 +33,7 @@
   (prefix (vicare ffi)
 	  ffi.)
   (vicare platform constants)
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -106,12 +106,16 @@
 
   (check (glibc.if-indextoname 0)	=> #f)
   (check (glibc.if-indextoname 1)	=> "lo")
-  (check (glibc.if-indextoname 2)	=> "eth0")
 
-  (check (glibc.if-nametoindex "lo")		=> 1)
-  (check (glibc.if-nametoindex "eth0")	=> 2)
+  (check (glibc.if-nametoindex "lo")	=> 1)
 
-  (check-pretty-print (list 'alist-of-ifaces (glibc.if-nameindex)))
+  ;;These are specific to the maintainer's system.
+  (when #f
+    (check (glibc.if-indextoname 2)		=> "eth0")
+    (check (glibc.if-nametoindex "eth0")	=> 2))
+
+  (when #t
+    (check-pretty-print (list 'alist-of-ifaces (glibc.if-nameindex))))
 
 ;;; --------------------------------------------------------------------
 

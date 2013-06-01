@@ -2,6 +2,8 @@
 
 #AM_MAKEINFOFLAGS	= --no-split
 
+EXTRA_DIST		= QUEST-FOR-ISSUE-35
+
 info_TEXINFOS		= vicare-scheme.texi
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
@@ -17,9 +19,11 @@ vicare_scheme_TEXINFOS	= \
 	linux.texi			\
 	syslib.texi			\
 	capi.texi			\
+	lang.texi			\
 	libs.texi			\
 	objects.texi			\
 	debug.texi			\
+	machinery.texi			\
 	compiler.texi			\
 	\
 	missing.texi			\
@@ -30,6 +34,7 @@ vicare_scheme_TEXINFOS	= \
 	shmem.texi			\
 	binfmt.texi			\
 	cre2.texi			\
+	history.texi			\
 	references.texi			\
 	\
 	srfi.texi				\
@@ -64,6 +69,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-strings.texi			\
 	srfi-testing.texi			\
 	srfi-time.texi				\
-	srfi-vectors.texi
+	srfi-vectors.texi			\
+	srfi-functional-pairs.texi
 
 ### end of file

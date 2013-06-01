@@ -2,7 +2,7 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([Vicare Scheme],[0.2d21],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.3d0],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_MACRO_DIR([autotools])
@@ -27,145 +27,83 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 #page
 #### additional configuration command line options
 
-vicare_DEBUG=no
-AC_MSG_CHECKING([whether debugging features are included in compiled Scheme libraries])
-AC_ARG_ENABLE([debug],
-  [AS_HELP_STRING([--enable-debug],
-     [enable compilation of Scheme libraries with debugging features (default is disable)])],
-  [AC_MSG_RESULT([$enableval])
-  if test "z$enableval" = zno
-  then vicare_DEBUG=no
-  else vicare_DEBUG=yes
-  fi],
-  [vicare_DEBUG=no
-   AC_MSG_RESULT([no])])
-AM_CONDITIONAL([WANT_DEBUG],[test x$vicare_DEBUG = xyes])
+# This must always be defined.  When true: the bottom page of the Scheme
+# stack segment  is protected  from read/write operation,  so that  if a
+# stack  overflow happens  it results  in a  SIGSEGV rather  than memory
+# corruption.
+AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
+  [Define to true to protect the Scheme stack from overflow.])
 
-vicare_ARGUMENTS_VALIDATION=1
-AC_MSG_CHECKING([whether arguments validation is enabled])
-AC_ARG_ENABLE([arguments-validation],
-  [AS_HELP_STRING([--disable-arguments-validation],
-     [disable arguments validation in the boot image (default is enable)])],
-  [AC_MSG_RESULT([$enableval])
-  if test "z$enableval" = zno
-  then vicare_ARGUMENTS_VALIDATION=0
-  else vicare_ARGUMENTS_VALIDATION=1
-  fi],
-  [vicare_ARGUMENTS_VALIDATION=1
-   AC_MSG_RESULT([yes])])
+AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS,["-O2"])])
 
-AC_SUBST([VICARE_ARGUMENTS_VALIDATION],[$vicare_ARGUMENTS_VALIDATION])
+VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
+  [whether debugging features are included in compiled Scheme libraries],
+  [enable compilation of Scheme libraries with debugging features])
+AM_CONDITIONAL([WANT_DEBUG],
+  [test "x$vicare_enable_DEBUG" = xyes])
 
-dnl --------------------------------------------------------------------
+AM_COND_IF([WANT_DEBUG],
+  [AS_VAR_SET(VFLAGS,"$VFLAGS -g")])
 
-AC_ARG_ENABLE([posix],
-  [AS_HELP_STRING([--disable-posix],
-     [disable bindings to GNU C Library (default is enable)])],
-  [case "${enableval}" in
-     yes) vicare_posix_bindings=true ;;
-     no)  vicare_posix_bindings=false ;;
-     *) AC_MSG_ERROR([bad value ${enableval} for --enable-posix]) ;;
-   esac],[vicare_posix_bindings=true])
-AM_CONDITIONAL([WANT_POSIX],[test x$vicare_posix_bindings = xtrue])
+VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
+  [whether arguments validation is enabled],
+  [enable arguments validation in the boot image])
+AM_CONDITIONAL([WANT_ARGUMENTS_VALIDATION],
+  [test "x$vicare_enable_ARGUMENTS_VALIDATION" = xyes])
+
+vicare_subst_ARGUMENTS_VALIDATION=1
+AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
+  [vicare_subst_ARGUMENTS_VALIDATION=1],
+  [vicare_subst_ARGUMENTS_VALIDATION=0])
+AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
+  [$vicare_subst_ARGUMENTS_VALIDATION])
 
 dnl --------------------------------------------------------------------
 
-AC_ARG_ENABLE([glibc],
-  [AS_HELP_STRING([--disable-glibc],
-     [disable bindings to GNU C Library (default is enable)])],
-  [case "${enableval}" in
-     yes) vicare_glibc_bindings=true ;;
-     no)  vicare_glibc_bindings=false ;;
-     *) AC_MSG_ERROR([bad value ${enableval} for --enable-glibc]) ;;
-   esac],[vicare_glibc_bindings=true])
-AM_CONDITIONAL([WANT_GLIBC],[test x$vicare_glibc_bindings = xtrue])
+VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
+  [whether to install the SRFI libraries],
+  [enable installation of SRFI libraries])
+AM_CONDITIONAL([WANT_SRFI],[test "x$vicare_enable_SRFI" = xyes])
+
+VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
+  [whether POSIX features are enabled],
+  [enable POSIX features])
+AM_CONDITIONAL([WANT_POSIX],[test "x$vicare_enable_POSIX" = xyes])
+
+VICARE_ENABLE_OPTION([GLIBC],[glibc],[yes],
+  [whether GNU C Library features are enabled],
+  [enable GNU C Library features])
+AM_CONDITIONAL([WANT_GLIBC],[test "x$vicare_enable_GLIBC" = xyes])
+
+VICARE_ENABLE_OPTION([LINUX],[linux],[yes],
+  [whether Linux features are enabled],
+  [enable Linux features])
+AM_CONDITIONAL([WANT_LINUX],[test "x$vicare_enable_LINUX" = xyes])
 
 dnl --------------------------------------------------------------------
 
-AC_ARG_ENABLE([linux],
-  [AS_HELP_STRING([--disable-linux],
-     [disable bindings to GNU C Library (default is enable)])],
-  [case "${enableval}" in
-     yes) vicare_linux_bindings=true ;;
-     no)  vicare_linux_bindings=false ;;
-     *) AC_MSG_ERROR([bad value ${enableval} for --enable-linux]) ;;
-   esac],[vicare_linux_bindings=true])
-AM_CONDITIONAL([WANT_LINUX],[test x$vicare_linux_bindings = xtrue])
+VICARE_ENABLE_OPTION([BINFMT],[binfmt],[no],
+  [whether usage of the binfmt_misc Linux kernel module is enabled],
+  [enable usage of the binfmt_misc linux kernel module])
+AM_CONDITIONAL([WANT_BINFMT],[test "x$vicare_enable_BINFMT" = xyes])
 
-dnl --------------------------------------------------------------------
+VICARE_ENABLE_OPTION([TIME_TESTS],[time-tests],[no],
+  [whether to enable timing of tests],
+  [enable timing of tests])
+AM_CONDITIONAL([WANT_TIME_TESTS],[test "x$vicare_enable_TIME_TESTS" = xyes])
 
-AC_MSG_CHECKING([whether usage of the binfmt_misc Linux kernel module is enabled])
-AC_ARG_ENABLE([binfmt],
-  [AS_HELP_STRING([--enable-binfmt],
-     [enable usage of the binfmt_misc linux kernel module (default: no)])],
-  [if test "$enableval" = yes
-   then vicare_enable_binfmt=yes
-   else vicare_enable_binfmt=no
-   fi],
-  [vicare_enable_binfmt=no])
-AC_MSG_RESULT([$vicare_enable_binfmt])
-AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xyes])
-
-dnl --------------------------------------------------------------------
-
-AC_MSG_CHECKING([whether to enable timing of tests])
-AC_ARG_ENABLE([time-tests],
-  [AS_HELP_STRING([--enable-time-tests],
-     [enable timing of tests (default: no)])],
-  [if test x$enableval = xyes
-   then vicare_time_tests=yes
-   else vicare_time_tests=no
-   fi],
-  [vicare_time_tests=no])
-AC_MSG_RESULT([$vicare_time_tests])
-AM_CONDITIONAL([WANT_TIME_TESTS],[test x$vicare_time_tests = xyes])
 AM_COND_IF([WANT_TIME_TESTS],
   [AC_CHECK_PROG([TIME_PROGRAM],[time],[time],[:])])
 
 dnl --------------------------------------------------------------------
-dnl Optional linking with pthreads
 
 dnl This  must come before  searching for POSIX functions.   For example
 dnl the POSIX semaphore functions appear to need this library.
-AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is check)]),
-  [true],[with_pthread=check])
-
-vicare_with_pthread=no
-if test x$with_pthread = xyes || test x$with_pthread = xcheck
-then
-  # Check for pthread header and library.
-  AC_CHECK_HEADER([pthread.h],[vicare_have_pthread_h=yes],[vicare_have_pthread_h=no])
-  AC_CHECK_LIB([pthread],[main],[vicare_have_pthread=yes],[vicare_have_pthread=no])
-  if test "$vicare_have_pthread" = yes && test "$vicare_have_pthread_h" = yes
-  then
-    # Both the library and the header were found: success!
-    AC_MSG_NOTICE([pthread support enabled])
-    AC_DEFINE([HAVE_PTHREAD],[1],[define if you have a pthread library])
-    vicare_with_pthread=yes
-    LIBS="$LIBS -lpthread"
-  elif test "$with_pthread" = yes; then
-    # The user requested pthread support or die, but either the header or
-    # the library or both were not found.
-    if test "$vicare_have_pthread_h" = no; then
-      AC_MSG_ERROR([pthread.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/pthread.h>   <other-options ...>
-])
-    fi
-    if test "$vicare_have_pthread" = no; then
-      AC_MSG_ERROR([pthread cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/pthread.ld|dylib|so|etc.>  <other-options ...>
-])
-    fi
-  else
-    # The user requested a check for optional pthread support, but either
-    # the header or the library or both were not found.
-    AC_MSG_WARN([pthread not found])
-  fi
-fi
-AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
+VICARE_WITH_LIBRARY([PTHREAD],[pthread],[check],
+  [whether to link with pthread],
+  [link executable with pthread],
+  [pthread.h],[pthread],[main])
+AM_CONDITIONAL([WANT_PTHREAD],[test "x$vicare_with_PTHREAD" = xyes])
 
 #page
 #### basic system inspection
@@ -274,13 +212,20 @@ AC_FUNC_MEMCMP
 AC_FUNC_MMAP
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([bzero memmove memset mmap munmap sqrt strerror getaddrinfo])
-AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
-AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime])
+AC_CHECK_FUNCS([open close read write lseek fcntl],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([bzero memmove memset mmap munmap sqrt strerror getaddrinfo],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([stat lstat realpath unlink mkdir],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
+AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime],,
+   [AC_MSG_ERROR([missing needed platform function],[1])])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
+AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
+AC_CHECK_FUNCS([hypot cbrt])
 
 AC_CACHE_SAVE
 
@@ -387,7 +332,6 @@ dnl --------------------------------------------------------------------
 
 AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([setenv unsetenv])
-  AC_CHECK_DECLS([environ])
   AC_CHECK_FUNCS([getpid getppid])
   AC_CHECK_FUNCS([system fork execv execve execvp])
   AC_CHECK_FUNCS([waitpid wait])
@@ -397,7 +341,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([chown fchown chmod fchmod umask utime utimes lutimes futimes])
   AC_CHECK_FUNCS([link symlink readlink remove rename])
   AC_CHECK_FUNCS([rmdir getcwd chdir fchdir opendir fdopendir readdir closedir rewinddir telldir seekdir])
-  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select fcntl ioctl dup dup2 pipe mkfifo truncate ftruncate])
+  AC_CHECK_FUNCS([open close read pread write pwrite lseek readv writev poll select ioctl dup dup2 pipe mkfifo truncate ftruncate lockf])
   AC_CHECK_FUNCS([msync mremap madvise mlock munlock mlockall munlockall mprotect])
   AC_CHECK_TYPES([struct sockaddr_un],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct sockaddr_in],,,[VICARE_INCLUDES])
@@ -428,6 +372,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([clock times timelocal timegm nanosleep])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
   AC_CHECK_FUNCS([getrusage getrlimit setrlimit])
+  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
 
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
@@ -957,10 +902,10 @@ AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_FALSE([O_NOATIME])])
 
 ## These are Linux specific.
-AM_COND_IF([WANT_POSIX],
+AM_COND_IF([WANT_LINUX],
   [VICARE_CONSTANT_TESTS([O_CLOEXEC O_DIRECT O_DIRECTORY O_LARGEFILE O_NOFOLLOW FD_CLOEXEC])],
   [VICARE_CONSTANT_FALSES([O_CLOEXEC O_DIRECT O_DIRECTORY O_LARGEFILE O_NOFOLLOW FD_CLOEXEC])])
-AM_COND_IF([WANT_POSIX],
+AM_COND_IF([WANT_LINUX],
   [VICARE_CONSTANT_TESTS([EPOLL_CLOEXEC EPOLL_CTL_ADD EPOLL_CTL_MOD
      EPOLL_CTL_DEL EPOLLIN EPOLLOUT EPOLLRDHUP EPOLLPRI EPOLLERR
      EPOLLHUP EPOLLET EPOLLONESHOT])],
@@ -1394,6 +1339,11 @@ AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_TESTS([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])],
   [VICARE_CONSTANT_FALSES([RUSAGE_SELF RUSAGE_CHILDREN RUSAGE_THREAD])])
 
+# For "lockf()".
+AM_COND_IF([WANT_POSIX],
+  [VICARE_CONSTANT_TESTS([F_LOCK F_TLOCK F_ULOCK F_TEST])],
+  [VICARE_CONSTANT_FALSES([F_LOCK F_TLOCK F_ULOCK F_TEST])])
+
 AC_CACHE_SAVE
 
 #page
@@ -1409,8 +1359,7 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
   AC_CHECK_FUNCS([rand srand])
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
-  AC_CHECK_FUNCS([wordexp wordfree])
-  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])])
+  AC_CHECK_FUNCS([wordexp wordfree])])
 
 AC_CACHE_SAVE
 
@@ -1450,6 +1399,7 @@ int main (void)
   AC_CHECK_FUNCS([timerfd_create timerfd_settime timerfd_gettime])
   AC_CHECK_FUNCS([prlimit])
   AC_CHECK_FUNCS([inotify_init inotify_init1 inotify_add_watch inotify_rm_watch])
+  AC_CHECK_FUNCS([daemon])
 ])
 
 dnl --------------------------------------------------------------------
@@ -1479,82 +1429,20 @@ ERROR: libgmp can be obtained from <http://gmplib.org>.])])
 dnl --------------------------------------------------------------------
 dnl Optional binding to Libffi
 
-AC_ARG_WITH([libffi],
-  AS_HELP_STRING([--with-libffi],[add support for libffi (default is check)]),
-  [true],[with_libffi=check])
-
-vicare_with_libffi=no
-if test x$with_libffi = xyes || test x$with_libffi = xcheck
-then
-  # Check for libffi header and library.
-  AC_CHECK_HEADER([ffi.h],[vicare_have_libffi_h=yes],[vicare_have_libffi_h=no])
-  AC_CHECK_LIB([ffi],[ffi_call],[vicare_have_libffi=yes],[vicare_have_libffi=no])
-  if test "$vicare_have_libffi" = yes && test "$vicare_have_libffi_h" = yes
-  then
-    # Both the library and the header were found: success!
-    AC_MSG_NOTICE([libffi support enabled])
-    AC_DEFINE([HAVE_LIBFFI],[1],[define if you have a libffi library])
-    vicare_with_libffi=yes
-    LIBS="$LIBS -lffi"
-  elif test "$with_libffi" = yes; then
-    # The user requested libffi support or die, but either the header or
-    # the library or both were not found.
-    if test "$vicare_have_libffi_h" = no; then
-      AC_MSG_ERROR([ffi.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/ffi.h>   <other-options ...>
-])
-    fi
-    if test "$vicare_have_libffi" = no; then
-      AC_MSG_ERROR([libffi cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/libffi.ld|dylib|so|etc.>  <other-options ...>
-])
-    fi
-  else
-    # The user requested a check for optional libffi support, but either
-    # the header or the library or both were not found.
-    AC_MSG_WARN([libffi not found -- FFI disabled])
-  fi
-fi
-AM_CONDITIONAL([WANT_LIBFFI],[test x$vicare_with_libffi = xyes])
+VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
+  [whether to link with Libffi],
+  [link executable with Libffi],
+  [ffi.h],[ffi],[ffi_call])
+AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
-AC_ARG_WITH([iconv],
-  AS_HELP_STRING([--with-iconv],[enable support for iconv (default is check)]),
-  [true],[with_iconv=check])
-
-vicare_with_iconv=no
-if test x$with_iconv = xyes || test x$with_iconv = xcheck
-then
-  # Check for iconv header and library.
-  AC_CHECK_HEADER([iconv.h],[vicare_have_iconv_h=yes],[vicare_have_iconv_h=no])
-  AC_CHECK_LIB([iconv],[iconv_open],[vicare_have_iconv=yes],[vicare_have_iconv=no])
-  if test "$vicare_have_iconv" = yes && test "$vicare_have_iconv_h" = yes
-  then
-    # Both the library and the header were found: success!
-    AC_MSG_NOTICE([iconv support enabled])
-    AC_DEFINE([HAVE_LIBICONV],[1],[define if you have an iconv library])
-    vicare_with_iconv=yes
-    LIBS="$LIBS -liconv"
-  elif test "$with_iconv" = yes; then
-    # The user requested iconv support  or die, but either the header or
-    # the library or both were not found.
-    if test "$vicare_have_iconv_h" = no; then
-      AC_MSG_ERROR([iconv.h cannot be found.])
-    fi
-    if test "$vicare_have_iconv" = no; then
-      AC_MSG_ERROR([iconv library cannot be found.])
-    fi
-  else
-    # The user requested a check  for optional iconv support, but either
-    # the header or the library or both were not found.
-    AC_MSG_WARN([iconv not found -- support disabled])
-  fi
-fi
-AM_CONDITIONAL([WANT_LIBICONV],[test x$vicare_with_iconv = xyes])
+VICARE_WITH_LIBRARY([LIBICONV],[libiconv],[check],
+  [whether to link with Libiconv],
+  [link executable with Libiconv],
+  [iconv.h],[iconv],[iconv_open])
+AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
 
 AM_COND_IF([WANT_LIBICONV],
   [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
@@ -1562,74 +1450,84 @@ AM_COND_IF([WANT_LIBICONV],
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
 
+AC_MSG_CHECKING([whether to link with GNU Readline or compatible library])
 AC_ARG_WITH([readline],
-  AS_HELP_STRING([--with-readline],
-    [enable support for GNU readline or compatible (default is check)]),
-  [true],[with_readline=check])
+  [AS_HELP_STRING([--with-readline],
+     [enable support for GNU readline or compatible (default is check)])],
+  [AS_CASE([$withval],
+     [yes],  [with_READLINE=yes],
+     [no],   [with_READLINE=no],
+     [check],[with_READLINE=check],
+     [AC_MSG_ERROR([bad value $withval for --with-readline])])],
+  [with_READLINE=check])
+AC_MSG_RESULT([$with_READLINE])
 
-vicare_with_readline=no
-if test x$with_readline = xyes || test x$with_readline = xcheck
-then
-  AX_LIB_READLINE
-  if test "$ax_cv_lib_readline" != "no"
-  then
-    vicare_with_readline=yes
-  else
-    if test x$with_readline = xyes ; then
-      # The user requested support readline or die, but readline was not
-      # found.
-      AC_MSG_ERROR([GNU Readline or compatible not found])
-    else
-      # The user  requested optional support for  readline, and readline
-      # was not found.
-      AC_MSG_WARN([GNU Readline or compatible not found])
-    fi
-  fi
-fi
-AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
+vicare_with_READLINE=no
+AS_IF([test "x$with_READLINE" != "xno"],
+  [AX_LIB_READLINE
+   AS_IF([test "x$ax_cv_lib_readline" != "xno"],
+     [vicare_with_READLINE=yes],
+     [AS_IF([test "x$with_READLINE" = xyes],
+        [# The user requested support readline or die, but
+         # readline was not found.
+         AC_MSG_ERROR([GNU Readline or compatible not found])],
+        [# The user  requested optional support for readline,
+         # but readline was not found.
+         AC_MSG_WARN([GNU Readline or compatible not found])])])],
+   [AC_MSG_NOTICE([Readline support was not requested])])
+AM_CONDITIONAL([WANT_READLINE],[test "x$vicare_with_READLINE" = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for CRE2 (optional)
 
+with_CRE2=no
+AC_MSG_CHECKING([whether to link with CRE2])
 AC_ARG_WITH([cre2],
-  AS_HELP_STRING([--with-cre2],[enable support for CRE2 (default is no)]),
-  [true],[enable_cre2=no])
+  [AS_HELP_STRING([--with-cre2],[link executable with CRE2 (default is no)])],
+  [AS_CASE([$withval],
+     [yes],  [with_CRE2=yes],
+     [no],   [with_CRE2=no],
+     [check],[with_CRE2=check],
+     [AC_MSG_ERROR([bad value $withval for --with-cre2])])],
+  [with_CRE2=no])
+AC_MSG_RESULT([$with_CRE2])
 
-cre2_val=0
+# We must check for both CRE2 and re2!!!
+
+vicare_with_CRE2=no
 CRE2_LIBS=
-if test "x$enable_cre2" != xno; then
-   dnl No need to check for "re2.h" header file.
+AS_IF([test "x$with_CRE2" != xno],
+  [# Check for header file and shared (or static) library.
+   # No need to check for "re2.h" header file.
    AC_CHECK_LIB([re2],[main],
      [have_re2=yes],
      [AC_MSG_WARN([test for RE2 library failed])])
-   AC_CHECK_LIB([cre2],[cre2_version_string],[have_cre2=yes],[have_cre2=no],[-lre2])
-   AC_CHECK_HEADERS([cre2.h],[have_cre2_h=yes],[have_cre2_h=no])
-  if test "$have_cre2" = yes && test "$have_cre2_h" = yes; then
-    cre2_val=1
-    CRE2_LIBS="-lcre2 -lre2"
-    AC_MSG_NOTICE([CRE2 successfully enabled])
-  elif test "$enable_cre2" = yes; then
-    if test "$have_cre2_h" = no; then
-      AC_MSG_ERROR([cre2.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/cre2.h>   <other-options ...>
-])
-    fi
-    if test "$have_cre2" = no; then
-      AC_MSG_ERROR([CRE2 cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/cre2.ld|dylib|so|etc.>  <other-options ...>
-])
-    fi
-  else
-    AC_MSG_WARN([cre2 not found -- CRE2 disabled])
-  fi
-else
-  AC_MSG_NOTICE([CRE2 was not requested])
-fi # "$enable_cre2" != no
+   AC_CHECK_LIB([cre2],[cre2_version_string],
+     [vicare_have_cre2=yes],[vicare_have_cre2=no],[-lre2])
+   AC_CHECK_HEADERS([cre2.h],[vicare_have_cre2_h=yes],[vicare_have_cre2_h=no])
+   AS_IF([test "x$vicare_have_cre2" = xyes && test "x$vicare_have_cre2_h" = xyes],
+     [# Both the library and the header were found: success!
+      AC_MSG_NOTICE([cre2 support enabled])
+      AC_DEFINE([HAVE_CRE2],[1],[define if you have a cre2 library])
+      vicare_with_CRE2=yes
+      CRE2_LIBS="-lcre2 -lre2"],
 
+     [test "x$with_CRE2" = xyes],
+     [# The user requested support for library or die, but either
+      # the header or the library or both were not found.
+      AS_IF([test "x$vicare_have_cre2_h" = xno],
+            [AC_MSG_ERROR([cre2.h cannot be found.])],
+            [test "x$vicare_have_cre2" = xno],
+            [AC_MSG_ERROR([cre2 cannot be found])])],
+
+     [# The user requested a check for optional cre2 support, but
+      # either the header or the library or both were not found.
+      AC_MSG_WARN([cre2 not found])])],
+  [AC_MSG_NOTICE([cre2 was not requested])])
+AM_CONDITIONAL([WANT_CRE2],[test "x$vicare_with_CRE2" = xyes])
+
+AM_COND_IF([WANT_CRE2],[cre2_val=1],[cre2_val=0])
 AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
-AM_CONDITIONAL([WANT_CRE2],[test x$cre2_val = x1])
 AC_SUBST([CRE2_LIBS])
 
 AC_CACHE_SAVE
@@ -1637,16 +1535,18 @@ AC_CACHE_SAVE
 #page
 #### finish
 
+AC_SUBST([VFLAGS])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile
-                src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile
-                lib/vicare/installation-configuration.sls
-                lib/vicare/errno.sls
-                lib/vicare/platform-constants.sls
+                src/Makefile scheme/Makefile doc/Makefile lib/Makefile
+                tests/Makefile demos/Makefile
+                lib/vicare/platform/configuration.sls
                 lib/vicare/platform/constants.sls
-                lib/vicare/words.sls
+                lib/vicare/platform/errno.sls
+                lib/vicare/platform/words.sls
                 meta/slackware/doinst.sh)
-AC_OUTPUT #(Makefile src/Makefile scheme/Makefile doc/Makefile)
+AC_OUTPUT
 
 ### end of file
 # Local Variables:

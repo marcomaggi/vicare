@@ -103,7 +103,7 @@
 ** DONE SRFI 13 strings
 ** DONE SRFI 14 char-sets
 ** DONE SRFI 16 case-lambda
-** SRFI 19 time
+** DONE SRFI 19 time
 ** DONE SRFI 23 error
 ** TODO SRFI 25 multidimensional arrays
 
@@ -136,6 +136,12 @@
 ** TODO SRFI 99 records
 
    Tests are missing.
+
+* Documentation
+
+  The documentation node "capi" should  be fully reviewed.  Does it make
+  sense to have  it at all?  Would  it be better to just  document the C
+  functions in the source code?
 
 * Stuff to think about for the future
 

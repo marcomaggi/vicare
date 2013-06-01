@@ -76,14 +76,13 @@
 		  directory-stream-closed?
 		  directory-stream-pointer)
 	    posix.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare unsafe operations))
 
 
 ;;;; helpers
@@ -146,11 +145,11 @@
   (assertion-violation who "expected false or procedure as argument" obj))
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (false/index who obj)
-  (or (not obj) (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+  (or (not obj) (and (fixnum? obj) ($fx<= 0 obj)))
   (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 ;;; --------------------------------------------------------------------
@@ -172,7 +171,7 @@
   (assertion-violation who "expected open directory stream as argument" obj))
 
 (define-argument-validation (file-descriptor who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected fixnum file descriptor as argument" obj))
 
 ;;; --------------------------------------------------------------------
@@ -202,7 +201,7 @@
       ((directory-stream       stream)
        (open-directory-stream  stream))
     (let ((rv (capi.glibc-dirfd (posix.directory-stream-pointer stream))))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(raise-errno-error who rv stream)))))
 
@@ -214,7 +213,7 @@
   (with-arguments-validation (who)
       ((bytevector  template))
     (let ((rv (capi.glibc-mkstemp template)))
-      (if (unsafe.fx<= 0 rv)
+      (if ($fx<= 0 rv)
 	  rv
 	(raise-errno-error who rv template)))))
 
@@ -233,7 +232,7 @@
 (define (sync)
   (define who 'sync)
   (let ((rv (capi.glibc-sync)))
-    (unless (unsafe.fxzero? rv)
+    (unless ($fxzero? rv)
       (raise-errno-error who rv))))
 
 (define (fsync fd)
@@ -241,7 +240,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let ((rv (capi.glibc-fsync fd)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(raise-errno-error who rv fd)))))
 
 (define (fdatasync fd)
@@ -249,7 +248,7 @@
   (with-arguments-validation (who)
       ((file-descriptor  fd))
     (let ((rv (capi.glibc-fdatasync fd)))
-      (unless (unsafe.fxzero? rv)
+      (unless ($fxzero? rv)
 	(raise-errno-error who rv fd)))))
 
 

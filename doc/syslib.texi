@@ -736,6 +736,11 @@ Compute the inverse hyperbolic functions.  Return flonum objects.
 @subsubheading Exponentials and logarithms
 
 
+@deffn {Unsafe Operation} $flcbrt @var{fl}
+Return the real cube root function of @var{fl}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $flexp @var{fl}
 Return the base @math{e} exponential of the operand.
 @end deffn
@@ -761,6 +766,12 @@ Return an equivalent of @math{exp(@var{fl}) - 1}.
 
 @deffn {Unsafe Operation} $fllog1p @var{fl}
 Return an equivalent of @math{log(1 + @var{fl})}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flhypot @vari{fl} @varii{fl}
+Compute the Euclidean distance function: @math{\sqrt(X*X+Y*Y)}.
+@glibcref{Exponents and Logarithms, hypot}.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -938,6 +949,10 @@ Return the reference to the imaginary part.
 @c page
 @node syslib numerics
 @section Low level numerics operations
+
+
+@cindex @library{ikarus system $numerics}, library
+@cindex Library @library{ikarus system $numerics}
 
 
 The library @library{ikarus syslib $numerics} exports bindings for low
@@ -4973,6 +4988,38 @@ Return a flonum representing the value at index @var{fx} of @var{bv}.
 Store @var{fl} at index @var{fx} of @var{bv}.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Other unsafe operations
+
+
+@defun $bytevector= @vari{bv} @varii{bv}
+Return @true{} if the two arguments are equal.
+@end defun
+
+
+@defun $bytevector-total-length @var{init-len} @var{bvs}
+Given the list of bytevectors @var{bvs}: compute the total length of the
+bytevectors, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+bytevectors in @var{bvs}.  The returned value may or may not be in the
+range of the maximum bytevector size.
+@end defun
+
+
+@defun $bytevector-concatenate @var{total-len} @var{bvs}
+Concatenate the bytevectors in the list @var{bvs}, return the result.
+The resulting bytevector must have length @var{total-len}.  Assume the
+arguments have been already validated.
+@end defun
+
+
+@defun $bytevector-reverse-and-concatenate @var{total-len} @var{bvs}
+Reverse the list of bytevectors @var{bvs} and concatenate its items;
+return the result.  The resulting bytevector must have length
+@var{total-len}.  Assume the arguments have been already validated.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations
@@ -5013,6 +5060,29 @@ Store @var{ch} at index @var{fx} of @var{str}.
 Return @true{} if @vari{str} and @varii{str} represent the same string;
 otherwise return @false{}.
 @end deffn
+
+
+@defun $string-total-length @var{init-len} @var{strs}
+Given the list of strings @var{strs}: compute the total length of the
+strings, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+strings in @var{strs}.  The returned value may or may not be in the
+range of the maximum string size.
+@end defun
+
+
+@defun $string-concatenate @var{total-len} @var{strs}
+Concatenate the strings in the list @var{strs}, return the result.  The
+resulting string must have length @var{total-len}.  Assume the arguments
+have been already validated.
+@end defun
+
+
+@defun $string-reverse-and-concatenate @var{total-len} @var{strs}
+Reverse the list of strings @var{strs} and concatenate its items; return
+the result.  The resulting string must have length @var{total-len}.
+Assume the arguments have been already validated.
+@end defun
 
 @c page
 @node syslib ports

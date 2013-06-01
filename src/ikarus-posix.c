@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -1393,72 +1393,90 @@ ikrt_posix_close (ikptr s_fd)
 #endif
 }
 ikptr
-ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size)
+ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 {
 #ifdef HAVE_READ
   void *	buffer;
   size_t	size;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)? IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	   = 0;
-  rv	   = read(IK_NUM_TO_FD(s_fd), buffer, size);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno  = 0;
+  rv     = read(IK_NUM_TO_FD(s_fd), buffer, size);
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off)
+ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb * pcb)
 {
 #ifdef HAVE_PREAD
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   off_t		off;
   ssize_t	rv;
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = ik_integer_to_off_t(s_off);
-  errno	   = 0;
-  rv	   = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    off	   = ik_integer_to_off_t(s_off);
+    errno  = 0;
+    rv     = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size)
+ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 {
 #ifdef HAVE_WRITE
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   ssize_t	rv;
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	   = 0;
-  rv	   = write(IK_NUM_TO_FD(s_fd), buffer, size);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    errno = 0;
+    rv	  = write(IK_NUM_TO_FD(s_fd), buffer, size);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
 }
 ikptr
-ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset)
+ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikpcb * pcb)
 {
 #ifdef HAVE_PWRITE
   void *	buffer;
   size_t	size;
+  size_t	bv_size;
   off_t		off;
   ssize_t	rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT!=s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  off	   = ik_integer_to_off_t(s_offset);
-  errno	   = 0;
-  rv	   = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
-  return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
+  buffer  = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
+  bv_size = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
+  size	  = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
+  if ((0 <= size) && (size <= bv_size)) {
+    off   = ik_integer_to_off_t(s_offset);
+    errno = 0;
+    rv	  = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
+  } else {
+    errno = EINVAL;
+    rv    = -1;
+  }
+  return (0 <= rv)? ika_integer_from_ssize_t(pcb, rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1842,7 +1860,7 @@ ikrt_posix_fcntl (ikptr fd, ikptr command, ikptr arg)
 ikptr
 ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 {
-#ifdef HAVE_ioctl
+#ifdef HAVE_IOCTL
   int		rv = -1;
   errno = 0;
   if (IK_IS_FIXNUM(arg)) {
@@ -1859,6 +1877,114 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
   } else
     ik_abort("invalid last argument to ioctl()");
   return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv | O_NONBLOCK);
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFL, rv & (~O_NONBLOCK));
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
+   FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFL, 0);
+  return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & O_NONBLOCK) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFD, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFD, rv | FD_CLOEXEC);
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFD, 0);
+  if (-1 == rv) return ik_errno_to_code();
+  errno = 0;
+  rv = fcntl(fd, F_SETFD, rv & (~FD_CLOEXEC));
+  return (-1 != rv)? IK_FIX(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikptr_posix_fd_ref_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+/* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
+   O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
+{
+#ifdef HAVE_FCNTL
+  int		fd = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  errno = 0;
+  rv = fcntl(fd, F_GETFD, 0);
+  return (-1 != rv)? IK_BOOLEAN_FROM_INT(rv & FD_CLOEXEC) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1952,6 +2078,23 @@ ikrt_posix_ftruncate (ikptr s_fd, ikptr s_length)
   int	rv;
   errno = 0;
   rv	= ftruncate(IK_NUM_TO_FD(s_fd), len);
+  return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_lockf (ikptr s_fd, ikptr s_cmd, ikptr s_len)
+{
+#ifdef HAVE_LOCKF
+  int	cmd  = ik_integer_to_int(s_cmd);
+  off_t	len  = ik_integer_to_off_t(s_len);
+  int	rv;
+  errno = 0;
+  rv	= lockf(IK_NUM_TO_FD(s_fd), cmd, len);
   return (0 == rv)? IK_FIX(0) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3473,11 +3616,10 @@ ikrt_posix_send (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = send(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  buffer  = IK_GENERALISED_C_BUFFER(s_buffer);
+  size    = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	  = 0;
+  rv	  = send(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3490,11 +3632,10 @@ ikrt_posix_recv (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags)
   void *	buffer;
   size_t	size;
   int		rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = recv(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	 = 0;
+  rv	 = recv(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 #else
   feature_failure(__func__);
@@ -3508,13 +3649,12 @@ ikrt_posix_sendto (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ik
 {
 #ifdef HAVE_SENDTO
   void *		buffer;
+  size_t		size;
   struct sockaddr *	addr;
   socklen_t		addr_len;
-  size_t		size;
   int			rv;
-  buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	   = (size_t)((IK_FALSE_OBJECT != s_size)?
-		      IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
+  buffer   = IK_GENERALISED_C_BUFFER(s_buffer);
+  size     = ik_generalised_c_buffer_len(s_buffer, s_size);
   addr	   = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
   addr_len = (socklen_t)IK_BYTEVECTOR_LENGTH(s_addr);
   errno	   = 0;
@@ -3536,11 +3676,10 @@ ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, 
   void *		buffer;
   size_t		size;
   int			rv;
-  buffer     = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
-  size	     = (size_t)((IK_FALSE_OBJECT != s_size)?
-			IK_UNFIX(s_size) : IK_BYTEVECTOR_LENGTH(s_buffer));
-  errno	     = 0;
-  rv	     = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
+  buffer = IK_GENERALISED_C_BUFFER(s_buffer);
+  size   = ik_generalised_c_buffer_len(s_buffer, s_size);
+  errno	 = 0;
+  rv	 = recvfrom(IK_NUM_TO_FD(s_sock), buffer, size, IK_UNFIX(s_flags), addr, &addr_len);
   if (0 <= rv) {
     ikptr	s_pair = ika_pair_alloc(pcb);
     ikptr	s_addr;
@@ -3699,7 +3838,7 @@ ikrt_posix_setsockopt_linger (ikptr s_sock, ikptr onoff, ikptr linger)
   struct linger optval;
   socklen_t	optlen = sizeof(struct linger);
   int		rv;
-  optval.l_onoff  = (IK_TRUE_OBJECT == onoff)? 1 : 0;
+  optval.l_onoff  = IK_BOOLEAN_TO_INT(onoff);
   optval.l_linger = IK_UNFIX(linger);
   errno = 0;
   rv	= setsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, optlen);
@@ -3718,11 +3857,14 @@ ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb * pcb)
   errno = 0;
   rv	= getsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
   if (0 == rv) {
-    /* Return  a pair  to distinguish  the value  from an  encoded errno
-       value. */
+    /* Return two values in a pair. */
     ikptr	s_pair = ika_pair_alloc(pcb);
-    IK_CAR(s_pair) = optval.l_onoff? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
-    IK_CDR(s_pair) = IK_FIX(optval.l_linger);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), IK_BOOLEAN_FROM_INT(optval.l_onoff));
+      IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, optval.l_linger));
+    }
+    pcb->root0 = NULL;
     return s_pair;
   } else
     return ik_errno_to_code();

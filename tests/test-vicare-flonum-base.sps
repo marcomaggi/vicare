@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -134,6 +134,49 @@
 	       (u7	(bytevector-u8-ref bv (+ 8 7))))
 	  (reverse (list u0 u1 u2 u3 u4 u5 u6 u7)))
       => (list octet0 octet1 octet2 octet3 octet4 octet5 octet6 octet7)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'funcs))
+
+  (check
+      (flsquare 1.2)
+    => (* 1.2 1.2))
+
+  (check
+      ($flsquare 1.2)
+    => (* 1.2 1.2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flcube 1.2)
+    => (* 1.2 1.2 1.2))
+
+  (check
+      ($flcube 1.2)
+    => (* 1.2 1.2 1.2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flhypot 1.2 3.4)
+    => (sqrt (+ (square 1.2) (square 3.4))))
+
+  (check
+      ($flhypot 1.2 3.4)
+    => (sqrt (+ (square 1.2) (square 3.4))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flcbrt (flcube 1.2))
+    => 1.2)
+
+  (check
+      ($flcbrt (flcube 1.2))
+    => 1.2)
 
   #t)
 

@@ -189,7 +189,7 @@
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
   (import (vicare)
     (ikarus system $foreign)
-    (vicare errno))
+    (vicare platform errno))
 
 
 ;;;; condition objects

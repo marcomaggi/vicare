@@ -59,6 +59,8 @@
     flsquare		$flsquare
     flcube		$flcube
     flsqrt		$flsqrt
+    flcbrt		$flcbrt
+    flhypot		$flhypot
 
     flinteger?
     flnan?		$flnan?
@@ -89,7 +91,8 @@
 		  flasinh		flacosh		flatanh
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
-		  flsquare		flcube
+		  flsquare		flcube		flhypot
+		  flcbrt
 		  flinteger?		flnan?		flfinite?
 		  flinfinite?		fl=?		fl<?
 		  fl>?			fl<=?		fl>=?
@@ -98,22 +101,8 @@
 		  flonum-parts		flonum-bytes
 		  bytevector->flonum	flonum->bytevector)
     (ikarus system $pairs)
-    (except (ikarus system $fx)
-	    $fxeven?
-	    $fxodd?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed Nov 21, 2012)
-    (only (ikarus fixnums)
-	  $fxeven?
-	  $fxodd?)
-    (except (ikarus system $bignums)
-	    $bignum-even?
-	    $bignum-odd?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed Nov 21, 2012)
-    (only (ikarus bignums)
-	  $bignum-even?
-	  $bignum-odd?)
+    (ikarus system $fx)
+    (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $bytevectors)
     (except (ikarus system $flonums)
@@ -155,15 +144,16 @@
 	    $fllog1p
 	    $flexpt
 	    $flsqrt
+	    $flcbrt
 	    $flsquare
 	    $flcube
+	    $flhypot
 	    $flmax
 	    $flmin)
     (vicare arguments validation)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand
-	  cond-exact-integer-operand
-	  receive))
+	  cond-exact-integer-operand))
 
 
 ;;;; helpers
@@ -194,6 +184,14 @@
 	   ((flonum	x)
 	    (flonum	y))
 	 (?unsafe-who x y))))))
+
+(define-syntax define-fl-operation/two/forcall
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who ?foreign-who)
+     (begin
+       (define-fl-operation/two ?safe-who ?unsafe-who)
+       (define (?unsafe-who x y)
+	 (foreign-call ?foreign-who x y))))))
 
 
 ;;;; flonums parts
@@ -956,9 +954,11 @@
 	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
 
 (define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
+(define-fl-operation/one/forcall flcbrt $flcbrt "ikrt_fl_cbrt")
+(define-fl-operation/two/forcall flhypot $flhypot "ikrt_fl_hypot")
 
-(define-fl-operation/two flsquare	$flsquare)
-(define-fl-operation/two flcube		$flcube)
+(define-fl-operation/one flsquare	$flsquare)
+(define-fl-operation/one flcube		$flcube)
 
 (define ($flsquare x)
   ($fl* x x))

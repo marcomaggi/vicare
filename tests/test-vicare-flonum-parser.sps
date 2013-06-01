@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for (vicare flonum-parser)
+;;;Contents: tests for flonum-parser library
 ;;;Date: Wed Feb 15, 2012
 ;;;
 ;;;Abstract
@@ -27,11 +27,11 @@
 
 #!r6rs
 (import (vicare)
-  (vicare flonum-parser)
+  (vicare numerics flonum-parser)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing library (vicare flonum-parser)\n")
+(check-display "*** testing Vicare: flonum-parser\n")
 
 
 (parametrise ((check-test-name	'base))

@@ -29,7 +29,7 @@
   (prefix (vicare iconv)
 	  iconv.)
   (vicare platform constants)
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

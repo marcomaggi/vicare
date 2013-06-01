@@ -27,10 +27,9 @@
   (import (except (ikarus)
 		  string->number
 		  sign)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare parser-logic)
-    (prefix (vicare unsafe-operations)
-	    $)
+    (vicare unsafe operations)
     (vicare arguments validation))
 
 ;;; <number>          ::= <num 2>

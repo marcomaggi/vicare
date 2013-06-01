@@ -40,7 +40,7 @@
 		  purge-collection-avoidance-list)
     (ikarus system $fx)
     (ikarus system $arg-list)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (ikarus.emergency))
 
@@ -57,50 +57,53 @@
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
-  #;(emergency-write "do-post-gc enter")
   (let ((k0 (collect-key)))
     ;;Run the hook functions.
     (parameterize ((post-gc-hooks '()))
-      ;;FIXME  As a  temporary work  around for  issue #35:  comment out
-      ;;running the  post GC  hooks.  To  be restored  after the  bug is
-      ;;fixed.  (Marco Maggi; Nov 1, 2012)
-      #;(void)
+      ;;Run the post-gc hooks.
       (for-each (lambda (x) (x)) ls))
-    #;(emergency-write "do-post-gc check for redoing gc")
     (if (eq? k0 (collect-key))
         (let ((was-enough? (foreign-call "ik_collect_check" n)))
           ;;Handlers ran  without GC but  there was not enough  space in
           ;;the nursery for the pending allocation.
           (unless was-enough?
-	    #;(emergency-write "do-post-gc again after run without GC")
-	    (do-post-gc ls n))
-	  #;(emergency-write "do-post-gc leaving"))
-      (let ()
-	;;Handlers did cause a GC, so, do the handlers again.
-	#;(emergency-write "do-post-gc again after run with GC")
-	(do-post-gc ls n)))))
+	    (do-post-gc ls n)))
+      ;;Handlers did cause a GC, so, do the handlers again.
+      (do-post-gc ls n))))
 
 (define (do-overflow n)
+  ;;This function is called whenever a Scheme function tries to allocate
+  ;;an object  on the heap and  the heap has  no enough room for  it.  A
+  ;;garbage collection is  run to reclaim some heap space  and we expect
+  ;;that, at return time, the heap has enough room to allocate N bytes.
+  ;;
   (foreign-call "ik_collect" n)
   (let ((ls (post-gc-hooks)))
     (unless (null? ls)
-      (do-post-gc ls n))))
+      (do-post-gc ls n)))
+  ;;NOTE  Do *not*  remove  this.   The code  calling  this function  to
+  ;;reclaim heap space expects DO-OVERFLOW  to return a single value; if
+  ;;it returns 0,  2 or more values very bad  assembly-level errors will
+  ;;happen.  (Marco Maggi; Thu Apr 4, 2013)
+  #t)
 
 (define (do-overflow-words n)
-  (let ((n ($fxsll n 2)))
-    (foreign-call "ik_collect" n)
-    (let ((ls (post-gc-hooks)))
-      (unless (null? ls)
-	(do-post-gc ls n)))))
+  ;;Like DO-OVERFLOW but make room for N words (rather thatn N bytes).
+  ;;
+  (do-overflow ($fxsll n 2)))
 
 (define do-vararg-overflow do-overflow)
 
 (define (collect)
-  (do-overflow 4096))
+  ;;Force a  garbage collection and make  room on the heap  for at least
+  ;;4096 bytes.  4096 is an  arbitrary value.  It is arbitrarily decided
+  ;;that this  function must  return a  single value  and such  value is
+  ;;void.
+  ;;
+  (do-overflow 4096)
+  (void))
 
 (define (do-stack-overflow)
-  ;;FIXME This is unused.  (Marco Maggi; Nov  7, 2012)
-  ;;
   (foreign-call "ik_stack_overflow"))
 
 (define (dump-metatable)

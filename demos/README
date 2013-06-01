@@ -1,0 +1,103 @@
+
+			  Demo scripts
+			  ============
+
+
+Topics
+------
+
+  1. Introduction
+  2. Demo networking clients
+  3. Demo networking servers
+
+
+1. Introduction
+---------------
+
+This directory contains scripts and  data files showing program examples
+with Vicare Scheme.
+
+
+2. Demo networking clients
+--------------------------
+
+2.1 CONNECT client
+------------------
+
+SYNOPSIS
+
+   vicare connect.sps [vicare options] -- IFACE PORT [connect options]
+
+DESCRIPTION
+
+The  script  "connect.sps"  is  similar to  the  command  "telnet",  but
+simpler: it connects to a server  from a terminal and exchanges messages
+represented by strings terminated by \n or \r\n.
+
+  When the option "--recv-first" is  used: CONNECT expects the server to
+send the first message.  When the option "--send-first" is used: CONNECT
+expects the user at the terminal to type in the first message.
+
+
+3. Demo networking servers
+--------------------------
+
+3.1 ECHO server
+---------------
+
+SYNOPSIS
+
+   vicare echod.sps [vicare options] [-- [echod options]]
+
+DESCRIPTION
+
+The script "echod.sps" implements the classic echo server: if we connect
+to it and  send it strings, it  will just echo them back  to the client.
+Upon receiving  a connection: the  server sends a greetings  string.  By
+default it listens to localhost:8081.
+
+  Internally it makes use of the following notable libraries:
+
+   (vicare posix)
+   (vicare posix pid-files)
+   (vicare posix log-files)
+   (vicare posix simple-event-loop)
+   (srfi :37 args-fold)
+
+this demo program is especially a demonstration of the Simple Event Loop
+library.
+
+  When  the client  sends the  string "quit\n"  or "quit\r\n":  the ECHO
+server closes  the connection.   To terminate the  ECHO server:  we must
+send it  a SIGTERM signal,  possibly using the  pid file to  acquire the
+process ID.
+
+
+3.2 SHELLD server
+-----------------
+
+To be written.
+
+
+3.3 HTTP server
+---------------
+
+		 *THIS PROGRAM is NOT FINISHED*
+
+The script  "httpd.sps" is a *toy*  web server capable of  serving pages
+from a customisable document root directory.  Start it with:
+
+   $ vicare demos/httpd.sps -- \
+	--document-root /path/to/root
+
+and terminate it by sending it a SIGINT signal (Ctrl-c).  By default the
+server binds itself to localhost:8080.
+
+
+### end of file
+# Local Variables:
+# mode: text
+# coding: utf-8-unix
+# fill-column: 72
+# paragraph-start: "*"
+# End:

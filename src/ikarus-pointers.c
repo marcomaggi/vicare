@@ -9,7 +9,7 @@
 	distribution  for no  reason I	can know  (Marco Maggi;	 Nov 26,
 	2011).
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -543,25 +543,57 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
   long		total_length	= 0;
   long		lengths[arity];
   int		i;
-  ikptr		sk;
   ikptr		s_result;
   for (i=0; i<arity; ++i)
     total_length += lengths[i] = IK_UNFIX(IK_ITEM(s_lengths, i));
-  sk = ik_enter_c_function(pcb);
+  ik_enter_c_function(pcb);
   {
+    /* When  arriving  here  the  Scheme   stack  has  been  freezed  by
+     * "ik_enter_c_function()", so the situation is as follows:
+     *
+     *          high memory
+     *   |                      |
+     *   |----------------------|
+     *   |                      | <- pcb->frame_base
+     *   |----------------------|
+     *   | ik_underflow_handler | <- pcb->frame_pointer
+     *   |----------------------|
+     *   |                      |
+     *           low memory
+     */
+    assert(IK_UNDERFLOW_HANDLER == *((ikptr*)pcb->frame_pointer));
+    /* As example:  let's assume  there are 2  pointer arguments  to the
+     * code object, we want to prepare the Scheme stack as follows:
+     *
+     *          high memory
+     *   |                      |
+     *   |----------------------|
+     *   |                      | <- pcb->frame_base = pcb->frame_pointer
+     *   |----------------------|
+     *   | ik_underflow_handler |
+     *   |----------------------|
+     *   |  pointer argument 1  |
+     *   |----------------------|
+     *   |  pointer argument 2  |
+     *   |----------------------|
+     *   |                      |
+     *           low memory
+     *
+     * setting "frame_pointer"  equal to  "frame_base" is needed  by the
+     * assembly subroutine calling the code in S_THUNK.
+     */
     uint8_t	buffer[total_length];
     long	offset;
-    /* Push the arguments on the Scheme stack. */
     pcb->frame_pointer = pcb->frame_base;
+    /* Push the arguments on the Scheme stack. */
     for (i=0, offset=0; i<arity; offset+=lengths[i], ++i) {
       IK_REF(pcb->frame_pointer, -2*wordsize-i*wordsize) =
 	/* Allocation without garbage collection!!! */
 	iku_pointer_alloc(pcb, (ik_ulong)&(buffer[offset]));
     }
-    /* Call the Scheme procedure. */
     s_result = ik_exec_code(pcb, s_code, IK_FIX(-arity), s_thunk);
   }
-  ik_leave_c_function(pcb, sk);
+  ik_leave_c_function(pcb);
   return s_result;
 }
 

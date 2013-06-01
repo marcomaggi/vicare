@@ -16,26 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
+
 #include "internals.h"
 
-static void print(FILE* fh, ikptr x);
-
-void
-ik_fprint (FILE* fh, ikptr x)
-{
-  print(fh, x);
-}
-void
-ik_print (ikptr x)
-{
-  print(stderr, x);
-  fprintf(stderr, "\n");
-}
-void
-ik_print_no_newline (ikptr x)
-{
-  print(stderr, x);
-}
+static void print_object (FILE* fh, ikptr x, int nested_level);
 
 const static char* char_string[128] = {
   "#\\nul","#\\soh","#\\stx","#\\etx","#\\eot","#\\enq","#\\ack","#\\bel",
@@ -57,42 +45,91 @@ const static char* char_string[128] = {
   "#\\x","#\\y","#\\z","#\\{","#\\|","#\\}","#\\~","#\\del"};
 
 
-static void
-print (FILE* fh, ikptr x)
+/** --------------------------------------------------------------------
+ ** Utilities.
+ ** ----------------------------------------------------------------- */
+
+void
+ik_fprint (FILE* fh, ikptr x)
 {
+  print_object(fh, x, 0);
+}
+void
+ik_print (ikptr x)
+{
+  print_object(stderr, x, 0);
+  fprintf(stderr, "\n");
+}
+void
+ik_print_no_newline (ikptr x)
+{
+  print_object(stderr, x, 0);
+}
+
+
+static void
+print_indentation (FILE* fh, int nested_level)
+{
+  if (nested_level) {
+    fprintf(fh, "\t");
+  }
+  for (; nested_level; --nested_level)
+    fprintf(fh, "   ");
+}
+static void
+print_object (FILE* fh, ikptr x, int nested_level)
+{
+#define PRINT_OBJECT(F,X)	print_object((F),(X),1+nested_level)
+#define PRINT_INDENTATION()	print_indentation(fh, 1+nested_level)
   if (IK_IS_FIXNUM(x)) {
-    fprintf(fh, "%ld", IK_UNFIX(x));
+    fprintf(fh, "fixnum=%ld", IK_UNFIX(x));
   }
   else if (x == IK_FALSE_OBJECT) {
-    fprintf(fh, "#f");
+    fprintf(fh, "bool=#f");
   }
   else if (x == IK_TRUE_OBJECT) {
-    fprintf(fh, "#t");
+    fprintf(fh, "bool=#t");
   }
   else if (x == IK_NULL_OBJECT) {
-    fprintf(fh, "()");
+    fprintf(fh, "null=()");
   }
   else if (IK_IS_CHAR(x)) {
     unsigned long i = ((long)x) >> char_shift;
     if (i < 128)
-      fprintf(fh, "%s", char_string[i]);
+      fprintf(fh, "char=%s", char_string[i]);
     else
-      fprintf(fh, "#\\x%lx", i);
+      fprintf(fh, "char=#\\x%lx", i);
+  }
+  else if (IK_IS_CODE(x)) {
+    fprintf(fh, "code={x=0x%016lx, annotation=", x);
+    PRINT_OBJECT(fh, IK_REF(x, off_code_annotation));
+    fprintf(fh, "}");
+  }
+  else if (IK_IS_CONTINUATION(x)) {
+    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    fprintf(fh, "continuation={x=0x%016lx, top=0x%016lx, size=%ld, next=0x%016lx}",
+	    x, kont->top, kont->size, kont->next);
+  }
+  else if (IK_IS_SYSTEM_CONTINUATION(x)) {
+    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    fprintf(fh,
+	    "system-continuation={x=0x%016lx, top=0x%016lx, size=%ld (unused), next=0x%016lx}",
+	    x, kont->top, kont->size, kont->next);
   }
   else if (IK_TAGOF(x) == vector_tag) {
     ikptr first_word = IK_REF(x, off_vector_length);
     if (IK_IS_FIXNUM(first_word)) {
       ikptr len = first_word;
       if (len == 0) {
-        fprintf(fh, "#()");
+        fprintf(fh, "vector=#()");
       } else {
-        fprintf(fh, "#(");
+        fprintf(fh, "vector=#(");
         ikptr data = x + off_vector_data;
-        print(fh, IK_REF(data, 0));
+        PRINT_OBJECT(fh, IK_REF(data, 0));
         ikptr i = (ikptr)wordsize;
         while (i<len) {
           fprintf(fh, " ");
-          print(fh, IK_REF(data,i));
+          PRINT_OBJECT(fh, IK_REF(data,i));
           i += wordsize;
         }
         fprintf(fh, ")");
@@ -103,6 +140,7 @@ print (FILE* fh, ikptr x)
       int   len   = IK_UNFIX(fxlen);
       int * data  = (int*)(str + off_string_data);
       int   i;
+      fprintf(fh, "symbol=");
       for (i=0; i<len; i++) {
         char c = (data[i]) >> char_shift;
         fprintf(fh, "%c", c);
@@ -115,49 +153,45 @@ print (FILE* fh, ikptr x)
 	fprintf(fh, "#[rtd: ");
       } else {
 	fprintf(fh, "#[struct nfields=%ld rtd=", number_of_fields);
-	print(fh, IK_REF(s_rtd, off_rtd_name));
+	PRINT_OBJECT(fh, IK_REF(s_rtd, off_rtd_name));
 	fprintf(fh, ": ");
       }
       for (i=0; i<number_of_fields; ++i) {
 	if (i) fprintf(fh, ", ");
-	print(fh, IK_FIELD(x, i));
+	PRINT_OBJECT(fh, IK_FIELD(x, i));
       }
       fprintf(fh, "]");
     } else
       fprintf(fh, "#<unknown first_word=%p>", (void*)first_word);
   }
   else if (IK_IS_CLOSURE(x)) {
-    fprintf(fh, "#<procedure>");
+    long	freec = IK_CLOSURE_NUMBER_OF_FREE_VARS(x);
+    long	i;
+    fprintf(fh, "#<closure num_of_free_vars=%ld,\n",
+	    freec);
+    for (i=0; i<freec; ++i) {
+      PRINT_INDENTATION();
+      fprintf(fh, "free[%ld]=", i);
+      PRINT_OBJECT(fh, IK_CLOSURE_FREE_VAR(x, i));
+      fprintf(fh, "\n");
+    }
+    PRINT_INDENTATION();
+    PRINT_OBJECT(fh, IK_CLOSURE_CODE_OBJECT(x));
+    fprintf(fh, ">");
   }
   else if (IK_IS_PAIR(x)) {
-    fprintf(fh, "(");
-    print(fh, IK_CAR(x));
-    ikptr d = IK_CDR(x);
-    /* fprintf(stderr, "d=0x%016lx\n", (long int)d); */
-    while (1) {
-      if (IK_IS_PAIR(d)) {
-        fprintf(fh, " ");
-        print(fh, IK_CAR(d));
-        d = IK_CDR(d);
-      }
-      else if (d == IK_NULL_OBJECT) {
-        fprintf(fh, ")");
-        return;
-      }
-      else {
-        fprintf(fh, " . ");
-        print(fh, d);
-        fprintf(fh, ")");
-        return;
-      }
-    }
+    fprintf(fh, "pair=(");
+    print_object(fh, IK_CAR(x), 0);
+    fprintf(fh, " . ");
+    PRINT_OBJECT(fh, IK_CDR(x));
+    fprintf(fh, ")");
   }
   else if (IK_TAGOF(x) == string_tag) {
     ikptr fxlen = IK_REF(x, off_string_length);
     int   len   = IK_UNFIX(fxlen);
     int * data  = (int*)(x + off_string_data);
     int   i;
-    fprintf(fh, "\"");
+    fprintf(fh, "string=\"");
     for(i=0; i<len; i++) {
       char c = (data[i]) >> char_shift;
       if ((c == '\\') || (c == '"')) {
@@ -171,7 +205,7 @@ print (FILE* fh, ikptr x)
     ikptr          fxlen = IK_REF(x, off_bytevector_length);
     int            len   = IK_UNFIX(fxlen);
     unsigned char* data  = (unsigned char*)(x + off_bytevector_data);
-    fprintf(fh, "#vu8(");
+    fprintf(fh, "bytevector=#vu8(");
     int i;
     for(i=0; i<(len-1); i++) {
       fprintf(fh, "%d ", data[i]);
@@ -183,6 +217,56 @@ print (FILE* fh, ikptr x)
   }
   else {
     fprintf(fh, "#<unknown>");
+  }
+}
+
+void
+ik_print_stack_frame (FILE * fh, ikptr top)
+{
+  ikptr		single_value_rp	= IK_REF(top, 0);
+  ikptr		framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
+  ikptr		args_size;
+  ikptr		argc;
+  ikptr		s_code;
+  int		i;
+  if (framesize) {
+    args_size	= framesize - wordsize;
+  } else {
+    framesize	= IK_REF(top, wordsize);
+    args_size	= framesize - wordsize - wordsize;
+  }
+  argc		= args_size / wordsize;
+  s_code	= ik_stack_frame_top_to_code_object(top);
+  fprintf(fh, "\tcall frame: top=0x%016lx, framesize=%ld, args count=%ld\n",
+	  top, framesize, argc);
+  fprintf(fh, "\tcode object: ");
+  ik_fprint(fh, s_code);
+  for (i=0; i<argc; ++i) {
+    fprintf(fh, "\n\targ %d=", i);
+    ik_fprint(fh, IK_REF(top, wordsize + i * wordsize));
+  }
+  fprintf(fh, "\n");
+}
+
+void
+ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames, ikpcb * pcb)
+/* Visit  the current  Scheme  stack  printing to  FH  the code  objects
+   referenced  by the  stack  frames.  At  most visit  MAX_NUM_OF_FRAMES
+   frames (to avoid printing too much output). */
+{
+  int		i;
+  ikptr		top = pcb->frame_pointer;
+  ikptr		end = pcb->frame_base - wordsize;
+  for (i=0; (i <= max_num_of_frames) && (top < end); ++i) {
+    ikptr	single_value_rp	= IK_REF(top, 0);
+    ikptr	framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
+    if (0 == framesize) {
+      framesize = IK_REF(top, wordsize);
+    }
+    fprintf(fh, "stack code object %d: ", i);
+    ik_fprint(fh, ik_stack_frame_top_to_code_object(top));
+    fprintf(fh, "\n");
+    top += framesize;
   }
 }
 

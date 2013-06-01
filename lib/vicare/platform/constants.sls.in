@@ -8,7 +8,7 @@
 ;;;	Export an  identifier syntax  for each platform  constant.  This
 ;;;	library can be used also by Vicare's source code.
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -151,6 +151,10 @@
 
 ;;; select related symbols
     FD_SETSIZE
+
+;;;; for lockf
+    F_LOCK		F_TLOCK
+    F_ULOCK		F_TEST
 
 ;;; poll related symbols
     POLLIN		POLLPRI		POLLOUT
@@ -463,7 +467,7 @@
 
 ;;; --------------------------------------------------------------------
 
-;;; errno codes, reexported from (vicare errno)
+;;; errno codes, reexported from (vicare platform errno)
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
     EAGAIN		EALREADY	EBADE
@@ -547,7 +551,7 @@
     SIGUSR1		SIGUSR2		SIGWINCH
     SIGINFO)
   (import (ikarus)
-    (vicare errno)
+    (vicare platform errno)
     (only (ikarus system $fx)
 	  $fx=))
 
@@ -562,11 +566,6 @@
 	 (if (number? N)
 	     (- N)
 	   #t))))))
-
-(define-syntax define-inline-constant
-  (syntax-rules ()
-    ((_ ?name ?value)
-     (define-syntax ?name (identifier-syntax ?value)))))
 
 
 ;;;; miscellaneous platform constants
@@ -844,6 +843,11 @@
 (define-inline-constant MCL_FUTURE		@VALUEOF_MCL_FUTURE@)
 
 (define-inline-constant FD_SETSIZE		@VALUEOF_FD_SETSIZE@)
+
+(define-inline-constant F_LOCK			@VALUEOF_F_LOCK@)
+(define-inline-constant F_TLOCK			@VALUEOF_F_TLOCK@)
+(define-inline-constant F_ULOCK			@VALUEOF_F_ULOCK@)
+(define-inline-constant F_TEST			@VALUEOF_F_TEST@)
 
 (define-inline-constant POLLIN			@VALUEOF_POLLIN@)
 (define-inline-constant POLLPRI			@VALUEOF_POLLPRI@)

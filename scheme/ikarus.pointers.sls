@@ -304,20 +304,19 @@
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (ikarus system $pointers)
 	  $pointer=)
-    (only (ikarus system $structs)
-	  $struct
-	  $struct-guardian)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (prefix (vicare unsafe-capi)
+    (vicare language-extensions syntaxes)
+    (except (vicare unsafe operations)
+	    $pointer=
+	    $memory-block-pointer
+	    $memory-block-size
+	    $memory-block-owner?)
+    (prefix (vicare unsafe capi)
 	    capi.)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.))
 
   (module (arguments-validation)
-    (import (vicare include))
-    (include/verbose "ikarus.config.ss"))
+    (include "ikarus.config.ss"))
 
 
 ;;;; arguments validation
@@ -357,7 +356,7 @@
   (assertion-violation who "expected exact integer as argument" obj))
 
 (define-argument-validation (non-negative-exact-integer who obj)
-  (or (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (or (and (fixnum? obj) ($fx<= 0 obj))
       (and (bignum? obj) (<= 0 obj)))
   (assertion-violation who "expected non-negative exact integer as argument" obj))
 
@@ -376,7 +375,7 @@
 (define-argument-validation (vector-of-lengths who obj)
   (and (vector? obj)
        (vector-for-all (lambda (obj)
-			 (and (fixnum? obj) (unsafe.fx<= 0 obj)))
+			 (and (fixnum? obj) ($fx<= 0 obj)))
 	 obj))
   (assertion-violation who "expected list of non-negative fixnums as argument" obj))
 
@@ -403,7 +402,7 @@
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (errno who obj)
-  (or (boolean? obj) (and (fixnum? obj) (unsafe.fx<= obj 0)))
+  (or (boolean? obj) (and (fixnum? obj) ($fx<= obj 0)))
   (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
 
 (define-argument-validation (machine-word who obj)
@@ -441,7 +440,7 @@
   (assertion-violation who "expected size_t as number of bytes argument" obj))
 
 (define-argument-validation (fixnum-number-of-bytes who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who
     "expected non-negative fixnum as number of bytes argument" obj))
 
@@ -456,7 +455,7 @@
     "expected exact integer representing an 8-bit signed or unsigned integer as argument" obj))
 
 (define-argument-validation (pointer-offset who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as pointer offset argument" obj))
 
 (define-argument-validation (start-index-for-bytevector who idx bv)
@@ -481,20 +480,20 @@
   ;;  |---|---|---|---|---|---|---|---|---| bytevector
   ;;                                    ^start = bv.len
   ;;
-  (let ((bv.len (unsafe.bytevector-length bv)))
-    (or (unsafe.fx=  idx bv.len)
-	(unsafe.fx<= idx bv.len)))
+  (let ((bv.len ($bytevector-length bv)))
+    (or ($fx=  idx bv.len)
+	($fx<= idx bv.len)))
   (assertion-violation who
     (string-append "start index argument "		(number->string idx)
-		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv)))
+		   " too big for bytevector length "	(number->string ($bytevector-length bv)))
     idx))
 
 (define-argument-validation (count-for-bytevector who count bv bv.start)
-  (let ((end (unsafe.fx+ bv.start count)))
-    (unsafe.fx<= end (unsafe.bytevector-length bv)))
+  (let ((end ($fx+ bv.start count)))
+    ($fx<= end ($bytevector-length bv)))
   (assertion-violation who
     (string-append "word count "			(number->string count)
-		   " too big for bytevector length "	(number->string (unsafe.bytevector-length bv))
+		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " start index "			(number->string bv.start))
     count))
 
@@ -651,7 +650,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%unsafe.memory-block-destructor S)
+(define (%memory-block-destructor S)
   (when ($memory-block-owner? S)
     ;;Remember that FREE will mutate to NULL the pointer.
     (capi.ffi-free ($memory-block-pointer S))
@@ -691,7 +690,7 @@
   (define who 'memory-block-reset)
   (with-arguments-validation (who)
       ((memory-block	B))
-    (%unsafe.memory-block-destructor B)
+    (%memory-block-destructor B)
     ($set-memory-block-pointer! B (null-pointer))
     ($set-memory-block-size!    B 0)
     ($set-memory-block-owner?!  B #f)))
@@ -1345,7 +1344,7 @@
 		    (with-arguments-validation (who)
 			((start-index-for-bytevector	src.start src)
 			 (count-for-bytevector		count src src.start))
-		      (unsafe.bytevector-copy!/count src src.start dst dst.start count)))
+		      ($bytevector-copy!/count src src.start dst dst.start count)))
 		   (else
 		    (assertion-violation who "expected pointer or bytevector as source argument" src)))))
 	  (else
@@ -1400,7 +1399,7 @@
       ((bytevector	bv))
     (let ((rv (capi.ffi-bytevector->memory bv)))
       (if rv
-	  (values rv (unsafe.bytevector-length bv))
+	  (values rv ($bytevector-length bv))
 	(values #f #f)))))
 
 (define (bytevector->memory* bv)
@@ -1409,7 +1408,7 @@
       ((bytevector	bv))
     (let ((rv (capi.ffi-bytevector->memory bv)))
       (if rv
-	  (values rv (unsafe.bytevector-length bv))
+	  (values rv ($bytevector-length bv))
 	(%raise-out-of-memory who)))))
 
 ;;; --------------------------------------------------------------------
@@ -1895,26 +1894,26 @@
   ;;hash value.
   ;;
   (let loop ((signature signature)
-	     (len       (unsafe.vector-length signature))
+	     (len       ($vector-length signature))
 	     (H		0)
 	     (i         0))
-    (cond ((unsafe.fx= i len)
+    (cond (($fx= i len)
 	   H)
-	  ((unsafe.fx< H_MAX H)
+	  (($fx< H_MAX H)
 	   (assertion-violation '%signature-hash "FFI signature too big" signature))
 	  (else
 	   (loop signature len
-		 (unsafe.fx+ H (unsafe.vector-ref signature i))
-		 (unsafe.fxadd1 i))))))
+		 ($fx+ H ($vector-ref signature i))
+		 ($fxadd1 i))))))
 
-(define (%unsafe.signature=? vec1 vec2)
-  (let ((len1 (unsafe.vector-length vec1)))
-    (and (unsafe.fx= len1 (unsafe.vector-length vec2))
+(define (%$signature=? vec1 vec2)
+  (let ((len1 ($vector-length vec1)))
+    (and ($fx= len1 ($vector-length vec2))
 	 (let loop ((i 0))
-	   (or (unsafe.fx= i len1)
-	       (and (unsafe.fx= (unsafe.vector-ref vec1 i)
-				(unsafe.vector-ref vec2 i))
-		    (loop (unsafe.fxadd1 i))))))))
+	   (or ($fx= i len1)
+	       (and ($fx= ($vector-ref vec1 i)
+				($vector-ref vec2 i))
+		    (loop ($fxadd1 i))))))))
 
 ;;Table of structures of type CIF, used to avoid generating duplicates.
 ;;
@@ -1937,7 +1936,7 @@
 	   (signature	(vector-map %type-symbol->type-id
 			  (list->vector (cons retval-type arg-types)))))
       (unless CIF-TABLE
-	(set! CIF-TABLE (make-hashtable %signature-hash %unsafe.signature=?)))
+	(set! CIF-TABLE (make-hashtable %signature-hash %$signature=?)))
       (or (hashtable-ref CIF-TABLE signature #f)
           (let* ((cif			(capi.ffi-prep-cif signature))
 		 (arg-types		(if (null? arg-types)
@@ -2009,8 +2008,8 @@
     (arguments-validation-forms
       (let ((types     (cif-arg-types    S))
 	    (checkers  (cif-arg-checkers S)))
-	(unless (unsafe.fx= (unsafe.vector-length args)
-			    (unsafe.vector-length types))
+	(unless ($fx= ($vector-length args)
+			    ($vector-length types))
 	  (assertion-violation who "wrong number of arguments" types args))
 	(when checkers
 	  (vector-for-each (lambda (arg-pred type arg)
@@ -2112,7 +2111,7 @@
 ;;;; done
 
 (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
-(set-rtd-destructor!	(type-descriptor memory-block)	%unsafe.memory-block-destructor)
+(set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
 
 (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 

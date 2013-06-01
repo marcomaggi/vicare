@@ -10,7 +10,7 @@
 	"internals.h", which defines  the internal API; some definitions
 	are modified to keep them opaque to external code.
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -193,28 +193,6 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 
 
 /** --------------------------------------------------------------------
- ** Code objects.
- ** ----------------------------------------------------------------- */
-
-/* This	 is the	 primary tag,  in the  machine word  referencing  a code
-   object. */
-#define code_pri_tag		vector_tag
-/* This is the	secondary tag, in the first word  of the referenced heap
-   vector. */
-#define code_tag		((ikptr)0x2F)
-#define disp_code_code_tag	0
-#define disp_code_code_size	(1 * wordsize)
-#define disp_code_reloc_vector	(2 * wordsize)
-#define disp_code_freevars	(3 * wordsize)
-#define disp_code_annotation	(4 * wordsize)
-#define disp_code_unused	(5 * wordsize)
-#define disp_code_data		(6 * wordsize)
-#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
-#define off_code_data		(disp_code_data		- code_pri_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
-
-
-/** --------------------------------------------------------------------
  ** Fixnum objects.
  ** ----------------------------------------------------------------- */
 
@@ -224,6 +202,8 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 
 #define most_positive_fixnum	(((ik_ulong)-1) >> (fx_shift+1))
 #define most_negative_fixnum	(most_positive_fixnum+1)
+#define IK_GREATEST_FIXNUM	most_positive_fixnum
+#define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
 #define IK_FIX(X)	((ikptr)(((long)(X)) << fx_shift))
 #define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
@@ -732,6 +712,37 @@ ik_decl int   ik_is_struct	(ikptr R);
 
 
 /** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+/* To assert  that an object  reference X (tagged pointer)  references a
+   code object we do:
+
+     assert(code_primary_tag == (code_primary_mask & X));
+     assert(code_tag         == IK_REF(X, off_code_tag));
+*/
+#define code_primary_mask	vector_mask
+#define code_primary_tag	vector_tag
+#define code_tag		((ikptr)0x2F)
+
+#define disp_code_tag		0
+#define disp_code_code_size	(1 * wordsize)
+#define disp_code_reloc_vector	(2 * wordsize)
+#define disp_code_freevars	(3 * wordsize)
+#define disp_code_annotation	(4 * wordsize)
+#define disp_code_unused	(5 * wordsize)
+#define disp_code_data		(6 * wordsize)
+#define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_annotation	(disp_code_annotation	- code_primary_tag)
+#define off_code_data		(disp_code_data		- code_primary_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
+
+#define IK_IS_CODE(X)		\
+     ((code_primary_tag == (code_primary_mask & X)) && \
+      (code_tag         == IK_REF(X, off_code_tag)))
+
+
+/** --------------------------------------------------------------------
  ** Closure objects.
  ** ----------------------------------------------------------------- */
 
@@ -744,10 +755,21 @@ ik_decl int   ik_is_struct	(ikptr R);
 
 #define IK_IS_CLOSURE(X)	((((long)(X)) & closure_mask) == closure_tag)
 
+#define IK_CLOSURE_ENTRY_POINT(X)	IK_REF((X),off_closure_code)
+#define IK_CLOSURE_CODE_OBJECT(X)	(IK_CLOSURE_ENTRY_POINT(X)-off_code_data)
+#define IK_CLOSURE_NUMBER_OF_FREE_VARS(X)	\
+  IK_UNFIX(IK_REF(IK_CLOSURE_CODE_OBJECT(X), off_code_freevars))
+#define IK_CLOSURE_FREE_VAR(X,IDX)	IK_REF((X),off_closure_data+wordsize*(IDX))
+
 
 /** --------------------------------------------------------------------
  ** Continuation objects.
  ** ----------------------------------------------------------------- */
+
+#define continuation_primary_mask	vector_mask
+#define continuation_primary_tag	vector_tag
+
+/* ------------------------------------------------------------------ */
 
 #define continuation_tag		((ikptr)0x1F)
 #define disp_continuation_tag		0
@@ -761,6 +783,12 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_continuation_size		(disp_continuation_size - vector_tag)
 #define off_continuation_next		(disp_continuation_next - vector_tag)
 
+#define IK_IS_CONTINUATION(X)		\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (continuation_tag         == IK_REF((X), off_continuation_tag)))
+
+/* ------------------------------------------------------------------ */
+
 #define system_continuation_tag		((ikptr) 0x11F)
 #define disp_system_continuation_tag	0
 #define disp_system_continuation_top	(1 * wordsize)
@@ -772,6 +800,15 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_system_continuation_top	(disp_system_continuation_top	 - vector_tag)
 #define off_system_continuation_next	(disp_system_continuation_next	 - vector_tag)
 #define off_system_continuation_unused	(disp_system_continuation_unused - vector_tag)
+
+#define IK_IS_SYSTEM_CONTINUATION(X)	\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (system_continuation_tag  == IK_REF((X), off_system_continuation_tag)))
+
+/* ------------------------------------------------------------------ */
+
+#define IK_IS_ANY_CONTINUATION(X)	\
+   (IK_IS_CONTINUATION(X) || IK_IS_SYSTEM_CONTINUATION(X))
 
 
 /** --------------------------------------------------------------------
@@ -798,8 +835,8 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
 				 ikptr s_count);
 
-ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
-ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+ik_decl void ik_enter_c_function (ikpcb* pcb);
+ik_decl void ik_leave_c_function (ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
@@ -947,6 +984,43 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 /* bytevector, pointer, mblock, false */
 #define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Generalised C buffer stuff.
+ ** ----------------------------------------------------------------- */
+
+ik_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
+
+/* ------------------------------------------------------------------ */
+
+/* generalised C buffer */
+#define IK_GENERALISED_C_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C buffer or false */
+#define IK_GENERALISED_C_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
+/* ------------------------------------------------------------------ */
+
+/* generalised sticky C buffer */
+#define IK_GENERALISED_C_STICKY_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised sticky C buffer or false */
+#define IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
+/* ------------------------------------------------------------------ */
+
+/* generalised C string */
+#define IK_GENERALISED_C_STRING(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C string or false */
+#define IK_GENERALISED_C_STRING_OR_FALSE(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
 
 
 /** --------------------------------------------------------------------

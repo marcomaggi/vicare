@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -46,25 +46,25 @@
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
-    (vicare syntactic-extensions)
-    (prefix (vicare words) words.)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare language-extensions syntaxes)
+    (prefix (vicare platform words) words.)
+    (vicare unsafe operations))
 
 
 ;;;; syntax helpers
 
-(define-syntax* (read-char-no-eof stx)
-  (syntax-case stx ()
-    ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
-     (and (identifier? #'?ch-name)
-	  (identifier? #'?raise-error))
-     #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
-	 (cond ((eof-object? ?ch-name)
-		(?raise-error))
-	       . ?cond-clauses)))))
+(define-syntax read-char-no-eof
+  (lambda (stx)
+    (syntax-case stx ()
+      ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
+       (and (identifier? #'?ch-name)
+	    (identifier? #'?raise-error))
+       #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
+	   (cond ((eof-object? ?ch-name)
+		  (?raise-error))
+		 . ?cond-clauses))))))
 
-(define-inline (%implementation-violation who msg . irritants)
+(define (%implementation-violation who msg . irritants)
   (raise (condition
 	  (make-assertion-violation)
 	  (make-implementation-restriction-violation)
@@ -74,6 +74,13 @@
 
 
 ;;;; miscellaneous helpers
+
+;;If set to  true enables loading shared libraries  specified by comment
+;;lists.  This  must be enabled only  when reading a program  or library
+;;source file.
+;;
+(define shared-library-loading-enabled?
+  (make-parameter #f))
 
 ;;Used to make the reader functions aware of the library file name being
 ;;read.
@@ -91,19 +98,21 @@
 (define custom-named-chars
   (make-parameter #f))
 
-(define-inline (reverse-list->string ell)
+(define-syntax-rule (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
   ;;
   (list->string (reverse ell)))
 
-(define-inline (port-in-r6rs-mode? port)
+(define-syntax-rule (port-in-r6rs-mode? port)
   (eq? (port-mode port) 'r6rs))
 
-(define-inline (port-in-vicare-mode? port)
+(define-syntax-rule (port-in-vicare-mode? port)
   (eq? (port-mode port) 'vicare))
 
-(define-inline (source-code-port? port)
-  (and (input-port? port) (textual-port? port)))
+(define-syntax-rule (source-code-port? port)
+  (and (or (input-port? port)
+	   (input/output-port? port))
+       (textual-port? port)))
 
 ;;; --------------------------------------------------------------------
 
@@ -140,32 +149,32 @@
 (define-inline (bytevector-cflonum-single-le-set! bv i x)
   (begin
     (bytevector-ieee-single-set! bv i                (real-part x) (endianness little))
-    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness little))))
+    (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness little))))
 
 (define-inline (bytevector-cflonum-single-be-set! bv i x)
   (begin
     (bytevector-ieee-single-set! bv i                (real-part x) (endianness big))
-    (bytevector-ieee-single-set! bv (unsafe.fx+ 4 i) (imag-part x) (endianness big))))
+    (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness big))))
 
 (define-inline (bytevector-cflonum-single-ne-set! bv i x)
   (begin
     (bytevector-ieee-single-native-set! bv i                (real-part x))
-    (bytevector-ieee-single-native-set! bv (unsafe.fx+ 4 i) (imag-part x))))
+    (bytevector-ieee-single-native-set! bv ($fx+ 4 i) (imag-part x))))
 
 (define-inline (bytevector-cflonum-double-le-set! bv i x)
   (begin
     (bytevector-ieee-double-set! bv i                (real-part x) (endianness little))
-    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness little))))
+    (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness little))))
 
 (define-inline (bytevector-cflonum-double-be-set! bv i x)
   (begin
     (bytevector-ieee-double-set! bv i                (real-part x) (endianness big))
-    (bytevector-ieee-double-set! bv (unsafe.fx+ 8 i) (imag-part x) (endianness big))))
+    (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness big))))
 
 (define-inline (bytevector-cflonum-double-ne-set! bv i x)
   (begin
     (bytevector-ieee-double-native-set! bv i                (real-part x))
-    (bytevector-ieee-double-native-set! bv (unsafe.fx+ 8 i) (imag-part x))))
+    (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x))))
 
 
 ;;;; interface to low level functions
@@ -219,14 +228,16 @@
     (display thing port))
   (define-inline (%write thing)
     (write thing port))
+    (define-inline (%pretty-print thing)
+      (pretty-print* thing port 0 #f))
   (%display "#[annotation")
-;;;Writing the annotation expression makes the output really unreadable
-;;;
+  ;;Writing   the  annotation   expression  makes   the  output   really
+  ;;unreadable.
   (%display " expression=#<omitted>")
-  (%display " stripped=")		(%write (annotation-stripped S))
-;;;Avoid  printing the SOURCE  field because  it may  be removed  in the
-;;;future  and all  its informations  are also  in  the TEXTUAL-POSITION
-;;;field.
+  (%display " stripped=")		(%pretty-print (annotation-stripped S))
+  ;;Avoid printing  the SOURCE field  because it  may be removed  in the
+  ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
+  ;;field.
   (%display " textual-position=")	(%write (annotation-textual-position S))
   (%display "]"))
 
@@ -353,98 +364,98 @@
 		(make-irritants-condition irritants))
 	      textual-pos)))
 
-(define-inline (die/pos port offset who msg . irritants)
+(define-syntax-rule (die/pos port offset who msg . irritants)
   (die/lex (make-compound-position/with-offset port offset) who msg . irritants))
 
-(define-inline (die/p p who msg . irritants)
+(define-syntax-rule (die/p p who msg . irritants)
   (die/pos p 0 who msg . irritants))
 
-(define-inline (die/p-1 p who msg . irritants)
+(define-syntax-rule (die/p-1 p who msg . irritants)
   (die/pos p -1 who msg . irritants))
 
-(define-inline (die/ann ann who msg . irritants)
+(define-syntax-rule (die/ann ann who msg . irritants)
   (die/lex (annotation-textual-position ann) who msg . irritants))
 
 
 ;;;; characters classification helpers
 
-(define CHAR-FIXNUM-0		(unsafe.char->fixnum #\0))
-(define CHAR-FIXNUM-a		(unsafe.char->fixnum #\a))
-;;(define CHAR-FIXNUM-f		(unsafe.char->fixnum #\f))
-(define CHAR-FIXNUM-A		(unsafe.char->fixnum #\A))
-;;(define CHAR-FIXNUM-F		(unsafe.char->fixnum #\F))
-(define CHAR-FIXNUM-a-10	(unsafe.fx- CHAR-FIXNUM-a 10))
-(define CHAR-FIXNUM-A-10	(unsafe.fx- CHAR-FIXNUM-A 10))
-(define CHAR-FIXNUM-SHARP	(unsafe.char->fixnum #\#))
-(define CHAR-FIXNUM-BANG	(unsafe.char->fixnum #\!))
+(define CHAR-FIXNUM-0		($char->fixnum #\0))
+(define CHAR-FIXNUM-a		($char->fixnum #\a))
+;;(define CHAR-FIXNUM-f		($char->fixnum #\f))
+(define CHAR-FIXNUM-A		($char->fixnum #\A))
+;;(define CHAR-FIXNUM-F		($char->fixnum #\F))
+(define CHAR-FIXNUM-a-10	($fx- CHAR-FIXNUM-a 10))
+(define CHAR-FIXNUM-A-10	($fx- CHAR-FIXNUM-A 10))
+(define CHAR-FIXNUM-SHARP	($char->fixnum #\#))
+(define CHAR-FIXNUM-BANG	($char->fixnum #\!))
 (define CHAR-FIXNUM-GREATEST-ASCII
   #\x7F #;($fixnum->char 127))
 
 (define-inline (char-is-single-char-line-ending? ch)
-  (or (unsafe.fx= ch #\x000A)	;; linefeed
-      (unsafe.fx= ch #\x0085)	;; next line
-      (unsafe.fx= ch #\x2028)))	;; line separator
+  (or ($fx= ch #\x000A)	;; linefeed
+      ($fx= ch #\x0085)	;; next line
+      ($fx= ch #\x2028)))	;; line separator
 
 (define-inline (char-is-carriage-return? ch)
-  (unsafe.fx= ch #\xD))
+  ($fx= ch #\xD))
 
 (define-inline (char-is-newline-after-carriage-return? ch)
   ;;This is used to recognise 2-char newline sequences.
   ;;
-  (or (unsafe.fx= ch #\x000A)	;; linefeed
-      (unsafe.fx= ch #\x0085)))	;; next line
+  (or ($fx= ch #\x000A)	;; linefeed
+      ($fx= ch #\x0085)))	;; next line
 
 (define (delimiter? ch)
   (or (char-whitespace? ch)
-      (unsafe.char= ch #\()
-      (unsafe.char= ch #\))
-      (unsafe.char= ch #\[)
-      (unsafe.char= ch #\])
-      (unsafe.char= ch #\")
-      (unsafe.char= ch #\#)
-      (unsafe.char= ch #\;)
-      (unsafe.char= ch #\{)
-      (unsafe.char= ch #\})
-      (unsafe.char= ch #\|)))
+      ($char= ch #\()
+      ($char= ch #\))
+      ($char= ch #\[)
+      ($char= ch #\])
+      ($char= ch #\")
+      ($char= ch #\#)
+      ($char= ch #\;)
+      ($char= ch #\{)
+      ($char= ch #\})
+      ($char= ch #\|)))
 
 (define-inline (dec-digit? ch)
-  (and (unsafe.char<= #\0 ch) (unsafe.char<= ch #\9)))
+  (and ($char<= #\0 ch) ($char<= ch #\9)))
 
 (define (initial? ch)
-  (cond ((unsafe.char<= ch CHAR-FIXNUM-GREATEST-ASCII)
+  (cond (($char<= ch CHAR-FIXNUM-GREATEST-ASCII)
 	 (or (letter? ch)
 	     (special-initial? ch)))
 	(else
 	 (unicode-printable-char? ch))))
 
 (define (letter? ch)
-  (or (and (unsafe.char<= #\a ch) (unsafe.char<= ch #\z))
-      (and (unsafe.char<= #\A ch) (unsafe.char<= ch #\Z))))
+  (or (and ($char<= #\a ch) ($char<= ch #\z))
+      (and ($char<= #\A ch) ($char<= ch #\Z))))
 
 (define (special-initial? ch)
-  (or (unsafe.char= ch #\!)
-      (unsafe.char= ch #\$)
-      (unsafe.char= ch #\%)
-      (unsafe.char= ch #\&)
-      (unsafe.char= ch #\*)
-      (unsafe.char= ch #\/)
-      (unsafe.char= ch #\:)
-      (unsafe.char= ch #\<)
-      (unsafe.char= ch #\=)
-      (unsafe.char= ch #\>)
-      (unsafe.char= ch #\?)
-      (unsafe.char= ch #\^)
-      (unsafe.char= ch #\_)
-      (unsafe.char= ch #\~)))
+  (or ($char= ch #\!)
+      ($char= ch #\$)
+      ($char= ch #\%)
+      ($char= ch #\&)
+      ($char= ch #\*)
+      ($char= ch #\/)
+      ($char= ch #\:)
+      ($char= ch #\<)
+      ($char= ch #\=)
+      ($char= ch #\>)
+      ($char= ch #\?)
+      ($char= ch #\^)
+      ($char= ch #\_)
+      ($char= ch #\~)))
 
 (define (special-subsequent? ch)
-  (or (unsafe.char= ch #\+)
-      (unsafe.char= ch #\-)
-      (unsafe.char= ch #\.)
-      (unsafe.char= ch #\@)))
+  (or ($char= ch #\+)
+      ($char= ch #\-)
+      ($char= ch #\.)
+      ($char= ch #\@)))
 
 (define (subsequent? ch)
-  (cond ((unsafe.char<= ch CHAR-FIXNUM-GREATEST-ASCII)
+  (cond (($char<= ch CHAR-FIXNUM-GREATEST-ASCII)
 	 (or (letter? ch)
 	     (dec-digit?  ch)
 	     (special-initial? ch)
@@ -465,7 +476,7 @@
   ;;N was  parsed.  PORT  must be  the port from  which the  chars where
   ;;drawn.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define (valid-integer-char? N)
     (cond ((<= N #xD7FF)   #t)
@@ -473,24 +484,24 @@
 	  ((<= N #x10FFFF) #t)
 	  (else            #f)))
   (if (valid-integer-char? N)
-      (unsafe.fixnum->char N)
+      ($fixnum->char N)
     (%error "invalid numeric value for character" (reverse-list->string accumulated-chars))))
 
 (define-inline (char->dec-digit ch)
-  (unsafe.fx- (unsafe.char->fixnum ch) CHAR-FIXNUM-0))
+  ($fx- ($char->fixnum ch) CHAR-FIXNUM-0))
 
 (define (char->hex-digit/or-false x)
   ;;If X is a character in the range of hex digits [0-9a-fA-F]: return a
   ;;fixnum representing such digit, else return #f.
   ;;
   (define-inline (y)
-    (unsafe.char->fixnum x))
-  (cond ((and (unsafe.char<= #\0 x) (unsafe.char<= x #\9))
-	 (unsafe.fx- (y) CHAR-FIXNUM-0))
-	((and (unsafe.char<= #\a x) (unsafe.char<= x #\f))
-	 (unsafe.fx- (y) CHAR-FIXNUM-a-10))
-	((and (unsafe.char<= #\A x) (unsafe.char<= x #\F))
-	 (unsafe.fx- (y) CHAR-FIXNUM-A-10))
+    ($char->fixnum x))
+  (cond ((and ($char<= #\0 x) ($char<= x #\9))
+	 ($fx- (y) CHAR-FIXNUM-0))
+	((and ($char<= #\a x) ($char<= x #\f))
+	 ($fx- (y) CHAR-FIXNUM-a-10))
+	((and ($char<= #\A x) ($char<= x #\F))
+	 ($fx- (y) CHAR-FIXNUM-A-10))
 	(else #f)))
 
 
@@ -546,24 +557,29 @@
   ;;
   (define who 'get-datum)
   (%assert-argument-is-source-code-port who port)
-  (let-values (((expr expr/ann locations kont)
-		(parametrise ((custom-named-chars (make-eq-hashtable)))
-		  (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
-    (if (null? locations)
-	expr
-      (begin
-	(for-each (reduce-loc! port)
-	  locations)
-	(kont)
-	(if (loc? expr)
-	    (loc-value expr)
-	  expr)))))
+  (parametrise ((shared-library-loading-enabled? #f))
+    (let-values (((expr expr/ann locations kont)
+		  (parametrise ((custom-named-chars (make-eq-hashtable)))
+		    (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
+      (if (null? locations)
+	  expr
+	(begin
+	  (for-each (reduce-loc! port)
+	    locations)
+	  (kont)
+	  (if (loc? expr)
+	      (loc-value expr)
+	    expr))))))
 
 (define (get-annotated-datum port)
   ;;Defined  by Ikarus.   Like GET-DATUM,  but rather  than  returning a
   ;;datum  return a  hierarchy of  ANNOTATION structures  with  the same
   ;;hierarchy of the datum and embedding the datum itself.
   ;;
+  (parametrise ((shared-library-loading-enabled? #f))
+    ($get-annotated-datum port)))
+
+(define ($get-annotated-datum port)
   (define who 'get-annotated-datum)
   (define (%return-annotated x)
     (if (and (annotation? x)
@@ -596,7 +612,7 @@
 ;;   read-script-source-file
 ;;   read-library-source-file
 ;;
-;;but all of them call GET-ANNOTATED-DATUM.
+;;but all of them call $GET-ANNOTATED-DATUM.
 ;;
 
 (define (read-library-source-file filename)
@@ -604,24 +620,26 @@
   ;;and return the first datum; close the port.
   ;;
   (let ((port (open-input-file filename)))
-    (parameterize ((current-library-file filename))
+    (parameterize ((current-library-file		filename)
+		   (shared-library-loading-enabled?	#t))
       (unwind-protect
-	  (get-annotated-datum port)
+	  ($get-annotated-datum port)
 	(close-input-port port)))))
 
 (define (read-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
   ;;and return all the datums in a list; close the port.
   ;;
-  (let ((port (open-input-file filename)))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(let read-next-datum ((obj (%next-datum)))
-	  (if (eof-object? obj)
-	      '()
-	    (cons obj (read-next-datum (%next-datum)))))
-      (close-input-port port))))
+  (parameterize ((shared-library-loading-enabled? #t))
+    (let ((port (open-input-file filename)))
+      (define-inline (%next-datum)
+	($get-annotated-datum port))
+      (unwind-protect
+	  (let read-next-datum ((obj (%next-datum)))
+	    (if (eof-object? obj)
+		'()
+	      (cons obj (read-next-datum (%next-datum)))))
+	(close-input-port port)))))
 
 (define (read-script-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
@@ -635,26 +653,27 @@
   ;;Notice that this  will discard valid sharp-bang comments  if the are
   ;;at the very beginning of a file.
   ;;
-  (let* ((port		(open-file-input-port filename))
-	 (sharp-bang?	(let-values (((octet1 octet2)
+  (parameterize ((shared-library-loading-enabled? #t))
+    (let* ((port	(open-file-input-port filename))
+	   (sharp-bang?	(let-values (((octet1 octet2)
 				      ;;If  an error  happens  here PORT
 				      ;;will  be   closed  by  the  port
 				      ;;guardian.
 				      (lookahead-two-u8 port)))
 			  (and (= octet1 CHAR-FIXNUM-SHARP)
 			       (= octet2 CHAR-FIXNUM-BANG))))
-	 (port		(transcoded-port port (native-transcoder))))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(begin
-	  (when sharp-bang?
-	    (read-and-discard-up-to-and-including-line-ending port))
-	  (let read-next-datum ((obj (%next-datum)))
-	    (if (eof-object? obj)
-		'()
-	      (cons obj (read-next-datum (%next-datum))))))
-      (close-input-port port))))
+	   (port	(transcoded-port port (native-transcoder))))
+      (define-inline (%next-datum)
+	($get-annotated-datum port))
+      (unwind-protect
+	  (begin
+	    (when sharp-bang?
+	      (read-and-discard-up-to-and-including-line-ending port))
+	    (let read-next-datum ((obj (%next-datum)))
+	      (if (eof-object? obj)
+		  '()
+		(cons obj (read-next-datum (%next-datum))))))
+	(close-input-port port)))))
 
 
 ;;;; helpers for public functions
@@ -677,12 +696,12 @@
   ;;     locations)
   ;;
   (lambda (entry)
-    (define-inline (%error msg . irritants)
+    (define-syntax-rule (%error msg . irritants)
       (die/p port 'vicare-reader msg . irritants))
-    (let ((loc (unsafe.cdr entry)))
+    (let ((loc ($cdr entry)))
       (unless (loc-set? loc)
 	(die/lex (loc-textual-position loc) 'vicare-reader
-		 "referenced location mark is not set" (unsafe.car entry)))
+		 "referenced location mark is not set" ($car entry)))
       (when (loc? (loc-value loc))
 	(let loop ((h loc) (t loc))
 	  (if (loc? h)
@@ -722,7 +741,7 @@
   ;;
   (define-inline (recurse)
     (start-tokenising/pos port))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
   (let* ((pos (make-compound-position port))
 	 (ch  (get-char-and-track-textual-position port)))
@@ -730,12 +749,12 @@
 	   (values ch pos))
 
 	  ;;discard line comments
-	  ((unsafe.char= ch #\;)
+	  (($char= ch #\;)
 	   (read-and-discard-up-to-and-including-line-ending port)
 	   (recurse))
 
 	  ;;tokenise everything starting with a #
-	  ((unsafe.char= ch #\#)
+	  (($char= ch #\#)
 	   ;;FIXME Why are we taking the position again here?
 	   (let* ((pos1 (make-compound-position port))
 		  (ch1  (get-char-and-track-textual-position port)))
@@ -743,12 +762,12 @@
 		    (%error "invalid eof after #"))
 
 		   ;;discard sexp comments
-		   ((unsafe.char= ch1 #\;)
+		   (($char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (recurse))
 
 		   ;;discard multiline comments
-		   ((unsafe.char= ch1 #\|)
+		   (($char= ch1 #\|)
 		    (finish-tokenisation-of-multiline-comment port)
 		    (recurse))
 
@@ -779,30 +798,30 @@
   ;;
   (define-inline (recurse)
     (start-tokenising port))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
   (let ((ch (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
 	   ch)
 
 	  ;;discard line comments
-	  ((unsafe.char= ch #\;)
+	  (($char= ch #\;)
 	   (read-and-discard-up-to-and-including-line-ending port)
 	   (recurse))
 
 	  ;;tokenise everything starting with a #
-	  ((unsafe.char= ch #\#)
+	  (($char= ch #\#)
 	   (let ((ch1 (get-char-and-track-textual-position port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid EOF after #"))
 
 		   ;;discard sexp comments
-		   ((unsafe.char= ch1 #\;)
+		   (($char= ch1 #\;)
 		    (read-and-discard-sexp port)
 		    (recurse))
 
 		   ;;discard multiline comments
-		   ((unsafe.char= ch1 #\|)
+		   (($char= ch1 #\|)
 		    (finish-tokenisation-of-multiline-comment port)
 		    (recurse))
 
@@ -843,26 +862,26 @@
   ;;If CH is the dot character:  the return value is the return value of
   ;;FINISH-TOKENISATION-OF-DOT-DATUM.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (cond ((eof-object? ch)
 	 (error 'advance-tokenisation-of-non-hash-datum/c "hmmmm eof")
 	 (eof-object))
 
-	((unsafe.char= #\( ch)   'lparen)
-	((unsafe.char= #\) ch)   'rparen)
-	((unsafe.char= #\[ ch)   'lbrack)
-	((unsafe.char= #\] ch)   'rbrack)
-	((unsafe.char= #\' ch)   '(macro . quote))
-	((unsafe.char= #\` ch)   '(macro . quasiquote))
+	(($char= #\( ch)   'lparen)
+	(($char= #\) ch)   'rparen)
+	(($char= #\[ ch)   'lbrack)
+	(($char= #\] ch)   'rbrack)
+	(($char= #\' ch)   '(macro . quote))
+	(($char= #\` ch)   '(macro . quasiquote))
 
-	((unsafe.char= #\, ch)
+	(($char= #\, ch)
 	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)
 		  '(macro . unquote))
-		 ((unsafe.char= ch1 #\@)
+		 (($char= ch1 #\@)
 		  (get-char-and-track-textual-position port)
 		  '(macro . unquote-splicing))
 		 (else
@@ -870,7 +889,7 @@
 
 	;;number
 	((dec-digit? ch)
-	 (let ((d (unsafe.fx- (unsafe.char->fixnum ch) (unsafe.char->fixnum #\0))))
+	 (let ((d ($fx- ($char->fixnum ch) ($char->fixnum #\0))))
 	   (cons 'datum (u:digit+ port (list ch) 10 #f #f +1 d))))
 
 	;;symbol
@@ -878,12 +897,12 @@
 	 (finish-tokenisation-of-identifier (cons ch '()) port #t))
 
 	;;string
-	((unsafe.char= #\" ch)
+	(($char= #\" ch)
 	 (let ((ls (%accumulate-string-chars '() port)))
 	   (cons 'datum (reverse-list->string ls))))
 
 	;;symbol "+" or number
-	((unsafe.char= #\+ ch)
+	(($char= #\+ ch)
 	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)	'(datum . +))
 		 ((delimiter?  ch1)	'(datum . +))
@@ -894,14 +913,14 @@
 		 ;;  +greek-pi/2	+greek-pi*2
 		 ;;
 		 ;;and so on.
-		 ((unsafe.char= ch1 #\g)
+		 (($char= ch1 #\g)
 		  (if (port-in-r6rs-mode? port)
 		      (%error "+g syntax is invalid in #!r6rs mode")
 		    (begin
 		      (get-char-and-track-textual-position port)
 		      (finish-tokenisation-of-identifier '(#\g #\+) port #t))))
 
-		 ((unsafe.char= #\+ ch1)
+		 (($char= #\+ ch1)
 		  (if (port-in-r6rs-mode? port)
 		      (%error "++ syntax is invalid in #!r6rs mode")
 		    (begin
@@ -923,13 +942,13 @@
 	;;"-nan.0"  without confusing them  with identifiers  by looking
 	;;only at the first char right after the first "-".
 	;;
-	((unsafe.char= #\- ch)
+	(($char= #\- ch)
 	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)	'(datum . -))
 		 ((delimiter?  ch1)	'(datum . -))
 
 		 ;;peculiar identifier: -> <subsequent>*
-		 ((unsafe.char= ch1 #\>)
+		 (($char= ch1 #\>)
 		  (get-char-and-track-textual-position port)
 		  (finish-tokenisation-of-identifier '(#\> #\-) port #t))
 
@@ -939,14 +958,14 @@
 		 ;;  -greek-pi/2	-greek-pi*2
 		 ;;
 		 ;;and so on.
-		 ((unsafe.char= ch1 #\g)
+		 (($char= ch1 #\g)
 		  (if (port-in-r6rs-mode? port)
 		      (%error "-g syntax is invalid in #!r6rs mode")
 		    (begin
 		      (get-char-and-track-textual-position port)
 		      (finish-tokenisation-of-identifier '(#\g #\-) port #t))))
 
-		 ((unsafe.char= ch1 #\-)
+		 (($char= ch1 #\-)
 		  (if (port-in-r6rs-mode? port)
 		      (%error "-- syntax is invalid in #!r6rs mode")
 		    (begin
@@ -963,22 +982,22 @@
 
 	;;everything  starting  with  a  dot (standalone  dot,  ellipsis
 	;;symbol, inexact number, other symbols)
-	((unsafe.char= #\. ch)
+	(($char= #\. ch)
 	 (finish-tokenisation-of-dot-datum port))
 
 	;;symbol with syntax "|<sym>|"
-	((unsafe.char= #\| ch)
+	(($char= #\| ch)
 	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
 	 (finish-tokenisation-of-identifier/bar '() port #t))
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
-	((unsafe.char= #\\ ch)
+	(($char= #\\ ch)
 	 (finish-tokenisation-of-identifier/backslash '() port #t))
 
 ;;;Unused for now.
 ;;;
-;;;     ((unsafe.char= #\{ ch) 'lbrace)
+;;;     (($char= #\{ ch) 'lbrace)
 
 	(else
 	 (%error-1 "invalid syntax" ch))))
@@ -1016,57 +1035,57 @@
   ;;is changed accordingly and  START-TOKENISING is applied to the port;
   ;;the return value is the return value of START-TOKENISING.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error)
+  (define-syntax-rule (%unexpected-eof-error)
     (%error "invalid EOF while reading hash datum"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  ;; (define-syntax-rule (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+  ;;   (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+  ;;     . ?cond-clauses))
 
   (cond
    ((eof-object? ch)
     (%error "invalid # near end of file"))
 
-   ((or (unsafe.char= #\t ch) (unsafe.char= #\T ch)) #;(memq ch '(#\t #\T))
+   ((or ($char= #\t ch) ($char= #\T ch)) #;(memq ch '(#\t #\T))
     (let ((c1 (peek-char port)))
       (cond ((eof-object? c1) '(datum . #t))
 	    ((delimiter?  c1) '(datum . #t))
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch c1))))))
 
-   ((or (unsafe.char= #\f ch) (unsafe.char= #\F ch)) #;(memq ch '(#\f #\F))
+   ((or ($char= #\f ch) ($char= #\F ch)) #;(memq ch '(#\f #\F))
     (let ((ch1 (peek-char port)))
       (cond ((eof-object? ch1) '(datum . #f))
 	    ((delimiter?  ch1) '(datum . #f))
 	    (else
 	     (%error (format "invalid syntax near #~a~a" ch ch1))))))
 
-   ((unsafe.char= #\\ ch)
+   (($char= #\\ ch)
     (finish-tokenisation-of-char port))
-   ((unsafe.char= #\( ch)
+   (($char= #\( ch)
     'vparen)
-   ((unsafe.char= #\' ch)
+   (($char= #\' ch)
     '(macro . syntax))
-   ((unsafe.char= #\` ch)
+   (($char= #\` ch)
     '(macro . quasisyntax))
 
-   ((unsafe.char= #\, ch)
+   (($char= #\, ch)
     (let ((ch1 (peek-char port)))
-      (cond ((unsafe.char= ch1 #\@)
+      (cond (($char= ch1 #\@)
 	     (get-char-and-track-textual-position port)
 	     '(macro . unsyntax-splicing))
 	    (else
 	     '(macro . unsyntax)))))
 
    ;; #! comments and such
-   ((unsafe.char= #\! ch)
+   (($char= #\! ch)
     (let ((ch1 (peek-char port)))
       (cond ((eof-object? ch1)
 	     (%unexpected-eof-error))
-	    ((unsafe.char= ch1 #\()
+	    (($char= ch1 #\()
 	     (read-char port)
 	     (if (port-in-r6rs-mode? port)
 		 (%error-1 "invalid syntax" "#!(")
@@ -1085,6 +1104,10 @@
 		  (if (port-in-r6rs-mode? port)
 		      (%error-1 "invalid syntax" "#!eof")
 		    `(datum . ,(eof-object))))
+		 ((would-block)
+		  (if (port-in-r6rs-mode? port)
+		      (%error-1 "invalid syntax" "#!would-block")
+		    `(datum . ,(would-block-object))))
 		 (else
 		  ;;If not  recognised, just handle it as  a comment and
 		  ;;read the next datum.
@@ -1095,7 +1118,7 @@
 	(%error-1 "graph notation marks syntax is invalid in #!r6rs mode" (string #\# ch))
       (finish-tokenisation-of-graph-location port (char->dec-digit ch))))
 
-   ((unsafe.char= #\: ch)
+   (($char= #\: ch)
     (if (port-in-r6rs-mode? port)
 	(%error-1 "keyword object syntax is invalid in #!r6rs mode" "#:")
       (let* ((ch1 (%read-char-skip-whitespace port "keyword object"))
@@ -1114,14 +1137,14 @@
 ;;;to read a  gensym by pretty string (because I was  unable to invent a
 ;;;cute syntax for them).  (Marco Maggi; Mon Mar 12, 2012)
 ;;;
-;;;((unsafe.char= #\: ch)
+;;;(($char= #\: ch)
 ;;; (if (port-in-r6rs-mode? port)
 ;;;     (%error-1 "gensym syntax is invalid in #!r6rs mode" (format "#~a" ch))
 ;;;   (let* ((ch1 (%read-char-skip-whitespace port "gensym"))
 ;;;          (pretty-name
 ;;;           (cond ((initial? ch1)
 ;;;                  (reverse-list->string (%accumulate-identifier-chars (cons ch1 '()) port)))
-;;;                 ((unsafe.char= #\| ch1)
+;;;                 (($char= #\| ch1)
 ;;;                  (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
 ;;;                 (else
 ;;;                  (%error-1 "invalid char inside gensym" ch1)))))
@@ -1141,16 +1164,16 @@
    ;;#{|d| |95BEx%X86N?8X&yC|}
    ;;   In which "d" is ID0 and "95BEx%X86N?8X&yC" is ID1.
    ;;
-   ((unsafe.char= #\{ ch)
+   (($char= #\{ ch)
     (when (port-in-r6rs-mode? port)
       (%error-1 "gensym syntax is invalid in #!r6rs mode" "#{"))
     (let ((ch1 (%read-char-skip-whitespace port "gensym")))
       (define-inline (%end-of-gensym? chX)
-	(unsafe.char= #\} chX))
+	($char= #\} chX))
       (define-inline (%read-identifier chX)
 	(cond ((initial? chX)
 	       (reverse-list->string (%accumulate-identifier-chars (cons chX '()) port)))
-	      ((unsafe.char= #\| chX)
+	      (($char= #\| chX)
 	       (reverse-list->string (%accumulate-identifier-chars/bar '() port)))
 	      (else
 	       (%error-1 "invalid char inside gensym syntax" chX))))
@@ -1167,45 +1190,45 @@
 	      (%error-1 "invalid char while looking for end of gensym syntax" ch3)))))))
 
    ;;bytevectors
-   ((unsafe.char= #\v ch)
+   (($char= #\v ch)
     (advance-tokenisation-of-bytevectors port))
 
    ;; #eNNNN -> exact integer number
-   ((or (unsafe.char= ch #\e) (unsafe.char= ch #\E))
+   ((or ($char= ch #\e) ($char= ch #\E))
     (cons 'datum (parse-numeric-string port (list ch #\#) 10 #f 'e)))
 
    ;; #iNNNN -> inexact integer number
-   ((or (unsafe.char= ch #\i) (unsafe.char= ch #\I))
+   ((or ($char= ch #\i) ($char= ch #\I))
     (cons 'datum (parse-numeric-string port (list ch #\#) 10 #f 'i)))
 
    ;; #bNNNN -> exact integer number in binary base
-   ((or (unsafe.char= ch #\b) (unsafe.char= ch #\B))
+   ((or ($char= ch #\b) ($char= ch #\B))
     (cons 'datum (parse-numeric-string port (list ch #\#) 2 2 #f)))
 
    ;; #xNNNN -> exact integer number in hex base
-   ((or (unsafe.char= ch #\x) (unsafe.char= ch #\X))
+   ((or ($char= ch #\x) ($char= ch #\X))
     (cons 'datum (parse-numeric-string port (list ch #\#) 16 16 #f)))
 
    ;; #oNNNN -> exact integer number in octal base
-   ((or (unsafe.char= ch #\o) (unsafe.char= ch #\O))
+   ((or ($char= ch #\o) ($char= ch #\O))
     (cons 'datum (parse-numeric-string port (list ch #\#) 8 8 #f)))
 
    ;; #dNNNN -> exact integer number in decimal base
-   ((or (unsafe.char= ch #\d) (unsafe.char= ch #\D))
+   ((or ($char= ch #\d) ($char= ch #\D))
     (cons 'datum (parse-numeric-string port (list ch #\#) 10 10 #f)))
 
-   ((unsafe.char= ch #\c)
+   (($char= ch #\c)
     (let ((ch1 (get-char-and-track-textual-position port)))
       (cond ((eof-object? ch1)
 	     (%unexpected-eof-error))
-	    ((unsafe.char= ch1 #\i)
+	    (($char= ch1 #\i)
 	     'case-insensitive)
-	    ((unsafe.char= ch1 #\s)
+	    (($char= ch1 #\s)
 	     'case-sensitive)
 	    (else
 	     (%error-1 "invalid syntax" (string #\# #\c ch1))))))
 
-;;;((unsafe.char= #\@ ch) DEAD: Unfixable due to port encoding
+;;;(($char= #\@ ch) DEAD: Unfixable due to port encoding
 ;;;                 that does not allow mixing binary and
 ;;;                 textual data in the same port.
 ;;;                Left here for historical value
@@ -1310,49 +1333,51 @@
   ;;
   ;; v   e    (                   #ve
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading hash datum"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
-  (define-inline (%invalid-sequence-of-chars   . chars)
+  (define-syntax-rule (%invalid-sequence-of-chars   . chars)
     (%error   "invalid sequence of characters" (string . chars)))
-  (define-inline (%invalid-sequence-of-chars-1 . chars)
+  (define-syntax-rule (%invalid-sequence-of-chars-1 . chars)
     (%error-1 "invalid sequence of characters" (string . chars)))
 
 ;;; --------------------------------------------------------------------
 
   (define-inline (%read-second-tag-char)
     (%read-char-no-eof (port ch1)
-      ((unsafe.char= #\u ch1)
+      (($char= #\u ch1)
        (%read-unsigned))
-      ((unsafe.char= #\s ch1)
+      (($char= #\s ch1)
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vs syntax in #!r6rs mode" "#vs"))
        (%read-signed))
-      ((unsafe.char= #\f ch1)
+      (($char= #\f ch1)
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vf syntax in #!r6rs mode" "#vf"))
        (%read-flonum))
-      ((unsafe.char= #\c ch1)
+      (($char= #\c ch1)
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vc syntax in #!r6rs mode" "#vc"))
        (%read-cflonum))
-      ((unsafe.char= #\e ch1)
+      (($char= #\e ch1)
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #ve syntax in #!r6rs mode" "#ve"))
        (%read-encoded))
       (else
        (%invalid-sequence-of-chars #\# #\v ch1))))
 
-  (define-inline (%read-open-paren token . chars)
+  (define-syntax-rule (%read-open-paren token . chars)
     (%read-char-no-eof (port ch)
-      ((unsafe.char= ch #\()
+      (($char= ch #\()
        token)
       (else
        (%invalid-sequence-of-chars-1 . chars))))
@@ -1361,32 +1386,32 @@
 
   (define-inline (%read-unsigned)
     (%read-char-no-eof (port ch2)
-      ((unsafe.char= ch2 #\8) ;unsigned 8
+      (($char= ch2 #\8) ;unsigned 8
        (%read-open-paren 'vu8 #\# #\v #\u #\8))
 
-      ((unsafe.char= ch2 #\1) ;unsigned 16
+      (($char= ch2 #\1) ;unsigned 16
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vu1 syntax in #!r6rs mode" "#vu1"))
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\6 ch3)
+	 (($char= #\6 ch3)
 	  (%read-unsigned-16))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\1 ch3))))
 
-      ((unsafe.char= ch2 #\3) ;unsigned 32
+      (($char= ch2 #\3) ;unsigned 32
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vu3 syntax in #!r6rs mode" "#vu3"))
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\2 ch3)
+	 (($char= #\2 ch3)
 	  (%read-unsigned-32))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\3 ch3))))
 
-      ((unsafe.char= ch2 #\6) ;unsigned 64
+      (($char= ch2 #\6) ;unsigned 64
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid #vu6 syntax in #!r6rs mode" "#vu6"))
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\4 ch3)
+	 (($char= #\4 ch3)
 	  (%read-unsigned-64))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\u #\6 ch3))))
@@ -1396,26 +1421,26 @@
 
   (define-inline (%read-signed)
     (%read-char-no-eof (port ch2)
-      ((unsafe.char= ch2 #\8) ;signed bytes
+      (($char= ch2 #\8) ;signed bytes
        (%read-open-paren 'vs8 #\# #\v #\s #\8))
 
-      ((unsafe.char= ch2 #\1) ;signed 16
+      (($char= ch2 #\1) ;signed 16
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\6 ch3)
+	 (($char= #\6 ch3)
 	  (%read-signed-16))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\1 ch3))))
 
-      ((unsafe.char= ch2 #\3) ;signed 32
+      (($char= ch2 #\3) ;signed 32
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\2 ch3)
+	 (($char= #\2 ch3)
 	  (%read-signed-32))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\3 ch3))))
 
-      ((unsafe.char= ch2 #\6) ;signed 64
+      (($char= ch2 #\6) ;signed 64
        (%read-char-no-eof (port ch3)
-	 ((unsafe.char= #\4 ch3)
+	 (($char= #\4 ch3)
 	  (%read-signed-64))
 	 (else
 	  (%invalid-sequence-of-chars-1 #\# #\v #\s #\6 ch3))))
@@ -1427,22 +1452,22 @@
 
   (define-inline (%read-unsigned-16)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vu16l #\# #\v #\u #\1 #\6 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vu16b #\# #\v #\u #\1 #\6 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vu16n #\# #\v #\u #\1 #\6 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\u #\1 #\6 ch4))))
 
   (define-inline (%read-signed-16)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vs16l #\# #\v #\s #\1 #\6 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vs16b #\# #\v #\s #\1 #\6 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vs16n #\# #\v #\s #\1 #\6 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\s #\1 #\6 ch4))))
@@ -1451,22 +1476,22 @@
 
   (define-inline (%read-unsigned-32)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vu32l #\# #\v #\u #\3 #\2 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vu32b #\# #\v #\u #\3 #\2 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vu32n #\# #\v #\u #\3 #\2 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\u #\3 #\2 ch4))))
 
   (define-inline (%read-signed-32)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vs32l #\# #\v #\s #\3 #\2 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vs32b #\# #\v #\s #\3 #\2 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vs32n #\# #\v #\s #\3 #\2 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\s #\3 #\2 ch4))))
@@ -1475,22 +1500,22 @@
 
   (define-inline (%read-unsigned-64)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vu64l #\# #\v #\u #\6 #\4 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vu64b #\# #\v #\u #\6 #\4 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vu64n #\# #\v #\u #\6 #\4 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\u #\6 #\4 ch4))))
 
   (define-inline (%read-signed-64)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vs64l #\# #\v #\s #\6 #\4 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vs64b #\# #\v #\s #\6 #\4 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vs64n #\# #\v #\s #\6 #\4 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\s #\6 #\4 ch4))))
@@ -1499,10 +1524,10 @@
 
   (define-inline (%read-flonum)
     (%read-char-no-eof (port ch2)
-      ((unsafe.char= ch2 #\4)	;single precision flonums
+      (($char= ch2 #\4)	;single precision flonums
        (%read-flonum-single-precision))
 
-      ((unsafe.char= ch2 #\8)	;double precision flonums
+      (($char= ch2 #\8)	;double precision flonums
        (%read-flonum-double-precision))
 
       (else
@@ -1510,22 +1535,22 @@
 
   (define-inline (%read-flonum-single-precision)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vf4l #\# #\v #\f #\4 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vf4b #\# #\v #\f #\4 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vf4n #\# #\v #\f #\4 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\f #\4 ch4))))
 
   (define-inline (%read-flonum-double-precision)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vf8l #\# #\v #\f #\8 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vf8b #\# #\v #\f #\8 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vf8n #\# #\v #\f #\8 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\f #\8 ch4))))
@@ -1534,10 +1559,10 @@
 
   (define-inline (%read-cflonum)
     (%read-char-no-eof (port ch2)
-      ((unsafe.char= ch2 #\4)	;single precision flonums
+      (($char= ch2 #\4)	;single precision flonums
        (%read-cflonum-single-precision))
 
-      ((unsafe.char= ch2 #\8)	;double precision flonums
+      (($char= ch2 #\8)	;double precision flonums
        (%read-cflonum-double-precision))
 
       (else
@@ -1545,22 +1570,22 @@
 
   (define-inline (%read-cflonum-single-precision)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vc4l #\# #\v #\c #\4 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vc4b #\# #\v #\c #\4 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vc4n #\# #\v #\c #\4 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\c #\4 ch4))))
 
   (define-inline (%read-cflonum-double-precision)
     (%read-char-no-eof (port ch4)
-      ((unsafe.char= ch4 #\l)
+      (($char= ch4 #\l)
        (%read-open-paren 'vc8l #\# #\v #\c #\8 #\l))
-      ((unsafe.char= ch4 #\b)
+      (($char= ch4 #\b)
        (%read-open-paren 'vc8b #\# #\v #\c #\8 #\b))
-      ((unsafe.char= ch4 #\n)
+      (($char= ch4 #\n)
        (%read-open-paren 'vc8n #\# #\v #\c #\8 #\n))
       (else
        (%invalid-sequence-of-chars-1 #\# #\v #\c #\8 ch4))))
@@ -1583,7 +1608,7 @@
   ;;(datum . ...)	The token is the ellipsis symbol.
   ;;(datum . <num>)	The token is the inexact number <NUM>.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (let ((ch (peek-char port)))
     (cond ((or (eof-object? ch)
@@ -1599,12 +1624,12 @@
 	  ;;and  symbols by  looking only  at the  char right  after the
 	  ;;first dot.
 	  ;;
-	  ((unsafe.char= ch #\.)
+	  (($char= ch #\.)
 	   (get-char-and-track-textual-position port)
 	   (let ((ch1 (get-char-and-track-textual-position port)))
 	     (cond ((eof-object? ch1)
 		    (%error "invalid syntax near end of file" ".."))
-		   ((unsafe.char= ch1 #\.) ;this is the third
+		   (($char= ch1 #\.) ;this is the third
 		    (let ((ch2 (peek-char port)))
 		      (cond ((eof-object? ch2)	'(datum . ...))
 			    ((delimiter?  ch2)	'(datum . ...))
@@ -1632,19 +1657,21 @@
   ;;
   (define-inline (recurse N1)
     (finish-tokenisation-of-graph-location port N1))
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading character"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (%read-char-no-eof (port ch)
-    ((unsafe.char= #\= ch) (cons 'mark N))
-    ((unsafe.char= #\# ch) (cons 'ref  N))
+    (($char= #\= ch) (cons 'mark N))
+    (($char= #\# ch) (cons 'ref  N))
     ((dec-digit? ch)
-     (recurse (unsafe.fx+ (unsafe.fx* N 10) (char->dec-digit ch))))
+     (recurse ($fx+ ($fx* N 10) (char->dec-digit ch))))
     (else
      (%error "invalid char while inside a #n mark/ref" ch))))
 
@@ -1749,7 +1776,7 @@
   ;;Read from PORT characters from an identifier token, accumulate them,
   ;;in reverse order and return the resulting list.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse accum)
     (%accumulate-identifier-chars accum port))
@@ -1761,7 +1788,7 @@
 	   (recurse (cons ch accumulated-chars)))
 	  ((delimiter? ch)
 	   accumulated-chars)
-	  ((unsafe.char= ch #\\)
+	  (($char= ch #\\)
 	   (get-char-and-track-textual-position port)
 	   (%accumulate-identifier-chars/backslash accumulated-chars port #f))
 	  ((port-in-r6rs-mode? port)
@@ -1779,18 +1806,20 @@
   ;;This is a syntax outside  of R6RS: identifiers between bars can hold
   ;;any character.
   ;;
-  (define-inline (%unexpected-eof-error . args)
+  (define-syntax-rule (%unexpected-eof-error . args)
     (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
   (define-inline (recurse accum)
     (%accumulate-identifier-chars/bar accum port))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (%read-char-no-eof (port ch)
-    ((unsafe.char= #\\ ch)
+    (($char= #\\ ch)
      (%accumulate-identifier-chars/backslash accumulated-chars port #t))
-    ((unsafe.char= #\| ch) ;end of symbol, whatever comes after
+    (($char= #\| ch) ;end of symbol, whatever comes after
      accumulated-chars)
     (else
      (recurse (cons ch accumulated-chars)))))
@@ -1806,19 +1835,21 @@
   ;;reading,  else %ACCUMULATE-IDENTIFIER-CHARS  is invoked  to continue
   ;;reading.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port   'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error . args)
+  (define-syntax-rule (%unexpected-eof-error . args)
     (%error "unexpected EOF while reading symbol" . args))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
-      ((unsafe.char= #\x ch)
+      (($char= #\x ch)
        (%tokenize-hex-digits))
       (else
        (%error "expected character \"x\" after backslash while reading symbol"
@@ -1828,7 +1859,7 @@
     (let next-digit ((code-point 0)
 		     (accumul    (list #\x #\\)))
       (%read-char-no-eof (port ch)
-	((unsafe.char= #\; ch)
+	(($char= #\; ch)
 	 (let ((accum (cons (fixnum->char/checked code-point accumul port)
 			    accumulated-chars)))
 	   (if inside-bar?
@@ -1836,7 +1867,7 @@
 	     (%accumulate-identifier-chars accum port))))
 	((char->hex-digit/or-false ch)
 	 => (lambda (digit)
-	      (next-digit (unsafe.fx+ digit (unsafe.fx* code-point 16))
+	      (next-digit ($fx+ digit ($fx* code-point 16))
 			  (cons ch accumul))))
 	(else
 	 (%error "expected hex digit after backslash sequence while reading symbol"
@@ -1847,9 +1878,9 @@
 
 
 (define (finalise-tokenisation port locations kont token pos)
-  (define-inline (%error   msg . irritants)
+  (define-syntax-rule (%error   msg . irritants)
     (die/p   port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
@@ -1996,9 +2027,9 @@
 	   (%error-1 (format "unexpected ~s found" token)))))
 
   (define-inline (%process-pair-token token)
-    (let ((class (unsafe.car token)))
+    (let ((class ($car token)))
       (cond ((eq? class 'datum) ;datum already tokenised
-	     (let ((X (unsafe.cdr token)))
+	     (let ((X ($cdr token)))
 	       (values X (annotate-simple X pos) locations kont)))
 
 	    ;;Read  a sexp  quoted  with one  among: QUOTE,  QUASIQUOTE,
@@ -2006,7 +2037,7 @@
 	    ;;UNSYNTAX-SPLICING.
 	    ;;
 	    ((eq? class 'macro)
-	     (let ((quoting-keyword (unsafe.cdr token)))
+	     (let ((quoting-keyword ($cdr token)))
 	       (define (%read-quoted-sexp)
 		 (let-values (((token1 pos) (start-tokenising/pos port)))
 		   (if (eof-object? token1)
@@ -2056,12 +2087,12 @@
 	    ;;  #N=#vu8(1 2 3)
 	    ;;
 	    ((eq? class 'mark)
-	     (let ((N (unsafe.cdr token)))
+	     (let ((N ($cdr token)))
 	       (let-values (((expr expr/ann locations kont)
 			     (read-expr port locations kont)))
 		 (cond ((assq N locations)
 			=> (lambda (pair)
-			     (let ((loc (unsafe.cdr pair)))
+			     (let ((loc ($cdr pair)))
 			       (when (loc-set? loc)
 				 (die/lex (condition (loc-textual-position loc) pos)
 					  'vicare-reader "duplicate location mark for graph notation" N))
@@ -2095,10 +2126,10 @@
 	    ;;processed by REDUCE-LOC!.
 	    ;;
 	    ((eq? class 'ref)
-	     (let ((N (unsafe.cdr token)))
+	     (let ((N ($cdr token)))
 	       (cond ((assq N locations)
 		      => (lambda (pair)
-			   (values (unsafe.cdr pair) 'unused locations kont)))
+			   (values ($cdr pair) 'unused locations kont)))
 		     (else
 		      (let* ((the-loc     (let ((value     #f)
 						(value/ann 'unused)
@@ -2120,16 +2151,18 @@
   ;;
   (define-inline (recurse accum)
     (%accumulate-string-chars accum port))
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p   port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading string"))
 
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
@@ -2137,9 +2170,9 @@
        (%accumulate-char ls port ch))))
 
   (define (%accumulate-char ls port ch)
-    (cond ((unsafe.char= #\" ch) ;end of the string
+    (cond (($char= #\" ch) ;end of the string
 	   ls)
-	  ((unsafe.char= #\\ ch)
+	  (($char= #\\ ch)
 	   (%parse-escape-sequence ls port))
 	  (else
 	   (recurse (cons ch ls)))))
@@ -2150,18 +2183,18 @@
     ;;
     (%read-char-no-eof (port ch)
       ;;recognise single char escape sequences
-      ((unsafe.char= #\a ch)  (recurse (cons #\x7  ls)))
-      ((unsafe.char= #\b ch)  (recurse (cons #\x8  ls)))
-      ((unsafe.char= #\t ch)  (recurse (cons #\x9  ls)))
-      ((unsafe.char= #\n ch)  (recurse (cons #\xA  ls)))
-      ((unsafe.char= #\v ch)  (recurse (cons #\xB  ls)))
-      ((unsafe.char= #\f ch)  (recurse (cons #\xC  ls)))
-      ((unsafe.char= #\r ch)  (recurse (cons #\xD  ls)))
-      ((unsafe.char= #\" ch)  (recurse (cons #\x22 ls)))
-      ((unsafe.char= #\\ ch)  (recurse (cons #\x5C ls)))
+      (($char= #\a ch)  (recurse (cons #\x7  ls)))
+      (($char= #\b ch)  (recurse (cons #\x8  ls)))
+      (($char= #\t ch)  (recurse (cons #\x9  ls)))
+      (($char= #\n ch)  (recurse (cons #\xA  ls)))
+      (($char= #\v ch)  (recurse (cons #\xB  ls)))
+      (($char= #\f ch)  (recurse (cons #\xC  ls)))
+      (($char= #\r ch)  (recurse (cons #\xD  ls)))
+      (($char= #\" ch)  (recurse (cons #\x22 ls)))
+      (($char= #\\ ch)  (recurse (cons #\x5C ls)))
 
       ;;inline hex escape "\xHHHH;"
-      ((unsafe.char= #\x ch)
+      (($char= #\x ch)
        (%read-char-no-eof (port ch1)
 	 ((char->hex-digit/or-false ch1)
 	  => (lambda (first-digit)
@@ -2170,7 +2203,7 @@
 	  (%error-1 "invalid character in inline hex escape while reading string" ch1))))
 
       ;;inline named char "\{name}"
-      ((unsafe.char= #\{ ch)
+      (($char= #\{ ch)
        (when (port-in-r6rs-mode? port)
 	 (%error "invalid custom named character syntax in R6RS mode"))
        (recurse (cons (%parse-escape-named-char) ls)))
@@ -2239,9 +2272,9 @@
       (%read-char-no-eof (port chX)
 	((char->hex-digit/or-false chX)
 	 => (lambda (digit)
-	      (next-char (unsafe.fx+ (unsafe.fx* code-point 16) digit)
+	      (next-char ($fx+ ($fx* code-point 16) digit)
 			 (cons chX accum))))
-	((unsafe.char= chX #\;)
+	(($char= chX #\;)
 	 (recurse (cons (fixnum->char/checked code-point (cons chX accum) port) ls)))
 	(else
 	 (%error-1 "invalid char in escape sequence while reading string"
@@ -2253,7 +2286,7 @@
     ;;
     (let ((token (finish-tokenisation-of-identifier '() port #f)))
       (%read-char-no-eof (port chX)
-	((unsafe.char= chX #\})
+	(($char= chX #\})
 	 (let* ((name (cdr token))
 		(ch   (hashtable-ref (custom-named-chars) name #f)))
 	   (or ch (%error "unknown named char in escape sequence while reading string" name))))
@@ -2284,7 +2317,7 @@
       (next-char ch)))
 
   (define-inline (intraline-whitespace? ch)
-    (or (unsafe.char= ch #\x9)
+    (or ($char= ch #\x9)
 	(eq? (char-general-category ch) 'Zs)))
 
   (main))
@@ -2299,25 +2332,27 @@
   ;;
   ;;where <CH> is the character value.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading character"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
       ;;There are multiple character sequences starting with "#\n".
-      ((unsafe.char= #\n ch)
+      (($char= #\n ch)
        (let ((ch1 (peek-char port)))
 	 (cond ((eof-object? ch1)
 		'(datum . #\n))
-	       ((unsafe.char= #\u ch1)
+	       (($char= #\u ch1)
 		(get-char-and-track-textual-position port)
 		(%finish-reading-character-name port "ul" '(datum . #\x0)))
-	       ((unsafe.char= #\e ch1)
+	       (($char= #\e ch1)
 		(get-char-and-track-textual-position port)
 		(%finish-reading-character-name port "ewline" '(datum . #\xA)))
 	       ((delimiter? ch1)
@@ -2325,29 +2360,29 @@
 	       (else
 		(%error "invalid syntax" (string #\# #\\ #\n ch1))))))
 
-      ((unsafe.char= #\a ch)
+      (($char= #\a ch)
        (%finish-reading-character-name port "alarm"	'(datum . #\x7)))
-      ((unsafe.char= #\b ch)
+      (($char= #\b ch)
        (%finish-reading-character-name port "backspace"	'(datum . #\x8)))
-      ((unsafe.char= #\t ch)
+      (($char= #\t ch)
        (%finish-reading-character-name port "tab"	'(datum . #\x9)))
-      ((unsafe.char= #\l ch)
+      (($char= #\l ch)
        (%finish-reading-character-name port "linefeed"	'(datum . #\xA)))
-      ((unsafe.char= #\v ch)
+      (($char= #\v ch)
        (%finish-reading-character-name port "vtab"	'(datum . #\xB)))
-      ((unsafe.char= #\p ch)
+      (($char= #\p ch)
        (%finish-reading-character-name port "page"	'(datum . #\xC)))
-      ((unsafe.char= #\r ch)
+      (($char= #\r ch)
        (%finish-reading-character-name port "return"	'(datum . #\xD)))
-      ((unsafe.char= #\e ch)
+      (($char= #\e ch)
        (%finish-reading-character-name port "esc"	'(datum . #\x1B)))
-      ((unsafe.char= #\s ch)
+      (($char= #\s ch)
        (%finish-reading-character-name port "space"	'(datum . #\x20)))
-      ((unsafe.char= #\d ch)
+      (($char= #\d ch)
        (%finish-reading-character-name port "delete"	'(datum . #\x7F)))
 
       ;;Read the char "#\x" or a character in hex format "#\xHHHH".
-      ((unsafe.char= #\x ch)
+      (($char= #\x ch)
        (let ((ch1 (peek-char port)))
 	 (cond ((or (eof-object? ch1)
 		    (delimiter?  ch1))
@@ -2373,7 +2408,7 @@
 		(%error "invalid character sequence" (string #\# #\\ ch1))))))
 
       ;;Read the char "#\{" or a custom named character "#\{name}".
-      ((unsafe.char= #\{ ch)
+      (($char= #\{ ch)
        (let ((ch1 (peek-char port)))
 	 (cond ((or (eof-object? ch1)
 		    (delimiter? ch1))
@@ -2383,7 +2418,7 @@
 		  (%error "invalid custom named character syntax in R6RS mode"))
 		(let ((token (finish-tokenisation-of-identifier '() port #f)))
 		  (%read-char-no-eof (port chX)
-		    ((unsafe.char= chX #\})
+		    (($char= chX #\})
 		     (let* ((name (cdr token))
 			    (ch   (hashtable-ref (custom-named-chars) name #f)))
 		       (cons 'datum (or ch (%error "unknown custom named character" name)))))
@@ -2418,16 +2453,16 @@
     ;;consumed, and we only need to  verify that the next char from PORT
     ;;is EOF or a delimiter.  In this case DATUM is ignored.
     ;;
-    (define-inline (%error msg . args)
+    (define-syntax-rule (%error msg . args)
       (die/p port 'tokenize msg . args))
     (let ((ch (peek-char port)))
       (cond ((or (eof-object? ch)
 		 (delimiter? ch))
-	     (cons 'datum (unsafe.string-ref str 0)))
-	    ((unsafe.char= ch (unsafe.string-ref str 1))
+	     (cons 'datum ($string-ref str 0)))
+	    (($char= ch ($string-ref str 1))
 	     (get-char-and-track-textual-position port)
 	     (let loop ((str.index 2))
-		 (if (unsafe.fx= str.index (unsafe.string-length str))
+		 (if ($fx= str.index ($string-length str))
 		     (let ((ch (peek-char port)))
 		       (cond ((eof-object? ch) datum)
 			     ((delimiter?  ch) datum)
@@ -2437,12 +2472,12 @@
 		   (let ((ch (get-char-and-track-textual-position port)))
 		     (cond ((eof-object? ch)
 			    (%error "invalid EOF in the middle of expected sequence" str))
-			   ((unsafe.char= ch (unsafe.string-ref str str.index))
-			    (loop (unsafe.fxadd1 str.index)))
+			   (($char= ch ($string-ref str str.index))
+			    (loop ($fxadd1 str.index)))
 			   (else
 			    (%error "invalid char while scanning string" ch str)))))))
 	    (else
-	     (%error "invalid syntax" (unsafe.string-ref str 0) ch)))))
+	     (%error "invalid syntax" ($string-ref str 0) ch)))))
 
   (main))
 
@@ -2566,12 +2601,12 @@
     (die/p port 'tokenize "end of file encountered while inside a #|-style comment"))
 
   (define-inline (string->reverse-list str str.start accumulated)
-    (%string->reverse-list str str.start (unsafe.string-length str) accumulated))
+    (%string->reverse-list str str.start ($string-length str) accumulated))
   (define (%string->reverse-list str str.index str.len accumulated)
-    (if (unsafe.fx= str.index str.len)
+    (if ($fx= str.index str.len)
 	accumulated
-      (%string->reverse-list str (unsafe.fxadd1 str.index) str.len
-			     (cons (unsafe.string-ref str str.index) accumulated))))
+      (%string->reverse-list str ($fxadd1 str.index) str.len
+			     (cons ($string-ref str str.index) accumulated))))
 
   (define (accumulate-comment-chars port ac)
     (define-inline (recurse ac)
@@ -2582,13 +2617,13 @@
 
 	    ;;A vertical bar character may or may not end this multiline
 	    ;;comment.
-	    ((unsafe.char= #\| c)
+	    (($char= #\| c)
 	     (let next-vertical-bar ((ch1 (get-char-and-track-textual-position port)) (ac ac))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
-		     ((unsafe.char= #\# ch1) ;end of comment
+		     (($char= #\# ch1) ;end of comment
 		      ac)
-		     ((unsafe.char= #\| ch1) ;optimisation for sequence of bars?!?
+		     (($char= #\| ch1) ;optimisation for sequence of bars?!?
 		      (next-vertical-bar (get-char-and-track-textual-position port) (cons ch1 ac)))
 		     (else
 		      (recurse (cons ch1 ac))))))
@@ -2596,11 +2631,11 @@
 	    ;;A hash character  may or may not start  a nested multiline
 	    ;;comment.   Read a  nested multiline  comment, if  there is
 	    ;;one.
-	    ((unsafe.char= #\# c)
+	    (($char= #\# c)
 	     (let ((ch1 (get-char-and-track-textual-position port)))
 	       (cond ((eof-object? ch1)
 		      (%multiline-error))
-		     ((unsafe.char= #\| ch1) ;it is a nested comment
+		     (($char= #\| ch1) ;it is a nested comment
 		      (let ((v (finish-tokenisation-of-multiline-comment port)))
 			(if (string? v)
 			    (recurse (string->reverse-list v 0 ac))
@@ -2646,9 +2681,9 @@
   ;;
   ;;	(read-char* port '(#\r) "6rs" #f #f)
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define str.len
     (string-length str))
@@ -2663,9 +2698,9 @@
 	(cond ((eof-object? ch)
 	       (%error (format "invalid eof inside ~a" who)))
 	      ((or (and (not case-insensitive-char?)
-			(unsafe.char= ch (string-ref str i)))
+			($char= ch (string-ref str i)))
 		   (and case-insensitive-char?
-			(unsafe.char= (char-downcase ch) (string-ref str i))))
+			($char= (char-downcase ch) (string-ref str i))))
 	       (loop (add1 i) (cons ch ls)))
 	      (else
 	       (%error-1 (format "invalid ~a: ~s" who (reverse-list->string (cons ch ls))))))))))
@@ -2678,7 +2713,7 @@
   ;;CALLER must be a string  describing the token the caller is parsing,
   ;;it is used for error reporting.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse)
     (%read-char-skip-whitespace port caller))
@@ -2723,9 +2758,9 @@
 				      reading-first-item?)
   (define-inline (recurse-to-read-cdr locs1 kont1)
     (%finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren #f))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
   (define-inline (%paren-symbol->char paren)
     (if (eq? paren 'rparen) #\) #\]))
@@ -2789,14 +2824,14 @@
 	;;When we  are sure that all  the locations have  been found and
 	;;the corresponding datums  gathered: substitute the LOC structs
 	;;in the pair with the corresponding datum and annotated datum.
-	(let ((the-car1 (unsafe.car pair)))
+	(let ((the-car1 ($car pair)))
 	  (when (loc? the-car1)
-	    (unsafe.set-car! pair     (loc-value     the-car1))
-	    (unsafe.set-car! pair/ann (loc-value/ann the-car1))))
-	(let ((the-cdr1 (unsafe.cdr pair)))
+	    ($set-car! pair     (loc-value     the-car1))
+	    ($set-car! pair/ann (loc-value/ann the-car1))))
+	(let ((the-cdr1 ($cdr pair)))
 	  (when (loc? the-cdr1)
-	    (unsafe.set-cdr! pair     (loc-value     the-cdr1))
-	    (unsafe.set-cdr! pair/ann (loc-value/ann the-cdr1))))
+	    ($set-cdr! pair     (loc-value     the-cdr1))
+	    ($set-cdr! pair/ann (loc-value/ann the-cdr1))))
 	(kont))
     kont))
 
@@ -2820,9 +2855,9 @@
   ;;
   (define-inline (recurse locs1 kont1 ls1 ls1/ann)
     (finish-tokenisation-of-vector port locs1 kont1 (fxadd1 count) ls1 ls1/ann))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
@@ -2848,13 +2883,13 @@
 
   (define (%store-items-in-vector vec vec/ann kont index ls ls/ann)
     (define-inline (recurse kont1)
-      (%store-items-in-vector vec vec/ann kont1 (unsafe.fxsub1 index)
-			      (unsafe.cdr ls) (unsafe.cdr ls/ann)))
+      (%store-items-in-vector vec vec/ann kont1 ($fxsub1 index)
+			      ($cdr ls) ($cdr ls/ann)))
     (if (null? ls)
 	kont
-      (let ((item (unsafe.car ls)))
+      (let ((item ($car ls)))
 	(vector-set! vec     index item)
-	(vector-set! vec/ann index (unsafe.car ls/ann))
+	(vector-set! vec/ann index ($car ls/ann))
 	(recurse (if (loc? item)
 		     (lambda ()
 		       ;;When we  are sure  that all the  locations have
@@ -2874,24 +2909,24 @@
 
 (define-syntax define-finish-bytevector
   (syntax-rules ()
-    ((_ ?who ?tag ?number-pred ?bytes-in-word ?unsafe.bytevector-set!)
+    ((_ ?who ?tag ?number-pred ?bytes-in-word ?$bytevector-set!)
      (define (?who port locs kont count ls)
        (define-inline (recurse locs1 kont1 count1 ls1)
 	 (?who port locs1 kont1 count1 ls1))
-       (define-inline (%error msg . irritants)
+       (define-syntax-rule (%error msg . irritants)
 	 (die/p port 'vicare-reader msg . irritants))
-       (define-inline (%error-1 msg . irritants)
+       (define-syntax-rule (%error-1 msg . irritants)
 	 (die/p-1 port 'vicare-reader msg . irritants))
 
        (define-inline (%make-bv the-count the-ls)
-	 (let ((bv (unsafe.make-bytevector (* ?bytes-in-word the-count))))
-	   (let loop ((i  (unsafe.fx- (unsafe.fx* count ?bytes-in-word) ?bytes-in-word))
+	 (let ((bv ($make-bytevector (* ?bytes-in-word the-count))))
+	   (let loop ((i  ($fx- ($fx* count ?bytes-in-word) ?bytes-in-word))
 		      (ls the-ls))
 	     (if (null? ls)
 		 bv
-	       (let ((word (unsafe.car ls)))
-		 (?unsafe.bytevector-set! bv i word)
-		 (loop (unsafe.fx- i ?bytes-in-word) (unsafe.cdr ls)))))))
+	       (let ((word ($car ls)))
+		 (?$bytevector-set! bv i word)
+		 (loop ($fx- i ?bytes-in-word) ($cdr ls)))))))
 
        (let-values (((token pos) (start-tokenising/pos port)))
 	 (cond ((eof-object? token)
@@ -2918,13 +2953,13 @@
   'vu8			     ;tag
   words.word-u8?	     ;to validate numbers
   1			     ;number of bytes in word
-  unsafe.bytevector-u8-set!) ;setter
+  $bytevector-u8-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s8
   'vs8			     ;tag
   words.word-s8?	     ;to validate numbers
   1			     ;number of bytes in word
-  unsafe.bytevector-s8-set!) ;setter
+  $bytevector-s8-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -2932,19 +2967,19 @@
   'vu16l		       ;tag
   words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-u16l-set!) ;setter
+  $bytevector-u16l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u16b
   'vu16b		       ;tag
   words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-u16b-set!) ;setter
+  $bytevector-u16b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u16n
   'vu16n		       ;tag
   words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-u16n-set!) ;setter
+  $bytevector-u16n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -2952,19 +2987,19 @@
   'vs16l		       ;tag
   words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-s16l-set!) ;setter
+  $bytevector-s16l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s16b
   'vs16b		       ;tag
   words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-s16b-set!) ;setter
+  $bytevector-s16b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s16n
   'vs16n		       ;tag
   words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
-  unsafe.bytevector-s16n-set!) ;setter
+  $bytevector-s16n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -2972,19 +3007,19 @@
   'vu32l		       ;tag
   words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-u32l-set!) ;setter
+  $bytevector-u32l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u32b
   'vu32b		       ;tag
   words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-u32b-set!) ;setter
+  $bytevector-u32b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u32n
   'vu32n		       ;tag
   words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-u32n-set!) ;setter
+  $bytevector-u32n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -2992,19 +3027,19 @@
   'vs32l		       ;tag
   words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-s32l-set!) ;setter
+  $bytevector-s32l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s32b
   'vs32b		       ;tag
   words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-s32b-set!) ;setter
+  $bytevector-s32b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s32n
   'vs32n		       ;tag
   words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
-  unsafe.bytevector-s32n-set!) ;setter
+  $bytevector-s32n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -3012,19 +3047,19 @@
   'vu64l		       ;tag
   words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-u64l-set!) ;setter
+  $bytevector-u64l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u64b
   'vu64b		       ;tag
   words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-u64b-set!) ;setter
+  $bytevector-u64b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u64n
   'vu64n		       ;tag
   words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-u64n-set!) ;setter
+  $bytevector-u64n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -3032,19 +3067,19 @@
   'vs64l		       ;tag
   words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-s64l-set!) ;setter
+  $bytevector-s64l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s64b
   'vs64b		       ;tag
   words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-s64b-set!) ;setter
+  $bytevector-s64b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s64n
   'vs64n		       ;tag
   words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
-  unsafe.bytevector-s64n-set!) ;setter
+  $bytevector-s64n-set!) ;setter
 
 ;;; --------------------------------------------------------------------
 
@@ -3129,9 +3164,9 @@
 ;;; --------------------------------------------------------------------
 
 (define (finish-tokenisation-of-bytevector-ve port locs kont)
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (let-values (((token pos) (start-tokenising/pos port)))
@@ -3148,7 +3183,8 @@
 	       (((encoding encoding^ locs1 kont1)
 		 (finalise-tokenisation port locs kont token pos)))
 	     (unless (and (symbol? encoding)
-			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n)))
+			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n
+						 hex base64)))
 	       (die/ann encoding^ 'vicare-reader
 			"expected encoding symbol for this bytevector type" encoding))
 	     (let-values (((token pos) (start-tokenising/pos port)))
@@ -3178,6 +3214,8 @@
 					    ((utf16be)	(string->utf16be	string))
 					    ((utf16le)	(string->utf16le	string))
 					    ((utf16n)	(string->utf16n		string))
+					    ((hex)	(string-hex->bytevector	string))
+					    ((base64)	(string-base64->bytevector string))
 					    (else
 					     (%error "invalid bytevector encoding" encoding)))))
 				   (values v v locs kont)))
@@ -3207,7 +3245,11 @@
 	      (let ((libid (cadr ls)))
 		(if (string? libid)
 		    (begin
-		      (register-filename-foreign-library (current-library-file) libid)
+		      (unless (shared-library-loading-enabled?)
+			(%error
+			 "comment list processing is disabled for this reading operation"))
+		      (when (current-library-file)
+			(register-filename-foreign-library (current-library-file) libid))
 		      (autoload-filename-foreign-library libid))
 		  (%error "expected string argument to load-shared-library"))))))
       ((char-names)
