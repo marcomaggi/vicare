@@ -871,7 +871,7 @@ ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
 ikptr
 ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
 {
-  uint32_t	mxn = most_positive_fixnum;
+  uint64_t	mxn = most_positive_fixnum;
   if (N <= mxn) {
     return IK_FIX(N);
   } else {
