@@ -20,6 +20,9 @@
     fasl-directory	fasl-path
     fasl-search-path)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
+
 		  load			load-r6rs-script
 		  fasl-directory	fasl-path
 		  fasl-search-path)
@@ -44,9 +47,9 @@
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
-    (only (vicare language-extensions syntaxes)
-	  define-argument-validation
-	  with-arguments-validation))
+    (vicare arguments validation))
+
+  (include "ikarus.wordsize.scm")
 
 
 ;;;; arguments validation
@@ -61,8 +64,9 @@
 
 ;;The file extension of serialised FASL files.
 (define FASL-EXTENSION
-  (cond ((<= (fixnum-width) 32)	".vicare-32bit-fasl")
-	(else			".vicare-64bit-fasl")))
+  (case-word-size
+   ((32)	".vicare-32bit-fasl")
+   ((64)	".vicare-64bit-fasl")))
 
 (define DEFAULT-FASL-DIRECTORY
   (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))

@@ -47,6 +47,9 @@ $(vicare_test_RULES):
 try-vicare-boot:
 	cd scheme; $(MAKE) $(@)
 
+boot-image-32-bit:
+	cd scheme; $(MAKE) $(@)
+
 boot-image-64-bit:
 	cd scheme; $(MAKE) $(@)
 

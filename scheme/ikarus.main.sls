@@ -40,6 +40,9 @@
     $record-guardian
     record-guardian-logger		record-guardian-log)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
+
 		  load-r6rs-script
 		  load
 		  host-info
@@ -95,6 +98,8 @@
 		  readline-enabled?
 		  make-readline-input-port)
 	    readline.))
+
+  (include "ikarus.wordsize.scm")
 
 
 ;;;; helpers
@@ -661,8 +666,11 @@
     (newline port))
   (%display "Vicare Scheme version ")
   (%display config.vicare-version)
-  (unless (= 30 (fixnum-width))
-    (%display ", 64-bit"))
+  (case-word-size
+   ((32)
+    (%display ", 32-bit"))
+   ((64)
+    (%display ", 64-bit")))
   (%newline)
   ;;Print the git branch and HEAD commit checksum.
   (let ((rev (foreign-call "ikrt_get_last_revision")))

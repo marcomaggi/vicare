@@ -18,6 +18,8 @@
 (library (ikarus.fasl.write)
   (export fasl-write)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
 		  fasl-write)
     (ikarus system $codes)
     (only (ikarus system $structs)
@@ -28,8 +30,7 @@
 	    case-word-size)
     (vicare unsafe operations))
 
-(module (wordsize)
-  (include "ikarus.config.ss"))
+  (include "ikarus.wordsize.scm")
 
 
 ;;;; arguments validation
@@ -46,20 +47,6 @@
 ;;;; helpers
 
 (define who 'fasl-write)
-
-(define-syntax case-word-size
-  ;;We really  need to define  this macro so that  it uses the  value of
-  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
-  ;;
-  (syntax-rules ()
-    ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (case wordsize
-       ((4)
-	(begin . ?body-32))
-       ((8)
-	(begin . ?body-64))
-       (else
-	(error 'case-word-size "invalid wordsize" wordsize))))))
 
 (define fxshift
   (case-word-size

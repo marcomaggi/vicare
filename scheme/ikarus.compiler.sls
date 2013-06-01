@@ -84,6 +84,9 @@
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
     (except (ikarus)
+	    fixnum-width
+	    greatest-fixnum		least-fixnum
+
 	    return
 	    current-primitive-locations
 	    eval-core			current-core-eval
@@ -108,10 +111,7 @@
 	    case-word-size)
     (vicare arguments validation))
 
-  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
-  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
-  (module (wordsize)
-    (include "ikarus.config.ss" #t))
+  (include "ikarus.wordsize.scm")
 
   (module UNSAFE
     ;;Remember that this file defines the primitive operations.
@@ -203,16 +203,6 @@
 
 
 ;;;; helper syntaxes
-
-(define-syntax case-word-size
-  ;;We really  need to define  this macro so that  it uses the  value of
-  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
-  ;;
-  (syntax-rules ()
-    ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (if (= 4 wordsize)
-	 (begin . ?body-32)
-       (begin . ?body-64)))))
 
 (define-inline (%debug-print ?obj)
   (pretty-print ?obj (current-error-port)))
@@ -4203,7 +4193,7 @@
 		    ((symbol	x))
 		  x)))
 	  (else
-	   (error who "BUG: primitive missing from makefile.sps" op)))))
+	   (error who "*** Vicare error: primitive missing from makefile.sps" op)))))
 
 ;;(define (primref-loc op)
 ;;  (mem off-symbol-record-proc (obj (primref->symbol op))))

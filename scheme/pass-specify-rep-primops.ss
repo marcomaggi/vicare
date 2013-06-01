@@ -1315,7 +1315,10 @@
 
  (define-primop fixnum-width safe
    ((V)
-    (K (fxsll max-bitcount-in-fixnum-binary-representation fx-shift)))
+    (case-word-size
+     ((32)	30)
+     ((64)	61))
+     #;(K (fxsll max-bitcount-in-fixnum-binary-representation fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -1323,8 +1326,10 @@
 
  (define-primop least-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)))
-	    fx-shift)))
+    (case-word-size
+     ((32)	-536870912)
+     ((64)	-1152921504606846976))
+    #;(K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1))) fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -1332,12 +1337,17 @@
 
  (define-primop greatest-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)) 1)
-	    fx-shift)))
+    (case-word-size
+     ((32)	+536870911)
+     ((64)	+1152921504606846975))
+    #;(K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)) 1) fx-shift)))
    ((E)
     (nop))
    ((P)
     (K #t)))
+
+ ;; (module ()
+ ;;   (debug-print 'fixnum-inspection (fixnum-width) (least-fixnum) (greatest-fixnum)))
 
 ;;; --------------------------------------------------------------------
 

@@ -32,6 +32,9 @@
     $fxcopy-bit			$fxcopy-bit-field
     $fxrotate-bit-field		$fxbit-field)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
+
 		  bitwise-bit-set?		bitwise-first-bit-set
 		  bitwise-bit-count
 		  fxfirst-bit-set		fxbit-count
@@ -50,27 +53,7 @@
 	    case-word-size)
     (vicare arguments validation))
 
-  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
-  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
-  (module (wordsize)
-    (include "ikarus.config.ss"))
-
-
-;;;; helpers
-
-(define-syntax case-word-size
-  ;;We really  need to define  this macro so that  it uses the  value of
-  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
-  ;;
-  (syntax-rules ()
-    ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (case wordsize
-       ((4)
-	(begin . ?body-32))
-       ((8)
-	(begin . ?body-64))
-       (else
-	(error 'case-word-size "invalid wordsize" wordsize))))))
+  (include "ikarus.wordsize.scm")
 
 
 (module (bitwise-first-bit-set

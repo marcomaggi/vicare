@@ -20,7 +20,9 @@
     assemble-sources
     code-entry-adjustment
     assembler-property-key)
-  (import (ikarus)
+  (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum)
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (vicare unsafe operations)
@@ -30,10 +32,7 @@
     (except (vicare language-extensions syntaxes)
 	    case-word-size))
 
-  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
-  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
-  (module (wordsize)
-    (include "ikarus.config.ss" #t))
+  (include "ikarus.wordsize.scm")
 
 
 ;;;; Introduction
@@ -106,16 +105,6 @@
 
 
 ;;;; helpers
-
-(define-syntax case-word-size
-  ;;We really  need to define  this macro so that  it uses the  value of
-  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
-  ;;
-  (syntax-rules ()
-    ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (if (= 4 wordsize)
-	 (begin . ?body-32)
-       (begin . ?body-64)))))
 
 (define (fold func init ls)
   (if (null? ls)

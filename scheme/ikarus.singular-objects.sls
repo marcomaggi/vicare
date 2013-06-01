@@ -1,5 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -25,10 +26,11 @@
 		  (eof-object		sys:eof-object))
     (rename (ikarus system $structs)
 	    (base-rtd	sys:base-rtd)))
+  (include "ikarus.wordsize.scm")
   (define (void)		(sys:void))
-  (define (fixnum-width)	(sys:fixnum-width))
-  (define (least-fixnum)	(sys:least-fixnum))
-  (define (greatest-fixnum)	(sys:greatest-fixnum))
+  #;(define (fixnum-width)	(sys:fixnum-width))
+  #;(define (least-fixnum)	(sys:least-fixnum))
+  #;(define (greatest-fixnum)	(sys:greatest-fixnum))
   (define (eof-object)		(sys:eof-object))
   (define (base-rtd)		(sys:base-rtd)))
 

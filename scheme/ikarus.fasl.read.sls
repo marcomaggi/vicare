@@ -18,6 +18,8 @@
 (library (ikarus fasl read)
   (export fasl-read)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
 		  fasl-read)
     (except (ikarus.code-objects)
 	    procedure-annotation)
@@ -28,27 +30,7 @@
 	    case-word-size)
     (vicare arguments validation))
 
-  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
-  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
-  (module (wordsize)
-    (include "ikarus.config.ss"))
-
-
-;;;; helpers
-
-(define-syntax case-word-size
-  ;;We really  need to define  this macro so that  it uses the  value of
-  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
-  ;;
-  (syntax-rules ()
-    ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (case wordsize
-       ((4)
-	(begin . ?body-32))
-       ((8)
-	(begin . ?body-64))
-       (else
-	(error 'case-word-size "invalid wordsize" wordsize))))))
+  (include "ikarus.wordsize.scm")
 
 
 ;;;; main functions
@@ -444,8 +426,8 @@
   ;;Read from  the input PORT a  fixnum represented as  32-bit or 64-bit
   ;;value depending on the underlying platform's word size.
   ;;
-  (case (fixnum-width)
-    ((30)
+  (case-word-size
+    ((32)
      (let* ((c0 (read-u8 port))
 	    (c1 (read-u8 port))
 	    (c2 (read-u8 port))
@@ -464,7 +446,7 @@
 				  (fxsll c1 6))
 			 (fxlogor (fxsll c2 14)
 				  (fxsll c3 22)))))))))
-    (else
+    ((64)
      (let* ((u0 (read-u32 port))
 	    (u1 (read-u32 port)))
        (if (<= u1 #x7FFFFFF)
@@ -478,8 +460,8 @@
   ;;Read from the  input PORT an exact integer  represented as 32-bit or
   ;;64-bit value depending on the underlying platform's word size.
   ;;
-  (case (fixnum-width)
-    ((30)	;32-bit platform
+  (case-word-size
+    ((32)	;32-bit platform
      (let* ((c0 (char->int (read-u8-as-char port)))
 	    (c1 (char->int (read-u8-as-char port)))
 	    (c2 (char->int (read-u8-as-char port)))
@@ -498,7 +480,7 @@
 				  (fxsll c1 8))
 			 (fxlogor (fxsll c2 16)
 				  (fxsll c3 24)))))))))
-    (else	;64-bit platform
+    ((64)	;64-bit platform
      (let* ((u0 (read-u32 port))
 	    (u1 (read-u32 port)))
        (if (<= u1 #x7FFFFFF)

@@ -1,18 +1,18 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should  have received a  copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus writer)
@@ -27,6 +27,9 @@
     ;;The following are not in "makefile.sps".
     traverse		traversal-helpers)
   (import (except (ikarus)
+		  fixnum-width
+		  greatest-fixnum		least-fixnum
+
 		  write			display
 		  put-datum		format
 		  printf		fprintf
@@ -39,6 +42,8 @@
 	  get-fmt)
     (only (ikarus records procedural)
 	  print-r6rs-record-instance))
+
+  (include "ikarus.wordsize.scm")
 
 
 (define print-unicode
@@ -688,7 +693,9 @@
      ((pointer? x)
       (write-char* "#<pointer #x" p)
       (write-hex (pointer->integer x)
-		 (if (<= (fixnum-width) 32) 8 16)
+		 (case-word-size
+		  ((32)		8)
+		  ((64)		16))
 		 p)
       (write-char* ">" p))
      (($unbound-object? x) (write-char* "#<unbound-object>" p) i)
