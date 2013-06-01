@@ -15,7 +15,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.11/include
     --enable-time-tests                         \
     --with-pthread                              \
     --with-cre2                                 \
-    CFLAGS='-O3 -march=i686 -mtune=i686'        \
+    CFLAGS='-O3'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"           \
     "$@"
 
