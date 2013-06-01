@@ -29,7 +29,7 @@
     (vicare unsafe operations))
 
 (module (wordsize)
-  (include/verbose "ikarus.config.ss"))
+  (include "ikarus.config.ss"))
 
 
 ;;;; arguments validation
@@ -45,12 +45,6 @@
 
 ;;;; helpers
 
-<<<<<<< HEAD
-=======
-(module (wordsize)
-  (include "ikarus.config.ss" #t))
-
->>>>>>> devel
 (define who 'fasl-write)
 
 (define-syntax case-word-size
@@ -117,18 +111,12 @@
   ;;endian 32-bit integers.
   ;;
   (assert (int? x))
-<<<<<<< HEAD
   (case-word-size
    ((32)
     (write-int32 x p))
    ((64)
     (write-int32 x p)
     (write-int32 (sra x 32) p))))
-=======
-  (write-int32 x p)
-  (when ($fx= wordsize 8)
-    (write-int32 (sra x 32) p)))
->>>>>>> devel
 
 (define MAX-ASCII-CHAR
   ($fixnum->char 127))
@@ -169,14 +157,10 @@
 	(put-tag #\I port)
 	(put-tag #\K port)
 	(put-tag #\0 port)
-<<<<<<< HEAD
 	(put-tag (case-word-size
 		  ((32)		#\1)
 		  ((64)		#\2))
 		 port)
-=======
-	(put-tag (if ($fx= wordsize 4) #\1 #\2) port)
->>>>>>> devel
 	(let ((next-mark (if foreign-libraries
 			     (let loop ((ls        foreign-libraries)
 					(next-mark 1))
