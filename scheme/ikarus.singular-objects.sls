@@ -26,8 +26,15 @@
 		  (eof-object		sys:eof-object))
     (rename (ikarus system $structs)
 	    (base-rtd	sys:base-rtd)))
-  #;(include "ikarus.wordsize.scm")
   (define (void)		(sys:void))
+  ;;FIXME Document  this!!!  We  really need  the definitions  below for
+  ;;FIXNUM-WIDTH, LEAST-FIXNUM and GREATEST-FIXNUM not the ones from:
+  ;;
+  ;;   (include "ikarus.wordsize.scm")
+  ;;
+  ;;which will cause a segfault in  the execution of this library's code
+  ;;object when  the boot image  is loaded.   We must document  why this
+  ;;happens.  (Marco Maggi; Wed Jun 19, 2013)
   (begin
     (define (fixnum-width)	(sys:fixnum-width))
     (define (least-fixnum)	(sys:least-fixnum))
