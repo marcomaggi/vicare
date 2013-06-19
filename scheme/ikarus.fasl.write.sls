@@ -85,14 +85,24 @@
 
 (define (write-int32 x port)
   ;;Serialise  the  exact integer  X  to PORT  as  a  big endian  32-bit
-  ;;integer.
+  ;;integer.  If X is the integer:
+  ;;
+  ;;   X = #xAABBCCDD
+  ;;         ^      ^
+  ;;         |      least significant
+  ;;         most significant
+  ;;
+  ;;in the file it is serialised as:
+  ;;
+  ;;                    DD CC BB AA
+  ;;   head of file |--|--|--|--|--|--| tail of file
   ;;
   (write-byte (bitwise-and x          #xFF) port)
   (write-byte (bitwise-and (sra x 8)  #xFF) port)
   (write-byte (bitwise-and (sra x 16) #xFF) port)
   (write-byte (bitwise-and (sra x 24) #xFF) port))
 
-(define (write-int x p)
+(define (write-int x port)
   ;;Serialise the exact integer X to PORT: on 32-bit platforms, as a big
   ;;endian 32-bit integer; on 64-bit platforms, as a sequence of two big
   ;;endian 32-bit integers.
@@ -100,10 +110,10 @@
   (assert (int? x))
   (case-word-size
    ((32)
-    (write-int32 x p))
+    (write-int32 x port))
    ((64)
-    (write-int32 x p)
-    (write-int32 (sra x 32) p))))
+    (write-int32 x port)
+    (write-int32 (sra x 32) port))))
 
 (define MAX-ASCII-CHAR
   ($fixnum->char 127))

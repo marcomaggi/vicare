@@ -26,11 +26,12 @@
 		  (eof-object		sys:eof-object))
     (rename (ikarus system $structs)
 	    (base-rtd	sys:base-rtd)))
-  (include "ikarus.wordsize.scm")
+  #;(include "ikarus.wordsize.scm")
   (define (void)		(sys:void))
-  #;(define (fixnum-width)	(sys:fixnum-width))
-  #;(define (least-fixnum)	(sys:least-fixnum))
-  #;(define (greatest-fixnum)	(sys:greatest-fixnum))
+  (begin
+    (define (fixnum-width)	(sys:fixnum-width))
+    (define (least-fixnum)	(sys:least-fixnum))
+    (define (greatest-fixnum)	(sys:greatest-fixnum)))
   (define (eof-object)		(sys:eof-object))
   (define (base-rtd)		(sys:base-rtd)))
 

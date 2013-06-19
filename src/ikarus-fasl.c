@@ -51,6 +51,10 @@ typedef struct {
 
 static ikptr ik_fasl_read(ikpcb* pcb, fasl_port* p);
 
+#define DEBUG_FASL	0
+
+static int	object_count = 0;
+
 
 void
 ik_fasl_load (ikpcb* pcb, char* fasl_file)
@@ -60,6 +64,8 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
   int		mapsize;
   char *	mem;
   fasl_port	p;
+  if (DEBUG_FASL)
+    ik_debug_message("loading boot image file: %s", fasl_file);
   fd = open(fasl_file, O_RDONLY);
   if (-1 == fd)
     ik_abort("failed to open boot file \"%s\": %s", fasl_file, strerror(errno));
@@ -71,29 +77,39 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
     filesize = buf.st_size;
   }
   mapsize	= ((filesize + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE;
+  if (DEBUG_FASL)
+    ik_debug_message("boot image: filesize=%d, mapsize=%d, pagesize=%d", filesize, mapsize, IK_PAGESIZE);
   mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
   if (MAP_FAILED == mem)
     ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
-  p.membase	= mem;
-  p.memp	= mem;
-  p.memq	= mem + filesize;
+  p.membase	= mem;	/* byte array in which to load the boot image */
+  p.memp	= mem;	/* pointer to the next byte to fill */
+  p.memq	= mem + filesize;	/* one-off end pointer */
   p.marks	= 0;
   p.marks_size	= 0;
   while (p.memp < p.memq) {
     p.code_ap	= 0;
     p.code_ep	= 0;
+    if (DEBUG_FASL)
+      ik_debug_message("read boot image super-object (it must be a code object)");
     ikptr v = ik_fasl_read(pcb, &p);
+    /* Clear table of  marks.  Every super-object in the  boot image has
+       its own table. */
     if (p.marks_size) {
       ik_munmap((ikptr)(long)p.marks, p.marks_size*sizeof(ikptr*));
       p.marks = 0;
       p.marks_size = 0;
     }
     if (p.memp == p.memq) {
+      if (DEBUG_FASL)
+	ik_debug_message("finished reading all the boot image");
       int err = munmap(mem, mapsize);
       if (err)
         ik_abort("failed to unmap fasl file: %s", strerror(errno));
       close(fd);
     }
+    if (DEBUG_FASL)
+      ik_debug_message("executing boot image code object");
     ikptr val = ik_exec_code(pcb, v, 0, 0);
     if (val != IK_VOID_OBJECT) {
       ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
@@ -253,6 +269,23 @@ fasl_read_byte (fasl_port* p)
 }
 static void
 fasl_read_buf (fasl_port* p, void* buf, int n)
+/* Read a block of bytes from a FASL port.  N is the number of bytes and
+ * BUF a pointer to the buffer that will hold them.
+ *
+ * Bytes are read in "big endian"  order; for example the block from the
+ * underlying device:
+ *
+ *                     DD CC BB AA
+ *    head of file |--|--|--|--|--|--| tail of file
+ *
+ * is read as 32-bit integer as:
+ *
+ *    #xAABBCCDD
+ *       ^     ^
+ *       |     least significant
+ *       |
+ *       most significant
+ */
 {
   if ((p->memp+n) <= p->memq) {
     memcpy(buf, p->memp, n);
@@ -269,15 +302,23 @@ do_read (ikpcb* pcb, fasl_port* p)
    This function  is used only  to load the  boot image, so it  does not
    support the "O" object field which loads foreign libraries.  */
 {
-  char	c = fasl_read_byte(p);
-  int	put_mark_index = 0;
+  char		c = fasl_read_byte(p);
+  uint32_t	put_mark_index = 0;
+#if 0
+  if (DEBUG_FASL)
+    ik_debug_message("reading object with header: %c", c);
+#endif
   if (c == '>') {
-    int idx = 0;
-    fasl_read_buf(p, &idx, sizeof(int));
+    /* We  mark  the next  object  with  index "put_mark_index".   Every
+       object branch below will do it for its object.  Here we only make
+       sure that the mark is valid. */
+    uint32_t idx = 0;
+    fasl_read_buf(p, &idx, sizeof(uint32_t));
     put_mark_index = idx;
+    /* Read the header of the next object. */
     c = fasl_read_byte(p);
-    if (idx <= 0)
-      ik_abort("%s: invalid index %d", __func__, idx);
+    /* if (idx <= 0) */
+    /*   ik_abort("%s: invalid index %d", __func__, idx); */
     if (p->marks) {
       if (idx >= p->marks_size)
         ik_abort("%s: mark too big: %d", __func__, idx);
@@ -286,7 +327,7 @@ do_read (ikpcb* pcb, fasl_port* p)
           ik_abort("%s: mark %d already set", __func__, idx);
       }
     } else {
-      /* allocate marks */
+      /* This is the first mark read.  Allocate the marks array. */
 #define NUM_OF_MARKS		(4 * IK_CHUNK_SIZE)
 #define MARKS_BLOCK_SIZE	(NUM_OF_MARKS * sizeof(ikptr*))
       p->marks = (ikptr*)(long)ik_mmap(MARKS_BLOCK_SIZE);
@@ -295,6 +336,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
   }
   if (c == 'x') {	/* code object */
+    if (DEBUG_FASL) ik_debug_message("open %d: code object", object_count++);
     long	code_size   = 0;
     ikptr	freevars    = IK_FIX(0);
     ikptr	annotation  = IK_FALSE;
@@ -302,6 +344,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     fasl_read_buf(p, &code_size, sizeof(long));
     fasl_read_buf(p, &freevars,  sizeof(ikptr));
     annotation = do_read(pcb, p);
+    if (DEBUG_FASL) ik_print(annotation);
     p_code     = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
     IK_REF(p_code, 0)			= code_tag;
     IK_REF(p_code, disp_code_code_size)	= IK_FIX(code_size);
@@ -313,34 +356,42 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     IK_REF(p_code, disp_code_reloc_vector) = do_read(pcb, p);
     ik_relocate_code(p_code);
+    if (DEBUG_FASL) ik_debug_message("close %d: code object", --object_count);
     return p_code | vector_tag;
   }
   else if (c == 'P') {
+    if (DEBUG_FASL) ik_debug_message("open %d: pair object", object_count++);
     ikptr pair = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
     if (put_mark_index) {
       p->marks[put_mark_index] = pair;
     }
     IK_REF(pair, off_car) = do_read(pcb, p);
     IK_REF(pair, off_cdr) = do_read(pcb, p);
+    if (DEBUG_FASL) ik_debug_message("close %d: pair object", --object_count);
     return pair;
   }
   else if (c == 'M') {
+    if (DEBUG_FASL) ik_debug_message("open %d: symbol object", object_count++);
     /* symbol */
     ikptr str = do_read(pcb, p);
     ikptr sym = ikrt_string_to_symbol(str, pcb);
     if (put_mark_index) {
       p->marks[put_mark_index] = sym;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: symbol object", --object_count);
     return sym;
   }
   else if (c == 's') {
+    if (DEBUG_FASL) ik_debug_message("open %d: ascii string object", object_count++);
     /* ascii string */
     long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
+    if (DEBUG_FASL) ik_debug_message("string length: %ld", len);
     long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
     ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
     IK_REF(str, off_string_length) = IK_FIX(len);
     fasl_read_buf(p, (char*)(long)str+off_string_data, len);
+    if (DEBUG_FASL) fwrite((char*)(long)(str+off_string_data), 1, len, stderr);
     {
       unsigned char* pi = (unsigned char*)(long)(str+off_string_data);
       ikchar* pj = (ikchar*)(long)(str+off_string_data);
@@ -353,9 +404,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = str;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: ascii string object", --object_count);
     return str;
   }
   else if (c == 'S') {
+    if (DEBUG_FASL) ik_debug_message("open %d: string object", object_count++);
     /* string */
     long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
@@ -372,9 +425,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = str;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: string object", --object_count);
     return str;
   }
   else if (c == 'V') {
+    if (DEBUG_FASL) ik_debug_message("open %d: vector object", object_count++);
     long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     long size = IK_ALIGN(len * wordsize + disp_vector_data);
@@ -387,28 +442,37 @@ do_read (ikpcb* pcb, fasl_port* p)
     for (i=0; i<len; i++) {
       IK_REF(vec, off_vector_data + i*wordsize) = do_read(pcb, p);
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: vector object", --object_count);
     return vec;
   }
   else if (c == 'I') {
+    if (DEBUG_FASL) ik_debug_message("open %d: fixnum object", object_count++);
     ikptr fixn;
     fasl_read_buf(p, &fixn, sizeof(ikptr));
+    if (DEBUG_FASL) ik_debug_message("close %d: fixnum object, fx=%ld", --object_count, IK_UNFIX(fixn));
     return fixn;
   }
   else if (c == 'F') {
+    if (DEBUG_FASL) ik_debug_message("read %d: false object", object_count);
     return IK_FALSE_OBJECT;
   }
   else if (c == 'T') {
+    if (DEBUG_FASL) ik_debug_message("read %d: true object", object_count);
     return IK_TRUE_OBJECT;
   }
   else if (c == 'N') {
+    if (DEBUG_FASL) ik_debug_message("read %d: null object", object_count);
     return IK_NULL_OBJECT;
   }
   else if (c == 'c') {
+    if (DEBUG_FASL) ik_debug_message("open %d: char object", object_count++);
     /* FIXME: sounds broken */
     unsigned char x = (unsigned char) fasl_read_byte(p);
+    if (DEBUG_FASL) ik_debug_message("close %d: char object", --object_count);
     return IK_CHAR_FROM_INTEGER(x);
   }
   else if (c == 'G') {
+    if (DEBUG_FASL) ik_debug_message("open %d: gensym object", object_count++);
     /* G is for gensym */
     ikptr pretty = do_read(pcb, p);
     ikptr unique = do_read(pcb, p);
@@ -416,9 +480,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = sym;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: gensym object", --object_count);
     return sym;
   }
   else if (c == 'R') { /* R is for RTD */
+    if (DEBUG_FASL) ik_debug_message("open %d: rtd object", object_count++);
     ikptr name = do_read(pcb, p);
     ikptr symb = do_read(pcb, p);
     long i, n = 0;
@@ -457,9 +523,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = rtd;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: rtd object", --object_count);
     return rtd;
   }
   else if (c == '{') { /* { is for struct instances */
+    if (DEBUG_FASL) ik_debug_message("open %d: struct instance object", object_count++);
     long	i, num_of_fields = 0, struct_size;
     ikptr	s_rtd;
     ikptr	s_struct;
@@ -474,6 +542,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = s_struct;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: struct instance object", --object_count);
     return s_struct;
   }
 #if 0
@@ -490,6 +559,7 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
 #endif
   else if (c == 'Q') { /* thunk */
+    if (DEBUG_FASL) ik_debug_message("open %d: thunk object", object_count++);
     ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
     if (put_mark_index) {
       p->marks[put_mark_index] = s_proc;
@@ -498,15 +568,18 @@ do_read (ikpcb* pcb, fasl_port* p)
     /* Store in  the closure's memory block  a raw pointer to  the first
        byte of the code object's data area. */
     IK_REF(s_proc, off_closure_code) = s_code + off_code_data;
+    if (DEBUG_FASL) ik_debug_message("close %d: thunk object", --object_count);
     return s_proc;
   }
   else if (c == '<') {
+    if (DEBUG_FASL) ik_debug_message("open %d: marked object", object_count++);
     int idx = 0;
     fasl_read_buf(p, &idx, sizeof(int));
     if ((idx <= 0) || (idx >= p->marks_size))
       ik_abort("invalid index for ref %d", idx);
     ikptr obj = p->marks[idx];
     if (obj) {
+      if (DEBUG_FASL) ik_debug_message("close %d: marked object", --object_count);
       return obj;
     } else {
       ik_abort("reference to uninitialized mark %d", idx);
@@ -514,6 +587,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
   }
   else if (c == 'v') {
+    if (DEBUG_FASL) ik_debug_message("open %d: bytevector object", object_count++);
     /* bytevector */
     long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
@@ -525,9 +599,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = x;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: bytevector object", --object_count);
     return x;
   }
   else if (c == 'l') {
+    if (DEBUG_FASL) ik_debug_message("open %d: short list object", object_count++);
     int   len  = (unsigned char) fasl_read_byte(p);
     ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) | pair_tag;
     if (put_mark_index) {
@@ -542,9 +618,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     IK_REF(pt, off_car) = do_read(pcb, p);
     IK_REF(pt, off_cdr) = do_read(pcb, p);
+    if (DEBUG_FASL) ik_debug_message("close %d: short list object", --object_count);
     return pair;
   }
   else if (c == 'L') {
+    if (DEBUG_FASL) ik_debug_message("open %d: long list object", object_count++);
     long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     if (len < 0)
@@ -562,23 +640,29 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     IK_REF(pt, off_car) = do_read(pcb, p);
     IK_REF(pt, off_cdr) = do_read(pcb, p);
+    if (DEBUG_FASL) ik_debug_message("close %d: long list object", --object_count);
     return pair;
   }
   else if (c == 'f') {
+    if (DEBUG_FASL) ik_debug_message("open %d: flonum object", object_count++);
     ikptr x = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;
     IK_REF(x, -vector_tag) = flonum_tag;
     fasl_read_buf(p, (void*)(long)(x+disp_flonum_data-vector_tag), 8);
     if (put_mark_index) {
       p->marks[put_mark_index] = x;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: flonum object", --object_count);
     return x;
   }
   else if (c == 'C') {
+    if (DEBUG_FASL) ik_debug_message("open %d: char object", object_count++);
     int n = 0;
     fasl_read_buf(p, &n, sizeof(int));
+    if (DEBUG_FASL) ik_debug_message("close %d: char object", --object_count);
     return IK_CHAR_FROM_INTEGER(n);
   }
   else if (c == 'b') {
+    if (DEBUG_FASL) ik_debug_message("open %d: bignum object", object_count++);
     long len  = 0;
     long sign = 0;
     fasl_read_buf(p, &len, sizeof(long));
@@ -596,9 +680,11 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = x;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: bignum object", --object_count);
     return x;
   }
   else if (c == 'i') {
+    if (DEBUG_FASL) ik_debug_message("open %d: complex number object", object_count++);
     ikptr real = do_read(pcb, p);
     ikptr imag = do_read(pcb, p);
     ikptr x;
@@ -618,6 +704,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = x;
     }
+    if (DEBUG_FASL) ik_debug_message("close %d: complex number object", --object_count);
     return x;
   } else {
     ik_abort("invalid type '%c' (0x%02x) found in fasl file", c, c);
@@ -629,12 +716,16 @@ do_read (ikpcb* pcb, fasl_port* p)
 static ikptr
 ik_fasl_read (ikpcb* pcb, fasl_port* p)
 {
+  ikptr		s_bootimage;
   /* first check the header */
   char buf[IK_FASL_HEADER_LEN];
   fasl_read_buf(p, buf, IK_FASL_HEADER_LEN);
   if (0 != strncmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN))
     ik_abort("invalid fasl header");
-  return do_read(pcb, p);
+  if (DEBUG_FASL) ik_debug_message("start reading boot image object");
+  s_bootimage = do_read(pcb, p);
+  if (DEBUG_FASL) ik_debug_message("done reading boot image object");
+  return s_bootimage;
 }
 
 /* end of file */

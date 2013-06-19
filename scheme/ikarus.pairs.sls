@@ -105,7 +105,12 @@
   (caaddr   $car $car $cdr $cdr)
   (cdaddr   $cdr $car $cdr $cdr)
   (cadddr   $car $cdr $cdr $cdr)
-  (cddddr   $cdr $cdr $cdr $cdr)))
+  (cddddr   $cdr $cdr $cdr $cdr))
+
+
+;;;; end of library (ikarus pairs)
+
+)
 
 
 (library (ikarus system pairs)
