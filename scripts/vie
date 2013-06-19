@@ -22,12 +22,12 @@ BREAK_CHARS="\"#'(),;\`\\|[]{}"
 
 function error () {
     local MESSAGE=${1:?"missing message argument to function '${FUNCNAME}'"}
-    printf 'ike error: %s\n' "${MESSAGE}" >&2
+    printf 'vie error: %s\n' "${MESSAGE}" >&2
     exit 2
 }
 function warning () {
     local MESSAGE=${1:?"missing message argument to function '${FUNCNAME}'"}
-    printf 'ike warning: %s\n' "${MESSAGE}" >&2
+    printf 'vie warning: %s\n' "${MESSAGE}" >&2
 }
 
 test -x "${rlwrap_PROGRAM}" || error "cannot find program 'rlwrap'"
