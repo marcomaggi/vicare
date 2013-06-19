@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# To enable this hook, make this file executable.
+
+PATH=~/bin:${PATH}
+
+git my-backup-push-local
+git my-log-commit-dir
+
+./scripts/make-last-revision
+
+### end of file
+

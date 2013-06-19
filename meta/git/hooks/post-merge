@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# To enable this hook, make this file executable.
+
+PATH=~/bin:${PATH}
+
+./scripts/make-last-revision
+
+### end of file
+
