@@ -1476,7 +1476,7 @@
 
 (parametrise ((check-test-name	'uri-encoding))
 
-  (let-syntax ((doit (syntax-rules ()
+  #;(let-syntax ((doit (syntax-rules ()
 		       ((_ raw encoded)
 			(begin
 			  (check
@@ -1511,7 +1511,7 @@
 
 ;;; --------------------------------------------------------------------
 
-    (let ((all-octets '#vu8(0 1 2 3 4 5 6 7 8 9
+  #;(let ((all-octets '#vu8(0 1 2 3 4 5 6 7 8 9
 			      10 11 12 13 14 15 16 17 18 19
 			      20 21 22 23 24 25 26 27 28 29
 			      30 31 32 33 34 35 36 37 38 39
@@ -1561,29 +1561,29 @@
       (uri-normalise-encoding (string->ascii "ciao"))
     => (string->ascii "ciao"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "cia%3do"))
-    => (string->ascii "cia%3Do"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "cia%3do"))
+  ;;   => (string->ascii "cia%3Do"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "cia%3Do"))
-    => (string->ascii "cia%3Do"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "cia%3Do"))
+  ;;   => (string->ascii "cia%3Do"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "ci%3fa%3do"))
-    => (string->ascii "ci%3Fa%3Do"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "ci%3fa%3do"))
+  ;;   => (string->ascii "ci%3Fa%3Do"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "ci%3Fa%3Do"))
-    => (string->ascii "ci%3Fa%3Do"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "ci%3Fa%3Do"))
+  ;;   => (string->ascii "ci%3Fa%3Do"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "%7Eciao"))
-    => (string->ascii "~ciao"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "%7Eciao"))
+  ;;   => (string->ascii "~ciao"))
 
-  (check
-      (uri-normalise-encoding (string->ascii "ci%5Fao"))
-    => (string->ascii "ci_ao"))
+  ;; (check
+  ;;     (uri-normalise-encoding (string->ascii "ci%5Fao"))
+  ;;   => (string->ascii "ci_ao"))
 
   #t)
 

@@ -19,26 +19,33 @@
   (export base-rtd eof-object void fixnum-width least-fixnum
           greatest-fixnum)
   (import (rename (ikarus)
-		  (void			sys:void)
 		  (fixnum-width		sys:fixnum-width)
 		  (least-fixnum		sys:least-fixnum)
 		  (greatest-fixnum	sys:greatest-fixnum)
+		  (void			sys:void)
 		  (eof-object		sys:eof-object))
     (rename (ikarus system $structs)
 	    (base-rtd	sys:base-rtd)))
-  (define (void)		(sys:void))
   ;;FIXME Document  this!!!  We  really need  the definitions  below for
   ;;FIXNUM-WIDTH, LEAST-FIXNUM and GREATEST-FIXNUM not the ones from:
   ;;
-  ;;   (include "ikarus.wordsize.scm")
+  #;(include "ikarus.wordsize.scm")
+  (begin
+    (define (fixnum-width)
+      61)
+    (define (greatest-fixnum)
+      +1152921504606846975)
+    (define (least-fixnum)
+      -1152921504606846976))
   ;;
   ;;which will cause a segfault in  the execution of this library's code
   ;;object when  the boot image  is loaded.   We must document  why this
   ;;happens.  (Marco Maggi; Wed Jun 19, 2013)
-  (begin
+  #;(begin
     (define (fixnum-width)	(sys:fixnum-width))
     (define (least-fixnum)	(sys:least-fixnum))
     (define (greatest-fixnum)	(sys:greatest-fixnum)))
+  (define (void)		(sys:void))
   (define (eof-object)		(sys:eof-object))
   (define (base-rtd)		(sys:base-rtd)))
 

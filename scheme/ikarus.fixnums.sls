@@ -73,6 +73,10 @@
     error@fxarithmetic-shift-left
     error@fxarithmetic-shift-right)
   (import (except (ikarus)
+		  ;; fixnum-width
+		  ;; greatest-fixnum
+		  ;; least-fixnum
+
 		  fxzero?
 		  fxpositive?		fxnegative?
 		  fxeven?		fxodd?
@@ -127,7 +131,10 @@
     (ikarus system $pairs)
     (ikarus system $strings)
     (vicare arguments validation)
-    (vicare language-extensions syntaxes))
+    (except (vicare language-extensions syntaxes)
+	    case-word-size))
+
+  #;(include "ikarus.wordsize.scm")
 
 
 ;;;; helpers
@@ -601,6 +608,7 @@
 
 
 (module (fixnum->string)
+  (import (ikarus.emergency))
 
   (define who 'fixnum->string)
 

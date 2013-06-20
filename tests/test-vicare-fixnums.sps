@@ -28,10 +28,41 @@
 #!r6rs
 (import (vicare)
   (ikarus system $fx)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare fixnum functions and operations\n")
+
+
+(parametrise ((check-test-name	'core))
+
+  (when #t
+    (fprintf (current-error-port)
+	     "fixnum width=~a\nleast fixnum=~a\ngreatest fixnum=~a\n"
+	     (fixnum-width)
+	     (least-fixnum)
+	     (greatest-fixnum)))
+
+  (check
+      (least-fixnum)
+    => (case-word-size
+	((32)	-536870912)
+	((64)	-1152921504606846976)))
+
+  (check
+      (greatest-fixnum)
+    => (case-word-size
+	((32)	+536870911)
+	((64)	+1152921504606846975)))
+
+  (check
+      (fixnum-width)
+    => (case-word-size
+	((32)	30)
+	((64)	61)))
+
+  #t)
 
 
 (parametrise ((check-test-name	'mod))

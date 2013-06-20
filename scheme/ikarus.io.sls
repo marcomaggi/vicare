@@ -3339,39 +3339,40 @@
 		     bv)))))
 
 	(define (write! src.bv src.start count)
-	  ;;Write data to the device.
+	  ;;Write COUNT  octets from the bytevector  SRC.BV, starting at
+	  ;;offset SRC.START, to the device.
 	  ;;
 	  (define who 'open-bytevector-output-port/write!)
-	  (debug-assert (and (fixnum? count) (<= 0 count)))
-	  (let* ((D		(cookie-dest cookie))
-		 (dev-position	(cookie-pos cookie))
-		 (new-dev-position (+ count dev-position)))
+	  (debug-assert (and (fixnum? count) (fxpositive? count)))
+	  (let* ((D                (cookie-dest cookie))
+		 (dev-position.cur (cookie-pos cookie))
+		 (dev-position.new (+ count dev-position.cur)))
 	    ;;DANGER  This  check must  not  be  removed when  compiling
 	    ;;without arguments validation.
-	    (unless (fixnum? new-dev-position)
+	    (unless (fixnum? dev-position.new)
 	      (%implementation-violation who
 		"request to write data to port would exceed maximum size of bytevectors"
-		new-dev-position))
-	    (if ($fx< dev-position ($device-len D))
+		dev-position.new))
+	    (if ($fx< dev-position.cur ($device-len D))
 		;;The  current  position  was  set  inside  the  already
 		;;accumulated data.
 		(write!/overwrite src.bv src.start count
 				  ($device-len D) ($device-bvs D)
-				  dev-position new-dev-position)
+				  dev-position.cur dev-position.new)
 	      ;;The  current  position is  at  the  end  of the  already
 	      ;;accumulated data.
-	      (write!/append src.bv src.start count ($device-bvs D) new-dev-position))
+	      (write!/append src.bv src.start count ($device-bvs D) dev-position.new))
 	    count))
 
 	(define-inline (write!/overwrite src.bv src.start count
-					 output.len output.bvs
+					 device.len device.bvs
 					 dev-position new-dev-position)
 	  ;;Write data  to the device,  overwriting some of  the already
 	  ;;existing data.  The  device is already composed  of a single
-	  ;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
+	  ;;bytevector of length DEVICE.LEN in the car of DEVICE.BVS.
 	  ;;
-	  (let* ((dst.bv   (car output.bvs))
-		 (dst.len  output.len)
+	  (let* ((dst.bv   (car device.bvs))
+		 (dst.len  device.len)
 		 (dst.room ($fx- dst.len dev-position)))
 	    (debug-assert (fixnum? dst.room))
 	    (if ($fx<= count dst.room)
@@ -3385,15 +3386,15 @@
 		($bytevector-copy!/count src.bv src.start dst.bv dev-position dst.room)
 		(let* ((src.start ($fx+ src.start dst.room))
 		       (count     ($fx- count     dst.room)))
-		  (write!/append src.bv src.start count output.bvs new-dev-position))))))
+		  (write!/append src.bv src.start count device.bvs new-dev-position))))))
 
-	(define-inline (write!/append src.bv src.start count output.bvs new-dev-position)
+	(define-inline (write!/append src.bv src.start count device.bvs new-dev-position)
 	  ;;Append new data to  the accumulated bytevectors.  We need to
 	  ;;update the device.
 	  ;;
 	  (let ((dst.bv ($make-bytevector count)))
 	    ($bytevector-copy!/count src.bv src.start dst.bv 0 count)
-	    (set-cookie-dest! cookie `(,new-dev-position . (,dst.bv . ,output.bvs)))))
+	    (set-cookie-dest! cookie (make-device new-dev-position (cons dst.bv device.bvs)))))
 
 	(define (set-position! new-position)
 	  ;;NEW-POSITION has already been  validated as exact integer by

@@ -449,7 +449,8 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (DEBUG_FASL) ik_debug_message("open %d: fixnum object", object_count++);
     ikptr fixn;
     fasl_read_buf(p, &fixn, sizeof(ikptr));
-    if (DEBUG_FASL) ik_debug_message("close %d: fixnum object, fx=%ld", --object_count, IK_UNFIX(fixn));
+    if (0 || DEBUG_FASL)
+      ik_debug_message("close %d: fixnum object, fixnum bytes size=%d, fx=%ld", --object_count, sizeof(ikptr), IK_UNFIX(fixn));
     return fixn;
   }
   else if (c == 'F') {
