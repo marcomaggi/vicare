@@ -2675,12 +2675,6 @@
 	(bytevector-u64-set! the-bv 1 (words.least-u64*) (endianness little)))
     => `(,(words.least-u64*)))
 
-  (debug-print (words.greatest-u64)
-	       (words.greatest-u64*)
-	       (words.word-u64? (words.greatest-u64))
-	       (words.word-u64? (words.greatest-u64*))
-	       )
-
   (check 	;too high
       (catch #f
 	(bytevector-u64-set! the-bv 1 (words.greatest-u64*) (endianness little)))

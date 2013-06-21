@@ -1010,13 +1010,6 @@
 
 (define (bytevector-u64-set! bv index word endianness)
   (define who 'bytevector-u64-set!)
-  ;; (debug-print 'word word
-  ;; 	       'greatest-fx (greatest-fixnum)
-  ;; 	       'least-fx (least-fixnum)
-  ;; 	       'greatest-u64 (words.greatest-u64)
-  ;; 	       'greatest-u64* (words.greatest-u64*)
-  ;; 	       18446744073709551615
-  ;; 	       18446744073709551616)
   (with-arguments-validation (who)
       ((bytevector	bv)
        (index		index)

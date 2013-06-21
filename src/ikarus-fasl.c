@@ -664,20 +664,35 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
   else if (c == 'b') {
     if (DEBUG_FASL) ik_debug_message("open %d: bignum object", object_count++);
-    long len  = 0;
+    /* The first word in the memory block of the bignum object. */
+    ik_ulong	first_word;
+    /* The number  of octets representing  the bignum.  If  positive the
+       bignum is positive, if negative the bignum is negative. */
+    long number_of_octets = 0;
+    /* The number of  limbs (machine words) representing  the bignum; on
+       32-bit  platforms: number_of_octets  >> 2;  on 64-bit  platforms:
+       number_of_octets >> 3. */
+    long nlimbs = 0;
+    /* The sign bit of the bignum. */
     long sign = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    if (len < 0) {
+    /* We assume the type "long" represents a machine word. */
+    fasl_read_buf(p, &number_of_octets, sizeof(long));
+    if (number_of_octets < 0) {
       sign = 1;
-      len = -len;
+      number_of_octets = -number_of_octets;
     }
-    if (len & 3)
-      ik_abort("error in fasl-read: invalid bignum length %ld", len);
-    ik_ulong tag = bignum_tag | (sign << bignum_sign_shift) |
-      ((len >> 2) << bignum_nlimbs_shift);
-    ikptr x = ik_unsafe_alloc(pcb, IK_ALIGN(len + disp_bignum_data)) | vector_tag;
-    IK_REF(x, -vector_tag) = (ikptr) tag;
-    fasl_read_buf(p, (void*)(long)(x+off_bignum_data), len);
+    /* The number  of octets must  be an  exact multiple of  the machine
+       word size. */
+    if (number_of_octets & ((wordsize == 4)? 3 : 7))
+      ik_abort("error in fasl-read: invalid bignum length %ld", number_of_octets);
+    nlimbs = (number_of_octets >> ((wordsize == 4)? 2 : 3));
+    first_word = bignum_tag			\
+      | (sign << bignum_sign_shift)		\
+      | (nlimbs << bignum_nlimbs_shift);
+    ikptr x = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_octets + disp_bignum_data)) | vector_tag;
+    IK_REF(x, -vector_tag) = (ikptr) first_word;
+    /* Read the vector of limbs as vector of octets. */
+    fasl_read_buf(p, (void*)(long)(x+off_bignum_data), number_of_octets);
     if (put_mark_index) {
       p->marks[put_mark_index] = x;
     }
