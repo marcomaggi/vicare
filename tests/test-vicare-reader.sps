@@ -27,6 +27,7 @@
 
 #!vicare
 (import (vicare)
+  (prefix (vicare platform words) words.)
   (vicare checks))
 
 (print-unicode #f)
@@ -459,7 +460,7 @@
 		  (obj  (read port))
 		  (eof  (port-eof? port)))
 	     (list (number? obj) obj eof))
-	 => '(#t ?number #t)))))
+	 => `(#t ?number #t)))))
 
 ;;; --------------------------------------------------------------------
 ;;; exact integers
@@ -487,6 +488,15 @@
   (read-number-and-eof "#e-1"		-1)
   (read-number-and-eof "#e-12"		-12)
   (read-number-and-eof "#e-123"		-123)
+
+  (read-number-and-eof "+9223372036854775807"		,(words.greatest-s64))
+  (read-number-and-eof "-9223372036854775808"		,(words.least-s64))
+
+  (read-number-and-eof "+9223372036854775808"		,(words.greatest-s64*))
+  (read-number-and-eof "-9223372036854775809"		,(words.least-s64*))
+
+  (read-number-and-eof "18446744073709551615"		,(words.greatest-u64))
+  (read-number-and-eof "18446744073709551616"		,(words.greatest-u64*))
 
 ;;; --------------------------------------------------------------------
 ;;; inexact integers

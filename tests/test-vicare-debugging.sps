@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
 	case-word-size)
   (vicare checks))
 

@@ -2542,25 +2542,63 @@
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (check
+  (check	;zero
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 0 (endianness little))
+	bv)
+    => #vu8(#x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00))
+
+  (check	;fixnum
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 #xFF (endianness little))
+	bv)
+    => #vu8(#xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00))
+
+  (check	;fixnum
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 #xFF (endianness big))
+	bv)
+    => #vu8(#x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF))
+
+  (check	;recognisable u64
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-u64-set! bv 0 #x0102030405060708 (endianness little))
 	bv)
     => #vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
 
-  (check
+  (check	;recognisable u64
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-u64-set! bv 0 #x0102030405060708 (endianness big))
 	bv)
     => #vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))
 
-  (check
+  (check	;recognisable u64
       (let ((bv (make-bytevector bytes-per-word)))
 	(bytevector-u64-set! bv 0 #x0102030405060708 (native-endianness))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#x08 #x07 #x06 #x05 #x04 #x03 #x02 #x01))
 	 ((big)		#vu8(#x01 #x02 #x03 #x04 #x05 #x06 #x07 #x08))))
+
+  (check	;greatest u64
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 (words.greatest-u64) (endianness big))
+	bv)
+    => #vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+
+  (check	;greatest u64
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 (words.greatest-u64) (endianness little))
+	bv)
+    => #vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+
+  (check	;greatest u64
+      (let ((bv (make-bytevector bytes-per-word)))
+	(bytevector-u64-set! bv 0 (words.greatest-u64) (native-endianness))
+	bv)
+    => #vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+
+;;; --------------------------------------------------------------------
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -2627,12 +2665,23 @@
 	(bytevector-u64-set! the-bv 1 #\a (endianness little)))
     => '(#\a))
 
-  (check	;too low
+  (check	;negative fixnum
+      (catch #f
+	(bytevector-u64-set! the-bv 1 -1 (endianness little)))
+    => '(-1))
+
+  (check	;negative bignum
       (catch #f
 	(bytevector-u64-set! the-bv 1 (words.least-u64*) (endianness little)))
     => `(,(words.least-u64*)))
 
-  (check	;too high
+  (debug-print (words.greatest-u64)
+	       (words.greatest-u64*)
+	       (words.word-u64? (words.greatest-u64))
+	       (words.word-u64? (words.greatest-u64*))
+	       )
+
+  (check 	;too high
       (catch #f
 	(bytevector-u64-set! the-bv 1 (words.greatest-u64*) (endianness little)))
     => `(,(words.greatest-u64*)))
@@ -2640,7 +2689,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
+  (check	;invalid endianness symbol
       (catch #f
 	(bytevector-u64-set! the-bv 1 0 'dummy))
     => '(dummy))
