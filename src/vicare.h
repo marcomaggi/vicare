@@ -35,6 +35,7 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
+#include <vicare-platform.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,8 +148,9 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
  ** Basic object related macros.
  ** ----------------------------------------------------------------- */
 
-#define wordsize	((int)(sizeof(ikptr)))
-/* The value of "wordshift" is selected in such a way that:
+/* The   constant   "wordsize"   is   defined   in   the   header   file
+   "vicare-platform.h".  The value of "wordshift"  is selected in such a
+   way that:
 
      length_in_bytes = number_of_words * wordsize
 		     = number_of_words << wordshift

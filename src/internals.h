@@ -87,6 +87,7 @@
 #  include <config.h>
 #endif
 
+#include <vicare-platform.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -317,6 +318,20 @@ typedef signed long long	ik_llong;
 typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
+
+#if IK_32BIT_PLATFORM
+#  define IK_SWORD_MAX		((int32_t)+2147483647L)
+#  define IK_SWORD_MIN		((int32_t)-2147483648L)
+#  define IK_UWORD_MAX		((uint32_t)0xFFFFFFFFL)		/* = 4294967295 */
+typedef int32_t			ik_sword_t;
+typedef uint32_t		ik_uword_t;
+#else
+#  define IK_SWORD_MAX		((int64_t)+9223372036854775807L)
+#  define IK_SWORD_MIN		((int64_t)-9223372036854775808L)
+#  define IK_UWORD_MAX		((uint64_t)0xFFFFFFFFFFFFFFFFL)	/* = 18446744073709551615 */
+typedef int64_t			ik_sword_t;
+typedef uint64_t		ik_uword_t;
+#endif
 
 /* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
 typedef ik_ulong		ikptr;
@@ -601,8 +616,9 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
  ** Basic object related macros.
  ** ----------------------------------------------------------------- */
 
-#define wordsize	((int)(sizeof(ikptr)))
-/* The value of "wordshift" is selected in such a way that:
+/* The   constant   "wordsize"   is   defined   in   the   header   file
+   "vicare-platform.h".  The value of "wordshift"  is selected in such a
+   way that:
 
      length_in_bytes = number_of_words * wordsize
 		     = number_of_words << wordshift
@@ -1029,6 +1045,8 @@ ik_decl int   ik_is_pointer	(ikptr X);
 #define IK_POINTER_DATA_LLONG(X)	((ik_llong) IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_ULONG(X)	((ik_ulong) IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_ULLONG(X)	((ik_ullong)IK_REF((X), off_pointer_data))
+
+#define IK_POINTER_DATA_WORD(X)		((ik_uword_t)IK_REF((X), off_pointer_data))
 
 #define IK_POINTER_SET(X,P)	(IK_REF((X), off_pointer_data) = (ikptr)((void*)(P)))
 #define IK_POINTER_SET_NULL(X)	(IK_REF((X), off_pointer_data) = 0)

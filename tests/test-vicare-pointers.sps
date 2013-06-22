@@ -220,30 +220,29 @@
     => (integer->pointer 23))
 
   (check
-      (let ((P (integer->pointer (words.greatest-machine-word)))
-	    (D 0))
-	(pointer=? P (pointer-add P D)))
-    => #t)
-
-  (check
       (let ((P (null-pointer))
 	    (D 0))
 	(pointer=? P (pointer-add P D)))
     => #t)
 
   (check
-      (let ((P (null-pointer))
-	    (D (words.greatest-machine-word)))
-	(pointer=? (integer->pointer (words.greatest-machine-word))
-		   (pointer-add P D)))
+      (let ((P (integer->pointer (words.greatest-machine-word)))
+  	    (D 0))
+  	(pointer=? P (pointer-add P D)))
     => #t)
 
   (check
+      (let ((P (null-pointer))
+	    (D (words.greatest-c-ptrdiff_t)))
+	(pointer-add P D))
+    => (integer->pointer (words.greatest-c-ptrdiff_t)))
+
+  (check
       (let ((P (integer->pointer (words.greatest-machine-word)))
-	    (D 1))
-	(equal? (list P D)
-		(catch #f
-		  (pointer-add P D))))
+  	    (D 1))
+  	(equal? (list P D)
+  		(catch #f
+  		  (pointer-add P D))))
     => #t)
 
   (check

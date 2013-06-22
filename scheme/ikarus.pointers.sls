@@ -810,7 +810,7 @@
   (define who 'pointer-add)
   (with-arguments-validation (who)
       ((pointer			ptr)
-       (exact-integer		delta)
+       (ptrdiff_t		delta)
        (pointer-and-offset	ptr delta))
     (let ((rv (capi.ffi-pointer-add ptr delta)))
       (or rv

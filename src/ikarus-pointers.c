@@ -200,12 +200,17 @@ ikrt_bn_to_pointer (ikptr x, ikpcb* pcb)
 ikptr
 ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb * pcb)
 {
-  ik_ullong	memory;
-  ik_llong	ptrdiff;
-  memory  = IK_POINTER_DATA_ULLONG(ptr);
-  ptrdiff = ik_integer_to_llong(delta);
+  ik_uword_t	memory;
+  ik_sword_t	ptrdiff;
+  memory  = IK_POINTER_DATA_WORD(ptr);
+#ifdef IK_32BIT_PLATFORM
+  ptrdiff = ik_integer_to_sint32(delta);
+#else
+  ptrdiff = ik_integer_to_sint64(delta);
+#endif
   if (0 <= ptrdiff) {
-    if (ULONG_MAX - ptrdiff < memory) /* => ULONG_MAX < ptrdiff + memory */
+    /* fprintf(stderr, "%s: %lu, %ld\n", __func__, (IK_UWORD_MAX - memory), ptrdiff); */
+    if ((IK_UWORD_MAX - memory) < ptrdiff) /* => IK_UWORD_MAX < ptrdiff + memory */
       return IK_FALSE_OBJECT;
   } else {
     if (-ptrdiff > memory) /* => 0 > ptrdiff + memory */
