@@ -279,6 +279,9 @@ endif
 if WANT_LINUX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
 endif
+if WANT_LIBICONV
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-iconv.sps
+endif
 if WANT_READLINE
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
 endif
