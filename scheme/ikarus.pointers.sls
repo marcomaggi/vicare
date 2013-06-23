@@ -1992,7 +1992,7 @@
 
 (define (%generic-callout-wrapper user-data S args)
   ;;Worker function for the wrapper of the actual foreign function: call
-  ;;the foreign  function and return  its return value.   This functions
+  ;;the foreign  function and  return its  return value.   This function
   ;;exists mostly to validate the input arguments.
   ;;
   ;;USER-DATA must be a pair whose car is a pointer object referencing a
@@ -2009,7 +2009,7 @@
       (let ((types     (cif-arg-types    S))
 	    (checkers  (cif-arg-checkers S)))
 	(unless ($fx= ($vector-length args)
-			    ($vector-length types))
+		      ($vector-length types))
 	  (assertion-violation who "wrong number of arguments" types args))
 	(when checkers
 	  (vector-for-each (lambda (arg-pred type arg)
@@ -2087,7 +2087,8 @@
 	   (retval-type (cif-retval-type    S))
 	   (proc	(if (or (eq? retval-type 'void)
 				(not arguments-validation))
-			    proc ;no return value to be validated
+			    (begin
+			      proc) ;no return value to be validated
 			  ;;This is a wrapper for a Scheme function that
 			  ;;needs validation of the return value.
 			  (lambda args

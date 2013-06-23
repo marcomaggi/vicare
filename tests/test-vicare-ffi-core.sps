@@ -168,21 +168,6 @@
 
   (check
       (let ((P (ffi.null-pointer))
-	    (D (words.greatest-machine-word)))
-	(ffi.pointer=? (ffi.integer->pointer (words.greatest-machine-word))
-		       (ffi.pointer-add P D)))
-    => #t)
-
-  (check
-      (let ((P (ffi.integer->pointer (words.greatest-machine-word)))
-	    (D 1))
-	(equal? (list P D)
-		(catch #f
-		  (ffi.pointer-add P D))))
-    => #t)
-
-  (check
-      (let ((P (ffi.null-pointer))
 	    (D -1))
 	(equal? (list P D)
 		(catch #f

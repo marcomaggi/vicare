@@ -1009,7 +1009,14 @@ ika_flonum_from_double (ikpcb* pcb, double N)
 ikptr
 ikrt_integer_from_machine_word (ikptr s_word, ikpcb * pcb)
 {
-  return ika_integer_from_ulong(pcb, (ik_ulong)s_word);
+#ifdef IK_32BIT_PLATFORM
+  uint32_t	word	= (uint32_t) s_word;
+  ikptr		s_int	= ika_integer_from_uint32(pcb, word);
+#else
+  uint64_t	word	= (uint64_t) s_word;
+  ikptr		s_int	= ika_integer_from_uint64(pcb, word);
+#endif
+  return s_int;
 }
 
 
@@ -1247,7 +1254,11 @@ ik_integer_to_ptrdiff_t (ikptr x)
 ikptr
 ikrt_integer_to_machine_word (ikptr s_int, ikpcb * pcb)
 {
-  ik_ulong	word = ik_integer_to_ulong(s_int);
+#ifdef IK_32BIT_PLATFORM
+  uint32_t	word = ik_integer_to_uint32(s_int);
+#else
+  uint64_t	word = ik_integer_to_uint64(s_int);
+#endif
   return (ikptr)word;
 }
 

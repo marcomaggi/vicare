@@ -365,7 +365,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
 			      sizeof(uint64_t) : cif->retval_type->size];
     /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
        native argument values. */
-    int  i;
+    int		i;
     for (i=0; i<cif->arity; i++) {
       ikptr  value = IK_ITEM(s_args, i);
       arg_value_ptrs[i] = arg_next;
@@ -511,7 +511,7 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
   ikptr         s_proc        = IK_CDR(s_data);
   ikpcb *       pcb           = ik_the_pcb();
-  int           i;
+  int		i;
   ikptr         rv;
   /* This setting  for "frame_pointer"  and "frame_base" is  expected by
      "ik_exec_code()". */
@@ -559,7 +559,9 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
        implementing the closure S_PROC. */
     ikptr	code_entry = IK_REF(s_proc, off_closure_code);
     ikptr	s_code     = code_entry - off_code_data;
-    rv = ik_exec_code(pcb, s_code, IK_FIX(-cif->arity), s_proc);
+    /* "cif->arity" is an "unsigned int",  so first convert it to "long"
+       and only after negate it and convert it to fixnum. */
+    rv = ik_exec_code(pcb, s_code, IK_FIX(-((long)cif->arity)), s_proc);
     /* Convert the Scheme return value to a native value. */
     scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
   }
