@@ -455,10 +455,14 @@
 		 (enum-set-member? 'IGNORE set2))
 	   (iconv-encoding-aliases? set1 set2))))
 
-;;; --------------------------------------------------------------------
+
+;;;; handles
 
 (define-struct iconv
   (pointer from to))
+
+(module ()
+  (set-rtd-destructor! (type-descriptor iconv) $iconv-destructor))
 
 (define (%struct-iconv-printer S port sub-printer)
   (define-inline (%display thing)
@@ -469,15 +473,10 @@
   (%display " to-encoding=")	(%display (enum-set->list (iconv-to   S)))
   (%display "]"))
 
-(define %iconv-guardian
-  (make-guardian))
-
-(define (%free-allocated-iconv)
-  (do ((handle (%iconv-guardian) (%iconv-guardian)))
-      ((not handle))
-    (let ((P (iconv-pointer handle)))
-      (unless (pointer-null? P)
-	(capi.glibc-iconv-close P)))))
+(define ($iconv-destructor handle)
+  (let ((P ($iconv-pointer handle)))
+    (unless (pointer-null? P)
+      (capi.glibc-iconv-close P))))
 
 (define (iconv-open from to)
   (define who 'iconv-open)
@@ -488,7 +487,7 @@
       (let ((rv (capi.glibc-iconv-open (%enum-set->string from who)
 				       (%enum-set->string to   who))))
 	(if (pointer? rv)
-	    (%iconv-guardian (make-iconv rv from to))
+	    (make-iconv rv from to)
 	  (raise-errno-error who rv to from)))))
   (define (%enum-set->string set who)
     (let ((ell	(enum-set->list set))
@@ -542,9 +541,6 @@
 
 
 ;;;; done
-
-(post-gc-hooks (cons* %free-allocated-iconv
-		      (post-gc-hooks)))
 
 )
 

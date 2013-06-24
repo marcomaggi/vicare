@@ -68,6 +68,51 @@
   #t)
 
 
+(parametrise ((check-test-name	'dummy-args))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_0")
+    => #t)
+
+  (check
+      (foreign-call "ikrt_dummy_arg_1" 2)
+    => 1002)
+
+  (check
+      (foreign-call "ikrt_dummy_arg_2" 2 30)
+    => 1032)
+
+  (check
+      (foreign-call "ikrt_dummy_arg_3" 2 30 400)
+    => 1432)
+
+  (check
+      (foreign-call "ikrt_dummy_arg_4" 1 2 4 8)
+    => (+ 1000 1 2 4 8))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_5" 1 2 4 8 16)
+    => (+ 1000 1 2 4 8 16))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_6" 1 2 4 8 16 32)
+    => (+ 1000 1 2 4 8 16 32))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_7" 1 2 4 8 16 32 64)
+    => (+ 1000 1 2 4 8 16 32 64))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_8" 1 2 4 8 16 32 64 128)
+    => (+ 1000 1 2 4 8 16 32 64 128))
+
+  (check
+      (foreign-call "ikrt_dummy_arg_9" 1 2 4 8 16 32 64 128 256)
+    => (+ 1000 1 2 4 8 16 32 64 128 256))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

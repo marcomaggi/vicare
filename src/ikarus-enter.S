@@ -141,72 +141,357 @@ L_multi_value_reentry:
 
 ## ------------------------------------------------------------
 
+# Call a C function From Scheme.   When entering this function:
+#
+# * %rsi must contain the address of the PCB structure.
+#
+# * %rdi must contain the address of the C function to call.
+#
+# * %rax must contain a fixnum representing the encoded number of
+#   arguments to the C function, EXcluding the last argument
+#   (the "ikpcb * pcb"), such arguments are on the Scheme stack.
+#
+# NOTE When we enter this routine to call the C function
+# "ik_stack_overflow()", we enter with a Scheme stack segment
+# and come back with another Scheme stack segment.
+#
 .align 8
 ik_foreign_call:
 _ik_foreign_call:
+  # Store the Frame Pointer Register into "pcb->frame_pointer".
   movq %rsp, 16(%rsi)    # (movl fpr (pcb-ref 'frame-pointer))
+  # Store the Allocation Pointer Register into "pcb->allocation_pointer".
   movq %rbp, 0(%rsi)     # (movl apr (pcb-ref 'allocation-pointer))
+  # Save the Frame Pointer Register (FPR, %esp) into RBX.  We will
+  # need it later to transfer the arguments from the Scheme stack to
+  # the C stack.
   movq %rsp, %rbx        # (movl fpr ebx)
+  # Store in %rsp the C stack from "pcb->system_stack".
   movq 48(%rsi), %rsp    # (movl (pcb-ref 'system-stack) esp)
-  # %esp is the system stack, %eax is the index to the last arg,
-  # %esi is the pcb.
 
-  # align the system stack by subtracting 8 if it's not 16-byte aligned
-  movq %rsp, %r12
-  andq $15, %r12
-  subq %r12, %rsp
+  # Here %rsp references the last used word on the C stack: the
+  # "old top of C stack".
 
-  # AMD64 says: %rbp, %rbx, %r12 .. %r15 are preserved by the callee
-  #             %rdi, %rsi, %rdx, %rcx, %r8, %r9 are parameter regs
+  # According to the calling convention for AMD64:
+  #
+  # * The registers: %rbp, %rbx, %r12 .. %r15 are preserved by the callee.
+  #
+  # * The registers: %rdi, %rsi, %rdx, %rcx, %r8, %r9 are parameter regs.
+  #
+  #
 
-  movq %rdi, %r12 # put target of call in %r12
-  movq %rsi, %r13 # put pcb in %r13
+  # Move in %r12 the address of the function to call, later we will use
+  # this value as argument for the "call" instruction.  %r12 will be
+  # preserved by the callee.
+  movq %rdi, %r12
+  # Move in %r13 the address of the PCB.  %r14 will be preserved by the
+  # callee.
+  movq %rsi, %r13
 
-  movq %rsi, %rdi # put pcb in first arg reg
+  # Move the address of the PCB in first argument register: %rdi.
+  movq %rsi, %rdi
+
+  # We want that: after pushing the C arguments on the C stack, %rsp is
+  # 16-byte aligned (a calling convention requirement established by
+  # C compilers).  Every argument will occupy a wordsize on the Stack,
+  # here we want to pad the C stack as needed.
+  #
+  # Here we align the system stack %rsp by subtracting from it its least
+  # significant byte, if %rsp is not already 16-byte aligned.
+  #
+  # This aligment is fine if the number of arguments less than 5: in this
+  # case all the arguments and the PCB address fit in the CPU registers,
+  # no arguments pushed on the stack.
+  #
+  # This alignment is a starting point for further considerations if
+  # there are 6 or more arguments, in which case later we will do what
+  # is needed.
+  #
+  # (Here we use %rdx as a scratch register.)
+  movq %rsp, %rdx
+  andq $15, %rdx	# mask in the least significant byte
+  subq %rdx, %rsp	# subtract the least significant byte
+
+  # If there are no arguments: jump to the appropriate label, the only
+  # argument is the PCB addres in %rdi.
   cmpq $0, %rax
   je L_zero_args
+
+  # There is one argument: jump to the appropriate label.
   cmpq $-8, %rax
   je L_one_arg
+
+  # There are two arguments: jump to the appropriate label.
   cmpq $-16, %rax
   je L_two_args
+
+  # There are three arguments: jump to the appropriate label.
   cmpq $-24, %rax
   je L_three_args
+
+  # There are four arguments: jump to the appropriate label.
   cmpq $-32, %rax
   je L_four_args
 
-  movq $0, %rbx
-  movq %rbx,0(%rbx)
+  # There are five arguments: jump to the appropriate label.
+  cmpq $-40, %rax
+  je L_five_args
+
+  # There are six arguments: jump to the appropriate label.
+  cmpq $-48, %rax
+  je L_six_args
+
+  # There are more than six arguments: we push the 7th, 8th, ...
+  # arguments on the stack, then fall through below to the six
+  # arguments label.  Let's consider the example of a function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3, ikptr arg4,
+  #              ikptr arg5, ikptr arg6, ikptr arg7, ikptr arg8,
+  #              ikpcb * pcb);
+  #
+  # When arriving here: %ebx references the top of the Scheme stack;
+  # %eax = -8 * wordsize = -64, the offset to add to %ebx to
+  # reference the topmost argument.  On the Scheme stack we have:
+  #
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |    return address    | <-- %ebx
+  #   |----------------------|
+  #   |     C argument 1     | <-- %ebx - 1 * wordsize = %ebx -  8
+  #   |----------------------|
+  #   |     C argument 2     | <-- %ebx - 2 * wordsize = %ebx - 16
+  #   |----------------------|
+  #   |     C argument 3     | <-- %ebx - 3 * wordsize = %ebx - 24
+  #   |----------------------|
+  #   |     C argument 4     | <-- %ebx - 4 * wordsize = %ebx - 32
+  #   |----------------------|
+  #   |     C argument 5     | <-- %ebx - 5 * wordsize = %ebx - 40
+  #   |----------------------|
+  #   |     C argument 6     | <-- %ebx - 6 * wordsize = %ebx - 48
+  #   |----------------------|
+  #   |     C argument 7     | <-- %ebx - 7 * wordsize = %ebx - 56
+  #   |----------------------|
+  #   |     C argument 8     | <-- %ebx - 8 * wordsize = %ebx + %eax
+  #   |----------------------|
+  #   |                      |
+  #          low memory
+  #
+  # On the C stack, right before performing the call instruction,
+  # we want:
+  #
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |  old top of C stack  |
+  #   |----------------------|
+  #   |    pointer to PCB    | <-- %esp + 2 * wordsize
+  #   |----------------------|
+  #   |     C argument 8     | <-- %esp + 1 * wordsize
+  #   |----------------------|
+  #   |     C argument 7     | <-- %esp
+  #   |----------------------|
+  #   |                      |
+  #          low memory
+  #
+  # and in the CPU registers we want:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == arg3,
+  #   %rcx == arg4, %r8  == arg5, %r9  == arg6
+  #
+  # To keep %rsp with 16-bytes alignment we do this reasoning:
+  #
+  # 1. We know that now %rsp is 16-bytes aligned (we did it before).
+  #
+  # 2. We know that we will push the PCB address on the stack, and it
+  #    accounts for 8 bytes.
+  #
+  # 3. Every argument we will push on the stack accounts for 8 bytes.
+  #
+  # 4. We store 6 (even) argument in the CPU registers.
+  #
+  # 5. If we push an even number of machine words on the stack: the
+  #    alignment is preserved.
+  #
+  # so:
+  #
+  # * If the number of arguments is odd: an odd number of arguments
+  #   will be pushed on the stack; plus the PCB address: an even number
+  #   of machine words will be pushed on the stack; we *do not* need to
+  #   push additional words to keep the alignment.
+  #
+  # * If the number of arguments is even: an even number of arguments
+  #   will be pushed on the stack; plus the PCB address: an odd number
+  #   of machine words will be pushed on the stack; we *do* need to push
+  #   an additional word on the stack to keep the alignment.
+  #
+  # If a machine word represents an odd number: its least significant
+  # bit is set.  On 64-bit platforms: fixnums are encoded by left-shifting
+  # the raw integer by 3 bits.  So a machine word represents an even
+  # fixnum if its least significant bits are #b0000, and it represents
+  # an odd fixnum if its least significant bits are #b1000.
+  #
+  # To isolate the least significant nibble in a machine word: we AND
+  # it with #b1111 = 15.  If the result of such AND is not zero: we
+  # *do not* need to push an additional word on the stack.
+  #
+  # (Here we use %rdx as a scratch register.)
+  movq %rax, %rdx
+  andq $15, %rdx
+  cmpq $0, %rdx		# is this needed at all???
+  jnz L_no_pad
+  push $0
+L_no_pad:
+
+  # Push the PCB address on the C stack: it is the rightmost argument
+  # to the C function.
+  push %rdi		 # pcb
+  # Copy the arguments from the Scheme stack to the C stack.
+L_loop:                  # (label Lloop)
+  movq (%rbx,%rax), %rcx # (movl (mem rbx rax) rcx)
+  push %rcx              # (pushl rcx)
+  addq $8, %rax          # (addl (int 8) rax)
+  cmpq $-48, %rax        # (cmpl (int -48) rax)
+  jne L_loop             # (jne (label Lloop))
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
+  movq -24(%rbx), %rdx		# arg3
+  movq -32(%rbx), %rcx		# arg4
+  movq -40(%rbx), %r8		# arg5
+  movq -48(%rbx), %r9		# arg6
+  jmp L_set
+
+L_six_args:
+  # There are six arguments.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
+  #              ikptr arg4, ikptr arg5, ikptr arg6,
+  #              ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == arg3,
+  #   %rcx == arg4, %r8  == arg5, %r9  == arg6
+  #
+  # and pushing the PCB address on the stack.  We first push a word
+  # on the stack to preserve 16-byte alignment of the value of %rsp.
+  #
+  push $0
+  push %rdi			# pcb
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
+  movq -24(%rbx), %rdx		# arg3
+  movq -32(%rbx), %rcx		# arg4
+  movq -40(%rbx), %r8		# arg5
+  movq -48(%rbx), %r9		# arg6
+  jmp L_set
+
+L_five_args:
+  # There are five arguments.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
+  #              ikptr arg4, ikptr arg5,
+  #              ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == arg3,
+  #   %rcx == arg4, %r8  == arg5, %r9  == pcb
+  #
+  movq %rdi, %r9		# pcb
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
+  movq -24(%rbx), %rdx		# arg3
+  movq -32(%rbx), %rcx		# arg4
+  movq -40(%rbx), %r8		# arg5
+  jmp L_set
+
 L_four_args:
-  movq %rdi, %r8        # pcb
-  movq -8(%rbx), %rdi
-  movq -16(%rbx), %rsi
-  movq -24(%rbx), %rdx
-  movq -32(%rbx), %rcx
+  # There are four arguments.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
+  #              ikptr arg4,
+  #              ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == arg3,
+  #   %rcx == arg4, %r8  == pcb
+  #
+  movq %rdi, %r8		# pcb
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
+  movq -24(%rbx), %rdx		# arg3
+  movq -32(%rbx), %rcx		# arg4
   jmp L_set
+
 L_three_args:
-  movq %rdi, %rcx        # pcb
-  movq -8(%rbx), %rdi
-  movq -16(%rbx), %rsi
-  movq -24(%rbx), %rdx
+  # There are three arguments.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
+  #              ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == arg3,
+  #   %rcx == pcb
+  #
+  movq %rdi, %rcx		# pcb
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
+  movq -24(%rbx), %rdx		# arg3
   jmp L_set
+
 L_two_args:
-  movq %rdi, %rdx        # pcb
-  movq -8(%rbx), %rdi
-  movq -16(%rbx), %rsi
+  # There are two arguments.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikptr arg2,
+  #              ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == arg2, %rdx == pcb
+  #
+  movq %rdi, %rdx		# pcb
+  movq  -8(%rbx), %rdi		# arg1
+  movq -16(%rbx), %rsi		# arg2
   jmp L_set
+
 L_one_arg:
-  movq %rdi, %rsi
-  movq -8(%rbx), %rdi
+  # There is one argument.  A function call to:
+  #
+  #   ikptr fun (ikptr arg1, ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == arg1, %rsi == pcb
+  #
+  movq %rdi, %rsi		# pcb
+  movq -8(%rbx), %rdi		# arg1
   jmp L_set
 
 L_zero_args:
+  # There are zero arguments.  A function call to:
+  #
+  #   ikptr fun (ikpcb * pcb);
+  #
+  # is performed by setting:
+  #
+  #   %rdi == pcb
+  #
+  # and we already did it before.
+
 L_set:                   # (label Lset)
   call *%r12             # (call cpr)
 L_back:
-  movq %r13, %rsi        # restore pcb from r13
-  movq 16(%rsi), %rsp    # get frame pointer from 16(pcb)
-  movq 0(%rsi), %rbp     # get allocation pointer from 0(pcb)
-  ret                    # return to scheme
+  # Restore PCB from %r13.
+  movq %r13, %rsi
+  # Retrieve the Frame Pointer Register from "pcb->frame_pointer".
+  movq 16(%rsi), %rsp    # (movl (pcb-ref 'frame-pointer) fpr)
+  # Retrieve the Allocation Pointer Register from "pcb->allocation_pointer".
+  movq 0(%rsi), %rbp	 # (movl (pcb-ref 'allocation-pointer) apr)
+  # Return to Scheme.
+  ret
 
 
 ## ------------------------------------------------------------
@@ -797,7 +1082,7 @@ _ik_foreign_call:
   #
   # For the purpose of padding to multiples of 16 bytes: when there
   # are more than 3 arguments to the C function (EXcluding the PCB
-  # pointer) we are interested in on the arguments count:
+  # pointer) we are interested in the arguments count:
   #
   #	(mod (- %eax) 16)
   #
@@ -838,7 +1123,7 @@ L_zero:
 
   # Remember that when arriving here: %ebx references the top of
   # the Scheme stack, %eax is the the offset to add to %ebx to
-  # reference topmost argument.  For 2 arguments, on the Scheme
+  # reference the topmost argument.  For 2 arguments, on the Scheme
   # stack we have:
   #
   #         high memory

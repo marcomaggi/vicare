@@ -571,19 +571,19 @@
 
   (check
       (with-temporary-file ("tmp")
-	(px.utimes "tmp" 12 0 34 0)
-	(list (px.file-atime "tmp")
-	      (px.file-mtime "tmp")))
+  	(px.utimes "tmp" 12 0 34 0)
+  	(list (px.file-atime "tmp")
+  	      (px.file-mtime "tmp")))
     => (list (* #e1e9 12)
-	     (* #e1e9 34)))
+  	     (* #e1e9 34)))
 
   (check
       (with-temporary-file ("tmp")
-	(px.lutimes "tmp" 12 0 34 0)
-	(list (px.file-atime "tmp")
-	      (px.file-mtime "tmp")))
+  	(px.lutimes "tmp" 12 0 34 0)
+  	(list (px.file-atime "tmp")
+  	      (px.file-mtime "tmp")))
     => (list (* #e1e9 12)
-	     (* #e1e9 34)))
+  	     (* #e1e9 34)))
 
   #t)
 

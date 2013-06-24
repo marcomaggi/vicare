@@ -36,7 +36,9 @@
 (check-display "*** testing Vicare: iconv functions\n")
 
 
-(parametrise ((check-test-name	'iconv))
+(parametrise ((check-test-name		'iconv)
+	      (struct-guardian-logger	(lambda (S E action)
+					  (check-pretty-print (list S E action)))))
 
 ;;; handle allocation
 
@@ -58,14 +60,14 @@
   (check	;nothing happens if we close the handle multiple times
       (let ((handle (iconv.iconv-open (iconv.iconv-encoding UTF-16)
 				      (iconv.iconv-encoding UTF-8))))
-;;;(check-pretty-print handle)
+	;;(check-pretty-print handle)
 	(iconv.iconv-close handle)
 	(iconv.iconv-close handle)
 	(iconv.iconv-close handle)
 	(iconv.iconv-closed? handle))
     => #t)
 
-;;; --------------------------------------------------------------------
+;; --------------------------------------------------------------------
 
   (check
       (iconv.iconv-encoding-aliases? (iconv.iconv-encoding IBM819)
@@ -77,7 +79,7 @@
 				     (iconv.iconv-encoding UTF-8))
     => #f)
 
-;;; --------------------------------------------------------------------
+;; --------------------------------------------------------------------
 
   (check
       (iconv.iconv-encoding=? (iconv.iconv-encoding IBM819)
@@ -109,13 +111,13 @@
 			      (iconv.iconv-encoding UTF-8))
     => #f)
 
-;;; --------------------------------------------------------------------
+;; --------------------------------------------------------------------
 
   (check
       (let* ((H		(iconv.iconv-open (iconv.iconv-encoding UTF-16BE) ;from
-					  (iconv.iconv-encoding UTF-8))) ;to
+					  (iconv.iconv-encoding UTF-8)))  ;to
 ;;;                      0123456789012345
-;;;                          012345678901
+;;;                      012345678901
 	     (in.str	"ciao hello salut")
 	     (in.bv	(string->utf16 in.str (endianness big)))
 	     (out.bv	(string->utf8 in.str))
@@ -134,11 +136,12 @@
 ;;;                                     0123456789012345
 	     (in.bv	(string->utf16 "ciao hello salut" (endianness big)))
 	     (out.bv	(make-bytevector 16)))
-	(let-values (((in.start out.start) (iconv.iconv! handle in.bv 0 #f out.bv 0 #f)))
+	(receive (in.start out.start)
+	    (iconv.iconv! handle in.bv 0 #f out.bv 0 #f)
 	  (utf8->string out.bv)))
     => "ciao hello salut")
 
-  #t)
+  (collect))
 
 
 ;;;; done

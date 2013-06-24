@@ -27,6 +27,7 @@ SRCS	= \
 	ikarus-glibc.c			\
 	ikarus-linux.c			\
 	ikarus-readline.c		\
+	ikarus-debugging.c		\
 	last-revision.h			\
 	internals.h
 
