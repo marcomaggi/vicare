@@ -242,8 +242,8 @@ _ik_foreign_call:
   je L_six_args
 
   # There are more than six arguments: we push the 7th, 8th, ...
-  # arguments on the stack, then fall through below to the six
-  # arguments label.  Let's consider the example of a function call to:
+  # arguments on the stack, and we put the 1st, 2nd, ..., 6th in
+  # CPU registers.  Let's consider the example of a function call to:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3, ikptr arg4,
   #              ikptr arg5, ikptr arg6, ikptr arg7, ikptr arg8,
