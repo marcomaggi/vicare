@@ -604,6 +604,259 @@
     NEG-CN110
     NEG-CN111
     NEG-CN112
+
+;;; --------------------------------------------------------------------
+;;; inverse constants
+
+    INV-GREATEST-FX
+    INV-LEAST-FX
+
+;;; --------------------------------------------------------------------
+
+    INV-FX1
+    INV-FX2
+    INV-FX3
+    INV-FX4
+
+;;; --------------------------------------------------------------------
+
+    INV-BN1
+    INV-BN2
+    INV-BN3
+    INV-BN4
+
+    INV-VBN1
+    INV-VBN2
+    INV-VBN3
+    INV-VBN4
+
+;;; --------------------------------------------------------------------
+
+    INV-RN01
+    INV-RN02
+    INV-RN03
+    INV-RN04
+
+    INV-RN05
+    INV-RN06
+    INV-RN07
+    ;; INV-RN08
+
+    INV-RN09
+    INV-RN10
+    INV-RN11
+    INV-RN12
+
+    INV-RN13
+    INV-RN14
+    INV-RN15
+    INV-RN16
+
+    INV-RN17
+    INV-RN18
+    INV-RN19
+    INV-RN20
+
+    ;; INV-RN21
+    ;; INV-RN22
+    ;; INV-RN23
+    ;; INV-RN24
+
+    ;; INV-RN25
+    ;; INV-RN26
+    ;; INV-RN27
+    ;; INV-RN28
+
+    INV-RN29
+    INV-RN30
+    INV-RN31
+    INV-RN32
+
+    ;; INV-RN33
+    INV-RN34
+    INV-RN35
+    INV-RN36
+
+    INV-VRN01
+    INV-VRN02
+    INV-VRN03
+    INV-VRN04
+
+    INV-VRN05
+    INV-VRN06
+    INV-VRN07
+
+    INV-VRN09
+    INV-VRN10
+    INV-VRN11
+    INV-VRN12
+
+    INV-VRN13
+    INV-VRN14
+    INV-VRN15
+    INV-VRN16
+
+    INV-VRN17
+    INV-VRN18
+    INV-VRN19
+    INV-VRN20
+
+    INV-VRN29
+    INV-VRN30
+    INV-VRN31
+    INV-VRN32
+
+    INV-VRN34
+    INV-VRN35
+    INV-VRN36
+
+;;; --------------------------------------------------------------------
+
+    INV-FL1
+    INV-FL2
+    INV-FL3
+    INV-FL4
+    INV-FL5
+    INV-FL6
+    INV-FL7
+
+;;; --------------------------------------------------------------------
+
+    INV-CFL01
+    INV-CFL02
+    INV-CFL03
+    INV-CFL04
+
+    INV-CFL05
+    INV-CFL06
+    INV-CFL07
+    INV-CFL08
+
+    INV-CFL09
+    INV-CFL10
+    INV-CFL11
+    INV-CFL12
+
+    INV-CFL13
+    INV-CFL14
+    INV-CFL15
+    INV-CFL16
+
+;;; --------------------------------------------------------------------
+;;; inverse compnum constants
+
+    INV-CN001
+    INV-CN002
+    INV-CN003
+    INV-CN004
+    INV-CN005
+    INV-CN006
+    INV-CN007
+    INV-CN008
+    INV-CN009
+    INV-CN010
+    INV-CN011
+    INV-CN012
+    INV-CN013
+    INV-CN014
+    INV-CN015
+    INV-CN016
+    INV-CN017
+    INV-CN018
+    INV-CN019
+    INV-CN020
+    INV-CN021
+    INV-CN022
+    INV-CN023
+    INV-CN024
+    INV-CN025
+    INV-CN026
+    INV-CN027
+    INV-CN028
+    INV-CN029
+    INV-CN030
+    INV-CN031
+    INV-CN032
+    INV-CN033
+    INV-CN034
+    INV-CN035
+    INV-CN036
+    INV-CN037
+    INV-CN038
+    INV-CN039
+    INV-CN040
+    INV-CN041
+    INV-CN042
+    INV-CN043
+    INV-CN044
+    INV-CN045
+    INV-CN046
+    INV-CN047
+    INV-CN048
+    INV-CN049
+    INV-CN050
+    INV-CN051
+    INV-CN052
+    INV-CN053
+    INV-CN054
+    INV-CN055
+    INV-CN056
+    INV-CN057
+    INV-CN058
+    INV-CN059
+    INV-CN060
+    INV-CN061
+    INV-CN062
+    INV-CN063
+    INV-CN064
+    INV-CN065
+    INV-CN066
+    INV-CN067
+    INV-CN068
+    INV-CN069
+    INV-CN070
+    INV-CN071
+    INV-CN072
+    INV-CN073
+    INV-CN074
+    INV-CN075
+    INV-CN076
+    INV-CN077
+    INV-CN078
+    INV-CN079
+    INV-CN080
+    INV-CN081
+    INV-CN082
+    INV-CN083
+    INV-CN084
+    INV-CN085
+    INV-CN086
+    INV-CN087
+    INV-CN088
+    INV-CN089
+    INV-CN090
+    INV-CN091
+    INV-CN092
+    INV-CN093
+    INV-CN094
+    INV-CN095
+    INV-CN096
+    INV-CN097
+    INV-CN098
+    INV-CN099
+    INV-CN100
+    INV-CN101
+    INV-CN102
+    INV-CN103
+    INV-CN104
+    INV-CN105
+    INV-CN106
+    INV-CN107
+    INV-CN108
+    INV-CN109
+    INV-CN110
+    INV-CN111
+    INV-CN112
     )
   (import (vicare)
     (vicare checks))
@@ -948,45 +1201,45 @@
 (define VRN03		(/ FX2 123))
 (define VRN04		(/ FX4 123))
 
-(define VRN05		(/ FX1 BN1))
-(define VRN06		(/ FX2 BN1))
-(define VRN07		(/ FX3 BN1))
-;;;(define VRN08		(/ FX4 BN1)) ;= -1, not a ratnum
+(define VRN05		(/ FX1 VBN1))
+(define VRN06		(/ FX2 VBN1))
+(define VRN07		(/ FX3 VBN1))
+;;;(define VRN08		(/ FX4 VBN1)) ;= -1, not a ratnum
 
-(define VRN09		(/ FX1 BN2))
-(define VRN10		(/ FX2 BN2))
-(define VRN11		(/ FX3 BN2))
-(define VRN12		(/ FX4 BN2))
+(define VRN09		(/ FX1 VBN2))
+(define VRN10		(/ FX2 VBN2))
+(define VRN11		(/ FX3 VBN2))
+(define VRN12		(/ FX4 VBN2))
 
-(define VRN13		(/ FX1 BN3))
-(define VRN14		(/ FX2 BN3))
-(define VRN15		(/ FX3 BN3))
-(define VRN16		(/ FX4 BN3))
+(define VRN13		(/ FX1 VBN3))
+(define VRN14		(/ FX2 VBN3))
+(define VRN15		(/ FX3 VBN3))
+(define VRN16		(/ FX4 VBN3))
 
-(define VRN17		(/ FX1 BN4))
-(define VRN18		(/ FX2 BN4))
-(define VRN19		(/ FX3 BN4))
-(define VRN20		(/ FX4 BN4))
+(define VRN17		(/ FX1 VBN4))
+(define VRN18		(/ FX2 VBN4))
+(define VRN19		(/ FX3 VBN4))
+(define VRN20		(/ FX4 VBN4))
 
-;;(define VRN21		536870912		#;(/ BN1 FX1)) ;not a ratnum
-;;(define VRN22		536871011		#;(/ BN2 FX1)) ;not a ratnum
-;;(define VRN23		-536870913		#;(/ BN3 FX1)) ;not a ratnum
-;;(define VRN24		-536871012		#;(/ BN4 FX1)) ;not a ratnum
+;;(define VRN21		536870912		#;(/ VBN1 FX1)) ;not a ratnum
+;;(define VRN22		536871011		#;(/ VBN2 FX1)) ;not a ratnum
+;;(define VRN23		-536870913		#;(/ VBN3 FX1)) ;not a ratnum
+;;(define VRN24		-536871012		#;(/ VBN4 FX1)) ;not a ratnum
 
-;;(define VRN25		-536870912		#;(/ BN1 FX2)) ;not a ratnum
-;;(define VRN26		-536871011		#;(/ BN2 FX2)) ;not a ratnum
-;;(define VRN27		536870913		#;(/ BN3 FX2)) ;not a ratnum
-;;(define VRN28		536871012		#;(/ BN4 FX2)) ;not a ratnum
+;;(define VRN25		-536870912		#;(/ VBN1 FX2)) ;not a ratnum
+;;(define VRN26		-536871011		#;(/ VBN2 FX2)) ;not a ratnum
+;;(define VRN27		536870913		#;(/ VBN3 FX2)) ;not a ratnum
+;;(define VRN28		536871012		#;(/ VBN4 FX2)) ;not a ratnum
 
-(define VRN29		(/ BN1 FX3))
-(define VRN30		(/ BN2 FX3))
-(define VRN31		(/ BN3 FX3))
-(define VRN32		(/ BN4 FX3))
+(define VRN29		(/ VBN1 FX3))
+(define VRN30		(/ VBN2 FX3))
+(define VRN31		(/ VBN3 FX3))
+(define VRN32		(/ VBN4 FX3))
 
-;;(define VRN33		-1			#;(/ BN1 FX4)) ;not a ratnum
-(define VRN34		(/ BN2 FX4))
-(define VRN35		(/ BN3 FX4))
-(define VRN36		(/ BN4 FX4))
+;;(define VRN33		-1			#;(/ VBN1 FX4)) ;not a ratnum
+(define VRN34		(/ VBN2 FX4))
+(define VRN35		(/ VBN3 FX4))
+(define VRN36		(/ VBN4 FX4))
 
 ;;; --------------------------------------------------------------------
 
@@ -1254,45 +1507,45 @@
 (define NEG-VRN03		(- (/ FX2 123)))
 (define NEG-VRN04		(- (/ FX4 123)))
 
-(define NEG-VRN05		(- (/ FX1 BN1)))
-(define NEG-VRN06		(- (/ FX2 BN1)))
-(define NEG-VRN07		(- (/ FX3 BN1)))
-;;;(define NEG-VRN08		(- (/ FX4 BN1))) ;= 1, not a ratnum
+(define NEG-VRN05		(- (/ FX1 VBN1)))
+(define NEG-VRN06		(- (/ FX2 VBN1)))
+(define NEG-VRN07		(- (/ FX3 VBN1)))
+;;;(define NEG-VRN08		(- (/ FX4 VBN1))) ;= 1, not a ratnum
 
-(define NEG-VRN09		(- (/ FX1 BN2)))
-(define NEG-VRN10		(- (/ FX2 BN2)))
-(define NEG-VRN11		(- (/ FX3 BN2)))
-(define NEG-VRN12		(- (/ FX4 BN2)))
+(define NEG-VRN09		(- (/ FX1 VBN2)))
+(define NEG-VRN10		(- (/ FX2 VBN2)))
+(define NEG-VRN11		(- (/ FX3 VBN2)))
+(define NEG-VRN12		(- (/ FX4 VBN2)))
 
-(define NEG-VRN13		(- (/ FX1 BN3)))
-(define NEG-VRN14		(- (/ FX2 BN3)))
-(define NEG-VRN15		(- (/ FX3 BN3)))
-(define NEG-VRN16		(- (/ FX4 BN3)))
+(define NEG-VRN13		(- (/ FX1 VBN3)))
+(define NEG-VRN14		(- (/ FX2 VBN3)))
+(define NEG-VRN15		(- (/ FX3 VBN3)))
+(define NEG-VRN16		(- (/ FX4 VBN3)))
 
-(define NEG-VRN17		(- (/ FX1 BN4)))
-(define NEG-VRN18		(- (/ FX2 BN4)))
-(define NEG-VRN19		(- (/ FX3 BN4)))
-(define NEG-VRN20		(- (/ FX4 BN4)))
+(define NEG-VRN17		(- (/ FX1 VBN4)))
+(define NEG-VRN18		(- (/ FX2 VBN4)))
+(define NEG-VRN19		(- (/ FX3 VBN4)))
+(define NEG-VRN20		(- (/ FX4 VBN4)))
 
-;;(define NEG-VRN21		536870912		#;(/ BN1 FX1)) ;not a ratnum
-;;(define NEG-VRN22		536871011		#;(/ BN2 FX1)) ;not a ratnum
-;;(define NEG-VRN23		-536870913		#;(/ BN3 FX1)) ;not a ratnum
-;;(define NEG-VRN24		-536871012		#;(/ BN4 FX1)) ;not a ratnum
+;;(define NEG-VRN21		536870912		#;(/ VBN1 FX1)) ;not a ratnum
+;;(define NEG-VRN22		536871011		#;(/ VBN2 FX1)) ;not a ratnum
+;;(define NEG-VRN23		-536870913		#;(/ VBN3 FX1)) ;not a ratnum
+;;(define NEG-VRN24		-536871012		#;(/ VBN4 FX1)) ;not a ratnum
 
-;;(define NEG-VRN25		-536870912		#;(/ BN1 FX2)) ;not a ratnum
-;;(define NEG-VRN26		-536871011		#;(/ BN2 FX2)) ;not a ratnum
-;;(define NEG-VRN27		536870913		#;(/ BN3 FX2)) ;not a ratnum
-;;(define NEG-VRN28		536871012		#;(/ BN4 FX2)) ;not a ratnum
+;;(define NEG-VRN25		-536870912		#;(/ VBN1 FX2)) ;not a ratnum
+;;(define NEG-VRN26		-536871011		#;(/ VBN2 FX2)) ;not a ratnum
+;;(define NEG-VRN27		536870913		#;(/ VBN3 FX2)) ;not a ratnum
+;;(define NEG-VRN28		536871012		#;(/ VBN4 FX2)) ;not a ratnum
 
-(define NEG-VRN29		(- (/ BN1 FX3)))
-(define NEG-VRN30		(- (/ BN2 FX3)))
-(define NEG-VRN31		(- (/ BN3 FX3)))
-(define NEG-VRN32		(- (/ BN4 FX3)))
+(define NEG-VRN29		(- (/ VBN1 FX3)))
+(define NEG-VRN30		(- (/ VBN2 FX3)))
+(define NEG-VRN31		(- (/ VBN3 FX3)))
+(define NEG-VRN32		(- (/ VBN4 FX3)))
 
-;;(define NEG-VRN33		-1			#;(/ BN1 FX4)) ;not a ratnum
-(define NEG-VRN34		(- (/ BN2 FX4)))
-(define NEG-VRN35		(- (/ BN3 FX4)))
-(define NEG-VRN36		(- (/ BN4 FX4)))
+;;(define NEG-VRN33		-1			#;(/ VBN1 FX4)) ;not a ratnum
+(define NEG-VRN34		(- (/ VBN2 FX4)))
+(define NEG-VRN35		(- (/ VBN3 FX4)))
+(define NEG-VRN36		(- (/ VBN4 FX4)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1480,6 +1733,261 @@
 (define NEG-CN110		(make-rectangular NEG-FL2 NEG-RN04))
 (define NEG-CN111		(make-rectangular NEG-FL3 NEG-RN04))
 (define NEG-CN112		(make-rectangular NEG-FL4 NEG-RN04))
+
+
+;;;; inverse constants
+
+(define INV-GREATEST-FX		-536870911)
+(define INV-LEAST-FX		+536870912)
+
+;;; --------------------------------------------------------------------
+
+(define INV-FX1		+1)
+(define INV-FX2		-1)
+(define INV-FX3		+1/536870911 #;(/ GREATEST-FX))
+(define INV-FX4		-1/536870912 #;(/ INV-LEAST-FX))
+
+;;; --------------------------------------------------------------------
+
+(define INV-BN1		+1/536870912)
+(define INV-BN2		+1/536871011)
+(define INV-BN3		-1/536870913)
+(define INV-BN4		-1/536871012)
+
+(define INV-VBN1	(/ 1 (+ GREATEST-FX-64-bit +1)))
+(define INV-VBN2	(/ 1 (+ GREATEST-FX-64-bit +100)))
+(define INV-VBN3	(/ 1 (+ LEAST-FX-64-bit -1)))
+(define INV-VBN4	(/ 1 (+ LEAST-FX-64-bit -100)))
+
+;;; --------------------------------------------------------------------
+
+(define INV-RN01	123			#;(/ INV-FX1 123))
+(define INV-RN02	-123			#;(/ INV-FX2 123))
+(define INV-RN03	-123			#;(/ INV-FX2 123))
+(define INV-RN04	-123/536870912		#;(/ INV-FX4 123))
+
+(define INV-RN05	536870912		#;(/ INV-FX1 BN1))
+(define INV-RN06	-536870912		#;(/ INV-FX2 BN1))
+(define INV-RN07	536870912/536870911	#;(/ INV-FX3 BN1))
+;;(define INV-RN08	1			#;(/ INV-FX4 BN1)) ;not a ratnum
+
+(define INV-RN09	536871011		#;(/ INV-FX1 BN2))
+(define INV-RN10	-536871011		#;(/ INV-FX2 BN2))
+(define INV-RN11	536871011/536870911	#;(/ INV-FX3 BN2))
+(define INV-RN12	-536871011/536870912	#;(/ INV-FX4 BN2))
+
+(define INV-RN13	-536870913		#;(/ INV-FX1 BN3))
+(define INV-RN14	536870913		#;(/ INV-FX2 BN3))
+(define INV-RN15	-536870913/536870911	#;(/ INV-FX3 BN3))
+(define INV-RN16	536870913/536870912	#;(/ INV-FX4 BN3))
+
+(define INV-RN17	-536871012		#;(/ INV-FX1 BN4))
+(define INV-RN18	536871012		#;(/ INV-FX2 BN4))
+(define INV-RN19	-536871012/536870911	#;(/ INV-FX3 BN4))
+(define INV-RN20	134217753/134217728	#;(/ INV-FX4 BN4))
+
+;;(define INV-RN21	-536870912		#;(/ INV-BN1 FX1)) ;not a ratnum
+;;(define INV-RN22	-536871011		#;(/ INV-BN2 FX1)) ;not a ratnum
+;;(define INV-RN23	536870913		#;(/ INV-BN3 FX1)) ;not a ratnum
+;;(define INV-RN24	536871012		#;(/ INV-BN4 FX1)) ;not a ratnum
+
+;;(define INV-RN25	536870912		#;(/ INV-BN1 FX2)) ;not a ratnum
+;;(define INV-RN26	536871011		#;(/ INV-BN2 FX2)) ;not a ratnum
+;;(define INV-RN27	-536870913		#;(/ INV-BN3 FX2)) ;not a ratnum
+;;(define INV-RN28	-536871012		#;(/ INV-BN4 FX2)) ;not a ratnum
+
+(define INV-RN29	536870911/536870912	#;(/ INV-BN1 FX3))
+(define INV-RN30	536870911/536871011	#;(/ INV-BN2 FX3))
+(define INV-RN31	-536870911/536870913	#;(/ INV-BN3 FX3))
+(define INV-RN32	-536870911/536871012	#;(/ INV-BN4 FX3))
+
+;;(define INV-RN33	-1			#;(/ INV-BN1 FX4)) ;not a ratnum
+(define INV-RN34	-536870912/536871011	#;(/ INV-BN2 FX4))
+(define INV-RN35	536870912/536870913	#;(/ INV-BN3 FX4))
+(define INV-RN36	134217728/134217753	#;(/ INV-BN4 FX4))
+
+;;; --------------------------------------------------------------------
+
+(define INV-VRN01		(/ 123 FX1))
+(define INV-VRN02		(/ 123 FX2))
+(define INV-VRN03		(/ 123 FX2))
+(define INV-VRN04		(/ 123 FX4))
+
+(define INV-VRN05		(/ VBN1 FX1))
+(define INV-VRN06		(/ VBN1 FX2))
+(define INV-VRN07		(/ VBN1 FX3))
+
+(define INV-VRN09		(/ VBN2 FX1))
+(define INV-VRN10		(/ VBN2 FX2))
+(define INV-VRN11		(/ VBN2 FX3))
+(define INV-VRN12		(/ VBN2 FX4))
+
+(define INV-VRN13		(/ VBN3 FX1))
+(define INV-VRN14		(/ VBN3 FX2))
+(define INV-VRN15		(/ VBN3 FX3))
+(define INV-VRN16		(/ VBN3 FX4))
+
+(define INV-VRN17		(/ VBN4 FX1))
+(define INV-VRN18		(/ VBN4 FX2))
+(define INV-VRN19		(/ VBN4 FX3))
+(define INV-VRN20		(/ VBN4 FX4))
+
+(define INV-VRN29		(/ FX3 VBN1))
+(define INV-VRN30		(/ FX3 VBN2))
+(define INV-VRN31		(/ FX3 VBN3))
+(define INV-VRN32		(/ FX3 VBN4))
+
+(define INV-VRN34		(/ FX4 VBN2))
+(define INV-VRN35		(/ FX4 VBN3))
+(define INV-VRN36		(/ FX4 VBN4))
+
+;;; --------------------------------------------------------------------
+
+(define INV-FL1		+inf.0)
+(define INV-FL2		-inf.0)
+(define INV-FL3		0.4710315591144606)
+(define INV-FL4		-0.4710315591144606)
+(define INV-FL5		+0.0)
+(define INV-FL6		-0.0)
+(define INV-FL7		+nan.0)
+
+;;; --------------------------------------------------------------------
+
+(define INV-CFL01	+nan.0+nan.0i)
+(define INV-CFL02	+nan.0+nan.0i)
+(define INV-CFL03	+nan.0+nan.0i)
+(define INV-CFL04	+nan.0+nan.0i)
+
+(define INV-CFL05	-0.8333333333333333+0.0i)
+(define INV-CFL06	-0.8333333333333333-0.0i)
+(define INV-CFL07	0.0+0.8333333333333333i)
+(define INV-CFL08	-0.0+0.8333333333333333i)
+
+(define INV-CFL09	-0.0+nan.0i)
+(define INV-CFL10	-0.0+nan.0i)
+(define INV-CFL11	+nan.0+0.0i)
+(define INV-CFL12	+nan.0+0.0i)
+
+(define INV-CFL13	+nan.0+nan.0i)
+(define INV-CFL14	+nan.0+nan.0i)
+(define INV-CFL15	+nan.0+nan.0i)
+(define INV-CFL16	+nan.0+nan.0i)
+
+
+;;;; inverse compnum constants
+
+(define INV-CN001 1/2-1/2i)
+(define INV-CN002 -1/2-1/2i)
+(define INV-CN003 536870911/288230375077969922-1/288230375077969922i)
+(define INV-CN004 -536870912/288230376151711745-1/288230376151711745i)
+(define INV-CN005 1/2+1/2i)
+(define INV-CN006 -1/2+1/2i)
+(define INV-CN007 536870911/288230375077969922+1/288230375077969922i)
+(define INV-CN008 -536870912/288230376151711745+1/288230376151711745i)
+(define INV-CN009 1/288230375077969922-536870911/288230375077969922i)
+(define INV-CN010 -1/288230375077969922-536870911/288230375077969922i)
+(define INV-CN011 1/1073741822-1/1073741822i)
+(define INV-CN012 -536870912/576460751229681665-536870911/576460751229681665i)
+(define INV-CN013 1/288230376151711745+536870912/288230376151711745i)
+(define INV-CN014 -1/288230376151711745+536870912/288230376151711745i)
+(define INV-CN015 536870911/576460751229681665+536870912/576460751229681665i)
+(define INV-CN016 -1/1073741824+1/1073741824i)
+(define INV-CN017 536870912/288230376151711745-1/288230376151711745i)
+(define INV-CN018 536871011/288230482452162122-1/288230482452162122i)
+(define INV-CN019 -536870913/288230377225453570-1/288230377225453570i)
+(define INV-CN020 -536871012/288230483525904145-1/288230483525904145i)
+(define INV-CN021 536870912/288230376151711745+1/288230376151711745i)
+(define INV-CN022 536871011/288230482452162122+1/288230482452162122i)
+(define INV-CN023 -536870913/288230377225453570+1/288230377225453570i)
+(define INV-CN024 -536871012/288230483525904145+1/288230483525904145i)
+(define INV-CN025 536870912/576460751229681665-536870911/576460751229681665i)
+(define INV-CN026 536871011/576460857530132042-536870911/576460857530132042i)
+(define INV-CN027 -536870913/576460752303423490-536870911/576460752303423490i)
+(define INV-CN028 -536871012/576460858603874065-536870911/576460858603874065i)
+(define INV-CN029 1/1073741824+1/1073741824i)
+(define INV-CN030 536871011/576460858603873865+536870912/576460858603873865i)
+(define INV-CN031 -536870913/576460753377165313+536870912/576460753377165313i)
+(define INV-CN032 -134217753/144115214919403972+33554432/36028803729850993i)
+(define INV-CN033 1/288230376151711745-536870912/288230376151711745i)
+(define INV-CN034 -1/288230376151711745-536870912/288230376151711745i)
+(define INV-CN035 536870911/576460751229681665-536870912/576460751229681665i)
+(define INV-CN036 -1/1073741824-1/1073741824i)
+(define INV-CN037 1/288230482452162122-536871011/288230482452162122i)
+(define INV-CN038 -1/288230482452162122-536871011/288230482452162122i)
+(define INV-CN039 536870911/576460857530132042-536871011/576460857530132042i)
+(define INV-CN040 -536870912/576460858603873865-536871011/576460858603873865i)
+(define INV-CN041 1/288230377225453570+536870913/288230377225453570i)
+(define INV-CN042 -1/288230377225453570+536870913/288230377225453570i)
+(define INV-CN043 536870911/576460752303423490+536870913/576460752303423490i)
+(define INV-CN044 -536870912/576460753377165313+536870913/576460753377165313i)
+(define INV-CN045 1/288230483525904145+536871012/288230483525904145i)
+(define INV-CN046 -1/288230483525904145+536871012/288230483525904145i)
+(define INV-CN047 536870911/576460858603874065+536871012/576460858603874065i)
+(define INV-CN048 -33554432/36028803729850993+134217753/144115214919403972i)
+(define INV-CN049 1.862645149230957e-9-0.0i)
+(define INV-CN050 1.862644805755772e-9-0.0i)
+(define INV-CN051 -1.86264514576151e-9-0.0i)
+(define INV-CN052 -1.8626448022863266e-9-0.0i)
+(define INV-CN053 1.862645149230957e-9+0.0i)
+(define INV-CN054 1.862644805755772e-9+0.0i)
+(define INV-CN055 -1.86264514576151e-9+0.0i)
+(define INV-CN056 -1.8626448022863266e-9+0.0i)
+(define INV-CN057 1.862645149230957e-9-7.365635878997524e-18i)
+(define INV-CN058 1.862644805755772e-9-7.365633162524219e-18i)
+(define INV-CN059 -1.86264514576151e-9-7.365635851558391e-18i)
+(define INV-CN060 -1.8626448022863266e-9-7.365633135085102e-18i)
+(define INV-CN061 1.862645149230957e-9+7.365635878997524e-18i)
+(define INV-CN062 1.862644805755772e-9+7.365633162524219e-18i)
+(define INV-CN063 -1.86264514576151e-9+7.365635851558391e-18i)
+(define INV-CN064 -1.8626448022863266e-9+7.365633135085102e-18i)
+(define INV-CN065 0.0-1.862645149230957e-9i)
+(define INV-CN066 -0.0-1.862645149230957e-9i)
+(define INV-CN067 7.365635878997524e-18-1.862645149230957e-9i)
+(define INV-CN068 -7.365635878997524e-18-1.862645149230957e-9i)
+(define INV-CN069 0.0-1.862644805755772e-9i)
+(define INV-CN070 -0.0-1.862644805755772e-9i)
+(define INV-CN071 7.365633162524219e-18-1.862644805755772e-9i)
+(define INV-CN072 -7.365633162524219e-18-1.862644805755772e-9i)
+(define INV-CN073 0.0+1.86264514576151e-9i)
+(define INV-CN074 -0.0+1.86264514576151e-9i)
+(define INV-CN075 7.365635851558391e-18+1.86264514576151e-9i)
+(define INV-CN076 -7.365635851558391e-18+1.86264514576151e-9i)
+(define INV-CN077 0.0+1.8626448022863266e-9i)
+(define INV-CN078 -0.0+1.8626448022863266e-9i)
+(define INV-CN079 7.365633135085102e-18+1.8626448022863266e-9i)
+(define INV-CN080 -7.365633135085102e-18+1.8626448022863266e-9i)
+(define INV-CN081 123.0-0.0i)
+(define INV-CN082 -123.0-0.0i)
+(define INV-CN083 -123.0-0.0i)
+(define INV-CN084 -2.2910535335540771e-7-0.0i)
+(define INV-CN085 123.0+0.0i)
+(define INV-CN086 -123.0+0.0i)
+(define INV-CN087 -123.0+0.0i)
+(define INV-CN088 -2.2910535335540771e-7+0.0i)
+(define INV-CN089 0.0018038006173773664-0.47102465141513433i)
+(define INV-CN090 -0.0018038006173773664-0.47102465141513433i)
+(define INV-CN091 -0.0018038006173773664-0.47102465141513433i)
+(define INV-CN092 -2.291053533553535e-7-1.1143470521332715e-13i)
+(define INV-CN093 0.0018038006173773664+0.47102465141513433i)
+(define INV-CN094 -0.0018038006173773664+0.47102465141513433i)
+(define INV-CN095 -0.0018038006173773664+0.47102465141513433i)
+(define INV-CN096 -2.291053533553535e-7+1.1143470521332715e-13i)
+(define INV-CN097 0.0-123.0i)
+(define INV-CN098 -0.0-123.0i)
+(define INV-CN099 0.47102465141513433-0.0018038006173773664i)
+(define INV-CN100 -0.47102465141513433-0.0018038006173773664i)
+(define INV-CN101 0.0+123.0i)
+(define INV-CN102 -0.0+123.0i)
+(define INV-CN103 0.47102465141513433+0.0018038006173773664i)
+(define INV-CN104 -0.47102465141513433+0.0018038006173773664i)
+(define INV-CN105 0.0+123.0i)
+(define INV-CN106 -0.0+123.0i)
+(define INV-CN107 0.47102465141513433+0.0018038006173773664i)
+(define INV-CN108 -0.47102465141513433+0.0018038006173773664i)
+(define INV-CN109 0.0+2.2910535335540771e-7i)
+(define INV-CN110 -0.0+2.2910535335540771e-7i)
+(define INV-CN111 1.1143470521332715e-13+2.291053533553535e-7i)
+(define INV-CN112 -1.1143470521332715e-13+2.291053533553535e-7i)
 
 
 ;;;; done
