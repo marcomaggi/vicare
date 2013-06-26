@@ -362,6 +362,7 @@ EXTRA_DIST = \
 	lists.sls					\
 	lists/low.sls					\
 	lists/stx.sls					\
+	numerics/helpers.sls				\
 	TEST-SOURCE-FILE.txt				\
 	rn100						\
 	\
