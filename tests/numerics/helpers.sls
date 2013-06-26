@@ -41,6 +41,7 @@
     flonum-quasi=?
     cflonum-quasi=?
     compnum-quasi=?
+    %cube
 
 ;;; --------------------------------------------------------------------
 
@@ -855,6 +856,11 @@
 (define (compnum-quasi=? x y)
   (and (inexact=? (real-part x) (real-part y))
        (inexact=? (imag-part x) (imag-part y))))
+
+;;; --------------------------------------------------------------------
+
+(define (%cube x)
+  (* x x x))
 
 
 ;;;; constants
