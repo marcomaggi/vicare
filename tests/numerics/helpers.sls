@@ -28,6 +28,7 @@
 #!r6rs
 (library (numerics helpers)
   (export
+    C R I
     make-test
     make-flonum-test
     make-cflonum-test
@@ -328,6 +329,10 @@
 
 
 ;;;; helpers
+
+(define C make-rectangular)
+(define R real-part)
+(define I imag-part)
 
 (define-syntax make-test
   (syntax-rules ()

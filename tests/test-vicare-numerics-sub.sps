@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (numerics helpers)
   (ikarus system $ratnums)
   (ikarus system $compnums)
   (ikarus system $numerics)
@@ -34,218 +35,6 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: subtraction\n")
-
-
-;;;; helpers
-
-(define C make-rectangular)
-(define R real-part)
-(define I imag-part)
-
-(define-syntax make-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	=> ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	=> ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	=> (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-flonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-cflonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-compnum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-inexact-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-;;; --------------------------------------------------------------------
-
-(define (flonum=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((flzero?/positive x)
-	 (flzero?/positive y))
-	((flzero?/negative x)
-	 (flzero?/negative y))
-	((fl=? x y))))
-
-(define (cflonum=? x y)
-  (and (flonum=? (real-part x) (real-part y))
-       (flonum=? (imag-part x) (imag-part y))))
-
-(define (compnum=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum=? x y))
-	(else
-	 (= x y))))
-
-;;; --------------------------------------------------------------------
-
-(define (inexact=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
-	(else
-	 (= x y))))
-
-(define (flonum-quasi=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((flzero?/positive x)
-	 (flzero?/positive y))
-	((flzero?/negative x)
-	 (flzero?/negative y))
-	(else
-	 (fl<? (flabs (fl- x y)) 1e-8))))
-
-(define (cflonum-quasi=? x y)
-  (and (flonum-quasi=? (real-part x) (real-part y))
-       (flonum-quasi=? (imag-part x) (imag-part y))))
-
-
-;;;; constants
-
-(define GREATEST-FX	+536870911)
-(define LEAST-FX	-536870912)
-
-;;; --------------------------------------------------------------------
-
-(define FX1		+1)
-(define FX2		-1)
-(define FX3		GREATEST-FX)
-(define FX4		LEAST-FX)
-
-;;; --------------------------------------------------------------------
-
-(define BN1		+536870912) ;GREATEST-FX + 1
-(define BN2		+536871011) ;GREATEST-FX + 100
-(define BN3		-536870913) ;LEAST-FX - 1
-(define BN4		-536871012) ;LEAST-FX - 100
-
-;;; --------------------------------------------------------------------
-
-(define RN01		1/123			#;(/ FX1 123))
-(define RN02		-1/123			#;(/ FX2 123))
-(define RN03		-1/123			#;(/ FX2 123))
-(define RN04		-536870912/123		#;(/ FX4 123))
-
-(define RN05		1/536870912		#;(/ FX1 BN1))
-(define RN06		-1/536870912		#;(/ FX2 BN1))
-(define RN07		536870911/536870912	#;(/ FX3 BN1))
-;;(define RN08		-1			#;(/ FX4 BN1)) ;not a ratnum
-
-(define RN09		1/536871011		#;(/ FX1 BN2))
-(define RN10		-1/536871011		#;(/ FX2 BN2))
-(define RN11		536870911/536871011	#;(/ FX3 BN2))
-(define RN12		-536870912/536871011	#;(/ FX4 BN2))
-
-(define RN13		-1/536870913		#;(/ FX1 BN3))
-(define RN14		1/536870913		#;(/ FX2 BN3))
-(define RN15		-536870911/536870913	#;(/ FX3 BN3))
-(define RN16		536870912/536870913	#;(/ FX4 BN3))
-
-(define RN17		-1/536871012		#;(/ FX1 BN4))
-(define RN18		1/536871012		#;(/ FX2 BN4))
-(define RN19		-536870911/536871012	#;(/ FX3 BN4))
-(define RN20		134217728/134217753	#;(/ FX4 BN4))
-
-;;(define RN21		536870912		#;(/ BN1 FX1)) ;not a ratnum
-;;(define RN22		536871011		#;(/ BN2 FX1)) ;not a ratnum
-;;(define RN23		-536870913		#;(/ BN3 FX1)) ;not a ratnum
-;;(define RN24		-536871012		#;(/ BN4 FX1)) ;not a ratnum
-
-;;(define RN25		-536870912		#;(/ BN1 FX2)) ;not a ratnum
-;;(define RN26		-536871011		#;(/ BN2 FX2)) ;not a ratnum
-;;(define RN27		536870913		#;(/ BN3 FX2)) ;not a ratnum
-;;(define RN28		536871012		#;(/ BN4 FX2)) ;not a ratnum
-
-(define RN29		536870912/536870911	#;(/ BN1 FX3))
-(define RN30		536871011/536870911	#;(/ BN2 FX3))
-(define RN31		-536870913/536870911	#;(/ BN3 FX3))
-(define RN32		-536871012/536870911	#;(/ BN4 FX3))
-
-;;(define RN33		-1			#;(/ BN1 FX4)) ;not a ratnum
-(define RN34		-536871011/536870912	#;(/ BN2 FX4))
-(define RN35		536870913/536870912	#;(/ BN3 FX4))
-(define RN36		134217753/134217728	#;(/ BN4 FX4))
-
-;;; --------------------------------------------------------------------
-
-(define FL1		+0.0)
-(define FL2		-0.0)
-(define FL3		+2.123)
-(define FL4		-2.123)
-(define FL5		+inf.0)
-(define FL6		-inf.0)
-(define FL7		+nan.0)
-
-;;; --------------------------------------------------------------------
-
-(define CFL01		+0.0+0.0i)
-(define CFL02		-0.0+0.0i)
-(define CFL03		+0.0-0.0i)
-(define CFL04		-0.0-0.0i)
-
-(define CFL05		-1.2-0.0i)
-(define CFL06		-1.2+0.0i)
-(define CFL07		+0.0-1.2i)
-(define CFL08		-0.0-1.2i)
-
-(define CFL09		-1.2-inf.0i)
-(define CFL10		-1.2+inf.0i)
-(define CFL11		+inf.0-1.2i)
-(define CFL12		-inf.0-1.2i)
-
-(define CFL13		-1.2-nan.0i)
-(define CFL14		-1.2+nan.0i)
-(define CFL15		+nan.0-1.2i)
-(define CFL16		-nan.0-1.2i)
 
 
 (parametrise ((check-test-name	'fixnums))
@@ -275,7 +64,7 @@
     (test FX4 FX4 0)
     #f)
 
-  (let-syntax ((test (make-test - $sub-fixnum-bignum)))
+  (let-syntax ((test (make-test - #;$sub-fixnum-bignum)))
     (test FX1 BN1 -536870911)
     (test FX2 BN1 -536870913)
     (test FX3 BN1 -1)
@@ -294,7 +83,7 @@
     (test FX4 BN4 100)
     #f)
 
-  (let-syntax ((test (make-test - $sub-fixnum-ratnum)))
+  (let-syntax ((test (make-test - #;$sub-fixnum-ratnum)))
     (test FX1 RN01 122/123)
     (test FX2 RN01 -124/123)
     (test FX3 RN01 66035122052/123)
@@ -375,7 +164,7 @@
     (test FX1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-test - $sub-fixnum-compnum)))
+  (let-syntax ((test (make-test - #;$sub-fixnum-compnum)))
     (test 1	10+20i				(C (- 1 10) (- 20)))
     (test 1	1+20.0i				(C (- 1 1)  (- 20.0)))
     (test 1	10.0+2i				(C (- 1 10.0) (- 2)))
@@ -385,12 +174,62 @@
     (test 1	(C 10 BN1)	(C (- 1 10) (- BN1)))
     #f)
 
+;;; --------------------------------------------------------------------
+
+  (let-syntax ((test (make-test - $sub-fixnum-bignum)))
+    (test FX1 VBN1 -1152921504606846975)
+    (test FX2 VBN1 -1152921504606846977)
+    (test FX3 VBN1 -1152921504069976065)
+    (test FX4 VBN1 -1152921505143717888)
+    (test FX1 VBN2 -1152921504606847074)
+    (test FX2 VBN2 -1152921504606847076)
+    (test FX3 VBN2 -1152921504069976164)
+    (test FX4 VBN2 -1152921505143717987)
+    (test FX1 VBN3 1152921504606846978)
+    (test FX2 VBN3 1152921504606846976)
+    (test FX3 VBN3 1152921505143717888)
+    (test FX4 VBN3 1152921504069976065)
+    (test FX1 VBN4 1152921504606847077)
+    (test FX2 VBN4 1152921504606847075)
+    (test FX3 VBN4 1152921505143717987)
+    (test FX4 VBN4 1152921504069976164)
+    #f)
+
+  (let-syntax ((test (make-test - $sub-fixnum-ratnum)))
+    (test FX1 VRN01 122/123)
+    (test FX2 VRN01 -124/123)
+    (test FX3 VRN01 66035122052/123)
+    (test FX4 VRN01 -66035122177/123)
+    (test FX1 VRN02 124/123)
+    (test FX2 VRN02 -122/123)
+    (test FX3 VRN02 66035122054/123)
+    (test FX4 VRN02 -66035122175/123)
+    (test FX1 VRN03 124/123)
+    (test FX2 VRN03 -122/123)
+    (test FX3 VRN03 66035122054/123)
+    (test FX4 VRN03 -66035122175/123)
+    (test FX1 VRN04 536871035/123)
+    (test FX2 VRN04 536870789/123)
+    (test FX3 VRN04 66571992965/123)
+    (test FX4 VRN04 -65498251264/123)
+    #f)
+
+  (let-syntax ((test (make-test - $sub-fixnum-compnum)))
+    (test 1	10+20i		(C (- 1 10) (- 20)))
+    (test 1	1+20.0i		(C (- 1 1)  (- 20.0)))
+    (test 1	10.0+2i		(C (- 1 10.0) (- 2)))
+    (test 1	1/2+20i		(C (- 1 1/2) (- 20)))
+    (test 1	10+2/3i		(C (- 1 10) (- 2/3)))
+    (test 1	(C VBN1 20)	(C (- 1 VBN1) (- 20)))
+    (test 1	(C 10 VBN1)	(C (- 1 10) (- VBN1)))
+    #f)
+
   #t)
 
 
 (parametrise ((check-test-name	'bignums))
 
-  (let-syntax ((test (make-test - $sub-bignum-fixnum)))
+  (let-syntax ((test (make-test - #;$sub-bignum-fixnum)))
     (test BN1 FX1 536870911)
     (test BN2 FX1 536871010)
     (test BN3 FX1 -536870914)
@@ -409,7 +248,7 @@
     (test BN4 FX4 -100)
     #f)
 
-  (let-syntax ((test (make-test - $sub-bignum-bignum)))
+  (let-syntax ((test (make-test - #;$sub-bignum-bignum)))
     (test BN1 BN1 0)
     (test BN2 BN1 99)
     (test BN3 BN1 -1073741825)
@@ -428,7 +267,7 @@
     (test BN4 BN4 0)
     #f)
 
-  (let-syntax ((test (make-test - $sub-bignum-ratnum)))
+  (let-syntax ((test (make-test - #;$sub-bignum-ratnum)))
     (test BN1 RN01 66035122175/123)
     (test BN2 RN01 66035134352/123)
     (test BN3 RN01 -66035122300/123)
@@ -447,7 +286,7 @@
     (test BN4 RN04 -65498263564/123)
     #f)
 
-  (let-syntax ((test (make-flonum-test - $sub-bignum-flonum)))
+  (let-syntax ((test (make-flonum-test - #;$sub-bignum-flonum)))
     (test BN1 FL1 536870912.0)
     (test BN2 FL1 536871011.0)
     (test BN3 FL1 -536870913.0)
@@ -466,7 +305,7 @@
     (test BN4 FL4 -536871009.877)
     #f)
 
-  (let-syntax ((test (make-cflonum-test - $sub-bignum-cflonum)))
+  (let-syntax ((test (make-cflonum-test - #;$sub-bignum-cflonum)))
     (test BN1 CFL01 536870912.0-0.0i)
     (test BN2 CFL01 536871011.0-0.0i)
     (test BN3 CFL01 -536870913.0-0.0i)
@@ -509,7 +348,7 @@
     (test BN1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-test - $sub-bignum-compnum)))
+  (let-syntax ((test (make-test - #;$sub-bignum-compnum)))
     (test BN1	10+20i				(C (- BN1 10) (- 20)))
     (test BN1	1+20.0i				(C (- BN1 1)  (- 20.0)))
     (test BN1	10.0+2i				(C (- BN1 10.0) (- 2)))
@@ -517,6 +356,137 @@
     (test BN1	10+2/3i				(C (- BN1 10) (- 2/3)))
     (test BN1	(C BN2 20)	(C (- BN1 BN2) (- 20)))
     (test BN1	(C 10 BN2)	(C (- BN1 10) (- BN2)))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax ((test (make-test - $sub-bignum-fixnum)))
+    (test VBN1 FX1 1152921504606846975)
+    (test VBN2 FX1 1152921504606847074)
+    (test VBN3 FX1 -1152921504606846978)
+    (test VBN4 FX1 -1152921504606847077)
+    (test VBN1 FX2 1152921504606846977)
+    (test VBN2 FX2 1152921504606847076)
+    (test VBN3 FX2 -1152921504606846976)
+    (test VBN4 FX2 -1152921504606847075)
+    (test VBN1 FX3 1152921504069976065)
+    (test VBN2 FX3 1152921504069976164)
+    (test VBN3 FX3 -1152921505143717888)
+    (test VBN4 FX3 -1152921505143717987)
+    (test VBN1 FX4 1152921505143717888)
+    (test VBN2 FX4 1152921505143717987)
+    (test VBN3 FX4 -1152921504069976065)
+    (test VBN4 FX4 -1152921504069976164)
+    #f)
+
+  (let-syntax ((test (make-test - $sub-bignum-bignum)))
+    (test VBN1 VBN1 0)
+    (test VBN2 VBN1 99)
+    (test VBN3 VBN1 -2305843009213693953)
+    (test VBN4 VBN1 -2305843009213694052)
+    (test VBN1 VBN2 -99)
+    (test VBN2 VBN2 0)
+    (test VBN3 VBN2 -2305843009213694052)
+    (test VBN4 VBN2 -2305843009213694151)
+    (test VBN1 VBN3 2305843009213693953)
+    (test VBN2 VBN3 2305843009213694052)
+    (test VBN3 VBN3 0)
+    (test VBN4 VBN3 -99)
+    (test VBN1 VBN4 2305843009213694052)
+    (test VBN2 VBN4 2305843009213694151)
+    (test VBN3 VBN4 99)
+    (test VBN4 VBN4 0)
+    #f)
+
+  (let-syntax ((test (make-test - $sub-bignum-ratnum)))
+    (test VBN1 VRN01 141809345066642178047/123)
+    (test VBN2 VRN01 141809345066642190224/123)
+    (test VBN3 VRN01 -141809345066642178172/123)
+    (test VBN4 VRN01 -141809345066642190349/123)
+    (test VBN1 VRN02 141809345066642178049/123)
+    (test VBN2 VRN02 141809345066642190226/123)
+    (test VBN3 VRN02 -141809345066642178170/123)
+    (test VBN4 VRN02 -141809345066642190347/123)
+    (test VBN1 VRN03 141809345066642178049/123)
+    (test VBN2 VRN03 141809345066642190226/123)
+    (test VBN3 VRN03 -141809345066642178170/123)
+    (test VBN4 VRN03 -141809345066642190347/123)
+    (test VBN1 VRN04 141809345067179048960/123)
+    (test VBN2 VRN04 141809345067179061137/123)
+    (test VBN3 VRN04 -141809345066105307259/123)
+    (test VBN4 VRN04 -141809345066105319436/123)
+    #f)
+
+  (let-syntax ((test (make-flonum-test - $sub-bignum-flonum)))
+    (test VBN1 FL1 1.152921504606847e+18)
+    (test VBN2 FL1 1.152921504606847e+18)
+    (test VBN3 FL1 -1.152921504606847e+18)
+    (test VBN4 FL1 -1.152921504606847e+18)
+    (test VBN1 FL2 1.152921504606847e+18)
+    (test VBN2 FL2 1.152921504606847e+18)
+    (test VBN3 FL2 -1.152921504606847e+18)
+    (test VBN4 FL2 -1.152921504606847e+18)
+    (test VBN1 FL3 1.152921504606847e+18)
+    (test VBN2 FL3 1.152921504606847e+18)
+    (test VBN3 FL3 -1.152921504606847e+18)
+    (test VBN4 FL3 -1.152921504606847e+18)
+    (test VBN1 FL4 1.152921504606847e+18)
+    (test VBN2 FL4 1.152921504606847e+18)
+    (test VBN3 FL4 -1.152921504606847e+18)
+    (test VBN4 FL4 -1.152921504606847e+18)
+    #f)
+
+  (let-syntax ((test (make-cflonum-test - $sub-bignum-cflonum)))
+    (test VBN1 CFL01 1.152921504606847e+18-0.0i)
+    (test VBN2 CFL01 1.152921504606847e+18-0.0i)
+    (test VBN3 CFL01 -1.152921504606847e+18-0.0i)
+    (test VBN4 CFL01 -1.152921504606847e+18-0.0i)
+    (test VBN1 CFL02 1.152921504606847e+18-0.0i)
+    (test VBN2 CFL02 1.152921504606847e+18-0.0i)
+    (test VBN3 CFL02 -1.152921504606847e+18-0.0i)
+    (test VBN4 CFL02 -1.152921504606847e+18-0.0i)
+    (test VBN1 CFL03 1.152921504606847e+18+0.0i)
+    (test VBN2 CFL03 1.152921504606847e+18+0.0i)
+    (test VBN3 CFL03 -1.152921504606847e+18+0.0i)
+    (test VBN4 CFL03 -1.152921504606847e+18+0.0i)
+    (test VBN1 CFL04 1.152921504606847e+18+0.0i)
+    (test VBN2 CFL04 1.152921504606847e+18+0.0i)
+    (test VBN3 CFL04 -1.152921504606847e+18+0.0i)
+    (test VBN4 CFL04 -1.152921504606847e+18+0.0i)
+    (test VBN1 CFL05 1.152921504606847e+18+0.0i)
+    (test VBN2 CFL05 1.152921504606847e+18+0.0i)
+    (test VBN3 CFL05 -1.152921504606847e+18+0.0i)
+    (test VBN4 CFL05 -1.152921504606847e+18+0.0i)
+    (test VBN1 CFL06 1.152921504606847e+18-0.0i)
+    (test VBN2 CFL06 1.152921504606847e+18-0.0i)
+    (test VBN3 CFL06 -1.152921504606847e+18-0.0i)
+    (test VBN4 CFL06 -1.152921504606847e+18-0.0i)
+    (test VBN1 CFL07 1.152921504606847e+18+1.2i)
+    (test VBN2 CFL07 1.152921504606847e+18+1.2i)
+    (test VBN3 CFL07 -1.152921504606847e+18+1.2i)
+    (test VBN4 CFL07 -1.152921504606847e+18+1.2i)
+    (test VBN1 CFL08 1.152921504606847e+18+1.2i)
+    (test VBN2 CFL08 1.152921504606847e+18+1.2i)
+    (test VBN3 CFL08 -1.152921504606847e+18+1.2i)
+    (test VBN4 CFL08 -1.152921504606847e+18+1.2i)
+    (test VBN1 CFL09 1.152921504606847e+18+inf.0i)
+    (test VBN1 CFL10 1.152921504606847e+18-inf.0i)
+    (test VBN1 CFL11 -inf.0+1.2i)
+    (test VBN1 CFL12 +inf.0+1.2i)
+    (test VBN1 CFL13 1.152921504606847e+18+nan.0i)
+    (test VBN1 CFL14 1.152921504606847e+18+nan.0i)
+    (test VBN1 CFL15 +nan.0+1.2i)
+    (test VBN1 CFL16 +nan.0+1.2i)
+    #f)
+
+  (let-syntax ((test (make-test - $sub-bignum-compnum)))
+    (test VBN1	10+20i		(C (- VBN1 10) (- 20)))
+    (test VBN1	1+20.0i		(C (- VBN1 1)  (- 20.0)))
+    (test VBN1	10.0+2i		(C (- VBN1 10.0) (- 2)))
+    (test VBN1	1/2+20i		(C (- VBN1 1/2) (- 20)))
+    (test VBN1	10+2/3i		(C (- VBN1 10) (- 2/3)))
+    (test VBN1	(C VBN2 20)	(C (- VBN1 VBN2) (- 20)))
+    (test VBN1	(C 10 VBN2)	(C (- VBN1 10) (- VBN2)))
     #f)
 
   #t)
@@ -527,11 +497,11 @@
   (let-syntax ((test (make-test - $sub-ratnum-fixnum)))
     (test 1/2 0 1/2)
     (test 1/2 10 -19/2)
-    (test 1/2 (greatest-fixnum) -1073741821/2)
-    (test 1/2 (least-fixnum) 1073741825/2)
+    (test 1/2 GREATEST-FX-32-bit -1073741821/2)
+    (test 1/2 LEAST-FX-32-bit 1073741825/2)
     #f)
 
-  (let-syntax ((test (make-test - $sub-ratnum-bignum)))
+  (let-syntax ((test (make-test - #;$sub-ratnum-bignum)))
     (test 1/2 BN1 -1073741823/2)
     (test 1/2 BN2 -1073742021/2)
     (test 1/2 BN3 1073741827/2)
@@ -548,7 +518,7 @@
     (test -1/2 -3/4 1/4)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-ratnum-flonum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-ratnum-flonum)))
     (test 1/2 3.4 -2.9)
     (test -1/2 3.4 -3.9)
     (test RN01 FL1 0.008130081300813009)
@@ -569,7 +539,7 @@
     (test RN04 FL4 -4364802.039601627)
     #f)
 
-  (let-syntax ((test (make-cflonum-test - $sub-ratnum-cflonum)))
+  (let-syntax ((test (make-cflonum-test - #;$sub-ratnum-cflonum)))
     (test RN01 CFL01 0.008130081300813009-0.0i)
     (test RN02 CFL01 -0.008130081300813009-0.0i)
     (test RN03 CFL01 -0.008130081300813009-0.0i)
@@ -612,7 +582,7 @@
     (test RN01 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-ratnum-compnum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-ratnum-compnum)))
     (test RN01 10+20i				(C (- RN01 10) (- 20)))
     (test RN01 1+20.0i				(C (- RN01 1) (- 20.0)))
     (test RN01 10.0+2i				(C (- RN01 10.0) (- 2)))
@@ -620,6 +590,93 @@
     (test RN01 10+2/3i				(C (- RN01 10) (- 2/3)))
     (test RN01 (C RN02 20)	(C (- RN01 RN02) (- 20)))
     (test RN01 (C 10 RN02)	(C (- RN01 10) (- RN02)))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax ((test (make-test - $sub-ratnum-bignum)))
+    (test 1/2 VBN1 -2305843009213693951/2)
+    (test 1/2 VBN2 -2305843009213694149/2)
+    (test 1/2 VBN3 2305843009213693955/2)
+    (test 1/2 VBN4 2305843009213694153/2)
+    (test -1/2 VBN1 -2305843009213693953/2)
+    (test -1/2 VBN2 -2305843009213694151/2)
+    (test -1/2 VBN3 2305843009213693953/2)
+    (test -1/2 VBN4 2305843009213694151/2)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-ratnum-flonum)))
+    (test 1/2 3.4 -2.9)
+    (test -1/2 3.4 -3.9)
+    (test VRN01 FL1 0.008130081300813009)
+    (test VRN02 FL1 -0.008130081300813009)
+    (test VRN03 FL1 -0.008130081300813009)
+    (test VRN04 FL1 -4364804.1626016265)
+    (test VRN01 FL2 0.008130081300813009)
+    (test VRN02 FL2 -0.008130081300813009)
+    (test VRN03 FL2 -0.008130081300813009)
+    (test VRN04 FL2 -4364804.1626016265)
+    (test VRN01 FL3 -2.114869918699187)
+    (test VRN02 FL3 -2.1311300813008134)
+    (test VRN03 FL3 -2.1311300813008134)
+    (test VRN04 FL3 -4364806.285601626)
+    (test VRN01 FL4 2.1311300813008134)
+    (test VRN02 FL4 2.114869918699187)
+    (test VRN03 FL4 2.114869918699187)
+    (test VRN04 FL4 -4364802.039601627)
+    #f)
+
+  (let-syntax ((test (make-cflonum-test - $sub-ratnum-cflonum)))
+    (test VRN01 CFL01 0.008130081300813009-0.0i)
+    (test VRN02 CFL01 -0.008130081300813009-0.0i)
+    (test VRN03 CFL01 -0.008130081300813009-0.0i)
+    (test VRN04 CFL01 -4364804.1626016265-0.0i)
+    (test VRN01 CFL02 0.008130081300813009-0.0i)
+    (test VRN02 CFL02 -0.008130081300813009-0.0i)
+    (test VRN03 CFL02 -0.008130081300813009-0.0i)
+    (test VRN04 CFL02 -4364804.1626016265-0.0i)
+    (test VRN01 CFL03 0.008130081300813009+0.0i)
+    (test VRN02 CFL03 -0.008130081300813009+0.0i)
+    (test VRN03 CFL03 -0.008130081300813009+0.0i)
+    (test VRN04 CFL03 -4364804.1626016265+0.0i)
+    (test VRN01 CFL04 0.008130081300813009+0.0i)
+    (test VRN02 CFL04 -0.008130081300813009+0.0i)
+    (test VRN03 CFL04 -0.008130081300813009+0.0i)
+    (test VRN04 CFL04 -4364804.1626016265+0.0i)
+    (test VRN01 CFL05 1.208130081300813+0.0i)
+    (test VRN02 CFL05 1.191869918699187+0.0i)
+    (test VRN03 CFL05 1.191869918699187+0.0i)
+    (test VRN04 CFL05 -4364802.962601626+0.0i)
+    (test VRN01 CFL06 1.208130081300813-0.0i)
+    (test VRN02 CFL06 1.191869918699187-0.0i)
+    (test VRN03 CFL06 1.191869918699187-0.0i)
+    (test VRN04 CFL06 -4364802.962601626-0.0i)
+    (test VRN01 CFL07 0.008130081300813009+1.2i)
+    (test VRN02 CFL07 -0.008130081300813009+1.2i)
+    (test VRN03 CFL07 -0.008130081300813009+1.2i)
+    (test VRN04 CFL07 -4364804.1626016265+1.2i)
+    (test VRN01 CFL08 0.008130081300813009+1.2i)
+    (test VRN02 CFL08 -0.008130081300813009+1.2i)
+    (test VRN03 CFL08 -0.008130081300813009+1.2i)
+    (test VRN04 CFL08 -4364804.1626016265+1.2i)
+    (test VRN01 CFL09 1.208130081300813+inf.0i)
+    (test VRN01 CFL10 1.208130081300813-inf.0i)
+    (test VRN01 CFL11 -inf.0+1.2i)
+    (test VRN01 CFL12 +inf.0+1.2i)
+    (test VRN01 CFL13 1.208130081300813+nan.0i)
+    (test VRN01 CFL14 1.208130081300813+nan.0i)
+    (test VRN01 CFL15 +nan.0+1.2i)
+    (test VRN01 CFL16 +nan.0+1.2i)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-ratnum-compnum)))
+    (test VRN01 10+20i		(C (- VRN01 10) (- 20)))
+    (test VRN01 1+20.0i		(C (- VRN01 1) (- 20.0)))
+    (test VRN01 10.0+2i		(C (- VRN01 10.0) (- 2)))
+    (test VRN01 1/2+20i		(C (- VRN01 1/2) (- 20)))
+    (test VRN01 10+2/3i		(C (- VRN01 10) (- 2/3)))
+    (test VRN01 (C VRN02 20)	(C (- VRN01 VRN02) (- 20)))
+    (test VRN01 (C 10 VRN02)	(C (- VRN01 10) (- VRN02)))
     #f)
 
   #t)
@@ -646,7 +703,7 @@
     (test FL4 FX4 536870909.877)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-flonum-bignum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-flonum-bignum)))
     (test FL1 BN1 -536870912.0)
     (test FL2 BN1 -536870912.0)
     (test FL3 BN1 -536870909.877)
@@ -665,7 +722,7 @@
     (test FL4 BN4 536871009.877)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-flonum-ratnum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-flonum-ratnum)))
     (test FL1 RN01 -0.008130081300813009)
     (test FL2 RN01 -0.008130081300813009)
     (test FL3 RN01 2.114869918699187)
@@ -746,18 +803,67 @@
     (test FL1 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-flonum-compnum)))
-    (test FL1 10+20i				(C (- FL1 10) (- 20)))
-    (test FL1 1+20.0i				(C (- FL1 1) (- 20.0)))
-    (test FL1 10.0+2i				(C (- FL1 10.0) (- 2)))
-    (test FL1 1/2+20i				(C (- FL1 1/2) (- 20)))
-    (test FL1 10+2/3i				(C (- FL1 10) (- 2/3)))
+  (let-syntax ((test (make-inexact-test - #;$sub-flonum-compnum)))
+    (test FL1 10+20i		(C (- FL1 10) (- 20)))
+    (test FL1 1+20.0i		(C (- FL1 1) (- 20.0)))
+    (test FL1 10.0+2i		(C (- FL1 10.0) (- 2)))
+    (test FL1 1/2+20i		(C (- FL1 1/2) (- 20)))
+    (test FL1 10+2/3i		(C (- FL1 10) (- 2/3)))
     (test FL1 (C RN02 20)	(C (- FL1 RN02) (- 20)))
     (test FL1 (C 10 RN02)	(C (- FL1 10) (- RN02)))
     #f)
 
-  #t)
+;;; --------------------------------------------------------------------
 
+  (let-syntax ((test (make-inexact-test - $sub-flonum-bignum)))
+    (test FL1 VBN1 -1.152921504606847e+18)
+    (test FL2 VBN1 -1.152921504606847e+18)
+    (test FL3 VBN1 -1.152921504606847e+18)
+    (test FL4 VBN1 -1.152921504606847e+18)
+    (test FL1 VBN2 -1.152921504606847e+18)
+    (test FL2 VBN2 -1.152921504606847e+18)
+    (test FL3 VBN2 -1.152921504606847e+18)
+    (test FL4 VBN2 -1.152921504606847e+18)
+    (test FL1 VBN3 1.152921504606847e+18)
+    (test FL2 VBN3 1.152921504606847e+18)
+    (test FL3 VBN3 1.152921504606847e+18)
+    (test FL4 VBN3 1.152921504606847e+18)
+    (test FL1 VBN4 1.152921504606847e+18)
+    (test FL2 VBN4 1.152921504606847e+18)
+    (test FL3 VBN4 1.152921504606847e+18)
+    (test FL4 VBN4 1.152921504606847e+18)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-flonum-ratnum)))
+    (test FL1 VRN01 -0.008130081300813009)
+    (test FL2 VRN01 -0.008130081300813009)
+    (test FL3 VRN01 2.114869918699187)
+    (test FL4 VRN01 -2.1311300813008134)
+    (test FL1 VRN02 0.008130081300813009)
+    (test FL2 VRN02 0.008130081300813009)
+    (test FL3 VRN02 2.1311300813008134)
+    (test FL4 VRN02 -2.114869918699187)
+    (test FL1 VRN03 0.008130081300813009)
+    (test FL2 VRN03 0.008130081300813009)
+    (test FL3 VRN03 2.1311300813008134)
+    (test FL4 VRN03 -2.114869918699187)
+    (test FL1 VRN04 4364804.1626016265)
+    (test FL2 VRN04 4364804.1626016265)
+    (test FL3 VRN04 4364806.285601626)
+    (test FL4 VRN04 4364802.039601627)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-flonum-compnum)))
+    (test FL1 10+20i		(C (- FL1 10) (- 20)))
+    (test FL1 1+20.0i		(C (- FL1 1) (- 20.0)))
+    (test FL1 10.0+2i		(C (- FL1 10.0) (- 2)))
+    (test FL1 1/2+20i		(C (- FL1 1/2) (- 20)))
+    (test FL1 10+2/3i		(C (- FL1 10) (- 2/3)))
+    (test FL1 (C VRN02 20)	(C (- FL1 VRN02) (- 20)))
+    (test FL1 (C 10 VRN02)	(C (- FL1 10) (- VRN02)))
+    #f)
+
+  #t)
 
 (parametrise ((check-test-name	'cflonums))
 
@@ -780,7 +886,7 @@
     (test CFL04 FX4 536870912.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-cflonum-bignum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-bignum)))
     (test CFL01 BN1 -536870912.0+0.0i)
     (test CFL02 BN1 -536870912.0+0.0i)
     (test CFL03 BN1 -536870912.0-0.0i)
@@ -799,7 +905,7 @@
     (test CFL04 BN4 536871012.0-0.0i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-cflonum-ratnum)))
+  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-ratnum)))
     (test CFL01 RN01 -0.008130081300813009+0.0i)
     (test CFL02 RN01 -0.008130081300813009+0.0i)
     (test CFL03 RN01 -0.008130081300813009-0.0i)
@@ -880,21 +986,78 @@
     (test CFL01 CFL16 +nan.0+1.2i)
     #f)
 
-  (let-syntax ((test (make-inexact-test - $sub-cflonum-compnum)))
-    (test CFL01 10+20i				(C (- (R CFL01) 10)
-								  (- (I CFL01) 20)))
-    (test CFL01 1+20.0i				(C (- (R CFL01) 1)
-								  (- (I CFL01) 20.0)))
-    (test CFL01 10.0+2i				(C (- (R CFL01) 10.0)
-								  (- (I CFL01) 2)))
-    (test CFL01 1/2+20i				(C (- (R CFL01) 1/2)
-								  (- (I CFL01) 20)))
-    (test CFL01 10+2/3i				(C (- (R CFL01) 10)
-								  (- (I CFL01) 2/3)))
+  (let-syntax ((test (make-inexact-test - #;$sub-cflonum-compnum)))
+    (test CFL01 10+20i		(C (- (R CFL01) 10)
+				   (- (I CFL01) 20)))
+    (test CFL01 1+20.0i		(C (- (R CFL01) 1)
+				   (- (I CFL01) 20.0)))
+    (test CFL01 10.0+2i		(C (- (R CFL01) 10.0)
+				   (- (I CFL01) 2)))
+    (test CFL01 1/2+20i		(C (- (R CFL01) 1/2)
+				   (- (I CFL01) 20)))
+    (test CFL01 10+2/3i		(C (- (R CFL01) 10)
+				   (- (I CFL01) 2/3)))
     (test CFL01 (C RN02 20)	(C (- (R CFL01) RN02)
-								  (- (I CFL01) 20)))
+				   (- (I CFL01) 20)))
     (test CFL01 (C 10 RN02)	(C (- (R CFL01) 10)
-								  (- (I CFL01) RN02)))
+				   (- (I CFL01) RN02)))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax ((test (make-inexact-test - $sub-cflonum-bignum)))
+    (test CFL01 VBN1 -1.152921504606847e+18+0.0i)
+    (test CFL02 VBN1 -1.152921504606847e+18+0.0i)
+    (test CFL03 VBN1 -1.152921504606847e+18-0.0i)
+    (test CFL04 VBN1 -1.152921504606847e+18-0.0i)
+    (test CFL01 VBN2 -1.152921504606847e+18+0.0i)
+    (test CFL02 VBN2 -1.152921504606847e+18+0.0i)
+    (test CFL03 VBN2 -1.152921504606847e+18-0.0i)
+    (test CFL04 VBN2 -1.152921504606847e+18-0.0i)
+    (test CFL01 VBN3 1.152921504606847e+18+0.0i)
+    (test CFL02 VBN3 1.152921504606847e+18+0.0i)
+    (test CFL03 VBN3 1.152921504606847e+18-0.0i)
+    (test CFL04 VBN3 1.152921504606847e+18-0.0i)
+    (test CFL01 VBN4 1.152921504606847e+18+0.0i)
+    (test CFL02 VBN4 1.152921504606847e+18+0.0i)
+    (test CFL03 VBN4 1.152921504606847e+18-0.0i)
+    (test CFL04 VBN4 1.152921504606847e+18-0.0i)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-cflonum-ratnum)))
+    (test CFL01 VRN01 -0.008130081300813009+0.0i)
+    (test CFL02 VRN01 -0.008130081300813009+0.0i)
+    (test CFL03 VRN01 -0.008130081300813009-0.0i)
+    (test CFL04 VRN01 -0.008130081300813009-0.0i)
+    (test CFL01 VRN02 0.008130081300813009+0.0i)
+    (test CFL02 VRN02 0.008130081300813009+0.0i)
+    (test CFL03 VRN02 0.008130081300813009-0.0i)
+    (test CFL04 VRN02 0.008130081300813009-0.0i)
+    (test CFL01 VRN03 0.008130081300813009+0.0i)
+    (test CFL02 VRN03 0.008130081300813009+0.0i)
+    (test CFL03 VRN03 0.008130081300813009-0.0i)
+    (test CFL04 VRN03 0.008130081300813009-0.0i)
+    (test CFL01 VRN04 4364804.1626016265+0.0i)
+    (test CFL02 VRN04 4364804.1626016265+0.0i)
+    (test CFL03 VRN04 4364804.1626016265-0.0i)
+    (test CFL04 VRN04 4364804.1626016265-0.0i)
+    #f)
+
+  (let-syntax ((test (make-inexact-test - $sub-cflonum-compnum)))
+    (test CFL01 10+20i		(C (- (R CFL01) 10)
+				   (- (I CFL01) 20)))
+    (test CFL01 1+20.0i		(C (- (R CFL01) 1)
+				   (- (I CFL01) 20.0)))
+    (test CFL01 10.0+2i		(C (- (R CFL01) 10.0)
+				   (- (I CFL01) 2)))
+    (test CFL01 1/2+20i		(C (- (R CFL01) 1/2)
+				   (- (I CFL01) 20)))
+    (test CFL01 10+2/3i		(C (- (R CFL01) 10)
+				   (- (I CFL01) 2/3)))
+    (test CFL01 (C VRN02 20)	(C (- (R CFL01) VRN02)
+				   (- (I CFL01) 20)))
+    (test CFL01 (C 10 VRN02)	(C (- (R CFL01) 10)
+				   (- (I CFL01) VRN02)))
     #f)
 
   #t)
@@ -902,7 +1065,7 @@
 
 (parametrise ((check-test-name	'compnums))
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-fixnum))
+  (letrec-syntax ((test1 (make-test - #;$sub-compnum-fixnum))
 		  (test (syntax-rules ()
 			  ((_ ?op1 ?op2)
 			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
@@ -916,7 +1079,7 @@
     (test (C 10 BN1)	1)
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-bignum))
+  (letrec-syntax ((test1 (make-test - #;$sub-compnum-bignum))
 		  (test (syntax-rules ()
 			  ((_ ?op1 ?op2)
 			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
@@ -930,7 +1093,7 @@
     (test (C 10 BN2)	BN1)
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-ratnum))
+  (letrec-syntax ((test1 (make-test - #;$sub-compnum-ratnum))
 		  (test (syntax-rules ()
 			  ((_ ?op1 ?op2)
 			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
@@ -944,7 +1107,7 @@
     (test (C 10 RN02)	RN01)
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-flonum))
+  (letrec-syntax ((test1 (make-test - #;$sub-compnum-flonum))
 		  (test (syntax-rules ()
 			  ((_ ?op1 ?op2)
 			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
@@ -960,7 +1123,7 @@
     (test (C 10 BN2)	FL1)
     #f)
 
-  (letrec-syntax ((test1 (make-test - $sub-compnum-cflonum))
+  (letrec-syntax ((test1 (make-test - #;$sub-compnum-cflonum))
 		  (test (syntax-rules ()
 			  ((_ ?op1 ?op2)
 			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
@@ -972,6 +1135,63 @@
     (test 10+2/3i	CFL01)
     (test (C BN2 20)	CFL01)
     (test (C 10 BN2)	CFL01)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (letrec-syntax ((test1 (make-test - $sub-compnum-fixnum))
+		  (test (syntax-rules ()
+			  ((_ ?op1 ?op2)
+			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
+					       (- (I ?op1) (I ?op2))))))))
+    (test (C VBN1 20)	1)
+    (test (C 10 VBN1)	1)
+    #f)
+
+  (letrec-syntax ((test1 (make-test - $sub-compnum-bignum))
+		  (test (syntax-rules ()
+			  ((_ ?op1 ?op2)
+			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
+					       (- (I ?op1) (I ?op2))))))))
+    (test 10+20i	VBN1)
+    (test 1.0+20.0i	VBN1)
+    (test 10.0+2.0i	VBN1)
+    (test 1/2+20i	VBN1)
+    (test 10+2/3i	VBN1)
+    (test (C VBN2 20)	VBN1)
+    (test (C 10 VBN2)	VBN1)
+    #f)
+
+  (letrec-syntax ((test1 (make-test - $sub-compnum-ratnum))
+		  (test (syntax-rules ()
+			  ((_ ?op1 ?op2)
+			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
+					       (- (I ?op1) (I ?op2))))))))
+    (test 10+20i	VRN01)
+    (test 1+20.0i	VRN01)
+    (test 10.0+2.0i	VRN01)
+    (test 1/2+20i	VRN01)
+    (test 10+2/3i	VRN01)
+    (test (C VRN02 20)	VRN01)
+    (test (C 10 VRN02)	VRN01)
+    #f)
+
+  (letrec-syntax ((test1 (make-test - $sub-compnum-flonum))
+		  (test (syntax-rules ()
+			  ((_ ?op1 ?op2)
+			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
+					       (- (I ?op1) (I ?op2))))))))
+    (test (C VBN2 20)	FL1)
+    (test (C 10 VBN2)	FL1)
+    #f)
+
+  (letrec-syntax ((test1 (make-test - $sub-compnum-cflonum))
+		  (test (syntax-rules ()
+			  ((_ ?op1 ?op2)
+			   (test1 ?op1 ?op2 (C (- (R ?op1) (R ?op2))
+					       (- (I ?op1) (I ?op2))))))))
+    (test (C VBN2 20)	CFL01)
+    (test (C 10 VBN2)	CFL01)
     #f)
 
   #t)
