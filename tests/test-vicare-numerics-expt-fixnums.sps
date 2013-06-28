@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (numerics helpers)
   (ikarus system $ratnums)
   (ikarus system $compnums)
   (ikarus system $numerics)
@@ -34,156 +35,6 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: expt with fixnum exponent\n")
-
-
-;;;; helpers
-
-(define C make-rectangular)
-(define R real-part)
-(define I imag-part)
-
-(define-syntax make-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	=> ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	=> ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	=> (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-flonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-cflonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-compnum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax make-inexact-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) (?unsafe-fun ?op1 ?op2))
-	  ))))))
-
-(define-syntax catch-undefined-operation
-  (syntax-rules ()
-    ((_ . ?body)
-     (check
-	 (guard (E ((assertion-violation? E)
-		    (condition-message E))
-		   (else E))
-	   (begin . ?body))
-       => "undefined operation"))))
-
-;;; --------------------------------------------------------------------
-
-(define (flonum=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((flzero?/positive x)
-	 (flzero?/positive y))
-	((flzero?/negative x)
-	 (flzero?/negative y))
-	((fl=? x y))))
-
-(define (cflonum=? x y)
-  (and (flonum=? (real-part x) (real-part y))
-       (flonum=? (imag-part x) (imag-part y))))
-
-(define (compnum=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum=? x y))
-	(else
-	 (= x y))))
-
-;;; --------------------------------------------------------------------
-
-(define (inexact=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
-	((or (compnum? x)
-	     (cflonum? x)
-	     (compnum? y)
-	     (cflonum? y))
-	 (complex-quasi=? x y))
-	(else
-	 (= x y))))
-
-(define (flonum-quasi=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((infinite? x)
-	 (fl=? x y))
-	;;Here we cannot consider +0.0 different fro -0.0.
-	((flzero? x)
-	 (flzero? y))
-	(else
-	 (fl<? (fl/ (flabs (fl- x y))
-		    (flabs x))
-	       1e-5))))
-
-(define (cflonum-quasi=? x y)
-  (and (flonum-quasi=? (real-part x) (real-part y))
-       (flonum-quasi=? (imag-part x) (imag-part y))))
-
-(define (complex-quasi=? x y)
-  (let ((x.rep (real-part x))
-	(x.imp (imag-part x))
-	(y.rep (real-part y))
-	(y.imp (imag-part y)))
-    (and (inexact=? x.rep y.rep)
-	 (inexact=? x.imp y.imp))))
-
-
-;;;; constants
-
-(define SMALLEST-POSITIVE-BIGNUM	(-    (least-fixnum)))
-(define SMALLEST-NEGATIVE-BIGNUM	(+ -1 (least-fixnum)))
-
-(define BN1	(+ +1  SMALLEST-POSITIVE-BIGNUM))
-(define BN2	(+ +10 SMALLEST-POSITIVE-BIGNUM))
-(define BN3	(+ -1  SMALLEST-NEGATIVE-BIGNUM))
-(define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
 
 
 (parametrise ((check-test-name	'zero-fixnum-exponent))
@@ -223,8 +74,8 @@
     (test2 -21	+1))
 
   ;; bignums
-  (test SMALLEST-POSITIVE-BIGNUM  +1)
-  (test SMALLEST-NEGATIVE-BIGNUM  +1)
+  (test GREATEST-FX-32-bit  +1)
+  (test LEAST-FX-32-bit  +1)
   (test BN1  +1)
   (test BN2  +1)
   (test BN3  +1)
@@ -233,9 +84,9 @@
   (let-syntax
       ((test2 (syntax-rules ()
 		((_ ?op ?expected)
-		 (check ($expt-bignum-fixnum	?op 0) => ?expected))
+		 (check ($expt-number-fixnum	?op 0) => ?expected))
 		((_ ?op ?expected ?equal)
-		 (check ($expt-bignum-fixnum	?op 0) (=> ?equal) ?expected)))))
+		 (check ($expt-number-fixnum	?op 0) (=> ?equal) ?expected)))))
     (test2 SMALLEST-POSITIVE-BIGNUM  +1)
     (test2 SMALLEST-NEGATIVE-BIGNUM  +1)
     (test2 BN1  +1)
@@ -447,9 +298,9 @@
   (let-syntax
       ((test2 (syntax-rules ()
 		((_ ?op1 ?op2 ?expected)
-		 (check ($expt-bignum-fixnum	?op1 ?op2) => ?expected))
+		 (check ($expt-number-fixnum	?op1 ?op2) => ?expected))
 		((_ ?op1 ?op2 ?expected ?equal)
-		 (check ($expt-bignum-fixnum	?op1 ?op2) (=> ?equal) ?expected)))))
+		 (check ($expt-number-fixnum	?op1 ?op2) (=> ?equal) ?expected)))))
     (test2 SMALLEST-POSITIVE-BIGNUM	+1	SMALLEST-POSITIVE-BIGNUM)
     (test2 SMALLEST-NEGATIVE-BIGNUM	+1	SMALLEST-NEGATIVE-BIGNUM)
     (test2 BN1				+1	BN1)
@@ -711,7 +562,7 @@
   (test		(C 123 BN1)	+3	(cube (C 123 BN1)))
   (test		(C BN1 456)	+3	(cube (C BN1 456)))
   (test		(C 1.23 BN1)	+3	(cube (C 1.23 BN1))	inexact=?)
-  (test		(C BN1 4.56)	+3	(cube (C BN1 4.56))	inexact=?)
+   (test		(C BN1 4.56)	+3	(cube (C BN1 4.56))	inexact=?)
   (test		(C 1/23 BN1)	+3	(cube (C 1/23 BN1)))
   (test		(C BN1 4/56)	+3	(cube (C BN1 4/56)))
 
@@ -1123,9 +974,9 @@
   (let-syntax
       ((test2 (syntax-rules ()
 		((_ ?op1 ?op2 ?expected)
-		 (check ($expt-bignum-fixnum	?op1 ?op2) => ?expected))
+		 (check ($expt-number-fixnum	?op1 ?op2) => ?expected))
 		((_ ?op1 ?op2 ?expected ?equal)
-		 (check ($expt-bignum-fixnum	?op1 ?op2) (=> ?equal) ?expected)))))
+		 (check ($expt-number-fixnum	?op1 ?op2) (=> ?equal) ?expected)))))
 
     (test2	SMALLEST-POSITIVE-BIGNUM	-1	(/ SMALLEST-POSITIVE-BIGNUM))
     (test2	SMALLEST-NEGATIVE-BIGNUM	-1	(/ SMALLEST-NEGATIVE-BIGNUM))
@@ -1290,7 +1141,7 @@
   (test		123+nan.0i	-1	(/ +123+nan.0i)		inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
-  (test		+inf.0+456i	-1	+nan.0+0.0i		inexact=?)
+  (test		+inf.0+456i	-1	+nan.0-0.0i		inexact=?)
   (test		123+inf.0i	-1	+0.0+nan.0i		inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
@@ -1435,7 +1286,7 @@
     (test2	123+nan.0i	-1	(/ +123+nan.0i)		inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
-    (test2	+inf.0+456i	-1	+nan.0+0.0i		inexact=?)
+    (test2	+inf.0+456i	-1	+nan.0-0.0i		inexact=?)
     (test2	123+inf.0i	-1	+0.0+nan.0i		inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
@@ -1570,7 +1421,7 @@
   (test		0.0+45.6i	-1	(/ 0.0+45.6i)	inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
-  (test		+inf.0+45.6i	-1	+nan.0+0.0i	inexact=?)
+  (test		+inf.0+45.6i	-1	+nan.0-0.0i	inexact=?)
   (test		12.3+inf.0i	-1	+0.0+nan.0i	inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
@@ -1638,7 +1489,7 @@
     (test2		0.0+45.6i	-1	(/ 0.0+45.6i)	inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
-    (test2		+inf.0+45.6i	-1	+nan.0+0.0i	inexact=?)
+    (test2		+inf.0+45.6i	-1	+nan.0-0.0i	inexact=?)
     (test2		12.3+inf.0i	-1	+0.0+nan.0i	inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))

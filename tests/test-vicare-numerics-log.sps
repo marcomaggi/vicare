@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (numerics helpers)
   (ikarus system $numerics)
   (vicare checks)
   (only (vicare language-extensions syntaxes)
@@ -36,223 +37,49 @@
 (check-display "*** testing Vicare numerics functions: log\n")
 
 
-;;;; helpers
-
-(define C make-rectangular)
-(define R real-part)
-(define I imag-part)
-
-(define-syntax make-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	=> ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	=> ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	=> ?expected-result)
-	  ))))))
-
-(define-syntax make-flonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-cflonum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-func ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-compnum-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  ))))))
-
-(define-syntax make-inexact-test
-  (syntax-rules ()
-    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
-     (syntax-rules ()
-       ((_ ?op1 ?op2 ?expected-result)
-	(begin
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?middle-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  ))))))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax catch-implementation-restriction
-  (syntax-rules ()
-    ((_ ?message . ?body)
-     (check
-	 (guard (E ((implementation-restriction-violation? E)
-		    (condition-message E))
-		   (else E))
-	   (begin . ?body))
-       => ?message))))
-
-;;; --------------------------------------------------------------------
-
-(define (flonum=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((flzero?/positive x)
-	 (flzero?/positive y))
-	((flzero?/negative x)
-	 (flzero?/negative y))
-	((fl=? x y))))
-
-(define (cflonum=? x y)
-  (and (flonum=? (real-part x) (real-part y))
-       (flonum=? (imag-part x) (imag-part y))))
-
-(define (compnum=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum=? x y))
-	(else
-	 (= x y))))
-
-;;; --------------------------------------------------------------------
-
-(define (inexact=? x y)
-  (cond ((and (cflonum? x)
-	      (cflonum? y))
-	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
-	((or (compnum? x)
-	     (cflonum? x)
-	     (compnum? y)
-	     (cflonum? y))
-	 (complex-quasi=? x y))
-	(else
-	 (= x y))))
-
-(define (flonum-quasi=? x y)
-  (cond ((flnan? x)
-	 (flnan? y))
-	((infinite? x)
-	 (fl=? x y))
-	;;Here we cannot consider +0.0 different fro -0.0.
-	((flzero? x)
-	 (flzero? y))
-	(else
-	 (fl<? (flabs (fl- x y))
-	       1e-5)
-	 #;(fl<? (fl/ (flabs (fl- x y))
-		    (flabs x))
-	       1e-5))))
-
-(define (cflonum-quasi=? x y)
-  (and (flonum-quasi=? (real-part x) (real-part y))
-       (flonum-quasi=? (imag-part x) (imag-part y))))
-
-(define (complex-quasi=? x y)
-  (let ((x.rep (real-part x))
-	(x.imp (imag-part x))
-	(y.rep (real-part y))
-	(y.imp (imag-part y)))
-    (and (inexact=? x.rep y.rep)
-	 (inexact=? x.imp y.imp))))
-
-
-;;;; constants
-
-(define SMALLEST-POSITIVE-BIGNUM	(-    (least-fixnum)))
-(define SMALLEST-NEGATIVE-BIGNUM	(+ -1 (least-fixnum)))
-
-(define BN1	(+ +1  SMALLEST-POSITIVE-BIGNUM))
-(define BN2	(+ +10 SMALLEST-POSITIVE-BIGNUM))
-(define BN3	(+ -1  SMALLEST-NEGATIVE-BIGNUM))
-(define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
-
-(define RN1	+13/11)
-(define RN2	+17/11)
-(define RN3	-13/11)
-(define RN4	-17/11)
-
-
 (parametrise ((check-test-name	'fixnums))
 
-  (define-syntax test
-    (syntax-rules ()
-      ((_ ?op ?expected)
-       (begin
-	 (check (log ?op)		(=> inexact=?) ?expected)
-	 (check ($log-fixnum ?op)	(=> inexact=?) ?expected)))))
+  (let-syntax ((test (make-inexact-test-1 log $log-fixnum)))
+    (test +1			0)
+    (test -1			0.0+3.141592653589793i)
 
-  (test +1			0)
-  (test -1			0.0+3.141592653589793i)
+    (test FX1 0)
+    (test FX2 0.0+3.141592653589793i)
+    (test FX3 20.10126823437577)
+    (test FX4 20.101268236238415+3.141592653589793i)
 
-  (case-word-size
-   ((32)
-    (test (greatest-fixnum)	20.10126823437577)
-    (test (least-fixnum)	20.101268236238415+3.141592653589793i))
-   ((64)
-    (void)))
+    #f)
 
   #t)
 
 
 (parametrise ((check-test-name	'bignums))
 
-  (define-syntax test
-    (syntax-rules ()
-      ((_ ?op ?expected)
-       (begin
-	 (check (log ?op)		(=> inexact=?) ?expected)
-	 (check ($log-bignum ?op)	(=> inexact=?) ?expected)))))
+  (let-syntax ((test (make-inexact-test-1 log)))
+    (test BN1 20.101268236238415)
+    (test BN2 20.101268420640267)
+    (test BN3 20.10126823810106+3.141592653589793i)
+    (test BN4 20.101268422502912+3.141592653589793i)
+    #f)
 
+  (let-syntax ((test (make-inexact-test-1 log $log-bignum)))
+    (test VBN1 41.58883083359672)
+    (test VBN2 41.58883083359672)
+    (test VBN3 41.58883083359672+3.141592653589793i)
+    (test VBN4 41.58883083359672+3.141592653589793i)
 
-  (case-word-size
-   ((32)
-    (test BN1			20.10126823810106)
-    (test BN2			20.101268254864866)
-    (test BN3			20.101268239963705+3.141592653589793i)
-    (test BN4			20.10126825672751+3.141592653589793i))
-   ((64)
-    (void)))
+    #f)
 
   #t)
 
 
 (parametrise ((check-test-name	'ratnums))
 
-  (define-syntax test
-    (syntax-rules ()
-      ((_ ?op ?expected)
-       (begin
-	 (check (log ?op)		(=> inexact=?) ?expected)
-	 (check ($log-ratnum ?op)	(=> inexact=?) ?expected)))))
 
-  (test +1/2			-0.6931471805599453)
-  (test -1/2			-0.6931471805599453+3.141592653589793i)
+(let-syntax ((test (make-inexact-test-1 log)))
+    (test +1/2			-0.6931471805599453)
+    (test -1/2			-0.6931471805599453+3.141592653589793i)
 
-  (case-word-size
-   ((32)
     (test (/ BN1 123)		15.289083882728642)
     (test (/ BN2 123)		15.289083899492448)
     (test (/ BN3 123)		15.289083884591287+3.141592653589793i)
@@ -261,9 +88,19 @@
     (test (/ 123 BN1)		-15.289083882728642)
     (test (/ 123 BN2)		-15.289083899492448)
     (test (/ 123 BN3)		-15.289083884591287+3.141592653589793i)
-    (test (/ 123 BN4)		-15.289083901355093+3.141592653589793i))
-   ((64)
-    (void)))
+    (test (/ 123 BN4)		-15.289083901355093+3.141592653589793i)
+    #f)
+
+  (let-syntax ((test (make-inexact-test-1 log $log-bignum)))
+    (test (/ VBN1 123) 36.7766464782243)
+    (test (/ VBN2 123) 36.7766464782243)
+    (test (/ VBN3 123) 36.7766464782243+3.141592653589793i)
+    (test (/ VBN4 123) 36.7766464782243+3.141592653589793i)
+    (test (/ 123 VBN1) -36.7766464782243)
+    (test (/ 123 VBN2) -36.7766464782243)
+    (test (/ 123 VBN3) -36.7766464782243+3.141592653589793i)
+    (test (/ 123 VBN4) -36.7766464782243+3.141592653589793i)
+    #f)
 
   #t)
 

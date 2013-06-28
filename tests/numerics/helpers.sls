@@ -42,6 +42,9 @@
     cflonum-quasi=?
     compnum-quasi=?
     %cube
+    r6rs-quotient
+    r6rs-remainder
+    r6rs-modulo
 
 ;;; --------------------------------------------------------------------
 
@@ -49,6 +52,9 @@
     LEAST-FX-32-bit
     GREATEST-FX-64-bit
     LEAST-FX-64-bit
+
+    SMALLEST-POSITIVE-BIGNUM
+    SMALLEST-NEGATIVE-BIGNUM
 
 ;;; --------------------------------------------------------------------
 
@@ -1083,9 +1089,9 @@
   (cond ((and (cflonum? x)
 	      (cflonum? y))
 	 (cflonum-quasi=? x y))
-	((and (flonum? x)
-	      (flonum? y))
-	 (flonum-quasi=? x y))
+	((or (flonum? x)
+	     (flonum? y))
+	 (flonum-quasi=? (inexact x) (inexact y)))
 	((and (compnum? x)
 	      (compnum? y))
 	 (compnum-quasi=? x y))
@@ -1095,12 +1101,15 @@
 (define (flonum-quasi=? x y)
   (cond ((flnan? x)
 	 (flnan? y))
+	((and (flinfinite? x)
+	      (flinfinite? y))
+	 (= x y))
 	((flzero?/positive x)
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))
 	(else
-	 (fl<? (flabs (fl- x y)) 1e-8))))
+	 (fl<? (flabs (fl/ (fl- x y) x)) 1e-5))))
 
 (define (cflonum-quasi=? x y)
   (and (flonum-quasi=? (real-part x) (real-part y))
@@ -1115,6 +1124,63 @@
 (define (%cube x)
   (* x x x))
 
+(define (r6rs-quotient n1 n2)
+  (assert (integer? n1))
+  (assert (integer? n2))
+  (let* ((n1^ (exact n1))
+	 (n2^ (exact n2))
+	 (R  (* (sign n1^) (sign n2^) (div (abs n1^) (abs n2^)))))
+    (if (or (inexact? n1)
+	    (inexact? n2))
+	(if (zero? R)
+	    (cond ((or (positive? n1)
+		       (if (flonum? n1)
+			   (flzero?/positive n1)
+			 (zero? n1)))
+		   (if (positive? n2) +0.0 -0.0))
+		  (else
+		   (if (positive? n2) -0.0 +0.0)))
+	  (inexact R))
+      R)))
+
+(define (r6rs-remainder n1 n2)
+  (assert (integer? n1))
+  (assert (integer? n2))
+  (let* ((n1^ (exact n1))
+	 (n2^ (exact n2))
+	 (R  (* (sign n1^) (mod (abs n1^) (abs n2^)))))
+    (if (or (inexact? n1)
+	    (inexact? n2))
+	(if (zero? R)
+	    (if (or (and (flonum? n1)
+			 (flzero?/positive n1))
+		    (and (fixnum? n1)
+			 (fxzero? n1))
+		    (positive? n1))
+		+0.0
+	      -0.0)
+	  (inexact R))
+      R)))
+
+(define (r6rs-modulo n1 n2)
+  (assert (integer? n1))
+  (assert (integer? n2))
+  (let* ((n1^ (exact n1))
+	 (n2^ (exact n2))
+	 (R  (* (sign n2^) (mod (* (sign n2^) n1^) (abs n2^)))))
+    (if (or (inexact? n1)
+	    (inexact? n2))
+	(if (zero? R)
+	    (if (or (and (flonum? n2)
+			 (flzero?/positive n2))
+		    (and (fixnum? n2)
+			 (fxzero? n2))
+		    (positive? n2))
+		+0.0
+	      -0.0)
+	  (inexact R))
+      R)))
+
 
 ;;;; constants
 
@@ -1127,6 +1193,9 @@
 (define LEAST-FX-32-bit		-536870912)
 (define GREATEST-FX-64-bit	+1152921504606846975)
 (define LEAST-FX-64-bit		-1152921504606846976)
+
+(define SMALLEST-POSITIVE-BIGNUM	(-    (least-fixnum)))
+(define SMALLEST-NEGATIVE-BIGNUM	(+ -1 (least-fixnum)))
 
 ;;; --------------------------------------------------------------------
 

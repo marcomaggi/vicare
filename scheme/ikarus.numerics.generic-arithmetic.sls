@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
@@ -3199,7 +3199,8 @@
   ;;
   ;;   (quotient+remainder X Y)
   ;;
-  ;;according to R6RS:
+  ;;according to  R6RS the  function MOD  always returns  a non-negative
+  ;;integer and:
   ;;
   ;;   (define (sign n)
   ;;     (cond ((negative? n) -1)
@@ -3251,23 +3252,12 @@
        (%error-not-integer y))))
 
   (define ($quotient+remainder-flonum-number x y)
-    (cond (($flzero?/positive x)
-	   (values (if (positive? y) +0.0 -0.0)
-		   +0.0))
-	  (($flzero?/negative x)
-	   (values (if (positive? y) -0.0 +0.0)
-		   -0.0))
-	  (else
-	   (let ((x.exact ($flonum->exact x)))
-	     (receive (q r)
-		 (cond-exact-integer-operand x.exact
-		   ((fixnum?)
-		    ($quotient+remainder-fixnum-number x.exact y))
-		   ((bignum?)
-		    ($quotient+remainder-bignum-number x.exact y))
-		   (else
-		    (%error-not-integer x)))
-	       (values (inexact q) (inexact r)))))))
+    (cond-inexact-integer-operand y
+      ((fixnum?)	($quotient+remainder-flonum-fixnum x y))
+      ((bignum?)	($quotient+remainder-flonum-bignum x y))
+      ((flonum?)	($quotient+remainder-flonum-flonum x y))
+      (else
+       (%error-not-integer x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3329,12 +3319,16 @@
 	    (else
 	     (%error-not-integer y))))
       (values (if (zero? q)
-		  (if ($fxpositive? x)
+		  (if (or ($fxpositive? x)
+			  ($fxzero? x))
 		      (if ($flpositive? y) +0.0 -0.0)
 		    (if ($flpositive? y) -0.0 +0.0))
 		(inexact q))
 	      (if (zero? r)
-		  (if ($fxpositive? x) 0.0 -0.0)
+		  (if (or ($fxpositive? x)
+			  ($fxzero? x))
+		      +0.0
+		    -0.0)
 		(inexact r)))))
 
 ;;; --------------------------------------------------------------------
@@ -3405,7 +3399,14 @@
 		   ((bignum?)	($quotient+remainder-bignum-bignum x.exact y))
 		   (else
 		    (%error-not-integer x))))
-	     (values (inexact q) (inexact r))))))
+	     (values (if (zero? q)
+			 (if ($flpositive? x)
+			     (if ($bignum-positive? y) +0.0 -0.0)
+			   (if ($bignum-positive? y) -0.0 +0.0))
+		       (inexact q))
+		     (if (zero? r)
+			 (if ($flpositive? x) +0.0 -0.0)
+		       (inexact r)))))))
 
   (define ($quotient+remainder-flonum-flonum x y)
     (cond (($flzero?/positive x)
@@ -3425,7 +3426,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
+    (assertion-violation who "expected exact or inexact integer as argument" x))
 
   #| end of module: quotient+remainder |# )
 
@@ -3546,7 +3547,7 @@
   ;;   (define (modulo n1 n2)
   ;;     (* (sign n2) (mod (* (sign n2) n1) (abs n2))))
   ;;
-  ;;so we have:
+  ;;the function  MOD always returns positive results, so we have:
   ;;
   ;;   sign(quotient)  = sign(X) * sign(Y)
   ;;   sign(remainder) = sign(X)
@@ -3583,12 +3584,12 @@
        (%error-not-integer m))))
 
   (define ($modulo-flonum-number n m)
-    (let ((n.exact ($flonum->exact n)))
-      (cond-exact-integer-operand n.exact
-	((fixnum?)	(inexact ($modulo-fixnum-number n.exact m)))
-	((bignum?)	(inexact ($modulo-bignum-number n.exact m)))
-	(else
-	 (%error-not-integer n)))))
+    (cond-inexact-integer-operand m
+      ((fixnum?)	($modulo-flonum-fixnum n m))
+      ((bignum?)	($modulo-flonum-bignum n m))
+      ((flonum?)	($modulo-flonum-flonum n m))
+      (else
+       (%error-not-integer m))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3643,12 +3644,19 @@
 	     (foreign-call "ikrt_fxbnplus" n m)))))
 
   (define ($modulo-fixnum-flonum n m)
-    (let ((v ($flonum->exact m)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
-	((bignum?)	(inexact ($modulo-fixnum-bignum n v)))
-	(else
-	 (%error-not-integer m)))))
+    (let* ((v ($flonum->exact m))
+	   (R (cond-exact-integer-operand v
+		((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
+		((bignum?)	(inexact ($modulo-fixnum-bignum n v)))
+		(else
+		 (%error-not-integer m)))))
+      ;;The return value must have the sign of M.
+      (if (and (or ($flzero?/negative m)
+		   ($fl< m -0.0))
+	       (or ($flzero?/positive R)
+		   ($fl> R +0.0)))
+	  ($fl- R)
+	R)))
 
 ;;; --------------------------------------------------------------------
 
@@ -3666,37 +3674,51 @@
     ;;
     ;;   ($add-bignum-number m ($remainder-bignum-bignum n m))
     ;;
-    (if ($bignum-positive? n)
-	(if ($bignum-positive? m)
-	    ($remainder-bignum-bignum n m)
-	  (let ((rem ($remainder-bignum-bignum n m)))
-	    (if (zero? rem)
-		0
-	      ($add-bignum-number m rem))))
-      (if ($bignum-positive? m)
-	  (let ((rem ($remainder-bignum-bignum n m)))
-	    (if (zero? rem)
-		0
-	      ($add-bignum-number m rem)))
-	($remainder-bignum-bignum n m))))
+    (let ((rem ($remainder-bignum-bignum n m)))
+      (cond (($bignum-positive? n)
+	     (cond (($bignum-positive? m)
+		    rem)				;;;both positive
+		   ((zero? rem)
+		    0)
+		   (else
+		    ($add-bignum-number m rem))))	;;;N positive, M negative
+	    (($bignum-positive? m)
+	     (if (zero? rem)
+		 0
+	       ($add-bignum-number m rem)))		;;;N negative, M positive
+	    (else
+	     rem))))					;;;both negative
 
   (define ($modulo-bignum-flonum n m)
-    (let ((m.exact ($flonum->exact m)))
-      (cond-exact-integer-operand m.exact
-	((fixnum?)	(inexact ($modulo-bignum-fixnum n m.exact)))
-	((bignum?)	(inexact ($modulo-bignum-bignum n m.exact)))
-	(else
-	 (%error-not-integer m)))))
+    (let* ((m.exact ($flonum->exact m))
+	   (R       (cond-exact-integer-operand m.exact
+		      ((fixnum?)	(inexact ($modulo-bignum-fixnum n m.exact)))
+		      ((bignum?)	(inexact ($modulo-bignum-bignum n m.exact)))
+		      (else
+		       (%error-not-integer m)))))
+      ;;The return value must have the sign of M.
+      (if (and (or ($flzero?/negative m)
+		   ($fl< m -0.0))
+	       (or ($flzero?/positive R)
+		   ($fl> R +0.0)))
+	  ($fl- R)
+	R)))
 
 ;;; --------------------------------------------------------------------
 
   (define ($modulo-flonum-fixnum n m)
-    (let ((n.exact ($flonum->exact n)))
-      (cond-exact-integer-operand n.exact
-	((fixnum?)	(inexact ($modulo-fixnum-fixnum n.exact m)))
-	((bignum?)	(inexact ($modulo-bignum-fixnum n.exact m)))
-	(else
-	 (%error-not-integer n)))))
+    (let* ((n.exact ($flonum->exact n))
+	   (R       (cond-exact-integer-operand n.exact
+		      ((fixnum?)	(inexact ($modulo-fixnum-fixnum n.exact m)))
+		      ((bignum?)	(inexact ($modulo-bignum-fixnum n.exact m)))
+		      (else
+		       (%error-not-integer n)))))
+      (if (zero? R)
+	  (if (or ($fxzero? m)
+		  ($fxpositive? m))
+	      +0.0
+	    -0.0)
+	(inexact R))))
 
   (define ($modulo-flonum-bignum n m)
     (let ((n.exact ($flonum->exact n)))
@@ -3717,7 +3739,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
+    (assertion-violation who "expected exact or inexact integer number as argument" x))
 
   #| end of module: modulo |# )
 
@@ -6468,22 +6490,18 @@
     ;; log x = ----------------------- + i * atan(x.imp, x.rep)
     ;;                    2
     ;;
+    ;;when x.imp == 0:
+    ;;
+    ;;         log (x.rep^2)
+    ;; log x = ------------- + i * atan(0, x.rep) = log (x.rep^(2/2)) = log (x.rep)
+    ;;               2
+    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (if ($flzero? x.imp)
-	  (let ((y ($log-flonum x.rep)))
-	    (if (flonum? y)
-		($make-cflonum y 0.0)
-	      (if ($flzero?/positive x.imp)
-		  y
-		;;Return the conjugate of Y.
-		(let ((y.rep ($cflonum-real y))
-		      (y.imp ($cflonum-imag y)))
-		  ($make-cflonum y.rep ($fl- y.imp))))))
-	($make-cflonum ($fl/ ($fllog ($fl+ ($flsquare x.rep)
-					   ($flsquare x.imp)))
-			     2.0)
-		       ($flatan2 x.imp x.rep)))))
+      ($make-cflonum ($fl/ ($fllog ($fl+ ($flsquare x.rep)
+					 ($flsquare x.imp)))
+			   2.0)
+		     ($flatan2 x.imp x.rep))))
 
   #| end of module |# )
 
@@ -6565,7 +6583,7 @@
       (if (and ($flzero? x.imp)
 	       (not ($flinfinite? x.rep))
 	       (not ($flnan?      x.rep)))
-	  ($make-cflonum e^x.rep 0.0)
+	  ($make-cflonum e^x.rep (if ($flzero?/positive x.imp) +0.0 -0.0))
 	($make-cflonum ($fl* e^x.rep ($cos-flonum x.imp))
 		       ($fl* e^x.rep ($sin-flonum x.imp))))))
 

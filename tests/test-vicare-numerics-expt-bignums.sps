@@ -97,6 +97,8 @@
 	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
 	  ))))))
 
+
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax catch-implementation-restriction
@@ -187,6 +189,14 @@
 (define BN3	(+ -1  SMALLEST-NEGATIVE-BIGNUM))
 (define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
 
+(define GREATEST-FX-64-bit	+1152921504606846975)
+(define LEAST-FX-64-bit		-1152921504606846976)
+
+(define VBN1		(+ GREATEST-FX-64-bit +1))
+(define VBN2		(+ GREATEST-FX-64-bit +100))
+(define VBN3		(+ LEAST-FX-64-bit -1))
+(define VBN4		(+ LEAST-FX-64-bit -100))
+
 
 (parametrise ((check-test-name	'fixnum-base))
 
@@ -232,7 +242,7 @@
 
   (catch-implementation-restriction
    "result is too big to compute"
-   ($expt-bignum-bignum BN1 BN1))
+   ($expt-bignum-bignum VBN1 VBN1))
 
   #t)
 
@@ -252,44 +262,45 @@
 
 (parametrise ((check-test-name	'flonum-base))
 
-  (define-syntax test
-    (make-inexact-test expt $expt-number-bignum $expt-flonum-bignum))
+  (let-syntax ((test (make-inexact-test expt $expt-number-bignum $expt-flonum-bignum)))
 
-  (test	+0.0			BN1	+0.0)
-  (test	-0.0			BN1	(if (even? BN1) +0.0 -0.0))
-  (test	+1.0			BN1	+1.0)
-  (test	-1.0			BN1	(if (even? BN1) +1.0 -1.0))
-  (test	+nan.0			BN1	+nan.0)
-  (test	+inf.0			BN1	+inf.0)
-  (test	-inf.0			BN1	(if (even? BN1) +inf.0 -inf.0))
-  (test	1.00000000000001	BN1	1.0000053644324274)
+    (test	+0.0			VBN1	+0.0)
+    (test	-0.0			VBN1	(if (even? VBN1) +0.0 -0.0))
+    (test	+1.0			VBN1	+1.0)
+    (test	-1.0			VBN1	(if (even? VBN1) +1.0 -1.0))
+    (test	+nan.0			VBN1	+nan.0)
+    (test	+inf.0			VBN1	+inf.0)
+    (test	-inf.0			VBN1	(if (even? VBN1) +inf.0 -inf.0))
+    (test	1.00000000000001	VBN1	+inf.0)
 
-  (test	+0.0			BN2	+0.0)
-  (test	-0.0			BN2	(if (even? BN2) +0.0 -0.0))
-  (test	+1.0			BN2	+1.0)
-  (test	-1.0			BN2	(if (even? BN2) +1.0 -1.0))
-  (test	+nan.0			BN2	+nan.0)
-  (test	+inf.0			BN2	+inf.0)
-  (test	-inf.0			BN2	(if (even? BN2) +inf.0 -inf.0))
-  (test	1.00000000000001	BN2	1.0000053644325173)
+    (test	+0.0			VBN2	+0.0)
+    (test	-0.0			VBN2	(if (even? VBN2) +0.0 -0.0))
+    (test	+1.0			VBN2	+1.0)
+    (test	-1.0			VBN2	(if (even? VBN2) +1.0 -1.0))
+    (test	+nan.0			VBN2	+nan.0)
+    (test	+inf.0			VBN2	+inf.0)
+    (test	-inf.0			VBN2	(if (even? VBN2) +inf.0 -inf.0))
+    (test	1.00000000000001	VBN2	+inf.0)
 
-  (test	+0.0			BN3	+0.0)
-  (test	-0.0			BN3	(if (even? BN3) +0.0 -0.0))
-  (test	+1.0			BN3	+1.0)
-  (test	-1.0			BN3	(if (even? BN3) +1.0 -1.0))
-  (test	+nan.0			BN3	+nan.0)
-  (test	+inf.0			BN3	+inf.0)
-  (test	-inf.0			BN3	(if (even? BN3) +inf.0 -inf.0))
-  (test	1.00000000000001	BN3	0.9999946355963379)
+    (test	+0.0			VBN3	+0.0)
+    (test	-0.0			VBN3	(if (even? VBN3) +0.0 -0.0))
+    (test	+1.0			VBN3	+1.0)
+    (test	-1.0			VBN3	(if (even? VBN3) +1.0 -1.0))
+    (test	+nan.0			VBN3	+nan.0)
+    (test	+inf.0			VBN3	+inf.0)
+    (test	-inf.0			VBN3	(if (even? VBN3) +inf.0 -inf.0))
+    (test	1.00000000000001	VBN3	0.0)
 
-  (test	+0.0			BN4	+0.0)
-  (test	-0.0			BN4	(if (even? BN4) +0.0 -0.0))
-  (test	+1.0			BN4	+1.0)
-  (test	-1.0			BN4	(if (even? BN4) +1.0 -1.0))
-  (test	+nan.0			BN4	+nan.0)
-  (test	+inf.0			BN4	+inf.0)
-  (test	-inf.0			BN4	(if (even? BN4) +inf.0 -inf.0))
-  (test	1.00000000000001	BN4	0.999994635596248)
+    (test	+0.0			VBN4	+0.0)
+    (test	-0.0			VBN4	(if (even? VBN4) +0.0 -0.0))
+    (test	+1.0			VBN4	+1.0)
+    (test	-1.0			VBN4	(if (even? VBN4) +1.0 -1.0))
+    (test	+nan.0			VBN4	+nan.0)
+    (test	+inf.0			VBN4	+inf.0)
+    (test	-inf.0			VBN4	(if (even? VBN4) +inf.0 -inf.0))
+    (test	1.00000000000001	VBN4	0.0)
+
+    #f)
 
   #t)
 

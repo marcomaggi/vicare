@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -30,6 +30,7 @@
   (ikarus system $ratnums)
   (ikarus system $compnums)
   (ikarus system $numerics)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -209,10 +210,17 @@
   (define-syntax test
     (make-inexact-test expt $expt-number-cflonum $expt-bignum-cflonum))
 
-  (test BN1	+1.0+2.0i	-431208522.4342323+319827433.79131836i)
-  (test BN2	+1.0+2.0i	-431208540.3859789+319827424.6954508i)
-  (test BN3	+1.0+2.0i	805257.2247952196-597259.414747084i)
-  (test BN4	+1.0+2.0i	805257.258319078-597259.397761072i)
+  (case-word-size
+   ((32)
+    (test BN1	+1.0+2.0i	-431208522.4342323+319827433.79131836i)
+    (test BN2	+1.0+2.0i	-431208540.3859789+319827424.6954508i)
+    (test BN3	+1.0+2.0i	805257.2247952196-597259.414747084i)
+    (test BN4	+1.0+2.0i	805257.258319078-597259.397761072i))
+   ((64)
+    (test BN1	+1.0+2.0i	8.586340858174443e16+1.1497197357841759e18i)
+    (test BN2	+1.0+2.0i	8.586340858174443e16+1.1497197357841759e18i)
+    (test BN3	+1.0+2.0i	-1.603449982756447e14-2.14703576409139e15i)
+    (test BN4	+1.0+2.0i	-1.603449982756447e14-2.14703576409139e15i)))
 
   #t)
 
