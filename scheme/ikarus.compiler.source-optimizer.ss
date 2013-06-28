@@ -85,9 +85,12 @@
 	((2)
 	 (%do-one-pass expr (source-optimizer-passes-count)))
 	((1)
-	 (parameterize ((cp0-size-limit 0))
-	   (%do-one-pass expr (source-optimizer-passes-count))))
+	 (let ((expr (parameterize ((cp0-size-limit 0))
+		       (%do-one-pass expr (source-optimizer-passes-count)))))
+	   #;(debug-print expr)
+	   expr))
 	(else
+	 #;(debug-print expr)
 	 expr)))
 
     (define (%do-one-pass expr passes-count)

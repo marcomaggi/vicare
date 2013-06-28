@@ -28,7 +28,8 @@
     traverse		traversal-helpers)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 
 		  write			display
 		  put-datum		format

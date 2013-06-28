@@ -41,7 +41,8 @@
     record-guardian-logger		record-guardian-log)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 
 		  load-r6rs-script
 		  load

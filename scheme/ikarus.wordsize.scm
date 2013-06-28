@@ -5,7 +5,8 @@
 	 case-word-size
 	 fixnum-width
 	 greatest-fixnum
-	 least-fixnum)
+	 least-fixnum
+	 )
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
@@ -31,18 +32,18 @@
 
   (case-word-size
    ((32)
-    (define (fixnum-width)
+    (define-syntax-rule (fixnum-width)
       30)
-    (define (greatest-fixnum)
+    (define-syntax-rule (greatest-fixnum)
       +536870911)
-    (define (least-fixnum)
+    (define-syntax-rule (least-fixnum)
       -536870912))
    ((64)
-    (define (fixnum-width)
+    (define-syntax-rule (fixnum-width)
       61)
-    (define (greatest-fixnum)
+    (define-syntax-rule (greatest-fixnum)
       +1152921504606846975)
-    (define (least-fixnum)
+    (define-syntax-rule (least-fixnum)
       -1152921504606846976)))
 
   #| end of module |# )

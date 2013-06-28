@@ -85,7 +85,8 @@
 	  $struct-ref $struct/rtd?)
     (except (ikarus)
 	    fixnum-width
-	    greatest-fixnum		least-fixnum
+	    greatest-fixnum
+	    least-fixnum
 
 	    return
 	    current-primitive-locations

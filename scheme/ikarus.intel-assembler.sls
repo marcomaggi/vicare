@@ -22,7 +22,9 @@
     assembler-property-key)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum)
+		  greatest-fixnum
+		  least-fixnum
+		  )
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (vicare unsafe operations)

@@ -33,7 +33,8 @@
     $fxrotate-bit-field		$fxbit-field)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 
 		  bitwise-bit-set?		bitwise-first-bit-set
 		  bitwise-bit-count

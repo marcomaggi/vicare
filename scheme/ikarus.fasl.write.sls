@@ -19,7 +19,8 @@
   (export fasl-write)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 		  fasl-write)
     (ikarus system $codes)
     (only (ikarus system $structs)

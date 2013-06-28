@@ -19,7 +19,8 @@
   (export fasl-read)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 		  fasl-read)
     (except (ikarus.code-objects)
 	    procedure-annotation)

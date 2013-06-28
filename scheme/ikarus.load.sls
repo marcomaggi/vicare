@@ -21,7 +21,8 @@
     fasl-search-path)
   (import (except (ikarus)
 		  fixnum-width
-		  greatest-fixnum		least-fixnum
+		  greatest-fixnum
+		  least-fixnum
 
 		  load			load-r6rs-script
 		  fasl-directory	fasl-path
