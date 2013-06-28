@@ -3953,6 +3953,7 @@ Inverse hyperbolic functions.
 
 
 @defun complex-conjugate @var{num}
+@cindex Conjugate of a complex number
 Return the complex conjugate of the number object @var{num}.
 @end defun
 
