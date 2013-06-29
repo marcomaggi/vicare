@@ -11,9 +11,10 @@ machines; it is tested only  on GNU+Linux, no official support for other
 platforms is present.  It implements a foreign-functions interface based
 on Libffi.  "Vicare" is pronounced the etruscan way.
 
-  The latest version of this package can be downloaded from Google Code:
+  The latest version of this package can be downloaded from:
 
-	<http://code.google.com/p/vicare-scheme/downloads/list>
+	 <http://sourceforge.net/projects/vicare-scheme/files/>
+
 
 the home page of the Vicare project is at:
 
@@ -26,6 +27,10 @@ development takes place at:
 and as backup at:
 
 		     <http://gitorious.org/vicare>
+
+and at:
+
+	    <http://sourceforge.net/projects/vicare-scheme/>
 
 this project has a mailing list:
 

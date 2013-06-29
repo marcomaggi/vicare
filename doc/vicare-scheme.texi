@@ -107,7 +107,7 @@
 @set COPYRIGHT_YEARS            2010-2013
 
 
-@set TARBALLURL                 @url{http://github.com/marcomaggi/vicare/downloads}
+@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
 @set RAWEXECUTABLE              vicare
@@ -129,7 +129,7 @@ The package, including its documentation, is distributed under the terms
 of the @gnu{} General Public License (@gpl{}) and can be downloaded
 from:
 
-@center @url{http://code.google.com/p/vicare-scheme/}
+@center @value{TARBALLURL}
 
 @noindent
 the home page of the project is at:
@@ -145,6 +145,11 @@ development takes place at:
 and, as a backup, at:
 
 @center @url{http://gitorious.org/vicare}
+
+@noindent
+and at:
+
+@center @url{http://sourceforge.net/projects/vicare-scheme/}
 
 @noindent
 this project has a mailing list:
