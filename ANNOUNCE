@@ -51,6 +51,8 @@ Notes for revision 0.3d0
 
 * The boot images have been rotated.
 
+* Issue 39 should be fixed.
+
 * Changed tarball distribution from .bz2 compression to .xz compression.
 
 * Added command line option -g as alias for --debug.
