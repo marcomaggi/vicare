@@ -625,9 +625,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (let-syntax ((test (make-test + $add-ratnum-fixnum)))
-    (test 1/2 0 1/2)
-    (test 1/2 10 21/2)
+  (let-syntax ((test (make-test + #;$add-ratnum-fixnum)))
     (test 1/2 GREATEST-FX-64-bit 2305843009213693951/2)
     (test 1/2 LEAST-FX-64-bit -2305843009213693951/2)
     #f)
