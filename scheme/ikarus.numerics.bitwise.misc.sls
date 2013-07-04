@@ -50,8 +50,7 @@
 	    $fxbit-field)
     (ikarus system $bignums)
     (ikarus system $flonums)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
@@ -120,7 +119,7 @@
   (define (pos-fxbitcount n)
       ;;; nifty parrallel count from:
       ;;; http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (let ((m0 #x15555555)
 	    (m1 #x13333333)
@@ -196,7 +195,7 @@
       (let ((x^ (if ($fx< x 0)
 		    ($fxlognot x)
 		  x)))
-	(case-word-size
+	(boot.case-word-size
 	 ((32)
 	  (%fxlength32 x^))
 	 ((64)

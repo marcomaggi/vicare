@@ -108,8 +108,7 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
@@ -3730,7 +3729,7 @@
 ;;
 
 (define wordshift
-  (case-word-size
+  (boot.case-word-size
    ((32) 2)
    ((64) 3)))
 
@@ -4119,7 +4118,7 @@
 ;;call-frames are laid out (search for livemask).
 ;;
 (define call-instruction-size
-  (case-word-size
+  (boot.case-word-size
    ((32) 5)
    ((64) 10)))
 

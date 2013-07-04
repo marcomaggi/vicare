@@ -32,6 +32,12 @@
 (library (vicare platform words)
   (export
 
+    ;; syntaxes
+    case-word-size	case-endianness
+
+    ;; auxiliary syntaxes
+    big				little
+
     ;; sizes
     SIZEOF_CHAR
     SIZEOF_SHORT	SIZEOF_INT
@@ -144,15 +150,6 @@
 
 ;;;; helpers
 
-(define-syntax case-word-size
-  (if (= 4 config.wordsize)
-      (syntax-rules ()
-	((_ ((32) . ?body-32) ((64) . ?body-64))
-	 (begin . ?body-32)))
-    (syntax-rules ()
-      ((_ ((32) . ?body-32) ((64) . ?body-64))
-       (begin . ?body-64)))))
-
 (define-syntax case-data-size
   (syntax-rules ()
     ((case-data-size 1
@@ -179,6 +176,44 @@
        ((4)	. ?body-4)
        ((8)	. ?body-8))
      (begin . ?body-8))))
+
+
+;;;; syntaxes
+
+(define-syntax case-word-size
+  (if (= 4 config.wordsize)
+      (syntax-rules ()
+	((_ ((32) . ?body-32) ((64) . ?body-64))
+	 (begin . ?body-32)))
+    (syntax-rules ()
+      ((_ ((32) . ?body-32) ((64) . ?body-64))
+       (begin . ?body-64)))))
+
+(define-syntax big	(syntax-rules ()))
+(define-syntax little	(syntax-rules ()))
+
+(define-syntax case-endianness
+  (lambda (stx)
+    (syntax-case stx (big little)
+      ((case-endianness (?who ?endianness)
+	 ((little)	. ?lit-body)
+	 ((big)		. ?big-body))
+       (and (identifier? #'?who)
+	    (identifier? #'?endianness))
+       #'(case-endianness (?who ?endianness)
+	   ((big)	. ?big-body)
+	   ((little)	. ?lit-body)))
+
+      ((case-endianness (?who ?endianness)
+	 ((big)		. ?big-body)
+	 ((little)	. ?lit-body))
+       (and (identifier? #'?who)
+	    (identifier? #'?endianness))
+       #'(case ?endianness
+	   ((big)	. ?big-body)
+	   ((little)	. ?lit-body)
+	   (else
+	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
 
 
 ;;;; constants

@@ -27,8 +27,7 @@
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
     (vicare unsafe operations)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
@@ -53,7 +52,7 @@
     (%assert (read-u8-as-char port) #\I)
     (%assert (read-u8-as-char port) #\K)
     (%assert (read-u8-as-char port) #\0)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (%assert (read-u8-as-char port) #\1))
      ((64)
@@ -427,7 +426,7 @@
   ;;Read from  the input PORT a  fixnum represented as  32-bit or 64-bit
   ;;value depending on the underlying platform's word size.
   ;;
-  (case-word-size
+  (boot.case-word-size
     ((32)
      (let* ((c0 (read-u8 port))
 	    (c1 (read-u8 port))
@@ -461,7 +460,7 @@
   ;;Read from the  input PORT an exact integer  represented as 32-bit or
   ;;64-bit value depending on the underlying platform's word size.
   ;;
-  (case-word-size
+  (boot.case-word-size
     ((32)	;32-bit platform
      (let* ((c0 (char->int (read-u8-as-char port)))
 	    (c1 (char->int (read-u8-as-char port)))

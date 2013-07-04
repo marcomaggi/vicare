@@ -127,8 +127,7 @@
     (ikarus system $pairs)
     (ikarus system $strings)
     (vicare arguments validation)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; helpers

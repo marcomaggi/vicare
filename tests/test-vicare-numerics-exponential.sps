@@ -30,7 +30,7 @@
   (numerics helpers)
   (ikarus system $numerics)
   (vicare checks)
-  (only (vicare language-extensions syntaxes)
+  (only (vicare platform words)
 	case-word-size))
 
 (check-set-mode! 'report-failed)

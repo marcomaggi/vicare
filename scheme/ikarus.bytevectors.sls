@@ -172,13 +172,13 @@
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
+    (only (vicare platform words)
+	  case-endianness big little)
     (except (vicare unsafe operations)
 	    $bytevector=
 	    $bytevector-total-length
 	    $bytevector-concatenate
 	    $bytevector-reverse-and-concatenate)
-    (only (vicare language-extensions syntaxes)
-	  case-endianness big little)
     (vicare arguments validation))
 
   (module (platform-endianness)

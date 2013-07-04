@@ -799,14 +799,14 @@
 (define-constant CP-REGISTER '%edi)
 
 (define-constant ALL-REGISTERS
-  (case-word-size
+  (boot.case-word-size
    ((32)
     '(%eax %edi %ebx %edx %ecx))
    ((64)
     '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15))))
 
 (define-constant NON-8BIT-REGISTERS
-  (case-word-size
+  (boot.case-word-size
    ((32)	'(%edi))
    ((64)	'(%edi))))
 
@@ -3852,7 +3852,7 @@
 	(else #f)))
 
     (define (small-operand? x)
-      (case-word-size
+      (boot.case-word-size
        ((32)
 	(not (mem? x)))
        ((64)
@@ -5190,4 +5190,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'make-primcall 'scheme-indent-function 1)
+;; eval: (put 'assemble-sources 'scheme-indent-function 1)
+;; eval: (put 'define-structure 'scheme-indent-function 1)
+;; eval: (put 'make-conditional 'scheme-indent-function 2)
+;; eval: (put 'struct-case 'scheme-indent-function 1)
 ;; End:

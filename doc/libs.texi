@@ -1491,10 +1491,34 @@ specific C language type.  The library @library{vicare platform words} implement
 such predicates and minimum/maximum range constants.
 
 @menu
+* words syntaxes::              Miscellaneous syntaxes.
 * words sizeof::                Knowing the size of C language types.
 * words predicates::            Verifying the range of integers.
 * words limits::                Exact integer range limits.
 @end menu
+
+@c page
+@node words syntaxes
+@subsection Miscellaneous syntaxes
+
+
+The following bindings are exported by the @library{vicare platform words}
+library.
+
+
+@deffn Syntax case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
+If the platform word size is 32-bit expand to @meta{body-32}, else
+expand to @meta{body-64}.
+@end deffn
+
+
+@deffn Syntax case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
+@deffnx Syntax case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
+@deffnx {Auxiliary Syntax} big
+@deffnx {Auxiliary Syntax} little
+If the platform endianness is little expand to @meta{lit-body}, else
+expand to @meta{big-body}.
+@end deffn
 
 @c page
 @node words sizeof

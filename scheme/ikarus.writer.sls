@@ -694,7 +694,7 @@
      ((pointer? x)
       (write-char* "#<pointer #x" p)
       (write-hex (pointer->integer x)
-		 (case-word-size
+		 (boot.case-word-size
 		  ((32)		8)
 		  ((64)		16))
 		 p)

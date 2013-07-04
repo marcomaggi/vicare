@@ -31,6 +31,8 @@
   (ikarus system $compnums)
   (ikarus system $numerics)
   (vicare language-extensions syntaxes)
+  (only (vicare platform words)
+	case-word-size)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

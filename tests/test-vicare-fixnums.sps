@@ -29,6 +29,8 @@
 (import (vicare)
   (ikarus system $fx)
   (vicare language-extensions syntaxes)
+  (only (vicare platform words)
+	case-word-size)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

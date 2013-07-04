@@ -45,7 +45,10 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d1
 ------------------------
 
-*
+* BACKWARDS    INCOMPATIBILITY   The    syntaxes   CASE-WORD-SIZE    and
+  CASE-ENDIANNESS  are  now exported  by  the  library (vicare  platform
+  words)  rather   than  by  the  library   (vicare  language-extensions
+  syntaxes).
 
 
 Notes for revision 0.3d0

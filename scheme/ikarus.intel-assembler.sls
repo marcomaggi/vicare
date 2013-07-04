@@ -31,8 +31,7 @@
     (vicare arguments validation)
     (prefix (vicare platform words)
 	    words.)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size))
+    (vicare language-extensions syntaxes))
 
   (include "ikarus.wordsize.scm")
 
@@ -316,7 +315,7 @@
 	    ac)))
 
   (define (IMM32 n ac)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (IMM n ac))
      ((64)
@@ -367,7 +366,7 @@
 	   ;;
 	   ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
 	   ;;
-	   (case-word-size
+	   (boot.case-word-size
 	    ((32)
 	     (cons* (byte n)
 		    (byte (sra n 8))
@@ -491,7 +490,7 @@
 	  ac))
 
   (define (imm32? x)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (imm? x))
      ((64)
@@ -919,7 +918,7 @@
   ;;   ls)
 
   (define (jmp-pc-relative code0 code1 dst ac)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (error 'intel-assembler "no pc-relative jumps in 32-bit mode"))
      ((64)
@@ -1278,7 +1277,7 @@
 	    (CODE #xE9 (cons `(local-relative . ,(label-name dst))
 			     ac)))
 	   ((imm? dst)
-	    (case-word-size
+	    (boot.case-word-size
 	     ((32)
 	      (CODE #xE9 (IMM32 dst ac)))
 	     ((64)
@@ -1293,7 +1292,7 @@
 	    (CODE #xE8 (cons `(local-relative . ,(label-name dst))
 			     ac)))
 	   ((imm? dst)
-	    (case-word-size
+	    (boot.case-word-size
 	     ((32)
 	      (CODE #xE8 (IMM32 dst ac)))
 	     ((64)

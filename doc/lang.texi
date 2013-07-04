@@ -2319,21 +2319,6 @@ The following bindings are exported by the library @library{vicare
 language-extensions syntaxes}.
 
 
-@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
-If the platform word size is 32-bit expand to @meta{body-32}, else
-expand to @meta{body-64}.
-@end defmac
-
-
-@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
-@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
-@deffnx {Auxiliary Syntax} big
-@deffnx {Auxiliary Syntax} little
-If the platform endianness is little expand to @meta{lit-body}, else
-expand to @meta{big-body}.
-@end deffn
-
-
 @deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
 @deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
 @deffnx {Auxiliary Syntax} else

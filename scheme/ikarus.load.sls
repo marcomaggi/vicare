@@ -65,7 +65,7 @@
 
 ;;The file extension of serialised FASL files.
 (define FASL-EXTENSION
-  (case-word-size
+  (boot.case-word-size
    ((32)	".vicare-32bit-fasl")
    ((64)	".vicare-64bit-fasl")))
 

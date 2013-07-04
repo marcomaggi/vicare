@@ -2093,7 +2093,7 @@
 
  (define-primop $fixnum->flonum unsafe
    ((V fx)
-    (case-word-size
+    (boot.case-word-size
       ((32)
        (with-tmp ((flo (prm 'alloc
 			    (K (align flonum-size))
@@ -3656,7 +3656,7 @@
 
  (define-primop $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (with-tmp ((flo (prm 'alloc
 			   (K (align flonum-size))
@@ -3716,7 +3716,7 @@
 
  (define-primop $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv idx flo)
-    (case-word-size
+    (boot.case-word-size
      ((32)
       (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
 	(with-tmp ((x0 (prm 'mref (T flo) (K off-flonum-data))))
@@ -3812,7 +3812,7 @@
      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
        ;;Store the single into the bytevector data area.
        (prm 'fl:store-single t (K off-bytevector-data))
-       (case-word-size
+       (boot.case-word-size
 	((32)
 	 ;;Load the single into a register.
 	 (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
@@ -3882,7 +3882,7 @@
       (else
        ;;NUM-OF-CHARS is a struct  instance representing recordized code
        ;;which, when evaluated, must return a fixnum.
-       (case-word-size
+       (boot.case-word-size
 	((32)
 	 (with-tmp ((str (prm 'alloc
 			      (align-code (T num-of-chars) disp-string-data)
@@ -3931,7 +3931,7 @@
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (prm 'mref32 (T str) (prm 'int+ (case-word-size
+       (prm 'mref32 (T str) (prm 'int+ (boot.case-word-size
 					;;IDX is a fixnum representing a
 					;;character  index  and its  raw
 					;;value  is also  the offset  in
@@ -3961,7 +3961,7 @@
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (prm 'mset32 (T str) (prm 'int+ (case-word-size
+       (prm 'mset32 (T str) (prm 'int+ (boot.case-word-size
 					;;IDX is a fixnum representing a
 					;;character  index  and its  raw
 					;;value  is also  the offset  in

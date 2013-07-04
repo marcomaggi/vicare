@@ -27,8 +27,7 @@
 	  base-rtd)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (except (vicare language-extensions syntaxes)
-	    case-word-size)
+    (vicare language-extensions syntaxes)
     (vicare unsafe operations))
 
   (include "ikarus.wordsize.scm")
@@ -50,7 +49,7 @@
 (define who 'fasl-write)
 
 (define fxshift
-  (case-word-size
+  (boot.case-word-size
    ((32)	2)
    ((64)	3)))
 
@@ -109,7 +108,7 @@
   ;;endian 32-bit integers.
   ;;
   (assert (int? x))
-  (case-word-size
+  (boot.case-word-size
    ((32)
     (write-int32 x port))
    ((64)
@@ -155,7 +154,7 @@
 	(put-tag #\I port)
 	(put-tag #\K port)
 	(put-tag #\0 port)
-	(put-tag (case-word-size
+	(put-tag (boot.case-word-size
 		  ((32)		#\1)
 		  ((64)		#\2))
 		 port)

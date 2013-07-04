@@ -47,7 +47,6 @@
     arguments-validation-forms
 
     ;; specialised CASE
-    case-word-size		case-endianness
     case-fixnums		$case-fixnums
     case-integers		$case-integers
     case-symbols		$case-symbols
@@ -57,10 +56,7 @@
     ;; miscellaneous dispatching
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
-    cond-exact-real-numeric-operand
-
-    ;; auxiliary syntaxes
-    big				little)
+    cond-exact-real-numeric-operand)
   (import (vicare)
     (for (prefix (vicare platform configuration)
 		 config.)
@@ -361,42 +357,6 @@
 			      (else V))))
 	   ...)
        . ?body))))
-
-
-(define-syntax case-word-size
-  (if (= 4 config.wordsize)
-      (syntax-rules ()
-	((_ ((32) . ?body-32) ((64) . ?body-64))
-	 (begin . ?body-32)))
-    (syntax-rules ()
-      ((_ ((32) . ?body-32) ((64) . ?body-64))
-       (begin . ?body-64)))))
-
-(define-syntax big	(syntax-rules ()))
-(define-syntax little	(syntax-rules ()))
-
-(define-syntax case-endianness
-  (lambda (stx)
-    (syntax-case stx (big little)
-      ((case-endianness (?who ?endianness)
-	 ((little)	. ?lit-body)
-	 ((big)		. ?big-body))
-       (and (identifier? #'?who)
-	    (identifier? #'?endianness))
-       #'(case-endianness (?who ?endianness)
-	   ((big)	. ?big-body)
-	   ((little)	. ?lit-body)))
-
-      ((case-endianness (?who ?endianness)
-	 ((big)		. ?big-body)
-	 ((little)	. ?lit-body))
-       (and (identifier? #'?who)
-	    (identifier? #'?endianness))
-       #'(case ?endianness
-	   ((big)	. ?big-body)
-	   ((little)	. ?lit-body)
-	   (else
-	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
 
 
 ;;;; specialised CASE
