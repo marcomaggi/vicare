@@ -1281,6 +1281,13 @@ Succeed if @var{obj} is a generalised C string and @var{obj.len} its
 optional length.
 @end deffn
 
+
+@deffn {Validation Clause} general-c-string*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C string and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
+@end deffn
+
 @c page
 @node args predefined genbuffers
 @subsubsection Validating generalised C buffer arguments
@@ -1339,8 +1346,22 @@ optional length.
 
 
 @deffn {Validation Clause} general-c-sticky-buffer* @var{obj} @var{obj.len}
-Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
-optional length.
+Succeed if @var{obj} is a generalised C sticky buffer and @var{obj.len}
+its optional length.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C buffer and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C sticky buffer and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
 @end deffn
 
 @c page

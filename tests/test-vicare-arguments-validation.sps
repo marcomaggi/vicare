@@ -2063,6 +2063,33 @@
       (doit #f general-c-string* (null-pointer) #f)
     => (list (null-pointer) #f))
 
+;;; --------------------------------------------------------------------
+;;; general-c-string*/false
+
+  (check
+      (doit #f general-c-string*/false "ciao" #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string*/false #f #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string*/false '#vu8(1 2 3) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string*/false (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string*/false (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-string*/false (null-pointer) #f)
+    => (list (null-pointer) #f))
+
   #t)
 
 
@@ -2151,6 +2178,29 @@
       (doit #f general-c-buffer* (null-pointer) #f)
     => (list (null-pointer) #f))
 
+;;; --------------------------------------------------------------------
+;;; general-c-buffer*/false
+
+  (check
+      (doit #f general-c-buffer*/false #f #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer*/false '#vu8(1 2 3) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer*/false (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer*/false (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer*/false (null-pointer) #f)
+    => (list (null-pointer) #f))
+
   #t)
 
 
@@ -2218,6 +2268,25 @@
 
   (check
       (doit #f general-c-sticky-buffer* (null-pointer) #f)
+    => (list (null-pointer) #f))
+
+;;; --------------------------------------------------------------------
+;;; general-c-sticky-buffer*/false
+
+  (check
+      (doit #f general-c-sticky-buffer*/false #f #f)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer*/false (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer*/false (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer*/false (null-pointer) #f)
     => (list (null-pointer) #f))
 
   #t)

@@ -50,6 +50,12 @@ Notes for revision 0.3d1
   words)  rather   than  by  the  library   (vicare  language-extensions
   syntaxes).
 
+* Added arguments validation clauses to (vicare arguments validation):
+
+     GENERAL-C-STRING*/FALSE
+     GENERAL-C-BUFFER*/FALSE
+     GENERAL-C-STICKY-BUFFER*/FALSE
+
 
 Notes for revision 0.3d0
 ------------------------
