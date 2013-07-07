@@ -93,6 +93,27 @@
   (check (six.cadddr (six.cddr ell))	=> 3)
   (check (six.cadddr (six.cdddr ell))	=> 2)
 
+  ;;When  this test  is  run  with the  source  optimiser inserted:  the
+  ;;mutation of  the pair must be  recognised; the CAR and  the CDR must
+  ;;precomputed after the mutation.
+  ;;
+  (check
+      (let ((b (six.cons 1 2)))
+	(six.set-car! b 10)
+	(six.set-cdr! b 20)
+	(vector (six.car b) (six.cdr b)))
+    => '#(10 20))
+
+  ;;The following  test will fail  because we are mutating  a hard-coded
+  ;;pair: the result is undefined.
+  ;;
+  ;; (check
+  ;;     (let ((b '(1 . 2)))
+  ;; 	(six.set-car! b 10)
+  ;; 	(six.set-cdr! b 20)
+  ;; 	(vector (six.car b) (six.cdr b)))
+  ;;   => '#(10 20))
+
   #f)
 
 
