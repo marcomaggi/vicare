@@ -56,6 +56,8 @@ Notes for revision 0.3d1
      GENERAL-C-BUFFER*/FALSE
      GENERAL-C-STICKY-BUFFER*/FALSE
 
+* Modified ADD-RESULT in (vicare checks) to return its argument.
+
 
 Notes for revision 0.3d0
 ------------------------

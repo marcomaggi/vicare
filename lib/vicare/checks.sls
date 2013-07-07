@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009, 2010, 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -284,7 +284,8 @@
 	 (list last-result (get-result)))))))
 
 (define (add-result value)
-  (result (cons value (result))))
+  (result (cons value (result)))
+  value)
 
 (define (get-result)
   (reverse (result)))

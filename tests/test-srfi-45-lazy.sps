@@ -157,7 +157,7 @@
 	 (add-result (srfi.force p))
 	 (set! x 10)
 	 (add-result (srfi.force p))))
-    => `(,(void) (6 6)))
+    => `(6 (6 6)))
 
   ;;From SRFI 40.
   (check
@@ -170,7 +170,7 @@
 			    (srfi.force f))
 			'second)))))
 	 (add-result (srfi.force f))))
-    => `(,(void) (second)))
+    => `(second (second)))
 
   ;;Due to John Shutt.
   (check
@@ -190,7 +190,7 @@
 	 (add-result (get-count))
 	 (add-result (srfi.force p))
 	 (add-result (get-count))))
-    => `(,(void) (5 0 10)))
+    => `(10 (5 0 10)))
 
   #t)
 
