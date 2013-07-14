@@ -7340,6 +7340,9 @@
     ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
     ;;
     (syntax-match stx ()
+      ((_ ?id)
+       (identifier? ?id)
+       (values ?id (bless '(syntax-rules ()))))
       ((_ ?id ?transformer-expr)
        (identifier? ?id)
        (values ?id ?transformer-expr))

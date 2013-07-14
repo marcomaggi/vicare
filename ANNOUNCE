@@ -58,6 +58,16 @@ Notes for revision 0.3d1
 
 * Modified ADD-RESULT in (vicare checks) to return its argument.
 
+* DEFINE-SYNTAX now accepts the syntax:
+
+    (define-syntax ?name)
+    ==> (define-syntax ?name (syntax-rules ()))
+
+  in addition to the R6RS one and the previously added:
+
+    (define-syntax (?name ?arg) ?body0 ?body ...)
+    ==> (define-syntax ?name (lambda (?arg) ?body0 ?body ...))
+
 
 Notes for revision 0.3d0
 ------------------------

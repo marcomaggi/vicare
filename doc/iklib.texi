@@ -126,6 +126,27 @@ process.
 @subsection Additional binding syntaxes
 
 
+@deffn Syntax define-syntax @meta{name}
+@deffnx Syntax define-syntax @meta{name} @meta{transformer}
+@deffnx Syntax define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
+Like @func{define-syntax} defined by @rnrs{6}, but additionally accepts
+the syntax:
+
+@example
+(define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax @meta{name} (lambda (@meta{arg}) @metao{body} @meta{body} @dots{}))
+@end example
+
+@noindent
+and the syntax:
+
+@example
+(define-syntax @meta{name})
+@expansion{} (define-syntax @meta{name} (syntax-rules ()))
+@end example
+@end deffn
+
+
 @deffn Syntax define-constant @meta{var} @meta{expr}
 Like @func{define} but create an immutable binding.
 
