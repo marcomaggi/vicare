@@ -565,9 +565,10 @@
   (define who 'flmax)
 
   (define ($flmax x y)
-    (if ($fl< x y)
-	y
-      x))
+    (cond ((flnan? x)	+nan.0)
+	  ((flnan? y)	+nan.0)
+	  (($fl< x y)	y)
+	  (else		x)))
 
   (define flmax
     (case-lambda
@@ -599,7 +600,10 @@
 (module (flmin $flmin)
 
   (define ($flmin x y)
-    (if ($fl< x y) x y))
+    (cond ((flnan? x)	+nan.0)
+	  ((flnan? y)	+nan.0)
+	  (($fl< x y)	x)
+	  (else		y)))
 
   (define who 'flmin)
 
