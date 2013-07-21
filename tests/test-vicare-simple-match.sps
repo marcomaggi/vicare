@@ -1822,6 +1822,34 @@
   #t)
 
 
+(parametrise ((check-test-name	'syntax))
+
+  (check
+      (match '(1 2 3)
+	((syntax (1 2 3))
+	 #t)
+	(else #f))
+    => #t)
+
+  (check	;match an identifier
+      (let ((ciao #f))
+	(match #'ciao
+	  ((syntax ciao (ciao))
+	   #t)
+	  (else #f)))
+    => #t)
+
+  (check	;match pattern variables
+      (let ((ciao #f))
+	(match '(1 2 3)
+	  ((syntax (a b c))
+	   (syntax->datum #'b))
+	  (else #f)))
+    => 2)
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   (check	;no match

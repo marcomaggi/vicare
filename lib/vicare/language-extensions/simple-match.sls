@@ -32,7 +32,7 @@
     match #;match-debug
 
     ;; auxiliary keywords
-    else let quote quasiquote and or not apply eval ... _ =>)
+    else let quote quasiquote and or not apply eval syntax ... _ =>)
   (import (ikarus)
     (vicare unsafe operations)
     (only (ikarus system $bytevectors)
@@ -225,7 +225,7 @@ is expanded to:
 				 wrapped-body?))
   (with-syntax (((expr)        (generate-temporaries #'(#f)))
 		(IN-EXPR       in-expr-stx))
-    (syntax-case pattern-stx (let quote quasiquote and or not apply eval)
+    (syntax-case pattern-stx (let quote quasiquote and or not apply eval syntax)
 
       ;;This matches  the end of  a clause when  the clause is  a proper
       ;;list.
@@ -439,6 +439,32 @@ is expanded to:
 	   (if (equal? expr (quasiquote ?datum))
 	       #,success-stx
 	     #,failure-stx)))
+
+;;; --------------------------------------------------------------------
+;;; syntax
+
+      ;;Match a syntax object.
+      ;;
+      ((syntax ?pattern)
+       #`(let ((expr IN-EXPR))
+	   (syntax-case expr ()
+	     (?pattern
+	      #,success-stx)
+	     (_
+	      #,failure-stx))))
+
+      ;;Match a syntax object.  Literals specification.
+      ;;
+      ((syntax ?pattern (?literal ...))
+       (let ((lits #'(?literal ...)))
+	 (if (for-all symbol? (syntax->datum lits))
+	     #`(let ((expr IN-EXPR))
+		 (syntax-case expr (?literal ...)
+		   (?pattern
+		    #,success-stx)
+		   (_
+		    #,failure-stx)))
+	   (synner "expected identifiers in literals list" lits))))
 
 ;;; --------------------------------------------------------------------
 ;;; ellipsis

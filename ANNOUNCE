@@ -68,6 +68,10 @@ Notes for revision 0.3d1
     (define-syntax (?name ?arg) ?body0 ?body ...)
     ==> (define-syntax ?name (lambda (?arg) ?body0 ?body ...))
 
+* The MATCH  syntax from  (vicare language-extensions  simple-match) now
+  accepts a  SYNTAX pattern  which works  almost like  the pattern  of a
+  SYNTAX-CASE use.
+
 
 Notes for revision 0.3d0
 ------------------------
