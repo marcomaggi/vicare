@@ -696,7 +696,8 @@
       (let recur ((sexp libname))
 	(syntax-match sexp ()
 	  (((?vers* ...))
-	   (for-all library-version-number? ?vers*) ;this is the fender
+	   (for-all library-version-number? (map syntax->datum ?vers*)) ;this is the fender
+	   #;(for-all library-version-number? ?vers*) ;this is the fender
 	   (values '() (map syntax->datum ?vers*)))
 
 	  ((?id . ?rest)
