@@ -475,6 +475,9 @@ main (int argc, const char *const argv[])
     HAVE_IN_CLASSB\n\
     HAVE_IN_CLASSC\n\
     HAVE_IN_CLASSD\n\
+    HAVE_IN_MULTICAST\n\
+    HAVE_IN_EXPERIMENTAL\n\
+    HAVE_IN_BADCLASS\n\
     )\n\
   (import (rnrs))\n\
 \n\
@@ -3363,6 +3366,27 @@ printf("(define-inline-constant HAVE_IN_CLASSC %s)\n",
   );
 printf("(define-inline-constant HAVE_IN_CLASSD %s)\n",
 #ifdef HAVE_IN_CLASSD
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_MULTICAST %s)\n",
+#ifdef HAVE_IN_MULTICAST
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_EXPERIMENTAL %s)\n",
+#ifdef HAVE_IN_EXPERIMENTAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_BADCLASS %s)\n",
+#ifdef HAVE_IN_BADCLASS
   "#t"
 #else
   "#f"

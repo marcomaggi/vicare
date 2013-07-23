@@ -296,6 +296,36 @@ ikrt_glibc_IN_CLASSD (ikptr s_addr, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_glibc_IN_MULTICAST (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_MULTICAST
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_MULTICAST(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN_EXPERIMENTAL (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_EXPERIMENTAL
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_EXPERIMENTAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN_BADCLASS (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_BADCLASS
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_BADCLASS(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

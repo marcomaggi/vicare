@@ -210,6 +210,9 @@ library.
 @defunx IN_CLASSB @var{addr}
 @defunx IN_CLASSC @var{addr}
 @defunx IN_CLASSD @var{addr}
+@defunx IN_MULTICAST @var{addr}
+@defunx IN_EXPERIMENTAL @var{addr}
+@defunx IN_BADCLASS @var{addr}
 Return @true{} if @var{addr} is an 32-bit exact integer representing, in
 native endianness, an IPv4 host address in the specified address class.
 

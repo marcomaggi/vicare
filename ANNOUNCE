@@ -86,6 +86,7 @@ Notes for revision 0.3d1
 * Added the following bindings to (vicare glibc):
 
      IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD
+     IN_MULTICAST IN_EXPERIMENTAL IN_BADCLASS
 
 
 Notes for revision 0.3d0

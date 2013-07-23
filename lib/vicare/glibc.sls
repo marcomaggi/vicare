@@ -45,6 +45,8 @@
     if-nameindex
     IN_CLASSA			IN_CLASSB
     IN_CLASSC			IN_CLASSD
+    IN_MULTICAST		IN_EXPERIMENTAL
+    IN_BADCLASS
 
     ;; mathematics
     csin		ccos		ctan
@@ -251,6 +253,24 @@
   (with-arguments-validation (who)
       ((word-u32	addr))
     (capi.glibc-IN_CLASSD addr)))
+
+(define (IN_MULTICAST addr)
+  (define who 'IN_MULTICAST)
+  (with-arguments-validation (who)
+      ((word-u32	addr))
+    (capi.glibc-IN_MULTICAST addr)))
+
+(define (IN_EXPERIMENTAL addr)
+  (define who 'IN_EXPERIMENTAL)
+  (with-arguments-validation (who)
+      ((word-u32	addr))
+    (capi.glibc-IN_EXPERIMENTAL addr)))
+
+(define (IN_BADCLASS addr)
+  (define who 'IN_BADCLASS)
+  (with-arguments-validation (who)
+      ((word-u32	addr))
+    (capi.glibc-IN_BADCLASS addr)))
 
 
 ;;;; mathematics

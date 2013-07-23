@@ -194,6 +194,27 @@
     	  (glibc.IN_CLASSD addr))
       => #f)
 
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_MULTICAST addr))
+      => #f)
+
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_EXPERIMENTAL addr))
+      => #f)
+
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_BADCLASS addr))
+      => #f)
+
     #f)
 
 

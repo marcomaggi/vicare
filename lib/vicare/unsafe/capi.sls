@@ -313,6 +313,8 @@
 
     glibc-IN_CLASSA			glibc-IN_CLASSB
     glibc-IN_CLASSC			glibc-IN_CLASSD
+    glibc-IN_MULTICAST			glibc-IN_EXPERIMENTAL
+    glibc-IN_BADCLASS
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -1799,6 +1801,15 @@
 
 (define-inline (glibc-IN_CLASSD addr)
   (foreign-call "ikrt_glibc_IN_CLASSD" addr))
+
+(define-inline (glibc-IN_MULTICAST addr)
+  (foreign-call "ikrt_glibc_IN_MULTICAST" addr))
+
+(define-inline (glibc-IN_EXPERIMENTAL addr)
+  (foreign-call "ikrt_glibc_IN_EXPERIMENTAL" addr))
+
+(define-inline (glibc-IN_BADCLASS addr)
+  (foreign-call "ikrt_glibc_IN_BADCLASS" addr))
 
 
 ;;;; platform API for file descriptors
