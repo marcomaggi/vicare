@@ -72,6 +72,13 @@ Notes for revision 0.3d1
   accepts a  SYNTAX pattern  which works  almost like  the pattern  of a
   SYNTAX-CASE use.
 
+* Fixed bug preventing loading of  libraries with version numbers in the
+  name.
+
+* Added constants definitions to library (vicare platform constants):
+
+  - from "/usr/include/netinet/in.h": IPPROTO_*, IPPORT_*
+
 
 Notes for revision 0.3d0
 ------------------------

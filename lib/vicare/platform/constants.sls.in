@@ -465,6 +465,33 @@
 ;;;; For "getrusage()".
     RUSAGE_SELF		RUSAGE_CHILDREN		RUSAGE_THREAD
 
+;;;; Constants from "/usr/include/netinet/in.h"
+    IPPROTO_IP		IPPROTO_HOPOPTS		IPPROTO_ICMP
+    IPPROTO_IGMP	IPPROTO_IPIP		IPPROTO_TCP
+    IPPROTO_EGP		IPPROTO_PUP		IPPROTO_UDP
+    IPPROTO_IDP		IPPROTO_TP		IPPROTO_DCCP
+    IPPROTO_IPV6	IPPROTO_ROUTING		IPPROTO_FRAGMENT
+    IPPROTO_RSVP	IPPROTO_GRE		IPPROTO_ESP
+    IPPROTO_AH		IPPROTO_ICMPV6		IPPROTO_NONE
+    IPPROTO_DSTOPTS	IPPROTO_MTP		IPPROTO_ENCAP
+    IPPROTO_PIM		IPPROTO_COMP		IPPROTO_SCTP
+    IPPROTO_UDPLITE	IPPROTO_RAW
+
+    IPPORT_ECHO		IPPORT_DISCARD		IPPORT_SYSTAT
+    IPPORT_DAYTIME	IPPORT_NETSTAT		IPPORT_FTP
+    IPPORT_TELNET	IPPORT_SMTP		IPPORT_TIMESERVER
+    IPPORT_NAMESERVER	IPPORT_WHOIS		IPPORT_MTP
+    IPPORT_TFTP		IPPORT_RJE		IPPORT_FINGER
+    IPPORT_TTYLINK	IPPORT_SUPDUP		IPPORT_EXECSERVER
+    IPPORT_LOGINSERVER	IPPORT_CMDSERVER	IPPORT_EFSSERVER
+    IPPORT_BIFFUDP	IPPORT_WHOSERVER	IPPORT_ROUTESERVER
+    ;;These have been already exported above.
+    #;IPPORT_RESERVED	#;IPPORT_USERRESERVED
+
+    IN_CLASSA_NET	IN_CLASSA_NSHIFT	IN_CLASSA_HOST		IN_CLASSA_MAX
+    IN_CLASSB_NET	IN_CLASSB_NSHIFT	IN_CLASSB_HOST		IN_CLASSB_MAX
+    IN_CLASSC_NET	IN_CLASSC_NSHIFT	IN_CLASSC_HOST
+
 ;;; --------------------------------------------------------------------
 
 ;;; errno codes, reexported from (vicare platform errno)
@@ -1497,6 +1524,80 @@
 (define-inline-constant RUSAGE_SELF		@VALUEOF_RUSAGE_SELF@)
 (define-inline-constant RUSAGE_CHILDREN		@VALUEOF_RUSAGE_CHILDREN@)
 (define-inline-constant RUSAGE_THREAD		@VALUEOF_RUSAGE_THREAD@)
+
+;;; Constants from "/usr/include/netinet/in.h"
+(define-inline-constant IPPROTO_IP		@VALUEOF_IPPROTO_IP@)
+(define-inline-constant IPPROTO_HOPOPTS		@VALUEOF_IPPROTO_HOPOPTS@)
+(define-inline-constant IPPROTO_ICMP		@VALUEOF_IPPROTO_ICMP@)
+(define-inline-constant IPPROTO_IGMP		@VALUEOF_IPPROTO_IGMP@)
+(define-inline-constant IPPROTO_IPIP		@VALUEOF_IPPROTO_IPIP@)
+(define-inline-constant IPPROTO_TCP		@VALUEOF_IPPROTO_TCP@)
+(define-inline-constant IPPROTO_EGP		@VALUEOF_IPPROTO_EGP@)
+(define-inline-constant IPPROTO_PUP		@VALUEOF_IPPROTO_PUP@)
+(define-inline-constant IPPROTO_UDP		@VALUEOF_IPPROTO_UDP@)
+(define-inline-constant IPPROTO_IDP		@VALUEOF_IPPROTO_IDP@)
+(define-inline-constant IPPROTO_TP		@VALUEOF_IPPROTO_TP@)
+(define-inline-constant IPPROTO_DCCP		@VALUEOF_IPPROTO_DCCP@)
+(define-inline-constant IPPROTO_IPV6		@VALUEOF_IPPROTO_IPV6@)
+(define-inline-constant IPPROTO_ROUTING		@VALUEOF_IPPROTO_ROUTING@)
+(define-inline-constant IPPROTO_FRAGMENT	@VALUEOF_IPPROTO_FRAGMENT@)
+(define-inline-constant IPPROTO_RSVP		@VALUEOF_IPPROTO_RSVP@)
+(define-inline-constant IPPROTO_GRE		@VALUEOF_IPPROTO_GRE@)
+(define-inline-constant IPPROTO_ESP		@VALUEOF_IPPROTO_ESP@)
+(define-inline-constant IPPROTO_AH		@VALUEOF_IPPROTO_AH@)
+(define-inline-constant IPPROTO_ICMPV6		@VALUEOF_IPPROTO_ICMPV6@)
+(define-inline-constant IPPROTO_NONE		@VALUEOF_IPPROTO_NONE@)
+(define-inline-constant IPPROTO_DSTOPTS		@VALUEOF_IPPROTO_DSTOPTS@)
+(define-inline-constant IPPROTO_MTP		@VALUEOF_IPPROTO_MTP@)
+(define-inline-constant IPPROTO_ENCAP		@VALUEOF_IPPROTO_ENCAP@)
+(define-inline-constant IPPROTO_PIM		@VALUEOF_IPPROTO_PIM@)
+(define-inline-constant IPPROTO_COMP		@VALUEOF_IPPROTO_COMP@)
+(define-inline-constant IPPROTO_SCTP		@VALUEOF_IPPROTO_SCTP@)
+(define-inline-constant IPPROTO_UDPLITE		@VALUEOF_IPPROTO_UDPLITE@)
+(define-inline-constant IPPROTO_RAW		@VALUEOF_IPPROTO_RAW@)
+
+;;; Constants from "/usr/include/netinet/in.h"
+(define-inline-constant IPPORT_ECHO		@VALUEOF_IPPORT_ECHO@)
+(define-inline-constant IPPORT_DISCARD		@VALUEOF_IPPORT_DISCARD@)
+(define-inline-constant IPPORT_SYSTAT		@VALUEOF_IPPORT_SYSTAT@)
+(define-inline-constant IPPORT_DAYTIME		@VALUEOF_IPPORT_DAYTIME@)
+(define-inline-constant IPPORT_NETSTAT		@VALUEOF_IPPORT_NETSTAT@)
+(define-inline-constant IPPORT_FTP		@VALUEOF_IPPORT_FTP@)
+(define-inline-constant IPPORT_TELNET		@VALUEOF_IPPORT_TELNET@)
+(define-inline-constant IPPORT_SMTP		@VALUEOF_IPPORT_SMTP@)
+(define-inline-constant IPPORT_TIMESERVER	@VALUEOF_IPPORT_TIMESERVER@)
+(define-inline-constant IPPORT_NAMESERVER	@VALUEOF_IPPORT_NAMESERVER@)
+(define-inline-constant IPPORT_WHOIS		@VALUEOF_IPPORT_WHOIS@)
+(define-inline-constant IPPORT_MTP		@VALUEOF_IPPORT_MTP@)
+(define-inline-constant IPPORT_TFTP		@VALUEOF_IPPORT_TFTP@)
+(define-inline-constant IPPORT_RJE		@VALUEOF_IPPORT_RJE@)
+(define-inline-constant IPPORT_FINGER		@VALUEOF_IPPORT_FINGER@)
+(define-inline-constant IPPORT_TTYLINK		@VALUEOF_IPPORT_TTYLINK@)
+(define-inline-constant IPPORT_SUPDUP		@VALUEOF_IPPORT_SUPDUP@)
+(define-inline-constant IPPORT_EXECSERVER	@VALUEOF_IPPORT_EXECSERVER@)
+(define-inline-constant IPPORT_LOGINSERVER	@VALUEOF_IPPORT_LOGINSERVER@)
+(define-inline-constant IPPORT_CMDSERVER	@VALUEOF_IPPORT_CMDSERVER@)
+(define-inline-constant IPPORT_EFSSERVER	@VALUEOF_IPPORT_EFSSERVER@)
+(define-inline-constant IPPORT_BIFFUDP		@VALUEOF_IPPORT_BIFFUDP@)
+(define-inline-constant IPPORT_WHOSERVER	@VALUEOF_IPPORT_WHOSERVER@)
+(define-inline-constant IPPORT_ROUTESERVER	@VALUEOF_IPPORT_ROUTESERVER@)
+;;These have been already defined above.
+;;
+;;(define-inline-constant IPPORT_RESERVED		@VALUEOF_IPPORT_RESERVED@)
+;;(define-inline-constant IPPORT_USERRESERVED	@VALUEOF_IPPORT_USERRESERVED@)
+
+;;; Constants from "/usr/include/netinet/in.h"
+(define-inline-constant IN_CLASSA_NET		@VALUEOF_IN_CLASSA_NET@)
+(define-inline-constant IN_CLASSA_NSHIFT	@VALUEOF_IN_CLASSA_NSHIFT@)
+(define-inline-constant IN_CLASSA_HOST		@VALUEOF_IN_CLASSA_HOST@)
+(define-inline-constant IN_CLASSA_MAX		@VALUEOF_IN_CLASSA_MAX@)
+(define-inline-constant IN_CLASSB_NET		@VALUEOF_IN_CLASSB_NET@)
+(define-inline-constant IN_CLASSB_NSHIFT	@VALUEOF_IN_CLASSB_NSHIFT@)
+(define-inline-constant IN_CLASSB_HOST		@VALUEOF_IN_CLASSB_HOST@)
+(define-inline-constant IN_CLASSB_MAX		@VALUEOF_IN_CLASSB_MAX@)
+(define-inline-constant IN_CLASSC_NET		@VALUEOF_IN_CLASSC_NET@)
+(define-inline-constant IN_CLASSC_NSHIFT	@VALUEOF_IN_CLASSC_NSHIFT@)
+(define-inline-constant IN_CLASSC_HOST		@VALUEOF_IN_CLASSC_HOST@)
 
 
 ;;;; h_errno friendly interface
