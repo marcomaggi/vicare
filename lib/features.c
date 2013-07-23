@@ -468,8 +468,8 @@ main (int argc, const char *const argv[])
     HAVE_Y0\n\
     HAVE_Y1\n\
     HAVE_YN\n\
-    HAVE_fstat\n\
-    HAVE_ioctl\n\
+    HAVE_FSTAT\n\
+    HAVE_IOCTL\n\
     RL_READLINE_VERSION)\n\
   (import (rnrs))\n\
 \n\
@@ -3312,15 +3312,15 @@ printf("(define-inline-constant HAVE_YN %s)\n",
   "#f"
 #endif
   );
-printf("(define-inline-constant HAVE_fstat %s)\n",
-#ifdef HAVE_fstat
+printf("(define-inline-constant HAVE_FSTAT %s)\n",
+#ifdef HAVE_FSTAT
   "#t"
 #else
   "#f"
 #endif
   );
-printf("(define-inline-constant HAVE_ioctl %s)\n",
-#ifdef HAVE_ioctl
+printf("(define-inline-constant HAVE_IOCTL %s)\n",
+#ifdef HAVE_IOCTL
   "#t"
 #else
   "#f"
