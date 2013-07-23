@@ -229,6 +229,7 @@
     make-sockaddr_in			make-sockaddr_in6
     sockaddr_in.in_addr			sockaddr_in6.in6_addr
     sockaddr_in.in_port			sockaddr_in6.in6_port
+    sockaddr_in.in_addr.number
     in6addr_loopback			in6addr_any
     inet-aton				inet-ntoa
     inet-pton				inet-ntop
@@ -2935,6 +2936,13 @@
       (if (bytevector? rv)
 	  rv
 	(error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+
+(define (sockaddr_in.in_addr.number sockaddr)
+  (define who 'sockaddr_in.in_addr.number)
+  (with-arguments-validation (who)
+      ((bytevector	sockaddr))
+    (let ((rv (capi.posix-sockaddr_in.in_addr.number sockaddr)))
+      (or rv (error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
 
 (define (sockaddr_in.in_port sockaddr)
   (define who 'sockaddr_in.in_port)

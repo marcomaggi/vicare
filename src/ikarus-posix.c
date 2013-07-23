@@ -2509,6 +2509,9 @@ ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
     socket_address->sin_port   = (unsigned short int)port;
     /* fprintf(stderr, "%s: field %u\n", __func__, (uint16_t)(ntohs(socket_address->sin_port))); */
     host_address	       = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
+    /* Notice that on,  x86 platforms, the bytevector "#vu8(127  0 0 1)"
+       must become  the "uint32_t sin_addr"  number in host  byte order:
+       "0x7f000001". */
     memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
   }
   pcb->root1 = NULL;
@@ -2534,6 +2537,27 @@ ikrt_posix_sockaddr_in_in_addr (ikptr s_socket_address, ikpcb * pcb)
       host_address   = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
       socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
       memcpy(host_address, &(socket_address->sin_addr), BV_LEN);
+    }
+    pcb->root0 = NULL;
+    return s_host_address;
+  } else
+    return IK_FALSE_OBJECT;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_sockaddr_in_in_addr_number (ikptr s_socket_address, ikpcb * pcb)
+{
+#if ((defined HAVE_STRUCT_SOCKADDR_IN) && (defined HAVE_NTOHL))
+  struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
+  if (AF_INET == socket_address->sin_family) {
+#undef BV_LEN
+#define BV_LEN	sizeof(struct in_addr)
+    ikptr		s_host_address;
+    pcb->root0 = &s_socket_address;
+    {
+      s_host_address = ika_integer_from_uint32(pcb, ntohl(socket_address->sin_addr.s_addr));
     }
     pcb->root0 = NULL;
     return s_host_address;

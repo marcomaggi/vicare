@@ -79,6 +79,14 @@ Notes for revision 0.3d1
 
   - from "/usr/include/netinet/in.h": IPPROTO_*, IPPORT_*
 
+* Added the following bindigns to (vicare posix):
+
+     sockaddr_in.in_addr.number
+
+* Added the following bindings to (vicare glibc):
+
+     IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD
+
 
 Notes for revision 0.3d0
 ------------------------

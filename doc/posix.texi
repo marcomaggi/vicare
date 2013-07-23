@@ -2230,15 +2230,42 @@ before storing the value in the data structure.
 
 
 @defun sockaddr_in.in_addr @var{socket-address}
+@defunx sockaddr_in.in_addr.number @var{socket-address}
 @defunx sockaddr_in.in_port @var{socket-address}
 Given a bytevector @var{socket-address} holding a @code{struct
 sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
-return them as bytevector holding the corresponding @code{struct
-in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
-an exception is raised.
+return them.  If the data in @var{socket_address} is invalid: an
+exception is raised.
 
-Internally convert the port number to host byte order using
+@func{sockaddr_in.in_addr} returns @code{in_addr} as bytevector holding
+the corresponding @code{struct in_addr}.
+
+@example
+(let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+  (px.sockaddr_in.in_addr sockaddr))
+@result{} #vu8(127 0 0 1)
+@end example
+
+@func{sockaddr_in.in_addr.number} returns @code{in_addr} as 32-bit
+unsigned exact integer; internally it converts the address number to
+host byte order using @cfunc{ntohl} after the extraction of the value
+from the data structure.
+
+@example
+(let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+  (px.sockaddr_in.in_addr.number sockaddr))
+@result{} #x7f000001
+@end example
+
+@func{sockaddr_in.in_port} returns @code{in_port} as exact integer;
+internally it converts the port number to host byte order using
 @cfunc{ntohs} after the extraction of the value from the data structure.
+
+@example
+(let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+  (px.sockaddr_in.in_port sockaddr))
+@result{} 88
+@end example
 @end defun
 
 @c page

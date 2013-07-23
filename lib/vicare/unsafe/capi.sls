@@ -284,6 +284,7 @@
     posix-make-sockaddr_un		posix-sockaddr_un.pathname
     posix-make-sockaddr_in		posix-make-sockaddr_in6
     posix-sockaddr_in.in_addr		posix-sockaddr_in6.in6_addr
+    posix-sockaddr_in.in_addr.number
     posix-sockaddr_in.in_port		posix-sockaddr_in6.in6_port
     posix-in6addr_loopback		posix-in6addr_any
     posix-inet_aton			posix-inet_ntoa
@@ -309,6 +310,9 @@
     posix-setsockopt/int		posix-getsockopt/int
     posix-setsockopt/size_t		posix-getsockopt/size_t
     posix-setsockopt/linger		posix-getsockopt/linger
+
+    glibc-IN_CLASSA			glibc-IN_CLASSB
+    glibc-IN_CLASSC			glibc-IN_CLASSD
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -1601,6 +1605,9 @@
 (define-inline (posix-sockaddr_in.in_addr sockaddr)
   (foreign-call "ikrt_posix_sockaddr_in_in_addr" sockaddr))
 
+(define-inline (posix-sockaddr_in.in_addr.number sockaddr)
+  (foreign-call "ikrt_posix_sockaddr_in_in_addr_number" sockaddr))
+
 (define-inline (posix-sockaddr_in.in_port sockaddr)
   (foreign-call "ikrt_posix_sockaddr_in_in_port" sockaddr))
 
@@ -1778,6 +1785,20 @@
 
 (define-inline (posix-getsockopt/linger sock)
   (foreign-call "ikrt_posix_getsockopt_linger" sock))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-IN_CLASSA addr)
+  (foreign-call "ikrt_glibc_IN_CLASSA" addr))
+
+(define-inline (glibc-IN_CLASSB addr)
+  (foreign-call "ikrt_glibc_IN_CLASSB" addr))
+
+(define-inline (glibc-IN_CLASSC addr)
+  (foreign-call "ikrt_glibc_IN_CLASSC" addr))
+
+(define-inline (glibc-IN_CLASSD addr)
+  (foreign-call "ikrt_glibc_IN_CLASSD" addr))
 
 
 ;;;; platform API for file descriptors

@@ -84,6 +84,21 @@
     => '(#vu8(1 2 3 4) 88))
 
   (check
+      (let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+	(px.sockaddr_in.in_addr sockaddr))
+    => '#vu8(127 0 0 1))
+
+  (check
+      (let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+	(px.sockaddr_in.in_port sockaddr))
+    => 88)
+
+  (check
+      (let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 88)))
+	(px.sockaddr_in.in_addr.number sockaddr))
+    => #x7f000001)
+
+  (check
       (let* ((addr	(let ((bv (make-bytevector 4)))
 			  (bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
 			  bv))

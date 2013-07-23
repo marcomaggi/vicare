@@ -7,7 +7,7 @@
 
 	Interface to GNU C Library functions.
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -246,6 +246,52 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
   }
   if_freenameindex(arry);
   return s_alist;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Networking.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_glibc_IN_CLASSA (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_CLASSA
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_CLASSA(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN_CLASSB (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_CLASSB
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_CLASSB(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN_CLASSC (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_CLASSC
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_CLASSC(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN_CLASSD (ikptr s_addr, ikpcb * pcb)
+{
+#ifdef HAVE_IN_CLASSD
+  uint32_t	addr = ik_integer_to_uint32(s_addr);
+  return IK_BOOLEAN_FROM_INT(IN_CLASSD(addr));
 #else
   feature_failure(__func__);
 #endif

@@ -470,7 +470,12 @@ main (int argc, const char *const argv[])
     HAVE_YN\n\
     HAVE_FSTAT\n\
     HAVE_IOCTL\n\
-    RL_READLINE_VERSION)\n\
+    RL_READLINE_VERSION\n\
+    HAVE_IN_CLASSA\n\
+    HAVE_IN_CLASSB\n\
+    HAVE_IN_CLASSC\n\
+    HAVE_IN_CLASSD\n\
+    )\n\
   (import (rnrs))\n\
 \n\
 ;;;; helpers\n\
@@ -3328,6 +3333,36 @@ printf("(define-inline-constant HAVE_IOCTL %s)\n",
   );
 printf("(define-inline-constant RL_READLINE_VERSION %s)\n",
 #ifdef RL_READLINE_VERSION
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+
+printf("(define-inline-constant HAVE_IN_CLASSA %s)\n",
+#ifdef HAVE_IN_CLASSA
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_CLASSB %s)\n",
+#ifdef HAVE_IN_CLASSB
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_CLASSC %s)\n",
+#ifdef HAVE_IN_CLASSC
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN_CLASSD %s)\n",
+#ifdef HAVE_IN_CLASSD
   "#t"
 #else
   "#f"

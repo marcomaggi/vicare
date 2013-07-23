@@ -1375,7 +1375,10 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
   AC_CHECK_FUNCS([rand srand])
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
-  AC_CHECK_FUNCS([wordexp wordfree])])
+  AC_CHECK_FUNCS([wordexp wordfree])
+
+  VICARE_CHECK_NETINET_IN_CLASS_MACROS([IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD])
+  ])
 
 AC_CACHE_SAVE
 

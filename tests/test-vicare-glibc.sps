@@ -122,6 +122,84 @@
   #t)
 
 
+(parametrise ((check-test-name	'networking))
+
+  (let ((host-address.class-A '#vu8(0 0 0 1))
+	(host-address.class-B '#vu8(128 0 0 1))
+	(host-address.class-C '#vu8(192 0 0 1)))
+
+    (check
+	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+	  (glibc.IN_CLASSA addr))
+      => #t)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-B 88))))
+    	  (glibc.IN_CLASSA addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-C 88))))
+    	  (glibc.IN_CLASSA addr))
+      => #f)
+
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_CLASSB addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-B 88))))
+    	  (glibc.IN_CLASSB addr))
+      => #t)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-C 88))))
+    	  (glibc.IN_CLASSB addr))
+      => #f)
+
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_CLASSC addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-B 88))))
+    	  (glibc.IN_CLASSC addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-C 88))))
+    	  (glibc.IN_CLASSC addr))
+      => #t)
+
+    ;;;
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-A 88))))
+    	  (glibc.IN_CLASSD addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-B 88))))
+    	  (glibc.IN_CLASSD addr))
+      => #f)
+
+    (check
+    	(let ((addr (px.sockaddr_in.in_addr.number (px.make-sockaddr_in host-address.class-C 88))))
+    	  (glibc.IN_CLASSD addr))
+      => #f)
+
+    #f)
+
+
+  #t)
+
+
 (parametrise ((check-test-name	'math))
 
   (define (almost= X Y)

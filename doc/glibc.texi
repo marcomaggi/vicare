@@ -30,6 +30,7 @@ functions, else the behaviour is undefined.
 * glibc temp::                  Temporary files and directories.
 * glibc sync::                  File system synchronisation.
 * glibc socket::                Network sockets.
+* glibc net::                   Networking.
 * glibc math::                  Mathematics.
 * glibc random::                Pseudo--random numbers.
 * glibc match::                 Pattern matching, globbing and
@@ -195,6 +196,37 @@ gethostbyname2}.  Like @func{gethostbyname} but allows the selection of
 the address type with the parameter @var{addrtype} which must be
 @code{AF_INET} or @code{AF_INET6}.
 @end defun
+
+@c page
+@node glibc net
+@section Networking
+
+
+The following bindings are exported by the @library{vicare glibc}
+library.
+
+
+@defun IN_CLASSA @var{addr}
+@defunx IN_CLASSB @var{addr}
+@defunx IN_CLASSC @var{addr}
+@defunx IN_CLASSD @var{addr}
+Return @true{} if @var{addr} is an 32-bit exact integer representing, in
+native endianness, an IPv4 host address in the specified address class.
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (prefix (vicare glibc) glibc.))
+
+(define host-address.class-B '#vu8(128 0 0 1))
+(define addr
+  (px.sockaddr_in.in_addr.number
+   (px.make-sockaddr_in host-address.class-B 88)))
+(glibc.IN_CLASSB addr)
+@result{} #t
+@end example
+@end defun
+
 
 @c page
 @node glibc math
