@@ -316,6 +316,13 @@
     glibc-IN_MULTICAST			glibc-IN_EXPERIMENTAL
     glibc-IN_BADCLASS
 
+    glibc-IN6_IS_ADDR_UNSPECIFIED	glibc-IN6_IS_ADDR_LOOPBACK
+    glibc-IN6_IS_ADDR_LINKLOCAL		glibc-IN6_IS_ADDR_SITELOCAL
+    glibc-IN6_IS_ADDR_V4MAPPED		glibc-IN6_IS_ADDR_V4COMPAT
+    glibc-IN6_IS_ADDR_MULTICAST		glibc-IN6_IS_ADDR_MC_NODELOCAL
+    glibc-IN6_IS_ADDR_MC_LINKLOCAL	glibc-IN6_IS_ADDR_MC_SITELOCAL
+    glibc-IN6_IS_ADDR_MC_ORGLOCAL	glibc-IN6_IS_ADDR_MC_GLOBAL
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
@@ -1810,6 +1817,44 @@
 
 (define-inline (glibc-IN_BADCLASS addr)
   (foreign-call "ikrt_glibc_IN_BADCLASS" addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-IN6_IS_ADDR_UNSPECIFIED addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_UNSPECIFIED" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_LOOPBACK addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_LOOPBACK" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_LINKLOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_LINKLOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_SITELOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_SITELOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_V4MAPPED addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_V4MAPPED" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_V4COMPAT addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_V4COMPAT" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MULTICAST addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MULTICAST" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MC_NODELOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_NODELOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MC_LINKLOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_LINKLOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MC_SITELOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_SITELOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MC_ORGLOCAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_ORGLOCAL" addr))
+
+(define-inline (glibc-IN6_IS_ADDR_MC_GLOBAL addr)
+  (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL" addr))
 
 
 ;;;; platform API for file descriptors

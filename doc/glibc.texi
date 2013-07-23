@@ -214,7 +214,8 @@ library.
 @defunx IN_EXPERIMENTAL @var{addr}
 @defunx IN_BADCLASS @var{addr}
 Return @true{} if @var{addr} is an 32-bit exact integer representing, in
-native endianness, an IPv4 host address in the specified address class.
+native endianness, an IPv4 host address in the specified address class;
+otherwise return @false{}.
 
 @example
 (import (vicare)
@@ -230,6 +231,22 @@ native endianness, an IPv4 host address in the specified address class.
 @end example
 @end defun
 
+
+@defun IN6_IS_ADDR_UNSPECIFIED @var{addr}
+@defunx IN6_IS_ADDR_LOOPBACK @var{addr}
+@defunx IN6_IS_ADDR_LINKLOCAL @var{addr}
+@defunx IN6_IS_ADDR_SITELOCAL @var{addr}
+@defunx IN6_IS_ADDR_V4MAPPED @var{addr}
+@defunx IN6_IS_ADDR_V4COMPAT @var{addr}
+@defunx IN6_IS_ADDR_MULTICAST @var{addr}
+@defunx IN6_IS_ADDR_MC_NODELOCAL @var{addr}
+@defunx IN6_IS_ADDR_MC_LINKLOCAL @var{addr}
+@defunx IN6_IS_ADDR_MC_SITELOCAL @var{addr}
+@defunx IN6_IS_ADDR_MC_ORGLOCAL @var{addr}
+@defunx IN6_IS_ADDR_MC_GLOBAL @var{addr}
+Return @true{} if @var{addr} is a bytevector representing a @code{struct
+in6_addr} of the specified type; otherwise return @false{}.
+@end defun
 
 @c page
 @node glibc math

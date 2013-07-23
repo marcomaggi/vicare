@@ -478,6 +478,18 @@ main (int argc, const char *const argv[])
     HAVE_IN_MULTICAST\n\
     HAVE_IN_EXPERIMENTAL\n\
     HAVE_IN_BADCLASS\n\
+    HAVE_IN6_IS_ADDR_UNSPECIFIED\n\
+    HAVE_IN6_IS_ADDR_LOOPBACK\n\
+    HAVE_IN6_IS_ADDR_LINKLOCAL\n\
+    HAVE_IN6_IS_ADDR_SITELOCAL\n\
+    HAVE_IN6_IS_ADDR_V4MAPPED\n\
+    HAVE_IN6_IS_ADDR_V4COMPAT\n\
+    HAVE_IN6_IS_ADDR_MULTICAST\n\
+    HAVE_IN6_IS_ADDR_MC_NODELOCAL\n\
+    HAVE_IN6_IS_ADDR_MC_LINKLOCAL\n\
+    HAVE_IN6_IS_ADDR_MC_SITELOCAL\n\
+    HAVE_IN6_IS_ADDR_MC_ORGLOCAL\n\
+    HAVE_IN6_IS_ADDR_MC_GLOBAL\n\
     )\n\
   (import (rnrs))\n\
 \n\
@@ -3387,6 +3399,93 @@ printf("(define-inline-constant HAVE_IN_EXPERIMENTAL %s)\n",
   );
 printf("(define-inline-constant HAVE_IN_BADCLASS %s)\n",
 #ifdef HAVE_IN_BADCLASS
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+/* ------------------------------------------------------------------ */
+
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_UNSPECIFIED %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_UNSPECIFIED
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_LOOPBACK %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_LOOPBACK
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_LINKLOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_LINKLOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_SITELOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_SITELOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_V4MAPPED %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_V4MAPPED
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_V4COMPAT %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_V4COMPAT
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MULTICAST %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MULTICAST
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_NODELOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MC_NODELOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_LINKLOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MC_LINKLOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_SITELOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MC_SITELOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_ORGLOCAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MC_ORGLOCAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_GLOBAL %s)\n",
+#ifdef HAVE_IN6_IS_ADDR_MC_GLOBAL
   "#t"
 #else
   "#f"

@@ -217,6 +217,16 @@
 
     #f)
 
+;;; --------------------------------------------------------------------
+
+  (let ((host-address-1 '#vu16b(1 2 3 4 5 6 7 8)))
+
+    (check
+    	(let ((addr (px.sockaddr_in6.in6_addr (px.make-sockaddr_in6 host-address-1 88))))
+    	  (glibc.IN6_IS_ADDR_UNSPECIFIED addr))
+      => #f)
+
+    #f)
 
   #t)
 

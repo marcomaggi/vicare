@@ -327,6 +327,129 @@ ikrt_glibc_IN_BADCLASS (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_IN6_IS_ADDR_UNSPECIFIED (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_UNSPECIFIED
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_UNSPECIFIED(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_LOOPBACK (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_LOOPBACK
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_LOOPBACK(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_LINKLOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_LINKLOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_SITELOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_SITELOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_V4MAPPED (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_V4MAPPED
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_V4MAPPED(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_V4COMPAT (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_V4COMPAT
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_V4COMPAT(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MULTICAST (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MULTICAST
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MULTICAST(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MC_NODELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MC_NODELOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MC_NODELOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MC_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MC_LINKLOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MC_LINKLOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MC_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MC_SITELOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MC_SITELOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MC_ORGLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MC_ORGLOCAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MC_ORGLOCAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL (ikptr s_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_IS_ADDR_MC_GLOBAL
+  struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_IS_ADDR_MC_GLOBAL(addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+
 
 /** --------------------------------------------------------------------
  ** Mathematics.

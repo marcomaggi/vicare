@@ -48,6 +48,13 @@
     IN_MULTICAST		IN_EXPERIMENTAL
     IN_BADCLASS
 
+    IN6_IS_ADDR_UNSPECIFIED	IN6_IS_ADDR_LOOPBACK
+    IN6_IS_ADDR_LINKLOCAL	IN6_IS_ADDR_SITELOCAL
+    IN6_IS_ADDR_V4MAPPED	IN6_IS_ADDR_V4COMPAT
+    IN6_IS_ADDR_MULTICAST	IN6_IS_ADDR_MC_NODELOCAL
+    IN6_IS_ADDR_MC_LINKLOCAL	IN6_IS_ADDR_MC_SITELOCAL
+    IN6_IS_ADDR_MC_ORGLOCAL	IN6_IS_ADDR_MC_GLOBAL
+
     ;; mathematics
     csin		ccos		ctan
     casin		cacos		catan
@@ -271,6 +278,80 @@
   (with-arguments-validation (who)
       ((word-u32	addr))
     (capi.glibc-IN_BADCLASS addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (IN6_IS_ADDR_UNSPECIFIED addr)
+  (define who 'IN6_IS_ADDR_UNSPECIFIED)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_UNSPECIFIED addr)))
+
+(define (IN6_IS_ADDR_LOOPBACK addr)
+  (define who 'IN6_IS_ADDR_LOOPBACK)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_LOOPBACK addr)))
+
+(define (IN6_IS_ADDR_LINKLOCAL addr)
+  (define who 'IN6_IS_ADDR_LINKLOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_LINKLOCAL addr)))
+
+(define (IN6_IS_ADDR_SITELOCAL addr)
+  (define who 'IN6_IS_ADDR_SITELOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_SITELOCAL addr)))
+
+(define (IN6_IS_ADDR_V4MAPPED addr)
+  (define who 'IN6_IS_ADDR_V4MAPPED)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_V4MAPPED addr)))
+
+(define (IN6_IS_ADDR_V4COMPAT addr)
+  (define who 'IN6_IS_ADDR_V4COMPAT)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_V4COMPAT addr)))
+
+(define (IN6_IS_ADDR_MULTICAST addr)
+  (define who 'IN6_IS_ADDR_MULTICAST)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MULTICAST addr)))
+
+(define (IN6_IS_ADDR_MC_NODELOCAL addr)
+  (define who 'IN6_IS_ADDR_MC_NODELOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MC_NODELOCAL addr)))
+
+(define (IN6_IS_ADDR_MC_LINKLOCAL addr)
+  (define who 'IN6_IS_ADDR_MC_LINKLOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MC_LINKLOCAL addr)))
+
+(define (IN6_IS_ADDR_MC_SITELOCAL addr)
+  (define who 'IN6_IS_ADDR_MC_SITELOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MC_SITELOCAL addr)))
+
+(define (IN6_IS_ADDR_MC_ORGLOCAL addr)
+  (define who 'IN6_IS_ADDR_MC_ORGLOCAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MC_ORGLOCAL addr)))
+
+(define (IN6_IS_ADDR_MC_GLOBAL addr)
+  (define who 'IN6_IS_ADDR_MC_GLOBAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr))
+    (capi.glibc-IN6_IS_ADDR_MC_GLOBAL addr)))
 
 
 ;;;; mathematics
