@@ -44,7 +44,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
 * iklib syntaxes::              Additional syntaxes.
-* iklib compensations::
+* iklib compensations::         Compensation stacks.
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
