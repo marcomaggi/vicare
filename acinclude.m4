@@ -111,6 +111,12 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_SIGNALFD_H
 #  include <sys/signalfd.h>
 #endif
+#ifdef HAVE_BITS_SOCKET_H
+#  include <bits/socket.h>
+#endif
+#ifdef HAVE_LINUX_ICMP_H
+#  include <linux/icmp.h>
+#endif
 #ifdef HAVE_SYS_TIMERFD_H
 #  include <sys/timerfd.h>
 #endif
@@ -161,6 +167,9 @@ AC_INCLUDES_DEFAULT
 #endif
 #ifdef HAVE_NETINET_UDP_H
 #  include <netinet/udp.h>
+#endif
+#ifdef HAVE_NETINET_IGMP_H
+#  include <netinet/igmp.h>
 #endif
 #ifdef HAVE_NETPACKET_PACKET_H
 #  include <netpacket/packet.h>

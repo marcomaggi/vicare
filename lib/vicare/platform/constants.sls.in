@@ -358,6 +358,12 @@
     IFNAMSIZ
 
     MSG_OOB		MSG_PEEK	MSG_DONTROUTE
+    MSG_TRYHARD		MSG_CTRUNC	MSG_PROXY
+    MSG_TRUNC		MSG_DONTWAIT	MSG_EOR
+    MSG_WAITALL		MSG_FIN		MSG_SYN
+    MSG_CONFIRM		MSG_RST		MSG_ERRQUEUE
+    MSG_NOSIGNAL	MSG_MORE	MSG_WAITFORONE
+    MSG_CMSG_CLOEXEC
 
     SOL_SOCKET		SOL_RAW		SOL_DECNET
     SOL_X25		SOL_PACKET	SOL_ATM
@@ -1385,6 +1391,22 @@
 (define-inline-constant MSG_OOB			@VALUEOF_MSG_OOB@)
 (define-inline-constant MSG_PEEK		@VALUEOF_MSG_PEEK@)
 (define-inline-constant MSG_DONTROUTE		@VALUEOF_MSG_DONTROUTE@)
+(define-inline-constant MSG_TRYHARD		@VALUEOF_MSG_TRYHARD@)
+(define-inline-constant MSG_CTRUNC		@VALUEOF_MSG_CTRUNC@)
+(define-inline-constant MSG_PROXY		@VALUEOF_MSG_PROXY@)
+(define-inline-constant MSG_TRUNC		@VALUEOF_MSG_TRUNC@)
+(define-inline-constant MSG_DONTWAIT		@VALUEOF_MSG_DONTWAIT@)
+(define-inline-constant MSG_EOR			@VALUEOF_MSG_EOR@)
+(define-inline-constant MSG_WAITALL		@VALUEOF_MSG_WAITALL@)
+(define-inline-constant MSG_FIN			@VALUEOF_MSG_FIN@)
+(define-inline-constant MSG_SYN			@VALUEOF_MSG_SYN@)
+(define-inline-constant MSG_CONFIRM		@VALUEOF_MSG_CONFIRM@)
+(define-inline-constant MSG_RST			@VALUEOF_MSG_RST@)
+(define-inline-constant MSG_ERRQUEUE		@VALUEOF_MSG_ERRQUEUE@)
+(define-inline-constant MSG_NOSIGNAL		@VALUEOF_MSG_NOSIGNAL@)
+(define-inline-constant MSG_MORE		@VALUEOF_MSG_MORE@)
+(define-inline-constant MSG_WAITFORONE		@VALUEOF_MSG_WAITFORONE@)
+(define-inline-constant MSG_CMSG_CLOEXEC	@VALUEOF_MSG_CMSG_CLOEXEC@)
 
 ;; on the GNU C Library see bits/socket.h
 (define-inline-constant SOL_SOCKET		@VALUEOF_SOL_SOCKET@)

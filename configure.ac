@@ -165,7 +165,7 @@ AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h inttypes.h limits.h mntent.h net/
 
 AM_COND_IF([WANT_POSIX],
   [AC_CHECK_LIB([rt],[mq_open])
-   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h netinet/tcp.h netinet/udp.h netpacket/packet.h net/ethernet.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
+   AC_CHECK_HEADERS([bits/socket.h fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h linux/icmp.h netinet/igmp.h netinet/tcp.h netinet/udp.h netpacket/packet.h net/ethernet.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
 
 AM_COND_IF([WANT_LINUX],
   [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h sys/inotify.h])])
@@ -1159,8 +1159,8 @@ AM_COND_IF([WANT_POSIX],
      IPPORT_RESERVED IPPORT_USERRESERVED IFNAMSIZ])])
 
 AM_COND_IF([WANT_POSIX],
-  [VICARE_CONSTANT_TESTS([MSG_OOB MSG_PEEK MSG_DONTROUTE])],
-  [VICARE_CONSTANT_FALSES([MSG_OOB MSG_PEEK MSG_DONTROUTE])])
+  [VICARE_CONSTANT_TESTS([MSG_OOB MSG_PEEK MSG_DONTROUTE MSG_TRYHARD MSG_CTRUNC MSG_PROXY MSG_TRUNC MSG_DONTWAIT MSG_EOR MSG_WAITALL MSG_FIN MSG_SYN MSG_CONFIRM MSG_RST MSG_ERRQUEUE MSG_NOSIGNAL MSG_MORE MSG_WAITFORONE MSG_CMSG_CLOEXEC])],
+  [VICARE_CONSTANT_FALSES([MSG_OOB MSG_PEEK MSG_DONTROUTE MSG_TRYHARD MSG_CTRUNC MSG_PROXY MSG_TRUNC MSG_DONTWAIT MSG_EOR MSG_WAITALL MSG_FIN MSG_SYN MSG_CONFIRM MSG_RST MSG_ERRQUEUE MSG_NOSIGNAL MSG_MORE MSG_WAITFORONE MSG_CMSG_CLOEXEC])])
 
 AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_TESTS([SOL_SOCKET SOL_RAW SOL_DECNET SOL_X25 SOL_PACKET SOL_ATM SOL_AAL SOL_IRDA])],
