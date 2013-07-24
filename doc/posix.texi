@@ -2114,8 +2114,10 @@ we mishandle the values.
 
 For an introduction to the @ip{} and related protocols @api{}s, on
 @gnu{}+Linux system, we should read the manual pages: @manpage{ip(7),
-@ip{} Protocol}, @manpage{tcp(7), @tcp{} Protocol}, @manpage{udp(7),
-@udp{} Protocol}, @manpage{icmp(7), @icmp{} Protocol}.
+Linux socket interface}, @manpage{packet(7), Packet interface on device
+level}, @manpage{ip(7), @ip{} Protocol}, @manpage{tcp(7), @tcp{}
+Protocol}, @manpage{udp(7), @udp{} Protocol}, @manpage{icmp(7), @icmp{}
+Protocol}.
 
 @menu
 * posix socket addresses::      Network address structures.
@@ -3024,6 +3026,33 @@ exception.
 @end defun
 
 @c ------------------------------------------------------------
+
+The functions @func{getsockopt} and @func{setsockopt}, and their
+variants, can be used to configure a number of socket options.  To
+inspect the list of available options read the following manual pages
+(on @gnu{}+Linux) systems:
+
+@itemize
+@item
+For generic networking socket options: the @var{level} argument must be
+set to @code{SOL_SOCKET}.  @manpage{socket(7), Socket Options}.
+
+@item
+For @ip{} specific options: the @var{level} argument must be set to
+@code{IPPROTO_IP}.  @manpage{ip(7), Socket Options}.
+
+@item
+For @tcp{} specific options: the @var{level} argument must be set to
+@code{IPPROTO_TCP}.  @manpage{tcp(7), Socket Options}.
+
+@item
+For @udp{} specific options: the @var{level} argument must be set to
+@code{IPPROTO_UDP}.  @manpage{udp(7), Socket Options},
+
+@item
+@manpage{icmp(7), @icmp{} Protocol}.
+@end itemize
+
 
 @defun getsockopt @var{sock} @var{level} @var{option} @var{optval}
 Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
