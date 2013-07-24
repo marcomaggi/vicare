@@ -13,27 +13,27 @@
 In addition to the libraries listed in the @rnrs{6} standard,
 @value{PRJNAME} offers more libraries which provide additional features:
 
-@table @library
-@item ikarus
+@table @code
+@item (ikarus)
 It is a composite library, it exports a superset of all the supported
 bindings of @rnrs{6}.
 
-@item vicare
+@item (vicare)
 It exports the same bindings of @library{ikarus}.
 
-@item vicare language-extensions
+@item (vicare language-extensions)
 It exports all the bindings exported by @library{vicare} that are
 @strong{not} exported by @library{rnrs (6)}.
 
-@item vicare platform constants
+@item (vicare platform constants)
 Exports one syntax identifier binding for each platform constant that
 makes sense to access from Scheme.
 
-@item vicare platform utilities
+@item (vicare platform utilities)
 Defines helper functions to deal with platform specific issues;
 @ref{platform} for details.
 
-@item vicare platform features
+@item (vicare platform features)
 @cindex Library @library{vicare platform features}
 @cindex @library{vicare platform features}, library
 Exports an identifier syntax for every @code{HAVE_} symbol defined by

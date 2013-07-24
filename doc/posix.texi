@@ -5694,9 +5694,9 @@ posix}; this section lists some of them along with reasons for not
 interface them.  This is not the last word: if good reasons arise to
 interface some of the functions, they will.
 
-@table @cfunc
-@item popen
-@itemx pclose
+@table @code
+@item popen()
+@itemx pclose()
 @findex popen
 @findex pclose
 There seems to be no real advantage (in a Scheme @api{}) to use these

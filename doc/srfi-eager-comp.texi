@@ -1647,7 +1647,7 @@ other macros.  The MWL--concept, and its implementation, were most
 influential for this @srfi{}.
 
 Another related mechanism is the library of streams recently submitted
-by Phil L. Bewig as @srfi{40} (superseded by @srfi{41}).  The library
+by Phil L. Bewig as @ansrfi{40} (superseded by @ansrfi{41}).  The library
 contains a data type to represent even streams (both car and cdr
 potentially delayed) and defines procedures for manipulating these
 streams.  Moreover, the macro @func{stream-of} defines a lazy
@@ -1669,8 +1669,8 @@ created his library to support the stream paradigm in Scheme, inspired
 by the work done for Haskell and other lazy languages, and intrigued by
 the beauty of programming with infinite streams.  My work only aims at a
 convenient way of expressing frequent patterns of loops in a compact
-way.  For what it is worth, section @srfi{40}-ec contains a suggestion
-for extending the eager comprehension mechanism for @srfi{41} streams.
+way.  For what it is worth, section @ansrfi{40}-ec contains a suggestion
+for extending the eager comprehension mechanism for @ansrfi{41} streams.
 
 Phil's work on streams and lazy comprehensions in Scheme triggered Eli
 Barzilay to implement a library of eager comprehensions for
