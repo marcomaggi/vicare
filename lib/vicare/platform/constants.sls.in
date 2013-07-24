@@ -328,6 +328,7 @@
     AF_FILE		PF_FILE
     AF_INET		PF_INET
     AF_INET6		PF_INET6
+    AF_PACKET		PF_PACKET
     AF_UNSPEC		PF_UNSPEC
     SHUT_RD		SHUT_WR		SHUT_RDWR
     IPPORT_RESERVED	IPPORT_USERRESERVED
@@ -1268,6 +1269,8 @@
 (define-inline-constant PF_INET			@VALUEOF_PF_INET@)
 (define-inline-constant AF_INET6		@VALUEOF_AF_INET6@)
 (define-inline-constant PF_INET6		@VALUEOF_PF_INET6@)
+(define-inline-constant AF_PACKET		@VALUEOF_AF_PACKET@)
+(define-inline-constant PF_PACKET		@VALUEOF_PF_PACKET@)
 (define-inline-constant AF_UNSPEC		@VALUEOF_AF_UNSPEC@)
 (define-inline-constant PF_UNSPEC		@VALUEOF_PF_UNSPEC@)
 (define-inline-constant SHUT_RD			@VALUEOF_SHUT_RD@)

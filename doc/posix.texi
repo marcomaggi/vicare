@@ -3038,6 +3038,11 @@ For generic networking socket options: the @var{level} argument must be
 set to @code{SOL_SOCKET}.  @manpage{socket(7), Socket Options}.
 
 @item
+For packet interface on device level socket options: the @var{level}
+argument must be set to @code{SOL_PACKET}.  @manpage{packet(7), Socket
+Options}.
+
+@item
 For @ip{} specific options: the @var{level} argument must be set to
 @code{IPPROTO_IP}.  @manpage{ip(7), Socket Options}.
 

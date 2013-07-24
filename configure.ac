@@ -165,7 +165,7 @@ AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h inttypes.h limits.h mntent.h net/
 
 AM_COND_IF([WANT_POSIX],
   [AC_CHECK_LIB([rt],[mq_open])
-   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h netinet/tcp.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
+   AC_CHECK_HEADERS([fnmatch.h ftw.h glob.h grp.h mqueue.h netdb.h netinet/tcp.h netinet/udp.h netpacket/packet.h net/ethernet.h paths.h poll.h utime.h regex.h wordexp.h sys/ioctl.h sys/mount.h sys/un.h sys/utsname.h sys/uio.h semaphore.h])])
 
 AM_COND_IF([WANT_LINUX],
   [AC_CHECK_HEADERS([sys/epoll.h sys/signalfd.h sys/timerfd.h sys/inotify.h])])
@@ -1142,7 +1142,8 @@ AM_COND_IF([WANT_POSIX],
   [VICARE_CONSTANT_TESTS([SOCK_STREAM SOCK_DGRAM SOCK_RAW SOCK_RDM
      SOCK_SEQPACKET SOCK_DCCP SOCK_PACKET SOCK_CLOEXEC SOCK_NONBLOCK
      AF_LOCAL PF_LOCAL AF_UNIX PF_UNIX AF_FILE PF_FILE AF_INET PF_INET
-     AF_INET6 PF_INET6 AF_UNSPEC PF_UNSPEC SHUT_RD SHUT_WR SHUT_RDWR
+     AF_INET6 PF_INET6 AF_UNSPEC PF_UNSPEC AF_PACKET PF_PACKET
+     SHUT_RD SHUT_WR SHUT_RDWR
      IPPORT_RESERVED IPPORT_USERRESERVED IFNAMSIZ])],
   [VICARE_CONSTANT_FALSES([SOCK_STREAM SOCK_DGRAM SOCK_RAW SOCK_RDM
      SOCK_SEQPACKET SOCK_DCCP SOCK_PACKET SOCK_CLOEXEC SOCK_NONBLOCK

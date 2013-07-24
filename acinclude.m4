@@ -159,6 +159,15 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_NETINET_TCP_H
 #  include <netinet/tcp.h>
 #endif
+#ifdef HAVE_NETINET_UDP_H
+#  include <netinet/udp.h>
+#endif
+#ifdef HAVE_NETPACKET_PACKET_H
+#  include <netpacket/packet.h>
+#endif
+#ifdef HAVE_NET_ETHERNET_H
+#  include <net/ethernet.h>
+#endif
 #ifdef HAVE_PATHS_H
 #  include <paths.h>
 #endif
