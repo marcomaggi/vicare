@@ -84,6 +84,8 @@ Notes for revision 0.3d1
   - from "/usr/include/netinet/tcp.h": *TCP*
   - from "/usr/include/netinet/udp.h": *UDP*
 
+  and others related to networking.
+
 * Added the following bindigns to (vicare posix):
 
      sockaddr_in.in_addr.number

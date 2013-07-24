@@ -319,28 +319,57 @@
     MNT_FORCE
 
 ;;; sockets constants
+    PF_UNSPEC		PF_LOCAL	PF_UNIX
+    PF_FILE		PF_INET		PF_AX25
+    PF_IPX		PF_APPLETALK	PF_NETROM
+    PF_BRIDGE		PF_ATMPVC	PF_X25
+    PF_INET6		PF_ROSE		PF_DECnet
+    PF_NETBEUI		PF_SECURITY	PF_KEY
+    PF_NETLINK		PF_ROUTE	PF_PACKET
+    PF_ASH		PF_ECONET	PF_ATMSVC
+    PF_RDS		PF_SNA		PF_IRDA
+    PF_PPPOX		PF_WANPIPE	PF_LLC
+    PF_CAN		PF_TIPC		PF_BLUETOOTH
+    PF_IUCV		PF_RXRPC	PF_ISDN
+    PF_PHONET		PF_IEEE802154	PF_CAIF
+    PF_ALG		PF_NFC		PF_MAX
+
+    AF_UNSPEC		AF_LOCAL	AF_UNIX
+    AF_FILE		AF_INET		AF_AX25
+    AF_IPX		AF_APPLETALK	AF_NETROM
+    AF_BRIDGE		AF_ATMPVC	AF_X25
+    AF_INET6		AF_ROSE		AF_DECnet
+    AF_NETBEUI		AF_SECURITY	AF_KEY
+    AF_NETLINK		AF_ROUTE	AF_PACKET
+    AF_ASH		AF_ECONET	AF_ATMSVC
+    AF_RDS		AF_SNA		AF_IRDA
+    AF_PPPOX		AF_WANPIPE	AF_LLC
+    AF_CAN		AF_TIPC		AF_BLUETOOTH
+    AF_IUCV		AF_RXRPC	AF_ISDN
+    AF_PHONET		AF_IEEE802154	AF_CAIF
+    AF_ALG		AF_NFC		AF_MAX
+
     SOCK_STREAM		SOCK_DGRAM	SOCK_RAW
     SOCK_RDM		SOCK_SEQPACKET	SOCK_DCCP
     SOCK_PACKET		SOCK_CLOEXEC	SOCK_NONBLOCK
 
-    AF_LOCAL		PF_LOCAL
-    AF_UNIX		PF_UNIX
-    AF_FILE		PF_FILE
-    AF_INET		PF_INET
-    AF_INET6		PF_INET6
-    AF_PACKET		PF_PACKET
-    AF_UNSPEC		PF_UNSPEC
     SHUT_RD		SHUT_WR		SHUT_RDWR
     IPPORT_RESERVED	IPPORT_USERRESERVED
     IFNAMSIZ
 
     MSG_OOB		MSG_PEEK	MSG_DONTROUTE
 
-    SOL_SOCKET		SO_DEBUG	SO_REUSEADDR
+    SOL_SOCKET		SOL_RAW		SOL_DECNET
+    SOL_X25		SOL_PACKET	SOL_ATM
+    SOL_AAL		SOL_IRDA
+
+    SO_DEBUG		SO_REUSEADDR
     SO_KEEPALIVE	SO_DONTROUTE	SO_LINGER
     SO_BROADCAST	SO_OOBINLINE	SO_SNDBUF
     SO_RCVBUF		SO_TYPE		SO_STYLE
     SO_ERROR
+
+    SOMAXCONN
 
     INADDR_LOOPBACK	INADDR_ANY	INADDR_BROADCAST
     INADDR_NONE		INET_ADDRSTRLEN	INET6_ADDRSTRLEN
@@ -1259,20 +1288,92 @@
 (define-inline-constant SOCK_NONBLOCK		@VALUEOF_SOCK_NONBLOCK@)
 
 ;; on the GNU C Library see bits/socket.h
-(define-inline-constant AF_LOCAL		@VALUEOF_AF_LOCAL@)
-(define-inline-constant PF_LOCAL		@VALUEOF_PF_LOCAL@)
-(define-inline-constant AF_UNIX			@VALUEOF_AF_UNIX@)
-(define-inline-constant PF_UNIX			@VALUEOF_PF_UNIX@)
-(define-inline-constant AF_FILE			@VALUEOF_AF_FILE@)
-(define-inline-constant PF_FILE			@VALUEOF_PF_FILE@)
-(define-inline-constant AF_INET			@VALUEOF_AF_INET@)
-(define-inline-constant PF_INET			@VALUEOF_PF_INET@)
-(define-inline-constant AF_INET6		@VALUEOF_AF_INET6@)
-(define-inline-constant PF_INET6		@VALUEOF_PF_INET6@)
-(define-inline-constant AF_PACKET		@VALUEOF_AF_PACKET@)
-(define-inline-constant PF_PACKET		@VALUEOF_PF_PACKET@)
-(define-inline-constant AF_UNSPEC		@VALUEOF_AF_UNSPEC@)
 (define-inline-constant PF_UNSPEC		@VALUEOF_PF_UNSPEC@)
+(define-inline-constant PF_LOCAL		@VALUEOF_PF_LOCAL@)
+(define-inline-constant PF_UNIX			@VALUEOF_PF_UNIX@)
+(define-inline-constant PF_FILE			@VALUEOF_PF_FILE@)
+(define-inline-constant PF_INET			@VALUEOF_PF_INET@)
+(define-inline-constant PF_AX25			@VALUEOF_PF_AX25@)
+(define-inline-constant PF_IPX			@VALUEOF_PF_IPX@)
+(define-inline-constant PF_APPLETALK		@VALUEOF_PF_APPLETALK@)
+(define-inline-constant PF_NETROM		@VALUEOF_PF_NETROM@)
+(define-inline-constant PF_BRIDGE		@VALUEOF_PF_BRIDGE@)
+(define-inline-constant PF_ATMPVC		@VALUEOF_PF_ATMPVC@)
+(define-inline-constant PF_X25			@VALUEOF_PF_X25@)
+(define-inline-constant PF_INET6		@VALUEOF_PF_INET6@)
+(define-inline-constant PF_ROSE			@VALUEOF_PF_ROSE@)
+(define-inline-constant PF_DECnet		@VALUEOF_PF_DECnet@)
+(define-inline-constant PF_NETBEUI		@VALUEOF_PF_NETBEUI@)
+(define-inline-constant PF_SECURITY		@VALUEOF_PF_SECURITY@)
+(define-inline-constant PF_KEY			@VALUEOF_PF_KEY@)
+(define-inline-constant PF_NETLINK		@VALUEOF_PF_NETLINK@)
+(define-inline-constant PF_ROUTE		@VALUEOF_PF_ROUTE@)
+(define-inline-constant PF_PACKET		@VALUEOF_PF_PACKET@)
+(define-inline-constant PF_ASH			@VALUEOF_PF_ASH@)
+(define-inline-constant PF_ECONET		@VALUEOF_PF_ECONET@)
+(define-inline-constant PF_ATMSVC		@VALUEOF_PF_ATMSVC@)
+(define-inline-constant PF_RDS			@VALUEOF_PF_RDS@)
+(define-inline-constant PF_SNA			@VALUEOF_PF_SNA@)
+(define-inline-constant PF_IRDA			@VALUEOF_PF_IRDA@)
+(define-inline-constant PF_PPPOX		@VALUEOF_PF_PPPOX@)
+(define-inline-constant PF_WANPIPE		@VALUEOF_PF_WANPIPE@)
+(define-inline-constant PF_LLC			@VALUEOF_PF_LLC@)
+(define-inline-constant PF_CAN			@VALUEOF_PF_CAN@)
+(define-inline-constant PF_TIPC			@VALUEOF_PF_TIPC@)
+(define-inline-constant PF_BLUETOOTH		@VALUEOF_PF_BLUETOOTH@)
+(define-inline-constant PF_IUCV			@VALUEOF_PF_IUCV@)
+(define-inline-constant PF_RXRPC		@VALUEOF_PF_RXRPC@)
+(define-inline-constant PF_ISDN			@VALUEOF_PF_ISDN@)
+(define-inline-constant PF_PHONET		@VALUEOF_PF_PHONET@)
+(define-inline-constant PF_IEEE802154		@VALUEOF_PF_IEEE802154@)
+(define-inline-constant PF_CAIF			@VALUEOF_PF_CAIF@)
+(define-inline-constant PF_ALG			@VALUEOF_PF_ALG@)
+(define-inline-constant PF_NFC			@VALUEOF_PF_NFC@)
+(define-inline-constant PF_MAX			@VALUEOF_PF_MAX@)
+
+(define-inline-constant AF_UNSPEC		@VALUEOF_AF_UNSPEC@)
+(define-inline-constant AF_LOCAL		@VALUEOF_AF_LOCAL@)
+(define-inline-constant AF_UNIX			@VALUEOF_AF_UNIX@)
+(define-inline-constant AF_FILE			@VALUEOF_AF_FILE@)
+(define-inline-constant AF_INET			@VALUEOF_AF_INET@)
+(define-inline-constant AF_AX25			@VALUEOF_AF_AX25@)
+(define-inline-constant AF_IPX			@VALUEOF_AF_IPX@)
+(define-inline-constant AF_APPLETALK		@VALUEOF_AF_APPLETALK@)
+(define-inline-constant AF_NETROM		@VALUEOF_AF_NETROM@)
+(define-inline-constant AF_BRIDGE		@VALUEOF_AF_BRIDGE@)
+(define-inline-constant AF_ATMPVC		@VALUEOF_AF_ATMPVC@)
+(define-inline-constant AF_X25			@VALUEOF_AF_X25@)
+(define-inline-constant AF_INET6		@VALUEOF_AF_INET6@)
+(define-inline-constant AF_ROSE			@VALUEOF_AF_ROSE@)
+(define-inline-constant AF_DECnet		@VALUEOF_AF_DECnet@)
+(define-inline-constant AF_NETBEUI		@VALUEOF_AF_NETBEUI@)
+(define-inline-constant AF_SECURITY		@VALUEOF_AF_SECURITY@)
+(define-inline-constant AF_KEY			@VALUEOF_AF_KEY@)
+(define-inline-constant AF_NETLINK		@VALUEOF_AF_NETLINK@)
+(define-inline-constant AF_ROUTE		@VALUEOF_AF_ROUTE@)
+(define-inline-constant AF_PACKET		@VALUEOF_AF_PACKET@)
+(define-inline-constant AF_ASH			@VALUEOF_AF_ASH@)
+(define-inline-constant AF_ECONET		@VALUEOF_AF_ECONET@)
+(define-inline-constant AF_ATMSVC		@VALUEOF_AF_ATMSVC@)
+(define-inline-constant AF_RDS			@VALUEOF_AF_RDS@)
+(define-inline-constant AF_SNA			@VALUEOF_AF_SNA@)
+(define-inline-constant AF_IRDA			@VALUEOF_AF_IRDA@)
+(define-inline-constant AF_PPPOX		@VALUEOF_AF_PPPOX@)
+(define-inline-constant AF_WANPIPE		@VALUEOF_AF_WANPIPE@)
+(define-inline-constant AF_LLC			@VALUEOF_AF_LLC@)
+(define-inline-constant AF_CAN			@VALUEOF_AF_CAN@)
+(define-inline-constant AF_TIPC			@VALUEOF_AF_TIPC@)
+(define-inline-constant AF_BLUETOOTH		@VALUEOF_AF_BLUETOOTH@)
+(define-inline-constant AF_IUCV			@VALUEOF_AF_IUCV@)
+(define-inline-constant AF_RXRPC		@VALUEOF_AF_RXRPC@)
+(define-inline-constant AF_ISDN			@VALUEOF_AF_ISDN@)
+(define-inline-constant AF_PHONET		@VALUEOF_AF_PHONET@)
+(define-inline-constant AF_IEEE802154		@VALUEOF_AF_IEEE802154@)
+(define-inline-constant AF_CAIF			@VALUEOF_AF_CAIF@)
+(define-inline-constant AF_ALG			@VALUEOF_AF_ALG@)
+(define-inline-constant AF_NFC			@VALUEOF_AF_NFC@)
+(define-inline-constant AF_MAX			@VALUEOF_AF_MAX@)
+
 (define-inline-constant SHUT_RD			@VALUEOF_SHUT_RD@)
 (define-inline-constant SHUT_WR			@VALUEOF_SHUT_WR@)
 (define-inline-constant SHUT_RDWR		@VALUEOF_SHUT_RDWR@)
@@ -1287,6 +1388,14 @@
 
 ;; on the GNU C Library see bits/socket.h
 (define-inline-constant SOL_SOCKET		@VALUEOF_SOL_SOCKET@)
+(define-inline-constant SOL_RAW			@VALUEOF_SOL_RAW@)
+(define-inline-constant SOL_DECNET		@VALUEOF_SOL_DECNET@)
+(define-inline-constant SOL_X25			@VALUEOF_SOL_X25@)
+(define-inline-constant SOL_PACKET		@VALUEOF_SOL_PACKET@)
+(define-inline-constant SOL_ATM			@VALUEOF_SOL_ATM@)
+(define-inline-constant SOL_AAL			@VALUEOF_SOL_AAL@)
+(define-inline-constant SOL_IRDA		@VALUEOF_SOL_IRDA@)
+
 (define-inline-constant SO_DEBUG		@VALUEOF_SO_DEBUG@)
 (define-inline-constant SO_REUSEADDR		@VALUEOF_SO_REUSEADDR@)
 (define-inline-constant SO_KEEPALIVE		@VALUEOF_SO_KEEPALIVE@)
@@ -1299,6 +1408,8 @@
 (define-inline-constant SO_TYPE			@VALUEOF_SO_TYPE@)
 (define-inline-constant SO_STYLE		@VALUEOF_SO_STYLE@)
 (define-inline-constant SO_ERROR		@VALUEOF_SO_ERROR@)
+
+(define-inline-constant SOMAXCONN		@VALUEOF_SOMAXCONN@)
 
 (define-inline-constant INADDR_LOOPBACK		@VALUEOF_INADDR_LOOPBACK@)
 (define-inline-constant INADDR_ANY		@VALUEOF_INADDR_ANY@)

@@ -2916,7 +2916,8 @@ raise an exception.
 Interface to the C function @cfunc{listen}, @glibcref{Listening,
 listen}.  Enable the socket @var{sock} to accept connections; the fixnum
 @var{pending_conns} specifies the maximum length of the pending
-connection requests queue.  If successful return unspecified values,
+connection requests queue, it can be at most equal to the platform
+constant @code{SOMAXCONN}.  If successful return unspecified values,
 else raise an exception.
 @end defun
 
