@@ -3287,8 +3287,7 @@
 		(%allowed-symbol-macro x '(none line block))))
 
 	     ((endianness)
-	      (lambda (x)
-		(%allowed-symbol-macro x '(big little))))
+	      endianness-macro)
 
 	     ((file-options)
 	      file-options-macro)
@@ -5159,6 +5158,20 @@
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
      (bless `(make-file-options ',?opt*)))))
+
+(define (endianness-macro expr-stx)
+  ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",
+  ;;"network"; convert "network" to "big".
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?name)
+     (and (identifier? ?name)
+	  (memq (identifier->symbol ?name) '(big little network)))
+     (case (identifier->symbol ?name)
+       ((network)
+	(bless '(quote big)))
+       ((big little)
+	(bless `(quote ,?name)))))))
 
 (define (%allowed-symbol-macro expr-stx allowed-symbol-set)
   ;;Helper  function used  to  implement the  transformer of:  EOL-STYLE

@@ -119,6 +119,7 @@ process.
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes misc::         Miscellaneous syntaxes.
 @end menu
 
 @c page
@@ -659,6 +660,18 @@ the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
+@end deffn
+
+@c page
+@node iklib syntaxes misc
+@subsection Miscellaneous syntaxes
+
+
+@deffn Syntax endianness @meta{endianness-symbol}
+Extend the syntax defined by @rnrs{6}.  The name of
+@meta{endianness-symbol} must be a symbol describing an endianness.
+Supported symbols are @code{big}, @code{little} and @code{network};
+@code{network} is converted to @code{big}.
 @end deffn
 
 @c page

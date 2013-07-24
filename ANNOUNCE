@@ -75,6 +75,9 @@ Notes for revision 0.3d1
 * Fixed bug preventing loading of  libraries with version numbers in the
   name.
 
+* The  syntax  ENDIANNESS now  accepts  also  the symbol  "network"  and
+  automatically converts it to "big".
+
 * Added constants definitions to library (vicare platform constants):
 
   - from "/usr/include/netinet/in.h": IPPROTO_*, IPPORT_*
