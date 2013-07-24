@@ -226,6 +226,11 @@
     	  (glibc.IN6_IS_ADDR_UNSPECIFIED addr))
       => #f)
 
+    (check
+    	(let ((addr (px.sockaddr_in6.in6_addr (px.make-sockaddr_in6 host-address-1 88))))
+    	  (glibc.IN6_ARE_ADDR_EQUAL addr addr))
+      => #t)
+
     #f)
 
   #t)

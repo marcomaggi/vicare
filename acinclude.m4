@@ -355,6 +355,25 @@ int main (void)
 
 AC_DEFUN([VICARE_CHECK_NETINET_IN6_ADDR_MACROS],[m4_map_args_w($1,[VICARE_CHECK_NETINET_IN6_ADDR_MACRO(],[)])])
 
+AC_DEFUN([VICARE_CHECK_NETINET_IN6_ADDR_MACRO_TWO],
+  [AC_CACHE_CHECK([availability of $1],
+     [vicare_cv_HAVE_$1],
+     [AC_COMPILE_IFELSE([AC_LANG_SOURCE([AC_INCLUDES_DEFAULT
+#ifdef HAVE_NETINET_IN_H
+#  include <netinet/in.h>
+#endif
+int main (void)
+{
+  struct in6_addr addr1, addr2;
+  int retval = $1(&addr1, &addr2);
+  return 0;
+}])],
+     [vicare_cv_HAVE_$1=1],
+     [vicare_cv_HAVE_$1=0])])
+  AC_DEFINE_UNQUOTED([HAVE_$1],
+    $vicare_cv_HAVE_$1,
+    [whether the macro $1 is available])])
+
 dnl page
 AC_DEFUN([VICARE_CHECK_PAGESIZE],
   [AC_CACHE_CHECK([page size],

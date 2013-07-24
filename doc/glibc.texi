@@ -248,6 +248,13 @@ Return @true{} if @var{addr} is a bytevector representing a @code{struct
 in6_addr} of the specified type; otherwise return @false{}.
 @end defun
 
+
+@defun IN6_ARE_ADDR_EQUAL @vari{addr} @varii{addr}
+The arguments @vari{addr} and @varii{addr} must be bytevectors
+representing two @code{struct in6_addr}.  Return @true{} if they
+represent the same address; otherwise return @false{}.
+@end defun
+
 @c page
 @node glibc math
 @section Mathematics

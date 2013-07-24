@@ -449,6 +449,17 @@ ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL (ikptr s_addr_bv, ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_glibc_IN6_ARE_ADDR_EQUAL (ikptr s_addr1_bv, ikptr s_addr2_bv, ikpcb * pcb)
+{
+#ifdef HAVE_IN6_ARE_ADDR_EQUAL
+  struct in6_addr *	addr1 = IK_BYTEVECTOR_DATA_VOIDP(s_addr1_bv);
+  struct in6_addr *	addr2 = IK_BYTEVECTOR_DATA_VOIDP(s_addr2_bv);
+  return IK_BOOLEAN_FROM_INT(IN6_ARE_ADDR_EQUAL(addr1, addr2));
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

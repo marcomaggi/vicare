@@ -322,6 +322,7 @@
     glibc-IN6_IS_ADDR_MULTICAST		glibc-IN6_IS_ADDR_MC_NODELOCAL
     glibc-IN6_IS_ADDR_MC_LINKLOCAL	glibc-IN6_IS_ADDR_MC_SITELOCAL
     glibc-IN6_IS_ADDR_MC_ORGLOCAL	glibc-IN6_IS_ADDR_MC_GLOBAL
+    glibc-IN6_ARE_ADDR_EQUAL
 
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
@@ -1855,6 +1856,9 @@
 
 (define-inline (glibc-IN6_IS_ADDR_MC_GLOBAL addr)
   (foreign-call "ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL" addr))
+
+(define-inline (glibc-IN6_ARE_ADDR_EQUAL addr1 addr2)
+  (foreign-call "ikrt_glibc_IN6_ARE_ADDR_EQUAL" addr1 addr2))
 
 
 ;;;; platform API for file descriptors

@@ -54,6 +54,7 @@
     IN6_IS_ADDR_MULTICAST	IN6_IS_ADDR_MC_NODELOCAL
     IN6_IS_ADDR_MC_LINKLOCAL	IN6_IS_ADDR_MC_SITELOCAL
     IN6_IS_ADDR_MC_ORGLOCAL	IN6_IS_ADDR_MC_GLOBAL
+    IN6_ARE_ADDR_EQUAL
 
     ;; mathematics
     csin		ccos		ctan
@@ -352,6 +353,13 @@
   (with-arguments-validation (who)
       ((bytevector	addr))
     (capi.glibc-IN6_IS_ADDR_MC_GLOBAL addr)))
+
+(define (IN6_ARE_ADDR_EQUAL addr1 addr2)
+  (define who 'IN6_ARE_ADDR_EQUAL)
+  (with-arguments-validation (who)
+      ((bytevector	addr1)
+       (bytevector	addr2))
+    (capi.glibc-IN6_ARE_ADDR_EQUAL addr1 addr2)))
 
 
 ;;;; mathematics
