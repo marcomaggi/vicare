@@ -491,6 +491,8 @@ main (int argc, const char *const argv[])
     HAVE_IN6_IS_ADDR_MC_ORGLOCAL\n\
     HAVE_IN6_IS_ADDR_MC_GLOBAL\n\
     HAVE_IN6_ARE_ADDR_EQUAL\n\
+    HAVE_BINDRESVPORT\n\
+    HAVE_BINDRESVPORT6\n\
     )\n\
   (import (rnrs))\n\
 \n\
@@ -3494,6 +3496,23 @@ printf("(define-inline-constant HAVE_IN6_IS_ADDR_MC_GLOBAL %s)\n",
   );
 printf("(define-inline-constant HAVE_IN6_ARE_ADDR_EQUAL %s)\n",
 #ifdef HAVE_IN6_ARE_ADDR_EQUAL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+/* ------------------------------------------------------------------ */
+
+printf("(define-inline-constant HAVE_BINDRESVPORT %s)\n",
+#ifdef HAVE_BINDRESVPORT
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_BINDRESVPORT6 %s)\n",
+#ifdef HAVE_BINDRESVPORT6
   "#t"
 #else
   "#f"

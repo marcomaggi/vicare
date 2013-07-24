@@ -324,6 +324,8 @@
     glibc-IN6_IS_ADDR_MC_ORGLOCAL	glibc-IN6_IS_ADDR_MC_GLOBAL
     glibc-IN6_ARE_ADDR_EQUAL
 
+    glibc-bindresvport			glibc-bindresvport6
+
     ;; platform API for file descriptors and Scheme ports
     platform-open-input-fd		platform-open-output-fd
     platform-open-input/output-fd	platform-close-fd
@@ -1859,6 +1861,14 @@
 
 (define-inline (glibc-IN6_ARE_ADDR_EQUAL addr1 addr2)
   (foreign-call "ikrt_glibc_IN6_ARE_ADDR_EQUAL" addr1 addr2))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (glibc-bindresvport fd sockaddr)
+  (foreign-call "ikrt_glibc_bindresvport" fd sockaddr))
+
+(define-inline (glibc-bindresvport6 fd sockaddr)
+  (foreign-call "ikrt_glibc_bindresvport6" fd sockaddr))
 
 
 ;;;; platform API for file descriptors

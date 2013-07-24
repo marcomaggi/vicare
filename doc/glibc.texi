@@ -255,6 +255,21 @@ representing two @code{struct in6_addr}.  Return @true{} if they
 represent the same address; otherwise return @false{}.
 @end defun
 
+
+@defun bindresvport @var{sock} @var{sockaddr-in}
+@defunx bindresvport6 @var{sock} @var{sockaddr-in6}
+Interfaces to the C functions @cfunc{bindresvport} and
+@cfunc{bindresvport6}, see the manual page @manpage{bindresvport, Bind a
+socket to a privileged IP port}.  Bind a socket descriptor @var{sock} to
+a privileged anonymous @ip{} port, that is, a port number arbitrarily
+selected from the range @math{[512, 1023]}.  If an error occurs: raise
+an exception.
+
+@var{sockaddr-in} must be a bytevector holding a @code{struct
+sockaddr_in}; @var{sockaddr-in6} must be a bytevector holding a
+@code{struct sockaddr_in6}.
+@end defun
+
 @c page
 @node glibc math
 @section Mathematics

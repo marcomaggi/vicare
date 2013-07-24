@@ -56,6 +56,8 @@
     IN6_IS_ADDR_MC_ORGLOCAL	IN6_IS_ADDR_MC_GLOBAL
     IN6_ARE_ADDR_EQUAL
 
+    bindresvport		bindresvport6
+
     ;; mathematics
     csin		ccos		ctan
     casin		cacos		catan
@@ -360,6 +362,26 @@
       ((bytevector	addr1)
        (bytevector	addr2))
     (capi.glibc-IN6_ARE_ADDR_EQUAL addr1 addr2)))
+
+;;; --------------------------------------------------------------------
+
+(define (bindresvport fd addr)
+  (define who 'bindresvport)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (bytevector	addr))
+    (let ((rv (capi.glibc-bindresvport fd addr)))
+      (when rv
+	(raise-errno-error who rv fd addr)))))
+
+(define (bindresvport6 fd addr)
+  (define who 'bindresvport6)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (bytevector	addr))
+    (let ((rv (capi.glibc-bindresvport6 fd addr)))
+      (when rv
+	(raise-errno-error who rv fd addr)))))
 
 
 ;;;; mathematics

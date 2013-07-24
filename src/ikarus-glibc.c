@@ -74,6 +74,12 @@ feature_failure_ (const char * funcname)
 
 #define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
 
+/* ------------------------------------------------------------------ */
+
+/* file descriptors */
+#define IK_FD_TO_NUM(fd)		IK_FIX(fd)
+#define IK_NUM_TO_FD(fd)		IK_UNFIX(fd)
+
 
 /** --------------------------------------------------------------------
  ** Operative system environment variables.
@@ -456,6 +462,35 @@ ikrt_glibc_IN6_ARE_ADDR_EQUAL (ikptr s_addr1_bv, ikptr s_addr2_bv, ikpcb * pcb)
   struct in6_addr *	addr1 = IK_BYTEVECTOR_DATA_VOIDP(s_addr1_bv);
   struct in6_addr *	addr2 = IK_BYTEVECTOR_DATA_VOIDP(s_addr2_bv);
   return IK_BOOLEAN_FROM_INT(IN6_ARE_ADDR_EQUAL(addr1, addr2));
+#else
+  feature_failure(__func__);
+#endif
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_glibc_bindresvport (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
+{
+#ifdef HAVE_BINDRESVPORT
+  int			fd	= IK_NUM_TO_FD(s_fd);
+  struct sockaddr_in *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_sockaddr_in);
+  int			rv;
+  rv = bindresvport(fd, addr);
+  return (0 == rv)? IK_FALSE : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_glibc_bindresvport6 (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
+{
+#ifdef HAVE_BINDRESVPORT6
+  int			fd	= IK_NUM_TO_FD(s_fd);
+  struct sockaddr_in6 *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_sockaddr_in);
+  int			rv;
+  rv = bindresvport6(fd, addr);
+  return (0 == rv)? IK_FALSE : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

@@ -96,6 +96,7 @@ Notes for revision 0.3d1
      IN6_IS_ADDR_MC_LINKLOCAL		IN6_IS_ADDR_MC_SITELOCAL
      IN6_IS_ADDR_MC_ORGLOCAL		IN6_IS_ADDR_MC_GLOBAL
      IN6_ARE_ADDR_EQUAL
+     bindresvport			bindresvport6
 
 
 Notes for revision 0.3d0
