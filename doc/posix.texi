@@ -2117,7 +2117,7 @@ For an introduction to the @ip{} and related protocols @api{}s, on
 Linux socket interface}, @manpage{packet(7), Packet interface on device
 level}, @manpage{ip(7), @ip{} Protocol}, @manpage{tcp(7), @tcp{}
 Protocol}, @manpage{udp(7), @udp{} Protocol}, @manpage{icmp(7), @icmp{}
-Protocol}.
+Protocol}, @manpage{raw(7), Raw sockets}.
 
 @menu
 * posix socket addresses::      Network address structures.
@@ -3056,7 +3056,8 @@ For @udp{} specific options: the @var{level} argument must be set to
 @code{IPPROTO_UDP}.  @manpage{udp(7), Socket Options},
 
 @item
-@manpage{icmp(7), @icmp{} Protocol}.
+For raw socket options: the @var{level} argument must be set to
+@code{IPPROTO_RAW}.  @manpage{raw(7), Raw sockets}.
 @end itemize
 
 
