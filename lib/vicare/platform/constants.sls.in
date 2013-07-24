@@ -492,6 +492,26 @@
     IN_CLASSB_NET	IN_CLASSB_NSHIFT	IN_CLASSB_HOST		IN_CLASSB_MAX
     IN_CLASSC_NET	IN_CLASSC_NSHIFT	IN_CLASSC_HOST
 
+;;;; Constants from "/usr/include/netinet/tcp.h"
+    TCP_NODELAY		TCP_MAXSEG		TCP_CORK
+    TCP_KEEPIDLE	TCP_KEEPINTVL		TCP_KEEPCNT
+    TCP_SYNCNT		TCP_LINGER2		TCP_DEFER_ACCEPT
+    TCP_WINDOW_CLAMP	TCP_INFO		TCP_QUICKACK
+    TCP_CONGESTION	TCP_MD5SIG		TCP_ESTABLISHED
+    TCP_SYN_SENT	TCP_SYN_RECV		TCP_FIN_WAIT1
+    TCP_FIN_WAIT2	TCP_TIME_WAIT		TCP_CLOSE
+    TCP_CLOSE_WAIT	TCP_LAST_ACK		TCP_LISTEN
+    TCP_CLOSING		TCPOPT_EOL		TCPOPT_NOP
+    TCPOPT_MAXSEG	TCPOLEN_MAXSEG		TCPOPT_WINDOW
+    TCPOLEN_WINDOW	TCPOPT_SACK_PERMITTED	TCPOLEN_SACK_PERMITTED
+    TCPOPT_SACK		TCPOPT_TIMESTAMP	TCPOLEN_TIMESTAMP
+    TCPOLEN_TSTAMP_APPA	TCPOPT_TSTAMP_HDR	TCP_MSS
+    TCP_MAXWIN		TCP_MAX_WINSHIFT	SOL_TCP
+    TCPI_OPT_TIMESTAMPS	TCPI_OPT_SACK		TCPI_OPT_WSCALE
+    TCPI_OPT_ECN	TCP_CA_Open		TCP_CA_Disorder
+    TCP_CA_CWR		TCP_CA_Recovery		TCP_CA_Loss
+    TCP_MD5SIG_MAXKEYLEN
+
 ;;; --------------------------------------------------------------------
 
 ;;; errno codes, reexported from (vicare platform errno)
@@ -1598,6 +1618,60 @@
 (define-inline-constant IN_CLASSC_NET		@VALUEOF_IN_CLASSC_NET@)
 (define-inline-constant IN_CLASSC_NSHIFT	@VALUEOF_IN_CLASSC_NSHIFT@)
 (define-inline-constant IN_CLASSC_HOST		@VALUEOF_IN_CLASSC_HOST@)
+
+;;; Constants from "/usr/include/netinet/tcp.h"
+(define-inline-constant TCP_NODELAY		@VALUEOF_TCP_NODELAY@)
+(define-inline-constant TCP_MAXSEG		@VALUEOF_TCP_MAXSEG@)
+(define-inline-constant TCP_CORK		@VALUEOF_TCP_CORK@)
+(define-inline-constant TCP_KEEPIDLE		@VALUEOF_TCP_KEEPIDLE@)
+(define-inline-constant TCP_KEEPINTVL		@VALUEOF_TCP_KEEPINTVL@)
+(define-inline-constant TCP_KEEPCNT		@VALUEOF_TCP_KEEPCNT@)
+(define-inline-constant TCP_SYNCNT		@VALUEOF_TCP_SYNCNT@)
+(define-inline-constant TCP_LINGER2		@VALUEOF_TCP_LINGER2@)
+(define-inline-constant TCP_DEFER_ACCEPT	@VALUEOF_TCP_DEFER_ACCEPT@)
+(define-inline-constant TCP_WINDOW_CLAMP	@VALUEOF_TCP_WINDOW_CLAMP@)
+(define-inline-constant TCP_INFO		@VALUEOF_TCP_INFO@)
+(define-inline-constant TCP_QUICKACK		@VALUEOF_TCP_QUICKACK@)
+(define-inline-constant TCP_CONGESTION		@VALUEOF_TCP_CONGESTION@)
+(define-inline-constant TCP_MD5SIG		@VALUEOF_TCP_MD5SIG@)
+(define-inline-constant TCP_ESTABLISHED		@VALUEOF_TCP_ESTABLISHED@)
+(define-inline-constant TCP_SYN_SENT		@VALUEOF_TCP_SYN_SENT@)
+(define-inline-constant TCP_SYN_RECV		@VALUEOF_TCP_SYN_RECV@)
+(define-inline-constant TCP_FIN_WAIT1		@VALUEOF_TCP_FIN_WAIT1@)
+(define-inline-constant TCP_FIN_WAIT2		@VALUEOF_TCP_FIN_WAIT2@)
+(define-inline-constant TCP_TIME_WAIT		@VALUEOF_TCP_TIME_WAIT@)
+(define-inline-constant TCP_CLOSE		@VALUEOF_TCP_CLOSE@)
+(define-inline-constant TCP_CLOSE_WAIT		@VALUEOF_TCP_CLOSE_WAIT@)
+(define-inline-constant TCP_LAST_ACK		@VALUEOF_TCP_LAST_ACK@)
+(define-inline-constant TCP_LISTEN		@VALUEOF_TCP_LISTEN@)
+(define-inline-constant TCP_CLOSING		@VALUEOF_TCP_CLOSING@)
+(define-inline-constant TCPOPT_EOL		@VALUEOF_TCPOPT_EOL@)
+(define-inline-constant TCPOPT_NOP		@VALUEOF_TCPOPT_NOP@)
+(define-inline-constant TCPOPT_MAXSEG		@VALUEOF_TCPOPT_MAXSEG@)
+(define-inline-constant TCPOLEN_MAXSEG		@VALUEOF_TCPOLEN_MAXSEG@)
+(define-inline-constant TCPOPT_WINDOW		@VALUEOF_TCPOPT_WINDOW@)
+(define-inline-constant TCPOLEN_WINDOW		@VALUEOF_TCPOLEN_WINDOW@)
+(define-inline-constant TCPOPT_SACK_PERMITTED	@VALUEOF_TCPOPT_SACK_PERMITTED@)
+(define-inline-constant TCPOLEN_SACK_PERMITTED	@VALUEOF_TCPOLEN_SACK_PERMITTED@)
+(define-inline-constant TCPOPT_SACK		@VALUEOF_TCPOPT_SACK@)
+(define-inline-constant TCPOPT_TIMESTAMP	@VALUEOF_TCPOPT_TIMESTAMP@)
+(define-inline-constant TCPOLEN_TIMESTAMP	@VALUEOF_TCPOLEN_TIMESTAMP@)
+(define-inline-constant TCPOLEN_TSTAMP_APPA	@VALUEOF_TCPOLEN_TSTAMP_APPA@)
+(define-inline-constant TCPOPT_TSTAMP_HDR	@VALUEOF_TCPOPT_TSTAMP_HDR@)
+(define-inline-constant TCP_MSS			@VALUEOF_TCP_MSS@)
+(define-inline-constant TCP_MAXWIN		@VALUEOF_TCP_MAXWIN@)
+(define-inline-constant TCP_MAX_WINSHIFT	@VALUEOF_TCP_MAX_WINSHIFT@)
+(define-inline-constant SOL_TCP			@VALUEOF_SOL_TCP@)
+(define-inline-constant TCPI_OPT_TIMESTAMPS	@VALUEOF_TCPI_OPT_TIMESTAMPS@)
+(define-inline-constant TCPI_OPT_SACK		@VALUEOF_TCPI_OPT_SACK@)
+(define-inline-constant TCPI_OPT_WSCALE		@VALUEOF_TCPI_OPT_WSCALE@)
+(define-inline-constant TCPI_OPT_ECN		@VALUEOF_TCPI_OPT_ECN@)
+(define-inline-constant TCP_CA_Open		@VALUEOF_TCP_CA_Open@)
+(define-inline-constant TCP_CA_Disorder		@VALUEOF_TCP_CA_Disorder@)
+(define-inline-constant TCP_CA_CWR		@VALUEOF_TCP_CA_CWR@)
+(define-inline-constant TCP_CA_Recovery		@VALUEOF_TCP_CA_Recovery@)
+(define-inline-constant TCP_CA_Loss		@VALUEOF_TCP_CA_Loss@)
+(define-inline-constant TCP_MD5SIG_MAXKEYLEN	@VALUEOF_TCP_MD5SIG_MAXKEYLEN@)
 
 
 ;;;; h_errno friendly interface

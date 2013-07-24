@@ -78,6 +78,7 @@ Notes for revision 0.3d1
 * Added constants definitions to library (vicare platform constants):
 
   - from "/usr/include/netinet/in.h": IPPROTO_*, IPPORT_*
+  - from "/usr/include/netinet/tcp.h": *TCP*
 
 * Added the following bindigns to (vicare posix):
 
