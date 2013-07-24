@@ -313,6 +313,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{IP}
 @end macro
 
+@macro icmp{}
+@acronym{ICMP}
+@end macro
+
 @macro tcp{}
 @acronym{TCP}
 @end macro

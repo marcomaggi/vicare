@@ -2112,6 +2112,11 @@ the C level @posix{} @api{}, socket--related data structures are stored
 in bytevectors; such raw manipulation can cause the process to crash if
 we mishandle the values.
 
+For an introduction to the @ip{} and related protocols @api{}s, on
+@gnu{}+Linux system, we should read the manual pages: @manpage{ip(7),
+@ip{} Protocol}, @manpage{tcp(7), @tcp{} Protocol}, @manpage{udp(7),
+@udp{} Protocol}, @manpage{icmp(7), @icmp{} Protocol}.
+
 @menu
 * posix socket addresses::      Network address structures.
 * posix socket hosts::          Network hosts database.
