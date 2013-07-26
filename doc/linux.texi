@@ -864,7 +864,12 @@ If @var{noclose} is @false{}: redirect @code{stdin}, @code{stdout} and
 Some of the following functions act upon the system file
 @file{/etc/ethers}; such file may not be present in all the @gnu{}+Linux
 installations, but it is quite easy to create one; @manpage{ethers(5),
-Ethernet address to @ip{} number database}.
+Ethernet address to @ip{} number database}.  Notice that the address of
+an Ethernet interface can be found in the output of the command:
+
+@example
+$ /usr/sbin/ip address
+@end example
 
 The following bindings are exported by the library @library{vicare
 linux}.
