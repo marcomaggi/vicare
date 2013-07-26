@@ -493,6 +493,13 @@ main (int argc, const char *const argv[])
     HAVE_IN6_ARE_ADDR_EQUAL\n\
     HAVE_BINDRESVPORT\n\
     HAVE_BINDRESVPORT6\n\
+    HAVE_ETHER_NTOA\n\
+    HAVE_ETHER_ATON\n\
+    HAVE_ETHER_NTOA_R\n\
+    HAVE_ETHER_ATON_R\n\
+    HAVE_ETHER_NTOHOST\n\
+    HAVE_ETHER_HOSTTON\n\
+    HAVE_ETHER_LINE\n\
     )\n\
   (import (rnrs))\n\
 \n\
@@ -3513,6 +3520,63 @@ printf("(define-inline-constant HAVE_BINDRESVPORT %s)\n",
   );
 printf("(define-inline-constant HAVE_BINDRESVPORT6 %s)\n",
 #ifdef HAVE_BINDRESVPORT6
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+
+printf("(define-inline-constant HAVE_ETHER_NTOA %s)\n",
+#ifdef HAVE_ETHER_NTOA
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_ATON %s)\n",
+#ifdef HAVE_ETHER_ATON
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_NTOA_R %s)\n",
+#ifdef HAVE_ETHER_NTOA_R
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_ATON_R %s)\n",
+#ifdef HAVE_ETHER_ATON_R
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_NTOHOST %s)\n",
+#ifdef HAVE_ETHER_NTOHOST
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_HOSTTON %s)\n",
+#ifdef HAVE_ETHER_HOSTTON
+  "#t"
+#else
+  "#f"
+#endif
+  );
+
+printf("(define-inline-constant HAVE_ETHER_LINE %s)\n",
+#ifdef HAVE_ETHER_LINE
   "#t"
 #else
   "#f"

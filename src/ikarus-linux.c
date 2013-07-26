@@ -37,6 +37,9 @@
 #ifdef HAVE_FCNTL_H
 #  include <fcntl.h>
 #endif
+#ifdef HAVE_NETINET_ETHER_H
+#  include <netinet/ether.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif
@@ -757,6 +760,112 @@ ikrt_linux_daemon (ikptr s_nochdir, ikptr s_noclose)
   rv    = daemon(IK_BOOLEAN_TO_INT(s_nochdir),
 		 IK_BOOLEAN_TO_INT(s_noclose));
   return (-1 != rv)? IK_FD_TO_NUM(rv) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Ethernet address manipulation routines.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_linux_ether_ntoa (ikptr s_ether_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_NTOA
+  const struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
+  char *			rv;
+  rv = ether_ntoa(addr);
+  return (NULL == rv)? ik_errno_to_code() : ika_bytevector_from_cstring(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_aton (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_ATON
+  const char *		name	= IK_GENERALISED_C_STRING(s_addr_str);
+  struct ether_addr *	rv;
+  rv = ether_aton(name);
+  return (0 == rv)? ik_errno_to_code() : ika_bytevector_from_memory_block(pcb, rv, sizeof(struct ether_addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_ntoa_r (ikptr s_ether_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_NTOA
+  const struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
+  char				buffer[64];
+  char *			rv;
+  rv = ether_ntoa_r(addr, buffer);
+  return (NULL == rv)? IK_FALSE : ika_bytevector_from_cstring(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_aton_r (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_ATON
+  const char *		name	= IK_GENERALISED_C_STRING(s_addr_str);
+  struct ether_addr	buffer;
+  struct ether_addr *	rv;
+  rv = ether_aton_r(name, &buffer);
+  return (0 == rv)? IK_FALSE : ika_bytevector_from_memory_block(pcb, rv, sizeof(struct ether_addr));
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_ntohost (ikptr s_ether_addr_bv, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_NTOHOST
+  struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
+  char			hostname[1024];
+  int			rv;
+  rv = ether_ntohost(hostname, addr);
+  return (0 == rv)? ika_bytevector_from_cstring(pcb, hostname) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_hostton (ikptr s_hostname_str, ikptr s_hostname_len, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_HOSTTON
+  const char *		hostname = IK_GENERALISED_C_STRING(s_hostname_str);
+  struct ether_addr	addr;
+  int			rv=0;
+  rv = ether_hostton(hostname, &addr);
+  return (0 == rv)? ika_bytevector_from_memory_block(pcb, (void*)&addr, sizeof(struct ether_addr)) : ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_linux_ether_line (ikptr s_line_str, ikptr s_line_len, ikpcb * pcb)
+{
+#ifdef HAVE_ETHER_LINE
+  const char *		line	= IK_GENERALISED_C_STRING(s_line_str);
+  struct ether_addr	addr;
+  char			hostname[ik_generalised_c_buffer_len(s_line_str, s_line_len)];
+  int			rv;
+  rv = ether_line(line, &addr, hostname);
+  if (0 == rv) {
+    ikptr	s_pair = ika_pair_alloc(pcb);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), ika_bytevector_from_memory_block(pcb, &addr, sizeof(struct ether_addr)));
+      IK_ASS(IK_CDR(s_pair), ika_bytevector_from_cstring(pcb, hostname));
+    }
+    pcb->root0 = NULL;
+    return s_pair;
+  } else
+    return ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif

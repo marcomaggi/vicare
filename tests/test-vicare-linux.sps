@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -335,6 +335,79 @@
 			   (not (lx.struct-inotify-event-name ev))))))
 	      (lx.inotify-rm-watch infd wd)))))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'ether))
+
+  (define-constant eth0.str "20:6a:8a:f6:b5:ed")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector? (lx.ether-aton eth0.str #f))
+    => #t)
+
+  (check
+      (ascii->string (lx.ether-ntoa (lx.ether-aton eth0.str #f)))
+    => eth0.str)
+
+  (check
+      (lx.ether-ntoa/string (lx.ether-aton eth0.str #f))
+    => eth0.str)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector? (lx.ether-aton-r eth0.str #f))
+    => #t)
+
+  (check
+      (ascii->string (lx.ether-ntoa-r (lx.ether-aton-r eth0.str #f)))
+    => eth0.str)
+
+  (check
+      (lx.ether-ntoa-r/string (lx.ether-aton-r eth0.str #f))
+    => eth0.str)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (receive (addr hostname)
+	  (lx.ether-line "20:6a:8a:f6:b5:ed localhost" #f)
+	(ascii->string hostname))
+    => "localhost")
+
+  (check
+      (receive (addr hostname)
+	  (lx.ether-line/string "20:6a:8a:f6:b5:ed localhost" #f)
+	hostname)
+    => "localhost")
+
+  (check
+      (receive (addr hostname)
+	  (lx.ether-line/string "20:6a:8a:f6:b5:ed localhost" #f)
+	(list (lx.ether-ntoa/string addr) hostname))
+    => '("20:6a:8a:f6:b5:ed" "localhost"))
+
+;;; --------------------------------------------------------------------
+
+  (when (file-exists? "/etc/ethers")
+
+    (check
+	(lx.ether-ntoa/string (lx.ether-hostton "localhost" #f))
+      => eth0.str)
+
+    (check
+	(lx.ether-ntohost/string (lx.ether-hostton "localhost" #f))
+      => "localhost")
+
+    (check
+	(lx.ether-ntohost/string (lx.ether-aton eth0.str #f))
+      => "localhost")
+
+    #f)
 
   #t)
 

@@ -105,6 +105,14 @@ Notes for revision 0.3d1
      IN6_ARE_ADDR_EQUAL
      bindresvport			bindresvport6
 
+* Added Ethernet address manipulation routines to (vicare linux):
+
+    ether-ntoa                  ether-aton              ether-ntoa/string
+    ether-ntoa-r                ether-aton-r            ether-ntoa-r/string
+    ether-ntohost               ether-hostton           ether-ntohost/string
+    ether-line                  ether-line/string
+
+
 
 Notes for revision 0.3d0
 ------------------------

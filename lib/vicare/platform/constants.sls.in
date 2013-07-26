@@ -567,6 +567,15 @@
     ICMP_REDIR_NETTOS	ICMP_REDIR_HOSTTOS	ICMP_EXC_TTL
     ICMP_EXC_FRAGTIME	ICMP_FILTER
 
+;;;; Constants from "netinet/igmp.h"
+    IGMP_MINLEN			IGMP_MEMBERSHIP_QUERY		IGMP_V1_MEMBERSHIP_REPORT
+    IGMP_V2_MEMBERSHIP_REPORT	IGMP_V2_LEAVE_GROUP		IGMP_DVMRP
+    IGMP_PIM			IGMP_TRACE			IGMP_MTRACE_RESP
+    IGMP_MTRACE			IGMP_MAX_HOST_REPORT_DELAY	IGMP_TIMER_SCALE
+    IGMP_DELAYING_MEMBER	IGMP_IDLE_MEMBER		IGMP_LAZY_MEMBER
+    IGMP_SLEEPING_MEMBER	IGMP_AWAKENING_MEMBER		IGMP_v1_ROUTER
+    IGMP_v2_ROUTER
+
 ;;; --------------------------------------------------------------------
 
 ;;; errno codes, reexported from (vicare platform errno)
@@ -1875,6 +1884,27 @@
 (define-inline-constant ICMP_EXC_TTL			@VALUEOF_ICMP_EXC_TTL@)
 (define-inline-constant ICMP_EXC_FRAGTIME		@VALUEOF_ICMP_EXC_FRAGTIME@)
 (define-inline-constant ICMP_FILTER			@VALUEOF_ICMP_FILTER@)
+
+;;; Constants from "netinet/igmp.h"
+(define-inline-constant IGMP_MINLEN			@VALUEOF_IGMP_MINLEN@)
+(define-inline-constant IGMP_MEMBERSHIP_QUERY		@VALUEOF_IGMP_MEMBERSHIP_QUERY@)
+(define-inline-constant IGMP_V1_MEMBERSHIP_REPORT	@VALUEOF_IGMP_V1_MEMBERSHIP_REPORT@)
+(define-inline-constant IGMP_V2_MEMBERSHIP_REPORT	@VALUEOF_IGMP_V2_MEMBERSHIP_REPORT@)
+(define-inline-constant IGMP_V2_LEAVE_GROUP		@VALUEOF_IGMP_V2_LEAVE_GROUP@)
+(define-inline-constant IGMP_DVMRP			@VALUEOF_IGMP_DVMRP@)
+(define-inline-constant IGMP_PIM			@VALUEOF_IGMP_PIM@)
+(define-inline-constant IGMP_TRACE			@VALUEOF_IGMP_TRACE@)
+(define-inline-constant IGMP_MTRACE_RESP		@VALUEOF_IGMP_MTRACE_RESP@)
+(define-inline-constant IGMP_MTRACE			@VALUEOF_IGMP_MTRACE@)
+(define-inline-constant IGMP_MAX_HOST_REPORT_DELAY	@VALUEOF_IGMP_MAX_HOST_REPORT_DELAY@)
+(define-inline-constant IGMP_TIMER_SCALE		@VALUEOF_IGMP_TIMER_SCALE@)
+(define-inline-constant IGMP_DELAYING_MEMBER		@VALUEOF_IGMP_DELAYING_MEMBER@)
+(define-inline-constant IGMP_IDLE_MEMBER		@VALUEOF_IGMP_IDLE_MEMBER@)
+(define-inline-constant IGMP_LAZY_MEMBER		@VALUEOF_IGMP_LAZY_MEMBER@)
+(define-inline-constant IGMP_SLEEPING_MEMBER		@VALUEOF_IGMP_SLEEPING_MEMBER@)
+(define-inline-constant IGMP_AWAKENING_MEMBER		@VALUEOF_IGMP_AWAKENING_MEMBER@)
+(define-inline-constant IGMP_v1_ROUTER			@VALUEOF_IGMP_v1_ROUTER@)
+(define-inline-constant IGMP_v2_ROUTER			@VALUEOF_IGMP_v2_ROUTER@)
 
 
 ;;;; h_errno friendly interface

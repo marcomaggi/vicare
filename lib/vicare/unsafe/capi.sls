@@ -400,6 +400,12 @@
     ;; iconv
     glibc-iconv-open	glibc-iconv-close
     glibc-iconv
+
+    ;; Ethernet address manipulation routines
+    linux-ether_ntoa	linux-ether_aton
+    linux-ether_ntoa_r	linux-ether_aton_r
+    linux-ether_ntohost	linux-ether_hostton
+    linux-ether_line
     )
   (import (ikarus))
 
@@ -2293,6 +2299,30 @@
   (foreign-call "ikrt_glibc_iconv" handle
 		input  input.start  input.past
 		output output.start output.past))
+
+
+;;;; Ethernet address manipulation routines
+
+(define-inline (linux-ether_ntoa ether-addr-bv)
+  (foreign-call "ikrt_linux_ether_ntoa" ether-addr-bv))
+
+(define-inline (linux-ether_aton addr-string.str addr-string.len)
+  (foreign-call "ikrt_linux_ether_aton" addr-string.str addr-string.len))
+
+(define-inline (linux-ether_ntoa_r ether-addr-bv)
+  (foreign-call "ikrt_linux_ether_ntoa_r" ether-addr-bv))
+
+(define-inline (linux-ether_aton_r addr-string.str addr-string.len)
+  (foreign-call "ikrt_linux_ether_aton_r" addr-string.str addr-string.len))
+
+(define-inline (linux-ether_ntohost ether-addr-bv)
+  (foreign-call "ikrt_linux_ether_ntohost" ether-addr-bv))
+
+(define-inline (linux-ether_hostton hostname.str hostname.len)
+  (foreign-call "ikrt_linux_ether_hostton" hostname.str hostname.len))
+
+(define-inline (linux-ether_line line.str line.len)
+  (foreign-call "ikrt_linux_ether_line" line.str line.len))
 
 
 ;;;; done

@@ -109,11 +109,18 @@
 
     ;; daemonisation
     daemon
+
+    ;; Ethernet address manipulation routines
+    ether-ntoa			ether-aton		ether-ntoa/string
+    ether-ntoa-r		ether-aton-r		ether-ntoa-r/string
+    ether-ntohost		ether-hostton		ether-ntohost/string
+    ether-line			ether-line/string
     )
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
+    (vicare arguments general-c-buffers)
     (prefix (vicare platform words)
 	    words.)
     (prefix (vicare posix)
@@ -609,6 +616,94 @@
     (if ($fx<= 0 rv)
 	rv
       (%raise-errno-error who rv nochdir noclose))))
+
+
+;;;; Ethernet address manipulation routines
+
+(define (ether-ntoa ether-addr-bv)
+  (define who 'ether-ntoa)
+  (with-arguments-validation (who)
+      ((bytevector	ether-addr-bv))
+    (let ((rv (capi.linux-ether_ntoa ether-addr-bv)))
+      (if (bytevector? rv)
+	  rv
+	(%raise-errno-error who rv ether-addr-bv)))))
+
+(define (ether-ntoa/string ether-addr-bv)
+  (ascii->string (ether-ntoa ether-addr-bv)))
+
+(define (ether-aton addr.str addr.len)
+  (define who 'ether-aton)
+  (with-arguments-validation (who)
+      ((general-c-string*	addr.str addr.len))
+    (with-general-c-strings
+	((addr.str^	addr.str))
+      (let ((rv (capi.linux-ether_aton addr.str^ addr.len)))
+	(if (bytevector? rv)
+	    rv
+	  (%raise-errno-error who rv addr.str addr.len))))))
+
+(define (ether-ntoa-r ether-addr-bv)
+  (define who 'ether-ntoa-r)
+  (with-arguments-validation (who)
+      ((bytevector	ether-addr-bv))
+    (let ((rv (capi.linux-ether_ntoa_r ether-addr-bv)))
+      (if (bytevector? rv)
+	  rv
+	(%raise-errno-error who rv ether-addr-bv)))))
+
+(define (ether-ntoa-r/string ether-addr-bv)
+  (ascii->string (ether-ntoa-r ether-addr-bv)))
+
+(define (ether-aton-r addr.str addr.len)
+  (define who 'ether-aton-r)
+  (with-arguments-validation (who)
+      ((general-c-string*	addr.str addr.len))
+    (with-general-c-strings
+	((addr.str^	addr.str))
+      (let ((rv (capi.linux-ether_aton_r addr.str^ addr.len)))
+	(if (bytevector? rv)
+	    rv
+	  (%raise-errno-error who rv addr.str addr.len))))))
+
+(define (ether-ntohost ether-addr-bv)
+  (define who 'ether-ntohost)
+  (with-arguments-validation (who)
+      ((bytevector	ether-addr-bv))
+    (let ((rv (capi.linux-ether_ntohost ether-addr-bv)))
+      (if (bytevector? rv)
+	  rv
+	(%raise-errno-error who rv ether-addr-bv)))))
+
+(define (ether-ntohost/string ether-addr-bv)
+  (ascii->string (ether-ntohost ether-addr-bv)))
+
+(define (ether-hostton hostname.str hostname.len)
+  (define who 'ether-hostton)
+  (with-arguments-validation (who)
+      ((general-c-string*	hostname.str hostname.len))
+    (with-general-c-strings
+	((hostname.str^		hostname.str))
+      (let ((rv (capi.linux-ether_hostton hostname.str^ hostname.len)))
+	(if (bytevector? rv)
+	    rv
+	  (%raise-errno-error who rv hostname.str hostname.len))))))
+
+(define (ether-line line.str line.len)
+  (define who 'ether-line)
+  (with-arguments-validation (who)
+      ((general-c-string*	line.str line.len))
+    (with-general-c-strings
+	((line.str^	line.str))
+      (let ((rv (capi.linux-ether_line line.str^ line.len)))
+	(if (pair? rv)
+	    (values ($car rv) ($cdr rv))
+	  (%raise-errno-error who rv line.str line.len))))))
+
+(define (ether-line/string line.str line.len)
+  (receive (addr hostname)
+      (ether-line line.str line.len)
+    (values addr (ascii->string hostname))))
 
 
 ;;;; done

@@ -41,6 +41,7 @@ behaviour is undefined.
                                 file descriptors.
 * linux inotify::               Monitoring file system events.
 * linux daemonisation::         Turning a process into a daemon.
+* linux ether::                 Ethernet address manipulation routines.
 @end menu
 
 @c page
@@ -853,6 +854,138 @@ the root directory.
 
 If @var{noclose} is @false{}: redirect @code{stdin}, @code{stdout} and
 @code{stderr} to @file{/dev/null}.
+@end defun
+
+@c page
+@node linux ether
+@section Ethernet address manipulation routines
+
+
+The following bindings are exported by the library @library{vicare
+linux}.
+
+
+@defun ether-ntoa @var{ether-addr-bv}
+@defunx ether-ntoa-r @var{ether-addr-bv}
+Interfaces to the C functions @cfunc{ether_ntoa} and
+@cfunc{ether_ntoa_r}, @manpage{ether_aton, ether_ntoa}.  Convert a
+bytevector holding a @code{struct ether_addr} into the string
+representation of the address.  If successful return a bytevector
+holding the @asciiz{} string representing the address; else raise an
+exception.
+@end defun
+
+
+@defun ether-ntoa/string @var{ether-addr-bv}
+@defunx ether-ntoa-r/string @var{ether-addr-bv}
+Like @func{ether-ntoa} and @func{ether-ntoa-r}, but return a Scheme
+string.
+
+@example
+(import (vicare)
+  (prefix (vicare linux) lx.))
+
+(define-constant eth0.str "20:6a:8a:f6:b5:ed")
+
+(lx.ether-ntoa/string (lx.ether-aton eth0.str #f))
+@result{} "20:6a:8a:f6:b5:ed"
+@end example
+@end defun
+
+
+@defun ether-aton @var{addr.str} @var{addr.len}
+@defunx ether-aton-r @var{addr.str} @var{addr.len}
+Interfaces to the C functions @cfunc{ether_aton} and
+@cfunc{ether_aton_r}, @manpage{ether_aton, ether_ntoa}.  Convert a
+string representing an Ethernet address into a @code{struct
+ether_addr}.  If successful return a bytevector holding the C structure,
+otherwise raise an exception.
+
+The arguments @var{addr.str} and @var{addr.len} must represent a
+generalised C @asciiz{} string, @ref{cbuffers strings, Introduction to
+generalised C strings}.
+@end defun
+
+
+@defun ether-ntohost @var{ether-addr-bv}
+Interface to the C function @cfunc{ether_ntohost}, @manpage{ether_aton,
+ether_ntohost}.  Convert a bytevector holding a @code{struct ether_addr}
+into the corresponding hostname string found in the file
+@file{/etc/ethers}.  If successful return a bytevector holding the
+@asciiz{} string representing the address; else raise an exception.
+@end defun
+
+
+@defun ether-ntohost/string @var{ether-addr-bv}
+Like @func{ether-ntohost}, but return a Scheme string.
+
+@example
+(import (vicare)
+  (prefix (vicare linux) lx.))
+
+(define-constant eth0.str "20:6a:8a:f6:b5:ed")
+
+;;Assuming "/etc/ethers" contains:
+;;
+;; 20:6a:8a:f6:b5:ed	localhost
+;;
+(lx.ether-ntohost/string (lx.ether-aton eth0.str #f))
+@result{} "localhost"
+@end example
+@end defun
+
+
+@defun ether-hostton @var{hostname.str} @var{hostname.len}
+Interface to the C function @cfunc{ether_hostton}, @manpage{ether_aton,
+ether_hostton}.  Convert a string representing a hostname address into
+the corresponding address in found in the file @file{/etc/ethers},
+represented as @code{struct ether_addr}.  If successful return a
+bytevector holding the C structure, otherwise raise an exception.
+
+The arguments @var{hostname.str} and @var{hostname.len} must represent a
+generalised C @asciiz{} string, @ref{cbuffers strings, Introduction to
+generalised C strings}.
+
+@example
+(import (vicare)
+  (prefix (vicare linux) lx.))
+
+;;Assuming "/etc/ethers" contains:
+;;
+;; 20:6a:8a:f6:b5:ed	localhost
+;;
+(lx.ether-ntoa/string (lx.ether-hostton "localhost" #f))
+@result{} "20:6a:8a:f6:b5:ed"
+@end example
+@end defun
+
+
+@defun ether-line @var{line.str} @var{line.len}
+Interface to the C function @cfunc{ether_line}, @manpage{ether_aton,
+ether_line}.  Parse a string representing a line in the format of the
+file @file{/etc/ethers}.  If successful return 2 values: a bytevector
+representing a @code{struct ether_addr} and a bytevector representing
+the hostname as @asciiz{} string; else raise an exception.
+
+The arguments @var{line.str} and @var{line.len} must represent a
+generalised C @asciiz{} string, @ref{cbuffers strings, Introduction to
+generalised C strings}.
+@end defun
+
+
+@defun ether-line/string @var{line.str} @var{line.len}
+Like @func{ether-line}, but, when successful, return a Scheme string as
+second value.
+
+@example
+(import (vicare)
+  (prefix (vicare linux) lx.))
+
+(receive (addr hostname)
+    (lx.ether-line/string "20:6a:8a:f6:b5:ed localhost" #f)
+  (list (lx.ether-ntoa/string addr) hostname))
+@result{} ("20:6a:8a:f6:b5:ed" "localhost")
+@end example
 @end defun
 
 @c end of file

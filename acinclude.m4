@@ -159,6 +159,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_NET_IF_H
 #  include <net/if.h>
 #endif
+#ifdef HAVE_NETINET_ETHER_H
+#  include <netinet/ether.h>
+#endif
 #ifdef HAVE_NETINET_IN_H
 #  include <netinet/in.h>
 #endif
