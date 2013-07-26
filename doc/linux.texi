@@ -861,6 +861,11 @@ If @var{noclose} is @false{}: redirect @code{stdin}, @code{stdout} and
 @section Ethernet address manipulation routines
 
 
+Some of the following functions act upon the system file
+@file{/etc/ethers}; such file may not be present in all the @gnu{}+Linux
+installations, but it is quite easy to create one; @manpage{ethers(5),
+Ethernet address to @ip{} number database}.
+
 The following bindings are exported by the library @library{vicare
 linux}.
 
