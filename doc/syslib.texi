@@ -40,11 +40,14 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 
 @cindex @library{ikarus system $symbols}, library
 @cindex Library @library{ikarus system $symbols}
+@cindex @library{vicare system $symbols}, library
+@cindex Library @library{vicare system $symbols}
 
 
 The arguments @var{sym} must be references to symbol blocks, the
 arguments @var{str} must be references to strings.  The following
-bindings are exported by the @library{ikarus system $symbols} library.
+bindings are exported by the libraries @library{ikarus system $symbols}
+and @library{vicare system $symbols}.
 
 
 @deffn {Unsafe Operation} $make-symbol @var{str}
@@ -147,11 +150,14 @@ vicare>
 
 @cindex @library{ikarus system $fx}, library
 @cindex Library @library{ikarus system $fx}
+@cindex @library{vicare system $fx}, library
+@cindex Library @library{vicare system $fx}
 
 
-The following bindings are exported by the @library{ikarus system $fx}
-library.  The arguments to these operations must be fixnums.
-@ref{objects fixnums} for details on the representation of fixnums.
+The following bindings are exported by the libraries @library{ikarus
+system $fx} and @library{vicare system $fx}.  The arguments to these
+operations must be fixnums.  @ref{objects fixnums} for details on the
+representation of fixnums.
 
 @c ------------------------------------------------------------
 
@@ -454,11 +460,14 @@ Evaluate to a fixnum which can be used as hash value.
 
 @cindex @library{ikarus system $bignums}, library
 @cindex Library @library{ikarus system $bignums}
+@cindex @library{vicare system $bignums}, library
+@cindex Library @library{vicare system $bignums}
 
 
 The arguments @var{bn} to these operations must be bignums.  The
-following bindings are exported by the @library{ikarus system $bignums}
-library.  @ref{iklib numerics} for more functions acting on bignums.
+following bindings are exported by the libraries @library{ikarus system
+$bignums} and @library{vicare system $bignums}.  @ref{iklib numerics}
+for more functions acting on bignums.
 
 
 @deffn {Unsafe Operation} $bignum-positive? @var{bn}
@@ -496,12 +505,15 @@ Return a flonum object representing @var{bn} as inexact number.
 
 @cindex @library{ikarus system $flonums}, library
 @cindex Library @library{ikarus system $flonums}
+@cindex @library{vicare system $flonums}, library
+@cindex Library @library{vicare system $flonums}
 
 
 The arguments @var{fl} to these operations must be flonums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
-by the @library{ikarus system $flonums} library.  @ref{iklib numerics}
-for more functions acting on flonums.
+by the libraries @library{ikarus system $flonums} and @library{vicare
+system $flonums}.  @ref{iklib numerics} for more functions acting on
+flonums.
 
 
 @deffn {Unsafe Operation} $make-flonum
@@ -828,13 +840,15 @@ Return the minimum between the operands.
 
 @cindex @library{ikarus system $ratnums}, library
 @cindex Library @library{ikarus system $ratnums}
+@cindex @library{vicare system $ratnums}, library
+@cindex Library @library{vicare system $ratnums}
 
 
 The arguments @var{rat} to these operations must be ratnums, the
 arguments @var{num} and @var{den} must be references to either fixnums
-or bignums.  The following bindings are exported by the @library{ikarus
-system $ratnums} library.  @ref{iklib numerics} for more functions
-acting on ratnums.
+or bignums.  The following bindings are exported by the libraries
+@library{ikarus system $ratnums} and @library{ikarus system $ratnums}.
+@ref{iklib numerics} for more functions acting on ratnums.
 
 
 @deffn {Unsafe Operation} $make-ratnum @var{num} @var{den}
@@ -885,13 +899,15 @@ Return a flonum object representing @var{rat} as inexact number.
 
 @cindex @library{ikarus system $compnums}, library
 @cindex Library @library{ikarus system $compnums}
+@cindex @library{vicare system $compnums}, library
+@cindex Library @library{vicare system $compnums}
 
 
 The arguments @var{cn} to these operations must be compnums, the
 arguments @var{num} must be references to either fixnums, bignums or
-flonums.  The following bindings are exported by the @library{ikarus
-system $compnums} library.  @ref{iklib numerics} for more functions
-acting on compnums.
+flonums.  The following bindings are exported by the libraries
+@library{ikarus system $compnums} and @library{vicare system $compnums}.
+@ref{iklib numerics} for more functions acting on compnums.
 
 
 @deffn {Unsafe Operation} $make-compnum @vari{num} @varii{num}
@@ -922,12 +938,15 @@ Return the inexact representation of a compnum as a cflonum.
 
 @cindex @library{ikarus system $compnums}, library
 @cindex Library @library{ikarus system $compnums}
+@cindex @library{vicare system $compnums}, library
+@cindex Library @library{vicare system $compnums}
 
 
 The arguments @var{cmp} to these operations must be cflonums, the
 arguments @var{fl} must be references to flonums.  The following
-bindings are exported by the @library{ikarus system $compnums} library.
-@ref{iklib numerics} for more functions acting on cflonums.
+bindings are exported by the libraries @library{ikarus system $compnums}
+and @library{vicare system $compnums}.  @ref{iklib numerics} for more
+functions acting on cflonums.
 
 
 @deffn {Unsafe Operation} $make-cflonum @vari{fl} @varii{fl}
@@ -953,10 +972,12 @@ Return the reference to the imaginary part.
 
 @cindex @library{ikarus system $numerics}, library
 @cindex Library @library{ikarus system $numerics}
+@cindex @library{vicare system $numerics}, library
+@cindex Library @library{vicare system $numerics}
 
 
-The library @library{ikarus syslib $numerics} exports bindings for low
-level operations on numbers.
+The libraries @library{ikarus syslib $numerics} and @library{vicare
+syslib $numerics} export bindings for low level operations on numbers.
 
 @menu
 * syslib numerics neg::         Numbers negation.
@@ -4715,12 +4736,15 @@ bignum @varii{bn}.
 
 @cindex @library{ikarus system $chars}, library
 @cindex Library @library{ikarus system $chars}
+@cindex @library{vicare system $chars}, library
+@cindex Library @library{vicare system $chars}
 
 
 The arguments @var{ch} to these operations must be characters, the
 arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
 not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
-exported by the @library{ikarus system $chars} library.
+exported by the libraries @library{ikarus system $chars} and
+@library{vicare system $chars}.
 
 
 @deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
@@ -4765,11 +4789,14 @@ Return a fixnum representing the code point of the operand.
 
 @cindex @library{ikarus system $pairs}, library
 @cindex Library @library{ikarus system $pairs}
+@cindex @library{vicare system $pairs}, library
+@cindex Library @library{vicare system $pairs}
 
 
 The arguments @var{P} to these operations must be pairs.  The following
-bindings are exported by the @library{ikarus system $pairs} library.
-@ref{objects pairs} for details of pair representation.
+bindings are exported by the libraries @library{ikarus system $pairs}
+and @library{vicare system $pairs}.  @ref{objects pairs} for details of
+pair representation.
 
 
 @deffn {Unsafe Operation} $car @var{P}
@@ -4798,13 +4825,15 @@ Store @var{value} in the cdr location of @var{P}.
 
 @cindex @library{ikarus system $structs}, library
 @cindex Library @library{ikarus system $structs}
+@cindex @library{vicare system $structs}, library
+@cindex Library @library{vicare system $structs}
 
 
 The arguments @var{stru} to these operations must be references to data
 structures, the arguments @var{rtd} must be references to structure type
 descriptors, the arguments @var{fx} must be fixnums of appropriate
-value.  The following bindings are exported by the @library{ikarus
-system $structs} library.
+value.  The following bindings are exported by the libraries
+@library{ikarus system $structs} and @library{vicare system $structs}.
 
 
 @deffn {Unsafe Operation} base-rtd
@@ -4864,11 +4893,14 @@ such values.  Return a reference to the structure.
 
 @cindex @library{ikarus system $vectors}, library
 @cindex Library @library{ikarus system $vectors}
+@cindex @library{vicare system $vectors}, library
+@cindex Library @library{vicare system $vectors}
 
 
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
-by the @library{ikarus system $vectors} library.
+by the libraries @library{ikarus system $vectors} and @library{vicare
+system $vectors}.
 
 
 @deffn {Unsafe Operation} $make-vector @var{fx}
@@ -4906,12 +4938,15 @@ Store @var{value} at index @var{fx} in @var{vec}.
 
 @cindex @library{ikarus system $bytevectors}, library
 @cindex Library @library{ikarus system $bytevectors}
+@cindex @library{vicare system $bytevectors}, library
+@cindex Library @library{vicare system $bytevectors}
 
 
 The arguments @var{bv} to these operations must be references to
 bytevectors, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{fl} must be flonums.  The following bindings
-are exported by the @library{ikarus system $bytevectors} library.
+are exported by the libraries @library{ikarus system $bytevectors} and
+@library{vicare system $bytevectors}.
 
 
 @deffn {Unsafe Operation} $make-bytevector @var{fx}
@@ -5027,12 +5062,15 @@ return the result.  The resulting bytevector must have length
 
 @cindex @library{ikarus system $strings}, library
 @cindex Library @library{ikarus system $strings}
+@cindex @library{vicare system $strings}, library
+@cindex Library @library{vicare system $strings}
 
 
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
-bindings are exported by the @library{ikarus system $strings} library.
+bindings are exported by the libraries @library{ikarus system $strings}
+and @library{vicare system $strings}.
 
 
 @deffn {Unsafe Operation} $make-string @var{fx}
@@ -5091,10 +5129,12 @@ Assume the arguments have been already validated.
 
 @cindex @library{ikarus system $io}, library
 @cindex Library @library{ikarus system $io}
+@cindex @library{vicare system $io}, library
+@cindex Library @library{vicare system $io}
 
 
-The following bindings are exported by the @library{ikarus system $io}
-library.
+The following bindings are exported by the libraries @library{ikarus
+system $io} and @library{vicare system $io}.
 
 
 @defun port? @var{obj}
@@ -5156,12 +5196,14 @@ Mutator for the port attributes.
 
 @cindex @library{ikarus system $transcoders}, library
 @cindex Library @library{ikarus system $transcoders}
+@cindex @library{vicare system $transcoders}, library
+@cindex Library @library{vicare system $transcoders}
 
 
 The arguments @var{tran} to these operations must be transcoders, the
 arguments @var{fx} must be fixnums in the appropriate range.  The
-following bindings are exported by the @library{ikarus system
-$transcoders} library.
+following bindings are exported by the libraries @library{ikarus system
+$transcoders} and @library{vicare system $transcoders}.
 
 
 @deffn {Unsafe Operation} $data->transcoder @var{fx}
@@ -5181,11 +5223,13 @@ Extract the payload bits from a transcoder and return them as fixnum.
 
 @cindex @library{ikarus system $pointers}, library
 @cindex Library @library{ikarus system $pointers}
+@cindex @library{vicare system $pointers}, library
+@cindex Library @library{vicare system $pointers}
 
 
 In the following definitions the @var{ptr} arguments must be pointer
-objects.  The following bindings are exported by the @library{ikarus
-system $pointers} library.
+objects.  The following bindings are exported by the libraries
+@library{ikarus system $pointers} and @library{vicare system $pointers}.
 
 
 @deffn {Primitive Operation} $pointer? @var{obj}
@@ -5206,11 +5250,13 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 
 @cindex @library{ikarus system $codes}, library
 @cindex Library @library{ikarus system $codes}
+@cindex @library{vicare system $codes}, library
+@cindex Library @library{vicare system $codes}
 
 
 In the following definitions: the @var{code} arguments must be code
-objects.  The following bindings are exported by the @library{ikarus
-system $codes} library.
+objects.  The following bindings are exported by the libraries
+@library{ikarus system $codes} and @library{ikarus system $codes}.
 
 
 @defun code? @var{obj}
@@ -5270,11 +5316,13 @@ Store @var{obj} in the annotation field of @var{code}.
 
 @cindex @library{ikarus system $codes}, library
 @cindex Library @library{ikarus system $codes}
+@cindex @library{vicare system $codes}, library
+@cindex Library @library{vicare system $codes}
 
 
 In the following definitions the @var{closure} arguments must be closure
 objects.  The following bindings are exported by the @library{ikarus
-system $codes} library.
+system $codes} and @library{vicare system $codes}.
 
 
 @deffn {Primitive Operation} $closure-code @var{closure}
@@ -5335,13 +5383,16 @@ Given a closure object @var{clo} being an annotated procedure created by
 
 @cindex @library{ikarus system $compiler}, library
 @cindex Library @library{ikarus system $compiler}
+@cindex @library{vicare system $compiler}, library
+@cindex Library @library{vicare system $compiler}
 
 
 @value{PRJNAME} is a compiler for the Scheme language; internally it
 implements a multitude of passes, each of which performing a
-transformation from Scheme code to executable binary code.  The library
-@library{ikarus system $compiler} exports one binding for each compiler
-pass, allowing inspection of the performed transformations.
+transformation from Scheme code to executable binary code.  The
+libraries @library{ikarus system $compiler} and @library{vicare system
+$compiler} export one binding for each compiler pass, allowing
+inspection of the performed transformations.
 
 The sequence in which the passes are performed @strong{cannot} be
 changed; they must be performed in the specified order.  The passes
