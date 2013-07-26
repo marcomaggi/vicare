@@ -231,7 +231,7 @@ ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
   return IK_VOID_OBJECT;
 }
 ikptr
-ik_bytevector_from_utf16z (ikpcb * pcb, const void * _data)
+ika_bytevector_from_utf16z (ikpcb * pcb, const void * _data)
 /* Build and return  a new bytevector from a memory  block referencing a
    UTF-16 string terminated with two  consecutive zeros starting at even
    offset.  If the  the end of the  string is not found  before the byte

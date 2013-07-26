@@ -443,7 +443,7 @@ ikrt_bytevector_from_cstring (ikptr s_pointer, ikptr s_count, ikpcb * pcb)
 ikptr
 ikrt_bytevector_from_cstring16 (ikptr s_pointer, ikpcb * pcb)
 {
-  return ik_bytevector_from_utf16z(pcb, IK_POINTER_DATA_VOIDP(s_pointer));
+  return ika_bytevector_from_utf16z(pcb, IK_POINTER_DATA_VOIDP(s_pointer));
 }
 
 /* ------------------------------------------------------------------ */
