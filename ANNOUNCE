@@ -76,8 +76,8 @@ Notes for revision 0.3d1
   name.
 
 * The  syntax ENDIANNESS  now  accepts also  the  symbols "network"  and
-  "native";  the former  is  automatically converted  it  to "big",  the
-  latter to the return value of "(native-endianness)".
+  "native"; the former  is automatically converted to  "big", the latter
+  to the return value of "(native-endianness)".
 
 * Added constants definitions to library (vicare platform constants):
 
