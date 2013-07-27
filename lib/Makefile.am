@@ -48,6 +48,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/checks.sls						\
 	vicare/debugging/compiler.sls					\
 	vicare/parser-logic.sls						\
+	vicare/bytevectors.sls						\
 	\
 	vicare/net/channels.sls
 

@@ -113,6 +113,7 @@ Notes for revision 0.3d1
     ether-ntohost               ether-hostton           ether-ntohost/string
     ether-line                  ether-line/string
 
+* Added library (vicare bytevectors).
 
 
 Notes for revision 0.3d0

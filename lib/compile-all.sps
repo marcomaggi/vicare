@@ -57,6 +57,8 @@
 
   (only (vicare checks))
 
+  (only (vicare bytevectors))
+
   (only (vicare containers weak-hashtables))
   (only (vicare containers bytevector-compounds core))
   (only (vicare containers bytevector-compounds))
