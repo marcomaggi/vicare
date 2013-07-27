@@ -1865,6 +1865,16 @@
   #t)
 
 
+(parametrise ((check-test-name	'endianness))
+
+  (check (endianness little)		=> 'little)
+  (check (endianness big)		=> 'big)
+  (check (endianness network)		=> 'big)
+  (check (endianness native)		=> (native-endianness))
+
+  #t)
+
+
 ;; (parametrise ((check-test-name	'syntax-transpose))
 
 ;;   (define id #f)

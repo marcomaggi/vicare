@@ -670,8 +670,9 @@ current error port describing the include operation.
 @deffn Syntax endianness @meta{endianness-symbol}
 Extend the syntax defined by @rnrs{6}.  The name of
 @meta{endianness-symbol} must be a symbol describing an endianness.
-Supported symbols are @code{big}, @code{little} and @code{network};
-@code{network} is converted to @code{big}.
+Supported symbols are @code{big}, @code{little}, @code{network} an
+@code{native}; @code{network} is converted to @code{big}, @code{native}
+is converted to the return value of @code{(native-endianness)}.
 @end deffn
 
 @c page

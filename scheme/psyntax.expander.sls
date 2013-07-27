@@ -5161,15 +5161,17 @@
 
 (define (endianness-macro expr-stx)
   ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",
-  ;;"network"; convert "network" to "big".
+  ;;"network", "native"; convert "network" to "big".
   ;;
   (syntax-match expr-stx ()
     ((_ ?name)
      (and (identifier? ?name)
-	  (memq (identifier->symbol ?name) '(big little network)))
+	  (memq (identifier->symbol ?name) '(big little network native)))
      (case (identifier->symbol ?name)
        ((network)
 	(bless '(quote big)))
+       ((native)
+	(bless '(native-endianness)))
        ((big little)
 	(bless `(quote ,?name)))))))
 
