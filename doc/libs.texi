@@ -2376,6 +2376,55 @@ bindings are exported by the library @library{vicare bytevectors}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-u8-litend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 8-bit words.  An alias for @func{bytevector-u8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 8-bit words.  An alias for @func{bytevector-u8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-litend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 8-bit words.  An alias for @func{bytevector-u8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 8-bit words.  An alias for @func{bytevector-u8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 8-bit words.  An alias for @func{bytevector-s8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 8-bit words.  An alias for @func{bytevector-s8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 8-bit words.  An alias for @func{bytevector-s8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 8-bit words.  An alias for @func{bytevector-s8-ref}.
+@end deffn
+
+@c ------------------------------------------------------------
+
 @subsubheading Words of 16-bit
 
 
@@ -2564,6 +2613,52 @@ The following syntaxes are wrappers for @func{bytevector-*-ref} and
 the need of an additional argument (useful in macros), and scaling the
 index with the size of the word.  The following bindings are exported by
 the library @library{vicare bytevectors}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsigned words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-u8-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u8-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u8-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u8-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u8-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Signed words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-s8-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s8-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s8-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s8-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s8-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
 
 @c ------------------------------------------------------------
 

@@ -28,6 +28,15 @@
 #!vicare
 (library (vicare bytevectors)
   (export
+    bytevector-u8-litend-set!
+    bytevector-u8-bigend-set!
+    bytevector-u8-litend-ref
+    bytevector-u8-bigend-ref
+    bytevector-s8-litend-set!
+    bytevector-s8-bigend-set!
+    bytevector-s8-litend-ref
+    bytevector-s8-bigend-ref
+
     bytevector-u16-litend-set!
     bytevector-u16-bigend-set!
     bytevector-u16-litend-ref
@@ -36,6 +45,7 @@
     bytevector-s16-bigend-set!
     bytevector-s16-litend-ref
     bytevector-s16-bigend-ref
+
     bytevector-u32-litend-set!
     bytevector-u32-bigend-set!
     bytevector-u32-litend-ref
@@ -44,6 +54,7 @@
     bytevector-s32-bigend-set!
     bytevector-s32-litend-ref
     bytevector-s32-bigend-ref
+
     bytevector-u64-litend-set!
     bytevector-u64-bigend-set!
     bytevector-u64-litend-ref
@@ -52,6 +63,7 @@
     bytevector-s64-bigend-set!
     bytevector-s64-litend-ref
     bytevector-s64-bigend-ref
+
     ;; bytevector-uint-litend-set!
     ;; bytevector-uint-bigend-set!
     ;; bytevector-uint-litend-ref
@@ -60,15 +72,31 @@
     ;; bytevector-sint-bigend-set!
     ;; bytevector-sint-litend-ref
     ;; bytevector-sint-bigend-ref
+
     bytevector-ieee-single-litend-set!
     bytevector-ieee-single-bigend-set!
     bytevector-ieee-single-litend-ref
     bytevector-ieee-single-bigend-ref
+
     bytevector-ieee-double-litend-set!
     bytevector-ieee-double-bigend-set!
     bytevector-ieee-double-litend-ref
     bytevector-ieee-double-bigend-ref
 ;;;
+    bytevector-u8-litend-scaled-set!
+    bytevector-u8-bigend-scaled-set!
+    bytevector-u8-native-scaled-set!
+    bytevector-u8-litend-scaled-ref
+    bytevector-u8-bigend-scaled-ref
+    bytevector-u8-native-scaled-ref
+
+    bytevector-s8-litend-scaled-set!
+    bytevector-s8-bigend-scaled-set!
+    bytevector-s8-native-scaled-set!
+    bytevector-s8-litend-scaled-ref
+    bytevector-s8-bigend-scaled-ref
+    bytevector-s8-native-scaled-ref
+
     bytevector-u16-litend-scaled-set!
     bytevector-u16-bigend-scaled-set!
     bytevector-u16-native-scaled-set!
@@ -134,6 +162,34 @@
 ;;BYTEVECTOR-*-SET! specifying the endiannes  in their name, without the
 ;;need of an additional argument (useful in macros).
 ;;
+
+(define-syntax-rule (bytevector-u8-litend-set! ?bv ?idx ?val)
+  (bytevector-u8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-u8-bigend-set! ?bv ?idx ?val)
+  (bytevector-u8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-u8-litend-ref ?bv ?idx)
+  (bytevector-u8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-u8-bigend-ref ?bv ?idx)
+  (bytevector-u8-ref ?bv ?idx))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (bytevector-s8-litend-set! ?bv ?idx ?val)
+  (bytevector-s8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-s8-bigend-set! ?bv ?idx ?val)
+  (bytevector-s8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-s8-litend-ref ?bv ?idx)
+  (bytevector-s8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-s8-bigend-ref ?bv ?idx)
+  (bytevector-s8-ref ?bv ?idx))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (bytevector-u16-litend-set! ?bv ?idx ?val)
   (bytevector-u16-set! ?bv ?idx ?val (endianness little)))
@@ -281,6 +337,46 @@
 ;;need of  an additional  argument (useful in  macros), and  scaling the
 ;;index with the size of the word.
 ;;
+
+(define-syntax-rule (bytevector-u8-litend-scaled-set! ?bv ?idx ?val)
+  (bytevector-u8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-u8-bigend-scaled-set! ?bv ?idx ?val)
+  (bytevector-u8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-u8-native-scaled-set! ?bv ?idx ?val)
+  (bytevector-u8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-u8-litend-scaled-ref ?bv ?idx)
+  (bytevector-u8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-u8-bigend-scaled-ref ?bv ?idx)
+  (bytevector-u8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-u8-native-scaled-ref ?bv ?idx)
+  (bytevector-u8-ref ?bv ?idx))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (bytevector-s8-litend-scaled-set! ?bv ?idx ?val)
+  (bytevector-s8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-s8-bigend-scaled-set! ?bv ?idx ?val)
+  (bytevector-s8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-s8-native-scaled-set! ?bv ?idx ?val)
+  (bytevector-s8-set! ?bv ?idx ?val))
+
+(define-syntax-rule (bytevector-s8-litend-scaled-ref ?bv ?idx)
+  (bytevector-s8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-s8-bigend-scaled-ref ?bv ?idx)
+  (bytevector-s8-ref ?bv ?idx))
+
+(define-syntax-rule (bytevector-s8-native-scaled-ref ?bv ?idx)
+  (bytevector-s8-ref ?bv ?idx))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (bytevector-u16-litend-scaled-set! ?bv ?idx ?val)
   (bytevector-u16-set! ?bv (* ?idx 2) ?val (endianness little)))
