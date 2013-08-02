@@ -131,12 +131,12 @@ development----of @srfi{}s.
 Although it is extremely straightforward, the origin of the particular
 mechanism described here is the @file{examples.scm} file accompanying
 the reference implementation of @ansrfi{42}.  The same mechanism has been
-reimplemented for the reference implementation of @srfi{67}, and a
+reimplemented for the reference implementation of @ansrfi{67}, and a
 simplified version is yet again found in the reference implementation of
 @ansrfi{77}.
 
 The mechanism in this @srfi{} does not replace more sophisticated
-approaches to unit testing, like @srfi{64} or SchemeUnit.  These
+approaches to unit testing, like @ansrfi{64} or SchemeUnit.  These
 systems provide more control of the testing, separate the definition of
 a test, its execution, and its reports, and provide several other
 features.
@@ -234,7 +234,7 @@ list the relevant free variables of @var{expr} (see examples) that you
 want to have printed.
 
 A @var{qualifier} is any qualifier of an eager comprehension as
-specified in @srfi{42}.
+specified in @ansrfi{42}.
 
 Examples:
 

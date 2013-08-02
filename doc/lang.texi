@@ -2060,7 +2060,7 @@ The empty @code{or} fails.
 @result{} #t
 @end example
 
-@itemx (not @meta{pattern})
+@item (not @meta{pattern})
 Matches if the subpattern @meta{pattern} does @strong{not} match the
 input expression.  The empty not fails.  The empty @code{not} pattern is
 a syntax error; the @code{not} pattern with multiple subpatterns is a

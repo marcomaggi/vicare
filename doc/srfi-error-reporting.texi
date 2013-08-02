@@ -2,7 +2,7 @@
 @section @ansrfi{23} error reporting mechanism
 
 
-@cindex @srfi{23} error reporting mechanism
+@cindex @ansrfi{23} error reporting mechanism
 @cindex @library{srfi :23}, library
 @cindex @library{srfi :23 error}, library
 @cindex Library @library{srfi :23}
