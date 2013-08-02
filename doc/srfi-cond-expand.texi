@@ -560,7 +560,7 @@ The Scheme implementation is @value{PRJNAME}.
 @item posix
 The program is running under a @posix{} system.
 
-@itemx linux
+@item linux
 @itemx solaris
 @itemx darwin
 @itemx bsd

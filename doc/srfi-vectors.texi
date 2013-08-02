@@ -73,7 +73,7 @@ be contained in a module/structure/package/library/unit called
 
 
 @rnrs{5} provides very few list--processing procedures, for which reason
-@srfi{1} exists.  However, @rnrs{5} provides even fewer vector
+@ansrfi{1} exists.  However, @rnrs{5} provides even fewer vector
 operations; while it provides mapping, appending, et cetera operations
 for lists, it specifies only nine vector manipulation operations:
 
@@ -92,8 +92,8 @@ reason, this @srfi{} is proposed.
 
 It should be noted that no vector sorting procedures are provided by
 this @srfi{}, because there already is a @srfi{} for such a purpose,
-@srfi{32}, which includes routines for sorting not only vectors but also
-lists.
+@ansrfi{32}, which includes routines for sorting not only vectors but
+also lists.
 
 @c page
 @node srfi vector spec
@@ -902,27 +902,27 @@ can be found at:
 @center @url{http://srfi.schemers.org/}
 
 @noindent
-@emph{@srfi{1}: List Library}.  A @srfi{} of list processing procedures,
-written by Olin Shivers.
+@emph{@ansrfi{1}: List Library}.  A @srfi{} of list processing
+procedures, written by Olin Shivers.
 
 @center @url{http://srfi.schemers.org/srfi-1/}
 
 @noindent
-@emph{@srfi{13}: String Library}.  A @srfi{} of string processing
+@emph{@ansrfi{13}: String Library}.  A @srfi{} of string processing
 procedures, written by Olin Shivers.
 
 @center @url{http://srfi.schemers.org/srfi-13/}
 
 @noindent
-@emph{@srfi{23}: Error Reporting Mechanism}.  A @srfi{} that defines a
+@emph{@ansrfi{23}: Error Reporting Mechanism}.  A @srfi{} that defines a
 new primitive (error) for reporting that an error occurred, written by
 Stephan Houben.
 
 @center @url{http://srfi.schemers.org/srfi-23/}
 
 @noindent
-@emph{@srfi{32}: Sort Libraries (draft)}.  A @srfi{} of list and vector
-sorting routines, written by Olin Shivers.
+@emph{@ansrfi{32}: Sort Libraries (draft)}.  A @srfi{} of list and
+vector sorting routines, written by Olin Shivers.
 
 @center @url{http://srfi.schemers.org/srfi-32/}
 

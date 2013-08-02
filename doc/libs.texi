@@ -3359,8 +3359,8 @@ logic.
 
 The input arguments are:
 
-@table @meta
-@item definer
+@table @asis
+@item @meta{definer}
 It must be an identifier.  It is bound to the generated syntax
 definition; such syntax is used as follows:
 
@@ -3373,12 +3373,12 @@ where: @meta{device-logic} is the identifier bound to the device logic
 syntax; the @meta{operator-name} are identifiers among the public
 operator function names.
 
-@item ch
+@item @meta{ch}
 It must be an identifier.  When a character is successfully extracted
 from the input device, it is bound to this identifier and made available
 to the operator clauses.
 
-@item next
+@item @meta{next}
 It must be an identifier.  The device logic rule
 @code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
 such syntax must expand to a tail--call to an operator processing the
@@ -3401,7 +3401,7 @@ where: @meta{device-arg} are the arguments representing the input device
 state; @meta{operator-arg} are the arguments representing the parser
 state as specified in the @meta{operator-spec}.
 
-@item fail
+@item @meta{fail}
 It must be an identifier.  The device logic rule
 @code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
 such syntax is used to handle parsing errors detected by the operator
@@ -3417,8 +3417,8 @@ Each @meta{operator-spec} must have the form:
 @noindent
 where:
 
-@table @meta
-@item operator-name
+@table @asis
+@item @meta{operator-name}
 Must be an identifier.  It is bound to a generated operator function.
 
 There is no difference in the way public operators and private ones are
@@ -3426,11 +3426,11 @@ specified; the public operators names are listed in the concrete parser
 definition.  An operator can be public in a concrete parser and private
 in another concrete parser.
 
-@item operator-arg
+@item @meta{operator-arg}
 Must be identifiers bound to the formal arguments associated to the
 parser state.
 
-@item operator-clause
+@item @meta{operator-clause}
 Are symbolic expressions specifying the input accepted by the operator.
 @end table
 

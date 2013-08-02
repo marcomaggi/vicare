@@ -72,6 +72,9 @@
 
 * The original implementation of the XOR macro is by Derick Eddington.
 
+* Fixes  for the  Texinfo documentation  where contributed  by Alexander
+  Shpilkin <https://github.com/alex-shpilkin>.
+
 
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus

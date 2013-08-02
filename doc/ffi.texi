@@ -752,8 +752,8 @@ object.  There are situations where the latter data structures are
 unsafe to use; @value{PRJNAME} discharges on the application the
 responsibility of using or not using such structures.
 
-@table @meta
-@item fields-clause
+@table @asis
+@item @meta{fields-clause}
 This clause is @strong{optional}.  It must have one of the forms:
 
 @example
@@ -766,7 +766,7 @@ where @code{fields} is the auxiliary keyword exported by
 @rsixlibrary{rnrs} and the @var{field-id} are field name identifiers.
 The listed fields become normal fields of the defined structure.
 
-@item destructor-clause
+@item @meta{destructor-clause}
 It must have one of the forms:
 
 @example
@@ -784,7 +784,7 @@ referenced destructor function is applied to the Scheme data struct; its
 responsibility is to extract the pointer object and apply to it whatever
 finalisation procedure the foreign library provides.
 
-@item collector-clause
+@item @meta{collector-clause}
 It must have one of the forms:
 
 @example
@@ -813,7 +813,7 @@ unregisters itself from the collection in the instance of type
 @meta{collector-id}.
 @end itemize
 
-@item collected-clause
+@item @meta{collected-clause}
 These clauses are optional and can be present in any number; when used,
 they must have the form:
 

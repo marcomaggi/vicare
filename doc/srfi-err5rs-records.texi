@@ -430,33 +430,33 @@ corresponding procedure of the @rnrs{6} procedural layer.)
 
 All implementations of @ansrfi{99} must provide the following libraries:
 
-@table @library
-@item srfi :99
+@table @asis
+@item @library{srfi :99}
 Alias for @library{srfi :99 records}.
 
-@item srfi :99 records
+@item @library{srfi :99 records}
 Composite of the next three.
 
-@item srfi :99 records procedural
-@itemx srfi :99 records inspection
-@itemx srfi :99 records syntactic
+@item @library{srfi :99 records procedural}
+@itemx @library{srfi :99 records inspection}
+@itemx @library{srfi :99 records syntactic}
 One library for each layer.
 @end table
 
 Implementations of @acronym{ERR5RS} should provide the following aliases
 as well:
 
-@table @library
-@item err5rs records
+@table @asis
+@item @library{err5rs records}
 Alias for @library{srfi :99 records}.
 
-@item err5rs records procedural
+@item @library{err5rs records procedural}
 Alias for @library{srfi :99 records procedural}.
 
-@item err5rs records inspection
+@item @library{err5rs records inspection}
 Alias for @library{srfi :99 records inspection}.
 
-@item err5rs records syntactic
+@item @library{err5rs records syntactic}
 Alias for @library{srfi :99 records syntactic}.
 @end table
 
