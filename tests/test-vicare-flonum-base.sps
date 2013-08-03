@@ -88,6 +88,28 @@
       (flzero?/negative -123.0)
     => #f)
 
+;;; --------------------------------------------------------------------
+
+  (check ($flpositive? +0.0)		=> #f)
+  (check ($flpositive? -0.0)		=> #f)
+  (check ($flpositive? +123.0)		=> #t)
+  (check ($flpositive? -123.0)		=> #f)
+
+  (check ($flnegative? +0.0)		=> #f)
+  (check ($flnegative? -0.0)		=> #f)
+  (check ($flnegative? +123.0)		=> #f)
+  (check ($flnegative? -123.0)		=> #t)
+
+  (check ($flnonpositive? +0.0)		=> #f)
+  (check ($flnonpositive? -0.0)		=> #t)
+  (check ($flnonpositive? +123.0)	=> #f)
+  (check ($flnonpositive? -123.0)	=> #t)
+
+  (check ($flnonnegative? +0.0)		=> #t)
+  (check ($flnonnegative? -0.0)		=> #f)
+  (check ($flnonnegative? +123.0)	=> #t)
+  (check ($flnonnegative? -123.0)	=> #f)
+
   #t)
 
 

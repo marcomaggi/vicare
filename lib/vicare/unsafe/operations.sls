@@ -77,6 +77,11 @@
     $fxzero?
     $fxnegative?
     $fxpositive?
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sat Aug 3, 2013)
+    ;;
+    ;; $fxnonpositive?
+    ;; $fxnonnegative?
     $fxadd1	;increment
     $fxsub1	;decrement
     $fxneg	;negation
@@ -112,6 +117,11 @@
 
     $bignum-positive?
     $bignum-negative?
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sat Aug 3, 2013)
+    ;;
+    ;; $bignum-non-positive?
+    ;; $bignum-non-negative?
     $bignum-byte-ref
     $bignum-size
 
@@ -128,6 +138,13 @@
     $ratnum-d
     $ratnum-num
     $ratnum-den
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sat Aug 3, 2013)
+    ;;
+    ;; $ratnum-positive?
+    ;; $ratnum-negative?
+    ;; $ratnum-non-positive?
+    ;; $ratnum-non-negative?
 
 ;;; --------------------------------------------------------------------
 
@@ -145,6 +162,16 @@
     $fl<=
     $fl>=
     $flonum-sbe
+    $flzero?
+    $flzero?/positive
+    $flzero?/negative
+    $flpositive?
+    $flnegative?
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sat Aug 3, 2013)
+    ;;
+    ;; $flnonpositive?
+    ;; $flnonnegative?
 
 ;;; --------------------------------------------------------------------
 

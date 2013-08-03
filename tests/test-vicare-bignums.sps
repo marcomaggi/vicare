@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (vicare system $bignums)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -49,6 +50,21 @@
 
   (check (even? (* 2 least-positive-bn))	=> #t)
   (check (even? (+ 1 (* 2 least-positive-bn)))	=> #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'predicates))
+
+  (check ($bignum-positive? least-positive-bn)		=> #t)
+  (check ($bignum-negative? least-positive-bn)		=> #f)
+  (check ($bignum-non-positive? least-positive-bn)	=> #f)
+  (check ($bignum-non-negative? least-positive-bn)	=> #t)
+
+  (check ($bignum-positive? greatest-negative-bn)	=> #f)
+  (check ($bignum-negative? greatest-negative-bn)	=> #t)
+  (check ($bignum-non-positive? greatest-negative-bn)	=> #t)
+  (check ($bignum-non-negative? greatest-negative-bn)	=> #f)
 
   #t)
 

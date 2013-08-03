@@ -221,6 +221,27 @@
   #t)
 
 
+(parametrise ((check-test-name	'unsafe))
+
+  (check ($fxpositive? 0)		=> #f)
+  (check ($fxpositive? +123)		=> #t)
+  (check ($fxpositive? -123)		=> #f)
+
+  (check ($fxnegative? 0)		=> #f)
+  (check ($fxnegative? +123)		=> #f)
+  (check ($fxnegative? -123)		=> #t)
+
+  (check ($fxnonpositive? 0)		=> #t)
+  (check ($fxnonpositive? +123)		=> #f)
+  (check ($fxnonpositive? -123)		=> #t)
+
+  (check ($fxnonnegative? 0)		=> #t)
+  (check ($fxnonnegative? +123)		=> #t)
+  (check ($fxnonnegative? -123)		=> #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

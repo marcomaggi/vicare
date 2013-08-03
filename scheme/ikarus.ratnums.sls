@@ -17,10 +17,17 @@
 
 (library (ikarus ratnums)
   (export
-    $ratnum->flonum)
+    $ratnum->flonum
+    $ratnum-positive?		$ratnum-negative?
+    ;;FIXME At  the next  boot image rotation  the definitions  of these
+    ;;functions  must  be  moved  in  this  library  and  these  exports
+    ;;uncommented.  (Marco Maggi; Sat Aug 3, 2013)
+    #;$ratnum-non-positive?	#;$ratnum-non-negative?)
   (import (ikarus)
     (except (ikarus system $ratnums)
-	    $ratnum->flonum)
+	    $ratnum->flonum
+	    $ratnum-positive?		$ratnum-negative?
+	    $ratnum-non-positive?	$ratnum-non-negative?)
     (ikarus system $flonums))
 
 
@@ -106,6 +113,21 @@
   ;;         (- (pos (- n) d)))))
 
   #| end of module |# )
+
+
+;;;; predicates
+
+(define ($ratnum-positive? Q)
+  ;;The denominator of a properly constructed ratnum is always positive;
+  ;;the sign of a ratnum is the sign of the numerator.
+  ;;
+  (positive? ($ratnum-num Q)))
+
+(define ($ratnum-negative? Q)
+  ;;The denominator of a properly constructed ratnum is always positive;
+  ;;the sign of a ratnum is the sign of the numerator.
+  ;;
+  (negative? ($ratnum-num Q)))
 
 
 ;;;; done

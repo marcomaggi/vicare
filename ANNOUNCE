@@ -79,6 +79,33 @@ Notes for revision 0.3d1
   "native"; the former  is automatically converted to  "big", the latter
   to the return value of "(native-endianness)".
 
+* Added functions to (vicare):
+
+     NON-NEGATIVE?
+     NON-POSITIVE?
+
+  and unsafe operations to (vicare system $fx):
+
+     $fxnonpositive?
+     $fxnonnegative?
+
+  to (vicare system $flonums):
+
+     $flnonpositive?
+     $flnonnegative?
+
+  to (vicare system $ratnums):
+
+     $ratnum-positive?
+     $ratnum-negative?
+     $ratnum-non-positive?
+     $ratnum-non-negative?
+
+  to (vicare system bignums):
+
+     $bignum-non-positive?
+     $bignum-non-negative?
+
 * Added constants definitions to library (vicare platform constants):
 
   - from "/usr/include/netinet/in.h": IPPROTO_*, IPPORT_*

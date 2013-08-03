@@ -174,6 +174,12 @@ Evaluate to true if @var{fx} is strictly positive or strictly negative.
 @end deffn
 
 
+@deffn {Unsafe Operation} $fxnonpositive? @var{fx}
+@deffnx {Unsafe Operation} $fxnonnegative? @var{fx}
+Evaluate to true if @var{fx} is non--positive or non--negative.
+@end deffn
+
+
 @deffn {Unsafe Operation} $fxsign @var{fx}
 Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
 the sign of @var{fx}.
@@ -476,6 +482,12 @@ Evaluate to true if the operand is positive or negative.
 @end deffn
 
 
+@deffn {Unsafe Operation} $bignum-non-positive? @var{bn}
+@deffnx {Unsafe Operation} $bignum-non-negative? @var{bn}
+Evaluate to true if the operand is non--positive or non--negative.
+@end deffn
+
+
 @deffn {Unsafe Operation} $bignum-even? @var{bn}
 @deffnx {Unsafe Operation} $bignum-odd? @var{bn}
 Evaluate to true if the operand is even or odd.
@@ -634,6 +646,18 @@ when applied to @code{-0.0}; to check for negativity including
 @example
 (or ($flzero?/negative @var{fl}) ($fl< @var{fl} -0.0))
 @end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $flnonpositive? @var{fl}
+Return @true{} if the operand is non--positive.  This predicate returns
+@false{} when applied to @code{-0.0}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flnonnegative? @var{fl}
+Return @true{} if the operand is non--negative.  This predicate returns
+@false{} when applied to @code{+0.0}.
 @end deffn
 
 
@@ -890,6 +914,20 @@ Return the reference to the denominator.
 
 @deffn {Unsafe Operation} $ratnum->flonum @var{rat}
 Return a flonum object representing @var{rat} as inexact number.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-positive? @var{rat}
+@deffnx {Unsafe Operation} $ratnum-negative? @var{rat}
+Return @true{} if @var{rat} is, respectively, positive or negative;
+otherwise return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-non-positive? @var{rat}
+@deffnx {Unsafe Operation} $ratnum-non-negative? @var{rat}
+Return @true{} if @var{rat} is, respectively, non--positive or
+non--negative; otherwise return @false{}.
 @end deffn
 
 @c page

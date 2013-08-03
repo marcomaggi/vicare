@@ -3870,6 +3870,14 @@ combination of number representations as real and imaginary parts, but
 not both flonums.
 @end defun
 
+@c ------------------------------------------------------------
+
+@defun non-positive? @var{X}
+@defunx non-negative? @var{X}
+Return @true{} if @var{X} is a real number object and it is,
+respectively, non--positive or non--negative.
+@end defun
+
 @c page
 @node iklib numerics math
 @subsection Additional math functions
