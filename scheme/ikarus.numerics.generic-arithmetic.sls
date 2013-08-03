@@ -7583,22 +7583,24 @@
 
 
 (define (numerator x)
+  (define who 'numerator)
   (cond-real-numeric-operand x
     ((fixnum?)		x)
     ((bignum?)		x)
     ((ratnum?)		($ratnum-n x))
     ((flonum?)		($flnumerator x))
     (else
-     (%error-not-integer 'numerator x))))
+     (%error-not-real-number x))))
 
 (define (denominator x)
+  (define who 'denominator)
   (cond-real-numeric-operand x
     ((fixnum?)		1)
     ((bignum?)		1)
     ((ratnum?)		($ratnum-d x))
     ((flonum?)		($fldenominator x))
     (else
-     (%error-not-integer 'denominator x))))
+     (%error-not-real-number x))))
 
 
 (module (floor)
