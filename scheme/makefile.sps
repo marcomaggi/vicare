@@ -1314,6 +1314,8 @@
     (string->list				i v r ba se)
     (string->number				i v r ba se)
     (string->symbol				i v symbols r ba se)
+    (string-or-symbol->string			i v $language)
+    (string-or-symbol->symbol			i v $language)
     (string-append				i v r ba se)
     (string-reverse-and-concatenate		i v $language)
     (string-copy				i v r ba se)

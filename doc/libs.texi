@@ -767,6 +767,13 @@ than zero.
 Succeed if @var{obj} is null or a list of strings.
 @end deffn
 
+
+@deffn {Validation Clause} string-or-symbol @var{obj}
+@deffnx {Validation Clause} string-or-symbol-or-false @var{obj}
+Succeed if @var{obj} is a string or symbol; the second clause accepts
+also @false{}.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @deffn {Validation Clause} index-for-string @var{str} @var{idx}

@@ -165,6 +165,9 @@
     start-and-past-for-string.vicare-arguments-validation
     list-of-strings.vicare-arguments-validation
 
+    string-or-symbol.vicare-arguments-validation
+    string-or-symbol-or-false.vicare-arguments-validation
+
     ;; vectors
     vector.vicare-arguments-validation
     vector/false.vicare-arguments-validation
@@ -1116,6 +1119,19 @@
   (assertion-violation who
     "expected valid fixnums as arguments for start and past string indexes"
     start past str))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (string-or-symbol who obj)
+  (or (string? obj)
+      (symbol? obj))
+  (assertion-violation who "expected string or symbol as argument" obj))
+
+(define-argument-validation (string-or-symbol-or-false who obj)
+  (or (not obj)
+      (string? obj)
+      (symbol? obj))
+  (assertion-violation who "expected string or symbol or false as argument" obj))
 
 
 ;;;; vectors

@@ -1610,6 +1610,41 @@
   #t)
 
 
+(parametrise ((check-test-name	'conversion))
+
+  (check
+      (string->symbol "ciao")
+    => 'ciao)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (symbol->string 'ciao)
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-or-symbol->string "ciao")
+    => "ciao")
+
+  (check
+      (string-or-symbol->string 'ciao)
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-or-symbol->symbol "ciao")
+    => 'ciao)
+
+  (check
+      (string-or-symbol->symbol 'ciao)
+    => 'ciao)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

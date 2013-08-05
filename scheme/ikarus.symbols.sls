@@ -30,6 +30,10 @@
     ;; object properties
     getprop putprop remprop property-list
 
+    ;; conversion functions
+    string-or-symbol->string
+    string-or-symbol->symbol
+
     ;; ???
     top-level-value top-level-bound? set-top-level-value!
     symbol-value symbol-bound? set-symbol-value!
@@ -53,16 +57,13 @@
 		  ;; internal functions
 		  $unintern-gensym)
     (vicare language-extensions syntaxes)
+    (vicare arguments validation)
     (vicare unsafe operations)
     (except (ikarus system $symbols)
 	    $unintern-gensym))
 
 
 ;;;; syntax helpers
-
-(define-argument-validation (symbol who obj)
-  (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
 
 #;(define-argument-validation (gensym who obj)
   (symbol? obj)
@@ -71,10 +72,6 @@
 (define-argument-validation (bound-symbol who obj)
   (not ($unbound-object? obj))
   (assertion-violation who "expected bound symbol as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
 
 
 (define gensym
@@ -223,14 +220,40 @@
   (define who 'symbol->string)
   (with-arguments-validation (who)
       ((symbol x))
-    (let ((str ($symbol-string x)))
-      (or str
-	  (let ((ct (gensym-count)))
+    ($symbol->string x)))
+
+(define ($symbol->string x)
+  (let ((str ($symbol-string x)))
+    (or str
+	(let ((ct (gensym-count)))
 ;;;FIXME What if gensym-count is a bignum?
-	    (let ((str (string-append (gensym-prefix) (fixnum->string ct))))
-	      ($set-symbol-string! x str)
-	      (gensym-count ($fxadd1 ct))
-	      str))))))
+	  (let ((str (string-append (gensym-prefix) (fixnum->string ct))))
+	    ($set-symbol-string! x str)
+	    (gensym-count ($fxadd1 ct))
+	    str)))))
+
+(define (string-or-symbol->string obj)
+  ;;Defined by Vicare.  If OBJ is a string return a copy of it; if it is
+  ;;a symbol return a new string object equal to its string name.
+  ;;
+  (define who 'string-or-symbol->string)
+  (with-arguments-validation (who)
+      ((string-or-symbol	obj))
+    (let ((str (if (string? obj)
+		   obj
+		 ($symbol->string obj))))
+      ($substring str 0 ($string-length str)))))
+
+(define (string-or-symbol->symbol obj)
+  ;;Defined by Vicare.  If OBJ is a  symbol return it; if it is a string
+  ;;return a symbol having it as string name.
+  ;;
+  (define who 'string-or-symbol->string)
+  (with-arguments-validation (who)
+      ((string-or-symbol	obj))
+    (if (symbol? obj)
+	obj
+      (string->symbol obj))))
 
 
 ;;;; property lists
