@@ -3630,6 +3630,13 @@ the sign of the fixnum @var{fx}.
 Return a string representation of @var{fx}.
 @end defun
 
+
+@defun fxnonpositive? @var{fx}
+@defunx fxnonnegative? @var{fx}
+Return @true{} if @var{fx} is, respectively, non--positive or
+non--negative; else return @false{}.
+@end defun
+
 @c page
 @node iklib flonums
 @section Additional functions on flonums
@@ -3637,6 +3644,17 @@ Return a string representation of @var{fx}.
 
 The following bindings are exported by the @library{ikarus} and
 @library{vicare} libraries.
+
+@c ------------------------------------------------------------
+
+@subsubheading Predicates
+
+
+@defun flnonpositive? @var{fl}
+@defunx flnonnegative? @var{fl}
+Return @true{} if @var{fl} is, respectively, non--positive or
+non--negative; else return @false{}.
+@end defun
 
 @c ------------------------------------------------------------
 

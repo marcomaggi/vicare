@@ -66,6 +66,9 @@
     positive?			negative?
     even?			odd?
 
+    fxnonnegative?		fxnonpositive?
+    flnonnegative?		flnonpositive?
+
     non-positive? $fxnonpositive? $bignum-non-positive? $flnonpositive? $ratnum-non-positive?
     non-negative? $fxnonnegative? $bignum-non-negative? $flnonnegative? $ratnum-non-negative?
 
@@ -6390,6 +6393,8 @@
      (assertion-violation 'negative? "expected real number as argument" x))))
 
 (module (non-positive?
+	 fxnonpositive?
+	 flnonpositive?
 	 $fxnonpositive?
 	 $bignum-non-positive?
 	 $flnonpositive?
@@ -6419,9 +6424,23 @@
     ;;The denominator of a ratnum is always strictly positive.
     (non-positive? ($ratnum-n x)))
 
+  (define (fxnonpositive? x)
+    (define who 'fxnonpositive?)
+    (with-arguments-validation (who)
+	((fixnum	x))
+      ($fxnonpositive? x)))
+
+  (define (flnonpositive? x)
+    (define who 'flnonpositive?)
+    (with-arguments-validation (who)
+	((flonum	x))
+      ($flnonpositive? x)))
+
   #| end of module: non-positive? |# )
 
 (module (non-negative?
+	 fxnonnegative?
+	 flnonnegative?
 	 $fxnonnegative?
 	 $bignum-non-negative?
 	 $flnonnegative?
@@ -6450,6 +6469,19 @@
   (define ($ratnum-non-negative? x)
     ;;The denominator of a ratnum is always strictly positive.
     (non-negative? ($ratnum-n x)))
+
+
+  (define (fxnonnegative? x)
+    (define who 'fxnonnegative?)
+    (with-arguments-validation (who)
+	((fixnum	x))
+      ($fxnonnegative? x)))
+
+  (define (flnonnegative? x)
+    (define who 'flnonnegative?)
+    (with-arguments-validation (who)
+	((flonum	x))
+      ($flnonnegative? x)))
 
   #| end of module: non-negative? |# )
 
