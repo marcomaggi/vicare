@@ -1,0 +1,4643 @@
+@node baselib
+@chapter Base library
+
+
+@cindex @rsixlibrary{base}, library
+@cindex Library, @rsixlibrary{base}
+
+
+@ignore
+In the original document this chapter is the "base.tex" file.
+@end ignore
+
+This chapter describes Scheme's @rsixlibrary{base} library, which
+exports many of the procedure and syntax bindings that are traditionally
+associated with Scheme.
+
+@menu
+* baselib types::               Base types.
+* baselib definitions::         Definitions.
+* baselib bodies::              Bodies.
+* baselib expressions::         Expressions.
+* baselib predicates::          Equivalence and procedure predicates.
+* baselib math::                Mathematics.
+* baselib booleans::            Booleans.
+* baselib lists::               Pairs and lists.
+* baselib symbols::             Symbols.
+* baselib characters::          Characters.
+* baselib strings::             Strings.
+* baselib vectors::             Vectors.
+* baselib errors::              Errors and violations.
+* baselib control::             Control features.
+* baselib iteration::           Iteration.
+* baselib quasiquotation::      Quasiquotation.
+* baselib syntax binding::      Binding constructs for syntactic keywords.
+* baselib transformers::        Macro transformers.
+* baselib tail call::           Tail calls and tail contexts.
+@end menu
+
+
+@c page
+@node baselib types
+@section Base types
+
+
+No object satisfies more than one of the following predicates:
+
+@example
+boolean?          pair?
+symbol?           number?
+char?             string?
+vector?           procedure?
+null?
+@end example
+
+These predicates define the base types @emph{boolean}, @emph{pair},
+@emph{symbol}, @emph{number}, @emph{char} (or @emph{character}),
+@emph{string}, @emph{vector}, and @emph{procedure}.  Moreover, the empty
+list is a special object of its own type.
+
+Note that, although there is a separate boolean type, any Scheme value
+can be used as a boolean value for the purpose of a conditional test.
+
+
+@c page
+@node baselib definitions
+@section Definitions
+
+
+Definitions may appear within a @meta{top-level-body}, at the top of a
+@meta{library-body}, or at the top of a @meta{body}.
+
+A @meta{definition} may be a variable definition or keyword definition.
+Macro uses that expand into definitions or groups of definitions
+(packaged in a @func{begin}, @func{let-syntax}, or @func{letrec-syntax}
+form) may also appear wherever other definitions may appear.
+
+
+@menu
+* baselib definitions variables::  Variables definitions.
+* baselib definitions syntax::     Syntax definitions.
+@end menu
+
+
+@c page
+@node baselib definitions variables
+@subsection Variables definitions
+
+
+The @func{define} form described in this section is a @meta{definition}
+used to create variable bindings and may appear anywhere other
+definitions may appear.
+
+
+@deffn Syntax define @meta{variable} @meta{expression}
+@deffnx Syntax define @meta{variable}
+@deffnx Syntax define (@meta{variable} @meta{formals}) @meta{body}
+@deffnx Syntax define (@meta{variable} . @meta{formal}) @meta{body}
+The first from of @func{define} binds @meta{variable} to a new location
+before assigning the value of @meta{expression} to it.
+
+@example
+(define add3
+  (lambda (x) (+ x 3)))
+(add3 3)                            @result{}  6
+(define first car)
+(first '(1 2))                      @result{}  1
+@end example
+
+The continuation of @meta{expression} should not be invoked more than
+once.
+
+@strong{Implementation responsibilities:} Implementations should detect
+that the continuation of @meta{expression} is invoked more than once.
+If the implementation detects this, it must raise an exception with
+condition type @condition{assertion}.
+
+The second form of @func{define} is equivalent to:
+
+@example
+(define @meta{variable} @meta{unspecified})
+@end example
+
+@noindent
+where @meta{unspecified} is a side--effect--free expression returning an
+unspecified value.
+
+In the third form of @func{define}, @meta{formals} must be either a
+sequence of zero or more variables, or a sequence of one or more
+variables followed by a dot @code{.} and another variable (as in a
+lambda expression).  This form is equivalent to:
+
+@example
+(define @meta{variable}
+  (lambda (@meta{formals}) @meta{body}))
+@end example
+
+In the fourth form of @func{define}, @meta{formal} must be a single
+variable.  This form is equivalent to:
+
+@example
+(define @meta{variable}
+  (lambda @meta{formal} @meta{body}))
+@end example
+@end deffn
+
+@c page
+@node baselib definitions syntax
+@subsection Syntax definitions
+
+
+The @code{define-syntax} form described in this section is a
+@meta{definition} used to create keyword bindings and may appear
+anywhere other definitions may appear.
+
+
+@deffn Syntax define-syntax @meta{keyword} @meta{expression}
+Binds @meta{keyword} to the value of @meta{expression}, which must
+evaluate, at macro--expansion time, to a transformer.  Macro
+transformers can be created using the @func{syntax-rules} and
+@func{identifier-syntax} forms.
+
+Keyword bindings established by @func{define-syntax} are visible
+throughout the body in which they appear, except where shadowed by other
+bindings, and nowhere else, just like variable bindings established by
+@func{define}.  All bindings established by a set of definitions,
+whether keyword or variable definitions, are visible within the
+definitions themselves.
+
+@strong{Implementation responsibilities:} The implementation should
+detect if the value of @meta{expression} cannot possibly be a
+transformer.
+
+Example:
+
+@example
+(let ()
+  (define even?
+    (lambda (x)
+      (or (= x 0) (odd? (- x 1)))))
+  (define-syntax odd?
+    (syntax-rules ()
+      ((odd?  x) (not (even? x)))))
+  (even? 10))
+@result{} #t
+@end example
+
+An implication of the left--to--right processing order is that one
+definition can affect whether a subsequent form is also a definition.
+
+Example:
+
+@example
+(let ()
+  (define-syntax bind-to-zero
+    (syntax-rules ()
+      ((bind-to-zero id) (define id 0))))
+  (bind-to-zero x)
+  x)
+@result{} 0
+@end example
+
+The behavior is unaffected by any binding for @func{bind-to-zero} that
+might appear outside of the @func{let} expression.
+@end deffn
+
+
+@c page
+@node baselib bodies
+@section Bodies
+
+
+The @meta{body} of a @func{lambda}, @func{let}, @func{let*},
+@func{let-values}, @func{let*-values}, @func{letrec}, or @func{letrec*}
+expression, or that of a definition with a body consists of zero or more
+definitions followed by one or more expressions:
+
+@example
+@meta{definition} @dots{} @metai{expression} @metaii{expression} @dots{}
+@end example
+
+Each identifier defined by a @meta{definition} is local to the
+@meta{body}; that is, the identifier is bound, and the region of the
+binding is the entire @meta{body}.
+
+Example:
+
+@example
+(let ((x 5))
+  (define foo (lambda (y) (bar x y)))
+  (define bar (lambda (a b) (+ (* a b) a)))
+  (foo (+ x 3)))
+@result{}  45
+@end example
+
+When @func{begin}, @func{let-syntax}, or @func{letrec-syntax} forms
+occur in a body prior to the first expression, they are spliced into the
+body.  Some or all of the body, including portions wrapped in
+@func{begin}, @func{let-syntax}, or @func{letrec-syntax} forms, may be
+specified by a macro use.
+
+An expanded @meta{body} containing variable definitions can always be
+converted into an equivalent @func{letrec*} expression.  For example,
+the @func{let} expression in the above example is equivalent to
+
+@example
+(let ((x 5))
+  (letrec* ((foo (lambda (y) (bar x y)))
+            (bar (lambda (a b) (+ (* a b) a))))
+    (foo (+ x 3))))
+@end example
+
+
+@c page
+@node baselib expressions
+@section Expressions
+
+
+The entries in this section describe the expressions of the
+@rsixlibrary{base} library, which may occur in the position of the
+@meta{expression} syntactic variable in addition to the primitive
+expression types.
+
+
+@menu
+* baselib expressions quotation::       Quotation.
+* baselib expressions procedures::      Procedures.
+* baselib expressions conditionals::    Conditionals.
+* baselib expressions assignments::     Assignments.
+* baselib expressions derived cond::    Derived conditionals.
+* baselib expressions binding::         Binding constructs.
+* baselib expressions sequencing::      Sequencing.
+@end menu
+
+@c page
+@node baselib expressions quotation
+@subsection Quotation
+
+
+@deffn Syntax quote @meta{datum}
+@meta{datum} should be a syntactic datum.  @code{(quote @meta{datum})}
+evaluates to the datum value represented by @meta{datum}.  This notation
+is used to include constants.
+
+@example
+(quote a)               @result{} a
+(quote #(a b c))        @result{} #(a b c)
+(quote (+ 1 2))         @result{} (+ 1 2)
+@end example
+
+@code{(quote @meta{datum})} may be abbreviated as @code{'@meta{datum}}:
+
+@example
+'"abc"               @result{} "abc"
+'145932              @result{} 145932
+'a                   @result{} a
+'#(a b c)            @result{} #(a b c)
+'()                  @result{} ()
+'(+ 1 2)             @result{} (+ 1 2)
+'(quote a)           @result{} (quote a)
+''a                  @result{} (quote a)
+@end example
+
+Constants are immutable.
+
+@quotation
+@strong{NOTE} Different constants that are the value of a @func{quote}
+expression may share the same locations.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib expressions procedures
+@subsection Procedures
+
+
+@deffn Syntax lambda @meta{formals} @meta{body}
+@meta{formals} must be a formal parameter list as described below, and
+@meta{body} must be as described in @ref{baselib bodies}.
+
+A @func{lambda} evaluates to a procedure.  The environment in effect
+when the @func{lambda} is evaluated is remembered as part of the
+procedure.  When the procedure is later called with some arguments, the
+environment in which the @func{lambda} was evaluated is extended by
+binding the variables in the parameter list to fresh locations, and the
+resulting argument values are stored in those locations.  Then, the
+expressions in the body of the @func{lambda} (which may contain
+definitions and thus represent a @func{letrec*} form) are evaluated
+sequentially in the extended environment.  The results of the last
+expression in the body are returned as the results of the procedure
+call.
+
+@example
+(lambda (x) (+ x x))      @result{} a procedure
+((lambda (x) (+ x x)) 4)  @result{} 8
+
+((lambda (x)
+   (define (p y)
+     (+ y 1))
+   (+ (p x) x))
+ 5) @result{} 11
+
+(define reverse-subtract
+  (lambda (x y) (- y x)))
+(reverse-subtract 7 10)         @result{} 3
+
+(define add4
+  (let ((x 4))
+    (lambda (y) (+ x y))))
+(add4 6)                        @result{} 10
+@end example
+
+@meta{formals} must have one of the following forms:
+
+@table @code
+@item (@metai{variable} @dots{})
+The procedure takes a fixed number of arguments; when the procedure is
+called, the arguments are stored in the bindings of the corresponding
+variables.
+
+@item @meta{variable}
+The procedure takes any number of arguments; when the procedure is
+called, the sequence of arguments is converted into a newly allocated
+list, and the list is stored in the binding of the @meta{variable}.
+
+@item (@metai{variable} @dots{} @metan{variable} . @metani{variable})
+If a period @code{.} precedes the last variable, then the procedure
+takes @var{n} or more arguments, where @var{n} is the number of
+parameters before the period (there must be at least one).  The value
+stored in the binding of the last variable is a newly allocated list of
+the arguments left over after all the other arguments have been matched
+up against the other parameters.
+
+@example
+((lambda x x) 3 4 5 6)          @result{} (3 4 5 6)
+((lambda (x y . z) z)
+ 3 4 5 6)                       @result{} (5 6)
+@end example
+@end table
+
+Any @meta{variable} must not appear more than once in @meta{formals}.
+@end deffn
+
+
+
+@c page
+@node baselib expressions conditionals
+@subsection Conditionals
+
+
+@deffn Syntax if @meta{test} @meta{consequent} @meta{alternate}
+@deffnx Syntax if @meta{test} @meta{consequent}
+@meta{test}, @meta{consequent}, and @meta{alternate} must be
+expressions.
+
+An @func{if} expression is evaluated as follows: first, @meta{test} is
+evaluated.  If it yields a true value, then @meta{consequent} is
+evaluated and its values are returned.  Otherwise @meta{alternate} is
+evaluated and its values are returned.  If @meta{test} yields @false{}
+and no @meta{alternate} is specified, then the result of the expression
+is unspecified.
+
+@example
+(if (> 3 2) 'yes 'no)           @result{} yes
+(if (> 2 3) 'yes 'no)           @result{} no
+(if (> 3 2)
+    (- 3 2)
+    (+ 3 2))                    @result{} 1
+(if #f #f)                      @result{} unspecified
+@end example
+
+The @meta{consequent} and @meta{alternate} expressions are in tail
+context if the @func{if} expression itself is.
+@end deffn
+
+@c page
+@node baselib expressions assignments
+@subsection Assignments
+
+
+@deffn Syntax set! @meta{variable} @meta{expression}
+@meta{expression} is evaluated, and the resulting value is stored in the
+location to which @meta{variable} is bound.  @meta{variable} must be
+bound either in some region expression or at the top level.  The result
+of the @func{set!} expression is unspecified.
+
+@example
+(let ((x 2))
+  (+ x 1)
+  (set! x 4)
+  (+ x 1)) @result{} 5
+@end example
+
+It is a syntax violation if @meta{variable} refers to an immutable
+binding.
+
+@quotation
+@strong{NOTE} The identifier @func{set!} is exported with level @emph{1}
+as well.
+@end quotation
+@end deffn
+
+@c page
+@node baselib expressions derived cond
+@subsection Derived conditionals
+
+
+@deffn Syntax cond @metai{cond-clause} @metaii{cond-clause} @dots{}
+@deffnx {Auxiliary Syntax} {=>}
+@deffnx {Auxiliary Syntax} else
+Each @meta{cond-clause} must be of the form:
+
+@example
+(@meta{test} @metai{expression} @dots{})
+@end example
+
+@noindent
+where @meta{test} is an expression.  Alternatively, a
+@meta{cond-clause} may be of the form:
+
+@example
+(@meta{test} => @meta{expression})
+@end example
+
+The last @meta{cond-clause} may be an ``@code{else} clause'', which has
+the form:
+
+@example
+(else @metai{expression} @metaii{expression} @dots{})
+@end example
+
+A @func{cond} expression is evaluated by evaluating the @meta{test}
+expressions of successive @meta{cond-clause}s in order until one of
+them evaluates to a true value.  When a @meta{test} evaluates to a true
+value, then the remaining @meta{expression}s in its @meta{cond-clause}
+are evaluated in order, and the results of the last @meta{expression} in
+the @meta{cond clause} are returned as the results of the entire
+@func{cond} expression.
+
+If the selected @meta{cond-clause} contains only the @meta{test} and no
+@meta{expression}s, then the value of the @meta{test} is returned as
+the result.  If the selected @meta{cond-clause} uses the @samp{=>}
+alternate form, then the @meta{expression} is evaluated.  Its value
+must be a procedure.  This procedure should accept one argument; it is
+called on the value of the @meta{test} and the values returned by this
+procedure are returned by the @func{cond} expression.
+
+If all @meta{test}s evaluate to @false{}, and there is no @samp{else}
+clause, then the conditional expression returns unspecified values; if
+there is an @code{else} clause, then its @meta{expression}s are
+evaluated, and the values of the last one are returned.
+
+@example
+(cond ((> 3 2) 'greater)
+      ((< 3 2) 'less))          @result{} greater
+
+(cond ((> 3 3) 'greater)
+      ((< 3 3) 'less)
+      (else 'equal))            @result{} equal
+
+(cond ('(1 2 3) => cadr)
+      (else #f))                @result{} 2
+@end example
+
+For a @meta{cond-clause} of one of the following forms:
+
+@example
+(@meta{test} @metai{expression} @dots{})
+(else @metai{expression} @metaii{expression} @dots{})
+@end example
+
+@noindent
+the last @meta{expression} is in tail context if the @func{cond} form
+itself is.  For a @meta{cond-clause} of the form:
+
+@example
+(@meta{test} => @meta{expression})
+@end example
+
+@noindent
+the (implied) call to the procedure that results from the evaluation of
+@meta{expression} is in a tail context if the @func{cond} form itself
+is.
+@end deffn
+
+
+@deffn Syntax case @meta{key} @metai{case-clause} @metaii{case-clause} @dots{}
+@meta{key} must be an expression.  Each @meta{case-clause} must have
+one of the following forms:
+
+@example
+((@metai{datum} @dots{}) @metai{expression} @metaii{expression} @dots{})
+(else @metai{expression} @metaii{expression} @dots{})
+@end example
+
+The second form, which specifies an ``@code{else} clause'', may only
+appear as the last @meta{case-clause}.  Each @meta{datum} is an
+external representation of some object.  The data represented by the
+@meta{datum}s need not be distinct.
+
+A @func{case} expression is evaluated as follows.
+
+@enumerate
+@item
+@meta{key} is evaluated and its result is compared using @func{eqv?}
+against the data represented by the @meta{datum}s of each
+@meta{case-clause} in turn, proceeding in order from left to right
+through the set of clauses.
+
+@item
+If the result of evaluating @meta{key} is equivalent to a datum of a
+@meta{case-clause}, the corresponding @meta{expression}s are evaluated
+from left to right and the results of the last expression in the
+@meta{case-clause} are returned as the results of the @func{case}
+expression.  Otherwise, the comparison process continues.
+
+@item
+If the result of evaluating @meta{key} is different from every datum in
+each set, then if there is an @code{else} clause its expressions are
+evaluated and the results of the last are the results of the @func{case}
+expression; otherwise the @func{case} expression returns unspecified
+values.
+@end enumerate
+
+@example
+(case (* 2 3)
+  ((2 3 5 7) 'prime)
+  ((1 4 6 8 9) 'composite))     @result{} composite
+(case (car '(c d))
+  ((a) 'a)
+  ((b) 'b))                     @result{} unspecified
+(case (car '(c d))
+  ((a e i o u) 'vowel)
+  ((w y) 'semivowel)
+  (else 'consonant))            @result{} consonant
+@end example
+
+The last @meta{expression} of a @meta{case-clause} is in tail context
+if the @func{case} expression itself is.
+@end deffn
+
+
+@deffn Syntax and @metai{test} @dots{}
+The @meta{test}s must be expressions.
+
+If there are no @meta{test}s, @true{} is returned.  Otherwise, the
+@meta{test} expressions are evaluated from left to right until a
+@meta{test} returns @false{} or the last @meta{test} is reached.  In the
+former case, the @func{and} expression returns @false{} without
+evaluating the remaining expressions.  In the latter case, the last
+expression is evaluated and its values are returned.
+
+@example
+(and (= 2 2) (> 2 1))           @result{}  #t
+(and (= 2 2) (< 2 1))           @result{}  #f
+(and 1 2 'c '(f g))             @result{}  (f g)
+(and)                           @result{}  #t
+@end example
+
+The @func{and} keyword could be defined in terms of @func{if} using
+@func{syntax-rules} as follows:
+
+@example
+(define-syntax and
+  (syntax-rules ()
+    ((and) #t)
+    ((and test) test)
+    ((and test1 test2 ...)
+     (if test1 (and test2 ...) #t))))
+@end example
+
+The last @meta{test} expression is in tail context if the @func{and}
+expression itself is.
+@end deffn
+
+
+@deffn Syntax or @metai{test} @dots{}
+The @meta{test}s must be expressions.
+
+If there are no @meta{test}s, @false{} is returned.  Otherwise, the
+@meta{test} expressions are evaluated from left to right until a
+@meta{test} returns a true value @var{val} or the last @meta{test} is
+reached.  In the former case, the @func{or} expression returns @var{val}
+without evaluating the remaining expressions.  In the latter case, the
+last expression is evaluated and its values are returned.
+
+@example
+(or (= 2 2) (> 2 1))            @result{} #t
+(or (= 2 2) (< 2 1))            @result{} #t
+(or #f #f #f)                   @result{} #f
+(or '(b c) (/ 3 0))             @result{} (b c)
+@end example
+
+The @func{or} keyword could be defined in terms of @func{if} using
+@func{syntax-rules} as follows:
+
+@example
+(define-syntax or
+  (syntax-rules ()
+    ((or) #f)
+    ((or test) test)
+    ((or test1 test2 ...)
+     (let ((x test1))
+       (if x x (or test2 ...))))))
+@end example
+
+The last @meta{test} expression is in tail context if the @func{or}
+expression itself is.
+@end deffn
+
+@c page
+@node baselib expressions binding
+@subsection Binding constructs
+
+
+The binding constructs described in this section create local bindings
+for variables that are visible only in a delimited region.  The syntax
+of the constructs @func{let}, @func{let*}, @func{letrec}, and
+@func{letrec*} is identical, but they differ in the regions they
+establish for their variable bindings and in the order in which the
+values for the bindings are computed.
+
+@itemize
+@item
+In a @func{let} expression, the initial values are computed before any
+of the variables become bound; in a @func{let*} expression, the bindings
+and evaluations are performed sequentially.
+
+@item
+In a @func{letrec} or @func{letrec*} expression, all the bindings are in
+effect while their initial values are being computed, thus allowing
+mutually recursive definitions.
+
+@item
+In a @func{letrec} expression, the initial values are computed before
+being assigned to the variables; in a @func{letrec*}, the evaluations
+and assignments are performed sequentially.
+@end itemize
+
+In addition, the binding constructs @func{let-values} and
+@func{let*-values} generalize @func{let} and @func{let*} to allow
+multiple variables to be bound to the results of expressions that
+evaluate to multiple values.  They are analogous to @func{let} and
+@func{let*} in the way they establish regions: in a @func{let-values}
+expression, the initial values are computed before any of the variables
+become bound; in a @func{let*-values} expression, the bindings are
+performed sequentially.
+
+
+@deffn Syntax let @meta{bindings} @meta{body}
+@meta{bindings} must have the form:
+
+@example
+((@metai{variable} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as
+described in @ref{baselib bodies}.  Any variable must not appear more
+than once in the @meta{variable}s.
+
+The @meta{init}s are evaluated in the current environment (in some
+unspecified order), the @meta{variable}s are bound to fresh locations
+holding the results, the @meta{body} is evaluated in the extended
+environment, and the values of the last expression of @meta{body} are
+returned.  Each binding of a @meta{variable} has @meta{body} as its
+region.
+
+@example
+(let ((x 2) (y 3))
+  (* x y))                      @result{} 6
+
+(let ((x 2) (y 3))
+  (let ((x 7)
+        (z (+ x y)))
+    (* z x)))                   @result{} 35
+@end example
+
+See also named @func{let}.
+@end deffn
+
+
+@deffn Syntax {let*} @meta{bindings} @meta{body}
+@meta{bindings} must have the form:
+
+@example
+((@metai{variable} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as described
+in @ref{baselib bodies}.
+
+The @func{let*} form is similar to @func{let}, but the @meta{init}s are
+evaluated and bindings created sequentially from left to right, with the
+region of each binding including the bindings to its right as well as
+@meta{body}.  Thus the second @meta{init} is evaluated in an environment
+in which the first binding is visible and initialized, and so on.
+
+@example
+(let ((x 2) (y 3))
+  (let* ((x 7)
+         (z (+ x y)))
+    (* z x)))             @result{} 70
+@end example
+
+@quotation
+@strong{NOTE} While the variables bound by a @func{let} expression must
+be distinct, the variables bound by a @func{let*} expression need not be
+distinct.
+@end quotation
+@end deffn
+
+
+@deffn Syntax letrec @meta{bindings} @meta{body}
+@meta{bindings} must have the form:
+
+@example
+((@metai{variable} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as described
+in @ref{baselib bodies}.  Any variable must not appear more than once in
+the @meta{variable}s.
+
+The @meta{variable}s are bound to fresh locations, the @meta{init}s are
+evaluated in the resulting environment (in some unspecified order), each
+@meta{variable} is assigned to the result of the corresponding
+@meta{init}, the @meta{body} is evaluated in the resulting environment,
+and the values of the last expression in @meta{body} are returned.  Each
+binding of a @meta{variable} has the entire @func{letrec} expression as
+its region, making it possible to define mutually recursive procedures.
+
+@example
+(letrec ((even?
+          (lambda (n)
+            (if (zero? n)
+                #t
+                (odd? (- n 1)))))
+         (odd?
+          (lambda (n)
+            (if (zero? n)
+                #f
+                (even? (- n 1))))))
+  (even? 88))
+@result{} #t
+@end example
+
+It should be possible to evaluate each @meta{init} without assigning or
+referring to the value of any @meta{variable}.  In the most common uses
+of @func{letrec}, all the @meta{init}s are @func{lambda}s and the
+restriction is satisfied automatically.  Another restriction is that the
+continuation of each @meta{init} should not be invoked more than once.
+
+@strong{Implementation responsibilities:} Implementations must detect
+references to a @meta{variable} during the evaluation of the @meta{init}
+expressions (using one particular evaluation order and order of
+evaluating the @meta{init} expressions).  If an implementation detects
+such a violation of the restriction, it must raise an exception with
+condition type @condition{assertion}.  Implementations may or may not detect
+that the continuation of each @meta{init} is invoked more than once.
+However, if the implementation detects this, it must raise an exception
+with condition type @condition{assertion}.
+@end deffn
+
+@deffn Syntax {letrec*} @meta{bindings} @meta{body}
+@meta{bindings} must have the form:
+
+@example
+((@metai{variable} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as described
+in @ref{baselib bodies}.  Any variable must not appear more than once in
+the @meta{variable}s.
+
+The @meta{variable}s are bound to fresh locations, each @meta{variable}
+is assigned in left--to--right order to the result of evaluating the
+corresponding @meta{init}, the @meta{body} is evaluated in the resulting
+environment, and the values of the last expression in @meta{body} are
+returned.  Despite the left--to--right evaluation and assignment order,
+each binding of a @meta{variable} has the entire @func{letrec*}
+expression as its region, making it possible to define mutually
+recursive procedures.
+
+@example
+(letrec* ((p
+           (lambda (x)
+             (+ 1 (q (- x 1)))))
+          (q
+           (lambda (y)
+             (if (zero? y)
+                 0
+                 (+ 1 (p (- y 1))))))
+          (x (p 5))
+          (y x))
+  y)
+@result{}  5
+@end example
+
+It must be possible to evaluate each @meta{init} without assigning or
+referring to the value of the corresponding @meta{variable} or the
+@meta{variable} of any of the bindings that follow it in
+@meta{bindings}.  Another restriction is that the continuation of each
+@meta{init} should not be invoked more than once.
+
+@strong{Implementation responsibilities:} Implementations must, during
+the evaluation of an @meta{init} expression, detect references to the
+value of the corresponding @meta{variable} or the @meta{variable} of any
+of the bindings that follow it in @meta{bindings}.  If an implementation
+detects such a violation of the restriction, it must raise an exception
+with condition type @condition{assertion}.  Implementations may or may not
+detect that the continuation of each @meta{init} is invoked more than
+once.  However, if the implementation detects this, it must raise an
+exception with condition type @condition{assertion}.
+@end deffn
+
+
+@deffn Syntax let-values @meta{mv-bindings} @meta{body}
+@meta{mv-bindings} must have the form:
+
+@example
+((@metai{formals} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as described
+in @ref{baselib bodies}.  Any variable must not appear more than once in
+the set of @meta{formals}.
+
+The @meta{init}s are evaluated in the current environment (in some
+unspecified order), and the variables occurring in the @meta{formals}
+are bound to fresh locations containing the values returned by the
+@meta{init}s, where the @meta{formals} are matched to the return values
+in the same way that the @meta{formals} in a @func{lambda} are matched
+to the arguments in a procedure call.  Then, the @meta{body} is
+evaluated in the extended environment, and the values of the last
+expression of @meta{body} are returned.  Each binding of a variable has
+@meta{body} as its region.  If the @meta{formals} do not match, an
+exception with condition type @condition{assertion} is raised.
+
+@example
+(let-values (((a b) (values 1 2))
+             ((c d) (values 3 4)))
+  (list a b c d))
+@result{} (1 2 3 4)
+
+(let-values (((a b . c) (values 1 2 3 4)))
+  (list a b c))
+@result{} (1 2 (3 4))
+
+(let ((a 'a) (b 'b) (x 'x) (y 'y))
+  (let-values (((a b) (values x y))
+               ((x y) (values a b)))
+    (list a b x y)))
+@result{} (x y a b)
+@end example
+
+Notice the following special case:
+
+@example
+(let-values ((all (values 1 2 3)))
+  all)
+@result{} (1 2 3)
+@end example
+
+@noindent
+which corresponds to the @func{lambda} formals:
+
+@example
+(define f
+  (lambda all
+    all))
+
+(f 1 2 3)       @result{} (1 2 3)
+@end example
+@end deffn
+
+
+@deffn Syntax {let*-values} @meta{mv-bindings} @meta{body}
+@meta{mv-bindings} must have the form:
+
+@example
+((@metai{formals} @metai{init}) @dots{})
+@end example
+
+@noindent
+where each @meta{init} is an expression, and @meta{body} is as described
+in @ref{baselib bodies}.  In each @meta{formals}, any variable must not
+appear more than once.
+
+The @func{let*-values} form is similar to @func{let-values}, but the
+@meta{init}s are evaluated and bindings created sequentially from left
+to right, with the region including the bindings to its right as well as
+@meta{body}.  Thus the second @meta{init} is evaluated in an environment
+in which the bindings of the first @meta{formals} is visible and
+initialized, and so on.
+
+@example
+(let ((a 'a) (b 'b) (x 'x) (y 'y))
+  (let*-values (((a b) (values x y))
+                ((x y) (values a b)))
+    (list a b x y)))
+@result{} (x y x y)
+@end example
+
+@quotation
+@strong{NOTE} While all of the variables bound by a @func{let-values}
+expression must be distinct, the variables bound by different
+@meta{formals} of a @func{let*-values} expression need not be distinct.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib expressions sequencing
+@subsection Sequencing
+
+
+@deffn Syntax begin @meta{form} @dots{}
+@deffnx Syntax begin @meta{expression} @meta{expression} @dots{}
+The @meta{begin} keyword has two different roles, depending on its
+context:
+
+@itemize
+@item
+It may appear as a form in a @meta{body}, @meta{library-body}, or
+@meta{top-level-body}, or directly nested in a @func{begin} form that
+appears in a body.  In this case, the @func{begin} form must have the
+shape specified in the first header line.  This use of @func{begin} acts
+as a @emph{splicing} form: the forms inside the @meta{body} are spliced
+into the surrounding body, as if the @func{begin} wrapper were not
+actually present.
+
+A @func{begin} form in a @meta{body} or @meta{library-body} must be
+non--empty if it appears after the first @meta{expression} within the
+body.
+
+@item
+It may appear as an ordinary expression and must have the shape
+specified in the second header line.  In this case, the
+@meta{expression}s are evaluated sequentially from left to right, and
+the values of the last @meta{expression} are returned.  This expression
+type is used to sequence side effects such as assignments or input and
+output.
+@end itemize
+
+@example
+(define x 0)
+
+(begin (set! x 5)
+       (+ x 1))
+@result{}  6
+
+(begin (display "4 plus 1 equals ")
+       (display (+ 4 1)))
+@result{} unspecified
+@print{} 4 plus 1 equals 5
+@end example
+@end deffn
+
+@c page
+@node baselib predicates
+@section Equivalence and procedure predicates
+
+
+A @emph{predicate} is a procedure that always returns a boolean value
+(@true{} or @false{}).  An @emph{equivalence predicate} is the
+computational analogue of a mathematical equivalence relation (it is
+symmetric, reflexive, and transitive).  Of the equivalence predicates
+described in this section, @func{eq?} is the finest or most
+discriminating, and @func{equal?} is the coarsest.  The @func{eqv?}
+predicate is slightly less discriminating than @func{eq?}.
+
+
+@deffn Procedure {eqv?} @vari{obj} @varii{obj}
+The @func{eqv?} procedure defines a useful equivalence relation on
+objects.  Briefly, it returns @true{} if @vari{obj} and @varii{obj}
+should normally be regarded as the same object and @false{} otherwise.
+This relation is left slightly open to interpretation, but the following
+partial specification of @func{eqv?} must hold for all implementations.
+
+The @func{eqv?} procedure returns @true{} if one of the following holds:
+
+@itemize
+@item
+@vari{obj} and @varii{obj} are both booleans and are the same according
+to the @func{boolean=?} procedure.
+
+@item
+@vari{obj} and @varii{obj} are both symbols and are the same according
+to the @func{symbol=?} procedure.
+
+@item
+@vari{obj} and @varii{obj} are both exact number objects and are
+numerically equal (see @code{=}).
+
+@item
+@vari{obj} and @varii{obj} are both inexact number objects, are
+numerically equal (see @code{=}), and yield the same results (in the
+sense of @func{eqv?}) when passed as arguments to any other procedure
+that can be defined as a finite composition of Scheme's standard
+arithmetic procedures.
+
+@item
+@vari{obj} and @varii{obj} are both characters and are the same
+character according to the @code{char=?} procedure.
+
+@item
+Both @vari{obj} and @varii{obj} are the empty list.
+
+@item
+@vari{obj} and @varii{obj} are objects such as pairs, vectors,
+bytevectors (library chapter ``Bytevectors''), strings, records (library
+chapter ``Records''), ports (library section ``Port I/O''), or
+hashtables (library chapter ``Hash tables'') that refer to the same
+locations in the store.
+
+@item
+@vari{obj} and @varii{obj} are record--type descriptors that are
+specified to be @func{eqv?} in library section ``Procedural layer''.
+@end itemize
+
+The @func{eqv?} procedure returns @false{} if one of the following
+holds:
+
+@itemize
+@item
+@vari{obj} and @varii{obj} are of different types.
+
+@item
+@vari{obj} and @varii{obj} are booleans for which the @func{boolean=?}
+procedure returns @false{}.
+
+@item
+@vari{Obj} and @varii{obj} are symbols for which the @func{symbol=?}
+procedure returns @false{}.
+
+@item
+One of @vari{obj} and @varii{obj} is an exact number object but the
+other is an inexact number object.
+
+@item
+@vari{obj} and @varii{obj} are rational number objects for which the
+@code{=} procedure returns @false{}.
+
+@item
+@vari{Obj} and @varii{obj} yield different results (in the sense of
+@func{eqv?}) when passed as arguments to any other procedure that can be
+defined as a finite composition of Scheme's standard arithmetic
+procedures.
+
+@item
+@vari{obj} and @varii{obj} are characters for which the @func{char=?}
+procedure returns @false{}.
+
+@item
+One of @vari{obj} and @varii{obj} is the empty list, but the other is
+not.
+
+@item
+@vari{obj} and @varii{obj} are objects such as pairs, vectors,
+bytevectors (library chapter ``Bytevectors''), strings, records (library
+chapter ``Records''), ports (library section ``Port I/O''), or
+hashtables (library chapter ``Hashtables'') that refer to distinct
+locations.
+
+@item
+@vari{obj} and @varii{obj} are pairs, vectors, strings, or records, or
+hashtables, where the applying the same accessor (i.e. @func{car},
+@func{cdr}, @func{vector-ref}, @func{string-ref}, or record accessors)
+to both yields results for which @func{eqv?} returns @false{}.
+
+@item
+@vari{obj} and @varii{obj} are procedures that would behave differently
+(return different values or have different side effects) for some
+arguments.
+@end itemize
+
+@quotation
+@strong{NOTE} The @func{eqv?} procedure returning @true{} when @vari{obj}
+and @varii{obj} are number objects does not imply that @code{=} would
+also return @true{} when called with @vari{obj} and @varii{obj} as
+arguments.
+@end quotation
+
+@example
+(eqv? 'a 'a)                     @result{} #t
+(eqv? 'a 'b)                     @result{} #f
+(eqv? 2 2)                       @result{} #t
+(eqv? '() '())                   @result{} #t
+(eqv? 100000000 100000000)       @result{} #t
+(eqv? (cons 1 2) (cons 1 2))     @result{} #f
+(eqv? (lambda () 1)
+      (lambda () 2))             @result{} #f
+(eqv? #f 'nil)                   @result{} #f
+@end example
+
+The following examples illustrate cases in which the above rules do not
+fully specify the behavior of @func{eqv?}.  All that can be said about
+such cases is that the value returned by @func{eqv?} must be a boolean.
+
+@example
+(let ((p (lambda (x) x)))
+  (eqv? p p))                   @result{} unspecified
+
+(eqv? "" "")                    @result{} unspecified
+
+(eqv? '#() '#())                @result{} unspecified
+
+(eqv? (lambda (x) x)
+      (lambda (x) x))           @result{} unspecified
+
+(eqv? (lambda (x) x)
+      (lambda (y) y))           @result{} unspecified
+
+(eqv? +nan.0 +nan.0)            @result{} unspecified
+@end example
+
+The next set of examples shows the use of @func{eqv?} with procedures
+that have local state.  Calls to @func{gen-counter} must return a
+distinct procedure every time, since each procedure has its own internal
+counter.  Calls to @func{gen-loser} return procedures that behave
+equivalently when called.  However, @func{eqv?} may not detect this
+equivalence.
+
+@example
+(define gen-counter
+  (lambda ()
+    (let ((n 0))
+      (lambda () (set! n (+ n 1)) n))))
+(let ((g (gen-counter)))
+  (eqv? g g))           @result{}  unspecified
+(eqv? (gen-counter) (gen-counter))
+                        @result{}  #f
+(define gen-loser
+  (lambda ()
+    (let ((n 0))
+      (lambda () (set! n (+ n 1)) 27))))
+(let ((g (gen-loser)))
+  (eqv? g g))           @result{}  unspecified
+(eqv? (gen-loser) (gen-loser))
+                        @result{}  unspecified
+
+(letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
+         (g (lambda () (if (eqv? f g) 'both 'g))))
+  (eqv? f g)) @result{} unspecified
+
+(letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
+         (g (lambda () (if (eqv? f g) 'g 'both))))
+  (eqv? f g)) @result{} #f
+@end example
+
+Implementations may share structure between constants where appropriate.
+Furthermore, a constant may be copied at any time by the implementation
+so as to exist simultaneously in different sets of locations.  Thus the
+value of @func{eqv?} on constants is sometimes
+implementation--dependent.
+
+@example
+(eqv? '(a) '(a))                 @result{} unspecified
+(eqv? "a" "a")                   @result{} unspecified
+(eqv? '(b) (cdr '(a b)))         @result{} unspecified
+(let ((x '(a)))
+  (eqv? x x))                    @result{} #t
+@end example
+@end deffn
+
+
+@deffn Procedure eq? @vari{obj} @varii{obj}
+The @func{eq?} predicate is similar to @func{eqv?} except that in some
+cases it is capable of discerning distinctions finer than those
+detectable by @func{eqv?}.
+
+The @func{eq?} and @func{eqv?} predicates are guaranteed to have the
+same behavior on symbols, booleans, the empty list, pairs, procedures,
+non--empty strings, bytevectors, vectors, and records.  The behavior of
+@func{eq?} on number objects and characters is
+implementation--dependent, but it always returns either @true{} or
+@false{}, and returns @true{} only when @func{eqv?} would also return
+@true{}.  The @func{eq?} predicate may also behave differently from
+@func{eqv?} on empty vectors, empty bytevectors, and empty strings.
+
+@example
+(eq? 'a 'a)                     @result{} #t
+(eq? '(a) '(a))                 @result{} unspecified
+(eq? (list 'a) (list 'a))       @result{} #f
+(eq? "a" "a")                   @result{} unspecified
+(eq? "" "")                     @result{} unspecified
+(eq? '() '())                   @result{} #t
+(eq? 2 2)                       @result{} unspecified
+(eq? #\A #\A)                   @result{} unspecified
+(eq? car car)                   @result{} #t
+(let ((n (+ 2 3)))
+  (eq? n n))                    @result{} unspecified
+(let ((x '(a)))
+  (eq? x x))                    @result{} #t
+(let ((x '#()))
+  (eq? x x))                    @result{} unspecified
+(let ((p (lambda (x) x)))
+  (eq? p p))                    @result{} unspecified
+@end example
+@end deffn
+
+
+@deffn Procedure {equal?} @vari{obj} @varii{obj}
+The @func{equal?}  predicate returns @true{} if and only if the
+(possibly infinite) unfoldings of its arguments into regular trees are
+equal as ordered trees.
+
+The @func{equal?} predicate treats pairs and vectors as nodes with
+outgoing edges, uses @func{string=?} to compare strings, uses
+@func{bytevector=?} to compare bytevectors (@ref{stdlib bytevector}),
+and uses @func{eqv?} to compare other nodes.
+
+@example
+(equal? 'a 'a)                  @result{}  #t
+
+(equal? '(a) '(a))              @result{}  #t
+
+(equal? '(a (b) c)
+        '(a (b) c))             @result{}  #t
+
+(equal? "abc" "abc")            @result{}  #t
+
+(equal? 2 2)                    @result{}  #t
+
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))     @result{}  #t
+
+(equal? '#vu8(1 2 3 4 5)
+        (u8-list->bytevector
+         '(1 2 3 4 5))          @result{}  #t
+
+(equal? (lambda (x) x)
+        (lambda (y) y))         @result{}  unspecified
+
+(let* ((x (list 'a))
+       (y (list 'a))
+       (z (list x y)))
+  (list (equal? z (list y x))
+        (equal? z (list x x)))) @result{}  (#t #t)
+@end example
+
+@quotation
+@strong{NOTE} The @func{equal?} procedure must always terminate, even if
+its arguments contain cycles.
+@end quotation
+@end deffn
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Procedure predicate
+
+
+@deffn Procedure {procedure?} @var{obj}
+Return @true{} if @var{obj} is a procedure, otherwise return @false{}.
+
+@example
+(procedure? car)                        @result{} #t
+(procedure? 'car)                       @result{} #f
+(procedure? (lambda (x) (* x x)))       @result{} #t
+(procedure? '(lambda (x) (* x x)))      @result{} #f
+@end example
+@end deffn
+
+
+@c page
+@node baselib math
+@section Mathematics
+
+
+The procedures described here implement arithmetic that is generic over
+the numerical tower.  The generic procedures described in this section
+accept both exact and inexact number objects as arguments, performing
+coercions and selecting the appropriate operations as determined by the
+numeric subtypes of their arguments.
+
+
+@menu
+* baselib math exactness::      Propagation of exactness and inexactness.
+* baselib math infinities::     Representability of infinities and NaNs.
+* baselib math semantics::      Semantics of common operations.
+* baselib math ops::            Numerical operations.
+* baselib math string::         Numerical input and output.
+@end menu
+
+
+@c page
+@node baselib math exactness
+@subsection Propagation of exactness and inexactness
+
+
+The procedures listed below must return the mathematically correct exact
+result provided all their arguments are exact:
+
+@example
++            -            *
+max          min          abs
+numerator    denominator  gcd
+lcm          floor        ceiling
+truncate     round        rationalize
+real-part    imag-part    make-rectangular
+@end example
+
+The procedures listed below must return the correct exact result
+provided all their arguments are exact, and no divisors are zero:
+
+@example
+/
+div          mod           div-and-mod
+div0         mod0          div0-and-mod0
+@end example
+
+Moreover, the procedure @func{expt} must return the correct exact result
+provided its first argument is an exact real number object and its
+second argument is an exact integer object.
+
+The general rule is that the generic operations return the correct exact
+result when all of their arguments are exact and the result is
+mathematically well--defined, but return an inexact result when any
+argument is inexact.  Exceptions to this rule include:
+
+@example
+sqrt            exp             log
+sin             cos             tan
+asin            acos            atan
+expt            make-polar      magnitude
+angle
+@end example
+
+@noindent
+which may (but are not required to) return inexact results even when
+given exact arguments, as indicated in the specification of these
+procedures.
+
+One general exception to the rule above is that an implementation may
+return an exact result despite inexact arguments if that exact result
+would be the correct result for all possible substitutions of exact
+arguments for the inexact ones.  An example is @code{(* 1.0 0)} which
+may return either @math{0} (exact) or @math{0.0} (inexact).
+
+
+@c page
+@node baselib math infinities
+@subsection Representability of infinities and NaNs
+
+
+The specification of the numerical operations is written as though
+infinities and NaNs are representable, and specifies many operations
+with respect to these number objects in ways that are consistent with
+the @ieee{} 754 standard for binary floating--point arithmetic.
+
+An implementation of Scheme may or may not represent infinities and
+NaNs; however, an implementation must raise a continuable exception with
+condition type @condition{no-infinities} or @condition{no-nans}
+(respectively; @ref{stdlib arithmetic flonums}) whenever it is unable to
+represent an infinity or NaN as specified.  In this case, the
+continuation of the exception handler is the continuation that otherwise
+would have received the infinity or NaN value.  This requirement also
+applies to conversions between number objects and external
+representations, including the reading of program source code.
+
+@c page
+@node baselib math semantics
+@subsection Semantics of common operations
+
+
+Some operations are the semantic basis for several arithmetic
+procedures.  The behavior of these operations is described in this
+section for later reference.
+
+
+@menu
+* baselib math semantics integer::      Integer division.
+* baselib math semantics trascend::     Transcendental functions.
+@end menu
+
+
+@c page
+@node baselib math semantics integer
+@subsubsection Integer division
+
+
+Scheme's operations for performing integer division rely on mathematical
+operations @math{div}, @math{mod}, @math{div_0}, and @math{mod_0},
+that are defined as follows:
+
+@itemize
+@item
+@math{div}, @math{mod}, @math{div_0}, and @math{mod_0} each accept
+two real numbers @math{x_1} and @math{x_2} as operands, where @math{x_2}
+must be nonzero.
+
+@item
+@math{div} returns an integer, and @math{mod} returns a real.  Their
+results are specified by:
+
+@example
+x_1 div x_2 = n_d
+x_1 mod x_2 = x_m
+@end example
+
+@noindent
+where:
+
+@example
+x_1 = n_d * x_2 + x_m
+0  <= x_m < |x_2|
+@end example
+
+Examples:
+
+@example
+ 123 div  10 =  12
+ 123 mod  10 =   3
+ 123 div -10 = -12
+ 123 mod -10 =   3
+-123 div  10 = -13
+-123 mod  10 =   7
+-123 div -10 =  13
+-123 mod -10 =   7
+@end example
+
+@item
+@math{div_0} and @math{mod_0} are like @math{div} and @math{mod}, except
+the result of @math{mod_0} lies within a half--open interval centered on
+zero.  The results are specified by:
+
+@example
+x_1 div_0 x_2 = n_d
+x_1 mod_0 x_2 = x_m
+@end example
+
+@noindent
+where:
+
+@example
+x_1 = n_d * x_2 + x_m
+-|x_2/2| <= x_m < |x_2/2|
+@end example
+
+Examples:
+
+@example
+ 123 div_0  10 =  12
+ 123 mod_0  10 =   3
+ 123 div_0 -10 = -12
+ 123 mod_0 -10 =   3
+-123 div_0  10 = -12
+-123 mod_0  10 =  -3
+-123 div_0 -10 =  12
+-123 mod_0 -10 =  -3
+@end example
+@end itemize
+
+@c page
+@node baselib math semantics trascend
+@subsubsection Transcendental functions
+
+
+In general, the transcendental functions @math{\log}, @math{\sin^{-1}}
+(arcsine), @math{\cos^{-1}} (arccosine), and @math{\tan^{-1}} are
+multiply defined.  The value of @math{\log z} is defined to be the one
+whose imaginary part lies in the range from @math{-\pi} (inclusive if
+@math{-0.0} is distinguished, exclusive otherwise) to @math{\pi}
+(inclusive).  @math{\log 0} is undefined.
+
+The value of @math{\log z} for non--real @math{z} is defined in terms of
+log on real numbers as:
+
+@tex
+$$ \log z = \log |z| + (\angle z) i $$
+@end tex
+@ifnottex
+@example
+\log z = \log |z| + (\angle z) i
+@end example
+@end ifnottex
+
+@noindent
+where @math{\angle z} is the angle of @math{z = a * e^{(i * b)}}
+specified as:
+
+@tex
+$$ \angle z = b + 2 \pi n $$
+@end tex
+@ifnottex
+@example
+\angle z = b + 2 \pi n
+@end example
+@end ifnottex
+
+@noindent
+with @math{-\pi <= \angle z <= \pi} and @math{\angle z = b + 2 \pi n}
+for some integer @math{n}.
+
+With the one--argument version of @math{\log} defined this way, the
+values of the two--argument--version of @math{\log z}, @math{\sin^{-1}
+z}, @math{\cos^{-1} z}, @math{\tan^{-1} z}, and the two--argument
+version of @math{\tan^{-1}} are according to the following formulae:
+
+@tex
+$$ \log_b z = (\log z)/(\log b) $$
+$$ \sin^{-1} z = -i \log (i z + \sqrt{1 - z^2}) $$
+$$ \cos^{-1} z = \pi/2 - \sin^{-1} z $$
+$$ \tan^{-1} z = (\log (1 + i z) - \log (1 - i z)) / (2 i) $$
+$$ \tan^{-1} (x, y) = \angle(x + yi) $$
+@end tex
+@ifnottex
+@example
+\log_b z = (\log z)/(\log b)
+\sin^(-1) z = -i \log (i z + \sqrt(1 - z^2))
+\cos^(-1) z = \pi/2 - sin^(-1) z
+\tan^(-1) z = (\log (1 + i z) - \log (1 - i z)) / (2 i)
+\tan^(-1) (x, y) = \angle(x + yi)
+@end example
+@end ifnottex
+
+The range of @math{\tan^{-1} (x, y)} is as in the following table; the
+asterisk (@samp{*}) indicates that the entry applies to implementations
+that distinguish minus zero.
+
+@multitable {*} {@math{y} condition} {@math{x} condition} {range of result @math{r}}
+@headitem @tab @math{y} condition @tab @math{x} condition @tab range of result @math{r}
+@item   @tab @math{y = 0.0}  @tab @math{x > 0.0}  @tab @math{0.0}
+@item * @tab @math{y = +0.0} @tab @math{x > 0.0}  @tab @math{+0.0}
+@item * @tab @math{y = -0.0} @tab @math{x > 0.0}  @tab @math{-0.0}
+@item   @tab @math{y > 0.0}  @tab @math{x > 0.0}  @tab @math{0.0 < r < \pi/2}
+@item   @tab @math{y > 0.0}  @tab @math{x = 0.0}  @tab @math{\pi/2}
+@item   @tab @math{y > 0.0}  @tab @math{x < 0.0}  @tab @math{\pi/2 < r < \pi}
+@item   @tab @math{y = 0.0}  @tab @math{x < 0}    @tab @math{\pi}
+@item * @tab @math{y = +0.0} @tab @math{x < 0.0}  @tab @math{\pi}
+@item * @tab @math{y = -0.0} @tab @math{x < 0.0}  @tab @math{-\pi}
+@item   @tab @math{y < 0.0}  @tab @math{x < 0.0}  @tab @math{-\pi< r < -\pi/2}
+@item   @tab @math{y < 0.0}  @tab @math{x = 0.0}  @tab @math{-\pi/2}
+@item   @tab @math{y < 0.0}  @tab @math{x > 0.0}  @tab @math{-\pi/2 < r < 0.0}
+@item   @tab @math{y = 0.0}  @tab @math{x = 0.0}  @tab undefined
+@item * @tab @math{y = +0.0} @tab @math{x = +0.0} @tab @math{+0.0}
+@item * @tab @math{y = -0.0} @tab @math{x = +0.0} @tab @math{-0.0}
+@item * @tab @math{y = +0.0} @tab @math{x = -0.0} @tab @math{\pi}
+@item * @tab @math{y = -0.0} @tab @math{x = -0.0} @tab @math{-\pi}
+@item * @tab @math{y = +0.0} @tab @math{x = 0}    @tab @math{\pi/2}
+@item * @tab @math{y = -0.0} @tab @math{x = 0}    @tab @math{-\pi/2}
+@end multitable
+
+@c page
+@node baselib math ops
+@subsection Numerical operations
+
+
+@menu
+* baselib math ops type pred::          Numerical type predicates.
+* baselib math ops exactness::          Generic conversion.
+* baselib math ops value pred::         Value predicates.
+* baselib math ops comparison::         Comparison.
+* baselib math ops arithmetic::         Arithmetic operations.
+* baselib math ops part::               Part separation.
+* baselib math ops trascend::           Trascendental functions.
+* baselib math ops exponentiation::     Exponentiation functions.
+* baselib math ops complex::            Complex numbers functions.
+@end menu
+
+
+@c page
+@node baselib math ops type pred
+@subsubsection Numerical type predicates
+
+
+@deffn Procedure {number?} @var{obj}
+@deffnx Procedure {complex?} @var{obj}
+@deffnx Procedure {real?} @var{obj}
+@deffnx Procedure {rational?} @var{obj}
+@deffnx Procedure {integer?} @var{obj}
+These numerical type predicates can be applied to any kind of argument.
+They return @true{} if the object is a number object of the named type,
+and @false{} otherwise.  In general, if a type predicate is true of a
+number object then all higher type predicates are also true of that
+number object.  Consequently, if a type predicate is false of a number
+object, then all lower type predicates are also false of that number
+object.
+
+If @var{z} is a complex number object, then @code{(real? @var{z})} is
+true if and only if @code{(zero? (imag-part @var{z}))} and @code{(exact?
+(imag-part @var{z}))} are both true.
+
+If @var{x} is a real number object, then @code{(rational? @var{x})} is
+true if and only if there exist exact integer objects @vari{k} and
+@varii{k} such that @code{(= @var{x} (/ @vari{k} @varii{k}))} and
+@code{(= (numerator @var{x}) @vari{k})} and @code{(= (denominator
+@var{x}) @varii{k})} are all true.  Thus infinities and NaNs are not
+rational number objects.
+
+If @var{q} is a rational number object, then @code{(integer? @var{q})}
+is true if and only if @code{(= (denominator @var{q}) 1)} is true.  If
+@var{q} is not a rational number object, then @code{(integer? @var{q})}
+is @false{}.
+
+Notice that the comparison function @func{=} does not care about the
+exactness of its arguments:
+
+@example
+(= 1 1.1)       @result{} #t
+(= 1 #i1.1)     @result{} #t
+@end example
+
+@noindent
+so, with the given definition, the only real numbers (according to
+@func{real?})  that are not also rational numbers (according to
+@func{rational?}) are infinities and NaNs.  For the same reason, numbers
+are integers (according to @func{integer?}) without respect for
+exactness.
+
+@example
+(complex? 3+4i)                        @result{} #t
+(complex? 3)                           @result{} #t
+(real? 3)                              @result{} #t
+(real? -2.5+0.0i)                      @result{} #f
+(real? -2.5+0i)                        @result{} #t
+(real? -2.5)                           @result{} #t
+(real? #e1e10)                         @result{} #t
+(rational? 6/10)                       @result{} #t
+(rational? 6/3)                        @result{} #t
+(rational? 2)                          @result{} #t
+(integer? 3+0i)                        @result{} #t
+(integer? 3.0)                         @result{} #t
+(integer? 8/4)                         @result{} #t
+
+(number? +nan.0)                       @result{} #t
+(complex? +nan.0)                      @result{} #t
+(real? +nan.0)                         @result{} #t
+(rational? +nan.0)                     @result{} #f
+(complex? +inf.0)                      @result{} #t
+(real? -inf.0)                         @result{} #t
+(rational? -inf.0)                     @result{} #f
+(integer? -inf.0)                      @result{} #f
+@end example
+
+Notice that @samp{3.0+0i} is an integer number according to
+@func{integer?}, because the imaginary part is exact zero.
+@samp{3.0+0.0i} is a complex number because the imaginary part is
+inexact zero, and it is equal to @samp{#i3.0+0i}; @samp{3.0+0.0i} is not
+integer according to @func{integer?}, but it is @func{integer-valued?}.
+
+@example
+(integer? 3.0+0i)                       @result{} #t
+(integer? 3.0+0.0i)                     @result{} #f
+(integer? #i3.0+0i)                     @result{} #f
+
+(integer-valued? 3.0+0.0i)              @result{} #t
+(integer-valued? #i3.0+0i)              @result{} #t
+@end example
+
+@quotation
+@strong{NOTE} Except for @func{number?}, the behavior of these type
+predicates on inexact number objects is unreliable, because any
+inaccuracy may affect the result.
+@end quotation
+@end deffn
+
+
+@deffn Procedure {real-valued?} @var{obj}
+@deffnx Procedure {rational-valued?} @var{obj}
+@deffnx Procedure {integer-valued?} @var{obj}
+These numerical type predicates can be applied to any kind of argument.
+The @func{real-valued?} procedure returns @true{} if the object is a
+number object and is equal in the sense of @code{=} to some real number
+object, or if the object is a NaN, or a complex number object whose real
+part is a NaN and whose imaginary part is zero in the sense of
+@func{zero?}.  The @func{rational-valued?} and @func{integer-valued?}
+procedures return @true{} if the object is a number object and is equal
+in the sense of @code{=} to some object of the named type, and otherwise
+they return @false{}.
+
+@example
+(real-valued? +nan.0)                  @result{} #t
+(real-valued? +nan.0+0i)               @result{} #t
+(real-valued? -inf.0)                  @result{} #t
+(real-valued? 3)                       @result{} #t
+(real-valued? -2.5+0.0i)               @result{} #t
+(real-valued? -2.5+0i)                 @result{} #t
+(real-valued? -2.5)                    @result{} #t
+(real-valued? #e1e10)                  @result{} #t
+
+(rational-valued? +nan.0)              @result{} #f
+(rational-valued? -inf.0)              @result{} #f
+(rational-valued? 6/10)                @result{} #t
+(rational-valued? 6/10+0.0i)           @result{} #t
+(rational-valued? 6/10+0i)             @result{} #t
+(rational-valued? 6/3)                 @result{} #t
+
+(integer-valued? 3+0i)                 @result{} #t
+(integer-valued? 3+0.0i)               @result{} #t
+(integer-valued? 3.0)                  @result{} #t
+(integer-valued? 3.0+0.0i)             @result{} #t
+(integer-valued? 8/4)                  @result{} #t
+@end example
+
+@quotation
+@strong{NOTE} These procedures test whether a given number object can be
+coerced to the specified type without loss of numerical accuracy.
+Specifically, the behavior of these predicates differs from the behavior
+of @func{real?}, @func{rational?}, and @func{integer?} on complex number
+objects whose imaginary part is inexact zero.
+@end quotation
+
+@quotation
+@strong{NOTE} The behavior of these type predicates on inexact number
+objects is unreliable, because any inaccuracy may affect the result.
+@end quotation
+@end deffn
+
+
+@deffn Procedure {exact?} @var{z}
+@deffnx Procedure {inexact?} @var{z}
+These numerical predicates provide tests for the exactness of a
+quantity.  For any number object, precisely one of these predicates is
+true.
+
+@example
+(exact? 5)                   @result{} #t
+(inexact? +inf.0)            @result{} #t
+(inexact? +nan.0)            @result{} #t
+@end example
+@end deffn
+
+
+
+@c page
+@node baselib math ops exactness
+@subsubsection Exactness conversion
+
+
+These procedures implement the natural one--to-one correspondence
+between exact and inexact integer objects throughout an
+implementation--dependent range.  The @func{inexact} and @func{exact}
+procedures are idempotent.
+
+
+@deffn Procedure inexact @var{z}
+The @func{inexact} procedure returns an inexact representation of
+@var{z}.  If inexact number objects of the appropriate type have bounded
+precision, then the value returned is an inexact number object that is
+nearest to the argument.  If an exact argument has no reasonably close
+inexact equivalent, an exception with condition type
+@condition{implementation-violation} may be raised.
+
+@quotation
+@strong{NOTE} For a real number object whose magnitude is finite but so
+large that it has no reasonable finite approximation as an inexact
+number, a reasonably close inexact equivalent may be @code{+inf.0} or
+@code{-inf.0}.  Similarly, the inexact representation of a complex
+number object whose components are finite may have infinite components.
+@end quotation
+@end deffn
+
+
+@deffn Procedure exact @var{z}
+The @func{exact} procedure returns an exact representation of @var{z}.
+The value returned is the exact number object that is numerically
+closest to the argument; in most cases, the result of this procedure
+should be numerically equal to its argument.  If an inexact argument has
+no reasonably close exact equivalent, an exception with condition type
+@condition{implementation-violation} may be raised.
+@end deffn
+
+
+@c page
+@node baselib math ops value pred
+@subsubsection Value predicates
+
+
+@deffn Procedure = @vari{z} @varii{z} @variii{z} @dots{}
+@deffnx Procedure < @vari{x} @varii{x} @variii{x} @dots{}
+@deffnx Procedure > @vari{x} @varii{x} @variii{x} @dots{}
+@deffnx Procedure <= @vari{x} @varii{x} @variii{x} @dots{}
+@deffnx Procedure >= @vari{x} @varii{x} @variii{x} @dots{}
+These procedures return @true{} if their arguments are (respectively):
+equal, monotonically increasing, monotonically decreasing, monotonically
+nondecreasing, or monotonically nonincreasing, and @false{} otherwise.
+
+Examples:
+
+@example
+(= +inf.0 +inf.0)               @result{} #t
+(= -inf.0 +inf.0)               @result{} #f
+(= -inf.0 -inf.0)               @result{} #t
+@end example
+
+@noindent
+for any real number object @var{x} that is neither infinite nor NaN:
+
+@example
+(< -inf.0 @var{x} +inf.0)       @result{} #t
+(> +inf.0 @var{x} -inf.0)       @result{} #t
+@end example
+
+@noindent
+for any number object @var{z}:
+
+@example
+(= +nan.0 @var{z})              @result{} #f
+@end example
+
+For any real number object @var{x}:
+
+@example
+(< +nan.0 @var{x})              @result{} #f
+(> +nan.0 @var{x})              @result{} #f
+@end example
+
+These predicates must be transitive.
+
+@quotation
+@strong{NOTE} The traditional implementations of these predicates in
+Lisp--like languages are not transitive.
+@end quotation
+
+@quotation
+@strong{NOTE} While it is possible to compare inexact number objects
+using these predicates, the results may be unreliable because a small
+inaccuracy may affect the result; this is especially true of @code{=}
+and @func{zero?}  (below).
+
+When in doubt, consult a numerical analyst.
+@end quotation
+@end deffn
+
+
+@deffn Procedure {zero?} @var{z}
+@deffnx Procedure {positive?} @var{x}
+@deffnx Procedure {negative?} @var{x}
+@deffnx Procedure {odd?} @var{n}
+@deffnx Procedure {even?} @var{n}
+@deffnx Procedure {finite?} @var{x}
+@deffnx Procedure {infinite?} @var{x}
+@deffnx Procedure {nan?} @var{x}
+These numerical predicates test a number object for a particular
+property, returning @true{} or @false{}.
+
+@table @func
+@item zero?
+Tests if the number object is @code{=} to zero.
+
+@item positive?
+Tests whether it is greater than zero.
+
+@item negative?
+Tests whether it is less than zero.
+
+@item odd?
+Tests whether it is odd.
+
+@item even?
+Tests whether it is even.
+
+@item finite?
+Tests whether it is not an infinity and not a NaN.
+
+@item infinite?
+Tests whether it is an infinity.
+
+@item nan?
+Tests whether it is a NaN.
+@end table
+
+@example
+(zero? +0.0)                  @result{} #t
+(zero? -0.0)                  @result{} #t
+(zero? +nan.0)                @result{} #f
+(positive? +inf.0)            @result{} #t
+(negative? -inf.0)            @result{} #t
+(positive? +nan.0)            @result{} #f
+(negative? +nan.0)            @result{} #f
+(finite? +inf.0)              @result{} #f
+(finite? 5)                   @result{} #t
+(finite? 5.0)                 @result{} #t
+(infinite? 5.0)               @result{} #f
+(infinite? +inf.0)            @result{} #t
+@end example
+
+@quotation
+@strong{NOTE} As with the predicates above, the results may be unreliable
+because a small inaccuracy may affect the result.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib math ops comparison
+@subsubsection Comparison
+
+
+@deffn Procedure max @vari{x} @varii{x} @dots{}
+@deffnx Procedure min @vari{x} @varii{x} @dots{}
+These procedures return the maximum or minimum of their arguments.
+
+@example
+(max 3 4)               @result{} 4
+(max 3.9 4)             @result{} 4.0
+@end example
+
+For any real number object @var{x} that is not a NaN:
+
+@example
+(max +inf.0 @var{x})    @result{} +inf.0
+(min -inf.0 @var{x})    @result{} -inf.0
+@end example
+
+@quotation
+@strong{NOTE} If any argument is inexact, then the result is also inexact
+(unless the procedure can prove that the inaccuracy is not large enough
+to affect the result, which is possible only in unusual
+implementations).  If @func{min} or @func{max} is used to compare number
+objects of mixed exactness, and the numerical value of the result cannot
+be represented as an inexact number object without loss of accuracy,
+then the procedure may raise an exception with condition type
+@condition{implementation-restriction}.
+@end quotation
+@end deffn
+
+@c page
+@node baselib math ops arithmetic
+@subsubsection Arithmetic operations
+
+
+@deffn Procedure + @vari{z} @dots{}
+@deffnx Procedure * @vari{z} @dots{}
+These procedures return the sum or product of their arguments.
+
+@example
+(+ 3 4)                 @result{}  7
+(+ 3)                   @result{}  3
+(+)                     @result{}  0
+(+ +inf.0 +inf.0)       @result{}  +inf.0
+(+ +inf.0 -inf.0)       @result{}  +nan.0
+
+(* 4)                   @result{}  4
+(*)                     @result{}  1
+(* 5 +inf.0)            @result{}  +inf.0
+(* -5 +inf.0)           @result{}  -inf.0
+(* +inf.0 +inf.0)       @result{}  +inf.0
+(* +inf.0 -inf.0)       @result{}  -inf.0
+(* 0 +inf.0)            @result{}  0 or +nan.0
+(* 0 +nan.0)            @result{}  0 or +nan.0
+(* 1.0 0)               @result{}  0 or 0.0
+@end example
+
+For any real number object @var{x} that is neither infinite nor NaN:
+
+@example
+(+ +inf.0 x)            @result{}  +inf.0
+(+ -inf.0 x)            @result{}  -inf.0
+@end example
+
+For any real number object @var{x}:
+
+@example
+(+ +nan.0 x)            @result{}  +nan.0
+@end example
+
+For any real number object @var{x} that is not an exact 0:
+
+@example
+(* +nan.0 x)            @result{}  +nan.0
+@end example
+
+If any of these procedures are applied to mixed non--rational real and
+non--real complex arguments, they either raise an exception with
+condition type @condition{implementation-restriction} or return an
+unspecified number object.
+
+Implementations that distinguish @code{-0.0} should adopt behavior
+consistent with the following examples:
+
+@example
+(+  0.0 -0.0)           @result{}  0.0
+(+ -0.0  0.0)           @result{}  0.0
+(+  0.0  0.0)           @result{}  0.0
+(+ -0.0 -0.0)           @result{} -0.0
+@end example
+@end deffn
+
+
+@deffn Procedure - @var{z}
+@deffnx Procedure - @vari{z} @varii{z} @variii{z} @dots{}
+With two or more arguments, this procedures returns the difference of
+its arguments, associating to the left.  With one argument, however, it
+returns the additive inverse of its argument.
+
+@example
+(- 3 4)                 @result{} -1
+(- 3 4 5)               @result{} -6
+(- 3)                   @result{} -3
+(- +inf.0 +inf.0)       @result{} +nan.0
+@end example
+
+If this procedure is applied to mixed non--rational real and non--real
+complex arguments, it either raises an exception with condition type
+@condition{implementation-restriction} or returns an unspecified number
+object.
+
+Implementations that distinguish @math{-0.0} should adopt behavior
+consistent with the following examples:
+
+@example
+(-  0.0)                @result{} -0.0
+(- -0.0)                @result{}  0.0
+(-  0.0 -0.0)           @result{}  0.0
+(- -0.0  0.0)           @result{} -0.0
+(-  0.0  0.0)           @result{}  0.0
+(- -0.0 -0.0)           @result{}  0.0
+@end example
+@end deffn
+
+
+@deffn Procedure / @var{z}
+@deffnx Procedure / @vari{z} @varii{z} @variii{z} @dots{}
+If all of the arguments are exact, then the divisors must all be
+nonzero.  With two or more arguments, this procedure returns the
+quotient of its arguments, associating to the left.  With one argument,
+however, it returns the multiplicative inverse of its argument.
+
+@example
+(/ 3 4 5)               @result{} 3/20
+(/ 3)                   @result{} 1/3
+(/ 0.0)                 @result{} +inf.0
+(/ 1.0 0)               @result{} +inf.0
+(/ -1 0.0)              @result{} -inf.0
+(/ +inf.0)              @result{} 0.0
+(/ 0 0)                 @result{} exception &assertion
+(/ 3 0)                 @result{} exception &assertion
+(/ 0 3.5)               @result{} 0.0
+(/ 0 0.0)               @result{} +nan.0
+(/ 0.0 0)               @result{} +nan.0
+(/ 0.0 0.0)             @result{} +nan.0
+@end example
+
+If this procedure is applied to mixed non--rational real and non--real
+complex arguments, it either raises an exception with condition type
+@condition{implementation-restriction} or returns an unspecified number
+object.
+@end deffn
+
+
+@deffn Procedure abs @var{x}
+Returns the absolute value of its argument.
+
+@example
+(abs -7)                 @result{}  7
+(abs -inf.0)             @result{}  +inf.0
+@end example
+@end deffn
+
+
+@deffn Procedure div-and-mod @vari{x} @varii{x}
+@deffnx Procedure div @vari{x} @varii{x}
+@deffnx Procedure mod @vari{x} @varii{x}
+@deffnx Procedure div0-and-mod0 @vari{x} @varii{x}
+@deffnx Procedure div0 @vari{x} @varii{x}
+@deffnx Procedure mod0 @vari{x} @varii{x}
+These procedures implement number--theoretic integer division and return
+the results of the corresponding mathematical operations specified in
+@ref{baselib math semantics integer}.  If @vari{x} and @varii{x} are
+exact, @varii{x} must be nonzero.  In the cases where the mathematical
+requirements in @ref{baselib math semantics integer} cannot be satisfied
+by any number object, either an exception is raised with condition type
+@condition{implementation-restriction}, or unspecified number objects (one
+for for @func{div}, @func{mod}, @func{div0} and @func{mod0}, two for
+@func{div-and-mod} and @func{div0-and-mod0}) are returned.
+
+@example
+(div x1 x2)        @result{} x1 div x2
+(mod x1 x2)        @result{} x1 mod x2
+
+(div-and-mod x1 x2)
+@result{} x1 div x2,
+   x1 mod x2 ;; two return values
+
+(div0 x1 x2)       @result{} x1 div_0 x2
+(mod0 x1 x2)       @result{} x1 mod_0 x2
+
+(div0-and-mod0 x1 x2)
+@result{} x1 div_0 x2,
+   x1 mod_0 x2 ;; two return values
+@end example
+@end deffn
+
+
+@deffn Procedure gcd @vari{n} @dots{}
+@deffnx Procedure lcm @vari{n} @dots{}
+These procedures return the greatest common divisor or least common
+multiple of their arguments.  The result is always non--negative.
+
+@example
+(gcd 32 -36)                    @result{} 4
+(gcd)                           @result{} 0
+(lcm 32 -36)                    @result{} 288
+(lcm 32.0 -36)                  @result{} 288.0
+(lcm)                           @result{} 1
+@end example
+@end deffn
+
+
+@c page
+@node baselib math ops part
+@subsubsection Part separation
+
+
+@deffn Procedure numerator @var{q}
+@deffnx Procedure denominator @var{q}
+These procedures return the numerator or denominator of their argument;
+the result is computed as if the argument was represented as a fraction
+in lowest terms.  The denominator is always positive.  The denominator
+of @code{0} is defined to be @code{1}.
+
+@example
+(numerator   (/ 6 4))           @result{} 3
+(denominator (/ 6 4))           @result{} 2
+(denominator (inexact (/ 6 4))) @result{} 2.0
+@end example
+@end deffn
+
+
+@deffn Procedure floor @var{x}
+@deffnx Procedure ceiling @var{x}
+@deffnx Procedure truncate @var{x}
+@deffnx Procedure round @var{x}
+These procedures return inexact integer objects for inexact arguments
+that are not infinities or NaNs, and exact integer objects for exact
+rational arguments.
+
+@table @func
+@item floor
+Returns the largest integer object not larger than @var{x}.
+
+@item ceiling
+Returns the smallest integer object not smaller than @var{x}.
+
+@item truncate
+Returns the integer object closest to @var{x} whose absolute value is
+not larger than the absolute value of @var{x}.
+
+@item round
+Returns the closest integer object to @var{x}, rounding to even when
+@var{x} represents a number halfway between two integers (this conforms
+to @ieee{} 754 round to nearest mode).
+@end table
+
+If the argument to one of these procedures is inexact, then the result
+is also inexact.  If an exact value is needed, the result should be
+passed to the @func{exact} procedure.
+
+Although infinities and NaNs are not integer objects, these procedures
+return an infinity when given an infinity as an argument, and a NaN when
+given a NaN.
+
+@example
+(floor -4.3)            @result{} -5.0
+(ceiling -4.3)          @result{} -4.0
+(truncate -4.3)         @result{} -4.0
+(round -4.3)            @result{} -4.0
+
+(floor 3.5)             @result{} 3.0
+(ceiling 3.5)           @result{} 4.0
+(truncate 3.5)          @result{} 3.0
+(round 3.5)             @result{} 4.0
+
+(round 7/2)             @result{} 4
+(round 7)               @result{} 7
+
+(floor +inf.0)          @result{} +inf.0
+(ceiling -inf.0)        @result{} -inf.0
+(round +nan.0)          @result{} +nan.0
+@end example
+@end deffn
+
+
+@deffn Procedure rationalize @vari{x} @varii{x}
+The @func{rationalize} procedure returns a number object representing
+the @emph{simplest} rational number differing from @vari{x} by no more
+than @varii{x}.
+
+A rational number @math{r_1} is @emph{simpler} than another rational
+number @math{r_2} if @math{r_1 = p_1/q_1} and @math{r_2 = p_2/q_2} (in
+lowest terms) and @math{|p_1| <= |p_2|} and @math{|q_1| <= |q_2|}.  Thus
+@math{3/5} is simpler than @math{4/7}.
+
+Although not all rationals are comparable in this ordering (consider
+@math{2/7} and @math{3/5}) any interval contains a rational number that
+is simpler than every other rational number in that interval (the
+simpler @math{2/5} lies between @math{2/7} and @math{3/5}).
+
+Note that @math{0 = 0/1} is the simplest rational of all.
+
+@example
+(rationalize (exact .3) 1/10)   @result{} 1/3
+(rationalize .3 1/10)           @result{} #i1/3 ; approximately
+
+(rationalize +inf.0 3)          @result{} +inf.0
+(rationalize +inf.0 +inf.0)     @result{} +nan.0
+(rationalize 3 +inf.0)          @result{} 0.0
+@end example
+
+The first two examples hold only in implementations whose inexact real
+number objects have sufficient precision.
+@end deffn
+
+
+@c page
+@node baselib math ops trascend
+@subsubsection Trascendental functions
+
+
+@deffn Procedure exp @var{z}
+@deffnx Procedure log @var{z}
+@deffnx Procedure log @vari{z} @varii{z}
+@deffnx Procedure sin @var{z}
+@deffnx Procedure cos @var{z}
+@deffnx Procedure tan @var{z}
+@deffnx Procedure asin @var{z}
+@deffnx Procedure acos @var{z}
+@deffnx Procedure atan @var{z}
+@deffnx Procedure atan @vari{x} @varii{x}
+These procedures compute the usual transcendental functions.
+
+The @func{exp} procedure computes the base--@var{e} exponential of
+@var{z}.
+
+The @func{log} procedure with a single argument computes the natural
+logarithm of @var{z} (@strong{not} the base--10 logarithm); @code{(log
+@vari{z} @varii{z})} computes the base--@varii{z} logarithm of @vari{z}.
+
+The @func{asin}, @func{acos}, and @func{atan} procedures compute
+arcsine, arccosine, and arctangent, respectively.  The two--argument
+variant of @func{atan} computes:
+
+@example
+(angle (make-rectangular @varii{x} @vari{x}))
+@end example
+
+These procedures may return inexact results even when given exact
+arguments.
+
+@example
+(exp +inf.0)    @result{} +inf.0
+(exp -inf.0)    @result{} 0.0
+(log +inf.0)    @result{} +inf.0
+(log 0.0)       @result{} -inf.0
+(log 0)         @result{} exception &assertion
+
+(log -inf.0)    @result{} +inf.0+3.141592653589793i
+                ; approximately
+
+(atan -inf.0)   @result{} -1.5707963267948965
+                ; approximately
+
+(atan +inf.0)   @result{} 1.5707963267948965
+                ; approximately
+
+(log -1.0+0.0i) @result{} 0.0+3.141592653589793i
+                ; approximately
+
+(log -1.0-0.0i) @result{} 0.0-3.141592653589793i
+                ; approximately if -0.0 is distinguished
+@end example
+@end deffn
+
+
+
+@c page
+@node baselib math ops exponentiation
+@subsubsection Exponentiation functions
+
+
+@deffn Procedure sqrt @var{z}
+Return the principal square root of @var{z}.  For rational @var{z}, the
+result has either positive real part, or zero real part and
+non--negative imaginary part.  With @math{\log} defined as in
+@ref{baselib math semantics trascend}, the value of @code{(sqrt
+@var{z})} could be expressed as @math{e^{(\log z)/2}}.
+
+The @func{sqrt} procedure may return an inexact result even when given
+an exact argument.
+
+@example
+(sqrt -5)               @result{} 0.0+2.23606797749979i
+                        ; approximately
+(sqrt +inf.0)           @result{} +inf.0
+(sqrt -inf.0)           @result{} +inf.0i
+@end example
+@end deffn
+
+
+@deffn Procedure exact-integer-sqrt @var{k}
+The @func{exact-integer-sqrt} procedure returns two non--negative exact
+integer objects @math{s} and @math{r} where @math{@var{k} = s^2 + r} and
+@math{@var{k} < (s+1)^2}.
+
+@example
+(exact-integer-sqrt 4)  @result{} 2 0 ; two return values
+(exact-integer-sqrt 5)  @result{} 2 1 ; two return values
+@end example
+@end deffn
+
+
+@deffn Procedure expt @vari{z} @varii{z}
+Return @vari{z} raised to the power @varii{z}.  For non--zero @vari{z},
+this is @math{e^{(z_2 \log z_1)}}.  @math{0.0^z} is @math{1.0} if
+@math{@var{z} = 0.0}, and @math{0.0} if @code{(real-part @var{z})} is
+positive.  For other cases in which the first argument is zero, either
+an exception is raised with condition type
+@condition{implementation-restriction}, or an unspecified number object
+is returned.
+
+For an exact real number object @vari{z} and an exact integer object
+@varii{z}, @code{(expt @vari{z} @varii{z})} must return an exact result.
+For all other values of @vari{z} and @varii{z}, @code{(expt @vari{z}
+@varii{z})} may return an inexact result, even when both @vari{z} and
+@varii{z} are exact.
+
+@example
+(expt 5 3)                  @result{} 125
+(expt 5 -3)                 @result{} 1/125
+(expt 5 0)                  @result{} 1
+(expt 0 5)                  @result{} 0
+(expt 0 5+.0000312i)        @result{} 0.0
+(expt 0 -5)                 @result{} unspecified
+(expt 0 -5+.0000312i)       @result{} unspecified
+(expt 0 0)                  @result{} 1
+(expt 0.0 0.0)              @result{} 1.0
+@end example
+@end deffn
+
+
+@c page
+@node baselib math ops complex
+@subsubsection Complex numbers functions
+
+
+@deffn Procedure make-rectangular @vari{x} @varii{x}
+@deffnx Procedure make-polar @variii{x} @variv{x}
+@deffnx Procedure real-part @var{z}
+@deffnx Procedure imag-part @var{z}
+@deffnx Procedure magnitude @var{z}
+@deffnx Procedure angle @var{z}
+Suppose @math{a_1}, @math{a_2}, @math{a_3}, and @math{a_4} are real
+numbers, and @math{c} is a complex number such that the following holds:
+
+@example
+c = a_1 + a_2 i = a_3 e^(i a_4)
+@end example
+
+Then, if @vari{x}, @varii{x}, @variii{x}, and @variv{x} are number
+objects representing @math{a_1}, @math{a_2}, @math{a_3}, and @math{a_4},
+respectively, @code{(make-rectangular @vari{x} @varii{x})} returns
+@math{c}, and @code{(make-polar @variii{x} @variv{x})} returns @math{c}.
+
+@example
+(make-rectangular 1.1 2.2)    @result{} 1.1+2.2i ; approximately
+(make-polar 1.1 2.2)          @result{} 1.1@@2.2 ; approximately
+@end example
+
+Conversely, if @math{-\pi <= a_4 <= \pi}, and if @math{z} is a number
+object representing @math{c}, then @code{(real-part @var{z})} returns
+@math{a_1}, @code{(imag-part @var{z})} returns @math{a_2},
+@code{(magnitude @var{z})} returns @math{a_3}, and @code{(angle
+@var{z})} returns @math{a_4}.
+
+@example
+(real-part 1.1+2.2i)    @result{} 1.1
+                        ; approximately
+(imag-part 1.1+2.2i)    @result{} 2.2
+                        ; approximately
+(magnitude 1.1@@2.2)     @result{} 1.1
+                        ; approximately
+(angle     1.1@@2.2)     @result{} 2.2
+                        ; approximately
+
+(angle -1.0)            @result{} 3.141592653589793
+                        ; approximately
+(angle -1.0+0.0i)       @result{} 3.141592653589793
+                        ; approximately
+(angle -1.0-0.0i)       @result{} -3.141592653589793
+                        ; approximately if -0.0 is distinguished
+(angle +inf.0)          @result{} 0.0
+(angle -inf.0)          @result{} 3.141592653589793
+                        ; approximately
+@end example
+
+Moreover, suppose @vari{x}, @varii{x} are such that either @vari{x} or
+@varii{x} is an infinity, then
+
+@example
+(make-rectangular x1 x2)        @result{} @var{z}
+(magnitude z)                   @result{} +inf.0
+@end example
+
+The @func{make-polar}, @func{magnitude}, and @func{angle} procedures may
+return inexact results even when given exact arguments.
+
+@example
+(angle -1)              @result{} 3.141592653589793
+                        ; approximately
+@end example
+@end deffn
+
+@c page
+@node baselib math string
+@subsection Numerical Input and Output
+
+
+@deffn Procedure {number->string} @var{z}
+@deffnx Procedure {number->string} @var{z} @var{radix}
+@deffnx Procedure {number->string} @var{z} @var{radix} @var{precision}
+The @func{number->string} procedure takes a number object and a radix
+and returns as a string an external representation of the given number
+object in the given radix such that:
+
+@example
+(let ((number @var{z})
+      (radix  @var{radix}))
+  (eqv?
+    (string->number (number->string number radix) radix)
+    number))
+@end example
+
+@noindent
+is true.  If no possible result makes this expression true, an exception
+with condition type @condition{implementation-restriction} is raised.
+
+@var{radix} must be an exact integer object, either @math{2}, @math{8},
+@math{10}, or @math{16}.  If omitted, @var{radix} defaults to @math{10}.
+If a @var{precision} is specified, then @var{z} must be an inexact
+complex number object, @var{precision} must be an exact positive integer
+object, and @var{radix} must be @math{10}.
+
+@quotation
+@strong{NOTE} The error case can occur only when @var{z} is not a complex
+number object or is a complex number object with a non--rational real or
+imaginary part.
+@end quotation
+
+If a @var{precision} is specified, then the representations of the
+inexact real components of the result, unless they are infinite or NaN,
+specify an explicit @meta{mantissa-width} @math{p}, and @math{p} is the
+least @math{p >= @var{precision}} for which the above expression is
+true.
+
+If @var{z} is inexact, the radix is @math{10}, and the above expression
+and condition can be satisfied by a result that contains a decimal
+point, then the result contains a decimal point and is expressed using
+the minimum number of digits (exclusive of exponent, trailing zeroes,
+and mantissa width) needed to make the above expression and condition
+true; otherwise the format of the result is unspecified.
+
+The result returned by @func{number->string} never contains an explicit
+radix prefix.
+@end deffn
+
+
+@deffn Procedure {string->number} @var{string}
+@deffnx Procedure {string->number} @var{string} @var{radix}
+Return a number object with maximally precise representation expressed
+by the given @var{string}.
+
+@var{radix} must be an exact integer object, either @math{2}, @math{8},
+@math{10}, or @math{16}.  If supplied, @var{radix} is a default radix
+that may be overridden by an explicit radix prefix in @var{string}
+(e.g. @code{#o177}).  If @var{radix} is not supplied, then the default
+radix is @math{10}.
+
+If @var{string} is not a syntactically valid notation for a number
+object or a notation for a rational number object with a zero
+denominator, then @func{string->number} returns @false{}.
+
+@example
+(string->number "100")          @result{} 100
+(string->number "100" 16)       @result{} 256
+(string->number "1e2")          @result{} 100.0
+(string->number "0/0")          @result{} #f
+(string->number "+inf.0")       @result{} +inf.0
+(string->number "-inf.0")       @result{} -inf.0
+(string->number "+nan.0")       @result{} +nan.0
+@end example
+
+@quotation
+@strong{NOTE} The @func{string->number} procedure always returns a number
+object or @false{}; it never raises an exception.
+@end quotation
+@end deffn
+
+@c page
+@node baselib booleans
+@section Booleans
+
+
+The standard boolean objects for true and false have external
+representations @true{} and @false{}.  However, of all objects, only
+@false{} counts as false in conditional expressions.
+
+@quotation
+@strong{NOTE} Programmers accustomed to other dialects of Lisp should be
+aware that Scheme distinguishes both @false{} and the empty list from
+each other and from the symbol @code{nil}.
+@end quotation
+
+
+@deffn Procedure not @var{obj}
+Return @true{} if @var{obj} is @false{}, or @false{} otherwise.
+
+@example
+(not #t)         @result{} #f
+(not 3)          @result{} #f
+(not (list 3))   @result{} #f
+(not #f)         @result{} #t
+(not '())        @result{} #f
+(not (list))     @result{} #f
+(not 'nil)       @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure {boolean?} @var{obj}
+Return @true{} if @var{obj} is either @true{} or @false{}, or @false{}
+otherwise.
+
+@example
+(boolean? #f)   @result{} #t
+(boolean? 0)    @result{} #f
+(boolean? '())  @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure {boolean=?} @vari{bool} @varii{bool} @variii{bool} @dots{}
+Return @true{} if the booleans are the same.
+@end deffn
+
+
+@c page
+@node baselib lists
+@section Pairs and lists
+
+
+A @emph{pair} is a compound structure with two fields called the car and
+cdr fields (for historical reasons).  Pairs are created by the procedure
+@func{cons}.  The car and cdr fields are accessed by the procedures
+@func{car} and @func{cdr}.
+
+Pairs are used primarily to represent lists.  A list can be defined
+recursively as either the empty list or a pair whose cdr is a list.
+More precisely, the set of lists is defined as the smallest set @var{X}
+such that:
+
+@itemize
+@item
+The empty list is in @var{X}.
+
+@item
+If @var{list} is in @var{X}, then any pair whose cdr field contains
+@var{list} is also in @var{X}.
+@end itemize
+
+The objects in the car fields of successive pairs of a list are the
+elements of the list.  For example, a two--element list is a pair whose
+car is the first element and whose cdr is a pair whose car is the second
+element and whose cdr is the empty list.  The length of a list is the
+number of elements, which is the same as the number of pairs.
+
+The empty list is a special object of its own type.  It is not a pair.
+It has no elements and its length is zero.
+
+@quotation
+@strong{NOTE} The above definitions imply that all lists have finite
+length and are terminated by the empty list.
+@end quotation
+
+A chain of pairs not ending in the empty list is called an
+@emph{improper list}.  Note that an improper list is not a list.  The
+list and dotted notations can be combined to represent improper lists:
+
+@example
+(a b c . d)
+@end example
+
+@noindent
+is equivalent to
+
+@example
+(a . (b . (c . d)))
+@end example
+
+Whether a given pair is a list depends upon what is stored in the cdr
+field.
+
+
+@deffn Procedure {pair?} @var{obj}
+Return @true{} if @var{obj} is a pair, @false{} otherwise.
+
+@example
+(pair? '(a . b))        @result{} #t
+(pair? '(a b c))        @result{} #t
+(pair? '())             @result{} #f
+(pair? '#(a b))         @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure cons @vari{obj} @varii{obj}
+Return a newly allocated pair whose car is @vari{obj} and whose cdr is
+@varii{obj}.  The pair is guaranteed to be different (in the sense of
+@func{eqv?}) from every existing object.
+
+@example
+(cons 'a '())           @result{}  (a)
+(cons '(a) '(b c d))    @result{}  ((a) b c d)
+(cons "a" '(b c))       @result{}  ("a" b c)
+(cons 'a 3)             @result{}  (a . 3)
+(cons '(a b) 'c)        @result{}  ((a b) . c)
+@end example
+@end deffn
+
+
+@deffn Procedure car @var{pair}
+Return the contents of the car field of @var{pair}.
+
+@example
+(car '(a b c))          @result{} a
+(car '((a) b c d))      @result{} (a)
+(car '(1 . 2))          @result{} 1
+(car '())               @result{} exception &assertion
+@end example
+@end deffn
+
+
+@deffn Procedure cdr @var{pair}
+Return the contents of the cdr field of @var{pair}.
+
+@example
+(cdr '((a) b c d))      @result{} (b c d)
+(cdr '(1 . 2))          @result{} 2
+(cdr '())               @result{} exception &assertion
+@end example
+@end deffn
+
+
+@deffn Procedure caar @var{pair}
+@deffnx Procedure cadr @var{pair}
+@deffnx Procedure ...
+@deffnx Procedure cdddar @var{pair}
+@deffnx Procedure cddddr @var{pair}
+These procedures are compositions of @func{car} and @func{cdr}, where
+for example @func{caddr} could be defined by
+
+@example
+(define caddr (lambda (x) (car (cdr (cdr x)))))
+@end example
+
+Arbitrary compositions, up to four deep, are provided.  There are
+twenty--eight of these procedures in all.
+@end deffn
+
+
+@deffn Procedure {null?} @var{obj}
+Return @true{} if @var{obj} is the empty list, @false{} otherwise.
+@end deffn
+
+
+@deffn Procedure {list?} @var{obj}
+Return @true{} if @var{obj} is a list, @false{} otherwise.  By
+definition, all lists are chains of pairs that have finite length and
+are terminated by the empty list.
+
+@example
+(list? '(a b c))     @result{} #t
+(list? '())          @result{} #t
+(list? '(a . b))     @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure list @var{obj} @dots{}
+Return a newly allocated list of its arguments.
+
+@example
+(list 'a (+ 3 4) 'c)    @result{} (a 7 c)
+(list)                  @result{} ()
+@end example
+@end deffn
+
+
+@deffn Procedure length @var{list}
+Return the length of @var{list}.
+
+@example
+(length '(a b c))               @result{}  3
+(length '(a (b) (c d e)))       @result{}  3
+(length '())                    @result{}  0
+@end example
+@end deffn
+
+
+@deffn Procedure append
+@deffnx Procedure append @var{list} @dots{} @var{obj}
+Return a possibly improper list consisting of the elements of the first
+@var{list} followed by the elements of the other @var{list}s, with
+@var{obj} as the cdr of the final pair.  An improper list results if
+@var{obj} is not a list.
+
+@example
+(append '(x) '(y))              @result{}  (x y)
+(append '(a) '(b c d))          @result{}  (a b c d)
+(append '(a (b)) '((c)))        @result{}  (a (b) (c))
+(append '(a b) '(c . d))        @result{}  (a b c . d)
+(append '() 'a)                 @result{}  a
+@end example
+
+If @func{append} constructs a non--empty chain of pairs, it is always
+newly allocated.  If no pairs are allocated, @var{obj} is returned.
+
+@quotation
+@rnrs{6} mandates that this function requires at least the argument
+@var{obj}; it is illegal to call this function with no arguments.
+Despite this: The Scheme implementations supported by Nausicaa (Mosh,
+Petite Chez, Vicare, Ypsilon) allow calling this function with no
+arguments, in which case the return value is the empty string.  The
+@library{nausicaa} language will ensure this behaviour.  (Fri Jun 5,
+2009)
+@end quotation
+@end deffn
+
+
+@deffn Procedure reverse @var{list}
+Return a newly allocated list consisting of the elements of @var{list}
+in reverse order.
+
+@example
+(reverse '(a b c))              @result{} (c b a)
+(reverse '(a (b c) d (e (f))))  @result{} ((e (f)) d (b c) a)
+@end example
+@end deffn
+
+
+@deffn Procedure list-tail @var{list} @var{k}
+@var{list} should be a list of size at least @var{k}.  Return the
+subchain of pairs of @var{list} obtained by omitting the first @var{k}
+elements.
+
+@example
+(list-tail '(a b c d) 2)        @result{}  (c d)
+@end example
+
+@strong{Implementation responsibilities:} The implementation must check
+that @var{list} is a chain of pairs whose length is at least @var{k}.
+It should not check that it is a chain of pairs beyond this length.
+@end deffn
+
+
+@deffn Procedure list-ref @var{list} @var{k}
+@var{list} must be a list whose length is at least @emph{@var{k} + 1}.
+The @func{list-tail} procedure returns the @var{k}th element of
+@var{list}.
+
+@example
+(list-ref '(a b c d) 2)         @result{} c
+@end example
+
+@strong{Implementation responsibilities:} The implementation must check
+that @var{list} is a chain of pairs whose length is at least
+@emph{@var{k} + 1}.  It should not check that it is a list of pairs
+beyond this length.
+@end deffn
+
+
+@deffn Procedure map @var{proc} @vari{list} @varii{list} @dots{}
+The @var{list}s should all have the same length.  @var{proc} should
+accept as many arguments as there are @var{list}s and return a single
+value.  @var{proc} should not mutate any of the @var{list}s.
+
+The @func{map} procedure applies @var{proc} element--wise to the
+elements of the @var{list}s and returns a list of the results, in order.
+@var{proc} is always called in the same dynamic environment as
+@func{map} itself.  The order in which @var{proc} is applied to the
+elements of the @var{list}s is unspecified.  If multiple returns occur
+from @func{map}, the values returned by earlier returns are not mutated.
+
+@example
+(map cadr '((a b) (d e) (g h)))         @result{}  (b e h)
+
+(map (lambda (n) (expt n n))
+     '(1 2 3 4 5))                      @result{}  (1 4 27 256 3125)
+
+(map + '(1 2 3) '(4 5 6))               @result{}  (5 7 9)
+
+(let ((count 0))
+  (map (lambda (ignored)
+         (set! count (+ count 1))
+         count)
+       '(a b)))                         @result{}  (1 2) or (2 1)
+@end example
+
+@strong{Implementation responsibilities:} The implementation should
+check that the @var{list}s all have the same length.  The implementation
+must check the restrictions on @var{proc} to the extent performed by
+applying it as described.  An implementation may check whether
+@var{proc} is an appropriate argument before applying it.
+@end deffn
+
+
+@deffn Procedure for-each @var{proc} @vari{list} @varii{list} @dots{}
+The @var{list}s should all have the same length.  @var{proc} should
+accept as many arguments as there are @var{list}s.  @var{proc} should
+not mutate any of the @var{list}s.
+
+The @func{for-each} procedure applies @var{proc} element--wise to the
+elements of the @var{list}s for its side effects, in order from the
+first elements to the last.  @var{proc} is always called in the same
+dynamic environment as @func{for-each} itself.  The return values of
+@func{for-each} are unspecified.
+
+@example
+(let ((v (make-vector 5)))
+  (for-each (lambda (i)
+              (vector-set! v i (* i i)))
+            '(0 1 2 3 4))
+  v)
+@result{}  #(0 1 4 9 16)
+
+(for-each (lambda (x) x) '(1 2 3 4))
+@result{} unspecified
+
+(for-each even? '())
+@result{} unspecified
+@end example
+
+@strong{Implementation responsibilities:} The implementation should
+check that the @var{list}s all have the same length.  The implementation
+must check the restrictions on @var{proc} to the extent performed by
+applying it as described.  An implementation may check whether
+@var{proc} is an appropriate argument before applying it.
+
+@quotation
+@strong{NOTE} Implementations of @code{for-each} may or may not
+tail--call @var{proc} on the last elements.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib symbols
+@section Symbols
+
+
+Symbols are objects whose usefulness rests on the fact that two symbols
+are identical (in the sense of @func{eq?}, @func{eqv?} and
+@func{equal?}) if and only if their names are spelled the same way.  A
+symbol literal is formed using @func{quote}.
+
+
+@deffn Procedure {symbol?} @var{obj}
+Return @true{} if @var{obj} is a symbol, @false{} otherwise.
+
+@example
+(symbol? 'foo)          @result{} #t
+(symbol? (car '(a b)))  @result{} #t
+(symbol? "bar")         @result{} #f
+(symbol? 'nil)          @result{} #t
+(symbol? '())           @result{} #f
+(symbol? #f)            @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure {symbol->string} @var{symbol}
+Return the name of @var{symbol} as an immutable string.
+
+@example
+(symbol->string 'flying-fish)                   @result{}  "flying-fish"
+(symbol->string 'Martin)                        @result{}  "Martin"
+(symbol->string (string->symbol "Malvina"))     @result{}  "Malvina"
+@end example
+@end deffn
+
+
+@deffn Procedure {symbol=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+Return @true{} if the symbols are the same, i.e., if their names are
+spelled the same.
+@end deffn
+
+
+@deffn Procedure {string->symbol} @var{string}
+Return the symbol whose name is @var{string}.
+
+@example
+(eq? 'mISSISSIppi 'mississippi)
+@result{} #f
+
+(string->symbol "mISSISSIppi")
+@result{} the symbol with name "mISSISSIppi"
+
+(eq? 'bitBlt (string->symbol "bitBlt"))
+@result{} #t
+
+(eq? 'JollyWog (string->symbol (symbol->string 'JollyWog)))
+@result{} #t
+
+(string=? "K. Harper, M.D."
+          (symbol->string (string->symbol "K. Harper, M.D.")))
+@result{} #t
+@end example
+@end deffn
+
+
+@c page
+@node baselib characters
+@section Characters
+
+
+The @dfn{characters} are objects that represent Unicode scalar values.
+
+@quotation
+Unicode defines a standard mapping between sequences of @emph{Unicode
+scalar values} (integers in the range @math{0} to @code{#x10FFFF},
+excluding the range @code{#xD800} to @code{#xDFFF}) in the latest
+version of the standard and human--readable ``characters''.
+
+More precisely, Unicode distinguishes between glyphs, which are printed
+for humans to read, and characters, which are abstract entities that map
+to glyphs (sometimes in a way that's sensitive to surrounding
+characters).  Furthermore, different sequences of scalar values
+sometimes correspond to the same character.  The relationships among
+scalar, characters, and glyphs are subtle and complex.
+
+Despite this complexity, most things that a literate human would call a
+``character'' can be represented by a single Unicode scalar value
+(although several sequences of Unicode scalar values may represent that
+same character).  For example, Roman letters, Cyrillic letters, Hebrew
+consonants, and most Chinese characters fall into this category.
+
+Unicode scalar values exclude the range @code{#xD800} to @code{#xDFFF},
+which are part of the range of Unicode @emph{code points}.  However, the
+Unicode code points in this range, the so--called @emph{surrogates}, are
+an artifact of the @utf{}--16 encoding, and can only appear in specific
+Unicode encodings, and even then only in pairs that encode scalar
+values.  Consequently, all characters represent code points, but the
+surrogate code points do not have representations as characters.
+@end quotation
+
+
+@deffn Procedure {char?} @var{obj}
+Return @true{} if @var{obj} is a character, @false{} otherwise.
+@end deffn
+
+
+@deffn Procedure {char->integer} @var{char}
+@deffnx Procedure {integer->char} @var{sv}
+@var{sv} must be a Unicode scalar value, i.e., a non--negative exact
+integer object in @code{[0, #xD7FF] union [#xE000, #x10FFFF]}.
+
+Given a character, @func{char->integer} returns its Unicode scalar value
+as an exact integer object.  For a Unicode scalar value @var{sv},
+@func{integer->char} returns its associated character.
+
+@example
+(integer->char 32)                      @result{} #\space
+(char->integer (integer->char 5000))    @result{} 5000
+(integer->char #\xD800)                 @result{} exception &assertion
+@end example
+@end deffn
+
+
+@deffn Procedure {char=?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffnx Procedure {char<?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffnx Procedure {char>?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffnx Procedure {char<=?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffnx Procedure {char>=?} @vari{char} @varii{char} @variii{char} @dots{}
+These procedures impose a total ordering on the set of characters
+according to their Unicode scalar values.
+
+@example
+@c (char<? #\z #\\ss)      @result{} #t
+(char<? #\z #\Z)                @result{} #f
+@end example
+@end deffn
+
+
+@c page
+@node baselib strings
+@section Strings
+
+
+Strings are sequences of characters.  The @emph{length} of a string is
+the number of characters that it contains.  This number is fixed when
+the string is created.  The @emph{valid indices} of a string are the
+integers less than the length of the string.  The first character of a
+string has index 0, the second has index 1, and so on.
+
+
+@deffn Procedure {string?} @var{obj}
+Return @true{} if @var{obj} is a string, @false{} otherwise.
+@end deffn
+
+
+@deffn Procedure make-string @var{k}
+@deffnx Procedure make-string @var{k} @var{char}
+Return a newly allocated string of length @var{k}.  If @var{char} is
+given, then all elements of the string are initialized to @var{char},
+otherwise the contents of the string are unspecified.
+@end deffn
+
+
+@deffn Procedure string @var{char} @dots{}
+Return a newly allocated string composed of the arguments.
+@end deffn
+
+
+@deffn Procedure string-length @var{string}
+Return the number of characters in the given @var{string} as an exact
+integer object.
+@end deffn
+
+
+@deffn Procedure string-ref @var{string} @var{k}
+@var{k} must be a valid index of @var{string}.  The @func{string-ref}
+procedure returns character @var{k} of @var{string} using zero--origin
+indexing.
+
+@quotation
+@strong{NOTE} Implementors should make @func{string-ref} run in constant
+time.
+@end quotation
+@end deffn
+
+
+@deffn Procedure {string=?} @vari{string} @varii{string} @variii{string} @dots{}
+Return @true{} if the strings are the same length and contain the same
+characters in the same positions.  Otherwise, the @func{string=?}
+procedure returns @false{}.
+
+@example
+(string=? "Strause" "Strasse")    @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure {string<?} @vari{string} @varii{string} @variii{string} @dots{}
+@deffnx Procedure {string>?} @vari{string} @varii{string} @variii{string} @dots{}
+@deffnx Procedure {string<=?} @vari{string} @varii{string} @variii{string} @dots{}
+@deffnx Procedure {string>=?} @vari{string} @varii{string} @variii{string} @dots{}
+These procedures are the lexicographic extensions to strings of the
+corresponding orderings on characters.  For example, @func{string<?} is
+the lexicographic ordering on strings induced by the ordering
+@func{char<?} on characters.  If two strings differ in length but are
+the same up to the length of the shorter string, the shorter string is
+considered to be lexicographically less than the longer string.
+
+@example
+(string<? "z" "a")      @result{} #t
+(string<? "z" "zz")     @result{} #t
+(string<? "z" "Z")      @result{} #f
+@end example
+@end deffn
+
+
+@deffn Procedure substring @var{string} @var{start} @var{end}
+@var{string} must be a string, and @var{start} and @var{end} must be
+exact integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} <= (string-length @var{string})
+@end example
+
+The @func{substring} procedure returns a newly allocated string formed
+from the characters of @var{string} beginning with index @var{start}
+(inclusive) and ending with index @var{end} (exclusive).
+@end deffn
+
+
+@deffn Procedure string-append @var{string} @dots{}
+Return a newly allocated string whose characters form the concatenation
+of the given strings.
+@end deffn
+
+
+@deffn Procedure string->list @var{string}
+@deffnx Procedure list->string @var{list}
+@var{list} must be a list of characters.
+
+The @func{string->list} procedure returns a newly allocated list of the
+characters that make up the given string.
+
+The @func{list->string} procedure returns a newly allocated string
+formed from the characters in @var{list}.
+
+The @func{string->list} and @func{list->string} procedures are inverses
+so far as @func{equal?} is concerned.
+@end deffn
+
+
+@deffn Procedure string-for-each @var{proc} @vari{string} @varii{string} @dots{}
+The @var{string}s must all have the same length.  @var{proc} should
+accept as many arguments as there are @var{string}s.
+
+The @func{string-for-each} procedure applies @var{proc} element--wise to
+the characters of the @var{string}s for its side effects, in order from
+the first characters to the last.  @var{proc} is always called in the
+same dynamic environment as @func{string-for-each} itself.  The return
+values of @func{string-for-each} are unspecified.
+
+Analogous to @func{for-each}.
+
+@strong{Implementation responsibilities:} The implementation must check
+the restrictions on @var{proc} to the extent performed by applying it as
+described.  An implementation may check whether @var{proc} is an
+appropriate argument before applying it.
+@end deffn
+
+
+@deffn Procedure string-copy @var{string}
+Return a newly allocated copy of the given @var{string}.
+@end deffn
+
+
+@c page
+@node baselib vectors
+@section Vectors
+
+
+Vectors are heterogeneous structures whose elements are indexed by
+integers.  A vector typically occupies less space than a list of the
+same length, and the average time needed to access a randomly chosen
+element is typically less for the vector than for the list.
+
+The @emph{length} of a vector is the number of elements that it
+contains.  This number is a non--negative integer that is fixed when the
+vector is created.  The @emph{valid indices} of a vector are the exact
+non--negative integer objects less than the length of the vector.  The
+first element in a vector is indexed by zero, and the last element is
+indexed by one less than the length of the vector.
+
+Like list constants, vector constants must be quoted:
+
+@example
+'#(0 (2 2 2 2) "Anna")     @result{}  #(0 (2 2 2 2) "Anna")
+@end example
+
+
+@deffn Procedure vector? @var{obj}
+Return @true{} if @var{obj} is a vector, @false{} otherwise.
+@end deffn
+
+
+@deffn Procedure make-vector @var{k}
+@deffnx Procedure make-vector @var{k} @var{fill}
+Return a newly allocated vector of @var{k} elements.  If a second
+argument is given, then each element is initialized to @var{fill}.
+Otherwise the initial contents of each element is unspecified.
+@end deffn
+
+
+@deffn Procedure vector @var{obj} @dots{}
+Return a newly allocated vector whose elements contain the given
+arguments.  Analogous to @code{list}.
+
+@example
+(vector 'a 'b 'c)               @result{}  #(a b c)
+@end example
+@end deffn
+
+
+@deffn Procedure vector-length @var{vector}
+Return the number of elements in @var{vector} as an exact integer
+object.
+@end deffn
+
+
+@deffn Procedure vector-ref @var{vector} @var{k}
+@var{k} must be a valid index of @var{vector}.  The @func{vector-ref}
+procedure returns the contents of element @var{k} of @var{vector}.
+
+@example
+(vector-ref '#(1 1 2 3 5 8 13 21) 5)     @result{}  8
+@end example
+@end deffn
+
+
+@deffn Procedure vector-set! @var{vector} @var{k} @var{obj}
+@var{k} must be a valid index of @var{vector}.  The @func{vector-set!}
+procedure stores @var{obj} in element @var{k} of @var{vector}, and
+returns unspecified.
+
+Passing an immutable vector to @func{vector-set!} should cause an
+exception with condition type @condition{assertion} to be raised.
+
+@example
+(let ((vec (vector 0 '(2 2 2 2) "Anna")))
+  (vector-set! vec 1 '("Sue" "Sue"))
+  vec)
+@result{}  #(0 ("Sue" "Sue") "Anna")
+
+(vector-set! '#(0 1 2) 1 "doe")
+@result{}  unspecified
+    ;; constant vector
+    ;; should raise exception &assertion
+@end example
+@end deffn
+
+
+@deffn Procedure vector->list @var{vector}
+@deffnx Procedure list->vector @var{list}
+The @func{vector->list} procedure returns a newly allocated list of the
+objects contained in the elements of @var{vector}.
+
+The @func{list->vector} procedure returns a newly created vector
+initialized to the elements of the list @var{list}.
+
+@example
+(vector->list '#(dah dah didah))        @result{} (dah dah didah)
+(list->vector '(dididit dah))           @result{} #(dididit dah)
+@end example
+@end deffn
+
+
+@deffn Procedure {vector-fill!} @var{vector fill}
+Store @var{fill} in every element of @var{vector} and returns
+unspecified.
+@end deffn
+
+
+@deffn Procedure vector-map @var{proc} @vari{vector} @varii{vector} @dots{}
+The @var{vector}s must all have the same length.  @var{proc} should
+accept as many arguments as there are @var{vector}s and return a single
+value.
+
+The @func{vector-map} procedure applies @var{proc} element--wise to the
+elements of the @var{vector}s and returns a vector of the results, in
+order.  @var{proc} is always called in the same dynamic environment as
+@func{vector-map} itself.  The order in which @var{proc} is applied to
+the elements of the @var{vector}s is unspecified.  If multiple returns
+occur from @func{vector-map}, the return values returned by earlier
+returns are not mutated.
+
+Analogous to @func{map}.
+
+@strong{Implementation responsibilities:} The implementation must check
+the restrictions on @var{proc} to the extent performed by applying it as
+described.  An implementation may check whether @var{proc} is an
+appropriate argument before applying it.
+@end deffn
+
+
+@deffn Procedure vector-for-each @var{proc} @vari{vector} @varii{vector} @dots{}
+The @var{vector}s must all have the same length.  @var{proc} should
+accept as many arguments as there are @var{vector}s.  The
+@code{vector-for-each} procedure applies @var{proc} element--wise to the
+elements of the @var{vector}s for its side effects, in order from the
+first elements to the last.  @var{proc} is always called in the same
+dynamic environment as @func{vector-for-each} itself.  The return values
+of @func{vector-for-each} are unspecified.
+
+Analogous to @func{for-each}.
+
+@strong{Implementation responsibilities:} The implementation must check
+the restrictions on @var{proc} to the extent performed by applying it as
+described.  An implementation may check whether @var{proc} is an
+appropriate argument before applying it.
+@end deffn
+
+
+@c page
+@node baselib errors
+@section Errors and violations
+
+
+@deffn Procedure error @var{who} @var{message} @vari{irritant} @dots{}
+@deffnx Procedure assertion-violation @var{who} @var{message} @vari{irritant} @dots{}
+@var{who} must be a string or a symbol or @false{}.  @var{message} must
+be a string.  The @var{irritant}s are arbitrary objects.
+
+These procedures raise an exception.  The @func{error} procedure should
+be called when an error has occurred, typically caused by something that
+has gone wrong in the interaction of the program with the external world
+or the user.  The @func{assertion-violation} procedure should be called
+when an invalid call to a procedure was made, either passing an invalid
+number of arguments, or passing an argument that it is not specified to
+handle.
+
+The @var{who} argument should describe the procedure or operation that
+detected the exception.  The @var{message} argument should describe the
+exceptional situation.  The @var{irritant}s should be the arguments to
+the operation that detected the operation.
+
+The condition object provided with the exception has the following
+condition types:
+
+@itemize
+@item
+If @var{who} is not @false{}, the condition has condition type
+@condition{who}, with @var{who} as the value of its field.  In that case,
+@var{who} should be the name of the procedure or entity that detected
+the exception.  If it is @false{}, the condition does not have condition
+type @condition{who}.
+
+@item
+The condition has condition type @condition{message}, with @var{message} as
+the value of its field.
+
+@item
+The condition has condition type @condition{irritants}, and its field has as
+its value a list of the @var{irritant}s.
+@end itemize
+
+Moreover, the condition created by @func{error} has condition type
+@condition{error}, and the condition created by @func{assertion-violation}
+has condition type @condition{assertion}.
+
+@example
+(define (fac n)
+  (if (not (integer-valued? n))
+      (assertion-violation
+       'fac "non-integral argument" n))
+  (if (negative? n)
+      (assertion-violation
+       'fac "negative argument" n))
+  (letrec
+    ((loop (lambda (n r)
+             (if (zero? n)
+                 r
+                 (loop (- n 1) (* r n))))))
+      (loop n 1)))
+
+(fac 5)         @result{} 120
+(fac 4.5)       @result{} exception &assertion
+(fac -3)        @result{} exception &assertion
+@end example
+@end deffn
+
+
+@deffn Syntax assert @meta{expression}
+An @func{assert} form is evaluated by evaluating @meta{expression}.  If
+@meta{expression} returns a true value, that value is returned from the
+@func{assert} expression.  If @meta{expression} returns @false{}, an
+exception with condition types @condition{assertion} and @condition{message} is
+raised.  The message provided in the condition object is
+implementation--dependent.
+
+@quotation
+@strong{NOTE} Implementations should exploit the fact that @func{assert}
+is a syntax to provide as much information as possible about the
+location of the assertion failure.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib control
+@section Control features
+
+
+This chapter describes various primitive procedures which control the
+flow of program execution in special ways.
+
+
+@deffn Procedure apply @var{proc} @vari{arg} @dots{} @var{rest-args}
+@var{rest-args} must be a list.  @var{proc} should accept @emph{n}
+arguments, where @emph{n} is number of @var{arg}s plus the length of
+@var{rest-args}.  The @func{apply} procedure calls @var{proc} with the
+elements of the list:
+
+@example
+(append (list @vari{arg} @dots{}) @var{rest-args})
+@end example
+
+@noindent
+as the actual arguments.
+
+If a call to @func{apply} occurs in a tail context, the call to
+@var{proc} is also in a tail context.
+
+@example
+(apply + (list 3 4))                    @result{}  7
+
+(define compose
+  (lambda (f g)
+    (lambda args
+      (f (apply g args)))))
+
+((compose sqrt *) 12 75)                @result{}  30
+@end example
+@end deffn
+
+
+@deffn Procedure call-with-current-continuation @var{proc}
+@deffnx Procedure call/cc @var{proc}
+@var{proc} should accept one argument.  The procedure @func{call/cc}
+(which is the same as the procedure
+@func{call-with-current-continuation}) packages the current continuation
+as an ``escape procedure'' and passes it as an argument to @var{proc}.
+
+The escape procedure is a Scheme procedure that, if it is later called,
+will abandon whatever continuation is in effect at that later time and
+will instead reinstate the continuation that was in effect when the
+escape procedure was created.
+
+Calling the escape procedure may cause the invocation of @var{before}
+and @var{after} procedures installed using @func{dynamic-wind}.
+
+The escape procedure accepts the same number of arguments as the
+continuation of the original call to @func{call/cc}.
+
+The escape procedure that is passed to @var{proc} has unlimited extent
+just like any other procedure in Scheme.  It may be stored in variables
+or data structures and may be called as many times as desired.
+
+If a call to @func{call/cc} occurs in a tail context, the call to
+@var{proc} is also in a tail context.
+
+The following examples show only some ways in which @func{call/cc} is
+used.  If all real uses were as simple as these examples, there would be
+no need for a procedure with the power of @func{call/cc}.
+
+@example
+(call-with-current-continuation
+  (lambda (exit)
+    (for-each (lambda (x)
+                (if (negative? x)
+                    (exit x)))
+              '(54 0 37 -3 245 19))
+    #t))
+@result{}  -3
+
+(define list-length
+  (lambda (obj)
+    (call-with-current-continuation
+      (lambda (return)
+        (letrec ((r
+                  (lambda (obj)
+                    (cond ((null? obj) 0)
+                          ((pair? obj)
+                           (+ (r (cdr obj)) 1))
+                          (else (return #f))))))
+          (r obj))))))
+
+(list-length '(1 2 3 4))                        @result{}  4
+(list-length '(a b . c))                        @result{} #f
+(call-with-current-continuation procedure?)     @result{} #t
+@end example
+
+@quotation
+@strong{NOTE} Calling an escape procedure reenters the dynamic extent of
+the call to @func{call/cc}, and thus restores its dynamic environment.
+@end quotation
+@end deffn
+
+
+@deffn Procedure values @var{obj} @dots{}
+Delivers all of its arguments to its continuation.  The @func{values}
+procedure might be defined as follows:
+
+@example
+(define (values . things)
+  (call-with-current-continuation
+    (lambda (cont) (apply cont things))))
+@end example
+
+The continuations of all non--final expressions within a sequence of
+expressions, such as in @func{lambda}, @func{begin}, @func{let},
+@func{let*}, @func{letrec}, @func{letrec*}, @func{let-values},
+@func{let*-values}, @func{case}, and @func{cond} forms, usually take an
+arbitrary number of values.
+
+Except for these and the continuations created by
+@func{call-with-values}, @func{let-values}, and @func{let*-values},
+continuations implicitly accepting a single value, such as the
+continuations of @meta{operator} and @meta{operand}s of procedure calls
+or the @meta{test} expressions in conditionals, take exactly one value.
+The effect of passing an inappropriate number of values to such a
+continuation is undefined.
+@end deffn
+
+
+@deffn Procedure call-with-values @var{producer} @var{consumer}
+@var{producer} must be a procedure and should accept zero arguments.
+@var{consumer} must be a procedure and should accept as many values as
+@var{producer} returns.  The @func{call-with-values} procedure calls
+@var{producer} with no arguments and a continuation that, when passed
+some values, calls the @var{consumer} procedure with those values as
+arguments.  The continuation for the call to @var{consumer} is the
+continuation of the call to @func{call-with-values}.
+
+@example
+(call-with-values
+    (lambda () (values 4 5))
+  (lambda (a b) b))
+@result{}  5
+
+(call-with-values * -)
+@result{}  -1
+@end example
+
+If a call to @code{call-with-values} occurs in a tail context, the call
+to @var{consumer} is also in a tail context.
+
+@strong{Implementation responsibilities:} After @var{producer} returns,
+the implementation must check that @var{consumer} accepts as many values
+as @var{consumer} has returned.
+@end deffn
+
+
+@deffn Procedure dynamic-wind @var{before} @var{thunk} @var{after}
+@var{before}, @var{thunk}, and @var{after} must be procedures, and each
+should accept zero arguments.  These procedures may return any number of
+values.
+
+The @func{dynamic-wind} procedure calls @var{thunk} without arguments,
+returning the results of this call.  Moreover, @func{dynamic-wind} calls
+@var{before} without arguments whenever the dynamic extent of the call
+to @var{thunk} is entered, and @var{after} without arguments whenever
+the dynamic extent of the call to @var{thunk} is exited.  Thus, in the
+absence of calls to escape procedures created by @func{call/cc},
+@func{dynamic-wind} calls @var{before}, @var{thunk}, and @var{after}, in
+that order.
+
+While the calls to @var{before} and @var{after} are not considered to be
+within the dynamic extent of the call to @var{thunk}, calls to the
+@var{before} and @var{after} procedures of any other calls to
+@func{dynamic-wind} that occur within the dynamic extent of the call to
+@var{thunk} are considered to be within the dynamic extent of the call
+to @var{thunk}.
+
+More precisely, an escape procedure transfers control out of the dynamic
+extent of a set of zero or more active @func{dynamic-wind} calls @emph{x
+@dots{}} and transfer control into the dynamic extent of a set of zero
+or more active @func{dynamic-wind} calls @emph{y @dots{}}.  It leaves
+the dynamic extent of the most recent @emph{x} and calls without
+arguments the corresponding @var{after} procedure.  If the @var{after}
+procedure returns, the escape procedure proceeds to the next most recent
+@emph{x}, and so on.  Once each @emph{x} has been handled in this
+manner, the escape procedure calls without arguments the @var{before}
+procedure corresponding to the least recent @emph{y}.  If the
+@var{before} procedure returns, the escape procedure reenters the
+dynamic extent of the least recent @emph{y} and proceeds with the next
+least recent @emph{y}, and so on.  Once each @emph{y} has been handled
+in this manner, control is transferred to the continuation packaged in
+the escape procedure.
+
+@strong{Implementation responsibilities:} The implementation must check
+the restrictions on @var{thunk} and @var{after} only if they are
+actually called.
+
+@example
+(let ((path '())
+      (c #f))
+  (let ((add (lambda (s)
+               (set! path (cons s path)))))
+    (dynamic-wind
+      (lambda () (add 'connect))
+      (lambda ()
+        (add (call-with-current-continuation
+               (lambda (c0)
+                 (set! c c0)
+                 'talk1))))
+      (lambda () (add 'disconnect)))
+    (if (< (length path) 4)
+        (c 'talk2)
+        (reverse path))))
+@result{} (connect talk1 disconnect connect talk2 disconnect)
+
+(let ((n 0))
+  (call-with-current-continuation
+    (lambda (k)
+      (dynamic-wind
+        (lambda ()
+          (set! n (+ n 1))
+          (k))
+        (lambda ()
+          (set! n (+ n 2)))
+        (lambda ()
+          (set! n (+ n 4))))))
+  n)
+@result{} 1
+
+(let ((n 0))
+  (call-with-current-continuation
+    (lambda (k)
+      (dynamic-wind
+        values
+        (lambda ()
+          (dynamic-wind
+            values
+            (lambda ()
+              (set! n (+ n 1))
+              (k))
+            (lambda ()
+              (set! n (+ n 2))
+              (k))))
+        (lambda ()
+          (set! n (+ n 4))))))
+  n)
+@result{} 7
+@end example
+
+@quotation
+@strong{NOTE} Entering a dynamic extent restores its dynamic environment.
+@end quotation
+@end deffn
+
+
+@c page
+@node baselib iteration
+@section Iteration
+
+
+@cindex Named let
+
+
+@deffn Syntax let @meta{variable} @meta{bindings} @meta{body}
+``Named @func{let}'' is a variant on the syntax of @func{let} that
+provides a general looping construct and may also be used to express
+recursion.  It has the same syntax and semantics as ordinary @func{let}
+except that @meta{variable} is bound within @meta{body} to a procedure
+whose parameters are the bound variables and whose body is @meta{body}.
+Thus the execution of @meta{body} may be repeated by invoking the
+procedure named by @meta{variable}.
+
+@example
+(let loop ((numbers '(3 -2 1 6 -5))
+           (nonneg '())
+           (neg '()))
+  (cond ((null? numbers) (list nonneg neg))
+        ((>= (car numbers) 0)
+         (loop (cdr numbers)
+               (cons (car numbers) nonneg)
+               neg))
+        ((< (car numbers) 0)
+         (loop (cdr numbers)
+               nonneg
+               (cons (car numbers) neg)))))
+@result{} ((6 1 3) (-5 -2))
+@end example
+@end deffn
+
+
+@c page
+@node baselib quasiquotation
+@section Quasiquotation
+
+
+@deffn Syntax quasiquote @meta{qq-template}
+@deffnx {Auxiliary Syntax} unquote
+@deffnx {Auxiliary Syntax} unquote-splicing
+``Backquote'' or ``quasiquote'' expressions are useful for constructing
+a list or vector structure when some but not all of the desired
+structure is known in advance.
+
+@meta{qq-template} should be as specified by the grammar at the end of
+this entry.
+
+If no @func{unquote} or @func{unquote-splicing} forms appear within the
+@meta{qq-template}, the result of evaluating @code{(quasiquote
+@meta{qq-template})} is equivalent to the result of evaluating
+@code{(quote @meta{qq-template})}.
+
+If an @code{(unquote @meta{expression} @dots{})} form appears inside a
+@meta{qq-template}, however, the @meta{expression}s are evaluated
+(``unquoted'') and their results are inserted into the structure instead
+of the @code{unquote} form.
+
+If an @code{(unquote-splicing @meta{expression} @dots{})} form appears
+inside a @meta{qq-template}, then the @meta{expression}s must evaluate
+to lists; the opening and closing parentheses of the lists are then
+``stripped away'' and the elements of the lists are inserted in place of
+the @func{unquote-splicing} form.
+
+Any @func{unquote-splicing} or multi--operand @func{unquote} form must
+appear only within a list or vector @meta{qq-template}.
+
+The following abbreviations may be used:
+
+@example
+(quasiquote @meta{qq-template})       =  `@meta{qq-template}
+(unquote @meta{expression})           =  ,@meta{expression}
+(unquote-splicing @meta{expression})  =  ,@@@meta{expression}
+@end example
+
+Examples:
+
+@example
+`(list ,(+ 1 2) 4)                      @result{} (list 3 4)
+
+(let ((name 'a))
+  `(list ,name ',name))                 @result{} (list a (quote a))
+
+`(a ,(+ 1 2) ,@@(map abs '(4 -5 6)) b)   @result{} (a 3 4 5 6 b)
+
+`((foo ,(- 10 3))
+  ,@@(cdr '(c)) . ,(car '(cons)))        @result{} ((foo 7) . cons)
+
+`#(10 5 ,(sqrt 4) ,@@(map sqrt '(16 9)) 8)
+                                        @result{} #(10 5 2 4 3 8)
+
+(let ((name 'foo))
+  `((unquote name name name)))          @result{} (foo foo foo)
+
+(let ((name '(foo)))
+  `((unquote-splicing name name name))) @result{} (foo foo foo)
+
+(let ((q '((append x y) (sqrt 9))))
+  ``(foo ,,@@q))
+@result{} `(foo (unquote (append x y) (sqrt 9)))
+
+(let ((x '(2 3))
+      (y '(4 5)))
+  `(foo (unquote (append x y) (sqrt 9))))
+@result{} (foo (2 3 4 5) 3)
+@end example
+
+Quasiquote forms may be nested.  Substitutions are made only for
+unquoted components appearing at the same nesting level as the outermost
+@func{quasiquote}.  The nesting level increases by one inside each
+successive quasiquotation, and decreases by one inside each unquotation.
+
+@example
+`(a `(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f)
+@result{}  (a `(b ,(+ 1 2) ,(foo 4 d) e) f)
+
+(let ((name1 'x)
+      (name2 'y))
+  `(a `(b ,,name1 ,',name2 d) e))
+@result{}  (a `(b ,x ,'y d) e)
+@end example
+
+A @func{quasiquote} expression may return either fresh, mutable objects
+or literal structure for any structure that is constructed at run time
+during the evaluation of the expression.  Portions that do not need to
+be rebuilt are always literal.  Thus:
+
+@example
+(let ((a 3))
+  `((1 2) ,a ,4 ,'five 6))
+@end example
+
+@noindent
+may be equivalent to either of the following expressions:
+
+@example
+'((1 2) 3 4 five 6)
+
+(let ((a 3))
+  (cons '(1 2)
+        (cons a (cons 4 (cons 'five '(6))))))
+@end example
+
+However, it is not equivalent to this expression:
+
+@example
+(let ((a 3))
+  (list (list 1 2) a 4 'five 6))
+@end example
+
+It is a syntax violation if any of the identifiers @func{quasiquote},
+@func{unquote}, or @func{unquote-splicing} appear in positions within a
+@meta{qq-template} other than as described above.
+
+The following grammar for quasiquote expressions is not context--free.
+It is presented as a recipe for generating an infinite number of
+production rules.  Imagine a copy of the following rules for @math{D =
+1, 2, 3, @dots{}}.  @math{D} keeps track of the nesting depth.
+
+@example
+@meta{qq-template} -> @meta{qq template 1}
+@meta{qq-template-0} -> @meta{expression}
+@meta{quasiquotation-@math{D}} -> (quasiquote @meta{qq-template-@math{D}})
+@meta{qq-template-@math{D}} -> @meta{lexeme-datum}
+    | @meta{list-qq-template-@math{D}}
+    | @meta{vector-qq-template-@math{D}}
+    | @meta{unquotation-@math{D}}
+@meta{list-qq-template-@math{D}} -> (@arbno{@meta{qq-template-or-splice-@math{D}}})
+    | (@atleastone{@meta{qq-template-or-splice-@math{D}}} . @meta{qq-template-@math{D}})
+    | @meta{quasiquotation-@math{D+1}}
+@meta{vector-qq-template-@math{D}} -> #(@arbno{@meta{qq-template-or-splice-@math{D}}})
+@meta{unquotation-@math{D}} -> (unquote @meta{qq-template-@math{D-1}})
+@meta{qq-template-or-splice-@math{D}} -> @meta{qq-template-@math{D}}
+    | @meta{splicing-unquotation-@math{D}}
+@meta{splicing-unquotation-@math{D}} ->
+      (unquote-splicing @arbno{@meta{qq-template-@math{D-1}}})
+    | (unquote @arbno{@meta{qq-template-@math{D-1}}})
+@end example
+
+In @func{quasiquotation}s, a @meta{list-qq-template-@math{D}} can
+sometimes be confused with either an @meta{unquotation-@math{D}} or a
+@meta{splicing-unquotation-@math{D}}.  The interpretation as an
+@meta{unquotation} or @meta{splicing-unquotation-@math{D}} takes
+precedence.
+@end deffn
+
+
+@c page
+@node baselib syntax binding
+@section Binding constructs for syntactic keywords
+
+
+@cindex Binding syntactic keywords
+@cindex Syntactic keywords, binding
+
+
+The @func{let-syntax} and @func{letrec-syntax} forms bind keywords.
+Like a @func{begin} form, a @func{let-syntax} or @func{letrec-syntax}
+form may appear in a definition context, in which case it is treated as
+a definition, and the forms in the body must also be definitions.  A
+@func{let-syntax} or @func{letrec-syntax} form may also appear in an
+expression context, in which case the forms within their bodies must be
+expressions.
+
+
+@deffn Syntax let-syntax @meta{bindings} @meta{form} @dots{}
+@meta{bindings} must have the form:
+
+@example
+((@meta{keyword} @meta{expression}) @dots{})
+@end example
+
+Each @meta{keyword} is an identifier, and each @meta{expression} is an
+expression that evaluates, at macro--expansion time, to a
+@dfn{transformer}.  Transformers may be created by @func{syntax-rules}
+or @func{identifier-syntax} or by one of the other mechanisms described
+in @ref{stdlib syntax-case, Syntax--case}.  It is a syntax violation for
+@meta{keyword} to appear more than once in the list of keywords being
+bound.
+
+The @meta{form}s are expanded in the syntactic environment obtained by
+extending the syntactic environment of the @func{let-syntax} form with
+macros whose keywords are the @meta{keyword}s, bound to the specified
+transformers.  Each binding of a @meta{keyword} has the @meta{form}s as
+its region.
+
+The @meta{form}s of a @func{let-syntax} form are treated, whether in
+definition or expression context, as if wrapped in an implicit
+@func{begin}.  Thus definitions in the result of expanding the
+@meta{form}s have the same region as any definition appearing in place
+of the @func{let-syntax} form would have.
+
+@strong{Implementation responsibilities:} The implementation should
+detect if the value of @meta{expression} cannot possibly be a
+transformer.
+
+@example
+(let-syntax ((when (syntax-rules ()
+                     ((when test stmt1 stmt2 ...)
+                      (if test
+                          (begin stmt1 stmt2 ...))))))
+  (let ((if #t))
+    (when if (set! if 'now))
+    if))
+@result{}  now
+
+(let ((x 'outer))
+  (let-syntax ((m (syntax-rules () ((m) x))))
+    (let ((x 'inner))
+      (m))))
+@result{}  outer
+
+(let ()
+  (let-syntax ((def (syntax-rules ()
+                      ((def stuff ...) (define stuff ...)))))
+    (def foo 42))
+  foo)
+@result{} 42
+
+(let ()
+  (let-syntax ())
+  5)
+@result{} 5
+@end example
+@end deffn
+
+
+@deffn Syntax letrec-syntax @meta{bindings} @meta{form} @dots{}
+Same as for @func{let-syntax}.
+
+The @meta{form}s are expanded in the syntactic environment obtained by
+extending the syntactic environment of the @func{letrec-syntax} form
+with macros whose keywords are the @meta{keyword}s, bound to the
+specified transformers.  Each binding of a @meta{keyword} has the
+@meta{bindings} as well as the @meta{form}s within its region, so the
+transformers can transcribe forms into uses of the macros introduced by
+the @func{letrec-syntax} form.
+
+The @meta{form}s of a @func{letrec-syntax} form are treated, whether in
+definition or expression context, as if wrapped in an implicit
+@func{begin}.  Thus definitions in the result of expanding the
+@meta{form}s have the same region as any definition appearing in place
+of the @func{letrec-syntax} form would have.
+
+@strong{Implementation responsibilities:} The implementation should
+detect if the value of @meta{expression} cannot possibly be a
+transformer.
+
+@example
+(letrec-syntax
+    ((my-or (syntax-rules ()
+              ((my-or)
+               #f)
+              ((my-or e)
+               e)
+              ((my-or e1 e2 ...)
+               (let ((temp e1))
+                 (if temp
+                     temp
+                   (my-or e2 ...)))))))
+  (let ((x     #f)
+        (y     7)
+        (temp  8)
+        (let   odd?)
+        (if    even?))
+    (my-or x (let temp) (if y) y)))
+@result{} 7
+@end example
+
+The following example highlights how @func{let-syntax} and
+@func{letrec-syntax} differ.
+
+@example
+(let ((f (lambda (x) (+ x 1))))
+  (let-syntax ((f (syntax-rules ()
+                    ((f x) x)))
+               (g (syntax-rules ()
+                    ((g x) (f x)))))
+    (list (f 1) (g 1))))
+@result{} (1 2)
+
+(let ((f (lambda (x) (+ x 1))))
+  (letrec-syntax ((f (syntax-rules ()
+                       ((f x) x)))
+                  (g (syntax-rules ()
+                       ((g x) (f x)))))
+    (list (f 1) (g 1))))
+@result{} (1 1)
+@end example
+
+The two expressions are identical except that the @func{let-syntax} form
+in the first expression is a @func{letrec-syntax} form in the second.
+In the first expression, the @samp{f} occurring in @samp{g} refers to
+the @func{let}--bound variable @samp{f}, whereas in the second it refers
+to the keyword @code{f} whose binding is established by the
+@func{letrec-syntax} form.
+@end deffn
+
+@c page
+@node baselib transformers
+@section Macro transformers
+
+
+@cindex Macro transformers
+@cindex Transformers, macro
+
+
+@deffn {Syntax (for @samp{expand})} syntax-rules (@meta{literal} @dots{}) @meta{syntax-rule} @dots{}
+@deffnx {Auxiliary Syntax (for @samp{expand})} _
+@deffnx {Auxiliary Syntax (for @samp{expand})} ...
+Each @meta{literal} must be an identifier.  Each @meta{syntax-rule} must
+have the following form:
+
+@example
+(@meta{srpattern} @meta{template})
+@end example
+
+An @meta{srpattern} is a restricted form of @meta{pattern}, namely, a
+nonempty @meta{pattern} in one of four parenthesized forms below whose
+first subform is an identifier or an underscore @samp{_}.  A
+@meta{pattern} is an identifier, constant, or one of the following.
+
+@example
+(@meta{pattern} @dots{})
+(@meta{pattern} @meta{pattern} @dots{} . @meta{pattern})
+(@meta{pattern} @dots{} @meta{pattern} @meta{ellipsis} @meta{pattern} @dots{})
+(@meta{pattern} @dots{} @meta{pattern} @meta{ellipsis} @meta{pattern} @dots{} . @meta{pattern})
+#(@meta{pattern} @dots{})
+#(@meta{pattern} @dots{} @meta{pattern} @meta{ellipsis} @meta{pattern} @dots{})
+@end example
+
+An @meta{ellipsis} is the identifier @samp{...} (three periods).
+
+A @meta{template} is a pattern variable, an identifier that is not a
+pattern variable, a pattern datum, or one of the following.
+
+@example
+(@meta{subtemplate} @dots{})
+(@meta{subtemplate} @dots{} . @meta{template})
+#(@meta{subtemplate} @dots{})
+@end example
+
+A @meta{subtemplate} is a @meta{template} followed by zero or more
+ellipses.
+
+An instance of @func{syntax-rules} evaluates, at macro--expansion time,
+to a new macro transformer by specifying a sequence of hygienic rewrite
+rules.  A use of a macro whose keyword is associated with a transformer
+specified by @func{syntax-rules} is matched against the patterns
+contained in the @meta{syntax-rule}s, beginning with the leftmost
+@meta{syntax-rule}.  When a match is found, the macro use is transcribed
+hygienically according to the template.  It is a syntax violation when
+no match is found.
+
+An identifier appearing within a @meta{pattern} may be an underscore
+@samp{_}, an ellipsis @samp{...} or a literal identifier listed in the
+list of literals @code{(@meta{literal} @dots{})}.  All other identifiers
+appearing within a @meta{pattern} are @dfn{pattern variables}.  It is a
+syntax violation if an ellipsis or underscore appears in
+@code{(@meta{literal} @dots{})}.
+
+While the first subform of @meta{srpattern} may be an identifier, the
+identifier is not involved in the matching and is not considered a
+pattern variable or literal identifier.
+
+Pattern variables match arbitrary input subforms and are used to refer
+to elements of the input.  It is a syntax violation if the same pattern
+variable appears more than once in a @meta{pattern}.
+
+Underscores also match arbitrary input subforms but are not pattern
+variables and so cannot be used to refer to those elements.  Multiple
+underscores may appear in a @meta{pattern}.
+
+A @meta{literal} identifier matches an input subform if and only if the
+input subform is an identifier and either both its occurrence in the
+input expression and its occurrence in the list of literals have the
+same lexical binding, or the two identifiers have the same name and both
+have no lexical binding.
+
+A subpattern followed by an ellipsis can match zero or more elements of
+the input.
+
+More formally, an input form @math{F} matches a pattern @math{P} if and
+only if one of the following holds:
+
+@itemize
+@item
+@math{P} is an underscore (@samp{_}).
+
+@item
+@math{P} is a pattern variable.
+
+@item
+@math{P} is a literal identifier and @math{F} is an identifier such that
+both @math{P} and @math{F} would refer to the same binding if both were
+to appear in the output of the macro outside of any bindings inserted
+into the output of the macro.  (If neither of two like--named
+identifiers refers to any binding, i.e., both are undefined, they are
+considered to refer to the same binding.)
+
+@item
+@math{P} is of the form:
+
+@example
+(P_1 @dots{} P_n)
+@end example
+
+@noindent
+and @math{F} is a list of @math{n} elements that match @math{P_1}
+through @math{P_n}.
+
+@item
+@math{P} is of the form:
+
+@example
+(P_1 @dots{} P_n . P_x)
+@end example
+
+@noindent
+and @math{F} is a list or improper list of @math{n} or more elements
+whose first @math{n} elements match @math{P_1} through @math{P_n} and
+whose @math{n}-th cdr matches @math{P_x}.
+
+@item
+@math{P} is of the form:
+
+@example
+(P_1 @dots{} P_k P_e @meta{ellipsis} P_(m+1) @dots{} P_n)
+@end example
+
+@noindent
+where @meta{ellipsis} is the identifier @samp{...}  and @math{F} is a
+list of @math{n} elements whose first @math{k} elements match @math{P_1}
+through @math{P_k}, whose next @math{m-k} elements each match
+@math{P_e}, and whose remaining @math{n-m} elements match @math{P_(m+1)}
+through @math{P_n}.
+
+@item
+@math{P} is of the form:
+
+@example
+(P_1 @dots{} P_k P_e @meta{ellipsis} P_(m+1) @dots{} P_n . P_x)
+@end example
+
+@noindent
+where @meta{ellipsis} is the identifier @samp{...} and @math{F} is a
+list or improper list of @math{n} elements whose first @math{k} elements
+match @math{P_1} through @math{P_k}, whose next @math{m-k} elements each
+match @math{P_e}, whose next @math{n-m} elements match @math{P_(m+1)}
+through @math{P_n}, and whose @math{n}th and final cdr matches
+@math{P_x}.
+
+@item
+@math{P} is of the form:
+
+@example
+#(P_1 @dots{} P_n)
+@end example
+
+@noindent
+and @math{F} is a vector of @math{n} elements that match @math{P_1}
+through @math{P_n}.
+
+@item
+@math{P} is of the form:
+
+@example
+#(P_1 @dots{} P_k P_e @meta{ellipsis} P_(m+1) @dots{} P_n)
+@end example
+
+@noindent
+where @meta{ellipsis} is the identifier @samp{...} and @math{F} is a
+vector of @math{n} or more elements whose first @math{k} elements match
+@math{P_1} through @math{P_k}, whose next @math{m-k} elements each match
+@math{P_e}, and whose remaining @math{n-m} elements match @math{P_(m+1)}
+through @math{P_n}.
+
+@item
+@math{P} is a pattern datum (any nonlist, nonvector, nonsymbol datum)
+and @math{F} is equal to @math{P} in the sense of the @func{equal?}
+procedure.
+@end itemize
+
+When a macro use is transcribed according to the template of the
+matching @meta{syntax-rule}, pattern variables that occur in the
+template are replaced by the subforms they match in the input.
+
+Pattern data and identifiers that are not pattern variables or ellipses
+are copied into the output.  A subtemplate followed by an ellipsis
+expands into zero or more occurrences of the subtemplate.  Pattern
+variables that occur in subpatterns followed by one or more ellipses may
+occur only in subtemplates that are followed by (at least) as many
+ellipses.  These pattern variables are replaced in the output by the
+input subforms to which they are bound, distributed as specified.  If a
+pattern variable is followed by more ellipses in the subtemplate than in
+the associated subpattern, the input form is replicated as necessary.
+The subtemplate must contain at least one pattern variable from a
+subpattern followed by an ellipsis, and for at least one such pattern
+variable, the subtemplate must be followed by exactly as many ellipses
+as the subpattern in which the pattern variable appears.  (Otherwise,
+the expander would not be able to determine how many times the subform
+should be repeated in the output.)  It is a syntax violation if the
+constraints of this paragraph are not met.
+
+A template of the form @code{(@meta{ellipsis} @meta{template})} is
+identical to @meta{template}, except that ellipses within the template
+have no special meaning.  That is, any ellipses contained within
+@meta{template} are treated as ordinary identifiers.  In particular, the
+template @code{(... ...)} produces a single ellipsis, @samp{...}.  This
+allows syntactic abstractions to expand into forms containing ellipses.
+
+@example
+(define-syntax be-like-begin
+  (syntax-rules ()
+    ((be-like-begin name)
+     (define-syntax name
+       (syntax-rules ()
+         ((name expr (... ...))
+          (begin expr (... ...))))))))
+
+(be-like-begin sequence)
+(sequence 1 2 3 4)
+@result{} 4
+@end example
+
+As an example for hygienic use of auxiliary identifier, if @func{let}
+and @func{cond} are defined as in @ref{baselib expressions binding,let}
+and @ref{scheme derived,cond} then they are hygienic (as required) and the
+following is not an error.
+
+@example
+(let ((=> #f))
+  (cond (#t => 'ok)))
+@result{} ok
+@end example
+
+The macro transformer for @func{cond} recognizes @samp{=>} as a local
+variable, and hence an expression, and not as the identifier @samp{=>},
+which the macro transformer treats as a syntactic keyword.  Thus the
+example expands into:
+
+@example
+(let ((=> #f))
+  (if #t (begin => 'ok)))
+@end example
+
+@noindent
+instead of:
+
+@example
+(let ((=> #f))
+  (let ((temp #t))
+    (if temp ('ok temp))))
+@end example
+
+@noindent
+which would result in an assertion violation.
+@end deffn
+
+
+@deffn {Syntax (for @samp{expand})} identifier-syntax @meta{template}
+@deffnx {Syntax (for @samp{expand})} identifier-syntax (@metai{id} @metai{template}) ((set! @metaii{id} @meta{pattern}) @metaii{template})
+@deffnx {Auxiliary Syntax (for @samp{expand})} set!
+The @meta{id}s must be identifiers.  The @meta{template}s must be as for
+@func{syntax-rules}.
+
+When a keyword is bound to a transformer produced by the first form of
+@func{identifier-syntax}, references to the keyword within the scope of
+the binding are replaced by @meta{template}.
+
+@example
+(define p (cons 4 5))
+(define-syntax p.car (identifier-syntax (car p)))
+p.car           @result{} 4
+(set! p.car 15) @error{} exception &syntax
+@end example
+
+The second, more general, form of @func{identifier-syntax} permits the
+transformer to determine what happens when @samp{set!} is used.  In this
+case, uses of the identifier by itself are replaced by
+@metai{template}, and uses of @samp{set!} with the identifier are
+replaced by @metaii{template}.
+
+@example
+(define p (cons 4 5))
+
+(define-syntax p.car
+  (identifier-syntax
+    (_
+     (car p))
+    ((set! _ e)
+     (set-car! p e))))
+
+(set! p.car 15)
+p.car           @result{} 15
+p               @result{} (15 . 5)
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading How to use literal arguments
+
+Here we give a little explanation on the @code{(@meta{literal} @dots{})}
+arguments of @func{syntax-rules}.  Scheme defines the @func{if} syntax
+as:
+
+@example
+(if ?test ?consequent ?alternate)
+@end example
+
+@noindent
+where the only ``language keyword'' is @func{if} itself.  Many other
+languages use a version with @code{then} and @code{else}, which are also
+``reserved keywords'' for those languages; Scheme has no reserved
+keywords.
+
+A Scheme @func{if} with @code{then} and @code{else}, let's call it
+@func{if*}, would look like:
+
+@example
+(if* ?test (then ?consequent) (else ?alternate))
+@end example
+
+@noindent
+we can define it with the following simple @func{syntax-rules}:
+
+@example
+#!r6rs
+(import (rnrs))
+
+(define-syntax if*
+  (syntax-rules ()
+    ((_ ?test (?then ?consequent) (?else ?alternate))
+     (if ?test ?consequent ?alternate))))
+
+(let ((a 2))
+  (if* (< 1 a)
+       (then (display "yeah"))
+       (else (display "nay"))))
+@print{} yeah
+@end example
+
+@noindent
+but notice that in this definition the pattern is:
+
+@example
+(_ ?test (?then ?consequent) (?else ?alternate))
+@end example
+
+@noindent
+and the identifiers @code{?THEN} and @code{?ELSE} become pattern
+variables, with no validation of their value; so the following macro use
+also works with no error:
+
+@example
+(let ((a 2))
+  (if* (< 1 a)
+       (123 (display "yeah"))
+       (456 (display "nay"))))
+@end example
+
+@noindent
+that is in the template of the first arm of @func{syntax-rules}:
+
+@itemize
+@item
+The identifier @code{?then} is a pattern variable bound to a syntax
+object holding the number 123.
+
+@item
+The identifier @code{?else} is a pattern variable bound to a syntax
+object holding the number 456.
+@end itemize
+
+@noindent
+we can verify it with the following modified program:
+
+@example
+#!r6rs
+(import (rnrs))
+
+(define-syntax if*
+  (syntax-rules ()
+    ((_ ?test (?then ?consequent) (?else ?alternate))
+     (display ?then))))
+
+(let ((a 2))
+  (if* (< 1 a)
+       (123 (display "yeah"))
+       (456 (display "nay"))))
+@print{} 123
+@end example
+
+This is not what we want: we would like the macro to verify that the
+components of the input form falling in the positions of @code{?then}
+and @code{?else} in the pattern, are identifiers having as names the
+symbol @code{then} and the symbol @code{else}.
+
+Specifically we would like, in those positions, identifiers being
+@func{free-identifier=?} to ``auxiliary keywords'' @code{then} and
+@code{else} that we have defined.  We could do such a test using
+@func{syntax-case}:
+
+@example
+#!r6rs
+(import (except (rnrs) else))
+
+;;Define auxiliary keywords, they are just identifiers
+;;bound to something.
+(define-syntax then (syntax-rules ()))
+(define-syntax else (syntax-rules ()))
+
+(define-syntax if*
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?test (?then ?consequent) (?else ?alternate))
+       (begin
+         (if (and (identifier? #'?then)
+                  (free-identifier=? #'?then #'then))
+             (display 'good)
+           (display 'bad))
+         #f)))))
+
+(let ((a 2))
+  (if* (< 1 a)
+       (then (display "yeah"))
+       (else (display "nay"))))
+@print{} good
+
+(let ((a 2))
+  (if* (< 1 a)
+       (123 (display "yeah"))
+       (456 (display "nay"))))
+@print{} bad
+@end example
+
+We do not need to use @func{syntax-case} for such a simple validation,
+because @func{syntax-rules} offers the @meta{literal} arguments exactly
+for this purpose.  So the full version of @samp{IF... THEN... ELSE...}
+is:
+
+@example
+#!r6rs
+(import (except (rnrs) else))
+
+(define-syntax if*
+  (syntax-rules (then else)
+    ((_ ?test (then ?consequent) (else ?alternate))
+     (if ?test ?consequent ?alternate))))
+
+(define-syntax then (syntax-rules ()))
+(define-syntax else (syntax-rules ()))
+
+(let ((a 2))
+  (if* (< 1 a)
+       (then (display "yeah"))
+       (else (display "nay"))))
+@print{} yeah
+
+(let ((a 2))
+  (if* (< 1 a)
+       (123 (display "yeah"))
+       (456 (display "nay"))))
+@error{} syntax error
+@end example
+
+The language @library{rnrs} already defines an auxiliary syntax
+@code{else} and it is all right to use it for @func{if*} so we can just
+do:
+
+@example
+#!r6rs
+(import (rnrs))
+
+(define-syntax if*
+  (syntax-rules (then else)
+    ((_ ?test (then ?consequent) (else ?alternate))
+     (if ?test ?consequent ?alternate))))
+
+(define-syntax then (syntax-rules ()))
+@end example
+
+Notice that with these definitions we have created actual bindings for
+@code{then} and @code{else} in the lexical context of the definition for
+@func{if*}, and @func{if*} will recognise only those.  So when writing a
+library that exports @func{if*} we have to export @code{then} and
+@code{else} along with it:
+
+@example
+#!r6rs
+(library (if-star)
+  (export if* then else)
+  (import (rnrs))
+  (define-syntax if*
+    (syntax-rules (then else)
+      ((_ ?test (then ?consequent) (else ?alternate))
+       (if ?test ?consequent ?alternate))))
+  (define-syntax then (syntax-rules ())))
+@end example
+
+@noindent
+and use it as:
+
+@example
+#!r6rs
+(import (rnrs)
+  (if-star))
+
+(let ((a 2))
+  (if* (< 1 a)
+       (then (display "yeah"))
+       (else (display "nay"))))
+@print{} yeah
+
+(let ((a 2))
+  (if* (< 1 a)
+       (123 (display "yeah"))
+       (456 (display "nay"))))
+@error{} syntax error
+@end example
+
+@c page
+@node baselib tail call
+@section Tail calls and tail contexts
+
+
+@cindex Tail call
+@cindex Tail contexts
+
+
+A @emph{tail call} is a procedure call that occurs in a @emph{tail
+context}.  Tail contexts are defined inductively.  Note that a tail
+context is always determined with respect to a particular lambda
+expression.
+
+@itemize
+@item
+The last expression within the body of a lambda expression, shown as
+@meta{tail-expression} below, occurs in a tail context.
+
+@example
+(lambda @meta{formals}
+  @arbno{@meta{definition}}
+  @arbno{@meta{expression}} @meta{tail-expression})
+@end example
+
+@item
+If one of the following expressions is in a tail context, then the
+subexpressions shown as @meta{tail-expression} are in a tail context.
+These were derived from specifications of the syntax of the forms
+described in this chapter by replacing some occurrences of
+@meta{expression} with @meta{tail-expression}.  Only those rules that
+contain tail contexts are shown here.
+
+@example
+(if @meta{expression} @meta{tail-expression} @meta{tail-expression})
+(if @meta{expression} @meta{tail-expression})
+
+(cond @atleastone{@meta{cond-clause}})
+(cond @arbno{@meta{cond-clause}} (else @meta{tail-sequence}))
+
+(case @meta{expression}
+  @atleastone{@meta{case-clause}})
+(case @meta{expression}
+  @arbno{@meta{case-clause}}
+  (else @meta{tail-sequence}))
+
+(and @arbno{@meta{expression}} @meta{tail expression})
+(or @arbno{@meta{expression}} @meta{tail expression})
+
+(let @meta{bindings} @meta{tail-body})
+(let @meta{variable} @meta{bindings} @meta{tail-body})
+(let* @meta{bindings} @meta{tail-body})
+(letrec* @meta{bindings} @meta{tail-body})
+(letrec @meta{bindings} @meta{tail-body})
+(let-values @meta{mv-bindings} @meta{tail-body})
+(let*-values @meta{mv-bindings} @meta{tail-body})
+
+(let-syntax @meta{bindings} @meta{tail-body})
+(letrec-syntax @meta{bindings} @meta{tail-body})
+
+(begin @meta{tail-sequence})
+@end example
+
+A @meta{cond clause} is:
+
+@example
+(@meta{test} @meta{tail-sequence})
+@end example
+
+@noindent
+a @meta{case-clause} is:
+
+@example
+((@arbno{@meta{datum}}) @meta{tail sequence})
+@end example
+
+@noindent
+a @meta{tail-body} is:
+
+@example
+@arbno{@meta{definition}} @meta{tail-sequence}
+@end example
+
+@noindent
+and a @meta{tail-sequence} is:
+
+@example
+@arbno{@meta{expression}} @meta{tail-expression}
+@end example
+
+@item
+If a @func{cond} expression is in a tail context, and has a clause of
+the form @code{(@metai{expression} => @metaii{expression})} then the
+(implied) call to the procedure that results from the evaluation of
+@metaii{expression} is in a tail context.  @metaii{expression} itself is
+not in a tail context.
+@end itemize
+
+Certain built--in procedures must also perform tail calls.  The first
+argument passed to @func{apply} and to @func{call/cc}, and the second
+argument passed to @func{call-with-values}, must be called via a tail
+call.
+
+In the following example the only tail call is the call to @func{f}.
+None of the calls to @func{g} or @func{h} are tail calls.  The reference
+to @code{x} is in a tail context, but it is not a call and thus is not a
+tail call.
+
+@example
+(lambda ()
+  (if (g)
+      (let ((x (h)))
+        x)
+      (and (g) (f))))
+@end example
+
+@quotation
+@strong{NOTE} Implementations may recognize that some non--tail calls,
+such as the call to @func{h} above, can be evaluated as though they were
+tail calls.  In the example above, the @func{let} expression could be
+compiled as a tail call to @func{h}.  (The possibility of @func{h}
+returning an unexpected number of values can be ignored, because in that
+case the effect of the @func{let} is explicitly unspecified and
+implementation--dependent.)
+@end quotation
+
+@c end of file

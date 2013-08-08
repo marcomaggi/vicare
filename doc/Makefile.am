@@ -11,6 +11,10 @@ vicare_scheme_TEXINFOS	= \
 	\
 	overview.texi			\
 	using.texi			\
+	scheme.texi			\
+	baselib.texi			\
+	stdlib.texi			\
+	exception-handlers-implementation.texi	\
 	iklib.texi			\
 	ffi.texi			\
 	posix.texi			\

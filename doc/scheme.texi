@@ -1,0 +1,3984 @@
+@node scheme
+@chapter The Scheme language
+
+
+@menu
+* scheme overview::             Overview of Scheme.
+* scheme requirements::         Requirement levels.
+* scheme numbers::              Numbers.
+* scheme lex::                  Lexical syntax and datum syntax.
+* scheme basic::                Semantic concepts.
+* scheme entry::                Entry format.
+* scheme library::              Libraries.
+* scheme programs::             Top-level programs.
+* scheme syntax::               Primitive syntax.
+* scheme expansion::            Expansion process.
+* scheme derived::              Sample definitions for derived forms.
+@end menu
+
+@c page
+@node scheme overview
+@section Overview of Scheme
+
+@c originally this chapter was the "struct" file.
+
+This chapter gives an overview of Scheme's semantics.  The purpose of
+this overview is to explain enough about the basic concepts of the
+language to facilitate understanding of the subsequent chapters of the
+report, which are organized as a reference manual.  Consequently, this
+overview is neither a complete introduction to the language, nor precise
+in all respects, nor normative in any way.
+
+@menu
+* scheme overview intro::         Introduction.
+* scheme overview basic types::   Basic types.
+* scheme overview expressions::   Expressions.
+* scheme overview variables::     Variables and binding.
+* scheme overview definitions::   Definitions.
+* scheme overview forms::         Forms.
+* scheme overview procedures::    Procedures.
+* scheme overview syntax::        Procedure calls and syntactic keywords.
+* scheme overview assignment::    Assignment.
+* scheme overview macros::        Derived forms and macros.
+* scheme overview data::          Syntactic data and datum values.
+* scheme overview continuations:: Continuations.
+* scheme overview libraries::     Libraries.
+* scheme overview programs::      Top--level programs.
+@end menu
+
+@c page
+@node scheme overview intro
+@subsection Introduction
+
+
+Following Algol, Scheme is a statically scoped programming language.
+Each use of a variable is associated with a lexically apparent binding
+of that variable.
+
+Scheme has @dfn{latent} as opposed to @dfn{manifest} types.  Types are
+associated with objects (also called values) rather than with variables.
+(Some authors refer to languages with latent types as untyped, weakly
+typed or dynamically typed languages.)  Other languages with latent
+types are Python, Ruby, Smalltalk, and other dialects of Lisp.
+Languages with manifest types (sometimes referred to as strongly typed
+or statically typed languages) include Algol 60, C, C#, Java, Haskell,
+and ML.
+
+All objects created in the course of a Scheme computation, including
+procedures and continuations, have unlimited extent.  No Scheme object
+is ever destroyed.  The reason that implementations of Scheme do not
+(usually!) run out of storage is that they are permitted to reclaim the
+storage occupied by an object if they can prove that the object cannot
+possibly matter to any future computation.  Other languages in which
+most objects have unlimited extent include C#, Java, Haskell, most Lisp
+dialects, ML, Python, Ruby, and Smalltalk.
+
+Implementations of Scheme must be properly tail--recursive.  This allows
+the execution of an iterative computation in constant space, even if the
+iterative computation is described by a syntactically recursive
+procedure.  Thus with a properly tail--recursive implementation,
+iteration can be expressed using the ordinary procedure--call mechanics,
+so that special iteration constructs are useful only as syntactic sugar.
+
+Scheme was one of the first languages to support procedures as objects
+in their own right.  Procedures can be created dynamically, stored in
+data structures, returned as results of procedures, and so on.  Other
+languages with these properties include Common Lisp, Haskell, ML, Ruby,
+and Smalltalk.
+
+One distinguishing feature of Scheme is that continuations, which in
+most other languages only operate behind the scenes, also have
+``first--class'' status.  First--class continuations are useful for
+implementing a wide variety of advanced control constructs, including
+non--local exits, backtracking, and coroutines.
+
+In Scheme, the argument expressions of a procedure call are evaluated
+before the procedure gains control, whether the procedure needs the
+result of the evaluation or not.  C, C#, Common Lisp, Python, Ruby, and
+Smalltalk are other languages that always evaluate argument expressions
+before invoking a procedure.  This is distinct from the lazy--evaluation
+semantics of Haskell, or the call--by--name semantics of Algol 60, where
+an argument expression is not evaluated unless its value is needed by
+the procedure.
+
+Scheme's model of arithmetic provides a rich set of numerical types and
+operations on them.  Furthermore, it distinguishes @dfn{exact} and
+@dfn{inexact} number objects: Essentially, an exact number object
+corresponds to a number exactly, and an inexact number object is the
+result of a computation that involved rounding or other errors.
+
+@c page
+@node scheme overview basic types
+@subsection Basic types
+
+
+Scheme programs manipulate @dfn{objects}, which are also referred to as
+@dfn{values}.  Scheme objects are organized into sets of values called
+@dfn{types}.  This section gives an overview of the fundamentally
+important types of the Scheme language.  More types are described in
+later chapters.
+
+@quotation
+@strong{NOTE} As Scheme is latently typed, the use of the term
+@emph{type} in this report differs from the use of the term in the
+context of other languages, particularly those with manifest typing.
+@end quotation
+
+@subsubheading Booleans
+
+A boolean is a truth value, and can be either true or false.  In Scheme,
+the object for ``false'' is written @false{}.  The object for ``true''
+is written @true{}.  In most places where a truth value is expected,
+however, any object different from @false{} counts as true.
+
+@subsubheading Numbers
+
+Scheme supports a rich variety of numerical data types, including
+objects representing integers of arbitrary precision, rational numbers,
+complex numbers, and inexact numbers of various kinds.  @ref{scheme
+numbers, Numbers}
+
+@subsubheading Characters
+
+Scheme characters mostly correspond to textual characters.  More
+precisely, they are isomorphic to the @dfn{scalar values} of the Unicode
+standard.
+
+@subsubheading Strings
+
+Strings are finite sequences of characters with fixed length and thus
+represent arbitrary Unicode texts.
+
+@subsubheading Symbols
+
+A symbol is an object representing a string, the symbol's @dfn{name}.
+Unlike strings, two symbols whose names are spelled the same way are
+never distinguishable.  Symbols are useful for many applications; for
+instance, they may be used the way enumerated values are used in other
+languages.
+
+@subsubheading Pairs and lists
+
+A pair is a data structure with two components.  The most common use of
+pairs is to represent (singly linked) lists, where the first component
+(the @dfn{car}) represents the first element of the list, and the second
+component (the @dfn{cdr}) the rest of the list.  Scheme also has a
+distinguished empty list, which is the last cdr in a chain of pairs that
+form a list.
+
+@subsubheading Vectors
+
+Vectors, like lists, are linear data structures representing finite
+sequences of arbitrary objects.  Whereas the elements of a list are
+accessed sequentially through the chain of pairs representing it, the
+elements of a vector are addressed by integer indices.  Thus, vectors
+are more appropriate than lists for random access to elements.
+
+@subsubheading Procedures
+
+Procedures are values in Scheme.
+
+@c page
+@node scheme overview expressions
+@subsection Expressions
+
+
+The most important elements of Scheme code are @dfn{expressions}.
+Expressions can be @dfn{evaluated}, producing a @dfn{value}.  (Actually,
+any number of values.  @ref{scheme basic multiple return values, Multiple
+return values}.)
+
+The most fundamental expressions are literal expressions:
+
+@example
+#t @result{} #t
+23 @result{} 23
+@end example
+
+@noindent
+this notation means that the expression @samp{#t} evaluates to @true{},
+that is, the value for ``true'', and that the expression @samp{23}
+evaluates to a number object representing the number @math{23}.
+
+Compound expressions are formed by placing parentheses around their
+subexpressions.  The first subexpression identifies an operation; the
+remaining subexpressions are operands to the operation:
+
+@example
+(+ 23 42)               @result{} 65
+(+ 14 (* 23 42))        @result{} 980
+@end example
+
+@noindent
+in the first of these examples, @func{+} is the name of the built--in
+operation for addition, and @samp{23} and @samp{42} are the operands.
+The expression @code{(+ 23 42)} reads as ``the sum of @math{23} and
+@math{42}''.  Compound expressions can be nested---the second example
+reads as ``the sum of @math{14} and the product of @math{23} and
+@math{42}''.
+
+As these examples indicate, compound expressions in Scheme are always
+written using the same prefix notation.  As a consequence, the
+parentheses are needed to indicate structure.  Consequently,
+``superfluous'' parentheses, which are often permissible in mathematical
+notation and also in many programming languages, are not allowed in
+Scheme.
+
+As in many other languages, whitespace (including line endings) is not
+significant when it separates subexpressions of an expression, and can
+be used to indicate structure.
+
+@c page
+@node scheme overview variables
+@subsection Variables and binding
+
+
+Scheme allows identifiers to stand for locations containing values.
+These identifiers are called variables.  In many cases, specifically
+when the location's value is never modified after its creation, it is
+useful to think of the variable as standing for the value directly.
+
+@example
+(let ((x 23)
+      (y 42))
+  (+ x y))
+@result{} 65
+@end example
+
+In this case, the expression starting with @func{let} is a binding
+construct.  The parenthesized structure following the @func{let} lists
+variables alongside expressions: the variable @samp{x} alongside
+@samp{23}, and the variable @samp{y} alongside @samp{42}.  The
+@func{let} expression binds @samp{x} to @samp{23}, and @samp{y} to
+@samp{42}.  These bindings are available in the @emph{body} of the
+@func{let} expression, @code{(+ x y)}, and only there.
+
+@c page
+@node scheme overview definitions
+@subsection Definitions
+
+
+The variables bound by a @func{let} expression are @emph{local}, because
+their bindings are visible only in @func{let}'s body.  Scheme also
+allows creating top--level bindings for identifiers as follows:
+
+@example
+(define x 23)
+(define y 42)
+(+ x y) @result{} 65
+@end example
+
+@noindent
+these are actually ``top--level'' in the body of a top--level program
+or library.  @ref{scheme library, Libraries}.
+
+The first two parenthesized structures are @dfn{definitions}; they
+create top--level bindings, binding @samp{x} to @samp{23} and @samp{y}
+to @samp{42}.  Definitions are not expressions, and cannot appear in all
+places where an expression can occur.  Moreover, a definition has no
+value.
+
+Bindings follow the lexical structure of the program: When several
+bindings with the same name exist, a variable refers to the binding that
+is ``closest'' to it, starting with its occurrence in the program and
+going from inside to outside, and referring to a top--level binding if
+no local binding can be found along the way:
+
+@example
+(define x 23)
+(define y 42)
+(let ((y 43))
+  (+ x y)) @result{} 66
+
+(let ((y 43))
+  (let ((y 44))
+    (+ x y))) @result{} 67
+@end example
+
+@c page
+@node scheme overview forms
+@subsection Forms
+
+
+While definitions are not expressions, compound expressions and
+definitions exhibit similar syntactic structure:
+
+@example
+(define x 23)
+(* x 2)
+@end example
+
+While the first line contains a definition, and the second an
+expression, this distinction depends on the bindings for @func{let} and
+@func{*}.  At the purely syntactical level, both are @dfn{forms}, and
+@dfn{form} is the general name for a syntactic part of a Scheme program.
+In particular, @samp{23} is a @emph{subform} of the form @code{(define x
+23)}.
+
+@c page
+@node scheme overview procedures
+@subsection Procedures
+
+
+Definitions can also be used to define procedures:
+
+@example
+(define (f x)
+  (+ x 42))
+
+(f 23) @result{} 65
+@end example
+
+A procedure is, slightly simplified, an abstraction of an expression
+over objects.  In the example, the first definition defines a procedure
+called @func{f}.  (Note the parentheses around @code{f x}, which
+indicate that this is a procedure definition.)  The expression @code{(f
+23)} is a procedure call, meaning, roughly, ``evaluate @code{(+ x 42)}
+(the body of the procedure) with @samp{x} bound to @samp{23}''.
+
+As procedures are objects, they can be passed to other procedures:
+
+@example
+(define (f x)
+  (+ x 42))
+
+(define (g p x)
+  (p x))
+
+(g f 23) @result{} 65
+@end example
+
+@noindent
+In this example, the body of @func{g} is evaluated with @var{p} bound to
+@func{f} and @samp{x} bound to @samp{23}, which is equivalent to
+@code{(f 23)}, which evaluates to @samp{65}.
+
+In fact, many predefined operations of Scheme are provided not by
+syntax, but by variables whose values are procedures.  The @func{+}
+operation, for example, which receives special syntactic treatment in
+many other languages, is just a regular identifier in Scheme, bound to a
+procedure that adds number objects.  The same holds for @func{*} and
+many others:
+
+@example
+(define (h op x y)
+  (op x y))
+
+(h + 23 42) @result{} 65
+(h * 23 42) @result{} 966
+@end example
+
+Procedure definitions are not the only way to create procedures.  A
+@func{lambda} expression creates a new procedure as an object, with no
+need to specify a name:
+
+@example
+((lambda (x) (+ x 42)) 23) @result{} 65
+@end example
+
+The entire expression in this example is a procedure call; @code{(lambda
+(x) (+ x 42))}, evaluates to a procedure that takes a single number
+object and adds 42 to it.
+
+@c page
+@node scheme overview syntax
+@subsection Procedure calls and syntactic keywords
+
+
+Whereas @code{(+ 23 42)}, @code{(f 23)}, and @code{((lambda (x) (+ x
+42)) 23)} are all examples of procedure calls, @func{lambda} and
+@func{let} expressions are not.  This is because @func{let}, even though
+it is an identifier, is not a variable, but is instead a @dfn{syntactic
+keyword}.  A form that has a syntactic keyword as its first
+subexpression obeys special rules determined by the keyword.  The
+@func{let} identifier in a definition is also a syntactic keyword.
+Hence, definitions are also not procedure calls.
+
+The rules for the @func{lambda} keyword specify that the first subform
+is a list of parameters, and the remaining subforms are the body of the
+procedure.  In @func{let} expressions, the first subform is a list of
+binding specifications, and the remaining subforms constitute a body of
+expressions.
+
+Procedure calls can generally be distinguished from these @dfn{special
+forms} by looking for a syntactic keyword in the first position of a
+form: if the first position does not contain a syntactic keyword, the
+expression is a procedure call.  (So--called @emph{identifier macros}
+allow creating other kinds of special forms, but are comparatively
+rare.)  The set of syntactic keywords of Scheme is fairly small, which
+usually makes this task fairly simple.  It is possible, however, to
+create new bindings for syntactic keywords.  @ref{scheme overview macros,
+Derived forms and macros}
+
+@c page
+@node scheme overview assignment
+@subsection Assignment
+
+
+Scheme variables bound by definitions or @func{let} or @func{lambda}
+expressions are not actually bound directly to the objects specified in
+the respective bindings, but to locations containing these objects.  The
+contents of these locations can subsequently be modified destructively
+via @dfn{assignment}:
+
+@example
+(let ((x 23))
+  (set! x 42)
+  x) @result{} 42
+@end example
+
+In this case, the body of the @func{let} expression consists of two
+expressions which are evaluated sequentially, with the value of the
+final expression becoming the value of the entire @func{let} expression.
+The expression @code{(set! x 42)} is an assignment, saying ``replace the
+object in the location referenced by @samp{x} with @samp{42}''.  Thus,
+the previous value of @samp{x}, @samp{23}, is replaced by @samp{42}.
+
+@c page
+@node scheme overview macros
+@subsection Derived forms and macros
+
+
+Many of the special forms specified in this report can be translated
+into more basic special forms.  For example, a @func{let} expression can
+be translated into a procedure call and a @func{lambda} expression.  The
+following two expressions are equivalent:
+
+@example
+(let ((x 23)
+      (y 42))
+  (+ x y))
+@result{} 65
+
+((lambda (x y) (+ x y)) 23 42)
+@result{} 65
+@end example
+
+Special forms like @func{let} expressions are called @dfn{derived forms}
+because their semantics can be derived from that of other kinds of forms
+by a syntactic transformation.  Some procedure definitions are also
+derived forms.  The following two definitions are equivalent:
+
+@example
+(define (f x)
+  (+ x 42))
+
+(define f
+  (lambda (x)
+    (+ x 42)))
+@end example
+
+In Scheme, it is possible for a program to create its own derived forms
+by binding syntactic keywords to macros:
+
+@example
+(define-syntax def
+  (syntax-rules ()
+    ((def f (p ...) body)
+     (define (f p ...)
+       body))))
+
+(def f (x)
+  (+ x 42))
+@end example
+
+The @func{define-syntax} construct specifies that a parenthesized
+structure matching the pattern @code{(def f (p ...) body)}, where
+@samp{f}, @samp{p}, and @samp{body} are pattern variables, is translated
+to @code{(define (f p ...) body)}.  Thus, the @samp{def} form appearing
+in the example gets translated to:
+
+@example
+(define (f x)
+  (+ x 42))
+@end example
+
+The ability to create new syntactic keywords makes Scheme extremely
+flexible and expressive, allowing many of the features built into other
+languages to be derived forms in Scheme.
+
+@c page
+@node scheme overview data
+@subsection Syntactic data and datum values
+
+
+A subset of the Scheme objects is called @dfn{datum values}.  These
+include booleans, number objects, characters, symbols, and strings as
+well as lists and vectors whose elements are data.  Each datum value may
+be represented in textual form as a @dfn{syntactic datum}, which can be
+written out and read back in without loss of information.  A datum value
+may be represented by several different syntactic data.  Moreover, each
+datum value can be trivially translated to a literal expression in a
+program by prepending a @samp{'} (single quote) to a corresponding
+syntactic datum:
+
+@example
+'23             @result{} 23
+'#t             @result{} #t
+'foo            @result{} foo
+'(1 2 3)        @result{} (1 2 3)
+'#(1 2 3)       @result{} #(1 2 3)
+@end example
+
+The @samp{'} shown in the previous examples is not needed for
+representations of number objects or booleans.  The syntactic datum
+@samp{foo} represents a symbol with name ``foo'', and @samp{'foo} is a
+literal expression with that symbol as its value.  @samp{(1 2 3)} is a
+syntactic datum that represents a list with elements @samp{1}, @samp{2},
+and @samp{3}, and @samp{'(1 2 3)} is a literal expression with this list
+as its value.  Likewise, @samp{#(1 2 3)} is a syntactic datum that
+represents a vector with elements @samp{1}, @samp{2} and @samp{3}, and
+@samp{'#(1 2 3)} is the corresponding literal.
+
+The syntactic data are a superset of the Scheme forms.  Thus, data can
+be used to represent Scheme forms as data objects.  In particular,
+symbols can be used to represent identifiers.
+
+@example
+'(+ 23 42)                 @result{} (+ 23 42)
+'(define (f x) (+ x 42))   @result{} (define (f x) (+ x 42))
+@end example
+
+This facilitates writing programs that operate on Scheme source code, in
+particular interpreters and program transformers.
+
+@c page
+@node scheme overview continuations
+@subsection Continuations
+
+
+Whenever a Scheme expression is evaluated there is a @dfn{continuation}
+wanting the result of the expression.  The continuation represents an
+entire (default) future for the computation.  For example, informally
+the continuation of @code{3} in the expression
+
+@example
+(+ 1 3)
+@end example
+
+@noindent
+adds 1 to it.  Normally these ubiquitous continuations are hidden behind
+the scenes and programmers do not think much about them.  On rare
+occasions, however, a programmer may need to deal with continuations
+explicitly.
+
+The @func{call-with-current-continuation} procedure allows Scheme
+programmers to do that by creating a procedure that reinstates the
+current continuation.  @ref{baselib control, Control features}
+
+The @func{call-with-current-continuation} procedure accepts a procedure,
+calls it immediately with an argument that is an @emph{escape
+procedure}.  This escape procedure can then be called with an argument
+that becomes the result of the call to
+@func{call-with-current-continuation}.  That is, the escape procedure
+abandons its own continuation, and reinstates the continuation of the
+call to @func{call-with-current-continuation}.
+
+In the following example, an escape procedure representing the
+continuation that adds @samp{1} to its argument is bound to
+@code{escape}, and then called with @samp{3} as an argument.  The
+continuation of the call to @code{escape} is abandoned, and instead the
+@samp{3} is passed to the continuation that adds @samp{1}:
+
+@example
+(+ 1 (call-with-current-continuation
+       (lambda (escape)
+         (+ 2 (escape 3)))))
+@result{} 4
+@end example
+
+An escape procedure has unlimited extent: It can be called after the
+continuation it captured has been invoked, and it can be called multiple
+times.  This makes @func{call-with-current-continuation} significantly
+more powerful than typical non--local control constructs such as
+exceptions in other languages.
+
+@c page
+@node scheme overview libraries
+@subsection Libraries
+
+
+Scheme code can be organized in components called @dfn{libraries}.  Each
+library contains definitions and expressions.  It can import definitions
+from other libraries and export definitions to other libraries.
+
+The following library called @samp{(hello)} exports a definition called
+@func{hello-world}, and imports the base library and the simple I/O
+library.  The @func{hello-world} export is a procedure that displays
+@samp{Hello World} on a separate line:
+
+@example
+(library (hello)
+  (export hello-world)
+  (import (rnrs base)
+          (rnrs io simple))
+  (define (hello-world)
+    (display "Hello World")
+    (newline)))
+@end example
+
+@c page
+@node scheme overview programs
+@subsection Top--level programs
+
+
+A Scheme program is invoked via a @dfn{top--level program}.  Like a
+library, a top--level program contains imports, definitions and
+expressions, and specifies an entry point for execution.  Thus a
+top--level program defines, via the transitive closure of the libraries
+it imports, a Scheme program.
+
+The following top--level program obtains the first argument from the
+command line via the @func{command-line} procedure from the
+@rsixlibrary{programs} library.  It then opens the file using
+@func{open-file-input-port}, yielding a @emph{port}, i.e. a connection
+to the file as a data source, and calls the @func{get-bytes-all}
+procedure to obtain the contents of the file as binary data.  It then
+uses @func{put-bytes} to output the contents of the file to standard
+output:
+
+@example
+#!r6rs
+(import (rnrs base)
+        (rnrs io ports)
+        (rnrs programs))
+(let ((p (standard-output-port)))
+  (put-bytevector p
+                  (call-with-port
+                      (open-file-input-port
+                        (cadr (command-line)))
+                    get-bytevector-all))
+  (close-port p))
+@end example
+
+@c page
+@node scheme requirements
+@section Requirement levels
+
+
+The key words ``must'', ``must not'', ``should'', ``should not'',
+``recommended'', ``may'', and ``optional'' in this report are to be
+interpreted as described in @rfc{} 2119.  Specifically:
+
+@table @strong
+@item must
+This word means that a statement is an absolute requirement of the
+specification.
+
+@item must not
+This phrase means that a statement is an absolute prohibition of the
+specification.
+
+@item should
+This word, or the adjective ``recommended'', means that valid reasons
+may exist in particular circumstances to ignore a statement, but that
+the implications must be understood and weighed before choosing a
+different course.
+
+@item should not
+This phrase, or the phrase ``not recommended'', means that valid reasons
+may exist in particular circumstances when the behavior of a statement
+is acceptable, but that the implications should be understood and
+weighed before choosing the course described by the statement.
+
+@item may
+This word, or the adjective ``optional'', means that an item is truly
+optional.
+@end table
+
+In particular, this report occasionally uses ``should'' to designate
+circumstances that are outside the specification of this report, but
+cannot be practically detected by an implementation.  @ref{scheme basic
+argument checking, Arguments checking}.  In such circumstances, a
+particular implementation may allow the programmer to ignore the
+recommendation of the report and even exhibit reasonable behavior.
+However, as the report does not specify the behavior, these programs may
+be unportable, that is, their execution might produce different results
+on different implementations.
+
+Moreover, this report occasionally uses the phrase ``not required'' to
+note the absence of an absolute requirement.
+
+@c page
+@node scheme numbers
+@section Numbers
+
+
+This chapter describes Scheme's model for numbers.  It is important to
+distinguish between the mathematical numbers, the Scheme objects that
+attempt to model them, the machine representations used to implement the
+numbers, and notations used to write numbers.
+
+In this report, the term @dfn{number} refers to a mathematical number,
+and the term @dfn{number object} refers to a Scheme object representing
+a number.  This report uses the types @dfn{complex}, @dfn{real},
+@dfn{rational}, and @dfn{integer} to refer to both mathematical numbers
+and number objects.  The @dfn{fixnum} and @dfn{flonum} types refer to
+special subsets of the number objects, as determined by common machine
+representations, as explained below.
+
+@menu
+* scheme numbers tower::        Numerical tower.
+* scheme numbers exactness::    Exactness.
+* scheme numbers fix flo::      Fixnums and flonums.
+* scheme numbers requirements:: Implementation requirements.
+* scheme numbers inf nan::      Infinities and NaNs.
+* scheme numbers minus zero::   Distinguished @math{-0.0}.
+@end menu
+
+
+@c page
+@node scheme numbers tower
+@subsection Numerical tower
+
+
+Numbers may be arranged into a tower of subsets in which each level is a
+subset of the level above it:
+
+@example
+number
+  complex
+  real
+  rational
+  integer
+@end example
+
+For example, 5 is an integer.  Therefore 5 is also a rational, a real,
+and a complex.  The same is true of the number objects that model 5.
+
+Number objects are organized as a corresponding tower of subtypes
+defined by the predicates @func{number?}, @func{complex?}, @func{real?},
+@func{rational?}, and @func{integer?}.  @ref{baselib math ops type
+pred, Numerical types predicates}.  Integer number objects are also
+called @dfn{integer objects}.
+
+There is no simple relationship between the subset that contains a
+number and its representation inside a computer.  For example, the
+integer 5 may have several representations.  Scheme's numerical
+operations treat number objects as abstract data, as independent of
+their representation as possible.  Although an implementation of Scheme
+may use many different representations for numbers, this should not be
+apparent to a casual programmer writing simple programs.
+
+@c page
+@node scheme numbers exactness
+@subsection Exactness
+
+
+It is useful to distinguish between number objects that are known to
+correspond to a number exactly, and those number objects whose
+computation involved rounding or other errors.  For example, index
+operations into data structures may need to know the index exactly, as
+may some operations on polynomial coefficients in a symbolic algebra
+system.  On the other hand, the results of measurements are inherently
+inexact, and irrational numbers may be approximated by rational and
+therefore inexact approximations.  In order to catch uses of numbers
+known only inexactly where exact numbers are required, Scheme explicitly
+distinguishes @emph{exact} from @emph{inexact} number objects.  This
+distinction is orthogonal to the dimension of type.
+
+A number object is exact if it is the value of an exact numerical
+literal or was derived from exact number objects using only exact
+operations.  Exact number objects correspond to mathematical numbers in
+the obvious way.
+
+Conversely, a number object is inexact if it is the value of an inexact
+numerical literal, or was derived from inexact number objects, or was
+derived using inexact operations.  Thus inexactness is contagious.
+
+Exact arithmetic is reliable in the following sense: If exact number
+objects are passed to any of the arithmetic procedures described in
+@ref{baselib math exactness, Propagation of exactness and inexactness},
+and an exact number object is returned, then the result is
+mathematically correct.  This is generally not true of computations
+involving inexact number objects because approximate methods such as
+floating--point arithmetics may be used, but it is the duty of each
+implementation to make the result as close as practical to the
+mathematically ideal result.
+
+@c page
+@node scheme numbers fix flo
+@subsection Fixnums and flonums
+
+
+A @dfn{fixnum} is an exact integer object that lies within a certain
+implementation--dependent subrange of the exact integer objects.
+@ref{stdlib arithmetic fixnums, Fixnums}
+
+Likewise, every implementation must designate a subset of its inexact
+real number objects as @dfn{flonums}, and to convert certain external
+representations into flonums.  @ref{stdlib arithmetic flonums, Flonums}
+
+Note that this does not imply that an implementation must use
+floating--point representations.
+
+@c page
+@node scheme numbers requirements
+@subsection Implementation requirements
+
+
+Implementations of Scheme must support number objects for the entire
+tower of subtypes given in @ref{scheme numbers tower, Numerical tower}.
+Moreover, implementations must support exact integer objects and exact
+rational number objects of practically unlimited size and precision, and
+to implement certain procedures (listed in @ref{baselib math exactness,
+Propagation of exactness and inexactness}), so they always return exact
+results when given exact arguments.  (``Practically unlimited'' means
+that the size and precision of these numbers should only be limited by
+the size of the available memory.)
+
+Implementations may support only a limited range of inexact number
+objects of any type, subject to the requirements of this section.  For
+example, an implementation may limit the range of the inexact real
+number objects (and therefore the range of inexact integer and rational
+number objects) to the dynamic range of the flonum format.  Furthermore
+the gaps between the inexact integer objects and rationals are likely to
+be very large in such an implementation as the limits of this range are
+approached.
+
+An implementation may use floating point and other approximate
+representation strategies for @emph{inexact} numbers.  This report
+recommends, but does not require, that the @ieee{} floating--point
+standards be followed by implementations that use floating--point
+representations, and that implementations using other representations
+should match or exceed the precision achievable using these
+floating--point standards.
+
+In particular, implementations that use floating--point representations
+must follow these rules: A floating--point result must be represented
+with at least as much precision as is used to express any of the inexact
+arguments to that operation.  Potentially inexact operations such as
+@func{sqrt}, when applied to exact arguments, should produce exact
+answers whenever possible (for example the square root of an exact 4
+ought to be an exact 2).  However, this is not required.  If, on the
+other hand, an exact number object is operated upon so as to produce an
+inexact result (as by @func{sqrt}), and if the result is represented in
+floating point, then the most precise floating--point format available
+must be used; but if the result is represented in some other way then
+the representation must have at least as much precision as the most
+precise floating--point format available.
+
+It is the programmer's responsibility to avoid using inexact number
+objects with magnitude or significand too large to be represented in the
+implementation.
+
+
+@c page
+@node scheme numbers inf nan
+@subsection Infinities and NaNs
+
+
+Some Scheme implementations, specifically those that follow the @ieee{}
+floating--point standards, distinguish special number objects called
+@dfn{positive infinity}, @dfn{negative infinity} and @dfn{NaN}.
+
+Positive infinity is regarded as an inexact real (but not rational)
+number object that represents an indeterminate number greater than the
+numbers represented by all rational number objects.  Negative infinity
+is regarded as an inexact real (but not rational) number object that
+represents an indeterminate number less than the numbers represented by
+all rational numbers.
+
+A NaN is regarded as an inexact real (but not rational) number object so
+indeterminate that it might represent any real number, including
+positive or negative infinity, and might even be greater than positive
+infinity or less than negative infinity.
+
+@c page
+@node scheme numbers minus zero
+@subsection Distinguished @math{-0.0}
+
+
+Some Scheme implementations, specifically those that follow the @ieee{}
+floating--point standards, distinguish between number objects for
+@math{0.0} and @math{-0.0}, i.e., positive and negative inexact zero.
+This report will sometimes specify the behavior of certain arithmetic
+operations on these number objects.  These specifications are marked
+with ``if @math{-0.0} is distinguished'' or ``implementations that
+distinguish @math{-0.0}''.
+
+
+@c page
+@node scheme lex
+@section Lexical syntax and datum syntax
+
+
+@menu
+* scheme lex intro::            Introduction.
+* scheme lex notation::         Notation.
+* scheme lex syntax::           Lexical syntax.
+* scheme lex datum::            Datum syntax.
+@end menu
+
+@c page
+@node scheme lex intro
+@subsection Introduction
+
+
+The syntax of Scheme code is organized in three levels:
+
+@enumerate
+@item
+The @dfn{lexical syntax} that describes how a program text is split
+into a sequence of lexemes.
+
+@item
+The @dfn{datum syntax}, formulated in terms of the lexical syntax, that
+structures the lexeme sequence as a sequence of @dfn{syntactic data},
+where a syntactic datum is a recursively structured entity.
+
+@item
+The @dfn{program syntax} formulated in terms of the datum syntax,
+imposing further structure and assigning meaning to syntactic data.
+@end enumerate
+
+Syntactic data (also called @dfn{external representations}) double as a
+notation for objects, and Scheme's @rsixlibrary{io ports} library
+provides the @func{get-datum} and @func{put-datum} procedures for
+reading and writing syntactic data, converting between their textual
+representation and the corresponding objects.  @ref{stdlib io port, Port
+input/output}.  Each syntactic datum represents a corresponding
+@emph{datum value}.  A syntactic datum can be used in a program to
+obtain the corresponding datum value using @func{quote}.  @ref{baselib
+expressions quotation, Quotation}
+
+Scheme source code consists of syntactic data and (non--significant)
+comments.  Syntactic data in Scheme source code are called @emph{forms}.
+(A form nested inside another form is called a @emph{subform}.)
+Consequently, Scheme's syntax has the property that any sequence of
+characters that is a form is also a syntactic datum representing some
+object.  This can lead to confusion, since it may not be obvious out of
+context whether a given sequence of characters is intended to be a
+representation of objects or the text of a program.  It is also a source
+of power, since it facilitates writing programs such as interpreters or
+compilers that treat programs as objects (or vice versa).
+
+A datum value may have several different external representations.  For
+example, both @code{#e28.000} and @code{#x1c} are syntactic data
+representing the exact integer object 28, and the syntactic data
+@code{(8 13)}, @code{( 08 13 )}, @code{(8 . (13 . ()))} all represent a
+list containing the exact integer objects 8 and 13.  Syntactic data that
+represent equal objects (in the sense of @func{equal?}; @ref{baselib
+predicates}) are always equivalent as forms of a program.
+
+Because of the close correspondence between syntactic data and datum
+values, this report sometimes uses the term @emph{datum} for either a
+syntactic datum or a datum value when the exact meaning is apparent from
+the context.
+
+An implementation must not extend the lexical or datum syntax in any
+way, with one exception: it need not treat the syntax
+@code{#!<identifier>}, for any <identifier> (@ref{scheme lex syntax
+identifiers}) that is not @code{r6rs}, as a syntax violation, and it may
+use specific @code{#!}--prefixed identifiers as flags indicating that
+subsequent input contains extensions to the standard lexical or datum
+syntax.  The syntax @code{#!r6rs} may be used to signify that the input
+afterward is written with the lexical syntax and datum syntax described
+by this report.  @code{#!r6rs} is otherwise treated as a comment;
+@ref{scheme lex syntax whitespace and comments}.
+
+@c page
+@node scheme lex notation
+@subsection Notation
+
+
+The formal syntax for Scheme is written in an extended @acronym{BNF}.
+Non--terminals are written using angle brackets.  Case is insignificant
+for non--terminal names.
+
+All spaces in the grammar are for legibility.  @meta{empty} stands for
+the empty string.
+
+The following extensions to @acronym{BNF} are used to make the
+description more concise: @arbno{@meta{thing}} means zero or more
+occurrences of @meta{thing}, and @atleastone{@meta{thing}} means at
+least one @meta{thing}.
+
+Some non-terminal names refer to the Unicode scalar values of the same
+name: @meta{character-tabulation} (U+0009), @meta{linefeed} (U+000A),
+@meta{carriage-return} (U+000D), @meta{line-tabulation} (U+000B),
+@meta{form-feed} (U+000C), @meta{space} (U+0020), @meta{next-line}
+(U+0085), @meta{line-separator} (U+2028), and @meta{paragraph-separator}
+(U+2029).
+
+@c page
+@node scheme lex syntax
+@subsection Lexical syntax
+
+
+The lexical syntax determines how a character sequence is split into a
+sequence of lexemes, omitting non--significant portions such as comments
+and whitespace.  The character sequence is assumed to be text according
+to the Unicode standard.  Some of the lexemes, such as identifiers,
+representations of number objects, strings etc., of the lexical syntax
+are syntactic data in the datum syntax, and thus represent objects.
+Besides the formal account of the syntax, this section also describes
+what datum values are represented by these syntactic data.
+
+The lexical syntax, in the description of comments, contains a forward
+reference to @meta{datum}, which is described as part of the datum
+syntax.  Being comments, however, these @meta{datum}s do not play a
+significant role in the syntax.
+
+Case is significant except in representations of booleans, number
+objects, and in hexadecimal numbers specifying Unicode scalar values.
+For example, @code{#x1A} and @code{#X1a} are equivalent.  The identifier
+@code{Foo} is, however, distinct from the identifier @code{FOO}.
+
+
+@menu
+* scheme lex syntax formal account::           Formal account.
+* scheme lex syntax line endings::             Line endings.
+* scheme lex syntax whitespace and comments::  Whitespace and comments.
+* scheme lex syntax identifiers::              Identifiers.
+* scheme lex syntax booleans::                 Booleans.
+* scheme lex syntax characters::               Characters.
+* scheme lex syntax strings::                  Strings.
+* scheme lex syntax numbers::                  Numbers.
+@end menu
+
+@c page
+@node scheme lex syntax formal account
+@subsubsection Formal account
+
+
+@meta{interlexeme-space} may occur on either side of any lexeme, but not
+within a lexeme.
+
+@meta{Identifier}s, @samp{.}, @meta{number}s, @meta{character}s, and
+@meta{boolean}s, must be terminated by a @meta{delimiter} or by the end
+of the input.
+
+The following two characters are reserved for future extensions to the
+language: @code{@{ @}}
+
+@example
+<lexeme> -> <identifier> | <boolean> | <number>
+         | <character> | <string>
+         | ( | ) | [ | ] | #( | #vu8( | ' | ` | , | ,@@ | .
+         | #' | #` | #, | #,@@
+<delimiter> -> ( | ) | [ | ] | " | ; | #
+         | <whitespace>
+<whitespace> -> <character tabulation>
+         | <linefeed> | <line tabulation> | <form feed>
+         | <carriage return> | <next line>
+         | <any character whose category is Zs, Zl, or Zp>
+<line ending> -> <linefeed> | <carriage return>
+         | <carriage return> <linefeed> | <next line>
+         | <carriage return> <next line> | <line separator>
+<comment> -> ; <all subsequent characters up to a <line ending>
+                or <paragraph separator> >
+         | <nested comment>
+         | #; <interlexeme space> <datum>
+         | #!r6rs
+<nested comment> -> #| <comment text>
+         <comment cont>* |#
+<comment text> -> character sequence not containing #| or |#
+<comment cont> -> <nested comment> <comment text>
+<atmosphere> -> <whitespace> | <comment>
+<interlexeme space> -> <atmosphere>*
+
+<identifier> -> <initial> <subsequent>*
+         | <peculiar identifier>
+<initial> -> <constituent> | <special initial>
+         | <inline hex escape>
+<letter> -> a | b | c | ... | z
+         | A | B | C | ... | Z
+<constituent> -> <letter>
+         | <any character whose Unicode scalar value is greater than
+             127, and whose category is Lu, Ll, Lt, Lm, Lo, Mn,
+             Nl, No, Pd, Pc, Po, Sc, Sm, Sk, So, or Co>
+<special initial> -> ! | $ | % | & | * | / | : | < | =
+         | > | ? | ^ | _ | ~
+<subsequent> -> <initial> | <digit>
+         | <any character whose category is Nd, Mc, or Me>
+         | <special subsequent>
+<digit> -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+<hex digit> -> <digit>
+         | a | A | b | B | c | C | d | D | e | E | f | F
+<special subsequent> -> + | - | . | @@
+<inline hex escape> -> \x<hex scalar value>;
+<hex scalar value> -> <hex digit>+
+<peculiar identifier> -> + | - | ... | -> <subsequent>*
+<boolean> -> #t | #T | #f | #F
+<character> -> #\<any character>
+         | #\<character name>
+         | #\x<hex scalar value>
+<character name> -> nul | alarm | backspace | tab
+         | linefeed | newline | vtab | page | return
+         | esc | space | delete
+<string> -> " <string element>* "
+<string element> -> <any character other than " or \>
+         | \a | \b | \t | \n | \v | \f | \r
+         | \" | \\
+         | \<intraline whitespace>* <line ending>
+            <intraline whitespace>*
+         | <inline hex escape>
+<intraline whitespace> -> <character tabulation>
+         | <any character whose category is Zs>
+@end example
+
+A @meta{hex-scalar-value} represents a Unicode scalar value between
+@code{0} and @code{#x10FFFF}, excluding the range @code{[#xD800,
+#xDFFF]}.
+
+The rules for @meta{num-R}, @meta{complex-R}, @meta{real-R},
+@meta{ureal-R}, @meta{uinteger-R}, and @meta{prefix-R} below should be
+replicated for R = 2, 8, 10, and 16.  There are no rules for
+@meta{decimal-2}, @meta{decimal-8}, and @meta{decimal-16}, which means
+that number representations containing decimal points or exponents must
+be in decimal radix.
+
+@example
+<number> -> <num 2> | <num 8>
+         | <num 10> | <num 16>
+<num R> -> <prefix R> <complex R>
+<complex R> -> <real R> | <real R> @@ <real R>
+         | <real R> + <ureal R> i | <real R> - <ureal R> i
+         | <real R> + <naninf> i | <real R> - <naninf> i
+         | <real R> + i | <real R> - i
+         | + <ureal R> i | - <ureal R> i
+         | + <naninf> i | - <naninf> i
+         | + i | - i
+<real R> -> <sign> <ureal R>
+         | + <naninf> | - <naninf>
+<naninf> -> nan.0 | inf.0
+<ureal R> -> <uinteger R>
+         | <uinteger R> / <uinteger R>
+         | <decimal R> <mantissa width>
+<decimal 10> -> <uinteger 10> <suffix>
+         | . <digit 10>+ <suffix>
+         | <digit 10>+ . <digit 10>* <suffix>
+         | <digit 10>+ . <suffix>
+<uinteger R> -> <digit R>+
+<prefix R> -> <radix R> <exactness>
+         | <exactness> <radix R>
+
+<suffix> -> <empty>
+         | <exponent marker> <sign> <digit 10>+
+<exponent marker> -> e | E | s | S | f | F
+         | d | D | l | L
+<mantissa width> -> <empty>
+         | \| <digit 10>+
+<sign> -> <empty> | + | -
+<exactness> -> <empty>
+         | #i| #I | #e| #E
+<radix 2> -> #b| #B
+<radix 8> -> #o| #O
+<radix 10> -> <empty> | #d | #D
+<radix 16> -> #x| #X
+<digit 2> -> 0 | 1
+<digit 8> -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+<digit 10> -> <digit>
+<digit 16> -> <hex digit>
+@end example
+
+@c page
+@node scheme lex syntax line endings
+@subsubsection Line endings
+
+
+Line endings are significant in Scheme in single--line comments
+(@ref{scheme lex syntax whitespace and comments}) and within string
+literals.  In Scheme source code, any of the line endings in
+@meta{line-ending} marks the end of a line.  Moreover, the
+two--character line endings @meta{carriage-return} @meta{linefeed} and
+@meta{carriage-return} @meta{next-line} each count as a single line
+ending.
+
+In a string literal, a @meta{line-ending} not preceded by a @code{\}
+stands for a linefeed character, which is the standard line--ending
+character of Scheme.
+
+@c page
+@node scheme lex syntax whitespace and comments
+@subsubsection Whitespace and comments
+
+
+@emph{Whitespace} characters are spaces, linefeeds, carriage returns,
+character tabulations, form feeds, line tabulations, and any other
+character whose category is Zs, Zl, or Zp.  Whitespace is used for
+improved readability and as necessary to separate lexemes from each
+other.  Whitespace may occur between any two lexemes, but not within a
+lexeme.  Whitespace may also occur inside a string, where it is
+significant.
+
+The lexical syntax includes several comment forms.  In all cases,
+comments are invisible to Scheme, except that they act as delimiters,
+so, for example, a comment cannot appear in the middle of an identifier
+or representation of a number object.
+
+A semicolon (@code{;}) indicates the start of a line comment.  The
+comment continues to the end of the line on which the semicolon appears.
+
+Another way to indicate a comment is to prefix a @meta{datum} (cf.
+section ``Formal account'') with @code{#;}, possibly with
+@meta{interlexeme-space} before the @meta{datum}.  The comment consists
+of the comment prefix @code{#;} and the @meta{datum} together.  This
+notation is useful for ``commenting out'' sections of code.
+
+Block comments may be indicated with properly nested @code{#|} and
+@code{|#} pairs.
+
+@example
+#|
+   The FACT procedure computes the factorial of a
+   non-negative integer.
+|#
+(define fact
+  (lambda (n)
+    ;; base case
+    (if (= n 0)
+        #;(= n 1)
+        1       ; identity of *
+        (* n (fact (- n 1))))))
+@end example
+
+The lexeme @code{#!r6rs}, which signifies that the program text that
+follows is written with the lexical and datum syntax described in this
+report, is also otherwise treated as a comment.
+
+@c page
+@node scheme lex syntax identifiers
+@subsubsection Identifiers
+
+
+@cindex Identifier, definition of
+@cindex Definition of identifier
+
+
+Most identifiers allowed by other programming languages are also
+acceptable to Scheme.  In general, a sequence of letters, digits, and
+``extended alphabetic characters'' is an identifier when it begins with
+a character that cannot begin a representation of a number object.  In
+addition, @code{+}, @code{-}, and @code{...} are identifiers, as is a
+sequence of letters, digits, and extended alphabetic characters that
+begins with the two--character sequence @code{->}.  Here are some
+examples of identifiers:
+
+@example
+lambda         q                soup
+list->vector   +                V17a
+<=             a34kTMNs         ->-
+the-word-recursion-has-many-meanings
+@end example
+
+Extended alphabetic characters may be used within identifiers as if they
+were letters.  The following are extended alphabetic characters:
+
+@example
+! $ % & * + - . / : < = > ? @@ ^ _ ~
+@end example
+
+Moreover, all characters whose Unicode scalar values are greater than
+127 and whose Unicode category is Lu, Ll, Lt, Lm, Lo, Mn, Mc, Me, Nd,
+Nl, No, Pd, Pc, Po, Sc, Sm, Sk, So, or Co can be used within
+identifiers.  In addition, any character can be used within an
+identifier when specified via an @meta{inline-hex-escape}.  For example,
+the identifier @code{H\x65;llo} is the same as the identifier
+@code{Hello}.
+@c , and the identifier @code{\x3BB;} is the same as the
+@c identifier $\lambda$.
+
+Any identifier may be used as a variable or as a syntactic keyword
+(@ref{scheme basic variables keywords regions} and @ref{scheme syntax
+macros}) in a Scheme program.  Any identifier may also be used as a
+syntactic datum, in which case it represents a @emph{symbol}
+(@ref{baselib symbols}).
+
+@c page
+@node scheme lex syntax booleans
+@subsubsection Booleans
+
+
+The standard boolean objects for true and false have external
+representations @true{} and @false{}.
+
+@c page
+@node scheme lex syntax characters
+@subsubsection Characters
+
+
+Characters are represented using the notation @code{#\<character>} or
+@code{#\<character name>} or @code{#\x<hex scalar value>}.
+
+For example:
+
+@example
+#\a             lower case letter a
+#\A             upper case letter A
+#\(             left parenthesis
+#\              space character
+#\nul           U+0000
+#\alarm         U+0007
+#\backspace     U+0008
+#\tab           U+0009
+#\linefeed      U+000A
+#\newline       U+000A
+#\vtab          U+000B
+#\page          U+000C
+#\return        U+000D
+#\esc           U+001B
+#\space         U+0020 preferred way to write a space
+#\delete        U+007F
+#\xFF           U+00FF
+#\x03BB         U+03BB
+#\x00006587     U+6587
+#\x0001z        &lexical exception
+#\alarmx        &lexical exception
+#\alarm x       U+0007 followed by x
+#\Alarm         &lexical exception
+#\alert         &lexical exception
+#\xA            U+000A
+#\xFF           U+00FF
+#\xff           U+00FF
+#\x ff          U+0078 followed by another datum, ff
+#\x(ff)         U+0078 followed by another datum, a parenthesized ff
+#\(x)           &lexical exception
+#\(x            &lexical exception
+#\((x)          U+0028 followed by another datum, parenthesized x
+#\x00110000     &lexical exception out of range
+#\x000000001    U+0001
+#\xD800         &lexical exception in excluded range
+@end example
+
+(The notation @condition{lexical} means that the line in question is a
+lexical syntax violation.)
+
+Case is significant in @code{#\<character>}, and in @code{#\<character
+name>}, but not in the @code{<hex scalar value>} of @code{#\x<hex scalar
+value>}.  A @meta{character} must be followed by a @meta{delimiter} or
+by the end of the input.  This rule resolves various ambiguous cases
+involving named characters, requiring, for example, the sequence of
+characters @code{#\space} to be interpreted as the space character
+rather than as the character @code{#\s} followed by the identifier
+@code{pace}.
+
+@quotation
+@strong{NOTE} The @code{#\newline} notation is retained for backward
+compatibility.  Its use is deprecated; @code{#\linefeed} should be used
+instead.
+@end quotation
+
+@c page
+@node scheme lex syntax strings
+@subsubsection Strings
+
+
+String are represented by sequences of characters enclosed within
+doublequotes (@code{"}).  Within a string literal, various escape
+sequences represent characters other than themselves.  Escape sequences
+always start with a backslash (@code{\}):
+
+@table @code
+@item \a
+alarm, U+0007
+@item \b
+backspace, U+0008
+@item \t
+character tabulation, U+0009
+@item \n
+linefeed, U+000A
+@item \v
+line tabulation, U+000B
+@item \f
+formfeed, U+000C
+@item \r
+return, U+000D
+@item \"
+doublequote, U+0022
+@item \
+backslash, U+005C
+@item \<intraline whitespace><line ending> <intraline whitespace>
+nothing
+@item \x<hex scalar value>;
+specified character (note the terminating semi--colon).
+@end table
+
+These escape sequences are case-sensitive, except that the alphabetic
+digits of a @meta{hex-scalar-value} can be uppercase or lowercase.
+
+Any other character in a string after a backslash is a syntax violation.
+Except for a line ending, any character outside of an escape sequence
+and not a doublequote stands for itself in the string literal.
+@c For example the single--character string literal {\tt "$\lambda$"}
+@c (doublequote, a lower case lambda, doublequote) represents the same
+@c string as {\tt "\{}x03bb;"}.
+A line ending that does not follow a backslash stands for a linefeed
+character.
+
+Examples:
+
+@example
+"abc"           U+0061, U+0062, U+0063
+"\x41;bc"       "Abc" ; U+0041, U+0062, U+0063
+"\x41; bc"      "A bc"
+                U+0041, U+0020, U+0062, U+0063
+"\x41bc;"       U+41BC
+"\x41"          &lexical exception
+"\x;"           &lexical exception
+"\x41bx;"       &lexical exception
+"\x00000041;"   "A" ; U+0041
+"\x0010FFFF;"   U+10FFFF
+"\x00110000;"   &lexical exception
+                out of range
+"\x000000001;"  U+0001
+"\xD800;"       &lexical exception
+                in excluded range
+"A
+bc"             U+0041, U+000A, U+0062, U+0063
+                if no space occurs after the A
+@end example
+
+@c page
+@node scheme lex syntax numbers
+@subsubsection Numbers
+
+
+The syntax of external representations for number objects is described
+formally by the @meta{number} rule in the formal grammar.  Case is not
+significant in external representations of number objects.
+
+A representation of a number object may be written in binary, octal,
+decimal, or hexadecimal by the use of a radix prefix.  The radix
+prefixes are @code{#b} (binary), @code{#o} (octal), @code{#d} (decimal),
+and @code{#x} (hexadecimal).  With no radix prefix, a representation of
+a number object is assumed to be expressed in decimal.
+
+A representation of a number object may be specified to be either exact
+or inexact by a prefix.  The prefixes are @code{#e} for exact, and
+@code{#i} for inexact.  An exactness prefix may appear before or after
+any radix prefix that is used.  If the representation of a number object
+has no exactness prefix, the constant is inexact if it contains a
+decimal point, an exponent, or a nonempty mantissa width; otherwise it
+is exact.
+
+In systems with inexact number objects of varying precisions, it may be
+useful to specify the precision of a constant.  For this purpose,
+representations of number objects may be written with an exponent marker
+that indicates the desired precision of the inexact representation.  The
+letters @code{s}, @code{f}, @code{d}, and @code{l} specify the use of
+@emph{short}, @emph{single}, @emph{double}, and @emph{long} precision,
+respectively.  (When fewer than four internal inexact representations
+exist, the four size specifications are mapped onto those available.
+For example, an implementation with two internal representations may map
+short and single together and long and double together.)  In addition,
+the exponent marker @code{e} specifies the default precision for the
+implementation.  The default precision has at least as much precision as
+@emph{double}, but implementations may wish to allow this default to be
+set by the user.
+
+@example
+3.1415926535898F0
+       Round to single, perhaps 3.141593
+0.6L0
+       Extend to long, perhaps .600000000000000
+@end example
+
+A representation of a number object with nonempty mantissa width,
+@code{x|p}, represents the best binary floating--point approximation of
+@emph{x} using a @emph{p}--bit significand.  For example, @code{1.1|53}
+is a representation of the best approximation of 1.1 in @ieee{} double
+precision.  If @emph{x} is an external representation of an inexact real
+number object that contains no vertical bar, then its numerical value
+should be computed as though it had a mantissa width of 53 or more.
+
+Implementations that use binary floating--point representations of real
+number objects should represent @code{x|p} using a @emph{p}--bit
+significand if practical, or by a greater precision if a @emph{p}--bit
+significand is not practical, or by the largest available precision if
+@emph{p} or more bits of significand are not practical within the
+implementation.
+
+@quotation
+@emph{Note} The precision of a significand should not be confused with
+the number of bits used to represent the significand.  In the @ieee{}
+floating--point standards, for example, the significand's most
+significant bit is implicit in single and double precision but is
+explicit in extended precision.  Whether that bit is implicit or
+explicit does not affect the mathematical precision.  In implementations
+that use binary floating point, the default precision can be calculated
+by calling the following procedure:
+
+@example
+(define (precision)
+  (do ([n 0 (+ n 1)]
+       [x 1.0 (/ x 2.0)])
+    ((= 1.0 (+ 1.0 x)) n)))
+@end example
+@end quotation
+
+@quotation
+@emph{Note} When the underlying floating--point representation is
+@ieee{} double precision, the @code{|p} suffix should not always be
+omitted: Denormalized floating--point numbers have diminished precision,
+and therefore their external representations should carry a @code{|p}
+suffix with the actual width of the significand.
+@end quotation
+
+The literals @code{+inf.0} and @code{-inf.0} represent positive and
+negative infinity, respectively.  The @code{+nan.0} literal represents
+the NaN that is the result of @code{(/ 0.0 0.0)}, and may represent
+other NaNs as well.  The @code{-nan.0} literal also represents a NaN.
+
+If @emph{x} is an external representation of an inexact real number
+object and contains no vertical bar and no exponent marker other than
+@code{e}, the inexact real number object it represents is a flonum (see
+library section ``Flonums'').  Some or all of the other external
+representations of inexact real number objects may also represent
+flonums, but that is not required by this report.
+
+@c page
+@node scheme lex datum
+@subsection Datum syntax
+
+
+The datum syntax describes the syntax of syntactic data in terms of a
+sequence of @meta{lexeme}s, as defined in the lexical syntax.
+
+Syntactic data include the lexeme data described in the previous section
+as well as the following constructs for forming compound data:
+
+@itemize
+@item
+pairs and lists, enclosed by @code{( )} or @code{[ ]};
+
+@item
+vectors;
+
+@item
+bytevectors.
+@end itemize
+
+@menu
+* scheme lex datum formal account::  Formal account.
+* scheme lex datum pairs and lists:: Pairs and lists.
+* scheme lex datum vectors::         Vectors.
+* scheme lex datum bytevectors::     Bytevectors.
+* scheme lex datum abbreviations::   Abbreviations.
+@end menu
+
+@c page
+@node scheme lex datum formal account
+@subsubsection Formal account
+
+
+The following grammar describes the syntax of syntactic data in terms of
+various kinds of lexemes defined in the grammar in @ref{scheme lex
+syntax,Lexical Syntax}
+
+@example
+<datum> -> <lexeme datum>
+         | <compound datum>
+<lexeme datum> -> <boolean> | <number>
+         | <character> | <string> | <symbol>
+<symbol> -> <identifier>
+<compound datum> -> <list> | <vector> | <bytevector>
+<list> -> (<datum>*) | [<datum>*]
+         | (<datum>+ . <datum>) | [<datum>+ . <datum>]
+         | <abbreviation>
+<abbreviation> -> <abbrev prefix> <datum>
+<abbrev prefix> -> ' | ` | , | ,@@
+         | #' | #` | #, | #,@@
+<vector> -> #(<datum>*)
+<bytevector> -> #vu8(<u8>*)
+<u8> -> <any <number> representing an exact integer in @{0, ..., 255@}>
+@end example
+
+@c page
+@node scheme lex datum pairs and lists
+@subsubsection Pairs and lists
+
+
+List and pair data, representing pairs and lists of values are
+represented using parentheses or brackets.  Matching pairs of brackets
+that occur in the rules of @meta{list} are equivalent to matching pairs
+of parentheses.
+
+The most general notation for Scheme pairs as syntactic data is the
+``dotted'' notation @code{(@metai{datum} . @metaii{datum})} where
+@metai{datum} is the representation of the value of the car field and
+@metaii{datum} is the representation of the value of the cdr field.  For
+example @code{(4 . 5)} is a pair whose car is 4 and whose cdr is 5.
+
+A more streamlined notation can be used for lists: the elements of the
+list are simply enclosed in parentheses and separated by spaces.  The
+empty list is represented by @code{( )}.  For example,
+
+@example
+(a b c d e)
+@end example
+
+@noindent
+and:
+
+@example
+(a . (b . (c . (d . (e . ())))))
+@end example
+
+@noindent
+are equivalent notations for a list of symbols.
+
+The general rule is that, if a dot is followed by an open parenthesis,
+the dot, open parenthesis, and matching closing parenthesis can be
+omitted in the external representation.
+
+The sequence of characters @code{(4 . 5)} is the external representation
+of a pair, not an expression that evaluates to a pair.  Similarly, the
+sequence of characters @code{(+ 2 6)} is @emph{not} an external
+representation of the integer @math{8}, even though it @emph{is} an
+expression (in the language of the @rsixlibrary{base} library)
+evaluating to the integer @math{8}; rather, it is a syntactic datum
+representing a three--element list, the elements of which are the symbol
+@code{+} and the integers @math{2} and @math{6}.
+
+@c page
+@node scheme lex datum vectors
+@subsubsection Vectors
+
+
+Vector data, representing vectors of objects, are represented using the
+notation @code{#(<datum> ...)}.  For example, a vector of length 3
+containing the number object for zero in element 0, the list @code{(2 2
+2 2)} in element 1, and the string @code{"Anna"} in element 2 can be
+represented as follows:
+
+@example
+#(0 (2 2 2 2) "Anna")
+@end example
+
+This is the external representation of a vector, not an expression that
+evaluates to a vector.
+
+@c page
+@node scheme lex datum bytevectors
+@subsubsection Bytevectors
+
+
+Bytevector data, representing bytevectors (@ref{stdlib bytevector}), are
+represented using the notation @code{#vu8(<u8> ...)}, where the
+@meta{u8}s represent the octets of the bytevector.  For example, a
+bytevector of length 3 containing the octets 2, 24, and 123 can be
+represented as follows:
+
+@example
+#vu8(2 24 123)
+@end example
+
+This is the external representation of a bytevector, and also an
+expression that evaluates to a bytevector.
+
+@c page
+@node scheme lex datum abbreviations
+@subsubsection Abbreviations
+
+
+@example
+ '<datum>        `<datum>        ,<datum>
+,@@<datum>       #'<datum>       #`<datum>
+#,<datum>      #,@@<datum>
+@end example
+
+Each of these is an abbreviation:
+
+@table @code
+@item '<datum>
+for @code{(quote <datum>)},
+
+@item `<datum>
+for @code{(quasiquote <datum>)},
+
+@item ,<datum>
+for @code{(unquote <datum>)},
+
+@item ,@@<datum>
+for @code{(unquote-splicing <datum>)},
+
+@item #'<datum>
+for @code{(syntax <datum>)},
+
+@item #`<datum>
+for @code{(quasisyntax <datum>)},
+
+@item #,<datum>
+for @code{(unsyntax <datum>)}, and
+
+@item #,@@<datum>
+for @code{(unsyntax-splicing <datum>)}.
+@end table
+
+Notice that it is the source code @emph{reader} (the lexer and parser)
+which builds the symbolic expression:
+
+@example
+(quote (a b c))
+@end example
+
+@noindent
+from the sequence of characters:
+
+@example
+'(a b c)
+@end example
+
+@noindent
+and this happens before any library is loaded, so the source code
+expander only sees the symbolic expression with the @func{quote} symbol
+in it.  So, while the following program works because the library
+@library{rnrs} exports the @func{quote} identifier:
+
+@example
+#!r6rs
+(import (rnrs))
+(write '(a b c))
+@end example
+
+@noindent
+the following program will fail:
+
+@example
+#!r6rs
+(import (except (rnrs) quote))
+(write '(a b c))
+@end example
+
+@noindent
+in exactly the same way the following program will fail:
+
+@example
+#!r6rs
+(import (except (rnrs) quote))
+(write (quote (a b c)))
+@end example
+
+@noindent
+because we have explicitly excluded @func{quote} from the import set.
+The same happens with @func{syntax} and the other abbreviations.
+
+Summary: once our eyes have adapted to use the abbreviations, and it may
+take a while, they are of friendly usage; but we have to remember to
+import libraries exporting @func{quote}, @func{syntax} and the other
+abbreviated identifiers.
+
+@c page
+@node scheme basic
+@section Semantic concepts
+
+@ignore
+In the original document this chapter was the "basic.tex" file.
+@end ignore
+
+@menu
+* scheme basic programs and libraries::      Programs and libraries.
+* scheme basic variables keywords regions::  Variables, keywords,
+                                             and regions.
+* scheme basic exceptions::                  Exceptional situations.
+* scheme basic argument checking::           Argument checking.
+* scheme basic syntax violations::           Syntax violations.
+* scheme basic safety::                      Safety.
+* scheme basic boolean values::              Boolean values.
+* scheme basic multiple return values::      Multiple return values.
+* scheme basic unspecified behavior::        Unspecified behavior.
+* scheme basic storage model::               Storage model.
+* scheme basic proper tail recursion::       Proper tail recursion.
+* scheme basic dynamic extent::              Dynamic extent and the
+                                             dynamic environment.
+@end menu
+
+@c page
+@node scheme basic programs and libraries
+@subsection Programs and libraries
+
+
+A Scheme program consists of a @emph{top--level} program together with a
+set of @emph{libraries}, each of which defines a part of the program
+connected to the others through explicitly specified exports and
+imports.
+
+@itemize
+@item
+A library consists of a set of export and import specifications and a
+body, which consists of definitions, and expressions.
+
+@item
+A top--level program is similar to a library, but has no export
+specifications.
+@end itemize
+
+Chapters ``Libraries'' and ``Top--level programs'' describe the syntax
+and semantics of libraries and top--level programs, respectively.
+Chapter ``Base library'' describes a base library that defines many of
+the constructs traditionally associated with Scheme.  A separate report
+describes the various @emph{standard libraries} provided by a Scheme
+system.
+
+The division between the base library and the other standard libraries
+is based on use, not on construction.  In particular, some facilities
+that are typically implemented as ``primitives'' by a compiler or the
+run--time system rather than in terms of other standard procedures or
+syntactic forms are not part of the base library, but are defined in
+separate libraries.  Examples include the fixnums and flonums libraries,
+the exceptions and conditions libraries, and the libraries for records.
+
+@c page
+@node scheme basic variables keywords regions
+@subsection Variables, keywords, and regions
+
+
+@cindex Keyword, definition of
+@cindex Definition of keyword
+
+@cindex Variable, definition of
+@cindex Definition of variable
+
+@cindex Environment, definition of
+@cindex Definition of environment
+
+@cindex Binding constructs, definition of
+@cindex Definition of binding constructs
+
+@cindex Definitions, definition of
+@cindex Definition of definitions
+
+@cindex Region, definition of
+@cindex Definition of region
+
+
+Within the body of a library or top--level program, an identifier may
+name a kind of syntax, or it may name a location where a value can be
+stored.  An identifier that names a kind of syntax is called a
+@dfn{keyword}, and is said to be @dfn{bound} to that kind of syntax (or,
+in the case of a syntactic abstraction, a @dfn{transformer} that
+translates the syntax into more primitive forms).  An identifier that
+names a location is called a @dfn{variable} and is said to be
+@dfn{bound} to that location.  At each point within a top--level program
+or a library, a specific, fixed set of identifiers is bound; the set of
+these identifiers, the set of @emph{visible bindings}, is known as the
+@dfn{environment} in effect at that point.
+
+Certain forms are used to create syntactic abstractions and to bind
+keywords to transformers for those new syntactic abstractions, while
+other forms create new locations and bind variables to those locations;
+collectively, these forms are called @dfn{binding constructs}.  Some
+binding constructs take the form of @emph{definitions}, while others are
+@emph{expressions}.  With the exception of exported library bindings, a
+binding created by a definition is visible only within the body in which
+the definition appears, e.g. the body of a library, top--level program,
+or @func{lambda} expression.  Exported library bindings are also visible
+within the bodies of the libraries and top--level programs that import
+them.
+
+Expressions that bind variables include the @func{lambda}, @func{let},
+@func{let*}, @func{letrec}, @func{letrec*}, @func{let-values}, and
+@func{let*-values} forms from the base library.  Of these, @func{lambda}
+is the most fundamental.  Variable definitions appearing within the body
+of such an expression, or within the bodies of a library or top--level
+program, are treated as a set of @func{letrec*} bindings.  In addition,
+for library bodies, the variables exported from the library can be
+referenced by importing libraries and top--level programs.
+
+Expressions that bind keywords include the @func{let-syntax} and
+@func{letrec-syntax} forms.  A @func{define} form is a definition that
+creates a variable binding, and a @code{define-syntax} form is a
+definition that creates a keyword binding.
+
+Scheme is a statically scoped language with block structure.  To each
+place in a top--level program or library body where an identifier is
+bound there corresponds a @dfn{region} of code within which the binding
+is visible.  The region is determined by the particular binding
+construct that establishes the binding; if the binding is established by
+a @func{lambda} expression, for example, then its region is the entire
+@func{lambda} expression.  Every mention of an identifier refers to the
+binding of the identifier that establishes the innermost of the regions
+containing the use.  If a use of an identifier appears in a place where
+none of the surrounding expressions contains a binding for the
+identifier, the use may refer to a binding established by a definition
+or import at the top of the enclosing library or top--level program.  If
+there is no binding for the identifier, it is said to be @dfn{unbound}.
+
+@c page
+@node scheme basic exceptions
+@subsection Exceptional situations
+
+
+A variety of exceptional situations are distinguished in this report,
+among them violations of syntax, violations of a procedure's
+specification, violations of implementation restrictions, and
+exceptional situations in the environment.  When an exceptional
+situation is detected by the implementation, an @emph{exception is
+raised}, which means that a special procedure called the @emph{current
+exception handler} is called.  A program can also raise an exception,
+and override the current exception handler; @ref{stdlib exceptions}.
+
+When an exception is raised, an object is provided that describes the
+nature of the exceptional situation.  The report uses the condition
+system described in library section ``Conditions'' to describe
+exceptional situations, classifying them by condition types.
+
+Some exceptional situations allow continuing the program if the
+exception handler takes appropriate action.  The corresponding
+exceptions are called @emph{continuable}.  For most of the exceptional
+situations described in this report, portable programs cannot rely upon
+the exception being continuable at the place where the situation was
+detected.  For those exceptions, the exception handler that is invoked
+by the exception should not return.  In some cases, however, continuing
+is permissible, and the handler may return.  @ref{stdlib exceptions}
+
+Implementations must raise an exception when they are unable to continue
+correct execution of a correct program due to some @emph{implementation
+restriction}.  For example, an implementation that does not support
+infinities must raise an exception with condition type
+@condition{implementation-restriction} when it evaluates an expression whose
+result would be an infinity.
+
+Some possible implementation restrictions such as the lack of
+representations for NaNs and infinities are anticipated by this report,
+and implementations typically must raise an exception of the appropriate
+condition type if they encounter such a situation.
+
+This report uses the phrase ``an exception is raised'' synonymously with
+``an exception must be raised''.  This report uses the phrase ``an
+exception with condition type @var{t}'' to indicate that the object
+provided with the exception is a condition object of the specified type.
+The phrase ``a continuable exception is raised'' indicates an
+exceptional situation that permits the exception handler to return.
+
+@c page
+@node scheme basic argument checking
+@subsection Argument checking
+
+
+Many procedures specified in this report or as part of a standard
+library restrict the arguments they accept.  Typically, a procedure
+accepts only specific numbers and types of arguments.  Many syntactic
+forms similarly restrict the values to which one or more of their
+subforms can evaluate.  These restrictions imply responsibilities for
+both the programmer and the implementation.  Specifically, the
+programmer is responsible for ensuring that the values indeed adhere to
+the restrictions described in the specification.  The implementation
+must check that the restrictions in the specification are indeed met, to
+the extent that it is reasonable, possible, and necessary to allow the
+specified operation to complete successfully.
+
+Note that it is not always possible for an implementation to completely
+check the restrictions set forth in a specification.  For example, if an
+operation is specified to accept a procedure with specific properties,
+checking of these properties is undecidable in general.  Similarly, some
+operations accept both lists and procedures that are called by these
+operations.  Since lists can be mutated by the procedures through the
+@rsixlibrary{mutable-pairs} library, an argument that is a list when the
+operation starts may become a non--list during the execution of the
+operation.
+
+Also, the procedure might escape to a different continuation, preventing
+the operation from performing more checks.  Requiring the operation to
+check that the argument is a list after each call to such a procedure
+would be impractical.  Furthermore, some operations that accept lists
+only need to traverse these lists partially to perform their function;
+requiring the implementation to traverse the remainder of the list to
+verify that all specified restrictions have been met might violate
+reasonable performance assumptions.  For these reasons, the programmer's
+obligations may exceed the checking obligations of the implementation.
+
+When an implementation detects a violation of a restriction for an
+argument, it must raise an exception with condition type
+@condition{assertion} in a way consistent with the safety of execution as
+described in section ``Safety''.
+
+@c page
+@node scheme basic syntax violations
+@subsection Syntax violations
+
+
+The subforms of a special form usually need to obey certain syntactic
+restrictions.  As forms may be subject to macro expansion, which may not
+terminate, the question of whether they obey the specified restrictions
+is undecidable in general.
+
+When macro expansion terminates, however, implementations must detect
+violations of the syntax.  A @emph{syntax violation} is an error with
+respect to the syntax of library bodies, top--level bodies, or the
+``syntax'' entries in the specification of the base library or the
+standard libraries.  Moreover, attempting to assign to an immutable
+variable (i.e. the variables exported by a library) is also considered a
+syntax violation.
+
+If a top--level or library form in a program is not syntactically
+correct, then the implementation must raise an exception with condition
+type @condition{syntax}, and execution of that top--level program or library
+must not be allowed to begin.
+
+@c page
+@node scheme basic safety
+@subsection Safety
+
+
+The standard libraries whose exports are described by this document are
+said to be @emph{safe libraries}.  Libraries and top--level programs
+that import only from safe libraries are also said to be safe.
+
+As defined by this document, the Scheme programming language is safe in
+the following sense: The execution of a safe top--level program cannot
+go so badly wrong as to crash or to continue to execute while behaving
+in ways that are inconsistent with the semantics described in this
+document, unless an exception is raised.
+
+Violations of an implementation restriction must raise an exception with
+condition type @condition{implementation-restriction}, as must all
+violations and errors that would otherwise threaten system integrity in
+ways that might result in execution that is inconsistent with the
+semantics described in this document.
+
+The above safety properties are guaranteed only for top--level programs
+and libraries that are said to be safe.  In particular, implementations
+may provide access to unsafe libraries in ways that cannot guarantee
+safety.
+
+@c page
+@node scheme basic boolean values
+@subsection Boolean values
+
+
+Although there is a separate boolean type, any Scheme value can be used
+as a boolean value for the purpose of a conditional test.  In a
+conditional test, all values count as true in such a test except for
+@false{}.  This report uses the word ``true'' to refer to any Scheme
+value except @false{}, and the word ``false'' to refer to @false{}.
+
+@c page
+@node scheme basic multiple return values
+@subsection Multiple return values
+
+
+A Scheme expression can evaluate to an arbitrary finite number of
+values.  These values are passed to the expression's continuation.
+
+Not all continuations accept any number of values. For example, a
+continuation that accepts the argument to a procedure call is guaranteed
+to accept exactly one value.  The effect of passing some other number of
+values to such a continuation is unspecified.  The
+@func{call-with-values} procedure makes it possible to create
+continuations that accept specified numbers of return values.  If the
+number of return values passed to a continuation created by a call to
+@func{call-with-values} is not accepted by its consumer that was passed
+in that call, then an exception is raised.  A more complete description
+of the number of values accepted by different continuations and the
+consequences of passing an unexpected number of values is given in the
+description of the @func{values} procedure.
+
+A number of forms in the base library have sequences of expressions as
+subforms that are evaluated sequentially, with the return values of all
+but the last expression being discarded.  The continuations discarding
+these values accept any number of values.
+
+@c page
+@node scheme basic unspecified behavior
+@subsection Unspecified behavior
+
+
+If an expression is said to ``return unspecified values'', then the
+expression must evaluate without raising an exception, but the values
+returned depend on the implementation; this report explicitly does not
+say how many or what values should be returned.  Programmers should not
+rely on a specific number of return values or the specific values
+themselves.
+
+@c page
+@node scheme basic storage model
+@subsection Storage model
+
+
+Variables and objects such as pairs, vectors, bytevectors, strings,
+hashtables, and records implicitly refer to locations or sequences of
+locations.  A string, for example, contains as many locations as there
+are characters in the string.  (These locations need not correspond to a
+full machine word.) A new value may be stored into one of these
+locations using the @func{string-set!} procedure, but the string
+contains the same locations as before.
+
+An object fetched from a location, by a variable reference or by a
+procedure such as @func{car}, @func{vector-ref}, or @func{string-ref},
+is equivalent in the sense of @func{eqv?} to the object last stored in
+the location before the fetch.
+
+Every location is marked to show whether it is in use.  No variable or
+object ever refers to a location that is not in use.  Whenever this
+report speaks of storage being allocated for a variable or object, what
+is meant is that an appropriate number of locations are chosen from the
+set of locations that are not in use, and the chosen locations are
+marked to indicate that they are now in use before the variable or
+object is made to refer to them.
+
+It is desirable for constants (i.e. the values of literal expressions)
+to reside in read-only memory.  To express this, it is convenient to
+imagine that every object that refers to locations is associated with a
+flag telling whether that object is mutable.  Literal constants, the
+strings returned by @func{symbol->string}, records with no mutable
+fields, and other values explicitly designated as immutable are
+immutable objects, while all objects created by the other procedures
+listed in this report are mutable.  An attempt to store a new value into
+a location referred to by an immutable object should raise an exception
+with condition type @condition{assertion}.
+
+@c page
+@node scheme basic proper tail recursion
+@subsection Proper tail recursion
+
+
+Implementations of Scheme must be @emph{properly tail--recursive}.
+Procedure calls that occur in certain syntactic contexts called
+@emph{tail contexts} are @emph{tail calls}.
+
+A Scheme implementation is properly tail--recursive if it supports an
+unbounded number of active tail calls.  A call is @emph{active} if the
+called procedure may still return.  Note that this includes regular
+returns as well as returns through continuations captured earlier by
+@func{call-with-current-continuation} that are later invoked.  In the
+absence of captured continuations, calls could return at most once and
+the active calls would be those that had not yet returned.  A formal
+definition of proper tail recursion can be found in Clinger's paper
+``Proper tail recursion and and space efficiency''.  The rules for
+identifying tail calls in constructs from the @rsixlibrary{base} library
+are described in section ``Tail calls and tail contexts''.
+
+@c page
+@node scheme basic dynamic extent
+@subsection Dynamic extent and the dynamic environment
+
+
+@cindex Dynamic extent, definition of
+@cindex Definition of dynamic extent
+
+@cindex Dynamic environment, definition of
+@cindex Definition of dynamic environment
+
+
+For a procedure call, the time between when it is initiated and when it
+returns is called its @emph{dynamic extent}.  In Scheme,
+@func{call-with-current-continuation} allows reentering a dynamic extent
+after its procedure call has returned.  Thus, the dynamic extent of a
+call may not be a single, connected time period.
+
+Some operations described in the report acquire information in addition
+to their explicit arguments from the @emph{dynamic environment}.  For
+example, @func{call-with-current-continuation} accesses an implicit
+context established by @func{dynamic-wind}, and the @func{raise}
+procedure accesses the current exception handler.
+
+The operations that modify the dynamic environment do so dynamically,
+for the dynamic extent of a call to a procedure like @func{dynamic-wind}
+or @func{with-exception-handler}.  When such a call returns, the
+previous dynamic environment is restored.  The dynamic environment can
+be thought of as part of the dynamic extent of a call.  Consequently, it
+is captured by @func{call-with-current-continuation}, and restored by
+invoking the escape procedure it creates.
+
+@c page
+@node scheme entry
+@section Entry format
+
+@ignore
+In the original document, this chapter was the "entry.tex" file.
+@end ignore
+
+The chapters that describe bindings in the base library and the standard
+libraries are organized into entries.  Each entry describes one language
+feature or a group of related features, where a feature is either a
+syntactic construct or a built--in procedure.  An entry begins with one
+or more header lines of the form
+
+@deffn Category template
+@dots{}
+@end deffn
+
+The @emph{Category} defines the kind of binding described by the entry,
+typically either ``Syntax'' or ``Procedure''.  An entry may specify
+various restrictions on subforms or arguments.
+
+
+@menu
+* scheme entry syntax::              Syntax entries.
+* scheme entry procedure::           Procedure entries.
+* scheme entry implementation resp:: Implementation responsibilities.
+* scheme entry other kinds::         Other kinds of entries.
+* scheme entry equivalent::          Equivalent entries.
+* scheme entry evaluation examples:: Evaluation examples.
+* scheme entry naming conventions::  Naming conventions.
+@end menu
+
+@c page
+@node scheme entry syntax
+@subsection Syntax entries
+
+
+If @emph{category} is ``Syntax'', the entry describes a special
+syntactic construct, and the template gives the syntax of the forms of
+the construct.  The template is written in a notation similar to a
+right--hand side of the @acronym{BNF} rules in chapter ``Lexical syntax
+and datum syntax'', and describes the set of forms equivalent to the
+forms matching the template as syntactic data.  Some ``Syntax'' entries
+carry a suffix (@code{expand}), specifying that the syntactic keyword of
+the construct is exported with level 1.  Otherwise, the syntactic
+keyword is exported with level 0; @ref{scheme library import export}.
+
+Components of the form described by a template are designated by
+syntactic variables, which are written using angle brackets, for
+example, @meta{expression}, @meta{variable}.  Case is insignificant in
+syntactic variables.  Syntactic variables stand for other forms, or
+sequences of them.  A syntactic variable may refer to a non--terminal in
+the grammar for syntactic data, in which case only forms matching that
+non--terminal are permissible in that position.  For example,
+@meta{identifier} stands for a form which must be an identifier.  Also,
+@meta{expression} stands for any form which is a syntactically valid
+expression.  Other non--terminals that are used in templates are defined
+as part of the specification.
+
+The notation
+
+@example
+@metai{thing} ...
+@end example
+
+@noindent
+indicates zero or more occurrences of a @meta{thing}, and
+
+@example
+@metai{thing} @metaii{thing} ...
+@end example
+
+@noindent
+indicates one or more occurrences of a @meta{thing}.
+
+It is the programmer's responsibility to ensure that each component of a
+form has the shape specified by a template.  Descriptions of syntax may
+express other restrictions on the components of a form.  Typically, such
+a restriction is formulated as a phrase of the form ``@meta{x} must be a
+@dots{}''.  Again, these specify the programmer's responsibility.  It is
+the implementation's responsibility to check that these restrictions are
+satisfied, as long as the macro transformers involved in expanding the
+form terminate.  If the implementation detects that a component does not
+meet the restriction, an exception with condition type @condition{syntax}
+is raised.
+
+@c page
+@node scheme entry procedure
+@subsection Procedure entries
+
+
+If @emph{Category} is ``Procedure'', then the entry describes a
+procedure, and the header line gives a template for a call to the
+procedure.  Parameter names in the template are shown like this:
+@var{parm}.  Thus the header line:
+
+@deffn Procedure vector-ref @var{vector} @var{k}
+@dots{}
+@end deffn
+
+
+@noindent
+indicates that the built--in procedure @func{vector-ref} takes two
+arguments, a vector @var{vector} and an exact non--negative integer
+object @var{k} (see below).  The header lines:
+
+@deffn Procedure procname @var{k}
+@dots{}
+@end deffn
+
+@deffn Procedure procname @var{k} @var{fill}
+@dots{}
+@end deffn
+
+@noindent
+indicate that the @func{make-vector} procedure takes either one or two
+arguments.  The parameter names are case--insensitive.
+
+As with syntax templates, an ellipsis @dots{} at the end of a header
+line, as in:
+
+@deffn Procedure the-proc @vari{z} @varii{z} @variii{z} ...
+@dots{}
+@end deffn
+
+@noindent
+indicates that the procedure takes arbitrarily many arguments of the
+same type as specified for the last parameter name.  In this case,
+@code{=} accepts two or more arguments that must all be complex number
+objects.
+
+A procedure that detects an argument that it is not specified to handle
+must raise an exception with condition type @condition{assertion}.  Also,
+the argument specifications are exhaustive: if the number of arguments
+provided in a procedure call does not match any number of arguments
+accepted by the procedure, an exception with condition type
+@condition{assertion} must be raised.
+
+For succinctness, the report follows the convention that if a parameter
+name is also the name of a type, then the corresponding argument must be
+of the named type.  For example, the header line for @func{vector-ref}
+given above dictates that the first argument to @func{vector-ref} must
+be a vector.  The following naming conventions imply type restrictions:
+
+@table @var
+@item obj
+any object;
+
+@item z
+complex number object;
+
+@item x
+real number object;
+
+@item y
+real number object;
+
+@item q
+rational number object;
+
+@item n
+integer object;
+
+@item k
+exact non--negative integer object;
+
+@item bool
+boolean (@false{} or @true{});
+
+@item octet
+exact integer object in @{0, @dots{}, 255@};
+
+@item byte
+exact integer object in @{-128, @dots{}, 127@};
+
+@item char
+character;
+
+@item pair
+pair;
+
+@item vector
+vector;
+
+@item string
+string;
+
+@item condition
+condition;
+
+@item bytevector
+bytevector;
+
+@item proc
+procedure.
+@end table
+
+Other type restrictions are expressed through parameter--naming
+conventions that are described in specific chapters.  For example,
+library chapter ``Arithmetic'' uses a number of special parameter
+variables for the various subsets of the numbers.
+
+With the listed type restrictions, it is the programmer's responsibility
+to ensure that the corresponding argument is of the specified type.  It
+is the implementation's responsibility to check for that type.
+
+A parameter called @var{list} means that it is the programmer's
+responsibility to pass an argument that is a list.  It is the
+implementation's responsibility to check that the argument is
+appropriately structured for the operation to perform its function, to
+the extent that this is possible and reasonable.  The implementation
+must at least check that the argument is either an empty list or a pair.
+
+Descriptions of procedures may express other restrictions on the
+arguments of a procedure.  Typically, such a restriction is formulated
+as a phrase of the form ``@var{x} must be a @dots{}'' (or otherwise
+using the word ``must'').
+
+@c page
+@node scheme entry implementation resp
+@subsection Implementation responsibilities
+
+
+In addition to the restrictions implied by naming conventions, an entry
+may list additional explicit restrictions.  These explicit restrictions
+usually describe both the programmer's responsibilities, who must ensure
+that the subforms of a form are appropriate, or that an appropriate
+argument is passed, and the implementation's responsibilities, which
+must check that subform adheres to the specified restrictions (if macro
+expansion terminates), or if the argument is appropriate.
+
+A description may explicitly list the implementation's responsibilities
+for some arguments or subforms in a paragraph labeled ``Implementation
+responsibilities''.  In this case, the responsibilities specified for
+these subforms or arguments in the rest of the description are only for
+the programmer.  A paragraph describing implementation responsibility
+does not affect the implementation's responsibilities for checking
+subforms or arguments not mentioned in the paragraph.
+
+@c page
+@node scheme entry other kinds
+@subsection Other kinds of entries
+
+
+If @emph{Category} is something other than ``Syntax'' and ``Procedure'',
+then the entry describes a non--procedural value, and the
+@emph{category} describes the type of that value.  The header line:
+
+@deffn {Condition Type} {&who}
+@dots{}
+@end deffn
+
+@noindent
+indicates that @condition{who} is a condition type.  The header line:
+
+@deffn {Auxiliary Syntax} unquote
+@dots{}
+@end deffn
+
+@noindent
+indicates that @func{unquote} is a syntax binding that may occur only as
+part of specific surrounding expressions.  Any use as an independent
+syntactic construct or identifier is a syntax violation.  As with
+``Syntax'' entries, some ``Auxiliary Syntax'' entries carry a suffix
+(@code{expand}), specifying that the syntactic keyword of the construct
+is exported with level 1.
+
+@c page
+@node scheme entry equivalent
+@subsection Equivalent entries
+
+
+The description of an entry occasionally states that it is @emph{the
+same} as another entry.  This means that both entries are equivalent.
+Specifically, it means that if both entries have the same name and are
+thus exported from different libraries, the entries from both libraries
+can be imported under the same name without conflict.
+
+@c page
+@node scheme entry evaluation examples
+@subsection Evaluation examples
+
+
+The symbol @code{@result{}} used in program examples can be read
+``evaluates to''.  For example:
+
+@example
+(* 5 8)
+@result{} 40
+@end example
+
+@noindent
+means that the expression @code{(* 5 8)} evaluates to the object
+@code{40}.  Or, more precisely: the expression given by the sequence of
+characters @code{(* 5 8)} evaluates, in an environment that imports the
+relevant library, to an object that may be represented externally by the
+sequence of characters @code{40}.
+
+The @code{@result{}} symbol is also used when the evaluation of an
+expression causes a violation.  For example:
+
+@example
+(integer->char #xD800)
+@result{} &assertion exception
+@end example
+
+@noindent
+means that the evaluation of the expression @code{(integer->char
+#xD800)} must raise an exception with condition type @condition{assertion}.
+
+Moreover, the @code{@result{}} symbol is also used to explicitly say
+that the value of an expression in unspecified.  For example:
+
+@example
+(eqv? "" "")
+@result{} unspecified
+@end example
+
+Mostly, examples merely illustrate the behavior specified in the entry.
+In some cases, however, they disambiguate otherwise ambiguous
+specifications and are thus normative.  Note that, in some cases,
+specifically in the case of inexact number objects, the return value is
+only specified conditionally or approximately.  For example:
+
+@example
+(atan -inf.0)
+@result{} -1.5707963267948965 ; approximately
+@end example
+
+@c page
+@node scheme entry naming conventions
+@subsection Naming conventions
+
+
+By convention, the names of procedures that store values into previously
+allocated locations usually end in @code{!}.
+
+By convention, @code{->} appears within the names of procedures that
+take an object of one type and return an analogous object of another
+type.  For example, @func{list->vector} takes a list and returns a
+vector whose elements are the same as those of the list.
+
+By convention, the names of predicates (procedures that always return a
+boolean value) end in @code{?} when the name contains any letters;
+otherwise, the predicate's name does not end with a question mark.
+
+By convention, the components of compound names are separated by
+@code{-}.  In particular, prefixes that are actual words or can be
+pronounced as though they were actual words are followed by a hyphen,
+except when the first character following the hyphen would be something
+other than a letter, in which case the hyphen is omitted.  Short,
+unpronounceable prefixes (@code{fx} and @code{fl}) are not followed by a
+hyphen.
+
+By convention, the names of condition types start with @code{&}.
+
+@c page
+@node scheme library
+@section Libraries
+
+
+@ignore
+In the original document this chapter was the "library.tex" file.
+@end ignore
+
+Libraries are parts of a program that can be distributed independently.
+The library system supports macro definitions within libraries, macro
+exports, and distinguishes the phases in which definitions and imports
+are needed.  This chapter defines the notation for libraries and a
+semantics for library expansion and execution.
+
+@menu
+* scheme library form::           Library form.
+* scheme library import export::  Import and export levels.
+* scheme library examples::       Examples.
+@end menu
+
+@c page
+@node scheme library form
+@subsection Library form
+
+
+@findex library
+@cindex library form, the
+@cindex The library form
+@cindex Library body
+@cindex Body, library
+
+
+A library definition must have the following form:
+
+@example
+(library @meta{library-name}
+  (export @meta{export-spec} @dots{})
+  (import @meta{import-spec} @dots{})
+  @meta{library-body})
+@end example
+
+It is a syntax violation if a constraint given in this section is not
+met.
+
+@menu
+* scheme library form decl::      Library declaration.
+* scheme library form names::     Library names.
+* scheme library form export::    The export specification.
+* scheme library form import::    The import specification.
+* scheme library form version::   The version reference.
+* scheme library form conflicts:: Handling conflicts.
+* scheme library form body::      Library bodies.
+@end menu
+
+@c page
+@node scheme library form decl
+@subsubsection Library declaration
+
+
+A library declaration contains the following elements:
+
+@itemize
+@item
+The @meta{library-name} specifies the name of the library (possibly with
+version).
+
+@item
+The @func{export} subform specifies a list of exports, which names a
+subset of the bindings defined within or imported into the library.
+
+@item
+The @func{import} subform specifies the imported bindings as a list of
+import dependencies, where each dependency specifies:
+
+@itemize -
+@item
+The imported library's name, and, optionally, constraints on its
+version.
+
+@item
+The relevant levels, e.g. expand or run time.
+
+@item
+The subset of the library's exports to make available within the
+importing library, and the local names to use within the importing
+library for each of the library's exports.
+@end itemize
+
+@item
+The @meta{library-body} is the library body, consisting of a sequence of
+definitions followed by a sequence of expressions.  The definitions may
+be both for local (unexported) and exported bindings, and the
+expressions are initialization expressions to be evaluated for their
+effects.
+@end itemize
+
+An identifier can be imported with the same local name from two or more
+libraries or for two levels from the same library only if the binding
+exported by each library is the same (i.e., the binding is defined in
+one library, and it arrives through the imports only by exporting and
+re--exporting).  Otherwise, no identifier can be imported multiple
+times, defined multiple times, or both defined and imported.  No
+identifiers are visible within a library except for those explicitly
+imported into the library or defined within the library.
+
+@c page
+@node scheme library form names
+@subsubsection Library names
+
+
+A @meta{library-name} uniquely identifies a library within an
+implementation, and is globally visible in the @func{import} clauses of
+all other libraries within an implementation.  A @meta{library-name} has
+the following form:
+
+@example
+(@metai{identifier} @metaii{identifier} @dots{} @meta{version})
+@end example
+
+@noindent
+where @meta{version} is empty or has the following form:
+
+@example
+(@meta{sub-version} @dots{})
+@end example
+
+Each @meta{sub-version} must represent an exact nonnegative integer
+object.  An empty @meta{version} is equivalent to @code{()}.
+
+@c page
+@node scheme library form export
+@subsubsection The export specification
+
+
+An @meta{export-spec} names a set of imported and locally defined
+bindings to be exported, possibly with different external names.  An
+@meta{export-spec} must have one of the following forms:
+
+@example
+@meta{identifier}
+(rename (@metai{identifier} @metaii{identifier})
+        @dots{})
+@end example
+
+In an @meta{export-spec}, an @meta{identifier} names a single binding
+defined within or imported into the library, where the external name for
+the export is the same as the name of the binding within the library.  A
+@func{rename} spec exports the binding named by @metai{identifier} in
+each @code{(@metai{identifier} @metaii{identifier})} pairing, using
+@metaii{identifier} as the external name.
+
+@c page
+@node scheme library form import
+@subsubsection The import specification
+
+
+Each @meta{import-spec} specifies a set of bindings to be imported into
+the library, the levels at which they are to be available, and the local
+names by which they are to be known.  An @meta{import-spec} must be one
+of the following:
+
+@example
+@meta{import-set}
+(for @meta{import-set} @meta{import-level} @dots{})
+@end example
+
+An @meta{import-level} is one of the following:
+
+@example
+run
+expand
+(meta @meta{level})
+@end example
+
+@noindent
+where @meta{level} represents an exact integer object.
+
+As an @meta{import-level}, @func{run} is an abbreviation for @code{(meta
+0)}, and @func{expand} is an abbreviation for @code{(meta 1)}.
+
+An @meta{import-set} names a set of bindings from another library and
+possibly specifies local names for the imported bindings.  It must be
+one of the following:
+
+@example
+@meta{library-reference}
+(library @meta{library-reference})
+(only @meta{import-set} @meta{identifier} ...)
+(except @meta{import-set} @meta{identifier} ...)
+(prefix @meta{import-set} @meta{identifier})
+(rename @meta{import-set} (@metai{identifier} @metaii{identifier}) ...)
+@end example
+
+A @meta{library-reference} identifies a library by its name and
+optionally by its version.  It has one of the following forms:
+
+@example
+(@metai{identifier} @metaii{identifier} ...)
+(@metai{identifier} @metaii{identifier} ... @meta{version-reference})
+@end example
+
+A @meta{library-reference} whose first @meta{identifier} is @func{for},
+@func{library}, @func{only}, @func{except}, @func{prefix}, or
+@func{rename} is permitted only within a @code{(library
+@meta{library-reference})} @meta{import-set}.  The @meta{import-set}
+@code{(library @meta{library-reference})} is otherwise equivalent to
+@meta{library-reference}.
+
+A @meta{library-reference} with no @meta{version-reference} (first form
+above) is equivalent to a @meta{library-reference} with a
+@meta{version-reference} of @code{()}.
+
+@c page
+@node scheme library form version
+@subsubsection The version reference
+
+
+A @meta{version-reference} specifies a set of @meta{version}s that it
+matches.  The @meta{library-reference} identifies all libraries of the
+same name and whose version is matched by the @meta{version-reference}.
+A @meta{version-reference} has the following form:
+
+@example
+(@metai{sub-version-reference} ... @metan{sub-version-reference})
+(and @meta{version-reference} ...)
+(or @meta{version-reference} @dots{})
+(not @meta{version-reference})
+@end example
+
+A @meta{version-reference} of the first form matches a @meta{version}
+with at least @var{n} elements, whose @meta{sub-version-reference}s
+match the corresponding @meta{sub-version}s.  An @func{and}
+@meta{version reference} matches a version if all
+@meta{version-references} following the @func{and} match it.
+Correspondingly, an @func{or} @meta{version-reference} matches a version
+if one of @meta{version-references} following the @func{or} matches it,
+and a @func{not} @meta{version-reference} matches a version if the
+@meta{version-reference} following it does not match it.
+
+A @meta{sub-version-reference} has one of the following forms:
+
+@example
+@meta{sub-version}
+(>= @meta{sub-version})
+(<= @meta{sub-version})
+(and @meta{sub-version-reference} @dots{})
+(or @meta{sub-version-reference} @dots{})
+(not @meta{sub-version-reference})
+@end example
+
+A @meta{sub-version-reference} of the first form matches a
+@meta{sub-version} if it is equal to it.  A @code{>=}
+@meta{sub-version-reference} of the first form matches a sub--version if
+it is greater or equal to the @meta{sub-version} following it;
+analogously for @code{<=}.  An @func{and} @meta{sub-version-reference}
+matches a sub--version if all of the subsequent
+@meta{sub-version-reference}s match it.
+
+Correspondingly, an @func{or} @meta{sub-version-reference} matches a
+sub--version if one of the subsequent @meta{sub-version-reference}s
+matches it, and a @func{not} @meta{sub-version-reference} matches a
+sub--version if the subsequent @meta{sub-version-reference} does not
+match it.
+
+Examples:
+
+@multitable {abcdefghilmnopqrstuvz} {abcdefghi} {match?}
+@headitem version reference @tab version @tab match?
+@item @code{()} @tab @code{(1)} @tab yes
+@item @code{(1)} @tab @code{(1)} @tab yes
+@item @code{(1)} @tab @code{(2)} @tab no
+@item @code{(2 3)} @tab @code{(2)} @tab no
+@item @code{(2 3)} @tab @code{(2 3)} @tab yes
+@item @code{(2 3)} @tab @code{(2 3 5)} @tab yes
+@item @code{(or (1 (>= 1)) (2))} @tab @code{(2)} @tab yes
+@item @code{(or (1 (>= 1)) (2))} @tab @code{(1 1)} @tab yes
+@item @code{(or (1 (>= 1)) (2))} @tab @code{(1 0)} @tab no
+@item @code{((or 1 2 3))} @tab @code{(1)} @tab yes
+@item @code{((or 1 2 3))} @tab @code{(2)} @tab yes
+@item @code{((or 1 2 3))} @tab @code{(3)} @tab yes
+@item @code{((or 1 2 3))} @tab @code{(4)} @tab no
+@end multitable
+
+@c page
+@node scheme library form conflicts
+@subsubsection Handling conflicts
+
+
+When more than one library is identified by a library reference, the
+choice of libraries is determined in some implementation--dependent
+manner.
+
+To avoid problems such as incompatible types and replicated state,
+implementations should prohibit the two libraries whose library names
+consist of the same sequence of identifiers but whose versions do not
+match to co--exist in the same program.
+
+By default, all of an imported library's exported bindings are made
+visible within an importing library using the names given to the
+bindings by the imported library.  The precise set of bindings to be
+imported and the names of those bindings can be adjusted with the
+@func{only}, @func{except}, @func{prefix}, and @func{rename} forms as
+described below.
+
+@table @func
+@item only
+Produces a subset of the bindings from another @meta{import-set},
+including only the listed @meta{identifier}s.  The included
+@meta{identifier}s must be in the original @meta{import-set}.
+
+@item except
+Produces a subset of the bindings from another @meta{import-set},
+including all but the listed @meta{identifier}s.  All of the excluded
+@meta{identifier}s must be in the original @meta{import set}.
+
+@item prefix
+Adds the @meta{identifier} prefix to each name from another
+@meta{import-set}.
+
+@item rename
+Used as:
+
+@example
+(rename (@metai{identifier} @metaii{identifier})
+        @dots{})
+@end example
+
+@noindent
+removes the bindings for @code{@metai{identifier} @dots{}} to form an
+intermediate @meta{import-set}, then adds the bindings back for the
+corresponding @code{@metaii{identifier} @dots{}} to form the final
+@meta{import-set}.  Each @metai{identifier} must be in the original
+@meta{import-set}, each @metaii{identifier} must not be in the
+intermediate @meta{import-set}, and the @metaii{identifier}s must be
+distinct.
+@end table
+
+@c page
+@node scheme library form body
+@subsubsection Library bodies
+
+
+The @meta{library-body} of a @func{library} form consists of forms that
+are classified as @emph{definitions} or @emph{expressions}.  Which forms
+belong to which class depends on the imported libraries and the result
+of expansion.  Generally, forms that are not definitions are
+expressions.
+
+A @meta{library-body} is like a @meta{body} except that a
+@meta{library-body}s need not include any expressions.  It must have the
+following form:
+
+@example
+@meta{definition} @dots{} @meta{expression} @dots{}
+@end example
+
+When @func{begin}, @func{let-syntax}, or @func{letrec-syntax} forms
+occur in a top--level body prior to the first expression, they are
+spliced into the body.  Some or all of the body, including portions
+wrapped in @func{begin}, @func{let-syntax}, or @func{letrec-syntax}
+forms, may be specified by a syntactic abstraction.
+
+The transformer expressions and bindings are evaluated and created from
+left to right, as described in @ref{scheme expansion,Expansion process}
+The expressions of variable definitions are evaluated from left to
+right, as if in an implicit @func{letrec*}, and the body expressions are
+also evaluated from left to right after the expressions of the variable
+definitions.  A fresh location is created for each exported variable and
+initialized to the value of its local counterpart.  The effect of
+returning twice to the continuation of the last body expression is
+unspecified.
+
+@quotation
+@strong{NOTE} The names @func{library}, @func{export}, @func{import},
+@func{for}, @func{run}, @func{expand}, @func{meta}, @func{import},
+@func{export}, @func{only}, @func{except}, @func{prefix}, @func{rename},
+@func{and}, @func{or}, @func{not}, @func{>=}, and @func{<=} appearing in
+the library syntax are part of the syntax and are not reserved, i.e.,
+the same names can be used for other purposes within the library or even
+exported from or imported into a library with different meanings,
+without affecting their use in the @func{library} form.
+@end quotation
+
+Bindings defined with a library are not visible in code outside of the
+library, unless the bindings are explicitly exported from the library.
+An exported macro may, however, @emph{implicitly export} an otherwise
+unexported identifier defined within or imported into the library.  That
+is, it may insert a reference to that identifier into the output code it
+produces.
+
+All explicitly exported variables are immutable in both the exporting
+and importing libraries.  It is thus a syntax violation if an explicitly
+exported variable appears on the left--hand side of a @func{set!}
+expression, either in the exporting or importing libraries.
+
+All implicitly exported variables are also immutable in both the
+exporting and importing libraries.  It is thus a syntax violation if a
+variable appears on the left--hand side of a @func{set!}  expression in
+any code produced by an exported macro outside of the library in which
+the variable is defined.  It is also a syntax violation if a reference
+to an assigned variable appears in any code produced by an exported
+macro outside of the library in which the variable is defined, where an
+assigned variable is one that appears on the left--hand side of a
+@func{set!} expression in the exporting library.
+
+All other variables defined within a library are mutable.
+
+@c page
+@node scheme library import export
+@subsection Import and export levels
+
+
+Expanding a library may require run--time information from another
+library.  For example, if a macro transformer calls a procedure from
+library @math{A}, then the library @math{A} must be instantiated before
+expanding any use of the macro in library @math{B}.  Library @math{A}
+may not be needed when library @math{B} is eventually run as part of a
+program, or it may be needed for run time of library @math{B}, too.  The
+library mechanism distinguishes these times by phases, which are
+explained in this section.
+
+Every library can be characterized by expand--time information
+(minimally, its imported libraries, a list of the exported keywords, a
+list of the exported variables, and code to evaluate the transformer
+expressions) and run--time information (minimally, code to evaluate the
+variable definition right--hand--side expressions, and code to evaluate
+the body expressions).  The expand--time information must be available
+to expand references to any exported binding, and the run--time
+information must be available to evaluate references to any exported
+variable binding.
+
+A @emph{phase} is a time at which the expressions within a library are
+evaluated.  Within a library body, top--level expressions and the
+right--hand sides of @func{define} forms are evaluated at run time,
+i.e. phase @math{0}, and the right--hand sides of @func{define-syntax}
+forms are evaluated at expand time, i.e. phase @math{1}.  When
+@func{define-syntax}, @func{let-syntax}, or @func{letrec-syntax} forms
+appear within code evaluated at phase @math{n}, the right--hand sides
+are evaluated at phase @math{n+1}.
+
+These phases are relative to the phase in which the library itself is
+used.  An @emph{instance} of a library corresponds to an evaluation of
+its variable definitions and expressions in a particular phase relative
+to another library---a process called @emph{instantiation}.  For
+example, if a top--level expression in a library @math{B} refers to a
+variable export from another library @math{A}, then it refers to the
+export from an instance of @math{A} at phase @math{0} (relative to the
+phase of @math{B}).  But if a phase @math{1} expression within @math{B}
+refers to the same binding from @math{A}, then it refers to the export
+from an instance of @math{A} at phase @math{1} (relative to the phase of
+@math{B}).
+
+A @emph{visit} of a library corresponds to the evaluation of its syntax
+definitions in a particular phase relative to another library; a process
+called @emph{visiting}.  For example, if a top--level expression in a
+library @math{B} refers to a macro export from another library @math{A},
+then it refers to the export from a visit of @math{A} at phase @math{0}
+(relative to the phase of @math{B}), which corresponds to the evaluation
+of the macro's transformer expression at phase @math{1}.
+
+A @emph{level} is a lexical property of an identifier that determines in
+which phases it can be referenced.  The level for each identifier bound
+by a definition within a library is @math{0}; that is, the identifier
+can be referenced only at phase @math{0} within the library.  The level
+for each imported binding is determined by the enclosing @func{for} form
+of the @func{import} in the importing library, in addition to the levels
+of the identifier in the exporting library.  Import and export levels
+are combined by pairwise addition of all level combinations.  For
+example, references to an imported identifier exported for levels
+@math{p_a} and @math{p_b} and imported for levels @math{q_a},
+@math{q_b}, and @math{q_c} are valid at levels @math{p_a + q_a},
+@math{p_a + q_b}, @math{p_a + q_c}, @math{p_b + q_a}, @math{p_b + q_b},
+and @math{p_b + q_c}.  An @meta{import-set} without an enclosing
+@func{for} is equivalent to @code{(for @meta{import-set} run)}, which is
+the same as @code{(for @meta{import-set} (meta 0))}.
+
+The export level of an exported binding is @math{0} for all bindings
+that are defined within the exporting library.  The export levels of a
+reexported binding, i.e. an export imported from another library, are
+the same as the effective import levels of that binding within the
+reexporting library.
+
+For the libraries defined in the library report, the export level is
+@math{0} for nearly all bindings.  The exceptions are
+@func{syntax-rules}, @func{identifier-syntax}, @code{...}, and @code{_}
+from the @rsixlibrary{base} library, which are exported with level
+@math{1}, @func{set!} from the @rsixlibrary{base} library, which is
+exported with levels @math{0} and @math{1}, and all bindings from the
+composite @code{(rnrs (6))} library, which are exported with levels
+@math{0} and @math{1}.
+
+Macro expansion within a library can introduce a reference to an
+identifier that is not explicitly imported into the library.  In that
+case, the phase of the reference must match the identifier's level as
+shifted by the difference between the phase of the source library (i.e.,
+the library that supplied the identifier's lexical context) and the
+library that encloses the reference.  For example, suppose that
+expanding a library invokes a macro transformer, and the evaluation of
+the macro transformer refers to an identifier that is exported from
+another library (so the phase @math{1} instance of the library is used);
+suppose further that the value of the binding is a syntax object
+representing an identifier with only a level @math{n} binding; then, the
+identifier must be used only at phase @math{n+1} in the library being
+expanded.  This combination of levels and phases is why negative levels
+on identifiers can be useful, even though libraries exist only at
+non--negative phases.
+
+If any of a library's definitions are referenced at phase @math{0} in
+the expanded form of a program, then an instance of the referenced
+library is created for phase @math{0} before the program's definitions
+and expressions are evaluated.  This rule applies transitively: if the
+expanded form of one library references at phase @math{0} an identifier
+from another library, then before the referencing library is
+instantiated at phase @math{n}, the referenced library must be
+instantiated at phase @math{n}.  When an identifier is referenced at any
+phase @math{n} greater than @math{0}, in contrast, then the defining
+library is instantiated at phase @math{n} at some unspecified time
+before the reference is evaluated.  Similarly, when a macro keyword is
+referenced at phase @math{n} during the expansion of a library, then the
+defining library is visited at phase @math{n} at some unspecified time
+before the reference is evaluated.
+
+An implementation may distinguish instances/visits of a library for
+different phases or to use an instance/visit at any phase as an
+instance/visit at any other phase.  An implementation may further expand
+each @code{library} form with distinct visits of libraries in any phase
+and/or instances of libraries in phases above @math{0}.  An
+implementation may create instances/visits of more libraries at more
+phases than required to satisfy references.  When an identifier appears
+as an expression in a phase that is inconsistent with the identifier's
+level, then an implementation may raise an exception either at expand
+time or run time, or it may allow the reference.  Thus, a library whose
+meaning depends on whether the instances of a library are distinguished
+or shared across phases or @func{library} expansions may be unportable.
+
+@c page
+@node scheme library examples
+@subsection Examples
+
+
+Examples for various @meta{import-spec}s and @meta{export-spec}s:
+
+@example
+(library (stack)
+  (export make push! pop! empty!)
+  (import (rnrs)
+          (rnrs mutable-pairs))
+
+  (define (make)
+    (list '()))
+  (define (push! s v)
+    (set-car! s (cons v (car s))))
+  (define (pop! s)
+    (let ([v (caar s)])
+      (set-car! s (cdar s))
+      v))
+  (define (empty! s)
+    (set-car! s '())))
+
+(library (balloons)
+  (export make push pop)
+  (import (rnrs))
+
+  (define (make w h)
+    (cons w h))
+  (define (push b amt)
+    (cons (- (car b) amt)
+          (+ (cdr b) amt)))
+  (define (pop b)
+    (display "Boom! ")
+    (display (* (car b) (cdr b)))
+    (newline)))
+
+(library (party)
+  ;; Total exports:
+  ;; make, push, push!, make-party, pop!
+  (export (rename (balloon:make make)
+                  (balloon:push push))
+          push!
+          make-party
+          (rename (party-pop! pop!)))
+  (import (rnrs)
+          (only (stack) make push! pop!) ; not empty!
+          (prefix (balloons) balloon:))
+
+  ;; Creates a party as a stack of balloons,
+  ;; starting with two balloons
+  (define (make-party)
+    (let ([s (make)]) ; from stack
+      (push! s (balloon:make 10 10))
+      (push! s (balloon:make 12 9))
+      s))
+  (define (party-pop! p)
+    (balloon:pop (pop! p))))
+
+
+(library (main)
+  (export)
+  (import (rnrs) (party))
+
+  (define p (make-party))
+  (pop! p)        ; displays "Boom! 108"
+  (push! p (push (make 5 5) 1))
+  (pop! p))       ; displays "Boom! 24"
+@end example
+
+Examples for macros and phases:
+
+@example
+(library (my-helpers id-stuff)
+  (export find-dup)
+  (import (rnrs))
+
+  (define (find-dup l)
+    (and (pair? l)
+         (let loop ((rest (cdr l)))
+           (cond
+            [(null? rest) (find-dup (cdr l))]
+            [(bound-identifier=? (car l) (car rest))
+             (car rest)]
+            [else (loop (cdr rest))])))))
+
+(library (my-helpers values-stuff)
+  (export mvlet)
+  (import (rnrs) (for (my-helpers id-stuff) expand))
+
+  (define-syntax mvlet
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ [(id ...) expr] body0 body ...)
+         (not (find-dup (syntax (id ...))))
+         (syntax
+           (call-with-values
+               (lambda () expr)
+             (lambda (id ...) body0 body ...)))]))))
+
+(library (let-div)
+  (export let-div)
+  (import (rnrs)
+          (my-helpers values-stuff)
+          (rnrs r5rs))
+
+  (define (quotient+remainder n d)
+    (let ([q (quotient n d)])
+      (values q (- n (* q d)))))
+  (define-syntax let-div
+    (syntax-rules ()
+      [(_ n d (q r) body0 body ...)
+       (mvlet [(q r) (quotient+remainder n d)]
+         body0 body ...)])))
+@end example
+
+@c page
+@node scheme programs
+@section Top--level programs
+
+
+@ignore
+In the original document this chapter is the "programs.tex" file.
+@end ignore
+
+A ``top--level program'' specifies an entry point for defining and
+running a Scheme program.  A top--level program specifies a set of
+libraries to import and code to run.  Through the imported libraries,
+whether directly or through the transitive closure of importing, a
+top--level program defines a complete Scheme program.
+
+
+@menu
+* scheme programs syntax::      Top-level program syntax.
+* scheme programs semantics::   Top-level program semantics.
+@end menu
+
+@c page
+@node scheme programs syntax
+@subsection Top--level program syntax
+
+
+@cindex Top--level body
+@cindex Body, top--level
+
+
+A top--level program is a delimited piece of text, typically a file,
+that has the following form:
+
+@example
+@meta{import-form} @meta{top-level-body}
+@end example
+
+An @meta{import-form} has the following form:
+
+@example
+(import @meta{import-spec} @dots{})
+@end example
+
+A @meta{top-level-body} has the following form:
+
+@example
+@meta{top-level-body-form} @dots{}
+@end example
+
+A @meta{top-level body form} is either a @meta{definition} or an
+@meta{expression}.
+
+The @meta{import-form} is identical to the import clause in libraries,
+and specifies a set of libraries to import.  A @meta{top-level-body} is
+like a @meta{library-body}, except that definitions and expressions may
+occur in any order.  Thus, the syntax specified by
+@meta{top-level-body-form} refers to the result of macro expansion.
+
+When uses of @func{begin}, @func{let-syntax}, or @func{letrec-syntax}
+from the @rsixlibrary{base} library occur in a top--level body prior to
+the first expression, they are spliced into the body.  Some or all of
+the body, including portions wrapped in @func{begin}, @func{let-syntax},
+or @func{letrec-syntax} forms, may be specified by a syntactic
+abstraction.
+
+@c page
+@node scheme programs semantics
+@subsection Top--level program semantics
+
+
+A top--level program is executed by treating the program similarly to a
+library, and evaluating its definitions and expressions.  The semantics
+of a top--level body may be roughly explained by a simple translation
+into a library body: Each @meta{expression} that appears before a
+definition in the top-level body is converted into a dummy definition
+
+@example
+(define @meta{variable}
+  (begin @meta{expression} @meta{unspecified}))
+@end example
+
+where @meta{variable} is a fresh identifier and @meta{unspecified} is a
+side--effect--free expression returning an unspecified value.  (It is
+generally impossible to determine which forms are definitions and
+expressions without concurrently expanding the body, so the actual
+translation is somewhat more complicated.)
+
+On platforms that support it, a top--level program may access its
+command line by calling the @func{command-line} procedure, @ref{stdlib
+programlib,Command line access and exit values}.
+
+@c page
+@node scheme syntax
+@section Primitive syntax
+
+
+@ignore
+In the original document this chapter is the "syntax.tex" file.
+@end ignore
+
+After the @func{import} form within a @func{library} form or a
+top--level program, the forms that constitute the body of the library or
+the top--level program depend on the libraries that are imported.  In
+particular, imported syntactic keywords determine the available
+syntactic abstractions and whether each form is a definition or
+expression.  A few form types are always available independent of
+imported libraries, however, including constant literals, variable
+references, procedure calls, and macro uses.
+
+@menu
+* scheme syntax primitive::     Primitive expression types.
+* scheme syntax macros::        Macros.
+@end menu
+
+@c page
+@node scheme syntax primitive
+@subsection Primitive expression types
+
+
+The entries in this section all describe expressions, which may occur in
+the place of @meta{expression} syntactic variables.
+
+
+@subsubheading Constant literals
+
+@deffn Syntax @meta{number}
+@deffnx Syntax @meta{boolean}
+@deffnx Syntax @meta{character}
+@deffnx Syntax @meta{string}
+@deffnx Syntax @meta{bytevector}
+An expression consisting of a representation of a number object, a
+boolean, a character, a string, or a bytevector, evaluates ``to
+itself''.
+
+@example
+145932          @result{}  145932
+#t              @result{}  #t
+"abc"           @result{}  "abc"
+#vu8(2 24 123)  @result{} #vu8(2 24 123)
+@end example
+
+The value of a literal expression is immutable, @ref{scheme basic storage
+model,Storage model}
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Variable references
+
+@deffn Syntax @meta{variable}
+An expression consisting of a variable is a variable reference if it is
+not a macro use (see below).  The value of the variable reference is the
+value stored in the location to which the variable is bound.  It is a
+syntax violation to reference an unbound variable.
+
+The following example examples assumes the base library has been
+imported:
+
+@example
+(define x 28)
+x @result{} 28
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Procedure calls
+
+@deffn Syntax @meta{operator} @metai{operand} @dots{}
+A procedure call consists of expressions for the procedure to be called
+and the arguments to be passed to it, with enclosing parentheses.  A
+form in an expression context is a procedure call if @meta{operator} is
+not an identifier bound as a syntactic keyword.
+
+When a procedure call is evaluated, the operator and operand expressions
+are evaluated (in an unspecified order) and the resulting procedure is
+passed the resulting arguments.
+
+The following examples assume the @rsixlibrary{base} library has been
+imported:
+
+@example
+(+ 3 4)                 @result{} 7
+((if #f + *) 3 4)       @result{} 12
+@end example
+
+If the value of @meta{operator} is not a procedure, an exception with
+condition type @condition{assertion} is raised.  Also, if @meta{operator}
+does not accept as many arguments as there are @meta{operand}s, an
+exception with condition type @condition{assertion} is raised.
+
+@quotation
+@strong{NOTE} In contrast to other dialects of Lisp, the order of
+evaluation is unspecified, and the operator expression and the operand
+expressions are always evaluated with the same evaluation rules.
+
+Although the order of evaluation is otherwise unspecified, the effect of
+any concurrent evaluation of the operator and operand expressions is
+constrained to be consistent with some sequential order of evaluation.
+The order of evaluation may be chosen differently for each procedure
+call.
+@end quotation
+
+@quotation
+@strong{NOTE} In many dialects of Lisp, the form @code{()} is a
+legitimate expression.  In Scheme, expressions written as list/pair
+forms must have at least one subexpression, so @code{()} is not a
+syntactically valid expression.
+@end quotation
+@end deffn
+
+@c page
+@node scheme syntax macros
+@subsection Macros
+
+
+@cindex Transformer, definition of
+@cindex Definition of transformer
+@cindex Macro transformer, definition of
+@cindex Definition of macro transformer
+
+
+Libraries and top--level programs can define and use new kinds of
+derived expressions and definitions called @dfn{syntactic abstractions}
+or @dfn{macros}.  A syntactic abstraction is created by binding a
+keyword to a @dfn{macro transformer} or, simply, @dfn{transformer}.
+
+The transformer determines how a use of the macro (called a @dfn{macro
+use}) is transcribed into a more primitive form.
+
+Most macro uses have the form:
+
+@example
+(@meta{keyword} @meta{datum} @dots{})
+@end example
+
+@noindent
+where @meta{keyword} is an identifier that uniquely determines the kind
+of form.  This identifier is called the @dfn{syntactic keyword}, or
+simply @dfn{keyword}.  The number of @meta{datum}s and the syntax of
+each depends on the syntactic abstraction.
+
+Macro uses can also take the form of improper lists, singleton
+identifiers, or @func{set!} forms, where the second subform of the
+@func{set!} is the keyword:
+
+@example
+(@meta{keyword} @meta{datum} @dots{} . @meta{datum})
+@meta{keyword}
+(set! @meta{keyword} @meta{datum})
+@end example
+
+The @func{define-syntax}, @func{let-syntax} and @func{letrec-syntax}
+forms create bindings for keywords, associate them with macro
+transformers, and control the scope within which they are visible.
+
+The @func{syntax-rules} and @func{identifier-syntax} forms create
+transformers via a pattern language.  Moreover, the @func{syntax-case}
+form allows creating transformers via arbitrary Scheme code.
+
+Keywords occupy the same name space as variables.  That is, within the
+same scope, an identifier can be bound as a variable or keyword, or
+neither, but not both, and local bindings of either kind may shadow
+other bindings of either kind.
+
+Macros defined using @func{syntax-rules} and @func{identifier-syntax}
+are ``hygienic'' and ``referentially transparent'' and thus preserve
+Scheme's lexical scoping.
+
+@itemize
+@item
+If a macro transformer inserts a binding for an identifier (variable or
+keyword) not appearing in the macro use, the identifier is in effect
+renamed throughout its scope to avoid conflicts with other identifiers.
+
+@item
+If a macro transformer inserts a free reference to an identifier, the
+reference refers to the binding that was visible where the transformer
+was specified, regardless of any local bindings that may surround the
+use of the macro.
+@end itemize
+
+Macros defined using the @func{syntax-case} facility are also hygienic
+unless @func{datum->syntax} is used.
+
+@c page
+@node scheme expansion
+@section Expansion process
+
+
+@ignore
+In the original document this chapter is the file "expansion.tex".
+@end ignore
+
+
+Macro uses are expanded into @dfn{core forms} at the start of evaluation
+(before compilation or interpretation) by a syntax @dfn{expander}.  The
+set of core forms is implementation--dependent, as is the representation
+of these forms in the expander's output.
+
+@itemize
+@item
+If the expander encounters a syntactic abstraction, it invokes the
+associated transformer to expand the syntactic abstraction, then repeats
+the expansion process for the form returned by the transformer.
+
+@item
+If the expander encounters a core form, it recursively processes its
+subforms that are in expression or definition context, if any, and
+reconstructs the form from the expanded subforms.
+@end itemize
+
+Information about identifier bindings is maintained during expansion to
+enforce lexical scoping for variables and keywords.
+
+To handle definitions, the expander processes the initial forms in a
+@meta{body} or @meta{library-body} from left to right.  How the expander
+processes each form encountered depends upon the kind of form.
+
+@table @asis
+@item macro use
+The expander invokes the associated transformer to transform the macro
+use, then recursively performs whichever of these actions are
+appropriate for the resulting form.
+
+@item @func{define-syntax} form
+The expander expands and evaluates the right--hand--side expression and
+binds the keyword to the resulting transformer.
+
+@item @func{define} form
+The expander records the fact that the defined identifier is a variable
+but defers expansion of the right--hand--side expression until after all
+of the definitions have been processed.
+
+@item @func{begin} form
+The expander splices the subforms into the list of body forms it is
+processing.
+
+@item @func{let-syntax} or @func{letrec-syntax} form
+The expander splices the inner body forms into the list of (outer) body
+forms it is processing, arranging for the keywords bound by the
+@func{let-syntax} and @func{letrec-syntax} to be visible only in the
+inner body forms.
+
+@item expression, i.e., nondefinition
+The expander completes the expansion of the deferred right--hand--side
+expressions and the current and remaining expressions in the body, and
+then creates the equivalent of a @func{letrec*} form from the defined
+variables, expanded right--hand--side expressions, and expanded body
+expressions.
+@end table
+
+For the right--hand side of the definition of a variable, expansion is
+deferred until after all of the definitions have been seen.
+Consequently, each keyword and variable reference within the right--hand
+side resolves to the local binding, if any.
+
+A definition in the sequence of forms must not define any identifier
+whose binding is used to determine the meaning of the undeferred
+portions of the definition or any definition that precedes it in the
+sequence of forms.  For example, the bodies of the following expressions
+violate this restriction.
+
+@example
+(let ()
+  (define define 17)
+  (list define))
+
+(let-syntax ((def0 (syntax-rules ()
+                     ((_ x) (define x 0)))))
+  (let ((z 3))
+    (def0 z)
+    (define def0 list)
+    (list z)))
+
+(let ()
+  (define-syntax foo
+    (lambda (e)
+      (+ 1 2)))
+  (define + 2)
+  (foo))
+@end example
+
+The following do not violate the restriction.
+
+@example
+(let ((x 5))
+  (define lambda list)
+  (lambda x x))         @result{}  (5 5)
+
+(let-syntax ((def0 (syntax-rules ()
+                     ((_ x) (define x 0)))))
+  (let ((z 3))
+    (define def0 list)
+    (def0 z)
+    (list z)))          @result{}  (3)
+
+(let ()
+  (define-syntax foo
+    (lambda (e)
+      (let ((+ -)) (+ 1 2))))
+  (define + 2)
+  (foo))                @result{}  -1
+@end example
+
+The implementation should treat a violation of the restriction as a
+syntax violation.
+
+Note that this algorithm does not directly reprocess any form.  It
+requires a single left--to--right pass over the definitions followed by
+a single pass (in any order) over the body expressions and deferred
+right--hand sides.
+
+Example:
+
+@example
+(lambda (x)
+  (define-syntax defun
+    (syntax-rules ()
+      ((_ x a e) (define x (lambda a e)))))
+  (defun even? (n) (or (= n 0) (odd? (- n 1))))
+  (define-syntax odd?
+    (syntax-rules () ((_ n) (not (even? n)))))
+  (odd? (if (odd? x) (* x x) x)))
+@end example
+
+In the example:
+
+@enumerate
+@item
+The definition of @func{defun} is encountered first, and the keyword
+@func{defun} is associated with the transformer resulting from the
+expansion and evaluation of the corresponding right--hand side.
+
+@item
+A use of @func{defun} is encountered next and expands into a
+@func{define} form.  Expansion of the right--hand side of this
+@func{define} form is deferred.
+
+@item
+The definition of @func{odd?} is next and results in the association of
+the keyword @func{odd?} with the transformer resulting from expanding
+and evaluating the corresponding right--hand side.
+
+@item
+A use of @func{odd?}  appears next and is expanded; the resulting call
+to @func{not} is recognized as an expression because @func{not} is bound
+as a variable.
+
+@item
+At this point, the expander completes the expansion of the current
+expression (the call to @func{not}) and the deferred right--hand side of
+the @func{even?}  definition; the uses of @func{odd?} appearing in these
+expressions are expanded using the transformer associated with the
+keyword @func{odd?}.
+
+@item
+The final output is the equivalent of:
+
+@example
+(lambda (x)
+  (letrec* ((even? (lambda (n)
+                     (or (= n 0)
+                         (not (even? (- n 1)))))))
+    (not (even? (if (not (even? x))
+                    (* x x)
+                  x)))))
+@end example
+
+@noindent
+although the structure of the output is implementation-dependent.
+@end enumerate
+
+Because definitions and expressions can be interleaved in a
+@meta{top-level-body}, the expander's processing of a
+@meta{top-level-body} is somewhat more complicated.  It behaves as
+described above for a @meta{body} or @meta{library-body} with the
+following exceptions:
+
+@itemize
+@item
+When the expander finds a nondefinition, it defers its expansion and
+continues scanning for definitions.
+
+@item
+Once it reaches the end of the set of forms, it processes the deferred
+right--hand--side and body expressions, then generates the equivalent of
+a @func{letrec*} form from the defined variables, expanded
+right--hand--side expressions, and expanded body expressions.
+
+@item
+For each body expression @meta{expression} that appears before a
+variable definition in the body, a dummy binding is created at the
+corresponding place within the set of @func{letrec*} bindings, with a
+fresh temporary variable on the left--hand side and the equivalent of:
+
+@example
+(begin @meta{expression} @meta{unspecified})
+@end example
+
+@noindent
+where @meta{unspecified} is a side--effect--free expression returning an
+unspecified value, on the right--hand side, so that left--to--right
+evaluation order is preserved.  The @func{begin} wrapper allows
+@meta{expression} to evaluate to an arbitrary number of values.
+@end itemize
+
+@c page
+@node scheme derived
+@section Sample definitions for derived forms
+
+
+@ignore
+In the original document this appendix is the file "derived.tex".
+@end ignore
+
+This appendix contains sample definitions for some of the keywords
+described in this report in terms of simpler forms:
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{cond}
+
+The @func{cond} keyword could be defined in terms of @func{if},
+@func{let} and @func{begin} using @func{syntax-rules} as follows:
+
+@example
+(define-syntax cond
+  (syntax-rules (else =>)
+    ((cond (else result1 result2 ...))
+     (begin result1 result2 ...))
+    ((cond (test => result))
+     (let ((temp test))
+       (if temp (result temp))))
+    ((cond (test => result) clause1 clause2 ...)
+     (let ((temp test))
+       (if temp
+           (result temp)
+           (cond clause1 clause2 ...))))
+    ((cond (test)) test)
+    ((cond (test) clause1 clause2 ...)
+     (let ((temp test))
+       (if temp
+           temp
+           (cond clause1 clause2 ...))))
+    ((cond (test result1 result2 ...))
+     (if test (begin result1 result2 ...)))
+    ((cond (test result1 result2 ...)
+           clause1 clause2 ...)
+     (if test
+         (begin result1 result2 ...)
+         (cond clause1 clause2 ...)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{case}
+
+The @func{case} keyword could be defined in terms of @func{let},
+@func{cond}, and @func{memv} using @code{syntax-rules} as follows:
+
+@example
+(define-syntax case
+  (syntax-rules (else)
+    ((case expr0
+       ((key ...) res1 res2 ...)
+       ...
+       (else else-res1 else-res2 ...))
+     (let ((tmp expr0))
+       (cond
+         ((memv tmp '(key ...)) res1 res2 ...)
+         ...
+         (else else-res1 else-res2 ...))))
+    ((case expr0
+       ((keya ...) res1a res2a ...)
+       ((keyb ...) res1b res2b ...)
+       ...)
+     (let ((tmp expr0))
+       (cond
+         ((memv tmp '(keya ...)) res1a res2a ...)
+         ((memv tmp '(keyb ...)) res1b res2b ...)
+         ...)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{let*}
+
+The @func{let*} keyword could be defined in terms of @func{let} using
+@func{syntax-rules} as follows:
+
+@example
+(define-syntax let*
+  (syntax-rules ()
+    ((let* () body1 body2 ...)
+     (let () body1 body2 ...))
+    ((let* ((name1 expr1) (name2 expr2) ...)
+       body1 body2 ...)
+     (let ((name1 expr1))
+       (let* ((name2 expr2) ...)
+         body1 body2 ...)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{letrec}
+
+The @func{letrec} keyword could be defined approximately in terms of
+@func{let} and @func{set!} using @func{syntax-rules}, using a helper to
+generate the temporary variables needed to hold the values before the
+assignments are made, as follows:
+
+@example
+(define-syntax letrec
+  (syntax-rules ()
+    ((letrec () body1 body2 ...)
+     (let () body1 body2 ...))
+    ((letrec ((var init) ...) body1 body2 ...)
+     (letrec-helper
+       (var ...)
+       ()
+       ((var init) ...)
+       body1 body2 ...))))
+
+(define-syntax letrec-helper
+  (syntax-rules ()
+    ((letrec-helper
+       ()
+       (temp ...)
+       ((var init) ...)
+       body1 body2 ...)
+     (let ((var <undefined>) ...)
+       (let ((temp init) ...)
+         (set! var temp)
+         ...)
+       (let () body1 body2 ...)))
+    ((letrec-helper
+       (x y ...)
+       (temp ...)
+       ((var init) ...)
+       body1 body2 ...)
+     (letrec-helper
+       (y ...)
+       (newtemp temp ...)
+       ((var init) ...)
+       body1 body2 ...))))
+@end example
+
+The syntax @code{<undefined>} represents an expression that returns
+something that, when stored in a location, causes an exception with
+condition type @condition{assertion} to be raised if an attempt to read from
+or write to the location occurs before the assignments generated by the
+@func{letrec} transformation take place.  (No such expression is defined
+in Scheme.)
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{letrec*}
+
+The @func{letrec*} keyword could be defined approximately in terms of
+@func{let} and @func{set!} using @func{syntax-rules} as follows:
+
+@example
+(define-syntax letrec*
+  (syntax-rules ()
+    ((letrec* ((var1 init1) ...) body1 body2 ...)
+     (let ((var1 <undefined>) ...)
+       (set! var1 init1)
+       ...
+       (let () body1 body2 ...)))))
+@end example
+
+The syntax @code{<undefined>} is as in the definition of @func{letrec}
+above.
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{let-values}
+
+The following definition of @func{let-values} using @func{syntax-rules}
+employs a pair of helpers to create temporary names for the formals.
+
+@example
+(define-syntax let-values
+  (syntax-rules ()
+    ((let-values (binding ...) body1 body2 ...)
+     (let-values-helper1
+       ()
+       (binding ...)
+       body1 body2 ...))))
+
+(define-syntax let-values-helper1
+  ;; map over the bindings
+  (syntax-rules ()
+    ((let-values
+       ((id temp) ...)
+       ()
+       body1 body2 ...)
+     (let ((id temp) ...) body1 body2 ...))
+    ((let-values
+       assocs
+       ((formals1 expr1) (formals2 expr2) ...)
+       body1 body2 ...)
+     (let-values-helper2
+       formals1
+       ()
+       expr1
+       assocs
+       ((formals2 expr2) ...)
+       body1 body2 ...))))
+
+(define-syntax let-values-helper2
+  ;; create temporaries for the formals
+  (syntax-rules ()
+    ((let-values-helper2
+       ()
+       temp-formals
+       expr1
+       assocs
+       bindings
+       body1 body2 ...)
+     (call-with-values
+       (lambda () expr1)
+       (lambda temp-formals
+         (let-values-helper1
+           assocs
+           bindings
+           body1 body2 ...))))
+    ((let-values-helper2
+       (first . rest)
+       (temp ...)
+       expr1
+       (assoc ...)
+       bindings
+       body1 body2 ...)
+     (let-values-helper2
+       rest
+       (temp ... newtemp)
+       expr1
+       (assoc ... (first newtemp))
+       bindings
+       body1 body2 ...))
+    ((let-values-helper2
+       rest-formal
+       (temp ...)
+       expr1
+       (assoc ...)
+       bindings
+       body1 body2 ...)
+     (call-with-values
+       (lambda () expr1)
+       (lambda (temp ... . newtemp)
+         (let-values-helper1
+           (assoc ... (rest-formal newtemp))
+           bindings
+           body1 body2 ...))))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{let*-values}
+
+The following macro defines @func{let*-values} in terms of @func{let}
+and @func{let-values} using @func{syntax-rules}:
+
+@example
+(define-syntax let*-values
+  (syntax-rules ()
+    ((let*-values () body1 body2 ...)
+     (let () body1 body2 ...))
+    ((let*-values (binding1 binding2 ...)
+       body1 body2 ...)
+     (let-values (binding1)
+       (let*-values (binding2 ...)
+         body1 body2 ...)))))
+@end example
+
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{let}
+
+The @func{let} keyword could be defined in terms of @func{lambda} and
+@func{letrec} using @func{syntax-rules} as follows:
+
+@example
+(define-syntax @func{let}
+  (syntax-rules ()
+    ((let ((name val) ...) body1 body2 ...)
+     ((lambda (name ...) body1 body2 ...)
+      val ...))
+    ((let tag ((name val) ...) body1 body2 ...)
+     ((letrec ((tag (lambda (name ...)
+                      body1 body2 ...)))
+        tag)
+      val ...))))
+@end example
+
+@c end of file

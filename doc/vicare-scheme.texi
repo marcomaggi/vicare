@@ -158,7 +158,8 @@ this project has a mailing list:
 
 @noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
-Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.
+Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.@*
+Copyright @copyright{} Michael Sperber, R. Kent Dybvig, Matthew Flatt and Anton Van Straaten.
 
 This document is derived from the original Ikarus documentation by the
 @value{PACKAGE} contributors, see the ``History'' appendix for details.
@@ -222,6 +223,9 @@ Trademarks used herein are the property of their respective owners.
 @menu
 * overview::                    Overview of Vicare Scheme.
 * using::                       Using the program.
+* scheme::                      The Scheme language.
+* baselib::                     Base library.
+* stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
 * ffi::                         Foreign functions interface.
 * posix::                       The @posix{} interface.
@@ -273,6 +277,9 @@ External documents
 
 @include overview.texi
 @include using.texi
+@include scheme.texi
+@include baselib.texi
+@include stdlib.texi
 @include iklib.texi
 @include ffi.texi
 @include posix.texi

@@ -1,0 +1,446 @@
+@subsubheading Discussion on a possible implementation
+
+
+Given a single--thread program, the following implementation of
+@func{with-exception-handler}, @func{raise} and @func{raise-continuable}
+is compliant:
+
+@example
+(import (except (rnrs)
+                with-exception-handler
+                raise
+                raise-continuable
+                guard))
+
+(define default-error-port (current-error-port))
+
+(define stack-of-handlers
+  (list
+   (lambda (raised-object)
+     (display "unhandled exception:\n" default-error-port)
+     (display raised-object default-error-port)
+     (newline default-error-port)
+     (when (serious-condition? raised-object)
+       (exit -1)))
+   (lambda args
+     (exit -1))))
+
+(define-syntax %with-popped-handler
+  (syntax-rules ()
+    ((_ ?handler . ?body)
+     (let ((ell      stack-of-handlers)
+           (?handler (car stack-of-handlers)))
+       (dynamic-wind
+           (lambda () (set! stack-of-handlers (cdr ell)))
+           (lambda () . ?body)
+           (lambda () (set! stack-of-handlers ell)))))))
+
+(define (with-exception-handler handler thunk)
+  (let ((ell stack-of-handlers))
+    (dynamic-wind
+        (lambda () (set! stack-of-handlers (cons handler ell)))
+        thunk
+        (lambda () (set! stack-of-handlers ell)))))
+
+(define (raise-continuable raised-object)
+  (%with-popped-handler handler
+     (handler raised-object)))
+
+(define (raise raised-object)
+  (%with-popped-handler handler
+     (handler raised-object)
+     (raise
+      (condition
+       (make-non-continuable-violation)
+       (make-message-condition
+        "return from handler of non-continuable exception")))))
+@end example
+
+@noindent
+we see that no function rewinds the stack nor invokes a continuation;
+also, in @func{raise}, the recursive invocation raising a
+non--continuable violation can return to the caller if the handler
+returns.
+
+The implementation of the @func{guard} syntax needs some reasoning to be
+understood; first, the skeleton of the transformation is a
+@func{with-exception-handler} syntax, the following form:
+
+@example
+(guard (E ((alpha-condition? E)
+           (do-alpha))
+          ((beta-condition? E)
+           (do-beta))
+          ((condition-gamma-value E)
+           => (lambda (value)
+                (do-gamma value)))
+          (else
+           (do-else)))
+  (form-a)
+  (form-b))
+@end example
+
+@noindent
+is basically transformed to:
+
+@example
+(with-exception-handler
+    (lambda (E)
+      (cond ((alpha-condition? E)
+             (do-alpha))
+            ((beta-condition? E)
+             (do-beta))
+            ((condition-gamma-value E)
+             => (lambda (value)
+                  (do-gamma value)))
+            (else
+             (do-else))))
+  (lambda ()
+    (form-a)
+    (form-b)))
+@end example
+
+@noindent
+to make it compliant, we need to add to this transformation the correct
+handling of continuations and of the dynamic environment.
+
+We need the mechanism explained step by step in what follows; given the
+form:
+
+@example
+(alpha ... (beta ...))
+@end example
+
+@noindent
+in which the form @code{beta} is nested at some level in the form
+@code{alpha}, we want to answer the question: how do we evaluate the
+form @code{beta} so that it has the same continuation and dynamic
+environment of @code{alpha}?
+
+We begin by understanding that this chunk of code:
+
+@example
+(begin
+  (form-a)
+  (form-b))
+@end example
+
+@noindent
+can be rewritten in the following equivalent form, in which an anonymous
+function is created and just evaluated in place:
+
+@example
+((lambda ()
+   (begin
+     (form-a)
+     (form-b))))
+@end example
+
+@noindent
+or more explicitly:
+
+@example
+(apply (lambda ()
+         (begin
+           (form-a)
+           (form-b))))
+@end example
+
+@noindent
+we should understand that, from the point of view of the executed
+computation, the @func{apply} and @func{begin} forms have the same
+continuation.
+
+The last version can be rewritten as:
+
+@example
+(apply (call/cc
+          (lambda (kont)
+            (lambda () ;body
+              (begin
+                (form-a)
+                (form-b))))))
+@end example
+
+@noindent
+in which the @func{call/cc} form evaluates to the anonymous function
+commented as @samp{body} which is then evaluated by @func{apply}; so we
+can say again that, from the point of view of the executed computation,
+the @func{apply} and @func{begin} forms have the same continuation.  We
+notice that the escape procedure @code{kont} is not used.
+
+Let's consider the following transformation of the previous example and
+understand why it is equivalent:
+
+@example
+(apply (call/cc
+          (lambda (kont)
+            (lambda () ;shell
+              (kont (lambda () ;body
+                      (begin
+                        (form-a)
+                        (form-b))))))))
+@end example
+
+@noindent
+the @func{call/cc} form evaluates to the anonymous function commented as
+@samp{shell} which is evaluated by @func{apply}; the @code{kont} escape
+procedure jumps back to the continuation of @func{call/cc} which is
+again @func{apply} and its return value is the anonymous function
+commented as @samp{body} which is evaluated by @func{apply}.  So once
+again we can say that, from the point of view of the executed
+computation, the @func{apply} and @func{begin} forms have the same
+continuation.
+
+As a final consideration, let's modify the form as follows:
+
+@example
+(apply (call/cc
+          (lambda (kont)
+            (lambda () ;shell
+              (dynamic-wind
+                  (lambda ()
+                    (in-guard))
+                  (lambda ()
+                    (kont (lambda () ;body
+                            (begin
+                              (form-a)
+                              (form-b)))))
+                  (lambda ()
+                    (out-guard)))))))
+@end example
+
+@noindent
+when the @code{shell} function is evaluated, the dynamic environment may
+be modified by the @func{dynamic-wind} form's @code{in-guard} and
+@code{out-guard}, but the @func{begin} form is still evaluated with the
+same continuation and the same dynamic environment of @func{apply}: both
+@code{in-guard} and @code{out-guard} are evaluated before the
+@code{body} function is evaluated.
+
+Now we can go back to the @func{guard} implementation and consider a
+@func{guard} form with @func{else} clause:
+
+@example
+(guard (E ((alpha-condition? E)
+           (do-alpha))
+          (else
+           (do-else)))
+  (dynamic-wind
+    (lambda () (in-guard))
+    (lambda () (form-a))
+    (lambda () (out-guard))))
+@end example
+
+@noindent
+we observed that the skeleton expansion of @func{guard} is:
+
+@example
+(with-exception-handler
+     (lambda (E)
+       (cond ((alpha-condition? E)
+              (do-alpha))
+             (else
+              (do-else))))
+  (lambda ()
+    (dynamic-wind
+      (lambda () (in-guard))
+      (lambda () (form-a))
+      (lambda () (out-guard)))))
+@end example
+
+@noindent
+the report establishes that:
+
+@quotation
+That implicit @func{cond} expression is evaluated with the continuation
+and dynamic environment of the @func{guard} form.
+@end quotation
+
+@noindent
+using the mechanism described above, we can expand the @func{guard} form
+as follows:
+
+@example
+((call/cc
+     (lambda (guard-kont)
+       (lambda ()
+         (with-exception-handler
+             (lambda (E) ;shell
+               (guard-kont
+                (lambda () ;handler
+                  (cond ((alpha-condition? E)
+                         (do-alpha))
+                        (else
+                         (do-else))))))
+           (lambda () ;body
+             (dynamic-wind
+                 (lambda () (in-guard))
+                 (lambda () (form-a))
+                 (lambda () (out-guard)))))))))
+@end example
+
+@noindent
+if the anonymous function commented as @code{body} raises an exception,
+the handler function commented as @code{shell} is applied to the raised
+object; the @code{guard-kont} escape procedure is used to jump to the
+continuation of @func{call/cc} and then the @func{cond} form is
+evaluated.  This expansion is compliant.  We notice explicitly that:
+
+@itemize
+@item
+With this mechanism the exception handler does not return to the
+continuation of @func{raise} or other form which raised the exception,
+rather it returns to the continuation of @func{guard}.
+
+@item
+When @code{guard-kont} is invoked: @code{out-guard} is evaluated and
+only after that the anonymous function commented as @code{handler} is
+evaluated.  This is different from the default behaviour of
+@func{with-exception-handler}, in which the handler is evaluated in the
+same dynamic environment of the body function with the single difference
+of the current exception handler.
+@end itemize
+
+Now let's consider a @func{guard} form without @func{else} clause:
+
+@example
+(guard (E ((alpha-condition? E)
+           (do-alpha))
+          ((beta-condition? E)
+           (do-beta)))
+  (dynamic-wind
+    (lambda () (in-guard))
+    (lambda () (form-a))
+    (lambda () (out-guard))))
+@end example
+
+@noindent
+applying the same expansion described above yields:
+
+@example
+(apply
+ (call/cc
+     (lambda (guard-kont)
+       (lambda ()
+         (with-exception-handler
+             (lambda (E) ;shell
+               (guard-kont
+                (lambda () ;handler
+                  (cond ((alpha-condition? E)
+                         (do-alpha))
+                        ((beta-condition? E)
+                         (do-beta))))))
+           (lambda () ;body
+             (dynamic-wind
+                 (lambda () (in-guard))
+                 (lambda () (form-a))
+                 (lambda () (out-guard)))))))))
+@end example
+
+@noindent
+but the report establishes that:
+
+@quotation
+If every @meta{cond-clause}'s @meta{test} evaluates to @false{} and
+there is no @code{else} clause, then @func{raise-continuable} is
+re--invoked on the raised object within the dynamic environment of the
+original call to @func{raise} except that the current exception handler
+is that of the @func{guard} expression.
+@end quotation
+
+@noindent
+so we use again the same mechanism and expand as follows:
+
+@example
+(apply ;external apply
+ (call/cc
+     (lambda (guard-kont)
+       (lambda ()
+         (with-exception-handler
+             (lambda (E) ;shell
+               (apply ;internal apply
+                 (call/cc
+                     (lambda (reraise-kont)
+                       (guard-kont
+                         (lambda () ;handler
+                           (cond ((alpha-condition? E)
+                                  (do-alpha))
+                                 ((beta-condition? E)
+                                  (do-beta))
+                                 (else
+                                  (reraise-kont
+                                   (lambda () ;reraise
+                                     (raise-continuable E))))))
+                       )))))
+           (lambda () ;body
+             (dynamic-wind
+                 (lambda () (in-guard))
+                 (lambda () (form-a))
+                 (lambda () (out-guard)))))))))
+@end example
+
+@noindent
+if the body function raises an exception and one of the non--@func{else}
+clauses matches, everything works as above and the @func{cond} form is
+evaluated with the continuation of @func{guard}; but if the clause which
+matches is @func{else}: the @code{reraise-kont} escape procedure is used
+to jump back to the continuation of the internal @func{call/cc} which
+has a dynamic environment equal to the one of the original raise
+invocation; the return value of @code{reraise-kont} is the anonymous
+function commented as @code{reraise}, which is evaluated in place by the
+internal @func{apply}; the return value of @func{raise-continuable}
+becomes the argument of @code{guard-kont}.
+
+We notice explicitly that:
+
+@itemize
+@item
+When the execution flow enters the body function: @code{in-guard} is
+evaluated; if @code{form-a} raises an exception: @code{guard-kont} is
+evaluated and so @code{out-guard} is evaluated.
+
+@item
+If the @func{else} clause is evaluated, then @code{reraise-kont} is
+evaluated: @code{in-guard} is evaluated again before
+@func{raise-continuable}; if @func{raise-continuable} returns:
+@func{guard-kont} is evaluated and @code{out-guard} is evaluated again.
+@end itemize
+
+As the last touch, let's introduce a binding for the raised object as
+follows:
+
+@example
+(apply ;external apply
+ (call/cc
+     (lambda (guard-kont)
+       (lambda ()
+         (with-exception-handler
+             (lambda (D) ;shell
+               (apply ;internal apply
+                 (call/cc
+                     (lambda (reraise-kont)
+                       (guard-kont
+                         (lambda () ;handler
+                           (let ((E D))
+                             (cond ((alpha-condition? E)
+                                    (do-alpha))
+                                   ((beta-condition? E)
+                                    (do-beta))
+                                   (else
+                                    (reraise-kont
+                                     (lambda () ;reraise
+                                       (raise-continuable D)))))))
+                         )))))
+           (lambda () ;body
+             (dynamic-wind
+                 (lambda () (in-guard))
+                 (lambda () (form-a))
+                 (lambda () (out-guard)))))))))
+@end example
+
+@noindent
+this way we are sure to reraise the original raised object in the
+@func{else} clause even though the tests in the clauses may have
+modified the biding of @code{E} or its value.
+
