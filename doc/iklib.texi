@@ -2235,6 +2235,18 @@ Return a list of symbols representing the names of the bindings from
 @var{env}, which must be an environment.  The name in position @math{i}
 in the returned list is associated to the label in position @math{i} in
 the list returned by @func{environment-labels}.
+
+For example, the following program prints all the bindings in the
+library @library{vicare language-extensions}:
+
+@example
+#!r6rs
+(import (vicare))
+(for-each pretty-print
+  (environment-symbols
+   (environment '(vicare language-extensions))))
+(flush-output-port (current-output-port))
+@end example
 @end defun
 
 
