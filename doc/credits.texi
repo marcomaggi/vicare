@@ -11,4 +11,58 @@ at the following @aurl{}s:
 @center @url{http://www.cs.indiana.edu/~aghuloum/ikarus/}
 @center @url{https://launchpad.net/ikarus}
 
+@c ------------------------------------------------------------
+
+@subsubheading Documentation: language definition, base and standard library
+
+The chapters @ref{scheme, The Scheme language}, @ref{baselib,Base
+library} and @ref{stdlib,Standard library} are derived from the original
+``Revised^6 Report on the Algorithmic Language Scheme'' document and the
+original ``Revised^6 Report on the Algorithmic Language Scheme ----
+Standard Libraries'', authored by the following people:
+
+@quotation
+@noindent
+MICHAEL SPERBER@*
+R. KENT DYBVIG, MATTHEW FLATT, ANTON VAN STRAATEN@*
+(Editors)
+
+@noindent
+RICHARD KELSEY, WILLIAM CLINGER, JONATHAN REES@*
+(Editors, Revised^5 Report on the Algorithmic Language Scheme)
+
+@noindent
+ROBERT BRUCE FINDLER, JACOB MATTHEWS@*
+(Authors, formal semantics)
+@end quotation
+
+@noindent
+with various contributions by the following people:
+
+@quotation
+Hal Abelson, Norman Adams, David Bartley, Gary Brooks, William Clinger,
+Daniel Friedman, Robert Halstead, Chris Hanson, Christopher Haynes,
+Eugene Kohlbecker, Don Oxley, Kent Pitman, Jonathan Rees, Guillermo
+Rozas, Guy L. Steele Jr., Gerald Jay Sussman, and Mitchell Wand.
+@end quotation
+
+@noindent
+and a lot of discussions and debates by the Scheme community.  According
+to the following quotation from the original document:
+
+@quotation
+We intend this report to belong to the entire Scheme community, and so
+we grant permission to copy it in whole or in part without fee.  In
+particular, we encourage implementors of Scheme to use this report as a
+starting point for manuals and other documentation, modifying it as
+necessary.
+@end quotation
+
+@noindent
+the documents are meant to be in the public domain.  They are available
+at:
+
+@center @url{http://www.r6rs.org/}
+@center @url{http://www.r6rs.org/r6rs-errata.html}
+
 @c end of file
