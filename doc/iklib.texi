@@ -2694,7 +2694,7 @@ Reset to void all the fields of a structure.
 
 
 It is possible to automatically apply a destructor function whenever an
-@rnrs{6} record reclaimed by the garbage collector.
+@rnrs{6} record is reclaimed by the garbage collector.
 
 @example
 #!r6rs
