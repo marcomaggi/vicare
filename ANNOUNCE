@@ -52,6 +52,10 @@ Notes for revision 0.3d1
   words)  rather   than  by  the  library   (vicare  language-extensions
   syntaxes).
 
+* BACKWARDS INCOMPATIBILITY  The unsafe  accessors and mutators  of R6RS
+  records are generated  by default by DEFINE-RECORD-TYPE,  but they are
+  no more created when the command line option "--strict-r6rs" is used.
+
 * Added arguments validation clauses to (vicare arguments validation):
 
      GENERAL-C-STRING*/FALSE

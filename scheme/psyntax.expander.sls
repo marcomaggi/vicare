@@ -3581,45 +3581,59 @@
 	     ;;Code for protocol.
 	     (protocol-code	(get-protocol-code clause*)))
 	(bless
-	 `(begin
-	    (define ,foo-rtd ,foo-rtd-code)
-	    (define ,protocol ,protocol-code)
-	    (define ,foo-rcd ,foo-rcd-code)
-	    (define-syntax ,foo
-	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)))
-	    (define ,foo? (record-predicate ,foo-rtd))
-	    (define ,make-foo (record-constructor ,foo-rcd))
-	    ,@(map
-		  (lambda (foo-x idx)
-		    `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
-		foo-x* idx*)
-	    ,@(map
-		  (lambda (set-foo-x! idx)
-		    `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
-		set-foo-x!* set-foo-idx*)
-	    ,@(map
-		  (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
-		    `(begin
-		       (define ,unsafe-foo-x-idx
-			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		       (define-syntax ,unsafe-foo-x
-			 (syntax-rules ()
-			   ((_ x)
-			    ($struct-ref x ,unsafe-foo-x-idx))))
-		       ))
-		unsafe-foo-x* idx* unsafe-foo-x-idx*)
-	    ,@(map
-		  (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
-		    `(begin
-		       (define ,unsafe-set-foo-x!-idx
-			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		       (define-syntax ,unsafe-set-foo-x!
-			 (syntax-rules ()
-			   ((_ x v)
-			    ($struct-set! x ,unsafe-set-foo-x!-idx v))))
-		       ))
-		unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
-	    ))))
+	 (append
+	  `(begin
+	     ;;Record type descriptor.
+	     (define ,foo-rtd ,foo-rtd-code)
+	     ;;Protocol function.
+	     (define ,protocol ,protocol-code)
+	     ;;Record constructor descriptor.
+	     (define ,foo-rcd ,foo-rcd-code)
+	     ;;Binding for record type name.  It is an anomalous binding
+	     ;;in the environment.
+	     (define-syntax ,foo
+	       (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)))
+	     ;;Record instance predicate.
+	     (define ,foo? (record-predicate ,foo-rtd))
+	     ;;Record instance constructor.
+	     (define ,make-foo (record-constructor ,foo-rcd))
+	     ;;Safe record fields accessors.
+	     ,@(map
+		   (lambda (foo-x idx)
+		     `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
+		 foo-x* idx*)
+	     ;;Safe record fields mutators (if any).
+	     ,@(map
+		   (lambda (set-foo-x! idx)
+		     `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
+		 set-foo-x!* set-foo-idx*))
+	  (if (strict-r6rs)
+	      '()
+	    `( ;; Unsafe record fields accessors.
+	      ,@(map
+		    (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
+		      `(begin
+			 (define ,unsafe-foo-x-idx
+			   ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+			 (define-syntax ,unsafe-foo-x
+			   (syntax-rules ()
+			     ((_ x)
+			      ($struct-ref x ,unsafe-foo-x-idx))))
+			 ))
+		  unsafe-foo-x* idx* unsafe-foo-x-idx*)
+	      ;; Unsafe record fields mutators.
+	      ,@(map
+		    (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
+		      `(begin
+			 (define ,unsafe-set-foo-x!-idx
+			   ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+			 (define-syntax ,unsafe-set-foo-x!
+			   (syntax-rules ()
+			     ((_ x v)
+			      ($struct-set! x ,unsafe-set-foo-x!-idx v))))
+			 ))
+		  unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
+	      ))))))
     (define (verify-clauses x cls*)
       (define valid-kwds
 	(map bless

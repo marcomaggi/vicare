@@ -653,8 +653,10 @@ following:
 same interface of a default protocol function.
 
 @item
-The syntax @func{define-record-type} automatically generates unsafe
-field accessor and mutator syntaxes; in the following example:
+If @command{vicare} is run @strong{without} the option
+@option{--strict-r6rs}: the syntax @func{define-record-type}
+automatically generates unsafe field accessor and mutator syntaxes; in
+the following example:
 
 @example
 (define-record-type color
@@ -738,7 +740,7 @@ function in the @rnrs{6} record--type descriptor; whenever a record is
 instantiated and its record--type descriptor has a destructor function:
 the record is registered in an internal guardian.  The guardian has an
 associated post garbage collection hook which applies the destructor to
-the record.
+the record.  @ref{iklib records final} for details.
 @end enumerate
 
 @c page
