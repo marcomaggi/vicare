@@ -823,7 +823,7 @@
 
   (define (%make-default-protocol rtd)
     ;;Build and return a default protocol function to be used whenever a
-    ;;arequest to  build an RCD  is issued without a  specific protocol.
+    ;;a request to  build an RCD is issued without  a specific protocol.
     ;;If available: this function returns the default protocol stored in
     ;;RTD, else a new protocol function is built and cached in RTD.
     ;;
