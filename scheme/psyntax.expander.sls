@@ -5418,7 +5418,7 @@
     ;;identifier  representing a  R6RS record  type.  Return  a symbolic
     ;;expression evaluating to the record type descriptor.
     ;;
-    (define who 'record-type-descriptor-transformer)
+    (define who 'record-type-descriptor)
     (syntax-match expr-stx ()
       ((_ ?identifier)
        (identifier? ?identifier)
