@@ -257,6 +257,7 @@
     network-entries
 
     tcp-connect				tcp-connect.connect-proc
+    tcp-connect/binary
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -3607,12 +3608,12 @@
   ;;by the  string HOSTNAME,  connecting to the  port associated  to the
   ;;string or number SERVICE.
   ;;
-  ;;If successful return  a textual input/output port  associated to the
+  ;;If successful: returns a textual input/output port associated to the
   ;;socket file  descriptor, configured  with "line" buffer  mode, UTF-8
   ;;transcoder,  and   "none"  end-of-line  translation.    Closing  the
   ;;returned port will close the connection.
   ;;
-  ;;This function  makes use of  GETADDRINFO to obtain  possible network
+  ;;These functions make  use of GETADDRINFO to  obtain possible network
   ;;interfaces to  connect to  and attempts  to connect  to all  of them
   ;;stopping at the first success.
   ;;
@@ -3682,6 +3683,73 @@
     (make-transcoder (utf-8-codec)
 		     (eol-style none)
 		     (error-handling-mode raise)))
+
+  #| end of module: tcp-connect |# )
+
+(module (tcp-connect/binary)
+  ;;Establish a client network connection  to the remote host identified
+  ;;by the  string HOSTNAME,  connecting to the  port associated  to the
+  ;;string or number SERVICE.
+  ;;
+  ;;If successful: returns a binary  input/output port associated to the
+  ;;socket file  descriptor.  Closing the  returned port will  close the
+  ;;connection.
+  ;;
+  ;;These functions make  use of GETADDRINFO to  obtain possible network
+  ;;interfaces to  connect to  and attempts  to connect  to all  of them
+  ;;stopping at the first success.
+  ;;
+  (define who 'tcp-connect/binary)
+
+  (define tcp-connect/binary
+    (case-lambda
+     ((hostname service)
+      (tcp-connect/binary hostname service (lambda args (void))))
+     ((hostname service log-procedure)
+      (with-arguments-validation (who)
+	  ((string	hostname)
+	   (service	service)
+	   (procedure	log-procedure))
+	(let ((service (if (string? service)
+			   service
+			 (number->string service))))
+	  (%attempt-addrinfos hostname service
+			      (socket PF_INET SOCK_STREAM 0)
+			      (getaddrinfo hostname service HINTS)
+			      log-procedure))))
+     ))
+
+  (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
+    (define (next-addrinfo)
+      (%attempt-addrinfos hostname service sock (cdr addrinfos) log-procedure))
+    (define (log action sockaddr)
+      (log-procedure action hostname service sockaddr))
+    (if (null? addrinfos)
+	(error who "unable to determine usable address of remote host" hostname service)
+      (let* ((info      (car addrinfos))
+	     (sockaddr  (struct-addrinfo-ai_addr info)))
+	(guard (E ((and (errno-condition? E)
+			(memv (condition-errno E) FAILED-CONNECTION-ERRNOS))
+		   (log 'fail sockaddr)
+		   (next-addrinfo))
+		  (else
+		   (raise E)))
+	  (log 'attempt sockaddr)
+	  ((tcp-connect.connect-proc) sock sockaddr)
+	  (log 'success sockaddr))
+	(make-binary-socket-input/output-port
+	 sock (string-append "client TCP socket " hostname ":" service)))))
+
+  (define-argument-validation (service who obj)
+    (or (string? obj)
+	(network-port-number? obj))
+    (assertion-violation who "expected network service specification as argument" obj))
+
+  (define-constant FAILED-CONNECTION-ERRNOS
+    (list EADDRNOTAVAIL ETIMEDOUT ECONNREFUSED ENETUNREACH))
+
+  (define-constant HINTS
+    (make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
 
   #| end of module: tcp-connect |# )
 

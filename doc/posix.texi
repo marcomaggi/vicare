@@ -3190,6 +3190,15 @@ The following example will download the main page from
 @end defun
 
 
+@defun tcp-connect/binary @var{hostname} @var{service}
+@defunx tcp-connect/binary @var{hostname} @var{service} @var{log-proc}
+Establish a client connection to the remote host identified by the
+string @var{hostname}, connecting to the port associated to the string
+or number @var{service}.  This function is similar to
+@func{tcp-connect}, but it returns a binary input output port.
+@end defun
+
+
 @deffn Parameter tcp-connect.connect-proc
 References a function used by @func{tcp-connect} to actually attempt a
 @tcp{} connection.  It is initialised to @func{connect}.

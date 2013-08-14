@@ -125,9 +125,10 @@ Notes for revision 0.3d1
 
   and others related to networking.
 
-* Added the following bindigns to (vicare posix):
+* Added the following bindings to (vicare posix):
 
      sockaddr_in.in_addr.number
+     tcp-connect/binary
 
 * Added the following bindings to (vicare glibc):
 
