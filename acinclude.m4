@@ -1,6 +1,10 @@
 ### custom macros
 
-m4_include([m4/ax_lib_readline.m4])
+m4_include([meta/autoconf/ax_lib_readline.m4])
+m4_include([meta/autoconf/lib-prefix.m4])
+m4_include([meta/autoconf/lib-link.m4])
+m4_include([meta/autoconf/lib-ld.m4])
+m4_include([meta/autoconf/iconv.m4])
 
 dnl $1 - upper case option name
 dnl $2 - command line option name "--enable-$2"

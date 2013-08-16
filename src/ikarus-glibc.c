@@ -62,7 +62,7 @@
 #endif
 
 /* Iconv usage has its own configuration option. */
-#ifdef HAVE_LIBICONV
+#ifdef HAVE_ICONV
 #  include <iconv.h>
 #endif
 
@@ -1167,7 +1167,7 @@ ikrt_glibc_iconv_open (ikptr s_from_code, ikptr s_to_code, ikpcb * pcb)
    state structure; if  an error occurs: the return  value is an encoded
    "errno" value. */
 {
-#if ((defined HAVE_LIBICONV) && (defined (HAVE_ICONV_OPEN)))
+#ifdef HAVE_ICONV
   char *	to_code   = IK_BYTEVECTOR_DATA_CHARP(s_to_code);
   char *	from_code = IK_BYTEVECTOR_DATA_CHARP(s_from_code);
   /* Glibc documentation  states that we must not  assume anything about
@@ -1196,7 +1196,7 @@ ikrt_glibc_iconv_close (ikptr s_handle)
    S_HANLE is mutated to hold the  NULL pointer; if an error occurs: the
    return value is an encoded "errno" value. */
 {
-#if ((defined HAVE_LIBICONV) && (defined (HAVE_ICONV_CLOSE)))
+#ifdef HAVE_ICONV
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
   if (handle) {
     int		retval;
@@ -1244,7 +1244,7 @@ ikrt_glibc_iconv (ikptr s_handle,
 		  ikptr s_out_bv, ikptr s_out_start, ikptr s_out_past,
 		  ikpcb * pcb)
 {
-#if ((defined HAVE_LIBICONV) && (defined (HAVE_ICONV)))
+#ifdef HAVE_ICONV
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
   size_t	istart = IK_UNFIX(s_in_start);
   size_t	ipast  = (IK_FALSE_OBJECT == s_in_past)? \

@@ -43,7 +43,22 @@ ikarus-main.$(OBJEXT) : $(srcdir)/last-revision.h
 bin_PROGRAMS		= vicare
 vicare_SOURCES		= $(SRCS) ikarus.c
 
+# List of flags to link libraries with the "vicare" executable.
+vicare_LDADD		=
+
+# Add Libiconv if requested by the configuration script.
+if WANT_LIBICONV
+vicare_LDADD		+= @LTLIBICONV@
+endif
+
+## --------------------------------------------------------------------
+
+# List of  library specifications:  tell GNU  Automake to  build these
+# libraries, too.
 lib_LTLIBRARIES			=
+
+# Build   the  Vicare/CRE2   shared  library   if  requested   by  the
+# configuration script.
 if WANT_CRE2
 lib_LTLIBRARIES			+= libvicarecre2.la
 libvicarecre2_la_LDFLAGS	= -version-info 0:0:0

@@ -1507,14 +1507,15 @@ AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
-VICARE_WITH_LIBRARY([LIBICONV],[libiconv],[check],
-  [whether to link with Libiconv],
-  [link executable with Libiconv],
-  [iconv.h],[iconv],[iconv_open])
-AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
+AM_ICONV
+dnl VICARE_WITH_LIBRARY([LIBICONV],[libiconv],[check],
+dnl   [whether to link with Libiconv],
+dnl   [link executable with Libiconv],
+dnl   [iconv.h],[iconv],[iconv_open])
+AM_CONDITIONAL([WANT_LIBICONV],[test "x$am_cv_func_iconv" = xyes])
 
-AM_COND_IF([WANT_LIBICONV],
-  [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
+dnl AM_COND_IF([WANT_LIBICONV],
+dnl   [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
