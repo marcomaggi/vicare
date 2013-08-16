@@ -4,7 +4,8 @@ ACLOCAL_AMFLAGS		= -I autotools
 SUBDIRS			= src scheme doc lib tests demos
 EXTRA_DIST		= configure.sh			\
 			  scripts/make-last-revision	\
-			  scripts/vie
+			  scripts/vie			\
+			  autotools/config.rpath
 dist_doc_DATA		= README COPYING GPL-3
 
 vicare_test_RULES	= test tests long-test long-tests \
