@@ -49,6 +49,7 @@
   (only (vicare language-extensions coroutines))
   (only (vicare language-extensions infix))
   (only (vicare language-extensions keywords))
+  (only (vicare language-extensions sentinels))
   (only (vicare language-extensions custom-ports))
 
   (only (vicare numerics constants))

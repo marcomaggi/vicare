@@ -154,6 +154,8 @@ Notes for revision 0.3d1
 
 * Added library (vicare bytevectors).
 
+* Added library (vicare language-extensions sentinels).
+
 * Texinfo  files  representing  the  revised  R6RS  standard  have  been
   imported   from  Nausicaa/Scheme   and   are  now   included  in   the
   documentation.

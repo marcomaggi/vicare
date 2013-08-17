@@ -17,6 +17,7 @@
 * wtables::                     Weak hashtables.
 * flonum format::               Formatting flonums.
 * flonum parse::                Parsing flonums.
+* sentinels::                   Sentinel values.
 * debugging::                   Debugging facilities.
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
@@ -4067,6 +4068,97 @@ Notice how the arguments handed to @var{real-func} match the argument of
 @end example
 @end defun
 
+@c page
+@node sentinels
+@section Sentinel values
+
+
+@cindex @library{vicare language-extensions sentinels}, library
+@cindex Library @library{vicare language-extensions sentinels}
+
+
+The library @library{vicare language-extensions sentinels} defines
+unique values and predicates to test them.  Sentinel values can be used
+as terminators for sequences or as values for uninitialised storage
+locations.
+
+
+@defvr Constant sentinel
+The sentinel value.
+@end defvr
+
+
+As usage example, the following form makes use of the sentinel as
+terminator for a list:
+
+@example
+(let ((ell (list 1 2 3 4 5 sentinel)))
+  (let loop ((ell ell)
+             (res '()))
+    (if (sentinel? (car ell))
+        res
+      (loop (cdr ell) (cons (car ell) res)))))
+@result{} (5 4 3 2 1))
+@end example
+
+@noindent
+the following form defines an iterator closure using the sentinel to
+signal the end of the iteration:
+
+@example
+(let* ((ell  '(1 2 3 4 5))
+       (iter (lambda ()
+               (let ((ell ell))
+                 (if (null? ell)
+                     sentinel
+                   (begin
+                     (car ell)
+                     (set! ell (cdr ell))))))))
+  (let loop ((res '()))
+    (let ((v (iter)))
+      (if (sentinel? v)
+          res
+        (loop (cons v res))))))
+@result{} (5 4 3 2 1)
+@end example
+
+
+@defun make-sentinel
+Return a new sentinel value.  @func{sentinel?} will return @true{} when
+applied to such a value, but new sentinel values are meant to be checked
+with @func{eq?}.
+
+New sentinels can be used in situations where a unique terminator is
+needed: when we need to distinguish @samp{sentinel} from a temporary
+sentinel we need for a specific operation.
+@end defun
+
+
+@defun sentinel? @var{obj}
+Return @true{} if @var{obj} a sentinel value.
+@end defun
+
+
+@defvr Constant undefined
+The undefined value.
+@end defvr
+
+
+@defun undefined? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{undefined}.
+@end defun
+
+
+@defvr Constant unspecified
+The unspecified value.
+@end defvr
+
+
+@defun unspecified? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{unspecified}.
+@end defun
+
+@c end of file
 @c page
 @node debugging
 @section Debugging facilities
