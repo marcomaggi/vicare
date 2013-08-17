@@ -34,7 +34,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/keywords.sls				\
 	vicare/language-extensions/custom-ports.sls			\
-	vicare/language-extensions/sentinel.sls				\
+	vicare/language-extensions/sentinels.sls			\
 	\
 	vicare/numerics/constants.sls					\
 	vicare/numerics/flonum-formatter.sls				\
