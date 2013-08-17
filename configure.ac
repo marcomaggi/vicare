@@ -1507,15 +1507,37 @@ AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
-AM_ICONV
-dnl VICARE_WITH_LIBRARY([LIBICONV],[libiconv],[check],
-dnl   [whether to link with Libiconv],
-dnl   [link executable with Libiconv],
-dnl   [iconv.h],[iconv],[iconv_open])
-AM_CONDITIONAL([WANT_LIBICONV],[test "x$am_cv_func_iconv" = xyes])
+with_LIBICONV=check
+AC_MSG_CHECKING([whether to enable support for Libiconv])
+AC_ARG_WITH([libiconv],
+  [AS_HELP_STRING([--with-libiconv],[enable support for Libiconv (default is check)])],
+  [AS_CASE([$withval],
+     [yes],  [with_LIBICONV=yes],
+     [no],   [with_LIBICONV=no],
+     [check],[with_LIBICONV=check],
+     [AC_MSG_ERROR([bad value $withval for --with-libiconv])])],
+  [with_LIBICONV=check])
+  AC_MSG_RESULT([$with_LIBICONV])
+dnl
+vicare_with_LIBICONV=no
+AS_IF([test "x$with_libiconv" != xno],
+  [AM_ICONV
+   AS_IF([test "$am_cv_func_iconv" = yes],
+     [# Success!
+      AC_MSG_NOTICE([Libiconv support enabled])
+      vicare_with_LIBICONV=yes],
 
-dnl AM_COND_IF([WANT_LIBICONV],
-dnl   [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
+     [test "$with_libiconv" = yes],
+     [# The  user requested support for  library or die, but  either the
+      # header or the library or both were not found.
+      AC_MSG_ERROR([Libiconv not found])],
+
+     [# The  user requested a  check for optional Libiconv  support, but
+      # either the header or the library or both were not found.
+      AC_MSG_WARN([Libiconv not found])])],
+  [AC_MSG_NOTICE([libiconv was not requested])])
+dnl
+AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
