@@ -19,6 +19,7 @@
 * flonum parse::                Parsing flonums.
 * sentinels::                   Sentinel values.
 * debugging::                   Debugging facilities.
+* namespaces::                  Namespaces.
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
 @end menu
@@ -4179,6 +4180,134 @@ Return true if @var{obj} is @func{eq?} to @code{unspecified}.
 
 The following bindings are exported by the library @library{vicare
 debugging compiler}.
+
+@c page
+@node namespaces
+@section Identifiers namespaces
+
+
+@cindex @library{vicare language-extensions namespaces}, library
+@cindex Library @library{vicare language-extensions namespaces}
+
+
+The library @library{vicare language-extensions namespaces} allows the
+definition of @dfn{namespaces}; Vicare's namespaces are similar to
+Vicare's modules, indeed a namespace definition expands into a module.
+In addition: namespaces are associated to a macro which can be used as
+``gate'' to access some of the bindings defined in, or visible from, the
+namespace.
+
+Here is a simple example of namespace:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(hellos ciao)           @result{} ciao
+(hellos salut)          @result{} salut
+@end example
+
+@noindent
+namespaces can be nested:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut japanese)
+  (define (ciao)
+    'ciao)
+  (define (salut)
+    'salut)
+  (define-namespace japanese
+    (export ohayo)
+    (define (ohayo)
+      'ohayo)))
+
+(hellos ciao)           @result{} ciao
+(hellos salut)          @result{} salut
+(hellos japanese ohayo) @result{} ohayo
+@end example
+
+@noindent
+the syntax @func{using} can ``import'' bindings from a namespace into
+the current lexical context:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(using hellos)
+(ciao)          @result{} ciao
+(salut)         @result{} salut
+@end example
+
+The following bindings are exported by the library @library{vicare
+language-extensions namespaces}.
+
+
+@deffn Syntax define-namespace @meta{name} (export @meta{member} @dots{}) @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} export
+Define a new namespace wrapping a module and a gate syntax bound to
+@meta{name}.  The identifier @func{export} is the one exported by
+@library{vicare}.  The forms @meta{body} are evaluated inside the
+module.
+
+The identifiers @meta{member} are ``public'': they can be accessed with
+the syntax:
+
+@example
+(@meta{name} @meta{member} @meta{arg} ...)
+@end example
+
+@noindent
+where the optional arguments @meta{arg} are handed to @meta{member}
+untouched; only the ``application'' syntax is available.  Notice that,
+while we cannot access variables from a namespace with the normal
+variable access syntax, we can export parameter functions and also
+define variable setter and getter syntaxes as follows:
+
+@example
+(define-syntax-rule (define-variable ?name ?init-value)
+  (define the-variable ?init-value)
+  (define-syntax ?name
+    (syntax-rules ()
+      ((_)
+       the-variable)
+      ((_ ?new-value)
+       (set! the-variable ?new-value)))))
+
+(define-variable blue 123)
+(blue)          @result{} 123
+(blue 456)
+(blue)          @result{} 456
+@end example
+@end deffn
+
+
+@deffn Syntax using @metao{name} @meta{name} @dots{}
+Import public bindings from one or more namespaces into the current
+lexical context.
+@end deffn
 
 @c page
 @node bytevector compounds

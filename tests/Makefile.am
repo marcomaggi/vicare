@@ -179,6 +179,7 @@ TESTS			=	\
 	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-namespaces.sps			\
 	test-vicare-net-channels-binary.sps		\
 	test-vicare-net-channels-textual.sps		\
 	test-vicare-numerics-generic.sps		\
@@ -504,6 +505,7 @@ EXTRA_DIST = \
 	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-namespaces.sps			\
 	test-vicare-net-channels-binary.sps		\
 	test-vicare-net-channels-textual.sps		\
 	test-vicare-numerics-generic.sps		\
