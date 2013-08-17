@@ -1827,16 +1827,16 @@ the same record type.
 
 The record mechanism spans three libraries:
 
-@table @rsixlibrary
-@item records syntactic
+@table @asis
+@item @rsixlibrary{records syntactic}
 Library, a syntactic layer for defining a record type and associated
 constructor, predicate, accessor, and mutators.
 
-@item records procedural
+@item @rsixlibrary{records procedural}
 Library, a procedural layer for creating and manipulating record types
 and creating constructors, predicates, accessors, and mutators.
 
-@item records inspection
+@item @rsixlibrary{records inspection}
 Library, a set of inspection procedures.
 @end table
 
@@ -3630,12 +3630,12 @@ This type describes unbound identifiers in the program.
 This chapter describes Scheme's libraries for performing input and
 output:
 
-@table @rsixlibrary
-@item io ports
+@table @asis
+@item @rsixlibrary{io ports}
 it is an I/O layer for conventional, imperative buffered input and
 output with text and binary data;
 
-@item io simple
+@item @rsixlibrary{io simple}
 it is a convenience library atop the @rsixlibrary{io ports} library for
 textual I/O, compatible with the traditional Scheme I/O procedures.
 @end table
@@ -9088,11 +9088,11 @@ only the names of the @meta{symbol}s are significant.
 The @rsixlibrary{} library is a composite of most of the libraries
 described in this report.  The only exceptions are:
 
-@table @rsixlibrary
-@item eval
-@item mutable-pairs
-@item mutable-strings
-@item r5rs
+@table @asis
+@item @rsixlibrary{eval}
+@item @rsixlibrary{mutable-pairs}
+@item @rsixlibrary{mutable-strings}
+@item @rsixlibrary{r5rs}
 @end table
 
 The library exports all procedures and syntactic forms provided by the
