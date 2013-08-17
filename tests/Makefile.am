@@ -232,6 +232,7 @@ TESTS			=	\
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
+	test-vicare-shared-memory.sps			\
 	test-vicare-sentinels.sps			\
 	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
@@ -576,6 +577,7 @@ EXTRA_DIST = \
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
+	test-vicare-sentinels.sps			\
 	test-vicare-shared-memory.sps			\
 	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
