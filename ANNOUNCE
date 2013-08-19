@@ -45,7 +45,9 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d1
 ------------------------
 
-* Miscellaneous error fixes.
+* Miscellaneous error fixes.  A new demonic error revealed itself: issue
+  #49; the temporary  workaround is to turn off the  optimiser using the
+  command line option "-O0".
 
 * BACKWARDS    INCOMPATIBILITY   The    syntaxes   CASE-WORD-SIZE    and
   CASE-ENDIANNESS  are  now exported  by  the  library (vicare  platform
