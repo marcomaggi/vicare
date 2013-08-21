@@ -55,6 +55,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi err5rs records::         @ansrfi{99} @acronym{ERR5RS} records.
 * srfi functional pairs::       @ansrfi{101} purely functional
                                 random--access pairs and lists.
+* srfi basic-socket::           @ansrfi{106} basic socket interface.
 @end menu
 
 @c ------------------------------------------------------------
@@ -92,5 +93,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-environment-variables.texi
 @include srfi-err5rs-records.texi
 @include srfi-functional-pairs.texi
+@include srfi-basic-socket-interface.texi
 
 @c end of file
