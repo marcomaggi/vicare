@@ -2179,8 +2179,8 @@
 ;;;; predicates
 
 ;;Defined by R6RS.  Return #t if X is a port.
-(define port?
-  primop.port?)
+(define (port? x)
+  (primop.port? x))
 
 ;;The following  predicates are *not*  affected by the  fact that
 ;;the port is closed.
