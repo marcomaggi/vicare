@@ -7851,7 +7851,7 @@
 (let-syntax
     ((define-bitwise-operation
        (syntax-rules ()
-	 ((_ ?who ?binary-who)
+	 ((_ ?who ?binary-who ?no-arg-return-value)
 	  (define ?who
 	    (case-lambda
 	     ((x y)
@@ -7866,7 +7866,7 @@
 		     (assertion-violation (quote ?who)
 		       "expected number as argument" a))))
 	     (()
-	      -1)
+	      ?no-arg-return-value)
 	     ((a b c d . e*)
 	      (let loop ((ac (?binary-who a (?binary-who b (?binary-who c d))))
 			 (e* e*))
@@ -7875,9 +7875,9 @@
 		  (loop (?binary-who ac ($car e*))
 			($cdr e*)))))))
 	  ))))
-  (define-bitwise-operation bitwise-and binary-bitwise-and)
-  (define-bitwise-operation bitwise-ior binary-bitwise-ior)
-  (define-bitwise-operation bitwise-xor binary-bitwise-xor))
+  (define-bitwise-operation bitwise-and binary-bitwise-and -1)
+  (define-bitwise-operation bitwise-ior binary-bitwise-ior 0)
+  (define-bitwise-operation bitwise-xor binary-bitwise-xor 0))
 
 (module (bitwise-not
 	 $bitwise-not-fixnum
