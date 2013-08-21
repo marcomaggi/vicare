@@ -67,6 +67,10 @@
   (only (srfi :101 random-access-lists procedures))
   (only (srfi :101 random-access-lists syntax))
   (only (srfi :101 random-access-lists equal))
+
+  ;;This SRFI depends upon (vicare posix).  So its compilation is in the
+  ;;file "compile-srfi-posix.sps".
+;;;(only (srfi :106))
   )
 
 ;;; end of file

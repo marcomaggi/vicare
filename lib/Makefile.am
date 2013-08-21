@@ -176,6 +176,16 @@ nobase_dist_libvicare_DATA	+= \
 dist_pkglibexec_SCRIPTS		+= compile-srfi.sps
 endif
 
+if WANT_SRFI
+if WANT_POSIX
+nobase_dist_libvicare_DATA	+= \
+	srfi/%3a106.sls					\
+	srfi/%3a106/socket.sls				\
+	srfi/%3a106/compat.vicare.sls
+dist_pkglibexec_SCRIPTS		+= compile-srfi-posix.sps
+endif
+endif
+
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= \
 	vicare/ffi.sls				\
@@ -268,6 +278,9 @@ if WANT_LIBFFI
 endif
 if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
+if WANT_SRFI
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi-posix.sps
+endif
 endif
 if WANT_GLIBC
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps

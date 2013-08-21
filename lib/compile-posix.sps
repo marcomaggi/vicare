@@ -7,6 +7,9 @@
   (only (vicare posix log-files))
   (only (vicare posix daemonisations))
   (only (vicare posix simple-event-loop))
-  (only (vicare posix tcp-server-sockets)))
+  (only (vicare posix tcp-server-sockets))
+
+  ;;This SRFI depends upon (vicare posix).
+  (only (srfi :106)))
 
 ;;; end of file

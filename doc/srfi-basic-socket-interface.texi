@@ -4,9 +4,9 @@
 
 @cindex @ansrfi{106} basic socket interface
 @cindex @library{srfi :106}, library
-@cindex @library{srfi :106 basic-socket-interface}, library
+@cindex @library{srfi :106 socket}, library
 @cindex Library @library{srfi :106}
-@cindex Library @library{srfi :106 basic-socket-interface}
+@cindex Library @library{srfi :106 socket}
 
 
 The library @library{srfi :106} is by Takashi Kato as the reference
@@ -137,11 +137,15 @@ Any value.
 @subsubsection Constructors and predicates
 
 
-@defun make-client-socket node service
-@defunx make-client-socket node service @var{ai-family}
-@defunx make-client-socket node service @var{ai-family} @var{ai-socktype}
-@defunx make-client-socket node service @var{ai-family} @var{ai-socktype} @var{ai-flags}
-@defunx make-client-socket node service @var{ai-family} @var{ai-socktype} @var{ai-flags} @var{ai-protocol}
+The following bindings are exported by the libraries @library{srfi :106}
+and @library{srfi :106 socket}.
+
+
+@defun make-client-socket @var{node} @var{service}
+@defunx make-client-socket @var{node} @var{service} @var{ai-family}
+@defunx make-client-socket @var{node} @var{service} @var{ai-family} @var{ai-socktype}
+@defunx make-client-socket @var{node} @var{service} @var{ai-family} @var{ai-socktype} @var{ai-flags}
+@defunx make-client-socket @var{node} @var{service} @var{ai-family} @var{ai-socktype} @var{ai-flags} @var{ai-protocol}
 Return a client socket connected to an Internet address.
 
 The Internet address is identified by @var{node} and @var{service}.
@@ -208,6 +212,10 @@ Return @true{} if @var{obj} is a socket object, @false{} otherwise.
 @subsubsection Socket operations
 
 
+The following bindings are exported by the libraries @library{srfi :106}
+and @library{srfi :106 socket}.
+
+
 @defun socket-accept @var{socket}
 Wait for an incoming connection request, and return a fresh connected
 client socket.
@@ -257,6 +265,9 @@ shutdown a socket @func{socket-shutdown} should be called explicitly.
 @subsubsection Port conversion
 
 
+The following bindings are exported by the libraries @library{srfi :106}
+and @library{srfi :106 socket}.
+
 
 @defun socket-input-port @var{socket}
 @defunx socket-output-port @var{socket}
@@ -268,6 +279,10 @@ associated socket must @strong{not} be closed along.
 @c page
 @node srfi basic-socket spec control
 @subsubsection Control features
+
+
+The following bindings are exported by the libraries @library{srfi :106}
+and @library{srfi :106 socket}.
 
 
 @defun call-with-socket @var{socket} @var{proc}
@@ -285,6 +300,9 @@ not return: then @var{socket} is not closed automatically.
 The following bindings must be implemented as macros:
 @code{address-family}, @code{address-info}, @code{socket-domain},
 @code{ip-protocol}, @code{message-type} and @code{shutdown-method}.
+
+The following bindings are exported by the libraries @library{srfi :106}
+and @library{srfi :106 socket}.
 
 
 @deffn Syntax address-family @meta{name}
@@ -427,7 +445,9 @@ flag.
 
 
 Implementations must support following constant variables.  All constant
-variable must be consistent with @posix{}'s[1] definition.
+variable must be consistent with @posix{}'s[1] definition.  The
+following bindings are exported by the libraries @library{srfi :106} and
+@library{srfi :106 socket}.
 
 @c ------------------------------------------------------------
 
@@ -588,320 +608,6 @@ Simple echo client:
 (socket-send client-socket (string->utf8 "hello\r\n"))
 (socket-recv client-socket (string-length "hello\r\n"))
 @end example
-
-
-
-<h1>Implementation</h1>
-The following implementation is written in R6RS.
-
-<h2>Interface layer</h2>
-<pre>(library (srfi :106 socket)
-    (export make-client-socket make-server-socket
-            socket?
-            (rename (socket-port socket-input-port)
-                    (socket-port socket-output-port))
-            call-with-socket
-            socket-merge-flags socket-purge-flags
-            socket-accept socket-send socket-recv socket-shutdown socket-close
-            *af-unspec* *af-inet* *af-inet6*
-            *sock-stream* *sock-dgram*
-            *ai-canonname* *ai-numerichost*
-            *ai-v4mapped* *ai-all* *ai-addrconfig*
-            *ipproto-ip* *ipproto-tcp* *ipproto-udp*
-            *shut-rd* *shut-wr* *shut-rdwr*
-            address-family socket-domain address-info
-            ip-protocol message-type shutdown-method)
-    (import (rnrs) (except (socket impl) socket-port))
-
-  (define %address-family `((inet    ,*af-inet*)
-                            (inet6   ,*af-inet6*)
-                            (unspec  ,*af-unspec*)))
-  (define %address-info `((canoname     ,*ai-canonname*)
-                          (numerichost  ,*ai-numerichost*)
-                          (v4mapped     ,*ai-v4mapped*)
-                          (all          ,*ai-all*)
-                          (addrconfig   ,*ai-addrconfig*)))
-
-  (define %ip-protocol `((ip  ,*ipproto-ip*)
-                         (tcp ,*ipproto-tcp*)
-                         (udp ,*ipproto-udp*)))
-
-  (define %socket-domain `((stream   ,*sock-stream*)
-                           (datagram ,*sock-dgram*)))
-
-  (define %message-types `((none 0)
-                           (peek ,*msg-peek*)
-                           (oob  ,*msg-oob*)
-                           (wait-all ,*msg-waitall*)))
-
-  (define (lookup who sets name)
-    (cond ((assq name sets) => cadr)
-          (else (assertion-violation who "no name defined" name)))
-
-  (define-syntax address-family
-    (syntax-rules ()
-      ((_ name)
-       (lookup 'address-family %address-family 'name))))
-
-  (define-syntax address-info
-    (syntax-rules ()
-      ((_ names ...)
-       (apply socket-merge-flags
-              (map (lambda (name) (lookup 'address-info %address-info name))
-                   '(names ...))))))
-
-  (define-syntax socket-domain
-    (syntax-rules ()
-      ((_ name)
-       (lookup 'socket-domain %socket-domain 'name))))
-
-  (define-syntax ip-protocol
-    (syntax-rules ()
-      ((_ name)
-       (lookup 'ip-protocol %ip-protocol 'name))))
-
-  (define-syntax message-type
-    (syntax-rules ()
-      ((_ names ...)
-       (apply socket-merge-flags
-              (map (lambda (name) (lookup 'message-type %message-types name))
-                   '(names ...))))))
-
-  (define (%proper-method methods)
-    (define allowed-methods '(read write))
-    (define (check-methods methods)
-      (let loop ((methods methods) (seen '()))
-        (cond ((null? methods))
-              ((memq (car methods) allowed-methods)
-               => (lambda (m)
-                    (if (memq (car m) seen)
-                        (assertion-violation 'shutdown-method
-                                             "duplicate method" m)
-                        (loop (cdr methods) (cons (car m) seen)))))
-              (else (assertion-violation 'shutdown-method
-                                         "unknown method" (car methods)))))
-    (check-methods methods)
-    (if (null? (cdr methods))
-        (case (car methods)
-          ((read) *shut-rd*)
-          ((write) *shut-wr*))
-        *shut-rdwr*))
-
-  (define-syntax shutdown-method
-    (syntax-rules ()
-      ((_ methods ...)
-       (%proper-method '(methods ...)))))
-
-  (define (socket-port socket)
-    (define (read! bv start count)
-      (let ((r (socket-recv socket count)))
-        (bytevector-copy! r 0 bv start (bytevector-length r))
-        (bytevector-length r)))
-    (define (write! bv start count)
-      (let ((buf (make-bytevector count)))
-        (bytevector-copy! bv start buf 0 count)
-        (socket-send socket buf)))
-    (make-custom-binary-input/output-port
-         "socket-port" read! write! #f #f #f))
-
-  )
-</pre>
-
-
-<h2>Implementation dependent layer</h2>
-<h3>For Ypsilon</h3>
-<pre>(library (srfi :106 socket impl)
-    (export make-client-socket make-server-socket
-            socket? socket-port call-with-socket
-            (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-purge-flags))
-            socket-accept socket-send socket-recv socket-shutdown socket-close
-            (rename (AF_UNSPEC *af-unspec*)
-                    (AF_INET   *af-inet*)
-                    (AF_INET6  *af-inet6*))
-            (rename (SOCK_STREAM *sock-stream*)
-                    (SOCK_DGRAM  *sock-dgram*))
-            (rename (AI_CANONNAME   *ai-canonname*)
-                    (AI_NUMERICHOST *ai-numerichost*)
-                    (AI_V4MAPPED    *ai-v4mapped*)
-                    (AI_ALL         *ai-all*)
-                    (AI_ADDRCONFIG  *ai-addrconfig*))
-            (rename (IPPROTO_IP  *ipproto-ip*)
-                    (IPPROTO_TCP *ipproto-tcp*)
-                    (IPPROTO_UDP *ipproto-udp*))
-            (rename (MSG_PEEK     *msg-peek*)
-                    (MSG_OOB      *msg-oob*)
-                    (MSG_WAITALL  *msg-waitall*))
-            (rename (SHUT_RD   *shut-rd*)
-                    (SHUT_WR   *shut-wr*)
-                    (SHUT_RDWR *shut-rdwr*)))
-    (import (rnrs) (rename (ypsilon socket)
-                           (socket-send %socket-send)
-                           (socket-recv %socket-recv)))
-
-  (define IPPROTO_IP 0)
-  (define IPPROTO_TCP 6)
-  (define IPPROTO_UDP 17)
-
-  (define (socket-send socket bv . flags)
-    (let ((flags (if (null? flags) 0 (car flags))))
-      (%socket-send socket bv flags)))
-
-  (define (socket-recv socket size . flags)
-    (let ((flags (if (null? flags) 0 (car flags))))
-      (%socket-recv socket size flags)))
-)
-</pre>
-
-<h3>For Mosh</h3>
-<pre>(library (srfi :106 socket impl)
-    (export make-client-socket make-server-socket
-            socket? socket-port call-with-socket
-            (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-purge-flags))
-            socket-accept socket-send socket-recv socket-shutdown socket-close
-            (rename (AF_UNSPEC *af-unspec*)
-                    (AF_INET   *af-inet*)
-                    (AF_INET6  *af-inet6*))
-            (rename (SOCK_STREAM *sock-stream*)
-                    (SOCK_DGRAM  *sock-dgram*))
-            (rename (AI_CANONNAME   *ai-canonname*)
-                    (AI_NUMERICHOST *ai-numerichost*)
-                    (AI_V4MAPPED    *ai-v4mapped*)
-                    (AI_ALL         *ai-all*)
-                    (AI_ADDRCONFIG  *ai-addrconfig*))
-            (rename (IPPROTO_IP  *ipproto-ip*)
-                    (IPPROTO_TCP *ipproto-tcp*)
-                    (IPPROTO_UDP *ipproto-udp*))
-            (rename (MSG_PEEK     *msg-peek*)
-                    (MSG_OOB      *msg-oob*)
-                    (MSG_WAITALL  *msg-waitall*))
-            (rename (SHUT_RD   *shut-rd*)
-                    (SHUT_WR   *shut-wr*)
-                    (SHUT_RDWR *shut-rdwr*)))
-    (import (rnrs) (mosh socket))
-  (define IPPROTO_IP 0)
-  (define MSG_OOB 1)
-  (define MSG_PEEK 2)
-  (define MSG_WAITALL 8)
-  )
-</pre>
-
-<h3>For Sagittarius</h3>
-<pre>(library (srfi :106 socket impl)
-    (export make-client-socket make-server-socket
-            socket? socket-port call-with-socket
-            (rename (bitwise-ior socket-merge-flags)
-                    (bitwise-xor socket-purge-flags))
-            socket-accept socket-send socket-recv socket-shutdown socket-close
-            (rename (AF_UNSPEC *af-unspec*)
-                    (AF_INET   *af-inet*)
-                    (AF_INET6  *af-inet6*))
-            (rename (SOCK_STREAM *sock-stream*)
-                    (SOCK_DGRAM  *sock-dgram*))
-            (rename (AI_CANONNAME   *ai-canonname*)
-                    (AI_NUMERICHOST *ai-numerichost*)
-                    (AI_V4MAPPED    *ai-v4mapped*)
-                    (AI_ALL         *ai-all*)
-                    (AI_ADDRCONFIG  *ai-addrconfig*))
-            (rename (IPPROTO_IP  *ipproto-ip*)
-                    (IPPROTO_TCP *ipproto-tcp*)
-                    (IPPROTO_UDP *ipproto-udp*))
-            (rename (MSG_PEEK     *msg-peek*)
-                    (MSG_OOB      *msg-oob*)
-                    (MSG_WAITALL  *msg-waitall*))
-            (rename (SHUT_RD   *shut-rd*)
-                    (SHUT_WR   *shut-wr*)
-                    (SHUT_RDWR *shut-rdwr*)))
-    (import (rnrs) (rename (sagittarius socket)
-                           (socket-send %socket-send)
-                           (socket-recv %socket-recv)))
-
-  (define IPPROTO_IP  0)
-  (define IPPROTO_TCP 6)
-  (define IPPROTO_UDP 17)
-
-  (define (socket-send socket bv :optional (flags 0))
-    (%socket-send socket bv flags))
-
-  (define (socket-recv socket size :optional (flags 0))
-    (%socket-recv socket size flags))
-  )
-</pre>
-
-<h3>For others</h3>
-<pre>(library (srfi :106 socket impl)
-    (export make-client-socket make-server-socket
-            socket? socket-port call-with-socket
-            socket-accept socket-send socket-recv socket-shutdown socket-close
-            (rename (AF_UNSPEC *af-unspec*)
-                    (AF_INET   *af-inet*)
-                    (AF_INET6  *af-inet6*))
-            (rename (SOCK_STREAM *sock-stream*)
-                    (SOCK_DGRAM  *sock-dgram*))
-            (rename (AI_CANONNAME   *ai-canonname*)
-                    (AI_NUMERICHOST *ai-numerichost*)
-                    (AI_V4MAPPED    *ai-v4mapped*)
-                    (AI_ALL         *ai-all*)
-                    (AI_ADDRCONFIG  *ai-addrconfig*))
-            (rename (IPPROTO_IP  *ipproto-ip*)
-                    (IPPROTO_TCP *ipproto-tcp*)
-                    (IPPROTO_UDP *ipproto-udp*))
-            (rename (MSG_PEEK     *msg-peek*)
-                    (MSG_OOB      *msg-oob*)
-                    (MSG_WAITALL  *msg-waitall*))
-            (rename (SHUT_RD   *shut-rd*)
-                    (SHUT_WR   *shut-wr*)
-                    (SHUT_RDWR *shut-rdwr*)))
-    (import (rnrs))
-
-  (define-syntax define-unsupported
-    (syntax-rules ()
-      ((_ (name))
-       (define (name . _)
-         (raise
-          (condition (make-implementation-restriction-violation)
-                     (make-who-condition 'name)
-                     (make-message-condition
-                      "This SRFI is not supported on this implementation")))))
-      ((_ name)
-       (define name #f))))
-
-  (define-unsupported (make-client-socket))
-  (define-unsupported (make-server-socket))
-  (define-unsupported (socket?           ))
-  (define-unsupported (socket-port       ))
-  (define-unsupported (call-with-socket  ))
-  (define-unsupported (socket-accept     ))
-  (define-unsupported (socket-send       ))
-  (define-unsupported (socket-recv       ))
-  (define-unsupported (socket-shutdown   ))
-  (define-unsupported (socket-close      ))
-
-  (define-unsupported AF_UNSPEC     )
-  (define-unsupported AF_INET       )
-  (define-unsupported AF_INET6      )
-  (define-unsupported SOCK_STREAM   )
-  (define-unsupported SOCK_DGRAM    )
-  (define-unsupported AI_CANONNAME  )
-  (define-unsupported AI_NUMERICHOST)
-  (define-unsupported AI_V4MAPPED   )
-  (define-unsupported AI_ALL        )
-  (define-unsupported AI_ADDRCONFIG )
-
-  (define-unsupported IPPROTO_IP)
-  (define-unsupported IPPROTO_TCP)
-  (define-unsupported IPPROTO_UDP)
-
-  (define-unsupported MSG_OOB)
-  (define-unsupported MSG_PEEK)
-  (define-unsupported MSG_WAITALL)
-
-  (define-unsupported SHUT_RD)
-  (define-unsupported SHUT_WR)
-  (define-unsupported SHUT_RDWR)
-)
-</pre>
 
 @c page
 @node srfi basic-socket refs
