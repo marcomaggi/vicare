@@ -2260,7 +2260,7 @@
 	   (if ($fx= y 1)
 	       x
 	     ;;The GCD between  any exact integer and a  fixnum is *not*
-	     ;;always a fixnum; the GDC is always positive.
+	     ;;always a fixnum; the GCD is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
 	       (cond ((eq? g 1)
 		      ;;X and Y are not exactly divisible.
@@ -2299,7 +2299,7 @@
     ;;Remember that a bignum cannot be zero, so neither X nor Y are zero
     ;;here.
     ;;
-    ;;The GCD of  two bignums is a  fixnum or bignum; the  GDC is always
+    ;;The GCD of  two bignums is a  fixnum or bignum; the  GCD is always
     ;;positive.
     (if (bnbn= x y)
 	1
