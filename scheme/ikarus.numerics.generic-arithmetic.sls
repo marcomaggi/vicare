@@ -8167,22 +8167,26 @@
     ;;OFFSET must be non-negative.  Fill the introduced most significant
     ;;bits as appropriate to extend the sign of INTEGER.
     ;;
-    (with-arguments-validation (who)
-	((fixnum	offset))
-      (cond-exact-integer-operand integer
-	((fixnum?)
-	 (if ($fx>= offset 0)
-	     ($fxsra integer offset)
-	   (%error-offset-non-negative who offset)))
-	((bignum?)
-	 (cond (($fxpositive? offset)
-		(foreign-call "ikrt_bignum_shift_right" integer offset))
-	       (($fxzero? offset)
-		integer)
-	       (else
-		(%error-offset-non-negative who offset))))
-	(else
-	 (%error-not-integer who offset)))))
+    (unless (fixnum? offset)
+      (raise
+       (condition (make-implementation-restriction-violation)
+		  (make-who-condition who)
+		  (make-message-condition "expected fixnum as shift offset argument")
+		  (make-irritants-condition (list offset)))))
+    (cond-exact-integer-operand integer
+      ((fixnum?)
+       (if ($fx>= offset 0)
+	   ($fxsra integer offset)
+	 (%error-offset-non-negative who offset)))
+      ((bignum?)
+       (cond (($fxpositive? offset)
+	      (foreign-call "ikrt_bignum_shift_right" integer offset))
+	     (($fxzero? offset)
+	      integer)
+	     (else
+	      (%error-offset-non-negative who offset))))
+      (else
+       (%error-not-integer who offset))))
 
   (define (%error-offset-non-negative who obj)
     (assertion-violation who "offset must be non-negative" obj))
@@ -8243,25 +8247,29 @@
     (%shift-left-logical integer offset 'bitwise-arithmetic-shift-left))
 
   (define (%shift-left-logical integer offset who)
-    (with-arguments-validation (who)
-	((fixnum	offset))
-      (cond-exact-integer-operand integer
-	((fixnum?)
-	 (cond (($fxpositive? offset)
-		(foreign-call "ikrt_fixnum_shift_left" integer offset))
-	       (($fxzero? offset)
-		integer)
-	       (else
-		(%error-positive-offset who offset))))
-	((bignum?)
-	 (cond (($fxpositive? offset)
-		(foreign-call "ikrt_bignum_shift_left" integer offset))
-	       (($fxzero? offset)
-		integer)
-	       (else
-		(%error-positive-offset who offset))))
-	(else
-	 (assertion-violation who "expected exact integer as argument" integer)))))
+    (unless (fixnum? offset)
+      (raise
+       (condition (make-implementation-restriction-violation)
+		  (make-who-condition who)
+		  (make-message-condition "expected fixnum as shift offset argument")
+		  (make-irritants-condition (list offset)))))
+    (cond-exact-integer-operand integer
+      ((fixnum?)
+       (cond (($fxpositive? offset)
+	      (foreign-call "ikrt_fixnum_shift_left" integer offset))
+	     (($fxzero? offset)
+	      integer)
+	     (else
+	      (%error-positive-offset who offset))))
+      ((bignum?)
+       (cond (($fxpositive? offset)
+	      (foreign-call "ikrt_bignum_shift_left" integer offset))
+	     (($fxzero? offset)
+	      integer)
+	     (else
+	      (%error-positive-offset who offset))))
+      (else
+       (assertion-violation who "expected exact integer as argument" integer))))
 
   (define (%error-positive-offset who offset)
     (assertion-violation who "offset must be non-negative" offset))
@@ -8271,37 +8279,41 @@
 
 (define (bitwise-arithmetic-shift integer offset)
   (define who 'bitwise-arithmetic-shift)
-  (with-arguments-validation (who)
-      ((fixnum	offset))
-    (cond-exact-integer-operand integer
-      ((fixnum?)
-       (cond (($fxpositive? offset)
-	      (foreign-call "ikrt_fixnum_shift_left" integer offset))
-	     (($fxzero? offset)
-	      integer)
-	     (else
-	      ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
-	      ;;opposite is a bignum!!!
-	      (let ((offset^ (- offset)))
-		(if (fixnum? offset^)
-		    ($fxsra integer offset^)
-		  (assertion-violation who "shift amount is too big" offset))))))
+  (unless (fixnum? offset)
+    (raise
+     (condition (make-implementation-restriction-violation)
+		(make-who-condition who)
+		(make-message-condition "expected fixnum as shift offset argument")
+		(make-irritants-condition (list offset)))))
+  (cond-exact-integer-operand integer
+    ((fixnum?)
+     (cond (($fxpositive? offset)
+	    (foreign-call "ikrt_fixnum_shift_left" integer offset))
+	   (($fxzero? offset)
+	    integer)
+	   (else
+	    ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
+	    ;;opposite is a bignum!!!
+	    (let ((offset^ (- offset)))
+	      (if (fixnum? offset^)
+		  ($fxsra integer offset^)
+		(assertion-violation who "shift amount is too big" offset))))))
 
-      ((bignum?)
-       (cond (($fxpositive? offset)
-	      (foreign-call "ikrt_bignum_shift_left" integer offset))
-	     (($fxzero? offset)
-	      integer)
-	     (else
-	      ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
-	      ;;opposite is a bignum!!!
-	      (let ((offset^ (- offset)))
-		(if (fixnum? offset^)
-		    (foreign-call "ikrt_bignum_shift_right" integer offset^)
-		  (assertion-violation who "shift amount is too big" offset))))))
+    ((bignum?)
+     (cond (($fxpositive? offset)
+	    (foreign-call "ikrt_bignum_shift_left" integer offset))
+	   (($fxzero? offset)
+	    integer)
+	   (else
+	    ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
+	    ;;opposite is a bignum!!!
+	    (let ((offset^ (- offset)))
+	      (if (fixnum? offset^)
+		  (foreign-call "ikrt_bignum_shift_right" integer offset^)
+		(assertion-violation who "shift amount is too big" offset))))))
 
-      (else
-       (assertion-violation who "not an exact integer" integer)))))
+    (else
+     (assertion-violation who "not an exact integer" integer))))
 
 
 (define (bitwise-length n)
