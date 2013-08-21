@@ -3639,10 +3639,15 @@
 	(let ((service (if (string? service)
 			   service
 			 (number->string service))))
-	  (%attempt-addrinfos hostname service
-			      (socket PF_INET SOCK_STREAM 0)
-			      (getaddrinfo hostname service HINTS)
-			      log-procedure))))
+	  (with-compensations/on-error
+	    (define sock
+	      (compensate
+		  (socket PF_INET SOCK_STREAM 0)
+		(with
+		 (close socket))))
+	    (%attempt-addrinfos hostname service sock
+				(getaddrinfo hostname service HINTS)
+				log-procedure)))))
      ))
 
   (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
@@ -3713,10 +3718,15 @@
 	(let ((service (if (string? service)
 			   service
 			 (number->string service))))
-	  (%attempt-addrinfos hostname service
-			      (socket PF_INET SOCK_STREAM 0)
-			      (getaddrinfo hostname service HINTS)
-			      log-procedure))))
+	  (with-compensations/on-error
+	    (define sock
+	      (compensate
+		  (socket PF_INET SOCK_STREAM 0)
+		(with
+		 (close socket))))
+	    (%attempt-addrinfos hostname service sock
+				(getaddrinfo hostname service HINTS)
+				log-procedure)))))
      ))
 
   (define (%attempt-addrinfos hostname service sock addrinfos log-procedure)
