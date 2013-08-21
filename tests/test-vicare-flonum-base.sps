@@ -172,6 +172,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'arithmetics))
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(fl- 1))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'funcs))
 
   (check (flmin +0.0 +0.0)	=> +0.0)
