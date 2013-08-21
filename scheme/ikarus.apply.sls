@@ -65,10 +65,13 @@
 
 (define-argument-validation (list-of-arguments who obj)
   (%length-or-raise obj)
-  (assertion-violation who
-    (string-append "expected proper list as argument with maximum length "
-		   (number->string CALL-ARGUMENTS-LIMIT))
-    obj))
+  (raise
+   (condition (make-implementation-restriction-violation)
+	      (make-who-condition who)
+	      (make-message-condition
+	       (string-append "expected proper list as argument with maximum length "
+			      (number->string CALL-ARGUMENTS-LIMIT)))
+	      (make-irritants-condition (list obj)))))
 
 
 (define who 'apply)
