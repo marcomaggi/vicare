@@ -50,6 +50,10 @@
 
 (parametrise ((check-test-name	'fixnums))
 
+  (check (lcm 0)		=> 0)
+  (check (lcm +123)		=> +123)
+  (check (lcm -123)		=> +123)
+
   (let-syntax ((test (make-test lcm $lcm-fixnum-fixnum)))
     (test 0 0 0)
     (test 1 0 0)
@@ -146,6 +150,9 @@
 
 
 (parametrise ((check-test-name	'bignums))
+
+  (check (lcm (+ 1 (greatest-fixnum)))		=> (+ 1 (greatest-fixnum)))
+  (check (lcm (- (+ 1 (greatest-fixnum))))	=> (+ 1 (greatest-fixnum)))
 
   (let-syntax ((test (make-test lcm #;$lcm-bignum-fixnum)))
     (test BN1 0 0)
@@ -285,6 +292,11 @@
 
 
 (parametrise ((check-test-name	'flonums))
+
+  (check (lcm +0.0)		=> +0.0)
+  (check (lcm -0.0)		=> +0.0)
+  (check (lcm +123.0)		=> +123.0)
+  (check (lcm -123.0)		=> +123.0)
 
   (let-syntax ((test (make-inexact-test lcm $lcm-flonum-fixnum)))
     (test IFL1 0 0.0)

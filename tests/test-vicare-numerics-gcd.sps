@@ -49,6 +49,10 @@
 
 (parametrise ((check-test-name	'fixnums))
 
+  (check (gcd 0)		=> 0)
+  (check (gcd +123)		=> +123)
+  (check (gcd -123)		=> +123)
+
   (let-syntax ((test (make-test gcd $gcd-fixnum-fixnum)))
     (test 0 1 1)
     (test 0 -1 1)
@@ -139,6 +143,9 @@
 
 
 (parametrise ((check-test-name	'bignums))
+
+  (check (gcd (+ 1 (greatest-fixnum)))		=> (+ 1 (greatest-fixnum)))
+  (check (gcd (- (+ 1 (greatest-fixnum))))	=> (+ 1 (greatest-fixnum)))
 
   (let-syntax ((test (make-test gcd #;$gcd-bignum-fixnum)))
     (test BN1 FX1 1)
@@ -276,6 +283,11 @@
 
 
 (parametrise ((check-test-name	'flonums))
+
+  (check (gcd +0.0)		=> +0.0)
+  (check (gcd -0.0)		=> +0.0)
+  (check (gcd +123.0)		=> +123.0)
+  (check (gcd -123.0)		=> +123.0)
 
   (let-syntax ((test (make-inexact-test gcd $gcd-flonum-fixnum)))
     (test IFL1 FX1 1.0)

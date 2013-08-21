@@ -2779,6 +2779,7 @@
     ($cube-compnum				$numerics $vicare-numerics)
     ($cube-cflonum				$numerics $vicare-numerics)
 
+    ($gcd-number				$numerics $vicare-numerics)
     ($gcd-number-number				$numerics $vicare-numerics)
     ($gcd-fixnum-number				$numerics $vicare-numerics)
     ($gcd-bignum-number				$numerics $vicare-numerics)
@@ -2796,6 +2797,7 @@
     ($gcd-flonum-bignum				$numerics $vicare-numerics)
     ($gcd-flonum-flonum				$numerics $vicare-numerics)
 
+    ($lcm-number				$numerics $vicare-numerics)
     ($lcm-number-number				$numerics $vicare-numerics)
     ($lcm-fixnum-number				$numerics $vicare-numerics)
     ($lcm-bignum-number				$numerics $vicare-numerics)

@@ -208,6 +208,7 @@
     $cube-fixnum		$cube-bignum		$cube-ratnum
     $cube-compnum		$cube-cflonum
 
+    $gcd-number
     $gcd-number-number		$gcd-fixnum-number	$gcd-bignum-number
     $gcd-flonum-number		$gcd-number-fixnum	$gcd-number-bignum
     $gcd-number-flonum		$gcd-fixnum-fixnum	$gcd-fixnum-bignum
@@ -215,6 +216,7 @@
     $gcd-bignum-flonum		$gcd-flonum-fixnum	$gcd-flonum-bignum
     $gcd-flonum-flonum
 
+    $lcm-number
     $lcm-number-number		$lcm-fixnum-number	$lcm-bignum-number
     $lcm-flonum-number		$lcm-number-fixnum	$lcm-number-bignum
     $lcm-number-flonum		$lcm-fixnum-fixnum	$lcm-fixnum-bignum
@@ -2750,7 +2752,7 @@
 
 
 (module (gcd
-	 $gcd-number-number
+	 $gcd-number		$gcd-number-number
 	 $gcd-fixnum-number	$gcd-bignum-number	$gcd-flonum-number
 	 $gcd-number-fixnum	$gcd-number-bignum	$gcd-number-flonum
 	 $gcd-fixnum-fixnum	$gcd-fixnum-bignum	$gcd-fixnum-flonum
@@ -2764,18 +2766,7 @@
       ($gcd-number-number x y))
 
      ((x)
-      (cond-inexact-integer-operand x
-	((fixnum?)	x)
-	((bignum?)	x)
-	((flonum?)
-	 (let ((x.exact ($flonum->exact x)))
-	   (cond-exact-integer-operand x.exact
-	     ((fixnum?)		x)
-	     ((bignum?)		x)
-	     (else
-	      (%error-not-integer x)))))
-	(else
-	 (%error-not-integer x))))
+      ($gcd-number x))
 
      (() 0)
 
@@ -2789,6 +2780,21 @@
      ))
 
 ;;; --------------------------------------------------------------------
+
+  (define ($gcd-number x)
+    (cond-inexact-integer-operand x
+      ((fixnum?)
+       (if ($fxnonnegative? x)
+	   x
+	 (- x)))
+      ((bignum?)
+       (if ($bignum-positive? x)
+	   x
+	 (- x)))
+      ((flonum?)
+       (inexact ($gcd-number ($flonum->exact x))))
+      (else
+       (%error-not-integer x))))
 
   (define ($gcd-number-number x y)
     (cond-inexact-integer-operand x
@@ -3000,7 +3006,7 @@
 
 
 (module (lcm
-	 $lcm-number-number
+	 $lcm-number		$lcm-number-number
 	 $lcm-fixnum-number	$lcm-bignum-number	$lcm-flonum-number
 	 $lcm-number-fixnum	$lcm-number-bignum	$lcm-number-flonum
 	 $lcm-fixnum-fixnum	$lcm-fixnum-bignum	$lcm-fixnum-flonum
@@ -3029,15 +3035,16 @@
 
   (define ($lcm-number x)
     (cond-inexact-integer-operand x
-      ((fixnum?)	x)
-      ((bignum?)	x)
+      ((fixnum?)
+       (if ($fxnonnegative? x)
+	   x
+	 (- x)))
+      ((bignum?)
+       (if ($bignum-positive? x)
+	   x
+	 (- x)))
       ((flonum?)
-       (let ((x.exact ($flonum->exact x)))
-	 (cond-exact-integer-operand x.exact
-	   ((fixnum?)	x)
-	   ((bignum?)	x)
-	   (else
-	    (%error-not-integer x)))))
+       (inexact ($lcm-number ($flonum->exact x))))
       (else
        (%error-not-exact-integer x))))
 

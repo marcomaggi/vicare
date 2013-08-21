@@ -2358,6 +2358,12 @@ Compute the cube of a cflonum and return the result as cflonum.
 @subsection Greatest common divisor
 
 
+@deffn {Unsafe Operation} $gcd-number @var{x}
+Return the greatest common divisor of standalone @var{x}, an exact or
+inexact integer; return a fixnum, bignum or flonum.
+@end deffn
+
+
 @deffn {Unsafe Operation} $gcd-number-number @vari{x} @varii{x}
 Return the greatest common divisor between any couple of exact or
 inexact integers; return a fixnum, bignum or flonum.
@@ -2476,6 +2482,12 @@ a flonum.
 @c page
 @node syslib numerics lcm
 @subsection Least common multiple
+
+
+@deffn {Unsafe Operation} $lcm-number @var{x}
+Return the least common multiple of standalone @var{x}, an exact or
+inexact integer; return a fixnum, bignum or flonum.
+@end deffn
 
 
 @deffn {Unsafe Operation} $lcm-number-number @vari{x} @varii{x}
