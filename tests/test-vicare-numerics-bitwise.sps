@@ -44,6 +44,14 @@
   (check (bitwise-ior 1 0)			=> 1)
   (check (bitwise-ior 1 1)			=> 1)
 
+  ;;Example by Goran Weinholt for issue #52.
+  ;;
+  (check
+      (let ()
+	(define (identity x) (bitwise-ior x (bitwise-ior)))
+	(identity 42))
+    => 42)
+
 ;;; --------------------------------------------------------------------
 
   (check (bitwise-xor)				=> 0)
@@ -55,6 +63,14 @@
   (check (bitwise-xor 1 0)			=> 1)
   (check (bitwise-xor 1 1)			=> 0)
 
+  ;;Example by Goran Weinholt for issue #52.
+  ;;
+  (check
+      (let ()
+	(define (identity x) (bitwise-xor x (bitwise-xor)))
+	(identity 42))
+    => 42)
+
 ;;; --------------------------------------------------------------------
 
   (check (bitwise-and)				=> -1)
@@ -65,6 +81,14 @@
   (check (bitwise-and 0 1)			=> 0)
   (check (bitwise-and 1 0)			=> 0)
   (check (bitwise-and 1 1)			=> 1)
+
+  ;;Example by Goran Weinholt for issue #52.
+  ;;
+  (check
+      (let ()
+	(define (identity x) (bitwise-and x (bitwise-and)))
+	(identity 42))
+    => 42)
 
   #t)
 
