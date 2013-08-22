@@ -604,46 +604,72 @@ as @posix{}'s @code{SHUT_RDWR}.
 Simple echo server:
 
 @example
-(import (rnrs)
-  (srfi :106 socket))
+(import (vicare)
+  (prefix (srfi :106 socket)
+          srfi.))
 
-(define echo-server-socket (make-server-socket "5000"))
+(define (server-run master-socket)
+  ;;Handle the first pending connection.  If an
+  ;;exception is raised ignore it.
+  (guard (E (else
+             (debug-print (condition-message E))))
+    (srfi.call-with-socket
+        (srfi.socket-accept master-socket)
+      (lambda (server-socket)
+        (with-compensations
+          (define in
+            (compensate
+                (transcoded-port
+                 (srfi.socket-input-port  server-socket)
+                 (native-transcoder))
+              (with
+               (close-port in))))
+          (define ou
+            (compensate
+                (transcoded-port
+                 (srfi.socket-output-port server-socket)
+                 (native-transcoder))
+              (with
+               (close-port ou))))
+          (push-compensation
+           (srfi.socket-shutdown server-socket)
+           (srfi.socket-close    server-socket))
+          (let loop ((line (read-line in)))
+            (unless (eof-object? line)
+              (put-string ou (string-append line "\r\n"))
+              (flush-output-port ou)
+              (loop (read-line in))))))))
+  ;;Handle next pending connection.
+  (server-run master-socket))
 
-(define (server-run)
-  (define (get-line-from-binary-port bin)
-    (utf8->string
-     (call-with-bytevector-output-port
-      (lambda (out)
-        (let loop ((b (get-u8 bin)))
-          (case b
-            ((#xA) #t) ;; newline
-            ((#xD) (loop (get-u8 bin))) ;; carriage return
-            (else (put-u8 out b) (loop (get-u8 bin))))))))
-  (call-with-socket (socket-accept echo-server-socket)
-    (lambda (sock)
-      (let ((in (socket-input-port sock))
-            (out (socket-output-port sock)))
-        (let lp2 ((r (get-line-from-binary-port in)))
-          (put-bytevector out (string->utf8 (string-append r "\r\n")))
-          (lp2 (get-line-from-binary-port in)))))))
-(server-run)
+(define echo-master-socket
+  (srfi.make-server-socket "8080"))
+
+(server-run echo-master-socket)
 @end example
 
 Simple echo client:
 
 @example
 (import (rnrs)
-  (srfi :106 socket))
+  (prefix (srfi :106 socket)
+          srfi.))
 
 (define client-socket
-  (make-client-socket "localhost" "5000"
-                      (address-family inet)
-                      (socket-domain stream)
-                      (address-info v4mapped addrconfig)
-                      (ip-protocol ip)))
+  (srfi.make-client-socket "localhost" "8080"
+    (srfi.address-family inet)
+    (srfi.socket-domain stream)
+    (srfi.address-info v4mapped addrconfig)
+    (srfi.ip-protocol ip)))
 
-(socket-send client-socket (string->utf8 "hello\r\n"))
-(socket-recv client-socket (string-length "hello\r\n"))
+(srfi.socket-send client-socket (string->utf8 "hello\r\n"))
+(display (utf8->string
+          (srfi.socket-recv client-socket
+                            (string-length "hello\r\n"))))
+(flush-output-port (current-output-port))
+(srfi.socket-shutdown client-socket
+                      (srfi.shutdown-method read write))
+(srfi.socket-close client-socket)
 @end example
 
 @c page

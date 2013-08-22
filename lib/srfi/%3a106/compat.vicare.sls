@@ -186,8 +186,10 @@
 
 ;;;; socket operations
 
-(define (socket-accept socket)
-  (px.accept (:socket-fd socket)))
+(define (socket-accept master-socket)
+  (receive (server-socket client-address)
+      (px.accept (:socket-fd master-socket))
+    (:make-socket server-socket #f #f #f #f #f #f)))
 
 (define socket-send
   (case-lambda
