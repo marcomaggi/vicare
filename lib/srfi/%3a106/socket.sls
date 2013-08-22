@@ -29,8 +29,7 @@
     make-client-socket		make-server-socket
     socket?
 
-    (rename (socket-port socket-input-port)
-	    (socket-port socket-output-port))
+    socket-input-port		socket-output-port
     call-with-socket
 
     socket-merge-flags		socket-purge-flags
@@ -140,17 +139,22 @@
     ((_ methods ...)
      (%proper-method '(methods ...)))))
 
-(define (socket-port socket)
+
+;;;; socket ports
+
+(define (socket-input-port socket)
   (define (read! bv start count)
     (let ((r (socket-recv socket count)))
       (bytevector-copy! r 0 bv start (bytevector-length r))
       (bytevector-length r)))
+  (make-custom-binary-input-port "socket-input-port" read! #f #f #f))
+
+(define (socket-output-port socket)
   (define (write! bv start count)
     (let ((buf (make-bytevector count)))
       (bytevector-copy! bv start buf 0 count)
       (socket-send socket buf)))
-  (make-custom-binary-input/output-port
-   "socket-port" read! write! #f #f #f))
+  (make-custom-binary-output-port "socket-output-port" write! #f #f #f))
 
 
 ;;;; done

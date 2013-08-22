@@ -29,6 +29,12 @@
 (import (vicare)
   (prefix (srfi :106) srfi.))
 
+
+;;;; with binary ports
+;;
+;;Download the first page from "http://reddit.com/r/programming/".
+;;
+
 (with-compensations
   (define socket
     (compensate
@@ -73,6 +79,60 @@
 		#;(log "received: ~s\n" line.str)
 		(display line.str str-port)
 		(next (get-bytevector-some in-port)))))))))
+
+  (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
+  (display (recv in-port))
+  (display (recv in-port))
+  (flush-output-port (current-output-port)))
+
+
+;;;; with transcoded textual ports on top of binary ports
+;;
+;;Download the first page from "http://reddit.com/r/programming/".
+;;
+
+(with-compensations
+  (define socket
+    (compensate
+	(begin
+	  (log "connecting...\n")
+	  (srfi.make-client-socket "reddit.com" "http"))
+      (with
+       (srfi.socket-shutdown socket)
+       (srfi.socket-close socket))))
+  (define in-port
+    (compensate
+	(transcoded-port (srfi.socket-input-port socket)
+			 (native-transcoder))
+      (with
+       (close-port in-port))))
+  (define ou-port
+    (compensate
+	(transcoded-port (srfi.socket-output-port socket)
+			 (native-transcoder))
+      (with
+       (close-port ou-port))))
+
+  (define (log template . args)
+    (apply fprintf (current-error-port)
+	   template args))
+
+  (define (send line ou-port)
+    (log "sending: ~s\n" line)
+    (display line ou-port)
+    (flush-output-port ou-port))
+
+  (define (recv in-port)
+    (let-values (((str-port getter) (open-string-output-port)))
+      (let next ((line (read-line in-port)))
+	(if (or (eof-object? line)
+		(string=? line "\r")
+		(string=? line ".\r"))
+	    (getter)
+	  (begin
+	    (log "received: ~s\n" line)
+	    (display line str-port)
+	    (next (read-line in-port)))))))
 
   (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
   (display (recv in-port))
