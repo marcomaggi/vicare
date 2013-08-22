@@ -309,6 +309,10 @@ binary ports.  Example:
 
   ---)
 @end example
+
+It is also fine to use the returned ports as @var{port} argument to the
+functions @func{select-port}, @func{select-port-readable?},
+@func{select-port-writable?}, @func{select-port-exceptional?}.
 @end quotation
 @end defun
 

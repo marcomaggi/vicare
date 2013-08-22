@@ -1,6 +1,8 @@
 ;;;derived from the reference implementation of SRFI 106
 ;;;
-;;;Copyright (C) 2012 Takashi Kato ktakashi@ymail.com
+;;;Copyright (C) 2012 Takashi Kato <ktakashi@ymail.com>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
 ;;;All Rights Reserved.
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -62,6 +64,7 @@
 (define echo-master-socket
   (srfi.make-server-socket "8080"))
 
+(display "echo server listening\n" (current-error-port))
 (server-run echo-master-socket)
 
 ;;; end of file

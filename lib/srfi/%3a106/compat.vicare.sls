@@ -1,6 +1,8 @@
 ;;;derived from the reference implementation of SRFI 106
 ;;;
-;;;Copyright (C) 2012 Takashi Kato ktakashi@ymail.com
+;;;Copyright (C) 2012 Takashi Kato <ktakashi@ymail.com>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
 ;;;All Rights Reserved.
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -34,6 +36,7 @@
     socket-accept
     socket-send			socket-recv
     socket-shutdown		socket-close
+    socket-input-port		socket-output-port
 
     *af-unspec*		*af-inet*		*af-inet6*
     *sock-stream*	*sock-dgram*
@@ -180,6 +183,7 @@
 		       (raise E)))
 	      (px.bind fd sockaddr)
 	      (px.listen fd MAX-PENDING-CONNECTIONS)
+	      (px.setsockopt/int fd SOL_SOCKET SO_REUSEADDR #t)
 	      (:make-socket fd #f service ai-family ai-socktype #f ai-protocol)))))))
    ))
 
@@ -219,6 +223,15 @@
   (begin0
       (proc socket)
     (socket-close socket)))
+
+
+;;;; port functions
+
+(define (socket-input-port socket)
+  (make-binary-socket-input-port* (:socket-fd socket) "socket-input-port"))
+
+(define (socket-output-port socket)
+  (make-binary-socket-output-port* (:socket-fd socket) "socket-output-port"))
 
 
 ;;;; done

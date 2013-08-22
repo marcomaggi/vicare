@@ -1,6 +1,8 @@
 ;;;derived from the reference implementation of SRFI 106
 ;;;
-;;;Copyright (C) 2012 Takashi Kato ktakashi@ymail.com
+;;;Copyright (C) 2012 Takashi Kato <ktakashi@ymail.com>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
 ;;;All Rights Reserved.
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -143,19 +145,23 @@
 
 ;;;; socket ports
 
-(define (socket-input-port socket)
-  (define (read! bv start count)
-    (let ((r (socket-recv socket count)))
-      (bytevector-copy! r 0 bv start (bytevector-length r))
-      (bytevector-length r)))
-  (make-custom-binary-input-port "socket-input-port" read! #f #f #f))
-
-(define (socket-output-port socket)
-  (define (write! bv start count)
-    (let ((buf (make-bytevector count)))
-      (bytevector-copy! bv start buf 0 count)
-      (socket-send socket buf)))
-  (make-custom-binary-output-port "socket-output-port" write! #f #f #f))
+;;These are  derived from the reference  implementation functions.  They
+;;are replaced  by functions in  the compat library.  (Marco  Maggi; Thu
+;;Aug 22, 2013)
+;;
+;; (define (socket-input-port socket)
+;;   (define (read! bv start count)
+;;     (let ((r (socket-recv socket count)))
+;;       (bytevector-copy! r 0 bv start (bytevector-length r))
+;;       (bytevector-length r)))
+;;   (make-custom-binary-input-port "socket-input-port" read! #f #f #f))
+;;
+;; (define (socket-output-port socket)
+;;   (define (write! bv start count)
+;;     (let ((buf (make-bytevector count)))
+;;       (bytevector-copy! bv start buf 0 count)
+;;       (socket-send socket buf)))
+;;   (make-custom-binary-output-port "socket-output-port" write! #f #f #f))
 
 
 ;;;; done
