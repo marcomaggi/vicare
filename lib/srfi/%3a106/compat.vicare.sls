@@ -79,7 +79,7 @@
 
 (define-record-type (:socket :make-socket socket?)
   (nongenerative srfi:106:socket)
-  (fields (immutable fd)))
+  (fields fd node service ai-family ai-socktype ai-flags ai-protocol))
 
 ;;; --------------------------------------------------------------------
 
@@ -126,7 +126,7 @@
 	  (with
 	   (px.close fd))))
       (define hints
-	(px.make-struct-addrinfo ai-flags ai-family ai-socktype ai-protocol))
+	(px.make-struct-addrinfo ai-flags ai-family ai-socktype ai-protocol #f #f #f))
       (let next-addrinfo ((addrinfos (px.getaddrinfo node service hints)))
 	(if (null? addrinfos)
 	    (%error-unable-to-find-remote-address who node service ai-family ai-socktype ai-flags ai-protocol)
@@ -138,7 +138,7 @@
 		      (else
 		       (raise E)))
 	      (px.connect fd sockaddr)
-	      (:make-socket fd)))))))
+	      (:make-socket fd node service ai-family ai-socktype ai-flags ai-protocol)))))))
    ))
 
 (define make-server-socket
@@ -164,7 +164,7 @@
 	;;Using AI_PASSIVE  here and specifying  #f as NODE  argument to
 	;;GETADDRINFO  will  make  the  returned  address  suitable  for
 	;;binding.
-	(px.make-struct-addrinfo AI_PASSIVE ai-family ai-socktype ai-protocol))
+	(px.make-struct-addrinfo AI_PASSIVE ai-family ai-socktype ai-protocol #f #f #f))
       (let next-addrinfo ((addrinfos (px.getaddrinfo #f service hints)))
 	(if (null? addrinfos)
 	    (begin
@@ -180,7 +180,7 @@
 		       (raise E)))
 	      (px.bind fd sockaddr)
 	      (px.listen fd MAX-PENDING-CONNECTIONS)
-	      (:make-socket fd)))))))
+	      (:make-socket fd #f service ai-family ai-socktype #f ai-protocol)))))))
    ))
 
 
@@ -202,8 +202,9 @@
    ((socket size)
     (socket-recv socket size 0))
    ((socket size flags)
-    (let ((buffer (make-bytevector size)))
-      (px.recv (:socket-fd socket) buffer size flags)))
+    (let* ((buf.bv   (make-bytevector size))
+	   (recv.len (px.recv (:socket-fd socket) buf.bv #f flags)))
+      (subbytevector-u8 buf.bv 0 recv.len)))
    ))
 
 (define (socket-shutdown socket how)

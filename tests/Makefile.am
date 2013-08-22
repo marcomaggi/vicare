@@ -324,6 +324,7 @@ EXTRA_DIST	= \
 	demo-vicare-timerfd.sps				\
 	demo-issue-35.sps				\
 	demo-tcp-connect.sps				\
+	demo-srfi-106.sps				\
 	\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
