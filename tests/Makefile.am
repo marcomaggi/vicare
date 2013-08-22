@@ -203,6 +203,9 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	test-srfi-98-os-environment-variables.sps	\
 	test-srfi-101-functional-pairs.sps
 
+VICARE_SCHEME_SRFI_POSIX_TESTS	= \
+	test-srfi-106-socket.sps
+
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps			\
 	test-vicare-ffi-foreign-pointer-wrapper.sps
@@ -245,6 +248,9 @@ TESTS		= $(VICARE_SCHEME_CORE_TESTS)
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
+if WANT_POSIX
+TESTS		+= $(VICARE_SCHEME_SRFI_POSIX_TESTS)
+endif
 endif
 
 if WANT_LIBFFI

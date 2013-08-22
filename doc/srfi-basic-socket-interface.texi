@@ -271,9 +271,45 @@ and @library{srfi :106 socket}.
 
 @defun socket-input-port @var{socket}
 @defunx socket-output-port @var{socket}
-Return a fresh binary input and output port associated with a
+Return a fresh binary input or output port associated with a
 @var{socket}, respectively.  Whenever the returned port is closed: the
 associated socket must @strong{not} be closed along.
+
+@quotation
+@strong{For Vicare:} it is fine to use @func{transcoded-port} from
+@rsixlibrary{io ports} to put a textual port on top of the returned
+binary ports.  Example:
+
+@example
+(import (vicare)
+  (prefix (srfi :106) srfi.))
+
+(with-compensations
+  (define socket
+    (compensate
+        (srfi.make-client-socket "reddit.com" "http")
+      (with
+       (srfi.socket-shutdown socket
+         (srfi.shutdown-method read write))
+       (srfi.socket-close socket))))
+
+  (define in-port
+    (compensate
+        (transcoded-port (srfi.socket-input-port socket)
+                         (native-transcoder))
+      (with
+       (close-port in-port))))
+
+  (define ou-port
+    (compensate
+        (transcoded-port (srfi.socket-output-port socket)
+                         (native-transcoder))
+      (with
+       (close-port ou-port))))
+
+  ---)
+@end example
+@end quotation
 @end defun
 
 @c page
@@ -333,6 +369,7 @@ described behaviour.
 
 @table @code
 @item canoname
+@itemx canonname
 Returns @code{*ai-canonname*}.
 
 @item numerichost

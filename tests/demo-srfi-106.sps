@@ -42,7 +42,7 @@
 	  (log "connecting...\n")
 	  (srfi.make-client-socket "reddit.com" "http"))
       (with
-       (srfi.socket-shutdown socket)
+       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
        (srfi.socket-close socket))))
   (define in-port
     (compensate
@@ -98,7 +98,7 @@
 	  (log "connecting...\n")
 	  (srfi.make-client-socket "reddit.com" "http"))
       (with
-       (srfi.socket-shutdown socket)
+       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
        (srfi.socket-close socket))))
   (define in-port
     (compensate

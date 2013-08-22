@@ -59,6 +59,7 @@
 
 (define-constant %address-info
   `((canoname     ,*ai-canonname*)
+    (canonname    ,*ai-canonname*)
     (numerichost  ,*ai-numerichost*)
     (v4mapped     ,*ai-v4mapped*)
     (all          ,*ai-all*)
