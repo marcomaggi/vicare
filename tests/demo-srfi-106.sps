@@ -83,6 +83,8 @@
   (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
   (display (recv in-port))
   (display (recv in-port))
+  (newline)
+  (newline)
   (flush-output-port (current-output-port)))
 
 
@@ -137,6 +139,68 @@
   (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
   (display (recv in-port))
   (display (recv in-port))
+  (newline)
+  (newline)
   (flush-output-port (current-output-port)))
+
+
+;;;; with transcoded textual ports on top of binary ports, call with socket
+;;
+;;Download the first page from "http://reddit.com/r/programming/".
+;;
+
+(let ()
+  (define (log template . args)
+    (apply fprintf (current-error-port)
+	   template args))
+
+  (define (main socket)
+    (with-compensations
+      (define in-port
+	(compensate
+	    (transcoded-port (srfi.socket-input-port socket)
+			     (native-transcoder))
+	  (with
+	   (close-port in-port))))
+      (define ou-port
+	(compensate
+	    (transcoded-port (srfi.socket-output-port socket)
+			     (native-transcoder))
+	  (with
+	   (close-port ou-port))))
+
+      (define (send line ou-port)
+	(log "sending: ~s\n" line)
+	(display line ou-port)
+	(flush-output-port ou-port))
+
+      (define (recv in-port)
+	(let-values (((str-port getter) (open-string-output-port)))
+	  (let next ((line (read-line in-port)))
+	    (if (or (eof-object? line)
+		    (string=? line "\r")
+		    (string=? line ".\r"))
+		(getter)
+	      (begin
+		(log "received: ~s\n" line)
+		(display line str-port)
+		(next (read-line in-port)))))))
+
+      (push-compensation
+       (srfi.socket-shutdown socket (srfi.shutdown-method read write)))
+
+      (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
+      (display (recv in-port))
+      (display (recv in-port))
+      (newline)
+      (newline)
+      (flush-output-port (current-output-port))))
+
+  (srfi.call-with-socket (begin
+			   (log "connecting...\n")
+			   (srfi.make-client-socket "reddit.com" "http"))
+			 main)
+  #f)
+
 
 ;;; end of file
