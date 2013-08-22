@@ -45,7 +45,12 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d2
 ------------------------
 
-*
+* Fixed some errors reported by Goran Weinholt.
+
+* Added libraries:
+
+    (srfi :106)
+    (srfi :106 socket)
 
 
 Notes for revision 0.3d1

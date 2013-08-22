@@ -36,7 +36,11 @@
 
 * Andreas Rottmann: provided patch to implement getpid.
 
-* Göran Weinholt: provided patch to implement FXREVERSE-BIT-FIELD.
+* Göran Weinholt:
+
+  - Provided patch to implement FXREVERSE-BIT-FIELD.
+
+  - Reported miscellaneous errors.
 
 * The implementation  of the function BITWISE-REVERSE-BIT-FIELD  is from
   original  code  in: Ypsilon  Scheme  System,  Copyright (c)  2004-2009
@@ -55,7 +59,7 @@
 * http://github.com/ChaosEternal: performed  a bisection  search helping
   to fix issue 29 (broken support for 64-bit architectures).
 
-* Peope  listed  here  contributed  comments,  suggestions,  criticisms,
+* People  listed  here  contributed comments,  suggestions,  criticisms,
   release  testing and  bug reports  which have  helped fix  and improve
   Vicare Scheme:
 
