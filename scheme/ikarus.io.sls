@@ -7933,9 +7933,9 @@
 	    (else
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
-  (let ((attributes		(%select-input/output-fast-tag-from-transcoder
+  (let ((attributes		(%select-input-fast-tag-from-transcoder
 				 who transcoder other-attributes
-				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
+				 GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
@@ -7977,9 +7977,9 @@
 	    (else
 	     (%raise-io-error 'write! port-identifier rv (make-i/o-write-error))))))
 
-  (let ((attributes		(%select-input/output-fast-tag-from-transcoder
+  (let ((attributes		(%select-output-fast-tag-from-transcoder
 				 who transcoder other-attributes
-				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
+				 GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
 				 (%select-eol-style-from-transcoder who transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	(buffer.index		0)
