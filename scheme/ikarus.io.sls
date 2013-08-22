@@ -495,8 +495,16 @@
     port-remprop		port-property-list
 
     ;; networking
+    make-binary-socket-input-port
+    make-binary-socket-input-port*
+    make-binary-socket-output-port
+    make-binary-socket-output-port*
     make-binary-socket-input/output-port
     make-binary-socket-input/output-port*
+    make-textual-socket-input-port
+    make-textual-socket-input-port*
+    make-textual-socket-output-port
+    make-textual-socket-output-port*
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
   (import (except (ikarus)
@@ -7894,6 +7902,96 @@
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
 		 read! write! get-position set-position! close cookie))))
 
+;;; --------------------------------------------------------------------
+
+(define (%socket->input-port sock other-attributes port-identifier buffer.size
+			     transcoder close-function who)
+  ;;Given  the  fixnum socket  descriptor  SOCK  representing a  network
+  ;;socket for the underlying platform:  build and return a Scheme input
+  ;;port to be used to read the data.
+  ;;
+  ;;The   returned  port   does   not  support   the  GET-POSITION   and
+  ;;SET-POSITION!  operations.
+  ;;
+  ;;If CLOSE-FUNCTION is a function: it is used as close function; if it
+  ;;is true:  a standard  close function for  file descriptors  is used;
+  ;;else the port does not support the close operation.
+  ;;
+  (define close
+    (cond ((procedure? close-function)
+	   close-function)
+	  ((and (boolean? close-function) close-function)
+	   (%make-close-function-for-platform-descriptor-port port-identifier sock))
+	  (else #f)))
+
+  (define (read! dst.bv dst.start requested-count)
+    (let ((count (capi.platform-read-fd sock dst.bv dst.start requested-count)))
+      (cond (($fx>= count 0)
+	     count)
+	    (($fx= count EAGAIN)
+	     (%raise-eagain-error 'read! #f port-identifier))
+	    (else
+	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
+
+  (let ((attributes		(%select-input/output-fast-tag-from-transcoder
+				 who transcoder other-attributes
+				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
+				 (%select-eol-style-from-transcoder who transcoder)
+				 DEFAULT-OTHER-ATTRS))
+	(buffer.index		0)
+	(buffer.used-size	0)
+	(buffer			(make-bytevector buffer.size))
+	(write!			#f)
+	(get-position		#t)
+	(cookie			(default-cookie sock)))
+    (%port->maybe-guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+		 read! write! #f #f close cookie))))
+
+(define (%socket->output-port sock other-attributes port-identifier buffer.size
+			      transcoder close-function who)
+  ;;Given  the  fixnum socket  descriptor  SOCK  representing a  network
+  ;;socket for the underlying platform: build and return a Scheme output
+  ;;port to be used to write the data.
+  ;;
+  ;;The   returned  port   does   not  support   the  GET-POSITION   and
+  ;;SET-POSITION!  operations.
+  ;;
+  ;;If CLOSE-FUNCTION is a function: it is used as close function; if it
+  ;;is true:  a standard  close function for  file descriptors  is used;
+  ;;else the port does not support the close operation.
+  ;;
+  (define close
+    (cond ((procedure? close-function)
+	   close-function)
+	  ((and (boolean? close-function) close-function)
+	   (%make-close-function-for-platform-descriptor-port port-identifier sock))
+	  (else #f)))
+
+  (define (write! src.bv src.start requested-count)
+    (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
+      (cond (($fx>= rv 0)
+	     rv)
+	    (($fx= rv EAGAIN)
+	     (%raise-eagain-error 'read! #f port-identifier))
+	    (else
+	     (%raise-io-error 'write! port-identifier rv (make-i/o-write-error))))))
+
+  (let ((attributes		(%select-input/output-fast-tag-from-transcoder
+				 who transcoder other-attributes
+				 INPUT/OUTPUT-PORT-TAG GUARDED-PORT-TAG PORT-WITH-FD-DEVICE
+				 (%select-eol-style-from-transcoder who transcoder)
+				 DEFAULT-OTHER-ATTRS))
+	(buffer.index		0)
+	(buffer.used-size	0)
+	(buffer			(make-bytevector buffer.size))
+	(read!			#f)
+	(get-position		#t)
+	(cookie			(default-cookie sock)))
+    (%port->maybe-guarded-port
+     ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
+		 read! write! #f #f close cookie))))
+
 (define (%socket->input/output-port sock other-attributes port-identifier buffer.size
 				    transcoder close-function who)
   ;;Given  the  fixnum socket  descriptor  SOCK  representing a  network
@@ -7945,6 +8043,8 @@
     (%port->maybe-guarded-port
      ($make-port attributes buffer.index buffer.used-size buffer transcoder port-identifier
 		 read! write! #f #f close cookie))))
+
+;;; --------------------------------------------------------------------
 
 (define (%make-set-position!-function-for-file-descriptor-port fd port-identifier)
   ;;Build and return a closure to be used as SET-POSITION!  function for
@@ -8367,6 +8467,46 @@
 
 ;;;; platform socket descriptor ports
 
+(define (make-binary-socket-input-port sock port-identifier)
+  (define who 'make-binary-socket-input-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%socket->input-port sock other-attributes port-identifier buffer.size
+			 transcoder close-function who)))
+
+(define (make-binary-socket-input-port* sock port-identifier)
+  (define who 'make-binary-socket-input-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%socket->input-port sock other-attributes port-identifier buffer.size
+			 transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-binary-socket-output-port sock port-identifier)
+  (define who 'make-binary-socket-output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#t))
+    (%socket->output-port sock other-attributes port-identifier buffer.size
+			  transcoder close-function who)))
+
+(define (make-binary-socket-output-port* sock port-identifier)
+  (define who 'make-binary-socket-output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(transcoder		#f)
+	(close-function		#f))
+    (%socket->output-port sock other-attributes port-identifier buffer.size
+			  transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
 (define (make-binary-socket-input/output-port sock port-identifier)
   (define who 'make-binary-socket-input/output-port)
   (let ((other-attributes	0)
@@ -8377,13 +8517,49 @@
 				transcoder close-function who)))
 
 (define (make-binary-socket-input/output-port* sock port-identifier)
-  (define who 'make-binary-socket-input/output-port)
+  (define who 'make-binary-socket-input/output-port*)
   (let ((other-attributes	0)
 	(buffer.size		(input/output-socket-buffer-size))
 	(transcoder		#f)
 	(close-function		#f))
     (%socket->input/output-port sock other-attributes port-identifier buffer.size
 				transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-textual-socket-input-port sock port-identifier transcoder)
+  (define who 'make-textual-socket-input-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#t))
+    (%socket->input-port sock other-attributes port-identifier buffer.size
+			 transcoder close-function who)))
+
+(define (make-textual-socket-input-port* sock port-identifier transcoder)
+  (define who 'make-textual-socket-input-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#f))
+    (%socket->input-port sock other-attributes port-identifier buffer.size
+			 transcoder close-function who)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-textual-socket-output-port sock port-identifier transcoder)
+  (define who 'make-textual-socket-output-port)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#t))
+    (%socket->output-port sock other-attributes port-identifier buffer.size
+			  transcoder close-function who)))
+
+(define (make-textual-socket-output-port* sock port-identifier transcoder)
+  (define who 'make-textual-socket-output-port*)
+  (let ((other-attributes	0)
+	(buffer.size		(input/output-socket-buffer-size))
+	(close-function		#f))
+    (%socket->output-port sock other-attributes port-identifier buffer.size
+			  transcoder close-function who)))
 
 ;;; --------------------------------------------------------------------
 

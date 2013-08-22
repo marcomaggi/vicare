@@ -6386,7 +6386,9 @@ File descriptor ports do support port position operations.
 @end defun
 
 
-@defun make-binary-socket-input/output-port @var{sock} @var{identifier}
+@defun make-binary-socket-input-port @var{sock} @var{identifier}
+@defunx make-binary-socket-output-port @var{sock} @var{identifier}
+@defunx make-binary-socket-input/output-port @var{sock} @var{identifier}
 Build and return a binary Scheme port using the platform socket
 descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  Closing the Scheme port will close the
@@ -6396,7 +6398,9 @@ Socket ports do @strong{not} support port position operations.
 @end defun
 
 
-@defun make-binary-socket-input/output-port* @var{sock} @var{identifier}
+@defun make-binary-socket-input-port* @var{sock} @var{identifier}
+@defunx make-binary-socket-output-port* @var{sock} @var{identifier}
+@defunx make-binary-socket-input/output-port* @var{sock} @var{identifier}
 Build and return a binary Scheme port using the platform socket
 descriptor @var{sock} as device.  @var{identifier} must be a string used
 for better error reporting.  Closing the Scheme port will @strong{not}
