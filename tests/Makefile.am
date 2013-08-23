@@ -201,7 +201,8 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
-	test-srfi-101-functional-pairs.sps
+	test-srfi-101-functional-pairs.sps		\
+	test-srfi-111-boxes.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	test-srfi-106-socket.sps

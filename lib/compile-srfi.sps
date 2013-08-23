@@ -71,6 +71,8 @@
   ;;This SRFI depends upon (vicare posix).  So its compilation is in the
   ;;file "compile-srfi-posix.sps".
 ;;;(only (srfi :106))
+
+  (only (srfi :111))
   )
 
 ;;; end of file

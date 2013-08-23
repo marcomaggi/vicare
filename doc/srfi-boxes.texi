@@ -1,0 +1,44 @@
+@node srfi boxes
+@section @ansrfi{111} boxes
+
+@cindex @ansrfi{111} boxes
+@cindex @library{srfi :111}, library
+@cindex @library{srfi :111 boxes}, library
+@cindex Library @library{srfi :111}
+@cindex Library @library{srfi :111 boxes}
+
+
+The library @library{srfi :111} is by John Conwan as the reference
+implementation for @ansrfi{111}; see:
+
+@center @url{http://srfi.schemers.org/srfi-111/srfi-111.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi boxes abstract::         Abstract.
+* srfi boxes rationale::        Rationale.
+* srfi boxes spec::             Specification.
+* srfi boxes copyright::        Copyright.
+@end menu
+
+@c page
+@node srfi boxes abstract
+@subsection Abstract
+
+@c page
+@node srfi boxes rationale
+@subsection Rationale
+
+@c page
+@node srfi boxes spec
+@subsection Specification
+
+@c page
+@node srfi boxes copyright
+@subsection Copyright
+
+
+
+@c end of file

@@ -46,6 +46,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-args-fold.texi			\
 	srfi-basic-format.texi			\
 	srfi-basic-socket-interface.texi	\
+	srfi-boxes.texi				\
 	srfi-case-lambda.texi			\
 	srfi-char-sets.texi			\
 	srfi-compare-procedures.texi		\
