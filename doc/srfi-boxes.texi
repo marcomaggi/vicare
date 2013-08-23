@@ -117,6 +117,13 @@ if, and only if, they are the product of the same call to @func{box} and
 not otherwise, and while they must be @func{equal?} if they are
 @func{eqv?}, the converse is implementation--dependent.
 
+@quotation
+@strong{For Vicare:} two boxes holding the same object are @func{eqv?}
+even if they are produced by different calls to @func{box}.  Vicare's
+behaviour is @strong{not} compliant with this specification.
+@end quotation
+
+
 @c ------------------------------------------------------------
 
 @subsubheading Autoboxing (optional)
