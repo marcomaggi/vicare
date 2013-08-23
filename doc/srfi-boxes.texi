@@ -27,18 +27,143 @@ for more details.
 @node srfi boxes abstract
 @subsection Abstract
 
+
+Boxes are objects with a single mutable state.  Several Schemes have
+them, sometimes called @emph{cells}.  A constructor, predicate,
+accessor, and mutator are provided.
+
 @c page
 @node srfi boxes rationale
 @subsection Rationale
 
+
+A box is a container for an object of any Scheme type, including another
+box.  It is like a single--element vector, or half of a pair, or a
+direct representation of state.  Boxes are normally used as minimal
+mutable storage, and can inject a controlled amount of mutability into
+an otherwise immutable data structure (or one that is conventionally
+treated as immutable).  They can be used to implement
+call--by--reference semantics by passing a boxed value to a procedure
+and expecting the procedure to mutate the box before returning.
+
+Some Scheme systems use boxes to implement @func{set!}.  In this
+transformation, known as @emph{assignment conversion}, all variables
+that are actually mutated are initialized to boxes, and all @func{set!}
+syntax forms become calls on @func{set-box!}.  Naturally, all ordinary
+references to those variables must become calls on @func{unbox}.  By
+reducing all variable mutation to data--structure mutation in this way,
+such Scheme systems are free to maintain variables in multiple hardware
+locations, such as the stack and the heap or registers and the stack,
+without worrying about exactly when and where they are mutated.
+
+Boxes are also useful for providing an extra level of indirection,
+allowing more than one body of code or data structure to share a
+reference, or pointer, to an object.  In this way, if any procedure
+mutates the box in any of the data structures, all procedures will
+immediately ``see'' the new value in all data structures containing it.
+
+Racket and Chicken provide @emph{immutable boxes}, which look like boxes
+to @func{box?} and @func{unbox} but which cannot be mutated.  They are
+not considered useful enough to be part of this @srfi{}.  If they are
+provided nevertheless, the recommended constructor name is
+@func{immutable-box}.
+
+The features specified in the autoboxing section of specification are
+based on those specified by RnRS for promises, which are analogous to
+immutable boxes except that their value is specified by code instead of
+data.
+
 @c page
 @node srfi boxes spec
 @subsection Specification
+
+
+The following procedures implement the box type (which is disjoint from
+all other Scheme types), and are exported by the libraries @library{srfi
+:111} and @library{srfi :111 boxes}.
+
+
+@defun box @var{obj}
+Constructor.  Return a newly allocated box initialized to
+@var{obj}.
+@end defun
+
+
+@defun box? @var{obj}
+Predicate.  Return @true{} if @var{obj} is a box, and @false{}
+otherwise.
+@end defun
+
+
+@defun unbox @var{box/obj}
+Accessor.  Return the current value of @var{box/obj}.
+
+@quotation
+@strong{For Vicare:} if @var{box/obj} is not a box object, no error is
+raised and the return value is @var{box/obj} itself.
+@end quotation
+@end defun
+
+
+@defun set-box! @var{box} @var{new-obj}
+Mutator.  Change @var{box} to hold @var{new-obj}.
+@end defun
+
+
+The behavior of boxes with the equivalence predicates @func{eq?},
+@func{eqv?}, and @func{equal?} is the same as if they were implemented
+with records.  That is, two boxes are both @func{eq?} and @func{eqv?}
+if, and only if, they are the product of the same call to @func{box} and
+not otherwise, and while they must be @func{equal?} if they are
+@func{eqv?}, the converse is implementation--dependent.
+
+@c ------------------------------------------------------------
+
+@subsubheading Autoboxing (optional)
+
+
+The following provisions of this @srfi{} are optional:
+
+@itemize
+@item
+A procedure, whether system--provided or user--written, that expects a
+box as an argument but receives a non--box may, if appropriate, allocate
+a box itself that holds the value, thus providing autoboxing.
+
+@item
+A procedure that accepts arguments only of specified types (such as
+@func{+}) but receives a box instead may, if appropriate, unbox the box.
+Procedures that accept arguments of any type (such as @func{cons}) must
+not unbox their arguments.
+
+@item
+Calling @func{unbox} on a non--box may simply return the non--box.
+@end itemize
 
 @c page
 @node srfi boxes copyright
 @subsection Copyright
 
 
+Copyright @copyright{} John Cowan 2013.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 @c end of file

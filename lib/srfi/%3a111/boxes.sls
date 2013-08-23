@@ -28,6 +28,10 @@
     (rnrs records syntactic))
   (define-record-type
     (box-type box box?)
-    (fields (mutable value unbox set-box!))))
+    (fields (mutable value %unbox set-box!)))
+  (define (unbox obj)
+    (if (box? obj)
+	(%unbox obj)
+      obj)))
 
 ;;; end of file
