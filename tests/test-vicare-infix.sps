@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (rnrs)
+(import (vicare)
   (vicare language-extensions infix)
   (vicare checks))
 
