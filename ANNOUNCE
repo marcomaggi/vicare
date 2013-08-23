@@ -48,6 +48,11 @@ Notes for revision 0.3d3
 * Fixed (vicare language-extensions infix) exporting its own binding for
   XOR; it now reexports the binding from (vicare).
 
+* Added libraries:
+
+    (srfi :111)
+    (srfi :111 boxes)
+
 
 Notes for revision 0.3d2
 ------------------------
