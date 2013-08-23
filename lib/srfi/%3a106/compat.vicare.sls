@@ -29,7 +29,7 @@
 (library (srfi :106 compat)
   (export
     make-client-socket		make-server-socket
-    socket?
+    socket?			socket-descriptor
     call-with-socket
     (rename (bitwise-ior socket-merge-flags)
 	    (bitwise-xor socket-purge-flags))
@@ -82,7 +82,12 @@
 
 (define-record-type (:socket :make-socket socket?)
   (nongenerative srfi:106:socket)
-  (fields fd node service ai-family ai-socktype ai-flags ai-protocol))
+  (fields (mutable descriptor socket-descriptor set-socket-descriptor!)
+	  node service ai-family ai-socktype ai-flags ai-protocol))
+
+(module ()
+  (record-destructor-set! (record-type-descriptor :socket)
+			  socket-close))
 
 ;;; --------------------------------------------------------------------
 
@@ -192,7 +197,7 @@
 
 (define (socket-accept master-socket)
   (receive (server-socket client-address)
-      (px.accept (:socket-fd master-socket))
+      (px.accept (socket-descriptor master-socket))
     (:make-socket server-socket #f #f #f #f #f #f)))
 
 (define socket-send
@@ -200,7 +205,7 @@
    ((socket bv)
     (socket-send socket bv 0))
    ((socket bv flags)
-    (px.send (:socket-fd socket) bv #f flags))
+    (px.send (socket-descriptor socket) bv #f flags))
    ))
 
 (define socket-recv
@@ -209,15 +214,18 @@
     (socket-recv socket size 0))
    ((socket size flags)
     (let* ((buf.bv   (make-bytevector size))
-	   (recv.len (px.recv (:socket-fd socket) buf.bv #f flags)))
+	   (recv.len (px.recv (socket-descriptor socket) buf.bv #f flags)))
       (subbytevector-u8 buf.bv 0 recv.len)))
    ))
 
 (define (socket-shutdown socket how)
-  (px.shutdown (:socket-fd socket) how))
+  (px.shutdown (socket-descriptor socket) how))
 
 (define (socket-close socket)
-  (px.close (:socket-fd socket)))
+  (let ((fd (socket-descriptor socket)))
+    (when fd
+      (px.close fd)
+      (set-socket-descriptor! socket #f))))
 
 (define (call-with-socket socket proc)
   (begin0
@@ -228,10 +236,10 @@
 ;;;; port functions
 
 (define (socket-input-port socket)
-  (make-binary-socket-input-port* (:socket-fd socket) "socket-input-port"))
+  (make-binary-socket-input-port* (socket-descriptor socket) "socket-input-port"))
 
 (define (socket-output-port socket)
-  (make-binary-socket-output-port* (:socket-fd socket) "socket-output-port"))
+  (make-binary-socket-output-port* (socket-descriptor socket) "socket-output-port"))
 
 
 ;;;; done

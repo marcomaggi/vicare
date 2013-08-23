@@ -173,6 +173,12 @@ Defaults to: @code{*ipproto-ip*}.
 
 The returned socket may not be closed automatically so it is the users'
 responsibility to close it explicitly.
+
+@quotation
+@strong{For Vicare:} whenever the returned socket object is garbage
+collected, the function @func{socket-close} is automatically applied to
+it.
+@end quotation
 @end defun
 
 
@@ -200,6 +206,12 @@ Defaults to: @code{*ipproto-ip*}.
 
 The returned socket may not be closed automatically so it is the users'
 responsibility to close it explicitly.
+
+@quotation
+@strong{For Vicare:} whenever the returned socket object is garbage
+collected, the function @func{socket-close} is automatically applied to
+it.
+@end quotation
 @end defun
 
 
@@ -258,6 +270,21 @@ Shutdown a socket.  @var{how} must be one of the following constants:
 @defun socket-close @var{socket}
 Close a socket.  The procedure should not shutdown the given socket: to
 shutdown a socket @func{socket-shutdown} should be called explicitly.
+
+@quotation
+@strong{For Vicare:} it is safe to apply multiple times this function to
+the same @var{socket} object; the first time the socket is closed,
+subsequent times nothing happens.  This function is automatically
+applied to every socket object returned by @func{make-client-socket} and
+@func{make-server-socket} whenever such objects are garbage collected.
+@end quotation
+@end defun
+
+
+@defun socket-descriptor @var{socket}
+This function is a Vicare extension.  Return an exact integer
+representing the underlying socket descriptor; such integer can be used
+as argument to every @posix{} function accepting socket descriptors.
 @end defun
 
 @c page

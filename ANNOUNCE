@@ -53,6 +53,9 @@ Notes for revision 0.3d3
     (srfi :111)
     (srfi :111 boxes)
 
+* SRFI 106:  added function  SOCKET-DESCRIPTOR; added  garbage collector
+  destructor to the socket object.
+
 
 Notes for revision 0.3d2
 ------------------------

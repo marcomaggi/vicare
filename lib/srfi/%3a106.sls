@@ -26,7 +26,7 @@
 (library (srfi :106)
   (export
     make-client-socket		make-server-socket
-    socket?
+    socket?			socket-descriptor
 
     socket-input-port		socket-output-port
     call-with-socket
