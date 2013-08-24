@@ -1947,6 +1947,14 @@ command line option @option{--strict-r6rs}.
 @subsection Local library imports
 
 
+@cindex @clause{import}, local library imports
+@cindex Local library imports, @clause{import}
+@cindex Importing alternative libraries, @clause{import}
+@cindex @clause{import}, importing alternative libraries
+@cindex Conditionally importing libraries, @clause{import}
+@cindex @clause{import}, conditionally importing libraries
+
+
 Local @func{import} forms are useful for the following reasons:
 
 @enumerate
@@ -1957,6 +1965,10 @@ libraries are imported at the top level.
 @item
 They limit the scope of the import and thus help modularize a library's
 dependencies.
+
+@item
+They allow conditional importing of libraries, and so importing
+alternative libraries according to some expand--time test.
 @end enumerate
 
 Let's suppose we are constructing a large library and at some point we
@@ -2059,6 +2071,33 @@ a function:
 (do-that)
 @print{} From body!
 @print{} From module!
+@end example
+
+In the following example: if @ansrfi{13} is available, import
+@func{string-concatenate} from it; otherwise define a custom version of
+the function.
+
+@example
+#!r6rs
+(import (vicare)
+  (srfi :0))
+
+(cond-expand
+ ((srfi :13)
+  (import (only (srfi :13)
+                string-concatenate)))
+ (else
+  (define (string-concatenate strs)
+    (receive (port getter)
+        (open-string-output-port)
+      (for-each-in-order (lambda (str)
+                           (display str port))
+        strs)
+      (getter)))))
+
+(display (string-concatenate '("a" "b" "c")))
+(newline)
+(flush-output-port (current-output-port))
 @end example
 
 @c page
