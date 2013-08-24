@@ -132,6 +132,12 @@ Return @true{} if the package was configured with Linux features
 enabled; otherwise return @false{}.
 @end defun
 
+
+@defun vicare-built-with-srfi-enabled
+Return @true{} if the package was installed along with the @srfi{}
+libraries; otherwise return @false{}.
+@end defun
+
 @c page
 @node iklib syntaxes
 @section Additional syntaxes

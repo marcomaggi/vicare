@@ -1190,6 +1190,15 @@ ikrt_exit (ikptr status, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
+ikrt_vicare_built_with_srfi_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_SRFI_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+ikptr
 ikrt_vicare_built_with_posix_enabled (ikpcb * pcb)
 {
 #ifdef VICARE_BUILT_WITH_POSIX_ENABLED

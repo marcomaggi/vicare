@@ -236,6 +236,40 @@ The following symbolic expressions are recognised by @func{cond-expand}
 as @value{PRJNAME} available features:
 
 @table @code
+@item vicare
+The Scheme implementation is @value{PRJNAME}.
+
+@item posix
+The program is running under a @posix{} system.
+
+@item linux
+@itemx solaris
+@itemx darwin
+@itemx bsd
+@itemx freebsd
+@itemx openbsd
+@itemx cygwin
+@itemx gnu
+The program is running under the named @acronym{OS}.
+
+@item srfi-enabled
+The package was installed along with @srfi{} libraries.
+
+@item posix-enabled
+The package was built with @posix{} features enabled.  This means the
+libraries in the hierarchy @library{vicare posix ---} should be
+installed and functional.
+
+@item glibc-enabled
+The package was built with @gnu{} C Library features enabled.  This
+means the libraries in the hierarchy @library{vicare glibc ---} should
+be installed and functional.
+
+@item linux-enabled
+The package was built with Linux features enabled.  This means the
+libraries in the hierarchy @library{vicare linux ---} should be
+installed and functional.
+
 @item (srfi :0)
 @itemx (srfi :0 cond-expand)
 @itemx srfi-0
@@ -554,42 +588,17 @@ as @value{PRJNAME} available features:
 @itemx srfi-101-random-access-lists
 @ansrfi{101} is available.
 
+@item (srfi :106)
+@itemx (srfi :106 socket)
+@itemx srfi-106
+@itemx srfi-106-socket
+@ansrfi{106} is available.
+
 @item (srfi :111)
 @itemx (srfi :111 random-access-lists)
 @itemx srfi-111
 @itemx srfi-111-random-access-lists
 @ansrfi{111} is available.
-
-@item vicare
-The Scheme implementation is @value{PRJNAME}.
-
-@item posix
-The program is running under a @posix{} system.
-
-@item linux
-@itemx solaris
-@itemx darwin
-@itemx bsd
-@itemx freebsd
-@itemx openbsd
-@itemx cygwin
-@itemx gnu
-The program is running under the named @acronym{OS}.
-
-@item posix-enabled
-The package was built with @posix{} features enabled.  This means the
-libraries in the hierarchy @library{vicare posix ---} should be
-installed and functional.
-
-@item glibc-enabled
-The package was built with @gnu{} C Library features enabled.  This
-means the libraries in the hierarchy @library{vicare glibc ---} should
-be installed and functional.
-
-@item linux-enabled
-The package was built with Linux features enabled.  This means the
-libraries in the hierarchy @library{vicare linux ---} should be
-installed and functional.
 @end table
 
 @c end of file

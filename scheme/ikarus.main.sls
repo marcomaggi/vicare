@@ -44,6 +44,7 @@
     vicare-built-with-posix-enabled
     vicare-built-with-glibc-enabled
     vicare-built-with-linux-enabled
+    vicare-built-with-srfi-enabled
     )
   (import (except (ikarus)
 		  fixnum-width
@@ -1321,6 +1322,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 
 ;;;; vicare configuration options
+
+(define (vicare-built-with-srfi-enabled)
+  (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
 
 (define (vicare-built-with-posix-enabled)
   (foreign-call "ikrt_vicare_built_with_posix_enabled"))
