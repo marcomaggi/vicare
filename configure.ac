@@ -70,15 +70,31 @@ VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [enable POSIX features])
 AM_CONDITIONAL([WANT_POSIX],[test "x$vicare_enable_POSIX" = xyes])
 
+AM_COND_IF([WANT_POSIX],
+  [AC_DEFINE([VICARE_BUILT_WITH_POSIX_ENABLED],[1],
+     [defined if POSIX features were requested at configuration time])])
+
+dnl AS_VAR_SET([vicare_built_with_posix_enabled],[0])
+dnl AM_COND_IF([WANT_POSIX],[AS_VAR_SET([vicare_built_with_posix_enabled],[1])])
+dnl AC_DEFINE([VICARE_BUILT_WITH_POSIX_ENABLED],[$vicare_built_with_posix_enabled])
+
 VICARE_ENABLE_OPTION([GLIBC],[glibc],[yes],
   [whether GNU C Library features are enabled],
   [enable GNU C Library features])
 AM_CONDITIONAL([WANT_GLIBC],[test "x$vicare_enable_GLIBC" = xyes])
 
+AM_COND_IF([WANT_GLIBC],
+  [AC_DEFINE([VICARE_BUILT_WITH_GLIBC_ENABLED],[1],
+     [defined if GLIBC features were requested at configuration time])])
+
 VICARE_ENABLE_OPTION([LINUX],[linux],[yes],
   [whether Linux features are enabled],
   [enable Linux features])
 AM_CONDITIONAL([WANT_LINUX],[test "x$vicare_enable_LINUX" = xyes])
+
+AM_COND_IF([WANT_LINUX],
+  [AC_DEFINE([VICARE_BUILT_WITH_LINUX_ENABLED],[1],
+     [defined if LINUX features were requested at configuration time])])
 
 dnl --------------------------------------------------------------------
 

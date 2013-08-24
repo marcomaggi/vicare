@@ -2221,6 +2221,13 @@
     (&source-rcd)
 
 ;;; --------------------------------------------------------------------
+;;; configuration options
+
+    (vicare-built-with-posix-enabled		i v $language)
+    (vicare-built-with-glibc-enabled		i v $language)
+    (vicare-built-with-linux-enabled		i v $language)
+
+;;; --------------------------------------------------------------------
 ;;; POSIX functions
 
     (strerror					i v $language)

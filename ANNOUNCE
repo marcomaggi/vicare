@@ -56,6 +56,12 @@ Notes for revision 0.3d3
 * SRFI 106:  added function  SOCKET-DESCRIPTOR; added  garbage collector
   destructor to the socket object.
 
+* Added to (vicare) functions to inspect configuration time options:
+
+    vicare-built-with-posix-enabled
+    vicare-built-with-glibc-enabled
+    vicare-built-with-linux-enabled
+
 
 Notes for revision 0.3d2
 ------------------------

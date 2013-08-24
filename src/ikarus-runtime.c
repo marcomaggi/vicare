@@ -1184,4 +1184,37 @@ ikrt_exit (ikptr status, ikpcb* pcb)
   exit(IK_IS_FIXNUM(status)? IK_UNFIX(status) : EXIT_FAILURE);
 }
 
+
+/** --------------------------------------------------------------------
+ ** Configuration options commands.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_vicare_built_with_posix_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_POSIX_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+ikptr
+ikrt_vicare_built_with_glibc_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_GLIBC_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+ikptr
+ikrt_vicare_built_with_linux_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_LINUX_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+
 /* end of file */

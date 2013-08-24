@@ -43,6 +43,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
+* iklib config::                Configuration options inspection.
 * iklib syntaxes::              Additional syntaxes.
 * iklib compensations::         Compensation stacks.
 * iklib conditions::            Additional condition types.
@@ -104,6 +105,31 @@ to the @cfunc{main} function of the current @value{PRJNAME} process.
 Return a Scheme string holding the C string in the @code{argv[0]}
 argument to the @cfunc{main} function of the current @value{PRJNAME}
 process.
+@end defun
+
+@c page
+@node iklib config
+@section Configuration options inspection
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun vicare-built-with-posix-enabled
+Return @true{} if the package was configured with @posix{} features
+enabled; otherwise return @false{}.
+@end defun
+
+
+@defun vicare-built-with-glibc-enabled
+Return @true{} if the package was configured with @gnu{} C Library
+features enabled; otherwise return @false{}.
+@end defun
+
+
+@defun vicare-built-with-linux-enabled
+Return @true{} if the package was configured with Linux features
+enabled; otherwise return @false{}.
 @end defun
 
 @c page
