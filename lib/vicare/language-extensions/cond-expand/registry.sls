@@ -8,9 +8,11 @@
     expand-time-features
     run-time-features
     available-features)
-  (import (rnrs)
+  (import (vicare)
     (for (prefix (vicare language-extensions cond-expand platform-features) platform.)
-         run expand))
+      run expand)
+    (for (prefix (vicare language-extensions cond-expand configuration-features) config.)
+      run expand))
 
 
 (define-syntax make-expand-time-features
@@ -70,30 +72,41 @@
 	(99		records)
 	(101		random-access-lists)
 	(111		boxes)))
-    (define (SRFI-names x)
-      (define number car)
-      (define mnemonic cdr)
+
+    (define (SRFI-names srfi-entry)
+      (define entry.number   car)
+      (define entry.mnemonic cadr)
       (define (make-symbol . args)
 	(string->symbol (apply string-append
 			       (map (lambda (a)
-				      (if (symbol? a) (symbol->string a) a))
+				      (if (symbol? a)
+					  (symbol->string a)
+					a))
 				 args))))
-      (let* ((n-str (number->string (number x)))
-	     (colon-n (make-symbol ":" n-str))
-	     (srfi-n (make-symbol "srfi-" n-str))
-	     (srfi-n-m (apply make-symbol srfi-n
-			      (map (lambda (m) (make-symbol "-" m))
-				(mnemonic x)))))
-	;; The first two are recommended by SRFI-97.
-	;; The last two are the two types of SRFI-97 library name.
+      (let* ((n-str	(number->string (entry.number srfi-entry)))
+	     (colon-n	(make-symbol ":"     n-str))
+	     (srfi-n	(make-symbol "srfi-" n-str))
+	     (srfi-n-m	(make-symbol srfi-n (make-symbol "-" (entry.mnemonic srfi-entry)))))
+	;;The  first   two  are   recommended  by   SRFI-97.   Examples:
+	;;"srfi-11", "srfi-11-let-values".
+	;;
+	;;The  last two  are  the  two types  of  SRFI-97 library  name.
+	;;Examples: "(srfi :11)", "(srfi :11 let-values)".
+	;;
 	(list srfi-n
 	      srfi-n-m
 	      `(srfi ,colon-n)
-	      `(srfi ,colon-n . ,(mnemonic x)))))
-    (let ((s (apply append (map SRFI-names SRFIs)))
-	  (h (platform.expand-time-features))
-	  (o '(r6rs)))
-      #`(quote #,(datum->syntax #'ignored (append s h o))))))
+	      `(srfi ,colon-n ,(entry.mnemonic srfi-entry)))))
+
+    (let* ((srfi-features         (apply append (map SRFI-names SRFIs)))
+	   (expand-time-features  (platform.expand-time-features))
+	   (language-features     '(r6rs))
+	   (config-features       (config.configuration-time-features))
+	   (all-features          (append srfi-features
+					  expand-time-features
+					  language-features
+					  config-features)))
+      #`(quote #,(datum->syntax #'ignored all-features)))))
 
 (define expand-time-features
   (make-expand-time-features))

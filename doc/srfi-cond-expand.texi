@@ -575,6 +575,21 @@ The program is running under a @posix{} system.
 @itemx cygwin
 @itemx gnu
 The program is running under the named @acronym{OS}.
+
+@item posix-enabled
+The package was built with @posix{} features enabled.  This means the
+libraries in the hierarchy @library{vicare posix ---} should be
+installed and functional.
+
+@item glibc-enabled
+The package was built with @gnu{} C Library features enabled.  This
+means the libraries in the hierarchy @library{vicare glibc ---} should
+be installed and functional.
+
+@item linux-enabled
+The package was built with Linux features enabled.  This means the
+libraries in the hierarchy @library{vicare linux ---} should be
+installed and functional.
 @end table
 
 @c end of file

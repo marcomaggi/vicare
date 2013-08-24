@@ -62,6 +62,12 @@ Notes for revision 0.3d3
     vicare-built-with-glibc-enabled
     vicare-built-with-linux-enabled
 
+* Added clauses to COND-EXPAND from (srfi :0):
+
+    posix-enabled
+    glibc-enabled
+    linux-enabled
+
 
 Notes for revision 0.3d2
 ------------------------

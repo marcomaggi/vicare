@@ -22,6 +22,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/cond-expand/feature-cond.sls		\
 	vicare/language-extensions/cond-expand/helpers.sls		\
 	vicare/language-extensions/cond-expand/platform-features.sls	\
+	vicare/language-extensions/cond-expand/configuration-features.sls \
 	vicare/language-extensions/cond-expand/registry.sls		\
 	\
 	vicare/arguments/general-c-buffers.sls				\
