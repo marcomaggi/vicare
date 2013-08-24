@@ -14,7 +14,7 @@
     ;;Return a list of symbols representing OS features.
     ;;
     (OS-id-features (host-info)
-		    '(("linux"	linux posix)
+		    '(("linux"		linux posix)
 		      ("solaris"	solaris posix)
 		      ("darwin"		darwin posix)
 		      ("bsd"		bsd)
