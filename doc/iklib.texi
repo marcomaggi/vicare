@@ -55,6 +55,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
+* iklib characters::            Additional character functions.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
@@ -2919,6 +2920,26 @@ The following bindings are exported by the library @library{vicare}.
 @defun promise? @var{obj}
 Return @true{} if @var{obj} is a promise object returned by
 @func{delay}, else return @false{}.
+@end defun
+
+@c page
+@node iklib characters
+@section Additional character functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun Syntax char-in-ascii-range? @var{obj}
+Evaluate to @true{} if @meta{obj} is a character and its Unicode code
+point is in the range @math{[0, 127]}.
+@end defun
+
+
+@defun fixnum-in-character-range? @var{obj}
+Defined by Vicare.  Return @true{} if @var{obj} is a fixnum and its
+value is in one of the ranges acceptable by Unicode code points;
+otherwise return @false{}.
 @end defun
 
 @c page

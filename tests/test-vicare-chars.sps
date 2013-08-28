@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -673,6 +673,14 @@
       (catch #f
 	(char>=? #\b #\b #\b 123))
     => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'misc))
+
+  (check (char-in-ascii-range? #\c)	=> #t)
+  (check (char-in-ascii-range? #\x5555)	=> #f)
 
   #t)
 

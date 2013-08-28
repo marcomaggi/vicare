@@ -1223,6 +1223,7 @@
     (call/cc					i v r ba)
     (call-with-values				i v r ba se)
     (ceiling					i v r ba se)
+;;
     (char->integer				i v r ba se)
     (char<=?					i v r ba se)
     (char<?					i v r ba se)
@@ -1230,6 +1231,9 @@
     (char>=?					i v r ba se)
     (char>?					i v r ba se)
     (char?					i v r ba se)
+    (char-in-ascii-range?			i v $language)
+    (fixnum-in-character-range?			i v $language)
+;;
     (complex?					i v r ba se)
     (cons					i v r ba se)
     (cos					i v r ba se)
