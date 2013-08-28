@@ -7,6 +7,12 @@ The Iconv functions allow conversion among character set encodings,
 available only if, at package configuration time, it was enabled with
 the @option{--with-iconv} option to the @command{configure} script.
 
+The availability of the Iconv @api{} can be tested at run--time with the
+function @func{vicare-built-with-iconv-enabled} from @library{vicare}
+(@pxref{iklib config, vicare-built-with-iconv-enabled}), and at
+expand--time with the clause @code{iconv-enabled} of @func{cond-expand}
+from @ansrfi{0} (@pxref{srfi cond-expand vicare, iconv-enabled}).
+
 @menu
 * iconv set::                   Encoding enumeration sets.
 * iconv conv::                  Conversion functions.
