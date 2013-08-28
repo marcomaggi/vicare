@@ -253,19 +253,35 @@ The program is running under a @posix{} system.
 The program is running under the named @acronym{OS}.
 
 @item srfi-enabled
+@cindex @code{srfi-enabled}, @func{cond-expand} clause
 The package was installed along with @srfi{} libraries.
 
+@item ffi-enabled
+@cindex @code{ffi-enabled}, @func{cond-expand} clause
+The package was built with Libffi bindings enabled.  This means the
+libraries in the hierarchy @library{vicare ffi ---} should be installed
+and functional.
+
+@item iconv-enabled
+@cindex @code{iconv-enabled}, @func{cond-expand} clause
+The package was built with Libiconv bindings enabled.  This means the
+libraries in the hierarchy @library{vicare iconv ---} should be
+installed and functional.
+
 @item posix-enabled
+@cindex @code{posix-enabled}, @func{cond-expand} clause
 The package was built with @posix{} features enabled.  This means the
 libraries in the hierarchy @library{vicare posix ---} should be
 installed and functional.
 
 @item glibc-enabled
+@cindex @code{glibc-enabled}, @func{cond-expand} clause
 The package was built with @gnu{} C Library features enabled.  This
 means the libraries in the hierarchy @library{vicare glibc ---} should
 be installed and functional.
 
 @item linux-enabled
+@cindex @code{linux-enabled}, @func{cond-expand} clause
 The package was built with Linux features enabled.  This means the
 libraries in the hierarchy @library{vicare linux ---} should be
 installed and functional.

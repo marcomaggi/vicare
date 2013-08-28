@@ -2227,6 +2227,8 @@
 ;;; --------------------------------------------------------------------
 ;;; configuration options
 
+    (vicare-built-with-ffi-enabled		i v $language)
+    (vicare-built-with-iconv-enabled		i v $language)
     (vicare-built-with-posix-enabled		i v $language)
     (vicare-built-with-glibc-enabled		i v $language)
     (vicare-built-with-linux-enabled		i v $language)

@@ -41,11 +41,12 @@
     record-guardian-logger		record-guardian-log
 
     ;; vicare configuration options
+    vicare-built-with-srfi-enabled
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
     vicare-built-with-posix-enabled
     vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled
-    vicare-built-with-srfi-enabled
-    )
+    vicare-built-with-linux-enabled)
   (import (except (ikarus)
 		  fixnum-width
 		  greatest-fixnum
@@ -60,7 +61,14 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level)
+		  expand-top-level
+
+		  vicare-built-with-srfi-enabled
+		  vicare-built-with-ffi-enabled
+		  vicare-built-with-iconv-enabled
+		  vicare-built-with-posix-enabled
+		  vicare-built-with-glibc-enabled
+		  vicare-built-with-linux-enabled)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
@@ -1325,6 +1333,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (vicare-built-with-srfi-enabled)
   (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
+
+(define (vicare-built-with-ffi-enabled)
+  (foreign-call "ikrt_vicare_built_with_ffi_enabled"))
+
+(define (vicare-built-with-iconv-enabled)
+  (foreign-call "ikrt_vicare_built_with_iconv_enabled"))
 
 (define (vicare-built-with-posix-enabled)
   (foreign-call "ikrt_vicare_built_with_posix_enabled"))

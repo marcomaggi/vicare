@@ -30,6 +30,12 @@ manual page.
 On non--Linux platforms we must avoid calling these functions, else the
 behaviour is undefined.
 
+The availability of the Linux @api{} can be tested at run--time with the
+function @func{vicare-built-with-linux-enabled} from @library{vicare}
+(@pxref{iklib config, vicare-built-with-linux-enabled}), and at
+expand--time with the clause @code{linux-enabled} of @func{cond-expand}
+from @ansrfi{0} (@pxref{srfi cond-expand vicare, linux-enabled}).
+
 @menu
 * linux env::                   Operating system environment variables.
 * linux status::                Process termination status.

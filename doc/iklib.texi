@@ -116,6 +116,24 @@ process.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun vicare-built-with-srfi-enabled
+Return @true{} if the package was installed along with the @srfi{}
+libraries; otherwise return @false{}.
+@end defun
+
+
+@defun vicare-built-with-iconv-enabled
+Return @true{} if the package was configured with bindings to Libiconv
+enabled; otherwise return @false{}.
+@end defun
+
+
+@defun vicare-built-with-ffi-enabled
+Return @true{} if the package was configured with bindings to Libffi
+enabled; otherwise return @false{}.
+@end defun
+
+
 @defun vicare-built-with-posix-enabled
 Return @true{} if the package was configured with @posix{} features
 enabled; otherwise return @false{}.
@@ -131,12 +149,6 @@ features enabled; otherwise return @false{}.
 @defun vicare-built-with-linux-enabled
 Return @true{} if the package was configured with Linux features
 enabled; otherwise return @false{}.
-@end defun
-
-
-@defun vicare-built-with-srfi-enabled
-Return @true{} if the package was installed along with the @srfi{}
-libraries; otherwise return @false{}.
 @end defun
 
 @c page

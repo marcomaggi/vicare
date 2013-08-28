@@ -45,16 +45,28 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d3
 ------------------------
 
+* Added to (vicare) functions to inspect configuration time options:
+
+    vicare-built-with-srfi-enabled
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
+    vicare-built-with-posix-enabled
+    vicare-built-with-glibc-enabled
+    vicare-built-with-linux-enabled
+
+  and to (srfi :0) the associated COND-EXPAND clauses:
+
+    srfi-enabled
+    ffi-enabled
+    iconv-enabled
+    posix-enabled
+    glibc-enabled
+    linux-enabled
+
 * Added miscellaneous functions to (vicare):
 
      char-in-ascii-range?
      fixnum-in-character-range?
-
-* Added to (vicare) functions to inspect configuration time options:
-
-    vicare-built-with-posix-enabled
-    vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled
 
 * Fixed (vicare language-extensions infix) exporting its own binding for
   XOR; it now reexports the binding from (vicare).
@@ -66,12 +78,6 @@ Notes for revision 0.3d3
 
 * SRFI 106:  added function  SOCKET-DESCRIPTOR; added  garbage collector
   destructor to the socket object.
-
-* Added clauses to COND-EXPAND from (srfi :0):
-
-    posix-enabled
-    glibc-enabled
-    linux-enabled
 
 
 Notes for revision 0.3d2

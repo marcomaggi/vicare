@@ -1522,6 +1522,10 @@ VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
   [ffi.h],[ffi],[ffi_call])
 AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
+AM_COND_IF([WANT_LIBFFI],
+  [AC_DEFINE([VICARE_BUILT_WITH_FFI_ENABLED],[1],
+     [defined if Libffi support is enabled])])
+
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
@@ -1556,6 +1560,10 @@ AS_IF([test "x$with_libiconv" != xno],
   [AC_MSG_NOTICE([libiconv was not requested])])
 dnl
 AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
+
+AM_COND_IF([WANT_LIBICONV],
+  [AC_DEFINE([VICARE_BUILT_WITH_ICONV_ENABLED],[1],
+     [defined if Libiconv support is enabled])])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library

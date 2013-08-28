@@ -23,6 +23,13 @@ set to @false{}.
 On non--@gnu{} C Library platforms we must avoid calling these
 functions, else the behaviour is undefined.
 
+The availability of the @gnu{} C Library @api{} can be tested at
+run--time with the function @func{vicare-built-with-glibc-enabled} from
+@library{vicare} (@pxref{iklib config,
+vicare-built-with-glibc-enabled}), and at expand--time with the clause
+@code{glibc-enabled} of @func{cond-expand} from @ansrfi{0} (@pxref{srfi
+cond-expand vicare, glibc-enabled}).
+
 @menu
 * glibc env::                   Operating system environment
                                 variables.
