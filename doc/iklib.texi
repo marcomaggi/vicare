@@ -2930,16 +2930,15 @@ Return @true{} if @var{obj} is a promise object returned by
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun Syntax char-in-ascii-range? @var{obj}
+@defun char-in-ascii-range? @var{obj}
 Evaluate to @true{} if @meta{obj} is a character and its Unicode code
 point is in the range @math{[0, 127]}.
 @end defun
 
 
 @defun fixnum-in-character-range? @var{obj}
-Defined by Vicare.  Return @true{} if @var{obj} is a fixnum and its
-value is in one of the ranges acceptable by Unicode code points;
-otherwise return @false{}.
+Return @true{} if @var{obj} is a fixnum and its value is in one of the
+ranges acceptable by Unicode code points; otherwise return @false{}.
 @end defun
 
 @c page

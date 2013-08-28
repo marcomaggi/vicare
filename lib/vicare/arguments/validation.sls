@@ -202,6 +202,8 @@
     pointer.vicare-arguments-validation
     non-null-pointer.vicare-arguments-validation
     pointer/false.vicare-arguments-validation
+    c-callback.vicare-arguments-validation
+    c-callback/false.vicare-arguments-validation
 
     ;; memory-blocks
     memory-block.vicare-arguments-validation
@@ -209,6 +211,8 @@
 
     ;; characters
     char.vicare-arguments-validation
+    char-in-ascii-range.vicare-arguments-validation
+    char-in-ascii-range/false.vicare-arguments-validation
 
     ;; flonums
     flonum.vicare-arguments-validation
@@ -1324,6 +1328,16 @@
        (not (pointer-null? obj)))
   (assertion-violation who "expected non NULL pointer as argument" obj))
 
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (c-callback who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer object as callback argument" obj))
+
+(define-argument-validation (c-callback/false who obj)
+  (or (not obj) (pointer? obj))
+  (assertion-violation who "expected false or pointer object as callback argument" obj))
+
 
 ;;;; memory-blocks
 
@@ -1390,6 +1404,16 @@
 (define-argument-validation (char who obj)
   (char? obj)
   (assertion-violation who "expected character as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (char-in-ascii-range who obj)
+  (char-in-ascii-range? obj)
+  (assertion-violation who "expected Scheme character in the ASCII range as argument" obj))
+
+(define-argument-validation (char-in-ascii-range/false who obj)
+  (or (not obj) (char-in-ascii-range? obj))
+  (assertion-violation who "expected false or Scheme character in the ASCII range as argument" obj))
 
 
 ;;;; ports

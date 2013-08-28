@@ -735,6 +735,13 @@ arguments validation}.
 Succeed if @var{obj} is a character.
 @end deffn
 
+
+@deffn {Validation Clause} char-in-ascii-range @var{obj}
+@deffnx {Validation Clause} char-in-ascii-range/false @var{obj}
+Succeed if @var{obj} is a character and its Unicode code point is in the
+range @math{[0, 127]}.  The second form accepts also @false{} as value.
+@end deffn
+
 @c page
 @node args predefined strings
 @subsubsection Validating string and related arguments
@@ -1048,6 +1055,16 @@ Succeed if @var{obj} is @false{} or a pointer.
 @deffn {Validation Clause} non-null-pointer @var{obj}
 Succeed if @var{obj} is a pointer and it does @strong{not} represent
 @cnull{}.
+@end deffn
+
+
+@deffn {Validation Clause} c-callback @var{obj}
+Succeed if @var{obj} is a pointer object.
+@end deffn
+
+
+@deffn {Validation Clause} c-callback/false @var{obj}
+Succeed if @var{obj} is @false{} or a pointer object.
 @end deffn
 
 @c page
