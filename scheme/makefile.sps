@@ -311,6 +311,7 @@
     "ikarus.command-line.sls"
 ;;; "ikarus.trace.sls"
     "ikarus.debugger.sls"
+    "ikarus.syntax-utilities.sls"
     "ikarus.main.sls"
     ))
 
@@ -2490,6 +2491,12 @@
     (keyword?					i v $language)
     (keyword=?					i v $language)
     (keyword-hash				i v $language)
+
+;;; --------------------------------------------------------------------
+;;; syntax utilities
+    (syntax-car					i v $language)
+    (syntax-cdr					i v $language)
+    (syntax->list				i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names

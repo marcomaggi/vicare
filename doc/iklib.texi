@@ -1633,6 +1633,7 @@ the character.
 * iklib expander local import::     Local library imports.
 * iklib expander extended export::  Extended library exports.
 * iklib expander fluids::           Fluid syntaxes.
+* iklib expander utilities::        Utility functions for writing macro.
 @end menu
 
 @c page
@@ -2185,6 +2186,78 @@ transformers while expanding the body forms.  The given @meta{keyword}
 must be already bound to fluid syntaxes defined by
 @func{define-fluid-syntax}.
 @end deffn
+
+@c page
+@node iklib expander utilities
+@subsection Utility functions for writing macro
+
+
+All the functions accept an optional argument @var{synner}: when used,
+it must be a function accepting 1 or 2 arguments, the first arugment
+being a string error message and the optional second argument being a
+subform; @var{synner} must raise a compound condition object with
+components: @condition{who}, @condition{message}, @condition{syntax}.
+The @var{synner} argument is meant to be used as follows:
+
+@example
+(define-syntax (my-macro stx)
+  (define (synner message subform)
+    (syntax-violation 'my-macro message stx subform))
+  (syntax-case stx ()
+    (pattern body)
+    (_
+     (synner "invalid syntax" #f))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Pairs processing
+
+
+@defun syntax-car @var{stx}
+@defunx syntax-car @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding pair; return a syntax
+object representing the car of @var{stx}.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (syntax-car #'(display . write))
+                    #'display)
+@result{} #t
+@end example
+@end defun
+
+
+@defun syntax-cdr @var{stx}
+@defunx syntax-cdr @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding pair; return a syntax
+object representing the cdr of @var{stx}.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (syntax-cdr #'(display . write))
+                    #'write)
+@result{} #t
+@end example
+@end defun
+
+
+@defun syntax->list @var{stx}
+@defunx syntax->list @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding a proper list of items;
+return a proper list holding the individual item syntax objects.
+
+@example
+(import (vicare))
+
+(for-all bound-identifier=?
+  (syntax->list #'(display write))
+  (list #'display #'write))
+@result{} #t
+@end example
+@end defun
 
 @c page
 @node iklib shared

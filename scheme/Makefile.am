@@ -194,6 +194,7 @@ EXTRA_DIST= \
 	ikarus.structs.sls				\
 	ikarus.symbol-table.sls				\
 	ikarus.symbols.sls				\
+	ikarus.syntax-utilities.sls			\
 	ikarus.time-and-date.sls			\
 	ikarus.timer.sls				\
 	ikarus.unicode-conversion.sls			\

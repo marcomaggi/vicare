@@ -142,6 +142,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
 	test-vicare-syntactic-extensions.sps		\
+	test-vicare-syntax-utilities.sps		\
 	test-vicare-system.sps				\
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\
