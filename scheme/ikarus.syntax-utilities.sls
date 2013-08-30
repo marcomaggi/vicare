@@ -34,6 +34,9 @@
     identifier-append		identifier-format
     identifier->string		string->identifier
 
+    duplicate-identifiers?	delete-duplicate-identifiers
+    identifier-memq
+
     ;; identifier processing: records API
     identifier-record-constructor
     identifier-record-predicate
@@ -151,6 +154,68 @@
 (define (string->identifier ctx str)
   (assert (identifier? ctx))
   (datum->syntax ctx (string->symbol str)))
+
+;;; --------------------------------------------------------------------
+
+(define duplicate-identifiers?
+  ;;Recursive  function.   Search  the   list  of  identifiers  STX  for
+  ;;duplicate  identifiers; at  the  first duplicate  found, return  it;
+  ;;return false if no duplications are found.
+  ;;
+  (case-lambda
+   ((stx)
+    (duplicate-identifiers? stx free-identifier=?))
+   ((stx identifier=)
+    (syntax-case stx ()
+      (() #f)
+      ((?car . ?cdr)
+       (let loop ((first #'?car)
+		  (rest  #'?cdr))
+	 (syntax-case rest ()
+	   (()
+	    (duplicate-identifiers? #'?cdr identifier=))
+	   ((?car . ?cdr)
+	    (if (identifier= first #'?car)
+		first
+	      (loop first #'?cdr))))))))))
+
+(define delete-duplicate-identifiers
+  (case-lambda
+   ((ids)
+    (delete-duplicate-identifiers ids free-identifier=?))
+   ((ids identifier=)
+    ;;Given the list  of identifiers IDS remove  the duplicate identifiers
+    ;;and return a proper list of unique identifiers.
+    ;;
+    (assert (and (list? ids) (for-all identifier? ids)))
+    (let clean-tail ((ids ids))
+      (if (null? ids)
+	  '()
+	(let ((head (car ids)))
+	  (cons head (clean-tail (remp (lambda (id)
+					 (identifier= id head))
+				   (cdr ids))))))))))
+
+(define identifier-memq
+  (case-lambda
+   ((id ids)
+    (identifier-memq id ids free-identifier=?))
+   ((id ids identifier=)
+    ;;Search the list of identifiers IDS for one which is IDENTIFIER= to
+    ;;ID and return the sublist starting  with it; return false if ID is
+    ;;not present.
+    ;;
+    (assert (identifier? id))
+    (assert (and (list? ids) (for-all identifier? ids)))
+    (let recur ((ids ids))
+      (cond ((null? ids)
+	     #f)
+	    ((let ((stx (car ids)))
+	       (and (identifier? stx)
+		    (identifier= id stx)))
+	     ids)
+	    (else
+	     (recur (cdr ids))))))))
 
 
 ;;;; identifiers processing: records API

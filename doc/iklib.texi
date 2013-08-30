@@ -2307,6 +2307,41 @@ be a string, symbol or identifier.
 @end example
 @end defun
 
+
+@defun duplicate-identifiers? @var{ids}
+@defunx duplicate-identifiers? @var{ids} @var{identifier=}
+Search the list of identifiers @var{ids} for duplicate identifiers; at
+the first duplicate found, return it; return @false{} if no duplications
+are found.
+
+The optional argument @var{identifier=} must be the predicate function
+used to compare identifiers; when not given it defaults to
+@func{free-identifier=?}.
+@end defun
+
+
+@defun delete-duplicate-identifiers @var{ids}
+@defunx delete-duplicate-identifiers @var{ids} @var{identifier=}
+Given the list of identifiers @var{ids} remove the duplicate identifiers
+and return a proper list of unique identifiers.
+
+The optional argument @var{identifier=} must be the predicate function
+used to compare identifiers; when not given it defaults to
+@func{free-identifier=?}.
+@end defun
+
+
+@defun identifier-memq @var{id} @var{ids}
+@defunx identifier-memq @var{id} @var{ids} @var{identifier=}
+Search the list of identifiers @var{ids} for one that matches @var{id}
+and return the sublist starting with it; return @false{} if @var{id} is
+not present.
+
+The optional argument @var{identifier=} must be the predicate function
+used to compare identifiers; when not given it defaults to
+@func{free-identifier=?}.
+@end defun
+
 @c page
 @node iklib expander utils records
 @subsubsection Generating identifiers for records @api{}

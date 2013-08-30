@@ -81,6 +81,36 @@
     (=> bound-identifier=?)
     #'this-that-those)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (duplicate-identifiers? (list #'a #'b #'c))
+    => #f)
+
+  (check
+      (duplicate-identifiers? (list #'a #'b #'c #'b))
+    (=> bound-identifier=?)
+    #'b)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all (lambda (obj1 obj2)
+		 (if (identifier? obj2)
+		     (bound-identifier=? obj1 obj2)
+		   (equal? obj1 obj2)))
+	(delete-duplicate-identifiers (list #'a #'b #'c #'b))
+	(list #'a #'b #'c))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all bound-identifier=?
+	(identifier-memq #'b (list #'a #'b #'c))
+	(list #'b #'c))
+    => #t)
+
   #t)
 
 

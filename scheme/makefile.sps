@@ -2501,6 +2501,9 @@
     (identifier-suffix				i v $language)
     (identifier-append				i v $language)
     (identifier-format				i v $language)
+    (duplicate-identifiers?			i v $language)
+    (delete-duplicate-identifiers		i v $language)
+    (identifier-memq				i v $language)
 
     (identifier-record-constructor		i v $language)
     (identifier-record-predicate		i v $language)
