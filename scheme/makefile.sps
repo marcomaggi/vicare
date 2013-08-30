@@ -2494,9 +2494,27 @@
 
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
+
     (syntax-car					i v $language)
     (syntax-cdr					i v $language)
     (syntax->list				i v $language)
+    (identifiers->list				i v $language)
+    (all-identifiers?				i v $language)
+
+    (identifier-prefix				i v $language)
+    (identifier-suffix				i v $language)
+    (identifier-append				i v $language)
+    (identifier-format				i v $language)
+
+    (identifier-record-constructor		i v $language)
+    (identifier-record-predicate		i v $language)
+    (identifier-record-field-accessor		i v $language)
+    (identifier-record-field-mutator		i v $language)
+
+    (identifier-struct-constructor		i v $language)
+    (identifier-struct-predicate		i v $language)
+    (identifier-struct-field-accessor		i v $language)
+    (identifier-struct-field-mutator		i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names

@@ -63,6 +63,9 @@ Notes for revision 0.3d3
     glibc-enabled
     linux-enabled
 
+* Added  utility functions  for macro  authoring, see  the documentation
+  node "iklib expander utils".
+
 * Added miscellaneous functions to (vicare):
 
      char-in-ascii-range?

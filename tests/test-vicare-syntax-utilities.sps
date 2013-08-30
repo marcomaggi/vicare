@@ -30,7 +30,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare functions: syntax utilities\n")
+(check-display "*** testing Vicare functions: syntax utilities\n")
 
 
 (parametrise ((check-test-name	'pairs))
@@ -50,10 +50,144 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (for-all (lambda (obj1 obj2)
+		 (if (identifier? obj2)
+		     (bound-identifier=? obj1 obj2)
+		   (equal? obj1 obj2)))
+	(syntax->list #'(display 123 write))
+	(list #'display 123 #'write))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
       (for-all bound-identifier=?
-	(syntax->list #'(display write))
+	(identifiers->list #'(display write))
 	(list #'display #'write))
     => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (all-identifiers? #'(a b c))
+    => #t)
+
+  (check
+      (all-identifiers? #'(a 1 c))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'ids))
+
+  (check
+      (identifier-prefix "this-" #'that)
+    (=> bound-identifier=?)
+    #'this-that)
+
+  (check
+      (identifier-prefix 'this- #'that)
+    (=> bound-identifier=?)
+    #'this-that)
+
+  (check
+      (identifier-prefix #'this- #'that)
+    (=> bound-identifier=?)
+    #'this-that)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-suffix #'this "-that")
+    (=> bound-identifier=?)
+    #'this-that)
+
+  (check
+      (identifier-suffix #'this- 'that)
+    (=> bound-identifier=?)
+    #'this-that)
+
+  (check
+      (identifier-suffix #'this- #'that)
+    (=> bound-identifier=?)
+    #'this-that)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-append #'here #'this "-that-" 'those)
+    (=> bound-identifier=?)
+    #'this-that-those)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-format #'here "~a-~a-~a" #'this "that" 'those)
+    (=> bound-identifier=?)
+    #'this-that-those)
+
+  #t)
+
+
+(parametrise ((check-test-name	'records))
+
+  (check
+      (identifier-record-constructor #'alpha)
+    (=> bound-identifier=?)
+    #'make-alpha)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-record-predicate #'alpha)
+    (=> bound-identifier=?)
+    #'alpha?)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-record-field-accessor #'alpha "one")
+    (=> bound-identifier=?)
+    #'alpha-one)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-record-field-mutator #'alpha "one")
+    (=> bound-identifier=?)
+    #'alpha-one-set!)
+
+  #t)
+
+
+(parametrise ((check-test-name	'structs))
+
+  (check
+      (identifier-struct-constructor #'alpha)
+    (=> bound-identifier=?)
+    #'make-alpha)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-struct-predicate #'alpha)
+    (=> bound-identifier=?)
+    #'alpha?)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-struct-field-accessor #'alpha "one")
+    (=> bound-identifier=?)
+    #'alpha-one)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (identifier-struct-field-mutator #'alpha "one")
+    (=> bound-identifier=?)
+    #'set-alpha-one!)
 
   #t)
 

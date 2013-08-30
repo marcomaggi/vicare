@@ -1633,7 +1633,7 @@ the character.
 * iklib expander local import::     Local library imports.
 * iklib expander extended export::  Extended library exports.
 * iklib expander fluids::           Fluid syntaxes.
-* iklib expander utilities::        Utility functions for writing macro.
+* iklib expander utils::            Utility functions for writing macro.
 @end menu
 
 @c page
@@ -2188,16 +2188,28 @@ must be already bound to fluid syntaxes defined by
 @end deffn
 
 @c page
-@node iklib expander utilities
+@node iklib expander utils
 @subsection Utility functions for writing macro
 
 
-All the functions accept an optional argument @var{synner}: when used,
-it must be a function accepting 1 or 2 arguments, the first arugment
-being a string error message and the optional second argument being a
-subform; @var{synner} must raise a compound condition object with
-components: @condition{who}, @condition{message}, @condition{syntax}.
-The @var{synner} argument is meant to be used as follows:
+@menu
+* iklib expander utils pairs::    Pairs processing.
+* iklib expander utils id::       Identifiers processing: generic functions.
+* iklib expander utils records::  Generating identifiers for records @api{}.
+* iklib expander utils structs::  Generating identifiers for structs @api{}.
+@end menu
+
+@c page
+@node iklib expander utils pairs
+@subsubsection Pairs processing
+
+
+Some functions accept an optional argument @var{synner}: when used, it
+must be a function accepting 1 or 2 arguments, the first arugment being
+a string error message and the optional second argument being a subform;
+@var{synner} must raise a compound condition object with components:
+@condition{who}, @condition{message}, @condition{syntax}.  The
+@var{synner} argument is meant to be used as follows:
 
 @example
 (define-syntax (my-macro stx)
@@ -2208,10 +2220,6 @@ The @var{synner} argument is meant to be used as follows:
     (_
      (synner "invalid syntax" #f))))
 @end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Pairs processing
 
 
 @defun syntax-car @var{stx}
@@ -2252,9 +2260,252 @@ return a proper list holding the individual item syntax objects.
 @example
 (import (vicare))
 
+(for-all (lambda (obj1 obj2)
+           (if (identifier? obj2)
+               (bound-identifier=? obj1 obj2)
+             (equal? obj1 obj2)))
+  (syntax->list #'(display 123 write))
+  (list #'display 123 #'write))
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifiers->list @var{stx}
+@defunx identifiers->list @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding a proper list of
+identifiers; return a proper list holding the individual identifiers.
+
+@example
+(import (vicare))
+
 (for-all bound-identifier=?
-  (syntax->list #'(display write))
+  (identifiers->list #'(display write))
   (list #'display #'write))
+@result{} #t
+@end example
+@end defun
+
+
+@defun all-identifiers? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the empty
+list or a proper list of identifiers, otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib expander utils id
+@subsubsection Identifiers processing: generic functions
+
+
+@defun identifier-prefix @var{prefix} @var{id}
+Build and return a new identifier, in the same lexical context of the
+identifier @var{id}, whose string name is the concatenation of
+@var{prefix} and @var{id}.  @var{prefix} can be a string, symbol or
+identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (identifier-prefix "this-" #'that)
+                    #'this-that)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-suffix @var{id} @var{suffix}
+Build and return a new identifier, in the same lexical context of the
+identifier @var{id}, whose string name is the concatenation of @var{id}
+and @var{suffix}.  @var{suffix} can be a string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (identifier-suffix #'this "-that")
+                    #'this-that)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-append @var{ctx} @var{item} @dots{}
+Build and return a new identifier, in the same lexical context of the
+identifier @var{ctx}, whose string name is the concatenation of the
+arugments @var{item}.  Each @var{item} can be a string, symbol or
+identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (identifier-append #'this "-that" '-those)
+                    #'this-that-those)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-format @var{ctx} @var{template} @var{item} @dots{}
+Build and return a new identifier, in the same lexical context of the
+identifier @var{ctx}, whose string name is the result of formatting the
+string @var{template} with the arugments @var{item}.  @var{template} can
+be a string including the same escape sequences of @func{format} from
+@library{vicare} (@pxref{iklib printing, format}).  Each @var{item} can
+be a string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-format #'here "~a-~a-~a" #'this "that" 'those)
+ #'this-that-those)
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node iklib expander utils records
+@subsubsection Generating identifiers for records @api{}
+
+
+@defun identifier-record-constructor @var{type-id}
+Assume @var{type-id} is an identifier representing the name of a
+@rnrs{6} record type: build and return a new identifer, in the same
+lexical context of @var{type-id}, representing the default constructor
+name for such record type.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-record-constructor #'alpha)
+ #'make-alpha)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-record-predicate @var{type-id}
+Assume @var{type-id} is an identifier representing the name of a
+@rnrs{6} record type: build and return a new identifer, in the same
+lexical context of @var{type-id}, representing the default predicate
+name for such record type.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-record-predicate #'alpha)
+ #'alpha?)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-record-field-accessor @var{type-id} @var{field-name}
+Assume @var{type-id} is an identifier representing the name of a
+@rnrs{6} record type: build and return a new identifer, in the same
+lexical context of @var{type-id}, representing the default accessor name
+for the field @var{field-name} of such record type.  @var{field-name}
+can be a string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-record-field-accessor #'alpha "one")
+ #'alpha-one)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-record-field-mutator @var{type-id} @var{field-name}
+Assume @var{type-id} is an identifier representing the name of a
+@rnrs{6} record type: build and return a new identifer, in the same
+lexical context of @var{type-id}, representing the default mutator name
+for the field @var{field-name} of such record type.  @var{field-name}
+can be a string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-record-field-mutator #'alpha "one")
+ #'alpha-one-set!)
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node iklib expander utils structs
+@subsubsection Generating identifiers for structs @api{}
+
+
+@defun identifier-struct-constructor @var{type-id}
+Assume @var{type-id} is an identifier representing the name of a Vicare
+struct type: build and return a new identifer, in the same lexical
+context of @var{type-id}, representing the default constructor name for
+such struct type.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-struct-constructor #'alpha)
+ #'make-alpha)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-struct-predicate @var{type-id}
+Assume @var{type-id} is an identifier representing the name of a Vicare
+struct type: build and return a new identifer, in the same lexical
+context of @var{type-id}, representing the default predicate name for
+such struct type.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-struct-predicate #'alpha)
+ #'alpha?)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-struct-field-accessor @var{type-id} @var{field-name}
+Assume @var{type-id} is an identifier representing the name of a Vicare
+struct type: build and return a new identifer, in the same lexical
+context of @var{type-id}, representing the default accessor name for the
+field @var{field-name} of such struct type.  @var{field-name} can be a
+string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-struct-field-accessor #'alpha "one")
+ #'alpha-one)
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifier-struct-field-mutator @var{type-id} @var{field-name}
+Assume @var{type-id} is an identifier representing the name of a Vicare
+struct type: build and return a new identifer, in the same lexical
+context of @var{type-id}, representing the default mutator name for the
+field @var{field-name} of such struct type.  @var{field-name} can be a
+string, symbol or identifier.
+
+@example
+(import (vicare))
+
+(bound-identifier=?
+ (identifier-struct-field-mutator #'alpha "one")
+ #'set-alpha-one!)
 @result{} #t
 @end example
 @end defun
