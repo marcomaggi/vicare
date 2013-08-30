@@ -2495,12 +2495,8 @@
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
 
-    (syntax-car					i v $language)
-    (syntax-cdr					i v $language)
-    (syntax->list				i v $language)
-    (identifiers->list				i v $language)
-    (all-identifiers?				i v $language)
-
+    (identifier->string				i v $language)
+    (string->identifier				i v $language)
     (identifier-prefix				i v $language)
     (identifier-suffix				i v $language)
     (identifier-append				i v $language)
@@ -2515,6 +2511,16 @@
     (identifier-struct-predicate		i v $language)
     (identifier-struct-field-accessor		i v $language)
     (identifier-struct-field-mutator		i v $language)
+
+    (syntax-car					i v $language)
+    (syntax-cdr					i v $language)
+    (syntax->list				i v $language)
+    (identifiers->list				i v $language)
+    (all-identifiers?				i v $language)
+
+    (syntax->vector				i v $language)
+
+    (syntax-unwrap				i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names

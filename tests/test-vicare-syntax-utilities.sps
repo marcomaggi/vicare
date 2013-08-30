@@ -33,52 +33,6 @@
 (check-display "*** testing Vicare functions: syntax utilities\n")
 
 
-(parametrise ((check-test-name	'pairs))
-
-  (check
-      (syntax-car #'(display . 1))
-    (=> bound-identifier=?)
-    #'display)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (syntax-cdr #'(1 . display))
-    (=> bound-identifier=?)
-    #'display)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (for-all (lambda (obj1 obj2)
-		 (if (identifier? obj2)
-		     (bound-identifier=? obj1 obj2)
-		   (equal? obj1 obj2)))
-	(syntax->list #'(display 123 write))
-	(list #'display 123 #'write))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (for-all bound-identifier=?
-	(identifiers->list #'(display write))
-	(list #'display #'write))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (all-identifiers? #'(a b c))
-    => #t)
-
-  (check
-      (all-identifiers? #'(a 1 c))
-    => #f)
-
-  #t)
-
-
 (parametrise ((check-test-name	'ids))
 
   (check
@@ -188,6 +142,103 @@
       (identifier-struct-field-mutator #'alpha "one")
     (=> bound-identifier=?)
     #'set-alpha-one!)
+
+  #t)
+
+
+(parametrise ((check-test-name	'pairs))
+
+  (check
+      (syntax-car #'(display . 1))
+    (=> bound-identifier=?)
+    #'display)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (syntax-cdr #'(1 . display))
+    (=> bound-identifier=?)
+    #'display)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all (lambda (obj1 obj2)
+		 (if (identifier? obj2)
+		     (bound-identifier=? obj1 obj2)
+		   (equal? obj1 obj2)))
+	(syntax->list #'(display 123 write))
+	(list #'display 123 #'write))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all bound-identifier=?
+	(identifiers->list #'(display write))
+	(list #'display #'write))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (all-identifiers? #'(a b c))
+    => #t)
+
+  (check
+      (all-identifiers? #'(a 1 c))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'vectors))
+
+  (check
+      (vector-for-all
+       (lambda (obj1 obj2)
+	 (if (identifier? obj2)
+	     (bound-identifier=? obj1 obj2)
+	   (equal? obj1 obj2)))
+       (syntax->vector #'#(display 123 write))
+       (vector #'display 123 #'write))
+    => #t)
+
+  #f)
+
+
+(parametrise ((check-test-name	'unwrap))
+
+  (check
+      (syntax-unwrap #'(1 (2 3) 4))
+    => '(1 (2 3) 4))
+
+  (check
+      (syntax-unwrap #'(1 #(2 3) 4))
+    => '(1 #(2 3) 4))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (vector-for-all
+       (lambda (obj1 obj2)
+	 (if (identifier? obj2)
+	     (bound-identifier=? obj1 obj2)
+	   (equal? obj1 obj2)))
+       (syntax-unwrap #'#(display 123 write))
+       (vector #'display 123 #'write))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all (lambda (obj1 obj2)
+		 (if (identifier? obj2)
+		     (bound-identifier=? obj1 obj2)
+		   (equal? obj1 obj2)))
+	(syntax-unwrap #'(display 123 write))
+	(list #'display 123 #'write))
+    => #t)
 
   #t)
 

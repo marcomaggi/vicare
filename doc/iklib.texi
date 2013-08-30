@@ -2193,15 +2193,18 @@ must be already bound to fluid syntaxes defined by
 
 
 @menu
-* iklib expander utils pairs::    Pairs processing.
+* iklib expander utils intro::    Introduction to utility functions.
 * iklib expander utils id::       Identifiers processing: generic functions.
 * iklib expander utils records::  Generating identifiers for records @api{}.
 * iklib expander utils structs::  Generating identifiers for structs @api{}.
+* iklib expander utils pairs::    Pairs processing.
+* iklib expander utils vectors::  Vectors processing.
+* iklib expander utils unwrap::   Unwrapping syntax objects.
 @end menu
 
 @c page
-@node iklib expander utils pairs
-@subsubsection Pairs processing
+@node iklib expander utils intro
+@subsubsection Introduction to utility functions
 
 
 Some functions accept an optional argument @var{synner}: when used, it
@@ -2221,80 +2224,20 @@ a string error message and the optional second argument being a subform;
      (synner "invalid syntax" #f))))
 @end example
 
-
-@defun syntax-car @var{stx}
-@defunx syntax-car @var{stx} @var{synner}
-Expect @var{stx} to be a syntax object holding pair; return a syntax
-object representing the car of @var{stx}.
-
-@example
-(import (vicare))
-
-(bound-identifier=? (syntax-car #'(display . write))
-                    #'display)
-@result{} #t
-@end example
-@end defun
-
-
-@defun syntax-cdr @var{stx}
-@defunx syntax-cdr @var{stx} @var{synner}
-Expect @var{stx} to be a syntax object holding pair; return a syntax
-object representing the cdr of @var{stx}.
-
-@example
-(import (vicare))
-
-(bound-identifier=? (syntax-cdr #'(display . write))
-                    #'write)
-@result{} #t
-@end example
-@end defun
-
-
-@defun syntax->list @var{stx}
-@defunx syntax->list @var{stx} @var{synner}
-Expect @var{stx} to be a syntax object holding a proper list of items;
-return a proper list holding the individual item syntax objects.
-
-@example
-(import (vicare))
-
-(for-all (lambda (obj1 obj2)
-           (if (identifier? obj2)
-               (bound-identifier=? obj1 obj2)
-             (equal? obj1 obj2)))
-  (syntax->list #'(display 123 write))
-  (list #'display 123 #'write))
-@result{} #t
-@end example
-@end defun
-
-
-@defun identifiers->list @var{stx}
-@defunx identifiers->list @var{stx} @var{synner}
-Expect @var{stx} to be a syntax object holding a proper list of
-identifiers; return a proper list holding the individual identifiers.
-
-@example
-(import (vicare))
-
-(for-all bound-identifier=?
-  (identifiers->list #'(display write))
-  (list #'display #'write))
-@result{} #t
-@end example
-@end defun
-
-
-@defun all-identifiers? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing the empty
-list or a proper list of identifiers, otherwise return @false{}.
-@end defun
-
 @c page
 @node iklib expander utils id
 @subsubsection Identifiers processing: generic functions
+
+
+@defun identifier->string @var{id}
+Return a string representing the name of the identifier @var{id}.
+@end defun
+
+
+@defun string->identifier @var{ctx} @var{str}
+Build and return a new identifier, in the same lexical context of
+@var{ctx}, having the string @var{str} as name.
+@end defun
 
 
 @defun identifier-prefix @var{prefix} @var{id}
@@ -2508,6 +2451,117 @@ string, symbol or identifier.
  #'set-alpha-one!)
 @result{} #t
 @end example
+@end defun
+
+@c page
+@node iklib expander utils pairs
+@subsubsection Pairs processing
+
+
+@defun syntax-car @var{stx}
+@defunx syntax-car @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding pair; return a syntax
+object representing the car of @var{stx}.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (syntax-car #'(display . write))
+                    #'display)
+@result{} #t
+@end example
+@end defun
+
+
+@defun syntax-cdr @var{stx}
+@defunx syntax-cdr @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding pair; return a syntax
+object representing the cdr of @var{stx}.
+
+@example
+(import (vicare))
+
+(bound-identifier=? (syntax-cdr #'(display . write))
+                    #'write)
+@result{} #t
+@end example
+@end defun
+
+
+@defun syntax->list @var{stx}
+@defunx syntax->list @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding a proper list of items;
+return a proper list holding the individual item syntax objects.
+
+@example
+(import (vicare))
+
+(for-all (lambda (obj1 obj2)
+           (if (identifier? obj2)
+               (bound-identifier=? obj1 obj2)
+             (equal? obj1 obj2)))
+  (syntax->list #'(display 123 write))
+  (list #'display 123 #'write))
+@result{} #t
+@end example
+@end defun
+
+
+@defun identifiers->list @var{stx}
+@defunx identifiers->list @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding a proper list of
+identifiers; return a proper list holding the individual identifiers.
+
+@example
+(import (vicare))
+
+(for-all bound-identifier=?
+  (identifiers->list #'(display write))
+  (list #'display #'write))
+@result{} #t
+@end example
+@end defun
+
+
+@defun all-identifiers? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the empty
+list or a proper list of identifiers, otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib expander utils vectors
+@subsubsection Vectors processing
+
+
+@defun syntax->vector @var{stx}
+@defunx syntax->vector @var{stx} @var{synner}
+Expect @var{stx} to be a syntax object holding a vector of items; return
+a proper list holding the individual item syntax objects.
+
+@example
+(import (vicare))
+
+(vector-for-all
+    (lambda (obj1 obj2)
+      (if (identifier? obj2)
+          (bound-identifier=? obj1 obj2)
+        (equal? obj1 obj2)))
+  (syntax->vector #'#(display 123 write))
+  (vector #'display 123 #'write))
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node iklib expander utils unwrap
+@subsubsection Unwrapping syntax objects
+
+
+@defun syntax-unwrap @var{stx}
+Given a syntax object @var{stx} decompose it and return the
+corresponding symbolic expression holding datums and identifiers.  Take
+care of returning a proper list when the input is a syntax object
+holding a proper list.
 @end defun
 
 @c page
