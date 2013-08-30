@@ -2522,6 +2522,10 @@
 
     (syntax-unwrap				i v $language)
 
+    (syntax=?					i v $language)
+
+    #;(quoted-syntax-object?			i v $language)
+
 ;;; --------------------------------------------------------------------
 ;;; library names
 

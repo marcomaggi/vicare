@@ -56,6 +56,12 @@
 
     ;; unwrapping
     syntax-unwrap
+
+    ;; comparison
+    syntax=?
+
+    ;; inspection
+    #;quoted-syntax-object?
     )
   (import (vicare))
 
@@ -274,6 +280,49 @@
      (syntax ?atom))
     (?atom
      (syntax->datum (syntax ?atom)))))
+
+
+;;;; comparison
+
+(define (syntax=? stx1 stx2)
+  (define (%syntax=? stx1 stx2)
+    (cond ((and (identifier? stx1) (identifier? stx2))
+	   (free-identifier=? stx1 stx2))
+	  ((and (pair? stx1) (pair? stx2))
+	   (and (syntax=? (car stx1) (car stx1))
+		(syntax=? (cdr stx1) (cdr stx1))))
+	  ((and (vector? stx1) (vector? stx2))
+	   (let ((len1 (vector-length stx1)))
+	     (and (= len1 (vector-length stx2))
+		  (let loop ((i 0))
+		    (or (= i len1)
+			(and (syntax=? (vector-ref stx1 i) (vector-ref stx2 i))
+			     (loop (+ 1 i)))))
+	       #f)))
+	  (else
+	   (equal? stx1 stx2))))
+  (%syntax=? (syntax-unwrap stx1) (syntax-unwrap stx2)))
+
+
+;;;; inspection
+
+;;FIXME This is commented out for now because the C language FASL reader
+;;cannot read R6RS records.  (Marco Maggi; Fri Aug 30, 2013)
+;;
+;; (define (quoted-syntax-object? stx)
+;;   ;;Given a syntax object: return true if  it is a list whose car is one
+;;   ;;among   QUOTE,  QUASIQUOTE,   SYNTAX,   QUASISYNTAX;  return   false
+;;   ;;otherwise.
+;;   ;;
+;;   (syntax-case stx ()
+;;     ((?car . ?cdr)
+;;      (and (identifier? #'?car)
+;; 	  (or (free-identifier=? #'?car #'quote)
+;; 	      (free-identifier=? #'?car #'quasiquote)
+;; 	      (free-identifier=? #'?car #'syntax)
+;; 	      (free-identifier=? #'?car #'quasisyntax)))
+;;      #t)
+;;     (_ #f)))
 
 
 ;;;; done

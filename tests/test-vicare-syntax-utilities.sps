@@ -243,6 +243,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'inspection))
+
+  ;; (check
+  ;;     (quoted-syntax-object? #'(quote alpha))
+  ;;   => #t)
+
+  ;; (check
+  ;;     (quoted-syntax-object? #'(alpha))
+  ;;   => #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

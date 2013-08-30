@@ -2200,6 +2200,8 @@ must be already bound to fluid syntaxes defined by
 * iklib expander utils pairs::    Pairs processing.
 * iklib expander utils vectors::  Vectors processing.
 * iklib expander utils unwrap::   Unwrapping syntax objects.
+* iklib expander utils inspect::  Inspecting syntax objects.
+* iklib expander utils compar::   Comparing syntax objects.
 @end menu
 
 @c page
@@ -2562,6 +2564,28 @@ Given a syntax object @var{stx} decompose it and return the
 corresponding symbolic expression holding datums and identifiers.  Take
 care of returning a proper list when the input is a syntax object
 holding a proper list.
+@end defun
+
+@c page
+@node iklib expander utils inspect
+@subsubsection Inspecting syntax objects
+
+
+@c @defun quoted-syntax-object? @var{stx}
+@c Given a syntax object: return @true{} if it is a list whose car is one
+@c among the identifiers @func{quote}, @func{quasiquote}, @func{syntax},
+@c @func{quasisyntax}; return @false{} otherwise.
+@c @end defun
+
+@c page
+@node iklib expander utils compar
+@subsubsection Comparing syntax objects
+
+
+@defun syntax=? @vari{stx} @varii{stx}
+Recursively visit the internals of the given syntax objects and return
+@true{} if they are equal; return @false{} otherwise.  Identifiers are
+compared with @func{free-identifier=?}.
 @end defun
 
 @c page
