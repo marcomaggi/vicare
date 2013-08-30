@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -40,30 +40,6 @@
 
 (define environment-for-assertion-errors
   environment-for-syntax-errors)
-
-(define (syntax=? stx1 stx2)
-  ;;Visit the syntax objects STX1 and STX2 and compare them: return true
-  ;;if they are equal.
-  ;;
-  (syntax-case stx1 ()
-    (_
-     (and (identifier? stx1)
-	  (identifier? stx2))
-     (free-identifier=? stx1 stx2))
-    ((?car1 . ?cdr1)
-     (syntax-case stx2 ()
-       ((?car2 . ?cdr2)
-	(and (syntax=? #'?car1 #'?car2)
-	     (syntax=? #'?cdr1 #'?cdr2)))
-       (_ #f)))
-    (#(?item1 ...)
-     (syntax-case stx2 ()
-       (#(?item2 ...)
-	(syntax=? #'(?item1 ...) #'(?item2 ...)))
-       (_ #f)))
-    (_
-     (equal? (syntax->datum stx1)
-	     (syntax->datum stx2)))))
 
 (define-syntax check-syntax-violation
   (syntax-rules (=>)
