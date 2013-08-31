@@ -97,8 +97,11 @@
     free-identifier=?			bound-identifier=?
     datum->syntax			syntax->datum
 
-    syntax-error			syntax-violation
-    assertion-error
+    syntax-violation			assertion-error
+
+    ;;FIXME SYNTAX-ERROR  is to be removed  from the export list  at the
+    ;;next boot image rotation.  (Marco Maggi; Sat Aug 31, 2013)
+    syntax-error
 
     make-variable-transformer		variable-transformer?
     variable-transformer-procedure
@@ -120,8 +123,13 @@
 		  bound-identifier=?	free-identifier=?
 		  generate-temporaries
 		  datum->syntax		syntax->datum
-		  syntax-error		syntax-violation
-		  make-variable-transformer)
+		  syntax-violation	make-variable-transformer
+
+		  ;;FIXME SYNTAX-ERROR is to  be removed from the export
+		  ;;list at the next boot image rotation.  (Marco Maggi;
+		  ;;Sat Aug 31, 2013)
+		  syntax-error
+		  )
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (psyntax library-manager)

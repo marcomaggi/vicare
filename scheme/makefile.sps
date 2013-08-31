@@ -1186,6 +1186,9 @@
     (append					i v r ba se)
     (apply					i v r ba se)
     (assert					i v r ba)
+    ;;FIXME SYNTAX-ERROR  is to be removed  from the export list  at the
+    ;;next boot image rotation.  (Marco Maggi; Sat Aug 31, 2013)
+    (syntax-error				i v $language)
     (assertion-error) ;empty?!?
     (assertion-violation			i v r ba)
     (boolean=?					i v r ba)
@@ -2081,7 +2084,6 @@
     (module					i v $language cm)
     (library					i v $language)
     (syntax-dispatch				)
-    (syntax-error				i v $language)
     ($transcoder->data				$transc $vicare-transc)
     ($data->transcoder				$transc $vicare-transc)
     (make-file-options				i v $language)

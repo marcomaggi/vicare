@@ -4350,7 +4350,7 @@
 	       (define (?refresh)
 		 (define-syntax ?func-name
 		   (lambda (stx)
-		     (syntax-error stx "cannot use label before it is defined")))
+		     (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
 		 ...
 		 (let* ((?func-name
 			 (let ((label
