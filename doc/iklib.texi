@@ -2202,6 +2202,7 @@ must be already bound to fluid syntaxes defined by
 * iklib expander utils unwrap::   Unwrapping syntax objects.
 * iklib expander utils inspect::  Inspecting syntax objects.
 * iklib expander utils compar::   Comparing syntax objects.
+* iklib expander utils clauses::  Syntax clauses helpers.
 @end menu
 
 @c page
@@ -2656,6 +2657,123 @@ holding a proper list.
 Recursively visit the internals of the given syntax objects and return
 @true{} if they are equal; return @false{} otherwise.  Identifiers are
 compared with @func{free-identifier=?}.
+@end defun
+
+@c page
+@node iklib expander utils clauses
+@subsubsection Syntax clauses helpers
+
+
+When writing definition macros similar to @func{define-record-type} it
+is quite useful to include in the syntax ``clauses'' that optionally
+specify the behaviour of the defined thing.  A list of clauses is a
+syntax object with the format:
+
+@example
+((@meta{identifier} @meta{thing} ...) ...)
+@end example
+
+@noindent
+in which @meta{identifier} is meant to be an auxiliary syntax (as
+defined by @func{define-auxiliary-syntaxes} or @func{define-syntax}) and
+the optional @meta{thing} arguments can represent any symbolic
+expression.  The following functions help in validating and processing
+such clauses.
+
+
+@defun syntax-clauses-unwrap @var{clauses}
+@defunx syntax-clauses-unwrap @var{clauses} @var{synner}
+Scan the syntax object @var{clauses} expecting it to represent a list of
+clauses; return a new syntax object representing @var{clauses} fully
+unwrapped.  The function @var{synner} is invoked if the structure of
+@var{clauses} is invalid.
+@end defun
+
+
+@defun filter-clauses @var{keyword-identifier} @var{clauses}
+Given a syntax object holding a list of clauses with the format:
+
+@example
+((@meta{identifier} . @meta{things}) ...)
+@end example
+
+@noindent
+look for the ones having @var{keyword-identifier} as @meta{identifier}
+(according to @func{free-identifier=?}) and return the selected clauses
+in a syntax object holding a list of them; return the empty list if no
+matching clause is found.
+@end defun
+
+
+@defun syntax-clauses-filter @var{keywords} @var{unwrapped-clauses}
+Given a fully unwrapped syntax object @var{unwrapped-clauses} holding a
+list of clauses (for example the return value of
+@func{syntax-clauses-unwrap}) select the ones having @meta{identifier}
+being @func{free-identifier=?} to an identifier in the list
+@var{keywords} and return the selected clauses in a fully unwrapped
+syntax object holding the list of them; return null if no matching
+clause is found.
+@end defun
+
+
+@defun syntax-clauses-remove @var{keywords} @var{unwrapped-clauses}
+Given a fully unwrapped syntax object @var{unwrapped-clauses} holding a
+list of clauses (for example the return value of
+@func{syntax-clauses-unwrap}) remove the ones having @meta{identifier}
+being @func{free-identifier=?} to an identifier in the list
+@var{keywords} and return the selected clauses in a fully unwrapped
+syntax object holding the list of them; return null if no matching
+clause is found.
+@end defun
+
+
+@defun syntax-clauses-partition @var{keywords} @var{unwrapped-clauses}
+Given a fully unwrapped syntax object @var{unwrapped-clauses} holding a
+list of clauses (for example the return value of
+@func{syntax-clauses-unwrap}) partition it into: a list of clauses
+having @meta{identifier} being @func{free-identifier=?} to an identifier
+in the list @var{keywords}, a list of non--matching clauses.  Return the
+two lists.
+@end defun
+
+
+@defun syntax-clauses-collapse @var{unwrapped-clauses}
+Given a fully unwrapped syntax object holding a list of clauses:
+collapse the clauses having equal @meta{identifier} into a single clause
+and return the resulting unwrapped syntax object.  Example:
+
+@example
+(syntax-clauses-collapse ((#'fields #'a #'b #'c)
+                          (#'fields #'d #'e #'f)))
+@result{} ((#'fields #'a #'b #'c #'d #'e #'f))
+@end example
+@end defun
+
+
+@defun validate-definition-clauses @var{mandatory-keywords} @var{optional-keywords} @var{at-most-once-keywords} @var{exclusive-keywords-sets} @var{clauses} @var{synner}
+Scan the syntax object @var{clauses} expecting a list with the format:
+
+@example
+((@meta{identifier} . @meta{things}) ...)
+@end example
+
+@noindent
+then verify that the @meta{identifier} syntax objects are in the list of
+identifiers @var{mandatory-keywords} or in the list of identifiers
+@var{optional-keywords}; any order is allowed.
+
+Identifiers in @var{mandatory-keywords} must appear at least once in the
+clauses; identifiers in @var{at-most-once-keywords} must appear at most
+once; identifiers in @var{optional-keywords} can appear zero or multiple
+times.
+
+@var{exclusive-keywords-sets} is a list of lists, each sublist holds
+identifiers; the identifiers in each sublist are mutually exclusive: at
+most one can appear in @var{clauses}.
+
+@var{synner} must be the closure used to raise a syntax violation if a
+parse error occurs; it must accept two arguments: the message string,
+the invalid subform.
 @end defun
 
 @c page

@@ -2526,12 +2526,16 @@
     (all-identifiers?				i v $language)
 
     (syntax->vector				i v $language)
-
     (syntax-unwrap				i v $language)
-
     (syntax=?					i v $language)
-
     #;(quoted-syntax-object?			i v $language)
+
+    (syntax-clauses-unwrap			i v $language)
+    (syntax-clauses-filter			i v $language)
+    (syntax-clauses-remove			i v $language)
+    (syntax-clauses-partition			i v $language)
+    (syntax-clauses-collapse			i v $language)
+    (syntax-clauses-validation			i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names

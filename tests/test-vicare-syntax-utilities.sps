@@ -40,13 +40,15 @@
     ((_ ?body => (?message ?form ?subform))
      (check
 	 (guard (E ((syntax-violation? E)
-		    (list (condition-message E)
-			  (syntax-violation-form E)
-			  (syntax-violation-subform E)))
+		    (list (string=? (condition-message E)
+				    ?message)
+			  (syntax=? (syntax-violation-form E)
+				    ?form)
+			  (syntax=? (syntax-violation-subform E)
+				    ?subform)))
 		   (else E))
 	   ?body)
-       (=> syntax=?)
-       (list ?message ?form ?subform)))))
+       => '(#t #t #t)))))
 
 
 (parametrise ((check-test-name	'ids))
@@ -302,6 +304,118 @@
   ;; (check
   ;;     (quoted-syntax-object? #'(alpha))
   ;;   => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'clauses))
+
+;;; unwrapping and format validation
+
+  (check
+      (syntax-clauses-unwrap #'())
+    (=> syntax=?)
+    '())
+
+  (check
+      (syntax-clauses-unwrap #'((alpha 123)
+				(beta  456)))
+    (=> syntax=?)
+    (list (list #'alpha 123)
+	  (list #'beta  456)))
+
+  (%guard-syntax-error
+      (syntax-clauses-unwrap #'#(123 123))
+    => ("expected list of elements as syntax clauses" #'#(123 123) #f))
+
+  (%guard-syntax-error
+      (syntax-clauses-unwrap #'(#(123 123)))
+    => ("invalid clause syntax" #'#(123 123) #f))
+
+  (%guard-syntax-error
+      (syntax-clauses-unwrap #'((123 123)))
+    => ("expected identifier as syntax clause first element" 123 #f))
+
+;;; --------------------------------------------------------------------
+;;; selecting clauses
+
+  (check
+      (syntax-clauses-filter (list #'alpha #'gamma)
+			     (syntax-clauses-unwrap #'((alpha 123)
+						       (beta  456))))
+    (=> syntax=?)
+    (list (list #'alpha 123)))
+
+  (check
+      (syntax-clauses-filter (list #'gamma)
+			     (syntax-clauses-unwrap #'((alpha 123)
+						       (beta  456))))
+    (=> syntax=?)
+    '())
+
+;;; --------------------------------------------------------------------
+;;; discarding clauses
+
+  (check
+      (syntax-clauses-remove (list #'alpha #'gamma)
+			     (syntax-clauses-unwrap #'((alpha 123)
+						       (beta  456))))
+    (=> syntax=?)
+    (list (list #'beta 456)))
+
+  (check
+      (syntax-clauses-remove (list #'gamma)
+			     (syntax-clauses-unwrap #'((alpha 123)
+						       (beta  456))))
+    (=> syntax=?)
+    (list (list #'alpha 123)
+	  (list #'beta  456)))
+
+;;; --------------------------------------------------------------------
+;;; partitioning clauses
+
+  (check
+      (receive (match no-match)
+	  (syntax-clauses-partition (list #'alpha #'gamma)
+				    (syntax-clauses-unwrap #'((alpha 123)
+							      (beta  456))))
+	(vector match no-match))
+    (=> syntax=?)
+    (vector (list (list #'alpha 123))
+	    (list (list #'beta  456))))
+
+;;; --------------------------------------------------------------------
+;;; collapsing clauses
+
+  (check
+      (syntax-clauses-collapse (syntax-clauses-unwrap #'((alpha 123)
+							 (beta  456))))
+    (=> syntax=?)
+    (list (list #'alpha 123)
+	  (list #'beta  456)))
+
+  (check
+      (syntax-clauses-collapse (syntax-clauses-unwrap #'((fields a b c)
+							 (fields d e f))))
+    (=> syntax=?)
+    (list (list #'fields #'a #'b #'c #'d #'e #'f)))
+
+  (check
+      (syntax-clauses-collapse (syntax-clauses-unwrap #'((fields a b)
+							 (fields c d)
+							 (fields e f))))
+    (=> syntax=?)
+    (list (list #'fields #'a #'b #'c #'d #'e #'f)))
+
+  (check
+      (syntax-clauses-collapse (syntax-clauses-unwrap #'((fields (mutable a) (immutable b))
+							 (fields (mutable c) (immutable d))
+							 (fields (mutable e) (immutable f)))))
+    (=> syntax=?)
+    (list (list #'fields
+		(list #'mutable #'a) (list #'immutable #'b)
+		(list #'mutable #'c) (list #'immutable #'d)
+		(list #'mutable #'e) (list #'immutable #'f))))
 
   #t)
 

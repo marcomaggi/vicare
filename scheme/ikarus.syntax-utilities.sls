@@ -65,8 +65,59 @@
 
     ;; inspection
     #;quoted-syntax-object?
-    )
-  (import (vicare))
+
+    ;; clauses helpers
+    syntax-clauses-unwrap
+    syntax-clauses-filter
+    syntax-clauses-remove
+    syntax-clauses-partition
+    syntax-clauses-collapse
+    syntax-clauses-validation)
+  (import (except (vicare)
+		  ;; identifier processing: generic functions
+		  identifier-prefix		identifier-suffix
+		  identifier-append		identifier-format
+		  identifier->string		string->identifier
+
+		  duplicate-identifiers?	delete-duplicate-identifiers
+		  identifier-memq
+
+		  ;; identifier processing: records API
+		  identifier-record-constructor
+		  identifier-record-predicate
+		  identifier-record-field-accessor
+		  identifier-record-field-mutator
+
+		  ;; identifier processing: structs API
+		  identifier-struct-constructor
+		  identifier-struct-predicate
+		  identifier-struct-field-accessor
+		  identifier-struct-field-mutator
+
+		  ;; pairs processing
+		  syntax-car			syntax-cdr
+		  syntax->list			identifiers->list
+		  all-identifiers?
+
+		  ;; vectors processing
+		  syntax->vector
+
+		  ;; unwrapping
+		  syntax-unwrap
+
+		  ;; comparison
+		  syntax=?
+
+		  ;; inspection
+		  #;quoted-syntax-object?
+
+		  ;; clauses helpers
+		  syntax-clauses-unwrap
+		  syntax-clauses-filter
+		  syntax-clauses-remove
+		  syntax-clauses-partition
+		  syntax-clauses-collapse
+		  syntax-clauses-validation))
 
 
 ;;;; helpers
@@ -351,19 +402,16 @@
 
 (define (syntax=? stx1 stx2)
   (define (%syntax=? stx1 stx2)
-    (cond ((and (identifier? stx1) (identifier? stx2))
+    (cond ((and (identifier? stx1)
+		(identifier? stx2))
 	   (free-identifier=? stx1 stx2))
-	  ((and (pair? stx1) (pair? stx2))
-	   (and (syntax=? (car stx1) (car stx1))
-		(syntax=? (cdr stx1) (cdr stx1))))
-	  ((and (vector? stx1) (vector? stx2))
-	   (let ((len1 (vector-length stx1)))
-	     (and (= len1 (vector-length stx2))
-		  (let loop ((i 0))
-		    (or (= i len1)
-			(and (syntax=? (vector-ref stx1 i) (vector-ref stx2 i))
-			     (loop (+ 1 i)))))
-	       #f)))
+	  ((and (pair? stx1)
+		(pair? stx2))
+	   (and (syntax=? (car stx1) (car stx2))
+		(syntax=? (cdr stx1) (cdr stx2))))
+	  ((and (vector? stx1)
+		(vector? stx2))
+	   (vector-for-all syntax=? stx1 stx2))
 	  (else
 	   (equal? stx1 stx2))))
   (%syntax=? (syntax-unwrap stx1) (syntax-unwrap stx2)))
@@ -390,7 +438,222 @@
 ;;     (_ #f)))
 
 
-;;;; syntax clauses
+;;;; syntax clauses utilities
+
+(define syntax-clauses-unwrap
+  (case-lambda
+   ((clauses)
+    (syntax-clauses-unwrap clauses (%make-synner 'syntax-clauses-unwrap)))
+   ((clauses synner)
+    ;;Scan the syntax object CLAUSES expecting a list with the format:
+    ;;
+    ;;    ((?identifier . ?things) ...)
+    ;;
+    ;;return a syntax object representing CLAUSES fully unwrapped.
+    ;;
+    ;;SYNNER must  be a closure  used to raise  a syntax violation  if a
+    ;;parse  error occurs;  it must  accept two  arguments: the  message
+    ;;string, the invalid subform.
+    ;;
+    (syntax-case clauses ()
+
+      (() '())
+
+      (((?identifier . ?things) . ?other-clauses)
+       (identifier? #'?identifier)
+       (cons (cons #'?identifier (syntax-unwrap #'?things))
+	     (syntax-clauses-unwrap #'?other-clauses synner)))
+
+      (((?wrong . ?things) . ?other-clauses)
+       (synner "expected identifier as syntax clause first element" #'?wrong))
+
+      ((?clause . ?other-clauses)
+       (synner "invalid clause syntax" #'?clause))
+
+      (_
+       (synner "expected list of elements as syntax clauses" clauses))))))
+
+(define (syntax-clauses-filter keyword-identifiers clauses)
+  ;;Given a fully unwrapped syntax object holding a list of clauses with
+  ;;the format:
+  ;;
+  ;;    ((?identifier ?thing ...) ...)
+  ;;
+  ;;select  the ones  having ?IDENTIFIER  being FREE-IDENTIFIER=?  to an
+  ;;identifier in  the list KEYWORD-IDENTIFIERS and  return the selected
+  ;;clauses in a fully unwrapped syntax object holding the list of them;
+  ;;return null if no matching clause is found.
+  ;;
+  (assert (all-identifiers? keyword-identifiers))
+  (filter (lambda (clause)
+	    (exists (lambda (keyword)
+		      (free-identifier=? keyword (car clause)))
+	      keyword-identifiers))
+    clauses))
+
+(define (syntax-clauses-remove keyword-identifiers clauses)
+  ;;Given a fully unwrapped syntax object holding a list of clauses with
+  ;;the format:
+  ;;
+  ;;    ((?identifier ?thing ...) ...)
+  ;;
+  ;;discard the  ones having ?IDENTIFIER being  FREE-IDENTIFIER=?  to an
+  ;;identifier in  the list KEYWORD-IDENTIFIERS and  return the selected
+  ;;clauses in a fully unwrapped syntax object holding the list of them;
+  ;;return null if no matching clause is found.
+  ;;
+  (assert (all-identifiers? keyword-identifiers))
+  (remp (lambda (clause)
+	  (exists (lambda (keyword)
+		    (free-identifier=? keyword (car clause)))
+	    keyword-identifiers))
+    clauses))
+
+(define (syntax-clauses-partition keyword-identifiers clauses)
+  ;;Given a fully unwrapped syntax object holding a list of clauses with
+  ;;the format:
+  ;;
+  ;;    ((?identifier ?thing ...) ...)
+  ;;
+  ;;partition   it    into   the    ones   having    ?IDENTIFIER   being
+  ;;FREE-IDENTIFIER=?  to an identifier  in the list KEYWORD-IDENTIFIERS
+  ;;and the others.  Return two values: the list of matching clauses and
+  ;;the list of non-matching clauses.
+  ;;
+  (assert (all-identifiers? keyword-identifiers))
+  (partition (lambda (clause)
+	       (exists (lambda (keyword)
+			 (free-identifier=? keyword (car clause)))
+		 keyword-identifiers))
+    clauses))
+
+(define (syntax-clauses-collapse clauses)
+  ;;Given a fully unwrapped syntax object holding a list of clauses with
+  ;;the format:
+  ;;
+  ;;    ((?identifier ?thing ...) ...)
+  ;;
+  ;;collapse the clauses  having equal ?IDENTIFIER into  a single clause
+  ;;and return the resulting unwrapped syntax object.  Example:
+  ;;
+  ;;    (syntax-clauses-collapse ((#'fields #'a #'b #'c)
+  ;;                              (#'fields #'d #'e #'f)))
+  ;;    => ((#'fields #'a #'b #'c #'d #'e #'f))
+  ;;
+  (if (null? clauses)
+      '()
+    (let* ((A     (car clauses))
+	   (D     (cdr clauses))
+	   (A-key (car A)))
+      (receive (match no-match)
+	  (syntax-clauses-partition (list A-key) D)
+	(cons (cons A-key (apply append (cdr A) (map cdr match)))
+	      (syntax-clauses-collapse no-match))))))
+
+
+;;;; full syntax clauses parsing
+
+(define (syntax-clauses-validation mandatory-keywords optional-keywords
+				   at-most-once-keywords exclusive-keywords-sets
+				   clauses synner)
+  ;;Scan the syntax object CLAUSES expecting a list with the format:
+  ;;
+  ;;    ((?identifier . ?things) ...)
+  ;;
+  ;;then verify that  the ?IDENTIFIER syntax objects are  in the list of
+  ;;identifiers  MANDATORY-KEYWORDS  or   in  the  list  of  identifiers
+  ;;OPTIONAL-KEYWORDS; any order is allowed.
+  ;;
+  ;;Identifiers in  MANDATORY-KEYWORDS must appear at least  once in the
+  ;;clauses;  identifiers in AT-MOST-ONCE-KEYWORDS  must appear  at most
+  ;;once; identifiers  in OPTIONAL-KEYWORDS can appear  zero or multiple
+  ;;times.
+  ;;
+  ;;EXCLUSIVE-KEYWORDS-SETS  is  a list  of  lists,  each sublist  holds
+  ;;identifiers; the identifiers in each sublist are mutually exclusive:
+  ;;at most one can appear in CLAUSES.
+  ;;
+  ;;SYNNER must  be the closure  used to raise  a syntax violation  if a
+  ;;parse  error  occurs; it  must  accept  two  arguments: the  message
+  ;;string, the invalid subform.
+  ;;
+
+  (define (%identifiers-join-for-message identifiers)
+    ;;Given  a possibly  empty list  of  identifiers, join  them into  a
+    ;;string with a  comma as separator; return the  string.  To be used
+    ;;to build error messages involving the list of identifiers.
+    ;;
+    (let ((keys (map symbol->string (map syntax->datum identifiers))))
+      (if (null? keys)
+	  ""
+	(call-with-values
+	    (lambda ()
+	      (open-string-output-port))
+	  (lambda (port getter)
+	    (display (syntax->datum (car keys)) port)
+	    (let loop ((keys (cdr keys)))
+	      (if (null? keys)
+		  (getter)
+		(begin
+		  (display ", " port)
+		  (display (syntax->datum (car keys)) port)
+		  (loop (cdr keys))))))))))
+
+
+
+
+  (let ((clauses (syntax-clauses-unwrap clauses synner)))
+
+    ;;Check that the keyword of each clause is in MANDATORY-KEYWORDS or in
+    ;;OPTIONAL-KEYWORDS.
+    (for-each
+	(lambda (clause)
+	  (let ((key (car clause)))
+	    (unless (or (identifier-memq key mandatory-keywords)
+			(identifier-memq key optional-keywords))
+	      (synner (string-append
+		       "unrecognised clause keyword \""
+		       (identifier->string (car clause))
+		       "\", expected one among: "
+		       (%identifiers-join-for-message (append mandatory-keywords optional-keywords)))
+		      clause))))
+      clauses)
+
+    ;;Check the mandatory keywords.
+    (for-each (lambda (mandatory-key)
+		(unless (find (lambda (clause)
+				(free-identifier=? mandatory-key (car clause)))
+			  clauses)
+		  (synner (string-append "missing mandatory clause "
+					 (symbol->string (syntax->datum mandatory-key)))
+			  mandatory-key)))
+      mandatory-keywords)
+
+    ;;Check the keywords which must appear at most once.
+    (for-each
+	(lambda (once-key)
+	  (let* ((err-clauses (filter (lambda (clause)
+					(free-identifier=? once-key (car clause)))
+				clauses))
+		 (count (length err-clauses)))
+	    (unless (or (zero? count) (= 1 count))
+	      (synner (string-append "clause " (symbol->string (syntax->datum once-key))
+				     " given multiple times")
+		      err-clauses))))
+      at-most-once-keywords)
+
+    ;;Check mutually exclusive keywords.
+    (for-each (lambda (mutually-exclusive-ids)
+		(let ((err (filter (lambda (clause) clause)
+			     (map (lambda (e)
+				    (exists (lambda (clause)
+					      (and (free-identifier=? e (car clause))
+						   clause))
+				      clauses))
+			       mutually-exclusive-ids))))
+		  (when (< 1 (length err))
+		    (synner "mutually exclusive clauses" err))))
+      exclusive-keywords-sets)))
 
 
 ;;;; done
