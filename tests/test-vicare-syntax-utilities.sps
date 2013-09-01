@@ -33,6 +33,22 @@
 (check-display "*** testing Vicare functions: syntax utilities\n")
 
 
+;;;; helpers
+
+(define-syntax %guard-syntax-error
+  (syntax-rules (=>)
+    ((_ ?body => (?message ?form ?subform))
+     (check
+	 (guard (E ((syntax-violation? E)
+		    (list (condition-message E)
+			  (syntax-violation-form E)
+			  (syntax-violation-subform E)))
+		   (else E))
+	   ?body)
+       (=> syntax=?)
+       (list ?message ?form ?subform)))))
+
+
 (parametrise ((check-test-name	'ids))
 
   (check
@@ -201,6 +217,10 @@
 	(list #'display 123 #'write))
     => #t)
 
+  (%guard-syntax-error
+      (syntax->list #'ciao)
+    => ("expected syntax object holding proper list as argument" #'ciao #f))
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -291,3 +311,6 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put '%guard-syntax-error 'scheme-indent-function 1)
+;; End:

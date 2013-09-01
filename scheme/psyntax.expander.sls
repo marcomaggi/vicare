@@ -3260,6 +3260,7 @@
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 	     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
 	     ((unwind-protect)			unwind-protect-macro)
+	     ((with-implicits)			with-implicits-macro)
 
 	     ;; non-Scheme style syntaxes
 	     ((return)				return-macro)
@@ -3782,6 +3783,39 @@
 	     (begin0
 		 ,?body
 	       (cleanup)))))))
+    ))
+
+
+;;;; module non-core-macro-transformer: WITH-IMPLICITS
+
+(define (with-implicits-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (define (%make-bindings ctx ids)
+    (map (lambda (id)
+	   `(,id (datum->syntax ,ctx (quote ,id))))
+      ids))
+
+  (syntax-match expr-stx ()
+
+    ((_ () ?body0 ?body* ...)
+     (bless
+      `(begin ,?body0 ,@?body*)))
+
+    ((_ ((?ctx ?symbol0 ?symbol* ...))
+	?body0 ?body* ...)
+     (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
+       (bless
+	`(with-syntax ,BINDINGS ,?body0 ,@?body*))))
+
+    ((_ ((?ctx ?symbol0 ?symbol* ...) . ?other-clauses)
+	?body0 ?body* ...)
+     (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
+       (bless
+	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 ,@?body*)))))
+
     ))
 
 

@@ -1875,6 +1875,34 @@
   #t)
 
 
+(parametrise ((check-test-name	'with-implicits))
+
+  (check
+      (let-syntax ((doit (lambda (stx)
+			   (syntax-case stx ()
+			     ((?id)
+			      (identifier? #'?id)
+			      (with-implicits ((#'?id x y z)
+					       (#'?id p q r))
+				#'(list x y z p q r)))))))
+
+	(let ((x 1) (y 2) (z 3)
+	      (p 10) (q 20) (r 30))
+	  (doit)))
+    => '(1 2 3 10 20 30))
+
+  (check
+      (let-syntax ((doit (lambda (stx)
+			   (syntax-case stx ()
+			     ((?ctx)
+			      (with-implicits ()
+				123))))))
+	(doit))
+    => 123)
+
+  #t)
+
+
 ;; (parametrise ((check-test-name	'syntax-transpose))
 
 ;;   (define id #f)

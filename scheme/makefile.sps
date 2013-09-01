@@ -410,6 +410,7 @@
     (begin0				(macro . begin0))
     (xor				(macro . xor))
     (unwind-protect			(macro . unwind-protect))
+    (with-implicits			(macro . with-implicits))
     (include				(macro . include))
 ;;;
     (return				($fluid . return))
@@ -2101,6 +2102,7 @@
     (begin0					i v $language)
     (xor					i v $language)
     (unwind-protect				i v $language)
+    (with-implicits				i v $language)
     (include					i v $language)
 ;;;
     (return					i v $language)

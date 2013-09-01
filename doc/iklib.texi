@@ -2342,6 +2342,41 @@ used to compare identifiers; when not given it defaults to
 @func{free-identifier=?}.
 @end defun
 
+
+@deffn Syntax with-implicits ((@meta{ctx} @meta{symbol} ...) ...) . @meta{body}
+Wrapper for @func{with-syntax} which defines the identifiers
+@meta{symbol} with the same context of @meta{ctx}.  @meta{ctx} must be
+an expression evaluating to an identifier; it is evaluated only once.
+@meta{symbol} must be Scheme symbols.
+
+For example:
+
+@example
+(syntax-case stx ()
+  ((id)
+   (identifier? #'id)
+   (with-implicits ((#'id x y))
+     #'(list x y))))
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+(syntax-case stx ()
+  ((id)
+   (identifier? #'id)
+   (with-syntax ((x (datum->syntax #'id 'x))
+                 (y (datum->syntax #'id 'y)))
+     #'(list x y))))
+@end example
+
+@quotation
+@strong{NOTE} This macro is derived from the one documented in the Chez
+Scheme User's Guide.
+@end quotation
+@end deffn
+
 @c page
 @node iklib expander utils records
 @subsubsection Generating identifiers for records @api{}
