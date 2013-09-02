@@ -95,8 +95,7 @@ itself.
 
 @item
 The @func{without-argument} specification describes an optional keyword
-argument with mandatory value, which must @strong{not} be a keyword
-itself.
+argument without value.
 
 @item
 @meta{name} must be an identifier which will become the name of a
