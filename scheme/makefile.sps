@@ -2535,6 +2535,9 @@
     (syntax-clauses-remove			i v $language)
     (syntax-clauses-partition			i v $language)
     (syntax-clauses-collapse			i v $language)
+    (syntax-clauses-verify-at-least-once	i v $language)
+    (syntax-clauses-verify-at-most-once		i v $language)
+    (syntax-clauses-verify-exactly-once		i v $language)
     (syntax-clauses-validation			i v $language)
 
 ;;; --------------------------------------------------------------------

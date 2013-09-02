@@ -72,6 +72,9 @@
     syntax-clauses-remove
     syntax-clauses-partition
     syntax-clauses-collapse
+    syntax-clauses-verify-at-least-once
+    syntax-clauses-verify-at-most-once
+    syntax-clauses-verify-exactly-once
     syntax-clauses-validation)
   (import (except (vicare)
 		  ;; identifier processing: generic functions
@@ -117,6 +120,9 @@
 		  syntax-clauses-remove
 		  syntax-clauses-partition
 		  syntax-clauses-collapse
+		  syntax-clauses-verify-at-least-once
+		  syntax-clauses-verify-at-most-once
+		  syntax-clauses-verify-exactly-once
 		  syntax-clauses-validation))
 
 
@@ -549,6 +555,88 @@
 	  (syntax-clauses-partition (list A-key) D)
 	(cons (cons A-key (apply append (cdr A) (map cdr match)))
 	      (syntax-clauses-collapse no-match))))))
+
+
+;;;; syntax clauses constraints
+
+(define syntax-clauses-verify-at-least-once
+  (case-lambda
+   ((keywords clauses)
+    (syntax-clauses-verify-at-least-once keywords clauses
+					 (%make-synner 'syntax-clauses-verify-at-least-once)))
+   ((keywords clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify that all  the identifiers in the list  KEYWORDS are present
+    ;;at  least   once  as   clause  keywords.   If   successful  return
+    ;;unspecified values, else call SYNNER.
+    ;;
+    (assert (all-identifiers? keywords))
+    (let loop ((keywords keywords))
+      (unless (null? keywords)
+	(let ((keyword (car keywords)))
+	  (if (exists (lambda (clause)
+			(free-identifier=? keyword (car clause)))
+		clauses)
+	      (loop (cdr keywords))
+	    (synner "missing mandatory clause" keyword))))))
+   ))
+
+(define syntax-clauses-verify-at-most-once
+  (case-lambda
+   ((keywords clauses)
+    (syntax-clauses-verify-at-most-once keywords clauses
+					(%make-synner 'syntax-clauses-verify-at-most-once)))
+   ((keywords clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify that  the identifiers in  the list KEYWORDS are  present at
+    ;;most once  as clause  keywords.  If successful  return unspecified
+    ;;values, else call SYNNER.
+    ;;
+    (assert (all-identifiers? keywords))
+    (let loop ((keywords keywords))
+      (unless (null? keywords)
+	(let* ((keyword (car keywords))
+	       (present (syntax-clauses-filter (list keyword) clauses)))
+	  (if (>= 1 (length present))
+	      (loop (cdr keywords))
+	    (synner "clause must be present at most once" present))))))
+   ))
+
+(define syntax-clauses-verify-exactly-once
+  (case-lambda
+   ((keywords clauses)
+    (syntax-clauses-verify-exactly-once keywords clauses
+					(%make-synner 'syntax-clauses-verify-exactly-once)))
+   ((keywords clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify  that the  identifiers  in the  list  KEYWORDS are  present
+    ;;exactly once as clause keywords.  If successful return unspecified
+    ;;values, else call SYNNER.
+    ;;
+    (assert (all-identifiers? keywords))
+    (let loop ((keywords keywords))
+      (unless (null? keywords)
+	(let* ((keyword (car keywords))
+	       (present (syntax-clauses-filter (list keyword) clauses))
+	       (number  (length present)))
+	  (if (= 1 number)
+	      (loop (cdr keywords))
+	    (synner "clause must be present exactly once" (if (< 1 number)
+							      present
+							    keyword)))))))
+   ))
 
 
 ;;;; full syntax clauses parsing

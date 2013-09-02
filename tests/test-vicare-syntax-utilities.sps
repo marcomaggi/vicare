@@ -42,10 +42,12 @@
 	 (guard (E ((syntax-violation? E)
 		    (list (string=? (condition-message E)
 				    ?message)
-			  (syntax=? (syntax-violation-form E)
-				    ?form)
-			  (syntax=? (syntax-violation-subform E)
-				    ?subform)))
+			  (or (syntax=? (syntax-violation-form E)
+					?form)
+			      ?form)
+			  (or (syntax=? (syntax-violation-subform E)
+					?subform)
+			      ?subform)))
 		   (else E))
 	   ?body)
        => '(#t #t #t)))))
@@ -416,6 +418,84 @@
 		(list #'mutable #'a) (list #'immutable #'b)
 		(list #'mutable #'c) (list #'immutable #'d)
 		(list #'mutable #'e) (list #'immutable #'f))))
+
+;;; --------------------------------------------------------------------
+;;; verify at least once
+
+  (check
+      (guard (E (else E))
+	(syntax-clauses-verify-at-least-once (list #'a #'b)
+					     (syntax-clauses-unwrap #'((a 123)
+								       (b 456)
+								       (d 789))))
+	#t)
+    => #t)
+
+  (%guard-syntax-error
+      (syntax-clauses-verify-at-least-once (list #'a #'b)
+					   (syntax-clauses-unwrap #'((a 123)
+								     (d 789))))
+
+    => ("missing mandatory clause" #'b #f))
+
+;;; --------------------------------------------------------------------
+;;; verify at most once
+
+  (check	;present
+      (guard (E (else E))
+	(syntax-clauses-verify-at-most-once (list #'a #'b)
+					    (syntax-clauses-unwrap #'((a 123)
+								      (b 456)
+								      (d 789))))
+	#t)
+    => #t)
+
+  (check	;missing
+      (guard (E (else E))
+	(syntax-clauses-verify-at-most-once (list #'a #'b)
+					    (syntax-clauses-unwrap #'((d 789))))
+	#t)
+    => #t)
+
+  (%guard-syntax-error
+      (syntax-clauses-verify-at-most-once (list #'a #'b)
+					  (syntax-clauses-unwrap #'((a 123)
+								    (a 456)
+								    (d 789))))
+
+    => ("clause must be present at most once"
+	(list (list #'a 123)
+	      (list #'a 456))
+	#f))
+
+;;; --------------------------------------------------------------------
+;;; verify exactly once
+
+  (check	;present
+      (guard (E (else E))
+	(syntax-clauses-verify-exactly-once (list #'a #'b)
+					    (syntax-clauses-unwrap #'((a 123)
+								      (b 456)
+								      (d 789))))
+	#t)
+    => #t)
+
+  (%guard-syntax-error
+      (syntax-clauses-verify-exactly-once (list #'a #'b)
+					  (syntax-clauses-unwrap #'((d 789)
+								    (a 123))))
+    => ("clause must be present exactly once" #'b #f))
+
+  (%guard-syntax-error
+      (syntax-clauses-verify-exactly-once (list #'a #'b)
+					  (syntax-clauses-unwrap #'((a 123)
+								    (a 456)
+								    (d 789))))
+
+    => ("clause must be present exactly once"
+	(list (list #'a 123)
+	      (list #'a 456))
+	#f))
 
   #t)
 

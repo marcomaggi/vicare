@@ -2680,6 +2680,10 @@ the optional @meta{thing} arguments can represent any symbolic
 expression.  The following functions help in validating and processing
 such clauses.
 
+@c ------------------------------------------------------------
+
+@subsubheading Syntax clauses utilities
+
 
 @defun syntax-clauses-unwrap @var{clauses}
 @defunx syntax-clauses-unwrap @var{clauses} @var{synner}
@@ -2748,6 +2752,45 @@ and return the resulting unwrapped syntax object.  Example:
 @result{} ((#'fields #'a #'b #'c #'d #'e #'f))
 @end example
 @end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Syntax clauses constraints
+
+
+@defun define syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses}
+@defunx define syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses verify
+that all the identifiers in the list @var{keywords} are present at least
+once as clause identifiers.  If successful return unspecified values,
+else call @var{synner} or raise a @condition{syntax} violation
+exception.
+@end defun
+
+
+@defun define syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses}
+@defunx define syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses verify
+that all the identifiers in the list @var{keywords} are present at most
+once as clause identifiers.  If successful return unspecified values,
+else call @var{synner} or raise a @condition{syntax} violation
+exception.
+@end defun
+
+
+@defun define syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses}
+@defunx define syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses verify
+that all the identifiers in the list @var{keywords} are present exactly
+once as clause identifiers.  If successful return unspecified values,
+else call @var{synner} or raise a @condition{syntax} violation
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Syntax clauses full validations
 
 
 @defun validate-definition-clauses @var{mandatory-keywords} @var{optional-keywords} @var{at-most-once-keywords} @var{exclusive-keywords-sets} @var{clauses} @var{synner}
