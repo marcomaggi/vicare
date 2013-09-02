@@ -40,14 +40,15 @@
     ((_ ?body => (?message ?form ?subform))
      (check
 	 (guard (E ((syntax-violation? E)
-		    (list (string=? (condition-message E)
-				    ?message)
+		    (list (or (string=? (condition-message E)
+					?message)
+			      (condition-message E))
 			  (or (syntax=? (syntax-violation-form E)
 					?form)
-			      ?form)
+			      (syntax-violation-form E))
 			  (or (syntax=? (syntax-violation-subform E)
 					?subform)
-			      ?subform)))
+			      (syntax-violation-subform E))))
 		   (else E))
 	   ?body)
        => '(#t #t #t)))))
@@ -495,6 +496,77 @@
     => ("clause must be present exactly once"
 	(list (list #'a 123)
 	      (list #'a 456))
+	#f))
+
+;;; --------------------------------------------------------------------
+;;; struct clauses validation
+
+  (check
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 (list #'a #'d) (list #'W))))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 456)
+								   (d 789)))))
+    (=> syntax=?)
+    '((456)))
+
+  ;;Not present.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() '())))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (d 789)))))
+    => ("clause must be present at least 1 times and at most 1 times"
+	#'b #f))
+
+  ;;Too many clauses.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() '())))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 8)
+								   (b 9)
+								   (d 789)))))
+    => ("clause must be present at least 1 times and at most 1 times"
+	#'((b 8) (b 9)) #f))
+
+  ;;No argument.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() '())))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b)
+								   (d 789)))))
+    => ("clause must have at least 1 arguments and at most 1 arguments"
+	#'(b) #f))
+
+  ;;Too many arguments.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() '())))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 8 9)
+								   (d 789)))))
+    => ("clause must have at least 1 arguments and at most 1 arguments"
+	#'(b 8 9) #f))
+
+  ;;Missing mutually inclusive.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 (list #'W) '())))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 456)
+								   (d 789)))))
+    => ("missing mutually inclusive clause" (list #'b #'W) #f))
+
+  ;;Present mutually exclusive.
+  ;;
+  (%guard-syntax-error
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() (list #'d))))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 456)
+								   (d 789)))))
+    => ("mutually exclusive clauses are present"
+	#'((b 456) (d 789))
 	#f))
 
   #t)

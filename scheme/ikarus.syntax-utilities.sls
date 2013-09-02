@@ -75,7 +75,19 @@
     syntax-clauses-verify-at-least-once
     syntax-clauses-verify-at-most-once
     syntax-clauses-verify-exactly-once
-    syntax-clauses-validation)
+    syntax-clauses-validation
+
+    ;; clause specification structs
+    make-syntax-clause-spec
+    syntax-clause-spec?
+    syntax-clause-spec-keyword
+    syntax-clause-spec-min-number-of-occurrences
+    syntax-clause-spec-max-number-of-occurrences
+    syntax-clause-spec-min-number-of-arguments
+    syntax-clause-spec-max-number-of-arguments
+    syntax-clause-spec-mutually-inclusive
+    syntax-clause-spec-mutually-exclusive
+    syntax-clauses-single-spec)
   (import (except (vicare)
 		  ;; identifier processing: generic functions
 		  identifier-prefix		identifier-suffix
@@ -123,7 +135,19 @@
 		  syntax-clauses-verify-at-least-once
 		  syntax-clauses-verify-at-most-once
 		  syntax-clauses-verify-exactly-once
-		  syntax-clauses-validation))
+		  syntax-clauses-validation
+
+		  ;; clause specification structs
+		  make-syntax-clause-spec
+		  syntax-clause-spec?
+		  syntax-clause-spec-keyword
+		  syntax-clause-spec-min-number-of-occurrences
+		  syntax-clause-spec-max-number-of-occurrences
+		  syntax-clause-spec-min-number-of-arguments
+		  syntax-clause-spec-max-number-of-arguments
+		  syntax-clause-spec-mutually-inclusive
+		  syntax-clause-spec-mutually-exclusive
+		  syntax-clauses-single-spec))
 
 
 ;;;; helpers
@@ -636,6 +660,122 @@
 	    (synner "clause must be present exactly once" (if (< 1 number)
 							      present
 							    keyword)))))))
+   ))
+
+
+;;;; clause specification structs
+
+(define-record-type syntax-clause-spec
+  (nongenerative vicare:syntax-clause)
+  (fields (immutable keyword)
+		;An identifier representing the keyword for this clause.
+	  (immutable min-number-of-occurrences)
+		;A  non-negative real  number  representing the  allowed
+		;minimum number of occurrences for this clause.  0 means
+		;the  clause   is  optional;  1  means   the  clause  is
+		;mandatory.
+	  (immutable max-number-of-occurrences)
+		;A  non-negative real  number  representing the  allowed
+		;maximum number of occurrences for this clause.  0 means
+		;the clause is forbidden; 1 means the clause must appear
+		;at most  once; +inf.0 means  the clause can  appear any
+		;number of times.
+	  (immutable min-number-of-arguments)
+		;A  non-negative real  number  representing the  allowed
+		;minimum number  of arguments for this  clause.  0 means
+		;the clause  can have no  arguments; 1 means  the clause
+		;must have at least one argument.
+	  (immutable max-number-of-arguments)
+		;A  non-negative real  number  representing the  allowed
+		;maximum number  of arguments for this  clause.  0 means
+		;the clause  has no arguments;  1 means the  clause must
+		;have at most one arguments; +inf.0 means the clause can
+		;have any number of arguments.
+	  (immutable mutually-inclusive)
+		;A list  identifiers representing clauses  keywords that
+		;must appear along with this one.
+	  (immutable mutually-exclusive)
+		;A list  identifiers representing clauses  keywords that
+		;must not appear along with this one.
+	  )
+  (protocol
+   (lambda (make-record)
+     (lambda (keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
+       (define (count? obj)
+	 (and (real? obj) (<= 0 obj)))
+       (assert (identifier? keyword))
+       (assert (count? min-occur))
+       (assert (count? max-occur))
+       (assert (count? min-args))
+       (assert (count? max-args))
+       (assert (<= min-occur max-occur))
+       (assert (<= min-args max-args))
+       (assert (all-identifiers? mutually-inclusive))
+       (assert (all-identifiers? mutually-exclusive))
+       (make-record keyword
+		    min-occur max-occur
+		    min-args max-args
+		    mutually-inclusive mutually-exclusive)))))
+
+(define syntax-clauses-single-spec
+  (case-lambda
+   ((spec clauses)
+    (syntax-clauses-single-spec spec clauses (%make-synner 'syntax-clauses-single-spec)))
+   ((spec clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify that the clauses conform to the given clause specification.
+    ;;If successful  return a  (possibly empty)  list of  syntax objects
+    ;;representing  the cdrs  of the  clauses matching  SPEC; else  call
+    ;;SYNNER.
+    ;;
+    (assert (syntax-clause-spec? spec))
+    (let* ((keyword (syntax-clause-spec-keyword spec))
+	   (present (syntax-clauses-filter (list keyword) clauses))
+	   (number  (length present)))
+      (unless (<= (syntax-clause-spec-min-number-of-occurrences spec)
+		  number
+		  (syntax-clause-spec-max-number-of-occurrences spec))
+	(synner (string-append "clause must be present at least "
+			       (number->string (syntax-clause-spec-min-number-of-occurrences spec))
+			       " times and at most "
+			       (number->string (syntax-clause-spec-max-number-of-occurrences spec))
+			       " times")
+		(if (< 1 number)
+		    present
+		  keyword)))
+      ;;Validate arguments
+      (for-each (lambda (clause)
+		  (define number
+		    (length (cdr clause)))
+		  (unless (<= (syntax-clause-spec-min-number-of-arguments spec)
+			      number
+			      (syntax-clause-spec-max-number-of-arguments spec))
+		    (synner (string-append "clause must have at least "
+					   (number->string (syntax-clause-spec-min-number-of-arguments spec))
+					   " arguments and at most "
+					   (number->string (syntax-clause-spec-max-number-of-arguments spec))
+					   " arguments")
+			    clause)))
+	present)
+      ;;Validate mutually inclusive.
+      (unless (null? present)
+	(for-each (lambda (id)
+		    (unless (exists (lambda (clause)
+				      (free-identifier=? id (car clause)))
+			      clauses)
+		      (synner "missing mutually inclusive clause" (list keyword id))))
+	  (syntax-clause-spec-mutually-inclusive spec)))
+      ;;Validate mutually exclusive.
+      (unless (null? present)
+	(let ((others (syntax-clauses-filter (syntax-clause-spec-mutually-exclusive spec) clauses)))
+	  (unless (null? others)
+	    (synner "mutually exclusive clauses are present" (append present others)))))
+      ;;Return the list of arguments.
+      (map cdr present)))
    ))
 
 

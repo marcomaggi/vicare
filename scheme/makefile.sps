@@ -2540,6 +2540,18 @@
     (syntax-clauses-verify-exactly-once		i v $language)
     (syntax-clauses-validation			i v $language)
 
+    ;; clause specification structs
+    (make-syntax-clause-spec			i v $language)
+    (syntax-clause-spec?			i v $language)
+    (syntax-clause-spec-keyword			i v $language)
+    (syntax-clause-spec-min-number-of-occurrences i v $language)
+    (syntax-clause-spec-max-number-of-occurrences i v $language)
+    (syntax-clause-spec-min-number-of-arguments	i v $language)
+    (syntax-clause-spec-max-number-of-arguments	i v $language)
+    (syntax-clause-spec-mutually-inclusive	i v $language)
+    (syntax-clause-spec-mutually-exclusive	i v $language)
+    (syntax-clauses-single-spec			i v $language)
+
 ;;; --------------------------------------------------------------------
 ;;; library names
 
