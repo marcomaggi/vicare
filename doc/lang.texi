@@ -59,7 +59,7 @@ list of arguments and options.
 @func{let-keywords} expands into a @func{let} syntax,
 @func{let*-keywords} expands into a @func{let*} syntax,
 @func{letrec-keywords} expands into a @func{letrec} syntax,
-@func{let-keywords} expands into a @func{let} syntax.
+@func{letrec*-keywords} expands into a @func{letrec*} syntax.
 
 @meta{input} must be an expression evaluating to a list of values and
 keywords; keywords must be compliant to the specification in
