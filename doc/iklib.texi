@@ -1634,6 +1634,7 @@ the character.
 * iklib expander extended export::  Extended library exports.
 * iklib expander fluids::           Fluid syntaxes.
 * iklib expander utils::            Utility functions for writing macro.
+* iklib expander clauses::          Syntax clauses helpers.
 @end menu
 
 @c page
@@ -2202,7 +2203,6 @@ must be already bound to fluid syntaxes defined by
 * iklib expander utils unwrap::   Unwrapping syntax objects.
 * iklib expander utils inspect::  Inspecting syntax objects.
 * iklib expander utils compar::   Comparing syntax objects.
-* iklib expander utils clauses::  Syntax clauses helpers.
 @end menu
 
 @c page
@@ -2660,8 +2660,8 @@ compared with @func{free-identifier=?}.
 @end defun
 
 @c page
-@node iklib expander utils clauses
-@subsubsection Syntax clauses helpers
+@node iklib expander clauses
+@subsection Syntax clauses helpers
 
 
 When writing definition macros similar to @func{define-record-type} it
@@ -2677,12 +2677,41 @@ syntax object with the format:
 in which @meta{identifier} is meant to be an auxiliary syntax (as
 defined by @func{define-auxiliary-syntaxes} or @func{define-syntax}) and
 the optional @meta{thing} arguments can represent any symbolic
-expression.  The following functions help in validating and processing
-such clauses.
+expression.  The functions documented in this section help in validating
+and processing such clauses.
 
-@c ------------------------------------------------------------
+@menu
+* iklib expander clauses intro::  Introduction to clauses functions.
+* iklib expander clauses utils::  Syntax clauses utilities.
+* iklib expander clauses constr:: Syntax clauses constraints.
+* iklib expander clauses full::   Syntax clauses full validations.
+@end menu
 
-@subsubheading Syntax clauses utilities
+@c page
+@node iklib expander clauses intro
+@subsubsection Introduction to clauses functions
+
+
+Some functions accept an optional argument @var{synner}: when used, it
+must be a function accepting 1 or 2 arguments, the first arugment being
+a string error message and the optional second argument being a subform;
+@var{synner} must raise a compound condition object with components:
+@condition{who}, @condition{message}, @condition{syntax}.  The
+@var{synner} argument is meant to be used as follows:
+
+@example
+(define-syntax (my-macro stx)
+  (define (synner message subform)
+    (syntax-violation 'my-macro message stx subform))
+  (syntax-case stx ()
+    (pattern body)
+    (_
+     (synner "invalid syntax" #f))))
+@end example
+
+@c page
+@node iklib expander clauses utils
+@subsubsection Syntax clauses utilities
 
 
 @defun syntax-clauses-unwrap @var{clauses}
@@ -2753,14 +2782,13 @@ and return the resulting unwrapped syntax object.  Example:
 @end example
 @end defun
 
+@c page
+@node iklib expander clauses constr
+@subsubsection Syntax clauses constraints
 
-@c ------------------------------------------------------------
 
-@subsubheading Syntax clauses constraints
-
-
-@defun define syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses}
-@defunx define syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+@defun syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses}
+@defunx syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses} @var{synner}
 Given a fully unwrapped syntax object holding a list of clauses verify
 that all the identifiers in the list @var{keywords} are present at least
 once as clause identifiers.  If successful return unspecified values,
@@ -2769,8 +2797,8 @@ exception.
 @end defun
 
 
-@defun define syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses}
-@defunx define syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+@defun syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses}
+@defunx syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses} @var{synner}
 Given a fully unwrapped syntax object holding a list of clauses verify
 that all the identifiers in the list @var{keywords} are present at most
 once as clause identifiers.  If successful return unspecified values,
@@ -2779,8 +2807,8 @@ exception.
 @end defun
 
 
-@defun define syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses}
-@defunx define syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses} @var{synner}
+@defun syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses}
+@defunx syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses} @var{synner}
 Given a fully unwrapped syntax object holding a list of clauses verify
 that all the identifiers in the list @var{keywords} are present exactly
 once as clause identifiers.  If successful return unspecified values,
@@ -2788,9 +2816,9 @@ else call @var{synner} or raise a @condition{syntax} violation
 exception.
 @end defun
 
-@c ------------------------------------------------------------
-
-@subsubheading Syntax clauses full validations
+@c page
+@node iklib expander clauses full
+@subsubsection Syntax clauses full validations
 
 
 @defun validate-definition-clauses @var{mandatory-keywords} @var{optional-keywords} @var{at-most-once-keywords} @var{exclusive-keywords-sets} @var{clauses} @var{synner}
