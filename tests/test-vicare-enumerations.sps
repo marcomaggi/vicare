@@ -48,7 +48,7 @@
 	 (guard (E ((syntax-violation? E)
 		    (list (condition-message E)
 ;;;			  (syntax-violation-form E)
-			  (syntax-violation-subform E)))
+			  (syntax->datum (syntax-violation-subform E))))
 		   (else E))
 	   (eval (quote ?body) environment-for-syntax-errors))
        (=> syntax=?) ?result))))
