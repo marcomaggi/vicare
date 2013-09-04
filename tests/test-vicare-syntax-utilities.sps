@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (vicare unsafe operations)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -497,6 +498,115 @@
 	(list (list #'a 123)
 	      (list #'a 456))
 	#f))
+
+;;; --------------------------------------------------------------------
+;;; verify mutually inclusive
+
+  (check	;present
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-inclusive (list #'a #'b)
+						  (syntax-clauses-unwrap #'((a 123)
+									    (b 456)
+									    (d 789))))
+	#t)
+    => #t)
+
+  (check	;all missing
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-inclusive (list #'a #'b)
+						  (syntax-clauses-unwrap #'((d 789)
+									    (e 0))))
+	#t)
+    => #t)
+
+  ;;One missing.
+  ;;
+  (%guard-syntax-error
+      (syntax-clauses-verify-mutually-inclusive (list #'a #'b)
+						(syntax-clauses-unwrap #'((a 123)
+									  (d 789))))
+    => ("mutually inclusive clauses are missing" (list #'b) #f))
+
+;;; --------------------------------------------------------------------
+;;; verify mutually exclusive
+
+  (check	;first present
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						  (syntax-clauses-unwrap #'((a 123)
+									    (d 789))))
+	#t)
+    => #t)
+
+  (check	;second present
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						  (syntax-clauses-unwrap #'((b 456)
+									    (d 789))))
+	#t)
+    => #t)
+
+  (check	;third present
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						  (syntax-clauses-unwrap #'((c 456)
+									    (d 789))))
+	#t)
+    => #t)
+
+  (check	;all missing
+      (guard (E (else E))
+	(syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						  (syntax-clauses-unwrap #'((d 789)
+									    (e 0))))
+	#t)
+    => #t)
+
+  ;;First and second present.
+  ;;
+  (%guard-syntax-error
+      (syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						(syntax-clauses-unwrap #'((a 1)
+									  (b 2)
+									  (d 4))))
+    => ("mutually exclusive clauses are present"
+	#'((a 1)
+	   (b 2)) #f))
+
+  ;;First and third present.
+  ;;
+  (%guard-syntax-error
+      (syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						(syntax-clauses-unwrap #'((a 1)
+									  (c 3)
+									  (d 4))))
+    => ("mutually exclusive clauses are present"
+	#'((a 1)
+	   (c 3)) #f))
+
+  ;;Second and third present.
+  ;;
+  (%guard-syntax-error
+      (syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						(syntax-clauses-unwrap #'((b 2)
+									  (c 3)
+									  (d 4))))
+    => ("mutually exclusive clauses are present"
+	#'((b 2)
+	   (c 3)) #f))
+
+  ;;All present.
+  ;;
+  (%guard-syntax-error
+      (syntax-clauses-verify-mutually-exclusive (list #'a #'b #'c)
+						(syntax-clauses-unwrap #'((a 1)
+									  (b 2)
+									  (c 3)
+									  (d 4))))
+    => ("mutually exclusive clauses are present"
+	#'((a 1)
+	   (b 2)
+	   (c 3)) #f))
 
 ;;; --------------------------------------------------------------------
 ;;; struct clauses validation

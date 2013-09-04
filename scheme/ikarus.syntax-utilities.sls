@@ -75,6 +75,8 @@
     syntax-clauses-verify-at-least-once
     syntax-clauses-verify-at-most-once
     syntax-clauses-verify-exactly-once
+    syntax-clauses-verify-mutually-inclusive
+    syntax-clauses-verify-mutually-exclusive
     syntax-clauses-validation
 
     ;; clause specification structs
@@ -135,6 +137,8 @@
 		  syntax-clauses-verify-at-least-once
 		  syntax-clauses-verify-at-most-once
 		  syntax-clauses-verify-exactly-once
+		  syntax-clauses-verify-mutually-inclusive
+		  syntax-clauses-verify-mutually-exclusive
 		  syntax-clauses-validation
 
 		  ;; clause specification structs
@@ -147,7 +151,8 @@
 		  syntax-clause-spec-max-number-of-arguments
 		  syntax-clause-spec-mutually-inclusive
 		  syntax-clause-spec-mutually-exclusive
-		  syntax-clauses-single-spec))
+		  syntax-clauses-single-spec)
+    (vicare unsafe operations))
 
 
 ;;;; helpers
@@ -660,6 +665,104 @@
 	    (synner "clause must be present exactly once" (if (< 1 number)
 							      present
 							    keyword)))))))
+   ))
+
+(define syntax-clauses-verify-mutually-inclusive
+  (case-lambda
+   ((keywords clauses)
+    (syntax-clauses-verify-mutually-inclusive keywords clauses
+					      (%make-synner 'syntax-clauses-verify-mutually-inclusive)))
+   ((keywords clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify that the if one of  the identifiers in the list KEYWORDS is
+    ;;present at  least once as  clause identifier, then all  the others
+    ;;are present  too.  If  successful return unspecified  values, else
+    ;;call SYNNER.
+    ;;
+    (define-struct flag
+      (id present?))
+    (define flags
+      (map (lambda (key)
+	     (make-flag key #f))
+	keywords))
+    (let next-clause ((clauses clauses))
+      (if (null? clauses)
+	  ;;If at least one is present...
+	  (when (exists flag-present? flags)
+	    ;;... check that all are present.
+	    (let ((missing (fold-left (lambda (knil flag)
+					(if ($flag-present? flag)
+					    knil
+					  (cons ($flag-id flag) knil)))
+			     '()
+			     flags)))
+	      (unless (null? missing)
+		(synner "mutually inclusive clauses are missing" missing))))
+	(let next-flag ((flags flags))
+	  (cond ((null? flags)
+		 (next-clause ($cdr clauses)))
+		((free-identifier=? ($flag-id ($car flags))
+				    ($caar clauses))
+		 ($set-flag-present?! ($car flags) #t)
+		 (next-clause ($cdr clauses)))
+		(else
+		 (next-flag ($cdr flags)))))
+	)))
+   ))
+
+(define syntax-clauses-verify-mutually-exclusive
+  (case-lambda
+   ((keywords clauses)
+    (syntax-clauses-verify-mutually-exclusive keywords clauses
+					      (%make-synner 'syntax-clauses-verify-mutually-exclusive)))
+   ((keywords clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify that the if one of  the identifiers in the list KEYWORDS is
+    ;;present at  least once as  clause identifier, then all  the others
+    ;;are NOT  present.  If  successful return unspecified  values, else
+    ;;call SYNNER.
+    ;;
+    (define-struct flag
+      (id clauses))
+    (define-inline (flag-cons-clause! flag clause)
+      ($set-flag-clauses! flag (cons clause ($flag-clauses flag))))
+    (define flags
+      (map (lambda (key)
+	     (make-flag key '()))
+	keywords))
+    (let next-clause ((clauses clauses))
+      (if (null? clauses)
+	  ;;If at least one is present...
+	  (when (exists (lambda (flag)
+			  (not (null? (flag-clauses flag))))
+		  flags)
+	    ;;... check that all are present.
+	    (let ((present (fold-left (lambda (knil flag)
+					(if (null? ($flag-clauses flag))
+					    knil
+					  (append ($flag-clauses flag) knil)))
+			     '()
+			     flags)))
+	      (unless (<= (length present) 1)
+		(synner "mutually exclusive clauses are present" (reverse present)))))
+	(let next-flag ((flags flags))
+	  (cond ((null? flags)
+		 (next-clause ($cdr clauses)))
+		((free-identifier=? ($flag-id ($car flags))
+				    ($caar clauses))
+		 (flag-cons-clause! ($car flags) ($car clauses))
+		 (next-clause ($cdr clauses)))
+		(else
+		 (next-flag ($cdr flags)))))
+	)))
    ))
 
 

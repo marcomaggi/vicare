@@ -2753,13 +2753,17 @@ list of clauses (for example the return value of
 having @meta{identifier} being @func{free-identifier=?} to an identifier
 in the list @var{keywords}, a list of non--matching clauses.  Return the
 two lists.
+
+This function can be used to check that a list of clauses only contains
+clauses with selected identifiers.
 @end defun
 
 
 @defun syntax-clauses-collapse @var{unwrapped-clauses}
-Given a fully unwrapped syntax object holding a list of clauses:
-collapse the clauses having equal @meta{identifier} into a single clause
-and return the resulting unwrapped syntax object.  Example:
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}): collapse the
+clauses having equal @meta{identifier} into a single clause and return
+the resulting unwrapped syntax object.  Example:
 
 @example
 (syntax-clauses-collapse ((#'fields #'a #'b #'c)
@@ -2775,31 +2779,53 @@ and return the resulting unwrapped syntax object.  Example:
 
 @defun syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses}
 @defunx syntax-clauses-verify-at-least-once @var{keywords} @var{unwrapped-clauses} @var{synner}
-Given a fully unwrapped syntax object holding a list of clauses verify
-that all the identifiers in the list @var{keywords} are present at least
-once as clause identifiers.  If successful return unspecified values,
-else call @var{synner} or raise a @condition{syntax} violation
-exception.
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that
+all the identifiers in the list @var{keywords} are present at least once
+as clause identifiers.  If successful return unspecified values, else
+call @var{synner} or raise a @condition{syntax} violation exception.
 @end defun
 
 
 @defun syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses}
 @defunx syntax-clauses-verify-at-most-once @var{keywords} @var{unwrapped-clauses} @var{synner}
-Given a fully unwrapped syntax object holding a list of clauses verify
-that all the identifiers in the list @var{keywords} are present at most
-once as clause identifiers.  If successful return unspecified values,
-else call @var{synner} or raise a @condition{syntax} violation
-exception.
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that
+all the identifiers in the list @var{keywords} are present at most once
+as clause identifiers.  If successful return unspecified values, else
+call @var{synner} or raise a @condition{syntax} violation exception.
 @end defun
 
 
 @defun syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses}
 @defunx syntax-clauses-verify-exactly-once @var{keywords} @var{unwrapped-clauses} @var{synner}
-Given a fully unwrapped syntax object holding a list of clauses verify
-that all the identifiers in the list @var{keywords} are present exactly
-once as clause identifiers.  If successful return unspecified values,
-else call @var{synner} or raise a @condition{syntax} violation
-exception.
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that
+all the identifiers in the list @var{keywords} are present exactly once
+as clause identifiers.  If successful return unspecified values, else
+call @var{synner} or raise a @condition{syntax} violation exception.
+@end defun
+
+
+@defun syntax-clauses-verify-mutually-inclusive @var{keywords} @var{unwrapped-clauses}
+@defunx syntax-clauses-verify-mutually-inclusive @var{keywords} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that if
+one of the identifiers in the list @var{keywords} is present at least
+once as clause identifier, then all the others are present too.  If
+successful return unspecified values, else call @var{synner} or raise a
+@condition{syntax} violation exception.
+@end defun
+
+
+@defun syntax-clauses-verify-mutually-exclusive @var{keywords} @var{unwrapped-clauses}
+@defunx syntax-clauses-verify-mutually-exclusive @var{keywords} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that if
+one of the identifiers in the list @var{keywords} is present at least
+once as clause identifier, then all the others are @strong{not} present.
+If successful return unspecified values, else call @var{synner} or raise
+a @condition{syntax} violation exception.
 @end defun
 
 @c page
@@ -2898,11 +2924,12 @@ Accessors for the fields of syntax clause specification objects.
 
 @defun syntax-clauses-single-spec @var{spec} @var{unwrapped-clauses}
 @defunx syntax-clauses-single-spec @var{spec} @var{unwrapped-clauses} @var{synner}
-Given a fully unwrapped syntax object holding a list of clauses verify
-that the clauses conform to the given clause specification @var{spec}.
-If successful return a (possibly empty) list of syntax objects
-representing the cdrs of the clauses matching @var{spec}; else call
-@var{synner} or raise a @condition{syntax} object.
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify if
+there are clauses conforming to the given specification @var{spec}.  If
+successful return a (possibly empty) list of syntax objects representing
+the cdrs of the clauses matching @var{spec}; if an invalid clause is
+found call @var{synner} or raise a @condition{syntax} object.
 
 @example
 (import (vicare))
