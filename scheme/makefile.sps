@@ -2540,7 +2540,6 @@
     (syntax-clauses-verify-exactly-once		i v $language)
     (syntax-clauses-verify-mutually-inclusive	i v $language)
     (syntax-clauses-verify-mutually-exclusive	i v $language)
-    (syntax-clauses-validation			i v $language)
 
     ;; clause specification structs
     (make-syntax-clause-spec			i v $language)

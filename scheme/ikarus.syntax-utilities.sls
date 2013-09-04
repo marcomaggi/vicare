@@ -77,7 +77,6 @@
     syntax-clauses-verify-exactly-once
     syntax-clauses-verify-mutually-inclusive
     syntax-clauses-verify-mutually-exclusive
-    syntax-clauses-validation
 
     ;; clause specification structs
     make-syntax-clause-spec
@@ -139,7 +138,6 @@
 		  syntax-clauses-verify-exactly-once
 		  syntax-clauses-verify-mutually-inclusive
 		  syntax-clauses-verify-mutually-exclusive
-		  syntax-clauses-validation
 
 		  ;; clause specification structs
 		  make-syntax-clause-spec
@@ -880,111 +878,6 @@
       ;;Return the list of arguments.
       (map cdr present)))
    ))
-
-
-;;;; full syntax clauses parsing
-
-(define (syntax-clauses-validation mandatory-keywords optional-keywords
-				   at-most-once-keywords exclusive-keywords-sets
-				   clauses synner)
-  ;;Scan the syntax object CLAUSES expecting a list with the format:
-  ;;
-  ;;    ((?identifier . ?things) ...)
-  ;;
-  ;;then verify that  the ?IDENTIFIER syntax objects are  in the list of
-  ;;identifiers  MANDATORY-KEYWORDS  or   in  the  list  of  identifiers
-  ;;OPTIONAL-KEYWORDS; any order is allowed.
-  ;;
-  ;;Identifiers in  MANDATORY-KEYWORDS must appear at least  once in the
-  ;;clauses;  identifiers in AT-MOST-ONCE-KEYWORDS  must appear  at most
-  ;;once; identifiers  in OPTIONAL-KEYWORDS can appear  zero or multiple
-  ;;times.
-  ;;
-  ;;EXCLUSIVE-KEYWORDS-SETS  is  a list  of  lists,  each sublist  holds
-  ;;identifiers; the identifiers in each sublist are mutually exclusive:
-  ;;at most one can appear in CLAUSES.
-  ;;
-  ;;SYNNER must  be the closure  used to raise  a syntax violation  if a
-  ;;parse  error  occurs; it  must  accept  two  arguments: the  message
-  ;;string, the invalid subform.
-  ;;
-
-  (define (%identifiers-join-for-message identifiers)
-    ;;Given  a possibly  empty list  of  identifiers, join  them into  a
-    ;;string with a  comma as separator; return the  string.  To be used
-    ;;to build error messages involving the list of identifiers.
-    ;;
-    (let ((keys (map symbol->string (map syntax->datum identifiers))))
-      (if (null? keys)
-	  ""
-	(call-with-values
-	    (lambda ()
-	      (open-string-output-port))
-	  (lambda (port getter)
-	    (display (syntax->datum (car keys)) port)
-	    (let loop ((keys (cdr keys)))
-	      (if (null? keys)
-		  (getter)
-		(begin
-		  (display ", " port)
-		  (display (syntax->datum (car keys)) port)
-		  (loop (cdr keys))))))))))
-
-
-
-
-  (let ((clauses (syntax-clauses-unwrap clauses synner)))
-
-    ;;Check that the keyword of each clause is in MANDATORY-KEYWORDS or in
-    ;;OPTIONAL-KEYWORDS.
-    (for-each
-	(lambda (clause)
-	  (let ((key (car clause)))
-	    (unless (or (identifier-memq key mandatory-keywords)
-			(identifier-memq key optional-keywords))
-	      (synner (string-append
-		       "unrecognised clause keyword \""
-		       (identifier->string (car clause))
-		       "\", expected one among: "
-		       (%identifiers-join-for-message (append mandatory-keywords optional-keywords)))
-		      clause))))
-      clauses)
-
-    ;;Check the mandatory keywords.
-    (for-each (lambda (mandatory-key)
-		(unless (find (lambda (clause)
-				(free-identifier=? mandatory-key (car clause)))
-			  clauses)
-		  (synner (string-append "missing mandatory clause "
-					 (symbol->string (syntax->datum mandatory-key)))
-			  mandatory-key)))
-      mandatory-keywords)
-
-    ;;Check the keywords which must appear at most once.
-    (for-each
-	(lambda (once-key)
-	  (let* ((err-clauses (filter (lambda (clause)
-					(free-identifier=? once-key (car clause)))
-				clauses))
-		 (count (length err-clauses)))
-	    (unless (or (zero? count) (= 1 count))
-	      (synner (string-append "clause " (symbol->string (syntax->datum once-key))
-				     " given multiple times")
-		      err-clauses))))
-      at-most-once-keywords)
-
-    ;;Check mutually exclusive keywords.
-    (for-each (lambda (mutually-exclusive-ids)
-		(let ((err (filter (lambda (clause) clause)
-			     (map (lambda (e)
-				    (exists (lambda (clause)
-					      (and (free-identifier=? e (car clause))
-						   clause))
-				      clauses))
-			       mutually-exclusive-ids))))
-		  (when (< 1 (length err))
-		    (synner "mutually exclusive clauses" err))))
-      exclusive-keywords-sets)))
 
 
 ;;;; done

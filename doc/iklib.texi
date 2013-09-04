@@ -2684,7 +2684,6 @@ and processing such clauses.
 * iklib expander clauses intro::    Introduction to clauses functions.
 * iklib expander clauses utils::    Syntax clauses utilities.
 * iklib expander clauses constr::   Syntax clauses constraints.
-* iklib expander clauses full::     Syntax clauses full validations.
 * iklib expander clauses structs::  Clause specification structs.
 @end menu
 
@@ -2826,37 +2825,6 @@ one of the identifiers in the list @var{keywords} is present at least
 once as clause identifier, then all the others are @strong{not} present.
 If successful return unspecified values, else call @var{synner} or raise
 a @condition{syntax} violation exception.
-@end defun
-
-@c page
-@node iklib expander clauses full
-@subsubsection Syntax clauses full validations
-
-
-@defun validate-definition-clauses @var{mandatory-keywords} @var{optional-keywords} @var{at-most-once-keywords} @var{exclusive-keywords-sets} @var{clauses} @var{synner}
-Scan the syntax object @var{clauses} expecting a list with the format:
-
-@example
-((@meta{identifier} . @meta{things}) ...)
-@end example
-
-@noindent
-then verify that the @meta{identifier} syntax objects are in the list of
-identifiers @var{mandatory-keywords} or in the list of identifiers
-@var{optional-keywords}; any order is allowed.
-
-Identifiers in @var{mandatory-keywords} must appear at least once in the
-clauses; identifiers in @var{at-most-once-keywords} must appear at most
-once; identifiers in @var{optional-keywords} can appear zero or multiple
-times.
-
-@var{exclusive-keywords-sets} is a list of lists, each sublist holds
-identifiers; the identifiers in each sublist are mutually exclusive: at
-most one can appear in @var{clauses}.
-
-@var{synner} must be the closure used to raise a syntax violation if a
-parse error occurs; it must accept two arguments: the message string,
-the invalid subform.
 @end defun
 
 @c page
