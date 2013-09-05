@@ -608,9 +608,15 @@
 	   (b 2)
 	   (c 3)) #f))
 
-;;; --------------------------------------------------------------------
-;;; struct clauses validation
+  #t)
 
+
+(parametrise ((check-test-name	'clauses-structs))
+
+;;; single struct clauses validation
+
+  ;;Single occurrence, single value.
+  ;;
   (check
       (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 (list #'a #'d) (list #'W))))
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
@@ -618,6 +624,41 @@
 								   (d 789)))))
     (=> syntax=?)
     '((456)))
+
+  ;;Single occurrence, multiple values.
+  ;;
+  (check
+      (let ((spec (make-syntax-clause-spec #'b 1 1 1 +inf.0 (list #'a #'d) (list #'W))))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 4 5 6)
+								   (d 789)))))
+    (=> syntax=?)
+    '((4 5 6)))
+
+  ;;Multiple occurrences, single value.
+  ;;
+  (check
+      (let ((spec (make-syntax-clause-spec #'b 1 +inf.0 1 1 (list #'a #'d) (list #'W))))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 4)
+								   (b 5)
+								   (b 6)
+								   (d 789)))))
+    (=> syntax=?)
+    '((4) (5) (6)))
+
+  ;;Multiple occurrences, multiple values.
+  ;;
+  (check
+      (let ((spec (make-syntax-clause-spec #'b 1 +inf.0 1 +inf.0 (list #'a #'d) (list #'W))))
+	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
+								   (b 4 5 6)
+								   (d 789)
+								   (b x y z)
+								   (b l m n)
+								   ))))
+    (=> syntax=?)
+    #'((4 5 6) (x y z) (l m n)))
 
   ;;Not present.
   ;;
@@ -678,6 +719,37 @@
     => ("mutually exclusive clauses are present"
 	#'((b 456) (d 789))
 	#f))
+
+;;; --------------------------------------------------------------------
+;;; clauses specs folding
+
+  (check	;single spec
+      (guard (E (else E))
+	(let ((specs    (list (make-syntax-clause-spec #'a 1 1 1 1 '() '())))
+	      (clauses  (syntax-clauses-unwrap #'((a 123)
+						  (b 456)
+						  (d 789)))))
+	  (syntax-clauses-fold-specs (lambda (knil spec args)
+				       (cons args knil))
+				     '() specs clauses)))
+    (=> syntax=?)
+    #'(((123))))
+
+  (check	;multiple specs
+      (guard (E (else E))
+	(let ((specs    (list (make-syntax-clause-spec #'a 1 1 1 1 '() '())
+			      (make-syntax-clause-spec #'b 1 1 1 1 '() '())
+			      (make-syntax-clause-spec #'d 1 1 1 1 '() '())))
+	      (clauses  (syntax-clauses-unwrap #'((a 123)
+						  (b 456)
+						  (d 789)))))
+	  (syntax-clauses-fold-specs (lambda (knil spec args)
+				       (cons (cons (identifier->string (syntax-clause-spec-keyword spec))
+						   args)
+					     knil))
+				     '() specs clauses)))
+    (=> syntax=?)
+    (reverse '(("a" (123)) ("b" (456)) ("d" (789)))))
 
   #t)
 

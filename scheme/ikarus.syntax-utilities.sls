@@ -88,7 +88,8 @@
     syntax-clause-spec-max-number-of-arguments
     syntax-clause-spec-mutually-inclusive
     syntax-clause-spec-mutually-exclusive
-    syntax-clauses-single-spec)
+    syntax-clauses-single-spec
+    syntax-clauses-fold-specs)
   (import (except (vicare)
 		  ;; identifier processing: generic functions
 		  identifier-prefix		identifier-suffix
@@ -149,7 +150,8 @@
 		  syntax-clause-spec-max-number-of-arguments
 		  syntax-clause-spec-mutually-inclusive
 		  syntax-clause-spec-mutually-exclusive
-		  syntax-clauses-single-spec)
+		  syntax-clauses-single-spec
+		  syntax-clauses-fold-specs)
     (vicare unsafe operations))
 
 
@@ -339,6 +341,7 @@
    ((stx)
     (syntax-car stx (%make-synner 'syntax-car)))
    ((stx synner)
+    (assert (procedure? synner))
     (syntax-case stx ()
       ((?car . ?cdr)
        #'?car)
@@ -350,6 +353,7 @@
    ((stx)
     (syntax-cdr stx (%make-synner 'syntax-cdr)))
    ((stx synner)
+    (assert (procedure? synner))
     (syntax-case stx ()
       ((?car . ?cdr)
        #'?cdr)
@@ -361,28 +365,32 @@
    ((stx)
     (syntax->list stx (%make-synner 'syntax->list)))
    ((stx synner)
-    (syntax-case stx ()
-      (() '())
-      ((?car . ?cdr)
-       (identifier? #'?car)
-       (cons #'?car (syntax->list #'?cdr synner)))
-      ((?car . ?cdr)
-       (cons (syntax->datum #'?car) (syntax->list #'?cdr synner)))
-      (_
-       (synner "expected syntax object holding proper list as argument" stx))))))
+    (assert (procedure? synner))
+    (let recur ((stx stx))
+      (syntax-case stx ()
+	(() '())
+	((?car . ?cdr)
+	 (identifier? #'?car)
+	 (cons #'?car (recur #'?cdr)))
+	((?car . ?cdr)
+	 (cons (syntax->datum #'?car) (recur #'?cdr)))
+	(_
+	 (synner "expected syntax object holding proper list as argument" stx)))))))
 
 (define identifiers->list
   (case-lambda
    ((stx)
     (identifiers->list stx (%make-synner 'identifiers->list)))
    ((stx synner)
-    (syntax-case stx ()
-      (() '())
-      ((?car . ?cdr)
-       (identifier? #'?car)
-       (cons #'?car (identifiers->list #'?cdr synner)))
-      (_
-       (synner "expected syntax object holding proper list of identifiers as argument" stx))))))
+    (assert (procedure? synner))
+    (let recur ((stx stx))
+      (syntax-case stx ()
+	(() '())
+	((?car . ?cdr)
+	 (identifier? #'?car)
+	 (cons #'?car (recur #'?cdr)))
+	(_
+	 (synner "expected syntax object holding proper list of identifiers as argument" stx)))))))
 
 (define (all-identifiers? stx)
   (syntax-case stx ()
@@ -602,6 +610,7 @@
     ;;unspecified values, else call SYNNER.
     ;;
     (assert (all-identifiers? keywords))
+    (assert (procedure? synner))
     (let loop ((keywords keywords))
       (unless (null? keywords)
 	(let ((keyword (car keywords)))
@@ -628,6 +637,7 @@
     ;;values, else call SYNNER.
     ;;
     (assert (all-identifiers? keywords))
+    (assert (procedure? synner))
     (let loop ((keywords keywords))
       (unless (null? keywords)
 	(let* ((keyword (car keywords))
@@ -653,6 +663,7 @@
     ;;values, else call SYNNER.
     ;;
     (assert (all-identifiers? keywords))
+    (assert (procedure? synner))
     (let loop ((keywords keywords))
       (unless (null? keywords)
 	(let* ((keyword (car keywords))
@@ -681,6 +692,9 @@
     ;;are present  too.  If  successful return unspecified  values, else
     ;;call SYNNER.
     ;;
+    (module ()
+      (assert (all-identifiers? keywords))
+      (assert (procedure? synner)))
     (define-struct flag
       (id present?))
     (define flags
@@ -728,6 +742,9 @@
     ;;are NOT  present.  If  successful return unspecified  values, else
     ;;call SYNNER.
     ;;
+    (module ()
+      (assert (all-identifiers? keywords))
+      (assert (procedure? synner)))
     (define-struct flag
       (id clauses))
     (define-inline (flag-cons-clause! flag clause)
@@ -767,6 +784,7 @@
 ;;;; clause specification structs
 
 (define-record-type syntax-clause-spec
+  (opaque #t)
   (nongenerative vicare:syntax-clause)
   (fields (immutable keyword)
 		;An identifier representing the keyword for this clause.
@@ -834,6 +852,7 @@
     ;;SYNNER.
     ;;
     (assert (syntax-clause-spec? spec))
+    (assert (procedure? synner))
     (let* ((keyword (syntax-clause-spec-keyword spec))
 	   (present (syntax-clauses-filter (list keyword) clauses))
 	   (number  (length present)))
@@ -877,6 +896,30 @@
 	    (synner "mutually exclusive clauses are present" (append present others)))))
       ;;Return the list of arguments.
       (map cdr present)))
+   ))
+
+(define syntax-clauses-fold-specs
+  (case-lambda
+   ((combine knil specs clauses)
+    (syntax-clauses-fold-specs combine knil specs clauses (%make-synner 'syntax-clauses-fold-specs)))
+   ((combine knil specs clauses synner)
+    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
+    ;;with the format:
+    ;;
+    ;;    ((?identifier ?thing ...) ...)
+    ;;
+    ;;verify   that   the   clauses   conform  to   the   given   clause
+    ;;specifications.  Combine the clause  arguments with the given KNIL
+    ;;in a FOLD-LEFT fashion.  If  successful return the resulting KNIL;
+    ;;else call SYNNER.
+    ;;
+    (assert (procedure? combine))
+    (assert (for-all syntax-clause-spec? specs))
+    (assert (procedure? synner))
+    (fold-left (lambda (knil spec)
+		 (combine knil spec (syntax-clauses-single-spec spec clauses synner)))
+      knil
+      specs))
    ))
 
 

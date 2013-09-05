@@ -2684,7 +2684,7 @@ and processing such clauses.
 * iklib expander clauses intro::    Introduction to clauses functions.
 * iklib expander clauses utils::    Syntax clauses utilities.
 * iklib expander clauses constr::   Syntax clauses constraints.
-* iklib expander clauses structs::  Clause specification structs.
+* iklib expander clauses objects::  Clause specification objects.
 @end menu
 
 @c page
@@ -2828,8 +2828,13 @@ a @condition{syntax} violation exception.
 @end defun
 
 @c page
-@node iklib expander clauses structs
-@subsubsection Clause specification structs
+@node iklib expander clauses objects
+@subsubsection Clause specification objects
+
+
+Clause specification objects are opaque objects, disjoint from all the
+other Scheme object types, representing the constraints enforceable on a
+syntax clause.
 
 
 @defun make-syntax-clause-spec @var{keyword} @var{min-occur} @var{max-occur} @var{min-args} @var{max-args} @var{mutually-inclusive} @var{mutually-exclusive}
@@ -2913,6 +2918,33 @@ found call @var{synner} or raise a @condition{syntax} object.
  '((456)))
 @result{} #t
 @end example
+@end defun
+
+
+@defun syntax-clauses-fold-specs @var{combine} @var{knil} @var{specs} @var{unwrapped-clauses}
+@defunx syntax-clauses-fold-specs @var{combine} @var{knil} @var{specs} @var{unwrapped-clauses} @var{synner}
+Given a fully unwrapped syntax object holding a list of clauses (for
+example the return value of @func{syntax-clauses-unwrap}) verify that
+the clauses conform to the given @var{specs}, which must be a list of
+syntax clause specification objects.
+
+Combine the clause arguments with the given @var{knil} in a
+@func{fold-left} fashion; if successful return the resulting @var{knil};
+if an invalid clause is found call @var{synner} or raise a
+@condition{syntax} object.  The operation is as follows:
+
+@example
+(fold-left
+    (lambda (knil spec)
+      (@var{combine} knil spec
+        (syntax-clauses-single-spec spec
+          @var{unwrapped-clauses} @var{synner})))
+  @var{knil}
+  @var{specs})
+@end example
+
+This function does @strong{not} check that all the clauses conform to a
+given specification.
 @end defun
 
 @c page
