@@ -754,6 +754,144 @@
   #t)
 
 
+(parametrise ((check-test-name	'clauses-examples-fields))
+
+  (define-record-type field-spec
+    (nongenerative vicare:syntax:field-spec)
+    (opaque #t)
+    (fields (immutable name)
+	    (immutable mutable?)
+	    (immutable accessor-name)
+	    (immutable mutator-name))
+    (protocol
+     (lambda (make-record)
+       (lambda (type-id field-name mutable? accessor mutator)
+	 (assert (or (string?     field-name)
+		     (identifier? field-name)))
+	 (assert (or (not accessor) (identifier? accessor)))
+	 (assert (or (not mutator)  (identifier? mutator)))
+	 (let* ((field-name (if (identifier? field-name)
+				(identifier->string field-name)
+			      field-name))
+		(accessor (or accessor
+			      (identifier-record-field-accessor type-id field-name)))
+		(mutator  (or mutator
+			      (and mutable?
+				   (identifier-record-field-mutator type-id field-name)))))
+	   (make-record field-name mutable? accessor mutator))))))
+
+  (define (field-spec=? spec1 spec2)
+    (assert (field-spec? spec1))
+    (assert (field-spec? spec2))
+    (and (string=? (field-spec-name spec1)
+		   (field-spec-name spec2))
+	 (boolean=? (field-spec-mutable? spec1)
+		    (field-spec-mutable? spec2))
+	 (bound-identifier=? (field-spec-accessor-name spec1)
+			     (field-spec-accessor-name spec2))
+	 (if (field-spec-mutable? spec1)
+	     (bound-identifier=? (field-spec-mutator-name spec1)
+				 (field-spec-mutator-name spec2))
+	   #t)))
+
+  (module (parse-r6rs-record-fields)
+    (define who 'parse-r6rs-record-fields)
+
+    (define (parse-r6rs-record-fields type-id clauses)
+      (let* ((clauses (syntax-clauses-unwrap clauses))
+	     (clauses (syntax-clauses-filter (list #'fields) clauses))
+	     (clauses (syntax-clauses-collapse clauses))
+	     (specs   (%extract-and-normalise-field-specs clauses)))
+	(map (lambda (spec)
+	       (%parse-single-field-spec type-id spec))
+	  specs)))
+
+    (define (%extract-and-normalise-field-specs stx)
+      ;;Given  a  syntax object  representing  a  single FIELDS  clause:
+      ;;extract its arguments and return a fully unwrapped syntax object
+      ;;representing a list of field specifications with the format:
+      ;;
+      ;;   (immutable ?field-name)
+      ;;   (immutable ?field-name ?accessor)
+      ;;   (mutable ?field-name)
+      ;;   (mutable ?field-name ?accessor ?mutator)
+      ;;
+      (syntax-case stx (fields)
+	(((fields ?spec ...))
+	 (syntax-unwrap #'(?spec ...)))
+	(_
+	 (synner "invalid clauses" stx))))
+
+    (define (%parse-single-field-spec type-id spec)
+      (syntax-case spec (immutable mutable)
+	(?name
+	 (identifier? #'?name)
+	 (make-field-spec type-id (identifier->string #'?name) #f #f #f))
+	((immutable ?name)
+	 (identifier? #'?name)
+	 (make-field-spec type-id (identifier->string #'?name) #f #f #f))
+	((immutable ?name ?accessor)
+	 (and (identifier? #'?name)
+	      (identifier? #'?accessor))
+	 (make-field-spec type-id (identifier->string #'?name) #f #'?accessor #f))
+	((mutable ?name)
+	 (identifier? #'?name)
+	 (make-field-spec type-id (identifier->string #'?name) #t #f #f))
+	((mutable ?name ?accessor ?mutator)
+	 (and (identifier? #'?name)
+	      (identifier? #'?accessor)
+	      (identifier? #'?mutator))
+	 (make-field-spec type-id (identifier->string #'?name) #t #'?accessor #'?mutator))
+	(_
+	 (synner "invalid field spec" spec))))
+
+    (define synner
+      (case-lambda
+       ((message subform)
+	(synner message subform #f))
+       ((message form subform)
+	(syntax-violation who message form subform))))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (equal-field-specs? ell1 ell2)
+    (for-all field-spec=? ell1 ell2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (parse-r6rs-record-fields #'this #'((fields a)))
+    (=> equal-field-specs?)
+    (list (make-field-spec #'this "a" #f #f #f)))
+
+  (check
+      (parse-r6rs-record-fields #'this #'((fields a b)))
+    (=> equal-field-specs?)
+    (list (make-field-spec #'this "a" #f #f #f)
+	  (make-field-spec #'this "b" #f #f #f)
+	  ))
+
+  (check
+      (parse-r6rs-record-fields #'this #'((fields (mutable a)
+						  (immutable b))))
+    (=> equal-field-specs?)
+    (list (make-field-spec #'this "a" #t #'this-a #'this-a-set!)
+	  (make-field-spec #'this "b" #f #'this-b #f)
+	  ))
+
+  (check
+      (parse-r6rs-record-fields #'this #'((fields (mutable a a-ref a-set)
+						  (immutable b b-ref))))
+    (=> equal-field-specs?)
+    (list (make-field-spec #'this "a" #t #'a-ref #'a-set)
+	  (make-field-spec #'this "b" #f #'b-ref #f)
+	  ))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
