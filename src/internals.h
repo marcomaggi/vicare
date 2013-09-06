@@ -1050,6 +1050,10 @@ ik_decl int   ik_is_pointer	(ikptr X);
 
 ik_decl ikptr ika_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
 ik_decl ikptr ika_vector_alloc_and_init	(ikpcb * pcb, long number_of_items);
+
+ik_decl ikptr iku_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
+ik_decl ikptr iku_vector_alloc_and_init (ikpcb * pcb, long number_of_items);
+
 ik_decl int   ik_is_vector		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_clean		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,

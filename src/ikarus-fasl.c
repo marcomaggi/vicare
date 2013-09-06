@@ -547,8 +547,10 @@ do_read (ikpcb* pcb, fasl_port* p)
     return s_struct;
   }
 #if 0
-  else if (c == 'W') { /* W is for R6RS record instances */
-    long	i, num_of_fields = 0, record_size;
+  /* This  is currently  excluded because  there is  no way  to build  a
+     record-type descriptor from C language level. */
+  else if (c == 'W') { /* W is for R6RS record-type descriptors */
+    long	i, record_size;
     ikptr	s_name   = do_read(pcb, p);
     ikptr	s_parent = do_read(pcb, p);
     ikptr	s_uid    = do_read(pcb, p);
@@ -557,14 +559,23 @@ do_read (ikpcb* pcb, fasl_port* p)
     ikptr	s_count  = do_read(pcb, p);
     long	num_of_fields = IK_UNFIX(s_count);
     ikptr	s_fields = iku_vector_alloc_and_init(pcb, num_of_fields);
+    ikptr	s_record = IK_VOID;
     for (i=0; i<num_of_fields; ++i) {
       ikptr	s_field_is_mutable = do_read(pcb, p);
       ikptr	s_field_name       = do_read(pcb, p);
-      ikptr	s_pair = iku_pair_alloc(pcb);
+      ikptr	s_1st_pair = iku_pair_alloc(pcb);
+      ikptr	s_2nd_pair = iku_pair_alloc(pcb);
       if (IK_TRUE == s_field_is_mutable) {
-	IK_CAR(s_pair) =
+	IK_CAR(s_1st_pair) = iku_symbol_from_string(pcb, iku_string_from_cstring(pcb, "mutable"));
+      } else {
+	IK_CAR(s_1st_pair) = iku_symbol_from_string(pcb, iku_string_from_cstring(pcb, "immutable"));
       }
+      IK_CDR(s_1st_pair) = s_2nd_pair;
+      IK_CAR(s_2nd_pair) = s_field_name;
+      IK_CDR(s_2nd_pair) = IK_NULL;
+      IK_ITEM(s_fields, i) = s_1st_pair;
     }
+    /* FIXME How do we build a record type descriptor here? */
     return s_record;
   }
 #endif

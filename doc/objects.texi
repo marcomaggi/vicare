@@ -1753,12 +1753,14 @@ fx = IK_ITEM(s_vec, idx);
 
 
 @deftypefun ikptr ika_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
 @end deftypefun
 
 
 @deftypefun ikptr ika_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.

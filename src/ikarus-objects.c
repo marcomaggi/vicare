@@ -597,6 +597,9 @@ ik_is_vector (ikptr s_vec)
 {
   return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(ref(s_vec, -vector_tag));
 }
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
 {
@@ -607,6 +610,19 @@ ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   IK_REF(s_vec, off_vector_length) = s_len;
   return s_vec;
 }
+ikptr
+iku_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
+{
+  ikptr s_len      = IK_FIX(number_of_items);
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long	align_size = IK_ALIGN(disp_vector_data + s_len);
+  ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
+  IK_REF(s_vec, off_vector_length) = s_len;
+  return s_vec;
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
 {
@@ -620,6 +636,22 @@ ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
+ikptr
+iku_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
+{
+  ikptr s_len      = IK_FIX(number_of_items);
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  long	align_size = IK_ALIGN(disp_vector_data + s_len);
+  ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
+  IK_REF(s_vec, off_vector_length) = s_len;
+  /* Set the data area to zero.  Remember that the machine word 0 is the
+     fixnum zero. */
+  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
+  return s_vec;
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr
 ikrt_vector_clean (ikptr s_vec)
 {
