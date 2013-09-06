@@ -2283,6 +2283,12 @@ point into a 32-bit integer representing a Scheme character to be stored
 into a string.
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} {unsigned long} IK_UNICODE_FROM_ASCII (char @var{ch})
+Return an unsigned integer representing the Unicode code point
+corresponding to the given @ascii{} character.
+@end deftypefn
+
 @c page
 @node objects strings
 @section String objects
@@ -2467,8 +2473,22 @@ ch = IK_CHAR32(s_str, idx);
 
 
 @deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+@deftypefunx ikptr iku_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
+@end deftypefun
+
+
+@deftypefun ikptr ika_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+@deftypefunx ikptr iku_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+Allocate a new string object and fill it with the @ascii{} characters
+from the given @asciiz{} string.
+@end deftypefun
+
+
+@deftypefun ikptr iku_string_to_symbol (ikpcb* @var{pcb}, ikptr @var{str})
+Return a Scheme symbol object whose name is the Scheme string
+@var{str}.  This function is the same as @cfunc{iku_symbol_from_string}.
 @end deftypefun
 
 @c page
@@ -2557,6 +2577,12 @@ specified field.
 
 @deftypefun int ik_is_symbol (ikptr @var{obj})
 Return true if @var{obj} is a symbol.
+@end deftypefun
+
+
+@deftypefun ikptr iku_symbol_from_string (ikpcb * @var{pcb}, ikptr @var{str})
+Return a Scheme symbol object whose name is the Scheme string
+@var{str}.  This function is the same as @cfunc{iku_string_to_symbol}.
 @end deftypefun
 
 @c page

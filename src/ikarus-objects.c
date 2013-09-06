@@ -701,7 +701,43 @@ ika_string_alloc (ikpcb * pcb, long number_of_chars)
   /* Do not ask me why, but IK_ALIGN is needed here. */
   align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
   s_str	     = ik_safe_alloc(pcb, align_size) | string_tag;
-  ref(s_str, off_string_length) = IK_FIX(number_of_chars);
+  IK_STRING_LENGTH_FX(s_str) = IK_FIX(number_of_chars);
+  return s_str;
+}
+ikptr
+iku_string_alloc (ikpcb * pcb, long number_of_chars)
+{
+  long	align_size;
+  ikptr s_str;
+  /* Do not ask me why, but IK_ALIGN is needed here. */
+  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
+  s_str	     = ik_unsafe_alloc(pcb, align_size) | string_tag;
+  IK_STRING_LENGTH_FX(s_str) = IK_FIX(number_of_chars);
+  return s_str;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ika_string_from_cstring (ikpcb * pcb, const char * cstr)
+{
+  long	clen  = strlen(cstr);
+  ikptr	s_str = ika_string_alloc(pcb, clen);
+  long	i;
+  for (i=0; i<clen; ++i) {
+    IK_CHAR32(s_str, i) = IK_CHAR32_FROM_INTEGER(IK_UNICODE_FROM_ASCII(cstr[i]));
+  }
+  return s_str;
+}
+ikptr
+iku_string_from_cstring (ikpcb * pcb, const char * cstr)
+{
+  long	clen  = strlen(cstr);
+  ikptr	s_str = iku_string_alloc(pcb, clen);
+  long	i;
+  for (i=0; i<clen; ++i) {
+    IK_CHAR32(s_str, i) = IK_CHAR32_FROM_INTEGER(IK_UNICODE_FROM_ASCII(cstr[i]));
+  }
   return s_str;
 }
 

@@ -111,6 +111,7 @@ iku_make_symbol (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
 }
 static ikptr
 intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
+/* Notice that all the memory allocations here are UNsafe. */
 {
   int   hash_value    = compute_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
@@ -148,7 +149,9 @@ intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symb
    gensyms table.
 
    If a symbol object having S_UNIQUE_STRING is already interned: return
-   it.  Else: allocate a new symbol object, intern it, return it. */
+   it.  Else: allocate a new symbol object, intern it, return it.
+
+   Notice that all the memory allocations here are UNsafe. */
 {
   int   hash_value    = compute_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
@@ -281,7 +284,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
 
 
 ikptr
-ikrt_string_to_symbol (ikptr str, ikpcb* pcb)
+iku_string_to_symbol (ikpcb * pcb, ikptr str)
 {
   ikptr s_symbol_table = pcb->symbol_table;
   if (IK_FALSE_OBJECT == s_symbol_table)
@@ -290,6 +293,19 @@ ikrt_string_to_symbol (ikptr str, ikpcb* pcb)
     pcb->symbol_table = s_symbol_table = make_symbol_table(pcb);
   }
   return intern_string(str, s_symbol_table, pcb);
+}
+ikptr
+iku_symbol_from_string (ikpcb* pcb, ikptr s_str)
+{
+  return iku_string_to_symbol(pcb, s_str);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_string_to_symbol (ikptr str, ikpcb* pcb)
+{
+  return iku_string_to_symbol(pcb, str);
 }
 ikptr
 ikrt_strings_to_gensym (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)

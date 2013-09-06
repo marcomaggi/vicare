@@ -407,10 +407,10 @@
 ;;;; program name
 
 (define (vicare-argv0)
-  (foreign-call "ikrt_get_argv0_string"))
+  (foreign-call "ikrt_get_argv0_bytevector"))
 
 (define (vicare-argv0-string)
-  (ascii->string (vicare-argv0)))
+  (foreign-call "ikrt_get_argv0_string"))
 
 
 ;;;; done

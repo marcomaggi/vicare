@@ -712,6 +712,8 @@ typedef uint32_t	ikchar;
 #define IK_CHAR_TO_INTEGER(X) \
   ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
+#define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
+
 
 /** --------------------------------------------------------------------
  ** String objects.
@@ -733,6 +735,12 @@ typedef uint32_t	ikchar;
 #define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
 
 ik_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
+ik_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);
+
+ik_decl ikptr iku_string_alloc		(ikpcb * pcb, long number_of_chars);
+ik_decl ikptr iku_string_from_cstring	(ikpcb * pcb, const char * cstr);
+ik_decl ikptr iku_string_to_symbol	(ikpcb * pcb, ikptr s_str);
+
 ik_decl ikptr ikrt_string_to_symbol	(ikptr, ikpcb* pcb);
 ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
 
@@ -758,7 +766,8 @@ ik_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
 #define off_symbol_record_proc		(disp_symbol_record_proc    - record_tag)
 #define off_symbol_record_plist		(disp_symbol_record_plist   - record_tag)
 
-ik_decl int ik_is_symbol	(ikptr obj);
+ik_decl int   ik_is_symbol		(ikptr obj);
+ik_decl ikptr iku_symbol_from_string	(ikpcb * pcb, ikptr s_str);
 
 
 /** --------------------------------------------------------------------
