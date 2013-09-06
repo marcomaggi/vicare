@@ -6,7 +6,7 @@
 @cindex Library @library{vicare irregex}
 
 
-The @library{vicare irregex} library is an implementation of regular
+The library @library{vicare irregex} is an implementation of regular
 expressions; it supports both @posix{} syntax with various (irregular)
 Perl--Compatible Regular Expressions (@acronym{PCRE}) extensions, as
 well as SCSH's Scheme Regular Expressions (@acronym{SRE}) syntax, with
@@ -17,13 +17,14 @@ possible, otherwise a closure--compiled Nondeterministic Finite Automata
 (@acronym{NFA}) approach is
 used.@footnote{See @url{http://en.wikipedia.org/wiki/Automata_theory}.}
 
+@quotation
 The library is derived from IrRegex, an implementation of regular
 expressions by Alex Shinn; only small changes were needed for
 integration into Vicare.  The original package is distributed under a
-@acronym{BSD} style license (@nauref{credits, Credits}) and can be
-downloaded from:
+@acronym{BSD} style license and can be downloaded from:
 
 @center @url{http://synthcode.com/}
+@end quotation
 
 @menu
 * irregex conventions::         Conventions.
@@ -42,8 +43,8 @@ downloaded from:
 @section Conventions
 
 
-In the documentation of the @library{vicare irregex} functions, the
-following conventions for arguments names are used:
+In the documentation of the functions exported by @library{vicare
+irregex}, the following conventions for argument names are used:
 
 @table @var
 @item pcre
