@@ -84,6 +84,8 @@ Notes for revision 0.3d3
 
 * Imported IrRegex from Nausicaa as (vicare irregex).
 
+* Imported Pregexp from Nausicaa as (vicare pregexp).
+
 
 Notes for revision 0.3d2
 ------------------------

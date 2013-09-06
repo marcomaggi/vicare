@@ -56,7 +56,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/net/channels.sls						\
 	\
 	vicare/irregex.sls						\
-	vicare/irregex/compat.vicare.sls
+	vicare/irregex/compat.vicare.sls				\
+	vicare/pregexp.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\

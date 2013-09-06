@@ -167,6 +167,9 @@ This document is derived from the original Ikarus documentation by the
 The documentation of IrRegex is Copyright @copyright{} 2005-2012 Alex
 Shinn.  All rights reserved.
 
+The documentation of Pregexp is Copyright @copyright{}) 1999-2005 Dorai
+Sitaram.  All rights reserved.
+
 @quotation
 This program is free software: you can redistribute it and/or modify it
 under the terms of the @gnu{} General Public License version 3 as
@@ -244,6 +247,7 @@ Trademarks used herein are the property of their respective owners.
 Adapted libraries
 
 * irregex::                     IrRegular expressions.
+* pregexp::                     Portable regular expressions for Scheme.
 
 Internals
 
@@ -300,6 +304,7 @@ External documents
 @include libs.texi
 
 @include irregex.texi
+@include pregexp.texi
 
 @include objects.texi
 @include debug.texi

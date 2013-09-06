@@ -241,6 +241,9 @@ file for the list of contributors to Ikarus Scheme and Vicare Scheme.
   IrRegex is adapted  from the original distribution by  Alex Shinn, see
 the file "LICENSE.irregex".
 
+  Pregexp is adapted from the original library by Dorai Sitaram, see the
+file "LICENSE.pregexp".
+
 
 B. Bug reports
 --------------

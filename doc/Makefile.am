@@ -31,6 +31,7 @@ vicare_scheme_TEXINFOS	= \
 	compiler.texi			\
 	\
 	irregex.texi			\
+	pregexp.texi			\
 	\
 	missing.texi			\
 	building.texi			\

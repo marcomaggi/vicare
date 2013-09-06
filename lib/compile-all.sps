@@ -73,6 +73,7 @@
 
 
   (only (vicare irregex))
+  (only (vicare pregexp))
 
   )
 
