@@ -373,7 +373,7 @@
 	 (identifier? #'?car)
 	 (cons #'?car (recur #'?cdr)))
 	((?car . ?cdr)
-	 (cons (syntax->datum #'?car) (recur #'?cdr)))
+	 (cons (syntax-unwrap #'?car) (recur #'?cdr)))
 	(_
 	 (synner "expected syntax object holding proper list as argument" stx)))))))
 
