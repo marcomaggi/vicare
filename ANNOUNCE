@@ -86,6 +86,9 @@ Notes for revision 0.3d3
 
 * Imported Pregexp from Nausicaa as (vicare pregexp).
 
+* Imported    variables    library     from    Nausicaa    as    (vicare
+  language-extensions variables).
+
 
 Notes for revision 0.3d2
 ------------------------

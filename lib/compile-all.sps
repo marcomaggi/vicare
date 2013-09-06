@@ -52,6 +52,7 @@
   (only (vicare language-extensions sentinels))
   (only (vicare language-extensions namespaces))
   (only (vicare language-extensions custom-ports))
+  (only (vicare language-extensions variables))
 
   (only (vicare numerics constants))
   (only (vicare numerics flonum-parser))

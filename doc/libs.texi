@@ -22,6 +22,7 @@
 * namespaces::                  Namespaces.
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
+* variables::                   Defining storage locations.
 @end menu
 
 @c page
@@ -5101,5 +5102,59 @@ Return @true{} if @var{obj} is a condition object of type
 @condition{maximum-message-size-exceeded} or a compound condition object
 with a component of type @condition{maximum-message-size-exceeded}.
 @end defun
+
+@c page
+@node variables
+@section Defining storage locations
+
+
+@cindex @library{vicare language-extensions variables}, library
+@cindex Library @library{vicare language-extensions variables}
+
+
+The library @library{vicare language-extensions variables} provides a
+way to define simple storage locations similar to the variables used in
+many languages.  The @dfn{variable} type of value is disjoint from the
+other types.
+
+
+@defun make-variable
+@defunx make-variable @var{obj}
+Build and return a new variable object.  The variable is initialised to
+@var{obj}, which defaults to the return value of @code{(void)}.
+@end defun
+
+
+@defun variable? @var{obj}
+Return @true{} if @var{obj} is a variable object, else return @false{}.
+@end defun
+
+
+@defun variable-set! @var{variable} @var{obj}
+@defunx variable-ref @var{variable}
+Setter and getter for the value of variable objects.
+@end defun
+
+
+@deffn Syntax define-variable @meta{name}
+@deffnx Syntax define-variable @meta{name} @var{obj}
+@deffnx Syntax define-variable (@meta{name} . @meta{formals}) @meta{body}
+Like @func{define}, but store the value in a newly built variable object
+which is then bound to @meta{name}.  Example:
+
+@example
+(import (vicare)
+  (vicare language-extensions variables))
+
+(define-variable v 123)
+v @result{} 123
+(set! v 456)
+v @result{} 456
+@end example
+
+While @func{define} defines a binding which, when exported by a library,
+cannot be modified, @func{define-variable} allocates a storage location,
+so the value bound to @meta{name} can be modified at will.
+@end deffn
 
 @c end of file
