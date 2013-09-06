@@ -6,7 +6,7 @@ EXTRA_DIST		= configure.sh			\
 			  scripts/make-last-revision	\
 			  scripts/vie			\
 			  autotools/config.rpath
-dist_doc_DATA		= README COPYING GPL-3
+dist_doc_DATA		= README COPYING GPL-3 LICENSE.irregex
 
 vicare_test_RULES	= test tests long-test long-tests \
 			  test-run test-vie test-exec-modes \

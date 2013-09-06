@@ -238,6 +238,9 @@ The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
 Vicare Scheme  is a fork  driven by  Marco Maggi.  See  the CONTRIBUTORS
 file for the list of contributors to Ikarus Scheme and Vicare Scheme.
 
+  IrRegex is adapted  from the original distribution by  Alex Shinn, see
+the file "LICENSE.irregex".
+
 
 B. Bug reports
 --------------
