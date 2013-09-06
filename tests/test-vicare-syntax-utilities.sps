@@ -801,21 +801,12 @@
       (let* ((clauses (syntax-clauses-unwrap clauses))
 	     (clauses (syntax-clauses-filter (list #'fields) clauses))
 	     (clauses (syntax-clauses-collapse clauses))
-	     (specs   (%extract-and-normalise-field-specs clauses)))
+	     (specs   (%extract-field-specs clauses)))
 	(map (lambda (spec)
 	       (%parse-single-field-spec type-id spec))
 	  specs)))
 
-    (define (%extract-and-normalise-field-specs stx)
-      ;;Given  a  syntax object  representing  a  single FIELDS  clause:
-      ;;extract its arguments and return a fully unwrapped syntax object
-      ;;representing a list of field specifications with the format:
-      ;;
-      ;;   (immutable ?field-name)
-      ;;   (immutable ?field-name ?accessor)
-      ;;   (mutable ?field-name)
-      ;;   (mutable ?field-name ?accessor ?mutator)
-      ;;
+    (define (%extract-field-specs stx)
       (syntax-case stx (fields)
 	(((fields ?spec ...))
 	 (syntax-unwrap #'(?spec ...)))
