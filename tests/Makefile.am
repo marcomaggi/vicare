@@ -164,7 +164,9 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-issue-022.sps				\
 	test-issue-023.sps				\
 	test-issue-024.sps				\
-	test-issue-025-sign-in-exact-rationals.sps
+	test-issue-025-sign-in-exact-rationals.sps	\
+	\
+	test-irregex.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps				\

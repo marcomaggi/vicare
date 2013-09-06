@@ -238,6 +238,10 @@ Trademarks used herein are the property of their respective owners.
 * lang::                        Language extension libraries.
 * libs::                        Other libraries.
 
+Adapted libraries
+
+* irregex::                     IrRegular expressions.
+
 Internals
 
 * objects::                     Built in Scheme objects.
@@ -291,6 +295,9 @@ External documents
 @include srfi.texi
 @include lang.texi
 @include libs.texi
+
+@include irregex.texi
+
 @include objects.texi
 @include debug.texi
 @include machinery.texi

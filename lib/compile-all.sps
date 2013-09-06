@@ -70,6 +70,10 @@
 
   (only (vicare assembler inspection))
   (only (vicare debugging compiler))
+
+
+  (only (vicare irregex))
+
   )
 
 ;;; end of file

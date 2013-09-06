@@ -53,7 +53,10 @@ nobase_dist_libvicare_DATA	= \
 	vicare/parser-logic.sls						\
 	vicare/bytevectors.sls						\
 	\
-	vicare/net/channels.sls
+	vicare/net/channels.sls						\
+	\
+	vicare/irregex.sls						\
+	vicare/irregex/compat.vicare.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\
