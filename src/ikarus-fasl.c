@@ -547,7 +547,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     return s_struct;
   }
 #if 0
-  else if (c == '"') { /* W is for R6RS record instances */
+  else if (c == 'W') { /* W is for R6RS record instances */
     long	i, num_of_fields = 0, record_size;
     ikptr	s_name   = do_read(pcb, p);
     ikptr	s_parent = do_read(pcb, p);
@@ -556,6 +556,15 @@ do_read (ikpcb* pcb, fasl_port* p)
     ikptr	s_opaque = do_read(pcb, p);
     ikptr	s_count  = do_read(pcb, p);
     long	num_of_fields = IK_UNFIX(s_count);
+    ikptr	s_fields = iku_vector_alloc_and_init(pcb, num_of_fields);
+    for (i=0; i<num_of_fields; ++i) {
+      ikptr	s_field_is_mutable = do_read(pcb, p);
+      ikptr	s_field_name       = do_read(pcb, p);
+      ikptr	s_pair = iku_pair_alloc(pcb);
+      if (IK_TRUE == s_field_is_mutable) {
+	IK_CAR(s_pair) =
+      }
+    }
     return s_record;
   }
 #endif
