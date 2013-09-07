@@ -5475,8 +5475,9 @@ initialisation value and @var{guard} as guard function.
 @end deffn
 
 
-@deffn Syntax parameterize ((lhs* rhs*) ...) body body* ...
-@deffnx Syntax parametrise ((lhs* rhs*) ...) body body* ...
+@deffn Syntax parametrise ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax parameterize ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax parameterise ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
 Parameters can be assigned to by simply calling the parameter procedure
 with a single argument.  The @func{parameterize} syntax is used to set
 the value of a parameter within the dynamic extent of the @code{body
