@@ -12,6 +12,7 @@
 * simple-match::                Simple destructuring match syntax.
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
+* streams::                     Streams.
 @end menu
 
 @c page
@@ -2558,5 +2559,9 @@ input/output the second.  Such ports are connected together so that data
 written to one port is read from the other port.
 @end defun
 
+
+@c page
+
+@include streams.texi
 
 @c end of file

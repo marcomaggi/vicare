@@ -38,6 +38,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/sentinels.sls			\
 	vicare/language-extensions/namespaces.sls			\
 	vicare/language-extensions/variables.sls			\
+	vicare/language-extensions/streams.sls				\
 	\
 	vicare/numerics/constants.sls					\
 	vicare/numerics/flonum-formatter.sls				\

@@ -261,6 +261,9 @@ implementation at:
   The library  (vicare containers levenshtein)  is derived from  code by
 Neil Van Dyke.
 
+  The library (vicare language-extensions  streams) is derived from code
+by Philip L. Bewig.
+
 
 B. Bug reports
 --------------

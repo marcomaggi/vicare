@@ -104,6 +104,9 @@ Notes for revision 0.3d3
 * Imported  Levenshtein  Distance  library   from  Nausicaa  as  (vicare
   containers levenshtein).
 
+* Imported streams library from  Nausicaa as (vicare language-extensions
+  streams).
+
 
 Notes for revision 0.3d2
 ------------------------
