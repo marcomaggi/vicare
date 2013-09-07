@@ -3885,6 +3885,23 @@ Usage examples:
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun make-list @var{len}
+@defunx make-list @var{len} @var{fill}
+Build and return a new list of @var{len} elements.  @var{fill} is used
+to initialise the the list pairs; when not given: it defaults to the
+return value of @code{(void)}.
+@end defun
+
+
+@defun last-pair @var{pair}
+Return the last pair in the non--empty, finite list @var{pair}.
+
+@example
+(last-pair '(a b c))    @result{} (c)
+@end example
+@end defun
+
+
 @defun for-each-in-order @var{proc} @varo{list} @var{list} ...
 Like @func{for-each} from @rsixlibrary{base} but guarantees that
 @var{proc} is applied starting from the head of the lists.
