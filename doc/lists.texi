@@ -20,13 +20,14 @@ For the last purpose, the libraries export macros that may make little
 sense in most scenarios (beside the fact that they are always inlined).
 
 @quotation
-@strong{NOTE} The @library{vicare containers lists ---} libraries and
-this section of documentation are derived from the @ansrfi{1} document
-and reference implementation by Olin Shivers, but they are @strong{not}
-compatible with it.  Read carefully this documentation!
+@strong{NOTE} The libraries in the hierarchy @library{vicare containers
+lists ---} and this section of documentation are derived from the
+@ansrfi{1} document and reference implementation by Olin Shivers, but
+they are @strong{not} compatible with it.  Read carefully this
+documentation!
 @end quotation
 
-To avoid identifier collisions, it is suggested to import these
+To avoid identifier collisions: it is suggested to import these
 libraries with the prefix @code{list.}, as in:
 
 @example
