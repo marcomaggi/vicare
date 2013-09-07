@@ -79,6 +79,7 @@
   (only (vicare containers strings low))
   (only (vicare containers strings))
   (only (vicare containers strings rabin-karp))
+  (only (vicare containers levenshtein))
 
   (only (vicare net channels))
 

@@ -101,6 +101,9 @@ Notes for revision 0.3d3
 * Imported   KMP   library   from   Nausicaa   as   (vicare   containers
   knuth-morris-pratt).
 
+* Imported  Levenshtein  Distance  library   from  Nausicaa  as  (vicare
+  containers levenshtein).
+
 
 Notes for revision 0.3d2
 ------------------------

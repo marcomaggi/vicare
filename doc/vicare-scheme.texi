@@ -251,6 +251,7 @@ Container libraries
 * strings::                     String library.
 * char-sets::                   Character sets.
 * kmp::                         Knuth-Morris-Pratt searching.
+* levenshtein::                 Levenshtein distance metric.
 
 Adapted libraries
 
@@ -316,6 +317,7 @@ External documents
 @include strings.texi
 @include char-sets.texi
 @include knuth-morris-pratt.texi
+@include levenshtein.texi
 
 @include irregex.texi
 @include pregexp.texi
