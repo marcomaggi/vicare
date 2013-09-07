@@ -244,6 +244,20 @@ the file "LICENSE.irregex".
   Pregexp is adapted from the original library by Dorai Sitaram, see the
 file "LICENSE.pregexp".
 
+  The libraries  in the  hierarchy (vicare  containers strings  ---) are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+  The libraries  in the  hierarchy (vicare  containers vectors  ---) are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+  The library (vicare containers knuth-morris-pratt) is derived from the
+reference implementation of SRFI 13 by Olin Shivers.
+
+  The library (vicare containers strings rabin-karp) is derived from the
+implementation at:
+
+    <http://algs4.cs.princeton.edu/53substring/RabinKarp.java.html>
+
 
 B. Bug reports
 --------------
