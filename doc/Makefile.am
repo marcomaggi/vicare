@@ -33,6 +33,8 @@ vicare_scheme_TEXINFOS	= \
 	knuth-morris-pratt.texi		\
 	lists.texi			\
 	vectors.texi			\
+	strings.texi			\
+	char-sets.texi			\
 	\
 	irregex.texi			\
 	pregexp.texi			\

@@ -93,6 +93,11 @@ Notes for revision 0.3d3
 
 * Imported vectors library from Nausicaa as (vicare containers vectors).
 
+* Imported strings library from Nausicaa as (vicare containers strings).
+
+* Imported  char-sets  library  from   Nausicaa  as  (vicare  containers
+  char-sets).
+
 * Imported   KMP   library   from   Nausicaa   as   (vicare   containers
   knuth-morris-pratt).
 

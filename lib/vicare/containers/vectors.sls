@@ -195,12 +195,11 @@
   (import (except (vicare)
 		  vector-copy
 		  vector-copy!)
-    (vicare containers vectors low))
+    (vicare containers vectors low)
+    (vicare containers auxiliary-syntaxes))
 
 
 ;;;; helpers
-
-(define-auxiliary-syntaxes view start past)
 
 (define-syntax unpack
   (syntax-rules (view start past)

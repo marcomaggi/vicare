@@ -43,6 +43,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/numerics/flonum-formatter.sls				\
 	vicare/numerics/flonum-parser.sls				\
 	\
+	vicare/containers/auxiliary-syntaxes.sls			\
 	vicare/containers/bytevector-compounds.sls			\
 	vicare/containers/bytevector-compounds/core.sls			\
 	vicare/containers/bytevector-compounds/unsafe.sls		\
@@ -52,7 +53,13 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/lists.sls					\
 	vicare/containers/vectors/low.sls				\
 	vicare/containers/vectors.sls					\
+	vicare/containers/strings/low.sls				\
+	vicare/containers/strings.sls					\
+	vicare/containers/strings/rabin-karp.sls			\
 	vicare/containers/knuth-morris-pratt.sls			\
+	vicare/containers/char-sets.sls					\
+	vicare/containers/char-sets/blocks.sls				\
+	vicare/containers/char-sets/categories.sls			\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

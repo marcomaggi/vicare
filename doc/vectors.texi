@@ -15,6 +15,15 @@ vector functions}).  While @library{vicare containers vectors} is a high
 level interface, @library{vicare containers vectors low} is a low level
 interface with the same functionalities.
 
+To avoid identifiers collision: it is suggested to import the libraries
+in the hierarchy @library{vicare containers vectors ---} with the prefix
+@code{vector.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare containers vectors) vector.))
+@end example
+
 @menu
 * vectors intro::               Introduction.
 * vectors convention::          Interface conventions.
@@ -204,8 +213,9 @@ non--terminal subform of a begin expression.
 
 Vector views are syntactic sugar to allow subvector specification with
 minimum overhead; views make use of auxiliary syntaxes exported by the
-library @library{vicare containers vectors}.  Many low level vector
-functions act on subvectors specified with triplets of arguments:
+library @library{vicare containers auxiliary-syntaxes} and reexported by
+@library{vicare containers vectors}.  Many low level vector functions
+act on subvectors specified with triplets of arguments:
 
 @itemize
 @item

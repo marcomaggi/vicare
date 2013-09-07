@@ -248,6 +248,8 @@ Container libraries
 
 * lists::                       List library.
 * vectors::                     Vector library.
+* strings::                     String library.
+* char-sets::                   Character sets.
 * kmp::                         Knuth-Morris-Pratt searching.
 
 Adapted libraries
@@ -311,6 +313,8 @@ External documents
 
 @include lists.texi
 @include vectors.texi
+@include strings.texi
+@include char-sets.texi
 @include knuth-morris-pratt.texi
 
 @include irregex.texi

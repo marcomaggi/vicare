@@ -172,6 +172,9 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-containers-lists-low.sps		\
 	test-vicare-containers-lists-stx.sps		\
 	test-vicare-containers-vectors-high.sps		\
+	test-vicare-containers-char-sets.sps		\
+	test-vicare-containers-strings-low.sps		\
+	test-vicare-containers-strings-high.sps		\
 	\
 	test-irregex.sps				\
 	test-pregexp.sps

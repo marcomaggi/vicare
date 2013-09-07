@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This  program  is free  software:  you  can redistribute  it
 ;;;and/or modify it  under the terms of the  GNU General Public
@@ -29,7 +29,9 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare)
+		vector-copy!
+		vector-copy)
   (vicare checks)
   (vicare containers strings)
   (vicare containers vectors)
