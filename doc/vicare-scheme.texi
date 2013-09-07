@@ -247,6 +247,8 @@ Trademarks used herein are the property of their respective owners.
 Container libraries
 
 * lists::                       List library.
+* vectors::                     Vector library.
+* kmp::                         Knuth-Morris-Pratt searching.
 
 Adapted libraries
 
@@ -308,6 +310,8 @@ External documents
 @include libs.texi
 
 @include lists.texi
+@include vectors.texi
+@include knuth-morris-pratt.texi
 
 @include irregex.texi
 @include pregexp.texi

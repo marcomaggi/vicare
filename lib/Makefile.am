@@ -50,6 +50,9 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/lists/stx.sls					\
 	vicare/containers/lists/low.sls					\
 	vicare/containers/lists.sls					\
+	vicare/containers/vectors/low.sls				\
+	vicare/containers/vectors.sls					\
+	vicare/containers/knuth-morris-pratt.sls			\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

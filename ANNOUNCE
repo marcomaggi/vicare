@@ -91,6 +91,11 @@ Notes for revision 0.3d3
 
 * Imported lists library from Nausicaa as (vicare containers lists).
 
+* Imported vectors library from Nausicaa as (vicare containers vectors).
+
+* Imported   KMP   library   from   Nausicaa   as   (vicare   containers
+  knuth-morris-pratt).
+
 
 Notes for revision 0.3d2
 ------------------------

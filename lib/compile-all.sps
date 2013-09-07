@@ -63,12 +63,15 @@
   (only (vicare bytevectors))
 
   (only (vicare containers weak-hashtables))
+  (only (vicare containers knuth-morris-pratt))
   (only (vicare containers bytevector-compounds core))
   (only (vicare containers bytevector-compounds))
   (only (vicare containers bytevector-compounds unsafe))
   (only (vicare containers lists stx))
   (only (vicare containers lists low))
   (only (vicare containers lists))
+  (only (vicare containers vectors low))
+  (only (vicare containers vectors))
 
   (only (vicare net channels))
 

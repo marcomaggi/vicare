@@ -167,9 +167,11 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-issue-024.sps				\
 	test-issue-025-sign-in-exact-rationals.sps	\
 	\
+	test-vicare-containers-kmp.sps			\
 	test-vicare-containers-lists-fun.sps		\
 	test-vicare-containers-lists-low.sps		\
 	test-vicare-containers-lists-stx.sps		\
+	test-vicare-containers-vectors-high.sps		\
 	\
 	test-irregex.sps				\
 	test-pregexp.sps
