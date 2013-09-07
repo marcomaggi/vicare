@@ -167,7 +167,7 @@ This document is derived from the original Ikarus documentation by the
 The documentation of IrRegex is Copyright @copyright{} 2005-2012 Alex
 Shinn.  All rights reserved.
 
-The documentation of Pregexp is Copyright @copyright{}) 1999-2005 Dorai
+The documentation of Pregexp is Copyright @copyright{} 1999-2005 Dorai
 Sitaram.  All rights reserved.
 
 @quotation
