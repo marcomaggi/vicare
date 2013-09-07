@@ -66,6 +66,9 @@
   (only (vicare containers bytevector-compounds core))
   (only (vicare containers bytevector-compounds))
   (only (vicare containers bytevector-compounds unsafe))
+  (only (vicare containers lists stx))
+  (only (vicare containers lists low))
+  (only (vicare containers lists))
 
   (only (vicare net channels))
 

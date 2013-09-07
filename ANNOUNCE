@@ -89,6 +89,8 @@ Notes for revision 0.3d3
 * Imported    variables    library     from    Nausicaa    as    (vicare
   language-extensions variables).
 
+* Imported lists library from Nausicaa as (vicare containers lists).
+
 
 Notes for revision 0.3d2
 ------------------------

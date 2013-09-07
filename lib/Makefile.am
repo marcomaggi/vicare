@@ -47,6 +47,9 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/bytevector-compounds/core.sls			\
 	vicare/containers/bytevector-compounds/unsafe.sls		\
 	vicare/containers/weak-hashtables.sls				\
+	vicare/containers/lists/stx.sls					\
+	vicare/containers/lists/low.sls					\
+	vicare/containers/lists.sls					\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

@@ -30,6 +30,8 @@ vicare_scheme_TEXINFOS	= \
 	machinery.texi			\
 	compiler.texi			\
 	\
+	lists.texi			\
+	\
 	irregex.texi			\
 	pregexp.texi			\
 	\
