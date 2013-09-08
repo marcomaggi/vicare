@@ -41,6 +41,19 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/streams.sls				\
 	vicare/language-extensions/loops.sls				\
 	vicare/language-extensions/ascii-chars.sls			\
+	vicare/language-extensions/comparisons.sls			\
+	\
+	vicare/crypto/randomisations/low.sls				\
+	vicare/crypto/randomisations.sls				\
+	vicare/crypto/randomisations/blum-blum-shub.sls			\
+	vicare/crypto/randomisations/borosh.sls				\
+	vicare/crypto/randomisations/cmrg.sls				\
+	vicare/crypto/randomisations/distributions.sls			\
+	vicare/crypto/randomisations/lists.sls				\
+	vicare/crypto/randomisations/marsaglia.sls			\
+	vicare/crypto/randomisations/mersenne.sls			\
+	vicare/crypto/randomisations/strings.sls			\
+	vicare/crypto/randomisations/vectors.sls			\
 	\
 	vicare/numerics/constants.sls					\
 	vicare/numerics/flonum-formatter.sls				\

@@ -15,6 +15,7 @@
 * asciis::                      Utilities for @ascii{} characters.
 * streams::                     Streams.
 * loops::                       Loop constructs.
+* comparisons::                 Comparison functions.
 @end menu
 
 @c page
@@ -2630,5 +2631,6 @@ Return a fixnum representing the upper case or lower case version of
 
 @include streams.texi
 @include loops.texi
+@include comparisons.texi
 
 @c end of file

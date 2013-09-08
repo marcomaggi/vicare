@@ -1,0 +1,1703 @@
+@node random
+@chapter Sources of random bits
+
+
+@cindex @library{vicare crypto randomisations}, library
+@cindex Library @library{vicare crypto randomisations}
+
+
+The library @library{vicare crypto randomisations} provides an @api{} to
+access sources of random and pseudo--random bits, or ``randomness
+sources'' for brevity.  Other, auxiliary libraries provide access to
+miscellaneous randomness generators and utilities.
+
+@menu
+* random intro::                Introduction.
+* random prng::                 Notes on the algorithms.
+* random numbers::              Simple random numbers.
+* random source::               Randomness sources.
+* random mrg32k3a::             L'Ecuyer's MRG32k3a generator
+* random device::               Device--based generator.
+* random utils::                Utilities.
+* random generators::           Auxiliary generators.
+* random dist::                 Random numbers from known distributions.
+@end menu
+
+@c page
+@node random intro
+@section Introduction
+
+
+There are three different ways to use the interface, with varying
+demands on the quality of the source and the amount of control over the
+production process:
+
+@itemize
+@item
+The ``no fuss'' interface specifies that @code{(random-integer U)}
+produces the next random integer number @math{X} such that @math{0 <= X
+< U} and @func{(random-real)} produces the next random real number
+@math{X} such that @math{0 < X < 1}.  Details about how these random
+values are produced may not be very relevant, as long as they appear to
+be sufficiently random.
+
+@item
+For simulation purposes, on the contrary, it is usually necessary to
+know that the numbers are produced deterministically by a pseudo--random
+number generator of high quality and to have explicit access to its
+state.  In addition, one might want to use several independent sources
+of random numbers at the same time and it can be useful to have some
+simple form of randomization.
+
+@item
+For security applications a serious form of true randomization is
+essential, in the sense that it is difficult for an adversary to exploit
+or introduce imperfections into the distribution of random bits.
+Moreover, the linear complexity of the stream of random bits is more
+important than its statistical properties.  In these applications, an
+entropy source (producing truly random bits at a low rate) can be used
+to randomize a pseudo random number generator to increase the rate of
+available bits.
+@end itemize
+
+Once randomness sources provide the infrastructure to obtain random
+bits, these can be used to construct other random deviates.  Most
+important are floating point numbers of various distributions and random
+discrete structures, such as permutations or graphs.
+
+@c page
+@node random prng
+@section Notes on the algorithms
+
+
+Pseudo--random number generators (@acronym{PRNG}s) are algorithms that
+can automatically create long sequences of numbers (for example,
+millions of numbers) with good random properties; eventually the
+sequence repeats itself or memory usage grows without
+bound@footnote{Wikipedia contributors, ``Random number generation,''
+Wikipedia, The Free Encyclopedia,
+@url{http://en.wikipedia.org/wiki/@/Random_number_generator} (accessed
+June 28, 2009).}.
+
+We examine some notes on @acronym{PRNG}s with the purpose of gaining
+basic understanding of the code, and to reverese engineer the basic
+steps of source code available on the Internet.  This section is meant
+to help people new to the @acronym{PRNG} algorithms.
+
+@menu
+* random prng lcg::             Linear congruential generators.
+* random prng mwc::             Multiply with carry.
+* random prng csprng::          Cryptographically secure @acronym{PRNG}.
+* random prng integers::        Generating integers in a specified range.
+* random prng reals::           Generating real numbers.
+@end menu
+
+@c page
+@node random prng lcg
+@subsection Linear congruential generators
+
+
+One of the most common @acronym{PRNG} is the @dfn{linear congruential
+generator} (@acronym{LCG}), which uses the recurrence:
+
+@example
+N' = (a N + b) mod M      0 <= N', N < M
+@end example
+
+@noindent
+to generate a new integer number @math{N'} from an initial state
+@math{N}, @math{a} and @math{b} being known, fixed, recursion
+coefficients.  The maximum number of integers the formula can produce is
+the modulus @math{M}.
+
+To avoid certain non--random properties of a single linear congruential
+generator, several such generators with slightly different values of the
+multiplier coeffient are typically used in parallel, with a ``master''
+generator that selects among them.
+
+The most efficient LCGs have an @math{M} equal to a power of @math{2},
+most often @math{2^{32}} or @math{2^{64}}, because this allows the
+modulus operation to be computed by merely truncating all but the
+rightmost @math{32} or @math{64} bits@footnote{Wikipedia contributors,
+"Linear congruential generator," Wikipedia, The Free Encyclopedia,
+@url{}http://en.wikipedia.org/wiki/Linear_congruential_generator
+(accessed May 24, 2009).}.
+
+@acronym{LCG}s should not be used for applications where high-quality
+randomness is critical.  For example, they are not suitable for a Monte
+Carlo simulation or for cryptographic applications.  A further problem
+of @acronym{LCG}s is that the lower--order bits of the generated
+sequence have a far shorter period than the sequence as a whole if
+@math{M} is set to a power of @math{2}.
+
+@c page
+@node random prng mwc
+@subsection Multiply with carry
+
+
+Multiply--with--carry (@acronym{MWC}) is a method invented by George
+Marsaglia for generating sequences of pseudo--random integers based on
+an initial set of from two to many thousands of randomly chosen seed
+values@footnote{Wikipedia contributors, ``Multiply--with--carry,''
+Wikipedia, The Free Encyclopedia,
+@url{http://en.wikipedia.org/wiki/Multiply-with-carry} (accessed May 8,
+2009).}.
+
+The main advantage of the @acronym{MWC} method is that it invokes simple
+computer integer arithmetic and leads to very fast generation of
+sequences of pseudo--random numbers with immense periods, ranging from
+around @math{260} to @math{22e6}.  As with most @acronym{PRNG}s, the
+resulting sequences are functions of the randomly chosen seed values,
+but @acronym{MWC} generators seem to behave as well as, and often better
+than, others in tests of randomness.
+
+A @acronym{MWC} sequence is based on arithmetic modulo @math{M}, usually
+@math{2^{32}}, because arithmetic modulo that @math{M} is automatic in
+most computers, but sometimes a modulo such as @math{32^2 - 1} is used,
+because arithmetic for modulus @math{2^{32} - 1} requires only a simple
+adjustment from that for @math{2^{32}}, and theory for @acronym{MWC}
+sequences based on modulus @math{2^{32}} has some nagging difficulties
+that use of @math{2^{32} - 1} avoids.
+
+Complementary--multiply--with--carry generators (@acronym{CMWC}) are a
+slightly modified form of @acronym{MWC} giving better results.  A basic
+formulation of the algorithm uses the recurrence:
+
+@example
+N' = (M - 1) - (a * N + C) mod M    0 <= N < M
+
+           a * N + C
+C' = floor ---------                     C < a
+               M
+@end example
+
+@noindent
+to generate a new number @math{N'} and a new carry @math{C'} from an
+initial state @math{N} and an initial carry @math{C}, @math{a} being the
+recursion coefficient and @math{M} being the modulo.
+
+Better formulations adopt a ``lag'' of @math{r} values: Chosen a
+positive integer @math{r}, an initial carry @math{C} and a vector
+@math{[N(1), N(2), ..., N(r)]} of initial seed values, the new number
+@math{N'} and the new carry @math{C'} are computed using the seed
+@math{N(r)} as:
+
+@example
+N' = (M - 1) - (a * N(r) + C) mod M
+
+           a * N(r) + C
+C' = floor ------------
+                M
+@end example
+
+@noindent
+then the seed vector is right--shifted purging @math{N(r)}:
+
+@example
+N(r)   = N(r-1)
+N(r-1) = N(r-2)
+...
+N(2)   = N(1)
+N(1)   = N'
+@end example
+
+@c page
+@node random prng csprng
+@subsection Cryptographically secure @acronym{PRNG}
+
+
+A cryptographically secure pseudo--random number generator
+(@acronym{CSPRNG}) is a @acronym{PRNG} with properties that make it
+suitable for use in cryptography.  The requirements of an ordinary
+@acronym{PRNG} are also satisfied by a @acronym{CSPRNG}, but the reverse
+is not true.
+
+@acronym{CSPRNG} requirements fall into two groups: that they pass
+statistical randomness tests; that they hold up well under serious
+attacks, even when part of their initial or running state becomes
+available to an attacker@footnote{Wikipedia contributors,
+``Cryptographically secure pseudorandom number generator,'' Wikipedia,
+The Free Encyclopedia, @url{http://en.wikipedia.org/wiki/@/
+Cryptographically@/_secure@/_pseudo-random@/_number_generator} (accessed
+June 6, 2009).}.
+
+@c page
+@node random prng integers
+@subsection Generating integers in a specified range
+
+
+In applications using a randomness source, it happens to need a
+pseudo--random integer @math{X} in a given range @math{0 <= X < U},
+while the @acronym{PRNG} generates a pseudo--random integer @math{N} in
+the range @math{0 <= N < M}.  In other words: We need a sample from the
+range @math{0 <= X < U} having uniform probability distribution, by
+means of a sample from the range @math{0 <= N < M} having a uniform
+probability distribution.
+
+We distinguish the two cases @math{U <= M} and @math{M < U}, because
+when @math{U <= M} there are more integers in the range @math{0 <= N <
+M} than in the range @math{0 <= X < U}, while when @math{M < U} it is
+the other way around.
+
+@itemize
+@item
+When @math{U <= M}, we have to understand that doing a simple @math{N
+mod U} is incorrect, because it breaks uniform distribution of the
+result in the range @math{0 <= X < U}.  We can use the following
+formulation which gives uniformly distributed results:
+
+@example
+Q  = floor(M / U)
+QU = Q * U
+
+loop:
+  N = <generate the next integer>
+  if (N < QU)
+  then X = floor(N / Q)
+  else goto loop
+@end example
+
+@noindent
+notice that @math{QU = Q * U <= M}; also notice that it is statistically
+possible that the algorithm loops forever, but we can hope that it finds
+a solution in a reasonable short time.  It works like this:
+
+@enumerate
+@item
+Conceptually partition the range @math{0 <= N < QU} in @math{U}
+intervals each of length @math{Q}, indexed by @math{X} in the range
+@math{0 <= X < U}.
+
+@item
+Generate an integer @math{N} and discard it if @math{QU <= N}.
+
+@item
+If @math{N} is in the range @math{0 <= N < QU}, then it is also in a
+range @math{X * Q < N < (X+1) * Q}.  @math{X} is the result.
+@end enumerate
+
+@item
+When @math{M < U}, we have to generate pseudo--random integers @math{N'}
+uniformly distributed in a range @math{0 <= N' < M'}, with @math{M < U
+<= M'}.  We can do it by computing the following formula, which is a
+polynomial in @math{M} and a linear combination with positive
+coefficients in @math{N(i)} with @math{0 <= i < k}:
+
+@example
+N' = N0 + M * N1 + M^2 * N2 + ... +
+   + ... + M^(k-2) * N(k-2) + M^(k-1) * N(k-1)
+@end example
+
+@noindent
+where @math{N0}, @math{N1}, ..., @math{N(k-1)} are all generated
+integers in the range @math{0 <= N(i) < M}.  The maximum value, that is
+@math{M' - 1}, is realised when every @math{N(i)} equals @math{M - 1}:
+
+@example
+M' - 1 = (M - 1) + M * (M - 1) + M^2 * (M - 1) + ... +
+       + ... + M^(k-2) * (M - 1) + M^(k-1) * (M - 1)
+       = (M - 1) * [1 + M + M^2 + ... + M^(k-2) + M^(k-1)]
+       = (M - 1) * (1 - M^k)/(1 - M)
+       = (M - 1) * (M^k - 1)/(M - 1)
+       = M^k - 1
+@end example
+
+@noindent
+which implies @math{M^k = M'}.  So by selecting @math{k} such that
+@math{U <= M^k} we are sure that @math{N'} will be in a suitable range.
+
+Computing this polinomial/combination is like expressing the big
+pseudo--random integer @math{N'} in base @math{M} where @math{N(i)} are
+the digits.  Each possible @math{N'} is uniquely associated to a
+@math{k}--tuple of integers @math{N(i)}.  Being the probability of
+@math{N(i)} uniformly distributed, each possible @math{k}--tuple has
+uniform probability in the set of all the possible @math{k}--tuples.  So
+also the probability of @math{N'} is uniformly distributed in the range
+@math{0 <= N' < M^k}.
+
+Then we proceed like we did before for @math{U <= M}:
+
+@example
+Q  = floor(M' / U)
+QU = Q * U
+
+loop:
+  N' = <compute the next polynomial>
+  if (N' < QU)
+  then X = floor(N' / Q)
+  else goto loop
+@end example
+@end itemize
+
+@c page
+@node random prng reals
+@subsection Generating real numbers
+
+
+We want a sample @math{X} from the discrete range of representable
+flonums in @math{0 <= X < 1} with a distribution that mimics the uniform
+distribution of real numbers @math{R} in the continuous range @math{0 <
+R < 1}.
+
+Knowing that the integers @math{N} generated by a @acronym{PRNG} are
+uniformly distributed in the range @math{0 <= N < M}, a pseudo--random
+flonum @math{X} in the range @math{0 < X < 1} can be computed from a
+generated @math{N} with the following normalisation formula:
+
+@example
+X = (1 + N) / (1 + M)
+@end example
+
+@noindent
+notice that:
+
+@example
+N = 0        =>  X = 1 / (1 + M) > 0
+N = (M - 1)  =>  X = M / (1 + M) < 1
+@end example
+
+@noindent
+sometimes this is enough, but we have to notice that: There may be more
+representable flonums in @math{0 < X < 1} than exact fractions like
+@math{(1 + N) / (1 + M)}.
+
+The following program prints the generated inexact fractions for the
+very simple case @math{M = 5}, it prints also the intervals between two
+adjacent fractions:
+
+@example
+(import (rnrs)
+  (vicare lists))
+
+(define M 5)
+(fold-left (lambda (prev-X X)
+             (write (list X (- X prev-X)))
+             (newline)
+             X)
+           0.0
+           (map (lambda (N)
+                  (inexact (/ (+ 1 N) (+ 1 M))))
+             (list-tabulate M values)))
+@print{} (0.16666666666666666 0.16666666666666666)
+@print{} (0.3333333333333333  0.16666666666666666)
+@print{} (0.5                 0.16666666666666669)
+@print{} (0.6666666666666666  0.16666666666666663)
+@print{} (0.8333333333333334  0.16666666666666674)
+@end example
+
+@noindent
+so the generated flonums are in ``units'' of approximately @math{1/6 =
+0.166666666666666}; we can compute this unit with @math{1 / (1 + M)}.
+
+It is useful to be able to generate flonums in smaller units: We can do
+it by generating a pseudo--random integer @math{N'} uniformly
+distributed in a range larger than @math{0 <= N < M}.  We use the same
+method previously outlined for large integers generation.  @ref{random
+prng integers, Generating integers in a specified range}
+
+So, we select a value for the desired unit, then we find @math{M'} such
+that:
+
+@example
+1 / (1 + M') <= unit
+=>  1 + M' >= 1 / unit
+=>  M' >= (1 / unit) - 1
+=>  1  >= (1 / unit) - 1 / M'
+@end example
+
+@noindent
+then we generate a big pseudo--random integer @math{N'} in the range
+@math{0 <= N' < M'} and normalise it with:
+
+@example
+X = (1 + N') / (1 + M')
+@end example
+
+@c page
+@node random numbers
+@section Simple random numbers
+
+
+@defvr {Constant} default-random-source
+A randomness source built by @func{make-random-source/mrg32k3a}, making
+use of Pierre L'Ecuyer's MRG32k3a generator.  @ref{random mrg32k3a,
+L'Ecuyer's MRG32k3a generator}.
+@end defvr
+
+
+@defun random-integer @var{n}
+Use @code{default-random-source} to generate the next integer @math{X}
+in the range @math{0 <= X < U}, where @var{U} is a positive integer.
+Subsequent results of this procedure are independent, uniformly
+distributed over the range @math{0 <= X < U}.
+@end defun
+
+
+@defun random-real
+Use @code{default-random-source} to generate the next real number
+@math{X} in the range @math{0 < X < 1}.  @math{X=0} and @math{X=1} are
+excluded in order to allow @math{\log(X)} and @math{\log(1-X)} without
+the danger of a numerical exception.  Subsequent results of this
+procedure are independent, uniformly distributed in the range @math{0 <
+X < 1}.
+@end defun
+
+@c page
+@node random source
+@section Randomness sources
+
+
+@deffn Parameter random-source-maker
+Hold a procedure that can be used to generate a new randomness source.
+It is initialised to @func{make-random-source/mrg32k3a}.  For example,
+it can be used as:
+
+@example
+(define source  ((random-source-maker)))
+(define integer (random-source-integer-maker source))
+(display (integer))
+@print{} <a random integer>
+@end example
+
+@noindent
+and as:
+
+@example
+(parameterise ((random-source-maker
+                  make-random-source/device))
+  (let* ((source  ((random-source-maker)))
+         (integer (random-source-integer-maker source)))
+    (display (integer))))
+@print{} <a random integer>
+@end example
+@end deffn
+
+
+@defun random-source? @var{obj}
+Test if @var{obj} is a randomness source.  Objects of type randomness
+source are distinct from all other types of objects.
+@end defun
+
+
+@defun random-source-state-ref @var{source}
+@defunx random-source-state-set! @var{source} @var{state}
+Get and set the current state of @var{source}.  The purpose of these
+functions is to allow saving and restoring the state between sessions
+(for example, save the state to a file and reload it later).
+
+The state value is always a vector whose first element is a symbol
+describing the generator.  The other elements of the vector depend on
+the kind of generator: Refer to generator's documentation for their
+format.
+@end defun
+
+
+@defun random-source-seed! @var{source} @var{integers-maker}
+Reseed @var{source} to a new state.  @var{integers-maker} must be a a
+generator of random integer numbers, like the ones returned by
+@func{random-source-integers-maker}.  Notice that many random sources
+require @var{integer-makers} to return integers representable with
+@math{32} bits.
+@end defun
+
+
+@defun random-source-required-seed-values @var{source}
+When @func{random-source-seed!} is used to reseed a @var{source}, some
+generator will invoke @var{integers-maker} a fixed and known number of
+times, other generators will invoke it a configurable number of times,
+other generators will invoke it until it first returns @false{}, other
+generators will invoke it until the returned numbers have some desired
+property.
+
+This function returns the number of times @var{integers-maker} will be
+called; if the return value is @false{}: @var{integers-maker} will be
+invoked until it first returns @false{}; if the return value is
+infinity: @var{integers-maker} will be invoked until it returns numbers
+with some desired property.
+@end defun
+
+
+@defun random-source-jumpahead! @var{source} @var{number-of-steps}
+Move ahead @var{number-of-steps} randomness @var{source}'s state.  What
+this means exactly depends on the type of @var{source}.
+@end defun
+
+
+The following procedures return a closure @var{rand} to generate
+pseudo--random integers and real numbers using a randomness
+@var{source}.  If an application obtains and uses several @var{rand}
+procedures for the same randomness @var{source}, a call to any of these
+procedures advances the state of @var{source}.  Hence, the procedures do
+not produce the same sequence of random integers each, but rather share
+a state.
+
+
+@defun random-source-integers-maker @var{source}
+Return a procedure @var{rand} to generate random integers using
+@var{source}.  @var{rand} takes a single argument @var{U}, which must be
+a positive integer, and returns the next uniformly distributed random
+integer @math{X} in the interval @math{0 <= X < U} by advancing the
+state of @var{source}.
+@end defun
+
+
+@defun random-source-reals-maker @var{source}
+@defunx random-source-reals-maker @var{source} @var{unit}
+Return a procedure @var{rand} which, when invoked with no arguments,
+generates random real numbers @math{X} in the range @code{0 < X < 1}
+using @var{source}.  @math{X=0} and @math{X=1} are excluded in order to
+allow @math{\log(X)} and @math{\log(1-X)} without the danger of a
+numerical exception.
+
+The optional parameter @var{unit} determines the quantization of the
+output; to have effect, @var{unit} must be a number such that @code{0 <
+unit < 1}, if @var{unit} is greater than, or equal to, @math{1} the
+generated numbers will have the default unit.  The numbers created by
+@var{rand} are spaced by at most @var{unit}.  @ref{random prng reals,
+Generating real numbers}, for details.
+@end defun
+
+@c page
+@node random mrg32k3a
+@section L'Ecuyer's MRG32k3a generator
+
+
+The default randomness source of @library{vicare crypto randomisations}
+is Pierre L'Ecuyer's MRG32k3a generator:
+
+@quotation
+P. L'Ecuyer.  ``Good Parameter Sets for Combined Multiple Recursive
+Random Number Generators'', Shorter version in Operations Research, 47,
+1 (1999), 159--164.
+
+P. L'Ecuyer, R. Simard, E. J. Chen, W. D. Kelton. ``An Object--Oriented
+Random--Number Package With Many Long Streams and Substreams''.  2001.
+To appear in Operations Research.
+@end quotation
+
+
+@defun make-random-source/mrg32k3a
+Create and return a new randomness source using MRG32k3a, representing a
+deterministic stream of random bits.  Each returned randomness source
+generates the same stream of values, unless the state is modified with
+@func{random-source-seed!}.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 7, whose first value is the symbol
+@code{random-source-state/mrg32k3a}.  All the other values in the vector
+are positive integers.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading The algorithm
+
+The MRG32k3a generator produces values @math{N} in the range @math{0 <=
+N < 2^{32} - 209}.  A new pseudo--random number @math{N} is generated
+with the following computation starting from the state vectors
+@math{[A1, A2, A3]} and @math{[B1, B2, B3]}:
+
+@example
+M1 = 4294967087 = 2^32 - 209
+M2 = 4294944443 = 2^32 - 22853
+
+c2 =  1403580
+c3 =  -810728
+d1 =   527612
+d3 = -1370589
+
+A0 = (          c2 * A2 + c3 * A3) mod M1
+B0 = (d1 * B1 +           d3 * B3) mod M2
+
+; right-shift A, purging the old A3
+A3 = A2
+A2 = A1
+A1 = A0
+
+; right-shift B, purging the old B3
+B3 = B2
+B2 = B1
+B1 = B0
+
+N = (A0 - B0) mod M1
+@end example
+
+@noindent
+notice that @math{M1} and @math{M2} are two prime numbers just below
+@math{2^{32}}; @math{c2}, @math{c3}, @math{d1} and @math{d3} are called
+@dfn{recursion coefficients}.  The @library{vicare crypto
+randomisations} library defines the initial state vectors as:
+
+@example
+A1 = 1062452522
+A2 = 2961816100
+A3 =  342112271
+
+B1 = 2854655037
+B2 = 3321940838
+B3 = 3542344109
+@end example
+
+@c page
+@node random device
+@section Device--based random numbers
+
+
+In Unix--like operating systems, @file{/dev/random} is a special file
+that serves as a true random number generator or as a pseudorandom
+number generator.  It allows access to environmental noise collected
+from device drivers and other sources.  Not all operating systems
+implement the same semantics for @file{/dev/random}@footnote{See
+@url{http://en.wikipedia.org/wiki/Urandom}, last verified Fri Jun 26,
+2009.}.
+
+@defun make-random-source/device
+@defunx make-random-source/device @var{device}
+Create and return a new randomness source using the specified
+@var{device} to generate random integers in the range @math{[0,
+2^{32})}.  When @var{device} is not specified, it defaults to
+@file{/dev/urandom}.
+
+We have to remember that reading @file{/dev/random} will @strong{block}
+if not enough entropy is available, waiting for more randomness to be
+provided by the system.  This is why, by default, this function will use
+@file{/dev/urandom}, which never blocks but provides randomness of
+lesser quality.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 7, whose first value is the symbol
+@code{random-source-state/device}.  The other values are the device
+pathname, a cache vector of values, the index of the next value to be
+extracted from the cace vector.
+@end defun
+
+
+@deffn Parameter random-device-cache-length
+Device--based randomness sources cache read bytes into a bytevector of
+fixed size.  This parameter allows us to select the size at source
+construction time.  It is preset to @math{4096}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Low level @api{} for device randomness sources
+
+
+@defun %random-bytevector @var{device} @var{number-of-bytes}
+@defunx random-bytevector @var{number-of-bytes}
+@defunx urandom-bytevector @var{number-of-bytes}
+Read @var{number-of-bytes} from the specified @var{device} on the file
+system and return them in a newly allocated bytevector.
+@func{random-bytevector} is a specialised version reading bytes from
+@file{/dev/random}.  @func{urandom-bytevector} is a specialised version
+reading bytes from @file{/dev/urandom}.
+@end defun
+
+
+@defun %random-bytevector! @var{device} @var{bv}
+@defunx random-bytevector! @var{bv}
+@defunx urandom-bytevector! @var{bv}
+Fill the bytevector @var{bv} with bytes read from the specified
+@var{device} on the file system; return @var{bv} itself.
+@func{random-bytevector!} is a specialised version reading bytes from
+@file{/dev/random}.  @func{urandom-bytevector!} is a specialised version
+reading bytes from @file{/dev/urandom}.
+@end defun
+
+@c page
+@node random utils
+@section Utilities
+
+
+@menu
+* random utils misc::           Miscellaneous utility functions.
+* random utils lists::          Specialised list functions.
+* random utils vectors::        Specialised vector functions.
+* random utils strings::        Specialised string functions.
+@end menu
+
+@c page
+@node random utils misc
+@subsection Miscellaneous utility functions
+
+
+The following bindings are exported by the @library{vicare crypto
+randomisations} library.
+
+
+@defun random-source-integers-maker-from-range @var{source} @var{start} @var{last}
+@defunx random-source-integers-maker-from-range @var{source} @var{start} @var{last} @var{step}
+Return a closure that, when evaluated with no arguments, returns a
+random integer in the range selected by @var{start} and @var{last} both
+included, using randomness from @var{source}.  @var{start} and
+@var{last} must be exact integers.  The optional @var{step} argument,
+which defaults to one, establishes the step of allowed values from the
+range.
+@end defun
+
+
+@defun random-source-reals-maker-from-range @var{source} @var{start} @var{last}
+@defunx random-source-reals-maker-from-range @var{source} @var{start} @var{last} @var{step}
+Return a closure that, when evaluated with no arguments, returns a
+random real in the range selected by @var{start} and @var{last}, using
+randomness from @var{source}.  @var{start} and @var{last} must be real
+numbers.
+
+@itemize
+@item
+When @var{step} is not used: The result @math{R} is computed by
+generating a random real @math{X} in the range @math{0 < X < 1}, then
+computing:
+
+@example
+R = start + (last - start) * X
+@end example
+
+@noindent
+so @math{R} is in the range delimited by @var{start} and @var{last} both
+excluded.  The random real @math{X} is computed with no specified unit.
+@ref{random source, @func{random-source-reals-maker}}, for details.
+
+@item
+When @var{step} is used: The result @math{R} is computed by generating a
+random integer @var{N} in the range @math{0 <= N < U} with upper limit:
+
+@example
+U = floor[(last - start) / step]
+@end example
+
+@noindent
+then computing:
+
+@example
+R = start + step * N
+@end example
+
+@noindent
+so @math{R} is in the range delimited by @var{start} included and
+@var{last} excluded.
+
+@end itemize
+@end defun
+
+
+@defun random-permutations-maker @var{source}
+Return a closure which, when applied to an integer number @var{n},
+generates random permutations of the set @code{@{0, ..., n-1@}} using
+randomness from @var{source}.  Such a permutation is represented by a
+vector of length @var{n} for the images of the points.
+@end defun
+
+@c page
+@node random utils lists
+@subsection Specialised list functions
+
+
+@cindex @library{vicare crypto randomisations lists}, library
+@cindex Library @library{vicare crypto randomisations lists}
+
+
+The auxiliary library @library{vicare crypto randomisations lists}
+exports bindings specialised to handle lists and randomness sources; it
+is based on @library{vicare crypto randomisations} only.
+
+
+@defun random-list-unfold-numbers @var{number-maker} @var{number-of-numbers}
+Given the closure @var{number-maker} returning a random number, build
+and return a new list of @var{number-of-numbers} random numbers.
+@end defun
+
+
+@defun random-list-shuffle @var{ell} @var{source}
+Build and return a new list shuffling the elements of @var{ell} using
+randomness from the given @var{source}.
+@end defun
+
+
+@defun random-list-sample @var{ell} @var{source}
+Return a closure that, when evaluated with no arguments, returns a
+randomly selected item from @var{ell}, using randomness from
+@var{source}.
+@end defun
+
+
+@defun random-list-sample-population @var{ell} @var{len} @var{source}
+Return a closure that, when evaluated with no arguments, returns a list
+of @var{len} items randomly selected from @var{ell}, using randomness
+from @var{source}.
+@end defun
+
+@c page
+@node random utils vectors
+@subsection Specialised vector functions
+
+
+@cindex @library{vicare crypto randomisations vectors}, library
+@cindex Library @library{vicare crypto randomisations vectors}
+
+
+The auxiliary library @library{vicare crypto randomisations vectors}
+exports bindings specialised to handle vectors and randomness sources;
+it is based on both @library{vicare crypto randomisations} and
+@library{vicare containers vectors}.  Arguments to the following
+functions follow the same conventions established for @library{vicare
+containers vectors} and @library{vicare crypto vectors low}.
+@ref{vectors convention, Interface conventions}
+
+
+@defun random-vector-unfold-numbers @var{number-maker} @var{number-of-numbers}
+Given the closure @var{number-maker} returning a random number, build
+and return a new list of @var{number-of-numbers} random numbers.
+@end defun
+
+
+@deffn Function %random-vector-shuffle @var{source} @var{vec} @var{start} @var{past}
+@deffnx Macro random-vector-shuffle @var{V} @var{source}
+Build a new vector copying the selected subvector, then shuffle it using
+randomness from the given @var{source}.  Return the new vector.
+@end deffn
+
+
+@deffn Function %random-vector-shuffle! @var{source} @var{vec} @var{start} @var{past}
+@deffnx Macro random-vector-shuffle! @var{V} @var{source}
+Shuffle the selected subvector using randomness from the given
+@var{source}.  Return the shuffled vector itself.
+@end deffn
+
+
+@deffn Function %random-vector-sample @var{source} @var{vec} @var{start} @var{past}
+@deffnx Macro random-vector-sample @var{V} @var{source}
+Return a closure that, when evaluated with no arguments, returns a
+randomly selected item from the selected subvector, using randomness
+from @var{source}.
+@end deffn
+
+
+@deffn Function %random-vector-sample-population @var{source} @var{len} @var{vec} @var{start} @var{past}
+@deffnx Macro random-vector-sample-population @var{V} @var{len} @var{source}
+Return a closure that, when evaluated with no arguments, returns a
+vector of @var{len} items randomly selected from the selected subvector
+of @var{vec}, using randomness from @var{source}.
+@end deffn
+
+
+@defun random-integers-with-sum @var{requested-sum} @var{number-of-numbers} @var{inclusive-min} @var{inclusive-max} @var{source}
+Return a vector of length @var{number-of-numbers}, holding random
+integers in the range delimited by @var{inclusive-min} and
+@var{inclusive-max}, generated using randomness from @var{source}.  The
+integers are such that their sum equals @var{requested-sum}.
+@end defun
+
+
+@defun random-reals-with-sum @var{requested-sum} @var{tolerance} @var{number-of-numbers} @var{exclusive-min} @var{exclusive-max} @var{source}
+Return a vector of length @var{number-of-numbers}, holding random reals
+in the range delimited by @var{exclusive-min} and @var{exclusive-max},
+generated using randomness from @var{source}.  The numbers are such that
+their sum equals approximately @var{requested-sum} with @var{tolerance}:
+
+@example
+(< (- (abs @var{tolerance}))
+   (abs (- @var{requested-sum} actual-sum))
+   (abs @var{tolerance}))
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node random utils strings
+@subsection Specialised string functions
+
+
+@cindex @library{vicare crypto randomisations strings}, library
+@cindex Library @library{vicare crypto randomisations strings}
+
+
+The auxiliary library @library{vicare crypto randomisations strings}
+exports bindings specialised to handle strings and randomness sources;
+it is based on both @library{vicare crypto randomisations} and
+@library{vicare containers strings}.  Arguments to the following
+functions follow the same conventions established for @library{vicare
+containers strings} and @library{vicare containers strings low}.
+@ref{strings convention, Interface conventions}
+
+
+@defun random-string-unfold-chars @var{integer-maker} @var{number-of-chars}
+Given the closure @var{integer-maker} returning a random integer, build
+and return a new string of @var{number-of-chars} random characters.
+
+As a usage example, the following program will generate random passwords
+with characters in the range of graphics @ascii{} codes (warning: for
+real world applications, use a true random source):
+
+@example
+(import (rnrs)
+  (vicare randomisations)
+  (vicare randomisations strings)
+  (vicare char-sets))
+
+(random-string-unfold-chars
+  (lambda ()
+    (do ((ch (random-integer 127) (random-integer 127)))
+        ((char-set-contains? char-set:ascii/graphic
+                             (integer->char ch))
+         ch)))
+  10)
+@end example
+@end defun
+
+
+@deffn Function %random-string-shuffle @var{source} @var{str} @var{start} @var{past}
+@deffnx Macro random-string-shuffle @var{S} @var{source}
+Build a new string copying the selected substring, then shuffle it using
+randomness from the given @var{source}.  Return the new string.
+@end deffn
+
+
+@deffn Function %random-string-shuffle! @var{source} @var{str} @var{start} @var{past}
+@deffnx Macro random-string-shuffle! @var{S} @var{source}
+Shuffle the selected substring using randomness from the given
+@var{source}.  Return the shuffled string itself.
+@end deffn
+
+
+@deffn Function %random-string-sample @var{source} @var{str} @var{start} @var{past}
+@deffnx Macro random-string-sample @var{S} @var{source}
+Return a closure that, when evaluated with no arguments, returns a
+randomly selected item from the selected substring, using randomness
+from @var{source}.
+@end deffn
+
+@deffn Function %random-string-sample-population @var{source} @var{len} @var{str} @var{start} @var{past}
+@deffnx Macro random-string-sample-population @var{S} @var{len} @var{source}
+Return a closure that, when evaluated with no arguments, returns a
+string of @var{len} items randomly selected from the selected substring
+of @var{str}, using randomness from @var{source}.
+@end deffn
+
+@c page
+@node random generators
+@section Auxiliary generators
+
+
+@menu
+* random generators mersenne::  The Mersenne twister.
+* random generators marsaglia:: George Marsaglia's generators.
+* random generators bbs::       Blum--Blum--Shub generator.
+* random generators borosh::    Borosh generator.
+* random generators cmrg::      Combined multiple recursive generator.
+@end menu
+
+@c page
+@node random generators mersenne
+@subsection The Mersenne twister
+
+
+@cindex @library{vicare crypto randomisations mersenne}, library
+@cindex Library @library{vicare crypto randomisations mersenne}
+
+
+The Mersenne twister is a pseudorandom number generator developed in
+1997 by Makoto Matsumoto and Takuji Nishimura:
+
+@quotation
+Matsumoto Makoto and Nishimura Takuji.  ``Mersenne twister: a
+623--dimensionally equidistributed uniform pseudo--random number
+generator''.  1998.  @acronym{ACM} Transactions on Modeling and Computer
+Simulation.
+@end quotation
+
+@noindent
+it provides for fast generation of very high--quality pseudorandom
+numbers, having been designed specifically to rectify many of the flaws
+found in older algorithms.  Its name derives from the fact that period
+length is chosen to be a Mersenne prime@footnote{Wikipedia contributors,
+``Mersenne twister'', Wikipedia, The Free Encyclopedia,
+@url{http://en.wikipedia.org/w/index.php?title=Mersenne_twister&oldid=299648661}
+(accessed July 1, 2009).}.
+
+The following bindings are exported by the @library{vicare crypto
+randomisations mersenne} library.
+
+
+@defun make-random-source/mersenne
+Build and return a new randomness source using the Mersenne generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 626, whose first value is the symbol
+@code{random-source-state/mersenne}.  The other values are integers
+representable with @math{32} bits.
+
+The @func{random-source-seed!} function for this generator, must be
+applied tot a numbers maker returning integers representable with
+@math{32} bits.
+@end defun
+
+
+@library{vicare crypto randomisations mersenne} initialises the
+generator drawing @math{32} bits integer numbers from a specifically
+built MRG32k3a randomness source, which in turn is initialised with the
+default @library{vicare crypto randomisations} seeds.  @ref{random
+mrg32k3a, L'Ecuyer's MRG32k3a generator}
+
+@c page
+@node random generators marsaglia
+@subsection George Marsaglia's generators
+
+
+@cindex @library{vicare crypto randomisations marsaglia}, library
+@cindex Library @library{vicare crypto randomisations marsaglia}
+
+
+The generators described here were posted by George Marsaglia in a
+thread on @url{sci.stat.math} and @url{sci.crypt} starting on January,
+12 1999.  The following bindings are exported by the @library{vicare
+crypto randomisations marsaglia} library.
+
+For all the randomness sources, the @func{random-source-seed!} function
+must be applied to a number maker returning integers representable with
+@math{32} bits.
+
+
+@defun make-random-source/marsaglia/cong
+Build and return a new randomness source using the CONG generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 2, whose first value is the symbol
+@code{random-source-state/marsaglia/cong}.  The other value is a single
+integer representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/fib
+Build and return a new randomness source using the FIB generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 3, whose first value is the symbol
+@code{random-source-state/marsaglia/fib}.  The other values are integers
+representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/lfib4
+Build and return a new randomness source using the LFIB4 generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 258, whose first value is the symbol
+@code{random-source-state/marsaglia/lfib4}.  The other values are
+integers representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/kiss
+Build and return a new randomness source using the KISS generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 5, whose first value is the symbol
+@code{random-source-state/marsaglia/kiss}.  The other values are
+integers representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/mwc
+Build and return a new randomness source using the MWC generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 3, whose first value is the symbol
+@code{random-source-state/marsaglia/mwc}.  The other values are integers
+representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/shr3
+Build and return a new randomness source using the SHR3 generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 2, whose first value is the symbol
+@code{random-source-state/marsaglia/shr3}.  The other value is an
+integer representable with @math{32} bits.
+@end defun
+
+
+@defun make-random-source/marsaglia/swb
+Build and return a new randomness source using the SWB generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 261, whose first value is the symbol
+@code{random-source-state/marsaglia/swb}.  The other values are integers
+representable with @math{32} bits.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Algorithms
+
+Here is the core C language implementation of the generators, as posted
+by Marsaglia (line wrapping added here, and small bits changed):
+
+@example
+#define znew    (z = 36969 * (z & 65535)        \
+                   + (z >> 16))
+
+#define wnew    (w = 18000 * (w & 65535)        \
+                   + (w >> 16))
+
+#define MWC     ((znew << 16) + wnew)
+
+#define SHR3    (jsr ^= (jsr << 17),  \
+                 jsr ^= (jsr >> 13),  \
+                 jsr ^= (jsr << 5))
+
+#define CONG    (jcong = 69069 * jcong + 1234567)
+
+#define FIB     ((b = a + b),    \
+                 (a = b - a))
+
+#define KISS    ((MWC^CONG) + SHR3)
+
+#define LFIB4   (c++,                           \
+                 t[c] = t[c]                    \
+                      + t[(uint8_t)(c +  58)]   \
+                      + t[(uint8_t)(c + 119)]   \
+                      + t[(uint8_t)(c + 178)])
+
+#define SWB     (c++,                                   \
+                 bro  = (x < y),                        \
+                 t[c] = (x = t[(uint8_t)(c + 34)])      \
+                           - (y = t[(uint8_t)(c + 19)]  \
+                                + bro))
+
+#define UNI   (KISS * 2.328306e-10)
+#define VNI   (((int32_t) KISS) * 4.656613e-10)
+
+#define UC    (uint8_t)   /* a cast operation */
+
+/* Use random seeds to reset z, w, jsr, jcong, a, b,
+   and the table t[256] */
+uint32_t  z, w, jsr, jcong, a, b, t[256];
+
+uint32_t  x=0, y=0, bro;
+uint8_t   c=0;
+@end example
+
+What follows is the comment part of the original post by Marsaglia
+himself, with minor editing for formatting purposes and porting to
+Scheme (errors in the original text are probably present here, too):
+
+@quotation
+Any one of KISS, MWC, FIB, LFIB4, SWB, SHR3, or CONG can be used in an
+expression to provide a random @math{32} bits integer.
+
+The KISS generator (Keep It Simple Stupid) is designed to combine the
+two multiply--with--carry generators in MWC with the @math{3}--shift
+register SHR3 and the congruential generator CONG, using addition and
+exclusive--or.  Period about @math{2^{123}}.  It is one of my favorite
+generators.
+
+The MWC generator concatenates two 16 bits multiply--with--carry
+generators:
+
+@example
+x(n) = 36969 * x(n-1) + carry
+y(n) = 18000 * y(n-1) + carry mod 2^16
+@end example
+
+@noindent
+has period about @math{2^{60}} and seems to pass all tests of
+randomness.  A favorite stand--alone generator---faster than KISS, which
+contains it.
+
+FIB is the classical Fibonacci sequence:
+
+@example
+x(n) = x(n-1) + x(n-2)
+@end example
+
+@noindent
+but taken modulo @math{2^{32}}.  Its period is @math{3 * 2^{31}} if one
+of its two seeds is odd and not @math{1 mod 8}.  It has little worth as
+a @acronym{RNG} by itself, but provides a simple and fast component for
+use in combination generators.
+
+SHR3 is a @math{3}--shift--register generator with period @math{2^{32} -
+1}.  It uses:
+
+@example
+y(n) = y(n-1) * (I + L^17) * (I + R^13) * (I+L^5)
+@end example
+
+@noindent
+with the @math{y} viewed as binary vectors, @math{L} the @math{32 x 32}
+binary matrix that shifts a vector left @math{1}, and @math{R} its
+transpose.  SHR3 seems to pass all tests except those related to the
+binary rank test, since @math{32} successive values, as binary vectors,
+must be linearly independent, while @math{32} successive truly random 32
+bits integers, viewed as binary vectors, will be linearly independent
+only about 29% of the time.
+
+CONG is a congruential generator with the widely used @math{69069}
+multiplier:
+
+@example
+x(n) = 69069 * x(n-1) + 1234567
+@end example
+
+@noindent
+it has period @math{2^{32}}.  The leading half of its @math{32} bits
+seem to pass tests, but bits in the last half are too regular.
+
+LFIB4 is an extension of what I have previously defined as a lagged
+Fibonacci generator:
+
+@example
+x(n) = x(n-r) op x(n-s)
+@end example
+
+@noindent
+with the @math{x} in a finite set over which there is a binary operation
+@math{op}, such as @math{+}, @math{-} on integers modulo @math{2^{32}},
+@math{*} on odd such integers, exclusive-or(xor) on binary vectors.
+
+Except for those using multiplication, lagged Fibonacci generators fail
+various tests of randomness, unless the lags are very long.  (See SWB
+below).  To see if more than two lags would serve to overcome the
+problems of @math{2}-lag generators using @math{+}, @math{-} or
+@math{xor}, I have developed the @math{4}--lag generator LFIB4 using
+addition:
+
+@example
+x(n) = [x(n-256) + x(n-179) + x(n-119) + x(n-55)] mod 2^32
+@end example
+
+@noindent
+its period is @math{2^{31} * (2^{256} - 1)}, about @math{2^{287}}, and
+it seems to pass all tests---in particular, those of the kind for which
+@math{2}-lag generators using @math{+}, @math{-}, @math{xor} seem to
+fail.  For even more confidence in its suitability, LFIB4 can be
+combined with KISS, with a resulting period of about @math{2^{410}},
+just use:
+
+@example
+(let* ((kiss       (make-random-source/marsaglia/kiss))
+       (cong       (make-random-source/marsaglia/cong))
+       (k-integers (random-source-integers-maker kiss))
+       (c-integers (random-source-integers-maker cong))
+       (integers   (lambda (U M)
+                     (mod (+ (k-integers U)
+                             (c-integers U))
+                          M))))
+  ---)
+@end example
+
+@noindent
+in any Scheme expression.
+
+SWB is a subtract--with--borrow generator that I developed to give a
+simple method for producing extremely long periods:
+
+@example
+x(n) = [x(n-222) - x(n-237) - borrow] mod 2^32
+@end example
+
+@noindent
+the @code{borrow} is @math{0}, or set to @math{1} if computing
+@math{x(n-1)} caused overflow in 32 bits integer arithmetic. This
+generator has a very long period, @math{2^{7098} * (2^{480} - 1)}, about
+@math{2^{7578}}.  It seems to pass all tests of randomness, except for
+the Birthday Spacings test, which it fails badly, as do all lagged
+Fibonacci generators using @math{+}, @math{-} or @math{xor}.
+
+I would suggest combining SWB with KISS, MWC, SHR3, or CONG.  KISS+SWB
+has period @math{>2^{7700}} and is highly recommended.
+Subtract--with--borrow has the same local behaviour as lagged Fibonacci
+using @math{+}, @math{-}, @math{xor}---the borrow merely provides a much
+longer period.  SWB fails the birthday spacings test, as do all lagged
+Fibonacci and other generators that merely combine two previous values
+by means of @math{+}, @math{-} or @math{xor}.  Those failures are for a
+particular case: @math{m = 512} birthdays in a year of @math{n = 2^{24}}
+days.  There are choices of @math{m} and @math{n} for which lags
+@math{>1000} will also fail the test.  A reasonable precaution is to
+always combine a @math{2}-lag Fibonacci or SWB generator with another
+kind of generator, unless the generator uses @math{*}, for which a very
+satisfactory sequence of odd @math{32} bits integers results.
+
+The classical Fibonacci sequence @math{mod 2^{32}} from FIB fails
+several tests.  It is not suitable for use by itself, but is quite
+suitable for combining with other generators.
+
+The last half of the bits of CONG are too regular, and it fails tests
+for which those bits play a significant role.  CONG+FIB will also have
+too much regularity in trailing bits, as each does.  But keep in mind
+that it is a rare application for which the trailing bits play a
+significant role.  CONG is one of the most widely used generators of the
+last @math{30} years, as it was the system generator for VAX and was
+incorporated in several popular software packages, all seemingly without
+complaint.
+@end quotation
+
+The generators are seeded as follows:
+
+@table @asis
+@item CONG
+The seed values are:
+
+@example
+jcong = 2524969849
+@end example
+
+@noindent
+with this seeding it is known that the millionth integer is
+@math{1529210297}.
+
+@item FIB
+The seed values are:
+
+@example
+a =  9983651
+b = 95746118
+@end example
+
+@noindent
+with this seeding it is known that the millionth integer is
+@math{3519793928}.
+
+@item KISS
+The seed values are:
+
+@example
+jcong = 1017008441
+jsr   = 3259917390
+w     =   99545079
+z     = 2247183469
+@end example
+
+@noindent
+with this seeding it is known that the millionth integer is
+@math{1372460312}.
+
+@item LFIB4
+The seed values are stored in a vector of length 256, holding @math{32}
+bits representable integers; the index into the vector is set to @code{c
+= 0}.  The seed values of the vector are precomputed, see the source
+code of the library.
+
+With this seeding it is known that the millionth integer is
+@math{1064612766}.
+
+@item MWC
+The seed values are:
+
+@example
+w = 1046675282
+z = 2374144069
+@end example
+
+@noindent
+with this seeding it is known that the millionth integer is
+@math{904977562}.
+
+@item SHR3
+The seed values are:
+
+@example
+jsr = 4176875757
+@end example
+
+@noindent
+with this seeding it is known that the millionth integer is
+@math{2642725982}.
+
+@item SWB
+The seed values are stored in a vector of length 256, holding @math{32}
+bits representable integers; the index into the vector is set to @code{c
+= 64}.  The seed values of the vector are precomputed, see the source
+code of the library.
+
+With this seeding it is known that the millionth integer is
+@math{627749721}.
+@end table
+
+@c page
+@node random generators bbs
+@subsection Blum--Blum--Shub generator
+
+
+@cindex @library{vicare crypto randomisations blum-blum-shub}, library
+@cindex Library @library{vicare crypto randomisations blum-blum-shub}
+
+
+Blum--Blum--Shub is a @acronym{PRNG} proposed in:
+
+@quotation
+Lenore Blum, Manuel Blum, Michael Shub.  ``A Simple Unpredictable
+Pseudo--Random Number Generator'', SIAM Journal on Computing, volume 15,
+page 364-383, May 1986.
+@end quotation
+
+@noindent
+when seeded with prime numbers satisfying the specified requirements, it
+can be considered a cryptographically secure @acronym{PRNG}.  The search
+of such prime numbers is a delicate and complex task; we have to turn to
+specialised literature to learn how to do it.
+
+The following bindings are exported by the @library{vicare crypto
+randomisations blum-blum-shub} library.  The library makes no attempt to
+validate the seed numbers for the cryptographic requirements, it just
+implements the @acronym{PRNG} algorithm; attaining cryptographic
+security is entirely on our shoulders.
+
+
+@defun make-random-source/blum-blum-shub
+Build and return a new randomness source using the BBS generator.  The
+returned randomness source is @strong{not} seeded; this is because
+seeding a cryptographically secure generator must be done with care, and
+it makes no sense to have a default seed.  The first operation after the
+creation of the source should be to seed it.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 5, whose first value is the symbol
+@code{random-source-state/blum-blum-shub}.  The other values are integer
+numbers.
+
+The @func{random-source-seed!} function for this generator, must be
+applied to a numbers maker returning:
+
+@enumerate
+@item
+The value of the prime number @math{P}.
+
+@item
+The value of the prime number @math{Q}.
+
+@item
+Integers numbers until one is found whose GCD with @math{P * Q} is
+@math{1}.
+@end enumerate
+
+@noindent
+see the algorithm details below.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading The algorithm
+
+BBS generates a sequence of bits, not of numbers.  Bits can be
+concatenated to yield numbers of any sort in base 2.  Seeding goes like
+this:
+
+@enumerate
+@item
+Select two prime numbers @math{P} and @math{Q} and compute @math{M = P *
+Q}, which will be the modulus of the internally generated integers.
+These primes are the ``secret'' of the generated sequence of
+pseudo--random integers; for cryptographic purposes they have to be kept
+hidden.
+
+@item
+Generate (using another @acronym{PRNG}) random integers @math{S} until
+one is found such that: The greatest commond divisor (GCD) between
+@math{S} and @math{M} is @math{1}.  Notice that @rnrs{6} Scheme
+implementations already provide a @func{gcd} function.  @nauref{baselib
+math ops arithmetic, Arithmetic operations}
+
+@item
+Compute the seed @math{X}:
+
+@example
+X = (S * S) mod M
+@end example
+@end enumerate
+
+The generator in @library{vicare crypto randomisations blum-blum-shub}
+computes a new integer @math{N} representable with @math{32} bits, from
+an initial state @math{X} with the following formulation:
+
+@example
+X0 = (X * X) mod M
+b0 = parity(X0)
+
+X1 = (X0 * X0) mod M
+b1 = parity(X1)
+
+X2 = (X1 * X1) mod M
+b2 = parity(X2)
+
+...
+@end example
+
+@noindent
+where @math{b(k)} are the bits of @math{N}, with @math{0 <= k < 32}, and
+@math{X32} is the new state of the generator.  The function
+@math{parity(X)} is the number of bits set to @math{1} in @math{X},
+modulo @math{2}.
+
+@c page
+@node random generators borosh
+@subsection Borosh generator
+
+
+@cindex @library{vicare crypto randomisations borosh}, library
+@cindex Library @library{vicare crypto randomisations borosh}
+
+
+This generator is called @dfn{Borosh--Niederreiter}.  It was taken from:
+
+@quotation
+Donald E. Knuth.  ``The Art of Computer Programming''.  Volume 2.  Third
+Edition.  Addison-Wesley.  Page 106-108.
+@end quotation
+
+@noindent
+the following bindings are exported by the @library{vicare crypto
+randomisations borosh} library.
+
+
+@defun make-random-source/borosh
+Build and return a new randomness source using the
+@dfn{Borosh--Niederreiter} generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 2, whose first value is the symbol
+@code{random-source-state/borosh}.  The other value is a single integer
+representable with @math{32} bits.
+
+The @func{random-source-seed!} function for this generator, must be
+applied to a numbers maker returning integers representable with
+@math{32} bits.
+@end defun
+
+
+@subsubheading The algorithm
+
+The generator computes a new integer @math{N'} from an initial state
+@math{N} with the following formulation:
+
+@example
+M = 2^32
+A = 1812433253
+
+N' = (A * N) mod M
+@end example
+
+@noindent
+@library{vicare crypto randomisations borosh} sets the initial state to
+@math{N = 1}.
+
+@c page
+@node random generators cmrg
+@subsection Combined multiple recursive generator
+
+
+@cindex @library{vicare crypto randomisations cmrg}, library
+@cindex Library @library{vicare crypto randomisations cmrg}
+
+
+This is a combined multiple recursive generator.  The algorithm was
+derived from:@footnote{It is available from L'Ecuyer's home page
+(@aurl{} last verified Tue Jul 14, 2009):
+
+@center @url{http://www.iro.umontreal.ca/~lecuyer/myftp/papers/combmrg.ps}
+@center @url{ftp://ftp.iro.umontreal.ca/pub/simulation/lecuyer/papers/combmrg.ps}
+}
+
+@quotation
+P.  L'Ecuyer.  ``Combined Multiple Recursive Random Number Generators''.
+Operations Research, 44, 5 (1996), 816--822.
+@end quotation
+
+@noindent
+the following bindings are exported by the @library{vicare crypto
+randomisations cmrg} library.
+
+
+@defun make-random-source/cmrg
+Build and return a new randomness source using a @acronym{CMRG}
+generator.
+
+The state returned by @func{random-source-state-ref} is a Scheme vector
+of length 7, whose first value is the symbol
+@code{random-source-state/cmrg}.  The other values are integers
+representable with @math{32} bits.
+
+The @func{random-source-seed!} function for this generator, must be
+applied to a numbers maker returning integers representable with
+@math{32} bits.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading The algorithm
+
+The sequence is:
+
+@example
+N = (X0 - Y0) mod m1
+@end example
+
+@noindent
+where the two underlying generators @math{X} and @math{Y} are:
+
+@example
+X0 = (A1 X1 + A2 X2 + A3 X3) mod M1
+Y0 = (B1 Y1 + B2 X2 + B3 Y3) mod M2
+@end example
+
+@noindent
+with coefficients:
+
+@example
+A1 = 0       A2 = 63308   A3 = -183326
+B1 = 86098   B2 = 0       B3 = -539608
+@end example
+
+@noindent
+and moduli:
+
+@example
+M1 = 2^31 - 1       = 2147483647
+M2 = 2^31 - 2000169 = 2145483479
+@end example
+
+According to the paper the initial values for @math{X} must lie in the
+range @math{0 <= X < M1} and the initial values for @math{Y} must lie in
+the range @math{0 <= Y < M2}, with at least one non--zero value.
+@library{vicare crypto randomisations cmrg} initialises the generator
+with:
+
+@example
+X1 = 7   X2 = 17   X3 = 47
+Y1 = 3   Y2 = 13   Y3 = 43
+@end example
+
+@noindent
+and the seeding procedure implemented by the randomness source (through
+@func{random-source-seed!}) will extract random numbers from the given
+generator until it is @math{0 < X < M1} and @math{0 < Y < M2}.
+
+@c page
+@node random dist
+@section Random numbers from known distributions
+
+
+@cindex @library{vicare crypto randomisations distributions}, library
+@cindex Library @library{vicare crypto randomisations distributions}
+
+
+The following functions are exported by the @library{vicare crypto
+randomisations distributions} library.
+
+
+@defun random-exponentials-maker @var{source}
+Return a closure which, when applied to a real number argument @var{mu},
+generates exponentially @math{exp(mu)} distributed random numbers using
+randomness from @var{source}.
+@end defun
+
+
+@defun random-normals-maker @var{source}
+Return a closure which, when applied to real number arguments @var{mu}
+and @var{sigma}, generates normally distributed @math{N(mu, sigma)}
+random numbers using randomness from @var{source}.
+@end defun
+
+@c end of file

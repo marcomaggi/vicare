@@ -38,6 +38,8 @@ vicare_scheme_TEXINFOS	= \
 	levenshtein.texi		\
 	streams.texi			\
 	loops.texi			\
+	comparisons.texi		\
+	randomisations.texi		\
 	\
 	irregex.texi			\
 	pregexp.texi			\

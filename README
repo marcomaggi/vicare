@@ -267,6 +267,12 @@ by Philip L. Bewig.
   The library (vicare language-extensions loops) is derived from code by
 Sebastian Egner.
 
+  The library  (vicare language-extensions comparisons) is  derived from
+code by Sebastian Egner and Jens Axel Soegaard.
+
+  The libraries in the hierarchy (vicare crypto randomisations ---) have
+many authors, please see the headers of the individual files.
+
 
 B. Bug reports
 --------------

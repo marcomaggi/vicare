@@ -131,6 +131,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-pointers.sps			\
 	test-vicare-promises.sps			\
 	test-vicare-time.sps				\
+	test-vicare-randomisations.sps			\
 	test-vicare-ratnums.sps				\
 	test-vicare-reader.sps				\
 	test-vicare-records-procedural.sps		\

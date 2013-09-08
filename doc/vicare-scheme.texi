@@ -252,6 +252,7 @@ Container libraries
 * char-sets::                   Character sets.
 * kmp::                         Knuth-Morris-Pratt searching.
 * levenshtein::                 Levenshtein distance metric.
+* random::                      Sources of random bits.
 
 Adapted libraries
 
@@ -318,6 +319,7 @@ External documents
 @include char-sets.texi
 @include knuth-morris-pratt.texi
 @include levenshtein.texi
+@include randomisations.texi
 
 @include irregex.texi
 @include pregexp.texi

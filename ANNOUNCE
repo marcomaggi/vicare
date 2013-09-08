@@ -110,8 +110,14 @@ Notes for revision 0.3d3
 * Imported loops  library from  Nausicaa as  (vicare language-extensions
   loops).
 
-* Imported ASCII  chars utility  library as  (vicare language-extensions
-  ascii-chars).
+* Imported   ASCII    chars   library    from   Nausicaa    as   (vicare
+  language-extensions ascii-chars).
+
+* Imported    comparisons    library    from   Nausicaa    as    (vicare
+  language-extensions comparisons).
+
+* Imported  randomisations libraries  from  Nausicaa  as (vicare  crypto
+  randomisations ---).
 
 
 Notes for revision 0.3d2
