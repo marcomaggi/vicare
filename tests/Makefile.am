@@ -51,6 +51,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	test-vicare-amb.sps				\
 	test-vicare-arguments-validation.sps		\
+	test-vicare-ascii-chars.sps			\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-bytevector-compounds.sps		\

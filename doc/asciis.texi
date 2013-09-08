@@ -1,0 +1,47 @@
+@node asciis
+@chapter @ascii{} characters library
+
+
+@cindex @library{nausicaa asciis}, library
+@cindex Library @library{nausicaa asciis}
+
+
+The @library{nausicaa asciis} library is a small library of small
+functions which deals with exact integers representing characters in
+@ascii{} encoding; it is meant to be used with bytevectors representing
+strings.
+
+
+@defun ascii-upper-case? @var{byte}
+@defunx ascii-lower-case? @var{byte}
+@defunx ascii-title-case?
+Return true if @var{byte} represents an upper case or lower case letter
+character.
+@end defun
+
+
+@defun ascii-cased? @var{byte}
+Return true if @var{byte} represents a letter character, which can be
+converted to upper or lower case.
+@end defun
+
+
+@defun ascii-alphabetic? @var{byte}
+Return true if @var{byte} represents a letter character.
+@end defun
+
+
+@defun ascii-numeric? @var{byte}
+Return true if @var{byte} represents a decimal digit character.
+@end defun
+
+
+@defun ascii-upcase @var{byte}
+@defunx ascii-downcase @var{byte}
+@defunx ascii-titlecase @var{byte}
+Return an exact integer representing the upper case or lower case
+version of @var{byte}; return @var{byte} itself if it represents an
+uncased character.
+@end defun
+
+@c end of file

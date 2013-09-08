@@ -55,6 +55,7 @@
   (only (vicare language-extensions variables))
   (only (vicare language-extensions streams))
   (only (vicare language-extensions loops))
+  (only (vicare language-extensions ascii-chars))
 
   (only (vicare numerics constants))
   (only (vicare numerics flonum-parser))

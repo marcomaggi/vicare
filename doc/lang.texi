@@ -12,6 +12,7 @@
 * simple-match::                Simple destructuring match syntax.
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
+* asciis::                      Utilities for @ascii{} characters.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 @end menu
@@ -2560,6 +2561,70 @@ input/output the second.  Such ports are connected together so that data
 written to one port is read from the other port.
 @end defun
 
+@c page
+@node asciis
+@section Utilities for @ascii{} characters
+
+
+@cindex @library{vicare language-extensions ascii-chars}, library
+@cindex Library @library{vicare language-extensions ascii-chars}
+
+
+The library @library{vicare language-extensions ascii-chars} provides a
+small number of functions dealing with fixnums representing characters
+in @ascii{} encoding range.  The identifiers whose name is prefixed with
+@samp{$} are bound to unsafe operations: they do @strong{not} validate
+the arguments and applying them to invalid arguments leads to undefined
+behaviour.
+
+
+@defun fixnum-in-ascii-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum representing a character in
+@ascii{} encoding.
+@end defun
+
+
+@defun ascii-upper-case? @var{fx}
+@defunx ascii-lower-case? @var{fx}
+@defunx ascii-title-case? @var{fx}
+@defunx $ascii-upper-case? @var{fx}
+@defunx $ascii-lower-case? @var{fx}
+@defunx $ascii-title-case? @var{fx}
+Return @true{} if @var{fx} represents an upper case or lower case letter
+character, otherwise return @false{}.
+@end defun
+
+
+@defun ascii-cased? @var{fx}
+@defunx $ascii-cased? @var{fx}
+Return @true{} if @var{fx} represents a letter character, which can be
+converted to upper or lower case, otherwise return @false{}.
+@end defun
+
+
+@defun ascii-alphabetic? @var{fx}
+@defunx $ascii-alphabetic? @var{fx}
+Return @true{} if @var{fx} represents a letter character, otherwise
+return @false{}.
+@end defun
+
+
+@defun ascii-numeric? @var{fx}
+@defunx $ascii-numeric? @var{fx}
+Return @true{} if @var{fx} represents a decimal digit character,
+otherwise return @false{}.
+@end defun
+
+
+@defun ascii-upcase @var{fx}
+@defunx ascii-downcase @var{fx}
+@defunx ascii-titlecase @var{fx}
+@defunx $ascii-upcase @var{fx}
+@defunx $ascii-downcase @var{fx}
+@defunx $ascii-titlecase @var{fx}
+Return a fixnum representing the upper case or lower case version of
+@var{fx}; return @var{fx} itself if it represents an uncased character.
+@end defun
 
 @c page
 
