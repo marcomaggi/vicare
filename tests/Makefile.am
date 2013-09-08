@@ -57,6 +57,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-comparisons.sps			\
 	test-vicare-compensations.sps			\
 	test-vicare-cond-expand.sps			\
 	test-vicare-coroutines.sps			\
