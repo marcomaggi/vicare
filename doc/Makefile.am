@@ -37,6 +37,7 @@ vicare_scheme_TEXINFOS	= \
 	char-sets.texi			\
 	levenshtein.texi		\
 	streams.texi			\
+	loops.texi			\
 	\
 	irregex.texi			\
 	pregexp.texi			\

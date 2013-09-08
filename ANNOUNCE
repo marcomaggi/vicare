@@ -107,6 +107,9 @@ Notes for revision 0.3d3
 * Imported streams library from  Nausicaa as (vicare language-extensions
   streams).
 
+* Imported loops  library from  Nausicaa as  (vicare language-extensions
+  loops).
+
 
 Notes for revision 0.3d2
 ------------------------

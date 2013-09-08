@@ -79,6 +79,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
+	test-vicare-loops.sps				\
 	test-vicare-namespaces.sps			\
 	test-vicare-net-channels-binary.sps		\
 	test-vicare-net-channels-textual.sps		\
@@ -137,6 +138,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-shared-memory.sps			\
 	test-vicare-sentinels.sps			\
 	test-vicare-simple-match.sps			\
+	test-vicare-streams.sps				\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\

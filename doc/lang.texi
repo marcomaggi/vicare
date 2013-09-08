@@ -13,6 +13,7 @@
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
 * streams::                     Streams.
+* loops::                       Loop constructs.
 @end menu
 
 @c page
@@ -2563,5 +2564,6 @@ written to one port is read from the other port.
 @c page
 
 @include streams.texi
+@include loops.texi
 
 @c end of file
