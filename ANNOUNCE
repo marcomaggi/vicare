@@ -82,6 +82,9 @@ Notes for revision 0.3d3
 * SRFI 106:  added function  SOCKET-DESCRIPTOR; added  garbage collector
   destructor to the socket object.
 
+* BACKWARDS INCOMPATIBILITY  The library  (vicare bytevectors)  has been
+  renamed to (vicare containers bytevectors).
+
 * Imported IrRegex from Nausicaa as (vicare irregex).
 
 * Imported Pregexp from Nausicaa as (vicare pregexp).

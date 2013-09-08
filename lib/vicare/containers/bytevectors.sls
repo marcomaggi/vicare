@@ -26,7 +26,7 @@
 
 
 #!vicare
-(library (vicare bytevectors)
+(library (vicare containers bytevectors)
   (export
     bytevector-u8-litend-set!
     bytevector-u8-bigend-set!

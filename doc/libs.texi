@@ -2379,12 +2379,12 @@ size; we can interface it as follows:
 @section Additional bytevector utilities
 
 
-@cindex Library @library{vicare bytevectors}
-@cindex @library{vicare bytevectors}, library
+@cindex Library @library{vicare containers bytevectors}
+@cindex @library{vicare containers bytevectors}, library
 
 
-The library @library{vicare bytevectors} exports bindings for additional
-bytevector handling utilities.
+The library @library{vicare containers bytevectors} exports bindings for
+additional bytevector handling utilities.
 
 @menu
 * bytevectors setget::          Single--identifier setters and getters.
@@ -2399,7 +2399,8 @@ bytevector handling utilities.
 The following syntaxes are wrappers for @func{bytevector-*-ref} and
 @func{bytevector-*-set!} specifying the endiannes in their name, without
 the need of an additional argument (useful in macros).  The following
-bindings are exported by the library @library{vicare bytevectors}.
+bindings are exported by the library @library{vicare containers
+bytevectors}.
 
 @c ------------------------------------------------------------
 
@@ -2639,7 +2640,7 @@ The following syntaxes are wrappers for @func{bytevector-*-ref} and
 @func{bytevector-*-set!} specifying the endiannes in their name, without
 the need of an additional argument (useful in macros), and scaling the
 index with the size of the word.  The following bindings are exported by
-the library @library{vicare bytevectors}.
+the library @library{vicare containers bytevectors}.
 
 @c ------------------------------------------------------------
 

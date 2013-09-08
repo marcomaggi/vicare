@@ -76,8 +76,7 @@
 
   (only (vicare checks))
 
-  (only (vicare bytevectors))
-
+  (only (vicare containers bytevectors))
   (only (vicare containers auxiliary-syntaxes))
   (only (vicare containers weak-hashtables))
   (only (vicare containers knuth-morris-pratt))

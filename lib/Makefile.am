@@ -60,6 +60,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/numerics/flonum-parser.sls				\
 	\
 	vicare/containers/auxiliary-syntaxes.sls			\
+	vicare/containers/bytevectors.sls				\
 	vicare/containers/bytevector-compounds.sls			\
 	vicare/containers/bytevector-compounds/core.sls			\
 	vicare/containers/bytevector-compounds/unsafe.sls		\
@@ -82,7 +83,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/checks.sls						\
 	vicare/debugging/compiler.sls					\
 	vicare/parser-logic.sls						\
-	vicare/bytevectors.sls						\
 	\
 	vicare/net/channels.sls						\
 	\
