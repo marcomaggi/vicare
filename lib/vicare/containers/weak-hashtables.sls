@@ -191,35 +191,40 @@
   ;;in TABLE at BUCKET-INDEX.  If KEY is already interned: overwrite the
   ;;old value with VALUE.
   ;;
-  (define who 'intern!)
-  (let ((number-of-entries (weak-table-size table)))
-    (if ($fx= number-of-entries (greatest-fixnum))
-	(assertion-violation who
-	  "reached maximum number of entries in weak table"
-	  table key value)
-      (begin
-	(let* ((buckets (weak-table-buckets table))
-	       (entries ($vector-ref buckets bucket-index)))
-	  (if (null? entries)
-	      ($vector-set! buckets bucket-index
-				  (cons (weak-cons key value) '()))
-	    ;;If  the key is  already interned:  overwrite the  old value;
-	    ;;else append a new weak pair to the chain of entries.
-	    (let loop ((equiv?	(weak-table-equiv-function table))
-		       (prev    entries)
-		       (entries ($cdr entries)))
-	      (if (null? entries) ;key not found
-		  ($set-cdr! prev (cons (weak-cons key value) '()))
-		(let ((intern-key ($car ($car entries))))
-		  ;;Here it does not matter if INTERN-KEY is BWP.
-		  (if (or (eq?    key intern-key)
-			  (equiv? key intern-key))
-		      ($set-cdr! ($car entries) value)
-		    (loop equiv? entries ($cdr entries))))))))
-	(let ((N ($fxadd1 number-of-entries)))
-	  (set-weak-table-size! table N)
-	  (when ($fx= N (weak-table-mask table))
-	    (%extend-table! table)))))))
+  (define who '%intern!)
+  (when ($fx= (greatest-fixnum) ($weak-table-size table))
+    (assertion-violation who "reached maximum number of entries in weak table" table key value))
+  (let* ((buckets ($weak-table-buckets table))
+	 (entries ($vector-ref buckets bucket-index)))
+    (if (null? entries)
+	(begin
+	  ($vector-set! buckets bucket-index
+			(cons (weak-cons key value) '()))
+	  ($set-weak-table-size! table ($fxadd1 ($weak-table-size table))))
+      ;;If the key is already  interned: overwrite the old value; else
+      ;;append a new weak pair to the chain of entries.
+      (let loop ((equiv?  ($weak-table-equiv-function table))
+		 (head    entries)
+		 (tail    ($cdr entries)))
+	(let ((intern-key ($caar head)))
+	  ;;Here it does not matter if INTERN-KEY is BWP.
+	  (cond ((or (eq?    key intern-key)
+		     (equiv? key intern-key))
+		 ;;The  key is  already  interned:  overwrite the  old
+		 ;;value and return.
+		 ($set-cdr! ($car head) value))
+		((null? tail)
+		 ;;The key is not interned: insert a new entry, update
+		 ;;the number of entries, enlarge the table if needed,
+		 ;;then return.
+		 ($set-cdr! head (cons (weak-cons key value) '()))
+		 (let ((N ($fxadd1 ($weak-table-size table))))
+		   ($set-weak-table-size! table N)
+		   (when ($fx= N ($weak-table-mask table))
+		     (%extend-table! table))))
+		(else
+		 ;;Try with the next entry.
+		 (loop equiv? tail ($cdr tail)))))))))
 
 (define (%unintern! table key bucket-index)
   ;;Remove  the entry  associated to  KEY from  TABLE in  the  bucket at
