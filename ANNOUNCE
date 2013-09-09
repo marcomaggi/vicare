@@ -122,6 +122,9 @@ Notes for revision 0.3d3
 * Imported  randomisations libraries  from  Nausicaa  as (vicare  crypto
   randomisations ---).
 
+* Imported object-properties library from Nausicaa as (vicare containers
+  object-properties).
+
 
 Notes for revision 0.3d2
 ------------------------

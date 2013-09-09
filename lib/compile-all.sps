@@ -79,6 +79,7 @@
   (only (vicare containers bytevectors))
   (only (vicare containers auxiliary-syntaxes))
   (only (vicare containers weak-hashtables))
+  (only (vicare containers object-properties))
   (only (vicare containers knuth-morris-pratt))
   (only (vicare containers bytevector-compounds core))
   (only (vicare containers bytevector-compounds))

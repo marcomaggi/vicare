@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -305,6 +305,13 @@
       (weak-hashtable-set! T (vector-ref K 5) 6)
       (check-pretty-print T)
       K))
+
+  (check
+      (let ((T (make-weak-hashtable string-hash string=? 5)))
+	(weak-hashtable-set! T "ciao" 123)
+	(weak-hashtable-set! T "ciao" 456)
+	(weak-hashtable-ref T "ciao" #f))
+    => 456)
 
   #t)
 

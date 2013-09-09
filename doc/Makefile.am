@@ -40,6 +40,7 @@ vicare_scheme_TEXINFOS	= \
 	loops.texi			\
 	comparisons.texi		\
 	randomisations.texi		\
+	object-properties.texi		\
 	\
 	irregex.texi			\
 	pregexp.texi			\

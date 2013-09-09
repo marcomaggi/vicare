@@ -1,0 +1,55 @@
+@node object-properties
+@chapter Object properties
+
+
+@cindex @library{vicare containers object-properties}, library
+@cindex Library @library{vicare containers object-properties}
+
+
+An @dfn{object property} is a convenient interface to a weak hashtable,
+@ref{wtables, Weak hashtables}.  It is a function that can be called
+with one or two arguments:
+
+@itemize
+@item
+When called with two arguments: the first is an object and the second is
+its property value; they are stored in the hashtable, with the object
+being the key.
+
+@item
+When called with one argument: the hashtable is queried using the
+argument as key, and the value is returned.
+@end itemize
+
+Object properties are implemented by the library @library{vicare
+containers object-properties}.
+
+@quotation
+@strong{NOTE} The idea of object properties implemented in this library
+comes from Guile, the @gnu{} Ubiquitous Interface Language for
+Extensions.
+@end quotation
+
+
+@defun make-object-property @var{hash-function} @var{equiv-function}
+Build and return a new object property.  The arguments
+@var{hash-function} and @var{equiv-function} are handed to the weak
+hashtable constructor @func{make-weak-hashtable}, @ref{wtables,
+make-weak-hashtable}.
+@end defun
+
+
+@deffn Parameter object-property-initial-capacity
+An integer representing the suggested initial number of buckets in the
+hashtable.  The default value is @math{16}.
+@end deffn
+
+
+@deffn Parameter object-property-default-value
+The value to return if the property is queried for an object that was
+not registered before.  The default value is the one bound to
+@code{sentinel} exported by @library{vicare language-extensions
+sentinels}.
+@end deffn
+
+@c end of file

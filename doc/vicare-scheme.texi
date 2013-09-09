@@ -252,10 +252,11 @@ Container libraries
 * char-sets::                   Character sets.
 * kmp::                         Knuth-Morris-Pratt searching.
 * levenshtein::                 Levenshtein distance metric.
-* random::                      Sources of random bits.
+* object-properties::           Object properties.
 
 Adapted libraries
 
+* random::                      Sources of random bits.
 * irregex::                     IrRegular expressions.
 * pregexp::                     Portable regular expressions for Scheme.
 
@@ -319,6 +320,8 @@ External documents
 @include char-sets.texi
 @include knuth-morris-pratt.texi
 @include levenshtein.texi
+@include object-properties.texi
+
 @include randomisations.texi
 
 @include irregex.texi

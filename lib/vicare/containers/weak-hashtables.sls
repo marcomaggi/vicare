@@ -38,18 +38,15 @@
     weak-hashtable-update!)
   (import (vicare)
     (vicare unsafe operations)
-    (vicare language-extensions syntaxes))
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (weak-table who obj)
+(define-argument-validation (weak-hashtable who obj)
   (weak-table? obj)
   (assertion-violation who "expected weak hashtable as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (dimension who obj)
   (and (fixnum? obj) (fx<= 0 obj))
@@ -317,7 +314,7 @@
 (define (weak-hashtable-set! table key value)
   (define who 'weak-hashtable-set!)
   (with-arguments-validation (who)
-      ((weak-table	table))
+      ((weak-hashtable	table))
     (let ((bucket-index (%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
       (%intern! table bucket-index key value))))
@@ -325,7 +322,7 @@
 (define (weak-hashtable-ref table key default)
   (define who 'weak-hashtable-ref)
   (with-arguments-validation (who)
-      ((weak-table	table))
+      ((weak-hashtable	table))
     (let* ((equiv?		(weak-table-equiv-function table))
 	   (buckets		(weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
@@ -343,7 +340,7 @@
 (define (weak-hashtable-delete! table key)
   (define who 'weak-hashtable-ref)
   (with-arguments-validation (who)
-      ((weak-table	table))
+      ((weak-hashtable	table))
     (let ((bucket-index (%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
       (%unintern! table key bucket-index))))
@@ -351,7 +348,7 @@
 (define (weak-hashtable-contains? table key)
   (define who 'weak-hashtable-contains?)
   (with-arguments-validation (who)
-      ((weak-table	table))
+      ((weak-hashtable	table))
     (let* ((equiv?		(weak-table-equiv-function table))
 	   (buckets		(weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
@@ -413,7 +410,7 @@
 (define (weak-hashtable-update! table key proc default)
   (define who 'weak-hashtable-update!)
   (with-arguments-validation (who)
-      ((weak-table	table)
+      ((weak-hashtable	table)
        (procedure	proc))
     (let* ((equiv?		(weak-table-equiv-function table))
 	   (buckets		(weak-table-buckets        table))

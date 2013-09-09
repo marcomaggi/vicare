@@ -3842,10 +3842,11 @@ initialised to nil.
 
 
 Weak hashtables are associative containers whose keys are held by weak
-references; registering a key into a weak hashtable does not prevent its
-garbage collection.  A weak hashtable is a vector holding nulls or
-alists; each vector location is called @dfn{bucket}.  Alists have the
-spine composed of strong pairs, while the entries are weak pairs:
+references: registering a key into a weak hashtable does not prevent its
+garbage collection.  A weak hashtable is a Scheme vector holding nulls
+or associative lists; each vector slot is called @dfn{bucket}; the
+associative lists have the spine composed of strong pairs, while the
+entries are weak pairs:
 
 @example
 |-----|-----|-----|-----|-----| vector of buckets
@@ -3864,15 +3865,14 @@ spine composed of strong pairs, while the entries are weak pairs:
 Whenever a key in a weak hashtable is garbage collected: the
 corresponding location in the weak pair is set to the @acronym{BWP}
 object; whenever a bucket is accessed, it is first cleared of weak pairs
-holding @acronym{BWP} in key position.  Notice that fixnums, characters
-and the other values that fit in a single machine word are never
-collected from the point of view of a weak hashtable.
+holding @acronym{BWP} in key position.
 
 @quotation
-@strong{NOTE} Immediate values (@true{}, @false{}, nil, fixnums, etc.)
-used as weak hashtable keys are @strong{never} garbage collected; so the
-associated entries will never be removed from the table unless we
-explicitly do it with @func{weak-hashtable-delete!} or
+@strong{NOTE} Immediate values (those that fit into a single machine
+word: @true{}, @false{}, nil, fixnums, characters, etc.)@: and interned
+symbols are @strong{never} garbage collected.  If we use them as weak
+hashtable keys: the associated entries will never be removed from the
+table unless we explicitly do it with @func{weak-hashtable-delete!}  or
 @func{weak-hashtable-clear!}.
 @end quotation
 
@@ -3881,7 +3881,7 @@ When the number of collected objects equals the number of buckets
 the number of buckets; the table is @strong{never} restricted by
 reducing the number of buckets.
 
-Weak hashtables are subjected to the following constraints:
+At present, weak hashtables are subjected to the following constraints:
 
 @itemize
 @item
@@ -3912,6 +3912,13 @@ initial number of buckets; when not used it defaults to @math{16}.
 Return true if @var{obj} is a weak hashtable.  Weak hashtables are
 disjoint values.
 @end defun
+
+
+@deffn {Validation Clause} weak-hashtable @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is an
+instance of @code{weak-hashtable}.
+@end deffn
 
 
 @defun weak-hashtable-set! @var{table} @var{key} @var{value}
