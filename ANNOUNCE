@@ -128,6 +128,9 @@ Notes for revision 0.3d3
 * Imported object-properties library from Nausicaa as (vicare containers
   object-properties).
 
+* Imported hooks  library from  Nausicaa as  (vicare language-extensions
+  hooks).
+
 
 Notes for revision 0.3d2
 ------------------------

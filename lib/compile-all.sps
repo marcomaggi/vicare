@@ -57,6 +57,7 @@
   (only (vicare language-extensions loops))
   (only (vicare language-extensions ascii-chars))
   (only (vicare language-extensions comparisons))
+  (only (vicare language-extensions hooks))
 
   (only (vicare crypto randomisations low))
   (only (vicare crypto randomisations))

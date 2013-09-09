@@ -73,6 +73,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-general-c-buffers.sps		\
+	test-vicare-hooks.sps				\
 	test-vicare-keywords.sps			\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\

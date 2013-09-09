@@ -13,6 +13,7 @@
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
 * asciis::                      Utilities for @ascii{} characters.
+* hooks::                       Running lists of functions.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
@@ -2627,6 +2628,68 @@ Return a fixnum representing the upper case or lower case version of
 @var{fx}; return @var{fx} itself if it represents an uncased character.
 @end defun
 
+@c page
+@node hooks
+@section Running lists of functions
+
+
+@cindex @library{vicare language-extensions hooks}, library
+@cindex Library @library{vicare language-extensions hooks}
+
+
+The library @library{vicare language-extensions hooks} exports an @api{}
+defining @dfn{hooks}: opaque Scheme objects, disjoint from other types,
+referencing a list of functions which can be applied to arguments at a
+specified point in a program.  @value{PACKAGE} hooks are somewhat
+similar to @gnu{} Guile hooks.
+
+
+@defun make-hook
+Build and return a new hook object.
+@end defun
+
+
+@defun hook? @var{obj}
+Return @true{} if @var{obj} is a hook object, otherwise @false{}.
+@end defun
+
+
+@defun hook-empty? @var{hook}
+Return @true{} if @var{hook} is a hook object and it is empty, otherwise
+@false{}.
+@end defun
+
+
+@defun add-hook! @var{hook} @var{proc}
+@defunx add-hook! @var{hook} @var{proc} @var{last?}
+Register @var{proc} as hook function; return unspecified values.  If
+@var{last?} is @false{} or not used: the new function is registered as
+first, else it is registered as last.
+@end defun
+
+
+@defun remove-hook! @var{hook} @var{proc}
+Remove a previously registered hook function.  Return unspecified
+values.
+@end defun
+
+
+@defun reset-hook! @var{hook}
+Remove all the previously registered hooks.
+@end defun
+
+
+@defun hook->list @var{hook}
+Return the list of registered functions.
+@end defun
+
+
+@defun run-hook @var{hook} @var{arg} @dots{}
+Run all the hook functions applying them to the given arguments.  Return
+unspecified values.
+@end defun
+
+@c end of file
 @c page
 
 @include streams.texi

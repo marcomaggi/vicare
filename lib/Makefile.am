@@ -42,6 +42,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/loops.sls				\
 	vicare/language-extensions/ascii-chars.sls			\
 	vicare/language-extensions/comparisons.sls			\
+	vicare/language-extensions/hooks.sls				\
 	\
 	vicare/crypto/randomisations/low.sls				\
 	vicare/crypto/randomisations.sls				\
