@@ -151,7 +151,7 @@
   (fxdiv (greatest-fixnum) 2))
 
 (define-inline (%compute-bucket-index table key)
-  ($fxand ((weak-table-hash-function table) key) (weak-table-mask table)))
+  ($fxand (($weak-table-hash-function table) key) ($weak-table-mask table)))
 
 (define (%clean-bucket-from-bwp-entries table bucket-index)
   ;;Scan the selected bucket and remove all the weak pairs having BWP in
@@ -159,8 +159,8 @@
   ;;
   (define-inline (decr! var)
     (set! var ($fxsub1 var)))
-  (let* ((size    (weak-table-size table))
-	 (buckets (weak-table-buckets table))
+  (let* ((size    ($weak-table-size table))
+	 (buckets ($weak-table-buckets table))
 	 (entries ($vector-ref buckets bucket-index))
 	 ;;Remove the leading entries with BWP key.
 	 (entries (let loop ((entries entries))
@@ -183,7 +183,7 @@
 		($set-cdr! head tail)
 		(loop head tail))
 	    (loop tail ($cdr tail))))))
-    (set-weak-table-size! table size)
+    ($set-weak-table-size! table size)
     ($vector-set! buckets bucket-index entries)))
 
 (define (%intern! table bucket-index key value)
@@ -230,8 +230,8 @@
   ;;Remove  the entry  associated to  KEY from  TABLE in  the  bucket at
   ;;BUCKET-INDEX.  If KEY is not found: just do nothing.
   ;;
-  (let* ((buckets (weak-table-buckets        table))
-	 (equiv?  (weak-table-equiv-function table)))
+  (let* ((buckets ($weak-table-buckets        table))
+	 (equiv?  ($weak-table-equiv-function table)))
     (let ((entries ($vector-ref buckets bucket-index)))
       (if (null? entries) ;empty bucket
 	  (values)	  ;key not found
@@ -242,7 +242,7 @@
 	  (if (or (eq?    key intern-key)
 		  (equiv? key intern-key))
 	      (begin
-		(set-weak-table-size! table ($fxsub1 (weak-table-size table)))
+		($set-weak-table-size! table ($fxsub1 ($weak-table-size table)))
 		($vector-set! buckets bucket-index ($cdr entries)))
 	    ;;Now check the tail of the chain.
 	    (let loop ((prev    entries)
@@ -254,7 +254,7 @@
 		  (if (or (eq?    key intern-key)
 			  (equiv? key intern-key))
 		      (begin
-			(set-weak-table-size! table ($fxsub1 (weak-table-size table)))
+			($set-weak-table-size! table ($fxsub1 ($weak-table-size table)))
 			($set-cdr! prev ($cdr entries)))
 		    (loop entries ($cdr entries))))))))))))
 
@@ -263,9 +263,9 @@
   ;;size of the vector in TABLE, which must be an instance of WEAK-TABLE
   ;;structure.
   ;;
-  (let* ((vec1	(weak-table-buckets table))
+  (let* ((vec1	($weak-table-buckets table))
 	 (len1	($vector-length vec1))
-	 (hash	(weak-table-hash-function table)))
+	 (hash	($weak-table-hash-function table)))
     ;;Do not allow the vector length to exceed the maximum fixnum.
     (when ($fx< len1 MAX-NUMBER-OF-BUCKETS)
       ;;If  we start  with an  even and  power of  2 vector  length, the
@@ -288,8 +288,8 @@
 	;;Insert in the new vector all the entries in the old vector.
 	(vector-for-each %insert vec1)
 	;;Update the TABLE structure.
-	(set-weak-table-buckets! table vec2)
-	(set-weak-table-mask!    table mask)))))
+	($set-weak-table-buckets! table vec2)
+	($set-weak-table-mask!    table mask)))))
 
 
 ;;;; high-level operations
@@ -328,8 +328,8 @@
   (define who 'weak-hashtable-ref)
   (with-arguments-validation (who)
       ((weak-hashtable	table))
-    (let* ((equiv?		(weak-table-equiv-function table))
-	   (buckets		(weak-table-buckets        table))
+    (let* ((equiv?		($weak-table-equiv-function table))
+	   (buckets		($weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
       (let loop ((entries ($vector-ref buckets bucket-index)))
@@ -354,8 +354,8 @@
   (define who 'weak-hashtable-contains?)
   (with-arguments-validation (who)
       ((weak-hashtable	table))
-    (let* ((equiv?		(weak-table-equiv-function table))
-	   (buckets		(weak-table-buckets        table))
+    (let* ((equiv?		($weak-table-equiv-function table))
+	   (buckets		($weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
       (let loop ((entries ($vector-ref buckets bucket-index)))
@@ -369,46 +369,55 @@
 	      (loop ($cdr entries)))))))))
 
 (define (weak-hashtable-clear! table)
-  (let* ((dim		(weak-table-init-dim table))
-	 (mask		($fxsub1 dim))
-	 (buckets	(make-vector dim '())))
-    (set-weak-table-size!     table 0)
-    (set-weak-table-buckets!  table buckets)
-    (set-weak-table-mask!     table mask)))
+  (define who 'weak-hashtable-clear!)
+  (with-arguments-validation (who)
+      ((weak-hashtable	table))
+    (let* ((dim		($weak-table-init-dim table))
+	   (mask	($fxsub1 dim))
+	   (buckets	(make-vector dim '())))
+      ($set-weak-table-size!     table 0)
+      ($set-weak-table-buckets!  table buckets)
+      ($set-weak-table-mask!     table mask))))
 
 (define (weak-hashtable-keys table)
-  (let* ((keys		(make-vector (weak-table-size table)))
-	 (buckets	(weak-table-buckets table))
-	 (dim		($vector-length buckets))
-	 (count		0))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i dim)
-	 keys)
-      (%clean-bucket-from-bwp-entries table i)
-      (let loop ((entries ($vector-ref buckets i)))
-	(unless (null? entries)
-	  ($vector-set! keys count ($car ($car entries)))
-	  (set! count ($fxadd1 count))
-	  (loop ($cdr entries)))))))
+  (define who 'weak-hashtable-keys)
+  (with-arguments-validation (who)
+      ((weak-hashtable	table))
+    (let* ((keys	(make-vector ($weak-table-size table)))
+	   (buckets	($weak-table-buckets table))
+	   (dim		($vector-length buckets))
+	   (count	0))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i dim)
+	   keys)
+	(%clean-bucket-from-bwp-entries table i)
+	(let loop ((entries ($vector-ref buckets i)))
+	  (unless (null? entries)
+	    ($vector-set! keys count ($car ($car entries)))
+	    (set! count ($fxadd1 count))
+	    (loop ($cdr entries))))))))
 
 (define (weak-hashtable-entries table)
-  (let* ((size		(weak-table-size table))
-	 (keys		(make-vector size))
-	 (vals		(make-vector size))
-	 (buckets	(weak-table-buckets table))
-	 (dim		($vector-length buckets))
-	 (count		0))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i dim)
-	 (values keys vals))
-      (%clean-bucket-from-bwp-entries table i)
-      (let loop ((entries ($vector-ref buckets i)))
-	(unless (null? entries)
-	  (let ((entry ($car entries)))
-	    ($vector-set! keys count ($car entry))
-	    ($vector-set! vals count ($cdr entry))
-	    (set! count ($fxadd1 count)))
-	  (loop ($cdr entries)))))))
+  (define who 'weak-hashtable-entries)
+  (with-arguments-validation (who)
+      ((weak-hashtable	table))
+    (let* ((size	($weak-table-size table))
+	   (keys	(make-vector size))
+	   (vals	(make-vector size))
+	   (buckets	($weak-table-buckets table))
+	   (dim		($vector-length buckets))
+	   (count	0))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i dim)
+	   (values keys vals))
+	(%clean-bucket-from-bwp-entries table i)
+	(let loop ((entries ($vector-ref buckets i)))
+	  (unless (null? entries)
+	    (let ((entry ($car entries)))
+	      ($vector-set! keys count ($car entry))
+	      ($vector-set! vals count ($cdr entry))
+	      (set! count ($fxadd1 count)))
+	    (loop ($cdr entries))))))))
 
 (define weak-hashtable-size weak-table-size)
 
@@ -417,8 +426,8 @@
   (with-arguments-validation (who)
       ((weak-hashtable	table)
        (procedure	proc))
-    (let* ((equiv?		(weak-table-equiv-function table))
-	   (buckets		(weak-table-buckets        table))
+    (let* ((equiv?		($weak-table-equiv-function table))
+	   (buckets		($weak-table-buckets        table))
 	   (bucket-index	(%compute-bucket-index table key)))
       (%clean-bucket-from-bwp-entries table bucket-index)
       (let ((the-entries ($vector-ref buckets bucket-index)))

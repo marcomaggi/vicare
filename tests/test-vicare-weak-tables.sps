@@ -306,7 +306,7 @@
       (check-pretty-print T)
       K))
 
-  (check 'this
+  (check
       (let ((T (make-weak-hashtable string-hash string=? 5)))
 	(weak-hashtable-set! T "ciao" 123)
 	(weak-hashtable-set! T "ciao" 456)
