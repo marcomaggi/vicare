@@ -330,14 +330,14 @@ defaults to @func{real-compare}.
 
 If one or both the arguments is @samp{+nan.0}:
 
-@table @func
-@item integer-compare
-@itemx rational-compare
+@table @asis
+@item @func{integer-compare}
+@itemx @func{rational-compare}
 Raise an error because @samp{+nan.0} is neither integer nor rational.
 
-@item real-compare
-@itemx complex-compare
-@itemx number-compare
+@item @func{real-compare}
+@itemx @func{complex-compare}
+@itemx @func{number-compare}
 Return @samp{+nan.0}.
 @end table
 @end defun
