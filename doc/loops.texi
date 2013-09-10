@@ -775,29 +775,29 @@ generators).
 In the fully decorated form, the following syntactic variables are
 present:
 
-@table @meta
-@item ob
+@table @asis
+@item @meta{ob}
 Outer binding.
 
-@item oc
+@item @meta{oc}
 Outer command.
 
-@item lb
+@item @meta{lb}
 Loop binding.
 
-@item ne1?
+@item @meta{ne1?}
 Not end predicate.
 
-@item ib
+@item @meta{ib}
 Inner binding.
 
-@item ic
+@item @meta{ic}
 Inner command.
 
-@item ne2?
+@item @meta{ne2?}
 Not end predicate.
 
-@item ls
+@item @meta{ls}
 Loop step.
 @end table
 
