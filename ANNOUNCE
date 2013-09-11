@@ -48,6 +48,9 @@ Notes for revision 0.3d4
 * Imported one-dimension  libraries from Nausicaa as  (vicare containers
   one-dimension-cc) and (vicare containers one-dimension-co).
 
+* Imported  u8 and  s8  bytevectors libraries  from  nausicaa under  the
+  hierarchy (vicare containers bytevectors ---).
+
 
 Notes for revision 0.3d3
 ------------------------

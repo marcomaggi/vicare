@@ -27,8 +27,56 @@
 
 #!r6rs
 (library (vicare containers auxiliary-syntaxes)
-  (export view start past)
+  (export
+    view start past
+    define-instantiable-body)
   (import (vicare))
-  (define-auxiliary-syntaxes view start past))
+
+
+(define-auxiliary-syntaxes view start past)
+
+(define-syntax (define-instantiable-body stx)
+  (syntax-case stx ()
+    ((_ ?name . ?body)
+     #'(define-syntax ?name
+	 (lambda (stx)
+	   (define (symbol-subst ctx from to body)
+	     (define (%subst body from to)
+	       (cond ((or (null?       body)
+			  (boolean?    body)
+			  (char?       body)
+			  (string?     body)
+			  (number?     body)
+			  (bytevector? body))
+		      body)
+		     ((symbol? body)
+		      (if (eq? from body)
+			  to
+			body))
+		     ((pair? body)
+		      (cons (%subst (car body) from to)
+			    (%subst (cdr body) from to)))
+		     ((vector? body)
+		      (list->vector (map (lambda (item)
+					   (%subst item from to))
+				      (vector->list body))))
+		     (else
+		      (error 'symbol-subst "unknown value while substituting symbols" body))))
+	     (let ((from (syntax->datum from))
+		   (to   (syntax->datum to))
+		   (body (syntax->datum body)))
+	       (datum->syntax ctx (fold-left %subst body from to))))
+	   (syntax-case stx ()
+	     ((?ctx ((?from ?to) (... ...)))
+	      (symbol-subst #'?ctx
+			    #'(?from (... ...))
+			    #'(?to   (... ...))
+			    #'(begin . ?body)))))))
+    ))
+
+
+;;;; done
+
+)
 
 ;;; end of file

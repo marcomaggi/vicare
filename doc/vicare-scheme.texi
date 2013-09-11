@@ -250,6 +250,7 @@ Container libraries
 * vectors::                     Vector library.
 * strings::                     String library.
 * char-sets::                   Character sets.
+* bytevectors::                 Bytevectors.
 * kmp::                         Knuth-Morris-Pratt searching.
 * levenshtein::                 Levenshtein distance metric.
 * object-properties::           Object properties.
@@ -319,6 +320,7 @@ External documents
 @include vectors.texi
 @include strings.texi
 @include char-sets.texi
+@include bytevectors.texi
 @include knuth-morris-pratt.texi
 @include levenshtein.texi
 @include object-properties.texi

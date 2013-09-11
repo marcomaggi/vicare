@@ -171,20 +171,24 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-language-extensions-variables.sps			\
 	\
 	test-vicare-containers-bytevector-compounds.sps			\
+	test-vicare-containers-bytevectors-s8-high.sps			\
+	test-vicare-containers-bytevectors-s8-low.sps			\
+	test-vicare-containers-bytevectors-u8-high.sps			\
+	test-vicare-containers-bytevectors-u8-low.sps			\
+	test-vicare-containers-char-sets.sps				\
 	test-vicare-containers-kmp.sps					\
+	test-vicare-containers-levenshtein.sps				\
 	test-vicare-containers-lists-fun.sps				\
 	test-vicare-containers-lists-low.sps				\
 	test-vicare-containers-lists-stx.sps				\
-	test-vicare-containers-vectors-high.sps				\
-	test-vicare-containers-char-sets.sps				\
-	test-vicare-containers-strings-low.sps				\
-	test-vicare-containers-strings-high.sps				\
-	test-vicare-containers-strings-rabin-karp.sps			\
-	test-vicare-containers-levenshtein.sps				\
-	test-vicare-containers-weak-hashtables.sps			\
 	test-vicare-containers-object-properties.sps			\
 	test-vicare-containers-one-dimension-cc.sps			\
 	test-vicare-containers-one-dimension-co.sps			\
+	test-vicare-containers-strings-high.sps				\
+	test-vicare-containers-strings-low.sps				\
+	test-vicare-containers-strings-rabin-karp.sps			\
+	test-vicare-containers-vectors-high.sps				\
+	test-vicare-containers-weak-hashtables.sps			\
 	\
 	test-vicare-crypto-randomisations.sps				\
 	\

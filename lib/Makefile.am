@@ -82,6 +82,12 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/levenshtein.sls				\
 	vicare/containers/one-dimension-co.sls				\
 	vicare/containers/one-dimension-cc.sls				\
+	vicare/containers/bytevectors/generic-low.sls			\
+	vicare/containers/bytevectors/generic.sls			\
+	vicare/containers/bytevectors/s8.sls				\
+	vicare/containers/bytevectors/s8low.sls				\
+	vicare/containers/bytevectors/u8.sls				\
+	vicare/containers/bytevectors/u8low.sls				\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

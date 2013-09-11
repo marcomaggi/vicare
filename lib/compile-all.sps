@@ -99,6 +99,8 @@
   (only (vicare containers levenshtein))
   (only (vicare containers one-dimension-co))
   (only (vicare containers one-dimension-cc))
+  (only (vicare containers bytevectors u8))
+  (only (vicare containers bytevectors s8))
 
   (only (vicare net channels))
 

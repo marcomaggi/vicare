@@ -273,6 +273,9 @@ code by Sebastian Egner and Jens Axel Soegaard.
   The libraries in the hierarchy (vicare crypto randomisations ---) have
 many authors, please see the headers of the individual files.
 
+  Some libraries  in the  hierarchy (vicare containers  bytevectors ---)
+are derived from the SRFI 13 reference implementation by Olin Shivers.
+
 
 B. Bug reports
 --------------

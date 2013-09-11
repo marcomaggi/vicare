@@ -65,9 +65,8 @@
 
 (define (fixnum-in-ascii-range? obj)
   (and (fixnum? obj)
-       (or ($ascii-upper-case? obj)
-	   ($ascii-lower-case? obj)
-	   ($ascii-numeric?    obj))))
+       (and ($fx>= obj 0)
+	    ($fx<= obj 127))))
 
 ;;; --------------------------------------------------------------------
 
