@@ -49,7 +49,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-ikarus-symbol-table.sps					\
 	test-ikarus-unicode.sps						\
 	\
-	test-vicare-arguments-validation.sps				\
 	test-vicare-bignums.sps						\
 	test-vicare-bytevectors.sps					\
 	test-vicare-chars.sps						\
@@ -65,7 +64,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-flonum-base.sps					\
 	test-vicare-flonum-formatter.sps				\
 	test-vicare-flonum-parser.sps					\
-	test-vicare-general-c-buffers.sps				\
 	test-vicare-io.sps						\
 	test-vicare-letrec-syntax.sps					\
 	test-vicare-library-utils.sps					\
@@ -114,7 +112,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-numerics-bitwise.sps				\
 	test-vicare-parameters.sps					\
 	test-vicare-parser-logic.sps					\
-	test-vicare-platform.sps					\
 	test-vicare-pointers.sps					\
 	test-vicare-promises.sps					\
 	test-vicare-time.sps						\
@@ -131,7 +128,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-syntax-utilities.sps				\
 	test-vicare-system.sps						\
 	test-vicare-vectors.sps						\
-	test-vicare-words.sps						\
 	\
 	test-issue-001-equal-hash.sps					\
 	test-issue-003.sps						\
@@ -150,6 +146,12 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-issue-023.sps						\
 	test-issue-024.sps						\
 	test-issue-025-sign-in-exact-rationals.sps			\
+	\
+	test-vicare-platform-utils.sps					\
+	test-vicare-platform-words.sps					\
+	\
+	test-vicare-arguments-validation.sps				\
+	test-vicare-arguments-general-c-buffers.sps			\
 	\
 	test-vicare-language-extensions.sps				\
 	test-vicare-language-extensions-cond-expand.sps			\
