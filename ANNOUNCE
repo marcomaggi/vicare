@@ -45,7 +45,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d4
 ------------------------
 
-*
+* Imported one-dimension  libraries from Nausicaa as  (vicare containers
+  one-dimension-cc) and (vicare containers one-dimension-co).
 
 
 Notes for revision 0.3d3

@@ -80,6 +80,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/char-sets/blocks.sls				\
 	vicare/containers/char-sets/categories.sls			\
 	vicare/containers/levenshtein.sls				\
+	vicare/containers/one-dimension-co.sls				\
+	vicare/containers/one-dimension-cc.sls				\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

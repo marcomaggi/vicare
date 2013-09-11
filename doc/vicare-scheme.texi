@@ -253,6 +253,7 @@ Container libraries
 * kmp::                         Knuth-Morris-Pratt searching.
 * levenshtein::                 Levenshtein distance metric.
 * object-properties::           Object properties.
+* one-dimension::               One dimensional extended ranges.
 
 Adapted libraries
 
@@ -321,6 +322,7 @@ External documents
 @include knuth-morris-pratt.texi
 @include levenshtein.texi
 @include object-properties.texi
+@include one-dimension.texi
 
 @include randomisations.texi
 

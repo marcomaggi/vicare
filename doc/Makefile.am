@@ -41,6 +41,7 @@ vicare_scheme_TEXINFOS	= \
 	comparisons.texi		\
 	randomisations.texi		\
 	object-properties.texi		\
+	one-dimension.texi		\
 	\
 	irregex.texi			\
 	pregexp.texi			\

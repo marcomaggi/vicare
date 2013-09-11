@@ -1,0 +1,664 @@
+@node one-dimension
+@chapter One dimensional extended ranges
+
+
+@cindex @library{vicare containers one-dimension-co}, library
+@cindex Library @library{vicare containers one-dimension-co}
+@cindex @library{vicare containers one-dimension-cc}, library
+@cindex Library @library{vicare containers one-dimension-cc}
+
+
+The one--dimension libraries implement low level operations over
+generalised ranges of a coordinate.  They can be used to operate on
+ranges of numbers or characters or whatever objects upon which we can
+define an ordering.  There are two versions of the library:
+
+@table @asis
+@item @library{vicare containers one-dimension-co}
+Represents domains of values using disjoint half--open ranges; each
+range has a lower--included and an upper--excluded limit.
+
+@item @library{vicare containers one-dimension-cc}
+Represents domains of values using disjoint double--closed ranges; each
+range has a lower--included and an upper--included limit.
+@end table
+
+Both libraries have the same @api{}, meaning that the functions names
+and arguments are the same; the only difference in semantics is that
+@library{vicare containers one-dimension-co} interprets argument ranges
+as half--open, while @library{vicare containers one-dimension-cc}
+interprets argument ranges as double--closed.
+
+@menu
+* one-dimension intro::         Data types and conventions.
+* one-dimension make::          Constructors.
+* one-dimension pred::          Predicates.
+* one-dimension inspect::       Inspection.
+* one-dimension ops::           Operations.
+@end menu
+
+@c page
+@node one-dimension intro
+@section Data types and conventions
+
+
+A @dfn{range} is a pair representing a half--open interval of items.
+The car of the pair if the included lower--limit, called @var{start};
+the cdr is the excluded upper--limit, called @var{past}, or the included
+upper--limit, called @var{last}.  Empty ranges are @strong{not} valid.
+
+A @dfn{domain} is a sorted list of ranges.  Empty domains are empty
+lists.  Ranges in a domain do not overlap and are not contiguous.  A
+domain of half--open ranges has the following format:
+
+@example
+((start1 . past1) (start2 . past2) (start3 . past3) ...)
+@end example
+
+@noindent
+with the constraints:
+
+@example
+start1 < past1 < start2 < past2 < start3 < past3 < ...
+@end example
+
+@noindent
+a domain of double--closed ranges has the following format:
+
+@example
+((start1 . last1) (start2 . last2) (start3 . last3) ...)
+@end example
+
+@noindent
+with the constraints:
+
+@example
+start1 <= last1 < start2 <= last2 < start3 <= last3 < ...
+@end example
+
+The range and domain functions accept the following arguments:
+
+@table @var
+@item obj
+Any object.
+
+@item item
+An object that satisfies the @var{item?} predicate of the selected type.
+
+@item range
+A valid range according to @func{%range?}.
+
+@item domain
+A valid domain according to @func{%domain?}.
+
+@item start
+The included left--limit of a range.
+
+@item past
+The excluded lower--limit of a range.
+
+@item last
+The included upper--limit of a range.
+
+@item item?
+A unary predicate returning @true{} if the argument is a valid item.
+For integers it can be @func{integer?}, while for characters it can be
+@func{char?}.
+
+If we need to exclude some range of values, we can do it by properly
+define this function.  For example, to exclude the integers in the
+half--open range @math{[10, 23)} we can use:
+
+@example
+(lambda (n)
+  (and (integer? n)
+       (<= 10  n)
+       (<   n 23)))
+@end example
+
+@item item=?
+An n--ary predicate returning @true{} if the all the arguments are
+equal.  @func{char=?} is an example of such a function.
+
+@item item<?
+An n--ary predicate returning @true{} if the all the arguments, in the
+given order, are in strict increasing order.  @func{char<?} is an
+example of such a function.
+
+@item item<=?
+An n--ary predicate returning @true{} if the all the arguments, in the
+given order, are in non--strict increasing order.  @func{char<=?} is an
+example of such a function.
+
+@item item-min
+An n--ary function returning the minimum between its arguments.  For
+numbers it can be @func{min}, for characters we can use:
+
+@example
+(lambda (a b) (if (char<? a b) a b))
+@end example
+
+@item item-max
+An n--ary function returning the maximum between its arguments.  For
+numbers it can be @func{max}, for characters we can use:
+
+@example
+(lambda (a b) (if (char<? a b) b a))
+@end example
+
+@item item-prev
+A binary function accepting an item and a range, or false, as arguments.
+The second argument can be @false{}, meaning that no range is specified,
+or a pair whose car is the left--limit and whose cdr is the
+right--limit; when the range is true, it is guaranteed that the item is
+inside the range.
+
+This function must return the value previous to item inside the range;
+if it is not possible to compute the previous value, because the lower
+bound has been reached: The function must return @false{}.
+
+For integers it can be:
+
+@example
+(lambda (x range)       ; with both (one-dimension-cc)
+  (let ((x (- x 1)))    ; and (one-dimension-co)
+    (if range
+        (and (<= (car range) x)
+             x)
+      x)))
+@end example
+
+@noindent
+for characters it can be:
+
+@example
+(lambda (ch range)      ; with (one-dimension-cc)
+  (let* ((x  (- (char->integer ch) 1)))
+    (and (number-in-range? x)
+         (let ((ch (integer->char x)))
+           (if range
+               (and (<= x (char->integer (car range)))
+                    ch)
+             ch)))))
+
+(define (number-in-range? x)
+  (or (and (<= 0 x)
+           (<  x #xD800))
+      (and (<  #xDFFF x)
+           (<= x #x10FFFF))))
+@end example
+
+@item item-next
+A binary function accepting an item and a range, or false, as arguments.
+The second argument can be @false{}, meaning that no range is specified,
+or a pair whose car is the left--limit and whose cdr is the
+right--limit; when the range is true, it is guaranteed that the item is
+inside the range.
+
+This function must return the value next to item inside the range; if it
+is not possible to compute the next value, because the upper bound has
+been reached: The function must return @false{}.
+
+For integers it can be:
+
+@example
+(lambda (x range)       ; with (one-dimension-cc)
+  (let ((x (+ 1 x)))
+    (if range
+        (and (<= x (cdr range))
+             x)
+      x)))
+
+(lambda (x range)       ; with (one-dimension-co)
+  (let ((x (+ 1 x)))
+    (if range
+        (and (< x (cdr range))
+             x)
+      x)))
+@end example
+
+@noindent
+for characters it can be:
+
+@example
+(lambda (ch range)      ; with (one-dimension-cc)
+  (let* ((x  (+ 1 (char->integer c))))
+    (and (number-in-range? x)
+         (let ((ch (integer->char x)))
+           (if range
+               (and (<= x (char->integer (cdr range)))
+                    ch)
+             ch)))))
+
+(define (number-in-range? x)
+  (or (and (<= 0 x)
+           (<  x #xD800))
+      (and (<  #xDFFF x)
+           (<= x #x10FFFF))))
+@end example
+
+@item item-minus
+A binary function:
+
+@itemize
+@item
+For half--open ranges: It must return the number of items between the
+first argument included and the second argument excluded.
+
+@item
+For double--closed ranges: It must return the number of items between
+the first argument included and the second argument included.
+@end itemize
+
+The arithmetic @func{-} applied to integers is an example of such a
+function for half--open ranges; for characters and double--closed ranges
+we can use:
+
+@example
+(lambda (past start)
+  (+ 1 (- (char->integer past)
+          (char->integer start))))
+@end example
+
+@item item-copy
+A unary function returning a copy of an item.  For ranges holding atomic
+values (like characters or integers) it is fine to use @code{(lambda (x)
+x)}.
+
+@item type
+A record used as type descriptor for collected items.  It is used as
+first arguments to all almost all the functions.  Type descriptors are
+built by @func{%make-type-descriptor}.
+@end table
+
+@c page
+@node one-dimension make
+@section Constructors
+
+
+@defun %make-type-descriptor @var{item?} @var{item=?} @var{item<?} @var{item<=?} @var{item-min} @var{item-max} @var{item-prev} @var{item-next} @var{item-minus} @var{item-copy}
+Build and return a new type descriptor.
+@end defun
+
+
+@defun %make-range @var{type} @var{start} @var{past}
+@defunx %make-range @var{type} @var{start} @var{last}
+Compose @var{start} and @var{past}/@var{last} into a range.  This
+function validates the arguments to make sure the resulting range is
+valid.
+@end defun
+
+
+@defun %range-copy @var{type} @var{range}
+Return a clone of @var{range}.
+@end defun
+
+
+@defun %make-domain @var{type} @var{item/range} ...
+Build and return a new domain.  The list of @var{item/range} may be the
+empty list or a mixed list of items and ranges.  See
+@func{%domain-add-item} and @func{%domain-add-range} for details.
+@end defun
+
+
+@defun %domain-copy @var{type} @var{domain}
+Return a newly allocated domain holding a copy of @var{domain}.
+@end defun
+
+
+@defun %domain-add-item @var{type} @var{domain} @var{obj}
+Add the single value @var{obj} to @var{domain}, return the new domain.
+The returned domain may share some structure with @var{domain}.  If
+@var{obj} does not satisfy the @var{item?} function of @var{type}: An
+assertion violation is raised.
+
+@var{obj} is interpreted as lower limit of a range and the
+@var{item-next} function of @var{type} is used to generate the
+corresponding upper limit.  If generating the next item fails: An
+assertion violation is raised.
+@end defun
+
+
+@defun %domain-add-range @var{type} @var{domain} @var{range}
+Add @var{range} to @var{domain}, return the new domain.  The returned
+domain may share some structure with @var{domain}.
+
+@var{range} is a pair of items; it is interpreted as double--closed
+range by @library{vicare containers one-dimension-cc} and as half--open
+range by @library{vicare containers one-dimensionc-co}.
+@end defun
+
+@c page
+@node one-dimension pred
+@section Predicates
+
+
+@subsubheading Range predicates
+
+
+@defun %range? @var{type} @var{obj}
+Return @true{} if @var{obj} is a valid range.
+@end defun
+
+
+@defun %range-contains? @var{type} @var{range} @var{obj}
+Return @true{} if @var{obj} is a member of @var{range}.
+@end defun
+
+
+@defun %range=? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the ranges are equal.
+@end defun
+
+
+@defun %range<? @var{type} @var{range-a} @var{range-b}
+Return @true{} if @var{range-a} has all members less than all members of
+@var{range-b}.
+@end defun
+
+
+@defun %range<=? @var{type} @var{range-a} @var{range-b}
+Return @true{} if @var{range-a} has all members less than, or equal to,
+all members of @var{range-b}.
+@end defun
+
+
+@defun %range-start<? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the start of @var{range-a} is less than the start of
+@var{range-b}.
+@end defun
+
+
+@defun %range-start<=? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the start of @var{range-a} is less than, or equal to,
+the start of @var{range-b}.
+@end defun
+
+
+@defun %range-past<? @var{type} @var{range-a} @var{range-b}
+@defunx %range-last<? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the past/last of @var{range-a} is less than the past
+of @var{range-b}.
+@end defun
+
+
+@defun %range-last<=? @var{type} @var{range-a} @var{range-b}
+@defunx %range-past<=? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the past/last of @var{range-a} is less than, or equal
+to, the past of @var{range-b}.
+@end defun
+
+
+@defun %range-contiguous? @var{type} @var{range-a} @var{range-b}
+Return @true{} if @var{range-a} and @var{range-b} are contiguous.  It
+does not matter which range has start less than the other.
+@end defun
+
+
+@defun %range-overlapping? @var{type} @var{range-a} @var{range-b}
+Return @true{} if the ranges have some elements in common.
+@end defun
+
+
+@defun %range-superset? @var{type} @var{range-a} @var{range-b}
+@defunx %range-superset?/strict @var{type} @var{range-a} @var{range-b}
+Return @true{} if @var{range-a} is a superset or a strict superset of
+@var{range-a}.
+@end defun
+
+
+@defun %range-subset? @var{type} @var{range-a} @var{range-b}
+@defunx %range-subset?/strict @var{type} @var{range-a} @var{range-b}
+Return @true{} if @var{range-a} is a subset or a strict subset of
+@var{range-a}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Domain predicates
+
+
+@defun %domain? @var{type} @var{domain}
+Return true if @var{domain} is a valid domain.
+@end defun
+
+
+@defun %domain-empty? @var{domain}
+Return true if the domain is empty.
+@end defun
+
+
+@defun %domain-contains? @var{type} @var{domain} @var{obj}
+Return true if @var{obj} is an element of @var{domain}.
+@end defun
+
+
+@defun %domain=? @var{type} @var{domain-a} @var{domain-b}
+Return true if the arguments represent the same domain.
+@end defun
+
+
+@defun %domain<? @var{type} @var{domain-a} @var{domain-b}
+Return true if all the elements of @var{domain-a} are strictly less than
+all the elements of @var{domain-b}.  Empty domains cannot be ordered, so
+if an argument is empty the return value is @false{}.
+@end defun
+
+
+@defun %domain-subset? @var{type} @var{domain-a} @var{domain-b}
+@defunx %domain-subset?/strict @var{type} @var{domain-a} @var{domain-b}
+Return @true{} if @var{domain-a} is a subset or strict subset of
+@var{domain-b}.
+@end defun
+
+
+@defun %domain-superset? @var{type} @var{domain-a} @var{domain-b}
+@defunx %domain-superset?/strict @var{type} @var{domain-a} @var{domain-b}
+Return @true{} if @var{domain-a} is a superset or strict superset of
+@var{domain-b}.
+@end defun
+
+
+@c page
+@node one-dimension inspect
+@section Inspection
+
+
+@defun %range-length @var{type} @var{range}
+Return the number of items in the range.
+@end defun
+
+
+@defun %domain-size @var{type} @var{domain}
+Return the number of items in the domain.
+@end defun
+
+@c page
+@node one-dimension ops
+@section Operations
+
+
+@subsubheading Set operations
+
+
+@defun %range-intersection @var{type} @var{range-a} @var{range-b}
+Return a range representing the intersection of the argument ranges.  It
+does not matter which range has start less than the other.
+
+Intersection is a closed operation on the space of ranges: The
+intersection of two ranges is a range (possibly empty).  If the ranges
+are not overlapping return @false{} to represent the empty range.
+@end defun
+
+
+@defun %range-union @var{type} @var{range-a} @var{range-b}
+Return two values representing the union of the argument ranges.  It
+does not matter which range has start less than the other.
+
+Union is @strong{not} a closed operation on the space of ranges: The
+union of two contiguous or overlapping ranges is a single range, but the
+union of two disjoint ranges is the set holding the two argument ranges.
+
+If the argument ranges are disjoint and non--contiguous: Return two
+values being @var{range-a} and @var{range-b}.  If the argument ranges
+are contiguous or overlapping: Return two values being @false{} and a
+new range representing the union.
+
+This function should be called like this:
+
+@example
+(let-values (((head tail) (%range-union type r-a r-b)))
+  (when head ---)
+  (when tail ---))
+@end example
+@end defun
+
+
+@defun %range-difference @var{type} @var{range-a} @var{range-b}
+Return two values representing the difference between the argument
+ranges; the difference is the set of elements present in one range and
+not in the other.  It does not matter which range has start less than
+the other.
+
+Difference is @strong{not} a closed operation on the space of ranges: In
+genreral the result is a couple of ranges.  The first one represents
+values which are all less than the values in the second one.  Both the
+returned values can be @false{}.
+
+This function should be called like this:
+
+@example
+(let-values (((head tail) (%range-difference type r-a r-b)))
+  (when head ---)
+  (when tail ---))
+@end example
+@end defun
+
+
+@defun %range-in-first-only @var{type} @var{range-a} @var{range-b}
+Return two values representing the elements of @var{range-a} that are
+not in @var{range-b}.
+
+This operation is @strong{not} a closed operation on the space of
+ranges: In genreral the result is a couple of ranges.  The first one
+represents values which are all less than the values in the second one.
+Both the returned values can be @false{}.
+
+This function should be called like this:
+
+@example
+(let-values (((head tail) (%range-in-first-only type r-a r-b)))
+  (when head ---)
+  (when tail ---))
+@end example
+@end defun
+
+
+@defun %domain-intersection @var{type} @var{domain-a} @var{domain-b}
+Return a new domain representing the intersection of the arguments.  The
+intersection is the set of values present in both the arguments.
+
+The returned value may share some structure with the arguments.
+@end defun
+
+
+@defun %domain-union @var{type} @var{domain-a} @var{domain-b}
+Return a new domain representing the union of the arguments.  The union
+is the set of values present in one and/or the other argument.
+
+The returned value may share some structure with the arguments.
+@end defun
+
+
+@defun %domain-difference @var{type} @var{domain-a} @var{domain-b}
+Return a new domain representing the difference of the arguments.  The
+difference is the set of values present in one or the other argument.
+
+The returned value may share some structure with the arguments.
+@end defun
+
+
+@defun %domain-complement @var{type} @var{domain} @var{domain-universe}
+Return a new domain representing the complement of @var{domain} in the
+space defined by @var{domain-universe}.  The returned value holds all
+the items from @var{domain-universe} that are not in @var{domain}.
+
+The returned value may share some structure with the arguments.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading List operations
+
+
+@defun %range-for-each @var{type} @var{proc} @var{range}
+Apply @var{proc} to each value in the range.
+@end defun
+
+
+@defun %range-every @var{type} @var{proc} @var{range}
+Apply @var{proc} to each value in the range and return true if all the
+return values are true.  The application stops at the first @false{}
+return value.
+@end defun
+
+
+@defun %range-any @var{type} @var{proc} @var{range}
+Apply @var{proc} to each value in the range and return true if at least
+one of the returned values is true.  The application stops at the first
+true return value.
+@end defun
+
+
+@defun %range-fold @var{type} @var{kons} @var{knil} @var{range}
+Fold @var{kons} over the values in the range.
+@end defun
+
+
+@defun %range->list @var{type} @var{range}
+Return a list holding all the elements in the range.
+@end defun
+
+
+@defun %domain-for-each @var{type} @var{proc} @var{domain}
+Apply @var{proc} to each element of @var{domain}.
+@end defun
+
+
+@defun %domain-every @var{type} @var{proc} @var{domain}
+Apply @var{proc} to each value in the domain and return true if all the
+return values are true.  The application stops at the first @false{}
+return value.
+@end defun
+
+
+@defun %domain-any @var{type} @var{proc} @var{domain}
+Apply @var{proc} to each value in the domain and return true if at least
+one of the returned values is true.  The application stops at the first
+true return value.
+@end defun
+
+
+@defun %domain-fold @var{type} @var{kons} @var{knil} @var{domain}
+Fold @var{kons} over the values in the domain.
+@end defun
+
+
+@defun %domain->list @var{type} @var{domain}
+Return a list holding all the elements in the domain.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Miscellaneous operations
+
+
+@defun %range-concatenate @var{type} @var{range-a} @var{range-b}
+Concatenate the ranges and return the resulting range.  It does not
+matter which range has start less than the other.  It makes sense to
+apply this function to ranges that satisfy @func{%range-contiguous?}.
+
+The returned range may share some value with the original ranges.
+@end defun
+
+@c end of file

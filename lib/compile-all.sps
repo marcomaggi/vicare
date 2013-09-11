@@ -97,6 +97,8 @@
   (only (vicare containers strings))
   (only (vicare containers strings rabin-karp))
   (only (vicare containers levenshtein))
+  (only (vicare containers one-dimension-co))
+  (only (vicare containers one-dimension-cc))
 
   (only (vicare net channels))
 

@@ -184,6 +184,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-containers-strings-high.sps		\
 	test-vicare-containers-strings-rabin-karp.sps	\
 	test-vicare-containers-levenshtein.sps		\
+	test-vicare-containers-one-dimension-cc.sps	\
+	test-vicare-containers-one-dimension-co.sps	\
 	\
 	test-irregex.sps				\
 	test-pregexp.sps
