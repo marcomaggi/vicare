@@ -484,12 +484,22 @@ The libraries @library{vicare containers bytevectors s8},
 @library{vicare containers bytevectors u8}, @library{vicare containers
 bytevectors s8low} and @library{vicare containers bytevectors u8low}
 extend the bytevector operations available in the base library;
-@ref{stdlib bytevector, Bytevectors}.  While @library{vicare containers
-bytevectors s8} and @library{vicare containers bytevectors u8} are high
-level interfaces, @library{vicare containers bytevectors s8low} and
-@library{vicare containers bytevectors u8low} are low level interfaces
-with the same functionalities; there is special support for bytevectors
-representing strings in @ascii{} encoding.
+@ref{stdlib bytevector, Bytevectors}.
+
+While @library{vicare containers bytevectors s8} and @library{vicare
+containers bytevectors u8} are high level interfaces, @library{vicare
+containers bytevectors s8low} and @library{vicare containers bytevectors
+u8low} are low level interfaces with the same functionalities; there is
+special support for bytevectors representing strings in @ascii{}
+encoding.
+
+To avoid identifiers collision: it is suggested to import these
+libraries with the prefix @samp{bv.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare containers bytevectors u8) bv.))
+@end example
 
 @menu
 * bytevectors 8 intro::         Introduction.
