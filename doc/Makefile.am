@@ -30,7 +30,7 @@ vicare_scheme_TEXINFOS	= \
 	machinery.texi			\
 	compiler.texi			\
 	\
-	bytevectors.texi
+	bytevectors.texi		\
 	char-sets.texi			\
 	comparisons.texi		\
 	knuth-morris-pratt.texi		\
