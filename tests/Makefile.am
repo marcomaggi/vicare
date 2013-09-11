@@ -127,7 +127,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-numerics-bitwise.sps		\
-	test-vicare-object-properties.sps		\
 	test-vicare-parameters.sps			\
 	test-vicare-parser-logic.sps			\
 	test-vicare-platform.sps			\
@@ -184,6 +183,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-containers-strings-high.sps		\
 	test-vicare-containers-strings-rabin-karp.sps	\
 	test-vicare-containers-levenshtein.sps		\
+	test-vicare-containers-object-properties.sps	\
 	test-vicare-containers-one-dimension-cc.sps	\
 	test-vicare-containers-one-dimension-co.sps	\
 	\
