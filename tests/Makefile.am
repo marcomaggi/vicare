@@ -123,7 +123,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-records-procedural.sps				\
 	test-vicare-records-syntactic.sps				\
 	test-vicare-round.sps						\
-	test-vicare-shared-memory.sps					\
 	test-vicare-string-to-number.sps				\
 	test-vicare-strings.sps						\
 	test-vicare-structs.sps						\
@@ -253,7 +252,7 @@ VICARE_SCHEME_POSIX_TESTS	= \
 	test-vicare-posix-semaphores.sps				\
 	test-vicare-posix-sigwait.sps					\
 	\
-	test-vicare-shared-memory.sps					\
+	test-vicare-posix-processes-shared-memory.sps			\
 	test-vicare-posix-sel.sps					\
 	test-vicare-posix-pid-files.sps					\
 	test-vicare-posix-lock-pid-files.sps				\
