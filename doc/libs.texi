@@ -4721,9 +4721,9 @@ so the value bound to @meta{name} can be modified at will.
 
 The library @library{vicare getopts} implements basic parsing of
 Unix--style command line arguments.  It is meant to be used as
-low--level module in an infrastructure for command line interfaces
-(@acronym{CLI}).  It is alternative to @ansrfi{37}, @ref{srfi args-fold,
-@ansrfi{37} a program argument processor}.
+low--level module in an infrastructure for command line interface
+programs (@acronym{CLI}).  It is alternative to @ansrfi{37}, @ref{srfi
+args-fold, @ansrfi{37} a program argument processor}.
 
 It is suggested to import this library with the prefix @samp{getopts.},
 as in:
