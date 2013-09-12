@@ -211,6 +211,7 @@
 
     ;; characters
     char.vicare-arguments-validation
+    char/false.vicare-arguments-validation
     char-in-ascii-range.vicare-arguments-validation
     char-in-ascii-range/false.vicare-arguments-validation
 
@@ -1404,6 +1405,10 @@
 (define-argument-validation (char who obj)
   (char? obj)
   (assertion-violation who "expected character as argument" obj))
+
+(define-argument-validation (char/false who obj)
+  (or (not obj) (char? obj))
+  (assertion-violation who "expected false or character as argument" obj))
 
 ;;; --------------------------------------------------------------------
 

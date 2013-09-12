@@ -732,7 +732,9 @@ arguments validation}.
 
 
 @deffn {Validation Clause} char @var{obj}
-Succeed if @var{obj} is a character.
+@deffnx {Validation Clause} char/false @var{obj}
+Succeed if @var{obj} is a character.  The second clause also accepts
+@false{}.
 @end deffn
 
 
