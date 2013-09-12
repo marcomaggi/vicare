@@ -196,7 +196,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-net-channels-textual.sps				\
 	\
 	test-irregex.sps						\
-	test-pregexp.sps
+	test-pregexp.sps						\
+	test-vicare-getopts.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps						\

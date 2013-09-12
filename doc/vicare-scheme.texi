@@ -261,6 +261,7 @@ Adapted libraries
 * random::                      Sources of random bits.
 * irregex::                     IrRegular expressions.
 * pregexp::                     Portable regular expressions for Scheme.
+* getopts::                     Parsing command line arguments.
 
 Internals
 
@@ -330,6 +331,7 @@ External documents
 
 @include irregex.texi
 @include pregexp.texi
+@include getopts.texi
 
 @include objects.texi
 @include debug.texi

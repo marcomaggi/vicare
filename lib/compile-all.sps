@@ -110,6 +110,7 @@
 
   (only (vicare irregex))
   (only (vicare pregexp))
+  (only (vicare getopts))
 
   )
 

@@ -53,6 +53,8 @@ Notes for revision 0.3d4
 * Imported  u8 and  s8  bytevectors libraries  from  nausicaa under  the
   hierarchy (vicare containers bytevectors ---).
 
+* Imported getopts library from Nausicaa as (vicare getopts).
+
 
 Notes for revision 0.3d3
 ------------------------
