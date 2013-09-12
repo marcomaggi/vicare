@@ -64,6 +64,8 @@ Notes for revision 0.3d4
 * Imported    enumerations   library    from    Nausicaa   as    (vicare
   language-extensions c-enumerations).
 
+* Imported formations library from Nausicaa as (vicare formations).
+
 
 Notes for revision 0.3d3
 ------------------------

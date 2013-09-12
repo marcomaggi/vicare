@@ -46,6 +46,7 @@ vicare_scheme_TEXINFOS	= \
 	\
 	irregex.texi			\
 	pregexp.texi			\
+	formations.texi			\
 	\
 	missing.texi			\
 	building.texi			\

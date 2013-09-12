@@ -102,7 +102,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/irregex.sls						\
 	vicare/irregex/compat.vicare.sls				\
 	vicare/pregexp.sls						\
-	vicare/getopts.sls
+	vicare/getopts.sls						\
+	vicare/formations.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\

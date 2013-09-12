@@ -276,6 +276,12 @@ many authors, please see the headers of the individual files.
   Some libraries  in the  hierarchy (vicare containers  bytevectors ---)
 are derived from the SRFI 13 reference implementation by Olin Shivers.
 
+  The library  (vicare formations) is derived  from: "format.scm" Common
+LISP  text  output  formatter  for  SLIB.   Written  1992-1994  by  Dirk
+Lutzebaeck.  Authors of the original  version (<1.4) were Ken Dickey and
+Aubrey Jaffer.  Assimilated into Guile  May 1999.  Ported to R6RS Scheme
+and Vicare by Marco Maggi.
+
 
 B. Bug reports
 --------------

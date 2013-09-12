@@ -199,7 +199,9 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	test-irregex.sps						\
 	test-pregexp.sps						\
-	test-vicare-getopts.sps
+	test-vicare-getopts.sps						\
+	test-formations-round.sps					\
+	test-formations-lib.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps						\
