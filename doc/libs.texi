@@ -22,6 +22,7 @@
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
 * variables::                   Defining storage locations.
+* getopts::                     Parsing command line arguments.
 @end menu
 
 @c page
@@ -4708,5 +4709,557 @@ While @func{define} defines a binding which, when exported by a library,
 cannot be modified, @func{define-variable} allocates a storage location,
 so the value bound to @meta{name} can be modified at will.
 @end deffn
+
+@c page
+@node getopts
+@section Parsing command line arguments
+
+
+@cindex @library{vicare getopts}, library
+@cindex Library @library{vicare getopts}
+
+
+The library @library{vicare getopts} implements basic parsing of
+Unix--style command line arguments.  It is meant to be used as
+low--level module in an infrastructure for command line interfaces
+(@acronym{CLI}).  It is alternative to @ansrfi{37}, @ref{srfi args-fold,
+@ansrfi{37} a program argument processor}.
+
+It is suggested to import this library with the prefix @samp{getopts.},
+as in:
+
+@example
+(import (vicare)
+  (prefix (vicare getopts) getopts.))
+@end example
+
+@menu
+* getopts intro::               Introduction.
+* getopts types::               Type definitions.
+* getopts config::              Parser configuration.
+* getopts parser::              Parsing arguments.
+* getopts conditions::          Exceptions and condition objects.
+@end menu
+
+@c page
+@node getopts intro
+@subsection Introduction
+
+
+Command line arguments are available through the @func{command-line}
+function from the @rsixlibrary{programs} library.  For the purposes of
+this documentation, command line arguments are divided into three
+categories:
+
+@table @asis
+@item Option without value
+A string selecting a configuration option that can be turned on or off.
+It can be a single character (brief option) or a full--word (long
+option).
+
+@item Option with value
+A string selecting a value for a configuration option; an option's value
+is a string of any length, including the empty string.
+
+@item Non--option
+A value to be passed to the program.
+@end table
+
+Let's assume that:
+
+@itemize
+@item
+@option{-v}, @option{-i} and @option{-h} are brief options that do not
+require a value.
+
+@item
+@option{-f}, @option{-o} and @option{-I} are brief options that do
+require a value.
+
+@item
+@option{--verbose}, @option{--interactive} and @option{--help} are long
+options that do not require a value.
+
+@item
+@option{--file}, @option{--output} and @option{--include} are long
+options that do require a value.
+@end itemize
+
+@noindent
+the following command line chunks are so interpreted:
+
+@table @code
+@item -vh -o green -i -Iwhite -f red
+The @option{-v}, @option{-h} and @option{-i} options without value; the
+@option{-o} option with value @samp{green}; the @option{-I} option with
+value @samp{white}; the @option{-f} option with value @samp{red}.
+
+@item --verbose --help --output=green --interactive
+@itemx --include white --file=red
+The @option{--verbose}, @option{--help} and @option{--interactive}
+options without value; the @option{--output} option with value
+@samp{green}; the @option{--include} option with value @samp{white}; the
+@option{--file} option with value @samp{red}.
+@end table
+
+The argument @code{--} is recognised as ``end of options'' marker: All
+the arguments following it are interpreted as non--options, even if
+their string starts with a dash or double dash.
+
+Chains of brief options are allowed: The options @option{-v},
+@option{-i} and @option{-h} can be selected with the single argument
+@code{-vih}.  Notice, though, that only options with no value can be
+chained; an option with value can appear only as last in the train, with
+no value attached.  For example:
+
+@example
+-vihI white
+@end example
+
+@noindent
+is interpreted as the options @option{-v}, @option{-i} and @option{-h}
+with no value followed by the option @option{-I} with value
+@samp{white}; the following:
+
+@example
+-vihIwhite              ;forbidden
+@end example
+
+@noindent
+could be made possible but, being unreadable, it is forbidden.
+
+Notice that a single dash, @samp{-}, is a valid non--option argument.
+
+@c page
+@node getopts types
+@subsection Type definitions
+
+
+@deftp Class @aclass{option}
+Type of records representing command line options.
+@end deftp
+
+
+@defcv {Immutable Field} @aclass{option} brief
+A Scheme character representing a dash plus single character (brief)
+option selector; to specify an option with no brief selector, we can set
+this field to @false{}.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{option} long
+A Scheme string representing a long option selector, without the
+double--dash prefix; to specify an option with no long selector, we can
+set this field to @false{}.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{option} requires-argument?
+Boolean, true if this option requires an argument.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{option} description
+Scheme string describing this option, to be used in help screens.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{option} action
+Semantic action, a closure to be invoked when this option is found on
+the command line.
+
+@itemize
+@item
+If the field @code{requires-argument?} is set to @false{}: the closure
+is applied to a single value being the @class{option} record
+representing the option.
+
+@item
+If the field @code{requires-argument?} is set to @true{}: the closure is
+applied to two values being the @class{option} record representing the
+option and the Scheme string representing the option's value.
+@end itemize
+
+We have to remember that @class{option} records can be compared with
+@func{eq?}.
+@end defcv
+
+
+@defop Syntax @aclass{option} make* @aclass{option} @var{brief} @var{long} @var{requires-argument?} @var{description} @var{action}
+Build and return a new @class{option} record.
+@end defop
+
+
+@defop Syntax @aclass{option} is-a? @var{obj} @aclass{option}
+Return true if @var{obj} is a record of type @class{option}.
+@end defop
+
+
+@defun <option>? @var{obj}
+Return true if @var{obj} is a record of type @class{option}.
+@end defun
+
+
+@deffn Syntax define-option @meta{name} @meta{clause} ...
+@deffnx {Auxiliary Syntax} brief: @meta{char}
+@deffnx {Auxiliary Syntax} long: @meta{string}
+@deffnx {Auxiliary Syntax} requires-argument: @meta{bool}
+@deffnx {Auxiliary Syntax} description: @meta{string}
+@deffnx {Auxiliary Syntax} action: @meta{function}
+Build a new @class{option} record and bind it to @meta{name}, which
+must be a Scheme symbol.  All the @meta{clause} arguments must be
+subforms with an auxiliary syntactic keyword as first element.  Example:
+
+@example
+(define-option interactive
+  (brief:               #\i)
+  (long:                "interactive")
+  (requires-argument:   #f)
+  (description:         "ask the user first")
+  (action:              (lambda (option) ---)))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Traditional records @api{}
+
+
+@defun make-<option> @var{brief} @var{long} @var{requires-argument?} @var{description} @var{action}
+Build and return a new @class{option} record.
+@end defun
+
+
+@defun <option>? @var{obj}
+Return true if @var{obj} is a record of type @class{option}.
+@end defun
+
+
+@defun <option>-brief @var{record}
+@defunx <option>-long @var{record}
+@defunx <option>-requires-argument? @var{record}
+@defunx <option>-description @var{record}
+@defunx <option>-action @var{record}
+Accessors for the fields of an @class{option} record.
+@end defun
+
+@c page
+@node getopts config
+@subsection Parser configuration
+
+
+@deftp Enumeration getopts-configuration
+Enumeration to be used to configure the @func{getopts} parser.  It
+contains the following symbols:
+
+@table @code
+@item delayed
+If given, action closures invocations are returned in a list rather that
+immediately evaluated; this allows @func{getopts} to parse the whole
+command line without changing the state of the program.
+
+The returned list has a thunk for each semantic action, in the same
+order in which the corresponding arguments appear on the command line.
+We can evaluate the thunks with:
+
+@example
+(let ((thunks (getopts ---)))
+  (for-each (lambda (T) (T)) thunks))
+@end example
+
+@item ignore-multiple-double-dashes
+The first double--dash argument, @samp{--}, always marks the end of
+options.  If this option is given, multiple @samp{--} after the first
+are all ignored; else they are interpreted as non--option arguments.
+@end table
+@end deftp
+
+
+@deffn Syntax getopts-options @var{symbol} ...
+Expand into an enumerated set of symbols to be used to configure the
+operations of the @func{getopts} parser.
+@end deffn
+
+@c page
+@node getopts parser
+@subsection Parsing arguments
+
+
+@defun getopts @var{command-line} @var{options} @var{argument-action}
+@defunx getopts @var{command-line} @var{options} @var{argument-action} @var{config-options}
+Parse the Scheme strings in the list @var{command-line} as command line
+arguments, according to the options described by the list @var{options}
+of @class{option} records.  If the configuration option @code{delayed} is
+not used, the return value is @false{}.
+
+@var{argument-action} must be a Scheme function accepting a single
+argument: a Scheme string representing a command line non--option.
+
+The optional @var{config-options} must be an enumerated set of values
+from the @code{getopts-configuration} enumeration.
+@end defun
+
+
+Meaningless usage example:
+
+@example
+(import (rnrs)
+  (vicare getopts))
+
+(define result #f)
+
+(let-syntax
+    ((set-cons! (syntax-rules ()
+                  ((_ ?name ?form)
+                   (set! ?name (cons ?form ?name))))))
+
+  (define (register-with opt val)
+    (set-cons! result (list (<option>-long opt) val)))
+
+  (define (register-without opt)
+    (set-cons! result (list (<option>-long opt))))
+
+  (define (register-non-option arg)
+    (set-cons! result arg)))
+
+(define-option interactive
+  (brief:               #\i)
+  (long:                "interactive")
+  (requires-argument:   #f)
+  (description:         "ask the user first")
+  (action:              register-without))
+
+(define-option force
+  (brief:               #\f)
+  (long:                "force")
+  (requires-argument:   #f)
+  (description:         "hurt me plenty")
+  (action:              register-without))
+
+(define-option help
+  (brief:               #\h)
+  (long:                "help")
+  (requires-argument?:  #f)
+  (description:         "print help screen")
+  (action:              register-without))
+
+(define-option file
+  (brief:               #\F)
+  (long:                "file")
+  (requires-argument:   #t)
+  (description:         "input file")
+  (action:              register-with))
+
+(define-option archive
+  (brief:               #\A)
+  (long:                "archive")
+  (requires-argument:   #t)
+  (description:         "output archive")
+  (action:              register-with))
+
+(getopts (command-line)
+         (list interactive force help file archive)
+         register-non-option
+         (getopts-options ignore-multiple-double-dashes))
+@end example
+
+@c page
+@node getopts conditions
+@subsection Exceptions and condition objects
+
+
+When @func{getopts} detects an error in the input command line
+arguments, it raises a continuable exception; returning from the
+exception is possible and makes @func{getopts} go on parsing with the
+next argument.  It is not always advisable to continue parsing after an
+error has been signaled.
+
+The raised exception values are compound condition of the types
+described below.
+
+@c ------------------------------------------------------------
+
+@subsubheading Base condition object
+
+
+@deftp {Condition Type} &getopts
+Base type for all the condition objects thrown by @func{getopts}; it is
+derived from @condition{error}.  It has no fields.
+@end deftp
+
+
+@defun make-getopts-condition
+@defunx getopts-condition? @var{obj}
+Constructor and predicate for the @condition{getopts} condition object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Option data object
+
+
+@deftp {Condition Type} &option
+Data condition type used to hold records of type @class{option}
+describing an option involved in an error; it is derived from
+@condition{condition}.
+@end deftp
+
+
+@defun make-option-condition @var{option-record}
+@defunx option-condition? @var{obj}
+Constructor and predicate for the @condition{option} condition object.
+@end defun
+
+
+@defun condition-option @var{option-condition}
+Accessor for the @code{option} field of a @condition{option} condition
+object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Argument data object
+
+
+@deftp {Condition Type} &argument
+Data condition type used to hold Scheme strings representing command
+line arguments involved in an error; it is derived from
+@condition{condition}.
+@end deftp
+
+
+@defun make-argument-condition @var{argument-string}
+@defunx argument-condition? @var{obj}
+Constructor and predicate for the @condition{argument} condition object.
+@end defun
+
+
+@defun condition-argument @var{argument-condition}
+Accessor for the @code{argument} field of a @condition{argument} condition
+object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Option selector data object
+
+
+@deftp {Condition Type} &brief/long
+Data condition type used to hold Scheme strings or characters
+representing option selectors involved in an error; it is derived from
+@condition{condition}.
+@end deftp
+
+
+@defun make-brief/long-condition @var{brief/long-string}
+@defunx brief/long-condition? @var{obj}
+Constructor and predicate for the @condition{brief/long} condition object.
+@end defun
+
+
+@defun condition-brief/long @var{brief/long-condition}
+Accessor for the field of a @condition{brief/long} condition object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Unknown option error
+
+
+@deftp {Condition Type} &unknown-option
+Condition type used to signal an ``unknown option'' error; it is derived
+from @condition{getopts}.  It has no fields.
+@end deftp
+
+
+@defun make-unknown-option-condition
+@defunx unknown-option-condition? @var{obj}
+Constructor and predicate for @condition{unknown-option} condition objects.
+@end defun
+
+
+@defun raise-unknown-option @var{who} @var{brief/long} @var{argument} @var{message}
+Raise a continuable exception describing an ``unknown option'' error;
+the raised object is a compound condition with components of the
+following types: @condition{who}, @condition{brief/long}, @condition{argument},
+@condition{message}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Option requires value error
+
+
+@deftp {Condition Type} &option-requires-value
+Condition type used to signal an ``option requires value'' error; it is
+derived from @condition{getopts}.  It has no fields.
+@end deftp
+
+
+@defun make-option-requires-value-condition
+@defunx option-requires-value-condition? @var{obj}
+Constructor and predicate for @condition{option-requires-value} condition
+objects.
+@end defun
+
+
+@defun raise-option-requires-value @var{who} @var{option} @var{argument} @var{message}
+Raise a continuable exception describing an ``option requires value''
+error; the raised object is a compound condition with components of the
+following types: @condition{who}, @condition{option}, @condition{argument},
+@condition{message}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Option requires no value error
+
+
+@deftp {Condition Type} &option-requires-no-value
+Condition type used to signal an ``option requires no value'' error; it
+is derived from @condition{getopts}.  It has no fields.
+@end deftp
+
+
+@defun make-option-requires-no-value-condition
+@defunx option-requires-no-value-condition? @var{obj}
+Constructor and predicate for @condition{option-requires-no-value} condition
+objects.
+@end defun
+
+
+@defun raise-option-requires-no-value @var{who} @var{option} @var{argument} @var{message}
+Raise a continuable exception describing an ``option requires no value''
+error; the raised object is a compound condition with components of the
+following types: @condition{who}, @condition{option}, @condition{argument},
+@condition{message}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Invalid option error
+
+
+@deftp {Condition Type} &invalid-option
+Condition type used to signal an ``invalid option'' error; it is derived
+from @condition{getopts}.  It has no fields.
+@end deftp
+
+
+@defun make-invalid-option-condition
+@defunx invalid-option-condition? @var{obj}
+Constructor and predicate for @condition{invalid-option} condition objects.
+@end defun
+
+
+@defun raise-invalid-option @var{who} @var{option} @var{argument} @var{message}
+Raise a continuable exception describing an ``invalid option'' error;
+the raised object is a compound condition with components of the
+following types: @condition{who}, @condition{option},
+@condition{argument}, @condition{message}.
+@end defun
+
+@c end of file
+
 
 @c end of file
