@@ -45,6 +45,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d4
 ------------------------
 
+* Added CASE-IDENTIFIERS to (vicare langauge-extensions syntaxes).
+
 * Imported one-dimension  libraries from Nausicaa as  (vicare containers
   one-dimension-cc) and (vicare containers one-dimension-co).
 
