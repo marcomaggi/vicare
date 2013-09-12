@@ -2501,6 +2501,15 @@ Like @func{callet}, but define local @func{let*} bindings for the
 @end example
 @end defmac
 
+
+@deffn Syntax set-cons! @meta{who} @meta{obj}
+Expand to:
+
+@example
+(set! @meta{who} (cons @meta{obj} @meta{who}))
+@end example
+@end deffn
+
 @c page
 @node custom-ports
 @section Custom ports
