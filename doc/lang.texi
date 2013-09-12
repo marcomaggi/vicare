@@ -14,6 +14,7 @@
 * custom-ports::                Custom ports.
 * asciis::                      Utilities for @ascii{} characters.
 * hooks::                       Running lists of functions.
+* callables::                   Callable objects.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
@@ -2711,7 +2712,61 @@ Run all the hook functions applying them to the given arguments.  Return
 unspecified values.
 @end defun
 
-@c end of file
+@c page
+@node callables
+@section Callable objects
+
+
+@cindex @library{vicare language-extensions callables}, library
+@cindex Library @library{vicare language-extensions callables}
+
+
+The library @library{vicare language-extensions callables} allows the
+definition of @dfn{callable objects}: closure objects associated to an
+object used as first argument in every call.  Here is an example of
+callable object:
+
+@example
+(import (vicare)
+  (vicare language-extensions callables))
+
+(define C
+  (callable 123 (lambda (self delta)
+                  (+ delta self))))
+
+(callable? C)           @result{} #t
+(callable-object C)     @result{} 123
+(C 9000)                @result{} 9123
+@end example
+
+
+@deffn Syntax callable @meta{object} @meta{function}
+Build and return a new callable object associated to @meta{object} and
+having @meta{function} as callable procedure.
+@end deffn
+
+
+@defun callable? @meta{obj}
+Return @true{} if @meta{obj} is a callable object, otherwise return
+@false{}.  Notice that a callable object satisfies @func{procedure?}.
+@end defun
+
+
+@deffn {Validation Clause} callable @var{obj}
+@deffnx {Validation Clause} callable/false @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is a
+callable object; the second clause also accepts @false{}.
+@end deffn
+
+
+@defun callable-object @var{callable}
+@defunx $callable-object @var{callable}
+Return the object associated to the callable object @var{callable}.
+@func{$callable-data} is the unsafe version which does not validate its
+argument prior to accessing its internal fields.
+@end defun
+
 @c page
 
 @include streams.texi

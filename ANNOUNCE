@@ -47,6 +47,9 @@ Notes for revision 0.3d4
 
 * Added CASE-IDENTIFIERS to (vicare langauge-extensions syntaxes).
 
+* Added   callable  objects   as  library   (vicare  language-extensions
+  callables), see the documentation node "callables".
+
 * Imported one-dimension  libraries from Nausicaa as  (vicare containers
   one-dimension-cc) and (vicare containers one-dimension-co).
 

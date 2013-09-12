@@ -154,13 +154,14 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-arguments-general-c-buffers.sps			\
 	\
 	test-vicare-language-extensions.sps				\
-	test-vicare-language-extensions-cond-expand.sps			\
 	test-vicare-language-extensions-amb.sps				\
-	test-vicare-language-extensions-hooks.sps			\
 	test-vicare-language-extensions-ascii-chars.sps			\
-	test-vicare-language-extensions-custom-ports.sps		\
-	test-vicare-language-extensions-coroutines.sps			\
+	test-vicare-language-extensions-callables.sps			\
 	test-vicare-language-extensions-comparisons.sps			\
+	test-vicare-language-extensions-cond-expand.sps			\
+	test-vicare-language-extensions-coroutines.sps			\
+	test-vicare-language-extensions-custom-ports.sps		\
+	test-vicare-language-extensions-hooks.sps			\
 	test-vicare-language-extensions-infix.sps			\
 	test-vicare-language-extensions-keywords.sps			\
 	test-vicare-language-extensions-loops.sps			\
