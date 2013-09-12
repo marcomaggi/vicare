@@ -2425,6 +2425,19 @@ datums.  @func{else} must be the binding exported by @library{rnrs} and
 behaviour is undefined.
 @end deffn
 
+
+@deffn Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only identifiers as
+datums; identifiers are compared with @func{free-identifier=?}.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to an identifier, else the
+behaviour is undefined.
+@end deffn
+
 @c page
 @node syntaxes args
 @subsection Arguments validation
