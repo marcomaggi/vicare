@@ -29,24 +29,25 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls					\
 	\
 	vicare/language-extensions/amb.sls				\
-	vicare/language-extensions/simple-match.sls			\
-	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/ascii-chars.sls			\
+	vicare/language-extensions/callables.sls			\
+	vicare/language-extensions/comparisons.sls			\
 	vicare/language-extensions/coroutines.sls			\
+	vicare/language-extensions/custom-ports.sls			\
+	vicare/language-extensions/define-record-extended.sls		\
+	vicare/language-extensions/hooks.sls				\
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/keywords.sls				\
-	vicare/language-extensions/custom-ports.sls			\
-	vicare/language-extensions/sentinels.sls			\
-	vicare/language-extensions/namespaces.sls			\
-	vicare/language-extensions/variables.sls			\
-	vicare/language-extensions/streams.sls				\
 	vicare/language-extensions/loops.sls				\
-	vicare/language-extensions/ascii-chars.sls			\
-	vicare/language-extensions/comparisons.sls			\
-	vicare/language-extensions/hooks.sls				\
-	vicare/language-extensions/callables.sls			\
+	vicare/language-extensions/namespaces.sls			\
+	vicare/language-extensions/sentinels.sls			\
+	vicare/language-extensions/simple-match.sls			\
+	vicare/language-extensions/streams.sls				\
+	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/variables.sls			\
 	\
-	vicare/crypto/randomisations/low.sls				\
 	vicare/crypto/randomisations.sls				\
+	vicare/crypto/randomisations/low.sls				\
 	vicare/crypto/randomisations/blum-blum-shub.sls			\
 	vicare/crypto/randomisations/borosh.sls				\
 	vicare/crypto/randomisations/cmrg.sls				\

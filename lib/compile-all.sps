@@ -59,6 +59,7 @@
   (only (vicare language-extensions comparisons))
   (only (vicare language-extensions hooks))
   (only (vicare language-extensions callables))
+  (only (vicare language-extensions define-record-extended))
 
   (only (vicare crypto randomisations low))
   (only (vicare crypto randomisations))
