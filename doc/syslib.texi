@@ -5172,6 +5172,11 @@ the result.  The resulting string must have length @var{total-len}.
 Assume the arguments have been already validated.
 @end defun
 
+
+@defun {Unsafe Operation} $interned-strings
+Return a vector holding the currently interned strings.
+@end defun
+
 @c page
 @node syslib ports
 @section Low level port structures

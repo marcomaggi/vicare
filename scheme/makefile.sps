@@ -284,6 +284,7 @@
     "ikarus.io.sls"
     "ikarus.pretty-formats.sls"
     "ikarus.writer.sls"
+    "ikarus.strings-table.sls"
     "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
@@ -829,6 +830,7 @@
     ($string-total-length			$strings $vicare-strings)
     ($string-concatenate			$strings $vicare-strings)
     ($string-reverse-and-concatenate		$strings $vicare-strings)
+    ($interned-strings				$strings $vicare-strings)
 ;;
     ($make-bytevector				$bytes $vicare-bytes)
     ($bytevector-length				$bytes $vicare-bytes)

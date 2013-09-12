@@ -191,6 +191,7 @@ EXTRA_DIST= \
 	ikarus.sort.sls					\
 	ikarus.string-to-number.sls 			\
 	ikarus.strings.sls				\
+	ikarus.strings-table.sls			\
 	ikarus.structs.sls				\
 	ikarus.symbol-table.sls				\
 	ikarus.symbols.sls				\

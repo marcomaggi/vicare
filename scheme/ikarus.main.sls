@@ -95,6 +95,8 @@
 	  read-script-source-file)
     (only (ikarus.symbol-table)
 	  $initialize-symbol-table!)
+    (only (ikarus.strings-table)
+	  $initialize-interned-strings-table!)
     (prefix (only (ikarus load)
 		  load
 		  load-r6rs-script
@@ -1124,9 +1126,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;;; some utility modules
 
 (module ()
-  ;;See "ikarus.symbol-table.ss"  for an  explanation of  this.  Nothing
+  ;;See "ikarus.symbol-table.sls"  for an explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
-  ($initialize-symbol-table!))
+  ($initialize-symbol-table!)
+  ;;See "ikarus.strings.table.sls".
+  ($initialize-interned-strings-table!))
 
 
 ;;;; automatic struct finalisation
