@@ -4802,11 +4802,11 @@ options without value; the @option{--output} option with value
 @option{--file} option with value @samp{red}.
 @end table
 
-The argument @code{--} is recognised as ``end of options'' marker: All
+The argument @code{--} is recognised as ``end of options'' marker: all
 the arguments following it are interpreted as non--options, even if
 their string starts with a dash or double dash.
 
-Chains of brief options are allowed: The options @option{-v},
+Chains of brief options are allowed: the options @option{-v},
 @option{-i} and @option{-h} can be selected with the single argument
 @code{-vih}.  Notice, though, that only options with no value can be
 chained; an option with value can appear only as last in the train, with
@@ -4835,112 +4835,96 @@ Notice that a single dash, @samp{-}, is a valid non--option argument.
 @subsection Type definitions
 
 
-@deftp Class @aclass{option}
+@deftp {@rnrs{6} Record Type} command-line-option
 Type of records representing command line options.
 @end deftp
 
 
-@defcv {Immutable Field} @aclass{option} brief
+@defcv {Immutable Field} command-line-option brief
 A Scheme character representing a dash plus single character (brief)
 option selector; to specify an option with no brief selector, we can set
 this field to @false{}.
 @end defcv
 
 
-@defcv {Immutable Field} @aclass{option} long
+@defcv {Immutable Field} command-line-option long
 A Scheme string representing a long option selector, without the
 double--dash prefix; to specify an option with no long selector, we can
 set this field to @false{}.
 @end defcv
 
 
-@defcv {Immutable Field} @aclass{option} requires-argument?
+@defcv {Immutable Field} command-line-option requires-argument?
 Boolean, true if this option requires an argument.
 @end defcv
 
 
-@defcv {Immutable Field} @aclass{option} description
+@defcv {Immutable Field} command-line-option description
 Scheme string describing this option, to be used in help screens.
 @end defcv
 
 
-@defcv {Immutable Field} @aclass{option} action
+@defcv {Immutable Field} command-line-option action
 Semantic action, a closure to be invoked when this option is found on
 the command line.
 
 @itemize
 @item
 If the field @code{requires-argument?} is set to @false{}: the closure
-is applied to a single value being the @class{option} record
+is applied to a single value being the @code{command-line-option} record
 representing the option.
 
 @item
 If the field @code{requires-argument?} is set to @true{}: the closure is
-applied to two values being the @class{option} record representing the
-option and the Scheme string representing the option's value.
+applied to two values being the @code{command-line-option} record
+representing the option and the Scheme string representing the option's
+value.
 @end itemize
 
-We have to remember that @class{option} records can be compared with
-@func{eq?}.
+We have to remember that @code{command-line-option} records can be
+compared with @func{eq?}.
 @end defcv
 
 
-@defop Syntax @aclass{option} make* @aclass{option} @var{brief} @var{long} @var{requires-argument?} @var{description} @var{action}
-Build and return a new @class{option} record.
-@end defop
-
-
-@defop Syntax @aclass{option} is-a? @var{obj} @aclass{option}
-Return true if @var{obj} is a record of type @class{option}.
-@end defop
-
-
-@defun <option>? @var{obj}
-Return true if @var{obj} is a record of type @class{option}.
+@defun make-command-line-option @var{brief} @var{long} @var{requires-argument?} @var{description} @var{action}
+Build and return a new @code{command-line-option} record.
 @end defun
 
 
-@deffn Syntax define-option @meta{name} @meta{clause} ...
-@deffnx {Auxiliary Syntax} brief: @meta{char}
-@deffnx {Auxiliary Syntax} long: @meta{string}
-@deffnx {Auxiliary Syntax} requires-argument: @meta{bool}
-@deffnx {Auxiliary Syntax} description: @meta{string}
-@deffnx {Auxiliary Syntax} action: @meta{function}
-Build a new @class{option} record and bind it to @meta{name}, which
-must be a Scheme symbol.  All the @meta{clause} arguments must be
-subforms with an auxiliary syntactic keyword as first element.  Example:
+@defun command-line-option? @var{obj}
+Return @true{} if @var{obj} is a record of type
+@code{command-line-option}, otherwise return @false{}.
+@end defun
+
+
+@deffn Syntax define-command-line-option @meta{name} @meta{clause} ...
+@deffnx {Auxiliary Syntax} brief @meta{char}
+@deffnx {Auxiliary Syntax} long @meta{string}
+@deffnx {Auxiliary Syntax} requires-argument @meta{bool}
+@deffnx {Auxiliary Syntax} description @meta{string}
+@deffnx {Auxiliary Syntax} action @meta{function}
+Build a new @code{command-line-option} record and bind it to
+@meta{name}, which must be a Scheme symbol.  All the @meta{clause}
+arguments must be subforms with an auxiliary syntactic keyword as first
+element.  Example:
 
 @example
-(define-option interactive
-  (brief:               #\i)
-  (long:                "interactive")
-  (requires-argument:   #f)
-  (description:         "ask the user first")
-  (action:              (lambda (option) ---)))
+(define-command-line-option interactive
+  (brief               #\i)
+  (long                "interactive")
+  (requires-argument   #f)
+  (description         "ask the user first")
+  (action              (lambda (option) ---)))
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
 
-@subsubheading Traditional records @api{}
-
-
-@defun make-<option> @var{brief} @var{long} @var{requires-argument?} @var{description} @var{action}
-Build and return a new @class{option} record.
-@end defun
-
-
-@defun <option>? @var{obj}
-Return true if @var{obj} is a record of type @class{option}.
-@end defun
-
-
-@defun <option>-brief @var{record}
-@defunx <option>-long @var{record}
-@defunx <option>-requires-argument? @var{record}
-@defunx <option>-description @var{record}
-@defunx <option>-action @var{record}
-Accessors for the fields of an @class{option} record.
+@defun command-line-option-brief @var{opt}
+@defunx command-line-option-long @var{opt}
+@defunx command-line-option-requires-argument? @var{opt}
+@defunx command-line-option-description @var{opt}
+@defunx command-line-option-action @var{opt}
+Accessors for the fields of a @code{command-line-option} record.
 @end defun
 
 @c page
@@ -4989,8 +4973,8 @@ operations of the @func{getopts} parser.
 @defunx getopts @var{command-line} @var{options} @var{argument-action} @var{config-options}
 Parse the Scheme strings in the list @var{command-line} as command line
 arguments, according to the options described by the list @var{options}
-of @class{option} records.  If the configuration option @code{delayed} is
-not used, the return value is @false{}.
+of @code{command-line-option} records.  If the configuration option
+@code{delayed} is not used, the return value is @false{}.
 
 @var{argument-action} must be a Scheme function accepting a single
 argument: a Scheme string representing a command line non--option.
@@ -5003,59 +4987,56 @@ from the @code{getopts-configuration} enumeration.
 Meaningless usage example:
 
 @example
-(import (rnrs)
-  (vicare getopts))
+(import (vicare)
+  (vicare getopts)
+  (only (vicare language-extensions syntaxes)
+        set-cons!))
 
 (define result #f)
 
-(let-syntax
-    ((set-cons! (syntax-rules ()
-                  ((_ ?name ?form)
-                   (set! ?name (cons ?form ?name))))))
+(define (register-with opt val)
+  (set-cons! result (list (command-line-option-long opt) val)))
 
-  (define (register-with opt val)
-    (set-cons! result (list (<option>-long opt) val)))
+(define (register-without opt)
+  (set-cons! result (list (command-line-option-long opt))))
 
-  (define (register-without opt)
-    (set-cons! result (list (<option>-long opt))))
+(define (register-non-option arg)
+  (set-cons! result arg))
 
-  (define (register-non-option arg)
-    (set-cons! result arg)))
+(define-command-line-option interactive
+  (brief               #\i)
+  (long                "interactive")
+  (requires-argument   #f)
+  (description         "ask the user first")
+  (action              register-without))
 
-(define-option interactive
-  (brief:               #\i)
-  (long:                "interactive")
-  (requires-argument:   #f)
-  (description:         "ask the user first")
-  (action:              register-without))
+(define-command-line-option force
+  (brief               #\f)
+  (long                "force")
+  (requires-argument   #f)
+  (description         "hurt me plenty")
+  (action              register-without))
 
-(define-option force
-  (brief:               #\f)
-  (long:                "force")
-  (requires-argument:   #f)
-  (description:         "hurt me plenty")
-  (action:              register-without))
+(define-command-line-option help
+  (brief               #\h)
+  (long                "help")
+  (requires-argument?  #f)
+  (description         "print help screen")
+  (action              register-without))
 
-(define-option help
-  (brief:               #\h)
-  (long:                "help")
-  (requires-argument?:  #f)
-  (description:         "print help screen")
-  (action:              register-without))
+(define-command-line-option file
+  (brief               #\F)
+  (long                "file")
+  (requires-argument   #t)
+  (description         "input file")
+  (action              register-with))
 
-(define-option file
-  (brief:               #\F)
-  (long:                "file")
-  (requires-argument:   #t)
-  (description:         "input file")
-  (action:              register-with))
-
-(define-option archive
-  (brief:               #\A)
-  (long:                "archive")
-  (requires-argument:   #t)
-  (description:         "output archive")
-  (action:              register-with))
+(define-command-line-option archive
+  (brief               #\A)
+  (long                "archive")
+  (requires-argument   #t)
+  (description         "output archive")
+  (action              register-with))
 
 (getopts (command-line)
          (list interactive force help file archive)
@@ -5099,9 +5080,9 @@ Constructor and predicate for the @condition{getopts} condition object.
 
 
 @deftp {Condition Type} &option
-Data condition type used to hold records of type @class{option}
-describing an option involved in an error; it is derived from
-@condition{condition}.
+Data condition type used to hold records of type
+@code{command-line-option} describing an option involved in an error; it
+is derived from @condition{condition}.
 @end deftp
 
 
