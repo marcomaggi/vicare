@@ -15,6 +15,7 @@
 * asciis::                      Utilities for @ascii{} characters.
 * hooks::                       Running lists of functions.
 * callables::                   Callable objects.
+* c-enums::                     C language flags and flags combinations.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
@@ -2766,6 +2767,149 @@ Return the object associated to the callable object @var{callable}.
 @func{$callable-data} is the unsafe version which does not validate its
 argument prior to accessing its internal fields.
 @end defun
+
+@c page
+@node c-enums
+@section C language flags and flags combinations
+
+
+@cindex @library{vicare language-extensions c-enumerations}, library
+@cindex Library @library{vicare language-extensions c-enumerations}
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions c-enumerations}.
+
+
+@deffn Syntax define-c-flags @meta{name} (@metao{flag} @meta{flag} ...) (@metao{symbol} @meta{symbol} ...)
+Define a new enumeration type and a couple of functions to convert
+between enumeration sets of this type and other objects.  Usage example:
+
+@example
+(define A 1)
+(define B 2)
+(define C 3)
+
+(define-c-flags things
+  (A B C)
+  (a b c))
+
+(things->value (things a)) @result{} 1
+(things->value (things b)) @result{} 2
+(things->value (things c)) @result{} 3
+
+(value->things 1) @result{} (things a)
+(value->things 2) @result{} (things b)
+(value->things 3) @result{} (things c)
+@end example
+
+@noindent
+when used in a library, we can do the following to export the interface:
+
+@example
+(library (things)
+  (export things things->value value->things)
+  (import (rnrs))
+  (define A 1)
+  (define B 2)
+  (define C 3)
+  (define-c-flags things
+    (A B C)
+    (a b c)))
+@end example
+
+The typical use of this syntax is to define an interface for C language
+foreign constants.
+
+@meta{name} must be an identifier to which an enumeration set
+constructor syntax is bound; the syntax accepts only a single symbol as
+argument and it expands to an enumeration set with that symbol as
+element.
+
+The enumeration type is @code{enum-@meta{name}} and the original
+constructor syntax accepting any number of arguments is
+@code{%@meta{name}}.
+
+The @meta{flag} arguments are meant to be identifiers bound to any
+Scheme value, but they can be any value.  The @meta{symbol} arguments
+must be Scheme symbols which are used to define (in the given order) the
+universe of the enumeration.
+
+The function which converts from an enumeration set (holding a single
+argument) to the corresponding value is bound to
+@code{@meta{name}->value}.  The function which converts from a value to
+the enumeration set (holding a single argument) is bound to
+@code{value->@meta{name}}.
+@end deffn
+
+
+@deffn Syntax define-c-ior-flags @meta{name} (@metao{flag} @meta{flag} ...) (@metao{symbol} @meta{symbol} ...)
+Define a new enumeration type and a couple of functions to convert
+between enumeration sets of this type and a bitwise, inclusive, OR
+combination of exact integers.  Usage example:
+
+@example
+(define A (bitwise-arithmetic-shift-left 1 0))
+(define B (bitwise-arithmetic-shift-left 1 1))
+(define C (bitwise-arithmetic-shift-left 1 2))
+
+(define-c-ior-flags things
+  (A B C)
+  (a b c))
+
+(things->value (things a))      @result{} 1
+(things->value (things b))      @result{} 2
+(things->value (things a b))    @result{} 3
+(things->value (things c))      @result{} 4
+(things->value (things a c))    @result{} 5
+(things->value (things b c))    @result{} 6
+(things->value (things a b c))  @result{} 7
+
+(value->things 1) @result{} (things a)
+(value->things 2) @result{} (things b)
+(value->things 5) @result{} (things a c)
+@end example
+
+@noindent
+when used in a library, we can do the following to export the interface:
+
+@example
+(library (things)
+  (export things things->value value->things)
+  (import (rnrs))
+  (define A (bitwise-arithmetic-shift-left 1 0))
+  (define B (bitwise-arithmetic-shift-left 1 1))
+  (define C (bitwise-arithmetic-shift-left 1 2))
+  (define-c-ior-flags things
+    (A B C)
+    (a b c)))
+@end example
+
+The typical use of this syntax is to define an interface for C language
+foreign constants used as flags in inclusive OR combinations.
+
+@meta{name} must be an identifier to which an enumeration set
+constructor syntax is bound; the syntax accepts any number of symbols as
+arguments and it expands to an enumeration set with that symbols as
+elements.  The enumeration type is @code{enum-@meta{name}}.
+
+The @meta{flag} arguments must be identifiers bound to exact integers.
+The @meta{symbol} arguments must be Scheme symbols which are used to
+define (in the given order) the universe of the enumeration.
+
+The function which converts from an enumeration set to the corresponding
+bitwise, inclusive OR combination is bound to
+@code{@meta{name}->value}.  An assertion violation is raised if this
+function is applied to an enumeration set of the wrong type.
+
+The function which converts from a bitwise, inclusive OR combination to
+the enumeration set is bound to @code{value->@meta{name}}.  If this
+function is applied to an integer holding bits outside the ones coded in
+the definition of the enumeration, no error is raised.
+@end deffn
+
+@c end of file
+
 
 @c page
 

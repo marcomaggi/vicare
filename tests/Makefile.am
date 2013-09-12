@@ -156,6 +156,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-language-extensions.sps				\
 	test-vicare-language-extensions-amb.sps				\
 	test-vicare-language-extensions-ascii-chars.sps			\
+	test-vicare-language-extensions-c-enumerations.sps		\
 	test-vicare-language-extensions-callables.sps			\
 	test-vicare-language-extensions-comparisons.sps			\
 	test-vicare-language-extensions-cond-expand.sps			\
