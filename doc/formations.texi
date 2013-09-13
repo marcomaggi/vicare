@@ -113,8 +113,8 @@ empty to keep its default value when supplying later parameters.
 @section Escape sequences for generic values
 
 
-@deffn Escape ~a
-@deffnx Escape ~s
+@deffn {Format Escape Sequence} ~a
+@deffnx {Format Escape Sequence} ~s
 Object output.  Parameters: @var{minwidth}, @var{padinc},
 @var{minpad}, @var{padchar}.
 
@@ -201,7 +201,7 @@ More examples:
 @section Escape sequences for characters
 
 
-@deffn Escape ~c
+@deffn {Format Escape Sequence} ~c
 Character.  Parameter: @var{charnum}.
 
 Output a character.  The default is to simply output, as per
@@ -230,10 +230,10 @@ code.
 @section Escape sequences for integers
 
 
-@deffn Escape ~d
-@deffnx Escape ~x
-@deffnx Escape ~o
-@deffnx Escape ~b
+@deffn {Format Escape Sequence} ~d
+@deffnx {Format Escape Sequence} ~x
+@deffnx {Format Escape Sequence} ~o
+@deffnx {Format Escape Sequence} ~b
 Integer.  Parameters: @var{minwidth}, @var{padchar}, @var{commachar},
 @var{commawidth}.
 
@@ -281,7 +281,7 @@ get upper case.
 @end deffn
 
 
-@deffn Escape ~r
+@deffn {Format Escape Sequence} ~r
 Integer in words, roman numerals, or a specified radix.  Parameters:
 @var{radix}, @var{minwidth}, @var{padchar}, @var{commachar},
 @var{commawidth}.
@@ -332,7 +332,7 @@ described for @code{~d} above.
 @subsection Fixed point format
 
 
-@deffn Escape @code{~f}
+@deffn {Format Escape Sequence} @code{~f}
 Real fixed--point float.  Parameters: @var{width}, @var{decimals},
 @var{scale}, @var{overflowchar}, @var{padchar}.
 
@@ -411,7 +411,7 @@ printed instead of the value.
 @subsection Exponential format
 
 
-@deffn Escape ~e
+@deffn {Format Escape Sequence} ~e
 Real exponential float.  Parameters: @var{width}, @var{decimals},
 @var{expdigits}, @var{intdigits}, @var{overflowchar}, @var{padchar},
 @var{expchar}.
@@ -511,7 +511,7 @@ output would exceed @var{width} then instead that many
 @subsection Engineering format
 
 
-@deffn Escape @code{~g}
+@deffn {Format Escape Sequence} @code{~g}
 @strong{FIXME} <to be written>
 @end deffn
 
@@ -520,7 +520,7 @@ output would exceed @var{width} then instead that many
 @section Escape sequences for complex numbers
 
 
-@deffn Escape ~i
+@deffn {Format Escape Sequence} ~i
 Complex fixed--point float.  Parameters: @var{width}, @var{decimals},
 @var{scale}, @var{overflowchar}, @var{padchar}.
 
@@ -542,7 +542,7 @@ counting for width and padding.
 @end deffn
 
 
-@deffn Escape @code{~p}
+@deffn {Format Escape Sequence} @code{~p}
 Plural.  No parameters.
 
 Output nothing if the argument is 1, or @samp{s} for any other
@@ -575,15 +575,15 @@ is probably best though.
 @end deffn
 
 
-@deffn Escape @code{~y}
+@deffn {Format Escape Sequence} @code{~y}
 Pretty print.  No parameters.
 
 Output an argument with @code{pretty-print}.
 @end deffn
 
 
-@deffn Escape @code{~?}
-@deffnx Escape @code{~k}
+@deffn {Format Escape Sequence} @code{~?}
+@deffnx {Format Escape Sequence} @code{~k}
 Sub-format.  No parameters.
 
 Take a format string argument and a second argument which is a list of
@@ -605,7 +605,7 @@ T-Scheme compatibility.
 @end deffn
 
 
-@deffn Escape @code{~*}
+@deffn {Format Escape Sequence} @code{~*}
 Argument jumping.  Parameter: @var{N}.
 
 Move forward @var{N} arguments (default 1) in the argument list.
@@ -637,7 +637,7 @@ matter, any further arguments are ignored.
 @end deffn
 
 
-@deffn Escape @code{~t}
+@deffn {Format Escape Sequence} @code{~t}
 Advance to a column position.  Parameters: @var{colnum}, @var{colinc},
 @var{padchar}.
 
@@ -674,7 +674,7 @@ there has been other output before @code{format}.
 @end deffn
 
 
-@deffn Escape @code{~~}
+@deffn {Format Escape Sequence} @code{~~}
 Tilde character.  Parameter: @var{n}.
 
 Output a tilde character @code{~}, or @var{n} many if a parameter is
@@ -683,7 +683,7 @@ is the way to output a literal tilde.
 @end deffn
 
 
-@deffn Escape @code{~%}
+@deffn {Format Escape Sequence} @code{~%}
 Newline.  Parameter: @var{n}.
 
 Output a newline character, or @var{n} many if a parameter is given.
@@ -692,7 +692,7 @@ including them in the format string.
 @end deffn
 
 
-@deffn Escape @code{~&}
+@deffn {Format Escape Sequence} @code{~&}
 Start a new line.  Parameter: @var{n}.
 
 Output a newline if not already at the start of a line.  With a
@@ -702,7 +702,7 @@ if not already at the start of a line, and 2 further newlines.
 @end deffn
 
 
-@deffn Escape @code{~_}
+@deffn {Format Escape Sequence} @code{~_}
 Space character.  Parameter: @var{n}.
 
 @c  For reference, in Common Lisp ~_ is a conditional newline, but
@@ -720,21 +720,21 @@ things).
 @end deffn
 
 
-@deffn Escape @code{~/}
+@deffn {Format Escape Sequence} @code{~/}
 Tab character.  Parameter: @var{n}.
 
 Output a tab character, or @var{n} many if a parameter is given.
 @end deffn
 
 
-@deffn Escape @code{~|}
+@deffn {Format Escape Sequence} @code{~|}
 Formfeed character.  Parameter: @var{n}.
 
 Output a formfeed character, or @var{n} many if a parameter is given.
 @end deffn
 
 
-@deffn Escape @code{~!}
+@deffn {Format Escape Sequence} @code{~!}
 Force output.  No parameters.
 
 At the end of output, call @code{force-output} to flush any buffers on
@@ -746,7 +746,7 @@ nothing.
 @end deffn
 
 
-@deffn Escape @code{~newline}
+@deffn {Format Escape Sequence} @code{~newline}
 @c (ie.@: newline character)
 Continuation line.  No parameters.
 
@@ -769,7 +769,7 @@ whitespace.
 @end deffn
 
 
-@deffn Escape {~( ~)}
+@deffn {Format Escape Sequence} {~( ~)}
 Case conversion.  No parameters.
 
 Between @code{~(} and @code{~)} the case of all output is changed.
@@ -792,11 +792,11 @@ Lower case.
 @c  text, just by keeping a state or the previous char to tell whether
 @c  within a word.)
 @c
-@c  @deffn Escape
+@c  @deffn {Format Escape Sequence}
 @c  @code{:} --- first letter of each word upper case, the rest lower
 @c  case, as per the @code{string-capitalize} function (@pxref{Alphabetic
 @c  Case Mapping}).
-@c  @deffn Escape
+@c  @deffn {Format Escape Sequence}
 @c  @code{@@} --- first letter of just the first word upper case, the
 @c  rest lower case.
 @c
@@ -823,7 +823,7 @@ fairly pointless).
 @end deffn
 
 
-@deffn Escape ~@{ ~@}
+@deffn {Format Escape Sequence} ~@{ ~@}
 Iteration.  Parameter: @var{maxreps} (for @code{~@{}).
 
 The format between @code{~@{} and @code{~@}} is iterated.  The
@@ -897,7 +897,7 @@ See also @code{~^} below for escaping from iteration.
 @end deffn
 
 
-@deffn Escape {~[ ~; ~]}
+@deffn {Format Escape Sequence} {~[ ~; ~]}
 Conditional.  Parameter: @var{selector}.
 
 A conditional block is delimited by @code{~[} and @code{~]}, and
@@ -951,7 +951,7 @@ available.
 @end deffn
 
 
-@deffn Escape @code{~^}
+@deffn {Format Escape Sequence} @code{~^}
 Escape.  Parameters: @var{val1}, @var{val2}, @var{val3}.
 
 Stop formatting if there are no more arguments.  This can be used for
