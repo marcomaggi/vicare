@@ -2062,17 +2062,16 @@
 	   (anychar-dispatch))
 
 	  ((#\? #\K) ; Indirection (is "~K" in T-Scheme)
-	   (cond
-	    ((memq modifier '(colon colon-at))
-	     (error who "illegal modifier in escape sequence ~?"))
-	    ((eq? modifier 'at)
-	     (let* ((frmt (next-arg))
-		    (args (rest-args)))
-	       (add-arg-pos (format:format frmt args))))
-	    (else
-	     (let* ((frmt (next-arg))
-		    (args (next-arg)))
-	       (format:format frmt args))))
+	   (cond ((memq modifier '(colon colon-at))
+		  (error who "illegal modifier in escape sequence ~?"))
+		 ((eq? modifier 'at)
+		  (let* ((frmt (next-arg))
+			 (args (rest-args)))
+		    (add-arg-pos (format:format frmt args))))
+		 (else
+		  (let* ((frmt (next-arg))
+			 (args (next-arg)))
+		    (format:format frmt args))))
 	   (anychar-dispatch))
 
 	  ((#\!) ; Flush output
@@ -2080,15 +2079,15 @@
 	   (anychar-dispatch))
 
 	  ((#\newline) ; Continuation lines
-	   (if (eq? modifier 'at)
-	       (format:print-char #\newline))
-	   (if (< format:pos format-string-len)
-	       (do ((ch (peek-next-char) (peek-next-char)))
-		   ((or (not (char-whitespace? ch))
-			(= format:pos (- format-string-len 1))))
-		 (if (eq? modifier 'colon)
-		     (format:print-char (next-char))
-		   (next-char))))
+	   (when (eq? modifier 'at)
+	     (format:print-char #\newline))
+	   (when (< format:pos format-string-len)
+	     (do ((ch (peek-next-char) (peek-next-char)))
+		 ((or (not (char-whitespace? ch))
+		      (= format:pos (- format-string-len 1))))
+	       (if (eq? modifier 'colon)
+		   (format:print-char (next-char))
+		 (next-char))))
 	   (anychar-dispatch))
 
 	  ((#\*) ; Argument jumping
@@ -2101,7 +2100,8 @@
 		(prev-arg)))
 	     ((at) ; jump absolute
 	      (set! arg-pos (if (one-positive-integer? params)
-				(car params) 0)))
+				(car params)
+			      0)))
 	     ((colon-at)
 	      (error who "illegal modifier `:@' in escape sequence ~*"))
 	     (else ; jump forward
@@ -2122,7 +2122,7 @@
 	   (anychar-dispatch))
 
 	  ((#\)) ; Case conversion end
-	   (when (not format:case-conversion)
+	   (unless format:case-conversion
 	     (error who "found escape sequence \"~)\" without previous opening escape sequence \"~(\""))
 	   (set! format:case-conversion #f)
 	   (anychar-dispatch))
