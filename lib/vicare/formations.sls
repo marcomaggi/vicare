@@ -39,36 +39,38 @@
   (import (except (vicare)
 		  format)
     (only (vicare language-extensions infix)
-	  infix))
+	  infix)
+    (vicare unsafe operations)
+    (vicare arguments validation))
 
 
 ;;;; constants
 
 ;;The default character prefixing the exponent value in "~e" printing.
-(define default-exponential-char #\E)
+(define-constant default-exponential-char #\E)
 
-(define ascii-non-printable-charnames
+(define-constant ascii-non-printable-charnames
   '#("nul" "soh" "stx" "etx" "eot" "enq" "ack" "bel"
      "bs"  "ht"  "nl"  "vt"  "np"  "cr"  "so"  "si"
      "dle" "dc1" "dc2" "dc3" "dc4" "nak" "syn" "etb"
      "can" "em"  "sub" "esc" "fs"  "gs"  "rs"  "us" "space"))
 
-(define parameter-characters
+(define-constant parameter-characters
   '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\- #\+ #\v #\# #\'))
 
-(define space-char-integer (char->integer #\space))
-(define zero-char-integer	(char->integer #\0))
+(define-constant space-char-integer	(char->integer #\space))
+(define-constant zero-char-integer	(char->integer #\0))
 
 ;;Roman numerals (from dorai@cs.rice.edu).
-(define roman-alist
+(define-constant roman-alist
   '((1000 #\M) (500 #\D) (100 #\C) (50 #\L)
     (10 #\X) (5 #\V) (1 #\I)))
 
-(define roman-boundary-values
+(define-constant roman-boundary-values
   '(100 100 10 10 1 1 #f))
 
 ;;Cardinals & ordinals (from dorai@cs.rice.edu).
-(define cardinal-ones-list
+(define-constant cardinal-ones-list
   '(#f
     "one"	"two"		"three"
     "four"	"five"		"six"
@@ -78,13 +80,13 @@
     "sixteen"	"seventeen"	"eighteen"
     "nineteen"))
 
-(define cardinal-tens-list
+(define-constant cardinal-tens-list
   '(#f
     #f		"twenty"	"thirty"
     "forty"	"fifty"		"sixty"
     "seventy"	"eighty"	"ninety"))
 
-(define cardinal-thousand-block-list
+(define-constant cardinal-thousand-block-list
   '(""
     " thousand"		" million"		" billion"
     " trillion"		" quadrillion"		" quintillion"
@@ -94,7 +96,7 @@
     " quindecillion"	" sexdecillion"		" septendecillion"
     " octodecillion"	" novemdecillion"	" vigintillion"))
 
-(define ordinal-ones-list
+(define-constant ordinal-ones-list
   '(#f
     "first"		"second"		"third"
     "fourth"		"fifth"			"sixth"
@@ -104,12 +106,11 @@
     "sixteenth"		"seventeenth"		"eighteenth"
     "nineteenth"))
 
-(define ordinal-tens-list
+(define-constant ordinal-tens-list
   '(#f
     #f			"twentieth"		"thirtieth"
     "fortieth"		"fiftieth"		"sixtieth"
     "seventieth"	"eightieth"		"ninetieth"))
-
 
 
 ;;;; porting and miscellaneous helpers
@@ -126,50 +127,44 @@
        ?name))
     ))
 
-(define (take ell k)
-  ;;Return the first  K elements from the list  ELL; this function comes
-  ;;from SRFI lists.
-  ;;
-  (let loop ((ell ell) (k k))
-    (if (zero? k)
-	'()
-      (cons (car ell) (loop (cdr ell) (- k 1))))))
-
-(define (string-prefix? s1 s2)
+(define ($string-prefix? s1 s2)
   ;;Return true if S1 is the prefix in S2.
   ;;
   (or (eq? s1 s2)
-      (let ((len1 (string-length s1)))
-	(and (<= len1 (string-length s2))
-	     (string=? s1 (substring s2 0 len1))))))
+      (let ((len1 ($string-length s1)))
+	(and ($fx<= len1 ($string-length s2))
+	     ($string= s1 (substring s2 0 len1))))))
 
-(define (string-index str ch)
+(define ($string-index str ch)
   ;;Return the index of CH in STR.
   ;;
-  (let ((len (string-length str)))
-    (do ((i 0 (+ 1 i)))
-	((or (= i len) (char=? ch (string-ref str i)))
-	 (if (= i len) #f i)))))
+  (let ((len ($string-length str)))
+    (do ((i 0 ($fxadd1 i)))
+	((or ($fx= i len)
+	     ($char= ch ($string-ref str i)))
+	 (if ($fx= i len) #f i)))))
 
-(define (string-index-right str ch)
+(define ($string-index-right str ch)
   ;;Return the index of CH in STR starting from the end.
   ;;
-  (do ((i (- (string-length str) 1) (- i 1)))
-      ((or (< i 0) (char=? ch (string-ref str i)))
-       (if (< i 0) #f i))))
+  (do ((i (- ($string-length str) 1) ($fxsub1 i)))
+      ((or ($fxnegative? i)
+	   ($char= ch ($string-ref str i)))
+       (if ($fxnegative? i) #f i))))
 
-(define (string-count-tabs str)
+(define ($string-count-tabs str)
   ;;Return the number of #\tab characters in STR.
   ;;
-  (let ((len (string-length str)))
+  (let ((len ($string-length str)))
     (let loop ((i 0) (count 0))
-      (if (= i len)
+      (if ($fx= i len)
 	  count
-	(loop (+ 1 i) (if (char=? #\tab (string-ref str i))
-			  (+ 1 count)
-			count))))))
+	(loop ($fxadd1 i)
+	      (if ($char= #\tab ($string-ref str i))
+		  ($fxadd1 count)
+		count))))))
 
-(define (string-titlecase/first str)
+(define ($string-titlecase/first str)
   ;;Convert  a string to  its representation  with the  first alphabetic
   ;;char capitalised.  We iterate  over the chars rather than extracting
   ;;a substring so that we can apply CHAR-ALPHABETIC?.
@@ -184,24 +179,25 @@
   ;; "*hello"		-> "*Hello"
   ;; "hello you"	-> "Hello you"
   ;;
-  (let ((cap-str		(string-copy str))
+  (let ((cap-str		($string-copy str))
 	(non-first-alpha	#f)
-	(str-len		(string-length str)))
-    (do ((i 0 (+ i 1)))
-	((= i str-len)
+	(str-len		($string-length str)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str-len)
 	 cap-str)
-      (let ((c (string-ref str i)))
+      (let ((c ($string-ref str i)))
 	(when (char-alphabetic? c)
 	  (if non-first-alpha
-	      (string-set! cap-str i (char-downcase c))
+	      ($string-set! cap-str i (char-downcase c))
 	    (begin
 	      (set! non-first-alpha #t)
-	      (string-set! cap-str i (char-upcase c)))))))))
+	      ($string-set! cap-str i (char-upcase c)))))))))
 
 (define (number->string/radix num radix)
   ;;Return the  string representation of  the integer NUM in  the RADIX.
-  ;;It extends R6RS NUMBER->STRING to  support any radix, not only 2, 8,
+  ;;It extends R6RS NUMBER->STRING to support  any radix, not only 2, 8,
   ;;10 and 16.
+  ;;
   (define who 'number->string/radix)
   (unless (and (integer? num) (exact? num))
     (assertion-violation who "only integers can be converted to a base different from 10" num))
@@ -251,13 +247,10 @@
 (define format-output-column
   (make-parameter #f
     (lambda (obj)
-      (unless (or (not obj) (and (integer? obj)
-				 (exact? obj)
-				 (not (negative? obj))))
-	(assertion-violation 'format-output-column
-	  "invalid value for FORMAT-OUTPUT-COLUMN parameter, expected integer or #f"
-	  obj))
-      obj)))
+      (define who 'format-output-column)
+      (with-arguments-validation (who)
+	  ((non-negative-fixnum/false	obj))
+	obj))))
 
 (define (increment-output-column delta)
   (let ((column (format-output-column)))
@@ -282,14 +275,14 @@
   ;;  "A\t\t"		-> increment by 1+2*8 = stringlen+2*8-2
   ;;  "ciao\nmamma\t"	-> increment by 5+8
   ;;
-  (let* ((idx	(string-index-right str #\newline))
+  (let* ((idx	($string-index-right str #\newline))
 	 (str	(if idx
 		    (begin
 		      (format-output-column 0)
-		      (substring str (+ 1 idx) (string-length str)))
+		      ($substring str ($fxadd1 idx) ($string-length str)))
 		  str))
-	 (len	(string-length str))
-	 (tabs	(string-count-tabs str)))
+	 (len	($string-length str))
+	 (tabs	($string-count-tabs str)))
     (format-output-column (infix len + 8 * tabs - tabs))))
 
 
@@ -415,7 +408,7 @@
     (let ((res (call-with-string-output-port
 		   (lambda (port) ((if use-write write display)
 				   obj port)))))
-      (if (and format:read-proof (string-prefix? "#<" res))
+      (if (and format:read-proof ($string-prefix? "#<" res))
 	  (call-with-string-output-port
 	      (lambda (port) (write res port)))
 	res)))
@@ -684,7 +677,7 @@
 			    number
 			  (number->string number)))
 	 (len		(string-length str))
-	 (dot		(string-index str #\.))
+	 (dot		($string-index str #\.))
 	 (digits	(+ (or decimals 0)
 			   (if expdigits (+ expdigits 2) 0))))
     (if (and width overflow-char (< width len))
@@ -1231,7 +1224,7 @@
 	 ;;buffer.
 	 (left-zeros	0)
 
-	 (number-string	(if (string-prefix? "#d" number-string)
+	 (number-string	(if ($string-prefix? "#d" number-string)
 			    (substring number-string
 				       2 (string-length number-string))
 			  number-string))
@@ -2158,7 +2151,7 @@
 	  ((#\() ; Case conversion begin
 	   (set! format:case-conversion
 		 (case modifier
-		   ((at)	string-titlecase/first)
+		   ((at)	$string-titlecase/first)
 		   ((colon)	string-titlecase)
 		   ((colon-at)	string-upcase)
 		   (else	string-downcase)))
