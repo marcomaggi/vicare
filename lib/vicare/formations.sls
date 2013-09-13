@@ -936,15 +936,11 @@
 	((= i mantissa-length))
       (mantissa-char-set! i #\0))))
 
-(define-syntax mantissa-prepend-zeros
-  (syntax-rules ()
-    ((_ ?number-of-zeros)
-     (mantissa-zfill #t ?number-of-zeros))))
+(define-syntax-rule (mantissa-prepend-zeros ?number-of-zeros)
+  (mantissa-zfill #t ?number-of-zeros))
 
-(define-syntax mantissa-append-zeros
-  (syntax-rules ()
-    ((_ ?number-of-zeros)
-     (mantissa-zfill #f ?number-of-zeros))))
+(define-syntax-rule (mantissa-append-zeros ?number-of-zeros)
+  (mantissa-zfill #f ?number-of-zeros))
 
 ;;Shift  left  current  by  N  positions  the  mantissa  buffer,  update
 ;;MANTISSA-LENGTH accordingly but not MANTISSA-DOT-INDEX.
@@ -1051,7 +1047,6 @@
     (if (< number-of-decimals requested-decimals)
 	(mantissa-append-zeros (- requested-decimals number-of-decimals))
       (mantissa-round-digits-after-dot requested-decimals))))
-
 
 
 ;;;; helpers, rounding floating point numbers
@@ -1253,7 +1248,7 @@
 
 	(do ((i 0 (+ i 1)))
 	    ((= i number-len))
-	  (let ((ch (string-ref number-string i)))
+	  (let ((ch ($string-ref number-string i)))
 	    (cond
 
 	     ((char-numeric? ch)
@@ -1273,11 +1268,11 @@
 		     (exponent-char-set! exponent-length ch)
 		     (incr! exponent-length 1))))
 
-	     ((or (char=? ch #\-) (char=? ch #\+))
+	     ((or ($char= ch #\-) ($char= ch #\+))
 	      ;;Record the  sign of the mantissa or  exponent.  Raise an
 	      ;;error if  the sign comes  inside the mantissa  or inside
 	      ;;the exponent.
-	      (let ((positive (char=? ch #\+)))
+	      (let ((positive ($char= ch #\+)))
 		(if mantissa?
 		    (if mantissa-started?
 			(raise-parsing-error)
@@ -1290,7 +1285,7 @@
 		      (set! exponent-is-positive positive)
 		      (set! exponent-started? #t))))))
 
-	     ((char=? ch #\.)
+	     (($char= ch #\.)
 	      ;;Record the index of the first digit after the dot in the
 	      ;;mantissa  buffer.  Raise an  error if  the dot  is found
 	      ;;twice or if we are not parsing the mantissa.
@@ -1298,7 +1293,7 @@
 		(raise-parsing-error))
 	      (set! mantissa-dot-index mantissa-length))
 
-	     ((or (char=? ch #\e) (char=? ch #\E))
+	     ((or ($char= ch #\e) ($char= ch #\E))
 	      ;;Record the end of mantissa and start of exponent.  Raise
 	      ;;an error if we are already parsing the exponent.
 	      (unless mantissa?
@@ -1777,7 +1772,6 @@
   (format:print-flonum-fixed-point 'at      (imag-part z) params)
   (format:print-char #\i))
 
-
 
 ;;;; helpers, tabulation
 
@@ -1802,17 +1796,15 @@
 		 (- c format:output-col))))
 	  padch))
 	(else	; absolute tabulation
-	 (format:print-fill-chars
-	  (cond
-	   ((< format:output-col colnum)
-	    (- colnum format:output-col))
-	   ((= padinc 0)
-	    0)
-	   (else
-	    (do ((c colnum (+ c padinc)))
-		((>= c format:output-col)
-		 (- c format:output-col)))))
-	  padch))))))
+	 (format:print-fill-chars (cond ((< format:output-col colnum)
+					 (- colnum format:output-col))
+					((= padinc 0)
+					 0)
+					(else
+					 (do ((c colnum (+ c padinc)))
+					     ((>= c format:output-col)
+					      (- c format:output-col)))))
+				  padch))))))
 
 
 ;;;; actual formatting
