@@ -2279,31 +2279,32 @@
 					    (format:format iteration-str sublist)))))
 		      (add-arg-pos usedup-args)))
 		   (else
-		    (error who "internal error in escape sequence ~}")))))
+		    (error who "internal error in escape sequence \"~}\"")))))
 	   (anychar-dispatch))
 
 	  ((#\^) ; Up and out
-	   (let* ((continue
-		   (cond
-		    ((not (null? params))
-		     (not
-		      (case (length params)
-			((1) (zero? (car params)))
-			((2) (= (list-ref params 0) (list-ref params 1)))
-			((3) (<= (list-ref params 0)
-				 (list-ref params 1)
-				 (list-ref params 2)))
-			(else
-			 (error who "too much parameters")))))
-		    (format:case-conversion ; if conversion stop conversion
-		     (set! format:case-conversion string-copy) #t)
-		    ((= iteration-nest 1) #t)
-		    ((= conditional-nest 1) #t)
-		    ((>= arg-pos arg-len)
-		     (set! format:pos format-string-len) #f)
-		    (else #t))))
-	     (if continue
-		 (anychar-dispatch))))
+	   (let* ((continue (cond ((not (null? params))
+				   (not
+				    (case (length params)
+				      ((1) (zero? (car params)))
+				      ((2) (= (list-ref params 0) (list-ref params 1)))
+				      ((3) (<= (list-ref params 0)
+					       (list-ref params 1)
+					       (list-ref params 2)))
+				      (else
+				       (error who "too much parameters")))))
+				  (format:case-conversion ; if conversion stop conversion
+				   (set! format:case-conversion string-copy) #t)
+				  ((= iteration-nest 1)
+				   #t)
+				  ((= conditional-nest 1)
+				   #t)
+				  ((>= arg-pos arg-len)
+				   (set! format:pos format-string-len) #f)
+				  (else
+				   #t))))
+	     (when continue
+	       (anychar-dispatch))))
 
 	  ;; format directive modifiers and parameters
 
