@@ -1980,8 +1980,8 @@
 		(format:print-string (format:char->str ch)))
 	       ((colon)
 		(let ((c ($char->fixnum ch)))
-		  (if ($fx< c 0)
-		      (set! c ($fx+ c 256))) ; compensate complement impl.
+		  (when ($fx< c 0)
+		    (set! c ($fx+ c 256))) ; compensate complement impl.
 		  (cond (($fx< c #x20) ; assumes that control chars are < #x20
 			 (format:print-char #\^)
 			 (format:print-char ($fixnum->char ($fx+ c #x40))))
@@ -1995,8 +1995,8 @@
 	   (anychar-dispatch))
 
 	  ((#\p) ; Plural
-	   (if (memq modifier '(colon colon-at))
-	       (prev-arg))
+	   (when (memq modifier '(colon colon-at))
+	     (prev-arg))
 	   (let ((arg (next-arg)))
 	     (when (not (number? arg))
 	       (error who "escape sequence ~p expects a number argument"))
@@ -2010,13 +2010,13 @@
 
 	  ((#\~) ; Tilde
 	   (if (one-positive-integer? params)
-	       (format:print-fill-chars (car params) #\~)
+	       (format:print-fill-chars ($car params) #\~)
 	     (format:print-char #\~))
 	   (anychar-dispatch))
 
 	  ((#\%) ; Newline
 	   (if (one-positive-integer? params)
-	       (format:print-fill-chars (car params) #\newline)
+	       (format:print-fill-chars ($car params) #\newline)
 	     (format:print-char #\newline))
 	   (set! format:output-col 0)
 	   (anychar-dispatch))
@@ -2024,15 +2024,13 @@
 	  ((#\&) ; Fresh line
 	   (if (one-positive-integer? params)
 	       (begin
-		 (if (> (car params) 0)
-		     (format:print-fill-chars (- (car params)
-						 (if (>
-						      format:output-col
-						      0) 0 1))
-					      #\newline))
+		 (when (> ($car params) 0)
+		   (format:print-fill-chars (- ($car params)
+					       (if (> format:output-col 0) 0 1))
+					    #\newline))
 		 (set! format:output-col 0))
-	     (if (> format:output-col 0)
-		 (format:print-char #\newline)))
+	     (when (> format:output-col 0)
+	       (format:print-char #\newline)))
 	   (anychar-dispatch))
 
 	  ((#\_) ; Space character
