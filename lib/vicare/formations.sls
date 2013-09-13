@@ -289,6 +289,7 @@
 ;;;; incipit
 
 (define (format arg0 . args)
+  (define who 'format)
 
   ;;Current format output port.
   (define destination-port #f)
@@ -296,8 +297,8 @@
   ;;Current format output TTY column.
   (define format:output-col 0)
 
-  ;;Flush output at end of formatting.
-  (define format:flush-output #f)
+  ;;If true: flush output at end of formatting.
+  (define format:flush-output? #f)
 
   (define format:case-conversion #f)
 
@@ -315,25 +316,26 @@
 
 ;;;; helpers, dispatching arguments
 
-;;Notice that  rewriting this  implementation with CASE-LAMBDA  does not
-;;bring true advantage.
 (define (format:dispatch-arguments arg0 args)
-
-  (define (invalid-string irritant)
-    (assertion-violation 'format
-      "invalid format string" irritant))
-
+  ;;This is called first to parse the arguments of a call to FORMAT.  It
+  ;;performs the actual formatting by calling FORMAT:FORMAT.
+  ;;
+  ;;Notice that rewriting this  implementation with CASE-LAMBDA does not
+  ;;bring true advantage.
+  ;;
+  (define (%invalid-string irritant)
+    (assertion-violation who "invalid format string" irritant))
   (let*-values
       (((sarg)		(string? arg0))
        ((format-string)	(cond (sarg
 			       arg0)
 			      ((null? args)
-			       (invalid-string arg0))
+			       (%invalid-string arg0))
 			      (else
-			       (let ((s (car args)))
-				 (unless (string? s)
-				   (invalid-string s))
-				 s))))
+			       (let ((s ($car args)))
+				 (if (string? s)
+				     s
+				   (%invalid-string s))))))
        ((port getter)	(cond (sarg
 			       (open-string-output-port))
 			      ((boolean? arg0)
@@ -345,17 +347,14 @@
 			      ((number? arg0)
 			       (values (current-error-port) #f))
 			      (else
-			       (assertion-violation 'format
-				 "invalid destination" arg0))))
-       ((arglist)	(if sarg args (cdr args))))
-
+			       (assertion-violation who "invalid destination" arg0))))
+       ((arglist)	(if sarg args ($cdr args))))
     (set! destination-port port)
     (let ((arg-pos (format:format format-string arglist))
 	  (arg-len (length arglist)))
       (cond ((> arg-pos arg-len)
-	     (error 'format
-	       "missing argument" (- arg-pos arg-len)))
-	    (format:flush-output
+	     (assertion-violation who "missing argument" (- arg-pos arg-len)))
+	    (format:flush-output?
 	     (flush-output-port port)))
       (and getter (getter)))))
 
@@ -2111,7 +2110,7 @@
 	   (anychar-dispatch))
 
 	  ((#\!) ; Flush output
-	   (set! format:flush-output #t)
+	   (set! format:flush-output? #t)
 	   (anychar-dispatch))
 
 	  ((#\newline) ; Continuation lines
@@ -2469,7 +2468,11 @@
 
 ;;;; body of FORMAT
 
-(format:dispatch-arguments arg0 args)))
+(format:dispatch-arguments arg0 args))
 
+
+;;;; done
+
+)
 
 ;;; end of file
