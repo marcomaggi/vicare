@@ -8,7 +8,7 @@
 
 The library @library{vicare formations} defines a sophisticated
 @func{format} function: a powerful way to print numbers, strings and
-other objects together with literal text under the control of a format
+other objects together with literal text under the control of a template
 string.
 
 @quotation
@@ -48,27 +48,40 @@ C programmers will note the similarity between @func{format} and
 of @code{%}, and are more powerful.
 
 
-@defun format @var{fmt}
-@defunx format @var{fmt} @var{args} @dots{}
-@defunx format @var{dest} @var{fmt}
-@defunx format @var{dest} @var{fmt} @var{arg} @dots{}
-Write output specified by the @var{fmt} string to @var{dest}.
+@defun format @var{template-string}
+@defunx format @var{template-string} @var{args} @dots{}
+@defunx format @var{dest} @var{template-string}
+@defunx format @var{dest} @var{template-string} @var{arg} @dots{}
+Write output specified by the @var{template-string} string to @var{dest}.
 
-@var{dest} can be an output port, @true{} for
-@func{current-output-port}, a number for @func{current-error-port}, or
-@false{} to return the output as a string.  If @var{dest} is not given
-(that is: the first argument is a string): the output is returned as if
-@false{} is used as @var{dest} argument.
+@var{dest} can be:
 
-@var{fmt} can contain literal text to be output, and @code{~}
-escapes.  Each escape has the form:
+@itemize
+@item
+An output port.
+
+@item
+@true{} for @func{current-output-port}.
+
+@item
+A number for @func{current-error-port}.
+
+@item
+@false{} to return the output as a string.
+@end itemize
+
+If @var{dest} is not given (that is: the first argument is a string):
+the output is returned as if @false{} is used as @var{dest} argument.
+
+@var{template-string} can contain literal text to be output, and
+@code{~} escapes.  Each escape has the form:
 
 @example
-~ [param [, param@dots{}] [:] [@@] code
+~ [@var{param} [, @var{param} @dots{}] [:] [@@] @var{code}
 @end example
 
-@code{code} is a character determining the escape sequence; the
-@code{code} letters are @strong{not} case--sensitive, upper and lower
+@var{code} is a character determining the escape sequence; the
+@var{code} letters are @strong{not} case--sensitive, upper and lower
 case are the same.  The @code{:} and @code{@@} characters are optional
 modifiers, one or both of which change the way various codes operate.
 Optional parameters are accepted by some codes too.  Parameters have the
@@ -76,7 +89,7 @@ following forms,
 
 @table @code
 @item [+/-]number
-An integer, with optional @code{+} or @code{-}.
+An integer, with optional @code{+} or @code{-} sign in front of it.
 
 @item '
 The quote.  The following character in the format string, for instance
