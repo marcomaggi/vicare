@@ -21,7 +21,7 @@ Scheme by Marco Maggi.
 
 @menu
 * formations output::               Formatted output.
-* formations escape values::        Escape sequences for generic values.
+* formations escape generic::       Escape sequences for generic values.
 * formations escape char::          Escape sequences for characters.
 * formations escape integers::      Escape sequences for integers.
 * formations escape flonums::       Escape sequences for flonums.
@@ -109,7 +109,7 @@ empty to keep its default value when supplying later parameters.
 @end defun
 
 @c page
-@node formations escape values
+@node formations escape generic
 @section Escape sequences for generic values
 
 

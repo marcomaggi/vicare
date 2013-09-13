@@ -367,10 +367,11 @@
 (define (format:print-char ch)
   ;;Print a  single character with  case conversion.  Update  the output
   ;;column.
+  ;;
   (if format:case-conversion
       (display (format:case-conversion (string ch)) destination-port)
     (write-char ch destination-port))
-  (if (char=? ch #\newline)
+  (if ($char= ch #\newline)
       (format-output-column 0)
     (increment-output-column 1)))
 
@@ -386,7 +387,7 @@
 (define (format:print-substring str i n)
   ;;Print a substring.  Update the output column.
   ;;
-  (let ((str (substring str i n)))
+  (let ((str ($substring str i n)))
     (display str destination-port)
     (adjust-output-column-from-string str)))
 
@@ -421,40 +422,41 @@
       (let ((minwidth	(format:par parameters l 0 0 "minwidth"))
 	    (padinc	(format:par parameters l 1 1 "padinc"))
 	    (minpad	(format:par parameters l 2 0 "minpad"))
-	    (padchar	(integer->char
-			 (format:par parameters l 3 space-char-integer #f)))
+	    (padchar	(integer->char (format:par parameters l 3 space-char-integer #f)))
 	    (objstr	(obj->str obj use-write)))
 
 	(define (print-padding)
-	  (do ((objstr-len (string-length objstr))
+	  (do ((objstr-len ($string-length objstr))
 	       (i minpad (+ i padinc)))
 	      ((>= (+ objstr-len i) minwidth)
 	       (format:print-fill-chars i padchar))))
 
-	(cond (pad-left	(print-padding)
-			(format:print-string objstr))
-	      (else	(format:print-string objstr)
-			(print-padding)))))))
-
+	(if pad-left
+	    (begin
+	      (print-padding)
+	      (format:print-string objstr))
+	  (begin
+	    (format:print-string objstr)
+	    (print-padding)))))))
 
 
 ;;;; helpers, character to string
 
 ;;Convert a character into a slashified string as done by WRITE.
 (define (format:char->str ch)
-  (let ((ich (char->integer ch)))
+  (let ((ich ($char->fixnum ch)))
     (string-append "#\\"
-		   (cond
-		    ((char=? ch #\newline)
-		     "newline")
-		    ((and (>= ich 0) (<= ich 32))
-		     (vector-ref ascii-non-printable-charnames ich))
-		    ((= ich 127)
-		     "del")
-		    ((>= ich 128) ; octal representation
-		     (number->string ich 8))
-		    (else
-		     (string ch))))))
+		   (cond (($char= ch #\newline)
+			  "newline")
+			 ((and ($fx>= ich 0)
+			       ($fx<= ich 32))
+			  ($vector-ref ascii-non-printable-charnames ich))
+			 (($fx= ich 127)
+			  "del")
+			 (($fx>= ich 128) ; octal representation
+			  (number->string ich 8))
+			 (else
+			  (string ch))))))
 
 
 ;;;; helpers, integer numbers to string
@@ -678,7 +680,7 @@
   (let* ((str		(if (string? number)
 			    number
 			  (number->string number)))
-	 (len		(string-length str))
+	 (len		($string-length str))
 	 (dot		($string-index str #\.))
 	 (digits	(+ (or decimals 0)
 			   (if expdigits (+ expdigits 2) 0))))
@@ -691,7 +693,7 @@
 			    (max (- width leftpad len) 0)
 			  0))
 	     (pad-char	(integer->char (or pad-char space-char-integer))))
-	(format:print-fill-chars leftpad pad-char)
+	(format:print-fill-chars leftpad  pad-char)
 	(format:print-string str)
 	(format:print-fill-chars rightpad pad-char)))))
 
@@ -838,45 +840,29 @@
   (set! exponent-is-positive	#t)
   (set! exponent-length		0))
 
-(define-syntax mantissa-char-set!
-  (syntax-rules ()
-    ((_ ?idx ?char)
-     (string-set! mantissa-buffer ?idx ?char))))
+(define-syntax-rule (mantissa-char-set! ?idx ?char)
+  ($string-set! mantissa-buffer ?idx ?char))
 
-(define-syntax mantissa-char-ref
-  (syntax-rules ()
-    ((_ ?idx)
-     (string-ref mantissa-buffer ?idx))))
+(define-syntax-rule (mantissa-char-ref ?idx)
+  ($string-ref mantissa-buffer ?idx))
 
-(define-syntax mantissa-digit-set!
-  (syntax-rules ()
-    ((_ ?idx ?digit)
-     (mantissa-char-set! ?idx (integer->char (+ ?digit zero-char-integer))))))
+(define-syntax-rule (mantissa-digit-set! ?idx ?digit)
+  (mantissa-char-set! ?idx (integer->char (+ ?digit zero-char-integer))))
 
-(define-syntax mantissa-digit-ref
-  (syntax-rules ()
-    ((_ ?idx)
-     (- (char->integer (mantissa-char-ref ?idx)) zero-char-integer))))
+(define-syntax-rule (mantissa-digit-ref ?idx)
+  (- ($char->fixnum (mantissa-char-ref ?idx)) zero-char-integer))
 
-(define-syntax exponent-char-set!
-  (syntax-rules ()
-    ((_ ?idx ?char)
-     (string-set! exponent-buffer ?idx ?char))))
+(define-syntax-rule (exponent-char-set! ?idx ?char)
+  ($string-set! exponent-buffer ?idx ?char))
 
-(define-syntax exponent-char-ref
-  (syntax-rules ()
-    ((_ ?idx)
-     (string-ref exponent-buffer ?idx))))
+(define-syntax-rule (exponent-char-ref ?idx)
+  ($string-ref exponent-buffer ?idx))
 
-(define-syntax exponent-digit-set!
-  (syntax-rules ()
-    ((_ ?idx ?digit)
-     (exponent-char-set! ?idx (integer->char (+ ?digit zero-char-integer))))))
+(define-syntax-rule (exponent-digit-set! ?idx ?digit)
+  (exponent-char-set! ?idx (integer->char (+ ?digit zero-char-integer))))
 
-(define-syntax exponent-digit-ref
-  (syntax-rules ()
-    ((_ ?idx)
-     (- (char->integer (exponent-char-ref ?idx)) zero-char-integer))))
+(define-syntax-rule (exponent-digit-ref ?idx)
+  (- ($char->fixnum (exponent-char-ref ?idx)) zero-char-integer))
 
 
 ;;;; helpers, miscellaneous stuff for floating point numbers
