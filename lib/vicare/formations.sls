@@ -1832,20 +1832,20 @@
 
     ;;Gets the next char from FORMAT-STRING.
     (define (next-char)
-      (let ((ch (peek-next-char)))
-	(set! format:pos (+ 1 format:pos))
-	ch))
+      (receive-and-return (ch)
+	  (peek-next-char)
+	(set! format:pos (+ 1 format:pos))))
 
     (define (peek-next-char)
       (if (>= format:pos format-string-len)
 	  (error who "illegal format string")
-	(string-ref format-string format:pos)))
+	($string-ref format-string format:pos)))
 
     (define (one-positive-integer? params)
       (cond ((null? params)
 	     #f)
-	    ((and (integer? (car params))
-		  (>= (car params) 0)
+	    ((and (integer? ($car params))
+		  (>= ($car params) 0)
 		  (= (length params) 1))
 	     #t)
 	    (else
@@ -1879,48 +1879,42 @@
       (if (>= format:pos format-string-len)
 	  arg-pos ; used for ~? continuance
 	(let ((char (next-char)))
-	  (cond
-	   ((char=? char #\~)
-	    (set! modifier #f)
-	    (set! params '())
-	    (set! param-value-found #f)
-	    (tilde-dispatch))
-	   (else
-	    (if (and (zero? conditional-nest)
-		     (zero? iteration-nest))
-		(format:print-char char))
-	    (anychar-dispatch))))))
+	  (cond (($char= char #\~)
+		 (set! modifier #f)
+		 (set! params '())
+		 (set! param-value-found #f)
+		 (tilde-dispatch))
+		(else
+		 (if (and (zero? conditional-nest)
+			  (zero? iteration-nest))
+		     (format:print-char char))
+		 (anychar-dispatch))))))
 
     (define (tilde-dispatch)
       (cond
        ((>= format:pos format-string-len)
-	(format:print-string "~") ; tilde at end of
-		; string is just
-		; output
-	arg-pos) ; used for ~?
-		; continuance
+	;;Tilde at end of string is just output.
+	(format:print-string  "~")
+	;;Used for ~? continuance.
+	arg-pos)
        ((and (or (zero? conditional-nest)
-		 (memv (peek-next-char) ; find conditional
-		; directives
+		 (memv (peek-next-char) ;find conditional directives
 		       (append '(#\[ #\] #\; #\: #\@ #\^)
 			       parameter-characters)))
 	     (or (zero? iteration-nest)
-		 (memv (peek-next-char) ; find iteration
-		; directives
+		 (memv (peek-next-char) ;find iteration directives
 		       (append '(#\{ #\} #\: #\@ #\^)
 			       parameter-characters))))
 	(case (next-char)
-	  ;; format directives
+	  ;;Format directives.
 	  ((#\a) ; Any -- for humans
-	   (set! format:read-proof
-		 (memq modifier '(colon colon-at)))
+	   (set! format:read-proof (memq modifier '(colon colon-at)))
 	   (format:out-obj-padded (memq modifier '(at colon-at))
 				  (next-arg) #f params)
 	   (anychar-dispatch))
 
 	  ((#\s) ; Slashified -- for parsers
-	   (set! format:read-proof
-		 (memq modifier '(colon colon-at)))
+	   (set! format:read-proof (memq modifier '(colon colon-at)))
 	   (format:out-obj-padded (memq modifier '(at colon-at))
 				  (next-arg) #t params)
 	   (anychar-dispatch))
@@ -1943,17 +1937,17 @@
 
 	  ((#\r)
 	   (if (null? params)
-	       (format:out-obj-padded ; Roman, cardinal, ordinal numerals
-		#f
-		((case modifier
-		   ((at) format:num->roman)
-		   ((colon-at) format:num->old-roman)
-		   ((colon) format:num->ordinal)
-		   (else format:num->cardinal))
-		 (next-arg))
-		#f params)
-	     (format:out-num-padded ; any Radix
-	      modifier (next-arg) (cdr params) (car params)))
+	       ;;Roman, cardinal, ordinal numerals.
+	       (format:out-obj-padded #f
+				      ((case modifier
+					 ((at)		format:num->roman)
+					 ((colon-at)	format:num->old-roman)
+					 ((colon)	format:num->ordinal)
+					 (else		format:num->cardinal))
+				       (next-arg))
+				      #f params)
+	     ;;Any radix.
+	     (format:out-num-padded modifier (next-arg) ($cdr params) ($car params)))
 	   (anychar-dispatch))
 
 	  ((#\f) ; Fixed-format floating-point
@@ -1964,8 +1958,8 @@
 	   (format:print-flonum-exponential modifier (next-arg) params)
 	   (anychar-dispatch))
 
-;;;This must be replaced by a function that can print currency with i18n
-;;;support.
+;;;FIXME This  must be replaced  by a  function that can  print currency
+;;;with i18n support.
 ;;;
 ;;; 	  ((#\$) ; Dollars floating-point
 ;;; 	   (format:print-flonum-dollar modifier (next-arg) params)
@@ -1985,19 +1979,19 @@
 	       ((at)
 		(format:print-string (format:char->str ch)))
 	       ((colon)
-		(let ((c (char->integer ch)))
-		  (if (< c 0)
-		      (set! c (+ c 256))) ; compensate complement impl.
-		  (cond
-		   ((< c #x20) ; assumes that control chars are < #x20
-		    (format:print-char #\^)
-		    (format:print-char (integer->char (+ c #x40))))
-		   ((>= c #x7f)
-		    (format:print-string "#\\")
-		    (format:print-string (number->string c 8)))
-		   (else
-		    (format:print-char ch)))))
-	       (else (format:print-char ch))))
+		(let ((c ($char->fixnum ch)))
+		  (if ($fx< c 0)
+		      (set! c ($fx+ c 256))) ; compensate complement impl.
+		  (cond (($fx< c #x20) ; assumes that control chars are < #x20
+			 (format:print-char #\^)
+			 (format:print-char ($fixnum->char ($fx+ c #x40))))
+			(($fx>= c #x7f)
+			 (format:print-string "#\\")
+			 (format:print-string (number->string c 8)))
+			(else
+			 (format:print-char ch)))))
+	       (else
+		(format:print-char ch))))
 	   (anychar-dispatch))
 
 	  ((#\p) ; Plural
@@ -2399,7 +2393,7 @@
 
 	  (else ; Unknown tilde directive
 	   (error who "unknown control character"
-	     (string-ref format-string (- format:pos 1))))))
+		  (string-ref format-string (- format:pos 1))))))
        (else
 	(anychar-dispatch)))) ; in case of conditional
 
