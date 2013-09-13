@@ -2310,13 +2310,13 @@
 
 	  ((#\@) ; `@' modifier
 	   (when (memq modifier '(at colon-at))
-	     (error who "double `@' modifier"))
+	     (error who "double \"@\" modifier"))
 	   (set! modifier (if (eq? modifier 'colon) 'colon-at 'at))
 	   (tilde-dispatch))
 
 	  ((#\:) ; `:' modifier
 	   (when (memq modifier '(colon colon-at))
-	     (error who "double escape sequence `:' modifier"))
+	     (error who "double escape sequence \":\" modifier"))
 	   (set! modifier (if (eq? modifier 'at) 'colon-at 'colon))
 	   (tilde-dispatch))
 
@@ -2336,12 +2336,7 @@
 		 ((not (char-numeric? ch)))
 	       (next-char)
 	       (set! num-str-end (+ 1 num-str-end)))
-	     (set! params
-		   (append params
-			   (list (string->number
-				  (substring format-string
-					     num-str-beg
-					     num-str-end))))))
+	     (set! params (append params (list (string->number (substring format-string num-str-beg num-str-end))))))
 	   (set! param-value-found #t)
 	   (tilde-dispatch))
 
