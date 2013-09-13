@@ -147,6 +147,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-issue-024.sps						\
 	test-issue-025-sign-in-exact-rationals.sps			\
 	\
+	test-vicare-unsafe-operations.sps				\
+	\
 	test-vicare-platform-utils.sps					\
 	test-vicare-platform-words.sps					\
 	\
