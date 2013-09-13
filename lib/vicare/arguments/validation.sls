@@ -51,6 +51,9 @@
     non-positive-fixnum.vicare-arguments-validation
     non-negative-fixnum.vicare-arguments-validation
     non-zero-fixnum.vicare-arguments-validation
+    non-positive-fixnum/false.vicare-arguments-validation
+    non-negative-fixnum/false.vicare-arguments-validation
+    non-zero-fixnum/false.vicare-arguments-validation
     fixnum-in-inclusive-range.vicare-arguments-validation
     fixnum-in-exclusive-range.vicare-arguments-validation
     even-fixnum.vicare-arguments-validation
@@ -294,7 +297,12 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Fri Sep 13, 2013)
+    (only (vicare system $fx)
+	  $fxnonpositive?
+	  $fxnonnegative?))
 
 
 (define-syntax define-argument-validation
@@ -515,20 +523,44 @@
        ($fx> 0 obj))
   (assertion-violation who "expected negative fixnum as argument" obj))
 
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (non-positive-fixnum who obj)
   (and (fixnum? obj)
-       ($fx>= 0 obj))
+       ($fxnonpositive? obj))
   (assertion-violation who "expected non-positive fixnum as argument" obj))
 
 (define-argument-validation (non-negative-fixnum who obj)
   (and (fixnum? obj)
-       ($fx<= 0 obj))
+       ($fxnonnegative? obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (non-zero-fixnum who obj)
   (and (fixnum? obj)
        (not (fxzero? obj)))
   (assertion-violation who "expected non-zero fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-positive-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   ($fxnonpositive? obj)))
+  (assertion-violation who "expected false or non-positive fixnum as argument" obj))
+
+(define-argument-validation (non-negative-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   ($fxnonnegative? obj)))
+  (assertion-violation who "expected false or non-negative fixnum as argument" obj))
+
+(define-argument-validation (non-zero-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   (not (fxzero? obj))))
+  (assertion-violation who "expected false or non-zero fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum-in-inclusive-range who obj min max)
   (and (fixnum? obj)

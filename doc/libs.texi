@@ -335,18 +335,29 @@ strictly positive or strictly negative.
 
 
 @deffn {Validation Clause} non-positive-fixnum @var{obj}
-@deffnx {Validation Clause} non-negative-fixnum @var{obj}
-@deffnx {Validation Clause} fixnum-index @var{obj}
+@deffnx {Validation Clause} non-positive-fixnum/false @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
-strictly positive or strictly negative.
+zero or positive.  The second clause accepts also @false{}.
+@end deffn
 
-The clause @code{fixnum-index} is an alias for
-@code{non-negative-fixnum}.
+
+@deffn {Validation Clause} non-negative-fixnum @var{obj}
+@deffnx {Validation Clause} non-negative-fixnum/false @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+zero or negative.  The second clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum-index @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+zero or positive.
 @end deffn
 
 
 @deffn {Validation Clause} non-zero-fixnum @var{obj}
-Fails if @var{obj} satisfies the predicate @func{fxzero?}.
+@deffnx {Validation Clause} non-zero-fixnum/false @var{obj}
+Fails if @var{obj} satisfies the predicate @func{fxzero?}.  The second
+clause accepts also @false{}.
 @end deffn
 
 
