@@ -2129,41 +2129,35 @@
 
 	  ((#\[) ; Conditional begin
 	   (set! conditional-nest (+ conditional-nest 1))
-	   (cond
-	    ((= conditional-nest 1)
+	   (when (= conditional-nest 1)
 	     (set! clause-pos format:pos)
 	     (set! clause-default #f)
 	     (set! clauses '())
 	     (set! conditional-type
 		   (case modifier
-		     ((at) 'if-then)
-		     ((colon) 'if-else-then)
-		     ((colon-at)
-		      (error who "illegal modifier in escape sequence ~["))
-		     (else 'num-case)))
+		     ((at)		'if-then)
+		     ((colon)		'if-else-then)
+		     ((colon-at)	(error who "illegal modifier in escape sequence ~["))
+		     (else		'num-case)))
 	     (set! conditional-arg
 		   (if (one-positive-integer? params)
 		       (car params)
-		     (next-arg)))))
+		     (next-arg))))
 	   (anychar-dispatch))
 
 	  ((#\;) ; Conditional separator
 	   (when (zero? conditional-nest)
 	     (error who "escape sequence ~; not in ~[~] conditional"))
-	   (when (not (null? params))
+	   (unless (null? params)
 	     (error who "no parameter allowed in ~~;"))
 	   (when (= conditional-nest 1)
-	     (let ((clause-str
-		    (cond
-		     ((eq? modifier 'colon)
-		      (set! clause-default #t)
-		      (substring format-string clause-pos
-				 (- format:pos 3)))
-		     ((memq modifier '(at colon-at))
-		      (error who "illegal modifier in escape sequence ~;"))
-		     (else
-		      (substring format-string clause-pos
-				 (- format:pos 2))))))
+	     (let ((clause-str (cond ((eq? modifier 'colon)
+				      (set! clause-default #t)
+				      (substring format-string clause-pos (- format:pos 3)))
+				     ((memq modifier '(at colon-at))
+				      (error who "illegal modifier in escape sequence ~;"))
+				     (else
+				      (substring format-string clause-pos (- format:pos 2))))))
 	       (set! clauses (append clauses (list clause-str)))
 	       (set! clause-pos format:pos)))
 	   (anychar-dispatch))
@@ -2174,44 +2168,37 @@
 	   (set! conditional-nest (- conditional-nest 1))
 	   (when modifier
 	     (error who "no modifier allowed in escape sequence ~]"))
-	   (when (not (null? params))
+	   (unless (null? params)
 	     (error who "no parameter allowed in escape sequence ~]"))
-	   (cond
-	    ((zero? conditional-nest)
-	     (let ((clause-str (substring format-string clause-pos
-					  (- format:pos 2))))
-	       (if clause-default
-		   (set! clause-default clause-str)
-		 (set! clauses (append clauses (list clause-str)))))
-	     (case conditional-type
-	       ((if-then)
-		(if conditional-arg
-		    (format:format (car clauses)
-				   (list conditional-arg))))
-	       ((if-else-then)
-		(add-arg-pos
-		 (format:format (if conditional-arg
-				    (cadr clauses)
-				  (car clauses))
-				(rest-args))))
-	       ((num-case)
-		(when (or (not (integer? conditional-arg))
-			  (< conditional-arg 0))
-		  (error who "argument not a positive integer"))
-		(when (not (and (>= conditional-arg (length clauses))
-				(not clause-default)))
-		  (add-arg-pos
-		   (format:format
-		    (if (>= conditional-arg (length clauses))
-			clause-default
-		      (list-ref clauses conditional-arg))
-		    (rest-args))))))))
+	   (cond ((zero? conditional-nest)
+		  (let ((clause-str (substring format-string clause-pos (- format:pos 2))))
+		    (if clause-default
+			(set! clause-default clause-str)
+		      (set! clauses (append clauses (list clause-str)))))
+		  (case conditional-type
+		    ((if-then)
+		     (if conditional-arg
+			 (format:format (car clauses) (list conditional-arg))))
+		    ((if-else-then)
+		     (add-arg-pos (format:format (if conditional-arg
+						     (cadr clauses)
+						   (car clauses))
+						 (rest-args))))
+		    ((num-case)
+		     (when (or (not (integer? conditional-arg))
+			       (< conditional-arg 0))
+		       (error who "argument not a positive integer"))
+		     (unless (and (>= conditional-arg (length clauses))
+				  (not clause-default))
+		       (add-arg-pos (format:format (if (>= conditional-arg (length clauses))
+						       clause-default
+						     (list-ref clauses conditional-arg))
+						   (rest-args))))))))
 	   (anychar-dispatch))
 
 	  ((#\{) ; Iteration begin
 	   (set! iteration-nest (+ iteration-nest 1))
-	   (cond
-	    ((= iteration-nest 1)
+	   (when (= iteration-nest 1)
 	     (set! iteration-pos format:pos)
 	     (set! iteration-type
 		   (case modifier
@@ -2220,7 +2207,7 @@
 		     ((colon-at) 'rest-sublists)
 		     (else 'list)))
 	     (set! max-iterations (if (one-positive-integer? params)
-				      (car params) #f))))
+				      (car params) #f)))
 	   (anychar-dispatch))
 
 	  ((#\}) ; Iteration end
