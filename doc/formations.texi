@@ -157,71 +157,43 @@ and the default @var{padinc} is 1 (imposing no minimum or multiple).
 More examples:
 
 @example
-(check
-    (format #f "ciao ~:a" display)
-  => (cond-expand
-      (ypsilon  "ciao \"#<subr display>\"")
-      (vicare   "ciao \"#<procedure display>\""))
+(import (except (vicare) format)
+  (vicare formations))
 
-(check
-    (list (format "~5a" 123)
-          (format "~5s" 123))
-  => '("123  "
-       "123  "))
+(format #f "ciao ~:a" display)
+@result{} "ciao \"#<procedure display>\""
 
-(check
-    (list (format "~5@@a" 123)
-          (format "~5@@s" 123))
-  => '("  123"
-       "  123"))
+(format "~5a" 123)              @result{} "123  "
+(format "~5s" 123)              @result{} "123  "
 
-(check
-    (list (format "~5,,,'.a" 123)
-          (format "~5,,,'.s" 123))
-  => '("123.."
-       "123.."))
+(format "~5@@a" 123)            @result{} "  123"
+(format "~5@@s" 123)            @result{} "  123"
 
-(check
-    (list (format "~5,,,'.@@a" 123)
-          (format "~5,,,'.@@s" 123))
-  => '("..123"
-       "..123"))
+(format "~5,,,'.a" 123)         @result{} "123.."
+(format "~5,,,'.s" 123)         @result{} "123.."
 
-(check
-    (list (format "~5,,4,'.@@a" 123)
-          (format "~5,,4,'.@@s" 123))
-  => '("....123"
-       "....123"))
-;;;     1234
+(format "~5,,,'.@@a" 123)       @result{} "..123"
+(format "~5,,,'.@@s" 123)       @result{} "..123"
 
-(check
-    (list (format "~10,,,'a@@a" 123)
-          (format "~10,,,'a@@s" 123))
-  => '("aaaaaaa123"
-       "aaaaaaa123"))
-;;;     1234567
+(format "~5,,4,'.@@a" 123)      @result{} "....123"
+(format "~5,,4,'.@@s" 123)      @result{} "....123"
+;;;                                1234
 
-(check
-    (list (format "~10,3,,'u@@a" 123)
-          (format "~10,3,,'u@@s" 123))
-  => '("uuuuuuuuu123"
-       "uuuuuuuuu123"))
-;;;     123456789
+(format "~10,,,'a@@a" 123)      @result{} "aaaaaaa123"
+(format "~10,,,'a@@s" 123)      @result{} "aaaaaaa123"
+;;;                                1234567
 
-(check
-    (list (format "~11,2,,'u@@a" 123)
-          (format "~11,2,,'u@@s" 123))
-  => '("uuuuuuuu123"
-       "uuuuuuuu123"))
-;;;     12345678
+(format "~10,3,,'u@@a" 123)     @result{} "uuuuuuuuu123"
+(format "~10,3,,'u@@s" 123)     @result{} "uuuuuuuuu123"
+;;;                                123456789
 
-(check
-    (list (format "~8,2,,'u@@a" 1)
-          (format "~8,2,,'u@@s" 1))
-  => '("uuuuuuuu1"
-       "uuuuuuuu1"))
-;;;     12345678
+(format "~11,2,,'u@@a" 123)     @result{} "uuuuuuuu123"
+(format "~11,2,,'u@@s" 123)     @result{} "uuuuuuuu123"
+;;;                                12345678
 
+(format "~8,2,,'u@@a" 1)        @result{} "uuuuuuuu1"
+(format "~8,2,,'u@@s" 1)        @result{} "uuuuuuuu1"
+;;;                                12345678
 @end example
 
 @c page
