@@ -2200,14 +2200,14 @@
 	   (set! iteration-nest (+ iteration-nest 1))
 	   (when (= iteration-nest 1)
 	     (set! iteration-pos format:pos)
-	     (set! iteration-type
-		   (case modifier
-		     ((at) 'rest-args)
-		     ((colon) 'sublists)
-		     ((colon-at) 'rest-sublists)
-		     (else 'list)))
+	     (set! iteration-type (case modifier
+				    ((at)	'rest-args)
+				    ((colon)	'sublists)
+				    ((colon-at)	'rest-sublists)
+				    (else	'list)))
 	     (set! max-iterations (if (one-positive-integer? params)
-				      (car params) #f)))
+				      (car params)
+				    #f)))
 	   (anychar-dispatch))
 
 	  ((#\}) ; Iteration end
@@ -2223,11 +2223,10 @@
 	   (when (not (null? params))
 	     (error who "no parameters allowed in escape sequence ~}"))
 	   (if (zero? iteration-nest)
-	       (let ((iteration-str
-		      (substring format-string iteration-pos
-				 (- format:pos (if modifier 3 2)))))
-		 (if (string=? iteration-str "")
-		     (set! iteration-str (next-arg)))
+	       (let ((iteration-str (substring format-string iteration-pos
+					       (- format:pos (if modifier 3 2)))))
+		 (when ($fxzero? ($string-length iteration-str))
+		   (set! iteration-str (next-arg)))
 		 (case iteration-type
 		   ((list)
 		    (let ((args (next-arg))
@@ -2236,9 +2235,7 @@
 			(error who "expected a list argument"))
 		      (set! args-len (length args))
 		      (do ((arg-pos 0 (+ arg-pos
-					 (format:format
-					  iteration-str
-					  (list-tail args arg-pos))))
+					 (format:format iteration-str (list-tail args arg-pos))))
 			   (i 0 (+ i 1)))
 			  ((or (>= arg-pos args-len)
 			       (and max-iterations
@@ -2246,7 +2243,7 @@
 		   ((sublists)
 		    (let ((args (next-arg))
 			  (args-len 0))
-		      (when (not (list? args))
+		      (unless (list? args)
 			(error who "expected a list argument"))
 		      (set! args-len (length args))
 		      (do ((arg-pos 0 (+ arg-pos 1)))
@@ -2258,33 +2255,28 @@
 			    (error who "expected a list of lists argument"))
 			  (format:format iteration-str sublist)))))
 		   ((rest-args)
-		    (let* ((args (rest-args))
-			   (args-len (length args))
-			   (usedup-args
-			    (do ((arg-pos 0 (+ arg-pos
-					       (format:format
-						iteration-str
-						(list-tail
-						 args arg-pos))))
-				 (i 0 (+ i 1)))
-				((or (>= arg-pos args-len)
-				     (and max-iterations
-					  (>= i max-iterations)))
-				 arg-pos))))
+		    (let* ((args        (rest-args))
+			   (args-len    (length args))
+			   (usedup-args (do ((arg-pos 0 (+ arg-pos
+							   (format:format iteration-str (list-tail args arg-pos))))
+					     (i 0 (+ i 1)))
+					    ((or (>= arg-pos args-len)
+						 (and max-iterations
+						      (>= i max-iterations)))
+					     arg-pos))))
 		      (add-arg-pos usedup-args)))
 		   ((rest-sublists)
-		    (let* ((args (rest-args))
-			   (args-len (length args))
-			   (usedup-args
-			    (do ((arg-pos 0 (+ arg-pos 1)))
-				((or (>= arg-pos args-len)
-				     (and max-iterations
-					  (>= arg-pos max-iterations)))
-				 arg-pos)
-			      (let ((sublist (list-ref args arg-pos)))
-				(when (not (list? sublist))
-				  (error who "expected list arguments"))
-				(format:format iteration-str sublist)))))
+		    (let* ((args        (rest-args))
+			   (args-len    (length args))
+			   (usedup-args (do ((arg-pos 0 (+ arg-pos 1)))
+					    ((or (>= arg-pos args-len)
+						 (and max-iterations
+						      (>= arg-pos max-iterations)))
+					     arg-pos)
+					  (let ((sublist (list-ref args arg-pos)))
+					    (when (not (list? sublist))
+					      (error who "expected list arguments"))
+					    (format:format iteration-str sublist)))))
 		      (add-arg-pos usedup-args)))
 		   (else
 		    (error who "internal error in escape sequence ~}")))))
