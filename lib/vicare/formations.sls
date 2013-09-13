@@ -298,8 +298,11 @@
   (define format:output-col 0)
 
   ;;If true: flush output at end of formatting.
-  (define format:flush-output? #f)
+  (define option.flush-output? #f)
 
+  ;;False    or     a    function     among:    $STRING-TITLECASE/FIRST,
+  ;;STRING-TITLECASE, STRING-UPCASE, STRING-DOWNCASE, or similar.
+  ;;
   (define format:case-conversion #f)
 
   ;;Current format string parsing position.
@@ -354,7 +357,7 @@
 	  (arg-len (length arglist)))
       (cond ((> arg-pos arg-len)
 	     (assertion-violation who "missing argument" (- arg-pos arg-len)))
-	    (format:flush-output?
+	    (option.flush-output?
 	     (flush-output-port port)))
       (and getter (getter)))))
 
@@ -1829,6 +1832,7 @@
 ;;;; actual formatting
 
 (define (format:format format-string arglist)
+  (define who 'format:format)
   (letrec
       ((format-string-len (string-length format-string))
        (arg-pos 0)		  ;argument position in arglist
@@ -1856,35 +1860,30 @@
 
     (define (peek-next-char)
       (if (>= format:pos format-string-len)
-	  (error 'format:format
-	    "illegal format string")
+	  (error who "illegal format string")
 	(string-ref format-string format:pos)))
 
     (define (one-positive-integer? params)
-      (cond
-       ((null? params)
-	#f)
-       ((and (integer? (car params))
-	     (>= (car params) 0)
-	     (= (length params) 1))
-	#t)
-       (else
-	(error 'format:format
-	  "one positive integer parameter expected"))))
+      (cond ((null? params)
+	     #f)
+	    ((and (integer? (car params))
+		  (>= (car params) 0)
+		  (= (length params) 1))
+	     #t)
+	    (else
+	     (error who "one positive integer parameter expected"))))
 
     (define (next-arg)
       (when (>= arg-pos arg-len)
 	(set! format:arg-pos (+ arg-len 1))
-	(error 'format:format
-	  "missing argument(s)"))
+	(error who "missing argument(s)"))
       (add-arg-pos 1)
       (list-ref arglist (- arg-pos 1)))
 
     (define (prev-arg)
       (add-arg-pos -1)
       (when (negative? arg-pos)
-	(error 'format:format
-	  "missing backward argument(s)"))
+	(error who "missing backward argument(s)"))
       (list-ref arglist arg-pos))
 
     (define (rest-args)
@@ -2003,8 +2002,7 @@
 			 (integer->char (car params))
 		       (next-arg))))
 	     (when (not (char? ch))
-	       (error 'format:format
-		 "escape sequence ~c expects a character"))
+	       (error who "escape sequence ~c expects a character"))
 	     (case modifier
 	       ((at)
 		(format:print-string (format:char->str ch)))
@@ -2029,8 +2027,7 @@
 	       (prev-arg))
 	   (let ((arg (next-arg)))
 	     (when (not (number? arg))
-	       (error 'format:format
-		 "escape sequence ~p expects a number argument"))
+	       (error who "escape sequence ~p expects a number argument"))
 	     (if (= arg 1)
 		 (when (memq modifier '(at colon-at))
 		   (format:print-char #\y))
@@ -2097,8 +2094,7 @@
 	  ((#\? #\K) ; Indirection (is "~K" in T-Scheme)
 	   (cond
 	    ((memq modifier '(colon colon-at))
-	     (error 'format:format
-	       "illegal modifier in escape sequence ~?"))
+	     (error who "illegal modifier in escape sequence ~?"))
 	    ((eq? modifier 'at)
 	     (let* ((frmt (next-arg))
 		    (args (rest-args)))
@@ -2110,7 +2106,7 @@
 	   (anychar-dispatch))
 
 	  ((#\!) ; Flush output
-	   (set! format:flush-output? #t)
+	   (set! option.flush-output? #t)
 	   (anychar-dispatch))
 
 	  ((#\newline) ; Continuation lines
@@ -2137,8 +2133,7 @@
 	      (set! arg-pos (if (one-positive-integer? params)
 				(car params) 0)))
 	     ((colon-at)
-	      (error 'format:format
-		"illegal modifier `:@' in escape sequence ~*"))
+	      (error who "illegal modifier `:@' in escape sequence ~*"))
 	     (else ; jump forward
 	      (if (one-positive-integer? params)
 		  (do ((i 0 (+ i 1)))
@@ -2158,8 +2153,7 @@
 
 	  ((#\)) ; Case conversion end
 	   (when (not format:case-conversion)
-	     (error 'format:format
-	       "missing escape sequence ~("))
+	     (error who "found escape sequence \"~)\" without previous opening escape sequence \"~(\""))
 	   (set! format:case-conversion #f)
 	   (anychar-dispatch))
 
@@ -2175,8 +2169,7 @@
 		     ((at) 'if-then)
 		     ((colon) 'if-else-then)
 		     ((colon-at)
-		      (error 'format:format
-			"illegal modifier in escape sequence ~["))
+		      (error who "illegal modifier in escape sequence ~["))
 		     (else 'num-case)))
 	     (set! conditional-arg
 		   (if (one-positive-integer? params)
@@ -2186,11 +2179,9 @@
 
 	  ((#\;) ; Conditional separator
 	   (when (zero? conditional-nest)
-	     (error 'format:format
-	       "escape sequence ~; not in ~[~] conditional"))
+	     (error who "escape sequence ~; not in ~[~] conditional"))
 	   (when (not (null? params))
-	     (error 'format:format
-	       "no parameter allowed in ~~;"))
+	     (error who "no parameter allowed in ~~;"))
 	   (when (= conditional-nest 1)
 	     (let ((clause-str
 		    (cond
@@ -2199,8 +2190,7 @@
 		      (substring format-string clause-pos
 				 (- format:pos 3)))
 		     ((memq modifier '(at colon-at))
-		      (error 'format:format
-			"illegal modifier in escape sequence ~;"))
+		      (error who "illegal modifier in escape sequence ~;"))
 		     (else
 		      (substring format-string clause-pos
 				 (- format:pos 2))))))
@@ -2210,15 +2200,12 @@
 
 	  ((#\]) ; Conditional end
 	   (when (zero? conditional-nest)
-	     (error 'format:format
-	       "missing escape sequence ~["))
+	     (error who "missing escape sequence ~["))
 	   (set! conditional-nest (- conditional-nest 1))
 	   (when modifier
-	     (error 'format:format
-	       "no modifier allowed in escape sequence ~]"))
+	     (error who "no modifier allowed in escape sequence ~]"))
 	   (when (not (null? params))
-	     (error 'format:format
-	       "no parameter allowed in escape sequence ~]"))
+	     (error who "no parameter allowed in escape sequence ~]"))
 	   (cond
 	    ((zero? conditional-nest)
 	     (let ((clause-str (substring format-string clause-pos
@@ -2240,8 +2227,7 @@
 	       ((num-case)
 		(when (or (not (integer? conditional-arg))
 			  (< conditional-arg 0))
-		  (error 'format:format
-		    "argument not a positive integer"))
+		  (error who "argument not a positive integer"))
 		(when (not (and (>= conditional-arg (length clauses))
 				(not clause-default)))
 		  (add-arg-pos
@@ -2269,19 +2255,16 @@
 
 	  ((#\}) ; Iteration end
 	   (when (zero? iteration-nest)
-	     (error 'format:format
-	       "missing in escape sequence ~{"))
+	     (error who "missing in escape sequence ~{"))
 	   (set! iteration-nest (- iteration-nest 1))
 	   (case modifier
 	     ((colon)
 	      (when (not max-iterations)
 		(set! max-iterations 1)))
 	     ((colon-at at)
-	      (error 'format:format
-		"illegal modifier")))
+	      (error who "illegal modifier")))
 	   (when (not (null? params))
-	     (error 'format:format
-	       "no parameters allowed in escape sequence ~}"))
+	     (error who "no parameters allowed in escape sequence ~}"))
 	   (if (zero? iteration-nest)
 	       (let ((iteration-str
 		      (substring format-string iteration-pos
@@ -2293,8 +2276,7 @@
 		    (let ((args (next-arg))
 			  (args-len 0))
 		      (when (not (list? args))
-			(error 'format:format
-			  "expected a list argument"))
+			(error who "expected a list argument"))
 		      (set! args-len (length args))
 		      (do ((arg-pos 0 (+ arg-pos
 					 (format:format
@@ -2308,8 +2290,7 @@
 		    (let ((args (next-arg))
 			  (args-len 0))
 		      (when (not (list? args))
-			(error 'format:format
-			  "expected a list argument"))
+			(error who "expected a list argument"))
 		      (set! args-len (length args))
 		      (do ((arg-pos 0 (+ arg-pos 1)))
 			  ((or (>= arg-pos args-len)
@@ -2317,8 +2298,7 @@
 				    (>= arg-pos max-iterations))))
 			(let ((sublist (list-ref args arg-pos)))
 			  (when (not (list? sublist))
-			    (error 'format:format
-			      "expected a list of lists argument"))
+			    (error who "expected a list of lists argument"))
 			  (format:format iteration-str sublist)))))
 		   ((rest-args)
 		    (let* ((args (rest-args))
@@ -2346,13 +2326,11 @@
 				 arg-pos)
 			      (let ((sublist (list-ref args arg-pos)))
 				(when (not (list? sublist))
-				  (error 'format:format
-				    "expected list arguments"))
+				  (error who "expected list arguments"))
 				(format:format iteration-str sublist)))))
 		      (add-arg-pos usedup-args)))
 		   (else
-		    (error 'format:format
-		      "internal error in escape sequence ~}")))))
+		    (error who "internal error in escape sequence ~}")))))
 	   (anychar-dispatch))
 
 	  ((#\^) ; Up and out
@@ -2367,8 +2345,7 @@
 				 (list-ref params 1)
 				 (list-ref params 2)))
 			(else
-			 (error 'format:format
-			   "too much parameters")))))
+			 (error who "too much parameters")))))
 		    (format:case-conversion ; if conversion stop conversion
 		     (set! format:case-conversion string-copy) #t)
 		    ((= iteration-nest 1) #t)
@@ -2383,30 +2360,26 @@
 
 	  ((#\@) ; `@' modifier
 	   (when (memq modifier '(at colon-at))
-	     (error 'format:format
-	       "double `@' modifier"))
+	     (error who "double `@' modifier"))
 	   (set! modifier (if (eq? modifier 'colon) 'colon-at 'at))
 	   (tilde-dispatch))
 
 	  ((#\:) ; `:' modifier
 	   (when (memq modifier '(colon colon-at))
-	     (error 'format:format
-	       "double escape sequence `:' modifier"))
+	     (error who "double escape sequence `:' modifier"))
 	   (set! modifier (if (eq? modifier 'at) 'colon-at 'colon))
 	   (tilde-dispatch))
 
 	  ((#\') ; Character parameter
 	   (when modifier
-	     (error 'format:format
-	       "misplaced escape sequence modifier"))
+	     (error who "misplaced escape sequence modifier"))
 	   (set! params (append params (list (char->integer (next-char)))))
 	   (set! param-value-found #t)
 	   (tilde-dispatch))
 
 	  ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\- #\+) ; num. paramtr
 	   (when modifier
-	     (error 'format:format
-	       "misplaced escape sequence modifier"))
+	     (error who "misplaced escape sequence modifier"))
 	   (let ((num-str-beg (- format:pos 1))
 		 (num-str-end format:pos))
 	     (do ((ch (peek-next-char) (peek-next-char)))
@@ -2424,35 +2397,30 @@
 
 	  ((#\V) ; Variable parameter from next argum.
 	   (when modifier
-	     (error 'format:format
-	       "misplaced escape sequence modifier"))
+	     (error who "misplaced escape sequence modifier"))
 	   (set! params (append params (list (next-arg))))
 	   (set! param-value-found #t)
 	   (tilde-dispatch))
 
 	  ((#\#) ; Parameter is number of remaining args
 	   (when param-value-found
-	     (error 'format:format
-	       "misplaced '#'"))
+	     (error who "misplaced '#'"))
 	   (when modifier
-	     (error 'format:format
-	       "misplaced escape sequence modifier"))
+	     (error who "misplaced escape sequence modifier"))
 	   (set! params (append params (list (length (rest-args)))))
 	   (set! param-value-found #t)
 	   (tilde-dispatch))
 
 	  ((#\,) ; Parameter separators
 	   (when modifier
-	     (error 'format:format
-	       "misplaced escape sequence modifier"))
+	     (error who "misplaced escape sequence modifier"))
 	   (if (not param-value-found)
 	       (set! params (append params '(#f)))) ; append empty paramtr
 	   (set! param-value-found #f)
 	   (tilde-dispatch))
 
 	  (else ; Unknown tilde directive
-	   (error 'format:format
-	     "unknown control character"
+	   (error who "unknown control character"
 	     (string-ref format-string (- format:pos 1))))))
        (else
 	(anychar-dispatch)))) ; in case of conditional
