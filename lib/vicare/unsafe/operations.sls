@@ -299,6 +299,7 @@
     $string-set!
     $string=
 
+    $string-copy
     $string-copy!
     $string-copy!/count
     $string-self-copy-forwards!
@@ -1015,6 +1016,11 @@
       (begin
 	($string-set! str index fill)
 	(loop str ($fxadd1 index) end fill)))))
+
+(define-inline ($string-copy ?src.str)
+  (let* ((src.len ($string-length ?src.str))
+	 (dst.str ($make-string src.len)))
+    ($string-copy! ?src.str 0 dst.str 0 src.len)))
 
 (define-inline ($string-copy! ?src.str ?src.start
 			      ?dst.str ?dst.start
