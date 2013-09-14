@@ -171,8 +171,8 @@ The documentation of Pregexp is Copyright @copyright{} 1999-2005 Dorai
 Sitaram.  All rights reserved.
 
 The documentation of the library @library{vicare formations} is derived
-from the documentation of Guile.  Copyright @copyright{} 1996, 1997,
-2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation.
+from the documentation of Guile.  Copyright @copyright{} 1996-2005,
+2009-2013 Free Software Foundation.
 
 @quotation
 This program is free software: you can redistribute it and/or modify it
