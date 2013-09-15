@@ -26,6 +26,8 @@ Scheme by Marco Maggi.
 * formations escape integers::  Escape sequences for integers.
 * formations escape flonums::   Escape sequences for flonums.
 * formations escape complex::   Escape sequences for complex numbers.
+* formations escape args::      Escape sequences for special
+                                arguments handling.
 * formations escape misc::      Miscellaneous escape sequences.
 @end menu
 
@@ -520,52 +522,13 @@ counting for width and padding.
 @end deffn
 
 @c page
-@node formations escape misc
-@section Miscellaneous escape sequences
-
-
-@deffn {Format Escape Sequence} ~p
-Plural.  No parameters.
-
-Output nothing if the argument is 1, or @samp{s} for any other
-value.
-
-@example
-(format #t "enter name~p" 1) @print{} enter name
-(format #t "enter name~p" 2) @print{} enter names
-@end example
-
-@code{~@@p} prints @samp{y} for 1 or @samp{ies} otherwise.
-
-@example
-(format #t "pupp~@@p" 1) @print{} puppy
-(format #t "pupp~@@p" 2) @print{} puppies
-@end example
-
-@code{~:p} re-uses the preceding argument instead of taking a new
-one, which can be convenient when printing some sort of count.
-
-@example
-(format #t "~d cat~:p" 9)   @print{} 9 cats
-(format #t "~d pupp~:@@p" 5) @print{} 5 puppies
-@end example
-
-@code{~p} is designed for English plurals and there's no attempt to
-support other languages.  @code{~[} conditionals (below) may be able to
-help.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~y
-Pretty print.  No parameters.
-
-Output an argument with @code{pretty-print}.
-@end deffn
+@node formations escape args
+@section Escape sequences for special arguments handling
 
 
 @deffn {Format Escape Sequence} ~?
 @deffnx {Format Escape Sequence} ~k
-Sub-format.  No parameters.
+Sub--format.  No parameters.
 
 Take a format string argument and a second argument which is a list of
 arguments for that string, and output the result.
@@ -615,6 +578,49 @@ argument list, a reverse of what the @code{@@} modifier does.
 
 At the end of the format string the current argument postion doesn't
 matter, any further arguments are ignored.
+@end deffn
+
+@c page
+@node formations escape misc
+@section Miscellaneous escape sequences
+
+
+@deffn {Format Escape Sequence} ~p
+Plural.  No parameters.
+
+Output nothing if the argument is 1, or @samp{s} for any other
+value.
+
+@example
+(format #t "enter name~p" 1) @print{} enter name
+(format #t "enter name~p" 2) @print{} enter names
+@end example
+
+@code{~@@p} prints @samp{y} for 1 or @samp{ies} otherwise.
+
+@example
+(format #t "pupp~@@p" 1) @print{} puppy
+(format #t "pupp~@@p" 2) @print{} puppies
+@end example
+
+@code{~:p} re-uses the preceding argument instead of taking a new
+one, which can be convenient when printing some sort of count.
+
+@example
+(format #t "~d cat~:p" 9)   @print{} 9 cats
+(format #t "~d pupp~:@@p" 5) @print{} 5 puppies
+@end example
+
+@code{~p} is designed for English plurals and there's no attempt to
+support other languages.  @code{~[} conditionals (below) may be able to
+help.
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~y
+Pretty print.  No parameters.
+
+Output an argument with @func{pretty-print}.
 @end deffn
 
 

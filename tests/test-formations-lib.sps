@@ -1382,6 +1382,58 @@
       (format "enter name~p" 2)
     => "enter names")
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "pupp~@p" 1)
+    => "puppy")
+
+  (check
+      (format "pupp~@p" 2)
+    => "puppies")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~d cat~:p" 9)
+    => "9 cats")
+
+  (check
+      (format "~d pupp~:@p" 5)
+    => "5 puppies")
+
+  #t)
+
+
+(parameterise ((check-test-name 'pretty-print))
+
+  (check
+      (format "a ~y b" '(1 2))
+    => "a (1 2)\n b")
+
+  #t)
+
+
+(parameterise ((check-test-name 'sub-format))
+
+  (check
+      (format "~?" "~d ~d" '(1 2))
+    => "1 2")
+
+  (check
+      (format "~@? ~s" "~d ~d" 1 2 "foo")
+    => "1 2 \"foo\"")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~k" "~d ~d" '(1 2))
+    => "1 2")
+
+  (check
+      (format "~@k ~s" "~d ~d" 1 2 "foo")
+    => "1 2 \"foo\"")
+
   #t)
 
 

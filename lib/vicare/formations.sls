@@ -561,12 +561,13 @@
 	   (let ((arg (next-arg)))
 	     (when (not (number? arg))
 	       (error who "escape sequence ~p expects a number argument"))
-	     (if (= arg 1)
-		 (when (memq modifier '(at colon-at))
-		   (format:print-char #\y))
-	       (if (memq modifier '(at colon-at))
-		   (format:print-string "ies")
-		 (format:print-char #\s))))
+	     (cond ((= arg 1)
+		    (when (memq modifier '(at colon-at))
+		      (format:print-char #\y)))
+		   ((memq modifier '(at colon-at))
+		    (format:print-string "ies"))
+		   (else
+		    (format:print-char #\s))))
 	   (anychar-dispatch))
 
 	  ((#\~) ; Tilde
@@ -613,16 +614,16 @@
 	   (set! format:output-col 0)
 	   (anychar-dispatch))
 
-	  ((#\T) ; Tabulate
+	  ((#\t) ; Tabulate
 	   (format:tabulate modifier params)
 	   (anychar-dispatch))
 
-	  ((#\Y) ; Pretty-print
+	  ((#\y) ; pretty-print
 	   (pretty-print (next-arg) destination-port)
 	   (set! format:output-col 0)
 	   (anychar-dispatch))
 
-	  ((#\? #\K) ; Indirection (is "~K" in T-Scheme)
+	  ((#\? #\k) ; Indirection (is "~K" in T-Scheme)
 	   (cond ((memq modifier '(colon colon-at))
 		  (error who "illegal modifier in escape sequence ~?"))
 		 ((eq? modifier 'at)
