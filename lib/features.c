@@ -444,6 +444,7 @@ main (int argc, const char *const argv[])
     HAVE_TIME_H\n\
     HAVE_TRUNCATE\n\
     HAVE_UMASK\n\
+    HAVE_UNAME\n\
     HAVE_UNISTD_H\n\
     HAVE_UNLINK\n\
     HAVE_UNSETENV\n\
@@ -3169,6 +3170,13 @@ printf("(define-inline-constant HAVE_TRUNCATE %s)\n",
   );
 printf("(define-inline-constant HAVE_UMASK %s)\n",
 #ifdef HAVE_UMASK
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_UNAME %s)\n",
+#ifdef HAVE_UNAME
   "#t"
 #else
   "#f"
