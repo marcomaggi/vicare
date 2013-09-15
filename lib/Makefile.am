@@ -226,7 +226,10 @@ nobase_dist_libvicare_DATA	+= \
 	srfi/%3a101/random-access-lists/equal.sls	\
 	\
 	srfi/%3a111.sls					\
-	srfi/%3a111/boxes.sls
+	srfi/%3a111/boxes.sls				\
+	\
+	srfi/%3a112.sls					\
+	srfi/%3a112/environment-inquiry.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-srfi.sps
 endif

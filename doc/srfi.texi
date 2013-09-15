@@ -64,6 +64,7 @@ minor modification of the original documents by Marco Maggi.
                                 random--access pairs and lists.
 * srfi basic-socket::           @ansrfi{106} basic socket interface.
 * srfi boxes::                  @ansrfi{111} boxes.
+* srfi env-inquiry::            @ansrfi{112} environment inquiry.
 @end menu
 
 @c ------------------------------------------------------------
@@ -103,5 +104,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-functional-pairs.texi
 @include srfi-basic-socket-interface.texi
 @include srfi-boxes.texi
+@include srfi-environment-inquiry.texi
 
 @c end of file

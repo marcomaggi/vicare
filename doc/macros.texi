@@ -203,6 +203,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{CSV}
 @end macro
 
+@macro dns{}
+@acronym{DNS}
+@end macro
+
 @macro dtd{}
 @acronym{DTD}
 @end macro

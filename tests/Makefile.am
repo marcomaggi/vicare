@@ -55,6 +55,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-collect.sps						\
 	test-vicare-compensations.sps					\
 	test-vicare-enumerations.sps					\
+	test-vicare-environment-inquiry.sps				\
 	test-vicare-equality.sps					\
 	test-vicare-errno.sps						\
 	test-vicare-expander.sps					\
@@ -242,7 +243,8 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	test-srfi-78-lightweight-testing.sps				\
 	test-srfi-98-os-environment-variables.sps			\
 	test-srfi-101-functional-pairs.sps				\
-	test-srfi-111-boxes.sps
+	test-srfi-111-boxes.sps						\
+	test-srfi-112-environment-inquiry.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	test-srfi-106-socket.sps

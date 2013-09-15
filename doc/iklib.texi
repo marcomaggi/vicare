@@ -44,6 +44,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
 * iklib config::                Configuration options inspection.
+* iklib env-inquiry::           Environment inquiry.
 * iklib syntaxes::              Additional syntaxes.
 * iklib compensations::         Compensation stacks.
 * iklib conditions::            Additional condition types.
@@ -149,6 +150,116 @@ features enabled; otherwise return @false{}.
 @defun vicare-built-with-linux-enabled
 Return @true{} if the package was configured with Linux features
 enabled; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib env-inquiry
+@section Environment inquiry
+
+
+@defun host-info
+Return a string being the value @gnu{} Autoconf assigned to the
+@code{target} variable.  Examples: @code{i686-pc-linux-gnu},
+@code{x86_64-unknown-linux-gnu}.
+@end defun
+
+
+The @posix{} function @cfunc{uname} fills a data structure of type
+@code{struct utsname} with strings representing a description of the
+underlying platform.  @value{PRJNAME} defines objects of type
+@code{utsname} to provide at the Scheme level such informations;
+@code{utsname} objects are disjoint from all the other types.
+
+
+@defun uname
+Interface to the C function @cfunc{uname}, @manpage{uname, Get name and
+information about current kernel}.  Build and return a new object of
+type @code{utsname}.  If successful return the object, otherwise raise
+an exception.
+@end defun
+
+
+@defun utsname? @var{obj}
+Return @true{} if @var{obj} is an object of type @code{utsname},
+otherwise return @false{}.
+@end defun
+
+
+@defun utsname-sysname @var{utsname}
+@defunx utsname-nodename @var{utsname}
+@defunx utsname-release @var{utsname}
+@defunx utsname-version @var{utsname}
+@defunx utsname-machine @var{utsname}
+Accessors for the fields of the @var{utsname} object.  All the returned
+values are strings.
+@end defun
+
+
+The following bindings are specified by @ansrfi{112}, exported by
+@library{vicare} and reexported by the @srfi{}'s libraries, @ref{srfi
+env-inquiry spec, Specification}.
+
+@defun implementation-name
+Return the string @code{"vicare-scheme"}.
+@end defun
+
+
+@defun implementation-version
+Return the @value{PRJNAME} version string.  Example:
+
+@example
+(import (vicare))
+(implementation-version)        @result{} "0.3d4"
+@end example
+@end defun
+
+
+@defun cpu-architecture
+Return a Scheme string representing the contents of the field
+@code{machine} of the @code{struct utsname} filled by @cfunc{uname}.
+Example:
+
+@example
+(import (vicare))
+(cpu-architecture)      @result{} "x86_64"
+@end example
+@end defun
+
+
+@defun machine-name
+Return a Scheme string representing the contents of the field
+@code{nodename} of the @code{struct utsname} filled by @cfunc{uname}.
+Example:
+
+@example
+(import (vicare))
+(machine-name)          @result{} "governatore"
+@end example
+@end defun
+
+
+@defun os-name
+Return a Scheme string representing the contents of the field
+@code{sysname} of the @code{struct utsname} filled by @cfunc{uname}.
+Example:
+
+@example
+(import (vicare))
+(os-name)               @result{} "Linux"
+@end example
+@end defun
+
+
+@defun os-version
+Return a Scheme string representing the contents of the field
+@code{version} of the @code{struct utsname} filled by @cfunc{uname}.
+Example:
+
+@example
+(import (vicare))
+(os-version)
+@result{} "#2 SMP Mon Sep 17 14:19:22 CDT 2012"
+@end example
 @end defun
 
 @c page
@@ -9903,12 +10014,6 @@ a single machine word.  Compound objects (like lists and vectors) are
 @defun void
 Return the void value.  It is the value returned by forms that do not
 return a meaningful value.
-@end defun
-
-
-@defun host-info
-Return a string being the value @gnu{} Autoconf assigned to the
-@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
 @end defun
 
 

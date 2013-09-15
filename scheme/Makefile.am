@@ -151,6 +151,7 @@ EXTRA_DIST= \
 	ikarus.debugger.sls				\
 	ikarus.emergency.sls				\
 	ikarus.enumerations.sls				\
+	ikarus.environment-inquiry.sls			\
 	ikarus.equal.sls				\
 	ikarus.exceptions.sls				\
 	ikarus.fasl.read.sls				\

@@ -53,6 +53,28 @@ Notes for revision 0.3d4
 * Added   callable  objects   as  library   (vicare  language-extensions
   callables), see the documentation node "callables".
 
+* Added environment inquiry functions to (vicare):
+
+    uname
+    utsname?
+    utsname-sysname
+    utsname-nodename
+    utsname-release
+    utsname-version
+    utsname-machine
+
+    implementation-name
+    implementation-version
+    cpu-architecture
+    machine-name
+    os-name
+    os-version
+
+* Added SRFI 112 libraries:
+
+    (srfi :112)
+    (srfi :112 environment-inquiry)
+
 * Imported one-dimension  libraries from Nausicaa as  (vicare containers
   one-dimension-cc) and (vicare containers one-dimension-co).
 

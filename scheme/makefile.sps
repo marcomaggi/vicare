@@ -313,6 +313,7 @@
 ;;; "ikarus.trace.sls"
     "ikarus.debugger.sls"
     "ikarus.syntax-utilities.sls"
+    "ikarus.environment-inquiry.sls"
     "ikarus.main.sls"
     ))
 
@@ -2257,6 +2258,24 @@
     (split-file-name				posix)
     (vicare-argv0				i v $language posix)
     (vicare-argv0-string			i v $language posix)
+
+;;; --------------------------------------------------------------------
+;;; environment inquiry
+
+    (uname					i v $language)
+    (utsname?					i v $language)
+    (utsname-sysname				i v $language)
+    (utsname-nodename				i v $language)
+    (utsname-release				i v $language)
+    (utsname-version				i v $language)
+    (utsname-machine				i v $language)
+
+    (implementation-name			i v $language)
+    (implementation-version			i v $language)
+    (cpu-architecture				i v $language)
+    (machine-name				i v $language)
+    (os-name					i v $language)
+    (os-version					i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)

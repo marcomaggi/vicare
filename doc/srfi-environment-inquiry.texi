@@ -1,0 +1,252 @@
+@node srfi env-inquiry
+@section @ansrfi{112} environment inquiry
+
+
+@cindex @ansrfi{112} environment inquiry
+@cindex @library{srfi :112}, library
+@cindex @library{srfi :112 boxes}, library
+@cindex Library @library{srfi :112}
+@cindex Library @library{srfi :112 boxes}
+
+
+The library @library{srfi :112} is by John Cowan as implementation for
+@ansrfi{112}; see:
+
+@center @url{http://srfi.schemers.org/srfi-112/srfi-112.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi env-inquiry abstract::   Abstract.
+* srfi env-inquiry rationale::  Rationale.
+* srfi env-inquiry spec::       Specification.
+* srfi env-inquiry impl::       Implementation.
+* srfi env-inquiry copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi env-inquiry abstract
+@subsection Abstract
+
+
+This is a proposal for environment inquiry, providing human--readable
+information at run time about the hardware and software configuration on
+which a Scheme program is being executed.  They are mostly based on
+Common Lisp, with additions from the Posix @cfunc{uname} system call.
+
+@c page
+@node srfi env-inquiry rationale
+@subsection Rationale
+
+
+The feature symbols of the @rnrs{7}--small @func{cond-expand} syntax
+provide the ability to conditionally compile code based on particular
+properties of an implementation that it sees fit to publish.  The
+@func{features} procedure, which returns the list of feature symbols of
+the implementation, provides run--time access to the same set of
+properties.  Assuming that Rhinoceros Scheme provides the feature symbol
+@code{rhinoceros} but not @code{diplodocus} and Diplodocus Scheme does
+the opposite, programs can portably ask ``Is this Rhinoceros Scheme or
+Diplodocus Scheme?'' and behave differently at run time based on the
+answer.  Similarly, a program can ask ``Does this implementation have
+exact complex numbers?'' by checking for the presence of the
+@code{exact-complex} feature symbol in the result of calling
+@func{features}.
+
+However, a program using just the @func{features} procedure cannot
+report to its user ``I am executing on X Scheme'' for every value of X,
+because it does not know which symbol in the feature list represents the
+implementation name, nor does it have a comprehensive list of
+implementation names.  Similarly, there are other properties that the
+feature list may allow testing for but not reporting on, such as the
+underlying @acronym{OS} and the @cpu{} architecture.  For the sake of
+logging and debugging, it is necessary or at least extremely useful to
+provide a standard way for Scheme applications, as well as Scheme users
+at the @repl{}, to report these things.  In the Common Lisp world, bugs
+are often reported in a @repl{} transcript beginning with a call to
+@func{lisp-implementation-version}.
+
+@c page
+@node srfi env-inquiry spec
+@subsection Specification
+
+
+The following procedures take no arguments and return either a string,
+or @false{} if the implementation cannot provide an appropriate and
+relevant result.  It is an error to mutate the returned string.  The
+procedures in this proposal are in the @library{srfi 112} library (or
+@library{srfi :112} on @rnrs{6}).
+
+@quotation
+@strong{For Vicare}: the bindings documented here are exported by the
+libraries @library{srfi :112} and @library{srfi :112
+environment-inquiry} and also by the boot image, @ref{iklib env-inquiry,
+Environment inquiry}.
+@end quotation
+
+Because users are expected to use the values of these procedures for
+reporting rather than testing, no attempt is made to standardize the
+string values they return.
+
+Procedures are provided rather than strings against the possibility that
+a Scheme process might migrate from machine to machine.  This need not
+happen only in a distributed environment; consider, for example, dumping
+a core image file containing a compiler and then shipping it to another
+site.
+
+@posix{} and Common Lisp equivalents or near--equivalents are provided.
+On Windows, some of this information is available using the
+@cfunc{GetSystemInfo} and @cfunc{GetComputerName} @api{}s.
+
+
+@defun implementation-name
+Return the name of the Scheme implementation.  This procedure
+corresponds roughly to Common Lisp's @func{lisp-implementation-type}
+function.
+@end defun
+
+
+@defun implementation-version
+Return the version of the Scheme implementation.  This procedure
+corresponds roughly to Common Lisp's @func{lisp-implementation-version}
+function.
+@end defun
+
+
+@defun cpu-architecture
+Return the @cpu{} architecture, real or virtual, on which this
+implementation is executing.  This procedure corresponds roughly to
+Common Lisp's @func{machine-type} function.  On @posix{} systems, the
+result may be derived from the @code{machine} field of the
+@code{utsname} structure.
+@end defun
+
+
+@defun machine-name
+Return a name for the particular machine on which the implementation is
+running.  Possible values are the @dns{} or @acronym{WINS} host name,
+the @dns{} full name, an @ip{} address in string form associated with
+the system, or a @acronym{MAC} address in string form associated with
+the system.  This procedure corresponds roughly to Common Lisp's
+@func{machine-instance} function.  On @posix{} systems, the result may
+be derived from the @code{nodename} field of the @code{utsname}
+structure.
+@end defun
+
+
+@defun os-name
+Return a name for the operating system, platform, or equivalent on which
+the implementation is running.  This procedure corresponds roughly to
+Common Lisp's @func{software-type} function.  On @posix{} systems, the
+result may be derived from the @code{sysname} field of the
+@code{utsname} structure.
+@end defun
+
+
+@defun os-version
+Return the version of the operating system, platform, or equivalent on
+which the implementation is running.  This procedure corresponds roughly
+to Common Lisp's @func{software-version} function.  On @posix{} systems,
+the result may be derived from the @code{release} and/or @code{version}
+fields of the @code{utsname} structure.
+@end defun
+
+
+@strong{NOTE} Analogues to the Common Lisp @func{machine-version},
+@func{short-site-name}, and @func{long-site-name} are not provided.
+They are inconsistently implemented and of doubtful utility.
+
+@c page
+@node srfi env-inquiry impl
+@subsection Implementation
+
+
+The implementation of this @srfi{} is inherently system--dependent.  The
+version shown below is for an imaginary Scheme implementation, and is in
+@rnrs{5} style.  Trivial wrappers will convert it to an @rnrs{6} or
+@rnrs{7} library.
+
+Some of the information can be derived from the @cfunc{uname} system
+call, which is provided by the @posix{} standard.  (Some of the same
+information is available on Win32 using @cfunc{GetSystemInfo} and
+@cfunc{GetComputerNameA}.)
+
+The exact Scheme interface to @cfunc{uname} is highly system--dependent.
+
+@itemize
+@item
+In Chicken, the @func{system-information} procedure returns a list of
+five strings representing the five components of the @posix{}
+@code{utsname} structure.
+
+@item
+In Gauche, the same procedure is called @func{sys-uname}.
+
+@item
+In Guile and Sizzle, it is called @func{uname}, and returns a vector
+rather than a list; Sizzle places it in the module @code{(core posix)}.
+
+@item
+In Scheme48, there are five separate procedures in the @code{posix}
+structure named @func{os-name}, @func{os-node-name},
+@func{os-release-name}, @func{os-version-name}, and @func{machine-name}.
+
+@item
+In scsh, the @func{uname} procedure returns a record whose fields have
+the same names as the Scheme48 procedures; their accessors are named
+@func{uname:os-name}, etc.
+@end itemize
+
+The version below uses the Guile convention.
+
+@example
+(define (implementation-name)
+  "Fantastic Scheme")
+
+(define (implementation-version)
+  "1.0")
+
+(define (cpu-architecture)
+  (vector-ref (uname) 4)) ; POSIX machine field
+
+(define (machine-name)
+  (vector-ref (uname) 1)) ; POSIX nodename field
+
+(define (os-name)
+  (vector-ref (uname) 0)) ; POSIX sysname field
+
+(define (os-version)
+  (string-append
+    (vector-ref (uname) 2)   ; POSIX version field
+    " "
+    (vector-ref (uname) 3))) ; POSIX release field
+@end example
+
+@c page
+@node srfi env-inquiry copyright
+@subsection Copyright
+
+
+Copyright @copyright{} John Cowan 2013.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file
