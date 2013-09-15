@@ -297,12 +297,7 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    (vicare unsafe operations)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Fri Sep 13, 2013)
-    (only (vicare system $fx)
-	  $fxnonpositive?
-	  $fxnonnegative?))
+    (vicare unsafe operations))
 
 
 (define-syntax define-argument-validation
@@ -527,12 +522,14 @@
 
 (define-argument-validation (non-positive-fixnum who obj)
   (and (fixnum? obj)
-       ($fxnonpositive? obj))
+       (or ($fxzero? obj)
+	   ($fxnegative? obj)))
   (assertion-violation who "expected non-positive fixnum as argument" obj))
 
 (define-argument-validation (non-negative-fixnum who obj)
   (and (fixnum? obj)
-       ($fxnonnegative? obj))
+       (or ($fxzero? obj)
+	   ($fxpositive? obj)))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (non-zero-fixnum who obj)
@@ -545,13 +542,15 @@
 (define-argument-validation (non-positive-fixnum/false who obj)
   (or (not obj)
       (and (fixnum? obj)
-	   ($fxnonpositive? obj)))
+	   (or ($fxzero? obj)
+	       ($fxnegative? obj))))
   (assertion-violation who "expected false or non-positive fixnum as argument" obj))
 
 (define-argument-validation (non-negative-fixnum/false who obj)
   (or (not obj)
       (and (fixnum? obj)
-	   ($fxnonnegative? obj)))
+	   (or ($fxzero? obj)
+	       ($fxpositive? obj))))
   (assertion-violation who "expected false or non-negative fixnum as argument" obj))
 
 (define-argument-validation (non-zero-fixnum/false who obj)
