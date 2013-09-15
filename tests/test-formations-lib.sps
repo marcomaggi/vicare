@@ -513,6 +513,10 @@
       (format "~f" 123)
     => "123.0")
 
+  (check	;upper case escape sequence
+      (format "~F" 123)
+    => "123.0")
+
   (check
       (format "~f" 0.0)
     => "0.0")
@@ -707,7 +711,7 @@
 	(format "~f" "1.23a61"))
     => 'error)
 
-  )
+  #f)
 
 
 (parameterise ((check-test-name 'float-decimal-number))
@@ -1365,7 +1369,20 @@
 ;;;           01234567
 
 
-  )
+  #t)
+
+
+(parameterise ((check-test-name 'plurals))
+
+  (check
+      (format "enter name~p" 1)
+    => "enter name")
+
+  (check
+      (format "enter name~p" 2)
+    => "enter names")
+
+  #t)
 
 
 ;;;; done

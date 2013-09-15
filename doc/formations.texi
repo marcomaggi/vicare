@@ -20,12 +20,13 @@ Scheme by Marco Maggi.
 @end quotation
 
 @menu
-* formations output::               Formatted output.
-* formations escape generic::       Escape sequences for generic values.
-* formations escape char::          Escape sequences for characters.
-* formations escape integers::      Escape sequences for integers.
-* formations escape flonums::       Escape sequences for flonums.
-* formations escape complex::       Escape sequences for complex numbers.
+* formations output::           Formatted output.
+* formations escape generic::   Escape sequences for generic values.
+* formations escape char::      Escape sequences for characters.
+* formations escape integers::  Escape sequences for integers.
+* formations escape flonums::   Escape sequences for flonums.
+* formations escape complex::   Escape sequences for complex numbers.
+* formations escape misc::      Miscellaneous escape sequences.
 @end menu
 
 @c page
@@ -321,18 +322,7 @@ described for @code{~d} above.
 @section Escape sequences for flonums
 
 
-@menu
-* formations escape flonums fixed::        Fixed point format.
-* formations escape flonums exponent::     Exponential format.
-* formations escape flonums eng::          Engineering format.
-@end menu
-
-@c page
-@node formations escape flonums fixed
-@subsection Fixed point format
-
-
-@deffn {Format Escape Sequence} @code{~f}
+@deffn {Format Escape Sequence} ~f
 Real fixed--point float.  Parameters: @var{width}, @var{decimals},
 @var{scale}, @var{overflowchar}, @var{padchar}.
 
@@ -406,10 +396,7 @@ printed instead of the value.
 @end example
 @end deffn
 
-@c page
-@node formations escape flonums exponent
-@subsection Exponential format
-
+@c ------------------------------------------------------------
 
 @deffn {Format Escape Sequence} ~e
 Real exponential float.  Parameters: @var{width}, @var{decimals},
@@ -507,15 +494,6 @@ output would exceed @var{width} then instead that many
 @end deffn
 
 @c page
-@node formations escape flonums eng
-@subsection Engineering format
-
-
-@deffn {Format Escape Sequence} @code{~g}
-@strong{FIXME} <to be written>
-@end deffn
-
-@c page
 @node formations escape complex
 @section Escape sequences for complex numbers
 
@@ -541,8 +519,12 @@ Notice that the imaginary unit character @code{i} is excluded from the
 counting for width and padding.
 @end deffn
 
+@c page
+@node formations escape misc
+@section Miscellaneous escape sequences
 
-@deffn {Format Escape Sequence} @code{~p}
+
+@deffn {Format Escape Sequence} ~p
 Plural.  No parameters.
 
 Output nothing if the argument is 1, or @samp{s} for any other
@@ -570,20 +552,19 @@ one, which can be convenient when printing some sort of count.
 
 @code{~p} is designed for English plurals and there's no attempt to
 support other languages.  @code{~[} conditionals (below) may be able to
-help.  When using @code{gettext} to translate messages @code{ngettext}
-is probably best though.
+help.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~y}
+@deffn {Format Escape Sequence} ~y
 Pretty print.  No parameters.
 
 Output an argument with @code{pretty-print}.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~?}
-@deffnx {Format Escape Sequence} @code{~k}
+@deffn {Format Escape Sequence} ~?
+@deffnx {Format Escape Sequence} ~k
 Sub-format.  No parameters.
 
 Take a format string argument and a second argument which is a list of
@@ -605,7 +586,7 @@ T-Scheme compatibility.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~*}
+@deffn {Format Escape Sequence} ~*
 Argument jumping.  Parameter: @var{N}.
 
 Move forward @var{N} arguments (default 1) in the argument list.
@@ -637,7 +618,7 @@ matter, any further arguments are ignored.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~t}
+@deffn {Format Escape Sequence} ~t
 Advance to a column position.  Parameters: @var{colnum}, @var{colinc},
 @var{padchar}.
 
@@ -674,7 +655,7 @@ there has been other output before @code{format}.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~~}
+@deffn {Format Escape Sequence} ~~
 Tilde character.  Parameter: @var{n}.
 
 Output a tilde character @code{~}, or @var{n} many if a parameter is
@@ -683,7 +664,7 @@ is the way to output a literal tilde.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~%}
+@deffn {Format Escape Sequence} ~%
 Newline.  Parameter: @var{n}.
 
 Output a newline character, or @var{n} many if a parameter is given.
@@ -692,7 +673,7 @@ including them in the format string.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~&}
+@deffn {Format Escape Sequence} ~&
 Start a new line.  Parameter: @var{n}.
 
 Output a newline if not already at the start of a line.  With a
@@ -702,7 +683,7 @@ if not already at the start of a line, and 2 further newlines.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~_}
+@deffn {Format Escape Sequence} ~_
 Space character.  Parameter: @var{n}.
 
 @c  For reference, in Common Lisp ~_ is a conditional newline, but
@@ -720,21 +701,21 @@ things).
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~/}
+@deffn {Format Escape Sequence} ~/
 Tab character.  Parameter: @var{n}.
 
 Output a tab character, or @var{n} many if a parameter is given.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~|}
+@deffn {Format Escape Sequence} ~|
 Formfeed character.  Parameter: @var{n}.
 
 Output a formfeed character, or @var{n} many if a parameter is given.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~!}
+@deffn {Format Escape Sequence} ~!
 Force output.  No parameters.
 
 At the end of output, call @code{force-output} to flush any buffers on
@@ -746,7 +727,7 @@ nothing.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~newline}
+@deffn {Format Escape Sequence} ~newline
 @c (ie.@: newline character)
 Continuation line.  No parameters.
 
@@ -951,7 +932,7 @@ available.
 @end deffn
 
 
-@deffn {Format Escape Sequence} @code{~^}
+@deffn {Format Escape Sequence} ~^
 Escape.  Parameters: @var{val1}, @var{val2}, @var{val3}.
 
 Stop formatting if there are no more arguments.  This can be used for
