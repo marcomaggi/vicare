@@ -1437,6 +1437,44 @@
   #t)
 
 
+(parameterise ((check-test-name 'jumping))
+
+  (check
+      (format "~d ~2*~d" 1 2 3 4)
+    => "1 4")
+
+  (check
+      (format #f "~d ~:*~d" 6)
+    => "6 6")
+
+  (check
+      (format #f "~d~d again ~@*~d~d" 1 2)
+    => "12 again 12")
+
+  (check
+      (format #f "~d~d~d ~1@*~d~d" 1 2 3)
+    => "123 23")
+
+  (check
+      (format "~#*~2:*~a" 'a 'b 'c 'd)
+    => "c")
+
+  #t)
+
+
+(parametrise ((check-test-name	'column-position))
+
+  (check
+      (format #f "~tX")
+    => " X")
+
+  (check
+      (format #f "~3tX")
+    => "   X")
+
+  #f)
+
+
 ;;;; done
 
 (check-report)

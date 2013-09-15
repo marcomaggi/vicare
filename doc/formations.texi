@@ -568,15 +568,15 @@ number 0 (and that's the default for @var{N}).
 (format #f "~d~d~d ~1@@*~d~d" 1 2 3)  @result{} "123 23"
 @end example
 
-A @code{#} move to the end followed by a @code{:} modifier move
-back can be used for an absolute position relative to the end of the
+A @code{#} moves to the end; when followed by a @code{:} modifier it can
+be used to select an absolute position relative to the end of the
 argument list, a reverse of what the @code{@@} modifier does.
 
 @example
 (format #t "~#*~2:*~a" 'a 'b 'c 'd)   @print{} c
 @end example
 
-At the end of the format string the current argument postion doesn't
+At the end of the format string the current argument postion does not
 matter, any further arguments are ignored.
 @end deffn
 
