@@ -611,10 +611,16 @@ installed and functional.
 @ansrfi{106} is available.
 
 @item (srfi :111)
-@itemx (srfi :111 random-access-lists)
+@itemx (srfi :111 boxes)
 @itemx srfi-111
-@itemx srfi-111-random-access-lists
+@itemx srfi-111-boxes
 @ansrfi{111} is available.
+
+@item (srfi :112)
+@itemx (srfi :112 environment-inquiry)
+@itemx srfi-112
+@itemx srfi-112-environment-inquiry
+@ansrfi{112} is available.
 @end table
 
 @c end of file
