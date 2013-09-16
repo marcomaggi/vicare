@@ -1464,13 +1464,41 @@
 
 (parametrise ((check-test-name	'column-position))
 
-  (check
-      (format #f "~tX")
-    => " X")
+  (check (format "~tX")			=> " X")
+  (check (format "~0tX")		=> "X")
+  (check (format "~1tX")		=> " X")
+  (check (format "~2tX")		=> "  X")
+  (check (format "~3tX")		=> "   X")
 
-  (check
-      (format #f "~3tX")
-    => "   X")
+;;; --------------------------------------------------------------------
+
+  (check (format "~,,'.tX")		=> ".X")
+  (check (format "~0,,'.tX")		=> "X")
+  (check (format "~1,,'.tX")		=> ".X")
+  (check (format "~2,,'.tX")		=> "..X")
+  (check (format "~3,,'.tX")		=> "...X")
+
+;;; --------------------------------------------------------------------
+
+  ;; colnum + N * colinc = 0+N*5 = 0+1*5 = 5
+  (check (format "abcd~0,5,'.tX")		=> "abcd.X")
+;;;                                                 0123456789
+
+  ;; colnum + N * colinc = 1+N*5 = 1+1*5 = 6
+  (check (format "abcd~1,5,'.tX")		=> "abcd..X")
+;;;                                                 0123456789
+
+  ;; colnum + N * colinc = 2+N*5 = 2+1*5 = 7
+  (check (format "abcd~2,5,'.tX")		=> "abcd...X")
+;;;                                                 0123456789
+
+  ;; colnum + N * colinc = 3+N*5 = 3+1*5 = 8
+  (check (format "abcd~3,5,'.tX")		=> "abcd....X")
+;;;                                                 0123456789
+
+;;; --------------------------------------------------------------------
+
+  (check (format "a~3,5'*@tx")			=> "a****x")
 
   #f)
 

@@ -217,26 +217,31 @@
 
 ;;;; escape sequence parameter handling
 
-(define (format:par parameters number-of-parameters
-		    index default parameter-name)
+(define (format:par parameters number-of-parameters index default parameter-name)
   ;;Extract an escape  sequence parameter from a list  of parameters and
   ;;return it.
   ;;
+  ;;PARAMETER-NAME must  be false or  a string representing the  name of
+  ;;the parameter.  If  PARAMETER-NAME is a string:  the parameter value
+  ;;is validated  as non-negative integer.  If  PARAMETER-NAME is false:
+  ;;the parameter value  can be anything; it will  probably be validated
+  ;;later by the caller of this function.
+  ;;
+  (define who 'format:par)
   (if (<= number-of-parameters index)
       default
-    (let ((par (list-ref parameters index)))
-      (if par
-	  (if parameter-name
-	      (if (< par 0)
-		  (assertion-violation 'format:par
-		    (string-append "parameter "
-				   (string-upcase parameter-name)
-				   " for escape sequence ~s must be a positive integer")
-		    par)
-		par)
-	    par)
-	default))))
-
+    (cond ((list-ref parameters index)
+	   => (lambda (par)
+		(if parameter-name
+		    (if (non-negative? par)
+			par
+		      (assertion-violation who
+			(string-append "escape sequence parameter " parameter-name
+				       " must be a positive integer")
+			par))
+		  par)))
+	  (else
+	   default))))
 
 
 ;;;; output column handling
@@ -245,17 +250,31 @@
   0)
 
 (define format-output-column
-  (make-parameter #f
+  ;;Starting format output TTY column.
+  (make-parameter 0
     (lambda (obj)
       (define who 'format-output-column)
+      (with-arguments-validation (who)
+	  ((non-negative-fixnum		obj))
+	obj))))
+
+(define format:output-col
+  ;;Current format output TTY column.
+  (make-parameter #f
+    (lambda (obj)
+      (define who 'format:output-col)
       (with-arguments-validation (who)
 	  ((non-negative-fixnum/false	obj))
 	obj))))
 
 (define (increment-output-column delta)
-  (let ((column (format-output-column)))
+  (let ((column (format:output-col)))
     (when column
-      (format-output-column (+ delta column)))))
+      (format:output-col (+ delta column)))))
+
+(define (positive-output-column?)
+  (let ((column (format:output-col)))
+    (and column (positive? column))))
 
 (define (adjust-output-column-from-string str)
   ;;To be invoked after printing  STR to the destination port.  Scan the
@@ -278,12 +297,12 @@
   (let* ((idx	($string-index-right str #\newline))
 	 (str	(if idx
 		    (begin
-		      (format-output-column 0)
+		      (format:output-col 0)
 		      ($substring str ($fxadd1 idx) ($string-length str)))
 		  str))
 	 (len	($string-length str))
 	 (tabs	($string-count-tabs str)))
-    (format-output-column (infix len + 8 * tabs - tabs))))
+    (format:output-col (infix len + 8 * tabs - tabs))))
 
 
 ;;;; incipit
@@ -293,9 +312,6 @@
 
   ;;Current format output port.
   (define destination-port #f)
-
-  ;;Current format output TTY column.
-  (define format:output-col 0)
 
   ;;If true: flush output at end of formatting.
   (define option.flush-output? #f)
@@ -353,7 +369,8 @@
 			       (assertion-violation who "invalid destination" arg0))))
        ((arglist)	(if sarg args ($cdr args))))
     (set! destination-port port)
-    (let ((arg-pos (format:format format-string arglist))
+    (let ((arg-pos (parametrise ((format:output-col (format-output-column)))
+		     (format:format format-string arglist)))
 	  (arg-len (length arglist)))
       (cond ((> arg-pos arg-len)
 	     (assertion-violation who "missing argument" (- arg-pos arg-len)))
@@ -366,24 +383,23 @@
 
 (define (format:format format-string arglist)
   (define who 'format:format)
-  (letrec
-      ((format-string-len (string-length format-string))
-       (arg-pos 0)		  ;argument position in arglist
-       (arg-len (length arglist)) ;number of arguments
-       (modifier #f)		  ;'colon | 'at | 'colon-at | #f
-       (params '())		  ;directive parameter list
-       (param-value-found #f)	  ;a directive parameter value found
-       (conditional-nest 0)	  ;conditional nesting level
-       (clause-pos 0)		  ;last cond. clause beginning char pos
-       (clause-default #f)	  ;conditional default clause string
-       (clauses '())		  ;conditional clause string list
-       (conditional-type #f)	  ;reflects the contional modifiers
-       (conditional-arg #f)	  ;argument to apply the conditional
-       (iteration-nest 0)	  ;iteration nesting level
-       (iteration-pos 0)	  ;iteration string beginning char pos
-       (iteration-type #f)	  ;reflects the iteration modifiers
-       (max-iterations #f)	  ;maximum number of iterations
-       (recursive-pos-save format:pos))
+  (let ((format-string-len	(string-length format-string))
+	(arg-pos		0) ;argument position in arglist
+	(arg-len		(length arglist)) ;number of arguments
+	(modifier		#f)  ;'colon | 'at | 'colon-at | #f
+	(params			'()) ;directive parameter list
+	(param-value-found	#f)  ;a directive parameter value found
+	(conditional-nest	0)   ;conditional nesting level
+	(clause-pos		0) ;last cond. clause beginning char pos
+	(clause-default		#f)  ;conditional default clause string
+	(clauses		'()) ;conditional clause string list
+	(conditional-type	#f)  ;reflects the contional modifiers
+	(conditional-arg	#f)  ;argument to apply the conditional
+	(iteration-nest		0)   ;iteration nesting level
+	(iteration-pos		0)  ;iteration string beginning char pos
+	(iteration-type		#f) ;reflects the iteration modifiers
+	(max-iterations		#f) ;maximum number of iterations
+	(recursive-pos-save	format:pos))
 
     ;;Gets the next char from FORMAT-STRING.
     (define (next-char)
@@ -580,7 +596,7 @@
 	   (if (one-positive-integer? params)
 	       (format:print-fill-chars ($car params) #\newline)
 	     (format:print-char #\newline))
-	   (set! format:output-col 0)
+	   (format:output-col 0)
 	   (anychar-dispatch))
 
 	  ((#\&) ; Fresh line
@@ -588,10 +604,10 @@
 	       (begin
 		 (when (> ($car params) 0)
 		   (format:print-fill-chars (- ($car params)
-					       (if (> format:output-col 0) 0 1))
+					       (if (positive-output-column?) 0 1))
 					    #\newline))
-		 (set! format:output-col 0))
-	     (when (> format:output-col 0)
+		 (format:output-col 0))
+	     (when (positive-output-column?)
 	       (format:print-char #\newline)))
 	   (anychar-dispatch))
 
@@ -607,11 +623,11 @@
 	     (format:print-char #\tab))
 	   (anychar-dispatch))
 
-	  ((#\|) ; Page seperator
+	  ((#\|) ; Page separator
 	   (if (one-positive-integer? params)
 	       (format:print-fill-chars (car params) #\page)
 	     (format:print-char #\page))
-	   (set! format:output-col 0)
+	   (format:output-col 0)
 	   (anychar-dispatch))
 
 	  ((#\t) ; Tabulate
@@ -620,7 +636,7 @@
 
 	  ((#\y) ; pretty-print
 	   (pretty-print (next-arg) destination-port)
-	   (set! format:output-col 0)
+	   (format:output-col 0)
 	   (anychar-dispatch))
 
 	  ((#\? #\k) ; Indirection (is "~K" in T-Scheme)
@@ -930,7 +946,7 @@
 	   (error who "unknown control character"
 		  (string-ref format-string (- format:pos 1))))))
        (else
-	(anychar-dispatch)))) ; in case of conditional
+	(anychar-dispatch))))
 
     (set! format:pos 0)
     (set! format:arg-pos 0)
@@ -951,7 +967,7 @@
       (display (format:case-conversion (string ch)) destination-port)
     (write-char ch destination-port))
   (if ($char= ch #\newline)
-      (format-output-column 0)
+      (format:output-col 0)
     (increment-output-column 1)))
 
 (define (format:print-string str)
@@ -2354,35 +2370,43 @@
 ;;;; helpers, tabulation
 
 (define (format:tabulate modifier parameters)
-  (let ((l (length parameters)))
-    (let ((colnum	(format:par parameters l 0 1 "colnum"))
-	  (padinc	(format:par parameters l 1 1 "padinc"))
-	  (padch	(integer->char
-			 (format:par parameters l 2 space-char-integer #f))))
-      (case modifier
-	((colon colon-at)
-	 (error 'format:tabulate
-	   "unsupported modifier for escape sequence ~t"
-	   modifier))
-	((at)	; relative tabulation
-	 (format:print-fill-chars
-	  (if (= padinc 0)
-	      colnum ; colnum = colrel
-	    (do ((c 0 (+ c padinc))
-		 (col (+ format:output-col colnum)))
-		((>= c col)
-		 (- c format:output-col))))
-	  padch))
-	(else	; absolute tabulation
-	 (format:print-fill-chars (cond ((< format:output-col colnum)
-					 (- colnum format:output-col))
-					((= padinc 0)
-					 0)
-					(else
-					 (do ((c colnum (+ c padinc)))
-					     ((>= c format:output-col)
-					      (- c format:output-col)))))
-				  padch))))))
+  (define who 'format:tabulate)
+  (define l (length parameters))
+  (let ((colnum	(format:par parameters l 0 1 "colnum"))
+	(colinc	(format:par parameters l 1 1 "colinc"))
+	(padch	(integer->char (format:par parameters l 2 space-char-integer #f))))
+    (format:print-fill-chars (case modifier
+			       ((colon colon-at)
+				(assertion-violation who
+				  "unsupported modifier for escape sequence ~t" modifier))
+			       ((at)
+				;;Relative tabulation.
+				(if (zero? colinc)
+				    colnum ; colnum = colrel
+				  (do ((c 0 (+ c colinc))
+				       (col (+ (format:output-col) colnum)))
+				      ((>= c col)
+				       (- c (format:output-col))))))
+			       (else
+				;;Absolute tabulation.
+				(cond ((< (format:output-col) colnum)
+				       ;;The  current  column is  before
+				       ;;the requested COLNUM: just move
+				       ;;to COLNUM.
+				       (- colnum (format:output-col)))
+				      ((zero? colinc)
+				       ;;If the column  increment is set
+				       ;;to zero: do  not move, keep the
+				       ;;current column position.
+				       0)
+				      (else
+				       ;;Increment  the  COLNUM  by  the
+				       ;;minimum  amount of  COLINC that
+				       ;;surpasses the current column.
+				       (do ((c colnum (+ c colinc)))
+					   ((>= c (format:output-col))
+					    (- c (format:output-col))))))))
+			     padch)))
 
 
 ;;;; body of FORMAT

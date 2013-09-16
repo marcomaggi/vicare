@@ -28,6 +28,8 @@ Scheme by Marco Maggi.
 * formations escape complex::   Escape sequences for complex numbers.
 * formations escape args::      Escape sequences for special
                                 arguments handling.
+* formations escape columns::   Escape sequences for columns
+                                and indentation.
 * formations escape misc::      Miscellaneous escape sequences.
 @end menu
 
@@ -55,7 +57,9 @@ of @code{%}, and are more powerful.
 @defunx format @var{template-string} @var{args} @dots{}
 @defunx format @var{dest} @var{template-string}
 @defunx format @var{dest} @var{template-string} @var{arg} @dots{}
-Write output specified by the @var{template-string} string to @var{dest}.
+Write output specified by the @var{template-string} string to
+@var{dest}; assume that the zero--based starting column number is the
+one specified by the parameter @func{format-output-column}.
 
 @var{dest} can be:
 
@@ -110,6 +114,13 @@ The number of arguments remaining.
 Parameters are separated by commas (@code{,}).  A parameter can be left
 empty to keep its default value when supplying later parameters.
 @end defun
+
+
+@deffn Parameter format-output-column
+The zero--based starting column number for the next invocations of
+@func{format}.  The value is initialised to @math{0} and must be a
+non--negative fixnum.
+@end deffn
 
 @c page
 @node formations escape generic
@@ -581,6 +592,74 @@ matter, any further arguments are ignored.
 @end deffn
 
 @c page
+@node formations escape columns
+@section Escape sequences for columns and indentation
+
+
+@deffn {Format Escape Sequence} ~y
+Pretty print.  No parameters.
+
+Output an argument with @func{pretty-print}.
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~t
+Advance to a column position.  Parameters: @var{colnum}, @var{colinc},
+@var{padchar}.
+
+Output @var{padchar} (space by default) to move to the given
+@var{colnum} column.  The start of the line is column 0, the default
+for @var{colnum} is 1.
+
+@example
+(format "~tX")          @result{} " X"
+(format "~0tX")         @result{} "X"
+(format "~1tX")         @result{} " X"
+(format "~2tX")         @result{} "  X"
+(format "~3tX")         @result{} "   X"
+
+(format "~,,'.tX")      @result{} ".X"
+(format "~0,,'.tX")     @result{} "X"
+(format "~1,,'.tX")     @result{} ".X"
+(format "~2,,'.tX")     @result{} "..X"
+(format "~3,,'.tX")     @result{} "...X"
+@end example
+
+If the current column is already past @var{colnum}, then the move is to
+column @code{@var{colnum} + @var{N} * @var{colinc}} for the smallest
+@var{N} which makes that value greater than or equal to the current
+column.  The default @var{colinc} is @math{1} (which means no further
+move).  In the following examples @code{~t} is found when the next
+character should be output at column @math{4}:
+
+@example
+;; @var{colnum} + @var{N} * @var{colinc} = 0+@var{N}*5 = 0+1*5 = 5
+(format "abcd~0,5,'.tX")        @result{} "abcd.X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 1+@var{N}*5 = 1+1*5 = 6
+(format "abcd~1,5,'.tX")        @result{} "abcd..X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 2+@var{N}*5 = 2+1*5 = 7
+(format "abcd~2,5,'.tX")        @result{} "abcd...X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 3+@var{N}*5 = 3+1*5 = 8
+(format "abcd~3,5,'.tX")        @result{} "abcd....X"
+;;;                                 0123456789
+@end example
+
+@code{~@@t} takes @var{colnum} as an offset from the current column.
+@var{colnum} pad characters are output, then further padding to make the
+current column a multiple of @var{colinc}, if it isn't already so.
+
+@example
+(format #f "a~3,5'*@@tx") @result{} "a****x"
+@end example
+@end deffn
+
+@c page
 @node formations escape misc
 @section Miscellaneous escape sequences
 
@@ -614,50 +693,6 @@ one, which can be convenient when printing some sort of count.
 @code{~p} is designed for English plurals and there's no attempt to
 support other languages.  @code{~[} conditionals (below) may be able to
 help.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~y
-Pretty print.  No parameters.
-
-Output an argument with @func{pretty-print}.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~t
-Advance to a column position.  Parameters: @var{colnum}, @var{colinc},
-@var{padchar}.
-
-Output @var{padchar} (space by default) to move to the given
-@var{colnum} column.  The start of the line is column 0, the default
-for @var{colnum} is 1.
-
-@example
-(format #f "~tX")  @result{} " X"
-(format #f "~3tX") @result{} "   X"
-@end example
-
-If the current column is already past @var{colnum}, then the move is
-to there plus a multiple of @var{colinc}, ie.@: column
-@math{@var{colnum} + @var{N} * @var{colinc}} for the smallest @var{N}
-which makes that value greater than or equal to the current column.
-The default @var{colinc} is 1 (which means no further move).
-
-@example
-(format #f "abcd~2,5,'.tx") @result{} "abcd...x"
-@end example
-
-@code{~@@t} takes @var{colnum} as an offset from the current column.
-@var{colnum} many pad characters are output, then further padding to
-make the current column a multiple of @var{colinc}, if it isn't
-already so.
-
-@example
-(format #f "a~3,5'*@@tx") @result{} "a****x"
-@end example
-
-@code{~t} is implemented using @code{port-column}, so it works even
-there has been other output before @code{format}.
 @end deffn
 
 
