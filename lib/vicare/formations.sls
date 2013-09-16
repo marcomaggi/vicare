@@ -164,34 +164,37 @@
 		  ($fxadd1 count)
 		count))))))
 
-(define ($string-titlecase/first str)
-  ;;Convert  a string to  its representation  with the  first alphabetic
-  ;;char capitalised.  We iterate  over the chars rather than extracting
-  ;;a substring so that we can apply CHAR-ALPHABETIC?.
-  ;;
-  ;;Some profiling  is needed to  understand if an  implementation using
-  ;;SUBSTRING is more efficient with a given Scheme implementation.
-  ;;
-  ;;Usage examples:
-  ;;
-  ;; "hello"		-> "Hello"
-  ;; "hELLO"		-> "Hello"
-  ;; "*hello"		-> "*Hello"
-  ;; "hello you"	-> "Hello you"
-  ;;
-  (let ((cap-str		($string-copy str))
-	(non-first-alpha	#f)
-	(str-len		($string-length str)))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i str-len)
-	 cap-str)
-      (let ((c ($string-ref str i)))
-	(when (char-alphabetic? c)
-	  (if non-first-alpha
-	      ($string-set! cap-str i (char-downcase c))
-	    (begin
-	      (set! non-first-alpha #t)
-	      ($string-set! cap-str i (char-upcase c)))))))))
+;;Commented out beause  we use STRING-TITLECASE.  (Marco  Maggi; Mon Sep
+;;16, 2013)
+;;
+;; (define ($string-titlecase/first str)
+;;   ;;Convert  a string to  its representation  with the  first alphabetic
+;;   ;;char capitalised.  We iterate  over the chars rather than extracting
+;;   ;;a substring so that we can apply CHAR-ALPHABETIC?.
+;;   ;;
+;;   ;;Some profiling  is needed to  understand if an  implementation using
+;;   ;;SUBSTRING is more efficient with a given Scheme implementation.
+;;   ;;
+;;   ;;Usage examples:
+;;   ;;
+;;   ;; "hello"		-> "Hello"
+;;   ;; "hELLO"		-> "Hello"
+;;   ;; "*hello"		-> "*Hello"
+;;   ;; "hello you"	-> "Hello you"
+;;   ;;
+;;   (let ((cap-str		($string-copy str))
+;; 	(non-first-alpha	#f)
+;; 	(str-len		($string-length str)))
+;;     (do ((i 0 ($fxadd1 i)))
+;; 	(($fx= i str-len)
+;; 	 cap-str)
+;;       (let ((c ($string-ref str i)))
+;; 	(when (char-alphabetic? c)
+;; 	  (if non-first-alpha
+;; 	      ($string-set! cap-str i (char-downcase c))
+;; 	    (begin
+;; 	      (set! non-first-alpha #t)
+;; 	      ($string-set! cap-str i (char-upcase c)))))))))
 
 (define (number->string/radix num radix)
   ;;Return the  string representation of  the integer NUM in  the RADIX.
@@ -316,10 +319,24 @@
   ;;If true: flush output at end of formatting.
   (define option.flush-output? #f)
 
-  ;;False    or     a    function     among:    $STRING-TITLECASE/FIRST,
-  ;;STRING-TITLECASE, STRING-UPCASE, STRING-DOWNCASE, or similar.
+  ;;A  boolean or  a  function  among: STRING-TITLECASE,  STRING-UPCASE,
+  ;;STRING-DOWNCASE, or similar.
+  ;;
+  ;;* When set to #f: it means that no conversion has been requested.
+  ;;
+  ;;* When set to #t: it means that a conversion has been requested, but
+  ;;it has already been performed.
+  ;;
+  ;;* When set to a procedurre: the procedure is the converter.
   ;;
   (define format:case-conversion #f)
+
+  (define (reset-one-shot-case-conversion)
+    (when (one-shot-case-conversion? format:case-conversion)
+      (set! format:case-conversion #t)))
+
+  (define (one-shot-case-conversion? fun)
+    (eq? fun string-titlecase))
 
   ;;Current format string parsing position.
   (define format:pos 0)
@@ -416,7 +433,7 @@
       (cond ((null? params)
 	     #f)
 	    ((and (integer? ($car params))
-		  (>= ($car params) 0)
+		  (non-negative? ($car params))
 		  (= (length params) 1))
 	     #t)
 	    (else
@@ -701,9 +718,11 @@
 	   (anychar-dispatch))
 
 	  ((#\() ; Case conversion begin
+	   (when format:case-conversion
+	     (error who "found escape sequence \"~(\" nested in escape sequence \"~(\""))
 	   (set! format:case-conversion
 		 (case modifier
-		   ((at)	$string-titlecase/first)
+		   ((at)	string-foldcase #;$string-titlecase/first)
 		   ((colon)	string-titlecase)
 		   ((colon-at)	string-upcase)
 		   (else	string-downcase)))
@@ -882,7 +901,8 @@
 				      (else
 				       (error who "too much parameters")))))
 				  (format:case-conversion ; if conversion stop conversion
-				   (set! format:case-conversion string-copy) #t)
+				   (set! format:case-conversion string-copy)
+				   #t)
 				  ((= iteration-nest 1)
 				   #t)
 				  ((= conditional-nest 1)
@@ -973,8 +993,10 @@
   ;;Print a  single character with  case conversion.  Update  the output
   ;;column.
   ;;
-  (if format:case-conversion
-      (display (format:case-conversion (string ch)) destination-port)
+  (if (procedure? format:case-conversion)
+      (begin
+	(display (format:case-conversion (string ch)) destination-port)
+	(reset-one-shot-case-conversion))
     (write-char ch destination-port))
   (if (or ($char= ch #\newline)
 	  ($char= ch #\page))
@@ -984,8 +1006,10 @@
 (define (format:print-string str)
   ;;Print a string with case conversion.  Update the output column.
   ;;
-  (display (if format:case-conversion
-	       (format:case-conversion str)
+  (display (if (procedure? format:case-conversion)
+	       (receive-and-return (str)
+		   (format:case-conversion str)
+		 (reset-one-shot-case-conversion))
 	     str)
 	   destination-port)
   (adjust-output-column-from-string str))

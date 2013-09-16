@@ -23,6 +23,7 @@ Scheme by Marco Maggi.
 * formations output::           Formatted output.
 * formations escape generic::   Escape sequences for generic values.
 * formations escape char::      Escape sequences for characters.
+* formations escape case::      Escape sequences for case conversion.
 * formations escape integers::  Escape sequences for integers.
 * formations escape flonums::   Escape sequences for flonums.
 * formations escape complex::   Escape sequences for complex numbers.
@@ -240,6 +241,44 @@ code.
 @example
 (format #t "~65c")  @print{} A
 @end example
+@end deffn
+
+@c page
+@node formations escape case
+@section Escape sequences for case conversion
+
+
+@deffn {Format Escape Sequence} {~( ~)}
+Case conversion.  No parameters.
+
+Between @code{~(} and @code{~)} the case of all output is changed.  The
+modifiers on @code{~(} control the conversion.
+
+@table @asis
+@item @code{~(}
+Lower case using @func{string-downcase}.
+
+@item @code{~:(}
+Title case using @func{string-titlecase}.
+
+@item @code{~@@(}
+Fold case using @func{string-foldcase}.  @strong{NOTE} Currently broken.
+
+@item @code{~:@@(}
+Upper case using @func{string-upcase}.
+@end table
+
+For example:
+
+@example
+(format #t "~(Hello~)")   @print{} hello
+(format #t "~:@@(Hello~)") @print{} HELLO
+@end example
+
+Case conversions do not nest, currently (an exception is raised).  This
+might change in the future, but if it does then it will be to Common
+Lisp style where the outermost conversion has priority, overriding inner
+ones (making those fairly pointless).
 @end deffn
 
 @c page
@@ -839,60 +878,6 @@ When output is to a string: @code{~!} does nothing.
 @end deffn
 
 @c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-@deffn {Format Escape Sequence} {~( ~)}
-Case conversion.  No parameters.
-
-Between @code{~(} and @code{~)} the case of all output is changed.
-The modifiers on @code{~(} control the conversion.
-
-@table @asis
-@item @code{~(}
-Lower case.
-@c
-@c  FIXME: The : and @ modifiers are not yet documented because the
-@c  code applies string-capitalize and string-capitalize-first to each
-@c  separate format:out-str call, which has various subtly doubtful
-@c  effects.  And worse they're applied to individual characters,
-@c  including literal characters in the format string, which has the
-@c  silly effect of being always an upcase.
-@c
-@c  The Common Lisp spec is apparently for the capitalization to be
-@c  applied in one hit to the whole of the output between ~( and ~).
-@c  (This can no doubt be implemented without accumulating all that
-@c  text, just by keeping a state or the previous char to tell whether
-@c  within a word.)
-@c
-@c  @deffn {Format Escape Sequence}
-@c  @code{:} --- first letter of each word upper case, the rest lower
-@c  case, as per the @code{string-capitalize} function (@pxref{Alphabetic
-@c  Case Mapping}).
-@c  @deffn {Format Escape Sequence}
-@c  @code{@@} --- first letter of just the first word upper case, the
-@c  rest lower case.
-@c
-@item @code{~:@@(}
-Upper case.
-@end table
-
-For example,
-
-@example
-(format #t "~(Hello~)")   @print{} hello
-(format #t "~:@@(Hello~)") @print{} HELLO
-@end example
-
-In the future it's intended the modifiers @code{:} and @code{@@}
-alone will capitalize the first letters of words, as per Common Lisp
-@code{format}, but the current implementation of this is flawed and
-not recommended for use.
-
-Case conversions do not nest, currently.  This might change in the
-future, but if it does then it will be to Common Lisp style where the
-outermost conversion has priority, overriding inner ones (making those
-fairly pointless).
-@end deffn
-
 
 @deffn {Format Escape Sequence} ~@{ ~@}
 Iteration.  Parameter: @var{maxreps} (for @code{~@{}).

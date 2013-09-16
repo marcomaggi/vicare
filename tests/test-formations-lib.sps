@@ -248,7 +248,34 @@
       (format "~65c")
     => "A")
 
-  )
+  #t)
+
+
+(parameterise ((check-test-name 'characters))
+
+  (check
+      (format "~(Hello~)")
+    => "hello")
+
+  (check
+      (format "~:(hello~)")
+    => "Hello")
+
+  (check
+      (format "~@(hello~)")
+    => "hello")
+
+  (check
+      (format "~:@(Hello~)")
+    => "HELLO")
+
+  ;;Raise an error on nested escape sequences.
+  ;;
+  ;; (check
+  ;;     (format "~(He~(ll~)o~)")
+  ;;   => "hello")
+
+  #t)
 
 
 (parameterise ((check-test-name 'integer-numbers))
