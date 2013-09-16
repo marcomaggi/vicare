@@ -28,6 +28,7 @@ Scheme by Marco Maggi.
 * formations escape complex::   Escape sequences for complex numbers.
 * formations escape args::      Escape sequences for special
                                 arguments handling.
+* formations escape lines::     Escape sequences for output lines.
 * formations escape columns::   Escape sequences for columns
                                 and indentation.
 * formations escape misc::      Miscellaneous escape sequences.
@@ -46,7 +47,9 @@ flexibility.
 
 @func{format} is similar to the Common Lisp procedure of the same name,
 but it's not identical and doesn't have quite all the features found in
-Common Lisp.
+Common Lisp@footnote{For the original Common Lisp specification see
+(@aurl{} last verified Sep 16, 2013):
+@url{http:/@//@/www.cs.cmu.edu/@/Groups/@/AI/@/html/@/cltl/@/clm/@/node200.html}}.
 
 C programmers will note the similarity between @func{format} and
 @cfunc{printf}, though escape sequences are marked with @code{~} instead
@@ -592,6 +595,42 @@ matter, any further arguments are ignored.
 @end deffn
 
 @c page
+@node formations escape lines
+@section Escape sequences for output lines
+
+
+@deffn {Format Escape Sequence} ~%
+Newline.  Parameter: @var{N}.
+
+Without modifiers: output a newline character, or @var{N} many if a
+parameter is given.  A newline (or a few newlines) can of course be
+output just by including them in the format string as @code{"\n"}.
+
+@example
+(format "A~%Z")         @result{} "A\nZ"
+(format "A~3%Z")        @result{} "A\n\n\nZ"
+@end example
+
+@code{~:%} outputs line endings as carriage returns followed by
+newlines, as in @code{"\r\n"}.
+
+@example
+(format "A~:%Z")        @result{} "A\r\nZ"
+(format "A~3:%Z")       @result{} "A\r\n\r\n\r\nZ"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~&
+Start a new line.  Parameter: @var{n}.
+
+Output a newline if not already at the start of a line.  With a
+parameter, output that many newlines, but with the first only if not
+already at the start of a line.  So for instance 3 would be a newline
+if not already at the start of a line, and 2 further newlines.
+@end deffn
+
+@c page
 @node formations escape columns
 @section Escape sequences for columns and indentation
 
@@ -702,25 +741,6 @@ Tilde character.  Parameter: @var{n}.
 Output a tilde character @code{~}, or @var{n} many if a parameter is
 given.  Normally @code{~} introduces an escape sequence, @code{~~}
 is the way to output a literal tilde.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~%
-Newline.  Parameter: @var{n}.
-
-Output a newline character, or @var{n} many if a parameter is given.
-A newline (or a few newlines) can of course be output just by
-including them in the format string.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~&
-Start a new line.  Parameter: @var{n}.
-
-Output a newline if not already at the start of a line.  With a
-parameter, output that many newlines, but with the first only if not
-already at the start of a line.  So for instance 3 would be a newline
-if not already at the start of a line, and 2 further newlines.
 @end deffn
 
 

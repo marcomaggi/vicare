@@ -1462,6 +1462,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'lines))
+
+  (check (format "A~%Z")		=> "A\nZ")
+  (check (format "A~3%Z")		=> "A\n\n\nZ")
+
+  (check (format "A~:%Z")		=> "A\r\nZ")
+  (check (format "A~3:%Z")		=> "A\r\n\r\n\r\nZ")
+
+;;; --------------------------------------------------------------------
+
+  #t)
+
+
 (parametrise ((check-test-name	'column-position))
 
   (check (format "~tX")			=> " X")

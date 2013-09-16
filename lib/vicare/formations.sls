@@ -593,9 +593,19 @@
 	   (anychar-dispatch))
 
 	  ((#\%) ; Newline
-	   (if (one-positive-integer? params)
-	       (format:print-fill-chars ($car params) #\newline)
-	     (format:print-char #\newline))
+	   (case modifier
+	     ((at colon-at)
+	      (assertion-violation who "unsupported modifier for escape sequence ~%" modifier))
+	     ((colon)
+	      (if (one-positive-integer? params)
+		  (do ((i 0 (+ 1 i)))
+		      ((= i ($car params)))
+		    (format:print-string "\r\n"))
+		(format:print-string "\r\n")))
+	     (else
+	      (if (one-positive-integer? params)
+		  (format:print-fill-chars ($car params) #\newline)
+		(format:print-char #\newline))))
 	   (format:output-col 0)
 	   (anychar-dispatch))
 
