@@ -1542,6 +1542,26 @@
   (check (format "A~|Z")		=> "A\fZ")
   (check (format "A~3|Z")		=> "A\f\f\fZ")
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (format #f "abc~
+                  ~d def~
+                  ~d" 1 2)
+    => "abc1 def2")
+
+  (check
+      (format "abc~\ndef~\nghi")
+    => "abcdefghi")
+
+  (check
+      (format "abc~:\n def~:\n ghi")
+    => "abc def ghi")
+
+  (check
+      (format "abc~@\n def~@\n ghi")
+    => "abc\ndef\nghi")
+
   #t)
 
 

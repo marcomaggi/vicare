@@ -650,6 +650,36 @@ Output a formfeed character, or @var{N} feeds if a parameter is given.
 @end example
 @end deffn
 
+
+@deffn {Format Escape Sequence} ~\n
+Continuation line.  No parameters.
+
+Skip this newline and any following whitespace in the format string,
+i.e.@: don't send it to the output.  This can be used to break up a long
+format string for readability, but not print the extra whitespace.
+
+@example
+(format "abc~
+         ~d def~
+         ~d" 1 2)               @result{} "abc1 def2"
+
+(format "abc~\ndef~\nghi")      @result{} "abcdefghi"
+@end example
+
+@code{~:\n} skips the newline but leaves any further whitespace to be
+printed normally.
+
+@example
+(format "abc~:\n def~:\n ghi")  @result{} "abc def ghi"
+@end example
+
+@code{~@@\n} prints the newline then skips following whitespace.
+
+@example
+(format "abc~@@\n def~@@\n ghi")  @result{} "abc\ndef\nghi"
+@end example
+@end deffn
+
 @c page
 @node formations escape columns
 @section Escape sequences for columns and indentation
@@ -809,28 +839,6 @@ When output is to a string: @code{~!} does nothing.
 @end deffn
 
 @c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-@deffn {Format Escape Sequence} ~newline
-@c (ie.@: newline character)
-Continuation line.  No parameters.
-
-Skip this newline and any following whitespace in the format string,
-i.e.@: don't send it to the output.  This can be used to break up a long
-format string for readability, but not print the extra whitespace.
-
-@example
-(format #f "abc~
-            ~d def~
-            ~d" 1 2) @result{} "abc1 def2"
-@end example
-
-@code{~:newline} skips the newline but leaves any further whitespace
-to be printed normally.
-
-@code{~@@newline} prints the newline then skips following
-whitespace.
-@end deffn
-
 
 @deffn {Format Escape Sequence} {~( ~)}
 Case conversion.  No parameters.
