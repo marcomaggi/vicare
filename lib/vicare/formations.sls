@@ -606,18 +606,17 @@
 	      (if (one-positive-integer? params)
 		  (format:print-fill-chars ($car params) #\newline)
 		(format:print-char #\newline))))
-	   (format:output-col 0)
 	   (anychar-dispatch))
 
 	  ((#\&) ; Fresh line
 	   (if (one-positive-integer? params)
-	       (begin
-		 (when (> ($car params) 0)
-		   (format:print-fill-chars (- ($car params)
-					       (if (positive-output-column?) 0 1))
-					    #\newline))
-		 (format:output-col 0))
+	       (when (positive? ($car params))
+		 (format:print-fill-chars (- ($car params)
+					     (if (positive-output-column?) 0 1))
+					  #\newline))
 	     (when (positive-output-column?)
+	       ;;FORMAT:PRINT-CHAR  takes care  of adjusting  the output
+	       ;;column.
 	       (format:print-char #\newline)))
 	   (anychar-dispatch))
 
@@ -635,9 +634,10 @@
 
 	  ((#\|) ; Page separator
 	   (if (one-positive-integer? params)
-	       (format:print-fill-chars (car params) #\page)
+	       (begin
+		 (format:print-fill-chars (car params) #\page)
+		 (format:output-col 0))
 	     (format:print-char #\page))
-	   (format:output-col 0)
 	   (anychar-dispatch))
 
 	  ((#\t) ; Tabulate
@@ -976,7 +976,8 @@
   (if format:case-conversion
       (display (format:case-conversion (string ch)) destination-port)
     (write-char ch destination-port))
-  (if ($char= ch #\newline)
+  (if (or ($char= ch #\newline)
+	  ($char= ch #\page))
       (format:output-col 0)
     (increment-output-column 1)))
 

@@ -625,9 +625,17 @@ newlines, as in @code{"\r\n"}.
 Start a new line.  Parameter: @var{n}.
 
 Output a newline if not already at the start of a line.  With a
-parameter, output that many newlines, but with the first only if not
-already at the start of a line.  So for instance 3 would be a newline
-if not already at the start of a line, and 2 further newlines.
+parameter, output that many newlines, but with the @strong{first} only
+if not already at the start of a line.
+
+@example
+(format "A~&Z")         @result{} "A\nZ"
+(format "A~3&Z")        @result{} "A\n\n\nZ"
+
+;; at the start of a line
+(format "~&Z")          @result{} "Z"
+(format "~3&Z")         @result{} "\n\nZ"
+@end example
 @end deffn
 
 @c page
