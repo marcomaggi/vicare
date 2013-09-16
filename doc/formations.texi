@@ -96,7 +96,7 @@ the output is returned as if @false{} is used as @var{dest} argument.
 case are the same.  The @code{:} and @code{@@} characters are optional
 modifiers, one or both of which change the way various codes operate.
 Optional parameters are accepted by some codes too.  Parameters have the
-following forms,
+following forms:
 
 @table @code
 @item [+/-]number
@@ -117,6 +117,9 @@ The number of arguments remaining.
 
 Parameters are separated by commas (@code{,}).  A parameter can be left
 empty to keep its default value when supplying later parameters.
+
+It's an error if there are not enough arguments for the escapes in the
+format string, but any excess arguments are ignored.
 @end defun
 
 
@@ -125,6 +128,26 @@ The zero--based starting column number for the next invocations of
 @func{format}.  The value is initialised to @math{0} and must be a
 non--negative fixnum.
 @end deffn
+
+
+Iterations @code{~@{} @code{~@}} and conditionals @code{~[} @code{~;}
+@code{~]} can be nested, but must be properly nested, meaning the inner
+form must be entirely within the outer form.  So it's not possible, for
+instance, to try to conditionalize the endpoint of an iteration.
+
+@example
+(format "~@{ ~[ ... ~] ~@}" ...)       ;; good
+(format "~@{ ~[ ... ~@} ... ~]" ...)   ;; bad
+@end example
+
+The same applies to case conversions @code{~(} @code{~)}, they must
+properly nest with respect to iterations and conditionals (though
+currently a case conversion cannot nest within another case conversion).
+
+When a sub--format (@code{~?}) is used, that sub--format string must be
+self-contained.  It cannot for instance give a @code{~@{} to begin an
+iteration form and have the @code{~@}} up in the originating format, or
+similar.
 
 @c page
 @node formations escape generic
@@ -1080,35 +1103,5 @@ but the force is done at the end of output.
 
 When output is to a string: @code{~!} does nothing.
 @end deffn
-
-@c ------------------------------------------------------------
-
-
-
-@c  FIXME: Good examples of these?
-
-It's an error if there are not enough arguments for the escapes in the
-format string, but any excess arguments are ignored.
-
-Iterations @code{~@{} @code{~@}} and conditionals @code{~[}
-@code{~;} @code{~]} can be nested, but must be properly nested,
-meaning the inner form must be entirely within the outer form.  So
-it's not possible, for instance, to try to conditionalize the endpoint
-of an iteration.
-
-@example
-(format #t "~@{ ~[ ... ~] ~@}" ...)       ;; good
-(format #t "~@{ ~[ ... ~@} ... ~]" ...)   ;; bad
-@end example
-
-The same applies to case conversions @code{~(} @code{~)}, they
-must properly nest with respect to iterations and conditionals (though
-currently a case conversion cannot nest within another case
-conversion).
-
-When a sub-format (@code{~?}) is used, that sub-format string must
-be self-contained.  It cannot for instance give a @code{~@{} to
-begin an iteration form and have the @code{~@}} up in the
-originating format, or similar.
 
 @c end of file
