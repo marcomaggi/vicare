@@ -1664,6 +1664,39 @@
   #t)
 
 
+(parametrise ((check-test-name	'escape))
+
+  (check
+      (format "~d~^ ~d" 1)
+    => "1")
+
+  (check
+      (format "~d~^ ~d" 1 2)
+    => "1 2")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~{~d~^/~} go" '(1 2 3))
+    => "1/2/3 go")
+
+  (check
+      (format "~:{ ~d~^~d~} go" '((1) (2 3)))
+    => " 1 23 go")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~? items" "~d~^ ~d" '(1))
+    => "1 items")
+
+  (check
+      (format "~? items" "~d~^ ~d" '(1 2))
+    => "1 2 items")
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   (check (format "A~~Z")		=> "A~Z")

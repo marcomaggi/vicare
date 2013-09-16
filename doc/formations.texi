@@ -755,7 +755,7 @@ first is used if the argument is @false{} or the second otherwise.
 
 (let ((n 3))
   (format "~d gnu~:[s are~; is~] here" n (= 1 n)))
-@result{} 3 gnus are here
+@result{} "3 gnus are here"
 @end example
 
 @code{~@@[} also treats the argument as a flag, and expects one clause.
@@ -768,6 +768,73 @@ suppress output if @false{} means something not available.
 (format "~@@[temperature=~d~]" 27) @result{} "temperature=27"
 (format "~@@[temperature=~d~]" #f) @result{} ""
 @end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} ~^
+Escape.  Parameters: @vari{val}, @varii{val}, @variii{val}.
+
+Stop formatting if there are no more arguments.  This can be used for
+instance to have a format string adapt to a variable number of
+arguments.
+
+@example
+(format "~d~^ ~d" 1)            @result{} "1"
+(format "~d~^ ~d" 1 2)          @result{} "1 2"
+@end example
+
+Within a @code{~@{} @code{~@}} iteration, @code{~^} stops the current
+iteration step if there are no more arguments to that step, but
+continuing with possible further steps and the rest of the format.  This
+can be used for instance to avoid a separator on the last iteration, or
+to adapt to variable length argument lists.
+
+@example
+(format "~@{~d~^/~@} go"    '(1 2 3))
+@result{} "1/2/3 go"
+
+(format "~:@{ ~d~^~d~@} go" '((1) (2 3)))
+@result{} " 1 23 go"
+@end example
+
+@c  For reference, format.scm doesn't implement that Common Lisp ~:^
+@c  modifier which stops the entire iterating of ~:{ or ~@:{.
+
+@c  FIXME: Believe the Common Lisp spec is for ~^ within ~[ ~]
+@c  conditional to terminate the whole format (or iteration step if in
+@c  an iteration).  But format.scm seems to terminate just the
+@c  conditional form.
+@c
+@c      (format #f "~[abc~^def~;ghi~] blah" 0)
+@c      @result{} "abc blah"                    ;; looks wrong
+
+@c  FIXME: Believe the Common Lisp spec is for ~^ within ~( ~) to end
+@c  that case conversion and then also terminate the whole format (or
+@c  iteration step if in an iteration).  But format.scm doesn't seem
+@c  to do that quite right.
+@c
+@c      (format #f "~d ~^ ~d" 1)      @result{} "1 "
+@c      (format #f "~(~d ~^ ~d~)" 1)  @result{} ERROR
+
+Within a @code{~?} sub--format, @code{~^} operates just on that
+sub-format.  If it terminates the sub--format then the originating
+format will still continue.
+
+@example
+(format "~? items" "~d~^ ~d" '(1))
+@result{} "1 items"
+
+(format "~? items" "~d~^ ~d" '(1 2))
+@result{} "1 2 items"
+@end example
+
+The parameters to @code{~^} (which are numbers) change the condition
+used to terminate.  For a single parameter, termination is when that
+value is zero (notice this makes plain @code{~^} equivalent to
+@code{~#^}).  For two parameters, termination is when those two are
+equal.  For three parameters, termination is when @math{@vari{val} <=
+@varii{val}} and @math{@varii{val} <= @variii{val}}.
 @end deffn
 
 @c page
@@ -1014,66 +1081,8 @@ but the force is done at the end of output.
 When output is to a string: @code{~!} does nothing.
 @end deffn
 
-@c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+@c ------------------------------------------------------------
 
-@deffn {Format Escape Sequence} ~^
-Escape.  Parameters: @var{val1}, @var{val2}, @var{val3}.
-
-Stop formatting if there are no more arguments.  This can be used for
-instance to have a format string adapt to a variable number of
-arguments.
-
-@example
-(format #t "~d~^ ~d" 1)   @print{} 1
-(format #t "~d~^ ~d" 1 2) @print{} 1 2
-@end example
-
-Within a @code{~@{} @code{~@}} iteration, @code{~^} stops the
-current iteration step if there are no more arguments to that step,
-but continuing with possible further steps and the rest of the format.
-This can be used for instance to avoid a separator on the last
-iteration, or to adapt to variable length argument lists.
-
-@example
-(format #f "~@{~d~^/~@} go"    '(1 2 3))     @result{} "1/2/3 go"
-(format #f "~:@{ ~d~^~d~@} go" '((1) (2 3))) @result{} " 1 23 go"
-@end example
-
-@c  For reference, format.scm doesn't implement that Common Lisp ~:^
-@c  modifier which stops the entire iterating of ~:{ or ~@:{.
-
-@c  FIXME: Believe the Common Lisp spec is for ~^ within ~[ ~]
-@c  conditional to terminate the whole format (or iteration step if in
-@c  an iteration).  But format.scm seems to terminate just the
-@c  conditional form.
-@c
-@c      (format #f "~[abc~^def~;ghi~] blah" 0)
-@c      @result{} "abc blah"                    ;; looks wrong
-
-@c  FIXME: Believe the Common Lisp spec is for ~^ within ~( ~) to end
-@c  that case conversion and then also terminate the whole format (or
-@c  iteration step if in an iteration).  But format.scm doesn't seem
-@c  to do that quite right.
-@c
-@c      (format #f "~d ~^ ~d" 1)      @result{} "1 "
-@c      (format #f "~(~d ~^ ~d~)" 1)  @result{} ERROR
-
-Within a @code{~?} sub-format, @code{~^} operates just on that
-sub-format.  If it terminates the sub-format then the originating
-format will still continue.
-
-@example
-(format #t "~? items" "~d~^ ~d" '(1))   @print{} 1 items
-(format #t "~? items" "~d~^ ~d" '(1 2)) @print{} 1 2 items
-@end example
-
-The parameters to @code{~^} (which are numbers) change the condition
-used to terminate.  For a single parameter, termination is when that
-value is zero (notice this makes plain @code{~^} equivalent to
-@code{~#^}).  For two parameters, termination is when those two are
-equal.  For three parameters, termination is when @math{@var{val1} <=
-@var{val2}} and @math{@var{val2} <= @var{val3}}.
-@end deffn
 
 
 @c  FIXME: Good examples of these?
