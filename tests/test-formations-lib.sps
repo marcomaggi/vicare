@@ -1598,6 +1598,72 @@
   #t)
 
 
+(parametrise ((check-test-name	'conditional))
+
+  (check
+      (format "~[peach~;banana~;mango~]" 0)
+    => "peach")
+
+  (check
+      (format "~[peach~;banana~;mango~]" 1)
+    => "banana")
+
+  (check
+      (format "~[peach~;banana~;mango~]" 2)
+    => "mango")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~0[peach~;banana~;mango~]")
+    => "peach")
+
+  (check
+      (format "~1[peach~;banana~;mango~]")
+    => "banana")
+
+  (check
+      (format "~2[peach~;banana~;mango~]")
+    => "mango")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~[banana~;mango~]" 99)
+    => "")
+
+  (check
+      (format "~[banana~;mango~:;fruit~]" 99)
+    => "fruit")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~:[false~;not false~]" #f)
+    => "false")
+
+  (check
+      (format "~:[false~;not false~]" 'abc)
+    => "not false")
+
+  (check
+      (let ((n 3))
+	(format "~d gnu~:[s are~; is~] here" n (= 1 n)))
+    => "3 gnus are here")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (format "~@[temperature=~d~]" 27)
+    => "temperature=27")
+
+  (check
+      (format "~@[temperature=~d~]" #f)
+    => "")
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   (check (format "A~~Z")		=> "A~Z")

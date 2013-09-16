@@ -601,6 +601,7 @@ in a list.
 T-Scheme compatibility.
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn {Format Escape Sequence} ~*
 Argument jumping.  Parameter: @var{N}.
@@ -632,6 +633,8 @@ argument list, a reverse of what the @code{@@} modifier does.
 At the end of the format string the current argument postion does not
 matter, any further arguments are ignored.
 @end deffn
+
+@c ------------------------------------------------------------
 
 
 @deffn {Format Escape Sequence} ~@{ ~@}
@@ -708,6 +711,63 @@ then @code{(3 4 5)} etc.
 @end example
 
 See also @code{~^} below for escaping from iteration.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} {~[ ~; ~]}
+Conditional.  Parameter: @var{selector}.
+
+A conditional block is delimited by @code{~[} and @code{~]}, and
+@code{~;} separates clauses within the block.  @code{~[} takes an
+integer argument and that number clause is used.  The first clause is
+number @samp{0}.
+
+@example
+(format "~[peach~;banana~;mango~]" 0)   @result{} "peach"
+(format "~[peach~;banana~;mango~]" 1)   @result{} "banana"
+(format "~[peach~;banana~;mango~]" 2)   @result{} "mango"
+@end example
+
+The @var{selector} parameter can be used for the clause number, instead
+of taking an argument.
+
+@example
+(format "~0[peach~;banana~;mango~]")    @result{} "peach"
+(format "~1[peach~;banana~;mango~]")    @result{} "banana"
+(format "~2[peach~;banana~;mango~]")    @result{} "mango"
+@end example
+
+If the clause number is out of range then nothing is output.  Or the
+last clause can be @code{~:;} to use that for a number out of range.
+
+@example
+(format "~[banana~;mango~]"         99) @result{} ""
+(format "~[banana~;mango~:;fruit~]" 99) @result{} "fruit"
+@end example
+
+@code{~:[} treats the argument as a flag, and expects two clauses.  The
+first is used if the argument is @false{} or the second otherwise.
+
+@example
+(format "~:[false~;not false~]" #f)   @result{} "false"
+(format "~:[false~;not false~]" 'abc) @result{} "not false"
+
+(let ((n 3))
+  (format "~d gnu~:[s are~; is~] here" n (= 1 n)))
+@result{} 3 gnus are here
+@end example
+
+@code{~@@[} also treats the argument as a flag, and expects one clause.
+If the argument is @false{} then no output is produced and the argument
+is consumed, otherwise the clause is used and the argument is not
+consumed, it's left for the clause.  This can be used for instance to
+suppress output if @false{} means something not available.
+
+@example
+(format "~@@[temperature=~d~]" 27) @result{} "temperature=27"
+(format "~@@[temperature=~d~]" #f) @result{} ""
+@end example
 @end deffn
 
 @c page
@@ -955,60 +1015,6 @@ When output is to a string: @code{~!} does nothing.
 @end deffn
 
 @c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-@deffn {Format Escape Sequence} {~[ ~; ~]}
-Conditional.  Parameter: @var{selector}.
-
-A conditional block is delimited by @code{~[} and @code{~]}, and
-@code{~;} separates clauses within the block.  @code{~[} takes an
-integer argument and that number clause is used.  The first clause is
-number 0.
-
-@example
-(format #f "~[peach~;banana~;mango~]" 1)  @result{} "banana"
-@end example
-
-The @var{selector} parameter can be used for the clause number,
-instead of taking an argument.
-
-@example
-(format #f "~2[peach~;banana~;mango~]") @result{} "mango"
-@end example
-
-If the clause number is out of range then nothing is output.  Or the
-last clause can be @code{~:;} to use that for a number out of range.
-
-@example
-(format #f "~[banana~;mango~]"         99) @result{} ""
-(format #f "~[banana~;mango~:;fruit~]" 99) @result{} "fruit"
-@end example
-
-@code{~:[} treats the argument as a flag, and expects two clauses.
-The first is used if the argument is @code{#f} or the second
-otherwise.
-
-@example
-(format #f "~:[false~;not false~]" #f)   @result{} "false"
-(format #f "~:[false~;not false~]" 'abc) @result{} "not false"
-
-(let ((n 3))
-  (format #t "~d gnu~:[s are~; is~] here" n (= 1 n)))
-@print{} 3 gnus are here
-@end example
-
-@code{~@@[} also treats the argument as a flag, and expects one
-clause.  If the argument is @code{#f} then no output is produced and
-the argument is consumed, otherwise the clause is used and the
-argument is not consumed, it's left for the clause.  This can be used
-for instance to suppress output if @code{#f} means something not
-available.
-
-@example
-(format #f "~@@[temperature=~d~]" 27) @result{} "temperature=27"
-(format #f "~@@[temperature=~d~]" #f) @result{} ""
-@end example
-@end deffn
-
 
 @deffn {Format Escape Sequence} ~^
 Escape.  Parameters: @var{val1}, @var{val2}, @var{val3}.
