@@ -45,7 +45,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d4
 ------------------------
 
-* Strings  loadef from  FASL  (but not  the boot  image)  files are  now
+* Strings  loaded from  FASL  files (but  not the  boot  image) are  now
   interned.
 
 * Added CASE-IDENTIFIERS to (vicare langauge-extensions syntaxes).
