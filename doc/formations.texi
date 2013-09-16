@@ -638,6 +638,18 @@ if not already at the start of a line.
 @end example
 @end deffn
 
+
+@deffn {Format Escape Sequence} ~|
+Formfeed character.  Parameter: @var{N}.
+
+Output a formfeed character, or @var{N} feeds if a parameter is given.
+
+@example
+(format "A~|Z")         @result{} "A\fZ"
+(format "A~3|Z")        @result{} "A\f\f\fZ"
+@end example
+@end deffn
+
 @c page
 @node formations escape columns
 @section Escape sequences for columns and indentation
@@ -647,6 +659,24 @@ if not already at the start of a line.
 Pretty print.  No parameters.
 
 Output an argument with @func{pretty-print}.
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~_
+Space character.  Parameter: @var{N}.
+
+@c For reference, in Common Lisp ~_ is a conditional newline, but slib
+@c fmtdoc.txi described it as a space, so we keep that.
+
+Output a space character, or @var{N} spaces if a parameter is given.
+
+With a variable parameter this is one way to insert runtime calculated
+padding (@code{~t} or the various field widths can do similar things).
+
+@example
+(format "~_foo" 4)      @result{} " foo"
+(format "~3_foo" 4)     @result{} "   foo"
+@end example
 @end deffn
 
 
@@ -706,6 +736,18 @@ current column a multiple of @var{colinc}, if it isn't already so.
 @end example
 @end deffn
 
+
+@deffn {Format Escape Sequence} ~/
+Tab character.  Parameter: @var{N}.
+
+Output a tab character, or @var{N} tabs if a parameter is given.
+
+@example
+(format "A~/Z")         @result{} "A\tZ"
+(format "A~3/Z")        @result{} "A\t\t\tZ"
+@end example
+@end deffn
+
 @c page
 @node formations escape misc
 @section Miscellaneous escape sequences
@@ -749,61 +791,32 @@ Tilde character.  Parameter: @var{n}.
 Output a tilde character @code{~}, or @var{n} many if a parameter is
 given.  Normally @code{~} introduces an escape sequence, @code{~~}
 is the way to output a literal tilde.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~_
-Space character.  Parameter: @var{n}.
-
-@c  For reference, in Common Lisp ~_ is a conditional newline, but
-@c  slib fmtdoc.txi described it as a space, so we keep that.
-
-Output a space character, or @var{n} many if a parameter is given.
-
-With a variable parameter this is one way to insert runtime calculated
-padding (@code{~t} or the various field widths can do similar
-things).
 
 @example
-(format #f "~v_foo" 4) @result{} "    foo"
+(format "A~~Z")         @result{} "A~Z"
+(format "A~3~Z")        @result{} "A~~~Z"
 @end example
 @end deffn
-
-
-@deffn {Format Escape Sequence} ~/
-Tab character.  Parameter: @var{n}.
-
-Output a tab character, or @var{n} many if a parameter is given.
-@end deffn
-
-
-@deffn {Format Escape Sequence} ~|
-Formfeed character.  Parameter: @var{n}.
-
-Output a formfeed character, or @var{n} many if a parameter is given.
-@end deffn
-
 
 @deffn {Format Escape Sequence} ~!
 Force output.  No parameters.
 
-At the end of output, call @code{force-output} to flush any buffers on
-the destination.  @code{~!} can occur anywhere in the format string, but
-the force is done at the end of output.
+At the end of output, call @func{flush-output-port} to flush any buffers
+on the destination.  @code{~!} can occur anywhere in the format string,
+but the force is done at the end of output.
 
-When output is to a string (destination @code{#f}), @code{~!} does
-nothing.
+When output is to a string: @code{~!} does nothing.
 @end deffn
 
+@c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
 @deffn {Format Escape Sequence} ~newline
 @c (ie.@: newline character)
 Continuation line.  No parameters.
 
 Skip this newline and any following whitespace in the format string,
-ie.@: don't send it to the output.  This can be used to break up a
-long format string for readability, but not print the extra
-whitespace.
+i.e.@: don't send it to the output.  This can be used to break up a long
+format string for readability, but not print the extra whitespace.
 
 @example
 (format #f "abc~

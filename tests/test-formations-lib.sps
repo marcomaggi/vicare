@@ -1522,6 +1522,29 @@
   #f)
 
 
+(parametrise ((check-test-name	'misc))
+
+  (check (format "A~~Z")		=> "A~Z")
+  (check (format "A~3~Z")		=> "A~~~Z")
+
+;;; --------------------------------------------------------------------
+
+  (check (format "A~_Z")		=> "A Z")
+  (check (format "A~2_Z")		=> "A  Z")
+
+;;; --------------------------------------------------------------------
+
+  (check (format "A~/Z")		=> "A\tZ")
+  (check (format "A~3/Z")		=> "A\t\t\tZ")
+
+;;; --------------------------------------------------------------------
+
+  (check (format "A~|Z")		=> "A\fZ")
+  (check (format "A~3|Z")		=> "A\f\f\fZ")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
