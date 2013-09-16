@@ -819,7 +819,7 @@
 
 	  ((#\}) ; Iteration end
 	   (when (zero? iteration-nest)
-	     (error who "missing in escape sequence ~{"))
+	     (error who "foun closing iteration escape \"~}\" without opening escape sequence \"~{\""))
 	   (set! iteration-nest (- iteration-nest 1))
 	   (case modifier
 	     ((colon)
@@ -827,8 +827,8 @@
 		(set! max-iterations 1)))
 	     ((colon-at at)
 	      (error who "illegal modifier")))
-	   (when (not (null? params))
-	     (error who "no parameters allowed in escape sequence ~}"))
+	   (unless (null? params)
+	     (error who "no parameters allowed in escape sequence \"~}\""))
 	   (if (zero? iteration-nest)
 	       (let ((iteration-str (substring format-string iteration-pos
 					       (- format:pos (if modifier 3 2)))))

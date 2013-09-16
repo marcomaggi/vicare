@@ -633,6 +633,83 @@ At the end of the format string the current argument postion does not
 matter, any further arguments are ignored.
 @end deffn
 
+
+@deffn {Format Escape Sequence} ~@{ ~@}
+Iteration.  Parameter: @var{maxreps} (for @code{~@{}).
+
+The format between @code{~@{} and @code{~@}} is iterated.  The modifiers
+to @code{~@{} determine how arguments are taken.  The default is a list
+argument with each iteration successively consuming elements from it.
+This is a convenient way to output a whole list.
+
+@example
+(format "~@{~d~@}" '(1 2 3))
+@result{} "123"
+
+(format "~@{~s=~d ~@}" '("x" 1 "y" 2))
+@result{} "\"x\"=1 \"y\"=2 "
+@end example
+
+@code{~:@{} takes a single argument which is a list of lists, each of
+those contained lists gives the arguments for the iterated format.
+
+@example
+(format "~:@{~dx~d ~@}" '((1 2) (3 4) (5 6)))
+@result{} "1x2 3x4 5x6 "
+@end example
+
+@code{~@@@{} takes arguments directly, with each iteration successively
+consuming arguments.
+
+@example
+(format "~@@@{~d~@}" 1 2 3)
+@result{} "123"
+
+(format "~@@@{~s=~d ~@}" "x" 1 "y" 2)
+@result{} "\"x\"=1 \"y\"=2 "
+@end example
+
+@code{~:@@@{} takes list arguments, one argument for each iteration,
+using that list for the format.
+
+@example
+(format "~:@@@{~dx~d ~@}" '(1 2) '(3 4) '(5 6))
+@result{} "1x2 3x4 5x6 "
+@end example
+
+Iterating stops when there are no more arguments or when the
+@var{maxreps} parameter to @code{~@{} is reached (default no
+maximum).
+
+@example
+(format "~2@{~d~@}" '(1 2 3 4))
+@result{} 12
+@end example
+
+If the format between @code{~@{} and @code{~@}} is empty, then a format
+string argument is taken (before iteration argument(s)) and used
+instead.  This allows a sub--format (like @code{~?} above) to be
+iterated.
+
+@example
+(format "~@{~@}" "~d" '(1 2 3))
+@result{} 123
+@end example
+
+Iterations can be nested, an inner iteration operates in the same way as
+described, but of course on the arguments the outer iteration provides
+it; this can be used to work into nested list structures.  For example
+in the following the inner @code{~@{~d~@}x} is applied to @code{(1 2)}
+then @code{(3 4 5)} etc.
+
+@example
+(format "~@{~@{~d~@}x~@}" '((1 2) (3 4 5)))
+@result{} "12x345x"
+@end example
+
+See also @code{~^} below for escaping from iteration.
+@end deffn
+
 @c page
 @node formations escape lines
 @section Escape sequences for output lines
@@ -878,80 +955,6 @@ When output is to a string: @code{~!} does nothing.
 @end deffn
 
 @c SONO ARRIVATO QUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-@deffn {Format Escape Sequence} ~@{ ~@}
-Iteration.  Parameter: @var{maxreps} (for @code{~@{}).
-
-The format between @code{~@{} and @code{~@}} is iterated.  The
-modifiers to @code{~@{} determine how arguments are taken.  The
-default is a list argument with each iteration successively consuming
-elements from it.  This is a convenient way to output a whole list.
-
-@example
-(format #t "~@{~d~@}"     '(1 2 3))       @print{} 123
-(format #t "~@{~s=~d ~@}" '("x" 1 "y" 2)) @print{} "x"=1 "y"=2
-@end example
-
-@code{~:@{} takes a single argument which is a list of lists, each
-of those contained lists gives the arguments for the iterated format.
-
-@c  @print{} on a new line here to avoid overflowing page width in DVI
-@example
-(format #t "~:@{~dx~d ~@}" '((1 2) (3 4) (5 6)))
-@print{} 1x2 3x4 5x6
-@end example
-
-@code{~@@@{} takes arguments directly, with each iteration
-successively consuming arguments.
-
-@example
-(format #t "~@@@{~d~@}"     1 2 3)       @print{} 123
-(format #t "~@@@{~s=~d ~@}" "x" 1 "y" 2) @print{} "x"=1 "y"=2
-@end example
-
-@code{~:@@@{} takes list arguments, one argument for each iteration,
-using that list for the format.
-
-@c  @print{} on a new line here to avoid overflowing page width in DVI
-@example
-(format #t "~:@@@{~dx~d ~@}" '(1 2) '(3 4) '(5 6))
-@print{} 1x2 3x4 5x6
-@end example
-
-Iterating stops when there are no more arguments or when the
-@var{maxreps} parameter to @code{~@{} is reached (default no
-maximum).
-
-@example
-(format #t "~2@{~d~@}" '(1 2 3 4)) @print{} 12
-@end example
-
-If the format between @code{~@{} and @code{~@}} is empty, then a
-format string argument is taken (before iteration argument(s)) and
-used instead.  This allows a sub-format (like @code{~?} above) to be
-iterated.
-
-@example
-(format #t "~@{~@}" "~d" '(1 2 3)) @print{} 123
-@end example
-
-@c  FIXME: What is the @code{:} modifier to ~} meant to do?  The
-@c  Common Lisp spec says it's a minimum of 1 iteration, but the
-@c  format.scm code seems to merely make it have MAXREPS default to 1.
-
-Iterations can be nested, an inner iteration operates in the same way
-as described, but of course on the arguments the outer iteration
-provides it.  This can be used to work into nested list structures.
-For example in the following the inner @code{~@{~d~@}x} is applied
-to @code{(1 2)} then @code{(3 4 5)} etc.
-
-@example
-(format #t "~@{~@{~d~@}x~@}" '((1 2) (3 4 5))) @print{} 12x345x
-@end example
-
-See also @code{~^} below for escaping from iteration.
-@end deffn
-
 
 @deffn {Format Escape Sequence} {~[ ~; ~]}
 Conditional.  Parameter: @var{selector}.
