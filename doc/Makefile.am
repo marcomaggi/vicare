@@ -55,12 +55,12 @@ vicare_libs_TEXINFOS = \
 	libs-streams.texi			\
 	libs-strings.texi			\
 	libs-vectors.texi			\
+	libs-irregex.texi			\
+	libs-pregexp.texi			\
+	libs-formations.texi			\
+	\
 	\
 	libs-net-channels.texi			\
-	\
-	irregex.texi				\
-	pregexp.texi				\
-	formations.texi				\
 	\
 	cre2.texi				\
 	\

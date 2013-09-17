@@ -4637,9 +4637,9 @@ following types: @condition{who}, @condition{option},
 
 @include libs-randomisations.texi
 
-@include irregex.texi
-@include pregexp.texi
-@include formations.texi
+@include libs-irregex.texi
+@include libs-pregexp.texi
+@include libs-formations.texi
 
 @include cre2.texi
 
