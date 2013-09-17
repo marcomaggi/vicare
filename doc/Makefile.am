@@ -4,7 +4,8 @@
 
 EXTRA_DIST		= QUEST-FOR-ISSUE-35
 
-info_TEXINFOS		= vicare-scheme.texi
+info_TEXINFOS		= vicare-scheme.texi vicare-libs.texi
+
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
 	macros.texi			\
@@ -17,36 +18,12 @@ vicare_scheme_TEXINFOS	= \
 	exception-handlers-implementation.texi	\
 	iklib.texi			\
 	ffi.texi			\
-	posix.texi			\
-	glibc.texi			\
-	iconv.texi			\
-	linux.texi			\
 	syslib.texi			\
 	capi.texi			\
-	lang.texi			\
-	libs.texi			\
 	objects.texi			\
 	debug.texi			\
 	machinery.texi			\
 	compiler.texi			\
-	\
-	bytevectors.texi		\
-	char-sets.texi			\
-	comparisons.texi		\
-	knuth-morris-pratt.texi		\
-	levenshtein.texi		\
-	lists.texi			\
-	loops.texi			\
-	object-properties.texi		\
-	one-dimension.texi		\
-	randomisations.texi		\
-	streams.texi			\
-	strings.texi			\
-	vectors.texi			\
-	\
-	irregex.texi			\
-	pregexp.texi			\
-	formations.texi			\
 	\
 	missing.texi			\
 	building.texi			\
@@ -55,9 +32,35 @@ vicare_scheme_TEXINFOS	= \
 	fasl.texi			\
 	shmem.texi			\
 	binfmt.texi			\
-	cre2.texi			\
 	history.texi			\
-	references.texi			\
+	references.texi
+
+vicare_libs_TEXINFOS = \
+	lang.texi				\
+	posix.texi				\
+	glibc.texi				\
+	iconv.texi				\
+	linux.texi				\
+	\
+	bytevectors.texi			\
+	char-sets.texi				\
+	comparisons.texi			\
+	knuth-morris-pratt.texi			\
+	levenshtein.texi			\
+	lists.texi				\
+	loops.texi				\
+	object-properties.texi			\
+	one-dimension.texi			\
+	randomisations.texi			\
+	streams.texi				\
+	strings.texi				\
+	vectors.texi				\
+	\
+	irregex.texi				\
+	pregexp.texi				\
+	formations.texi				\
+	\
+	cre2.texi				\
 	\
 	srfi.texi				\
 	srfi-and-let-star.texi			\

@@ -25,7 +25,7 @@ functions, else the behaviour is undefined.
 
 The availability of the @gnu{} C Library @api{} can be tested at
 run--time with the function @func{vicare-built-with-glibc-enabled} from
-@library{vicare} (@pxref{iklib config,
+@library{vicare} (@vicareref{iklib config,
 vicare-built-with-glibc-enabled}), and at expand--time with the clause
 @code{glibc-enabled} of @func{cond-expand} from @ansrfi{0} (@pxref{srfi
 cond-expand vicare, glibc-enabled}).

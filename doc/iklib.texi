@@ -31,7 +31,7 @@ makes sense to access from Scheme.
 
 @item @library{vicare platform utilities}
 Defines helper functions to deal with platform specific issues;
-@ref{platform} for details.
+@libsref{platform, Hosting platform utilities} for details.
 
 @item @library{vicare platform features}
 @cindex Library @library{vicare platform features}
@@ -196,8 +196,8 @@ values are strings.
 
 
 The following bindings are specified by @ansrfi{112}, exported by
-@library{vicare} and reexported by the @srfi{}'s libraries, @ref{srfi
-env-inquiry spec, Specification}.
+@library{vicare} and reexported by the @srfi{}'s libraries,
+@libsref{srfi env-inquiry spec, Specification}.
 
 @defun implementation-name
 Return the string @code{"vicare-scheme"}.
@@ -9029,8 +9029,8 @@ variable @code{errno} to some predefined integer constant,
 @glibcref{Checking for Errors, errno}.  The Scheme code accessing
 @code{errno} values should be agnostic with respect to the actual error
 codes; for this to happen we should use the following facilities along
-with bindings from @library{vicare platform errno}, @ref{errno} for
-details.
+with bindings from @library{vicare platform errno}, @libsref{errno, More
+features for @code{errno}} for details.
 
 Values for the C language variable @code{errno} are encoded as negated
 fixnum values: if @code{EPERM} is defined to @code{1} at the C language
@@ -9191,8 +9191,8 @@ Return @true{} if the @vari{time} is greater than or equal to
 
 The following bindings are exported by the libraries @library{vicare},
 @library{ikarus}.  An extended @api{} for @gnu{} Readline is available
-through the @library{vicare readline} library; @ref{readline} for
-details.
+through the @library{vicare readline} library; @libsref{readline,
+Extended interface to @gnu{} Readline} for details.
 
 
 @defun readline-enabled?

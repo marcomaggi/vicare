@@ -9,8 +9,8 @@
 
 
 The @library{vicare containers strings} library extends the string
-operations available in the base library (@pxref{baselib strings,
-Strings}) and Vicare's extensions (@pxref{iklib strings, Additional
+operations available in the base library (@vicareref{baselib strings,
+Strings}) and Vicare's extensions (@vicareref{iklib strings, Additional
 string functions}).  While @library{vicare containers strings} is a high
 level ainterface, @library{vicare containers strings low} is a low level
 interface with the same functionalities.

@@ -10,6 +10,9 @@
 * amb::                         McCarthy's @func{amb} operator.
 * infix::                       Infix to prefix transformer.
 * simple-match::                Simple destructuring match syntax.
+* sentinels::                   Sentinel values.
+* namespaces::                  Namespaces.
+* variables::                   Defining storage locations.
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
 * asciis::                      Utilities for @ascii{} characters.
@@ -31,7 +34,7 @@
 
 
 Keywords are disjoint objects which can be read by @value{PRJNAME}'s
-reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
+reader in @code{#!vicare} mode, @vicareref{iklib reader stx}.  The core
 bindings and keyword objects handling is embedded in @value{PRJNAME}'s
 boot image, but additional facilities are required to make use of
 keywords.
@@ -387,7 +390,7 @@ control to the ``next'' coroutine, it enqueues an escape function to its
 current continuation and causes the next escape function to be invoked.
 
 For discussions about other implementations of coroutines and
-continuations see @ref{HFWCoro, references}.
+continuations see @vicareref{HFWCoro, references}.
 
 @menu
 * coroutines examples::         Usage examples for coroutines.
@@ -766,7 +769,7 @@ fixnum generator referenced by @func{amb-random-fixnum-maker}.
 Hold a procedure accepting a fixnum as single argument: when applied to
 the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
 It is initialised with @func{random} from the library @library{vicare},
-@ref{iklib misc, random}.
+@vicareref{iklib misc, random}.
 @end deffn
 
 @c page
@@ -2197,6 +2200,277 @@ error.
 @error{} &error
 @end example
 
+@c page
+@node sentinels
+@section Sentinel values
+
+
+@cindex @library{vicare language-extensions sentinels}, library
+@cindex Library @library{vicare language-extensions sentinels}
+
+
+The library @library{vicare language-extensions sentinels} defines
+unique values and predicates to test them.  Sentinel values can be used
+as terminators for sequences or as values for uninitialised storage
+locations.
+
+
+@defvr Constant sentinel
+The sentinel value.
+@end defvr
+
+
+As usage example, the following form makes use of the sentinel as
+terminator for a list:
+
+@example
+(let ((ell (list 1 2 3 4 5 sentinel)))
+  (let loop ((ell ell)
+             (res '()))
+    (if (sentinel? (car ell))
+        res
+      (loop (cdr ell) (cons (car ell) res)))))
+@result{} (5 4 3 2 1))
+@end example
+
+@noindent
+the following form defines an iterator closure using the sentinel to
+signal the end of the iteration:
+
+@example
+(let* ((ell  '(1 2 3 4 5))
+       (iter (lambda ()
+               (let ((ell ell))
+                 (if (null? ell)
+                     sentinel
+                   (begin
+                     (car ell)
+                     (set! ell (cdr ell))))))))
+  (let loop ((res '()))
+    (let ((v (iter)))
+      (if (sentinel? v)
+          res
+        (loop (cons v res))))))
+@result{} (5 4 3 2 1)
+@end example
+
+
+@defun make-sentinel
+Return a new sentinel value.  @func{sentinel?} will return @true{} when
+applied to such a value, but new sentinel values are meant to be checked
+with @func{eq?}.
+
+New sentinels can be used in situations where a unique terminator is
+needed: when we need to distinguish @samp{sentinel} from a temporary
+sentinel we need for a specific operation.
+@end defun
+
+
+@defun sentinel? @var{obj}
+Return @true{} if @var{obj} a sentinel value.
+@end defun
+
+
+@defvr Constant undefined
+The undefined value.
+@end defvr
+
+
+@defun undefined? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{undefined}.
+@end defun
+
+
+@defvr Constant unspecified
+The unspecified value.
+@end defvr
+
+
+@defun unspecified? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{unspecified}.
+@end defun
+
+@c page
+@node namespaces
+@section Identifiers namespaces
+
+
+@cindex @library{vicare language-extensions namespaces}, library
+@cindex Library @library{vicare language-extensions namespaces}
+
+
+The library @library{vicare language-extensions namespaces} allows the
+definition of @dfn{namespaces}; Vicare's namespaces are similar to
+Vicare's modules, indeed a namespace definition expands into a module.
+In addition: namespaces are associated to a macro which can be used as
+``gate'' to access some of the bindings defined in, or visible from, the
+namespace.
+
+Here is a simple example of namespace:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(hellos ciao)           @result{} ciao
+(hellos salut)          @result{} salut
+@end example
+
+@noindent
+namespaces can be nested:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut japanese)
+  (define (ciao)
+    'ciao)
+  (define (salut)
+    'salut)
+  (define-namespace japanese
+    (export ohayo)
+    (define (ohayo)
+      'ohayo)))
+
+(hellos ciao)           @result{} ciao
+(hellos salut)          @result{} salut
+(hellos japanese ohayo) @result{} ohayo
+@end example
+
+@noindent
+the syntax @func{using} can ``import'' bindings from a namespace into
+the current lexical context:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(using hellos)
+(ciao)          @result{} ciao
+(salut)         @result{} salut
+@end example
+
+The following bindings are exported by the library @library{vicare
+language-extensions namespaces}.
+
+
+@deffn Syntax define-namespace @meta{name} (export @meta{member} @dots{}) @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} export
+Define a new namespace wrapping a module and a gate syntax bound to
+@meta{name}.  The identifier @func{export} is the one exported by
+@library{vicare}.  The forms @meta{body} are evaluated inside the
+module.
+
+The identifiers @meta{member} are ``public'': they can be accessed with
+the syntax:
+
+@example
+(@meta{name} @meta{member} @meta{arg} ...)
+@end example
+
+@noindent
+where the optional arguments @meta{arg} are handed to @meta{member}
+untouched; only the ``application'' syntax is available.  Notice that,
+while we cannot access variables from a namespace with the normal
+variable access syntax, we can export parameter functions and also
+define variable setter and getter syntaxes as follows:
+
+@example
+(define-syntax-rule (define-variable ?name ?init-value)
+  (define the-variable ?init-value)
+  (define-syntax ?name
+    (syntax-rules ()
+      ((_)
+       the-variable)
+      ((_ ?new-value)
+       (set! the-variable ?new-value)))))
+
+(define-variable blue 123)
+(blue)          @result{} 123
+(blue 456)
+(blue)          @result{} 456
+@end example
+@end deffn
+
+
+@deffn Syntax using @metao{name} @meta{name} @dots{}
+Import public bindings from one or more namespaces into the current
+lexical context.
+@end deffn
+
+@c page
+@node variables
+@section Defining storage locations
+
+
+@cindex @library{vicare language-extensions variables}, library
+@cindex Library @library{vicare language-extensions variables}
+
+
+The library @library{vicare language-extensions variables} provides a
+way to define simple storage locations similar to the variables used in
+many languages.  The @dfn{variable} type of value is disjoint from the
+other types.
+
+
+@defun make-variable
+@defunx make-variable @var{obj}
+Build and return a new variable object.  The variable is initialised to
+@var{obj}, which defaults to the return value of @code{(void)}.
+@end defun
+
+
+@defun variable? @var{obj}
+Return @true{} if @var{obj} is a variable object, else return @false{}.
+@end defun
+
+
+@defun variable-set! @var{variable} @var{obj}
+@defunx variable-ref @var{variable}
+Setter and getter for the value of variable objects.
+@end defun
+
+
+@deffn Syntax define-variable @meta{name}
+@deffnx Syntax define-variable @meta{name} @var{obj}
+@deffnx Syntax define-variable (@meta{name} . @meta{formals}) @meta{body}
+Like @func{define}, but store the value in a newly built variable object
+which is then bound to @meta{name}.  Example:
+
+@example
+(import (vicare)
+  (vicare language-extensions variables))
+
+(define-variable v 123)
+v @result{} 123
+(set! v 456)
+v @result{} 456
+@end example
+
+While @func{define} defines a binding which, when exported by a library,
+cannot be modified, @func{define-variable} allocates a storage location,
+so the value bound to @meta{name} can be modified at will.
+@end deffn
 
 @c page
 @node syntaxes

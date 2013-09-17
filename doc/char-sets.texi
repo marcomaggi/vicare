@@ -12,7 +12,7 @@ characters.
 A @dfn{character} is every value for which the application of
 @func{char?}  returns @true{}; @dfn{character sets} are values of
 disjoint type @code{char-set} representing a number of character in the
-available Unicode ranges, @ref{stdlib unicode, Unicode}.
+available Unicode ranges, @vicareref{stdlib unicode, Unicode}.
 
 @menu
 * char-sets conv::              Arguments naming conventions.

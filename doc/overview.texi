@@ -411,7 +411,8 @@ likely a process crash).
 @cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
 @cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
 This setting can be overridden by setting the environment variable
-@env{VICARE_ARGUMENTS_VALIDATION}; @ref{args config} for details.
+@env{VICARE_ARGUMENTS_VALIDATION}; @libsref{args config, Enabling or
+disabling arguments validation} for details.
 
 @item @env{CFLAGS}
 Specify options to be used while compiling @value{PRJNAME}'s C code.
@@ -827,6 +828,7 @@ while @cretwo{} is available at:
 
 @value{PRJNAME} interface to @cretwo{} can be included at package
 configuration time by giving the @option{--with-cre2} option to the
-@command{configure} script.  @ref{cre2} for the @api{} documentation.
+@command{configure} script.  @libsref{cre2, A binding to the library
+CRE2} for the @api{} documentation.
 
 @c end of file

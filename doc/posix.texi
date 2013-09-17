@@ -30,7 +30,7 @@ syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
 
 The availability of the @posix{} @api{} can be tested at run--time with
 the function @func{vicare-built-with-posix-enabled} from
-@library{vicare} (@pxref{iklib config,
+@library{vicare} (@vicareref{iklib config,
 vicare-built-with-posix-enabled}), and at expand--time with the clause
 @code{posix-enabled} of @func{cond-expand} from @ansrfi{0} (@pxref{srfi
 cond-expand vicare, posix-enabled}).
@@ -1337,7 +1337,7 @@ read}.  Read bytes from the file descriptor @var{fd} and store them in
 the number of bytes read, else raise an exception.
 
 @var{buffer} and @var{size} must represent a generalised C buffer,
-@ref{cbuffers buffers, Introduction to generalised C buffers}.
+@libsref{cbuffers buffers, Introduction to generalised C buffers}.
 @end defun
 
 
@@ -1360,7 +1360,7 @@ If successful return a non--negative fixnum representing the number of
 written bytes, else raise an exception.
 
 @var{buffer} and @var{size} must represent a generalised C string,
-@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@libsref{cbuffers strings, Introduction to generalised C strings}.  When
 @var{buffer} is a Scheme string: it is converted to a bytevector with
 @func{string->ascii}.
 @end defun
@@ -2031,7 +2031,8 @@ up to @var{len} bytes.
 @section Memory--mapped input/output
 
 
-@ref{shmem mmap} for a description of shared memory through @func{mmap}.
+@vicareref{shmem mmap, Shared memory through @func{mmap}} for a
+description of shared memory through @func{mmap}.
 
 
 @defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{fd} @var{offset}
@@ -2982,7 +2983,7 @@ If successful return a non--negative fixnum representing the number of
 bytes actually sent, else raise an exception.
 
 @var{buffer} and @var{size} must represent a generalised C string,
-@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@libsref{cbuffers strings, Introduction to generalised C strings}.  When
 @var{buffer} is a Scheme string: it is converted to a bytevector with
 @func{string->ascii}.
 @end defun
@@ -2996,7 +2997,7 @@ which must be a fixnum: read data from @var{sock} and store it in
 the number of bytes actually received, else raise an exception.
 
 @var{buffer} and @var{size} must represent a generalised C buffer,
-@ref{cbuffers buffers, Introduction to generalised C buffers}.
+@libsref{cbuffers buffers, Introduction to generalised C buffers}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -3009,7 +3010,7 @@ from @var{buffer} to the socket @var{sock} to the destination specified
 by @var{addr}.
 
 @var{buffer} and @var{size} must represent a generalised C string,
-@ref{cbuffers strings, Introduction to generalised C strings}.  When
+@libsref{cbuffers strings, Introduction to generalised C strings}.  When
 @var{buffer} is a Scheme string: it is converted to a bytevector with
 @func{string->ascii}.
 
@@ -3025,7 +3026,7 @@ informations about the address of the sender: read data from @var{sock}
 and store it in @var{buffer}.
 
 @var{buffer} and @var{size} must represent a generalised C buffer,
-@ref{cbuffers buffers, Introduction to generalised C buffers}.
+@libsref{cbuffers buffers, Introduction to generalised C buffers}.
 
 If successful return two values: a non--negative fixnum representing the
 number of bytes actually received, a bytevector holding a @code{struct
@@ -6143,8 +6144,8 @@ the underlying procedure.
 
 @defun setup-compensated-pid-file-creation
 Call the function @func{create-pid-file} and push a call to
-@func{remove-pid-file} to the current compensations stack.  @ref{iklib
-compensations, Compensation stacks}.
+@func{remove-pid-file} to the current compensations stack.
+@vicareref{iklib compensations, Compensation stacks}.
 
 Beware of creating the compensation stack @strong{inside} the dynamic
 environment configuration for @acronym{PID} file creation; in the

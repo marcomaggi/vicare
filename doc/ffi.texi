@@ -32,7 +32,7 @@ The availability of the Libffi @api{} can be tested at run--time with
 the function @func{vicare-built-with-ffi-enabled} from @library{vicare}
 (@pxref{iklib config, vicare-built-with-ffi-enabled}), and at
 expand--time with the clause @code{ffi-enabled} of @func{cond-expand}
-from @ansrfi{0} (@pxref{srfi cond-expand vicare, ffi-enabled}).
+from @ansrfi{0} (@libsref{srfi cond-expand vicare, ffi-enabled}).
 
 @menu
 * ffi libffi::                  Installing and using Libffi.

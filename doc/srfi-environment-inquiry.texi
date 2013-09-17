@@ -81,8 +81,8 @@ procedures in this proposal are in the @library{srfi 112} library (or
 @quotation
 @strong{For Vicare}: the bindings documented here are exported by the
 libraries @library{srfi :112} and @library{srfi :112
-environment-inquiry} and also by the boot image, @ref{iklib env-inquiry,
-Environment inquiry}.
+environment-inquiry} and also by the boot image, @vicareref{iklib
+env-inquiry, Environment inquiry}.
 @end quotation
 
 Because users are expected to use the values of these procedures for

@@ -9,8 +9,8 @@
 
 
 The library @library{vicare containers vectors} extends the vector
-operations available in the base library (@pxref{baselib vectors,
-Vectors}) and Vicare's extensions (@pxref{iklib vectors, Additional
+operations available in the base library (@vicareref{baselib vectors,
+Vectors}) and Vicare's extensions (@vicareref{iklib vectors, Additional
 vector functions}).  While @library{vicare containers vectors} is a high
 level interface, @library{vicare containers vectors low} is a low level
 interface with the same functionalities.

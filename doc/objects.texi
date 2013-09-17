@@ -5114,7 +5114,8 @@ When interfacing a C language foreign library with @value{PRJNAME}, it
 is often needed to convert Scheme objects to raw memory blocks, possibly
 containing @asciiz{} strings.  Generalised C buffers are meant to be
 used in interfaces to foreign C language libraries, when a pointer to
-raw data is required as argument.  @ref{cbuffers buffers} for details.
+raw data is required as argument.  @libsref{cbuffers buffers,
+Introduction to generalised C buffers} for details.
 
 Notice that at the C language level only general C buffers exist: Scheme
 strings should be converted to bytevectors at the Scheme level.

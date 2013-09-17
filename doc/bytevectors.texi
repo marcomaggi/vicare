@@ -484,7 +484,7 @@ The libraries @library{vicare containers bytevectors s8},
 @library{vicare containers bytevectors u8}, @library{vicare containers
 bytevectors s8low} and @library{vicare containers bytevectors u8low}
 extend the bytevector operations available in the base library;
-@ref{stdlib bytevector, Bytevectors}.
+@vicareref{stdlib bytevector, Bytevectors}.
 
 While @library{vicare containers bytevectors s8} and @library{vicare
 containers bytevectors u8} are high level interfaces, @library{vicare

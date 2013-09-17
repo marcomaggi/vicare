@@ -11,7 +11,7 @@ Feature--Based Conditional Expansion.
 The @srfi{} libraries are optionally installed by the package; the
 availability of the @srfi{} libraries can be tested at run--time with
 the function @func{vicare-built-with-srfi-enabled} from @library{vicare}
-(@pxref{iklib config, vicare-built-with-srfi-enabled}), and at
+(@vicareref{iklib config, vicare-built-with-srfi-enabled}), and at
 expand--time with the clause @code{srfi-enabled} of @func{cond-expand}
 from @ansrfi{0} (@pxref{srfi cond-expand vicare, linux-enabled}).
 
