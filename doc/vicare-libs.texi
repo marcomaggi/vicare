@@ -4625,17 +4625,17 @@ following types: @condition{who}, @condition{option},
 
 @include libs-net-channels.texi
 
-@include lists.texi
-@include vectors.texi
-@include strings.texi
-@include char-sets.texi
-@include bytevectors.texi
+@include libs-lists.texi
+@include libs-vectors.texi
+@include libs-strings.texi
+@include libs-char-sets.texi
+@include libs-bytevectors.texi
 @include knuth-morris-pratt.texi
 @include levenshtein.texi
 @include object-properties.texi
 @include one-dimension.texi
 
-@include randomisations.texi
+@include libs-randomisations.texi
 
 @include irregex.texi
 @include pregexp.texi

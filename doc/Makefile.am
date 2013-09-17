@@ -42,19 +42,19 @@ vicare_libs_TEXINFOS = \
 	iconv.texi				\
 	linux.texi				\
 	\
-	bytevectors.texi			\
-	char-sets.texi				\
-	comparisons.texi			\
+	libs-bytevectors.texi			\
+	libs-char-sets.texi			\
+	libs-comparisons.texi			\
 	knuth-morris-pratt.texi			\
 	levenshtein.texi			\
-	lists.texi				\
-	loops.texi				\
+	libs-lists.texi				\
+	libs-loops.texi				\
 	object-properties.texi			\
 	one-dimension.texi			\
-	randomisations.texi			\
-	streams.texi				\
-	strings.texi				\
-	vectors.texi				\
+	libs-randomisations.texi		\
+	libs-streams.texi			\
+	libs-strings.texi			\
+	libs-vectors.texi			\
 	\
 	libs-net-channels.texi			\
 	\

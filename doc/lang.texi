@@ -3182,13 +3182,10 @@ function is applied to an integer holding bits outside the ones coded in
 the definition of the enumeration, no error is raised.
 @end deffn
 
-@c end of file
-
-
 @c page
 
-@include streams.texi
-@include loops.texi
-@include comparisons.texi
+@include libs-streams.texi
+@include libs-loops.texi
+@include libs-comparisons.texi
 
 @c end of file
