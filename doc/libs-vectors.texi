@@ -289,7 +289,7 @@ The vector itself or an unquoted list holding the vector itself,
 prefixed by the @code{view} auxiliary syntax: it selects the whole
 vector.
 
-@itemx (view @meta{vector} (start @meta{start-index}))
+@item (view @meta{vector} (start @meta{start-index}))
 An unquoted list holding the vector and the start index, with auxiliary
 syntaxes @code{view} and @code{start}: it selects the subvector from the
 start index to the end.
@@ -299,7 +299,7 @@ An unquoted list holding the vector and the past index, with auxiliary
 syntaxes @code{view} and @code{past}: it selects the subvector from zero
 to the selected past index.
 
-@itemx (view @meta{vector} (start @meta{start-index}) (past @meta{past-index}))
+@item (view @meta{vector} (start @meta{start-index}) (past @meta{past-index}))
 An unquoted list holding the vector, the start index and the past index,
 with auxiliary syntaxes @code{view}, @code{start} and @code{past}: it
 selects the subvector between the start and past indexes.

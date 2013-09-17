@@ -804,7 +804,7 @@ An unquoted list holding the bytevector and the past index, with
 auxiliary syntaxes @code{view} and @code{past}: it selects the subvector
 from zero to the selected past index.
 
-@itemx (view @meta{bytevector} (start @meta{start-index}) (past @meta{past-index}))
+@item (view @meta{bytevector} (start @meta{start-index}) (past @meta{past-index}))
 An unquoted list holding the bytevector, the start index and the past
 index, with auxiliary syntaxes @code{view}, @code{start} and
 @code{past}: it selects the subvector between the start and past

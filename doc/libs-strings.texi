@@ -357,7 +357,7 @@ An unquoted list holding the string and the past index, with auxiliary
 syntaxes @code{view} and @code{past}: it selects the substring from zero
 to the selected past index.
 
-@itemx (view @meta{string} (start @meta{start-index}) (past @meta{past-index}))
+@item (view @meta{string} (start @meta{start-index}) (past @meta{past-index}))
 An unquoted list holding the string, the start index and the past index,
 with auxiliary syntaxes @code{view}, @code{start} and @code{past}: it
 selects the substring between the start and past indexes.
