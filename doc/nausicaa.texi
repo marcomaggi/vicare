@@ -113,7 +113,7 @@ entitled ``@gnu{} Free Documentation License''.
 
 Libraries in the language @library{nausicaa}
 
-* oopp::                        Object--Oriented Perfumed Programming.
+* oopp::                        Object-Oriented Perfumed Programming.
 * multimethods::                Multimethods dispatching.
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
