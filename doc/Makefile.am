@@ -56,6 +56,8 @@ vicare_libs_TEXINFOS = \
 	strings.texi				\
 	vectors.texi				\
 	\
+	libs-net-channels.texi			\
+	\
 	irregex.texi				\
 	pregexp.texi				\
 	formations.texi				\
