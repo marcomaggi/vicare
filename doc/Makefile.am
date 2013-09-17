@@ -45,12 +45,12 @@ vicare_libs_TEXINFOS = \
 	libs-bytevectors.texi			\
 	libs-char-sets.texi			\
 	libs-comparisons.texi			\
-	knuth-morris-pratt.texi			\
-	levenshtein.texi			\
+	libs-knuth-morris-pratt.texi		\
+	libs-levenshtein.texi			\
 	libs-lists.texi				\
 	libs-loops.texi				\
-	object-properties.texi			\
-	one-dimension.texi			\
+	libs-object-properties.texi		\
+	libs-one-dimension.texi			\
 	libs-randomisations.texi		\
 	libs-streams.texi			\
 	libs-strings.texi			\

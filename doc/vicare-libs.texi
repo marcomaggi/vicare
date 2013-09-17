@@ -4630,10 +4630,10 @@ following types: @condition{who}, @condition{option},
 @include libs-strings.texi
 @include libs-char-sets.texi
 @include libs-bytevectors.texi
-@include knuth-morris-pratt.texi
-@include levenshtein.texi
-@include object-properties.texi
-@include one-dimension.texi
+@include libs-knuth-morris-pratt.texi
+@include libs-levenshtein.texi
+@include libs-object-properties.texi
+@include libs-one-dimension.texi
 
 @include libs-randomisations.texi
 
