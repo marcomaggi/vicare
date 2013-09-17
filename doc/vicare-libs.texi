@@ -192,14 +192,12 @@ Trademarks used herein are the property of their respective owners.
 @menu
 * lang::                        Language extension libraries.
 * srfi::                        Scheme Requests For Implementation.
+* platform::                    Hosting platform libraries.
 * posix::                       The @posix{} interface.
 * glibc::                       The @gnu{} C Library interface.
 * iconv::                       The Libiconv interface.
 * linux::                       The @gnu{}+Linux interface.
 * args::                        Optional function arguments validation.
-* errno::                       More features for @code{errno}.
-* platform::                    Hosting platform utilities.
-* words::                       Exact integer predicates and constants.
 * cbuffers::                    Generalised C buffers and strings.
 * readline::                    Extended interface to @gnu{} Readline.
 * parser logic::                Defining parsers logic.
@@ -1652,8 +1650,93 @@ predicate @func{time?} exported by @library{vicare}.
 @end deffn
 
 @c page
+@node platform
+@chapter Hosting platform libraries
+
+
+@menu
+* platform constants::          Hosting platform constants.
+* platform features::           Hosting platform features.
+* platform utilities::          Hosting platform utilities.
+* errno::                       More features for @code{errno}.
+* words::                       Exact integer predicates and constants.
+@end menu
+
+@c page
+@node platform constants
+@section Hosting platform constants
+
+
+@cindex Library @library{vicare platform constants}
+@cindex @library{vicare platform constants}, library
+
+
+The library @library{vicare platform constants} exports one syntax
+identifier binding for each platform constant that makes sense to access
+from Scheme.
+
+@c page
+@node platform features
+@section Hosting platform features
+
+
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
+
+
+The library @library{vicare platform features} exports an identifier
+syntax for every @code{HAVE_} symbol defined by the configuration script
+@command{configure}; such syntaxes expand to a boolean value: @true{} if
+the feature is available, @false{} otherwise.
+
+@c page
+@node platform utilities
+@section Hosting platform utilities
+
+
+@cindex Library @library{vicare platform utilities}
+@cindex @library{vicare platform utilities}, library
+
+
+The library @library{vicare platform utilities} defines helper functions
+to deal with platform specific issues.  The following bindings are
+exported by the library @library{vicare platform utilities}.
+
+
+@deffn Syntax posix-signal->symbol @var{code}
+Given an integer representing an interprocess @posix{} signal code,
+return the corresponding symbol; if @var{code} is not recognised as
+@posix{} signal code: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(posix-signal->symbol SIGTERM)            @result{} SIGTERM
+(posix-signal->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end deffn
+
+
+@defun errno-code->symbol @var{code}
+Given a fixnum representing an encoded @code{errno} value, return the
+corresponding symbol; if @var{code} is not recognised as encoded
+@code{errno} value: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(errno-code->symbol EINVAL)             @result{} EINVAL
+(errno-code->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end defun
+
+@c page
 @node errno
-@chapter More features for @code{errno}
+@section More features for @code{errno}
 
 
 @cindex Library @library{vicare platform errno}
@@ -1708,65 +1791,8 @@ are @strong{not} meant to be binding identifiers.
 @end deffn
 
 @c page
-@node platform
-@chapter Hosting platform utilities
-
-
-@cindex Library @library{vicare platform constants}
-@cindex @library{vicare platform constants}, library
-@cindex Library @library{vicare platform utilities}
-@cindex @library{vicare platform utilities}, library
-@cindex Library @library{vicare platform features}
-@cindex @library{vicare platform features}, library
-
-
-The library @library{vicare platform constants} exports one syntax
-identifier binding for each platform constant that makes sense to access
-from Scheme.  The library @library{vicare platform utilities} defines
-helper functions to deal with platform specific issues. The library
-@library{vicare platform features} exports an identifier syntax for
-every @code{HAVE_} symbol defined by the configuration script
-@command{configure}; such syntaxes expand to a boolean value: @true{} if
-the feature is available, @false{} otherwise.
-
-The following bindings are exported by the library @library{vicare
-platform utilities}.
-
-
-@deffn Syntax posix-signal->symbol @var{code}
-Given an integer representing an interprocess @posix{} signal code,
-return the corresponding symbol; if @var{code} is not recognised as
-@posix{} signal code: return @false{}.
-
-@example
-(import (rnrs)
-  (vicare platform constants)
-  (vicare platform utilities))
-
-(posix-signal->symbol SIGTERM)            @result{} SIGTERM
-(posix-signal->symbol (greatest-fixnum))  @result{} #f
-@end example
-@end deffn
-
-
-@defun errno-code->symbol @var{code}
-Given a fixnum representing an encoded @code{errno} value, return the
-corresponding symbol; if @var{code} is not recognised as encoded
-@code{errno} value: return @false{}.
-
-@example
-(import (rnrs)
-  (vicare platform constants)
-  (vicare platform utilities))
-
-(errno-code->symbol EINVAL)             @result{} EINVAL
-(errno-code->symbol (greatest-fixnum))  @result{} #f
-@end example
-@end defun
-
-@c page
 @node words
-@chapter Exact integer predicates and constants
+@section Exact integer predicates and constants
 
 
 @cindex Library @library{vicare platform words}
@@ -1787,7 +1813,7 @@ such predicates and minimum/maximum range constants.
 
 @c page
 @node words syntaxes
-@section Miscellaneous syntaxes
+@subsection Miscellaneous syntaxes
 
 
 The following bindings are exported by the @library{vicare platform words}
@@ -1810,7 +1836,7 @@ expand to @meta{big-body}.
 
 @c page
 @node words sizeof
-@section Knowing the size of C language types
+@subsection Knowing the size of C language types
 
 
 The following bindings are exported by the @library{vicare platform words}
@@ -1878,7 +1904,7 @@ Number of bytes in the C language type @code{void *}.
 
 @c page
 @node words predicates
-@section Verifying the range of integers
+@subsection Verifying the range of integers
 
 
 The following bindings are exported by the @library{vicare platform words}
@@ -2037,7 +2063,7 @@ else evaluate to @false{}.
 
 @c page
 @node words limits
-@section Exact integer range limits
+@subsection Exact integer range limits
 
 
 The following bindings are exported by the @library{vicare platform
