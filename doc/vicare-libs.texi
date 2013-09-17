@@ -245,6 +245,7 @@ Indexes
 
 External documents
 
+* core: (vicare-scheme).        Documentation for Vicare Scheme.
 * libffi: (libffi).             Libffi documentation.
 
 @end menu
