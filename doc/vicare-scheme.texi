@@ -267,6 +267,7 @@ Indexes
 External documents
 
 * libs: (vicare-libs).          Bundled libraries for Vicare Scheme.
+* nausicaa: (nausicaa).         The language @library{nausicaa}.
 * libffi: (libffi).             Libffi documentation.
 
 @end menu

@@ -52,7 +52,8 @@
 
 @copying
 This document describes version @value{VERSION} of Nausicaa, a
-collection of libraries for @value{PACKAGE}.
+collection of libraries for @value{PACKAGE} implementing the language
+@library{nausicaa} on top of @library{vicare}.
 
 @noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by @value{AUTHOR} @value{AUTHOR_EMAIL}
@@ -137,7 +138,8 @@ Indexes
 
 
 This document describes version @value{VERSION} of Nausicaa, a
-collection of libraries for @value{PACKAGE}.
+collection of libraries for @value{PACKAGE} implementing the language
+@library{nausicaa} on top of @library{vicare}.
 
 Scheme is not a typed language and Nausicaa does not change this; the
 libraries in this package allow a coding style similar to moving around
