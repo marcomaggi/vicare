@@ -249,6 +249,24 @@ VICARE_SCHEME_SRFI_TESTS	= \
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	test-srfi-106-socket.sps
 
+VICARE_SCHEME_NAUSICAA_TESTS	= \
+	test-nausicaa-tags-helpers.sps			\
+	test-nausicaa-tags-core-classes.sps		\
+	test-nausicaa-tags-core-labels.sps		\
+	test-nausicaa-tags-docs.sps			\
+	test-nausicaa-oopp-generics.sps			\
+	test-nausicaa-oopp-binding-constructs.sps	\
+	test-nausicaa-oopp-builtin-labels.sps		\
+	test-nausicaa-oopp-core.sps			\
+	test-nausicaa-oopp-labels-and-interfaces.sps	\
+	test-nausicaa-oopp-label-core.sps		\
+	test-nausicaa-oopp-label-shadowing.sps		\
+	test-nausicaa-oopp-mixins.sps			\
+	test-nausicaa-oopp-setter-and-getter.sps	\
+	test-nausicaa-multimethods-ordinary.sps		\
+	test-nausicaa-multimethods-starred.sps		\
+	test-nausicaa-conditions.sps
+
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\
 	test-vicare-ffi-foreign-pointer-wrapper.sps
@@ -296,6 +314,10 @@ TESTS		+= $(VICARE_SCHEME_SRFI_POSIX_TESTS)
 endif
 endif
 
+if WANT_NAUSICAA
+TESTS		+= $(VICARE_SCHEME_NAUSICAA_TESTS)
+endif
+
 if WANT_LIBFFI
 TESTS		+= $(VICARE_SCHEME_FFI_TESTS)
 endif
@@ -328,6 +350,7 @@ EXTRA_DIST	= \
 	lists/low.sls					\
 	lists/stx.sls					\
 	numerics/helpers.sls				\
+	libtest/records-lib.sls				\
 	TEST-SOURCE-FILE.txt				\
 	rn100						\
 	\
@@ -379,6 +402,7 @@ EXTRA_DIST	= \
 	$(VICARE_SCHEME_LONG_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
 	$(VICARE_SCHEME_SRFI_POSIX_TESTS)		\
+	$(VICARE_SCHEME_NAUSICAA_TESTS)			\
 	$(VICARE_SCHEME_FFI_TESTS)			\
 	$(VICARE_SCHEME_POSIX_TESTS)			\
 	$(VICARE_SCHEME_GLIBC_TESTS)			\

@@ -36,16 +36,16 @@ this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
 
-  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
-collection of R6 Scheme libraries:
-
-	      <http://marcomaggi.github.com/nausicaa.html>
-
 
 Notes for revision 0.3d5
 ------------------------
 
-*
+* Imported libraries  from Nausicaa/OOPP.   Installation of  the library
+  hierarchy (nausicaa ---) is enabled by defult; it can be disables with
+  the option "--disable-nausicaa" of the script "configure".
+
+* Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
+  "vicare-libs.texi", "nausicaa.texi".
 
 
 Notes for revision 0.3d4

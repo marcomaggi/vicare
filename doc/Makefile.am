@@ -4,7 +4,10 @@
 
 EXTRA_DIST		= QUEST-FOR-ISSUE-35
 
-info_TEXINFOS		= vicare-scheme.texi vicare-libs.texi
+info_TEXINFOS		= \
+	vicare-scheme.texi		\
+	vicare-libs.texi		\
+	nausicaa.texi
 
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
@@ -100,5 +103,15 @@ vicare_libs_TEXINFOS = \
 	srfi-time.texi				\
 	srfi-vectors.texi			\
 	srfi-functional-pairs.texi
+
+nausicaa_TEXINFOS	= \
+	nausicaa-language.texi			\
+	nausicaa-oopp.texi			\
+	nausicaa-multimethods.texi		\
+	nausicaa-builtins.texi			\
+	nausicaa-conditions.texi		\
+	macros.texi				\
+	fdl-1.3.texi				\
+	gpl-3.0.texi
 
 ### end of file

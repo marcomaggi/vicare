@@ -1,0 +1,595 @@
+@node conditions
+@chapter Condition object types
+
+
+@cindex @library{nausicaa language conditions}, library
+@cindex Library @library{nausicaa language conditions}
+
+
+The library @library{nausicaa language conditions} provides some
+syntaxes to ease the use of condition object types, it also defines a
+set of condition types to be used by the Nausicaa libraries.
+
+In the context of the Nausicaa distribution: a limit of the default
+condition types system is that it is not possible to use a condition
+type identifier in syntaxes like @func{with-tags} and similar;
+@library{nausicaa language conditions} overcomes this limitation using
+label shadowing as defined by @library{nausicaa language oopp}.
+
+@menu
+* conditions define::           Defining new condition types.
+* conditions handle::           Handling exceptions.
+* conditions types::            Condition object types.
+@end menu
+
+@c page
+@node conditions define
+@section Defining new condition types
+
+
+The following bindings are exported by the library @library{nausicaa
+language conditions}.
+
+
+@deffn Syntax define-condition-type @meta{condition-type} @meta{supertype} @meta{constructor} @meta{predicate} (@meta{field} @meta{accessor}) @dots{}
+@deffnx Syntax define-condition-type @meta{condition-type} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} parent @meta{supertype}
+@deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+A transparent replacement for @func{define-condition-type} from
+@rsixlibrary{conditions} which defines a new condition object type with
+additional features to better merge it in to the Nausicaa language.
+This macro also supports a ``compressed'' syntax having equivalent
+expansion.
+
+The first form can be used exactly like the original, but we
+@strong{cannot} mix the hierarchy of @meta{condition-type} identifiers
+created by the original with the hierarchy of identifiers created by
+this replacement.
+
+The second form defines a new condition object type
+@meta{condition-type}; the name of the identifier @meta{condition-type}
+must have @samp{&} as first character; this form allows for @oopp{}
+field tagging.  As example, the definition:
+
+@example
+(define-condition-type &wrong-num-args
+  (parent &assertion)
+  (fields procname expected given))
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+(define-condition-type &wrong-num-args
+    &assertion
+  make-wrong-num-args-condition
+  wrong-num-args-condition?
+  (procname     condition-wrong-num-args.procname)
+  (expected     condition-wrong-num-args.expected)
+  (given        condition-wrong-num-args.given))
+@end example
+
+@noindent
+in which we see several automatically generated identifiers.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} parent @meta{parent-type}
+Select the parent condition type for the enclosing definition.  This
+clause can be omitted and can be used at most once.  When not used, the
+parent defaults to @condition{condition}.
+
+@meta{parent-type} must be an identifier defined by
+@func{define-condition-type} described above.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+Specify the fields of the enclosing condition type definition.  All the
+@meta{field-spec} arguments must have one of the forms:
+
+@example
+@meta{field}
+(@meta{field} @meta{accessor})
+((@meta{field} @meta{tag}))
+((@meta{field} @meta{tag}) @meta{accessor})
+@end example
+
+@noindent
+in which: the identifier @meta{field} is the name of the field; the
+identifier @meta{accessor} is the name of the accessor of the field; the
+identifier @meta{tag} is the name of a label or class which tags the
+field.  This clause can be omitted and can be used at most once.
+
+When the first form of @meta{field-spec} is used: for each field an
+accessor name is built as follows: the @samp{&} character is stripped
+from @meta{condition-type}, a dot is appended to the result, the field
+name is appended to the result, the string @samp{condition-} is
+prepended to the result.
+@end deffn
+
+
+The @func{define-contition-type} replacement takes advantage of the fact
+that, in normal code using @rsixlibrary{conditions}, the identifier of a
+condition type is used only in @func{define-condition-type} forms; so
+the replacement syntax defines a condition type using the original
+@func{define-condition-type} from @rsixlibrary{conditions}, assigning to
+it an automatically generated (and hidden) name @samp{the-type}:
+
+@example
+(rnrs.define-condition-type the-type
+    @meta{supertype}
+  @meta{constructor}
+  @meta{predicate}
+  (@meta{field} @meta{accessor})
+  @dots{})
+@end example
+
+@noindent
+then it defines a label using the type name as label name and shadowing
+@samp{the-type}:
+
+@example
+(define-label @meta{condition-type}
+  (parent @meta{supertype})
+  (shadows the-type)
+  (protocol (lambda () @meta{constructor}))
+  (predicate @meta{predicate})
+  (virtual-fields (immutable @meta{field} @meta{accessor})
+                  @dots{}))
+@end example
+
+@noindent
+the result is a condition type definition which can be used as usual
+inside a hierarchy of types created by this syntax; in addition we have
+the features of a label: @meta{condition-type} can be used by
+@func{is-a?}, @func{with-tags} and derived syntaxes.
+
+@c page
+@node conditions handle
+@section Handling exceptions
+
+
+The following bindings are exported by the library @library{nausicaa
+language conditions}.
+
+
+@deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
+@deffnx Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{}) (finally @metao{finally-body} @meta{finally-body} @dots{})
+@deffnx {Auxiliary Syntax} catch
+@deffnx {Auxiliary Syntax} finally
+@deffnx {Auxiliary Syntax} else
+This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
+Every @meta{catch-clause} has one of the forms:
+
+@example
+(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
+(else @metao{else-body} @meta{else-body} @dots{})
+@end example
+
+@noindent
+where the optional @clause{else} clause must appear only once as last
+one.
+
+When no @clause{finally} clause is present, and without the @func{else}
+clause, it will expand to:
+
+@example
+(guard (@meta{var}
+        ((is-a? @meta{var} @meta{tag})
+         (with-tags ((@meta{var} @meta{tag}))
+           @metao{tag-body}
+           @meta{tag-body}
+           ...))
+        ...)
+  @meta{body})
+@end example
+
+@noindent
+and with the @func{else} clause:
+
+@example
+(guard (@meta{var}
+        ((is-a? @meta{var} @meta{tag})
+         (with-tags ((@meta{var} @meta{tag}))
+           @metao{tag-body}
+           @meta{tag-body}
+           ...))
+        ...
+       (else
+        @metao{else-body}
+        @meta{else-body}
+        ...))
+  @meta{body})
+@end example
+
+When the @clause{finally} clause is present: the same @func{guard} form
+is wrapped into a compensation stack:
+
+@example
+(with-compensations
+  (push-compensation @metao{finally-body} @meta{finally-body} ...)
+  (guard ---))
+@end example
+@end deffn
+
+
+Whenever we define a tuple of simple condition objects to describe an
+exception: we assume that, somewhere in the source code, such tuple is
+``known'' and code will be able to recognise it and act upon it.  The
+syntax @func{try} proposes a way to handle such situation by defining an
+@oopp{} label associated to the tuple.
+
+Very often compound condition objects are created with components
+@condition{who}, @condition{message} and @condition{irritants}; the
+predefined label @class{common-conditions} (@pxref{conditions common,
+Label type for common condition types}) exists with the purpose of
+making it easy to access such compound conditions:
+
+@example
+(import (nausicaa))
+
+(<common-conditions> C (<> ('ciao "ciao" '(ciao))))
+
+((<common-conditions>) C)       @result{} #t
+(is-a? C <common-conditions>)   @result{} #t
+(C who)                         @result{} ciao
+(C message)                     @result{} "ciao"
+(C irritants)                   @result{} (ciao)
+@end example
+
+@noindent
+we can catch an exception raising a @class{common-conditions} compound
+condition object as follows:
+
+@example
+(try
+     (raise (<common-conditions> ('ciao "ciao" '(ciao))))
+  (catch E
+    (&assertion
+     (exit 1))
+    (<common-conditions>
+     (E who))
+    (else
+     (raise E))))
+@result{} ciao
+@end example
+
+If we want to add some other simple condition type to the compound we
+can just create a new label for it:
+
+@example
+(define-condition-type &whatever
+    (parent &condition)
+  (fields a b c))
+
+(define-label &tuple
+  (parent <common-conditions>)
+  (protocol
+   (lambda ()
+     (lambda (who message irritants a b c)
+       (condition (<common-conditions> (who message irritants))
+                  (&whatever (a b c))))))
+  (predicate (&whatever))
+  (virtual-fields (immutable a (slot-ref <> a &whatever))
+                  (immutable b (slot-ref <> b &whatever))
+                  (immutable c (slot-ref <> c &whatever))))
+@end example
+
+@noindent
+and use @func{try} to catch it:
+
+@example
+(try
+     (raise (&tuple ('ciao "ciao" '(ciao) 1 2 3)))
+  (catch E
+    (&assertion
+     (exit 1))
+    (<common-conditions>
+     (list (E who) (E a)))
+    (else
+     (raise E))))
+@result{} (ciao 1)
+@end example
+
+We can use the @clause{finally} body to execute code, in any case, after
+the body and possibly the @clause{catch} clause have been evaluated:
+
+@example
+;; without exceptions
+(let ((a 1))
+  (try
+      (set! a (+ a 10))
+    (catch E
+      (&error     E)
+      (&warning   E)
+      (else       E))
+    (finally
+     (set! a (+ a 100))))
+  a)
+@result{} 111
+
+;; with raised exception
+(let ((a 1))
+  (try
+      (raise (&warning ()))
+    (catch E
+      (&error     E)
+      (&warning   (set! a (+ a 10)))
+      (else       E))
+    (finally
+     (set! a (+ a 100))))
+  a)
+@result{} 111
+@end example
+
+@c page
+@node conditions types
+@section Condition object types
+
+
+The library @library{nausicaa language conditions} exports bindings
+defining a set of new condition types and also bindings for condition
+type identifiers which redefine the condition types defined by @rnrs{6}
+libraries.
+
+@menu
+* conditions base::             Base condition types redefinition.
+* conditions flonums::          Flonum related condition types
+                                redefinition.
+* conditions io::               Input/output related condition types
+                                redefinition.
+* conditions vicare::           Condition redefinition for Vicare types.
+* conditions unimplemented::    Unimplemented error condition.
+* conditions mismatch::         General mismatch error.
+* conditions num-args::         Wrong number of arguments error.
+* conditions common::           Label type for common condition types.
+@end menu
+
+@c page
+@node conditions base
+@subsection Base condition types redefinition
+
+
+The following bindings are exported by @library{nausicaa language
+conditions} and redefine the bindings for condition type identifiers
+exported by @rsixlibrary{conditions}.
+
+
+@deftp {Condition Type Label} &condition
+@deftpx {Condition Type Label} &warning
+@deftpx {Condition Type Label} &serious
+@deftpx {Condition Type Label} &error
+@deftpx {Condition Type Label} &violation
+@deftpx {Condition Type Label} &assertion
+@deftpx {Condition Type Label} &irritants
+@deftpx {Condition Type Label} &who
+@deftpx {Condition Type Label} &message
+@deftpx {Condition Type Label} &non-continuable
+@deftpx {Condition Type Label} &implementation-restriction
+@deftpx {Condition Type Label} &lexical
+@deftpx {Condition Type Label} &syntax
+@deftpx {Condition Type Label} &undefined
+Label identifiers shadowing @rnrs{6} condition type identifiers.
+@end deftp
+
+@c page
+@node conditions flonums
+@subsection Flonum related condition types redefinition
+
+
+The following bindings are exported by @library{nausicaa language
+conditions} and redefine the bindings for condition type identifiers
+exported by @rsixlibrary{flonums}.
+
+
+@deftp {Condition Type Label} &no-infinities
+@deftpx {Condition Type Label} &no-nans
+Label identifiers shadowing @rnrs{6} condition type identifiers.
+@end deftp
+
+@c page
+@node conditions io
+@subsection Input/output related condition types redefinition
+
+
+The following bindings are exported by @library{nausicaa language
+conditions} and redefine the bindings for condition type identifiers
+exported by @rsixlibrary{io ports}.
+
+
+@deftp {Condition Type Label} &i/o
+@deftpx {Condition Type Label} &i/o-read
+@deftpx {Condition Type Label} &i/o-write
+@deftpx {Condition Type Label} &i/o-port
+@deftpx {Condition Type Label} &i/o-encoding
+@deftpx {Condition Type Label} &i/o-decoding
+@deftpx {Condition Type Label} &i/o-invalid-position
+@deftpx {Condition Type Label} &i/o-filename
+@deftpx {Condition Type Label} &i/o-file-protection
+@deftpx {Condition Type Label} &i/o-file-is-read-only
+@deftpx {Condition Type Label} &i/o-file-already-exists
+@deftpx {Condition Type Label} &i/o-file-does-not-exist
+Label identifiers shadowing @rnrs{6} condition type identifiers.
+@end deftp
+
+@c page
+@node conditions vicare
+@subsection Condition redefinition for Vicare types
+
+
+The following bindings are exported by @library{nausicaa language
+conditions} and redefine the bindings for condition type identifiers
+exported by @library{vicare}.
+
+
+@deftp {Condition Type Label} &errno
+@deftpx {Condition Type Label} &h_errno
+@deftpx {Condition Type Label} &i/o-eagain
+@deftpx {Condition Type Label} &out-of-memory-error
+Label identifiers shadowing Vicare's condition type identifiers.
+@end deftp
+
+@c page
+@node conditions unimplemented
+@subsection Unimplemented error condition
+
+
+The following bindings are exported by the @library{nausicaa language
+conditions} library.
+
+
+@deftp {Condition Type Label} &unimplemented
+The type of condition used to signal unimplemented features.  It is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-unimplemented-condition
+Return a new instance of @condition{unimplemented}.
+@end defun
+
+
+@defun unimplemented-condition? @var{obj}
+Return @true{} if @var{obj} is of type @condition{unimplemented}.
+@end defun
+
+
+@defun raise-unimplemented-error @var{who}
+@defunx raise-unimplemented-error @var{who} @var{message}
+@defunx raise-unimplemented-error @var{who} @var{message} @var{irritants}
+Raise a composite condition object with component types:
+@condition{unimplemented}, @condition{who}, @condition{message},
+@condition{irritants}.
+@end defun
+
+@c page
+@node conditions mismatch
+@subsection General mismatch error
+
+
+The following bindings are exported by the @library{nausicaa language
+conditions} library.
+
+
+@deftp {Condition Type Label} &mismatch
+Signal a mismatch between two values.  It is derived from
+@condition{assertion}.
+@end deftp
+
+
+@defun make-mismatch-condition
+Build and return a new @condition{mismatch} condition object.
+@end defun
+
+
+@defun mismatch-condition? @var{obj}
+Return @true{} if @var{obj} is a condition of object of type
+@condition{mismatch}.
+@end defun
+
+@c page
+@node conditions num-args
+@subsection Wrong number of arguments error
+
+
+The following bindings are exported by the @library{nausicaa language
+conditions} library.
+
+
+@deftp {Condition Type Label} &wrong-num-args
+Condition type used to signal a call to function with the wrong number
+of arguments; it is derived from @condition{assertion}.  It has the
+following fields:
+
+@table @code
+@item procname
+A Scheme symbol representing the name of the invoked function; @false{}
+if the name is not available.
+
+@item expected
+An exact integer representing the expected number of arguments.
+
+@item given
+An exact integer representing the number of arguments used in the
+offending call.
+@end table
+@end deftp
+
+
+@defun make-wrong-num-args-condition @var{procname} @var{expected} @var{given}
+@defunx wrong-num-args-condition? @var{obj}
+Constructor and predicate for condition objects of type
+@condition{wrong-num-args}.
+@end defun
+
+
+@defun condition-wrong-num-args.procname @var{condition}
+@defunx condition-wrong-num-args.expected @var{condition}
+@defunx condition-wrong-num-args.given @var{condition}
+Accessors for the fields of a condition object of type
+@condition{wrong-num-args}.
+@end defun
+
+
+@deffn Syntax raise-wrong-num-args-error @var{who} @var{message} @var{procname} @var{expected} @var{given}
+Raise a non--continuable exception with compound condition object of
+type: @condition{wrong-num-args}, @condition{who}, @condition{message}.
+@end deffn
+
+@c page
+@node conditions common
+@subsection Label type for common condition types
+
+
+The following bindings are exported by the @library{nausicaa language
+conditions} library.
+
+
+@deftp Label @aclass{common-conditions}
+Label type for compound condition objects with components:
+@condition{who}, @condition{message}, @condition{irritants}.  It is
+derived from @class{condition} exported by @library{nausicaa language
+builtins}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{common-conditions} @aclass{common-conditions} constructor @var{who} @var{message} @var{irritants}
+Build and return a new compound condition object with components:
+@condition{who}, @condition{message}, @condition{irritants}.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe virtual fields
+
+
+@deftypecv {Immutable virtual fields} @aclass{common-conditions} &who who
+Accessing this field is like applying to the instance object the
+function @func{condition-who} from @rsixlibrary{conditions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual fields} @aclass{common-conditions} &message message
+Accessing this field is like applying to the instance object the
+function @func{condition-message} from @rsixlibrary{conditions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual fields} @aclass{common-conditions} &irritants irritants
+Accessing this field is like applying to the instance object the
+function @func{condition-irritants} from @rsixlibrary{conditions}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{common-conditions} @aclass{common-conditions} (@meta{who} @meta{message} @meta{irritants})
+Build and return a new compound condition object with components:
+@condition{who}, @condition{message}, @condition{irritants}.
+@end defop
+
+@c end of file

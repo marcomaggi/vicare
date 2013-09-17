@@ -36,7 +36,7 @@ depcomp
 test-driver
 doc/mdate-sh
 doc/stamp-vti
-doc/stamp-1
+doc/stamp-*
 doc/texinfo.tex
 doc/version.texi
 doc/version-scheme.texi

@@ -319,11 +319,6 @@ this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
 
-  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
-collection of R6 Scheme libraries:
-
-	      <http://marcomaggi.github.com/nausicaa.html>
-
   The library Libffi can be found at:
 
 		    <http://sourceware.org/libffi/>
@@ -343,16 +338,6 @@ the library CRE2 is available from:
   The home page of the R6RS standard is at:
 
 			 <http://www.r6rs.org>
-
-  Other known implementations of R6 Scheme:
-
-Chez Scheme	<http://www.scheme.com/>
-Guile		<http://www.gnu.org/software/guile/guile.html>
-Larceny		<http://www.larcenists.org/>
-Mosh		<http://code.google.com/p/mosh-scheme/>
-Racket		<http://racket-lang.org/>
-Sagittarius	<http://code.google.com/p/sagittarius-scheme/>
-Ypsilon		<http://code.google.com/p/ypsilon/>
 
 
 D. On boot images

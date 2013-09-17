@@ -1,0 +1,738 @@
+@node multimethods
+@chapter Multimethods dispatching
+
+
+@cindex @library{nausicaa language multimethods}, library
+@cindex Library @library{nausicaa language multimethods}
+
+
+In the context of the library @library{nausicaa language multimethods}:
+@dfn{generic functions}, or @dfn{multimethods}, are interfaces to
+procedures that can be specialised to the (possibly conventional) data
+types of their arguments; each specialisation of a generic function is
+called @dfn{method}.  When applying a generic function to a tuple of
+arguments, the most specific method with respect to the arguments' types
+is chosen.
+
+The library defines two kinds of generic functions: ordinary and
+starred.  @dfn{Ordinary generic functions} only have one (primary)
+method for each possible tuple of argument types.  @dfn{Starred generic
+functions} may have qualified primary, before, after and around methods
+for each possible tuple of argument types; the methods are applied
+(composed) according to a defined protocol.
+
+@menu
+* multimethods examples::       Examples of method dispatching.
+* multimethods application::    How generic functions and methods
+                                are invoked.
+* multimethods dispatching::    How methods are dispatched.
+* multimethods definers::       Declaring multimethod definers.
+* multimethods methods::        Adding methods to a multimethod.
+* multimethods next::           Invoking the next method.
+* multimethods oopp::           Notes on using generics as @oopp{} type
+                                methods.
+@end menu
+
+@c page
+@node multimethods examples
+@section Examples of method dispatching
+
+
+Here we show with some examples what we have to expect from the
+multimethod dispatching of @library{nausicaa language multimethods}.  In the
+following examples the string @code{%apple} is written in place of the
+value bound to the symbol @class{apple}.
+
+Let's examine this example which uses the generic functions definer
+@func{define-generic} from the library @library{nausicaa language
+builtins}:
+
+@example
+(import (rnrs)
+  (nausicaa language oopp)
+  (nausicaa language multimethods)
+  (nausicaa language builtins))
+
+(define-class <one> (parent <top>) (nongenerative one))
+(define-class <two> (parent <one>) (nongenerative two))
+(define-class <c>   (parent <two>) (nongenerative c))
+@end example
+
+@noindent
+the class hierarchy is:
+
+@example
+<top> -> <one> -> <two> -> <c>
+@end example
+
+@noindent
+the list of @uid{}s for @class{c} is:
+
+@example
+(tag-unique-identifiers <c>)
+@result{} (c two one nausicaa:builtin:<top>)
+@end example
+
+@noindent
+so for the generic function:
+
+@example
+(define-generic doit (o))
+(define-method (doit (o <one>)) 'one)
+(define-method (doit (o <two>)) 'two)
+@end example
+
+@noindent
+applied to a value of type @class{c}: the method with @class{two} in the
+signature is @emph{more specific} than the method with @class{one} in
+the signature:
+
+@example
+(doit (<c> ())) @result{} two
+@end example
+
+@noindent
+also the method with @class{one} in the signature is the ``next method''
+of the method with @class{two} in the signature, we can call it using
+@func{call-next-method}.  The following example shows a call to the next
+method:
+
+@example
+(define-generic fluff (o))
+
+(define-method (fluff (o <one>))
+  'one)
+
+(define-method (fluff (o <two>))
+  (cons 'two (call-next-method)))
+
+(define o (<c> ()))
+
+(fluff o)
+@result{} (two . one)
+@end example
+
+The syntax @func{define-generic} defines a macro which can be used as a
+function; the syntax @func{define-method} adds a new method to the
+generic function; @func{define-generic} establishes the number of
+arguments for the generic function: all the methods must have the same
+number of arguments.
+
+It is possible to define a function accepting different numbers of
+arguments as follows:
+
+@example
+(define fluff
+  (case-lambda
+   ((a)
+    (fluff-1 a))
+   ((a b)
+    (fluff-2 a b))
+   ((a b . rest)
+    (fluff-3 a b rest))))
+
+(define-generic fluff-1 (o))
+(define-generic fluff-2 (o p))
+(define-generic fluff-3 (o p rest))
+
+(define-method (fluff-1 (o <one>))
+  ---)
+
+(define-method (fluff-2 (o <one>) (p <two>))
+  ---)
+
+(define-method (fluff-3 (o <one>) (p <two>) rest)
+  ---)
+@end example
+
+@noindent
+this way we turn a set of macros into a single ``generic function''
+which is truly a function.  If we avoid wrapping the macros into a
+function we may gain a bit of speed in function calls.
+
+@c page
+@node multimethods application
+@section How generic functions and methods are invoked
+
+
+The library @library{nausicaa language multimethods} is designed to work
+with type definitions from the library @library{nausicaa language oopp};
+these types are identified by a unique symbol (@uid{}).
+
+Ordinary generic functions allow the association of a single method to a
+tuple of arguments' types; when an ordinary generic function is applied
+to a tuple of arguments, the following happens:
+
+@enumerate
+@item
+For each argument in the tuple a type is determined, then the list of
+@uid{}s representing the type hierarchy is acquired; the tuple of @uid{}
+lists is called @dfn{signature}.  Each generic function maintains an
+internal collection in which every method's closure is associated to a
+signature.
+
+@item
+The internal collection of methods is queried for all the methods
+applicable to the tuple of arguments, using the signature as search key.
+
+@item
+The list of applicable methods is sorted from the most specific to the
+least specific for the signature.  From now on the list of sorted,
+applicable methods is handled as a stack.
+
+@item
+The next method is popped from the stack and its closure applied to the
+tuple of arguments; the return value of this application becomes the
+return value of the generic function application.  If the function calls
+its ``next method'': recurse to step 4 (@pxref{multimethods next,
+Invoking the next method}).
+@end enumerate
+
+Starred generic functions allow the definition of four qualified
+methods: @code{:primary}, @code{:around}, @code{:before} and
+@code{:after}; we can think of ordinary generics as starred generics
+supporting only @code{:primary} methods.  The short description is that
+@code{:around} methods are applied first, then @code{:before},
+@code{:primary} and @code{:after} methods are applied in this order.
+When a @strong{starred} generic function is applied to a tuple of
+arguments, the following happens:
+
+@enumerate
+@item
+For each argument in the tuple a type is determined, then the list of
+@uid{}s representing the type hierarchy is acquired; the tuple of @uid{}
+lists is called @dfn{signature}.  For each method qualification
+(@code{:primary}, @code{:around}, @dots{}): each generic function
+maintains an internal collection in which every method's closure is
+associated to a signature.
+
+@item
+For each method qualification: the internal collection is queried for
+all the methods applicable to the tuple of arguments, using the
+signature as search key.
+
+@item
+For each method qualification: the list of applicable methods is sorted
+from the most specific to the least specific for the signature.  The
+list of @code{:after} methods is reversed: from the least specific to
+the most specific.
+@end enumerate
+
+From now on the lists of sorted applicable methods are handled as
+stacks; the stacks of @code{:primary}, @code{:around} and @code{:before}
+methods have the most specific method on the top; the stack of
+@code{:after} methods has the least specific method on the top.
+
+From now on the application of the generic function enters an implicit
+loop in which more methods' closures can be applied to the same tuple of
+arguments.  The loop can terminate if a method's closure throws an
+exception or, for @code{:around} and @code{:primary} methods, if it does
+not take the special action of calling @func{call-next-method}.
+
+The loop is a bit articulated, so we may have to read the following
+descriptions multiple times.  We split the description in two branches:
+First a simplified invocation for generic functions having at least one
+applicable @code{:primary} method, no @code{:around} methods, and
+performing no calls to @func{call-next-method}; then the full
+application algorithm.
+
+Here is the simplified branch with no @code{:around} methods and no
+calls to @func{call-next-method}:
+
+@enumerate 4
+@item
+Pop all the @code{:before} methods from the stack and apply their
+closures to the tuple of arguments.  The return values of these
+applications are discarded.
+
+@item
+Pop the next @code{:primary} method from the stack and apply its closure
+to the tuple of arguments.  The return value of this application is
+saved in a temporary location.
+
+@item
+Pop all the @code{:after} methods from the stack and apply their
+closures to the tuple of arguments.  The return values of these
+applications are discarded.
+
+@item
+Return the saved return value of the @code{:primary} method.
+@end enumerate
+
+@noindent
+here is the full application algorithm:
+
+@enumerate 4
+@item
+Test if this function application originated from a call to
+@func{call-next-method} from a @code{:before} or @code{:after} method;
+if it has: raise an assertion violation.
+
+@item
+Test if this function application originated from a call to
+@func{call-next-method} from a @code{:primary} method; if it has:
+
+@enumerate a
+@item
+If the stack of @code{:primary} methods is empty raise an assertion
+violation.
+
+@item
+Pop the next @code{:primary} method from the stack and apply its closure
+to the tuple of arguments.
+
+@item
+Break out returning the return value of this application: it becomes the
+return value of @func{call-next-method}.
+@end enumerate
+
+@item
+If the stack of @code{:primary} methods is empty: raise an assertion
+violation.  This condition means that the generic function has no
+applicable methods for the tuple of arguments.
+
+@item
+If the stack of @code{:around} methods is not empty: pop the next
+@code{:around} method and apply its closure to the tuple of arguments.
+Break out returning the return value of this application.
+
+@item
+Pop all the @code{:before} methods from the stack and apply their
+closures to the tuple of arguments.  The return values of these
+applications are discarded.
+
+@item
+Pop the next @code{:primary} method from the stack and apply its closure
+to the tuple of arguments.  The return value of this application is
+saved in a temporary location.
+
+@item
+Pop all the @code{:after} methods from the stack and apply their
+closures to the tuple of arguments.  The return values of these
+applications are discarded.
+
+@item
+Return the saved return value of the @code{:primary} method.
+@end enumerate
+
+The @code{:primary} methods are meant to do the real work of the
+function.  Only the most specific is applied to the arguments, however
+it can use @func{call-next-method} to invoke a least specialised version
+and use its return value, and so on recursively until there are no more
+next methods.
+
+@code{:before} and @code{:after} methods are meant to execute additional
+work before and after the primary methods; for example test pre and post
+conditions on the arguments.  While @code{:before} methods are applied
+from the most specific to the least specific, @code{:after} methods are
+applied from the least specific to the most specific.  Notice that the
+@code{:after} methods have no access to the return value of the
+@code{:primary} methods.
+
+@code{:around} methods are yet another level for performing tasks before
+and after the primary methods; only the most specific is applied to the
+arguments.  It is expected, but not mandatory, that an @code{:around}
+method invokes @func{call-next-method}; when such invocations are
+performed recursively: they will consume all the applicable
+@code{:around} methods, from the most specific to the least specific,
+and then will start the application of @code{:before}, @code{:primary}
+and @code{:after} methods.
+
+The protocol of application for methods in a starred generic function is
+meant to be the same as the standard method combination for
+@acronym{CLOS} methods as defined by the Common Lisp
+standard@footnote{See for example (@aurl{} last verified Aug 7, 2013):
+
+@center @url{http:@///www.cs.cmu.edu@//Groups@//AI@//html@//cltl@//clm@//node285.html}
+}.
+
+@c page
+@node multimethods dispatching
+@section How methods are dispatched
+
+
+Here we attempt the formulation of the rules of method dispatching.  A
+method is identified by a couple of values: the signature and the
+closure.
+
+@c ------------------------------------------------------------
+
+@subsubheading Applicability
+
+First we need to understand when a method is applicable to a tuple of
+arguments:
+
+@enumerate
+@item
+Methods in a generic function have the same number of arguments, so the
+tuple of arguments must match that number.
+
+@item
+Given a tuple of arguments, position by position, the class of the
+method's argument is equal to, or a parent of, the class of the given
+argument.
+@end enumerate
+
+@c ------------------------------------------------------------
+
+@subsubheading Specificity
+
+Now we can understand how to determine which one, among two applicable
+methods, is more specific for a tuple of arguments.  Let's call the
+methods @var{A} and @var{B}.
+
+Notice that it is forbidden to two distinct methods, in the same generic
+function, to have the same signature.
+
+@oopp{} types support only single inheritance, so if two methods are
+applicable: the homologous lists of @uid{}s in their signatures, have at
+least one @func{eq?} member (different from @class{top}).
+
+The lists of @uid{}s in the signatures are compared in couples, position
+by position from the beginning to the end.
+
+@enumerate
+@item
+If the first @uid{}s are @func{eq?}: the next couple is inspected.
+
+@item
+If the @uid{} from @var{B} is a member of the list from @var{A}: @var{A}
+is more specific than @var{B}.
+@end enumerate
+
+@c page
+@node multimethods definers
+@section Declaring multimethod definers
+
+
+The following syntaxes allow the definition and merging of generic
+functions; merging multimethods can be useful when two libraries export
+generic functions bound to identifiers having the same name.
+
+
+@deffn Syntax define-generic-definer @meta{definer} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} argument-type-inspector @meta{func}
+Define a new syntax, bound to the identifier @meta{definer}, to be used
+to define ordinary generic functions.
+
+The argument of the clause @clause{argument-type-inspector} must be an
+expression which, evaluated at run--time, returns a function; such
+function, applied to a multimethod argument, must return the list of
+type @uid{}s.  This clause is mandatory.  See below for details.
+
+The library @library{nausicaa language builtins} defines the macro
+@func{define-generic} as follows:
+
+@example
+(define-generic-definer define-generic
+  (argument-type-inspector  tag-unique-identifiers-of))
+@end example
+@end deffn
+
+
+@deffn Syntax define-generic*-definer @meta{definer} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} argument-type-inspector @meta{func}
+@deffnx {Auxiliary Syntax} reverse-before-methods? @meta{bool}
+Define a new syntax, bound to the identifier @meta{definer}, to be used
+to define starred generic functions.
+
+The argument of the clause @clause{argument-type-inspector} must be an
+expression which, evaluated at run--time, returns a function; such
+function, applied to a multimethod argument, must return the list of
+type @uid{}s.  This clause is mandatory.  See below for details.
+
+The argument of the clause @clause{reverse-before-methods?} must be a
+boolean datum: @true{} if the methods qualified as @code{:before} must
+be reversed and so applied from the least specific to the most specific;
+@false{} if the standard method protocol must be adopted.  This clause
+is optional: the default is to use the standard method protocol.  See
+below for details.
+
+The library @library{nausicaa language builtins} defines the macro
+@func{define-generic*} as follows:
+
+@example
+(define-generic*-definer define-generic*
+  (argument-type-inspector  tag-unique-identifiers-of)
+  (reverse-before-methods?  #f))
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} argument-type-inspector @meta{func}
+The clause @clause{argument-type-inspector} allows the specification of
+a function to map a multimethod argument to the list of @uid{}s
+representing its type.  @meta{func} must be an expression which,
+evaluated at run--time, returns a function.
+
+When merging generic functions: the type inspector function is the one
+of the multimethod in which the others are merged.
+
+Usually the @clause{argument-type-inspector} clause selects a wrapper
+for @func{tag-unique-identifiers-of} from @library{nausicaa language
+builtins}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} reverse-before-methods? @meta{bool}
+The default methods composition protocol states that @code{:before} and
+@code{:around} methods are evaluated from the most specific to the least
+specific, while @code{:after} methods are evaluated from the least
+specific to the most specific.
+
+When the clause @clause{reverse-before-methods?} is used and @meta{bool}
+is @true{}: the order of @code{:before} methods is reversed to ``from
+the least specific to the most specific'' prior to evaluating them.
+@ref{multimethods methods} for an example of why this customisation is
+useful.
+@end deffn
+
+@c page
+@node multimethods methods
+@section Adding methods to a multimethod
+
+
+@deffn Syntax define-method (@meta{generic} @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method @meta{qualifier} @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method @meta{generic} @meta{qualifier} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} :primary
+@deffnx {Auxiliary Syntax} :around
+@deffnx {Auxiliary Syntax} :before
+@deffnx {Auxiliary Syntax} :after
+Add a new method to an already existent generic function @meta{generic},
+either ordinary or starred:
+
+@itemize
+@item
+When the @meta{qualifier} argument is not present or it is the
+@code{:primary} syntax: @meta{generic} can be either an ordinary or
+starred generic function.
+
+@item
+When the @meta{qualifier} argument is the @code{:before}, @code{:after} or
+@code{:around} syntax: @meta{generic} must be a starred generic
+function.
+@end itemize
+
+The list of @meta{arg-spec} specifies the class of the arguments for
+which this method specialises the generic function; an @meta{arg-spec}
+can be:
+
+@table @code
+@item (@meta{arg} @meta{tag})
+Where @meta{arg} is the formal name of the argument and @meta{tag} the
+(possibly conventional) type identifier of expected values.
+
+@item @meta{arg}
+Where @meta{arg} is the formal name of the argument.  In this case the
+type to the conventional @class{top}, which is interpreted as parent of
+every other type (and so it has the least specificity).
+@end table
+
+If a method is defined with the same signature of an already registered
+method: the old method is overwritten by the new one.
+@end deffn
+
+
+@deffn Syntax add-method @meta{generic} @meta{types} @meta{closure}
+@deffnx Syntax add-method @meta{generic} @meta{qualifier} @meta{types} @meta{closure}
+@deffnx {Auxiliary Syntax} :primary
+@deffnx {Auxiliary Syntax} :around
+@deffnx {Auxiliary Syntax} :before
+@deffnx {Auxiliary Syntax} :after
+Add a new method to an already existent generic function @meta{generic},
+either ordinary or starred:
+
+@itemize
+@item
+When the @meta{qualifier} argument is not present or it is the
+@code{:primary} syntax: @meta{generic} can be either an ordinary or
+starred generic function.
+
+@item
+When the @meta{qualifier} argument is the @code{:before}, @code{:after}
+or @code{:around} syntax: @meta{generic} must be a starred generic
+function.
+@end itemize
+
+@meta{types} must be a list of type identifiers for which this method
+specialises the generic function.  @meta{closure} must be an expression
+which, evaluated at run--time, returns the method's implementation
+closure.
+@end deffn
+
+@c page
+@node multimethods next
+@section Invoking the next method
+
+
+The library @library{nausicaa language multimethods} makes use of
+parameters to implement the ``next method'' facility@footnote{A
+``traditional'' way to make the bindings @func{call-next-method} and
+@func{next-method?} available in the body of methods (rejected by
+@library{nausicaa language multimethods}) is to add two arguments to the
+function at expand time; the following method function:
+
+@example
+(lambda (arg1 arg2)
+  ---)
+@end example
+
+@noindent
+is changed to:
+
+@example
+(lambda (call-next-method next-method? arg1 arg2)
+  ---)
+@end example
+
+@noindent
+this way the bindings are available only to the methods.  This
+implementation requires the source syntax object of the method to be
+available at expansion time, and to hold a @func{lambda} form.}; this
+allows functions from foreign libraries to be used directly as methods
+and also macros to be used as methods (through @func{add-method}, which
+requires only the method implementation's identifier).  The bindings are
+available also to code outside the method implementations, but this is
+not a big problem.
+
+
+@defun call-next-method
+Call the next most specific method.
+@end defun
+
+
+@defun next-method?
+Return true if a next method is available.
+@end defun
+
+@c page
+@node multimethods oopp
+@section Notes on using generics as @oopp{} type methods
+
+
+It is possible to use generic functions as implementations of methods
+for types defined using the library @library{nausicaa language oopp};
+doing it results in method behaviour which is traditional in
+object--oriented systems.  For example, given the definitions:
+
+@example
+(import (nausicaa))
+
+(define-class <alpha>
+  (fields a)
+  (methods (doit doit)))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields b)
+  (methods (doit doit)))
+
+(define-generic doit (o arg))
+
+(define-method (doit (o <alpha>) arg)
+  (list 'doit-alpha arg))
+
+(define-method (doit (o <beta>) arg)
+  (list 'doit-beta arg))
+@end example
+
+@noindent
+we have:
+
+@example
+(let (((o <alpha>) (<alpha> (1))))
+  (o doit 10))
+@result{} (doit-alpha 10)
+
+(let (((o <beta>) (<beta> (1 2))))
+  (o doit 20))
+@result{} (doit-beta 20)
+@end example
+
+@noindent
+but also:
+
+@example
+(let (((o <alpha>) (<beta> (1 2))))
+  (o doit 30))
+@result{} (doit-beta 30)
+@end example
+
+@noindent
+in which @code{(o doit ---)} is meant to call the @func{doit} method of
+@class{alpha}, because @code{o} is tagged as @class{alpha}, but
+@class{beta} has redefined the method, so @func{doit} of @class{beta} is
+called.  This behaviour can be obtained only with multimethods, not when
+defining methods as plain functions or macros.
+
+Another interesting use of generics as class methods is the
+implementation of pre and post conditions.
+
+The Object--Oriented Programming substitution principle states that: if
+@class{beta} inherits from @class{alpha}, every chunk of code expecting
+an @class{alpha} instance as argument must work when a @class{beta}
+instance is used as argument.  We can write pre and post conditions in a
+method implementation for @class{alpha} and pre and post conditions in
+the method reimplementation for @class{beta}; when the reimplemented
+method is called, it is correct to enforce both the pre and post
+conditions for @class{beta} and for @class{alpha}.
+
+The conditions for the @class{alpha} method must imply the conditions
+for the @class{beta} method; for example, a precondition for
+@class{alpha} can be that an argument is a positive integer, while a
+precondition for @class{beta} can be that the integer is greater than
+@math{3}.  It follows that the preconditions for @class{alpha} should be
+tested before the preconditions of @class{beta}.
+
+This is exactly what happens with @code{:before} and @code{:after}
+methods when we use the @code{reverse-before-methods} clause in
+@func{define-generic*}:
+
+@example
+(import (nausicaa)
+  (only (nausicaa checks)
+        with-result add-result))
+
+(define-class <alpha>
+  (fields a)
+  (methods (doit doit)))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields b)
+  (methods (doit doit)))
+
+(define-generic* doit (o arg)
+  (reverse-before-methods #t))
+
+(define-method (doit (o <alpha>) arg)
+  (list 'doit-alpha arg))
+
+(define-method (doit (o <beta>) arg)
+  (list 'doit-beta arg))
+
+(define-method doit :before ((o <alpha>) arg)
+  (add-result 'before-alpha))
+
+(define-method doit :after ((o <alpha>) arg)
+  (add-result 'after-alpha))
+
+(define-method doit :before ((o <beta>) arg)
+  (add-result 'before-beta))
+
+(define-method doit :after ((o <beta>) arg)
+  (add-result 'after-beta))
+
+(with-result
+ (let (((o <alpha>) (make <beta> 1 2)))
+   (o.doit 30)))
+@result{} ((doit-beta 30)
+    (before-alpha   ;this is the order of invocation
+     before-beta    ;for :BEFORE and :AFTER methods
+     after-alpha
+     after-beta))
+@end example
+
+@c end of file

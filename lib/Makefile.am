@@ -244,6 +244,32 @@ dist_pkglibexec_SCRIPTS		+= compile-srfi-posix.sps
 endif
 endif
 
+if WANT_NAUSICAA
+nobase_dist_libvicare_DATA	+= \
+	nausicaa/language/auxiliary-syntaxes.sls		\
+	nausicaa/language/symbols-tree.sls			\
+	nausicaa/language/unsafe-operations.sls			\
+	nausicaa/language/unsafe-operations.vicare.sls		\
+	\
+	nausicaa/language/oopp.sls				\
+	nausicaa/language/oopp/auxiliary-syntaxes.sls		\
+	nausicaa/language/oopp/configuration.sls		\
+	nausicaa/language/oopp/helpers.sls			\
+	\
+	nausicaa/language/multimethods.sls			\
+	nausicaa/language/multimethods/auxiliary-syntaxes.sls	\
+	nausicaa/language/multimethods/helpers-for-expand.sls	\
+	nausicaa/language/multimethods/methods-table.sls	\
+	nausicaa/language/multimethods/types.sls		\
+	\
+	nausicaa/language/builtins.sls				\
+	nausicaa/language/conditions.sls			\
+	\
+	nausicaa.sls
+
+dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
+endif
+
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= \
 	vicare/ffi.sls				\
@@ -323,13 +349,16 @@ VICARE_INST	= $(bindir)/vicare
 VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$(VICARE_LIBRARY_PATH)
 VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
-.PHONY: vfasl-installed
+.PHONY: vfasl vfasl-installed
 
 vfasl:
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
+if WANT_NAUSICAA
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
@@ -367,6 +396,9 @@ vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
 if WANT_SRFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
+if WANT_NAUSICAA
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-nausicaa.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps

@@ -69,6 +69,15 @@ AM_COND_IF([WANT_SRFI],
   [AC_DEFINE([VICARE_BUILT_WITH_SRFI_ENABLED],[1],
      [defined if SRFI libraries were requested at configuration time])])
 
+VICARE_ENABLE_OPTION([NAUSICAA],[nausicaa],[yes],
+  [whether to install the Nausicaa libraries],
+  [enable installation of Nausicaa libraries])
+AM_CONDITIONAL([WANT_NAUSICAA],[test "x$vicare_enable_NAUSICAA" = xyes])
+
+AM_COND_IF([WANT_NAUSICAA],
+  [AC_DEFINE([VICARE_BUILT_WITH_NAUSICAA_ENABLED],[1],
+     [defined if Nausicaa libraries were requested at configuration time])])
+
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
   [enable POSIX features])
