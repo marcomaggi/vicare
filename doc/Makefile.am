@@ -37,10 +37,12 @@ vicare_scheme_TEXINFOS	= \
 
 vicare_libs_TEXINFOS = \
 	lang.texi				\
+	\
 	posix.texi				\
 	glibc.texi				\
 	iconv.texi				\
 	linux.texi				\
+	cre2.texi				\
 	\
 	libs-bytevectors.texi			\
 	libs-char-sets.texi			\
@@ -59,10 +61,7 @@ vicare_libs_TEXINFOS = \
 	libs-pregexp.texi			\
 	libs-formations.texi			\
 	\
-	\
 	libs-net-channels.texi			\
-	\
-	cre2.texi				\
 	\
 	srfi.texi				\
 	srfi-and-let-star.texi			\
