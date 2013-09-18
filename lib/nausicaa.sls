@@ -1622,6 +1622,9 @@
 ;;;; bindings from (vicare language-extensions simple-match)
     match
 
+;;;; bindings from (vicare language-extensions infix)
+    infix
+
 
 ;;;; done exports
 
@@ -1678,6 +1681,7 @@
     (for (vicare language-extensions namespaces)	expand run)
     (for (vicare language-extensions sentinels)		expand run)
     (for (vicare language-extensions simple-match)	expand run)
+    (for (vicare language-extensions infix)		expand run)
     ))
 
 ;;; end of file
