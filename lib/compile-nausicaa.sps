@@ -9,6 +9,7 @@
   (only (nausicaa))
 
   (only (nausicaa containers lists))
+  (only (nausicaa containers vectors))
 
   )
 

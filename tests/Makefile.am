@@ -267,7 +267,8 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-multimethods-starred.sps		\
 	test-nausicaa-conditions.sps			\
 	\
-	test-nausicaa-containers-lists.sps
+	test-nausicaa-containers-lists.sps		\
+	test-nausicaa-containers-vectors.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\

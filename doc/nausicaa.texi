@@ -121,6 +121,7 @@ Libraries in the language @library{nausicaa}
 Containers libraries
 
 * lists::                       Extended lists processing.
+* vectors::                     Extended vectors processing.
 
 Appendices
 
@@ -161,6 +162,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-conditions.texi
 
 @include nausicaa-lists.texi
+@include nausicaa-vectors.texi
 
 @include gpl-3.0.texi
 @include fdl-1.3.texi

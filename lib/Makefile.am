@@ -267,7 +267,8 @@ nobase_dist_libvicare_DATA	+= \
 	\
 	nausicaa.sls						\
 	\
-	nausicaa/containers/lists.sls
+	nausicaa/containers/lists.sls				\
+	nausicaa/containers/vectors.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

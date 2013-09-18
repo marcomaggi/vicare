@@ -112,6 +112,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-conditions.texi		\
 	\
 	nausicaa-lists.texi			\
+	nausicaa-vectors.texi			\
 	\
 	macros.texi				\
 	fdl-1.3.texi				\
