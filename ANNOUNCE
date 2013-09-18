@@ -47,6 +47,10 @@ Notes for revision 0.3d5
 * Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
   "vicare-libs.texi", "nausicaa.texi".
 
+* Added containers libraries:
+
+     (nausicaa containers lists)
+
 
 Notes for revision 0.3d4
 ------------------------

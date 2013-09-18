@@ -118,6 +118,10 @@ Libraries in the language @library{nausicaa}
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
 
+Containers libraries
+
+* lists::                       Extended lists processing.
+
 Appendices
 
 * Package License::             @gnu{} General Public License.
@@ -155,6 +159,8 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-multimethods.texi
 @include nausicaa-builtins.texi
 @include nausicaa-conditions.texi
+
+@include nausicaa-lists.texi
 
 @include gpl-3.0.texi
 @include fdl-1.3.texi

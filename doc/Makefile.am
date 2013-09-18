@@ -110,6 +110,9 @@ nausicaa_TEXINFOS	= \
 	nausicaa-multimethods.texi		\
 	nausicaa-builtins.texi			\
 	nausicaa-conditions.texi		\
+	\
+	nausicaa-lists.texi			\
+	\
 	macros.texi				\
 	fdl-1.3.texi				\
 	gpl-3.0.texi

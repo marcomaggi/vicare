@@ -1,0 +1,824 @@
+@node lists
+@chapter Extended lists processing
+
+
+@cindex Library @library{nausicaa containers lists}
+@cindex @library{nausicaa containers lists}, library
+
+
+The label @class{xlist} provides an interface to the functions
+@library{vicare containers lists} functions through the facilities of
+the language @library{nausicaa}.
+
+
+@deftp Label @aclass{xlist}
+Label interface to the list functions.  Note that @class{xlist} is
+@strong{not} derived from @class{list} and it has @strong{no} predicate.
+@end deftp
+
+
+All the following methods are implemented as syntaxes; in all the
+following descriptions: @var{self} is an identifier bound to the subject
+list.
+
+
+@defmethod @aclass{xlist} list-copy
+Implement the expansion:
+
+@example
+(@var{self} list-copy)
+@expansion{} (list-copy @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} tree-copy
+Implement the expansion:
+
+@example
+(@var{self} tree-copy)
+@expansion{} (tree-copy @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} circular-list!
+Implement the expansion:
+
+@example
+(@var{self} circular-list!)
+@expansion{} (set! @var{self} (list->circular-list! @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} break-circular-list!
+Implement the expansion:
+
+@example
+(@var{self} break-circular-list!)
+@expansion{} (set! @var{self} (circular-list->list! @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} circular-list-copy
+Implement the expansion:
+
+@example
+(@var{self} circular-list-copy)
+@expansion{} (circular-list-copy @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} circular-list-length
+Implement the expansion:
+
+@example
+(@var{self} circular-list-length)
+@expansion{} (circular-list-length @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} circular-list?
+Implement the expansion:
+
+@example
+(@var{self} circular-list?)
+@expansion{} (circular-list? @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} circular-list?/or-null
+Implement the expansion:
+
+@example
+(@var{self} circular-list?/or-null)
+@expansion{} (circular-list?/or-null @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} dotted-list?
+Implement the expansion:
+
+@example
+(@var{self} dotted-list?)
+@expansion{} (dotted-list? @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} dotted-list?/or-null
+Implement the expansion:
+
+@example
+(@var{self} dotted-list?/or-null)
+@expansion{} (dotted-list?/or-null @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} car+cdr
+Implement the expansion:
+
+@example
+(@var{self} car+cdr)
+@expansion{} (car+cdr @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} first
+Implement the expansion:
+
+@example
+(@var{self} first)
+@expansion{} (first @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} second
+Implement the expansion:
+
+@example
+(@var{self} second)
+@expansion{} (second @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} third
+Implement the expansion:
+
+@example
+(@var{self} third)
+@expansion{} (third @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} fourth
+Implement the expansion:
+
+@example
+(@var{self} fourth)
+@expansion{} (fourth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} fifth
+Implement the expansion:
+
+@example
+(@var{self} fifth)
+@expansion{} (fifth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} sixth
+Implement the expansion:
+
+@example
+(@var{self} sixth)
+@expansion{} (sixth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} seventh
+Implement the expansion:
+
+@example
+(@var{self} seventh)
+@expansion{} (seventh @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} eighth
+Implement the expansion:
+
+@example
+(@var{self} eighth)
+@expansion{} (eighth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} ninth
+Implement the expansion:
+
+@example
+(@var{self} ninth)
+@expansion{} (ninth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} tenth
+Implement the expansion:
+
+@example
+(@var{self} tenth)
+@expansion{} (tenth @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} take-left @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} take-left @meta{count})
+@expansion{} (take-left @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} take-right @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} take-right @meta{count})
+@expansion{} (take-right @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} take-left! @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} take-left! @meta{count})
+@expansion{} (set! @var{self} (take-left! @var{self} @meta{count}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} drop-left @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} drop-left @meta{count})
+@expansion{} (drop-left @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} drop-right @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} drop-right @meta{count})
+@expansion{} (drop-right @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} drop-right! @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} drop-right! @meta{count})
+@expansion{} (set! @var{self} (drop-right! @var{self} @meta{count}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} split-at @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} split-at @meta{count})
+@expansion{} (split-at @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} split-at! @meta{count}
+Implement the expansion:
+
+@example
+(@var{self} split-at! @meta{count})
+@expansion{} (split-at! @var{self} @meta{count})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} last
+Implement the expansion:
+
+@example
+(@var{self} last)
+@expansion{} (last @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} last-pair
+Implement the expansion:
+
+@example
+(@var{self} last-pair)
+@expansion{} (last-pair @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} length+
+Implement the expansion:
+
+@example
+(@var{self} length+)
+@expansion{} (length+ @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} append! @meta{obj} @dots{}
+Implement the expansion:
+
+@example
+(@var{self} append! @meta{obj} @dots{})
+@expansion{} (set! @var{self} (append! @var{self} @meta{obj} @dots{}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} reverse!
+Implement the expansion:
+
+@example
+(@var{self} reverse!)
+@expansion{} (set! @var{self} (reverse! @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} append-reverse
+Implement the expansion:
+
+@example
+(@var{self} append-reverse)
+@expansion{} (append-reverse @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} append-reverse!
+Implement the expansion:
+
+@example
+(@var{self} append-reverse!)
+@expansion{} (set! @var{self} (append-reverse! @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} zip @meta{ell} @dots{}
+Implement the expansion:
+
+@example
+(@var{self} zip @meta{ell} @dots{})
+@expansion{} (zip @var{self} @meta{ell} @dots{})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} zip* @meta{ell} @dots{}
+Implement the expansion:
+
+@example
+(@var{self} zip* @meta{ell} @dots{})
+@expansion{} (zip* @var{self} @meta{ell} @dots{})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} unzip1
+Implement the expansion:
+
+@example
+(@var{self} unzip1)
+@expansion{} (unzip1 @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} unzip2
+Implement the expansion:
+
+@example
+(@var{self} unzip2)
+@expansion{} (unzip2 @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} unzip3
+Implement the expansion:
+
+@example
+(@var{self} unzip3)
+@expansion{} (unzip3 @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} unzip4
+Implement the expansion:
+
+@example
+(@var{self} unzip4)
+@expansion{} (unzip4 @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} unzip5
+Implement the expansion:
+
+@example
+(@var{self} unzip5)
+@expansion{} (unzip5 @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} count @meta{proc}
+Implement the expansion:
+
+@example
+(@var{self} count @meta{proc})
+@expansion{} (count @meta{proc} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} and-fold-left* @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} and-fold-left* @meta{knil} @meta{kombine})
+@expansion{} (and-fold-left* @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} and-fold-right* @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} and-fold-right* @meta{knil} @meta{kombine})
+@expansion{} (and-fold-right* @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} fold-left/pred @meta{knil} @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} fold-left/pred @meta{knil} @meta{predicate})
+@expansion{} (fold-left/pred @meta{predicate} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} pair-fold @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} pair-fold @meta{knil} @meta{kombine})
+@expansion{} (pair-fold @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} pair-fold* @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} pair-fold* @meta{knil} @meta{kombine})
+@expansion{} (pair-fold* @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} reduce @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} reduce @meta{knil} @meta{kombine})
+@expansion{} (reduce @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} reduce* @meta{knil} @meta{kombine}
+Implement the expansion:
+
+@example
+(@var{self} reduce* @meta{knil} @meta{kombine})
+@expansion{} (reduce* @meta{kombine} @meta{knil} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} map-in-order* @meta{proc}
+Implement the expansion:
+
+@example
+(@var{self} map-in-order* @meta{proc})
+@expansion{} (map-in-order* @meta{proc} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} map! @meta{proc}
+Implement the expansion:
+
+@example
+(@var{self} map! @meta{proc})
+@expansion{} (set! @var{self} (map! @meta{proc} @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} pair-for-each @meta{proc}
+Implement the expansion:
+
+@example
+(@var{self} pair-for-each @meta{proc})
+@expansion{} (pair-for-each @meta{proc} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} filter-map @meta{proc}
+Implement the expansion:
+
+@example
+(@var{self} filter-map @meta{proc})
+@expansion{} (filter-map @meta{proc} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} filter! @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} filter! @meta{predicate})
+@expansion{} (set! @var{self} (filter! @meta{predicate} @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} remove* @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} remove* @meta{predicate})
+@expansion{} (remove* @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} remove*! @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} remove*! @meta{predicate})
+@expansion{} (set! @var{self} (remove*! @meta{predicate} @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} find-tail @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} find-tail @meta{predicate})
+@expansion{} (find-tail @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} take-while @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} take-while @meta{predicate})
+@expansion{} (take-while @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} take-while! @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} take-while! @meta{predicate})
+@expansion{} (set! @var{self} (take-while! @meta{predicate} @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} drop-while @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} drop-while @meta{predicate})
+@expansion{} (drop-while @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} drop-while! @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} drop-while! @meta{predicate})
+@expansion{} (set! @var{self} (drop-while @meta{predicate} @var{self}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} span @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} span @meta{predicate})
+@expansion{} (span @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} break @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} break @meta{predicate})
+@expansion{} (break @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} any @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} any @meta{predicate})
+@expansion{} (any @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} every @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} every @meta{predicate})
+@expansion{} (every @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} list-index @meta{predicate}
+Implement the expansion:
+
+@example
+(@var{self} list-index @meta{predicate})
+@expansion{} (list-index @meta{predicate} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} member* @meta{obj}
+@defmethodx @aclass{xlist} member* @meta{obj} @meta{item=}
+Implement the expansions:
+
+@example
+(@var{self} member* @meta{obj})
+@expansion{} (member* @meta{obj} @var{self})
+
+(@var{self} member* @meta{obj} @meta{item=})
+@expansion{} (member* @meta{obj} @var{self} @meta{item=})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} position @meta{obj}
+Implement the expansion:
+
+@example
+(@var{self} position @meta{obj})
+@expansion{} (position @meta{obj} @var{self})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} delete @meta{obj}
+@defmethodx @aclass{xlist} delete @meta{obj} @meta{item=}
+Implement the expansions:
+
+@example
+(@var{self} delete @meta{obj})
+@expansion{} (delete @meta{obj} @var{self})
+
+(@var{self} delete @meta{obj} @meta{item=})
+@expansion{} (delete @meta{obj} @var{self} @meta{item=})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} delete! @meta{obj}
+@defmethodx @aclass{xlist} delete! @meta{obj} @meta{item=}
+Implement the expansions:
+
+@example
+(@var{self} delete! @meta{obj})
+@expansion{} (set! @var{self} (delete! @meta{obj} @var{self}))
+
+(@var{self} delete! @meta{obj} @meta{item=})
+@expansion{} (set! @var{self} (delete! @meta{obj} @var{self} @meta{item=}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} delete-duplicates
+@defmethodx @aclass{xlist} delete-duplicates @meta{item=}
+Implement the expansions:
+
+@example
+(@var{self} delete-duplicates)
+@expansion{} (delete-duplicates @var{self})
+
+(@var{self} delete-duplicates @meta{item=})
+@expansion{} (delete-duplicates @var{self} @meta{item=})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} delete-duplicates!
+@defmethodx @aclass{xlist} delete-duplicates! @meta{item=}
+Implement the expansions:
+
+@example
+(@var{self} delete-duplicates!)
+@expansion{} (set! @var{self} (delete-duplicates! @var{self}))
+
+(@var{self} delete-duplicates! @meta{item=})
+@expansion{} (set! @var{self} (delete-duplicates! @var{self} @meta{item=}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} sorted-list-insert @meta{obj} @meta{item>}
+Implement the expansion:
+
+@example
+(@var{self} sorted-list-insert @meta{obj} @meta{item>})
+@expansion{} (sorted-list-insert @meta{obj} @var{self} @meta{item>})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} sorted-list-insert! @meta{obj} @meta{item>}
+Implement the expansion:
+
+@example
+(@var{self} sorted-list-insert! @meta{obj} @meta{item>})
+@expansion{} (set! @var{self} (sorted-list-insert @meta{obj} @var{self} @meta{item>}))
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} sorted-list-insert/uniq @meta{obj} @meta{item<} @meta{item>}
+Implement the expansion:
+
+@example
+(@var{self} sorted-list-insert/uniq @meta{obj} @meta{item<} @meta{item>})
+@expansion{} (sorted-list-insert/uniq @meta{obj} @var{self} @meta{item<} @meta{item>})
+@end example
+@end defmethod
+
+
+@defmethod @aclass{xlist} sorted-list-insert/uniq! @meta{obj} @meta{item<} @meta{item>}
+Implement the expansion:
+
+@example
+(@var{self} sorted-list-insert/uniq! @meta{obj} @meta{item<} @meta{item>})
+@expansion{} (set! @var{self} (sorted-list-insert/uniq @meta{obj} @var{self} @meta{item<} @meta{item>}))
+@end example
+@end defmethod
+
+@c end of file
