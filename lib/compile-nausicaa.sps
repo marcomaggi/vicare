@@ -10,6 +10,7 @@
 
   (only (nausicaa containers lists))
   (only (nausicaa containers vectors))
+  (only (nausicaa containers strings))
 
   )
 
