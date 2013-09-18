@@ -6,9 +6,9 @@
 @cindex @library{nausicaa containers vectors}, library
 
 
-The label @class{xvector} provides an interface to the @library{vicare
-containers vectors} functions through the facilities of the language
-@library{nausicaa}.
+The label @class{xvector} provides an interface to the functions in
+@library{vicare containers vectors} through the facilities of the
+language @library{nausicaa}.
 
 
 @deftp Label @aclass{xvector}
