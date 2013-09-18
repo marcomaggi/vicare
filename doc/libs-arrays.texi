@@ -1,0 +1,177 @@
+@node arrays
+@chapter Multidimensional arrays
+
+
+@cindex Library @library{vicare containers arrays}
+@cindex @library{vicare containers arrays}, library
+
+
+@menu
+* arrays coordinates::          Array item coordinates.
+* arrays positions::            Array item positions.
+* arrays shapes::               Array shapes.
+* arrays arrays::               Arrays.
+@end menu
+
+@c page
+@node arrays coordinates
+@section Array item coordinates
+
+
+A single element coordinate in a multidimensional array is a
+non--negative fixnum.  The following bindings are exported by the
+library @library{vicare containers arrays}.
+
+
+@defun coordinate? @var{obj}
+Return @true{} if @var{obj} is valid as multidimensional array
+coordinate; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are validation clauses to be used with the
+facilities of the library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} coordinate @var{obj}
+@deffnx {Validation Clause} coordinate/false @var{obj}
+Succeed if @var{obj} is acceptable as multidimensional array coordinate;
+the second form accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-coordinates @var{obj}
+Succeed if @var{obj} is a proper list of items, each acceptable as
+multidimensional array coordinate.
+@end deffn
+
+
+@deffn {Validation Clause} vector-of-coordinates @var{obj}
+Succeed if @var{obj} is a built--in Scheme vector, and each item is
+acceptable as multidimensional array coordinate.
+@end deffn
+
+@c page
+@node arrays positions
+@section Array item positions
+
+
+A single element position in a multidimensional array is described by a
+@code{position} object; @code{position} objects are disjoint from all
+the other Scheme objects.
+
+The following bindings are exported by the library @library{vicare
+containers arrays}.  Bindings prefixed by @code{$} are unsafe
+operations: they do not validate their arguments.
+
+
+@defun position @varo{coord} @var{coord} @dots{}
+@defunx $position @varo{coord} @var{coord} @dots{}
+Build and return a new multidimensional array @code{position} object
+containing the specified coordinates.
+@end defun
+
+
+@defun make-position @var{dim}
+@defunx $make-position @var{dim}
+Build and return a new multidimensional array @code{position} object of
+the specified dimension containing all @code{0} as coordinates.
+@end defun
+
+
+@defun vector->position @var{vec}
+@defunx $vector->position @var{vec}
+Build and return a new multidimensional array @code{position} object
+having the items in the given vector argument as coordinates.
+@end defun
+
+
+@defun list->position @var{ell}
+@defunx $list->position @var{ell}
+Build and return a new multidimensional array @code{position} object
+having the items in the given proper list argument as coordinates.
+@end defun
+
+
+@defun position? @var{obj}
+Return @true{} if @var{obj} is a @code{position} object; otherwise
+return @false{}.
+@end defun
+
+
+@defun position-dimension @var{pos}
+@defunx $position-dimension @var{pos}
+Return the number of coordinates of the element @code{position} object
+@var{pos}.
+@end defun
+
+
+@defun position-ref @var{pos} @var{idx}
+@defunx $position-ref @var{pos} @var{idx}
+Return the coordinate at index @var{idx} in the @code{position} object
+@var{pos}.
+@end defun
+
+
+@defun position-set! @var{pos} @var{idx} @var{coord}
+@defunx $position-set! @var{pos} @var{idx} @var{coord}
+Store a new coordinate @var{coord} at index @var{idx} in the
+@code{position} object @var{pos}
+@end defun
+
+
+@defun position=? @varo{pos} @var{pos} @dots{}
+@defunx $position=? @vari{pos} @varii{pos}
+Return @true{} if all the arguments are @code{position} objects and
+their coordinates are equal.
+@end defun
+
+
+@defun position-copy @var{pos}
+@defunx $position-copy @var{pos}
+Build and return a copy of the @code{position} object @var{pos}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are validation clauses to be used with the
+facilities of the library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} position @var{obj}
+@deffnx {Validation Clause} position/false @var{obj}
+Succeed if @var{obj} is a @code{position} object; the second clause
+accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} position-index @var{pos} @var{obj}
+Assuming @var{pos} is a @code{position} object (this argument is
+@strong{not} validated): succeed if @var{obj} is a valid index to select
+a coordinate in @var{pos}.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-positions @var{obj}
+Succeed if @var{obj} is a proper list of items, each being a
+multidimensional array @code{position} object.
+@end deffn
+
+@c page
+@node arrays shapes
+@section Array shapes
+
+@c page
+@node arrays arrays
+@section Arrays
+
+
+
+@c end of file

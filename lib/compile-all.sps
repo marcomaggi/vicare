@@ -104,6 +104,7 @@
   (only (vicare containers one-dimension-cc))
   (only (vicare containers bytevectors u8))
   (only (vicare containers bytevectors s8))
+  (only (vicare containers arrays))
 
   (only (vicare net channels))
 

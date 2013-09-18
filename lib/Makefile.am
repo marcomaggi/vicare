@@ -91,6 +91,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/bytevectors/s8low.sls				\
 	vicare/containers/bytevectors/u8.sls				\
 	vicare/containers/bytevectors/u8low.sls				\
+	vicare/containers/arrays.sls					\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\

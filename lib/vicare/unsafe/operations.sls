@@ -77,11 +77,8 @@
     $fxzero?
     $fxnegative?
     $fxpositive?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $fxnonpositive?
-    ;; $fxnonnegative?
+    $fxnonpositive?
+    $fxnonnegative?
     $fxadd1	;increment
     $fxsub1	;decrement
     $fxneg	;negation
@@ -269,6 +266,7 @@
     $vector-ref
     $vector-set!
 
+    $vector-copy
     $vector-copy!
     $vector-self-copy-forwards!
     $vector-self-copy-backwards!
@@ -340,7 +338,11 @@
     (ikarus system $structs)
     (except (ikarus system $fx)
 	    $fxmax
-	    $fxmin)
+	    $fxmin
+	    ;;FIXME  To be  removed  at the  next  boot image  rotation.
+	    ;;(Marco Maggi; Wed Sep 18, 2013)
+	    $fxnonpositive?
+	    $fxnonnegative?)
     (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $flonums)
@@ -399,6 +401,16 @@
 
 
 ;;;; fixnums
+
+;;; predicates
+
+(define-inline ($fxnonpositive? op)
+  (or ($fxzero? op)
+      ($fxnegative? op)))
+
+(define-inline ($fxnonnegative? op)
+  (or ($fxzero? op)
+      ($fxpositive? op)))
 
 ;;; arithmetic operations
 
@@ -1108,6 +1120,13 @@
       (begin
 	($vector-set! vec index fill)
 	(loop vec ($fxadd1 index) end fill)))))
+
+(define-inline ($vector-copy ?vec)
+  (let* ((src.vec ?vec)
+	 (src.len ($vector-length src.vec))
+	 (dst.vec ($make-vector src.len)))
+    ($vector-copy! src.vec 0 dst.vec 0 src.len)
+    dst.vec))
 
 (define-inline ($vector-copy! ?src.vec ?src.start
 			      ?dst.vec ?dst.start

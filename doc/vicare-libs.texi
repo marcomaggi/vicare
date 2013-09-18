@@ -224,6 +224,7 @@ Container libraries
 * wtables::                     Weak hashtables.
 * object-properties::           Object properties.
 * one-dimension::               One dimensional extended ranges.
+* arrays::                      Multidimensional arrays.
 
 Adapted libraries
 
@@ -4634,6 +4635,7 @@ following types: @condition{who}, @condition{option},
 @include libs-levenshtein.texi
 @include libs-object-properties.texi
 @include libs-one-dimension.texi
+@include libs-arrays.texi
 
 @include libs-randomisations.texi
 
