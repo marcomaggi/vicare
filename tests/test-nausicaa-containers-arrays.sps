@@ -429,20 +429,20 @@
 
 (parameterise ((check-test-name 'array-class))
 
-  (let (((array <array>)	(<array> ((array-shape '#(1 2 3 4 5)
-						       '#(6 7 8 9 10))
+  (let (((array <array>)	(<array> ((<shape> ('#(1 2 3 4 5)
+						    '#(6 7 8 9 10)))
 					  0)))
-  	((array2 <array>)	(<array> ((array-shape '#(5 4 3 2 1)
-						       '#(10 9 8 7 6))
+  	((array2 <array>)	(<array> ((<shape> ('#(5 4 3 2 1)
+						    '#(10 9 8 7 6)))
 					  1)))
-  	((array3 <array>)	(<array> ((array-shape '#(0 0 0 0)
-						       '#(3 4 5 6))
+  	((array3 <array>)	(<array> ((<shape> ('#(0 0 0 0)
+						    '#(3 4 5 6)))
 					  #f)))
-  	((array4 <array>)	(<array> ((array-shape '#(0 0 0)
-						       '#(2 3 4))
+  	((array4 <array>)	(<array> ((<shape> ('#(0 0 0)
+						    '#(2 3 4)))
 					  #f)))
 	;;this is small, good for string representation
-  	((array5 <array>)	(array (array-shape '#(0 0 0) '#(2 3 4))
+  	((array5 <array>)	(array (<shape> ('#(0 0 0) '#(2 3 4)))
   				       1  2  3  4  5  6  7  8  9  10
   				       11 12 13 14 15 16 17 18 19 20
   				       21 22 23 24))
