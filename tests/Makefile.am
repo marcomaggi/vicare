@@ -269,7 +269,8 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	\
 	test-nausicaa-containers-lists.sps		\
 	test-nausicaa-containers-vectors.sps		\
-	test-nausicaa-containers-strings.sps
+	test-nausicaa-containers-strings.sps		\
+	test-nausicaa-containers-arrays.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\

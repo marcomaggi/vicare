@@ -72,11 +72,15 @@ definition (@pxref{conditions, Condition object types}).
 All the bindings are reexported.
 
 @item @library{vicare language-extensions sentinels}
-Sentinel values (@vicareref{sentinels, The sentinel value}).
+Sentinel values (@libsref{sentinels, The sentinel value}).
 
 @item @library{vicare language-extensions simple-match}
-Simple pattern matching syntax (@vicareref{simple-match, Simple
+Simple pattern matching syntax (@libsref{simple-match, Simple
 destructuring match syntax}).
+
+@item @library{vicare language-extensions infix}
+Syntax for infix--to--prefix notation conversion (@libsref{simple-match,
+Simple destructuring match syntax}).
 @end table
 
 @c end of file

@@ -52,6 +52,7 @@ Notes for revision 0.3d5
      (nausicaa containers lists)
      (nausicaa containers vectors)
      (nausicaa containers strings)
+     (nausicaa containers arrays)
 
 * Added INFIX to the export list of (nausicaa).
 

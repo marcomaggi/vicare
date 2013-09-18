@@ -114,6 +114,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-lists.texi			\
 	nausicaa-vectors.texi			\
 	nausicaa-strings.texi			\
+	nausicaa-arrays.texi			\
 	\
 	macros.texi				\
 	fdl-1.3.texi				\

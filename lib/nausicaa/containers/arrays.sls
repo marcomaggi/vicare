@@ -31,7 +31,7 @@
 
 
 #!r6rs
-(library (nausicaa arrays)
+(library (nausicaa containers arrays)
   (export
 
     <position> <shape> <array>
@@ -75,9 +75,12 @@
     array-display
     array-write)
   (import (nausicaa)
-    (nausicaa lists)
-    (nausicaa vectors)
-    (nausicaa strings))
+    (prefix (vicare containers strings) strings.)
+    (prefix (vicare containers lists) lists.)
+    (prefix (vicare containers vectors) vectors.)
+    (nausicaa containers lists)
+    (nausicaa containers vectors)
+    (nausicaa containers strings))
 
 
 ;;;; helpers
@@ -91,7 +94,7 @@
 ;;; constructors
 
 (define (array-position . coordinates)
-  (unless (every %coordinate? coordinates)
+  (unless (lists.every %coordinate? coordinates)
     (assertion-violation 'array-position
       "array coordinates must be non-negative exact integers"
       coordinates))
@@ -102,7 +105,7 @@
 
 (define (array-position? position)
   (and (vector? position)
-       (vector-every %coordinate? position)
+       (vectors.vector-every %coordinate? position)
        #t))
 
 (define (assert-array-position obj func-name)
@@ -122,7 +125,7 @@
 
 (define (array-position->string position)
   (string-append "#<array-position -- "
-		 (string-join (vector->list (vector-map number->string position)) " ")
+		 (strings.string-join (vector->list (vector-map number->string position)) " ")
 		 ">"))
 
 (define array-position-display
@@ -142,8 +145,8 @@
 ;;; --------------------------------------------------------------------
 
 (define-label <position>
-  (inherit <xvector>)
-  (custom-maker array-position)
+  (parent <xvector>)
+  (protocol (lambda () array-position))
   (predicate array-position?)
   (virtual-fields (immutable string array-position->string))
   (methods (display	array-position-display)
@@ -166,13 +169,13 @@
    (lambda (make-top)
      (lambda ((starts <xvector>) (pasts <xvector>))
        (let ((len (vector-length starts)))
-	 (when (or (zero? len) (not (= len pasts.length)))
+	 (when (or (zero? len) (not (= len (pasts length))))
 	   (assertion-violation 'array-shape
 	     "invalid number of elements in shape specification"
 	     starts pasts))
 	 (do* ((i 0 (+ 1 i))
-	       (S (getf (starts i)) (getf (starts i)))
-	       (P (getf (pasts  i)) (getf (pasts  i))))
+	       (S (starts[i]) (starts[i]))
+	       (P (pasts[i]) (pasts[i])))
 	     ((= i len))
 	   (unless (%coordinate? S)
 	     (assertion-violation 'array-shape
@@ -202,11 +205,11 @@
 ;;; predicates and assertions
 
 (define (array-shape-contains? (shape <shape>) position)
-  (vector-every (lambda (start past index)
-		  (and (<= start index) (< index past)))
-    shape.starts
-    shape.pasts
-    position))
+  (vectors.vector-every (lambda (start past index)
+			  (and (<= start index) (< index past)))
+			(shape starts)
+			(shape pasts)
+			position))
 
 (define (assert-array-shape obj func-name)
   (or (array-shape? obj)
@@ -224,23 +227,23 @@
 ;;; inspection
 
 (define (array-shape-number-of-dimensions (shape <shape>))
-  shape.starts.length)
+  (shape starts length))
 
 (define (array-shape-number-of-elements (shape <shape>))
-  (vector-fold-left (lambda (sum start past)
-		      (+ sum (- past start)))
-    0
-    shape.starts
-    shape.pasts))
+  (vectors.vector-fold-left (lambda (sum start past)
+			      (+ sum (- past start)))
+			    0
+			    (shape starts)
+			    (shape pasts)))
 
 (define (array-shape-index-start (shape <shape>) dimension)
-  (getf (shape.starts dimension)))
+  (shape starts[dimension]))
 
 (define (array-shape-index-past (shape <shape>) dimension)
-  (getf (shape.pasts dimension)))
+  (shape pasts[dimension]))
 
 (define (array-shape-index-last (shape <shape>) dimension)
-  (+ -1 (getf (shape.pasts dimension))))
+  (+ -1 (shape pasts[dimension])))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -248,41 +251,41 @@
 (define array-shape=?
   (case-lambda
    (((A <shape>) (B <shape>))
-    (and (= A.number-of-dimensions B.number-of-dimensions)
-	 (vector-every
+    (and (= (A number-of-dimensions) (B number-of-dimensions))
+	 (vectors.vector-every
 	     (lambda (sa sb pa pb)
 	       (and (= sa sb) (= pa pb)))
-	   A.starts B.starts
-	   A.pasts  B.pasts)))
+	   (A starts) (B starts)
+	   (A pasts)  (B pasts))))
    ((shape0 . shapes)
-    (fold-left/pred array-shape=? shape0 shapes))))
+    (lists.fold-left/pred array-shape=? shape0 shapes))))
 
 (define array-supershape?
   (case-lambda
    (((A <shape>) (B <shape>))
-    (and (= A.number-of-dimensions B.number-of-dimensions)
-	 (vector-every
+    (and (= (A number-of-dimensions) (B number-of-dimensions))
+	 (vectors.vector-every
 	     (lambda (sa sb pa pb)
 	       (infix sa <= sb and pb <= pa))
-	   A.starts B.starts
-	   A.pasts  B.pasts)))
+	   (A starts) (B starts)
+	   (A pasts)  (B pasts))))
    ((shape0 . shapes)
-    (fold-left/pred array-supershape? shape0 shapes))))
+    (lists.fold-left/pred array-supershape? shape0 shapes))))
 
 (define array-supershape?/strict
   (case-lambda
    (((A <shape>) (B <shape>))
-    (and (= A.number-of-dimensions B.number-of-dimensions)
-	 (let ((len A.starts.length))
+    (and (= (A number-of-dimensions) (B number-of-dimensions))
+	 (let ((len (A starts length)))
 	   (let loop ((A-is-strict-supershape? #f)
 		      (i 0))
 	     (if (= i len)
 		 A-is-strict-supershape?
-	       (let ((Sa (vector-ref A.starts i))
-		     (Sb (vector-ref B.starts i))
-		     (Pa (vector-ref A.pasts  i))
-		     (Pb (vector-ref B.pasts  i)))
-		 (cond ((null? A.starts)
+	       (let ((Sa (vector-ref (A starts) i))
+		     (Sb (vector-ref (B starts) i))
+		     (Pa (vector-ref (A pasts)  i))
+		     (Pb (vector-ref (B pasts)  i)))
+		 (cond ((null? (A starts))
 			A-is-strict-supershape?)
 		       ((and (<  Sa Sb) (<= Pb Pa))
 			(loop #t (+ 1 i)))
@@ -292,7 +295,7 @@
 			(loop A-is-strict-supershape? (+ 1 i)))
 		       (else #f))))))))
    ((shape0 . shapes)
-    (fold-left/pred array-supershape?/strict shape0 shapes))))
+    (lists.fold-left/pred array-supershape?/strict shape0 shapes))))
 
 (define (array-subshape? shape0 . shapes)
   (apply array-supershape? (reverse (cons shape0 shapes))))
@@ -305,9 +308,9 @@
 
 (define (array-shape->string (S <shape>))
   (string-append "#<array-shape -- "
-		 (string-join (vector->list (S.starts.map number->string)) " ")
+		 (strings.string-join (vector->list (S starts map number->string)) " ")
 		 " -- "
-		 (string-join (vector->list (S.pasts.map number->string)) " ")
+		 (strings.string-join (vector->list (S pasts map number->string)) " ")
 		 ">"))
 
 (define array-shape-display
@@ -323,9 +326,9 @@
     (array-shape-write shape (current-output-port)))
    (((S <shape>) port)
     (display "(array-shape '" port)
-    (write S.starts port)
+    (write (S starts) port)
     (display " '" port)
-    (write S.pasts  port)
+    (write (S pasts)  port)
     (display ")" port))))
 
 
@@ -334,7 +337,7 @@
 (define-class (<array> make-<array> array?)
   (nongenerative nausicaa:arrays:<array>)
   (opaque #t)
-  (inherit <shape>)
+  (parent <shape>)
   (fields (immutable (dimensions <xvector>))
 		;A vector holding the lengths of the dimensions.
 	  (immutable (factors <xvector>))
@@ -348,13 +351,24 @@
   (protocol
    (lambda (make-shape)
      (lambda ((S <shape>) fill-value)
-       (let ((dimensions (S.pasts.map - S.starts)))
-	 ((make-shape S.starts S.pasts)
+       (let ((dimensions (vector-map - (S pasts) (S starts))))
+	 ((make-shape (S starts) (S pasts))
 	  dimensions (%compute-factors dimensions) #f
-	  (make-vector (vector-fold-left * 1 dimensions) fill-value))))))
+	  (make-vector (vectors.vector-fold-left * 1 dimensions) fill-value))))))
 
-  (setter array-Setter)
-  (getter array-Getter)
+  (getter (lambda (stx)
+	    (syntax-case stx ()
+	      ((?var ((?position0) (?position) ...))
+	       ;;Build a POSITION object and hand it to ARRAY-REF.
+	       #'(array-ref ?var (array-position ?position0 ?position ...)))
+	      )))
+
+  (setter (lambda (stx)
+	    (syntax-case stx ()
+	      ((?var ((?position0) (?position) ...) ?value)
+	       ;;Build a POSITION object and hand it to ARRAY-SET!.
+	       #'(array-set! ?var (array-position ?position0 ?position ...) ?value))
+	      )))
 
   (method-syntax =
     (syntax-rules ()
@@ -381,7 +395,7 @@
        (vector-set! factors (- len 1) 1)
        factors)
     (vector-set! factors k
-		 (subvector-fold-left * 1 (view dimensions (start (+ 1 k)))))))
+		 (vectors.subvector-fold-left * 1 (vectors.view dimensions (vectors.start (+ 1 k)))))))
 
 ;; (define (%compute-factors dimensions)
 ;;   (let loop ((dims    (cdr dimensions))
@@ -396,42 +410,42 @@
    ((shape)
     (make-array shape #f))
    ((shape fill-value)
-    (make* <array> shape fill-value))))
+    (<array> (shape fill-value)))))
 
 (define (array shape . elements)
-  (let* (((S <array>)	(make* <array> shape #f))
-	 ((V <xvector>)	S.vector))
+  (let* (((S <array>)	(<array> (shape #f)))
+	 ((V <xvector>)	(S vector)))
     (do ((i 0 (+ 1 i))
 	 (elements elements (if (null? elements)
 				(assertion-violation 'array
 				  "number of elements less than size of array")
 			      (cdr elements))))
-	((= i V.length)
+	((= i (V length))
 	 (if (null? elements)
 	     S
 	   (assertion-violation 'array
 	     "number of elements exceeds size of array")))
-      (setf (V i) (car elements)))))
+      (set! V[i] (car elements)))))
 
 (define (array-copy (A <array>))
   (make-from-fields <array>
-    (A.starts.copy)
-    (A.pasts.copy)
-    (A.dimensions.copy)
-    (A.factors.copy)
-    A.mapper
-    (A.vector.copy)))
+    (A starts copy)
+    (A pasts copy)
+    (A dimensions copy)
+    (A factors copy)
+    (A mapper)
+    (A vector copy)))
 
 (define (array-view (A <array>) mapper)
   (make-from-fields <array>
-    A.starts A.pasts
-    A.dimensions A.factors
-    (let ((under A.mapper))
+    (A starts) (A pasts)
+    (A dimensions) (A factors)
+    (let ((under (A mapper)))
       (if under
 	  (lambda (position)
 	    (under (mapper position)))
 	mapper))
-    A.vector))
+    (A vector)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates and assertions
@@ -451,46 +465,40 @@
   (case-lambda
    ((item= (A <array>) (B <array>))
     (and (array-shape=? A B)
-	 (vector= item= A.vector B.vector)))
+	 (vector-for-all item= (A vector) (B vector))))
    ((item= array0 . arrays)
-    (fold-left/pred (lambda (a b)
-		      (array=? item= a b))
-		    array0 arrays))))
+    (lists.fold-left/pred (lambda (a b)
+			    (array=? item= a b))
+			  array0 arrays))))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
 (define (%compute-index who (A <array>) position)
-  (vector-fold-left
+  (vectors.vector-fold-left
       (lambda (offset factor index)
 	(infix offset + factor * index))
     0
-    A.factors
-    (if A.mapper
-	(A.mapper position)
+    (A factors)
+    (if (A mapper)
+	(A mapper position)
       position)))
 
 (define (array-ref (A <array>) position)
-  (getf (A.vector (%compute-index 'array-ref A position))))
+  (A vector [(%compute-index 'array-ref A position)]))
 
 (define (array-set! (A <array>) position value)
-  (setf (A.vector (%compute-index 'array-set! A position)) value))
-
-(define-inline (array-Getter ?self . ?position)
-  (array-ref ?self (array-position . ?position)))
-
-(define-inline (array-Setter ?self ?value . ?position)
-  (array-set! ?self (array-position . ?position) ?value))
+  (set! (A vector [(%compute-index 'array-set! A position)]) value))
 
 ;;; --------------------------------------------------------------------
 ;;; Conversion and port output
 
 (define (array->string (A <array>) element->string)
   (string-append "#<array " (array-shape->string A) " "
-		 (A.vector.fold-right
-		  (lambda (item string)
-		    (string-append (element->string item) " " string))
-		  "")
+		 (A vector fold-right
+		    (lambda (item string)
+		      (string-append (element->string item) " " string))
+		    "")
 		 ">"))
 
 (define array-display
@@ -498,7 +506,7 @@
    ((array element->string)
     (array-display array element->string (current-output-port)))
    (((A <array>) element->string port)
-    (display (A.string element->string) port))))
+    (display (A string element->string) port))))
 
 (define array-write
   (case-lambda
@@ -508,9 +516,9 @@
     (display "(array " port)
     (array-shape-write A port)
     (display " " port)
-    (display (A.vector.fold-right (lambda (item string)
+    (display (A vector fold-right (lambda (item string)
 				    (string-append (element->string item) " " string))
-				  "")
+		"")
 	     port)
     (display ")" port))))
 
