@@ -42,6 +42,7 @@
     make-position			$make-position
     position				$position
     position?
+    position-index?			$position-index?
     position-dimension			$position-dimension
     position-ref			$position-ref
     position-set!			$position-set!
@@ -56,6 +57,9 @@
     ;; array shapes
 
     ;; arrays
+
+    ;; misc stuff
+    number-of-dimensions.vicare-arguments-validation
 
     )
   (import (vicare)
@@ -118,6 +122,21 @@
      make-record)))
 
 ;;; --------------------------------------------------------------------
+;;; predicates
+
+(define (position-index? pos obj)
+  (define who 'position-index?)
+  (with-arguments-validation (who)
+      ((position	pos))
+    ($position-index? pos obj)))
+
+(define ($position-index? pos obj)
+  (and (fixnum? obj)
+       ($fx>= obj 0)
+       ($fx<= obj ($position-dimension pos))))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
 
 (define-argument-validation (position who obj)
   (position? obj)
@@ -129,9 +148,7 @@
   (assertion-violation who "expected false or array position as argument" obj))
 
 (define-argument-validation (position-index who pos obj)
-  (and (fixnum? obj)
-       ($fx>= obj 0)
-       ($fx<= obj ($position-dimension pos)))
+  ($position-index? pos obj)
   (assertion-violation who "expected valid coordinate index for array position" pos obj))
 
 (define-argument-validation (list-of-positions who obj)
@@ -163,11 +180,11 @@
 (define (make-position dim)
   (define who 'make-position)
   (with-arguments-validation (who)
-      ((dimension	dim))
+      ((number-of-dimensions	dim))
     ($make-position dim)))
 
 (define ($make-position dim)
-  ($make-:position (make-vector dim 0)))
+  (make-:position (make-vector dim 0)))
 
 (define (position coord . coords)
   (list->position (cons coord coords)))
@@ -255,6 +272,13 @@
 
 (define ($position-copy pos)
   ($vector->position ($vector-copy ($:position-coordinates pos))))
+
+
+;;;; miscellaneous utilities
+
+(define-argument-validation (number-of-dimensions who obj)
+  (coordinate? obj)
+  (assertion-violation who "expected array position number of dimensions as argument" obj))
 
 
 ;;;; done

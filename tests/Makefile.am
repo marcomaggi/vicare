@@ -175,6 +175,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-language-extensions-streams.sps			\
 	test-vicare-language-extensions-variables.sps			\
 	\
+	test-vicare-containers-arrays.sps				\
 	test-vicare-containers-bytevector-compounds.sps			\
 	test-vicare-containers-bytevectors-s8-high.sps			\
 	test-vicare-containers-bytevectors-s8-low.sps			\

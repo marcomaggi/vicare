@@ -98,11 +98,19 @@ Revised^6 Report on the algorithmic language Scheme
 <\NAME\>
 @end macro
 
-@macro clause{NAME}
+@macro objtype{NAME}
 @code{\NAME\}
 @end macro
 
-@macro objtype{NAME}
+@macro aobjtype{NAME}
+\NAME\
+@end macro
+
+@macro cobjtype{NAME}
+\NAME\
+@end macro
+
+@macro clause{NAME}
 @code{\NAME\}
 @end macro
 

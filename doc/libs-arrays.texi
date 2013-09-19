@@ -11,6 +11,7 @@
 * arrays positions::            Array item positions.
 * arrays shapes::               Array shapes.
 * arrays arrays::               Arrays.
+* arrays misc::                 Miscellaneous utilities.
 @end menu
 
 @c page
@@ -61,79 +62,107 @@ acceptable as multidimensional array coordinate.
 
 
 A single element position in a multidimensional array is described by a
-@code{position} object; @code{position} objects are disjoint from all
-the other Scheme objects.
+@objtype{position} object; @objtype{position} objects are disjoint from
+all the other Scheme objects.
 
 The following bindings are exported by the library @library{vicare
 containers arrays}.  Bindings prefixed by @code{$} are unsafe
 operations: they do not validate their arguments.
 
+@c ------------------------------------------------------------
+
+@subsubheading Constructors
+
 
 @defun position @varo{coord} @var{coord} @dots{}
 @defunx $position @varo{coord} @var{coord} @dots{}
-Build and return a new multidimensional array @code{position} object
+Build and return a new multidimensional array @objtype{position} object
 containing the specified coordinates.
 @end defun
 
 
 @defun make-position @var{dim}
 @defunx $make-position @var{dim}
-Build and return a new multidimensional array @code{position} object of
-the specified dimension containing all @code{0} as coordinates.
+Build and return a new multidimensional array @objtype{position} object
+of the specified dimension containing all @code{0} as coordinates.
 @end defun
 
 
 @defun vector->position @var{vec}
 @defunx $vector->position @var{vec}
-Build and return a new multidimensional array @code{position} object
+Build and return a new multidimensional array @objtype{position} object
 having the items in the given vector argument as coordinates.
 @end defun
 
 
 @defun list->position @var{ell}
 @defunx $list->position @var{ell}
-Build and return a new multidimensional array @code{position} object
+Build and return a new multidimensional array @objtype{position} object
 having the items in the given proper list argument as coordinates.
 @end defun
 
 
+@defun position-copy @var{pos}
+@defunx $position-copy @var{pos}
+Build and return a copy of the @objtype{position} object @var{pos}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Predicates
+
+
 @defun position? @var{obj}
-Return @true{} if @var{obj} is a @code{position} object; otherwise
+Return @true{} if @var{obj} is a @objtype{position} object; otherwise
 return @false{}.
 @end defun
 
 
+@defun position-index? @var{pos} @var{obj}
+@defunx $position-index? @var{pos} @var{obj}
+Return @true{} if @var{obj} is a valid index to select a coordinate in
+the @objtype{position} object @var{pos}; otherwise return @false{}.
+
+With @func{position-index?}: it is an error if @var{pos} is not a
+@objtype{position} object.  With @func{$position-index?}: the argument
+@var{pos} is not validated befor accessing it as @objtype{position}
+object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Accessors and mutators
+
+
 @defun position-dimension @var{pos}
 @defunx $position-dimension @var{pos}
-Return the number of coordinates of the element @code{position} object
-@var{pos}.
+Return the number of coordinates of the element @objtype{position}
+object @var{pos}.
 @end defun
 
 
 @defun position-ref @var{pos} @var{idx}
 @defunx $position-ref @var{pos} @var{idx}
-Return the coordinate at index @var{idx} in the @code{position} object
-@var{pos}.
+Return the coordinate at index @var{idx} in the @objtype{position}
+object @var{pos}.
 @end defun
 
 
 @defun position-set! @var{pos} @var{idx} @var{coord}
 @defunx $position-set! @var{pos} @var{idx} @var{coord}
 Store a new coordinate @var{coord} at index @var{idx} in the
-@code{position} object @var{pos}
+@objtype{position} object @var{pos}
 @end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison functions
 
 
 @defun position=? @varo{pos} @var{pos} @dots{}
 @defunx $position=? @vari{pos} @varii{pos}
-Return @true{} if all the arguments are @code{position} objects and
+Return @true{} if all the arguments are @objtype{position} objects and
 their coordinates are equal.
-@end defun
-
-
-@defun position-copy @var{pos}
-@defunx $position-copy @var{pos}
-Build and return a copy of the @code{position} object @var{pos}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -147,13 +176,13 @@ facilities of the library @library{vicare arguments validation}.
 
 @deffn {Validation Clause} position @var{obj}
 @deffnx {Validation Clause} position/false @var{obj}
-Succeed if @var{obj} is a @code{position} object; the second clause
+Succeed if @var{obj} is a @objtype{position} object; the second clause
 accepts also @false{}.
 @end deffn
 
 
 @deffn {Validation Clause} position-index @var{pos} @var{obj}
-Assuming @var{pos} is a @code{position} object (this argument is
+Assuming @var{pos} is a @objtype{position} object (this argument is
 @strong{not} validated): succeed if @var{obj} is a valid index to select
 a coordinate in @var{pos}.
 @end deffn
@@ -161,7 +190,7 @@ a coordinate in @var{pos}.
 
 @deffn {Validation Clause} list-of-positions @var{obj}
 Succeed if @var{obj} is a proper list of items, each being a
-multidimensional array @code{position} object.
+multidimensional array @objtype{position} object.
 @end deffn
 
 @c page
@@ -173,5 +202,23 @@ multidimensional array @code{position} object.
 @section Arrays
 
 
+
+@c page
+@node arrays misc
+@section Miscellaneous utilities
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are validation clauses to be used with the
+facilities of the library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} number-of-dimensions @var{obj}
+Succeed if @var{obj} is acceptable as number of dimensions for
+@objtype{position} and @objtype{shape} objects.
+@end deffn
 
 @c end of file
