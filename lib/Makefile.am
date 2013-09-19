@@ -249,8 +249,6 @@ if WANT_NAUSICAA
 nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/auxiliary-syntaxes.sls		\
 	nausicaa/language/symbols-tree.sls			\
-	nausicaa/language/unsafe-operations.sls			\
-	nausicaa/language/unsafe-operations.vicare.sls		\
 	\
 	nausicaa/language/oopp.sls				\
 	nausicaa/language/oopp/auxiliary-syntaxes.sls		\

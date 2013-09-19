@@ -105,7 +105,7 @@
 		  shadows		satisfies
 		  mixins		maker			finaliser)
 	    aux.)
-    (nausicaa language unsafe-operations))
+    (vicare unsafe operations))
 
 
 ;;;; helpers
