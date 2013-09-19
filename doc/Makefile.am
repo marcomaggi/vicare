@@ -5,40 +5,43 @@
 EXTRA_DIST		= QUEST-FOR-ISSUE-35
 
 info_TEXINFOS		= \
-	vicare-scheme.texi		\
-	vicare-libs.texi		\
+	vicare-scheme.texi			\
+	vicare-libs.texi			\
 	nausicaa.texi
 
 vicare_scheme_TEXINFOS	= \
-	gpl-3.0.texi			\
-	macros.texi			\
+	gpl-3.0.texi				\
+	macros.texi				\
 	\
-	overview.texi			\
-	using.texi			\
-	scheme.texi			\
-	baselib.texi			\
-	stdlib.texi			\
+	overview.texi				\
+	using.texi				\
+	scheme.texi				\
+	baselib.texi				\
+	stdlib.texi				\
 	exception-handlers-implementation.texi	\
-	iklib.texi			\
-	ffi.texi			\
-	syslib.texi			\
-	capi.texi			\
-	objects.texi			\
-	debug.texi			\
-	machinery.texi			\
-	compiler.texi			\
+	iklib.texi				\
+	ffi.texi				\
+	syslib.texi				\
+	capi.texi				\
+	objects.texi				\
+	debug.texi				\
+	machinery.texi				\
+	compiler.texi				\
 	\
-	missing.texi			\
-	building.texi			\
-	credits.texi			\
-	unicode.texi			\
-	fasl.texi			\
-	shmem.texi			\
-	binfmt.texi			\
-	history.texi			\
+	missing.texi				\
+	building.texi				\
+	credits.texi				\
+	unicode.texi				\
+	fasl.texi				\
+	shmem.texi				\
+	binfmt.texi				\
+	history.texi				\
 	references.texi
 
 vicare_libs_TEXINFOS = \
+	gpl-3.0.texi				\
+	macros.texi				\
+	\
 	lang.texi				\
 	\
 	posix.texi				\
