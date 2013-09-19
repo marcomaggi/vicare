@@ -66,7 +66,7 @@
   (import (vicare)
     (nausicaa language oopp)
     (nausicaa language multimethods)
-    (nausicaa language unsafe-operations)
+    (vicare unsafe operations)
     (vicare containers bytevectors))
 
 

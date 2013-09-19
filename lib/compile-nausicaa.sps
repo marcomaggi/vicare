@@ -1,6 +1,5 @@
 #!r6rs
 (import
-    (only (nausicaa language unsafe-operations))
   (only (nausicaa language auxiliary-syntaxes))
   (only (nausicaa language oopp))
   (only (nausicaa language multimethods))

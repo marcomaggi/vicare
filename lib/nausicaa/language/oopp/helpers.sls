@@ -91,7 +91,7 @@
     (for (only (rnrs)
 	       lambda define define-syntax set!)
 	 (meta -1))
-    (nausicaa language unsafe-operations)
+    (vicare unsafe operations)
     (prefix (only (nausicaa language oopp configuration)
 		  enable-satisfactions)
 	    config.)
