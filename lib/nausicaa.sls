@@ -1457,6 +1457,12 @@
     os-name
     os-version
 
+    ;; condition types
+    &procedure-argument-violation
+    make-procedure-argument-violation
+    procedure-argument-violation?
+    procedure-argument-violation
+
 
 ;;;; bindings from (nausicaa language oopp)
 

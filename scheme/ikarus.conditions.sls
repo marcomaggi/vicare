@@ -14,6 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus conditions)
   (export condition? simple-conditions condition-predicate
           condition condition-accessor print-condition
@@ -85,6 +86,13 @@
 	  make-errno-condition errno-condition? condition-errno
 	  &h_errno &h_errno-rtd &h_errno-rcd
 	  make-h_errno-condition h_errno-condition? condition-h_errno
+
+	  &procedure-argument-violation
+	  &procedure-argument-violation-rtd
+	  &procedure-argument-violation-rcd
+	  make-procedure-argument-violation
+	  procedure-argument-violation?
+	  procedure-argument-violation
 	  )
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
@@ -147,7 +155,14 @@
 		  make-source-position-condition source-position-condition?
 		  source-position-port-id
 		  source-position-byte source-position-character
-		  source-position-line source-position-column)
+		  source-position-line source-position-column
+
+		  &procedure-argument-violation
+		  &procedure-argument-violation-rtd
+		  &procedure-argument-violation-rcd
+		  make-procedure-argument-violation
+		  procedure-argument-violation?
+		  procedure-argument-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
@@ -466,6 +481,16 @@
 (define-condition-type &h_errno &condition
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
+
+(define-condition-type &procedure-argument-violation &assertion
+  make-procedure-argument-violation procedure-argument-violation?)
+
+(define (procedure-argument-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-procedure-argument-violation))))
 
 
 ;;;; printing condition objects

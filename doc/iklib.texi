@@ -1127,6 +1127,7 @@ Push the given thunk on the current compensations stack.
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
+* iklib conditions procarg::    Procedure argument violations.
 @end menu
 
 @c page
@@ -1236,6 +1237,35 @@ Return @true{} if @var{obj} is an instance of @condition{errno}.
 @defun condition-errno @var{obj}
 Accessor for the encoded @code{errno} value in @var{obj}, which must be
 an instance of @condition{errno}.
+@end defun
+
+@c page
+@node iklib conditions procarg
+@subsection Procedure argument violations
+
+
+@deftp {Condition Type} &procedure-argument-violation
+Condition object type representing invalid values handed as arguments to
+a procedure; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-procedure-argument-violation
+Build and return a new condition object of type
+@condition{procedure-argument-validation}.
+@end defun
+
+
+@defun procedure-argument-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-argument-validation}; otherwise return @false{}.
+@end defun
+
+
+@defun procedure-argument-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{procedure-argument-validation}.
 @end defun
 
 @c page

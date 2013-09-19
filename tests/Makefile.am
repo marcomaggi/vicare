@@ -54,6 +54,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-chars.sps						\
 	test-vicare-collect.sps						\
 	test-vicare-compensations.sps					\
+	test-vicare-conditions.sps					\
 	test-vicare-enumerations.sps					\
 	test-vicare-environment-inquiry.sps				\
 	test-vicare-equality.sps					\
