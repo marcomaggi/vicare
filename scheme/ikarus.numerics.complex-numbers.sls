@@ -45,15 +45,8 @@
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $ratnums)
-    (except (ikarus system $flonums)
-	    ;;FIXME  To be  removed  at the  next  boot image  rotation.
-	    ;;(Marco Maggi; Mon May 20, 2013)
-	    $flhypot)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Mon May 20, 2013)
-    (only (ikarus flonums)
-	  $flhypot)
-    (rename (only (ikarus generic-arithmetic) #;(ikarus system $numerics)
+    (ikarus system $flonums)
+    (rename (only (ikarus generic-arithmetic)
 		  $abs-fixnum
 		  $abs-bignum
 		  $abs-ratnum

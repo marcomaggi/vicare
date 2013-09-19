@@ -40,6 +40,8 @@ this project has a mailing list:
 Notes for revision 0.3d5
 ------------------------
 
+* The boot images have been rotated.
+
 * Imported libraries  from Nausicaa/OOPP.   Installation of  the library
   hierarchy (nausicaa ---) is enabled by defult; it can be disables with
   the option "--disable-nausicaa" of the script "configure".

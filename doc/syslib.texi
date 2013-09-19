@@ -955,6 +955,13 @@ Return a reference to the compnum.
 @end deffn
 
 
+@deffn {Unsafe Operation} $make-rectangular @var{rep} @var{imp}
+Return a real numebr, a new compnum or a new cflonum; @var{rep} and
+@var{imp} can be any combination of real numbers.  If @var{imp} is exact
+zero: the returned value is @var{rep}, a real.
+@end deffn
+
+
 @deffn {Unsafe Operation} $compnum-real @var{cn}
 Return the reference to the real part.
 @end deffn

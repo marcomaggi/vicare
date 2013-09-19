@@ -18,12 +18,15 @@
 (library (ikarus bignums)
   (export
     $bignum-positive?	$bignum-negative?
+    (rename ($bignum-positive?	$bignum-non-negative?)
+	    ($bignum-negative?	$bignum-non-positive?))
     $bignum-even?	$bignum-odd?
     $bignum->flonum)
   (import (ikarus)
     (except (ikarus system $bignums)
-	    $bignum-positive?	$bignum-negative?
-	    $bignum-even?	$bignum-odd?
+	    $bignum-positive?		$bignum-negative?
+	    $bignum-non-positive?	$bignum-non-negative?
+	    $bignum-even?		$bignum-odd?
 	    $bignum->flonum)
     (ikarus system $flonums))
 

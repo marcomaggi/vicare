@@ -49,6 +49,10 @@
 		  ;; object properties
 		  getprop putprop remprop property-list
 
+		  ;; conversion functions
+		  string-or-symbol->string
+		  string-or-symbol->symbol
+
 		  ;; ???
 		  top-level-value top-level-bound? set-top-level-value!
 		  symbol-value symbol-bound? set-symbol-value!
