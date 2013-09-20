@@ -46,25 +46,25 @@
   ;;To be used after INDEX validation.
   ;;
   ($fx<= idx len)
-  (assertion-violation who "start index argument out of range for vector" idx len))
+  (procedure-argument-violation who "start index argument out of range for vector" idx len))
 
 (define-argument-validation (end-index-and-length who idx len)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= idx len)
-  (assertion-violation who "end index argument out of range for vector" idx len))
+  (procedure-argument-violation who "end index argument out of range for vector" idx len))
 
 (define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= start end)
-  (assertion-violation who "start and end index arguments are in decreasing order" start end))
+  (procedure-argument-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-index-and-count-and-length who start count len)
   ($fx<= ($fx+ start count) len)
-  (assertion-violation who
+  (procedure-argument-violation who
     (vector-append "count argument out of range for vector of length " (number->string len)
 		   " and start index " (number->string start))
     count))
@@ -73,7 +73,7 @@
 
 (define-argument-validation (vector-of-length who vec len)
   ($fx= len ($vector-length vec))
-  (assertion-violation who "expected vector arguments with the same length" len vec))
+  (procedure-argument-violation who "expected vector arguments with the same length" len vec))
 
 (define-argument-validation (list-of-vectors-of-length who who1 ell len)
   ;;WHO is used  twice in the arguments list because we  need it also in
@@ -87,7 +87,7 @@
 	      ((vector a))
 	    (and ($fx= ($vector-length a) len)
 		 (next-vector ($cdr ell) len))))))
-  (assertion-violation who "expected vector arguments with the same length" len ell))
+  (procedure-argument-violation who "expected vector arguments with the same length" len ell))
 
 
 ;;;; constants
@@ -252,16 +252,16 @@
 	     (cond ((pair? h)
 		    (if (not (eq? h t))
 			(race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		      (assertion-violation who
+		      (procedure-argument-violation who
 			"circular list is invalid as argument" ls)))
 		   ((null? h)
 		    ($fx+ n 1))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (fill v i ls)
     (if (null? ls)
@@ -371,7 +371,7 @@
 	   (vector	v1))
 	(let ((n (vector-length v0)))
 	  (unless ($fx= n ($vector-length v1))
-	    (assertion-violation who "length mismatch" v0 v1))
+	    (procedure-argument-violation who "length mismatch" v0 v1))
 	  (let f ((p  p)
 		  (v0 v0)
 		  (v1 v1)
@@ -485,7 +485,7 @@
        (define who '?name)
        (define (iterator-1 proc vec)
 	 (unless (vector? vec)
-	   (assertion-violation who "not a vector" vec))
+	   (procedure-argument-violation who "not a vector" vec))
 	 (let ((len (vector-length vec)))
 	   (if (zero? len)
 	       (?combine) ;not PROC!!!
@@ -502,12 +502,12 @@
 	   (unless (null? vectors)
 	     (if (vector? (car vectors))
 		 (loop (cdr vectors))
-	       (assertion-violation who "not a vector" (car vectors)))))
+	       (procedure-argument-violation who "not a vector" (car vectors)))))
 	 (let ((len (vector-length (car vectors))))
 	   (unless (for-all (lambda (vec)
 			      (= len (vector-length vec)))
 		     (cdr vectors))
-	     (assertion-violation who "length mismatch" vectors))
+	     (procedure-argument-violation who "length mismatch" vectors))
 	   (let ((len-1 (- len 1)))
 	     (let loop ((i 0))
 	       (if (= i len-1)
