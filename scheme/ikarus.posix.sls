@@ -40,38 +40,27 @@
 
 		  vicare-argv0
 		  vicare-argv0-string)
-    (vicare language-extensions syntaxes)
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (fixnum who obj)
-  (fixnum? obj)
-  (assertion-violation who "expected fixnum as argument" obj))
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
 (define-argument-validation (string-or-bytevector who obj)
   (or (bytevector? obj) (string? obj))
-  (assertion-violation who "expected string or bytevector as argument" obj))
+  (procedure-argument-violation who "expected string or bytevector as argument" obj))
 
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
-  (assertion-violation who "expected string or bytevector as pathname argument" obj))
+  (procedure-argument-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (boolean/fixnum who obj)
   (or (fixnum? obj) (boolean? obj))
-  (assertion-violation who "expected boolean or fixnum as argument" obj))
+  (procedure-argument-violation who "expected boolean or fixnum as argument" obj))
 
 
 ;;;; errors handling
