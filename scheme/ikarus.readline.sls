@@ -43,11 +43,11 @@
 
 (define-argument-validation (prompt who obj)
   (or (not obj) (bytevector? obj) (string? obj))
-  (assertion-violation who "expected false, bytevector or string as prompt argument" obj))
+  (procedure-argument-violation who "expected false, bytevector or string as prompt argument" obj))
 
 (define-argument-validation (prompt-maker who obj)
   (or (not obj) (procedure? obj))
-  (assertion-violation who "expected false or procedure as prompt maker argument" obj))
+  (procedure-argument-violation who "expected false or procedure as prompt maker argument" obj))
 
 
 ;;;; access to C API
