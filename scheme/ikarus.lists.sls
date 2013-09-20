@@ -39,15 +39,15 @@
 
 (define-argument-validation (proper-list who obj)
   (list? obj)
-  (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT obj))
+  (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT obj))
 
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx>= obj 0))
-  (assertion-violation who "expected non-negative fixnum list length argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum list length argument" obj))
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx>= obj 0))
-  (assertion-violation who "expected non-negative fixnum list index argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum list index argument" obj))
 
 
 ;;;; constants
@@ -128,21 +128,21 @@
 	     (if (pair? h)
 		 (if (not (eq? h t))
 		     (%race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		   (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
+		   (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
 	       (if (null? h)
 		   ($fx+ n 1)
-		 (assertion-violation who IMPROPER_LIST_IS_INVALID_AS_ARGUMENT ls)))))
+		 (procedure-argument-violation who IMPROPER_LIST_IS_INVALID_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls 0))
 
 
 (define (list-ref the-list the-index)
   (define who 'list-ref)
   (define (%error-index-out-of-range)
-    (assertion-violation who INDEX_IS_OUT_OF_RANGE the-index the-list))
+    (procedure-argument-violation who INDEX_IS_OUT_OF_RANGE the-index the-list))
   (define-argument-validation (in-range who obj)
     (pair? obj)
     (%error-index-out-of-range))
@@ -156,7 +156,7 @@
 	  ((null? ls)
 	   (%error-index-out-of-range))
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT the-list))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT the-list))))
   (with-arguments-validation (who)
       ((index the-index))
     (%$list-ref the-list the-index)))
@@ -170,9 +170,9 @@
 	  ((pair? ls)
 	   (%$list-tail ($cdr ls) ($fxsub1 i)))
 	  ((null? ls)
-	   (assertion-violation who INDEX_IS_OUT_OF_RANGE index list))
+	   (procedure-argument-violation who INDEX_IS_OUT_OF_RANGE index list))
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT list))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT list))))
   (with-arguments-validation (who)
       ((index index))
     (%$list-tail list index)))
@@ -191,15 +191,15 @@
 		      (if (not (eq? h t))
 			  (let ((a2 ($car h)))
 			    (reverse ($cdr h) ($cdr t) ls (cons a2 (cons a1 ac))))
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		     ((null? h)
 		      (cons a1 ac))
 		     (else
-		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		      (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	    ((null? h)
 	     ac)
 	    (else
-	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	     (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
     (define (rev! ls ac)
       (if (null? ls)
@@ -226,15 +226,15 @@
 	     (cond ((pair? h)
 		    (if (not (eq? h t))
 			(%race ($cdr h) ($cdr t) ls (cons ($car h) ac))
-		      (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+		      (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		   ((null? h)
 		    ac)
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   ac)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race x x x '()))
 
 
@@ -246,7 +246,7 @@
 	  (if (pair? h)
 	      (if (not (eq? h t))
 		  (%race ($cdr h) ($cdr t) ls h)
-		(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
+		(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))
 	    last))
       last))
   (with-arguments-validation (who)
@@ -268,16 +268,16 @@
 			    ((not (eq? h t))
 			     (%race ($cdr h) ($cdr t) ls x))
 			    (else
-			     (assertion-violation who
+			     (procedure-argument-violation who
 			       CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
 		     ((null? h)
 		      #f)
 		     (else
-		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+		      (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls x))
 
 
@@ -294,16 +294,16 @@
 			    ((not (eq? h t))
 			     (%race ($cdr h) ($cdr t) ls x))
 			    (else
-			     (assertion-violation who
+			     (procedure-argument-violation who
 			       CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
 		     ((null? h)
 		      #f)
 		     (else
-		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+		      (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls x))
 
 
@@ -320,15 +320,15 @@
 			    ((not (eq? h t))
 			     (%race ($cdr h) ($cdr t) ls x))
 			    (else
-			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+			     (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
 		     ((null? h)
 		      #f)
 		     (else
-		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+		      (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls x))
 
 
@@ -345,15 +345,15 @@
 			    ((not (eq? h t))
 			     (%race ($cdr h) ($cdr t) ls p))
 			    (else
-			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
+			     (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls))))
 		     ((null? h)
 		      #f)
 		     (else
-		      (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+		      (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (with-arguments-validation (who)
       ((procedure p))
     (%race ls ls ls p)))
@@ -374,16 +374,16 @@
 				((not (eq? h t))
 				 (%race ($cdr h) ($cdr t) ls p))
 				(else
-				 (assertion-violation who
+				 (procedure-argument-violation who
 				   CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))))
 		       ((null? h)
 			#f)
 		       (else
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (with-arguments-validation (who)
       ((procedure p))
     (%race ls ls ls p)))
@@ -404,19 +404,19 @@
 				  (if (eq? ($car a) x)
 				      a
 				    (%race x ($cdr h) ($cdr t) ls))
-				(assertion-violation who
+				(procedure-argument-violation who
 				  MALFORMED_ALIST_AS_ARGUMENT ls)))
-			  (assertion-violation who
+			  (procedure-argument-violation who
 			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		       ((null? h)
 			#f)
 		       (else
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
-	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race x ls ls ls))
 
 
@@ -435,19 +435,19 @@
 				  (if (p ($car a))
 				      a
 				    (%race p ($cdr h) ($cdr t) ls))
-				(assertion-violation who
+				(procedure-argument-violation who
 				  MALFORMED_ALIST_AS_ARGUMENT ls)))
-			  (assertion-violation who
+			  (procedure-argument-violation who
 			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		       ((null? h)
 			#f)
 		       (else
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
-	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (with-arguments-validation (who)
       ((procedure p))
     (%race p ls ls ls)))
@@ -468,17 +468,17 @@
 				  (if (eqv? ($car a) x)
 				      a
 				    (%race x ($cdr h) ($cdr t) ls))
-				(assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
-			  (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+				(procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		       ((null? h)
 			#f)
 		       (else
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
-	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race x ls ls ls))
 
 
@@ -497,17 +497,17 @@
 				  (if (equal? ($car a) x)
 				      a
 				    (%race x ($cdr h) ($cdr t) ls))
-				(assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
-			  (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+				(procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls)))
+			  (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 		       ((null? h)
 			#f)
 		       (else
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
-	       (assertion-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))
+	       (procedure-argument-violation who MALFORMED_ALIST_AS_ARGUMENT ls))))
 	  ((null? h)
 	   #f)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race x ls ls ls))
 
 
@@ -525,26 +525,26 @@
 				 (if (?cmp ($car h) x)
 				     (%race ($cdr h) ($cdr t) ls x)
 				   (cons ($car h) (%race ($cdr h) ($cdr t) ls x)))
-			       (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+			       (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 			    ((null? h)
 			     '())
 			    (else
-			     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+			     (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 		  (let ((a0 ($car h)) (h ($cdr h)))
 		    (cond ((pair? h)
 			   (if (not (eq? h t))
 			       (if (?cmp ($car h) x)
 				   (cons a0 (%race ($cdr h) ($cdr t) ls x))
 				 (cons* a0 ($car h) (%race ($cdr h) ($cdr t) ls x)))
-			     (assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
+			     (procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)))
 			  ((null? h)
 			   (list a0))
 			  (else
-			   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
+			   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))))
 	       ((null? h)
 		'())
 	       (else
-		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 	 (with-arguments-validation (who)
 	     ((?check x))
 	   (%race ls ls ls x))))))
@@ -568,56 +568,56 @@
 	   (let ((h ($cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		      (len ($cdr h) ($cdr t) ($fx+ n 2))))
 		   ((null? h)
 		    ($fxadd1 n))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 
   (define (map1 f a d n)
     (cond ((pair? d)
 	   (if ($fxzero? n)
-	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	       (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	     (cons (f a) (map1 f ($car d) ($cdr d) ($fxsub1 n)))))
 	  ((null? d)
 	   (if ($fxzero? n)
 	       (cons (f a) '())
-	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	     (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define (map2 f a1 a2 d1 d2 n)
     (cond
      ((pair? d1)
       (cond ((pair? d2)
 	     (if ($fxzero? n)
-		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+		 (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	       (cons (f a1 a2)
 		     (map2 f
 			   ($car d1) ($car d2)
 			   ($cdr d1) ($cdr d2)
 			   ($fxsub1 n)))))
 	    ((null? d2)
-	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	     (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	    (else
-	     (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+	     (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
      ((null? d1)
       (cond ((null? d2)
 	     (if ($fxzero? n)
 		 (cons (f a1 a2) '())
-	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	       (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
 	    (else
-	     (assertion-violation who
+	     (procedure-argument-violation who
 	       (if (list? d2)
 		   LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS
 		 EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
      (else
-      (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+      (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define (cars ls*)
     (if (null? ls*)
@@ -625,7 +625,7 @@
       (let ((a (car ls*)))
 	(if (pair? a)
 	    (cons (car a) (cars (cdr ls*)))
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
+	  (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
 
   (define (cdrs ls*)
     (if (null? ls*)
@@ -633,16 +633,16 @@
       (let ((a (car ls*)))
 	(if (pair? a)
 	    (cons (cdr a) (cdrs (cdr ls*)))
-	  (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
+	  (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))))
 
   (define (err-mutated all-lists)
-    (apply assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING all-lists))
+    (apply procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING all-lists))
 
   (define (err-mismatch all-lists)
-    (apply assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS all-lists))
+    (apply procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS all-lists))
 
   (define (err-invalid all-lists)
-    (apply assertion-violation who "invalid arguments" all-lists))
+    (apply procedure-argument-violation who "invalid arguments" all-lists))
 
   (define (mapm f ls ls* n all-lists)
     (cond ((null? ls)
@@ -705,51 +705,51 @@
 	   (let ((h ($cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		      (len ($cdr h) ($cdr t) ($fx+ n 2))))
 		   ((null? h)
 		    ($fxadd1 n))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 
   (define (for-each1 f a d n)
     (cond ((pair? d)
 	   (if ($fxzero? n)
-	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	       (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	     (begin
 	       (f a)
 	       (for-each1 f ($car d) ($cdr d) ($fxsub1 n)))))
 	  ((null? d)
 	   (if ($fxzero? n)
 	       (f a)
-	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	     (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define (for-each2 f a1 a2 d1 d2 n)
     (cond ((pair? d1)
 	   (if (pair? d2)
 	       (if ($fxzero? n)
-		   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+		   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 		 (begin
 		   (f a1 a2)
 		   (for-each2 f
 			      ($car d1) ($car d2)
 			      ($cdr d1) ($cdr d2)
 			      ($fxsub1 n))))
-	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	     (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	  ((null? d1)
 	   (if (null? d2)
 	       (if ($fxzero? n)
 		   (f a1 a2)
-		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
-	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
+	     (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define for-each
     (case-lambda
@@ -762,7 +762,7 @@
 	      ((null? ls)
 	       (void))
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 
      ((f ls ls2)
       (with-arguments-validation (who)
@@ -771,13 +771,13 @@
 	       (if (pair? ls2)
 		   (let ((d ($cdr ls)))
 		     (for-each2 f ($car ls) ($car ls2) d ($cdr ls2) (len d d 0)))
-		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	      ((null? ls)
 	       (if (null? ls2)
 		   (void)
-		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 
      ((f ls . ls*)
       (with-arguments-validation (who)
@@ -786,15 +786,15 @@
 	(let ((n (length ls)))
 	  (for-each (lambda (x)
 		      (unless (and (list? x) (= (length x) n))
-			(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT x)))
+			(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT x)))
 	    ls*)
 	  (let loop ((n (length ls)) (ls ls) (ls* ls*))
 	    (if ($fx= n 0)
 		(unless (and (null? ls) (andmap null? ls*))
-		  (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
+		  (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
 	      (begin
 	       (unless (and (pair? ls) (andmap pair? ls*))
-		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
+		 (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING f))
 	       (apply f (car ls) (map car ls*))
 	       (loop (fx- n 1) (cdr ls) (map cdr ls*))))))))
      ))
@@ -812,49 +812,49 @@
 	   (let ((h ($cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		      (len ($cdr h) ($cdr t) ($fx+ n 2))))
 		   ((null? h)
 		    ($fxadd1 n))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 
   (define (andmap1 f a d n)
     (cond ((pair? d)
 	   (if ($fxzero? n)
-	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	       (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	     (and (f a)
 		  (andmap1 f ($car d) ($cdr d) ($fxsub1 n)))))
 	  ((null? d)
 	   (if ($fxzero? n)
 	       (f a)
-	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	     (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define (andmap2 f a1 a2 d1 d2 n)
     (cond ((pair? d1)
 	   (if (pair? d2)
 	       (if ($fxzero? n)
-		   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+		   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 		 (and (f a1 a2)
 		      (andmap2 f
 			       ($car d1) ($car d2)
 			       ($cdr d1) ($cdr d2)
 			       ($fxsub1 n))))
-	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+	     (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	  ((null? d1)
 	   (if (null? d2)
 	       (if ($fxzero? n)
 		   (f a1 a2)
-		 (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
-	     (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))
+	     (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define andmap
     (case-lambda
@@ -867,7 +867,7 @@
 	      ((null? ls)
 	       #t)
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 
      ((f ls ls2)
       (with-arguments-validation (who)
@@ -877,18 +877,18 @@
 		   (let ((d ($cdr ls)))
 		     (andmap2 f
 			      ($car ls) ($car ls2) d ($cdr ls2) (len d d 0)))
-		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	      ((null? ls)
 	       (if (null? ls2)
 		   #t
-		 (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
+		 (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS)))
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 
      ((f ls . ls*)
       (with-arguments-validation (who)
 	  ((procedure f))
-	(assertion-violation who "vararg not yet supported")))
+	(procedure-argument-violation who "vararg not yet supported")))
      ))
 
   #| end of module |# )
@@ -904,29 +904,29 @@
 	   (let ((h ($cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT)
 		      (len ($cdr h) ($cdr t) ($fx+ n 2))))
 		   ((null? h)
 		    ($fxadd1 n))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT))))
 
   (define (ormap1 f a d n)
     (cond ((pair? d)
 	   (if ($fxzero? n)
-	       (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
+	       (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)
 	     (or (f a)
 		 (ormap1 f ($car d) ($cdr d) ($fxsub1 n)))))
 	  ((null? d)
 	   (if ($fxzero? n)
 	       (f a)
-	     (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
+	     (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING)))
 	  (else
-	   (assertion-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
+	   (procedure-argument-violation who LIST_WAS_ALTERED_WHILE_PROCESSING))))
 
   (define ormap
     (case-lambda
@@ -939,9 +939,9 @@
 	      ((null? ls)
 	       #f)
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT)))))
      (_
-      (assertion-violation who "vararg not supported yet"))
+      (procedure-argument-violation who "vararg not supported yet"))
      ))
 
   #| end of module |#)
@@ -955,7 +955,7 @@
 		 (h  ($cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 		      (let ((a1 ($car h)))
 			(let-values (((a* b*) (%race ($cdr h) ($cdr t) ls p)))
 			  (cond ((p a0)
@@ -971,11 +971,11 @@
 			(values (list a0) '())
 		      (values '() (list a0))))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   (values '() '()))
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (with-arguments-validation (who)
       ((procedure p))
     (%race ls ls ls p)))
@@ -991,11 +991,11 @@
 
        (define (err* ls*)
 	 (cond ((null? ls*)
-		(assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+		(procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	       ((list? (car ls*))
 		(err* (cdr ls*)))
 	       (else
-		(assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
 
        (define (cars+cdrs ls ls*)
 	 (if (null? ls)
@@ -1005,9 +1005,9 @@
 		    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		      (values (cons (car a) cars) (cons (cdr a) cdrs))))
 		   ((list? (car ls*))
-		    (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+		    (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
 
        (define (loop1 f a h t ls)
 	 (cond ((pair? h)
@@ -1015,19 +1015,19 @@
 		  (?combine (f a)
 			    (cond ((pair? h)
 				   (if (eq? h t)
-				       (assertion-violation who "circular" ls)
+				       (procedure-argument-violation who "circular" ls)
 				     (let ((c (car h)) (h (cdr h)))
 				       (?combine (f b) (loop1 f c h (cdr t) ls)))))
 				  ((null? h)
 				   (f b))
 				  (else
 				   (?combine (f b)
-					     (assertion-violation who
+					     (procedure-argument-violation who
 					       EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))))
 	       ((null? h)
 		(f a))
 	       (else
-		(?combine (f a) (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		(?combine (f a) (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 
        (define (loopn f a a* h h* t ls ls*)
 	 (cond ((pair? h)
@@ -1036,7 +1036,7 @@
 		    (?combine (apply f a a*)
 			      (if (pair? h)
 				  (if (eq? h t)
-				      (assertion-violation who "circular" ls)
+				      (procedure-argument-violation who "circular" ls)
 				    (let-values (((c* h*) (cars+cdrs h* ls*)))
 				      (let ((c (car h)) (h (cdr h)))
 					(?combine (apply f b b*)
@@ -1059,7 +1059,7 @@
 		   ((null? ls)
 		    (?combine))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 
 	  ((f ls . ls*)
 	   (with-arguments-validation (who)
@@ -1087,11 +1087,11 @@
 
   (define (err* ls*)
     (cond ((null? ls*)
-	   (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	   (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	  ((list? (car ls*))
 	   (err* (cdr ls*)))
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
 
   (define (cars+cdrs ls ls*)
     (if (null? ls)
@@ -1101,26 +1101,26 @@
 	       (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		 (values (cons (car a) cars) (cons (cdr a) cdrs))))
 	      ((list? (car ls*))
-	       (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	       (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
 
   (define (loop1 f nil h t ls)
     (cond ((pair? h)
 	   (let ((a (car h)) (h (cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 		      (let ((b (car h)) (h (cdr h)) (t (cdr t)))
 			(loop1 f (f (f nil a) b) h t ls))))
 		   ((null? h)
 		    (f nil a))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   nil)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (loopn f nil h h* t ls ls*)
     (cond ((pair? h)
@@ -1128,7 +1128,7 @@
 	     (let ((a (car h)) (h (cdr h)))
 	       (cond ((pair? h)
 		      (if (eq? h t)
-			  (assertion-violation who
+			  (procedure-argument-violation who
 			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 			(let-values (((b* h*) (cars+cdrs h* ls*)))
 			  (let ((b (car h)) (h (cdr h)) (t (cdr t)))
@@ -1167,11 +1167,11 @@
 
   (define (err* ls*)
     (cond ((null? ls*)
-	   (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	   (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	  ((list? (car ls*))
 	   (err* (cdr ls*)))
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
 
   (define (cars+cdrs ls ls*)
     (if (null? ls)
@@ -1181,26 +1181,26 @@
 	       (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		 (values (cons (car a) cars) (cons (cdr a) cdrs))))
 	      ((list? (car ls*))
-	       (assertion-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+	       (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
 	      (else
-	       (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
+	       (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
 
   (define (loop1 f nil h t ls)
     (cond ((pair? h)
 	   (let ((a (car h)) (h (cdr h)))
 	     (cond ((pair? h)
 		    (if (eq? h t)
-			(assertion-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
+			(procedure-argument-violation who CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 		      (let ((b (car h)) (h (cdr h)) (t (cdr t)))
 			(f a (f b (loop1 f nil h t ls))))))
 		   ((null? h)
 		    (f a nil))
 		   (else
-		    (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   nil)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (loopn f nil h h* t ls ls*)
     (cond ((pair? h)
@@ -1208,7 +1208,7 @@
 	     (let ((a (car h)) (h (cdr h)))
 	       (cond ((pair? h)
 		      (if (eq? h t)
-			  (assertion-violation who
+			  (procedure-argument-violation who
 			    CIRCULAR_LIST_IS_INVALID_AS_ARGUMENT ls)
 			(let-values (((b* h*) (cars+cdrs h* ls*)))
 			  (let ((b (car h))
