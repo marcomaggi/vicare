@@ -305,6 +305,7 @@
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare language-extensions syntaxes)
+    (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $pointer=
 	    $memory-block-pointer
@@ -321,142 +322,75 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (symbol who obj)
-  (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
-
-(define-argument-validation (list who obj)
-  (list? obj)
-  (assertion-violation who "expected list as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-(define-argument-validation (flonum who obj)
-  (flonum? obj)
-  (assertion-violation who "expected flonum as argument" obj))
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (exact-integer who obj)
-  (or (fixnum? obj) (bignum? obj))
-  (assertion-violation who "expected exact integer as argument" obj))
-
-(define-argument-validation (non-negative-exact-integer who obj)
-  (or (and (fixnum? obj) ($fx<= 0 obj))
-      (and (bignum? obj) (<= 0 obj)))
-  (assertion-violation who "expected non-negative exact integer as argument" obj))
-
 (define-argument-validation (null/list-of-symbols who obj)
   (or (null? obj) (and (list? obj) (for-all symbol? obj)))
-  (assertion-violation who "expected list of symbols as argument" obj))
-
-(define-argument-validation (list-of-bytevectors who obj)
-  (and (list? obj) (for-all bytevector? obj))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
-
-(define-argument-validation (list-of-strings who obj)
-  (and (list? obj) (for-all string? obj))
-  (assertion-violation who "expected list of strings as argument" obj))
+  (procedure-argument-violation who "expected list of symbols as argument" obj))
 
 (define-argument-validation (vector-of-lengths who obj)
   (and (vector? obj)
        (vector-for-all (lambda (obj)
 			 (and (fixnum? obj) ($fx<= 0 obj)))
 	 obj))
-  (assertion-violation who "expected list of non-negative fixnums as argument" obj))
+  (procedure-argument-violation who "expected list of non-negative fixnums as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (memory-block who obj)
-  (memory-block? obj)
-  (assertion-violation who "expected instance of memory-block as argument" obj))
-
 (define-argument-validation (memory-block/non-null who obj)
   (memory-block?/non-null obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected instance of memory-block referencing non-null as argument" obj))
 
 (define-argument-validation (pointer/memory-block who obj)
   (or (pointer? obj) (memory-block? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected pointer or instance of memory-block as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
-  (assertion-violation who "expected string or bytevector as pathname argument" obj))
+  (procedure-argument-violation who "expected string or bytevector as pathname argument" obj))
 
 (define-argument-validation (errno who obj)
   (or (boolean? obj) (and (fixnum? obj) ($fx<= obj 0)))
-  (assertion-violation who "expected boolean or negative fixnum as errno argument" obj))
-
-(define-argument-validation (machine-word who obj)
-  (words.machine-word? obj)
-  (assertion-violation who
-    "expected non-negative exact integer in the range of a machine word as argument" obj))
-
-(define-argument-validation (ptrdiff who obj)
-  (words.ptrdiff_t? obj)
-  (assertion-violation who
-    "expected exact integer representing pointer difference as argument" obj))
+  (procedure-argument-violation who "expected boolean or negative fixnum as errno argument" obj))
 
 (define-argument-validation (memory/ptrdiff who memory offset data-size)
   (or (pointer? memory)
       (<= (+ offset data-size) (memory-block-size memory)))
-  (assertion-violation who
+  (procedure-argument-violation who
     "offset from pointer out of range for data size"
     memory offset data-size))
 
 (define-argument-validation (memory/index who memory index data-size)
   (or (pointer? memory)
       (<= (* index data-size) (memory-block-size memory)))
-  (assertion-violation who
+  (procedure-argument-violation who
     "offset from pointer out of range for data size"
     memory index data-size))
 
 (define-argument-validation (pointer-and-offset who pointer offset)
   (%pointer-and-offset? pointer offset)
-  (assertion-violation who
+  (procedure-argument-violation who
     "offset would cause pointer overflow or underflow"
     pointer offset))
 
 (define-argument-validation (size_t-number-of-bytes who obj)
   (words.size_t? obj)
-  (assertion-violation who "expected size_t as number of bytes argument" obj))
+  (procedure-argument-violation who "expected size_t as number of bytes argument" obj))
 
 (define-argument-validation (fixnum-number-of-bytes who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as number of bytes argument" obj))
 
 (define-argument-validation (number-of-elements who obj)
   (words.size_t? obj)
-  (assertion-violation who "expected size_t as number of elements argument" obj))
-
-(define-argument-validation (byte who obj)
-  (or (words.word-u8? obj)
-      (words.word-s8? obj))
-  (assertion-violation who
-    "expected exact integer representing an 8-bit signed or unsigned integer as argument" obj))
+  (procedure-argument-violation who "expected size_t as number of elements argument" obj))
 
 (define-argument-validation (pointer-offset who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as pointer offset argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as pointer offset argument" obj))
 
 (define-argument-validation (start-index-for-bytevector who idx bv)
   ;;To be used after  START-INDEX validation.  Valid scenarios for start
@@ -483,7 +417,7 @@
   (let ((bv.len ($bytevector-length bv)))
     (or ($fx=  idx bv.len)
 	($fx<= idx bv.len)))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "start index argument "		(number->string idx)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv)))
     idx))
@@ -491,125 +425,11 @@
 (define-argument-validation (count-for-bytevector who count bv bv.start)
   (let ((end ($fx+ bv.start count)))
     ($fx<= end ($bytevector-length bv)))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "word count "			(number->string count)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " start index "			(number->string bv.start))
     count))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (uint8 who obj)
-  (words.word-u8? obj)
-  (assertion-violation who
-    "expected exact integer representing an 8-bit unsigned integer as argument" obj))
-
-(define-argument-validation (sint8 who obj)
-  (words.word-s8? obj)
-  (assertion-violation who
-    "expected exact integer representing an 8-bit signed integer as argument" obj))
-
-(define-argument-validation (uint16 who obj)
-  (words.word-u16? obj)
-  (assertion-violation who
-    "expected exact integer representing an 16-bit unsigned integer as argument" obj))
-
-(define-argument-validation (sint16 who obj)
-  (words.word-s16? obj)
-  (assertion-violation who
-    "expected exact integer representing an 16-bit signed integer as argument" obj))
-
-(define-argument-validation (uint32 who obj)
-  (words.word-u32? obj)
-  (assertion-violation who
-    "expected exact integer representing an 32-bit unsigned integer as argument" obj))
-
-(define-argument-validation (sint32 who obj)
-  (words.word-s32? obj)
-  (assertion-violation who
-    "expected exact integer representing an 32-bit signed integer as argument" obj))
-
-(define-argument-validation (uint64 who obj)
-  (words.word-u64? obj)
-  (assertion-violation who
-    "expected exact integer representing an 64-bit unsigned integer as argument" obj))
-
-(define-argument-validation (sint64 who obj)
-  (words.word-s64? obj)
-  (assertion-violation who
-    "expected exact integer representing an 64-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (signed-char who obj)
-  (words.signed-char? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"signed char\" as argument" obj))
-
-(define-argument-validation (unsigned-char who obj)
-  (words.unsigned-char? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"unsigned char\" as argument" obj))
-
-(define-argument-validation (signed-short who obj)
-  (words.signed-short? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"signed short\" as argument" obj))
-
-(define-argument-validation (unsigned-short who obj)
-  (words.unsigned-short? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"unsigned short\" as argument" obj))
-
-(define-argument-validation (signed-int who obj)
-  (words.signed-int? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"signed int\" as argument" obj))
-
-(define-argument-validation (unsigned-int who obj)
-  (words.unsigned-int? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"unsigned int\" as argument" obj))
-
-(define-argument-validation (signed-long who obj)
-  (words.signed-long? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"signed long\" as argument" obj))
-
-(define-argument-validation (unsigned-long who obj)
-  (words.unsigned-long? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"unsigned long\" as argument" obj))
-
-(define-argument-validation (signed-long-long who obj)
-  (words.signed-long-long? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"signed long long\" as argument" obj))
-
-(define-argument-validation (unsigned-long-long who obj)
-  (words.unsigned-long-long? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"unsigned long long\" as argument" obj))
-
-(define-argument-validation (size_t who obj)
-  (words.size_t? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"size_t\" as argument" obj))
-
-(define-argument-validation (ssize_t who obj)
-  (words.ssize_t? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"ssize_t\" as argument" obj))
-
-(define-argument-validation (off_t who obj)
-  (words.off_t? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"off_t\" as argument" obj))
-
-(define-argument-validation (ptrdiff_t who obj)
-  (words.ptrdiff_t? obj)
-  (assertion-violation who
-    "expected exact integer representing a C language \"ptrdiff_t\" as argument" obj))
 
 
 ;;;; errno interface
@@ -814,7 +634,7 @@
        (pointer-and-offset	ptr delta))
     (let ((rv (capi.ffi-pointer-add ptr delta)))
       (or rv
-	  (assertion-violation who
+	  (procedure-argument-violation who
 	    "requested pointer arithmetic operation would cause \
              machine word overflow or underflow"
 	    ptr delta)))))
@@ -862,7 +682,7 @@
 			   (define who '?who)
 			   (with-arguments-validation (who)
 			       ((pointer/memory-block	memory)
-				(ptrdiff		offset)
+				(ptrdiff_t		offset)
 				(memory/ptrdiff		memory offset ?data-size))
 			     (?accessor memory offset)))))))
   (define-accessor pointer-ref-c-uint8
@@ -948,34 +768,34 @@
 			  (define who '?who)
 			  (with-arguments-validation (who)
 			      ((pointer/memory-block	memory)
-			       (ptrdiff			offset)
+			       (ptrdiff_t		offset)
 			       (memory/ptrdiff		memory offset ?data-size)
 			       (?word-type		value))
 			    (?mutator memory offset value)))))))
   (define-mutator pointer-set-c-uint8!
     capi.ffi-pointer-set-c-uint8!
-    uint8 1)
+    word-u8 1)
   (define-mutator pointer-set-c-sint8!
     capi.ffi-pointer-set-c-sint8!
-    sint8 1)
+    word-s8 1)
   (define-mutator pointer-set-c-uint16!
     capi.ffi-pointer-set-c-uint16!
-    uint16 2)
+    word-u16 2)
   (define-mutator pointer-set-c-sint16!
     capi.ffi-pointer-set-c-sint16!
-    sint16 2)
+    word-s16 2)
   (define-mutator pointer-set-c-uint32!
     capi.ffi-pointer-set-c-uint32!
-    uint32 4)
+    word-u32 4)
   (define-mutator pointer-set-c-sint32!
     capi.ffi-pointer-set-c-sint32!
-    sint32 4)
+    word-s32 4)
   (define-mutator pointer-set-c-uint64!
     capi.ffi-pointer-set-c-uint64!
-    uint64 8)
+    word-u64 8)
   (define-mutator pointer-set-c-sint64!
     capi.ffi-pointer-set-c-sint64!
-    sint64 8)
+    word-s64 8)
 
   (define-mutator pointer-set-c-float!
     capi.ffi-pointer-set-c-float!
@@ -1061,7 +881,7 @@
 			   (define who '?who)
 			   (with-arguments-validation (who)
 			       ((pointer/memory-block	memory)
-				(ptrdiff		offset)
+				(ptrdiff_t		offset)
 				(memory/index		memory offset ?data-size))
 			     (?accessor memory offset)))))))
   (define-accessor array-ref-c-uint8
@@ -1148,34 +968,34 @@
 			  (define who '?who)
 			  (with-arguments-validation (who)
 			      ((pointer/memory-block	memory)
-			       (ptrdiff			offset)
+			       (ptrdiff_t		offset)
 			       (memory/index		memory offset ?data-size)
 			       (?word-type		value))
 			    (?mutator memory offset value)))))))
   (define-mutator array-set-c-uint8!
     capi.ffi-array-set-c-uint8!
-    uint8 1)
+    word-u8 1)
   (define-mutator array-set-c-sint8!
     capi.ffi-array-set-c-sint8!
-    sint8 1)
+    word-s8 1)
   (define-mutator array-set-c-uint16!
     capi.ffi-array-set-c-uint16!
-    uint16 2)
+    word-u16 2)
   (define-mutator array-set-c-sint16!
     capi.ffi-array-set-c-sint16!
-    sint16 2)
+    word-s16 2)
   (define-mutator array-set-c-uint32!
     capi.ffi-array-set-c-uint32!
-    uint32 4)
+    word-u32 4)
   (define-mutator array-set-c-sint32!
     capi.ffi-array-set-c-sint32!
-    sint32 4)
+    word-s32 4)
   (define-mutator array-set-c-uint64!
     capi.ffi-array-set-c-uint64!
-    uint64 8)
+    word-u64 8)
   (define-mutator array-set-c-sint64!
     capi.ffi-array-set-c-sint64!
-    sint64 8)
+    word-s64 8)
 
   (define-mutator array-set-c-float!
     capi.ffi-array-set-c-float!
@@ -1333,7 +1153,7 @@
 		       (count-for-bytevector		count src src.start))
 		    (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count)))
 		 (else
-		  (assertion-violation who "expected pointer or bytevector as source argument" src))))
+		  (procedure-argument-violation who "expected pointer or bytevector as source argument" src))))
 	  ((bytevector? dst)
 	   (with-arguments-validation (who)
 	       ((start-index-for-bytevector	dst.start dst)
@@ -1346,9 +1166,9 @@
 			 (count-for-bytevector		count src src.start))
 		      ($bytevector-copy!/count src src.start dst dst.start count)))
 		   (else
-		    (assertion-violation who "expected pointer or bytevector as source argument" src)))))
+		    (procedure-argument-violation who "expected pointer or bytevector as source argument" src)))))
 	  (else
-	   (assertion-violation who "expected pointer or bytevector as destination argument" dst)))))
+	   (procedure-argument-violation who "expected pointer or bytevector as destination argument" dst)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1372,7 +1192,7 @@
   (define who 'memset)
   (with-arguments-validation (who)
       ((pointer			ptr)
-       (byte			byte)
+       (byte/octet		byte)
        (size_t-number-of-bytes	count))
     (capi.ffi-memset ptr byte count)))
 
@@ -1787,7 +1607,7 @@
 				       TYPE_ID_SINT64)))
 
     (else
-     (assertion-violation #f "invalid FFI type specifier" type))))
+     (procedure-argument-violation #f "invalid FFI type specifier" type))))
 
 (let-syntax ((define-predicate (syntax-rules ()
 				 ((_ ?who ?pred)
@@ -1855,7 +1675,7 @@
     ((ptrdiff_t)		%ptrdiff_t?)
 
     (else
-     (assertion-violation #f "unknown FFI type specifier" type))))
+     (procedure-argument-violation #f "unknown FFI type specifier" type))))
 
 
 ;;; Libffi: call interfaces
@@ -1900,7 +1720,7 @@
     (cond (($fx= i len)
 	   H)
 	  (($fx< H_MAX H)
-	   (assertion-violation '%signature-hash "FFI signature too big" signature))
+	   (procedure-argument-violation '%signature-hash "FFI signature too big" signature))
 	  (else
 	   (loop signature len
 		 ($fx+ H ($vector-ref signature i))
@@ -2014,7 +1834,7 @@
 	(when checkers
 	  (vector-for-each (lambda (arg-pred type arg)
 			     (unless (arg-pred arg)
-			       (assertion-violation who
+			       (procedure-argument-violation who
 				 "argument does not match specified type" type arg)))
 	    checkers types args))))
     (capi.ffi-callout user-data args)))
