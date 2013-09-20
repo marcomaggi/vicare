@@ -27,7 +27,7 @@
 
 (define-argument-validation (textual-input-port who obj)
   (and (textual-port? obj) (input-port? obj))
-  (assertion-violation who "expected textual input port as argument" obj))
+  (procedure-argument-violation who "expected textual input port as argument" obj))
 
 
 (define eval-depth 0)
@@ -37,7 +37,7 @@
     (lambda (x)
       (if (string? x)
 	  x
-	(assertion-violation 'waiter-prompt-string "not a string" x)))))
+	(procedure-argument-violation 'waiter-prompt-string "not a string" x)))))
 
 (define cafe-input-port
   (make-parameter (console-input-port)
@@ -84,7 +84,7 @@
    ((proc)
     (if (procedure? proc)
 	(do-new-cafe proc)
-      (assertion-violation 'new-cafe "not a procedure" proc)))))
+      (procedure-argument-violation 'new-cafe "not a procedure" proc)))))
 
 (define (do-new-cafe eval-proc)
   ;;Implement the  LOOP, handling  recovery from exceptions  and keeping

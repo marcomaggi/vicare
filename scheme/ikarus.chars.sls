@@ -35,12 +35,12 @@
 
 (define-argument-validation (fixnum-in-range who obj)
   (fixnum-in-character-range? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected fixnum in range [0, #xD800) or (#xDFFF, #x10FFFF] as argument" obj))
 
 (define-argument-validation (list-of-chars who obj)
   (for-all char? obj)
-  (assertion-violation who "expected character as argument"
+  (procedure-argument-violation who "expected character as argument"
 		       (exists (lambda (x) (and (not (char? x)) x)) obj)))
 
 
@@ -59,7 +59,7 @@
     #;(cond (($fx<= N #xD7FF)
 	   ($fixnum->char N))
 	  (($fx< N #xE000)
-	   (assertion-violation who "integer does not have a unicode representation" N))
+	   (procedure-argument-violation who "integer does not have a unicode representation" N))
 	  (else ;(assert ($fx<= N #x10FFFF))
 	   ($fixnum->char N)))))
 
