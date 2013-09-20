@@ -142,7 +142,7 @@
 	   ($fx= obj 16)
 	   ($fx= obj 2)
 	   ($fx= obj 8)))
-  (assertion-violation who "expected supported radix as argument" obj))
+  (procedure-argument-violation who "expected supported radix as argument" obj))
 
 
 ;;;; helpers
