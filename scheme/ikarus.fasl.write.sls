@@ -27,21 +27,10 @@
 	  base-rtd)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare language-extensions syntaxes)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
-
-
-;;;; arguments validation
-
-(define-argument-validation (output-port who obj)
-  (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
-
-(define-argument-validation (binary-port who obj)
-  (binary-port? obj)
-  (assertion-violation who "expected binary port as argument" obj))
 
 
 ;;;; helpers

@@ -175,7 +175,7 @@
 (define-argument-validation (fixnum-shift who obj)
   (and (fixnum? obj)
        ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as shfit argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as shfit argument" obj))
 
 (define-syntax define-fx-operation/three
   (syntax-rules ()
@@ -205,7 +205,7 @@
   (cond ((eq? x 0)	#t)
 	((fixnum? x)	#f)
 	(else
-	 (assertion-violation 'fxzero? "expected fixnum as argument" x))))
+	 (procedure-argument-violation 'fxzero? "expected fixnum as argument" x))))
 
 (define ($fxpositive? N)	($fx> N 0))
 (define ($fxnegative? N)	($fx< N 0))
@@ -322,13 +322,13 @@
 
   (define-argument-validation (positive-fixnum-shift-width who obj)
     ($fx< obj (fixnum-width))
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected positive fixnum less than fixnum width as shift argument"
       obj))
 
   (define-argument-validation (negative-fixnum-shift-width who obj)
     ($fx> obj (- (fixnum-width)))
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected negative fixnum less than fixnum width as shift argument"
       obj))
 
@@ -338,13 +338,13 @@
 
 (define (error@fxarithmetic-shift who x y)
   (unless (fixnum? x)
-    (assertion-violation who "not a fixnum" x))
+    (procedure-argument-violation who "not a fixnum" x))
   (unless (fixnum? y)
-    (assertion-violation who "not a fixnum" y))
+    (procedure-argument-violation who "not a fixnum" y))
   (unless ($fx>= y 0)
-    (assertion-violation who "negative shift not allowed" y))
+    (procedure-argument-violation who "negative shift not allowed" y))
   (unless ($fx< y (fixnum-width))
-    (assertion-violation who "shift is not less than fixnum-width" y))
+    (procedure-argument-violation who "shift is not less than fixnum-width" y))
   (%overflow-violation who x y))
 
 (define (error@fxarithmetic-shift-left x y)
@@ -634,7 +634,7 @@
 	  ((10) ($fixnum->string x 10))
 	  ((16) ($fixnum->string x 16))
 	  (else
-	   (assertion-violation who "invalid radix" r)))))))
+	   (procedure-argument-violation who "invalid radix" r)))))))
 
   (define ($fixnum->string x radix)
     (cond (($fxzero? x)

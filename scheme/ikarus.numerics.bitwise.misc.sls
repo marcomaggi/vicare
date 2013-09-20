@@ -286,7 +286,7 @@
   (define-argument-validation ($bit-index who obj)
     (and ($fx>= obj 0)
 	 ($fx<  obj (fixnum-width)))
-    (assertion-violation who "bit index out of range" obj))
+    (procedure-argument-violation who "bit index out of range" obj))
 
   #| end of module: fxcopy-bit |# )
 
@@ -315,11 +315,11 @@
   (define-argument-validation ($bit-index who obj)
     (and ($fx>= obj 0)
 	 ($fx<  obj (fixnum-width)))
-    (assertion-violation who "bit index out of range" obj))
+    (procedure-argument-violation who "bit index out of range" obj))
 
   (define-argument-validation ($bit-indexes-in-order who i j)
     ($fx<= i j)
-    (assertion-violation who "bit indexes not in order" i j))
+    (procedure-argument-violation who "bit indexes not in order" i j))
 
   #| end of module: fxcopy-bit-field |# )
 
@@ -354,16 +354,16 @@
 
   (define-argument-validation ($bit-index-positive-limit who obj)
     ($fx< obj (fixnum-width))
-    (assertion-violation who "bit index out of range" obj))
+    (procedure-argument-violation who "bit index out of range" obj))
 
   (define-argument-validation ($field-width who w i j)
     ($fx>= w 0)
-    (assertion-violation who "field width is negative" i j))
+    (procedure-argument-violation who "field width is negative" i j))
 
   (define-argument-validation ($count who c w)
     (and ($fx>= c 0)
 	 ($fx<  c w))
-    (assertion-violation who "count is invalid" c))
+    (procedure-argument-violation who "count is invalid" c))
 
   #| end of module: fxrotate-bit-field |# )
 
@@ -479,11 +479,11 @@
   (define-argument-validation ($bit-index who obj)
     (and ($fx>= obj 0)
 	 ($fx<  obj (fixnum-width)))
-    (assertion-violation who "bit index out of range" obj))
+    (procedure-argument-violation who "bit index out of range" obj))
 
   (define-argument-validation ($bit-index-order who start end)
     ($fx<= start end)
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected second argument less than, or equal to, third argument" start end))
 
   #| end of module: fxreverse-bit-field |# )
@@ -510,11 +510,11 @@
   (define-argument-validation ($bit-index who obj)
     (and ($fx>= obj 0)
 	 ($fx<  obj (fixnum-width)))
-    (assertion-violation who "bit index out of range" obj))
+    (procedure-argument-violation who "bit index out of range" obj))
 
   (define-argument-validation ($bit-index-order who i j)
     ($fx<= i j)
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected second argument less than, or equal to, third argument" i j))
 
   #| end of module: fxbit-field |#)

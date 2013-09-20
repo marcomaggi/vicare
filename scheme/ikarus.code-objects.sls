@@ -42,29 +42,29 @@
 
 (define-argument-validation (code-size who obj)
   ($fx-non-negative? obj)
-  (assertion-violation who "expected non-negative fixnum as code object size argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as code object size argument" obj))
 
 (define-argument-validation (number-of-freevars who obj)
   ($fx-non-negative? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as number of free variables argument"
     obj))
 
 (define-argument-validation (code who obj)
   (code? obj)
-  (assertion-violation who "expected code object as argument" obj))
+  (procedure-argument-violation who "expected code object as argument" obj))
 
 (define-argument-validation (code-index who code idx)
   (and (fixnum? idx)
        ($fx>= idx 0)
        ($fx<  idx ($code-size code)))
-  (assertion-violation who "expected valid fixnum code index argument" idx code))
+  (procedure-argument-violation who "expected valid fixnum code index argument" idx code))
 
 (define-argument-validation (no-freevars who code)
   ;;We expect CODE to have been already validated as code object.
   ;;
   ($fxzero? ($code-freevars code))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected code object without free variables as argument"
     code ($code-freevars code)))
 

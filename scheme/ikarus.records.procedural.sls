@@ -427,33 +427,33 @@
 
 (define-argument-validation (rtd who obj)
   (<rtd>? obj)
-  (assertion-violation who $error-message-expected-rtd obj))
+  (procedure-argument-violation who $error-message-expected-rtd obj))
 
 (define-argument-validation (false/non-sealed-parent-rtd who obj)
   (or (not obj)
       (and (<rtd>? obj)
 	   (not (<rtd>-sealed? obj))))
-  (assertion-violation who "expected false or non-sealed RTD as parent RTD argument" obj))
+  (procedure-argument-violation who "expected false or non-sealed RTD as parent RTD argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (rcd who obj)
   (<rcd>? obj)
-  (assertion-violation who "expected record-constructor descriptor as argument" obj))
+  (procedure-argument-violation who "expected record-constructor descriptor as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
   (%record-object? obj)
-  (assertion-violation who $error-message-expected-record obj))
+  (procedure-argument-violation who $error-message-expected-record obj))
 
 (define-argument-validation (non-opaque-record who obj)
   (record? obj)
-  (assertion-violation who "expected non-opaque record as argument" obj))
+  (procedure-argument-violation who "expected non-opaque record as argument" obj))
 
 (define-argument-validation (built-record-and-rtd who record rtd)
   (eq? rtd ($struct-rtd record))
-  (assertion-violation who
+  (procedure-argument-violation who
     "constructor function returned record of invalid type, expected record of specific RTD"
     record rtd))
 
@@ -468,41 +468,41 @@
 	       (and prtd^
 		    (or (eq? rtd prtd^) ;RECORD is an instance of a subtype of RTD
 			(upper-parent (<rtd>-parent prtd^))))))))
-  (assertion-violation who
+  (procedure-argument-violation who
     "invalid record type as accessor or mutator argument" record rtd))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record-type-name who obj)
   (symbol? obj)
-  (assertion-violation who "expected symbol as record-type name argument" obj))
+  (procedure-argument-violation who "expected symbol as record-type name argument" obj))
 
 (define-argument-validation (sealed who obj)
   (boolean? obj)
-  (assertion-violation who "expected boolean as sealed argument" obj))
+  (procedure-argument-violation who "expected boolean as sealed argument" obj))
 
 (define-argument-validation (opaque who obj)
   (boolean? obj)
-  (assertion-violation who "expected boolean as opaque argument" obj))
+  (procedure-argument-violation who "expected boolean as opaque argument" obj))
 
 (define-argument-validation (uid who obj)
   (or (not obj) (symbol? obj))
-  (assertion-violation who "expected false or symbol as UID argument" obj))
+  (procedure-argument-violation who "expected false or symbol as UID argument" obj))
 
 (define-argument-validation (fields-specification-vector who obj)
   (%fields-specification-vector? obj)
-  (assertion-violation who "expected fields vector as argument" obj))
+  (procedure-argument-violation who "expected fields vector as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as field index argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as field index argument" obj))
 
 (define-argument-validation (absolute-field-index who abs-index max-index rtd relative-field-index)
   (and (fixnum? abs-index)
        ($fx< abs-index max-index))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "absolute field index " (number->string abs-index)
 		   " out of range, expected less than " (number->string max-index))
     rtd relative-field-index))
@@ -515,7 +515,7 @@
   ;;of field specifications.
   ;;
   ($car ($vector-ref (<rtd>-fields rtd) relative-field-index))
-  (assertion-violation who
+  (procedure-argument-violation who
     "selected record field is not mutable" relative-field-index rtd))
 
 
@@ -609,14 +609,14 @@
 					    (+ field-index (<rtd>-total-fields-number prtd))
 					  field-index)))
       (cond ((not (fixnum? absolute-field-index))
-	     (assertion-violation who
+	     (procedure-argument-violation who
 	       "field index out of range" field-index))
 	    ((fx<? absolute-field-index (<rtd>-total-fields-number rtd))
 	     ;;Remember that the RTD structure holds a normalised vector
 	     ;;of field specifications.
 	     ($car ($vector-ref (<rtd>-fields rtd) field-index)))
 	    (else
-	     (assertion-violation who
+	     (procedure-argument-violation who
 	       "relative field index out of range for record type" field-index))))))
 
 
@@ -686,7 +686,7 @@
     ;;
     (let ((rtd (%lookup-nongenerative-rtd uid)))
       (define (%error wrong-field)
-	(assertion-violation who
+	(procedure-argument-violation who
 	  (string-append
 	   "requested access to non-generative record-type descriptor \
             with " wrong-field " not equivalent to that in the interned RTD")
@@ -866,22 +866,22 @@
 
   (define-argument-validation (false/rcd who obj)
     (or (not obj) (<rcd>? obj))
-    (assertion-violation who "expected false or record-constructor descriptor as argument" obj))
+    (procedure-argument-violation who "expected false or record-constructor descriptor as argument" obj))
 
   (define-argument-validation (protocol who obj)
     (or (not obj) (procedure? obj))
-    (assertion-violation who "expected protocol function as argument" obj))
+    (procedure-argument-violation who "expected protocol function as argument" obj))
 
   (define-argument-validation (rtd&parent-rcd who rtd parent-rcd)
     (or (not parent-rcd) (eq? (<rtd>-parent rtd) (<rcd>-rtd parent-rcd)))
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected false or record-constructor descriptor associated to the \
        parent of the record-type descriptor"
       rtd parent-rcd))
 
   (define-argument-validation (constructor who obj)
     (procedure? obj)
-    (assertion-violation who
+    (procedure-argument-violation who
       "expected procedure as constructor value returned by protocol function" obj))
 
   (define-argument-validation (default-constructor-argnum who argnum this-number-of-fields field-values)

@@ -70,15 +70,15 @@
   (and (or (fixnum? obj)
 	   (bignum? obj))
        (>= obj 0))
-  (assertion-violation who "invalid initial hashtable capacity" obj))
+  (procedure-argument-violation who "invalid initial hashtable capacity" obj))
 
 (define-argument-validation (hasht who obj)
   (hasht? obj)
-  (assertion-violation who "expected hash table as argument" obj))
+  (procedure-argument-violation who "expected hash table as argument" obj))
 
 (define-argument-validation (mutable-hasht who obj)
   (hasht-mutable? obj)
-  (assertion-violation who "expected mutable hash table as argument" obj))
+  (procedure-argument-violation who "expected mutable hash table as argument" obj))
 
 
 ;;;; data structure
@@ -471,7 +471,7 @@
   (define-argument-validation (hash-result who obj)
     (or (fixnum? obj)
 	(bignum? obj))
-    (assertion-violation who "invalid return value from client hash function" obj))
+    (procedure-argument-violation who "invalid return value from client hash function" obj))
 
   #| end of module: make-hashtable |# )
 
