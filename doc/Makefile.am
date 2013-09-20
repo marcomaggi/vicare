@@ -50,23 +50,35 @@ vicare_libs_TEXINFOS = \
 	linux.texi				\
 	cre2.texi				\
 	\
+	libs-arguments-validation.texi		\
+	libs-arrays.texi			\
 	libs-bytevectors.texi			\
+	libs-bytevector-compounds.texi		\
+	libs-cbuffers.texi			\
 	libs-char-sets.texi			\
 	libs-comparisons.texi			\
+	libs-debugging.texi			\
+	libs-flonum-format.texi			\
+	libs-flonum-parser.texi			\
+	libs-formations.texi			\
+	libs-getopts.texi			\
+	libs-gcc.texi				\
+	libs-irregex.texi			\
 	libs-knuth-morris-pratt.texi		\
 	libs-levenshtein.texi			\
 	libs-lists.texi				\
 	libs-loops.texi				\
 	libs-object-properties.texi		\
 	libs-one-dimension.texi			\
+	libs-parser-logic.texi			\
+	libs-platform.texi			\
+	libs-pregexp.texi			\
 	libs-randomisations.texi		\
+	libs-readline.texi			\
 	libs-streams.texi			\
 	libs-strings.texi			\
 	libs-vectors.texi			\
-	libs-irregex.texi			\
-	libs-pregexp.texi			\
-	libs-formations.texi			\
-	libs-arrays.texi			\
+	libs-weak-hashtables.texi		\
 	\
 	libs-net-channels.texi			\
 	\
