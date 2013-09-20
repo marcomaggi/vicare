@@ -154,13 +154,13 @@
 
   (check-assertion-violation
    (enum-set-universe 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-indexer 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (let* ((S (make-enumeration '(a b c)))
@@ -172,7 +172,7 @@
 
   (check-assertion-violation
    (enum-set-constructor 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (let* ((S (make-enumeration '(a b c)))
@@ -190,7 +190,7 @@
 
   (check-assertion-violation
    (enum-set->list 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -201,73 +201,73 @@
 
   (check-assertion-violation
    (enum-set-member? 'ciao 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-subset? 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-subset? (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set=? 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set=? (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-union 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-union (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-intersection 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-intersection (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-difference 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-difference (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-complement 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-projection 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-projection (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   #t)
 

@@ -74,7 +74,7 @@
 
 (define-argument-validation (ulong who obj)
   (words.unsigned-long? obj)
-  (assertion-violation who "expected exact integer representing unsigned long as argument" obj))
+  (procedure-argument-violation who "expected exact integer representing unsigned long as argument" obj))
 
 
 ;;;; helpers

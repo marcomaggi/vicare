@@ -335,7 +335,7 @@ Define a validation clause to be used along with the syntax
 @example
 (define-argument-validation (bytevector who bv)
   (bytevector? bv)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected a bytevector as argument"
     bv))
 @end example
@@ -374,13 +374,13 @@ Simple example:
 @example
 (define-argument-validation (fixnum who obj)
   (fixnum? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected fixnum as argument"
     obj))
 
 (define-argument-validation (integer who obj)
   (integer? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected integer as argument"
     obj))
 
@@ -413,10 +413,10 @@ which is equivalent to something like:
         (begin
           (do-this)
           (do-that))
-      (assertion-violation who
+      (procedure-argument-violation who
         "expected integer as argument"
         obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected fixnum as argument"
     obj))
 @end example
@@ -697,14 +697,22 @@ arguments validation}.
 @deffn {Validation Clause} octet @var{obj}
 @deffnx {Validation Clause} false-or-octet @var{obj}
 Succeed if @var{obj} is an exact integer, or @false{} for the second
-variant, fitting in the range of an octet.
+variant, fitting in the range of an octet @math{[0, 255]}.
 @end deffn
 
 
 @deffn {Validation Clause} byte @var{obj}
 @deffnx {Validation Clause} false-or-byte @var{obj}
 Succeed if @var{obj} is an exact integer, or @false{} for the second
-variant, fitting in the range of an byte.
+variant, fitting in the range of an byte @math{[-128, 127]}.
+@end deffn
+
+
+@deffn {Validation Clause} byte/octet @var{obj}
+@deffnx {Validation Clause} byte/octet/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an byte @math{[-128, 127]} or octet
+@math{[0, 255]}.
 @end deffn
 
 
@@ -1255,6 +1263,11 @@ Succeed if @var{obj} is a symbol.
 
 @deffn {Validation Clause} symbol/false @var{obj}
 Succeed if @var{obj} is @false{} or a symbol.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-symbols @var{obj}
+Succeed if @var{obj} is a proper list whose items are symbols.
 @end deffn
 
 @c page

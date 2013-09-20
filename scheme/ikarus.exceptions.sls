@@ -94,7 +94,7 @@
     (or (not obj)
 	(symbol? obj)
 	(string? obj))
-    (assertion-violation who "expected false, symbol or string as value for &who" obj))
+    (procedure-argument-violation who "expected false, symbol or string as value for &who" obj))
 
   #| end of module |# )
 

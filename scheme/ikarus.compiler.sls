@@ -1534,7 +1534,7 @@
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
 	   (symbol? ($cadr obj)))
-      (assertion-violation who "expected quoted symbol sexp as argument" obj))
+      (procedure-argument-violation who "expected quoted symbol sexp as argument" obj))
 
     (define (quoted-sym x)
       ;;Check that X has the format:

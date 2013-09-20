@@ -249,7 +249,7 @@
 
   (define-argument-validation (immediate-int who obj)
     (immediate-int? obj)
-    (assertion-violation who "expected immediate integer as argument" obj))
+    (procedure-argument-violation who "expected immediate integer as argument" obj))
 
 
   (define (register-index x)

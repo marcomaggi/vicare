@@ -57,7 +57,7 @@
 
 (define-argument-validation (search-path who obj)
   (for-all string? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected list of strings representing directory pathnames as search path" obj))
 
 
@@ -236,9 +236,9 @@
    ((filename eval-proc)
     (define who 'load)
     (unless (string? filename)
-      (assertion-violation who "expected string as filename argument" filename))
+      (procedure-argument-violation who "expected string as filename argument" filename))
     (unless (procedure? eval-proc)
-      (assertion-violation who
+      (procedure-argument-violation who
 	"expected procedure as symbolic expression evaluator argument" eval-proc))
     (let next-form ((ls (read-script-source-file filename)))
       (unless (null? ls)
@@ -257,7 +257,7 @@
   ;;
   (define who 'load-r6rs-script)
   (unless (string? filename)
-    (assertion-violation who "expected string as file name argument" filename))
+    (procedure-argument-violation who "expected string as file name argument" filename))
   (let* ((prog  (read-script-source-file filename))
 	 (thunk (compile-r6rs-top-level prog)))
     (when serialize?
