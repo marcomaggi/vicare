@@ -81,50 +81,50 @@
 
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as string length argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as string length argument" obj))
 
 (define-argument-validation (total-length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as total string length argument" obj))
 
 (define-argument-validation (has-length who str len)
   ($fx= len ($string-length str))
-  (assertion-violation who "length mismatch in argument strings" len str))
+  (procedure-argument-violation who "length mismatch in argument strings" len str))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as string index argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as string index argument" obj))
 
 (define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= start len)
-  (assertion-violation who "start index argument out of range for string" start len))
+  (procedure-argument-violation who "start index argument out of range for string" start len))
 
 (define-argument-validation (end-index-and-length who end len)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= end len)
-  (assertion-violation who "end index argument out of range for string" end len))
+  (procedure-argument-violation who "end index argument out of range for string" end len))
 
 (define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= start end)
-  (assertion-violation who "start and end index arguments are in decreasing order" start end))
+  (procedure-argument-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (count who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as characters count argument" obj))
 
 (define-argument-validation (start-index-and-count-and-length who start count len)
   ($fx<= ($fx+ start count) len)
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "count argument out of range for string of length " (number->string len)
 		   " and start index " (number->string start))
     count))
@@ -134,14 +134,14 @@
 (define-argument-validation (latin1 who code-point str)
   (and ($fx>= code-point 0)
        ($fx< code-point 256))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected only Latin-1 characters in string argument"
     ($fixnum->char code-point) str))
 
 (define-argument-validation (ascii who code-point str)
   (and ($fx>= code-point 0)
        ($fx<  code-point 128))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected only ASCII characters in string argument"
     ($fixnum->char code-point) str))
 
@@ -556,14 +556,14 @@
 	     (if (pair? h)
 		 (if (not (eq? h t))
 		     (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		   (assertion-violation who "circular list is invalid as argument" ls))
+		   (procedure-argument-violation who "circular list is invalid as argument" ls))
 	       (if (null? h)
 		   ($fx+ n 1)
-		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		 (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (fill s i ls)
     (if (null? ls)
