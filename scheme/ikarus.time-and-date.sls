@@ -41,7 +41,9 @@
 		  time=?
 		  time<?		time<=?
 		  time>?		time>=?)
-    (vicare arguments validation))
+    (rename (vicare arguments validation)
+	    (time.vicare-arguments-validation		time-struct.vicare-arguments-validation)
+	    (time/false.vicare-arguments-validation	time-struct/false.vicare-arguments-validation)))
 
 
 (define-struct time
@@ -52,10 +54,6 @@
    microsecs
 		;Exact integer representing the microseconds.
    ))
-
-(define-argument-validation (time-struct who obj)
-  (time? obj)
-  (assertion-violation who "expected time object as argument" obj))
 
 (define (current-time)
   (foreign-call "ikrt_current_time" (make-time 0 0 0)))
