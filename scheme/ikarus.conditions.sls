@@ -179,23 +179,23 @@
 
 (define-argument-validation (condition who obj)
   (condition? obj)
-  (assertion-violation who EXPECTED_CONDITION_OBJECT_AS_ARGUMENT obj))
+  (procedure-argument-violation who EXPECTED_CONDITION_OBJECT_AS_ARGUMENT obj))
 
 (define-argument-validation (rtd who obj)
   (record-type-descriptor? obj)
-  (assertion-violation who "expected record type descriptor as argument" obj))
+  (procedure-argument-violation who "expected record type descriptor as argument" obj))
 
 (define-argument-validation (rtd-subtype who obj)
   (rtd-subtype? obj (record-type-descriptor &condition))
-  (assertion-violation who "expected an RTD descendant of &condition as argument" obj))
+  (procedure-argument-violation who "expected an RTD descendant of &condition as argument" obj))
 
 (define-argument-validation (procedure who obj)
   (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
+  (procedure-argument-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (output-port who obj)
   (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
+  (procedure-argument-violation who "expected output port as argument" obj))
 
 
 ;;;; data types
