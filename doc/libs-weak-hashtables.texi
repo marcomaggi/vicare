@@ -1,0 +1,147 @@
+@node wtables
+@chapter Weak hashtables
+
+
+@cindex Library @library{vicare containers weak-hashtables}
+@cindex @library{vicare containers weak-hashtables}, library
+
+
+Weak hashtables are associative containers whose keys are held by weak
+references: registering a key into a weak hashtable does not prevent its
+garbage collection.  A weak hashtable is a Scheme vector holding nulls
+or associative lists; each vector slot is called @dfn{bucket}; the
+associative lists have the spine composed of strong pairs, while the
+entries are weak pairs:
+
+@example
+|-----|-----|-----|-----|-----| vector of buckets
+         |
+         v
+      |-----|-----|strong pair
+         |      |
+         |       ------------> |-----|-----|strong pair
+         |                        |     |
+      |-----|-----|weak pair      |      -------> null
+        key  value                v
+                               |-----|-----| weak pair
+                                 key  value
+@end example
+
+Whenever a key in a weak hashtable is garbage collected: the
+corresponding location in the weak pair is set to the @acronym{BWP}
+object (a special unique object that has this exact purpose); whenever a
+bucket is accessed, it is first cleared of weak pairs holding
+@acronym{BWP} in key position.
+
+@quotation
+@strong{NOTE} Immediate values (those that fit into a single machine
+word: @true{}, @false{}, nil, fixnums, characters, etc.)@: and interned
+symbols are @strong{never} garbage collected.  If we use them as weak
+hashtable keys: the associated entries will never be removed from the
+table unless we explicitly do it with @func{weak-hashtable-delete!}  or
+@func{weak-hashtable-clear!}.
+@end quotation
+
+When the number of collected objects equals the number of buckets
+(whatever the distribution of elements), the table is enlarged doubling
+the number of buckets; the table is @strong{never} restricted by
+reducing the number of buckets.
+
+At present, weak hashtables are subjected to the following constraints:
+
+@itemize
+@item
+The number of buckets is always an exact power of @math{2}.
+
+@item
+The maximum number of buckets is the value of @code{(greatest-fixnum)}.
+
+@item
+The maximum number of entries is the value of @code{(greatest-fixnum)}.
+@end itemize
+
+The @api{} of weak hashtables is similar to the @api{} of @rnrs{6}
+hashtables.  The following bindings are exported by the library
+@library{vicare containers weak-hashtables}.
+
+
+@defun make-weak-hashtable @var{hash-function} @var{equiv-function}
+@defunx make-weak-hashtable @var{hash-function} @var{equiv-function} @var{dimension}
+Build and return a new weak hashtable using @var{hash-function} as hash
+function for keys and @var{equiv-function} as comparison function
+between keys.  When @var{dimension} is used: it is approximately the
+initial number of buckets; when not used it defaults to @math{16}.
+@end defun
+
+
+@defun weak-hashtable? @var{obj}
+Return @true{} if @var{obj} is a weak hashtable, otherwise @false{}.
+Weak hashtables are disjoint values.
+@end defun
+
+
+@deffn {Validation Clause} weak-hashtable @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is an
+instance of @code{weak-hashtable}.
+@end deffn
+
+
+@defun weak-hashtable-set! @var{table} @var{key} @var{value}
+Add an entry to @var{table} holding @var{key} and @var{value}.  Return
+unspecified values.
+@end defun
+
+
+@defun weak-hashtable-ref @var{table} @var{key} @var{default}
+Search for @var{key} in @var{table}; if found: return the corresponding
+value, else return @var{default}.
+@end defun
+
+
+@defun weak-hashtable-contains? @var{table} @var{key}
+Return @true{} if @var{table} contains an entry for @var{key}, else
+return @false{}.
+@end defun
+
+
+@defun weak-hashtable-delete! @var{table} @var{key}
+If @var{key} is in @var{table}: remove it, else do nothing.  Return
+unspecified values.
+@end defun
+
+
+@defun weak-hashtable-size @var{table}
+Return the approximate number of entries in @var{table}.  The returned
+value can be incorrect if some keys have been garbage collected but the
+corresponding entries in the table are not yet removed.
+@end defun
+
+
+@defun weak-hashtable-clear! @var{table}
+Remove all the entries from @var{table}.  The number of buckets is reset
+to the its initial value.  Return unspecified values.
+@end defun
+
+
+@defun weak-hashtable-keys @var{table}
+Return a vector holding the keys in @var{table}.
+@end defun
+
+
+@defun weak-hashtable-entries @var{table}
+Return two values: a vector holding the keys in @var{table}, a vector
+holding the values in @var{table}.
+@end defun
+
+
+@defun weak-hashtable-update! @var{table} @var{key} @var{proc} @var{default}
+If no entry exists for @var{key} in @var{table}: create a new entry
+associating @var{key} to the result of applying @var{proc} to
+@var{default}.
+
+If an entry exists for @var{key} in @var{table}: replace its value with
+the result of applying @var{proc} to the old value.
+@end defun
+
+@c end of file

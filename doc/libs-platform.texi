@@ -1,0 +1,716 @@
+@node platform
+@chapter Hosting platform libraries
+
+
+@menu
+* platform constants::          Hosting platform constants.
+* platform features::           Hosting platform features.
+* platform utilities::          Hosting platform utilities.
+* errno::                       More features for @code{errno}.
+* words::                       Exact integer predicates and constants.
+@end menu
+
+@c page
+@node platform constants
+@section Hosting platform constants
+
+
+@cindex Library @library{vicare platform constants}
+@cindex @library{vicare platform constants}, library
+
+
+The library @library{vicare platform constants} exports one syntax
+identifier binding for each platform constant that makes sense to access
+from Scheme.
+
+@c page
+@node platform features
+@section Hosting platform features
+
+
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
+
+
+The library @library{vicare platform features} exports an identifier
+syntax for every @code{HAVE_} symbol defined by the configuration script
+@command{configure}; such syntaxes expand to a boolean value: @true{} if
+the feature is available, @false{} otherwise.
+
+@c page
+@node platform utilities
+@section Hosting platform utilities
+
+
+@cindex Library @library{vicare platform utilities}
+@cindex @library{vicare platform utilities}, library
+
+
+The library @library{vicare platform utilities} defines helper functions
+to deal with platform specific issues.  The following bindings are
+exported by the library @library{vicare platform utilities}.
+
+
+@deffn Syntax posix-signal->symbol @var{code}
+Given an integer representing an interprocess @posix{} signal code,
+return the corresponding symbol; if @var{code} is not recognised as
+@posix{} signal code: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(posix-signal->symbol SIGTERM)            @result{} SIGTERM
+(posix-signal->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end deffn
+
+
+@defun errno-code->symbol @var{code}
+Given a fixnum representing an encoded @code{errno} value, return the
+corresponding symbol; if @var{code} is not recognised as encoded
+@code{errno} value: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(errno-code->symbol EINVAL)             @result{} EINVAL
+(errno-code->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end defun
+
+@c page
+@node errno
+@section More features for @code{errno}
+
+
+@cindex Library @library{vicare platform errno}
+@cindex @library{vicare platform errno}, library
+
+
+One syntax identifier binding for each known @code{errno} value is
+exported by the library @library{vicare platform errno} and reexported
+by the library @library{vicare platform constants}; @vicareref{iklib
+errno, Interface to @code{errno}} for details on @value{PRJNAME}
+internal encoding of @code{errno} codes.  The following bindings are
+exported by the library @library{vicare platform errno}.
+
+
+@deffn Syntax errno-code @meta{symbol}
+Verify that @meta{symbol} is one of the symbolic names of @code{errno};
+if successful expand to an expression evaluating to the coded
+@code{errno} value, else raise a syntax violation.
+@end deffn
+
+
+@deffn Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ...
+@deffnx Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ... (else . @meta{ebody})
+@deffnx {Auxiliary Syntax} else
+Specialised @func{case} macro for @code{errno} values.  @func{else} is
+the auxiliary keyword exported by @library{rnrs}.  Example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare platform errno))
+
+(define identifier "some-port")
+
+(case-errno (errno)
+  ((EACCES EFAULT)
+   (make-i/o-file-protection-error identifier))
+  ((EROFS)
+   (make-i/o-file-is-read-only-error identifier))
+  ((EEXIST)
+   (make-i/o-file-already-exists-error identifier))
+  ((EIO)
+   (make-i/o-error))
+  ((ENOENT)
+   (make-i/o-file-does-not-exist-error identifier))
+  (else
+   (make-irritants-condition (list identifier))))
+@end example
+
+The @meta{code} must be symbols representing @code{errno} codes, they
+are @strong{not} meant to be binding identifiers.
+@end deffn
+
+@c page
+@node words
+@section Exact integer predicates and constants
+
+
+@cindex Library @library{vicare platform words}
+@cindex @library{vicare platform words}, library
+
+
+It is often needed to validate exact integers agains fixed range bounds,
+for example for 32-bit and 64-bit representations or some platform
+specific C language type.  The library @library{vicare platform words} implements
+such predicates and minimum/maximum range constants.
+
+@menu
+* words syntaxes::              Miscellaneous syntaxes.
+* words sizeof::                Knowing the size of C language types.
+* words predicates::            Verifying the range of integers.
+* words limits::                Exact integer range limits.
+@end menu
+
+@c page
+@node words syntaxes
+@subsection Miscellaneous syntaxes
+
+
+The following bindings are exported by the @library{vicare platform words}
+library.
+
+
+@deffn Syntax case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
+If the platform word size is 32-bit expand to @meta{body-32}, else
+expand to @meta{body-64}.
+@end deffn
+
+
+@deffn Syntax case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
+@deffnx Syntax case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
+@deffnx {Auxiliary Syntax} big
+@deffnx {Auxiliary Syntax} little
+If the platform endianness is little expand to @meta{lit-body}, else
+expand to @meta{big-body}.
+@end deffn
+
+@c page
+@node words sizeof
+@subsection Knowing the size of C language types
+
+
+The following bindings are exported by the @library{vicare platform words}
+library.
+
+
+@deffn {Identifier Syntax} SIZEOF_CHAR
+Number of bytes in the C language type @code{char}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SHORT
+Number of bytes in the C language type @code{short int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_INT
+Number of bytes in the C language type @code{int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG
+Number of bytes in the C language type @code{long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG_LONG
+Number of bytes in the C language type @code{long long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SIZE_T
+Number of bytes in the C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SSIZE_T
+Number of bytes in the C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_OFF_T
+Number of bytes in the C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_PTRDIFF_T
+Number of bytes in the C language type @code{ptrdiff_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_FLOAT
+Number of bytes in the C language type @code{float}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_DOUBLE
+Number of bytes in the C language type @code{double}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_POINTER
+Number of bytes in the C language type @code{void *}.
+@end deffn
+
+@c page
+@node words predicates
+@subsection Verifying the range of integers
+
+
+The following bindings are exported by the @library{vicare platform words}
+library.
+
+
+@deffn Syntax word? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum, that is an exact
+integer; else return @false{}.
+@end deffn
+
+
+@deffn Syntax machine-word? @var{obj}
+On 32-bit platforms: return @true{} if @var{obj} is a fixnum or bignum
+in the 32-bit range; on 64-bit platforms: return @true{} if @var{obj} is
+a fixnum or bignum in the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u8? @var{obj}
+@deffnx Syntax word-s8? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 8-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u16? @var{obj}
+@deffnx Syntax word-s16? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 16-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u32? @var{obj}
+@deffnx Syntax word-s32? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 32-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u64? @var{obj}
+@deffnx Syntax word-s64? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u128? @var{obj}
+@deffnx Syntax word-s128? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 128-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u256? @var{obj}
+@deffnx Syntax word-s256? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 256-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax unsigned-char? @var{obj}
+@deffnx Syntax signed-char? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range representable with
+a platform C language type @code{signed char} or @code{unsigned char}.
+@end deffn
+
+
+@deffn Syntax unsigned-short? @var{obj}
+@deffnx Syntax signed-short? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed short int} or
+@code{unsigned short int}.
+@end deffn
+
+
+@deffn Syntax unsigned-int? @var{obj}
+@deffnx Syntax signed-int? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed int} or
+@code{unsigned int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long? @var{obj}
+@deffnx Syntax signed-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long int} or
+@code{unsigned long int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long-long? @var{obj}
+@deffnx Syntax signed-long-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long long
+int} or @code{unsigned long long int}.
+@end deffn
+
+
+@deffn Syntax pointer-integer? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{void *}.
+@end deffn
+
+
+@deffn Syntax size_t? @var{obj}
+@deffnx Syntax ssize_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{size_t} or
+@code{ssize_t} as defined by @file{stddef.h}.
+@end deffn
+
+
+@deffn Syntax off_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{off_t} as defined by
+@file{stdio.h}.
+@end deffn
+
+
+@deffn Syntax ptrdiff_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{ptrdiff_t} as
+defined by @file{stddef.h}.
+@end deffn
+
+
+The following predicates are meant to be used to validate indices in
+bytevectors.
+
+
+@deffn Syntax fixnum-aligned-to-2? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{2}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-4? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{4}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-8? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{8}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to? @var{N} @var{alignment}
+@strong{Unsafe syntax: @var{N} and @var{alignment} must be fixnums.}
+Evaluate to @true{} if @var{N} is a fixnum multiple of @math{alignment};
+else evaluate to @false{}.
+@end deffn
+
+@c page
+@node words limits
+@subsection Exact integer range limits
+
+
+The following bindings are exported by the @library{vicare platform
+words} library.
+
+@c ------------------------------------------------------------
+
+@subsubheading Inclusive limits
+
+
+@deffn Syntax greatest-u8
+@deffnx Syntax greatest-s8
+@deffnx Syntax least-u8
+@deffnx Syntax least-s8
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16
+@deffnx Syntax greatest-s16
+@deffnx Syntax least-u16
+@deffnx Syntax least-s16
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32
+@deffnx Syntax greatest-s32
+@deffnx Syntax least-u32
+@deffnx Syntax least-s32
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64
+@deffnx Syntax greatest-s64
+@deffnx Syntax least-u64
+@deffnx Syntax least-s64
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128
+@deffnx Syntax greatest-u128
+@deffnx Syntax least-u128
+@deffnx Syntax least-s128
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256
+@deffnx Syntax greatest-u256
+@deffnx Syntax least-u256
+@deffnx Syntax least-s256
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word
+@deffnx Syntax least-machine-word
+On 32-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-char
+@deffnx Syntax greatest-c-signed-char
+@deffnx Syntax least-c-unsigned-char
+@deffnx Syntax least-c-signed-char
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-short
+@deffnx Syntax greatest-c-signed-short
+@deffnx Syntax least-c-unsigned-short
+@deffnx Syntax least-c-signed-short
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-int
+@deffnx Syntax greatest-c-signed-int
+@deffnx Syntax least-c-unsigned-int
+@deffnx Syntax least-c-signed-int
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long
+@deffnx Syntax greatest-c-signed-long
+@deffnx Syntax least-c-unsigned-long
+@deffnx Syntax least-c-signed-long
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long-long
+@deffnx Syntax greatest-c-signed-long-long
+@deffnx Syntax least-c-unsigned-long-long
+@deffnx Syntax least-c-signed-long-long
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-pointer
+@deffnx Syntax least-c-pointer
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{void *} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-size_t
+@deffnx Syntax least-c-size_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t
+@deffnx Syntax least-c-ssize_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t
+@deffnx Syntax least-c-off_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t
+@deffnx Syntax least-c-ptrdiff_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exclusive limits
+
+
+@deffn Syntax greatest-u8*
+@deffnx Syntax greatest-s8*
+@deffnx Syntax least-u8*
+@deffnx Syntax least-s8*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16*
+@deffnx Syntax greatest-s16*
+@deffnx Syntax least-u16*
+@deffnx Syntax least-s16*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32*
+@deffnx Syntax greatest-s32*
+@deffnx Syntax least-u32*
+@deffnx Syntax least-s32*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64*
+@deffnx Syntax greatest-s64*
+@deffnx Syntax least-u64*
+@deffnx Syntax least-s64*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128*
+@deffnx Syntax greatest-u128*
+@deffnx Syntax least-u128*
+@deffnx Syntax least-s128*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256*
+@deffnx Syntax greatest-u256*
+@deffnx Syntax least-u256*
+@deffnx Syntax least-s256*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word*
+@deffnx Syntax least-machine-word*
+On 32-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-char*
+@deffnx Syntax greatest-c-signed-char*
+@deffnx Syntax least-c-unsigned-char*
+@deffnx Syntax least-c-signed-char*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-short*
+@deffnx Syntax greatest-c-signed-short*
+@deffnx Syntax least-c-unsigned-short*
+@deffnx Syntax least-c-signed-short*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-int*
+@deffnx Syntax greatest-c-signed-int*
+@deffnx Syntax least-c-unsigned-int*
+@deffnx Syntax least-c-signed-int*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long*
+@deffnx Syntax greatest-c-signed-long*
+@deffnx Syntax least-c-unsigned-long*
+@deffnx Syntax least-c-signed-long*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long-long*
+@deffnx Syntax greatest-c-signed-long-long*
+@deffnx Syntax least-c-unsigned-long-long*
+@deffnx Syntax least-c-signed-long-long*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{long long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-pointer*
+@deffnx Syntax least-c-pointer*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{void *} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-size_t*
+@deffnx Syntax least-c-size_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t*
+@deffnx Syntax least-c-ssize_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t*
+@deffnx Syntax least-c-off_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t*
+@deffnx Syntax least-c-ptrdiff_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
+@end deffn
+
+@c end of file

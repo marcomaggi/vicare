@@ -1,0 +1,105 @@
+@node gcc
+@chapter A toy library interface to @gcc{}
+
+
+@cindex Library @library{vicare gcc}
+@cindex @library{vicare gcc}, library
+
+
+The library @library{vicare gcc} is installed along with
+@value{PRJNAME}; it implements a toy interface to @command{gcc}, the
+@gnu{} C Compiler.  Its purpose is to build, at runtime, a C language
+shared library from possibly dynamically constructed C code; then load
+the library and access a C function as @ffi{} callout.
+
+@library{vicare gcc} must be considered as a toy to demonstrate the
+features of @value{PRJNAME}; it is installed only if the @posix{},
+@gnu{} C library and Libffi @api{}s are enabled at package configuration
+time.
+
+The following is an example of function to increment an integer:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare gcc) gcc.))
+
+(gcc.initialise "/usr/local/bin/gcc" "/home/marco/var/tmp/")
+
+(gcc.define-c-function
+  signed-int incr (signed-int)
+  "#include <stdio.h>
+   int incr (int a) @{
+     return 1+a;
+   @}")
+
+(incr 1)        @result{} 2
+@end example
+
+@noindent
+the code creates a shared library @code{libincr.so} in a subdirectory of
+the given initialisation directory, then load it and access the symbol
+@code{incr}.
+
+@library{vicare gcc} depends upon the following libraries:
+
+@example
+(vicare ffi)
+(vicare posix)
+(vicare glibc)
+(vicare platform constants)
+(vicare language-extensions syntaxes)
+@end example
+
+
+@defun initialise @var{gcc} @var{tmpdir}
+Initialise the library.  @var{gcc} must be the string full filename of
+the @gcc{} executable.  @var{tmpdir} must be the string pathname of an
+existing directory on a partition with executable permissions; it is
+used to create temporary files, including the shared libraries.
+
+Temporary files go in a subdirectory of @var{tmpdir}; it is the
+responsibility of the system administrator to clean up regularly such
+subdirectories.
+@end defun
+
+
+@deffn Syntax define-c-function @meta{retval} @meta{name} @meta{args} @meta{code}
+Define a new Scheme function wrapping a C function from a shared
+library.  @meta{name} must be an identifier representing the name of the
+function.
+
+@meta{retval} must be a symbol selecting the type of the return value;
+@meta{args} must be a list of symbols selecting the types of the
+arguments; @vicareref{ffi call types, Specifying native types} for
+details.
+
+@meta{code} must be a Scheme string representing the C code to be
+compiled.
+@end deffn
+
+
+@deffn Parameter COMPILE-FLAGS
+References a list of string.  Base options for the compiler, it is
+initialised to @code{("-c")}.
+@end deffn
+
+
+@deffn Parameter LINK-FLAGS
+References a list of string.  Base options for the linker, it is
+initialised to @code{("-pipe" "-shared" "-fPIC")}.
+@end deffn
+
+
+@deffn Parameter CFLAGS
+References a list of string.  Additional options for the compiler, it is
+initialised to @code{("-O2")}.
+@end deffn
+
+
+@deffn Parameter LDFLAGS
+References a list of string.  Additional options for the linker, it is
+initialised to nil.
+@end deffn
+
+@c end of file

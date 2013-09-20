@@ -1,0 +1,21 @@
+@node debugging
+@chapter Debugging facilities
+
+
+@menu
+* debugging compiler::          Inspecting the compiler internals.
+@end menu
+
+@c page
+@node debugging compiler
+@section Inspecting the compiler internals
+
+
+@cindex Library @library{vicare debugging compiler}
+@cindex @library{vicare debugging compiler}, library
+
+
+The following bindings are exported by the library @library{vicare
+debugging compiler}.
+
+@c end of file

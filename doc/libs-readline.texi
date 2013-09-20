@@ -1,0 +1,33 @@
+@node readline
+@chapter Extended interface to @gnu{} Readline
+
+
+@cindex Library @library{vicare readline}
+@cindex @library{vicare readline}, library
+
+
+The library @library{vicare readline} extends the basic readline @api{}
+exported by @library{vicare} (@vicareref{iklib readline, Readline
+interface}) with features specific to the @gnu{} Readline library.  The
+following bindings:
+
+@example
+readline-enabled?
+readline
+make-readline-input-port
+@end example
+
+@noindent
+exported by @library{vicare} are reexported by @library{vicare
+readline}.
+
+
+@defun rl-version
+If support for readline is enabled and the linked library is @gnu{}
+Readline: return an exact integer representing the @gnu{} Readline
+version number as encoded in the C symbol @code{RL_READLINE_VERSION};
+else return @false{}.  When this function returns @false{}: no other
+@gnu{} Readline functions must be called, lest the process be aborted.
+@end defun
+
+@c end of file

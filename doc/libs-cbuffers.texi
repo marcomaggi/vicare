@@ -1,0 +1,276 @@
+@node cbuffers
+@chapter Generalised C buffers and strings
+
+
+When interfacing a C language foreign library with @value{PRJNAME}, it
+is often needed to convert Scheme objects to raw memory blocks, possibly
+containing @asciiz{} strings.
+
+@menu
+* cbuffers buffers::            Introduction to generalised C buffers.
+* cbuffers strings::            Introduction to generalised C strings.
+* cbuffers api::                Programming interface to generalised
+                                C buffers and strings.
+@end menu
+
+@c page
+@node cbuffers buffers
+@section Introduction to generalised C buffers
+
+
+Generalised C buffers are meant to be used in interfaces to foreign C
+language libraries, when a pointer to raw data is required as argument.
+
+A @dfn{generalised C buffer} is an object capable of holding an array of
+mutable bytes referenced by a pointer; such Scheme objects are:
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+A @dfn{generalised C sticky buffer} is an object capable of holding an
+array of mutable bytes referenced by a pointer, whose data area is never
+moved around by the garbage collector; such Scheme objects are: pointer
+objects, instances of @code{memory-block}.  Sticky buffers are meant to
+be used when calling out to C functions that call back to Scheme.
+
+@vicareref{iklib memory blocks, Memory blocks} for details on memory
+blocks.
+
+Two arguments to function are usually needed to represent a generalised
+C buffer: the buffer value itself and an optional length.
+
+@enumerate
+@item
+The buffer argument is meant to be either bytevector, or
+@code{memory-block} instance, or pointer object.
+
+@item
+The length argument is meant to be @false{} or an exact integer in the
+range of the C language type @code{size_t}.  When the buffer argument is
+a pointer object: the length argument must represent the number of bytes
+available in the referenced memory block; otherwise the length argument
+is ignored.
+@end enumerate
+
+Here is an example function accepting a generalised C buffer argument
+@var{buf} and its optional length argument @var{buf.len}:
+
+@example
+(define fun
+  (case-lambda
+    ((buf)
+     (fun buf #f))
+    ((buf buf.len)
+     (define who 'fun)
+     (with-arguments-validation (who)
+         ((general-c-buffer     buf)
+          (general-c-buffer.len buf buf.len))
+       (do-something-with buf buf.len)))))
+@end example
+
+@c page
+@node cbuffers strings
+@section Introduction to generalised C strings
+
+
+Generalised C strings are meant to be used in interfaces to foreign C
+language libraries, when a pointer to C string or input buffer is
+required as argument.
+
+A @dfn{generalised C string} is an object capable of holding the
+representation of a C language string; such Scheme objects are: strings,
+bytevectors, pointer objects, instances of @code{memory-block}.
+@vicareref{iklib memory blocks, Memory blocks} for details on memory
+blocks.
+
+When a Scheme string is used as generalised C string: the application
+must take care of converting the Scheme string into a C string
+representation, for example using @func{string->ascii}.
+
+When using generalised C strings we have to remember that:
+
+@itemize
+@item
+A run of the garbage collector may move the data area of Scheme
+bytevectors; for this reason Scheme bytevectors and Scheme strings
+converted to bytevectors are not suitable as arguments to Scheme
+functions interfacing to C functions that call back to Scheme.
+
+@item
+If a Scheme string is used as argument: the C function cannot modify it
+by using it as output buffer.
+@end itemize
+
+@noindent
+in these cases we should use generalised C buffers, @ref{cbuffers
+buffers, Introduction to generalised C buffers}.
+
+Two arguments to function are usually needed to represent a generalised
+C string: the string value itself and an optional length.
+
+@enumerate
+@item
+The string argument is meant to be either a string, or bytevector, or
+@code{memory-block} instance, or pointer object.
+
+@item
+The length argument is meant to be @false{} or an exact integer in the
+range of the C language type @code{size_t}.  When the string argument is
+a pointer object: the length argument must represent the number of bytes
+available in the referenced memory block; otherwise the length argument
+is ignored.
+@end enumerate
+
+Here is an example function accepting a generalised C string argument
+@var{str} and its optional length argument @var{str.len}, the string is
+converted to bytevector with @func{string->ascii}:
+
+@example
+(define fun
+  (case-lambda
+    ((str)
+     (fun str #f))
+    ((str str.len)
+     (define who 'fun)
+     (with-arguments-validation (who)
+         ((general-c-string     str)
+          (general-c-string.len str str.len))
+       (with-general-c-strings
+           ((str^         str))
+         (do-something-with str^ str.len))))))
+@end example
+
+@c page
+@node cbuffers api
+@section Programming interface to generalised C buffers and strings
+
+
+@cindex Library @library{vicare arguments general-c-buffers}
+@cindex @library{vicare arguments general-c-buffers}, library
+
+
+The @api{} dealing with generalised C buffers and strings, is composed
+of syntaxes used to validate and normalise the arguments before handing
+them to the foreign function.
+
+@ref{args predefined genbuffers, Validating generalised C buffer
+arguments} for details on how to validation generalised C buffer
+arguments.
+
+@ref{args predefined genstrings, Validating generalised C string
+arguments} for details on how to validation generalised C string
+arguments.
+
+
+The following bindings are exported by the library @library{vicare
+arguments general-c-buffers}.
+
+
+@defun general-c-buffer-len @var{buf} @var{buf.len}
+Return the number of bytes in a generalised C buffer object.
+
+@var{buf} must be a bytevector, pointer object or @code{memory-block}
+struct instance.
+
+When @var{buf} is a pointer object: @var{buf.len} must be an exact
+integer (in the range of the C language type @code{size_t}) representing
+the number of bytes available in the referenced memory block.  Otherwise
+@var{buf.len} is ignored.
+@end defun
+
+
+@deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) (string-to-bytevector @meta{string->bytevector}) @metao{body} . @meta{body}
+@deffnx Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string or input
+buffer.
+
+The values @meta{str} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+The value @meta{string->bytevector} must be an expression evaluating to
+a procedure which converts a string to a bytevector, for example
+@func{string->ascii}.  In the second form of the syntax use:
+@meta{string->bytevector} defaults to @func{string->ascii}.
+
+For each couple @meta{str} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{str}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the procedure result of evaluating
+@meta{string->bytevector}, then bind it to @meta{str}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) (string-to-bytevector @meta{string->bytevector}) @metao{body} . @meta{body}
+@deffnx Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Like @func{with-general-c-strings} but if a @meta{expr} evaluates
+to @false{} accept the value.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames ((@meta{ptn} @meta{expr}) ...) @metao{body} . @meta{body}
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string representing
+a file system pathname.
+
+The values @meta{ptn} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+For each couple @meta{ptn} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{ptn}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the function referenced by the parameter
+@func{string->pathname-func}, then bind it to @meta{ptn}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames/false ((@meta{ptn} @meta{expr}) ...) @metao{body} . @meta{body}
+Like @func{with-general-c-pathnames} but if a @meta{expr} evaluates to
+@false{} accept the value.
+@end deffn
+
+
+As example, let's say we have loaded C language code exposing a function
+@cfunc{ikptr_posix_file_size}, which given a file pathname returns its
+size; we can interface it as follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare arguments validation))
+
+(define (file-size pathname)
+  (define who 'file-size)
+  (with-arguments-validation (who)
+      ((general-c-string pathname))
+    (with-general-c-pathnames ((pathname^ pathname))
+      (foreign-call "ikptr_posix_file_size" pathname^))))
+@end example
+
+@c end of file
