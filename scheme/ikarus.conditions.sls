@@ -169,33 +169,27 @@
     (vicare unsafe operations))
 
 
-;;;; constants
-
-(define EXPECTED_CONDITION_OBJECT_AS_ARGUMENT
-  "expected condition object as argument")
-
-
 ;;;; arguments validation
 
 (define-argument-validation (condition who obj)
   (condition? obj)
-  (procedure-argument-violation who EXPECTED_CONDITION_OBJECT_AS_ARGUMENT obj))
+  (assertion-violation who "expected condition object as argument" obj))
 
 (define-argument-validation (rtd who obj)
   (record-type-descriptor? obj)
-  (procedure-argument-violation who "expected record type descriptor as argument" obj))
+  (assertion-violation who "expected record type descriptor as argument" obj))
 
 (define-argument-validation (rtd-subtype who obj)
   (rtd-subtype? obj (record-type-descriptor &condition))
-  (procedure-argument-violation who "expected an RTD descendant of &condition as argument" obj))
+  (assertion-violation who "expected an RTD descendant of &condition as argument" obj))
 
 (define-argument-validation (procedure who obj)
   (procedure? obj)
-  (procedure-argument-violation who "expected procedure as argument" obj))
+  (assertion-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (output-port who obj)
   (output-port? obj)
-  (procedure-argument-violation who "expected output port as argument" obj))
+  (assertion-violation who "expected output port as argument" obj))
 
 
 ;;;; data types
@@ -248,7 +242,7 @@
 		       (append (simple-conditions ($car x*)) (loop ($cdr x*))))
 		      (else
 		       (assertion-violation who
-			 EXPECTED_CONDITION_OBJECT_AS_ARGUMENT ($car x*)))))))
+			 "expected condition object as argument" ($car x*)))))))
       (cond ((null? ls)
 	     (make-compound-condition '()))
 	    ((null? ($cdr ls))
@@ -271,7 +265,7 @@
 	((&condition? x)
 	 (list x))
 	(else
-	 (assertion-violation 'simple-conditions EXPECTED_CONDITION_OBJECT_AS_ARGUMENT x))))
+	 (assertion-violation 'simple-conditions "expected condition object as argument" x))))
 
 
 (define (condition-predicate rtd)
