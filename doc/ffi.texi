@@ -1032,6 +1032,9 @@ Remove the property @var{key} from the property list of @var{struct}.
 @item (@meta{type-id}-property-list @var{struct})
 Return a new association list representing the property list of
 @var{struct}.
+
+@item (@meta{type-id}-hash @var{struct})
+Return an exact integer to be used as hashtable key for @var{struct}.
 @end table
 
 If the definition of @meta{type-id} includes a clause
