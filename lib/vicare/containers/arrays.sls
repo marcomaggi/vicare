@@ -92,22 +92,22 @@
 
 (define-argument-validation (coordinate who obj)
   (coordinate? obj)
-  (assertion-violation who "expected array position coordinate as argument" obj))
+  (procedure-argument-violation who "expected array position coordinate as argument" obj))
 
 (define-argument-validation (coordinate/false who obj)
   (or (not obj)
       (coordinate? obj))
-  (assertion-violation who "expected false or array position coordinate as argument" obj))
+  (procedure-argument-violation who "expected false or array position coordinate as argument" obj))
 
 (define-argument-validation (list-of-coordinates who obj)
   (and (list? obj)
        (for-all coordinate? obj))
-  (assertion-violation who "expected list of array position coordinates as argument" obj))
+  (procedure-argument-violation who "expected list of array position coordinates as argument" obj))
 
 (define-argument-validation (vector-of-coordinates who obj)
   (and (vector? obj)
        (vector-for-all coordinate? obj))
-  (assertion-violation who "expected vector of array position coordinates as argument" obj))
+  (procedure-argument-violation who "expected vector of array position coordinates as argument" obj))
 
 
 ;;;; array position
@@ -140,21 +140,21 @@
 
 (define-argument-validation (position who obj)
   (position? obj)
-  (assertion-violation who "expected array position as argument" obj))
+  (procedure-argument-violation who "expected array position as argument" obj))
 
 (define-argument-validation (position/false who obj)
   (or (not obj)
       (position? obj))
-  (assertion-violation who "expected false or array position as argument" obj))
+  (procedure-argument-violation who "expected false or array position as argument" obj))
 
 (define-argument-validation (position-index who pos obj)
   ($position-index? pos obj)
-  (assertion-violation who "expected valid coordinate index for array position" pos obj))
+  (procedure-argument-violation who "expected valid coordinate index for array position" pos obj))
 
 (define-argument-validation (list-of-positions who obj)
   (and (list? obj)
        (for-all position? obj))
-  (assertion-violation who "expected list of array position positions as argument" obj))
+  (procedure-argument-violation who "expected list of array position positions as argument" obj))
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -278,7 +278,7 @@
 
 (define-argument-validation (number-of-dimensions who obj)
   (coordinate? obj)
-  (assertion-violation who "expected array position number of dimensions as argument" obj))
+  (procedure-argument-violation who "expected array position number of dimensions as argument" obj))
 
 
 ;;;; done
