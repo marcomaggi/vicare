@@ -40,6 +40,7 @@
 
     ;; more macros
     false-if-exception check-for-true check-for-false
+    check-for-procedure-argument-violation
 
     ;; selecting tests
     check-test-name
@@ -312,6 +313,17 @@
      (check (if ?form #t #f) => #f))
     ((_ (quote ?name) ?form)
      (check (quote ?name) (if ?form #t #f) => #f))))
+
+(define-syntax check-for-procedure-argument-violation
+  (syntax-rules ()
+    ((_ ?body ?expected-irritants)
+     (check
+	 (guard (E ((procedure-argument-violation? E)
+		    (condition-irritants E))
+		   (else E))
+	   ?body)
+       => ?expected-irritants))
+    ))
 
 
 ;;;; selecting tests
