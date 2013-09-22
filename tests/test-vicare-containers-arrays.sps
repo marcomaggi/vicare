@@ -56,41 +56,28 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (guard (E ((assertion-violation? E)
-		 (condition-irritants E))
-		(else E))
-	(with-arguments-validation (who)
-	    ((arrays.coordinate		123))
-	  #t))
-    => #t)
+  (check-for-true
+   (with-arguments-validation (who)
+       ((arrays.coordinate		123))
+     #t))
 
-  (check
-      (guard (E ((assertion-violation? E)
-		 (condition-irritants E))
-		(else E))
-	(with-arguments-validation (who)
-	    ((arrays.coordinate		-123))
-	  #f))
-    => '(-123))
+  (check-for-procedure-argument-violation
+      (with-arguments-validation (who)
+	  ((arrays.coordinate	-123))
+	#f)
+    '(-123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-		 (condition-irritants E))
-		(else E))
-	(with-arguments-validation (who)
-	    ((arrays.list-of-coordinates	'(456 -123)))
-	  #f))
-    => '((456 -123)))
+  (check-for-procedure-argument-violation
+      (with-arguments-validation (who)
+	  ((arrays.list-of-coordinates	'(456 -123)))
+	#f)
+    '((456 -123)))
 
-  (check
-      (guard (E ((assertion-violation? E)
-		 (condition-irritants E))
-		(else E))
-	(with-arguments-validation (who)
-	    ((arrays.vector-of-coordinates	'#(456 -123)))
-	  #f))
-    => '(#(456 -123)))
+  (check-for-procedure-argument-violation
+      (with-arguments-validation (who)
+	  ((arrays.vector-of-coordinates	'#(456 -123)))
+	#f)
+    '(#(456 -123)))
 
   #t)
 
