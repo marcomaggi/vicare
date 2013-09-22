@@ -847,6 +847,23 @@
   #t)
 
 
+(parametrise ((check-test-name	'misc))
+
+  (ffi.define-foreign-pointer-wrapper alpha
+    (ffi.foreign-destructor #f)
+    (ffi.collector-struct-type #f))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(integer? (alpha-hash S)))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

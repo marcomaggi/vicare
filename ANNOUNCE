@@ -65,6 +65,9 @@ Notes for revision 0.3d5
 
 * Added INFIX to the export list of (nausicaa).
 
+* The wrapper  for foreign pointers  now defines also  a "?TYPE-ID-hash"
+  function to generate hashtable keys associated to wrapper structures.
+
 
 Notes for revision 0.3d4
 ------------------------
