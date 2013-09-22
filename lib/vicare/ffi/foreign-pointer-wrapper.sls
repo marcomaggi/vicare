@@ -181,11 +181,11 @@
     ;;   (begin
     ;;     (define-argument-validation (gsasl who obj)
     ;;       (gsasl? obj)
-    ;;       (assertion-violation who
+    ;;       (procedure-argument-violation who
     ;;         "expected \"gsasl\" struct as argument" obj))
     ;;     (define-argument-validation (gsasl/alive who obj)
     ;;       (gsasl/alive? obj)
-    ;;       (assertion-violation who
+    ;;       (procedure-argument-violation who
     ;;         "expected alive \"gsasl\" struct as argument" obj)))
     ;;
     (let ((type-string (%id->string type-id)))
@@ -211,16 +211,16 @@
 	  #`(begin
 	      (define-argument-validation (PRED-VALIDATOR who obj)
 		(#,pred obj)
-		(assertion-violation who PRED-MSG obj))
+		(procedure-argument-violation who PRED-MSG obj))
 	      (define-argument-validation (ALIVE-VALIDATOR who obj)
 		(#,pred/alive obj)
-		(assertion-violation who ALIVE-MSG obj))
+		(procedure-argument-violation who ALIVE-MSG obj))
 	      (define-argument-validation (FALSE-OR-PRED-VALIDATOR who obj)
 		(or (not obj) (#,pred obj))
-		(assertion-violation who FALSE-OR-PRED-MSG obj))
+		(procedure-argument-violation who FALSE-OR-PRED-MSG obj))
 	      (define-argument-validation (FALSE-OR-ALIVE-VALIDATOR who obj)
 		(or (not obj) (#,pred/alive obj))
-		(assertion-violation who FALSE-OR-ALIVE-MSG obj)))))))
+		(procedure-argument-violation who FALSE-OR-ALIVE-MSG obj)))))))
 
   (define (%make-makers-definitions type-id field-ids
 				    collector-type-id collected-type-ids)
