@@ -38,11 +38,9 @@
 
   (define-auxiliary-syntaxes type1 spiffy1)
 
-  (define-syntax dummy
-    (begin
-      (register-identifier-property #'type1)
-      (register-identifier-property #'spiffy1)
-      values))
+  (eval-for-expand
+    (register-identifier-property #'type1)
+    (register-identifier-property #'spiffy1))
 
   (check
       (let ()
@@ -74,11 +72,9 @@
     => #f)
 
   (let ()
-    (define-syntax dummy
-      (begin
-	(forget-identifier-property #'type1)
-	(forget-identifier-property #'spiffy1)
-	values))
+    (eval-for-expand
+      (forget-identifier-property #'type1)
+      (forget-identifier-property #'spiffy1))
     #f)
 
   #t)
@@ -88,24 +84,21 @@
 
   (define-auxiliary-syntaxes type2 spiffy2)
 
-  (define-syntax dummy
-    (begin
-      (register-identifier-property #'type2)
-      (register-identifier-property #'spiffy2)
-      values))
+  (eval-for-expand
+   (register-identifier-property #'type2)
+   (register-identifier-property #'spiffy2))
 
   (let ((a "ciao")
 	(b 123)
 	(c #f))
 
-    (define-syntax dummy
-      (begin
-	(identifier-property-set! #'type2 #'a #'(quote string))
-	(identifier-property-set! #'type2 #'b #'(quote fixnum))
-	(identifier-property-set! #'type2 #'c #f)
-	#;(debug-print 'table (identifier-property-table #'type2))
-	#;(debug-print (identifier-property-ref #'type2 #'a #f))
-	values))
+    (eval-for-expand
+     (identifier-property-set! #'type2 #'a #'(quote string))
+     (identifier-property-set! #'type2 #'b #'(quote fixnum))
+     (identifier-property-set! #'type2 #'c #f)
+     #;(debug-print 'table (identifier-property-table #'type2))
+     #;(debug-print (identifier-property-ref #'type2 #'a #f))
+     )
 
     (define-syntax (get-type2 stx)
       (syntax-case stx ()
@@ -128,6 +121,27 @@
 
     #f)
 
+  #t)
+
+
+(parametrise ((check-test-name	'example-for-docs))
+
+  (define-syntax (type-of stx)
+    (syntax-case stx ()
+      ((_ ?id)
+       (identifier-property-ref #'type-of #'?id #f))
+      ))
+
+  (eval-for-expand
+   (register-identifier-property #'type-of))
+
+  (let ((a "ciao"))
+    (eval-for-expand
+     (identifier-property-set! #'type-of #'a #'(quote string)))
+
+    (check (type-of a) => 'string)
+
+    #f)
   #t)
 
 

@@ -3255,6 +3255,8 @@
 	     ((unwind-protect)			unwind-protect-macro)
 	     ((with-implicits)			with-implicits-macro)
 
+	     ((eval-for-expand)			eval-for-expand-macro)
+
 	     ;; non-Scheme style syntaxes
 	     ((return)				return-macro)
 	     ((continue)			continue-macro)
@@ -3809,6 +3811,21 @@
        (bless
 	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 ,@?body*)))))
 
+    ))
+
+
+;;;; module non-core-macro-transformer: WITH-IMPLICITS
+
+(define (eval-for-expand-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's EVAL-FOR-EXPAND macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?body0 ?body* ...)
+     (bless
+      `(define-syntax ,(gensym "eval-for-expand")
+	 (begin ,?body0 ,@?body* values))))
     ))
 
 
