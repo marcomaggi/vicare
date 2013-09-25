@@ -29,21 +29,30 @@
 (library (vicare containers stacks)
   (export
     stack
+
     stack.vicare-arguments-validation
     stack/false.vicare-arguments-validation
 
-    make-stack		stack?
-    stack-empty?	$stack-empty?
-    stack-not-empty?	$stack-not-empty?
-    stack-size	$stack-size
+    make-stack			stack?
 
-    stack-top		$stack-top
-    stack-push!		$stack-push!
-    stack-pop!		$stack-pop!
-    stack-purge!	$stack-purge!
+    stack-hash			$stack-hash
+    stack-putprop		$stack-putprop
+    stack-getprop		$stack-getprop
+    stack-remprop		$stack-remprop
+    stack-property-list		$stack-property-list
 
-    stack->list		list->stack
-    stack->vector	vector->stack)
+
+    stack-empty?		$stack-empty?
+    stack-not-empty?		$stack-not-empty?
+    stack-size			$stack-size
+
+    stack-top			$stack-top
+    stack-push!			$stack-push!
+    stack-pop!			$stack-pop!
+    stack-purge!		$stack-purge!
+
+    stack->list			list->stack
+    stack->vector		vector->stack)
   (import (vicare)
     (vicare unsafe operations)
     (vicare system $numerics)
@@ -66,8 +75,9 @@
   (protocol
    (lambda (make-record)
      (lambda items
-       (make-record items))))
-  (fields (mutable first-pair)))
+       (make-record #f items))))
+  (fields (mutable uid)
+	  (mutable first-pair)))
 
 (define-argument-validation (stack who obj)
   (stack? obj)
@@ -76,6 +86,75 @@
 (define-argument-validation (stack/false who obj)
   (or (not obj) (stack? obj))
   (procedure-argument-violation who "expected false or stack object as argument" obj))
+
+
+;;;; UID stuff
+
+(define (stack-hash S)
+  (define who 'stack-hash)
+  (with-arguments-validation (who)
+      ((stack		S))
+    ($stack-hash S)))
+
+(define ($stack-hash S)
+  (unless ($stack-uid S)
+    ($stack-uid-set! S (gensym)))
+  (symbol-hash ($stack-uid S)))
+
+;;; --------------------------------------------------------------------
+
+(define (stack-putprop S key value)
+  (define who 'stack-putprop)
+  (with-arguments-validation (who)
+      ((stack		S)
+       (symbol		key))
+    ($stack-putprop S key value)))
+
+(define ($stack-putprop S key value)
+  (unless ($stack-uid S)
+    ($stack-uid-set! S (gensym)))
+  (putprop ($stack-uid S) key value))
+
+;;; --------------------------------------------------------------------
+
+(define (stack-getprop S key)
+  (define who 'stack-getprop)
+  (with-arguments-validation (who)
+      ((stack		S)
+       (symbol		key))
+    ($stack-getprop S key)))
+
+(define ($stack-getprop S key)
+  (unless ($stack-uid S)
+    ($stack-uid-set! S (gensym)))
+  (getprop ($stack-uid S) key))
+
+;;; --------------------------------------------------------------------
+
+(define (stack-remprop S key)
+  (define who 'stack-remprop)
+  (with-arguments-validation (who)
+      ((stack		S)
+       (symbol		key))
+    ($stack-remprop S key)))
+
+(define ($stack-remprop S key)
+  (unless ($stack-uid S)
+    ($stack-uid-set! S (gensym)))
+  (remprop ($stack-uid S) key))
+
+;;; --------------------------------------------------------------------
+
+(define (stack-property-list S)
+  (define who 'stack-property-list)
+  (with-arguments-validation (who)
+      ((stack		S))
+    ($stack-property-list S)))
+
+(define ($stack-property-list S)
+  (unless ($stack-uid S)
+    ($stack-uid-set! S (gensym)))
+  (property-list ($stack-uid S)))
 
 
 ;;;; inspection

@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare containers stacks)
+  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -70,6 +71,80 @@
     => #f)
 
   #t)
+
+
+(parametrise ((check-test-name		'object))
+
+  (define who 'test)
+
+;;; hash
+
+  (check-for-true
+   (integer? (stack-hash (make-stack 1 2 3))))
+
+  (check
+      (let ((A (make-stack 1 2 3))
+	    (B (make-stack 1 2 3))
+	    (T (make-hashtable stack-hash eq?)))
+	(hashtable-set! T A 1)
+	(hashtable-set! T B 2)
+	(list (hashtable-ref T A #f)
+	      (hashtable-ref T B #f)))
+    => '(1 2))
+
+;;; --------------------------------------------------------------------
+;;; properties
+
+  (check
+      (let ((S (make-stack 1 2 3)))
+	(stack-property-list S))
+    => '())
+
+  (check
+      (let ((S (make-stack 1 2 3)))
+	(stack-putprop S 'ciao 'salut)
+	(stack-getprop S 'ciao))
+    => 'salut)
+
+  (check
+      (let ((S (make-stack 1 2 3)))
+	(stack-getprop S 'ciao))
+    => #f)
+
+  (check
+      (let ((S (make-stack 1 2 3)))
+	(stack-putprop S 'ciao 'salut)
+	(stack-remprop S 'ciao)
+	(stack-getprop S 'ciao))
+    => #f)
+
+  (check
+      (let ((S (make-stack 1 2 3)))
+	(stack-putprop S 'ciao 'salut)
+	(stack-putprop S 'hello 'ohayo)
+	(list (stack-getprop S 'ciao)
+	      (stack-getprop S 'hello)))
+    => '(salut ohayo))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-for-true
+   (let ((S (make-stack 1 2 3)))
+     (with-arguments-validation (who)
+	 ((stack	S))
+       #t)))
+
+;;;
+
+  (check-for-procedure-argument-violation
+   (let ((S 123))
+     (with-arguments-validation (who)
+	 ((stack	S))
+       #t))
+   '(123))
+
+  #f)
 
 
 (parametrise ((check-test-name 'inspect))

@@ -49,6 +49,57 @@ otherwise return @false{}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Object properties
+
+
+@defun stack-putprop @var{stack} @var{key} @var{value}
+@defunx $stack-putprop @var{stack} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{stack};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun stack-getprop @var{stack} @var{key}
+@defunx $stack-getprop @var{stack} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{stack}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun stack-remprop @var{stack} @var{key}
+@defunx $stack-remprop @var{stack} @var{key}
+Remove the property @var{key} from the property list of @var{stack}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun stack-property-list @var{stack}
+@defunx $stack-property-list @var{stack}
+Return a new association list representing the property list of
+@var{stack}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun stack-hash @var{stack}
+@defunx $stack-hash @var{stack}
+Return an exact integer to be used as hashtable key for @var{stack}.
+Hashtables having a @objtype{stack} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable stack-hash eq?)
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
 @subsubheading Arguments validation
 
 
