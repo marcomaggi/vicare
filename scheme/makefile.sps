@@ -416,6 +416,8 @@
     (with-implicits			(macro . with-implicits))
     (include				(macro . include))
 ;;;
+    (eval-for-expand			(macro . eval-for-expand))
+;;;
     (return				($fluid . return))
     (continue				($fluid . continue))
     (break				($fluid . break))
@@ -2114,6 +2116,8 @@
     (unwind-protect				i v $language)
     (with-implicits				i v $language)
     (include					i v $language)
+;;;
+    (eval-for-expand				i v $language)
 ;;;
     (return					i v $language)
     (continue					i v $language)

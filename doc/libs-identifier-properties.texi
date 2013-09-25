@@ -9,7 +9,28 @@
 The library @library{vicare language-extensions identifier-properties}
 allows the association of objects to identifiers at expand time, using
 other identifiers as keywords; this library is meant to be imported for
-the @code{expand} phase.
+the @code{expand} phase.  Meaningless usage examples:
+
+@example
+(import (vicare)
+  (for (vicare language-extensions identifier-properties)
+       expand))
+
+(define-syntax (type-of stx)
+  (syntax-case stx ()
+    ((_ ?id)
+     (identifier-property-ref #'type-of #'?id #f))))
+
+(eval-for-expand
+  (register-identifier-property #'type-of))
+
+(let ((a "ciao"))
+  (eval-for-expand
+    (identifier-property-set! #'type-of #'a #'(quote string)))
+  (type-of a) @expansion{} (quote string)
+  (type-of a))
+@result{} string
+@end example
 
 The following bindings are by the library @library{vicare
 language-extensions identifier-properties}.

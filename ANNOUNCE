@@ -52,6 +52,8 @@ Notes for revision 0.3d5
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
 
+* Added EVAL-FOR-EXPAND to (vicare).
+
 * The validation  clauses of  the library (vicare  arguments validation)
   now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
   ASSERTION-VIOLATION.

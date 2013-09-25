@@ -831,6 +831,15 @@ Supported symbols are @code{big}, @code{little}, @code{network} an
 is converted to the return value of @code{(native-endianness)}.
 @end deffn
 
+
+@deffn Syntax eval-for-expand @metao{body} @meta{body} @dots{}
+Evaluate the @meta{body} forms at expand time.  An
+@func{eval-for-expand} form counts a definition in a body.
+
+Notice that definitions in the body are @strong{not} visible by other
+code evaluated for expand.
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks
