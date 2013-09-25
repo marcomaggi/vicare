@@ -22,6 +22,8 @@
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
+* identifier alists::           Utilities for alists of identifiers.
+* identifier properties::       Expand-time identifier properties.
 @end menu
 
 @c page
@@ -2432,6 +2434,11 @@ way to define simple storage locations similar to the variables used in
 many languages.  The @dfn{variable} type of value is disjoint from the
 other types.
 
+The following bindings are exported by the library @library{vicare
+language-extensions variables}; the bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
 
 @defun make-variable
 @defunx make-variable @var{obj}
@@ -2447,6 +2454,8 @@ Return @true{} if @var{obj} is a variable object, else return @false{}.
 
 @defun variable-set! @var{variable} @var{obj}
 @defunx variable-ref @var{variable}
+@defunx $variable-set! @var{variable} @var{obj}
+@defunx $variable-ref @var{variable}
 Setter and getter for the value of variable objects.
 @end defun
 
@@ -3187,5 +3196,7 @@ the definition of the enumeration, no error is raised.
 @include libs-streams.texi
 @include libs-loops.texi
 @include libs-comparisons.texi
+@include libs-identifier-alists.texi
+@include libs-identifier-properties.texi
 
 @c end of file
