@@ -1,0 +1,59 @@
+@node identifier alists
+@section Utilities for alists of identifiers
+
+
+@cindex @library{vicare language-extensions identifier-alists}, library
+@cindex Library @library{vicare language-extensions identifier-alists}
+
+
+The library @library{vicare language-extensions identifier-alists}
+exports an interface to association lists having identifiers as keys;
+the identifiers are compared using @func{free-identifier=?}.
+
+
+@defun identifier-alist-cons @var{key} @var{value} @var{table}
+Given the alist @var{table}: store @var{key} and @var{value} in the
+alist and return the new alist.  Does @strong{no} checks for duplicate
+@var{key} in @var{table}.
+@end defun
+
+
+@defun identifier-alist-new @var{key} @var{value} @var{table}
+Given the alist @var{table}: store @var{key} and @var{value} in the
+alist and return the new alist.  Check if @var{key} is already in
+@var{table}, if it is: raise an assertion violation.
+@end defun
+
+
+@defun identifier-alist-cons-and-replace @var{key} @var{value} @var{table}
+Given the alist @var{table}: store @var{key} and @var{value} in the
+alist and return the new alist.  All the previously existent occurrences
+of @var{key} in @var{table} are removed.
+@end defun
+
+
+@defun identifier-alist-ref @var{table} @var{key} @var{default}
+Given the alist @var{table}: look for the identifier @var{key} and
+return its value.  If @var{key} is not present: return @var{default}.
+@end defun
+
+
+@defun identifier-alist-set! @var{table} @var{key} @var{new-value}
+Given the alist @var{table}: look for the identifier @var{key} and
+replace its value with @var{new-value}; return @var{table}.  If
+@var{key} is not present: raise an assertion violation.
+@end defun
+
+
+@defun identifier-alist-remove @var{table} @var{key}
+Given the alist @var{table}: remove the occurrences of @var{key} and
+return the new alist.
+@end defun
+
+
+@defun identifier-alist-exists @var{table} @var{key}
+Given the alist @var{table}: return the first pair in the list having
+@var{key} as car.  If @var{key} is not present: return @false{}.
+@end defun
+
+@c end of file

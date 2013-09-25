@@ -233,6 +233,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined genbuffers::     Validating generalised C buffer
                                    arguments.
 * args predefined time::           Time objects.
+* args predefined identifier::     Identifier objects.
 @end menu
 
 @c page
@@ -1408,6 +1409,26 @@ Succeed if @var{obj} is a time object: it satisfies the predicate
 @deffn {Validation Clause} time/false @var{obj}
 Succeed if @var{obj} is @false{} or a time object: it satisfies the
 predicate @func{time?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined identifier
+@subsection Validating identifier objects
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} identifier @var{obj}
+Succeed if @var{obj} is a identifier object: it satisfies the predicate
+@func{identifier?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} identifier/false @var{obj}
+Succeed if @var{obj} is @false{} or a identifier object: it satisfies
+the predicate @func{identifier?} exported by @library{vicare}.
 @end deffn
 
 @c end of file

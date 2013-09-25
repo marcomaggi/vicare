@@ -63,6 +63,8 @@ vicare_libs_TEXINFOS = \
 	libs-formations.texi			\
 	libs-getopts.texi			\
 	libs-gcc.texi				\
+	libs-identifier-alists.texi		\
+	libs-identifier-properties.texi		\
 	libs-irregex.texi			\
 	libs-knuth-morris-pratt.texi		\
 	libs-levenshtein.texi			\

@@ -291,6 +291,10 @@
     ;; time objects
     time.vicare-arguments-validation
     time/false.vicare-arguments-validation
+
+    ;; identifiers
+    identifier.vicare-arguments-validation
+    identifier/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare platform configuration)
@@ -1707,6 +1711,18 @@
   (or (not obj)
       (time? obj))
   (procedure-argument-violation who "expected false or time object as argument" obj))
+
+
+;;;; identifier objects
+
+(define-argument-validation (identifier who obj)
+  (identifier? obj)
+  (procedure-argument-violation who "expected identifier object as argument" obj))
+
+(define-argument-validation (identifier/false who obj)
+  (or (not obj)
+      (identifier? obj))
+  (procedure-argument-violation who "expected false or identifier object as argument" obj))
 
 
 ;;;; done
