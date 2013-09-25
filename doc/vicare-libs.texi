@@ -225,6 +225,7 @@ Container libraries
 * object-properties::           Object properties.
 * one-dimension::               One dimensional extended ranges.
 * arrays::                      Multidimensional arrays.
+* stacks::                      Simple stacks.
 
 Adapted libraries
 
@@ -287,6 +288,7 @@ External documents
 @include libs-object-properties.texi
 @include libs-one-dimension.texi
 @include libs-arrays.texi
+@include libs-stacks.texi
 
 @include libs-randomisations.texi
 
