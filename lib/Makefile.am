@@ -94,6 +94,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/bytevectors/u8.sls				\
 	vicare/containers/bytevectors/u8low.sls				\
 	vicare/containers/arrays.sls					\
+	vicare/containers/stacks.sls					\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\
@@ -271,7 +272,8 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/containers/lists.sls				\
 	nausicaa/containers/vectors.sls				\
 	nausicaa/containers/strings.sls				\
-	nausicaa/containers/arrays.sls
+	nausicaa/containers/arrays.sls				\
+	nausicaa/containers/stacks.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

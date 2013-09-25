@@ -107,6 +107,7 @@
   (only (vicare containers bytevectors u8))
   (only (vicare containers bytevectors s8))
   (only (vicare containers arrays))
+  (only (vicare containers stacks))
 
   (only (vicare net channels))
 

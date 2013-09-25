@@ -1462,6 +1462,9 @@
     procedure-argument-violation?
     procedure-argument-violation
 
+    ;; misc
+    eval-for-expand
+
 
 ;;;; bindings from (nausicaa language oopp)
 

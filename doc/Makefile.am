@@ -77,6 +77,7 @@ vicare_libs_TEXINFOS = \
 	libs-pregexp.texi			\
 	libs-randomisations.texi		\
 	libs-readline.texi			\
+	libs-stacks.texi			\
 	libs-streams.texi			\
 	libs-strings.texi			\
 	libs-vectors.texi			\
@@ -133,6 +134,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-vectors.texi			\
 	nausicaa-strings.texi			\
 	nausicaa-arrays.texi			\
+	nausicaa-stacks.texi			\
 	\
 	macros.texi				\
 	fdl-1.3.texi				\
