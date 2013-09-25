@@ -68,6 +68,11 @@ Notes for revision 0.3d5
 * The wrapper  for foreign pointers  now defines also  a "?TYPE-ID-hash"
   function to generate hashtable keys associated to wrapper structures.
 
+* Imported from Nausicaa the libraries:
+
+     (vicare language-extensions identifier-alists)
+     (vicare language-extensions identifier-properties)
+
 
 Notes for revision 0.3d4
 ------------------------

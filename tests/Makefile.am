@@ -167,6 +167,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-language-extensions-coroutines.sps			\
 	test-vicare-language-extensions-custom-ports.sps		\
 	test-vicare-language-extensions-hooks.sps			\
+	test-vicare-language-extensions-identifier-alists.sps		\
+	test-vicare-language-extensions-identifier-properties.sps	\
 	test-vicare-language-extensions-infix.sps			\
 	test-vicare-language-extensions-keywords.sps			\
 	test-vicare-language-extensions-loops.sps			\

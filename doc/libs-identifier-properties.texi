@@ -1,0 +1,54 @@
+@node identifier properties
+@section Expand--time identifier properties
+
+
+@cindex @library{vicare language-extensions identifier-properties}, library
+@cindex Library @library{vicare language-extensions identifier-properties}
+
+
+The library @library{vicare language-extensions identifier-properties}
+allows the association of objects to identifiers at expand time, using
+other identifiers as keywords; this library is meant to be imported for
+the @code{expand} phase.
+
+The following bindings are by the library @library{vicare
+language-extensions identifier-properties}.
+
+
+@defun register-identifier-property @var{subject}
+Allocate a new identifier properties table associated to the identifier
+@var{subject}.  If a property associated to @var{subject} already
+exists: raise an exception.
+@end defun
+
+
+@defun forget-identifier-property @var{subject}
+Release all the resources of the properties table associated to the
+identifier @var{subject}.  If a property associated to @var{subject}
+does not exist: raise an exception.
+@end defun
+
+
+@defun identifier-property-exists? @var{subject}
+Return @true{} if @var{subject} is an identifier associated to a
+properties table; otherwise return @false{}.  Raise an exception if
+@var{subject} is not an identifier.
+@end defun
+
+
+@defun identifier-property-set! @var{subject} @var{key} @var{value}
+Associate the identifier @var{key} to @var{value} in @var{subject}'s
+table.  Raise an assertion violation if @var{subject} is not a
+previously defined object property.  If @var{key} already has an
+identifier property for @var{subject}: silently overwrite the old value.
+@end defun
+
+
+@defun identifier-property-ref @var{subject} @var{key} @var{default}
+Return the value associated to the identifier @var{key} in
+@var{subject}'s table.  Raise an assertion violation if @var{subject} is
+not a previously defined object property.  If @var{key} does not have an
+identifier property for @var{subject}: return @var{default}.
+@end defun
+
+@c end of file
