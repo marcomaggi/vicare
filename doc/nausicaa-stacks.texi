@@ -146,7 +146,7 @@ are pushed on the stack from right to left.
 (import (nausicaa)
   (nausicaa containers stacks))
 
-(<stack> S ((list->stack '(1 2 3))))
+(<stack> S (list->stack '(1 2 3)))
 
 (S top)         @result{} 1
 @end example
