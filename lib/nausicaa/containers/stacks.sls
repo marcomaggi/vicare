@@ -28,8 +28,10 @@
 (library (nausicaa containers stacks)
   (export
     <stack>
-    stack.vicare-arguments-validation
-    stack/false.vicare-arguments-validation
+    (rename (stack.vicare-arguments-validation
+	     <stack>.vicare-arguments-validation)
+	    (stack/false.vicare-arguments-validation
+	     <stack>/false.vicare-arguments-validation))
     list->stack
     vector->stack)
   (import (nausicaa)
@@ -44,18 +46,32 @@
      (immutable ($not-empty?	<boolean>)	$stack-not-empty?)
      (immutable (size		<integer>)	stack-size)
      (immutable ($size		<integer>)	$stack-size))
-    (methods (top		stack-top)
-	     ($top		$stack-top)
-	     (push!		stack-push!)
-	     ($push!		$stack-push!)
-	     (pop!		stack-pop!)
-	     ($pop!		$stack-pop!)
-	     (purge!		stack-purge!)
-	     ($purge!		$stack-purge!)
-	     (list		stack->list)
-	     ($list		$stack->list)
-	     (vector		stack->vector)
-	     ($vector		$stack->vector))
+    (methods
+     (hash		stack-hash)
+     ($hash		$stack-hash)
+
+     (putprop		stack-putprop)
+     ($putprop		$stack-putprop)
+     (getprop		stack-getprop)
+     ($getprop		$stack-getprop)
+     (remprop		stack-remprop)
+     ($remprop		$stack-remprop)
+     (property-list	stack-property-list)
+     ($property-list	$stack-property-list)
+
+     (top		stack-top)
+     ($top		$stack-top)
+     (push!		stack-push!)
+     ($push!		$stack-push!)
+     (pop!		stack-pop!)
+     ($pop!		$stack-pop!)
+     (purge!		stack-purge!)
+     ($purge!		$stack-purge!)
+
+     (list		stack->list)
+     ($list		$stack->list)
+     (vector		stack->vector)
+     ($vector		$stack->vector))
     #| end of label |# )
   #| end of library |# )
 

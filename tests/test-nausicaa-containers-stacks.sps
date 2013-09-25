@@ -27,6 +27,7 @@
 #!r6rs
 (import (nausicaa)
   (nausicaa containers stacks)
+  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -51,6 +52,83 @@
     => #t)
 
   #t)
+
+
+(parametrise ((check-test-name		'object))
+
+  (define who 'test)
+
+;;; hash
+
+  (check-for-true
+   (let (((S <stack>) (<stack> (1 2 3))))
+     (integer? (S hash))))
+
+  (check
+      (let (((A <stack>)     (<stack> (1 2 3)))
+	    ((B <stack>)     (<stack> (1 2 3)))
+	    ((T <hashtable>) (make-hashtable (lambda ((S <stack>))
+					       (S hash))
+					     eq?)))
+	(set! T[A] 1)
+	(set! T[B] 2)
+	(list (T[A])
+	      (T[B])))
+    => '(1 2))
+
+;;; --------------------------------------------------------------------
+;;; properties
+
+  (check
+      (let (((S <stack>) (<stack> (1 2 3))))
+	(S property-list))
+    => '())
+
+  (check
+      (let (((S <stack>) (<stack> (1 2 3))))
+	(S putprop 'ciao 'salut)
+	(S getprop 'ciao))
+    => 'salut)
+
+  (check
+      (let (((S <stack>) (<stack> (1 2 3))))
+	(S getprop 'ciao))
+    => #f)
+
+  (check
+      (let (((S <stack>) (<stack> (1 2 3))))
+	(S putprop 'ciao 'salut)
+	(S remprop 'ciao)
+	(S getprop 'ciao))
+    => #f)
+
+  (check
+      (let (((S <stack>) (<stack> (1 2 3))))
+	(S putprop 'ciao 'salut)
+	(S putprop 'hello 'ohayo)
+	(list (S getprop 'ciao)
+	      (S getprop 'hello)))
+    => '(salut ohayo))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-for-true
+   (let ((S (<stack> (1 2 3))))
+     (with-arguments-validation (who)
+	 ((<stack>	S))
+       #t)))
+
+;;;
+
+  (check-for-procedure-argument-violation
+   (let ((S 123))
+     (with-arguments-validation (who)
+	 ((<stack>	S))
+       #t))
+   '(123))
+
+  #f)
 
 
 (parametrise ((check-test-name 'pred))

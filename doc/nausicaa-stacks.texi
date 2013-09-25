@@ -48,6 +48,60 @@ Build and return a @class{stack} object using the default constructor.
 
 @c ------------------------------------------------------------
 
+@subsubheading Object properties
+
+
+@defmethod @aclass{stack} putprop @var{key} @var{value}
+@defmethodx @aclass{stack} $putprop @var{key} @var{value}
+Add a new property @var{key} to the property list of the @class{stack};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{stack} getprop @var{stack} @var{key}
+@defmethodx @aclass{stack} $getprop @var{stack} @var{key}
+Return the value of the property @var{key} in the property list of the
+@class{stack}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{stack} remprop @var{stack} @var{key}
+@defmethodx @aclass{stack} $remprop @var{stack} @var{key}
+Remove the property @var{key} from the property list of the
+@class{stack}; if @var{key} is not set: nothing happens.  @var{key} must
+be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{stack} property-list @var{stack}
+@defmethodx @aclass{stack} $property-list @var{stack}
+Return a new association list representing the property list of the
+@class{stack}.  The order of the entries is the same as the property
+creation order.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defmethod @aclass{stack} hash @var{stack}
+@defmethodx @aclass{stack} $hash @var{stack}
+Return an exact integer to be used as hashtable key for the
+@class{stack}.  Hashtables having a @class{stack} as key can be
+instantiated as follows:
+
+@example
+(make-hashtable (lambda ((S <stack>))
+                  (S hash))
+                eq?)
+@end example
+@end defmethod
+
+@c ------------------------------------------------------------
+
 @subsubheading Arguments validation
 
 
