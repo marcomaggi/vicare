@@ -28,6 +28,8 @@
 (library (vicare language-extensions variables)
   (export make-variable variable?
 	  variable-ref variable-set!
+	  (rename ($variable-value		$variable-ref)
+		  ($variable-value-set!		$variable-set!))
 	  define-variable)
   (import (vicare))
 
