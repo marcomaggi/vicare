@@ -26,41 +26,69 @@
 
 #!r6rs
 (library (vicare language-extensions variables)
-  (export make-variable variable?
-	  variable-ref variable-set!
-	  (rename ($variable-value		$variable-ref)
-		  ($variable-value-set!		$variable-set!))
-	  define-variable)
+  (export
+    make-variable			variable?
+    variable-ref			variable-set!
+    (rename ($variable-value		$variable-ref)
+	    ($variable-value-set!	$variable-set!))
+    define-variable
+    define-variable-alias		$define-variable-alias)
   (import (vicare))
 
-  (define-record-type variable
-    (sealed #t)
-    (opaque #t)
-    (nongenerative vicare:variables::variable)
-    (fields (mutable value variable-ref variable-set!))
-    (protocol (lambda (make-record)
-		(case-lambda
-		 (()
-		  (make-record (void)))
-		 ((value)
-		  (make-record value))))))
+
+(define-record-type variable
+  (sealed #t)
+  (opaque #t)
+  (nongenerative vicare:variables::variable)
+  (fields (mutable value variable-ref variable-set!))
+  (protocol (lambda (make-record)
+	      (case-lambda
+	       (()
+		(make-record (void)))
+	       ((value)
+		(make-record value))))))
 
-  (define-syntax (define-variable stx)
-    (syntax-case stx ()
-      ((_ (?name . ?args) ?form0 ?form ...)
-       #'(define-variable ?name (lambda ?args ?form0 ?form ...)))
-      ((_ ?name)
-       #'(define-variable ?name (void)))
-      ((_ ?name ?value)
-       #'(begin
-	   (define the-var (make-variable ?value))
-	   (define-syntax ?name
-	     (identifier-syntax
-	      (_
-	       (variable-ref  the-var))
-	      ((set! _ ?e)
-	       (variable-set! the-var ?e))))))))
+;;; --------------------------------------------------------------------
 
-  )
+(define-syntax (define-variable stx)
+  (syntax-case stx ()
+    ((_ (?name . ?args) ?form0 ?form ...)
+     #'(define-variable ?name (lambda ?args ?form0 ?form ...)))
+    ((_ ?name)
+     #'(define-variable ?name (void)))
+    ((_ ?name ?value)
+     #'($define-variable-alias ?name (make-variable ?value)))
+    ))
+
+(define-syntax (define-variable-alias stx)
+  (syntax-case stx ()
+    ((_ ?alias ?variable-expr)
+     #'(begin
+	 (define the-var ?variable-expr)
+	 (define-syntax ?alias
+	   (identifier-syntax
+	    (_
+	     (variable-ref the-var))
+	    ((set! _ ??value)
+	     (variable-set! the-var ??value))))))
+    ))
+
+(define-syntax ($define-variable-alias stx)
+  (syntax-case stx ()
+    ((_ ?alias ?variable-expr)
+     #'(begin
+	 (define the-var ?variable-expr)
+	 (define-syntax ?alias
+	   (identifier-syntax
+	    (_
+	     ($variable-value the-var))
+	    ((set! _ ??value)
+	     ($variable-value-set! the-var ??value))))))
+    ))
+
+
+;;;; done
+
+)
 
 ;;; end of file

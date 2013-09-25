@@ -2431,8 +2431,8 @@ lexical context.
 
 The library @library{vicare language-extensions variables} provides a
 way to define simple storage locations similar to the variables used in
-many languages.  The @dfn{variable} type of value is disjoint from the
-other types.
+many languages.  The @objtype{variable} type is disjoint from the other
+types.
 
 The following bindings are exported by the library @library{vicare
 language-extensions variables}; the bindings whose name is prefixed with
@@ -2442,13 +2442,15 @@ arguments before accessing them.
 
 @defun make-variable
 @defunx make-variable @var{obj}
-Build and return a new variable object.  The variable is initialised to
-@var{obj}, which defaults to the return value of @code{(void)}.
+Build and return a new @objtype{variable} object.  The
+@objtype{variable} is initialised to @var{obj}, which defaults to the
+return value of @code{(void)}.
 @end defun
 
 
 @defun variable? @var{obj}
-Return @true{} if @var{obj} is a variable object, else return @false{}.
+Return @true{} if @var{obj} is a @objtype{variable} object, else return
+@false{}.
 @end defun
 
 
@@ -2456,15 +2458,15 @@ Return @true{} if @var{obj} is a variable object, else return @false{}.
 @defunx variable-ref @var{variable}
 @defunx $variable-set! @var{variable} @var{obj}
 @defunx $variable-ref @var{variable}
-Setter and getter for the value of variable objects.
+Setter and getter for the value of @objtype{variable} objects.
 @end defun
 
 
 @deffn Syntax define-variable @meta{name}
 @deffnx Syntax define-variable @meta{name} @var{obj}
 @deffnx Syntax define-variable (@meta{name} . @meta{formals}) @meta{body}
-Like @func{define}, but store the value in a newly built variable object
-which is then bound to @meta{name}.  Example:
+Like @func{define}, but store the value in a newly built
+@objtype{variable} object, which is then bound to @meta{name}.  Example:
 
 @example
 (import (vicare)
@@ -2479,6 +2481,14 @@ v @result{} 456
 While @func{define} defines a binding which, when exported by a library,
 cannot be modified, @func{define-variable} allocates a storage location,
 so the value bound to @meta{name} can be modified at will.
+@end deffn
+
+
+@deffn Syntax define-variable-alias @meta{name} @meta{variable-expr}
+@deffnx Syntax $define-variable-alias @meta{name} @meta{variable-expr}
+Like the second form of @func{define-variable}, but accept as second
+argument an expression which, when evaluated, returns a
+@objtype{variable} object.
 @end deffn
 
 @c page
