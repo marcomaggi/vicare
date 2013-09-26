@@ -109,8 +109,8 @@ The following bindings are meant to be used with the facilities of the
 library @library{vicare arguments validation}.
 
 
-@deffn {Validation Clause} stack @var{obj}
-@deffnx {Validation Clause} stack/false @var{obj}
+@deffn {Validation Clause} @aclass{stack} @var{obj}
+@deffnx {Validation Clause} @aclass{stack}/false @var{obj}
 Succeed if @var{obj} is a @class{stack} object; the second clause also
 accepts @false{}.
 @end deffn
