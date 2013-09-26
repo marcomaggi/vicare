@@ -22,14 +22,14 @@
           remq remv remove remp filter map for-each
 	  (rename (for-each for-each-in-order)) andmap ormap list-tail
           partition for-all exists fold-left fold-right
-	  make-queue)
+	  make-queue-procs)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
-		  make-queue)
+		  make-queue-procs)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations))
@@ -1247,10 +1247,10 @@
 
 ;;;; queue of items
 
-(define make-queue
+(define make-queue-procs
   (case-lambda
    (()
-    (make-queue '()))
+    (make-queue-procs '()))
    ((init-values)
     ;;The value of this variable is #f or a pair representing a queue of
     ;;items.

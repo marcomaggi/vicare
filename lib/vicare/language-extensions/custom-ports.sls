@@ -47,7 +47,7 @@
     (values ou-port in-port)))
 
 (define (open-binary-input-port-pair)
-  (let-values (((ou->in.empty? ou->in.enqueue! ou->in.dequeue!) (make-queue)))
+  (let-values (((ou->in.empty? ou->in.enqueue! ou->in.dequeue!) (make-queue-procs)))
 
     ;;Output port to input port device.
     (define ou->in.device.bv '#vu8())
@@ -129,8 +129,8 @@
 ;;;; input/output binary port pairs
 
 (define (open-binary-input/output-port-pair)
-  (let-values (((one->two.empty? one->two.enqueue! one->two.dequeue!) (make-queue))
-	       ((two->one.empty? two->one.enqueue! two->one.dequeue!) (make-queue)))
+  (let-values (((one->two.empty? one->two.enqueue! one->two.dequeue!) (make-queue-procs))
+	       ((two->one.empty? two->one.enqueue! two->one.dequeue!) (make-queue-procs)))
 
     ;;Device used to transfer data from port ONE to port TWO.
     (define one->two.device.bv '#vu8())
@@ -281,7 +281,7 @@
     (values ou-port in-port)))
 
 (define (open-textual-input-port-pair)
-  (let-values (((ou->in.empty? ou->in.enqueue! ou->in.dequeue!) (make-queue)))
+  (let-values (((ou->in.empty? ou->in.enqueue! ou->in.dequeue!) (make-queue-procs)))
 
     ;;Output port to input port device.
     (define ou->in.device.str '#vu8())
@@ -364,8 +364,8 @@
 ;;;; input/output textual port pairs
 
 (define (open-textual-input/output-port-pair)
-  (let-values (((one->two.empty? one->two.enqueue! one->two.dequeue!) (make-queue))
-	       ((two->one.empty? two->one.enqueue! two->one.dequeue!) (make-queue)))
+  (let-values (((one->two.empty? one->two.enqueue! one->two.dequeue!) (make-queue-procs))
+	       ((two->one.empty? two->one.enqueue! two->one.dequeue!) (make-queue-procs)))
 
     ;;Device used to transfer data from port ONE to port TWO.
     (define one->two.device.str '#vu8())

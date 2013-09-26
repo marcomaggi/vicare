@@ -226,6 +226,7 @@ Container libraries
 * one-dimension::               One dimensional extended ranges.
 * arrays::                      Multidimensional arrays.
 * stacks::                      Simple stacks.
+* queues::                      Simple queues.
 
 Adapted libraries
 
@@ -289,6 +290,7 @@ External documents
 @include libs-one-dimension.texi
 @include libs-arrays.texi
 @include libs-stacks.texi
+@include libs-queues.texi
 
 @include libs-randomisations.texi
 

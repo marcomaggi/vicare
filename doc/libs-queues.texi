@@ -1,0 +1,205 @@
+@node queues
+@chapter Simple queues
+
+
+@cindex @library{vicare containers queues}, library
+@cindex Library @library{vicare containers queues}
+
+
+The library @library{vicare containers queues} implements queues holding
+arbitrary scheme objects and designed for efficient first--in/first--out
+operations.
+
+@menu
+* queues objects::              Queue objects.
+* queues inspection::           Inspecting queue objects.
+* queues access::               Queue accessors and mutators.
+* queues conversion::           Converting queues to other objects.
+@end menu
+
+@c page
+@node queues objects
+@section Queue objects
+
+
+The following bindings are exported by the library @library{vicare
+containers queues}.
+
+
+@deftp {@rnrs{6} Record Type} queue
+@cindex @var{queue} argument
+@cindex Argument @var{queue}
+Record type representing a queue object.  The @objtype{queue} type is
+non--generative and available for subtyping.  In this documentation
+@objtype{queue} object arguments to functions are indicated as
+@var{queue}.
+@end deftp
+
+
+@defun make-queue @var{obj} @dots{}
+Build and return a @objtype{queue} object holding the given objects,
+which are pushed on the queue from right to left.
+@end defun
+
+
+@defun queue? @var{obj}
+Return @true{} if @var{obj} is a record of type @objtype{queue};
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun queue-putprop @var{queue} @var{key} @var{value}
+@defunx $queue-putprop @var{queue} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{queue};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun queue-getprop @var{queue} @var{key}
+@defunx $queue-getprop @var{queue} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{queue}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun queue-remprop @var{queue} @var{key}
+@defunx $queue-remprop @var{queue} @var{key}
+Remove the property @var{key} from the property list of @var{queue}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun queue-property-list @var{queue}
+@defunx $queue-property-list @var{queue}
+Return a new association list representing the property list of
+@var{queue}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun queue-hash @var{queue}
+@defunx $queue-hash @var{queue}
+Return an exact integer to be used as hashtable key for @var{queue}.
+Hashtables having a @objtype{queue} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable queue-hash eq?)
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are meant to be used with the facilities of the
+library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} queue @var{obj}
+@deffnx {Validation Clause} queue/false @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{queue?}; the second
+clause also accepts @false{}.
+@end deffn
+
+@c page
+@node queues inspection
+@section Inspecting queue objects
+
+
+The following bindings are exported by the library @library{vicare
+containers queues}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun queue-empty? @var{queue}
+@defunx $queue-empty? @var{queue}
+Return @true{} if @var{queue} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun queue-not-empty? @var{queue}
+@defunx $queue-not-empty? @var{queue}
+Return @true{} if @var{queue} is @strong{not} empty; otherwise return
+@false{}.
+@end defun
+
+
+@defun queue-size? @var{queue}
+@defunx $queue-size? @var{queue}
+Return an exact integer representing the number of objects in @var{queue}.
+@end defun
+
+@c page
+@node queues access
+@section Queue accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers queues}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun queue-front @var{queue}
+@defunx $queue-front @var{queue}
+Return the object at the front of the queue.  Raise an assertion violation
+if @var{queue} is empty.
+@end defun
+
+
+@defun queue-rear @var{queue}
+@defunx $queue-rear @var{queue}
+Return the object at the rear of the queue.  Raise an assertion
+violation if @var{queue} is empty.
+@end defun
+
+
+@defun queue-push! @var{queue} @var{obj}
+@defunx $queue-push! @var{queue} @var{obj}
+Push @var{obj} on the @var{queue}.
+@end defun
+
+
+@defun queue-pop! @var{queue}
+@defunx $queue-pop! @var{queue}
+Remove the object at the front of the queue and return it.  Raise an
+assertion violation if @var{queue} is empty.
+@end defun
+
+@c page
+@node queues conversion
+@section Converting queues to other objects
+
+
+The following bindings are exported by the library @library{vicare
+containers queues}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun queue->list @var{queue}
+@defunx list->queue @var{list}
+Convert to and from a queue and a proper list.  Objects from the list
+are pushed on the queue from left to right.
+@end defun
+
+
+@defun queue->vector @var{queue}
+@defunx vector->queue @var{vector}
+Convert to and from a queue and a vector.
+@end defun
+
+@c end of file

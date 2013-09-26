@@ -201,7 +201,7 @@
   (check	;success
       (let ()
 	(define-values (empty? enqueue! dequeue!)
-	  (make-queue '(1 2 3 4)))
+	  (make-queue-procs '(1 2 3 4)))
 
 	(define (generator)
 	  (if (empty?)
@@ -217,7 +217,7 @@
   (check	;failure
       (let ()
 	(define-values (empty? enqueue! dequeue!)
-	  (make-queue '(1 2 3 4)))
+	  (make-queue-procs '(1 2 3 4)))
 
 	(define (generator)
 	  (if (empty?)
@@ -477,7 +477,7 @@
     (define-values (refused-tasks.empty?
 		    refused-tasks.enqueue!
 		    refused-tasks.dequeue!)
-      (make-queue))
+      (make-queue-procs))
     (let loop ((available.time    day.time)
 	       (available.effort  day.effort)
 	       (day.tasks         '()))
@@ -500,7 +500,7 @@
     (define-values (refused-tasks.empty?
 		    refused-tasks.enqueue!
 		    refused-tasks.dequeue!)
-      (make-queue))
+      (make-queue-procs))
     (define (generator)
       (if (tasks.empty?)
 	  (amb)
@@ -569,7 +569,7 @@
 
   (let ()
     (define-values (empty? enqueue! dequeue!)
-      (make-queue tasks))
+      (make-queue-procs tasks))
 
     (print "*** sequenced choices\n")
     (let ((days (schedule fill-day empty? dequeue!)))
@@ -581,7 +581,7 @@
     (with-ambiguous-choices
      (let loop ((count 3))
        (define-values (empty? enqueue! dequeue!)
-	 (make-queue tasks))
+	 (make-queue-procs tasks))
        (let* ((days     (schedule amb-fill-day empty? dequeue!))
 	      (days.len (length days)))
 	 (print "solution of length: ~a\n" days.len)

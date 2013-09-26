@@ -1765,7 +1765,7 @@
     (remp					i v r ls)
     (remv					i v r ls)
     (remove					i v r ls)
-    (make-queue					i v $language)
+    (make-queue-procs				i v $language)
     (set-car!					i v mp se)
     (set-cdr!					i v mp se)
     (string-set!				i v ms se)
