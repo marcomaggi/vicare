@@ -111,9 +111,7 @@ library @library{nausicaa arguments validation}.
 
 
 @deffn {Validation Clause} @aclass{queue} @var{obj}
-@deffnx {Validation Clause} @aclass{queue}/false @var{obj}
-Succeed if @var{obj} is a @class{queue} object; the second clause also
-accepts @false{}.
+Succeed if @var{obj} is a @class{queue} object.
 @end deffn
 
 @c page

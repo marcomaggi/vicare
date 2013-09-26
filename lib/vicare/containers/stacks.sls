@@ -31,7 +31,6 @@
     stack
 
     stack.vicare-arguments-validation
-    stack/false.vicare-arguments-validation
 
     make-stack			stack?
 
@@ -82,10 +81,6 @@
 (define-argument-validation (stack who obj)
   (stack? obj)
   (procedure-argument-violation who "expected stack object as argument" obj))
-
-(define-argument-validation (stack/false who obj)
-  (or (not obj) (stack? obj))
-  (procedure-argument-violation who "expected false or stack object as argument" obj))
 
 
 ;;;; UID stuff

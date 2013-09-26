@@ -31,7 +31,6 @@
     queue
 
     queue.vicare-arguments-validation
-    queue/false.vicare-arguments-validation
 
     make-queue			queue?
 
@@ -96,10 +95,6 @@
 (define-argument-validation (queue who obj)
   (queue? obj)
   (procedure-argument-violation who "expected queue object as argument" obj))
-
-(define-argument-validation (queue/false who obj)
-  (or (not obj) (queue? obj))
-  (procedure-argument-violation who "expected false or queue object as argument" obj))
 
 
 ;;;; UID stuff
