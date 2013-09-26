@@ -120,6 +120,11 @@ whose expression is the symbol @code{false}; @meta{validator-id} must be
 an identifier previously used as name of validation clause by the
 @func{define-argument-validation} macro.
 
+When this form is used, the first clause argument is first tested alone:
+the clause succeeds if the first argument is @false{}; otherwise all the
+clause arguments are handed to the validation claused selected by
+@meta{validator-id}.
+
 @item
 The identifier @func{void}, exported by @library{vicare}; this is a
 special case for which no validation is generated: the @var{arg} values
