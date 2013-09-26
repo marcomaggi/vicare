@@ -193,6 +193,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-containers-object-properties.sps			\
 	test-vicare-containers-one-dimension-cc.sps			\
 	test-vicare-containers-one-dimension-co.sps			\
+	test-vicare-containers-queues.sps				\
 	test-vicare-containers-stacks.sps				\
 	test-vicare-containers-strings-high.sps				\
 	test-vicare-containers-strings-low.sps				\
@@ -276,7 +277,8 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-containers-vectors.sps		\
 	test-nausicaa-containers-strings.sps		\
 	test-nausicaa-containers-arrays.sps		\
-	test-nausicaa-containers-stacks.sps
+	test-nausicaa-containers-stacks.sps		\
+	test-nausicaa-containers-queues.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\

@@ -42,6 +42,9 @@ Notes for revision 0.3d5
 
 * The boot images have been rotated.
 
+* BACKWARDS INCOMPATIBILITY  The function  MAKE-QUEUE from  (vicare) has
+  been renamed MAKE-QUEUE-PROCS.
+
 * Imported libraries  from Nausicaa/OOPP.   Installation of  the library
   hierarchy (nausicaa ---) is enabled by defult; it can be disables with
   the option "--disable-nausicaa" of the script "configure".
@@ -79,6 +82,11 @@ Notes for revision 0.3d5
 
      (vicare containers stacks)
      (nausicaa containers stacks)
+
+* Imported queues library from nausicaa as libraries:
+
+     (vicare containers queues)
+     (nausicaa containers queues)
 
 
 Notes for revision 0.3d4

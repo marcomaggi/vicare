@@ -125,6 +125,7 @@ Containers libraries
 * strings::                     Extended strings processing.
 * arrays::                      Multidimensional arrays.
 * stacks::                      Simple stacks.
+* queues::                      Simple queues.
 
 Appendices
 
@@ -169,6 +170,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-strings.texi
 @include nausicaa-arrays.texi
 @include nausicaa-stacks.texi
+@include nausicaa-queues.texi
 
 @include gpl-3.0.texi
 @include fdl-1.3.texi

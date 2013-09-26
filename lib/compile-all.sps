@@ -108,6 +108,7 @@
   (only (vicare containers bytevectors s8))
   (only (vicare containers arrays))
   (only (vicare containers stacks))
+  (only (vicare containers queues))
 
   (only (vicare net channels))
 

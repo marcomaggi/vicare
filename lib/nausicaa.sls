@@ -1013,7 +1013,7 @@
     make-memory-block/guarded
     make-out-of-memory-error
     make-parameter
-    make-queue
+    make-queue-procs
     make-readline-input-port
     make-source-position-condition
     make-struct-type

@@ -4890,20 +4890,20 @@ called with at least two arguments.
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue)))
+		    (make-queue-procs)))
 	(empty?))
     => #t)
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue)))
+		    (make-queue-procs)))
 	(enqueue! 1)
 	(empty?))
     => #f)
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue)))
+		    (make-queue-procs)))
 	(enqueue! 1)
 	(let ((rv0 (empty?))
 	      (rv1 (dequeue!))
@@ -4913,7 +4913,7 @@ called with at least two arguments.
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue)))
+		    (make-queue-procs)))
 	(enqueue! 1)
 	(enqueue! 2)
 	(enqueue! 3)
@@ -4929,19 +4929,19 @@ called with at least two arguments.
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue '())))
+		    (make-queue-procs '())))
 	(empty?))
     => #t)
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue '(1))))
+		    (make-queue-procs '(1))))
 	(empty?))
     => #f)
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue '(1 2 3))))
+		    (make-queue-procs '(1 2 3))))
 	(let ((rv0 (dequeue!))
 	      (rv1 (dequeue!))
 	      (rv2 (dequeue!))
@@ -4951,7 +4951,7 @@ called with at least two arguments.
 
   (check
       (let-values (((empty? enqueue! dequeue!)
-		    (make-queue '(1 2))))
+		    (make-queue-procs '(1 2))))
 	(enqueue! 3)
 	(enqueue! 4)
 	(let ((rv0 (dequeue!))

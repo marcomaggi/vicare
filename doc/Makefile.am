@@ -75,6 +75,7 @@ vicare_libs_TEXINFOS = \
 	libs-parser-logic.texi			\
 	libs-platform.texi			\
 	libs-pregexp.texi			\
+	libs-queues.texi			\
 	libs-randomisations.texi		\
 	libs-readline.texi			\
 	libs-stacks.texi			\
@@ -135,6 +136,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-strings.texi			\
 	nausicaa-arrays.texi			\
 	nausicaa-stacks.texi			\
+	nausicaa-queues.texi			\
 	\
 	macros.texi				\
 	fdl-1.3.texi				\

@@ -3969,8 +3969,8 @@ first-out sequence.  The following bindings are exported by the library
 @library{vicare}.
 
 
-@defun make-queue
-@defunx make-queue @var{init-values}
+@defun make-queue-procs
+@defunx make-queue-procs @var{init-values}
 Build a queue of items and return @math{3} values:
 
 @enumerate
@@ -3996,18 +3996,18 @@ Usage examples:
 (import (vicare))
 
 (let-values (((empty? enqueue! dequeue!)
-              (make-queue)))
+              (make-queue-procs)))
   (empty?))
 @result{} #t
 
 (let-values (((empty? enqueue! dequeue!)
-              (make-queue)))
+              (make-queue-procs)))
   (enqueue! 1)
   (empty?))
 @result{} #f
 
 (let-values (((empty? enqueue! dequeue!)
-              (make-queue)))
+              (make-queue-procs)))
   (enqueue! 1)
   (empty?)      @result{} #f
   (dequeue!)    @result{} 1
@@ -4015,7 +4015,7 @@ Usage examples:
 @result{} #t
 
 (let-values (((empty? enqueue! dequeue!)
-              (make-queue)))
+              (make-queue-procs)))
   (enqueue! 1)
   (enqueue! 2)
   (enqueue! 3)
