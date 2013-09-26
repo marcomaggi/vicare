@@ -108,9 +108,7 @@ library @library{vicare arguments validation}.
 
 
 @deffn {Validation Clause} stack @var{obj}
-@deffnx {Validation Clause} stack/false @var{obj}
-Succeed if @var{obj} satisfies the predicate @func{stack?}; the second
-clause also accepts @false{}.
+Succeed if @var{obj} satisfies the predicate @func{stack?}.
 @end deffn
 
 @c page

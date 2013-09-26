@@ -29,9 +29,7 @@
   (export
     <queue>
     (rename (queue.vicare-arguments-validation
-	     <queue>.vicare-arguments-validation)
-	    (queue/false.vicare-arguments-validation
-	     <queue>/false.vicare-arguments-validation))
+	     <queue>.vicare-arguments-validation))
     list->queue
     vector->queue)
   (import (nausicaa)

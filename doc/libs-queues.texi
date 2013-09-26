@@ -108,9 +108,7 @@ library @library{vicare arguments validation}.
 
 
 @deffn {Validation Clause} queue @var{obj}
-@deffnx {Validation Clause} queue/false @var{obj}
-Succeed if @var{obj} satisfies the predicate @func{queue?}; the second
-clause also accepts @false{}.
+Succeed if @var{obj} satisfies the predicate @func{queue?}.
 @end deffn
 
 @c page

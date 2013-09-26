@@ -29,9 +29,7 @@
   (export
     <stack>
     (rename (stack.vicare-arguments-validation
-	     <stack>.vicare-arguments-validation)
-	    (stack/false.vicare-arguments-validation
-	     <stack>/false.vicare-arguments-validation))
+	     <stack>.vicare-arguments-validation))
     list->stack
     vector->stack)
   (import (nausicaa)
