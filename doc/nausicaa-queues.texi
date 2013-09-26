@@ -23,7 +23,7 @@ containers queues}.
 @section Queue objects
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{nausicaa
 containers queues}.
 
 
@@ -31,14 +31,15 @@ containers queues}.
 @cindex @var{queue} argument
 @cindex Argument @var{queue}
 Label type to be used to handle @objtype{queue} objects as defined by
-@library{vicare containers queues}.  In this documentation @class{queue}
-object arguments to functions are indicated as @var{queue}.
+the library @library{vicare containers queues}.  In this documentation
+@class{queue} object arguments to functions are indicated as
+@var{queue}.
 @end deftp
 
 
 @defop {Default constructor} @aclass{queue} constructor @var{obj} @dots{}
 Build and return a @class{queue} object holding the given objects, which
-are pushed on the queue from right to left.
+are pushed on the queue from lefto to right.
 @end defop
 
 
@@ -106,7 +107,7 @@ instantiated as follows:
 
 
 The following bindings are meant to be used with the facilities of the
-library @library{vicare arguments validation}.
+library @library{nausicaa arguments validation}.
 
 
 @deffn {Validation Clause} @aclass{queue} @var{obj}
@@ -120,7 +121,7 @@ accepts @false{}.
 @section Inspecting queue objects
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{nausicaa
 containers queues}.  The bindings whose name is prefixed with @code{$}
 are unsafe operations: they do @strong{not} validate their arguments
 before accessing them.
@@ -128,20 +129,20 @@ before accessing them.
 
 @deftypecv {Immutable virtual field} @aclass{queue} @aclass{boolean} empty?
 @deftypecvx {Immutable virtual field} @aclass{queue} @aclass{boolean} $empty?
-A boolean, @true{} if @var{queue} is empty; otherwise return @false{}.
+A boolean, @true{} if the instance is empty; otherwise return @false{}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{queue} @aclass{boolean} not-empty?
 @deftypecvx {Immutable virtual field} @aclass{queue} @aclass{boolean} $not-empty?
-A boolean, @true{} if @var{queue} is @strong{not} empty; otherwise
+A boolean, @true{} if the instance is @strong{not} empty; otherwise
 return @false{}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{queue} @aclass{integer} size
 @deftypecvx {Immutable virtual field} @aclass{queue} @aclass{integer} $size
-An exact integer representing the number of objects in @var{queue}.
+An exact integer representing the number of objects in the instance.
 @end deftypecv
 
 @c page
@@ -149,7 +150,7 @@ An exact integer representing the number of objects in @var{queue}.
 @section Queue accessors and mutators
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{nausicaa
 containers queues}.  The bindings whose name is prefixed with @code{$}
 are unsafe operations: they do @strong{not} validate their arguments
 before accessing them.
@@ -186,7 +187,7 @@ Raise an assertion violation if @var{queue} is empty.
 @section Converting queues to other objects
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{nausicaa
 containers queues}.  The bindings whose name is prefixed with @code{$}
 are unsafe operations: they do @strong{not} validate their arguments
 before accessing them.

@@ -128,20 +128,20 @@ before accessing them.
 
 @deftypecv {Immutable virtual field} @aclass{stack} @aclass{boolean} empty?
 @deftypecvx {Immutable virtual field} @aclass{stack} @aclass{boolean} $empty?
-A boolean, @true{} if @var{stack} is empty; otherwise return @false{}.
+A boolean, @true{} if the instance is empty; otherwise return @false{}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{stack} @aclass{boolean} not-empty?
 @deftypecvx {Immutable virtual field} @aclass{stack} @aclass{boolean} $not-empty?
-A boolean, @true{} if @var{stack} is @strong{not} empty; otherwise
+A boolean, @true{} if the instance is @strong{not} empty; otherwise
 return @false{}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{stack} @aclass{integer} size
 @deftypecvx {Immutable virtual field} @aclass{stack} @aclass{integer} $size
-An exact integer representing the number of objects in @var{stack}.
+An exact integer representing the number of objects in the instance.
 @end deftypecv
 
 @c page

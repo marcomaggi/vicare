@@ -38,7 +38,7 @@ non--generative and available for subtyping.  In this documentation
 
 @defun make-queue @var{obj} @dots{}
 Build and return a @objtype{queue} object holding the given objects,
-which are pushed on the queue from right to left.
+which are pushed on the queue from left to right.
 @end defun
 
 
