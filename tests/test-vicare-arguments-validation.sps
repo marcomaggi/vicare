@@ -2332,6 +2332,34 @@
   #t)
 
 
+(parametrise ((check-test-name	'logic-clause-or-false))
+
+  (define who 'test)
+
+  (check
+      (let ((obj 123))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  123))
+    => 123)
+
+  (check
+      (let ((obj #f))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  #t))
+    => #t)
+
+  (check-for-procedure-argument-violation
+   (let ((obj "ciao"))
+     (with-arguments-validation (who)
+	 (((or false fixnum)	obj))
+       #t))
+   '("ciao"))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

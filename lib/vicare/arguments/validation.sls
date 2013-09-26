@@ -307,6 +307,8 @@
     (vicare unsafe operations))
 
 
+(define-syntax or-false)
+
 (define-syntax define-argument-validation
   ;;Define a set of macros to  validate arguments, to be used along with
   ;;WITH-ARGUMENTS-VALIDATION.  Transform:
@@ -315,7 +317,7 @@
   ;;    (bytevector? bv)
   ;;    (procedure-argument-violation who "expected a bytevector as argument" bv))
   ;;
-  ;;into:
+  ;;into (somewhat):
   ;;
   ;;  (define-inline (bytevector.vicare-arguments-validation who bv . body)
   ;;    (if (the-predicate bv)
@@ -336,20 +338,28 @@
     (define who 'define-argument-validation)
     (define (main stx)
       (syntax-case stx ()
-	((_ (?name ?who ?arg ...) ?predicate ?error-handler)
+	((_ (?name ?who ?arg0 ?arg ...) ?predicate ?error-handler)
 	 (and (identifier? #'?name)
 	      (identifier? #'?who))
 	 (let ((ctx  #'?name)
 	       (name (symbol->string (syntax->datum #'?name))))
 	   (with-syntax
-	       ((VALIDATE (%name ctx name ".vicare-arguments-validation")))
+	       ((VALIDATE          (%name ctx name ".vicare-arguments-validation")))
 	     #'(begin
-		 (define-syntax-rule (the-predicate ?arg ...) ?predicate)
-		 (define-syntax-rule (the-error ?who ?arg ...) ?error-handler)
-		 (define-syntax-rule (VALIDATE ?who ?arg ... . body)
-		   (if (the-predicate ?arg ...)
-		       (begin . body)
-		     (the-error ?who ?arg ...)))))))
+		 (define-syntax-rule (the-predicate ?arg0 ?arg ...) ?predicate)
+		 (define-syntax-rule (the-error ?who ?arg0 ?arg ...) ?error-handler)
+		 (define-syntax (VALIDATE stx)
+		   (syntax-case stx (or-false)
+		     ((_ ?who () (?arg0 ?arg ...) . ?body)
+		      #'(if (the-predicate ?arg0 ?arg ...)
+			    (begin . ?body)
+			  (the-error ?who ?arg0 ?arg ...)))
+		     ((_ ?who (or-false) (?arg0 ?arg ...) . ?body)
+		      #'(if (or (not ?arg0)
+				(the-predicate ?arg0 ?arg ...))
+			    (begin . ?body)
+			  (the-error ?who ?arg0 ?arg ...)))
+		     ))))))
 	(_
 	 (%synner "invalid input form" #f))))
 
@@ -424,8 +434,7 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?always-include (?who) ((?validator ?arg ...) ...) . ?body)
-	 (and (identifier? #'?who)
-	      (for-all identifier? (syntax->list #'(?validator ...))))
+	 (identifier? #'?who)
 	 ;;Whether we  include the arguments  checking or not,  we build
 	 ;;the output form validating the input form.
 	 (let* ((include?	(syntax->datum #'?always-include))
@@ -440,23 +449,35 @@
 	 (%synner "invalid input form" #f))))
 
     (define (%build-output-form who validators list-of-args body)
-      (syntax-case validators (void)
+      (syntax-case validators (void or)
 	(()
 	 #`(let () #,body))
+
 	;;Accept VOID as special  validator meaning "always valid"; this
 	;;is sometimes useful when composing syntax output forms.
 	((void . ?other-validators)
 	 (%build-output-form who #'?other-validators list-of-args body))
+
+	(((or ?false ?validator) . ?other-validators)
+	 (and (identifier? #'?false)
+	      (eq? 'false (syntax->datum #'?false))
+	      (identifier? #'?validator))
+	 (%generate-validation-form who #'?validator #'(or-false) #'?other-validators list-of-args body))
+
 	((?validator . ?other-validators)
 	 (identifier? #'?validator)
-	 (let ((str (symbol->string (syntax->datum #'?validator))))
-	   (with-syntax
-	       ((VALIDATE (%name #'?validator str ".vicare-arguments-validation"))
-		(((ARG ...) . OTHER-ARGS) list-of-args))
-	     #`(VALIDATE #,who ARG ...
-			 #,(%build-output-form who #'?other-validators #'OTHER-ARGS body)))))
+	 (%generate-validation-form who #'?validator #'()         #'?other-validators list-of-args body))
+
 	((?validator . ?others)
 	 (%synner "invalid argument-validator selector" #'?validator))))
+
+    (define (%generate-validation-form who validator-id modifiers-stx other-validators-stx list-of-args body)
+      (let ((str (symbol->string (syntax->datum validator-id))))
+	   (with-syntax
+	       ((VALIDATE (%name validator-id str ".vicare-arguments-validation"))
+		(((ARG0 ARG ...) . OTHER-ARGS) list-of-args))
+	     #`(VALIDATE #,who #,modifiers-stx (ARG0 ARG ...)
+			 #,(%build-output-form who other-validators-stx #'OTHER-ARGS body)))))
 
     (define (%name ctx name suffix-string)
       (let ((str (string-append name suffix-string)))

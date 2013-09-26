@@ -55,6 +55,12 @@ Notes for revision 0.3d5
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
 
+* Added special validation clause:
+
+    (or false ?validator)
+
+  to the arguments validation library.
+
 * Added EVAL-FOR-EXPAND to (vicare).
 
 * The validation  clauses of  the library (vicare  arguments validation)
