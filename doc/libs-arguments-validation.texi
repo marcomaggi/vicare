@@ -106,12 +106,32 @@ just evaluate the @meta{body} forms.
 @meta{who} must be an identifier used as argument when building a
 @condition{who} condition object.
 
-@meta{validator} must be an identifier previously used as name of
-validation clause by the @func{define-argument-validation} macro.  As a
-special case when @meta{validator} is the identifier @func{void},
-exported by @library{vicare}, no validation is generated: the @var{arg}
-values are considered always valid; this is sometimes useful when using
-this macro in the expansion of another macro.
+@meta{validator} must be one among:
+
+@itemize
+@item
+An identifier previously used as name of validation clause by the
+@func{define-argument-validation} macro.
+
+@item
+The form @code{(or false @meta{validator-id})}, where: @code{or} is the
+identifier exported by @library{vicare}; @code{false} is an identifier
+whose expression is the symbol @code{false}; @meta{validator-id} must be
+an identifier previously used as name of validation clause by the
+@func{define-argument-validation} macro.
+
+@item
+The identifier @func{void}, exported by @library{vicare}; this is a
+special case for which no validation is generated: the @var{arg} values
+are considered always valid; this is sometimes useful when using this
+macro in the expansion of another macro.
+@end itemize
+
+@quotation
+@strong{NOTE} In future a full logic expression may be possible as
+@meta{validator} argument.  At present only the special @code{or} case
+is supported, with @code{false} as first operand.
+@end quotation
 
 Simple example:
 
