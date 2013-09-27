@@ -2314,7 +2314,7 @@ Here is a simple example of namespace:
 (import (vicare)
   (vicare language-extensions namespaces))
 
-(define-namespace hellos
+(define-namespace hellos::
   (export ciao salut)
   (define (ciao)
     'ciao)
@@ -2323,8 +2323,8 @@ Here is a simple example of namespace:
       ((_)
        'salut))))
 
-(hellos ciao)           @result{} ciao
-(hellos salut)          @result{} salut
+(hellos:: ciao)         @result{} ciao
+(hellos:: salut)        @result{} salut
 @end example
 
 @noindent
@@ -2334,20 +2334,20 @@ namespaces can be nested:
 (import (vicare)
   (vicare language-extensions namespaces))
 
-(define-namespace hellos
-  (export ciao salut japanese)
+(define-namespace hellos::
+  (export ciao salut japanese::)
   (define (ciao)
     'ciao)
   (define (salut)
     'salut)
-  (define-namespace japanese
+  (define-namespace japanese::
     (export ohayo)
     (define (ohayo)
       'ohayo)))
 
-(hellos ciao)           @result{} ciao
-(hellos salut)          @result{} salut
-(hellos japanese ohayo) @result{} ohayo
+(hellos:: ciao)                 @result{} ciao
+(hellos:: salut)                @result{} salut
+(hellos:: japanese:: ohayo)     @result{} ohayo
 @end example
 
 @noindent
@@ -2358,7 +2358,7 @@ the current lexical context:
 (import (vicare)
   (vicare language-extensions namespaces))
 
-(define-namespace hellos
+(define-namespace hellos::
   (export ciao salut)
   (define (ciao)
     'ciao)
@@ -2367,10 +2367,14 @@ the current lexical context:
       ((_)
        'salut))))
 
-(using hellos)
+(using hellos::)
 (ciao)          @result{} ciao
 (salut)         @result{} salut
 @end example
+
+@noindent
+while not enforced it seems a good idea to suffix namespace names with
+@code{::}.
 
 The following bindings are exported by the library @library{vicare
 language-extensions namespaces}.
