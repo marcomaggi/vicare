@@ -5518,7 +5518,7 @@
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
     ;;LEXENV.RUN  and  LEXENV.EXPAND,  the   result  must  be  a  single
     ;;identifier  representing a  R6RS record  type.  Return  a symbolic
@@ -5539,8 +5539,8 @@
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer      function      used     to      expand      R6RS's
-    ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from the top-level built in
-    ;;environment.  Expand  the contents of  EXPR-STX in the  context of
+    ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntax uses from the top-level built
+    ;;in environment.  Expand the contents of EXPR-STX in the context of
     ;;the lexical environments LEXENV.RUN  and LEXENV.EXPAND, the result
     ;;must  be a  single  identifier representing  a  R6RS record  type.
     ;;Return a  symbolic expression evaluating to  the record destructor
