@@ -1464,6 +1464,8 @@
 
     ;; misc
     eval-for-expand
+    record-type-unsafe-ref
+    record-type-unsafe-set!
 
 
 ;;;; bindings from (nausicaa language oopp)

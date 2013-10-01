@@ -55,6 +55,9 @@ Notes for revision 0.3d5
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
 
+* Added syntaxes  "record-type-unsafe-ref" and "record-type-unsafe-set!"
+  to (vicare).
+
 * Added special validation clause:
 
     (or false ?validator)
