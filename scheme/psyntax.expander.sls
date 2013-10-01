@@ -3590,10 +3590,7 @@
 
   (define (get-mutators foo fields)
     (define (gen-name x)
-      (datum->syntax foo
-		     (string->symbol
-		      (string-append (symbol->string (syntax->datum foo)) "-"
-				     (symbol->string (syntax->datum x)) "-set!"))))
+      (id foo foo "-" x "-set!"))
     (let f ((fields fields))
       (syntax-match fields (mutable)
 	(() '())
@@ -3605,10 +3602,7 @@
 
   (define (get-unsafe-mutators foo fields)
     (define (gen-name x)
-      (datum->syntax foo
-		     (string->symbol
-		      (string-append "$" (symbol->string (syntax->datum foo))
-				     "-" (symbol->string (syntax->datum x)) "-set!"))))
+      (id foo "$" foo "-" x "-set!"))
     (let f ((fields fields))
       (syntax-match fields (mutable)
 	(() '())
@@ -3630,10 +3624,7 @@
 
   (define (get-accessors foo fields)
     (define (gen-name x)
-      (datum->syntax foo
-		     (string->symbol
-		      (string-append (symbol->string (syntax->datum foo)) "-"
-				     (symbol->string (syntax->datum x))))))
+      (id foo foo "-" x))
     (map
 	(lambda (field)
 	  (syntax-match field (mutable immutable)
@@ -3647,10 +3638,7 @@
 
   (define (get-unsafe-accessors foo fields)
     (define (gen-name x)
-      (datum->syntax foo
-		     (string->symbol
-		      (string-append "$" (symbol->string (syntax->datum foo))
-				     "-" (symbol->string (syntax->datum x))))))
+      (id foo "$" foo "-" x))
     (map (lambda (field)
 	   (syntax-match field (mutable immutable)
 	     ((mutable name accessor mutator) (identifier? accessor) (gen-name name))
@@ -3700,9 +3688,10 @@
 	   (stx-error cls "malformed define-record-type clause"))))))
 
   (define (id ctxt . str*)
-    ;;Given the identifier  CTXT and a list of strings  or symbols STR*:
-    ;;concatenate  all the  items in  STR*,  with the  result build  and
-    ;;return a new identifier in the same context of CTXT.
+    ;;Given the  identifier CTXT  and a  list of  strings or  symbols or
+    ;;identifiers  STR*: concatenate  all the  items in  STR*, with  the
+    ;;result build  and return a new  identifier in the same  context of
+    ;;CTXT.
     ;;
     (datum->syntax ctxt (string->symbol (apply string-append
 					       (map (lambda (x)
@@ -3710,6 +3699,8 @@
 							     (symbol->string x))
 							    ((string? x)
 							     x)
+							    ((identifier? x)
+							     (symbol->string (syntax->datum x)))
 							    (else
 							     (assertion-violation who "BUG"))))
 						 str*)))))
