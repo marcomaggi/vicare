@@ -3460,40 +3460,44 @@
 	 ;;Record instance constructor.
 	 (define ,make-foo (record-constructor ,foo-rcd))
 	 ;;Safe record fields accessors.
-	 ,@(map
-	       (lambda (foo-x idx)
-		 `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
+	 ,@(map (lambda (foo-x idx)
+		  `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
 	     foo-x* idx*)
 	 ;;Safe record fields mutators (if any).
-	 ,@(map
-	       (lambda (set-foo-x! idx)
-		 `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
+	 ,@(map (lambda (set-foo-x! idx)
+		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
 	     set-foo-x!* set-foo-idx*))
       (if (strict-r6rs)
 	  '()
 	`( ;; Unsafe record fields accessors.
-	  ,@(map
-		(lambda (unsafe-foo-x idx unsafe-foo-x-idx)
-		  `(begin
-		     (define ,unsafe-foo-x-idx
-		       ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		     (define-syntax ,unsafe-foo-x
-		       (syntax-rules ()
-			 ((_ x)
-			  ($struct-ref x ,unsafe-foo-x-idx))))
-		     ))
+	  ,@(map (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
+		   `(begin
+		      (define ,unsafe-foo-x-idx
+			;;The field at index 3  in the RTD is: the index
+			;;of  the first  field  of this  subtype in  the
+			;;layout of instances; it is the total number of
+			;;fields of the parent type.
+			($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		      (define-syntax ,unsafe-foo-x
+			(syntax-rules ()
+			  ((_ x)
+			   ($struct-ref x ,unsafe-foo-x-idx))))
+		      ))
 	      unsafe-foo-x* idx* unsafe-foo-x-idx*)
 	  ;; Unsafe record fields mutators.
-	  ,@(map
-		(lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
-		  `(begin
-		     (define ,unsafe-set-foo-x!-idx
-		       ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		     (define-syntax ,unsafe-set-foo-x!
-		       (syntax-rules ()
-			 ((_ x v)
-			  ($struct-set! x ,unsafe-set-foo-x!-idx v))))
-		     ))
+	  ,@(map (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
+		   `(begin
+		      (define ,unsafe-set-foo-x!-idx
+			;;The field at index 3  in the RTD is: the index
+			;;of  the first  field  of this  subtype in  the
+			;;layout of instances; it is the total number of
+			;;fields of the parent type.
+			($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		      (define-syntax ,unsafe-set-foo-x!
+			(syntax-rules ()
+			  ((_ x v)
+			   ($struct-set! x ,unsafe-set-foo-x!-idx v))))
+		      ))
 	      unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
 	  ))
       #| end of append |# )
@@ -3644,15 +3648,14 @@
   (define (%get-accessors foo fields)
     (define (gen-name x)
       (id foo foo "-" x))
-    (map
-	(lambda (field)
-	  (syntax-match field (mutable immutable)
-	    ((mutable name accessor mutator) (identifier? accessor) accessor)
-	    ((immutable name accessor)       (identifier? accessor) accessor)
-	    ((mutable name)                  (identifier? name) (gen-name name))
-	    ((immutable name)                (identifier? name) (gen-name name))
-	    (name                            (identifier? name) (gen-name name))
-	    (others (stx-error field "invalid field spec"))))
+    (map (lambda (field)
+	   (syntax-match field (mutable immutable)
+	     ((mutable name accessor mutator) (identifier? accessor) accessor)
+	     ((immutable name accessor)       (identifier? accessor) accessor)
+	     ((mutable name)                  (identifier? name) (gen-name name))
+	     ((immutable name)                (identifier? name) (gen-name name))
+	     (name                            (identifier? name) (gen-name name))
+	     (others (stx-error field "invalid field spec"))))
       fields))
 
   (define (%get-unsafe-accessors foo fields)
@@ -3674,6 +3677,9 @@
       fields))
 
   (define (%enumerate ls)
+    ;;Return a list of zero-based exact integers with the same length of
+    ;;LS.
+    ;;
     (let recur ((ls ls)
 		(i  0))
       (if (null? ls)
