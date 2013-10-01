@@ -137,6 +137,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-arrays.texi			\
 	nausicaa-stacks.texi			\
 	nausicaa-queues.texi			\
+	nausicaa-bitvectors.texi		\
 	\
 	macros.texi				\
 	fdl-1.3.texi				\
