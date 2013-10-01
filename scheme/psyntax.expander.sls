@@ -3478,10 +3478,8 @@
 			;;layout of instances; it is the total number of
 			;;fields of the parent type.
 			($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		      (define-syntax ,unsafe-foo-x
-			(syntax-rules ()
-			  ((_ x)
-			   ($struct-ref x ,unsafe-foo-x-idx))))
+		      (define-syntax-rule (,unsafe-foo-x x)
+			($struct-ref x ,unsafe-foo-x-idx))
 		      ))
 	      unsafe-foo-x* idx* unsafe-foo-x-idx*)
 	  ;; Unsafe record fields mutators.
@@ -3493,10 +3491,8 @@
 			;;layout of instances; it is the total number of
 			;;fields of the parent type.
 			($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		      (define-syntax ,unsafe-set-foo-x!
-			(syntax-rules ()
-			  ((_ x v)
-			   ($struct-set! x ,unsafe-set-foo-x!-idx v))))
+		      (define-syntax-rule (,unsafe-set-foo-x! x v)
+			($struct-set! x ,unsafe-set-foo-x!-idx v))
 		      ))
 	      unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
 	  ))
