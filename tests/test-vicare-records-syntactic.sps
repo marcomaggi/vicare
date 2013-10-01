@@ -263,6 +263,171 @@
   #t)
 
 
+(parametrise ((check-test-name	'record-type-unsafe))
+
+  (check	;unsafe accessors
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	(list (record-type-unsafe-ref color red   X)
+	      (record-type-unsafe-ref color green X)
+	      (record-type-unsafe-ref color blue  X)))
+    => '(1 2 3))
+
+  (check	;unsafe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	(record-type-unsafe-set! color red   X 10)
+	(record-type-unsafe-set! color green X 20)
+	(record-type-unsafe-set! color blue  X 30)
+	(list (record-type-unsafe-ref color red   X)
+	      (record-type-unsafe-ref color green X)
+	      (record-type-unsafe-ref color blue  X)))
+    => '(10 20 30))
+
+  (check	;unsafe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red   the-red   set-the-red!)
+		  (mutable green the-green set-the-green!)
+		  (mutable blue  the-blue  set-the-blue!)))
+	(define X
+	  (make-color 1 2 3))
+	(record-type-unsafe-set! color red   X 10)
+	(record-type-unsafe-set! color green X 20)
+	(record-type-unsafe-set! color blue  X 30)
+	(list (record-type-unsafe-ref color red   X)
+	      (record-type-unsafe-ref color green X)
+	      (record-type-unsafe-ref color blue  X)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check	;unsafe accessors, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(list (record-type-unsafe-ref alpha a O)
+	      (record-type-unsafe-ref alpha b O)
+	      (record-type-unsafe-ref alpha c O)
+	      (record-type-unsafe-ref beta a O)
+	      (record-type-unsafe-ref beta b O)
+	      (record-type-unsafe-ref beta c O)))
+    => '(1 2 3 4 5 6))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(record-type-unsafe-set! alpha a O 10)
+	(record-type-unsafe-set! alpha b O 20)
+	(record-type-unsafe-set! alpha c O 30)
+	(record-type-unsafe-set! beta a O 40)
+	(record-type-unsafe-set! beta b O 50)
+	(record-type-unsafe-set! beta c O 60)
+	(list (record-type-unsafe-ref alpha a O)
+	      (record-type-unsafe-ref alpha b O)
+	      (record-type-unsafe-ref alpha c O)
+	      (record-type-unsafe-ref beta a O)
+	      (record-type-unsafe-ref beta b O)
+	      (record-type-unsafe-ref beta c O)))
+    => '(10 20 30 40 50 60))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(record-type-unsafe-set! alpha a O 10)
+	#;(record-type-unsafe-set! alpha b O 20)
+	(record-type-unsafe-set! alpha c O 30)
+	(record-type-unsafe-set! beta a O 40)
+	#;(record-type-unsafe-set! beta b O 50)
+	(record-type-unsafe-set! beta c O 60)
+	(list (record-type-unsafe-ref alpha a O)
+	      (record-type-unsafe-ref alpha b O)
+	      (record-type-unsafe-ref alpha c O)
+	      (record-type-unsafe-ref beta a O)
+	      (record-type-unsafe-ref beta b O)
+	      (record-type-unsafe-ref beta c O)))
+    => '(10 2 30 40 5 60))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type gamma
+	  (parent beta)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define O
+	  (make-gamma 1 2 3 4 5 6 7 8 9))
+	(record-type-unsafe-set! alpha a O 10)
+	#;(record-type-unsafe-set! alpha b O 20)
+	(record-type-unsafe-set! alpha c O 30)
+	(record-type-unsafe-set! beta a O 40)
+	#;(record-type-unsafe-set! beta b O 50)
+	(record-type-unsafe-set! beta c O 60)
+	(record-type-unsafe-set! gamma a O 70)
+	#;(record-type-unsafe-set! gamma b O 80)
+	(record-type-unsafe-set! gamma c O 90)
+	(list (record-type-unsafe-ref alpha a O)
+	      (record-type-unsafe-ref alpha b O)
+	      (record-type-unsafe-ref alpha c O)
+	      (record-type-unsafe-ref beta a O)
+	      (record-type-unsafe-ref beta b O)
+	      (record-type-unsafe-ref beta c O)
+	      (record-type-unsafe-ref gamma a O)
+	      (record-type-unsafe-ref gamma b O)
+	      (record-type-unsafe-ref gamma c O)))
+    => '(10 2 30 40 5 60 70 8 90))
+
+  #t)
+
+
 (parametrise ((check-test-name	'reset))
 
   (define-record-type <alpha>

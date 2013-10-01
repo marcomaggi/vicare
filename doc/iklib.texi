@@ -3828,6 +3828,14 @@ The current implementation is the following:
 The following bindings are exported by the library @library{vicare}.
 
 
+@deffn Syntax record-type-unsafe-ref @meta{type-name} @meta{field-name} @meta{record}
+@deffnx Syntax record-type-unsafe-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
+Expand to an unsafe expression which accesses or mutates the field whose
+name is @meta{field-name} in the record @meta{record} of type
+@meta{type-name}.
+@end deffn
+
+
 @defun record-reset @var{record}
 Reset to void all the fields of a record, whatever its type.
 @end defun
