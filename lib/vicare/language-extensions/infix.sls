@@ -57,78 +57,17 @@
 		  (fxnot				fx~)
 		  (fxarithmetic-shift-left		fx<<)
 		  (fxarithmetic-shift-right		fx>>)))
-  (import (for (rnrs)
+  (import (for (vicare)
 	    run expand (meta 2))
     (for (only (vicare)
 	       xor)
-      run expand (meta 2)))
+      run expand (meta 2))
+    (vicare language-extensions increments))
 
 
 ;;;; helpers
 
-(define-syntax ?
-  (syntax-rules ()))
-
-(define-syntax :
-  (syntax-rules ()))
-
-(define-syntax incr!
-  (syntax-rules ()))
-
-(define-syntax decr!
-  (syntax-rules ()))
-
-(define-syntax pre-incr
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?id)
-       (identifier? #'?id)
-       #'(begin
-	   (set! ?id (+ ?id 1))
-	   ?id))
-      ((_ ?expr)
-       #'(+ ?expr 1))
-      (_
-       (syntax-violation 'pre-incr "invalid pre-increment operation" (syntax->datum stx))))))
-
-(define-syntax pre-decr
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?id)
-       (identifier? #'?id)
-       #'(begin
-	   (set! ?id (- ?id 1))
-	   ?id))
-      ((_ ?expr)
-       #'(- ?expr 1))
-      (_
-       (syntax-violation 'pre-decr "invalid pre-decrement operation" (syntax->datum stx))))))
-
-(define-syntax post-incr
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?id)
-       (identifier? #'?id)
-       #'(let ((v ?id))
-	   (set! ?id (+ ?id 1))
-	   v))
-      ((_ ?expr)
-       #'(+ ?expr 1))
-      (_
-       (syntax-violation 'post-incr "invalid post-increment operation" (syntax->datum stx))))))
-
-(define-syntax post-decr
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?id)
-       (identifier? #'?id)
-       #'(let ((v ?id))
-	   (set! ?id (- ?id 1))
-	   v))
-      ((_ ?expr)
-       #'(- ?expr 1))
-      (_
-       (syntax-violation 'post-decr "invalid post-decrement operation" (syntax->datum stx))))))
+(define-auxiliary-syntaxes ? :)
 
 
 (define-syntax infix
@@ -160,8 +99,8 @@
     (define $eqv?	(make-<lexical-token> 'EQ #'eqv?))
     (define $equal?	(make-<lexical-token> 'EQ #'equal?))
     ;; Increment and decrement.
-    (define $incr!	(make-<lexical-token> 'INCR	(cons #'pre-incr #'post-incr)))
-    (define $decr!	(make-<lexical-token> 'DECR	(cons #'pre-decr #'post-decr)))
+    (define $incr!	(make-<lexical-token> 'INCR	(cons #'pre-incr! #'post-incr!)))
+    (define $decr!	(make-<lexical-token> 'DECR	(cons #'pre-decr! #'post-decr!)))
     ;; Logical operators
     (define $and	(make-<lexical-token> 'AND	#'and))
     (define $not	(make-<lexical-token> 'NOT	#'not))

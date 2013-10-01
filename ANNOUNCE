@@ -67,6 +67,8 @@ Notes for revision 0.3d5
   now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
   ASSERTION-VIOLATION.
 
+* Added library (vicare language-extensions increments).
+
 * Added containers libraries:
 
      (nausicaa containers lists)

@@ -39,6 +39,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/hooks.sls				\
 	vicare/language-extensions/identifier-alists.sls		\
 	vicare/language-extensions/identifier-properties.sls		\
+	vicare/language-extensions/increments.sls			\
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/keywords.sls				\
 	vicare/language-extensions/loops.sls				\
@@ -275,7 +276,8 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/containers/strings.sls				\
 	nausicaa/containers/arrays.sls				\
 	nausicaa/containers/stacks.sls				\
-	nausicaa/containers/queues.sls
+	nausicaa/containers/queues.sls				\
+	nausicaa/containers/bitvectors.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

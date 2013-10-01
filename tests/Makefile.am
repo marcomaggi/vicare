@@ -256,29 +256,30 @@ VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	test-srfi-106-socket.sps
 
 VICARE_SCHEME_NAUSICAA_TESTS	= \
-	test-nausicaa-tags-helpers.sps			\
-	test-nausicaa-tags-core-classes.sps		\
-	test-nausicaa-tags-core-labels.sps		\
-	test-nausicaa-tags-docs.sps			\
-	test-nausicaa-oopp-generics.sps			\
-	test-nausicaa-oopp-binding-constructs.sps	\
-	test-nausicaa-oopp-builtin-labels.sps		\
-	test-nausicaa-oopp-core.sps			\
-	test-nausicaa-oopp-labels-and-interfaces.sps	\
-	test-nausicaa-oopp-label-core.sps		\
-	test-nausicaa-oopp-label-shadowing.sps		\
-	test-nausicaa-oopp-mixins.sps			\
-	test-nausicaa-oopp-setter-and-getter.sps	\
-	test-nausicaa-multimethods-ordinary.sps		\
-	test-nausicaa-multimethods-starred.sps		\
-	test-nausicaa-conditions.sps			\
+	test-nausicaa-tags-helpers.sps					\
+	test-nausicaa-tags-core-classes.sps				\
+	test-nausicaa-tags-core-labels.sps				\
+	test-nausicaa-tags-docs.sps					\
+	test-nausicaa-oopp-generics.sps					\
+	test-nausicaa-oopp-binding-constructs.sps			\
+	test-nausicaa-oopp-builtin-labels.sps				\
+	test-nausicaa-oopp-core.sps					\
+	test-nausicaa-oopp-labels-and-interfaces.sps			\
+	test-nausicaa-oopp-label-core.sps				\
+	test-nausicaa-oopp-label-shadowing.sps				\
+	test-nausicaa-oopp-mixins.sps					\
+	test-nausicaa-oopp-setter-and-getter.sps			\
+	test-nausicaa-multimethods-ordinary.sps				\
+	test-nausicaa-multimethods-starred.sps				\
+	test-nausicaa-conditions.sps					\
 	\
-	test-nausicaa-containers-lists.sps		\
-	test-nausicaa-containers-vectors.sps		\
-	test-nausicaa-containers-strings.sps		\
-	test-nausicaa-containers-arrays.sps		\
-	test-nausicaa-containers-stacks.sps		\
-	test-nausicaa-containers-queues.sps
+	test-nausicaa-containers-lists.sps				\
+	test-nausicaa-containers-vectors.sps				\
+	test-nausicaa-containers-strings.sps				\
+	test-nausicaa-containers-arrays.sps				\
+	test-nausicaa-containers-stacks.sps				\
+	test-nausicaa-containers-queues.sps				\
+	test-nausicaa-containers-bitvectors.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\
