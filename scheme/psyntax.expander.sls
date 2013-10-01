@@ -3435,8 +3435,7 @@
     ;;Code for protocol.
     (define protocol-code
       (%get-protocol-code clause*))
-    (bless
-     (append
+    (define r6rs-output-code
       `(begin
 	 ;;Record type descriptor.
 	 (define ,foo-rtd ,foo-rtd-code)
@@ -3444,8 +3443,8 @@
 	 (define ,protocol ,protocol-code)
 	 ;;Record constructor descriptor.
 	 (define ,foo-rcd ,foo-rcd-code)
-	 ;;Binding for record type name.  It is an anomalous binding
-	 ;;in the environment.
+	 ;;Binding for record type name.  It  is a spcial binding in the
+	 ;;environment.
 	 (define-syntax ,foo
 	   (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)))
 	 ;;Record instance predicate.
@@ -3459,7 +3458,8 @@
 	 ;;Safe record fields mutators (if any).
 	 ,@(map (lambda (set-foo-x! idx)
 		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
-	     set-foo-x!* set-foo-idx*))
+	     set-foo-x!* set-foo-idx*)))
+    (define vicare-output-code
       (if (strict-r6rs)
 	  '()
 	`( ;; Unsafe record fields accessors.
@@ -3488,9 +3488,8 @@
 			($struct-set! x ,unsafe-set-foo-x!-idx v))
 		      ))
 	      unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
-	  ))
-      #| end of append |# )
-     #| end of bless|# ))
+	  )))
+    (bless (append r6rs-output-code vicare-output-code)))
 
 ;;; --------------------------------------------------------------------
 
