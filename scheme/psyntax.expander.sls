@@ -3405,15 +3405,14 @@
 ;;; --------------------------------------------------------------------
 
   (define (%do-define-record namespec clause*)
-    (define foo		(get-record-name namespec))
+    (define foo		(%get-record-name namespec))
     (define foo-rtd	(gensym))
     (define foo-rcd	(gensym))
     (define protocol	(gensym))
-    (define make-foo	(get-record-constructor-name namespec))
-    (define fields	(get-fields clause*))
+    (define make-foo	(%get-record-constructor-name namespec))
+    (define fields	(%get-fields clause*))
     ;;Indexes for safe accessors and mutators.
-    (define idx*
-      (enumerate fields))
+    (define idx*	(%enumerate fields))
     (define set-foo-idx*
       (get-mutator-indices fields))
     ;;Names of safe accessors and mutators.
@@ -3502,12 +3501,12 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (get-record-name spec)
+  (define (%get-record-name spec)
     (syntax-match spec ()
       ((foo make-foo foo?) foo)
       (foo foo)))
 
-  (define (get-record-constructor-name spec)
+  (define (%get-record-constructor-name spec)
     (syntax-match spec ()
       ((foo make-foo foo?) make-foo)
       (foo (identifier? foo) (id foo "make-" (syntax->datum foo)))))
@@ -3580,32 +3579,38 @@
       ((_ expr) expr)
       (_        #f)))
 
-  (define (get-fields clause*)
+  (define (%get-fields clause*)
     (syntax-match clause* (fields)
-      (() '())
-      (((fields f* ...) . _) f*)
-      ((_ . rest) (get-fields rest))))
+      (()
+       '())
+      (((fields f* ...) . _)
+       f*)
+      ((_ . rest)
+       (%get-fields rest))))
 
   (define (get-mutator-indices fields)
-    (let f ((fields fields) (i 0))
+    (let recur ((fields fields) (i 0))
       (syntax-match fields (mutable)
-	(() '())
+	(()
+	 '())
 	(((mutable . _) . rest)
-	 (cons i (f rest (+ i 1))))
+	 (cons i (recur rest (+ i 1))))
 	((_ . rest)
-	 (f rest (+ i 1))))))
+	 (recur rest (+ i 1))))))
 
   (define (get-mutators foo fields)
     (define (gen-name x)
       (id foo foo "-" x "-set!"))
-    (let f ((fields fields))
+    (let recur ((fields fields))
       (syntax-match fields (mutable)
-	(() '())
+	(()
+	 '())
 	(((mutable name accessor mutator) . rest)
-	 (cons mutator (f rest)))
+	 (cons mutator (recur rest)))
 	(((mutable name) . rest)
-	 (cons (gen-name name) (f rest)))
-	((_ . rest) (f rest)))))
+	 (cons (gen-name name) (recur rest)))
+	((_ . rest)
+	 (recur rest)))))
 
   (define (get-unsafe-mutators foo fields)
     (define (gen-name x)
@@ -3661,13 +3666,12 @@
 	   (gensym))
       fields))
 
-  (define (enumerate ls)
+  (define (%enumerate ls)
     (let recur ((ls ls)
 		(i  0))
-      (cond ((null? ls)
-	     '())
-	    (else
-	     (cons i (recur (cdr ls) (+ i 1)))))))
+      (if (null? ls)
+	  '()
+	(cons i (recur (cdr ls) (+ i 1))))))
 
 ;;; --------------------------------------------------------------------
 
