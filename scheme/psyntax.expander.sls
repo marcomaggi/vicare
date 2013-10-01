@@ -3429,11 +3429,19 @@
       (%get-unsafe-mutators-idx-names foo fields))
     ;;Unsafe field accessors and mutators alists.
     (define foo-fields-accessors-table
+      ;;Here we want to build a sexp  which will be BLESSed below in the
+      ;;output code.  The sexp will  evluate to an alist, having symbols
+      ;;representing field  names as  keys and  an identifiers  bound to
+      ;;unsafe accessors as values.
       (map (lambda (name func)
 	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
 	(map syntax->datum field-names)
 	unsafe-foo-x*))
     (define foo-fields-mutators-table
+      ;;Here we want to build a sexp  which will be BLESSed below in the
+      ;;output code.  The sexp will  evluate to an alist, having symbols
+      ;;representing field  names as  keys and  an identifiers  bound to
+      ;;unsafe mutators as values.
       (map (lambda (name func)
 	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
 	(map syntax->datum mutable-field-names)
