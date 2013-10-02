@@ -2700,6 +2700,14 @@
     ($inv-compnum				$numerics $vicare-numerics)
     ($inv-cflonum				$numerics $vicare-numerics)
 
+    ($add1-integer				$numerics $vicare-numerics)
+    ($add1-fixnum				$numerics $vicare-numerics)
+    ($add1-bignum				$numerics $vicare-numerics)
+
+    ($sub1-integer				$numerics $vicare-numerics)
+    ($sub1-fixnum				$numerics $vicare-numerics)
+    ($sub1-bignum				$numerics $vicare-numerics)
+
     ($add-number-number				$numerics $vicare-numerics)
     ($add-fixnum-number				$numerics $vicare-numerics)
     ($add-bignum-number				$numerics $vicare-numerics)

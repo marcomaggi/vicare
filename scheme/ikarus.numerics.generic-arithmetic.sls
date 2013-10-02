@@ -126,6 +126,9 @@
     $inv-flonum		$inv-ratnum	$inv-compnum
     $inv-cflonum
 
+    $add1-integer	$add1-fixnum	$add1-bignum
+    $sub1-integer	$sub1-fixnum	$sub1-bignum
+
     $add-number-number		$add-fixnum-number	$add-bignum-number
     $add-flonum-number		$add-ratnum-number	$add-compnum-number
     $add-cflonum-number		$add-number-fixnum	$add-number-bignum
@@ -1107,6 +1110,47 @@
 		   ($fl+ ($cflonum-imag x) ($cflonum-imag y))))
 
   #| end of module: $add-number-number |# )
+
+
+(module ($add1-integer
+	 $add1-fixnum
+	 $add1-bignum)
+
+  (define ($add1-integer x)
+    (define who '$add1-integer)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($add1-fixnum x))
+      ((bignum?)	($add1-bignum x))
+      (else
+       (err who x))))
+
+  (define ($add1-fixnum x)
+    ($add-fixnum-fixnum x 1))
+
+  (define ($add1-bignum x)
+    ($add-bignum-fixnum x 1))
+
+  #| end of module: $add1-integer |# )
+
+(module ($sub1-integer
+	 $sub1-fixnum
+	 $sub1-bignum)
+
+  (define ($sub1-integer x)
+    (define who '$sub1-integer)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($sub1-fixnum x))
+      ((bignum?)	($sub1-bignum x))
+      (else
+       (err who x))))
+
+  (define ($sub1-fixnum x)
+    ($sub-fixnum-fixnum x 1))
+
+  (define ($sub1-bignum x)
+    ($sub-bignum-fixnum x 1))
+
+  #| end of module: $sub1-integer |# )
 
 
 (module ($sub-number-number

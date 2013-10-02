@@ -66,13 +66,18 @@ Notes for revision 0.3d5
 * Added syntax  "record-type-and-record?" to  (vicare) to  allow testing
   the type of a record instance through the record type identifier only.
 
+* Added to (vicare system $numerics):
+
+    $add1-integer	$add1-fixnum	$add1-bignum
+    $sub1-integer	$sub1-fixnum	$sub1-bignum
+
+* Added EVAL-FOR-EXPAND to (vicare).
+
 * Added special validation clause:
 
     (or false ?validator)
 
   to the arguments validation library.
-
-* Added EVAL-FOR-EXPAND to (vicare).
 
 * The validation  clauses of  the library (vicare  arguments validation)
   now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
