@@ -1464,8 +1464,10 @@
 
     ;; misc
     eval-for-expand
-    record-type-unsafe-ref
-    record-type-unsafe-set!
+    record-type-field-ref
+    record-type-field-set!
+    $record-type-field-ref
+    $record-type-field-set!
 
 
 ;;;; bindings from (nausicaa language oopp)

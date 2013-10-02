@@ -55,8 +55,13 @@ Notes for revision 0.3d5
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
 
-* Added syntaxes  "record-type-unsafe-ref" and "record-type-unsafe-set!"
-  to (vicare).
+* Added  syntaxes to  (vicare) to  allow  access to  R6RS record  fields
+  through the record type identifier only.
+
+     record-type-field-ref
+     record-type-field-set!
+     $record-type-field-ref
+     $record-type-field-set!
 
 * Added special validation clause:
 
