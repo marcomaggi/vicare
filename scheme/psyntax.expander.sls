@@ -3235,6 +3235,7 @@
 	  ((symbol? x)
 	   (case x
 	     ((define-record-type)		define-record-type-macro)
+	     ((record-type-and-record?)		record-type-and-record?-macro)
 	     ((define-struct)			define-struct-macro)
 	     ((define-condition-type)		define-condition-type-macro)
 	     ((cond)				cond-macro)
@@ -3855,6 +3856,21 @@
 ;;; --------------------------------------------------------------------
 
   (main x))
+
+
+;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
+
+(define (record-type-and-record?-macro expr-stx)
+  ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?type-name ?record)
+     (identifier? ?type-name)
+     (bless
+      `(record-and-rtd? ,?record (record-type-descriptor ,?type-name))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE

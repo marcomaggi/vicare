@@ -666,6 +666,83 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicates))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define A
+	  (make-alpha 1))
+	(record-and-rtd? A (record-type-descriptor alpha)))
+    => #t)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields b))
+	(define B
+	  (make-beta 1 2))
+	(list (record-and-rtd? B (record-type-descriptor alpha))
+	      (record-and-rtd? B (record-type-descriptor beta))))
+    => '(#t #t))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields b))
+	(define A
+	  (make-alpha 1))
+	(list (record-and-rtd? A (record-type-descriptor alpha))
+	      (record-and-rtd? A (record-type-descriptor beta))))
+    => '(#t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define A
+	  (make-alpha 1))
+	(record-type-and-record? alpha A))
+    => #t)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields b))
+	(define B
+	  (make-beta 1 2))
+	(list (record-type-and-record? alpha B)
+	      (record-type-and-record? beta  B)))
+    => '(#t #t))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields b))
+	(define A
+	  (make-alpha 1))
+	(list (record-type-and-record? alpha A)
+	      (record-type-and-record? beta  A)))
+    => '(#t #f))
+
+  #t)
+
+
 (parametrise ((check-test-name	'reset))
 
   (define-record-type <alpha>

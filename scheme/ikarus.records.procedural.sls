@@ -33,7 +33,7 @@
 
     ;; extension utility functions, non-R6RS
     rtd-subtype?			print-r6rs-record-instance
-    record-reset
+    record-reset			record-and-rtd?
     record-destructor-set!		record-destructor)
   (import (except (ikarus)
 		  ;; bindings for (rnrs records procedural (6))
@@ -52,7 +52,7 @@
 
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				print-r6rs-record-instance
-		  record-reset
+		  record-reset				record-and-rtd?
 		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
     (vicare language-extensions syntaxes)
@@ -992,17 +992,28 @@
   (define who 'record-predicate)
   (with-arguments-validation (who)
       ((rtd	rtd))
-    (lambda (x)
-      ;;We must verify that X is  actually a record instance of RTD or a
-      ;;record instance of a subtype of RTD.
-      (and ($struct? x)
-	   (let ((rtd^ ($struct-rtd x)))
-	     (or (eq? rtd rtd^)
-		 (and (<rtd>? rtd^)
-		      (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
-			(and prtd^
-			     (or (eq? rtd prtd^)
-				 (upper-parent (<rtd>-parent prtd^))))))))))))
+    (lambda (record)
+      (and ($struct? record)
+	   ($record-and-rtd? record rtd)))))
+
+(define (record-and-rtd? record rtd)
+  ;;Vicare extension.  Return  #t if RECORD is a record  instance of RTD
+  ;;or a record instance of a subtype of RTD.
+  (and ($struct? record)
+       (<rtd>? rtd)
+       ($record-and-rtd? record rtd)))
+
+(define ($record-and-rtd? record rtd)
+  ;;We must verify that RECORD is actually a record instance of RTD or a
+  ;;record instance of a subtype of RTD.
+  ;;
+  (let ((rtd^ ($struct-rtd record)))
+    (or (eq? rtd rtd^)
+	(and (<rtd>? rtd^)
+	     (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
+	       (and prtd^
+		    (or (eq? rtd prtd^)
+			(upper-parent (<rtd>-parent prtd^)))))))))
 
 
 ;;;; non-R6RS extensions

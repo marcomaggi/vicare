@@ -401,6 +401,7 @@
     (nongenerative			(macro . nongenerative))
     (parent-rtd				(macro . parent-rtd))
     (define-record-type			(macro . define-record-type))
+    (record-type-and-record?		(macro . record-type-and-record?))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
 ;;;
@@ -2035,6 +2036,8 @@
     (record-guardian-logger			i v $language)
     (record-guardian-log			i v $language)
     (record-reset				i v $language)
+    (record-and-rtd?				i v $language)
+    (record-type-and-record?			i v $language)
     (syntax-violation				i v r sc)
     (bound-identifier=?				i v r sc)
     (datum->syntax				i v r sc)

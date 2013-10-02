@@ -3670,10 +3670,30 @@ Reset to void all the fields of a structure.
 
 
 @menu
+* iklib records predicates::    Record predicates.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
 * iklib records misc::          Miscellaneous functions.
 @end menu
+
+@c page
+@node iklib records predicates
+@subsection Record predicates
+
+
+@defun record-and-rtd? @var{record} @var{rtd}
+Return @true{} if @var{record} is a record instance of @var{rtd} or a
+record instance of a subtype of @var{rtd}; otherwise return @false{}.
+@end defun
+
+
+@deffn Syntax record-type-and-record? @meta{type-name} @meta{record}
+Return @true{} if @meta{record} is an expression evaluating to a record
+instance of type @meta{type-name} or a record instance of a subtype of
+@meta{type-name}; otherwise return @false{}.  This syntax allows to test
+the type of a record instance through the type name identifier, without
+the need to export the predicate identifier out of libraries.
+@end deffn
 
 @c page
 @node iklib records fields
