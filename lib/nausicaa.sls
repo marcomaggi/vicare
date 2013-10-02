@@ -1180,6 +1180,7 @@
     record-guardian-logger
     record-reset
     record-and-rtd?
+    record-type-and-record?
     register-to-avoid-collecting
     remprop
     replace-to-avoid-collecting
