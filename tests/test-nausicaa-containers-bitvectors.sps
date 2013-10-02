@@ -68,6 +68,26 @@
 	  #f #f #f #f  #f #f #f #f    #f #f #f #f  #f #f #f #f
 	  #f #f #f #f  #f #f #f #f))
 
+  (check
+      (let (((o <bitvector>) (<bitvector> (1234))))
+	(o vector))
+    => (make-vector 1234 #f))
+
+  (check
+      (let (((o <bitvector>) (<bitvector> (1024))))
+	(set! o[100] #t)
+	(set! o[200] #t)
+	(set! o[500] #t)
+	(set! o[1023] #t)
+	(o vector))
+    => (receive-and-return (V)
+	   (make-vector 1024 #f)
+	 (vector-set! V 100 #t)
+	 (vector-set! V 200 #t)
+	 (vector-set! V 500 #t)
+	 (vector-set! V 1023 #t)
+	 V))
+
   #t)
 
 
