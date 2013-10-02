@@ -26,19 +26,19 @@
 
 
 #!r6rs
-(library (libtest records-lib)
+(library (libtest classes-lib)
   (export <alpha> <beta> <gamma>)
   (import (rnrs)
     (nausicaa language oopp))
 
   (define-class <alpha>
-    (nongenerative records-lib:<alpha>)
+    (nongenerative classes-lib:<alpha>)
     (fields (mutable a)
 	    (immutable b)
 	    (mutable c)))
 
   (define-class <beta>
-    (nongenerative records-lib:<beta>)
+    (nongenerative classes-lib:<beta>)
     (parent <alpha>)
     (fields (mutable d)
 	    (immutable e)
@@ -46,7 +46,7 @@
     (virtual-fields (mutable def beta-def-ref beta-def-set!)))
 
   (define-class <gamma>
-    (nongenerative records-lib:<gamma>)
+    (nongenerative classes-lib:<gamma>)
     (parent <beta>)
     (fields (mutable g)
 	    (immutable h)

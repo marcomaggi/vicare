@@ -364,7 +364,7 @@ EXTRA_DIST	= \
 	lists/low.sls					\
 	lists/stx.sls					\
 	numerics/helpers.sls				\
-	libtest/records-lib.sls				\
+	libtest/classes-lib.sls				\
 	TEST-SOURCE-FILE.txt				\
 	rn100						\
 	\
