@@ -28,7 +28,8 @@
 #!r6rs
 (import (vicare)
   (vicare language-extensions syntaxes)
-  (ikarus system $structs)
+  (vicare system $structs)
+  (libtest records-lib)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -265,7 +266,7 @@
 
 (parametrise ((check-test-name	'record-type-field))
 
-  (check	;unsafe accessors
+  (check	;safe accessors
       (let ()
 	(define-record-type color
 	  (fields (mutable red)
@@ -278,7 +279,7 @@
 	      (record-type-field-ref color blue  X)))
     => '(1 2 3))
 
-  (check	;unsafe accessors and mutators
+  (check	;safe accessors and mutators
       (let ()
 	(define-record-type color
 	  (fields (mutable red)
@@ -294,7 +295,7 @@
 	      (record-type-field-ref color blue  X)))
     => '(10 20 30))
 
-  (check	;unsafe accessors and mutators
+  (check	;safe accessors and mutators
       (let ()
 	(define-record-type color
 	  (fields (mutable red   the-red   set-the-red!)
@@ -312,7 +313,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;unsafe accessors, with inheritance
+  (check	;safe accessors, with inheritance
       (let ()
 	(define-record-type alpha
 	  (fields (mutable a)
@@ -333,7 +334,7 @@
 	      (record-type-field-ref beta c O)))
     => '(1 2 3 4 5 6))
 
-  (check	;unsafe accessors and mutators, with inheritance
+  (check	;safe accessors and mutators, with inheritance
       (let ()
 	(define-record-type alpha
 	  (fields (mutable a)
@@ -360,7 +361,7 @@
 	      (record-type-field-ref beta c O)))
     => '(10 20 30 40 50 60))
 
-  (check	;unsafe accessors and mutators, with inheritance
+  (check	;safe accessors and mutators, with inheritance
       (let ()
 	(define-record-type alpha
 	  (fields (mutable a)
@@ -387,7 +388,7 @@
 	      (record-type-field-ref beta c O)))
     => '(10 2 30 40 5 60))
 
-  (check	;unsafe accessors and mutators, with inheritance
+  (check	;safe accessors and mutators, with inheritance
       (let ()
 	(define-record-type alpha
 	  (fields (mutable a)
@@ -424,6 +425,42 @@
 	      (record-type-field-ref gamma b O)
 	      (record-type-field-ref gamma c O)))
     => '(10 2 30 40 5 60 70 8 90))
+
+;;; --------------------------------------------------------------------
+;;; here we use records from the library (libtest records-lib)
+
+  (check	;safe accessors
+      (let ((X (make-<alpha> 1 2)))
+	(list (record-type-field-ref <alpha> one X)
+	      (record-type-field-ref <alpha> two X)))
+    => '(1 2))
+
+  (check	;safe accessors and mutators
+      (let ((X (make-<alpha> 1 2)))
+	(record-type-field-set! <alpha> one X 10)
+	(list (record-type-field-ref <alpha> one X)
+	      (record-type-field-ref <alpha> two X)))
+    => '(10 2))
+
+  (check	;safe accessors
+      (let ((X (make-<gamma> 1 2 3 4)))
+	(list (record-type-field-ref <beta>  one   X)
+	      (record-type-field-ref <beta>  two   X)
+	      (record-type-field-ref <gamma> three X)
+	      (record-type-field-ref <gamma> four  X)
+	      ))
+    => '(1 2 3 4))
+
+  (check	;safe accessors and mutators
+      (let ((X (make-<gamma> 1 2 3 4)))
+	(record-type-field-set! <beta>  one   X 10)
+	(record-type-field-set! <gamma> three X 30)
+	(list (record-type-field-ref <beta>  one   X)
+	      (record-type-field-ref <beta>  two   X)
+	      (record-type-field-ref <gamma> three X)
+	      (record-type-field-ref <gamma> four  X)
+	      ))
+    => '(10 2 30 4))
 
   #t)
 
@@ -589,6 +626,42 @@
 	      ($record-type-field-ref gamma b O)
 	      ($record-type-field-ref gamma c O)))
     => '(10 2 30 40 5 60 70 8 90))
+
+;;; --------------------------------------------------------------------
+;;; here we use records from the library (libtest records-lib)
+
+  (check	;safe accessors
+      (let ((X (make-<alpha> 1 2)))
+	(list ($record-type-field-ref <alpha> one X)
+	      ($record-type-field-ref <alpha> two X)))
+    => '(1 2))
+
+  (check	;safe accessors and mutators
+      (let ((X (make-<alpha> 1 2)))
+	($record-type-field-set! <alpha> one X 10)
+	(list ($record-type-field-ref <alpha> one X)
+	      ($record-type-field-ref <alpha> two X)))
+    => '(10 2))
+
+  (check	;safe accessors
+      (let ((X (make-<gamma> 1 2 3 4)))
+	(list ($record-type-field-ref <beta>  one   X)
+	      ($record-type-field-ref <beta>  two   X)
+	      ($record-type-field-ref <gamma> three X)
+	      ($record-type-field-ref <gamma> four  X)
+	      ))
+    => '(1 2 3 4))
+
+  (check	;safe accessors and mutators
+      (let ((X (make-<gamma> 1 2 3 4)))
+	($record-type-field-set! <beta>  one   X 10)
+	($record-type-field-set! <gamma> three X 30)
+	(list ($record-type-field-ref <beta>  one   X)
+	      ($record-type-field-ref <beta>  two   X)
+	      ($record-type-field-ref <gamma> three X)
+	      ($record-type-field-ref <gamma> four  X)
+	      ))
+    => '(10 2 30 4))
 
   #t)
 
