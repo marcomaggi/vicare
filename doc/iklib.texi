@@ -3694,12 +3694,27 @@ and mutator identifiers out of libraries.
 (define-record-type alpha
   (field (mutable a)))
 
+(define-record-type beta
+  (parent alpha)
+  (field (mutable b)))
+
 (define A
   (make-alpha 1))
+
+(define B
+  (make-beta 1 11))
 
 (record-type-field-ref  alpha a A)       @result{} 1
 (record-type-field-set! alpha a A 2)
 (record-type-field-ref  alpha a A)       @result{} 2
+
+(record-type-field-ref  alpha a B)       @result{} 1
+(record-type-field-set! alpha a B 2)
+(record-type-field-ref  alpha a B)       @result{} 2
+
+(record-type-field-ref  beta b B)        @result{} 11
+(record-type-field-set! beta b B 22)
+(record-type-field-ref  beta b B)        @result{} 22
 @end example
 @end deffn
 
