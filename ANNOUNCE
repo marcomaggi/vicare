@@ -63,6 +63,9 @@ Notes for revision 0.3d5
      $record-type-field-ref
      $record-type-field-set!
 
+* Added syntax  "record-type-and-record?" to  (vicare) to  allow testing
+  the type of a record instance through the record type identifier only.
+
 * Added special validation clause:
 
     (or false ?validator)
