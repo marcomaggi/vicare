@@ -3670,9 +3670,67 @@ Reset to void all the fields of a structure.
 
 
 @menu
+* iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
 * iklib records misc::          Miscellaneous functions.
 @end menu
+
+@c page
+@node iklib records fields
+@subsection Accessing and mutating fields
+
+
+@deffn Syntax record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
+@deffnx Syntax record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
+Expand to an expression which accesses or mutates the field whose name
+is @meta{field-name} in the record @meta{record} of type
+@meta{type-name}.  These syntaxes allow access to the fields of a record
+through the type name identifier, without the need to export accessor
+and mutator identifiers out of libraries.
+
+@example
+(import (vicare))
+
+(define-record-type alpha
+  (field (mutable a)))
+
+(define A
+  (make-alpha 1))
+
+(record-type-field-ref  alpha a A)       @result{} 1
+(record-type-field-set! alpha a A 2)
+(record-type-field-ref  alpha a A)       @result{} 2
+@end example
+@end deffn
+
+
+@deffn Syntax $record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
+@deffnx Syntax $record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
+Expand to an unsafe expression which accesses or mutates the field whose
+name is @meta{field-name} in the record @meta{record} of type
+@meta{type-name}.  These syntaxes allow unsafe access to the fields of a
+record through the type name identifier, without the need to export
+unsafe accessor and mutator identifiers out of libraries.
+
+These syntaxes are usable only when the @func{define-record-type} syntax
+used to define @meta{type-name} has been expanded in extended Vicare
+mode; if @command{vicare} was run with the option @option{--strict-r6rs}
+use of these syntaxes raises a syntax violation exception.
+
+@example
+(import (vicare))
+
+(define-record-type alpha
+  (field (mutable a)))
+
+(define A
+  (make-alpha 1))
+
+($record-type-field-ref  alpha a A)      @result{} 1
+($record-type-field-set! alpha a A 2)
+($record-type-field-ref  alpha a A)      @result{} 2
+@end example
+@end deffn
 
 @c page
 @node iklib records final
@@ -3826,14 +3884,6 @@ The current implementation is the following:
 
 
 The following bindings are exported by the library @library{vicare}.
-
-
-@deffn Syntax record-type-unsafe-ref @meta{type-name} @meta{field-name} @meta{record}
-@deffnx Syntax record-type-unsafe-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
-Expand to an unsafe expression which accesses or mutates the field whose
-name is @meta{field-name} in the record @meta{record} of type
-@meta{type-name}.
-@end deffn
 
 
 @defun record-reset @var{record}
