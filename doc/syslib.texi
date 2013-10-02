@@ -1027,6 +1027,8 @@ syslib $numerics} export bindings for low level operations on numbers.
 @menu
 * syslib numerics neg::         Numbers negation.
 * syslib numerics inv::         Numbers inversion.
+* syslib numerics add1::        Exact integers increment.
+* syslib numerics sub1::        Exact integers decrement.
 * syslib numerics add::         Numbers addition.
 * syslib numerics sub::         Numbers subtraction.
 * syslib numerics mul::         Numbers multiplication.
@@ -1152,6 +1154,46 @@ Compute the inverse of a compnum and return the result as a compnum.
 
 @deffn {Unsafe Operation} $inv-cflonum @var{cfl}
 Compute the inverse of a cflonum and return the result as a cflonum.
+@end deffn
+
+@c page
+@node syslib numerics add1
+@subsection Exact integers increment
+
+
+@deffn {Unsafe Operation} $add1-integer @var{N}
+Increment by @math{1} the fixnum or bignum @var{N} and return the
+result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $add1-bignum @var{N}
+Increment by @math{1} the bignum @var{N} and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $add1-fixnum @var{N}
+Increment by @math{1} the fixnum @var{N} and return the result.
+@end deffn
+
+@c page
+@node syslib numerics sub1
+@subsection Exact integers decrement
+
+
+@deffn {Unsafe Operation} $sub1-integer @var{N}
+Decrement by @math{1} the fixnum or bignum @var{N} and return the
+result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sub1-bignum @var{N}
+Decrement by @math{1} the bignum @var{N} and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sub1-fixnum @var{N}
+Decrement by @math{1} the fixnum @var{N} and return the result.
 @end deffn
 
 @c page
