@@ -28,7 +28,7 @@
 (import (nausicaa)
   (rnrs eval)
   (vicare checks)
-  (prefix (libtest records-lib) test.))
+  (prefix (libtest classes-lib) test.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing classes, tagged binding constructs\n")
@@ -186,14 +186,14 @@
 
     #f)
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	    ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
@@ -365,14 +365,14 @@
 
     #f)
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	     ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
@@ -536,14 +536,14 @@
 
     #f)
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (letrec (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (letrec (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	       ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
@@ -738,14 +738,14 @@
 
     #f)
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (letrec* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (letrec* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 		((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))

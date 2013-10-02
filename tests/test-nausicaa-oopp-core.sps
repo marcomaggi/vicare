@@ -29,7 +29,7 @@
   (rnrs eval)
   (rnrs mutable-pairs)
   (vicare checks)
-  (prefix (libtest records-lib) test.))
+  (prefix (libtest classes-lib) test.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing classes basics\n")
@@ -731,7 +731,7 @@
       #f)
     #f)
 
-;;; these tests use the record definitions from (libtest records-lib)
+;;; these tests use the record definitions from (libtest classes-lib)
 
   (check
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9))))
@@ -1280,7 +1280,7 @@
 
     #f)
 
-;;; the following tests use the records from (libtest records-lib)
+;;; the following tests use the records from (libtest classes-lib)
 
   (let ()
     (define r (test.<alpha> (123 #\a 1.0)))
@@ -2090,7 +2090,7 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; use the records from (libtest records-lib)
+;;; use the records from (libtest classes-lib)
 
   (check
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
@@ -2101,7 +2101,7 @@
 	(f r))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	    (s (test.<beta>  (10 20 30 40 50 60)))
 	    (f (lambda ((r test.<gamma>) (s test.<beta>))
@@ -2235,7 +2235,7 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; use the records from (libtest records-lib)
+;;; use the records from (libtest classes-lib)
 
   (check
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9))))
@@ -2246,7 +2246,7 @@
 	(f r))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	    (s (test.<beta>  (10 20 30 40 50 60))))
 	(define (f (r test.<gamma>) (s test.<beta>))
@@ -2431,7 +2431,7 @@
     #f)
 
 ;;; --------------------------------------------------------------------
-;;; use the records from (libtest records-lib)
+;;; use the records from (libtest classes-lib)
 
   (check
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
@@ -2443,7 +2443,7 @@
 	(f r))
     => '(1 2 3 4 5 6 7 8 9))
 
-  (check	;use the records from (libtest records-lib)
+  (check	;use the records from (libtest classes-lib)
       (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
 	    (s (test.<beta>  (10 20 30 40 50 60)))
 	    (f (case-lambda
@@ -2565,7 +2565,7 @@
 
 (parametrise ((check-test-name 'predicates))
 
-;;; These tests make use of the record types exported by (libtest records-lib).
+;;; These tests make use of the record types exported by (libtest classes-lib).
 
   (let ((a (test.<alpha> (1 2 3)))
 	(b (test.<beta>  (1 2 3  4 5 6))))
