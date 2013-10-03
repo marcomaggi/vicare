@@ -1289,6 +1289,7 @@
     (integer->char				i v r ba se)
     (integer-valued?				i v r ba)
     (integer?					i v r ba se)
+    (exact-integer?				i v $language)
     (lcm					i v r ba se)
     (length					i v r ba se)
     (list					i v r ba se)

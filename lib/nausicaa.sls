@@ -850,6 +850,7 @@
 ;;;
 ;;; &errno
     errno-condition?
+    exact-integer?
     exit-hooks
     expand-form-to-core-language
     expand-library

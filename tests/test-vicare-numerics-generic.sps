@@ -90,6 +90,18 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicates))
+
+  (check (exact-integer? 123)				=> #t)
+  (check (exact-integer? least-positive-bn)		=> #t)
+  (check (exact-integer? greatest-negative-bn)		=> #t)
+  (check (exact-integer? 1.2)				=> #f)
+  (check (exact-integer? 1+2i)				=> #f)
+  (check (exact-integer? 1.+2.i)			=> #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

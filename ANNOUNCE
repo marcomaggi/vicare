@@ -66,6 +66,8 @@ Notes for revision 0.3d5
 * Added syntax  "record-type-and-record?" to  (vicare) to  allow testing
   the type of a record instance through the record type identifier only.
 
+* Added "exact-integer?" to (vicare).
+
 * Added to (vicare system $numerics):
 
     $add1-integer	$add1-fixnum	$add1-bignum
