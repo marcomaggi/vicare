@@ -5014,26 +5014,33 @@ The following bindings are exported by the @library{ikarus} and
 
 
 @defun bignum? @var{obj}
-Return true if @var{obj} is an exact integer represented by a big
-number.
+Return @true{} if @var{obj} is an exact integer represented by a big
+number; otherwise return @false{}.
 @end defun
 
 
 @defun ratnum? @var{obj}
-Return true if @var{obj} is an exact rational number.
+Return @true{} if @var{obj} is an exact rational number; otherwise
+return @false{}.
 @end defun
 
 
 @defun cflonum? @var{obj}
-Return true if @var{obj} is a complex number having flonums as both real
-and imaginary parts.
+Return @true{} if @var{obj} is a complex number having flonums as both
+real and imaginary parts; otherwise return @false{}.
 @end defun
 
 
 @defun compnum? @var{obj}
-Return true if @var{obj} is a complex number having any possible
+Return @true{} if @var{obj} is a complex number having any possible
 combination of number representations as real and imaginary parts, but
-not both flonums.
+not both flonums; otherwise return @false{}.
+@end defun
+
+
+@defun exact-integer? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum; otherwise return
+@false{}.
 @end defun
 
 @c ------------------------------------------------------------

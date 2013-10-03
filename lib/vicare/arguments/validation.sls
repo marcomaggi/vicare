@@ -622,12 +622,6 @@
 
 ;;;; exact integers validation
 
-(define-inline (exact-integer? obj)
-  (or (fixnum? obj)
-      (bignum? obj)))
-
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (exact-integer who obj)
   (exact-integer? obj)
   (procedure-argument-violation who "expected exact integer as argument" obj))
