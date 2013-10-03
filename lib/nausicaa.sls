@@ -1465,6 +1465,16 @@
     procedure-argument-violation?
     procedure-argument-violation
 
+    ;; bignums
+    bignum-positive?
+    bignum-negative?
+    bignum-non-negative?
+    bignum-non-positive?
+    bignum-odd?
+    bignum-even?
+    least-positive-bignum
+    greatest-negative-bignum
+
     ;; misc
     eval-for-expand
     record-type-field-ref
@@ -1517,7 +1527,8 @@
     <char> <string> <mutable-string> <vector>
     <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <flonum> <integer> <integer-valued> <rational> <rational-valued>
+    <fixnum> <flonum>
+    <exact-integer> <integer> <integer-valued> <rational> <rational-valued>
     <real> <real-valued> <complex> <number>
     <procedure>
 
