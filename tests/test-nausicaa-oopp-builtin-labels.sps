@@ -30,7 +30,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing built-in labels\n")
+(check-display "*** testing Nausicaa: built-in labels\n")
 
 
 (parametrise ((check-test-name	'booleans))

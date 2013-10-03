@@ -88,6 +88,10 @@
 	       case-symbol
 	       case-identifier)
 	 expand)
+    (for (prefix (only (vicare platform configuration)
+		       arguments-validation)
+		 config.)
+      expand)
     (for (prefix (only (nausicaa language oopp configuration)
 		       validate-tagged-values?)
 		 config.)
@@ -1391,6 +1395,82 @@
     ))
 
 
+(define-syntax with-tagged-arguments-validation
+  ;;Transform:
+  ;;
+  ;;  (with-tagged-arguments-validation (who)
+  ;;       ((<fixnum>  X)
+  ;;        (<integer> Y))
+  ;;    (do-this)
+  ;;    (do-that))
+  ;;
+  ;;into:
+  ;;
+  ;;  (if ((<fixnum>) X)
+  ;;      (if ((<integer>) Y)
+  ;;          (begin
+  ;;            (do-this)
+  ;;            (do-that))
+  ;;        (procedure-argument-violation who "invalid tagged argument" '<integer> Y))
+  ;;    (procedure-argument-violation who "invalid tagged argument" '<fixnum> X))
+  ;;
+  ;;As a special case:
+  ;;
+  ;;  (with-tagged-arguments-validation (who)
+  ;;       ((<top>  X))
+  ;;    (do-this)
+  ;;    (do-that))
+  ;;
+  ;;expands to:
+  ;;
+  ;;  (begin
+  ;;    (do-this)
+  ;;    (do-that))
+  ;;
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((_ (?who) ((?validator ?arg) ...) . ?body)
+	 (identifier? #'?who)
+	 (let* ((body		#'(begin . ?body))
+		(output-form	(%build-output-form #'?who
+						    #'(?validator ...)
+						    (syntax->list #'(?arg ...))
+						    body)))
+	   (if config.arguments-validation
+	       output-form
+	     body)))
+	(_
+	 (%synner "invalid input form" #f))))
+
+    (define (%build-output-form who validators args body)
+      (syntax-case validators (<top>)
+	(()
+	 #`(let () #,body))
+
+	;;Accept "<top>" as special validator meaning "always valid".
+	((<top> . ?other-validators)
+	 (%build-output-form who #'?other-validators (cdr args) body))
+
+	((?validator . ?other-validators)
+	 (identifier? #'?validator)
+	 (%generate-validation-form who #'?validator (car args) #'?other-validators (cdr args) body))
+
+	((?validator . ?others)
+	 (%synner "invalid argument-validator selector" #'?validator))))
+
+    (define (%generate-validation-form who validator-id arg-id other-validators-stx args body)
+      #`(if ((#,validator-id) #,arg-id)
+	    #,(%build-output-form who other-validators-stx args body)
+	  (procedure-argument-violation #,who
+	    "invalid tagged argument" (quote #,validator-id) #,arg-id)))
+
+    (define (%synner msg subform)
+      (syntax-violation 'with-tagged-arguments-validation msg stx subform))
+
+    (main stx)))
+
+
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
 
 (define-syntax (define/tags stx)
@@ -1490,41 +1570,53 @@
     ((_ #(?args-id ?tag-id) ?body0 ?body ...)
      (and (identifier? #'?args-id)
 	  (identifier? #'?tag-id))
-     (with-syntax ((((FORMAL) (SYNTAX-BINDING ...))
+     (with-syntax ((((FORMAL) VALIDATIONS (SYNTAX-BINDING ...))
 		    (help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
        #`(lambda FORMAL
-	   (let-syntax (SYNTAX-BINDING ...)
-	     ?body0 ?body ...))))
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and untagged rest argument.
     ;;
     ((_ (?var0 ?var ... . ?args) ?body0 ?body ...)
      (identifier? #'?args)
-     (with-syntax (((FORMALS (SYNTAX-BINDING ...))
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 		    (help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
        #`(lambda FORMALS
-	   (let-syntax (SYNTAX-BINDING ...)
-	     ?body0 ?body ...))))
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and tagged rest argument.
     ;;
     ((_ (?var0 ?var ... . #(?args-id ?tag-id)) ?body0 ?body ...)
      (and (identifier? #'?args)
 	  (identifier? #'?tag))
-     (with-syntax (((FORMALS (SYNTAX-BINDING ...))
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 		    (help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
        #`(lambda FORMALS
-	   (let-syntax (SYNTAX-BINDING ...)
-	     ?body0 ?body ...))))
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and no rest argument.
     ;;
     ((_ (?var0 ?var ...) ?body0 ?body ...)
-     (with-syntax (((FORMALS (SYNTAX-BINDING ...))
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 		    (help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
        #`(lambda FORMALS
-	   (let-syntax (SYNTAX-BINDING ...)
-	     ?body0 ?body ...))))
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       ?body0 ?body ...)))))
 
     (_
      (synner "syntax error in LAMBDA/TAGS"))))
@@ -1541,11 +1633,17 @@
 	 (()
 	  (cons #'case-lambda (reverse ou-clauses)))
 	 (((?formals ?body0 ?body ...) . ?other-clauses)
-	  (with-syntax (((FORMALS (SYNTAX-BINDING ...))
-			 (help.parse-formals-bindings #'?formals #'<top> synner)))
-	    (loop #'?other-clauses
-		  (cons #'(FORMALS (let-syntax (SYNTAX-BINDING ...) ?body0 ?body ...))
-			ou-clauses))))
+	  (begin
+	    (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+			   (help.parse-formals-bindings #'?formals #'<top> synner)))
+	      (loop #'?other-clauses
+		    (cons #'(FORMALS
+			     (define who 'case-lambda/tags)
+			     (with-tagged-arguments-validation (who)
+				 VALIDATIONS
+			       (let-syntax (SYNTAX-BINDING ...)
+				 ?body0 ?body ...)))
+			  ou-clauses)))))
 	 ((?clause . ?other-clauses)
 	  (synner "invalid clause syntax" #'?clause)))))
 
