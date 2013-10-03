@@ -2842,6 +2842,11 @@ When all the bindings have no tags: this syntax is equivalent to
 @func{lambda} as defined by @rnrs{6}; an untagged binding is equivalent
 to a binding tagged with @class{top}.
 
+If procedure arguments validation, as defined by @library{vicare
+arguments validation}, is enabled: the function will validate its tagged
+arguments using the tag predicates and raise a
+@condition{procedure-argument-violation} exception in case of failure.
+
 Usage examples:
 
 @itemize
@@ -2911,6 +2916,11 @@ Each @meta{cl-clause} must have the format:
 @example
 (@meta{tagged-formals} @metao{body} @meta{body} @dots{})
 @end example
+
+If procedure arguments validation, as defined by @library{vicare
+arguments validation}, is enabled: the function will validate its tagged
+arguments using the tag predicates and raise a
+@condition{procedure-argument-violation} exception in case of failure.
 
 Usage examples:
 

@@ -507,15 +507,15 @@
   (protocol (lambda () vector))
   (predicate vector?)
   (virtual-fields (immutable (length	<fixnum>)	vector-length)
-		      (immutable ($length	<fixnum>)	$vector-length))
+		  (immutable ($length	<fixnum>)	$vector-length))
 
 ;;; --------------------------------------------------------------------
 
   (method (ref (S <vector>) (idx <fixnum>))
     ($vector-ref S (S %normalise-index idx)))
 
-  (method (set! (S <vector>) (idx <fixnum>) (ch <char>))
-    ($vector-set! S (S %normalise-index idx) ch))
+  (method (set! (S <vector>) (idx <fixnum>) item)
+    ($vector-set! S (S %normalise-index idx) item))
 
 ;;; --------------------------------------------------------------------
 

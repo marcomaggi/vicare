@@ -654,7 +654,7 @@
 
     ((?vars . ?other-bindings)
      (with-syntax
-	 (((FORMALS (SYNTAX-BINDING ...))
+	 (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 	   (parse-formals-bindings #'?vars top-id synner)))
        (parse-let-values-bindings #'?other-bindings top-id synner
 				  #`(FORMALS . #,values-vars)
@@ -691,12 +691,13 @@
   ;;
   ;;The return value is a syntax object with the structure:
   ;;
-  ;;   (FORMALS (SYNTAX-BINDING ...))
+  ;;   (FORMALS (VALIDATION ...) (SYNTAX-BINDING ...))
   ;;
   ;;the FORMALS  component represents a  valid list of  formal arguments
-  ;;for  a LAMBDA  syntax;  each SYNTAX-BINDING  component represents  a
-  ;;valid binding for LET-SYNTAX.  If  a variable is tagged with TOP-ID:
-  ;;no syntax binding is generated.
+  ;;for  a LAMBDA  syntax;  each VALIDATION  component  is a  validation
+  ;;clause; each SYNTAX-BINDING component represents a valid binding for
+  ;;LET-SYNTAX.  If a variable is  tagged with TOP-ID: no syntax binding
+  ;;is generated.
   ;;
   ;;When the FORMALS-STX comes from a LAMBDA, the returned syntax object
   ;;should be used to compose an output form as:
@@ -716,7 +717,7 @@
   (syntax-case formals-stx ()
     ;;No arguments.
     (()
-     #'(() ()))
+     #'(() () ()))
 
     ;;List of all the arguments, with tag.
     (#(?args-id ?tag-id)
@@ -724,33 +725,33 @@
 	  (identifier? #'?tag-id))
      (with-syntax ((((VAR) (TAG) (BINDING))
 		    (parse-let-bindings #'((?args-id ?tag-id)) top-id synner)))
-       #'(VAR (BINDING))))
+       #'(VAR ((TAG VAR)) (BINDING))))
 
     ;;List of all the arguments, no tag.
     (?args-id
      (identifier? #'?args-id)
-     #'(?args-id ()))
+     #'(?args-id () ()))
 
     ;;Fixed number of arguments.
     ((?var ...)
      (with-syntax ((((VAR ...) (TAG ...) (BINDING ...))
 		    (parse-let-bindings #'(?var ...) top-id synner)))
-       #'((VAR ...) (BINDING ...))))
+       #'((VAR ...) ((TAG VAR) ...) (BINDING ...))))
 
     ;;Mandatory arguments plus untagged rest argument.
     ((?var0 ?var ... . ?rest)
      (identifier? #'?rest)
-     (with-syntax ((((REST-VAR VAR ...) (TAG ...) (BINDING ...))
+     (with-syntax ((((REST-VAR VAR ...) (REST-TAG TAG ...) (BINDING ...))
 		    (parse-let-bindings #'(?rest ?var0 ?var ...) top-id synner)))
-       #'((VAR ... . REST-VAR) (BINDING ...))))
+       #'((VAR ... . REST-VAR) ((TAG VAR) ...) (BINDING ...))))
 
     ;;Mandatory arguments plus tagged rest argument.
     ((?var0 ?var ... . #(?rest-id ?tag-id))
      (and (identifier? #'?rest)
 	  (identifier? #'?tag-id))
-     (with-syntax ((((REST-VAR VAR ...) (TAG ...) (BINDING ...))
+     (with-syntax ((((REST-VAR VAR ...) (REST-TAG TAG ...) (BINDING ...))
 		    (parse-let-bindings #'(#(?rest-id ?tag-id) ?var0 ?var ...) top-id synner)))
-       #'((VAR ... . REST-VAR) (BINDING ...))))
+       #'((VAR ... . REST-VAR) ((TAG VAR) ... (REST-TAG REST-VAR)) (BINDING ...))))
 
     ))
 
