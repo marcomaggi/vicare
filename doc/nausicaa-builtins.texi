@@ -1462,6 +1462,40 @@ Apply @func{/} to the instance and the given optional arguments; return
 the result.
 @end defmethod
 
+
+@defmethod @aclass{number} incr!
+@defmethodx @aclass{number} pre-incr!
+@defmethodx @aclass{number} incr! @var{step}
+@defmethodx @aclass{number} pre-incr! @var{step}
+Mutate the number by incrementing it of @var{step}, or @math{1} if
+@var{step} is not given; return the number @strong{after} the increment.
+@end defmethod
+
+
+@defmethod @aclass{number} decr!
+@defmethodx @aclass{number} pre-decr!
+@defmethodx @aclass{number} decr! @var{step}
+@defmethodx @aclass{number} pre-decr! @var{step}
+Mutate the number by decrementing it of @var{step}, or @math{1} if
+@var{step} is not given; return the number @strong{after} the decrement.
+@end defmethod
+
+
+@defmethod @aclass{number} post-incr!
+@defmethodx @aclass{number} post-incr! @var{step}
+Mutate the number by incrementing it of @var{step}, or @math{1} if
+@var{step} is not given; return the number @strong{before} the
+increment.
+@end defmethod
+
+
+@defmethod @aclass{number} post-decr!
+@defmethodx @aclass{number} post-decr! @var{step}
+Mutate the number by decrementing it of @var{step}, or @math{1} if
+@var{step} is not given; return the number @strong{before} the
+decrement.
+@end defmethod
+
 @c ------------------------------------------------------------
 
 @subsubheading Methods: exactness

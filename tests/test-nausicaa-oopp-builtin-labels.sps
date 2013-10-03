@@ -1466,6 +1466,78 @@
 	(N / 2))
     => 1/2)
 
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N incr!)))
+	(list N R))
+    => '(2 2))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N incr! 10)))
+	(list N R))
+    => '(11 11))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N pre-incr!)))
+	(list N R))
+    => '(2 2))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N pre-incr! 10)))
+	(list N R))
+    => '(11 11))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N post-incr!)))
+	(list N R))
+    => '(2 1))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N post-incr! 10)))
+	(list N R))
+    => '(11 1))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N decr!)))
+	(list N R))
+    => '(0 0))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N decr! 10)))
+	(list N R))
+    => '(-9 -9))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N pre-decr!)))
+	(list N R))
+    => '(0 0))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N pre-decr! 10)))
+	(list N R))
+    => '(-9 -9))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N post-decr!)))
+	(list N R))
+    => '(0 1))
+
+  (check
+      (let* (((N <number>) 1)
+	     ((R <number>) (N post-decr! 10)))
+	(list N R))
+    => '(-9 1))
+
   #t)
 
 
