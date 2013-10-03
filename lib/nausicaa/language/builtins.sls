@@ -34,7 +34,9 @@
     <char> <string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <flonum> <integer> <integer-valued> <rational> <rational-valued>
+    <fixnum> <flonum>
+    <exact-integer> <integer> <integer-valued>
+    <rational> <rational-valued>
     <real> <real-valued> <complex> <number>
     <procedure>
 
@@ -1359,6 +1361,12 @@
   (virtual-fields
    (immutable (odd?	<boolean>)	odd?)
    (immutable (even?	<boolean>)	even?)))
+
+;;; --------------------------------------------------------------------
+
+(define-builtin-label <exact-integer>
+  (parent <integer>)
+  (predicate exact-integer?))
 
 ;;; --------------------------------------------------------------------
 

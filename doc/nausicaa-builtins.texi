@@ -1381,6 +1381,7 @@ Value setter.  Equivalent to applying @func{hashtable-set!} to
 * builtins numbers rational::   Rational number objects.
 * builtins numbers integerv::   Integer-valued number objects.
 * builtins numbers integer::    Integer number objects.
+* builtins numbers integere::   Exact integer number objects.
 * builtins numbers fixnum::     Fixnum number objects.
 * builtins numbers flonum::     Flonum number objects.
 @end menu
@@ -1860,6 +1861,16 @@ function @func{odd?} from @rsixlibrary{base}.
 Accessing this field is like applying to the instance number the
 function @func{even?} from @rsixlibrary{base}.
 @end deftypecv
+
+@c page
+@node builtins numbers integere
+@subsection Exact integer number objects
+
+
+@deftp {Builtin Label} @aclass{exact-integer}
+Conventional type for objects satisfying @func{exact-integer?}.  It is
+derived from @class{integer}.
+@end deftp
 
 @c page
 @node builtins numbers fixnum

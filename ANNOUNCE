@@ -97,6 +97,8 @@ Notes for revision 0.3d5
 
 * Added library (vicare language-extensions increments).
 
+* Added builtin "<exact-integer>" to (nausicaa).
+
 * Added containers libraries:
 
      (nausicaa containers lists)
