@@ -622,26 +622,30 @@
 
 ;;;; exact integers validation
 
+(define-inline (%exact-integer? obj)
+  (or (fixnum? obj)
+      (bignum? obj)))
+
 (define-argument-validation (exact-integer who obj)
-  (exact-integer? obj)
+  (%exact-integer? obj)
   (procedure-argument-violation who "expected exact integer as argument" obj))
 
 (define-argument-validation (exact-integer/false who obj)
-  (or (not obj) (exact-integer? obj))
+  (or (not obj) (%exact-integer? obj))
   (procedure-argument-violation who "expected false or exact integer as argument" obj))
 
 (define-argument-validation (positive-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (< 0 obj))
   (procedure-argument-violation who "expected positive exact integer as argument" obj))
 
 (define-argument-validation (negative-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (> 0 obj))
   (procedure-argument-violation who "expected negative exact integer as argument" obj))
 
 (define-argument-validation (non-positive-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (>= 0 obj))
   (procedure-argument-violation who "expected non-positive exact integer as argument" obj))
 
@@ -651,7 +655,7 @@
   (procedure-argument-violation who "expected non-negative exact integer as argument" obj))
 
 (define-argument-validation (exact-integer-in-inclusive-range who obj min max)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (>= obj min)
        (<= obj max))
   (procedure-argument-violation who
@@ -661,7 +665,7 @@
     obj))
 
 (define-argument-validation (exact-integer-in-exclusive-range who obj min max)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (> obj min)
        (< obj max))
   (procedure-argument-violation who
@@ -671,12 +675,12 @@
     obj))
 
 (define-argument-validation (even-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (even? obj))
   (procedure-argument-violation who "expected even exact integer as argument" obj))
 
 (define-argument-validation (odd-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (odd? obj))
   (procedure-argument-violation who "expected odd exact integer as argument" obj))
 

@@ -1463,6 +1463,16 @@
     (fxnonpositive?				i v $language)
     (fxnonnegative?				i v $language)
     (fixnum->flonum				i v r fl)
+;;;
+    (bignum-positive?				i v $language)
+    (bignum-negative?				i v $language)
+    (bignum-non-negative?			i v $language)
+    (bignum-non-positive?			i v $language)
+    (bignum-odd?				i v $language)
+    (bignum-even?				i v $language)
+    (least-positive-bignum			i v $language)
+    (greatest-negative-bignum			i v $language)
+;;;
     (fl*					i v r fl)
     (fl+					i v r fl)
     (fl-					i v r fl)
