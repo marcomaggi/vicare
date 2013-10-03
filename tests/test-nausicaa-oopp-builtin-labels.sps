@@ -1441,6 +1441,31 @@
 	((<number>) (N sin)))
     => #t)
 
+  (check
+      (let (((N <number>) 1))
+	(N + 2))
+    => 3)
+
+  (check
+      (let (((N <number>) 1))
+	(N - 2))
+    => -1)
+
+  (check
+      (let (((N <number>) 3))
+	(N -))
+    => -3)
+
+  (check
+      (let (((N <number>) 3))
+	(N * 2))
+    => 6)
+
+  (check
+      (let (((N <number>) 1))
+	(N / 2))
+    => 1/2)
+
   #t)
 
 

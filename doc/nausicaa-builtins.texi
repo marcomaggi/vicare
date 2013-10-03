@@ -1436,6 +1436,34 @@ function @func{nan?} from @rsixlibrary{base}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Methods: arithmetic
+
+
+@defmethod @aclass{number} + @var{num} @dots{}
+Apply @func{+} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} - @var{num} @dots{}
+Apply @func{-} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} * @var{num} @dots{}
+Apply @func{*} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} / @var{num} @dots{}
+Apply @func{/} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+@c ------------------------------------------------------------
+
 @subsubheading Methods: exactness
 
 

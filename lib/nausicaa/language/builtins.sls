@@ -1051,6 +1051,37 @@
 
   ;;; math functions from (rnrs base (6)) and (vicare)
 
+  ;; arithmetic
+  (method-syntax +
+    (syntax-rules ()
+      ((_ ?num . ?nums)
+       (+ ?num . ?nums))))
+
+  (method-syntax -
+    (syntax-rules ()
+      ((_ ?num . ?nums)
+       (- ?num . ?nums))))
+
+  (method-syntax *
+    (syntax-rules ()
+      ((_ ?num . ?nums)
+       (* ?num . ?nums))))
+
+  (method-syntax /
+    (syntax-rules ()
+      ((_ ?num . ?nums)
+       (/ ?num . ?nums))))
+
+  (method-syntax incr!
+    (syntax-rules ()
+      ((_ ?num)
+       (incr! ?num))))
+
+  (method-syntax decr!
+    (syntax-rules ()
+      ((_ ?num . ?nums)
+       (/ ?num . ?nums))))
+
   ;; exactness
   (method-syntax exact
     (syntax-rules ()
