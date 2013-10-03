@@ -4910,6 +4910,7 @@ representing the mantissa's @math{53} bits.
 @menu
 * iklib numerics constants::    Numeric constants.
 * iklib numerics preds::        Additional numeric predicates.
+* iklib numerics bignums::      Additional bignum functions.
 * iklib numerics math::         Additional math functions.
 * iklib numerics bitwise::      Additional bitwise functions.
 @end menu
@@ -5049,6 +5050,46 @@ Return @true{} if @var{obj} is a fixnum or bignum; otherwise return
 @defunx non-negative? @var{X}
 Return @true{} if @var{X} is a real number object and it is,
 respectively, non--positive or non--negative.
+@end defun
+
+@c page
+@node iklib numerics bignums
+@subsection Additional bignum functions
+
+
+@defun bignum-positive? @var{bn}
+@defunx bignum-non-negative? @var{bn}
+The argument must be a bignum.  Return @true{} if it is positive,
+otherwise return @false{}.
+@end defun
+
+
+@defun bignum-negative? @var{bn}
+@defunx bignum-non-positive? @var{bn}
+The argument must be a bignum.  Return @true{} if it is negative,
+otherwise return @false{}.
+@end defun
+
+
+@defun bignum-odd? @var{bn}
+The argument must be a bignum.  Return @true{} if it is odd, otherwise
+return @false{}.
+@end defun
+
+
+@defun bignum-even? @var{bn}
+The argument must be a bignum.  Return @true{} if it is even, otherwise
+return @false{}.
+@end defun
+
+
+@defun least-positive-bignum
+Return the smallest positive bignum.
+@end defun
+
+
+@defun greatest-negative-bignum
+Return the greatest negative bignum.
 @end defun
 
 @c page

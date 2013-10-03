@@ -102,6 +102,41 @@
   #t)
 
 
+(parametrise ((check-test-name	'bignums))
+
+  (check
+      (least-positive-bignum)
+    => (+ +1 (greatest-fixnum)))
+
+  (check
+      (greatest-negative-bignum)
+    => (+ -1 (least-fixnum)))
+
+;;; --------------------------------------------------------------------
+
+  (check (bignum-positive? (least-positive-bignum))		=> #t)
+  (check (bignum-positive? (greatest-negative-bignum))		=> #f)
+
+  (check (bignum-negative? (least-positive-bignum))		=> #f)
+  (check (bignum-negative? (greatest-negative-bignum))		=> #t)
+
+  (check (bignum-non-positive? (least-positive-bignum))		=> #f)
+  (check (bignum-non-positive? (greatest-negative-bignum))	=> #t)
+
+  (check (bignum-non-negative? (least-positive-bignum))		=> #t)
+  (check (bignum-non-negative? (greatest-negative-bignum))	=> #f)
+
+;;; --------------------------------------------------------------------
+
+  (check (bignum-even? (least-positive-bignum))		=> #t)
+  (check (bignum-odd?  (least-positive-bignum))		=> #f)
+
+  (check (bignum-even? (greatest-negative-bignum))	=> #f)
+  (check (bignum-odd?  (greatest-negative-bignum))	=> #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
