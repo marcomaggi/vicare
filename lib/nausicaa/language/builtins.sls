@@ -1075,12 +1075,74 @@
   (method-syntax incr!
     (syntax-rules ()
       ((_ ?num)
-       (incr! ?num))))
+       (begin
+	 (set! ?num (+ ?num 1))
+	 ?num))
+      ((_ ?num ?step)
+       (begin
+	 (set! ?num (+ ?num ?step))
+	 ?num))
+      ))
 
   (method-syntax decr!
     (syntax-rules ()
-      ((_ ?num . ?nums)
-       (/ ?num . ?nums))))
+      ((_ ?num)
+       (begin
+	 (set! ?num (- ?num 1))
+	 ?num))
+      ((_ ?num ?step)
+       (begin
+	 (set! ?num (- ?num ?step))
+	 ?num))
+      ))
+
+  (method-syntax pre-incr!
+    (syntax-rules ()
+      ((_ ?num)
+       (begin
+	 (set! ?num (+ ?num 1))
+	 ?num))
+      ((_ ?num ?step)
+       (begin
+	 (set! ?num (+ ?num ?step))
+	 ?num))
+      ))
+
+  (method-syntax pre-decr!
+    (syntax-rules ()
+      ((_ ?num)
+       (begin
+	 (set! ?num (- ?num 1))
+	 ?num))
+      ((_ ?num ?step)
+       (begin
+	 (set! ?num (- ?num ?step))
+	 ?num))
+      ))
+
+  (method-syntax post-incr!
+    (syntax-rules ()
+      ((_ ?num)
+       (receive-and-return (N)
+	   ?num
+	 (set! ?num (+ ?num 1))))
+      ((_ ?num ?step)
+       (receive-and-return (N)
+	   ?num
+	 (set! ?num (+ ?num ?step))))
+      ))
+
+  (method-syntax post-decr!
+    (syntax-rules ()
+      ((_ ?num)
+       (receive-and-return (N)
+	   ?num
+	 (set! ?num (- ?num 1))))
+      ((_ ?num ?step)
+       (receive-and-return (N)
+	   ?num
+	 (set! ?num (- ?num ?step))))
+      ))
 
   ;; exactness
   (method-syntax exact
@@ -1306,13 +1368,13 @@
 
   (virtual-fields
    (immutable (even?		<boolean>)	fxeven?)
-   (immutable (odd?			<boolean>)	fxodd?)
-   (immutable (negative?		<boolean>)	fxnegative?)
-   (immutable (positive?		<boolean>)	fxpositive?)
+   (immutable (odd?		<boolean>)	fxodd?)
+   (immutable (negative?	<boolean>)	fxnegative?)
+   (immutable (positive?	<boolean>)	fxpositive?)
    (immutable (non-negative?	<boolean>)	fxnonnegative?)
    (immutable (non-positive?	<boolean>)	fxnonpositive?)
    (immutable (zero?		<boolean>)	fxzero?)
-   (immutable (sign			<fixnum>)	fxsign))
+   (immutable (sign		<fixnum>)	fxsign))
 
   ;; methods: conversion
   (method-syntax string
@@ -1525,17 +1587,17 @@
   (virtual-fields
    (immutable (integer?		<boolean>)	flinteger?)
    (immutable (finite?		<boolean>)	flfinite?)
-   (immutable (infinite?		<boolean>)	flinfinite?)
-   (immutable (nan?			<boolean>)	flnan?)
-   (immutable (negative?		<boolean>)	flnegative?)
-   (immutable (positive?		<boolean>)	flpositive?)
-   (immutable (nonnegative?		<boolean>)	flnonnegative?)
-   (immutable (nonpositive?		<boolean>)	flnonpositive?)
+   (immutable (infinite?	<boolean>)	flinfinite?)
+   (immutable (nan?		<boolean>)	flnan?)
+   (immutable (negative?	<boolean>)	flnegative?)
+   (immutable (positive?	<boolean>)	flpositive?)
+   (immutable (nonnegative?	<boolean>)	flnonnegative?)
+   (immutable (nonpositive?	<boolean>)	flnonpositive?)
    (immutable (zero?		<boolean>)	flzero?)
    (immutable (zero?/positive	<boolean>)	flzero?/positive)
    (immutable (zero?/negative	<boolean>)	flzero?/negative)
    (immutable (even?		<boolean>)	fleven?)
-   (immutable (odd?			<boolean>)	flodd?))
+   (immutable (odd?		<boolean>)	flodd?))
 
   ;; methods: conversion
   (method-syntax string
