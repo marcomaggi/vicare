@@ -97,6 +97,9 @@ Notes for revision 0.3d5
 
 * Added library (vicare language-extensions increments).
 
+* Added to Nausicaa classes a syntax to select concrete fields using the
+  R6RS records' unsafe accessors and mutators.
+
 * Added builtin "<exact-integer>" to (nausicaa).
 
 * Added containers libraries:

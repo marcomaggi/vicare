@@ -269,6 +269,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-oopp-label-shadowing.sps				\
 	test-nausicaa-oopp-mixins.sps					\
 	test-nausicaa-oopp-setter-and-getter.sps			\
+	test-nausicaa-oopp-unsafe-field-selectors.sps			\
 	test-nausicaa-multimethods-ordinary.sps				\
 	test-nausicaa-multimethods-starred.sps				\
 	test-nausicaa-conditions.sps					\
