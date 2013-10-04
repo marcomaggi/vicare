@@ -2903,15 +2903,13 @@ Usage example:
 
 
 @deffn Syntax begin/tags @metao{body} @meta{body} @dots{}
-@deffnx Syntax begin/tags @metao{body} @meta{body} @dots{} (=> @meta{tag} ...)
-@deffnx {Auxiliary Syntax} =>
-When the auxiliary syntax @func{=>} is not used: @func{begin/tags}
+@deffnx Syntax begin/tags (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
+When the auxiliary syntax @func{<-} is not used: @func{begin/tags}
 behaves like @func{begin} from @library{rnrs (6)}.  When the auxiliary
-syntax @func{=>} is used: it specifies one tag for each value returned
+syntax @func{<-} is used: it specifies one tag for each value returned
 by the last @meta{body} form; such tag is used to validate the
 corresponding return value with the tag's predicate.
-
-The auxiliary syntax @func{=>} is the one exported by @rsixlibrary{base}.
 @end deffn
 
 @c page
@@ -2920,15 +2918,27 @@ The auxiliary syntax @func{=>} is the one exported by @rsixlibrary{base}.
 
 
 @deffn Syntax lambda/tags @meta{tagged-formals} @metao{body} @meta{body} @dots{}
+@deffnx Syntax lambda/tags @meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
 Like @func{lambda} and defines the @oopp{} bindings for the arguments.
 When all the bindings have no tags: this syntax is equivalent to
 @func{lambda} as defined by @rnrs{6}; an untagged binding is equivalent
 to a binding tagged with @class{top}.
 
 If procedure arguments validation, as defined by @library{vicare
-arguments validation}, is enabled: the function will validate its tagged
-arguments using the tag predicates and raise a
-@condition{procedure-argument-violation} exception in case of failure.
+arguments validation}, is enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+@end itemize
 
 Usage examples:
 
@@ -2989,21 +2999,33 @@ Function with only the rest argument:
 
 
 @deffn Syntax case-lambda/tags @meta{cl-clause} @dots{}
+@deffnx {Auxiliary Syntax} <-
 Like @func{case-lambda} and defines the @oopp{} bindings for the
 arguments.  When all the bindings have no tags: this syntax is
 equivalent to @func{case-lambda} as defined by @rnrs{6}; an untagged
 binding is equivalent to a binding tagged with @class{top}.
 
-Each @meta{cl-clause} must have the format:
+Each @meta{cl-clause} must have one of the formats:
 
 @example
 (@meta{tagged-formals} @metao{body} @meta{body} @dots{})
+(@meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{})
 @end example
 
 If procedure arguments validation, as defined by @library{vicare
-arguments validation}, is enabled: the function will validate its tagged
-arguments using the tag predicates and raise a
-@condition{procedure-argument-violation} exception in case of failure.
+arguments validation}, is enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+@end itemize
 
 Usage examples:
 
@@ -3037,10 +3059,28 @@ Usage examples:
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag})
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
 @deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
 Like @func{define} and defines the @oopp{} bindings for function
 arguments.  When all the bindings have no tags: this syntax is
 equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
 is equivalent to a binding tagged with @class{top}.
+
+When the syntax is used for function definition and procedure arguments
+validation, as defined by @library{vicare arguments validation}, is
+enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+@end itemize
 
 Usage examples:
 

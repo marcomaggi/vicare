@@ -1521,6 +1521,7 @@
     do/tags			do*/tags
     set!/tags
     with-label-shadowing
+    <-
 
 
 ;;;; bindings from (nausicaa language builtins)

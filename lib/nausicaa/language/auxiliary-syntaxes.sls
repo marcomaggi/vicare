@@ -72,7 +72,7 @@
     namespaces
 
     ;; miscellaneous
-    <> <...> ->)
+    <> <...> -> <-)
   (import (only (vicare)
 		define-auxiliary-syntaxes
 		;; bindings from (rnrs records syntactic (6))
@@ -100,6 +100,7 @@
   <>
   <...>
   ->
+  <-
 
   ;; makers
   mandatory optional with without

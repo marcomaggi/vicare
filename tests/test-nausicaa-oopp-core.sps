@@ -1963,8 +1963,8 @@
 	  (fields a))
 	(<alpha> A (<> [1]))
 	((<alpha>) (begin
-		     A
-		     (=> <alpha>))))
+		     (<- <alpha>)
+		     A)))
     => #t)
 
   (check
@@ -1976,9 +1976,9 @@
 	(<alpha> A (<> [1]))
 	(<beta>  B (<> [2]))
 	(let-values (((a b) (begin
+			      (<- <alpha> <beta>)
 			      (void)
-			      (values A B)
-			      (=> <alpha> <beta>))))
+			      (values A B))))
 	  (list ((<alpha>) a)
 		((<beta>)  b))))
     => '(#t #t))
@@ -1995,9 +1995,9 @@
 	(<beta>  B (<> [2]))
 	(<gamma> G (<> [3]))
 	(let-values (((a b g) (begin
+				(<- <alpha> <beta> <gamma>)
 				(void)
-				(values A B G)
-				(=> <alpha> <beta> <gamma>))))
+				(values A B G))))
 	  (list ((<alpha>) a)
 		((<beta>)  b)
 		((<gamma>) g))))
@@ -2190,6 +2190,35 @@
       => '(2 3))
 
     #f)
+
+;;; --------------------------------------------------------------------
+;;; validated return values
+
+  (check
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <vector>)
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (lambda ((O <pair>))
+	    (<- <vector>)
+	    (vector (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <fixnum> <fixnum>)
+	  (values (O car) (O cdr)))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
 
   #t)
 
