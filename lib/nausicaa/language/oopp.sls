@@ -89,10 +89,6 @@
 	       case-symbol
 	       case-identifier)
 	 expand)
-    (for (prefix (only (vicare platform configuration)
-		       arguments-validation)
-		 config.)
-      expand)
     (for (prefix (only (nausicaa language oopp configuration)
 		       validate-tagged-values?)
 		 config.)
@@ -1437,7 +1433,7 @@
 						    #'(?validator ...)
 						    (syntax->list #'(?arg ...))
 						    body)))
-	 (if config.arguments-validation
+	 (if config.validate-tagged-values?
 	     output-form
 	   body)))
       (_
