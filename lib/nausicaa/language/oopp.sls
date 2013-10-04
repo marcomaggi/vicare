@@ -39,7 +39,7 @@
 
     define/tags			define-values/tags
     lambda/tags			case-lambda/tags
-    with-tags
+    with-tags			begin/tags
     let/tags			let*/tags
     letrec/tags			letrec*/tags
     let-values/tags		let*-values/tags
@@ -74,7 +74,8 @@
 	    (aux.shadows		shadows)
 	    (aux.satisfies		satisfies)
 	    (aux.mixins			mixins)
-	    (aux.<>			<>)))
+	    (aux.<>			<>))
+    =>)
   (import (except (vicare)
 		  define-syntax)
     (prefix (only (rnrs)
@@ -1395,7 +1396,7 @@
     ))
 
 
-(define-syntax with-tagged-arguments-validation
+(define-syntax (with-tagged-arguments-validation stx)
   ;;Transform:
   ;;
   ;;  (with-tagged-arguments-validation (who)
@@ -1427,48 +1428,73 @@
   ;;    (do-this)
   ;;    (do-that))
   ;;
-  (lambda (stx)
-    (define (main stx)
-      (syntax-case stx ()
-	((_ (?who) ((?validator ?arg) ...) . ?body)
-	 (identifier? #'?who)
-	 (let* ((body		#'(begin . ?body))
-		(output-form	(%build-output-form #'?who
+  (define (main stx)
+    (syntax-case stx ()
+      ((_ (?who) ((?validator ?arg) ...) . ?body)
+       (identifier? #'?who)
+       (let* ((body		#'(begin . ?body))
+	      (output-form	(%build-output-form #'?who
 						    #'(?validator ...)
 						    (syntax->list #'(?arg ...))
 						    body)))
-	   (if config.arguments-validation
-	       output-form
-	     body)))
-	(_
-	 (%synner "invalid input form" #f))))
+	 (if config.arguments-validation
+	     output-form
+	   body)))
+      (_
+       (%synner "invalid input form" #f))))
 
-    (define (%build-output-form who validators args body)
-      (syntax-case validators (<top>)
-	(()
-	 #`(let () #,body))
+  (define (%build-output-form who validators args body)
+    (syntax-case validators (<top>)
+      (()
+       #`(let () #,body))
 
-	;;Accept "<top>" as special validator meaning "always valid".
-	((<top> . ?other-validators)
-	 (%build-output-form who #'?other-validators (cdr args) body))
+      ;;Accept "<top>" as special validator meaning "always valid".
+      ((<top> . ?other-validators)
+       (%build-output-form who #'?other-validators (cdr args) body))
 
-	((?validator . ?other-validators)
-	 (identifier? #'?validator)
-	 (%generate-validation-form who #'?validator (car args) #'?other-validators (cdr args) body))
+      ((?validator . ?other-validators)
+       (identifier? #'?validator)
+       (%generate-validation-form who #'?validator (car args) #'?other-validators (cdr args) body))
 
-	((?validator . ?others)
-	 (%synner "invalid argument-validator selector" #'?validator))))
+      ((?validator . ?others)
+       (%synner "invalid argument-validator selector" #'?validator))))
 
-    (define (%generate-validation-form who validator-id arg-id other-validators-stx args body)
-      #`(if ((#,validator-id) #,arg-id)
-	    #,(%build-output-form who other-validators-stx args body)
-	  (procedure-argument-violation #,who
-	    "invalid tagged argument" (quote #,validator-id) #,arg-id)))
+  (define (%generate-validation-form who validator-id arg-id other-validators-stx args body)
+    #`(if ((#,validator-id) #,arg-id)
+	  #,(%build-output-form who other-validators-stx args body)
+	(procedure-argument-violation #,who
+	  "invalid tagged argument" (quote #,validator-id) #,arg-id)))
 
-    (define (%synner msg subform)
-      (syntax-violation 'with-tagged-arguments-validation msg stx subform))
+  (define (%synner msg subform)
+    (syntax-violation 'with-tagged-arguments-validation msg stx subform))
 
-    (main stx)))
+  (main stx))
+
+
+;;;; tagged return value
+
+(define-syntax (begin/tags stx)
+  (syntax-case stx (=>)
+    ((_ ?body0 ?body ... (=> ?tag))
+     (identifier? #'?tag)
+     #'(let/tags (((R ?tag) (begin ?body0 ?body ...)))
+	 R))
+
+    ((_ ?body0 ?body ... (=> ?tag0 ?tag ...))
+     (all-identifiers? #'(?tag0 ?tag ...))
+     (with-syntax
+	 (((VAR0 VAR ...) (generate-temporaries #'(?tag0 ?tag ...))))
+       #'(call-with-values
+	     (lambda () ?body0 ?body ...)
+	   (lambda/tags ((VAR0 ?tag0) (VAR ?tag) ...)
+	     (values VAR0 VAR ...)))))
+
+    ((_ ?body0 ?body ... (=>))
+     #'(begin ?body0 ?body ...))
+
+    ((_ ?body0 ?body ...)
+     #'(begin ?body0 ?body ...))
+    ))
 
 
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
@@ -1883,4 +1909,5 @@
 ;; eval: (put 'case-symbol 'scheme-indent-function 1)
 ;; eval: (put 'case-identifier 'scheme-indent-function 1)
 ;; eval: (put 'THE-PARENT 'scheme-indent-function 1)
+;; eval: (put 'receive-and-return/tags 'scheme-indent-function 2)
 ;; End:
