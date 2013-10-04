@@ -33,7 +33,7 @@ define define-values
 let let* letrec letrec*
 let-values let*-values
 lambda case-lambda set!
-do
+do begin
 receive receive-and-return
 @end example
 
@@ -53,6 +53,7 @@ let-values/tags         @equiv{} let-values
 let*-values/tags        @equiv{} let*-values
 receive/tags            @equiv{} receive
 receive-and-return/tags @equiv{} receive-and-return
+begin/tags              @equiv{} begin
 do/tags                 @equiv{} do
 do*/tags                @equiv{} do*
 case-lambda/tags        @equiv{} case-lambda

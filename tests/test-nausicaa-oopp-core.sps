@@ -32,7 +32,7 @@
   (prefix (libtest classes-lib) test.))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing classes basics\n")
+(check-display "*** testing Nausicaa: classes basics\n")
 
 
 ;;;; helpers
@@ -1946,6 +1946,62 @@
       => '(2 1))
 
     #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'begin-tags))
+
+  (check
+      (begin
+	1 2 3)
+    => 3)
+
+  (check
+      (let ()
+	(define-class <alpha>
+	  (fields a))
+	(<alpha> A (<> [1]))
+	((<alpha>) (begin
+		     A
+		     (=> <alpha>))))
+    => #t)
+
+  (check
+      (let ()
+	(define-class <alpha>
+	  (fields a))
+	(define-class <beta>
+	  (fields b))
+	(<alpha> A (<> [1]))
+	(<beta>  B (<> [2]))
+	(let-values (((a b) (begin
+			      (void)
+			      (values A B)
+			      (=> <alpha> <beta>))))
+	  (list ((<alpha>) a)
+		((<beta>)  b))))
+    => '(#t #t))
+
+  (check
+      (let ()
+	(define-class <alpha>
+	  (fields a))
+	(define-class <beta>
+	  (fields b))
+	(define-class <gamma>
+	  (fields g))
+	(<alpha> A (<> [1]))
+	(<beta>  B (<> [2]))
+	(<gamma> G (<> [3]))
+	(let-values (((a b g) (begin
+				(void)
+				(values A B G)
+				(=> <alpha> <beta> <gamma>))))
+	  (list ((<alpha>) a)
+		((<beta>)  b)
+		((<gamma>) g))))
+    => '(#t #t #t))
 
   #t)
 

@@ -41,7 +41,10 @@
 ;;;; (rnrs base (6))
     < > <= >= =
     apply call-with-current-continuation call/cc
-    begin quasiquote unquote unquote-splicing
+;;;Replaced by BEGIN/TAGS from (nausicaa language oopp).
+;;;
+;;; begin
+    quasiquote unquote unquote-splicing
     caadar caaddr cadaar cadadr caddar cadddr cdaaar
     caar cadr cdar cddr caaar caadr cadar
     caddr cdaar cdadr cddar cdddr caaaar caaadr
@@ -1489,6 +1492,7 @@
      (set!/tags				set!)
      (define/tags			define)
      (define-values/tags		define-values)
+     (begin/tags			begin)
      (lambda/tags			lambda)
      (let/tags				let)
      (let*/tags				let*)

@@ -2663,6 +2663,7 @@ to access tag fields and to apply tag methods.
 @menu
 * oopp bindings overview::      Introduction to @oopp{} bindings.
 * oopp bindings let::           @oopp{} bindings: @func{let}--like syntaxes.
+* oopp bindings begin::         @oopp{} bindings: @func{begin}--like syntaxes.
 * oopp bindings lambda::        @oopp{} bindings: @func{lambda}--like syntaxes.
 * oopp bindings define::        @oopp{} bindings: @func{define}--like syntaxes.
 * oopp bindings do::            @oopp{} bindings: @func{do}--like syntaxes.
@@ -2894,6 +2895,23 @@ Usage example:
   )
 @result{} 1, 2 ;;two values
 @end example
+@end deffn
+
+@c page
+@node oopp bindings begin
+@subsection @oopp{} bindings: @func{begin}--like syntaxes
+
+
+@deffn Syntax begin/tags @metao{body} @meta{body} @dots{}
+@deffnx Syntax begin/tags @metao{body} @meta{body} @dots{} (=> @meta{tagged-variable} ...)
+@deffnx {Auxiliary Syntax} =>
+When the auxiliary syntax @func{=>} is not used: @func{begin/tags}
+behaves like @func{begin} from @library{rnrs (6)}.  When the auxiliary
+syntax @func{=>} is used: it specifies one tag for each value returned
+by the last @meta{body} form; such tag is used to validate the
+corresponding return value with the tag's predicate.
+
+The auxiliary syntax @func{=>} is the one exported by @rsixlibrary{base}.
 @end deffn
 
 @c page
