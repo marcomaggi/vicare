@@ -42,8 +42,8 @@
     parse-formals-bindings		make-tagged-variable-transformer
 
     ;; helpers
-    define-values			case-symbol
-    case-identifier			symbol=identifier?
+    case-symbol				case-identifier
+    symbol=identifier?
     single-identifier-subst		multi-identifier-subst
 
     ;; special identifier builders
@@ -1028,6 +1028,8 @@
     (<parsed-spec>-methods-table-set! O (cons (cons ?method-name-id ?method-implementation-id)
 					      (<parsed-spec>-methods-table O)))))
 
+;;; --------------------------------------------------------------------
+
 (define (<parsed-spec>-mutable-fields-data spec)
   ;;Select the mutable fields among  the concrete and virtual fields and
   ;;return a list of lists with the format:
@@ -1035,7 +1037,7 @@
   ;;	((?field-name ?accessor ?mutator ?tag) ...)
   ;;
   (map (lambda (field-record)
-	 (list (<field-spec>-name-id		field-record)
+	 (list (<field-spec>-name-id field-record)
 	       (<field-spec>-accessor-id	field-record)
 	       (<field-spec>-mutator-id		field-record)
 	       (<field-spec>-tag-id		field-record)))
@@ -1046,14 +1048,34 @@
 		  (<parsed-spec>-virtual-fields spec))
 	(<parsed-spec>-virtual-fields spec)))))
 
+(define (<parsed-spec>-unsafe-mutable-fields-data spec)
+  ;;Select the  mutable fields  among the concrete  fields and  return a
+  ;;list of lists with the format:
+  ;;
+  ;;	((?field-name ?unsafe-field-name ?tag) ...)
+  ;;
+  (if (<class-spec>? spec)
+      (map (lambda (field-record)
+	     (define field-name-id
+	       (<field-spec>-name-id field-record))
+	     (list field-name-id
+		   (identifier-prefix "$" field-name-id)
+		   (<field-spec>-tag-id field-record)))
+	(filter (lambda (field-record)
+		  (<field-spec>-mutator-id field-record))
+	  (<parsed-spec>-concrete-fields spec)))
+    '()))
+
+;;; --------------------------------------------------------------------
+
 (define (<parsed-spec>-immutable-fields-data spec)
   ;;Select the  immutable fields among  the concrete and  virtual fields
   ;;and return a list of lists with the format:
   ;;
-  ;;	((?field-name ?accessor ?tag) ...)
+  ;;	((?field-name ?unsafe-field-name ?accessor ?tag) ...)
   ;;
   (map (lambda (field-record)
-	 (list (<field-spec>-name-id		field-record)
+	 (list (<field-spec>-name-id field-record)
 	       (<field-spec>-accessor-id	field-record)
 	       (<field-spec>-tag-id		field-record)))
     (filter (lambda (field-record)
@@ -1062,6 +1084,26 @@
 	  (append (<parsed-spec>-concrete-fields spec)
 		  (<parsed-spec>-virtual-fields spec))
 	(<parsed-spec>-virtual-fields spec)))))
+
+(define (<parsed-spec>-unsafe-immutable-fields-data spec)
+  ;;Select the immutable  fields among the concrete fields  and return a
+  ;;list of lists with the format:
+  ;;
+  ;;	((?field-name ?unsafe-field-name ?tag) ...)
+  ;;
+  (if (<class-spec>? spec)
+      (map (lambda (field-record)
+	     (define field-name-id
+	       (<field-spec>-name-id field-record))
+	     (list field-name-id
+		   (identifier-prefix "$" field-name-id)
+		   (<field-spec>-tag-id field-record)))
+	(filter (lambda (field-record)
+		  (not (<field-spec>-mutator-id field-record)))
+	  (<parsed-spec>-concrete-fields spec)))
+    '()))
+
+;;; --------------------------------------------------------------------
 
 (define (<parsed-spec>-concrete-fields-data spec)
   ;;Take the concrete fields and return a list of lists with the format:
@@ -1086,7 +1128,7 @@
     (<parsed-spec>-concrete-fields spec)))
 
 (define (<parsed-spec>-concrete-fields-names spec)
-  ;;Take the concrete fields and return a list of lists with the format:
+  ;;Take the concrete fields and return a list with the format:
   ;;
   ;;   (?field-name ...)
   ;;
@@ -1238,10 +1280,18 @@
 	(<parsed-spec>-name-id spec))
        (THE-PARENT
 	(<parsed-spec>-parent-id spec))
+       (THE-RECORD-TYPE
+	(if (<class-spec>? spec)
+	    (<class-spec>-record-type-id spec)
+	  #f))
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
 	(<parsed-spec>-immutable-fields-data spec))
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(<parsed-spec>-mutable-fields-data spec)))
+	(<parsed-spec>-mutable-fields-data spec))
+       (((IMMUTABLE-CONCRETE-FIELD UNSAFE-IMMUTABLE-CONCRETE-FIELD IMMUTABLE-CONCRETE-TAG) ...)
+	(<parsed-spec>-unsafe-immutable-fields-data spec))
+       (((MUTABLE-CONCRETE-FIELD UNSAFE-MUTABLE-CONCRETE-FIELD MUTABLE-CONCRETE-TAG) ...)
+	(<parsed-spec>-unsafe-mutable-fields-data spec)))
     #'(lambda (original-stx expr-stx var-id args-stx)
 	;;Process an accessor form:
 	;;
@@ -1259,8 +1309,20 @@
 	  ((??field-name)
 	   (identifier? #'??field-name)
 	   (case-symbol (syntax->datum #'??field-name)
-	     ((IMMUTABLE-FIELD) #`(IMMUTABLE-ACCESSOR #,expr-stx)) ...
-	     ((MUTABLE-FIELD)   #`(MUTABLE-ACCESSOR   #,expr-stx))   ...
+	     ;;Safe accessors.
+	     ((IMMUTABLE-FIELD)
+	      #`(IMMUTABLE-ACCESSOR #,expr-stx))
+	     ...
+	     ((MUTABLE-FIELD)
+	      #`(MUTABLE-ACCESSOR   #,expr-stx))
+	     ...
+	     ;;Unsafe accessors.
+	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	      #`($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx))
+	     ...
+	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	      #`($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx))
+	     ...
 	     (else
 	      #`(THE-PARENT :dispatch #,expr-stx (#,var-id ??field-name)))))
 
@@ -1269,11 +1331,19 @@
 	   (identifier? #'??field-name)
 	   (with-syntax ((KEYS #'((??key0 (... ...)) (??key (... ...)) (... ...))))
 	     (case-symbol (syntax->datum #'??field-name)
+	       ;;Safe accessors.
 	       ((IMMUTABLE-FIELD)
 		#`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o (o . KEYS)))
 	       ...
 	       ((MUTABLE-FIELD)
 		#`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o (o . KEYS)))
+	       ...
+	       ;;Unsafe accessors.
+	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+		#`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o (o . KEYS)))
+	       ...
+	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+		#`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o (o . KEYS)))
 	       ...
 	       (else
 		#`(THE-PARENT :dispatch #,expr-stx (#,var-id ??field-name . KEYS))))))
@@ -1282,11 +1352,19 @@
 	  ((??field-name . ??args)
 	   (identifier? #'??field-name)
 	   (case-symbol (syntax->datum #'??field-name)
+	     ;;Safe accessors.
 	     ((IMMUTABLE-FIELD)
 	      #`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o (o . ??args)))
 	     ...
 	     ((MUTABLE-FIELD)
 	      #`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o (o . ??args)))
+	     ...
+	     ;;Unsafe accessors.
+	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	      #`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o (o . ??args)))
+	     ...
+	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	      #`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o (o . ??args)))
 	     ...
 	     (else
 	      #`(THE-PARENT :dispatch #,expr-stx (#,var-id ??field-name . ??args)))))
@@ -1342,10 +1420,18 @@
 	(<parsed-spec>-name-id spec))
        (THE-PARENT
 	(<parsed-spec>-parent-id spec))
+       (THE-RECORD-TYPE
+	(if (<class-spec>? spec)
+	    (<class-spec>-record-type-id spec)
+	  #f))
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
 	(<parsed-spec>-immutable-fields-data spec))
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(<parsed-spec>-mutable-fields-data spec)))
+	(<parsed-spec>-mutable-fields-data spec))
+       (((IMMUTABLE-CONCRETE-FIELD UNSAFE-IMMUTABLE-CONCRETE-FIELD IMMUTABLE-CONCRETE-TAG) ...)
+	(<parsed-spec>-unsafe-immutable-fields-data spec))
+       (((MUTABLE-CONCRETE-FIELD UNSAFE-MUTABLE-CONCRETE-FIELD MUTABLE-CONCRETE-TAG) ...)
+	(<parsed-spec>-unsafe-mutable-fields-data spec)))
     #'(lambda (stx expr-stx keys-stx value-stx)
 	;;Process a mutator form equivalent to:
 	;;
@@ -1365,11 +1451,20 @@
 	  ((??field-name)
 	   (identifier? #'??field-name)
 	   (case-symbol (syntax->datum #'??field-name)
+	     ;;Safe mutators.
 	     ((MUTABLE-FIELD)
 	      #`(MUTABLE-MUTATOR #,expr-stx (MUTABLE-TAG :assert-type-and-return #,value-stx)))
 	     ...
 	     ((IMMUTABLE-FIELD)
 	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" stx #'IMMUTABLE-FIELD))
+	     ...
+	     ;;Unsafe mutators.
+	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	      #`($record-type-field-set! THE-RECORD-TYPE MUTABLE-CONCRETE-FIELD #,expr-stx
+					 (MUTABLE-CONCRETE-TAG :assert-type-and-return #,value-stx)))
+	     ...
+	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" stx #'IMMUTABLE-CONCRETE-FIELD))
 	     ...
 	     (else
 	      #`(THE-PARENT :mutator #,expr-stx (??field-name) #,value-stx))))
@@ -1381,13 +1476,23 @@
 	   (identifier? #'??field-name)
 	   (with-syntax ((KEYS #'((??key0 (... ...)) (??key (... ...)) (... ...))))
 	     (case-symbol (syntax->datum #'??field-name)
+	       ;;Safe mutators.
+	       ((MUTABLE-FIELD)
+		#`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o
+				 (MUTABLE-TAG   :setter o (o KEYS #,value-stx))))
+	       ...
 	       ((IMMUTABLE-FIELD)
 		#`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o
 				 (IMMUTABLE-TAG :setter o (o KEYS #,value-stx))))
 	       ...
-	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o
-				 (MUTABLE-TAG   :setter o (o KEYS #,value-stx))))
+	       ;;Unsafe mutators.
+	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+		#`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o
+					  (MUTABLE-CONCRETE-TAG   :setter o (o KEYS #,value-stx))))
+	       ...
+	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+		#`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o
+					  (IMMUTABLE-CONCRETE-TAG :setter o (o KEYS #,value-stx))))
 	       ...
 	       (else
 		#`(THE-PARENT :mutator #,expr-stx #,keys-stx #,value-stx)))))
@@ -1396,6 +1501,7 @@
 	  ((??field-name0 ??arg (... ...))
 	   (identifier? #'??field-name0)
 	   (case-symbol (syntax->datum #'??field-name0)
+	     ;;Safe mutators.
 	     ((MUTABLE-FIELD)
 	      #`(MUTABLE-TAG   :mutator (MUTABLE-ACCESSOR   #,expr-stx)
 			       (??arg (... ...)) #,value-stx))
@@ -1403,6 +1509,15 @@
 	     ((IMMUTABLE-FIELD)
 	      #`(IMMUTABLE-TAG :mutator (IMMUTABLE-ACCESSOR #,expr-stx)
 			       (??arg (... ...)) #,value-stx))
+	     ...
+	     ;;Unsafe mutators.
+	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	      #`(MUTABLE-CONCRETE-TAG   :mutator ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)
+					(??arg (... ...)) #,value-stx))
+	     ...
+	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	      #`(IMMUTABLE-CONCRETE-TAG :mutator ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)
+					(??arg (... ...)) #,value-stx))
 	     ...
 	     (else
 	      #`(THE-PARENT :mutator #,expr-stx (??field-name0 ??arg (... ...)) #,value-stx))))

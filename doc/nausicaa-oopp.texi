@@ -458,32 +458,68 @@ O                       @result{} '(3 . 4)
 @end example
 
 @item (@meta{var} @meta{id})
+Expands according to the following rules, in the given order:
+
+@enumerate
+@item
 If the type has a method named @meta{id}: this syntax expands to a call
-to such method with no arguments; else if the type has a field named
-@meta{id}: this syntax expands to a call to the field accessor.
+to such method with no arguments.
+
+@item
+If the type has a field named @meta{id}: this syntax expands to a call
+to the field accessor.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} field named @meta{id} with the @samp{$} stripped: this
+syntax expands to a call to the unsafe field accessor.
+@end enumerate
+
 Examples:
 
 @example
 (define-label <pair>
-  (virtual-field (immutable car car))
+  (virtual-fields (immutable car car))
   (method (cdr O)
     (cdr O)))
 
 (<pair> O '(1 . 2))
-(O car)         @result{} 1   ;field accessor application
-(O cdr)         @result{} 2   ;method application
+(O car)         @result{} 1     ;field accessor application
+(O cdr)         @result{} 2     ;method application
+
+(define-class <alpha>
+  (fields a))
+
+(<alpha> A (1))
+(A a)           @result{} 1     ;field accessor application
+(A $a)          @result{} 1     ;unsafe field accessor application
 @end example
 
 @item (set!/tags (@meta{var} @meta{id}) @meta{expr})
+Expands according to the following rules, in the given order:
+
+@enumerate
+@item
 If the type has a field named @meta{id}: this syntax expands to a call
-to the field mutator.  If @meta{id} is not the name of a field or it is
-the name of an immutable field: this syntax causes a syntax violation to
-be raised and expand time.  Example:
+to the field mutator.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} field named @meta{id} with the @samp{$} stripped: this
+syntax expands to a call to the unsafe field mutator.
+
+@item
+If @meta{id} is not the name of a field or it is the name of an
+immutable field: this syntax causes a syntax violation to be raised and
+expand time.
+@end enumerate
+
+Example:
 
 @example
 (define-label <pair>
-  (virtual-field (mutable car car set-car!)
-                 (mutable cdr cdr set-cdr!)))
+  (virtual-fields (mutable car car set-car!)
+                  (mutable cdr cdr set-cdr!)))
 
 (<alpha> O (cons 1 2))
 (O car)         @result{} 1
@@ -492,6 +528,13 @@ be raised and expand time.  Example:
 (set!/tags (o car) 77)
 (set!/tags (o cdr) 99)
 O               @result{} (77 . 99)
+
+(define-class <alpha>
+  (fields (mutable a)))
+
+(<alpha> A (1))
+(set!/tags (A a)  2)    ;field mutator application
+(set!/tags (A $a) 3)    ;unsafe field mutator application
 @end example
 
 @item (@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
@@ -575,9 +618,10 @@ M               @result{} #(#(1 2 77) #(4 99 6))
 @end example
 
 @item (@meta{var} @meta{id} @metao{form} @meta{form} ...)
-This syntax allows the use of nested syntaxes for typed fields.
+This syntax allows the use of nested syntaxes for typed fields.  It is
+expanded according to the following rules, in the given order:
 
-@itemize
+@enumerate
 @item
 If the type has a method named @meta{id}: this syntax expands to a call
 to such method with arguments @metao{form}, @meta{form}, @dots{}.
@@ -594,7 +638,7 @@ Example:
 @end example
 
 @item
-If the type has a @strong{typed} field named @meta{id}: this syntax
+If the type has a @strong{tagged} field named @meta{id}: this syntax
 expands to a recursive reference to the members @metao{form},
 @meta{form}, @dots{} of the field's value.  Example:
 
@@ -653,6 +697,13 @@ where @code{G0} is an automatically generated identifier; the syntax use
 supported by @metai{type}.
 
 @item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} and @strong{tagged} field named @meta{id} with the
+@samp{$} stripped: this syntax expands to a recursive reference to the
+members @metao{form}, @meta{form}, @dots{} of the field's value which is
+extracted using the unsafe accessor.
+
+@item
 If the type has an @strong{untyped} field named @meta{id}: this syntax
 causes a syntax violation exception to be raised at expand time.
 Example:
@@ -668,13 +719,27 @@ Example:
 
 (O car car)     @error{} syntax violation
 @end example
-@end itemize
+@end enumerate
 
 @item (set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
 This syntax allows the use of nested field mutator and setter syntaxes
-for typed fields.  If the type has a @strong{typed} field named
-@meta{id}: this syntax expands to a recursive @func{set!/tags} syntax
-for the field.  Example of nested field mutation:
+for typed fields.  It expands according to the following rules, in the
+given order:
+
+@enumerate
+@item
+If the type has a @strong{tagged} field named @meta{id}: this syntax
+expands to a recursive @func{set!/tags} syntax for the field's value.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} and @strong{tagged} field named @meta{id} with the
+@samp{$} stripped: this syntax expands to a recursive @func{set!/tags}
+syntax for the field's value, which is extracted using the unsafe
+accessor.
+@end enumerate
+
+Example of nested field mutation:
 
 @example
 (define-class <alpha>
