@@ -1477,17 +1477,26 @@
   (syntax-case stx (aux.<-)
     ((_ (aux.<- ?tag) ?body0 ?body ...)
      (identifier? #'?tag)
-     #'(let/tags (((R ?tag) (begin ?body0 ?body ...)))
-	 R))
+     (if config.validate-tagged-values?
+	 #'(receive-and-return (R)
+	       (begin ?body0 ?body ...)
+	     (unless ((?tag) R)
+	       (assertion-violation 'begin/tags "invalid tagged return value" '?tag R)))
+       #'(begin ?body0 ?body ...)))
 
     ((_ (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
      (all-identifiers? #'(?tag0 ?tag ...))
-     (with-syntax
-	 (((VAR0 VAR ...) (generate-temporaries #'(?tag0 ?tag ...))))
-       #'(call-with-values
-	     (lambda () ?body0 ?body ...)
-	   (lambda/tags ((VAR0 ?tag0) (VAR ?tag) ...)
-	     (values VAR0 VAR ...)))))
+     (if config.validate-tagged-values?
+	 (with-syntax
+	     (((RETVAL ...) (generate-temporaries #'(?tag ...))))
+	   #'(receive-and-return (retval0 RETVAL ...)
+		 (begin ?body0 ?body ...)
+	       (unless ((?tag0) retval0)
+		 (assertion-violation 'begin/tags "invalid tagged return value" '?tag0 retval0))
+	       (unless ((?tag) RETVAL)
+		 (assertion-violation 'begin/tags "invalid tagged return value" '?tag RETVAL))
+	       ...))
+       #'(begin ?body0 ?body ...)))
 
     ((_ (aux.<-) ?body0 ?body ...)
      #'(begin ?body0 ?body ...))
