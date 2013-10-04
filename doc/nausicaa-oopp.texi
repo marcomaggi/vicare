@@ -2903,7 +2903,7 @@ Usage example:
 
 
 @deffn Syntax begin/tags @metao{body} @meta{body} @dots{}
-@deffnx Syntax begin/tags @metao{body} @meta{body} @dots{} (=> @meta{tagged-variable} ...)
+@deffnx Syntax begin/tags @metao{body} @meta{body} @dots{} (=> @meta{tag} ...)
 @deffnx {Auxiliary Syntax} =>
 When the auxiliary syntax @func{=>} is not used: @func{begin/tags}
 behaves like @func{begin} from @library{rnrs (6)}.  When the auxiliary
