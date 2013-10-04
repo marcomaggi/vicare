@@ -74,8 +74,8 @@
 	    (aux.shadows		shadows)
 	    (aux.satisfies		satisfies)
 	    (aux.mixins			mixins)
-	    (aux.<>			<>))
-    =>)
+	    (aux.<>			<>)
+	    (aux.<-			<-)))
   (import (except (vicare)
 		  define-syntax)
     (prefix (only (rnrs)
@@ -98,7 +98,7 @@
 		 config.)
 	 expand)
     (prefix (only (nausicaa language auxiliary-syntaxes)
-		  <>
+		  <>			<-
 		  parent		nongenerative
 		  sealed		opaque
 		  predicate		abstract
@@ -1474,13 +1474,13 @@
 ;;;; tagged return value
 
 (define-syntax (begin/tags stx)
-  (syntax-case stx (=>)
-    ((_ ?body0 ?body ... (=> ?tag))
+  (syntax-case stx (aux.<-)
+    ((_ (aux.<- ?tag) ?body0 ?body ...)
      (identifier? #'?tag)
      #'(let/tags (((R ?tag) (begin ?body0 ?body ...)))
 	 R))
 
-    ((_ ?body0 ?body ... (=> ?tag0 ?tag ...))
+    ((_ (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
      (all-identifiers? #'(?tag0 ?tag ...))
      (with-syntax
 	 (((VAR0 VAR ...) (generate-temporaries #'(?tag0 ?tag ...))))
@@ -1489,7 +1489,7 @@
 	   (lambda/tags ((VAR0 ?tag0) (VAR ?tag) ...)
 	     (values VAR0 VAR ...)))))
 
-    ((_ ?body0 ?body ... (=>))
+    ((_ (aux.<-) ?body0 ?body ...)
      #'(begin ?body0 ?body ...))
 
     ((_ ?body0 ?body ...)
@@ -1583,13 +1583,13 @@
     ;;Thunk definition.
     ;;
     ((_ () ?body0 ?body ...)
-     #'(lambda () ?body0 ?body ...))
+     #'(lambda () (begin/tags ?body0 ?body ...)))
 
     ;;Function with untagged args argument.
     ;;
     ((_ ?formals ?body0 ?body ...)
      (identifier? #'?formals)
-     #'(lambda ?formals ?body0 ?body ...))
+     #'(lambda ?formals (begin/tags ?body0 ?body ...)))
 
     ;;Function with tagged args argument.
     ;;
@@ -1603,7 +1603,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	       (begin/tags ?body0 ?body ...))))))
 
     ;;Mandatory arguments and untagged rest argument.
     ;;
@@ -1616,7 +1616,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	       (begin/tags ?body0 ?body ...))))))
 
     ;;Mandatory arguments and tagged rest argument.
     ;;
@@ -1630,7 +1630,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	       (begin/tags ?body0 ?body ...))))))
 
     ;;Mandatory arguments and no rest argument.
     ;;
@@ -1642,7 +1642,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	       (begin/tags ?body0 ?body ...))))))
 
     (_
      (synner "syntax error in LAMBDA/TAGS"))))
@@ -1668,7 +1668,7 @@
 			     (with-tagged-arguments-validation (who)
 				 VALIDATIONS
 			       (let-syntax (SYNTAX-BINDING ...)
-				 ?body0 ?body ...)))
+				 (begin/tags ?body0 ?body ...))))
 			  ou-clauses)))))
 	 ((?clause . ?other-clauses)
 	  (synner "invalid clause syntax" #'?clause)))))
