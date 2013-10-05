@@ -604,65 +604,68 @@
       (_
        (synner "invalid bindings syntax" bindings-stx))))))
 
-(define-with-caller (parse-let-values-bindings (bindings-stx top-id synner)
-					       ((values-vars		'())
-						(syntax-bindings	'())))
-  ;;Recursive function.  Parse  the syntax object BINDINGS-STX expecting
-  ;;it to  be a list  of tagged LET-VALUES bindings;  supported syntaxes
-  ;;for the bindings are:
-  ;;
-  ;;   ()
-  ;;   (?vars0 ?vars ...)
-  ;;
-  ;;where each ?VARS must have the syntax of the tagged LAMBDA formals:
-  ;;
-  ;;   (?var0 ?var ...)
-  ;;   (?var0 ?var ... . ?rest)
-  ;;   ?var-id
-  ;;
-  ;;and each ?VAR must have one of the following syntaxes:
-  ;;
-  ;;   ?var-id
-  ;;   (?var-id)
-  ;;   (?var-id ?tag-id)
-  ;;   #(?var-id ?tag-id)
-  ;;
-  ;;The return value is a syntax object with the structure:
-  ;;
-  ;;   ((VARS ...) (SYNTAX-BINDING ...))
-  ;;
-  ;;where  each VARS  is a  list  of identifiers  to be  used to  create
-  ;;bindings  and  the  SYNTAX-BINDING  are  the  associated  LET-SYNTAX
-  ;;bindings.  If a variable is tagged with TOP-ID: no syntax binding is
-  ;;generated.
-  ;;
-  ;;When the  BINDINGS-STX comes from a LET-VALUES,  the returned syntax
-  ;;object should be used to compose an output form as:
-  ;;
-  ;;   #'(let-values ((VARS ?init) ...)
-  ;;       (let-syntax (SYNTAX-BINDING ...)
-  ;;         ?body0 ?body ...))
-  ;;
-  ;;TOP-ID must the the identifier bound to the "<top>" tag; this tag is
-  ;;used as default when no tag  is given for a binding.  SYNNER must be
-  ;;a closure to be used to raise syntax violations.
-  ;;
-  (define-inline (%final stx)
-    (reverse (syntax->list stx)))
-  (syntax-case bindings-stx ()
-    (()
-     (list (%final values-vars) (%final syntax-bindings)))
+(define parse-let-values-bindings
+  (case-lambda
+   ((bindings-stx top-id synner)
+    (parse-let-values-bindings bindings-stx top-id synner '() '()))
+   ((bindings-stx top-id synner values-vars syntax-bindings)
+    ;;Recursive   function.   Parse   the  syntax   object  BINDINGS-STX
+    ;;expecting it to be a list of tagged LET-VALUES bindings; supported
+    ;;syntaxes for the bindings are:
+    ;;
+    ;;   ()
+    ;;   (?vars0 ?vars ...)
+    ;;
+    ;;where  each  ?VARS must  have  the  syntax  of the  tagged  LAMBDA
+    ;;formals:
+    ;;
+    ;;   (?var0 ?var ...)
+    ;;   (?var0 ?var ... . ?rest)
+    ;;   ?var-id
+    ;;
+    ;;and each ?VAR must have one of the following syntaxes:
+    ;;
+    ;;   ?var-id
+    ;;   (?var-id)
+    ;;   (?var-id ?tag-id)
+    ;;   #(?var-id ?tag-id)
+    ;;
+    ;;The return value is a syntax object with the structure:
+    ;;
+    ;;   ((VARS ...) (SYNTAX-BINDING ...))
+    ;;
+    ;;where each  VARS is  a list  of identifiers to  be used  to create
+    ;;bindings  and the  SYNTAX-BINDING  are  the associated  LET-SYNTAX
+    ;;bindings.  If a variable is  tagged with TOP-ID: no syntax binding
+    ;;is generated.
+    ;;
+    ;;When the BINDINGS-STX comes from a LET-VALUES, the returned syntax
+    ;;object should be used to compose an output form as:
+    ;;
+    ;;   #'(let-values ((VARS ?init) ...)
+    ;;       (let-syntax (SYNTAX-BINDING ...)
+    ;;         ?body0 ?body ...))
+    ;;
+    ;;TOP-ID must the the identifier bound  to the "<top>" tag; this tag
+    ;;is used  as default when  no tag is  given for a  binding.  SYNNER
+    ;;must be a closure to be used to raise syntax violations.
+    ;;
+    (define-inline (%final stx)
+      (reverse (syntax->list stx)))
+    (syntax-case bindings-stx ()
+      (()
+       (list (%final values-vars) (%final syntax-bindings)))
 
-    ((?vars . ?other-bindings)
-     (with-syntax
-	 (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-	   (parse-formals-bindings #'?vars top-id synner)))
-       (parse-let-values-bindings #'?other-bindings top-id synner
-				  #`(FORMALS . #,values-vars)
-				  #`(SYNTAX-BINDING ... . #,syntax-bindings))))
+      ((?vars . ?other-bindings)
+       (with-syntax
+	   (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+	     (parse-formals-bindings #'?vars top-id synner)))
+	 (parse-let-values-bindings #'?other-bindings top-id synner
+				    #`(FORMALS . #,values-vars)
+				    #`(SYNTAX-BINDING ... . #,syntax-bindings))))
 
-    (_
-     (synner "invalid bindings syntax" bindings-stx))))
+      (_
+       (synner "invalid bindings syntax" bindings-stx))))))
 
 (define (parse-formals-bindings formals-stx top-id synner)
   ;;Parse the  syntax object  FORMALS-STX expecting it  to be a  list of
