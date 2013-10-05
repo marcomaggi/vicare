@@ -43,7 +43,6 @@
 
     ;; helpers
     case-symbol				case-identifier
-    symbol=identifier?
     single-identifier-subst		multi-identifier-subst
 
     ;; special identifier builders
@@ -188,13 +187,6 @@
     ))
 
 ;;; --------------------------------------------------------------------
-
-(define (symbol=identifier? sym id)
-  ;;Return true  if the symbol  SYM is equal  to the symbol name  of the
-  ;;identifier ID.
-  ;;
-  (and (identifier? id)
-       (eq? sym (syntax->datum id))))
 
 (define (single-identifier-subst src-id dst-stx stx)
   ;;Visit the syntax object STX  substituting all the occurrences of the

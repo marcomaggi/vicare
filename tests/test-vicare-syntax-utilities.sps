@@ -883,6 +883,17 @@
   #t)
 
 
+(parametrise ((check-test-name	'clauses-examples-fields))
+
+  (check-for-true
+   (identifier=symbol? #'ciao 'ciao))
+
+  (check-for-false
+   (identifier=symbol? #'ciao 'hello))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

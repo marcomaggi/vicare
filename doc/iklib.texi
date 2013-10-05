@@ -2809,6 +2809,12 @@ Recursively visit the internals of the given syntax objects and return
 compared with @func{free-identifier=?}.
 @end defun
 
+
+@defun {identifier=symbol?} @var{id} @var{sym}
+Return true if the symbol @var{sym} is equal to the symbol name of the
+identifier @var{id}.
+@end defun
+
 @c page
 @node iklib expander clauses
 @subsection Syntax clauses helpers

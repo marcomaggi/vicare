@@ -2584,6 +2584,7 @@
     (syntax->vector				i v $language)
     (syntax-unwrap				i v $language)
     (syntax=?					i v $language)
+    (identifier=symbol?				i v $language)
     #;(quoted-syntax-object?			i v $language)
 
     (syntax-clauses-unwrap			i v $language)

@@ -62,6 +62,7 @@
 
     ;; comparison
     syntax=?
+    identifier=symbol?
 
     ;; inspection
     #;quoted-syntax-object?
@@ -124,6 +125,7 @@
 
 		  ;; comparison
 		  syntax=?
+		  identifier=symbol?
 
 		  ;; inspection
 		  #;quoted-syntax-object?
@@ -152,7 +154,8 @@
 		  syntax-clause-spec-mutually-exclusive
 		  syntax-clauses-single-spec
 		  syntax-clauses-fold-specs)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare arguments validation))
 
 
 ;;;; helpers
@@ -456,6 +459,16 @@
 	  (else
 	   (equal? stx1 stx2))))
   (%syntax=? (syntax-unwrap stx1) (syntax-unwrap stx2)))
+
+(define (identifier=symbol? id sym)
+  ;;Return true  if the symbol  SYM is equal to  the symbol name  of the
+  ;;identifier ID.
+  ;;
+  (define who 'identifier=symbol?)
+  (with-arguments-validation (who)
+      ((identifier	id)
+       (symbol		sym))
+    (eq? sym (syntax->datum id))))
 
 
 ;;;; inspection
