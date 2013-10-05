@@ -115,16 +115,6 @@
 
 ;;;; private helpers
 
-(define-syntax define-with-caller
-  (syntax-rules ()
-    ((_ (?who (?caller-arg ...) ((?func-arg ?func-default) ...)) ?body0 ?body ...)
-     (begin
-       (define-inline (?who ?caller-arg ...)
-	 (the-function ?caller-arg ... ?func-default ...))
-       (define (the-function ?caller-arg ... ?func-arg ...)
-	 (let-syntax ((?who (identifier-syntax the-function)))
-	   ?body0 ?body ...))))))
-
 (define-auxiliary-syntaxes
   parser-name
   clause-keyword
