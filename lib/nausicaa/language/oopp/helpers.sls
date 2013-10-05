@@ -383,10 +383,10 @@
 ;;;; public helpers: visible identifiers composition
 
 (define (make-method-identifier tag-id method-id)
-  (string->identifier tag-id
-		      (string-append (identifier->string tag-id)
-				     "-"
-				     (identifier->string method-id))))
+  (identifier-append tag-id
+		     (identifier->string tag-id)
+		     "-"
+		     (identifier->string method-id)))
 
 ;;; --------------------------------------------------------------------
 
