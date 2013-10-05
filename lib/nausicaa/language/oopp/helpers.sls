@@ -848,17 +848,18 @@
   ;;
   ;;	((?field-name ?accessor ?mutator ?tag) ...)
   ;;
+  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
-	 (list (<field-spec>-name-id field-record)
-	       (<field-spec>-accessor-id	field-record)
-	       (<field-spec>-mutator-id		field-record)
-	       (<field-spec>-tag-id		field-record)))
+	 (list ($<field-spec>-name-id		field-record)
+	       ($<field-spec>-accessor-id	field-record)
+	       ($<field-spec>-mutator-id	field-record)
+	       ($<field-spec>-tag-id		field-record)))
     (filter (lambda (field-record)
-	      (<field-spec>-mutator-id field-record))
+	      ($<field-spec>-mutator-id field-record))
       (if (<class-spec>? spec)
-	  (append (<parsed-spec>-concrete-fields spec)
-		  (<parsed-spec>-virtual-fields spec))
-	(<parsed-spec>-virtual-fields spec)))))
+	  (append ($<parsed-spec>-concrete-fields spec)
+		  ($<parsed-spec>-virtual-fields spec))
+	($<parsed-spec>-virtual-fields spec)))))
 
 (define (<parsed-spec>-unsafe-mutable-fields-data spec)
   ;;Select the  mutable fields  among the concrete  fields and  return a
@@ -866,16 +867,17 @@
   ;;
   ;;	((?field-name ?unsafe-field-name ?tag) ...)
   ;;
+  (assert (<parsed-spec>? spec))
   (if (<class-spec>? spec)
       (map (lambda (field-record)
 	     (define field-name-id
-	       (<field-spec>-name-id field-record))
+	       ($<field-spec>-name-id field-record))
 	     (list field-name-id
 		   (identifier-prefix "$" field-name-id)
-		   (<field-spec>-tag-id field-record)))
+		   ($<field-spec>-tag-id field-record)))
 	(filter (lambda (field-record)
-		  (<field-spec>-mutator-id field-record))
-	  (<parsed-spec>-concrete-fields spec)))
+		  ($<field-spec>-mutator-id field-record))
+	  ($<parsed-spec>-concrete-fields spec)))
     '()))
 
 ;;; --------------------------------------------------------------------
@@ -886,16 +888,17 @@
   ;;
   ;;	((?field-name ?unsafe-field-name ?accessor ?tag) ...)
   ;;
+  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
-	 (list (<field-spec>-name-id field-record)
-	       (<field-spec>-accessor-id	field-record)
-	       (<field-spec>-tag-id		field-record)))
+	 (list ($<field-spec>-name-id		field-record)
+	       ($<field-spec>-accessor-id	field-record)
+	       ($<field-spec>-tag-id		field-record)))
     (filter (lambda (field-record)
-	      (not (<field-spec>-mutator-id field-record)))
+	      (not ($<field-spec>-mutator-id field-record)))
       (if (<class-spec>? spec)
-	  (append (<parsed-spec>-concrete-fields spec)
-		  (<parsed-spec>-virtual-fields spec))
-	(<parsed-spec>-virtual-fields spec)))))
+	  (append ($<parsed-spec>-concrete-fields spec)
+		  ($<parsed-spec>-virtual-fields  spec))
+	($<parsed-spec>-virtual-fields spec)))))
 
 (define (<parsed-spec>-unsafe-immutable-fields-data spec)
   ;;Select the immutable  fields among the concrete fields  and return a
@@ -903,16 +906,17 @@
   ;;
   ;;	((?field-name ?unsafe-field-name ?tag) ...)
   ;;
+  (assert (<parsed-spec>? spec))
   (if (<class-spec>? spec)
       (map (lambda (field-record)
 	     (define field-name-id
-	       (<field-spec>-name-id field-record))
+	       ($<field-spec>-name-id field-record))
 	     (list field-name-id
 		   (identifier-prefix "$" field-name-id)
-		   (<field-spec>-tag-id field-record)))
+		   ($<field-spec>-tag-id field-record)))
 	(filter (lambda (field-record)
-		  (not (<field-spec>-mutator-id field-record)))
-	  (<parsed-spec>-concrete-fields spec)))
+		  (not ($<field-spec>-mutator-id field-record)))
+	  ($<parsed-spec>-concrete-fields spec)))
     '()))
 
 ;;; --------------------------------------------------------------------
