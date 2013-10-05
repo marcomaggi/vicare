@@ -577,7 +577,7 @@
 ;;the clauses, so all the parsing results go here for simplicity.
 ;;
 (define-record-type <parsed-spec>
-  (nongenerative nausicaa:language:classes:<parsed-spec>)
+  (nongenerative nausicaa:language:oopp:<parsed-spec>)
   (protocol
    (lambda (make-instance)
      (lambda (name-id top-id lambda-id)
@@ -716,7 +716,7 @@
 	  ))
 
 (define-record-type <class-spec>
-  (nongenerative nausicaa:language:classes:<class-spec>)
+  (nongenerative nausicaa:language:oopp:<class-spec>)
   (parent <parsed-spec>)
   (fields (immutable record-type-id)
 		;Identifier to  be used for the actual  R6RS record type
@@ -729,7 +729,7 @@
 	(tag-id->record-type-id name-id))))))
 
 (define-record-type <label-spec>
-  (nongenerative nausicaa:language:classes:<label-spec>)
+  (nongenerative nausicaa:language:oopp:<label-spec>)
   (parent <parsed-spec>)
   (protocol
    ;;R6RS mandates that a record type  with custom RCD must have a custom
@@ -739,7 +739,7 @@
        ((make-spec name-id top-id lambda-id))))))
 
 (define-record-type <mixin-spec>
-  (nongenerative nausicaa:language:classes:<mixin-spec>)
+  (nongenerative nausicaa:language:oopp:<mixin-spec>)
   (parent <parsed-spec>)
   (fields (immutable clauses)
 		;The  syntax  object  representing  the clauses  in  the
@@ -756,7 +756,7 @@
 ;;;; data types: field specification
 
 (define-record-type <field-spec>
-  (nongenerative nausicaa:language:classes:helpers:<field-spec>)
+  (nongenerative nausicaa:language:oopp:helpers:<field-spec>)
   (protocol
    (lambda (make-record)
      (lambda (name acc mut tag)
@@ -782,7 +782,7 @@
 	  ))
 
 (define-record-type <concrete-field-spec>
-  (nongenerative nausicaa:language:classes:helpers:<concrete-field-spec>)
+  (nongenerative nausicaa:language:oopp:helpers:<concrete-field-spec>)
   (parent <field-spec>)
   (protocol
    (lambda (make-field-spec)
@@ -790,7 +790,7 @@
        ((make-field-spec name acc mut tag))))))
 
 (define-record-type <virtual-field-spec>
-  (nongenerative nausicaa:language:classes:helpers:<virtual-field-spec>)
+  (nongenerative nausicaa:language:oopp:helpers:<virtual-field-spec>)
   (parent <field-spec>)
   (protocol
    (lambda (make-field-spec)
@@ -805,40 +805,40 @@
   ;;PARSED-SPEC.  If such identifier  is already present: raise a syntax
   ;;violation.
   ;;
-  (let* ((member-identifiers	(<parsed-spec>-member-identifiers parsed-spec))
-	 (dup			(identifier-memq id member-identifiers free-identifier=?)))
-    (when dup
-      (synner (string-append what-string " conflicts with other member name") id))
-    (<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))
+  (let ((member-identifiers (<parsed-spec>-member-identifiers parsed-spec)))
+    (cond ((identifier-memq id member-identifiers free-identifier=?)
+	   => (lambda (summy)
+		(synner (string-append what-string " conflicts with other member name") id)))
+	  (else
+	   (<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))))
 
-(define-inline (<parsed-spec>-definitions-cons! ?parsed-spec ?definition)
-  ;;Prepend   a  definition  form   to  the   list  of   definitions  in
-  ;;?PARSED-SPEC.
+(define-inline (<parsed-spec>-definitions-cons! parsed-spec definition)
+  ;;Prepend a definition form to the list of definitions in PARSED-SPEC.
   ;;
-  (let ((O ?parsed-spec))
-    (<parsed-spec>-definitions-set! O (cons ?definition (<parsed-spec>-definitions O)))))
+  (assert (<parsed-spec>? parsed-spec))
+  ($<parsed-spec>-definitions-set! parsed-spec (cons definition ($<parsed-spec>-definitions parsed-spec))))
 
-(define-inline (<parsed-spec>-concrete-fields-cons! ?parsed-spec ?field-record)
-  ;;Prepend  a field record  to the  list of  concrete field  records in
-  ;;?PARSED-SPEC.
+(define-inline (<parsed-spec>-concrete-fields-cons! parsed-spec field-record)
+  ;;Prepend a  field record  to the  list of  concrete field  records in
+  ;;PARSED-SPEC.
   ;;
-  (let ((O ?parsed-spec))
-    (<parsed-spec>-concrete-fields-set! O (cons ?field-record (<parsed-spec>-concrete-fields O)))))
+  (assert (<parsed-spec>? parsed-spec))
+  ($<parsed-spec>-concrete-fields-set! parsed-spec (cons field-record ($<parsed-spec>-concrete-fields parsed-spec))))
 
-(define-inline (<parsed-spec>-virtual-fields-cons! ?parsed-spec ?field-record)
+(define-inline (<parsed-spec>-virtual-fields-cons! parsed-spec field-record)
   ;;Prepend  a field  record to  the list  of virtual  field  records in
-  ;;?PARSED-SPEC.
+  ;;PARSED-SPEC.
   ;;
-  (let ((O ?parsed-spec))
-    (<parsed-spec>-virtual-fields-set! O (cons ?field-record (<parsed-spec>-virtual-fields O)))))
+  (assert (<parsed-spec>? parsed-spec))
+  ($<parsed-spec>-virtual-fields-set! parsed-spec (cons field-record ($<parsed-spec>-virtual-fields parsed-spec))))
 
-(define-inline (<parsed-spec>-methods-table-cons! ?parsed-spec ?method-name-id ?method-implementation-id)
-  ;;Prepend  a method name  identifier to  the list  of method  names in
-  ;;?PARSED-SPEC.
+(define-inline (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-implementation-id)
+  ;;Prepend a  method name  identifier to  the list  of method  names in
+  ;;PARSED-SPEC.
   ;;
-  (let ((O ?parsed-spec))
-    (<parsed-spec>-methods-table-set! O (cons (cons ?method-name-id ?method-implementation-id)
-					      (<parsed-spec>-methods-table O)))))
+  (assert (<parsed-spec>? parsed-spec))
+  ($<parsed-spec>-methods-table-set! parsed-spec (cons (cons method-name-id method-implementation-id)
+						       ($<parsed-spec>-methods-table parsed-spec))))
 
 ;;; --------------------------------------------------------------------
 
