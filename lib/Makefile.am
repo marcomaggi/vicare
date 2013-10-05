@@ -39,6 +39,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/hooks.sls				\
 	vicare/language-extensions/identifier-alists.sls		\
 	vicare/language-extensions/identifier-properties.sls		\
+	vicare/language-extensions/identifier-substitutions.sls		\
 	vicare/language-extensions/increments.sls			\
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/keywords.sls				\
