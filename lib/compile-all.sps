@@ -64,6 +64,7 @@
   (only (vicare language-extensions c-enumerations))
   (only (vicare language-extensions identifier-alists))
   (only (vicare language-extensions identifier-properties))
+  (only (vicare language-extensions identifier-substitutions))
 
   (only (vicare crypto randomisations low))
   (only (vicare crypto randomisations))
