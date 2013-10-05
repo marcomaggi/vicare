@@ -511,97 +511,98 @@
 	    "invalid tagged-variable syntax use" stx)))))))
 
 
-(define-with-caller (parse-let-bindings (bindings-stx top-id synner)
-					((vars			'())
-					 (tags			'())
-					 (syntax-bindings	'())))
-  ;;Recursive function.  Parse  the syntax object BINDINGS-STX expecting
-  ;;it to be  a list of tagged LET bindings;  supported syntaxes for the
-  ;;bindings are:
-  ;;
-  ;;   ()
-  ;;   (?var0 ?var ...)
-  ;;
-  ;;where each ?VAR must have one of the following syntaxes:
-  ;;
-  ;;   ?var-id
-  ;;   (?var-id)
-  ;;   (?var-id ?tag-id)
-  ;;   #(?var-id ?tag-id)
-  ;;
-  ;;The return value is a syntax object with the structure:
-  ;;
-  ;;   ((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-  ;;
-  ;;where each VAR is an identifier to be used to create a binding, each
-  ;;TAG is the identifier of the type tag and each SYNTAX-BINDING is the
-  ;;associated LET-SYNTAX binding.  If a variable is tagged with TOP-ID:
-  ;;no syntax binding is generated.
-  ;;
-  ;;When the BINDINGS-STX  comes from a LET, the  returned syntax object
-  ;;should be used to compose an output form as:
-  ;;
-  ;;   #'(let ((VAR (TAG :assert-type-and-return ?init)) ...)
-  ;;       (let-syntax (SYNTAX-BINDING ...)
-  ;;         ?body0 ?body ...))
-  ;;
-  ;;TOP-ID must the the identifier bound to the "<top>" tag; this tag is
-  ;;used as default when no tag  is given for a binding.  SYNNER must be
-  ;;a closure to be used to raise syntax violations.
-  ;;
-  (syntax-case bindings-stx ()
-    ;;No more bindings.
-    (()
-     (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
-
-    ;;Tagged binding, parentheses envelope.
-    (((?var ?tag) . ?other-bindings)
-     (and (identifier? #'?var)
-	  (identifier? #'?tag))
-     (let ((tag-id #'?tag))
-       (parse-let-bindings #'?other-bindings top-id synner
-			   (cons #'?var vars)
-			   (cons tag-id tags)
-			   (if (free-identifier=? tag-id top-id)
-			       syntax-bindings
-			     (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
-				   syntax-bindings)))))
-
-    ;;Tagged binding, vector envelope.
-    ((#(?var ?tag) . ?other-bindings)
-     (and (identifier? #'?var)
-	  (identifier? #'?tag))
-     (let ((tag-id #'?tag))
-       (parse-let-bindings #'?other-bindings top-id synner
-			   (cons #'?var vars)
-			   (cons tag-id tags)
-			   (if (free-identifier=? tag-id top-id)
-			       syntax-bindings
-			     (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
-				   syntax-bindings)))))
-
-    ;;Non-tagged binding.
-    ((?var . ?other-bindings)
-     (identifier? #'?var)
-     (parse-let-bindings #'?other-bindings top-id synner
-			 (cons #'?var vars)
-			 (cons top-id tags)
-			 syntax-bindings))
-
-    ;;Special case of non-tagged binding in parens.
+(define parse-let-bindings
+  (case-lambda
+   ((bindings-stx top-id synner)
+    (parse-let-bindings bindings-stx top-id synner '() '() '()))
+   ((bindings-stx top-id synner vars tags syntax-bindings)
+    ;;Recursive   function.   Parse   the  syntax   object  BINDINGS-STX
+    ;;expecting  it to  be  a  list of  tagged  LET bindings;  supported
+    ;;syntaxes for the bindings are:
     ;;
-    ;;FIXME Why are we supporting this?  Is there some special case I do
-    ;;not rememeber?  (Marco Maggi; Thu Jul 18, 2013)
-    (((?var) . ?other-bindings)
-     (identifier? #'?var)
-     (parse-let-bindings #'?other-bindings top-id synner
-			 (cons #'?var vars)
-			 (cons top-id tags)
-			 syntax-bindings))
+    ;;   ()
+    ;;   (?var0 ?var ...)
+    ;;
+    ;;where each ?VAR must have one of the following syntaxes:
+    ;;
+    ;;   ?var-id
+    ;;   (?var-id)
+    ;;   (?var-id ?tag-id)
+    ;;   #(?var-id ?tag-id)
+    ;;
+    ;;The return value is a syntax object with the structure:
+    ;;
+    ;;   ((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
+    ;;
+    ;;where each  VAR is an identifier  to be used to  create a binding,
+    ;;each TAG is the identifier of the type tag and each SYNTAX-BINDING
+    ;;is the  associated LET-SYNTAX  binding.  If  a variable  is tagged
+    ;;with TOP-ID: no syntax binding is generated.
+    ;;
+    ;;When the BINDINGS-STX comes from a LET, the returned syntax object
+    ;;should be used to compose an output form as:
+    ;;
+    ;;   #'(let ((VAR (TAG :assert-type-and-return ?init)) ...)
+    ;;       (let-syntax (SYNTAX-BINDING ...)
+    ;;         ?body0 ?body ...))
+    ;;
+    ;;TOP-ID must the the identifier bound  to the "<top>" tag; this tag
+    ;;is used  as default when  no tag is  given for a  binding.  SYNNER
+    ;;must be a closure to be used to raise syntax violations.
+    ;;
+    (syntax-case bindings-stx ()
+      ;;No more bindings.
+      (()
+       (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
 
-    ;;Syntax error.
-    (_
-     (synner "invalid bindings syntax" bindings-stx))))
+      ;;Tagged binding, parentheses envelope.
+      (((?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-let-bindings #'?other-bindings top-id synner
+			     (cons #'?var vars)
+			     (cons tag-id tags)
+			     (if (free-identifier=? tag-id top-id)
+				 syntax-bindings
+			       (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+				     syntax-bindings)))))
+
+      ;;Tagged binding, vector envelope.
+      ((#(?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-let-bindings #'?other-bindings top-id synner
+			     (cons #'?var vars)
+			     (cons tag-id tags)
+			     (if (free-identifier=? tag-id top-id)
+				 syntax-bindings
+			       (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+				     syntax-bindings)))))
+
+      ;;Non-tagged binding.
+      ((?var . ?other-bindings)
+       (identifier? #'?var)
+       (parse-let-bindings #'?other-bindings top-id synner
+			   (cons #'?var vars)
+			   (cons top-id tags)
+			   syntax-bindings))
+
+      ;;Special case of non-tagged binding in parens.
+      ;;
+      ;;FIXME Why are we supporting this?  Is there some special case I do
+      ;;not rememeber?  (Marco Maggi; Thu Jul 18, 2013)
+      (((?var) . ?other-bindings)
+       (identifier? #'?var)
+       (parse-let-bindings #'?other-bindings top-id synner
+			   (cons #'?var vars)
+			   (cons top-id tags)
+			   syntax-bindings))
+
+      ;;Syntax error.
+      (_
+       (synner "invalid bindings syntax" bindings-stx))))))
 
 (define-with-caller (parse-let-values-bindings (bindings-stx top-id synner)
 					       ((values-vars		'())
