@@ -2361,7 +2361,7 @@ must be already bound to fluid syntaxes defined by
 
 
 Some functions accept an optional argument @var{synner}: when used, it
-must be a function accepting 1 or 2 arguments, the first arugment being
+must be a function accepting 1 or 2 arguments, the first argument being
 a string error message and the optional second argument being a subform;
 @var{synner} must raise a compound condition object with components:
 @condition{who}, @condition{message}, @condition{syntax}.  The
@@ -2427,7 +2427,7 @@ and @var{suffix}.  @var{suffix} can be a string, symbol or identifier.
 @defun identifier-append @var{ctx} @var{item} @dots{}
 Build and return a new identifier, in the same lexical context of the
 identifier @var{ctx}, whose string name is the concatenation of the
-arugments @var{item}.  Each @var{item} can be a string, symbol or
+arguments @var{item}.  Each @var{item} can be a string, symbol or
 identifier.
 
 @example
@@ -2443,7 +2443,7 @@ identifier.
 @defun identifier-format @var{ctx} @var{template} @var{item} @dots{}
 Build and return a new identifier, in the same lexical context of the
 identifier @var{ctx}, whose string name is the result of formatting the
-string @var{template} with the arugments @var{item}.  @var{template} can
+string @var{template} with the arguments @var{item}.  @var{template} can
 be a string including the same escape sequences of @func{format} from
 @library{vicare} (@pxref{iklib printing, format}).  Each @var{item} can
 be a string, symbol or identifier.
@@ -2843,7 +2843,7 @@ and processing such clauses.
 
 
 Some functions accept an optional argument @var{synner}: when used, it
-must be a function accepting 1 or 2 arguments, the first arugment being
+must be a function accepting 1 or 2 arguments, the first argument being
 a string error message and the optional second argument being a subform;
 @var{synner} must raise a compound condition object with components:
 @condition{who}, @condition{message}, @condition{syntax}.  The
