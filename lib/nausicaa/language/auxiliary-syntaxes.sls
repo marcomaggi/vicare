@@ -41,6 +41,7 @@
     public-protocol super-protocol virtual-fields
     methods method method-syntax
     mixins satisfies shadows
+    public protected private
 
     ;; makers
     mandatory optional with without
@@ -96,6 +97,9 @@
   mixins
   satisfies
   shadows
+  public
+  protected
+  private
 
   <>
   <...>
