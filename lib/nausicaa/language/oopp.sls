@@ -1474,10 +1474,8 @@
     ((_ (aux.<- ?tag) ?body0 ?body ...)
      (identifier? #'?tag)
      (if config.validate-tagged-values?
-	 #'(receive-and-return (R)
-	       (begin ?body0 ?body ...)
-	     (unless ((?tag) R)
-	       (assertion-violation 'begin/tags "invalid tagged return value" '?tag R)))
+	 #'(let ((retval (begin ?body0 ?body ...)))
+	     (?tag :assert-type-and-return retval))
        #'(begin ?body0 ?body ...)))
 
     ((_ (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
@@ -1485,13 +1483,10 @@
      (if config.validate-tagged-values?
 	 (with-syntax
 	     (((RETVAL ...) (generate-temporaries #'(?tag ...))))
-	   #'(receive-and-return (retval0 RETVAL ...)
-		 (begin ?body0 ?body ...)
-	       (unless ((?tag0) retval0)
-		 (assertion-violation 'begin/tags "invalid tagged return value" '?tag0 retval0))
-	       (unless ((?tag) RETVAL)
-		 (assertion-violation 'begin/tags "invalid tagged return value" '?tag RETVAL))
-	       ...))
+	   #'(let-values (((retval0 RETVAL ...) (begin ?body0 ?body ...)))
+	       (values (?tag0 :assert-type-and-return retval0)
+		       (?tag  :assert-type-and-return RETVAL)
+		       ...)))
        #'(begin ?body0 ?body ...)))
 
     ((_ (aux.<-) ?body0 ?body ...)
