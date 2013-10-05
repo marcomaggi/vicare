@@ -2023,58 +2023,56 @@
 
 ;;;; parsers entry points: mixins clauses filtering
 
-(define-with-caller (filter-and-validate-mixins-clauses (input-clauses synner)
-							((collected-mixins	'())
-							 (output-clauses	'())))
-  (%filter-and-validate-mixins-clauses (%verify-and-partially-unwrap-clauses input-clauses synner)
-				       synner collected-mixins output-clauses))
+(define filter-and-validate-mixins-clauses
+  (case-lambda
+   ((input-clauses synner)
+    (filter-and-validate-mixins-clauses (%verify-and-partially-unwrap-clauses input-clauses synner) synner '() '()))
+   ((input-clauses synner collected-mixins output-clauses)
+    ;;Tail-recursive function.   Parse clauses  with keyword  MIXINS and
+    ;;prepend  the  mixin  identifiers to  COLLECTED-MIXINS.   Return  2
+    ;;values: a  list of identifiers  being the mixin identifiers  to be
+    ;;inserted in the given order, the list of other clauses.
+    ;;
+    (define-syntax %recurse
+      (syntax-rules ()
+	((_ ?input-clauses ?output-clauses)
+	 (filter-and-validate-mixins-clauses ?input-clauses synner collected-mixins ?output-clauses))
+	((_ ?collected-mixins ?input-clauses ?output-clauses)
+	 (filter-and-validate-mixins-clauses ?input-clauses synner ?collected-mixins ?output-clauses))))
+    (cond
+     ;;No more input clauses.
+     ((null? input-clauses)
+      (values (reverse collected-mixins)
+	      (reverse output-clauses)))
+     ;;Parse matching clause.
+     ((free-identifier=? #'aux.mixins (caar input-clauses))
+      (syntax-case ($cdar input-clauses) ()
+	(()
+	 (%recurse ($cdr input-clauses) output-clauses))
+	((?mixin ...)
+	 (let loop ((collected-mixins	collected-mixins)
+		    (new-mixins		#'(?mixin ...)))
+	   (syntax-case new-mixins ()
+	     (()
+	      (%recurse collected-mixins ($cdr input-clauses) output-clauses))
+	     ;;No substitutions.
+	     ((?mixin . ?other-mixins)
+	      (identifier? #'?mixin)
+	      (loop (cons #'(?mixin) collected-mixins) #'?other-mixins))
+	     ;;With map of substitutions.
+	     (((?mixin (?from ?to) ...) . ?other-mixins)
+	      (and (identifier? #'?mixin)
+		   (all-identifiers? #'(?from ... ?to ...)))
+	      (loop (cons #'(?mixin (?from ?to) ...) collected-mixins) #'?other-mixins))
+	     (_
+	      (synner "expected identifier as mixin" ($car input-clauses))))))
+	(_
+	 (synner "invalid mixins specification" ($car input-clauses)))))
 
-(define (%filter-and-validate-mixins-clauses input-clauses synner collected-mixins output-clauses)
-  ;;Tail-recursive  function.   Parse clauses  with  keyword MIXINS  and
-  ;;prepend the mixin identifiers to COLLECTED-MIXINS.  Return 2 values:
-  ;;a list of identifiers being  the mixin identifiers to be inserted in
-  ;;the given order, the list of other clauses.
-  ;;
-  (define-syntax %recurse
-    (syntax-rules ()
-      ((_ ?input-clauses ?output-clauses)
-       (%filter-and-validate-mixins-clauses ?input-clauses synner collected-mixins ?output-clauses))
-      ((_ ?collected-mixins ?input-clauses ?output-clauses)
-       (%filter-and-validate-mixins-clauses ?input-clauses synner ?collected-mixins ?output-clauses))))
-  (cond
-   ;;No more input clauses.
-   ((null? input-clauses)
-    (values (reverse collected-mixins)
-	    (reverse output-clauses)))
-   ;;Parse matching clause.
-   ((free-identifier=? #'aux.mixins (caar input-clauses))
-    (syntax-case ($cdar input-clauses) ()
-      (()
-       (%recurse ($cdr input-clauses) output-clauses))
-      ((?mixin ...)
-       (let loop ((collected-mixins	collected-mixins)
-		  (new-mixins		#'(?mixin ...)))
-	 (syntax-case new-mixins ()
-	   (()
-	    (%recurse collected-mixins ($cdr input-clauses) output-clauses))
-	   ;;No substitutions.
-	   ((?mixin . ?other-mixins)
-	    (identifier? #'?mixin)
-	    (loop (cons #'(?mixin) collected-mixins) #'?other-mixins))
-	   ;;With map of substitutions.
-	   (((?mixin (?from ?to) ...) . ?other-mixins)
-	    (and (identifier? #'?mixin)
-		 (all-identifiers? #'(?from ... ?to ...)))
-	    (loop (cons #'(?mixin (?from ?to) ...) collected-mixins) #'?other-mixins))
-	   (_
-	    (synner "expected identifier as mixin" ($car input-clauses))))))
-      (_
-       (synner "invalid mixins specification" ($car input-clauses)))))
-
-   ;;Parse non-matching clause.
-   (else
-    (%recurse ($cdr input-clauses)
-	      (cons ($car input-clauses) output-clauses)))))
+     ;;Parse non-matching clause.
+     (else
+      (%recurse ($cdr input-clauses)
+		(cons ($car input-clauses) output-clauses)))))))
 
 
 ;;;; parsing finalisation
