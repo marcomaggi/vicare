@@ -70,7 +70,8 @@
 	  arguments-validation-forms
 	  exact-integer.vicare-arguments-validation)
     (vicare unsafe operations)
-    (vicare language-extensions define-record-extended))
+    (vicare language-extensions define-record-extended)
+    (vicare language-extensions case-identifiers))
 
 
 ;;;; some defining syntaxes
@@ -401,53 +402,6 @@
 		  ...)
 	      ?datum-body0 ?datum-body ...)
 	     ...)))
-    ))
-
-;;; --------------------------------------------------------------------
-
-;;There is no unsafe version possible for identifiers.
-;;
-(define-syntax (case-identifiers stx)
-  (define who 'case-identifiers)
-  (define (%assert-all-datums LL)
-    (for-each (lambda (L)
-		(for-each (lambda (S)
-			    (unless (symbol? S)
-			      (syntax-violation who
-				(string-append "expected identifier as datum")
-				L S)))
-		  L))
-      (syntax->datum LL)))
-  (syntax-case stx (else)
-    ((_ ?expr
-	((?datum0 ?datum ...)
-	 ?datum-body0 ?datum-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (begin
-       (%assert-all-datums #'((?datum0 ?datum ...) ...))
-       #'(let ((key ?expr))
-	   (cond ((or (free-identifier=? #'?datum0 key)
-		      (free-identifier=? #'?datum  key)
-		      ...)
-		  ?datum-body0 ?datum-body ...)
-		 ...
-		 (else
-		  ?else-body0 ?else-body ...)))))
-
-    ((_ ?expr
-	((?datum0 ?datum ...)
-	 ?datum-body0 ?datum-body ...)
-	...)
-     (begin
-       (%assert-all-datums #'((?datum0 ?datum ...) ...))
-       #'(let ((key ?expr))
-	   (cond ((or (free-identifier=? #'?datum0 key)
-		      (free-identifier=? #'?datum  key)
-		      ...)
-		  ?datum-body0 ?datum-body ...)
-		 ...))))
     ))
 
 

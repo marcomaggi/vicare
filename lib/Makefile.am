@@ -32,6 +32,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/ascii-chars.sls			\
 	vicare/language-extensions/c-enumerations.sls			\
 	vicare/language-extensions/callables.sls			\
+	vicare/language-extensions/case-identifiers.sls			\
 	vicare/language-extensions/comparisons.sls			\
 	vicare/language-extensions/coroutines.sls			\
 	vicare/language-extensions/custom-ports.sls			\

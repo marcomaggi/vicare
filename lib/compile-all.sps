@@ -43,6 +43,7 @@
   (only (vicare arguments validation))
   (only (vicare arguments general-c-buffers))
 
+  (only (vicare language-extensions case-identifiers))
   (only (vicare language-extensions syntaxes))
   (only (vicare language-extensions amb))
   (only (vicare language-extensions simple-match))
@@ -111,6 +112,8 @@
   (only (vicare containers arrays))
   (only (vicare containers stacks))
   (only (vicare containers queues))
+
+  (only (vicare parser-tools silex))
 
   (only (vicare net channels))
 
