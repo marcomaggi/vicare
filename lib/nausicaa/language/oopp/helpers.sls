@@ -8,11 +8,6 @@
 ;;;	This  library implements  helper  functions and  macros for  the
 ;;;	expand phase of the library (nausicaa language oopp).
 ;;;
-;;;	  In  an attempt to  make the  hierarchy of  libraries (nausicaa
-;;;	language  oopp  ---)  self-sufficient  we  accept  some  code
-;;;	duplication  between  this  library  and the  library  (nausicaa
-;;;	language syntax-utilities).
-;;;
 ;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -1684,8 +1679,9 @@
 ;;;; parsers entry points: class definition
 
 (define (parse-class-definition stx top-id lambda-id synner)
-  ;;Parse the  full class definition form  in the syntax  object STX and
-  ;;return an instance of record type "<class-spec>".
+  ;;Parse the  full DEFINE-CLASS  form in the  syntax object  STX (after
+  ;;mixin  clauses insertion)  and  return an  instance  of record  type
+  ;;"<class-spec>".
   ;;
   ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
   ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
@@ -1694,16 +1690,16 @@
   ;;
   ;;Notice  how  we delegate  to  the  function PARSE-CLASS-CLAUSES  the
   ;;responsibility of building the  "<class-spec>" record: this makes it
-  ;;easiers to test the parser functions.
+  ;;easier to test the parser functions.
   ;;
   (syntax-case stx ()
     ((_ ?tag-spec ?clause ...)
-     (let-values (((name-id public-constructor-id predicate-id)
-		   (parse-tag-name-spec #'?tag-spec synner)))
-       (let ((spec (parse-class-clauses #'(?clause ...) name-id top-id lambda-id synner)))
-	 (<parsed-spec>-public-constructor-id-set! spec public-constructor-id)
-	 (<parsed-spec>-public-predicate-id-set!   spec predicate-id)
-	 spec)))
+     (receive (name-id public-constructor-id predicate-id)
+	 (parse-tag-name-spec #'?tag-spec synner)
+       (receive-and-return (spec)
+	   (parse-class-clauses #'(?clause ...) name-id top-id lambda-id synner)
+	 ($<parsed-spec>-public-constructor-id-set! spec public-constructor-id)
+	 ($<parsed-spec>-public-predicate-id-set!   spec predicate-id))))
     (_
      (synner "syntax error in class definition"))))
 
@@ -1726,8 +1722,9 @@
 ;;;; parsers entry points: label definition
 
 (define (parse-label-definition stx top-id lambda-id synner)
-  ;;Parse the  full label definition form  in the syntax  object STX and
-  ;;return an instance of record type "<label-spec>".
+  ;;Parse the  full DEFINE-LABEL  form in the  syntax object  STX (after
+  ;;mixin  clauses insertion)  and  return an  instance  of record  type
+  ;;"<label-spec>".
   ;;
   ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
   ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
@@ -1742,12 +1739,12 @@
     ((_ ?tag-spec ?clause ...)
      (receive (name-id public-constructor-id predicate-id)
 	 (parse-tag-name-spec #'?tag-spec synner)
-       (let ((spec (parse-label-clauses #'(?clause ...) name-id top-id lambda-id synner)))
+       (receive-and-return (spec)
+	   (parse-label-clauses #'(?clause ...) name-id top-id lambda-id synner)
 	 (<parsed-spec>-public-constructor-id-set! spec public-constructor-id)
-	 (<parsed-spec>-public-predicate-id-set!   spec predicate-id)
-	 spec)))
+	 (<parsed-spec>-public-predicate-id-set!   spec predicate-id))))
     (_
-     (synner "syntax error in class definition"))))
+     (synner "syntax error in label definition"))))
 
 (define (parse-label-clauses clauses name-id top-id lambda-id synner)
   ;;Parse the  clauses in a label  definition form in  the syntax object
@@ -1768,8 +1765,9 @@
 ;;;; parsers entry points: mixin definition
 
 (define (parse-mixin-definition stx top-id lambda-id synner)
-  ;;Parse the  full mixin definition form  in the syntax  object STX and
-  ;;return an instance of record type "<mixin-spec>".
+  ;;Parse the  full DEFINE-MIXIN  form in the  syntax object  STX (after
+  ;;nested mixin  clauses insertion)  and return  an instance  of record
+  ;;type "<mixin-spec>".
   ;;
   ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
   ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
@@ -1782,11 +1780,11 @@
   ;;
   (syntax-case stx ()
     ((_ ?tag-spec ?clause ...)
-     (let-values (((name-id public-constructor-id predicate-id)
-		   (parse-tag-name-spec #'?tag-spec synner)))
+     (receive (name-id public-constructor-id predicate-id)
+	 (parse-tag-name-spec #'?tag-spec synner)
        (parse-mixin-clauses #'(?clause ...) name-id top-id lambda-id synner)))
     (_
-     (synner "syntax error in class definition"))))
+     (synner "syntax error in mixin definition"))))
 
 (define (parse-mixin-clauses clauses name-id top-id lambda-id synner)
   ;;Parse the  clauses in a mixin  definition form in  the syntax object
