@@ -3280,6 +3280,7 @@
 	     ((xor)				xor-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 	     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
+	     ((define-syntax*)			define-syntax*-macro)
 	     ((unwind-protect)			unwind-protect-macro)
 	     ((with-implicits)			with-implicits-macro)
 
@@ -4249,6 +4250,36 @@
 	 (syntax-rules ()
 	   ((_ ,@?arg* . ,?rest)
 	    (begin ,?body0 ,@?body*))))))
+    ))
+
+
+;;;; module non-core-macro-transformer: DEFINE-SYNTAX*
+
+(define (define-syntax*-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?name)
+     (identifier? ?name)
+     (bless
+      `(define-syntax ,?name (syntax-rules ()))))
+    ((_ ?name ?expr)
+     (identifier? ?name)
+     (bless
+      `(define-syntax ,?name ,?expr)))
+    ((_ (?name ?stx) ?body0 ?body* ...)
+     (and (identifier? ?name)
+	  (identifier? ?stx))
+     (let ((WHO     (datum->syntax ?name 'who))
+	   (SYNNER  (datum->syntax ?name 'synner)))
+       (bless
+	`(define-syntax ,?name
+	   (lambda (,?stx)
+	     (letrec ((,WHO    (quote ,?name))
+		      (,SYNNER (case-lambda
+				((message)
+				 (,SYNNER message #f))
+				((message subform)
+				 (syntax-violation ,WHO message ,?stx subform)))))
+	       ,?body0 ,@?body*))))))
     ))
 
 
