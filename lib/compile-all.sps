@@ -66,6 +66,8 @@
   (only (vicare language-extensions identifier-alists))
   (only (vicare language-extensions identifier-properties))
   (only (vicare language-extensions identifier-substitutions))
+  (only (vicare language-extensions let-constants))
+  #;(only (vicare language-extensions makers))
 
   (only (vicare crypto randomisations low))
   (only (vicare crypto randomisations))
@@ -113,7 +115,7 @@
   (only (vicare containers stacks))
   (only (vicare containers queues))
 
-  (only (vicare parser-tools silex))
+  #;(only (vicare parser-tools silex))
 
   (only (vicare net channels))
 
