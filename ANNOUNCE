@@ -78,12 +78,14 @@ Notes for revision 0.3d5
     least-positive-bignum
     greatest-negative-bignum
 
+* Added to (vicare) the experimental syntax "define-syntax*".
+
+* Added "eval-for-expand" to (vicare).
+
 * Added to (vicare system $numerics):
 
     $add1-integer	$add1-fixnum	$add1-bignum
     $sub1-integer	$sub1-fixnum	$sub1-bignum
-
-* Added EVAL-FOR-EXPAND to (vicare).
 
 * Added special validation clause:
 
