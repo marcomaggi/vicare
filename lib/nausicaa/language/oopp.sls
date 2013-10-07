@@ -1749,7 +1749,7 @@
 	     ;;Do not enforce the order of evaluation of ?INIT.
 	     (let ((TMP (TAG :assert-type-and-return ?init)) ...)
 	       (set! VAR TMP) ...
-	       ?body0 ?body ...)))))
+	       (let () ?body0 ?body ...))))))
 
     (_
      (syntax-violation 'letrec/tags "syntax error in letrec/tags input form" stx #f))))
@@ -1768,7 +1768,7 @@
 	     ;;do enforce the order of evaluation of ?INIT
 	     (set! VAR (TAG :assert-type-and-return ?init))
 	     ...
-	     ?body0 ?body ...))))
+	     (let () ?body0 ?body ...)))))
 
     (_
      (syntax-violation 'letrec*/tags "syntax error in letrec*/tags input form" stx #f))))
