@@ -1984,7 +1984,7 @@
 	      (environment '(vicare))))
     => '(doit (doit hello) hello))
 
-  (check	;redefinition  of   WHO,  SYNNER  still  bound   to  the
+  (check	;redefinition  of __WHO__,  SYNNER  still  bound to  the
 		;automatically generated one
       (guard (E ((syntax-violation? E)
 		 (list (condition-who E)
@@ -1993,7 +1993,7 @@
 		(else E))
 	(eval '(let ()
 		 (define-syntax* (doit stx)
-		   (define who 'other)
+		   (define __who__ 'other)
 		   (syntax-case stx ()
 		     ((_ ?id)
 		      (synner "bad syntax" #'?id))))
@@ -2009,9 +2009,9 @@
 		(else E))
 	(eval '(let ()
 		 (define-syntax* (doit stx)
-		   (define who 'other)
+		   (define __who__ 'other)
 		   (define (synner message subform)
-		     (syntax-violation who message subform #f))
+		     (syntax-violation __who__ message subform #f))
 		   (syntax-case stx ()
 		     ((_ ?id)
 		      (synner "bad syntax" #'?id))))

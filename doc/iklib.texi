@@ -304,6 +304,30 @@ and the syntax:
 @end deffn
 
 
+@deffn Syntax define-syntax* @meta{name}
+@deffnx Syntax define-syntax* @meta{name} @meta{transformer}
+@deffnx Syntax define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
+Like @func{define-syntax} defined by Vicare.  Additionally, when the
+last form is used, the unhygienic bindings @code{__who__} and
+@func{synner} are introduced as follows:
+
+@example
+(define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax* (@meta{name} @meta{arg})
+      (let-syntax
+          ((__who__ (identifier-syntax (quote @meta{name}))))
+        (letrec
+            ((synner (case-lambda
+                       ((message)
+                        (synner message #f))
+                       ((message subform)
+                        (syntax-violation __who__
+                           message @meta{arg} subform)))))
+          @metao{body} @meta{body} @dots{})))
+@end example
+@end deffn
+
+
 @deffn Syntax define-constant @meta{var} @meta{expr}
 Like @func{define} but create an immutable binding.
 
