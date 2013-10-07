@@ -1391,6 +1391,8 @@
     char-in-ascii-range?
     fixnum-in-character-range?
 
+    define-syntax*
+
     ;;; syntax utilities
     identifier->string
     string->identifier
