@@ -4256,6 +4256,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-SYNTAX*
 
 (define (define-syntax*-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?name)
      (identifier? ?name)
@@ -4268,18 +4272,20 @@
     ((_ (?name ?stx) ?body0 ?body* ...)
      (and (identifier? ?name)
 	  (identifier? ?stx))
-     (let ((WHO     (datum->syntax ?name 'who))
+     (let ((WHO     (datum->syntax ?name '__who__))
 	   (SYNNER  (datum->syntax ?name 'synner)))
        (bless
 	`(define-syntax ,?name
 	   (lambda (,?stx)
-	     (letrec ((,WHO    (quote ,?name))
-		      (,SYNNER (case-lambda
-				((message)
-				 (,SYNNER message #f))
-				((message subform)
-				 (syntax-violation ,WHO message ,?stx subform)))))
-	       ,?body0 ,@?body*))))))
+	     (let-syntax
+		 ((,WHO (identifier-syntax (quote ,?name))))
+	       (letrec
+		   ((,SYNNER (case-lambda
+			      ((message)
+			       (,SYNNER message #f))
+			      ((message subform)
+			       (syntax-violation ,WHO message ,?stx subform)))))
+		 ,?body0 ,@?body*)))))))
     ))
 
 
