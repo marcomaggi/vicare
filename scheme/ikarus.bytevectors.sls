@@ -19,6 +19,7 @@
 (library (ikarus bytevectors)
   (export
     make-bytevector		bytevector-length
+    bytevector-empty?		$bytevector-empty?
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
@@ -98,6 +99,7 @@
     $bytevector-concatenate	$bytevector-reverse-and-concatenate)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
+		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!
 		  bytevector-copy	bytevector-append
 		  bytevector=?		native-endianness
@@ -178,7 +180,8 @@
 	    $bytevector=
 	    $bytevector-total-length
 	    $bytevector-concatenate
-	    $bytevector-reverse-and-concatenate)
+	    $bytevector-reverse-and-concatenate
+	    $bytevector-empty?)
     (vicare arguments validation))
 
   (module (platform-endianness)
@@ -487,6 +490,20 @@
   (with-arguments-validation (who)
       ((bytevector bv))
     ($bytevector-length bv)))
+
+(define (bytevector-empty? bv)
+  ;;Defined by  Vicare.  Return  true if BV  is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'bytevector-empty?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($bytevector-empty? bv)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($bytevector-empty? bv)
+  ($fxzero? ($bytevector-length bv)))
 
 (define (bytevector=? x y)
   ;;Defined by R6RS.  Return  #t if X and Y are equal;  that is, if they

@@ -846,6 +846,7 @@
 ;;
     ($make-bytevector				$bytes $vicare-bytes)
     ($bytevector-length				$bytes $vicare-bytes)
+    ($bytevector-empty?				$bytes $vicare-bytes)
     ($bytevector-s8-ref				$bytes $vicare-bytes)
     ($bytevector-u8-ref				$bytes $vicare-bytes)
     ($bytevector-set!				$bytes $vicare-bytes)
@@ -1594,6 +1595,7 @@
     (bytevector-ieee-single-ref			i v r bv)
     (bytevector-ieee-single-set!		i v r bv)
     (bytevector-length				i v r bv)
+    (bytevector-empty?				i v $language)
     (bytevector-s16-native-ref			i v r bv)
     (bytevector-s16-native-set!			i v r bv)
     (bytevector-s16-ref				i v r bv)
