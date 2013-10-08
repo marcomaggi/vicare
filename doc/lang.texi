@@ -15,6 +15,7 @@
 * namespaces::                  Namespaces.
 * variables::                   Defining storage locations.
 * syntaxes::                    Language syntactic extensions.
+* makers::                      Maker syntaxes.
 * custom-ports::                Custom ports.
 * asciis::                      Utilities for @ascii{} characters.
 * hooks::                       Running lists of functions.
@@ -2923,6 +2924,449 @@ Expand to:
 
 @example
 (set! @meta{who} (cons @meta{obj} @meta{who}))
+@end example
+@end deffn
+
+@c page
+@node makers
+@section Maker syntaxes
+
+
+@cindex @library{vicare language-extensions makers}, library
+@cindex Library @library{vicare language-extensions makers}
+
+
+The library @library{vicare language-extensions makers} provides a
+constructor for macro definitions; its nominal purpose is to define
+macros which wrap constructors for records and similar entities,
+allowing the use of ``keywords'' to specify non--positional arguments.
+
+To avoid identifiers collision, it is suggested to import this library
+with prefix @samp{mk.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+@end example
+
+@menu
+* makers intro::                Introduction to maker macros.
+* makers api::                  Defining makers.
+@end menu
+
+@c page
+@node makers intro
+@subsection Introduction to maker macros
+
+
+It happens to define a function or macro accepting a number of arguments
+greater than 3:
+
+@example
+(define (the-func a b c d e f g h i)
+  ...)
+@end example
+
+@noindent
+in these cases it can be difficult to remember the order of the
+arguments; it can also be desirable to define default values for some or
+all of the arguments, so that at the call site some arguments can be
+omitted in the source code.  The syntax @func{define-maker} implements a
+solution to this problem.
+
+The following examples show the expansion of a simple maker with neither
+fixed nor variable arguments, only optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      2)
+        (gamma:     3)))
+
+(doit)                  @expansion{} (list 1 2 3)
+
+(doit (alpha:   10))    @expansion{} (list 10 2 3)
+(doit (beta:    20))    @expansion{} (list 1 20 3)
+(doit (gamma:   30))    @expansion{} (list 1 2 30)
+
+(doit (alpha:   10)
+      (beta:    20))    @expansion{} (list 10 20 3)
+
+(doit (alpha:   10)
+      (gamma:   30))    @expansion{} (list 10 2 30)
+
+(doit (gamma:   30)
+      (beta:    20))    @expansion{} (list 1 20 30)
+
+(doit (alpha:   10)
+      (beta:    20)
+      (gamma:   30))    @expansion{} (list 10 20 30)
+
+(let ((b 7))
+  (doit (beta:  (+ 6 (* 2 b)))
+        (alpha: (+ 2 8)))
+  @expansion{} (list (+ 2 8)
+            (+ 6 (* 2 b))
+            3)
+  #f)
+
+(doit (alpha: 10 20 30))
+@expansion{} (list 1 (list 10 20 30) 3)
+@end example
+
+@noindent
+notice the last example: when multiple values are used in an argument's
+clause, they are enclosed in a @func{list} form; the following examples
+show the expansion of a maker with both fixed and variable arguments,
+plus optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker (doit a b)
+    (list #\a #\b)
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  3)))
+
+
+(doit #\p #\q)          @expansion{} (list #\a #\b #\p #\q 1 2 3)
+
+(doit #\p #\q
+      (alpha: 10))      @expansion{} (list #\a #\b #\p #\q 10 2 3)
+
+(doit #\p #\q
+      (beta: 20))       @expansion{} (list #\a #\b #\p #\q 1 20 3)
+
+(doit #\p #\q
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 1 2 30)
+
+(doit #\p #\q
+      (alpha: 10)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 10 20 3)
+
+(doit #\p #\q
+      (alpha: 10)
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 10 2 30)
+
+(doit #\p #\q
+      (gamma: 30)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 1 20 30)
+@end example
+
+Each default value can be any expression and it is evaluated every time
+the maker is used:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define g
+  (let ((counter 0))
+    (lambda ()
+      (set! counter (+ 1 counter))
+      counter)))
+
+(define default2 (- (/ 9 3) 1))
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      default2)
+        (gamma:     (g))))
+
+(doit)                  @result{} ( 1  2  1)
+(doit (alpha: 10))      @result{} (10  2  2)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+A maker invocation can expand itself into another macro use; this allows
+us to detect whether an optional argument was used or not:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+    subdoit
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  sentinel)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?alpha ?beta ?gamma)
+       (and (identifier? #'?gamma)
+            (free-identifier=? #'?gamma #'sentinel))
+       #'(list ?alpha ?beta 3))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit)                  @result{} ( 1  2  3)
+(doit (alpha: 10))      @result{} (10  2  3)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+@noindent
+and also to ``unpack'' multiple values used in the same argument clause:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  subdoit ((alpha:  1)
+           (beta:   2)
+           (gamma:  3)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx (list)
+      ((_ ?alpha (list ?beta0 ...) ?gamma)
+       #'(list ?alpha ?beta0 ... ?gamma))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit (alpha: 10)
+       (beta: #\a #\b #\c)
+       (gamma: 30))
+@result{} (10 #\a #\b #\c 30)
+@end example
+
+We can define a maker in the body of a library and export it; we just
+have to remember to export the auxiliary syntaxes, too:
+
+@example
+(library (the-lib)
+  (export doit alpha beta gamma)
+  (import (vicare)
+    (prefix (vicare language-extensions makers) mk.))
+  (define-auxiliary-syntaxes alpha beta gamma)
+  (define-maker doit
+    list ((alpha     1)
+          (beta      2)
+          (gamma     3))))
+
+(library (exec)
+  (export)
+  (import (rnrs)
+    (prefix (the-lib) lib.))
+  (lib.doit)                  @expansion{} (list 1 2 3)
+  (lib.doit (lib.alpha   10)) @expansion{} (list 10 2 3)
+  (lib.doit (lib.beta    20)) @expansion{} (list 1 20 3)
+  (lib.doit (lib.gamma   30)) @expansion{} (list 1 2 30)
+  )
+@end example
+
+A number of options can be specified to customise the parsing of
+clauses.  We can specify if a clause is mandatory or optional:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.mandatory))
+        (beta:      2 (mk.optional))
+        (gamma:     3)))
+
+(doit (alpha: 10))              @expansion{} (list 10 2 3)
+(doit (beta:  20))              @error{} missing clause "alpha:"
+@end example
+
+@noindent
+the default is for all the clauses to be optional.  We can specify that
+a clause must be used along one or more other clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.with beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @expansion{} (list 10 20 30)
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+
+(doit (alpha: 10)
+      (gamma: 30))              @error{} missing clause "beta:"
+@end example
+
+@noindent
+or we can specify that a clause must not be used along one or more other
+clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntax alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.without beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @error{} invalid clauses mix
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+@end example
+
+@c page
+@node makers api
+@subsection Defining makers
+
+
+The following bindings are exported by the @library{vicare
+language-extensions makers} library.
+
+
+@deffn Macro define-maker @var{name-spec} @var{maker-sexp} @var{keywords-defaults-options}
+@deffnx {Auxiliary Syntax} mandatory
+@deffnx {Auxiliary Syntax} optional
+@deffnx {Auxiliary Syntax} with @var{identifier} ...
+@deffnx {Auxiliary Syntax} without @var{identifier} ...
+Define a new maker macro.  @var{name-spec} has one of the forms:
+
+@example
+@var{name-identifier}
+(@var{name-identifier} @var{positional-arg} ...)
+@end example
+
+@noindent
+where @var{name-identifier} is the name of the defined macro and each
+@var{positional-arg} is an identifier, name of a mandatory positional
+argument for the macro.
+
+@var{maker-sexp} has one of the forms:
+
+@example
+@varo{maker-expr}
+(@varo{maker-expr} @var{maker-expr} ...)
+@end example
+
+@noindent
+where each @var{maker-expr} is a macro keyword or an expression
+evaluated in the lexical context of the @func{define-maker} macro use;
+the expressions are evaluated every time the maker is used.
+
+@var{keywords-defaults-options} defines optional arguments selected with an
+auxiliary syntax and a value; it has the form:
+
+@example
+(@var{clause-spec} ...)
+@end example
+
+@noindent
+where each @var{clause-spec} has the form:
+
+@example
+(@var{auxiliary-syntax} @var{default-expr})
+(@var{auxiliary-syntax} @var{default-expr} @var{option} ...)
+@end example
+
+@noindent
+where each @var{auxiliary-syntax} is an identifier and
+@var{default-expr} is an expression representing the default value for
+the argument; the expressions are all evaluated in the lexical context
+of the @func{define-maker} macro use, the expressions are evaluated
+every time the maker is used.
+
+Notice that the @var{auxiliary-syntax} identifiers are matched against
+the values in the macro use by comparing the syntax objects with
+@func{free-identifier=?}.
+
+Each of the @var{option} forms can be one among:
+
+@example
+(mandatory)
+(optional)
+(with @var{identifier} ...)
+(without @var{identifier} ...)
+@end example
+
+@noindent
+where the first two specify if the current clause is mandatory or
+optional; the @func{with} option selects a list of clauses that must be
+present when the current clause is used; the @func{without} option
+selects a list of clauses that must not be present when the current
+clause is used.  Each clause can be used at most once;
+@clause{mandatory} cannot appear along with @clause{optional}.
+
+When the new macro is used without optional auxiliary syntaxes, it is
+expanded to:
+
+@example
+;; single maker expression, no positional arguments
+(@var{maker-expr-result})
+
+;; single maker expression, positional arguments
+(@var{maker-expr-result}
+ @varo{positional-arg} @var{positional-arg} ...)
+
+;; multiple maker expressions, no positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...)
+
+;; multiple maker expressions, positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...
+ @varo{positional-arg} @var{positional-arg} ...)
+@end example
+
+When the new macro is defined with optional auxiliary syntaxes, the
+expressions in the given syntax clauses, or the default expressions, are
+appended to the output form in the same order as the corresponding
+syntaxes in @var{keywords-defaults-options}.
+
+It is an error if the generated maker is invoked with a clause used
+multiple times.
+
+When the clause of a generated maker is used with multiple values: the
+values are enclosed in a @func{list} form and the result is used as
+argument for the maker expression; for example:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-syntax alpha:)
+
+(mk.define-maker doit
+    vector
+  ((alpha: (list 1 2 3))))
+
+(doit)                   @expansion{} (vector (list 1 2 3))
+(doit (alpha: 10 20 30)) @expansion{} (vector (list 10 20 30))
 @end example
 @end deffn
 

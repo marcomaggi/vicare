@@ -43,6 +43,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/identifier-substitutions.sls		\
 	vicare/language-extensions/increments.sls			\
 	vicare/language-extensions/infix.sls				\
+	vicare/language-extensions/makers.sls				\
 	vicare/language-extensions/keywords.sls				\
 	vicare/language-extensions/let-constants.sls			\
 	vicare/language-extensions/loops.sls				\

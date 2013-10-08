@@ -173,6 +173,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-language-extensions-infix.sps			\
 	test-vicare-language-extensions-keywords.sps			\
 	test-vicare-language-extensions-loops.sps			\
+	test-vicare-language-extensions-makers.sps			\
 	test-vicare-language-extensions-namespaces.sps			\
 	test-vicare-language-extensions-sentinels.sps			\
 	test-vicare-language-extensions-simple-match.sps		\
