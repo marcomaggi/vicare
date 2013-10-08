@@ -983,6 +983,7 @@
 ;;;
     ($make-vector				$vectors $vicare-vectors)
     ($vector-length				$vectors $vicare-vectors)
+    ($vector-empty?				$vectors $vicare-vectors)
     ($vector-ref				$vectors $vicare-vectors)
     ($vector-set!				$vectors $vicare-vectors)
 ;;;
@@ -1382,6 +1383,7 @@
     (vector-fill!				i v r ba se)
     (vector-for-each				i v r ba)
     (vector-length				i v r ba se)
+    (vector-empty?				i v $language)
     (vector-map					i v r ba)
     (vector-for-all				i v $language)
     (vector-exists				i v $language)

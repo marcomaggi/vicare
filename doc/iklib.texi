@@ -4555,6 +4555,12 @@ beginning with index @var{start} (inclusive) and ending with index
 @end defun
 
 
+@defun vector-empty? @var{vec}
+Return @true{} if the vector @var{vec} has zero length, otherwise return
+@false{}.
+@end defun
+
+
 @defun vector-append @var{vec} ...
 Return a newly allocated vector whose items form the concatenation of
 the given vectors.

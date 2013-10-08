@@ -5021,6 +5021,12 @@ Evaluate to a fixnum representing the numbe of values in @var{vec}.
 @end deffn
 
 
+@deffn {Unsafe Operation} $vector-empty? @var{vec}
+Return @true{} if the vector @var{vec} has zero length, otherwise return
+@false{}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $vector-ref @var{vec} @var{fx}
 Return the value at index @var{fx} in @var{vec}.
 @end deffn

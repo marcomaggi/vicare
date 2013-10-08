@@ -55,6 +55,10 @@ Notes for revision 0.3d5
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
 
+* The validation  clauses of  the library (vicare  arguments validation)
+  now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
+  ASSERTION-VIOLATION.
+
 * Added  syntaxes to  (vicare) to  allow  access to  R6RS record  fields
   through the record type identifier only.
 
@@ -80,6 +84,9 @@ Notes for revision 0.3d5
 
 * Added to (vicare) the experimental syntax "define-syntax*".
 
+* Added to (vicare)  the function "vector-empty?" and  to (vicare system
+  $vectors) the operation "$vector-empty?".
+
 * Added "eval-for-expand" to (vicare).
 
 * Added to (vicare system $numerics):
@@ -92,10 +99,6 @@ Notes for revision 0.3d5
     (or false ?validator)
 
   to the arguments validation library.
-
-* The validation  clauses of  the library (vicare  arguments validation)
-  now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
-  ASSERTION-VIOLATION.
 
 * Added library (vicare language-extensions increments).
 
