@@ -732,6 +732,7 @@
     break
     bwp-object?
     bytevector-append
+    bytevector-empty?
     bytevector->base64
     bytevector->bignum
     bytevector->c4b-list
@@ -1245,6 +1246,7 @@
     strdup
     strdup*
     strerror
+    string-empty?
     string->ascii
     string-base64->bytevector
     string-copy!
@@ -1365,6 +1367,7 @@
     vector-append
     vector-copy
     vector-copy!
+    vector-empty?
     vector-exists
     vector-for-all
     vector-resize
