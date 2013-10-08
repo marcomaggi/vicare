@@ -105,7 +105,7 @@ Notes for revision 0.3d5
 * Added to  Nausicaa the  validation of values  returned by  code forms,
   through "begin/tags", "lambda/tags" and "define/tags".
 
-* Added builtin "<exact-integer>" to (nausicaa).
+* Added builtin label "<exact-integer>" to (nausicaa).
 
 * Added containers libraries:
 
