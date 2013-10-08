@@ -2621,6 +2621,7 @@
     (syntax-clause-spec-mutually-exclusive	i v $language)
     (syntax-clauses-single-spec			i v $language)
     (syntax-clauses-fold-specs			i v $language)
+    (syntax-clauses-validate-specs		i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names

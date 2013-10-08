@@ -90,6 +90,7 @@
     syntax-clause-spec-mutually-inclusive
     syntax-clause-spec-mutually-exclusive
     syntax-clauses-single-spec
+    syntax-clauses-validate-specs
     syntax-clauses-fold-specs)
   (import (except (vicare)
 		  ;; identifier processing: generic functions
@@ -153,6 +154,7 @@
 		  syntax-clause-spec-mutually-inclusive
 		  syntax-clause-spec-mutually-exclusive
 		  syntax-clauses-single-spec
+		  syntax-clauses-validate-specs
 		  syntax-clauses-fold-specs)
     (vicare unsafe operations)
     (vicare arguments validation))
@@ -856,6 +858,18 @@
 		   (assertion-violation who
 		     "syntax clause keyword used in its own list of mutually exclusive clauses"
 		     (car pair)))))
+       (let ((in-both (fold-left (lambda (knil inclusive)
+				   (cond ((identifier-memq inclusive mutually-exclusive)
+					  => (lambda (pair)
+					       (cons (car pair) knil)))
+					 (else
+					  knil)))
+			'()
+			mutually-inclusive)))
+	 (unless (null? in-both)
+	   (assertion-violation who
+	     "syntax clause includes the same keywords in both mutually inclusive and exclusive clauses"
+	     (reverse in-both))))
        (make-record keyword
 		    min-occur max-occur
 		    min-args max-args
@@ -972,6 +986,54 @@
 	knil
 	specs)))
    ))
+
+(define (syntax-clauses-validate-specs list-of-specs)
+  ;;Given a list of SYNTAX-CLAUSE-SPEC objects: perform some validations
+  ;;among them.  If successful  return LIST-OF-SPECS, otherwise raise an
+  ;;assertion violation.
+  ;;
+  (define who 'syntax-clauses-validate-specs)
+  (assert (list? list-of-specs))
+  (assert (for-all syntax-clause-spec? list-of-specs))
+  (for-each (lambda (spec1)
+	      (for-each (lambda (inclusive1)
+			  (when (let loop ((specs list-of-specs))
+				  (cond ((null? specs)
+					 ;;Not found.
+					 inclusive1)
+					((eq? spec1 (car specs))
+					 ;;Skip.
+					 (loop (cdr specs)))
+					((free-identifier=? inclusive1 (syntax-clause-spec-keyword (car specs)))
+					 ;;Found!!!
+					 #f)
+					(else
+					 ;;Try next.
+					 (loop (cdr specs)))))
+			    (assertion-violation who
+			      "unknown keyword in list of mutually inclusive syntax clauses"
+			      spec1 inclusive1)))
+		(syntax-clause-spec-mutually-inclusive spec1))
+	      (for-each (lambda (exclusive1)
+			  (when (let loop ((specs list-of-specs))
+				  (cond ((null? specs)
+					 ;;Not found.
+					 exclusive1)
+					((eq? spec1 (car specs))
+					 ;;Skip.
+					 (loop (cdr specs)))
+					((free-identifier=? exclusive1 (syntax-clause-spec-keyword (car specs)))
+					 ;;Found!!!
+					 #f)
+					(else
+					 ;;Try next.
+					 (loop (cdr specs)))))
+			    (assertion-violation who
+			      "unknown keyword in list of mutually exclusive syntax clauses"
+			      spec1 exclusive1)))
+		(syntax-clause-spec-mutually-exclusive spec1)))
+    list-of-specs)
+  list-of-specs)
 
 
 ;;;; done
