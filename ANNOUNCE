@@ -132,6 +132,7 @@ Notes for revision 0.3d5
 
      (vicare language-extensions identifier-alists)
      (vicare language-extensions identifier-properties)
+     (vicare language-extensions makers)
 
 * Imported stacks library from nausicaa as libraries:
 
