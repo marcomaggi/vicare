@@ -78,7 +78,8 @@
   (import (vicare)
     (vicare arguments validation)
     (vicare unsafe operations)
-    (vicare language-extensions syntaxes))
+    (vicare language-extensions syntaxes)
+    (vicare language-extensions let-constants))
 
 
 ;;;; helpers
@@ -165,69 +166,63 @@
 (define-auxiliary-syntaxes
   brief long require-argument description action)
 
-(define-syntax (define-command-line-option stx)
-  (define who 'define-command-line-option)
+(define-syntax define-command-line-option
+  (let*-constants
+      ((who	'define-command-line-option)
+       (specs	(list (make-syntax-clause-spec #'brief			0 1 1 1 '() '())
+		      (make-syntax-clause-spec #'long			0 1 1 1 '() '())
+		      (make-syntax-clause-spec #'require-argument	0 1 1 1 '() '())
+		      (make-syntax-clause-spec #'description		0 1 1 1 '() '())
+		      (make-syntax-clause-spec #'action			0 1 1 1 '() '()))))
+    (define-struct options
+      (brief long require-argument? description semantic-action))
+    (lambda (stx)
+      (define (main stx)
+	(syntax-case stx ()
+	  ((_ ?name . ?clauses)
+	   (identifier? #'?name)
+	   (let* ((knil    (make-options #f #f #f "undocumented option" #'%default-semantic-action))
+		  (clauses (syntax-clauses-unwrap #'?clauses synner))
+		  (opt     (syntax-clauses-fold-specs combine knil specs clauses synner)))
+	     (with-syntax
+		 ((BRIEF		(options-brief opt))
+		  (LONG			(options-long opt))
+		  (REQUIRE-ARGUMENT	(options-require-argument? opt))
+		  (DESCRIPTION		(options-description opt))
+		  (ACTION		(options-semantic-action opt)))
+	       #'(define ?name
+		   (make-command-line-option BRIEF LONG REQUIRE-ARGUMENT DESCRIPTION ACTION)))))
+	  (_
+	   (synner "invalid syntax for command line option definition"))))
 
-  (define (main stx)
-    (syntax-case stx ()
-      ((_ ?name . ?clauses)
-       (identifier? #'?name)
-       (receive (known-clauses unknown-clauses)
-	   (syntax-clauses-partition keywords (syntax-clauses-unwrap #'?clauses synner))
-	 (unless (null? unknown-clauses)
-	   (synner "unknown clauses in command line option definition" unknown-clauses))
-	 (let ((opt (syntax-clauses-fold-specs combine (make-opt #f #f #f "undocumented option"
-								 #'%default-semantic-action)
-					       clause-specs known-clauses synner)))
-	   (with-syntax
-	       ((BRIEF			(opt-brief opt))
-		(LONG			(opt-long opt))
-		(REQUIRE-ARGUMENT	(opt-require-argument? opt))
-		(DESCRIPTION		(opt-description opt))
-		(ACTION			(opt-semantic-action opt)))
-	     #'(define ?name
-		 (make-command-line-option BRIEF LONG REQUIRE-ARGUMENT DESCRIPTION ACTION))))))
-      (_
-       (synner "invalid syntax for command line option definition"))))
+      (define (combine opt spec args)
+	;;Remember that ARGS  is a vector of vectors  of syntax objects.
+	;;We know that:
+	;;
+	;;* All the clauses must appear 0 or 1 time; so ARGS is always a
+	;;  vector of a single argument.
+	;;
+	;;* All the clauses accept  a single mandatory argument, so each
+	;;  nested vector will have a single argument.
+	;;
+	(define-inline (get-arg)
+	  (vector-ref (vector-ref args 0) 0))
+	(case-identifiers (syntax-clause-spec-keyword spec)
+	  ((brief)		(set-options-brief!		opt (get-arg)))
+	  ((long)		(set-options-long!		opt (get-arg)))
+	  ((require-argument)	(set-options-require-argument?!	opt (get-arg)))
+	  ((description)	(set-options-description!	opt (get-arg)))
+	  ((action)		(set-options-semantic-action!	opt (get-arg))))
+	opt)
 
-  (define-struct opt
-    (brief long require-argument? description semantic-action))
+      (define synner
+	(case-lambda
+	 ((message)
+	  (synner message #f))
+	 ((message subform)
+	  (syntax-violation who message stx subform))))
 
-  (define clause-specs
-    (list (make-syntax-clause-spec #'brief		0 1 1 1 '() '())
-	  (make-syntax-clause-spec #'long		0 1 1 1 '() '())
-	  (make-syntax-clause-spec #'require-argument	0 1 1 1 '() '())
-	  (make-syntax-clause-spec #'description	0 1 1 1 '() '())
-	  (make-syntax-clause-spec #'action		0 1 1 1 '() '())))
-
-  (define keywords
-    (map syntax-clause-spec-keyword clause-specs))
-
-  (define (combine opt spec arg)
-    (case-identifiers (syntax-clause-spec-keyword spec)
-      ((brief)
-       (set-opt-brief! opt (caar arg)))
-      ((long)
-       (set-opt-long! opt (caar arg)))
-      ((require-argument)
-       (set-opt-require-argument?! opt (caar arg)))
-      ((description)
-       (set-opt-description! opt (caar arg)))
-      ((action)
-       (set-opt-semantic-action! opt (caar arg)))
-      (else
-       (synner "internal error, unknown clause keyword"
-	       (syntax-clause-spec-keyword spec))))
-    opt)
-
-  (define synner
-    (case-lambda
-     ((message)
-      (synner message #f))
-     ((message subform)
-      (syntax-violation who message stx subform))))
-
-  (main stx))
+      (main stx))))
 
 (define (%default-semantic-action . args)
   (error #f "missing semantic action while parsing command line option" args))
