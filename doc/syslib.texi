@@ -5189,6 +5189,12 @@ Return a fixnum representing the length of the operand.
 @end deffn
 
 
+@deffn {Unsafe Operations} $string-empty? @var{str}
+Return @true{} if the string @var{str} is empty, otherwise return
+@false{}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
 Return the character at offset @var{fx} in @var{str}.
 @end deffn

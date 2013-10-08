@@ -87,6 +87,9 @@ Notes for revision 0.3d5
 * Added to (vicare)  the function "vector-empty?" and  to (vicare system
   $vectors) the operation "$vector-empty?".
 
+* Added to (vicare)  the function "string-empty?" and  to (vicare system
+  $strings) the operation "string-empty?".
+
 * Added "eval-for-expand" to (vicare).
 
 * Added to (vicare system $numerics):

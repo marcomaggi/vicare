@@ -4438,6 +4438,12 @@ lengths is not in the range of the maximum bytevector length.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun string-empty? @var{str}
+Return @true{} if the string @var{str} is empty, otherwise return
+@false{}.
+@end defun
+
+
 @defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
 Copy @var{count} characters from @var{src.str} starting at
 @var{src.start} (inclusive) to @var{dst.str} starting at
