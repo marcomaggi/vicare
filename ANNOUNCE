@@ -46,7 +46,7 @@ Notes for revision 0.3d5
   been renamed MAKE-QUEUE-PROCS.
 
 * Imported libraries  from Nausicaa/OOPP.   Installation of  the library
-  hierarchy (nausicaa ---) is enabled by defult; it can be disables with
+  hierarchy (nausicaa ---) is enabled by defult; it can be disabled with
   the option "--disable-nausicaa" of the script "configure".
 
 * Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
