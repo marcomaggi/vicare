@@ -3079,24 +3079,76 @@ Accessors for the fields of syntax clause specification objects.
 @defunx syntax-clauses-single-spec @var{spec} @var{unwrapped-clauses} @var{synner}
 Given a fully unwrapped syntax object holding a list of clauses (for
 example the return value of @func{syntax-clauses-unwrap}) verify if
-there are clauses conforming to the given specification @var{spec}.  If
-successful return a (possibly empty) list of syntax objects representing
-the cdrs of the clauses matching @var{spec}; if an invalid clause is
-found call @var{synner} or raise a @condition{syntax} object.
+there are clauses conforming to the given specification @var{spec}.
+
+If successful return a (possibly empty) vector of vectors of syntax
+objects; else call @var{synner} or raise a @condition{syntax} exception.
+The length of the returned vector is the number of clauses from
+@var{unwrapped-clauses} conforming to @var{spec}.  Each nested vector
+represents the cdr of a clause matching @var{spec}:
+
+@itemize
+@item
+If a clause has no arguments: the corresponding nested vector is empty.
+
+@item
+If a clause has @math{1} argument: the corresponding nested vector has
+@math{1} item being the syntax object representing the argument.
+
+@item
+If a clause has @math{N} arguments: the corresponding nested vector has
+@math{N} items being the syntax objects representing the arguments.
+@end itemize
+
+Examples:
 
 @example
 (import (vicare))
 
-(define spec
-  (make-syntax-clause-spec #'b 1 1 1 1 '() '()))
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 1 1 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 456)
+                             (d 789))))
+@result{} #(#(456))
 
-(define unwrapped-clauses
-  (syntax-clauses-unwrap #'((a 123) (b 456) (d 789))))
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b)
+                             (d 789))))
+@result{} #(#())
 
-(syntax=?
- (syntax-clauses-single-spec spec unwrapped-clauses)
- '((456)))
-@result{} #t
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 5 6)
+                             (d 789))))
+@result{} #(#(4 5 6))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4)
+                             (b 5)
+                             (b 6)
+                             (d 789))))
+@result{} #(#(4) #(5) #(6))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 4.1)
+                             (b 5 5.1)
+                             (d 789))))
+@result{} #(#(4 4.1) #(5 5.1))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 ciao 6)
+                             (d 789))))
+@result{} #(#(4 #<syntax-object expr=ciao> 6))
 @end example
 @end defun
 
@@ -3109,22 +3161,28 @@ the clauses conform to the given @var{specs}, which must be a list of
 syntax clause specification objects.
 
 Combine the clause arguments with the given @var{knil} in a
-@func{fold-left} fashion; if successful return the resulting @var{knil};
+@func{fold-left} fashion, if successful return the resulting @var{knil};
 if an invalid clause is found call @var{synner} or raise a
-@condition{syntax} object.  The operation is as follows:
+@condition{syntax} object.
+
+The operation is conceptually as follows:
 
 @example
 (fold-left
     (lambda (knil spec)
-      (@var{combine} knil spec
-        (syntax-clauses-single-spec spec
-          @var{unwrapped-clauses} @var{synner})))
+      (let ((args (syntax-clauses-single-spec spec
+                     @var{unwrapped-clauses} @var{synner})))
+        (if (fxzero? (vector-length args))
+            knil
+          (@var{combine} knil spec args))))
   @var{knil}
   @var{specs})
 @end example
 
-This function does @strong{not} check that all the clauses conform to a
-given specification.
+@noindent
+notice that @var{combine} is called only if a clause from @var{specs} is
+present in @var{unwrapped-clauses}; @var{combine} must return the new
+value for @var{knil}.
 @end defun
 
 @c page

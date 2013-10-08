@@ -631,7 +631,7 @@
 			(free-identifier=? keyword (car clause)))
 		clauses)
 	      (loop (cdr keywords))
-	    (synner "missing mandatory clause" keyword))))))
+	    (synner "missing mandatory syntax clause" keyword))))))
    ))
 
 (define syntax-clauses-verify-at-most-once
@@ -657,7 +657,7 @@
 	       (present (syntax-clauses-filter (list keyword) clauses)))
 	  (if (>= 1 (length present))
 	      (loop (cdr keywords))
-	    (synner "clause must be present at most once" present))))))
+	    (synner "syntax clause must be present at most once" present))))))
    ))
 
 (define syntax-clauses-verify-exactly-once
@@ -684,9 +684,10 @@
 	       (number  (length present)))
 	  (if (= 1 number)
 	      (loop (cdr keywords))
-	    (synner "clause must be present exactly once" (if (< 1 number)
-							      present
-							    keyword)))))))
+	    (synner "syntax clause must be present exactly once"
+		    (if (< 1 number)
+			present
+		      keyword)))))))
    ))
 
 (define syntax-clauses-verify-mutually-inclusive
@@ -726,7 +727,7 @@
 			     '()
 			     flags)))
 	      (unless (null? missing)
-		(synner "mutually inclusive clauses are missing" missing))))
+		(synner "mutually inclusive syntax clauses are missing" missing))))
 	(let next-flag ((flags flags))
 	  (cond ((null? flags)
 		 (next-clause ($cdr clauses)))
@@ -780,7 +781,7 @@
 			     '()
 			     flags)))
 	      (unless (<= (length present) 1)
-		(synner "mutually exclusive clauses are present" (reverse present)))))
+		(synner "mutually exclusive syntax clauses are present" (reverse present)))))
 	(let next-flag ((flags flags))
 	  (cond ((null? flags)
 		 (next-clause ($cdr clauses)))
@@ -860,19 +861,32 @@
     ;;    ((?identifier ?thing ...) ...)
     ;;
     ;;verify that the clauses conform to the given clause specification.
-    ;;If successful  return a  (possibly empty)  list of  syntax objects
-    ;;representing  the cdrs  of the  clauses matching  SPEC; else  call
-    ;;SYNNER.
+    ;;
+    ;;If  successful return  a  (possibly empty)  vector  of vectors  of
+    ;;syntax  objects; else  call SYNNER.   The length  of the  returned
+    ;;vector is the  number of clauses from CLAUSES  conforming to SPEC.
+    ;;Each nested vector represents the cdr of a clause matching SPEC:
+    ;;
+    ;;* If a clause has no arguments: the corresponding nested vector is
+    ;;  empty.
+    ;;
+    ;;* If a clause has 1  argument: the corresponding nested vector has
+    ;;  1 item being the syntax object representing the argument.
+    ;;
+    ;;* If a clause has N arguments: the corresponding nested vector has
+    ;;  N items being the syntax objects representing the arguments.
     ;;
     (assert (syntax-clause-spec? spec))
     (assert (procedure? synner))
     (let* ((keyword (syntax-clause-spec-keyword spec))
 	   (present (syntax-clauses-filter (list keyword) clauses))
 	   (number  (length present)))
+      ;;Check  that the  syntax clause  selected by  SPEC is  present in
+      ;;CLAUSES the correct number of times.
       (unless (<= (syntax-clause-spec-min-number-of-occurrences spec)
 		  number
 		  (syntax-clause-spec-max-number-of-occurrences spec))
-	(synner (string-append "clause must be present at least "
+	(synner (string-append "syntax clause must be present at least "
 			       (number->string (syntax-clause-spec-min-number-of-occurrences spec))
 			       " times and at most "
 			       (number->string (syntax-clause-spec-max-number-of-occurrences spec))
@@ -880,14 +894,15 @@
 		(if (< 1 number)
 		    present
 		  keyword)))
-      ;;Validate arguments
+      ;;Check that each present syntax  clause has a number of arguments
+      ;;conforming to the specification in SPEC.
       (for-each (lambda (clause)
 		  (define number
 		    (length (cdr clause)))
 		  (unless (<= (syntax-clause-spec-min-number-of-arguments spec)
 			      number
 			      (syntax-clause-spec-max-number-of-arguments spec))
-		    (synner (string-append "clause must have at least "
+		    (synner (string-append "syntax clause must have at least "
 					   (number->string (syntax-clause-spec-min-number-of-arguments spec))
 					   " arguments and at most "
 					   (number->string (syntax-clause-spec-max-number-of-arguments spec))
@@ -900,39 +915,51 @@
 		    (unless (exists (lambda (clause)
 				      (free-identifier=? id (car clause)))
 			      clauses)
-		      (synner "missing mutually inclusive clause" (list keyword id))))
+		      (synner "missing mutually inclusive syntax clause" (list keyword id))))
 	  (syntax-clause-spec-mutually-inclusive spec)))
       ;;Validate mutually exclusive.
       (unless (null? present)
 	(let ((others (syntax-clauses-filter (syntax-clause-spec-mutually-exclusive spec) clauses)))
 	  (unless (null? others)
-	    (synner "mutually exclusive clauses are present" (append present others)))))
-      ;;Return the list of arguments.
-      (map cdr present)))
+	    (synner "mutually exclusive syntax clauses are present" (append present others)))))
+      ;;Return the vector of vectors of clause cdrs.
+      (list->vector (map (lambda (clause)
+			   (let ((D (cdr clause)))
+			     (if (null? D)
+				 '#()
+			       (list->vector D))))
+		      present))))
    ))
 
 (define syntax-clauses-fold-specs
   (case-lambda
-   ((combine knil specs clauses)
-    (syntax-clauses-fold-specs combine knil specs clauses (%make-synner 'syntax-clauses-fold-specs)))
-   ((combine knil specs clauses synner)
-    ;;Given a  fully unwrapped syntax  object holding a list  of clauses
-    ;;with the format:
+   ((combine knil specs unwrapped-clauses)
+    (syntax-clauses-fold-specs combine knil specs unwrapped-clauses (%make-synner 'syntax-clauses-fold-specs)))
+   ((combine knil specs unwrapped-clauses synner)
+    ;;UNWRAPPED-CLAUSES must be a  fully unwrapped syntax object holding
+    ;;a list of clauses with the format:
     ;;
     ;;    ((?identifier ?thing ...) ...)
     ;;
-    ;;verify   that   the   clauses   conform  to   the   given   clause
-    ;;specifications.  Combine the clause  arguments with the given KNIL
-    ;;in a FOLD-LEFT fashion.  If  successful return the resulting KNIL;
-    ;;else call SYNNER.
+    ;;Verify   that    UNWRAPPED-CLAUSES   conforms   to    the   clause
+    ;;specifications in  the list  SPECS.  Combine the  clause arguments
+    ;;with the given KNIL in  a FOLD-LEFT fashion.  If successful return
+    ;;the resulting KNIL; else call SYNNER.
     ;;
     (assert (procedure? combine))
     (assert (for-all syntax-clause-spec? specs))
     (assert (procedure? synner))
-    (fold-left (lambda (knil spec)
-		 (combine knil spec (syntax-clauses-single-spec spec clauses synner)))
-      knil
-      specs))
+    (receive (input-clauses unknown-clauses)
+	(syntax-clauses-partition (map syntax-clause-spec-keyword specs) unwrapped-clauses)
+      (unless (null? unknown-clauses)
+	(synner "unknown syntax clauses" unknown-clauses))
+      (fold-left (lambda (knil spec)
+		   (let ((vector-of-vectors-of-cdr-values (syntax-clauses-single-spec spec input-clauses synner)))
+		     (if (fxzero? (vector-length vector-of-vectors-of-cdr-values))
+			 knil
+		       (combine knil spec vector-of-vectors-of-cdr-values))))
+	knil
+	specs)))
    ))
 
 
