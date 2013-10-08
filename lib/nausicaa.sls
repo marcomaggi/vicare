@@ -1451,6 +1451,7 @@
     syntax-clause-spec-mutually-exclusive
     syntax-clauses-single-spec
     syntax-clauses-fold-specs
+    syntax-clauses-validate-specs
 
     ;; environment inquiry
     uname
