@@ -834,6 +834,7 @@
   (protocol
    (lambda (make-record)
      (lambda (keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
+       (define who 'syntax-clause-spec)
        (define (count? obj)
 	 (and (real? obj) (<= 0 obj)))
        (assert (identifier? keyword))
@@ -845,6 +846,16 @@
        (assert (<= min-args max-args))
        (assert (all-identifiers? mutually-inclusive))
        (assert (all-identifiers? mutually-exclusive))
+       (cond ((identifier-memq keyword mutually-inclusive)
+	      => (lambda (pair)
+		   (assertion-violation who
+		     "syntax clause keyword used in its own list of mutually inclusive clauses"
+		     (car pair)))))
+       (cond ((identifier-memq keyword mutually-exclusive)
+	      => (lambda (pair)
+		   (assertion-violation who
+		     "syntax clause keyword used in its own list of mutually exclusive clauses"
+		     (car pair)))))
        (make-record keyword
 		    min-occur max-occur
 		    min-args max-args
