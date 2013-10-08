@@ -4418,6 +4418,12 @@ that are encoded but should not are decoded.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun bytevector-empty? @var{bytevector}
+Return @true{} if the bytevector @var{bytevector} has zero length,
+otherwise return @false{}.
+@end defun
+
+
 @defun bytevector-append @var{bytevector} ...
 Concatenate the bytevector arguments and return the result.  If no
 arguments are given: return the empty bytevector.

@@ -337,7 +337,10 @@
 	    ;;FIXME This except  must be removed at the  next boot image
 	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
 	    $vector-empty?)
-    (rename (ikarus system $bytevectors)
+    (rename (except (ikarus system $bytevectors)
+		    ;;FIXME This except must be removed at the next boot
+		    ;;image rotation.  (Marco Maggi; Tue Oct 8, 2013)
+		    $bytevector-empty?)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
@@ -928,6 +931,8 @@
 
 ;;;; miscellaneous bytevector operations
 
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
 (define-inline ($bytevector-empty? ?bv)
   ($fxzero? ($bytevector-length ?bv)))
 

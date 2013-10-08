@@ -5060,6 +5060,12 @@ reference to it.
 @end deffn
 
 
+@deffn {Unsafe Operation} $bytevector-empty? @var{bytevector}
+Return @true{} if the bytevector @var{bytevector} has zero length,
+otherwise return @false{}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $bytevector-length @var{bv}
 Return a fixnum representing the number of bytes in the operand.
 @end deffn

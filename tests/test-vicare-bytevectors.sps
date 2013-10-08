@@ -187,6 +187,16 @@
       (catch #f (bytevector-length #\a))
     => '(#\a))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-empty? '#vu8())
+    => #t)
+
+  (check
+      (bytevector-empty? '#vu8(1 2 3))
+    => #f)
+
   #t)
 
 
