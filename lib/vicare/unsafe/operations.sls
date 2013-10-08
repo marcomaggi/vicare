@@ -283,6 +283,7 @@
 
     $make-string
     $string-length
+    $string-empty?
     $string-ref
     $string-set!
     $string=
@@ -341,7 +342,10 @@
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
-    (ikarus system $strings)
+    (except (ikarus system $strings)
+	    ;;FIXME This except  must be removed at the  next boot image
+	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
+	    $string-empty?)
     (ikarus system $codes)
     (ikarus system $pointers)
     (for (prefix (only (vicare platform configuration)
@@ -994,6 +998,11 @@
 
 
 ;;;; miscellaneous string operations
+
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define-inline ($string-empty? vec)
+  ($fxzero? ($string-length vec)))
 
 (define-inline ($string-fill! ?str ?index ?end ?fill)
   ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive

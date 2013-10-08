@@ -19,6 +19,7 @@
   (export
     make-string			string
     substring			string-length
+    string-empty?		$string-empty?
     string-ref			string-set!
     string->list		list->string
     string-append		string-for-each
@@ -47,6 +48,7 @@
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
+		  string-empty?
 		  string-ref			string-set!
 		  string->list			list->string
 		  string-append			string-for-each
@@ -68,13 +70,13 @@
 		  string->uri-encoding		uri-encoding->string
 		  uri-encode			uri-decode
 		  uri-normalise-encoding)
-    #;(vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $string=
 	    $string-total-length
 	    $string-concatenate
-	    $string-reverse-and-concatenate))
+	    $string-reverse-and-concatenate
+	    $string-empty?))
 
 
 ;;;; arguments validation
@@ -882,6 +884,21 @@
     (if (bytevector? r)
 	(utf8->string r)
       (error who "cannot obtain unique id"))))
+
+
+(define (string-empty? str)
+  ;;Defined by  Vicare.  Return true  if STR is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'string-empty?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($string-empty? str)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($string-empty? str)
+  ($fxzero? ($string-length str)))
 
 
 ;;;; Latin-1 bytevectors to/from strings
