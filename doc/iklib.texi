@@ -3185,6 +3185,29 @@ present in @var{unwrapped-clauses}; @var{combine} must return the new
 value for @var{knil}.
 @end defun
 
+
+@defun syntax-clauses-validate-specs @var{list-of-specs}
+Given a list of @objtype{syntax-clause-spec} objects: perform some
+validations among them.  If successful return @var{list-of-specs}
+itself, otherwise raise an assertion violation.
+
+The following checks are performed:
+
+@itemize
+@item
+For every identifier listed in the @code{mutually-inclusive} field of
+every @objtype{syntax-clause-spec}: check that such identifier is equal,
+according to @func{free-identifier=?}, to an identifier in the
+@code{keyword} field of another @objtype{syntax-clause-spec} object.
+
+@item
+For every identifier listed in the @code{mutually-exclusive} field of
+every @objtype{syntax-clause-spec}: check that such identifier is equal,
+according to @func{free-identifier=?}, to an identifier in the
+@code{keyword} field of another @objtype{syntax-clause-spec} object.
+@end itemize
+@end defun
+
 @c page
 @node iklib shared
 @section Shared structures graph notation
