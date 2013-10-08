@@ -19,6 +19,7 @@
   (export
     make-vector		vector
     subvector		vector-length
+    vector-empty?	$vector-empty?
     vector-ref		vector-set!
     vector->list	list->vector
     vector-map		vector-for-each
@@ -29,6 +30,7 @@
   (import (except (ikarus)
 		  make-vector		vector
 		  subvector		vector-length
+		  vector-empty?
 		  vector-ref		vector-set!
 		  vector->list		list->vector
 		  vector-map		vector-for-each
@@ -37,7 +39,8 @@
 		  vector-copy		vector-copy!
 		  vector-resize)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (except (vicare unsafe operations)
+	    $vector-empty?))
 
 
 ;;;; arguments validation
@@ -707,6 +710,21 @@
 	      (else
 	       (let ((src.end ($fx+ src.start count)))
 		 ($vector-copy! src.vec src.start dst.vec dst.start src.end))))))))
+
+
+(define (vector-empty? vec)
+  ;;Defined by  Vicare.  Return true  if VEC is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'vector-empty?)
+  (with-arguments-validation (who)
+      ((vector	vec))
+    ($vector-empty? vec)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($vector-empty? vec)
+  ($fxzero? ($vector-length vec)))
 
 
 ;;;; done

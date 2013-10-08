@@ -252,6 +252,7 @@
 
     $make-vector
     $vector-length
+    $vector-empty?
     $vector-ref
     $vector-set!
 
@@ -331,7 +332,10 @@
     (ikarus system $flonums)
     (ikarus system $compnums)
     (ikarus system $pairs)
-    (ikarus system $vectors)
+    (except (ikarus system $vectors)
+	    ;;FIXME This except  must be removed at the  next boot image
+	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
+	    $vector-empty?)
     (rename (ikarus system $bytevectors)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
@@ -1079,6 +1083,11 @@
   (let* ((len ?len)
 	 (vec ($make-vector ?len)))
     ($vector-clean! vec)))
+
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define-inline ($vector-empty? vec)
+  ($fxzero? ($vector-length vec)))
 
 (define-inline ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))
