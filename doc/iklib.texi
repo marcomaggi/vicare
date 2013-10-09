@@ -7258,6 +7258,69 @@ Empty components are discarded.
 @end example
 @end defun
 
+
+@defun search-file-in-environment-path @var{pathname} @var{environment-variable}
+Search a file pathname (regular file or directory) in the given search
+path.
+
+@var{pathname} must be a string representing a file pathname;
+@var{environment-variable} must be a string representing a system
+environment variable.
+
+@itemize
+@item
+If @var{pathname} is absolute, test its existence: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+@item
+If @var{pathname} is relative and it has a directory part, test its
+existence: when found, return a string representing the real absolute
+file pathname; otherwise return @false{}.
+
+@item
+If @var{pathname} is relative and it has no directory part, read the
+environment variable as colon--separated list of directories and search
+the file in them, from the first to the last: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+Notice that the file is searched in the process' current working
+directory only if such directory is listed in the given path.
+@end itemize
+@end defun
+
+
+@defun search-file-in-list-path @var{pathname} @var{list-of-directories}
+Search a file pathname (regular file or directory) in the given search
+path.
+
+@var{pathname} must be a string representing a file pathname;
+@var{list-of-directories} must be a list of strings representing
+directory pathnames.
+
+@itemize
+@item
+If @var{pathname} is absolute, test its existence: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+@item
+If @var{pathname} is relative and it has a directory part, test its
+existence: when found, return a string representing the real absolute
+file pathname; otherwise return @false{}.
+
+@item
+If @var{pathname} is relative and it has no directory part, search the
+file in the given directories, from the first to the last: when found,
+return a string representing the real absolute file pathname; otherwise
+return @false{}.
+
+Notice that the file is searched in the process' current working
+directory only if such directory is listed in the given path.
+@end itemize
+@end defun
+
 @c page
 @node iklib io codecs
 @subsection Transcoders and additional codecs
