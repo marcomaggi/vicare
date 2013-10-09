@@ -51,6 +51,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	test-vicare-bignums.sps						\
 	test-vicare-bytevectors.sps					\
+	test-vicare-builtin-posix.sps					\
 	test-vicare-chars.sps						\
 	test-vicare-collect.sps						\
 	test-vicare-compensations.sps					\
@@ -213,6 +214,11 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-getopts.sps						\
 	test-formations-round.sps					\
 	test-formations-lib.sps
+
+# test-vicare-parser-tools-silex-file.sps
+# test-vicare-parser-tools-silex-misc.sps
+# test-vicare-parser-tools-silex-online.sps
+
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps						\
@@ -466,6 +472,7 @@ VICARE_ENV	= \
 	CHECK_TEST_NAME=$(name); export CHECK_TEST_NAME;				\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
 	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
+	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex; export SILEX_PATH;	\
 	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
 VICARE_RUN	= $(VICARE_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
@@ -492,6 +499,22 @@ demo demos:
 	@for f in $(VICARE_SELECTED_DEMOS); do $(VICARE_RUN) $$f; done
 	@echo
 
+## --------------------------------------------------------------------
+
+## SILex test files
+
+.PHONY: silex-test
+
+silex-test:
+	@for f in $(testdir)/make-silex-*.sps; do export testdir=$(testdir); $(VICARE_RUN) $$f; done
+
+## special rules: LALR test parsers building
+
+.PHONY: lalr-test
+
+lalr-test:
+	@for f in $(testdir)/make-lalr-*.sps; do export testdir=$(testdir); $(VICARE_RUN) $$f; done
+
 #page
 #### running vicare from the build directory
 
@@ -503,7 +526,8 @@ VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) $(user_flags)
 VICARE_TEST_RUN_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
-	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;
+	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
+	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex; export SILEX_PATH;
 VICARE_TEST_RUN	= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
 VICARE_TEST_VIE	= $(VICARE_TEST_RUN_ENV) $(VIE) $(VICARE) --raw-repl $(VICARE_TEST_RUN_FLAGS)
 
@@ -538,9 +562,10 @@ VICARE_INSTCHECK_LIBRARY_PATH = $(DESTDIR)$(VICARE_LIBDIR):$(VICARE_LIBRARY_PATH
 
 VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
 VICARE_INSTCHECK_ENV	= \
-	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH); export VICARE_LIBRARY_PATH; \
-	LD_LIBRARY_PATH=$(DESTDIR)$(libdir); export LD_LIBRARY_PATH; \
-	VICARE_CHECK_QUIET=no; export VICARE_CHECK_QUIET;
+	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
+	LD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export LD_LIBRARY_PATH;		\
+	VICARE_CHECK_QUIET=no;					export VICARE_CHECK_QUIET;	\
+	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex;	export SILEX_PATH;
 VICARE_INSTCHECK_RUN	= \
 	$(VICARE_INSTCHECK_ENV) $(DESTDIR)$(bindir)/vicare $(VICARE_INSTCHECK_FLAGS)
 

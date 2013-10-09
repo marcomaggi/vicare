@@ -195,6 +195,14 @@
     bytevector-length.vicare-arguments-validation
     list-of-bytevectors.vicare-arguments-validation
 
+    ;; string and bytevector pathnames
+    file-pathname.vicare-arguments-validation
+    file-string-pathname.vicare-arguments-validation
+    file-bytevector-pathname.vicare-arguments-validation
+    file-colon-search-path.vicare-arguments-validation
+    file-string-colon-search-path.vicare-arguments-validation
+    file-bytevector-colon-search-path.vicare-arguments-validation
+
     ;; symbols
     symbol.vicare-arguments-validation
     symbol/false.vicare-arguments-validation
@@ -1359,6 +1367,38 @@
        ($fx>= len 0))
   (procedure-argument-violation who
     "expected non-negative fixnum as bytevector length argument" len))
+
+
+;;;; string and bytevector pathnames
+
+(define-argument-validation (file-pathname who obj)
+  (file-pathname? obj)
+  (procedure-argument-violation who "expected string or bytevector as pathname argument" obj))
+
+(define-argument-validation (file-string-pathname who obj)
+  (file-string-pathname? obj)
+  (procedure-argument-violation who "expected file string pathname as argument" obj))
+
+(define-argument-validation (file-bytevector-pathname who obj)
+  (file-bytevector-pathname? obj)
+  (procedure-argument-violation who "expected file bytevector pathname as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (file-colon-search-path who obj)
+  (file-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid string or bytevector as colon-separated file search path argument" obj))
+
+(define-argument-validation (file-string-colon-search-path who obj)
+  (file-string-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid string as colon-separated file search path argument" obj))
+
+(define-argument-validation (file-bytevector-colon-search-path who obj)
+  (file-bytevector-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid bytevector as colon-separated file search path argument" obj))
 
 
 ;;;; symbols

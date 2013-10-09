@@ -941,6 +941,41 @@ exception.
 @section Interfacing with the file system
 
 
+The library @library{vicare posix} reexports the following bindings from
+@library{vicare $posix} (@vicareref{iklib io pathnames, Pathnames
+handling}):
+@findex split-pathname
+@findex search-file-in-environment-path
+@findex search-file-in-list-path
+@findex split-pathname-bytevector
+@findex split-pathname-root-and-tail
+@findex split-pathname-string
+@findex split-search-path
+@findex split-search-path-bytevector
+@findex split-search-path-string
+@findex file-absolute-pathname?
+@findex file-relative-pathname?
+@findex file-pathname?
+@findex file-string-pathname?
+@findex file-bytevector-pathname?
+@findex file-colon-search-path?
+@findex file-string-colon-search-path?
+@findex file-bytevector-colon-search-path?
+
+@example
+file-pathname?
+file-string-pathname?           file-bytevector-pathname?
+file-absolute-pathname?         file-relative-pathname?
+split-pathname-root-and-tail
+file-colon-search-path?
+file-string-colon-search-path?  file-bytevector-colon-search-path?
+split-search-path               split-pathname
+split-search-path-bytevector    split-pathname-bytevector
+split-search-path-string        split-pathname-string
+search-file-in-environment-path search-file-in-list-path
+@end example
+
+
 @defun chown @var{pathname} @var{owner} @var{group}
 Interface to the C function @cfunc{chown}, @glibcref{File Owner, chown}.
 Changes the owner and group of the file system entry selected by
