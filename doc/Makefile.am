@@ -84,6 +84,8 @@ vicare_libs_TEXINFOS = \
 	libs-vectors.texi			\
 	libs-weak-hashtables.texi		\
 	\
+	libs-silex.texi				\
+	\
 	libs-net-channels.texi			\
 	\
 	srfi.texi				\

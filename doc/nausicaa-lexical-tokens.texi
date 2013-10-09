@@ -1,0 +1,571 @@
+@node lexical-tokens
+@chapter Describing lexical tokens
+
+
+@cindex @library{nausicaa parser-tools lexical-tokens}, library
+@cindex Library @library{nausicaa parser-tools lexical-tokens}
+
+
+It is an accepted pattern to split the interpretation of a stream of
+text into a lexing step and a parsing step.  The lexer fragments the
+input into @dfn{tokens} each of which is assigned a @dfn{category}, the
+parser associates a semantic meaning to a sequence of token categories.
+
+The library @library{nausicaa parser-tools lexical-tokens} defines the
+classes @class{lexical-token} and @class{source-location} which are
+meant to be used by all the lexers and parsers distributed with
+@value{PACKAGE}.
+
+@menu
+* lexical-tokens location::       Source location records.
+* lexical-tokens token::          Lexical token records.
+@end menu
+
+@c page
+@node lexical-tokens location
+@section Source location records
+
+
+Location records are meant to store informations about the position of a
+token in the input stream; they should be produced by the lexer and
+either discarded or consumed by the parser's error handler.  All the
+bindings are exported by the @library{nausicaa parser-tools
+lexical-tokens} library; this library is built on top of
+@library{nausicaa language classes} and @library{nausicaa language
+generics}.
+
+It is cleaner to implement the parser in such a way that location
+records are used only by client--supplied error handlers, not by the
+parser itself.  The parser should handle the location as an opaque
+value, possibly @false{} when there is no consistent way to track the
+source location.
+
+@menu
+* lexical-tokens location type::    The record type.
+* lexical-tokens location makers::  Building records.
+* lexical-tokens location pred::    Predicates.
+* lexical-tokens location cmp::     Comparison functions.
+* lexical-tokens location update::  Updating the location.
+* lexical-tokens location misc::    Miscellaneous functions.
+@end menu
+
+@c page
+@node lexical-tokens location type
+@subsection Type, makers, accessors
+
+
+@deftp Class @aclass{source-location}
+References the position of the next character to parse in the input
+stream, which is the position of the first char in the next token
+produced by the lexer.
+@end deftp
+
+
+@defcv {Immutable Field} @aclass{source-location} input
+Describes the source of the input.  It can be any Scheme value, for
+example a string representing the pathname of an input file.  Set to
+@false{} if the source is unknown.
+@end defcv
+
+
+@deftypecv {Immutable Field} @aclass{source-location} @aclass{integer} line
+@deftypecvx {Immutable Field} @aclass{source-location} @aclass{integer} column
+@deftypecvx {Immutable Field} @aclass{source-location} @aclass{integer} offset
+Counters for the line number, column number and character offset from
+the start of the input.  By convention: Line and column numbers start
+from @math{1}, the offset starts from @math{0}.
+
+When the value of these counters is not known, by convention, they
+should be set to @false{}, so that they are no more numbers.
+
+Notice that these values match the local bindings @samp{yyline},
+@samp{yycolumn} and @samp{yyoffset} available to the lexer actions of
+the @library{nausicaa silex} library.  @ref{silex semantics action,
+Evaluation of the actions}
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Procedural interface
+
+
+@defun <source-location>-input @var{loc}
+@defunx <source-location>-line @var{loc}
+@defunx <source-location>-column @var{loc}
+@defunx <source-location>-offset @var{loc}
+Accessors for the fields of a @class{source-location} record.
+@end defun
+
+@c page
+@node lexical-tokens location makers
+@subsection Building records
+
+
+@defop Syntax @aclass{source-location} make @aclass{source-location} @meta{clause} @dots{}
+@defopx Syntax @aclass{source-location} make* @aclass{source-location} @meta{input} @meta{line} @meta{column} @meta{offset}
+@defopx {Auxiliary Syntax} @aclass{source-location} input: @meta{input-source}
+@defopx {Auxiliary Syntax} @aclass{source-location} line: @meta{line}
+@defopx {Auxiliary Syntax} @aclass{source-location} column: @meta{column}
+@defopx {Auxiliary Syntax} @aclass{source-location} offset: @meta{offset}
+Build and return a new instance of @class{source-location}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Procedural interface
+
+@defun make-<source-location> @var{input} @var{line} @var{colum} @var{offset}
+Build and return a record of type @class{source-location}.
+@end defun
+
+
+@defun make-<source-location>/start @var{input}
+Build and return a @class{source-location} record representing the very
+beginning of an input stream.  The line and column counters are set to
+@math{1}, the offset counter is set to @math{0}; @var{input} is stored
+in the @samp{input} field.
+@end defun
+
+@c page
+@node lexical-tokens location pred
+@subsection Predicates
+
+
+@defop Syntax @aclass{source-location} is-a? @meta{obj} @aclass{source-location}
+Return @true{} if @meta{obj} is an instance of @class{source-location}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Procedural interface
+
+@defun <source-location>? @var{obj}
+@defunx <source-location>?/or-false @var{obj}
+Return true if @var{obj} is a record of type @class{source-location}.
+The second variant accepts @false{}, too.
+@end defun
+
+
+@defun <source-location>?/start @var{obj}
+@defunx <source-location>?/start/or-false @var{obj}
+Return true if @var{obj} is a record of type @class{source-location} and
+it represents the first possible location: Column and line counters set
+to @math{1}.  The offset counter is ignored.  The second variant accepts
+@false{}, too.
+@end defun
+
+@c page
+@node lexical-tokens location cmp
+@subsection Comparison functions
+
+
+@defun source-location=? @vari{loc} @varii{loc}
+Compare @vari{loc} and @varii{loc} which must be @false{} or records of
+type @class{source-location}.  Return true if @vari{loc} and @varii{loc}
+are true and the line, column and offset counters have the same values.
+@end defun
+
+
+The following comparison functions establish an ordering in the space of
+the @class{source-location} records and @false{} by comparing the line
+and column counters.  By convention:
+
+@itemize
+@item
+A @class{source-location} record is more advanced than @false{} in the
+input stream.
+
+@item
+When the arguments of a comparision function application are both
+@false{}, the result is @false{}.
+@end itemize
+
+
+@defun source-location-point=? @vari{loc} @varii{loc}
+Return @true{} if the line and column counters of @vari{loc} and
+@varii{loc} have the same values.
+@end defun
+
+
+@defun source-location-point>? @vari{loc} @varii{loc}
+Return @true{} if @vari{loc} is more advanced in the input stream than
+@varii{loc}.
+@end defun
+
+
+@defun source-location-point>=? @vari{loc} @varii{loc}
+Return @true{} if @vari{loc} is more advanced or at the same point, in
+the input stream than @varii{loc}.
+@end defun
+
+
+@defun source-location-point<? @vari{loc} @varii{loc}
+Return @true{} if @vari{loc} is less advanced in the input stream than
+@varii{loc}.
+@end defun
+
+
+@defun source-location-point<=? @vari{loc} @varii{loc}
+Return @true{} if @vari{loc} is less advanced or at the same point, in
+the input stream than @varii{loc}.
+@end defun
+
+@c page
+@node lexical-tokens location update
+@subsection Updating the location
+
+
+@defun source-location-update @var{location} @var{char/token-length}
+If @var{location} is @false{}, the return value is @false{}.  If
+@var{location} is a @class{source-location} record, build and return a
+new @class{source-location} record representing the position of the next
+char to be parsed in the input stream, starting from @var{location} and
+updated with @var{char/token-length}.
+
+@itemize
+@item
+If @var{char/token-length} is an exact integer, it is interpreted as
+token length.  The column and offset counters from @var{location} are
+incremented by that amount.
+
+@item
+If @var{char/token-length} is the @samp{#\return} character the action
+depends upon the value of the @samp{source-location-honor-return}
+parameter: if it is true, the column counter is set to @math{1} and the
+offset counter is incremented by @math{1}; if it is @false{}, the column
+and offset counters are incremented by @math{1}.
+
+@item
+If @var{char/token-length} is the @samp{#\newline} character: The line
+counter is incremented by @math{1}, the column counter is set to
+@math{1} and the offset counter is incremented by @math{1}.
+
+@item
+If @var{char/token-length} is the @samp{#\tab} character: The offset
+counter is incremented by @math{1} and the column counter is set to the
+result of:
+
+@example
+((source-location-tab-function)
+    (<source-location>-column @var{location}))
+@end example
+
+@noindent
+that is, the current procedure in the
+@samp{source-location-tab-function} parameter is applied to the column
+counter to produce the next column counter's value.
+@end itemize
+@end defun
+
+
+@deffn Parameter source-location-tab-function
+Hold a function used to produce the next column counter's value given
+the current column counter.  By default it is set to
+@func{source-location-tab-function/8chars}.
+@end deffn
+
+
+@defun source-location-tab-function/8chars @var{column}
+Return the smallest multiple of @math{8} which is greater than
+@var{column}.
+@end defun
+
+
+@defun source-location-tab-function/tab-table @var{column}
+Produce the next column counter's value drawing it from the list of
+horizontal tabulation offsets in the @samp{source-location-tab-table}
+parameter.  The returned value is the smallest offset which is greater
+than @var{column}.  If the list is null or all the offsets are smaller
+than @var{column}, @func{source-location-tab-function/8chars} is used to
+compute the return value.
+@end defun
+
+
+@deffn Parameter source-location-tab-table
+Hold a list of horizontal tabulation offsets, sorted in increasing
+order.  The default value is null.
+@end deffn
+
+
+@deffn Parameter source-location-honor-return
+Hold a boolean value which causes @func{source-location-update} to honor
+a @samp{#\return} character or not.
+@end deffn
+
+@c page
+@node lexical-tokens location misc
+@subsection Miscellaneous functions
+
+
+The procedures described here make use of the @library{nausicaa language
+generics} library; @ref{generics, Multimethod dispatching}.
+
+
+@defun source-location->string @var{loc}
+Return a string representation of @var{loc}, which must be a record of
+type @class{source-location} or @false{}.  If @var{loc} is @false{}, the
+return value is the string @samp{<??>}; else the result is of the form:
+
+@example
+<input>:line:column
+@end example
+
+@noindent
+for example @samp{main.c:33:7}.  @meta{input} is a string produced by
+applying @func{object->string} to the value of the @samp{input} field of
+@var{loc}.
+
+Notice that the use of this function is not mandatory at all.
+@end defun
+
+
+@deffn Method object->string (@var{o} <source-location>)
+Return a string representation of @var{o}.  It is a wrapper for
+@func{source-location->string}.
+@end deffn
+
+@c page
+@node lexical-tokens token
+@section Lexical token records
+
+
+@menu
+* lexical-tokens token intro::  Overview of lexical tokens.
+* lexical-tokens token token::  Lexical token class.
+* lexical-tokens token error::  Lexical error class.
+@end menu
+
+@c page
+@node lexical-tokens token intro
+@subsection Overview of lexical tokens
+
+
+Lexical token records are meant to store informations about a token from
+the input stream; they should be produced by the lexer and consumed by
+the parser.  For example, when the lexer tokenises the number @math{123}
+from the string @samp{123}, it can build a record with:
+
+@example
+(let ((position ---))
+  (make* <lexical-token> 'NUMBER position 123 3))
+@end example
+
+@noindent
+while when tokenising a string it can do:
+
+@example
+(let ((position ---))
+  (make* <lexical-token> 'STRING position "some text" 9))
+@end example
+
+When the lexer has to signal the end--of--input, it must return a token
+with category @samp{*eoi*}, and continue to return it if it is called
+again and again; it can do:
+
+@example
+(let ((position ---))
+  (make* <lexical-token> '*eoi* position (eof-object)))
+@end example
+
+When the lexer closure has to signal a lexer error (an invalid character
+from the input stream), it must return a token with category
+@samp{*lexer-error*}.
+
+@c page
+@node lexical-tokens token token
+@subsection Lexical token class
+
+
+The following bindings are exported by the @library{nausicaa
+parser-tools lexical-tokens} library; this library is built on top of
+@library{nausicaa language classes}.
+
+
+@deftp Class @aclass{lexical-token}
+Hold the informations about a token from the input stream.
+@end deftp
+
+
+@defcv {Immutable Field} @aclass{lexical-token} category
+Represents the grammar's terminal symbol to which this token belongs.
+Every parser @api{} must provide an interface to specify the list of
+allowed terminal symbols.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{lexical-token} location
+Represents the location in the input from which the token was built; it
+must be @false{} or an instance of @class{source-location} record.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{lexical-token} value
+Represents the semantic value associated with the token.  It can be any
+Scheme value.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{lexical-token} length
+It is meant to be the length of the string which generated the token.
+When the token represents the end--of--input, this field can be set to
+zero.
+@end defcv
+
+
+@defcv {Immutable Virtual Field} @aclass{lexical-token} end-of-input?
+True if the token has category @samp{*eoi*}.
+@end defcv
+
+
+@defcv {Immutable Virtual Field} @aclass{lexical-token} lexer-error?
+True if the token has category @samp{*lexer-error*}.
+@end defcv
+
+
+@defcv {Immutable Virtual Field} @aclass{lexical-token} special?
+True if the token has category @samp{*eoi*} or @samp{*lexer-error*}.
+@end defcv
+
+
+@defop Syntax @aclass{lexical-token} make* @aclass{lexical-token} @var{category} @var{location} @var{value} @var{length}
+Build and return a new record of type @class{lexical-token}.
+@end defop
+
+
+@defop Syntax @aclass{lexical-token} make @aclass{lexical-token} @var{clause} ...
+@defopx {Auxiliary Syntax} @aclass{lexical-token} category: @var{category}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} location: @var{location}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} value: @var{value}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} length: @var{length}
+Build and return a new record of type @class{lexical-token}.  The
+@func{category:} clause is mandatory; @var{location} defaults to
+@false{}; @var{value} defaults to @false{}; @var{length} defaults to
+zero.
+@end defop
+
+
+@defop Syntax @aclass{lexical-token} is-a? @var{obj} @aclass{lexical-token}
+Return @true{} if @var{obj} is an instance of @class{lexical-token}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Traditional records @api{}
+
+
+@defun make-<lexical-token> @var{category} @var{location} @var{value} @var{length}
+Build and return a new record of type @class{lexical-token}.
+@end defun
+
+
+@defun make-<lexical-token>/end-of-input @var{location}
+Build and return a new record of type @class{lexical-token} meant to
+represent the end--of--input.  The field @samp{category} is set to the
+symbol @samp{*eoi*}, the field @samp{value} is set to
+@samp{(eof-object)}, the field @samp{length} is set to zero.  The field
+@samp{location} is set to @var{location}, which must be a
+@class{source-location} record or @false{}.
+@end defun
+
+
+@defun make-<lexical-token>/lexer-error @var{location} @var{value} @var{length}
+Build and return a new record of type @class{lexical-token} meant to
+represent a lexer error.  The field @samp{category} is set to
+@samp{*lexer-error*}, all the other fields are initialised with the
+arguments.
+@end defun
+
+
+@defun <lexical-token>? @var{obj}
+Return true if @var{obj} is a record of type of @class{lexical-token}.
+@end defun
+
+
+@defun <lexical-token>?/end-of-input @var{obj}
+Return true if @var{obj} is an instance of @class{lexical-token} having
+category @func{eq?} to the symbol @samp{*eoi*}.
+@end defun
+
+
+@defun <lexical-token>?/lexer-error @var{obj}
+Return true if @var{obj} is an instance of @class{lexical-token} having
+category @func{eq?} to the symbol @samp{*lexer-error*}.
+@end defun
+
+
+@defun <lexical-token>?/special @var{obj}
+Return true if @var{obj} is an instance of @class{lexical-token} having
+category @func{eq?} to the symbol @samp{*eoi*} or @samp{*lexer-error*}.
+@end defun
+
+
+@defun <lexical-token>-category @var{tok}
+@defunx <lexical-token>-location @var{tok}
+@defunx <lexical-token>-value @var{tok}
+@defunx <lexical-token>-length @var{tok}
+Accessors for the fields of @class{lexical-token} records.
+@end defun
+
+@c page
+@node lexical-tokens token error
+@subsection Lexical error class
+
+
+The following bindings are exported by the @library{nausicaa
+parser-tools lexical-tokens} library; this library is built on top of
+@library{nausicaa language classes}.
+
+
+@deftp Class @aclass{lexer-error}
+Hold the informations about a lexer error; it is derived from
+@class{lexical-token}.  The value of the @code{category} field is always
+@samp{*lexer-error*}.
+@end deftp
+
+
+@defcv {Immutable Field} @aclass{lexer-error} message
+A Scheme string describing the error.
+@end defcv
+
+
+@defop Syntax @aclass{lexer-error} make* @aclass{lexer-error} @var{location} @var{value} @var{length} @var{message}
+Build and return a new record of type @class{lexer-error}.
+@end defop
+
+
+@defop Syntax @aclass{lexer-error} make @aclass{lexer-error} @var{clause} ...
+@defopx {Auxiliary Syntax} @aclass{lexer-error} location: @var{location}
+@defopx {Auxiliary Syntax} @aclass{lexer-error} value: @var{value}
+@defopx {Auxiliary Syntax} @aclass{lexer-error} length: @var{length}
+@defopx {Auxiliary Syntax} @aclass{lexer-error} error-message: @var{message}
+Build and return a new record of type @class{lexer-error}.  The
+@func{error-message:} clause is mandatory; @var{location} defaults to
+@false{}; @var{value} defaults to @false{}; @var{length} defaults to
+zero.
+@end defop
+
+
+@defop Syntax @aclass{lexer-error} is-a? @var{obj} @aclass{lexer-error}
+Return @true{} if @var{obj} is an instance of @class{lexer-error}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Traditional records @api{}
+
+
+@defun make-<lexer-error> @var{location} @var{value} @var{length} @var{message}
+Build and return a new record of type @class{lexer-error}.
+@end defun
+
+
+@defun <lexer-error>? @var{obj}
+Return true if @var{obj} is a record of type of @class{lexer-error}.
+@end defun
+
+
+@defun <lexer-error>-message @var{tok}
+Accessor for the field of @class{lexer-error} records.
+@end defun
+
+@c end of file
