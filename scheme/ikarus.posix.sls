@@ -120,7 +120,8 @@
 	    file-bytevector-pathname.vicare-arguments-validation
 	    file-colon-search-path.vicare-arguments-validation
 	    file-string-colon-search-path.vicare-arguments-validation
-	    file-bytevector-colon-search-path.vicare-arguments-validation))
+	    file-bytevector-colon-search-path.vicare-arguments-validation)
+    #;(ikarus.emergency))
 
 
 ;;;; arguments validation
@@ -167,6 +168,14 @@
   (file-bytevector-colon-search-path? obj)
   (procedure-argument-violation who
     "expected valid bytevector as colon-separated file search path argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (list-of-string-pathnames who obj)
+  (and (list? obj)
+       (for-all file-string-pathname? obj))
+  (procedure-argument-violation who
+    "expected list of valid strings as list of pathnames argument" obj))
 
 
 ;;;; helpers
@@ -460,6 +469,9 @@
 (define ($file-exists? pathname)
   (define who 'file-exists?)
   (with-pathnames ((pathname.bv pathname))
+    ;; (emergency-write pathname)
+    ;; (emergency-write (utf8->string pathname.bv))
+    ;; (emergency-write (if (capi.posix-file-exists? pathname.bv) "yes" "no"))
     (let ((rv (capi.posix-file-exists? pathname.bv)))
       (if (boolean? rv)
 	  rv
@@ -572,11 +584,14 @@
   (define who 'real-pathname)
   (with-arguments-validation (who)
       ((file-pathname		pathname))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-realpath pathname.bv)))
-	(if (bytevector? rv)
-	    ((filename->string-func) rv)
-	  (%raise-errno-error/filename who rv pathname))))))
+    ($real-pathname who pathname)))
+
+(define ($real-pathname who pathname)
+  (with-pathnames ((pathname.bv pathname))
+    (let ((rv (capi.posix-realpath pathname.bv)))
+      (if (bytevector? rv)
+	  ((filename->string-func) rv)
+	(%raise-errno-error/filename who rv pathname)))))
 
 (define (delete-file pathname)
   ;;Defined by R6RS.
@@ -638,35 +653,107 @@
 	 search-file-in-list-path)
 
   (define (search-file-in-environment-path pathname environment-variable)
+    ;;Search a  file pathname (regular  file or directory) in  the given
+    ;;search path.
+    ;;
+    ;;PATHNAME  must   be  a   string  representing  a   file  pathname;
+    ;;ENVIRONMENT-VARIABLE  must  be  a  string  representing  a  system
+    ;;environment variable.
+    ;;
+    ;;If PATHNAME is absolute, test  its existence: when found, return a
+    ;;string  representing the  real absolute  file pathname;  otherwise
+    ;;return false.
+    ;;
+    ;;If PATHNAME  is relative  and it  has a  directory part,  test its
+    ;;existence:  when  found, return  a  string  representing the  real
+    ;;absolute file pathname; otherwise return false.
+    ;;
+    ;;If PATHNAME  is relative and  it has  no directory part,  read the
+    ;;environment variable  as colon-separated  list of  directories and
+    ;;search the file  in them, from the first to  the last: when found,
+    ;;return  a string  representing  the real  absolute file  pathname;
+    ;;otherwise return false.   Notice that the file is  searched in the
+    ;;process'  current  working directory  only  if  such directory  is
+    ;;listed in the given path.
+    ;;
     (define who 'search-file-in-environment-path)
     (with-arguments-validation (who)
 	((file-string-pathname	pathname)
 	 (non-empty-string	environment-variable))
-      (cond ((getenv environment-variable)
-	     => (lambda (string-path)
-		  ($search-file-in-list-path pathname (split-search-path-string string-path))))
-	    (else
-	     (search-file-in-list-path pathname '())))))
+      (if (file-absolute-pathname? pathname)
+	  ;;The file is absolute: test for its existence.
+	  (and (file-exists? pathname)
+	       ($real-pathname who pathname))
+	(receive (root tail)
+	    (split-pathname-root-and-tail pathname)
+	  (if ($string-empty? root)
+	      ;;The pathname is  relative and it has  no directory part:
+	      ;;search it in the given path.
+	      (cond ((getenv environment-variable)
+		     => (lambda (string-path)
+			  (%search-file-in-list-path pathname (split-search-path-string string-path))))
+		    (else
+		     ;;There is no path from the environment: the search
+		     ;;has failed.   Notice that we do  *not* search the
+		     ;;file in the current directory.
+		     #f))
+	    ;;The pathname  is relative but  has a directory  part: test
+	    ;;for its existence.
+	    (and (file-exists? pathname)
+		 ($real-pathname who pathname)))))))
 
   (define (search-file-in-list-path pathname list-of-directories)
+    ;;Search a  file pathname (regular  file or directory) in  the given
+    ;;search path.
+    ;;
+    ;;PATHNAME  must   be  a   string  representing  a   file  pathname;
+    ;;LIST-OF-DIRECTORIES  must  be  a   list  of  strings  representing
+    ;;directory pathnames.
+    ;;
+    ;;If PATHNAME is absolute, test  its existence: when found, return a
+    ;;string  representing the  real absolute  file pathname;  otherwise
+    ;;return false.
+    ;;
+    ;;If PATHNAME  is relative  and it  has a  directory part,  test its
+    ;;existence:  when  found, return  a  string  representing the  real
+    ;;absolute file pathname; otherwise return false.
+    ;;
+    ;;If PATHNAME is  relative and it has no directory  part, search the
+    ;;file in  the given directories, from  the first to the  last: when
+    ;;found,  return  a  string  representing  the  real  absolute  file
+    ;;pathname;  otherwise  return  false.   Notice  that  the  file  is
+    ;;searched in  the process' current  working directory only  if such
+    ;;directory is listed in the given path.
+    ;;
     (define who 'search-file-in-list-path)
     (with-arguments-validation (who)
-	((file-string-pathname	pathname)
-	 (list-of-strings	list-of-directories))
-      ($search-file-in-list-path pathname list-of-directories)))
+	((file-string-pathname		pathname)
+	 (list-of-string-pathnames	list-of-directories))
+      (if (file-absolute-pathname? pathname)
+	  ;;The file is absolute: test for its existence.
+	  (and (file-exists? pathname)
+	       ($real-pathname who pathname))
+	(receive (root tail)
+	    (split-pathname-root-and-tail pathname)
+	  (if ($string-empty? root)
+	      ;;The pathname is  relative and it has  no directory part:
+	      ;;search it in the given path.
+	      (%search-file-in-list-path pathname list-of-directories)
+	    ;;The pathname  is relative but  has a directory  part: test
+	    ;;for its existence.
+	    (and (file-exists? pathname)
+		 ($real-pathname who pathname)))))))
 
-  (define ($search-file-in-list-path pathname list-of-directories)
-    (if (file-absolute-pathname? pathname)
-	pathname
-      (let loop ((dirs list-of-directories))
-	(if (null? dirs)
-	    #f
-	  (let* ((pathname    (string-append ($car dirs) pathname))
-		 (pathname.bv (with-pathnames ((pathname.bv pathname))
-				(capi.posix-realpath pathname.bv))))
-	    (if (bytevector? pathname.bv)
-		((pathname->string-func) pathname.bv)
-	      (loop ($cdr dirs))))))))
+  (define (%search-file-in-list-path pathname list-of-directories)
+    (let loop ((dirs list-of-directories))
+      (if (null? dirs)
+	  #f
+	(let* ((pathname    (string-append ($car dirs) "/" pathname))
+	       (pathname.bv (with-pathnames ((pathname.bv pathname))
+			      (capi.posix-realpath pathname.bv))))
+	  (if (bytevector? pathname.bv)
+	      ((pathname->string-func) pathname.bv)
+	    (loop ($cdr dirs)))))))
 
   #| end of module |# )
 

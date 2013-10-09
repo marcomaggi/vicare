@@ -789,6 +789,7 @@ ikrt_posix_file_exists (ikptr s_pathname)
   pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = stat(pathname, &S);
+  /* fprintf(stderr, "%s: %d, %d, %s, %s\n", __func__, rv, errno, pathname, getcwd(NULL, 0)); */
   if (0 == rv)
     return IK_TRUE_OBJECT;
   else if ((ENOENT == errno) || (ENOTDIR == errno))
