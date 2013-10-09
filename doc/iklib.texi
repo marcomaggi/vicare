@@ -7067,7 +7067,8 @@ example in the previous section):
 @value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
 
 @menu
-* iklib io pathnames::          Pathnames handling.
+* iklib io pathnames::          String and bytevector pathnames
+                                handling.
 * iklib io codecs::             Transcoders and additional codecs.
 * iklib io non-blocking::       Handling non--blocking devices.
 * iklib io binary::             Additional binary port features.
@@ -7079,14 +7080,15 @@ example in the previous section):
 
 @c page
 @node iklib io pathnames
-@subsection Pathnames handling
+@subsection String and bytevector pathnames handling
 
 
 All the file--related functions defined by @rnrs{6} accept a Scheme
 string as representing a file pathname; internally such string is
 converted to a bytevector to be handed to the underlying operating
-system.  The following bindings are exported by the @library{ikarus}
-library.
+system.
+
+The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Parameter string->filename-func
@@ -7103,6 +7105,73 @@ In @value{PRJNAME} the filename--to--string conversion is performed by
 the function returned by @func{filename->string-func}, which defaults to
 @func{utf8->string}.
 @end deffn
+
+
+The following bindings are exported by the library @library{vicare
+$posix}.
+
+
+@defun file-pathname? @var{obj}
+@defunx file-string-pathname? @var{obj}
+@defunx file-bytevector-pathname? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector, not empty, not
+including a character whose @ascii{} representation is the null byte.
+@end defun
+
+
+@defun file-absolute-pathname? @var{pathname}
+The argument @var{pathname} must be a string or bytevector.  Return
+@true{} if @var{pathname} starts with a @code{/} character, which means
+it is valid as Unix--style absolute pathname; otherwise return @false{}.
+
+This function only acts upon its argument, never accessing the file
+system.
+@end defun
+
+
+@defun file-relative-pathname? @var{pathname}
+The argument @var{pathname} must be a string or bytevector.  Return
+@true{} if @var{pathname} doest @strong{not} start with a @code{/}
+character, which means it is valid as Unix--style relative pathname;
+otherwise return @false{}.
+
+This function only acts upon its argument, never accessing the file
+system.
+@end defun
+
+
+@defun split-pathname-root-and-tail @var{pathname}
+Given a string representing a pathname: split it into the directory part
+and the tail part.  Return 2 values: a string representing the directory
+part and a string representing the tail name part.  If @var{pathname} is
+just the name of a file or directory relative to the current directory:
+the directory part is empty and the first returned value is the empty
+string.
+
+Assume the pathname components separator is @code{/}, which is
+Unix--specific.
+
+@example
+(receive (root tail)
+    (split-pathname-root-and-tail "a/b")
+  (list root tail))
+@result{} ("a" "b")
+
+(receive (root tail)
+    (split-pathname-root-and-tail "ciao")
+  (list root tail))
+@result{} ("" "ciao")
+@end example
+@end defun
+
+
+@defun file-colon-search-path? @var{obj}
+@defunx file-string-colon-search-path? @var{obj}
+@defunx file-bytevector-colon-search-path? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector, possibly empty,
+not including a character whose @ascii{} representation is the null
+byte.
+@end defun
 
 
 @defun split-search-path @var{path}
@@ -7164,7 +7233,7 @@ Empty components are discarded.
 (import (vicare))
 
 (split-pathname-bytevector '#vu8())
-@result{} #f ()
+@error{} "invalid pathname"
 
 (split-pathname-bytevector '#ve(ascii "ciao/hello"))
 @result{} #f (#ve(ascii "ciao") #ve(ascii "hello"))
@@ -7173,7 +7242,7 @@ Empty components are discarded.
 @result{} #t ()
 
 (split-pathname-string "")
-@result{} #f ()
+@error{} "invalid pathname"
 
 (split-pathname-string "ciao/hello/salut")
 @result{} #f ("ciao" "hello" "salut")
@@ -7188,7 +7257,6 @@ Empty components are discarded.
 @result{} #t (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
 @end example
 @end defun
-
 
 @c page
 @node iklib io codecs

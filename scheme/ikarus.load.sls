@@ -30,7 +30,7 @@
     (prefix (only (ikarus.posix)
 		  getenv
 		  mkdir/parents
-		  split-file-name
+		  split-pathname-root-and-tail
 		  real-pathname
 		  file-modification-time)
 	    posix.)
@@ -199,7 +199,7 @@
 	(%display "serialising ")
 	(%display ikfasl)
 	(%display " ... ")
-	(let-values (((dir name) (posix.split-file-name ikfasl)))
+	(let-values (((dir name) (posix.split-pathname-root-and-tail ikfasl)))
 	  (posix.mkdir/parents dir #o755))
 	(let ((port (open-file-output-port ikfasl (file-options no-fail))))
 	  (unwind-protect

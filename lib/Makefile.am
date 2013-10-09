@@ -355,14 +355,15 @@ VFLAGS		= @VFLAGS@
 
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH)	\
-		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH)		\
-		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH)
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);		export VICARE_LIBRARY_PATH;	\
+		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);			export VICARE_FASL_PATH;	\
+		  SILEX_PATH=$(srcdir)/vicare/parser-tools/silex;		export SILEX_PATH;		\
+		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);			export LD_LIBRARY_PATH;
 VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
 VICARE_INST	= $(bindir)/vicare
-VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$(VICARE_LIBRARY_PATH)
+VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$(VICARE_LIBRARY_PATH);			export VICARE_LIBRARY_PATH;
 VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
 .PHONY: vfasl vfasl-installed
@@ -456,5 +457,20 @@ CLEANFILES	= vicare/platform/features.sls
 
 clean-local:
 	-rm -rf $(VICARE_FASL_DIRECTORY)
+
+#page
+#### SILex lexers building
+
+SILEX_SRCDIR	= $(srcdir)/vicare/parser-tools/silex
+
+.PHONY: silex-internals silex-backup
+
+silex-internals:
+	@echo; echo "*** Special rule: rebuilding SILex internals lexer tables"; echo
+	@export SILEX_SRCDIR=$(SILEX_SRCDIR); $(VICARE_RUN) $(SILEX_SRCDIR)/make-tables.sps
+
+silex-backup:
+	@echo; echo "*** Special rule: backup of SILex internals lexer tables"; echo
+	cp --verbose $(SILEX_SRCDIR)/*-l.sls $(SILEX_SRCDIR)/backup
 
 ### end of file

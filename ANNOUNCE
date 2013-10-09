@@ -100,6 +100,29 @@ Notes for revision 0.3d5
     $add1-integer	$add1-fixnum	$add1-bignum
     $sub1-integer	$sub1-fixnum	$sub1-bignum
 
+* Fixes,  reorganisation  and  development   of  string  and  bytevector
+  pathname functions.  Added to (vicare $posix):
+
+    split-pathname-root-and-tail
+    search-file-in-environment-path
+    search-file-in-list-path
+    split-pathname
+    split-pathname-bytevector
+    split-pathname-string
+    split-search-path
+    split-search-path-bytevector
+    split-search-path-string
+    file-absolute-pathname?
+    file-relative-pathname?
+    file-pathname?
+    file-string-pathname?
+    file-bytevector-pathname?
+    file-colon-search-path?
+    file-string-colon-search-path?
+    file-bytevector-colon-search-path?
+
+  which are reexported by (vicare posix).
+
 * Added special validation clause:
 
     (or false ?validator)
