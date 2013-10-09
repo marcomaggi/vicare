@@ -176,6 +176,20 @@ the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
 Autotools.
 
 
+3.3 Special make rules
+----------------------
+
+There are  special makefile rules  to rebuild source code  files, mostly
+lexer and parser tables:
+
+silex-test	- rebuild the tests for the SILex lexer
+
+and the  following DANGEROUS  rule, use  only if you  know what  you are
+doing:
+
+silex-internals - rebuild the internal tables of SILex itself
+
+
 4. Testing
 ----------
 

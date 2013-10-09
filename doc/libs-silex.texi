@@ -1,0 +1,1305 @@
+@node silex
+@chapter A lexical analyser generator
+
+
+@cindex @library{vicare parser-tools silex}, library
+@cindex Library @library{vicare parser-tools silex}
+@cindex @library{vicare parser-tools silex lexer}, library
+@cindex Library @library{vicare parser-tools silex lexer}
+
+
+The library @library{vicare parser-tools silex} generates a lexical
+analyser table from a Lex--like specification file.  The library
+@library{vicare parser-tools silex lexer} generates a Scheme lexical
+analyser using a supplied table.  It is suggested to import the
+libraries with the @samp{lex.} prefix, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare parser-tools silex)       lex.)
+  (prefix (vicare parser-tools silex lexer) lex.))
+@end example
+
+@quotation
+``SILex'' stands for ``Scheme Implementation of Lex''.  The library is a
+port to @rnrs{6} Scheme of SILex version 1.0 by Danny Dube'.  The
+original code is available at (@aurl{} last verified Oct 8, 2013):
+
+@center @url{http://www.iro.umontreal.ca/~dube/}
+@end quotation
+
+@menu
+* silex example::               A lexer example for a calculator.
+* silex tables::                Creating lexer tables.
+* silex input::                 Input systems.
+* silex lexer::                 Building and using lexical analysers.
+* silex syntax::                Syntax of the specification.
+* silex semantics::             Semantics of the specification file.
+* silex format::                Tables output format.
+* silex utilities::             Utility functions.
+* silex default::               Default semantic actions.
+@end menu
+
+@c page
+@node silex example
+@section A lexer example for a calculator
+
+
+The following is a lexer specification file that can be used to tokenise
+a mathematical expression.
+
+@smallexample
+blanks          [ \9\10\13]+
+
+decint          [0-9]+
+binint          #[bB][01]+
+octint          #[oO][0-7]+
+hexint          #[xX][0-9A-Fa-f]+
+integer         @{decint@}|@{binint@}|@{octint@}|@{hexint@}
+
+exponent        ([eE][+\-]?[0-9]+)
+truereal        [0-9]+\.|[0-9]*\.[0-9]+@{exponent@}?|[0-9]+@{exponent@}
+real            @{truereal@}|@{integer@}
+
+imag            (@{decint@}|@{real@})i
+
+nan             \-nan\.0|\+nan\.0|nan\.0
+pinf            \+inf\.0|inf\.0
+minf            \-inf\.0
+
+initial         [a-zA-Z_]
+subsequent      @{initial@}|[0-9\.@!$&:<=>?~\-]
+symbol          @{initial@}@{subsequent@}*
+
+operator        <=|>=|//|[\+\-*/%\^<>=]
+
+comma           ,
+
+oparen          \(
+cparen          \)
+
+%%
+@{blanks@}        ;; skip blanks, tabs and newlines
+@{imag@}          (string->number (string-append "+" yytext))
+@{real@}          (string->number yytext)
+@{nan@}           +nan.0
+@{pinf@}          +inf.0
+@{minf@}          -inf.0
+@{operator@}      (case (string->symbol yytext)
+                    ((+) '+)
+                    ((-) '-)
+                    ((*) '*)
+                    ((/) '/)
+                    ((%) 'mod)
+                    ((^) 'expt)
+                    ((//) 'div)
+                    ((=) '=)
+                    ((<) '<)
+                    ((>) '>)
+                    ((<=) '<=)
+                    ((>=) '>=))
+@{symbol@}        (string->symbol yytext)
+@{comma@}         'cons
+
+@{oparen@}        #\(
+@{cparen@}        #\)
+
+<<EOF>>         (eof-object)
+<<ERROR>>       (assertion-violation #f
+                  "invalid lexer token")
+@end smallexample
+
+Let's say the file is called @file{calc.l}, then the table for this
+lexer can be created with one of the following forms (and other forms
+not described here):
+
+@example
+;; Generate a proper Scheme library called "(calc)" and
+;; save it in the file "calc-lib.sls".
+;;
+;; Use the default table format.
+;;
+;; The library exports the table bound to "calc-table".
+
+(lex (input-file: "calc.l") (output-file: "calc-lib.sls")
+     (library-spec: "(calc)")
+     (table-name: 'calc-table))
+
+
+;; Generate a DEFINE form in that binds the lexer table
+;; to the symbol "calc-table" and save it in the file
+;; "calc-def.sls".
+;;
+;; Use the Scheme code table format.
+
+(lex (input-file: "calc.l") (output-file: "calc-def.sls")
+     (lexer-format: 'code)
+     (table-name: 'calc-table))
+
+;; Generate the lexer table, evaluate it and return it
+;; as value immediately usable.
+;;
+;; Use the Scheme code table format.
+
+(define calc-table
+  (lex (:input-file "calc.l") (:output-value #t)
+       (:lexer-format 'code)))
+@end example
+
+Once we have created the lexer table, let's say bound to
+@samp{calc-table}, we can use it as follows.  We take advantage of the
+fact that: When the input reaches the end, the lexer closure returns the
+@samp{(eof-object)} value.
+
+@example
+(define (tokenize table string)
+  (let* ((IS    (make-IS (string: string)))
+         (lexer (make-lexer table IS))
+    (do ((token (lexer) (lexer))
+         (out   '()))
+        ((eof-object? token)
+         (reverse out))
+      (set! out (cons token out))))))
+
+(tokenize calc-table "1*(2/3)")
+@result{} (1 * #\( 2 / 3 #\))
+
+(tokenize calc-table "fun(1+a, sin(2), 3, 4)")
+@result{} (fun #\( 1 + a cons sin #\( 2 #\) cons 3 cons 4 #\))
+@end example
+
+@c page
+@node silex tables
+@section Creating lexer tables
+
+
+The following bindings are exported by the @library{vicare
+parser-tools silex} library.
+
+
+@deffn Syntax lex @var{clause} ...
+Build a new lexer table from a lexer specification.  @ref{silex syntax,
+Syntax of the specification}
+
+The behaviour of this function is configured with the given @var{clause}
+arguments; see below for the list of supported options.
+
+The specification can be loaded from a file, or read from a textual
+input port, or acquired from a Scheme string.
+
+The output is the lexer's @dfn{table}, a Scheme vector representing the
+lexer automaton.  It can be saved to a file, or written to a port, or
+evaluated using the @rsixlibrary{eval} library and returned as value.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} input-string: @var{spec-str}
+Instruct @func{lex} to build the lexer tables from the specification in
+the given Scheme string.  When used together, this option supersedes
+@samp{input-file:} and @samp{input-port:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} input-port: @var{port}
+Instruct @func{lex} to build the lexer tables from the specification
+read from the given textual input port.  When used together, this option
+supersedes @samp{input-file:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} input-file: @var{pathname}
+Instruct @func{lex} to build the lexer tables from the specification in
+the selected file.  @var{pathname} must be a string representing an
+existent file pathname.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} library-spec: @var{library-name}
+Instruct @func{lex} to build the output as a proper Scheme library.
+This means a Scheme string is built, representing a @func{library} form.
+The string may contain Scheme comments.  When this option is not used
+the output is the raw table vector or a @func{define} form.
+
+The argument @var{library-name} must represent a valid library name; the
+following formats are accepted:
+
+@itemize
+@item
+A string, including the parentheses.  Example:
+
+@example
+(library-spec: "(calc-lexer)")
+; -> (library (calc-lexer) ---)
+@end example
+
+@item
+A symbol, which will be converted to string and to which parentheses
+will be added.  Example:
+
+@example
+(library-spec: 'calc-lexer)
+; -> (library (calc-lexer) ---)
+@end example
+
+@item
+A list of values, which will be simply converted to string.  Example:
+
+@example
+(library-spec: '(calc-lexer))
+; -> (library (calc-lexer) ---)
+@end example
+@end itemize
+
+It is mandatory to use the option @samp{table-name:} along with
+@samp{library-spec:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {library-language:} @var{lang}
+Select @var{lang} as language to use for the library; the language is
+the first import specification after @code{import} in the @code{library}
+form.  By default the language is @library{rnrs}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} library-imports: @var{import-list}
+Select a list of libraries which must be imported when using the
+generated lexer.  @var{import-list} must be a list of library
+specifications; for example, if we want to include the @library{vicare
+language sentinel} and @library{vicare language parameters} libraries
+we do:
+
+@example
+(library-imports: '((vicare language sentinel)
+                    (vicare language parameters)))
+@end example
+
+If the lexer table is written to a proper Scheme library:
+@var{import-list} is added to the import specification of the generated
+library.  If the lexer table is directly evaluated: @var{import-list} is
+added to the environment which is handed to @func{eval}.
+
+This option is ignored when the selected output is neither a library,
+nor an evaluated library.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} table-name: @var{name}
+Instruct @func{lex} to output a @func{define} form defining a binding
+between @var{name} and the table vector.  @var{name} can be a string or
+symbol, and it must represent a valid identifier.
+
+When this option is used along with @samp{library-spec:}, the
+@func{library} form will export the identifier @var{name}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} output-value: #t|#f
+When the argument is @true{}, instruct @func{lex} to evaluate the vector
+table using the @rsixlibrary{eval} library and to return the result,
+which is then directly usable.
+
+The list of libraries selected by @samp{library-imports:} is added to
+the environment used for the evaluation.  By default, the environment
+always includes @library{rnrs}, and also @library{vicare parser-tools
+silex lexer} when the selected lexer format is @samp{code}.
+
+It is an error to use this option along with @samp{table-name:}.  When
+used together, this option supersedes @samp{output-file:} and
+@samp{output-port:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} output-port: @var{port}
+Instruct @func{lex} to write the output as string in the given textual
+output port.
+
+When used together, this option supersedes @samp{output-file:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} output-file: @var{pathname}
+Instruct @func{lex} to save the output in a file with given pathname.
+This is especially useful when the output is a proper @func{library} or
+@func{define} form.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} lexer-format: @var{format}
+Instruct @func{lex} about the format of the lexer table.  @var{format}
+can be one among the following symbols: @samp{decision-tree},
+@samp{code}, @samp{portable}; the default is @samp{decision-tree}.
+@ref{silex format, Tables output format}
+@end deffn
+
+
+@deffn {Auxiliary Syntax} pretty-print: #t|#f
+Instruct @func{lex} to pretty--print the contents of the table.
+Normally, the table is displayed as a compact mass of characters fitting
+in about @math{75} columns.  The option is useful only for a developer
+of @library{vicare parser-tools silex}.  The Scheme code generated
+with the @samp{code} option is always pretty--printed, the others are
+not by default.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} counters: @var{which-ones}
+Instruct @func{lex} about which counters will be available to the lexer.
+
+Counters are managed by the input system, and can be used by the lexer.
+The following values for @var{which-ones} are available: @samp{all},
+@samp{line}, @samp{none}; @samp{line} is the default.  The more counters
+the input system maintains, the more it is slowed down.
+
+Notice that the same @samp{counters:} option must be given to @func{lex}
+and to @func{make-IS}, a mismatch will result in undefined
+behaviour.  This is because an input system is independent from a lexer
+table, and it is more efficient to build tables for a specific set of
+counters rather than to configure them at run time.
+@end deffn
+
+@c page
+@node silex input
+@section Input systems
+
+
+An input system provides the buffering, the line counting and similar
+low level services.  The following bindings are exported by the
+@library{vicare parser-tools silex input-system} library and
+reexported by the @library{vicare parser-tools silex lexer} library.
+
+
+@deffn Syntax make-IS @var{clauses} ...
+Build and return a new input system.  The behaviour of this function is
+configured with the given @var{clauses}; see below for the list of
+supported options.
+
+Input characters can come from a string, a port or the return value of a
+procedure.  When an input port is used by an input system, the program
+should avoid reading characters directly from the port.  This is because
+the input system may have needed a look--ahead to do the analysis of the
+preceding token.  The program would not find what it expects on the
+port.  The input system provides safe functions to get characters from
+the input.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} string: @var{string}
+Instruct @func{make-IS} to build an input system that will take
+characters from the supplied string.  When the input system is
+initialized with a string, it takes a copy of it.  This way, eventual
+mutations of the string do not affect the analysis.
+
+When used together, this option supersedes @samp{port:} and
+@samp{procedure:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} port: @var{port}
+Instruct @func{make-IS} to build an input system that will read
+characters from the supplied textual input port.  The input system never
+closes itself the port it has received, this task is left to the
+program.
+
+When used together, this option supersedes @samp{procedure:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} procedure: @var{proc}
+Instruct @func{make-IS} to build an input system that will read
+characters invoking the supplied procedure.
+
+The use of a function as character source allows the input system to
+parse any character stream, no matter how it is obtained.  For example,
+the characters may come from the decompression or decryption of a huge
+file, the task being done lazily in order to save space.
+
+The function must take no argument and return a character each time it
+is called.  When the end of file (or its logical equivalent) is reached,
+the function must return an object that is not a character (for example,
+the symbol @samp{eof}).  After the function has returned an end of file
+indicator, it is not called again.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} counters: @var{which-ones}
+Instruct @func{make-IS} about which counters to make available to
+the lexer.
+
+Counters are managed by the input system, and can be used by the lexer.
+The following values for @var{which-ones} are available: @samp{all},
+@samp{line}, @samp{none}; @samp{all} is the default.  The more counters
+the input system maintains, the more it is slowed down.
+
+Notice that the same @samp{counters:} option must be given to @func{lex}
+and to @func{make-IS}, a mismatch will result in undefined behaviour.
+This is because an input system is independent from a lexer table, and
+it is more efficient to build tables for a specific set of counters
+rather than to configure them at run time.
+@end deffn
+
+
+@defun lexer-get-func-line @var{input-system}
+Return a closure which, when invoked with no arguments, will return the
+current line number in @var{input-system}.
+@end defun
+
+
+@defun lexer-get-func-column @var{input-system}
+Return a closure which, when invoked with no arguments, will return the
+current column number in @var{input-system}.
+@end defun
+
+
+@defun lexer-get-func-offset @var{input-system}
+Return a closure which, when invoked with no arguments, will return the
+current offset in @var{input-system}.
+@end defun
+
+
+@defun lexer-get-func-getc @var{input-system}
+Return a closure which, when invoked with no arguments, will return the
+next character from @var{input-system}.  The closure allows client code
+to perform a lookahead.
+
+The returned character is not forgotten by the lexer, this function just
+increments by @math{1} a pointer into the internal buffer.  Multiple
+invocations of this function will return the sequence of characters
+about to be analysed by the lexer.  When there are no more characters,
+the return value is the @samp{(eof-object)} value.
+
+The returned characters are @strong{skipped} by the lexer, unless we put
+them back with the closure returned by @func{lexer-get-func-ungetc}.
+@end defun
+
+
+@defun lexer-get-func-ungetc @var{input-system}
+Return a closure which, when invoked with no arguments, will decrement a
+pointer into the buffer of @var{input-system}.  This function puts back
+a character previously read by a closure returned by
+@func{lexer-get-func-getc}.
+
+It is not possible to replace characters in the input system.
+@end defun
+
+@c page
+@node silex lexer
+@section Building and using lexical analysers
+
+
+Each lexer is associated to a lexer table and an input system.  Any
+number of lexers, using any table, can be created using the same input
+system.  Multiple lexers sharing the same input system can be invoked in
+turn to parse complex inputs.
+
+For all the lexer makers: the @var{input-system} argument is the input
+system from which the analyser will take its input; it is mandatory to
+build the input system with the same @code{counters:} specification of
+the table handed to the maker.
+
+@c ------------------------------------------------------------
+
+@subsubheading Format agnostic lexer maker
+
+The following bindings are exported from the @library{vicare
+parser-tools silex lexer} library.
+
+
+@defun make-lexer @var{lexer-table} @var{input-system}
+Build and return a new lexical analyser: an analysis function which,
+when invoked with no arguments, returns the next token.
+
+@var{lexer-table} must be a table generated by @func{lex}, in any
+format.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Decision tree lexer maker
+
+The following bindings are exported from the @library{vicare
+parser-tools silex tree-lexer-driver} library.
+
+
+@defun make-tree-lexer @var{lexer-table} @var{input-system}
+Build and return a new lexical analyser: an analysis function which,
+when invoked with no arguments, returns the next token.
+
+@var{lexer-table} must be a table generated by @func{lex} using the
+@code{decision-tree} format.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Portable tree lexer maker
+
+The following bindings are exported from the @library{vicare
+parser-tools silex char-lexer-driver} library.
+
+
+@defun make-char-lexer @var{lexer-table} @var{input-system}
+Build and return a new lexical analyser: an analysis function which,
+when invoked with no arguments, returns the next token.
+
+@var{lexer-table} must be a table generated by @func{lex} using the
+@code{portable} format.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Scheme code lexer maker
+
+The following bindings are exported from the @library{vicare
+parser-tools silex code-lexer-driver} library.
+
+
+@defun make-code-lexer @var{lexer-table} @var{input-system}
+Build and return a new lexical analyser: an analysis function which,
+when invoked with no arguments, returns the next token.
+
+@var{lexer-table} must be a table generated by @func{lex} using the
+@code{code} format.
+@end defun
+
+@c page
+@node silex syntax
+@section Syntax of the specification
+
+
+A specification for a lexical analyser contains two parts: the
+@dfn{macro definitions part}, or @dfn{header}, and the @dfn{rules part}.
+The two parts are separated by the mark @code{%%}.  Example:
+
+@example
+blanks          [ \9\10\13]+
+decint          [0-9]+
+
+%%
+
+@{blanks@}        ;; skip blanks, tabs and newlines
+@{decint@}        (string->number yytext)
+@end example
+
+The first part is used to define @dfn{macros}; that is, to give names to
+some regular expressions.  The second part is used to indicate the
+regular expressions with which the input will have to match, and the
+@dfn{actions} associated with each expression.
+
+Comments can be inserted any place where white space is allowed and is
+considered as white space itself.  Line comments begin with a semicolon
+@samp{;} and extend up to the end of a line; the semicolon is a valid
+token in many languages, so we should take care not to comment out an
+entire line when writing a regular expression matching a semicolon.
+Nested comments begin with a @samp{#|} sequence and extend up to the
+corresponding @samp{|#} sequence.
+
+@menu
+* silex syntax macros::         Syntax of the macro definitions.
+* silex syntax rules::          Syntax of the rule--action pairs.
+* silex syntax regexp atomic::  Atomic regular expressions.
+* silex syntax regexp compose:: Composing regular expressions.
+* silex syntax regexp marker::  Markers.
+* silex syntax regexp space::   White spaces in regular expressions.
+* silex syntax sample::         Show some frequent mistakes.
+@end menu
+
+@c page
+@node silex syntax macros
+@subsection Macro definitions part
+
+
+The first part of a specification contains zero or more macro
+definitions.  A definition consists of a name and a regular expression,
+separated by white spaces (meaning: horizontal blank characters,
+vertical blank characters like newlines and comments).  It looks better
+when each definition is written on a separate line.
+
+The syntax for a macro name is that of an @rnrs{6} symbol.  For example,
+@code{abcd}, @code{+}, @code{...}, @code{Digit} and @code{digit} are all
+valid macro names; the last two being different.  It is an error to
+write two macro definitions with the same name, unless they have equal
+regexp specification.
+
+The special syntax:
+
+@example
+%[@meta{pathname}]
+@end example
+
+@noindent
+can be used to include a macro definition file whose pathname is
+@meta{pathname}, which must be an absolute pathname or a pathname
+relative to the current working directory; @meta{pathname} is handed as
+is to @func{open-input-file}; @meta{pathname} can be any string not
+including the @samp{]} character.
+
+Two macros with the same name are allowed if they have the same regexp
+specification, this allows an include file to be loaded multiple times.
+Recursive inclusion of files is detected by comparing file pathnames as
+used in the @samp{%[...]} directive.
+
+The defined macro can be referenced in regular expressions using the
+syntax @code{@{@var{name}@}}.  The scope of a macro definition includes
+the remaining definitions and the rules part; it is analogous to
+@code{let*} is Scheme, where the macro definitions correspond to the
+bindings and the rules part correspond to the body.
+
+We end the macro definitions part with @code{%%}.
+
+@c page
+@node silex syntax rules
+@subsection Rules part
+
+
+The rules part contains the rules up to the end of the specification.
+Each rule is a @dfn{pattern} optionally followed by an @dfn{action}.
+The pattern is a regular expression.  The action, if there is one, is
+formed of one or more Scheme expressions.
+
+The actions can span over several lines.  To distinguish between the
+remaining of the current action and the start of a new rule, SILex
+checks the indentation.  A new rule must start at the beginning of the
+line.  That is, the action starts right after the pattern and contains
+all the following lines that start with white space.
+
+SILex does not parse the actions.  It simply captures the text
+up to the start of the next rule.  So a syntax error in an action is not
+detected by SILex.
+
+Nevertheless, SILex is able to detect that an action has been omitted.
+In that case, a default action is supplied.
+
+@c page
+@node silex syntax regexp atomic
+@subsection Atomic regular expressions
+
+
+The following constructs are regular expressions:
+
+@table @code
+@item c
+@dfn{Ordinary character}.  It is a regular expression that matches the
+character @var{c} itself.  @var{c} must @strong{not} be one of the
+following characters:
+
+@example
+. \ @{ " [ | ? + * ( ) ^ $ ;
+@end example
+
+@noindent
+or any white space.  If @var{c} is the @samp{#} character: notice that
+it could match a hex character specification (explained below); remember
+that SILex gives precedence to the longest match.
+
+@item .
+@dfn{Wild card}.  It matches any character except the newline character.
+
+@item \n
+@itemx \@var{integer}
+@itemx \@var{c}
+@dfn{Backslash}.  The backslash is used for two things: protect a
+character from special meaning; generating non-printable characters.
+
+The expression @code{\n} matches the newline character.
+
+The expression @code{\@var{integer}} matches the character that has
+number @var{integer} (in the sense of @func{char->integer}).
+@var{integer} must be a valid character number on the underlying Scheme
+implementation.  Notice that @samp{\9} represents the horizontal
+tabulation @samp{#\tab}, @samp{\10} the newline character
+@samp{#\newline}, and @samp{\13} the carriage return character
+@samp{#\return}.
+
+The expression @code{\@var{c}} matches the character @var{c} if @var{c}
+is not @samp{n}, @samp{-} nor a digit.
+
+@item #x@var{HEX}
+@itemx #X@var{HEX}
+@dfn{Hexadecimal characters}.  The expressions @code{#x@var{HEX}} and
+@code{#X@var{HEX}} match the character that has hex number @var{HEX} (in
+the sense of @func{string->number}).  Remembering that SILex lexerts
+match the longest input sequence: @var{HEX} terminates at the first
+non--hexadecimal digit character (uppercase or lowercase).
+
+@item @{@var{name}@}
+@dfn{Macro reference}.  This expression matches the same lexemes as
+those matched by the regular expression named @var{name}.  We can
+imagine that the reference is replaced by the text of the named
+expression.  However, it works as if parentheses had been added to
+protect the substituting expression.
+
+@item "@var{some text}"
+@dfn{String}.  A string matches a lexeme identical to its contents.  The
+format of the string is the same defined by @rnrs{6}, including the
+quoted line wrapping.
+@ignore
+In a string, the only special characters are @samp{"}, which closes the
+string, and @samp{\} which keeps the effect mentioned above.
+@end ignore
+
+@item [@var{list of characters}]
+@itemx []@var{list of characters}]
+@itemx [-@var{list of characters}]
+@itemx [^@var{list of characters}]
+@dfn{Character class}.  The expression matches one of the enumerated
+characters.  For example, the expression @samp{[abc]} matches one of
+@samp{a}, @samp{b} and @samp{c}.
+
+We can list a range of characters by writing the first character, the
+@samp{-} and the last character.  For example, @samp{[A-Za-z]} matches
+one letter.
+
+The special characters in a class are @samp{]}, which closes the class,
+@samp{-}, which denotes a range of characters, and @samp{\}, which keeps
+its usual meaning.
+
+There is an exception with the first character in a class.  If the first
+character is @samp{]} or @samp{-}, it loses its special meaning.  If the
+first character is @samp{^}, the expression matches one character if it
+is @strong{not} enumerated in @var{list of characters}.
+@end table
+
+@c page
+@node silex syntax regexp compose
+@subsection Composing regular expressions
+
+
+Suppose @var{r} and @var{s} are regular expressions.  Then the following
+expressions can be built:
+
+@table @code
+@item @var{r}|@var{s}
+@dfn{Union}.  This regular expression matches a lexeme if the lexeme is
+matched by @var{r} or by @var{s}.
+
+@item @var{r}@var{s}
+@dfn{Concatenation}.  This expression matches a lexeme if the lexeme can
+be written as the concatenation of a lexeme matched by @var{r} and a
+lexeme matched by @var{s}.
+
+@item @var{r}?
+@dfn{Optional expression}.  A lexeme matches this expression if it is
+the empty lexeme or if it matches @var{r}.
+
+@item @var{r}+
+@dfn{Positive closure}.  This expression matches a lexeme that can be
+written as the concatenation of one or more lexemes, where each of those
+matches @var{r}.
+
+@item @var{r}*
+@dfn{Kleene closure}.  A lexeme is matched by this expression if it can
+be written as the concatenation of zero or more lexemes, where each of
+those matches @var{r}.
+
+@item @var{r}@{@var{i}@}
+@itemx @var{r}@{@var{i},@}
+@itemx @var{r}@{@var{i},@var{j}@}
+@dfn{Power or repetition of an expression}.  These expressions allow the
+``repetition'' of a regular expression a certain number of times.
+@var{i} and @var{j} must be positive integers and @var{j} must be
+greater than, or equal to, @var{i}.
+
+The first form repeats the expression @var{r} exactly @var{i} times.
+The second form repeats @var{r} at least @var{i} times.  The last form
+repeats @var{r} at least @var{i} times and at most @var{j} times.
+
+We should avoid using large numbers (more than @math{10}), because the
+finite automaton for @var{r} is copied once for each repetition.  The
+tables of the analyser may quickly become very large.  We should note
+that the syntax of these expressions does not conflict with the syntax
+of the macro reference.
+
+@item (@var{r})
+@dfn{Parentheses}.  This expression matches the same lexemes as @var{r}.
+It is used to override the precedence of the operators.
+@end table
+
+The building operators are listed in order of increasing precedence.
+The @code{?}, @code{+}, @code{*} and repetition operators have the same
+precedence.
+
+@c page
+@node silex syntax regexp marker
+@subsection Markers
+
+
+The remaining ``expressions'' would better be called @dfn{markers}.
+They all match the empty lexeme but require certain conditions to be
+respected in the input.  They cannot be used in all regular expressions.
+Suppose that @var{r} is a regular expression without markers.
+
+@table @code
+@item ^@var{r}
+@itemx @var{r}$
+@dfn{Beginning and end of line}.  These markers require that the lexeme
+is found at the beginning or at the end of the line, respectively.  The
+markers lose their special meaning if they are not placed at the
+beginning or end of the regular expression, or if they are used in the
+first part of the specification.  In those cases, they are treated as
+regular characters.
+
+@item <<EOF>>
+@dfn{End of file}.  This marker is matched only when the input system is
+at the end of input.  The marker must be used alone in its pattern, and
+only in the second part of the specification.  There can be at most one
+rule with this particular pattern.
+
+@item <<ERROR>>
+@dfn{Error}.  This marker is matched only when there is a parsing error.
+It can be used under the same conditions as @code{<<EOF>>}.
+@end table
+
+@c page
+@node silex syntax regexp space
+@subsection White spaces in regular expressions
+
+
+White space ends the regular expressions.  In order to include white
+space in a regular expression, it must be protected by a backslash or
+placed in a string.
+
+@c page
+@node silex syntax sample
+@subsection An example of a specification file
+
+
+Here is an example of a SILex specification file.  The file is
+syntactically correct from the SILex point of view.  However, many
+common mistakes are shown.  The file is not a useful one.
+
+@example
+; This is a syntactically correct but silly file.
+
+partial     hel
+complete    @{partial@}lo            ; @r{Backward macro ref. only}
+digit       [0-9]
+letter      [a-zA-Z]
+
+%%
+
+-?@{digit@}+    (cons 'integer yytext)   ; @r{@code{yytext} contains}
+                                       ; @r{the lexeme}
+-?@{digit@}+\.@{digit@}+[eE][-+]?@{digit@}+
+              (cons                ; @r{An action}
+               'float              ; @r{spanning multiple}
+               yytext)             ; @r{lines}
+
+;             (list 'semicolon)    ; @r{Probably a mistake}
+
+begin         )list 'begin(        ; @r{No error detected here}
+end                                ; @r{The action is optional}
+
+\73           (list 'bell-3)       ; @r{It does not match the}
+                                   ; @r{char. # 7 followed by @samp{3}}
+\0073         (list 'bell-3)       ; @r{Neither does it}
+(\7)3         (list 'bell-3)       ; @r{This does it}
+
+"*()+|@{@}[].? are ordinary but \" and \\ are special"
+
+[^\n]         (list 'char)         ; @r{Same thing as @samp{.}}
+(@{letter@}|_)(@{letter@}|_|@{digit@})*  ; @r{A C identifier}
+[][]                               ; @r{One of the square brackets}
+
+Repe(ti)@{2@}on   (list 'repetition)
+
+^@{letter@}+:   (cons 'label yytext) ; @r{A label placed at the}
+                                   ; @r{beginning of the line}
+$^                                 ; @r{No special meaning}
+<<EOF>>       (list 'eof)          ; @r{Detection of the end of file}
+<<ERROR>>     (my-error)           ; @r{Error handling}
+@end example
+
+@c page
+@node silex semantics
+@section Semantics of the specification
+
+
+An important part of the semantics of a specification is described with
+the syntax of the regular expressions, the remainder is presented here.
+We begin with the role of the actions, information on the matching
+method follows.
+
+@menu
+* silex semantics action::      What does an action do.
+* silex semantics rules::       When does a regular expression
+                                matches the input.
+@end menu
+
+@c page
+@node silex semantics action
+@subsection Evaluation of the actions
+
+
+@vindex yycontinue
+@vindex yygetc
+@vindex yyungetc
+@vindex yytext
+@vindex yyline
+@vindex yycolumn
+@vindex yyoffset
+
+
+The action of a rule is evaluated when the corresponding pattern is
+matched.  The result of its evaluation is the result that the lexical
+analyser returns to its caller.
+
+We can think of an action like this: it is a form which is placed in the
+body of a @func{lambda} function, which in turn is invoked when a token
+matching the regular expression is found.  So the following
+specification:
+
+@example
+decint          [0-9]+
+
+%%
+
+@{decint@}        (string->number yytext)
+@end example
+
+@noindent
+will cause the following code to be put in the generated lexer tables:
+
+@example
+(lambda (yytext)
+  (string->number yytext))
+@end example
+
+@noindent
+arguments in the formals of the @func{lambda} are local bindings we can
+use in our actions.  There are a few local bindings that are accessible
+by the action when it is evaluated: @func{yycontinue}, @func{yygetc},
+@func{yyungetc}, @code{yytext}, @code{yyline}, @code{yycolumn} and
+@code{yyoffset}.
+
+
+@deffn Binding yycontinue
+Contains the lexical analysis function itself.  Use @code{(yycontinue)}
+to ask for the next token.  Typically, the action associated with a
+pattern that matches white space is a call to @func{yycontinue}; it has
+the effect of skipping the white space.
+@end deffn
+
+
+@deffn Binding yygetc
+@deffnx Binding yyungetc
+Contain functions to get and unget characters from the input of the
+analyser.  They take no argument.  @func{yygetc} returns a character, or
+the @samp{(eof-object)} value if the end--of--input is reached.
+
+They should be used to read characters instead of accessing directly the
+input port because the analyser may have read more characters in order
+to have a look--ahead.
+
+If we get more characters than we unget: those characters are skipped by
+the lexer function at the next invocation.  If we want to perform a
+lookahead without loosing characters, we must unget all the characters
+we have got.
+
+It is incorrect to try to unget more characters than has been gotten
+since @emph{the parsing of the last token}.  If such an attempt is made,
+@func{yyungetc} silently refuses.
+@end deffn
+
+
+@deffn Binding yytext
+Bound to a string containing the lexeme.  This string is guaranteed not
+to be mutated.  The string is created only if the action @emph{seems} to
+need it.  The action is considered to need the lexeme when @samp{yytext}
+appears somewhere in the text of the action.
+@end deffn
+
+
+@deffn Binding yyline
+@deffnx Binding yycolumn
+@deffnx Binding yyoffset
+Indicate the position in the input at the beginning of the lexeme.
+@code{yyline} is the number of the line; the first line is numbered
+@math{1}.  @code{yycolumn} is the number of the column; the first column
+numbered @math{1}.
+
+It is important to mention that characters such as the tabulation
+generate a variable length output when they are printed.  So it would be
+more accurate to say that @code{yycolumn} is the index of the first
+character of the lexeme, starting at the beginning of the line.
+
+@code{yyoffset} indicates the distance from the beginning of the input;
+the first lexeme has offset @math{0}.
+
+The three bindings may not all be existent depending on options given to
+the function @func{lex} when generating the tables.
+@end deffn
+
+
+There is a default action that is provided for a rule when its action is
+omitted.
+
+@itemize
+@item
+If the pattern is @samp{<<EOF>>}, the default action returns the
+end--of--file object, @samp{(eof-object)}.
+
+@item
+If the pattern is @samp{<<ERROR>>}, the default action raises an
+assertion violation.  Notice that the error message of this assertion
+cannot hold the line and column numbers, because this default action
+must be usable by lexers that do not use such counters, too.
+
+@item
+The default action for the other patterns is to call the analyser again.
+@end itemize
+
+It is clearer (and normally more useful) to specify explicitly the
+action associated with each rule.
+
+@c page
+@node silex semantics rules
+@subsection Matching the rules
+
+
+All lexical analysers generated by @library{vicare parser-tools silex}
+are interactive.  That is, they read as few characters as possible to
+get the longest match.  This is a useful property when the input is
+coming from a terminal.  A lexical analyser is normally based on a
+finite automaton; it is the case for the analysers generated by
+@library{vicare parser-tools silex}.  A non--interactive analyser
+always needs an extra character to provoke an invalid transition in the
+automaton.  The longest match is detected this way.  With an interactive
+analyser, an extra character is not required when it is impossible to
+obtain a longer match.
+
+A lexical analyser generated by @library{vicare parser-tools silex}
+does not impose any @i{a priori} limit on the size of the lexemes.  The
+internal buffer is extended each time it is necessary.
+
+Each time the analyser is asked to return a token, it tries to match a
+prefix of the input with a pattern.  There may be more than one possible
+match; when it is the case, we say there is a conflict.  For example,
+suppose we have those regular expressions:
+
+@example
+begin
+[a-z]*
+@end example
+
+@noindent
+and the input is @samp{beginning1 @r{@dots{}}}.  We have a match with
+the first expression and we have many different matches with the second.
+To resolve such a conflict, the longest match is chosen.  So the chosen
+match is the one between the lexeme @samp{beginning} and the second
+pattern.
+
+Suppose we have the same regular expressions but the input is
+@samp{begin+ @r{@dots{}}}.  We have @emph{two} longest match.  This
+conflict is resolved by choosing the first pattern that allows a longest
+match.  So the chosen match is between the lexeme @samp{begin} and the
+first pattern.
+
+The analyser generated by @library{vicare parser-tools silex} allows
+the empty lexeme to be matched if there is no longer match.  However, we
+should take care not to call the analyser again without consuming at
+least one character of the input: It would cause an infinite loop.
+
+The pattern @samp{<<EOF>>} is matched when the analyser is called and
+the input system is at end of input.  In this situation, the marker is
+matched even if there is a pattern that matches the empty lexeme.  The
+analyser can be called again and again and the @samp{<<EOF>>} pattern
+will be matched each time, causing its corresponding action to be
+evaluated each time, too.
+
+The pattern @samp{<<ERROR>>} is matched when the input system is not at
+end of input and no other match is possible.  Depending on the action
+associated with this pattern, our program may choose to stop or choose
+to try to recover from the error.  To recover from the error, our
+program has to read some characters from the input before it can call
+the analyser again.
+
+As example of error recovery consider the following code which just
+shows the mechanism:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare parser-tools lexical-tokens) pt.)
+  (prefix (vicare parser-tools silex) lex.)
+  (prefix (vicare parser-tools silex lexer) lex.))
+
+(define description "%%
+A          (make <lexical-token>
+             (category: 'A)
+             (location: (make* <source-location>
+                          #f yyline yycolumn yyoffset))
+             (value: yytext)
+             (length: (string-length yytext)))
+
+<<EOF>>    (make <lexical-token>
+             (category: '*eoi*)
+             (location: (make* <source-location>
+                          #f yyline yycolumn yyoffset))
+             (value: (eof-object))
+             (length: 1))
+
+<<ERROR>>  (make <lexical-token>
+             (category: '*lexer-error*)
+             (location: (make* <source-location>
+                          #f yyline yycolumn yyoffset))
+             (value: yytext)
+             (length: (string-length yytext)))
+")
+
+(define table
+  (lex.lex
+    (lex.input-string: description)
+    (lex.counters: 'all)
+    (lex.library-language: '(vicare))
+    (lex.library-imports:
+      '((vicare parser-tools lexical-token)
+        (vicare parser-tools source-location)))
+    (lex.output-value: #t)
+    (lex.lexer-format: 'decision-tree)))
+
+;; correct string
+(let* ((IS      (lex.make-IS (lex.string: "AAA")
+                             (lex.counters: 'all)))
+       (lexer (lex.make-lexer table IS)))
+  (let (((T1 pt.<lexical-token>) (lexer))
+        ((T2 pt.<lexical-token>) (lexer))
+        ((T3 pt.<lexical-token>) (lexer))
+        ((T4 pt.<lexical-token>) (lexer)))
+    (list T1.category T2.category
+          T3.category T4.category)))
+@result{} (A A A *eoi*)
+
+;; lexer error
+(let* ((IS      (lex.make-IS (lex.string: "AAAB")
+                             (lex.counters: 'all)))
+       (lexer (lex.make-lexer table IS)))
+  (let (((T1 pt.<lexical-token>) (lexer))
+        ((T2 pt.<lexical-token>) (lexer))
+        ((T3 pt.<lexical-token>) (lexer))
+        ((T4 pt.<lexical-token>) (lexer)))
+    (list T1.category T2.category
+          T3.category T4.category)))
+@result{} (A A A *lexer-error*)
+
+;; lexer error and recovery
+(let* ((IS        (lex.make-IS (lex.string: "AAABBAA")
+                  (lex.counters: 'all)))
+       (lexer (lex.make-lexer table IS)))
+  (let (((T1 pt.<lexical-token>) (lexer))
+        ((T2 pt.<lexical-token>) (lexer))
+        ((T3 pt.<lexical-token>) (lexer))
+        ((T4 pt.<lexical-token>) (lexer)))
+    ;; discard invalid characters,
+    ;; we know there are 2 of them
+    (let ((getc (lex.lexer-get-func-getc IS)))
+      (getc)
+      (getc))
+    (let (((T5 pt.<lexical-token>) (lexer))
+          ((T6 pt.<lexical-token>) (lexer))
+          ((T7 pt.<lexical-token>) (lexer)))
+      (list T1.category T2.category T3.category
+            T4.category
+            T5.category T6.category T7.category))))
+@result{} (A A A *lexer-error* A A *eoi*)
+@end example
+
+@c page
+@node silex format
+@section Tables output format
+
+
+The @library{vicare parser-tools silex} library provides three
+different encodings of the tables: the @dfn{decision tree} encoding, the
+@dfn{portable} encoding and the ``compilation'' to Scheme code.  The
+decision tree is the default.
+
+With the decision tree encoding, the finite automaton of the analyser is
+represented with data structures holding integers representation of the
+characters (in the sense of @func{char->integer}).  This representation
+is the most compact, but it relies on the character integer
+representations in @rnrs{6} Schemes.
+
+With the portable encoding, the data structures describing the automaton
+contain characters directly.  If the automaton, as generated, contains a
+transition from state @var{s} to state @var{t} on character @var{c},
+then somewhere in the table there is the Scheme character
+@samp{#\@var{c}}.  When the file containing the analyser is loaded in
+any implementation, the character is read as is, and not as the number
+@samp{(char->integer #\@var{c})}.
+
+This encoding should be portable to non--@rnrs{6} Schemes.  However, it
+is less compact.  This is because something like @samp{(65 90)} is more
+compact than something like @samp{(#\A #\B @r{@dots{}} #\Y #\Z)} to
+represent @samp{[A-Z]}.  The construction of an analyser from a portable
+table takes more time than the construction from a default table.  But,
+once built, the performance of the analyser is the same in both cases.
+
+It is important to note that in some character sets, the letters or the
+digits are not contiguous.  So, in those cases, the regular expression
+@samp{[A-Z]} does not necessarily accept only the uppercase letters.
+
+The last encoding is the compilation to Scheme code.  This produces a
+fast lexical analyser.  Instead of containing data structures
+representing the behavior of the automaton, the table contains Scheme
+code that ``hard--codes'' the automaton.  This encoding often generates
+big tables.  Such an analyser is not portable to non--@rnrs{6} Schemes.
+
+@c page
+@node silex utilities
+@section Utility functions
+
+
+The following bindings are exported by the @library{vicare
+parser-tools silex utilities} library.
+
+
+@defun make-max-count-lexer @var{lexer} @var{max-number-of-tokens} @var{error-handler}
+Return a lexer function wrapping @var{lexer}; if the number of returned
+tokens reaches @var{max-number-of-tokens}: the thunk @var{error-handler}
+is invoked.
+@end defun
+
+@c page
+@node silex default
+@section Default semantic actions
+
+
+The following bindings are exported by the @library{vicare
+parser-tools silex default-error-handler} library.  The library is meant
+to be included in the table library using the @func{library-imports:}
+clause of @func{lex}.
+
+
+@deffn Syntax silex-default-error-handler
+@deffnx Syntax silex-default-error-handler @meta{yytext}
+Expand to a custom semantic action for the @samp{<<ERROR>>} rule; it is
+meant to be used in SILex table files as:
+
+@example
+<<ERROR>>       (silex-default-error-handler)
+@end example
+
+The semantic action builds and returns a record of type
+@class{lexical-token} with category @samp{*lexer-error*} and semantic
+value set to an error string describing the input that caused the error;
+the default @code{yytext} binding is used to build the error string.
+
+When the optional @meta{yytex} argument is present: this value is used
+in place of @code{yytext} to build the error message string.
+@end deffn
+
+
+@deffn Syntax silex-default-eof-handler
+Expand to a custom semantic action for the @samp{<<EOF>>} rule; it is
+meant to be used in SILex table files as:
+
+@example
+<<EOF>>         (silex-default-eof-handler)
+@end example
+
+The semantic action builds and returns a record of type
+@class{lexical-token} with category @samp{*eoi*}, semantic value set to
+@code{(eof-object)} and length set to zero.
+@end deffn
+
+@c end of file

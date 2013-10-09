@@ -213,12 +213,11 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-pregexp.sps						\
 	test-vicare-getopts.sps						\
 	test-formations-round.sps					\
-	test-formations-lib.sps
-
-# test-vicare-parser-tools-silex-file.sps
-# test-vicare-parser-tools-silex-misc.sps
-# test-vicare-parser-tools-silex-online.sps
-
+	test-formations-lib.sps						\
+	\
+	test-vicare-parser-tools-silex-file.sps				\
+	test-vicare-parser-tools-silex-misc.sps				\
+	test-vicare-parser-tools-silex-online.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps						\
@@ -373,8 +372,15 @@ EXTRA_DIST	= \
 	lists/low.sls					\
 	lists/stx.sls					\
 	numerics/helpers.sls				\
+	libtest/calc-code-lexer.sls			\
+	libtest/calc-portable-lexer.sls			\
+	libtest/calc-tree-lexer.sls			\
 	libtest/classes-lib.sls				\
+	libtest/makers-lib.sls				\
 	libtest/records-lib.sls				\
+	libtest/silex-test.sls				\
+	make-silex-calc.sps				\
+	calc.l						\
 	TEST-SOURCE-FILE.txt				\
 	rn100						\
 	\
@@ -472,7 +478,7 @@ VICARE_ENV	= \
 	CHECK_TEST_NAME=$(name); export CHECK_TEST_NAME;				\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
 	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
-	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex; export SILEX_PATH;	\
+	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex/macros; export SILEX_PATH;\
 	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
 VICARE_RUN	= $(VICARE_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE) $(VICARE_FLAGS)
 

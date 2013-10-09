@@ -115,13 +115,13 @@
   (only (vicare containers stacks))
   (only (vicare containers queues))
 
-  #;(only (vicare parser-tools silex))
+  (only (vicare parser-tools silex lexer))
+  (only (vicare parser-tools silex))
 
   (only (vicare net channels))
 
   (only (vicare assembler inspection))
   (only (vicare debugging compiler))
-
 
   (only (vicare irregex))
   (only (vicare pregexp))

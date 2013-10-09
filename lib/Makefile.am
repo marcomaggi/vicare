@@ -113,7 +113,35 @@ nobase_dist_libvicare_DATA	= \
 	vicare/irregex/compat.vicare.sls				\
 	vicare/pregexp.sls						\
 	vicare/getopts.sls						\
-	vicare/formations.sls
+	vicare/formations.sls						\
+	\
+	vicare/parser-tools/silex/action.l				\
+	vicare/parser-tools/silex/action-l.sls				\
+	vicare/parser-tools/silex/char-lexer-driver.sls			\
+	vicare/parser-tools/silex/class.l				\
+	vicare/parser-tools/silex/class-l.sls				\
+	vicare/parser-tools/silex/code-lexer-driver.sls			\
+	vicare/parser-tools/silex/default-error-handler.sls		\
+	vicare/parser-tools/silex/input-system.sls			\
+	vicare/parser-tools/silex/lexer.sls				\
+	vicare/parser-tools/silex/macro.l				\
+	vicare/parser-tools/silex/macro-l.sls				\
+	vicare/parser-tools/silex/make-tables.sps			\
+	vicare/parser-tools/silex/nested-comment.l			\
+	vicare/parser-tools/silex/nested-comment-l.sls			\
+	vicare/parser-tools/silex/regexp.l				\
+	vicare/parser-tools/silex/regexp-l.sls				\
+	vicare/parser-tools/silex/semantic.sls				\
+	vicare/parser-tools/silex.sls					\
+	vicare/parser-tools/silex/string.l				\
+	vicare/parser-tools/silex/string-l.sls				\
+	vicare/parser-tools/silex/tree-lexer-driver.sls			\
+	vicare/parser-tools/silex/utilities.sls				\
+	\
+	vicare/parser-tools/silex/macros/identifier.macros.l		\
+	vicare/parser-tools/silex/macros/string.macros.l		\
+	vicare/parser-tools/silex/macros/unicode.macros.l		\
+	vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\
@@ -281,7 +309,9 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/containers/arrays.sls				\
 	nausicaa/containers/stacks.sls				\
 	nausicaa/containers/queues.sls				\
-	nausicaa/containers/bitvectors.sls
+	nausicaa/containers/bitvectors.sls			\
+	\
+	nausicaa/parser-tools/lexical-tokens.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif
@@ -357,7 +387,7 @@ VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);		export VICARE_LIBRARY_PATH;	\
 		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);			export VICARE_FASL_PATH;	\
-		  SILEX_PATH=$(srcdir)/vicare/parser-tools/silex;		export SILEX_PATH;		\
+		  SILEX_PATH=$(srcdir)/vicare/parser-tools/silex/macros;	export SILEX_PATH;		\
 		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);			export LD_LIBRARY_PATH;
 VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
@@ -471,6 +501,6 @@ silex-internals:
 
 silex-backup:
 	@echo; echo "*** Special rule: backup of SILex internals lexer tables"; echo
-	cp --verbose $(SILEX_SRCDIR)/*-l.sls $(SILEX_SRCDIR)/backup
+	cp --verbose $(SILEX_SRCDIR)/*-l.sls $(SILEX_SRCDIR)/*.l $(SILEX_SRCDIR)/backup
 
 ### end of file
