@@ -11,7 +11,7 @@
 The library @library{vicare parser-tools silex} generates a lexical
 analyser table from a Lex--like specification file.  The library
 @library{vicare parser-tools silex lexer} generates a Scheme lexical
-analyser using a supplied table.  It is suggested to import the
+analyser using a supplied table.  It is suggested to import these
 libraries with the @samp{lex.} prefix, as in:
 
 @example
@@ -105,8 +105,7 @@ cparen          \)
 @{cparen@}        #\)
 
 <<EOF>>         (eof-object)
-<<ERROR>>       (assertion-violation #f
-                  "invalid lexer token")
+<<ERROR>>       (assertion-violation #f "invalid lexer token")
 @end smallexample
 
 Let's say the file is called @file{calc.l}, then the table for this
@@ -114,47 +113,49 @@ lexer can be created with one of the following forms (and other forms
 not described here):
 
 @example
-;; Generate a proper Scheme library called "(calc)" and
-;; save it in the file "calc-lib.sls".
+(import (vicare)
+  (prefix (vicare parser-tools silex)       lex.)
+  (prefix (vicare parser-tools silex lexer) lex.))
+
+;;Generate a proper Scheme library called "(calc)",
+;;containing the table definition, and save it in the
+;;file "calc-lib.sls".  Use the default table format.
+;;The library exports the table bound to "calc-table".
 ;;
-;; Use the default table format.
+(lex.lex (lex.input-file:   "calc.l")
+         (lex.output-file:  "calc-lib.sls")
+         (lex.library-spec: "(calc)")
+         (lex.table-name:   'calc-table))
+
+;;Generate a standalone DEFINE form that binds the
+;;lexer table to the symbol "calc-table" and save it
+;;in the file "calc-def.sls".  Use the Scheme code
+;;table format.
 ;;
-;; The library exports the table bound to "calc-table".
+(lex.lex (lex.input-file:   "calc.l")
+         (lex.output-file:  "calc-def.sls")
+         (lex.lexer-format: 'code)
+         (lex.table-name:   'calc-table))
 
-(lex (input-file: "calc.l") (output-file: "calc-lib.sls")
-     (library-spec: "(calc)")
-     (table-name: 'calc-table))
-
-
-;; Generate a DEFINE form in that binds the lexer table
-;; to the symbol "calc-table" and save it in the file
-;; "calc-def.sls".
+;;Generate the lexer table, evaluate it and return it
+;;as value immediately usable.  Use the Scheme code
+;;table format.
 ;;
-;; Use the Scheme code table format.
-
-(lex (input-file: "calc.l") (output-file: "calc-def.sls")
-     (lexer-format: 'code)
-     (table-name: 'calc-table))
-
-;; Generate the lexer table, evaluate it and return it
-;; as value immediately usable.
-;;
-;; Use the Scheme code table format.
-
 (define calc-table
-  (lex (:input-file "calc.l") (:output-value #t)
-       (:lexer-format 'code)))
+  (lex.lex (lex.input-file:   "calc.l")
+           (lex.output-value: #t)
+           (lex.lexer-format: 'code)))
 @end example
 
 Once we have created the lexer table, let's say bound to
-@samp{calc-table}, we can use it as follows.  We take advantage of the
-fact that: When the input reaches the end, the lexer closure returns the
+@samp{calc-table}, we can use it as follows; we take advantage of the
+fact that: when the input reaches the end, the lexer closure returns the
 @samp{(eof-object)} value.
 
 @example
 (define (tokenize table string)
-  (let* ((IS    (make-IS (string: string)))
-         (lexer (make-lexer table IS))
+  (let* ((IS    (lex.make-IS (lex.string: string)))
+         (lexer (lex.make-lexer table IS))
     (do ((token (lexer) (lexer))
          (out   '()))
         ((eof-object? token)
