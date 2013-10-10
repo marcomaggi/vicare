@@ -255,46 +255,48 @@ It is mandatory to use the clause @clause{table-name:} along with
 @end deffn
 
 
-@deffn {Auxiliary Syntax} {library-language:} @var{lang}
-Select @var{lang} as language to use for the library; the language is
+@deffn {Auxiliary Syntax} {library-language:} @meta{lang}
+Select @meta{lang} as language to use for the library; the language is
 the first import specification after @code{import} in the @code{library}
 form.  By default the language is @library{rnrs}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} library-imports: @var{import-list}
+@deffn {Auxiliary Syntax} library-imports: @meta{import-list}
 Select a list of libraries which must be imported when using the
-generated lexer.  @var{import-list} must be a list of library
+generated lexer.  @meta{import-list} must be a list of library
 specifications; for example, if we want to include the @library{vicare
-language sentinel} and @library{vicare language parameters} libraries
-we do:
+language-extensions sentinels} and @library{vicare language-extensions
+variables} libraries we do:
 
 @example
-(library-imports: '((vicare language sentinel)
-                    (vicare language parameters)))
+(library-imports:
+   '((vicare language-extensions sentinels)
+     (vicare language-extensions variables)))
 @end example
 
 If the lexer table is written to a proper Scheme library:
-@var{import-list} is added to the import specification of the generated
-library.  If the lexer table is directly evaluated: @var{import-list} is
+@meta{import-list} is added to the import specification of the generated
+library.  If the lexer table is directly evaluated: @meta{import-list} is
 added to the environment which is handed to @func{eval}.
 
 This clause is ignored when the selected output is neither a library,
-nor an evaluated library.
+nor an evaluated form.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} table-name: @var{name}
+@deffn {Auxiliary Syntax} table-name: @meta{name}
 Instruct @func{lex} to output a @func{define} form defining a binding
-between @var{name} and the table vector.  @var{name} can be a string or
+between @meta{name} and the table vector.  @meta{name} can be a string or
 symbol, and it must represent a valid identifier.
 
 When this clause is used along with @clause{library-spec:}, the
-@func{library} form will export the identifier @var{name}.
+@func{library} form will export the identifier @meta{name}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} output-value: #t|#f
+@deffn {Auxiliary Syntax} output-value: #t
+@deffnx {Auxiliary Syntax} output-value: #f
 When the argument is @true{}, instruct @func{lex} to evaluate the vector
 table using the @rsixlibrary{eval} library and to return the result,
 which is then directly usable.
@@ -304,50 +306,55 @@ the environment used for the evaluation.  By default, the environment
 always includes @library{rnrs}, and also @library{vicare parser-tools
 silex lexer} when the selected lexer format is @clause{code}.
 
-It is an error to use this clause along with @clause{table-name:}.  When
-used together, this clause supersedes @clause{output-file:} and
+This clause is mutually exclusive with @clause{table-name:},
+@clause{output-file:} and @clause{output-port:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} output-port: @meta{port}
+Instruct @func{lex} to write the output as string in the given textual
+output port.
+
+This clause is mutually exclusive with @clause{output-value:} and
+@clause{output-file:}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} output-file: @meta{pathname}
+Instruct @func{lex} to save the output in a file with given pathname;
+this is especially useful when the output is a proper @func{library} or
+@func{define} form.  @meta{pathname} must be an expression evaluating to
+a string representing the file pathname.
+
+This clause is mutually exclusive with @clause{output-value:} and
 @clause{output-port:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} output-port: @var{port}
-Instruct @func{lex} to write the output as string in the given textual
-output port.
-
-When used together, this clause supersedes @clause{output-file:}.
-@end deffn
-
-
-@deffn {Auxiliary Syntax} output-file: @var{pathname}
-Instruct @func{lex} to save the output in a file with given pathname.
-This is especially useful when the output is a proper @func{library} or
-@func{define} form.
-@end deffn
-
-
-@deffn {Auxiliary Syntax} lexer-format: @var{format}
-Instruct @func{lex} about the format of the lexer table.  @var{format}
+@deffn {Auxiliary Syntax} lexer-format: @meta{format}
+Instruct @func{lex} about the format of the lexer table.  @meta{format}
 can be one among the following symbols: @clause{decision-tree},
 @samp{code}, @samp{portable}; the default is @samp{decision-tree}.
 @ref{silex format, Tables output format}
 @end deffn
 
 
-@deffn {Auxiliary Syntax} pretty-print: #t|#f
+@deffn {Auxiliary Syntax} pretty-print: #t
+@deffnx {Auxiliary Syntax} pretty-print: #f
 Instruct @func{lex} to pretty--print the contents of the table.
 Normally, the table is displayed as a compact mass of characters fitting
-in about @math{75} columns.  The clause is useful only for a developer
+in about @math{75} columns.  This clause is useful only for a developer
 of @library{vicare parser-tools silex}.  The Scheme code generated with
 the @samp{code} clause is always pretty--printed, the others are not by
 default.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} counters: @var{which-ones}
+@deffn {Auxiliary Syntax} counters: @meta{which-ones}
 Instruct @func{lex} about which counters will be available to the lexer.
 
 Counters are managed by the input system, and can be used by the lexer.
-The following values for @var{which-ones} are available: @samp{all},
+The following values for @meta{which-ones} are available: @samp{all},
 @samp{line}, @samp{none}; @samp{line} is the default.  The more counters
 the input system maintains, the more it is slowed down.
 
@@ -364,9 +371,9 @@ rather than to configure them at run time.
 
 
 An input system provides the buffering, the line counting and similar
-low level services.  The following bindings are exported by the
-@library{vicare parser-tools silex input-system} library and
-reexported by the @library{vicare parser-tools silex lexer} library.
+low level services.  The following bindings are exported by the library
+@library{vicare parser-tools silex input-system} and reexported by the
+library @library{vicare parser-tools silex lexer}.
 
 
 @deffn Syntax make-IS @var{clauses} ...
