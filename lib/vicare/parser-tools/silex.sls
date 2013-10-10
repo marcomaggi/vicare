@@ -137,7 +137,7 @@
    (input-port:		#f	(mk.without input-string: input-file:))
    (input-string:	#f	(mk.without input-file:   input-port:))
 
-   (library-spec:	#f)
+   (library-spec:	#f	(mk.with table-name:))
    (library-language:	'(rnrs))
    (library-imports:	'())
    (table-name:		#f)
@@ -145,7 +145,7 @@
    (counters:		'line)
    (lexer-format:	'decision-tree)
 
-   (output-value:	#f	(mk.without output-file:  output-port:))
+   (output-value:	#f	(mk.without output-file:  output-port:  table-name:))
    (output-file:	#f	(mk.without output-port:  output-value:))
    (output-port:	#f	(mk.without output-value: output-file:))))
 
