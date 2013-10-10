@@ -160,7 +160,7 @@ fact that: when the input reaches the end, the lexer closure returns the
          (out   '()))
         ((eof-object? token)
          (reverse out))
-      (set! out (cons token out))))))
+      (set-cons! out token)))))
 
 (tokenize calc-table "1*(2/3)")
 @result{} (1 * #\( 2 / 3 #\))
@@ -174,51 +174,50 @@ fact that: when the input reaches the end, the lexer closure returns the
 @section Creating lexer tables
 
 
-The following bindings are exported by the @library{vicare
-parser-tools silex} library.
+The following bindings are exported by the @library{vicare parser-tools
+silex} library.
 
 
-@deffn Syntax lex @var{clause} ...
-Build a new lexer table from a lexer specification.  @ref{silex syntax,
-Syntax of the specification}
-
-The behaviour of this function is configured with the given @var{clause}
-arguments; see below for the list of supported options.
-
-The specification can be loaded from a file, or read from a textual
-input port, or acquired from a Scheme string.
+@deffn Syntax lex @meta{clause} @dots{}
+Build a new lexer table from a lexer specification, which can be: loaded
+from a file, read from a textual input port, acquired from a Scheme
+string; @ref{silex syntax, Syntax of the specification}.
 
 The output is the lexer's @dfn{table}, a Scheme vector representing the
-lexer automaton.  It can be saved to a file, or written to a port, or
-evaluated using the @rsixlibrary{eval} library and returned as value.
+lexer automaton; it can be: saved to a file, written to a port,
+evaluated using the library @rsixlibrary{eval} and returned as value.
+
+The behaviour of this function is configured with the given
+@meta{clause} arguments; see below for the list of supported options.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} input-string: @var{spec-str}
+@deffn {Auxiliary Syntax} input-string: @meta{spec-str}
 Instruct @func{lex} to build the lexer tables from the specification in
-the given Scheme string.  When used together, this option supersedes
-@samp{input-file:} and @samp{input-port:}.
+the given Scheme string.  This clause is mutually exclusive with
+@clause{input-file:} and @clause{input-port:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} input-port: @var{port}
+@deffn {Auxiliary Syntax} input-port: @meta{port}
 Instruct @func{lex} to build the lexer tables from the specification
-read from the given textual input port.  When used together, this option
-supersedes @samp{input-file:}.
+read from the given textual input port.  This clause is mutually
+exclusive with @clause{input-string:} and @clause{input-file:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} input-file: @var{pathname}
+@deffn {Auxiliary Syntax} input-file: @meta{pathname}
 Instruct @func{lex} to build the lexer tables from the specification in
-the selected file.  @var{pathname} must be a string representing an
-existent file pathname.
+the selected file.  @meta{pathname} must be an expression evaluating to
+a string representing an existent file pathname.  This clause is
+mutually exclusive with @clause{input-string:} and @clause{input-port:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} library-spec: @var{library-name}
+@deffn {Auxiliary Syntax} library-spec: @meta{library-name}
 Instruct @func{lex} to build the output as a proper Scheme library.
 This means a Scheme string is built, representing a @func{library} form.
-The string may contain Scheme comments.  When this option is not used
+The string may contain Scheme comments.  When this clause is not used
 the output is the raw table vector or a @func{define} form.
 
 The argument @var{library-name} must represent a valid library name; the
@@ -251,8 +250,8 @@ A list of values, which will be simply converted to string.  Example:
 @end example
 @end itemize
 
-It is mandatory to use the option @samp{table-name:} along with
-@samp{library-spec:}.
+It is mandatory to use the clause @clause{table-name:} along with
+@clause{library-spec:}.
 @end deffn
 
 
@@ -280,7 +279,7 @@ If the lexer table is written to a proper Scheme library:
 library.  If the lexer table is directly evaluated: @var{import-list} is
 added to the environment which is handed to @func{eval}.
 
-This option is ignored when the selected output is neither a library,
+This clause is ignored when the selected output is neither a library,
 nor an evaluated library.
 @end deffn
 
@@ -290,7 +289,7 @@ Instruct @func{lex} to output a @func{define} form defining a binding
 between @var{name} and the table vector.  @var{name} can be a string or
 symbol, and it must represent a valid identifier.
 
-When this option is used along with @samp{library-spec:}, the
+When this clause is used along with @clause{library-spec:}, the
 @func{library} form will export the identifier @var{name}.
 @end deffn
 
@@ -300,14 +299,14 @@ When the argument is @true{}, instruct @func{lex} to evaluate the vector
 table using the @rsixlibrary{eval} library and to return the result,
 which is then directly usable.
 
-The list of libraries selected by @samp{library-imports:} is added to
+The list of libraries selected by @clause{library-imports:} is added to
 the environment used for the evaluation.  By default, the environment
 always includes @library{rnrs}, and also @library{vicare parser-tools
-silex lexer} when the selected lexer format is @samp{code}.
+silex lexer} when the selected lexer format is @clause{code}.
 
-It is an error to use this option along with @samp{table-name:}.  When
-used together, this option supersedes @samp{output-file:} and
-@samp{output-port:}.
+It is an error to use this clause along with @clause{table-name:}.  When
+used together, this clause supersedes @clause{output-file:} and
+@clause{output-port:}.
 @end deffn
 
 
@@ -315,7 +314,7 @@ used together, this option supersedes @samp{output-file:} and
 Instruct @func{lex} to write the output as string in the given textual
 output port.
 
-When used together, this option supersedes @samp{output-file:}.
+When used together, this clause supersedes @clause{output-file:}.
 @end deffn
 
 
@@ -328,7 +327,7 @@ This is especially useful when the output is a proper @func{library} or
 
 @deffn {Auxiliary Syntax} lexer-format: @var{format}
 Instruct @func{lex} about the format of the lexer table.  @var{format}
-can be one among the following symbols: @samp{decision-tree},
+can be one among the following symbols: @clause{decision-tree},
 @samp{code}, @samp{portable}; the default is @samp{decision-tree}.
 @ref{silex format, Tables output format}
 @end deffn
@@ -337,10 +336,10 @@ can be one among the following symbols: @samp{decision-tree},
 @deffn {Auxiliary Syntax} pretty-print: #t|#f
 Instruct @func{lex} to pretty--print the contents of the table.
 Normally, the table is displayed as a compact mass of characters fitting
-in about @math{75} columns.  The option is useful only for a developer
-of @library{vicare parser-tools silex}.  The Scheme code generated
-with the @samp{code} option is always pretty--printed, the others are
-not by default.
+in about @math{75} columns.  The clause is useful only for a developer
+of @library{vicare parser-tools silex}.  The Scheme code generated with
+the @samp{code} clause is always pretty--printed, the others are not by
+default.
 @end deffn
 
 
@@ -352,11 +351,11 @@ The following values for @var{which-ones} are available: @samp{all},
 @samp{line}, @samp{none}; @samp{line} is the default.  The more counters
 the input system maintains, the more it is slowed down.
 
-Notice that the same @samp{counters:} option must be given to @func{lex}
-and to @func{make-IS}, a mismatch will result in undefined
-behaviour.  This is because an input system is independent from a lexer
-table, and it is more efficient to build tables for a specific set of
-counters rather than to configure them at run time.
+Notice that the same @samp{counters:} clause must be given to @func{lex}
+and to @func{make-IS}, a mismatch will result in undefined behaviour.
+This is because an input system is independent from a lexer table, and
+it is more efficient to build tables for a specific set of counters
+rather than to configure them at run time.
 @end deffn
 
 @c page
