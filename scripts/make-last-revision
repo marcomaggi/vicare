@@ -1,7 +1,13 @@
 #!/bin/sh
 #
-# Rebuild  the  "./scheme/last-revision"  file  holding the  branch  and
+# Rebuild the "./src/last-revision.h" file holding the branch and
 # commit hash.  To be run from the top source directory.
+#
+# This script  can be  run by adding  the following line  at the  end of
+# "$(top_srcdir)/.git/hooks/post-commit":
+#
+#   sh ./scripts/make-last-revision
+#
 
 PATH=~/bin:${PATH}
 
