@@ -864,6 +864,15 @@ Notice that definitions in the body are @strong{not} visible by other
 code evaluated for expand.
 @end deffn
 
+
+@deffn Syntax set-cons! @meta{who} @meta{obj}
+Expand to:
+
+@example
+(set! @meta{who} (cons @meta{obj} @meta{who}))
+@end example
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks

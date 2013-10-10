@@ -39,7 +39,6 @@
     with-bytevectors		with-bytevectors/or-false
     callet			callet*
     define-exact-integer->symbol-function
-    set-cons!
 
     ;; arguments validation
     define-argument-validation
@@ -217,9 +216,6 @@
 			      (else V))))
 	   ...)
        . ?body))))
-
-(define-syntax-rule (set-cons! ?ell ?obj)
-  (set! ?ell (cons ?obj ?ell)))
 
 
 ;;;; specialised CASE

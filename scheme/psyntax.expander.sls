@@ -3290,6 +3290,7 @@
 	     ((define-syntax*)			define-syntax*-macro)
 	     ((unwind-protect)			unwind-protect-macro)
 	     ((with-implicits)			with-implicits-macro)
+	     ((set-cons!)			set-cons!-macro)
 
 	     ((eval-for-expand)			eval-for-expand-macro)
 
@@ -4024,6 +4025,20 @@
        (bless
 	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 ,@?body*)))))
 
+    ))
+
+
+;;;; module non-core-macro-transformer: SET-CONS!
+
+(define (set-cons!-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?id ?obj)
+     (identifier? ?id)
+     (bless `(set! ,?id (cons ,?obj ,?id))))
     ))
 
 

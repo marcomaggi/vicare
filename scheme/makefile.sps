@@ -421,6 +421,7 @@
     (unwind-protect			(macro . unwind-protect))
     (with-implicits			(macro . with-implicits))
     (include				(macro . include))
+    (set-cons!				(macro . set-cons!))
 ;;;
     (eval-for-expand			(macro . eval-for-expand))
 ;;;
@@ -2146,6 +2147,7 @@
     (unwind-protect				i v $language)
     (with-implicits				i v $language)
     (include					i v $language)
+    (set-cons!					i v $language)
 ;;;
     (eval-for-expand				i v $language)
 ;;;
