@@ -28,8 +28,6 @@
 #!r6rs
 (import (vicare)
   (vicare getopts)
-  (only (vicare language-extensions syntaxes)
-	set-cons!)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
