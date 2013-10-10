@@ -296,6 +296,9 @@ Lutzebaeck.  Authors of the original  version (<1.4) were Ken Dickey and
 Aubrey Jaffer.  Assimilated into Guile  May 1999.  Ported to R6RS Scheme
 and Vicare by Marco Maggi.
 
+  The SILex libraries are a port to  R6RS Scheme of SILex version 1.0 by
+Danny Dube'.  Copyright (C) 2001, 2009 Danny Dube'.
+
 
 B. Bug reports
 --------------
