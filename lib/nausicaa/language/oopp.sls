@@ -1684,7 +1684,7 @@
     ((_ (?var ...) ?body0 ?body ...)
      (with-syntax
 	 ((((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-let-bindings #'(?var ...) #'<top> synner)))
+	   (help.parse-with-tags-bindings #'(?var ...) synner)))
        #`(let-syntax (SYNTAX-BINDING ...) ?body0 ?body ...)))
     (_
      (synner "syntax error"))))

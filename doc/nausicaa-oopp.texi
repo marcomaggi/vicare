@@ -2735,7 +2735,7 @@ syntax @code{#(@meta{variable} @meta{tag})}, the list syntax
 @subsection @oopp{} bindings: @func{let}--like syntaxes
 
 
-@deffn Syntax with-tags (@meta{tagged-variable} ...) @metao{body} @meta{body} @dots{}
+@deffn Syntax with-tags (@meta{tagged-variable} @dots{}) @metao{body} @meta{body} @dots{}
 The @func{with-tags} syntax is the basic tool to provide @oopp{}
 notation for objects use.  Expand into a @func{let-syntax} form which
 defines @oopp{} notation syntaxes for already existent bindings; the
@@ -2745,16 +2745,13 @@ bindings.
 Each @meta{tagged-variable} must have one of the formats:
 
 @example
-@meta{variable}
 (@meta{variable} @meta{tag})
+#(@meta{variable} @meta{tag})
 @end example
 
 @noindent
 where: @meta{variable} is an identifier representing the binding name,
-@meta{tag} is an identifier representing a class or label type.  When a
-@meta{variable} has no type: we can use @class{top} as its conventional
-class type name; this can be useful when expanding macros making use of
-@func{with-tags}.
+@meta{tag} is an identifier representing a class or label type.
 
 Usage example:
 
