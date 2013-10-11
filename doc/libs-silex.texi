@@ -631,6 +631,7 @@ corresponding @samp{|#} sequence.
 
 @menu
 * silex syntax macros::         Syntax of the macro definitions.
+* silex syntax includes::       Including macro files.
 * silex syntax rules::          Syntax of the rule--action pairs.
 * silex syntax regexp atomic::  Atomic regular expressions.
 * silex syntax regexp compose:: Composing regular expressions.
@@ -656,31 +657,62 @@ valid macro names; the last two being different.  It is an error to
 write two macro definitions with the same name, unless they have equal
 regexp specification.
 
+The defined macros can be referenced in regular expressions using the
+syntax @code{@{@var{name}@}}.  The scope of a macro definition includes
+the remaining definitions and the rules part; it is analogous to
+@code{let*} in Scheme, where the macro definitions correspond to the
+bindings and the rules part corresponds to the body.
+
+We end the macro definitions part with @code{%%}.
+
+@c page
+@node silex syntax includes
+@subsection Including macro files
+
+
 The special syntax:
 
 @example
-%[@meta{pathname}]
+%[@var{pathname}]
 @end example
 
 @noindent
 can be used to include a macro definition file whose pathname is
-@meta{pathname}, which must be an absolute pathname or a pathname
-relative to the current working directory; @meta{pathname} is handed as
-is to @func{open-input-file}; @meta{pathname} can be any string not
-including the @samp{]} character.
+@var{pathname}, which can be any string not including the @samp{]}
+character; the @var{pathname} is handled as follows:
+
+@enumerate
+@item
+If @var{pathname} is absolute, test its existence: when found, convert
+it to a string representing the real, absolute file pathname.
+
+@item
+If @var{pathname} is relative and it has a directory part, test its
+existence from the current process working directory: when found,
+convert it to a string representing the real, absolute file pathname.
+
+@item
+@cindex @env{SILEX_PATH}, environment variable
+@cindex Environment variable @env{SILEX_PATH}
+If @var{pathname} is relative and it has no directory part, read the
+system environment variable @env{SILEX_PATH} as colon--separated list of
+directories and search the file in them, from the first to the last:
+when found, convert it to a string representing the real, absolute file
+pathname.
+
+Notice that the file is searched in the process' current working
+directory only if such directory is listed in the given path.
+@end enumerate
+
+@noindent
+the result of converting @meta{pathname} to a real, absolute pathname is
+handed as is to @func{open-input-file}.  If the file is not found: an
+exception is raised.
 
 Two macros with the same name are allowed if they have the same regexp
 specification, this allows an include file to be loaded multiple times.
-Recursive inclusion of files is detected by comparing file pathnames as
-used in the @samp{%[...]} directive.
-
-The defined macro can be referenced in regular expressions using the
-syntax @code{@{@var{name}@}}.  The scope of a macro definition includes
-the remaining definitions and the rules part; it is analogous to
-@code{let*} is Scheme, where the macro definitions correspond to the
-bindings and the rules part correspond to the body.
-
-We end the macro definitions part with @code{%%}.
+Recursive inclusion of files is detected by comparing real, absolute
+file pathnames.
 
 @c page
 @node silex syntax rules
