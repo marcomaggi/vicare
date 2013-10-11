@@ -725,10 +725,10 @@ The pattern is a regular expression.  The action, if there is one, is
 formed of one or more Scheme expressions.
 
 The actions can span over several lines.  To distinguish between the
-remaining of the current action and the start of a new rule, SILex
-checks the indentation.  A new rule must start at the beginning of the
-line.  That is, the action starts right after the pattern and contains
-all the following lines that start with white space.
+rest of the current action and the start of a new rule, SILex checks the
+indentation.  A new rule must start at the beginning of the line.  That
+is, the action starts right after the pattern and contains all the
+following lines that start with white space.
 
 SILex does not parse the actions.  It simply captures the text
 up to the start of the next rule.  So a syntax error in an action is not
