@@ -38,6 +38,7 @@
     parse-mixin-definition		parse-mixin-clauses
     parse-tag-name-spec			filter-and-validate-mixins-clauses
 
+    parse-with-tags-bindings
     parse-let-bindings			parse-let-values-bindings
     parse-formals-bindings		make-tagged-variable-transformer
 
@@ -319,6 +320,64 @@
 	    "invalid tagged-variable syntax use" stx)))))))
 
 
+(define parse-with-tags-bindings
+  (case-lambda
+   ((bindings-stx synner)
+    (parse-with-tags-bindings bindings-stx synner '() '() '()))
+   ((bindings-stx synner vars tags syntax-bindings)
+    ;;Recursive   function.   Parse   the  syntax   object  BINDINGS-STX
+    ;;expecting it to be a  list of tagged WITH-TAGS bindings; supported
+    ;;syntaxes for the bindings are:
+    ;;
+    ;;   ()
+    ;;   (?var0 ?var ...)
+    ;;
+    ;;where each ?VAR must have the following syntax:
+    ;;
+    ;;   (?var-id ?tag-id)
+    ;;   #(?var-id ?tag-id)
+    ;;
+    ;;The return value is a syntax object with the structure:
+    ;;
+    ;;   ((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
+    ;;
+    ;;where each  VAR is an identifier  to be used to  create a binding,
+    ;;each TAG is the identifier of the type tag and each SYNTAX-BINDING
+    ;;is the  associated LET-SYNTAX  binding.
+    ;;
+    ;;SYNNER must be a closure to be used to raise syntax violations.
+    ;;
+    (syntax-case bindings-stx ()
+      ;;No more bindings.
+      (()
+       (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
+
+      ;;Tagged binding, parentheses envelope.
+      (((?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-with-tags-bindings #'?other-bindings synner
+				   (cons #'?var vars)
+				   (cons tag-id tags)
+				   (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+					 syntax-bindings))))
+
+      ;;Tagged binding, vector envelope.
+      ((#(?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-with-tags-bindings #'?other-bindings synner
+				   (cons #'?var vars)
+				   (cons tag-id tags)
+				   (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+					 syntax-bindings))))
+
+      ;;Syntax error.
+      (_
+       (synner "invalid bindings syntax" bindings-stx))))))
+
 (define parse-let-bindings
   (case-lambda
    ((bindings-stx top-id synner)
