@@ -537,8 +537,8 @@ the table handed to the maker.
 
 @subsubheading Format agnostic lexer maker
 
-The following bindings are exported from the @library{vicare
-parser-tools silex lexer} library.
+The following bindings are exported from the library @library{vicare
+parser-tools silex lexer}.
 
 
 @defun make-lexer @var{lexer-table} @var{input-system}
@@ -553,8 +553,8 @@ format.
 
 @subsubheading Decision tree lexer maker
 
-The following bindings are exported from the @library{vicare
-parser-tools silex tree-lexer-driver} library.
+The following bindings are exported from the library @library{vicare
+parser-tools silex tree-lexer-driver}.
 
 
 @defun make-tree-lexer @var{lexer-table} @var{input-system}
@@ -569,8 +569,8 @@ when invoked with no arguments, returns the next token.
 
 @subsubheading Portable tree lexer maker
 
-The following bindings are exported from the @library{vicare
-parser-tools silex char-lexer-driver} library.
+The following bindings are exported from the library @library{vicare
+parser-tools silex char-lexer-driver}.
 
 
 @defun make-char-lexer @var{lexer-table} @var{input-system}
@@ -585,8 +585,8 @@ when invoked with no arguments, returns the next token.
 
 @subsubheading Scheme code lexer maker
 
-The following bindings are exported from the @library{vicare
-parser-tools silex code-lexer-driver} library.
+The following bindings are exported from the library @library{vicare
+parser-tools silex code-lexer-driver}.
 
 
 @defun make-code-lexer @var{lexer-table} @var{input-system}
