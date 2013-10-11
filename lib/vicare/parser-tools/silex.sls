@@ -1162,12 +1162,18 @@
     (assert (include-file-data? file-data))
     (let* ((source-pathname   ($include-file-data-source-pathname file-data))
 	   (absolute-pathname (search-file-in-environment-path source-pathname "SILEX_PATH")))
-      (if (member absolute-pathname (include-files))
-	  (apply lex-error who
-		 ($include-file-data-source-line   file-data)
-		 ($include-file-data-source-column file-data)
-		 "recursive inclusion of macro file: \"" absolute-pathname "\"")
-	absolute-pathname)))
+      (cond ((not absolute-pathname)
+	     (apply lex-error who
+		    ($include-file-data-source-line   file-data)
+		    ($include-file-data-source-column file-data)
+		    "request to include non-existent macro file: \"" source-pathname "\""))
+	    ((member absolute-pathname (include-files))
+	     (apply lex-error who
+		    ($include-file-data-source-line   file-data)
+		    ($include-file-data-source-column file-data)
+		    "recursive inclusion of macro file: \"" absolute-pathname "\""))
+	    (else
+	     absolute-pathname))))
 
   #| end of module: parse-macros |# )
 
