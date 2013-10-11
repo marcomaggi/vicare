@@ -370,15 +370,15 @@ rather than to configure them at run time.
 @section Input systems
 
 
-An input system provides the buffering, the line counting and similar
-low level services.  The following bindings are exported by the library
-@library{vicare parser-tools silex input-system} and reexported by the
-library @library{vicare parser-tools silex lexer}.
+An @dfn{input system} provides the buffering, the line counting and
+similar low level services.  The following bindings are exported by the
+library @library{vicare parser-tools silex input-system} and reexported
+by the library @library{vicare parser-tools silex lexer}.
 
 
-@deffn Syntax make-IS @var{clauses} ...
+@deffn Syntax make-IS @meta{clauses} @dots{}
 Build and return a new input system.  The behaviour of this function is
-configured with the given @var{clauses}; see below for the list of
+configured with the given @meta{clauses}; see below for the list of
 supported options.
 
 Input characters can come from a string, a port or the return value of a
@@ -391,28 +391,29 @@ the input.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} string: @var{string}
+@deffn {Auxiliary Syntax} string: @meta{string}
 Instruct @func{make-IS} to build an input system that will take
 characters from the supplied string.  When the input system is
 initialized with a string, it takes a copy of it.  This way, eventual
 mutations of the string do not affect the analysis.
 
-When used together, this option supersedes @samp{port:} and
-@samp{procedure:}.
+This clause is mutually exclusive with @clause{port:} and
+@clause{procedure:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} port: @var{port}
+@deffn {Auxiliary Syntax} port: @meta{port}
 Instruct @func{make-IS} to build an input system that will read
 characters from the supplied textual input port.  The input system never
 closes itself the port it has received, this task is left to the
 program.
 
-When used together, this option supersedes @samp{procedure:}.
+This clause is mutually exclusive with @clause{string:} and
+@clause{procedure:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} procedure: @var{proc}
+@deffn {Auxiliary Syntax} procedure: @meta{proc}
 Instruct @func{make-IS} to build an input system that will read
 characters invoking the supplied procedure.
 
@@ -426,15 +427,18 @@ is called.  When the end of file (or its logical equivalent) is reached,
 the function must return an object that is not a character (for example,
 the symbol @samp{eof}).  After the function has returned an end of file
 indicator, it is not called again.
+
+This clause is mutually exclusive with @clause{string:} and
+@clause{port:}.
 @end deffn
 
 
-@deffn {Auxiliary Syntax} counters: @var{which-ones}
+@deffn {Auxiliary Syntax} counters: @meta{which-ones}
 Instruct @func{make-IS} about which counters to make available to
 the lexer.
 
 Counters are managed by the input system, and can be used by the lexer.
-The following values for @var{which-ones} are available: @samp{all},
+The following values for @meta{which-ones} are available: @samp{all},
 @samp{line}, @samp{none}; @samp{all} is the default.  The more counters
 the input system maintains, the more it is slowed down.
 
@@ -443,6 +447,31 @@ and to @func{make-IS}, a mismatch will result in undefined behaviour.
 This is because an input system is independent from a lexer table, and
 it is more efficient to build tables for a specific set of counters
 rather than to configure them at run time.
+
+@example
+(import (vicare)
+  (prefix (vicare parser-tools silex)       lex.)
+  (prefix (vicare parser-tools silex lexer) lex.))
+
+;;Build table with no knowledge of the input system.
+;;
+(define table
+  (lex.lex (lex.input-string: "...")
+           (les.output-value: #t)
+           (lex.counters:     'line))) ;!!!
+
+;;Build input system with no knowledge of the table.
+;;
+(define IS
+  (lex.make-IS (lex.string: "1+2+3")
+               (lex.counters: 'all)))  ;!!!
+
+;;Build lexer using the table and the input system.
+;;Error!!!
+;;
+(define lexer
+  (lex.make-lexer table IS))
+@end example
 @end deffn
 
 
@@ -473,7 +502,7 @@ The returned character is not forgotten by the lexer, this function just
 increments by @math{1} a pointer into the internal buffer.  Multiple
 invocations of this function will return the sequence of characters
 about to be analysed by the lexer.  When there are no more characters,
-the return value is the @samp{(eof-object)} value.
+the return value is the @eof{} object.
 
 The returned characters are @strong{skipped} by the lexer, unless we put
 them back with the closure returned by @func{lexer-get-func-ungetc}.
