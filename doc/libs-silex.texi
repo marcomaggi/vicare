@@ -745,7 +745,7 @@ In that case, a default action is supplied.
 The following constructs are regular expressions:
 
 @table @code
-@item c
+@item @var{c}
 @dfn{Ordinary character}.  It is a regular expression that matches the
 character @var{c} itself.  @var{c} must @strong{not} be one of the
 following characters:
@@ -766,7 +766,7 @@ that SILex gives precedence to the longest match.
 @itemx \@var{integer}
 @itemx \@var{c}
 @dfn{Backslash}.  The backslash is used for two things: protect a
-character from special meaning; generating non-printable characters.
+character from special meaning; generating non--printable characters.
 
 The expression @code{\n} matches the newline character.
 
@@ -785,7 +785,7 @@ is not @samp{n}, @samp{-} nor a digit.
 @itemx #X@var{HEX}
 @dfn{Hexadecimal characters}.  The expressions @code{#x@var{HEX}} and
 @code{#X@var{HEX}} match the character that has hex number @var{HEX} (in
-the sense of @func{string->number}).  Remembering that SILex lexerts
+the sense of @func{string->number}).  Remembering that SILex lexers
 match the longest input sequence: @var{HEX} terminates at the first
 non--hexadecimal digit character (uppercase or lowercase).
 
