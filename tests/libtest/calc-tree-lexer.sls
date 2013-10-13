@@ -4,6 +4,7 @@
     calc-lexer-table/tree)
   (import (rnrs)
 (vicare parser-tools silex input-system)
+(ikarus system $fx)
 )
 
 ;

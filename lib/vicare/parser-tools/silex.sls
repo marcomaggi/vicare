@@ -2209,17 +2209,18 @@
   ;;
 
   (define (main)
-    (let-values (((opened-file? value-getter)
-		  (cond (output-value
-			 (let-values (((sport getter) (open-string-output-port)))
-			   (set! output-port  sport)
-			   (values #f getter)))
-			((and output-file (not output-port))
-			 (set! output-port (open-file-output-port output-file
-								  (file-options no-fail)
-								  (buffer-mode block)
-								  (native-transcoder)))
-			 (values #t #f)))))
+    (receive (opened-file? value-getter)
+	(cond (output-value
+	       (receive (sport getter)
+		   (open-string-output-port)
+		 (set! output-port sport)
+		 (values #f getter)))
+	      ((and output-file (not output-port))
+	       (set! output-port (open-file-output-port output-file
+							(file-options no-fail)
+							(buffer-mode block)
+							(native-transcoder)))
+	       (values #t #f)))
       (unwind-protect
 	  (begin
 	    (when library-spec
@@ -2233,6 +2234,7 @@
 	      (write library-language output-port)
 	      (newline output-port)
 	      (display "(vicare parser-tools silex input-system)\n" output-port)
+	      (display "(ikarus system $fx)\n" output-port)
 	      (for-each (lambda (spec)
 			  (write spec output-port)
 			  (newline output-port))
@@ -2252,7 +2254,9 @@
 	  (let ((ell (read (open-string-input-port (value-getter)))))
 	    (eval ell (if (eq? lexer-format 'code)
 			  (apply environment library-language
-				 '(vicare parser-tools silex input-system) library-imports)
+				 '(vicare parser-tools silex input-system)
+				 '(vicare system $fx)
+				 library-imports)
 			(apply environment library-language library-imports)))))))
 
   (define (library-spec->string-spec spec)
@@ -2889,7 +2893,7 @@
 	   (%display action-var)
 	   (%display ")"))
 	  ((eq? (car tree) '=)
-	   (%display "(if (= c ")
+	   (%display "(if ($fx= c ")
 	   (%display (list-ref tree 1))
 	   (%display ")")
 	   (out-print-code-trans3 (+ margin 4)
@@ -2902,7 +2906,7 @@
 				  output-port)
 	   (%display ")"))
 	  (else
-	   (%display "(if (< c ")
+	   (%display "(if ($fx< c ")
 	   (%display (list-ref tree 0))
 	   (%display ")")
 	   (out-print-code-trans3 (+ margin 4)

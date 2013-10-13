@@ -4,6 +4,7 @@
     calc-lexer-table/portable)
   (import (rnrs)
 (vicare parser-tools silex input-system)
+(ikarus system $fx)
 )
 
 ;
