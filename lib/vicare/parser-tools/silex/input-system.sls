@@ -24,28 +24,29 @@
 (library (vicare parser-tools silex input-system)
   (export
     make-IS
-    (rename (<input-system>-user-getc		lexer-get-func-getc)
+    (rename (<input-system>?			lexer-input-system?)
+	    (<input-system>-user-getc		lexer-get-func-getc)
 	    (<input-system>-user-ungetc		lexer-get-func-ungetc)
 	    (<input-system>-get-user-line	lexer-get-func-line)
 	    (<input-system>-get-user-column	lexer-get-func-column)
 	    (<input-system>-get-user-offset	lexer-get-func-offset))
 
     ;;Accessors needed in the output tables with the "code" format.
-    <input-system>-start-go-to-end
-    <input-system>-end-go-to-point
-    <input-system>-init-lexeme
-    <input-system>-get-start-line
-    <input-system>-get-start-column
-    <input-system>-get-start-offset
-    <input-system>-peek-left-context
-    <input-system>-peek-char
-    <input-system>-read-char
-    <input-system>-get-start-end-text
-    <input-system>-get-user-line
-    <input-system>-get-user-column
-    <input-system>-get-user-offset
-    <input-system>-user-getc
-    <input-system>-user-ungetc
+    <input-system>-start-go-to-end		$<input-system>-start-go-to-end
+    <input-system>-end-go-to-point		$<input-system>-end-go-to-point
+    <input-system>-init-lexeme			$<input-system>-init-lexeme
+    <input-system>-get-start-line		$<input-system>-get-start-line
+    <input-system>-get-start-column		$<input-system>-get-start-column
+    <input-system>-get-start-offset		$<input-system>-get-start-offset
+    <input-system>-peek-left-context		$<input-system>-peek-left-context
+    <input-system>-peek-char			$<input-system>-peek-char
+    <input-system>-read-char			$<input-system>-read-char
+    <input-system>-get-start-end-text		$<input-system>-get-start-end-text
+    <input-system>-get-user-line		$<input-system>-get-user-line
+    <input-system>-get-user-column		$<input-system>-get-user-column
+    <input-system>-get-user-offset		$<input-system>-get-user-offset
+    <input-system>-user-getc			$<input-system>-user-getc
+    <input-system>-user-ungetc			$<input-system>-user-ungetc
 
     ;; auxiliary syntaxes
     counters:		port:

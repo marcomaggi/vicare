@@ -24,41 +24,45 @@
 (library (vicare parser-tools silex tree-lexer-driver)
   (export make-tree-lexer)
   (import (rnrs)
-    (vicare parser-tools silex input-system))
+    (vicare parser-tools silex input-system)
+    (vicare unsafe operations))
 
 
 (define lexer-integer-newline (char->integer #\newline))
 
 (define (make-tree-lexer tables IS)
+  (assert (vector? tables))
+  (assert (<= 9 ($vector-length tables)))
+  (assert (lexer-input-system? IS))
   ;;Fabrication de lexer a partir d'arbres de decision.
   ;;
   (letrec
       (		; Contenu de la table
-       (counters-type        (vector-ref tables 0))
-       (<<EOF>>-pre-action   (vector-ref tables 1))
-       (<<ERROR>>-pre-action (vector-ref tables 2))
-       (rules-pre-actions    (vector-ref tables 3))
-       (table-nl-start       (vector-ref tables 5))
-       (table-no-nl-start    (vector-ref tables 6))
-       (trees-v              (vector-ref tables 7))
-       (acc-v                (vector-ref tables 8))
+       (counters-type        ($vector-ref tables 0))
+       (<<EOF>>-pre-action   ($vector-ref tables 1))
+       (<<ERROR>>-pre-action ($vector-ref tables 2))
+       (rules-pre-actions    ($vector-ref tables 3))
+       (table-nl-start       ($vector-ref tables 5))
+       (table-no-nl-start    ($vector-ref tables 6))
+       (trees-v              ($vector-ref tables 7))
+       (acc-v                ($vector-ref tables 8))
 
 		; Contenu du IS
-       (IS-start-go-to-end    (<input-system>-start-go-to-end	IS))
-       (IS-end-go-to-point    (<input-system>-end-go-to-point	IS))
-       (IS-init-lexeme        (<input-system>-init-lexeme	IS))
-       (IS-get-start-line     (<input-system>-get-start-line	IS))
-       (IS-get-start-column   (<input-system>-get-start-column	IS))
-       (IS-get-start-offset   (<input-system>-get-start-offset	IS))
-       (IS-peek-left-context  (<input-system>-peek-left-context	IS))
-       (IS-peek-char          (<input-system>-peek-char		IS))
-       (IS-read-char          (<input-system>-read-char		IS))
-       (IS-get-start-end-text (<input-system>-get-start-end-text IS))
-       (IS-get-user-line      (<input-system>-get-user-line	IS))
-       (IS-get-user-column    (<input-system>-get-user-column	IS))
-       (IS-get-user-offset    (<input-system>-get-user-offset	IS))
-       (IS-user-getc          (<input-system>-user-getc		IS))
-       (IS-user-ungetc        (<input-system>-user-ungetc	IS))
+       (IS-start-go-to-end    ($<input-system>-start-go-to-end		IS))
+       (IS-end-go-to-point    ($<input-system>-end-go-to-point		IS))
+       (IS-init-lexeme        ($<input-system>-init-lexeme		IS))
+       (IS-get-start-line     ($<input-system>-get-start-line		IS))
+       (IS-get-start-column   ($<input-system>-get-start-column		IS))
+       (IS-get-start-offset   ($<input-system>-get-start-offset		IS))
+       (IS-peek-left-context  ($<input-system>-peek-left-context	IS))
+       (IS-peek-char          ($<input-system>-peek-char		IS))
+       (IS-read-char          ($<input-system>-read-char		IS))
+       (IS-get-start-end-text ($<input-system>-get-start-end-text	IS))
+       (IS-get-user-line      ($<input-system>-get-user-line		IS))
+       (IS-get-user-column    ($<input-system>-get-user-column		IS))
+       (IS-get-user-offset    ($<input-system>-get-user-offset		IS))
+       (IS-user-getc          ($<input-system>-user-getc		IS))
+       (IS-user-ungetc        ($<input-system>-user-ungetc		IS))
 
 		; Resultats
        (<<EOF>>-action   #f)
@@ -233,7 +237,7 @@
 		     state-function))
 		  (hook
 		   (lambda ()
-		     (set! state-function (vector-ref states leaf)))))
+		     (set! state-function ($vector-ref states leaf)))))
 	      (add-hook hook)
 	      result))))
        (prepare-dispatch-leaf
@@ -249,7 +253,7 @@
 		  (left-func  (prepare-dispatch-tree left-tree))
 		  (right-func (prepare-dispatch-tree right-tree)))
 	      (lambda (c)
-		(if (< c bound)
+		(if ($fx< c bound)
 		    (left-func c)
 		  (right-func c)))))))
        (prepare-dispatch-=
@@ -260,7 +264,7 @@
 		  (left-func  (prepare-dispatch-tree left-tree))
 		  (right-func (prepare-dispatch-tree right-tree)))
 	      (lambda (c)
-		(if (= c bound)
+		(if ($fx= c bound)
 		    (left-func c)
 		  (right-func c)))))))
        (prepare-dispatch-tree
@@ -297,7 +301,7 @@
 		; Fabrique les fonctions d'etats ([set-end] & trans)
        (prepare-state-no-acc
 	(lambda (s r1 r2)
-	  (let ((trans-func (prepare-transition (vector-ref trees-v s))))
+	  (let ((trans-func (prepare-transition ($vector-ref trees-v s))))
 	    (lambda (action)
 	      (let ((next-state (trans-func)))
 		(if next-state
@@ -308,12 +312,12 @@
 	  (let ((peek-char       IS-peek-char)
 		(end-go-to-point IS-end-go-to-point)
 		(new-action1     #f)
-		(trans-func (prepare-transition (vector-ref trees-v s))))
+		(trans-func (prepare-transition ($vector-ref trees-v s))))
 	    (let ((result
 		   (lambda (action)
 		     (let* ((c (peek-char))
 			    (new-action
-			     (if (or (not c) (= c lexer-integer-newline))
+			     (if (or (not c) ($fx= c lexer-integer-newline))
 				 (begin
 				   (end-go-to-point)
 				   new-action1)
@@ -324,7 +328,7 @@
 			 new-action))))
 		  (hook
 		   (lambda ()
-		     (set! new-action1 (vector-ref rules-actions r1)))))
+		     (set! new-action1 ($vector-ref rules-actions r1)))))
 	      (add-hook hook)
 	      result))))
        (prepare-state-diff-acc
@@ -333,13 +337,13 @@
 		(peek-char       IS-peek-char)
 		(new-action1     #f)
 		(new-action2     #f)
-		(trans-func (prepare-transition (vector-ref trees-v s))))
+		(trans-func (prepare-transition ($vector-ref trees-v s))))
 	    (let ((result
 		   (lambda (action)
 		     (end-go-to-point)
 		     (let* ((c (peek-char))
 			    (new-action
-			     (if (or (not c) (= c lexer-integer-newline))
+			     (if (or (not c) ($fx= c lexer-integer-newline))
 				 new-action1
 			       new-action2))
 			    (next-state (trans-func)))
@@ -348,14 +352,14 @@
 			 new-action))))
 		  (hook
 		   (lambda ()
-		     (set! new-action1 (vector-ref rules-actions r1))
-		     (set! new-action2 (vector-ref rules-actions r2)))))
+		     (set! new-action1 ($vector-ref rules-actions r1))
+		     (set! new-action2 ($vector-ref rules-actions r2)))))
 	      (add-hook hook)
 	      result))))
        (prepare-state-same-acc
 	(lambda (s r1 r2)
 	  (let ((end-go-to-point IS-end-go-to-point)
-		(trans-func (prepare-transition (vector-ref trees-v s)))
+		(trans-func (prepare-transition ($vector-ref trees-v s)))
 		(new-action #f))
 	    (let ((result
 		   (lambda (action)
@@ -366,12 +370,12 @@
 			 new-action))))
 		  (hook
 		   (lambda ()
-		     (set! new-action (vector-ref rules-actions r1)))))
+		     (set! new-action ($vector-ref rules-actions r1)))))
 	      (add-hook hook)
 	      result))))
        (prepare-state
 	(lambda (s)
-	  (let* ((acc (vector-ref acc-v s))
+	  (let* ((acc ($vector-ref acc-v s))
 		 (r1 (car acc))
 		 (r2 (cdr acc)))
 	    (cond ((not r1)  (prepare-state-no-acc   s r1 r2))
@@ -394,7 +398,7 @@
 		  (hook
 		   (lambda ()
 		     (set! eof-action   <<EOF>>-action)
-		     (set! start-state  (vector-ref states s1))
+		     (set! start-state  ($vector-ref states s1))
 		     (set! error-action <<ERROR>>-action))))
 	      (add-hook hook)
 	      result))))
@@ -417,8 +421,8 @@
 		  (hook
 		   (lambda ()
 		     (set! eof-action <<EOF>>-action)
-		     (set! start-state1 (vector-ref states s1))
-		     (set! start-state2 (vector-ref states s2))
+		     (set! start-state1 ($vector-ref states s1))
+		     (set! start-state2 ($vector-ref states s2))
 		     (set! error-action <<ERROR>>-action))))
 	      (add-hook hook)
 	      result))))
@@ -477,12 +481,12 @@
       (let loop ((r (- len 1)))
 	(if (< r 0)
 	    (set! rules-actions v)
-	  (let* ((yytext? (vector-ref rules-pre-actions (* 2 r)))
-		 (pre-action (vector-ref rules-pre-actions (+ (* 2 r) 1)))
+	  (let* ((yytext? ($vector-ref rules-pre-actions (* 2 r)))
+		 (pre-action ($vector-ref rules-pre-actions (+ (* 2 r) 1)))
 		 (action (if yytext?
 			     (prepare-action-yytext    pre-action)
 			   (prepare-action-no-yytext pre-action))))
-	    (vector-set! v r action)
+	    ($vector-set! v r action)
 	    (loop (- r 1))))))
 
 		; Calculer la valeur de states
@@ -492,7 +496,7 @@
 	(if (< s 0)
 	    (set! states v)
 	  (begin
-	    (vector-set! v s (prepare-state s))
+	    ($vector-set! v s (prepare-state s))
 	    (loop (- s 1))))))
 
 		; Calculer la valeur de final-lexer
