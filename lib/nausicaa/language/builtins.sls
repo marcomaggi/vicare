@@ -34,7 +34,8 @@
     <char> <string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <flonum>
+    <fixnum> <positive-fixnum> <negative-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
+    <flonum>
     <exact-integer> <integer> <integer-valued>
     <rational> <rational-valued>
     <real> <real-valued> <complex> <number>
@@ -1371,7 +1372,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <fixnum>
-  (parent <integer>)
+  (parent <exact-integer>)
   (predicate fixnum?)
 
   (virtual-fields
@@ -1585,6 +1586,28 @@
     (syntax-rules ()
       ((_ ?fx1 ?fx ...)
        (fxmin ?fx1 ?fx ...)))))
+
+;;; --------------------------------------------------------------------
+
+(define-builtin-label <positive-fixnum>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       ($fxpositive? fx))))
+
+(define-builtin-label <negative-fixnum>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       ($fxnegative? fx))))
+
+(define-builtin-label <nonpositive-fixnum>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       ($fxnonpositive? fx))))
+
+(define-builtin-label <nonnegative-fixnum>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       ($fxnonnegative? fx))))
 
 ;;; --------------------------------------------------------------------
 

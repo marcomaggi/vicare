@@ -127,22 +127,25 @@ vicare_libs_TEXINFOS = \
 	srfi-functional-pairs.texi
 
 nausicaa_TEXINFOS	= \
-	nausicaa-language.texi			\
-	nausicaa-oopp.texi			\
-	nausicaa-multimethods.texi		\
-	nausicaa-builtins.texi			\
-	nausicaa-conditions.texi		\
+	nausicaa-language.texi					\
+	nausicaa-oopp.texi					\
+	nausicaa-multimethods.texi				\
+	nausicaa-builtins.texi					\
+	nausicaa-conditions.texi				\
 	\
-	nausicaa-lists.texi			\
-	nausicaa-vectors.texi			\
-	nausicaa-strings.texi			\
-	nausicaa-arrays.texi			\
-	nausicaa-stacks.texi			\
-	nausicaa-queues.texi			\
-	nausicaa-bitvectors.texi		\
+	nausicaa-lists.texi					\
+	nausicaa-vectors.texi					\
+	nausicaa-strings.texi					\
+	nausicaa-arrays.texi					\
+	nausicaa-stacks.texi					\
+	nausicaa-queues.texi					\
+	nausicaa-bitvectors.texi				\
 	\
-	macros.texi				\
-	fdl-1.3.texi				\
+	nausicaa-parser-tools-source-locations.texi		\
+	nausicaa-parser-tools-lexical-tokens.texi		\
+	\
+	macros.texi						\
+	fdl-1.3.texi						\
 	gpl-3.0.texi
 
 ### end of file

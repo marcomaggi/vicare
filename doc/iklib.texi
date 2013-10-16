@@ -1170,6 +1170,7 @@ Push the given thunk on the current compensations stack.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
 * iklib conditions procarg::    Procedure argument violations.
+* iklib conditions exprret::    Expression return value violations.
 @end menu
 
 @c page
@@ -1308,6 +1309,36 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
 @condition{irritants}, @condition{procedure-argument-validation}.
+@end defun
+
+@c page
+@node iklib conditions exprret
+@subsection Expression return value violations
+
+
+@deftp {Condition Type} &expression-return-value-violation
+Condition object type representing invalid values returned from an
+expression; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-expression-return-value-violation
+Build and return a new condition object of type
+@condition{expression-return-value-validation}.
+@end defun
+
+
+@defun expression-return-value-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{expression-return-value-validation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{expression-return-value-validation}.
 @end defun
 
 @c page

@@ -200,6 +200,7 @@
 		    :insert-parent-clause define-record-type
 		    :insert-constructor-fields lambda
 		    :super-constructor-descriptor :assert-type-and-return
+		    :assert-procedure-argument :assert-expression-return-value
 		    :append-unique-id :list-of-unique-ids
 		    :predicate-function :accessor-function :mutator-function
 		    aux.<>)
@@ -228,11 +229,18 @@
 	 ?expr
 	 #t))
 
-    ;;If a "<top>" value receives  a dispatch request: interpret it as a
-    ;;function application.
+    ;;If a "<top>" value receives a dispatch request: what do we do?
+    ;;
+    ;;Creative solution: just interpret it as a function application.
+    ;;
+    ;; ((_ :dispatch ?expr (?var . ?args))
+    ;;  (identifier? #'?var)
+    ;;  #'(?expr . ?args))
+    ;;
+    ;;Logic solution: raise an error.
     ((_ :dispatch ?expr (?var . ?args))
      (identifier? #'?var)
-     #'(?expr . ?args))
+     (synner "invalid tag member"))
 
     ((_ :accessor ?expr (?var . ?args))
      (synner "invalid tag-syntax field-accessor request"))
@@ -270,6 +278,10 @@
     ;;are of type "<top>", so we just evaluate the expression and return
     ;;its value.
     ((_ :assert-type-and-return ?expr)
+     #'?expr)
+    ((_ :assert-procedure-argument ?expr)
+     #'(void))
+    ((_ :assert-expression-return-value ?expr)
      #'?expr)
 
     ((_ :append-unique-id (?id ...))
@@ -508,6 +520,7 @@
 				  :define :let :make :is-a?
 				  :dispatch :accessor :mutator :getter :setter
 				  :assert-type-and-return
+				  :assert-procedure-argument :assert-expression-return-value
 				  :append-unique-id :list-of-unique-ids
 				  :predicate-function :accessor-function :mutator-function
 				  :process-shadowed-identifier
@@ -571,13 +584,31 @@
 
 		  ((_ :assert-type-and-return ??expr)
 		   (if config.validate-tagged-values?
-		       #'(let ((val ??expr))
-			   (if (THE-TAG :is-a? val)
-			       val
-			     (assertion-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
+		       #'(receive-and-return (val)
+			     ??expr
+			   (unless (THE-TAG :is-a? val)
+			     (assertion-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE
+						  '(expression: ??expr)
+						  `(result: ,val))))
+		     #'??expr))
+
+		  ((_ :assert-procedure-argument ??id)
+		   (identifier? #'??id)
+		   ;;This DOES NOT return the value.
+		   (if config.validate-tagged-values?
+		       #'(unless (THE-TAG :is-a? ??id)
+			   (procedure-argument-violation 'THE-TAG
+			     "tagged procedure argument of invalid type" ??id))
+		     #'(void)))
+
+		  ((_ :assert-expression-return-value ??expr)
+		   ;;This DOES return the value.
+		   (if config.validate-tagged-values?
+		       #'(receive-and-return (val)
+			     ??expr
+			   (unless (THE-TAG :is-a? val)
+			     (expression-return-value-violation 'THE-TAG
+			       "tagged expression return value of invalid type" val)))
 		     #'??expr))
 
 		  ;; public API: auxiliary syntaxes
@@ -959,6 +990,7 @@
 				  :insert-constructor-fields
 				  :super-constructor-descriptor lambda
 				  :assert-type-and-return
+				  :assert-procedure-argument :assert-expression-return-value
 				  :append-unique-id :list-of-unique-ids
 				  :predicate-function :accessor-function :mutator-function
 				  aux.<>)
@@ -1049,13 +1081,29 @@
 
 		  ((_ :assert-type-and-return ??expr)
 		   (if config.validate-tagged-values?
-		       #'(let ((val ??expr))
-			   (if (THE-TAG :is-a? val)
-			       val
-			     (assertion-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
+		       #'(receive-and-return (val)
+			     ??expr
+			   (unless (THE-TAG :is-a? val)
+			     (assertion-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE
+						  '(expression: ??expr)
+						  `(result: ,val))))
+		     #'??expr))
+
+		  ((_ :assert-procedure-argument ??id)
+		   (identifier? #'??id)
+		   ;;This DOES NOT return the value.
+		   (if config.validate-tagged-values?
+		       #'(unless (THE-TAG :is-a? ??id)
+			   (procedure-argument-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE ??id))
+		     #'(void)))
+
+		  ((_ :assert-expression-return-value ??expr)
+		   ;;This DOES return the value.
+		   (if config.validate-tagged-values?
+		       #'(receive-and-return (val)
+			     ??expr
+			   (unless (THE-TAG :is-a? val)
+			     (expression-return-value-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE val)))
 		     #'??expr))
 
 		  ;; public API: auxiliary syntaxes
@@ -1456,10 +1504,9 @@
        (%synner "invalid argument-validator selector" #'?validator))))
 
   (define (%generate-validation-form who validator-id arg-id other-validators-stx args body)
-    #`(if ((#,validator-id) #,arg-id)
-	  #,(%build-output-form who other-validators-stx args body)
-	(procedure-argument-violation #,who
-	  "invalid tagged argument" (quote #,validator-id) #,arg-id)))
+    #`(begin
+	(#,validator-id :assert-procedure-argument #,arg-id)
+	#,(%build-output-form who other-validators-stx args body)))
 
   (define (%synner msg subform)
     (syntax-violation 'with-tagged-arguments-validation msg stx subform))
@@ -1475,7 +1522,7 @@
      (identifier? #'?tag)
      (if config.validate-tagged-values?
 	 #'(let ((retval (begin ?body0 ?body ...)))
-	     (?tag :assert-type-and-return retval))
+	     (?tag :assert-expression-return-value retval))
        #'(begin ?body0 ?body ...)))
 
     ((_ (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
@@ -1483,9 +1530,10 @@
      (if config.validate-tagged-values?
 	 (with-syntax
 	     (((RETVAL ...) (generate-temporaries #'(?tag ...))))
-	   #'(let-values (((retval0 RETVAL ...) (begin ?body0 ?body ...)))
-	       (values (?tag0 :assert-type-and-return retval0)
-		       (?tag  :assert-type-and-return RETVAL)
+	   #'(receive (retval0 RETVAL ...)
+		 (begin ?body0 ?body ...)
+	       (values (?tag0 :assert-expression-return-value retval0)
+		       (?tag  :assert-expression-return-value RETVAL)
 		       ...)))
        #'(begin ?body0 ?body ...)))
 
@@ -1533,6 +1581,10 @@
     ((_ (?who . ?formals) ?body0 ?body ...)
      (identifier? #'?who)
      #'(define ?who (lambda/tags ?formals ?body0 ?body ...)))
+
+    ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
+     (all-identifiers? #'(?who ?tag0 ?tag ...))
+     #'(define ?who (lambda/tags ?formals (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)))
 
     (_
      (synner "syntax error in DEFINE/TAGS"))))

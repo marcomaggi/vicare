@@ -41,19 +41,19 @@
   (define description "%%
 A		(<lexical-token>
                   ((category: 'A)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: yytext)
                    (length: (string-length yytext))))
 
 <<EOF>>		(<lexical-token>
                   ((category: '*eoi*)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: (eof-object))
                    (length: 1)))
 
 <<ERROR>>	(<lexical-token>
                   ((category: '*lexer-error*)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: yytext)
                    (length: (string-length yytext))))
 ")
@@ -62,7 +62,8 @@ A		(<lexical-token>
     (lex.lex (lex.input-string:		description)
 	     (lex.counters:		'all)
 	     (lex.library-language:	'(vicare))
-	     (lex.library-imports:	'((nausicaa parser-tools lexical-tokens)))
+	     (lex.library-imports:	'((nausicaa parser-tools lexical-tokens)
+					  (nausicaa parser-tools source-locations)))
 	     (lex.output-value:		#t)
 	     (lex.lexer-format:		'decision-tree)))
 
@@ -121,7 +122,7 @@ A		(<lexical-token>
   (define description "%%
 A		(<lexical-token>
                   ((category: 'A)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: yytext)
                    (length: (string-length yytext))))
 
@@ -130,19 +131,19 @@ B		(begin
                   (yygetc) (yygetc)
                   (<lexical-token>
                     ((category: 'B)
-                     (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                     (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                      (value: yytext)
                      (length: (string-length yytext)))))
 
 <<EOF>>		(<lexical-token>
                   ((category: '*eoi*)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: (eof-object))
                    (length: 1)))
 
 <<ERROR>>	(<lexical-token>
                   ((category: '*lexer-error*)
-                   (location: (<source-location> ((input: #f) (line: yyline) (column: yycolumn) (offset: yyoffset))))
+                   (location: (<source-location> ((line: yyline) (column: yycolumn) (offset: yyoffset))))
                    (value: yytext)
                    (length: (string-length yytext))))
 ")
@@ -151,7 +152,8 @@ B		(begin
     (lex.lex (lex.input-string:		description)
 	     (lex.counters:		'all)
 	     (lex.library-language:	'(vicare))
-	     (lex.library-imports:	'((nausicaa parser-tools lexical-tokens)))
+	     (lex.library-imports:	'((nausicaa parser-tools lexical-tokens)
+					  (nausicaa parser-tools source-locations)))
 	     (lex.output-value:		#t)
 	     (lex.lexer-format:		'decision-tree)))
 

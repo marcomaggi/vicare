@@ -122,11 +122,11 @@
 ;;;
 
   (check-for-procedure-argument-violation
-   (let ((S 123))
-     (with-arguments-validation (who)
-	 ((<stack>	S))
-       #t))
-   '(123))
+      (let ((S 123))
+	(with-arguments-validation (who)
+	    ((<stack>	S))
+	  #t))
+    => (list who '(123)))
 
   #f)
 

@@ -83,7 +83,8 @@
 		  argument-type-inspector
 		  reverse-before-methods?
 		  merge-with-multimethods
-		  :primary :before :after :around)
+		  :primary :before :after :around
+		  <-)
 	    aux.)
     (nausicaa language multimethods auxiliary-syntaxes))
 
@@ -637,19 +638,32 @@
   ;;generic function.
   ;;
   (define who 'define-method)
-  (define (main generic-function-id table-key formals-stx body-stx)
+  (define (main generic-function-spec table-key formals-stx body-stx)
     (let loop ((formals		formals-stx)
 	       (arg-ids		'())
 	       (type-ids	'()))
       (syntax-case formals ()
 	(()
-	 (with-syntax ((GF		generic-function-id)
-		       (TABLE-KEY	table-key)
-		       ((ARG ...)	(reverse arg-ids))
-		       ((TYPE ...)	(reverse type-ids))
-		       (BODY		body-stx))
-	   #'(define dummy ;to make it a definition
-	       (add-method GF TABLE-KEY (TYPE ...) (type.method-lambda ((ARG TYPE) ...) . BODY)))))
+	 (syntax-case generic-function-spec ()
+	   (?generic-function-id
+	    (identifier? #'?generic-function-id)
+	    (with-syntax ((TABLE-KEY	table-key)
+			  ((ARG ...)	(reverse arg-ids))
+			  ((TYPE ...)	(reverse type-ids))
+			  (BODY		body-stx))
+	      #'(define dummy ;to make it a definition
+		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+			      (type.method-lambda ((ARG TYPE) ...) . BODY)))))
+	   ((?generic-function-id ?tag0 ?tag ...)
+	    (all-identifiers? #'(?generic-function-id ?tag0 ?tag ...))
+	    (with-syntax ((TABLE-KEY	table-key)
+			  ((ARG ...)	(reverse arg-ids))
+			  ((TYPE ...)	(reverse type-ids))
+			  (BODY		body-stx))
+	      #'(define dummy ;to make it a definition
+		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+			      (type.method-lambda ((ARG TYPE) ...) (aux.<- ?tag0 ?tag ...) . BODY)))))
+	   ))
 	(((?arg ?type) . ?formals)
 	 (loop #'?formals (cons #'?arg arg-ids) (cons #'?type    type-ids)))
 	((?arg . ?formals)
@@ -664,50 +678,36 @@
       (syntax-violation who message stx subform))))
   (syntax-case stx (aux.:primary aux.:before aux.:after aux.:around)
     ((_ aux.:primary (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ aux.:primary ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ ?generic-function aux.:primary ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
 
     ((_ aux.:before (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
     ((_ aux.:before ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
     ((_ ?generic-function aux.:before ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
 
     ((_ aux.:after (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
     ((_ aux.:after ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
     ((_ ?generic-function aux.:after ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
 
     ((_ aux.:around (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
     ((_ aux.:around ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
     ((_ ?generic-function aux.:around ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
 
     ((_ (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
 
     (_

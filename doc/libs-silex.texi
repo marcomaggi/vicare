@@ -28,6 +28,11 @@ original code is available at (@aurl{} last verified Oct 8, 2013):
 @center @url{http://www.iro.umontreal.ca/~dube/}
 @end quotation
 
+The library @library{vicare parser-tools silex utilities} implements
+convenience facilities to use SILex.  It is suggested to use SILex with
+the facilities of the libraries in the hierarchey @library{nausicaa
+parser-tools ---}, @nauref{lexical-tokens, Describing lexical tokens}.
+
 @menu
 * silex example::               A lexer example for a calculator.
 * silex tables::                Creating lexer tables.
@@ -37,7 +42,6 @@ original code is available at (@aurl{} last verified Oct 8, 2013):
 * silex semantics::             Semantics of the specification file.
 * silex format::                Tables output format.
 * silex utilities::             Utility functions.
-* silex default::               Default semantic actions.
 @end menu
 
 @c page
@@ -1301,10 +1305,9 @@ A          (lt.<lexical-token>
 @section Tables output format
 
 
-The library @library{vicare parser-tools silex} provides three different
-encodings of the tables: the @dfn{decision tree} encoding, the
-@dfn{portable} encoding and the ``compilation'' to Scheme code.  The
-decision tree is the default.
+SILex provides three different table encodings: the @dfn{decision tree}
+encoding, the @dfn{portable} encoding and the ``compilation'' to Scheme
+code; the decision tree is the default.
 
 With the decision tree encoding, the finite automaton of the analyser is
 represented with data structures holding integers representation of the
@@ -1331,15 +1334,19 @@ It is important to note that in some character sets, the letters or the
 digits are not contiguous.  So, in those cases, the regular expression
 @samp{[A-Z]} does not necessarily accept only the uppercase letters.
 
-The last encoding is the compilation to Scheme code.  This produces a
-fast lexical analyser.  Instead of containing data structures
-representing the behavior of the automaton, the table contains Scheme
-code that ``hard--codes'' the automaton.  This encoding often generates
-big tables.  Such an analyser is not portable to non--@rnrs{6} Schemes.
+The last encoding is the compilation to Scheme code; it produces a fast
+lexical analyser.  Instead of containing data structures representing
+the behavior of the automaton, the table contains Scheme code that
+``hard--codes'' the automaton.  This encoding often generates big
+tables.  Such an analyser is not portable to non--@rnrs{6} Schemes.
 
 @c page
 @node silex utilities
 @section Utility functions
+
+
+@cindex @library{vicare parser-tools silex utilities}, library
+@cindex Library @library{vicare parser-tools silex utilities}
 
 
 The following bindings are exported by the @library{vicare
@@ -1351,48 +1358,5 @@ Return a lexer function wrapping @var{lexer}; if the number of returned
 tokens reaches @var{max-number-of-tokens}: the thunk @var{error-handler}
 is invoked.
 @end defun
-
-@c page
-@node silex default
-@section Default semantic actions
-
-
-The following bindings are exported by the @library{vicare
-parser-tools silex default-error-handler} library.  The library is meant
-to be included in the table library using the @func{library-imports:}
-clause of @func{lex}.
-
-
-@deffn Syntax silex-default-error-handler
-@deffnx Syntax silex-default-error-handler @meta{yytext}
-Expand to a custom semantic action for the @samp{<<ERROR>>} rule; it is
-meant to be used in SILex table files as:
-
-@example
-<<ERROR>>       (silex-default-error-handler)
-@end example
-
-The semantic action builds and returns a record of type
-@class{lexical-token} with category @samp{*lexer-error*} and semantic
-value set to an error string describing the input that caused the error;
-the default @code{yytext} binding is used to build the error string.
-
-When the optional @meta{yytex} argument is present: this value is used
-in place of @code{yytext} to build the error message string.
-@end deffn
-
-
-@deffn Syntax silex-default-eof-handler
-Expand to a custom semantic action for the @samp{<<EOF>>} rule; it is
-meant to be used in SILex table files as:
-
-@example
-<<EOF>>         (silex-default-eof-handler)
-@end example
-
-The semantic action builds and returns a record of type
-@class{lexical-token} with category @samp{*eoi*}, semantic value set to
-@code{(eof-object)} and length set to zero.
-@end deffn
 
 @c end of file

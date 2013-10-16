@@ -39,6 +39,8 @@
     :make-from-fields
     :is-a?
     :assert-type-and-return
+    :assert-procedure-argument
+    :assert-expression-return-value
     :insert-parent-clause
     :insert-constructor-fields
     :super-constructor-descriptor
@@ -72,6 +74,8 @@
     :setter
     :getter
     :assert-type-and-return
+    :assert-procedure-argument
+    :assert-expression-return-value
     :insert-parent-clause
     :insert-constructor-fields
     :super-constructor-descriptor

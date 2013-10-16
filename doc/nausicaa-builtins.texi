@@ -1879,7 +1879,31 @@ derived from @class{integer}.
 
 @deftp {Builtin Label} @aclass{fixnum}
 Conventional type for objects satisfying @func{fixnum?}.  It is derived
-from @class{integer}.
+from @class{exact-integer}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{positive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxpositive?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnegative?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonpositive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonpositive?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonnegative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonnegative?}.  It is derived from @class{fixnum}.
 @end deftp
 
 @c ------------------------------------------------------------

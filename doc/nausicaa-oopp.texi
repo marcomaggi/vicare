@@ -3056,7 +3056,8 @@ Usage examples:
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag})
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
 @deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
 @deffnx {Auxiliary Syntax} <-
 Like @func{define} and defines the @oopp{} bindings for function
 arguments.  When all the bindings have no tags: this syntax is
@@ -3077,6 +3078,12 @@ of failure.
 If the auxiliary @func{<-} clause is present: the @meta{body} forms will
 be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
+
+@item
+If the @meta{variable} argument comes with @meta{tag} arguments: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
 @end itemize
 
 Usage examples:

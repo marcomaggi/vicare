@@ -15,6 +15,10 @@
   (only (nausicaa containers queues))
   (only (nausicaa containers bitvectors))
 
+  (only (nausicaa parser-tools source-locations))
+  (only (nausicaa parser-tools lexical-tokens))
+  (only (nausicaa parser-tools silex default-error-handler))
+
   )
 
 

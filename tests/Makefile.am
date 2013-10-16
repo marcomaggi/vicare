@@ -287,7 +287,10 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-containers-arrays.sps				\
 	test-nausicaa-containers-stacks.sps				\
 	test-nausicaa-containers-queues.sps				\
-	test-nausicaa-containers-bitvectors.sps
+	test-nausicaa-containers-bitvectors.sps				\
+	\
+	test-nausicaa-parser-tools-lexical-token.sps			\
+	test-nausicaa-parser-tools-source-location.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\

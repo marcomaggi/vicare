@@ -2339,6 +2339,74 @@
 	(f r s))
     => '(1 7 10 40))
 
+;;; --------------------------------------------------------------------
+;;; validated return values, syntax 1
+
+  (check
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define ((fun <fixnum> <fixnum>) (O <pair>))
+	  (values (O car) (O cdr)))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (list (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
+;;; --------------------------------------------------------------------
+;;; validated return values, syntax 2
+
+  (check
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <vector>)
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <vector>)
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <fixnum> <fixnum>)
+	  (values (O car) (O cdr)))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define (fun (O <pair>))
+	  (<- <vector>)
+	  (list (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
   #t)
 
 
@@ -2609,6 +2677,7 @@
   (check
       (tag-unique-identifiers-of 123)
     => '(nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
 	 nausicaa:builtin:<integer>
 	 nausicaa:builtin:<integer-valued>
 	 nausicaa:builtin:<rational-valued>
