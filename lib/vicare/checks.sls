@@ -41,6 +41,7 @@
     ;; more macros
     false-if-exception check-for-true check-for-false
     check-for-procedure-argument-violation
+    check-for-expression-return-value-violation
 
     ;; selecting tests
     check-test-name
@@ -315,14 +316,27 @@
      (check (quote ?name) (if ?form #t #f) => #f))))
 
 (define-syntax check-for-procedure-argument-violation
-  (syntax-rules ()
-    ((_ ?body ?expected-irritants)
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
      (check
 	 (guard (E ((procedure-argument-violation? E)
-		    (condition-irritants E))
+		    (list (condition-who E)
+			  (condition-irritants E)))
 		   (else E))
 	   ?body)
-       => ?expected-irritants))
+       => ?expected-who/irritants))
+    ))
+
+(define-syntax check-for-expression-return-value-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((expression-return-value-violation? E)
+		    (list (condition-who E)
+			  (condition-irritants E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
     ))
 
 

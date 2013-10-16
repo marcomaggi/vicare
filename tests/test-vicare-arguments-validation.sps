@@ -2351,11 +2351,11 @@
     => #t)
 
   (check-for-procedure-argument-violation
-   (let ((obj "ciao"))
-     (with-arguments-validation (who)
-	 (((or false fixnum)	obj))
-       #t))
-   '("ciao"))
+      (let ((obj "ciao"))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  #t))
+    => (list who '("ciao")))
 
   #t)
 

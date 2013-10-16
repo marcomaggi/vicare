@@ -93,6 +93,13 @@
 	  make-procedure-argument-violation
 	  procedure-argument-violation?
 	  procedure-argument-violation
+
+	  &expression-return-value-violation
+	  &expression-return-value-violation-rtd
+	  &expression-return-value-violation-rcd
+	  make-expression-return-value-violation
+	  expression-return-value-violation?
+	  expression-return-value-violation
 	  )
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
@@ -162,7 +169,14 @@
 		  &procedure-argument-violation-rcd
 		  make-procedure-argument-violation
 		  procedure-argument-violation?
-		  procedure-argument-violation)
+		  procedure-argument-violation
+
+		  &expression-return-value-violation
+		  &expression-return-value-violation-rtd
+		  &expression-return-value-violation-rcd
+		  make-expression-return-value-violation
+		  expression-return-value-violation?
+		  expression-return-value-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
@@ -485,6 +499,16 @@
 	      (make-message-condition message)
 	      (make-irritants-condition irritants)
 	      (make-procedure-argument-violation))))
+
+(define-condition-type &expression-return-value-violation &assertion
+  make-expression-return-value-violation expression-return-value-violation?)
+
+(define (expression-return-value-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-expression-return-value-violation))))
 
 
 ;;;; printing condition objects

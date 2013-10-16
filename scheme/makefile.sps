@@ -511,6 +511,8 @@
 						      &source-rcd)))
     (&procedure-argument-violation	($core-rtd . (&procedure-argument-violation-rtd
     						      &procedure-argument-violation-rcd)))
+    (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
+    						      &expression-return-value-violation-rcd)))
     ))
 
 
@@ -1862,8 +1864,10 @@
     (errno-condition?				i v $language)
     (&h_errno					i v $language)
     (h_errno-condition?				i v $language)
-    (&procedure-argument-violation			i v $language)
-    (procedure-argument-violation?			i v $language)
+    (&procedure-argument-violation		i v $language)
+    (procedure-argument-violation?		i v $language)
+    (&expression-return-value-violation		i v $language)
+    (expression-return-value-violation?		i v $language)
     (lookahead-char				i v r ip)
     (lookahead-u8				i v r ip)
     (lookahead-two-u8				i v $language)
@@ -1917,6 +1921,8 @@
     (condition-h_errno				i v $language)
     (make-procedure-argument-violation		i v $language)
     (procedure-argument-violation		i v $language)
+    (make-expression-return-value-violation	i v $language)
+    (expression-return-value-violation		i v $language)
     (latin-1-codec				i v r ip)
     (make-transcoder				i v r ip)
     (native-eol-style				i v r ip)

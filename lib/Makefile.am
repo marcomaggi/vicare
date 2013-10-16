@@ -121,7 +121,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/parser-tools/silex/class.l				\
 	vicare/parser-tools/silex/class-l.sls				\
 	vicare/parser-tools/silex/code-lexer-driver.sls			\
-	vicare/parser-tools/silex/default-error-handler.sls		\
 	vicare/parser-tools/silex/input-system.sls			\
 	vicare/parser-tools/silex/lexer.sls				\
 	vicare/parser-tools/silex/macro.l				\
@@ -311,7 +310,9 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/containers/queues.sls				\
 	nausicaa/containers/bitvectors.sls			\
 	\
-	nausicaa/parser-tools/lexical-tokens.sls
+	nausicaa/parser-tools/source-locations.sls		\
+	nausicaa/parser-tools/lexical-tokens.sls		\
+	nausicaa/parser-tools/silex/default-error-handler.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

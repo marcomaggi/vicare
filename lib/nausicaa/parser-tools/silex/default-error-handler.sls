@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,32 +26,33 @@
 
 
 #!r6rs
-(library (vicare parser-tools silex default-error-handler)
+(library (nausicaa parser-tools silex default-error-handler)
   (export silex-default-error-handler
 	  silex-default-eof-handler)
-  (import (rnrs)
-    (vicare parser-tools lexical-tokens))
+  (import (nausicaa)
+    (nausicaa parser-tools source-locations)
+    (nausicaa parser-tools lexical-tokens))
 
 
-(define-syntax silex-default-error-handler
-  (lambda (stx)
-    (syntax-case stx ()
-      ((?key ?yytext)
-       #`(%silex-default-error-handler ?yytext
-				       #,(datum->syntax #'?key 'yyline)
-				       #,(datum->syntax #'?key 'yycolumn)
-				       #,(datum->syntax #'?key 'yyoffset)
-				       #,(datum->syntax #'?key 'yygetc)
-				       #,(datum->syntax #'?key 'yyungetc)
-				       ))
-      ((?key)
-       #`(%silex-default-error-handler #,(datum->syntax #'?key 'yytext)
-				       #,(datum->syntax #'?key 'yyline)
-				       #,(datum->syntax #'?key 'yycolumn)
-				       #,(datum->syntax #'?key 'yyoffset)
-				       #,(datum->syntax #'?key 'yygetc)
-				       #,(datum->syntax #'?key 'yyungetc)
-				       )))))
+(define-syntax (silex-default-error-handler stx)
+  (syntax-case stx ()
+    ((?key ?yytext)
+     #`(%silex-default-error-handler ?yytext
+				     #,(datum->syntax #'?key 'yyline)
+				     #,(datum->syntax #'?key 'yycolumn)
+				     #,(datum->syntax #'?key 'yyoffset)
+				     #,(datum->syntax #'?key 'yygetc)
+				     #,(datum->syntax #'?key 'yyungetc)
+				     ))
+    ((?key)
+     #`(%silex-default-error-handler #,(datum->syntax #'?key 'yytext)
+				     #,(datum->syntax #'?key 'yyline)
+				     #,(datum->syntax #'?key 'yycolumn)
+				     #,(datum->syntax #'?key 'yyoffset)
+				     #,(datum->syntax #'?key 'yygetc)
+				     #,(datum->syntax #'?key 'yyungetc)
+				     ))
+    ))
 
 (define (%silex-default-error-handler yytext yyline yycolumn yyoffset yygetc yyungetc)
   (let ((text (letrec ((the-count 10)
@@ -73,22 +74,24 @@
 		      (if (eof-object? ch)
 			  (done count chars)
 			(loop (+ 1 count) (cons ch chars)))))))))
-    (make-<lexical-token>
-     '*lexer-error*
-     (make-<source-location> #f yyline yycolumn yyoffset)
-     text (string-length text))))
+    (<lexical-token> ((category: '*lexer-error*)
+		      (location: (<source-location> ((line:   yyline)
+						     (column: yycolumn)
+						     (offset: yyoffset))))
+		      (value:    text)
+		      (length:   (string-length text))))))
 
 
-(define-syntax silex-default-eof-handler
-  (lambda (stx)
-    (syntax-case stx ()
-      ((?key)
-       #`(make-<lexical-token> '*eoi*
-			       (make-<source-location> #f
-						       #,(datum->syntax #'?key 'yyline)
-						       #,(datum->syntax #'?key 'yycolumn)
-						       #,(datum->syntax #'?key 'yyoffset))
-			       (eof-object) 0)))))
+(define-syntax (silex-default-eof-handler stx)
+  (syntax-case stx ()
+    ((?key)
+     #`(<lexical-token> ((category:	'*eoi*)
+			 (location:	(<source-location> ((line:   #,(datum->syntax #'?key 'yyline))
+							    (column: #,(datum->syntax #'?key 'yycolumn))
+							    (offset: #,(datum->syntax #'?key 'yyoffset)))))
+			 (value:	(eof-object))
+			 (length:	0))))
+    ))
 
 
 ;;;; done
