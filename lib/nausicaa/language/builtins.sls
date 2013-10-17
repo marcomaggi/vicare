@@ -1595,16 +1595,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-builtin-label <positive-fixnum>
-  (parent <fixnum>)
-  (predicate (lambda (fx)
-	       ($fxpositive? fx))))
-
-(define-builtin-label <negative-fixnum>
-  (parent <fixnum>)
-  (predicate (lambda (fx)
-	       ($fxnegative? fx))))
-
 (define-builtin-label <nonpositive-fixnum>
   (parent <fixnum>)
   (predicate (lambda (fx)
@@ -1614,6 +1604,16 @@
   (parent <fixnum>)
   (predicate (lambda (fx)
 	       ($fxnonnegative? fx))))
+
+(define-builtin-label <positive-fixnum>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (fx)
+	       ($fxpositive? fx))))
+
+(define-builtin-label <negative-fixnum>
+  (parent <nonpositive-fixnum>)
+  (predicate (lambda (fx)
+	       ($fxnegative? fx))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1909,7 +1909,13 @@
 
    ((number? obj)
     ;;Order does matter here!!!
-    (cond ((fixnum?		obj)	(tag-unique-identifiers <fixnum>))
+    (cond ((fixnum?		obj)
+	   ;;We  do  not  test   for  either  "<nonnegative-fixnum>"  or
+	   ;;"<nonpositive-fixnum>".
+	   (cond (($fxpositive? obj)	(tag-unique-identifiers <positive-fixnum>))
+		 (($fxnegative? obj)	(tag-unique-identifiers <negative-fixnum>))
+		 (else			(tag-unique-identifiers <fixnum>))))
+	  ((bignum?		obj)	(tag-unique-identifiers <exact-integer>))
 	  ((integer?		obj)	(tag-unique-identifiers <integer>))
 	  ((rational?		obj)	(tag-unique-identifiers <rational>))
 	  ((integer-valued?	obj)	(tag-unique-identifiers <integer-valued>))
