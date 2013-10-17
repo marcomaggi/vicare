@@ -6,16 +6,17 @@
 @cindex Library @library{nausicaa parser-tools lexical-tokens}
 
 
-It is an accepted pattern to split the interpretation of a stream of
-text into a lexing step and a parsing step.  In such scenario a lexer
+It is an accepted design pattern to split the interpretation of a stream
+of text into a lexing step and a parsing step.  In such scenario a lexer
 function fragments the input into @dfn{tokens} each of which is assigned
 a @dfn{category}, the parser associates a semantic meaning to a sequence
 of token categories.
 
 The library @library{nausicaa parser-tools lexical-tokens} defines the
-classes @class{lexical-token} and @class{source-location} which are
-meant to be used by all the lexers and parsers distributed with
-@value{PACKAGE}.
+class @class{lexical-token} which is meant to be used by all the lexers
+and parsers distributed with @value{PACKAGE}.  The library must be used
+along with @library{nausicaa parser-tools source-locations}, which
+defines the class @class{source-location}.
 
 @menu
 * lexical-tokens token::          Lexical token records.
