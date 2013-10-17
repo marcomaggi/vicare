@@ -3624,6 +3624,4 @@ be instantiated as follows:
 @end example
 @end defmethod
 
-
-
 @c end of file
