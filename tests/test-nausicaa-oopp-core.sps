@@ -2676,6 +2676,117 @@
 	(f r s))
     => '(1 7 10 40))
 
+;;; --------------------------------------------------------------------
+;;; validated return values, syntax 1
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((O <pair>))
+	    (<- <vector>)
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((O <pair>))
+	    (<- <vector>)
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((O <pair>))
+	    (<- <fixnum> <fixnum>)
+	    (values (O car) (O cdr)))))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((O <pair>))
+	    (<- <vector>)
+	    (list (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
+;;; --------------------------------------------------------------------
+;;; validated return values, syntax 2
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <fixnum> <fixnum>) (O <pair>))
+	    (values (O car) (O cdr)))))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check	;no arguments
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>))
+	    (vector 1 2))))
+	(fun))
+    => '#(1 2))
+
+  (check	;rest argument
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) . rest)
+	    (vector (car rest) (cadr rest)))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check	;tagged argument
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) . #(rest <list>))
+	    (vector (car rest) (cadr rest)))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (list (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
   #t)
 
 
