@@ -3573,6 +3573,9 @@ follows:
   (mixins (<hashable-and-properties-clauses>
            (<class>     <mine>))))
 @end example
+
+This mixin appends a single concrete field to the enclosing class; such
+field must be initialised to @false{}.
 @end deftp
 
 @c ------------------------------------------------------------
