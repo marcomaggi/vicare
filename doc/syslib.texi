@@ -88,6 +88,20 @@ Top level bindings in compiled Scheme code are represented by gensyms;
 the value of a top level binding is stored in the @code{value} field of
 a gensym memory block.
 @end itemize
+
+Given the return value of @code{(gensym)}: we can use this field for any
+purpose we want.  Notice that this field is initialised to the unbound
+object, so we can test the value of a newly created symbols with:
+
+@example
+($unbound-object? ($symbol-value? @var{sym}))
+@end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $unbound-object? @var{obj}
+Return @true{} if @var{obj} is the special unbound machine word value,
+otherwise return @false{}.
 @end deffn
 
 
@@ -100,12 +114,6 @@ Accessor and mutator for the field @code{proc}.
 @deffn {Unsafe Operation} $set-symbol-value/proc! @var{sym} @var{val}
 Set both the fields @code{value} and @code{proc} of @var{sym} to
 @var{val}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $unbound-object? @var{sym}
-Return true if the @func{$symbol-value} field of @var{sym} is set to the
-special ``unbound'' machine word value.
 @end deffn
 
 
