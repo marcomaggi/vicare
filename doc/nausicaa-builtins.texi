@@ -1296,28 +1296,28 @@ Access the keys and values.  Calling this method is like applying
 
 
 @defmethod @aclass{hashtable} delete! @var{key}
-Equivalent to applying @func{hashable-delete!} to the instance.
+Equivalent to applying @func{hashtable-delete!} to the instance.
 @end defmethod
 
 
 @deftypemethod @aclass{hashtable} @aclass{boolean} contains? @var{key}
-Equivalent to applying @func{hashable-contains?} to the instance.
+Equivalent to applying @func{hashtable-contains?} to the instance.
 @end deftypemethod
 
 
 @defmethod @aclass{hashtable} clear!
-Equivalent to applying @func{hashable-clear!} to the instance.
+Equivalent to applying @func{hashtable-clear!} to the instance.
 @end defmethod
 
 
 @defmethod @aclass{hashtable} update! @var{key} @var{proc} @var{default}
-Equivalent to applying @func{hashable-update!} to the instance.
+Equivalent to applying @func{hashtable-update!} to the instance.
 @end defmethod
 
 
 @defmethod @aclass{hashtable} copy
 @defmethodx @aclass{hashtable} copy @var{mutable?}
-Equivalent to applying @func{hashable-copy} to the instance.
+Equivalent to applying @func{hashtable-copy} to the instance.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -3578,6 +3578,31 @@ This mixin appends a single concrete field to the enclosing class; such
 field must be initialised to @false{}.
 @end deftp
 
+
+@deftypecv {Mutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} %uid
+Contains @false{} or a gensym.  This field should @strong{never} be
+accessed directly.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} uid
+Contains gensym.  The symbol is unique for the instance object.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{exact-integer} hash
+An exact integer to be used as hashtable key for the instance.
+Hashtables having a @class{hashable-and-properties-clauses} as key can
+be instantiated as follows:
+
+@example
+(make-hashtable
+  (lambda ((V <hashable-and-properties-clauses>))
+    (V hash))
+  eq?)
+@end example
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading Object properties
@@ -3607,24 +3632,6 @@ Remove the property @var{key} from the property list of the instance; if
 Return a new association list representing the property list of the
 instance.  The order of the entries is the same as the property creation
 order.
-@end defmethod
-
-@c ------------------------------------------------------------
-
-@subsubheading Hash function
-
-
-@defmethod @aclass{hashable-and-properties-clauses} hash
-Return an exact integer to be used as hashtable key for the instance.
-Hashtables having a @class{hashable-and-properties-clauses} as key can
-be instantiated as follows:
-
-@example
-(make-hashtable
-  (lambda ((V <hashable-and-properties-clauses>))
-    (V hash))
-  eq?)
-@end example
 @end defmethod
 
 @c end of file
