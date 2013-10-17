@@ -1545,6 +1545,125 @@
     ))
 
 
+;;;; convenience syntaxes with tags: LAMBDA
+
+(define-syntax (lambda/tags stx)
+  (syntax-case stx ()
+
+    ;;Thunk definition.
+    ;;
+    ((_ () ?body0 ?body ...)
+     #'(lambda () (begin/tags ?body0 ?body ...)))
+
+    ;;Function with tagged return values.
+    ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+     (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
+	  (identifier=symbol? #'?who '_))
+     #'(lambda/tags ?formals (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...)))
+
+    ;;Function with untagged args argument.
+    ;;
+    ((_ ?formals ?body0 ?body ...)
+     (identifier? #'?formals)
+     #'(lambda ?formals (begin/tags ?body0 ?body ...)))
+
+    ;;Function with tagged args argument.
+    ;;
+    ((_ #(?args-id ?tag-id) ?body0 ?body ...)
+     (and (identifier? #'?args-id)
+	  (identifier? #'?tag-id))
+     (with-syntax ((((FORMAL) VALIDATIONS (SYNTAX-BINDING ...))
+		    (help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
+       #`(lambda FORMAL
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       (begin/tags ?body0 ?body ...))))))
+
+    ;;Mandatory arguments and untagged rest argument.
+    ;;
+    ((_ (?var0 ?var ... . ?args) ?body0 ?body ...)
+     (identifier? #'?args)
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+		    (help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
+       #`(lambda FORMALS
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       (begin/tags ?body0 ?body ...))))))
+
+    ;;Mandatory arguments and tagged rest argument.
+    ;;
+    ((_ (?var0 ?var ... . #(?args-id ?tag-id)) ?body0 ?body ...)
+     (and (identifier? #'?args)
+	  (identifier? #'?tag))
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+		    (help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
+       #`(lambda FORMALS
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       (begin/tags ?body0 ?body ...))))))
+
+    ;;Mandatory arguments and no rest argument.
+    ;;
+    ((_ (?var0 ?var ...) ?body0 ?body ...)
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+		    (help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
+       #`(lambda FORMALS
+	   (define who 'lambda/tags)
+	   (with-tagged-arguments-validation (who)
+	       VALIDATIONS
+	     (let-syntax (SYNTAX-BINDING ...)
+	       (begin/tags ?body0 ?body ...))))))
+
+    (_
+     (synner "syntax error in LAMBDA/TAGS"))))
+
+(define-syntax (case-lambda/tags stx)
+  (syntax-case stx ()
+    ((_)
+     #'(case-lambda))
+
+    ((_ ?clause ...)
+     (let loop ((in-clauses #'(?clause ...))
+		(ou-clauses '()))
+       (syntax-case in-clauses ()
+	 (()
+	  (cons #'case-lambda (reverse ou-clauses)))
+
+	 ;;Function with tagged return values.
+	 (((((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...) . ?other-clauses)
+	  (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
+	       (identifier=symbol? #'?who '_))
+	  (loop #'((?formals
+		    (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...))
+		   . ?other-clauses)
+		ou-clauses))
+
+	 (((?formals ?body0 ?body ...) . ?other-clauses)
+	  (begin
+	    (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+			   (help.parse-formals-bindings #'?formals #'<top> synner)))
+	      (loop #'?other-clauses
+		    (cons #'(FORMALS
+			     (define who 'case-lambda/tags)
+			     (with-tagged-arguments-validation (who)
+				 VALIDATIONS
+			       (let-syntax (SYNTAX-BINDING ...)
+				 (begin/tags ?body0 ?body ...))))
+			  ou-clauses)))))
+
+	 ((?clause . ?other-clauses)
+	  (synner "invalid clause syntax" #'?clause)))))
+
+    (_
+     (synner "invalid syntax in case-lambda definition"))))
+
+
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
 
 (define-syntax (define/tags stx)
@@ -1628,105 +1747,6 @@
        (syntax-violation who "invalid binding definition syntax" stx #'?var0))))
 
   (%main stx))
-
-(define-syntax (lambda/tags stx)
-  (syntax-case stx ()
-
-    ;;Thunk definition.
-    ;;
-    ((_ () ?body0 ?body ...)
-     #'(lambda () (begin/tags ?body0 ?body ...)))
-
-    ;;Function with untagged args argument.
-    ;;
-    ((_ ?formals ?body0 ?body ...)
-     (identifier? #'?formals)
-     #'(lambda ?formals (begin/tags ?body0 ?body ...)))
-
-    ;;Function with tagged args argument.
-    ;;
-    ((_ #(?args-id ?tag-id) ?body0 ?body ...)
-     (and (identifier? #'?args-id)
-	  (identifier? #'?tag-id))
-     (with-syntax ((((FORMAL) VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
-       #`(lambda FORMAL
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
-
-    ;;Mandatory arguments and untagged rest argument.
-    ;;
-    ((_ (?var0 ?var ... . ?args) ?body0 ?body ...)
-     (identifier? #'?args)
-     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
-       #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
-
-    ;;Mandatory arguments and tagged rest argument.
-    ;;
-    ((_ (?var0 ?var ... . #(?args-id ?tag-id)) ?body0 ?body ...)
-     (and (identifier? #'?args)
-	  (identifier? #'?tag))
-     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
-       #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
-
-    ;;Mandatory arguments and no rest argument.
-    ;;
-    ((_ (?var0 ?var ...) ?body0 ?body ...)
-     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
-       #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
-
-    (_
-     (synner "syntax error in LAMBDA/TAGS"))))
-
-(define-syntax (case-lambda/tags stx)
-  (syntax-case stx ()
-    ((_)
-     #'(case-lambda))
-
-    ((_ ?clause ...)
-     (let loop ((in-clauses #'(?clause ...))
-		(ou-clauses '()))
-       (syntax-case in-clauses ()
-	 (()
-	  (cons #'case-lambda (reverse ou-clauses)))
-	 (((?formals ?body0 ?body ...) . ?other-clauses)
-	  (begin
-	    (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-			   (help.parse-formals-bindings #'?formals #'<top> synner)))
-	      (loop #'?other-clauses
-		    (cons #'(FORMALS
-			     (define who 'case-lambda/tags)
-			     (with-tagged-arguments-validation (who)
-				 VALIDATIONS
-			       (let-syntax (SYNTAX-BINDING ...)
-				 (begin/tags ?body0 ?body ...))))
-			  ou-clauses)))))
-	 ((?clause . ?other-clauses)
-	  (synner "invalid clause syntax" #'?clause)))))
-
-    (_
-     (synner "invalid syntax in case-lambda definition"))))
 
 
 ;;;; convenience syntaxes with tags: LET and similar
