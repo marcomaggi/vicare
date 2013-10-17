@@ -269,6 +269,10 @@ Return a string representation of @var{O}.  It makes use of the method
 The following code defines a hashable source location object:
 
 @example
+#!r6rs
+(import (nausicaa)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
 (module (<hashable-source-location>)
   (import (prefix (vicare language-extensions makers) mk.))
 
