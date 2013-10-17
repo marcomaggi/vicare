@@ -28,6 +28,7 @@
 #!r6rs
 (import (nausicaa)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
