@@ -64,7 +64,6 @@
 
 (define-class <source-location>
   (nongenerative nausicaa:parser-tools:lexical-tokens:<source-location>)
-
   (fields (immutable (specified?	<boolean>))
 	  (immutable (line		<positive-fixnum>))
 	  (immutable (column		<positive-fixnum>))
@@ -80,16 +79,14 @@
 		  (line <positive-fixnum>) (column <positive-fixnum>)
 		  (offset <nonnegative-fixnum>))
 		(<- <source-location>)
-		(if specified?
-		    ((make-top) specified? line column offset)
-		  (unspecified-source-location)))))
+		((make-top) specified? line column offset))))
 
   (maker (lambda (stx)
 	   (syntax-case stx ()
 	     ((_ (?unspecified))
 	      (and (identifier? #'?unspecified)
 		   (identifier=symbol? #'?unspecified 'unspecified))
-	      #'(make-<source-location> #t 1 1 0))
+	      #'(unspecified-source-location))
 	     ((_ (?expr ...))
 	      #'(%make-source-location ?expr ...)))))
 
@@ -160,7 +157,7 @@
 
 (define-generic source-location-update (location delta))
 
-(define-method ((source-location-update <source-location>) (L <source-location>) (offset-delta <fixnum>))
+(define-method ((source-location-update <source-location>) (L <source-location>) (offset-delta <nonnegative-fixnum>))
   (if (L $specified?)
       (<source-location> ((line:   (L $line))
 			  (column: (+ offset-delta (L $column)))
@@ -223,7 +220,7 @@
 
 
 (define unspecified-source-location
-  (let ((L (<source-location> (unspecified))))
+  (let ((L (make-<source-location> #f 1 1 0)))
     (lambda () L)))
 
 (define unspecified-source-location-string
