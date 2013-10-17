@@ -2932,6 +2932,18 @@ and raise a @condition{procedure-argument-violation} exception in case
 of failure.
 
 @item
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+
+@item
 If the auxiliary @func{<-} clause is present: the @meta{body} forms will
 be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
@@ -2991,6 +3003,48 @@ Function with only the rest argument:
 
 (g 1 2 3)               @result{} 3
 @end example
+
+@item
+Functions with a single validated return value:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum>) val)
+    val))
+
+(define g
+  (lambda/tags (val)
+    (<- <fixnum>)
+    val))
+
+(f 1)                   @result{} 1
+(g 1)                   @result{} 1
+@end example
+
+@item
+Functions with multiple validated return values:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum> <string>) a b)
+    (values a b)))
+
+(define g
+  (lambda/tags (a b)
+    (<- <fixnum> <string>)
+    (values a b)))
+
+(f 1 "2")               @result{} 1, "2"
+(g 1 "2")               @result{} 1, "2"
+@end example
 @end itemize
 @end deffn
 
@@ -3017,6 +3071,18 @@ arguments validation}, is enabled:
 The function will validate its tagged arguments using the tag predicates
 and raise a @condition{procedure-argument-violation} exception in case
 of failure.
+
+@item
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
 
 @item
 If the auxiliary @func{<-} clause is present: the @meta{body} forms will
