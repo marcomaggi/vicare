@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (nausicaa)
-  (prefix (nausicaa parser-tools lexical-tokens) lt.)
+  (prefix (nausicaa parser-tools lexical-tokens)   lt.)
   (prefix (nausicaa parser-tools source-locations) sl.)
   (vicare checks))
 
@@ -35,89 +35,88 @@
 (check-display "*** testing Nausicaa parser tools: lexical tokens\n")
 
 
-(parametrise ((check-test-name	'makers))
+(parametrise ((check-test-name	'lexical-tokens))
+
+  (define (make-it C)
+    (lt.<lexical-token> ((lt.category: C)
+			 (lt.value:    'value)
+			 (lt.length:   5))))
+
+;;; --------------------------------------------------------------------
 
   (check
       (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'category)
-							 (lt.location: 'location)
 							 (lt.value:    'value)
 							 (lt.length:   5)))))
-	(list (T category) (T location) (T value) (T length)))
-    => '(category location value 5))
+	(list (T category) (T location unspecified?) (T value) (T length)))
+    => '(category #t value 5))
+
+  (check
+      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
+	(list (T category) (T location unspecified?) (T value) (T length)))
+    => '(woppa #t #f 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(list (T category) (T location) (T value) (T length)))
-    => '(woppa #f #f 0))
+      (let (((T lt.<lexical-token>) (make-it 'category)))
+	(list (T special?) (T end-of-input?) (T lexer-error?)))
+    => '(#f #f #f))
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token>
-				     ((lt.category:	'category)
-				      (lt.location:	'location)
-				      (lt.value:	'value)
-				      (lt.length:	5)))))
-	(list (T category) (T location) (T value) (T length)))
-    => '(category location value 5))
+      (let (((T lt.<lexical-token>) (make-it '*eoi*)))
+	(list (T special?) (T end-of-input?) (T lexer-error?)))
+    => '(#t #t #f))
+
+  (check
+      (let (((T lt.<lexical-token>) (make-it '*lexer-error*)))
+	(list (T special?) (T end-of-input?) (T lexer-error?)))
+    => '(#t #f #t))
 
   #t)
 
 
-(parametrise ((check-test-name	'predicates))
+(parametrise ((check-test-name	'end-of-input))
 
-  (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: '*eoi*)))))
-	(T end-of-input?))
-    => #t)
-
-  (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(T end-of-input?))
-    => #f)
+  (define (make-it)
+    (lt.<end-of-input> ()))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: '*lexer-error*)))))
-	(T lexer-error?))
-    => #t)
-
-  (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(T lexer-error?))
-    => #f)
+      (let (((T lt.<end-of-input>) (lt.<end-of-input> ())))
+	(list (T category) (T location unspecified?) (T value) (T length)))
+    => `(*eoi* #t ,(eof-object) 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: '*eoi*)))))
-	(T special?))
-    => #t)
-
-  (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: '*lexer-error*)))))
-	(T special?))
-    => #t)
-
-  (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(T special?))
-    => #f)
+      (let (((T lt.<end-of-input>) (make-it)))
+	(list (T special?) (T end-of-input?) (T lexer-error?)))
+    => '(#t #t #f))
 
   #t)
 
 
-(parametrise ((check-test-name	'error))
+(parametrise ((check-test-name	'lexer-error))
+
+  (define (make-it)
+    (lt.<lexer-error> ((lt.error-message: "ciao"))))
+
+;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexer-error>) (lt.<lexer-error> ((lt.location: 123)
-						     (lt.value: "ciao")
-						     (lt.length: 4)
-						     (error-message: "darn!")))))
-	(list (T category) (T location) (T value) (T length) (T message)
-	      (is-a? T lt.<lexer-error>)))
-    => '(*lexer-error* 123 "ciao" 4 "darn!" #t))
+      (let (((T lt.<lexer-error>) (lt.<lexer-error> ((lt.error-message: "darn!")))))
+	(list (T category) (T location unspecified?) (T value) (T length)
+	      (T message)))
+    => `(*lexer-error* #t #f 0 "darn!"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((T lt.<lexer-error>) (make-it)))
+	(list (T special?) (T lexer-error?) (T end-of-input?)))
+    => '(#t #t #f))
 
   #t)
 
