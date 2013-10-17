@@ -54,6 +54,8 @@
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
 
+    <hashable-and-properties-clauses>
+
     ;; multimethods
     define-generic		define-generic*
     tag-unique-identifiers-of	object->string
@@ -70,6 +72,10 @@
     (nausicaa language oopp)
     (nausicaa language multimethods)
     (vicare unsafe operations)
+    (only (vicare system $symbols)
+	  $symbol-value
+	  $set-symbol-value!
+	  $unbound-object?)
     (vicare containers bytevectors))
 
 
@@ -2028,6 +2034,43 @@
   (add-method get-multi-all	(<textual-input-port>)	get-string-all)
 
   #| end of module |# )
+
+
+;;;; common mixins
+
+(define-mixin <hashable-and-properties-clauses>
+  (fields (mutable (%uid	<symbol>)))
+
+  (virtual-fields
+   (immutable (uid <symbol>)
+	      (lambda/tags ((O <class>))
+		(or (O $%uid)
+		    (receive-and-return (sym)
+			(gensym)
+		      (set!/tags (O $%uid) sym)))))
+   (immutable (hash <exact-integer>)
+	      (lambda/tags ((O <class>))
+		;;We memoize the hash value  in the "value" field of the
+		;;symbol's data structure.
+		(if ($unbound-object? ($symbol-value (O uid)))
+		    (receive-and-return (H)
+			(symbol-hash (O $%uid))
+		      ($set-symbol-value! (O $%uid) H))
+		  ($symbol-value (O $%uid))))))
+
+  (method (putprop (O <class>) (key <symbol>) value)
+    (putprop (O uid) key value))
+
+  (method (getprop (O <class>) (key <symbol>))
+    (getprop (O uid) key))
+
+  (method (remprop (O <class>) (key <symbol>))
+    (remprop (O uid) key))
+
+  (method (property-list (O <class>))
+    (property-list (O uid)))
+
+  #| end of mixin |# )
 
 
 ;;;; done

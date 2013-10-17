@@ -1558,6 +1558,8 @@
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
 
+    <hashable-and-properties-clauses>
+
     ;; multimethods
     define-generic		define-generic*
     tag-unique-identifiers-of	object->string

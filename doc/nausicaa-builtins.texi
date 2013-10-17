@@ -37,6 +37,7 @@ language multimethods}.
 * builtins conditions::         Condition labels.
 * builtins procedures::         Procedure labels.
 * builtins multimethods::       Predefined generic functions.
+* builtins mixins::             Predefined mixins.
 @end menu
 
 @c page
@@ -3546,5 +3547,83 @@ Write @var{storage} to the port starting at offset @var{start}.
 Write @var{count} units of data from @var{storage} to the port, starting
 at offset @var{start}.
 @end deffn
+
+@c page
+@node builtins mixins
+@section Predefined mixins
+
+
+@menu
+* builtins mixins hashable::    Hashable and properties clauses.
+@end menu
+
+@c page
+@node builtins mixins hashable
+@subsection Hashable and properties clauses
+
+
+@deftp {Mixin} @aclass{hashable-and-properties-clauses}
+Mixin type implementing hash function and properties list for classes;
+this mixin cannot be used by labels.  When importing this mixin we must
+specialise the identifier @class{class} to the importing class type, as
+follows:
+
+@example
+(define-class <mine>
+  (mixins (<hashable-and-properties-clauses>
+           (<class>     <mine>))))
+@end example
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defmethod @aclass{hashable-and-properties-clauses} putprop @var{key} @var{value}
+Add a new property @var{key} to the property list of the instance;
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} getprop @var{key}
+Return the value of the property @var{key} in the property list of the
+instance; if @var{key} is not set: return @false{}.  @var{key} must be a
+symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} remprop @var{key}
+Remove the property @var{key} from the property list of the instance; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} property-list
+Return a new association list representing the property list of the
+instance.  The order of the entries is the same as the property creation
+order.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Hash function
+
+
+@defmethod @aclass{hashable-and-properties-clauses} hash
+Return an exact integer to be used as hashtable key for the instance.
+Hashtables having a @class{hashable-and-properties-clauses} as key can
+be instantiated as follows:
+
+@example
+(make-hashtable
+  (lambda ((V <hashable-and-properties-clauses>))
+    (V hash))
+  eq?)
+@end example
+@end defmethod
+
+
 
 @c end of file
