@@ -2,11 +2,11 @@
 @section Representing source locations
 
 
-The library @library{nausicaa parser-tools source-locations}, built on
-top of @library{nausicaa}, defines @class{source-location} to represent
-informations about the position of a token in a source of characters;
-they should be produced by the lexer and either discarded or consumed by
-the parser's error handler.
+The library @library{nausicaa parser-tools source-locations} defines the
+class @class{source-location} to represent informations about the
+position of a token in a source of characters; they should be produced
+by the lexer and either discarded or consumed by the parser's error
+handler.
 
 It is cleaner to implement the parser in such a way that location
 objects are used only by client--supplied error handlers, not by the
@@ -20,6 +20,7 @@ to track the source location.
 * source-locations update::       Updating the location.
 * source-locations unspecified::  Unspecified source locations.
 * source-locations misc::         Miscellaneous functions.
+* source-locations examples::     Some code examples.
 @end menu
 
 @c page
@@ -47,10 +48,10 @@ the given field values.
 @defopx {Auxiliary Syntax} @aclass{source-location} column: @meta{column}
 @defopx {Auxiliary Syntax} @aclass{source-location} offset: @meta{offset}
 Build and return a new instance of @class{source-location} using the
-common constructor and the given arguments.  When no @meta{clause}
-arguments are used: the returned object represents the conventional
-starting position, with line number @math{1}, column number @math{1} and
-offset @math{0}.
+common constructor and the given arguments.  When a @meta{clause}
+argument is not used, its default value is such that the returned object
+represents the conventional starting position, with line number
+@math{1}, column number @math{1} and offset @math{0}.
 
 When the @code{unspecified} argument is used: it must be an identifier
 whose symbol name is @code{unspecified}; the return value is an object
@@ -136,47 +137,52 @@ field greater than, or equal to, the one of @var{L}; otherwise return
 @subsection Updating the location
 
 
-@deftypemethod @aclass{source-location} @aclass{source-location} update (delta @aclass{fixnum})
-@deftypemethodx @aclass{source-location} @aclass{source-location} update (delta @aclass{char})
-If @var{location} is @false{}, the return value is @false{}.  If
-@var{location} is a @class{source-location} record, build and return a
-new @class{source-location} record representing the position of the next
-char to be parsed in the input stream, starting from @var{location} and
-updated with @var{char/token-length}.
+@deftypemethod @aclass{source-location} @aclass{source-location} update (@var{fx} @aclass{nonnegative-fixnum})
+@deftypemethodx @aclass{source-location} @aclass{source-location} update (@var{ch} @aclass{char})
+If the instance object is unspecified: return a @class{source-location}
+object in unspecified state; otherwise build and return a new
+@class{source-location} object representing a location past the one of
+the instance according to the given arguments.
+
+If the argument is @var{fx}: it is interpreted as token length; the
+column and offset counters are incremented by that amount.
+
+If the argument if @var{ch}, the action depends on its specific value;
+if it is:
+
+@table @samp
+@item #\return
+The action depends upon the value of the parameter
+@samp{source-location-honor-return}:
 
 @itemize
 @item
-If @var{char/token-length} is an exact integer, it is interpreted as
-token length.  The column and offset counters from @var{location} are
-incremented by that amount.
+If it is true: the column counter is set to @math{1} and the offset
+counter is incremented by @math{1}.
 
 @item
-If @var{char/token-length} is the @samp{#\return} character the action
-depends upon the value of the @samp{source-location-honor-return}
-parameter: if it is true, the column counter is set to @math{1} and the
-offset counter is incremented by @math{1}; if it is @false{}, the column
-and offset counters are incremented by @math{1}.
+If it is @false{}: the column and offset counters are incremented by
+@math{1}.
+@end itemize
 
-@item
-If @var{char/token-length} is the @samp{#\newline} character: The line
-counter is incremented by @math{1}, the column counter is set to
-@math{1} and the offset counter is incremented by @math{1}.
+@item #\newline
+The line counter is incremented by @math{1}, the column counter is set
+to @math{1} and the offset counter is incremented by @math{1}.
 
-@item
-If @var{char/token-length} is the @samp{#\tab} character: The offset
-counter is incremented by @math{1} and the column counter is set to the
-result of:
+@item #\tab
+The offset counter is incremented by @math{1} and the column counter is
+set to the result of:
 
 @example
-((source-location-tab-function)
-    (<source-location>-column @var{location}))
+(let (((L <source-location>) ---))
+  ((source-location-tab-function) (L column)))
 @end example
 
 @noindent
-that is, the current procedure in the
-@samp{source-location-tab-function} parameter is applied to the column
-counter to produce the next column counter's value.
-@end itemize
+that is, the current procedure in the parameter
+@func{source-location-tab-function} is applied to the column counter to
+produce the next column counter's value.
+@end table
 @end deftypemethod
 
 
@@ -210,8 +216,8 @@ order.  The default value is null.
 
 
 @deffn Parameter source-location-honor-return
-Hold a boolean value which causes @func{source-location-update} to honor
-a @samp{#\return} character or not.
+Hold a boolean value which causes the @func{update} method to honor a
+@samp{#\return} character or not.
 @end deffn
 
 @c page
@@ -254,5 +260,51 @@ the one referenced by the parameter
 Return a string representation of @var{O}.  It makes use of the method
 @func{string} of @class{source-location}.
 @end deffn
+
+@c page
+@node source-locations examples
+@subsection Some code examples
+
+
+The following code defines a hashable source location object:
+
+@example
+(module (<hashable-source-location>)
+  (import (prefix (vicare language-extensions makers) mk.))
+
+  (define-class <hashable-source-location>
+    (parent sl.<source-location>)
+    (mixins (<hashable-and-properties-clauses>
+             (<class>         <hashable-source-location>)))
+
+    (protocol
+     (lambda (make-source-location)
+       (lambda (specified? line column offset)
+         ((make-source-location specified? line column offset)
+          #f ;;field from <hashable-and-properties-clauses>
+          ))))
+
+    (maker
+     (lambda (stx)
+       (syntax-case stx ()
+         ((_ (?unspecified))
+          (and (identifier? #'?unspecified)
+               (identifier=symbol? #'?unspecified 'unspecified))
+          #'(make-<hashable-source-location> #f 1 1 0))
+         ((_ (?expr ...))
+          #'(%make-hashable-source-location ?expr ...)))))
+
+    #| end of class |# )
+
+  (mk.define-maker %make-hashable-source-location
+      (make-<hashable-source-location> #t)
+    ;;These default values represent the start location
+    ;;of a source of characters.
+    ((sl.line:        1)
+     (sl.column:      1)
+     (sl.offset:      0)))
+
+  #| end of module |# )
+@end example
 
 @c end of file

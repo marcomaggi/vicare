@@ -27,142 +27,222 @@
 
 #!r6rs
 (import (nausicaa)
-  (prefix (nausicaa parser-tools lexical-tokens) lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Nausicaa parser tools: source location objects\n")
 
 
-(parametrise ((check-test-name 'maker))
+(parametrise ((check-test-name 'core))
 
-  (check
-      (let (((S lt.<source-location>) (lt.<source-location> ((lt.input: "here")
-							     (lt.line: 10)
-							     (lt.column: 20)
-							     (lt.offset: 30)))))
-	(list (S input) (S line) (S column) (S offset)))
-    => '("here" 10 20 30))
+  (check	;normal building
+      (let (((S sl.<source-location>) (sl.<source-location> ((sl.line: 10)
+							     (sl.column: 20)
+							     (sl.offset: 30)))))
+	(list (S specified?) (S unspecified?)
+	      (S start?)
+	      (S line) (S column) (S offset)))
+    => '(#t #f #f 10 20 30))
+
+  (check	;default building creates "start" location
+      (let (((S sl.<source-location>) (sl.<source-location> ())))
+	(list (S specified?) (S unspecified?)
+	      (S start?)
+	      (S line) (S column) (S offset)))
+    => '(#t #f #t 1 1 0))
 
   #t)
 
 
-(parametrise ((check-test-name 'predicates))
+(parametrise ((check-test-name		'hashable))
 
-  (check
-      (is-a? (lt.<start-source-location> (lt.error-message: "this")) lt.<source-location>)
-    => #t)
+  (module (<hashable-source-location>)
+    (import (prefix (vicare language-extensions makers) mk.))
 
-  (check
-      (is-a? #f lt.<source-location>)
-    => #f)
+    (define-class <hashable-source-location>
+      (parent sl.<source-location>)
+      (mixins (<hashable-and-properties-clauses>
+	       (<class>		<hashable-source-location>)))
 
-  (check
-      (is-a? 123 lt.<source-location>)
-    => #f)
+      (protocol
+       (lambda (make-source-location)
+	 (lambda (specified? line column offset)
+	   ((make-source-location specified? line column offset)
+	    #f ;;field from <hashable-and-properties-clauses>
+	    ))))
 
-;;; --------------------------------------------------------------------
+      (maker
+       (lambda (stx)
+	 (syntax-case stx ()
+	   ((_ (?unspecified))
+	    (and (identifier? #'?unspecified)
+		 (identifier=symbol? #'?unspecified 'unspecified))
+	    #'(make-<hashable-source-location> #f 1 1 0))
+	   ((_ (?expr ...))
+	    #'(%make-hashable-source-location ?expr ...)))))
 
-  (check
-      (lt.<source-location>? (lt.<start-source-location> (lt.error-message: "this")))
-    => #t)
+      #| end of class |# )
 
-  (check
-      (lt.<source-location>? #f)
-    => #f)
+    (mk.define-maker %make-hashable-source-location
+	(make-<hashable-source-location> #t)
+      ;;These default values represent the start location of a source of
+      ;;characters.
+      ((sl.line:	1)
+       (sl.column:	1)
+       (sl.offset:	0)))
 
-  (check
-      (lt.<source-location>? 123)
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (lt.<source-location>?/or-false (lt.<start-source-location> (lt.error-message: "this")))
-    => #t)
-
-  (check
-      (lt.<source-location>?/or-false #f)
-    => #t)
-
-  (check
-      (lt.<source-location>?/or-false 123)
-    => #f)
+    #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
+  (check	;normal building
+      (let (((S <hashable-source-location>) (<hashable-source-location> ((sl.line: 10)
+									 (sl.column: 20)
+									 (sl.offset: 30)))))
+	(list (S specified?) (S unspecified?)
+	      (S start?)
+	      (S line) (S column) (S offset)))
+    => '(#t #f #f 10 20 30))
+
+  (check	;default building creates "start" location
+      (let (((S <hashable-source-location>) (<hashable-source-location> ())))
+	(list (S specified?) (S unspecified?)
+	      (S start?)
+	      (S line) (S column) (S offset)))
+    => '(#t #f #t 1 1 0))
+
+;;; --------------------------------------------------------------------
+;;; hash
+
+  (check-for-true
+   (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+     (integer? (L hash))))
+
   (check
-      (lt.<source-location>?/start (lt.<start-source-location> ("this" 1 2 3)))
+      (let ((A (<hashable-source-location> ()))
+	    (B (<hashable-source-location> ()))
+	    (T (make-hashtable (lambda ((L <hashable-source-location>))
+				 (L hash))
+			       eq?)))
+	(hashtable-set! T A 1)
+	(hashtable-set! T B 2)
+	(list (hashtable-ref T A #f)
+	      (hashtable-ref T B #f)))
+    => '(1 2))
+
+;;; --------------------------------------------------------------------
+;;; properties
+
+  (check
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L property-list))
+    => '())
+
+  (check
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L putprop 'ciao 'salut)
+	(L getprop 'ciao))
+    => 'salut)
+
+  (check
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L getprop 'ciao))
     => #f)
 
   (check
-      (lt.<source-location>?/start (lt.<start-source-location> ("this")))
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L putprop 'ciao 'salut)
+	(L remprop 'ciao)
+	(L getprop 'ciao))
+    => #f)
+
+  (check
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L putprop 'ciao 'salut)
+	(L putprop 'hello 'ohayo)
+	(list (L getprop 'ciao)
+	      (L getprop 'hello)))
+    => '(salut ohayo))
+
+  (check
+      (let (((L <hashable-source-location>) (<hashable-source-location> ())))
+	(L putprop 'ciao 'salut)
+	(L putprop 'hello 'ohayo)
+	(L property-list))
+    => '((ciao . salut)
+	 (hello . ohayo)))
+
+  #t)
+
+
+(parametrise ((check-test-name 'unspecified))
+
+  (check
+      ((sl.<source-location>) (sl.unspecified-source-location))
     => #t)
 
   (check
-      (lt.<source-location>?/start #f)
-    => #f)
+      (let (((S sl.<source-location>) (sl.unspecified-source-location)))
+	(list (S specified?) (S unspecified?)))
+    => '(#f #t))
 
   (check
-      (lt.<source-location>?/start 123)
-    => #f)
-
-;;; --------------------------------------------------------------------
+      (let (((S sl.<source-location>) (sl.<source-location> (unspecified))))
+	(list (S specified?) (S line) (S column) (S offset)))
+    => '(#f 1 1 0))
 
   (check
-      (lt.<source-location>?/start/or-false (lt.<source-location> ("this" 1 2 3)))
-    => #f)
+      (let (((S sl.<source-location>) (sl.<source-location> (unspecified))))
+	(list (S specified?) (S unspecified?)))
+    => '(#f #t))
+
+  (check
+      (let (((S sl.<source-location>) (sl.unspecified-source-location)))
+	(S string))
+    => "no-source")
+
+  (check
+      (let (((S sl.<source-location>) (sl.unspecified-source-location)))
+	(parametrise ((sl.unspecified-source-location-string "boh"))
+	  (S string)))
+    => "boh")
 
   #t)
 
 
 (parametrise ((check-test-name 'comparison))
 
-  (let ((a (lt.<source-location> (#f 1 2 3)))
-  	(b (lt.<source-location> (#f 1 2 3))))
+  (let (((A sl.<source-location>) (sl.<source-location> ((sl.offset: 3))))
+  	((B sl.<source-location>) (sl.<source-location> ((sl.offset: 3)))))
 
-    (check (source-location=? a b)		=> #t)
-    (check (source-location-point=? a b)	=> #t)
-    (check (source-location-point<? a b)	=> #f)
-    (check (source-location-point>? a b)	=> #f)
-    (check (source-location-point<=? a b)	=> #t)
-    (check (source-location-point>=? a b)	=> #t)
-
-    #f)
-
-  (let ((a1 (lt.<source-location> (#f 1 2 3)))
-  	(b1 (lt.<source-location> (#f 1 2 30))))
-
-    (check (source-location=? a1 b1)		=> #f)
-    (check (source-location-point=? a1 b1)	=> #t)
-    (check (source-location-point<? a1 b1)	=> #f)
-    (check (source-location-point>? a1 b1)	=> #f)
-    (check (source-location-point<=? a1 b1)	=> #t)
-    (check (source-location-point>=? a1 b1)	=> #t)
+    (check-for-true	(A = B))
+    (check-for-false	(A < B))
+    (check-for-false	(A > B))
+    (check-for-true	(A <= B))
+    (check-for-true	(A >= B))
 
     #f)
 
-  (let ((a2 (lt.<source-location> (#f 1 2 3)))
-  	(b2 (lt.<source-location> (#f 10 2 3))))
+  (let (((A sl.<source-location>) (sl.<source-location> ((sl.offset: 3))))
+  	((B sl.<source-location>) (sl.<source-location> ((sl.offset: 5)))))
 
-    (check (source-location=? a2 b2)		=> #f)
-    (check (source-location-point=? a2 b2)	=> #f)
-    (check (source-location-point<? a2 b2)	=> #t)
-    (check (source-location-point>? a2 b2)	=> #f)
-    (check (source-location-point<=? a2 b2)	=> #t)
-    (check (source-location-point>=? a2 b2)	=> #f)
+    (check-for-false	(A = B))
+    (check-for-true	(A < B))
+    (check-for-false	(A > B))
+    (check-for-true	(A <= B))
+    (check-for-false	(A >= B))
 
     #f)
 
-  (let ((a3 (lt.<source-location> (#f 1 2 3)))
-	(b3 (lt.<source-location> (#f 1 20 3))))
+  (let (((A sl.<source-location>) (sl.<source-location> ((sl.offset: 5))))
+  	((B sl.<source-location>) (sl.<source-location> ((sl.offset: 3)))))
 
-    (check (source-location=? a3 b3)		=> #f)
-    (check (source-location-point=? a3 b3)	=> #f)
-    (check (source-location-point<? a3 b3)	=> #t)
-    (check (source-location-point>? a3 b3)	=> #f)
-    (check (source-location-point<=? a3 b3)	=> #t)
-    (check (source-location-point>=? a3 b3)	=> #f)
+    (check-for-false	(A = B))
+    (check-for-false	(A < B))
+    (check-for-true	(A > B))
+    (check-for-false	(A <= B))
+    (check-for-true	(A >= B))
 
     #f)
 
@@ -172,72 +252,162 @@
 (parametrise ((check-test-name 'update))
 
   (check	;token length
-      (let ((loc (lt.<source-location> ('this 10 20 30))))
-	(source-location-update loc 4))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 (+ 20 4) (+ 30 4))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (L update 4))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: (+ 20 4))
+				 (sl.offset: (+ 30 4)))))
+	(M = R))
+    => #t)
 
   (check	;newline char
-      (let ((loc (lt.<source-location> ('this 10 20 30))))
-	(source-location-update loc #\newline))
-    (=> source-location=?)
-    (lt.<source-location> ('this (+ 10 1) 1 (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (L update #\newline))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   (+ 10 1))
+				 (sl.column: 1)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   (check	;return char
-      (let ((loc (lt.<source-location> ('this 10 20 30))))
-	(source-location-update loc #\return))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 (+ 20 1) (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (L update #\return))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: (+ 20 1))
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
-  (check	;return char
-      (parametrise ((source-location-honor-return #f))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\return)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 (+ 20 1) (+ 30 1))))
+  (check	;not honored return char
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-honor-return #f))
+	    (L update #\return)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: (+ 20 1))
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
-  (check	;return char
-      (parametrise ((source-location-honor-return #t))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\return)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 1 (+ 30 1))))
+  (check	;honored return char
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-honor-return #t))
+	    (L update #\return)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 1)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
+
+  (check	;tab char, default
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (L update #\tab))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 24)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   (check	;tab char, 8chars
-      (let ((loc (lt.<source-location> ('this 10 20 30))))
-	(source-location-update loc #\tab))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 24 (+ 30 1))))
-
-  (check	;tab char, 8chars
-      (parametrise ((source-location-tab-function source-location-tab-function/8chars))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\tab)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 24 (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-tab-function sl.source-location-tab-function/8chars))
+	    (L update #\tab)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 24)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   (check	;tab char, table function
-      (parametrise ((source-location-tab-function source-location-tab-function/tab-table))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\tab)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 24 (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-tab-function sl.source-location-tab-function/tab-table))
+	    (L update #\tab)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 24)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   (check	;tab char, table function, tab table
-      (parametrise ((source-location-tab-function	source-location-tab-function/tab-table)
-		    (source-location-tab-table		'(6 12 18 24 30 36)))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\tab)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 24 (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-tab-function sl.source-location-tab-function/tab-table)
+			(sl.source-location-tab-table    '(6 12 18 24 30 36)))
+	    (L update #\tab)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 24)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   (check	;tab char, table function, short tab table
-      (parametrise ((source-location-tab-function	source-location-tab-function/tab-table)
-		    (source-location-tab-table		'(6 12 18)))
-	(let ((loc (lt.<source-location> ('this 10 20 30))))
-	  (source-location-update loc #\tab)))
-    (=> source-location=?)
-    (lt.<source-location> ('this 10 24 (+ 30 1))))
+      (let ()
+	(define #(L sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 20)
+				 (sl.offset: 30))))
+	(define #(M sl.<source-location>)
+	  (parametrise ((sl.source-location-tab-function sl.source-location-tab-function/tab-table)
+			(sl.source-location-tab-table    '(6 12 18)))
+	    (L update #\tab)))
+	(define #(R sl.<source-location>)
+	  (sl.<source-location> ((sl.line:   10)
+				 (sl.column: 24)
+				 (sl.offset: (+ 30 1)))))
+	(M = R))
+    => #t)
 
   #t)
 
@@ -245,17 +415,15 @@
 (parametrise ((check-test-name 'misc))
 
   (check
-      (object->string (lt.<source-location> ((lt.input: 'this)
-					     (lt.line: 10)
-					     (lt.column: 20)
-					     (lt.offset: 30))))
-    => "this:10:20")
+      (object->string (sl.<source-location> ((sl.line: 10)
+					     (sl.column: 20)
+					     (sl.offset: 30))))
+    => "10:20")
 
   (check
-      (let (((S lt.<source-location>) (lt.<source-location> ((lt.input: "here")
-							     (lt.line: 10)
-							     (lt.column: 20)
-							     (lt.offset: 30)))))
+      (let (((S sl.<source-location>) (sl.<source-location> ((sl.line: 10)
+							     (sl.column: 20)
+							     (sl.offset: 30)))))
 	(list (S line string) (S column string) (S offset string)))
     => '("10" "20" "30"))
 
