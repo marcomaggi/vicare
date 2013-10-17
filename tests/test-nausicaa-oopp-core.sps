@@ -2676,6 +2676,36 @@
 
   (check
       (tag-unique-identifiers-of 123)
+    => '(nausicaa:builtin:<positive-fixnum>
+	 nausicaa:builtin:<nonnegative-fixnum>
+	 nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
+	 nausicaa:builtin:<integer>
+	 nausicaa:builtin:<integer-valued>
+	 nausicaa:builtin:<rational-valued>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of -123)
+    => '(nausicaa:builtin:<negative-fixnum>
+	 nausicaa:builtin:<nonpositive-fixnum>
+	 nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
+	 nausicaa:builtin:<integer>
+	 nausicaa:builtin:<integer-valued>
+	 nausicaa:builtin:<rational-valued>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of 0)
     => '(nausicaa:builtin:<fixnum>
 	 nausicaa:builtin:<exact-integer>
 	 nausicaa:builtin:<integer>

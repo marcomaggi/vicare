@@ -1884,18 +1884,6 @@ from @class{exact-integer}.
 @end deftp
 
 
-@deftp {Builtin Label} @aclass{positive-fixnum}
-Conventional type for objects satisfying @func{fixnum?} and
-@func{fxpositive?}.  It is derived from @class{fixnum}.
-@end deftp
-
-
-@deftp {Builtin Label} @aclass{negative-fixnum}
-Conventional type for objects satisfying @func{fixnum?} and
-@func{fxnegative?}.  It is derived from @class{fixnum}.
-@end deftp
-
-
 @deftp {Builtin Label} @aclass{nonpositive-fixnum}
 Conventional type for objects satisfying @func{fixnum?} and
 @func{fxnonpositive?}.  It is derived from @class{fixnum}.
@@ -1905,6 +1893,18 @@ Conventional type for objects satisfying @func{fixnum?} and
 @deftp {Builtin Label} @aclass{nonnegative-fixnum}
 Conventional type for objects satisfying @func{fixnum?} and
 @func{fxnonnegative?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{positive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxpositive?}.  It is derived from @class{nonnegative-fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnegative?}.  It is derived from @class{nonpositive-fixnum}.
 @end deftp
 
 @c ------------------------------------------------------------
