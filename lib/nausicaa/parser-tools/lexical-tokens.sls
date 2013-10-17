@@ -34,7 +34,7 @@
 (library (nausicaa parser-tools lexical-tokens)
   (export
     <lexical-token>
-    <end-of-input-token>
+    <end-of-input>
     <lexer-error>
 
     ;; auxiliary syntaxes
@@ -44,7 +44,7 @@
     value:
     error-message:)
   (import (nausicaa)
-    (nausicaa parser-tools source-locations)
+    (prefix (nausicaa parser-tools source-locations) sl.)
     (prefix (vicare language-extensions makers) mk.)
     (vicare arguments validation)
     (vicare system $fx))
@@ -58,98 +58,102 @@
   value:)
 
 
-(define-class <lexical-token>
-  (nongenerative vicare:parser-tools:<lexical-token>)
+(module (<lexical-token>)
 
-  (fields (immutable (category <symbol>))
-	  (immutable (location <source-location>))
-	  (immutable value)
-	  (immutable (length <fixnum>)))
+  (define-class <lexical-token>
+    (nongenerative nausicaa:parser-tools:lexical-tokens:<lexical-token>)
 
-  (protocol
-   (lambda (make-top)
-     (lambda (category location value length)
-       (define who 'make-<lexical-token>)
-       (with-arguments-validation (who)
-	   ((symbol	category)
-	    (fixnum	length))
-	 ((make-top) category location value length)))))
+    (fields (immutable (category	<symbol>))
+	    (immutable (location	sl.<source-location>))
+	    (immutable value)
+	    (immutable (length		<nonnegative-fixnum>)))
 
-  (maker
-   (lambda (stx)
-     (syntax-case stx ()
-       ((_ (?clause ...))
-	#'(%make-lexical-token ?clause ...)))))
+    (protocol
+     (lambda (make-top)
+       (lambda ((category <symbol>) (location sl.<source-location>) value (length <nonnegative-fixnum>))
+	 ((make-top) category location value length))))
 
-  (method (special? (O <lexical-token>))
-    (or (eq? '*eoi*         (O $category))
-	(eq? '*lexer-error* (O $category))))
+    (maker
+     (lambda (stx)
+       (syntax-case stx ()
+	 ((_ (?clause ...))
+	  #'(%make-lexical-token ?clause ...)))))
 
-  (method (end-of-input? (O <lexical-token>))
-    (eq? '*eoi* (O $category)))
+    (method (special? (O <lexical-token>))
+      (or (eq? '*eoi*         (O $category))
+	  (eq? '*lexer-error* (O $category))))
 
-  (method (lexer-error? (O <lexical-token>))
-    (eq? '*lexer-error* (O $category)))
+    (method (end-of-input? (O <lexical-token>))
+      (eq? '*eoi* (O $category)))
 
-  #| end of class definition |# )
+    (method (lexer-error? (O <lexical-token>))
+      (eq? '*lexer-error* (O $category)))
 
-(mk.define-maker %make-lexical-token
-    make-<lexical-token>
-  ((category:	#f (mk.mandatory))
-   (location:	#f)
-   (value:	#f)
-   (length:	0)))
+    #| end of class definition |# )
 
-
-(define-label <end-of-input-token>
-  (parent <lexical-token>)
-  (predicate (lambda ((O <lexical-token>))
-	       (eq? '*eoi* (O $category))))
-  (protocol (lambda ()
-	      (lambda (location value length)
-		(make-<lexical-token> '*eoi* location value length))))
-  (maker
-   (lambda (stx)
-     (syntax-case stx ()
-       ((_ (?clause ...))
-	#'(%make-end-of-input-token ?clause ...)))))
+  (mk.define-maker %make-lexical-token
+      make-<lexical-token>
+    ((category:	#f (mk.mandatory))
+     (location:	(sl.unspecified-source-location))
+     (value:	#f)
+     (length:	0)))
 
-  #| end of label definition |# )
-
-(mk.define-maker %make-end-of-input-token
-    make-<end-of-input-token>
-  ((location:	#f)
-   (value:	#f)
-   (length:	0)))
+  #| end of module |# )
 
 
-(define-class <lexer-error>
-  (nongenerative vicare:parser-tools:lexical-tokens:<lexer-error>)
-  (parent <lexical-token>)
-  (fields (immutable (message <string>)))
+(module (<end-of-input>)
 
-  (maker
-   (lambda (stx)
-     (syntax-case stx ()
-       ((_ (?expr ...))
-	#'(%make-lexer-error ?expr ...)))))
+  (define-label <end-of-input>
+    (parent <lexical-token>)
+    (predicate (lambda ((O <lexical-token>))
+		 (eq? '*eoi* (O $category))))
+    (protocol (lambda ()
+		(lambda (location)
+		  (<lexical-token> ((category:	'*eoi*)
+				    (location:	location)
+				    (value:	(eof-object))
+				    (length:	0))))))
+    (maker
+     (lambda (stx)
+       (syntax-case stx ()
+	 ((_ (?clause ...))
+	  #'(%make-end-of-input ?clause ...)))))
 
-  (protocol
-   (lambda (make-lexical-token)
-     (lambda (location value length error-message)
-       (define who 'make-<lexer-error>)
-       (with-arguments-validation (who)
-	   ((string	error-message))
-	 ((make-lexical-token '*lexer-error* location value length) error-message)))))
+    #| end of label definition |# )
 
-  #| end of class definition |# )
+  (mk.define-maker %make-end-of-input
+      make-<end-of-input>
+    ((location:	(sl.unspecified-source-location))))
 
-(mk.define-maker %make-lexer-error
-    (make-<lexer-error>)
-  ((location:		#f)
-   (value:		#f)
-   (length:		0)
-   (error-message:	#f (mk.mandatory))))
+  #| end of module |# )
+
+
+(module (<lexer-error>)
+
+  (define-class <lexer-error>
+    (parent <lexical-token>)
+    (nongenerative nausicaa:parser-tools:lexical-tokens:<lexer-error>)
+    (fields (immutable (message <string>)))
+
+    (maker
+     (lambda (stx)
+       (syntax-case stx ()
+	 ((_ (?expr ...))
+	  #'(%make-lexer-error ?expr ...)))))
+
+    (protocol
+     (lambda (make-lexical-token)
+       (lambda (location (error-message <string>))
+	 ((make-lexical-token '*lexer-error* location #f 0) error-message))))
+
+    #| end of class definition |# )
+
+  (mk.define-maker %make-lexer-error
+      (make-<lexer-error>)
+    ((location:		(sl.unspecified-source-location))
+     (error-message:	#f (mk.mandatory))))
+
+  #| end of module |# )
 
 
 ;;;; done
