@@ -1535,7 +1535,7 @@
 
     ;; built-in types
     <top> <boolean> <symbol> <keyword> <pointer>
-    <pair> <mutable-pair> <list>
+    <pair> <mutable-pair> <spine> <list>
     <char> <string> <mutable-string> <vector>
     <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>

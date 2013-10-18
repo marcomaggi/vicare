@@ -23,6 +23,7 @@ language multimethods}.
 * builtins keywords::           Keyword label.
 * builtins pointers::           Pointer label.
 * builtins pairs::              Pair label.
+* builtins spines::             Spine label.
 * builtins lists::              List label.
 * builtins chars::              Character label.
 * builtins strings::            String label.
@@ -381,27 +382,25 @@ Access and mutate the cdr of the pair using @func{cdr} and
 
 @deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $car
 Access the car of the pair using the unsafe operation @func{$car} from
-@library{nausicaa language unsafe-operations}.
+@library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $cdr
 Access the cdr of the pair using the unsafe operation @func{$cdr} from
-@library{nausicaa language unsafe-operations}.
+@library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $car
 Access and mutate the car of the pair using the unsafe operations
-@func{$car} and @func{$set-car!} from @library{nausicaa language
-unsafe-operations}.
+@func{$car} and @func{$set-car!} from @library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $cdr
 Access and mutate the cdr of the pair using the unsafe operations
-@func{$cdr} and @func{set-cdr!} from @library{nausicaa language
-unsafe-operations}.
+@func{$cdr} and @func{set-cdr!} from @library{vicare system $pairs}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -416,18 +415,24 @@ the expressions @meta{car} and @meta{cdr}.
 @end defop
 
 @c page
-@node builtins lists
-@section List label
+@node builtins spines
+@section Spine label
 
 
-@deftp {Builtin Label} @aclass{list}
-Conventional type of objects satisfying @func{list?}.  Both proper lists
-and nulls an be tagged with this label.
+A @dfn{spine} is the head of a proper list: null or a pair whose cdr is
+null or a pair.  It can be used to iterate over a proper list without
+fully validating it first.
+
+
+@deftp {Builtin Label} @aclass{spine}
+Conventional type of objects satisfying @func{null?} or @func{pair?}
+and, in the case of a pair, having null or a pair as cdr.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
-Return the result of applying @func{list} to the @var{item} arguments.
+@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @var{cdr}
+Return the result of applying @func{cons} to @var{car} and @var{cdr}.
+@var{cdr} must be a @class{spine}.
 @end deftypeop
 
 @c ------------------------------------------------------------
@@ -435,39 +440,48 @@ Return the result of applying @func{list} to the @var{item} arguments.
 @subsubheading Safe accessors
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{top} car
-Access the car of the list using @func{car}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using @func{car}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{list} cdr
-Access the cdr of the list using @func{cdr}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using @func{cdr}.
 @end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{list} length
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{exact-integer} length
 Access the length of the list.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{list} null?
-Return true if the list is empty.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} null?
+True if the spine is null.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} pair?
+True if the spine is a pair.
+@end deftypecv
 
 @c ------------------------------------------------------------
 
 @subsubheading Unsafe accessors
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{top} $car
-Access the car of the list using the unsafe operation @func{$car} from
-@library{nausicaa language unsafe-operations}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} $car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using the unsafe operation @func{$car} from @library{vicare system
+$pairs}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{list} $cdr
-Access the cdr of the list using the unsafe operation @func{$cdr} from
-@library{nausicaa language unsafe-operations}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} $cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using the unsafe operation @func{$cdr} from @library{vicare system
+$pairs}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -475,90 +489,116 @@ Access the cdr of the list using the unsafe operation @func{$cdr} from
 @subsubheading Methods
 
 
-@defmethod @aclass{list} caar
-@defmethodx @aclass{list} cadr
-@defmethodx @aclass{list} cdar
-@defmethodx @aclass{list} cddr
-@defmethodx @aclass{list} caaar
-@defmethodx @aclass{list} caadr
-@defmethodx @aclass{list} cadar
-@defmethodx @aclass{list} caddr
-@defmethodx @aclass{list} cdaar
-@defmethodx @aclass{list} cdadr
-@defmethodx @aclass{list} cddar
-@defmethodx @aclass{list} cdddr
+@defmethod @aclass{spine} caar
+@defmethodx @aclass{spine} cadr
+@defmethodx @aclass{spine} cdar
+@defmethodx @aclass{spine} cddr
+@defmethodx @aclass{spine} caaar
+@defmethodx @aclass{spine} caadr
+@defmethodx @aclass{spine} cadar
+@defmethodx @aclass{spine} caddr
+@defmethodx @aclass{spine} cdaar
+@defmethodx @aclass{spine} cdadr
+@defmethodx @aclass{spine} cddar
+@defmethodx @aclass{spine} cdddr
 Apply the corresponding function to the list.  Notice that calling these
 methods may raise an error if the list structure is not suitable.
 @end defmethod
 
 
-@defmethod @aclass{list} map @var{proc} . @var{lists}
+@defmethod @aclass{spine} map @var{proc} . @var{lists}
 Apply @func{map} to the instance list and the optional @var{lists}.
 @end defmethod
 
 
-@defmethod @aclass{list} for-each @var{proc} . @var{lists}
+@defmethod @aclass{spine} for-each @var{proc} . @var{lists}
 Apply @func{for-each} to the instance list and the optional @var{lists}.
 @end defmethod
 
 
-@defmethod @aclass{list} find @var{proc}
+@defmethod @aclass{spine} find @var{proc}
 Apply @func{find} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} reverse @var{proc}
+@defmethod @aclass{spine} reverse @var{proc}
 Apply @func{reverse} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} for-all @var{proc}
+@defmethod @aclass{spine} for-all @var{proc}
 @defmethodx @aclass{lits} exists @var{proc}
 Apply @func{for-all} and @func{exists} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} filter @var{proc}
-@defmethodx @aclass{list} partition @var{proc}
+@defmethod @aclass{spine} filter @var{proc}
+@defmethodx @aclass{spine} partition @var{proc}
 Apply @func{filter} and @func{partition} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} fold-left @var{nil} @var{combine}
+@defmethod @aclass{spine} fold-left @var{nil} @var{combine}
 Apply @func{fold-left} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} fold-right @var{nil} @var{combine}
+@defmethod @aclass{spine} fold-right @var{nil} @var{combine}
 Apply @func{fold-right} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} remp @var{proc}
-@defmethodx @aclass{list} remove @var{obj}
-@defmethodx @aclass{list} remv @var{obj}
-@defmethodx @aclass{list} remq @var{obj}
+@defmethod @aclass{spine} remp @var{proc}
+@defmethodx @aclass{spine} remove @var{obj}
+@defmethodx @aclass{spine} remv @var{obj}
+@defmethodx @aclass{spine} remq @var{obj}
 Apply @func{remp}, @func{remove}, @func{remv}, @func{remq} to the list
 and the given argument.
 @end defmethod
 
 
-@defmethod @aclass{list} memp @var{proc} @var{list}
-@defmethodx @aclass{list} member @var{obj} @var{list}
-@defmethodx @aclass{list} memv @var{obj} @var{list}
-@defmethodx @aclass{list} memq @var{obj} @var{list}
+@defmethod @aclass{spine} memp @var{proc} @var{list}
+@defmethodx @aclass{spine} member @var{obj} @var{list}
+@defmethodx @aclass{spine} memv @var{obj} @var{list}
+@defmethodx @aclass{spine} memq @var{obj} @var{list}
 Apply @func{memp}, @func{member}, @func{memv}, @func{memq} to the list
 and the given arguments.
 @end defmethod
 
 
-@defmethod @aclass{list} assp @var{proc}
-@defmethodx @aclass{list} assoc @var{obj}
-@defmethodx @aclass{list} assv @var{obj}
-@defmethodx @aclass{list} assq @var{obj}
+@defmethod @aclass{spine} assp @var{proc}
+@defmethodx @aclass{spine} assoc @var{obj}
+@defmethodx @aclass{spine} assv @var{obj}
+@defmethodx @aclass{spine} assq @var{obj}
 Apply @func{assp}, @func{assoc}, @func{assv}, @func{assq} to the list
 and the given argument.
 @end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{spine} @aclass{spine} ()
+@defopx Maker @aclass{spine} @aclass{spine} (@meta{car} @meta{cdr})
+When the first form is used: return null.  When the second form is used:
+build and return a new @class{spine} object using the common protocol.
+@end defop
+
+@c page
+@node builtins lists
+@section List label
+
+
+@deftp {Builtin Label} @aclass{list}
+Conventional type of objects satisfying @func{list?}; it is derived from
+@class{spine}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
+Return the result of applying @func{list} to the @var{item} arguments.
+@end deftypeop
 
 @c ------------------------------------------------------------
 
@@ -705,14 +745,14 @@ string.
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{fixnum} $length
-Return the result of applying @func{$string-length} from
-@library{nausicaa language unsafe-operations} to the string.
+Return the result of applying @func{$string-length} from @library{vicare
+system $strings} to the string.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{boolean} $empty?
 Return @true{} if the string length is zero.  Make use of unsafe
-operations from @library{nausicaa language unsafe-operations}.
+operations from @library{vicare system $strings}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -853,14 +893,14 @@ True if the vector length is zero.
 
 
 @deftypecv {Immutable virtual field} @aclass{vector} @aclass{fixnum} $length
-Return the result of applying @func{$vector-length} from
-@library{nausicaa language unsafe-operations} to the vector.
+Return the result of applying @func{$vector-length} from @library{vicare
+system $vectors} to the vector.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{vector} @aclass{boolean} $empty?
 Return @true{} if the vector length is zero.  Make use of unsafe
-operations from @library{nausicaa language unsafe-operations}.
+operations from @library{vicare system $vectors}.
 @end deftypecv
 
 @c ------------------------------------------------------------
