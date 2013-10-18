@@ -123,42 +123,46 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'list))
+(parametrise ((check-test-name	'list))
 
-  (let* (((L <list>) '(c i a o))
-	 ((I <list-iterator>) (make <list-iterator>
-				(subject: L))))
+  (let* (((L <list>)		'(c i a o))
+	 ((I <iterator>)	(<list-iterator> ((subject: L)))))
+    (check-for-true (is-a? I <list-iterator>))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> '(c i a o))
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'c)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'i)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'a)
-    (check I.current	=> 'a)
-    (check I.current	=> 'a)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'o)
-    (check-for-false (I.more?))
+    (check (I subject)	=> '(c i a o))
+    (check-for-true (I more?))
+    (check (I next)	=> 'c)
+    (check-for-true (I more?))
+    (check (I next)	=> 'i)
+    (check-for-true (I more?))
+    (check (I next)	=> 'a)
+    (check (I current)	=> 'a)
+    (check (I current)	=> 'a)
+    (check-for-true (I more?))
+    (check (I next)	=> 'o)
+    (check-for-false (I more?))
     (check
-    	(guard (E ((is-a? &stop-iteration)
-    		   E.iterator)
-    		  (else E))
-    	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-    	(guard (E ((is-a? &stop-iteration)
-    		   E.iterator)
-    		  (else E))
-    	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
 ;;; --------------------------------------------------------------------
 
   ;; stride = 2
-  (let* (((L <list>) '(c i a o h e l L o))
+  #;(let* (((L <list>) '(c i a o h e l L o))
 	 ((I <list-iterator>) (make <list-iterator>
 				(subject: L)
 				(stride:  +2))))
@@ -192,7 +196,7 @@
     #f)
 
   ;; stride = 3
-  (let* (((L <list>) '(c i a o h e l L o))
+  #;(let* (((L <list>) '(c i a o h e l L o))
 	 ((I <list-iterator>) (make <list-iterator>
 				(subject: L)
 				(stride:  +3))))
