@@ -64,11 +64,12 @@
 (define-class <iterator>
   (nongenerative nausicaa:containers:iterators:<iterator>)
   (abstract)
-  (fields (mutable current))
+  (fields (immutable subject)
+	  (mutable   current))
   (super-protocol
    (lambda (make-top)
-     (lambda ()
-       ((make-top) THE-SENTINEL))))
+     (lambda (subject)
+       ((make-top) subject THE-SENTINEL))))
   (methods (more?	iterator-more?)
 	   (next	iterator-next)))
 
@@ -91,7 +92,7 @@
 
     (protocol (lambda (make-iterator)
 		(lambda ((subject <spine>) (stride <positive-fixnum>))
-		  ((make-iterator) subject stride))))
+		  ((make-iterator subject) subject stride))))
 
     (maker    (lambda (stx)
 		(syntax-case stx ()
@@ -149,12 +150,12 @@
 
     (super-protocol
      (lambda (make-iterator)
-       (lambda ((sequence.getter <procedure>) (sequence.length <nonnegative-fixnum>)
+       (lambda (subject (sequence.getter <procedure>) (sequence.length <nonnegative-fixnum>)
 	   (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
 	 (define who 'make-<sequence-iterator>)
 	 (with-arguments-validation (who)
 	     ((length-start-past-stride		sequence.length start past stride))
-	   ((make-iterator) sequence.getter start past stride)))))
+	   ((make-iterator subject) sequence.getter start past stride)))))
 
     #| end of class |# )
 
@@ -199,7 +200,7 @@
     (protocol (lambda (make-subject-iterator)
 		(lambda ((subject <string>)
 		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-subject-iterator (lambda (index) ($string-ref subject index))
+		  ((make-subject-iterator subject (lambda (index) ($string-ref subject index))
 					  (subject $length) start past stride)
 		   subject))))
 
@@ -232,7 +233,7 @@
     (protocol (lambda (make-sequence-iterator)
 		(lambda ((subject <vector>)
 		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-sequence-iterator (lambda (index) ($vector-ref subject index))
+		  ((make-sequence-iterator subject (lambda (index) ($vector-ref subject index))
 					   (subject $length) start past stride)
 		   subject))))
 
@@ -265,7 +266,7 @@
     (protocol (lambda (make-sequence-iterator)
 		(lambda ((subject <bytevector-u8>)
 		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-sequence-iterator (lambda (index) ($bytevector-u8-ref subject index))
+		  ((make-sequence-iterator subject (lambda (index) ($bytevector-u8-ref subject index))
 					   (subject $length) start past stride)
 		   subject))))
 
