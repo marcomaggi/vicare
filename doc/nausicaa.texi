@@ -128,6 +128,7 @@ Containers libraries
 * stacks::                      Simple stacks.
 * queues::                      Simple queues.
 * bitvectors::                  Bitvectors.
+* iterators::                   Iterating over sequences.
 
 Appendices
 
@@ -174,6 +175,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-stacks.texi
 @include nausicaa-queues.texi
 @include nausicaa-bitvectors.texi
+@include nausicaa-containers-iterators.texi
 
 @c page
 @node parser tools

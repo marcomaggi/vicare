@@ -14,6 +14,7 @@
   (only (nausicaa containers stacks))
   (only (nausicaa containers queues))
   (only (nausicaa containers bitvectors))
+  (only (nausicaa containers iterators))
 
   (only (nausicaa parser-tools source-locations))
   (only (nausicaa parser-tools lexical-tokens))

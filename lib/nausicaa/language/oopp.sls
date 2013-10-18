@@ -47,6 +47,7 @@
     do/tags			do*/tags
     set!/tags
     with-label-shadowing
+    with-tagged-arguments-validation
 
     <top> <top>? <top>-unique-identifiers
 

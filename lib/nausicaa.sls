@@ -1527,7 +1527,7 @@
     receive/tags
     do/tags			do*/tags
     set!/tags
-    with-label-shadowing
+    with-label-shadowing	with-tagged-arguments-validation
     <-
 
 
