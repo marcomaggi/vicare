@@ -30,11 +30,16 @@
   (export
     <iterator>
     <list-iterator>
+    <sequence-iterator>
     <string-iterator>
     <vector-iterator>
     <bytevector-u8-iterator>
 
     &stop-iteration
+
+    ;; multimethods
+    iterator-more?
+    iterator-next
 
     ;; auxiliary syntaxes
     subject:
@@ -130,33 +135,55 @@
   #| end of module |# )
 
 
-(module (<sequence> <sequence-iterator>)
+(module (<sequence-iterator>)
 
-  (define-auxiliary-syntaxes
-    <sequence>)
-
-  (define-label <past-index>
-    (predicate (lambda (obj)
-		 (or ((<nonnegative-fixnum>) obj)
-		     (not obj)))))
-
-  (define-mixin <sequence-iterator>
+  (define-class <sequence-iterator>
+    (nongenerative nausicaa:containers:iterators:<sequence-iterator>)
+    (abstract)
     (parent <iterator>)
-    (fields (mutable   (subject	<sequence>))
+
+    (fields (immutable (getter	<procedure>))
 	    (mutable   (index	<nonnegative-fixnum>))
 	    (immutable (past	<nonnegative-fixnum>))
-	    (immutable (stride	<positive-fixnum>)))
+	    (immutable (stride	<fixnum>)))
 
-    (protocol
+    (super-protocol
      (lambda (make-iterator)
-       (lambda ((sequence <sequence>) (start <nonnegative-fixnum>) (past <past-index>) (stride <positive-fixnum>))
+       (lambda ((sequence.getter <procedure>) (sequence.length <nonnegative-fixnum>)
+	   (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
 	 (define who 'make-<sequence-iterator>)
-	 (let ((past (or past (sequence length))))
-	   (with-arguments-validation (who)
-	       ((start-and-past-for-sequence	sequence start past))
-	     ((make-iterator sequence) start past stride))))))
+	 (with-arguments-validation (who)
+	     ((length-start-past-stride		sequence.length start past stride))
+	   ((make-iterator) sequence.getter start past stride)))))
 
-    #| end of mixin |# )
+    #| end of class |# )
+
+  (define-argument-validation (length-start-past-stride who len start past stride)
+    (cond (($fxpositive? stride)
+	   (and ($fx>= past start)
+		($fx<= past len)))
+	  (($fxnegative? stride)
+	   (and ($fx<  start len)
+		($fx>= start past)))
+	  (else #f))
+    (procedure-argument-violation who
+      (string-append "invalid start="	(number->string start)
+		     " past="		(number->string past)
+		     " stride="		(number->string stride)
+		     " indexes for sequence of length " (number->string len))))
+
+  (define-method (iterator-more? (I <sequence-iterator>))
+    (if ($fxpositive? (I $stride))
+	($fx< (I $index) (I $past))
+      ($fx> (I $index) (I $past))))
+
+  (define-method (iterator-next (I <sequence-iterator>))
+    (if (I more?)
+	(receive-and-return (retval)
+	    ((I $getter) (I $index))
+	  (set! (I $current) retval)
+	  (I $index incr! (I $stride)))
+      (raise (&stop-iteration (I)))))
 
   #| end of module |# )
 
@@ -165,9 +192,16 @@
 
   (define-class <string-iterator>
     (nongenerative nausicaa:containers:iterators:<string-iterator>)
-    (mixins (<sequence-iterator>
-	     (<sequence>			<string>)
-	     (start-and-past-for-sequence	start-and-past-for-string)))
+    (parent <sequence-iterator>)
+
+    (fields (immutable (subject <string>)))
+
+    (protocol (lambda (make-subject-iterator)
+		(lambda ((subject <string>)
+		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
+		  ((make-subject-iterator (lambda (index) ($string-ref subject index))
+					  (subject $length) start past stride)
+		   subject))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -184,19 +218,6 @@
      (past:	#f)
      (stride:	+1)))
 
-  (define-method (iterator-more? (I <string-iterator>))
-    (if ($fxpositive? (I $stride))
-	($fx< (I $index) (I $past))
-      ($fx> (I $index) (I $past))))
-
-  (define-method (iterator-next (I <string-iterator>))
-    (if (I more?)
-	(receive-and-return (retval)
-	    (I subject [(I $index)])
-	  (set!  (I $current) retval)
-	  (I $index incr! (I stride)))
-      (raise (&stop-iteration (I)))))
-
   #| end of module |# )
 
 
@@ -204,9 +225,16 @@
 
   (define-class <vector-iterator>
     (nongenerative nausicaa:containers:iterators:<vector-iterator>)
-    (mixins (<sequence-iterator>
-	     (<sequence>			<vector>)
-	     (start-and-past-for-sequence	start-and-past-for-vector)))
+    (parent <sequence-iterator>)
+
+    (fields (immutable (subject <vector>)))
+
+    (protocol (lambda (make-sequence-iterator)
+		(lambda ((subject <vector>)
+		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
+		  ((make-sequence-iterator (lambda (index) ($vector-ref subject index))
+					   (subject $length) start past stride)
+		   subject))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -223,19 +251,6 @@
      (past:	#f)
      (stride:	+1)))
 
-  (define-method (iterator-more? (I <vector-iterator>))
-    (if ($fxpositive? (I $stride))
-	($fx< (I $index) (I $past))
-      ($fx> (I $index) (I $past))))
-
-  (define-method (iterator-next (I <vector-iterator>))
-    (if (I more?)
-	(receive-and-return (retval)
-	    (I subject [(I $index)])
-	  (set!  (I $current) retval)
-	  (I $index incr! (I stride)))
-      (raise (&stop-iteration (I)))))
-
   #| end of module |# )
 
 
@@ -243,9 +258,16 @@
 
   (define-class <bytevector-u8-iterator>
     (nongenerative nausicaa:containers:iterators:<bytevector-iterator>)
-    (mixins (<sequence-iterator>
-	     (<sequence>			<bytevector-u8>)
-	     (start-and-past-for-sequence	start-and-past-for-bytevector)))
+    (parent <sequence-iterator>)
+
+    (fields (immutable (subject <bytevector-u8>)))
+
+    (protocol (lambda (make-sequence-iterator)
+		(lambda ((subject <bytevector-u8>)
+		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
+		  ((make-sequence-iterator (lambda (index) ($bytevector-u8-ref subject index))
+					   (subject $length) start past stride)
+		   subject))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -261,19 +283,6 @@
      (start:	0)
      (past:	#f)
      (stride:	+1)))
-
-  (define-method (iterator-more? (I <bytevector-u8-iterator>))
-    (if ($fxpositive? (I $stride))
-	($fx< (I $index) (I $past))
-      ($fx> (I $index) (I $past))))
-
-  (define-method (iterator-next (I <bytevector-u8-iterator>))
-    (if (I more?)
-	(receive-and-return (retval)
-	    (I $subject [(I $index)])
-	  (set! (I $current) retval)
-	  (I $index incr! (I stride)))
-      (raise (&stop-iteration (I)))))
 
   #| end of module |# )
 
