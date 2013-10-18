@@ -49,18 +49,26 @@ language multimethods}.
 @smallexample
 <top>
   |
-  +------+--------+---------+-------+---------+-----------
-  |      |        |         |       |         |           |
-  |      v        v         v       v         v           v
-  |  <boolean> <symbol> <keyword> <pair> <mutable-pair> <list>
+  +------+--------+---------+-------
+  |      |        |         |       |
+  |      v        v         v       v
+  |  <boolean> <symbol> <keyword> <char>
   |
-  +----+-------+--------+----------+------------
-  |    |       |        |          |            |
-  |    v       v        v          v            v
-  |  <char> <string> <vector> <bytevector> <hashtable>
-  |            |
-  |            v
-  |     <mutable-string>
+  +------+------------------
+  |      |                  |
+  |      v                  v
+  |   <pair>             <spine>
+  |      |                  |
+  |      v                  v
+  |  <mutable-pair>      <list>
+  |
+  +--------+--------+----------+------------
+  |        |        |          |            |
+  |        v        v          v            v
+  |     <string> <vector> <bytevector> <hashtable>
+  |        |
+  |        v
+  |  <mutable-string>
   |
   +-------+------------+----------
   |       |            |          |
@@ -104,7 +112,7 @@ language multimethods}.
 <rational-valued> --> <integer-valued>
   |
   v
-<rational> --> <integer> --> <fixnum>
+<rational> --> <integer> --> <exact-integer> --> <fixnum>
 @end smallexample
 
 @c page
@@ -340,7 +348,8 @@ meant to be used for immutable pairs.
 
 
 @deftp {Builtin Label} @aclass{mutable-pair}
-Conventional type of objects satisfying @func{pair?}.
+Conventional type of objects satisfying @func{pair?}; it is derived from
+@aclass{pair}.
 @end deftp
 
 
