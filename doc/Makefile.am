@@ -140,6 +140,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-stacks.texi					\
 	nausicaa-queues.texi					\
 	nausicaa-bitvectors.texi				\
+	nausicaa-containers-iterators.texi			\
 	\
 	nausicaa-parser-tools-source-locations.texi		\
 	nausicaa-parser-tools-lexical-tokens.texi		\

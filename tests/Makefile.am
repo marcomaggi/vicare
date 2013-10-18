@@ -288,6 +288,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-containers-stacks.sps				\
 	test-nausicaa-containers-queues.sps				\
 	test-nausicaa-containers-bitvectors.sps				\
+	test-nausicaa-containers-iterators.sps				\
 	\
 	test-nausicaa-parser-tools-lexical-token.sps			\
 	test-nausicaa-parser-tools-source-location.sps

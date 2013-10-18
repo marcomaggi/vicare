@@ -309,6 +309,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/containers/stacks.sls				\
 	nausicaa/containers/queues.sls				\
 	nausicaa/containers/bitvectors.sls			\
+	nausicaa/containers/iterators.sls			\
 	\
 	nausicaa/parser-tools/source-locations.sls		\
 	nausicaa/parser-tools/lexical-tokens.sls		\
