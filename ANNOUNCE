@@ -160,15 +160,19 @@ Notes for revision 0.3d5
      (vicare language-extensions identifier-properties)
      (vicare language-extensions makers)
 
-* Imported stacks library from nausicaa as libraries:
+* Imported stacks library from Nausicaa as libraries:
 
      (vicare containers stacks)
      (nausicaa containers stacks)
 
-* Imported queues library from nausicaa as libraries:
+* Imported queues library from Nausicaa as libraries:
 
      (vicare containers queues)
      (nausicaa containers queues)
+
+* Imported iterators library from Nausicaa as:
+
+     (nausicaa containers iterators)
 
 
 Notes for revision 0.3d4
