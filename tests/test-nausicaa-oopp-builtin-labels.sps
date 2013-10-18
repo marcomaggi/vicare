@@ -173,6 +173,63 @@
   #t)
 
 
+(parametrise ((check-test-name	'spines))
+
+  (check	;maker
+      (let ()
+	(<spine> P (<> ()))
+	P)
+    => '())
+
+  (check	;maker
+      (let ()
+	(<spine> P (<> (1 '())))
+	(vector (P car) (P cdr)))
+    => '#(1 ()))
+
+  (check	;maker
+      (let ()
+	(<spine> P (<> (1 '(2))))
+	(vector (P car) (P cdr)))
+    => '#(1 (2)))
+
+  (check	;predicate
+      ((<spine>) '())
+    => #t)
+
+  (check	;predicate
+      ((<spine>) '(1))
+    => #t)
+
+  (check	;predicate
+      ((<spine>) '(1 2))
+    => #t)
+
+  (check	;predicate
+      ((<spine>) '(1 . 2))
+    => #f)
+
+  (check	;predicate
+      ((<spine>) '(1 2 . 3))
+    => #t)
+
+  (check	;predicate
+      ((<spine>) '())
+    => #t)
+
+  (check	;virtual fields safe accessors
+      (let (((P <spine>) '(1 2)))
+	(vector (P car) (P cdr)))
+    => '#(1 (2)))
+
+  (check	;virtual fields unsafe accessors
+      (let (((P <spine>) '(1 2)))
+	(vector (P $car) (P $cdr)))
+    => '#(1 (2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'lists))
 
 ;;; maker

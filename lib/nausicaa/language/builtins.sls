@@ -30,7 +30,7 @@
   (export
     <top>
     <boolean> <symbol> <keyword> <pointer>
-    <pair> <mutable-pair> <list>
+    <pair> <mutable-pair> <spine> <list>
     <char> <string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
@@ -122,8 +122,8 @@
 		       (assertion-violation '<keyword>
 			 "expected symbol or string as constructor argument" arg))))))
   (virtual-fields (immutable (string <string>) (lambda/tags ((K <keyword>))
-							 (symbol->string (K symbol))))
-		      (immutable (symbol <symbol>) keyword->symbol)))
+						 (symbol->string (K symbol))))
+		  (immutable (symbol <symbol>) keyword->symbol)))
 
 (define-builtin-label <pointer>
   (predicate pointer?)
@@ -191,30 +191,50 @@
   (protocol (lambda () cons))
   (predicate pair?)
   (virtual-fields (immutable car car)
-		      (immutable cdr cdr)
-		      (immutable $car $car)
-		      (immutable $cdr $cdr)))
+		  (immutable cdr cdr)
+		  (immutable $car $car)
+		  (immutable $cdr $cdr)))
 
 (define-builtin-label <mutable-pair>
   (protocol (lambda () cons))
   (predicate pair?)
   (virtual-fields (mutable car car set-car!)
-		      (mutable cdr cdr set-cdr!)
-		      (mutable $car $car $set-car!)
-		      (mutable $cdr $cdr $set-cdr!)))
+		  (mutable cdr cdr set-cdr!)
+		  (mutable $car $car $set-car!)
+		  (mutable $cdr $cdr $set-cdr!)))
 
-(define-builtin-label <list>
-  ;;We want  this type  to accept  null as  a valid  list, so  we cannot
-  ;;subclass it from <pair>.
+;;; --------------------------------------------------------------------
+
+(define-builtin-label <spine>
+  ;;A spine is  the head of a proper  list: null or a pair  whose cdr is
+  ;;null  or a  pair.  It  can be  used to  iterate over  a proper  list
+  ;;without fully validating it first.
   ;;
-  (protocol (lambda () list))
-  (predicate list?)
-  (virtual-fields (immutable length		length)
-		      (immutable null?		null?)
-		      (immutable car		car)
-		      (immutable (cdr <list>)	cdr)
-		      (immutable $car		$car)
-		      (immutable ($cdr <list>)	$cdr))
+  (protocol (lambda ()
+	      (lambda/tags (A (D <spine>))
+		(cons A D))))
+
+  (predicate (lambda (obj)
+	       (or (and (pair? obj)
+			(or (pair? ($cdr obj))
+			    (null? ($cdr obj))))
+		   (null? obj))))
+
+  (maker (lambda (stx)
+	   (syntax-case stx ()
+	     ((_ ())
+	      #'(quote ()))
+	     ((_ (?car ?cdr))
+	      #'(make-<spine> ?car ?cdr))
+	     )))
+
+  (virtual-fields (immutable (length	<exact-integer>)	length)
+		  (immutable (null?	<boolean>) 		null?)
+		  (immutable (pair?	<boolean>)		pair?)
+		  (immutable car				car)
+		  (immutable (cdr	<spine>)		cdr)
+		  (immutable $car				$car)
+		  (immutable ($cdr	<spine>)		$cdr))
 
   ;; --------------------------------------------------------------------
 
@@ -388,7 +408,16 @@
   (method-syntax assq
     (syntax-rules ()
       ((_ o proc)
-       (assq proc o)))))
+       (assq proc o))))
+
+  #| end of label |# )
+
+;;; --------------------------------------------------------------------
+
+(define-builtin-label <list>
+  (parent <spine>)
+  (protocol (lambda () list))
+  (predicate list?))
 
 
 ;;;; built-in types: arrays common stuff
@@ -417,15 +446,15 @@
 	   (assertion-violation who "array index out of range" idx))))
 
   (getter (lambda (stx)
-		(syntax-case stx ()
-		  ((?var ((?idx)))
-		   #'(?var ref ?idx))))))
+	    (syntax-case stx ()
+	      ((?var ((?idx)))
+	       #'(?var ref ?idx))))))
 
 (define-mixin <mutable-array>
   (setter (lambda (stx)
-		(syntax-case stx ()
-		  ((?var ((?index)) ?val)
-		   #'(?var set! ?index ?val))))))
+	    (syntax-case stx ()
+	      ((?var ((?index)) ?val)
+	       #'(?var set! ?index ?val))))))
 
 
 ;;;; built-in types: characters and strings
@@ -433,18 +462,18 @@
 (define-builtin-label <char>
   (predicate char?)
   (virtual-fields (immutable (upcase    <char>)	char-upcase)
-		      (immutable (downcase  <char>)	char-downcase)
-		      (immutable (titlecase <char>)	char-titlecase)
-		      (immutable (foldcase  <char>)	char-foldcase)
+		  (immutable (downcase  <char>)	char-downcase)
+		  (immutable (titlecase <char>)	char-titlecase)
+		  (immutable (foldcase  <char>)	char-foldcase)
 
-		      (immutable (alphabetic? <boolean>)	char-alphabetic?)
-		      (immutable (numeric?    <boolean>)	char-numeric?)
-		      (immutable (whitespace? <boolean>)	char-whitespace?)
-		      (immutable (upper-case? <boolean>)	char-upper-case?)
-		      (immutable (lower-case? <boolean>)	char-lower-case?)
-		      (immutable (title-case? <boolean>)	char-title-case?)
+		  (immutable (alphabetic? <boolean>)	char-alphabetic?)
+		  (immutable (numeric?    <boolean>)	char-numeric?)
+		  (immutable (whitespace? <boolean>)	char-whitespace?)
+		  (immutable (upper-case? <boolean>)	char-upper-case?)
+		  (immutable (lower-case? <boolean>)	char-lower-case?)
+		  (immutable (title-case? <boolean>)	char-title-case?)
 
-		      (immutable (general-category <symbol>) char-general-category)))
+		  (immutable (general-category <symbol>) char-general-category)))
 
 ;;; --------------------------------------------------------------------
 
@@ -453,11 +482,11 @@
   (protocol (lambda () string))
   (predicate string?)
   (virtual-fields (immutable (length    <fixnum>)	string-length)
-		      (immutable ($length   <fixnum>)	$string-length)
-		      (immutable (upcase    <string>)	string-upcase)
-		      (immutable (downcase  <string>)	string-downcase)
-		      (immutable (titlecase <string>)	string-titlecase)
-		      (immutable (foldcase  <string>)	string-foldcase))
+		  (immutable ($length   <fixnum>)	$string-length)
+		  (immutable (upcase    <string>)	string-upcase)
+		  (immutable (downcase  <string>)	string-downcase)
+		  (immutable (titlecase <string>)	string-titlecase)
+		  (immutable (foldcase  <string>)	string-foldcase))
 
   (method (ref (S <string>) (idx <fixnum>))
     ($string-ref S (S %normalise-index idx)))
@@ -561,7 +590,8 @@
     (syntax-rules ()
       ((_ o fill)
        (vector-fill! o fill))))
-  )
+
+  #| end of label |# )
 
 
 ;;;; built-in types: bytevectors
@@ -569,7 +599,7 @@
 (define-builtin-label <bytevector>
   (predicate bytevector?)
   (virtual-fields (immutable length bytevector-length)
-		      (immutable $length $bytevector-length))
+		  (immutable $length $bytevector-length))
   (method-syntax copy
     (syntax-rules ()
       ((_ ?bv)
@@ -592,13 +622,13 @@
 		#'(define-builtin-label ?type
 		    (parent <bytevector>)
 		    (setter (lambda (stx)
-				  (syntax-case stx ()
-				    ((?var ((?idx)) ?val)
-				     #'(SETTER ?var ?idx ?val)))))
+			      (syntax-case stx ()
+				((?var ((?idx)) ?val)
+				 #'(SETTER ?var ?idx ?val)))))
 		    (getter (lambda (stx)
-				  (syntax-case stx ()
-				    ((?var ((?idx)))
-				     #'(GETTER ?var ?idx))))))
+			      (syntax-case stx ()
+				((?var ((?idx)))
+				 #'(GETTER ?var ?idx))))))
 		)))
 	   ))))
   (define-bytevector-label <bytevector-u8>	"u8-native")
@@ -647,21 +677,21 @@
 (define-builtin-label <hashtable>
   (predicate hashtable?)
   (virtual-fields (immutable size hashtable-size)
-		      (immutable keys hashtable-keys)
-		      (immutable entries hashtable-entries)
-		      (immutable (mutable? <boolean>) hashtable-mutable?))
+		  (immutable keys hashtable-keys)
+		  (immutable entries hashtable-entries)
+		  (immutable (mutable? <boolean>) hashtable-mutable?))
   (getter (lambda (stx)
-		(syntax-case stx ()
-		  ((?var ((?key)))
-		   #'(hashtable-ref ?var ?key (void)))
-		  ((?var ((?key) (?default)))
-		   #'(hashtable-ref ?var ?key ?default))
-		  )))
+	    (syntax-case stx ()
+	      ((?var ((?key)))
+	       #'(hashtable-ref ?var ?key (void)))
+	      ((?var ((?key) (?default)))
+	       #'(hashtable-ref ?var ?key ?default))
+	      )))
 
   (setter (lambda (stx)
-		(syntax-case stx ()
-		  ((?var ((?index)) ?val)
-		   #'(hashtable-set! ?var ?index ?val)))))
+	    (syntax-case stx ()
+	      ((?var ((?index)) ?val)
+	       #'(hashtable-set! ?var ?index ?val)))))
 
   (method-syntax delete!
     (syntax-rules ()
@@ -690,49 +720,50 @@
       ((_ ?table ?key ?proc ?default)
        (hashtable-update! ?table ?key ?proc ?default))))
 
-  )
+  #| end of label |# )
 
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <hashtable-eq>
   (parent <hashtable>)
-  (protocol
-   (lambda ()
-     (lambda entries
-       (receive-and-return (table)
-	   (make-eq-hashtable)
-	 (for-each (lambda (entry)
-		     (hashtable-set! table (car entry) (cdr entry)))
-	   entries)))))
-  (maker
-   (lambda (stx)
-     (syntax-case stx ()
-       ((_ ((?key ?val) ...))
-	#'(make-<hashtable-eq> (cons ?key ?val) ...))
-       ((_ ((?key . ?val) ...))
-	#'(make-<hashtable-eq> (cons ?key ?val) ...))
-       ))))
+
+  (protocol (lambda ()
+	      (lambda entries
+		(receive-and-return (table)
+		    (make-eq-hashtable)
+		  (for-each (lambda (entry)
+			      (hashtable-set! table (car entry) (cdr entry)))
+		    entries)))))
+
+  (maker (lambda (stx)
+	   (syntax-case stx ()
+	     ((_ ((?key ?val) ...))
+	      #'(make-<hashtable-eq> (cons ?key ?val) ...))
+	     ((_ ((?key . ?val) ...))
+	      #'(make-<hashtable-eq> (cons ?key ?val) ...))
+	     )))
+
+  #| end of label |# )
 
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <hashtable-eqv>
   (parent <hashtable>)
-  (protocol
-   (lambda ()
-     (lambda entries
-       (receive-and-return (table)
-	   (make-eqv-hashtable)
-	 (for-each (lambda (entry)
-		     (hashtable-set! table (car entry) (cdr entry)))
-	   entries)))))
-  (maker
-   (lambda (stx)
-     (syntax-case stx ()
-       ((_ ((?key ?val) ...))
-	#'(make-<hashtable-eqv> (cons ?key ?val) ...))
-       ((_ ((?key . ?val) ...))
-	#'(make-<hashtable-eqv> (cons ?key ?val) ...))
-       ))))
+  (protocol (lambda ()
+	      (lambda entries
+		(receive-and-return (table)
+		    (make-eqv-hashtable)
+		  (for-each (lambda (entry)
+			      (hashtable-set! table (car entry) (cdr entry)))
+		    entries)))))
+  (maker (lambda (stx)
+	   (syntax-case stx ()
+	     ((_ ((?key ?val) ...))
+	      #'(make-<hashtable-eqv> (cons ?key ?val) ...))
+	     ((_ ((?key . ?val) ...))
+	      #'(make-<hashtable-eqv> (cons ?key ?val) ...))
+	     )))
+  #| end of label |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -802,13 +833,13 @@
 
 (define-builtin-label <record-type-descriptor>
   (predicate record-type-descriptor?)
-  (virtual-fields (immutable (name	<symbol>)	record-type-name)
-		      (immutable (parent	<record-type-descriptor>)	record-type-parent)
-		      (immutable (uid	<symbol>)	record-type-uid)
-		      (immutable (generative? <boolean>)	record-type-generative?)
-		      (immutable (sealed?	<boolean>)	record-type-sealed?)
-		      (immutable (opaque?	<boolean>)	record-type-opaque?)
-		      (immutable (field-names <vector>)	record-type-field-names))
+  (virtual-fields (immutable (name		<symbol>)			record-type-name)
+		  (immutable (parent		<record-type-descriptor>)	record-type-parent)
+		  (immutable (uid		<symbol>)			record-type-uid)
+		  (immutable (generative?	<boolean>)			record-type-generative?)
+		  (immutable (sealed?		<boolean>)			record-type-sealed?)
+		  (immutable (opaque?		<boolean>)			record-type-opaque?)
+		  (immutable (field-names	<vector>)			record-type-field-names))
 
   (method-syntax predicate
     (syntax-rules ()
@@ -829,7 +860,8 @@
     (syntax-rules ()
       ((_ ?rtd ?field-idx)
        (record-field-mutable? ?rtd ?field-idx))))
-  )
+
+  #| end of label |# )
 
 (define-builtin-label <record>
   (predicate record?)
@@ -842,9 +874,6 @@
   (parent <record>)
   (protocol (lambda () condition))
   (predicate condition?)
-  ;; (virtual-fields (immutable message	condition-message)
-  ;; 		      (immutable who	condition-who)
-  ;; 		      (immutable irritants	condition-irritants))
   (method-syntax simple
     (syntax-rules ()
       ((_ ?cond)
@@ -857,17 +886,17 @@
   (predicate transcoder?)
   (protocol (lambda () make-transcoder))
   (maker (lambda (stx)
-	       (syntax-case stx ()
-		 ((_ ?codec)
-		  #'(make-<transcoder> ?codec))
-		 ((_ ?codec ?eol-style)
-		  #'(make-<transcoder> ?codec ?eol-style))
-		 ((_ ?codec ?eol-style ?error-handling-mode)
-		  #'(make-<transcoder> ?codec ?eol-style ?error-handling-mode))
-		 )))
+	   (syntax-case stx ()
+	     ((_ ?codec)
+	      #'(make-<transcoder> ?codec))
+	     ((_ ?codec ?eol-style)
+	      #'(make-<transcoder> ?codec ?eol-style))
+	     ((_ ?codec ?eol-style ?error-handling-mode)
+	      #'(make-<transcoder> ?codec ?eol-style ?error-handling-mode))
+	     )))
   (virtual-fields (immutable codec transcoder-codec)
-		      (immutable (eol-style <symbol>) transcoder-eol-style)
-		      (immutable (error-handling-mode <symbol>) transcoder-error-handling-mode)))
+		  (immutable (eol-style <symbol>) transcoder-eol-style)
+		  (immutable (error-handling-mode <symbol>) transcoder-error-handling-mode)))
 
 
 ;;;; built-in types: port objects
@@ -920,9 +949,9 @@
   (define-mixin <input-port-clauses>
     (virtual-fields
      (immutable (eof? <boolean>) port-eof?))
-    (methods (get-single		get-single)
+    (methods (get-single	get-single)
 	     (lookahead-single	lookahead-single)
-	     (get-multi-n		get-multi-n)
+	     (get-multi-n	get-multi-n)
 	     (get-multi-n!	get-multi-n!)
 	     (get-multi-some	get-multi-some)
 	     (get-multi-all	get-multi-all)))
@@ -1058,7 +1087,7 @@
        (number->string ?num ?radix ?precision))
       ))
 
-  ;;; math functions from (rnrs base (6)) and (vicare)
+;;; math functions from (rnrs base (6)) and (vicare)
 
   ;; arithmetic
   (method-syntax +
@@ -1885,7 +1914,9 @@
   (method-syntax min
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
-       (flmin ?fl1 ?fl ...)))))
+       (flmin ?fl1 ?fl ...))))
+
+  #| end of label |# )
 
 
 ;;;; built-in types: procedure objects
