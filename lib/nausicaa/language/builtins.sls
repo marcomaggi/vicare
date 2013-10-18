@@ -187,24 +187,6 @@
 
 ;;;; built-in types: pairs and lists
 
-(define-builtin-label <pair>
-  (protocol (lambda () cons))
-  (predicate pair?)
-  (virtual-fields (immutable car car)
-		  (immutable cdr cdr)
-		  (immutable $car $car)
-		  (immutable $cdr $cdr)))
-
-(define-builtin-label <mutable-pair>
-  (protocol (lambda () cons))
-  (predicate pair?)
-  (virtual-fields (mutable car car set-car!)
-		  (mutable cdr cdr set-cdr!)
-		  (mutable $car $car $set-car!)
-		  (mutable $cdr $cdr $set-cdr!)))
-
-;;; --------------------------------------------------------------------
-
 (define-builtin-label <spine>
   ;;A spine is  the head of a proper  list: null or a pair  whose cdr is
   ;;null  or a  pair.  It  can be  used to  iterate over  a proper  list
@@ -413,6 +395,23 @@
   #| end of label |# )
 
 ;;; --------------------------------------------------------------------
+
+(define-builtin-label <pair>
+  (protocol (lambda () cons))
+  (predicate pair?)
+  (virtual-fields (immutable car car)
+		  (immutable cdr cdr)
+		  (immutable $car $car)
+		  (immutable $cdr $cdr)))
+
+(define-builtin-label <mutable-pair>
+  (parent <pair>)
+  (protocol (lambda () cons))
+  (predicate pair?)
+  (virtual-fields (mutable car car set-car!)
+		  (mutable cdr cdr set-cdr!)
+		  (mutable $car $car $set-car!)
+		  (mutable $cdr $cdr $set-cdr!)))
 
 (define-builtin-label <list>
   (parent <spine>)
@@ -1956,11 +1955,20 @@
 	  ((real-valued?	obj)	(tag-unique-identifiers <real-valued>))
 	  ((complex?		obj)	(tag-unique-identifiers <complex>))
 	  (else				(tag-unique-identifiers <number>))))
+
    ((char?		obj)		(tag-unique-identifiers <char>))
    ((string?		obj)		(tag-unique-identifiers <string>))
    ((symbol?		obj)		(tag-unique-identifiers <symbol>))
    ((vector?		obj)		(tag-unique-identifiers <vector>))
    ((bytevector?	obj)		(tag-unique-identifiers <bytevector>))
+
+   ;;Notice that  we never try to  test for "<list>": qualifying  a long
+   ;;list can be time-consuming.
+   ((pair?		obj)		(if (pair? ($cdr obj))
+					    (tag-unique-identifiers <spine>)
+					  (tag-unique-identifiers <pair>)))
+   ((null?		obj)		(tag-unique-identifiers <spine>))
+
    ((port?		obj)
     ;;Order here is arbitrary.
     (cond ((input/output-port?	obj)	(tag-unique-identifiers <input/output-port>))
@@ -1976,12 +1984,6 @@
    ;;Remember that in Larceny hashtables are records.
    ((hashtable?	obj)	(tag-unique-identifiers <hashtable>))
    ((procedure? obj)	(tag-unique-identifiers <procedure>))
-   ((pair?		obj)
-    ;;Order does matter  here!!!  Better leave these at  the end because
-    ;;qualifying a long list can be time-consuming.
-    (if (list? obj)
-	(tag-unique-identifiers <list>)
-      (tag-unique-identifiers <pair>)))
 
    ;;Everything else inluding records not defined by DEFINE-CLASS.
    (else (tag-unique-identifiers <top>))))

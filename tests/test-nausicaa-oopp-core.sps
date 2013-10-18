@@ -2820,7 +2820,11 @@
 
   (check
       (tag-unique-identifiers-of '(1 2))
-    => '(nausicaa:builtin:<list> nausicaa:builtin:<top>))
+    => '(nausicaa:builtin:<spine> nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of '())
+    => '(nausicaa:builtin:<spine> nausicaa:builtin:<top>))
 
   (check
       (tag-unique-identifiers-of #\a)
