@@ -34,88 +34,72 @@
 (check-display "*** testing Nausicaa containers: iterators\n")
 
 
-#;(parametrise ((check-test-name	'example-string))
+(parametrise ((check-test-name	'example-string))
 
   (define-class <simple-string-iterator>
-    (nongenerative example:<simple-string-iterator>)
-    (inherit <iterator>)
-    (fields (mutable   (index  <integer>)))
-    (virtual-fields (immutable (subject <string>))
-		    (mutable   (current <char>)))
-    (protocol
-     (lambda (make-iterator)
-       (lambda (string)
-	 (assert (string? string))
-	 ((make-iterator string) 0))))
-    (maker ()
-	   (subject:	sentinel))
-    (methods more? next))
+    (parent <iterator>)
+    (fields (mutable (index <nonnegative-fixnum>)))
+    (virtual-fields (immutable (subject <string>)
+			       (lambda ((I <iterator>)) (I $subject))))
+    (protocol (lambda (make-iterator)
+		(lambda ((subject <string>))
+		  ((make-iterator subject) 0)))))
 
-  ;; accessor for the virtual field SUBJECT
-  (define (<simple-string-iterator>-subject (I <iterator>))
-    I.subject)
+  (define-method (iterator-more? (I <simple-string-iterator>))
+    (fx< (I index) (string-length (I subject))))
 
-  ;; accessor and mutator for the virtual field CURRENT
-  (define (<simple-string-iterator>-current (I <iterator>))
-    I.current)
-  (define (<simple-string-iterator>-current-set! (I <iterator>) value)
-    (set! I.current value))
-
-  ;;; virtual methods implementations
-
-  (define-virtual-method <simple-string-iterator> (more? (I <simple-string-iterator>))
-    (< I.index I.subject.length))
-
-  (define-virtual-method <simple-string-iterator> (next (I <simple-string-iterator>))
-    (if (< I.index I.subject.length)
-	(begin0-let ((retval (getf (I.subject I.index))))
-	  (set!  I.current retval)
-	  (incr! I.index))
-      (raise (make &stop-iteration I))))
+  (define-method (iterator-next (I <simple-string-iterator>))
+    (if (I more?)
+	(receive-and-return (retval)
+	    (string-ref (I subject) (I index))
+	  (set! (I current) retval)
+	  (set! (I index) (+ 1 (I index))))
+      (raise (&stop-iteration (I)))))
 
 ;;; --------------------------------------------------------------------
 
-  (let* (((S <string>) "ciao")
-	 ((J <simple-string-iterator>)
-	  (make <simple-string-iterator>
-	    (subject: S)))
-	 ((I <iterator>) J))
+  (let ()
+    (<string> S "ciao")
+    (<simple-string-iterator> J (<> (S)))
+    (<iterator> I J)
 
     (check (is-a? I <iterator>)		=> #t)
     (check (is-a? J <iterator>)		=> #t)
     (check (is-a? J <simple-string-iterator>) => #t)
-    (check (sentinel? I.current)	=> #t)
+    (check (sentinel? (I current))	=> #t)
 
-    (check I.subject			=> "ciao")
-    (check J.subject.length		=> 4)
+    (check (I subject)			=> "ciao")
+    (check (J subject length)		=> 4)
 
-    (check (I.more?)	=> #t)
-    (check (I.next)	=> #\c)
+    (check (I more?)	=> #t)
+    (check (I next)	=> #\c)
 
-    (check (I.more?)	=> #t)
-    (check (I.next)	=> #\i)
+    (check (I more?)	=> #t)
+    (check (I next)	=> #\i)
 
-    (check (I.more?)	=> #t)
-    (check (I.next)	=> #\a)
+    (check (I more?)	=> #t)
+    (check (I next)	=> #\a)
 
-    (check (I.more?)	=> #t)
-    (check (I.next)	=> #\o)
+    (check (I more?)	=> #t)
+    (check (I next)	=> #\o)
 
-    (check (I.more?)	=> #f)
+    (check (I more?)	=> #f)
+
     (check
-    	(guard (E ((is-a? &stop-iteration)
-    		   E.iterator)
-    		  (else E))
-    	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
-
-    ;;once it is over, it is over forever
-    (check (I.more?)	=> #f)
-    (check
-    	(guard (E ((is-a? &stop-iteration)
-    		   E.iterator)
-    		  (else E))
-    	  (I.next))
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
 
     #f)

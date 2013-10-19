@@ -82,91 +82,34 @@ Scheme string iterator:
 @example
 #!r6rs
 (import (nausicaa)
-  (nausicaa iterators))
+  (nausicaa containers iterators))
 
 (define-class <simple-string-iterator>
-  (nongenerative example:<simple-string-iterator>)
-  (inherit <iterator>)
-  (fields (mutable (index <integer>)))
-  (virtual-fields (immutable (subject <string>))
-                  (mutable   (current <char>)))
-  (protocol
-   (lambda (make-iterator)
-     (lambda (string)
-       (assert (string? string))
-       ((make-iterator string) 0))))
-  (maker ()
-         (subject:    sentinel))
-  (methods more? next))
+  (parent <iterator>)
+  (fields (mutable (index <nonnegative-fixnum>)))
+  (virtual-fields (immutable (subject <string>)
+                             (lambda ((I <iterator>))
+                               (I $subject))))
+  (protocol (lambda (make-iterator)
+              (lambda ((subject <string>))
+                ((make-iterator subject) 0)))))
 
-;; accessor for the virtual field SUBJECT
-(define (<simple-string-iterator>-subject (I <iterator>))
-  I.subject)
+(define-method (iterator-more? (I <simple-string-iterator>))
+  (fx< (I index) (string-length (I subject))))
 
-;; accessor and mutator for the virtual field CURRENT
-(define (<simple-string-iterator>-current (I <iterator>))
-  I.current)
-(define (<simple-string-iterator>-current-set! (I <iterator>) value)
-  (set! I.current value))
-
-;;; virtual methods implementations
-
-(define-virtual-method <simple-string-iterator> (more? (I <simple-string-iterator>))
-  (< I.index I.subject.length))
-
-(define (%string-iterator-step (I <simple-string-iterator>))
-  (if (< I.index I.subject.length)
-      (begin0-let ((retval (getf (I.subject I.index))))
-        (set!  I.current retval)
-        (incr! I.index))
-    (raise (make &stop-iteration I))))
-
-(define-virtual-method <simple-string-iterator> next
-  %string-iterator-step)
-
-;;; tests
-
-(let* (((S <string>) "ciao")
-       ((J <simple-string-iterator>)
-        (make <simple-string-iterator>
-          (subject: S)))
-       ((I <iterator>) J))
-
-  (is-a? I <iterator>)                  @result{} #t
-  (is-a? J <iterator>)                  @result{} #t
-  (is-a? J <simple-string-iterator>)    @result{} #t
-
-  (sentinel? I.current)      @result{} #t
-  I.subject                  @result{} "ciao"
-  J.subject.length           @result{} 4
-
-  (I.more?)     @result{} #t
-  (I.next)      @result{} #\c
-
-  (I.more?)     @result{} #t
-  (I.next)      @result{} #\i
-
-  (I.more?)     @result{} #t
-  (I.next)      @result{} #\a
-
-  (I.more?)     @result{} #t
-  (I.next)      @result{} #\o
-
-  (I.more?)     @result{} #f
-  (guard (E ((is-a? &stop-iteration)
-             E.iterator)
-            (else E))
-    (I.next))   @result{} I
-
-  ;;once it is over, it is over forever
-  (I.more?)     @result{} #f
-  (guard (E ((is-a? &stop-iteration)
-             E.iterator)
-            (else E))
-    (I.next))   @result{} I
-
-  #f)
+(define-method (iterator-next (I <simple-string-iterator>))
+  (if (I more?)
+      (receive-and-return (retval)
+          (string-ref (I subject) (I index))
+        (set! (I current) retval)
+        (set! (I index) (+ 1 (I index))))
+    (raise (&stop-iteration (I)))))
 @end example
+
+@noindent
+notice the virtual field called @code{subject}: it references the
+untagged concrete field in @class{iterator}; its only purpose is to
+provide tagged access to the subject.
 
 @c page
 @node iterators conditions

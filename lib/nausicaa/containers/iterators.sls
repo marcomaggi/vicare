@@ -195,7 +195,7 @@
     (parent <sequence-iterator>)
 
     ;;This tagged  virtual field references the  untagged concrete field
-    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
+    ;;in "<iterator>"; its  only purpose is to provide  tagged access to
     ;;the subject.
     (virtual-fields (immutable (subject <container>)
 			       (lambda ((I <iterator>)) (I $subject))))
