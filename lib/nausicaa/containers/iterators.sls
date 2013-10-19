@@ -140,7 +140,7 @@
   #| end of module |# )
 
 
-(module (<sequence-iterator>)
+(module (<sequence-iterator> <sequence-iterator-clauses>)
 
   (define-class <sequence-iterator>
     (nongenerative nausicaa:containers:iterators:<sequence-iterator>)
@@ -191,23 +191,17 @@
           #;(I index incr! (I $stride)))
       (raise (&stop-iteration (I)))))
 
-  #| end of module |# )
-
-
-(module (<string-iterator>)
-
-  (define-class <string-iterator>
-    (nongenerative nausicaa:containers:iterators:<string-iterator>)
+  (define-mixin <sequence-iterator-clauses>
     (parent <sequence-iterator>)
 
     ;;This tagged  virtual field references the  untagged concrete field
     ;;in "<iterator>";  it only purpose  is to provide tagged  access to
     ;;the subject.
-    (virtual-fields (immutable (subject <string>)
+    (virtual-fields (immutable (subject <container>)
 			       (lambda ((I <iterator>)) (I $subject))))
 
-    (protocol (lambda (make-subject-iterator)
-		(lambda ((subject <string>) start past (stride <fixnum>))
+    (protocol (lambda (make-sequence-iterator)
+		(lambda ((subject <container>) start past (stride <fixnum>))
 		  (let ((start (or start
 				   (if ($fxnegative? stride)
 				       (subject $length)
@@ -216,8 +210,21 @@
 				   (if ($fxnegative? stride)
 				       0
 				     (subject $length)))))
-		    ((make-subject-iterator subject (lambda (index) ($string-ref subject index))
-					    (subject $length) start past stride))))))
+		    ((make-sequence-iterator subject (lambda (index) (%the-getter subject index))
+					     (subject $length) start past stride))))))
+
+    #| end of mixin |# )
+
+  #| end of module |# )
+
+
+(module (<string-iterator>)
+
+  (define-class <string-iterator>
+    (nongenerative nausicaa:containers:iterators:<string-iterator>)
+    (mixins (<sequence-iterator-clauses>
+	     (<container>		<string>)
+	     (%the-getter		$string-ref)))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -241,26 +248,9 @@
 
   (define-class <vector-iterator>
     (nongenerative nausicaa:containers:iterators:<vector-iterator>)
-    (parent <sequence-iterator>)
-
-    ;;This tagged  virtual field references the  untagged concrete field
-    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
-    ;;the subject.
-    (virtual-fields (immutable (subject <vector>)
-			       (lambda ((I <iterator>)) (I $subject))))
-
-    (protocol (lambda (make-subject-iterator)
-		(lambda ((subject <vector>) start past (stride <fixnum>))
-		  (let ((start (or start
-				   (if ($fxnegative? stride)
-				       (subject $length)
-				     0)))
-			(past  (or past
-				   (if ($fxnegative? stride)
-				       0
-				     (subject $length)))))
-		    ((make-subject-iterator subject (lambda (index) ($vector-ref subject index))
-					    (subject $length) start past stride))))))
+    (mixins (<sequence-iterator-clauses>
+	     (<container>		<vector>)
+	     (%the-getter		$vector-ref)))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -284,26 +274,9 @@
 
   (define-class <bytevector-u8-iterator>
     (nongenerative nausicaa:containers:iterators:<bytevector-u8-iterator>)
-    (parent <sequence-iterator>)
-
-    ;;This tagged  virtual field references the  untagged concrete field
-    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
-    ;;the subject.
-    (virtual-fields (immutable (subject <bytevector-u8>)
-			       (lambda ((I <iterator>)) (I $subject))))
-
-    (protocol (lambda (make-subject-iterator)
-		(lambda ((subject <bytevector-u8>) start past (stride <fixnum>))
-		  (let ((start (or start
-				   (if ($fxnegative? stride)
-				       (subject $length)
-				     0)))
-			(past  (or past
-				   (if ($fxnegative? stride)
-				       0
-				     (subject $length)))))
-		    ((make-subject-iterator subject (lambda (index) ($bytevector-u8-ref subject index))
-					    (subject $length) start past stride))))))
+    (mixins (<sequence-iterator-clauses>
+	     (<container>		<bytevector-u8>)
+	     (%the-getter		$bytevector-u8-ref)))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
