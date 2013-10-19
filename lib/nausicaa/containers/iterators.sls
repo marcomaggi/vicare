@@ -65,7 +65,11 @@
   (nongenerative nausicaa:containers:iterators:<iterator>)
   (abstract)
   (fields (immutable subject)
+		;Contains  the  object  over   which  the  iteration  is
+		;performed.  Notice that it is untagged.
 	  (mutable   current))
+		;Initialised to THE-SENTINEL,  contains the current item
+		;referenced by the iterator.
   (super-protocol
    (lambda (make-top)
      (lambda (subject)
@@ -183,7 +187,8 @@
 	(receive-and-return (retval)
 	    ((I $getter) (I $index))
 	  (set! (I $current) retval)
-	  (I $index incr! (I $stride)))
+	  (set! (I $index) (+ (I $index) (I $stride)))
+          #;(I index incr! (I $stride)))
       (raise (&stop-iteration (I)))))
 
   #| end of module |# )
@@ -195,14 +200,24 @@
     (nongenerative nausicaa:containers:iterators:<string-iterator>)
     (parent <sequence-iterator>)
 
-    (fields (immutable (subject <string>)))
+    ;;This tagged  virtual field references the  untagged concrete field
+    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
+    ;;the subject.
+    (virtual-fields (immutable (subject <string>)
+			       (lambda ((I <iterator>)) (I $subject))))
 
     (protocol (lambda (make-subject-iterator)
-		(lambda ((subject <string>)
-		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-subject-iterator subject (lambda (index) ($string-ref subject index))
-					  (subject $length) start past stride)
-		   subject))))
+		(lambda ((subject <string>) start past (stride <fixnum>))
+		  (let ((start (or start
+				   (if ($fxnegative? stride)
+				       (subject $length)
+				     0)))
+			(past  (or past
+				   (if ($fxnegative? stride)
+				       0
+				     (subject $length)))))
+		    ((make-subject-iterator subject (lambda (index) ($string-ref subject index))
+					    (subject $length) start past stride))))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -215,7 +230,7 @@
   (mk.define-maker %make-string-iterator
       (make-<string-iterator>)
     ((subject:	(void)	(mk.mandatory))
-     (start:	0)
+     (start:	#f)
      (past:	#f)
      (stride:	+1)))
 
@@ -228,14 +243,24 @@
     (nongenerative nausicaa:containers:iterators:<vector-iterator>)
     (parent <sequence-iterator>)
 
-    (fields (immutable (subject <vector>)))
+    ;;This tagged  virtual field references the  untagged concrete field
+    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
+    ;;the subject.
+    (virtual-fields (immutable (subject <vector>)
+			       (lambda ((I <iterator>)) (I $subject))))
 
-    (protocol (lambda (make-sequence-iterator)
-		(lambda ((subject <vector>)
-		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-sequence-iterator subject (lambda (index) ($vector-ref subject index))
-					   (subject $length) start past stride)
-		   subject))))
+    (protocol (lambda (make-subject-iterator)
+		(lambda ((subject <vector>) start past (stride <fixnum>))
+		  (let ((start (or start
+				   (if ($fxnegative? stride)
+				       (subject $length)
+				     0)))
+			(past  (or past
+				   (if ($fxnegative? stride)
+				       0
+				     (subject $length)))))
+		    ((make-subject-iterator subject (lambda (index) ($vector-ref subject index))
+					    (subject $length) start past stride))))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
@@ -248,7 +273,7 @@
   (mk.define-maker %make-vector-iterator
       (make-<vector-iterator>)
     ((subject:	(void)	(mk.mandatory))
-     (start:	0)
+     (start:	#f)
      (past:	#f)
      (stride:	+1)))
 
@@ -258,30 +283,40 @@
 (module (<bytevector-u8-iterator>)
 
   (define-class <bytevector-u8-iterator>
-    (nongenerative nausicaa:containers:iterators:<bytevector-iterator>)
+    (nongenerative nausicaa:containers:iterators:<bytevector-u8-iterator>)
     (parent <sequence-iterator>)
 
-    (fields (immutable (subject <bytevector-u8>)))
+    ;;This tagged  virtual field references the  untagged concrete field
+    ;;in "<iterator>";  it only purpose  is to provide tagged  access to
+    ;;the subject.
+    (virtual-fields (immutable (subject <bytevector-u8>)
+			       (lambda ((I <iterator>)) (I $subject))))
 
-    (protocol (lambda (make-sequence-iterator)
-		(lambda ((subject <bytevector-u8>)
-		    (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
-		  ((make-sequence-iterator subject (lambda (index) ($bytevector-u8-ref subject index))
-					   (subject $length) start past stride)
-		   subject))))
+    (protocol (lambda (make-subject-iterator)
+		(lambda ((subject <bytevector-u8>) start past (stride <fixnum>))
+		  (let ((start (or start
+				   (if ($fxnegative? stride)
+				       (subject $length)
+				     0)))
+			(past  (or past
+				   (if ($fxnegative? stride)
+				       0
+				     (subject $length)))))
+		    ((make-subject-iterator subject (lambda (index) ($bytevector-u8-ref subject index))
+					    (subject $length) start past stride))))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()
 	       ((_ (?clause ...))
-		#'(%make-bytevector-iterator ?clause ...))
+		#'(%make-bytevector-u8-iterator ?clause ...))
 	       )))
 
     #| end of class |# )
 
-  (mk.define-maker %make-bytevector-iterator
-      (make-<bytevector-iterator>)
+  (mk.define-maker %make-bytevector-u8-iterator
+      (make-<bytevector-u8-iterator>)
     ((subject:	(void)	(mk.mandatory))
-     (start:	0)
+     (start:	#f)
      (past:	#f)
      (stride:	+1)))
 
