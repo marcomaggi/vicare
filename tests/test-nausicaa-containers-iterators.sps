@@ -162,209 +162,372 @@
 ;;; --------------------------------------------------------------------
 
   ;; stride = 2
-  #;(let* (((L <list>) '(c i a o h e l L o))
-	 ((I <list-iterator>) (make <list-iterator>
-				(subject: L)
-				(stride:  +2))))
+  (let* (((L <list>)		'(c i a o h e l L o))
+	 ((I <iterator>)	(<list-iterator> ((subject: L)
+						  (stride:  +2)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> '(c i a o h e l L o))
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'c)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'a)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'h)
-    (check I.current	=> 'h)
-    (check I.current	=> 'h)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'l)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'o)
-    (check-for-false (I.more?))
+    (check-for-true (is-a? I <list-iterator>))
+    (check (I subject)	=> '(c i a o h e l L o))
+    (check-for-true (I more?))
+    (check (I next)	=> 'c)
+    (check-for-true (I more?))
+    (check (I next)	=> 'a)
+    (check-for-true (I more?))
+    (check (I next)	=> 'h)
+    (check (I current)	=> 'h)
+    (check (I current)	=> 'h)
+    (check-for-true (I more?))
+    (check (I next)	=> 'l)
+    (check-for-true (I more?))
+    (check (I next)	=> 'o)
+    (check-for-false (I more?))
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
   ;; stride = 3
-  #;(let* (((L <list>) '(c i a o h e l L o))
-	 ((I <list-iterator>) (make <list-iterator>
-				(subject: L)
-				(stride:  +3))))
+  (let* (((L <list>)		'(c i a o h e l L o))
+	 ((I <iterator>)	(<list-iterator> ((subject: L)
+						  (stride:  +3)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> '(c i a o h e l L o))
+    (check-for-true (is-a? I <list-iterator>))
+    (check (I subject)	=> '(c i a o h e l L o))
     ;;                       0     3     6
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'c)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'o)
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'l)
-    (check I.current	=> 'l)
-    (check I.current	=> 'l)
-    (check-for-false (I.more?))
+    (check-for-true (I more?))
+    (check (I next)	=> 'c)
+    (check-for-true (I more?))
+    (check (I next)	=> 'o)
+    (check-for-true (I more?))
+    (check (I next)	=> 'l)
+    (check (I current)	=> 'l)
+    (check (I current)	=> 'l)
+    (check-for-false (I more?))
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'string))
+(parametrise ((check-test-name	'string))
 
   ;;forwards string iteration
-  (let* (((S <string>) "ciao")
-	 ((I <string-iterator>) (make <string-iterator>
-				  (subject: S)
-				  (stride:  1))))
+  (let* (((S <string>)		"ciao")
+	 ((I <iterator>)	(<string-iterator> ((subject: S)
+						    (stride:  1)))))
     (check-for-true (is-a? I <iterator>))
-    (check-for-true (sentinel? I.current))
-    (check I.subject	=> "ciao")
-    (check I.subject.length => 4)
-    (check-for-true (I.more?))
-    (check (I.next)	=> #\c)
-    (check (I.next)	=> #\i)
-    (check (I.next)	=> #\a)
-    (check (I.next)	=> #\o)
+    (check-for-true (is-a? I <string-iterator>))
+    (check-for-true (sentinel? (I current)))
+    (check (I subject)	=> "ciao")
+    (with-tags ((I <string-iterator>))
+      (check (I subject length) => 4))
+    (check-for-true (I more?))
+    (check (I next)	=> #\c)
+    (check (I next)	=> #\i)
+    (check (I next)	=> #\a)
+    (check (I next)	=> #\o)
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     #f)
 
   ;;forwards string iteration, stride 2
-  (let* (((S <string>) "ciao")
-	 ((I <string-iterator>) (make* <string-iterator>
-				  S 0 S.length 2)))
+  (let* (((S <string>)		"ciao")
+	 ((I <iterator>)	(<string-iterator> ((subject: S)
+						    (start:   0)
+						    (past:    (S length))
+						    (stride:  2)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> "ciao")
-    (check (I.next)	=> #\c)
-    (check (I.next)	=> #\a)
-    (check I.current	=> #\a)
-    (check I.current	=> #\a)
+    (check-for-true (is-a? I <string-iterator>))
+    (check (I subject)	=> "ciao")
+    (check (I next)	=> #\c)
+    (check (I next)	=> #\a)
+    (check (I current)	=> #\a)
+    (check (I current)	=> #\a)
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
   ;;backwards string iteration
-  (let* (((S <string>) "ciao")
-	 ((I <string-iterator>) (make* <string-iterator>
-				  S (- S.length 1) 0 -1)))
+  (let* (((S <string>)		"ciao")
+	 ((I <iterator>)	(<string-iterator> ((subject: S)
+						    (start:   (+ -1 (S length)))
+						    (past:    0)
+						    (stride:  -1)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> "ciao")
-    (check (I.next)	=> #\o)
-    (check (I.next)	=> #\a)
-    (check (I.next)	=> #\i)
+    (check-for-true (is-a? I <string-iterator>))
+    (check (I subject)	=> "ciao")
+    (check (I next)	=> #\o)
+    (check (I next)	=> #\a)
+    (check (I next)	=> #\i)
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'vector))
+(parametrise ((check-test-name	'vector))
 
-  (let* (((V <vector>) '#(c i a o))
-	 ((I <vector-iterator>) (make* <vector-iterator>
-				  V 0 V.length 1)))
+  ;;forwards vector iteration
+  (let* (((S <vector>)		'#(#\c #\i #\a #\o))
+	 ((I <iterator>)	(<vector-iterator> ((subject: S)
+						    (stride:  1)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> '#(c i a o))
-    (check-for-true (I.more?))
-    (check (I.next)	=> 'c)
-    (check (I.next)	=> 'i)
-    (check (I.next)	=> 'a)
-    (check I.current	=> 'a)
-    (check I.current	=> 'a)
-    (check (I.next)	=> 'o)
+    (check-for-true (is-a? I <vector-iterator>))
+    (check-for-true (sentinel? (I current)))
+    (check (I subject)	=> '#(#\c #\i #\a #\o))
+    (with-tags ((I <vector-iterator>))
+      (check (I subject length) => 4))
+    (check-for-true (I more?))
+    (check (I next)	=> #\c)
+    (check (I next)	=> #\i)
+    (check (I next)	=> #\a)
+    (check (I next)	=> #\o)
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
+      => I)
+    #f)
+
+  ;;forwards vector iteration, stride 2
+  (let* (((S <vector>)		'#(#\c #\i #\a #\o))
+	 ((I <iterator>)	(<vector-iterator> ((subject: S)
+						    (start:   0)
+						    (past:    (S length))
+						    (stride:  2)))))
+    (check-for-true (is-a? I <iterator>))
+    (check-for-true (is-a? I <vector-iterator>))
+    (check (I subject)	=> '#(#\c #\i #\a #\o))
+    (check (I next)	=> #\c)
+    (check (I next)	=> #\a)
+    (check (I current)	=> #\a)
+    (check (I current)	=> #\a)
+    (check
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    #f)
+
+  ;;backwards vector iteration
+  (let* (((S <vector>)		'#(#\c #\i #\a #\o))
+	 ((I <iterator>)	(<vector-iterator> ((subject: S)
+						    (start:   (+ -1 (S length)))
+						    (past:    0)
+						    (stride:  -1)))))
+    (check-for-true (is-a? I <iterator>))
+    (check-for-true (is-a? I <vector-iterator>))
+    (check (I subject)	=> '#(#\c #\i #\a #\o))
+    (check (I next)	=> #\o)
+    (check (I next)	=> #\a)
+    (check (I next)	=> #\i)
+    (check
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'bytevector))
+(parametrise ((check-test-name	'bytevector))
 
-  (let* (((V <bytevector>) '#vu8(1 2 3 4))
-	 ((I <bytevector-iterator>) (make* <bytevector-iterator>
-				      V 0 V.length 1)))
+  ;;forwards vector iteration
+  (let* (((S <bytevector-u8>)	'#vu8(1 2 3 4))
+	 ((I <iterator>)	(<bytevector-u8-iterator> ((subject: S)
+							   (stride:  1)))))
     (check-for-true (is-a? I <iterator>))
-    (check I.subject	=> '#vu8(1 2 3 4))
-    (check-for-true (I.more?))
-    (check (I.next)	=> 1)
-    (check (I.next)	=> 2)
-    (check (I.next)	=> 3)
-    (check I.current	=> 3)
-    (check I.current	=> 3)
-    (check (I.next)	=> 4)
+    (check-for-true (is-a? I <bytevector-u8-iterator>))
+    (check-for-true (sentinel? (I current)))
+    (check (I subject)	=> '#vu8(1 2 3 4))
+    (with-tags ((I <bytevector-u8-iterator>))
+      (check (I subject length) => 4))
+    (check-for-true (I more?))
+    (check (I next)	=> 1)
+    (check (I next)	=> 2)
+    (check (I next)	=> 3)
+    (check (I next)	=> 4)
     (check
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     (check	;once it is over, it is over forever
-	(guard (E ((is-a? &stop-iteration)
-		   E.iterator)
-		  (else E))
-	  (I.next))
+    	(try
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
+      => I)
+    #f)
+
+  ;;forwards vector iteration, stride 2
+  (let* (((S <bytevector-u8>)	'#vu8(1 2 3 4))
+	 ((I <iterator>)	(<bytevector-u8-iterator> ((subject: S)
+							   (start:   0)
+							   (past:    (S length))
+							   (stride:  2)))))
+    (check-for-true (is-a? I <iterator>))
+    (check-for-true (is-a? I <bytevector-u8-iterator>))
+    (check (I subject)	=> '#vu8(1 2 3 4))
+    (check (I next)	=> 1)
+    (check (I next)	=> 3)
+    (check (I current)	=> 3)
+    (check (I current)	=> 3)
+    (check
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    #f)
+
+  ;;backwards vector iteration
+  (let* (((S <bytevector-u8>)	'#vu8(1 2 3 4))
+	 ((I <iterator>)	(<bytevector-u8-iterator> ((subject: S)
+							   (start:   (+ -1 (S length)))
+							   (past:    0)
+							   (stride:  -1)))))
+    (check-for-true (is-a? I <iterator>))
+    (check-for-true (is-a? I <bytevector-u8-iterator>))
+    (check (I subject)	=> '#vu8(1 2 3 4))
+    (check (I next)	=> 4)
+    (check (I next)	=> 3)
+    (check (I next)	=> 2)
+    (check
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
       => I)
     #f)
 
