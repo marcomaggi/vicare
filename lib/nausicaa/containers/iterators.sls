@@ -209,8 +209,7 @@
 	(receive-and-return (retval)
 	    ((I $getter) (I $index))
 	  (set! (I $%current) retval)
-	  (set! (I $index) (+ (I $index) (I $stride)))
-          #;(I index incr! (I $stride)))
+	  (incr! (I $index) (I $stride)))
       (raise (&stop-iteration (I)))))
 
 ;;; --------------------------------------------------------------------

@@ -47,76 +47,52 @@
 (define-syntax (pre-incr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id (+ ?id 1))
 	 ?id))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id (+ ?id ?step))
 	 ?id))
-    ((_ ?expr)
-     #'(+ ?expr 1))
-    ((_ ?expr ?step)
-     #'(+ ?expr ?step))
     (_
      (syntax-violation 'pre-incr! "invalid pre-increment operation" stx))))
 
 (define-syntax (pre-decr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id (- ?id 1))
 	 ?id))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id (- ?id ?step))
 	 ?id))
-    ((_ ?expr)
-     #'(- ?expr 1))
-    ((_ ?expr ?step)
-     #'(- ?expr ?step))
     (_
      (syntax-violation 'pre-decr! "invalid pre-decrement operation" stx))))
 
 (define-syntax (post-incr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id (+ ?id 1))))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id (+ ?id ?step))))
-    ((_ ?expr)
-     #'(+ ?expr 1))
-    ((_ ?expr ?step)
-     #'(+ ?expr ?step))
     (_
      (syntax-violation 'post-incr! "invalid post-increment operation" stx))))
 
 (define-syntax (post-decr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id (- ?id 1))))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id (- ?id ?step))))
-    ((_ ?expr)
-     #'(- ?expr 1))
-    ((_ ?expr ?step)
-     #'(- ?expr ?step))
     (_
      (syntax-violation 'post-decr! "invalid post-decrement operation" stx))))
 
@@ -124,76 +100,52 @@
 (define-syntax ($pre-incr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id ($add-number-fixnum ?id 1))
 	 ?id))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id ($add-number-number ?id ?step))
 	 ?id))
-    ((_ ?expr)
-     #'($add-number-fixnum ?expr 1))
-    ((_ ?expr ?step)
-     #'($add-number-number ?expr ?step))
     (_
      (syntax-violation '$pre-incr! "invalid pre-increment operation" stx))))
 
 (define-syntax ($pre-decr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id ($sub-number-fixnum ?id 1))
 	 ?id))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(begin
 	 (set!/tags ?id ($sub-number-number ?id ?step))
 	 ?id))
-    ((_ ?expr)
-     #'($add-number-fixnum ?expr 1))
-    ((_ ?expr ?step)
-     #'($add-number-number ?expr ?step))
     (_
      (syntax-violation '$pre-decr! "invalid pre-decrement operation" stx))))
 
 (define-syntax ($post-incr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id ($add-number-fixnum ?id 1))))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id ($add-number-number ?id ?step))))
-    ((_ ?expr)
-     #'($add-number-fixnum ?expr 1))
-    ((_ ?expr ?step)
-     #'($add-number-number ?expr ?step))
     (_
      (syntax-violation '$post-incr! "invalid post-increment operation" stx))))
 
 (define-syntax ($post-decr! stx)
   (syntax-case stx ()
     ((_ ?id)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id ($sub-number-fixnum ?id 1))))
     ((_ ?id ?step)
-     (identifier? #'?id)
      #'(receive-and-return (v)
 	   ?id
 	 (set!/tags ?id ($sub-number-number ?id ?step))))
-    ((_ ?expr)
-     #'($sub-number-fixnum ?expr 1))
-    ((_ ?expr ?step)
-     #'($sub-number-number ?expr ?step))
     (_
      (syntax-violation '$post-decr! "invalid post-decrement operation" stx))))
 
