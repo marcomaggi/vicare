@@ -52,7 +52,7 @@
     (if (I more?)
 	(receive-and-return (retval)
 	    (string-ref (I subject) (I index))
-	  (set! (I current) retval)
+	  (set! (I %current) retval)
 	  (set! (I index) (+ 1 (I index))))
       (raise (&stop-iteration (I)))))
 
@@ -109,9 +109,9 @@
 
 (parametrise ((check-test-name	'list))
 
-  (let* (((L <list>)		'(c i a o))
-	 ((I <iterator>)	(<list-iterator> ((subject: L)))))
-    (check-for-true (is-a? I <list-iterator>))
+  (let* (((L <spine>)		'(c i a o))
+	 ((I <iterator>)	(<spine-iterator> ((subject: L)))))
+    (check-for-true (is-a? I <spine-iterator>))
     (check-for-true (is-a? I <iterator>))
     (check (I subject)	=> '(c i a o))
     (check-for-true (I more?))
@@ -146,11 +146,11 @@
 ;;; --------------------------------------------------------------------
 
   ;; stride = 2
-  (let* (((L <list>)		'(c i a o h e l L o))
-	 ((I <iterator>)	(<list-iterator> ((subject: L)
+  (let* (((L <spine>)		'(c i a o h e l L o))
+	 ((I <iterator>)	(<spine-iterator> ((subject: L)
 						  (stride:  +2)))))
     (check-for-true (is-a? I <iterator>))
-    (check-for-true (is-a? I <list-iterator>))
+    (check-for-true (is-a? I <spine-iterator>))
     (check (I subject)	=> '(c i a o h e l L o))
     (check-for-true (I more?))
     (check (I next)	=> 'c)
@@ -184,11 +184,11 @@
     #f)
 
   ;; stride = 3
-  (let* (((L <list>)		'(c i a o h e l L o))
-	 ((I <iterator>)	(<list-iterator> ((subject: L)
+  (let* (((L <spine>)		'(c i a o h e l L o))
+	 ((I <iterator>)	(<spine-iterator> ((subject: L)
 						  (stride:  +3)))))
     (check-for-true (is-a? I <iterator>))
-    (check-for-true (is-a? I <list-iterator>))
+    (check-for-true (is-a? I <spine-iterator>))
     (check (I subject)	=> '(c i a o h e l L o))
     ;;                       0     3     6
     (check-for-true (I more?))

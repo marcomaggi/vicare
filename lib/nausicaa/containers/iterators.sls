@@ -29,7 +29,7 @@
 (library (nausicaa containers iterators)
   (export
     <iterator>
-    <list-iterator>
+    <spine-iterator>
     <sequence-iterator>
     <string-iterator>
     <vector-iterator>
@@ -67,13 +67,24 @@
   (fields (immutable subject)
 		;Contains  the  object  over   which  the  iteration  is
 		;performed.  Notice that it is untagged.
-	  (mutable   current))
+	  (mutable   %current))
 		;Initialised to THE-SENTINEL,  contains the current item
 		;referenced by the iterator.
   (super-protocol
    (lambda (make-top)
      (lambda (subject)
        ((make-top) subject THE-SENTINEL))))
+
+  (method (current (I <iterator>))
+    ;;We do not  want to expose a mutable "current"  field in the public
+    ;;API.   So we  access  the field  through a  method,  which is,  of
+    ;;course, read-only.
+    ;;
+    ;;FIXME  The field  "%current"  should  have attribute  "protected".
+    ;;(Marco Maggi; Sun Oct 20, 2013)
+    ;;
+    (I $%current))
+
   (methods (more?	iterator-more?)
 	   (next	iterator-next)))
 
@@ -85,10 +96,10 @@
   (fields ((iterator <iterator>))))
 
 
-(module (<list-iterator>)
+(module (<spine-iterator>)
 
-  (define-class <list-iterator>
-    (nongenerative nausicaa:containers:iterators:<list-iterator>)
+  (define-class <spine-iterator>
+    (nongenerative nausicaa:containers:iterators:<spine-iterator>)
     (parent <iterator>)
 
     (fields (mutable   (spine	<spine>))
@@ -107,32 +118,32 @@
     #| end of class |# )
 
   (mk.define-maker %make-list-iterator
-      make-<list-iterator>
+      make-<spine-iterator>
     ((subject:	(void)	(mk.mandatory))
      (stride:	+1)))
 
-  (define-method (iterator-more? (I <list-iterator>))
+  (define-method (iterator-more? (I <spine-iterator>))
     (let loop ((i           1)
 	       ((L <spine>) (I $spine)))
       (and (not (L null?))
 	   (or (= i (I $stride))
 	       (loop (+ 1 i) (L $cdr))))))
 
-  (define-method (iterator-next (I <list-iterator>))
+  (define-method (iterator-next (I <spine-iterator>))
     (let loop ((i           1)
 	       ((L <spine>) (I $spine)))
       (cond ((L null?)
 	     (set! (I $spine) L)
 	     (raise (&stop-iteration (I))))
-	    ((eq? THE-SENTINEL (I $current)) ;only the first time
+	    ((eq? THE-SENTINEL (I $%current)) ;only the first time
 	     (receive-and-return (retval)
 		 (L $car)
-	       (set! (I $current) retval)
+	       (set! (I $%current) retval)
 	       (set! (I $spine)   (L $cdr))))
 	    ((= i (I $stride))
 	     (receive-and-return (retval)
 		 (L $car)
-	       (set! (I $current) retval)
+	       (set! (I $%current) retval)
 	       (set! (I $spine)   (L $cdr))))
 	    (else
 	     (loop (+ 1 i) (L $cdr))))))
@@ -186,7 +197,7 @@
     (if (I more?)
 	(receive-and-return (retval)
 	    ((I $getter) (I $index))
-	  (set! (I $current) retval)
+	  (set! (I $%current) retval)
 	  (set! (I $index) (+ (I $index) (I $stride)))
           #;(I index incr! (I $stride)))
       (raise (&stop-iteration (I)))))
