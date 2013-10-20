@@ -34,7 +34,8 @@
     <char> <string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <positive-fixnum> <negative-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
+    <fixnum> <positive-fixnum> <negative-fixnum>
+    <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
     <flonum>
     <exact-integer> <integer> <integer-valued>
     <rational> <rational-valued>
@@ -1622,6 +1623,11 @@
        (fxmin ?fx1 ?fx ...)))))
 
 ;;; --------------------------------------------------------------------
+
+(define-builtin-label <nonzero-fixnum>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       (not ($fxzero? fx)))))
 
 (define-builtin-label <nonpositive-fixnum>
   (parent <fixnum>)

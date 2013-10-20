@@ -1539,7 +1539,8 @@
     <char> <string> <mutable-string> <vector>
     <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <positive-fixnum> <negative-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
+    <fixnum> <positive-fixnum> <negative-fixnum>
+    <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
     <flonum>
     <exact-integer> <integer> <integer-valued> <rational> <rational-valued>
     <real> <real-valued> <complex> <number>

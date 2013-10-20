@@ -294,8 +294,8 @@ Example:
 @subsection Iterating over strings
 
 
-The following bindings are exported by the @library{nausicaa containers iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
 @deftp Class @aclass{string-iterator}
@@ -303,50 +303,60 @@ An iterator for Scheme strings; it is derived from @class{iterator}.
 @end deftp
 
 
+@defop {Common constructor} @aclass{string-iterator} constructor @var{the-string} @var{start} @var{past} @var{stride}
+Build and return a new instance of @class{string-iterator} using
+@var{the-string} as string upon which to iterate, @var{start} as index
+of the first character, @var{past} as index of the character past the
+last one to return and @var{stride} as stride.
+
+The stride is the number of characters in the string to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the characters.
+
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
+
+@example
+0 <= @var{start} <= @var{past} <= (string-length @var{the-string})
+@end example
+
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (string-length @var{the-string})
+@end example
+@end defop
+
+
+@defop Maker @aclass{string-iterator} @aclass{string-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{string-iterator} subject: @meta{the-string}
+@defopx {Optional clause} @aclass{string-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{string-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{string-iterator} stride: @meta{stride}
+Build and return a new @class{string-iterator} instance using the common
+constructor.
+
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the string.  If the stride is negative: @meta{start} defaults one less
+than the length of the string and @meta{past} defaults to @math{-1}.
+@end defop
+
+
 @deftypecv {Immutable field} @aclass{string-iterator} @aclass{char} current
-Shadows the @code{current} field of @class{iterator} adding the
+Shadows the @code{current} member of @class{iterator} adding the
 @class{char} tag.
 @end deftypecv
-
-
-@defop {Common constructor} @aclass{string-iterator} constructor @var{the-string} @var{start} @var{past} @var{stride}
-Build a new instance of @class{string-iterator} using @var{the-string}
-as string upon which to iterate, @var{start} as index of the first
-character, @var{past} as index of the character past the last one to
-return and @var{stride} as stride.
-
-@var{start}, @var{past} and @var{stride} must be exact integers.
-@var{start} must be between @math{0} and one less than the string
-length.  @var{past} must be between @math{-1} and the string length.
-@var{stride} cannot be zero and it must have the same sign of the
-difference @var{past} minus @var{start}.
-
-The stride is the number of characters in the string to jump forward to
-when iterating; it must be @math{1} when we want to visit all the
-characters.
-@end defop
-
-
-@defop Syntax @aclass{string-iterator} make @aclass{string-iterator} . @meta{clauses}
-@defopx {Auxiliary syntax} @aclass{string-iterator} subject: @meta{the-string}
-@defopx {Auxiliary syntax} @aclass{string-iterator} start: @meta{start}
-@defopx {Auxiliary syntax} @aclass{string-iterator} past: @meta{past}
-@defopx {Auxiliary syntax} @aclass{string-iterator} stride: @meta{stride}
-Build and return a new class instance using the common constructor.
-
-If the @func{start:} clause is not used: the start index defaults to
-zero.  If the @func{past:} clause is not used: the past index defaults
-to the length of the string.  If the @func{stride:} clause is not used:
-the stride defaults to @math{1}.
-@end defop
 
 @c page
 @node containers iterators vectors
 @subsection Iterating over vectors
 
 
-The following bindings are exported by the @library{nausicaa containers iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
 @deftp Class @aclass{vector-iterator}
@@ -355,34 +365,44 @@ An iterator for Scheme vectors; it is derived from @class{iterator}.
 
 
 @defop {Common constructor} @aclass{vector-iterator} constructor @var{the-vector} @var{start} @var{past} @var{stride}
-Build a new instance of @class{vector-iterator} using @var{the-vector}
-as vector upon which to iterate, @var{start} as index of the first
-character, @var{past} as index of the character past the last one to
+Build and return a new instance of @class{vector-iterator} using
+@var{the-vector} as vector upon which to iterate, @var{start} as index
+of the first item, @var{past} as index of the item past the last one to
 return and @var{stride} as stride.
 
-@var{start}, @var{past} and @var{stride} must be exact integers.
-@var{start} must be between @math{0} and one less than the vector
-length.  @var{past} must be between @math{-1} and the vector length.
-@var{stride} cannot be zero and it must have the same sign of the
-difference @var{past} minus @var{start}.
+The stride is the number of items in the vector to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the items.
 
-The stride is the number of characters in the vector to jump forward to
-when iterating; it must be @math{1} when we want to visit all the
-characters.
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
+
+@example
+0 <= @var{start} <= @var{past} <= (vector-length @var{the-vector})
+@end example
+
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (vector-length @var{the-vector})
+@end example
 @end defop
 
 
-@defop Syntax @aclass{vector-iterator} make @aclass{vector-iterator} . @meta{clauses}
-@defopx {Auxiliary syntax} @aclass{vector-iterator} subject: @meta{the-vector}
-@defopx {Auxiliary syntax} @aclass{vector-iterator} start: @meta{start}
-@defopx {Auxiliary syntax} @aclass{vector-iterator} past: @meta{past}
-@defopx {Auxiliary syntax} @aclass{vector-iterator} stride: @meta{stride}
-Build and return a new class instance using the common constructor.
+@defop Maker @aclass{vector-iterator} @aclass{vector-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{vector-iterator} subject: @meta{the-vector}
+@defopx {Optional clause} @aclass{vector-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{vector-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{vector-iterator} stride: @meta{stride}
+Build and return a new @class{vector-iterator} instance using the common
+constructor.
 
-If the @func{start:} clause is not used: the start index defaults to
-zero.  If the @func{past:} clause is not used: the past index defaults
-to the length of the vector.  If the @func{stride:} clause is not used:
-the stride defaults to @math{1}.
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the vector.  If the stride is negative: @meta{start} defaults one less
+than the length of the vector and @meta{past} defaults to @math{-1}.
 @end defop
 
 @c page
@@ -390,51 +410,56 @@ the stride defaults to @math{1}.
 @subsection Iterating over bytevectors
 
 
-The following bindings are exported by the @library{nausicaa containers iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
-@deftp Class @aclass{bytevector-iterator}
-An iterator for Scheme bytevectors of unsigned bytes; it is derived from
+@deftp Class @aclass{bytevector-u8-iterator}
+An iterator for Scheme bytevectors of octets; it is derived from
 @class{iterator}.
 @end deftp
 
 
-@deftypecv {Immutable field} @aclass{string-iterator} @aclass{fixnum} current
-Shadows the @code{current} field of @class{iterator} adding the
-@class{fixnum} tag.
-@end deftypecv
+@defop {Common constructor} @aclass{bytevector-u8-iterator} constructor @var{the-bytevector} @var{start} @var{past} @var{stride}
+Build and return a new instance of @class{bytevector-u8-iterator} using
+@var{the-bytevector} as bytevector upon which to iterate, @var{start} as
+index of the first octet, @var{past} as index of the octet past the last
+one to return and @var{stride} as stride.
 
+The stride is the number of octets in the bytevector to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the octets.
 
-@defop {Common constructor} @aclass{bytevector-iterator} constructor @var{the-bytevector} @var{start} @var{past} @var{stride}
-Build a new instance of @class{bytevector-iterator} using @var{the-bytevector}
-as bytevector upon which to iterate, @var{start} as index of the first
-character, @var{past} as index of the character past the last one to
-return and @var{stride} as stride.
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
 
-@var{start}, @var{past} and @var{stride} must be exact integers.
-@var{start} must be between @math{0} and one less than the bytevector
-length.  @var{past} must be between @math{-1} and the bytevector length.
-@var{stride} cannot be zero and it must have the same sign of the
-difference @var{past} minus @var{start}.
+@example
+0 <= @var{start} <= @var{past} <= (bytevector-length @var{the-bytevector})
+@end example
 
-The stride is the number of characters in the bytevector to jump forward to
-when iterating; it must be @math{1} when we want to visit all the
-characters.
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (bytevector-length @var{the-bytevector})
+@end example
 @end defop
 
 
-@defop Syntax @aclass{bytevector-iterator} make @aclass{bytevector-iterator} . @meta{clauses}
-@defopx {Auxiliary syntax} @aclass{bytevector-iterator} subject: @meta{the-bytevector}
-@defopx {Auxiliary syntax} @aclass{bytevector-iterator} start: @meta{start}
-@defopx {Auxiliary syntax} @aclass{bytevector-iterator} past: @meta{past}
-@defopx {Auxiliary syntax} @aclass{bytevector-iterator} stride: @meta{stride}
-Build and return a new class instance using the common constructor.
+@defop Maker @aclass{bytevector-u8-iterator} @aclass{bytevector-u8-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{bytevector-u8-iterator} subject: @meta{the-bytevector-u8}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} stride: @meta{stride}
+Build and return a new @class{bytevector-u8-iterator} instance using the
+common constructor.
 
-If the @func{start:} clause is not used: the start index defaults to
-zero.  If the @func{past:} clause is not used: the past index defaults
-to the length of the bytevector.  If the @func{stride:} clause is not used:
-the stride defaults to @math{1}.
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the bytevector.  If the stride is negative: @meta{start} defaults one
+less than the length of the bytevector and @meta{past} defaults to
+@math{-1}.
 @end defop
 
 @c end of file
