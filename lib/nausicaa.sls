@@ -1652,6 +1652,16 @@
     <common-conditions>
 
 
+;;;; bindings from (nausicaa language increments)
+
+    incr!		decr!
+    pre-incr!		post-incr!
+    pre-decr!		post-decr!
+    $incr!		$decr!
+    $pre-incr!		$post-incr!
+    $pre-decr!		$post-decr!
+
+
 ;;;; bindings from (vicare language-extensions namespaces)
     define-namespace		using
 
@@ -1720,10 +1730,18 @@
     (for (nausicaa language multimethods)		expand run)
     (for (nausicaa language builtins)			expand run)
     (for (nausicaa language conditions)			expand run)
+    (for (nausicaa language increments)			expand run)
     (for (vicare language-extensions namespaces)	expand run)
     (for (vicare language-extensions sentinels)		expand run)
     (for (vicare language-extensions simple-match)	expand run)
-    (for (vicare language-extensions infix)		expand run)
+    (for (except (vicare language-extensions infix)
+		 incr!		decr!
+		 pre-incr!		post-incr!
+		 pre-decr!		post-decr!
+		 $incr!		$decr!
+		 $pre-incr!		$post-incr!
+		 $pre-decr!		$post-decr!)
+      expand run)
     ))
 
 ;;; end of file

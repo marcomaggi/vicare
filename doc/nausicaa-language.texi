@@ -69,6 +69,9 @@ All the bindings are reexported.
 Provides basic condition types and utilities for condition types
 definition (@pxref{conditions, Condition object types}).
 
+@item @library{(nausicaa language increments)}
+Provides syntaxes to increment and decrement numeric values (@pxref{increments, Condition object types}).
+
 @item @library{vicare language-extension namespaces}
 All the bindings are reexported.
 

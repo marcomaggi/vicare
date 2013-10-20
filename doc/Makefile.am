@@ -132,6 +132,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-multimethods.texi				\
 	nausicaa-builtins.texi					\
 	nausicaa-conditions.texi				\
+	nausicaa-increments.texi				\
 	\
 	nausicaa-containers-lists.texi				\
 	nausicaa-containers-vectors.texi			\

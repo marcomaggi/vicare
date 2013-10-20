@@ -117,6 +117,7 @@ Libraries in the language @library{nausicaa}
 * multimethods::                Multimethods dispatching.
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
+* increments::                  Numeric increment syntaxes.
 
 Library groups
 
@@ -161,6 +162,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-multimethods.texi
 @include nausicaa-builtins.texi
 @include nausicaa-conditions.texi
+@include nausicaa-increments.texi
 
 @c page
 @node containers

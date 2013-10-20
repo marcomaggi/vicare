@@ -35,8 +35,6 @@
   (import (nausicaa)
     (only (vicare platform words)
 	  case-word-size)
-    (only (vicare language-extensions increments)
-	  incr!)
     (vicare arguments validation)
     (vicare unsafe operations)
     (vicare system $numerics))
