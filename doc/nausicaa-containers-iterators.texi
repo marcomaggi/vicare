@@ -2,8 +2,8 @@
 @section Iterating over sequences
 
 
-@cindex Library @library{nausicaa iterators}
-@cindex @library{nausicaa iterators}, library
+@cindex Library @library{nausicaa containers iterators}
+@cindex @library{nausicaa containers iterators}, library
 
 
 Iterators are objects used to visit values stored in sequences, like
@@ -26,13 +26,27 @@ loosely inspired by Python's iterators.
 @subsection Basic iterators @api{}
 
 
-The following bindings are exported by the @library{nausicaa iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
 @deftp {Abstract Class} @aclass{iterator}
 Base type for all the iterators.
 @end deftp
+
+
+@defop {Superclass constructor} @aclass{iterator} constructor @var{subject}
+Build a new instance of @class{iterator}; return the constructor
+function for the subclass which invoked this protocol.
+
+Initialise the field @code{subject} with @var{subject} and the field
+@code{current} with a sentinel value, @libsref{sentinels, Sentinel
+values}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
 
 
 @defcv {Immutable field} @aclass{iterator} subject
@@ -42,38 +56,65 @@ tagged virtual field.
 @end defcv
 
 
-@defcv {Mutable field} @aclass{iterator} current
+@defcv {Mutable protected field} @aclass{iterator} %current
 The last value extracted from the subject of the iteration.  Concrete
 implementations of the method @func{next} must update this field every
-time they extract a new value.
+time they extract a new value from the subject.
 @end defcv
 
+@c ------------------------------------------------------------
 
-@defop {Superclass constructor} @aclass{iterator} constructor @var{subject}
-Build a new instance of @class{iterator} whose @code{subject} field is
-initialised with @var{subject} and whose @code{current} field is
-initialised with the @code{sentinel} value.  Return the constructor
-function for the subclass which invoked this protocol.
-@end defop
+@subsubheading Methods
 
 
-@defop {Virtual method} @aclass{iterator} next
+@defop Multimethod @aclass{iterator} next
 Advance the iteration, return the value extracted from the subject;
-memoize the extracted value in the @code{current} field.
+memoize the extracted value in the @code{%current} field.
+@class{iterator} does @strong{not} provide an implementation of this
+method; this method is implemented by the generic function
+@func{iterator-next}.
 
 If the iteration is over: raise a non--continuable exception with
 condition object of type @condition{stop-iteration}, @ref{containers
-iterators conditions}; once the iteration is over, calling this method
-multiple times always causes @condition{stop-iteration} to be raised.
+iterators conditions, Condition object types}.  Once the iteration is
+over, calling this method multiple times always causes
+@condition{stop-iteration} to be raised.
 @end defop
 
 
-@defop {Virtual method} @aclass{iterator} more?
-Return @true{} if more values can be extracted from the container.
+@defop Multimethod @aclass{iterator} more?
+Return @true{} if more values can be extracted from the container,
+otherwise return @false{}.  @class{iterator} does @strong{not} provide
+an implementation of this method; this method is implemented by the
+generic function @func{iterator-more?}.
+
 Whenever possible, concrete implementations of this method must only
-test the availability of more values, they must not actually perform the
-operation.
+test the availability of more values, they must @strong{not} actually
+perform the operation.
 @end defop
+
+
+@defop Method @aclass{iterator} current
+The last value extracted from the subject of the iteration.  This method
+can be called any number of times and will always return the same value
+after each invocation of the method @func{next}.
+@end defop
+
+
+@deffn {Generic Function} iterator-next @var{iterator}
+Advance the iteration, return the value extracted from the subject;
+memoize the extracted value in the @code{%current} field of @var{iterator}.
+@end deffn
+
+
+@deffn {Generic Function} iterator-more? @var{iterator}
+Return @true{} if more values can be extracted from the container,
+otherwise return @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples
 
 
 The following is an example definition for a simple left--to--right
@@ -101,9 +142,50 @@ Scheme string iterator:
   (if (I more?)
       (receive-and-return (retval)
           (string-ref (I subject) (I index))
-        (set! (I current) retval)
+        (set! (I %current) retval)
         (set! (I index) (+ 1 (I index))))
     (raise (&stop-iteration (I)))))
+
+(<string> S "ciao")
+(<simple-string-iterator> J (<> (S)))
+(<iterator> I J)
+
+(is-a? I <iterator>)                    @result{} #t
+(is-a? J <iterator>)                    @result{} #t
+(is-a? J <simple-string-iterator>)      @result{} #t
+(sentinel? (I current))                 @result{} #t
+
+(I subject)                             @result{} "ciao"
+(J subject length)                      @result{} 4
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\c
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\i
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\a
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\o
+
+(I more?)                               @result{} #f
+
+(try
+    (I next)
+  (catch E
+    (&stop-iteration     #t)
+    (else                E)))
+@result{} #t
+
+;;once it is over, it is over forever
+(try
+    (I next)
+  (catch E
+    (&stop-iteration    #t)
+    (else               E)))
+@result{} #t
 @end example
 
 @noindent
@@ -116,16 +198,17 @@ provide tagged access to the subject.
 @subsection Condition object types
 
 
-The following bindings are exported by the @library{nausicaa iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
 @deftp {Condition type} &stop-iteration
 Condition type used to signal that the iteration over a subject is over;
 it is derived from @condition{serious}.
 
-This type is defined by @func{define-condition} from @library{nausicaa
-language conditions}, @ref{conditions define}.
+This type is defined by @func{define-condition-type} from
+@library{nausicaa language conditions}, @ref{conditions define, Defining
+new condition types}.
 @end deftp
 
 
@@ -134,9 +217,9 @@ The @class{iterator} instance which raised the condition object.
 @end deftypecv
 
 
-@defop Maker @acondition{stop-iteration} make @acondition{stop-iteration} @var{iterator}
+@defop Maker @acondition{stop-iteration} @acondition{stop-iteration} (@meta{iterator})
 Build and return a new instance of @condition{stop-iteration} using
-@var{iterator} as value for the @code{iterator} field.
+@meta{iterator} as value for the @code{iterator} field.
 @end defop
 
 @c page
@@ -144,18 +227,18 @@ Build and return a new instance of @condition{stop-iteration} using
 @subsection Iterating over lists
 
 
-The following bindings are exported by the @library{nausicaa iterators}
-library.
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
 
 
-@deftp Class @aclass{list-iterator}
+@deftp Class @aclass{spine-iterator}
 A forward stride iterator for Scheme lists; it is derived from
 @class{iterator}.
 @end deftp
 
 
-@defop {Common constructor} @aclass{list-iterator} constructor @var{the-list} @var{stride}
-Build a new instance of @class{list-iterator} using @var{the-list} as
+@defop {Common constructor} @aclass{spine-iterator} constructor @var{the-list} @var{stride}
+Build a new instance of @class{spine-iterator} using @var{the-list} as
 list upon which to iterate and @var{stride}, which must be an exact
 positive integer, as stride.  The stride is the number of elements in
 the list to jump forward to when iterating; it must be @math{1} when we
@@ -163,9 +246,9 @@ want to visit all the elements.
 @end defop
 
 
-@defop Syntax @aclass{list-iterator} make @aclass{list-iterator} . @meta{clauses}
-@defopx {Auxiliary Syntax} @aclass{list-iterator} subject: @meta{the-list}
-@defopx {Auxiliary Syntax} @aclass{list-iterator} stride: @meta{stride}
+@defop Syntax @aclass{spine-iterator} make @aclass{spine-iterator} . @meta{clauses}
+@defopx {Auxiliary Syntax} @aclass{spine-iterator} subject: @meta{the-list}
+@defopx {Auxiliary Syntax} @aclass{spine-iterator} stride: @meta{stride}
 Build and return a new class instance using the common constructor.
 
 If the @func{stride:} clause is not used: the stride defaults to
@@ -179,7 +262,7 @@ If the @func{stride:} clause is not used: the stride defaults to
   (nausicaa iterators))
 
 (let* (((L <list>)          '(c i a o))
-       ((I <list-iterator>) (make <list-iterator>
+       ((I <spine-iterator>) (make <spine-iterator>
                               (subject: L))))
 
   (I.more?)     @result{} #t
@@ -193,7 +276,7 @@ If the @func{stride:} clause is not used: the stride defaults to
   (I.more?))    @result{} #f
 
 (let* (((L <list>)          '(h e l L o))
-       ((I <list-iterator>) (make <list-iterator>
+       ((I <spine-iterator>) (make <spine-iterator>
                               (subject: L)
                               (stride: 2))))
 
@@ -211,7 +294,7 @@ If the @func{stride:} clause is not used: the stride defaults to
 @subsection Iterating over strings
 
 
-The following bindings are exported by the @library{nausicaa iterators}
+The following bindings are exported by the @library{nausicaa containers iterators}
 library.
 
 
@@ -262,7 +345,7 @@ the stride defaults to @math{1}.
 @subsection Iterating over vectors
 
 
-The following bindings are exported by the @library{nausicaa iterators}
+The following bindings are exported by the @library{nausicaa containers iterators}
 library.
 
 
@@ -307,7 +390,7 @@ the stride defaults to @math{1}.
 @subsection Iterating over bytevectors
 
 
-The following bindings are exported by the @library{nausicaa iterators}
+The following bindings are exported by the @library{nausicaa containers iterators}
 library.
 
 
