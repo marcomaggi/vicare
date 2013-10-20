@@ -235,6 +235,11 @@
       (check (I subject length) => 4))
     (check-for-true (I more?))
     (check (I next)	=> #\c)
+    (check (I current)	=> #\c)
+    (check
+	(with-tags ((I <string-iterator>))
+	  (I current upcase))
+      => #\C)
     (check (I next)	=> #\i)
     (check (I next)	=> #\a)
     (check (I next)	=> #\o)
@@ -299,6 +304,35 @@
     (check (I next)	=> #\o)
     (check (I next)	=> #\a)
     (check (I next)	=> #\i)
+    (check
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    (check	;once it is over, it is over forever
+    	(try
+	    (I next)
+	  (catch E
+	    (&stop-iteration
+	     (E iterator))
+	    (else E)))
+      => I)
+    #f)
+
+  ;;backwards string iteration, default values
+  (let* (((S <string>)		"ciao")
+	 ((I <iterator>)	(<string-iterator> ((subject: S)
+						    (stride:  -1)))))
+    (check-for-true (is-a? I <iterator>))
+    (check-for-true (is-a? I <string-iterator>))
+    (check (I subject)	=> "ciao")
+    (check (I next)	=> #\o)
+    (check (I next)	=> #\a)
+    (check (I next)	=> #\i)
+    (check (I next)	=> #\c)
     (check
     	(try
 	    (I next)

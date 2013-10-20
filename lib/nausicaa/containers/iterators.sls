@@ -159,14 +159,14 @@
     (parent <iterator>)
 
     (fields (immutable (getter	<procedure>))
-	    (mutable   (index	<nonnegative-fixnum>))
-	    (immutable (past	<nonnegative-fixnum>))
-	    (immutable (stride	<fixnum>)))
+	    (mutable   (index	<index>))
+	    (immutable (past	<index>))
+	    (immutable (stride	<nonzero-fixnum>)))
 
     (super-protocol
      (lambda (make-iterator)
        (lambda (subject (sequence.getter <procedure>) (sequence.length <nonnegative-fixnum>)
-	   (start <nonnegative-fixnum>) (past <nonnegative-fixnum>) (stride <fixnum>))
+		   (start <index>) (past <index>) (stride <nonzero-fixnum>))
 	 (define who 'make-<sequence-iterator>)
 	 (with-arguments-validation (who)
 	     ((length-start-past-stride		sequence.length start past stride))
@@ -174,19 +174,30 @@
 
     #| end of class |# )
 
+;;; --------------------------------------------------------------------
+
+  (define-label <index>
+    (parent <fixnum>)
+    (predicate (lambda (fx)
+		 ($fx<= -1 fx))))
+
   (define-argument-validation (length-start-past-stride who len start past stride)
     (cond (($fxpositive? stride)
-	   (and ($fx>= past start)
+	   (and ($fxnonnegative? start)
+		($fx>= past start)
 		($fx<= past len)))
 	  (($fxnegative? stride)
 	   (and ($fx<  start len)
-		($fx>= start past)))
+		($fx>= start past)
+		($fx<= -1    past)))
 	  (else #f))
     (procedure-argument-violation who
       (string-append "invalid start="	(number->string start)
 		     " past="		(number->string past)
 		     " stride="		(number->string stride)
 		     " indexes for sequence of length " (number->string len))))
+
+;;; --------------------------------------------------------------------
 
   (define-method (iterator-more? (I <sequence-iterator>))
     (if ($fxpositive? (I $stride))
@@ -202,6 +213,8 @@
           #;(I index incr! (I $stride)))
       (raise (&stop-iteration (I)))))
 
+;;; --------------------------------------------------------------------
+
   (define-mixin <sequence-iterator-clauses>
     (parent <sequence-iterator>)
 
@@ -212,14 +225,14 @@
 			       (lambda ((I <iterator>)) (I $subject))))
 
     (protocol (lambda (make-sequence-iterator)
-		(lambda ((subject <container>) start past (stride <fixnum>))
+		(lambda ((subject <container>) start past (stride <nonzero-fixnum>))
 		  (let ((start (or start
 				   (if ($fxnegative? stride)
-				       (subject $length)
+				       ($fx+ -1 (subject $length))
 				     0)))
 			(past  (or past
 				   (if ($fxnegative? stride)
-				       0
+				       -1
 				     (subject $length)))))
 		    ((make-sequence-iterator subject (lambda (index) (%the-getter subject index))
 					     (subject $length) start past stride))))))
@@ -236,6 +249,9 @@
     (mixins (<sequence-iterator-clauses>
 	     (<container>		<string>)
 	     (%the-getter		$string-ref)))
+
+    (virtual-fields (immutable (current <char>)
+			       (lambda ((I <iterator>)) (I $%current))))
 
     (maker (lambda (stx)
 	     (syntax-case stx ()

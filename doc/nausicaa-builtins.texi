@@ -1933,6 +1933,12 @@ from @class{exact-integer}.
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{nonzero-fixnum}
+Conventional type for objects satisfying @func{fixnum?} but not
+@func{fxzero?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
 @deftp {Builtin Label} @aclass{nonpositive-fixnum}
 Conventional type for objects satisfying @func{fixnum?} and
 @func{fxnonpositive?}.  It is derived from @class{fixnum}.
