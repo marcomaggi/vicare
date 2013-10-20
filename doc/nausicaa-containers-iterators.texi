@@ -246,47 +246,47 @@ want to visit all the elements.
 @end defop
 
 
-@defop Syntax @aclass{spine-iterator} make @aclass{spine-iterator} . @meta{clauses}
+@defop Maker @aclass{spine-iterator} @aclass{spine-iterator} (@meta{clauses} @dots{})
 @defopx {Auxiliary Syntax} @aclass{spine-iterator} subject: @meta{the-list}
 @defopx {Auxiliary Syntax} @aclass{spine-iterator} stride: @meta{stride}
-Build and return a new class instance using the common constructor.
-
-If the @func{stride:} clause is not used: the stride defaults to
-@math{1}.
+Build and return a new class instance using the common constructor.  The
+clause @clause{subject:} is mandatory; the clause @clause{stride:} is
+optional, when not used the stride defaults to @math{1}.
 @end defop
 
+
+Example:
 
 @example
 #!r6rs
 (import (nausicaa)
-  (nausicaa iterators))
+  (nausicaa containers iterators))
 
-(let* (((L <list>)          '(c i a o))
-       ((I <spine-iterator>) (make <spine-iterator>
-                              (subject: L))))
+(let ()
+  (<spine>    L '(c i a o))
+  (<iterator> I  (<spine-iterator> ((subject: L))))
 
-  (I.more?)     @result{} #t
-  (I.next)      @result{} c
-  (I.more?)     @result{} #t
-  (I.next)      @result{} i
-  (I.more?)     @result{} #t
-  (I.next)      @result{} a
-  (I.more?)     @result{} #t
-  (I.next)      @result{} o
-  (I.more?))    @result{} #f
+  (I more?)     @result{} #t
+  (I next)      @result{} c
+  (I more?)     @result{} #t
+  (I next)      @result{} i
+  (I more?)     @result{} #t
+  (I next)      @result{} a
+  (I more?)     @result{} #t
+  (I next)      @result{} o
+  (I more?))    @result{} #f
 
-(let* (((L <list>)          '(h e l L o))
-       ((I <spine-iterator>) (make <spine-iterator>
-                              (subject: L)
-                              (stride: 2))))
-
-  (I.more?)     @result{} #t
-  (I.next)      @result{} h
-  (I.more?)     @result{} #t
-  (I.next)      @result{} l
-  (I.more?)     @result{} #t
-  (I.next)      @result{} o
-  (I.more?))    @result{} #f
+(let ()
+  (<spine>    L '(h e l L o))
+  (<iterator> I (<spine-iterator> ((subject: L)
+                                   (stride:  2))))
+  (I more?)     @result{} #t
+  (I next)      @result{} h
+  (I more?)     @result{} #t
+  (I next)      @result{} l
+  (I more?)     @result{} #t
+  (I next)      @result{} o
+  (I more?))    @result{} #f
 @end example
 
 @c page
