@@ -1,5 +1,5 @@
-@node strings
-@chapter Extended strings processing
+@node containers strings
+@section Extended strings processing
 
 
 @cindex Library @library{nausicaa containers strings}

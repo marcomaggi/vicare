@@ -1,5 +1,5 @@
-@node stacks
-@chapter Simple stacks
+@node containers stacks
+@section Simple stacks
 
 
 @cindex @library{nausicaa containers stacks}, library
@@ -12,15 +12,15 @@ last--in/first--out operations; it is built on top of @library{vicare
 containers stacks}.
 
 @menu
-* stacks objects::              Stack objects.
-* stacks inspection::           Inspecting stack objects.
-* stacks access::               Stack accessors and mutators.
-* stacks conversion::           Converting stacks to other objects.
+* containers stacks objects::     Stack objects.
+* containers stacks inspection::  Inspecting stack objects.
+* containers stacks access::      Stack accessors and mutators.
+* containers stacks conversion::  Converting stacks to other objects.
 @end menu
 
 @c page
-@node stacks objects
-@section Stack objects
+@node containers stacks objects
+@subsection Stack objects
 
 
 The following bindings are exported by the library @library{vicare
@@ -114,8 +114,8 @@ Succeed if @var{obj} is a @class{stack} object.
 @end deffn
 
 @c page
-@node stacks inspection
-@section Inspecting stack objects
+@node containers stacks inspection
+@subsection Inspecting stack objects
 
 
 The following bindings are exported by the library @library{vicare
@@ -143,8 +143,8 @@ An exact integer representing the number of objects in the instance.
 @end deftypecv
 
 @c page
-@node stacks access
-@section Stack accessors and mutators
+@node containers stacks access
+@subsection Stack accessors and mutators
 
 
 The following bindings are exported by the library @library{vicare
@@ -173,8 +173,8 @@ an assertion violation if @var{stack} is empty.
 @end defmethod
 
 @c page
-@node stacks conversion
-@section Converting stacks to other objects
+@node containers stacks conversion
+@subsection Converting stacks to other objects
 
 
 The following bindings are exported by the library @library{vicare

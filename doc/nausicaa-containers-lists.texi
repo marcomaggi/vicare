@@ -1,5 +1,5 @@
-@node lists
-@chapter Extended lists processing
+@node containers lists
+@section Extended lists processing
 
 
 @cindex Library @library{nausicaa containers lists}

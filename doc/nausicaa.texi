@@ -117,18 +117,11 @@ Libraries in the language @library{nausicaa}
 * multimethods::                Multimethods dispatching.
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
+
+Library groups
+
 * parser tools::                Lexers and parsers.
-
-Containers libraries
-
-* lists::                       Extended lists processing.
-* vectors::                     Extended vectors processing.
-* strings::                     Extended strings processing.
-* arrays::                      Multidimensional arrays.
-* stacks::                      Simple stacks.
-* queues::                      Simple queues.
-* bitvectors::                  Bitvectors.
-* iterators::                   Iterating over sequences.
+* containers::                  Containers libraries.
 
 Appendices
 
@@ -161,6 +154,7 @@ of object--oriented languages, but it just has the perfume of
 @acronym{OOP}.
 
 @c page
+@c Libraries in the Nausicaa language
 
 @include nausicaa-language.texi
 @include nausicaa-oopp.texi
@@ -168,13 +162,29 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-builtins.texi
 @include nausicaa-conditions.texi
 
-@include nausicaa-lists.texi
-@include nausicaa-vectors.texi
-@include nausicaa-strings.texi
-@include nausicaa-arrays.texi
-@include nausicaa-stacks.texi
-@include nausicaa-queues.texi
-@include nausicaa-bitvectors.texi
+@c page
+@node containers
+@chapter Containers libraries
+
+
+@menu
+* containers lists::            Extended lists processing.
+* containers vectors::          Extended vectors processing.
+* containers strings::          Extended strings processing.
+* containers arrays::           Multidimensional arrays.
+* containers stacks::           Simple stacks.
+* containers queues::           Simple queues.
+* containers bitvectors::       Bitvectors.
+* containers iterators::        Iterating over sequences.
+@end menu
+
+@include nausicaa-containers-lists.texi
+@include nausicaa-containers-vectors.texi
+@include nausicaa-containers-strings.texi
+@include nausicaa-containers-arrays.texi
+@include nausicaa-containers-stacks.texi
+@include nausicaa-containers-queues.texi
+@include nausicaa-containers-bitvectors.texi
 @include nausicaa-containers-iterators.texi
 
 @c page

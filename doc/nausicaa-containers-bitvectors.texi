@@ -1,5 +1,5 @@
-@node bitvectors
-@chapter Bitvectors
+@node containers bitvectors
+@section Bitvectors
 
 
 @cindex Library @library{nausicaa containers bitvectors}
@@ -10,16 +10,16 @@ The library @library{nausicaa containers bitvectors} implements vectors
 of bits on top of Scheme bytevectors and vectors of fixnums.
 
 @menu
-* bitvectors class::            Record type of bitvectors.
-* bitvectors bits::             Bitwise operations on bitvectors.
-* bitvectors conv::             Conversion operations on bitvectors.
-* bitvectors comp::             Comparison operations on bitvectors.
-* bitvectors ops::              Other operations on bitvectors.
+* containers bitvectors class::  Record type of bitvectors.
+* containers bitvectors bits::   Bitwise operations on bitvectors.
+* containers bitvectors conv::   Conversion operations on bitvectors.
+* containers bitvectors comp::   Comparison operations on bitvectors.
+* containers bitvectors ops::    Other operations on bitvectors.
 @end menu
 
 @c page
-@node bitvectors class
-@section Record type of bitvectors
+@node containers bitvectors class
+@subsection Record type of bitvectors
 
 
 The following bindings are exported by the library @library{nausicaa containers
@@ -61,8 +61,8 @@ Return a boolean representing the bit at @meta{index} in the
 @end defop
 
 @c page
-@node bitvectors bits
-@section Bitwise operations on bitvectors
+@node containers bitvectors bits
+@subsection Bitwise operations on bitvectors
 
 
 The following bindings are exported by the library @library{nausicaa containers
@@ -122,8 +122,8 @@ if all the bits are set to false: return @math{-1}.
 @end defmethod
 
 @c page
-@node bitvectors conv
-@section Conversion operations on bitvectors
+@node containers bitvectors conv
+@subsection Conversion operations on bitvectors
 
 
 The following bindings are exported by the library @library{nausicaa containers
@@ -145,8 +145,8 @@ in the list @var{ell} or vector @var{vec}.
 @end defun
 
 @c page
-@node bitvectors comp
-@section Comparison operations on bitvectors
+@node containers bitvectors comp
+@subsection Comparison operations on bitvectors
 
 
 The following bindings are exported by the library @library{nausicaa containers
@@ -159,8 +159,8 @@ bit.
 @end defmethod
 
 @c page
-@node bitvectors ops
-@section Other operations on bitvectors
+@node containers bitvectors ops
+@subsection Other operations on bitvectors
 
 
 The following bindings are exported by the library @library{nausicaa containers

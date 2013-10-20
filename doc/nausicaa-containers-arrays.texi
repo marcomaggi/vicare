@@ -1,5 +1,5 @@
-@node arrays
-@chapter Multidimensional arrays
+@node containers arrays
+@section Multidimensional arrays
 
 
 @cindex @library{nausicaa containers arrays}, library
@@ -11,15 +11,15 @@ mutidimensional arrays on top of built--in Scheme vectors.
 
 
 @menu
-* arrays conventions::          Arguments conventions.
-* arrays layout::               Layout of elements in the vector.
-* arrays proc::                 Procedural @api{}.
-* arrays class::                Classes and labels @api{}.
+* containers arrays conventions::  Arguments conventions.
+* containers arrays layout::       Layout of elements in the vector.
+* containers arrays proc::         Procedural @api{}.
+* containers arrays class::        Classes and labels @api{}.
 @end menu
 
 @c page
-@node arrays conventions
-@section Arguments conventions
+@node containers arrays conventions
+@subsection Arguments conventions
 
 
 In the documentation of @library{nausicaa containers arrays} we call:
@@ -69,8 +69,8 @@ Can be any value.
 @end table
 
 @c page
-@node arrays layout
-@section Layout of elements in the vector
+@node containers arrays layout
+@subsection Layout of elements in the vector
 
 
 A multidimensional array is a special @api{} to access built--in Scheme
@@ -183,19 +183,19 @@ following function will compute and return the list of factors:
 @end example
 
 @c page
-@node arrays proc
-@section Procedural @api{}
+@node containers arrays proc
+@subsection Procedural @api{}
 
 
 @menu
-* arrays proc position::        Specifying the coordinates of elements.
-* arrays proc shape::           Specifying the shape of arrays.
-* arrays proc array::           Dealing with arrays.
+* containers arrays proc position::  Specifying the coordinates of elements.
+* containers arrays proc shape::     Specifying the shape of arrays.
+* containers arrays proc array::     Dealing with arrays.
 @end menu
 
 @c page
-@node arrays proc position
-@subsection Specifying the coordinates of elements
+@node containers arrays proc position
+@subsubsection Specifying the coordinates of elements
 
 
 The elements' positions in arrays are represented by built--in Scheme
@@ -257,8 +257,8 @@ current output port.
 @end defun
 
 @c page
-@node arrays proc shape
-@subsection Specifying the shape of arrays
+@node containers arrays proc shape
+@subsubsection Specifying the shape of arrays
 
 
 Values of type @code{shape} represent the shape of an array, that is:
@@ -414,8 +414,8 @@ current output port.
 
 
 @c page
-@node arrays proc array
-@subsection Dealing with arrays
+@node containers arrays proc array
+@subsubsection Dealing with arrays
 
 
 Values of type @code{array} represent an array, a collection of values
@@ -529,24 +529,24 @@ output port.
 @end defun
 
 @c page
-@node arrays class
-@section Classes and labels @api{}
+@node containers arrays class
+@subsection Classes and labels @api{}
 
 
 @menu
-* arrays class position::       Specifying the coordinates of elements.
-* arrays class shape::          Specifying the shape of arrays.
-* arrays class array::          Dealing with arrays.
+* containers arrays class position::  Specifying the coordinates of elements.
+* containers arrays class shape::     Specifying the shape of arrays.
+* containers arrays class array::     Dealing with arrays.
 @end menu
 
 @c page
-@node arrays class position
-@subsection Specifying the coordinates of elements
+@node containers arrays class position
+@subsubsection Specifying the coordinates of elements
 
 
 The elements' positions in arrays are represented by built--in Scheme
 vectors holding exact integers.  The following @api{} is compatible with
-the one documented in @ref{arrays proc position}.
+the one documented in @ref{containers arrays proc position}.
 
 @c ------------------------------------------------------------
 
@@ -603,14 +603,14 @@ output port.
 @end defmethod
 
 @c page
-@node arrays class shape
-@subsection Specifying the shape of arrays
+@node containers arrays class shape
+@subsubsection Specifying the shape of arrays
 
 
 Values of class @class{shape} represent the shape of an array, that is:
 the number of dimensions, the start index of each dimension, the past
 index of each dimension.  The following @api{} is compatible with the
-one documented in @ref{arrays proc shape}.
+one documented in @ref{containers arrays proc shape}.
 
 @c ------------------------------------------------------------
 
@@ -735,8 +735,8 @@ output port.
 @end defmethod
 
 @c page
-@node arrays class array
-@subsection Dealing with arrays
+@node containers arrays class array
+@subsubsection Dealing with arrays
 
 
 Instances of class @class{array} represent an array: a collection of

@@ -1,5 +1,5 @@
-@node vectors
-@chapter Extended vectors processing
+@node containers vectors
+@section Extended vectors processing
 
 
 @cindex Library @library{nausicaa containers vectors}

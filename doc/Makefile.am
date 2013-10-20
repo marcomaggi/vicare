@@ -133,13 +133,13 @@ nausicaa_TEXINFOS	= \
 	nausicaa-builtins.texi					\
 	nausicaa-conditions.texi				\
 	\
-	nausicaa-lists.texi					\
-	nausicaa-vectors.texi					\
-	nausicaa-strings.texi					\
-	nausicaa-arrays.texi					\
-	nausicaa-stacks.texi					\
-	nausicaa-queues.texi					\
-	nausicaa-bitvectors.texi				\
+	nausicaa-containers-lists.texi				\
+	nausicaa-containers-vectors.texi			\
+	nausicaa-containers-strings.texi			\
+	nausicaa-containers-arrays.texi				\
+	nausicaa-containers-stacks.texi				\
+	nausicaa-containers-queues.texi				\
+	nausicaa-containers-bitvectors.texi			\
 	nausicaa-containers-iterators.texi			\
 	\
 	nausicaa-parser-tools-source-locations.texi		\

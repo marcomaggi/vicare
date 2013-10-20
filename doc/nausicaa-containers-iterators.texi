@@ -1,5 +1,5 @@
-@node iterators
-@chapter Iterating over sequences
+@node containers iterators
+@section Iterating over sequences
 
 
 @cindex Library @library{nausicaa iterators}
@@ -13,17 +13,17 @@ developers are used to them.  @value{PACKAGE}'s iterators @api{} is
 loosely inspired by Python's iterators.
 
 @menu
-* iterators base::              Basic iterators @api{}.
-* iterators conditions::        Condition object types.
-* iterators lists::             Iterating over lists.
-* iterators strings::           Iterating over strings.
-* iterators vectors::           Iterating over vectors.
-* iterators bytevectors::       Iterating over bytevectors.
+* containers iterators base::              Basic iterators @api{}.
+* containers iterators conditions::        Condition object types.
+* containers iterators lists::             Iterating over lists.
+* containers iterators strings::           Iterating over strings.
+* containers iterators vectors::           Iterating over vectors.
+* containers iterators bytevectors::       Iterating over bytevectors.
 @end menu
 
 @c page
-@node iterators base
-@section Basic iterators @api{}
+@node containers iterators base
+@subsection Basic iterators @api{}
 
 
 The following bindings are exported by the @library{nausicaa iterators}
@@ -62,9 +62,9 @@ Advance the iteration, return the value extracted from the subject;
 memoize the extracted value in the @code{current} field.
 
 If the iteration is over: raise a non--continuable exception with
-condition object of type @condition{stop-iteration}, @ref{iterators
-conditions}; once the iteration is over, calling this method multiple
-times always causes @condition{stop-iteration} to be raised.
+condition object of type @condition{stop-iteration}, @ref{containers
+iterators conditions}; once the iteration is over, calling this method
+multiple times always causes @condition{stop-iteration} to be raised.
 @end defop
 
 
@@ -112,8 +112,8 @@ untagged concrete field in @class{iterator}; its only purpose is to
 provide tagged access to the subject.
 
 @c page
-@node iterators conditions
-@section Condition object types
+@node containers iterators conditions
+@subsection Condition object types
 
 
 The following bindings are exported by the @library{nausicaa iterators}
@@ -140,8 +140,8 @@ Build and return a new instance of @condition{stop-iteration} using
 @end defop
 
 @c page
-@node iterators lists
-@section Iterating over lists
+@node containers iterators lists
+@subsection Iterating over lists
 
 
 The following bindings are exported by the @library{nausicaa iterators}
@@ -207,8 +207,8 @@ If the @func{stride:} clause is not used: the stride defaults to
 @end example
 
 @c page
-@node iterators strings
-@section Iterating over strings
+@node containers iterators strings
+@subsection Iterating over strings
 
 
 The following bindings are exported by the @library{nausicaa iterators}
@@ -258,8 +258,8 @@ the stride defaults to @math{1}.
 @end defop
 
 @c page
-@node iterators vectors
-@section Iterating over vectors
+@node containers iterators vectors
+@subsection Iterating over vectors
 
 
 The following bindings are exported by the @library{nausicaa iterators}
@@ -303,8 +303,8 @@ the stride defaults to @math{1}.
 @end defop
 
 @c page
-@node iterators bytevectors
-@section Iterating over bytevectors
+@node containers iterators bytevectors
+@subsection Iterating over bytevectors
 
 
 The following bindings are exported by the @library{nausicaa iterators}
