@@ -1294,13 +1294,13 @@ A simple error procedure raising an exception looks like this:
     (if (not (is-a? token <lexical-token>))
         message
       (let (((T <lexical-token>) token))
-        (if (not (is-a? T.location <source-location>))
+        (if (not (is-a? (T location) <source-location>))
             message
-          (let (((P <source-location>) T.location))
+          (let (((P <source-location>) (T location)))
             (string-append
               message
-              " line "   (if P.line   P.line.string   "?")
-              " column " (if P.column P.column.string "?"))))))
+              " line "   (if (P line)   (P line string)   "?")
+              " column " (if (P column) (P column string) "?"))))))
     token))
 @end example
 
@@ -1716,8 +1716,8 @@ some basic mechanism.
 In all the examples of this section we will use these helpers:
 
 @example
-(define eoi-token
-  (make-lexical-token '*eoi* #f (eof-object) 0))
+(define-constant EOI-TOKEN
+  (<end-of-input> ()))
 
 (define (make-lexer list-of-tokens)
   ;;Return a lexer closure  drawing tokens
@@ -1726,16 +1726,17 @@ In all the examples of this section we will use these helpers:
   ;;
   (lambda ()
     (if (null? list-of-tokens)
-        eoi-token
+        EOI-TOKEN
       (begin0
           (car list-of-tokens)
         (set! list-of-tokens (cdr list-of-tokens))))))
 
 (define (make-token category semantic-value)
-  (make-<lexical-token> category #f semantic-value 0))
+  (<lexical-token> ((category: category)
+                    (value:    semantic-value))))
 
-(define (error-handler message token)
-  (cons message (<lexical-token>-value token)))
+(define (error-handler message (token <lexical-token>))
+  (cons message (token value)))
 @end example
 
 @noindent
@@ -2100,7 +2101,7 @@ grammars.  It is especially interesting for natural language processing,
 the context in which the technique has been devised.
 
 To generate a GLR parser instead of a regular LALR parser, simply use
-the @samp{:parser-type 'glr} option with @func{lalr-parser}.
+the @samp{(parser-type: 'glr)} clause with @func{lalr-parser}.
 
 GLR parsers are run in exactly the same way as regular LALR parsers; the
 only difference is that the result of the parsing is a (possibly empty)
