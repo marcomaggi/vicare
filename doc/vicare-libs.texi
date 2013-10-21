@@ -302,7 +302,7 @@ External documents
 @include libs-irregex.texi
 @include libs-pregexp.texi
 @include libs-formations.texi
-@include libs-silex.texi
+@include libs-parser-tools-silex.texi
 
 @include cre2.texi
 
