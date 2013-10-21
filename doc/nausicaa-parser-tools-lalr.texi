@@ -6,12 +6,13 @@
 @cindex Library @library{nausicaa parser-tools lalr}
 
 
-The @library{nausicaa parser-tools lalr} library is a LALR(1) parser
-tables generator.  The @library{nausicaa parser-tools lalr lr-driver}
-and @library{nausicaa parser-tools lalr glr-driver} libraries generate
+The library @library{nausicaa parser-tools lalr} is a LALR(1) parser
+tables generator.  The libraries @library{nausicaa parser-tools lalr
+lr-driver} and @library{nausicaa parser-tools lalr glr-driver} generate
 instances of a parser using a supplied table.  The two drivers are not
 compatible, each of them requires a specifically built table.
 
+@quotation
 The algorithm is the same used in @gnu{} Bison and it is described in:
 
 @quotation
@@ -25,10 +26,16 @@ fact, much of the code is a direct translation from C to Scheme of the
 Bison sources.
 
 The library is a port to @rnrs{6} Scheme of Lalr-scm by Dominique
-Boucher.  The original source is available at@footnote{@aurl{} last
-verified Tue Jul 21, 2009.}:
+Boucher.  The original source is available at (@aurl{} last verified Oct
+21, 2013):
 
 @center @url{http://code.google.com/p/lalr-scm/}
+@end quotation
+
+The LALR libraries make use of the @class{lexical-token} and
+@class{source-location} classes defined by the libraries
+@library{nausicaa parser-tools lexical-tokens} and @library{nausicaa
+parser-tools source-locations}.
 
 @menu
 * lalr intro::                  Introduction to the LR parser.
