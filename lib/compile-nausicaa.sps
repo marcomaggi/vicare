@@ -19,8 +19,10 @@
   (only (nausicaa parser-tools source-locations))
   (only (nausicaa parser-tools lexical-tokens))
   (only (nausicaa parser-tools silex default-error-handler))
+  (only (nausicaa parser-tools lalr lr-driver))
+  (only (nausicaa parser-tools lalr glr-driver))
+  (only (nausicaa parser-tools lalr))
 
   )
-
 
 ;;; end of file

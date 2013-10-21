@@ -197,10 +197,12 @@ of object--oriented languages, but it just has the perfume of
 @menu
 * source-locations::            Representing source locations.
 * lexical-tokens::              Describing lexical tokens.
+* lalr::                        A LALR(1) parser generator.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
 @include nausicaa-parser-tools-lexical-tokens.texi
+@include nausicaa-parser-tools-lalr.texi
 
 @c page
 
