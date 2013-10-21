@@ -314,7 +314,10 @@ nobase_dist_libvicare_DATA	+= \
 	\
 	nausicaa/parser-tools/source-locations.sls		\
 	nausicaa/parser-tools/lexical-tokens.sls		\
-	nausicaa/parser-tools/silex/default-error-handler.sls
+	nausicaa/parser-tools/silex/default-error-handler.sls	\
+	nausicaa/parser-tools/lalr/lr-driver.sls		\
+	nausicaa/parser-tools/lalr/glr-driver.sls		\
+	nausicaa/parser-tools/lalr.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

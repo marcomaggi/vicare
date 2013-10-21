@@ -291,7 +291,10 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-containers-iterators.sps				\
 	\
 	test-nausicaa-parser-tools-lexical-token.sps			\
-	test-nausicaa-parser-tools-source-location.sps
+	test-nausicaa-parser-tools-source-location.sps			\
+	test-nausicaa-parser-tools-lalr-lr.sps				\
+	test-nausicaa-parser-tools-lalr-glr.sps				\
+	test-nausicaa-parser-tools-lalr-calc.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\
@@ -384,6 +387,7 @@ EXTRA_DIST	= \
 	libtest/records-lib.sls				\
 	libtest/silex-test.sls				\
 	make-silex-calc.sps				\
+	make-lalr-calc.sps				\
 	calc.l						\
 	TEST-SOURCE-FILE.txt				\
 	rn100						\

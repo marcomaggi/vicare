@@ -183,6 +183,7 @@ There are  special makefile rules  to rebuild source code  files, mostly
 lexer and parser tables:
 
 silex-test	- rebuild the tests for the SILex lexer
+lalr-test	- rebuild the tests for the LALR parser
 
 and the  following DANGEROUS  rule, use  only if you  know what  you are
 doing:
@@ -298,6 +299,9 @@ and Vicare by Marco Maggi.
 
   The SILex libraries are a port to  R6RS Scheme of SILex version 1.0 by
 Danny Dube'.  Copyright (C) 2001, 2009 Danny Dube'.
+
+  The LALR libraries are a port  to R6RS Scheme of Lalr-scm by Dominique
+Boucher.  Copyright (c) 2005-2008 Dominique Boucher.
 
 
 B. Bug reports

@@ -174,6 +174,10 @@ Notes for revision 0.3d5
 
      (nausicaa containers iterators)
 
+* Imported LALR libraries from Nausicaa as:
+
+     (nausicaa parser-tools lalr ---)
+
 
 Notes for revision 0.3d4
 ------------------------

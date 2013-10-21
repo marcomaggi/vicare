@@ -145,6 +145,7 @@ nausicaa_TEXINFOS	= \
 	\
 	nausicaa-parser-tools-source-locations.texi		\
 	nausicaa-parser-tools-lexical-tokens.texi		\
+	nausicaa-parser-tools-lalr.texi				\
 	\
 	macros.texi						\
 	fdl-1.3.texi						\
