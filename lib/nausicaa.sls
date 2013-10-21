@@ -10,13 +10,6 @@
 ;;;	libraries.   It   defines  the  (nausicaa   oopp)  language:  an
 ;;;	augmented (rnrs) language.
 ;;;
-;;;	  Bindings from the following libraries are NOT reexported:
-;;;
-;;;	   (rnrs eval (6))
-;;;	   (rnrs r5rs (6))
-;;;	   (rnrs mutable-pairs (6))
-;;;	   (rnrs mutable-strings (6))
-;;;
 ;;;Copyright (c) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -644,6 +637,31 @@
 
     string-normalize-nfd	string-normalize-nfkd
     string-normalize-nfc	string-normalize-nfkc
+
+
+;;;; (rnrs r5rs (6))
+
+    delay
+    exact->inexact
+    force
+    inexact->exact
+    modulo
+    remainder
+    null-environment
+    quotient
+    scheme-report-environment
+
+;;;; (rnrs eval (6))
+    eval
+    environment
+
+;;;; (rnrs mutable-pairs (6))
+    set-car!
+    set-cdr!
+
+;;;; (rnrs mutable-strings (6))
+    string-set!
+    string-fill!
 
 
 ;;;; bindings from (vicare language-extensions)
