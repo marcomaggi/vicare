@@ -197,9 +197,7 @@ cparen		\\)
  (lalr.parser-name:		'make-calc-parser)
  (lalr.library-spec:		'(libtest calc-parser))
  (lalr.library-imports:		'((libtest calc-parser-helper)
-				  (rnrs eval)
-				  (prefix (nausicaa parser-tools lexical-tokens)   lt.)
-				  (prefix (nausicaa parser-tools source-locations) sl.)))
+				  (rnrs eval)))
 
  (lalr.dump-table:		"calc-parser-tables.txt")
 		;output to a file the human readable LALR table

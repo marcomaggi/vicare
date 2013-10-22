@@ -4,12 +4,10 @@
   (import
     (nausicaa)
     (nausicaa parser-tools lalr lr-driver)
-    (nausicaa parser-tools lexical-tokens)
-    (vicare language-extensions sentinels)
-    (libtest calc-parser-helper)
-    (rnrs eval)
     (prefix (nausicaa parser-tools lexical-tokens) lt.)
-    (prefix (nausicaa parser-tools source-locations) sl.))
+    (prefix (nausicaa parser-tools source-locations) sl.)
+    (libtest calc-parser-helper)
+    (rnrs eval))
   (define (make-calc-parser)
     (lr-driver
       '#(((*default* . *error*) (error . 6) (ID . 5)

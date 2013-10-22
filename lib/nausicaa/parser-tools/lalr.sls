@@ -221,16 +221,16 @@
 
 (mk.define-maker lalr-parser
     %lalr-parser
-  ((library-spec:		#f)
+  ((library-spec:		#f	(mk.with parser-name:))
    (library-language:		'(nausicaa))
    (library-imports:		'())
    (default-library-imports:	#t)
    (parser-type:		'lr)
    (parser-name:		#f)
 
-   (output-value:		#f)
-   (output-port:		#f)
-   (output-file:		#f)
+   (output-value:		#f	(mk.without output-port: output-file:))
+   (output-port:		#f	(mk.without output-value: output-file:))
+   (output-file:		#f	(mk.without output-value: output-port:))
 
    (dump-table:			#f)
 
@@ -263,8 +263,8 @@
       (let* ((imports	(append (list library-language)
 				(if default-library-imports
 				    `((nausicaa parser-tools lalr ,driver-name)
-				      (nausicaa parser-tools lexical-tokens)
-				      (vicare language-extensions sentinels))
+				      (prefix (nausicaa parser-tools lexical-tokens) lt.)
+				      (prefix (nausicaa parser-tools source-locations) sl.))
 				  '())
 				library-imports))
 	     (exports	`(,parser-name))
