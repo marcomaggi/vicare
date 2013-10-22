@@ -380,6 +380,9 @@ EXTRA_DIST	= \
 	lists/stx.sls					\
 	numerics/helpers.sls				\
 	libtest/calc-code-lexer.sls			\
+	libtest/calc-parser-helper.sls			\
+	libtest/calc-parser-lexer.sls			\
+	libtest/calc-parser.sls				\
 	libtest/calc-portable-lexer.sls			\
 	libtest/calc-tree-lexer.sls			\
 	libtest/classes-lib.sls				\
