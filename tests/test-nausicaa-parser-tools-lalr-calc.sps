@@ -50,7 +50,7 @@
     (if (not (is-a? token lt.<lexical-token>))
 	message
       (let (((T lt.<lexical-token>) token))
-	(if (not (is-a? (T location) sl.<source-location>))
+	(if (T location unspecified?)
 	    message
 	  (let (((P sl.<source-location>) (T location)))
 	    (string-append message
