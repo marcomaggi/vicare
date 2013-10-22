@@ -9,7 +9,7 @@
 The library @library{nausicaa parser-tools lalr} is a LALR(1) parser
 tables generator.  The libraries @library{nausicaa parser-tools lalr
 lr-driver} and @library{nausicaa parser-tools lalr glr-driver} generate
-instances of a parser using a supplied table.  The two drivers are not
+instances of a parser using a supplied table; the two drivers are not
 compatible, each of them requires a specifically built table.
 
 @quotation
@@ -54,12 +54,13 @@ parser-tools source-locations}.
 This section introduces the behaviour of the LR driver; it is meant to
 be a tutorial for users who know nothing about parsing, and it has no
 commitment to being rigorous and exhaustive.  This tutorial is meant to
-be read in sequence, each section after the other as they appear.
+be read in sequence, each section after the other as they appear.  We
+describe the basic mechanism of the parser, in a way that is (hopefully)
+easy to understand.
 
-We describe the basic mechanism of the parser, in a way that is easy to
-understand.  Let's say we want to compute simple arithmetic expressions
-involving numbers, the operators @math{+-*/}, and parentheses to
-establish precedence.  We want to compute one--line expressions like:
+Let's say we want to compute simple arithmetic expressions involving
+numbers, the operators @math{+-*/}, and parentheses to establish
+precedence.  We want to compute one--line expressions like:
 
 @example
 10
@@ -85,7 +86,7 @@ establish precedence.  We want to compute one--line expressions like:
 @subsubsection Splitting expressions in semantic tokens
 
 
-The first step is to split the expression in @dfn{tokens}, that is basic
+The first step is to split the expression in @dfn{tokens}: basic
 elements having a semantic meaning.  In @samp{3 * 4 - 5} there are five
 of them:
 
@@ -107,7 +108,7 @@ of this.
 
 Scheme implements the functions @func{+}, @func{-}, @func{*}, @func{/}
 which can be applied to every Scheme's number object; so it is
-reasonable to state that: We are not interested in the concrete value of
+reasonable to state that: we are not interested in the concrete value of
 each number, but only in the abstract fact that they are numbers.  We
 can say that all the number tokens are in the same @dfn{category}; let's
 use the Scheme symbol @samp{N} to indicate it.  @samp{N} is an
@@ -116,7 +117,7 @@ abstraction for each number.
 The Scheme functions @func{+}, @func{-}, @func{*}, @func{/} are all
 applied in the same way, but the arithmetic operators @math{+-*/} are
 not: @math{+} and @math{-} can be both unary and binary, @math{*} and
-@math{/} take precedence over @math{+} and @math{-}.  We may come up
+@math{/} take precedence over @math{+} and @math{-}.  We might come up
 with the following alternative categorisations:
 
 @itemize
@@ -211,8 +212,8 @@ Parenthesis tokens with the Scheme characters @samp{#\(} and @samp{#\)}.
 @end itemize
 @end enumerate
 
-Experience shows that it is useful to define yet another token: The
-end--of-input; it is used by the lexer to signal the no more tokens are
+Experience shows that it is useful to define yet another token: the
+end--of-input; it is used by the lexer to signal that no more tokens are
 available.  We need to define a new terminal category for this, let's
 call it @samp{*eoi*}.  The concrete value of this terminal is not
 important, we can just select @samp{(eof-object)}; in what follows we
@@ -287,14 +288,15 @@ choice to compute a result; the semantic clause is just a Scheme form in
 which we do whatever we want with the three operands @samp{2}, @samp{*}
 and @samp{3}.  For example, we can compute the result @math{2 * 3 = 6}.
 
-The parser generator should create code equivalent to:
+The parser generator should create Scheme code as semantic clause
+equivalent to:
 
 @example
 (let (($3   2)   ;
       ($2   *)   ; Automatically generated preamble
       ($1   3))  ;
 
-  ($2 $3 $1))    ; Client-supplied semantic clause
+  ($2 $3 $1))    ; Client-supplied semantic action
 @end example
 
 So we want the parser to mutate the vectors as follows:
@@ -344,12 +346,12 @@ zero, so it references the terminal @samp{S}:
    p
 @end example
 
-The first action is always a @dfn{lookahead}, that is: To look at the
+The first action is always a @dfn{lookahead}, that is: to look at the
 element at index @samp{1 + p} and acquire its category; such element is
 always a terminal, in this case with symbol @samp{N}.
 
-The parser searches the grammar for the sequence @samp{S N}: It finds
-that the action associated to it is a @dfn{shift}, that is: Increment
+The parser searches the grammar for the sequence @samp{S N}: it finds
+that the action associated to it is a @dfn{shift}, that is: increment
 @samp{p} by @math{1}.  The parser obeys:
 
 @example
@@ -366,7 +368,7 @@ reason, we name the Scheme vectors @dfn{stacks} and the variable
 After a shift, the parser always performs a lookahead, it acquires the
 symbol @samp{A}.  Parser searches the grammar for the sequences @samp{S
 N A} and @samp{N A}, in this order, stopping at the first with an action
-associated to it; if finds that @samp{S N A} has no action, but @samp{N
+associated to it; it finds that @samp{S N A} has no action, but @samp{N
 A} is associated to a shift.  Parser obeys:
 
 @example
@@ -408,12 +410,12 @@ N *eoi*
 
 @noindent
 stopping at the first with an action associated to it; the action
-associated to @samp{N A N *eoi*} is a @dfn{reduce}: Take the values
+associated to @samp{N A N *eoi*} is a @dfn{reduce}: take the values
 associated to @samp{N A N}, that is @samp{1 + 2}, and use them as
-arguments for the semantic clause the grammar associates to @samp{N A N
+arguments for the semantic action the grammar associates to @samp{N A N
 *eoi*}.
 
-We have established that we want the semantic clauses to compute the
+We have established that we want the semantic actions to compute the
 given expression, so the result of the evaluation is @samp{3}; parser
 searches the grammar, finding that the result associated to @samp{N A N
 *eoi*} has to be of category @samp{N}; so it mutates the stacks and the
@@ -429,7 +431,7 @@ stack pointer as follows:
 After a reduce, parser performs a lookahead; it acquires the symbol
 @samp{*eoi*}, again.  Parser searches the grammar for the sequences
 @samp{S N *eoi*} and @samp{N *eoi*}; it finds the action associated to
-@samp{S N *eoi*} is @dfn{accept}, that is: Stop parsing and return the
+@samp{S N *eoi*} is @dfn{accept}, that is: stop parsing and return the
 value referenced by the stack pointer, which is @samp{3}.
 
 Let's see, more briefly, what happens when parsing:
@@ -779,18 +781,18 @@ associated to the lookahead @samp{D}.
 
 What happens if the lookahead is not associated to an outgoing link?  It
 means that the sequence of tokens does not comply with the defined
-grammar.  There are two possible reactions to this: Stop parsing and
+grammar.  There are two possible reactions to this: stop parsing and
 signal an error, or try to recover.
 
-Recovering makes sense only when the grammar is such that: It is
+Recovering makes sense only when the grammar is such that: it is
 possible to discard a subsequence of symbols as invalid, and go on
 parsing the following symbols.
 
-In the example of the single expressions parser: If the lookahead
+In the example of the single expressions parser: if the lookahead
 returns an invalid category symbol, the only possible reaction is to
 stop parsing and signal an error.  The whole expression is wrong.
 
-In the example of the script expression parser: We can discard an
+In the example of the script expression parser: we can discard an
 invalid line and try to parse the following ones.  Let's examine how
 this is done by the LR driver.
 
@@ -829,7 +831,7 @@ after parsing the first line is reduced to:
 #(S   N  M  N  T          *eoi*   #f #f #f)
 @end example
 
-When writing the grammar specification: We associate an error action to
+When writing the grammar specification: we associate an error action to
 the beginning of a line, and it ends up being associated to @samp{S}.
 
 Let's consider the following couple of lines, with the first being a
@@ -888,8 +890,8 @@ we have recovered from the error.
 We have seen the graph representation of the grammar with tokens
 belonging to terminal categories.  But how many nodes are there in such
 a graph?  There are an infinite number of expressions, and consequently
-an infinite number of sequences of terminals is required to represent
-them.  This would make it impossible to code a parser, unless we take a
+an infinite number of terminal sequences is required to represent them.
+This would make it impossible to code a parser, unless we take a
 different approach.
 
 We start by noticing that, if the following sequences of terminals
@@ -958,8 +960,8 @@ E @equiv{} N
 @noindent
 in which we have included a rule for the parentheses; with this
 definition involving a few symbols we can represent the whole set of
-possible expressions.  @library{nausicaa parser-tools lalr} allows us to do exactly
-this, using the following S--expression:
+possible expressions.  The library @library{nausicaa parser-tools lalr}
+allows us to do exactly this, using the following S--expression:
 
 @example
 (E (N)
