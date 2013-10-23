@@ -335,6 +335,7 @@ VICARE_SCHEME_CRE2_TESTS	= foreign-test-vicare-cre2.sps
 ## select tests for "make check"
 
 TESTS		= $(VICARE_SCHEME_CORE_TESTS)
+#XFAIL_TESTS	=
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
