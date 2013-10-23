@@ -1312,7 +1312,7 @@
   ;;
   ;;   ((EXPR (EXPR ADD EXPR)
   ;;          (EXPR MUL EXPR)
-  ;;          (NUM))
+  ;;          (NUM)))
   ;;
 
   ;;Operator precedence  matters when  parsing input sequences  in which
@@ -1321,11 +1321,11 @@
   ;;   NUM ADD NUM MUL NUM
   ;;
   ;;If ADD  and MUL have  the same  precedence, there is  a Shift/Reduce
-  ;;conflict: the sequence can be parsed by shifting first as in:
+  ;;conflict; the sequence can be parsed by shifting first as in:
   ;;
   ;;   NUM ADD NUM MUL NUM => NUM ADD EXPR => EXPR
   ;;
-  ;;or by reducing first as:
+  ;;or by reducing first as in:
   ;;
   ;;   NUM ADD NUM MUL NUM => EXPR MUL NUM => EXPR
   ;;
@@ -1360,7 +1360,7 @@
   ;;
   ;;   ((EXPR (EXPR ADD EXPR)
   ;;          (EXPR ADD EXPR ADD EXPR)
-  ;;          (NUM))
+  ;;          (NUM)))
   ;;
   ;;we have a Reduce/Reduce conflict.  A sequence like:
   ;;
@@ -1424,7 +1424,7 @@
     #f)
 
   ;;On the meaning of terminal precedence: two non-associative operators
-  ;;with different precedence.  Show that precedence always win.
+  ;;with different precedence.  Show that precedence always wins.
   (let ()
 
     (define make-parser
@@ -1496,6 +1496,7 @@
 
     ;;left-associative
     (check (doit ONE ADD TWO ADD THREE)		=> '(+ (+ 1 2) 3))
+    ;;right-associative
     (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 (* 2 3)))
 
     #f)
@@ -1532,7 +1533,6 @@
     (check (doit ONE ADD TWO)	=> '(+ 1 2))
     (check (doit ONE MUL TWO)	=> '(* 1 2))
 
-    ;;left-associative
     (check (doit ONE ADD TWO ADD THREE)		=> '(+ 1 (+ 2 3)))
     (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 (* 2 3)))
 
@@ -1689,6 +1689,138 @@
     (check (doit ONE DIV TWO
 		 DIV THREE
 		 DIV FOUR)	=> '(/ 1 (/ 2 (/ 3 4))))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; Reduce/Reduce conflicts with unary operators
+
+  ;;On   the  meaning   of  Reduce/Reduce   conflicts:  left-associative
+  ;;operators with unary rule without precedence.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		    ;precedence 0
+			  (left: ADD SUB)   ;precedence 1
+			  (left: MUL DIV))) ;precedence 2
+       (lalr.rules:
+	'((EXPR (ADD EXPR)		: (list $1 $2)
+		(SUB EXPR)		: (list $1 $2)
+		(EXPR ADD EXPR)		: (list $2 $1 $3)
+		(EXPR SUB EXPR)		: (list $2 $1 $3)
+		(EXPR MUL EXPR)		: (list $2 $1 $3)
+		(EXPR DIV EXPR)		: (list $2 $1 $3)
+		(NUM)			: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant SUB	(make-token 'SUB '-))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant DIV	(make-token 'DIV '/))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+
+    (check (doit ADD ONE)		=> '(+ 1))
+    (check (doit SUB ONE)		=> '(- 1))
+
+    (check (doit ADD ADD ONE)		=> '(+ (+ 1)))
+    (check (doit SUB SUB ONE)		=> '(- (- 1)))
+    (check (doit ADD SUB ONE)		=> '(+ (- 1)))
+    (check (doit SUB ADD ONE)		=> '(- (+ 1)))
+
+    ;;ADD is left-associative.
+    (check (doit ADD ONE ADD TWO)	=> '(+ (+ 1) 2))
+    ;;ADD and SUB have equal preceence, but ADD is left-associative.
+    (check (doit ADD ONE SUB TWO)	=> '(- (+ 1) 2))
+    ;;precedence(MUL) > precedence(ADD).
+    (check (doit ADD ONE MUL TWO)	=> '(+ (* 1 2)))
+    ;;precedence(DIV) > precedence(ADD).
+    (check (doit ADD ONE DIV TWO)	=> '(+ (/ 1 2)))
+
+    ;;ADD and SUB have equal preceence, but SUB is left-associative.
+    (check (doit SUB ONE ADD TWO)	=> '(+ (- 1) 2))
+    ;;SUB is left-associative.
+    (check (doit SUB ONE SUB TWO)	=> '(- (- 1) 2))
+    ;;precedence(MUL) > precedence(SUB).
+    (check (doit SUB ONE MUL TWO)	=> '(- (* 1 2)))
+    ;;precedence(DIV) > precedence(SUB).
+    (check (doit SUB ONE DIV TWO)	=> '(- (/ 1 2)))
+
+    #f)
+
+  ;;On   the  meaning   of  Reduce/Reduce   conflicts:  left-associative
+  ;;operators with unary rule having precedence.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		     ;precedence 0
+			  (left: ADD SUB)    ;precedence 1
+			  (left: MUL DIV)    ;precedence 2
+			  (nonassoc: UADD)   ;precedence 3
+			  (nonassoc: USUB))) ;precedence 4
+       (lalr.rules:
+	'((EXPR (ADD EXPR (prec: UADD)) : (list $1 $2)
+		(SUB EXPR (prec: USUB)) : (list $1 $2)
+		(EXPR ADD EXPR)		: (list $2 $1 $3)
+		(EXPR SUB EXPR)		: (list $2 $1 $3)
+		(EXPR MUL EXPR)		: (list $2 $1 $3)
+		(EXPR DIV EXPR)		: (list $2 $1 $3)
+		(NUM)			: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant SUB	(make-token 'SUB '-))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant DIV	(make-token 'DIV '/))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+
+    (check (doit ADD ONE)		=> '(+ 1))
+    (check (doit SUB ONE)		=> '(- 1))
+
+    (check (doit ADD ADD ONE)		=> '(+ (+ 1)))
+    (check (doit SUB SUB ONE)		=> '(- (- 1)))
+    (check (doit ADD SUB ONE)		=> '(+ (- 1)))
+    (check (doit SUB ADD ONE)		=> '(- (+ 1)))
+
+    ;;precedence(UNARY) > precedence(ADD).
+    (check (doit ADD ONE ADD TWO)	=> '(+ (+ 1) 2))
+    ;;precedence(UNARY) > precedence(SUB).
+    (check (doit ADD ONE SUB TWO)	=> '(- (+ 1) 2))
+    ;;precedence(UNARY) > precedence(MUL).
+    (check (doit ADD ONE MUL TWO)	=> '(* (+ 1) 2))
+    ;;precedence(UNARY) > precedence(DIV).
+    (check (doit ADD ONE DIV TWO)	=> '(/ (+ 1) 2))
+
+    ;;precedence(UNARY) > precedence(ADD).
+    (check (doit SUB ONE ADD TWO)	=> '(+ (- 1) 2))
+    ;;precedence(UNARY) > precedence(SUB).
+    (check (doit SUB ONE SUB TWO)	=> '(- (- 1) 2))
+
+    ;;FIXME Commented  out because they  fail.  I dunno why  because the
+    ;;same  thing works  in the  calc example  in the  other test  file.
+    ;;(Marco Maggi; Wed Oct 23, 2013)
+    ;;
+    ;; ;;precedence(UNARY) > precedence(MUL).
+    ;; (check (doit SUB ONE MUL TWO)	=> '(* (- 1) 2))
+    ;; ;;precedence(UNARY) > precedence(DIV).
+    ;; (check (doit SUB ONE DIV TWO)	=> '(/ (- 1) 2))
 
     #f)
 

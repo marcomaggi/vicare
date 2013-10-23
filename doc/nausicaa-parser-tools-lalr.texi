@@ -1351,10 +1351,10 @@ if the end--of--input is found.
 
 @menu
 * lalr grammar intro::          Introduction to grammar definition.
+* lalr grammar preamble::       Code preamble for all the examples.
 * lalr grammar precedence::     Operator precedence and associativity.
 * lalr grammar clauses::        Writing semantic clauses.
 * lalr grammar error::          Error recovery.
-* lalr grammar conflict::       Conflicts resolution.
 * lalr grammar examples::       Dummy examples of grammar definitions.
 @end menu
 
@@ -1452,52 +1452,642 @@ part, example:
 when such a rule matches a sequence of symbols, it generates the
 sentinel value; @libsref{sentinels, Sentinel values}.
 
-Finally note that in this example grammar: all the operators have the
-same precedence and are right--associative.
+@c page
+@node lalr grammar preamble
+@subsubsection Code preamble for all the examples
+
+
+For all the examples in this section about grammar definition, we assume
+the following preamble:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools lalr) lalr.)
+  (prefix (nausicaa parser-tools lexical-tokens) lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(define-constant EOI-TOKEN
+  (lt.<end-of-input> ()))
+
+(define (make-lexer list-of-tokens)
+  ;;Return a lexer closure drawing  tokens from the
+  ;;list LIST-OF-TOKENS.  When the list is empty,
+  ;;return the EOI-TOKEN.
+  (lambda ()
+    (if (null? list-of-tokens)
+        EOI-TOKEN
+      (begin0
+          (car list-of-tokens)
+        (set! list-of-tokens (cdr list-of-tokens))))))
+
+(define (make-token category value)
+  (lt.<lexical-token> ((lt.category: category)
+                       (lt.value:    value)
+                       (lt.length:   0))))
+
+(define make-error-handler
+  ;;Return an error handler closure that calls
+  ;;YYCUSTOM with a pair describing the offending
+  ;;token.  To just return the pair invoke as:
+  ;;
+  ;;    (make-error-handler (lambda x x))
+  ;;
+  (case-lambda
+   (()
+    (make-error-handler (lambda x x)))
+   ((yycustom)
+    (lambda ((message <string>) (token lt.<lexical-token>))
+      (yycustom `(error-handler . ,(token value)))))))
+@end example
 
 @c page
 @node lalr grammar precedence
 @subsubsection Operator precedence and associativity
 
 
-The grammar defined in the introduction (@ref{lalr grammar intro})
-defines no operator precedences.  It is possible to explicitly assign
-precedences and associativity to terminal symbols and productions a la
-Yacc.  Here is a modified (and augmented) version of the grammar:
+It is possible to explicitly assign precedences and associativity to
+terminal symbols and productions a la Yacc.  Conflicts in the grammar
+are handled in a conventional way, in the absence of precedence
+directives: Shift/Reduce conflicts are resolved by shifting, and
+Reduce/Reduce conflicts are resolved by choosing the rule listed first
+in the grammar definition.
+
+Let's define two operators @samp{ADD} and @samp{MUL} and the grammar:
 
 @example
-(lalr-parser
-
-  (terminals: '(ID
-                (left: + -)
-                (left: * /)
-                (nonassoc: uminus)))
-
-  (rules: '((e (e + e)              : (+ $1 $3)
-               (e - e)              : (- $1 $3)
-               (e * e)              : (* $1 $3)
-               (e / e)              : (/ $1 $3)
-               (- e (prec: uminus)) : (- $2)
-               (ID)                 : $1)))
-
-  ---) ;other options
+((EXPR (EXPR ADD EXPR)
+       (EXPR MUL EXPR)
+       (NUM)))
 @end example
 
-The @samp{left:} clause is used to specify a set of left--associative
-operators of the same precedence level.  The @samp{right:} clause
-specifies right--associative operators at the same precedence level.
-The @samp{nonassoc:} clause specifies operators that are
-non--associative.
+@c ------------------------------------------------------------
 
-Note the use of the (apparently) useless terminal @samp{uminus}.  It is
-only defined in order to assign to the penultimate rule a precedence
-level higher than that of @samp{*} and @samp{/}.  The @samp{prec:}
-directive can only appear as the last element of a rule.
+@subsubheading Operator precedence
 
-Finally, note that precedence levels are incremented from left to right,
-i.e. the precedence level of @samp{+} and @samp{-} is less than the
-precedence level of @samp{*} and @samp{/} since the formers appear first
-in the list of terminal symbols.
+
+Operator precedence is represented by an @dfn{operator index}: a
+non--negative exact integer; the higher the integer the higher the
+precedence.  When composing the @clause{terminals:} clause:
+
+@itemize
+@item
+If we just write the terminal symbol, its precedence will be @math{0}.
+
+@item
+If we use an associativity specifier: its precedence index is @math{1}
+higher than its last predecessor in the list having an associativity
+specification; if it is the first: its precedence index is @math{1}.
+@end itemize
+
+@noindent
+examples:
+
+@example
+;;All the terminals have precedence index 0.
+(terminals: '(NUM ADD SUB MUL DIV))
+
+(terminals: '(NUM               ;precedence 0
+              (nonassoc: ADD)   ;precedence 1
+              (nonassoc: SUB)   ;precedence 2
+              (nonassoc: MUL)   ;precedence 3
+              (nonassoc: DIV))) ;precedence 4
+
+(terminals: '(NUM               ;precedence 0
+              (nonassoc: ADD)   ;precedence 1
+              (left:     SUB)   ;precedence 2
+              (right:    MUL)   ;precedence 3
+              DIV))             ;precedence 0
+
+(terminals: '(NUM               ;precedence 0
+              (left: ADD SUB)   ;precedence 1
+              (left: MUL DIV)   ;precedence 2
+              (right: POW)))    ;precedence 3
+
+(terminals: '(NUM               ;precedence 0
+              (left: ADD SUB)   ;precedence 1
+              (left: MUL DIV)   ;precedence 2
+              (nonassoc: UNARY) ;precedence 3
+              (right: POW)))    ;precedence 4
+@end example
+
+@noindent
+notice that last two examples in which @samp{ADD} and @samp{SUB} have
+the same precedence as do @samp{MUL} and @samp{DIV}.
+
+Operator precedence matters when parsing input sequences in which both
+appear:
+
+@example
+NUM ADD NUM MUL NUM
+@end example
+
+@itemize
+@item
+If @samp{ADD} and @samp{MUL} have the same precedence, there is a
+Shift/Reduce conflict; the sequence can be parsed by shifting first as
+in:
+
+@example
+NUM ADD NUM MUL NUM @result{} NUM ADD EXPR @result{} EXPR
+@end example
+
+@noindent
+or by reducing first as in:
+
+@example
+NUM ADD NUM MUL NUM @result{} EXPR MUL NUM @result{} EXPR
+@end example
+
+@noindent
+the generated parsers choose Shift in this case.
+
+@item
+If @samp{MUL} has higher precedence than @samp{ADD}, subexpressions
+containing @samp{MUL} are reduced first no matter if they come before or
+after:
+
+@example
+NUM ADD NUM MUL NUM @result{} NUM ADD EXPR @result{} EXPR
+NUM MUL NUM ADD NUM @result{} EXPR ADD NUM @result{} EXPR
+@end example
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Operator associativity
+
+
+Operator associativity matters when parsing input sequences in which
+only one operator appears:
+
+@example
+NUM ADD NUM ADD NUM
+@end example
+
+@itemize
+@item
+If @samp{ADD} is left-associative, because listed in the
+@clause{terminals:} clause with the @code{left:} specifier, the first
+subexpression is reduced first:
+
+@example
+NUM ADD NUM ADD NUM @result{} EXPR ADD NUM @result{} EXPR
+@end example
+
+@item
+If @samp{ADD} is right--associative, because listed in the
+@clause{terminals:} clause with the @code{right:} specifier, the second
+subexpression is reduced first:
+
+@example
+NUM ADD NUM ADD NUM @result{} NUM ADD EXPR @result{} EXPR
+@end example
+
+@item
+If @samp{ADD} is non--associative, because listed in the
+@clause{terminals:} clause with the @code{nonassoc:} specifier, or has
+no specified associativity: the expression is parsed as if @samp{ADD} is
+right--associative.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Reduce/Reduce conflits
+
+
+Let's consider a different grammar containing two rules, one of which is
+a subexpression of the other:
+
+@example
+((EXPR (EXPR ADD EXPR)
+       (EXPR ADD EXPR ADD EXPR)
+       (NUM)))
+@end example
+
+@noindent
+we have a Reduce/Reduce conflict; a sequence like:
+
+@example
+NUM1 ADD NUM2 ADD NUM2
+@end example
+
+@noindent
+can be parsed by reducing the first subexpression:
+
+@example
+NUM1 ADD NUM2 ADD NUM2 @result{} EXPR ADD NUM2 @result{} EXPR
+@end example
+
+@noindent
+or by reducing the whole expression:
+
+@example
+NUM1 ADD NUM2 ADD NUM2 @result{} EXPR
+@end example
+
+@noindent
+the generated parsers select the rule that comes first in the grammar
+definition; in the above example the shorter rule comes first.
+
+@c ------------------------------------------------------------
+
+@subsubheading Overriding the precedence among non-terminal rules
+
+
+It is sometimes desirable to give a rule a higher precedence than it
+would have as determined by the contained terminal symbols.  For
+example, let's consider the following arithmetic expressions grammar:
+
+@example
+((EXPR (ADD EXPR)              : (list $1 $2)
+       (SUB EXPR)              : (list $1 $2)
+       (EXPR ADD EXPR)         : (list $2 $1 $3)
+       (EXPR SUB EXPR)         : (list $2 $1 $3)
+       (EXPR MUL EXPR)         : (list $2 $1 $3)
+       (EXPR DIV EXPR)         : (list $2 $1 $3)
+       (NUM)                   : $1))
+@end example
+
+@noindent
+in which notice the rules defining the unary operators @samp{ADD} and
+@samp{SUB}.  If the terminal symbols are defined as:
+
+@example
+(terminals: '(NUM
+              (left: ADD SUB)
+              (left: MUL DIV)))
+@end example
+
+@noindent
+multiplication and division will have the right precedence over binary
+addition and binary subtraction, but also a wrong precedence over unary
+@samp{ADD} and @samp{SUB}:
+
+@example
+ADD NUM MUL NUM @result{} ADD EXPR @result{} EXPR
+SUB NUM MUL NUM @result{} SUB EXPR @result{} EXPR
+@end example
+
+@noindent
+in concrete examples:
+
+@example
++ 1 * 2 @result{} + (1 * 2)
+- 1 * 2 @result{} - (1 * 2)
+@end example
+
+We can override the precedence of the unary operators by defining
+additional terminal symbols with highest precedence:
+
+@example
+(terminals: '(NUM
+              (left: ADD SUB)
+              (left: MUL DIV))
+              (nonassoc: UADD)
+              (nonassoc: USUB))
+@end example
+
+@noindent
+and use the @code{prec:} specifier directly in the grammar definition:
+
+@example
+((EXPR (ADD EXPR (prec: UADD)): (list $1 $2)
+       (SUB EXPR (prec: USUB)): (list $1 $2)
+       (EXPR ADD EXPR)         : (list $2 $1 $3)
+       (EXPR SUB EXPR)         : (list $2 $1 $3)
+       (EXPR MUL EXPR)         : (list $2 $1 $3)
+       (EXPR DIV EXPR)         : (list $2 $1 $3)
+       (NUM)                   : $1))
+@end example
+
+@noindent
+this way the unary operators will have the right precedence:
+
+@example
+ADD NUM MUL NUM @result{} EXPR MUL EXPR @result{} EXPR
+SUB NUM MUL NUM @result{} EXPR MUL EXPR @result{} EXPR
+@end example
+
+@noindent
+in concrete examples:
+
+@example
++ 1 * 2 @result{} (+ 1) * 2
+- 1 * 2 @result{} (- 1) * 2
+@end example
+
+In the grammar, the @code{prec:} specifier can appear only as last
+element in the rule.
+
+@c ------------------------------------------------------------
+
+@subsubheading Terminals precedence examples
+
+
+Example on the meaning of terminal precedence: two operators with the
+same precedence.  Show that Shift/Reduce conflicts are resolved by
+choosing Shift.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM   ;precedence 0
+                      ADD   ;precedence 0
+                      MUL)) ;precedence 0
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO MUL THREE)    @result{} (+ 1 (* 2 3))
+(doit ONE MUL TWO ADD THREE)    @result{} (* 1 (+ 2 3))
+@end example
+
+On the meaning of terminal precedence: two non--associative operators
+with different precedence.  Show that precedence always wins.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      (nonassoc: ADD)   ;precedence 1
+                      (nonassoc: MUL))) ;precedence 2
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO MUL THREE)    @result{} (+ 1 (* 2 3))
+(doit ONE MUL TWO ADD THREE)    @result{} (+ (* 1 2) 3)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Terminals associativity examples
+
+
+On the meaning of terminal associativity: a left--associative operator
+and a right--associative operator.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM            ;precedence 0
+                      (left:  ADD)   ;precedence 1
+                      (right: MUL))) ;precedence 2
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+;;left-associative
+(doit ONE ADD TWO ADD THREE)    @result{} (+ (+ 1 2) 3)
+
+;;right-associative
+(doit ONE MUL TWO MUL THREE)    @result{} (* 1 (* 2 3))
+@end example
+
+On the meaning of terminal associativity: non--associative operators and
+operators for which the associativity is unspecified are handled as
+right--associative.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM             ;precedence 0
+                      (nonassoc: ADD) ;precedence 1
+                      MUL))           ;precedence 0
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO ADD THREE)    @result{} (+ 1 (+ 2 3))
+(doit ONE MUL TWO MUL THREE)    @result{} (* 1 (* 2 3))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Reduce/Reduce conflicts examples
+
+
+On the meaning of Reduce/Reduce conflicts: the longest rule is given
+first.  Operator precedence does matter.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      ADD               ;precedence 0
+                      (nonassoc: SUB)   ;precedence 1
+                      (left:     MUL)   ;precedence 2
+                      (right:    DIV))) ;precedence 3
+   (lalr.rules:
+    '((EXPR
+       (EXPR ADD EXPR ADD EXPR)     : (list $2 $1 $3 $5)
+       (EXPR SUB EXPR SUB EXPR)     : (list $2 $1 $3 $5)
+       (EXPR MUL EXPR MUL EXPR)     : (list $2 $1 $3 $5)
+       (EXPR DIV EXPR DIV EXPR)     : (list $2 $1 $3 $5)
+       (EXPR ADD EXPR)              : (list $2 $1 $3)
+       (EXPR SUB EXPR)              : (list $2 $1 $3)
+       (EXPR MUL EXPR)              : (list $2 $1 $3)
+       (EXPR DIV EXPR)              : (list $2 $1 $3)
+       (NUM)                        : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant SUB        (make-token 'SUB '-))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant DIV        (make-token 'DIV '/))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+(define-constant FOUR       (make-token 'NUM 4))
+
+(check (doit ONE ADD TWO)   @result{} (+ 1 2)
+(check (doit ONE SUB TWO)   @result{} (- 1 2)
+(check (doit ONE MUL TWO)   @result{} (* 1 2)
+(check (doit ONE DIV TWO)   @result{} (/ 1 2)
+
+;;No associativity specified.
+(doit ONE ADD TWO
+      ADD THREE)     @result{} (+ 1 2 3)
+(doit ONE ADD TWO
+      ADD THREE
+      ADD FOUR)      @result{} (+ 1 (+ 2 3 4))
+
+;;Non-associative operator.
+(doit ONE SUB TWO
+      SUB THREE)     @result{} (- 1 2 3)
+(doit ONE SUB TWO
+      SUB THREE
+      SUB FOUR)      @result{} (- 1 (- 2 3 4))
+
+;;Left-associative operator.
+(doit ONE MUL TWO
+      MUL THREE)     @result{} (* (* 1 2) 3)
+(doit ONE MUL TWO
+      MUL THREE
+      MUL FOUR)      @result{} (* (* (* 1 2) 3) 4)
+
+;;Right-associative operator.
+(doit ONE DIV TWO
+      DIV THREE)     @result{} (/ 1 2 3)
+(doit ONE DIV TWO
+      DIV THREE
+      DIV FOUR)      @result{} (/ 1 (/ 2 3 4))
+@end example
+
+On the meaning of Reduce/Reduce conflicts: the longest rule is given
+last.  Operator precedence does matter.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      ADD               ;precedence 0
+                      (nonassoc: SUB)   ;precedence 1
+                      (left:     MUL)   ;precedence 2
+                      (right:    DIV))) ;precedence 3
+   (lalr.rules:
+    '((EXPR
+       (EXPR ADD EXPR)              : (list $2 $1 $3)
+       (EXPR SUB EXPR)              : (list $2 $1 $3)
+       (EXPR MUL EXPR)              : (list $2 $1 $3)
+       (EXPR DIV EXPR)              : (list $2 $1 $3)
+       (EXPR ADD EXPR ADD EXPR)     : (list $2 $1 $3 $5)
+       (EXPR SUB EXPR SUB EXPR)     : (list $2 $1 $3 $5)
+       (EXPR MUL EXPR MUL EXPR)     : (list $2 $1 $3 $5)
+       (EXPR DIV EXPR DIV EXPR)     : (list $2 $1 $3 $5)
+       (NUM)                        : $1)))))
+
+(define (doit . tokens)
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant SUB        (make-token 'SUB '-))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant DIV        (make-token 'DIV '/))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+(define-constant FOUR       (make-token 'NUM 4))
+
+(doit ONE ADD TWO)   @result{} (+ 1 2)
+(doit ONE SUB TWO)   @result{} (- 1 2)
+(doit ONE MUL TWO)   @result{} (* 1 2)
+(doit ONE DIV TWO)   @result{} (/ 1 2)
+
+;;No associativity specified.  Handled as right-associative
+;;operator.
+(doit ONE ADD TWO
+      ADD THREE)     @result{} (+ 1 (+ 2 3))
+(doit ONE ADD TWO
+      ADD THREE
+      ADD FOUR)      @result{} (+ 1 (+ 2 (+ 3 4)))
+
+;;Non-associative operator.  Handled as right-associative
+;;operator.
+(doit ONE SUB TWO
+      SUB THREE)     @result{} (- 1 (- 2 3))
+(doit ONE SUB TWO
+      SUB THREE
+      SUB FOUR)      @result{} (- 1 (- 2 (- 3 4)))
+
+;;Left-associative operator.
+(doit ONE MUL TWO
+      MUL THREE)     @result{} (* (* 1 2) 3)
+(doit ONE MUL TWO
+      MUL THREE
+      MUL FOUR)      @result{} (* (* (* 1 2) 3) 4)
+
+;;Right-associative operator.
+(doit ONE DIV TWO
+      DIV THREE)     @result{} (/ 1 (/ 2 3))
+(doit ONE DIV TWO
+      DIV THREE
+      DIV FOUR)      @result{} (/ 1 (/ 2 (/ 3 4)))
+@end example
 
 @c page
 @node lalr grammar clauses
@@ -1692,16 +2282,6 @@ so an ``unexpected end--of--input error'' is generated; the error
 handler is invoked and its return value becomes the return value of the
 parser closure.
 @end enumerate
-
-@c page
-@node lalr grammar conflict
-@subsubsection Conflicts resolution
-
-
-Conflicts in the grammar are handled in a conventional way.  In the
-absence of precedence directives, Shift/Reduce conflicts are resolved by
-shifting, and Reduce/Reduce conflicts are resolved by choosing the rule
-listed first in the grammar definition.
 
 @c page
 @node lalr grammar examples

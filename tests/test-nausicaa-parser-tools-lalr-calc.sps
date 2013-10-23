@@ -167,6 +167,16 @@
   (check (doit "1%3\n")		=> 1)
   (check (doit "1^3\n")		=> 1)
 
+  (check (doit "+1+2\n")	=> +3)
+  (check (doit "+1-2\n")	=> -1)
+  (check (doit "+1*2\n")	=> +2)
+  (check (doit "+1/2\n")	=> 1/2)
+
+  (check (doit "-1+2\n")	=> +1)
+  (check (doit "-1-2\n")	=> -3)
+  (check (doit "-1*2\n")	=> -2)
+  (check (doit "-1/2\n")	=> -1/2)
+
 ;;; functions
 
   (check (doit "sin(1.1)\n")		=> (sin 1.1))
