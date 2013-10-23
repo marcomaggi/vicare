@@ -59,14 +59,18 @@
 		       (lt.value:    value)
 		       (lt.length:   0))))
 
-(define (make-error-handler yycustom)
+(define make-error-handler
   ;;Return  an error  handler closure  that calls  YYCUSTOM with  a pair
   ;;describing the offending token.  To just return the pair invoke as:
   ;;
   ;;	(make-error-handler (lambda x x))
   ;;
-  (lambda (message (token lt.<lexical-token>))
-    (yycustom `(error-handler . ,(token value)))))
+  (case-lambda
+   (()
+    (make-error-handler (lambda x x)))
+   ((yycustom)
+    (lambda ((message <string>) (token lt.<lexical-token>))
+      (yycustom `(error-handler . ,(token value)))))))
 
 (define (debug:print-tables doit? terminals non-terminals)
   (when doit?
@@ -271,7 +275,7 @@
 
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
 	   (make-parser		(lalr.lalr-parser (lalr.output-value: #t)
 						  (lalr.expect: #f)
 						  (lalr.terminals: terminals)
@@ -416,7 +420,7 @@
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
            (result		'())
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
            (parser		(make-parser)))
       (parser lexer error-handler)))
 
@@ -562,7 +566,7 @@
 
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
            (parser		(make-parser)))
       (parser lexer error-handler)))
 
@@ -611,8 +615,13 @@
 
 (parameterise ((check-test-name 'associativity-1))
 
-;;;Expression language  with no associativity  attributes.  The conflict
-;;;resolution protocol rules:
+;;;Expression language with no associativity attributes.
+;;;
+;;;When no  associativity specification is  present for a symbol  in the
+;;;"terminals:"  clause:  a  terminal  has precedence  index  zero  and,
+;;;according to the conflict resolution rules, it is right-associative.
+;;;
+;;;The conflict resolution protocol rules:
 ;;;
 ;;; Shift/Reduce	-> Shift
 ;;; Reduce/Reduce	-> the Reduce that comes first in the grammar
@@ -622,886 +631,1066 @@
     (lalr.lalr-parser
      (lalr.output-value: #t)
      (lalr.expect: 0)
-     (lalr.terminals: '(N A S M D))
+     (lalr.terminals: '(NUM	;precedence = 0
+			ADD	;precedence = 0
+			SUB	;precedence = 0
+			MUL	;precedence = 0
+			DIV))	;precedence = 0
 
-     (lalr.rules: '((E (E A E)	: (list $2 $1 $3)
-		       (E S E)	: (list $2 $1 $3)
-		       (E M E)	: (list $2 $1 $3)
-		       (E D E)	: (list $2 $1 $3)
-		       (A N)	: (list $1 $2)
-		       (S N)	: (list $1 $2)
-		       (N)	: $1)))))
+     (lalr.rules: '((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+			  (EXPR SUB EXPR)	: (list $2 $1 $3)
+			  (EXPR MUL EXPR)	: (list $2 $1 $3)
+			  (EXPR DIV EXPR)	: (list $2 $1 $3)
+			  (ADD NUM)		: (list $1 $2)
+			  (SUB NUM)		: (list $1 $2)
+			  (NUM)			: $1)))))
 
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
            (parser		(make-parser)))
       (parser lexer error-handler)))
 
-;;; --------------------------------------------------------------------
-;;; Grammar tests, no associativity.
+  (define-constant ADD		(make-token 'ADD '+))
+  (define-constant SUB		(make-token 'SUB '-))
+  (define-constant MUL		(make-token 'MUL '*))
+  (define-constant DIV		(make-token 'DIV '/))
 
-  (check
-      (doit (make-token 'N 1))
-    => 1)
-
-  (check
-      (doit (make-token 'A '+)
-	    (make-token 'N 1))
-    => '(+ 1))
-
-  (check
-      (doit (make-token 'S '-)
-	    (make-token 'N 1))
-    => '(- 1))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'A '+)
-	    (make-token 'N 2))
-    => '(+ 1 2))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'S '-)
-	    (make-token 'N 2))
-    => '(- 1 2))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'M '*)
-	    (make-token 'N 2))
-    => '(* 1 2))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'D '/)
-	    (make-token 'N 2))
-    => '(/ 1 2))
+  (define-constant ONE		(make-token 'NUM 1))
+  (define-constant TWO		(make-token 'NUM 2))
+  (define-constant THREE	(make-token 'NUM 3))
+  (define-constant FOUR		(make-token 'NUM 4))
+  (define-constant FIVE		(make-token 'NUM 5))
+  (define-constant SIX		(make-token 'NUM 6))
 
 ;;; --------------------------------------------------------------------
-;;; Operator precedence.
+;;; single operator
 
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'A '+)
-	    (make-token 'N 2)
-	    (make-token 'S '-)
-	    (make-token 'N 3))
-    => '(+ 1 (- 2 3)))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'A '+)
-	    (make-token 'N 2)
-	    (make-token 'M '*)
-	    (make-token 'N 3))
-    => '(+ 1 (* 2 3)))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'A '+)
-	    (make-token 'N 2)
-	    (make-token 'D '/)
-	    (make-token 'N 3))
-    => '(+ 1 (/ 2 3)))
-
-;; ;;; --------------------------------------------------------------------
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'S '-)
-	    (make-token 'N 2)
-	    (make-token 'M '+)
-	    (make-token 'N 3))
-    => '(- 1 (+ 2 3)))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'S '-)
-	    (make-token 'N 2)
-	    (make-token 'M '*)
-	    (make-token 'N 3))
-    => '(- 1 (* 2 3)))
-
-  (check
-      (doit (make-token 'N 1)
-	    (make-token 'S '-)
-	    (make-token 'N 2)
-	    (make-token 'D '/)
-	    (make-token 'N 3))
-    => '(- 1 (/ 2 3)))
+  (check (doit ONE)			=> 1)
+  (check (doit ADD ONE)			=> '(+ 1))
+  (check (doit SUB ONE)			=> '(- 1))
+  (check (doit ONE ADD TWO)		=> '(+ 1 2))
+  (check (doit ONE SUB TWO)		=> '(- 1 2))
+  (check (doit ONE MUL TWO)		=> '(* 1 2))
+  (check (doit ONE DIV TWO)		=> '(/ 1 2))
 
 ;;; --------------------------------------------------------------------
+;;; different operators precedence, shift/reduce conflict: pick shift
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3))
-;;     => '(+ (* 1 2) 3))
+  ;; add first
+  (check (doit ONE ADD TWO SUB THREE)	=> '(+ 1 (- 2 3)))
+  (check (doit ONE ADD TWO MUL THREE)	=> '(+ 1 (* 2 3)))
+  (check (doit ONE ADD TWO DIV THREE)	=> '(+ 1 (/ 2 3)))
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 3))
-;;     => '(- (* 1 2) 3))
+  ;;sub first
+  (check (doit ONE SUB TWO ADD THREE)	=> '(- 1 (+ 2 3)))
+  (check (doit ONE SUB TWO MUL THREE)	=> '(- 1 (* 2 3)))
+  (check (doit ONE SUB TWO DIV THREE)	=> '(- 1 (/ 2 3)))
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '/)
-;; 	    (make-token 'N 3))
-;;     => '(/ (* 1 2) 3))
+  ;;mul first
+  (check (doit ONE MUL TWO ADD THREE)	=> '(* 1 (+ 2 3)))
+  (check (doit ONE MUL TWO SUB THREE)	=> '(* 1 (- 2 3)))
+  (check (doit ONE MUL TWO DIV THREE)	=> '(* 1 (/ 2 3)))
 
-;; ;;; --------------------------------------------------------------------
+  ;;div first
+  (check (doit ONE DIV TWO ADD THREE)	=> '(/ 1 (+ 2 3)))
+  (check (doit ONE DIV TWO SUB THREE)	=> '(/ 1 (- 2 3)))
+  (check (doit ONE DIV TWO MUL THREE)	=> '(/ 1 (* 2 3)))
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'D '/)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3))
-;;     => '(+ (/ 1 2) 3))
+;;; --------------------------------------------------------------------
+;;; operator associativity, shift/reduce conflict: pick shift
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'D '/)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 3))
-;;     => '(- (/ 1 2) 3))
+  ;;add operators
+  (check (doit ONE ADD TWO ADD THREE)	=> '(+ 1 (+ 2 3)))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR)		=> '(+ 1 (+ 2 (+ 3 4))))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR ADD FIVE ADD
+	       SIX)			=> '(+ 1 (+ 2 (+ 3 (+ 4 (+ 5 6))))))
 
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'D '/)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '*)
-;; 	    (make-token 'N 3))
-;;     => '(* (/ 1 2) 3))
+  ;;sub operators
+  (check (doit ONE SUB TWO SUB THREE)	=> '(- 1 (- 2 3)))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR)		=> '(- 1 (- 2 (- 3 4))))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR SUB FIVE SUB
+	       SIX)			=> '(- 1 (- 2 (- 3 (- 4 (- 5 6))))))
 
-;; ;;; --------------------------------------------------------------------
-;; ;;; Associativity.
+  ;;mul operators
+  (check (doit ONE MUL TWO MUL THREE)	=> '(* 1 (* 2 3)))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR)		=> '(* 1 (* 2 (* 3 4))))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR MUL FIVE MUL
+	       SIX)			=> '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
 
-;;   (check	;left associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3))
-;;     => '(+ (+ 1 2) 3))
+  ;;div operators
+  (check (doit ONE DIV TWO DIV THREE)	=> '(/ 1 (/ 2 3)))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR)		=> '(/ 1 (/ 2 (/ 3 4))))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR DIV FIVE DIV
+	       SIX)			=> '(/ 1 (/ 2 (/ 3 (/ 4 (/ 5 6))))))
 
-;;   (check	;left associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 3))
-;;     => '(- (- 1 2) 3))
+;;; --------------------------------------------------------------------
+;;; associativity of unary operators
 
-;;   (check	;right associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 3))
-;;     => '(* 1 (* 2 3)))
-
-;;   (check	;right associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'D '/)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'D '/)
-;; 	    (make-token 'N 3))
-;;     => '(/ 1 (/ 2 3)))
-
-;;   (check	;left associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 4))
-;;     => '(+ (+ (+ 1 2) 3) 4))
-
-;;   (check	;left associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 4)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 5)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 6))
-;;     => '(+ (+ (+ (+ (+ 1 2) 3) 4) 5) 6))
-
-;;   (check	;right associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 3)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 4))
-;;     => '(* 1 (* 2 (* 3 4))))
-
-;;   (check	;right associative
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 3)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 4)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 5)
-;; 	    (make-token 'M '*)
-;; 	    (make-token 'N 6))
-;;     => '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
-
-;; ;;; --------------------------------------------------------------------
-;; ;;; Non associativity.
-
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3))
-;;     => '(+ (+ 1 2) (+ 3)))
-
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 3))
-;;     => '(+ (+ 1 2) (- 3)))
-
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 3))
-;;     => '(- (+ 1 2) (+ 3)))
-
-;;   (check
-;;       (doit (make-token 'N 1)
-;; 	    (make-token 'A '+)
-;; 	    (make-token 'N 2)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'S '-)
-;; 	    (make-token 'N 3))
-;;     => '(- (+ 1 2) (- 3)))
+  (check (doit ONE ADD TWO ADD ADD THREE)	=> '(+ 1 (+ 2 (+ 3))))
+  (check (doit ONE ADD TWO ADD SUB THREE)	=> '(+ 1 (+ 2 (- 3))))
+  (check (doit ONE ADD TWO SUB ADD THREE)	=> '(+ 1 (- 2 (+ 3))))
+  (check (doit ONE ADD TWO SUB SUB THREE)	=> '(+ 1 (- 2 (- 3))))
 
   #t)
 
 
 (parameterise ((check-test-name 'associativity-2))
 
-;;;Fully working test of associativity.
+;;;Expression language with all non-associative operators.
+;;;
+;;;When  a  symbol  in  the "terminals:"  clause  has  an  associativity
+;;;specification:  its  precedence  index  is 1  higher  than  its  last
+;;;predecessor in the list having  an associativity specification; if it
+;;;is the first: its precedence index is 1.
+;;;
+;;;When the associativity specification  is "nonassoc:": the terminal is
+;;;right associative.
+;;;
+;;;The conflict resolution protocol rules:
+;;;
+;;; Shift/Reduce	-> Shift
+;;; Reduce/Reduce	-> the Reduce that comes first in the grammar
+;;;
 
   (define make-parser
     (lalr.lalr-parser
      (lalr.output-value: #t)
      (lalr.expect: 0)
-     (lalr.terminals: '(NUM (left:     ADD SUB)
-			    (right:    MUL DIV)
-			    (nonassoc: UNARY)))
+     (lalr.terminals: '(NUM		  ;precedence 0
+			(nonassoc: ADD)	  ;precedence 1
+			(nonassoc: SUB)	  ;precedence 2
+			(nonassoc: MUL)	  ;precedence 3
+			(nonassoc: DIV))) ;precedence 4
 
-     (lalr.rules: '((EXPR (EXPR ADD EXPR)          : (list $2 $1 $3)
-			  (EXPR SUB EXPR)          : (list $2 $1 $3)
-			  (EXPR MUL EXPR)          : (list $2 $1 $3)
-			  (EXPR DIV EXPR)          : (list $2 $1 $3)
-			  (NUM)                    : $1
-			  (ADD NUM (prec: UNARY))  : (list $1 $2)
-			  (SUB NUM (prec: UNARY))  : (list $1 $2))))))
+     (lalr.rules: '((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+			  (EXPR SUB EXPR)	: (list $2 $1 $3)
+			  (EXPR MUL EXPR)	: (list $2 $1 $3)
+			  (EXPR DIV EXPR)	: (list $2 $1 $3)
+			  (ADD NUM)		: (list $1 $2)
+			  (SUB NUM)		: (list $1 $2)
+			  (NUM)			: $1)))))
 
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
            (parser		(make-parser)))
       (parser lexer error-handler)))
 
-;;; --------------------------------------------------------------------
-;;; Grammar tests, no associativity.
+  (define-constant ADD		(make-token 'ADD '+))
+  (define-constant SUB		(make-token 'SUB '-))
+  (define-constant MUL		(make-token 'MUL '*))
+  (define-constant DIV		(make-token 'DIV '/))
 
-  (check
-      (doit (make-token 'NUM 1))
-    => 1)
-
-  (check
-      (doit (make-token 'ADD '+)
-	    (make-token 'NUM 1))
-    => '(+ 1))
-
-  (check
-      (doit (make-token 'SUB '-)
-	    (make-token 'NUM 1))
-    => '(- 1))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2))
-    => '(+ 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2))
-    => '(- 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2))
-    => '(* 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2))
-    => '(/ 1 2))
+  (define-constant ONE		(make-token 'NUM 1))
+  (define-constant TWO		(make-token 'NUM 2))
+  (define-constant THREE	(make-token 'NUM 3))
+  (define-constant FOUR		(make-token 'NUM 4))
+  (define-constant FIVE		(make-token 'NUM 5))
+  (define-constant SIX		(make-token 'NUM 6))
 
 ;;; --------------------------------------------------------------------
-;;; Operator precedence.
+;;; single operator
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- (+ 1 2) 3))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(+ 1 (* 2 3)))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(+ 1 (/ 2 3)))
+  (check (doit ONE)			=> 1)
+  (check (doit ADD ONE)			=> '(+ 1))
+  (check (doit SUB ONE)			=> '(- 1))
+  (check (doit ONE ADD TWO)		=> '(+ 1 2))
+  (check (doit ONE SUB TWO)		=> '(- 1 2))
+  (check (doit ONE MUL TWO)		=> '(* 1 2))
+  (check (doit ONE DIV TWO)		=> '(/ 1 2))
 
 ;;; --------------------------------------------------------------------
+;;; operator precedence
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '+)
-	    (make-token 'NUM 3))
-    => '(- 1 (+ 2 3)))
+  ;; add first
+  (check (doit ONE ADD TWO SUB THREE)	=> '(+ 1 (- 2 3)))
+  (check (doit ONE ADD TWO MUL THREE)	=> '(+ 1 (* 2 3)))
+  (check (doit ONE ADD TWO DIV THREE)	=> '(+ 1 (/ 2 3)))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(- 1 (* 2 3)))
+  ;;sub first
+  (check (doit ONE SUB TWO ADD THREE)	=> '(+ (- 1 2) 3))
+  (check (doit ONE SUB TWO MUL THREE)	=> '(- 1 (* 2 3)))
+  (check (doit ONE SUB TWO DIV THREE)	=> '(- 1 (/ 2 3)))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(- 1 (/ 2 3)))
+  ;;mul first
+  (check (doit ONE MUL TWO ADD THREE)	=> '(+ (* 1 2) 3))
+  (check (doit ONE MUL TWO SUB THREE)	=> '(- (* 1 2) 3))
+  (check (doit ONE MUL TWO DIV THREE)	=> '(* 1 (/ 2 3)))
+
+  ;;div first
+  (check (doit ONE DIV TWO ADD THREE)	=> '(+ (/ 1 2) 3))
+  (check (doit ONE DIV TWO SUB THREE)	=> '(- (/ 1 2) 3))
+  (check (doit ONE DIV TWO MUL THREE)	=> '(* (/ 1 2) 3))
 
 ;;; --------------------------------------------------------------------
+;;; operator associativity
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ (* 1 2) 3))
+  ;;add operators
+  (check (doit ONE ADD TWO ADD THREE)	=> '(+ 1 (+ 2 3)))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR)		=> '(+ 1 (+ 2 (+ 3 4))))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR ADD FIVE ADD
+	       SIX)			=> '(+ 1 (+ 2 (+ 3 (+ 4 (+ 5 6))))))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- (* 1 2) 3))
+  ;;sub operators
+  (check (doit ONE SUB TWO SUB THREE)	=> '(- 1 (- 2 3)))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR)		=> '(- 1 (- 2 (- 3 4))))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR SUB FIVE SUB
+	       SIX)			=> '(- 1 (- 2 (- 3 (- 4 (- 5 6))))))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '/)
-	    (make-token 'NUM 3))
-    => '(/ (* 1 2) 3))
+  ;;mul operators
+  (check (doit ONE MUL TWO MUL THREE)	=> '(* 1 (* 2 3)))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR)		=> '(* 1 (* 2 (* 3 4))))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR MUL FIVE MUL
+	       SIX)			=> '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ (/ 1 2) 3))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- (/ 1 2) 3))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '*)
-	    (make-token 'NUM 3))
-    => '(* (/ 1 2) 3))
+  ;;div operators
+  (check (doit ONE DIV TWO DIV THREE)	=> '(/ 1 (/ 2 3)))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR)		=> '(/ 1 (/ 2 (/ 3 4))))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR DIV FIVE DIV
+	       SIX)			=> '(/ 1 (/ 2 (/ 3 (/ 4 (/ 5 6))))))
 
 ;;; --------------------------------------------------------------------
-;;; Associativity.
+;;; associativity of unary operators
 
-  (check	;left associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ (+ 1 2) 3))
-
-  (check	;left associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- (- 1 2) 3))
-
-  (check	;right associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(* 1 (* 2 3)))
-
-  (check	;right associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(/ 1 (/ 2 3)))
-
-  (check	;left associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 4))
-    => '(+ (+ (+ 1 2) 3) 4))
-
-  (check	;left associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 4)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 5)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 6))
-    => '(+ (+ (+ (+ (+ 1 2) 3) 4) 5) 6))
-
-  (check	;right associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 4))
-    => '(* 1 (* 2 (* 3 4))))
-
-  (check	;right associative
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 4)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 5)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 6))
-    => '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
-
-;;; --------------------------------------------------------------------
-;;; Non associativity.
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ (+ 1 2) (+ 3)))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(+ (+ 1 2) (- 3)))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(- (+ 1 2) (+ 3)))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- (+ 1 2) (- 3)))
+  (check (doit ONE ADD TWO ADD ADD THREE)	=> '(+ 1 (+ 2 (+ 3))))
+  (check (doit ONE ADD TWO ADD SUB THREE)	=> '(+ 1 (+ 2 (- 3))))
+  (check (doit ONE ADD TWO SUB ADD THREE)	=> '(+ 1 (- 2 (+ 3))))
+  (check (doit ONE ADD TWO SUB SUB THREE)	=> '(+ 1 (- 2 (- 3))))
 
   #t)
 
 
 (parameterise ((check-test-name 'associativity-3))
 
+;;;Fully working  test of  precedence and  associativity.  Just  to show
+;;;off:  addition and  subtraction are  left-associative, multiplication
+;;;and division are right-associative; they  could have been all left or
+;;;all right with no problems.
+;;;
+;;;When  a  symbol  in  the "terminals:"  clause  has  an  associativity
+;;;specification:  its  precedence  index  is 1  higher  than  its  last
+;;;predecessor in the list having  an associativity specification; if it
+;;;is the first: its precedence index is 1.
+;;;
+;;;When multiple symbols are present  in the same associativity selector
+;;;in the "terminals:" clause: they have the same precedence.
+;;;
+;;;When the associativity specification  is "nonassoc:": the terminal is
+;;;right associative.
+;;;
+
   (define make-parser
     (lalr.lalr-parser
      (lalr.output-value: #t)
      (lalr.expect: 0)
-     (lalr.terminals: '(NUM ADD SUB MUL DIV (nonassoc: UNARY)))
+     (lalr.terminals: '(NUM		    ;precedence 0
+			(left:     ADD SUB) ;precedence 1
+			(right:    MUL DIV) ;precedence 2
+			(nonassoc: UNARY))) ;precedence 3
 
-     (lalr.rules: '((EXPR (EXPR ADD EXPR)          : (list $2 $1 $3)
-			  (EXPR ADD EXPR ADD EXPR) : (list $1 $2 $3 $4 $5)
-
-			  (EXPR SUB EXPR)          : (list $2 $1 $3)
-			  (EXPR SUB EXPR SUB EXPR) : (list $1 $2 $3 $4 $5)
-
-			  (EXPR MUL EXPR)          : (list $2 $1 $3)
-			  (EXPR MUL EXPR MUL EXPR) : (list $1 $2 $3 $4 $5)
-
-			  (EXPR DIV EXPR)          : (list $2 $1 $3)
-			  (EXPR DIV EXPR DIV EXPR) : (list $1 $2 $3 $4 $5)
-
-			  (NUM)                    : $1
-			  (ADD NUM (prec: UNARY))  : (list $1 $2)
-			  (SUB NUM (prec: UNARY))  : (list $1 $2))))))
+     (lalr.rules: '((EXPR (EXPR ADD EXPR)		: (list $2 $1 $3)
+			  (EXPR SUB EXPR)		: (list $2 $1 $3)
+			  (EXPR MUL EXPR)		: (list $2 $1 $3)
+			  (EXPR DIV EXPR)		: (list $2 $1 $3)
+			  (NUM)				: $1
+			  (ADD NUM (prec: UNARY))	: (list $1 $2)
+			  (SUB NUM (prec: UNARY))	: (list $1 $2))))))
 
   (define (doit . tokens)
     (let* ((lexer		(make-lexer tokens))
-	   (error-handler	(make-error-handler (lambda x x)))
+	   (error-handler	(make-error-handler))
            (parser		(make-parser)))
       (parser lexer error-handler)))
 
-;;; --------------------------------------------------------------------
-;;; Grammar tests, no associativity.
+  (define-constant ADD		(make-token 'ADD '+))
+  (define-constant SUB		(make-token 'SUB '-))
+  (define-constant MUL		(make-token 'MUL '*))
+  (define-constant DIV		(make-token 'DIV '/))
 
-  (check
-      (doit (make-token 'NUM 1))
-    => 1)
-
-  (check
-      (doit (make-token 'ADD '+)
-	    (make-token 'NUM 1))
-    => '(+ 1))
-
-  (check
-      (doit (make-token 'SUB '-)
-	    (make-token 'NUM 1))
-    => '(- 1))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2))
-    => '(+ 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2))
-    => '(- 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2))
-    => '(* 1 2))
-
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2))
-    => '(/ 1 2))
+  (define-constant ONE		(make-token 'NUM 1))
+  (define-constant TWO		(make-token 'NUM 2))
+  (define-constant THREE	(make-token 'NUM 3))
+  (define-constant FOUR		(make-token 'NUM 4))
+  (define-constant FIVE		(make-token 'NUM 5))
+  (define-constant SIX		(make-token 'NUM 6))
 
 ;;; --------------------------------------------------------------------
-;;; Operator precedence.
+;;; single operator
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(+ 1 (- 2 3)))
+  (check (doit ONE)			=> 1)
+  (check (doit ADD ONE)			=> '(+ 1))
+  (check (doit SUB ONE)			=> '(- 1))
+  (check (doit ONE ADD TWO)		=> '(+ 1 2))
+  (check (doit ONE SUB TWO)		=> '(- 1 2))
+  (check (doit ONE MUL TWO)		=> '(* 1 2))
+  (check (doit ONE DIV TWO)		=> '(/ 1 2))
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(+ 1 (* 2 3)))
+;;; --------------------------------------------------------------------
+;;; operator precedence
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(+ 1 (/ 2 3)))
+  ;; add first
+  (check (doit ONE ADD TWO SUB THREE)	=> '(- (+ 1 2) 3)) ;same precedence, left-associativity
+  (check (doit ONE ADD TWO MUL THREE)	=> '(+ 1 (* 2 3)))
+  (check (doit ONE ADD TWO DIV THREE)	=> '(+ 1 (/ 2 3)))
+
+  ;;sub first
+  (check (doit ONE SUB TWO ADD THREE)	=> '(+ (- 1 2) 3)) ;same precedence, left-associativity
+  (check (doit ONE SUB TWO MUL THREE)	=> '(- 1 (* 2 3)))
+  (check (doit ONE SUB TWO DIV THREE)	=> '(- 1 (/ 2 3)))
+
+  ;;mul first
+  (check (doit ONE MUL TWO ADD THREE)	=> '(+ (* 1 2) 3))
+  (check (doit ONE MUL TWO SUB THREE)	=> '(- (* 1 2) 3))
+  (check (doit ONE MUL TWO DIV THREE)	=> '(* 1 (/ 2 3))) ;same precedence, right-associativity
+
+  ;;div first
+  (check (doit ONE DIV TWO ADD THREE)	=> '(+ (/ 1 2) 3))
+  (check (doit ONE DIV TWO SUB THREE)	=> '(- (/ 1 2) 3))
+  (check (doit ONE DIV TWO MUL THREE)	=> '(/ 1 (* 2 3))) ;same precedence, right-associativity
+
+;;; --------------------------------------------------------------------
+;;; operator associativity
+
+  ;;add operators, left associative
+  (check (doit ONE ADD TWO ADD THREE)	=> '(+ (+ 1 2) 3))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR)		=> '(+ (+ (+ 1 2) 3) 4))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR ADD FIVE ADD
+	       SIX)			=> '(+ (+ (+ (+ (+ 1 2) 3) 4) 5) 6))
+
+  ;;sub operators, left associative
+  (check (doit ONE SUB TWO SUB THREE)	=> '(- (- 1 2) 3))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR)		=> '(- (- (- 1 2) 3) 4))
+  (check (doit ONE SUB TWO SUB THREE
+	       SUB FOUR SUB FIVE SUB
+	       SIX)			=> '(- (- (- (- (- 1 2) 3) 4) 5) 6))
+
+  ;;mul operators, right associative
+  (check (doit ONE MUL TWO MUL THREE)	=> '(* 1 (* 2 3)))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR)		=> '(* 1 (* 2 (* 3 4))))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR MUL FIVE MUL
+	       SIX)			=> '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
+
+  ;;div operators, right associative
+  (check (doit ONE DIV TWO DIV THREE)	=> '(/ 1 (/ 2 3)))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR)		=> '(/ 1 (/ 2 (/ 3 4))))
+  (check (doit ONE DIV TWO DIV THREE
+	       DIV FOUR DIV FIVE DIV
+	       SIX)			=> '(/ 1 (/ 2 (/ 3 (/ 4 (/ 5 6))))))
+
+;;; --------------------------------------------------------------------
+;;; associativity of unary operators
+
+  (check (doit ONE ADD TWO ADD ADD THREE)	=> '(+ (+ 1 2) (+ 3))) ;same precedence, left-associative
+  (check (doit ONE ADD TWO ADD SUB THREE)	=> '(+ (+ 1 2) (- 3))) ;same precedence, left-associative
+  (check (doit ONE ADD TWO SUB ADD THREE)	=> '(- (+ 1 2) (+ 3))) ;same precedence, left-associative
+  (check (doit ONE ADD TWO SUB SUB THREE)	=> '(- (+ 1 2) (- 3))) ;same precedence, left-associative
+
+  #t)
+
+
+(parameterise ((check-test-name 'associativity-4))
+
+;;;Tests   for   precedence   and  associativity   between   conflicting
+;;;non-terminals.
+;;;
+;;;When no  associativity specification is  present for a symbol  in the
+;;;"terminals:"  clause:  a  terminal  has precedence  index  zero  and,
+;;;according to the conflict resolution rules, it is right-associative.
+;;;
+;;;The conflict resolution protocol rules:
+;;;
+;;; Shift/Reduce	-> choose Shift
+;;; Reduce/Reduce	-> choose the rule listed first in the grammar
+;;;
+
+  (define make-parser
+    (lalr.lalr-parser
+     (lalr.output-value: #t)
+     (lalr.expect: 0)
+     (lalr.terminals: '(NUM		    ;precedence 0
+			ADD		    ;precedence 0
+			SUB		    ;precedence 0
+			MUL		    ;precedence 0
+			DIV		    ;precedence 0
+			(right: POW)	    ;precedence 1
+			(nonassoc: UNARY))) ;precedence 2
+
+     (lalr.rules:
+      '((EXPR
+
+	 ;; conflicting non-terminals
+	 (EXPR ADD EXPR)          : (list $2 $1 $3) ;in coflict: choose this
+	 (EXPR ADD EXPR ADD EXPR) : (list $2 $1 $3 $5)
+
+	 ;; conflicting non-terminals
+	 (EXPR SUB EXPR)          : (list $2 $1 $3) ;in coflict: choose this
+	 (EXPR SUB EXPR SUB EXPR) : (list $2 $1 $3 $5)
+
+	 ;; conflicting non-terminals
+	 (EXPR MUL EXPR)          : (list $2 $1 $3) ;in coflict: choose this
+	 (EXPR MUL EXPR MUL EXPR) : (list $2 $1 $3 $5)
+
+	 ;; conflicting non-terminals
+	 (EXPR DIV EXPR)          : (list $2 $1 $3) ;in coflict: choose this
+	 (EXPR DIV EXPR DIV EXPR) : (list $2 $1 $3 $5)
+
+	 (EXPR POW EXPR)          : (list $2 $1 $3)
+
+	 (NUM)                    : $1
+	 (ADD NUM (prec: UNARY))  : (list $1 $2)
+	 (SUB NUM (prec: UNARY))  : (list $1 $2))))))
+
+  (define (doit . tokens)
+    (let* ((lexer		(make-lexer tokens))
+	   (error-handler	(make-error-handler))
+           (parser		(make-parser)))
+      (parser lexer error-handler)))
+
+  (define-constant ADD		(make-token 'ADD '+))
+  (define-constant SUB		(make-token 'SUB '-))
+  (define-constant MUL		(make-token 'MUL '*))
+  (define-constant DIV		(make-token 'DIV '/))
+  (define-constant POW		(make-token 'POW '^))
+
+  (define-constant ONE		(make-token 'NUM 1))
+  (define-constant TWO		(make-token 'NUM 2))
+  (define-constant THREE	(make-token 'NUM 3))
+  (define-constant FOUR		(make-token 'NUM 4))
+  (define-constant FIVE		(make-token 'NUM 5))
+  (define-constant SIX		(make-token 'NUM 6))
+
+;;; --------------------------------------------------------------------
+;;; single operator
+
+  (check (doit ONE)			=> 1)
+  (check (doit ADD ONE)			=> '(+ 1))
+  (check (doit SUB ONE)			=> '(- 1))
+  (check (doit ONE ADD TWO)		=> '(+ 1 2))
+  (check (doit ONE SUB TWO)		=> '(- 1 2))
+  (check (doit ONE MUL TWO)		=> '(* 1 2))
+  (check (doit ONE DIV TWO)		=> '(/ 1 2))
+
+;;; --------------------------------------------------------------------
+;;; precedence between different operators, shift/reduce conflict: pick shift
+
+  ;;add first
+  (check (doit ONE ADD TWO SUB THREE)		=> '(+ 1 (- 2 3)))
+  (check (doit ONE ADD TWO MUL THREE)		=> '(+ 1 (* 2 3)))
+  (check (doit ONE ADD TWO DIV THREE)		=> '(+ 1 (/ 2 3)))
+
+  ;;sub first
+  (check (doit ONE SUB TWO ADD THREE)		=> '(- 1 (+ 2 3)))
+  (check (doit ONE SUB TWO MUL THREE)		=> '(- 1 (* 2 3)))
+  (check (doit ONE SUB TWO DIV THREE)		=> '(- 1 (/ 2 3)))
+
+  ;;mul first
+  (check (doit ONE MUL TWO ADD THREE)		=> '(* 1 (+ 2 3)))
+  (check (doit ONE MUL TWO SUB THREE)		=> '(* 1 (- 2 3)))
+  (check (doit ONE MUL TWO DIV THREE)		=> '(* 1 (/ 2 3)))
+
+  ;;div first
+  (check (doit ONE DIV TWO ADD THREE)		=> '(/ 1 (+ 2 3)))
+  (check (doit ONE DIV TWO SUB THREE)		=> '(/ 1 (- 2 3)))
+  (check (doit ONE DIV TWO MUL THREE)		=> '(/ 1 (* 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; precedence between same operators, shift/reduce conflict: pick shift
+
+  ;;add operators
+  (check (doit ONE ADD TWO ADD THREE)		=> '(+ 1 (+ 2 3)))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR)			=> '(+ 1 (+ 2 (+ 3 4))))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR ADD FIVE ADD SIX)	=> '(+ 1 (+ 2 (+ 3 (+ 4 (+ 5 6))))))
+
+  ;;sub operators
+  (check (doit ONE SUB TWO SUB THREE)		=> '(- 1 (- 2 3)))
+
+  ;;mul operators
+  (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 (* 2 3)))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR)			=> '(* 1 (* 2 (* 3 4))))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR MUL FIVE MUL SIX)	=> '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
+
+  ;;div operators
+  (check (doit ONE DIV TWO DIV THREE)		=> '(/ 1 (/ 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; associativity of unary operators
+
+  (check (doit ONE ADD TWO ADD ADD THREE)	=> '(+ 1 (+ 2 (+ 3))))
+  (check (doit ONE ADD TWO ADD SUB THREE)	=> '(+ 1 (+ 2 (- 3))))
+  (check (doit ONE ADD TWO SUB ADD THREE)	=> '(+ 1 (- 2 (+ 3))))
+  (check (doit ONE ADD TWO SUB SUB THREE)	=> '(+ 1 (- 2 (- 3))))
 
 ;;; --------------------------------------------------------------------
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '+)
-	    (make-token 'NUM 3))
-    => '(- 1 (+ 2 3)))
+  ;;Start:		ONE ADD TWO POW THREE ADD FOUR
+  ;;Reduce POW:		ONE ADD (^ 2 3) ADD FOUR
+  ;;Shift:		ONE ADD (+ (^ 2 3) 4)
+  ;;Reduce:		(+ 1 (+ (^ 2 3) 4))
+  ;;
+  (check (doit ONE ADD TWO POW THREE ADD FOUR)	=> '(+ 1 (+ (^ 2 3) 4)))
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(- 1 (* 2 3)))
+  #t)
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(- 1 (/ 2 3)))
+
+(parameterise ((check-test-name 'associativity-5))
+
+;;;Tests   for   precedence   and  associativity   between   conflicting
+;;;non-terminals.
+;;;
+;;;When no  associativity specification is  present for a symbol  in the
+;;;"terminals:"  clause:  a  terminal  has precedence  index  zero  and,
+;;;according to the conflict resolution rules, it is right-associative.
+;;;
+;;;The conflict resolution protocol rules:
+;;;
+;;; Shift/Reduce	-> choose Shift
+;;; Reduce/Reduce	-> choose the rule listed first in the grammar
+;;;
+
+  (define make-parser
+    (lalr.lalr-parser
+     (lalr.output-value: #t)
+     (lalr.expect: 0)
+     (lalr.terminals: '(NUM		    ;precedence 0
+			ADD		    ;precedence 0
+			SUB		    ;precedence 0
+			MUL		    ;precedence 0
+			DIV		    ;precedence 0
+			(right: POW)	    ;precedence 1
+			(nonassoc: UNARY))) ;precedence 2
+
+     (lalr.rules:
+      '((EXPR
+
+	 ;; conflicting non-terminals
+	 (EXPR ADD EXPR ADD EXPR) : (list $2 $1 $3 $5) ;in coflict: choose this
+	 (EXPR ADD EXPR)          : (list $2 $1 $3)
+
+	 ;; conflicting non-terminals
+	 (EXPR SUB EXPR SUB EXPR) : (list $2 $1 $3 $5) ;in coflict: choose this
+	 (EXPR SUB EXPR)          : (list $2 $1 $3)
+
+	 ;; conflicting non-terminals
+	 (EXPR MUL EXPR MUL EXPR) : (list $2 $1 $3 $5) ;in coflict: choose this
+	 (EXPR MUL EXPR)          : (list $2 $1 $3)
+
+	 ;; conflicting non-terminals
+	 (EXPR DIV EXPR DIV EXPR) : (list $2 $1 $3 $5) ;in coflict: choose this
+	 (EXPR DIV EXPR)          : (list $2 $1 $3)
+
+	 (EXPR POW EXPR)          : (list $2 $1 $3)
+
+	 (NUM)                    : $1
+	 (ADD NUM (prec: UNARY))  : (list $1 $2)
+	 (SUB NUM (prec: UNARY))  : (list $1 $2))))))
+
+  (define (doit . tokens)
+    (let* ((lexer		(make-lexer tokens))
+	   (error-handler	(make-error-handler))
+           (parser		(make-parser)))
+      (parser lexer error-handler)))
+
+  (define-constant ADD		(make-token 'ADD '+))
+  (define-constant SUB		(make-token 'SUB '-))
+  (define-constant MUL		(make-token 'MUL '*))
+  (define-constant DIV		(make-token 'DIV '/))
+  (define-constant POW		(make-token 'POW '^))
+
+  (define-constant ONE		(make-token 'NUM 1))
+  (define-constant TWO		(make-token 'NUM 2))
+  (define-constant THREE	(make-token 'NUM 3))
+  (define-constant FOUR		(make-token 'NUM 4))
+  (define-constant FIVE		(make-token 'NUM 5))
+  (define-constant SIX		(make-token 'NUM 6))
+
+;;; --------------------------------------------------------------------
+;;; single operator
+
+  (check (doit ONE)			=> 1)
+  (check (doit ADD ONE)			=> '(+ 1))
+  (check (doit SUB ONE)			=> '(- 1))
+  (check (doit ONE ADD TWO)		=> '(+ 1 2))
+  (check (doit ONE SUB TWO)		=> '(- 1 2))
+  (check (doit ONE MUL TWO)		=> '(* 1 2))
+  (check (doit ONE DIV TWO)		=> '(/ 1 2))
+
+;;; --------------------------------------------------------------------
+;;; precedence between different operators, shift/reduce conflict: pick shift
+
+  ;;add first
+  (check (doit ONE ADD TWO SUB THREE)		=> '(+ 1 (- 2 3)))
+  (check (doit ONE ADD TWO MUL THREE)		=> '(+ 1 (* 2 3)))
+  (check (doit ONE ADD TWO DIV THREE)		=> '(+ 1 (/ 2 3)))
+
+  ;;sub first
+  (check (doit ONE SUB TWO ADD THREE)		=> '(- 1 (+ 2 3)))
+  (check (doit ONE SUB TWO MUL THREE)		=> '(- 1 (* 2 3)))
+  (check (doit ONE SUB TWO DIV THREE)		=> '(- 1 (/ 2 3)))
+
+  ;;mul first
+  (check (doit ONE MUL TWO ADD THREE)		=> '(* 1 (+ 2 3)))
+  (check (doit ONE MUL TWO SUB THREE)		=> '(* 1 (- 2 3)))
+  (check (doit ONE MUL TWO DIV THREE)		=> '(* 1 (/ 2 3)))
+
+  ;;div first
+  (check (doit ONE DIV TWO ADD THREE)		=> '(/ 1 (+ 2 3)))
+  (check (doit ONE DIV TWO SUB THREE)		=> '(/ 1 (- 2 3)))
+  (check (doit ONE DIV TWO MUL THREE)		=> '(/ 1 (* 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; precedence between same operators, shift/reduce conflict: pick shift
+
+  ;;add operators
+  (check (doit ONE ADD TWO ADD THREE)		=> '(+ 1 2 3))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR)			=> '(+ 1 (+ 2 3 4)))
+  (check (doit ONE ADD TWO ADD THREE
+	       ADD FOUR ADD FIVE ADD SIX)	=> '(+ 1 (+ 2 3 (+ 4 5 6))))
+
+  ;;sub operators
+  (check (doit ONE SUB TWO SUB THREE)		=> '(- 1 2 3))
+
+  ;;mul operators
+  (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 2 3))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR)			=> '(* 1 (* 2 3 4)))
+  (check (doit ONE MUL TWO MUL THREE
+	       MUL FOUR MUL FIVE MUL SIX)	=> '(* 1 (* 2 3 (* 4 5 6))))
+
+  ;;div operators
+  (check (doit ONE DIV TWO DIV THREE)		=> '(/ 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; associativity of unary operators
+
+  (check (doit ONE ADD TWO ADD ADD THREE)	=> '(+ 1 2 (+ 3)))
+  (check (doit ONE ADD TWO ADD SUB THREE)	=> '(+ 1 2 (- 3)))
+  (check (doit ONE ADD TWO SUB ADD THREE)	=> '(+ 1 (- 2 (+ 3))))
+  (check (doit ONE ADD TWO SUB SUB THREE)	=> '(+ 1 (- 2 (- 3))))
 
 ;;; --------------------------------------------------------------------
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(* 1 (+ 2 3)))
+  ;;Start:		ONE ADD TWO POW THREE ADD FOUR
+  ;;Reduce POW:		ONE ADD (^ 2 3) ADD FOUR
+  ;;Reduce:		(+ 1 (^ 2 3) 4)
+  ;;
+  (check (doit ONE ADD TWO POW THREE ADD FOUR)	=> '(+ 1 (^ 2 3) 4))
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(* 1 (- 2 3)))
+  #t)
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '/)
-	    (make-token 'NUM 3))
-    => '(* 1 (/ 2 3)))
+
+(parameterise ((check-test-name 'doc-examples-1))
 
-;;; --------------------------------------------------------------------
+  ;;Let's define two operators ADD and MUL and the grammar:
+  ;;
+  ;;   ((EXPR (EXPR ADD EXPR)
+  ;;          (EXPR MUL EXPR)
+  ;;          (NUM))
+  ;;
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(/ 1 (+ 2 3)))
+  ;;Operator precedence  matters when  parsing input sequences  in which
+  ;;both appear:
+  ;;
+  ;;   NUM ADD NUM MUL NUM
+  ;;
+  ;;If ADD  and MUL have  the same  precedence, there is  a Shift/Reduce
+  ;;conflict: the sequence can be parsed by shifting first as in:
+  ;;
+  ;;   NUM ADD NUM MUL NUM => NUM ADD EXPR => EXPR
+  ;;
+  ;;or by reducing first as:
+  ;;
+  ;;   NUM ADD NUM MUL NUM => EXPR MUL NUM => EXPR
+  ;;
+  ;;If MUL has higher precedence than ADD, subexpressions containing MUL
+  ;;are reduced first no matter if they come before or after:
+  ;;
+  ;;   NUM ADD NUM MUL NUM => NUM ADD EXPR => EXPR
+  ;;   NUM MUL NUM ADD NUM => EXPR ADD NUM => EXPR
+  ;;
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(/ 1 (- 2 3)))
+  ;;Operator associativity matters when parsing input sequences in which
+  ;;only one operator appears:
+  ;;
+  ;;   NUM ADD NUM ADD NUM
+  ;;
+  ;;If  ADD  is left-associative,  the  first  subexpression is  reduced
+  ;;first:
+  ;;
+  ;;   NUM ADD NUM ADD NUM => EXPR ADD NUM => EXPR
+  ;;
+  ;;If  ADD is  right-associative, the  second subexpression  is reduced
+  ;;first:
+  ;;
+  ;;   NUM ADD NUM ADD NUM => NUM ADD EXPR => EXPR
+  ;;
+  ;;If ADD  is non-associative  or has  no specified  associativity: the
+  ;;expression is parsed as if ADD is right-associative.
+  ;;
 
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '*)
-	    (make-token 'NUM 3))
-    => '(/ 1 (* 2 3)))
-
-;;; --------------------------------------------------------------------
-;;; Associativity.
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ 1 (+ 2 3)))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(- 1 (- 2 3)))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3))
-    => '(* 1 (* 2 3)))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 2)
-	    (make-token 'DIV '/)
-	    (make-token 'NUM 3))
-    => '(/ 1 (/ 2 3)))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 4))
-    => '(+ 1 (+ 2 (+ 3 4))))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 4)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 5)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 6))
-    => '(+ 1 (+ 2 (+ 3 (+ 4 (+ 5 6))))))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 4))
-    => '(* 1 (* 2 (* 3 4))))
-
-  (check	;shift/reduce conflict, pick shift
-      (doit (make-token 'NUM 1)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 2)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 3)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 4)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 5)
-	    (make-token 'MUL '*)
-	    (make-token 'NUM 6))
-    => '(* 1 (* 2 (* 3 (* 4 (* 5 6))))))
+  ;;If the grammar  contains two rules, one of which  is a subexpression
+  ;;of the other:
+  ;;
+  ;;   ((EXPR (EXPR ADD EXPR)
+  ;;          (EXPR ADD EXPR ADD EXPR)
+  ;;          (NUM))
+  ;;
+  ;;we have a Reduce/Reduce conflict.  A sequence like:
+  ;;
+  ;;   NUM1 ADD NUM2 ADD NUM2
+  ;;
+  ;;can be parsed by reducing the first subexpression:
+  ;;
+  ;;   NUM1 ADD NUM2 ADD NUM2 => EXPR ADD NUM2 => EXPR
+  ;;
+  ;;or by reducing the whole expression:
+  ;;
+  ;;   NUM1 ADD NUM2 ADD NUM2 => EXPR
+  ;;
+  ;;LALR selects the rule that comes first in the grammar definition.
+  ;;
 
 ;;; --------------------------------------------------------------------
+;;; precedence
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ 1 (+ 2 (+ 3))))
+  ;;On the meaning  of terminal precedence: two operators  with the same
+  ;;precedence.   Show  that  Shift/Reduce  conflicts  are  resolved  by
+  ;;choosing Shift.
+  (let ()
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'ADD '+)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(+ 1 (+ 2 (- 3))))
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM	;precedence 0
+			  ADD	;precedence 0
+			  MUL))	;precedence 0
+       (lalr.rules:
+	'((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+		(EXPR MUL EXPR)	: (list $2 $1 $3)
+		(NUM)		: $1)))))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 3))
-    => '(+ 1 (- 2 (+ 3))))
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
 
-  (check
-      (doit (make-token 'NUM 1)
-	    (make-token 'ADD '+)
-	    (make-token 'NUM 2)
-	    (make-token 'SUB '-)
-	    (make-token 'SUB '-)
-	    (make-token 'NUM 3))
-    => '(+ 1 (- 2 (- 3))))
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+
+    ;;Selecting shift: the second subexpression is reduced first and the
+    ;;result is: (+ 1 (* 2 3)).
+    ;;
+    ;;Selecting reduce: the first subexpression is reduced first and the
+    ;;result is: (* (+ 1 2) 3).
+    ;;
+    (check (doit ONE ADD TWO MUL THREE)		=> '(+ 1 (* 2 3)))
+    (check (doit ONE MUL TWO ADD THREE)		=> '(* 1 (+ 2 3)))
+
+    #f)
+
+  ;;On the meaning of terminal precedence: two non-associative operators
+  ;;with different precedence.  Show that precedence always win.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		    ;precedence 0
+			  (nonassoc: ADD)   ;precedence 1
+			  (nonassoc: MUL))) ;precedence 2
+       (lalr.rules:
+	'((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+		(EXPR MUL EXPR)	: (list $2 $1 $3)
+		(NUM)		: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+
+    ;;Precedence wins.
+    (check (doit ONE ADD TWO MUL THREE)		=> '(+ 1 (* 2 3)))
+    (check (doit ONE MUL TWO ADD THREE)		=> '(+ (* 1 2) 3))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; associativity
+
+  ;;On  the  meaning  of   terminal  associativity:  a  left-associative
+  ;;operator and a right-associative operator.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		 ;precedence 0
+			  (left:  ADD)   ;precedence 1
+			  (right: MUL))) ;precedence 2
+       (lalr.rules:
+	'((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+		(EXPR MUL EXPR)	: (list $2 $1 $3)
+		(NUM)		: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+
+    ;;left-associative
+    (check (doit ONE ADD TWO ADD THREE)		=> '(+ (+ 1 2) 3))
+    (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 (* 2 3)))
+
+    #f)
+
+  ;;On the meaning of  terminal associativity: non-associative operators
+  ;;and operators for which the associativity is unspecified are handled
+  ;;as right-associative.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		  ;precedence 0
+			  (nonassoc: ADD) ;precedence 1
+			  MUL))		  ;precedence 0
+       (lalr.rules:
+	'((EXPR (EXPR ADD EXPR)	: (list $2 $1 $3)
+		(EXPR MUL EXPR)	: (list $2 $1 $3)
+		(NUM)		: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+
+    ;;left-associative
+    (check (doit ONE ADD TWO ADD THREE)		=> '(+ 1 (+ 2 3)))
+    (check (doit ONE MUL TWO MUL THREE)		=> '(* 1 (* 2 3)))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; Reduce/Reduce conflicts
+
+  ;;On the meaning of Reduce/Reduce conflicts: the longest rule is given
+  ;;first.  Operator precedence does matter.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		    ;precedence 0
+			  ADD		    ;precedence 0
+			  (nonassoc: SUB)   ;precedence 1
+			  (left:     MUL)   ;precedence 2
+			  (right:    DIV))) ;precedence 3
+       (lalr.rules:
+	'((EXPR
+	   (EXPR ADD EXPR ADD EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR SUB EXPR SUB EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR MUL EXPR MUL EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR DIV EXPR DIV EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR ADD EXPR)		: (list $2 $1 $3)
+	   (EXPR SUB EXPR)		: (list $2 $1 $3)
+	   (EXPR MUL EXPR)		: (list $2 $1 $3)
+	   (EXPR DIV EXPR)		: (list $2 $1 $3)
+	   (NUM)			: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant SUB	(make-token 'SUB '-))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant DIV	(make-token 'DIV '/))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+    (define-constant FOUR	(make-token 'NUM 4))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE SUB TWO)	=> '(- 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+    (check (doit ONE DIV TWO)	=> '(/ 1 2))
+
+    ;;No associativity specified.
+    (check (doit ONE ADD TWO
+		 ADD THREE)	=> '(+ 1 2 3))
+    (check (doit ONE ADD TWO
+		 ADD THREE
+		 ADD FOUR)	=> '(+ 1 (+ 2 3 4)))
+
+    ;;Non-associative operator.
+    (check (doit ONE SUB TWO
+		 SUB THREE)	=> '(- 1 2 3))
+    (check (doit ONE SUB TWO
+		 SUB THREE
+		 SUB FOUR)	=> '(- 1 (- 2 3 4)))
+
+    ;;Left-associative operator.
+    (check (doit ONE MUL TWO
+		 MUL THREE)	=> '(* (* 1 2) 3))
+    (check (doit ONE MUL TWO
+		 MUL THREE
+		 MUL FOUR)	=> '(* (* (* 1 2) 3) 4))
+
+    ;;Right-associative operator.
+    (check (doit ONE DIV TWO
+		 DIV THREE)	=> '(/ 1 2 3))
+    (check (doit ONE DIV TWO
+		 DIV THREE
+		 DIV FOUR)	=> '(/ 1 (/ 2 3 4)))
+
+    #f)
+
+  ;;On the meaning of Reduce/Reduce conflicts: the longest rule is given
+  ;;last.  Operator precedence does matter.
+  (let ()
+
+    (define make-parser
+      (lalr.lalr-parser
+       (lalr.output-value: #t)
+       (lalr.expect: 0)
+       (lalr.terminals: '(NUM		    ;precedence 0
+			  ADD		    ;precedence 0
+			  (nonassoc: SUB)   ;precedence 1
+			  (left:     MUL)   ;precedence 2
+			  (right:    DIV))) ;precedence 3
+       (lalr.rules:
+	'((EXPR
+	   (EXPR ADD EXPR)		: (list $2 $1 $3)
+	   (EXPR SUB EXPR)		: (list $2 $1 $3)
+	   (EXPR MUL EXPR)		: (list $2 $1 $3)
+	   (EXPR DIV EXPR)		: (list $2 $1 $3)
+	   (EXPR ADD EXPR ADD EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR SUB EXPR SUB EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR MUL EXPR MUL EXPR)	: (list $2 $1 $3 $5)
+	   (EXPR DIV EXPR DIV EXPR)	: (list $2 $1 $3 $5)
+	   (NUM)			: $1)))))
+
+    (define (doit . tokens)
+      (let* ((lexer		(make-lexer tokens))
+	     (error-handler	(make-error-handler))
+	     (parser		(make-parser)))
+	(parser lexer error-handler)))
+
+    (define-constant ADD	(make-token 'ADD '+))
+    (define-constant SUB	(make-token 'SUB '-))
+    (define-constant MUL	(make-token 'MUL '*))
+    (define-constant DIV	(make-token 'DIV '/))
+    (define-constant ONE	(make-token 'NUM 1))
+    (define-constant TWO	(make-token 'NUM 2))
+    (define-constant THREE	(make-token 'NUM 3))
+    (define-constant FOUR	(make-token 'NUM 4))
+
+    (check (doit ONE ADD TWO)	=> '(+ 1 2))
+    (check (doit ONE SUB TWO)	=> '(- 1 2))
+    (check (doit ONE MUL TWO)	=> '(* 1 2))
+    (check (doit ONE DIV TWO)	=> '(/ 1 2))
+
+    ;;No   associativity   specified.   Handled   as   right-associative
+    ;;operator.
+    (check (doit ONE ADD TWO
+		 ADD THREE)	=> '(+ 1 (+ 2 3)))
+    (check (doit ONE ADD TWO
+		 ADD THREE
+		 ADD FOUR)	=> '(+ 1 (+ 2 (+ 3 4))))
+
+    ;;Non-associative operator.  Handled as right-associative operator.
+    (check (doit ONE SUB TWO
+		 SUB THREE)	=> '(- 1 (- 2 3)))
+    (check (doit ONE SUB TWO
+		 SUB THREE
+		 SUB FOUR)	=> '(- 1 (- 2 (- 3 4))))
+
+    ;;Left-associative operator.
+    (check (doit ONE MUL TWO
+		 MUL THREE)	=> '(* (* 1 2) 3))
+    (check (doit ONE MUL TWO
+		 MUL THREE
+		 MUL FOUR)	=> '(* (* (* 1 2) 3) 4))
+
+    ;;Right-associative operator.
+    (check (doit ONE DIV TWO
+		 DIV THREE)	=> '(/ 1 (/ 2 3)))
+    (check (doit ONE DIV TWO
+		 DIV THREE
+		 DIV FOUR)	=> '(/ 1 (/ 2 (/ 3 4))))
+
+    #f)
 
   #t)
 

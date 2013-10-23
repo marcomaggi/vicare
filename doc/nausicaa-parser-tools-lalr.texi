@@ -288,15 +288,14 @@ choice to compute a result; the semantic clause is just a Scheme form in
 which we do whatever we want with the three operands @samp{2}, @samp{*}
 and @samp{3}.  For example, we can compute the result @math{2 * 3 = 6}.
 
-The parser generator should create Scheme code as semantic clause
-equivalent to:
+The parser generator should create Scheme equivalent to:
 
 @example
 (let (($3   2)   ;
       ($2   *)   ; Automatically generated preamble
       ($1   3))  ;
 
-  ($2 $3 $1))    ; Client-supplied semantic action
+  ($2 $3 $1))    ; Client-supplied semantic clause
 @end example
 
 So we want the parser to mutate the vectors as follows:
@@ -309,7 +308,7 @@ So we want the parser to mutate the vectors as follows:
 @item
 The parser has to recognise the subvector @samp{N A N} has representing
 a sequence it can compute; the values have to be fed to a semantic
-action; let's say it computes the result @math{1 + 6 = 7}.
+clause; let's say it computes the result @math{1 + 6 = 7}.
 
 So we want the parser to mutate the vectors as follows:
 
@@ -1380,7 +1379,7 @@ e : e '+' t
   ;
 
 t : t '*' f
-  : t '/' f
+  | t '/' f
   | f
   ;
 
@@ -1389,8 +1388,8 @@ f : ID
 @end example
 
 @noindent
-the same grammar, written with @library{nausicaa parser-tools lalr},
-would look like this:
+the same grammar, written for @library{nausicaa parser-tools lalr} and
+with semantic actions added, would look like this:
 
 @example
 (lalr-parser
@@ -1426,8 +1425,8 @@ right--hand sides of @samp{e} are the rules:
 which are used to match sequences of terminals and non--terminals.  The
 rule @samp{(e + t)} has the semantic clause @samp{(+ $1 $3)}.
 
-In the semantic clauses, the symbol @samp{$n} refers to the value of the
-@math{n}-th symbol in the right--hand side rule.  For example, when the
+In the semantic clauses, the symbol @samp{$N} refers to the value of the
+@math{N}-th symbol in the right--hand side rule.  For example, when the
 sequence of tokens @samp{1 + 2} is matched by the rule:
 
 @example
@@ -1451,7 +1450,10 @@ part, example:
 
 @noindent
 when such a rule matches a sequence of symbols, it generates the
-sentinel value.  @nauref{sentinel, The sentinel value}
+sentinel value; @libsref{sentinels, Sentinel values}.
+
+Finally note that in this example grammar: all the operators have the
+same precedence and are right--associative.
 
 @c page
 @node lalr grammar precedence
@@ -1459,10 +1461,9 @@ sentinel value.  @nauref{sentinel, The sentinel value}
 
 
 The grammar defined in the introduction (@ref{lalr grammar intro})
-implicitly handles operator precedences.  It is also possible to
-explicitly assign precedences and associativity to terminal symbols and
-productions a la Yacc.  Here is a modified (and augmented) version of
-the grammar:
+defines no operator precedences.  It is possible to explicitly assign
+precedences and associativity to terminal symbols and productions a la
+Yacc.  Here is a modified (and augmented) version of the grammar:
 
 @example
 (lalr-parser

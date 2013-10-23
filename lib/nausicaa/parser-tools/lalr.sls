@@ -415,6 +415,9 @@
 	  (set! terms/prec (reverse rev-terms/prec)))
       (let ((term (car terminals)))
 	(cond ((pair? term)
+	       ;;When a terminal has an associativity specification: its
+	       ;;precedence is 1 higher than its last predecessor in the
+	       ;;list with non-zero precedence.
 	       (if (and (memq (car term) '(left: right: nonassoc:))
 			(not (null? (cdr term))))
 		   (let ((prec    (+ prec-level 1))
@@ -432,6 +435,8 @@
 					    rev-terms/prec))))))
 		 (error "invalid operator precedence specification" term)))
 	      (else
+	       ;;When  no  associativity  specification  is  present:  a
+	       ;;terminal has precedence 0 and it is right-associative.
 	       (check-terminal term rev-terms)
 	       (check-terminals (cdr terminals)
 				(cons term rev-terms)
@@ -1390,6 +1395,8 @@
 	    (else (case (get-symbol-assoc symbol)
 		    ((left)
 		     'reduce)
+		    ;;Right  associativity  and   no  associativity  are
+		    ;;equivalent.
 		    ((right none nonassoc)
 		     'shift)
 		    (else ;this should never happen
