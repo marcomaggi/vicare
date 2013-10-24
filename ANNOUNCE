@@ -46,8 +46,8 @@ Notes for revision 0.3d5
   been renamed MAKE-QUEUE-PROCS.
 
 * Imported libraries  from Nausicaa/OOPP.   Installation of  the library
-  hierarchy (nausicaa ---) is enabled by defult; it can be disabled with
-  the option "--disable-nausicaa" of the script "configure".
+  hierarchy (nausicaa  ---) is  enabled by default;  it can  be disabled
+  with the option "--disable-nausicaa" of the script "configure".
 
 * Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
   "vicare-libs.texi", "nausicaa.texi".
@@ -85,7 +85,8 @@ Notes for revision 0.3d5
     least-positive-bignum
     greatest-negative-bignum
 
-* Added to (vicare) the experimental syntax "define-syntax*".
+* Added  to (vicare)  the experimental  syntax "define-syntax*".   Still
+  undocumented.
 
 * Added to (vicare)  the function "vector-empty?" and  to (vicare system
   $vectors) the operation "$vector-empty?".
@@ -148,6 +149,9 @@ Notes for revision 0.3d5
      (nausicaa containers vectors)
      (nausicaa containers strings)
      (nausicaa containers arrays)
+
+  the multidimensional arrays library will  be rewritten with changes in
+  the API.
 
 * Added INFIX to the export list of (nausicaa).
 
