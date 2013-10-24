@@ -103,7 +103,14 @@ script from the top source directory:
    $ cd vicare-scheme
    $ sh autogen.sh
 
-after this  the procedure  is the same  as the one  for building  from a
+notice  that  "autogen.sh"  will   run  the  programs  "autoreconf"  and
+"libtoolize"; the  latter is  selected through the  environment variable
+"LIBTOOLIZE",  whose  value  can  be  customised;  for  example  to  run
+"glibtoolize" rather than "libtoolize" we do:
+
+   $ LIBTOOLIZE=glibtoolize sh autogen.sh
+
+  After this the  procedure is the same  as the one for  building from a
 proper release tarball, but we  must enable maintainer mode when running
 the "configure" script:
 
