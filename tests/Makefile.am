@@ -294,7 +294,9 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-parser-tools-source-location.sps			\
 	test-nausicaa-parser-tools-lalr-lr.sps				\
 	test-nausicaa-parser-tools-lalr-glr.sps				\
-	test-nausicaa-parser-tools-lalr-calc.sps
+	test-nausicaa-parser-tools-lalr-calc.sps			\
+	\
+	test-issue-058-lalr-unary-prec.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\
@@ -335,7 +337,7 @@ VICARE_SCHEME_CRE2_TESTS	= foreign-test-vicare-cre2.sps
 ## select tests for "make check"
 
 TESTS		= $(VICARE_SCHEME_CORE_TESTS)
-#XFAIL_TESTS	=
+XFAIL_TESTS	= test-issue-058-lalr-unary-prec.sps
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
