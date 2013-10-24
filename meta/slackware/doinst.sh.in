@@ -21,6 +21,7 @@ install -m 0775 -d "$fasldir"
 for item in \
     compile-all.sps             \
     compile-srfi.sps            \
+    compile-nausicaa.sps        \
     compile-ffi.sps             \
     compile-posix.sps           \
     compile-iconv.sps           \

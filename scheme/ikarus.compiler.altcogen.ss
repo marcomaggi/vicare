@@ -1634,7 +1634,7 @@
 
   (define-argument-validation (set who obj)
     (set? obj)
-    (assertion-violation who "expected set as argument" obj))
+    (procedure-argument-violation who "expected set as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -1945,7 +1945,7 @@
     (define-argument-validation (list-of-fixnums who obj)
       (and (list? obj)
 	   (for-all fixnum? obj))
-      (assertion-violation who "expected list of fixnums as argument" obj))
+      (procedure-argument-violation who "expected list of fixnums as argument" obj))
 
     #| end of module: list->set |# )
 

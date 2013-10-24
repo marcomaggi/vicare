@@ -1,0 +1,3658 @@
+@node builtins
+@chapter Conventional labels for built--in objects
+
+
+@cindex @library{nausicaa language builtins}, library
+@cindex Library @library{nausicaa language builtins}
+@cindex Conventional label types
+@cindex Labeled objects, conventional types
+@cindex Built--in objects, conventional labels
+
+
+For every Scheme object type implemented by Vicare Scheme:
+@library{nausicaa language builtins} defines a label type providing
+@oopp{} notation.  This also allows the use of built--in types as
+arguments to generic functions defined by the library @library{nausicaa
+language multimethods}.
+
+@menu
+* builtins chart::              A chart for predefined built-in labels.
+* builtins base::               Basic conventional types.
+* builtins booleans::           Boolean label.
+* builtins symbols::            Symbol label.
+* builtins keywords::           Keyword label.
+* builtins pointers::           Pointer label.
+* builtins pairs::              Pair label.
+* builtins spines::             Spine label.
+* builtins lists::              List label.
+* builtins chars::              Character label.
+* builtins strings::            String label.
+* builtins vectors::            Vector label.
+* builtins bytevectors::        Bytevector labels.
+* builtins hashtables::         Hashtable label.
+* builtins numbers::            Numeric objects labels.
+* builtins transcoders::        Transcoder labels.
+* builtins ports::              Input/output port objects labels.
+* builtins rtds::               @rnrs{6} record type descriptor labels.
+* builtins records::            @rnrs{6} record labels.
+* builtins conditions::         Condition labels.
+* builtins procedures::         Procedure labels.
+* builtins multimethods::       Predefined generic functions.
+* builtins mixins::             Predefined mixins.
+@end menu
+
+@c page
+@node builtins chart
+@section A chart for predefined builtin types
+
+
+@smallexample
+<top>
+  |
+  +------+--------+---------+-------
+  |      |        |         |       |
+  |      v        v         v       v
+  |  <boolean> <symbol> <keyword> <char>
+  |
+  +------+------------------
+  |      |                  |
+  |      v                  v
+  |   <pair>             <spine>
+  |      |                  |
+  |      v                  v
+  |  <mutable-pair>      <list>
+  |
+  +--------+--------+----------+------------
+  |        |        |          |            |
+  |        v        v          v            v
+  |     <string> <vector> <bytevector> <hashtable>
+  |        |
+  |        v
+  |  <mutable-string>
+  |
+  +-------+------------+----------
+  |       |            |          |
+  |       v            v          v
+  |  <transcoder> <procedure> <pointer>
+  |
+  +--> <port> -+-------+-----------+--------------+
+  |            |       |           |              |
+  |            |       v           v              v
+  |            | <input-port> <output-port> <input/output-port>
+  |            |
+  |            +--> <binary-port> --+-> <binary-input-port>
+  |            |                    |
+  |            |                    +-> <binary-output-port>
+  |            |                    |
+  |            |                     -> <binary-input/output-port>
+  |            |
+  |             --> <textual-port> -+-> <textual-input-port>
+  |                                 |
+  |                                 +-> <textual-output-port>
+  |                                 |
+  |                                  -> <textual-input/output-port>
+  |
+  +----> <record-type-descriptor>
+  |
+  +----> <record> --> <condition>
+  |
+  v
+<number>
+  |
+  v
+<complex>
+  |
+  v
+<real-valued>
+  |
+  v
+<real> --> <flonum>
+  |
+  v
+<rational-valued> --> <integer-valued>
+  |
+  v
+<rational> --> <integer> --> <exact-integer> --> <fixnum>
+@end smallexample
+
+@c page
+@node builtins base
+@section Basic conventional types
+
+
+@deftp Class @aclass{top}
+Conventional parent of all the types; class and label types defined with
+@func{define-class} and @func{define-label}, have @class{top} as parent
+type if we do not select explicitly a parent with the @func{parent}
+clause.
+@end deftp
+
+@c page
+@node builtins booleans
+@section Boolean label
+
+
+@deftp {Builtin Label} @aclass{boolean}
+Conventional type of objects satisfying @func{boolean?}.
+@end deftp
+
+@c page
+@node builtins symbols
+@section Symbol label
+
+
+@deftp {Builtin Label} @aclass{symbol}
+Conventional type for objects satisfying @func{symbol?}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{symbol} @aclass{symbol} constructor @var{string}
+Return the result of applying @func{string->symbol} to @var{string}.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{symbol} @aclass{string} string
+Accessing this field is like applying @func{symbol->string} to the
+instance.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{symbol} hash
+Return an integer usable as hash value of the instance.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{symbol} @aclass{symbol} (@meta{string})
+Build and return a new symbol whose name is the string resulting from
+the evaluation of the expression @meta{string}.
+@end defop
+
+@c page
+@node builtins keywords
+@section Keyword label
+
+
+@deftp {Builtin Label} @aclass{keyword}
+Conventional type for objects satisfying @func{keyword?}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{keyword} @aclass{keyword} constructor @var{name}
+Build and return a new keyword object whose name is @var{name}, which
+must be a symbol or string.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{keyword} @aclass{symbol} symbol
+Accessing this field is like applying @func{keyword->symbol} to the
+instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{keyword} @aclass{string} string
+Return a the string representing the name of the symbol embedded in the
+keyword object.  Mutating the returned string leads to undefined
+behaviour.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{keyword} @aclass{keyword} (@meta{name})
+Build and return a new keyword object whose name is the symbol resulting
+from the evaluation of the expression @meta{name}, which must return a
+symbol or string.
+@end defop
+
+@c page
+@node builtins pointers
+@section Pointer label
+
+
+@deftp {Builtin Label} @aclass{pointer}
+Conventional type for objects satisfying @func{pointer?} from
+@library{vicare}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{pointer} @aclass{pointer} constructor @var{address}
+Build and return a new pointer object referencing @var{address}, which
+must be a non--negative exact integer.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{pointer} @aclass{boolean} null?
+Accessing this field is like applying to the instance the function
+@func{pointer-null?} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{pointer} @aclass{integer} integer
+Accessing this field is like applying to the instance the function
+@func{pointer->integer} from @library{vicare}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: comparison functions
+
+
+@defmethod @aclass{pointer} = @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer=?} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} <> @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer<>?} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} < @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer<?} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} > @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer>?} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} <= @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer<=?} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} >= @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer>=?} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: pointer arithmetic
+
+
+@defmethod @aclass{pointer} add @var{offset}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer-add} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{pointer} diff @varii{pointer}
+Calling this method is like applying to the instance, and the argument,
+the function @func{pointer-diff} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Other methods
+
+
+@deftypemethod @aclass{pointer} @aclass{pointer} clone
+Calling this method is like applying to the instance the function
+@func{pointer-clone} from @library{vicare}.
+@end deftypemethod
+
+
+@defmethod @aclass{pointer} set-null!
+Calling this method is like applying to the instance the function
+@func{set-pointer-null!} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{pointer} @aclass{pointer} (@meta{address})
+Build and return a new pointer object referencing @meta{address}, which
+must be an expression evaluating to a non--negative exact integer.
+@end defop
+
+@c page
+@node builtins pairs
+@section Pair label
+
+
+@deftp {Builtin Label} @aclass{pair}
+Conventional type of objects satisfying @func{pair?}.  This label is
+meant to be used for immutable pairs.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{mutable-pair}
+Conventional type of objects satisfying @func{pair?}; it is derived from
+@aclass{pair}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{pair} @aclass{pair} constructor @var{car} @var{cdr}
+@deftypeopx {Common constructor} @aclass{mutable-pair} @aclass{mutable-pair} constructor @var{car} @var{cdr}
+Return the result of applying @func{cons} to @var{car} and @var{cdr}.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} car
+Access the car of the pair using @func{car}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} cdr
+Access the cdr of the pair using @func{cdr}.
+@end deftypecv
+
+
+@deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} car
+Access and mutate the car of the pair using @func{car} and
+@func{set-car!}.
+@end deftypecv
+
+
+@deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} cdr
+Access and mutate the cdr of the pair using @func{cdr} and
+@func{set-cdr!}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsafe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $car
+Access the car of the pair using the unsafe operation @func{$car} from
+@library{vicare system $pairs}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $cdr
+Access the cdr of the pair using the unsafe operation @func{$cdr} from
+@library{vicare system $pairs}.
+@end deftypecv
+
+
+@deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $car
+Access and mutate the car of the pair using the unsafe operations
+@func{$car} and @func{$set-car!} from @library{vicare system $pairs}.
+@end deftypecv
+
+
+@deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $cdr
+Access and mutate the cdr of the pair using the unsafe operations
+@func{$cdr} and @func{set-cdr!} from @library{vicare system $pairs}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{pair} @aclass{pair} (@meta{car} @meta{cdr})
+@defopx Maker @aclass{pair} @aclass{mutable-pair} (@meta{car} @meta{cdr})
+Return the result of applying @func{cons} to the results of evaluating
+the expressions @meta{car} and @meta{cdr}.
+@end defop
+
+@c page
+@node builtins spines
+@section Spine label
+
+
+A @dfn{spine} is the head of a proper list: null or a pair whose cdr is
+null or a pair.  It can be used to iterate over a proper list without
+fully validating it first.
+
+
+@deftp {Builtin Label} @aclass{spine}
+Conventional type of objects satisfying @func{null?} or @func{pair?}
+and, in the case of a pair, having null or a pair as cdr.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @var{cdr}
+Return the result of applying @func{cons} to @var{car} and @var{cdr}.
+@var{cdr} must be a @class{spine}.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using @func{car}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using @func{cdr}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{exact-integer} length
+Access the length of the list.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} null?
+True if the spine is null.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} pair?
+True if the spine is a pair.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsafe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} $car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using the unsafe operation @func{$car} from @library{vicare system
+$pairs}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} $cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using the unsafe operation @func{$cdr} from @library{vicare system
+$pairs}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{spine} caar
+@defmethodx @aclass{spine} cadr
+@defmethodx @aclass{spine} cdar
+@defmethodx @aclass{spine} cddr
+@defmethodx @aclass{spine} caaar
+@defmethodx @aclass{spine} caadr
+@defmethodx @aclass{spine} cadar
+@defmethodx @aclass{spine} caddr
+@defmethodx @aclass{spine} cdaar
+@defmethodx @aclass{spine} cdadr
+@defmethodx @aclass{spine} cddar
+@defmethodx @aclass{spine} cdddr
+Apply the corresponding function to the list.  Notice that calling these
+methods may raise an error if the list structure is not suitable.
+@end defmethod
+
+
+@defmethod @aclass{spine} map @var{proc} . @var{lists}
+Apply @func{map} to the instance list and the optional @var{lists}.
+@end defmethod
+
+
+@defmethod @aclass{spine} for-each @var{proc} . @var{lists}
+Apply @func{for-each} to the instance list and the optional @var{lists}.
+@end defmethod
+
+
+@defmethod @aclass{spine} find @var{proc}
+Apply @func{find} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} reverse @var{proc}
+Apply @func{reverse} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} for-all @var{proc}
+@defmethodx @aclass{lits} exists @var{proc}
+Apply @func{for-all} and @func{exists} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} filter @var{proc}
+@defmethodx @aclass{spine} partition @var{proc}
+Apply @func{filter} and @func{partition} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} fold-left @var{nil} @var{combine}
+Apply @func{fold-left} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} fold-right @var{nil} @var{combine}
+Apply @func{fold-right} to the list.
+@end defmethod
+
+
+@defmethod @aclass{spine} remp @var{proc}
+@defmethodx @aclass{spine} remove @var{obj}
+@defmethodx @aclass{spine} remv @var{obj}
+@defmethodx @aclass{spine} remq @var{obj}
+Apply @func{remp}, @func{remove}, @func{remv}, @func{remq} to the list
+and the given argument.
+@end defmethod
+
+
+@defmethod @aclass{spine} memp @var{proc} @var{list}
+@defmethodx @aclass{spine} member @var{obj} @var{list}
+@defmethodx @aclass{spine} memv @var{obj} @var{list}
+@defmethodx @aclass{spine} memq @var{obj} @var{list}
+Apply @func{memp}, @func{member}, @func{memv}, @func{memq} to the list
+and the given arguments.
+@end defmethod
+
+
+@defmethod @aclass{spine} assp @var{proc}
+@defmethodx @aclass{spine} assoc @var{obj}
+@defmethodx @aclass{spine} assv @var{obj}
+@defmethodx @aclass{spine} assq @var{obj}
+Apply @func{assp}, @func{assoc}, @func{assv}, @func{assq} to the list
+and the given argument.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{spine} @aclass{spine} ()
+@defopx Maker @aclass{spine} @aclass{spine} (@meta{car} @meta{cdr})
+When the first form is used: return null.  When the second form is used:
+build and return a new @class{spine} object using the common protocol.
+@end defop
+
+@c page
+@node builtins lists
+@section List label
+
+
+@deftp {Builtin Label} @aclass{list}
+Conventional type of objects satisfying @func{list?}; it is derived from
+@class{spine}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
+Return the result of applying @func{list} to the @var{item} arguments.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{list} @aclass{list} (@meta{item} @dots{})
+Return the result of applying @func{list} to the results of evaluating
+the expressions @meta{item}.
+@end defop
+
+@c page
+@node builtins chars
+@section Character type
+
+
+@deftp {Builtin Label} @aclass{char}
+Conventional type for objects satisfying @func{char?}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{char} upcase
+Accessing this field is like applying @func{char-upcase} to the char.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{char} downcase
+Accessing this field is like applying @func{char-downcase} to the char.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{char} titlecase
+Accessing this field is like applying @func{char-titlecase} to the char.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{char} foldcase
+Accessing this field is like applying @func{char-foldcase} to the char.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} alphabetic?
+Return the result of applying @func{char-alphabetic?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} numeric?
+Return the result of applying @func{char-numeric?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} whitespace?
+Return the result of applying @func{char-whitespace?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} upper-case?
+Return the result of applying @func{char-upper-case?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} lower-case?
+Return the result of applying @func{char-lower-case?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{boolean} title-case?
+Return the result of applying @func{char-title-case?} to the character.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{char} @aclass{symbol} general-category
+Return the result of applying @func{char-general-category} to the
+character.
+@end deftypecv
+
+@c page
+@node builtins strings
+@section String type
+
+
+@deftp {Builtin Label} @aclass{string}
+Conventional type for immutable objects satisfying @func{string?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{mutable-string}
+Conventional type for mutable objects satisfying @func{string?}.  It is
+a sublabel of @aclass{string}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{string} @aclass{string} constructor @var{ch} @dots{}
+@deftypeopx {Common constructor} @aclass{mutable-string} @aclass{mutable-string} constructor @var{ch} @dots{}
+Return the result of applying @func{string} to the @var{ch} arguments.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{fixnum} length
+Accessing this field is like applying @func{string-length} to the
+string.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{boolean} empty?
+It is @true{} if the string length is zero.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{string} upcase
+Accessing this field is like applying @func{string-upcase} to the
+string.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{string} downcase
+Accessing this field is like applying @func{string-downcase} to the
+string.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{string} titlecase
+Accessing this field is like applying @func{string-titlecase} to the
+string.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{string} foldcase
+Accessing this field is like applying @func{string-foldcase} to the
+string.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsafe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{fixnum} $length
+Return the result of applying @func{$string-length} from @library{vicare
+system $strings} to the string.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{boolean} $empty?
+Return @true{} if the string length is zero.  Make use of unsafe
+operations from @library{vicare system $strings}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @aclass{string} @aclass{integer} hash
+Return the result of applying @func{string-hash} to the string instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} @aclass{string} substring (@var{begin} @aclass{fixnum})
+@deftypemethodx @aclass{string} @aclass{string} substring (@var{begin} @aclass{fixnum}) (@var{end} @aclass{fixnum})
+Build and return a new string holding the selected substring of the
+subject.  When @var{end} is not used: it defaults to the length of the
+string.
+
+When @var{begin} and @var{end} are zero or positive: this method behaves
+like @func{substring} from @rsixlibrary{base}.  If either @var{begin}
+and/or @var{end} are negative: they are first normalised with:
+
+@example
+(+ @var{begin/end} (string-length @var{string}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the string:
+@math{-1} selects the ultimate character, @math{-2} selects the
+penultimate character and so on.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} @aclass{string} append (@var{string} @aclass{string}) @dots{}
+Build and return a new string whose characters form the concatenation of
+the subject and given strings.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} @aclass{list} list
+Return a list holding all the characters in the string.
+@end deftypemethod
+
+
+@defmethod @aclass{string} for-each @var{proc}
+Apply the function @var{proc} to each character in the string.
+@end defmethod
+
+
+@deftypemethod @aclass{string} @aclass{string} copy
+Build and return a new string holding the same characters.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} @aclass{char} ref (@var{index} @aclass{fixnum})
+When @var{index} is zero or positive: this method behaves like
+@func{string-ref} from @rsixlibrary{base}.  If @var{index} is negative:
+it is first normalised with:
+
+@example
+(+ @var{index} (string-length @var{string}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the string:
+@math{-1} selects the ultimate character, @math{-2} selects the
+penultimate character and so on.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} @aclass{top} ref (@var{index} @aclass{fixnum}) (@var{ch} @aclass{char})
+When @var{index} is zero or positive: this method behaves like
+@func{string-set!} from @rsixlibrary{base}.  If @var{index} is negative:
+it is first normalised with:
+
+@example
+(+ @var{index} (string-length @var{string}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the string:
+@math{-1} selects the ultimate character, @math{-2} selects the
+penultimate character and so on.
+@end deftypemethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{string} (@meta{char} @dots{})
+@defopx Maker @aclass{mutable-string} (@meta{char} @dots{})
+Return the result of applying @func{string} to the results of evaluating
+the expressions @meta{char}.
+@end defop
+
+
+@defop Getter @aclass{string} @var{instance} (@var{index})
+Character getter; it behaves like the @func{ref} method.
+@end defop
+
+
+@defop Setter @aclass{mutable-string} set!/tags (@var{instance} (@var{index})) @meta{char}
+Character setter; it behaves like the @func{set!} method.
+@end defop
+
+@c page
+@node builtins vectors
+@section Vector type
+
+
+@deftp {Builtin Label} @aclass{vector}
+Conventional type for objects satisfying @func{vector?}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{vector} @aclass{vector} constructor @var{item} @dots{}
+Return the result of applying @func{vector} to the @var{item} arguments.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{vector} @aclass{fixnum} length
+Access the length of the vector.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{vector} @aclass{boolean} empty?
+True if the vector length is zero.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsafe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{vector} @aclass{fixnum} $length
+Return the result of applying @func{$vector-length} from @library{vicare
+system $vectors} to the vector.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{vector} @aclass{boolean} $empty?
+Return @true{} if the vector length is zero.  Make use of unsafe
+operations from @library{vicare system $vectors}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+@deftypemethod @aclass{vector} @aclass{vector} subvector (@var{begin} @aclass{fixnum})
+@deftypemethodx @aclass{vector} @aclass{vector} subvector (@var{begin} @aclass{fixnum}) (@var{end} @aclass{fixnum})
+Build and return a new vector holding the selected subvector of the
+instance.  When @var{end} is not used: it defaults to the length of the
+vector.
+
+When @var{begin} and @var{end} are zero or positive: this method behaves
+like @func{subvector} from @library{nausicaa language common}.  If
+either @var{begin} and/or @var{end} are negative: they are first
+normalised with:
+
+@example
+(+ @var{begin/end} (vector-length @var{instance}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the vector:
+@math{-1} selects the ultimate value, @math{-2} selects the penultimate
+value and so on.
+@end deftypemethod
+
+
+@defmethod @aclass{vector} map @var{proc} . @var{vectors}
+Apply @func{vector-map} to the instance vector and the optional
+@var{vectors}.
+@end defmethod
+
+
+@defmethod @aclass{vector} for-each @var{proc} . @var{vectors}
+Apply @func{vector-for-each} to the instance vector and the optional
+@var{vectors}.
+@end defmethod
+
+
+@defmethod @aclass{vector} for-all @var{proc} . @var{vectors}
+Apply @func{vector-for-all} to the instance vector and the optional
+@var{vectors}.
+@end defmethod
+
+
+@defmethod @aclass{vector} exists @var{proc} . @var{vectors}
+Apply @func{vector-exists} to the instance vector and the optional
+@var{vectors}.
+@end defmethod
+
+
+@defmethod @aclass{vector} fill! @var{fill}
+Apply @func{vector-fill!} to the instance vector and @var{fill}.
+@end defmethod
+
+
+@deftypemethod @aclass{vector} @aclass{top} ref (@var{index} @aclass{fixnum})
+When @var{index} is zero or positive: this method behaves like
+@func{vector-ref} from @rsixlibrary{base}.  If @var{index} is negative:
+it is first normalised with:
+
+@example
+(+ @var{index} (vector-length @var{vector}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the vector:
+@math{-1} selects the ultimate value, @math{-2} selects the penultimate
+value and so on.
+@end deftypemethod
+
+
+@deftypemethod @aclass{vector} @aclass{top} set! (@var{index} @aclass{fixnum}) (@var{value} @aclass{top})
+Store @var{value} at @var{index} in the vector.  When @var{index} is
+zero or positive: this method behaves like @func{vector-set!} from
+@rsixlibrary{vectors}.  If @var{index} is negative: it is first
+normalised with:
+
+@example
+(+ @var{index} (vector-length @var{vector}))
+@end example
+
+@noindent
+so that negative indices are counted from the end of the vector:
+@math{-1} selects the ultimate value, @math{-2} selects the penultimate
+value and so on.
+@end deftypemethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{vector} @aclass{vector} (@meta{item} @dots{})
+Return the result of applying @func{vector} to the results of evaluating
+the expressions @meta{item}.
+@end defop
+
+
+@defop Getter @aclass{vector} @var{instance} (@var{index})
+Item getter; it behaves like the @func{ref} method.
+@end defop
+
+
+@defop Setter @aclass{mutable-vector} set!/tags (@var{instance} (@var{index})) @meta{item}
+Item setter; it behaves like the @func{set!} method.
+@end defop
+
+@c page
+@node builtins bytevectors
+@section Bytevector labels
+
+
+@menu
+* builtins bytevectors base::      Bytevector labels: 8-bit words.
+* builtins bytevectors 8::         Bytevector labels: 8-bit words.
+* builtins bytevectors 16::        Bytevector labels: 16-bit words.
+* builtins bytevectors 32::        Bytevector labels: 32-bit words.
+* builtins bytevectors 64::        Bytevector labels: 64-bit words.
+* builtins bytevectors sfl::       Bytevector labels: single--precision
+                                   floating--point numbers.
+* builtins bytevectors dfl::       Bytevector labels: double--precision
+                                   floating--point numbers.
+@end menu
+
+@c page
+@node builtins bytevectors base
+@subsection Bytevector labels: 8-bit words
+
+
+@deftp {Builtin Label} @aclass{bytevector}
+Conventional type for objects satisfying @func{bytevector?}.
+@end deftp
+
+
+@defcv {Immutable virtual field} @aclass{bytevector} length
+Access the length of the bytevector.
+@end defcv
+
+@c page
+@node builtins bytevectors 8
+@subsection Bytevector labels: 8-bit words
+
+
+@deftp {Builtin Label} @aclass{bytevector-u8}
+@deftpx {Builtin Label} @aclass{bytevector-s8}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as octets or bytes.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-u8} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s8} @var{instance} (@meta{index})
+Octet or byte getter.  @meta{index} is the zero--based index of the
+selected byte or octet.
+@end defop
+
+
+@defop Setter @aclass{bytevector-u8} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s8} set!/tags (@var{instance} (@meta{index})) @meta{item}
+Octet or byte setter.  @meta{index} is the zero--based index of the
+selected byte or octet.
+@end defop
+
+@c page
+@node builtins bytevectors 16
+@subsection Bytevector labels: 16-bit words
+
+
+@deftp {Builtin Label} @aclass{bytevector-u16l}
+@deftpx {Builtin Label} @aclass{bytevector-s16l}
+@deftpx {Builtin Label} @aclass{bytevector-u16b}
+@deftpx {Builtin Label} @aclass{bytevector-s16b}
+@deftpx {Builtin Label} @aclass{bytevector-u16n}
+@deftpx {Builtin Label} @aclass{bytevector-s16n}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as 16-bit words.  The suffix @samp{l} stands
+for little--endian; the suffix @samp{b} stands for big--endian; the
+suffix @samp{n} stands for native endianness.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-u16l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u16b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u16n} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s16l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s16b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s16n} @var{instance} (@meta{index})
+16-bit word getter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+
+@defop Setter @aclass{bytevector-u16l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u16b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u16n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s16l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s16b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s16n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+16-bit word setter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+@c page
+@node builtins bytevectors 32
+@subsection Bytevector labels: 32-bit words
+
+
+@deftp {Builtin Label} @aclass{bytevector-u32l}
+@deftpx {Builtin Label} @aclass{bytevector-s32l}
+@deftpx {Builtin Label} @aclass{bytevector-u32b}
+@deftpx {Builtin Label} @aclass{bytevector-s32b}
+@deftpx {Builtin Label} @aclass{bytevector-u32n}
+@deftpx {Builtin Label} @aclass{bytevector-s32n}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as 32-bit words.  The suffix @samp{l} stands
+for little--endian; the suffix @samp{b} stands for big--endian; the
+suffix @samp{n} stands for native endianness.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-u32l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u32b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u32n} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s32l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s32b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s32n} @var{instance} (@meta{index})
+32-bit word getter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+
+@defop Setter @aclass{bytevector-u32l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u32b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u32n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s32l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s32b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s32n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+32-bit word setter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+@c page
+@node builtins bytevectors 64
+@subsection Bytevector labels: 64-bit words
+
+
+@deftp {Builtin Label} @aclass{bytevector-u64l}
+@deftpx {Builtin Label} @aclass{bytevector-s64l}
+@deftpx {Builtin Label} @aclass{bytevector-u64b}
+@deftpx {Builtin Label} @aclass{bytevector-s64b}
+@deftpx {Builtin Label} @aclass{bytevector-u64n}
+@deftpx {Builtin Label} @aclass{bytevector-s64n}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as 64-bit words.  The suffix @samp{l} stands
+for little--endian; the suffix @samp{b} stands for big--endian; the
+suffix @samp{n} stands for native endianness.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-u64l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u64b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-u64n} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s64l} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s64b} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-s64n} @var{instance} (@meta{index})
+64-bit word getter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+
+@defop Setter @aclass{bytevector-u64l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u64b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-u64n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s64l} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s64b} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-s64n} set!/tags (@var{instance} (@meta{index})) @meta{item}
+64-bit word setter.  @meta{index} is the zero--based index of the
+selected word.
+@end defop
+
+@c page
+@node builtins bytevectors sfl
+@subsection Bytevector labels: single--precision floating--point numbers
+
+
+@deftp {Builtin Label} @aclass{bytevector-singlel}
+@deftpx {Builtin Label} @aclass{bytevector-singleb}
+@deftpx {Builtin Label} @aclass{bytevector-singlen}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as @ieee{} single--precision floating--point
+numbers.  The suffix @samp{l} stands for little--endian; the suffix
+@samp{b} stands for big--endian; the suffix @samp{n} stands for native
+endianness.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-singlel} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-singleb} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-singlen} @var{instance} (@meta{index})
+Floating--point number getter.  @meta{index} is the zero--based index of
+the selected word.
+@end defop
+
+
+@defop Setter @aclass{bytevector-singlel} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-singleb} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-singlen} set!/tags (@var{instance} (@meta{index})) @meta{item}
+Floating--point number setter.  @meta{index} is the zero--based index of
+the selected word.
+@end defop
+
+@c page
+@node builtins bytevectors dfl
+@subsection Bytevector labels: double--precision floating--point numbers
+
+
+@deftp {Builtin Label} @aclass{bytevector-doublel}
+@deftpx {Builtin Label} @aclass{bytevector-doubleb}
+@deftpx {Builtin Label} @aclass{bytevector-doublen}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as @ieee{} double--precision floating--point
+numbers.  The suffix @samp{l} stands for little--endian; the suffix
+@samp{b} stands for big--endian; the suffix @samp{n} stands for native
+endianness.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Getter @aclass{bytevector-doublel} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-doubleb} @var{instance} (@meta{index})
+@defopx Getter @aclass{bytevector-doublen} @var{instance} (@meta{index})
+Floating--point number getter.  @meta{index} is the zero--based index of
+the selected word.
+@end defop
+
+
+@defop Setter @aclass{bytevector-doublel} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-doubleb} set!/tags (@var{instance} (@meta{index})) @meta{item}
+@defopx Setter @aclass{bytevector-doublen} set!/tags (@var{instance} (@meta{index})) @meta{item}
+Floating--point number setter.  @meta{index} is the zero--based index of
+the selected word.
+@end defop
+
+@c page
+@node builtins hashtables
+@section Hashtable labels
+
+
+@deftp {Builtin Label} @aclass{hashtable}
+Conventional type for objects satisfying @func{hashtable?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{hashtable-eq}
+Conventional type for objects satisfying @func{hashtable?} and built to
+compare keys with @func{eq?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{hashtable-eqv}
+Conventional type for objects satisfying @func{hashtable?} and built to
+compare keys with @func{eqv?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{string-hashtable}
+@deftpx {Builtin Label} @aclass{string-ci-hashtable}
+Conventional types for objects satisfying @func{hashtable?} and built to
+use strings as keys.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{symbol-hashtable}
+Conventional type for objects satisfying @func{hashtable?} and built to
+use symbols as keys.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@defcv {Immutable virtual field} @aclass{hashtable} size
+Access the size of the table.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{hashtable} keys
+Access the keys.  Retrieving this field is like applying
+@func{hashtable-keys} to the hashtable.
+@end defcv
+
+
+@deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{boolean} mutable?
+Retrieving this field is like applying @func{hashtable-mutable?} to the
+hashtable.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{hashtable} entries
+Access the keys and values.  Calling this method is like applying
+@func{hashtable-entries} to the hashtable.
+@end defmethod
+
+
+@defmethod @aclass{hashtable} delete! @var{key}
+Equivalent to applying @func{hashtable-delete!} to the instance.
+@end defmethod
+
+
+@deftypemethod @aclass{hashtable} @aclass{boolean} contains? @var{key}
+Equivalent to applying @func{hashtable-contains?} to the instance.
+@end deftypemethod
+
+
+@defmethod @aclass{hashtable} clear!
+Equivalent to applying @func{hashtable-clear!} to the instance.
+@end defmethod
+
+
+@defmethod @aclass{hashtable} update! @var{key} @var{proc} @var{default}
+Equivalent to applying @func{hashtable-update!} to the instance.
+@end defmethod
+
+
+@defmethod @aclass{hashtable} copy
+@defmethodx @aclass{hashtable} copy @var{mutable?}
+Equivalent to applying @func{hashtable-copy} to the instance.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{hashtable-eq} @aclass{hashtable-eq} ((@meta{key} @meta{val}) @dots{})
+Build and return a new hashtable object using @func{make-eq-hashtable}.
+Initialise the table with the given key/value entries.
+@end defop
+
+
+@defop Maker @aclass{hashtable-eqv} @aclass{hashtable-eqv} ((@meta{key} @meta{val}) @dots{})
+Build and return a new hashtable object using @func{make-eqv-hashtable}.
+Initialise the table with the given key/value entries.
+@end defop
+
+
+@defop Maker @aclass{string-hashtable} @aclass{string-hashtable} ((@meta{key} @meta{val}) @dots{})
+@defopx Maker @aclass{string-ci-hashtable} @aclass{string-ci-hashtable} ((@meta{key} @meta{val}) @dots{})
+Build and return a new hashtable object using @func{make-hashtable}, the
+hash functions @func{string-hash} and @func{string-ci-hash}
+(respectively) and the equivalence functions @func{string=?} and
+@func{string-ci=?} (respectively).  Initialise the table with the given
+key/value entries.
+@end defop
+
+
+@defop Maker @aclass{symbol-hashtable} @aclass{symbol-hashtable} ((@meta{key} @meta{val}) @dots{})
+Build and return a new hashtable object using @func{make-hashtable}, the
+hash function @func{symbol-hash} and the equivalence function
+@func{eq?}.  Initialise the table with the given key/value entries.
+@end defop
+
+
+@defop Getter @aclass{hashtable} @var{instance} (@meta{key})
+@defopx Getter @aclass{hashtable} @var{instance} (@meta{key}) (@meta{default})
+Value getter.  Equivalent to applying @func{hashtable-ref} to
+@var{instance}; return the value associated to @meta{key}.  If
+@meta{default} is used: it must be an expression whose value is returned
+when the requested key is not in the table.
+@end defop
+
+
+@defop Setter @aclass{hashtable} set!/tags (@var{instance} (@meta{key})) @meta{item}
+Value setter.  Equivalent to applying @func{hashtable-set!} to
+@var{instance}.
+@end defop
+
+@c page
+@node builtins numbers
+@section Numeric objects types
+
+
+@menu
+* builtins numbers number::     Generic number objects.
+* builtins numbers complex::    Complex number objects.
+* builtins numbers realv::      Real-valued number objects.
+* builtins numbers real::       Real number objects.
+* builtins numbers rationalv::  Rational-valued number objects.
+* builtins numbers rational::   Rational number objects.
+* builtins numbers integerv::   Integer-valued number objects.
+* builtins numbers integer::    Integer number objects.
+* builtins numbers integere::   Exact integer number objects.
+* builtins numbers fixnum::     Fixnum number objects.
+* builtins numbers flonum::     Flonum number objects.
+@end menu
+
+@c page
+@node builtins numbers number
+@subsection Generic number objects
+
+
+@deftp {Builtin Label} @aclass{number}
+Conventional type for objects satisfying @func{number?}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} exact?
+Accessing this field is like applying to the instance number the
+function @func{exact?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} inexact?
+Accessing this field is like applying to the instance number the
+function @func{inexact?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} zero?
+Accessing this field is like applying to the instance number the
+function @func{zero?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} finite?
+Accessing this field is like applying to the instance number the
+function @func{finite?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} infinite?
+Accessing this field is like applying to the instance number the
+function @func{infinite?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{boolean} nan?
+Accessing this field is like applying to the instance number the
+function @func{nan?} from @rsixlibrary{base}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: arithmetic
+
+
+@defmethod @aclass{number} + @var{num} @dots{}
+Apply @func{+} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} - @var{num} @dots{}
+Apply @func{-} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} * @var{num} @dots{}
+Apply @func{*} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+
+@defmethod @aclass{number} / @var{num} @dots{}
+Apply @func{/} to the instance and the given optional arguments; return
+the result.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: exactness
+
+
+@defmethod @aclass{number} exact
+Calling this method is like applying to the instance number the function
+@func{exact} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} inexact
+Calling this method is like applying to the instance number the function
+@func{inexact} from @rsixlibrary{base}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: exponentiation and logarithms
+
+
+@defmethod @aclass{number} exp
+Calling this method is like applying to the instance number the function
+@func{exp} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} log
+@defmethodx @aclass{number} log @var{base}
+Calling this method is like applying to the number and the optional
+@var{base} the function @func{log} from @rsixlibrary{base}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: powers
+
+
+@defmethod @aclass{number} expt @varii{Z2}
+Calling this method is like applying to the number and @varii{Z} the
+function @func{expt} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} square
+Calling this method is like applying to the instance number the function
+@func{square} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} cube
+Calling this method is like applying to the instance number the function
+@func{cube} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} sqrt
+Calling this method is like applying to the instance number the function
+@func{sqrt} from @rsixlibrary{base}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: trigonometric functions
+
+
+@defmethod @aclass{number} sin
+Calling this method is like applying to the instance number the function
+@func{sin} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} cos
+Calling this method is like applying to the instance number the function
+@func{cos} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} tan
+Calling this method is like applying to the instance number the function
+@func{tan} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} asin
+Calling this method is like applying to the instance number the function
+@func{asin} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} acos
+Calling this method is like applying to the instance number the function
+@func{acos} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} atan
+Calling this method is like applying to the instance number the function
+@func{atan} from @rsixlibrary{base}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: hyperbolic functions
+
+
+@defmethod @aclass{number} sinh
+Calling this method is like applying to the instance number the function
+@func{sinh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} cosh
+Calling this method is like applying to the instance number the function
+@func{cosh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} tanh
+Calling this method is like applying to the instance number the function
+@func{tanh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} asinh
+Calling this method is like applying to the instance number the function
+@func{asinh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} acosh
+Calling this method is like applying to the instance number the function
+@func{acosh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{number} atanh
+Calling this method is like applying to the instance number the function
+@func{atanh} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: complex numbers operations
+
+
+@defmethod @aclass{number} real-part
+Calling this method is like applying to the instance number the function
+@func{real-part} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} imag-part
+Calling this method is like applying to the instance number the function
+@func{imag-part} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} magnitude
+Calling this method is like applying to the instance number the function
+@func{magnitude} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} angle
+Calling this method is like applying to the instance number the function
+@func{angle} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{number} conjugate
+Calling this method is like applying to the instance number the function
+@func{complex-conjugate} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Conversion
+
+
+@defmethod @aclass{number} string
+@defmethodx @aclass{number} string @var{radix}
+@defmethodx @aclass{number} string @var{radix} @var{precision}
+Calling this method is like applying to the instance number, and the
+optional arguments @var{radix} and @var{precision}, the function
+@func{number->string} from @rsixlibrary{base}.
+@end defmethod
+
+@c page
+@node builtins numbers complex
+@subsection Complex number objects
+
+
+@deftp {Builtin Label} @aclass{complex}
+Conventional type for objects satisfying @func{complex?}.  It is derived
+from @class{number}.
+@end deftp
+
+@c page
+@node builtins numbers realv
+@subsection Real--values number objects
+
+
+@deftp {Builtin Label} @aclass{real-valued}
+Conventioanl type for objects satisfying @func{real-valued?}.  It is
+derived from @class{complex}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} positive?
+Accessing this field is like applying to the instance number the
+function @func{positive?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} negative?
+Accessing this field is like applying to the instance number the
+function @func{negative?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} non-positive?
+Accessing this field is like applying to the instance number the
+function @func{non-positive?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} non-negative?
+Accessing this field is like applying to the instance number the
+function @func{non-negative?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{fixnum} sign
+Accessing this field is like applying to the instance number the
+function @func{sign} from @rsixlibrary{vicare}.  It is the sign of the
+number: @math{+1}, @math{0}, @math{-1}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{real-valued} numerator
+Accessing this field is like applying to the instance number the
+function @func{numerator} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{real-valued} denominator
+Accessing this field is like applying to the instance number the
+function @func{denominator} from @rsixlibrary{base}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: rounding
+
+
+@defmethod @aclass{real-valued} floor
+Calling this method is like applying to the instance number the function
+@func{floor} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{real-valued} ceiling
+Calling this method is like applying to the instance number the function
+@func{ceiling} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{real-valued} truncate
+Calling this method is like applying to the instance number the function
+@func{truncate} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{real-valued} round
+Calling this method is like applying to the instance number the function
+@func{round} from @rsixlibrary{base}.
+@end defmethod
+
+
+@defmethod @aclass{real-valued} rationalize @var{tolerance}
+Calling this method is like applying to the instance number the function
+@func{rationalize} from @rsixlibrary{base}.
+@end defmethod
+
+@c page
+@node builtins numbers real
+@subsection Real number objects
+
+
+@deftp {Builtin Label} @aclass{real}
+Conventional for objects satisfying @func{real?}.  It is derived from
+@class{real-valued}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{real} abs
+Accessing this field is like applying to the instance number the
+function @func{abs} from @rsixlibrary{base}.
+@end deftypecv
+
+@c page
+@node builtins numbers rationalv
+@subsection Real--valued number objects
+
+
+@deftp {Builtin Label} @aclass{rational-valued}
+Conventional type for objects satisfying @func{rational-valued?}.  It is
+derived from @class{real}.
+@end deftp
+
+@c page
+@node builtins numbers rational
+@subsection Real number objects
+
+
+@deftp {Builtin Label} @aclass{rational}
+Conventional type for objects satisfying @func{rational?}.  It is
+derived from @class{rational-valued}.
+@end deftp
+
+@c page
+@node builtins numbers integerv
+@subsection Integer--valued number objects
+
+
+@deftp {Builtin Label} @aclass{integer-valued}
+Conventional type for objects satisfying @func{integer-valued?}.  It is
+derived from @class{rational-valued}.
+@end deftp
+
+@c page
+@node builtins numbers integer
+@subsection Integer number objects
+
+
+@deftp {Builtin Label} @aclass{integer}
+Conventional type for objects satisfying @func{integer?}.  It is derived
+from @class{integer-valued}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{integer} @aclass{boolean} odd?
+Accessing this field is like applying to the instance number the
+function @func{odd?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{integer} @aclass{boolean} even?
+Accessing this field is like applying to the instance number the
+function @func{even?} from @rsixlibrary{base}.
+@end deftypecv
+
+@c page
+@node builtins numbers integere
+@subsection Exact integer number objects
+
+
+@deftp {Builtin Label} @aclass{exact-integer}
+Conventional type for objects satisfying @func{exact-integer?}.  It is
+derived from @class{integer}.
+@end deftp
+
+@c page
+@node builtins numbers fixnum
+@subsection Fixnum number objects
+
+
+@deftp {Builtin Label} @aclass{fixnum}
+Conventional type for objects satisfying @func{fixnum?}.  It is derived
+from @class{exact-integer}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonzero-fixnum}
+Conventional type for objects satisfying @func{fixnum?} but not
+@func{fxzero?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonpositive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonpositive?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonnegative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonnegative?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{positive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxpositive?}.  It is derived from @class{nonnegative-fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnegative?}.  It is derived from @class{nonpositive-fixnum}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} even?
+Accessing this field is like applying to the instance number the
+function @func{fxeven?} from @rsixlibrary{arithmetic fixnums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} odd?
+Accessing this field is like applying to the instance number the
+function @func{fxodd?} from @rsixlibrary{arithmetic fixnums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} negative?
+Accessing this field is like applying to the instance number the
+function @func{fxnegative?} from @rsixlibrary{arithmetic fixnums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} positive?
+Accessing this field is like applying to the instance number the
+function @func{fxpositive?} from @rsixlibrary{arithmetic fixnums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-negative?
+Accessing this field is like applying to the instance number the
+function @func{fxnonnegative?} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-positive?
+Accessing this field is like applying to the instance number the
+function @func{fxnonpositive?} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} zero?
+Accessing this field is like applying to the instance number the
+function @func{fxzero?} from @rsixlibrary{arithmetic fixnums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{fixnum} sign
+Accessing this field is like applying to the instance number the
+function @func{fxsign} from @library{vicare}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: arithmetic operations
+
+
+@defmethod @aclass{fixnum} abs
+Calling this method is like applying to the instance number the function
+@func{fxabs} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} * @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fx*} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} mul-with-carry @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx*/carry} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} + @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fx+} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} add-with-carry @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx+/carry} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} - @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} sub-with-carry @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fx-/carry} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} div @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxdiv} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} mod @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxmod} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} div-and-mod @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxdiv-and-mod} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} div0 @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxdiv0} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} mod0 @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxmod0} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} div0-and-mod0 @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxdiv0-and-mod0} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: comparison operations
+
+
+@defmethod @aclass{fixnum} = @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx=?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} < @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx<?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} > @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx>?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} <= @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fx<=?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} >= @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fx>=?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: logic operations
+
+
+@defmethod @aclass{fixnum} and @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxand} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} ior @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxior} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} xor @varii{fx} @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxxor} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} not @var{fx}
+Calling this method is like applying to the instance number the function
+@func{fxnot} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: shift operations
+
+
+@defmethod @aclass{fixnum} arithmetic-shift @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxarithmetic-shift} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} arithmetic-shift-left @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxarithmetic-shift-left} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} arithmetic-shift-right @varii{fx}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxarithmetic-shift-right} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: bitwise operations
+
+
+@defmethod @aclass{fixnum} bit-set? @varii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxbit-set?} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} bit-count
+Calling this method is like applying to the instance number the function
+@func{fxbit-count} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} bit-field @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxbit-field} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} copy-bit @varii{fx} @varii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxcopy-bit} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} copy-bit-field @varii{fx} @variii{fx} @variv{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxcopy-bit-field} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} first-bit-set
+Calling this method is like applying to the instance number the function
+@func{fxfirst-bit-set} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} if @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxif} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} length
+Calling this method is like applying to the instance number the function
+@func{fxlength} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} reverse-bit-field @varii{fx} @variii{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxreverse-bit-field} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} rotate-bit-field @varii{fx} @variii{fx} @variv{fx}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxrotate-bit-field} from
+@rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: min and max
+
+
+@defmethod @aclass{fixnum} max @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+arguments, the function @func{fxmax} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} min @var{fx} @dots{}
+Calling this method is like applying to the instance number, and the
+argument, the function @func{fxmin} from @rsixlibrary{arithmetic
+fixnums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: conversion
+
+
+@defmethod @aclass{fixnum} string
+Calling this method is like applying to the instance number the function
+@func{fixnum->string} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} flonum
+Calling this method is like applying to the instance number the function
+@func{fixnum->flonum} from @rsixlibrary{arithmetic fixnums}.
+@end defmethod
+
+@c page
+@node builtins numbers flonum
+@subsection Flonum number objects
+
+
+@deftp {Builtin Label} @aclass{flonum}
+Conventional type for objects satisfying @func{flonum?}.  It is derived
+from @class{real}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} integer?
+Accessing this field is like applying to the instance number the
+function @func{flinteger?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} finite?
+Accessing this field is like applying to the instance number the
+function @func{flfinite?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} infinite?
+Accessing this field is like applying to the instance number the
+function @func{flinfinite?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nan?
+Accessing this field is like applying to the instance number the
+function @func{flnan?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} negative?
+Accessing this field is like applying to the instance number the
+function @func{flnegative?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} positive?
+Accessing this field is like applying to the instance number the
+function @func{flpositive?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonnegative?
+Accessing this field is like applying to the instance number the
+function @func{flnonnegative?} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonpositive?
+Accessing this field is like applying to the instance number the
+function @func{flnonpositive?} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?
+Accessing this field is like applying to the instance number the
+function @func{flzero?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/positive
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/negative
+Accessing this field is like applying to the instance number,
+respectively, the functions @func{flzero?/positive} and
+@func{flzero?/negative} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} even?
+Accessing this field is like applying to the instance number the
+function @func{fleven?} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} odd?
+Accessing this field is like applying to the instance number the
+function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: arithmetic functions
+
+
+@defmethod @aclass{flonum} abs
+Calling this method is like applying to the instance number the function
+@func{flabs} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} * @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{flabs} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} + @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl+} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} - @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl-} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} / @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl/} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} div @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{fldiv} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} mod @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{flmod} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} div-and-mod @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{fldiv-and-mod} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} div0 @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{fldiv0} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} mod0 @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{flmod0} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} div0-and-mod0 @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{fldiv0-and-mod0} from
+@rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: power unctions
+
+
+@defmethod @aclass{flonum} expt @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{flexpt} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} square
+Calling this method is like applying to the instance number the function
+@func{flsquare} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} cube
+Calling this method is like applying to the instance number the function
+@func{flcube} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} sqrt
+Calling this method is like applying to the instance number the function
+@func{flsqrt} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} cbrt
+Calling this method is like applying to the instance number the function
+@func{flcbrt} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: comparison functions
+
+
+@defmethod @aclass{flonum} = @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl=?} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} < @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl<?} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} > @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl>?} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} <= @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl<=?} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} >= @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{fl>=?} from @rsixlibrary{arithmetic
+flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: trigonometric functions
+
+
+@defmethod @aclass{flonum} sin
+Calling this method is like applying to the instance number the function
+@func{flsin} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} cos
+Calling this method is like applying to the instance number the function
+@func{flcos} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} tan
+Calling this method is like applying to the instance number the function
+@func{fltan} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} acos
+Calling this method is like applying to the instance number the function
+@func{flacos} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} asin
+Calling this method is like applying to the instance number the function
+@func{flasin} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} atan
+@defmethodx @aclass{flonum} atan @varii{fl}
+Calling this method is like applying to the instance number, and
+optional argument, the function @func{flatan} from
+@rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: hyperbolic functions
+
+
+@defmethod @aclass{flonum} sinh
+Calling this method is like applying to the instance number the function
+@func{flsinh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} cosh
+Calling this method is like applying to the instance number the function
+@func{flcosh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} tanh
+Calling this method is like applying to the instance number the function
+@func{fltanh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} acosh
+Calling this method is like applying to the instance number the function
+@func{flacosh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} asinh
+Calling this method is like applying to the instance number the function
+@func{flasinh} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} atanh
+Calling this method is like applying to the instance number the function
+@func{flatan} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: rounding functions
+
+
+@defmethod @aclass{flonum} ceiling
+Calling this method is like applying to the instance number the function
+@func{flceiling} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} floor
+Calling this method is like applying to the instance number the function
+@func{flfloor} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} round
+Calling this method is like applying to the instance number the function
+@func{flround} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} truncate
+Calling this method is like applying to the instance number the function
+@func{fltruncate} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: rationals operations
+
+
+@defmethod @aclass{flonum} numerator
+Calling this method is like applying to the instance number the function
+@func{flnumerator} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} denominator
+Calling this method is like applying to the instance number the function
+@func{fldenominator} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: exponentiation and logarithms
+
+
+@defmethod @aclass{flonum} exp
+Calling this method is like applying to the instance number the function
+@func{flexp} from @rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} log
+@defmethodx @aclass{flonum} log @varii{fl}
+Calling this method is like applying to the instance number, and
+optional argument, the function @func{fllog} from
+@rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} log1p
+Calling this method is like applying to the instance number the function
+@func{fllog1p} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} expm1
+Calling this method is like applying to the instance number the function
+@func{flexpm1} from @library{vicare}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} hypot @varii{fl}
+Calling this method is like applying to the instance number, and
+argument, the function @func{flhypot} from @library{vicare}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: min and max
+
+
+@defmethod @aclass{flonum} max @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+optional arguments, the function @func{flmax} from
+@rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+
+@defmethod @aclass{flonum} min @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+optional arguments, the function @func{flmin} from
+@rsixlibrary{arithmetic flonums}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: conversion
+
+
+@defmethod @aclass{flonum} string
+Calling this method is like applying to the instance number the function
+@func{flonum->string} from @library{vicare}.
+@end defmethod
+
+@c page
+@node builtins transcoders
+@section Transcoder labels
+
+
+@deftp {Builtin Label} @aclass{transcoder}
+Conventional type for objects satisfying @func{transcoder?}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{transcoder} @aclass{transcoder} constructor @var{codec}
+@deftypeopx {Common constructor} @aclass{transcoder} @aclass{transcoder} constructor @var{codec} @var{eol-style}
+@deftypeopx {Common constructor} @aclass{transcoder} @aclass{transcoder} constructor @var{codec} @var{eol-style} @var{error-handling-mode}
+Return the result of applying @func{make-transcoder} to the arguments.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@defcv {Immutable virtual field} @aclass{transcoder} codec
+Retrieving this field is like applying @func{transcoder-codec} to the
+instance.
+@end defcv
+
+
+@deftypecv {Immutable virtual field} @aclass{transcoder} @aclass{symbol} eol-style
+Retrieving this field is like applying @func{transcoder-eol-style} to
+the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{transcoder} @aclass{symbol} error-handling-mode
+Retrieving this field is like applying
+@func{transcoder-error-handling-mode} to the instance.
+@end deftypecv
+
+@c page
+@node builtins ports
+@section Input/output port objects types
+
+
+@menu
+* builtins ports base::         Base port label.
+* builtins ports io::           Input and output port labels.
+* builtins ports binary::       Binary port labels.
+* builtins ports textual::      Textual port labels.
+@end menu
+
+@c page
+@node builtins ports base
+@subsection Base port label
+
+
+@deftp {Builtin Label} @aclass{port}
+Conventional type for objects satisfying @func{port?}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{transcoder} transcoder
+Accessing this field is like applying to the port the function
+@func{port-transcoder} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} textual?
+Accessing this field is like applying to the port the function
+@func{textual-port?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} binary?
+Accessing this field is like applying to the port the function
+@func{binary-port?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} input?
+Accessing this field is like applying to the port the function
+@func{input-port?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} output?
+Accessing this field is like applying to the port the function
+@func{output-port?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} has-port-position?
+Accessing this field is like applying to the port the function
+@func{port-has-port-position?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} has-set-port-position?
+Accessing this field is like applying to the port the function
+@func{port-has-set-port-position?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Mutable virtual field} @aclass{port} @aclass{integer} port-position
+Accessing and mutating this field is like applying to the port,
+respectively, the functions @func{port-position} and
+@func{set-port-position!} from @rsixlibrary{io ports}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} closed?
+Accessing this field is like applying to the port the function
+@func{port-closed?} from @library{vicare}.
+@end deftypecv
+
+
+@defcv {Immutable virtual field} @aclass{port} fd
+Accessing this field is like applying to the port the function
+@func{port-fd} from @library{vicare}.
+@end defcv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{string} id
+Accessing this field is like applying to the port the function
+@func{port-id} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{symbol} uid
+Accessing this field is like applying to the port the function
+@func{port-uid} from @library{vicare}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{integer} hash
+Accessing this field is like applying to the port the function
+@func{port-hash} from @library{vicare}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{boolean} non-blocking-mode?
+Accessing this field is like applying to the port the function
+@func{port-in-non-blocking-mode?} from @library{vicare}.  Mutating this
+field is like applying to the port the function
+@func{port-set-non-blocking-mode!} and
+@func{port-unset-non-blocking-mode!} from @library{vicare}.
+@end deftypecv
+
+@c page
+@node builtins ports io
+@subsection Input and output port labels
+
+
+@deftp {Builtin Label} @aclass{input-port}
+Conventional type for objects satisfying @func{input-port?}.  It is
+derived from @class{port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{output-port}
+Conventional type for objects satisfying @func{output-port?}.  It is
+derived from @class{port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{input/output-port}
+Conventional type for objects satisfying @func{input/output-port?}.  It
+is derived from @class{port}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{input-port} @aclass{boolean} eof?
+@deftypecvx {Immutable virtual field} @aclass{input/output-port} @aclass{boolean} eof?
+Accessing this field is like applying to the port the function
+@func{port-eof?} from @rsixlibrary{io ports}.
+@end deftypecv
+
+
+@deftypecv {Mutable virtual field} @aclass{output-port} @aclass{symbol} buffer-mode
+@deftypecvx {Mutable virtual field} @aclass{input/output-port} @aclass{symbol} buffer-mode
+Accessing and mutating this field is like applying to the port,
+respectively, the functions @func{output-port-buffer-mode}, from
+@rsixlibrary{io ports}, and @func{set-port-buffer-mode!}, from
+@library{vicare}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Input ports methods
+
+
+For all the following input methods: if @eof{} is found and no data is
+available: return the @eof{} object; if the underlying device is in
+non--blocking mode and no data is available: return the would--block
+object.
+
+
+@defmethod @aclass{input-port} get-single
+@defmethodx @aclass{input/output-port} get-single
+Read, consume and return a single data unit from the port.  It is the
+responsibility of subclasses to provide an implementation for this
+method.
+@end defmethod
+
+
+@defmethod @aclass{input-port} lookahead-single
+@defmethodx @aclass{input/output-port} lookahead-single
+Read, @strong{without} consuming and return a single data unit from the
+port.  It is the responsibility of subclasses to provide an
+implementation for this method.
+@end defmethod
+
+
+@defmethod @aclass{input-port} get-multi-n @var{count}
+@defmethodx @aclass{input/output-port} get-multi-n @var{count}
+Read, consume and return @var{count} data units from the port.  It is
+the responsibility of subclasses to provide an implementation for this
+method.
+@end defmethod
+
+
+@defmethod @aclass{input-port} get-multi-n! @var{storage} @var{start} @var{count}
+@defmethodx @aclass{input/output-port} get-multi-n! @var{storage} @var{start} @var{count}
+Read and consume @var{count} data units from the port and store them in
+the @var{storage} starting at offset @var{start}.  It is the
+responsibility of subclasses to provide an implementation for this
+method.
+@end defmethod
+
+
+@defmethod @aclass{input-port} get-multi-some
+@defmethodx @aclass{input/output-port} get-multi-some
+Read, consume and return multiple data units from the port.  It is the
+responsibility of subclasses to provide an implementation for this
+method.
+@end defmethod
+
+
+@defmethod @aclass{input-port} get-multi-all
+@defmethodx @aclass{input/output-port} get-multi-all
+Read, consume and return all the data from the port.  It is the
+responsibility of subclasses to provide an implementation for this
+method.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Output ports methods
+
+
+@defmethod @aclass{output-port} flush
+@defmethodx @aclass{input/output-port} flush
+Calling this method is like applying to the port the function
+@func{flush-output-port} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{output-port} put-single @var{storage}
+@defmethodx @aclass{input/output-port} put-single @var{storage}
+Write @var{storage} to the port.  It is the responsibility of subclasses
+to provide an implementation for this method.
+@end defmethod
+
+
+@defmethod @aclass{output-port} put-multi @var{storage}
+@defmethodx @aclass{output-port} put-multi @var{storage} @var{start}
+@defmethodx @aclass{output-port} put-multi @var{storage} @var{start} @var{count}
+@defmethodx @aclass{input/output-port} put-multi @var{storage}
+@defmethodx @aclass{input/output-port} put-multi @var{storage} @var{start}
+@defmethodx @aclass{input/output-port} put-multi @var{storage} @var{start} @var{count}
+Write @var{count} units of data from @var{storage} to the port, starting
+at offset @var{start}.  It is the responsibility of subclasses to
+provide an implementation for this method.
+@end defmethod
+
+@c page
+@node builtins ports binary
+@subsection Binary port labels
+
+
+@deftp {Builtin Label} @aclass{binary-port}
+Conventional type for objects satisfying @func{binary-port?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{binary-input-port}
+Conventional type for objects satisfying @func{binary-port?} and
+@func{input-port?}.  It is derived from @class{input-port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{binary-output-port}
+Conventional type for objects satisfying @func{binary-port?} and
+@func{output-port?}.  It is derived from @class{output-port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{binary-input/output-port}
+Conventional type for objects satisfying @func{binary-port?} and
+@func{input/output-port?}.  It is derived from @class{input/input-port}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Input port methods
+
+
+@defmethod @aclass{binary-input-port} get-single
+@defmethodx @aclass{binary-input/output-port} get-single
+Calling this method il like applying to the port the function
+@func{get-u8} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-input-port} lookahead-single
+@defmethodx @aclass{binary-input/output-port} lookahead-single
+Calling this method il like applying to the port the function
+@func{lookahead-u8} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-input-port} get-multi-n @var{count}
+@defmethodx @aclass{binary-input/output-port} get-multi-n @var{count}
+Calling this method il like applying to the port the function
+@func{get-bytevector-n} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-input-port} get-multi-n! @var{bv} @var{start} @var{count}
+@defmethodx @aclass{binary-input/output-port} get-multi-n! @var{bv} @var{start} @var{count}
+Calling this method il like applying to the port the function
+@func{get-bytevector-n!} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-input-port} get-multi-some
+@defmethodx @aclass{binary-input/output-port} get-multi-some
+Calling this method il like applying to the port the function
+@func{get-bytevector-some} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-input-port} get-multi-all
+@defmethodx @aclass{binary-input/output-port} get-multi-all
+Calling this method il like applying to the port the function
+@func{get-bytevector-all} from @rsixlibrary{io ports}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Output port methods
+
+
+@defmethod @aclass{binary-output-port} put-single @var{byte}
+@defmethodx @aclass{binary-input/output-port} put-single @var{byte}
+Calling this method il like applying to the port the function
+@func{put-u8} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{binary-output-port} put-multi @var{bv}
+@defmethodx @aclass{binary-output-port} put-multi @var{bv} @var{start}
+@defmethodx @aclass{binary-output-port} put-multi @var{bv} @var{start} @var{count}
+@defmethodx @aclass{binary-input/output-port} put-multi @var{bv}
+@defmethodx @aclass{binary-input/output-port} put-multi @var{bv} @var{start}
+@defmethodx @aclass{binary-input/output-port} put-multi @var{bv} @var{start} @var{count}
+Calling this method il like applying to the port the function
+@func{put-bytevector} from @rsixlibrary{io ports}.
+@end defmethod
+
+@c page
+@node builtins ports textual
+@subsection Textual port labels
+
+
+@deftp {Builtin Label} @aclass{textual-port}
+Conventional type for objects satisfying @func{textual-port?}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{textual-input-port}
+Conventional type for objects satisfying @func{textual-port?} and
+@func{input-port?}.  It is derived from @class{input-port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{textual-output-port}
+Conventional type for objects satisfying @func{textual-port?} and
+@func{output-port?}.  It is derived from @class{output-port}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{textual-input/output-port}
+Conventional type for objects satisfying @func{textual-port?} and
+@func{input/output-port?}.  It is derived from @class{input/output-port}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Input port methods
+
+
+@defmethod @aclass{textual-input-port} get-single
+@defmethodx @aclass{textual-input/output-port} get-single
+Calling this method il like applying to the port the function
+@func{get-char} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} lookahead-single
+@defmethodx @aclass{textual-input/output-port} lookahead-single
+Calling this method il like applying to the port the function
+@func{lookahead-char} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-multi-n @var{count}
+@defmethodx @aclass{textual-input/output-port} get-multi-n @var{count}
+Calling this method il like applying to the port the function
+@func{get-string-n} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-multi-n! @var{bv} @var{start} @var{count}
+@defmethodx @aclass{textual-input/output-port} get-multi-n! @var{bv} @var{start} @var{count}
+Calling this method il like applying to the port the function
+@func{get-string-n!} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-multi-some
+@defmethodx @aclass{textual-input/output-port} get-multi-some
+Calling this method il like applying to the port the function
+@func{get-string-some} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-multi-all
+@defmethodx @aclass{textual-input/output-port} get-multi-all
+Calling this method il like applying to the port the function
+@func{get-string-all} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-datum
+@defmethodx @aclass{textual-input/output-port} get-datum
+Calling this method il like applying to the port the function
+@func{get-datum} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-input-port} get-line
+@defmethodx @aclass{textual-input/output-port} get-line
+Calling this method il like applying to the port the function
+@func{get-line} from @rsixlibrary{io ports}.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Output port methods
+
+
+@defmethod @aclass{textual-output-port} put-single @var{byte}
+@defmethodx @aclass{textual-input/output-port} put-single @var{byte}
+Calling this method il like applying to the port the function
+@func{put-char} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-output-port} put-multi @var{bv}
+@defmethodx @aclass{textual-output-port} put-multi @var{bv} @var{start}
+@defmethodx @aclass{textual-output-port} put-multi @var{bv} @var{start} @var{count}
+@defmethodx @aclass{textual-input/output-port} put-multi @var{bv}
+@defmethodx @aclass{textual-input/output-port} put-multi @var{bv} @var{start}
+@defmethodx @aclass{textual-input/output-port} put-multi @var{bv} @var{start} @var{count}
+Calling this method il like applying to the port the function
+@func{put-string} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-output-port} put-datum @var{datum}
+@defmethodx @aclass{textual-input/output-port} put-datum @var{datum}
+Calling this method il like applying to the port the function
+@func{put-datum} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-output-port} write @var{datum}
+@defmethodx @aclass{textual-input/output-port} write @var{datum}
+Calling this method il like applying to the port the function
+@func{write} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-output-port} display @var{datum}
+@defmethodx @aclass{textual-input/output-port} display @var{datum}
+Calling this method il like applying to the port the function
+@func{display} from @rsixlibrary{io ports}.
+@end defmethod
+
+
+@defmethod @aclass{textual-output-port} pretty-print @var{datum}
+@defmethodx @aclass{textual-input/output-port} pretty-print @var{datum}
+Calling this method il like applying to the port the function
+@func{pretty-print} from @rsixlibrary{io ports}.
+@end defmethod
+
+@c page
+@node builtins rtds
+@section @rnrs{6} record type descriptor labels
+
+
+@deftp {Builtin Label} @aclass{record-type-descriptor}
+Conventional type for objects satisfying @func{record-type-descriptor?}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{symbol} name
+Return the name of the record type.  Retrieving this field is like
+applying @func{record-type-name} to the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{record-type-descriptor} parent
+Return @false{} or the record type descriptor of the parent.  Retrieving
+this field is like applying @func{record-type-parent} to the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{symbol} uid
+Return @false{} or a symbol representing the unique identifiers of the
+instance.  Retrieving this field is like applying @func{record-type-uid}
+to the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{boolean} generative?
+Returna a boolean, @true{} if the record type is generative.  Retrieving
+this field is like applying @func{record-type-generative?} to the
+instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{boolean} sealed?
+Returna a boolean, @true{} if the record type is sealed.  Retrieving
+this field is like applying @func{record-type-sealed?} to the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{boolean} opaque?
+Returna a boolean, @true{} if the record type is opaque.  Retrieving
+this field is like applying @func{record-type-opaque?} to the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{record-type-descriptor} @aclass{vector} field-names
+Return a vector of symbols representing the field names.  Retrieving
+this field is like applying @func{record-type-field-names} to the
+instance.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @aclass{record-type-descriptor} @aclass{procedure} predicate
+Return the predicate procedure of the instance.  Calling this method is
+like applying @func{record-predicate} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{record-type-descriptor} @aclass{procedure} accessor @var{field-idx}
+Return the accessor procedure for field @var{field-idx}.  Calling this
+method is like applying @func{record-accessor} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{record-type-descriptor} @aclass{procedure} mutator @var{field-idx}
+Return the mutator procedure for field @var{field-idx}.  Calling this
+method is like applying @func{record-mutator} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{record-type-descriptor} @aclass{boolean} field-mutable? @var{field-idx}
+Return a boolean, @true{} if field @var{field-idx} is mutable.  Calling
+this method is like applying @func{record-field-mutable?} to the
+instance.
+@end deftypemethod
+
+@c page
+@node builtins records
+@section @rnrs{6} record labels
+
+
+@deftp {Builtin Label} @aclass{record}
+Conventional type for objects satisfying @func{record?}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@deftypecv {Immutable virtual field} @aclass{record} @aclass{record-type-descriptor} rtd
+Return the record type descriptor.  Retrieving this field is like
+applying @func{record-rtd} to the instance.
+@end deftypecv
+
+@c page
+@node builtins conditions
+@section Condition labels
+
+
+@deftp {Builtin Label} @aclass{condition}
+Conventional type for objects satisfying @func{condition?}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{condition} @aclass{condition} constructor @var{condition} @dots{}
+Return the result of applying @func{condition} to the arguments
+@var{condition}.
+@end deftypeop
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors and mutators
+
+
+@defcv {Immutable virtual field} @aclass{condition} message
+Accessing this field is like applying @func{condition-message} to the
+condition object.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{condition} who
+Accessing this field is like applying @func{condition-who} to the
+condition object.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{condition} irritants
+Accessing this field is like applying @func{condition-irritants} to the
+condition object.
+@end defcv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{condition} simple
+Return the result of applying @func{simple-conditions} to the instance.
+@end defmethod
+
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{condition} @aclass{condition} (@meta{condition} @dots{})
+Build and return a new condition object applying the common constructor
+to the result of evaluating the @meta{condition} expressions.
+@end defop
+
+
+@defop Getter @aclass{condition} @var{instance} (@meta{condition-type})
+Value getter.  Equivalent to applying @func{hashtable-ref} to
+@var{instance}; return the value associated to @meta{key}.  If
+@meta{default} is used: it must be an expression whose value is returned
+when the requested key is not in the table.
+@end defop
+
+@c page
+@node builtins procedures
+@section Procedure labels
+
+
+@deftp {Builtin Label} @aclass{procedure}
+Conventional type for objects satisfying @func{procedure?}.
+@end deftp
+
+@c page
+@node builtins multimethods
+@section Predefined generic functions
+
+
+@menu
+* builtins multimethods definers::      Defining multimethods.
+* builtins multimethods methods::       Predefined multimethods.
+@end menu
+
+@c page
+@node builtins multimethods definers
+@subsection Defining multimethods
+
+
+@defun tag-unique-identifiers-of @var{obj}
+Object--type inspector function; return the list of @uid{}s in the type
+hierarchy of @var{obj}.  When this function does not recognise an
+object's type: the return value just identifies @var{obj} as of type
+@class{top}.  This function can recognise:
+
+@enumerate
+@item
+All the built--in objects having conventional label type defined by the
+library @library{nausicaa language builtins}.
+
+@item
+All the instances of classes defined by @func{define-class} from the
+library @library{nausicaa language oopp}.
+@end enumerate
+
+Whenever we define new label types with @func{define-label} from
+@library{nausicaa language oopp}, for example @class{alpha} and
+@class{beta}, it is useful to define a new type inspector function as:
+
+@example
+(define (new-tag-unique-identifiers-of obj)
+  (cond (((<alpha>) obj)
+         (tag-unique-identifiers <alpha>))
+        (((<beta>) obj)
+         (tag-unique-identifiers <beta>))
+        (else
+         (tag-unique-identifiers-of obj))))
+@end example
+
+@noindent
+and use it as argument--type inspector function for multimethods.
+@end defun
+
+
+@deffn Syntax define-generic @meta{name} @meta{formals} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
+Define a new ordinary generic function (a macro) and bind it to
+@meta{name}.  The number of arguments is specified by @meta{formals}: a
+list of identifiers, one for each argument; the list is used only to
+determine the number of arguments (it can be used to document the
+intended meaning of arguments).
+
+When the optional @clause{merge-with-multimethods} clause is used: the
+internal methods table is initialised to the union of the methods tables
+from the @meta{generic} arguments, which must be ordinary generic
+function identifiers.  The union is performed by visiting arguments from
+left to right; when two methods have the same signature, the one from
+the leftmost generic function takes precedence.
+@end deffn
+
+
+@deffn Syntax define-generic* @meta{name} @meta{formals} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} merge-with-multimethods @meta{generic} @dots{}
+Define a new starred generic function (a macro) and bind it to
+@meta{name}.  The number of arguments is specified by @meta{formals}: a
+list of identifiers, one for each argument; the list is used only to
+determine the number of arguments (it can be used to document the
+intended meaning of arguments).
+
+When the optional @clause{merge-with-multimethods} clause is used: the
+internal methods tables are initialised to the unions of the methods
+tables from the @meta{generic} arguments, which must be starred generic
+function identifiers.  The union is performed by visiting arguments from
+left to right; when two methods have the same signature, the one from
+the leftmost generic function takes precedence.
+@end deffn
+
+@c page
+@node builtins multimethods methods
+@subsection Predefined multimethods
+
+
+@subsubheading Generic methods
+
+
+@deffn {Generic Function} object->string @var{obj}
+Return a string representation for @var{obj}.  A non--specialised method
+is predefined to use the following implementation:
+
+@example
+(call-with-string-output-port
+   (lambda (port)
+     (display obj port)))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Input ports methods
+
+
+For all the following input methods: if @eof{} is found and no data is
+available: return the @eof{} object; if the underlying device is in
+non--blocking mode and no data is available: return the would--block
+object.
+
+
+@deffn {Generic Function} get-single @var{port}
+Read, consume and return a single data unit from the port.
+@end deffn
+
+
+@deffn {Generic Function} lookahead-single @var{port}
+Read, @strong{without} consuming and return a single data unit from the
+port.
+@end deffn
+
+
+@deffn {Generic Function} get-multi-n @var{port} @var{count}
+Read, consume and return @var{count} data units from the port.
+@end deffn
+
+
+@deffn {Generic Function} get-multi-n! @var{port} @var{storage} @var{start} @var{count}
+Read and consume @var{count} data units from the port and store them in
+the @var{storage} starting at offset @var{start}.
+@end deffn
+
+
+@deffn {Generic Function} get-multi-some @var{port}
+Read, consume and return multiple data units from the port.
+@end deffn
+
+
+@deffn {Generic Function} get-multi-all @var{port}
+Read, consume and return all the data from the port.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Output ports methods
+
+
+@deffn {Generic Function} put-single @var{port} @var{storage}
+Write @var{storage} to the port.
+@end deffn
+
+
+@deffn {Generic Function} put-multi-2 @var{port} @var{storage}
+Write @var{storage} to the port.
+@end deffn
+
+
+@deffn {Generic Function} put-multi-3 @var{port} @var{storage} @var{start}
+Write @var{storage} to the port starting at offset @var{start}.
+@end deffn
+
+
+@deffn {Generic Function} put-multi-4 @var{port} @var{storage} @var{start} @var{count}
+Write @var{count} units of data from @var{storage} to the port, starting
+at offset @var{start}.
+@end deffn
+
+@c page
+@node builtins mixins
+@section Predefined mixins
+
+
+@menu
+* builtins mixins hashable::    Hashable and properties clauses.
+@end menu
+
+@c page
+@node builtins mixins hashable
+@subsection Hashable and properties clauses
+
+
+@deftp {Mixin} @aclass{hashable-and-properties-clauses}
+Mixin type implementing hash function and properties list for classes;
+this mixin cannot be used by labels.  When importing this mixin we must
+specialise the identifier @class{class} to the importing class type, as
+follows:
+
+@example
+(define-class <mine>
+  (mixins (<hashable-and-properties-clauses>
+           (<class>     <mine>))))
+@end example
+
+This mixin appends a single concrete field to the enclosing class; such
+field must be initialised to @false{}.
+@end deftp
+
+
+@deftypecv {Mutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} %uid
+Contains @false{} or a gensym.  This field should @strong{never} be
+accessed directly.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} uid
+Contains gensym.  The symbol is unique for the instance object.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{exact-integer} hash
+An exact integer to be used as hashtable key for the instance.
+Hashtables having a @class{hashable-and-properties-clauses} as key can
+be instantiated as follows:
+
+@example
+(make-hashtable
+  (lambda ((V <hashable-and-properties-clauses>))
+    (V hash))
+  eq?)
+@end example
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defmethod @aclass{hashable-and-properties-clauses} putprop @var{key} @var{value}
+Add a new property @var{key} to the property list of the instance;
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} getprop @var{key}
+Return the value of the property @var{key} in the property list of the
+instance; if @var{key} is not set: return @false{}.  @var{key} must be a
+symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} remprop @var{key}
+Remove the property @var{key} from the property list of the instance; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} property-list
+Return a new association list representing the property list of the
+instance.  The order of the entries is the same as the property creation
+order.
+@end defmethod
+
+@c end of file

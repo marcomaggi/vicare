@@ -151,6 +151,7 @@ EXTRA_DIST= \
 	ikarus.debugger.sls				\
 	ikarus.emergency.sls				\
 	ikarus.enumerations.sls				\
+	ikarus.environment-inquiry.sls			\
 	ikarus.equal.sls				\
 	ikarus.exceptions.sls				\
 	ikarus.fasl.read.sls				\
@@ -191,9 +192,11 @@ EXTRA_DIST= \
 	ikarus.sort.sls					\
 	ikarus.string-to-number.sls 			\
 	ikarus.strings.sls				\
+	ikarus.strings-table.sls			\
 	ikarus.structs.sls				\
 	ikarus.symbol-table.sls				\
 	ikarus.symbols.sls				\
+	ikarus.syntax-utilities.sls			\
 	ikarus.time-and-date.sls			\
 	ikarus.timer.sls				\
 	ikarus.unicode-conversion.sls			\

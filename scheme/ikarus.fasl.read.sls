@@ -24,6 +24,8 @@
 		  fasl-read)
     (except (ikarus.code-objects)
 	    procedure-annotation)
+    (only (ikarus.strings-table)
+	  intern-string)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
     (vicare unsafe operations)
@@ -112,6 +114,9 @@
     ;;
     (%read/mark #f))
 
+  (define intern-string?
+    (make-parameter #t))
+
   (define (%read/mark m)
     ;;Read  and return the  next object.   Unless M  is false:  mark the
     ;;object with M.
@@ -142,7 +147,9 @@
 	       ($string-set! str i (read-u8-as-char port))
 	       (next-char ($fxadd1 i))))
 	   (when m (%put-mark m str))
-	   str))
+	   (if (intern-string?)
+	       (intern-string str)
+	     str)))
 	((#\S) ;Unicode string
 	 (let* ((len (read-integer-word port))
 		(str (make-string len)))
@@ -151,17 +158,21 @@
 	       ($string-set! str i (integer->char (read-u32 port)))
 	       (next-char ($fxadd1 i))))
 	   (when m (%put-mark m str))
-	   str))
+	   (if (intern-string?)
+	       (intern-string str)
+	     str)))
 	((#\M) ;symbol
-	 (let ((sym (string->symbol (%read-without-mark))))
-	   (when m (%put-mark m sym))
-	   sym))
+	 (parametrise ((intern-string? #f))
+	   (let ((sym (string->symbol (%read-without-mark))))
+	     (when m (%put-mark m sym))
+	     sym)))
 	((#\G) ;generated symbol
-	 (let* ((pretty (%read-without-mark))
-		(unique (%read-without-mark))
-		(g      (foreign-call "ikrt_strings_to_gensym" pretty unique)))
-	   (when m (%put-mark m g))
-	   g))
+	 (parametrise ((intern-string? #f))
+	   (let* ((pretty (%read-without-mark))
+		  (unique (%read-without-mark))
+		  (g      (foreign-call "ikrt_strings_to_gensym" pretty unique)))
+	     (when m (%put-mark m g))
+	     g)))
 	((#\V) ;vector
 	 (let* ((len (read-integer-word port))
 		(vec (make-vector len)))

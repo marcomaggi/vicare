@@ -1,0 +1,1107 @@
+@node formations
+@chapter Formatting strings
+
+
+@cindex @library{vicare formations}, library
+@cindex Library @library{vicare formations}
+
+
+The library @library{vicare formations} defines a sophisticated
+@func{format} function: a powerful way to print numbers, strings and
+other objects together with literal text under the control of a template
+string.
+
+@quotation
+The library @library{vicare formations} is a distribution of the
+@func{format} function written by Dirk Lutzebaeck
+(@email{lutzeb@@cs.tu-berlin.de}), originally by Ken Dickey and Aubrey
+Jaffer, included in the Guile distribution and later adapted to @rnrs{6}
+Scheme by Marco Maggi.
+@end quotation
+
+@menu
+* formations output::           Formatted output.
+* formations escape generic::   Escape sequences for generic values.
+* formations escape char::      Escape sequences for characters.
+* formations escape case::      Escape sequences for case conversion.
+* formations escape integers::  Escape sequences for integers.
+* formations escape flonums::   Escape sequences for flonums.
+* formations escape complex::   Escape sequences for complex numbers.
+* formations escape args::      Escape sequences for special
+                                arguments handling.
+* formations escape lines::     Escape sequences for output lines.
+* formations escape columns::   Escape sequences for columns
+                                and indentation.
+* formations escape misc::      Miscellaneous escape sequences.
+@end menu
+
+@c page
+@node formations output
+@section Formatted output
+
+
+A format string is generally more compact and easier than using just the
+standard procedures like @func{display}, @func{write} and
+@func{newline}.  Parameters in the output string allow various output
+styles, and parameters can be taken from the arguments for runtime
+flexibility.
+
+@func{format} is similar to the Common Lisp procedure of the same name,
+but it's not identical and doesn't have quite all the features found in
+Common Lisp@footnote{For the original Common Lisp specification see
+(@aurl{} last verified Sep 16, 2013):
+@url{http:/@//@/www.cs.cmu.edu/@/Groups/@/AI/@/html/@/cltl/@/clm/@/node200.html}}.
+
+C programmers will note the similarity between @func{format} and
+@cfunc{printf}, though escape sequences are marked with @code{~} instead
+of @code{%}, and are more powerful.
+
+
+@defun format @var{template-string}
+@defunx format @var{template-string} @var{args} @dots{}
+@defunx format @var{dest} @var{template-string}
+@defunx format @var{dest} @var{template-string} @var{arg} @dots{}
+Write output specified by the @var{template-string} string to
+@var{dest}; assume that the zero--based starting column number is the
+one specified by the parameter @func{format-output-column}.
+
+@var{dest} can be:
+
+@itemize
+@item
+An output port.
+
+@item
+@true{} for @func{current-output-port}.
+
+@item
+A number for @func{current-error-port}.
+
+@item
+@false{} to return the output as a string.
+@end itemize
+
+If @var{dest} is not given (that is: the first argument is a string):
+the output is returned as if @false{} is used as @var{dest} argument.
+
+@var{template-string} can contain literal text to be output, and
+@code{~} escapes.  Each escape has the form:
+
+@example
+~ [@var{param} [, @var{param} @dots{}] [:] [@@] @var{code}
+@end example
+
+@var{code} is a character determining the escape sequence; the
+@var{code} letters are @strong{not} case--sensitive, upper and lower
+case are the same.  The @code{:} and @code{@@} characters are optional
+modifiers, one or both of which change the way various codes operate.
+Optional parameters are accepted by some codes too.  Parameters have the
+following forms:
+
+@table @code
+@item [+/-]number
+An integer, with optional @code{+} or @code{-} sign in front of it.
+
+@item '
+The quote.  The following character in the format string, for instance
+@code{'z} for @code{z}.
+
+@item v
+The next function argument as the parameter.  @code{v} stands for
+``variable'', a parameter can be calculated at runtime and included in
+the arguments.  Upper case @code{V} can be used too.
+
+@item #
+The number of arguments remaining.
+@end table
+
+Parameters are separated by commas (@code{,}).  A parameter can be left
+empty to keep its default value when supplying later parameters.
+
+It's an error if there are not enough arguments for the escapes in the
+format string, but any excess arguments are ignored.
+@end defun
+
+
+@deffn Parameter format-output-column
+The zero--based starting column number for the next invocations of
+@func{format}.  The value is initialised to @math{0} and must be a
+non--negative fixnum.
+@end deffn
+
+
+Iterations @code{~@{} @code{~@}} and conditionals @code{~[} @code{~;}
+@code{~]} can be nested, but must be properly nested, meaning the inner
+form must be entirely within the outer form.  So it's not possible, for
+instance, to try to conditionalize the endpoint of an iteration.
+
+@example
+(format "~@{ ~[ ... ~] ~@}" ...)       ;; good
+(format "~@{ ~[ ... ~@} ... ~]" ...)   ;; bad
+@end example
+
+The same applies to case conversions @code{~(} @code{~)}, they must
+properly nest with respect to iterations and conditionals (though
+currently a case conversion cannot nest within another case conversion).
+
+When a sub--format (@code{~?}) is used, that sub--format string must be
+self-contained.  It cannot for instance give a @code{~@{} to begin an
+iteration form and have the @code{~@}} up in the originating format, or
+similar.
+
+@c page
+@node formations escape generic
+@section Escape sequences for generic values
+
+
+@deffn {Format Escape Sequence} ~a
+@deffnx {Format Escape Sequence} ~s
+Object output.  Parameters: @var{minwidth}, @var{padinc},
+@var{minpad}, @var{padchar}.
+
+@code{~a} outputs an argument like @code{display}, @code{~s}
+outputs an argument like @code{write}.
+
+@example
+(format #t "~a" "foo") @print{} foo
+(format #t "~s" "foo") @print{} "foo"
+@end example
+
+@code{~:a} and @code{~:s} put objects that don't have an external
+representation in quotes like a string.
+
+@example
+(format #t "~:a" car) @print{} "#<primitive-procedure car>"
+@end example
+
+If the output is less than @var{minwidth} characters (default 0), it's
+padded on the right with @var{padchar} (default space).  @code{~@@a}
+and @code{~@@s} put the padding on the left instead.
+
+@example
+(format #f "~5a" 'abc)       @result{} "abc  "
+(format #f "~5,,,'-@@a" 'abc) @result{} "--abc"
+@end example
+
+The number of padding characters, @var{padchar}, included in the output
+is computed with: @math{@var{minpad} + @var{N} * @var{padinc}}, where
+@var{n} is the smallest integer making the total object plus padding
+greater than or equal to @var{minwidth}.  The default @var{minpad} is 0
+and the default @var{padinc} is 1 (imposing no minimum or multiple).
+
+@example
+(format #f "~5,1,4a" 'abc) @result{} "abc    "
+@end example
+@end deffn
+
+
+More examples:
+
+@example
+(import (except (vicare) format)
+  (vicare formations))
+
+(format #f "ciao ~:a" display)
+@result{} "ciao \"#<procedure display>\""
+
+(format "~5a" 123)              @result{} "123  "
+(format "~5s" 123)              @result{} "123  "
+
+(format "~5@@a" 123)            @result{} "  123"
+(format "~5@@s" 123)            @result{} "  123"
+
+(format "~5,,,'.a" 123)         @result{} "123.."
+(format "~5,,,'.s" 123)         @result{} "123.."
+
+(format "~5,,,'.@@a" 123)       @result{} "..123"
+(format "~5,,,'.@@s" 123)       @result{} "..123"
+
+(format "~5,,4,'.@@a" 123)      @result{} "....123"
+(format "~5,,4,'.@@s" 123)      @result{} "....123"
+;;;                                1234
+
+(format "~10,,,'a@@a" 123)      @result{} "aaaaaaa123"
+(format "~10,,,'a@@s" 123)      @result{} "aaaaaaa123"
+;;;                                1234567
+
+(format "~10,3,,'u@@a" 123)     @result{} "uuuuuuuuu123"
+(format "~10,3,,'u@@s" 123)     @result{} "uuuuuuuuu123"
+;;;                                123456789
+
+(format "~11,2,,'u@@a" 123)     @result{} "uuuuuuuu123"
+(format "~11,2,,'u@@s" 123)     @result{} "uuuuuuuu123"
+;;;                                12345678
+
+(format "~8,2,,'u@@a" 1)        @result{} "uuuuuuuu1"
+(format "~8,2,,'u@@s" 1)        @result{} "uuuuuuuu1"
+;;;                                12345678
+@end example
+
+@c page
+@node formations escape char
+@section Escape sequences for characters
+
+
+@deffn {Format Escape Sequence} ~c
+Character.  Parameter: @var{charnum}.
+
+Output a character.  The default is to simply output, as per
+@func{write-char}.  @code{~@@c} prints in @func{write} style.
+@code{~:c} prints control characters (@ascii{} 0 to 31) in @code{^X}
+form.
+
+@example
+(format #t "~c" #\z)        @print{} z
+(format #t "~@@c" #\z)       @print{} #\z
+(format #t "~:c" #\newline) @print{} ^J
+@end example
+
+If the @var{charnum} parameter is given then an argument is not taken
+but instead the character is @code{(integer->char @var{charnum})}.  This
+can be used for instance to output characters given by their Unicode
+code.
+
+@example
+(format #t "~65c")  @print{} A
+@end example
+@end deffn
+
+@c page
+@node formations escape case
+@section Escape sequences for case conversion
+
+
+@deffn {Format Escape Sequence} {~( ~)}
+Case conversion.  No parameters.
+
+Between @code{~(} and @code{~)} the case of all output is changed.  The
+modifiers on @code{~(} control the conversion.
+
+@table @asis
+@item @code{~(}
+Lower case using @func{string-downcase}.
+
+@item @code{~:(}
+Title case using @func{string-titlecase}.
+
+@item @code{~@@(}
+Fold case using @func{string-foldcase}.  @strong{NOTE} Currently broken.
+
+@item @code{~:@@(}
+Upper case using @func{string-upcase}.
+@end table
+
+For example:
+
+@example
+(format #t "~(Hello~)")   @print{} hello
+(format #t "~:@@(Hello~)") @print{} HELLO
+@end example
+
+Case conversions do not nest, currently (an exception is raised).  This
+might change in the future, but if it does then it will be to Common
+Lisp style where the outermost conversion has priority, overriding inner
+ones (making those fairly pointless).
+@end deffn
+
+@c page
+@node formations escape integers
+@section Escape sequences for integers
+
+
+@deffn {Format Escape Sequence} ~d
+@deffnx {Format Escape Sequence} ~x
+@deffnx {Format Escape Sequence} ~o
+@deffnx {Format Escape Sequence} ~b
+Integer.  Parameters: @var{minwidth}, @var{padchar}, @var{commachar},
+@var{commawidth}.
+
+Output an integer argument as a decimal, hexadecimal, octal or binary
+integer (respectively).
+
+@example
+(format #t "~d" 123) @print{} 123
+@end example
+
+If the output is less than the @var{minwidth} parameter (default no
+minimum), it's padded on the left with the @var{padchar} parameter
+(default space).
+
+@example
+(format #t "~5,'*d" 12)   @print{} ***12
+(format #t "~5,'0d" 12)   @print{} 00012
+(format #t "~3d"    1234) @print{} 1234
+@end example
+
+The @code{@@} modifier causes a @code{+} sign to be prepended to
+positive numbers, zero included.
+
+@example
+(format #t "~@@b" 12) @print{} +1100
+(format #t "~@@d" 0)  @print{} +0
+@end example
+
+The @code{:} modifier adds a @var{commachar} (default comma) every
+@var{commawidth} digits (default 3).
+
+@example
+(format #t "~:d" 1234567)         @print{} 1,234,567
+(format #t "~10,'*,'/,2:d" 12345) @print{} ***1/23/45
+@end example
+
+Hexadecimal @code{~x} output is in lower case, but the @code{~(} and
+@code{~)} case conversion directives described elsewhere can be used to
+get upper case.
+
+@example
+(format #t "~x"       65261) @print{} feed
+(format #t "~:@@(~x~)" 65261) @print{} FEED
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~r
+Integer in words, roman numerals, or a specified radix.  Parameters:
+@var{radix}, @var{minwidth}, @var{padchar}, @var{commachar},
+@var{commawidth}.
+
+With no parameters output is in words as a cardinal like ``ten'', or
+@code{~:r} prints an ordinal like ``tenth''.
+
+@example
+(format #t "~r" 9)  @print{} nine        ;; cardinal
+(format #t "~r" -9) @print{} minus nine  ;; cardinal
+(format #t "~:r" 9) @print{} ninth       ;; ordinal
+@end example
+
+And also with no parameters, @code{~@@r} gives roman numerals and
+@code{~:@@r} gives old roman numerals.  In old roman numerals
+there's no ``subtraction'', so 9 is @code{VIIII} instead of
+@code{IX}.  In both cases only positive numbers can be output.
+
+@example
+(format #t "~@@r" 89)  @print{} LXXXIX     ;; roman
+(format #t "~:@@r" 89) @print{} LXXXVIIII  ;; old roman
+@end example
+
+When a parameter is given it means numeric output in the specified
+@var{radix} (which can be any integer, @strong{not} only 2, 8, 10 or
+16).  The modifiers and parameters following the radix are the same as
+described for @code{~d} above.
+
+@example
+(format #f "~3r" 27)   @result{} "1000"    ;; base 3
+(format #f "~3,5r" 26) @result{} "  222"   ;; base 3 width 5
+@end example
+@end deffn
+
+@c page
+@node formations escape flonums
+@section Escape sequences for flonums
+
+
+@deffn {Format Escape Sequence} ~f
+Real fixed--point float.  Parameters: @var{width}, @var{decimals},
+@var{scale}, @var{overflowchar}, @var{padchar}.
+
+Output a number or number string in fixed-point format, ie.@: with a
+decimal point.
+
+@example
+(format #t "~f" 5)              @print{} 5.0
+(format #t "~f" 1e-1)           @print{} 0.1
+(format #t "~f" "123")          @print{} 123.0
+(format #t "~f" "#d123")        @print{} 123.0
+(format #t "~f" "#d-1e-1")      @print{} -0.1
+@end example
+
+@code{~@@f} prints a @code{+} sign on positive numbers (including
+zero).
+
+@example
+(format #t "~@@f" 0) @print{} +0.0
+@end example
+
+If the output is less than @var{width} characters (default is no limit
+and no padding) it's padded on the left with @var{padchar} (space by
+default).  If the output equals or exceeds @var{width} then there's no
+padding and the decimals after the comma are truncated if this makes the
+number fit the @var{width}.
+
+@example
+(format "~6f" -1.5)                     @result{} "  -1.5"
+(format "~6,,,,'*f" 23)                 @result{} "**23.0"
+(format "~6f" 1234567.0)                @result{} "1234567.0"
+(format "~10,,,,'.f" 123.456789123)     @result{} "123.456789"
+(format "~5,,,,'.f" 1e9)                @result{} "1000000000.0"
+(format "~5,,,,'.f" 1000000000.123456)  @result{} "1000000000.123456"
+@end example
+
+@var{decimals} is how many digits to print after the decimal point,
+with the value rounded or padded with zeros as necessary.  (The
+default is to output as many decimals as required.)
+
+@example
+(format #t "~1,2f" 3.125) @print{} 3.13
+(format #t "~1,2f" 1.5)   @print{} 1.50
+@end example
+
+@noindent
+Decimals are rounded only when requested.  If not requested they are not
+rounded nor truncated when the output exceeds the requested @var{width}.
+
+@example
+(format #t "~1f"   0.123) @print{} "0.123")
+(format #t "~1,2f" 0.123) @print{} ".12")
+@end example
+
+@var{scale} is a power of 10 applied to the value, moving the decimal
+point that many places.  A positive @var{scale} increases the value
+shown, a negative decreases it.
+
+@example
+(format #t "~,,2f" 1234)  @print{} 123400.0
+(format #t "~,,-2f" 1234) @print{} 12.34
+@end example
+
+If @var{overflowchar} and @var{width} are both given and if the output
+would exceed @var{width}, then that many @var{overflowchar}s are
+printed instead of the value.
+
+@example
+(format #t "~5,,,'xf" 12345) @print{} 12345
+(format #t "~4,,,'xf" 12345) @print{} xxxx
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} ~e
+Real exponential float.  Parameters: @var{width}, @var{decimals},
+@var{expdigits}, @var{intdigits}, @var{overflowchar}, @var{padchar},
+@var{expchar}.
+
+Output a number or number string in exponential notation.
+
+@example
+(format #t "~e" 5000.25) @print{} 5.00025E+3
+(format #t "~e" "123.4") @print{} 1.234E+2
+(format #t "~e" "1e4")   @print{} 1.0E+4
+@end example
+
+@code{~@@e} prints a @code{+} sign on positive numbers (including
+zero).  (This is for the mantissa, a @code{+} or @code{-} sign is
+always shown on the exponent.)
+
+@example
+(format #t "~@@e" 5000.0) @print{} +5.0E+3
+@end example
+
+If the output is less than @var{width} characters it's padded on the
+left with @var{padchar} (space by default).  The default for
+@var{width} is to output with no padding.
+
+@example
+(format #f "~10e" 1234.0)       @result{} "  1.234E+3"
+(format #f "~10,,,,,'*e" 0.5)   @result{} "****5.0E-1"
+@end example
+
+If the output is more than @var{width} characters: decimals in the
+exponential representation are rounded to make the output fit the
+@var{width}; if rounding does not make the output fit, the full output
+without rounding is printed.  When @var{decimals} is specified: no
+rounding is done to remove those decimals, even if the output exceeds
+the @var{width}.
+
+@example
+;; here rounding succeeds in making the output fit
+(format #f "~5e" 123456)        @result{} "1.E+5"
+
+;; here rounding fails in making the output fit
+(format #f "~2e" 123456)        @result{} "1.23456E+5"
+
+;; here DECIMALS causes the output to overflow
+(format "~6,3e" 123.3456)       @result{} "1.233E+2"
+@end example
+
+@var{decimals} is the number of digits shown in the mantissa after the
+decimal point.  The value is rounded or trailing zeros are added as
+necessary.  The default @var{decimals} is to show as much as needed by
+the value.
+
+@example
+(format #f "~,3e" 11111.0) @result{} "1.111E+4"
+(format #f "~,8e" 123.0)   @result{} "1.23000000E+2"
+@end example
+
+@var{expdigits} is the minimum number of digits shown for the
+exponent, with leading zeros added if necessary.  The default for
+@var{expdigits} is to show only as many digits as required.  At least
+1 digit is always shown.
+
+@example
+(format #f "~,,1e" 1.0e99) @result{} "1.0E+99"
+(format #f "~,,6e" 1.0e99) @result{} "1.0E+000099"
+@end example
+
+@var{intdigits} (default 1) is the number of digits to show before the
+decimal point in the mantissa.  @var{intdigits} can be zero, in which
+case the integer part is a single @code{0}, or it can be negative,
+in which case leading zeros are shown after the decimal point.
+
+@example
+(format #t "~,,,3e" 12345.0)  @print{} 123.45E+2
+(format #t "~,,,0e" 12345.0)  @print{} 0.12345E+5
+(format #t "~,,,-3e" 12345.0) @print{} 0.00012345E+8
+@end example
+
+If @var{overflowchar} is given then @var{width} is a hard limit.  If the
+output would exceed @var{width} then instead that many
+@var{overflowchar}s are printed.
+
+@example
+(format #f "~6,,,,'xe" 100.0) @result{} "1.0E+2"
+(format #f "~3,,,,'xe" 100.0) @result{} "xxx"
+@end example
+
+@var{expchar} is the exponent marker character (default @code{E}).
+
+@example
+(format #t "~,,,,,,'ee" 100.0) @print{} 1.0e+2
+@end example
+@end deffn
+
+@c page
+@node formations escape complex
+@section Escape sequences for complex numbers
+
+
+@deffn {Format Escape Sequence} ~i
+Complex fixed--point float.  Parameters: @var{width}, @var{decimals},
+@var{scale}, @var{overflowchar}, @var{padchar}.
+
+Output the argument as a complex number, with both real and imaginary
+part shown (even if one or both are zero).
+
+The parameters and modifiers are the same as for fixed--point @code{~f}
+described above.  The real and imaginary parts are both output with the
+same given parameters and modifiers, except that for the imaginary part
+the @code{@@} modifier is always enabled, so as to print a @code{+} sign
+between the real and imaginary parts.
+
+@example
+(format #t "~i" 1)  @print{} 1.0+0.0i
+@end example
+
+Notice that the imaginary unit character @code{i} is excluded from the
+counting for width and padding.
+@end deffn
+
+@c page
+@node formations escape args
+@section Escape sequences for special arguments handling
+
+
+@deffn {Format Escape Sequence} ~?
+@deffnx {Format Escape Sequence} ~k
+Sub--format.  No parameters.
+
+Take a format string argument and a second argument which is a list of
+arguments for that string, and output the result.
+
+@example
+(format #t "~?" "~d ~d" '(1 2))    @print{} 1 2
+@end example
+
+@code{~@@?} takes arguments for the sub-format directly rather than
+in a list.
+
+@example
+(format #t "~@@? ~s" "~d ~d" 1 2 "foo") @print{} 1 2 "foo"
+@end example
+
+@code{~?} and @code{~k} are the same, @code{~k} is provided for
+T-Scheme compatibility.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} ~*
+Argument jumping.  Parameter: @var{N}.
+
+Move forward @var{N} arguments (default 1) in the argument list.
+@code{~:*} moves backwards.  (@var{N} cannot be negative.)
+
+@example
+(format #f "~d ~2*~d" 1 2 3 4) @result{} "1 4"
+(format #f "~d ~:*~d" 6)       @result{} "6 6"
+@end example
+
+@code{~@@*} moves to argument number @var{N}.  The first argument is
+number 0 (and that's the default for @var{N}).
+
+@example
+(format #f "~d~d again ~@@*~d~d" 1 2) @result{} "12 again 12"
+(format #f "~d~d~d ~1@@*~d~d" 1 2 3)  @result{} "123 23"
+@end example
+
+A @code{#} moves to the end; when followed by a @code{:} modifier it can
+be used to select an absolute position relative to the end of the
+argument list, a reverse of what the @code{@@} modifier does.
+
+@example
+(format #t "~#*~2:*~a" 'a 'b 'c 'd)   @print{} c
+@end example
+
+At the end of the format string the current argument postion does not
+matter, any further arguments are ignored.
+@end deffn
+
+@c ------------------------------------------------------------
+
+
+@deffn {Format Escape Sequence} ~@{ ~@}
+Iteration.  Parameter: @var{maxreps} (for @code{~@{}).
+
+The format between @code{~@{} and @code{~@}} is iterated.  The modifiers
+to @code{~@{} determine how arguments are taken.  The default is a list
+argument with each iteration successively consuming elements from it.
+This is a convenient way to output a whole list.
+
+@example
+(format "~@{~d~@}" '(1 2 3))
+@result{} "123"
+
+(format "~@{~s=~d ~@}" '("x" 1 "y" 2))
+@result{} "\"x\"=1 \"y\"=2 "
+@end example
+
+@code{~:@{} takes a single argument which is a list of lists, each of
+those contained lists gives the arguments for the iterated format.
+
+@example
+(format "~:@{~dx~d ~@}" '((1 2) (3 4) (5 6)))
+@result{} "1x2 3x4 5x6 "
+@end example
+
+@code{~@@@{} takes arguments directly, with each iteration successively
+consuming arguments.
+
+@example
+(format "~@@@{~d~@}" 1 2 3)
+@result{} "123"
+
+(format "~@@@{~s=~d ~@}" "x" 1 "y" 2)
+@result{} "\"x\"=1 \"y\"=2 "
+@end example
+
+@code{~:@@@{} takes list arguments, one argument for each iteration,
+using that list for the format.
+
+@example
+(format "~:@@@{~dx~d ~@}" '(1 2) '(3 4) '(5 6))
+@result{} "1x2 3x4 5x6 "
+@end example
+
+Iterating stops when there are no more arguments or when the
+@var{maxreps} parameter to @code{~@{} is reached (default no
+maximum).
+
+@example
+(format "~2@{~d~@}" '(1 2 3 4))
+@result{} 12
+@end example
+
+If the format between @code{~@{} and @code{~@}} is empty, then a format
+string argument is taken (before iteration argument(s)) and used
+instead.  This allows a sub--format (like @code{~?} above) to be
+iterated.
+
+@example
+(format "~@{~@}" "~d" '(1 2 3))
+@result{} 123
+@end example
+
+Iterations can be nested, an inner iteration operates in the same way as
+described, but of course on the arguments the outer iteration provides
+it; this can be used to work into nested list structures.  For example
+in the following the inner @code{~@{~d~@}x} is applied to @code{(1 2)}
+then @code{(3 4 5)} etc.
+
+@example
+(format "~@{~@{~d~@}x~@}" '((1 2) (3 4 5)))
+@result{} "12x345x"
+@end example
+
+See also @code{~^} below for escaping from iteration.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} {~[ ~; ~]}
+Conditional.  Parameter: @var{selector}.
+
+A conditional block is delimited by @code{~[} and @code{~]}, and
+@code{~;} separates clauses within the block.  @code{~[} takes an
+integer argument and that number clause is used.  The first clause is
+number @samp{0}.
+
+@example
+(format "~[peach~;banana~;mango~]" 0)   @result{} "peach"
+(format "~[peach~;banana~;mango~]" 1)   @result{} "banana"
+(format "~[peach~;banana~;mango~]" 2)   @result{} "mango"
+@end example
+
+The @var{selector} parameter can be used for the clause number, instead
+of taking an argument.
+
+@example
+(format "~0[peach~;banana~;mango~]")    @result{} "peach"
+(format "~1[peach~;banana~;mango~]")    @result{} "banana"
+(format "~2[peach~;banana~;mango~]")    @result{} "mango"
+@end example
+
+If the clause number is out of range then nothing is output.  Or the
+last clause can be @code{~:;} to use that for a number out of range.
+
+@example
+(format "~[banana~;mango~]"         99) @result{} ""
+(format "~[banana~;mango~:;fruit~]" 99) @result{} "fruit"
+@end example
+
+@code{~:[} treats the argument as a flag, and expects two clauses.  The
+first is used if the argument is @false{} or the second otherwise.
+
+@example
+(format "~:[false~;not false~]" #f)   @result{} "false"
+(format "~:[false~;not false~]" 'abc) @result{} "not false"
+
+(let ((n 3))
+  (format "~d gnu~:[s are~; is~] here" n (= 1 n)))
+@result{} "3 gnus are here"
+@end example
+
+@code{~@@[} also treats the argument as a flag, and expects one clause.
+If the argument is @false{} then no output is produced and the argument
+is consumed, otherwise the clause is used and the argument is not
+consumed, it's left for the clause.  This can be used for instance to
+suppress output if @false{} means something not available.
+
+@example
+(format "~@@[temperature=~d~]" 27) @result{} "temperature=27"
+(format "~@@[temperature=~d~]" #f) @result{} ""
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Format Escape Sequence} ~^
+Escape.  Parameters: @vari{val}, @varii{val}, @variii{val}.
+
+Stop formatting if there are no more arguments.  This can be used for
+instance to have a format string adapt to a variable number of
+arguments.
+
+@example
+(format "~d~^ ~d" 1)            @result{} "1"
+(format "~d~^ ~d" 1 2)          @result{} "1 2"
+@end example
+
+Within a @code{~@{} @code{~@}} iteration, @code{~^} stops the current
+iteration step if there are no more arguments to that step, but
+continuing with possible further steps and the rest of the format.  This
+can be used for instance to avoid a separator on the last iteration, or
+to adapt to variable length argument lists.
+
+@example
+(format "~@{~d~^/~@} go"    '(1 2 3))
+@result{} "1/2/3 go"
+
+(format "~:@{ ~d~^~d~@} go" '((1) (2 3)))
+@result{} " 1 23 go"
+@end example
+
+@c  For reference, format.scm doesn't implement that Common Lisp ~:^
+@c  modifier which stops the entire iterating of ~:{ or ~@:{.
+
+@c  FIXME: Believe the Common Lisp spec is for ~^ within ~[ ~]
+@c  conditional to terminate the whole format (or iteration step if in
+@c  an iteration).  But format.scm seems to terminate just the
+@c  conditional form.
+@c
+@c      (format #f "~[abc~^def~;ghi~] blah" 0)
+@c      @result{} "abc blah"                    ;; looks wrong
+
+@c  FIXME: Believe the Common Lisp spec is for ~^ within ~( ~) to end
+@c  that case conversion and then also terminate the whole format (or
+@c  iteration step if in an iteration).  But format.scm doesn't seem
+@c  to do that quite right.
+@c
+@c      (format #f "~d ~^ ~d" 1)      @result{} "1 "
+@c      (format #f "~(~d ~^ ~d~)" 1)  @result{} ERROR
+
+Within a @code{~?} sub--format, @code{~^} operates just on that
+sub-format.  If it terminates the sub--format then the originating
+format will still continue.
+
+@example
+(format "~? items" "~d~^ ~d" '(1))
+@result{} "1 items"
+
+(format "~? items" "~d~^ ~d" '(1 2))
+@result{} "1 2 items"
+@end example
+
+The parameters to @code{~^} (which are numbers) change the condition
+used to terminate.  For a single parameter, termination is when that
+value is zero (notice this makes plain @code{~^} equivalent to
+@code{~#^}).  For two parameters, termination is when those two are
+equal.  For three parameters, termination is when @math{@vari{val} <=
+@varii{val}} and @math{@varii{val} <= @variii{val}}.
+@end deffn
+
+@c page
+@node formations escape lines
+@section Escape sequences for output lines
+
+
+@deffn {Format Escape Sequence} ~%
+Newline.  Parameter: @var{N}.
+
+Without modifiers: output a newline character, or @var{N} many if a
+parameter is given.  A newline (or a few newlines) can of course be
+output just by including them in the format string as @code{"\n"}.
+
+@example
+(format "A~%Z")         @result{} "A\nZ"
+(format "A~3%Z")        @result{} "A\n\n\nZ"
+@end example
+
+@code{~:%} outputs line endings as carriage returns followed by
+newlines, as in @code{"\r\n"}.
+
+@example
+(format "A~:%Z")        @result{} "A\r\nZ"
+(format "A~3:%Z")       @result{} "A\r\n\r\n\r\nZ"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~&
+Start a new line.  Parameter: @var{n}.
+
+Output a newline if not already at the start of a line.  With a
+parameter, output that many newlines, but with the @strong{first} only
+if not already at the start of a line.
+
+@example
+(format "A~&Z")         @result{} "A\nZ"
+(format "A~3&Z")        @result{} "A\n\n\nZ"
+
+;; at the start of a line
+(format "~&Z")          @result{} "Z"
+(format "~3&Z")         @result{} "\n\nZ"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~|
+Formfeed character.  Parameter: @var{N}.
+
+Output a formfeed character, or @var{N} feeds if a parameter is given.
+
+@example
+(format "A~|Z")         @result{} "A\fZ"
+(format "A~3|Z")        @result{} "A\f\f\fZ"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~\n
+Continuation line.  No parameters.
+
+Skip this newline and any following whitespace in the format string,
+i.e.@: don't send it to the output.  This can be used to break up a long
+format string for readability, but not print the extra whitespace.
+
+@example
+(format "abc~
+         ~d def~
+         ~d" 1 2)               @result{} "abc1 def2"
+
+(format "abc~\ndef~\nghi")      @result{} "abcdefghi"
+@end example
+
+@code{~:\n} skips the newline but leaves any further whitespace to be
+printed normally.
+
+@example
+(format "abc~:\n def~:\n ghi")  @result{} "abc def ghi"
+@end example
+
+@code{~@@\n} prints the newline then skips following whitespace.
+
+@example
+(format "abc~@@\n def~@@\n ghi")  @result{} "abc\ndef\nghi"
+@end example
+@end deffn
+
+@c page
+@node formations escape columns
+@section Escape sequences for columns and indentation
+
+
+@deffn {Format Escape Sequence} ~y
+Pretty print.  No parameters.
+
+Output an argument with @func{pretty-print}.
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~_
+Space character.  Parameter: @var{N}.
+
+@c For reference, in Common Lisp ~_ is a conditional newline, but slib
+@c fmtdoc.txi described it as a space, so we keep that.
+
+Output a space character, or @var{N} spaces if a parameter is given.
+
+With a variable parameter this is one way to insert runtime calculated
+padding (@code{~t} or the various field widths can do similar things).
+
+@example
+(format "~_foo" 4)      @result{} " foo"
+(format "~3_foo" 4)     @result{} "   foo"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~t
+Advance to a column position.  Parameters: @var{colnum}, @var{colinc},
+@var{padchar}.
+
+Output @var{padchar} (space by default) to move to the given
+@var{colnum} column.  The start of the line is column 0, the default
+for @var{colnum} is 1.
+
+@example
+(format "~tX")          @result{} " X"
+(format "~0tX")         @result{} "X"
+(format "~1tX")         @result{} " X"
+(format "~2tX")         @result{} "  X"
+(format "~3tX")         @result{} "   X"
+
+(format "~,,'.tX")      @result{} ".X"
+(format "~0,,'.tX")     @result{} "X"
+(format "~1,,'.tX")     @result{} ".X"
+(format "~2,,'.tX")     @result{} "..X"
+(format "~3,,'.tX")     @result{} "...X"
+@end example
+
+If the current column is already past @var{colnum}, then the move is to
+column @code{@var{colnum} + @var{N} * @var{colinc}} for the smallest
+@var{N} which makes that value greater than or equal to the current
+column.  The default @var{colinc} is @math{1} (which means no further
+move).  In the following examples @code{~t} is found when the next
+character should be output at column @math{4}:
+
+@example
+;; @var{colnum} + @var{N} * @var{colinc} = 0+@var{N}*5 = 0+1*5 = 5
+(format "abcd~0,5,'.tX")        @result{} "abcd.X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 1+@var{N}*5 = 1+1*5 = 6
+(format "abcd~1,5,'.tX")        @result{} "abcd..X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 2+@var{N}*5 = 2+1*5 = 7
+(format "abcd~2,5,'.tX")        @result{} "abcd...X"
+;;;                                 0123456789
+
+;; @var{colnum} + @var{N} * @var{colinc} = 3+@var{N}*5 = 3+1*5 = 8
+(format "abcd~3,5,'.tX")        @result{} "abcd....X"
+;;;                                 0123456789
+@end example
+
+@code{~@@t} takes @var{colnum} as an offset from the current column.
+@var{colnum} pad characters are output, then further padding to make the
+current column a multiple of @var{colinc}, if it isn't already so.
+
+@example
+(format #f "a~3,5'*@@tx") @result{} "a****x"
+@end example
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~/
+Tab character.  Parameter: @var{N}.
+
+Output a tab character, or @var{N} tabs if a parameter is given.
+
+@example
+(format "A~/Z")         @result{} "A\tZ"
+(format "A~3/Z")        @result{} "A\t\t\tZ"
+@end example
+@end deffn
+
+@c page
+@node formations escape misc
+@section Miscellaneous escape sequences
+
+
+@deffn {Format Escape Sequence} ~p
+Plural.  No parameters.
+
+Output nothing if the argument is 1, or @samp{s} for any other
+value.
+
+@example
+(format #t "enter name~p" 1) @print{} enter name
+(format #t "enter name~p" 2) @print{} enter names
+@end example
+
+@code{~@@p} prints @samp{y} for 1 or @samp{ies} otherwise.
+
+@example
+(format #t "pupp~@@p" 1) @print{} puppy
+(format #t "pupp~@@p" 2) @print{} puppies
+@end example
+
+@code{~:p} re-uses the preceding argument instead of taking a new
+one, which can be convenient when printing some sort of count.
+
+@example
+(format #t "~d cat~:p" 9)   @print{} 9 cats
+(format #t "~d pupp~:@@p" 5) @print{} 5 puppies
+@end example
+
+@code{~p} is designed for English plurals and there's no attempt to
+support other languages.  @code{~[} conditionals (below) may be able to
+help.
+@end deffn
+
+
+@deffn {Format Escape Sequence} ~~
+Tilde character.  Parameter: @var{n}.
+
+Output a tilde character @code{~}, or @var{n} many if a parameter is
+given.  Normally @code{~} introduces an escape sequence, @code{~~}
+is the way to output a literal tilde.
+
+@example
+(format "A~~Z")         @result{} "A~Z"
+(format "A~3~Z")        @result{} "A~~~Z"
+@end example
+@end deffn
+
+@deffn {Format Escape Sequence} ~!
+Force output.  No parameters.
+
+At the end of output, call @func{flush-output-port} to flush any buffers
+on the destination.  @code{~!} can occur anywhere in the format string,
+but the force is done at the end of output.
+
+When output is to a string: @code{~!} does nothing.
+@end deffn
+
+@c end of file

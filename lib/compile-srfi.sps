@@ -73,6 +73,7 @@
 ;;;(only (srfi :106))
 
   (only (srfi :111))
+  (only (srfi :112))
   )
 
 ;;; end of file

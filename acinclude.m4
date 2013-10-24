@@ -121,6 +121,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_LINUX_ICMP_H
 #  include <linux/icmp.h>
 #endif
+#ifdef HAVE_SYS_UTSNAME_H
+#  include <sys/utsname.h>
+#endif
 #ifdef HAVE_SYS_TIMERFD_H
 #  include <sys/timerfd.h>
 #endif

@@ -1,0 +1,147 @@
+@node bytevector compounds
+@chapter Bytevector compounds
+
+
+@cindex Library @library{vicare containers bytevector-compounds}
+@cindex @library{vicare containers bytevector-compounds}, library
+
+
+A @dfn{bytevector compound} is a sequence of octets split into a
+sequence of bytevectors.  Bytevector compounds have a special @api{} to
+handle the sequence of octets as a First--in First--out queue.
+Bytevector compounds are defined by the library @library{vicare
+containers bytevector-compounds}.
+
+@menu
+* bytevector compounds types::    Data type definitions.
+* bytevector compounds inspect::  Inspecting bytevector compounds.
+* bytevector compounds queue::    Queue programming interface.
+* bytevector compounds access::   Accessors and mutators.
+@end menu
+
+@c page
+@node bytevector compounds types
+@section Data type definitions
+
+
+The following bindings are exported by the library @library{vicare
+containers bytevector-compounds}.
+
+
+@deftp {@rnrs{6} Record Type} bytevector-compound
+@cindex Argument @var{bvcom}
+@cindex Function argument @var{bvcom}
+@cindex @var{bvcom}, function argument
+Record type representing a bytevector compound.  When instances of this
+type are used as arguments to functions: this documentation identifies
+them as @var{bvcom}.
+@end deftp
+
+
+@defun bytevector-compound? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@code{bytevector-compound}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Validation clauses
+
+The following bindings are to be used with the facilities of the library
+@library{vicare arguments validation}, @ref{args, Optional function
+arguments validation}.
+
+
+@deffn {Validation Clause} bytevector-compound @var{obj}
+@deffnx {Validation Clause} false-or-bytevector-compound @var{obj}
+Succeed if @var{obj} is an instance of @code{bytevector-compound}.  The
+second clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector-compound/filled @var{obj}
+Succeed if @var{obj} is an instance of @code{bytevector-compound} and it
+contains at least one octet.
+@end deffn
+
+@c page
+@node bytevector compounds inspect
+@section Inspecting bytevector compounds
+
+
+The following bindings are exported by the library @library{vicare
+containers bytevector-compounds}.
+
+
+@defun bytevector-compound-empty? @var{bvcom}
+Return @true{} if @var{bvcom} has no octets in it, else return @false{}.
+@end defun
+
+
+@defun bytevector-compound-filled? @var{bvcom}
+Return @true{} if @var{bvcom} has at least one octet in it, else return
+@false{}.
+@end defun
+
+
+@defun bytevector-compound-length @var{bvcom}
+Return a non--negative exact integer representing the number of octets
+currently in @var{bvcom}.
+@end defun
+
+
+@defun bytevector-compound-total-length @var{bvcom}
+Return a non--negative exact integer representing the number of octets
+in @var{bvcom}, including the ones in the bytevectors that have been
+already dequeued.
+@end defun
+
+
+@defun bytevector-compound-data @var{bvcom}
+Return the list of bytevectors in @var{bvcom}.  Mutating the return
+value results in undefined behaviour.
+@end defun
+
+@c page
+@node bytevector compounds queue
+@section Queue programming interface
+
+
+The following bindings are exported by the library @library{vicare
+containers bytevector-compounds}.
+
+
+@defun bytevector-compound-enqueue! @var{bvcom} @var{item}
+Enqueue the bytevector @var{item} into @var{bvcom}.  Return unspecified
+values.
+@end defun
+
+
+@defun bytevector-compound-dequeue! @var{bvcom}
+Dequeue the next bytevector from @var{bvcom} and return it; return
+@false{} if @var{bvcom} is empty.
+@end defun
+
+@c page
+@node bytevector compounds access
+@section Accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers bytevector-compounds}.
+
+
+@defun bytevector-compound-u8-set! @var{bvcom} @var{idx} @var{octet}
+@defunx bytevector-compound-u8-ref @var{bvcom} @var{idx}
+Accessor and mutator for non-negative exact integers in the range
+@math{[0, 255]}.
+@end defun
+
+
+@defun bytevector-compound-s8-set! @var{bvcom} @var{idx} @var{byte}
+@defunx bytevector-compound-s8-ref @var{bvcom} @var{idx}
+Accessor and mutator for non-negative exact integers in the range
+@math{[-128, 127]}.
+@end defun
+
+@c end of file

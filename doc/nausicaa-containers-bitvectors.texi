@@ -1,0 +1,174 @@
+@node containers bitvectors
+@section Bitvectors
+
+
+@cindex Library @library{nausicaa containers bitvectors}
+@cindex @library{nausicaa containers bitvectors}, library
+
+
+The library @library{nausicaa containers bitvectors} implements vectors
+of bits on top of Scheme bytevectors and vectors of fixnums.
+
+@menu
+* containers bitvectors class::  Record type of bitvectors.
+* containers bitvectors bits::   Bitwise operations on bitvectors.
+* containers bitvectors conv::   Conversion operations on bitvectors.
+* containers bitvectors comp::   Comparison operations on bitvectors.
+* containers bitvectors ops::    Other operations on bitvectors.
+@end menu
+
+@c page
+@node containers bitvectors class
+@subsection Record type of bitvectors
+
+
+The following bindings are exported by the library @library{nausicaa containers
+bitvectors}.
+
+
+@deftp Class @aclass{bitvector}
+Object type for bitvectors using vectors of fixnums as storage.
+@end deftp
+
+
+@defop {Default constructor} @aclass{bitvector} constructor @var{length}
+Build and return a new @class{bitvector} object capable of holding
+@var{length} bits.  The bits are initialised to zero.
+@end defop
+
+
+@defop {Maker syntax} @aclass{bitvector} @aclass{bitvector} (@meta{length})
+Build and return a new @class{bitvector} using the default constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@defcv {Immutable field} @aclass{bitvector} length
+The number of bits.
+@end defcv
+
+@c ------------------------------------------------------------
+
+@defop {Setter syntax} @aclass{bitvector} set! (@meta{bitvector} (@meta{index})) @meta{bool}
+Set the bit at @meta{index} in the @class{bitvector} @meta{bitvector} to
+one if @meta{bool} is true, or to zero if @meta{bool} is false.
+@end defop
+
+
+@defop {Getter syntax} @aclass{bitvector} @meta{bitvector} (@meta{index})
+Return a boolean representing the bit at @meta{index} in the
+@class{bitvector} @meta{bitvector}.
+@end defop
+
+@c page
+@node containers bitvectors bits
+@subsection Bitwise operations on bitvectors
+
+
+The following bindings are exported by the library @library{nausicaa containers
+bitvectors}.
+
+
+@defmethod @aclass{bitvector} set-all!
+@defmethodx @aclass{bitvector} clear-all!
+Set all the bits to true or to false.
+@end defmethod
+
+
+@defmethod @aclass{bitvector} toggle! @var{index}
+Invert the bit at @var{index}.
+@end defmethod
+
+
+@defmethod @aclass{bitvector} not
+Apply the bitwise NOT to the instance and return a new @class{bitvector}
+object holding the result.
+@end defmethod
+
+
+@defmethod @aclass{bitvector} not!
+Mutate this instance by applying the bitwise NOT operation and storing
+the result in the instance itself.  The return value is the instance
+object itself.
+@end defmethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} and (@var{B} @aclass{bitvector})
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} ior (@var{B} @aclass{bitvector})
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} xor (@var{B} @aclass{bitvector})
+Apply the bitwise AND, inclusive OR or exclusive OR to the instance and
+@var{B}, then return a new @class{bitvector} object representing the
+result.  @var{B} must have the same length of the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} and! (@var{B} @aclass{bitvector})
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} ior! (@var{B} @aclass{bitvector})
+@deftypemethodx @aclass{bitvector} @aclass{bitvector} xor! (@var{B} @aclass{bitvector})
+Mutate this instance by applying the bitwise AND, inclusive OR or
+exclusive OR to the instance and @var{B} and storing the result in the
+instance itself.  @var{B} must have the same length of the instance.
+@end deftypemethod
+
+
+@defmethod @aclass{bitvector} bit-count
+Return an exact integer being the number of bits set to true.
+@end defmethod
+
+
+@defmethod @aclass{bitvector} first-bit-set
+Return an exact integer being the offset of the first bit set to true;
+if all the bits are set to false: return @math{-1}.
+@end defmethod
+
+@c page
+@node containers bitvectors conv
+@subsection Conversion operations on bitvectors
+
+
+The following bindings are exported by the library @library{nausicaa containers
+bitvectors}.
+
+
+@defmethod @aclass{bitvector} list
+@defmethodx @aclass{bitvector} vector
+Return a list or vector filled with boolean values representing the bits
+of the bitvector.  The boolean at index zero in the returned sequence
+corresponds to the bit at index zero in the bitvector.
+@end defmethod
+
+
+@defun list->bitvector @var{ell}
+@defunx vector->bitvector @var{vec}
+Build and return a new @class{bitvector} object representing the values
+in the list @var{ell} or vector @var{vec}.
+@end defun
+
+@c page
+@node containers bitvectors comp
+@subsection Comparison operations on bitvectors
+
+
+The following bindings are exported by the library @library{nausicaa containers
+bitvectors}.
+
+
+@defmethod @aclass{bitvector} = (@var{B} @aclass{bitvector})
+Return true if the instance and @var{B} are equal in length and bit by
+bit.
+@end defmethod
+
+@c page
+@node containers bitvectors ops
+@subsection Other operations on bitvectors
+
+
+The following bindings are exported by the library @library{nausicaa containers
+bitvectors}.
+
+
+@deftypemethod @aclass{bitvector} @aclass{bitvector} clone
+Build and return a copy of this instance using newly allocated storage.
+@end deftypemethod
+
+@c end of file

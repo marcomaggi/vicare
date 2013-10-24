@@ -1,0 +1,1029 @@
+@node irregex
+@chapter IrRegular expressions
+
+
+@cindex @library{vicare irregex}, library
+@cindex Library @library{vicare irregex}
+
+
+The library @library{vicare irregex} is an implementation of regular
+expressions; it supports both @posix{} syntax with various (irregular)
+Perl--Compatible Regular Expressions (@acronym{PCRE}) extensions, as
+well as SCSH's Scheme Regular Expressions (@acronym{SRE}) syntax, with
+various aliases for commonly used patterns.
+
+Deterministic Finite Automata (@acronym{DFA}) matching is used when
+possible, otherwise a closure--compiled Nondeterministic Finite Automata
+(@acronym{NFA}) approach is
+used.@footnote{See @url{http://en.wikipedia.org/wiki/Automata_theory}.}
+
+@quotation
+The library is derived from IrRegex, an implementation of regular
+expressions by Alex Shinn; only small changes were needed for
+integration into Vicare.  The original package is distributed under a
+@acronym{BSD} style license and can be downloaded from:
+
+@center @url{http://synthcode.com/}
+@end quotation
+
+@menu
+* irregex conventions::         Conventions.
+* irregex pred::                Predicates.
+* irregex compile::             Compiling regular expressions.
+* irregex match::               Match objects.
+* irregex replace::             Replacing substrings.
+* irregex chunk::               Chunked string matching.
+* irregex misc::                Miscellaneous functions.
+* irregex pcre::                Supported @acronym{PCRE} syntax.
+* irregex sre::                 Extended @acronym{SRE} syntax.
+@end menu
+
+@c page
+@node irregex conventions
+@section Conventions
+
+
+In the documentation of the functions exported by @library{vicare
+irregex}, the following conventions for argument names are used:
+
+@table @var
+@item pcre
+A string representing a regular expression in @posix{} syntax, with
+@acronym{PCRE} extensions.
+
+@item sre
+A symbolic expression (a list) representing an @acronym{SRE} regular
+expression in SCSH syntax.
+
+@item irx
+A regular expression in one of the following forms: string in
+@posix{}/@acronym{PCRE} syntax; symbolic expression in @acronym{SRE}
+syntax; a precompiled regular expression value.
+
+@item str
+A string.
+
+@item start
+@itemx past
+Non--negative, exact integers representing indexes usually into a
+string.  @var{start} is the index of the first code point in a selected
+substring; @var{past} is the index of the code point past the last code
+point included in the selected substring.
+
+@item obj
+Can be any value.
+@end table
+
+@c page
+@node irregex pred
+@section Predicates
+
+
+@defun {irregex?} @var{obj}
+Return @true{} if @var{obj} is a compiled regular expression.  Compiled
+regular expression values are disjoint from all the other Scheme types.
+@end defun
+
+
+@defun {irregex-match-data?} @var{obj}
+Return @true{} if @var{obj} is a successful match result from
+@func{irregex-search} or @func{irregex-match}.  Match data values are
+disjoint from all the other Scheme types.
+@end defun
+
+@c page
+@node irregex compile
+@section Compiling regular expressions
+
+
+@defun irregex @var{pcre/sre} @var{options} ...
+@defunx {string->irregex} @var{pcre} @var{options} ...
+@defunx {sre->irregex} @var{sre} @var{options} ...
+Compile a regular expression from either a @posix{}--style regular
+expression string (with most @acronym{PCRE} extensions) or an
+SCSH--style @acronym{SRE}.  Return an object representing the compiled
+regular expression.
+
+There is no @code{(rx ...)} syntax to specify the regular expression, we
+just use normal Scheme lists.  Technically a string by itself could be
+considered a valid @acronym{SRE}, so if we want to just match a literal
+string we should use something like:
+
+@example
+(irregex `(: ,str))
+@end example
+
+@noindent
+or use the explicit:
+
+@example
+(string->irregex str)
+@end example
+
+The optional @var{options} are a list of any of the following symbols,
+which must be quoted:
+
+@table @code
+@item i
+@itemx case-insensitive
+match case--insensitively;
+
+@item m
+@itemx multi-line
+treat string as multiple lines (effects @code{^} and @code{$});
+
+@item s
+@item single-line
+treat string as a single line (@code{.} can match newline);
+
+@item utf8
+@utf{}-8 mode, assumes strings are byte--strings;
+
+@item fast
+try to optimize the regular expression;
+
+@item small
+try to compile a smaller regular expression.
+@end table
+
+@quotation
+@strong{NOTE} The @code{fast} and @code{small} options may not actually
+make the compiled expression any faster or smaller at the moment.
+@end quotation
+@end defun
+
+@c page
+@node irregex match
+@section Match objects
+
+
+@defun irregex-search @var{irx} @var{str}
+@defunx irregex-search @var{irx} @var{str} @var{start}
+@defunx irregex-search @var{irx} @var{str} @var{start} @var{past}
+Search for any instance of the pattern @var{irx} in @var{str},
+optionally between the given range.  If a match is found, return a match
+object, otherwise @false{}.  Match objects can be used to query the
+selected substring or its submatches using the @func{irregex-match-*}
+procedures below.  Examples:
+
+@example
+(irregex-search "[a-z]+" "123abc456")
+@result{} ... ; match object
+
+(irregex-search "[a-z]+" "123456")
+@result{} #f
+
+(irregex-search "foobar" "abcFOOBARdef")
+@result{} #f
+
+(irregex-search (string->irregex "foobar"
+                                 'case-insensitive)
+                "abcFOOBARdef")
+@result{} ... ; match object
+@end example
+
+Matching follows the @posix{} leftmost, longest semantics, when
+searching.  That is, of all possible matches in the string,
+@func{irregex-search} will return the match at the first position
+(leftmost).  If multiple matches are possible from that same first
+position, the longest match is returned.
+@end defun
+
+
+@defun irregex-match @var{irx} @var{str}
+Like @func{irregex-search}, but performs an anchored match against the
+beginning and end of the string, without searching.
+
+Examples:
+
+@example
+(irregex-match '(w/nocase "foobar") "abcFOOBARdef")
+@result{} #f
+
+(irregex-match '(w/nocase "foobar") "FOOBAR")
+@result{} ... ; match object
+@end example
+@end defun
+
+
+@defun irregex-match-substring @var{match-obj}
+@defunx irregex-match-substring @var{match-obj} @var{index-or-name}
+@defunx irregex-match-start-index @var{match-obj} @var{index-or-name}
+@defunx irregex-match-end-index @var{match-obj} @var{index-or-name}
+Fetch the matched substring (or its start or end offset) at the given
+submatch index, or named submatch.  The entire match is index 0, the
+first 1, etc.  The default is index 0.  Examples:
+
+@example
+(irregex-match-substring
+   (irregex-search "ciao" "hello ciao salut")
+   0)
+@result{} "ciao"
+
+(let ((match (irregex-search "c(i(a(o)))"
+                             "hello ciao salut")))
+;;;                           01234567890123456
+
+  (irregex-match-substring match)       @result{} "ciao"
+  (irregex-match-substring match 0)     @result{} "ciao"
+  (irregex-match-substring match 1)     @result{} "iao"
+  (irregex-match-substring match 2)     @result{} "ao"
+  (irregex-match-substring match 3)     @result{} "o"
+
+  (irregex-match-start-index match 0)   @result{} 6
+  (irregex-match-past-index match 0))   @result{} 10
+@end example
+@end defun
+
+@c page
+@node irregex replace
+@section Replacing substrings
+
+
+@defun irregex-replace @var{irx} @var{str} [@var{replacements} ...]
+@defunx {irregex-replace/all} @var{irx} @var{str} [@var{replacements} ...]
+Match a pattern in a string, and replaces it with a (possibly empty)
+list of substitutions.  Each @var{replacement} can be either a string
+literal, a numeric index, a symbol (as a named submatch), or a procedure
+which takes one argument (the match object) and returns a string.
+
+@func{irregex-replace} will replace only the first match, while
+@func{irregex-replace/all} will replace all of them.
+
+Examples:
+
+@example
+(irregex-replace "[aeiou]" "hello world" "*")
+@result{} "h*llo world"
+
+(irregex-replace/all "[aeiou]" "hello world" "*")
+@result{} "h*ll* w*rld"
+@end example
+@end defun
+
+@c page
+@node irregex chunk
+@section Chunked string matching
+
+
+It's often desirable to perform regular expression matching over
+sequences of characters not represented as a single string.  The most
+obvious example is a text--buffer data structure, but we may also want
+to match over lists or trees of strings (i.e. ropes), over only certain
+ranges within a string, over an input port, etc.
+
+With existing regular expression libraries, the only way to accomplish
+this is by converting the abstract sequence into a freshly allocated
+string.  This can be expensive, or even impossible if the object is a
+text--buffer opened onto a 500MB file.
+
+@library{vicare irregex} provides a chunked string @api{} specifically
+for this purpose.
+
+
+@defun make-irregex-chunker @var{get-next} @var{get-string}
+@defunx make-irregex-chunker @var{get-next} @var{get-string} @var{get-start}
+@defunx make-irregex-chunker @var{get-next} @var{get-string} @var{get-start} @var{get-end}
+@defunx make-irregex-chunker @var{get-next} @var{get-string} @var{get-start} @var{get-end}
+@defunx make-irregex-chunker @var{get-next} @var{get-string} @var{get-start} @var{get-end} @var{get-substring}
+@defunx make-irregex-chunker @var{get-next} @var{get-string} @var{get-start} @var{get-end} @var{get-substring} @var{get-subchunk}
+Define a chunking @api{}.
+
+@table @code
+@item (@var{get-next} chunk)
+Return the next chunk, or @false{} if there are no more chunks.
+
+@item (@var{get-string} chunk)
+A string source for the chunk.
+
+@item (@var{get-start} chunk)
+The start index of the result of @var{get-string} (defaults to always 0).
+
+@item (@var{get-end} chunk)
+The end (exclusive) of the string (defaults to @func{string-length} of
+the source string).
+
+@item (@var{get-substring} @var{cnk1} @var{i} @var{cnk2} @var{j})
+A substring for the range between the chunk @var{cnk1} starting at index
+@var{i} and ending at @var{cnk2} at index @var{j}.
+
+@item (@var{get-subchunk} @var{cnk1} @var{i} @var{cnk2} @var{j})
+As above but returns a new chunked data type instead of a string
+(optional).
+@end table
+
+There are two important constraints on the @var{get-next} procedure.  It
+must return an @func{eq?} identical object when called multiple times on
+the same chunk, and it must not return a chunk with an empty string
+(start == past).  This second constraint is for performance reasons, we
+push the work of possibly filtering empty chunks to the chunker since
+there are many chunk types for which empty strings aren't possible, and
+this work is thus not needed.  Note that the initial chunk passed to
+match on is allowed to be empty.
+
+@var{get-substring} is provided for possible performance improvements,
+without it a default is used.
+
+@var{get-subchunk} is optional, but without it we cannot use
+@func{irregex-match-subchunk}.
+@end defun
+
+
+@defun irregex-match-subchunk @var{match-obj}
+@defunx irregex-match-subchunk @var{match-obj} @var{index-or-name}
+Generate a chunked data--type for the given match item, of the same type
+as the underlying chunk type.  This is only available if the chunk type
+specifies the @func{get-subchunk} @api{}, otherwise an error is raised.
+@end defun
+
+
+@defun {irregex-search/chunked} @var{irx} @var{chunker} @var{chunk}
+@defunx {irregex-search/chunked} @var{irx} @var{chunker} @var{chunk} @var{start}
+@defunx {irregex-match/chunked} @var{irx} @var{chunker} @var{chunk}
+@defunx {irregex-match/chunked} @var{irx} @var{chunker} @var{chunk} @var{start}
+These return normal match--data objects.
+
+Example: To match against a simple, flat list of strings use:
+
+@example
+(define (rope->string rope1 start rope2 end)
+  (if (eq? rope1 rope2)
+      (substring (car rope1) start end)
+      (let loop ((rope (cdr rope1))
+                 (res (list (substring (car rope1) start))))
+         (if (eq? rope rope2)
+             (string-concatenate-reverse      ; from SRFI-13
+              (cons (substring (car rope) 0 end) res))
+             (loop (cdr rope) (cons (car rope) res))))))
+
+(define rope-chunker
+  (make-irregex-chunker (lambda (x)
+                          (and (pair? (cdr x)) (cdr x)))
+                        car
+                        (lambda (x)
+                          0)
+                        (lambda (x)
+                          (string-length (car x)))
+                        rope->string))
+
+(irregex-search/chunked <pat> rope-chunker <list-of-strings>)
+@end example
+
+Here we are just using the default start, end and substring behaviors,
+so the above chunker could simply be defined as:
+
+@example
+(define rope-chunker
+  (make-irregex-chunker (lambda (x)
+                          (and (pair? (cdr x)) (cdr x)))
+                        car))
+@end example
+@end defun
+
+
+@defun irregex-fold/chunked @var{irx} @var{kons} @var{knil} @var{chunker} @var{chunk}
+@defunx irregex-fold/chunked @var{irx} @var{kons} @var{knil} @var{chunker} @var{chunk} @var{finish}
+@defunx irregex-fold/chunked @var{irx} @var{kons} @var{knil} @var{chunker} @var{chunk} @var{finish} @var{start-index}
+Chunked version of @func{irregex-fold}.
+@end defun
+
+
+@c page
+@node irregex misc
+@section Miscellaneous functions
+
+
+@defun irregex-split @var{irx} @var{str}
+@defunx irregex-split @var{irx} @var{str} @var{start} @var{end}
+@defunx irregex-extract @var{irx} @var{str}
+@defunx irregex-extract @var{irx} @var{str} @var{start} @var{end}
+@func{irregex-split} splits the string @var{str} into substrings divided
+by the pattern in @var{irx}.  @func{irregex-extract} does the opposite,
+returning a list of each instance of the pattern matched disregarding
+the substrings in between.
+@end defun
+
+
+@defun irregex-fold @var{irx} @var{kons} @var{knil} @var{str} [@var{finish} @var{start} @var{past}]
+This follows the @api{} for @func{regexp-fold} from SCSH.  The
+@var{kons} procedure takes the following signature:
+
+@example
+(@var{kons} <from-index> <match> <seed>)
+@end example
+
+@noindent
+where @code{@meta{from-index}} is the index from where we started
+searching (initially @var{start} and thereafter the past index of the
+last match); @code{@meta{match}} is the resulting match data object;
+@code{@meta{seed}} is the accumulated fold result starting with
+@var{knil}.
+
+The rationale for providing the @code{@meta{from-index}} is because this
+information is useful (e.g. for extracting the unmatched portion of the
+string before the current match, as needed in @func{irregex-replace}),
+and not otherwise directly accessible.
+
+The optional @var{finish} takes two arguments:
+
+@example
+(@var{finish} <from-index> <seed>)
+@end example
+
+@noindent
+which simiarly allows us to pick up the unmatched tail of the string,
+and defaults to just returning the @code{@meta{seed}}.
+
+@var{start} and @var{past} select a substring of @var{str}.
+
+To extract all instances of a match out of a string, we can use:
+
+@example
+(map irregex-match-substring
+  (irregex-fold <irx>
+                (lambda (i m s)
+                  (cons m s))
+                '()
+                <str>
+                (lambda (i s)
+                  (reverse s))))
+@end example
+@end defun
+
+
+@defun irregex-quote @var{str}
+Return a new string with any special regular expression characters
+escaped, to match the original string literally in @posix{} regular
+expressions.
+@end defun
+
+
+@defun irregex-opt @var{list-of-strings}
+Return an optimized @acronym{SRE} matching any of the literal strings in
+the list, like Emacs' @func{regexp-opt}.  Note this optimization does
+not help when @func{irregex} is able to build a @acronym{DFA}.
+@end defun
+
+
+@defun {sre->string} @var{sre}
+Convert an @acronym{SRE} to a @posix{}--style regular expression string, if
+possible.
+@end defun
+
+@c page
+@node irregex pcre
+@section Supported @acronym{PCRE} syntax
+
+
+Since the @acronym{PCRE} syntax is so overwhelming complex, it's easier
+to just list what @library{vicare irregex} does @strong{not} support
+for now.  Refer to the @acronym{PCRE} documentation for
+details.@footnote{See @url{http://pcre.org/pcre.txt}.  @aurl{} last
+verified Sun Jul 12, 2009.}
+
+@itemize
+@item
+Unicode character classes (@code{\P}) are not supported, but will be in
+an upcoming release.  @code{\C} named characters are not supported.
+
+@item
+Callbacks, subroutine patterns and recursive patterns are not supported.
+@code{(*FOO)} patterns are not supported and may never be.
+
+@item
+@code{\G} and @code{\K} are not supported.
+
+@item
+Octal character escapes are not supported because they are ambiguous
+with back--references; just use hex character escapes.
+@end itemize
+
+Other than that, everything should work, including named submatches,
+zero--width assertions, conditional patterns, etc.
+
+In addition, @code{\<} and @code{\>} act as beginning--of--word and
+end--of--word marks, respectively, as in Emacs regular expressions.
+
+Also, two escapes are provided to embed @acronym{SRE} patterns inside
+@acronym{PCRE} strings, @code{"\'<sre>"} and @code{"(*'<sre>)"}.  For
+example, to match a comma--delimited list of integers we could use:
+
+@example
+"\\'integer(,\\'integer)*"
+@end example
+
+@noindent
+and to match a @aurl{} in angle brackets we could use:
+
+@example
+"<('*http-url)>"
+@end example
+
+@noindent
+note in the second example the enclosing @code{"('*...)"} syntax is
+needed because the Scheme reader would consider the closing @samp{>} as
+part of the @acronym{SRE} symbol.
+
+The following chart gives a quick reference from @acronym{PCRE} form to
+the @acronym{SRE} equivalent:
+
+@example
+;; basic syntax
+"^"                     ;; bos (or eos inside (?m: ...))
+"$"                     ;; eos (or eos inside (?m: ...))
+"."                     ;; nonl
+"a?"                    ;; (? a)
+"a*"                    ;; (* a)
+"a+"                    ;; (+ a)
+"a??"                   ;; (?? a)
+"a*?"                   ;; (*? a)
+"a+?"                   ;; (+? a)
+"a@{n,m@}"                ;; (** n m a)
+
+;; grouping
+"(...)"                 ;; (submatch ...)
+"(?:...)"               ;; (: ...)
+"(?i:...)"              ;; (w/nocase ...)
+"(?-i:...)"             ;; (w/case ...)
+"(?<name>...)"          ;; (=> <name>...)
+
+;; character classes
+"[aeiou]"               ;; ("aeiou")
+"[^aeiou]"              ;; (~ "aeiou")
+"[a-z]"                 ;; (/ "az") or (/ "a" "z")
+"[[:alpha:]]"           ;; alpha
+
+;; assertions
+"(?=...)"               ;; (look-ahead ...)
+"(?!...)"               ;; (neg-look-ahead ...)
+"(?<=...)"              ;; (look-behind ...)
+"(?<!...)"              ;; (neg-look-behind ...)
+"(?(test)pass|fail)"    ;; (if test pass fail)
+"(*COMMIT)"             ;; commit
+@end example
+
+@c page
+@node irregex sre
+@section Extended @acronym{SRE} Syntax
+
+
+Scheme Regular Expressions were proposed by Olin Shivers.  The original
+request for coments is available at:
+
+@center @url{http://www.scsh.net/docu/post/sre.html}
+
+@menu
+* irregex sre syntax::          Syntax tables.
+* irregex sre basic::           Basic patterns.
+* irregex sre repetition::      Repetition patterns.
+* irregex sre char-sets::       Character sets.
+* irregex sre assertion::       Assertion patterns.
+* irregex sre utility::         Utility patterns.
+@end menu
+
+@c page
+@node irregex sre syntax
+@subsection Syntax tables
+
+
+The following tables summarizes the @acronym{SRE} syntax, with detailed
+explanations following.
+
+@example
+;; basic patterns
+<string>                          ; literal string
+(seq <sre> ...)                   ; sequence
+(: <sre> ...)
+(or <sre> ...)                    ; alternation
+
+;; optional/multiple patterns
+(? <sre> ...)                     ; 0 or 1 matches
+(* <sre> ...)                     ; 0 or more matches
+(+ <sre> ...)                     ; 1 or more matches
+(= <n> <sre> ...)                 ; exactly <n> matches
+(>= <n> <sre> ...)                ; <n> or more matches
+(** <from> <to> <sre> ...)        ; <n> to <m> matches
+(?? <sre> ...)                    ; non-greedy (non-greedy) pattern: (0 or 1)
+(*? <sre> ...)                    ; non-greedy kleene star
+(**? <from> <to> <sre> ...)       ; non-greedy range
+
+;; submatch patterns
+(submatch <sre> ...)              ; numbered submatch
+($ <sre> ...)
+(submatch-named <name> <sre> ...) ; named submatch
+(=> <name> <sre> ...)
+(backref <n-or-name>)             ; match a previous submatch
+
+;; toggling case-sensitivity
+(w/case <sre> ...)                ; enclosed <sre>s are case-sensitive
+(w/nocase <sre> ...)              ; enclosed <sre>s are case-insensitive
+
+;; character sets
+<char>                            ; singleton char set
+(<string>)                        ; set of chars
+(or <cset-sre> ...)               ; set union
+(~ <cset-sre> ...)                ; set complement (i.e. [^...])
+(- <cset-sre> ...)                ; set difference
+(& <cset-sre> ...)                ; set intersection
+(/ <range-spec> ...)              ; pairs of chars as ranges
+
+;; named character sets
+any
+nonl
+ascii
+lower-case     lower
+upper-case     upper
+alphabetic     alpha
+numeric        num
+alphanumeric   alphanum  alnum
+punctuation    punct
+graphic        graph
+whitespace     white     space
+printing       print
+control        cntrl
+hex-digit      xdigit
+
+;; assertions and conditionals
+bos eos                           ; beginning/end of string
+bol eol                           ; beginning/end of line
+bow eow                           ; beginning/end of word
+nwb                               ; non-word-boundary
+(look-ahead <sre> ...)            ; zero-width look-ahead assertion
+(look-behind <sre> ...)           ; zero-width look-behind assertion
+(neg-look-ahead <sre> ...)        ; zero-width negative look-ahead assertion
+(neg-look-behind <sre> ...)       ; zero-width negative look-behind assertion
+(atomic <sre> ...)                ; for (?>...) independent patterns
+(if <test> <pass> [<fail>])       ; conditional patterns
+commit                            ; don't backtrack beyond this (i.e. cut)
+
+;; backwards compatibility
+(posix-string <string>)           ; embed a POSIX string literal
+@end example
+
+@c page
+@node irregex sre basic
+@subsection Basic patterns
+
+
+The simplest @acronym{SRE} is a literal string, which matches that
+string exactly.
+
+@example
+(irregex-search "needle" "hayneedlehay")
+@result{} #<match>
+@end example
+
+By default the match is case--sensitive, though we can control this
+either with the compiler flags or local overrides:
+
+@example
+(irregex-search "needle" "haynEEdlehay")
+@result{} #f
+
+(irregex-search (irregex "needle" 'i) "haynEEdlehay")
+@result{} #<match>
+
+(irregex-search '(w/nocase "needle") "haynEEdlehay")
+@result{} #<match>
+@end example
+
+We can use @code{w/case} to switch back to case--sensitivity inside a
+@code{w/nocase} or when the @acronym{SRE} was compiled with
+@code{case-insensitive}:
+
+@example
+(irregex-search '(w/nocase "SMALL" (w/case "BIG")) "smallBIGsmall")
+@result{} #<match>
+
+(irregex-search '(w/nocase "small" (w/case "big")) "smallBIGsmall")
+@result{} #f
+@end example
+
+Of course, literal strings by themselves aren't very interesting regular
+expressions, so we want to be able to compose them.  The most basic way
+to do this is with the @code{seq} operator (or its abbreviation
+@code{:}), which matches one or more patterns consecutively:
+
+@example
+(irregex-search '(: "one" space "two" space "three") "one two three")
+@result{} #<match>
+@end example
+
+The @code{w/case} and @code{w/nocase} operators allowed multiple
+@acronym{SRE}s in a sequence; other operators that take any number of
+arguments (e.g. the repetition operators below) allow such implicit
+sequences.
+
+To match any one of a set of patterns we use the @code{or} alternation
+operator:
+
+@example
+(irregex-search '(or "eeney" "meeney" "miney") "meeney")
+@result{} #<match>
+
+(irregex-search '(or "eeney" "meeney" "miney") "moe")
+@result{} #f
+@end example
+
+@c page
+@node irregex sre repetition
+@subsection Repetition patterns
+
+
+There are several ways to control the number of times a pattern is
+matched.  The simplest of these is @code{?} which just optionally
+matches the pattern:
+
+@example
+(irregex-search '(: "match" (? "es") "!") "matches!")
+@result{} #<match>
+
+(irregex-search '(: "match" (? "es") "!") "match!")
+@result{} #<match>
+
+(irregex-search '(: "match" (? "es") "!") "matche!")
+@result{} #f
+@end example
+
+To optionally match any number of times we use @code{*}, the Kleene
+star:
+
+@example
+(irregex-search '(: "<" (* (~ #\>)) ">") "<html>")
+@result{} #<match>
+
+(irregex-search '(: "<" (* (~ #\>)) ">") "<>")
+@result{} #<match>
+
+(irregex-search '(: "<" (* (~ #\>)) ">") "<html")
+@result{} #f
+@end example
+
+Often we want to match any number of times, but at least one time is
+required, and for that we use @code{+}:
+
+@example
+(irregex-search '(: "<" (+ (~ #\>)) ">") "<html>")
+@result{} #<match>
+
+(irregex-search '(: "<" (+ (~ #\>)) ">") "<a>")
+@result{} #<match>
+
+(irregex-search '(: "<" (+ (~ #\>)) ">") "<>")
+@result{} #f
+@end example
+
+More generally, to match at least a given number of times, we use
+@code{>=}:
+
+@example
+(irregex-search '(: "<" (>= 3 (~ #\>)) ">") "<table>")
+@result{} #<match>
+
+(irregex-search '(: "<" (>= 3 (~ #\>)) ">") "<pre>")
+@result{} #<match>
+
+(irregex-search '(: "<" (>= 3 (~ #\>)) ">") "<tr>")
+@result{} #f
+@end example
+
+To match a specific number of times exactly we use @code{=}:
+
+@example
+(irregex-search '(: "<" (= 4 (~ #\>)) ">") "<html>")
+@result{} #<match>
+
+(irregex-search '(: "<" (= 4 (~ #\>)) ">") "<table>")
+@result{} #f
+@end example
+
+And finally, the most general form is @code{**} which specifies a range
+of times to match.  All of the earlier forms are special cases of this.
+
+@example
+(irregex-search '(: (= 3 (** 1 3 numeric) ".")
+                    (** 1 3 numeric))
+                "192.168.1.10")
+@result{} #<match>
+
+(irregex-search '(: (= 3 (** 1 3 numeric) ".")
+                    (** 1 3 numeric))
+                "192.0168.1.10")
+@result{} #f
+@end example
+
+There are also so--called ``non-greedy'' variants of these repetition
+operators, by convention suffixed with an additional @code{?}.  Since
+the normal repetition patterns can match any of the allotted repetition
+range, these operators will match a string if and only if the normal
+versions matched.  However, when the endpoints of which submatch matched
+are taken into account (specifically, all matches when using
+@func{irregex-search} since the endpoints of the match itself matter),
+the use of a non--greedy repetition can change the result.
+
+So, whereas @code{?} can be thought to mean ``match or don't match'',
+@code{??} means ``don't match or match''.  @code{*} typically consumes
+as much as possible, but @code{*?}  tries first to match zero times, and
+only consumes one at a time if that fails.  If we have a greedy operator
+followed by a non--greedy operator in the same pattern, they can produce
+surprising results as they compete to make the match longer or shorter.
+If this seems confusing, that's because it is.  Non--greedy repetitions
+are defined only in terms of the specific backtracking algorithm used to
+implement them, which for compatibility purposes always means the Perl
+algorithm.  Thus, when using these patterns we force @library{vicare
+irregex} to use a backtracking engine, and can't rely on efficient
+execution.
+
+@c page
+@node irregex sre char-sets
+@subsection Character sets
+
+
+Perhaps more common than matching specific strings is matching any of a
+set of characters.  We can use the @code{or} alternation pattern on a
+list of single--character strings to simulate a character set, but this
+is too clumsy for everyday use so @acronym{SRE} syntax allows a number
+of shortcuts.
+
+A single character matches that character literally, a trivial character
+class.  More conveniently, a list holding a single element which is a
+string, refers to the character set composed of every character in the
+string.
+
+@example
+(irregex-match '(* #\-) "---")
+@result{} #<match>
+
+(irregex-match '(* #\-) "-_-")
+@result{} #f
+
+(irregex-match '(* ("aeiou")) "oui")
+@result{} #<match>
+
+(irregex-match '(* ("aeiou")) "ouais")
+@result{} #f
+@end example
+
+Ranges are introduced with the @code{/} operator.  Strings or characters
+in the @code{/} are flattened and then taken in pairs to represent the
+start and end points, inclusive, of character ranges.
+
+@example
+(irregex-match '(* (/ "AZ09")) "R2D2")
+@result{} #<match>
+
+(irregex-match '(* (/ "AZ09")) "C-3PO")
+@result{} #f
+@end example
+
+In addition, a number of set algebra operations is provided.  @code{or},
+of course, has the same meaning, but when all the options are character
+sets it can be thought of as the set union operator.  This is further
+extended by the @condition{} set intersection, @code{-} set difference, and
+@code{~} set complement operators.
+
+@example
+(irregex-match '(* (& (/ "az") (~ ("aeiou")))) "xyzzy")
+@result{} #<match>
+
+(irregex-match '(* (& (/ "az") (~ ("aeiou")))) "vowels")
+@result{} #f
+
+(irregex-match '(* (- (/ "az") ("aeiou"))) "xyzzy")
+@result{} #<match>
+
+(irregex-match '(* (- (/ "az") ("aeiou"))) "vowels")
+@result{} #f
+@end example
+
+@c page
+@node irregex sre assertion
+@subsection Assertion patterns
+
+
+It can be useful to assert something about the area around a pattern,
+without explicitly making it part of the pattern.  The most common cases
+are specifically anchoring some pattern to the beginning or end of a
+word or line or even the whole string.  For example, to match on the end
+of a word:
+
+@example
+(irregex-match '(: "foo" eow) "foo")
+@result{} #<match>
+
+(irregex-match '(: "foo" eow) "foo!")
+@result{} #<match>
+
+(irregex-match '(: "foo" eow) "foof")
+@result{} #f
+@end example
+
+The @code{bow}, @code{bol}, @code{eol}, @code{bos} and @code{eos} work
+similarly.  @code{nwb} asserts that you are not in a word--boundary; if
+replaced with @code{eow} in the above examples it would reverse all the
+results.
+
+There is no @code{wb}, since we probably know from context whether it
+would be the beginning or end of a word, but if we need it we can always
+use @code{(or bow eow)}.
+
+Somewhat more generally, Perl introduced positive and negative
+@code{look-ahead} and @code{look-behind} patterns.  Perl's
+@code{look-behind} patterns are limited to a fixed length, however the
+@library{vicare irregex} versions have no such limit.
+
+@example
+(irregex-match '(: "regular" (look-ahead " expression"))
+               "regular expression")
+@result{} #<match>
+@end example
+
+The most general case, of course, would be an @code{and} pattern to
+complement the @code{or} pattern; all the patterns must match or the
+whole pattern fails.  This may be provided in a future release, although
+it (and @code{look-ahead} and @code{look-behind} assertions) are
+unlikely to be compiled efficiently.
+
+@c page
+@node irregex sre utility
+@subsection Utility patterns
+
+
+The following utility regular expressions are also provided for common
+patterns that people are eternally reinventing.  They are not
+necessarily the official patterns matching the @rfc{} definitions
+of the given data, because of the way that such patterns tend to be
+used.  There are three general usages for regexps:
+
+@table @emph
+@item Searching
+Search for a pattern matching a desired object in a larger text.
+
+@item Validation
+Determine whether an entire string matches a pattern.
+
+@item Extraction
+Given a string already known to be valid, extract certain fields from it
+as submatches.
+@end table
+
+In some cases, but not always, these will overlap.  When they are
+different, @func{irregex-search} will naturally always want the
+searching version, so @library{vicare irregex} provides that version.
+
+As an example where these might be different, consider an @aurl{}.  If
+we want to match all the @aurl{}s in some arbitrary text, we probably
+want to exclude a period or comma at the tail end of an @aurl{}, since
+it's more likely being used as punctuation rather than part of the
+@aurl{}, despite the fact that it would be valid @aurl{} syntax.
+
+Another problem with the @rfc{} definitions is the standard itself may
+have become irrelevant.  For example, the pattern @library{vicare
+irregex} provides for email addresses doesn't match quoted local parts
+(e.g. @code{"first last"@@domain.com}) because these are increasingly
+rare, and unsupported by enough software that it's better to discourage
+their use.  Conversely, technically consecutive periods
+(e.g. @code{first..last@@domain.com}) are not allowed in email
+addresses, but most email software does allow this, and in fact such
+addresses are quite common in Japan.
+
+The current patterns provided are:
+
+@table @code
+@item newline
+General newline pattern (@code{crlf}, @code{cr}, @code{lf}).
+
+@item integer
+An integer.
+
+@item real
+A real number (including scientific).
+
+@item string
+A ``quoted'' string.
+
+@item symbol
+An @rnrs{6} Scheme symbol.
+
+@item ipv4-address
+A numeric decimal IPv4 address.
+
+@item ipv6-address
+A numeric hexadecimal IPv6 address.
+
+@item domain
+A domain name.
+
+@item email
+An email address.
+
+@item http-url
+A @aurl{} beginning with @code{https?://}.
+@end table
+
+Because of these issues the exact definitions of these patterns are
+subject to change, but will be documented clearly when they are
+finalized.  More common patterns are also planned, but as what we want
+increases in complexity it's probably better to use a real parser.
+
+@c end of file

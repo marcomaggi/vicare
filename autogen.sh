@@ -2,8 +2,6 @@
 #
 # Run this in the top source directory to rebuild the infrastructure.
 
-export PATH=/bin:/usr/local/bin:/usr/bin:$PATH
-
 LIBTOOLIZE=${LIBTOOLIZE:=libtoolize}
 
 set -xe

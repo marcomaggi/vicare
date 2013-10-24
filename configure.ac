@@ -2,7 +2,7 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([Vicare Scheme],[0.3d3],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.3d5],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_MACRO_DIR([autotools])
@@ -68,6 +68,15 @@ AM_CONDITIONAL([WANT_SRFI],[test "x$vicare_enable_SRFI" = xyes])
 AM_COND_IF([WANT_SRFI],
   [AC_DEFINE([VICARE_BUILT_WITH_SRFI_ENABLED],[1],
      [defined if SRFI libraries were requested at configuration time])])
+
+VICARE_ENABLE_OPTION([NAUSICAA],[nausicaa],[yes],
+  [whether to install the Nausicaa libraries],
+  [enable installation of Nausicaa libraries])
+AM_CONDITIONAL([WANT_NAUSICAA],[test "x$vicare_enable_NAUSICAA" = xyes])
+
+AM_COND_IF([WANT_NAUSICAA],
+  [AC_DEFINE([VICARE_BUILT_WITH_NAUSICAA_ENABLED],[1],
+     [defined if Nausicaa libraries were requested at configuration time])])
 
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
@@ -174,8 +183,9 @@ AC_CHECK_HEADERS([assert.h dlfcn.h errno.h fcntl.h signal.h     \
                   stdint.h stdlib.h string.h strings.h stdarg.h \
                   errno.h stddef.h                              \
                   sys/mman.h sys/resource.h sys/stat.h          \
-                  sys/time.h sys/types.h sys/wait.h time.h      \
-                  unistd.h])
+                  sys/time.h sys/types.h sys/wait.h             \
+                  sys/utsname.h                                 \
+                  time.h unistd.h])
 
 AC_CHECK_HEADERS([arpa/inet.h dirent.h fstab.h inttypes.h limits.h mntent.h net/if.h netinet/in.h pwd.h signal.h termios.h sys/mman.h sys/select.h sys/socket.h sys/times.h sys/timex.h sys/types.h math.h complex.h])
 
@@ -242,6 +252,7 @@ AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
 AC_CHECK_FUNCS([hypot cbrt])
+AC_CHECK_FUNCS([uname])
 
 AC_CACHE_SAVE
 
@@ -1522,6 +1533,10 @@ VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
   [ffi.h],[ffi],[ffi_call])
 AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
+AM_COND_IF([WANT_LIBFFI],
+  [AC_DEFINE([VICARE_BUILT_WITH_FFI_ENABLED],[1],
+     [defined if Libffi support is enabled])])
+
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
 
@@ -1556,6 +1571,10 @@ AS_IF([test "x$with_libiconv" != xno],
   [AC_MSG_NOTICE([libiconv was not requested])])
 dnl
 AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
+
+AM_COND_IF([WANT_LIBICONV],
+  [AC_DEFINE([VICARE_BUILT_WITH_ICONV_ENABLED],[1],
+     [defined if Libiconv support is enabled])])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library

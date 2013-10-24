@@ -1,0 +1,314 @@
+@node source-locations
+@section Representing source locations
+
+
+The library @library{nausicaa parser-tools source-locations} defines the
+class @class{source-location} to represent informations about the
+position of a token in a source of characters; they should be produced
+by the lexer and either discarded or consumed by the parser's error
+handler.
+
+It is cleaner to implement the parser in such a way that location
+objects are used only by client--supplied error handlers, not by the
+parser itself.  The parser should handle the location as an opaque
+value, possibly in ``unspecified'' state when there is no consistent way
+to track the source location.
+
+@menu
+* source-locations objects::      Source location objects.
+* source-locations comparison::   Comparison methods.
+* source-locations update::       Updating the location.
+* source-locations unspecified::  Unspecified source locations.
+* source-locations misc::         Miscellaneous functions.
+* source-locations examples::     Some code examples.
+@end menu
+
+@c page
+@node source-locations objects
+@subsection Source location objects
+
+
+@deftp Class @aclass{source-location}
+Represent a source location in a source of characters used as input for
+a lexer.  It is meant to reference the position of the next character to
+parse from the input, which is the position of the first char in the
+next token produced by the lexer.
+@end deftp
+
+
+@defop {Common constructor} @aclass{source-location} constructor @var{specified?} @var{line} @var{column} @var{offset}
+Build and return a new @class{source-location} object initialised with
+the given field values.
+@end defop
+
+
+@defop {Maker syntax} @aclass{source-location} @aclass{source-location} (@meta{clause} @dots{})
+@defopx {Maker syntax} @aclass{source-location} @aclass{source-location} (unspecified)
+@defopx {Auxiliary Syntax} @aclass{source-location} line: @meta{line}
+@defopx {Auxiliary Syntax} @aclass{source-location} column: @meta{column}
+@defopx {Auxiliary Syntax} @aclass{source-location} offset: @meta{offset}
+Build and return a new instance of @class{source-location} using the
+common constructor and the given arguments.  When a @meta{clause}
+argument is not used, its default value is such that the returned object
+represents the conventional starting position, with line number
+@math{1}, column number @math{1} and offset @math{0}.
+
+When the @code{unspecified} argument is used: it must be an identifier
+whose symbol name is @code{unspecified}; the return value is an object
+whose @code{specified?} field is set to @false{}.
+@end defop
+
+
+@deftypecv {Immutable field} @aclass{source-location} @aclass{boolean} specified?
+@deftypecvx {Immutable virtual field} @aclass{source-location} @aclass{boolean} unspecified?
+The field @code{specified?} is @true{} if this object represents a specified
+source location; @false{} otherwise.  The field @code{unspecified?} is
+@true{} if this object represents an unspecified source location; @false{}
+otherwise.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{source-location} @aclass{positive-fixnum} line
+@deftypecvx {Immutable field} @aclass{source-location} @aclass{positive-fixnum} column
+@deftypecvx {Immutable field} @aclass{source-location} @aclass{nonnegative-fixnum} offset
+Counters for the line number, column number and character offset from
+the start of the input.  By convention: line and column numbers start
+from @math{1}, the offset starts from @math{0}.  The value of these
+fields is meaningful only if the field @code{specified?} is set to
+@true{}.
+
+@quotation
+These fields are modeled to match the local bindings @samp{yyline},
+@samp{yycolumn} and @samp{yyoffset} available to the lexer actions of
+SILex; @libsref{silex semantics action, Evaluation of the actions}.
+@end quotation
+@end deftypecv
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} start?
+Return @true{} if the instance is specified and represents the
+conventional starting position: line number @math{1}, column number
+@math{1} and offset @math{0}; otherwise return @false{}.
+@end deftypemethod
+
+@c page
+@node source-locations comparison
+@subsection Comparison methods
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} = (@var{L} @aclass{source-location})
+Compare the instance object with the given @var{L} object and return
+@true{} if they are both specified and have equal @code{offset} field;
+otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} < (@var{L} @aclass{source-location})
+Compare the instance object with the given @var{L} object and return
+@true{} if they are both specified and the instance has @code{offset}
+field less than the one of @var{L}; otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} > (@var{L} @aclass{source-location})
+Compare the instance object with the given @var{L} object and return
+@true{} if they are both specified and the instance has @code{offset}
+field greater than the one of @var{L}; otherwise return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} <= (@var{L} @aclass{source-location})
+Compare the instance object with the given @var{L} object and return
+@true{} if they are both specified and the instance has @code{offset}
+field less than, or equal to, the one of @var{L}; otherwise return
+@false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{source-location} @aclass{boolean} >= (@var{L} @aclass{source-location})
+Compare the instance object with the given @var{L} object and return
+@true{} if they are both specified and the instance has @code{offset}
+field greater than, or equal to, the one of @var{L}; otherwise return
+@false{}.
+@end deftypemethod
+
+@c page
+@node source-locations update
+@subsection Updating the location
+
+
+@deftypemethod @aclass{source-location} @aclass{source-location} update (@var{fx} @aclass{nonnegative-fixnum})
+@deftypemethodx @aclass{source-location} @aclass{source-location} update (@var{ch} @aclass{char})
+If the instance object is unspecified: return a @class{source-location}
+object in unspecified state; otherwise build and return a new
+@class{source-location} object representing a location past the one of
+the instance according to the given arguments.
+
+If the argument is @var{fx}: it is interpreted as token length; the
+column and offset counters are incremented by that amount.
+
+If the argument if @var{ch}, the action depends on its specific value;
+if it is:
+
+@table @samp
+@item #\return
+The action depends upon the value of the parameter
+@samp{source-location-honor-return}:
+
+@itemize
+@item
+If it is true: the column counter is set to @math{1} and the offset
+counter is incremented by @math{1}.
+
+@item
+If it is @false{}: the column and offset counters are incremented by
+@math{1}.
+@end itemize
+
+@item #\newline
+The line counter is incremented by @math{1}, the column counter is set
+to @math{1} and the offset counter is incremented by @math{1}.
+
+@item #\tab
+The offset counter is incremented by @math{1} and the column counter is
+set to the result of:
+
+@example
+(let (((L <source-location>) ---))
+  ((source-location-tab-function) (L column)))
+@end example
+
+@noindent
+that is, the current procedure in the parameter
+@func{source-location-tab-function} is applied to the column counter to
+produce the next column counter's value.
+@end table
+@end deftypemethod
+
+
+@deffn Parameter source-location-tab-function
+Hold a function used to produce the next column counter's value given
+the current column counter.  By default it is set to
+@func{source-location-tab-function/8chars}.
+@end deffn
+
+
+@defun source-location-tab-function/8chars @var{column}
+Return the smallest multiple of @math{8} which is greater than
+@var{column}.
+@end defun
+
+
+@defun source-location-tab-function/tab-table @var{column}
+Produce the next column counter's value drawing it from the list of
+horizontal tabulation offsets in the @samp{source-location-tab-table}
+parameter.  The returned value is the smallest offset which is greater
+than @var{column}.  If the list is null or all the offsets are smaller
+than @var{column}, @func{source-location-tab-function/8chars} is used to
+compute the return value.
+@end defun
+
+
+@deffn Parameter source-location-tab-table
+Hold a list of horizontal tabulation offsets, sorted in increasing
+order.  The default value is null.
+@end deffn
+
+
+@deffn Parameter source-location-honor-return
+Hold a boolean value which causes the @func{update} method to honor a
+@samp{#\return} character or not.
+@end deffn
+
+@c page
+@node source-locations unspecified
+@subsection Unspecified source locations
+
+
+@defun unspecified-source-location
+Return a @class{source-location} object representing an unspecified
+source location.  This function always returns the same object.
+@end defun
+
+
+@deffn Parameter unspecified-source-location-string
+Contains a string representation for @class{source-location} objects
+representing an unspecified source location.  It is initialised to
+@samp{"no-source"}.
+@end deffn
+
+@c page
+@node source-locations misc
+@subsection Miscellaneous methods and functions
+
+
+The procedures described here make use of multimethods;
+@ref{multimethods, Multimethod dispatching}.
+
+
+@deftypemethod @aclass{source-location} @aclass{string} string
+Return a string representing the instance object.  If the instance
+object is specified the string has the format
+@samp{@meta{line}:@meta{column}}, where @meta{line} is the line number
+and @meta{column} is the column number; otherwise the returned value is
+the one referenced by the parameter
+@func{unspecified-source-location-string}.
+@end deftypemethod
+
+
+@deffn Method object->string (@var{O} @aclass{source-location})
+Return a string representation of @var{O}.  It makes use of the method
+@func{string} of @class{source-location}.
+@end deffn
+
+@c page
+@node source-locations examples
+@subsection Some code examples
+
+
+The following code defines a hashable source location object:
+
+@example
+#!r6rs
+(import (nausicaa)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(module (<hashable-source-location>)
+  (import (prefix (vicare language-extensions makers) mk.))
+
+  (define-class <hashable-source-location>
+    (parent sl.<source-location>)
+    (mixins (<hashable-and-properties-clauses>
+             (<class>         <hashable-source-location>)))
+
+    (protocol
+     (lambda (make-source-location)
+       (lambda (specified? line column offset)
+         ((make-source-location specified? line column offset)
+          #f ;;field from <hashable-and-properties-clauses>
+          ))))
+
+    (maker
+     (lambda (stx)
+       (syntax-case stx ()
+         ((_ (?unspecified))
+          (and (identifier? #'?unspecified)
+               (identifier=symbol? #'?unspecified 'unspecified))
+          #'(make-<hashable-source-location> #f 1 1 0))
+         ((_ (?expr ...))
+          #'(%make-hashable-source-location ?expr ...)))))
+
+    #| end of class |# )
+
+  (mk.define-maker %make-hashable-source-location
+      (make-<hashable-source-location> #t)
+    ;;These default values represent the start location
+    ;;of a source of characters.
+    ((sl.line:        1)
+     (sl.column:      1)
+     (sl.offset:      0)))
+
+  #| end of module |# )
+@end example
+
+@c end of file

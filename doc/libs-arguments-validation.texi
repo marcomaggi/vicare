@@ -1,0 +1,1503 @@
+@node args
+@chapter Optional function arguments validation
+
+
+@cindex Library @library{vicare arguments validation}
+@cindex @library{vicare arguments validation}, library
+
+
+The library @library{vicare arguments validation} provides bindings to
+macros that extend the Scheme language implemented by @library{vicare}
+and @library{rnrs}.
+
+@menu
+* args config::                 Enabling or disabling arguments
+                                validation.
+* args definitions::            Defining arguments validation clauses.
+* args using::                  Performing arguments validation.
+* args forms::                  Optional validation forms.
+
+* args predefined::             Predefined validation clauses.
+@end menu
+
+@c page
+@node args config
+@section Enabling or disabling arguments validation
+
+
+@cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
+@cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
+
+
+Global arguments validation is enabled or disabled by setting to @true{}
+or @false{} the @code{arguments-validation} identifier syntax exported
+by @library{vicare platform configuration}, the default is @true{}; such
+value can be configured as follows:
+
+@enumerate
+@item
+Argument validation is @strong{enabled} by setting to the string
+@code{yes}, or the string @code{1}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+Argument validation is @strong{disabled} by setting to the string
+@code{no}, or the string @code{0}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+If the environment variable @env{VICARE_ARGUMENTS_VALIDATION} is unset
+or set to some string different from @code{yes}, @code{no}, @code{1},
+@code{0}:
+
+@itemize
+@item
+Arguments validation is @strong{enabled} if the
+@option{--enable-arguments-validation} option of the @command{configure}
+script was used.
+
+@item
+Arguments validation is @strong{disabled} if the
+@option{--disable-arguments-validation} option of the
+@command{configure} script was used.
+@end itemize
+@end enumerate
+
+@c page
+@node args definitions
+@section Defining argument validation clauses
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac define-argument-validation (@meta{name} @meta{who} @meta{arg} ...) @meta{predicate} @meta{error-handler}
+Define a validation clause to be used along with the syntax
+@func{WITH-ARGUMENTS-VALIDATION}.  Example:
+
+@example
+(define-argument-validation (bytevector who bv)
+  (bytevector? bv)
+  (procedure-argument-violation who
+    "expected a bytevector as argument"
+    bv))
+@end example
+
+We have to assume that the values @meta{arg} are evaluated multiple
+times.
+@end defmac
+
+@c page
+@node args using
+@section Performing arguments validation
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
+If arguments validation is enabled: expand to code that validates the
+@meta{arg} expressions using to the @meta{validator} clause, then
+evaluate the @meta{body} forms; if arguments validation is disabled:
+just evaluate the @meta{body} forms.
+
+@meta{who} must be an identifier used as argument when building a
+@condition{who} condition object.
+
+@meta{validator} must be one among:
+
+@itemize
+@item
+An identifier previously used as name of validation clause by the
+@func{define-argument-validation} macro.
+
+@item
+The form @code{(or false @meta{validator-id})}, where: @code{or} is the
+identifier exported by @library{vicare}; @code{false} is an identifier
+whose expression is the symbol @code{false}; @meta{validator-id} must be
+an identifier previously used as name of validation clause by the
+@func{define-argument-validation} macro.
+
+When this form is used, the first clause argument is first tested alone:
+the clause succeeds if the first argument is @false{}; otherwise all the
+clause arguments are handed to the validation claused selected by
+@meta{validator-id}.
+
+@item
+The identifier @func{void}, exported by @library{vicare}; this is a
+special case for which no validation is generated: the @var{arg} values
+are considered always valid; this is sometimes useful when using this
+macro in the expansion of another macro.
+@end itemize
+
+@quotation
+@strong{NOTE} In future a full logic expression may be possible as
+@meta{validator} argument.  At present only the special @code{or} case
+is supported, with @code{false} as first operand.
+@end quotation
+
+Simple example:
+
+@example
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (procedure-argument-violation who
+    "expected fixnum as argument"
+    obj))
+
+(define-argument-validation (integer who obj)
+  (integer? obj)
+  (procedure-argument-violation who
+    "expected integer as argument"
+    obj))
+
+(with-arguments-validation (who)
+     ((fixnum  X)
+      (integer Y))
+  (do-this)
+  (do-that))
+@end example
+
+@noindent
+multiple clauses are evaluated from first to last, so the above example
+is equivalent to:
+
+@example
+(with-arguments-validation (who)
+     ((fixnum  X))
+  (with-arguments-validation (who)
+       ((integer Y))
+    (do-this)
+    (do-that)))
+@end example
+
+@noindent
+which is equivalent to something like:
+
+@example
+(if (fixnum? X)
+    (if (integer? X)
+        (begin
+          (do-this)
+          (do-that))
+      (procedure-argument-violation who
+        "expected integer as argument"
+        obj))
+  (procedure-argument-violation who
+    "expected fixnum as argument"
+    obj))
+@end example
+@end defmac
+
+
+@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
+Like @func{with-arguments-validation}, but the validation is always
+performed even when global arguments validation is disabled.
+@end defmac
+
+@c page
+@node args forms
+@section Optional validation forms
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac arguments-validation-forms
+@defmacx arguments-validation-forms @metao{body} . @meta{body}
+When used without arguments or arguments validation disabled: expand to
+@code{(values)}; else expand to:
+
+@example
+(begin @metao{body} . @meta{body})
+@end example
+@end defmac
+
+@c page
+@node args predefined
+@section Predefined validation clauses
+
+
+@menu
+* args predefined pairs::          Validating pairs and lists.
+* args predefined booleans::       Validating booleans.
+* args predefined numbers::        Validating numbers.
+* args predefined fixnums::        Validating fixnums.
+* args predefined exact integers:: Validating exact integers.
+* args predefined keywords::       Validating keywords.
+* args predefined promises::       Validating promises.
+* args predefined bits::           Validating bit--sized integers.
+* args predefined signed int::     Validating C language @code{int} values.
+* args predefined clang::          Validating C language values.
+* args predefined chars::          Validating characters.
+* args predefined strings::        Validating string and
+                                   related arguments.
+* args predefined vectors::        Validating vector and
+                                   related arguments.
+* args predefined bytevectors::    Validating bytevector and related
+                                   arguments.
+* args predefined pathnames::      String and bytevector pathnames.
+* args predefined symbols::        Validating symbols.
+* args predefined enum-sets::      Validating enum-sets.
+* args predefined pointers::       Validating pointers.
+* args predefined memory-blocks::  Validating @code{memory-block} values.
+* args predefined flonums::        Validating flonums.
+* args predefined bignums::        Validating bignums.
+* args predefined ratnums::        Validating ratnums.
+* args predefined reals::          Validating reals.
+* args predefined compnums::       Validating compnums.
+* args predefined cflonums::       Validating cflonums.
+* args predefined complexes::      Validating complexes.
+* args predefined ports::          Validating input/output ports.
+* args predefined transcoders::    Validating port transcoders.
+* args predefined procedures::     Validating procedures.
+* args predefined genstrings::     Validating generalised C string
+                                   arguments.
+* args predefined genbuffers::     Validating generalised C buffer
+                                   arguments.
+* args predefined time::           Time objects.
+* args predefined identifier::     Identifier objects.
+@end menu
+
+@c page
+@node args predefined pairs
+@subsection Validating pairs and lists
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} pair @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{pair?}.
+@end deffn
+
+
+@deffn {Validation Clause} list @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{list?}.
+@end deffn
+
+@c page
+@node args predefined booleans
+@subsection Validating booleans
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} boolean @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{boolean?}.
+@end deffn
+
+@c page
+@node args predefined numbers
+@subsection Validating numbers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} number @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{number?}.
+@end deffn
+
+@c page
+@node args predefined fixnums
+@subsection Validating fixnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{fixnum?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-fixnum @var{obj}
+@deffnx {Validation Clause} negative-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-fixnum @var{obj}
+@deffnx {Validation Clause} non-positive-fixnum/false @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+zero or positive.  The second clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} non-negative-fixnum @var{obj}
+@deffnx {Validation Clause} non-negative-fixnum/false @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+zero or negative.  The second clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum-index @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+zero or positive.
+@end deffn
+
+
+@deffn {Validation Clause} non-zero-fixnum @var{obj}
+@deffnx {Validation Clause} non-zero-fixnum/false @var{obj}
+Fails if @var{obj} satisfies the predicate @func{fxzero?}.  The second
+clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} fixnum-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is in
+the specified range.  @var{min} and @var{max} must be fixnums.
+@end deffn
+
+
+@deffn {Validation Clause} even-fixnum @var{obj}
+@deffnx {Validation Clause} odd-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and the
+predicate @func{fxeven?} or @func{fxodd?}.
+@end deffn
+
+@c page
+@node args predefined exact integers
+@subsection Validating exact integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicates
+@func{integer?} and @func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-exact-integer @var{obj}
+@deffnx {Validation Clause} negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-exact-integer @var{obj}
+@deffnx {Validation Clause} non-negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} exact-integer-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is in the specified range.  @var{min} and @var{max}
+must be exact integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-exact-integer @var{obj}
+@deffnx {Validation Clause} odd-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and the predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined keywords
+@subsection Validating keywords
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} keyword @var{obj}
+Succeed if @var{obj} is a keyword object: it satisfies the predicate
+@func{keyword?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined promises
+@subsection Validating promises
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} promise @var{obj}
+Succeed if @var{obj} is a promise object: it satisfies the predicate
+@func{promise?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} false-or-promise @var{obj}
+Succeed if @var{obj} is @false{} or a promise object: it satisfies the
+predicate @func{promise?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined bits
+@subsection Validating bit--sized integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} octet @var{obj}
+@deffnx {Validation Clause} false-or-octet @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an octet @math{[0, 255]}.
+@end deffn
+
+
+@deffn {Validation Clause} byte @var{obj}
+@deffnx {Validation Clause} false-or-byte @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an byte @math{[-128, 127]}.
+@end deffn
+
+
+@deffn {Validation Clause} byte/octet @var{obj}
+@deffnx {Validation Clause} byte/octet/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an byte @math{[-128, 127]} or octet
+@math{[0, 255]}.
+@end deffn
+
+
+@deffn {Validation Clause} word-u8 @var{obj}
+@deffnx {Validation Clause} word-u8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an octet.
+@end deffn
+
+
+@deffn {Validation Clause} word-s8 @var{obj}
+@deffnx {Validation Clause} word-s8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a byte.
+@end deffn
+
+
+@deffn {Validation Clause} word-u16 @var{obj}
+@deffnx {Validation Clause} word-u16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s16 @var{obj}
+@deffnx {Validation Clause} word-s16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u32 @var{obj}
+@deffnx {Validation Clause} word-u32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s32 @var{obj}
+@deffnx {Validation Clause} word-s32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u64 @var{obj}
+@deffnx {Validation Clause} word-u64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s64 @var{obj}
+@deffnx {Validation Clause} word-s64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u128 @var{obj}
+@deffnx {Validation Clause} word-u128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s128 @var{obj}
+@deffnx {Validation Clause} word-s128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u256 @var{obj}
+@deffnx {Validation Clause} word-u256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s256 @var{obj}
+@deffnx {Validation Clause} word-s256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} machine-word @var{obj}
+@deffnx {Validation Clause} machine-word/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned machine word integer; a
+machine word is @math{32}-bit or @math{64}-bit integer.
+@end deffn
+
+@c page
+@node args predefined signed int
+@subsection Validating C language @code{int} values
+
+
+Exact integers in the range of the C language type @code{int} are used
+often when interfacing with a foreign C language library; the library
+@library{vicare platform words} provides the predicate @func{signed-int?} to
+validated such values; @ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-signed-int @var{obj}
+@deffnx {Validation Clause} negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-signed-int @var{obj}
+@deffnx {Validation Clause} non-negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} signed-int-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is in the specified range.  @var{min} and @var{max} must be exact
+integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-signed-int @var{obj}
+@deffnx {Validation Clause} odd-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and the
+predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined clang
+@subsection Validating C language values
+
+
+The library @library{vicare platform words} provides the predicates to validate
+typical values used when interfacing with foreign C language libraries;
+@ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} unsigned-char @var{obj}
+@deffnx {Validation Clause} unsigned-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned char}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-char @var{obj}
+@deffnx {Validation Clause} signed-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed char}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-short @var{obj}
+@deffnx {Validation Clause} unsigned-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned short int}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-short @var{obj}
+@deffnx {Validation Clause} signed-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed short int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-int @var{obj}
+@deffnx {Validation Clause} unsigned-int/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long @var{obj}
+@deffnx {Validation Clause} unsigned-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long @var{obj}
+@deffnx {Validation Clause} signed-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long-long @var{obj}
+@deffnx {Validation Clause} unsigned-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long-long @var{obj}
+@deffnx {Validation Clause} signed-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long long}.
+@end deffn
+
+
+@deffn {Validation Clause} pointer-integer @var{obj}
+@deffnx {Validation Clause} pointer-integer/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{void *}.
+@end deffn
+
+
+@deffn {Validation Clause} size_t @var{obj}
+@deffnx {Validation Clause} size_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ssize_t @var{obj}
+@deffnx {Validation Clause} ssize_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Validation Clause} off_t @var{obj}
+@deffnx {Validation Clause} off_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ptrdiff_t @var{obj}
+@deffnx {Validation Clause} ptrdiff_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ptrdiff_t}.
+@end deffn
+
+@c page
+@node args predefined chars
+@subsection Validating characters
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} char @var{obj}
+@deffnx {Validation Clause} char/false @var{obj}
+Succeed if @var{obj} is a character.  The second clause also accepts
+@false{}.
+@end deffn
+
+
+@deffn {Validation Clause} char-in-ascii-range @var{obj}
+@deffnx {Validation Clause} char-in-ascii-range/false @var{obj}
+Succeed if @var{obj} is a character and its Unicode code point is in the
+range @math{[0, 127]}.  The second form accepts also @false{} as value.
+@end deffn
+
+@c page
+@node args predefined strings
+@subsection Validating string and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} string @var{obj}
+Succeed if @var{obj} is a string.
+@end deffn
+
+
+@deffn {Validation Clause} string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string @var{obj}
+Succeed if @var{obj} is a string and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-strings @var{obj}
+Succeed if @var{obj} is null or a list of strings.
+@end deffn
+
+
+@deffn {Validation Clause} string-or-symbol @var{obj}
+@deffnx {Validation Clause} string-or-symbol-or-false @var{obj}
+Succeed if @var{obj} is a string or symbol; the second clause accepts
+also @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Validation Clause} index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{str}, which is expected to be an already validated string.
+@var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} < (string-length @var{str})
+@end example
+@end deffn
+
+
+@deffn {Validation Clause} one-off-index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index for @var{str}, which is
+expected to be an already validated string, or it is equal to the string
+length.  @var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} <= (string-length @var{str})
+@end example
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-string @var{str} @var{idx} @var{count}
+Assuming that @var{str} is an already validated string: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{str},
+and @var{count} is a fixnum which can be used as characters count in
+@var{str} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a substring of
+@var{str}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-string @var{str} @var{start} @var{end}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{str}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a substring of
+@var{str} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-string @var{str} @var{start} @var{past}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} <= (string-length @var{str})
+@var{start} <= @var{past} <= (string-length @var{str})
+@end example
+
+In other words: @var{start} and @var{past} select a substring of
+@var{str} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined vectors
+@subsection Validating vector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} vector @var{obj}
+Succeed if @var{obj} is a vector.
+@end deffn
+
+
+@deffn {Validation Clause} vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector @var{obj}
+Succeed if @var{obj} is a vector and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-vector @var{vec} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{vec}, which is expected to be an already validated vector.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-vector @var{vec} @var{idx} @var{count}
+Assuming that @var{vec} is an already validated vector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{vec},
+and @var{count} is a fixnum which can be used as characters count in
+@var{vec} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subvector of
+@var{vec}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-vector @var{vec} @var{start} @var{end}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{vec}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subvector of
+@var{vec} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-vector @var{vec} @var{start} @var{past}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} <= (vector-length @var{vec})
+@var{start} <= @var{past} <= (vector-length @var{vec})
+@end example
+
+In other words: @var{start} and @var{past} select a subvector of
+@var{vec} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined bytevectors
+@subsection Validating bytevector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bytevector @var{obj}
+Succeed if @var{obj} is a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector @var{obj}
+Succeed if @var{obj} is a bytevector and its length is greater than
+zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector and its length is
+greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-bytevectors @var{obj}
+Succeed if @var{obj} is null or a list of bytevectors.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Validation Clause} index-for-bytevector @var{bv} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{bv}, which is expected to be an already validated bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector-length @var{len}
+Succeed if @var{len} is a non--negative fixnum usable as bytevector
+length.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-bytevector @var{bv} @var{idx} @var{count}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{bv},
+and @var{count} is a fixnum which can be used as characters count in
+@var{bv} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subbytevector of
+@var{bv}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-bytevector @var{bv} @var{start} @var{end}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{bv}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subbytevector of
+@var{bv} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-bytevector @var{bv} @var{start} @var{past}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} <= (bytevector-length @var{bv})
+@var{start} <= @var{past} <= (bytevector-length @var{bv})
+@end example
+
+In other words: @var{start} and @var{past} select a subbytevector of
+@var{bv} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined pathnames
+@subsection String and bytevector pathnames
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} file-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{file-pathname?} from
+@library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-string-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-string-pathname?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-bytevector-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-bytevector-pathname?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-colon-search-path?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-string-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-string-colon-search-path?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-bytevector-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-bytevector-colon-search-path?} from @library{vicare $posix}.
+@end deffn
+
+@c page
+@node args predefined symbols
+@subsection Validating symbols
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} symbol @var{obj}
+Succeed if @var{obj} is a symbol.
+@end deffn
+
+
+@deffn {Validation Clause} symbol/false @var{obj}
+Succeed if @var{obj} is @false{} or a symbol.
+@end deffn
+
+
+@deffn {Validation Clause} list-of-symbols @var{obj}
+Succeed if @var{obj} is a proper list whose items are symbols.
+@end deffn
+
+@c page
+@node args predefined enum-sets
+@subsection Validating enum-sets
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} enum-set @var{obj}
+Succeed if @var{obj} is a enum-set.
+@end deffn
+
+
+@deffn {Validation Clause} enum-set/false @var{obj}
+Succeed if @var{obj} is @false{} or a enum-set.
+@end deffn
+
+@c page
+@node args predefined pointers
+@subsection Validating pointers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} pointer @var{obj}
+Succeed if @var{obj} is a pointer.
+@end deffn
+
+
+@deffn {Validation Clause} pointer/false @var{obj}
+Succeed if @var{obj} is @false{} or a pointer.
+@end deffn
+
+
+@deffn {Validation Clause} non-null-pointer @var{obj}
+Succeed if @var{obj} is a pointer and it does @strong{not} represent
+@cnull{}.
+@end deffn
+
+
+@deffn {Validation Clause} c-callback @var{obj}
+Succeed if @var{obj} is a pointer object.
+@end deffn
+
+
+@deffn {Validation Clause} c-callback/false @var{obj}
+Succeed if @var{obj} is @false{} or a pointer object.
+@end deffn
+
+@c page
+@node args predefined memory-blocks
+@subsection Validating @code{memory-block} values
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} memory-block @var{obj}
+Succeed if @var{obj} is a memory-block.
+@end deffn
+
+
+@deffn {Validation Clause} memory-block/false @var{obj}
+Succeed if @var{obj} is @false{} or a memory-block.
+@end deffn
+
+@c page
+@node args predefined flonums
+@subsection Validating flonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} flonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{flonum?}.
+@end deffn
+
+@c page
+@node args predefined bignums
+@subsection Validating bignums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bignum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{bignum?}.
+@end deffn
+
+@c page
+@node args predefined ratnums
+@subsection Validating ratnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} ratnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined reals
+@subsection Validating reals
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} real @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{real?}.
+@end deffn
+
+
+@deffn {Validation Clause} real-exact @var{obj}
+Succeed if @var{obj} satisfies one of the predicates @func{fixnum?},
+@func{bignum?}, @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined compnums
+@subsection Validating compnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} compnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{compnum?}.
+@end deffn
+
+@c page
+@node args predefined cflonums
+@subsection Validating cflonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} cflonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{cflonum?}.
+@end deffn
+
+@c page
+@node args predefined complexes
+@subsection Validating complexes
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} complex @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{complex?}.
+@end deffn
+
+@c page
+@node args predefined ports
+@subsection Validating input/output ports
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} port @var{obj}
+Succeed if @var{obj} is a port.
+@end deffn
+
+
+@deffn {Validation Clause} port/false @var{obj}
+Succeed if @var{obj} is @false{} or a port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port @var{obj}
+@deffnx {Validation Clause} output-port @var{obj}
+@deffnx {Validation Clause} input/output-port @var{obj}
+Succeed if @var{obj} is an input, output or input/output port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port/false @var{obj}
+@deffnx {Validation Clause} output-port/false @var{obj}
+@deffnx {Validation Clause} input/output-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an input, output or input/output
+port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port @var{obj}
+@deffnx {Validation Clause} binary-port @var{obj}
+Succeed if @var{obj} is an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port/false @var{obj}
+@deffnx {Validation Clause} binary-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} open-port @var{obj}
+Succeed if @var{obj} is an open port.
+@end deffn
+
+@c page
+@node args predefined transcoders
+@subsection Validating port transcoders
+
+
+The following bindings are extranscodered by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} transcoder @var{obj}
+Succeed if @var{obj} is a transcoder.
+@end deffn
+
+
+@deffn {Validation Clause} transcoder/false @var{obj}
+Succeed if @var{obj} is @false{} or a transcoder.
+@end deffn
+
+@c page
+@node args predefined procedures
+@subsection Validating procedures
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} procedure @var{obj}
+Succeed if @var{obj} is a procedure.
+@end deffn
+
+
+@deffn {Validation Clause} procedure/false @var{obj}
+Succeed if @var{obj} is @false{} or a procedure.
+@end deffn
+
+@c page
+@node args predefined genstrings
+@subsection Validating generalised C string arguments
+
+
+@ref{cbuffers strings, Introduction to generalised C strings}, for
+details on generalised C strings.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-string? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string @var{obj}
+Succeed if @var{obj} is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string.len @var{str} @var{str.len}
+If @var{str} is a pointer object: succeed if @var{str.len} an exact
+integer in the range of the C language type @code{size_t}.  Otherwise
+succeed if @var{str.len} is @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C string and @var{obj.len} its
+optional length.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C string and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
+@end deffn
+
+@c page
+@node args predefined genbuffers
+@subsection Validating generalised C buffer arguments
+
+
+@ref{cbuffers buffers, Introduction to generalised C buffers}, for
+details on generalised C buffers.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer @var{obj}
+Succeed if @var{obj} is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C buffer.
+@end deffn
+
+
+@deffn Syntax general-c-sticky-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer @var{obj}
+Succeed if @var{obj} is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer.len @var{buf} @var{buf.len}
+If @var{buf} is a pointer object: succeed if @var{buf.len} an exact
+integer in the range of the C language type @code{size_t}.  Otherwise
+succeed if @var{buf.len} is @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
+optional length.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C sticky buffer and @var{obj.len}
+its optional length.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C buffer and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer*/false @var{obj} @var{obj.len}
+Succeed if @var{obj} is a @false{} or a generalised C sticky buffer and
+@var{obj.len} its optional length.  If @var{obj} is @false{}:
+@var{obj.len} must be false too.
+@end deffn
+
+@c page
+@node args predefined time
+@subsection Validating time objects
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} time @var{obj}
+Succeed if @var{obj} is a time object: it satisfies the predicate
+@func{time?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} time/false @var{obj}
+Succeed if @var{obj} is @false{} or a time object: it satisfies the
+predicate @func{time?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined identifier
+@subsection Validating identifier objects
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} identifier @var{obj}
+Succeed if @var{obj} is a identifier object: it satisfies the predicate
+@func{identifier?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} identifier/false @var{obj}
+Succeed if @var{obj} is @false{} or a identifier object: it satisfies
+the predicate @func{identifier?} exported by @library{vicare}.
+@end deffn
+
+@c end of file

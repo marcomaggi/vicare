@@ -284,6 +284,7 @@
     "ikarus.io.sls"
     "ikarus.pretty-formats.sls"
     "ikarus.writer.sls"
+    "ikarus.strings-table.sls"
     "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
@@ -311,6 +312,8 @@
     "ikarus.command-line.sls"
 ;;; "ikarus.trace.sls"
     "ikarus.debugger.sls"
+    "ikarus.syntax-utilities.sls"
+    "ikarus.environment-inquiry.sls"
     "ikarus.main.sls"
     ))
 
@@ -341,6 +344,10 @@
     (fluid-let-syntax			(core-macro . fluid-let-syntax))
     (record-type-descriptor		(core-macro . record-type-descriptor))
     (record-constructor-descriptor	(core-macro . record-constructor-descriptor))
+    (record-type-field-set!		(core-macro . record-type-field-set!))
+    (record-type-field-ref		(core-macro . record-type-field-ref))
+    ($record-type-field-set!		(core-macro . $record-type-field-set!))
+    ($record-type-field-ref		(core-macro . $record-type-field-ref))
     (let-values				(macro . let-values))
     (let*-values			(macro . let*-values))
     (define-struct			(macro . define-struct))
@@ -351,6 +358,7 @@
     (with-syntax			(macro . with-syntax))
     (identifier-syntax			(macro . identifier-syntax))
     (parameterize			(macro . parameterize))
+    (parameterise			(macro . parameterize))
     (parametrise			(macro . parameterize))
     (when				(macro . when))
     (unless				(macro . unless))
@@ -393,10 +401,12 @@
     (nongenerative			(macro . nongenerative))
     (parent-rtd				(macro . parent-rtd))
     (define-record-type			(macro . define-record-type))
+    (record-type-and-record?		(macro . record-type-and-record?))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
+    (define-syntax*			(macro . define-syntax*))
     (define-integrable			(macro . define-integrable))
     (define-inline			(macro . define-inline))
     (define-constant			(macro . define-constant))
@@ -409,7 +419,11 @@
     (begin0				(macro . begin0))
     (xor				(macro . xor))
     (unwind-protect			(macro . unwind-protect))
+    (with-implicits			(macro . with-implicits))
     (include				(macro . include))
+    (set-cons!				(macro . set-cons!))
+;;;
+    (eval-for-expand			(macro . eval-for-expand))
 ;;;
     (return				($fluid . return))
     (continue				($fluid . continue))
@@ -495,6 +509,10 @@
 						      &interrupted-rcd)))
     (&source				($core-rtd . (&source-rtd
 						      &source-rcd)))
+    (&procedure-argument-violation	($core-rtd . (&procedure-argument-violation-rtd
+    						      &procedure-argument-violation-rcd)))
+    (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
+    						      &expression-return-value-violation-rcd)))
     ))
 
 
@@ -568,33 +586,33 @@
     ($interrupts	(ikarus system $interrupts)		#f	#t)
     ($io		(ikarus system $io)			#f	#t)
     ($for		(ikarus system $foreign)		#f	#t)
-    ($compiler		(ikarus system $compiler)		#f	#f)
-    ($numerics		(ikarus system $numerics)		#f	#f)
+    ($compiler		(ikarus system $compiler)		#f	#t)
+    ($numerics		(ikarus system $numerics)		#f	#t)
 ;;;
-    ($vicare-pairs	(vicare system $pairs)			#f	#f)
-    ($vicare-lists	(vicare system $lists)			#f	#f)
-    ($vicare-chars	(vicare system $chars)			#f	#f)
-    ($vicare-strings	(vicare system $strings)		#f	#f)
-    ($vicare-vectors	(vicare system $vectors)		#f	#f)
-    ($vicare-flonums	(vicare system $flonums)		#f	#f)
-    ($vicare-bignums	(vicare system $bignums)		#f	#f)
-    ($vicare-bytes	(vicare system $bytevectors)		#f	#f)
-    ($vicare-transc	(vicare system $transcoders)		#f	#f)
-    ($vicare-fx		(vicare system $fx)			#f	#f)
-    ($vicare-rat	(vicare system $ratnums)		#f	#f)
-    ($vicare-comp	(vicare system $compnums)		#f	#f)
-    ($vicare-symbols	(vicare system $symbols)		#f	#f)
-    ($vicare-structs	(vicare system $structs)		#f	#f)
-    ($vicare-pointers	(vicare system $pointers)		#f	#f)
-    ($vicare-codes	(vicare system $codes)			#f	#f)
-    ($vicare-tcbuckets	(vicare system $tcbuckets)		#f	#f)
-    ($vicare-arg-list	(vicare system $arg-list)		#f	#f)
-    ($vicare-stack	(vicare system $stack)			#f	#f)
-    ($vicare-interrupts	(vicare system $interrupts)		#f	#f)
-    ($vicare-io		(vicare system $io)			#f	#f)
-    ($vicare-for	(vicare system $foreign)		#f	#f)
-    ($vicare-compiler	(vicare system $compiler)		#f	#f)
-    ($vicare-numerics	(vicare system $numerics)		#f	#f)
+    ($vicare-pairs	(vicare system $pairs)			#f	#t)
+    ($vicare-lists	(vicare system $lists)			#f	#t)
+    ($vicare-chars	(vicare system $chars)			#f	#t)
+    ($vicare-strings	(vicare system $strings)		#f	#t)
+    ($vicare-vectors	(vicare system $vectors)		#f	#t)
+    ($vicare-flonums	(vicare system $flonums)		#f	#t)
+    ($vicare-bignums	(vicare system $bignums)		#f	#t)
+    ($vicare-bytes	(vicare system $bytevectors)		#f	#t)
+    ($vicare-transc	(vicare system $transcoders)		#f	#t)
+    ($vicare-fx		(vicare system $fx)			#f	#t)
+    ($vicare-rat	(vicare system $ratnums)		#f	#t)
+    ($vicare-comp	(vicare system $compnums)		#f	#t)
+    ($vicare-symbols	(vicare system $symbols)		#f	#t)
+    ($vicare-structs	(vicare system $structs)		#f	#t)
+    ($vicare-pointers	(vicare system $pointers)		#f	#t)
+    ($vicare-codes	(vicare system $codes)			#f	#t)
+    ($vicare-tcbuckets	(vicare system $tcbuckets)		#f	#t)
+    ($vicare-arg-list	(vicare system $arg-list)		#f	#t)
+    ($vicare-stack	(vicare system $stack)			#f	#t)
+    ($vicare-interrupts	(vicare system $interrupts)		#f	#t)
+    ($vicare-io		(vicare system $io)			#f	#t)
+    ($vicare-for	(vicare system $foreign)		#f	#t)
+    ($vicare-compiler	(vicare system $compiler)		#f	#t)
+    ($vicare-numerics	(vicare system $numerics)		#f	#t)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
@@ -620,6 +638,7 @@
     (foreign-call				i v $language)
     (type-descriptor				i v $language)
     (parameterize				i v $language parameters)
+    (parameterise				i v $language parameters)
     (parametrise				i v $language parameters)
     (define-struct				i v $language)
     (stale-when					i v $language)
@@ -821,13 +840,16 @@
     ($string-ref				$strings $vicare-strings)
     ($string-set!				$strings $vicare-strings)
     ($string-length				$strings $vicare-strings)
+    ($string-empty?				$strings $vicare-strings)
     ($string=					$strings $vicare-strings)
     ($string-total-length			$strings $vicare-strings)
     ($string-concatenate			$strings $vicare-strings)
     ($string-reverse-and-concatenate		$strings $vicare-strings)
+    ($interned-strings				$strings $vicare-strings)
 ;;
     ($make-bytevector				$bytes $vicare-bytes)
     ($bytevector-length				$bytes $vicare-bytes)
+    ($bytevector-empty?				$bytes $vicare-bytes)
     ($bytevector-s8-ref				$bytes $vicare-bytes)
     ($bytevector-u8-ref				$bytes $vicare-bytes)
     ($bytevector-set!				$bytes $vicare-bytes)
@@ -938,32 +960,35 @@
     ($ratnum-non-negative?			$rat $vicare-rat)
 ;;;
     ($make-rectangular				$comp $vicare-comp)
+
     ($make-compnum				$comp $vicare-comp)
     ($compnum-real				$comp $vicare-comp)
     ($compnum-imag				$comp $vicare-comp)
+
     ($make-cflonum				$comp $vicare-comp)
     ($cflonum-real				$comp $vicare-comp)
     ($cflonum-imag				$comp $vicare-comp)
 
-    ($complex-conjugate-compnum			$comp $vicare-comp)
-    ($complex-conjugate-cflonum			$comp $vicare-comp)
+    ($complex-conjugate-compnum			$numerics $vicare-numerics)
+    ($complex-conjugate-cflonum			$numerics $vicare-numerics)
 
-    ($angle-fixnum?				$comp $vicare-comp)
-    ($angle-bignum?				$comp $vicare-comp)
-    ($angle-ratnum?				$comp $vicare-comp)
-    ($angle-flonum?				$comp $vicare-comp)
-    ($angle-compnum?				$comp $vicare-comp)
-    ($angle-cflonum?				$comp $vicare-comp)
+    ($angle-fixnum?				$numerics $vicare-numerics)
+    ($angle-bignum?				$numerics $vicare-numerics)
+    ($angle-ratnum?				$numerics $vicare-numerics)
+    ($angle-flonum?				$numerics $vicare-numerics)
+    ($angle-compnum?				$numerics $vicare-numerics)
+    ($angle-cflonum?				$numerics $vicare-numerics)
 
-    ($magnitude-fixnum				$comp $vicare-comp)
-    ($magnitude-bignum				$comp $vicare-comp)
-    ($magnitude-ratnum				$comp $vicare-comp)
-    ($magnitude-flonum				$comp $vicare-comp)
-    ($magnitude-compnum				$comp $vicare-comp)
-    ($magnitude-cflonum				$comp $vicare-comp)
+    ($magnitude-fixnum				$numerics $vicare-numerics)
+    ($magnitude-bignum				$numerics $vicare-numerics)
+    ($magnitude-ratnum				$numerics $vicare-numerics)
+    ($magnitude-flonum				$numerics $vicare-numerics)
+    ($magnitude-compnum				$numerics $vicare-numerics)
+    ($magnitude-cflonum				$numerics $vicare-numerics)
 ;;;
     ($make-vector				$vectors $vicare-vectors)
     ($vector-length				$vectors $vicare-vectors)
+    ($vector-empty?				$vectors $vicare-vectors)
     ($vector-ref				$vectors $vicare-vectors)
     ($vector-set!				$vectors $vicare-vectors)
 ;;;
@@ -1140,6 +1165,7 @@
     (cond					i v r ba se ne)
     (define					i v r ba se ne)
     (define-syntax				i v r ba se ne)
+    (define-syntax*				i v $language)
     (define-fluid-syntax			i v $language)
     (identifier-syntax				i v r ba)
     (if						i v r ba se ne)
@@ -1223,6 +1249,7 @@
     (call/cc					i v r ba)
     (call-with-values				i v r ba se)
     (ceiling					i v r ba se)
+;;
     (char->integer				i v r ba se)
     (char<=?					i v r ba se)
     (char<?					i v r ba se)
@@ -1230,6 +1257,9 @@
     (char>=?					i v r ba se)
     (char>?					i v r ba se)
     (char?					i v r ba se)
+    (char-in-ascii-range?			i v $language)
+    (fixnum-in-character-range?			i v $language)
+;;
     (complex?					i v r ba se)
     (cons					i v r ba se)
     (cos					i v r ba se)
@@ -1266,6 +1296,7 @@
     (integer->char				i v r ba se)
     (integer-valued?				i v r ba)
     (integer?					i v r ba se)
+    (exact-integer?				i v $language)
     (lcm					i v r ba se)
     (length					i v r ba se)
     (list					i v r ba se)
@@ -1321,6 +1352,7 @@
     (string-copy				i v r ba se)
     (string-for-each				i v r ba)
     (string-length				i v r ba se)
+    (string-empty?				i v $language)
     (string-ref					i v r ba se)
     (string<=?					i v r ba se)
     (string<?					i v r ba se)
@@ -1357,6 +1389,7 @@
     (vector-fill!				i v r ba se)
     (vector-for-each				i v r ba)
     (vector-length				i v r ba se)
+    (vector-empty?				i v $language)
     (vector-map					i v r ba)
     (vector-for-all				i v $language)
     (vector-exists				i v $language)
@@ -1439,6 +1472,16 @@
     (fxnonpositive?				i v $language)
     (fxnonnegative?				i v $language)
     (fixnum->flonum				i v r fl)
+;;;
+    (bignum-positive?				i v $language)
+    (bignum-negative?				i v $language)
+    (bignum-non-negative?			i v $language)
+    (bignum-non-positive?			i v $language)
+    (bignum-odd?				i v $language)
+    (bignum-even?				i v $language)
+    (least-positive-bignum			i v $language)
+    (greatest-negative-bignum			i v $language)
+;;;
     (fl*					i v r fl)
     (fl+					i v r fl)
     (fl-					i v r fl)
@@ -1555,6 +1598,7 @@
     (bytevector-ieee-single-ref			i v r bv)
     (bytevector-ieee-single-set!		i v r bv)
     (bytevector-length				i v r bv)
+    (bytevector-empty?				i v $language)
     (bytevector-s16-native-ref			i v r bv)
     (bytevector-s16-native-set!			i v r bv)
     (bytevector-s16-ref				i v r bv)
@@ -1747,7 +1791,7 @@
     (remp					i v r ls)
     (remv					i v r ls)
     (remove					i v r ls)
-    (make-queue					i v $language)
+    (make-queue-procs				i v $language)
     (set-car!					i v mp se)
     (set-cdr!					i v mp se)
     (string-set!				i v ms se)
@@ -1819,6 +1863,10 @@
     (errno-condition?				i v $language)
     (&h_errno					i v $language)
     (h_errno-condition?				i v $language)
+    (&procedure-argument-violation		i v $language)
+    (procedure-argument-violation?		i v $language)
+    (&expression-return-value-violation		i v $language)
+    (expression-return-value-violation?		i v $language)
     (lookahead-char				i v r ip)
     (lookahead-u8				i v r ip)
     (lookahead-two-u8				i v $language)
@@ -1870,6 +1918,10 @@
     (condition-errno				i v $language)
     (make-h_errno-condition			i v $language)
     (condition-h_errno				i v $language)
+    (make-procedure-argument-violation		i v $language)
+    (procedure-argument-violation		i v $language)
+    (make-expression-return-value-violation	i v $language)
+    (expression-return-value-violation		i v $language)
     (latin-1-codec				i v r ip)
     (make-transcoder				i v r ip)
     (native-eol-style				i v r ip)
@@ -1981,6 +2033,10 @@
     (protocol					i v r rs)
     (record-constructor-descriptor		i v r rs)
     (record-type-descriptor			i v r rs)
+    (record-type-field-set!			i v $language)
+    (record-type-field-ref			i v $language)
+    ($record-type-field-set!			i v $language)
+    ($record-type-field-ref			i v $language)
     (sealed					i v r rs)
     (nongenerative				i v r rs)
     (record-field-mutable?			i v r ri)
@@ -2005,6 +2061,8 @@
     (record-guardian-logger			i v $language)
     (record-guardian-log			i v $language)
     (record-reset				i v $language)
+    (record-and-rtd?				i v $language)
+    (record-type-and-record?			i v $language)
     (syntax-violation				i v r sc)
     (bound-identifier=?				i v r sc)
     (datum->syntax				i v r sc)
@@ -2076,7 +2134,6 @@
     (module					i v $language cm)
     (library					i v $language)
     (syntax-dispatch				)
-    (syntax-error				i v $language)
     ($transcoder->data				$transc $vicare-transc)
     ($data->transcoder				$transc $vicare-transc)
     (make-file-options				i v $language)
@@ -2094,7 +2151,11 @@
     (begin0					i v $language)
     (xor					i v $language)
     (unwind-protect				i v $language)
+    (with-implicits				i v $language)
     (include					i v $language)
+    (set-cons!					i v $language)
+;;;
+    (eval-for-expand				i v $language)
 ;;;
     (return					i v $language)
     (continue					i v $language)
@@ -2223,6 +2284,8 @@
 ;;; --------------------------------------------------------------------
 ;;; configuration options
 
+    (vicare-built-with-ffi-enabled		i v $language)
+    (vicare-built-with-iconv-enabled		i v $language)
     (vicare-built-with-posix-enabled		i v $language)
     (vicare-built-with-glibc-enabled		i v $language)
     (vicare-built-with-linux-enabled		i v $language)
@@ -2238,10 +2301,46 @@
     (mkdir					posix)
     (mkdir/parents				posix)
     (real-pathname				posix)
+    (file-pathname?				posix)
+    (file-string-pathname?			posix)
+    (file-bytevector-pathname?			posix)
+    (file-absolute-pathname?			posix)
+    (file-relative-pathname?			posix)
+    (file-colon-search-path?			posix)
+    (file-string-colon-search-path?		posix)
+    (file-bytevector-colon-search-path?		posix)
     (file-modification-time			posix)
-    (split-file-name				posix)
+    (split-pathname-root-and-tail		posix)
+    (search-file-in-environment-path		posix)
+    (search-file-in-list-path			posix)
+    (split-pathname				posix)
+    (split-pathname-bytevector			posix)
+    (split-pathname-string			posix)
+    (split-search-path				posix)
+    (split-search-path-bytevector		posix)
+    (split-search-path-string			posix)
     (vicare-argv0				i v $language posix)
     (vicare-argv0-string			i v $language posix)
+
+;;; --------------------------------------------------------------------
+;;; environment inquiry
+
+    (uname					i v $language)
+    (utsname?					i v $language)
+    (utsname-sysname				i v $language)
+    (utsname-nodename				i v $language)
+    (utsname-release				i v $language)
+    (utsname-version				i v $language)
+    (utsname-machine				i v $language)
+
+    (implementation-name			i v $language)
+    (implementation-version			i v $language)
+    (cpu-architecture				i v $language)
+    (machine-name				i v $language)
+    (os-name					i v $language)
+    (os-version					i v $language)
+
+    (host-info					i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)
@@ -2474,8 +2573,11 @@
 ;;; --------------------------------------------------------------------
 
     (ellipsis-map)
-    (host-info					i v $language)
     (debug-call)
+
+    ;;FIXME  SYNTAX-ERROR  is to  be  removed  at  the next  boot  image
+    ;;rotation.  (Marco Maggi; Sat Aug 31, 2013)
+    (syntax-error				i)
 
 ;;; --------------------------------------------------------------------
 
@@ -2484,6 +2586,66 @@
     (keyword?					i v $language)
     (keyword=?					i v $language)
     (keyword-hash				i v $language)
+
+;;; --------------------------------------------------------------------
+;;; syntax utilities
+
+    (identifier->string				i v $language)
+    (string->identifier				i v $language)
+    (identifier-prefix				i v $language)
+    (identifier-suffix				i v $language)
+    (identifier-append				i v $language)
+    (identifier-format				i v $language)
+    (duplicate-identifiers?			i v $language)
+    (delete-duplicate-identifiers		i v $language)
+    (identifier-memq				i v $language)
+
+    (identifier-record-constructor		i v $language)
+    (identifier-record-predicate		i v $language)
+    (identifier-record-field-accessor		i v $language)
+    (identifier-record-field-mutator		i v $language)
+
+    (identifier-struct-constructor		i v $language)
+    (identifier-struct-predicate		i v $language)
+    (identifier-struct-field-accessor		i v $language)
+    (identifier-struct-field-mutator		i v $language)
+
+    (syntax-car					i v $language)
+    (syntax-cdr					i v $language)
+    (syntax->list				i v $language)
+    (identifiers->list				i v $language)
+    (all-identifiers?				i v $language)
+
+    (syntax->vector				i v $language)
+    (syntax-unwrap				i v $language)
+    (syntax=?					i v $language)
+    (identifier=symbol?				i v $language)
+    #;(quoted-syntax-object?			i v $language)
+
+    (syntax-clauses-unwrap			i v $language)
+    (syntax-clauses-filter			i v $language)
+    (syntax-clauses-remove			i v $language)
+    (syntax-clauses-partition			i v $language)
+    (syntax-clauses-collapse			i v $language)
+    (syntax-clauses-verify-at-least-once	i v $language)
+    (syntax-clauses-verify-at-most-once		i v $language)
+    (syntax-clauses-verify-exactly-once		i v $language)
+    (syntax-clauses-verify-mutually-inclusive	i v $language)
+    (syntax-clauses-verify-mutually-exclusive	i v $language)
+
+    ;; clause specification structs
+    (make-syntax-clause-spec			i v $language)
+    (syntax-clause-spec?			i v $language)
+    (syntax-clause-spec-keyword			i v $language)
+    (syntax-clause-spec-min-number-of-occurrences i v $language)
+    (syntax-clause-spec-max-number-of-occurrences i v $language)
+    (syntax-clause-spec-min-number-of-arguments	i v $language)
+    (syntax-clause-spec-max-number-of-arguments	i v $language)
+    (syntax-clause-spec-mutually-inclusive	i v $language)
+    (syntax-clause-spec-mutually-exclusive	i v $language)
+    (syntax-clauses-single-spec			i v $language)
+    (syntax-clauses-fold-specs			i v $language)
+    (syntax-clauses-validate-specs		i v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; library names
@@ -2582,6 +2744,14 @@
     ($inv-ratnum				$numerics $vicare-numerics)
     ($inv-compnum				$numerics $vicare-numerics)
     ($inv-cflonum				$numerics $vicare-numerics)
+
+    ($add1-integer				$numerics $vicare-numerics)
+    ($add1-fixnum				$numerics $vicare-numerics)
+    ($add1-bignum				$numerics $vicare-numerics)
+
+    ($sub1-integer				$numerics $vicare-numerics)
+    ($sub1-fixnum				$numerics $vicare-numerics)
+    ($sub1-bignum				$numerics $vicare-numerics)
 
     ($add-number-number				$numerics $vicare-numerics)
     ($add-fixnum-number				$numerics $vicare-numerics)

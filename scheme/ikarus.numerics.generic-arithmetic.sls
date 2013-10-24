@@ -66,11 +66,7 @@
     positive?			negative?
     even?			odd?
 
-    fxnonnegative?		fxnonpositive?
-    flnonnegative?		flnonpositive?
-
-    non-positive? $fxnonpositive? $bignum-non-positive? $flnonpositive? $ratnum-non-positive?
-    non-negative? $fxnonnegative? $bignum-non-negative? $flnonnegative? $ratnum-non-negative?
+    non-positive?		non-negative?
 
     ;; exactness
     exact->inexact		inexact
@@ -129,6 +125,9 @@
     $inv-number		$inv-fixnum	$inv-bignum
     $inv-flonum		$inv-ratnum	$inv-compnum
     $inv-cflonum
+
+    $add1-integer	$add1-fixnum	$add1-bignum
+    $sub1-integer	$sub1-fixnum	$sub1-bignum
 
     $add-number-number		$add-fixnum-number	$add-bignum-number
     $add-flonum-number		$add-ratnum-number	$add-compnum-number
@@ -388,6 +387,8 @@
 		positive?			negative?
 		even?				odd?
 
+		non-positive?			non-negative?
+
 		;; exactness
 		exact->inexact			inexact
 
@@ -405,7 +406,7 @@
 		bitwise-arithmetic-shift-right
 		bitwise-arithmetic-shift-left
 		bitwise-arithmetic-shift
-		bitwise-length		bitwise-copy-bit-field
+		bitwise-length			bitwise-copy-bit-field
 		bitwise-copy-bit		bitwise-bit-field
 		bitwise-reverse-bit-field	bitwise-rotate-bit-field
 		sra				sll
@@ -436,6 +437,9 @@
   (ikarus system $pairs)
   (ikarus system $fx)
   (ikarus system $flonums)
+  ;;FIXME For  no reason I  can figure out now:  here we really  need to
+  ;;import  from "(ikarus  flonums)", rather  than from  "(ikarus system
+  ;;$flonums)".  (Marco Maggi; Thu Sep 19, 2013)
   (rename (only (ikarus flonums) #;(ikarus system $flonums)
 		$flexp
 		$flsin
@@ -454,12 +458,7 @@
 	  ($flcosh	$cosh-flonum)
 	  ($fltanh	$tanh-flonum)
 	  ($flasinh	$asinh-flonum))
-  (except (ikarus system $ratnums)
-	  ;;FIXME At  the next  boot image  rotation the  definitions of
-	  ;;these functions  must be  moved to  "ikarus.ratnums.sls" and
-	  ;;this import clause removed.  (Marco Maggi; Sat Aug 3, 2013)
-	  $ratnum-non-positive?
-	  $ratnum-non-negative?)
+  (ikarus system $ratnums)
   (ikarus system $bignums)
   (ikarus system $compnums)
   (ikarus system $chars)
@@ -471,7 +470,7 @@
 ;;;; helpers
 
 (define (err who x)
-  (assertion-violation who
+  (procedure-argument-violation who
     (if (number? x)
 	"invalid argument"
       "expected number as argument")
@@ -483,7 +482,7 @@
       ((?k ?arg)
        (identifier? #'?arg)
        (with-syntax ((WHO (datum->syntax #'?k 'who)))
-	 #'(assertion-violation WHO "expected number as argument" ?arg))))))
+	 #'(procedure-argument-violation WHO "expected number as argument" ?arg))))))
 
 (define-syntax %error-not-real-number
   (lambda (stx)
@@ -491,21 +490,21 @@
       ((?k ?arg)
        (identifier? #'?arg)
        (with-syntax ((WHO (datum->syntax #'?k 'who)))
-	 #'(assertion-violation WHO "expected real number as argument" ?arg))))))
+	 #'(procedure-argument-violation WHO "expected real number as argument" ?arg))))))
 
 (define (%error-not-integer who obj)
-  (assertion-violation who "expected exact or inexact integer as argument" obj))
+  (procedure-argument-violation who "expected exact or inexact integer as argument" obj))
 
 (define-syntax %error-division-by-zero
   (syntax-rules ()
     ((_ ?who . ?irritants)
      ;;According to R6RS this must be an assertion.
-     (assertion-violation ?who "division by zero" . ?irritants))))
+     (procedure-argument-violation ?who "division by zero" . ?irritants))))
 
 (define-syntax %error-undefined-operation
   (syntax-rules ()
     ((_ ?who . ?irritants)
-     (assertion-violation ?who "undefined operation" . ?irritants))))
+     (procedure-argument-violation ?who "undefined operation" . ?irritants))))
 
 
 ;;;; constants
@@ -530,7 +529,7 @@
        (%error-not-real x))))
 
   (define (%error-not-real x)
-    (assertion-violation who "expected real number as argument" x))
+    (procedure-argument-violation who "expected real number as argument" x))
 
   #| end of module: real->flonum |# )
 
@@ -553,7 +552,7 @@
 	  ((number? a)
 	   a)
 	  (else
-	   (assertion-violation '+ "not a number" a))))
+	   (procedure-argument-violation '+ "not a number" a))))
    (()
     0)
    ((a b c d . e*)
@@ -588,7 +587,7 @@
     (cond ((fixnum? a) a)
 	  ((number? a) a)
 	  (else
-	   (assertion-violation '* "not a number" a))))
+	   (procedure-argument-violation '* "not a number" a))))
    (()
     1)
    ((a b c d . e*)
@@ -628,7 +627,7 @@
       ((compnum?)	($neg-compnum x))
       ((cflonum?)	($neg-cflonum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (procedure-argument-violation who "expected number as argument" x))))
 
   (define ($neg-fixnum x)
     (if ($fx= x (least-fixnum))
@@ -676,7 +675,7 @@
       ((compnum?)	($inv-compnum x))
       ((cflonum?)	($inv-cflonum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (procedure-argument-violation who "expected number as argument" x))))
 
   (define ($inv-fixnum x)
     (cond (($fxzero? x)
@@ -1111,6 +1110,47 @@
 		   ($fl+ ($cflonum-imag x) ($cflonum-imag y))))
 
   #| end of module: $add-number-number |# )
+
+
+(module ($add1-integer
+	 $add1-fixnum
+	 $add1-bignum)
+
+  (define ($add1-integer x)
+    (define who '$add1-integer)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($add1-fixnum x))
+      ((bignum?)	($add1-bignum x))
+      (else
+       (err who x))))
+
+  (define ($add1-fixnum x)
+    ($add-fixnum-fixnum x 1))
+
+  (define ($add1-bignum x)
+    ($add-bignum-fixnum x 1))
+
+  #| end of module: $add1-integer |# )
+
+(module ($sub1-integer
+	 $sub1-fixnum
+	 $sub1-bignum)
+
+  (define ($sub1-integer x)
+    (define who '$sub1-integer)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($sub1-fixnum x))
+      ((bignum?)	($sub1-bignum x))
+      (else
+       (err who x))))
+
+  (define ($sub1-fixnum x)
+    ($sub-fixnum-fixnum x 1))
+
+  (define ($sub1-bignum x)
+    ($sub-bignum-fixnum x 1))
+
+  #| end of module: $sub1-integer |# )
 
 
 (module ($sub-number-number
@@ -2064,7 +2104,7 @@
 
   (define ($div-fixnum-fixnum x y)
     (cond (($fxzero? y)
-	   (assertion-violation who "division by 0" x y))
+	   (procedure-argument-violation who "division by 0" x y))
 	  (($fxzero? x)
 	   0)
 	  (($fx= 1 y)
@@ -2255,7 +2295,7 @@
   (define ($div-bignum-fixnum x y)
     ;;Remember that a bignum cannot be zero, so X is not zero here.
     (cond (($fxzero? y)
-	   (assertion-violation who "division by 0" x y))
+	   (procedure-argument-violation who "division by 0" x y))
 	  (($fx= 1 y)
 	   x)
 	  (($fxpositive? y)
@@ -3000,7 +3040,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected exact or inexact integer as argument" x))
+    (procedure-argument-violation who "expected exact or inexact integer as argument" x))
 
   #| end of module |# )
 
@@ -3195,10 +3235,10 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
+    (procedure-argument-violation who "expected integer as argument" x))
 
   (define (%error-not-exact-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
+    (procedure-argument-violation who "expected exact integer as argument" x))
 
   #| end of module |# )
 
@@ -3243,7 +3283,7 @@
 
   (define (quotient+remainder x y)
     (if (zero? y) ;both exact and inexact
-	(assertion-violation who "second argument must be non-zero")
+	(procedure-argument-violation who "second argument must be non-zero")
       (cond-inexact-integer-operand x
 	((fixnum?)	($quotient+remainder-fixnum-number x y))
 	((bignum?)	($quotient+remainder-bignum-number x y))
@@ -3444,7 +3484,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected exact or inexact integer as argument" x))
+    (procedure-argument-violation who "expected exact or inexact integer as argument" x))
 
   #| end of module: quotient+remainder |# )
 
@@ -3639,7 +3679,7 @@
 
   (define ($modulo-fixnum-fixnum n m)
     (if ($fxzero? m)
-	(assertion-violation who "division by zero" n m)
+	(procedure-argument-violation who "division by zero" n m)
       ($fxmodulo n m)))
 
   (define ($modulo-fixnum-bignum n m)
@@ -3680,7 +3720,7 @@
 
   (define ($modulo-bignum-fixnum n m)
     (if ($fxzero? m)
-	(assertion-violation who "division by zero" n m)
+	(procedure-argument-violation who "division by zero" n m)
       (foreign-call "ikrt_bnfx_modulo" n m)))
 
   (define ($modulo-bignum-bignum n m)
@@ -3757,7 +3797,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-not-integer x)
-    (assertion-violation who "expected exact or inexact integer number as argument" x))
+    (procedure-argument-violation who "expected exact or inexact integer number as argument" x))
 
   #| end of module: modulo |# )
 
@@ -3776,7 +3816,7 @@
       ((compnum?)	($square-compnum x))
       ((cflonum?)	($square-cflonum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (procedure-argument-violation who "expected number as argument" x))))
 
   (define ($square-fixnum x)
     ($mul-fixnum-fixnum x x))
@@ -4915,7 +4955,7 @@
 	   ($exact-integer-sqrt-bignum x))
 
 	  (else
-	   (assertion-violation who "expected exact integer as argument" x))))
+	   (procedure-argument-violation who "expected exact integer as argument" x))))
 
   (define ($exact-integer-sqrt-fixnum x)
     (cond (($fx> x 0)
@@ -4933,7 +4973,7 @@
       (%error-negative-operand x)))
 
   (define (%error-negative-operand x)
-    (assertion-violation who "expected non-negative exact integer as argument" x))
+    (procedure-argument-violation who "expected non-negative exact integer as argument" x))
 
   #| end of module: exact-integer-sqrt |# )
 
@@ -5478,7 +5518,7 @@
       (case-fixnums obj
 	((2 8 10 16)	#t)
 	(else		#f))
-      (assertion-violation who "invalid radix" obj))
+      (procedure-argument-violation who "invalid radix" obj))
 
     #| end of module |# )
 
@@ -5567,7 +5607,7 @@
 
     (define-argument-validation (radix10 who obj)
       (eqv? obj 10)
-      (assertion-violation who "invalid radix for inexact number, expected 10" obj))
+      (procedure-argument-violation who "invalid radix for inexact number, expected 10" obj))
 
     #| end of module: $number->string |# )
 
@@ -5582,7 +5622,7 @@
 	((8)  (bignum->power-string x  7 3))
 	((16) (bignum->power-string x 15 4))
 	(else
-	 (assertion-violation who "BUG"))))
+	 (procedure-argument-violation who "BUG"))))
 
     (define (bignum->decimal-string x)
       (utf8->string (foreign-call "ikrt_bignum_to_bytevector" x)))
@@ -6010,7 +6050,7 @@
 	     (%error-not-real x)))
 
 	 (define (%error-not-real x)
-	   (assertion-violation '?who "expected real number as argument" x))
+	   (procedure-argument-violation '?who "expected real number as argument" x))
 
 	 #| end of module: ?who |# )
        )))
@@ -6335,7 +6375,7 @@
   (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
 	((number? x)	(+ x 1))
 	(else
-	 (assertion-violation 'add1 "not a number" x))))
+	 (procedure-argument-violation 'add1 "not a number" x))))
 
 (define (add1 x)
   ;;By importing  the library here  we shadow the binding  ADD1, causing
@@ -6356,7 +6396,7 @@
   (cond ((fixnum? x)	(- (least-fixnum) 1))
 	((number? x)	(- x 1))
 	(else
-	 (assertion-violation 'sub1 "not a number" x))))
+	 (procedure-argument-violation 'sub1 "not a number" x))))
 
 (define (sub1 x)
   ;;By importing  the library here  we shadow the binding  SUB1, causing
@@ -6377,7 +6417,7 @@
     ((cflonum?)	(and ($flzero? ($cflonum-real x))
 		     ($flzero? ($cflonum-imag x))))
     (else
-     (assertion-violation 'zero? "expected number as argument" x))))
+     (procedure-argument-violation 'zero? "expected number as argument" x))))
 
 (define (positive? x)
   (cond-real-numeric-operand x
@@ -6387,7 +6427,7 @@
     ;;The denominator of a ratnum is always strictly positive.
     ((ratnum?)	(positive? ($ratnum-n x)))
     (else
-     (assertion-violation 'positive? "expected real number as argument" x))))
+     (procedure-argument-violation 'positive? "expected real number as argument" x))))
 
 (define (negative? x)
   (cond-real-numeric-operand x
@@ -6397,100 +6437,27 @@
     ((ratnum?)	(negative? ($ratnum-n x)))
     ((flonum?)	($flnegative? x))
     (else
-     (assertion-violation 'negative? "expected real number as argument" x))))
+     (procedure-argument-violation 'negative? "expected real number as argument" x))))
 
-(module (non-positive?
-	 fxnonpositive?
-	 flnonpositive?
-	 $fxnonpositive?
-	 $bignum-non-positive?
-	 $flnonpositive?
-	 $ratnum-non-positive?)
+(define (non-positive? x)
   (define who 'non-positive?)
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxnonpositive? x))
+    ((bignum?)	($bignum-non-positive? x))
+    ((flonum?)	($flnonpositive? x))
+    ((ratnum?)	($ratnum-non-positive? x))
+    (else
+     (%error-not-real-number x))))
 
-  (define (non-positive? x)
-    (cond-real-numeric-operand x
-      ((fixnum?)	($fxnonpositive? x))
-      ((bignum?)	($bignum-non-positive? x))
-      ((flonum?)	($flnonpositive? x))
-      ((ratnum?)	($ratnum-non-positive? x))
-      (else
-       (%error-not-real-number x))))
-
-  (define ($fxnonpositive? x)
-    (or ($fxzero? x)
-	($fxnegative? x)))
-
-  (define $bignum-non-positive? $bignum-negative?)
-
-  (define ($flnonpositive? x)
-    (or ($flzero?/negative x)
-	($flnegative? x)))
-
-  (define ($ratnum-non-positive? x)
-    ;;The denominator of a ratnum is always strictly positive.
-    (non-positive? ($ratnum-n x)))
-
-  (define (fxnonpositive? x)
-    (define who 'fxnonpositive?)
-    (with-arguments-validation (who)
-	((fixnum	x))
-      ($fxnonpositive? x)))
-
-  (define (flnonpositive? x)
-    (define who 'flnonpositive?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      ($flnonpositive? x)))
-
-  #| end of module: non-positive? |# )
-
-(module (non-negative?
-	 fxnonnegative?
-	 flnonnegative?
-	 $fxnonnegative?
-	 $bignum-non-negative?
-	 $flnonnegative?
-	 $ratnum-non-negative?)
+(define (non-negative? x)
   (define who 'non-negative?)
-
-  (define (non-negative? x)
-    (cond-real-numeric-operand x
-      ((fixnum?)	($fxnonnegative? x))
-      ((bignum?)	($bignum-non-negative? x))
-      ((flonum?)	($flnonnegative? x))
-      ((ratnum?)	($ratnum-non-negative? x))
-      (else
-       (%error-not-real-number x))))
-
-  (define ($fxnonnegative? x)
-    (or ($fxzero? x)
-	($fxpositive? x)))
-
-  (define $bignum-non-negative? $bignum-positive?)
-
-  (define ($flnonnegative? x)
-    (or ($flzero?/positive x)
-	($flpositive? x)))
-
-  (define ($ratnum-non-negative? x)
-    ;;The denominator of a ratnum is always strictly positive.
-    (non-negative? ($ratnum-n x)))
-
-
-  (define (fxnonnegative? x)
-    (define who 'fxnonnegative?)
-    (with-arguments-validation (who)
-	((fixnum	x))
-      ($fxnonnegative? x)))
-
-  (define (flnonnegative? x)
-    (define who 'flnonnegative?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      ($flnonnegative? x)))
-
-  #| end of module: non-negative? |# )
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxnonnegative? x))
+    ((bignum?)	($bignum-non-negative? x))
+    ((flonum?)	($flnonnegative? x))
+    ((ratnum?)	($ratnum-non-negative? x))
+    (else
+     (%error-not-real-number x))))
 
 (define (even? x)
   (cond-inexact-integer-operand x
@@ -6498,7 +6465,7 @@
     ((bignum?)	($bignum-even? x))
     ((flonum?)	($fleven? x))
     (else
-     (assertion-violation 'even? "expected integer as argument" x))))
+     (procedure-argument-violation 'even? "expected integer as argument" x))))
 
 (define (odd? x)
   (cond-inexact-integer-operand x
@@ -6506,7 +6473,7 @@
     ((bignum?)	($bignum-odd? x))
     ((flonum?)	($flodd? x))
     (else
-     (assertion-violation 'odd? "expected integer as argument" x))))
+     (procedure-argument-violation 'odd? "expected integer as argument" x))))
 
 
 (module (log
@@ -6525,11 +6492,11 @@
 	((compnum?)	($log-compnum x))
 	((cflonum?)	($log-cflonum x))
 	(else
-	 (assertion-violation who "not a number" x))))
+	 (procedure-argument-violation who "not a number" x))))
      ((x y)
       (let ((ly (log y)))
 	(if (eq? ly 0)
-	    (assertion-violation who "invalid arguments" x y)
+	    (procedure-argument-violation who "invalid arguments" x y)
 	  (/ (log x) ly))))))
 
 ;;; --------------------------------------------------------------------
@@ -6538,7 +6505,7 @@
     (cond (($fx= x 1)
 	   0)
 	  (($fxzero? x)
-	   (assertion-violation who "undefined around 0"))
+	   (procedure-argument-violation who "undefined around 0"))
 	  (($fxpositive? x)
 	   (foreign-call "ikrt_fx_log" x))
 	  (else
@@ -7850,7 +7817,7 @@
 	  (($fx= n 1)
 	   0)
 	  (else
-	   (assertion-violation who "incorrect argument" n)))))
+	   (procedure-argument-violation who "incorrect argument" n)))))
 
 
 ;;;; common bitwise operations
@@ -7870,7 +7837,7 @@
 		     a)
 		    ((bignum? a) a)
 		    (else
-		     (assertion-violation (quote ?who)
+		     (procedure-argument-violation (quote ?who)
 		       "expected number as argument" a))))
 	     (()
 	      ?no-arg-return-value)
@@ -7896,7 +7863,7 @@
       ((fixnum?)	($bitwise-not-fixnum x))
       ((bignum?)	($bitwise-not-bignum x))
       (else
-       (assertion-violation who "expected exact integer as argument" x))))
+       (procedure-argument-violation who "expected exact integer as argument" x))))
 
   (define ($bitwise-not-fixnum x)
     ($fxlognot x))
@@ -7955,7 +7922,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
+    (procedure-argument-violation who "expected exact integer as argument" x))
 
   #| end of module: binary-bitwise-and |# )
 
@@ -8008,7 +7975,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
+    (procedure-argument-violation who "expected exact integer as argument" x))
 
   #| end of module: binary-bitwise-ior |# )
 
@@ -8075,7 +8042,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
+    (procedure-argument-violation who "expected exact integer as argument" x))
 
   #| end of module: binary-bitwise-xor |# )
 
@@ -8150,7 +8117,7 @@
 
   (define-argument-validation (index-order who i j)
     (<= i j)
-    (assertion-violation who "indexes must be in nondescending order" i j))
+    (procedure-argument-violation who "indexes must be in nondescending order" i j))
 
   #| end of module |# )
 
@@ -8189,10 +8156,10 @@
        (%error-not-integer who offset))))
 
   (define (%error-offset-non-negative who obj)
-    (assertion-violation who "offset must be non-negative" obj))
+    (procedure-argument-violation who "offset must be non-negative" obj))
 
   (define (%error-not-integer who obj)
-    (assertion-violation who "expected exact integer as argument" obj))
+    (procedure-argument-violation who "expected exact integer as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -8231,7 +8198,7 @@
   ;; 	  ;;2012)
   ;; 	  -1))
   ;;      (else
-  ;; 	(assertion-violation who "not an exact integer" integer))))
+  ;; 	(procedure-argument-violation who "not an exact integer" integer))))
   ;;
   ;;   (else
   ;;    (%error-not-integer offset)))))
@@ -8269,10 +8236,10 @@
 	     (else
 	      (%error-positive-offset who offset))))
       (else
-       (assertion-violation who "expected exact integer as argument" integer))))
+       (procedure-argument-violation who "expected exact integer as argument" integer))))
 
   (define (%error-positive-offset who offset)
-    (assertion-violation who "offset must be non-negative" offset))
+    (procedure-argument-violation who "offset must be non-negative" offset))
 
   #| end of module |# )
 
@@ -8297,7 +8264,7 @@
 	    (let ((offset^ (- offset)))
 	      (if (fixnum? offset^)
 		  ($fxsra integer offset^)
-		(assertion-violation who "shift amount is too big" offset))))))
+		(procedure-argument-violation who "shift amount is too big" offset))))))
 
     ((bignum?)
      (cond (($fxpositive? offset)
@@ -8310,10 +8277,10 @@
 	    (let ((offset^ (- offset)))
 	      (if (fixnum? offset^)
 		  (foreign-call "ikrt_bignum_shift_right" integer offset^)
-		(assertion-violation who "shift amount is too big" offset))))))
+		(procedure-argument-violation who "shift amount is too big" offset))))))
 
     (else
-     (assertion-violation who "not an exact integer" integer))))
+     (procedure-argument-violation who "not an exact integer" integer))))
 
 
 (define (bitwise-length n)
@@ -8321,7 +8288,7 @@
     ((fixnum?)	(fxlength n))
     ((bignum?)	(foreign-call "ikrt_bignum_length" n))
     (else
-     (assertion-violation 'bitwise-length "not an exact integer" n))))
+     (procedure-argument-violation 'bitwise-length "not an exact integer" n))))
 
 
 (module (bitwise-copy-bit)
@@ -8330,29 +8297,29 @@
   (define (bitwise-copy-bit n idx bit)
     (cond ((fixnum? idx)
 	   (cond ((fx< idx 0)
-		  (assertion-violation who "negative bit index" idx))
+		  (procedure-argument-violation who "negative bit index" idx))
 		 ((or (fixnum? n) (bignum? n))
 		  (do-copy-bit n idx bit))
 		 (else
-		  (assertion-violation who "not an exact integer" n))))
+		  (procedure-argument-violation who "not an exact integer" n))))
 	  ((bignum? idx)
 	   (unless (or (fixnum? n) (bignum? n))
-	     (assertion-violation who "not an exact integer" n))
+	     (procedure-argument-violation who "not an exact integer" n))
 	   (if ($bignum-positive? idx)
 	       (case-fixnums bit
 		 ((0)
 		  (if (>= n 0)
 		      n
-		    (assertion-violation who "unrepresentable result")))
+		    (procedure-argument-violation who "unrepresentable result")))
 		 ((1)
 		  (if (< n 0)
 		      n
-		    (assertion-violation who "unrepresentable result")))
+		    (procedure-argument-violation who "unrepresentable result")))
 		 (else
-		  (assertion-violation who "bit must be either 0 or 1" bit)))
-	     (assertion-violation who "negative bit index" idx)))
+		  (procedure-argument-violation who "bit must be either 0 or 1" bit)))
+	     (procedure-argument-violation who "negative bit index" idx)))
 	  (else
-	   (assertion-violation who "index is not an exact integer" idx))))
+	   (procedure-argument-violation who "index is not an exact integer" idx))))
 
   (define (do-copy-bit n idx bit)
     (case-fixnums bit
@@ -8369,7 +8336,7 @@
 	      (bitwise-not (bitwise-and (bitwise-not n)
 					(bitwise-not (sll 1 idx)))))))
       (else
-       (assertion-violation who "bit must be either 0 or 1" bit))))
+       (procedure-argument-violation who "bit must be either 0 or 1" bit))))
 
   #| end of module |# )
 
@@ -8385,16 +8352,16 @@
 			    (bignum? integer))
 			(bitwise-and (sra integer idx1)
 				     (- (sll 1 (- idx2 idx1)) 1))
-		      (assertion-violation who "not an exact integer" integer))
-		  (assertion-violation who "invalid order for indices" idx1 idx2)))
+		      (procedure-argument-violation who "not an exact integer" integer))
+		  (procedure-argument-violation who "invalid order for indices" idx1 idx2)))
 	       ((not (fixnum? idx2))
-		(assertion-violation who "invalid index" idx2))
+		(procedure-argument-violation who "invalid index" idx2))
 	       (else
-		(assertion-violation who "negative index" idx2))))
+		(procedure-argument-violation who "negative index" idx2))))
 	((not (fixnum? idx1))
-	 (assertion-violation who "invalid index" idx1))
+	 (procedure-argument-violation who "invalid index" idx1))
 	(else
-	 (assertion-violation who "negative index" idx1))))
+	 (procedure-argument-violation who "negative index" idx1))))
 
 
 ;;;; debugging functions

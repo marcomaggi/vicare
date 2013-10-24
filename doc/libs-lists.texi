@@ -1,0 +1,3003 @@
+@node lists
+@chapter List library
+
+
+@cindex @library{vicare containers lists}, library
+@cindex Library @library{vicare containers lists}
+@cindex @library{vicare containers lists low}, library
+@cindex Library @library{vicare containers lists low}
+@cindex @library{vicare containers lists stx}, library
+@cindex Library @library{vicare containers lists stx}
+
+
+The libraries @library{vicare containers lists} and @library{vicare
+containers lists stx} implement a collection of functions and macros to
+manipulate lists; additionally, @library{vicare containers lists low}
+implements a collection of low level utilities.  These libraries have
+two purposes: to provide a rich set of functions and macros and to be a
+source code repository from which code can be taken and specialised.
+For the last purpose, the libraries export macros that may make little
+sense in most scenarios (beside the fact that they are always inlined).
+
+@quotation
+@strong{NOTE} The libraries in the hierarchy @library{vicare containers
+lists ---} and this section of documentation are derived from the
+@ansrfi{1} document and reference implementation by Olin Shivers, but
+they are @strong{not} compatible with it.  Read carefully this
+documentation!
+@end quotation
+
+To avoid identifier collisions: it is suggested to import these
+libraries with the prefix @code{list.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare containers lists) list.))
+@end example
+
+@menu
+* lists intro::                 Introduction.
+* lists conventions::           Conventions.
+* lists cons::                  Constructors.
+* lists pred::                  Predicates.
+* lists compar::                Comparison.
+* lists select::                Selectors.
+* lists misc::                  Length, append, concatenate,
+                                reverse, zip and count.
+* lists fold::                  Fold, unfold and map.
+* lists filter::                Filtering and partitioning.
+* lists search::                Searching.
+* lists delete::                Deletion.
+* lists sorted::                Utilities for sorted lists.
+* lists alist::                 Association lists.
+* lists circ::                  Circular lists.
+* lists set::                   Set operations on lists.
+* lists low::                   Low level utilities.
+@end menu
+
+@c page
+@node lists intro
+@section Introduction
+
+
+Scheme does not properly have a list type, just as the C language does
+not have a string type.  Rather, Scheme has a binary--tuple type, from
+which one can build binary trees.  There is an interpretation of Scheme
+values that allows one to treat these trees as lists.  Further
+complications ensue from the fact that Scheme allows side--effects to
+these tuples, raising the possibility of lists of unbounded length, and
+trees of unbounded depth (that is, circular data structures).
+
+What follows is a classification of concrete values with respect to
+@dfn{list} as an abstract concept.
+
+@c ------------------------------------------------------------
+
+@subsubheading Null value
+
+It is a special value which can be identified with the predicate
+@func{null?}.  Null is meant to represent empty lists and to be the
+terminator for proper lists.
+
+@func{length} applied to null returns zero.  In light of what follows,
+it makes sense to consider null as a list of length zero for all the
+list classes: proper, circular, dotted, generalised.
+
+@c ------------------------------------------------------------
+
+@subsubheading Proper lists
+
+A finite, null--terminated list; more precisely a proper list is defined
+as: A pair whose cdr is a proper list or null.  The opposite of proper
+is @dfn{improper}; everything that is not null or a proper list, is an
+improper list.
+
+@example
+(a b c)
+(32)
+@end example
+
+We can build a proper list in a single function call with @func{list},
+or we can do it in steps using @func{cons} and @func{cons*}; we can
+detect if a list is proper with @func{list?}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Circular list
+
+An infinite, unterminated list; a circular list is a value such that
+@func{cdr} applied any number of times always returns a pair.  The
+opposite of circular is @dfn{finite}.
+
+We can build a list having a circular tail as follows:
+
+@example
+(define end  (cons  1 '()))
+(define tail (cons* 3 2 end))
+(define ell  (cons* 5 4 tail))
+(set-cdr! end tail)
+@end example
+
+@noindent
+the list structure bound to @samp{ell} looks like this:
+
+@example
+                           cdr
+                  ----------------
+                 |                |
+     cdr    cdr  v cdr    cdr     |
+   O----->O----->O----->O----->O--
+   |      |      |      |      |
+car|   car|   car|   car|   car|
+   v      v      v      v      v
+   5      4      3      2      1
+@end example
+
+@noindent
+so that the following happens:
+
+@example
+(car ell)            @result{} 5
+(cadr ell)           @result{} 4
+(caddr ell)          @result{} 3
+(cadddr ell)         @result{} 2
+(cadddr (cdr ell))   @result{} 1
+(cdddr (cddr ell))   @result{} tail
+(cadddr (cddr ell))  @result{} 3
+(cadddr (cdddr ell)) @result{} 2
+@end example
+
+@noindent
+it is impossible to build a circular list without mutating a pair.
+Notice that the following is @strong{not} a circular list:
+
+@example
+                           car
+           --------------------
+          |                    |
+     cdr  v cdr    cdr    cdr  | cdr
+   O----->O----->O----->O----->O----->()
+   |      |      |      |
+car|   car|   car|   car|
+   v      v      v      v
+   5      4      3      2
+@end example
+
+@noindent
+it is a proper list in which the car of the last pair references one of
+the previous pairs.
+
+We can build a circular list, a ring, with @func{circular-list} and we
+can detect if a list is a ring or has a circular tail with
+@func{circular-list?}.
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Dotted list
+
+A finite, non--nil terminated list, such as:
+
+@example
+(a b c . d)
+(x . y)
+@end example
+
+@noindent
+a dotted list is a value for which there exists an integer @math{n > 0},
+such that @func{cdr} applied @math{n} times yields neither a pair nor
+null.  This means that, for a dotted list, either @func{null?} or
+@func{pair?} return @true{}.
+
+Users of the @library{vicare containers lists ---} libraries should note
+that dotted lists are not commonly used, and are considered by many
+Scheme programmers to be an ugly artifact of Scheme's lack of a true
+list type.  However, dotted lists do play a noticeable role in the
+syntax of Scheme, in the ``rest'' parameters used by n--ary lambdas:
+
+@example
+(lambda (x y . rest)
+  ---)
+@end example
+
+Dotted lists are not fully supported by the list libraries; most
+procedures are defined only on proper lists.  The procedures that will
+also handle circular or dotted lists are specifically marked.  While
+this design decision restricts the domain of possible arguments one can
+pass to these procedures, it has the benefit of allowing the procedures
+to catch the error cases where programmers inadvertently pass scalar
+values to a list procedure by accident (for example, by switching the
+arguments to a procedure call).
+
+@c ------------------------------------------------------------
+
+@subsubheading Improper list
+
+A finite, non--nil terminated list, such as:
+
+@example
+(a b c . d)
+(x . y)
+42
+george
+@end example
+
+@noindent
+a improper list is a value for which there exists an integer @math{n >=
+0}, such that @func{cdr} applied @math{n} times yields neither a pair
+nor null.  This includes non--pair, non--null values (symbols, numbers,
+etc.), which are considered to be improper lists of length @math{0}.
+Dotted lists are improper lists.
+
+@c page
+@node lists conventions
+@section Conventions
+
+
+All the functions are exported by the @library{vicare containers lists}
+library, while all the macros are exported by @library{vicare containers
+lists stx}.  Each macro has a corresponding function version, but some
+functions were not translated to macros.  Macro names always end with
+the suffix @samp{/stx}.
+
+It is an error to pass a circular or dotted list to a procedure not
+defined to accept such an argument; it is an error to pass a proper or
+dotted list to a procedure defined for circular lists.
+
+All the functions and macros whose main name ends with @samp{!}, are
+allowed to alter their arguments.
+
+The documentation of this library obeys the following conventions for
+procedure formals:
+
+@table @var
+@item ell
+A proper (finite, nil--terminated) list.
+
+@item circ
+A proper or circular list.
+
+@item dotted
+A dotted list.
+
+@item pair
+A pair.
+
+@item n
+@itemx i
+A non--negative exact integer object.
+
+@item proc
+A procedure.
+
+@item pred
+A procedure whose return value is treated as a boolean.
+
+@item item=
+A boolean procedure taking two arguments.
+
+@item fill
+Can be any value; it is used to indicate values used to fill a compound
+data structure.
+
+@item obj
+Any value, including dotted lists.
+@end table
+
+@c page
+@node lists cons
+@section Constructors
+
+
+@cindex List constructors
+
+
+@defun xcons @vari{obj} @varii{obj}
+The name stands for ``eXchanged CONS'', it is like @func{cons} but
+reverses the arguments.  Of utility only as a value to be conveniently
+passed to higher--order procedures.
+
+@example
+(cons 1 2)  @result{} (1 . 2)
+(xcons 1 2) @result{} (2 . 1)
+@end example
+@end defun
+
+
+@deffn Function make-list @var{n}
+@deffnx Function make-list @var{n} @var{fill}
+@deffnx Syntax make-list/stx @var{n}
+@deffnx Syntax make-list/stx @var{n} @var{fill}
+Return an @var{n}--element list, whose elements are all the value
+@var{fill}.  If @var{fill} is not given, the elements of the list may be
+arbitrary values.
+
+@example
+(make-list 4 'c)
+@result{} (c c c c)
+
+(make-list 0)
+@result{} ()
+@end example
+@end deffn
+
+
+@deffn Function list-copy @var{fell}
+@deffnx Syntax list-copy/stx @var{fell}
+Copy the spine of the argument.
+@end deffn
+
+
+@deffn Function tree-copy @var{fell}
+@deffnx Syntax tree-copy/stx @var{fell}
+Copy the whole tree of @var{fell}, not only the spine (which is what
+@func{list-copy} does).
+@end deffn
+
+
+@deffn Function list-tabulate @var{n} @var{init-proc}
+@deffnx Function list-tabulate/reverse @var{n} @var{init-proc}
+@deffnx Syntax list-tabulate/stx @var{n} @var{init-proc}
+@deffnx Syntax list-tabulate/reverse/stx @var{n} @var{init-proc}
+Return an @var{n}--element list.  Element @math{i} of the list, where
+@math{0 <= i < n}, is produced by @code{(init-proc i)}.
+
+The basic variants build the list from element @math{0} to element
+@math{n-1}.  The @samp{/reverse} variants build the lists in reversed
+order, with element @math{n-1} created first.  The @samp{/reverse}
+variants may be a little faster, especially for long lists.
+
+@example
+(list-tabulate 4 values)
+@result{} (0 1 2 3)
+@end example
+@end deffn
+
+
+@deffn Function iota @var{count}
+@deffnx Function iota @var{count} @var{start}
+@deffnx Function iota @var{count} @var{start} @var{step}
+@deffnx Syntax iota/stx @var{count}
+@deffnx Syntax iota/stx @var{count} @var{start}
+@deffnx Syntax iota/stx @var{count} @var{start} @var{step}
+Return a list containing the elements:
+
+@example
+(start start+step ... start+(count-1)*step)
+@end example
+
+The @var{start} and @var{step} parameters default to @code{0} and
+@code{1}, respectively.  @var{count} must be a non--negative number.
+The resulting list is built in reverse, starting from the last element.
+
+@example
+(iota 5)
+@result{} (0 1 2 3 4)
+
+(iota 5 0 -0.1)
+@result{} (0 -0.1 -0.2 -0.3 -0.4)
+@end example
+@end deffn
+
+@c page
+@node lists pred
+@section Predicates
+
+
+@defun not-pair? @var{obj}
+Defined as:
+
+@example
+(lambda (x) (not (pair? x)))
+@end example
+
+@noindent
+provided as a procedure as it can be useful as the termination condition
+for list--processing procedures that wish to handle all finite lists,
+both proper and dotted.
+@end defun
+
+
+@defun circular-list? @var{obj}
+@defunx circular-list?/or-null @var{obj}
+Return @true{} if @var{obj} is a circular list.  The @samp{/or-null}
+variant returns @true{} also if @var{obj} is null.
+@end defun
+
+
+@defun dotted-list? @var{obj}
+@defunx dotted-list?/or-null @var{obj}
+Return @true{} if @var{obj} is a dotted list.  The @samp{/or-null}
+variant returns @true{} also if @var{obj} is null.
+@end defun
+
+@c ------------------------------------------------------------
+
+@deffn Function and-null? @var{ell} ...
+@deffnx Syntax and-null?/stx @var{ell} ...
+Return @true{} if all the @var{ell} are null or no arguments are given.
+@end deffn
+
+
+@deffn Function or-null? @var{ell} ...
+@deffnx Syntax or-null?/stx @var{ell} ...
+Return @true{} if at least one of the @var{ell} is null.  Return
+@false{} if no arguments are given.
+@end deffn
+
+
+@deffn Function and/or-null? @var{ell} ...
+@deffnx Syntax and/or-null?/stx @var{ell} ...
+Return two values being the return values of @func{and-null?} and
+@func{or-null?} applied to the @var{ell} arguments.
+@end deffn
+
+@c page
+@node lists compar
+@section Comparison
+
+
+@defun list=? @var{item=} @varo{ell} ...
+Determines list equality, given an element--equality procedure
+@var{item=}.  Proper list @vari{ell} equals proper list @varii{ell} if:
+
+@enumerate
+@item
+They are of the same length.
+
+@item
+Their corresponding elements are equal, according to @var{item=}.
+@end enumerate
+
+If there are no list arguments, or only one list argument: The return
+value is @true{}.  If there are two or more list arguments they are
+compared in couples: First @varo{ell} is compared to @vari{ell}, then
+@vari{ell} is compared to @varii{ell}, etc.  The iteration over list
+arguments stops if two list arguments are found different.
+
+@var{item=} is applied to elements from two list arguments taken with
+the same order; the first from @vari{ell}, the second from @varii{ell},
+etc.  @var{item=} must be consistent with @func{eq?}:
+
+@example
+(eq? x y) @result{} (elm=? x y)
+@end example
+
+@noindent
+this implies that two lists which are @func{eq?} are always
+@func{list=?}, as well.
+
+Examples:
+
+@example
+(list=? eq?)
+@result{} #t
+
+(list=? eq? '(a))
+@result{} #t
+
+(list=? = '(1 2 3 4)
+          '(1 2 3 4))
+@result{} #t
+
+(list=? = '(1 2 3 4)
+          '(1 9 3 4))
+@result{} #f
+
+(list=? = '(1 2 3 4)
+          '(1 2 3 4)
+          '(1 2 3 4))
+@result{} #t
+
+(list=? = '(1 2 3 4)
+          '(1 2 3 4 5)
+          '(1 2 3 4))
+@result{} #f
+
+(list=? = '())
+@result{} #t
+
+(list=? = '() '())
+@result{} #t
+
+(list=? = '() '() '())
+@result{} #t
+@end example
+@end defun
+
+@c page
+@node lists select
+@section Selectors
+
+
+@cindex List selectors
+
+
+@deffn Function first @var{pair}
+@deffnx Function second  @var{pair}
+@deffnx Function third   @var{pair}
+@deffnx Function fourth  @var{pair}
+@deffnx Function fifth   @var{pair}
+@deffnx Function sixth   @var{pair}
+@deffnx Function seventh @var{pair}
+@deffnx Function eighth  @var{pair}
+@deffnx Function ninth   @var{pair}
+@deffnx Function tenth   @var{pair}
+@deffnx Syntax fifth/stx   @var{pair}
+@deffnx Syntax sixth/stx   @var{pair}
+@deffnx Syntax seventh/stx @var{pair}
+@deffnx Syntax eighth/stx  @var{pair}
+@deffnx Syntax ninth/stx   @var{pair}
+@deffnx Syntax tenth/stx   @var{pair}
+Synonyms for @func{car}, @func{cadr}, @func{caddr}, ...
+
+@example
+(third '(a b c d e))
+@result{} c
+@end example
+@end deffn
+
+
+@defun {car+cdr} @var{pair}
+The fundamental pair deconstructor:
+
+@example
+(lambda (p)
+  (values (car p) (cdr p)))
+@end example
+@end defun
+
+
+@deffn Function take-left @var{dotted} @var{i}
+@deffnx Function drop-left @var{dotted} @var{i}
+@deffnx Syntax take-left/stx @var{dotted} @var{i}
+@deffnx Syntax drop-left/stx @var{dotted} @var{i}
+@func{take-left} returns the first @var{i} elements of list
+@var{dotted}.  @func{drop-left} returns all but the first @var{i}
+elements of list @var{dotted}.
+
+@example
+(take-left '(a b c d e) 2)
+@result{} (a b)
+
+(drop-left '(a b c d e) 2)
+@result{} (c d e)
+@end example
+
+@var{dotted} may be any value: a proper, circular, or dotted list:
+
+@example
+(take-left '(1 2 3 . d) 2)
+@result{} (1 2)
+
+(drop-left '(1 2 3 . d) 2)
+@result{} (3 . d)
+
+(take-left '(1 2 3 . d) 3)
+@result{} (1 2 3)
+
+(drop-left '(1 2 3 . d) 3)
+@result{} d
+@end example
+
+For a legal @var{i}, @func{take-left} and @func{drop-left} partition the
+list in a manner which can be inverted with append:
+
+@example
+(append (take-left x i) (drop-left x i)) = x
+@end example
+
+@func{drop-left} is exactly equivalent to performing @var{i} @func{cdr}
+operations on @var{dotted}; the returned value shares a common tail with
+@var{dotted}.
+
+If the argument is a list of non--zero length, @func{take-left} is
+guaranteed to return a freshly--allocated list, even in the case where
+the entire list is taken: @code{(take-left dotted (length+ dotted))}.
+@end deffn
+
+
+@deffn Function take-right @var{dotted} @var{i}
+@deffnx Function drop-right @var{dotted} @var{i}
+@deffnx Syntax take-right/stx @var{dotted} @var{i}
+@deffnx Syntax drop-right/stx @var{dotted} @var{i}
+@func{take-right} returns the last @var{i} elements of @var{dotted}.
+@func{drop-right} returns all but the last @var{i} elements of
+@var{dotted}.
+
+@example
+(take-right '(a b c d e) 2)
+@result{} (d e)
+
+(drop-right '(a b c d e) 2)
+@result{} (a b c)
+@end example
+
+The returned list may share a common tail with the argument list.
+
+@var{dotted} may be any finite list, either proper or dotted:
+
+@example
+(take-right '(1 2 3 . d) 2)
+@result{} (2 3 . d)
+
+(drop-right '(1 2 3 . d) 2)
+@result{} (1)
+
+(take-right '(1 2 3 . d) 0)
+@result{} d
+
+(drop-right '(1 2 3 . d) 0)
+@result{} (1 2 3)
+@end example
+
+For a legal @var{i}, @func{take-right} and @func{drop-right} partition
+the list in a manner which can be inverted with append:
+
+@example
+(append (drop-right flist i) (take-right flist i)) = flist
+@end example
+
+The return value of @func{take-right} is guaranteed to share a common
+tail with @var{dotted}.
+
+If the argument is a list of non--zero length, @func{drop-right} is
+guaranteed to return a freshly--allocated list, even in the case where
+nothing is dropped, e.g. @code{(drop-right dotted 0)}.
+@end deffn
+
+
+@deffn Function take-left! @var{dotted} @var{i}
+@deffnx Function drop-right! @var{dotted} @var{i}
+@deffnx Syntax take-left!/stx @var{dotted} @var{i}
+@deffnx Syntax drop-right!/stx @var{dotted} @var{i}
+@func{take!} and @func{drop-right!} are like @func{take} and
+@func{drop-right}, but they are allowed to alter the argument list to
+produce the result.
+
+An error is raised if the length of the list is less than @var{i}.
+@end deffn
+
+
+@deffn Function split-at @var{dotted} @var{i}
+@deffnx Function split-at! @var{dotted} @var{i}
+@deffnx Syntax split-at/stx @var{dotted} @var{i}
+@deffnx Syntax split-at!/stx @var{dotted} @var{i}
+@func{split-at} splits the list @var{dotted} at index @var{i}, returning
+a list of the first @var{i} elements, and the remaining tail.  It is
+equivalent to:
+
+@example
+(values (take-left x i) (drop-left x i))
+@end example
+
+@func{split-at!} is allowed to alter the argument list to produce the
+result.
+
+@example
+(split-at '(a b c d e f g h) 3)
+@result{} (a b c) (d e f g h)
+@end example
+@end deffn
+
+
+@deffn Function last @var{pair}
+@deffnx Function last-pair @var{pair}
+@deffnx Syntax last/stx @var{pair}
+@deffnx Syntax last-pair/stx @var{pair}
+@func{last} returns the last element of the non--empty, finite list
+@var{pair}.  @func{last-pair} returns the last pair in the non--empty,
+finite list @var{pair}.
+
+@example
+(last '(a b c)) @result{} c
+(last-pair '(a b c)) @result{} (c)
+@end example
+@end deffn
+
+@c page
+@node lists misc
+@section Length, append, concatenate, reverse, zip and count
+
+
+@cindex List length
+@cindex List appending
+@cindex List contatenation
+@cindex List reversing
+@cindex List zip
+@cindex List counting
+
+
+@defun {length+} @var{circ}
+Return the length of the argument, or @false{} if @var{circ} is a
+circular list.  The length of a proper list is a non--negative integer
+@math{n} such that @func{cdr} applied @math{n} times to the list
+produces the empty list.
+@end defun
+
+
+@defun append! @var{ell} ...
+Return a list consisting of the elements of @var{ell} followed by the
+elements of the other list arguments; it is allowed to alter cons cells
+in the argument lists to construct the result list.  The last argument
+is never altered; the result list shares structure with this parameter.
+
+@example
+(append! '(x) '(y))        @result{}  (x y)
+(append! '(a) '(b c d))    @result{}  (a b c d)
+(append! '(a (b)) '((c)))  @result{}  (a (b) (c))
+(append! '(a b) '(c . d))  @result{}  (a b c . d)
+(append! '() 'a)           @result{}  a
+(append! '(x y))           @result{}  (x y)
+(append!)                  @result{}  ()
+@end example
+
+Notice that @func{append} is implemented by @rsixlibrary{base}.
+@nauref{baselib lists, Pairs and lists}
+@end defun
+
+
+@deffn Function concatenate @var{list-of-lists}
+@deffnx Function concatenate! @var{list-of-lists}
+@deffnx Syntax concatenate/stx @var{list-of-lists}
+@deffnx Syntax concatenate!/stx @var{list-of-lists}
+These functions append the elements of their argument together; that is,
+@func{concatenate} returns:
+
+@example
+(apply append list-of-lists)
+@end example
+
+@func{concatenate!} is allowed to alter the arguments to build the
+result.  As with @func{append} and @func{append!}, the last element of
+the input list may be any value at all.
+@end deffn
+
+
+@defun reverse! @var{list}
+Return a newly allocated list consisting of the elements of @var{list}
+in reverse order; it is allowed to alter the argument's cons cells to
+produce the reversed list.
+
+@example
+(reverse! '(a b c))              @result{}  (c b a)
+(reverse! '(a (b c) d (e (f))))  @result{}  ((e (f)) d (b c) a)
+@end example
+
+Notice that @func{reverse} is implemented by @rsixlibrary{base}.
+@nauref{baselib lists, Pairs and lists}
+@end defun
+
+
+@deffn Function append-reverse @var{rev-head} @var{tail}
+@deffnx Function append-reverse! @var{rev-head} @var{tail}
+@deffnx Syntax append-reverse/stx @var{rev-head} @var{tail}
+@deffnx Syntax append-reverse!/stx @var{rev-head} @var{tail}
+@func{append-reverse} returns:
+
+@example
+(append (reverse rev-head) tail)
+@end example
+
+It is provided because it is a common operation; a common
+list--processing style calls for this exact operation to transfer values
+accumulated in reverse order onto the front of another list, and because
+the implementation is significantly more efficient than the simple
+composition it replaces.
+
+@quotation
+But note that this pattern of iterative computation followed by a
+@func{reverse} can frequently be rewritten as a recursion, dispensing
+with the @func{reverse} and @func{append-reverse} steps, and shifting
+temporary, intermediate storage from the heap to the stack, which is
+typically a win for reasons of cache locality and eager storage
+reclamation.
+@end quotation
+
+@func{append-reverse!} is allowed to alter @var{rev-head}'s cons cells
+to construct the result.
+@end deffn
+
+
+@deffn Function zip @vari{list} @var{list} ...
+@deffnx Function zip* @vari{circ} @var{circ} ...
+@deffnx Syntax zip/stx @metai{list} @meta{list} ...
+@deffnx Syntax zip*/stx @metai{circ} @meta{circ} ...
+The function @func{zip} is defined as:
+
+@example
+(lambda ells (apply map list ells))
+@end example
+
+@noindent
+while @func{zip*} is defined as:
+
+@example
+(lambda ells (apply map* list ells))
+@end example
+
+If @func{zip*} is passed @var{n} lists, it returns a list as long as the
+shortest of these lists, each element of which is an @var{n}--element
+list comprised of the corresponding elements from the parameter lists.
+
+@example
+(zip* '(one two three)
+      '(1 2 3)
+      '(odd even odd even odd even odd even))
+@result{} ((one 1 odd) (two 2 even) (three 3 odd))
+
+(zip* '(1 2 3))
+@result{} ((1) (2) (3))
+@end example
+
+When applying @func{zip*}, at least one of the argument lists must be
+finite:
+
+@example
+(zip* '(3 1 4 1)
+      (circular-list #f #t))
+@result{} ((3 #f)
+    (1 #t)
+    (4 #f)
+    (1 #t))
+@end example
+@end deffn
+
+
+@deffn Function unzip1 @var{ell}
+@deffnx Function unzip2 @var{ell}
+@deffnx Function unzip3 @var{ell}
+@deffnx Function unzip4 @var{ell}
+@deffnx Function unzip5 @var{ell}
+@deffnx Syntax unzip1/stx @var{ell}
+@deffnx Syntax unzip2/stx @var{ell}
+@deffnx Syntax unzip3/stx @var{ell}
+@deffnx Syntax unzip4/stx @var{ell}
+@deffnx Syntax unzip5/stx @var{ell}
+@func{unzip1} takes a list of lists, where every list must contain at
+least one element, and returns a list containing the initial element of
+each such list.  That is, it returns @code{(map car lists)}.
+
+@func{unzip2} takes a list of lists, where every list must contain at
+least two elements, and returns two values: a list of the first
+elements, and a list of the second elements.
+
+@func{unzip3} does the same for the first three elements of the lists,
+and so forth.
+
+@example
+(unzip2 '((1 one) (2 two) (3 three)))
+@result{} (1 2 3)
+   (one two three)
+@end example
+@end deffn
+
+
+@deffn Function count @var{pred} @var{circ} ...
+@deffnx Syntax count/stx @var{pred} @var{circ} ...
+@var{pred} is a procedure taking as many arguments as there are lists
+and returning a single value.  It is applied element--wise to the
+elements of the lists, and a count is tallied of the number of elements
+that produce a true value.  This count is returned.
+
+@func{count} is ``iterative'' in that it is guaranteed to apply
+@var{pred} to the list elements in a left--to--right order.  The
+counting stops when the shortest list expires.
+
+@example
+(count even? '(3 1 4 1 5 9 2 5 6))
+@result{} 3
+
+(count < '(1 2 4 8) '(2 4 6 8 10 12 14 16))
+@result{} 3
+@end example
+
+At least one of the argument lists must be finite:
+
+@example
+(count < '(3 1 4 1) (circular-list 1 10))
+@result{} 2
+@end example
+@end deffn
+
+@c page
+@node lists fold
+@section Fold, unfold and map
+
+
+@cindex List fold, unfold and map
+
+
+The @dfn{left--folding} operator is the fundamental list iterator, the
+@dfn{right--folding} operator is the fundamental list recursion
+operator.
+
+@menu
+* lists fold examples::         Folding usage examples.
+* lists fold rnrs::             Folding with @rnrs{6} style.
+* lists fold traditional::      Folding with traditional style.
+* lists fold derived::          Derived folding.
+* lists fold pair::             Folding pairs.
+* lists fold reduce::           Reducing.
+* lists fold unfold::           Unfolding.
+* lists fold map::              Mapping.
+* lists fold foreach::          Producing side effects.
+@end menu
+
+@c page
+@node lists fold examples
+@subsection Folding usage examples
+
+
+In the single list argument case, for a list of @math{4} elements, the
+return value of a left--folding with @rnrs{6} style, is computed as
+with:
+
+@example
+(fold-left kons knil ell) @equiv{}
+  (kons (kons (kons (kons knil
+                          (list-ref ell 0))
+                    (list-ref ell 1))
+              (list-ref ell 2))
+        (list-ref ell 3))
+@end example
+
+@noindent
+while with the ``traditional'' style:
+
+@example
+(fold kons knil ell) @equiv{}
+  (kons (list-ref ell 3)
+        (kons (list-ref ell 2)
+              (kons (list-ref ell 1)
+                    (kons (list-ref ell 0)
+                          knil))))
+@end example
+
+@noindent
+the return value of a right--folding with both @rnrs{6} style and
+``traditional'' style, is computed as with:
+
+@example
+(fold-right kons knil ell) @equiv{}
+     (fold* kons knil ell) @equiv{}
+  (kons (list-ref ell 0)
+        (kons (list-ref ell 1)
+              (kons (list-ref ell 2)
+                    (kons (list-ref ell 3)
+                          knil))))
+@end example
+
+In the multiple list arguments case, for three lists of @math{4}
+elements, the return value of a left--folding with @rnrs{6} style, is
+computed as with:
+
+@example
+(fold-left kons knil ell0 ell1 ell2) @equiv{}
+  (kons (kons (kons (kons knil
+                          (list-ref ell0 0)
+                          (list-ref ell1 0)
+                          (list-ref ell2 0))
+                    (list-ref ell0 1)
+                    (list-ref ell1 1)
+                    (list-ref ell2 1))
+              (list-ref ell0 2)
+              (list-ref ell1 2)
+              (list-ref ell2 2))
+        (list-ref ell0 3)
+        (list-ref ell1 3)
+        (list-ref ell2 3))
+@end example
+
+@noindent
+while with the ``traditional'' style:
+
+@example
+(fold kons knil ell0 ell1 ell2) @equiv{}
+  (kons (list-ref ell0 3)
+        (list-ref ell1 3)
+        (list-ref ell2 3)
+        (kons (list-ref ell0 2)
+              (list-ref ell1 2)
+              (list-ref ell2 2)
+              (kons (list-ref ell0 1)
+                    (list-ref ell1 1)
+                    (list-ref ell2 1)
+                    (kons (list-ref ell0 0)
+                          (list-ref ell1 0)
+                          (list-ref ell2 0)
+                          knil))))
+@end example
+
+@noindent
+the return value of a right--folding with both @rnrs{6} style and
+``traditional'' style, is computed as with:
+
+@example
+(fold-right kons knil ell0 ell1 ell2) @equiv{}
+     (fold* kons knil ell0 ell1 ell2) @equiv{}
+  (kons (list-ref ell0 0)
+        (list-ref ell1 0)
+        (list-ref ell2 0)
+        (kons (list-ref ell0 1)
+              (list-ref ell1 1)
+              (list-ref ell2 1)
+              (kons (list-ref ell0 2)
+                    (list-ref ell1 2)
+                    (list-ref ell2 2)
+                    (kons (list-ref ell0 3)
+                          (list-ref ell1 3)
+                          (list-ref ell2 3)
+                          knil))))
+@end example
+
+Left--folding, usage examples for @func{fold} in the single list
+argument case:
+
+@example
+;; add the elements
+(fold + 0 '(1 2 3))             @result{} 6
+
+;; reverse a list
+(fold cons '() '(1 2 3))        @result{} (3 2 1)
+
+;; append in reverse order
+(fold cons '(4 5 6) '(3 2 1))   @result{} (1 2 3 4 5 6)
+
+;; how many symbols?
+(fold (lambda (x count)
+        (if (symbol? x)
+            (+ count 1)
+          count))
+      0
+      '(a 1 b 2 c 3))           @result{} 3
+@end example
+
+Right--folding usage examples for @func{fold*} in the single list
+argument case:
+
+@example
+;; copy the list
+(fold* cons '() '(1 2 3))       @result{} (1 2 3)
+
+;; add elements
+(fold* + 0 numbers)             @result{} 45
+
+;; prepend elements
+(fold* cons '(4 5 6) '(1 2 3))  @result{} (1 2 3 4 5 6)
+
+;; filter the even numbers
+(fold* (lambda (x l)
+         (if (even? x)
+             (cons x l)
+           l))
+       '()
+       '(0 1 2 3 4 5 6 7 8 9))
+@result{} (0 2 4 6 8)
+@end example
+
+Usage examples for @func{fold} and @func{fold*} in the multiple list
+argument case:
+
+@example
+(fold (lambda (a b c knil)
+        (cons (list a b c) knil))
+      '()
+      '(1 2 3)
+      '(10 20 30)
+      '(100 200 300))
+@result{} '((3 30 300)
+     (2 20 200)
+     (1 10 100))
+
+(fold* (lambda (a b c knil)
+         (cons (list a b c)
+                knil))
+       '()
+       '(1 2 3)
+       '(10 20 30)
+       '(100 200 300))
+@result{} ((1 10 100)
+    (2 20 200)
+    (3 30 300))
+@end example
+
+@c page
+@node lists fold rnrs
+@subsection Folding with @rnrs{6} style
+
+
+Exactly as with the @func{fold-left} and @func{fold-right} functions
+defined by @rnrs{6}:
+
+@itemize
+@item
+With left--folding functions and syntaxes, the @strong{first} argument
+to the first call to @var{combine} is @var{knil}, then it is the return
+value of the previous calls to @var{combine}.
+
+@item
+With right--folding functions and syntaxes, the @strong{last} argument
+to to the first evaluated call to @var{combine} is @var{knil}, then it
+is the return value of the previous calls to @var{combine}.
+@end itemize
+
+
+@deffn Syntax fold-left/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax fold-right/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+Like @func{fold-left} and @func{fold-right}, defined by @rnrs{6}, but
+implemented as syntaxes.  These syntaxes exist only for completeness.
+@end deffn
+
+
+@deffn Function fold-left* @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Function fold-right* @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax fold-left*/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax fold-right*/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+Like @func{fold-left} and @func{fold-right}, defined by @rnrs{6}, but
+accept lists of different length and stop at the end of the shortest
+list.  At least one of the list arguments must be finite.  The syntaxes
+may be a little faster than the functions when multiple @var{circ}
+arguments are involved.
+@end deffn
+
+@c page
+@node lists fold traditional
+@subsection Folding with traditional style
+
+
+The functions @func{fold} and @func{fold*} are similar to
+@func{fold-left*} and @func{fold-right*} but @var{knil} is always the
+@strong{last} argument of the calls to @var{kons}.
+
+
+@deffn Function fold @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax fold/stx @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+Left fold the function @var{kons} over the elements of the list
+arguments.  Accept lists of different length and stop at the end of the
+shortest list.  At least one of the list arguments must be finite.  The
+syntax may be a little faster than the function when multiple @var{circ}
+arguments are involved.
+@end deffn
+
+
+@deffn Function fold* @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax fold*/stx @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+Right fold the function @var{kons} over the elements of the list
+arguments.  Accept lists of different length and stop at the end of the
+shortest list.  At least one of the list arguments must be finite.  The
+syntax may be a little faster than the function when multiple @var{circ}
+arguments are involved.
+@end deffn
+
+@c page
+@node lists fold derived
+@subsection Derived folding
+
+
+@deffn Function and-fold-left* @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Function and-fold-right* @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax and-fold-left*/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+@deffnx Syntax and-fold-right*/stx @var{combine} @var{knil} @var{circ1} @var{circ2} ...
+Like @func{fold-left*} and @func{fold-right*}, but stop the folding if
+the value returned by @var{combine} is @false{}, in which case the
+return value is @false{}.
+@end deffn
+
+
+@defun fold-left/pred @var{pred} @var{knil} @var{circ}
+Apply @var{pred} to successive couples of elements from @var{circ};
+return true if all the evaluations of @var{pred} were true.  The
+iteration stops at the first @false{} return value from @var{pred}.
+
+This function is implemented as:
+
+@example
+(define (fold-left/pred pred knil ell)
+  (and-fold-left*/stx (lambda (knil item)
+                        (and (pred knil item) item))
+                      knil ell))
+@end example
+
+@noindent
+and it can be used to implement predicates for ordering like @func{<}:
+
+@example
+(fold-left/pred < 0 '(1 2 3 4 5 6))
+@result{} 6
+
+(fold-left/pred < 0 '(1 2 3 -4 5 6))
+@result{} #f
+@end example
+@end defun
+
+@c page
+@node lists fold pair
+@subsection Folding pairs
+
+
+@defun pair-fold @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+Analogous to @func{fold}, but @var{kons} is applied to successive
+sublists of the lists, rather than successive elements; that is,
+@var{kons} is applied to the pairs making up the lists, giving this
+(tail) recursion:
+
+@example
+(pair-fold kons knil ell) @equiv{} (let ((tail (cdr ell)))
+                               (pair-fold kons
+                                          (kons ell knil)
+                                          tail))
+(pair-fold kons knil '()) @equiv{} knil
+@end example
+
+For finite lists, the @var{kons} function may reliably apply
+@func{set-cdr!} to the pairs it is given without altering the sequence
+of execution.
+
+Examples:
+
+@example
+(pair-fold (lambda (elm knil)
+             (cons (car elm) knil))
+           '(999)
+           '(1 2 3))
+@result{} (3 2 1 999)
+
+;;; destructively reverse a list
+(pair-fold (lambda (pair tail)
+             (set-cdr! pair tail)
+             pair)
+           '()
+           '(0 1 2 3 4 5))
+@result{} (5 4 3 2 1 0)
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun pair-fold* @var{kons} @var{knil} @var{circ1} @var{circ2} ...
+Hold the same relationship with @func{fold*} that @func{pair-fold} holds
+with @func{fold}; obey the recursion:
+
+@example
+(pair-fold* kons knil lis) @equiv{}
+    (kons lis (pair-fold* kons knil (cdr lis)))
+(pair-fold* kons knil '()) @equiv{} knil
+@end example
+
+@noindent
+example:
+
+@example
+(pair-fold* cons '() '(a b c))
+@result{} ((a b c) (b c) (c))
+@end example
+
+At least one of the list arguments must be finite.
+
+Examples:
+
+@example
+(pair-fold* (lambda (elm knil)
+              (cons (car elm) knil))
+            '(999)
+            '(1 2 3))
+@result{} (1 2 3 999)
+
+(pair-fold* (lambda (pair tail)
+              (set-cdr! pair tail)
+              pair)
+            '()
+            '(0 1 2 3 4 5))
+@result{} (0 1 2 3 4 5)
+
+(pair-fold* (lambda (a b c knil)
+              (cons (list (car a)
+                          (car b)
+                          (car c))
+                    knil))
+            '(999)
+            '(1 2 3)
+            '(10 20 30)
+            '(100 200 300))
+@result{} '((1 10 100)
+     (2 20 200)
+     (3 30 300)
+     999)
+@end example
+@end defun
+
+@c page
+@node lists fold reduce
+@subsection Reducing
+
+
+@deffn Function reduce @var{f} @var{ridentity} @var{ell}
+@deffnx Syntax reduce/stx @var{f} @var{ridentity} @var{ell}
+@func{reduce} is a variant of @func{fold}.  @var{ridentity} should be a
+``right identity'' of the procedure @var{f}; that is, for any value
+@var{x} acceptable to @var{f}:
+
+@example
+(f x ridentity) @equiv{} x
+@end example
+
+@func{reduce} has the following definition:
+
+@example
+if list = (), return ridentity;
+otherwise, return (fold f (car list) (cdr list)).
+@end example
+
+@noindent
+in other words, we compute @code{(fold f ridentity list)}.
+
+Note that @var{ridentity} is used only in the empty--list case.
+
+We typically use @func{reduce} when applying @var{f} is expensive and we
+would like to avoid the extra application incurred when @func{fold}
+applies @var{f} to the head of list and the identity value, redundantly
+producing the same value passed in to @var{f}.  For example, if @var{f}
+involves searching a file directory or performing a database query, this
+can be significant.  In general, however, @func{fold} is useful in many
+contexts where @func{reduce} is not.
+
+Examples:
+
+@example
+;; take the max of a list of non-negative integers
+(reduce max 0 '(1 2 3 4 5 6))
+@result{} 6
+
+(reduce + 0 '(0 1 2 3 4 5 6 7 8 9))
+@result{} 45
+@end example
+@end deffn
+
+
+@deffn Function reduce* @var{f} @var{ridentity} @var{ell}
+@deffnx Syntax reduce*/stx @var{f} @var{ridentity} @var{ell}
+@func{reduce*} is the @func{fold*} variant of
+@func{reduce}.  It obeys the following definition:
+
+@example
+(reduce* f ridentity '()) @equiv{} ridentity
+(reduce* f ridentity '(e1)) @equiv{} (f e1 ridentity)
+                            @equiv{} e1
+(reduce* f ridentity '(e1 e2 ...)) @equiv{}
+    (f e1 (reduce f ridentity (e2 ...)))
+@end example
+
+@noindent
+in other words, we compute @code{(fold* f ridentity list)}.
+
+@example
+;; append a bunch of lists together
+(reduce* append
+         '()
+         '((1 2 3)
+           (4 5)
+           (6 7 8 9)
+           (0)))
+@result{} (1 2 3 4 5 6 7 8 9 0)
+@end example
+@end deffn
+
+@c page
+@node lists fold unfold
+@subsection Unfolding
+
+
+@deffn Function unfold @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed}
+@deffnx Function unfold @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed} @var{tail-gen}
+@deffnx Syntax unfold/stx @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed}
+@deffnx Syntax unfold/stx @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed} @var{tail-gen}
+Generate a list from a starting value; return the result.  It is is the
+fundamental recursive list constructor, just as @func{fold-right} is the
+fundamental recursive list consumer.  It is best described by its basic
+recursion:
+
+@example
+(unfold stop? map-to-elm seed-step seed tail-gen) =
+    (if (stop? seed)
+        (tail-gen seed)
+      (cons (map-to-elm seed)
+            (unfold stop? map-to-elm
+                    seed-step (seed-step seed)
+                    tail-gen)))
+@end example
+
+The arguments are:
+
+@table @var
+@item stop?
+Determines when to stop: it is applied to the current seed value, and if
+the return value is @true{}: unfolding stops.  If it evaluates to
+@true{} at the first invocation: the return value of @func{unfold} is
+the return value of @var{tail-gen}.
+
+@item map-to-elm
+Maps each seed value to the corresponding list element.  It is applied
+to the current seed value and must return the value to append to the
+result list.
+
+@item seed-step
+Maps each seed value to next seed value.
+
+@item first-seed
+The ``state'' value for the unfold.  It is the first seed value.
+
+@item tail-gen
+Applied to the seed value that caused @func{stop?} to return @true{},
+must return the tail of the result list.  Defaults to @code{(lambda (x)
+'())}.
+@end table
+
+While @func{unfold} may seem a bit abstract to novice functional
+programmers, it can be used in a number of ways:
+
+@example
+;; List of squares: 1^2 ... 5^2
+(unfold (lambda (x) (> x 5))
+        (lambda (x) (* x x))
+        (lambda (x) (+ x 1))
+        1)
+@result{} (1 4 9 16 25)
+
+;; Copy a proper list.
+(unfold null-list? car cdr '(1 2 3 4 5))
+@result{} (1 2 3 4 5)
+
+;; Read current input port into a list of values.
+(unfold eof-object? values (lambda (x) (read)) (read))
+
+;; Copy a possibly non-proper list:
+(unfold not-pair? car cdr '(1 2 3 4 . 5) values)
+@result{} (1 2 3 4 . 5)
+
+;; Append HEAD onto TAIL:
+(unfold null-list? car cdr '(1 2 3) (lambda (x) '(4 5 6)))
+@result{} (1 2 3 4 5 6)
+@end example
+
+@quotation
+@strong{NOTE} Interested functional programmers may enjoy noting that
+@func{fold-right} and @func{unfold} are in some sense inverses.  That
+is, given operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying:
+
+@example
+(kons (kar x) (kdr x)) = x and (knull? knil) = #t
+@end example
+
+@noindent
+then:
+
+@example
+(fold-right kons knil (unfold knull? kar kdr x)) = x
+@end example
+
+@noindent
+and:
+
+@example
+(unfold knull? kar kdr (fold-right kons knil x)) = x
+@end example
+
+This combinator sometimes is called an ``anamorphism''; when an explicit
+@var{tail-gen} procedure is supplied, it is called an ``apomorphism''.
+@end quotation
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Function unfold-right @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed}
+@deffnx Function unfold-right @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed} @var{tail}
+@deffnx Syntax unfold-right/stx @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed}
+@deffnx Syntax unfold-right/stx @var{stop?} @var{map-to-elm} @var{seed-step} @var{first-seed} @var{tail}
+Generate a list from a starting value; return the result.  It is the
+fundamental iterative list constructor, just as @func{fold} is the
+fundamental iterative list consumer.  Construct a list with the
+following loop:
+
+@example
+(let loop ((seed seed)
+           (ell  tail))
+  (if (stop? seed)
+      ell
+    (loop (seed-step seed)
+          (cons (map-to-elm seed) ell))))
+@end example
+
+Arguments are:
+
+@table @var
+@item stop?
+Determine when to stop unfolding.
+
+@item map-to-elm
+Map each seed value to the corresponding list element.
+
+@item seed-step
+Map each seed value to next seed value.
+
+@item first-seed
+The ``state'' value for the unfold.
+
+@item tail
+List terminator; defaults to @code{'()}.
+@end table
+
+While @func{unfold-right} may seem a bit abstract to novice functional
+programmers, it can be used in a number of ways:
+
+@example
+;; List of squares: 1^2 ... 10^2
+(unfold-right zero?
+              (lambda (x) (* x x))
+              (lambda (x) (- x 1))
+              5)
+@result{} (1 4 9 16 25)
+
+;; Reverse a proper list.
+(unfold-right null-list? car cdr '(1 2 3 4 5))
+@result{} (5 4 3 2 1)
+
+;; Read current input port into a list of values.
+(unfold-right eof-object? values (lambda (x) (read)) (read))
+
+;; Equivalent to: (append-reverse rev-head tail)
+(unfold-right null-list? car cdr '(3 2 1) '(4 5 6))
+@result{} (1 2 3 4 5 6)
+@end example
+
+@quotation
+@strong{NOTE} Interested functional programmers may enjoy noting that
+@func{fold} and @func{unfold-right} are in some sense inverses.  That
+is, given operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying:
+
+@example
+(kons (kar x) (kdr x)) = x and (knull? knil) = #t
+@end example
+
+@noindent
+then:
+
+@example
+(fold kons knil (unfold-right knull? kar kdr x)) = x
+@end example
+
+@noindent
+and:
+
+@example
+(unfold-right knull? kar kdr (fold kons knil x)) = x.
+@end example
+
+This combinator presumably has some pretentious mathematical name;
+interested readers are invited to communicate it to the author.
+@end quotation
+@end deffn
+
+@c page
+@node lists fold map
+@subsection Mapping
+
+
+@deffn Function map* @var{proc} @varo{circ} @var{circ} ...
+@deffnx Syntax map*/stx @var{proc} @varo{circ} @var{circ} ...
+This procedure extends the @rnrs{6} specification of @func{map} to allow
+the arguments to be of unequal length; it terminates when the shortest
+list runs out of elements.
+
+@var{proc} is a procedure taking as many arguments as there are list
+arguments and returning a single value.  @func{map} applies @var{proc}
+element--wise to the elements of the lists and returns a list of the
+results, in order.  The dynamic order in which @var{proc} is applied to
+the elements of the lists is unspecified.
+
+@example
+(map* cadr '((a b)
+             (d e)
+             (g h)))
+@result{}  (b e h)
+
+(map* (lambda (n)
+        (expt n n))
+  '(1 2 3 4 5))
+@result{} (1 4 27 256 3125)
+
+(map* + '(1 2 3)
+        '(4 5 6))
+@result{} (5 7 9)
+
+(let ((count 0))
+  (map*
+      (lambda (ignored)
+        (set! count (+ count 1))
+        count)
+    '(a b)))
+@result{} (1 2) or (2 1)
+@end example
+
+At least one of the list arguments must be a finite list:
+
+@example
+(map* +
+      '(3 1 4 1)
+      (circular-list 1 0))
+@result{} (4 1 5 1)
+@end example
+@end deffn
+
+
+@deffn Function map-in-order* @var{f} @varo{circ} @var{circ} ...
+@deffnx Syntax map-in-order*/stx @var{f} @varo{circ} @var{circ} ...
+A variant of the @func{map} procedure that guarantees to apply @var{f}
+across the elements of the @var{circ} arguments in a left--to--right
+order.  This is useful for mapping procedures that both have side
+effects and return useful values.
+
+At least one of the list arguments must be finite.
+@end deffn
+
+
+@defun append-map @var{f} @varo{circ} @var{circ} ...
+@defunx append-map! @var{f} @varo{circ} @var{circ} ...
+Equivalent to:
+
+@example
+(apply append (map f clist1 clist2 ...))
+@end example
+
+@noindent
+and:
+
+@example
+(apply append! (map f clist1 clist2 ...))
+@end example
+
+@noindent
+so it makes sense to use these functions only when the list returned by
+the map process is a list of lists.
+
+Map @var{f} over the elements of the lists, just as in the @func{map}
+function.  However, the results of the applications are appended
+together to make the final result.  @func{append-map} uses @func{append}
+to append the results together; @func{append-map!} uses @func{append!}.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.
+
+Example:
+
+@example
+(append-map!
+    (lambda (x)
+      (list x (- x)))
+  '(1 3 8))
+@result{} (1 -1 3 -3 8 -8)
+
+(append-map! list
+             '(1 2 3)
+             '(10 20 30))
+@result{} (1 10 2 20 3 30)
+@end example
+
+At least one of the list arguments must be a finite list.
+@end defun
+
+
+@deffn Function map! @var{f} @varo{ell} @var{ell} ...
+@deffnx Syntax map!/stx @var{f} @varo{ell} @var{ell} ...
+Like @func{map} and @func{map/stx}, but they are allowed to alter the
+cons cells of @varo{ell} to construct the result list.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.  In the n--ary case, all the list arguments must have
+the same number of elements.
+@end deffn
+
+
+@deffn Function map*! @var{f} @var{ell} @var{circ} ...
+@deffnx Syntax map*!/stx @var{f} @var{ell} @var{circ} ...
+Like @func{map*} and @func{map*!/stx}, but they are allowed to alter the
+cons cells of @var{ell} to construct the result list.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.  In the n--ary case, @var{circ} ... must have at least
+as many elements as @var{ell}.
+@end deffn
+
+
+@deffn Function filter-map @var{f} @varo{ell} @var{ell} ...
+@deffnx Syntax filter-map/stx @var{f} @varo{ell} @var{ell} ...
+Like @func{map}, but only true values are mapped:
+
+@example
+(filter-map
+    (lambda (x)
+      (and (number? x)
+           (* x x)))
+  '(a 1 b 3 c 7))
+@result{} (1 9 49)
+@end example
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.  At least one of the list arguments must be finite.
+@end deffn
+
+
+@deffn Function filter-map* @var{f} @varo{circ} @var{circ} ...
+@deffnx Syntax filter-map*/stx @var{f} @varo{circ} @var{circ} ...
+Like @func{filter-map} and @func{filter-map/stx}, but accept list
+arguments of different length.
+@end deffn
+
+@c page
+@node lists fold foreach
+@subsection Producing side effects
+
+
+@deffn Function for-each* @var{proc} @varo{circ} @var{circ} ...
+@deffnx Syntax for-each*/stx @var{proc} @varo{circ} @var{circ} ...
+This procedure extends the @rnrs{6} specification for @func{for-each} to
+allow the arguments to be of unequal length; it terminates when the
+shortest list runs out of elements.
+
+The arguments to @func{for-each*} are like the arguments to @func{map*},
+but @func{for-each*} calls @var{proc} for its side effects rather than
+for its values.  Unlike @func{map*}, @func{for-each*} is guaranteed to
+call @var{proc} on the elements of the lists in order from the first
+element(s) to the last, and the value returned by @func{for-each*} is
+unspecified.
+
+@example
+(let ((v (make-vector 5)))
+  (for-each*
+       (lambda (i)
+         (vector-set! v i (* i i)))
+    '(0 1 2 3 4))
+  v)
+@result{} #(0 1 4 9 16)
+@end example
+
+At least one of the list arguments must be a finite list.
+@end deffn
+
+
+@deffn Function pair-for-each @var{f} @varo{ell} @var{ell} ...
+@deffnx Syntax pair-for-each/stx @var{f} @varo{ell} @var{ell} ...
+Like @func{for-each}, but @var{f} is applied to successive sublists of
+the argument lists.  That is, @var{f} is applied to the cons cells of
+the lists, rather than the lists' elements.  These applications occur in
+left--to--right order.
+
+The @var{f} procedure may reliably apply @func{set-cdr!} to the pairs it
+is given without altering the sequence of execution.
+
+@example
+(pair-for-each
+    (lambda (pair)
+      (display pair)
+      (newline))
+  '(a b c))
+@print{} (a b c)
+@print{} (b c)
+@print{} (c)
+@end example
+
+The list arguments must have equal length.
+@end deffn
+
+
+@deffn Function pair-for-each* @var{f} @varo{circ} @var{circ} ...
+@deffnx Syntax pair-for-each*/stx @var{f} @varo{circ} @var{circ} ...
+Like @func{for-each*}, but @var{f} is applied to successive sublists of
+the argument lists.  That is, @var{f} is applied to the cons cells of
+the lists, rather than the lists' elements.  These applications occur in
+left--to--right order.
+
+The @var{f} procedure may reliably apply @func{set-cdr!} to the pairs it
+is given without altering the sequence of execution.
+
+@example
+(pair-for-each*
+    (lambda (pair)
+      (display pair)
+      (newline))
+  '(a b c))
+@print{} (a b c)
+@print{} (b c)
+@print{} (c)
+@end example
+
+At least one of the list arguments must be a finite list.
+@end deffn
+
+@c page
+@node lists filter
+@section Filtering and partitioning
+
+
+@cindex List filtering
+
+
+@defun filter! @var{pred} @var{ell}
+Return all the elements of @var{ell} that satisfy the predicate
+@var{pred}.  The list is not disordered: Elements that appear in the
+result list occur in the same order as they occur in @var{ell}.  The
+returned list may share a common tail with @var{ell}.  The dynamic order
+in which the various applications of @var{pred} are made is not
+specified.
+
+@example
+(filter! even? '(0 7 8 8 43 -4))
+@result{} (0 8 8 -4)
+@end example
+
+@func{filter!} may alter the cons cells in @var{ell} to construct the
+result lists.  Notice that @func{filter} is exported by
+@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+@end defun
+
+
+@defun partition! @var{pred} @var{ell}
+Partition the elements of @var{ell} with predicate @var{pred}, and
+return two values: the list of in--elements and the list of
+out--elements.  The list is not disordered: Elements occur in the result
+lists in the same order as they occur in @var{ell}.  The dynamic order
+in which the various applications of @var{pred} are made is not
+specified.  One of the returned lists may share a common tail with
+@var{ell}.
+
+@example
+(partition! symbol? '(one 2 3 four five 6))
+@result{} (one four five) (2 3 6)
+@end example
+
+@func{partition!} may alter the cons cells in @var{ell} to construct the
+result lists.  Notice that @func{partition} is exported by
+@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+@end defun
+
+
+@defun remove* @var{pred} @var{ell}
+@defunx remove*! @var{pred} @var{ell}
+Return @var{ell} without the elements that satisfy predicate
+@var{pred}:
+
+@example
+(lambda (pred list)
+  (filter (lambda (x)
+            (not (pred x)))
+          list))
+@end example
+
+The list is not disordered: Elements that appear in the result list
+occur in the same order as they occur in @var{ell}.  The returned list
+may share a common tail with @var{ell}.  The dynamic order in which the
+various applications of pred are made is not specified.
+
+@example
+(remove* even? '(0 7 8 8 43 -4)) @result{} (7 43)
+@end example
+
+@func{remove*!}  is allowed to alter the cons cells in @var{ell} to
+construct the result lists.
+
+Notice that @rsixlibrary{lists} exports @func{remove}, which accepts a
+Scheme object as first argument.  @nauref{stdlib list, List utilities}
+@end defun
+
+@c page
+@node lists search
+@section Searching
+
+
+@cindex List searching
+@cindex Searching in lists
+
+
+The following procedures search lists for the leftmost elements
+satisfying some criteria; this means they do not always examine the
+entire list; thus, there is no efficient way for them to reliably detect
+and signal an error when passed a dotted or circular list.  Here are the
+general rules describing how these procedures work when applied to
+different kinds of lists:
+
+@table @emph
+@item Proper lists
+The standard, canonical behavior happens in this case.
+
+@item Dotted lists
+It is an error to pass these procedures a dotted list that does not
+contain an element satisfying the search criteria.  That is, it is an
+error if the procedure has to search all the way to the end of the
+dotted list.  In this case the result is undefined.
+
+@item Circular lists
+It is an error to pass these procedures a circular list that does not
+contain an element satisfying the search criteria.  Note that the
+procedures do not detect this case, they will simply diverge.  It is,
+however, acceptable to search a circular list if the search is
+successful; that is, if the list contains an element satisfying the
+search criteria.
+@end table
+
+
+@defun take-while @var{pred} @var{circ}
+@defunx take-while! @var{pred} @var{circ}
+Return the longest initial prefix of @var{circ} whose elements all
+satisfy @var{pred}.  @func{take-while!} is allowed to alter the argument
+list to produce the result.
+
+@example
+(take-while even? '(2 18 3 10 22 9))
+@result{} (2 18)
+@end example
+@end defun
+
+
+@defun drop-while @var{pred} @var{circ}
+Drop the longest initial prefix of @var{circ} whose elements all satisfy
+@var{pred} and return the rest of the list.
+
+@example
+(drop-while even? '(2 18 3 10 22 9))
+@result{} (3 10 22 9)
+@end example
+
+The circular--list case may be viewed as ``rotating'' the list.
+@end defun
+
+
+@defun span @var{pred} @var{circ}
+@defunx span! @var{pred} @var{ell}
+@defunx break @var{pred} @var{circ}
+@defunx break! @var{pred} @var{ell}
+@func{span} splits the list into the longest initial prefix whose
+elements all satisfy @var{pred} and the remaining tail.  @func{break}
+inverts the sense of the predicate: The tail commences with the first
+element of the input list that satisfies the predicate.
+
+In other words: @func{span} finds the intial span of elements satisfying
+@var{pred}, and @func{break} breaks the list at the first element
+satisfying @var{pred}.
+
+@func{span} is equivalent to:
+
+@example
+(values (take-while pred clist)
+        (drop-while pred clist))
+@end example
+
+@func{span!} and @func{break!} are allowed to alter the argument list to
+produce the result.
+
+@example
+(span even? '(2 18 3 10 22 9))
+@result{} (2 18) (3 10 22 9)
+
+(break even? '(3 1 4 1 5 9))
+@result{} (3 1) (4 1 5 9)
+@end example
+@end defun
+
+
+@defun any @var{pred} @varo{ell} @var{ell} ...
+@defunx any* @var{pred} @varo{circ} @var{circ} ...
+Apply the predicate across the lists, returning true if the predicate
+returns true on any application.  If there are @math{N} list arguments,
+then @var{pred} must be a procedure taking @math{N} arguments and
+returning a boolean result.  If all the list arguments are empty: The
+return value is @false{}.
+
+The list arguments of @func{any} must have the same length; @func{any*}
+accepts lists of different length.
+
+@func{any} applies @var{pred} to the first elements of the list
+arguments, if this application return true, @func{any} immediately
+returns that value; otherwise, it iterates, applying pred to the second
+elements of the lits arguments and so forth.  The iteration stops when a
+true value is produced or one of the lists runs out of values; in the
+latter case, @func{any} returns @false{}.  The application of @var{pred}
+to the last element of the lists is a tail call.
+
+Note the difference between @func{find} and @func{any}: @func{find}
+returns the element that satisfied the predicate; @func{any} returns the
+true value that the predicate produced.
+
+The identifier @func{any} does not end with a question mark: This is to
+indicate that it does not return a simple boolean (@true{} or @false{}),
+but a general value.
+
+@example
+(any integer? '(a 3 b 2.7))
+@result{} #t
+
+(any integer? '(a 3.1 b 2.7))
+@result{} #f
+
+(any < '(3 1 4 1 5)
+       '(2 7 1 8 2))
+@result{} #t
+@end example
+@end defun
+
+
+@defun every @var{pred} @varo{ell} @var{ell} ...
+@defunx every* @var{pred} @varo{circ} @var{circ} ...
+Apply the predicate across the lists, returning true if the predicate
+returns true on every application.  If there are @math{N} list
+arguments, then @var{pred} must be a procedure taking @math{N} arguments
+and returning a boolean result.  If all the list arguments are empty:
+The return value is @true{}.
+
+The list arguments of @func{every} must have the same length;
+@func{every*} accepts lists of different length.
+
+@func{every} applies @var{pred} to the first elements of the list
+arguments, if this application returns @false{}, @func{every}
+immediately returns @false{}; otherwise, it iterates, applying
+@var{pred} to the second elements of the list arguments and so forth.
+The iteration stops when a @false{} value is produced or one of the
+lists runs out of values.  In the latter case, @func{every} returns the
+true value produced by its final application of @var{pred}.  The
+application of @var{pred} to the last element of the lists is a tail
+call.
+
+If one of the list arguments has no elements, @func{every} simply
+returns @true{}.
+
+The identifier @func{every} does not end with a question mark: This is
+to indicate that it does not return a simple boolean (@true{} or
+@false{}), but a general value.
+@end defun
+
+
+@defun list-index @var{pred} @varo{ell} @var{ell} ...
+@defunx list-index* @var{pred} @varo{circ} @var{circ} ...
+Return the index of the leftmost element that satisfies @var{pred}.  If
+there are @math{N} list arguments, then @var{pred} must be a function
+taking @math{N} arguments and returning a boolean result.
+
+The list arguments of @func{list-index} must have the same length;
+@func{list-index*} accepts lists of different length.
+
+@func{list-index} applies @var{pred} to the first elements of the list
+arguments, if this application returns true, @func{list-index}
+immediately returns zero; otherwise, it iterates, applying @var{pred} to
+the second elements of the list arguments and so forth.  When it finds a
+tuple of list elements that cause @var{pred} to return true, it stops
+and returns the zero--based index of that position in the lists.
+
+The iteration stops when one of the lists runs out of values; in this
+case, @func{list-index} returns @false{}.
+
+@example
+(list-index even? '(3 1 4 1 5 9))
+@result{} 2
+
+(list-index < '(3 1 4 1 5 9 2 5 6) '(2 7 1 8 2))
+@result{} 1
+
+(list-index = '(3 1 4 1 5 9 2 5 6) '(2 7 1 8 2))
+@result{} #f
+@end example
+@end defun
+
+
+@defun position @var{obj} @var{ell}
+@defunx position/stx @var{obj} @var{ell}
+Return the index of the leftmost @var{obj} in @var{ell}.  If @var{obj}
+is not present in @var{ell}, return @false{}.
+@end defun
+
+
+@defun member* @var{obj} @var{ell}
+@defunx member* @var{obj} @var{ell} @var{item=}
+Return the first sublist of @var{ell} whose car is @var{obj}, where the
+sublists of @var{ell} are the non--empty lists returned by @code{(drop
+ell i)} for @var{i} less than the length of @var{ell}.  If @var{obj}
+does not occur in @var{ell}, then @false{} is returned.
+
+Examples:
+
+@example
+(member* '(a) '(b (a) c))
+@result{} ((a) c)
+@end example
+
+@func{member*} extends the @rnrs{6} definition of @func{member} to allow
+the client to pass in an optional equality procedure @var{item=} used to
+compare keys.  @var{item=} defaults to @func{equal?}.
+
+The comparison procedure is used to compare the elements @math{Ei} of
+list to the key @var{obj} in this way:
+
+@example
+(= x ei) ; list is (E1 ... En)
+@end example
+
+@noindent
+that is, the first argument is always @var{obj}, and the second argument
+is one of the list elements.  Thus one can reliably find the first
+element of list that is greater than five with:
+
+@example
+(member* 5 ell <)
+@end example
+
+Note that fully general list searching may be performed with the
+@func{find-tail} and @func{find} procedures.
+@end defun
+
+
+@defun find-tail @var{pred} @var{circ}
+Return the first pair of @var{circ} whose car satisfies @var{pred}.  If
+no pair does, return @false{}.  @func{find-tail} can be viewed as a
+general--predicate variant of the @func{member*} function.
+
+Examples:
+
+@example
+(find-tail even? '(3 1 37 -8 -5 0 0))
+@result{} (-8 -5 0 0)
+
+(find-tail even? '(3 1 37 -5))
+@result{} #f
+@end example
+
+In the circular--list case, this procedure ``rotates'' the list.
+
+@func{find-tail} is essentially @func{drop-while}, where the sense of
+the predicate is inverted: @func{find-tail} searches until it finds an
+element satisfying the predicate; @func{drop-while} searches until it
+finds an element that doesn't satisfy the predicate.
+
+@quotation
+@strong{NOTE} The @func{find} function defined by @rnrs{6} has an
+ambiguity in its lookup semantics: if @func{find} returns @false{}, we
+cannot tell (in general) if it found a @false{} element that satisfied
+@var{pred}, or if it did not find any element at all.
+
+In many situations, this ambiguity cannot arise: either the list being
+searched is known not to contain any @false{} elements, or the list is
+guaranteed to have an element satisfying @var{pred}.
+
+However, in cases where this ambiguity can arise, we should use
+@func{find-tail} instead of @func{find}, @func{find-tail} has no such
+ambiguity.
+@end quotation
+@end defun
+
+@c page
+@node lists delete
+@section Deletion
+
+
+@cindex List deletion
+
+
+@defun delete @var{obj} @var{ell}
+@defunx delete @var{obj} @var{ell} @var{item=}
+@defunx delete! @var{obj} @var{ell}
+@defunx delete! @var{obj} @var{ell} @var{item=}
+Use the comparison procedure @var{item=} (which defaults to
+@func{equal?})  to find all the elements of @var{ell} that are equal to
+@var{obj}, and delete them from @var{ell}.  The dynamic order in which
+the various applications of @var{item=} are made is not specified.
+
+The list is not disordered: Elements that appear in the result list
+occur in the same order as they occur in @var{ell}.  The result may
+share a common tail with @var{ell}.
+
+Note that fully general element deletion can be performed with the
+@func{remove} and @func{remove!} procedures.
+
+The comparison procedure is used as @code{(item= obj Ei)}, that is:
+@var{obj} is always the first argument and a list element is always the
+second argument.  The comparison procedure will be used to compare each
+element of list exactly once; the order in which it is applied to the
+various @math{Ei} is not specified.  Thus, one can reliably remove all
+the numbers greater than 5 from a list with @code{(delete 5 ell <)}.
+
+@func{delete!} is allowed to alter the cons cells in @var{ell} to
+construct the result.
+@end defun
+
+
+@defun delete-duplicates @var{ell}
+@defunx delete-duplicates @var{ell} @var{item=}
+@defunx {delete-duplicates!} @var{ell}
+@defunx {delete-duplicates!} @var{ell} @var{item=}
+Remove duplicate elements from @var{ell}.  If there are multiple equal
+elements in @var{ell}, the result list only contains the first or
+leftmost of these elements in the result.  The order of these surviving
+elements is the same as in the original list: @func{delete-duplicates}
+does not disorder the list (hence it is useful for ``cleaning up''
+association lists).
+
+The @var{item=} parameter is used to compare the elements of the list;
+it defaults to @func{equal?}.  If @math{x} comes before @math{y} in
+@var{ell}, then the comparison is performed as @code{(item= x y)}.  The
+comparison procedure will be used to compare each pair of elements in
+@var{ell} no more than once; the order in which it is applied to the
+various pairs is not specified.
+
+The list argument may share a common tail with the returned list.
+
+@func{delete-duplicates!}  is allowed to alter the cons cells in its
+argument list to construct the result.
+
+@example
+(delete-duplicates '(a b a c a b c z)) @result{} (a b c z)
+
+;; Clean up an alist:
+(delete-duplicates '((a . 3) (b . 7) (a . 9) (c . 1))
+                   (lambda (x y)
+                     (eq? (car x) (car y))))
+@result{} ((a . 3) (b . 7) (c . 1))
+@end example
+@end defun
+
+@c page
+@node lists sorted
+@section Utilities for sorted lists
+
+
+@defun sorted-list-insert @var{obj} @var{ell} @var{item>}
+Build a new list holding the same arguments of @var{ell}, a list sorted
+in increasing order, and @var{obj} inserted in such a position that the
+order is preserved.  The returned list may share structure with
+@var{ell}.
+
+@var{item>} must be a predicate accepting two arguments and returning
+true if the first is greater than the second.  If @var{obj} is equal to
+one of the items in @var{ell}: @var{obj} is added before the item from
+@var{ell}.
+@end defun
+
+
+@defun sorted-list-insert/uniq @var{obj} @var{ell} @var{item<} @var{item>}
+Like @func{sorted-list-insert}, but if @var{obj} is equal to one of the
+items in @var{ell}: @var{obj} is discarded, and @var{ell} it self is
+returned.
+@end defun
+
+
+@defun union-of-sorted-lists @var{ell1} @var{ell2} @var{item<} @var{item>}
+Build a new list representing the union of the lists arguments.
+@var{ell1} and @var{ell2} are interpreted as lists sorted in
+increasing order, and the result of the union is a sorted list.  The
+returned list may share structure with the list arguments.
+
+@var{item<} and @var{item>} must be predicates accepting two arguments
+and returning true if the first is less than/greater than the second.
+
+When both @var{item<} and @var{item>} return @false{}, the two items are
+considered equal; in this case all the equal items are added to the
+result, in such a way that the items from @var{ell1} all come before
+the items from @var{ell2}.
+@end defun
+
+
+@defun union-of-sorted-lists/uniq @vari{ell} @varii{ell} @var{item<} @var{item>}
+Like @func{union-of-sorted-lists}, but when equal items are found only
+the ones from @vari{ell} are added to the result.
+
+@example
+(union-of-sorted-lists/uniq
+  '(0 1   3     8 9 10)
+  '(  1 2   4 5        11 23)
+  < >)
+@result{} '(0 1 2 3 4 5 8 9 10 11 23)
+;;     ^
+;; from ell1
+
+(union-of-sorted-lists/uniq
+  '(0 1 1   3)
+  '(  1   2   4)
+  < >)
+@result{} '(0 1 1 2 3 4 5)
+;;     ^ ^
+;; both from ell1
+@end example
+@end defun
+
+@c page
+@node lists alist
+@section Association lists
+
+
+@cindex List, association lists
+@cindex Association lists
+@cindex Alists
+
+
+An @dfn{association list} (or @dfn{alist}) is a list of pairs.  The car
+of each pair contains a key value, and the cdr contains the associated
+data value.  They can be used to construct simple look--up tables in
+Scheme.  Note that association lists are probably inappropriate for
+performance--critical use on large data; in these cases, hash tables or
+some other alternative should be employed.
+
+
+@defun assoc* @var{key} @var{alist}
+@defunx assoc* @var{key} @var{alist} @var{item=}
+@var{alist} must be an association list: A list of pairs.  These
+procedures find the first pair in @var{alist} whose car field is
+@var{key}, and returns that pair.  If no pair in @var{alist} has
+@var{key} as its car, then @false{} is returned.
+
+The functions use @func{equal?} to compare the keys and they allow the
+client to pass in an optional equality procedure @var{item=} used to
+compare keys.  Notice that @func{assq} and @func{assv} are exported by
+@rsixlibrary{lists}.  @nauref{stdlib list, List utilities}
+
+@example
+(assoc* (list 'a) '(((a)) ((b)) ((c))))
+@result{} ((a))
+@end example
+
+The comparison procedure is used to compare the elements @math{Ei} of
+list to the key parameter in this way:
+
+@example
+(item= key (car Ei)) ; list is (E1 ... En)
+@end example
+
+@noindent
+that is, the first argument is always @var{key}, and the second argument
+is one of the list elements.  Thus one can reliably find the first entry
+of @var{alist} whose @var{key} is greater than five with @code{(assoc* 5
+alist <)}.
+
+Note that fully general alist searching may be performed with the
+@func{find-tail} and @func{find} procedures.
+@end defun
+
+
+@defun alist-cons @var{key} @var{obj} @var{alist}
+Defined as:
+
+@example
+(lambda (key datum alist)
+  (cons (cons key datum) alist))
+@end example
+
+@noindent
+cons a new alist entry mapping @var{key} to @var{obj} onto @var{alist}.
+@end defun
+
+
+@defun alist-copy @var{alist}
+Make a fresh copy of @var{alist}.  This means copying each pair that
+forms an association as well as the spine of the list:
+
+@example
+(lambda (a)
+  (map (lambda (elt)
+         (cons (car elt) (cdr elt)))
+       a))
+@end example
+@end defun
+
+
+@defun alist-delete @var{key} @var{alist}
+@defunx alist-delete @var{key} @var{alist} @var{item=}
+@defunx alist-delete! @var{key} @var{alist}
+@defunx alist-delete! @var{key} @var{alist} @var{item=}
+Delete all associations from @var{alist} with the given @var{key}, using
+the key--comparison procedure @var{item=}, which defaults to
+@func{equal?}.  The dynamic order in which the various applications of
+@var{item=} are made is not specified.
+
+The returned value may share common tail with @var{alist}.  The alist is
+not disordered: Elements that appear in the result alist occur in the
+same order as they occur in @var{alist}.
+
+The comparison procedure is used to compare the element keys @math{Ki}
+of @var{alist}'s entries to the @var{key} argumentd as @code{(item= key
+Ki)}; thus, one can reliably remove all entries of @var{alist} whose key
+is greater than five with @code{(alist-delete 5 alist <)}.
+
+@func{alist-delete!} is allowed to alter cons cells from the alist
+parameter to construct the result.
+@end defun
+
+@c page
+@node lists circ
+@section Circular lists
+
+
+@subsubheading Constructors
+
+@deffn Function circular-list @vari{obj} @varii{obj} ...
+@deffnx Syntax circular-list/stx @vari{obj} @varii{obj} ...
+Construct a circular list (a ring) of the elements.
+
+@example
+(circular-list 'z 'q)
+@result{} (z q z q z q ...)
+@end example
+@end deffn
+
+
+@deffn Function list->circular-list! @var{ell}
+@deffnx Syntax list->circular-list!/stx @var{ell}
+Take a proper list and make it circular (a ring).  Return the circular
+list.
+@end deffn
+
+
+@deffn Function circular-list->list! @var{circ}
+@deffnx Function circular-list->list!/stx @var{circ}
+Take a circular list and ``open it'' returning a proper list.  The car
+of the returned list is the car of @var{circ}.  If @var{circ} is null,
+return null.
+@end deffn
+
+
+@deffn Function circular-list-copy @var{circ}
+@deffnx Syntax circular-list-copy/stx @var{circ}
+Build and return a copy of @var{circ}.  If @var{circ} is null, return
+null.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspection
+
+@deffn Function circular-list-length @var{circ}
+@deffnx Syntax circular-list-length/stx @var{circ}
+Return the number of elements in @var{circ}.  The length of a circular
+list is a non--negative exact integer @math{N} such that: @func{cdr}
+applied @math{N} times to @var{circ}, returns the @var{circ} pair
+itself.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison
+
+@deffn Function circular-list= @var{item=} @var{clist} ...
+@deffnx Function circular-list=/stx @var{item=} @vari{clist} @varii{clist}
+Compare the list arguments using @var{item=}, return true if the lists
+are equal.  If all the list arguments are null, return @true{}.  If at
+least one list arguments is null, but not all, return @false{}.  If the
+list arguments have different length, return @false{}.
+@end deffn
+
+@c page
+@node lists set
+@section Set operations on lists
+
+
+@cindex List set operations
+@cindex Set operations on lists
+
+
+These procedures implement operations on sets represented as lists of
+elements.  They all take an @var{item=} argument used to compare
+elements of lists; this equality procedure is required to be consistent
+with @func{eq?}; that is, it must be the case that:
+
+@example
+(eq? x y) @result{} (= x y)
+@end example
+
+Note that this implies, in turn, that two lists that are @func{eq?} are
+also set--equal by any legal comparison procedure.  This allows for
+constant--time determination of set operations on @func{eq?} lists.
+
+Be aware that these procedures typically run in time @math{O(n * m)} for
+@math{n} and @math{m} elements list arguments.  Performance--critical
+applications operating upon large sets will probably wish to use other
+data structures and algorithms.
+
+
+@defun lset<=? @var{item=} @var{ell} ...
+Return true if, and only if, every @var{elli} is a subset of
+@var{elli+1}.  List @var{AL} is a subset of list @var{BL} if every
+element in @var{AL} is equal to some element of @var{BL}.  When
+performing an element comparison, the @var{item=} procedure's first
+argument is an element of @var{AL}, its second argument an element of
+@var{BL}.
+
+@example
+(lset<=? eq? '(a) '(a b a) '(a b c c))
+@result{} #t
+
+(lset<=? eq?)
+@result{} #t
+
+(lset<=? eq? '(a))
+@result{} #t
+@end example
+
+If invoked with all null lists, the return value is @true{}.
+@end defun
+
+
+@defun lset=? @var{item=} @var{ell} ...
+Return true if, and only if, every @var{elli} is set--equal to
+@var{elli+1}.  ``Set--equal'' simply means that @var{elli} is a subset
+of @var{elli+1}, and @var{elli+1} is a subset of @var{elli}.  The
+@var{item=} procedure's first argument is an element of @var{elli}, its
+second argument is an element of @var{elli+1}.
+
+@example
+(lset=? eq? '(b e a) '(a e b) '(e e b a))
+@result{} #t
+
+(lset=? eq?)
+@result{} #t
+
+(lset=? eq? '(a))
+@result{} #t
+@end example
+@end defun
+
+
+@defun lset-adjoin @var{item=} @varo{ell} @var{ell} ...
+Add the @math{Ei} elements from the @var{ell} ... arguments, not already
+in @varo{ell}, to the result list.  The result shares a common tail with
+the @var{ell} argument.  The new elements are added to the front of the
+list, but no guarantees are made about their order.
+
+@var{item=} is an equality procedure used to determine if an @math{Ei}
+is already a member of @varo{ell}; its first argument is an element of
+@varo{ell}, its second is one of the @math{Ei}.
+
+The @varo{ell} parameter is always a suffix of the result; even if the
+list parameter contains repeated elements, these are not reduced.
+
+@example
+(lset-adjoin eq? '(a b c d c e) 'a 'e 'i 'o 'u)
+@result{} (u o i a b c d c e)
+@end example
+@end defun
+
+
+@defun lset-union @var{item=} @var{ell} ...
+@defunx lset-union! @var{item=} @var{ell} ...
+Return the union of the lists.  The union of lists @var{AL} and @var{BL}
+is constructed as follows:
+
+@enumerate
+@item
+If @var{AL} is the empty list, the answer is @var{BL} (or a copy of
+@var{BL}).
+
+@item
+Otherwise, the result is initialised to be list @var{AL} (or a copy of
+@var{AL}).
+
+@item
+Proceed through the elements of list @var{BL} in a left--to--right
+order.  If @var{b} is such an element of @var{BL}, compare every element
+@var{r} of the current result list to @var{b}: @code{(item= r b)}.  If
+all comparisons fail, @var{b} is consed onto the front of the result.
+@end enumerate
+
+However, there is no guarantee that @var{item=} will be applied to every
+pair of arguments from @var{AL} and @var{BL}.  In particular, if
+@var{AL} is @func{eq?} to @var{BL}, the operation may immediately
+terminate.
+
+In the @math{N}--ary case, the two--argument @func{list-union} operation
+is simply folded across the argument lists.
+
+@example
+(lset-union eq? '(a b c d e) '(a e i o u))
+@result{} (u o i a b c d e)
+
+;; Repeated elements in the first argument are preserved.
+(lset-union eq? '(a a c) '(x a x))
+@result{} (x a a c)
+
+(lset-union eq?)
+@result{} ()
+
+(lset-union eq? '(a b c))
+@result{} (a b c)
+@end example
+
+@func{lset-union!} is allowed to use the cons cells in the first list
+parameter to construct its answer; @func{lset-union!} is permitted to
+recycle cons cells from any of its list arguments.
+@end defun
+
+
+@defun lset-intersection @var{item=} @varo{ell} @var{ell} ...
+@defunx lset-intersection! @var{item=} @varo{ell} @var{ell} ...
+Return the intersection of the lists.  The intersection of lists
+@var{AL} and @var{BL} is comprised of every element of @var{AL} that is
+@var{item=} to some element of @var{BL}: @code{(item= a b)}, for @var{a}
+in @var{AL}, and @var{b} in @var{BL}.  Note this implies that an element
+which appears in @var{BL} and multiple times in list @var{AL} will also
+appear multiple times in the result.
+
+The order in which elements appear in the result is the same as they
+appear in @varo{ell}; that is, @func{lset-intersection} essentially
+filters @varo{ell}, without disarranging element order.  The result may
+share a common tail with @varo{ell}.
+
+In the @math{N}--ary case, the two--argument @func{list-intersection}
+operation is simply folded across the argument lists.  However, the
+dynamic order in which the applications of @var{item=} are made is not
+specified.
+
+@example
+(lset-intersection eq? '(a b c d e) '(a e i o u))
+@result{} (a e)
+
+;; Repeated elements in the first argument are preserved.
+(lset-intersection eq? '(a x y a) '(x a x z))
+@result{} '(a x a)
+
+(lset-intersection eq? '(a b c))
+@result{} (a b c)
+@end example
+
+@func{lset-intersection!}  is allowed to use the cons cells in the first
+list parameter to construct its answer.
+@end defun
+
+
+@defun lset-difference @var{item=} @varo{ell} @var{ell} ...
+@defunx lset-difference! @var{item=} @varo{ell} @var{ell} ...
+Return the difference of the lists: All the elements of @varo{ell} that
+are not @var{item=} to any element from one of the other @var{ell}
+parameters.
+
+The @var{item=} procedure's first argument is always an element of
+@varo{ell}; its second is an element of one of the other @var{ell}.  The
+dynamic order in which the applications of @var{item=} are made is not
+specified.  Elements that are repeated multiple times in the @varo{ell}
+parameter will occur multiple times in the result.
+
+The order in which elements appear in the result is the same as they
+appear in @varo{ell}; that is, @func{lset-difference} essentially
+filters @varo{ell}, without disarranging element order.  The result may
+share a common tail with @varo{ell}.
+
+@example
+(lset-difference eq? '(a b c d e) '(a e i o u))
+@result{} (b c d)
+
+(lset-difference eq? '(a b c))
+@result{} (a b c)
+@end example
+
+@func{lset-difference!} is allowed to use the cons cells in the first
+list parameter to construct its answer.
+@end defun
+
+
+@defun lset-xor @var{item=} @var{ell} ...
+@defunx lset-xor! @var{item=} @var{ell} ...
+Return the exclusive--or of the sets.  If there are exactly two lists,
+this is all the elements that appear in exactly one of the two lists.
+The operation is associative, and thus extends to the @math{N}--ary
+case, in which the result is a list of the elements that appear in an
+odd number of the lists.  The result may share a common tail with any of
+the @var{ell} parameters.
+
+More precisely, for two lists @var{AL} and @var{BL}, @var{AL} xor
+@var{BL} is a list of:
+
+@itemize
+@item
+Every element @var{a} of @var{AL} such that there is no element @var{b}
+of @var{BL} such that @code{(item= a b)}, and
+
+@item
+Every element @var{b} of @var{BL} such that there is no element @var{a}
+of @var{AL} such that @code{(item= b a)}.
+@end itemize
+
+In the @math{n}--ary case, the binary--xor operation is simply folded
+across the lists.
+
+@example
+(lset-xor eq? '(a b c d e) '(a e i o u))
+@result{} (d c b i o u)
+
+(lset-xor eq?)
+@result{} ()
+
+(lset-xor eq? '(a b c d e))
+@result{} (a b c d e)
+@end example
+
+@func{lset-xor!} is allowed to use the cons cells in the first list
+parameter to construct its answer.
+@end defun
+
+
+@defun {lset-diff+intersection} @var{item=} @varo{ell} @var{ell} ...
+@defunx {lset-diff+intersection!} @var{item=} @varo{ell} @var{ell} ...
+Return two values: The difference and the intersection of the lists.  It
+is equivalent to:
+
+@example
+(values (lset-difference = list1 list2 ...)
+        (lset-intersection = list1
+                             (lset-union = list2 ...)))
+@end example
+
+@noindent
+but can be implemented more efficiently.
+
+The @var{item=} procedure's first argument is an element of @varo{ell};
+its second is an element of one of the other @var{ell} arguments.
+
+Either of the returned lists may share a common tail with @varo{ell}.
+This operation essentially partitions @varo{ell}.
+
+@func{lset-diff+intersection!} is allowed to use the cons cells in the
+first list argument to construct its answer.
+@end defun
+
+@c page
+@node lists low
+@section Low level utilities
+
+
+The following bindings are exported by @library{vicare containers lists
+low}.
+
+
+@defun %and/or-null? @var{ell} ...
+This is the implementation of @func{and/or-null?}.  Return two values
+being the return values of @func{and-null?} and @func{or-null?} applied
+to the @var{list} arguments.
+@end defun
+
+
+@defun %and/or-eq? @var{list-of-clists1} @var{list-of-clists2}
+Given two lists of lists (possibly circular), compare with @func{eq?}
+the sublists from the arguments, and return two boolean values:
+
+@enumerate
+@item
+True if each sublist from @var{list-of-clists1} is @func{eq?} to its
+homologous from @var{list-of-clists2}.
+
+@item
+True if at least one sublist from @var{list-of-clists1} is @func{eq?} to
+its homologous from @var{list-of-clists2}.
+@end enumerate
+
+@var{list-of-clists1} and @var{list-of-clists2} are meant to have the
+same length, but this is not tested.  The iteration will stop when the
+end of the shorter list is found.
+
+To understand how this function is used, consider the following:
+
+@smallexample
+(define (circular-list= item= . list-of-clists)
+  (let-values (((and-nil or-nil)
+               (apply %and/or-null? list-of-clists)))
+    (cond (and-nil #t)
+          (or-nil  #f)
+          (else
+           (let loop ((cells list-of-clists))
+             (let-values (((cars cdrs) (%cars/cdrs* cells)))
+               (or
+                (null? cars)
+                (and
+                 (apply item= cars)
+                 (let-values (((and-eq or-eq)
+                              (%and/or-eq? list-of-clists cdrs)))
+                   (cond (and-eq #t)
+                         (or-eq  #f)
+                         (else (loop cdrs))))))))))))
+@end smallexample
+@end defun
+
+
+@defun %cars @var{list-of-lists}
+@defunx %cars @var{list-of-lists} @var{who}
+Return the list of cars of the sublists of @var{list-of-lists}, which
+must be a non--empty list of lists.
+
+If all the sublists are null: The return value is null.  If at least one
+sublist, but not all, is null: Raise an assertion violation using
+@var{who} as value for the @condition{who} condition.  @var{who} defaults to
+@false{}.
+@end defun
+
+
+@defun %cars* @var{list-of-lists}
+Like @var{%cars} but accept sublists of different length.  If at least
+one sublist is null: The return value is null.
+@end defun
+
+
+@defun %cdrs @var{list-of-lists}
+@defunx %cdrs @var{list-of-lists} @var{who}
+Return the list of cdrs of the sublists of @var{list-of-lists}, which
+must be a non--empty list of lists.
+
+If all the sublists are null: The return value is null.  If at least one
+sublist, but not all, is null: Raise an assertion violation using
+@var{who} as value for the @condition{who} condition.  @var{who} defaults to
+@false{}.
+@end defun
+
+
+@defun %cdrs* @var{list-of-lists}
+Like @var{%cdrs} but accept sublists of different length.  If at least
+one sublist is null: The return value is null.
+@end defun
+
+
+@defun %cars/cdrs @var{list-of-lists}
+Given a list of sublists, return two values being the list of cars and
+the list of cdrs from @var{list-of-lists}.  If the sublists are detected
+not to have equal length, raise an error.
+@end defun
+
+
+@defun %cars/cdrs* @var{list-of-lists}
+Like @func{%cars/cdrs}, but accept lists of different length.  If a list
+in @var{list-of-lists} is null: Return 2 null values.
+@end defun
+
+
+@defun %cars+cdrs*/no-test @var{list-of-lists}
+Like @func{%cars/cdrs*}, but do not test if one sublist is null.  If one
+sublist is null, the behaviour is undefined.
+@end defun
+
+
+@defun %cars+knil @var{list-of-lists} @var{knil}
+@defunx %knil+cars @var{list-of-lists} @var{knil}
+@defunx %cars+knil @var{list-of-lists} @var{knil} @var{who}
+@defunx %knil+cars @var{list-of-lists} @var{knil} @var{who}
+Return the list of cars of the sublists of @var{list-of-lists}, which
+must be a non--empty list of lists.  @func{%cars+knil} adds @var{knil}
+as last value.  @func{%knil+cars} adds @var{knil} as first value.
+
+If all the sublists are null: The return value is null.  If at least one
+sublist, but not all, is null: Raise an assertion violation using
+@var{who} as value for the @condition{who} condition.  @var{who} defaults to
+@false{}.
+@end defun
+
+
+@defun %cars+knil* @var{list-of-lists} @var{knil}
+@defunx %knil+cars* @var{list-of-lists} @var{knil}
+Like @func{%cars+knil} and @func{%knil+cars}, but accept sublists of
+different length.  If at least one sublist is null: The return value is
+null.
+@end defun
+
+
+@defun %cars+knil/cdrs @var{list-of-lists} @var{knil}
+@defunx %knil+cars/cdrs @var{list-of-lists} @var{knil}
+@defunx %cars+knil/cdrs @var{list-of-lists} @var{knil} @var{who}
+@defunx %knil+cars/cdrs @var{list-of-lists} @var{knil} @var{who}
+Given that @var{list-of-lists} must be a non--empty list of lists,
+return two values: The list of cars and the lists of cdrs of the
+sublists.  @func{%cars+knil/cdrs} adds @var{knil} as last value of the
+cars.  @func{%knil+cars/cdrs} adds @var{knil} as first value of the
+cars.
+
+If all the sublists are null: The return values are both null.  If at
+least one sublist, but not all, is null: Raise an assertion violation
+using @var{who} as value for the @condition{who} condition.  @var{who}
+defaults to @false{}.
+@end defun
+
+
+@defun %cars+knil/cdrs* @var{list-of-lists} @var{knil}
+@defunx %knil+cars/cdrs* @var{list-of-lists} @var{knil}
+Like @func{%cars+knil/cdrs} and @func{%knil+cars/cdrs}, but accept
+sublists of different length.  If at least one sublist is null: The
+return value is null.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Queues
+
+The following macros handle queue values: Pairs whose car is a list and
+whose cdr is the last pair in the list.  They allow user friendly
+insertion of elements at the end of the list.  Experiments show that
+building a list in reverse and then applying @func{reverse} to it, is
+almost always faster than using these queue macros.
+
+@example
+          -----------
+  queue  | car | cdr |
+          -----------
+            |     |
+        ----       ----------------
+       |                           |
+       v                           v
+      ---    ---    ---    ---    ---
+list | | |->| | |->| | |->| | |->| | |->()
+      ---    ---    ---    ---    ---
+      |      |      |      |      |
+      o      o      o      o      o
+@end example
+
+
+@deffn Syntax %make-queue @var{obj}
+Build and return a new queue having @var{obj} as first argument.  Takes
+care of evaluating @var{obj} only once.
+@end deffn
+
+
+@deffn Syntax %list->queue @var{ell}
+Embed @var{list} into a queue and return it.  Takes care of evaluating
+@var{ell} only once.
+@end deffn
+
+
+@deffn Syntax enqueue! @var{queue} @var{obj}
+Enqueue @var{obj} at the end of @var{queue} and return a new queue
+value.  Takes care of evaluating @var{obj} only once, but evaluates
+@var{queue} multiple times.
+@end deffn
+
+
+@deffn Syntax %queue-list-ref @var{queue}
+Return the list inside of @var{queue}.  It is a synonym of @func{car}.
+@end deffn
+
+
+@deffn Syntax %queue-last-pair-ref @var{queue}
+Return the last pair of the list inside of @var{queue}.  It is a synonym
+of @func{cdr}.
+@end deffn
+
+
+Examples of building a list using a queue:
+
+@example
+(define max-value+1 10)
+
+(do ((i 1 (+ 1 i))
+     (l (%make-queue 0) (%enqueue! l i)))
+    ((= i max-value+1)
+     (%queue-list-ref l)))
+@result{} '(0 1 2 3 4 5 6 7 8 9)
+
+(let loop ((l (%make-queue 0))
+           (i 1))
+  (if (= i max-value+1)
+      (%queue-list-ref l)
+    (loop (%enqueue! l i) (+ 1 i))))
+@result{} '(0 1 2 3 4 5 6 7 8 9)
+@end example
+
+@noindent
+which is the same of doing:
+
+@example
+(define max-value+1 10)
+
+(do ((i 1 (+ 1 i))
+     (l '(0) (cons i l)))
+    ((= i max-value+1)
+     (reverse l)))
+@result{} '(0 1 2 3 4 5 6 7 8 9)
+
+(let loop ((l '(0))
+           (i 1))
+  (if (= i max-value+1)
+      (reverse l)
+    (loop (cons i l) (+ 1 i))))
+@result{} '(0 1 2 3 4 5 6 7 8 9)
+@end example
+
+@c end of file

@@ -25,15 +25,13 @@
 		  make-promise
 		  promise?)
     (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+    (rename (vicare arguments validation)
+	    (promise.vicare-arguments-validation
+	     promise-struct.vicare-arguments-validation)))
 
 
 (define-struct promise
   (proc results))
-
-(define-argument-validation (promise-struct who obj)
-  (promise? obj)
-  (assertion-violation who "expected promise as argument" obj))
 
 (define (force P)
   (define who 'force)

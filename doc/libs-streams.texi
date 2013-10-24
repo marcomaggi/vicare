@@ -1,0 +1,2121 @@
+@node streams
+@section Streams
+
+
+@cindex @library{vicare language-extensions streams}, library
+@cindex Library @library{vicare language-extensions streams}
+
+
+The @library{vicare language-extensions streams} library implements
+@dfn{streams}; sometimes called ``lazy lists'', streams are a sequential
+data structure containing elements computed only on demand.  A stream is
+either null or is a pair with a stream in its cdr.  Since elements of a
+stream are computed only when accessed, streams can be infinite.  Once
+computed, the value of a stream element is cached in case it is needed
+again.
+
+@menu
+* streams basic::               Basic interface.
+* streams cons::                Definitions and constructors.
+* streams from::                Converting objects into streams.
+* streams to::                  Converting streams to objects.
+* streams ops::                 Operations.
+* streams select::              Selecting.
+* streams range::               Range streams.
+* streams of::                  Comprehensions.
+* streams fold::                Folding.
+* streams unfold::              Unfolding.
+* streams map::                 Mapping and side effects.
+* streams match::               Matching.
+* streams utilities::           Utilities.
+* streams examples::            Examples.
+@end menu
+
+@c page
+@node streams basic
+@subsection Basic interface
+
+
+The basic @api{} provides two mutually--recursive abstract data types:
+An object of the @samp{stream} abstract data type is a promise that,
+when forced, is either @samp{stream-null} or is an object of type
+@samp{stream-pair}.  An object of the @samp{stream-pair} abstract data
+type contains a @dfn{kar} and a @dfn{kdr}, which must be a
+@samp{stream}.  The essential feature of streams is the systematic
+suspensions of the recursive promises between the two data types.
+
+@example
+alpha stream
+  :: (promise stream-null)
+  |  (promise (alpha stream-pair))
+
+alpha stream-pair
+  :: (promise alpha) x (promise (alpha stream))
+@end example
+
+The object stored in the kar of a @samp{stream-pair} is a promise that
+is forced the first time the kar is accessed; its value is cached in
+case it is needed again.  The object may have any type, and different
+stream elements may have different types.  If the kar is never accessed,
+the object stored there is never evaluated.  Likewise, the kdr is a
+promise to return a stream, and is only forced on demand.
+
+This @api{} provides eight operators: constructors for
+@samp{stream-null} and @samp{stream-pair}, type recognisers for streams
+and the two kinds of streams, accessors for both fields of a
+@samp{stream-pair}, a lambda that creates procedures that return
+streams.
+
+
+@deffn Constant stream-null
+Return a promise that, when forced, is a single object, distinguishable
+from all other objects, that represents the null stream.
+@func{stream-null} is immutable and unique.
+@end deffn
+
+
+@deffn Syntax stream-cons @var{obj} @var{stream}
+Accept an object and a stream and create a newly--allocated stream
+containing a promise that, when forced, is a @samp{stream-pair} with the
+object in its kar and the stream in its @func{stream-cdr}.
+
+Once created, a @samp{stream-pair} is immutable; there is @strong{no}
+@func{stream-set-kar!} or @func{stream-set-kdr!} that modifies an
+existing @samp{stream-pair}.  There is no dotted--pair or improper
+stream as with lists.
+@end deffn
+
+
+@defun stream? @var{obj}
+Return @true{} if @var{obj} is a @samp{stream} and @false{} otherwise.
+If @var{obj} is a @samp{stream}, @func{stream?} does not force its
+promise.
+
+If @code{(stream? obj)} is @true{}, then one of @code{(stream-null?
+obj)} and @code{(stream-pair? obj)} will be @true{} and the other will
+be @false{}; if @code{(stream? obj)} is @false{}, both
+@code{(stream-null?  obj)} and @code{(stream-pair?  obj)} will be
+@false{}.
+@end defun
+
+
+@defun stream-null? @var{obj}
+Return @true{} if the @var{obj} is the distinguished null stream and
+@false{} otherwise.  If @var{obj} is a @samp{stream},
+@func{stream-null?} must force its promise in order to distinguish
+@samp{stream-null} from @samp{stream-pair}.
+@end defun
+
+
+@defun stream-pair? @var{obj}
+Take an @var{obj} and return @true{} if it is a @samp{stream-pair}
+constructed by @func{stream-cons} and @false{} otherwise.  If @var{obj}
+is a @samp{stream}, @func{stream-pair?} must force its promise in order
+to distinguish @samp{stream-null} from @samp{stream-pair}.
+@end defun
+
+
+@defun stream-car @var{stream}
+Return the object stored in the kar of @var{stream}.  @func{stream-car}
+signals an error if the object passed to it is not a @samp{stream-pair}.
+Calling @func{stream-car} causes the object stored there to be evaluated
+if it has not yet been; the object's value is cached in case it is
+needed again.
+@end defun
+
+
+@defun stream-cdr @var{stream}
+Return the stream stored in the kdr of @var{stream}.  @func{stream-cdr}
+signals an error if the object passed to it is not a @samp{stream-pair}.
+Calling @func{stream-cdr} does not force the promise containing the
+stream stored in the kdr of the stream.
+@end defun
+
+
+@deffn Syntax stream-lambda @var{formals} . @var{body}
+Create a procedure that returns a promise to evaluate the body of the
+procedure.  The last body expression to be evaluated must yield a
+stream.
+
+As with normal @func{lambda}, @var{formals} may be a single variable
+name, in which case all the formal arguments are collected into a single
+list, or a list of variable names, which may be null if there are no
+arguments, proper if there are an exact number of arguments, or dotted
+if a fixed number of arguments is to be followed by zero or more
+arguments collected into a list.
+
+@var{body} must contain at least one expression, and may contain
+internal definitions preceding any expressions to be evaluated.
+@end deffn
+
+
+Examples:
+
+@example
+(define strm123
+  (stream-cons 1
+    (stream-cons 2
+      (stream-cons 3
+        stream-null))))
+
+(stream-car strm123)
+@result{} 1
+
+(stream-car (stream-cdr strm123))
+@result{} 2
+
+(stream-pair?
+  (stream-cdr
+    (stream-cons (/ 1 0) stream-null)))
+@result{} #f
+
+(stream? (list 1 2 3))
+@result{} #f
+
+(define iter
+  (stream-lambda (f x)
+    (stream-cons x (iter f (f x)))))
+
+(define nats
+  (iter (lambda (x)
+          (+ x 1))
+        0))
+
+(stream-car (stream-cdr nats))
+@result{} 1
+
+(define stream-add
+  (stream-lambda (s1 s2)
+    (stream-cons
+      (+ (stream-car s1) (stream-car s2))
+      (stream-add (stream-cdr s1)
+                  (stream-cdr s2)))))
+
+(define evens
+  (stream-add nats nats))
+
+(stream-car evens)
+@result{} 0
+
+(stream-car (stream-cdr evens))
+@result{} 2
+
+(stream-car (stream-cdr (stream-cdr evens)))
+@result{} 4
+@end example
+
+@c page
+@node streams cons
+@subsection Definitions and constructors
+
+
+@deffn Syntax stream @var{object} ...
+Take zero or more objects and create a newly--allocated @samp{stream}
+containing in its elements the objects, in order.  Since @func{stream}
+is syntactic, the objects are evaluated when they are accessed, not when
+the @samp{stream} is created.  If no objects are given, as in
+@code{(stream)}, the null stream is returned.  See also
+@func{list->stream}.
+
+Example:
+
+@example
+(define strm123 (stream 1 2 3))
+
+; (/ 1 0) not evaluated when stream is created
+(define s (stream 1 (/ 1 0) -1))
+@end example
+@end deffn
+
+
+@defun stream-constant @var{object} ...
+Take one or more objects and return a newly--allocated @samp{stream}
+containing in its elements the objects, repeating the objects in
+succession forever.
+
+Example:
+
+@example
+(stream-constant 1)
+@result{} 1 1 1 ...
+
+(stream-constant #t #f)
+@result{} #t #f #t #f #t #f ...
+@end example
+@end defun
+
+
+@deffn Syntax define-stream (@var{name} @var{formals}) . @var{body}
+Create a procedure that returns a @samp{stream}, and may appear anywhere
+a normal @func{define} may appear, including an internal definition, and
+may have internal definitions of its own, including other
+@func{define-streams}.  The defined procedure takes arguments in the
+same way as @func{stream-lambda}.
+
+@func{define-stream} is syntactic sugar on @func{stream-lambda}; see
+also @func{stream-let}.
+
+The following example is a simple version of @func{stream-map} that
+takes only a single input stream and calls itself recursively:
+
+@example
+(define-stream (stream-map proc strm)
+  (if (stream-null? strm)
+      stream-null
+    (stream-cons
+      (proc (stream-car strm))
+      (stream-map proc (stream-cdr strm)))))
+@end example
+@end deffn
+
+
+@deffn Syntax stream-let @var{name} ((@var{var} @var{expr}) ...) @var{body}
+Create a local scope that binds each variable to the value of its
+corresponding expression.  Additionally bind @var{name} to a procedure
+which takes the bound variables as arguments and @var{body} as its
+defining expressions, binding the tag with @func{stream-lambda}.
+@var{name} is in scope within @var{body}, and may be called recursively.
+
+When the expanded expression defined by @func{stream-let} is evaluated,
+@func{stream-let} evaluates the expressions in its body in an
+environment containing the newly--bound variables, returning the value
+of the last expression evaluated, which must yield a stream.
+
+@func{stream-let} provides syntactic sugar on @func{stream-lambda}, in
+the same manner as normal @func{let} provides syntactic sugar on normal
+@func{lambda}.  However, unlike normal @func{let}, the @var{name} is
+required, not optional, because unnamed @func{stream-let} is
+meaningless.
+
+Example: @func{stream-member} returns the first @samp{stream-pair} of
+the input @var{strm} with a kar @var{x} that satisfies @code{(eqv? obj
+x)}, or the null stream if @var{x} is not present in @var{strm}.
+
+@example
+(define-stream (stream-member eql? obj strm)
+  (stream-let loop ((strm strm))
+    (cond ((stream-null? strm)
+           strm)
+          ((eqv? obj (stream-car strm))
+           strm)
+          (else
+           (loop (stream-cdr strm))))))
+@end example
+@end deffn
+
+@c page
+@node streams from
+@subsection Converting objects into streams
+
+
+@defun list->stream @var{list-of-objects}
+Return a newly--allocated @samp{stream} containing in its elements the
+objects in the list.  Since the objects are given in a list, they are
+evaluated when @func{list->stream} is called, before the @samp{stream}
+is created.  If the list of objects is null, as in @code{(list->stream
+'())}, the null @samp{stream} is returned.  See also @func{stream}.
+
+Example:
+
+@example
+(define strm123
+  (list->stream '(1 2 3)))
+
+;; fails with divide-by-zero error
+(define s
+  (list->stream (list 1 (/ 1 0) -1)))
+@end example
+@end defun
+
+
+@defun port->stream
+@defunx port->stream @var{port}
+Return a newly--allocated @samp{stream} containing in its elements the
+characters on the @var{port}.  If @var{port} is not given it defaults to
+the current input port.  The returned @samp{stream} has finite length
+and is terminated by @samp{stream-null}.
+
+It looks like one use of @func{port->stream} would be this:
+
+@example
+(define s               ;wrong!
+  (with-input-from-file filename
+    (lambda ()
+      (port->stream))))
+@end example
+
+@noindent
+but that fails, because @func{with-input-from-file} is eager, and closes
+the input port prematurely, before the first character is read.  To read
+a file into a stream, use:
+
+@example
+(define-stream (file->stream filename)
+  (let ((p (open-input-file filename)))
+    (stream-let loop ((c (read-char p)))
+      (if (eof-object? c)
+          (begin (close-input-port p)
+                 stream-null)
+          (stream-cons c
+            (loop (read-char p)))))))
+@end example
+@end defun
+
+@c page
+@node streams to
+@subsection Converting streams to objects
+
+
+@defun stream->list @var{stream}
+@defunx stream->list @var{stream} @var{n}
+Take a natural number @var{n} and a @var{stream} and return a
+newly--allocated list containing in its elements the first @var{n} items
+in the @var{stream}.  If the @var{stream} has less than @var{n} items
+all the items in the @var{stream} will be included in the returned list.
+If @var{n} is not given it defaults to infinity, which means that unless
+@var{stream} is finite @func{stream->list} will never return.
+
+Example:
+
+@example
+(stream->list 10
+  (stream-map (lambda (x) (* x x))
+    (stream-from 0)))
+  => (0 1 4 9 16 25 36 49 64 81)
+@end example
+@end defun
+
+@c page
+@node streams ops
+@subsection Operations
+
+
+@defun stream-length @var{stream}
+Take an input stream and return the number of elements in the stream; it
+does not evaluate its elements.  @func{stream-length} may only be used
+on finite streams; it enters an infinite loop with infinite streams.
+
+Example:
+
+@example
+(define strm123
+  (stream 1 2 3))
+
+(stream-length strm123)
+@result{} 3
+@end example
+@end defun
+
+
+@defun stream-ref @var{stream} @var{n}
+Return the @var{n}-th element of @var{stream}, counting from zero.  An
+error is signaled if @var{n} is greater than or equal to the length of
+@var{stream}.
+
+Example:
+
+@example
+(define (fact n)
+  (stream-ref
+    (stream-scan * 1 (stream-from 1))
+    n))
+@end example
+@end defun
+
+
+@defun stream-reverse @var{stream}
+Return a newly--allocated stream containing the elements of the input
+@var{stream} but in reverse order.  @func{stream-reverse} may only be
+used with finite streams; it enters an infinite loop with infinite
+streams.  @func{stream-reverse} does not force evaluation of the
+elements of the stream.
+
+@example
+(define s (stream 1 (/ 1 0) -1))
+(define r (stream-reverse s))
+
+(stream-ref r 0)
+(stream-ref r 2)        @result{} 1
+(stream-ref r 1)        @error{} division by zero
+@end example
+@end defun
+
+
+@defun stream-append @var{stream} ...
+Return a newly--allocated @samp{stream} containing in its elements those
+elements contained in its input streams, in order of input.  If any of
+the input streams is infinite, no elements of any of the succeeding
+input streams will appear in the output stream; thus, if @var{x} is
+infinite, @code{(stream-append x y)} is identical to @var{x}.  See also
+@func{stream-concat}.
+
+Example: quicksort can be used to sort a @samp{stream}, using
+@func{stream-append} to build the output; the sort is lazy; so if only
+the beginning of the output stream is needed, the end of the stream is
+never sorted.
+
+@example
+(define-stream (qsort lt? strm)
+  (if (stream-null? strm)
+      stream-null
+      (let ((x (stream-car strm))
+            (xs (stream-cdr strm)))
+        (stream-append
+          (qsort lt?
+            (stream-filter
+              (lambda (u) (lt? u x))
+              xs))
+          (stream x)
+          (qsort lt?
+            (stream-filter
+              (lambda (u) (not (lt? u x)))
+              xs))))))
+@end example
+
+Note also that, when used in tail position as in @func{qsort},
+@func{stream-append} does not suffer the poor performance of
+@func{append} on lists.  The list version of @func{append} requires
+re--traversal of all its list arguments except the last each time it is
+called.  But @func{stream-append} is different.  Each recursive call to
+@func{stream-append} is suspended; when it is later forced, the
+preceding elements of the result have already been traversed, so
+tail--recursive loops that produce streams are efficient even when each
+element is appended to the end of the result stream.  This also implies
+that during traversal of the result only one promise needs to be kept in
+memory at a time.
+@end defun
+
+
+@defun stream-concat @var{stream}
+Take a @var{stream} consisting of one or more streams and return a
+newly--allocated stream containing all the elements of the input
+streams.  If any of the streams in the input stream is infinite, any
+remaining streams in the input stream will never appear in the output
+stream.  See also @func{stream-append}.
+
+Example:
+
+@example
+(stream->list
+  (stream-concat
+    (stream
+      (stream 1 2) (stream) (stream 3 2 1))))
+@result{} (1 2 3 2 1)
+@end example
+
+Example: the permutations of a finite stream can be determined by
+interleaving each element of the stream in all possible positions within
+each permutation of the other elements of the stream; @func{interleave}
+returns a stream of streams with @var{x} inserted in each possible
+position of @var{yy}:
+
+@example
+(define-stream (interleave x yy)
+  (stream-match yy
+    (() (stream (stream x)))
+    ((y .  ys)
+      (stream-append
+        (stream (stream-cons x yy))
+        (stream-map
+          (lambda (z) (stream-cons y z))
+          (interleave x ys))))))
+
+(define-stream (perms xs)
+  (if (stream-null? xs)
+      (stream (stream))
+    (stream-concat
+      (stream-map
+        (lambda (ys)
+          (interleave (stream-car xs) ys))
+        (perms (stream-cdr xs))))))
+@end example
+@end defun
+
+
+@defun stream-zip @var{stream} ...
+Take one or more input streams and return a newly--allocated stream in
+which each element is a list (not a stream) of the corresponding
+elements of the input streams.  The output stream is as long as the
+shortest input stream, if any of the input streams is finite, or is
+infinite if all the input streams are infinite.
+
+A common use of @func{stream-zip} is to add an index to a stream, as in:
+
+@example
+(stream-finds eqv? obj strm)
+@end example
+
+@noindent
+which returns all the zero--based indices in @var{strm} at which
+@var{obj} appears; @code{(stream-find eqv? obj strm)} returns the first
+such index, or @false{} if @var{obj} is not in @var{strm}.
+
+@example
+(define-stream (stream-finds item= obj strm)
+  (stream-of (car x)
+    (x in (stream-zip (stream-from 0) strm))
+    (item= obj (cadr x))))
+
+(define (stream-find item= obj strm)
+  (stream-car
+    (stream-append
+      (stream-finds item= obj strm)
+      (stream #f))))
+
+(stream-find char=? #\l
+  (list->stream
+    (string->list "hello")))
+@result{} 2
+
+(stream-find char=? #\l
+  (list->stream
+    (string->list "goodbye")))
+@result{} #f
+@end example
+
+@func{stream-find} is not as inefficient as it looks; although it calls
+@func{stream-finds}, which finds all matching indices, the matches are
+computed lazily, and only the first match is needed for
+@func{stream-find}.
+@end defun
+
+@c page
+@node streams select
+@subsection Selecting
+
+
+@defun stream-drop @var{n} @var{stream}
+Return the suffix of the input stream that starts at the next element
+after the first @var{n} elements.  The output stream shares structure
+with the input stream; thus, promises forced in one instance of the
+stream are also forced in the other instance of the stream.  If the
+input stream has less than @var{n} elements, @func{stream-drop} returns
+the null stream.  See also @func{stream-take}.
+
+Example:
+
+@example
+(define (stream-split n strm)
+  (values (stream-take n strm)
+          (stream-drop n strm)))
+@end example
+@end defun
+
+
+@defun stream-drop-while @var{pred} @var{stream}
+Return the suffix of the input stream that starts at the first element
+@var{x} for which @code{(pred x)} is @false{}.  The output stream
+shares structure with the input stream.  See also
+@func{stream-take-while}.
+
+Example: @func{stream-unique} creates a new stream that retains only the
+first of any sub--sequences of repeated elements.
+
+@example
+(define-stream (stream-unique item= strm)
+  (if (stream-null? strm)
+      stream-null
+    (stream-cons (stream-car strm)
+      (stream-unique item=
+        (stream-drop-while
+          (lambda (x)
+            (item= (stream-car strm) x))
+          strm)))))
+@end example
+@end defun
+
+
+@defun stream-take @var{n} @var{stream}
+Take a non--negative exact integer @var{n} and a @var{stream} and return
+a newly--allocated stream containing the first @var{n} elements of the
+input stream.  If the input stream has less than @var{n} elements, so
+does the output stream.  See also @func{stream-drop}.
+
+Example: @func{merge-sort} splits a stream into two equal--length
+pieces, sorts them recursively and merges the results:
+
+@example
+(define-stream (merge-sort lt? strm)
+  (let* ((n     (div (stream-length strm) 2))
+         (ts    (stream-take n strm))
+         (ds    (stream-drop n strm)))
+    (if (zero? n)
+        strm
+      (stream-merge lt? (merge-sort < ts) (merge-sort < ds)))))
+@end example
+@end defun
+
+
+@defun stream-take-while @var{pred} @var{stream}
+Take a predicate and a stream and return a newly--allocated stream
+containing those elements @var{x} that form the maximal prefix of the
+input stream for which @code{(pred x)} is non--@false{}.  See also
+@func{stream-drop-while}.
+
+@example
+(stream-car
+  (stream-reverse
+    (stream-take-while
+      (lambda (x) (< x 1000))
+      primes)))
+@result{} 997
+@end example
+@end defun
+
+
+@defun stream-filter @var{pred} @var{stream}
+Return a newly--allocated stream that contains only those elements
+@var{x} of the input stream for which @code{(pred x)} is true.
+
+Example:
+
+@example
+(stream-filter odd? (stream-from 0))
+@result{} 1 3 5 7 9 ...
+@end example
+@end defun
+
+@c page
+@node streams range
+@subsection Range streams
+
+
+@defun stream-from @var{first}
+@defunx stream-from @var{first} @var{step}
+Create a newly--allocated stream that contains @var{first} as its first
+element and increments each succeeding element by @var{step}, which
+defaults to @samp{1}.  @var{first} and @var{step} may be of any numeric
+type.
+
+@func{stream-from} is frequently useful as a generator in
+@func{stream-of} expressions.  See also @func{stream-range} for a
+similar procedure that creates finite streams.
+
+@func{stream-from} could be implemented as:
+
+@example
+(stream-iterate
+    (lambda (x)
+      (+ x step))
+  first)
+@end example
+
+Example:
+
+@example
+(define nats (stream-from 0))
+@result{} 0 1 2 ...
+
+(define odds (stream-from 1 2))
+@result{} 1 3 5 ...
+@end example
+@end defun
+
+
+@defun stream-range @var{first} @var{past}
+@defunx stream-range @var{first} @var{past} @var{step}
+Create a newly--allocated stream that contains @var{first} as its first
+element and increments each succeeding element by @var{step}.  The
+stream is finite and ends before @var{past}, which is not an element of
+the stream.  If @var{step} is not given it defaults to @samp{1} if
+@var{first} is less than @var{past} and @samp{-1} otherwise.
+
+@var{first}, @var{past} and @var{step} may be of any numeric type.
+
+@func{stream-range} is frequently useful as a generator in
+@func{stream-of} expressions.  See also @func{stream-from} for a similar
+procedure that creates infinite streams.
+
+Examples:
+
+@example
+(stream-range 0 10)
+@result{} 0 1 2 3 4 5 6 7 8 9
+
+(stream-range 0 10 2)
+@result{} 0 2 4 6 8
+@end example
+
+Successive elements of the stream are calculated by adding @var{step} to
+@var{first}, so if any of @var{first}, @var{past} or @var{step} are
+inexact, the length of the output stream may differ from:
+
+@example
+(ceiling (- (/ (- past first) step) 1)
+@end example
+@end defun
+
+@c page
+@node streams of
+@subsection Comprehensions
+
+
+@deffn Syntax stream-of @var{expr} @var{clause} ...
+Provide the syntax of stream comprehensions, which generate streams by
+means of looping expressions.  The result is a stream of objects of the
+type returned by @var{expr}.  There are four types of @var{clause}
+arguments:
+
+@table @code
+@item (var in stream-expr)
+Loop over the elements of @var{stream-expr}, in order from the start of
+the stream, binding each element of the stream in turn to @var{var}.
+@func{stream-from} and @func{stream-range} are frequently useful as
+generators for @var{stream-expr}.
+
+@item (var is expr)
+Bind @var{var} to the value obtained by evaluating @var{expr}.
+
+@item (pred expr)
+Include in the output stream only those elements @var{x} for which
+@code{(pred x)} is true.
+@end table
+
+The scope of variables bound in the stream comprehension is the clauses
+to the right of the binding clause (but not the binding clause itself)
+plus the result expression.
+
+When two or more generators are present, the loops are processed as if
+they are nested from left to right; that is, the rightmost generator
+varies fastest.  A consequence of this is that only the first generator
+may be infinite and all subsequent generators must be finite.  If no
+generators are present, the result of a stream comprehension is a stream
+containing the result expression; thus, @code{(stream-of 1)} produces a
+finite stream containing only the element @code{1}.
+
+@example
+(stream-of (* x x)
+  (x in (stream-range 0 10))
+  (even? x))
+@result{} 0 4 16 36 64
+
+(stream-of (list a b)
+  (a in (stream-range 1 4))
+  (b in (stream-range 1 3)))
+@result{} (1 1) (1 2) (2 1) (2 2) (3 1) (3 2)
+
+(stream-of (list i j)
+  (i in (stream-range 1 5))
+  (j in (stream-range (+ i 1) 5)))
+@result{} (1 2) (1 3) (1 4) (2 3) (2 4) (3 4)
+@end example
+@end deffn
+
+@c page
+@node streams fold
+@subsection Folding
+
+
+@defun stream-iterate @var{proc} @var{base}
+Create a newly--allocated stream containing @var{base} in its first
+element and apply @var{proc} to each element in turn to determine the
+succeeding element.  See also @func{stream-unfold} and
+@func{stream-unfolds}.
+
+Examples:
+
+@example
+(stream-iterate (lambda (x) (+ x 1)) 0)
+  => 0 1 2 3 4 ...
+
+(stream-iterate (lambda (x) (* x 2)) 1)
+  => 1 2 4 8 16 ...
+@end example
+
+Given a seed between 0 and 232, exclusive, the following expression
+creates a stream of pseudo--random integers between 0 and 232,
+exclusive, beginning with seed, using the method described by Stephen
+Park and Keith Miller:
+
+@example
+(stream-iterate
+  (lambda (x) (modulo (* x 16807) 2147483647))
+  seed)
+@end example
+
+Example: successive of the following stream approach the value of the
+``golden ratio'' 1.618...:
+
+@example
+(stream-iterate (lambda (x) (+ 1 (/ x))) 1)
+@end example
+@end defun
+
+
+@defun stream-fold @var{proc} @var{base} @var{stream}
+Apply a binary procedure to @var{base} and the first element of
+@var{stream} to compute a new base, then apply the procedure to the new
+base and the next element of @var{stream} to compute a succeeding base,
+and so on, accumulating a value that is finally returned as the value of
+@func{stream-fold} when the end of the @var{stream} is reached.
+
+@var{stream} must be finite, or @func{stream-fold} will enter an
+infinite loop.  See also @func{stream-scan}, which is similar to
+@func{stream-fold}, but useful for infinite streams.
+
+For readers familiar with other functional languages, this is a
+left--fold; there is no corresponding right--fold, since right--fold
+relies on finite streams that are fully--evaluated, at which time they
+may as well be converted to a list.
+
+@func{stream-fold} is often used to summarize a stream in a single
+value, for instance, to compute the maximum element of a stream.
+
+@example
+(define (stream-maximum item< strm)
+  (stream-fold
+    (lambda (x y)
+      (if (item< x y) y x))
+    (stream-car strm)
+    (stream-cdr strm)))
+@end example
+
+Sometimes, it is useful to have @func{stream-fold} defined only on
+non--null streams:
+
+@example
+(define (stream-fold-one proc strm)
+  (stream-fold proc
+    (stream-car strm)
+    (stream-cdr strm)))
+@end example
+
+@noindent
+@func{stream-minimum} can then be defined as:
+
+@example
+(define (stream-minimum item< strm)
+  (stream-fold-one
+    (lambda (x y)
+      (if (item< x y) x y))
+    strm))
+@end example
+
+@func{stream-fold} can also be used to build a stream:
+
+@example
+(define-stream (isort item< strm)
+  (define-stream (insert strm x)
+    (stream-match strm
+      (() (stream x))
+      ((y .  ys)
+        (if (item< y x)
+            (stream-cons y (insert ys x))
+          (stream-cons x strm)))))
+  (stream-fold insert stream-null strm))
+@end example
+@end defun
+
+
+@defun stream-scan @var{proc} @var{base} @var{stream}
+Accumulate the partial folds of an input @var{stream} into a
+newly--allocated output stream.  The output stream is the @var{base}
+followed by:
+
+@example
+(stream-fold proc base (stream-take i stream))
+@end example
+
+@noindent
+for each of the first @math{i} elements of @var{stream}.
+
+Examples:
+
+@example
+(stream-scan + 0 (stream-from 1))
+@result{} (stream 0 1 3 6 10 15 ...)
+
+(stream-scan * 1 (stream-from 1))
+@result{} (stream 1 1 2 6 24 120 ...)
+@end example
+@end defun
+
+@c page
+@node streams unfold
+@subsection Unfolding
+
+
+@defun stream-unfold @var{map} @var{pred} @var{gen} @var{base}
+@func{stream-unfold} is the fundamental recursive stream constructor.
+It constructs a stream by repeatedly applying @var{gen} to successive
+values of @var{base}, in the manner of @func{stream-iterate}, then
+applying @var{map} to each of the values so generated, appending each of
+the mapped values to the output stream as long as @code{(pred base)} is
+non--@false{}.  See also @func{stream-iterate} and
+@func{stream-unfolds}.
+
+For example, the expression below creates the finite stream:
+
+@example
+0 1 4 9 16 25 36 49 64 81
+@end example
+
+@noindent
+initially the base is @code{0}, which is less than @code{10}, so
+@var{map} squares the base and the mapped value becomes the first
+element of the output stream; then @var{gen} increments the base by
+@code{1}, so it becomes @code{1}; this is less than @code{10}, so
+@var{map} squares the new base and @code{1} becomes the second element
+of the output stream; and so on, until the base becomes @code{10}, when
+@var{pred?}  stops the recursion and @code{stream-null} ends the output
+stream.
+
+@example
+(stream-unfold
+  (lambda (x) (expt x 2)) ; map
+  (lambda (x) (< x 10))   ; pred
+  (lambda (x) (+ x 1))    ; gen
+  0)                      ; base
+@end example
+@end defun
+
+
+@defun stream-unfolds @var{proc} @var{seed}
+Return @var{n} newly--allocated streams containing those elements
+produced by successive calls to the generator @var{proc}, which takes
+the current @var{seed} as its argument and returns @code{n+1} values:
+
+@example
+(proc seed) -> seed R0 ...  R(n-1)
+@end example
+
+@noindent
+where the returned @var{seed} is the input @var{seed} to the next call
+to the generator and @math{R(i)} indicates how to produce the next
+element of the @math{i}-th result stream:
+
+@table @code
+@item (value)
+@var{value} is the next car of the result stream;
+
+@item #f
+no value produced by this iteration of the generator @var{proc} for the
+result stream;
+
+@item ()
+the end of the result stream.
+@end table
+
+It may require multiple calls of @var{proc} to produce the next element
+of any particular result stream.  See also @func{stream-iterate} and
+@func{stream-unfold}.
+
+@func{stream-unfolds} is especially useful when writing expressions that
+return multiple streams.  For instance, with reference to the
+definitions below:
+
+@example
+(stream-partition pred strm)
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+(values
+  (stream-filter pred strm)
+  (stream-filter
+      (lambda (x)
+        (not (pred x)))
+     strm))
+@end example
+
+@noindent
+but only tests @func{pred} once for each element of @var{strm}.
+
+@example
+(define (stream-partition pred strm)
+  (stream-unfolds
+    (lambda (s)
+      (if (stream-null? s)
+          (values s '() '())
+        (let ((a (stream-car s))
+              (d (stream-cdr s)))
+          (if (pred a)
+              (values d (list a) #f)
+            (values d #f (list a))))))
+    strm))
+
+(call-with-values
+  (lambda ()
+    (stream-partition odd?
+      (stream-range 1 6)))
+  (lambda (odds evens)
+    (list (stream->list odds)
+          (stream->list evens))))
+@result{} ((1 3 5) (2 4))
+@end example
+@end defun
+
+@c page
+@node streams map
+@subsection Mapping and side effects
+
+
+@defun stream-map @var{proc} @var{stream} ...
+Apply a procedure element--wise to corresponding elements of the input
+streams, returning a newly--allocated stream containing elements that
+are the results of those procedure applications.  The output stream has
+as many elements as the minimum--length input stream, and may be
+infinite.
+
+Example:
+
+@example
+(define (square x)
+  (* x x))
+
+(stream-map square (stream 9 3))
+@result{} 81 9
+
+(define (sigma f m n)
+  (stream-fold + 0
+    (stream-map f (stream-range m (+ n 1)))))
+
+(sigma square 1 100)
+@result{} 338350
+@end example
+@end defun
+
+
+@defun stream-for-each @var{proc} @var{stream} ...
+Apply a procedure element--wise to corresponding elements of the input
+streams for its side--effects; return nothing.  @func{stream-for-each}
+stops as soon as any of its input streams is exhausted.
+
+Example, the following procedure displays the contents of a file:
+
+@example
+(define (display-file filename)
+  (stream-for-each display
+    (file->stream filename)))
+@end example
+@end defun
+
+@c page
+@node streams match
+@subsection Matching
+
+
+@deffn Syntax stream-match @var{stream} @var{clause} ...
+Provide the syntax of pattern--matching for streams.  The input
+@var{stream} is an expression that evaluates to a stream.  @var{clause}
+arguments are of the form:
+
+@example
+(@meta{pattern} @meta{expr})
+(@meta{pattern} @meta{fender} @meta{expr})
+@end example
+
+@noindent
+consisting of a @meta{pattern} that matches a stream of a particular
+shape, an optional @meta{fender} that must succeed if the @meta{pattern}
+is to match, and an @meta{expr} that is evaluated if the @meta{pattern}
+matches.  There are four types of patterns:
+
+@table @code
+@item ()
+Matches the null stream.
+
+@item (pat0 pat1 ...)
+Matches a finite stream with length exactly equal to the number of
+pattern elements.
+
+@item (pat0 pat1 ...  . patrest)
+Matches an infinite stream, or a finite stream with length at least as
+great as the number of pattern elements before the literal dot.
+
+@item pat
+Matches an entire stream; should always appear last in the list of
+clauses; it's not an error to appear elsewhere, but subsequent clauses
+could never match.
+@end table
+
+Each @meta{pattern} element may be either:
+
+@table @emph
+@item An identifier
+Matches any stream element; additionally, the value of the stream
+element is bound to the variable named by the identifier, which is in
+scope in the fender and expression of the corresponding clause; each
+identifier in a single pattern must be unique.
+
+@item A literal underscore
+Matches any stream element, but creates no bindings.
+@end table
+
+The patterns are tested in order, left--to--right, until a matching
+pattern is found; if @meta{fender} is present, it must evaluate as true
+for the match to be successful.  Pattern variables are bound in the
+corresponding fender and expression.  Once the matching pattern is
+found, the corresponding expression is evaluated and returned as the
+result of the match.  An error is signaled if no pattern matches the
+input stream.
+
+@func{stream-match} is often used to distinguish null streams from
+non--null streams, binding head and tail:
+
+@example
+(define (len strm)
+  (stream-match strm
+    (()                 0)
+    ((head . tail)      (+ 1 (len tail)))))
+@end example
+
+Fenders can test the common case where two stream elements must be
+identical; the else pattern is an identifier bound to the entire stream,
+not a keyword as in @func{cond}.
+
+@example
+(stream-match strm
+  ((x y . _) (equal? x y)
+   'ok)
+  (else
+   'error))
+@end example
+
+A more complex example uses two nested matchers to match two different
+stream arguments; @code{(stream-merge lt? .  strms)} stably merges two
+or more streams ordered by the @var{lt?} predicate:
+
+@example
+(define-stream (stream-merge lt? . strms)
+
+  (define-stream (merge xx yy)
+    (stream-match xx
+      (() yy)
+      ((x . xs)
+       (stream-match yy
+         (() xx)
+         ((y . ys)
+          (if (lt? y x)
+              (stream-cons y (merge xx ys))
+            (stream-cons x (merge xs yy))))))))
+
+  (stream-let loop ((strms strms))
+    (cond ((null? strms)
+           stream-null)
+          ((null? (cdr strms))
+           (car strms))
+          (else
+           (merge (car strms)
+                  (apply stream-merge lt?
+                  (cdr strms)))))))
+@end example
+@end deffn
+
+@c page
+@node streams utilities
+@subsection Utilities
+
+
+@cindex @srfi{} streams utilities
+
+
+Streams, being the signature structured data type of functional
+programming languages, find useful expression in conjunction with
+higher--order functions.  Some of these higher--order functions, and
+their relationship to streams, are described below.
+
+The identity and constant procedures are frequently useful as the
+recursive base for maps and folds; @code{(identity obj)} always returns
+@var{obj}, and @code{(const obj)} creates a procedure that takes any
+number of arguments and always returns the same @var{obj}, no matter its
+arguments:
+
+@example
+(define (identity obj)
+  obj)
+
+(define (const obj)
+  (lambda x obj))
+@end example
+
+Many of the stream procedures take a unary predicate that accepts an
+element of a stream and returns a boolean.  Procedure @code{(negate
+pred)} takes a unary predicate and returns a new unary predicate that,
+when called, returns the opposite boolean value as the original
+predicate.
+
+@example
+(define (negate pred)
+  (lambda (x) (not (pred x))))
+@end example
+
+@func{negate} is useful for procedures like @func{stream-take-while}
+that take a predicate, allowing them to be used in the opposite
+direction from which they were written; for instance, with the predicate
+reversed, @func{stream-take-while} becomes @func{stream-take-until}.
+@func{stream-remove} is the opposite of @func{stream-filter}:
+
+@example
+(define-stream (stream-remove pred strm)
+  (stream-filter (negate pred) strm))
+@end example
+
+A section is a procedure which has been partially applied to some of its
+arguments; for instance, @code{(double x)}, which returns twice its
+argument, is a partial application of the multiply operator to the
+number 2.  Sections come in two kinds:
+
+@itemize
+@item
+Left sections partially apply arguments starting from the left.
+
+@item
+Right sections partially apply arguments starting from the right.
+@end itemize
+
+The procedure @func{lsec} takes a procedure and some prefix of its
+arguments and returns a new procedure in which those arguments are
+partially applied; the procedure @func{rsec} takes a procedure and some
+reversed suffix of its arguments and returns a new procedure in which
+those arguments are partially applied:
+
+@example
+(define (lsec proc . args)
+  (lambda x
+    (apply proc (append args x))))
+
+(define (rsec proc . args)
+  (lambda x
+    (apply proc (reverse (append (reverse args)
+                                 (reverse x))))))
+@end example
+
+Since most of the stream procedures take a stream as their last
+(rightmost) argument, left sections are particularly useful in
+conjunction with streams.
+
+@example
+(define stream-sum (lsec stream-fold + 0))
+@end example
+
+Function composition creates a new function by partially applying
+multiple functions, one after the other.  In the simplest case there are
+only two functions, @var{f} and @var{g}, composed as @code{(compose f
+g)}; the composition can be bound to create a new function, as in:
+
+@example
+(define fg (compose f g))
+@end example
+
+@noindent
+the procedure @func{compose} takes one or more procedures and returns a
+new procedure that performs the same action as the individual procedures
+would if called in succession:
+
+@example
+(define (compose . fns)
+  (let comp ((fns fns))
+    (cond
+      ((null? fns) 'error)
+      ((null? (cdr fns)) (car fns))
+      (else
+        (lambda args
+          (call-with-values
+            (lambda ()
+              (apply
+                (comp (cdr fns))
+                args))
+            (car fns)))))))
+@end example
+
+@func{compose} works with sections to create succinct but highly
+expressive procedure definitions.  The expression to compute the squares
+of the integers from 1 to 10 given above at @func{stream-unfold} could
+be written by composing @func{stream-map}, @func{stream-take-while}, and
+@func{stream-iterate}:
+
+@example
+((compose
+  (lsec stream-map (rsec expt 2))
+  (lsec stream-take-while (negate (rsec > 10)))
+  (lsec stream-iterate (rsec + 1)))
+ 1)
+@end example
+
+@c page
+@node streams examples
+@subsection Examples
+
+
+@cindex @srfi{} streams examples
+
+
+The examples below show a few of the myriad ways streams can be
+exploited, as well as a few ways they can trip the unwary user.  All the
+examples are drawn from published sources; it is instructive to compare
+the Scheme versions to the originals in other languages.
+
+@menu
+* streams examples infinite::   Infinite streams.
+* streams examples generators:: Generators and co--routines.
+* streams examples pipeline::   A pipeline of procedures.
+* streams examples persistent:: Persistent data.
+* streams examples passes::     Reducing two passes to one.
+* streams examples pitfalls::   Pitfalls.
+@end menu
+
+
+@c page
+@node streams examples infinite
+@subsubsection Infinite streams
+
+
+As a simple illustration of infinite streams, consider this definition
+of the natural numbers:
+
+@example
+(define nats
+  (stream-cons 0
+    (stream-map add1 nats)))
+@end example
+
+@noindent
+the recursion works because it is offset by one from the initial
+@func{stream-cons}.  Another sequence that uses the offset trick is this
+definition of the Fibonacci numbers:
+
+@example
+(define fibs
+  (stream-cons 1
+    (stream-cons 1
+      (stream-map +
+        fibs
+        (stream-cdr fibs)))))
+@end example
+
+Yet another sequence that uses the same offset trick is the Hamming
+numbers, named for the mathematician and computer scientist Richard
+Hamming, defined as all numbers that have no prime factors greater than
+5; in other words, Hamming numbers are all numbers expressible as
+
+@example
+2i x 3j x 5k
+@end example
+
+@noindent
+where @var{i}, @var{j} and @var{k} are non--negative integers.  The
+Hamming sequence starts with 1 2 3 4 5 6 8 9 10 12 and is computed
+starting with 1, taking 2, 3 and 5 times all the previous elements with
+@func{stream-map}, then merging @func{sub-streams} and eliminating
+duplicates:
+
+@example
+(define hamming
+  (stream-cons 1
+    (stream-unique =
+      (stream-merge <
+        (stream-map (lsec * 2) hamming)
+        (stream-map (lsec * 3) hamming)
+        (stream-map (lsec * 5) hamming)))))
+@end example
+
+It is possible to have an infinite stream of infinite streams. Consider
+the definition of @func{power-table}:
+
+@example
+(define power-table
+  (stream-of
+    (stream-of (expt m n)
+      (m in (stream-from 1)))
+      (n in (stream-from 2))))
+@end example
+
+@noindent
+which evaluates to an infinite stream of infinite streams:
+
+@example
+(stream
+  (stream 1 4 9 16 25 ...)
+  (stream 1 8 27 64 125 ...)
+  (stream 1 16 81 256 625 ...)
+  ...)
+@end example
+
+But even though it is impossible to display @func{power-table} in its
+entirety, it is possible to select just part of it:
+
+@example
+(stream->list 10 (stream-ref power-table 1))
+  => (1 8 27 64 125 216 343 512 729 1000)
+@end example
+
+This example clearly shows that the elements of a stream are computed
+lazily, as they are needed; @code{(stream-ref power-table 0)} is not
+computed, even when its successor is displayed, since computing it would
+enter an infinite loop.
+
+Chris Reade shows how to calculate the stream of prime numbers according
+to the sieve of Eratosthenes, using a method that eliminates multiples
+of the sifting base with addition rather than division:
+
+@example
+(define primes (let ()
+  (define-stream (next base mult strm)
+    (let ((first (stream-car strm))
+          (rest (stream-cdr strm)))
+      (cond ((< first mult)
+              (stream-cons first
+                (next base mult rest)))
+            ((< mult first)
+              (next base (+ base mult) strm))
+            (else (next base
+                    (+ base mult) rest)))))
+  (define-stream (sift base strm)
+    (next base (+ base base) strm))
+  (define-stream (sieve strm)
+    (let ((first (stream-car strm))>
+          (rest (stream-cdr strm)))
+      (stream-cons first
+        (sieve (sift first rest)))))
+  (sieve (stream-from 2))))
+@end example
+
+A final example of infinite streams is a functional pearl from Jeremy
+Gibbons, David Lester and Richard Bird that enumerates the positive
+rational numbers without duplicates:
+
+@example
+(define rats
+  (stream-iterate
+    (lambda (x)
+      (let* ((n (floor x)) (y (- x n)))
+        (/ (- n -1 y))))
+    1))
+@end example
+
+@c page
+@node streams examples generators
+@subsubsection Generators and co--routines
+
+
+It is possible to model generators and co--routines using streams.
+Consider the task, due to Carl Hewitt, of determining if two trees have
+the same sequence of leaves:
+
+@example
+(same-fringe? = '(1 (2 3)) '((1 2) 3))  => #t
+
+(same-fringe? = '(1 2 3) '(1 (3 2)))    => #f
+@end example
+
+The simplest solution is to flatten both trees into lists and compare
+them element--by--element:
+
+@example
+(define (flatten tree)
+  (cond [(null? tree) '()]
+        [(pair? (car tree))
+         (append (flatten (car tree))
+                 (flatten (cdr tree)))]
+        [else (cons (car tree)
+                    (flatten (cdr tree)))]))
+
+(define (same-fringe? eql? tree1 tree2)
+  (let loop ([t1 (flatten tree1)]
+             [t2 (flatten tree2)])
+    (cond [(and (null? t1) (null? t2)) #t]
+          [(or (null? t1) (null? t2)) #f]
+          [(not (eql? (car t1) (car t2))) #f]
+          [else (loop (cdr t1) (cdr t2))])))
+@end example
+
+That works, but requires time to flatten both trees and space to store
+the flattened versions; if the trees are large, that can be a lot of
+time and space, and if the fringes differ, much of that time and space
+is wasted.
+
+Hewitt used a generator to flatten the trees one element at a time,
+storing only the current elements of the trees and the machines needed
+to continue flattening them, so @func{same-fringe?} could stop early if
+the trees differ.  Dorai Sitaram presents both the generator solution
+and a co--routine solution, which both involve tricky calls to
+@func{call-with-current-continuation} and careful coding to keep them
+synchronized.
+
+An alternate solution flattens the two trees to streams instead of
+lists, which accomplishes the same savings of time and space, and
+involves code that looks little different than the list solution
+presented above:
+
+@example
+(define-stream (flatten tree)
+  (cond [(null? tree) stream-null]
+        [(pair? (car tree))
+         (stream-append
+           (flatten (car tree))
+           (flatten (cdr tree)))]
+        [else (stream-cons
+                (car tree)
+                (flatten (cdr tree)))]))
+
+(define (same-fringe? eql? tree1 tree2)
+  (let loop ([t1 (flatten tree1)]
+             [t2 (flatten tree2)])
+    (cond [(and (stream-null? t1)
+                (stream-null? t2)) #t]
+          [(or  (stream-null? t1)
+                (stream-null? t2)) #f]
+          [(not (eql? (stream-car t1)
+                      (stream-car t2))) #f]
+          [else (loop (stream-cdr t1)
+                      (stream-cdr t2))])))
+@end example
+
+Note that streams, a data structure, replace generators or co--routines,
+which are control structures, providing a fine example of how lazy
+streams enhance modularity.
+
+@c page
+@node streams examples pipeline
+@subsubsection A pipeline of procedures
+
+
+Another way in which streams promote modularity is enabling the use of
+many small procedures that are easily composed into larger programs, in
+the style of Unix pipelines, where streams are important because they
+allow a large dataset to be processed one item at a time.  Bird and
+Wadler provide the example of a text formatter.  Their example uses
+right--folds:
+
+@example
+(define (stream-fold-right f base strm)
+  (if (stream-null? strm)
+      base
+    (f (stream-car strm)
+       (stream-fold-right f base
+         (stream-cdr strm)))))
+
+(define (stream-fold-right-one f strm)
+  (stream-match strm
+    [(x) x]
+    [(x . xs)
+     (f x (stream-fold-right-one f xs))]))
+@end example
+
+Bird and Wadler define text as a stream of characters, and develop a
+standard package for operating on text, which they derive mathematically
+(this assumes the line--separator character is a single
+@code{#\newline}):
+
+@example
+(define (breakon a)
+  (stream-lambda (x xss)
+    (if (equal? a x)
+        (stream-append (stream (stream)) xss)
+      (stream-append
+        (stream (stream-append
+            (stream x) (stream-car xss)))
+        (stream-cdr xss)))))
+
+(define-stream (lines strm)
+  (stream-fold-right
+    (breakon #\newline)
+    (stream (stream))
+    strm))
+
+(define-stream (words strm)
+  (stream-filter stream-pair?
+    (stream-fold-right
+      (breakon #\space)
+      (stream (stream))
+      strm)))
+
+(define-stream (paras strm)
+  (stream-filter stream-pair?
+    (stream-fold-right
+      (breakon stream-null)
+      (stream (stream))
+      strm)))
+
+(define (insert a)
+  (stream-lambda (xs ys)
+    (stream-append xs (stream a) ys)))
+
+(define unlines
+  (lsec stream-fold-right-one
+    (insert #\newline)))
+
+(define unwords
+  (lsec stream-fold-right-one
+    (insert #\space)))
+
+(define unparas
+  (lsec stream-fold-right-one
+    (insert stream-null)))
+@end example
+
+These versatile procedures can be composed to count words, lines and
+paragraphs; the @func{normalize} procedure squeezes out multiple spaces
+and blank lines:
+
+@example
+(define countlines
+  (compose stream-length lines))
+
+(define countwords
+  (compose stream-length
+           stream-concat
+           (lsec stream-map words)
+           lines))
+
+(define countparas
+  (compose stream-length paras lines))
+
+(define parse
+  (compose (lsec stream-map
+             (lsec stream-map words))
+           paras
+           lines))
+
+(define unparse
+  (compose unlines
+           unparas
+           (lsec stream-map
+             (lsec stream-map unwords))))
+
+(define normalize (compose unparse parse))
+@end example
+
+More useful than normalization is text--filling, which packs as many
+words onto each line as will fit.
+
+@example
+(define (greedy m ws)
+  (- (stream-length
+       (stream-take-while (rsec <= m)
+         (stream-scan
+           (lambda (n word)
+             (+ n (stream-length word) 1))
+           -1
+           ws))) 1))
+
+(define-stream (fill m ws)
+  (if (stream-null? ws)
+      stream-null
+    (let* ([n (greedy m ws)]
+           [fstline (stream-take n ws)]
+           [rstwrds (stream-drop n ws)])
+      (stream-append
+        (stream fstline)
+        (fill m rstwrds)))))
+
+(define linewords
+  (compose stream-concat
+           (lsec stream-map words)))
+
+(define textparas
+  (compose (lsec stream-map linewords)
+           paras
+           lines))
+
+(define (filltext m strm)
+  (unparse (stream-map (lsec fill m) (textparas strm))))
+@end example
+
+To display filename in lines of @var{n} characters, say:
+
+@example
+(stream-for-each display
+  (filltext n (file->stream filename)))
+@end example
+
+Though each operator performs only a single task, they can be composed
+powerfully and expressively.  The alternative is to build a single
+monolithic procedure for each task, which would be harder and involve
+repetitive code.  Streams ensure procedures are called as needed.
+
+@c page
+@node streams examples persistent
+@subsubsection Persistent data
+
+
+Queues are one of the fundamental data structures of computer science.
+In functional languages, queues are commonly implemented using two
+lists, with the front half of the queue in one list, where the head of
+the queue can be accessed easily, and the rear half of the queue in
+reverse order in another list, where new items can easily be added to
+the end of a queue.  The standard form of such a queue holds that the
+front list can only be null if the rear list is also null:
+
+@example
+(define queue-null (cons '() '())
+
+(define (queue-null? obj)
+  (and (pair? obj) (null? (car obj))))
+
+(define (queue-check f r)
+  (if (null? f)
+      (cons (reverse r) '())
+    (cons f r)))
+
+(define (queue-snoc q x)
+  (queue-check (car q) (cons x (cdr q))))
+
+(define (queue-head q)
+  (if (null? (car q))
+      (error "empty queue: head")
+    (car (car q))))
+
+(define (queue-tail q)
+  (if (null? (car q))
+      (error "empty-head: tail")
+    (queue-check (cdr (car q)) (cdr q))))
+@end example
+
+This queue operates in amortized constant time per operation, with two
+conses per element, one when it is added to the rear list, and another
+when the rear list is reversed to become the front list.
+@func{queue-snoc} and @func{queue-head} operate in constant time;
+@func{queue-tail} operates in worst--case linear time when the front
+list is empty.
+
+Chris Okasaki points out that, if the queue is used persistently, its
+time--complexity rises from linear to quadratic since each persistent
+copy of the queue requires its own linear--time access.  The problem can
+be fixed by implementing the front and rear parts of the queue as
+streams, rather than lists, and rotating one element from rear to front
+whenever the rear list is larger than the front list:
+
+@example
+(define queue-null
+  (cons stream-null stream-null))
+
+(define (queue-null? x)
+  (and (pair? x) (stream-null (car x))))
+
+(define (queue-check f r)
+  (if (< (stream-length r) (stream-length f))
+      (cons f r)
+    (cons (stream-append f (stream-reverse r))
+          stream-null)))
+
+(define (queue-snoc q x)
+  (queue-check (car q) (stream-cons x (cdr q))))
+
+(define (queue-head q)
+  (if (stream-null? (car q))
+      (error "empty queue: head")
+    (stream-car (car q))))
+
+(define (queue-tail q)
+  (if (stream-null? (car q))
+      (error "empty queue: tail")
+    (queue-check (stream-cdr (car q)) (cdr q))))
+@end example
+
+Memoization solves the persistence problem; once a queue element has
+moved from rear to front, it needs never be moved again in subsequent
+traversals of the queue.  Thus, the linear time--complexity to access
+all elements in the queue, persistently, is restored.
+
+@c page
+@node streams examples passes
+@subsubsection Reducing two passes to one
+
+
+The final example is a lazy dictionary, where definitions and uses may
+occur in any order; in particular, uses may precede their corresponding
+definitions.  This is a common problem.
+
+Many programming languages allow procedures to be used before they are
+defined.  Macro processors must collect definitions and emit uses of
+text in order.  An assembler needs to know the address that a linker
+will subsequently give to variables.  The usual method is to make two
+passes over the data, collecting the definitions on the first pass and
+emitting the uses on the second pass.  But Chris Reade shows how streams
+allow the dictionary to be built lazily, so that only a single pass is
+needed.  Consider a stream of requests:
+
+@example
+(define requests
+  (stream
+    '(get 3)
+    '(put 1 "a")    ; use follows definition
+    '(put 3 "c")    ; use precedes definition
+    '(get 1)
+    '(get 2)
+    '(put 2 "b")    ; use precedes definition
+    '(put 4 "d")))  ; unused definition
+@end example
+
+We want a procedure that will display cab, which is the result of
+@code{(get 3)}, @code{(get 1)}, and @code{(get 2)}, in order.  We first
+separate the request stream into gets and puts:
+
+@example
+(define (get? obj) (eq? (car obj) 'get))
+
+(define-stream (gets strm)
+  (stream-map cadr (stream-filter get? strm)))
+
+(define-stream (puts strm)
+  (stream-map cdr  (stream-remove get? strm)))
+@end example
+
+Now, @func{run-dict} inserts each element of the puts stream into a lazy
+dictionary, represented as a stream of key/value pairs (an association
+stream), then looks up each element of the gets stream with
+@func{stream-assoc}:
+
+@example
+(define-stream (run-dict requests)
+  (let ([dict (build-dict (puts requests))])
+    (stream-map (rsec stream-assoc dict)
+      (gets requests))))
+
+(define (stream-assoc key dict)
+    (cond [(stream-null? dict) #f]
+          [(equal? key (car (stream-car dict)))
+           (stream-car dict)]
+          [else (stream-assoc key
+                  (stream-cdr dict))]))
+@end example
+
+@var{dict} is created in the @func{let}, but nothing is initially added
+to it.  Each time @func{stream-assoc} performs a lookup, enough of
+@var{dict} is built to satisfy the lookup, but no more.  We are assuming
+that each item is defined once and only once.  All that is left is to
+define the procedure that inserts new items into the dictionary, lazily:
+
+@example
+(define-stream (build-dict puts)
+  (if (stream-null? puts)
+      stream-null
+    (stream-cons
+      (stream-car puts)
+      (build-dict (stream-cdr puts)))))
+
+@end example
+
+Now we can run the requests and print the result:
+
+@example
+(stream-for-each display
+  (stream-map cadr (run-dict requests)))
+@end example
+
+The @code{(put 4 "d")} definition is never added to the dictionary
+because it is never needed.
+
+@c page
+@node streams examples pitfalls
+@subsubsection Pitfalls
+
+
+Programming with streams, or any lazy evaluator, can be tricky, even for
+programmers experienced in the genre.  Programming with streams is even
+worse in Scheme than in a purely functional language, because, though
+the streams are lazy, the surrounding Scheme expressions in which they
+are embedded are eager.  The impedance between lazy and eager can
+occasionally lead to astonishing results.  Thirty--two years ago,
+William Burge warned:
+
+@quotation
+Some care must be taken when a stream is produced to make sure that its
+elements are not really a list in disguise, in other words, to make sure
+that the stream elements are not materialized too soon.
+@end quotation
+
+For example, a simple version of @func{stream-map} that returns a stream
+built by applying a unary procedure to the elements of an input stream
+could be defined like this:
+
+@example
+(define-stream (stream-map proc strm) ;wrong!
+  (let loop ([strm strm])
+    (if (stream-null? strm)
+        stream-null
+      (stream-cons
+        (proc (stream-car strm))
+        (loop (stream-cdr strm))))))
+@end example
+
+That looks right.  It properly wraps the procedure in
+@func{stream-lambda}, and the two legs of the @func{if} both return
+streams, so it type--checks.  But it fails because the named @func{let}
+binds @var{loop} to a procedure using normal @func{lambda} rather than
+@func{stream-lambda}, so even though the first element of the result
+stream is lazy, subsequent elements are eager.  @func{stream-map} can be
+written using @func{stream-let}:
+
+@example
+(define-stream (stream-map proc strm)
+  (stream-let loop ([strm strm])
+    (if (stream-null? strm)
+        stream-null
+      (stream-cons
+        (proc (stream-car strm))
+        (loop (stream-cdr strm))))))
+@end example
+
+Here, @func{stream-let} assures that each element of the result stream
+is properly delayed, because each is subject to the @func{stream-lambda}
+that is implicit in @func{stream-let}, so the result is truly a stream,
+not a ``list in disguise''.  Another version of this procedure was given
+previously at the description of @func{define-stream}.
+
+Another common problem occurs when a stream--valued procedure requires
+the next stream element in its definition.  Consider this definition of
+@func{stream-unique}:
+
+@example
+(define-stream (stream-unique eql? strm) ;wrong!
+  (stream-match strm
+    [() strm]
+    [(_) strm]
+    [(a b . _)
+     (if (eql? a b)
+         (stream-unique eql?
+           (stream-cdr strm))
+       (stream-cons a
+         (stream-unique eql?
+           (stream-cdr strm))))]))
+@end example
+
+@noindent
+the @code{(a b . _)} pattern requires the value of the next stream
+element after the one being considered.  Thus, to compute the nth
+element of the stream, one must know the n+1st element, and to compute
+the n+1st element, one must know the n+2nd element, and to compute...
+The correct version, given above in the description of
+@func{stream-drop-while}, only needs the current stream element.
+
+A similar problem occurs when the stream expression uses the previous
+element to compute the current element:
+
+@example
+(define (nat n)
+  (stream-ref
+    (stream-let loop ([s (stream 0)])
+      (stream-cons (stream-car s)
+        (loop (stream (add1 (stream-car s))))))
+    n))
+@end example
+
+@noindent
+this program traverses the stream of natural numbers, building the
+stream as it goes.  The definition is correct: @code{(nat 15)} evaluates
+to 15; but it needlessly uses unbounded space because each stream
+element holds the value of the prior stream element in the binding to
+@var{s}.
+
+When traversing a stream, it is easy to write the expression in such a
+way that evaluation requires unbounded space, even when that is not
+strictly necessary.  During the discussion of @ansrfi{40}, Joe Marshall
+created this infamous procedure:
+
+@example
+(define (times3 n)
+  (stream-ref
+    (stream-filter
+      (lambda (x)
+        (zero? (modulo x n)))
+      (stream-from 0))
+    3))
+@end example
+
+@noindent
+@code{(times3 5)} evaluates to 15 and @code{(times3 #e1e9)} evaluates to
+three billion, though it takes a while.  In either case, @func{times3}
+should operate in bounded space, since each iteration mutates the
+promise that holds the next value.  But it is easy to write
+@func{times3} so that it does not operate in bounded space, as the
+follies of @ansrfi{40} showed.
+
+The common problem is that some element of the stream (often the first
+element) is bound outside the expression that is computing the stream,
+so it holds the head of the stream, which holds the second element, and
+so on.  In addition to testing the programmer, this procedure tests the
+stream primitives (it caught several errors during development) and also
+tests the underlying Scheme system (it found a bug in one
+implementation).
+
+Laziness is no defense against an infinite loop; for instance, the
+expression below never returns, because the @func{odd?} predicate never
+finds an odd stream element.
+
+@example
+(stream-null?
+  (stream-filter odd?
+    (stream-from 0 2)))
+@end example
+
+Ultimately, streams are defined as promises, which are implemented as
+thunks (lambda with no arguments).  Since a stream is a procedure,
+comparisons such as @func{eq?}, @func{eqv?} and @func{equal?} are not
+meaningful when applied to streams.  For instance, the expression
+
+@example
+(define s ((stream-lambda () stream-null)))
+@end example
+
+@noindent
+defines @var{s} as the null stream, and @code{(stream-null? s)} is
+@true{}, but @code{(eq?  s stream-null)} is @false{}.
+
+To determine if two streams are equal, it is necessary to evaluate the
+elements in their common prefixes, reporting @false{} if two elements
+ever differ and @true{} if both streams are exhausted at the same time.
+
+@example
+(define (stream-equal? eql? xs ys)
+  (cond [(and (stream-null? xs)
+              (stream-null? ys)) #t]
+        [(or (stream-null? xs)
+             (stream-null? ys)) #f]
+        [(not (eql? (stream-car xs)
+                    (stream-car ys))) #f]
+        [else (stream-equal? eql?
+                (stream-cdr xs)
+                (stream-cdr ys))]))
+@end example
+
+It is generally not a good idea to mix lazy streams with eager
+side--effects, because the order in which stream elements are evaluated
+determines the order in which the side--effects occur.  For a simple
+example, consider this side--effecting version of @func{strm123}:
+
+@example
+(define strm123-with-side-effects
+  (stream-cons (begin (display "one") 1)
+    (stream-cons (begin (display "two") 2)
+      (stream-cons (begin (display "three") 3)
+        stream-null))))
+@end example
+
+The stream has elements @code{1 2 3}.  But depending on the order in
+which stream elements are accessed, @code{"one"}, @code{"two"} and
+@code{"three"} could be printed in any order.
+
+Since the performance of streams can be very poor, normal (eager) lists
+should be preferred to streams unless there is some compelling reason to
+the contrary.  For instance, computing pythagorean triples with streams:
+
+@example
+(stream-ref
+  (stream-of (list a b c)
+    (n in (stream-from 1))
+    (a in (stream-range 1 n))
+    (b in (stream-range a n))
+    (c is (- n a b))
+    (= (+ (* a a) (* b b)) (* c c)))
+  50)
+@end example
+
+@noindent
+is about two orders of magnitude slower than the equivalent expression
+using loops:
+
+@example
+(do ([n 1 (+ n 1)]) ([> n 228])
+  (do ([a 1 (+ a 1)]) ([> a n])
+    (do ([b a (+ b 1)]) ([> b n])
+      (let ([c (- n a b)])
+        (if (= (+ (* a a) (* b b)) (* c c))
+            (display (list a b c)))))))
+@end example
+
+@c end of file

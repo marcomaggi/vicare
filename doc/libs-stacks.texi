@@ -1,0 +1,195 @@
+@node stacks
+@chapter Simple stacks
+
+
+@cindex @library{vicare containers stacks}, library
+@cindex Library @library{vicare containers stacks}
+
+
+The library @library{vicare containers stacks} implements stacks holding
+arbitrary scheme objects and designed for efficient last--in/first--out
+operations.
+
+@menu
+* stacks objects::              Stack objects.
+* stacks inspection::           Inspecting stack objects.
+* stacks access::               Stack accessors and mutators.
+* stacks conversion::           Converting stacks to other objects.
+@end menu
+
+@c page
+@node stacks objects
+@section Stack objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.
+
+
+@deftp {@rnrs{6} Record Type} stack
+@cindex @var{stack} argument
+@cindex Argument @var{stack}
+Record type representing a stack object.  The @objtype{stack} type is
+non--generative and available for subtyping.  In this documentation
+@objtype{stack} object arguments to functions are indicated as
+@var{stack}.
+@end deftp
+
+
+@defun make-stack @var{obj} @dots{}
+Build and return a @objtype{stack} object holding the given objects,
+which are pushed on the stack from right to left.
+@end defun
+
+
+@defun stack? @var{obj}
+Return @true{} if @var{obj} is a record of type @objtype{stack};
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun stack-putprop @var{stack} @var{key} @var{value}
+@defunx $stack-putprop @var{stack} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{stack};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun stack-getprop @var{stack} @var{key}
+@defunx $stack-getprop @var{stack} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{stack}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun stack-remprop @var{stack} @var{key}
+@defunx $stack-remprop @var{stack} @var{key}
+Remove the property @var{key} from the property list of @var{stack}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun stack-property-list @var{stack}
+@defunx $stack-property-list @var{stack}
+Return a new association list representing the property list of
+@var{stack}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun stack-hash @var{stack}
+@defunx $stack-hash @var{stack}
+Return an exact integer to be used as hashtable key for @var{stack}.
+Hashtables having a @objtype{stack} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable stack-hash eq?)
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are meant to be used with the facilities of the
+library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} stack @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{stack?}.
+@end deffn
+
+@c page
+@node stacks inspection
+@section Inspecting stack objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun stack-empty? @var{stack}
+@defunx $stack-empty? @var{stack}
+Return @true{} if @var{stack} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun stack-not-empty? @var{stack}
+@defunx $stack-not-empty? @var{stack}
+Return @true{} if @var{stack} is @strong{not} empty; otherwise return
+@false{}.
+@end defun
+
+
+@defun stack-size? @var{stack}
+@defunx $stack-size? @var{stack}
+Return an exact integer representing the number of objects in @var{stack}.
+@end defun
+
+@c page
+@node stacks access
+@section Stack accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun stack-top @var{stack}
+@defunx $stack-top @var{stack}
+Return the object at the top of the stack.  Raise an assertion violation
+if @var{stack} is empty.
+@end defun
+
+
+@defun stack-push! @var{stack} @var{obj}
+@defunx $stack-push! @var{stack} @var{obj}
+Push @var{obj} on the @var{stack}.
+@end defun
+
+
+@defun stack-pop! @var{stack}
+@defunx $stack-pop! @var{stack}
+Remove the object at the top of the stack and return it.  Raise an
+assertion violation if @var{stack} is empty.
+@end defun
+
+@c page
+@node stacks conversion
+@section Converting stacks to other objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun stack->list @var{stack}
+@defunx list->stack @var{list}
+Convert to and from a stack and a proper list.
+@end defun
+
+
+@defun stack->vector @var{stack}
+@defunx vector->stack @var{vector}
+Convert to and from a stack and a vector.
+@end defun
+
+@c end of file

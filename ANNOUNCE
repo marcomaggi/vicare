@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d3
+Subject: [announce] Vicare Scheme revision 0.3d5
 
                              Vicare Scheme
                              =============
@@ -36,14 +36,232 @@ this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
 
-  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
-collection of R6 Scheme libraries:
 
-	      <http://marcomaggi.github.com/nausicaa.html>
+Notes for revision 0.3d5
+------------------------
+
+* The boot images have been rotated.
+
+* BACKWARDS INCOMPATIBILITY  The function  MAKE-QUEUE from  (vicare) has
+  been renamed MAKE-QUEUE-PROCS.
+
+* Imported libraries  from Nausicaa/OOPP.   Installation of  the library
+  hierarchy (nausicaa  ---) is  enabled by default;  it can  be disabled
+  with the option "--disable-nausicaa" of the script "configure".
+
+* Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
+  "vicare-libs.texi", "nausicaa.texi".
+
+* Added   condition  object   type  "&procedure-argument-violation"   to
+  (vicare).
+
+* Added  condition object  type "&expression-return-value-violation"  to
+  (vicare).
+
+* The validation  clauses of  the library (vicare  arguments validation)
+  now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
+  ASSERTION-VIOLATION.
+
+* Added  syntaxes to  (vicare) to  allow  access to  R6RS record  fields
+  through the record type identifier only.
+
+     record-type-field-ref
+     record-type-field-set!
+     $record-type-field-ref
+     $record-type-field-set!
+
+* Added syntax  "record-type-and-record?" to  (vicare) to  allow testing
+  the type of a record instance through the record type identifier only.
+
+* Added to (vicare):
+
+    exact-integer?
+    bignum-positive?
+    bignum-negative?
+    bignum-non-negative?
+    bignum-non-positive?
+    bignum-odd?
+    bignum-even?
+    least-positive-bignum
+    greatest-negative-bignum
+
+* Added  to (vicare)  the experimental  syntax "define-syntax*".   Still
+  undocumented.
+
+* Added to (vicare)  the function "vector-empty?" and  to (vicare system
+  $vectors) the operation "$vector-empty?".
+
+* Added to (vicare)  the function "string-empty?" and  to (vicare system
+  $strings) the operation "string-empty?".
+
+* Added  to (vicare)  the function  "bytevector-empty?"  and  to (vicare
+  system $bytevectors) the operation "$bytevector-empty?".
+
+* Added "eval-for-expand" to (vicare).
+
+* Added to (vicare system $numerics):
+
+    $add1-integer	$add1-fixnum	$add1-bignum
+    $sub1-integer	$sub1-fixnum	$sub1-bignum
+
+* Fixes,  reorganisation  and  development   of  string  and  bytevector
+  pathname functions.  Added to (vicare $posix):
+
+    split-pathname-root-and-tail
+    search-file-in-environment-path
+    search-file-in-list-path
+    split-pathname
+    split-pathname-bytevector
+    split-pathname-string
+    split-search-path
+    split-search-path-bytevector
+    split-search-path-string
+    file-absolute-pathname?
+    file-relative-pathname?
+    file-pathname?
+    file-string-pathname?
+    file-bytevector-pathname?
+    file-colon-search-path?
+    file-string-colon-search-path?
+    file-bytevector-colon-search-path?
+
+  which are reexported by (vicare posix).
+
+* Added special validation clause:
+
+    (or false ?validator)
+
+  to the arguments validation library.
+
+* Added library (vicare language-extensions increments).
+
+* Added to Nausicaa classes a syntax to select concrete fields using the
+  R6RS records' unsafe accessors and mutators.
+
+* Added to  Nausicaa the  validation of values  returned by  code forms,
+  through "begin/tags", "lambda/tags" and "define/tags".
+
+* Added builtin label "<exact-integer>" to (nausicaa).
+
+* Added containers libraries:
+
+     (nausicaa containers lists)
+     (nausicaa containers vectors)
+     (nausicaa containers strings)
+     (nausicaa containers arrays)
+
+  the multidimensional arrays library will  be rewritten with changes in
+  the API.
+
+* Added INFIX to the export list of (nausicaa).
+
+* The wrapper  for foreign pointers  now defines also  a "?TYPE-ID-hash"
+  function to generate hashtable keys associated to wrapper structures.
+
+* Imported from Nausicaa the libraries:
+
+     (vicare language-extensions identifier-alists)
+     (vicare language-extensions identifier-properties)
+     (vicare language-extensions makers)
+
+* Imported stacks library from Nausicaa as libraries:
+
+     (vicare containers stacks)
+     (nausicaa containers stacks)
+
+* Imported queues library from Nausicaa as libraries:
+
+     (vicare containers queues)
+     (nausicaa containers queues)
+
+* Imported iterators library from Nausicaa as:
+
+     (nausicaa containers iterators)
+
+* Imported SILex libraries from Nausicaa as:
+
+     (vicare parser-tools silex ---)
+
+* Imported LALR libraries from Nausicaa as:
+
+     (nausicaa parser-tools lalr ---)
+
+
+Notes for revision 0.3d4
+------------------------
+
+* Strings  loaded from  FASL  files (but  not the  boot  image) are  now
+  interned.
+
+* Added CASE-IDENTIFIERS to (vicare langauge-extensions syntaxes).
+
+* Added   callable  objects   as  library   (vicare  language-extensions
+  callables), see the documentation node "callables".
+
+* Added environment inquiry functions to (vicare):
+
+    uname
+    utsname?
+    utsname-sysname
+    utsname-nodename
+    utsname-release
+    utsname-version
+    utsname-machine
+
+    implementation-name
+    implementation-version
+    cpu-architecture
+    machine-name
+    os-name
+    os-version
+
+* Added SRFI 112 libraries:
+
+    (srfi :112)
+    (srfi :112 environment-inquiry)
+
+* Imported one-dimension  libraries from Nausicaa as  (vicare containers
+  one-dimension-cc) and (vicare containers one-dimension-co).
+
+* Imported  u8 and  s8  bytevectors libraries  from  nausicaa under  the
+  hierarchy (vicare containers bytevectors ---).
+
+* Imported getopts library from Nausicaa as (vicare getopts).
+
+* Imported    enumerations   library    from    Nausicaa   as    (vicare
+  language-extensions c-enumerations).
+
+* Imported formations library from Nausicaa as (vicare formations).
 
 
 Notes for revision 0.3d3
 ------------------------
+
+* Added to (vicare) functions to inspect configuration time options:
+
+    vicare-built-with-srfi-enabled
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
+    vicare-built-with-posix-enabled
+    vicare-built-with-glibc-enabled
+    vicare-built-with-linux-enabled
+
+  and to (srfi :0) the associated COND-EXPAND clauses:
+
+    srfi-enabled
+    ffi-enabled
+    iconv-enabled
+    posix-enabled
+    glibc-enabled
+    linux-enabled
+
+* Added  utility functions  for macro  authoring, see  the documentation
+  node "iklib expander utils".
+
+* Added miscellaneous functions to (vicare):
+
+     char-in-ascii-range?
+     fixnum-in-character-range?
 
 * Fixed (vicare language-extensions infix) exporting its own binding for
   XOR; it now reexports the binding from (vicare).
@@ -56,17 +274,54 @@ Notes for revision 0.3d3
 * SRFI 106:  added function  SOCKET-DESCRIPTOR; added  garbage collector
   destructor to the socket object.
 
-* Added to (vicare) functions to inspect configuration time options:
+* BACKWARDS INCOMPATIBILITY  The library  (vicare bytevectors)  has been
+  renamed to (vicare containers bytevectors).
 
-    vicare-built-with-posix-enabled
-    vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled
+* Fixed error in weak hashtables not handling correctly already interned
+  keys.
 
-* Added clauses to COND-EXPAND from (srfi :0):
+* Imported IrRegex from Nausicaa as (vicare irregex).
 
-    posix-enabled
-    glibc-enabled
-    linux-enabled
+* Imported Pregexp from Nausicaa as (vicare pregexp).
+
+* Imported    variables    library     from    Nausicaa    as    (vicare
+  language-extensions variables).
+
+* Imported lists library from Nausicaa as (vicare containers lists).
+
+* Imported vectors library from Nausicaa as (vicare containers vectors).
+
+* Imported strings library from Nausicaa as (vicare containers strings).
+
+* Imported  char-sets  library  from   Nausicaa  as  (vicare  containers
+  char-sets).
+
+* Imported   KMP   library   from   Nausicaa   as   (vicare   containers
+  knuth-morris-pratt).
+
+* Imported  Levenshtein  Distance  library   from  Nausicaa  as  (vicare
+  containers levenshtein).
+
+* Imported streams library from  Nausicaa as (vicare language-extensions
+  streams).
+
+* Imported loops  library from  Nausicaa as  (vicare language-extensions
+  loops).
+
+* Imported   ASCII    chars   library    from   Nausicaa    as   (vicare
+  language-extensions ascii-chars).
+
+* Imported    comparisons    library    from   Nausicaa    as    (vicare
+  language-extensions comparisons).
+
+* Imported  randomisations libraries  from  Nausicaa  as (vicare  crypto
+  randomisations ---).
+
+* Imported object-properties library from Nausicaa as (vicare containers
+  object-properties).
+
+* Imported hooks  library from  Nausicaa as  (vicare language-extensions
+  hooks).
 
 
 Notes for revision 0.3d2

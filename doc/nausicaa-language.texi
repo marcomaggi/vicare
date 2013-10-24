@@ -1,0 +1,91 @@
+@node nausicaa
+@chapter The language @library{nausicaa}
+
+
+This chapter describes the language @library{nausicaa} and its
+differences from the languages @library{rnrs (6)} and @library{vicare}.
+To use @library{nausicaa}: we put @library{nausicaa} in place of
+@library{rnrs} as first import specification:
+
+@example
+(import (nausicaa))
+@end example
+
+@menu
+* nausicaa libs::               Component libraries.
+@end menu
+
+@c page
+@node nausicaa libs
+@section Component libraries
+
+
+Unless otherwise specified, the library @library{nausicaa} reexports the
+bindings from the following libraries:
+
+@table @asis
+@item @library{vicare}
+Almost all the bindings are reexported with the exception of the
+following ones:
+
+@example
+define define-values
+let let* letrec letrec*
+let-values let*-values
+lambda case-lambda set!
+do begin
+receive receive-and-return
+@end example
+
+@item @library{nausicaa language oopp}
+All the bindings are reexported, with the following renamings:
+
+@example
+set!/tags               @equiv{} set!
+define/tags             @equiv{} define
+define-values/tags      @equiv{} define-values
+lambda/tags             @equiv{} lambda
+let/tags                @equiv{} let
+let*/tags               @equiv{} let*
+letrec/tags             @equiv{} letrec
+letrec*/tags            @equiv{} letrec*
+let-values/tags         @equiv{} let-values
+let*-values/tags        @equiv{} let*-values
+receive/tags            @equiv{} receive
+receive-and-return/tags @equiv{} receive-and-return
+begin/tags              @equiv{} begin
+do/tags                 @equiv{} do
+do*/tags                @equiv{} do*
+case-lambda/tags        @equiv{} case-lambda
+@end example
+
+@item @library{nausicaa language builtins}
+All the bindings are reexported.
+
+@item @library{nausicaa language multimethods}
+All the bindings are reexported.
+
+@item @library{nausicaa language conditions}
+Provides basic condition types and utilities for condition types
+definition (@pxref{conditions, Condition object types}).
+
+@item @library{(nausicaa language increments)}
+Provides syntaxes to increment and decrement numeric values
+(@pxref{increments, Numeric increment syntaxes}).
+
+@item @library{vicare language-extension namespaces}
+All the bindings are reexported.
+
+@item @library{vicare language-extensions sentinels}
+Sentinel values (@libsref{sentinels, The sentinel value}).
+
+@item @library{vicare language-extensions simple-match}
+Simple pattern matching syntax (@libsref{simple-match, Simple
+destructuring match syntax}).
+
+@item @library{vicare language-extensions infix}
+Syntax for infix--to--prefix notation conversion (@libsref{simple-match,
+Simple destructuring match syntax}).
+@end table
+
+@c end of file

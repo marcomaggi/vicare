@@ -210,7 +210,7 @@
 
     (define-argument-validation (letrec-pass who obj)
       (memq obj '(scc waddell basic))
-      (assertion-violation who
+      (procedure-argument-violation who
 	"invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
 	obj))
 

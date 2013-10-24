@@ -28,6 +28,12 @@ allow the native procedures to @dfn{call back} into Scheme.
 Additionally, @library{vicare ffi} reexports all the bindings from the
 library @library{ikarus system $foreign}.
 
+The availability of the Libffi @api{} can be tested at run--time with
+the function @func{vicare-built-with-ffi-enabled} from @library{vicare}
+(@pxref{iklib config, vicare-built-with-ffi-enabled}), and at
+expand--time with the clause @code{ffi-enabled} of @func{cond-expand}
+from @ansrfi{0} (@libsref{srfi cond-expand vicare, ffi-enabled}).
+
 @menu
 * ffi libffi::                  Installing and using Libffi.
 * ffi dl::                      Accessing shared libraries.
@@ -856,8 +862,8 @@ identifier @meta{type-id}.
 Here only the bindings in the public @api{} are documented:
 
 @table @code
-@item (make-@meta{type-id}/owner @var{pointer} @var{field} ...)
-@itemx (make-@meta{type-id}/owner @var{pointer} @var{collector} @var{field} ...)
+@item (make-@meta{type-id}/owner @var{pointer} @var{field} @dots{})
+@itemx (make-@meta{type-id}/owner @var{pointer} @var{collector} @var{field} @dots{})
 Build and return a new struct instance of type @meta{type-id} wrapping
 the pointer object @var{pointer}; the returned instance @strong{owns}
 the @var{pointer} object.
@@ -876,8 +882,8 @@ If the definition of @meta{type-id} includes a clause @code{fields}: the
 constructor function accepts as many arguments as specified custom
 fields.
 
-@item (make-@meta{type-id}/not-owner @var{pointer})
-@itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector})
+@item (make-@meta{type-id}/not-owner @var{pointer} @var{field} @dots{})
+@itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector} @var{field} @dots{})
 Build and return a new struct instance of type @meta{type-id} wrapping
 the pointer object @var{pointer}; the returned instance @strong{does not
 own} the @var{pointer} object.
@@ -1026,6 +1032,9 @@ Remove the property @var{key} from the property list of @var{struct}.
 @item (@meta{type-id}-property-list @var{struct})
 Return a new association list representing the property list of
 @var{struct}.
+
+@item (@meta{type-id}-hash @var{struct})
+Return an exact integer to be used as hashtable key for @var{struct}.
 @end table
 
 If the definition of @meta{type-id} includes a clause

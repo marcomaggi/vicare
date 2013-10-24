@@ -1,6 +1,6 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
  * This program is free software:  you can redistribute it and/or modify
@@ -107,9 +107,14 @@ ikarus_main (int argc, char** argv, char* boot_file)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_get_argv0_string (ikpcb * pcb)
+ikrt_get_argv0_bytevector (ikpcb * pcb)
 {
   return ika_bytevector_from_cstring(pcb, pcb->argv0);
+}
+ikptr
+ikrt_get_argv0_string (ikpcb * pcb)
+{
+  return ika_string_from_cstring(pcb, pcb->argv0);
 }
 ikptr
 ikrt_get_last_revision (ikpcb * pcb)

@@ -78,39 +78,39 @@
 
 (define-argument-validation (name who name)
   (string? name)
-  (assertion-violation who "expected string as name argument" name))
+  (procedure-argument-violation who "expected string as name argument" name))
 
 (define-argument-validation (list-of-fields who fields)
   (list? fields)
-  (assertion-violation who "fields must be a list" fields))
+  (procedure-argument-violation who "fields must be a list" fields))
 
 (define-argument-validation (rtd who rtd)
   (rtd? rtd)
-  (assertion-violation who "expected structure rtd as argument" rtd))
+  (procedure-argument-violation who "expected structure rtd as argument" rtd))
 
 (define-argument-validation (struct-of-type who struct rtd)
   (and ($struct? struct)
        (eq? rtd ($struct-rtd struct)))
-  (assertion-violation who "not a data structure of correct type" struct rtd))
+  (procedure-argument-violation who "not a data structure of correct type" struct rtd))
 
 (define-argument-validation (struct who x)
   ($struct? x)
-  (assertion-violation who "expected data structure as argument" x))
+  (procedure-argument-violation who "expected data structure as argument" x))
 
 (define-argument-validation (index who index struct)
   (and (fixnum? index)
        ($fx>= index 0)
        ($fx<  index (rtd-length ($struct-rtd struct))))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected fixnum in range for structure field as index argument" index struct))
 
 (define-argument-validation (printer who printer)
   (procedure? printer)
-  (assertion-violation who "expected procedure as printer argument" printer))
+  (procedure-argument-violation who "expected procedure as printer argument" printer))
 
 (define-argument-validation (destructor who destructor)
   (procedure? destructor)
-  (assertion-violation who "expected procedure as destructor argument" destructor))
+  (procedure-argument-violation who "expected procedure as destructor argument" destructor))
 
 
 ;;;; low level RTD operations
@@ -316,19 +316,19 @@
 (define (%field-index i rtd who)
   (cond ((fixnum? i)
 	 (unless (and ($fx>= i 0) ($fx< i (rtd-length rtd)))
-	   (assertion-violation who "out of range for rtd" i rtd))
+	   (procedure-argument-violation who "out of range for rtd" i rtd))
 	 i)
 	((symbol? i)
 	 (letrec ((lookup (lambda (n ls)
 			    (cond ((null? ls)
-				   (assertion-violation who "not a field" rtd))
+				   (procedure-argument-violation who "not a field" rtd))
 				  ((eq? i ($car ls))
 				   n)
 				  (else
 				   (lookup ($fx+ n 1) ($cdr ls)))))))
 	   (lookup 0 (rtd-fields rtd))))
 	(else
-	 (assertion-violation who "not a valid index" i))))
+	 (procedure-argument-violation who "not a valid index" i))))
 
 (define (struct-field-accessor rtd i)
   ;;Return  an  accessor function  for  the field  at  index  I of  data
@@ -383,9 +383,9 @@
       ($struct? x)
     (let ((rtd ($car rest)))
       (unless (null? ($cdr rest))
-	(assertion-violation who "too many arguments"))
+	(procedure-argument-violation who "too many arguments"))
       (unless (rtd? rtd)
-	(assertion-violation who "not an rtd"))
+	(procedure-argument-violation who "not an rtd"))
       (and ($struct? x)
 	   (eq? rtd ($struct-rtd x))))))
 

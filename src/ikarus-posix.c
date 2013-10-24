@@ -89,6 +89,9 @@
 #ifdef HAVE_SYS_STAT_H
 #  include <sys/stat.h>
 #endif
+#ifdef HAVE_SYS_UTSNAME_H
+#  include <sys/utsname.h>
+#endif
 #ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 #endif
@@ -786,6 +789,7 @@ ikrt_posix_file_exists (ikptr s_pathname)
   pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   rv	   = stat(pathname, &S);
+  /* fprintf(stderr, "%s: %d, %d, %s, %s\n", __func__, rv, errno, pathname, getcwd(NULL, 0)); */
   if (0 == rv)
     return IK_TRUE_OBJECT;
   else if ((ENOENT == errno) || (ENOTDIR == errno))
@@ -6258,6 +6262,44 @@ ikrt_posix_ntohs (ikptr s_host_long, ikpcb * pcb)
   uint16_t	rv;
   rv = ntohs(in);
   return ika_integer_from_uint16(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Name and informations about current kernel
+ ** ----------------------------------------------------------------- */
+
+#define IK_UTSNAME_SYSNAME(STRU)		IK_FIELD((STRU),0)
+#define IK_UTSNAME_NODENAME(STRU)		IK_FIELD((STRU),1)
+#define IK_UTSNAME_RELEASE(STRU)		IK_FIELD((STRU),2)
+#define IK_UTSNAME_VERSION(STRU)		IK_FIELD((STRU),3)
+#define IK_UTSNAME_MACHINE(STRU)		IK_FIELD((STRU),4)
+
+ikptr
+ikrt_posix_uname (ikptr s_struct, ikpcb * pcb)
+{
+#ifdef HAVE_UNAME
+  struct utsname	stru;
+  int			rv;
+  errno = 0;
+  rv    = uname(&stru);
+  if (0 == rv) {
+    pcb->root0 = &s_struct;
+    {
+      IK_ASS(IK_UTSNAME_SYSNAME(s_struct),	ika_string_from_cstring(pcb, stru.sysname));
+      IK_ASS(IK_UTSNAME_NODENAME(s_struct),	ika_string_from_cstring(pcb, stru.nodename));
+      IK_ASS(IK_UTSNAME_RELEASE(s_struct),	ika_string_from_cstring(pcb, stru.release));
+      IK_ASS(IK_UTSNAME_VERSION(s_struct),	ika_string_from_cstring(pcb, stru.version));
+      IK_ASS(IK_UTSNAME_MACHINE(s_struct),	ika_string_from_cstring(pcb, stru.machine));
+    }
+    pcb->root0 = NULL;
+    return IK_FALSE;
+  } else {
+    return ik_errno_to_code();
+  }
 #else
   feature_failure(__func__);
 #endif

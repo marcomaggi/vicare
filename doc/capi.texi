@@ -2156,8 +2156,8 @@ Interface to the Linux specific C function @cfunc{waitid}, see the
 or more child processes with finer control of @cfunc{waitpid}.  The
 arguments @var{idtype}, @var{id} and @var{options} must be fixnums.
 @var{info} must be a reference to a structure of type
-@code{struct-siginfo_t}, @ref{linux status} for details.  If successful:
-return @var{info} itself, else raise an exception.
+@code{struct-siginfo_t}, @libsref{linux status} for details.  If
+successful: return @var{info} itself, else raise an exception.
 @end deftypefun
 
 

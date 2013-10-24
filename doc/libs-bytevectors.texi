@@ -1,0 +1,2308 @@
+@node bytevectors
+@chapter Bytevectors
+
+@menu
+* bytevectors utils::           Additional bytevector utilities.
+* bytevectors 8::               Bytevectors of signed and
+                                unsigned bytes.
+@end menu
+
+@c page
+@node bytevectors utils
+@section Additional bytevector utilities
+
+
+@cindex Library @library{vicare containers bytevectors}
+@cindex @library{vicare containers bytevectors}, library
+
+
+The library @library{vicare containers bytevectors} exports bindings for
+additional bytevector handling utilities.
+
+@menu
+* bytevectors utils setget::    Single-identifier setters and getters.
+* bytevectors utils scaled::    Scaled setters and getters.
+@end menu
+
+@c page
+@node bytevectors utils setget
+@subsection Single--identifier setters and getters
+
+
+The following syntaxes are wrappers for @func{bytevector-*-ref} and
+@func{bytevector-*-set!} specifying the endiannes in their name, without
+the need of an additional argument (useful in macros).  The following
+bindings are exported by the library @library{vicare containers
+bytevectors}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-u8-litend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 8-bit words.  An alias for @func{bytevector-u8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 8-bit words.  An alias for @func{bytevector-u8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-litend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 8-bit words.  An alias for @func{bytevector-u8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 8-bit words.  An alias for @func{bytevector-u8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 8-bit words.  An alias for @func{bytevector-s8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 8-bit words.  An alias for @func{bytevector-s8-set!}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 8-bit words.  An alias for @func{bytevector-s8-ref}.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 8-bit words.  An alias for @func{bytevector-s8-ref}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Words of 16-bit
+
+
+@deffn Syntax bytevector-u16-litend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 16-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u16-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 16-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u16-litend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 16-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u16-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 16-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s16-litend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 16-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s16-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 16-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s16-litend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 16-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s16-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 16-bit big--endian words.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Words of 32-bit
+
+
+@deffn Syntax bytevector-u32-litend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 32-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u32-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 32-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u32-litend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 32-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u32-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 32-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s32-litend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 32-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s32-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 32-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s32-litend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 32-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s32-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 32-bit big--endian words.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Words of 64-bit
+
+
+@deffn Syntax bytevector-u64-litend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 64-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u64-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for unsigned 64-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u64-litend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 64-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-u64-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for unsigned 64-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s64-litend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 64-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s64-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for signed 64-bit big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s64-litend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 64-bit little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-s64-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for signed 64-bit big--endian words.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Single--precision floating--point numbers
+
+
+@deffn Syntax bytevector-ieee-single-litend-set! @var{bv} @var{idx} @var{val}
+Setter for single--precision floating--point little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-single-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for single--precision floating--point big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-single-litend-ref @var{bv} @var{idx} @var{val}
+Getter for single--precision floating--point little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-single-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for single--precision floating--point big--endian words.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Double precision floating--point numbers
+
+
+@deffn Syntax bytevector-ieee-double-litend-set! @var{bv} @var{idx} @var{val}
+Setter for double--precision floating--point little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-double-bigend-set! @var{bv} @var{idx} @var{val}
+Setter for double--precision floating--point big--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-double-litend-ref @var{bv} @var{idx} @var{val}
+Getter for double--precision floating--point little--endian words.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-double-bigend-ref @var{bv} @var{idx} @var{val}
+Getter for double--precision floating--point big--endian words.
+@end deffn
+
+@c page
+@node bytevectors utils scaled
+@subsection Scaled setters and getters
+
+
+The following syntaxes are wrappers for @func{bytevector-*-ref} and
+@func{bytevector-*-set!} specifying the endiannes in their name, without
+the need of an additional argument (useful in macros), and scaling the
+index with the size of the word.  The following bindings are exported by
+the library @library{vicare containers bytevectors}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsigned words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-u8-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u8-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u8-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-u8-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u8-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u8-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Signed words of 8-bit
+
+
+The 8-bit setters and getters exist with the only purpose of having
+8-bit identifiers with the same naming scheme of the others; this is
+useful when building identifiers in macros.
+
+
+@deffn Syntax bytevector-s8-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s8-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s8-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-s8-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s8-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s8-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsigned words of 16-bit
+
+
+@deffn Syntax bytevector-u16-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u16-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u16-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-u16-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u16-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u16-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Signed words of 16-bit
+
+
+@deffn Syntax bytevector-s16-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s16-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s16-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-s16-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s16-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s16-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsigned words of 32-bit
+
+
+@deffn Syntax bytevector-u32-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u32-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u32-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-u32-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u32-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u32-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Signed words of 32-bit
+
+
+@deffn Syntax bytevector-s32-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s32-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s32-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-s32-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s32-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s32-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Unsigned words of 64-bit
+
+
+@deffn Syntax bytevector-u64-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u64-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-u64-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-u64-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u64-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-u64-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Signed words of 64-bit
+
+
+@deffn Syntax bytevector-s64-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s64-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-s64-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-s64-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s64-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-s64-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Single--precision floating--point words
+
+
+@deffn Syntax bytevector-ieee-single-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-ieee-single-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-ieee-single-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-single-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-ieee-single-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-ieee-single-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Double--precision floating--point words
+
+
+@deffn Syntax bytevector-ieee-double-litend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-ieee-double-bigend-scaled-set! @var{bv} @var{idx} @var{val}
+@deffnx Syntax bytevector-ieee-double-native-scaled-set! @var{bv} @var{idx} @var{val}
+Scaled setters.
+@end deffn
+
+
+@deffn Syntax bytevector-ieee-double-litend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-ieee-double-bigend-scaled-ref @var{bv} @var{idx}
+@deffnx Syntax bytevector-ieee-double-native-scaled-ref @var{bv} @var{idx}
+Scaled getters.
+@end deffn
+
+@c page
+@node bytevectors 8
+@section Bytevectors of signed and unsigned bytes
+
+
+@cindex @library{vicare containers bytevectors u8}, library
+@cindex Library @library{vicare containers bytevectors u8}
+@cindex @library{vicare containers bytevectors u8low}, library
+@cindex Library @library{vicare containers bytevectors u8low}
+@cindex @library{vicare containers bytevectors s8}, library
+@cindex Library @library{vicare containers bytevectors s8}
+@cindex @library{vicare containers bytevectors s8low}, library
+@cindex Library @library{vicare containers bytevectors s8low}
+
+
+The libraries @library{vicare containers bytevectors s8},
+@library{vicare containers bytevectors u8}, @library{vicare containers
+bytevectors s8low} and @library{vicare containers bytevectors u8low}
+extend the bytevector operations available in the base library;
+@vicareref{stdlib bytevector, Bytevectors}.
+
+While @library{vicare containers bytevectors s8} and @library{vicare
+containers bytevectors u8} are high level interfaces, @library{vicare
+containers bytevectors s8low} and @library{vicare containers bytevectors
+u8low} are low level interfaces with the same functionalities; there is
+special support for bytevectors representing strings in @ascii{}
+encoding.
+
+To avoid identifiers collision: it is suggested to import these
+libraries with the prefix @samp{bv.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare containers bytevectors u8) bv.))
+@end example
+
+@menu
+* bytevectors 8 intro::         Introduction.
+* bytevectors 8 convention::    Interface conventions.
+* bytevectors 8 views::         Views over bytevectors.
+* bytevectors 8 cons::          Constructors.
+* bytevectors 8 pred::          Predicates.
+* bytevectors 8 compar::        Comparison.
+* bytevectors 8 map::           Mapping functions.
+* bytevectors 8 case::          Case mapping.
+* bytevectors 8 fold::          Fold and unfold.
+* bytevectors 8 select::        Selection.
+* bytevectors 8 pad::           Padding and trimming.
+* bytevectors 8 prefix::        Prefixes and suffixes.
+* bytevectors 8 search::        Searching.
+* bytevectors 8 filter::        Filtering and deleting.
+* bytevectors 8 list::          List and bytevector conversion.
+* bytevectors 8 replicate::     Replicate and rotate.
+* bytevectors 8 mutate::        Mutators.
+* bytevectors 8 misc::          Miscellaneous functions.
+@end menu
+
+@c page
+@node bytevectors 8 intro
+@subsection Introduction
+
+
+@subsubheading Library organisation
+
+The functions are split in a high level library, @library{vicare
+containers bytevectors s8} and @library{vicare containers bytevectors
+u8}, and a low level one, @library{vicare containers bytevectors s8low}
+and @library{vicare containers bytevectors u8low}.  The main difference
+between the two layers is that the high level library makes heavy usage
+of macros to implement the @dfn{bytevector views}, which allow accessing
+subvectors using a friendly syntax.
+
+All the functions in the low level library are bound to identifiers
+starting with @code{%}; for example: @func{bytevector-u8-prefix?} is a
+high level macro, @func{%bytevector-u8-prefix?} is its low level
+function homologous.
+
+@subsubheading Direction of iteration
+
+The library accesses the bytes of a vector in left--to--right or
+right--to--left order depending on the convenience of the algorithm.
+
+@subsubheading Handling side effects
+
+Care must be taken when using functions with side effects.  One reason
+for this is that some of the supported Scheme implementations may
+collapse equal datum bytevectors in the source code to the same
+bytevector in the program.  Mutating such a bytevector in a point of the
+program, will make the change visible to other points in the program.
+
+@c page
+@node bytevectors 8 convention
+@subsection Interface conventions
+
+
+The following conventions hold:
+
+@itemize
+@item
+Procedures whose names end in @code{-ci} are case--insensitive variants;
+they interpret bytevectors as strings of characters in @ascii{}
+encoding: when doing comparisons they use @func{char-ci=?} and
+@func{char-ci<?} and the like.
+
+@item
+Procedures whose names end in @code{!} are side--effecting variants.
+What values these procedures return is usually not specified.
+
+@item
+The order of common arguments is consistent across the different
+procedures in the high level library, and consistent across the
+different procedures in the low level library.  Arguments to some
+functions in the high level library have different order from the ones
+of the homologous low level functions.
+
+@item
+Procedures that have left/right directional variants use the following
+convention:
+
+@multitable {right--to--left} {Suffix}
+@headitem Direction @tab Suffix
+@item left-to-right @tab @meta{none}
+@item right-to-left @tab --right
+@item both @tab --both
+@end multitable
+@end itemize
+
+In the procedure specifications:
+
+@itemize
+@item
+A @var{B} argument is a bytevector view, which is expanded by a macro in
+a triplet of values: the bytevector, the index of the first byte in the
+selected subvector, the index of the byte past the last in the selected
+position; @ref{bytevectors 8 views} for details.
+
+@item
+A @var{bv} argument is a bytevector.
+
+@item
+A @var{byte} argument is an exact integer representing an unsigned byte,
+that is in the range @math{[0, 256)}.
+
+@item
+A @var{char} argument is a character.
+
+@item
+The @var{start} and @var{past} arguments are half--open bytevector
+indices specifying a subvector within a bytevector argument; when
+unspecified, they default to zero and the length of the bytevector,
+respectively.  When specified, it must be the case that:
+
+@example
+0 <= start <= past <= (bytevector-length bv)
+@end example
+
+@noindent
+for the corresponding argument @var{bv}.  They typically restrict a
+procedure's action to the indicated subvector; when @var{start} equals
+@var{past} the selected subvector is the empty bytevector.
+
+@item
+A @var{pred} argument is a unary predicate procedure, returning a
+true/false value when applied to an exact integer representing a byte.
+
+@item
+A @var{criterion} orn @var{byte/char/char-set/pred} argument is a value
+used to select/search for a byte in a bytevector:
+
+@itemize -
+@item
+If it is a byte, it is used in an equality test with @func{=}.
+
+@item
+If it is a character, it is used in an equality test with @func{=} after
+having been converted to an exact integer with @func{char->integer}.
+
+@item
+If it is a character set, it is used in a membership test after the byte
+has been converted to a character with @func{integer->char}.
+
+@item
+If it is a procedure, it is applied to the bytes as a test predicate.
+@end itemize
+
+@item
+An @var{i} or @var{k} argument is an exact non--negative integer
+specifying an index into a bytevector.
+
+@item
+The @var{len} and @var{nbytes} arguments are exact non--negative
+integers specifying a length of a bytevector or some number of bytes.
+
+@item
+An @var{obj} argument can be any value.
+@end itemize
+
+An argument followed by @code{...} means zero--or--more elements.  So
+the procedure with the signature:
+
+@example
+sum-squares x ...
+@end example
+
+@noindent
+takes zero or more arguments (@var{x}, @dots{}), while the procedure
+with signature:
+
+@example
+spell-check doc dict1 dict2 ...
+@end example
+
+@noindent
+takes two mandatory arguments (@var{doc} and @var{dict1}) and zero or
+more optional arguments (@var{dict2} ...).
+
+If a procedure is said to return ``unspecified'', this means that
+nothing at all is known about what the procedure returns; such a
+procedure is not even required to be consistent from call to call; it is
+simply required to return a value (or values) that may be passed to a
+command continuation, e.g. as the value of an expression appearing as a
+non--terminal subform of a begin expression.
+
+Unless explicitly stated: comparison is simply done on individual bytes
+of the bytevector, case--insensitive comparison is done converting the
+bytes to characters with @func{integer->char} and then using the
+functions:
+
+@example
+char-ci=? char-ci<? char-ci>? char-ci<=? char-ci>=?
+@end example
+
+@noindent
+provided by the underlying implementation, or by case--folding
+characters with the operation:
+
+@example
+(char-downcase (char-upcase (integer->char byte)))
+@end example
+
+@noindent
+where the two case--mapping operations are assumed to work for
+characters in the range allowed by @ascii{} encoding.
+
+@c page
+@node bytevectors 8 views
+@subsection Views over bytevectors
+
+
+Bytevector views are syntactic sugar to allow subvector specification
+with minimum overhead; views make use of auxiliary syntaxes exported by
+the @library{vicare containers auxiliary-syntaxes} library and
+reexported by the @library{vicare containers bytevectors u8} library.  Many low
+level bytevector functions act on subvectors specified with triplets of
+arguments:
+
+@itemize
+@item
+The full bytevector.
+
+@item
+The @dfn{start index}: the index of the first byte included in the
+selected subvector.
+
+@item
+The @dfn{past index}: the index of the byte past the last byte included
+in the selected subvector.
+@end itemize
+
+To select the subvector @code{#vu8(6 7 8 9)} from the bytevector
+@code{#vu8(0 1 2 3 4 5 6 7 8 9)} we have to determine the half--open
+range of bytes, which is @math{[6, 10)}, then apply a function to the
+arguments:
+
+@example
+(%the-function '#vu8(0 1 2 3 4 5 6 7 8 9) 6 10)
+@end example
+
+@noindent
+while to select the whole bytevector we can do:
+
+@example
+(%the-function '#vu8(0 1 2 3 4 5 6 7 8 9) 0 10)
+@end example
+
+@noindent
+or:
+
+@example
+(let ((bv '#vu8(0 1 2 3 4 5 6 7 8 9)))
+  (%the-function bv 0 (bytevector-length bv)))
+@end example
+
+With the bytevector views implemented by @library{vicare containers bytevectors
+u8}, the low level function is wrapped by a high level syntax which can
+be invoked as:
+
+@example
+(the-function '#vu8(0 1 2 3 4 5 6 7 8 9))
+        ; select the whole bytevector
+
+(the-function (view '#vu8(0 1 2 3 4 5 6 7 8 9)))
+        ; select the whole bytevector
+
+(the-function (view '#vu8(0 1 2 3 4 5 6 7 8 9)
+                (start 6)))
+        ; select the subvector [6, 10)
+
+(the-function (view '#vu8(0 1 2 3 4 5 6 7 8 9)
+                (start  6)
+                (past  11)))
+        ; select the subvector [6, 10)
+
+(the-function (view '#vu8(0 1 2 3 4 5 6 7 8 9)
+                (past 10)))
+        ; select the subvector [0, 10)
+@end example
+
+@noindent
+instead of a triplet of arguments, the bytevector view is a single
+argument that can be:
+
+@table @code
+@item @meta{bytevector}
+@itemx (view @meta{bytevector})
+The bytevector itself or an unquoted list holding the bytevector itself,
+prefixed by the @code{view} auxiliary syntax: it selects the whole
+bytevector.
+
+@item (view @meta{bytevector} (start @meta{start-index}))
+An unquoted list holding the bytevector and the start index, with
+auxiliary syntaxes @code{view} and @code{start}: it selects the
+subvector from the start index to the end.
+
+@item (view @meta{bytevector} (past @meta{past-index}))
+An unquoted list holding the bytevector and the past index, with
+auxiliary syntaxes @code{view} and @code{past}: it selects the subvector
+from zero to the selected past index.
+
+@item (view @meta{bytevector} (start @meta{start-index}) (past @meta{past-index}))
+An unquoted list holding the bytevector, the start index and the past
+index, with auxiliary syntaxes @code{view}, @code{start} and
+@code{past}: it selects the subvector between the start and past
+indexes.
+@end table
+
+@noindent
+@meta{bytevector}, @meta{start-index} and @meta{past-index} can be
+arbitrary Scheme expressions.  High level macros accepting two or more
+subvectors as arguments, support bytevector views for all of them.  When
+we are concerned with the overhead of bytevector views, we can use the
+low level functions directly.
+
+In the following documentation: low level functions and high level
+macros are documented together; only the meaning of arguments to the low
+level function are described, the meaning of high level arguments is
+obvious.
+
+@c page
+@node bytevectors 8 cons
+@subsection Constructors
+
+
+@defun bytevector-s8-append @varo{bv} @var{bv} ...
+@defunx bytevector-u8-append @varo{bv} @var{bv} ...
+Return a newly allocated bytevector whose bytes form the concatenation
+of the given bytevectors.
+@end defun
+
+
+@defun bytevector-u8-concatenate @var{bvs-list}
+@defunx bytevector-s8-concatenate @var{bvs-list}
+Append the elements of @var{bvs-list} together into a single bytevector.
+Guaranteed to return a freshly allocated bytevector.
+@end defun
+
+
+@deffn Function %bytevector-s8-concatenate-reverse @var{bvs-list} @var{final-bv} @var{nbytes}
+@deffnx Function %bytevector-u8-concatenate-reverse @var{bvs-list} @var{final-bv} @var{nbytes}
+@deffnx Macro bytevector-s8-concatenate-reverse @var{bvs-list}
+@deffnx Macro bytevector-u8-concatenate-reverse @var{bvs-list}
+@deffnx Macro bytevector-s8-concatenate-reverse @var{bvs-list} @var{final-bv}
+@deffnx Macro bytevector-u8-concatenate-reverse @var{bvs-list} @var{final-bv}
+@deffnx Macro bytevector-s8-concatenate-reverse @var{bvs-list} @var{final-bv} @var{nbytes}
+@deffnx Macro bytevector-u8-concatenate-reverse @var{bvs-list} @var{final-bv} @var{nbytes}
+Reverse @var{bvs-list} then concatenate the elements, which must be
+bytevectors.  The first @var{nbytes} bytes in @var{final-bv} are consed
+onto the beginning of @var{bvs-list} before performing the reversal and
+concatenation operations.
+
+@var{final-bv} defaults to the empty bytevector and @var{nbytes}
+defaults to the length of @var{final-bv}.
+
+This procedure is useful in the construction of procedures that
+accumulate byte data into lists of byte buffers, and wish to convert the
+accumulated data into a single bytevector when done.
+@end deffn
+
+
+@defun bytevector-s8-tabulate @var{integer->byte} @var{len}
+@defunx bytevector-u8-tabulate @var{integer->byte} @var{len}
+Construct a bytevector of size @var{len} by applying @var{integer->byte}
+to each index in the range @math{[0, @var{len})} to produce the
+corresponding byte element.  The order in which @var{integer->byte} is
+applied to the indices is not specified.
+@end defun
+
+@c page
+@node bytevectors 8 pred
+@subsection Predicates
+
+
+@defun bytevector-u8-null? @var{obj}
+Return @true{} if @var{obj} is the empty bytevector, otherwise return
+@false{}.
+@end defun
+
+
+@deffn Function %bytevector-s8-every @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-every @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-any @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-any @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-every @var{byte/char/char-set/pred} @var{B}
+@deffnx Macro bytevector-u8-every @var{byte/char/char-set/pred} @var{B}
+@deffnx Macro bytevector-s8-any @var{byte/char/char-set/pred} @var{B}
+@deffnx Macro bytevector-u8-any @var{byte/char/char-set/pred} @var{B}
+Check to see if the given criteria is true on every/any byte in
+@var{bv}, proceeding from left (index @var{start}) to right (index
+@var{past}).
+
+If the selected subvector is empty: the return value is @false{}.
+
+If @var{byte/char/char-set/pred} is a byte, it is tested for equality
+with the elements of @var{B}.
+
+If @var{byte/char/char-set/pred} is a character, it is tested for
+equality with the elements of @var{B}.
+
+If @var{byte/char/char-set/pred} is a character set, the elements of
+@var{B} are tested for membership in the set.
+
+If @var{byte/char/char-set/pred} is a predicate procedure, it is applied
+to the elements of @var{B}.  The predicate is ``witness--generating'':
+
+@itemize
+@item
+If @func{bytevector-u8-any} returns true, the returned true value is the
+one produced by the application of the predicate.
+
+@item
+If @func{bytevector-u8-every} returns true, the returned true value is
+the one produced by the application of the predicate to the last byte in
+the subvector.
+@end itemize
+
+If the predicate is applied to the final element of the selected
+subvector, that final application is a tail call.
+
+The names of these procedures do not end with a question mark; this is
+to indicate that, in the predicate case, they do not return a simple
+boolean (@true{} or @false{}), but a general value.
+@end deffn
+
+@c page
+@node bytevectors 8 compar
+@subsection Comparison
+
+
+@menu
+* bytevectors 8 compar lexi::        Lexicographic comparison.
+* bytevectors 8 compar dict::        String dictionary comparison.
+* bytevectors 8 compar number::      String and numeric parts
+                                     lexicographic comparison.
+* bytevectors 8 compar dictnumber::  String and numeric parts
+                                     dictionary comparison.
+@end menu
+
+@c page
+@node bytevectors 8 compar lexi
+@subsubsection Lexicographic comparison
+
+
+@deffn Function %bytevector-s8-compare @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Function %bytevector-u8-compare @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Function %bytevector-s8-compare-ci @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Function %bytevector-u8-compare-ci @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Macro bytevector-s8-compare @vari{B} @varii{B} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Macro bytevector-u8-compare @vari{B} @varii{B} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Macro bytevector-s8-compare-ci @vari{B} @varii{B} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Macro bytevector-u8-compare-ci @vari{B} @varii{B} @var{proc<} @var{proc=} @var{proc>}
+Determine the @dfn{mismatch index} between the two subvectors: the
+largest index @math{i} such that for every @math{0 <= j < i},
+@math{bv1[j] = bv2[j]}; that is, @math{i} is the first position that
+does not match.
+
+The mismatch index is always an index into @vari{bv}; in the case of
+equal bytevectorss, it is always @vari{past}; the functions observe the
+protocol in this redundant case for uniformity.
+
+@var{proc<}, @var{proc=}, or @var{proc>} are applied to the mismatch
+index (not byte), depending upon whether the subvector of @vari{bv} is
+less than, equal to, or greater than the subvector of @varii{bv}.  The
+result of the application is returned.
+
+If we just want to have the mismatch index as return value: we can use
+@func{values} as value for @var{proc<}, @var{proc=} and @var{proc>}.
+Another interesting option is to use @code{(lambda (mismatch-index) #f)}
+or @code{(lambda (mismatch-index) #t)}.
+
+Examples:
+
+@example
+(define S string->utf8)
+
+(bytevector-u8-compare (S "abcd") (S "abcd")
+                       values values values)
+@result{} 4
+
+(bytevector-u8-compare (S "abcd") (S "abcd12")
+                       values values values)
+@result{} 4
+@end example
+@end deffn
+
+
+@deffn Function %bytevector-s8= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8= @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-ci= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci= @vari{B} @varii{B}
+Compare two subvectors: return true if they are equal, @false{}
+otherwise.
+@end deffn
+
+
+@deffn Function %bytevector-s8<> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8<> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci<> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci<> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8<> @vari{B} @vari{B}
+@deffnx Macro bytevector-u8<> @vari{B} @vari{B}
+@deffnx Macro bytevector-s8-ci<> @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci<> @vari{B} @varii{B}
+Compare two subvectors: return @false{} if they are equal, true
+otherwise.
+@end deffn
+
+
+The following predicates are the lexicographic extensions of the
+corresponding integer and character predicates.  A bytevector @vari{bv}
+is ``lexicographically'' less than @varii{bv} if, after conversion to
+strings in @ascii{} encoding, @vari{bv} would come first in a
+dictionary.
+
+
+@deffn Function %bytevector-s8< @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8< @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci< @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci< @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8< @vari{B} @varii{B}
+@deffnx Macro bytevector-u8< @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-ci< @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci< @vari{B} @varii{B}
+Compare two subvectors: return true if the first is lexicographically
+less than the second, @false{} otherwise.  If @varii{bv} is longer than
+@vari{bv} but the subvectors are equal up to the end of @vari{bv}:
+return @true{}.
+@end deffn
+
+
+@deffn Function %bytevector-s8<= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8<= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci<= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci<= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8<= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8<= @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-ci<= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci<= @vari{B} @varii{B}
+Compare two subvectors: return true if the first is lexicographically
+less than, or equal to, the second; @false{} otherwise.  If @varii{bv}
+is longer than @vari{bv} but the subvectors are equal up to the end of
+@vari{bv}: return @true{}.
+@end deffn
+
+
+@deffn Function %bytevector-s8> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci> @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8> @vari{B} @varii{B}
+@deffnx Macro bytevector-u8> @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-ci> @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci> @vari{B} @varii{B}
+Compare two subvectors: return true if the first is lexicographically
+greater than the second, @false{} otherwise.  If @vari{bv} is longer
+than @varii{bv} but the subvectors are equal up to the end of
+@varii{bv}: return @true{}.
+@end deffn
+
+
+@deffn Function %bytevector-s8>= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8>= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-s8-ci>= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Function %bytevector-u8-ci>= @vari{bv} @vari{beg} @vari{past} @varii{bv} @varii{beg} @varii{past}
+@deffnx Macro bytevector-s8>= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8>= @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-ci>= @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-ci>= @vari{B} @varii{B}
+Compare two subvectors: return true if the first is lexicographically
+greater than, or equal to, the second; @false{} otherwise.  If @vari{bv}
+is longer than @varii{bv} but the subvectors are equal up to the end of
+@varii{bv}: return @true{}.
+@end deffn
+
+@c page
+@node bytevectors 8 compar dict
+@subsubsection Bytevector dictionary comparison
+
+
+Dictionary comparison is like lexicographic bytevector comparison, but
+bytes representing white space characters in @ascii{} encoding are
+ignored.  Recognised white spaces are:
+
+@example
+#\space         #\tab           #\vtab
+#\linefeed      #\return        #\page
+@end example
+
+@noindent
+that is bytes with value:
+
+@example
+32              9               11
+10              13              12
+@end example
+
+
+@defun bytevector-s8-dictionary-compare @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-compare @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-compare @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-compare @vari{bv} @varii{bv}
+Compare the bytevector arguments and return a ternary result: @samp{-1}
+if @vari{bv} is less than @varii{bv}, @samp{0} if @vari{bv} is equal to
+@varii{bv}, @samp{+1} if @vari{bv} is greater than @varii{bv}.  The
+comparison is case sensitive.
+@end defun
+
+
+@defun bytevector-s8-dictionary=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary=? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary<? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary<? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary>? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary>? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.  The comparison is case sensitive.
+@end defun
+
+
+@defun bytevector-s8-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-compare-ci @vari{bv} @varii{bv}
+Compare the bytevector arguments and return a ternary result: @samp{-1}
+if @vari{bv} is less than @varii{bv}, @samp{0} if @vari{bv} is equal to
+@varii{bv}, @samp{+1} if @vari{bv} is greater than @varii{bv}.  The
+comparison is case insensitive.
+@end defun
+
+
+@defun bytevector-s8-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8-dictionary-ci>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.  The comparison is case insensitive.
+@end defun
+
+@c page
+@node bytevectors 8 compar number
+@subsubsection Bytevector and numeric parts lexicographic comparison
+
+
+Bytevector/numbers comparison splits the bytevectors to compare into
+their numeric and non--numeric parts and compares the parts one by one;
+numeric parts are sequences of bytes which correspond to number digits
+in @ascii{} encoding.  For example, the string @samp{foo4bar3zab10} is
+the bytevector:
+
+@example
+#vu8(102 111 111 52 98 97 114 51 122 97 98 49 48)
+@end example
+
+@noindent
+and it is split into the following list:
+
+@example
+(#vu8(102 111 111) 4
+ #vu8(98 97 114)   3
+ #vu8(122 97 98)   10)
+@end example
+
+@noindent
+in which non--numeric parts are retained as Scheme bytevectors and
+numeric parts become exact integers; numeric parts only become
+@strong{exact} integer, never flonums.  Bytevector parts are compared
+with the ordinary lexicographic operators @func{bytevector-u8<} and
+@func{bytevector=?}  (or @func{bytevector-u8-ci<} and
+@func{bytevector-u8-ci=}), while numeric parts are compared with the
+ordinary @func{<} and @func{=} operators; a bytevector part and a
+numeric part are compared by comparing the bytevectors.
+
+
+@defun bytevector-s8/numbers-compare @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-compare @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-compare @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-compare @vari{bv} @varii{bv}
+Compare the bytevector and numeric parts of the arguments and return a
+ternary result: @samp{-1} if @vari{bv} is less than @varii{bv}, @samp{0}
+if @vari{bv} is equal to @varii{bv}, @samp{+1} if @vari{bv} is greater
+than @varii{bv}.  The comparison is case sensitive.
+@end defun
+
+
+@defun bytevector-s8/numbers=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers<? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers<? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.
+@end defun
+
+
+@defun bytevector-s8/numbers-compare-ci @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-compare-ci @vari{bv} @varii{bv}
+Compare the string and numeric parts of the arguments and return a
+ternary result: @samp{-1} if @vari{bv} is less than @varii{bv}, @samp{0}
+if @vari{bv} is equal to @varii{bv}, @samp{+1} if @vari{bv} is greater
+than @varii{bv}.  The comparison is case insensitive.
+@end defun
+
+
+@defun bytevector-s8/numbers-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-ci>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-ci>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.  The comparison is case insensitive.
+@end defun
+
+@c page
+@node bytevectors 8 compar dictnumber
+@subsubsection Bytevector and numeric parts dictionary comparison
+
+
+Bytevector/numbers dictionary comparison is like bytevector/numbers
+comparison, but white space characters in the bytevector arguments are
+ignored.  White spaces are:
+
+@example
+#\space         #\tab           #\vtab
+#\linefeed      #\return        #\page
+@end example
+
+
+@defun bytevector-s8/numbers-dictionary-compare @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-compare @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-compare @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-compare @vari{bv} @varii{bv}
+Compare the bytevector and numeric parts of the arguments and return a
+ternary result: @samp{-1} if @vari{bv} is less than @varii{bv}, @samp{0}
+if @vari{bv} is equal to @varii{bv}, @samp{+1} if @vari{bv} is greater
+than @varii{bv}.  The comparison is case sensitive.
+@end defun
+
+
+@defun bytevector-s8/numbers-dictionary=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary<? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary<? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.
+@end defun
+
+
+@defun bytevector-s8/numbers-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-compare-ci @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-compare-ci @vari{bv} @varii{bv}
+Compare the bytevector and numeric parts of the arguments and return a
+ternary result: @samp{-1} if @vari{bv} is less than @varii{bv}, @samp{0}
+if @vari{bv} is equal to @varii{bv}, @samp{+1} if @vari{bv} is greater
+than @varii{bv}.  The comparison is case insensitive.
+@end defun
+
+
+@defun bytevector-s8/numbers-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx bytevector-s8/numbers-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx bytevector-u8/numbers-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci<>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci<? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci>? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci<=? @vari{bv} @varii{bv}
+@defunx %bytevector-s8/numbers-dictionary-ci>=? @vari{bv} @varii{bv}
+@defunx %bytevector-u8/numbers-dictionary-ci>=? @vari{bv} @varii{bv}
+Return @true{} or @false{}, depending on whether the arguments comply
+with the predicate.  The comparison is case insensitive.
+@end defun
+
+@c page
+@node bytevectors 8 map
+@subsection Mapping functions
+
+
+@defun bytevector-s8-map @var{proc} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-map @var{proc} @varo{bv} @var{bv} ...
+Build and return a newly--allocated bytevector mapping @var{proc} over
+all the bytes of the bytevector arguments, from zero to the end in
+increasing order.  It is an error if the bytevectorss have different
+length.
+
+@var{proc} must return an exact integer representing a byte and it is
+applied to the elements as:
+
+@example
+(@var{proc} @var{idx}
+  (bytevector-u8-ref @varo{bv} @var{idx})
+  (bytevector-u8-ref @var{bv}  @var{idx})
+  ...)
+@end example
+
+@noindent
+where @var{idx} is the current index.
+@end defun
+
+
+@defun bytevector-s8-map! @var{proc} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-map! @var{proc} @varo{bv} @var{bv} ...
+@defunx bytevector-s8-map*! @var{proc} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-map*! @var{proc} @varo{bv} @var{bv} ...
+Mutate bytevector @varo{bv} mapping @var{proc} over all the elements of
+the bytevector arguments, from zero to the end in increasing order.
+
+@func{bytevector-u8-map!} must be applied to bytevectorss of the same
+length; @func{bytevector-u8-map*!} accepts bytevectorss of different
+length and iterates until the end of the shorter is reached.
+
+@var{proc} is applied to the elements as:
+
+@example
+(@var{proc} @var{idx}
+  (bytevector-u8-ref @varo{bv} @var{idx})
+  (bytevector-u8-ref @var{bv}  @var{idx})
+  ...)
+@end example
+
+@noindent
+where @var{idx} is the current index.
+@end defun
+
+
+@defun bytevector-s8-for-each* @var{proc} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-for-each* @var{proc} @varo{bv} @var{bv} ...
+Apply @var{proc} over all the elements of the bytevector arguments, from
+zero to the end in increasing order.  This function accepts bytevectorss
+of different length and iterates until the end of the shorter is
+reached.
+
+@var{proc} is applied to the elements as:
+
+@example
+(@var{proc} @var{idx}
+  (bytevector-u8-ref @varo{bv} @var{idx})
+  (bytevector-u8-ref @var{bv}  @var{idx})
+  ...)
+@end example
+
+@noindent
+where @var{idx} is the current index.
+@end defun
+
+
+@subsubheading Mapping over subvectors
+
+
+@deffn Function %subbytevector-s8-map @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-map @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Macro subbytevector-s8-map @var{proc} @var{B}
+@deffnx Macro subbytevector-u8-map @var{proc} @var{B}
+Build and return a new bytevector mapping @var{proc} over the bytes in
+the selected subvector of @var{bv}, from index @var{start} to index
+@var{past} in increasing order.  @var{proc} must be a byte--to--byte
+procedure.
+@end deffn
+
+
+@deffn Function %subbytevector-s8-map! @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-map! @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Macro subbytevector-s8-map! @var{proc} @var{B}
+@deffnx Macro subbytevector-u8-map! @var{proc} @var{B}
+Mutate the selected subvector of @var{bv}, mapping @var{proc} over its
+bytes from index @var{start} to index @var{past} in increasing order.
+@var{proc} must be a byte--to--byte procedure.
+@end deffn
+
+
+@deffn Function %subbytevector-s8-for-each @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-for-each @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Macro subbytevector-s8-for-each @var{proc} @var{B}
+@deffnx Macro subbytevector-u8-for-each @var{proc} @var{B}
+Apply @var{proc} to each byte in the selected subvector of @var{bv},
+from index @var{start} to index @var{past} in increasing order.
+@end deffn
+
+
+@deffn Function %subbytevector-s8-for-each-index @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-for-each-index @var{proc} @var{bv} @var{start} @var{past}
+@deffnx Macro subbytevector-s8-for-each-index @var{proc} @var{B}
+@deffnx Macro subbytevector-u8-for-each-index @var{proc} @var{B}
+Apply @var{proc} to each index in the selected subvector of @var{bv},
+from index @var{start} to index @var{past} in increasing order.  This is
+simply a method of looping over a bytevector that is guaranteed to be
+safe and correct.
+@end deffn
+
+@c page
+@node bytevectors 8 case
+@subsection Case mapping
+
+
+@deffn Function %bytevector-s8-titlecase*! @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-titlecase*! @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-titlecase* @var{B}
+@deffnx Macro bytevector-u8-titlecase* @var{B}
+@deffnx Macro bytevector-s8-titlecase*! @var{B}
+@deffnx Macro bytevector-u8-titlecase*! @var{B}
+For every byte @math{b}, interpreted in @ascii{} encoding, in the
+selected range of @var{B}: if @math{b} is preceded by a byte
+representing a cased character in @ascii{} encoding, @math{b} is
+downcased; otherwise it is titlecased.
+
+@func{bytevector-u8-titlecase*} returns the result string and does not
+alter its argument.  @func{bytevector-u8-titlecase!} is the in--place
+side--effecting variant.
+
+Note that the byte preceding @code{bv[start]} has no effect on the
+titlecase decision for byte @code{bv[start]}.
+@end deffn
+
+
+@deffn Macro bytevector-s8-upcase* @var{B}
+@deffnx Macro bytevector-u8-upcase* @var{B}
+@deffnx Macro bytevector-s8-upcase*! @var{B}
+@deffnx Macro bytevector-u8-upcase*! @var{B}
+@deffnx Macro bytevector-s8-downcase* @var{B}
+@deffnx Macro bytevector-u8-downcase* @var{B}
+@deffnx Macro bytevector-s8-downcase*! @var{B}
+@deffnx Macro bytevector-u8-downcase*! @var{B}
+Interpret the bytes in the selected subvector in @ascii{} encoding:
+raise or lower the case of the alphabetic characters.  There are no low
+level functions for these macros because they are just wrappers for
+@func{%bytevector-u8-map} and @func{%bytevector-u8-map!}.
+
+@func{bytevector-u8-upcase} and @func{bytevector-u8-downcase} return the
+result string and do not alter their argument.
+@func{bytevector-u8-upcase!} and @func{bytevector-u8-downcase!} are the
+in--place side--effecting variants.
+@end deffn
+
+@c page
+@node bytevectors 8 fold
+@subsection Fold and unfold
+
+
+@defun bytevector-s8-fold-left @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-fold-left @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-s8-fold-right @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-fold-right @var{kons} @var{knil} @varo{bv} @var{bv} ...
+The fundamental bytevector iterator.  The bytevector arguments must have
+the same length.
+
+@var{kons} is iterated left--to--right over each index in all of the
+bytevectors, stopping at the end of the shortest; @var{kons} is applied
+as:
+
+@example
+(@var{kons} @var{idx} @var{state}
+  (bytevector-u8-ref @varo{bv} @var{idx})
+  (bytevector-u8-ref @var{bv}  @var{idx})
+  ···)
+@end example
+
+@noindent
+where @var{state} is the current state value; the current state value
+begins with @var{knil}, and becomes whatever @var{kons} returned at the
+respective iteration; @var{idx} is the current index.
+
+@func{bytevector-u8-fold-right} is similar to @func{bytevector-u8-fold}, but it
+iterates right--to--left.
+
+@quotation
+Notice that to allow for an unspecified number of arguments, these folds
+hand the state as first argument to @var{kons}, as opposed to the usual
+fold arguments.
+@end quotation
+@end defun
+
+
+@defun bytevector-s8-fold-left* @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-fold-left* @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-s8-fold-right* @var{kons} @var{knil} @varo{bv} @var{bv} ...
+@defunx bytevector-u8-fold-right* @var{kons} @var{knil} @varo{bv} @var{bv} ...
+Like @func{bytevector-u8-fold} and @func{bytevector-u8-unfold} but
+accept bytevectors of different length, iterating until the end of the
+shortest one.
+@end defun
+
+@c ------------------------------------------------------------
+
+@deffn Function %subbytevector-s8-fold-left @var{kons} @var{knil} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-fold-left @var{kons} @var{knil} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-s8-fold-right @var{kons} @var{knil} @var{bv} @var{start} @var{past}
+@deffnx Function %subbytevector-u8-fold-right @var{kons} @var{knil} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-fold @var{kons} @var{knil} @var{S}
+@deffnx Macro bytevector-u8-fold @var{kons} @var{knil} @var{S}
+@deffnx Macro bytevector-s8-fold-right @var{kons} @var{knil} @var{S}
+@deffnx Macro bytevector-u8-fold-right @var{kons} @var{knil} @var{S}
+Fundamental iterators for subvectors.  @var{kons} is iterated over each
+byte of the selected subvector:
+
+@example
+(@var{kons}
+  (bytevector-u8-ref @var{bv} (+ @var{start} @var{idx}))
+  @var{state})
+@end example
+
+@noindent
+where @var{state} is the current state value; the current state value
+begins with @var{knil}, and becomes whatever @var{kons} returned at the
+respective iteration; @var{idx} is the current index.
+
+The left--fold iterator, @func{%subbytevector-u8-fold-left}, builds the return
+value as:
+
+@example
+(@var{kons}
+  (bytevector-u8-ref @var{bv} (- @var{past} 1))
+  (@var{kons}
+    (bytevector-u8-ref @var{bv} (- @var{past} 2))
+    ...
+      (@var{kons}
+        (bytevector-u8-ref @var{bv} (+ @var{start} 2))
+        (@var{kons}
+           (bytevector-u8-ref @var{bv} (+ @var{start} 1))
+           (@var{kons}
+              (bytevector-u8-ref @var{bv} @var{start})
+              @var{knil})))))
+@end example
+
+The right--fold iterator, @func{%subbytevector-u8-fold-right}, builds the
+return value as:
+
+@example
+(@var{kons}
+  (bytevector-u8-ref @var{bv} @var{start}
+  (@var{kons}
+    (bytevector-u8-ref @var{bv} (+ @var{start} 1))
+    ...
+      (@var{kons}
+        (bytevector-u8-ref @var{bv} (- @var{past} 3))
+        (@var{kons}
+           (bytevector-u8-ref @var{bv} (- @var{past} 2))
+           (@var{kons}
+              (bytevector-u8-ref @var{bv} (- @var{past} 1))
+              @var{knil})))))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@defun bytevector-s8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx bytevector-u8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx bytevector-s8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv}
+@defunx bytevector-u8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv}
+@defunx bytevector-s8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv} @var{make-final}
+@defunx bytevector-u8-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv} @var{make-final}
+This is a fundamental constructor for bytevectors.  Arguments description
+follows.
+
+@table @var
+@item make-seed
+A map function used to generate a series of ``seed'' values from the
+initial seed:
+
+@example
+@var{first-seed}
+(@var{make-seed} @var{first-seed})            @result{} seed2
+(@var{make-seed} seed2)                 @result{} seed3
+(@var{make-seed} seed3)                 @result{} seed4
+...
+@end example
+
+@item stop?
+A predicate function telling when to stop generating bytes; when it
+returns true when applied to one of the seed values.
+
+@item seed->char
+Map function mapping each seed value to the corresponding byte in the
+result bytevector.  These bytes are assembled into the bytevector in a
+left--to--right order.
+
+@item base-bv
+An optional bytevector which is used as initial/leftmost portion of the
+constructed bytevector.  Defaults to the empty bytevector.
+
+@item make-final
+Optional function applied to the terminal seed value (on which
+@var{stop?}  returns true) to produce the final/rightmost portion of the
+constructed bytevector.  Defaults to @code{(lambda (x) "")}.
+@end table
+
+The final bytevector constructed does not share storage with either
+@var{base-bv} or the value produced by @var{make-final}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun bytevector-s8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx bytevector-u8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx bytevector-s8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv}
+@defunx bytevector-u8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv}
+@defunx bytevector-s8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv} @var{make-final}
+@defunx bytevector-u8-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-bv} @var{make-final}
+This is a fundamental constructor for bytevectors.  The arguments are like
+the ones of @func{bytevector-u8-unfold}.  The difference from
+@func{bytevector-u8-unfold} is that this function builds the bytevector from right
+to left.
+
+The final bytevector constructed does not share storage with either
+@var{base-bv} or the value produced by @var{make-final}.
+@end defun
+
+@c page
+@node bytevectors 8 select
+@subsection Selection
+
+
+@defun subbytevector-s8 @var{bv} @var{start} @var{past}
+@defunx subbytevector-u8 @var{bv} @var{start} @var{past}
+Build and return a new bytevector holding a copy of the subvector
+selected in @var{bv}.
+@end defun
+
+
+@deffn Macro subbytevector-s8* @var{B}
+@deffnx Macro subbytevector-u8* @var{B}
+Wrapper for @func{subbytevector-u8} accepting a bytevector view as
+argument.
+@end deffn
+
+
+@deffn Function %bytevector-s8-copy* @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-copy* @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-copy* @var{B}
+@deffnx Macro bytevector-u8-copy* @var{B}
+The function @func{%bytevector-u8-copy*} is an alias for
+@func{subbytevector-u8}; the macro @func{bytevector-u8-copy*} is an
+alias for @func{subbytevector-u8*}.
+
+@quotation
+These exist for symmetry with the @library{vicare containers vectors}
+library; they allow more confidence in converting a vector function into
+a bytevector function, and vice versa, by just replacing the string
+@code{vector} in the function names with the string
+@code{bytevector-u8}, and vice versa.
+@end quotation
+@end deffn
+
+
+@deffn Function %bytevector-s8-reverse-copy* @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-reverse-copy* @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-reverse-copy* @var{B}
+@deffnx Macro bytevector-u8-reverse-copy* @var{B}
+Like @func{%bytevector-u8-copy*}, but copy the elements in the reverse
+order from the selected subvector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-copy*! @var{dst-bv} @var{dst-start} @var{src-bv} @var{src-start} @var{src-past}
+@deffnx Function %bytevector-u8-copy*! @var{dst-bv} @var{dst-start} @var{src-bv} @var{src-start} @var{src-past}
+@deffnx Macro bytevector-s8-copy*! @var{dst-S} @var{src-S}
+@deffnx Macro bytevector-u8-copy*! @var{dst-S} @var{src-S}
+Write the selected source subvector into the selected destination
+subvector.  This function is the side--effecting variant of
+@func{subbytevector-u8} and @func{subbytevector-u8*}.  This function
+supports copying over the same bytevector.
+
+The selected destination subvector starts at @var{dst-start} in
+@var{dst-bv} and may extend until the end of the bytevector.  In the
+destination bytevector view @var{dst-S}: if a past index is specified,
+it is ignored.
+@end deffn
+
+
+@deffn Function %bytevector-s8-reverse-copy*! @var{dst-bv} @var{dst-start} @var{src-bv} @var{src-start} @var{src-past}
+@deffnx Function %bytevector-u8-reverse-copy*! @var{dst-bv} @var{dst-start} @var{src-bv} @var{src-start} @var{src-past}
+@deffnx Macro bytevector-s8-reverse-copy*! @var{B-dst} @var{B-src}
+@deffnx Macro bytevector-u8-reverse-copy*! @var{B-dst} @var{B-src}
+Like @func{%bytevector-u8-copy*!}, but this copies the elements in the reverse
+order.  This function supports copying over the same bytevector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-take @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-take @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-take-right @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-take-right @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-take @var{B} @var{nbytes}
+@deffnx Macro bytevector-u8-take @var{B} @var{nbytes}
+@deffnx Macro bytevector-s8-take-right @var{B} @var{nbytes}
+@deffnx Macro bytevector-u8-take-right @var{B} @var{nbytes}
+Return the first or last @var{nbytes} of the selected subvector.  These
+functions always return a newly allocated bytevector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-drop @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-drop @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-drop-right @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-drop-right @var{nbytes} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-drop @var{B} @var{nbytes}
+@deffnx Macro bytevector-u8-drop @var{B} @var{nbytes}
+@deffnx Macro bytevector-s8-drop-right @var{B} @var{nbytes}
+@deffnx Macro bytevector-u8-drop-right @var{B} @var{nbytes}
+Drop the first or last @var{nbytes} of the selected subvector and return
+the resulting bytevector.  These functions always return a newly
+allocated bytevector.
+@end deffn
+
+@c page
+@node bytevectors 8 pad
+@subsection Padding and trimming
+
+
+@deffn Function %bytevector-s8-pad @var{requested-len} @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-pad @var{requested-len} @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-pad-right @var{requested-len} @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-pad-right @var{requested-len} @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-pad @var{B} @var{requested-len}
+@deffnx Macro bytevector-u8-pad @var{B} @var{requested-len}
+@deffnx Macro bytevector-s8-pad @var{B} @var{requested-len} @var{fill}
+@deffnx Macro bytevector-u8-pad @var{B} @var{requested-len} @var{fill}
+@deffnx Macro bytevector-s8-pad-right @var{B} @var{requested-len}
+@deffnx Macro bytevector-u8-pad-right @var{B} @var{requested-len}
+@deffnx Macro bytevector-s8-pad-right @var{B} @var{requested-len} @var{fill}
+@deffnx Macro bytevector-u8-pad-right @var{B} @var{requested-len} @var{fill}
+Build a bytevector of length @var{requested-len} comprised of @var{bv}
+padded on the left or right by as many occurrences of the byte or
+character @var{fill} as needed.  Always return a newly allocated
+bytevector.
+
+If @var{bv} has more than @var{requested-len} bytes, it is truncated on
+the left or right to length @var{requested-len}.  For the macros:
+@var{fill} defaults to the byte representing @code{#\space} in @ascii{}
+encoding.
+@end deffn
+
+
+@deffn Function %bytevector-s8-trim @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-trim @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-trim-right @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-trim-right @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-trim-both @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-trim-both @var{byte/char/char-set/pred} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-trim @var{B} @var{byte/char/char-set/pred}
+@deffnx Macro bytevector-u8-trim @var{B} @var{byte/char/char-set/pred}
+@deffnx Macro bytevector-s8-trim-right @var{B} @var{byte/char/char-set/pred}
+@deffnx Macro bytevector-u8-trim-right @var{B} @var{byte/char/char-set/pred}
+@deffnx Macro bytevector-s8-trim-both @var{B} @var{byte/char/char-set/pred}
+@deffnx Macro bytevector-u8-trim-both @var{B} @var{byte/char/char-set/pred}
+Trim @var{bv} by skipping over all bytes on the left/on the
+right/on both sides that satisfy the second parameter
+@var{byte/char/char-set/pred}:
+
+@itemize
+@item
+If it is an exact integer @var{byte}, bytes equal to @var{byte} are
+trimmed.
+
+@item
+If it is a character @var{char}, bytes equal to the @ascii{}
+representation of @var{char} are trimmed.
+
+@item
+If it is a char set @var{char-set}, bytes representing @ascii{}
+characters contained in @var{char-set} are trimmed.
+
+@item
+If it is a predicate @var{pred}, it is a test predicate that is applied
+to the bytes in @var{B}; a byte causing it to return true is skipped.
+@end itemize
+
+Always return a newly allocated bytevector.
+@end deffn
+
+@c page
+@node bytevectors 8 prefix
+@subsection Prefixes and suffixes
+
+
+@deffn Function %bytevector-s8-prefix-length @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-prefix-length @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-s8-prefix-length-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-prefix-length-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-prefix-length @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-prefix-length @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-prefix-length-ci @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-prefix-length-ci @vari{B} @varii{B}
+Return the length of the longest common prefix of the two subvectors.
+This is equivalent to the ``mismatch index'' for the bytevectors (modulo
+the start index offsets).
+@end deffn
+
+
+@deffn Function %bytevector-s8-suffix-length @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-suffix-length @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-s8-suffix-length-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-suffix-length-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-suffix-length @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-suffix-length @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-suffix-length-ci @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-suffix-length-ci @vari{B} @varii{B}
+Return the length of the longest common suffix of the two subvectors.
+@end deffn
+
+
+@deffn Function %bytevector-s8-prefix? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-prefix? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-s8-prefix-ci? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-prefix-ci? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-prefix? @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-prefix? @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-prefix-ci? @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-prefix-ci? @vari{B} @varii{B}
+Return @true{} if the subvector @vari{B} is a prefix of the subvector
+@varii{B}, otherwise return @false{}.  Notice that the empty bytevector
+is a prefix of every bytevector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-suffix? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-suffix? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-s8-suffix-ci? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-suffix-ci? @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-suffix? @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-suffix? @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-suffix-ci? @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-suffix-ci? @vari{B} @varii{B}
+Return @true{} if the subvector @vari{B} is a suffix of the subvector
+@varii{B}, otherwise return @false{}.  Notice that the empty bytevector
+is @strong{not} a suffix of every bytevector.
+@end deffn
+
+@c page
+@node bytevectors 8 search
+@subsection Searching
+
+
+@deffn Function %bytevector-s8-index @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-index @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-index-right @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-index-right @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-index @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-index @var{B} @var{criterion}
+@deffnx Macro bytevector-s8-index-right @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-index-right @var{B} @var{criterion}
+Search through the bytevector from the left or right, returning the
+index of the first occurrence of a byte which matches the
+@var{criterion}:
+
+@itemize
+@item
+If @var{criterion} is an exact integer: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character set: the byte, interpreted as @ascii{}
+character, has to be contained in it.
+
+@item
+If @var{criterion} is a procedure: the procedure applied to the byte
+must return true.
+@end itemize
+
+If no match is found: return @false{}.
+@end deffn
+
+
+@deffn Function %bytevector-s8-skip @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-skip @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-skip-right @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-skip-right @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-skip @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-skip @var{B} @var{criterion}
+@deffnx Macro bytevector-s8-skip-right @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-skip-right @var{B} @var{criterion}
+Search through the bytevector from the left or right, returning the
+index of the first occurrence of a byte which does not match the
+@var{criterion}:
+
+@itemize
+@item
+If @var{criterion} is an exact integer: the byte has to be different
+from it.
+
+@item
+If @var{criterion} is a character: the byte has to be different from it.
+
+@item
+If @var{criterion} is a character set: the byte, interpreted as @ascii{}
+character, must not be contained in it.
+
+@item
+If @var{criterion} is a procedure: the procedure applied to the byte
+must return false.
+@end itemize
+
+If no match is found: Return @false{}.
+@end deffn
+
+
+@deffn Function %bytevector-s8-count @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-count @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-count @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-count @var{B} @var{criterion}
+Return a count of the number of bytes in @var{bv} that satisfy the
+@var{criterion} argument:
+
+@itemize
+@item
+If @var{criterion} is an exact integer: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character set: the byte, interpreted as @ascii{}
+character, has to be contained in it.
+
+@item
+If @var{criterion} is a procedure: the procedure applied to the byte
+must return true.
+@end itemize
+@end deffn
+
+
+@deffn Function %bytevector-s8-contains @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-contains @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-s8-contains-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-contains-ci @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-contains @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-contains @vari{B} @varii{B}
+@deffnx Macro bytevector-s8-contains-ci @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-contains-ci @vari{B} @varii{B}
+Return true if the subvector @vari{B} contains the subvector @varii{B},
+else return @false{}.  The return value is the index in the bytevector,
+not in the subvector.
+@end deffn
+
+@c page
+@node bytevectors 8 filter
+@subsection Filtering and deleting
+
+
+@deffn Function %bytevector-s8-filter @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-filter @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-filter @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-filter @var{B} @var{criterion}
+Filter the selected subvector, retaining only those bytes that satisfy
+the @var{criterion} argument; a byte is retained when:
+
+@itemize
+@item
+If @var{criterion} is an exact integer: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character: the byte has to be equal to it.
+
+@item
+If @var{criterion} is a character set: the byte, interpreted as @ascii{}
+character, has to be contained in it.
+
+@item
+If @var{criterion} is a procedure: the procedure applied to the byte
+must return true.
+@end itemize
+
+Always return a newly allocated bytevector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-delete @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-delete @var{criterion} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-delete @var{B} @var{criterion}
+@deffnx Macro bytevector-u8-delete @var{B} @var{criterion}
+Filter the selected subvector, retaining only those bytes that do
+@strong{not} satisfy the @var{criterion} argument; a byte is deleted
+when:
+
+@itemize
+@item
+If @var{criterion} is an exact integer: the byte has to be different
+from it.
+
+@item
+If @var{criterion} is a character: the byte has to be different from it.
+
+@item
+If @var{criterion} is a character set: the byte, interpreted as @ascii{}
+character, must not be contained in it.
+
+@item
+If @var{criterion} is a procedure: the procedure applied to the byte
+must return false.
+@end itemize
+
+Always return a newly allocated bytevector.
+@end deffn
+
+@c page
+@node bytevectors 8 list
+@subsection List and string conversion
+
+
+@deffn Function %bytevector->s8-list* @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector->u8-list* @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector->s8-list* @var{B}
+@deffnx Macro bytevector->u8-list* @var{B}
+Return a newly allocated list of the bytes that make up the given
+subvector.
+@end deffn
+
+
+@deffn Function %reverse-bytevector->s8-list @var{bv} @var{start} @var{past}
+@deffnx Function %reverse-bytevector->u8-list @var{bv} @var{start} @var{past}
+@deffnx Macro reverse-bytevector->s8-list @var{B}
+@deffnx Macro reverse-bytevector->u8-list @var{B}
+Like @func{%bytevector->u8-list*} but reverses the order of the bytes
+from the subvector.
+@end deffn
+
+
+@defun reverse-s8-list->bytevector-u8 @var{char-list}
+@defunx reverse-u8-list->bytevector-u8 @var{char-list}
+Reverse the given list of characters, then compose a bytevector with the
+result.
+@end defun
+
+
+@deffn Function %bytevector-s8-tokenize @var{token-set} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-tokenize @var{token-set} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-tokenise @var{token-set} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-tokenise @var{token-set} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-tokenize @var{B} @var{token-set}
+@deffnx Macro bytevector-u8-tokenize @var{B} @var{token-set}
+@deffnx Macro bytevector-s8-tokenise @var{B} @var{token-set}
+@deffnx Macro bytevector-u8-tokenise @var{B} @var{token-set}
+Split the selected subvector into a list of bytevectors, where each
+bytevector is a maximal, non--empty, contiguous sequence of bytes whose
+character interpretation in @ascii{} encoding is in the character set
+@var{token-set}.
+@end deffn
+
+
+@defun bytevector-s8-join @var{bytevector-u8-list}
+@defunx bytevector-u8-join @var{bytevector-u8-list}
+@defunx bytevector-s8-join @var{bytevector-u8-list} @var{delimiter}
+@defunx bytevector-u8-join @var{bytevector-u8-list} @var{delimiter}
+@defunx bytevector-s8-join @var{bytevector-u8-list} @var{delimiter} @var{grammar}
+@defunx bytevector-u8-join @var{bytevector-u8-list} @var{delimiter} @var{grammar}
+@defunx %bytevector-s8-join @var{bytevector-u8-list} @var{delimiter} @var{grammar}
+@defunx %bytevector-u8-join @var{bytevector-u8-list} @var{delimiter} @var{grammar}
+This procedure is a simple unparser: it pastes strings together using
+the @var{delimiter} bytevector.  @var{delimiter} defaults to a single
+byte representing a white space in @ascii{} encoding.  @var{grammar} is
+a symbol that determines how the delimiter is used, and defaults to
+@code{infix}.  Supported values for @var{grammar} are:
+
+@table @code
+@item infix
+Means an infix or separator grammar: insert the delimiter between list
+elements.  An empty list will produce an empty string.
+
+@quotation
+@strong{Note}: Parsing an empty string with an infix grammar is
+ambiguous.  Is it an empty list, or a list of one element, the empty
+string?
+@end quotation
+
+@item strict-infix
+Means the same as @code{infix}, but will raise an error if given an
+empty list.
+
+@item suffix
+Means a suffix or terminator grammar: insert the delimiter after every
+list element.  This grammar has no ambiguities.
+
+@item prefix
+Means a prefix grammar: insert the delimiter before every list element.
+This grammar has no ambiguities.
+@end table
+@end defun
+
+@c page
+@node bytevectors 8 replicate
+@subsection Replicate and rotate
+
+
+@deffn Function %xsubbytevector-s8 @var{from} @var{to} @var{str} @var{start} @var{past}
+@deffnx Function %xsubbytevector-u8 @var{from} @var{to} @var{str} @var{start} @var{past}
+@deffnx Macro xsubbytevector-s8 @var{S} @var{from} @var{to}
+@deffnx Macro xsubbytevector-u8 @var{S} @var{from} @var{to}
+Extended subvector procedure replicating the selected subvector ``up and
+down'' index space, in both the positive and negative directions.
+
+The call:
+
+@example
+(%xsubstring from to 'vu8(0 1 2 3 4 5 6) 3 6)
+@end example
+
+@noindent
+selects the subvector @code{3 4 5} and defines the conceptual
+bidirectionally--infinite bytevector:
+
+@example
+...  4  5  3  4  5  3  4  5  3  4  5 ...
+... -5 -4 -3 -2 -1  0 +1 +2 +3 +4 +5 ...
+                    ^
+@end example
+
+@noindent
+that is @code{3 4 5} repeated in both directions.  This function returns
+the subvector of this bytevector beginning at index @var{from}, and
+ending at @var{to}.
+
+Note that:
+
+@itemize
+@item
+The @var{from}/@var{to} indices give a half--open range; the bytes from
+index @var{from} up to, but not including, index @var{to}.
+
+@item
+The @var{from}/@var{to} indices are not in terms of the index space for
+the bytevector @var{bv}.  They are in terms of the replicated index
+space of the subvector defined by @var{bv}, @var{start}, and @var{past}.
+@end itemize
+
+It is an error if @var{start} equals @var{past}.
+@end deffn
+
+
+@deffn Function xbytevector-s8-xcopy! @var{from} @var{to} @var{target} @var{target-start} @var{source} @var{source-start} @var{source-past}
+@deffnx Function xbytevector-u8-xcopy! @var{from} @var{to} @var{target} @var{target-start} @var{source} @var{source-start} @var{source-past}
+@deffnx Macro bytevector-s8-xcopy! @var{target-B} @var{source-B} @var{from} @var{to}
+@deffnx Macro bytevector-u8-xcopy! @var{target-B} @var{source-B} @var{from} @var{to}
+Exactly the same as @func{%xsubbytevector-u8}, but the extracted data is
+written into the selected subvector of @var{target}.
+
+This operation is not defined if @code{(eq? target start)}; we cannot
+copy a bytevector on top of itself.
+@end deffn
+
+@c page
+@node bytevectors 8 mutate
+@subsection Mutators
+
+
+@defun bytevector-s8-swap! @var{bv} @var{i} @var{j}
+@defunx bytevector-u8-swap! @var{bv} @var{i} @var{j}
+Swap the bytes in @var{bv} at positions @var{i} and @var{j}.
+@end defun
+
+
+@deffn Function %bytevector-s8-fill*! @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-fill*! @var{fill} @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-fill*! @var{B} @var{fill}
+@deffnx Macro bytevector-u8-fill*! @var{B} @var{fill}
+Fill the selected subvector with @var{fill}, a byte or character,
+modifying the original bytevector.
+@end deffn
+
+@c page
+@node bytevectors 8 misc
+@subsection Miscellaneous functions
+
+
+@deffn Function %bytevector-s8-replace @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Function %bytevector-u8-replace @vari{bv} @vari{start} @vari{past} @varii{bv} @varii{start} @varii{past}
+@deffnx Macro bytevector-s8-replace @vari{B} @varii{B}
+@deffnx Macro bytevector-u8-replace @vari{B} @varii{B}
+Replace the subvector in @vari{B} with the selected subvector in
+@varii{B}.  Return a newly allocated bytevector.
+@end deffn
+
+
+@deffn Function %bytevector-s8-reverse @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-reverse @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-s8-reverse! @var{bv} @var{start} @var{past}
+@deffnx Function %bytevector-u8-reverse! @var{bv} @var{start} @var{past}
+@deffnx Macro bytevector-s8-reverse @var{B}
+@deffnx Macro bytevector-u8-reverse @var{B}
+@deffnx Macro bytevector-s8-reverse! @var{B}
+@deffnx Macro bytevector-u8-reverse! @var{B}
+Reverse the bytevector.  @func{%bytevector-u8-reverse} returns the
+result bytevector and does not alter its @var{bv} argument.
+@func{%bytevector-u8-reverse!} is the in--place side--effecting variant.
+@end deffn
+
+@c end of file

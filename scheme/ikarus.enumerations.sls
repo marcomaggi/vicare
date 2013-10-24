@@ -80,7 +80,8 @@
 		  enum-set?
 		  make-file-options)
     (vicare language-extensions syntaxes)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare arguments validation))
 
 
 ;;;; record types
@@ -112,24 +113,6 @@
 		;in   this  enumeration   set,  with   respect   to  the
 		;UNIVERSE-BITVECTOR field in the ENUM-TYPE value.
    ))
-
-
-;;;; arguments validation
-
-(define-constant EXPECTED_ENUM_SET
-  "expected enumeration set as argument")
-
-(define-argument-validation (enum-set who obj)
-  (enum-set? obj)
-  (assertion-violation who EXPECTED_ENUM_SET obj))
-
-(define-argument-validation (symbol who obj)
-  (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
-
-(define-argument-validation (list-of-symbols who obj)
-  (and (list? obj) (for-all symbol? obj))
-  (assertion-violation who "expected list of symbols as argument" obj))
 
 
 ;;;; helpers

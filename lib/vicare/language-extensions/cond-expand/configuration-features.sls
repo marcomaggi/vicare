@@ -34,10 +34,12 @@
 	'(?symbol)
       '()))
   (define (configuration-time-features)
-    (append (feature vicare-built-with-posix-enabled posix-enabled)
+    (append (feature vicare-built-with-srfi-enabled  srfi-enabled)
+	    (feature vicare-built-with-ffi-enabled   ffi-enabled)
+	    (feature vicare-built-with-iconv-enabled iconv-enabled)
+	    (feature vicare-built-with-posix-enabled posix-enabled)
 	    (feature vicare-built-with-glibc-enabled glibc-enabled)
 	    (feature vicare-built-with-linux-enabled linux-enabled)
-	    (feature vicare-built-with-srfi-enabled  srfi-enabled)
 	    )))
 
 ;;; end of file

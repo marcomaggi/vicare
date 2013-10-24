@@ -8,6 +8,13 @@ distribution of @value{PRJNAME}.  The libraries' names conform to
 @srfi{}s and other platform features which works alongside @srfi{} 0:
 Feature--Based Conditional Expansion.
 
+The @srfi{} libraries are optionally installed by the package; the
+availability of the @srfi{} libraries can be tested at run--time with
+the function @func{vicare-built-with-srfi-enabled} from @library{vicare}
+(@vicareref{iklib config, vicare-built-with-srfi-enabled}), and at
+expand--time with the clause @code{srfi-enabled} of @func{cond-expand}
+from @ansrfi{0} (@pxref{srfi cond-expand vicare, linux-enabled}).
+
 @quotation
 This @srfi{} documentation is an unofficial Texinfo reformatting and
 minor modification of the original documents by Marco Maggi.
@@ -57,6 +64,7 @@ minor modification of the original documents by Marco Maggi.
                                 random--access pairs and lists.
 * srfi basic-socket::           @ansrfi{106} basic socket interface.
 * srfi boxes::                  @ansrfi{111} boxes.
+* srfi env-inquiry::            @ansrfi{112} environment inquiry.
 @end menu
 
 @c ------------------------------------------------------------
@@ -96,5 +104,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-functional-pairs.texi
 @include srfi-basic-socket-interface.texi
 @include srfi-boxes.texi
+@include srfi-environment-inquiry.texi
 
 @c end of file

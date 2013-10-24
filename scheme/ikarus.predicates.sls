@@ -20,7 +20,7 @@
     ratnum?		compnum?	cflonum?
     number?		complex?	real?
     rational?		integer?	exact?
-    inexact?
+    inexact?		exact-integer?
     finite?		infinite?	nan?
     real-valued?	rational-valued? integer-valued?
     eof-object?		bwp-object?
@@ -38,7 +38,7 @@
 	    ratnum?		compnum?	cflonum?
             number?		complex?	real?
             rational?		integer?	exact?
-	    inexact?
+	    inexact?		exact-integer?
 	    finite?		infinite?	nan?
 	    real-valued?	rational-valued? integer-valued?
 	    eof-object?		bwp-object?
@@ -155,6 +155,11 @@
 		    (bignum?   rep)
 		    (rational? rep)
 		    ($flonum-rational? rep)))))
+	(else #f)))
+
+(define (exact-integer? x)
+  (cond ((sys:fixnum? x) #t)
+	((sys:bignum? x) #t)
 	(else #f)))
 
 (define (integer? x)

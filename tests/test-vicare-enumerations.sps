@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -41,30 +41,6 @@
 (define environment-for-assertion-errors
   environment-for-syntax-errors)
 
-(define (syntax=? stx1 stx2)
-  ;;Visit the syntax objects STX1 and STX2 and compare them: return true
-  ;;if they are equal.
-  ;;
-  (syntax-case stx1 ()
-    (_
-     (and (identifier? stx1)
-	  (identifier? stx2))
-     (free-identifier=? stx1 stx2))
-    ((?car1 . ?cdr1)
-     (syntax-case stx2 ()
-       ((?car2 . ?cdr2)
-	(and (syntax=? #'?car1 #'?car2)
-	     (syntax=? #'?cdr1 #'?cdr2)))
-       (_ #f)))
-    (#(?item1 ...)
-     (syntax-case stx2 ()
-       (#(?item2 ...)
-	(syntax=? #'(?item1 ...) #'(?item2 ...)))
-       (_ #f)))
-    (_
-     (equal? (syntax->datum stx1)
-	     (syntax->datum stx2)))))
-
 (define-syntax check-syntax-violation
   (syntax-rules (=>)
     ((_ ?body => ?result)
@@ -72,7 +48,7 @@
 	 (guard (E ((syntax-violation? E)
 		    (list (condition-message E)
 ;;;			  (syntax-violation-form E)
-			  (syntax-violation-subform E)))
+			  (syntax->datum (syntax-violation-subform E))))
 		   (else E))
 	   (eval (quote ?body) environment-for-syntax-errors))
        (=> syntax=?) ?result))))
@@ -178,13 +154,13 @@
 
   (check-assertion-violation
    (enum-set-universe 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-indexer 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (let* ((S (make-enumeration '(a b c)))
@@ -196,7 +172,7 @@
 
   (check-assertion-violation
    (enum-set-constructor 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (let* ((S (make-enumeration '(a b c)))
@@ -214,7 +190,7 @@
 
   (check-assertion-violation
    (enum-set->list 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -225,73 +201,73 @@
 
   (check-assertion-violation
    (enum-set-member? 'ciao 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-subset? 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-subset? (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set=? 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set=? (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-union 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-union (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-intersection 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-intersection (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-difference 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-difference (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-complement 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
 ;;; --------------------------------------------------------------------
 
   (check-assertion-violation
    (enum-set-projection 123 (make-enumeration '(a b c)))
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   (check-assertion-violation
    (enum-set-projection (make-enumeration '(a b c)) 123)
-   => '("expected enumeration set as argument" 123))
+   => '("expected enum-set as argument" 123))
 
   #t)
 

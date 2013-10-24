@@ -1,0 +1,334 @@
+\input texinfo.tex
+@c %**start of header
+@setfilename vicare-libs.info
+@settitle Libraries for Vicare Scheme
+@c %**end of header
+
+@include version-libs.texi
+@include macros.texi
+
+@c page
+@c ------------------------------------------------------------
+@c Vicare specific macros.
+@c ------------------------------------------------------------
+
+@macro bub{}
+@acronym{BUB}
+@end macro
+
+@macro cif{}
+@acronym{CIF}
+@end macro
+
+@macro cretwo{}
+@acronym{CRE2}
+@end macro
+
+@macro eol{}
+@acronym{EOL}
+@end macro
+
+@macro fasl{}
+@acronym{FASL}
+@end macro
+
+@macro fifo{}
+@acronym{FIFO}
+@end macro
+
+@macro ikptr{}
+@code{ikptr}
+@end macro
+
+@macro oob{}
+@acronym{OOB}
+@end macro
+
+@macro os{}
+@acronym{OS}
+@end macro
+
+@macro pcb{}
+@acronym{PCB}
+@end macro
+
+@macro retwo{}
+@acronym{RE2}
+@end macro
+
+@macro sel{}
+@acronym{SEL}
+@end macro
+
+@macro std{}
+@acronym{STD}
+@end macro
+
+@macro urldate{DATE}
+(@acronym{URL} last verified \DATE\)
+@end macro
+
+@macro void{}
+@code{#<void>}
+@end macro
+
+@c page
+@c ------------------------------------------------------------
+@c Values.
+@c ------------------------------------------------------------
+
+@set PRJNAME                    Vicare
+
+@set TITLE                      Libraries for Vicare Scheme
+
+@c To be used as @value{PACKAGE} whenever we need to include the full
+@c name of this package.
+@set PACKAGE                    Vicare Scheme
+
+@c To be used as @value{PACKAGE_NICKNAME} whenever we need to include
+@c the nickname of the project: the name that is used to compose the
+@c distribution tarball or the web address.
+@set PACKAGE_NICKNAME           vicare-scheme
+
+@c To be used as @value{AUTHOR} whenever we need to include the list of
+@c authors of this document.
+@set AUTHOR                     Marco Maggi
+
+@c To be used as @value{AUTHOR_EMAIL} whenever we need to include the
+@c email of the *single* author of this document.
+@set AUTHOR_EMAIL               @email{marco.maggi-ipsu@@poste.it}
+
+@c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
+@c list of copyright years.
+@set COPYRIGHT_YEARS            2010-2013
+
+
+@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
+@set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
+@set EXECUTABLE                 @command{vicare}
+@set RAWEXECUTABLE              vicare
+
+@c page
+@c ------------------------------------------------------------
+@c Copyright notice.
+@c ------------------------------------------------------------
+
+@copying
+@noindent
+This document describes the libraries distributed along with version
+@value{VERSION} of @value{PACKAGE}, an @rnrs{6} compliant native
+compiler for the Scheme language.
+
+@noindent
+Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
+Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.
+
+The documentation of IrRegex is Copyright @copyright{} 2005-2012 Alex
+Shinn.  All rights reserved.
+
+The documentation of Pregexp is Copyright @copyright{} 1999-2005 Dorai
+Sitaram.  All rights reserved.
+
+The documentation of the library @library{vicare formations} is derived
+from the documentation of Guile.  Copyright @copyright{} 1996-2005,
+2009-2013 Free Software Foundation.
+
+The documentation of the libraries @library{vicare parser-tools silex
+---} are derived form the documentation of SILex.  Copyright
+@copyright{} 2001, 2009 Danny Dube'.
+
+@quotation
+This program is free software: you can redistribute it and/or modify it
+under the terms of the @gnu{} General Public License version 3 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the @gnu{} General Public License
+along with this program.  If not, see
+@url{http://www.gnu.org/licenses/}.
+@end quotation
+
+Trademarks used herein are the property of their respective owners.
+@end copying
+
+@c page
+@c ------------------------------------------------------------
+@c Headers.
+@c ------------------------------------------------------------
+
+@titlepage
+@title @value{TITLE}
+@subtitle Revision @value{VERSION}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c ------------------------------------------------------------
+
+@ifinfo
+@dircategory Development
+@direntry
+* vicare-libs: (vicare-libs).   @value{TITLE}.
+@end direntry
+@end ifinfo
+
+@c ------------------------------------------------------------
+
+@ignore
+@syncodeindex tp cp
+@syncodeindex vr cp
+@syncodeindex fn cp
+@end ignore
+
+
+@c page
+@ifnottex
+@node Top
+@top @value{TITLE}
+
+@insertcopying
+
+@menu
+* lang::                        Language extension libraries.
+* srfi::                        Scheme Requests For Implementation.
+* platform::                    Hosting platform libraries.
+* posix::                       The @posix{} interface.
+* glibc::                       The @gnu{} C Library interface.
+* iconv::                       The Libiconv interface.
+* linux::                       The @gnu{}+Linux interface.
+* args::                        Optional function arguments validation.
+* cbuffers::                    Generalised C buffers and strings.
+* readline::                    Extended interface to @gnu{} Readline.
+* parser logic::                Defining parsers logic.
+* gcc::                         A toy library interface to @gcc{}.
+* flonum format::               Formatting flonums.
+* flonum parser::               Parsing flonums.
+* debugging::                   Debugging facilities.
+* getopts::                     Parsing command line arguments.
+
+Networking libraires
+
+* net channels::                Interprocess connection channels.
+
+Container libraries
+
+* lists::                       List library.
+* vectors::                     Vector library.
+* strings::                     String library.
+* char-sets::                   Character sets.
+* bytevectors::                 Bytevectors.
+* bytevector compounds::        Bytevector compounds.
+* kmp::                         Knuth-Morris-Pratt searching.
+* levenshtein::                 Levenshtein distance metric.
+* wtables::                     Weak hashtables.
+* object-properties::           Object properties.
+* one-dimension::               One dimensional extended ranges.
+* arrays::                      Multidimensional arrays.
+* stacks::                      Simple stacks.
+* queues::                      Simple queues.
+
+Adapted libraries
+
+* random::                      Sources of random bits.
+* irregex::                     IrRegular expressions.
+* pregexp::                     Portable regular expressions for Scheme.
+* formations::                  Formatting strings.
+* silex::                       A lexical analyser generator.
+
+Appendices
+
+* cre2::                        Binding to the library @cretwo{}.
+* Package License::             @gnu{} General Public License.
+
+Indexes
+
+* concept index::               An entry for each concept.
+* function index::              An entry for each function.
+* variable index::              An entry for each variable.
+* type index::                  An entry for each type.
+
+External documents
+
+* core: (vicare-scheme).        Documentation for Vicare Scheme.
+* libffi: (libffi).             Libffi documentation.
+
+@end menu
+@end ifnottex
+
+@c page
+
+@include lang.texi
+@include srfi.texi
+@include libs-platform.texi
+@include posix.texi
+@include glibc.texi
+@include iconv.texi
+@include linux.texi
+
+@include libs-arguments-validation.texi
+@include libs-cbuffers.texi
+@include libs-readline.texi
+@include libs-parser-logic.texi
+@include libs-gcc.texi
+@include libs-flonum-format.texi
+@include libs-flonum-parser.texi
+@include libs-debugging.texi
+@include libs-getopts.texi
+
+@include libs-net-channels.texi
+
+@include libs-lists.texi
+@include libs-vectors.texi
+@include libs-strings.texi
+@include libs-char-sets.texi
+@include libs-bytevectors.texi
+@include libs-bytevector-compounds.texi
+@include libs-knuth-morris-pratt.texi
+@include libs-levenshtein.texi
+@include libs-weak-hashtables.texi
+@include libs-object-properties.texi
+@include libs-one-dimension.texi
+@include libs-arrays.texi
+@include libs-stacks.texi
+@include libs-queues.texi
+
+@include libs-randomisations.texi
+
+@include libs-irregex.texi
+@include libs-pregexp.texi
+@include libs-formations.texi
+@include libs-parser-tools-silex.texi
+
+@include cre2.texi
+
+@include gpl-3.0.texi
+
+@c page
+@node concept index
+@appendix An entry for each concept
+
+@printindex cp
+
+@node function index
+@appendix An entry for each function
+
+@printindex fn
+
+@node variable index
+@appendix An entry for each variable
+
+@printindex vr
+
+@node type index
+@appendix An entry for each type
+
+@printindex tp
+
+@bye
+
+@c end of file

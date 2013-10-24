@@ -25,6 +25,8 @@
     flzero?/negative	$flzero?/negative
     flpositive?		$flpositive?
     flnegative?		$flnegative?
+    flnonnegative?	$flnonnegative?
+    flnonpositive?	$flnonpositive?
     fleven?		$fleven?
     flodd?		$flodd?
 			$flonum-integer?
@@ -82,6 +84,7 @@
 		  inexact->exact	exact		fixnum->flonum
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
+		  flnonnegative?	flnonpositive?
 		  fleven?		flodd?		flround
 		  flfloor		flceiling	fltruncate
 		  flnumerator		fldenominator	flabs
@@ -112,6 +115,8 @@
 	    $flzero?/negative
 	    $flpositive?
 	    $flnegative?
+	    $flnonnegative?
+	    $flnonpositive?
 	    $fleven?
 	    $flodd?
 	    $flfinite?
@@ -423,8 +428,10 @@
   (and ($flzero? x)
        (not ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128)))))
 
-(define-fl-operation/one flpositive? $flpositive?)
-(define-fl-operation/one flnegative? $flnegative?)
+(define-fl-operation/one flpositive?		$flpositive?)
+(define-fl-operation/one flnegative?		$flnegative?)
+(define-fl-operation/one flnonpositive?		$flnonpositive?)
+(define-fl-operation/one flnonnegative?		$flnonnegative?)
 
 (define ($flpositive? x)
   ($fl> x +0.0))
@@ -438,6 +445,14 @@
   ;; (let ((b0 ($flonum-u8-ref x 0)))
   ;;   ($fx> b0 127))
   )
+
+(define ($flnonpositive? x)
+  (or ($flzero?/negative x)
+      ($flnegative? x)))
+
+(define ($flnonnegative? x)
+  (or ($flzero?/positive x)
+      ($flpositive? x)))
 
 ;;; --------------------------------------------------------------------
 

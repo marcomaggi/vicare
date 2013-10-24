@@ -14,6 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus conditions)
   (export condition? simple-conditions condition-predicate
           condition condition-accessor print-condition
@@ -85,6 +86,20 @@
 	  make-errno-condition errno-condition? condition-errno
 	  &h_errno &h_errno-rtd &h_errno-rcd
 	  make-h_errno-condition h_errno-condition? condition-h_errno
+
+	  &procedure-argument-violation
+	  &procedure-argument-violation-rtd
+	  &procedure-argument-violation-rcd
+	  make-procedure-argument-violation
+	  procedure-argument-violation?
+	  procedure-argument-violation
+
+	  &expression-return-value-violation
+	  &expression-return-value-violation-rtd
+	  &expression-return-value-violation-rcd
+	  make-expression-return-value-violation
+	  expression-return-value-violation?
+	  expression-return-value-violation
 	  )
   (import (except (ikarus)
 		  define-condition-type condition? simple-conditions
@@ -147,24 +162,32 @@
 		  make-source-position-condition source-position-condition?
 		  source-position-port-id
 		  source-position-byte source-position-character
-		  source-position-line source-position-column)
+		  source-position-line source-position-column
+
+		  &procedure-argument-violation
+		  &procedure-argument-violation-rtd
+		  &procedure-argument-violation-rcd
+		  make-procedure-argument-violation
+		  procedure-argument-violation?
+		  procedure-argument-violation
+
+		  &expression-return-value-violation
+		  &expression-return-value-violation-rtd
+		  &expression-return-value-violation-rcd
+		  make-expression-return-value-violation
+		  expression-return-value-violation?
+		  expression-return-value-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations))
 
 
-;;;; constants
-
-(define EXPECTED_CONDITION_OBJECT_AS_ARGUMENT
-  "expected condition object as argument")
-
-
 ;;;; arguments validation
 
 (define-argument-validation (condition who obj)
   (condition? obj)
-  (assertion-violation who EXPECTED_CONDITION_OBJECT_AS_ARGUMENT obj))
+  (assertion-violation who "expected condition object as argument" obj))
 
 (define-argument-validation (rtd who obj)
   (record-type-descriptor? obj)
@@ -233,7 +256,7 @@
 		       (append (simple-conditions ($car x*)) (loop ($cdr x*))))
 		      (else
 		       (assertion-violation who
-			 EXPECTED_CONDITION_OBJECT_AS_ARGUMENT ($car x*)))))))
+			 "expected condition object as argument" ($car x*)))))))
       (cond ((null? ls)
 	     (make-compound-condition '()))
 	    ((null? ($cdr ls))
@@ -256,7 +279,7 @@
 	((&condition? x)
 	 (list x))
 	(else
-	 (assertion-violation 'simple-conditions EXPECTED_CONDITION_OBJECT_AS_ARGUMENT x))))
+	 (assertion-violation 'simple-conditions "expected condition object as argument" x))))
 
 
 (define (condition-predicate rtd)
@@ -466,6 +489,26 @@
 (define-condition-type &h_errno &condition
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
+
+(define-condition-type &procedure-argument-violation &assertion
+  make-procedure-argument-violation procedure-argument-violation?)
+
+(define (procedure-argument-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-procedure-argument-violation))))
+
+(define-condition-type &expression-return-value-violation &assertion
+  make-expression-return-value-violation expression-return-value-violation?)
+
+(define (expression-return-value-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-expression-return-value-violation))))
 
 
 ;;;; printing condition objects

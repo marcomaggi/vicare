@@ -1,0 +1,139 @@
+@node levenshtein
+@chapter Levenshtein distance metric
+
+
+@cindex @library{vicare containers levenshtein}, library
+@cindex Library @library{vicare containers levenshtein}
+
+
+The library @library{vicare containers levenshtein} is a Scheme
+implementation of the @dfn{Levenshtein Distance} algorithm, which is an
+@dfn{edit distance} metric of string similarity, due to Vladimir
+Levenshtein.  The Levenshtein Distance is a function of two strings that
+represents a count of single--character insertions, deletions, and
+substitions that will change the first string to the second.  More
+information is available in
+@uref{http://www.nist.gov/dads/HTML/Levenshtein.html, NIST DADS} and the
+Michael Gilleland article, ``@uref{http://www.merriampark.com/ld.htm,
+Levenshtein Distance in Three Flavors}.''
+
+@quotation
+This implementation is modeled after a
+@uref{http://www.mgilleland.com/ld/ldperl2.htm, space--efficient Perl
+implementation} by Jorge Mas Trullenque.  It has been written in Scheme
+by Neil Van Dyke, and extended to support heterogeneous combinations of
+Scheme types (strings, lists, vectors), user--supplied predicate
+functions, and optionally reusable scratch vectors.
+@end quotation
+
+@menu
+* levenshtein basic::           Basic comparisons.
+* levenshtein coerce::          Type-coercing comparisons.
+@end menu
+
+@c page
+@node levenshtein basic
+@section Basic comparisons
+
+
+In the current implementation, all comparisons are done internally via
+vectors.
+
+
+@defun vector-levenshtein/predicate/get-scratch @var{a} @var{b} @var{pred} @var{get-scratch}
+Few, if any, programs will use this procedure directly.  This is like
+@func{vector-levenshtein/predicate}, but allows @var{get-scratch} to be
+specified.  @var{get-scratch} is a procedure of one term, @i{n}, that
+yields a vector of length @i{n} or greater, which is used for
+record-keeping during execution of the Levenshtein algorithm.
+@func{make-vector} can be used for @var{get-scratch}, although some
+programs comparing a large size or quantity of vectors may wish to reuse
+a record-keeping vector, rather than each time allocating a new one that
+will need to be garbage-collected.
+@end defun
+
+
+@defun vector-levenshtein/predicate @var{a} @var{b} @var{pred}
+@defunx vector-levenshtein/eq @var{a} @var{b}
+@defunx vector-levenshtein/eqv @var{a} @var{b}
+@defunx vector-levenshtein/equal @var{a} @var{b}
+@defunx vector-levenshtein @var{a} @var{b}
+Calculate the Levenshtein Distance of vectors @var{a} and @var{b}.
+@var{pred} is the predicate procedure for determining if two elements
+are equal.  The @code{/eq}, @code{/eqv}, and @code{/equal} variants
+correspond to the standard equivalence predicates, @code{eq?},
+@code{eqv?}, and @code{equal?}.  @func{vector-levenshtein} is an alias
+for @func{vector-levenshtein/equal}.
+
+@example
+(vector-levenshtein '#(6 6 6) '#(6 35 6 24 6 32)) @result{} 3
+@end example
+@end defun
+
+
+@defun list-levenshtein/predicate @var{a} @var{b} @var{pred}
+@defunx list-levenshtein/eq @var{a} @var{b}
+@defunx list-levenshtein/eqv @var{a} @var{b}
+@defunx list-levenshtein/equal @var{a} @var{b}
+@defunx list-levenshtein @var{a} @var{b}
+Calculate the Levenshtein Distance of lists @var{a} and @var{b}.
+@var{pred} is the predicate procedure for determining if two elements
+are equal.  The @code{/eq}, @code{/eqv}, and @code{/equal} variants
+correspond to the standard equivalence predicates, @code{eq?},
+@code{eqv?}, and @code{equal?}.  @func{list-levenshtein} is an alias for
+@func{list-levenshtein/equal}.  Note that comparison of lists is less
+efficient than comparison of vectors.
+
+@example
+(list-levenshtein/eq '(b c e x f y) '(a b c d e f)) @result{} 4
+@end example
+@end defun
+
+
+@defun string-levenshtein @var{a} @var{b}
+Calculate the Levenshtein Distance of strings @var{a} and @var{b}.
+
+@example
+(string-levenshtein "adresse" "address") @result{} 2
+@end example
+@end defun
+
+@c page
+@node levenshtein coerce
+@section Type--coercing comparisons
+
+
+Procedures @func{levenshtein} and @func{levenshtein/predicate} provide a
+convenient interface for comparing a combination of vectors, lists, and
+strings, the types of which might not be known until runtime.
+
+
+@defun levenshtein/predicate @var{a} @var{b} @var{pred}
+Calculate the Levenshtein Distance of two objects @var{a} and @var{b},
+which are vectors, lists, or strings.  @var{a} and @var{b} need not be
+of the same type.  @var{pred} is the element equivalence predicate used.
+
+@example
+(levenshtein/predicate '#(#\A #\B #\C #\D)
+                       "aBXcD"
+                       char-ci=?)
+@result{} 1
+@end example
+@end defun
+
+
+@defun levenshtein @var{a} @var{b}
+Calculate the Levenshtein Distance of @var{a} and @var{b}, in a similar
+manner as using @code{levenshtein/predicate} with @code{equal?} as the
+predicate.
+
+@example
+(define g '#(#\g #\u #\m #\b #\o))
+
+(levenshtein g "gambol")  @result{} 2
+(levenshtein g "dumbo")   @result{} 1
+(levenshtein g "umbrage") @result{} 5
+@end example
+@end defun
+
+@c end of file

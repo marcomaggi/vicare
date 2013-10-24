@@ -41,11 +41,12 @@
     record-guardian-logger		record-guardian-log
 
     ;; vicare configuration options
+    vicare-built-with-srfi-enabled
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
     vicare-built-with-posix-enabled
     vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled
-    vicare-built-with-srfi-enabled
-    )
+    vicare-built-with-linux-enabled)
   (import (except (ikarus)
 		  fixnum-width
 		  greatest-fixnum
@@ -60,7 +61,14 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level)
+		  expand-top-level
+
+		  vicare-built-with-srfi-enabled
+		  vicare-built-with-ffi-enabled
+		  vicare-built-with-iconv-enabled
+		  vicare-built-with-posix-enabled
+		  vicare-built-with-glibc-enabled
+		  vicare-built-with-linux-enabled)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
@@ -87,6 +95,8 @@
 	  read-script-source-file)
     (only (ikarus.symbol-table)
 	  $initialize-symbol-table!)
+    (only (ikarus.strings-table)
+	  $initialize-interned-strings-table!)
     (prefix (only (ikarus load)
 		  load
 		  load-r6rs-script
@@ -1116,9 +1126,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;;; some utility modules
 
 (module ()
-  ;;See "ikarus.symbol-table.ss"  for an  explanation of  this.  Nothing
+  ;;See "ikarus.symbol-table.sls"  for an explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
-  ($initialize-symbol-table!))
+  ($initialize-symbol-table!)
+  ;;See "ikarus.strings.table.sls".
+  ($initialize-interned-strings-table!))
 
 
 ;;;; automatic struct finalisation
@@ -1325,6 +1337,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (vicare-built-with-srfi-enabled)
   (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
+
+(define (vicare-built-with-ffi-enabled)
+  (foreign-call "ikrt_vicare_built_with_ffi_enabled"))
+
+(define (vicare-built-with-iconv-enabled)
+  (foreign-call "ikrt_vicare_built_with_iconv_enabled"))
 
 (define (vicare-built-with-posix-enabled)
   (foreign-call "ikrt_vicare_built_with_posix_enabled"))

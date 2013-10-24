@@ -19,6 +19,7 @@
 (library (ikarus bytevectors)
   (export
     make-bytevector		bytevector-length
+    bytevector-empty?		$bytevector-empty?
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
@@ -98,6 +99,7 @@
     $bytevector-concatenate	$bytevector-reverse-and-concatenate)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
+		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!
 		  bytevector-copy	bytevector-append
 		  bytevector=?		native-endianness
@@ -178,7 +180,8 @@
 	    $bytevector=
 	    $bytevector-total-length
 	    $bytevector-concatenate
-	    $bytevector-reverse-and-concatenate)
+	    $bytevector-reverse-and-concatenate
+	    $bytevector-empty?)
     (vicare arguments validation))
 
   (module (platform-endianness)
@@ -309,24 +312,24 @@
 
 (define-argument-validation (byte-filler who fill)
   (and (fixnum? fill) ($fx<= -128 fill) ($fx<= fill 255))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected fixnum in range [-128, 255] as bytevector fill argument" fill))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who idx)
   (and (fixnum? idx) ($fx<= 0 idx))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as bytevector index argument" idx))
 
 (define-argument-validation (start-index who idx)
   (and (fixnum? idx) ($fx<= 0 idx))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as bytevector start index argument" idx))
 
 (define-argument-validation (end-index who idx)
   (and (fixnum? idx) ($fx<= 0 idx))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as bytevector start end argument" idx))
 
 ;;; --------------------------------------------------------------------
@@ -354,7 +357,7 @@
   ;;  ^index = bv.len = 0
   ;;
   ($fx<= idx ($fx- ($bytevector-length bv) bytes-per-word))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "index argument "			(number->string idx)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " and word size "			(number->string bytes-per-word))
@@ -385,7 +388,7 @@
   (let ((bv.len ($bytevector-length bv)))
     (or ($fx=  idx bv.len)
 	($fx<= idx ($fx- bv.len bytes-per-word))))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "start index argument "		(number->string idx)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " and word size "			(number->string bytes-per-word))
@@ -397,7 +400,7 @@
   ;;empty bytevector.
   ;;
   ($fx<= idx ($bytevector-length bv))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "end index argument "		(number->string idx)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " and word size "			(number->string bytes-per-word))
@@ -405,30 +408,30 @@
 
 (define-argument-validation (aligned-index-2 who idx)
   (words.fixnum-aligned-to-2? idx)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected bytevector index aligned to multiple of 2 as argument" idx))
 
 (define-argument-validation (aligned-index-4 who idx)
   (words.fixnum-aligned-to-4? idx)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected bytevector index aligned to multiple of 4 as argument" idx))
 
 (define-argument-validation (aligned-index-8 who idx)
   (words.fixnum-aligned-to-8? idx)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected bytevector index aligned to multiple of 8 as argument" idx))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (count who count)
   (and (fixnum? count) ($fx<= 0 count))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as bytevector word count argument" count))
 
 (define-argument-validation (count-for who count bv bv.start bytes-per-word)
   (let ((end ($fx+ bv.start ($fx* count bytes-per-word))))
     ($fx<= end ($bytevector-length bv)))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "word count "			(number->string count)
 		   " too big for bytevector length "	(number->string ($bytevector-length bv))
 		   " start index "			(number->string bv.start)
@@ -487,6 +490,20 @@
   (with-arguments-validation (who)
       ((bytevector bv))
     ($bytevector-length bv)))
+
+(define (bytevector-empty? bv)
+  ;;Defined by  Vicare.  Return  true if BV  is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'bytevector-empty?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($bytevector-empty? bv)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($bytevector-empty? bv)
+  ($fxzero? ($bytevector-length bv)))
 
 (define (bytevector=? x y)
   ;;Defined by R6RS.  Return  #t if X and Y are equal;  that is, if they
@@ -1556,7 +1573,7 @@
 	 (let* ((bv.len ($bytevector-length bv))
 		(rest   (fxmod bv.len ?bytes-in-word)))
 	   (unless ($fxzero? rest)
-	     (assertion-violation ?who
+	     (procedure-argument-violation ?who
 	       "invalid bytevector size for requested type conversion" '?tag bv.len))
 	   (let loop ((bv		bv)
 		      (i		bv.len)
@@ -1615,20 +1632,20 @@
 	       (if (pair? h)
 		   (if (not (eq? h t))
 		       (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		     (assertion-violation '?who "circular list" ls))
+		     (procedure-argument-violation '?who "circular list" ls))
 		 (if (null? h)
 		     ($fx+ n 1)
-		   (assertion-violation '?who "not a proper list" ls))))
+		   (procedure-argument-violation '?who "not a proper list" ls))))
 	   (if (null? h)
 	       n
-	     (assertion-violation '?who "not a proper list" ls))))
+	     (procedure-argument-violation '?who "not a proper list" ls))))
 
        (define (fill s i ls)
 	 (if (null? ls)
 	     s
 	   (let ((c ($car ls)))
 	     (unless (?valid-number-pred c)
-	       (assertion-violation '?who "not an octet" c))
+	       (procedure-argument-violation '?who "not an octet" c))
 	     ($bytevector-u8-set! s i c)
 	     (fill s ($fxadd1 i) (cdr ls)))))
 
@@ -1653,21 +1670,21 @@
 		  (if (pair? h)
 		      (if (not (eq? h t))
 			  (%race ($cdr h) ($cdr t) ls (+ n 2))
-			(assertion-violation ?who "circular list" ls))
+			(procedure-argument-violation ?who "circular list" ls))
 		    (if (null? h)
 			(+ n 1)
-		      (assertion-violation ?who "not a proper list" ls)))))
+		      (procedure-argument-violation ?who "not a proper list" ls)))))
 	       ((null? h)
 		n)
 	       (else
-		(assertion-violation ?who "not a proper list" ls))))
+		(procedure-argument-violation ?who "not a proper list" ls))))
 
        (define (%fill s i ls)
 	 (if (null? ls)
 	     s
 	   (let ((c ($car ls)))
 	     (unless (?valid-number-pred c)
-	       (assertion-violation ?who "invalid element for requested bytevector type" '?tag c))
+	       (procedure-argument-violation ?who "invalid element for requested bytevector type" '?tag c))
 	     (?bytevector-set! s i c)
 	     (%fill s ($fx+ ?bytes-in-word i) (cdr ls)))))
 

@@ -1,0 +1,1535 @@
+@node vectors
+@chapter Vectors library
+
+
+@cindex @library{vicare containers vectors}, library
+@cindex Library @library{vicare containers vectors}
+@cindex @library{vicare containers vectors low}, library
+@cindex Library @library{vicare containers vectors low}
+
+
+The library @library{vicare containers vectors} extends the vector
+operations available in the base library (@vicareref{baselib vectors,
+Vectors}) and Vicare's extensions (@vicareref{iklib vectors, Additional
+vector functions}).  While @library{vicare containers vectors} is a high
+level interface, @library{vicare containers vectors low} is a low level
+interface with the same functionalities.
+
+To avoid identifiers collision: it is suggested to import the libraries
+in the hierarchy @library{vicare containers vectors ---} with the prefix
+@code{vector.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare containers vectors) vector.))
+@end example
+
+@menu
+* vectors intro::               Introduction.
+* vectors convention::          Interface conventions.
+* vectors views::               Views over vectors.
+* vectors cons::                Constructors.
+* vectors pred::                Predicates.
+* vectors compar::              Comparison.
+* vectors fold::                Fold and unfold.
+* vectors select::              Selection.
+* vectors pad::                 Padding and trimming.
+* vectors prefix::              Prefixes and suffixes.
+* vectors search::              Searching.
+* vectors filter::              Filtering and deleting.
+* vectors list::                List and vector conversion.
+* vectors replicate::           Replicate and rotate.
+* vectors mutate::              Mutators.
+* vectors misc::                Miscellaneous functions.
+@end menu
+
+@c page
+@node vectors intro
+@section Introduction
+
+
+@subsubheading Library organisation
+
+The functions are split in a high level library, @library{vicare
+containers vectors}, and a low level one, @library{vicare containers
+vectors low}.  The main difference between the two layers is that the
+high level library makes heavy usage of macros to implement the
+@dfn{vector views}, which allow accessing subvectors using a friendly
+syntax.
+
+All the functions in the low level library are bound to identifiers
+starting with @code{%}; for example: @func{vector-prefix?} is a high
+level macro, @func{%vector-prefix?} is its low level function
+homologous.
+
+@subsubheading Direction of iteration
+
+The library accesses the values of a vector in left--to--right or
+right--to--left order depending on the convenience of the algorithm.
+
+@subsubheading Handling side effects
+
+Care must be taken when using functions with side effects.  One reason
+for this is that some of the supported Scheme implementations will treat
+a literal vector as a constant, so the following raises an error:
+
+@example
+(import (rnrs))
+
+(define vec '#(0 1 2 3 4))
+(vector-set! vec 2 #\9)
+@end example
+
+@noindent
+To avoid this problem completely, we can change the program in this way:
+
+@example
+(import (rnrs))
+
+(define vec (vector-copy '#(0 1 2 3 4)))
+(vector-set! vec 2 #\9)
+@end example
+
+@noindent
+of course we may want to wrap into @func{vector-copy} only the vectors
+that are meant to be mutated.
+
+@c page
+@node vectors convention
+@section Interface conventions
+
+
+In order to simplify text in this documentation section, the values of a
+vector are called @dfn{items}.
+
+The following naming convention holds:
+
+@itemize
+@item
+Procedures whose names end in @code{!} are side--effecting variants.
+What values these procedures return is usually not specified.
+
+@item
+The order of common arguments is consistent across the different
+procedures in the high level library, and consistent across the
+different procedures in the low level library.  Arguments to some
+functions in the high level library have different order from the one of
+the homologous low level functions.
+
+@item
+Procedures that have left/right directional variants use the following
+convention:
+
+@multitable {right--to--left} {Suffix}
+@headitem Direction @tab Suffix
+@item left-to-right @tab @meta{none}
+@item right-to-left @tab --right
+@item both @tab --both
+@end multitable
+@end itemize
+
+In the procedure specifications:
+
+@itemize
+@item
+A @var{V} argument is a vector view, which is expanded by a macro in a
+triplet of values: the vector, the index of the first value in the
+selected subvector, the index of the value past the last in the selected
+position.  @ref{vectors views} for details.
+
+@item
+A @var{vec} argument is a vector.
+
+@item
+The @var{start} and @var{past} arguments are half--open vector indices
+specifying a subvector within a vector argument; when unspecified, they
+default to zero and the length of the vector, respectively.  When
+specified, it must be the case that:
+
+@example
+0 <= start <= past <= (vector-length s)
+@end example
+
+@noindent
+for the corresponding argument @var{vec}.  They typically restrict a
+procedure's action to the indicated subvector; when @var{start} equals
+@var{past} the selected subvector is the empty vector.
+
+@item
+A @var{pred} argument is a unary value predicate procedure,
+returning a true/false value when applied to a value.
+
+@item
+A @var{item=} argument is a binary function applied to two items, it
+must return true when they are equal, false otherwise.
+
+@item
+A @var{item<} argument is a binary function applied to two items, it
+must return true when the first is less than the second, false
+otherwise.
+
+@item
+An @var{i} or @var{k} argument is an exact non--negative integer
+specifying an index into a vector.
+
+@item
+The @var{len} and @var{nvalues} arguments are exact non--negative
+integers specifying a length of a vector or some number of values.
+
+@item
+An @var{obj} argument can be any value.
+@end itemize
+
+An argument followed by @code{...} means zero--or--more elements.  So
+the procedure with the signature:
+
+@example
+sum-squares x ...
+@end example
+
+@noindent
+takes zero or more arguments (@var{x}, @dots{}), while the procedure
+with signature:
+
+@example
+spell-check doc dict1 dict2 ...
+@end example
+
+@noindent
+takes two mandatory arguments (@var{doc} and @var{dict1}) and zero or
+more optional arguments (@var{dict2} ...).
+
+If a procedure is said to return ``unspecified'', this means that
+nothing at all is known about what the procedure returns.  Such a
+procedure is not even required to be consistent from call to call.  It
+is simply required to return a value (or values) that may be passed to a
+command continuation, e.g. as the value of an expression appearing as a
+non--terminal subform of a begin expression.
+
+@c page
+@node vectors views
+@section Views over vectors
+
+
+Vector views are syntactic sugar to allow subvector specification with
+minimum overhead; views make use of auxiliary syntaxes exported by the
+library @library{vicare containers auxiliary-syntaxes} and reexported by
+@library{vicare containers vectors}.  Many low level vector functions
+act on subvectors specified with triplets of arguments:
+
+@itemize
+@item
+The full vector.
+
+@item
+The @dfn{start index}: The index of the first item in the selected
+subvector.
+
+@item
+The @dfn{past index}: The index of the item past the last item in the
+selected subvector.
+@end itemize
+
+To select the subvector @code{#(2 3 4)} from the vector @code{#(0 1 2 3
+4 5 6)} we have to determine the half--open range of items, which is
+@math{[2, 5)}, then apply a function to the arguments:
+
+@example
+(%the-function '#(0 1 2 3 4 5 6) 2 5)
+@end example
+
+@noindent
+while to select the whole vector we can do:
+
+@example
+(%the-function '#(0 1 2 3 4 5 6) 0 7)
+@end example
+
+@noindent
+or:
+
+@example
+(let ((vec '#(0 1 2 3 4 5 6)))
+  (%the-function vec 0 (vector-length vec)))
+@end example
+
+With the vector views implemented by @library{vicare containers
+vectors}, the low level function is wrapped by a high level syntax which
+can be invoked as:
+
+@example
+(the-function '#(0 1 2 3 4 5 6 7))
+        ; select the whole vector
+
+(the-function (view '#(0 1 2 3 4 5 6 7)))
+        ; select the whole vector
+
+(the-function (view '#(0 1 2 3 4 5 6 7)
+                (start 3)))
+        ; select the subvector [3, 8)
+
+(the-function (view '#(0 1 2 3 4 5 6 7)
+                (start 3)
+                (past 6)))
+        ; select the subvector [3, 6)
+
+(the-function (view '#(0 1 2 3 4 5 6 7)
+                (past 5)))
+        ; select the subvector [0, 5)
+@end example
+
+@noindent
+instead of a triplet of arguments, the vector view is a single argument
+that can be:
+
+@table @code
+@item @meta{vector}
+@itemx (view @meta{vector})
+The vector itself or an unquoted list holding the vector itself,
+prefixed by the @code{view} auxiliary syntax: it selects the whole
+vector.
+
+@item (view @meta{vector} (start @meta{start-index}))
+An unquoted list holding the vector and the start index, with auxiliary
+syntaxes @code{view} and @code{start}: it selects the subvector from the
+start index to the end.
+
+@item (view @meta{vector} (past @meta{past-index}))
+An unquoted list holding the vector and the past index, with auxiliary
+syntaxes @code{view} and @code{past}: it selects the subvector from zero
+to the selected past index.
+
+@item (view @meta{vector} (start @meta{start-index}) (past @meta{past-index}))
+An unquoted list holding the vector, the start index and the past index,
+with auxiliary syntaxes @code{view}, @code{start} and @code{past}: it
+selects the subvector between the start and past indexes.
+@end table
+
+@noindent
+@code{@meta{vector}}, @code{@meta{start-index}} and
+@code{@meta{past-index}} can be arbitrary Scheme expressions.  High
+level macros accepting two or more subvectors as arguments, support
+vector views for all of them.  When we are concerned with the overhead
+of vector views, we can use the low level functions directly.
+
+When the start and past index are negative, the @func{view} syntax
+normalises them as:
+
+@example
+(if (negative? @var{idx})
+    (+ @var{idx} (vector-length @var{string}))
+   @var{idx})
+@end example
+
+@noindent
+so that negative indices are counted from the end of the vector:
+@math{-1} selects the ultimate character, @math{-2} selected the
+penultimate character and so on.
+
+In the following documentation: low level functions and high level
+macros are documented together; only the meaning of arguments to the low
+level function are described, the meaning of high level arguments is
+obvious.
+
+@c page
+@node vectors cons
+@section Constructors
+
+
+@defun vector-concatenate @var{vector-list}
+Append the elements of @var{vector-list} together into a single vector.
+Guaranteed to return a freshly allocated vector.
+@end defun
+
+
+@deffn Function %vector-concatenate-reverse @var{vector-list} @var{final-vector} @var{nvalues}
+@deffnx Macro vector-concatenate-reverse @var{vector-list}
+@deffnx Macro vector-concatenate-reverse @var{vector-list} @var{final-vector}
+@deffnx Macro vector-concatenate-reverse @var{vector-list} @var{final-vector} @var{nvalues}
+Reverse @var{vector-list} then concatenate the elements, which must be
+vectors.  The first @var{nvalues} items in @var{final-vector} are consed
+onto the beginning of @var{vector-list} before performing the the
+reversal and concatenation operations.
+
+@var{final-vector} defaults to the empty vector and @var{nvalues}
+defaults to the length of @var{final-vector}.
+
+This procedure is useful in the construction of procedures that
+accumulate data into lists of vector buffers, and wish to convert the
+accumulated data into a single vector when done.
+@end deffn
+
+
+@defun vector-append @var{vec} ...
+Return a newly allocated vector that contains all elements in order from
+the subsequent locations in the vector arguments.
+
+@example
+(vector-append '#(x) '#(y))
+@result{} #(x y)
+
+(vector-append '#(a) '#(b c d))
+@result{} #(a b c d)
+
+(vector-append '#(a #(b)) '#(#(c)))
+@result{} #(a #(b) #(c))
+@end example
+@end defun
+
+
+@defun vector-tabulate @var{integer->item} @var{len}
+Construct a vector of size @var{len} by applying @var{integer->item} to
+each index from zero (included) to @var{len} (excluded), in increasing
+order, to produce the corresponding vector element.
+@end defun
+
+@c page
+@node vectors pred
+@section Predicates
+
+
+@defun vector-null? @var{obj}
+Return @true{} if @var{obj} is the empty vector, otherwise return
+@false{}.
+@end defun
+
+
+@deffn Function %vector-every @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-any @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-every @var{pred} @var{V}
+@deffnx Macro subvector-any @var{pred} @var{V}
+Check to see if the given predicate is true on every/any item in
+@var{vec}, proceeding from left (index @var{start}) to right (index
+@var{past}).  If the selected subvector is empty, the return value is
+@false{}.
+
+The predicate is ``witness--generating'':
+
+@itemize
+@item
+If @func{subvector-any} returns true: the returned true value is the one
+produced by the application of the predicate.
+
+@item
+If @func{subvector-every} returns true: the returned true value is the
+one produced by the application of the predicate to the last item in the
+subvector.
+@end itemize
+
+If the predicate is applied to the final item of the selected subvector,
+that final application is a tail call.
+
+The names of these procedures do not end with a question mark; this is
+to indicate that they do not return a simple boolean (@true{} or
+@false{}), but a general value.
+@end deffn
+
+
+@defun vector-every @var{pred} @varo{vec} @var{vec} ...
+@defunx vector-any @var{pred} @varo{vec} @var{vec} ...
+Like @func{subvector-every} and @func{subvector-any}, but apply the
+predicate to the elements of all the vectors used as arguments.  All the
+arguments must have the same number of elements.
+@end defun
+
+@c page
+@node vectors compar
+@section Comparison
+
+
+@deffn Function %vector-compare @var{item=} @var{item<} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past} @var{proc<} @var{proc=} @var{proc>}
+@deffnx Macro vector-compare @var{item=} @var{item<} @vari{V} @varii{V} @var{proc<} @var{proc=} @var{proc>}
+Determine the @dfn{mismatch index} between the two subvectors: the
+largest index @math{i} such that for every @math{0 <= j < i},
+@math{vec1[j] = vec2[j]}; that is, @math{i} is the first position that
+does not match.
+
+The mismatch index is always an index into @vari{vec}; in the case of
+equal vectors, it is always @vari{past}; the functions observe the
+protocol in this redundant case for uniformity.
+
+The items before the mismatch index are tested for equality using
+@var{item=}; the items at the mismatch index are also compared using
+@var{item<}, to determine the smallest.
+
+@var{proc<}, @var{proc=}, or @var{proc>} are applied to the mismatch
+index (not item), depending upon whether the subvector of @vari{vec} is
+less than, equal to, or greater than the subvector of @varii{vec}.  The
+result of the application is returned.
+
+If we just want to have the mismatch index as return value: We can use
+@func{values} as value for @var{proc<}, @var{proc=} and @var{proc>}.
+Another interesting option is to use @code{(lambda (mismatch-index) #f)}
+or @code{(lambda (mismatch-index) #t)}.
+
+Examples:
+
+@example
+(vector-compare '#(0 1 2 3) '#(0 1 2 3) values values values)
+@result{} 4
+
+(vector-compare '#(0 1 2 3) '#(0 1 2 3) values values values)
+@result{} 4
+@end example
+@end deffn
+
+
+@deffn Function %vector= @var{item=} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector= @var{item=} @vari{V} @varii{V}
+Compare two subvectors: Return true if they are equal according to
+@var{item=}, @false{} otherwise.
+@end deffn
+
+
+@deffn Function %vector<> @var{item=} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector<> @var{item=} @vari{V} @vari{V}
+Compare two subvectors: Return @false{} if they are equal according to
+@var{item=}, true otherwise.
+@end deffn
+
+
+The following predicates compare two subvectors according to the
+following rules:
+
+@enumerate
+@item
+Two subvectors are equal if: they have the same length and all their
+items are equal according to @var{item=}.
+
+@item
+A subvector @vari{V} is less than @varii{V} if:
+
+@itemize
+@item
+@vari{V} is shorter than @varii{V} and the all the items in @vari{V} are
+equal to the corresponding items in @varii{V} according to @var{item=}.
+
+@item
+The items in @vari{V} and @varii{V} are equal up to a certain index
+according to @var{item=}, and the item at the mismatch index in @vari{V}
+is less than the corresponding item in @varii{V} according to
+@var{item<}.
+@end itemize
+
+@item
+A subvector @vari{V} is greater than @varii{V} if:
+
+@itemize
+@item
+@vari{V} is longer than @varii{V} and the all the items in @vari{V} are
+equal to the corresponding items in @varii{V} according to @var{item=}.
+
+@item
+The items in @vari{V} and @varii{V} are equal up to a certain index
+according to @var{item=}, and the item at the mismatch index in @vari{V}
+is greater than the corresponding item in @varii{V} according to
+@var{item<}.
+@end itemize
+@end enumerate
+
+
+@deffn Function %vector< @var{item=} @var{item<} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector< @var{item=} @var{item<} @vari{V} @varii{V}
+Compare two subvectors: Return true if the first is less than the
+second, @false{} otherwise.
+@end deffn
+
+
+@deffn Function %vector<= @var{item=} @var{item<} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector<= @var{item=} @var{item<} @vari{V} @varii{V}
+Compare two subvectors: Return true if the first is less than, or equal
+to, the second; @false{} otherwise.
+@end deffn
+
+
+@deffn Function %vector> @var{item=} @var{item<} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector> @var{item=} @var{item<} @vari{V} @varii{V}
+Compare two subvectors: Return true if the first is greater than the
+second, @false{} otherwise.
+@end deffn
+
+
+@deffn Function %vector>= @var{item=} @var{item<} @vari{vec} @vari{beg} @vari{past} @varii{vec} @varii{beg} @varii{past}
+@deffnx Macro vector>= @var{item=} @var{item<} @vari{V} @varii{V}
+Compare two subvectors: Return true if the first is greater than, or
+equal to, the second; @false{} otherwise.
+@end deffn
+
+@c page
+@node vectors fold
+@section Fold and unfold
+
+
+@menu
+* vectors fold rnrs::           Folding with @rnrs{6} style.
+* vectors fold sub::            Folding over subvectors.
+* vectors fold unfold::         Unfolding vectors.
+* vectors fold map::            Mapping functions.
+@end menu
+
+@c page
+@node vectors fold rnrs
+@subsection Folding with @rnrs{6} style
+
+
+@deffn Function vector-fold-left @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-fold-right @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-fold-left/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-fold-right/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+Fold the function @var{combine} over the vector arguments, which must
+have the same length.  The return value is the return value of the last
+evaluated call to @var{combine}; if all the vector arguments are empty,
+the return value is @var{knil}.  The syntaxes may be a little faster in
+the multiple vector arguments case.
+
+The left--folding variants iterate @var{combine} left--to--right over each
+element of equal index in all the vectors; @var{combine} is applied as:
+
+@example
+(@var{combine} @var{state}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···)
+@end example
+
+@noindent
+where @var{state} is the current state value, and it is the
+@strong{first} argument; the current state value begins with @var{knil},
+and becomes whatever @var{combine} returned at the respective iteration.
+
+The right--folding variants iterate @var{combine} right--to--left over each
+element of equal index in all the vectors; @var{combine} is applied as:
+
+@example
+(@var{combine}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···
+  @var{state})
+@end example
+
+@noindent
+in which @var{state} is the @strong{last} argument.
+@end deffn
+
+
+@deffn Function vector-fold-left* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-fold-right* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-fold-left*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-fold-right*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+Like the above functions, but accept vectors of different length,
+iterating until the end of the shortest.
+@end deffn
+
+
+@defun vector-fold-left/with-index @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@defunx vector-fold-left*/with-index @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@defunx vector-fold-right/with-index @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@defunx vector-fold-right*/with-index @var{combine} @var{knil} @var{vec0} @var{vec} ...
+Folding operators variants which apply @var{combine} using the index of the
+current elements as first argument.  For the left--folding operators:
+
+@example
+(@var{combine} @var{idx} @var{state}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···)
+@end example
+
+@noindent
+for the right--folding operators:
+
+@example
+(@var{combine} @var{idx}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···
+  @var{state})
+@end example
+
+Here is a possible implementation for @func{vector-map!}:
+
+@example
+(define (vector-map! proc vec0 . vectors)
+  (apply vector-fold-left/with-index
+         (lambda (index state . items)
+           (vector-set! state index (apply proc index items))
+           state)
+         vec0 vec0 vectors))
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@deffn Function vector-and-fold-left @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-and-fold-left* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-and-fold-right @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-and-fold-right* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-and-fold-left/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-and-fold-left*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-and-fold-right/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-and-fold-right*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+Like the functions above, but stop the iteration if @var{combine}
+returns @false{}.  The return value is the return value of the last
+evaluated call to @var{combine}; if all the vector arguments are empty,
+the return value is @var{knil}.
+
+These functions can be used to implement functions like
+@func{vector-every}:
+
+@example
+(define (vector-every pred vec0 . vectors)
+  (apply vector-and-fold-left (lambda (state . items)
+                                (apply pred items))
+         #t ;must be true
+         (cons vec0 vectors)))
+@end example
+@end deffn
+
+
+@deffn Function vector-or-fold-left @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-or-fold-left* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-or-fold-right @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Function vector-or-fold-right* @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-or-fold-left/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-or-fold-left*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-or-fold-right/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-or-fold-right*/stx @var{combine} @var{knil} @var{vec0} @var{vec} ...
+Like the functions above, but stop the iteration if @var{combine}
+returns true as state.  The return value is the return value of the last
+evaluated call to @var{combine}.  If all the vectors are empty, the
+return value is @var{knil}.
+
+These functions can be used to implement functions like
+@func{vector-any}:
+
+@example
+(define (vector-any pred vec0 . vectors)
+  (apply vector-or-fold-left (lambda (state . items)
+                               (apply pred items))
+         #f ;must be false
+         (cons vec0 vectors)))
+@end example
+@end deffn
+
+
+@defun vector-fold-left/pred @var{pred} @var{knil} @var{vec}
+Apply @var{pred} to adjacent couples of elements from @var{vec}; return
+true if all the evaluations of @var{pred} were true.  The iteration
+stops at the first @false{} return value from @var{pred}.
+
+This function is implemented as:
+
+@example
+(define (fold-left/pred pred knil ell)
+  (vector-and-fold-left/stx (lambda (state item)
+                              (and (pred state item) item))
+     knil ell))
+@end example
+
+@noindent
+and it can be used to implement predicates for ordering like @func{<}:
+
+@example
+(vector-fold-left/pred < 0 '(1 2 3 4 5 6))
+@result{} 6
+
+(vector-fold-left/pred < 0 '(1 2 3 -4 5 6))
+@result{} #f
+@end example
+@end defun
+
+@c page
+@node vectors fold sub
+@subsection Folding over subvectors
+
+
+@deffn Function %subvector-fold-left @var{combine} @var{knil} @var{vec} @var{start} @var{past}
+@deffnx Function %subvector-fold-right @var{combine} @var{knil} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-fold-left @var{combine} @var{knil} @var{S}
+@deffnx Macro subvector-fold-right @var{combine} @var{knil} @var{S}
+Fold @var{combine} over each item of the selected subvector, return the
+return value of the last evaluated call to @var{combine}; if the
+selected subvector is empty, the return value is @var{knil}.  The
+left--fold operator builds the return value as:
+
+@example
+(@var{combine}
+  (@var{combine}
+        ...
+        (@var{combine}
+           (@var{combine}
+              (vector-ref @var{vec} @var{start})
+              @var{knil})
+           (vector-ref @var{vec} (+ @var{start} 1)))
+        ...
+    (vector-ref @var{vec} (- @var{past} 2)))
+    ...
+  (vector-ref @var{vec} (- @var{past} 1)))
+@end example
+
+@noindent
+the right--fold iterator builds the return value as:
+
+@example
+(@var{combine}
+  (vector-ref @var{vec} @var{start}
+  (@var{combine}
+    (vector-ref @var{vec} (+ @var{start} 1))
+    ...
+      (@var{combine}
+        (vector-ref @var{vec} (- @var{past} 3))
+        (@var{combine}
+           (vector-ref @var{vec} (- @var{past} 2))
+           (@var{combine}
+              (vector-ref @var{vec} (- @var{past} 1))
+              @var{knil})))))
+@end example
+@end deffn
+
+@c page
+@node vectors fold unfold
+@subsection Unfolding vectors
+
+
+@defun vector-unfold @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed}
+@defunx vector-unfold @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed} @var{base-vector}
+@defunx vector-unfold @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed} @var{base-vector} @var{make-final}
+This is a fundamental constructor for vectors.  Arguments description
+follows.
+
+@table @var
+@item make-seed
+A map function used to generate a series of ``seed'' values from the
+initial seed:
+
+@example
+@var{first-seed}
+(@var{make-seed} @var{first-seed})            @result{} seed2
+(@var{make-seed} seed2)                 @result{} seed3
+(@var{make-seed} seed3)                 @result{} seed4
+...
+@end example
+
+@item stop?
+A predicate function telling when to stop generating items: When it
+returns true when applied to one of the seed values.
+
+@item seed->item
+Map function mapping each seed value to the corresponding item in
+the result vector.  These items are assembled into the vector in a
+left--to--right order.
+
+@item base
+An optional vector which is used as initial/leftmost portion of the
+constructed vector.  Defaults to the empty vector.
+
+@item make-final
+Optional function applied to the terminal seed value (on which
+@var{stop?}  returns true) to produce the final/rightmost portion of the
+constructed vector.  Defaults to @code{(lambda (x) '#())}.
+@end table
+
+More precisely, the following (simple, inefficient) definitions hold:
+
+@example
+;; iterative
+(define (vector-unfold stop? seed->item make-seed
+                       first-seed base-vector make-final)
+  (let loop ((seed    first-seed)
+             (result  base-vector))
+    (if (stop? seed)
+        (vector-append result (make-final seed))
+      (loop (make-seed seed)
+            (vector-append result
+                           (vector (seed->item seed)))))))
+
+;; recursive
+(define (vector-unfold stop? seed->item make-seed
+                       first-seed base-vector make-final)
+  (vector-append
+     base-vector
+     (let loop ((seed first-seed))
+       (if (stop? seed)
+           (make-final seed)
+         (vector-append (vector (seed->item seed))
+                        (loop (make-seed seed)))))))
+@end example
+
+This function is a fairly powerful vector constructor; we can use it to
+convert a list to a vector, read a port into a vector, reverse a vector,
+copy a vector, and so forth.  Examples:
+
+@example
+(port->vector p) = (vector-unfold eof-object? values
+                                  (lambda (x) (read-item p))
+                                  (read-item p))
+
+(list->vector lis) = (vector-unfold null? car cdr lis)
+
+(vector-tabulate f size) = (vector-unfold (lambda (i)
+                                            (= i size))
+                                          f add1 0)
+@end example
+
+@noindent
+to map @code{proc} over a list @var{lis}, producing a vector:
+
+@example
+(vector-unfold null? (compose proc car) cdr lis)
+@end example
+
+Interested functional programmers may enjoy noting that
+@func{vector-fold-right} and @func{vector-unfold} are in some sense
+inverses.  That is, given operations @var{knull?}, @var{kar}, @var{kdr},
+@var{combine}, and @var{knil} satisfying:
+
+@example
+(combine (kar x) (kdr x)) @result{} x
+(knull? knil) @result{} #t
+@end example
+
+@noindent
+then:
+
+@example
+(vector-fold-right combine knil
+                   (vector-unfold knull? kar kdr x))
+@result{} x
+@end example
+
+@noindent
+and:
+
+@example
+(vector-unfold knull? kar kdr
+               (vector-fold-right combine knil s))
+@result{} s
+@end example
+
+The final vector constructed does not share storage with either
+@var{base-vector} or the value produced by @var{make-final}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun vector-unfold-right @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed}
+@defunx vector-unfold-right @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed} @var{base-vector}
+@defunx vector-unfold-right @var{stop?} @var{seed->item} @var{make-seed} @var{first-seed} @var{base-vector} @var{make-final}
+This is a fundamental constructor for vectors.  The arguments are like
+the ones of @func{vector-unfold}.  The difference from
+@func{vector-unfold} is that this function builds the vector from right
+to left; more precisely, the following (simple, inefficient) definitions
+hold:
+
+@example
+;; iterative
+(define (vector-unfold-right
+           stop? seed->item make-seed
+           first-seed base-vector make-final)
+  (let lp ((seed    first-seed)
+           (result  base))
+    (if (stop? seed)
+        (vector-append (make-final seed) result)
+      (loop (make-seed seed)
+            (vector-append (vector (seed->item seed))
+                           result)))))
+
+;; recursive
+(define (vector-unfold-right
+           stop? seed->item make-seed
+           first-seed base-vector make-final)
+  (vector-append
+     (let loop ((seed first-seed))
+       (if (stop? seed)
+           (make-final seed)
+         (vector-append (loop (make-seed seed))
+                        (vector (seed->item seed)))))
+     base))
+@end example
+
+Interested functional programmers may enjoy noting that
+@func{vector-fold} and @func{vector-unfold-right} are in some sense
+inverses.  That is, given operations @var{knull?}, @var{kar}, @var{kdr},
+@var{kons}, and @var{knil} satisfying:
+
+@example
+(kons (kar x) (kdr x)) @result{} x
+(knull? knil) @result{} #t
+@end example
+
+@noindent
+then:
+
+@example
+(vector-fold kons knil
+             (vector-unfold-right knull? kar kdr x))
+@result{} x
+@end example
+
+@noindent
+and:
+
+@example
+(vector-unfold-right knull? kar kdr
+                     (vector-fold kons knil s))
+@result{} s
+@end example
+
+The final vector constructed does not share storage with either
+@var{base-vector} or the value produced by @func{make-final}.
+@end defun
+
+@c page
+@node vectors fold map
+@subsection Mapping functions
+
+
+All the functions described here map their @var{proc} function argument
+over all the elements of the vector arguments, or the subvector
+argument, from zero to the end in increasing order.  In all the
+following descriptions:
+
+@itemize
+@item
+Functions and syntaxes whose main name portion ends without a @code{!},
+build and return a new vector, storing into it the results of mapping
+@var{proc}.
+
+@item
+Functions and syntaxes whose main name portion ends with a @code{!},
+mutate their @var{vec0} vector argument, storing into it the results of
+mapping @var{proc}.
+
+@item
+Functions and syntaxes whose main name portion ends without a @code{*},
+accept only vector arguments of equal length.
+
+@item
+Functions and syntaxes whose main name portion ends with a @code{*},
+accept vector arguments of different length, stopping the iteration at
+the end of the shortest.
+
+@item
+Functions whose name ends without the @code{/with-index} suffix, apply
+their @var{proc} function argument as:
+
+@example
+(@var{proc}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ...)
+@end example
+
+@item
+Functions whose name ends with the @code{/with-index} suffix, apply
+their @var{proc} function argument as:
+
+@example
+(@var{proc} @var{idx}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ...)
+@end example
+
+@noindent
+where @var{idx} is the index of the current element.
+@end itemize
+
+
+@defun vector-map* @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-map/with-index @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-map*/with-index @var{proc} @var{vec0} @var{vec} ...
+Build and return a new vector holding the return values of mapping
+@var{proc} over all the elements of the vector arguments.
+@end defun
+
+
+@defun vector-map! @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-map*! @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-map!/with-index @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-map*!/with-index @var{proc} @var{vec0} @var{vec} ...
+Mutate @var{vec0} setting its elements to the return values of mapping
+@var{proc} over all the elements of the vector arguments.
+@end defun
+
+
+@defun vector-for-each* @var{proc} @var{vec0} @var{vec} ...
+@defunx vector-for-each*/with-index @var{proc} @var{vec0} @var{vec} ...
+Apply @var{proc} over all the elements of the vector arguments.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Mapping over subvectors
+
+@deffn Function %subvector-map @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Function %subvector-map/with-index @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-map @var{proc} @var{S}
+@deffnx Macro subvector-map/with-index @var{proc} @var{S}
+Build and return a new vector mapping @var{proc} over the items in the
+selected subvector of @var{vec}, from index @var{start} to index
+@var{past} in increasing order.
+@end deffn
+
+
+@deffn Function %subvector-map! @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Function %subvector-map!/with-index @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-map! @var{proc} @var{S}
+@deffnx Macro subvector-map!/with-index @var{proc} @var{S}
+Mutate the selected subvector of @var{vec}, mapping @var{proc} over its
+items from index @var{start} to index @var{past} in increasing order.
+@end deffn
+
+
+@deffn Function %subvector-for-each @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Function %subvector-for-each/with-index @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-for-each @var{proc} @var{V}
+@deffnx Macro subvector-for-each/with-index @var{proc} @var{V}
+Apply @var{proc} to each item in the selected subvector of @var{vec},
+from index @var{start} to index @var{past} in increasing order.
+@end deffn
+
+
+@deffn Function %subvector-for-each-index @var{proc} @var{vec} @var{start} @var{past}
+@deffnx Macro subvector-for-each-index @var{proc} @var{V}
+Apply @var{proc} to each index in the selected subvector of @var{vec},
+from index @var{start} to index @var{past} in increasing order.  This is
+simply a method of looping over a vector that is guaranteed to be safe
+and correct.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Syntax variants
+
+The following syntaxes are like the corresponding functions.  They can
+be a little faster when multiple vector arguments are present.
+
+
+@deffn Syntax vector-map/stx @var{proc} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-map*/stx @var{proc} @var{vec0} @var{vec} ...
+Like @func{vector-map} and @func{vector-map*}, but implemented as a
+syntax.
+@end deffn
+
+
+@deffn Syntax vector-map!/stx @var{proc} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-map*!/stx @var{proc} @var{vec0} @var{vec} ...
+Like @func{vector-map!} and @func{vector-map*!}, but implemented as a
+syntax.
+@end deffn
+
+
+@deffn Syntax vector-for-each/stx @var{proc} @var{vec0} @var{vec} ...
+@deffnx Syntax vector-for-each*/stx @var{proc} @var{vec0} @var{vec} ...
+Like @func{vector-for-each} and @func{vector-for-each*}, but implemented
+as a syntax.
+@end deffn
+
+@c page
+@node vectors select
+@section Selection
+
+
+@deffn Function %vector-copy @var{vec} @var{start} @var{past}
+@deffnx Macro subvector* @var{V}
+@deffnx Macro vector-copy @var{V}
+Build and return a new vector holding the selected subvector of
+@var{vec}.
+@end deffn
+
+
+@deffn Function %vector-reverse-copy @var{vec} @var{start} @var{past}
+@deffnx Macro vector-reverse-copy @var{V}
+Like @func{%vector-copy}, but copy the elements in the reverse order
+from the selected subvector of @var{vec}.
+
+@example
+(vector-reverse-copy (view '#(5 4 3 2 1 0)
+                       (start 1)
+                       (past  5)))
+@result{} #(1 2 3 4)
+@end example
+@end deffn
+
+
+@deffn Function %vector-copy! @var{dst-vec} @var{dst-start} @var{src-vec} @var{src-start} @var{src-past}
+@deffnx Macro vector-copy! @var{dst-V} @var{src-V}
+Write the selected source subvector into the selected destination
+subvector.  This function supports copying over the same vector.
+
+The selected destination subvector starts at @var{dst-start} in
+@var{dst-vec} and may extend until the end of the vector.  In the
+destination vector view @var{dst-V}: If a past index is specified, it is
+ignored.
+@end deffn
+
+
+@deffn Function %vector-reverse-copy! @var{dst-vec} @var{dst-start} @var{src-vec} @var{src-start} @var{src-past}
+@deffnx Macro vector-reverse-copy! @var{V-dst} @var{V-src}
+Like @func{%vector-copy!}, but this copies the elements in the reverse
+order.  This function supports copying over the same vector.
+@end deffn
+
+
+@deffn Function %vector-take @var{nitems} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-take-right @var{nitems} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-take @var{V} @var{nitems}
+@deffnx Macro vector-take-right @var{V} @var{nitems}
+Return the first or last @var{nitems} of the selected subvector.  These
+functions always return a newly allocated vector.
+@end deffn
+
+
+@deffn Function %vector-drop @var{nitems} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-drop-right @var{nitems} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-drop @var{V} @var{nitems}
+@deffnx Macro vector-drop-right @var{V} @var{nitems}
+Drop the first or last @var{nitems} of the selected subvector and return
+the resulting vector.  These functions always return a newly allocated
+vector.
+@end deffn
+
+@c page
+@node vectors pad
+@section Padding and trimming
+
+
+@deffn Function %vector-pad @var{requested-len} @var{fill-item} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-pad-right @var{requested-len} @var{fill-item} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-pad @var{V} @var{requested-len}
+@deffnx Macro vector-pad @var{V} @var{requested-len} @var{fill-item}
+@deffnx Macro vector-pad-right @var{V} @var{requested-len}
+@deffnx Macro vector-pad-right @var{V} @var{requested-len} @var{fill-item}
+Build a vector of length @var{requested-len} comprised of @var{vec}
+padded on the left or right by as many occurrences of the item
+@var{fill-item} as needed.  Always return a newly allocated vector.
+
+If @var{vec} has more than @var{requested-len} items, it is truncated on
+the left or right to length @var{requested-len}.  For the macros:
+@var{fill-item} defaults to @false{}.
+
+@example
+(vector-pad '#(1 2 3))           @result{} #(#f #f 1 2 3)
+(vector-pad '#(1 2 3 4 5) 5)     @result{} #(1 2 3 4 5)
+(vector-pad '#(9 9 1 2 3 4 5) 5) @result{} #(1 2 3 4 5)
+@end example
+@end deffn
+
+
+@deffn Function %vector-trim @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-trim-right @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-trim-both @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-trim @var{V} @var{pred}
+@deffnx Macro vector-trim-right @var{V} @var{pred}
+@deffnx Macro vector-trim-both @var{V} @var{pred}
+Trim the selected subvector of @var{vec} by skipping over all items on
+the left/on the right/on both sides that satisfy @var{pred}: A test
+predicate that is applied to the items in @var{vec}, an item causing it
+to return true is skipped.
+
+Always return a newly allocated vector.
+@end deffn
+
+@c page
+@node vectors prefix
+@section Prefixes and suffixes
+
+
+@deffn Function %vector-prefix-length @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-prefix-length @vari{V} @varii{V}
+Return the length of the longest common prefix of the two subvectors.
+This is equivalent to the mismatch index for the vectors (modulo the
+start index offsets).
+@end deffn
+
+
+@deffn Function %vector-suffix-length @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-suffix-length @vari{V} @varii{V}
+Return the length of the longest common suffix of the two subvectors.
+@end deffn
+
+
+@deffn Function %vector-prefix? @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-prefix? @vari{V} @varii{V}
+Return @true{} if the selected subvector of @vari{vec} is a prefix of
+the selected subvector of @varii{vec}, otherwise return @false{}.  Notice
+that the empty vector is a prefix of every vector.
+@end deffn
+
+
+@deffn Function %vector-suffix? @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-suffix? @vari{V} @varii{V}
+Return @true{} if the selected subvector of @vari{vec} is a suffix of
+the selected subvector of @varii{vec}, otherwise return @false{}.  Notice
+that the empty vector is @strong{not} a suffix of every vector.
+@end deffn
+
+@c page
+@node vectors search
+@section Searching
+
+
+@deffn Function %vector-index @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-index-right @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-index @var{V} @var{pred}
+@deffnx Macro vector-index-right @var{V} @var{pred}
+Search through the subvector from the left or right, returning the index
+of the first occurrence of an item which satisfies the predicate
+@var{pred}.  If no match is found: Return @false{}.
+@end deffn
+
+
+@deffn Function %vector-skip @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Function %vector-skip-right @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-skip @var{V} @var{pred}
+@deffnx Macro vector-skip-right @var{V} @var{pred}
+Search through the vector from the left or right, returning the index of
+the first occurrence of an item which does not satisfy the predicate
+@var{pred}.  If no match is found: Return @false{}.
+@end deffn
+
+
+@deffn Function %vector-count @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-count @var{V} @var{pred}
+Return a count of the number of items in @var{vec} that satisfy the
+@var{pred} argument.
+@end deffn
+
+
+@deffn Function %vector-contains @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-contains @vari{V} @varii{V}
+Return true if the selected subvector of @vari{vec} contains the
+selected subvector of @varii{vec}, else return @false{}.  The return
+value is the index in @vari{vec} where the subvector of @varii{vec}
+occurs.
+@end deffn
+
+
+@deffn Function %vector-binary-search @var{obj} @var{cmp} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-binary-search @var{V} @var{obj} @var{cmp}
+Similar to @func{vector-index} and @func{vector-index-right}, but
+instead of searching left to right or right to left, perform a binary
+search.  @var{cmp} should be a procedure of two arguments and return:
+
+@itemize
+@item
+A negative integer, indicating that its first argument is less than its
+second.
+
+@item
+Zero, indicating that they are equal.
+
+@item
+A positive integer, indicating that the first argument is greater than
+the second argument.
+@end itemize
+
+An example @var{cmp} might be:
+
+@example
+(lambda (char1 char2)
+  (cond ((char<? char1 char2) -1)
+        ((char=? char1 char2)  0)
+        (else                  1)))
+@end example
+@end deffn
+
+@c page
+@node vectors filter
+@section Filtering and deleting
+
+
+@deffn Function %vector-filter @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-filter @var{V} @var{pred}
+Filter the selected subvector, retaining only those characters that
+satisfy the @var{pred} argument.  Always return a newly allocated
+vector.
+@end deffn
+
+
+@deffn Function %vector-delete @var{pred} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-delete @var{V} @var{pred}
+Filter the selected subvector, retaining only those characters that do
+@strong{not} satisfy the @var{pred} argument.  Always return a newly
+allocated vector.
+@end deffn
+
+@c page
+@node vectors list
+@section List and vector conversion
+
+
+@deffn Function %vector->list* @var{vec} @var{start} @var{past}
+@deffnx Macro vector->list* @var{V}
+Return a newly allocated list of the items that make up the given
+subvector.  This is an extension of the @func{vector->list} function
+that adds support for subvectors.
+@end deffn
+
+
+@deffn Function %reverse-vector->list @var{vec} @var{start} @var{past}
+@deffnx Macro reverse-vector->list @var{V}
+Like @func{%vector->list*} but reverses the order of the items from the
+subvector.
+@end deffn
+
+
+@defun reverse-list->vector @var{char-list}
+Reverse the given list of items, then compose a vector with the
+result.
+
+@example
+(reverse-list->vector '(#\a #\B #\c))
+@result{} #(#\c #\B #\a)
+@end example
+@end defun
+
+@c page
+@node vectors replicate
+@section Replicate and rotate
+
+
+@deffn Function %xsubvector @var{from} @var{to} @var{vec} @var{start} @var{past}
+@deffnx Macro xsubvector @var{V} @var{from} @var{to}
+Extended subvector procedure replicating the selected subvector ``up and
+down'' index space, in both the positive and negative directions.
+
+The call:
+
+@example
+(%xsubvector from to '#(#\a #\b #\c #\d #\e #\f #\g) 3 6)
+@end example
+
+@noindent
+selects the subvector @code{#(#\d #\e #\f)} and defines the conceptual
+bidirectionally--infinite vector:
+
+@example
+...  e  f  d  e  f  d  e  f  d  e  f ...
+... -5 -4 -3 -2 -1  0 +1 +2 +3 +4 +5 ...
+                    ^
+@end example
+
+@noindent
+that is @code{#(#\d #\e #\f)} repeated in both directions.
+@func{%xsubvector} returns the subvector of this vector beginning at
+index @var{from}, and ending at @var{to}.
+
+We can use this function to perform a variety of tasks:
+
+@itemize
+@item
+To replicate a vector:
+
+@example
+(xsubvector '#(#\a #\b #\c) 0 7)
+@result{} #(#\a #\b #\c #\a #\b #\c #\a)
+@end example
+
+@item
+To rotate a vector left:
+
+@example
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) 1  7)
+@result{} #(#\b #\c #\d #\e #\f #\a)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) 2  8)
+@result{} #(#\c #\d #\e #\f #\a #\b)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) 3  9)
+@result{} #(#\d #\e #\f #\a #\b #\c)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) 4 10)
+@result{} #(#\e #\f #\a #\b #\c #\d)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) 5 11)
+@result{} #(#\f #\a #\b #\c #\d #\e)
+@end example
+
+@item
+To rotate a vector right:
+
+@example
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) -1 5)
+@result{} #(#\f #\a #\b #\c #\d #\e)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) -2 4)
+@result{} #(#\e #\f #\a #\b #\c #\d)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) -3 3)
+@result{} #(#\d #\e #\f #\a #\b #\c)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) -4 2)
+@result{} #(#\c #\d #\e #\f #\a #\b)
+
+(xsubvector '#(#\a #\b #\c #\d #\e #\f) -5 1)
+@result{} #(#\b #\c #\d #\e #\f #\a)
+@end example
+@end itemize
+
+Note that:
+
+@itemize
+@item
+The @var{from}/@var{to} indices give a half--open range; the items from
+index @var{from} up to, but not including, index @var{to}.
+
+@item
+The @var{from}/@var{to} indices are not in terms of the index space for
+vector @var{vec}.  They are in terms of the replicated index space of
+the subvector defined by @var{vec}, @var{start}, and @var{past}.
+@end itemize
+
+It is an error if @var{start} equals @var{past}.
+@end deffn
+
+
+@deffn Function xvector-xcopy! @var{from} @var{to} @var{target} @var{target-start} @var{source} @var{source-start} @var{source-past}
+@deffnx Macro vector-xcopy! @var{target-S} @var{source-S} @var{from} @var{to}
+Exactly the same as @func{%xsubvector}, but the extracted text is
+written into the selected subvector of @var{target}.
+
+This operation is not defined if @code{(eq? target start)}; we cannot
+copy a vector on top of itself.
+@end deffn
+
+@c page
+@node vectors mutate
+@section Mutators
+
+
+@defun vector-swap! @var{vec} @var{i} @var{j}
+Swap the items in @var{vec} at positions @var{i} and @var{j}.
+@end defun
+
+
+@deffn Function %vector-fill*! @var{fill-item} @var{vec} @var{start} @var{past}
+@deffnx Macro vector-fill*! @var{V} @var{fill-item}
+Fill the selected subvector with @var{fill-item}, modifying the original
+vector.
+@end deffn
+
+@c page
+@node vectors misc
+@section Miscellaneous functions
+
+
+@deffn Function %vector-replace @vari{vec} @vari{start} @vari{past} @varii{vec} @varii{start} @varii{past}
+@deffnx Macro vector-replace @vari{V} @varii{V}
+Replace the selected subvector in @vari{vec} with the selected subvector
+in @varii{vec}.  Return a newly allocated vector.
+@end deffn
+
+
+@deffn Function %vector-reverse @var{vec} @var{start} @var{past}
+@deffnx Function %vector-reverse! @var{vec} @var{start} @var{past}
+@deffnx Macro vector-reverse @var{V}
+@deffnx Macro vector-reverse! @var{V}
+Reverse the vector.  @func{%vector-reverse} returns the result vector
+and does not alter its @var{vec} parameter.  @func{%vector-reverse!} is
+the in--place side--effecting variant.
+@end deffn
+
+@c end of file

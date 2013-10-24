@@ -103,7 +103,14 @@ script from the top source directory:
    $ cd vicare-scheme
    $ sh autogen.sh
 
-after this  the procedure  is the same  as the one  for building  from a
+notice  that  "autogen.sh"  will   run  the  programs  "autoreconf"  and
+"libtoolize"; the  latter is  selected through the  environment variable
+"LIBTOOLIZE",  whose  value  can  be  customised;  for  example  to  run
+"glibtoolize" rather than "libtoolize" we do:
+
+   $ LIBTOOLIZE=glibtoolize sh autogen.sh
+
+  After this the  procedure is the same  as the one for  building from a
 proper release tarball, but we  must enable maintainer mode when running
 the "configure" script:
 
@@ -176,6 +183,21 @@ the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
 Autotools.
 
 
+3.3 Special make rules
+----------------------
+
+There are  special makefile rules  to rebuild source code  files, mostly
+lexer and parser tables:
+
+silex-test	- rebuild the tests for the SILex lexer
+lalr-test	- rebuild the tests for the LALR parser
+
+and the  following DANGEROUS  rule, use  only if you  know what  you are
+doing:
+
+silex-internals - rebuild the internal tables of SILex itself
+
+
 4. Testing
 ----------
 
@@ -238,6 +260,56 @@ The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
 Vicare Scheme  is a fork  driven by  Marco Maggi.  See  the CONTRIBUTORS
 file for the list of contributors to Ikarus Scheme and Vicare Scheme.
 
+  IrRegex is adapted  from the original distribution by  Alex Shinn, see
+the file "LICENSE.irregex".
+
+  Pregexp is adapted from the original library by Dorai Sitaram, see the
+file "LICENSE.pregexp".
+
+  The libraries  in the  hierarchy (vicare  containers strings  ---) are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+  The libraries  in the  hierarchy (vicare  containers vectors  ---) are
+derived from the reference implementation of SRFI 13 by Olin Shivers.
+
+  The library (vicare containers knuth-morris-pratt) is derived from the
+reference implementation of SRFI 13 by Olin Shivers.
+
+  The library (vicare containers strings rabin-karp) is derived from the
+implementation at:
+
+    <http://algs4.cs.princeton.edu/53substring/RabinKarp.java.html>
+
+  The library  (vicare containers levenshtein)  is derived from  code by
+Neil Van Dyke.
+
+  The library (vicare language-extensions  streams) is derived from code
+by Philip L. Bewig.
+
+  The library (vicare language-extensions loops) is derived from code by
+Sebastian Egner.
+
+  The library  (vicare language-extensions comparisons) is  derived from
+code by Sebastian Egner and Jens Axel Soegaard.
+
+  The libraries in the hierarchy (vicare crypto randomisations ---) have
+many authors, please see the headers of the individual files.
+
+  Some libraries  in the  hierarchy (vicare containers  bytevectors ---)
+are derived from the SRFI 13 reference implementation by Olin Shivers.
+
+  The library  (vicare formations) is derived  from: "format.scm" Common
+LISP  text  output  formatter  for  SLIB.   Written  1992-1994  by  Dirk
+Lutzebaeck.  Authors of the original  version (<1.4) were Ken Dickey and
+Aubrey Jaffer.  Assimilated into Guile  May 1999.  Ported to R6RS Scheme
+and Vicare by Marco Maggi.
+
+  The SILex libraries are a port to  R6RS Scheme of SILex version 1.0 by
+Danny Dube'.  Copyright (C) 2001, 2009 Danny Dube'.
+
+  The LALR libraries are a port  to R6RS Scheme of Lalr-scm by Dominique
+Boucher.  Copyright (c) 2005-2008 Dominique Boucher.
+
 
 B. Bug reports
 --------------
@@ -275,11 +347,6 @@ this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
 
-  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
-collection of R6 Scheme libraries:
-
-	      <http://marcomaggi.github.com/nausicaa.html>
-
   The library Libffi can be found at:
 
 		    <http://sourceware.org/libffi/>
@@ -299,16 +366,6 @@ the library CRE2 is available from:
   The home page of the R6RS standard is at:
 
 			 <http://www.r6rs.org>
-
-  Other known implementations of R6 Scheme:
-
-Chez Scheme	<http://www.scheme.com/>
-Guile		<http://www.gnu.org/software/guile/guile.html>
-Larceny		<http://www.larcenists.org/>
-Mosh		<http://code.google.com/p/mosh-scheme/>
-Racket		<http://racket-lang.org/>
-Sagittarius	<http://code.google.com/p/sagittarius-scheme/>
-Ypsilon		<http://code.google.com/p/ypsilon/>
 
 
 D. On boot images

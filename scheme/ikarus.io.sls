@@ -628,8 +628,16 @@
 		  port-remprop			port-property-list
 
 		  ;; networking
+		  make-binary-socket-input-port
+		  make-binary-socket-input-port*
+		  make-binary-socket-output-port
+		  make-binary-socket-output-port*
 		  make-binary-socket-input/output-port
 		  make-binary-socket-input/output-port*
+		  make-textual-socket-input-port
+		  make-textual-socket-input-port*
+		  make-textual-socket-output-port
+		  make-textual-socket-output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
     (only (vicare options)
@@ -1304,43 +1312,43 @@
 
 (define-argument-validation (port-mode who obj)
   (or (eq? obj 'r6rs) (eq? obj 'vicare))
-  (assertion-violation who "expected supported port mode as argument" obj))
+  (procedure-argument-violation who "expected supported port mode as argument" obj))
 
 (define-argument-validation (port-with-fd who obj)
   (and (port? obj)
        (let ((port obj))
 	 (with-port (port) port.fd-device?)))
-  (assertion-violation who "expected port with file descriptor as underlying device" obj))
+  (procedure-argument-violation who "expected port with file descriptor as underlying device" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation ($input-port who obj)
   (%unsafe.input-port? obj)
-  (assertion-violation who "expected input port as argument" obj))
+  (procedure-argument-violation who "expected input port as argument" obj))
 
 (define-argument-validation ($output-port who obj)
   (%unsafe.output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
+  (procedure-argument-violation who "expected output port as argument" obj))
 
 (define-argument-validation ($not-input/output-port who obj)
   (not (%unsafe.input-and-output-port? obj))
-  (assertion-violation who "invalid input/output port as argument" obj))
+  (procedure-argument-violation who "invalid input/output port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation ($binary-port who obj)
   (%unsafe.binary-port? obj)
-  (assertion-violation who "expected binary port as argument" obj))
+  (procedure-argument-violation who "expected binary port as argument" obj))
 
 (define-argument-validation ($textual-port who obj)
   (%unsafe.textual-port? obj)
-  (assertion-violation who "expected textual port as argument" obj))
+  (procedure-argument-violation who "expected textual port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation ($open-port who obj)
   (not (%unsafe.port-closed? obj))
-  (assertion-violation who "expected open port as argument" obj))
+  (procedure-argument-violation who "expected open port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -1351,58 +1359,59 @@
   (raise
    (condition (make-who-condition who)
 	      (make-message-condition "position must be a nonnegative exact integer")
-	      (make-i/o-invalid-position-error position))))
+	      (make-i/o-invalid-position-error position)
+	      (make-procedure-argument-violation))))
 
 (define-argument-validation (get-position-result who position port)
   (and (or (fixnum? position)
 	   (bignum? position))
        (>= position 0))
-  (assertion-violation who "invalid value returned by get-position" port position))
+  (procedure-argument-violation who "invalid value returned by get-position" port position))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (port-identifier who obj)
   (string? obj)
-  (assertion-violation who "ID is not a string" obj))
+  (procedure-argument-violation who "ID is not a string" obj))
 
 (define-argument-validation (read!-procedure who obj)
   (procedure? obj)
-  (assertion-violation who "READ! is not a procedure" obj))
+  (procedure-argument-violation who "READ! is not a procedure" obj))
 
 (define-argument-validation (write!-procedure who obj)
   (procedure? obj)
-  (assertion-violation who "WRITE! is not a procedure" obj))
+  (procedure-argument-violation who "WRITE! is not a procedure" obj))
 
 (define-argument-validation (maybe-close-procedure who obj)
   (or (procedure? obj) (not obj))
-  (assertion-violation who "CLOSE should be either a procedure or false" obj))
+  (procedure-argument-violation who "CLOSE should be either a procedure or false" obj))
 
 (define-argument-validation (maybe-get-position-procedure who obj)
   (or (procedure? obj) (not obj))
-  (assertion-violation who "GET-POSITION should be either a procedure or false" obj))
+  (procedure-argument-violation who "GET-POSITION should be either a procedure or false" obj))
 
 (define-argument-validation (maybe-set-position!-procedure who obj)
   (or (procedure? obj) (not obj))
-  (assertion-violation who "SET-POSITION! should be either a procedure or false" obj))
+  (procedure-argument-violation who "SET-POSITION! should be either a procedure or false" obj))
 
 (define-argument-validation (filename who obj)
   (string? obj)
-  (assertion-violation who "expected string as filename argument" obj))
+  (procedure-argument-violation who "expected string as filename argument" obj))
 
 (define-argument-validation (file-options who obj)
   (enum-set? obj)
-  (assertion-violation who "expected enum set as file-options argument" obj))
+  (procedure-argument-violation who "expected enum set as file-options argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum-start-index who start)
   (and (fixnum? start) ($fx>= start 0))
-  (assertion-violation who "expected non-negative fixnum as start index argument" start))
+  (procedure-argument-violation who "expected non-negative fixnum as start index argument" start))
 
 (define-argument-validation (start-index-for-bytevector who dst.start dst.bv)
   ;;Notice that start=length is valid is the count argument is zero
   ($fx<= dst.start ($bytevector-length dst.bv))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "start index argument " (number->string dst.start)
 		   " too big for bytevector of length "
 		   (number->string ($bytevector-length dst.bv)))
@@ -1411,7 +1420,7 @@
 (define-argument-validation ($start-index-for-string who dst.start dst.str)
   ;;Notice that start=length is valid is the count argument is zero
   ($fx< dst.start ($string-length dst.str))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "start index argument " (number->string dst.start)
 		   " too big for string of length " (number->string ($string-length dst.str)))
     dst.start))
@@ -1422,19 +1431,19 @@
   (and (integer? count)
        (exact? count)
        (>= count 0))
-  (assertion-violation who "expected non-negative exact integer as count argument" count))
+  (procedure-argument-violation who "expected non-negative exact integer as count argument" count))
 
 (define-argument-validation (fixnum-count who count)
   (and (fixnum? count)
        ($fx>= count 0))
-  (assertion-violation who "expected non-negative fixnum as count argument" count))
+  (procedure-argument-violation who "expected non-negative fixnum as count argument" count))
 
 (define-argument-validation (count-from-start-in-bytevector who count start dst.bv)
   ;;We know that COUNT and START  are fixnums, but not if START+COUNT is
   ;;a fixnum, too.
   ;;
   (<= (+ start count) ($bytevector-length dst.bv))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "count argument "    (number->string count)
 		   " from start index " (number->string start)
 		   " too big for bytevector of length "
@@ -1446,7 +1455,7 @@
   ;;a fixnum, too.
   ;;
   (<= (+ start count) ($string-length dst.str))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "count argument "    (number->string count)
 		   " from start index " (number->string start)
 		   " too big for string of length "

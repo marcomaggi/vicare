@@ -1534,7 +1534,7 @@
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
 	   (symbol? ($cadr obj)))
-      (assertion-violation who "expected quoted symbol sexp as argument" obj))
+      (procedure-argument-violation who "expected quoted symbol sexp as argument" obj))
 
     (define (quoted-sym x)
       ;;Check that X has the format:
@@ -4350,7 +4350,7 @@
 	       (define (?refresh)
 		 (define-syntax ?func-name
 		   (lambda (stx)
-		     (syntax-error stx "cannot use label before it is defined")))
+		     (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
 		 ...
 		 (let* ((?func-name
 			 (let ((label

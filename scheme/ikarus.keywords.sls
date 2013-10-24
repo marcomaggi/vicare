@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -39,19 +39,11 @@
 		  keyword?
 		  keyword=?
 		  keyword-hash)
-    (vicare language-extensions syntaxes))
+    (vicare arguments validation))
 
 
 (define-struct keyword
   (symbol))
-
-(define-argument-validation (symbol who obj)
-  (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
-
-(define-argument-validation (keyword who obj)
-  (keyword? obj)
-  (assertion-violation who "expected keyword as argument" obj))
 
 (define (symbol->keyword S)
   (define who 'symbol->keyword)

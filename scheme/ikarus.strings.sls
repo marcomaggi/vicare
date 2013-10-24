@@ -19,6 +19,7 @@
   (export
     make-string			string
     substring			string-length
+    string-empty?		$string-empty?
     string-ref			string-set!
     string->list		list->string
     string-append		string-for-each
@@ -47,6 +48,7 @@
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
+		  string-empty?
 		  string-ref			string-set!
 		  string->list			list->string
 		  string-append			string-for-each
@@ -68,63 +70,63 @@
 		  string->uri-encoding		uri-encoding->string
 		  uri-encode			uri-decode
 		  uri-normalise-encoding)
-    #;(vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $string=
 	    $string-total-length
 	    $string-concatenate
-	    $string-reverse-and-concatenate))
+	    $string-reverse-and-concatenate
+	    $string-empty?))
 
 
 ;;;; arguments validation
 
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as string length argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as string length argument" obj))
 
 (define-argument-validation (total-length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as total string length argument" obj))
 
 (define-argument-validation (has-length who str len)
   ($fx= len ($string-length str))
-  (assertion-violation who "length mismatch in argument strings" len str))
+  (procedure-argument-violation who "length mismatch in argument strings" len str))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as string index argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as string index argument" obj))
 
 (define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= start len)
-  (assertion-violation who "start index argument out of range for string" start len))
+  (procedure-argument-violation who "start index argument out of range for string" start len))
 
 (define-argument-validation (end-index-and-length who end len)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= end len)
-  (assertion-violation who "end index argument out of range for string" end len))
+  (procedure-argument-violation who "end index argument out of range for string" end len))
 
 (define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
   ($fx<= start end)
-  (assertion-violation who "start and end index arguments are in decreasing order" start end))
+  (procedure-argument-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (count who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
+  (procedure-argument-violation who "expected non-negative fixnum as characters count argument" obj))
 
 (define-argument-validation (start-index-and-count-and-length who start count len)
   ($fx<= ($fx+ start count) len)
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "count argument out of range for string of length " (number->string len)
 		   " and start index " (number->string start))
     count))
@@ -134,14 +136,14 @@
 (define-argument-validation (latin1 who code-point str)
   (and ($fx>= code-point 0)
        ($fx< code-point 256))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected only Latin-1 characters in string argument"
     ($fixnum->char code-point) str))
 
 (define-argument-validation (ascii who code-point str)
   (and ($fx>= code-point 0)
        ($fx<  code-point 128))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected only ASCII characters in string argument"
     ($fixnum->char code-point) str))
 
@@ -556,14 +558,14 @@
 	     (if (pair? h)
 		 (if (not (eq? h t))
 		     (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		   (assertion-violation who "circular list is invalid as argument" ls))
+		   (procedure-argument-violation who "circular list is invalid as argument" ls))
 	       (if (null? h)
 		   ($fx+ n 1)
-		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		 (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (fill s i ls)
     (if (null? ls)
@@ -882,6 +884,21 @@
     (if (bytevector? r)
 	(utf8->string r)
       (error who "cannot obtain unique id"))))
+
+
+(define (string-empty? str)
+  ;;Defined by  Vicare.  Return true  if STR is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'string-empty?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($string-empty? str)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($string-empty? str)
+  ($fxzero? ($string-length str)))
 
 
 ;;;; Latin-1 bytevectors to/from strings

@@ -1199,6 +1199,24 @@ ikrt_vicare_built_with_srfi_enabled (ikpcb * pcb)
 #endif
 }
 ikptr
+ikrt_vicare_built_with_iconv_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_ICONV_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+ikptr
+ikrt_vicare_built_with_ffi_enabled (ikpcb * pcb)
+{
+#ifdef VICARE_BUILT_WITH_FFI_ENABLED
+  return IK_TRUE;
+#else
+  return IK_FALSE;
+#endif
+}
+ikptr
 ikrt_vicare_built_with_posix_enabled (ikpcb * pcb)
 {
 #ifdef VICARE_BUILT_WITH_POSIX_ENABLED

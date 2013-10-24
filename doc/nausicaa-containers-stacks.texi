@@ -1,0 +1,219 @@
+@node containers stacks
+@section Simple stacks
+
+
+@cindex @library{nausicaa containers stacks}, library
+@cindex Library @library{nausicaa containers stacks}
+
+
+The library @library{nausicaa containers stacks} implements stacks
+holding arbitrary scheme objects and designed for efficient
+last--in/first--out operations; it is built on top of @library{vicare
+containers stacks}.
+
+@menu
+* containers stacks objects::     Stack objects.
+* containers stacks inspection::  Inspecting stack objects.
+* containers stacks access::      Stack accessors and mutators.
+* containers stacks conversion::  Converting stacks to other objects.
+@end menu
+
+@c page
+@node containers stacks objects
+@subsection Stack objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.
+
+
+@deftp {Label Type} @aclass{stack}
+@cindex @var{stack} argument
+@cindex Argument @var{stack}
+Label type to be used to handle @objtype{stack} objects as defined by
+@library{vicare containers stacks}.  In this documentation @class{stack}
+object arguments to functions are indicated as @var{stack}.
+@end deftp
+
+
+@defop {Default constructor} @aclass{stack} constructor @var{obj} @dots{}
+Build and return a @class{stack} object holding the given objects, which
+are pushed on the stack from right to left.
+@end defop
+
+
+@deffn Syntax @aclass{stack} (@var{obj} @dots{})
+Build and return a @class{stack} object using the default constructor.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defmethod @aclass{stack} putprop @var{key} @var{value}
+@defmethodx @aclass{stack} $putprop @var{key} @var{value}
+Add a new property @var{key} to the property list of the @class{stack};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{stack} getprop @var{stack} @var{key}
+@defmethodx @aclass{stack} $getprop @var{stack} @var{key}
+Return the value of the property @var{key} in the property list of the
+@class{stack}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{stack} remprop @var{stack} @var{key}
+@defmethodx @aclass{stack} $remprop @var{stack} @var{key}
+Remove the property @var{key} from the property list of the
+@class{stack}; if @var{key} is not set: nothing happens.  @var{key} must
+be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{stack} property-list @var{stack}
+@defmethodx @aclass{stack} $property-list @var{stack}
+Return a new association list representing the property list of the
+@class{stack}.  The order of the entries is the same as the property
+creation order.
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defmethod @aclass{stack} hash @var{stack}
+@defmethodx @aclass{stack} $hash @var{stack}
+Return an exact integer to be used as hashtable key for the
+@class{stack}.  Hashtables having a @class{stack} as key can be
+instantiated as follows:
+
+@example
+(make-hashtable (lambda ((S <stack>))
+                  (S hash))
+                eq?)
+@end example
+@end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Arguments validation
+
+
+The following bindings are meant to be used with the facilities of the
+library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} @aclass{stack} @var{obj}
+Succeed if @var{obj} is a @class{stack} object.
+@end deffn
+
+@c page
+@node containers stacks inspection
+@subsection Inspecting stack objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@deftypecv {Immutable virtual field} @aclass{stack} @aclass{boolean} empty?
+@deftypecvx {Immutable virtual field} @aclass{stack} @aclass{boolean} $empty?
+A boolean, @true{} if the instance is empty; otherwise return @false{}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{stack} @aclass{boolean} not-empty?
+@deftypecvx {Immutable virtual field} @aclass{stack} @aclass{boolean} $not-empty?
+A boolean, @true{} if the instance is @strong{not} empty; otherwise
+return @false{}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{stack} @aclass{integer} size
+@deftypecvx {Immutable virtual field} @aclass{stack} @aclass{integer} $size
+An exact integer representing the number of objects in the instance.
+@end deftypecv
+
+@c page
+@node containers stacks access
+@subsection Stack accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defmethod @aclass{stack} top
+@defmethodx @aclass{stack} $top
+Return the object at the top of the stack.  Raise an assertion violation
+if the instance is empty.
+@end defmethod
+
+
+@defmethod @aclass{stack} push! @var{obj}
+@defmethodx @aclass{stack} $push! @var{obj}
+Push @var{obj} on the @class{stack}.
+@end defmethod
+
+
+@defmethod @aclass{stack} pop!
+@defmethodx @aclass{stack} $pop!
+Remove the object at the top of the @class{stack} and return it.  Raise
+an assertion violation if @var{stack} is empty.
+@end defmethod
+
+@c page
+@node containers stacks conversion
+@subsection Converting stacks to other objects
+
+
+The following bindings are exported by the library @library{vicare
+containers stacks}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defmethod @aclass{stack} list
+@defmethodx @aclass{stack} $list
+Return null or a proper list holding the objects from the @class{stack},
+top first.
+@end defmethod
+
+
+@defun list->stack @var{list}
+Convert a proper list to a @class{stack} object; objects from the list
+are pushed on the stack from right to left.
+
+@example
+(import (nausicaa)
+  (nausicaa containers stacks))
+
+(<stack> S (list->stack '(1 2 3)))
+
+(S top)         @result{} 1
+@end example
+@end defun
+
+
+@defmethod @aclass{stack} vector
+@defmethodx @aclass{stack} $vector
+Return a vector holding the objects from the @class{stack}, top first.
+@end defmethod
+
+
+@defun vector->stack @var{vector}
+Convert a vector to a @class{stack} object; objects from the vector are
+pushed on the stack from right to left.
+@end defun
+
+@c end of file

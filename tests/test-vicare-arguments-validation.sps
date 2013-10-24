@@ -148,6 +148,46 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-chars))
+
+  (check
+      (doit #f args.char #\c)
+    => #t)
+
+  (check
+      (doit #f args.char 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+
+  (check (char-in-ascii-range? #\c)	=> #t)
+  (check (char-in-ascii-range? #\x5555)	=> #f)
+
+  (check
+      (doit #f args.char-in-ascii-range #\c)
+    => #t)
+
+  (check
+      (doit #f args.char-in-ascii-range #\x5555)
+    => '(#\x5555))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (doit #f args.char-in-ascii-range/false #\c)
+    => #t)
+
+  (check
+      (doit #f args.char-in-ascii-range/false #\x5555)
+    => '(#\x5555))
+
+  (check
+      (doit #f args.char-in-ascii-range/false #f)
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-fixnums))
 
 ;;; fixnum
@@ -2288,6 +2328,34 @@
   (check
       (doit #f general-c-sticky-buffer*/false (null-pointer) #f)
     => (list (null-pointer) #f))
+
+  #t)
+
+
+(parametrise ((check-test-name	'logic-clause-or-false))
+
+  (define who 'test)
+
+  (check
+      (let ((obj 123))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  123))
+    => 123)
+
+  (check
+      (let ((obj #f))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  #t))
+    => #t)
+
+  (check-for-procedure-argument-violation
+      (let ((obj "ciao"))
+	(with-arguments-validation (who)
+	    (((or false fixnum)	obj))
+	  #t))
+    => (list who '("ciao")))
 
   #t)
 

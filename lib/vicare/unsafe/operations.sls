@@ -77,11 +77,8 @@
     $fxzero?
     $fxnegative?
     $fxpositive?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $fxnonpositive?
-    ;; $fxnonnegative?
+    $fxnonpositive?
+    $fxnonnegative?
     $fxadd1	;increment
     $fxsub1	;decrement
     $fxneg	;negation
@@ -117,11 +114,8 @@
 
     $bignum-positive?
     $bignum-negative?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $bignum-non-positive?
-    ;; $bignum-non-negative?
+    $bignum-non-positive?
+    $bignum-non-negative?
     $bignum-byte-ref
     $bignum-size
 
@@ -138,13 +132,10 @@
     $ratnum-d
     $ratnum-num
     $ratnum-den
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $ratnum-positive?
-    ;; $ratnum-negative?
-    ;; $ratnum-non-positive?
-    ;; $ratnum-non-negative?
+    $ratnum-positive?
+    $ratnum-negative?
+    $ratnum-non-positive?
+    $ratnum-non-negative?
 
 ;;; --------------------------------------------------------------------
 
@@ -167,11 +158,8 @@
     $flzero?/negative
     $flpositive?
     $flnegative?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $flnonpositive?
-    ;; $flnonnegative?
+    $flnonpositive?
+    $flnonnegative?
 
 ;;; --------------------------------------------------------------------
 
@@ -249,11 +237,9 @@
     $bytevector-self-copy-forwards!
     $bytevector-self-copy-backwards!
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Fri May 17, 2013)
-    #;$bytevector-total-length
-    #;$bytevector-concatenate
-    #;$bytevector-reverse-and-concatenate
+    $bytevector-total-length
+    $bytevector-concatenate
+    $bytevector-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
 
@@ -266,9 +252,11 @@
 
     $make-vector
     $vector-length
+    $vector-empty?
     $vector-ref
     $vector-set!
 
+    $vector-copy
     $vector-copy!
     $vector-self-copy-forwards!
     $vector-self-copy-backwards!
@@ -295,10 +283,12 @@
 
     $make-string
     $string-length
+    $string-empty?
     $string-ref
     $string-set!
     $string=
 
+    $string-copy
     $string-copy!
     $string-copy!/count
     $string-self-copy-forwards!
@@ -306,11 +296,9 @@
     $string-fill!
     $substring
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Fri May 17, 2013)
-    #;$string-total-length
-    #;$string-concatenate
-    #;$string-reverse-and-concatenate
+    $string-total-length
+    $string-concatenate
+    $string-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
 
@@ -345,13 +333,22 @@
     (ikarus system $flonums)
     (ikarus system $compnums)
     (ikarus system $pairs)
-    (ikarus system $vectors)
-    (rename (ikarus system $bytevectors)
+    (except (ikarus system $vectors)
+	    ;;FIXME This except  must be removed at the  next boot image
+	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
+	    $vector-empty?)
+    (rename (except (ikarus system $bytevectors)
+		    ;;FIXME This except must be removed at the next boot
+		    ;;image rotation.  (Marco Maggi; Tue Oct 8, 2013)
+		    $bytevector-empty?)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
-    (ikarus system $strings)
+    (except (ikarus system $strings)
+	    ;;FIXME This except  must be removed at the  next boot image
+	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
+	    $string-empty?)
     (ikarus system $codes)
     (ikarus system $pointers)
     (for (prefix (only (vicare platform configuration)
@@ -934,6 +931,8 @@
 
 ;;;; miscellaneous bytevector operations
 
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
 (define-inline ($bytevector-empty? ?bv)
   ($fxzero? ($bytevector-length ?bv)))
 
@@ -1005,6 +1004,11 @@
 
 ;;;; miscellaneous string operations
 
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define-inline ($string-empty? vec)
+  ($fxzero? ($string-length vec)))
+
 (define-inline ($string-fill! ?str ?index ?end ?fill)
   ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive
   ;;with ?FILL.
@@ -1015,6 +1019,11 @@
       (begin
 	($string-set! str index fill)
 	(loop str ($fxadd1 index) end fill)))))
+
+(define-inline ($string-copy ?src.str)
+  (let* ((src.len ($string-length ?src.str))
+	 (dst.str ($make-string src.len)))
+    ($string-copy! ?src.str 0 dst.str 0 src.len)))
 
 (define-inline ($string-copy! ?src.str ?src.start
 			      ?dst.str ?dst.start
@@ -1089,6 +1098,11 @@
 	 (vec ($make-vector ?len)))
     ($vector-clean! vec)))
 
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define-inline ($vector-empty? vec)
+  ($fxzero? ($vector-length vec)))
+
 (define-inline ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))
 
@@ -1102,6 +1116,13 @@
       (begin
 	($vector-set! vec index fill)
 	(loop vec ($fxadd1 index) end fill)))))
+
+(define-inline ($vector-copy ?vec)
+  (let* ((src.vec ?vec)
+	 (src.len ($vector-length src.vec))
+	 (dst.vec ($make-vector src.len)))
+    ($vector-copy! src.vec 0 dst.vec 0 src.len)
+    dst.vec))
 
 (define-inline ($vector-copy! ?src.vec ?src.start
 			      ?dst.vec ?dst.start

@@ -16,15 +16,17 @@
 
 (library (ikarus chars)
   (export
-    char->integer	integer->char
+    char->integer		integer->char
     char=?
-    char<?		char<=?
-    char>?		char>=?)
+    char<?			char<=?
+    char>?			char>=?
+    char-in-ascii-range?	fixnum-in-character-range?)
   (import (except (ikarus)
 		  char->integer		integer->char
 		  char=?
 		  char<?		char<=?
-		  char>?		char>=?)
+		  char>?		char>=?
+		  char-in-ascii-range?	fixnum-in-character-range?)
     (vicare unsafe operations)
     (vicare arguments validation))
 
@@ -32,17 +34,13 @@
 ;;;; arguments validation
 
 (define-argument-validation (fixnum-in-range who obj)
-  (and (fixnum? obj)
-       (or (and ($fx>= obj 0)
-		($fx<  obj #xD800))
-	   (and ($fx>  obj #xDFFF)
-		($fx<= obj #x10FFFF))))
-  (assertion-violation who
+  (fixnum-in-character-range? obj)
+  (procedure-argument-violation who
     "expected fixnum in range [0, #xD800) or (#xDFFF, #x10FFFF] as argument" obj))
 
 (define-argument-validation (list-of-chars who obj)
   (for-all char? obj)
-  (assertion-violation who "expected character as argument"
+  (procedure-argument-violation who "expected character as argument"
 		       (exists (lambda (x) (and (not (char? x)) x)) obj)))
 
 
@@ -61,7 +59,7 @@
     #;(cond (($fx<= N #xD7FF)
 	   ($fixnum->char N))
 	  (($fx< N #xE000)
-	   (assertion-violation who "integer does not have a unicode representation" N))
+	   (procedure-argument-violation who "integer does not have a unicode representation" N))
 	  (else ;(assert ($fx<= N #x10FFFF))
 	   ($fixnum->char N)))))
 
@@ -120,6 +118,29 @@
 (define-comparison char<=?	$char<=)
 (define-comparison char>?	$char>)
 (define-comparison char>=?	$char>=)
+
+
+;;;; miscellaneous functions
+
+(define (char-in-ascii-range? obj)
+  ;;Defined by Vicare.  Return #t if  OBJ is a character and its Unicode
+  ;;code point is in the range [0, 127]; otherwise return #f.
+  ;;
+  (and (char? obj)
+       (let ((chi ($char->fixnum obj)))
+	 (and ($fx>= chi 0)
+	      ($fx<= chi 127)))))
+
+(define (fixnum-in-character-range? obj)
+  ;;Defined by Vicare.  Return #t if OBJ is a fixnum and its value is in
+  ;;one  of the  ranges  acceptable by  Unicode  code points;  otherwise
+  ;;return #f.
+  ;;
+  (and (fixnum? obj)
+       (or (and ($fx>= obj 0)
+		($fx<  obj #xD800))
+	   (and ($fx>  obj #xDFFF)
+		($fx<= obj #x10FFFF)))))
 
 
 ;;;; done

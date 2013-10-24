@@ -6,13 +6,20 @@ EXTRA_DIST		= configure.sh			\
 			  scripts/make-last-revision	\
 			  scripts/vie			\
 			  autotools/config.rpath
-dist_doc_DATA		= README COPYING GPL-3
+dist_doc_DATA		= README COPYING GPL-3		\
+			  LICENSE.irregex LICENSE.pregexp LICENSE.srfi
 
-vicare_test_RULES	= test tests long-test long-tests \
-			  test-run test-vie test-exec-modes \
-			  demo demos foreign-test foreign-tests
+vicare_test_RULES	= \
+	test tests long-test long-tests		\
+	test-run test-vie test-exec-modes	\
+	demo demos foreign-test foreign-tests	\
+	silex-test lalr-test
 
-vicare_lib_RULES	= vfasl vfasl-installed
+vicare_lib_RULES	= \
+	vfasl				\
+	vfasl-installed			\
+	silex-internals			\
+	silex-backup
 
 if WANT_BINFMT
 rcddir			= $(sysconfdir)/rc.d
@@ -38,12 +45,8 @@ rc.vicare-scheme: Makefile
 
 endif
 
-.PHONY: $(vicare_test_RULES) $(vicare_lib_RULES) \
+.PHONY: $(vicare_test_RULES) $(vicare_lib_RULES)	\
 	try-vicare-boot boot-image-64-bit
-
-
-$(vicare_test_RULES):
-	cd tests ; $(MAKE) $(@)
 
 try-vicare-boot:
 	cd scheme; $(MAKE) $(@)
@@ -56,5 +59,8 @@ boot-image-64-bit:
 
 $(vicare_lib_RULES):
 	cd lib; $(MAKE) $(@)
+
+$(vicare_test_RULES):
+	cd tests ; $(MAKE) $(@)
 
 ### end of file

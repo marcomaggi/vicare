@@ -1,0 +1,64 @@
+@node flonum parser
+@chapter Parsing flonums
+
+
+@cindex Library @library{vicare numerics flonum-parser}
+@cindex @library{vicare numerics flonum-parser}, library
+
+
+The following bindings are exported by the library @library{vicare
+numerics flonum-parser}.
+
+
+@defun parse-flonum @var{flonum} @var{real-func} @var{unreal-func}
+Parse the @var{flonum} its components for string formatting.
+
+If @var{flonum} is representable as real number, apply the function
+@var{real-func} to @math{3} arguments: a boolean, true if @var{flonum}
+is positive; a list of characters representing the digits of
+@var{flonum}; a fixnum representing the exponent of @var{flonum}.
+Return the result of the application.
+
+If @var{flonum} is not representable as real number, apply the function
+@var{unreal-func} to a single argument being the string representation
+of @var{flonum}.  Return the result of the application.
+
+Notice how the arguments handed to @var{real-func} match the argument of
+@func{format-flonum} from @library{vicare flonum-formatter}.
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare numerics flonum-parser))
+
+(parse-flonum 1.23456789
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #t
+    (#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
+     #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\1)
+    1)
+
+(parse-flonum 12.34e5
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #t (#\1 #\2 #\3 #\4) 7)
+
+(parse-flonum -12.34e5
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #f (#\1 #\2 #\3 #\4) 7)
+
+(parse-flonum +inf.0
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (unreal "+inf.0")
+
+(parse-flonum +nan.0
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (unreal "+nan.0")
+@end example
+@end defun
+
+@c end of file

@@ -2832,25 +2832,25 @@ By default, all of an imported library's exported bindings are made
 visible within an importing library using the names given to the
 bindings by the imported library.  The precise set of bindings to be
 imported and the names of those bindings can be adjusted with the
-@func{only}, @func{except}, @func{prefix}, and @func{rename} forms as
-described below.
+@clause{only}, @clause{except}, @clause{prefix}, and @clause{rename}
+forms as described below.
 
-@table @func
-@item only
+@table @asis
+@item @clause{only}
 Produces a subset of the bindings from another @meta{import-set},
 including only the listed @meta{identifier}s.  The included
 @meta{identifier}s must be in the original @meta{import-set}.
 
-@item except
+@item @clause{except}
 Produces a subset of the bindings from another @meta{import-set},
 including all but the listed @meta{identifier}s.  All of the excluded
 @meta{identifier}s must be in the original @meta{import set}.
 
-@item prefix
+@item @clause{prefix}
 Adds the @meta{identifier} prefix to each name from another
 @meta{import-set}.
 
-@item rename
+@item @clause{rename}
 Used as:
 
 @example

@@ -1,0 +1,2631 @@
+@node lalr
+@section A LALR(1) parser generator
+
+
+@cindex @library{nausicaa parser-tools lalr}, library
+@cindex Library @library{nausicaa parser-tools lalr}
+
+
+The library @library{nausicaa parser-tools lalr} is a LALR(1) parser
+tables generator.  The libraries @library{nausicaa parser-tools lalr
+lr-driver} and @library{nausicaa parser-tools lalr glr-driver} generate
+instances of a parser using a supplied table; the two drivers are not
+compatible, each of them requires a specifically built table.
+
+@quotation
+The algorithm is the same used in @gnu{} Bison and it is described in:
+
+@quotation
+F. DeRemer and T. Pennello.  ``Efficient Computation of LALR(1)
+Look--Ahead Set''.  TOPLAS, vol. 4, no. 4, october 1982.
+@end quotation
+
+@noindent
+as a consequence, it is not written in a fully functional style.  In
+fact, much of the code is a direct translation from C to Scheme of the
+Bison sources.
+
+The library is a port to @rnrs{6} Scheme of Lalr-scm by Dominique
+Boucher.  The original source is available at (@aurl{} last verified Oct
+21, 2013):
+
+@center @url{http://code.google.com/p/lalr-scm/}
+@end quotation
+
+The LALR libraries make use of the @class{lexical-token} and
+@class{source-location} classes defined by the libraries
+@library{nausicaa parser-tools lexical-tokens} and @library{nausicaa
+parser-tools source-locations}.
+
+@menu
+* lalr intro::                  Introduction to the LR parser.
+* lalr tables::                 Creating parser tables.
+* lalr lexer::                  Describing tokens.
+* lalr parser::                 Running the parser.
+* lalr grammar::                Defining the grammar.
+* lalr glr::                    Generalised LR parsing.
+@end menu
+
+@c page
+@node lalr intro
+@subsection Introduction to the LR parser
+
+
+This section introduces the behaviour of the LR driver; it is meant to
+be a tutorial for users who know nothing about parsing, and it has no
+commitment to being rigorous and exhaustive.  This tutorial is meant to
+be read in sequence, each section after the other as they appear.  We
+describe the basic mechanism of the parser, in a way that is (hopefully)
+easy to understand.
+
+Let's say we want to compute simple arithmetic expressions involving
+numbers, the operators @math{+-*/}, and parentheses to establish
+precedence.  We want to compute one--line expressions like:
+
+@example
+10
+-20
+1 + 2
+3 * 4 - 5
+(6 - (7 - 8)) * 2
+@end example
+
+@menu
+* lalr intro tokens::           Splitting expressions in
+                                semantic tokens.
+* lalr intro want::             What we want.
+* lalr intro simple::           Simplified parser behaviour.
+* lalr intro look::             Why the lookahead.
+* lalr intro states::           From symbol sequences to states.
+* lalr intro error::            Error recovering.
+* lalr intro nonterm::          Non--terminal categories.
+@end menu
+
+@c page
+@node lalr intro tokens
+@subsubsection Splitting expressions in semantic tokens
+
+
+The first step is to split the expression in @dfn{tokens}: basic
+elements having a semantic meaning.  In @samp{3 * 4 - 5} there are five
+of them:
+
+@example
+3       -> number
+*       -> operator
+4       -> number
+-       -> operator
+5       -> number
+@end example
+
+Splitting the input into tokens is the job of the lexer.  We cannot
+decide what the lexer has to do if we do not define the parser grammar
+first.
+
+We can be sure that we want to deal with every number @math{3} in the
+same way, the same goes for every operator @math{*}.  But there is more
+of this.
+
+Scheme implements the functions @func{+}, @func{-}, @func{*}, @func{/}
+which can be applied to every Scheme's number object; so it is
+reasonable to state that: we are not interested in the concrete value of
+each number, but only in the abstract fact that they are numbers.  We
+can say that all the number tokens are in the same @dfn{category}; let's
+use the Scheme symbol @samp{N} to indicate it.  @samp{N} is an
+abstraction for each number.
+
+The Scheme functions @func{+}, @func{-}, @func{*}, @func{/} are all
+applied in the same way, but the arithmetic operators @math{+-*/} are
+not: @math{+} and @math{-} can be both unary and binary, @math{*} and
+@math{/} take precedence over @math{+} and @math{-}.  We might come up
+with the following alternative categorisations:
+
+@itemize
+@item
+All the operator tokens are in the same category.
+
+@item
+The operators @math{+} and @math{-} are in a category; the operators
+@math{*} and @math{/} are in another category.
+
+@item
+Each operator has its own category.
+@end itemize
+
+Putting all the tokens equal to each other in the same category is
+always safe, but it leads to an explosion of the number of categories;
+this complicates the definition of the grammar.  Experience shows that
+``it works'' to put @math{+} and @math{-} in a category, let's call it
+@samp{A} like addition, and @math{*} and @math{/} in another category,
+let's call it @samp{M} like multiplication.
+
+With these abstractions, we can see the expression @samp{3 * 4 - 5} as
+the following ordered sequence of categorised tokens:
+
+@example
+[N, 3]  [M, *]  [N, 4]  [A, -]  [N, 5]
+@end example
+
+@noindent
+the parser will not be interested in the concrete values, only in the
+categories; so it will see the sequence as just:
+
+@example
+N M N A N
+@end example
+
+We want to support parentheses, too.  The semantic meaning of the open
+parenthesis is different from the semantic meaning of the closed one;
+@math{(1 + 2)} makes sense, but @math{(1 + 2(} is wrong; giving
+different semantic meaning to the parentheses is mandatory to recognise
+nested expressions like @math{(1 * (2 + 3))}.  So we assign the open
+parenthesis to the category @samp{O} and the closed one to the category
+@samp{C}; with these abstractions, the expression:
+
+@example
+(6 - (7 - 8)) * 2
+@end example
+
+@noindent
+is tokenised by the following ordered sequence (from left to right, then
+top to bottom):
+
+@example
+[O, (]  [N, 6]  [A, -]  [O, (]  [N, 7]  [A, -]
+[N, 8]  [C, )]  [C, )]  [M, *]  [N, 2]
+@end example
+
+@noindent
+but the parser is interested only in the categories:
+
+@example
+O N A O N A N C C M N
+@end example
+
+The categories defined so far are not the only ones with which an LR
+parser is concerned; we call them @dfn{terminal categories} or
+@dfn{terminal symbols} or just @dfn{terminals}, because they are direct
+abstractions of concrete values.  In contrast, the other categories are
+called @dfn{non--terminal categories} or @dfn{non--terminal symbols} or
+just @dfn{non--terminals}, because they are higher level abstractions
+for sequences of terminals and nested non--terminals.
+
+When modeling a terminal with a Scheme object, we need at least two
+fields:
+
+@enumerate
+@item
+The Scheme symbol representing the category.
+
+@item
+The Scheme object representing the concrete value.  We can represent:
+
+@itemize
+@item
+Number tokens with Scheme number objects.
+
+@item
+Operator tokens with the Scheme functions implementing them.
+
+@item
+Parenthesis tokens with the Scheme characters @samp{#\(} and @samp{#\)}.
+@end itemize
+@end enumerate
+
+Experience shows that it is useful to define yet another token: the
+end--of-input; it is used by the lexer to signal that no more tokens are
+available.  We need to define a new terminal category for this, let's
+call it @samp{*eoi*}.  The concrete value of this terminal is not
+important, we can just select @samp{(eof-object)}; in what follows we
+will display it as @samp{#<eof>}.
+
+Putting all together, given the input expression:
+
+@example
+(6 - (7 - 8)) * 2
+@end example
+
+@noindent
+the lexer transforms it into the ordered sequence of tokens:
+
+@example
+[O, (]  [N, 6]  [A, -]  [O, (]  [N, 7]  [A, -]
+[N, 8]  [C, )]  [C, )]  [M, *]  [N, 2]  [*eoi*, #<eof>]
+@end example
+
+@noindent
+and the parser will operate on the terminal categories:
+
+@example
+O N A O N A N C C M N *eoi*
+@end example
+
+@c page
+@node lalr intro want
+@subsubsection What we want
+
+
+Let's take the simple expression @samp{1 + 2 * 3}; its tokenisation is:
+
+@example
+[N, 1] [A, +] [N, 2] [M, *] [N, 3] [*eoi*, #<eof>]
+@end example
+
+@noindent
+and we can imagine values and category symbols to be available in Scheme
+vectors:
+
+@example
+#(1  +  2  *  3  #<eof>)
+#(N  A  N  M  N   *eoi*)
+@end example
+
+@noindent
+experience shows that it is useful to consider a fake first element in
+both vectors; we assign this element to an additional terminal category
+whose symbol is @samp{S} as in start, its value is not important so we
+select @false{}:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+@end example
+
+Basically, we want the following:
+
+@enumerate
+@item
+The parser has to recognise the subvectors @samp{N A N} and @samp{N M N}
+as representing expressions it can compute.
+
+@item
+The parser must recognise that @samp{N M N} has precedence above @samp{N
+A N}.  @samp{N M N} has to be computed first.
+
+@item
+The values @samp{2 * 3} have to be fed to a @dfn{semantic clause} of our
+choice to compute a result; the semantic clause is just a Scheme form in
+which we do whatever we want with the three operands @samp{2}, @samp{*}
+and @samp{3}.  For example, we can compute the result @math{2 * 3 = 6}.
+
+The parser generator should create Scheme equivalent to:
+
+@example
+(let (($3   2)   ;
+      ($2   *)   ; Automatically generated preamble
+      ($1   3))  ;
+
+  ($2 $3 $1))    ; Client-supplied semantic clause
+@end example
+
+So we want the parser to mutate the vectors as follows:
+
+@example
+#(#f  1  +  6  #<eof>  #f #f)
+#( S  N  A  N   *eoi*  #f #f)
+@end example
+
+@item
+The parser has to recognise the subvector @samp{N A N} has representing
+a sequence it can compute; the values have to be fed to a semantic
+clause; let's say it computes the result @math{1 + 6 = 7}.
+
+So we want the parser to mutate the vectors as follows:
+
+@example
+#(#f  7  #<eof>  #f #f #f #f)
+#( S  N   *eoi*  #f #f #f #f)
+@end example
+
+@item
+Finally we want the parser to recognise @samp{*eoi*} as the
+end--of--input terminal, and to finish the parsing operation returning
+the value @samp{7} it left in the vector before.
+@end enumerate
+
+@c page
+@node lalr intro simple
+@subsubsection Simplified parser behaviour
+
+
+We can describe the desired behaviour of the LR driver in terms of three
+basic actions: lookahead, shift, reduce; with the addition of two
+special actions: accept, error.  We assume that the parser can consult a
+data structure called @dfn{grammar} and decide what to do, we can think
+of it as an associative container.
+
+We scan the vectors using a variable @samp{p} (as in ``pointer'')
+holding the index of the current element; at first @samp{p} is set to
+zero, so it references the terminal @samp{S}:
+
+@example
+#(#f  1  +  2  #<eof>)
+#( S  N  A  N   *eoi*)
+   |
+   p
+@end example
+
+The first action is always a @dfn{lookahead}, that is: to look at the
+element at index @samp{1 + p} and acquire its category; such element is
+always a terminal, in this case with symbol @samp{N}.
+
+The parser searches the grammar for the sequence @samp{S N}: it finds
+that the action associated to it is a @dfn{shift}, that is: increment
+@samp{p} by @math{1}.  The parser obeys:
+
+@example
+#(#f  1  +  2  #<eof>)
+#( S  N  A  N   *eoi*)
+      |
+      p
+@end example
+
+A shift action is similar to pushing a value on a stack; for this
+reason, we name the Scheme vectors @dfn{stacks} and the variable
+@samp{p} @dfn{stack pointer}.
+
+After a shift, the parser always performs a lookahead, it acquires the
+symbol @samp{A}.  Parser searches the grammar for the sequences @samp{S
+N A} and @samp{N A}, in this order, stopping at the first with an action
+associated to it; it finds that @samp{S N A} has no action, but @samp{N
+A} is associated to a shift.  Parser obeys:
+
+@example
+#(#f  1  +  2  #<eof>)
+#( S  N  A  N   *eoi*)
+         |
+         p
+@end example
+
+Again after a shift, the parser performs a lookahead; it acquires the
+symbol @samp{N}.  Parser searches the grammar for each of the sequences:
+
+@example
+S N A N
+N A N
+A N
+@end example
+
+@noindent
+stopping at the first with an action associated to it; the action
+associated to @samp{N A N} is a shift.  Parser obeys:
+
+@example
+#(#f  1  +  2  #<eof>)
+#( S  N  A  N   *eoi*)
+            |
+            p
+@end example
+
+After the shift, parser performs a lookahead; it acquires the symbol
+@samp{*eoi*}.  Parser searches the grammar for each of the sequences:
+
+@example
+S N A N *eoi*
+N A N *eoi*
+A N *eoi*
+N *eoi*
+@end example
+
+@noindent
+stopping at the first with an action associated to it; the action
+associated to @samp{N A N *eoi*} is a @dfn{reduce}: take the values
+associated to @samp{N A N}, that is @samp{1 + 2}, and use them as
+arguments for the semantic action the grammar associates to @samp{N A N
+*eoi*}.
+
+We have established that we want the semantic actions to compute the
+given expression, so the result of the evaluation is @samp{3}; parser
+searches the grammar, finding that the result associated to @samp{N A N
+*eoi*} has to be of category @samp{N}; so it mutates the stacks and the
+stack pointer as follows:
+
+@example
+#(#f  3 #<eof>  #f  #f)
+#( S  N  *eoi*  #f  #f)
+      |
+      p
+@end example
+
+After a reduce, parser performs a lookahead; it acquires the symbol
+@samp{*eoi*}, again.  Parser searches the grammar for the sequences
+@samp{S N *eoi*} and @samp{N *eoi*}; it finds the action associated to
+@samp{S N *eoi*} is @dfn{accept}, that is: stop parsing and return the
+value referenced by the stack pointer, which is @samp{3}.
+
+Let's see, more briefly, what happens when parsing:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+   |
+   p
+@end example
+
+@noindent
+everything is the same as before until:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+            |
+            p
+@end example
+
+@noindent
+in the previous example the lookahead returned @samp{*eoi*} and the
+grammar said ``reduce'' for @samp{N A N *eoi*}; here the lookahead
+returns @samp{M} and the grammar says ``shift'' for @samp{N A N M}:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+               |
+               p
+@end example
+
+@noindent
+the lookahead returns @samp{N} and the grammar says ``shift'' for
+@samp{N M N}:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+                  |
+                  p
+@end example
+
+@noindent
+the lookahead returns @samp{*eoi*} and the grammar says ``reduce'' for
+@samp{N M N *eoi*}:
+
+@example
+#(#f  1  +  6  #<eof>  #f #f)
+#( S  N  A  N   *eoi*  #f #f)
+            |
+            p
+@end example
+
+@noindent
+the lookahead returns @samp{*eoi*} and the grammar says ``reduce'' for
+@samp{N A N *eoi*}:
+
+@example
+#(#f  7  #<eof>  #f #f #f #f)
+#( S  N   *eoi*  #f #f #f #f)
+      |
+      p
+@end example
+
+@noindent
+the lookahead returns @samp{*eoi*} and the grammar says ``accept'' for
+@samp{S N *eoi*}.
+
+@c page
+@node lalr intro look
+@subsubsection Why the lookahead
+
+
+Why do we need to look ahead at the next token's category?  When the
+stacks are:
+
+@example
+#(#f  1  +  2  #<eof>)
+#( S  N  A  N   *eoi*)
+            |
+            p
+@end example
+
+@noindent
+we can recognise the subvector @samp{N A N} to be a reducible one
+without looking a the next token's category; the same goes with:
+
+@example
+#(#f  1  +  2  -  3  #<eof>)
+#( S  N  A  N  A  N   *eoi*)
+            |
+            p
+@end example
+
+But let's look at:
+
+@example
+#(#f  1  +  2  *  3  #<eof>)
+#( S  N  A  N  M  N   *eoi*)
+            |
+            p
+@end example
+
+@noindent
+it is an error to reduce @samp{N A N}, because the following
+multiplication takes precedence over addition; we can detect the need to
+give precedence to what follows only by looking at the next token's
+category.
+
+This is not always the case.  Let's make a change to our parser, let's
+say we want to parse scripts in which every line is an arithmetic
+expression.  We add a new token with category @samp{T}, as in
+terminator, and value @samp{#\newline}.
+
+Let's look at this example:
+
+@example
+#(#f  1  +  2  *  3  #\newline  4  /  5  #\newline  #<eof>)
+#( S  N  A  N  M  N  T          N  M  N  T           *eoi*)
+                  |
+                  p
+@end example
+
+@noindent
+once the parser has performed the lookahead and detected the @samp{T}
+category, the grammar can tell it to reduce twice the stack, without
+doing another lookahead:
+
+@example
+#(#f  1  +  6  #\newline  4  /  5  #\newline  #<eof>  #f #f)
+#( S  N  A  N  T          N  M  N  T           *eoi*  #f #f)
+            |
+            p
+
+#(#f  7  #\newline  4  /  5  #\newline  #<eof>  #f #f #f #f)
+#( S  N  T          N  M  N  T           *eoi*  #f #f #f #f)
+      |
+      p
+@end example
+
+Notice that, with a well written grammar, the parser generator can
+understand that the result of the first line is no more needed and
+remove it with a reduce action.  Starting from the above stacks, the
+lookahead returns @samp{T} and the action is shift:
+
+@example
+#(#f  7  #\newline  4  /  5  #\newline  #<eof>  #f #f #f #f)
+#( S  N  T          N  M  N  T           *eoi*  #f #f #f #f)
+         |
+         p
+@end example
+
+@noindent
+now the lookahead returns @samp{N} and the action can be a reduction
+which puts the stacks in the following state:
+
+@example
+#(#f  4  /  5  #\newline  #<eof>  #f #f #f #f #f #f)
+#( S  N  M  N  T           *eoi*  #f #f #f #f #f #f)
+   |
+   p
+@end example
+
+@noindent
+parser is ready to start a new line.
+
+@c page
+@node lalr intro states
+@subsubsection From symbol sequences to states
+
+
+We have seen that parser searches the grammar for an action associated
+to a sequence of categories; this is inefficient.  We can represent the
+grammar with a directed graph, having a single source and a single sink,
+in which:
+
+@itemize
+@item
+Each sequence of categories having an action is represented by a
+state--node.
+
+@item
+Every shift and every reduce causes a transaction from one node to the
+other.
+
+@item
+The lookahead determines which outgoing transaction link to take from a
+given node.
+@end itemize
+
+There are many possible expressions and many possible paths in the
+graph; for example, the following expressions:
+
+@example
+1
+1 + 2
+1 + (2 * 3)
+3 * 4
+@end example
+
+@noindent
+and much more can be represented by the following sequences of
+terminals:
+
+@example
+N *eoi*
+N A N *eoi*
+N A O N M N C *eoi*
+N M N *eoi*
+@end example
+
+@noindent
+which in turn are represented by the following graph, in which every
+node has a numeric index (from @math{0} to @math{11}) and every terminal
+category (@samp{N}, @samp{A}, @samp{M}, @samp{C}, @samp{O}) has the
+associated action between parenthesis (@samp{s} for shift, @samp{r} for
+reduce, @samp{a} for accept):
+
+@example
+         (11) finish
+          ^
+          |
+          |*eoi*(a)
+     N(s) |
+ (0)---->(1)<------------+------------------------------
+start     |              |                              |
+          |              |*eoi*(r)                      |
+          | A(s)    N(s) |           *eoi*(r)           |
+          +----->(2)--->(3)<-------------------------   |
+          |       |                                  |  |
+          |       |                                  |  |
+          |       | O(s)   N(s)   M(s)   N(s)   C(s) |  |
+          |        ---->(4)--->(5)--->(6)--->(7)--->(8) |
+          |                                             |
+          |                                             |
+          | M(s)    N(s)      *eoi*(r)                  |
+           ----->(9)--->(10)----------------------------
+@end example
+
+Starting from node @math{0}, with each shift and reduce we move our
+position in the graph to some node.  What matters to select the next
+action to perform, is just the node we are in and the category of the
+lookahead token.
+
+Let's try it with the expression @samp{1 + 2}; we add a stack for the
+current node number:
+
+@example
+#(#f   1   +   2  #<eof>)
+#( S   N   A   N   *eoi*)
+#( 0  #f  #f  #f      #f)
+   |
+   p
+@end example
+
+@noindent
+the lookahead returns @samp{N} and the grammar associates @samp{[0, N]}
+with @samp{[1, shift]}:
+
+@example
+#(#f   1   +   2  #<eof>)
+#( S   N   A   N   *eoi*)
+#( 0   1  #f  #f      #f)
+       |
+       p
+@end example
+
+@noindent
+the lookahead returns @samp{A} and the grammar associates @samp{[1, A]}
+with @samp{[2, shift]}:
+
+@example
+#(#f   1   +   2  #<eof>)
+#( S   N   A   N   *eoi*)
+#( 0   1   2  #f      #f)
+           |
+           p
+@end example
+
+@noindent
+the lookahead returns @samp{N} and the grammar associates @samp{[2, N]}
+with @samp{[3, shift]}:
+
+@example
+#(#f   1   +   2  #<eof>)
+#( S   N   A   N   *eoi*)
+#( 0   1   2   3      #f)
+               |
+               p
+@end example
+
+@noindent
+the lookahead returns @samp{*eoi*} and the grammar associates @samp{[3,
+*eoi*]} with @samp{[1, reduce]}:
+
+@example
+#(#f   3  #<eof>  #f  #f)
+#( S   N   *eoi*  #f  #f)
+#( 0   1      #f  #f  #f)
+       |
+       p
+@end example
+
+@noindent
+the lookahead returns @samp{*eoi*} and the grammar associates @samp{[1,
+*eoi*]} with @samp{[11, accept]}.
+
+@c page
+@node lalr intro error
+@subsubsection Error recovering
+
+
+Until now we have seen only examples for which, given a sequence of
+symbols @samp{S A B C} and a lookahead @samp{D}, at least one of the
+sequences:
+
+@example
+S A B C D
+A B C D
+B C D
+C D
+@end example
+
+@noindent
+has an action associated to it in the grammar; in other words, using the
+graph model:
+
+@itemize
+@item
+The state associated to the sequence @samp{S A B C} has an
+outgoing link associated to the lookahead @samp{D}, or
+
+@item
+The state associated to the sequence @samp{A B C} has an outgoing link
+associated to the lookahead @samp{D}, or
+
+@item
+The state associated to the sequence @samp{B C} has an outgoing link
+associated to the lookahead @samp{D}, or
+
+@item
+The state associated to the sequence @samp{C} has an outgoing link
+associated to the lookahead @samp{D}.
+@end itemize
+
+What happens if the lookahead is not associated to an outgoing link?  It
+means that the sequence of tokens does not comply with the defined
+grammar.  There are two possible reactions to this: stop parsing and
+signal an error, or try to recover.
+
+Recovering makes sense only when the grammar is such that: it is
+possible to discard a subsequence of symbols as invalid, and go on
+parsing the following symbols.
+
+In the example of the single expressions parser: if the lookahead
+returns an invalid category symbol, the only possible reaction is to
+stop parsing and signal an error.  The whole expression is wrong.
+
+In the example of the script expression parser: we can discard an
+invalid line and try to parse the following ones.  Let's examine how
+this is done by the LR driver.
+
+The valid terminal categories are:
+
+@example
+N A M O C T *eoi*
+@end example
+
+@noindent
+where @samp{T} is the line terminator; examples of valid lines are:
+
+@example
+N T
+A N T
+N A N T
+N M N T
+N A N M N T
+@end example
+
+If we use a grammar describing a sequence of lines, the grammar
+``knows'' that after each line it has to reduce the stacks to the
+starting symbol; it knows that @samp{S} is the first symbol of each
+line.  For example:
+
+@example
+#(#f  1  +  2  #\newline  3  *  4  #\newline  #<eof>)
+#(S   N  A  N  T          N  M  N  T          *eoi*)
+@end example
+
+@noindent
+after parsing the first line is reduced to:
+
+@example
+#(#f  3  *  4  #\newline  #<eof>  #f #f #f)
+#(S   N  M  N  T          *eoi*   #f #f #f)
+@end example
+
+When writing the grammar specification: we associate an error action to
+the beginning of a line, and it ends up being associated to @samp{S}.
+
+Let's consider the following couple of lines, with the first being a
+wrong expression:
+
+@example
+#(#f  1  +  #\newline  3  *  4  #\newline  #<eof>)
+#(S   N  A  T          N  M  N  T          *eoi*)
+@end example
+
+@noindent
+when the stack pointer references the symbol @samp{A}, the lookahead
+returns @samp{T} and the grammar signals an error.  The parser
+decrements the pointer, ``rewinding'' the stack, in search of a symbol
+which has an error action associated to it.  It finds that @samp{S} has
+such an action, and it is associated to the symbol @samp{T}; so it
+removes all the symbols between @samp{S}, excluded, and the first
+@samp{T}, excluded:
+
+@example
+#(#f  #\newline  3  *  4  #\newline  #<eof>  #f #f)
+#(S   T          N  M  N  T           *eoi*  #f #f)
+  |
+  p
+@end example
+
+@noindent
+and it restarts parsing doing a lookahead that returns @samp{T}; the
+action is a shift:
+
+@example
+#(#f  #\newline  3  *  4  #\newline  #<eof>  #f #f)
+#(S   T          N  M  N  T           *eoi*  #f #f)
+      |
+      p
+@end example
+
+@noindent
+the lookahead returns @samp{N} and the action is a reduce:
+
+@example
+#(#f  3  *  4  #\newline  #<eof>  #f #f #f)
+#(S   N  M  N  T          *eoi*   #f #f #f)
+  |
+  p
+@end example
+
+@noindent
+we have recovered from the error.
+
+@c page
+@node lalr intro nonterm
+@subsubsection Non--terminal categories
+
+
+We have seen the graph representation of the grammar with tokens
+belonging to terminal categories.  But how many nodes are there in such
+a graph?  There are an infinite number of expressions, and consequently
+an infinite number of terminal sequences is required to represent them.
+This would make it impossible to code a parser, unless we take a
+different approach.
+
+We start by noticing that, if the following sequences of terminals
+represent expressions:
+
+@example
+N
+A N
+N A N
+N M N
+@end example
+
+@noindent
+then the following sequences of terminals represent expressions with
+subexpression:
+
+@example
+N A  N
+N A  A N
+N A  N A N
+N A  N M N
+
+N M  N
+N M  A N
+N M  N A N
+N M  N M N
+@end example
+
+Let's define a new category, indicated by the Scheme symbol @samp{E},
+which represents the basic expressions:
+
+@example
+E @equiv{} N
+  @equiv{} A N
+  @equiv{} N A N
+  @equiv{} N M N
+@end example
+
+@noindent
+then we can represent the composite sequences written above with:
+
+@example
+N A E
+N M E
+@end example
+
+@noindent
+and more generally:
+
+@example
+E A E
+E M E
+@end example
+
+Let's suppose in defining the category @samp{E} we can use @samp{E}
+itself, recursively; then we can write:
+
+@example
+E @equiv{} N
+  @equiv{} A E
+  @equiv{} E A E
+  @equiv{} E M E
+  @equiv{} O E C
+@end example
+
+@noindent
+in which we have included a rule for the parentheses; with this
+definition involving a few symbols we can represent the whole set of
+possible expressions.  The library @library{nausicaa parser-tools lalr}
+allows us to do exactly this, using the following S--expression:
+
+@example
+(E (N)
+   (A E)
+   (E A E)
+   (E M E)
+   (O E C))
+@end example
+
+Categories defined this way, as sequences of the same and other
+categories, are called non--terminals for reasons we can imagine.  The
+definition of non--terminals changes nothing in the way the parser
+itself works, but it is the fundamental tool to describe the grammar.
+We can use any number of non--terminals to describe a grammar.
+
+@c page
+@node lalr tables
+@subsection Creating parser tables
+
+
+The following bindings are exported by the @library{nausicaa
+parser-tools lalr} library.
+
+
+@deffn Syntax lalr-parser @meta{clause} ...
+@deffnx Syntax make-lalr-parser @meta{clause} ...
+Generate a parser table to be used by the LR or GLR driver.  The
+behaviour of this function is configured with the @meta{clause}
+arguments; see below for the list of supported options.  For example,
+this is a simple expression grammar:
+
+@example
+(lalr-parser
+
+  (terminals: '(ID
+                (left: + -)
+                (left: * /)
+                (nonassoc: uminus)))
+
+  (rules: '((e (e + e)              : (+ $1 $3)
+               (e - e)              : (- $1 $3)
+               (e * e)              : (* $1 $3)
+               (e / e)              : (/ $1 $3)
+               (- e (prec: uminus)) : (- $2)
+               (ID)                 : $1)))
+
+  ---) ;other options
+@end example
+
+@ref{lalr grammar, Defining the parser}, for the definition of the
+grammar and the meaning of the @clause{terminals:} and @clause{rules:}
+options.
+
+The core of the output is a set of parser ``tables'': Scheme vectors
+representing the automaton.  There are three of them: action, goto,
+reduction.  The tables are used as arguments for a call to
+@func{lr-driver} or @func{glr-driver}: their return value is a closure
+implementing an instance of the parser.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {terminals:} @var{sexpr}
+Specifies a list representing the terminal symbols, their precedence and
+their associativity.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {rules:} @var{sexpr}
+Specifies a list representing the grammar production rules.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {expect:} @var{number-of-conflicts}
+Specifies the number of rule conflicts we expect in the parser
+definition.  The default is zero.
+
+When more than @var{number-of-conflicts} are detected, warning messages
+are printed to the current error port.  If @var{number-of-conflicts} is
+@false{}, rather than an exact non-negative integer, no message is ever
+displayed on the error port.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {parser-type:} @var{driver}
+Select the type of tables to generate.  Available drivers are selected
+with a symbol among: @samp{lr}, @samp{glr}.  The default is @samp{lr}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {output-value:} #t|#f
+If the value is true, instruct @func{lalr-parser} to evaluate the output
+with @func{eval} and return a proper Scheme function implementing a
+parser maker.  This clause is mutually exclusive with
+@clause{output-port:} and @clause{output-file:}.
+
+With this option, in the case of the @samp{lr} driver, the generated
+code has the form:
+
+@example
+(lambda ()
+  (lr-driver @var{action-table} @var{goto-table} @var{reduction-table}))
+@end example
+
+@noindent
+so the value returned by @func{lalr-parser} is a closure which, when
+evaluated with no arguments, returns a new parser closure.  See
+@samp{library-imports:} to add libraries to the evaluation environment.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {output-port:} @var{port}
+Instruct @func{lalr-parser} to print the generated code to the specified
+port.  This clause is mutually exclusive with @clause{output-value:} and
+@clause{output-file:}.
+
+When neither @samp{library-spec:} nor @samp{parser-name:} are used, the
+output is the same as the one generated by @samp{output-value:}: A
+lambda function returning new parser closures.  See @samp{library-spec:}
+and @samp{parser-name:} for details on the other output types.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {output-file:} @var{pathname}
+Instruct @func{lalr-parser} to save the generated code to the specified
+file; the file will be overwritten if it already exists.  @var{pathname}
+must be a string representing the pathname.  This clause is mutually
+exclusive with @clause{output-value:} and @clause{output-port:}.
+
+When neither @samp{library-spec:} nor @samp{parser-name:} are used, the
+output is the same as the one generated by @samp{output-value:}: a
+lambda function returning new parser closures.  See @samp{library-spec:}
+and @samp{parser-name:} for details on the other output types.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {dump-table:} @var{pathname}
+Instruct @func{lalr-parser} to save a human readable dump of the
+generated parser in the specified file.  @var{pathname} must be a string
+representing the pathname.  The file will be overwritten if it already
+exists.  This is useful for debugging purposes (if we know how the
+parser works).
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {parser-name:} @var{name}
+Instruct @func{lalr-parser} to use the symbol @var{name} as identifier
+to which bind the parser maker function.  It is mandatory to use this
+option when generating a library.
+
+If this option is used, but @samp{library-spec:} is not: The output is a
+@func{define} form which, when evaluated, binds the parser maker to
+@var{name}.  Example output for the @samp{lr} driver:
+
+@example
+(define (@var{name})
+  (lr-driver @var{action-table} @var{goto-table} @var{reduction-table}))
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {library-spec:} @var{spec}
+Instruct @func{lalr-parser} to generate a proper Scheme library, holding
+the parser definition and exporting a binding to the parser maker
+function.  @var{spec} must be a proper @meta{library-name} as defined by
+@rnrs{6}.
+
+This option is especially useful in conjunction with
+@clause{output-file:}.  It is mandatory to use the clause
+@clause{parser-name:} along with @clause{library-spec:}.
+
+Example output for the @samp{lr} driver assuming @var{name} is the value
+used for the @clause{parser-name:} option:
+
+@example
+(library @var{spec}
+  (export @var{name})
+  (import (nausicaa)
+    (nausicaa parser-tools lalr lr-driver)
+    (prefix (nausicaa parser-tools lexical-tokens) lt.)
+    (prefix (nausicaa parser-tools source-locations) sl.))
+  (define (@var{name})
+    (lr-driver @var{action-table}
+               @var{goto-table}
+               @var{reduction-table})))
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {library-language:} @var{lang}
+Instruct @func{lalr-parser} to use @var{lang} as language for the
+library; the language is the first import specification after
+@code{import} in the @code{library} form.  By default the language is
+@library{nausicaa}.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {default-library-imports:} @var{bool}
+Instruct @func{lalr-parser} to include the default libraries to the list
+of Scheme libraries required by the parser definition.  The default
+value for @var{bool} is @true{}.
+
+The default list of import specifications is:
+
+@example
+(nausicaa parser-tools lalr @meta{driver-name})
+(prefix (nausicaa parser-tools lexical-tokens) lt.)
+(prefix (nausicaa parser-tools source-locations) sl.)
+@end example
+
+@noindent
+where @meta{driver-name} is @samp{lr-driver} or @samp{glr-driver}.  If
+this clause is used with @var{bool} set to @false{}: these libraries are
+not included; in this case we should select appropriate replacements
+using the @clause{library-imports:} clause.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} {library-imports:} @var{imports}
+Instruct @func{lalr-parser} to add @var{imports} to the list of Scheme
+libraries required by the parser definition.  @var{imports} must be a
+list of library specifications; for example, if the parser definition
+(meaning the semantic actions) requires the @library{alpha} and
+@library{beta} libraries, we must use:
+
+@example
+(library-imports: '((alpha) (beta)))
+@end example
+
+The selected imports will be added to the import list of the generated
+library (if @clause{library-spec:} is used), or to the @func{eval}
+environment argument (if @clause{output-value:} is used).  The imports
+are ignored when the output is a @func{define} form.
+@end deffn
+
+@c page
+@node lalr lexer
+@subsection Describing tokens
+
+
+The parser closure accepts as argument a lexer closure which, invoked
+with no arguments, must return the next token from the input.  Tokens
+are described using objects of type @class{lexical-token}, as defined by
+the library @library{nausicaa parser-tools lexical-tokens};
+@ref{lexical-tokens, Describing lexical tokens}.
+
+Once the lexer closure finds the end of input, it must return a token
+with category @samp{*eoi*}; it must continue to return such a token if
+invoked multiple times.
+
+If the lexer closure finds a lexer error in the input, it must return a
+token with category @samp{*lexer-error*}; lexer errors are
+unrecoverable.
+
+@c page
+@node lalr parser
+@subsection Running the parser
+
+
+Here we suppose to have used @func{lalr-parser} to generate a proper
+Scheme library exporting a binding to the parser maker.  Let
+@library{calc-parser} be the library specification and
+@func{make-calc-parser} the name of the binding to the parser maker.
+
+The parser maker is invoked with no arguments and returns a new parser
+closure, which represents an instance of the parser.  To create a parser
+closure we do:
+
+@example
+(import (nausicaa)
+  (calc-parser))
+
+(define parser (make-calc-parser))
+@end example
+
+The @func{parser} function accepts two or three arguments: the lexer
+closure, an error handler procedure, a custom value.  When invoked, it
+consumes tokens from the lexer until the end of input is found or an
+unrecoverable error occurs.
+
+To invoke @func{parser} with a lexer generated by the library
+@library{nausicaa parser-tools silex}, using a table in
+@samp{calc-lexer-table} to parse @var{input-string}, we do:
+
+@example
+(import (prefix (nausicaa parser-tools silex lexer) lex.))
+
+(let* ((IS        (lex.make-IS (lex.string: @var{input-string})))
+       (lexer     (lex.make-lexer calc-lexer-table IS))
+       (error-hnd (lambda (message token) ---))
+       (yycustom  #f))
+  (parser lexer error-hnd yycustom))
+@end example
+
+The parser closure will return the value computed by the semantic clause
+of the outer non--terminal, the @dfn{start symbol}.
+
+@c ------------------------------------------------------------
+
+@subsubheading The lexical analyser
+
+The lexer closure must be a thunk invoked each time the parser needs to
+lookahead in the token stream; its return value must be an object of
+type @class{lexical-token}.
+
+Once the lexer closure finds the end of input, it must return a token
+with category @samp{*eoi*}; it must continue to return such a token if
+invoked multiple times.
+
+If the lexer closure finds a lexer error in the input, it must return a
+token with category @samp{*lexer-error*}; lexer errors are
+unrecoverable.
+
+If the lexer raises an exception, it will go through the parser closure
+with no obstacles.
+
+@c ------------------------------------------------------------
+
+@subsubheading The error procedure
+
+It must be a function accepting two arguments: an error message as
+Scheme string, the lexical token that caused the error.  Its return
+value does not matter for the parser itself.
+
+If the error procedure returns, the parser closure attempts to recover
+from the error and to resume parsing.  If it raises an exception parsing
+may stop, depending on how the program deals with it.
+
+A simple error procedure raising an exception looks like this:
+
+@example
+(define (error-handler message token)
+  (error #f
+    (if (not (is-a? token <lexical-token>))
+        message
+      (let (((T <lexical-token>) token))
+        (if (T location unspecified?)
+            message
+          (let (((P <source-location>) (T location)))
+            (string-append
+              message
+              " line "   (if (P line)
+                             (P line string)
+                           "?")
+              " column " (if (P column)
+                             (P column string)
+                           "?"))))))
+    token))
+@end example
+
+The error procedure is invoked:
+
+@itemize
+@item
+When an invalid value is returned by the lexer.  If the value is not a
+@class{lexical-token} record, the error procedure is invoked with the
+offending value as second argument.
+
+Parsing stops and the return value of the parser closure is the return
+value of the error procedure, if any.
+
+@item
+When the stream of tokens returned by the lexer violates parser's
+grammar.
+
+@itemize -
+@item
+If the error is an unexpected end--of--input, the second argument is a
+@class{lexical-token} record with @samp{*eoi*} in the category field.
+
+Parsing stops and the return value of the parser closure is the return
+value of the error procedure, if any.
+
+@item
+If the error is another grammar violation, the error procedure is
+invoked with the offending value as second argument; its return value,
+if any, is discarded.
+
+If the error procedure returns, the parser will try to recover from the
+error and resume parsing; if error recovery fails, the parser behaves as
+if the end--of--input is found.
+@end itemize
+@end itemize
+
+@c page
+@node lalr grammar
+@subsection Defining the parser
+
+
+@menu
+* lalr grammar intro::          Introduction to grammar definition.
+* lalr grammar preamble::       Code preamble for all the examples.
+* lalr grammar clauses::        Writing semantic clauses.
+* lalr grammar examples::       Dummy examples of grammar definitions.
+* lalr grammar error::          Error recovery.
+* lalr grammar precedence::     Operator precedence and associativity.
+@end menu
+
+@c page
+@node lalr grammar intro
+@subsubsection Introduction to grammar definition
+
+
+The grammar is defined by the list of terminal token categories and the
+list of non--terminal definitions.  Each non--terminal definition is a
+list where the first element is the non--terminal and the other elements
+are the right--hand sides (lists of grammar symbols).  In addition to
+this, each right--hand side can be followed by a semantic clause.
+
+For example, consider the following (Yacc) grammar for a very simple
+expression language:
+
+@example
+e : e '+' t
+  | e '-' t
+  | t
+  ;
+
+t : t '*' f
+  | t '/' f
+  | f
+  ;
+
+f : ID
+  ;
+@end example
+
+@noindent
+the same grammar, written for @library{nausicaa parser-tools lalr} and
+with semantic actions added, would look like this:
+
+@example
+(lalr-parser
+
+  (terminals: '(ID + - * /))
+
+  (rules: '((e (e + t)    : (+ $1 $3)
+               (e - t)    : (- $1 $3)
+               (t)        : $1)
+
+            (t (t * f)    : (* $1 $3)
+               (t / f)    : (/ $1 $3)
+               (f)        : $1)
+
+            (f (ID)       : $1)))
+
+  ---) ;other options
+@end example
+
+Here the symbols @samp{ID}, @samp{+}, @samp{-}, @samp{*}, @samp{/}
+represent the terminal token categories; each token returned by the
+lexer closure must belong to one of these.  The non--terminal
+definitions are the symbols @samp{e}, @samp{t} and @samp{f}; the
+right--hand sides of @samp{e} are the rules:
+
+@example
+(e + t)
+(e - t)
+(t)
+@end example
+
+@noindent
+which are used to match sequences of terminals and non--terminals.  The
+rule @samp{(e + t)} has the semantic clause @samp{(+ $1 $3)}.
+
+In the semantic clauses, the symbol @samp{$N} refers to the value of the
+@math{N}-th symbol in the right--hand side rule.  For example, when the
+sequence of tokens @samp{1 + 2} is matched by the rule:
+
+@example
+(e + t)    : (+ $1 $3)
+@end example
+
+@noindent
+the semantic clause is evaluated with @samp{$1} bound to @samp{1}, and
+@samp{$2} bound to @samp{2}; the result of the evaluation of the
+semantic clause becomes the value of the non--terminal @samp{e}.
+
+A rule with no semantic clause can be written by omitting the @samp{: ---}
+part, example:
+
+@example
+(e (e + t)    : (+ $1 $3)
+   (e - t)    : (- $1 $3)
+   (p)                       ;no semantic clause
+   (t)        : $1)
+@end example
+
+@noindent
+when such a rule matches a sequence of symbols, it generates the
+sentinel value; @libsref{sentinels, Sentinel values}.
+
+@c page
+@node lalr grammar preamble
+@subsubsection Code preamble for all the examples
+
+
+For all the examples in this section about grammar definition, we assume
+the following preamble:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools lalr) lalr.)
+  (prefix (nausicaa parser-tools lexical-tokens) lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(define-constant EOI-TOKEN
+  (lt.<end-of-input> ()))
+
+(define (make-lexer list-of-tokens)
+  ;;Return a lexer closure drawing  tokens from the
+  ;;list LIST-OF-TOKENS.  When the list is empty,
+  ;;return the EOI-TOKEN.
+  (lambda ()
+    (if (null? list-of-tokens)
+        EOI-TOKEN
+      (begin0
+          (car list-of-tokens)
+        (set! list-of-tokens (cdr list-of-tokens))))))
+
+(define (make-token category value)
+  (lt.<lexical-token> ((lt.category: category)
+                       (lt.value:    value)
+                       (lt.length:   0))))
+
+(define make-error-handler
+  ;;Return an error handler closure that calls
+  ;;YYCUSTOM with a pair describing the offending
+  ;;token.  To just return the pair invoke as:
+  ;;
+  ;;    (make-error-handler (lambda x x))
+  ;;
+  (case-lambda
+   (()
+    (make-error-handler (lambda x x)))
+   ((yycustom)
+    (lambda ((message <string>) (token lt.<lexical-token>))
+      (yycustom `(error-handler . ,(token value)))))))
+
+(define (doit . tokens)
+  ;;Parse the given list of tokens using the parser
+  ;;function returned by MAKE-PARSER.
+  ;;
+  (let* ((lexer             (make-lexer tokens))
+         (error-handler     (make-error-handler))
+         (parser            (make-parser)))
+    (parser lexer error-handler)))
+@end example
+
+@c page
+@node lalr grammar clauses
+@subsubsection Writing semantic clauses
+
+
+Semantic clauses are Scheme forms that can do anything Scheme allows us
+to do.  They are allowed to access the local bindings @samp{$1},
+@samp{$2}, @dots{} bound to values in the same number of the symbols of
+the production rule.
+
+An important limit is the environment in which the semantic clauses are
+evaluated:
+
+@itemize
+@item
+If we have instructed @func{lalr-parser} to generate a @func{define}
+form, we can take the form and place it in our code; in this case the
+environment is the one active at that position.
+
+@item
+If we have instructed @func{lalr-parser} to generate a proper Scheme
+library, we can add libraries specifications to the import list of the
+generated library using the @clause{library-imports:} clause of
+@func{lalr-parser}.
+
+@item
+If we have instructed @func{lalr-parser} to evaluate the generated
+parser maker using the @rsixlibrary{eval} library, we can add libraries
+specifications to the evaluation environment using the
+@clause{library-imports:} clause of @func{lalr-parser}.
+@end itemize
+
+
+The following local bindings are accessible in the semantic clauses.
+
+
+@defun yypushback
+If evaluated, tell the parser closure to reuse the last token (as
+lookahead) rather than to retrieve a new one from the lexer.  This may
+be useful to handle some corner cases in the grammar definition.
+@end defun
+
+
+@defvar yycustom
+This is the custom value we give as @var{yycustom} argument to the
+parser function.  It can be any value, from a closure to a constant, to
+a continuation.
+@end defvar
+
+@c page
+@node lalr grammar examples
+@subsubsection Dummy examples of grammar definitions
+
+
+In this section we examine some dummy parser definitions to understand
+some basic mechanism.  @ref{lalr grammar preamble, Code preamble for all
+the examples}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Single token parser
+
+The following example defines a parser accepting only a single token of
+category @samp{A}, which must be followed by the end--of--input
+@samp{*eoi*}.  Every other input sequence causes an error; this includes
+an @samp{*eoi*} token alone.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (A) : $1)))))
+
+;;Parse the sequence: A *eoi*
+(doit (make-token 'A 1))
+@result{} 1
+
+;;Parse the sequence: *eoi*
+(doit)
+@result{} ("unexpected end of input" . (eof-object))
+@end example
+
+@noindent
+the following test raises an error:
+
+@example
+(doit (make-token 'A 1)
+      (make-token 'A 2)
+      (make-token 'A 3))
+@result{} ("unexpected end of input" . (eof-object))
+@end example
+
+@noindent
+we will come back to this test when describing the error recovery
+mechanism; @ref{lalr grammar error, Error recovery}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Accepting @samp{*eoi*} alone
+
+The following parser defines a grammar which accepts the sequence
+@samp{A *eoi*}, but also accepts @samp{*eoi*} alone.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (A) : $1)
+          ()  : 0))))
+
+;;Parse the sequence: A *eoi*
+(doit (make-token 'A 1))
+@result{} 1
+
+;;Parse the sequence: *eoi*
+(doit)
+@result{} 0
+@end example
+
+When the input is a single @samp{*eoi*} token: the parser returns the
+value of the semantic action in @samp{() : 0}.  When the input is the
+sequence @samp{A *eoi*}: the parser returns the value of the semantic
+action in @samp{(A) : $1}.  Let's understand why using the reasoning
+explained in the introduction (@pxref{lalr intro, Introduction to the LR
+parser}).
+
+@itemize
+@item
+We can imagine the tokens of the sequence @samp{A *eoi*} on the
+following stacks:
+
+@example
+#(#f  1  #<eof>)
+#(S   A   *eoi*)
+  |
+  p
+@end example
+
+@noindent
+the first lookahead returns @samp{A} and the action is shift, we
+``enter'' the right--hand side rule @samp{(A)}:
+
+@example
+#(#f  1  #<eof>)
+#(S   A   *eoi*)
+      |
+      p
+@end example
+
+@noindent
+the second lookahead returns @samp{*eoi*} and the action is reduce, we
+``leave'' the right--hand side rule @samp{(A)}; one couple is popped
+from the stack and one couple is pushed:
+
+@example
+#(#f  1  #<eof>)
+#(S   e   *eoi*)
+      |
+      p
+@end example
+
+@noindent
+the value has not changed because the semantic clause is just @samp{$1}
+which is @samp{1} itself; the third lookahead returns @samp{*eoi*} and
+the action is accept (the value @samp{1}).
+
+@item
+We can imagine the tokens of the sequence @samp{*eoi*} on the following
+stacks:
+
+@example
+#(#f  #<eof>)
+#(S   *eoi*)
+  |
+  p
+@end example
+
+@noindent
+the first lookahead returns @samp{*eoi*} and the action is reduce, we
+enter and leave the right--hand side rule @samp{()} in a single step; no
+couples are popped from the stacks, but a couple is pushed:
+
+@example
+#(#f  0  #<eof>)
+#(S   e   *eoi*)
+      |
+      p
+@end example
+
+@noindent
+we see the result of the semantic clause; the second lookahead returns
+@samp{*eoi*} and the action is accept (the value @samp{0}).
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Accepting fixed sequences
+
+The following parser defines a grammar which accepts the following fixed
+sequences:
+
+@example
+*eoi*
+A *eoi*
+A A *eoi*
+A A A *eoi*
+@end example
+
+@noindent
+the return value of the parser is the list of values from the tokens.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (A)     : (list $1)
+          (A A)   : (list $1 $2)
+          (A A A) : (list $1 $2 $3)
+          ()      : 0)))))
+
+;;Parse the sequence: A *eoi*
+(doit (make-token 'A 1))
+@result{} (1)
+
+;;Parse the sequence: A A *eoi*
+(doit (make-token 'A 1)
+      (make-token 'A 2))
+@result{} (1 2)
+
+;;Parse the sequence: A A A *eoi*
+(doit (make-token 'A 1)
+      (make-token 'A 2)
+      (make-token 'A 3))
+@result{} (1 2 3)
+
+;;Parse the sequence: *eoi*
+(doit)
+@result{} 0
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Accepting a sequence of arbitrary length
+
+The following parser defines a grammar which accepts a sequence of
+@samp{A} tokens of any length; it also accepts @samp{*eoi*} alone.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (e A) : $2
+          (A)   : $1
+          ()    : 0)))))
+
+;;Parse the sequence: *eoi*
+(doit)
+@result{} 0
+
+;;Parse the sequence: A *eoi*
+(doit (make-token 'A 1))
+@result{} 1
+
+;;Parse the sequence: A A A *eoi*
+(doit (make-token 'A 1)
+      (make-token 'A 2)
+      (make-token 'A 3))
+@result{} 3
+@end example
+
+@noindent
+in the last test example, notice that the parser's return value is the
+value of the last parsed token (@samp{3}), while the other values are
+discarded.  This is because the whole sequence matches the right--hand
+side rule @samp{(e A)} and its semantic clause is @samp{$2}, which is
+the value of the token matching the last terminal @samp{A}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Returning all the values from an arbitrary sequence
+
+If we want all the values in the sequence we can use the following
+parser:
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (e A) : (cons $2 $1)
+          (A)   : (list $1)
+          ()    : 0)))))
+
+;;Parse the sequence: *eoi*
+(doit)
+@result{} 0
+
+;;Parse the sequence: A *eoi*
+(doit (make-token 'A 1))
+@result{} (1)
+
+;;Parse the sequence: A A *eoi*
+(doit (make-token 'A 1)
+      (make-token 'A 2))
+@result{} (2 1)
+
+;;Parse the sequence: A A A *eoi*
+(doit (make-token 'A 1)
+      (make-token 'A 2)
+      (make-token 'A 3))
+@result{} (3 2 1)
+@end example
+
+@noindent
+we notice that the values are returned in reverse order; this is
+because, making the semantic clauses explicit, the following are
+equivalent:
+
+@example
+(cons 2 (list 1))
+
+(doit (make-token 'A 1)
+      (make-token 'A 2))
+@end example
+
+@noindent
+and also the following:
+
+@example
+(cons 3 (cons 2 (list 1)))
+
+(doit (make-token 'A 1)
+      (make-token 'A 2)
+      (make-token 'A 3))
+@end example
+
+@noindent
+in more detail, when parsing the sequence @samp{A A *eoi*} we can
+imagine the following stacks:
+
+@example
+#(#f  1  2  #<eof>)
+#(S   A  A   *eoi*)
+  |
+  p
+@end example
+
+@noindent
+the first lookahead returns @samp{A} and the action is shift:
+
+@example
+#(#f  1  2  #<eof>)
+#(S   A  A   *eoi*)
+      |
+      p
+@end example
+
+@noindent
+the second lookahead returns @samp{A} and the action is reduce:
+
+@example
+#(#f  (1)  2  #<eof>)
+#(S    e   A   *eoi*)
+       |
+       p
+@end example
+
+@noindent
+the third lookahead returns @samp{A} and the action is shift:
+
+@example
+#(#f  (1)  2  #<eof>)
+#(S    e   A   *eoi*)
+           |
+           p
+@end example
+
+@noindent
+the fourth lookahead returns @samp{A} and the action is reduce:
+
+@example
+#(#f  (2 . (1))  #<eof>  #f)
+#(S    e          *eoi*  #f)
+       |
+       p
+@end example
+
+@noindent
+and we know that @samp{(2 . (1))} is @samp{(2 1)}; the fifth lookahead
+returns @samp{*eoi*} and the action is accept.
+
+@c page
+@node lalr grammar error
+@subsubsection Error recovery
+
+
+@subsubheading Introduction to error recovery
+
+
+@library{nausicaa parser-tools lalr} implements a very simple error
+recovery strategy.  A production can be of the form:
+
+@example
+(NON-TERMINAL
+   ---                  ;right-hand side rules
+   (error TERMINAL) : semantic-clause)
+@end example
+
+If, while parsing the right--hand side rules for @samp{NON-TERMINAL},
+the lookahead returns a token of invalid category: the parser resets the
+state associated with the parsing of the rule and skips all the tokens
+returned by the lexer until one with category @samp{TERMINAL} is found.
+The @samp{TERMINAL} token is also discarded and parsing continues with a
+new lookahead.
+
+The symbol @samp{error} is reserved as error recovery directive, it
+cannot be used as terminal or non--terminal.
+
+There can be several such right--hand side rules for a single
+non--terminal: for a C--like language, we could ``synchronise'' on
+semicolons and closing curly brackets by writing error rules like these:
+
+@example
+(statement
+   (expression SEMICOLON)        : ---
+   (LBRACKET statement RBRACKET) : ---
+   (error SEMICOLON)    ;empty semantic clause
+   (error RBRACKET))    ;empty semantic clause
+@end example
+
+@noindent
+if an error occurs, the parser will discard its internal state up to,
+and including, the first token that started the @samp{statement}
+non--terminal (@samp{LBRACKET} or the first of @samp{expression}).
+
+@c ------------------------------------------------------------
+
+@subsubheading Dummy example: Single token parser
+
+
+Let's consider the following parser which accepts as input only the
+sequence: @samp{A}, @samp{*eoi*}; it is a corner case which is useful to
+understand.  The correct way to handle this case is to have an error
+handler that does not return; in the following the error handler
+returns, leaving the parser to handle everything.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+    (lalr.output-value: #t)
+    (lalr.terminals:    '(A))
+    (lalr.rules:
+     '((e (A) : $1)))))
+@end example
+
+We have already examined the correct usage of this grammar (@ref{lalr
+grammar examples, Dummy examples of grammar definitions}); we can now
+understand what happens in the following test:
+
+@example
+(example (make-token 'A 1)
+         (make-token 'A 2)
+         (make-token 'A 3)))
+@result{} ("unexpected end of input" . (eof-object))
+@end example
+
+@noindent
+following the reasoning exposed in the introduction (@pxref{lalr intro,
+Introduction to the LR parser}), we can imagine the input tokens on the
+following stacks:
+
+@example
+#(#f  1  2  3  #<eof>)
+#(S   A  A  A   *eoi*)
+  |
+  p
+@end example
+
+@enumerate
+@item
+The first lookahead returns @samp{A} and the action is a shift:
+
+@example
+#(#f  1  2  3  #<eof>)
+#(S   A  A  A   *eoi*)
+      |
+      p
+@end example
+
+@item
+The second lookahead returns @samp{A} and the action is a reduce, which
+changes nothing because there is only one token and the semantic action
+is @samp{$1}:
+
+@example
+#(#f  1  2  3  #<eof>)
+#(S   A  A  A   *eoi*)
+      |
+      p
+@end example
+
+@item
+The third lookahead returns @samp{A} and the action is error because
+only @samp{*eoi*} is acceptable now.  The error handler is invoked and
+its return value discarded.
+
+The parser attempts to recover from the error; we already know that the
+recovery will fail, because we have not included any @samp{error}
+right--hand side rule in the grammar.
+
+@item
+The first operation of recovery is to reset the current parser state
+removing everything related to this right--hand side rule:
+
+@example
+#(#f  2  3  #<eof>  #f)
+#(S   A  A   *eoi*  #f)
+  |
+  p
+@end example
+
+@item
+The parser detects the fact that the stack has been fully rewind without
+finding a non--terminal with an @samp{error} directive, so it just stops
+reading tokens from the lexer and imposes a @samp{*eoi*} token as
+lookahead.
+
+@item
+The end--of--input token is invalid as lookahead from the initial state,
+so an ``unexpected end--of--input error'' is generated; the error
+handler is invoked and its return value becomes the return value of the
+parser closure.
+@end enumerate
+
+@c page
+@node lalr grammar precedence
+@subsubsection Operator precedence and associativity
+
+
+It is possible to explicitly assign precedences and associativity to
+terminal symbols and productions a la Yacc.  Conflicts in the grammar
+are handled in a conventional way, in the absence of precedence
+directives: Shift/Reduce conflicts are resolved by shifting, and
+Reduce/Reduce conflicts are resolved by choosing the rule listed first
+in the grammar definition.
+
+Let's define two operators @samp{ADD} and @samp{MUL} and the grammar:
+
+@example
+((EXPR (EXPR ADD EXPR)
+       (EXPR MUL EXPR)
+       (NUM)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Operator precedence
+
+
+Operator precedence is represented by an @dfn{operator index}: a
+non--negative exact integer; the higher the integer the higher the
+precedence.  When composing the @clause{terminals:} clause:
+
+@itemize
+@item
+If we just write the terminal symbol, its precedence will be @math{0}.
+
+@item
+If we use an associativity specifier: its precedence index is @math{1}
+higher than its last predecessor in the list having an associativity
+specification; if it is the first: its precedence index is @math{1}.
+@end itemize
+
+@noindent
+examples:
+
+@example
+;;All the terminals have precedence index 0.
+(terminals: '(NUM ADD SUB MUL DIV))
+
+(terminals: '(NUM               ;precedence 0
+              (nonassoc: ADD)   ;precedence 1
+              (nonassoc: SUB)   ;precedence 2
+              (nonassoc: MUL)   ;precedence 3
+              (nonassoc: DIV))) ;precedence 4
+
+(terminals: '(NUM               ;precedence 0
+              (nonassoc: ADD)   ;precedence 1
+              (left:     SUB)   ;precedence 2
+              (right:    MUL)   ;precedence 3
+              DIV))             ;precedence 0
+
+(terminals: '(NUM               ;precedence 0
+              (left: ADD SUB)   ;precedence 1
+              (left: MUL DIV)   ;precedence 2
+              (right: POW)))    ;precedence 3
+
+(terminals: '(NUM               ;precedence 0
+              (left: ADD SUB)   ;precedence 1
+              (left: MUL DIV)   ;precedence 2
+              (nonassoc: UNARY) ;precedence 3
+              (right: POW)))    ;precedence 4
+@end example
+
+@noindent
+notice that last two examples in which @samp{ADD} and @samp{SUB} have
+the same precedence as do @samp{MUL} and @samp{DIV}.
+
+Operator precedence matters when parsing input sequences in which both
+appear:
+
+@example
+NUM ADD NUM MUL NUM
+@end example
+
+@itemize
+@item
+If @samp{ADD} and @samp{MUL} have the same precedence, there is a
+Shift/Reduce conflict; the sequence can be parsed by shifting first as
+in:
+
+@example
+NUM ADD NUM MUL NUM @result{} NUM ADD EXPR @result{} EXPR
+@end example
+
+@noindent
+or by reducing first as in:
+
+@example
+NUM ADD NUM MUL NUM @result{} EXPR MUL NUM @result{} EXPR
+@end example
+
+@noindent
+the generated parsers choose Shift in this case.
+
+@item
+If @samp{MUL} has higher precedence than @samp{ADD}, subexpressions
+containing @samp{MUL} are reduced first no matter if they come before or
+after:
+
+@example
+NUM ADD NUM MUL NUM @result{} NUM ADD EXPR @result{} EXPR
+NUM MUL NUM ADD NUM @result{} EXPR ADD NUM @result{} EXPR
+@end example
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Operator associativity
+
+
+Operator associativity matters when parsing input sequences in which
+only one operator appears:
+
+@example
+NUM ADD NUM ADD NUM
+@end example
+
+@itemize
+@item
+If @samp{ADD} is left-associative, because listed in the
+@clause{terminals:} clause with the @code{left:} specifier, the first
+subexpression is reduced first:
+
+@example
+NUM ADD NUM ADD NUM @result{} EXPR ADD NUM @result{} EXPR
+@end example
+
+@item
+If @samp{ADD} is right--associative, because listed in the
+@clause{terminals:} clause with the @code{right:} specifier, the second
+subexpression is reduced first:
+
+@example
+NUM ADD NUM ADD NUM @result{} NUM ADD EXPR @result{} EXPR
+@end example
+
+@item
+If @samp{ADD} is non--associative, because listed in the
+@clause{terminals:} clause with the @code{nonassoc:} specifier, or has
+no specified associativity: the expression is parsed as if @samp{ADD} is
+right--associative.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Reduce/Reduce conflits
+
+
+Let's consider a different grammar containing two rules, one of which is
+a subexpression of the other:
+
+@example
+((EXPR (EXPR ADD EXPR)
+       (EXPR ADD EXPR ADD EXPR)
+       (NUM)))
+@end example
+
+@noindent
+we have a Reduce/Reduce conflict; a sequence like:
+
+@example
+NUM1 ADD NUM2 ADD NUM2
+@end example
+
+@noindent
+can be parsed by reducing the first subexpression:
+
+@example
+NUM1 ADD NUM2 ADD NUM2 @result{} EXPR ADD NUM2 @result{} EXPR
+@end example
+
+@noindent
+or by reducing the whole expression:
+
+@example
+NUM1 ADD NUM2 ADD NUM2 @result{} EXPR
+@end example
+
+@noindent
+the generated parsers select the rule that comes first in the grammar
+definition; in the above example the shorter rule comes first.
+
+@c ------------------------------------------------------------
+
+@subsubheading Overriding the precedence among non-terminal rules
+
+
+It is sometimes desirable to give a rule a higher precedence than it
+would have as determined by the contained terminal symbols.  For
+example, let's consider the following arithmetic expressions grammar:
+
+@example
+((EXPR (ADD EXPR)              : (list $1 $2)
+       (SUB EXPR)              : (list $1 $2)
+       (EXPR ADD EXPR)         : (list $2 $1 $3)
+       (EXPR SUB EXPR)         : (list $2 $1 $3)
+       (EXPR MUL EXPR)         : (list $2 $1 $3)
+       (EXPR DIV EXPR)         : (list $2 $1 $3)
+       (NUM)                   : $1))
+@end example
+
+@noindent
+in which notice the rules defining the unary operators @samp{ADD} and
+@samp{SUB}.  If the terminal symbols are defined as:
+
+@example
+(terminals: '(NUM
+              (left: ADD SUB)
+              (left: MUL DIV)))
+@end example
+
+@noindent
+multiplication and division will have the right precedence over binary
+addition and binary subtraction, but also a wrong precedence over unary
+@samp{ADD} and @samp{SUB}:
+
+@example
+ADD NUM MUL NUM @result{} ADD EXPR @result{} EXPR
+SUB NUM MUL NUM @result{} SUB EXPR @result{} EXPR
+@end example
+
+@noindent
+in concrete examples:
+
+@example
++ 1 * 2 @result{} + (1 * 2)
+- 1 * 2 @result{} - (1 * 2)
+@end example
+
+We can override the precedence of the unary operators by defining
+additional terminal symbols with highest precedence:
+
+@example
+(terminals: '(NUM
+              (left: ADD SUB)
+              (left: MUL DIV))
+              (nonassoc: UADD)
+              (nonassoc: USUB))
+@end example
+
+@noindent
+and use the @code{prec:} specifier directly in the grammar definition:
+
+@example
+((EXPR (ADD EXPR (prec: UADD)): (list $1 $2)
+       (SUB EXPR (prec: USUB)): (list $1 $2)
+       (EXPR ADD EXPR)         : (list $2 $1 $3)
+       (EXPR SUB EXPR)         : (list $2 $1 $3)
+       (EXPR MUL EXPR)         : (list $2 $1 $3)
+       (EXPR DIV EXPR)         : (list $2 $1 $3)
+       (NUM)                   : $1))
+@end example
+
+@noindent
+this way the unary operators will have the right precedence:
+
+@example
+ADD NUM MUL NUM @result{} EXPR MUL EXPR @result{} EXPR
+SUB NUM MUL NUM @result{} EXPR MUL EXPR @result{} EXPR
+@end example
+
+@noindent
+in concrete examples:
+
+@example
++ 1 * 2 @result{} (+ 1) * 2
+- 1 * 2 @result{} (- 1) * 2
+@end example
+
+In the grammar, the @code{prec:} specifier can appear only as last
+element in the rule.
+
+@c ------------------------------------------------------------
+
+@subsubheading Terminals precedence examples
+
+
+Example on the meaning of terminal precedence: two operators with the
+same precedence.  Show that Shift/Reduce conflicts are resolved by
+choosing Shift.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM   ;precedence 0
+                      ADD   ;precedence 0
+                      MUL)) ;precedence 0
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO MUL THREE)    @result{} (+ 1 (* 2 3))
+(doit ONE MUL TWO ADD THREE)    @result{} (* 1 (+ 2 3))
+@end example
+
+On the meaning of terminal precedence: two non--associative operators
+with different precedence.  Show that precedence always wins.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      (nonassoc: ADD)   ;precedence 1
+                      (nonassoc: MUL))) ;precedence 2
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO MUL THREE)    @result{} (+ 1 (* 2 3))
+(doit ONE MUL TWO ADD THREE)    @result{} (+ (* 1 2) 3)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Terminals associativity examples
+
+
+On the meaning of terminal associativity: a left--associative operator
+and a right--associative operator.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM            ;precedence 0
+                      (left:  ADD)   ;precedence 1
+                      (right: MUL))) ;precedence 2
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+;;left-associative
+(doit ONE ADD TWO ADD THREE)    @result{} (+ (+ 1 2) 3)
+
+;;right-associative
+(doit ONE MUL TWO MUL THREE)    @result{} (* 1 (* 2 3))
+@end example
+
+On the meaning of terminal associativity: non--associative operators and
+operators for which the associativity is unspecified are handled as
+right--associative.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM             ;precedence 0
+                      (nonassoc: ADD) ;precedence 1
+                      MUL))           ;precedence 0
+   (lalr.rules:
+    '((EXPR (EXPR ADD EXPR) : (list $2 $1 $3)
+            (EXPR MUL EXPR) : (list $2 $1 $3)
+            (NUM)           : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+
+(doit ONE ADD TWO)              @result{} (+ 1 2)
+(doit ONE MUL TWO)              @result{} (* 1 2)
+
+(doit ONE ADD TWO ADD THREE)    @result{} (+ 1 (+ 2 3))
+(doit ONE MUL TWO MUL THREE)    @result{} (* 1 (* 2 3))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Reduce/Reduce conflicts examples
+
+
+On the meaning of Reduce/Reduce conflicts: the longest rule is given
+first.  Operator precedence does matter.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      ADD               ;precedence 0
+                      (nonassoc: SUB)   ;precedence 1
+                      (left:     MUL)   ;precedence 2
+                      (right:    DIV))) ;precedence 3
+   (lalr.rules:
+    '((EXPR
+       (EXPR ADD EXPR ADD EXPR)     : (list $2 $1 $3 $5)
+       (EXPR SUB EXPR SUB EXPR)     : (list $2 $1 $3 $5)
+       (EXPR MUL EXPR MUL EXPR)     : (list $2 $1 $3 $5)
+       (EXPR DIV EXPR DIV EXPR)     : (list $2 $1 $3 $5)
+       (EXPR ADD EXPR)              : (list $2 $1 $3)
+       (EXPR SUB EXPR)              : (list $2 $1 $3)
+       (EXPR MUL EXPR)              : (list $2 $1 $3)
+       (EXPR DIV EXPR)              : (list $2 $1 $3)
+       (NUM)                        : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant SUB        (make-token 'SUB '-))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant DIV        (make-token 'DIV '/))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+(define-constant FOUR       (make-token 'NUM 4))
+
+(check (doit ONE ADD TWO)   @result{} (+ 1 2)
+(check (doit ONE SUB TWO)   @result{} (- 1 2)
+(check (doit ONE MUL TWO)   @result{} (* 1 2)
+(check (doit ONE DIV TWO)   @result{} (/ 1 2)
+
+;;No associativity specified.
+(doit ONE ADD TWO
+      ADD THREE)     @result{} (+ 1 2 3)
+(doit ONE ADD TWO
+      ADD THREE
+      ADD FOUR)      @result{} (+ 1 (+ 2 3 4))
+
+;;Non-associative operator.
+(doit ONE SUB TWO
+      SUB THREE)     @result{} (- 1 2 3)
+(doit ONE SUB TWO
+      SUB THREE
+      SUB FOUR)      @result{} (- 1 (- 2 3 4))
+
+;;Left-associative operator.
+(doit ONE MUL TWO
+      MUL THREE)     @result{} (* (* 1 2) 3)
+(doit ONE MUL TWO
+      MUL THREE
+      MUL FOUR)      @result{} (* (* (* 1 2) 3) 4)
+
+;;Right-associative operator.
+(doit ONE DIV TWO
+      DIV THREE)     @result{} (/ 1 2 3)
+(doit ONE DIV TWO
+      DIV THREE
+      DIV FOUR)      @result{} (/ 1 (/ 2 3 4))
+@end example
+
+On the meaning of Reduce/Reduce conflicts: the longest rule is given
+last.  Operator precedence does matter.
+
+@example
+(define make-parser
+  (lalr.lalr-parser
+   (lalr.output-value: #t)
+   (lalr.expect: 0)
+   (lalr.terminals: '(NUM               ;precedence 0
+                      ADD               ;precedence 0
+                      (nonassoc: SUB)   ;precedence 1
+                      (left:     MUL)   ;precedence 2
+                      (right:    DIV))) ;precedence 3
+   (lalr.rules:
+    '((EXPR
+       (EXPR ADD EXPR)              : (list $2 $1 $3)
+       (EXPR SUB EXPR)              : (list $2 $1 $3)
+       (EXPR MUL EXPR)              : (list $2 $1 $3)
+       (EXPR DIV EXPR)              : (list $2 $1 $3)
+       (EXPR ADD EXPR ADD EXPR)     : (list $2 $1 $3 $5)
+       (EXPR SUB EXPR SUB EXPR)     : (list $2 $1 $3 $5)
+       (EXPR MUL EXPR MUL EXPR)     : (list $2 $1 $3 $5)
+       (EXPR DIV EXPR DIV EXPR)     : (list $2 $1 $3 $5)
+       (NUM)                        : $1)))))
+
+(define-constant ADD        (make-token 'ADD '+))
+(define-constant SUB        (make-token 'SUB '-))
+(define-constant MUL        (make-token 'MUL '*))
+(define-constant DIV        (make-token 'DIV '/))
+(define-constant ONE        (make-token 'NUM 1))
+(define-constant TWO        (make-token 'NUM 2))
+(define-constant THREE      (make-token 'NUM 3))
+(define-constant FOUR       (make-token 'NUM 4))
+
+(doit ONE ADD TWO)   @result{} (+ 1 2)
+(doit ONE SUB TWO)   @result{} (- 1 2)
+(doit ONE MUL TWO)   @result{} (* 1 2)
+(doit ONE DIV TWO)   @result{} (/ 1 2)
+
+;;No associativity specified.  Handled as right-associative
+;;operator.
+(doit ONE ADD TWO
+      ADD THREE)     @result{} (+ 1 (+ 2 3))
+(doit ONE ADD TWO
+      ADD THREE
+      ADD FOUR)      @result{} (+ 1 (+ 2 (+ 3 4)))
+
+;;Non-associative operator.  Handled as right-associative
+;;operator.
+(doit ONE SUB TWO
+      SUB THREE)     @result{} (- 1 (- 2 3))
+(doit ONE SUB TWO
+      SUB THREE
+      SUB FOUR)      @result{} (- 1 (- 2 (- 3 4)))
+
+;;Left-associative operator.
+(doit ONE MUL TWO
+      MUL THREE)     @result{} (* (* 1 2) 3)
+(doit ONE MUL TWO
+      MUL THREE
+      MUL FOUR)      @result{} (* (* (* 1 2) 3) 4)
+
+;;Right-associative operator.
+(doit ONE DIV TWO
+      DIV THREE)     @result{} (/ 1 (/ 2 3))
+(doit ONE DIV TWO
+      DIV THREE
+      DIV FOUR)      @result{} (/ 1 (/ 2 (/ 3 4)))
+@end example
+
+@c page
+@node lalr glr
+@subsection Generalised LR parsing
+
+
+GLR parsing (which stands for Generalized LR parsing) is an extension of
+the traditional LR parsing technique to handle highly ambiguous
+grammars.  It is especially interesting for natural language processing,
+the context in which the technique has been devised.
+
+To generate a GLR parser instead of a regular LALR parser, simply use
+the @samp{(parser-type: 'glr)} clause with @func{lalr-parser}.
+
+GLR parsers are run in exactly the same way as regular LALR parsers; the
+only difference is that the result of the parsing is a (possibly empty)
+list of parses instead of a single parse.
+
+Since the parsing of a phrase can lead to many potential parses, errors
+cannot be detected as easily as with deterministic LR parsing.  For this
+reason, it is advised to not put error productions in the grammar (they
+will be ignored anyway).  Moreover, GLR parsers are usually not meant
+for interactive parsers.
+
+@c end of file

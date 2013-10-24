@@ -8,7 +8,7 @@
 @cindex Library @library{srfi :111 boxes}
 
 
-The library @library{srfi :111} is by John Conwan as the reference
+The library @library{srfi :111} is by John Cowan as the reference
 implementation for @ansrfi{111}; see:
 
 @center @url{http://srfi.schemers.org/srfi-111/srfi-111.html}

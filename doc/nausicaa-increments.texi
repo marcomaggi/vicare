@@ -1,0 +1,117 @@
+@node increments
+@chapter Numeric increment syntaxes
+
+
+@cindex Library @library{nausicaa language increments}
+@cindex @library{nausicaa language increments}, library
+
+
+The library @library{nausicaa language increments} exports syntaxes to
+ease incrementing and decrementing of numeric values.  The bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@deffn Syntax incr! @meta{expr}
+@deffnx Syntax incr! @meta{expr} @meta{step}
+@deffnx Syntax $incr! @meta{expr}
+@deffnx Syntax $incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  @meta{expr}
+must be an identifier or @oopp{} syntax usable to access and mutate a
+number object, otherwise the behaviour is undefined.  @meta{step} must
+be an expression evaluating to a number object; when @meta{step} is not
+given: it defaults to the fixnum @code{1}.
+
+The syntax expands as follows:
+
+@example
+(incr! @meta{expr} @meta{step})
+@expansion{} (begin
+      (set! @meta{expr} (+ @meta{expr} @meta{step}))
+      @meta{expr})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-incr! @meta{expr}
+@deffnx Syntax pre-incr! @meta{expr} @meta{step}
+@deffnx Syntax $pre-incr! @meta{expr}
+@deffnx Syntax $pre-incr! @meta{expr} @meta{step}
+Aliases for @func{incr!} and @func{$incr!}.
+@end deffn
+
+
+@deffn Syntax post-incr! @meta{expr}
+@deffnx Syntax post-incr! @meta{expr} @meta{step}
+@deffnx Syntax $post-incr! @meta{expr}
+@deffnx Syntax $post-incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the value of @meta{expr}
+before the operation.  @meta{expr} must be an identifier or @oopp{}
+syntax usable to access and mutate a number object, otherwise the
+behaviour is undefined.  @meta{step} must be an expression evaluating to
+a number object; when @meta{step} is not given: it defaults to the
+fixnum @code{1}.
+
+The syntax expands as follows:
+
+@example
+(post-incr! @meta{expr} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{expr}
+      (set! @meta{expr} (+ @meta{expr} @meta{step})))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax decr! @meta{expr}
+@deffnx Syntax decr! @meta{expr} @meta{step}
+@deffnx Syntax $decr! @meta{expr}
+@deffnx Syntax $decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  @meta{expr}
+must be an identifier or @oopp{} syntax usable to access and mutate a
+number object, otherwise the behaviour is undefined.  @meta{step} must
+be an expression evaluating to a number object; when @meta{step} is not
+given: it defaults to the fixnum @code{1}.
+
+The syntax expands as follows:
+
+@example
+(decr! @meta{expr} @meta{step})
+@expansion{} (begin
+      (set! @meta{expr} (- @meta{expr} @meta{step}))
+      @meta{expr})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-decr! @meta{expr}
+@deffnx Syntax pre-decr! @meta{expr} @meta{step}
+@deffnx Syntax $pre-decr! @meta{expr}
+@deffnx Syntax $pre-decr! @meta{expr} @meta{step}
+Aliases for @func{decr!} and @func{$decr!}.
+@end deffn
+
+
+@deffn Syntax post-decr! @meta{expr}
+@deffnx Syntax post-decr! @meta{expr} @meta{step}
+@deffnx Syntax $post-decr! @meta{expr}
+@deffnx Syntax $post-decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the value of @meta{expr}
+before the operation.  @meta{expr} must be an identifier or @oopp{}
+syntax usable to access and mutate a number object, otherwise the
+behaviour is undefined.  @meta{step} must be an expression evaluating to
+a number object; when @meta{step} is not given: it defaults to the
+fixnum @code{1}.
+
+The syntax expands as follows:
+
+@example
+(post-decr! @meta{expr} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{expr}
+      (set! @meta{expr} (- @meta{expr} @meta{step})))
+@end example
+@end deffn
+
+@c end of file

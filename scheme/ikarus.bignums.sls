@@ -17,17 +17,65 @@
 
 (library (ikarus bignums)
   (export
+    bignum-positive?
+    bignum-negative?
+    (rename (bignum-positive?	bignum-non-negative?)
+	    (bignum-negative?	bignum-non-positive?))
+    bignum-odd?
+    bignum-even?
+    least-positive-bignum
+    greatest-negative-bignum
+
     $bignum-positive?	$bignum-negative?
+    (rename ($bignum-positive?	$bignum-non-negative?)
+	    ($bignum-negative?	$bignum-non-positive?))
     $bignum-even?	$bignum-odd?
     $bignum->flonum)
-  (import (ikarus)
+  (import (except (ikarus)
+		  bignum-positive?
+		  bignum-negative?
+		  bignum-non-negative?
+		  bignum-non-positive?
+		  bignum-odd?
+		  bignum-even?
+		  least-positive-bignum
+		  greatest-negative-bignum)
     (except (ikarus system $bignums)
-	    $bignum-positive?	$bignum-negative?
-	    $bignum-even?	$bignum-odd?
+	    $bignum-positive?		$bignum-negative?
+	    $bignum-non-positive?	$bignum-non-negative?
+	    $bignum-even?		$bignum-odd?
 	    $bignum->flonum)
-    (ikarus system $flonums))
+    (ikarus system $flonums)
+    (vicare arguments validation))
 
 
+;;;; limits
+
+(define (least-positive-bignum)
+  (+ +1 (greatest-fixnum)))
+
+(define (greatest-negative-bignum)
+  (+ -1 (least-fixnum)))
+
+
+;;;; predicates
+
+(define-syntax define-bn-operation/one
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((bignum	x))
+	 (?unsafe-who x))))))
+
+(define-bn-operation/one bignum-positive?	$bignum-positive?)
+(define-bn-operation/one bignum-negative?	$bignum-negative?)
+(define-bn-operation/one bignum-odd?		$bignum-odd?)
+(define-bn-operation/one bignum-even?		$bignum-even?)
+
+;;; --------------------------------------------------------------------
+
 (define ($bignum-positive? x)
   (foreign-call "ikrt_positive_bn" x))
 

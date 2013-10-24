@@ -51,6 +51,9 @@
     non-positive-fixnum.vicare-arguments-validation
     non-negative-fixnum.vicare-arguments-validation
     non-zero-fixnum.vicare-arguments-validation
+    non-positive-fixnum/false.vicare-arguments-validation
+    non-negative-fixnum/false.vicare-arguments-validation
+    non-zero-fixnum/false.vicare-arguments-validation
     fixnum-in-inclusive-range.vicare-arguments-validation
     fixnum-in-exclusive-range.vicare-arguments-validation
     even-fixnum.vicare-arguments-validation
@@ -83,6 +86,8 @@
     false-or-byte.vicare-arguments-validation
     octet.vicare-arguments-validation
     false-or-octet.vicare-arguments-validation
+    byte/octet.vicare-arguments-validation
+    byte/octet/false.vicare-arguments-validation
     word-u8.vicare-arguments-validation
     word-u8/false.vicare-arguments-validation
     word-s8.vicare-arguments-validation
@@ -190,9 +195,18 @@
     bytevector-length.vicare-arguments-validation
     list-of-bytevectors.vicare-arguments-validation
 
+    ;; string and bytevector pathnames
+    file-pathname.vicare-arguments-validation
+    file-string-pathname.vicare-arguments-validation
+    file-bytevector-pathname.vicare-arguments-validation
+    file-colon-search-path.vicare-arguments-validation
+    file-string-colon-search-path.vicare-arguments-validation
+    file-bytevector-colon-search-path.vicare-arguments-validation
+
     ;; symbols
     symbol.vicare-arguments-validation
     symbol/false.vicare-arguments-validation
+    list-of-symbols.vicare-arguments-validation
 
     ;; enum-sets
     enum-set.vicare-arguments-validation
@@ -202,6 +216,8 @@
     pointer.vicare-arguments-validation
     non-null-pointer.vicare-arguments-validation
     pointer/false.vicare-arguments-validation
+    c-callback.vicare-arguments-validation
+    c-callback/false.vicare-arguments-validation
 
     ;; memory-blocks
     memory-block.vicare-arguments-validation
@@ -209,6 +225,9 @@
 
     ;; characters
     char.vicare-arguments-validation
+    char/false.vicare-arguments-validation
+    char-in-ascii-range.vicare-arguments-validation
+    char-in-ascii-range/false.vicare-arguments-validation
 
     ;; flonums
     flonum.vicare-arguments-validation
@@ -280,6 +299,10 @@
     ;; time objects
     time.vicare-arguments-validation
     time/false.vicare-arguments-validation
+
+    ;; identifiers
+    identifier.vicare-arguments-validation
+    identifier/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare platform configuration)
@@ -292,15 +315,17 @@
     (vicare unsafe operations))
 
 
+(define-syntax or-false)
+
 (define-syntax define-argument-validation
   ;;Define a set of macros to  validate arguments, to be used along with
   ;;WITH-ARGUMENTS-VALIDATION.  Transform:
   ;;
   ;;  (define-argument-validation (bytevector who bv)
   ;;    (bytevector? bv)
-  ;;    (assertion-violation who "expected a bytevector as argument" bv))
+  ;;    (procedure-argument-violation who "expected a bytevector as argument" bv))
   ;;
-  ;;into:
+  ;;into (somewhat):
   ;;
   ;;  (define-inline (bytevector.vicare-arguments-validation who bv . body)
   ;;    (if (the-predicate bv)
@@ -311,7 +336,7 @@
   ;;    (bytevector? bv))
   ;;
   ;;  (define-inline (the-error who bv))
-  ;;    (assertion-violation who "expected a bytevector as argument" bv))
+  ;;    (procedure-argument-violation who "expected a bytevector as argument" bv))
   ;;
   ;;If we need to export a validator  from a library: we can export just
   ;;the    identifier   VICARE.ARGUMENT-VALIDATION-FOR-?NAME,    without
@@ -321,20 +346,28 @@
     (define who 'define-argument-validation)
     (define (main stx)
       (syntax-case stx ()
-	((_ (?name ?who ?arg ...) ?predicate ?error-handler)
+	((_ (?name ?who ?arg0 ?arg ...) ?predicate ?error-handler)
 	 (and (identifier? #'?name)
 	      (identifier? #'?who))
 	 (let ((ctx  #'?name)
 	       (name (symbol->string (syntax->datum #'?name))))
 	   (with-syntax
-	       ((VALIDATE (%name ctx name ".vicare-arguments-validation")))
+	       ((VALIDATE          (%name ctx name ".vicare-arguments-validation")))
 	     #'(begin
-		 (define-syntax-rule (the-predicate ?arg ...) ?predicate)
-		 (define-syntax-rule (the-error ?who ?arg ...) ?error-handler)
-		 (define-syntax-rule (VALIDATE ?who ?arg ... . body)
-		   (if (the-predicate ?arg ...)
-		       (begin . body)
-		     (the-error ?who ?arg ...)))))))
+		 (define-syntax-rule (the-predicate ?arg0 ?arg ...) ?predicate)
+		 (define-syntax-rule (the-error ?who ?arg0 ?arg ...) ?error-handler)
+		 (define-syntax (VALIDATE stx)
+		   (syntax-case stx (or-false)
+		     ((_ ?who () (?arg0 ?arg ...) . ?body)
+		      #'(if (the-predicate ?arg0 ?arg ...)
+			    (begin . ?body)
+			  (the-error ?who ?arg0 ?arg ...)))
+		     ((_ ?who (or-false) (?arg0 ?arg ...) . ?body)
+		      #'(if (or (not ?arg0)
+				(the-predicate ?arg0 ?arg ...))
+			    (begin . ?body)
+			  (the-error ?who ?arg0 ?arg ...)))
+		     ))))))
 	(_
 	 (%synner "invalid input form" #f))))
 
@@ -409,8 +442,7 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?always-include (?who) ((?validator ?arg ...) ...) . ?body)
-	 (and (identifier? #'?who)
-	      (for-all identifier? (syntax->list #'(?validator ...))))
+	 (identifier? #'?who)
 	 ;;Whether we  include the arguments  checking or not,  we build
 	 ;;the output form validating the input form.
 	 (let* ((include?	(syntax->datum #'?always-include))
@@ -425,23 +457,35 @@
 	 (%synner "invalid input form" #f))))
 
     (define (%build-output-form who validators list-of-args body)
-      (syntax-case validators (void)
+      (syntax-case validators (void or)
 	(()
 	 #`(let () #,body))
+
 	;;Accept VOID as special  validator meaning "always valid"; this
 	;;is sometimes useful when composing syntax output forms.
 	((void . ?other-validators)
 	 (%build-output-form who #'?other-validators list-of-args body))
+
+	(((or ?false ?validator) . ?other-validators)
+	 (and (identifier? #'?false)
+	      (eq? 'false (syntax->datum #'?false))
+	      (identifier? #'?validator))
+	 (%generate-validation-form who #'?validator #'(or-false) #'?other-validators list-of-args body))
+
 	((?validator . ?other-validators)
 	 (identifier? #'?validator)
-	 (let ((str (symbol->string (syntax->datum #'?validator))))
-	   (with-syntax
-	       ((VALIDATE (%name #'?validator str ".vicare-arguments-validation"))
-		(((ARG ...) . OTHER-ARGS) list-of-args))
-	     #`(VALIDATE #,who ARG ...
-			 #,(%build-output-form who #'?other-validators #'OTHER-ARGS body)))))
+	 (%generate-validation-form who #'?validator #'()         #'?other-validators list-of-args body))
+
 	((?validator . ?others)
 	 (%synner "invalid argument-validator selector" #'?validator))))
+
+    (define (%generate-validation-form who validator-id modifiers-stx other-validators-stx list-of-args body)
+      (let ((str (symbol->string (syntax->datum validator-id))))
+	   (with-syntax
+	       ((VALIDATE (%name validator-id str ".vicare-arguments-validation"))
+		(((ARG0 ARG ...) . OTHER-ARGS) list-of-args))
+	     #`(VALIDATE #,who #,modifiers-stx (ARG0 ARG ...)
+			 #,(%build-output-form who other-validators-stx #'OTHER-ARGS body)))))
 
     (define (%name ctx name suffix-string)
       (let ((str (string-append name suffix-string)))
@@ -469,67 +513,95 @@
 
 (define-argument-validation (pair who obj)
   (pair? obj)
-  (assertion-violation who "expected pair as argument" obj))
+  (procedure-argument-violation who "expected pair as argument" obj))
 
 (define-argument-validation (list who obj)
   (list? obj)
-  (assertion-violation who "expected list as argument" obj))
+  (procedure-argument-violation who "expected list as argument" obj))
 
 
 ;;;; booleans
 
 (define-argument-validation (boolean who obj)
   (boolean? obj)
-  (assertion-violation who "expected boolean as argument" obj))
+  (procedure-argument-violation who "expected boolean as argument" obj))
 
 
 ;;;; numbers
 
 (define-argument-validation (number who obj)
   (number? obj)
-  (assertion-violation who "expected number as argument" obj))
+  (procedure-argument-violation who "expected number as argument" obj))
 
 
 ;;;; fixnums validation
 
 (define-argument-validation (fixnum who obj)
   (fixnum? obj)
-  (assertion-violation who "expected fixnum as argument" obj))
+  (procedure-argument-violation who "expected fixnum as argument" obj))
 
 (define-argument-validation (fixnum/false who obj)
   (or (not obj) (fixnum? obj))
-  (assertion-violation who "expected false or fixnum as argument" obj))
+  (procedure-argument-violation who "expected false or fixnum as argument" obj))
 
 (define-argument-validation (positive-fixnum who obj)
   (and (fixnum? obj)
        ($fx< 0 obj))
-  (assertion-violation who "expected positive fixnum as argument" obj))
+  (procedure-argument-violation who "expected positive fixnum as argument" obj))
 
 (define-argument-validation (negative-fixnum who obj)
   (and (fixnum? obj)
        ($fx> 0 obj))
-  (assertion-violation who "expected negative fixnum as argument" obj))
+  (procedure-argument-violation who "expected negative fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-positive-fixnum who obj)
   (and (fixnum? obj)
-       ($fx>= 0 obj))
-  (assertion-violation who "expected non-positive fixnum as argument" obj))
+       (or ($fxzero? obj)
+	   ($fxnegative? obj)))
+  (procedure-argument-violation who "expected non-positive fixnum as argument" obj))
 
 (define-argument-validation (non-negative-fixnum who obj)
   (and (fixnum? obj)
-       ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as argument" obj))
+       (or ($fxzero? obj)
+	   ($fxpositive? obj)))
+  (procedure-argument-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (non-zero-fixnum who obj)
   (and (fixnum? obj)
        (not (fxzero? obj)))
-  (assertion-violation who "expected non-zero fixnum as argument" obj))
+  (procedure-argument-violation who "expected non-zero fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-positive-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   (or ($fxzero? obj)
+	       ($fxnegative? obj))))
+  (procedure-argument-violation who "expected false or non-positive fixnum as argument" obj))
+
+(define-argument-validation (non-negative-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   (or ($fxzero? obj)
+	       ($fxpositive? obj))))
+  (procedure-argument-violation who "expected false or non-negative fixnum as argument" obj))
+
+(define-argument-validation (non-zero-fixnum/false who obj)
+  (or (not obj)
+      (and (fixnum? obj)
+	   (not (fxzero? obj))))
+  (procedure-argument-violation who "expected false or non-zero fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum-in-inclusive-range who obj min max)
   (and (fixnum? obj)
        ($fx>= obj min)
        ($fx<= obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected fixnum in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
@@ -539,7 +611,7 @@
   (and (fixnum? obj)
        ($fx> obj min)
        ($fx< obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected fixnum in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
@@ -548,135 +620,133 @@
 (define-argument-validation (even-fixnum who obj)
   (and (fixnum? obj)
        (fxeven? obj))
-  (assertion-violation who "expected even fixnum as argument" obj))
+  (procedure-argument-violation who "expected even fixnum as argument" obj))
 
 (define-argument-validation (odd-fixnum who obj)
   (and (fixnum? obj)
        (fxodd? obj))
-  (assertion-violation who "expected odd fixnum as argument" obj))
+  (procedure-argument-violation who "expected odd fixnum as argument" obj))
 
 
 ;;;; exact integers validation
 
-(define-inline (exact-integer? obj)
+(define-inline (%exact-integer? obj)
   (or (fixnum? obj)
       (bignum? obj)))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (exact-integer who obj)
-  (exact-integer? obj)
-  (assertion-violation who "expected exact integer as argument" obj))
+  (%exact-integer? obj)
+  (procedure-argument-violation who "expected exact integer as argument" obj))
 
 (define-argument-validation (exact-integer/false who obj)
-  (or (not obj) (exact-integer? obj))
-  (assertion-violation who "expected false or exact integer as argument" obj))
+  (or (not obj) (%exact-integer? obj))
+  (procedure-argument-violation who "expected false or exact integer as argument" obj))
 
 (define-argument-validation (positive-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (< 0 obj))
-  (assertion-violation who "expected positive exact integer as argument" obj))
+  (procedure-argument-violation who "expected positive exact integer as argument" obj))
 
 (define-argument-validation (negative-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (> 0 obj))
-  (assertion-violation who "expected negative exact integer as argument" obj))
+  (procedure-argument-violation who "expected negative exact integer as argument" obj))
 
 (define-argument-validation (non-positive-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (>= 0 obj))
-  (assertion-violation who "expected non-positive exact integer as argument" obj))
+  (procedure-argument-violation who "expected non-positive exact integer as argument" obj))
 
 (define-argument-validation (non-negative-exact-integer who obj)
-  (and (exact-integer? obj)
-       (<= 0 obj))
-  (assertion-violation who "expected non-negative exact integer as argument" obj))
+  (or (and (fixnum? obj) ($fx<= 0 obj))
+      (and (bignum? obj) (<= 0 obj)))
+  (procedure-argument-violation who "expected non-negative exact integer as argument" obj))
 
 (define-argument-validation (exact-integer-in-inclusive-range who obj min max)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (>= obj min)
        (<= obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected exact integer in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
     obj))
 
 (define-argument-validation (exact-integer-in-exclusive-range who obj min max)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (> obj min)
        (< obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected exact integer in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
     obj))
 
 (define-argument-validation (even-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (even? obj))
-  (assertion-violation who "expected even exact integer as argument" obj))
+  (procedure-argument-violation who "expected even exact integer as argument" obj))
 
 (define-argument-validation (odd-exact-integer who obj)
-  (and (exact-integer? obj)
+  (and (%exact-integer? obj)
        (odd? obj))
-  (assertion-violation who "expected odd exact integer as argument" obj))
+  (procedure-argument-violation who "expected odd exact integer as argument" obj))
 
 
 ;;;; keywords
 
 (define-argument-validation (keyword who obj)
   (keyword? obj)
-  (assertion-violation who "expected keyword as argument" obj))
+  (procedure-argument-violation who "expected keyword as argument" obj))
 
 
 ;;;; promises
 
 (define-argument-validation (promise who obj)
   (promise? obj)
-  (assertion-violation who "expected promise as argument" obj))
+  (procedure-argument-violation who "expected promise as argument" obj))
 
 (define-argument-validation (false-or-promise who obj)
   (or (not obj)
       (promise? obj))
-  (assertion-violation who "expected false or promise as argument" obj))
+  (procedure-argument-violation who "expected false or promise as argument" obj))
 
 
 ;;;; C language "int" type
 
 (define-argument-validation (signed-int who obj)
   (words.signed-int? obj)
-  (assertion-violation who "expected exact integer as argument" obj))
+  (procedure-argument-violation who "expected exact integer as argument" obj))
 
 (define-argument-validation (signed-int/false who obj)
   (or (not obj) (words.signed-int? obj))
-  (assertion-violation who "expected false or exact integer as argument" obj))
+  (procedure-argument-violation who "expected false or exact integer as argument" obj))
 
 (define-argument-validation (positive-signed-int who obj)
   (and (words.signed-int? obj)
        (< 0 obj))
-  (assertion-violation who "expected positive exact integer as argument" obj))
+  (procedure-argument-violation who "expected positive exact integer as argument" obj))
 
 (define-argument-validation (negative-signed-int who obj)
   (and (words.signed-int? obj)
        (> 0 obj))
-  (assertion-violation who "expected negative exact integer as argument" obj))
+  (procedure-argument-violation who "expected negative exact integer as argument" obj))
 
 (define-argument-validation (non-positive-signed-int who obj)
   (and (words.signed-int? obj)
        (>= 0 obj))
-  (assertion-violation who "expected non-positive exact integer as argument" obj))
+  (procedure-argument-violation who "expected non-positive exact integer as argument" obj))
 
 (define-argument-validation (non-negative-signed-int who obj)
   (and (words.signed-int? obj)
        (<= 0 obj))
-  (assertion-violation who "expected non-negative exact integer as argument" obj))
+  (procedure-argument-violation who "expected non-negative exact integer as argument" obj))
 
 (define-argument-validation (signed-int-in-inclusive-range who obj min max)
   (and (words.signed-int? obj)
        (>= obj min)
        (<= obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected exact integer in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
@@ -686,7 +756,7 @@
   (and (words.signed-int? obj)
        (> obj min)
        (< obj max))
-  (assertion-violation who
+  (procedure-argument-violation who
     (string-append "expected exact integer in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
@@ -695,79 +765,79 @@
 (define-argument-validation (even-signed-int who obj)
   (and (words.signed-int? obj)
        (even? obj))
-  (assertion-violation who "expected even exact integer as argument" obj))
+  (procedure-argument-violation who "expected even exact integer as argument" obj))
 
 (define-argument-validation (odd-signed-int who obj)
   (and (words.signed-int? obj)
        (odd? obj))
-  (assertion-violation who "expected odd exact integer as argument" obj))
+  (procedure-argument-violation who "expected odd exact integer as argument" obj))
 
 
 ;;;; bit sized integers
 
 (define-argument-validation (word-u8 who obj)
   (words.word-u8? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing an octet as argument" obj))
 
 (define-argument-validation (word-s8 who obj)
   (words.word-s8? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a byte as argument" obj))
 
 (define-argument-validation (word-u16 who obj)
   (words.word-u16? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 16-bit unsigned integer as argument" obj))
 
 (define-argument-validation (word-s16 who obj)
   (words.word-s16? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 16-bit signed integer as argument" obj))
 
 (define-argument-validation (word-u32 who obj)
   (words.word-u32? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 32-bit unsigned integer as argument" obj))
 
 (define-argument-validation (word-s32 who obj)
   (words.word-s32? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 32-bit signed integer as argument" obj))
 
 (define-argument-validation (word-u64 who obj)
   (words.word-u64? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 64-bit unsigned integer as argument" obj))
 
 (define-argument-validation (word-s64 who obj)
   (words.word-s64? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 64-bit signed integer as argument" obj))
 
 (define-argument-validation (word-u128 who obj)
   (words.word-u128? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 128-bit unsigned integer as argument" obj))
 
 (define-argument-validation (word-s128 who obj)
   (words.word-s128? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 128-bit signed integer as argument" obj))
 
 (define-argument-validation (word-u256 who obj)
   (words.word-u256? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 256-bit unsigned integer as argument" obj))
 
 (define-argument-validation (word-s256 who obj)
   (words.word-s256? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a 256-bit signed integer as argument" obj))
 
 (define-argument-validation (machine-word who obj)
   (words.machine-word? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer representing a machine word as argument" obj))
 
 
@@ -775,95 +845,107 @@
 
 (define-argument-validation (byte who obj)
   (words.word-s8? obj)
-  (assertion-violation who "expected fixnum representing byte as argument" obj))
+  (procedure-argument-violation who "expected fixnum representing byte as argument" obj))
 
 (define-argument-validation (false-or-byte who obj)
-  (or (not obj) (words.word-s8? obj))
-  (assertion-violation who "expected false or fixnum representing byte as argument" obj))
+  (or (not obj)
+      (words.word-s8? obj))
+  (procedure-argument-violation who "expected false or fixnum representing byte as argument" obj))
 
 (define-argument-validation (octet who obj)
   (words.word-u8? obj)
-  (assertion-violation who "expected fixnum representing octet as argument" obj))
+  (procedure-argument-violation who "expected fixnum representing octet as argument" obj))
 
 (define-argument-validation (false-or-octet who obj)
   (or (not obj) (words.word-u8? obj))
-  (assertion-violation who "expected false or fixnum representing octet as argument" obj))
+  (procedure-argument-violation who "expected false or fixnum representing octet as argument" obj))
+
+(define-argument-validation (byte/octet who obj)
+  (or (words.word-u8? obj)
+      (words.word-s8? obj))
+  (procedure-argument-violation who "expected fixnum representing byte or octet as argument" obj))
+
+(define-argument-validation (byte/octet/false who obj)
+  (or (not obj)
+      (words.word-u8? obj)
+      (words.word-s8? obj))
+  (procedure-argument-violation who "expected false or fixnum representing byte or octet as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (word-u8/false who obj)
   (or (not obj) (words.word-u8? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing an octet as argument" obj))
 
 (define-argument-validation (word-s8/false who obj)
   (or (not obj) (words.word-s8? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a byte as argument" obj))
 
 (define-argument-validation (word-u16/false who obj)
   (or (not obj) (words.word-u16? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 16-bit unsigned integer as argument"
     obj))
 
 (define-argument-validation (word-s16/false who obj)
   (or (not obj) (words.word-s16? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 16-bit signed integer as argument"
     obj))
 
 (define-argument-validation (word-u32/false who obj)
   (or (not obj) (words.word-u32? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 32-bit unsigned integer as argument"
     obj))
 
 (define-argument-validation (word-s32/false who obj)
   (or (not obj) (words.word-s32? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 32-bit signed integer as argument"
     obj))
 
 (define-argument-validation (word-u64/false who obj)
   (or (not obj) (words.word-u64? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 64-bit unsigned integer as argument"
     obj))
 
 (define-argument-validation (word-s64/false who obj)
   (or (not obj) (words.word-s64? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 64-bit signed integer as argument"
     obj))
 
 (define-argument-validation (word-u128/false who obj)
   (or (not obj) (words.word-u128? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 128-bit unsigned integer as argument"
     obj))
 
 (define-argument-validation (word-s128/false who obj)
   (or (not obj) (words.word-s128? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 128-bit signed integer as argument"
     obj))
 
 (define-argument-validation (word-u256/false who obj)
   (or (not obj) (words.word-u256? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 256-bit unsigned integer as argument"
     obj))
 
 (define-argument-validation (word-s256/false who obj)
   (or (not obj) (words.word-s256? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a 256-bit signed integer as argument"
     obj))
 
 (define-argument-validation (machine-word/false who obj)
   (or (not obj) (words.machine-word? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer representing a machine word as argument"
     obj))
 
@@ -872,84 +954,84 @@
 
 (define-argument-validation (unsigned-char who obj)
   (words.unsigned-char? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"unsigned char\""
     obj))
 
 (define-argument-validation (signed-char who obj)
   (words.signed-char? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"signed char\""
     obj))
 
 (define-argument-validation (unsigned-short who obj)
   (words.unsigned-short? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"unsigned short int\""
     obj))
 
 (define-argument-validation (signed-short who obj)
   (words.signed-short? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"signed short int\""
     obj))
 
 (define-argument-validation (unsigned-int who obj)
   (words.unsigned-int? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"unsigned int\""
     obj))
 
 (define-argument-validation (unsigned-long who obj)
   (words.unsigned-long? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"unsigned long\""
     obj))
 
 (define-argument-validation (signed-long who obj)
   (words.signed-long? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"signed long\""
     obj))
 
 (define-argument-validation (unsigned-long-long who obj)
   (words.unsigned-long-long? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"unsigned long long\""
     obj))
 
 (define-argument-validation (signed-long-long who obj)
   (words.signed-long-long? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"signed long long\""
     obj))
 
 (define-argument-validation (pointer-integer who obj)
   (words.pointer-integer? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"void *\"" obj))
 
 (define-argument-validation (size_t who obj)
   (words.size_t? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"size_t\""
     obj))
 
 (define-argument-validation (ssize_t who obj)
   (words.ssize_t? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"ssize_t\""
     obj))
 
 (define-argument-validation (off_t who obj)
   (words.off_t? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"off_t\""
     obj))
 
 (define-argument-validation (ptrdiff_t who obj)
   (words.ptrdiff_t? obj)
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected exact integer in the range of the C language type \"ptrdiff_t\""
     obj))
 
@@ -958,85 +1040,85 @@
 
 (define-argument-validation (unsigned-char/false who obj)
   (or (not obj) (words.unsigned-char? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"unsigned char\""
     obj))
 
 (define-argument-validation (signed-char/false who obj)
   (or (not obj) (words.signed-char? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"signed char\""
     obj))
 
 (define-argument-validation (unsigned-short/false who obj)
   (or (not obj) (words.unsigned-short? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"unsigned short int\""
     obj))
 
 (define-argument-validation (signed-short/false who obj)
   (or (not obj) (words.signed-short? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"signed short int\""
     obj))
 
 (define-argument-validation (unsigned-int/false who obj)
   (or (not obj) (words.unsigned-int? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"unsigned int\""
     obj))
 
 (define-argument-validation (unsigned-long/false who obj)
   (or (not obj) (words.unsigned-long? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"unsigned long\""
     obj))
 
 (define-argument-validation (signed-long/false who obj)
   (or (not obj) (words.signed-long? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"signed long\""
     obj))
 
 (define-argument-validation (unsigned-long-long/false who obj)
   (or (not obj) (words.unsigned-long-long? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"unsigned long long\""
     obj))
 
 (define-argument-validation (signed-long-long/false who obj)
   (or (not obj) (words.signed-long-long? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"signed long long\""
     obj))
 
 (define-argument-validation (pointer-integer/false who obj)
   (or (not obj) (words.pointer-integer? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"void *\""
     obj))
 
 (define-argument-validation (size_t/false who obj)
   (or (not obj) (words.size_t? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"size_t\""
     obj))
 
 (define-argument-validation (ssize_t/false who obj)
   (or (not obj) (words.ssize_t? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"ssize_t\""
     obj))
 
 (define-argument-validation (off_t/false who obj)
   (or (not obj) (words.off_t? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"off_t\""
     obj))
 
 (define-argument-validation (ptrdiff_t/false who obj)
   (or (not obj) (words.ptrdiff_t? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"ptrdiff_t\""
     obj))
 
@@ -1057,40 +1139,40 @@
 
 (define-argument-validation (string who obj)
   (string? obj)
-  (assertion-violation who "expected string as argument" obj))
+  (procedure-argument-violation who "expected string as argument" obj))
 
 (define-argument-validation (string/false who obj)
   (or (not obj) (string? obj))
-  (assertion-violation who "expected false or string as argument" obj))
+  (procedure-argument-violation who "expected false or string as argument" obj))
 
 (define-argument-validation (non-empty-string who obj)
   (and (string? obj)
        ($fx< 0 ($string-length obj)))
-  (assertion-violation who "expected non-empty string as argument" obj))
+  (procedure-argument-violation who "expected non-empty string as argument" obj))
 
 (define-argument-validation (non-empty-string/false who obj)
   (or (not obj)
       (and (string? obj)
 	   ($fx< 0 ($string-length obj))))
-  (assertion-violation who "expected false or non-empty string as argument" obj))
+  (procedure-argument-violation who "expected false or non-empty string as argument" obj))
 
 (define-argument-validation (list-of-strings who obj)
   (or (null? obj)
       (and (list? obj)
 	   (for-all string? obj)))
-  (assertion-violation who "expected list of strings as argument" obj))
+  (procedure-argument-violation who "expected list of strings as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-string who str idx)
   ;;We assume that STR has already been validated as string.
   (index-for-string? str idx)
-  (assertion-violation who "expected valid fixnum as index for string argument" idx str))
+  (procedure-argument-violation who "expected valid fixnum as index for string argument" idx str))
 
 (define-argument-validation (one-off-index-for-string who str idx)
   ;;We assume that STR has already been validated as string.
   (one-off-index-for-string? str idx)
-  (assertion-violation who "expected valid fixnum as index for string argument" idx str))
+  (procedure-argument-violation who "expected valid fixnum as index for string argument" idx str))
 
 (define-argument-validation (index-and-count-for-string who str idx count)
   ;;We assume that STR has already been validated as string.
@@ -1098,7 +1180,7 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-string? str end)))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for string index and character count"
     idx count str))
 
@@ -1107,7 +1189,7 @@
   (and (index-for-string? str start)
        (index-for-string? str end)
        ($fx<= start end))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and end string indexes"
     start end str))
 
@@ -1116,7 +1198,7 @@
   (and (one-off-index-for-string? str start)
        (one-off-index-for-string? str past)
        ($fx<= start past))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and past string indexes"
     start past str))
 
@@ -1125,13 +1207,13 @@
 (define-argument-validation (string-or-symbol who obj)
   (or (string? obj)
       (symbol? obj))
-  (assertion-violation who "expected string or symbol as argument" obj))
+  (procedure-argument-violation who "expected string or symbol as argument" obj))
 
 (define-argument-validation (string-or-symbol-or-false who obj)
   (or (not obj)
       (string? obj)
       (symbol? obj))
-  (assertion-violation who "expected string or symbol or false as argument" obj))
+  (procedure-argument-violation who "expected string or symbol or false as argument" obj))
 
 
 ;;;; vectors
@@ -1150,27 +1232,27 @@
 
 (define-argument-validation (vector who obj)
   (vector? obj)
-  (assertion-violation who "expected vector as argument" obj))
+  (procedure-argument-violation who "expected vector as argument" obj))
 
 (define-argument-validation (vector/false who obj)
   (or (not obj) (vector? obj))
-  (assertion-violation who "expected false or vector as argument" obj))
+  (procedure-argument-violation who "expected false or vector as argument" obj))
 
 (define-argument-validation (non-empty-vector who obj)
   (and (vector? obj)
        ($fx< 0 ($vector-length obj)))
-  (assertion-violation who "expected non-empty vector as argument" obj))
+  (procedure-argument-violation who "expected non-empty vector as argument" obj))
 
 (define-argument-validation (non-empty-vector/false who obj)
   (or (not obj)
       (and (vector? obj)
 	   ($fx< 0 ($vector-length obj))))
-  (assertion-violation who "expected false or non-empty vector as argument" obj))
+  (procedure-argument-violation who "expected false or non-empty vector as argument" obj))
 
 (define-argument-validation (index-for-vector who vec idx)
   ;;We assume that VEC has already been validated as vector.
   (index-for-vector? vec idx)
-  (assertion-violation who "expected valid fixnum as index for vector argument" idx vec))
+  (procedure-argument-violation who "expected valid fixnum as index for vector argument" idx vec))
 
 (define-argument-validation (index-and-count-for-vector who vec idx count)
   ;;We assume that VEC has already been validated as vector.
@@ -1178,7 +1260,7 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-vector? vec end)))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for vector index and character count"
     idx count vec))
 
@@ -1187,7 +1269,7 @@
   (and (index-for-vector? vec start)
        (index-for-vector? vec end)
        ($fx<= start end))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and end vector indexes"
     start end vec))
 
@@ -1196,7 +1278,7 @@
   (and (one-off-index-for-vector? vec start)
        (one-off-index-for-vector? vec past)
        ($fx<= start past))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and past vector indexes"
     start past vec))
 
@@ -1222,35 +1304,35 @@
 
 (define-argument-validation (bytevector who obj)
   (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
+  (procedure-argument-violation who "expected bytevector as argument" obj))
 
 (define-argument-validation (bytevector/false who obj)
   (or (not obj) (bytevector? obj))
-  (assertion-violation who "expected false or bytevector as argument" obj))
+  (procedure-argument-violation who "expected false or bytevector as argument" obj))
 
 (define-argument-validation (non-empty-bytevector who obj)
   (and (bytevector? obj)
        ($fx< 0 ($bytevector-length obj)))
-  (assertion-violation who "expected non-empty bytevector as argument" obj))
+  (procedure-argument-violation who "expected non-empty bytevector as argument" obj))
 
 (define-argument-validation (non-empty-bytevector/false who obj)
   (or (not obj)
       (and (bytevector? obj)
 	   ($fx< 0 ($bytevector-length obj))))
-  (assertion-violation who "expected false or non-empty bytevector as argument" obj))
+  (procedure-argument-violation who "expected false or non-empty bytevector as argument" obj))
 
 (define-argument-validation (list-of-bytevectors who obj)
   (or (null? obj)
       (and (list? obj)
 	   (for-all bytevector? obj)))
-  (assertion-violation who "expected list of bytevectors as argument" obj))
+  (procedure-argument-violation who "expected list of bytevectors as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-bytevector who vec idx)
   ;;We assume that VEC has already been validated as bytevector.
   (index-for-bytevector? vec idx)
-  (assertion-violation who "expected valid fixnum as index for bytevector argument" idx vec))
+  (procedure-argument-violation who "expected valid fixnum as index for bytevector argument" idx vec))
 
 (define-argument-validation (index-and-count-for-bytevector who vec idx count)
   ;;We assume that VEC has already been validated as bytevector.
@@ -1258,7 +1340,7 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-bytevector? vec end)))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for bytevector index and character count"
     idx count vec))
 
@@ -1267,7 +1349,7 @@
   (and (index-for-bytevector? vec start)
        (index-for-bytevector? vec end)
        ($fx<= start end))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and end bytevector indexes"
     start end vec))
 
@@ -1276,198 +1358,258 @@
   (and (one-off-index-for-bytevector? vec start)
        (one-off-index-for-bytevector? vec past)
        ($fx<= start past))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
 
 (define-argument-validation (bytevector-length who len)
   (and (fixnum? len)
        ($fx>= len 0))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected non-negative fixnum as bytevector length argument" len))
+
+
+;;;; string and bytevector pathnames
+
+(define-argument-validation (file-pathname who obj)
+  (file-pathname? obj)
+  (procedure-argument-violation who "expected string or bytevector as pathname argument" obj))
+
+(define-argument-validation (file-string-pathname who obj)
+  (file-string-pathname? obj)
+  (procedure-argument-violation who "expected file string pathname as argument" obj))
+
+(define-argument-validation (file-bytevector-pathname who obj)
+  (file-bytevector-pathname? obj)
+  (procedure-argument-violation who "expected file bytevector pathname as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (file-colon-search-path who obj)
+  (file-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid string or bytevector as colon-separated file search path argument" obj))
+
+(define-argument-validation (file-string-colon-search-path who obj)
+  (file-string-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid string as colon-separated file search path argument" obj))
+
+(define-argument-validation (file-bytevector-colon-search-path who obj)
+  (file-bytevector-colon-search-path? obj)
+  (procedure-argument-violation who
+    "expected valid bytevector as colon-separated file search path argument" obj))
 
 
 ;;;; symbols
 
 (define-argument-validation (symbol who obj)
   (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
+  (procedure-argument-violation who "expected symbol as argument" obj))
 
 (define-argument-validation (symbol/false who obj)
   (or (not obj) (symbol? obj))
-  (assertion-violation who "expected false or symbol as argument" obj))
+  (procedure-argument-violation who "expected false or symbol as argument" obj))
+
+(define-argument-validation (list-of-symbols who obj)
+  (and (list? obj) (for-all symbol? obj))
+  (procedure-argument-violation who "expected list of symbols as argument" obj))
 
 
 ;;;; enum-sets
 
 (define-argument-validation (enum-set who obj)
   (enum-set? obj)
-  (assertion-violation who "expected enum-set as argument" obj))
+  (procedure-argument-violation who "expected enum-set as argument" obj))
 
 (define-argument-validation (enum-set/false who obj)
   (or (not obj) (enum-set? obj))
-  (assertion-violation who "expected false or enum-set as argument" obj))
+  (procedure-argument-violation who "expected false or enum-set as argument" obj))
 
 
 ;;;; pointers
 
 (define-argument-validation (pointer who obj)
   (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
+  (procedure-argument-violation who "expected pointer as argument" obj))
 
 (define-argument-validation (pointer/false who obj)
   (or (not obj) (pointer? obj))
-  (assertion-violation who "expected false or pointer as argument" obj))
+  (procedure-argument-violation who "expected false or pointer as argument" obj))
 
 (define-argument-validation (non-null-pointer who obj)
   (and (pointer? obj)
        (not (pointer-null? obj)))
-  (assertion-violation who "expected non NULL pointer as argument" obj))
+  (procedure-argument-violation who "expected non NULL pointer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (c-callback who obj)
+  (pointer? obj)
+  (procedure-argument-violation who "expected pointer object as callback argument" obj))
+
+(define-argument-validation (c-callback/false who obj)
+  (or (not obj) (pointer? obj))
+  (procedure-argument-violation who "expected false or pointer object as callback argument" obj))
 
 
 ;;;; memory-blocks
 
 (define-argument-validation (memory-block who obj)
   (memory-block? obj)
-  (assertion-violation who "expected memory-block as argument" obj))
+  (procedure-argument-violation who "expected memory-block as argument" obj))
 
 (define-argument-validation (memory-block/false who obj)
   (or (not obj) (memory-block? obj))
-  (assertion-violation who "expected false or memory-block as argument" obj))
+  (procedure-argument-violation who "expected false or memory-block as argument" obj))
 
 
 ;;;; flonums validation
 
 (define-argument-validation (flonum who obj)
   (flonum? obj)
-  (assertion-violation who "expected flonum as argument" obj))
+  (procedure-argument-violation who "expected flonum as argument" obj))
 
 ;;;; bignums validation
 
 (define-argument-validation (bignum who obj)
   (bignum? obj)
-  (assertion-violation who "expected bignum as argument" obj))
+  (procedure-argument-violation who "expected bignum as argument" obj))
 
 ;;;; ratnums validation
 
 (define-argument-validation (ratnum who obj)
   (ratnum? obj)
-  (assertion-violation who "expected ratnum as argument" obj))
+  (procedure-argument-violation who "expected ratnum as argument" obj))
 
 ;;;; compnums validation
 
 (define-argument-validation (compnum who obj)
   (compnum? obj)
-  (assertion-violation who "expected compnum as argument" obj))
+  (procedure-argument-violation who "expected compnum as argument" obj))
 
 ;;;; cflonums validation
 
 (define-argument-validation (cflonum who obj)
   (cflonum? obj)
-  (assertion-violation who "expected cflonum as argument" obj))
+  (procedure-argument-violation who "expected cflonum as argument" obj))
 
 ;;;; real validation
 
 (define-argument-validation (real who obj)
   (real? obj)
-  (assertion-violation who "expected real number as argument" obj))
+  (procedure-argument-violation who "expected real number as argument" obj))
 
 (define-argument-validation (real-exact who obj)
   (or (fixnum? obj)
       (bignum? obj)
       (ratnum? obj))
-  (assertion-violation who "expected exact real number as argument" obj))
+  (procedure-argument-violation who "expected exact real number as argument" obj))
 
 ;;;; complex validation
 
 (define-argument-validation (complex who obj)
   (complex? obj)
-  (assertion-violation who "expected complex number as argument" obj))
+  (procedure-argument-violation who "expected complex number as argument" obj))
 
 
 ;;;; characters
 
 (define-argument-validation (char who obj)
   (char? obj)
-  (assertion-violation who "expected character as argument" obj))
+  (procedure-argument-violation who "expected character as argument" obj))
+
+(define-argument-validation (char/false who obj)
+  (or (not obj) (char? obj))
+  (procedure-argument-violation who "expected false or character as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (char-in-ascii-range who obj)
+  (char-in-ascii-range? obj)
+  (procedure-argument-violation who "expected Scheme character in the ASCII range as argument" obj))
+
+(define-argument-validation (char-in-ascii-range/false who obj)
+  (or (not obj) (char-in-ascii-range? obj))
+  (procedure-argument-violation who "expected false or Scheme character in the ASCII range as argument" obj))
 
 
 ;;;; ports
 
 (define-argument-validation (port who obj)
   (port? obj)
-  (assertion-violation who "expected port as argument" obj))
+  (procedure-argument-violation who "expected port as argument" obj))
 
 (define-argument-validation (port/false who obj)
   (or (not obj) (port? obj))
-  (assertion-violation who "expected false or port as argument" obj))
+  (procedure-argument-violation who "expected false or port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (input-port who obj)
   (input-port? obj)
-  (assertion-violation who "expected input port as argument" obj))
+  (procedure-argument-violation who "expected input port as argument" obj))
 
 (define-argument-validation (input-port/false who obj)
   (or (not obj) (input-port? obj))
-  (assertion-violation who "expected false or input port as argument" obj))
+  (procedure-argument-violation who "expected false or input port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (output-port who obj)
   (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
+  (procedure-argument-violation who "expected output port as argument" obj))
 
 (define-argument-validation (output-port/false who obj)
   (or (not obj) (output-port? obj))
-  (assertion-violation who "expected false or output port as argument" obj))
+  (procedure-argument-violation who "expected false or output port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (input/output-port who obj)
   (input/output-port? obj)
-  (assertion-violation who "expected input/output port as argument" obj))
+  (procedure-argument-violation who "expected input/output port as argument" obj))
 
 (define-argument-validation (input/output-port/false who obj)
   (or (not obj) (input/output-port? obj))
-  (assertion-violation who "expected false or input/output port as argument" obj))
+  (procedure-argument-violation who "expected false or input/output port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (textual-port who obj)
   (textual-port? obj)
-  (assertion-violation who "expected textual port as argument" obj))
+  (procedure-argument-violation who "expected textual port as argument" obj))
 
 (define-argument-validation (textual-port/false who obj)
   (or (not obj) (textual-port? obj))
-  (assertion-violation who "expected false or textual port as argument" obj))
+  (procedure-argument-violation who "expected false or textual port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (binary-port who obj)
   (binary-port? obj)
-  (assertion-violation who "expected binary port as argument" obj))
+  (procedure-argument-violation who "expected binary port as argument" obj))
 
 (define-argument-validation (binary-port/false who obj)
   (or (not obj) (binary-port? obj))
-  (assertion-violation who "expected false or binary port as argument" obj))
+  (procedure-argument-violation who "expected false or binary port as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (open-port who obj)
   (not (port-closed? obj))
-  (assertion-violation who "expected open port as argument" obj))
+  (procedure-argument-violation who "expected open port as argument" obj))
 
 
 ;;;; transcoders
 
 (define-argument-validation (transcoder who obj)
   (transcoder? obj)
-  (assertion-violation who "expected transcoder as argument" obj))
+  (procedure-argument-violation who "expected transcoder as argument" obj))
 
 (define-argument-validation (transcoder/false who obj)
   (or (not obj) (transcoder? obj))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or a transcoder object as transcoder argument" obj))
 
 
@@ -1475,11 +1617,11 @@
 
 (define-argument-validation (procedure who obj)
   (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
+  (procedure-argument-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (procedure/false who obj)
   (or (not obj) (procedure? obj))
-  (assertion-violation who "expected false or procedure as argument" obj))
+  (procedure-argument-violation who "expected false or procedure as argument" obj))
 
 
 ;;;; generalised C strings
@@ -1492,7 +1634,7 @@
 
 (define-argument-validation (general-c-string who obj)
   (general-c-string? obj)
-  (assertion-violation who "expected general C string as argument" obj))
+  (procedure-argument-violation who "expected general C string as argument" obj))
 
 (define-argument-validation (general-c-string/false who obj)
   (or (not obj)
@@ -1500,7 +1642,7 @@
       (bytevector? obj)
       (pointer? obj)
       (memory-block? obj))
-  (assertion-violation who "expected false or general C string as argument" obj))
+  (procedure-argument-violation who "expected false or general C string as argument" obj))
 
 (define-argument-validation (general-c-string* who str str.len)
   (cond ((or (string?       str)
@@ -1510,7 +1652,7 @@
 	((pointer? str)
 	 (words.size_t? str.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected general C string and optional length as arguments" str str.len))
 
 (define-argument-validation (general-c-string*/false who str str.len)
@@ -1523,7 +1665,7 @@
 	((pointer? str)
 	 (words.size_t? str.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or general C string and optional length as arguments" str str.len))
 
 ;;; --------------------------------------------------------------------
@@ -1535,11 +1677,11 @@
 
 (define-argument-validation (general-c-buffer who obj)
   (general-c-buffer? obj)
-  (assertion-violation who "expected general C buffer as argument" obj))
+  (procedure-argument-violation who "expected general C buffer as argument" obj))
 
 (define-argument-validation (general-c-buffer/false who obj)
   (or (not obj) (general-c-buffer? obj))
-  (assertion-violation who "expected false or general C buffer as argument" obj))
+  (procedure-argument-violation who "expected false or general C buffer as argument" obj))
 
 (define-argument-validation (general-c-buffer* who buf buf.len)
   (cond ((or (bytevector?   buf)
@@ -1548,7 +1690,7 @@
 	((pointer? buf)
 	 (words.size_t? buf.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected general C buffer and optional length as arguments" buf buf.len))
 
 (define-argument-validation (general-c-buffer*/false who buf buf.len)
@@ -1560,7 +1702,7 @@
 	((pointer? buf)
 	 (words.size_t? buf.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected general C buffer and optional length as arguments" buf buf.len))
 
 ;;; --------------------------------------------------------------------
@@ -1571,11 +1713,11 @@
 
 (define-argument-validation (general-c-sticky-buffer who obj)
   (general-c-sticky-buffer? obj)
-  (assertion-violation who "expected general C sticky buffer as argument" obj))
+  (procedure-argument-violation who "expected general C sticky buffer as argument" obj))
 
 (define-argument-validation (general-c-sticky-buffer/false who obj)
   (or (not obj) (general-c-sticky-buffer? obj))
-  (assertion-violation who "expected general C sticky buffer as argument" obj))
+  (procedure-argument-violation who "expected general C sticky buffer as argument" obj))
 
 (define-argument-validation (general-c-sticky-buffer* who buf buf.len)
   (cond ((memory-block? buf)
@@ -1583,7 +1725,7 @@
 	((pointer? buf)
 	 (words.size_t? buf.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected general C sticky buffer and optional length as arguments" buf buf.len))
 
 (define-argument-validation (general-c-sticky-buffer*/false who buf buf.len)
@@ -1594,7 +1736,7 @@
 	((pointer? buf)
 	 (words.size_t? buf.len))
 	(else #f))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected general C sticky buffer and optional length as arguments" buf buf.len))
 
 ;;; --------------------------------------------------------------------
@@ -1603,7 +1745,7 @@
   (if (pointer? buf)
       (words.size_t? buf.len)
     (not buf.len))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"size_t\" \
      as general C buffer length"
     buf.len))
@@ -1612,7 +1754,7 @@
   (if (pointer? buf)
       (words.size_t? buf.len)
     (not buf.len))
-  (assertion-violation who
+  (procedure-argument-violation who
     "expected false or exact integer in the range of the C language type \"size_t\" \
      as general C string length"
     buf.len))
@@ -1622,12 +1764,24 @@
 
 (define-argument-validation (time who obj)
   (time? obj)
-  (assertion-violation who "expected time object as argument" obj))
+  (procedure-argument-violation who "expected time object as argument" obj))
 
 (define-argument-validation (time/false who obj)
   (or (not obj)
       (time? obj))
-  (assertion-violation who "expected false or time object as argument" obj))
+  (procedure-argument-violation who "expected false or time object as argument" obj))
+
+
+;;;; identifier objects
+
+(define-argument-validation (identifier who obj)
+  (identifier? obj)
+  (procedure-argument-violation who "expected identifier object as argument" obj))
+
+(define-argument-validation (identifier/false who obj)
+  (or (not obj)
+      (identifier? obj))
+  (procedure-argument-violation who "expected false or identifier object as argument" obj))
 
 
 ;;;; done

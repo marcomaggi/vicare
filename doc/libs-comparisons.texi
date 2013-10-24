@@ -1,0 +1,1045 @@
+@node comparisons
+@section Comparison functions
+
+
+@cindex @library{vicare language-extensions comparisons}, library
+@cindex Library @library{vicare language-extensions comparisons}
+
+
+The library @library{vicare language-extensions comparisons} implements
+an infrastructure for comparison functions; it can be seen as an
+extension of the standard procedures @func{=}, @func{<}, @func{char<?}
+etc.  The primary design aspect is the separation of representing a
+total order and using it.
+
+Since the compare procedures are often optional, comparing built in
+types is as convenient as using built in function, sometimes more
+convenient: For example, testing if the integer index @code{i} lies in
+the integer range @math{[0, n)} can be written as @code{(<=/<? 0 i n)}.
+
+@menu
+* comparisons intro::           Introduction.
+* comparisons examples::        Examples.
+* comparisons conventions::     Terminology and conventions.
+* comparisons atoms::           Comparing atoms.
+* comparisons sequence::        Comparing lists and vectors.
+* comparisons pair::            Comparing pairs and improper lists.
+* comparisons default::         The default compare procedure.
+* comparisons cons::            Constructing compare procedures.
+* comparisons branch::          Branching.
+* comparisons pred::            Predicates.
+* comparisons minmax::          Minimum and maximum values.
+* comparisons debug::           Debugging procedure.
+@end menu
+
+@c page
+@node comparisons intro
+@subsection Introduction
+
+
+The @library{vicare language-extensions comparisons} library defines a
+mechanism for comparing Scheme values with respect to a total order (aka
+linear order).  The mechanism provides operations for:
+
+@enumerate
+@item
+Comparing objects of the built-in types.
+
+@item
+Using a total order in situations that arise in programs.
+
+@item
+Facilitating the definition of a new total order.
+@end enumerate
+
+Traditionally, a total order is represented in Scheme by an order
+predicate, like @func{<} or @func{char<?}.  In the context of
+@library{vicare language-extensions comparisons}, however, a total order
+is represented by a Scheme procedure comparing its two arguments and
+returning either @math{-1}, @math{0}, or @math{1} depending on whether
+the first argument is considered smaller, equal, or greater than the
+second argument respectively.  Examples of such compare procedures
+include:
+
+@example
+(lambda (x y)
+  (sign (- x y)))
+@end example
+
+@noindent
+for comparing real numbers, but also:
+
+@example
+(lambda (x y) 0)
+@end example
+
+@noindent
+comparing anything.
+
+The primary reason for using @math{3}--valued compare procedures
+(instead of @math{2}--valued order predicates) is efficiency: When
+comparison is computationally expensive, it is wasteful if two
+predicates are evaluated where a single @math{3}--valued comparison
+would suffice.
+
+But dealing directly with @math{3}--valued comparisons in the
+application program is inconvenient and obscures intention: For testing
+@math{x < y} one would have to write:
+
+@example
+(= (compare x y) -1)
+@end example
+
+@noindent
+for this reason, an operation @func{<?} is supplied which allows to
+phrase the same test as:
+
+@example
+(<? compare x y)
+@end example
+
+This is an example of mapping the three possible outcomes of a
+comparison into the two boolean values @true{} and @false{}.  Since
+@func{<?}  takes the total order as an explicit parameter, a comfortably
+large arsenal of tests can be made available for each and every total
+order.  This deviates from the approach of @rnrs{6}, in which there are
+only five operations (@func{=}, @func{<}, @func{>}, @func{<=},
+@func{>=}) and for each total order (real/number, char, char--ci,
+string, string--ci) a complete set of these five operations is provided.
+
+But still, using @func{<?} would be inconvenient if the compare
+procedure would have to be supplied explicitly every time.  For this
+reason, the argument @var{compare} is often made optional and the
+procedure @func{default-compare} is used whenever no @var{compare}
+procedure is passed explicitly.  @func{default-compare} defines some
+resonable total order on the builtin types of @rnrs{6}.
+
+For the definition of comparison procedures, special control structures
+(macros) are provided.  These control structures can be used in the
+definition of a (potentially recursive) comparison procedure.
+
+@c page
+@node comparisons examples
+@subsection Examples
+
+
+Assume there is a type @samp{length} representing physical length;  the
+type has an accessor procedure @func{meters} returning the length in
+meters (a real number):
+
+@example
+(define-record-type length
+  (fields (immutable meters     meters)))
+@end example
+
+A compare procedure for lengths can then be defined in terms of
+@func{real-compare} as:
+
+@example
+(define (length-compare length1 length2)
+  (real-compare (meters length1) (meters length2)))
+@end example
+
+@noindent
+now:
+
+@example
+(<? length-compare x y)
+@end example
+
+@noindent
+tests if length @var{x} is shorter than length @var{y}.  Also,
+
+@example
+(<=/<? length-compare a x b)
+@end example
+
+@noindent
+tests if length @var{x} lies between length @var{a} (included) and
+length @var{b} (excluded).  The expression:
+
+@example
+(min-compare length-compare x y z)
+@end example
+
+@noindent
+is the shortest of the lengths @var{x}, @var{y}, and @var{z}.  Likewise,
+
+@example
+(chain<? length-compare x1 x2 x3 x4)
+@end example
+
+@noindent
+tests if the lengths @var{x1}, @var{x2}, @var{x3}, @var{x3} are strictly
+increasing, and so on.
+
+Furthermore, assume there is another type @code{box} representing a
+physical box; the type has procedures @func{width}, @func{height}, and
+@func{depth} accessing the dimension (each giving a length):
+
+@example
+(define-record-type box
+  (fields (immutable width      width)
+          (immutable height     height)
+          (immutable depth      depth)))
+@end example
+
+A comparison procedure for boxes, comparing first by width then by
+height and then by depth, can be defined using the control structure
+@func{refine-compare} as:
+
+@example
+(define (box-compare box1 box2)
+  (refine-compare
+    (length-compare (width  box1) (width  box2))
+    (length-compare (height box1) (height box2))
+    (length-compare (depth  box1) (depth  box2))))
+@end example
+
+@noindent
+so:
+
+@example
+(<? box-compare b1 b2)
+@end example
+
+@noindent
+tests if box @var{b1} is smaller than box @var{b2}, in the sense of the
+order defined.  Of course, all the other tests, minimum, maximum etc.
+are available, too.
+
+As a final complication, assume that there is also a type @code{bowl}
+with accessors @func{radius} (a @samp{length}) and @func{open?} (a
+boolean):
+
+@example
+(define-record-type bowl
+  (fields (immutable radius   radius)
+          (immutable open?    open?)))
+@end example
+
+Bowls are to be compared first by whether they are open or closed, and
+then by radius.  However, bowls and boxes also need to be compared to
+each other, ordered such that a bowl is considered ``smaller'' than a
+box.  (There are type--test predicates @func{box?} and @func{bowl?}).
+Using the control structure @func{select-compare} this can be expressed
+as:
+
+@example
+(define (container-compare c1 c2)
+  (select-compare c1 c2
+    (bowl? (boolean-compare (open?  c1) (open?  c2))
+           (length-compare  (radius c1) (radius c2)))
+    (box?  (box-compare c1 c2))
+    (else "neither bowls nor boxes" c1 c2)))
+@end example
+
+This is an example of ``hierarchical extension'' of compare procedures.
+Also note the implicit use of @func{refine-compare} in the @func{bowl?}
+case.
+
+
+@c page
+@node comparisons conventions
+@subsection Terminology and conventions
+
+
+A @dfn{comparison procedure} is a Scheme procedure of two arguments
+returning an exact integer in @math{@{-1, 0, 1@}} such that the valid
+input values are ordered according to some total order.  A comparison
+procedure, together with a set of Scheme values to which it is
+applicable, represents a comparison function.
+
+A @dfn{comparison} is either an expression applying a comparison
+procedure to two values, or the result of such an expression.
+
+Each operation (macro or procedure) processing the value of a comparison
+checks if the value is indeed an exact integer in the set @math{@{-1, 0,
+1@}}.  If this is not the case, an error is signalled.
+
+Comparison procedures expecting certain types of arguments should raise
+an error in case the arguments are not of this type.
+
+@c page
+@node comparisons atoms
+@subsection Comparing atoms
+
+
+This section describes comparison procedures for most of the atomic
+types of @rnrs{6}: booleans, characters, strings, symbols, and numbers.
+As a general naming convention, a procedure named:
+
+@example
+@var{type}-compare-@var{order}
+@end example
+
+@noindent
+compares two objects of the type @var{type} with respect to a total
+order for which @var{order} is a mnemonic hint (e.g. @samp{-ci} for
+case--insensitive).  Of course, @samp{-@var{order}} may be absent if
+there is just one order or the order is obvious.  It is an error if a
+comparison procedure accepting objects of a certain type is called with
+one or two arguments not of that type.
+
+
+@defun boolean-compare @var{bool1} @var{bool2}
+Compare two booleans, ordered by @false{} < @true{}.  A non--false value
+is not interpreted as a ``true value,'' but rather an error will be
+signalled.
+@end defun
+
+
+@defun char-compare @var{char1} @var{char2}
+@defunx char-compare-ci @var{char1} @var{char2}
+Compare characters as @func{char<=?} and @func{char-ci<=?}
+respectively.  The suffix @code{-ci} means ``case insensitive.''
+@end defun
+
+
+@defun string-compare @var{string1} @var{string2}
+@defunx string-compare-ci @var{string1} @var{string2}
+Compare strings as @func{string<=} and @func{string-ci<=?}.  The suffix
+@code{-ci} means ``case insensitive.''
+@end defun
+
+
+@defun symbol-compare @var{symbol1} @var{symbol2}
+Compares symbols as @func{string<=} on the names returned by
+@func{symbol->string}.
+@end defun
+
+
+@defun integer-compare @var{x} @var{y}
+@defunx rational-compare @var{x} @var{y}
+@defunx real-compare @var{x} @var{y}
+@defunx complex-compare @var{x} @var{y}
+@defunx number-compare @var{x} @var{y}
+Compare two numbers using the @rnrs{6} functions @func{=} and @func{<}.
+It is an error if an argument is not of the type specified by the name
+of the procedure.
+
+Complex numbers are ordered based on their magnitude:
+
+@example
+(real-compare (magnitude x) (magnitude y))
+@end example
+
+If at least one among @var{x} and @var{y} is a complex number:
+@func{number-compare} defaults to @func{complex-compare}, else it
+defaults to @func{real-compare}.
+
+If one or both the arguments is @samp{+nan.0}:
+
+@table @asis
+@item @func{integer-compare}
+@itemx @func{rational-compare}
+Raise an error because @samp{+nan.0} is neither integer nor rational.
+
+@item @func{real-compare}
+@itemx @func{complex-compare}
+@itemx @func{number-compare}
+Return @samp{+nan.0}.
+@end table
+@end defun
+
+@c page
+@node comparisons sequence
+@subsection Comparing lists and vectors
+
+
+This section describes comparison procedures for Scheme lists, vectors
+and objects that can be accessed like lists or like vectors.
+
+An object @var{x} can be accessed like a vector if there are procedures
+@func{size} and @func{ref} such that @samp{(size x)} is a non--negative
+integer @math{n} indicating the number of elements, and @code{(ref x i)}
+is the @math{i}-th element of @var{x} for @math{i} in @math{@{0, ...,
+n-1@}}.
+
+The default vector access procedures are @func{vector-length} and
+@func{vector-ref}.
+
+An object @var{x} can be accessed like a (proper) list if there are
+procedures @func{empty?}, @func{head} and @func{tail} such that
+@code{(empty? x)} is a boolean indicating that there are no elements in
+@var{x}, @func{(head x)} is the first element of @var{x}, and
+@func{(tail x)} is an object representing the residual elements of
+@var{x}.
+
+The default list access procedures are @func{null?}, @func{car} and
+@func{cdr}.
+
+Independently of the way the elements are accessed, the natural ordering
+of vectors and lists differs.  The following comparison policies are
+defined:
+
+@table @emph
+@item As vectors
+The shorter sequence is always smaller than the longer one, no matter
+the elements in it.  Sequences of the same size are compared
+lexicographically (element by element, stopping at the first different
+one).
+
+@item As lists
+The empty sequence is smallest.  Two non--empty sequences are compared
+by their first elements, and only if the first elements are equal the
+residual sequences are compared, recursively.
+@end table
+
+
+@defun vector-compare @var{x} @var{y}
+@defunx vector-compare @var{compare} @var{x} @var{y}
+@defunx vector-compare @var{compare} @var{x} @var{y} @var{size} @var{ref}
+@defunx vector-compare-as-list @var{x} @var{y}
+@defunx vector-compare-as-list @var{compare} @var{x} @var{y}
+@defunx vector-compare-as-list @var{compare} @var{x} @var{y} @var{size} @var{ref}
+@defunx list-compare @var{x} @var{y}
+@defunx list-compare @var{compare} @var{x} @var{y}
+@defunx list-compare @var{compare} @var{x} @var{y} @var{empty?} @var{head} @var{tail}
+@defunx list-compare-as-vector @var{x} @var{y}
+@defunx list-compare-as-vector @var{compare} @var{x} @var{y}
+@defunx list-compare-as-vector @var{compare} @var{x} @var{y} @var{empty?} @var{head} @var{tail}
+Compare two sequences @var{x} and @var{y}, using @var{compare} for
+comparing elements.  The result is an exact integer in @math{@{-1, 0,
+1@}}.  If @var{compare} is not supplied, @func{default-compare} is used.
+
+The procedure named @func{@var{access}-compare-as-@var{order}} accesses
+the objects like @var{access} and compares them with respect to the
+order given by @var{order}. The names @func{@var{type}-compare} are
+abbreviations for @code{@var{type}-compare-as-@var{type}}.
+
+In the following examples the difference between comparison as list and
+comparison as vector does not show:
+
+@example
+(list-compare '()  '())                    @result{} 0
+(list-compare '(1) '())                    @result{} +1
+(list-compare '()  '(1))                   @result{} -1
+
+(list-compare '(1) '(1))                   @result{} 0
+(list-compare '(1) '(2))                   @result{} -1
+(list-compare '(2) '(1))                   @result{} +1
+
+(list-compare '(1 1) '(1 1))               @result{} 0
+(list-compare '(1 1) '(1 2))               @result{} -1
+(list-compare '(1 2) '(1 1))               @result{} +1
+
+(list-compare '(1 1 1) '(1 1))             @result{} +1
+(list-compare '(1 1)   '(1 1 1))           @result{} -1
+
+(list-compare-as-vector '()  '())          @result{} 0
+(list-compare-as-vector '(1) '())          @result{} +1
+(list-compare-as-vector '()  '(1))         @result{} -1
+
+(list-compare-as-vector '(1) '(1))         @result{} 0
+(list-compare-as-vector '(1) '(2))         @result{} -1
+(list-compare-as-vector '(2) '(1))         @result{} +1
+
+(list-compare-as-vector '(1 1) '(1 1))     @result{} 0
+(list-compare-as-vector '(1 1) '(1 2))     @result{} -1
+(list-compare-as-vector '(1 2) '(1 1))     @result{} +1
+
+(list-compare-as-vector '(1 1 1) '(1 1))   @result{} +1
+(list-compare-as-vector '(1 1)   '(1 1 1)) @result{} -1
+@end example
+
+In the following examples the difference shows:
+
+@example
+(vector-compare         '#(1 1 1) '#(2 1)) @result{} +1
+(vector-compare-as-list '#(1 1 1) '#(2 1)) @result{} -1
+@end example
+@end defun
+
+@c page
+@node comparisons pair
+@subsection Comparing pairs and improper lists
+
+
+This section describes comparison procedures for Scheme pairs and
+(possibly) improper lists.
+
+
+@defun pair-compare-car @var{compare}
+@defunx pair-compare-cdr @var{compare}
+Construct a compare procedure on pairs which only uses the car (or,
+respectively, the cdr), and ignores the other.  One could define:
+
+@example
+(define (pair-compare-car compare)
+  (lambda (x y)
+    (compare (car x) (car y))))
+@end example
+
+@func{pair-compare-car} can be used to turn a search data structure
+(e.g. a heap) into a dictionary: Store @samp{(key . value)} pairs and
+compare them using the compare procedure @code{(pair-compare-car
+compare-key)}.
+@end defun
+
+
+@defun pair-compare @var{compare-car} @var{compare-cdr} @var{pair1} @var{pair2}
+@defunx pair-compare @var{compare} @var{obj1} @var{obj2}
+@defunx pair-compare @var{obj1} @var{obj2}
+Compare two pairs, or (possibly improper) lists.
+
+The quaternary form compares @var{pair1} and @var{pair2} by comparing
+their cars using @func{compare-car}, and if the cars are equal the cdrs
+are compared using @func{compare-cdr}.
+
+The ternary form compares two objects by type using the ordering of
+types:
+
+@example
+null < pair < neither-null-nor-pair
+@end example
+
+Two objects of type neither--null--nor--pair are compared using
+@var{compare}.  Two pairs are compared by using @var{compare} on the
+cars, and if the cars are equal by recursing on the cdrs.
+
+The binary form uses @func{default-compare} as @var{compare}.
+
+@example
+(pair-compare '() 'foo)
+@result{} -1
+
+(pair-compare '() '(1 . 2)))
+@result{} -1
+
+(pair-compare '(1 . 2) 'foo)
+@result{} -1
+
+(pair-compare 3 4)
+@result{} -1
+@end example
+@end defun
+
+
+@c page
+@node comparisons default
+@subsection The default compare procedure
+
+
+It is convenient to have a compare procedure readily available for
+comparing most builtin types.
+
+
+@defun default-compare @var{obj1} @var{obj2}
+Compare the arguments by type using the ordering:
+
+@example
+null < pair   < boolean < char   < string
+     < symbol < number  < vector < other
+@end example
+
+Two objects of the same type @var{type} are compared as
+@func{@var{type}-compare} would, if there is such a procedure.  The type
+@var{null} consists of the empty list.  The effect of comparing two
+other objects or of comparing cyclic structures (made from lists or
+vectors) is unspecified.
+@end defun
+
+@c page
+@node comparisons cons
+@subsection Constructing compare procedures
+
+
+The syntactic extensions defined in this section are the primary
+utilities for defining new compare procedures as conveniently as
+possible.
+
+
+@deffn Syntax refine-compare @var{expr} ...
+The arguments, if any, must be expressions; they are evaluated from left
+to right until a non--zero value is found (which then is the value) or
+until there are no more arguments to evaluate (in which case the value
+is @samp{0}).  If no arguments are supplied, the return value is
+@samp{0}.
+@end deffn
+
+
+@deffn Syntax select-compare @var{expr1} @var{expr2} @var{clause} ...
+Each @var{clause}, with the possible exception of the last, is of the
+form:
+
+@example
+(@meta{type?} @meta{c1} ...)
+@end example
+
+@noindent
+where @meta{type?} is an expression evaluating to a predicate procedure,
+and @meta{ci} are expressions evaluating to an exact integer in
+@math{@{-1, 0, 1@}}.  The last @var{clause} may be an ``else clause'',
+which has the form:
+
+@example
+(else @meta{c1} ...)
+@end example
+
+@func{select-compare} is a conditional for defining hierarchical
+extensions and refinements of compare procedures.  It compares the
+values of @var{expr1} and @var{expr2} by trying the type tests in order,
+and applies an implict @func{refine-compare} on the consequences upon a
+match.
+
+In more detail, evaluation proceeds as follows: First @var{expr1} and
+@var{expr2} are evaluated in unspecified order, resulting in values
+@var{x1} and @var{x2}, respectively.  Then the clauses are evaluated one
+by one, from left to right.
+
+For clause:
+
+@example
+(@meta{type?} @meta{c1} ...)
+@end example
+
+@noindent
+first @meta{type?} is evaluated resulting in a predicate procedure
+@var{type?}  and then the expressions @code{(@var{type?} @var{x1})} and
+@code{(@var{type?}  @var{x2})} are evaluated and interpreted as
+booleans:
+
+@enumerate
+@item
+If both booleans are true then the overall value is:
+
+@example
+(refine-compare @meta{c1} ...)
+@end example
+
+@item
+If only the first is true the result is @samp{-1}.
+
+@item
+If only the second is true the result is @samp{+1}.
+
+@item
+If neither is true the next clause is considered.
+@end enumerate
+
+An else clause is treated as if both tests where true.  If there are no
+clauses left, the result is @samp{0}.
+
+@func{select-compare} evaluates @var{expr1} and @var{expr2} exactly
+once, even in the absence of any clauses.  Moreover, each @meta{type?}
+is evaluated at most once and the resulting procedure @var{type?} is
+called at most twice.
+@end deffn
+
+
+@deffn Syntax cond-compare @meta{clause} ...
+Each @meta{clause}, with the possible exception of the last, is of the
+form:
+
+@example
+((@meta{t1} @meta{t2}) @meta{c1} ...)
+@end example
+
+@noindent
+where @meta{t1} and @meta{t2} are expressions evaluating to booleans,
+and @meta{ci} are expressions evaluating to an exact integer in
+@math{@{-1, 0, 1@}}.
+
+The last @var{clause} may be an ``else clause'', which has the form:
+
+@example
+(else @meta{c1} ...)
+@end example
+
+@func{cond-compare} is another conditional for defining hierarchical
+extensions and refinements of compare procedures.
+
+Evaluation proceeds as follows: The clauses are evaluated one by one,
+from left to right.  For clause:
+
+@example
+((@meta{t1} @meta{t2}) @meta{c1} ...)
+@end example
+
+@noindent
+first @meta{t1} and @meta{t2} are evaluated and the results are
+interpreted as boolean values:
+
+@enumerate
+@item
+If both booleans are true then the overall value is:
+
+@example
+(refine-compare @meta{c1} ...)
+@end example
+
+@item
+If only the first is true the result is @samp{-1}.
+
+@item
+If only the second is true the result is @samp{+1}.
+
+@item
+If neither is true the next clause is considered.
+@end enumerate
+
+An else clause is treated as if both booleans where true.  If there are
+no clauses left (or there are no clauses to begin with), the result is
+@samp{0}.
+
+@func{cond-compare} evaluates each expression at most once.
+@end deffn
+
+@c page
+@node comparisons branch
+@subsection Branching
+
+
+The facilities described in this section provide a mechanism for using a
+compare procedure (passed as a parameter) in the different situations
+arising in applications.
+
+@deffn Syntax if3 @meta{c} @meta{less} @meta{equal} @meta{greater}
+@meta{c}, @meta{less}, @meta{equal}, and @meta{greater} are expressions.
+
+@func{if3} is the 3--way conditional for comparisons.  First @meta{c} is
+evaluated, resulting in value @var{c}.  The value @var{c} must be an
+exact integer in @code{@{-1, 0, 1@}}, otherwise an error is signalled.
+
+@table @math
+@item @var{c} = -1
+The value of the @func{if3} expression is obtained by evaluating
+@meta{less}.
+
+@item @var{c} = 0
+@meta{equal} is evaluated.
+
+@item @var{c} = 1
+@meta{greater} is evaluated.
+@end table
+@end deffn
+
+
+@deffn Syntax if=? @meta{c} @meta{consequent}
+@deffnx Syntax if=? @meta{c} @meta{consequent} @meta{alternate}
+@deffnx Syntax if<? @meta{c} @meta{consequent}
+@deffnx Syntax if<? @meta{c} @meta{consequent} @meta{alternate}
+@deffnx Syntax if>? @meta{c} @meta{consequent}
+@deffnx Syntax if>? @meta{c} @meta{consequent} @meta{alternate}
+@deffnx Syntax if<=? @meta{c} @meta{consequent}
+@deffnx Syntax if<=? @meta{c} @meta{consequent} @meta{alternate}
+@deffnx Syntax if>=? @meta{c} @meta{consequent}
+@deffnx Syntax if>=? @meta{c} @meta{consequent} @meta{alternate}
+@deffnx Syntax if-not=? @meta{c} @meta{consequent}
+@deffnx Syntax if-not=? @meta{c} @meta{consequent} @meta{alternate}
+@meta{c}, @meta{consequent}, and @meta{alternate} are expressions.  If
+@meta{alternate} is not provided, @code{(if #f #f)} is used.
+
+These six macros are 2--way conditionals for comparisons.  First
+@meta{c} is evaluated, resulting in value @var{c}.  The value @var{c}
+must be an exact integer in @math{@{-1, 0, 1@}}, otherwise an error is
+signalled.  Then, depending on the value of @var{c} and the name of the
+macro, either @meta{consequence} or @meta{alternate} is evaluated, and
+the resulting value is the value of the conditional expression.
+
+The branch is chosen according to the following table:
+
+@multitable {@func{if-not=?}} {@meta{consequent}012} {@meta{alternate}0}
+@headitem @tab @meta{consequent} @tab @meta{alternate}
+@item @func{if=?} @tab @code{c = 0} @tab @code{c in @{-1, 1@}}
+@item @func{if<?} @tab @code{c = -1} @tab @code{c in @{0, 1@}}
+@item @func{if>?} @tab @code{c = 1} @tab @code{c in @{-1, 0@}}
+@item @func{if<=?} @tab @code{c in @{-1, 0@}} @tab @code{c = 1}
+@item @func{if>=?} @tab @code{c in @{0, 1@}} @tab @code{c = -1}
+@item @func{if-not=?} @tab @code{c in @{-1, 1@}} @tab @code{c = 0}
+@end multitable
+@end deffn
+
+@c page
+@node comparisons pred
+@subsection Predicates
+
+
+@defun =? [@var{compare}] [@var{x} @var{y}]
+@defunx <? [@var{compare}] [@var{x} @var{y}]
+@defunx >? [@var{compare}] [@var{x} @var{y}]
+@defunx <=? [@var{compare}] [@var{x} @var{y}]
+@defunx >=? [@var{compare}] [@var{x} @var{y}]
+@defunx not=? [@var{compare}] [@var{x} @var{y}]
+If the values @var{x} and @var{y} are given, test if @var{x} and @var{y}
+are in the relation specified by the name of the procedure @func{rel?},
+with respect to compare procedure @var{compare}; otherwise construct a
+predicate procedure.
+
+In the forms:
+
+@example
+(rel? [@var{compare}] @var{x} @var{y})
+@end example
+
+@noindent
+the result is a boolean depending on @code{(@var{compare} @var{x}
+@var{y})} and the test @func{rel?} as specified for @func{if<?} etc.  If
+@var{compare} is not supplied, @func{default-compare} is used.
+
+In the form:
+
+@example
+(rel? [@var{compare}])
+@end example
+
+@noindent
+the predicate procedure:
+
+@example
+(lambda (x y)
+  (rel? @var{compare} @var{x} @var{y}))
+@end example
+
+@noindent
+is constructed.  Again, if @var{compare} is not supplied,
+@func{default-compare} is used.
+
+A few examples for illustration:
+
+@example
+(>? "laugh" "LOUD")
+@result{} #t
+
+(<? string-compare-ci "laugh" "LOUD")
+@result{} #t
+
+(define char<=?
+  (<=? char-compare))
+
+(sort-by-less '(1 a "b") (<?))
+@result{} '("b" a 1)
+
+(sort-by-less '(1 a "b") (>?))
+@result{} '(1 a "b")
+@end example
+
+@quotation
+@emph{Warning:} A common mistake is writing @code{(<=? x y z)} where
+@code{(<=/<=? x y z)} is meant; this will most likely manifest itself at
+the time the expression @code{(x y z)} is evaluated.
+@end quotation
+@end defun
+
+
+@defun </<? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx </<=? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx <=/<? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx <=/<=? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx >/>? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx >/>=? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx >=/>? [@var{compare}] [@var{x} @var{y} @var{z}]
+@defunx >=/>=? [@var{compare}] [@var{x} @var{y} @var{z}]
+Test if @var{x}, @var{y}, and @var{z} form a chain with the two
+relations specified by the name of the procedure @func{rel1/rel2?}, with
+respect to the compare procedure @var{compare}.
+
+If @var{compare} is not provided, @func{default-compare} is used.
+
+If @var{x}, @var{y} and @var{z} are not provided, a predicate procedure
+of three arguments is constructed.  The order in which the values are
+compared is unspecified, but each value is compared at least once.
+
+@quotation
+@strong{NOTE}
+
+@example
+(<=/<? real-compare 0 x 1)
+@end example
+
+@noindent
+tests if @var{x} is a real number in the half open interval @code{[0,
+1)}.
+@end quotation
+@end defun
+
+
+@defun chain=? @var{compare} @var{x1} ...
+@defunx chain<? @var{compare} @var{x1} ...
+@defunx chain>? @var{compare} @var{x1} ...
+@defunx chain<=? @var{compare} @var{x1} ...
+@defunx chain>=? @var{compare} @var{x1} ...
+Test if the values @var{x1} @dots{} (zero or more values) form a chain
+with respect to the relation specified by the name of the procedure, and
+with respect to the compare procedure @var{compare}.  The result is a
+boolean.
+
+The order in which the values are compared is unspecified, but each
+value is compared at least once (even if there is just one).
+
+A sequence of values @var{x1}, @dots{}, @var{xn} forms a chain with
+respect to the relation @func{rel?} if:
+
+@example
+(rel? @var{compare} @var{xi} @var{xj})
+@end example
+
+@noindent
+for all @math{1 < i < j < n}.  In particular, this is the case for
+@math{n \in @{0, 1@}}.
+
+Since the relations @func{=}, @func{<}, @func{>}, @func{<}, and @func{>}
+are transitive, it is sufficient to test:
+
+@example
+(rel? @var{compare} @var{xi} @var{xi+1})
+@end example
+
+@noindent
+for @math{1 < i < n}.
+
+@quotation
+@strong{NOTE} The reason every @var{xi} participates in at least one
+comparison is type--checking: After testing if the values form a chain,
+these value may be assumed to be of the type comparable by compare---
+and this holds irrespectively of the number of values, or whether they
+form a chain.
+@end quotation
+@end defun
+
+
+@defun pairwise-not=? @var{compare} @var{x1} ...
+Tests if the values @var{x1} ... (zero or more values) are pairwise
+unequal with respect to the compare procedure @var{compare}.  The result
+is a boolean.
+
+The order in which the values are compared is unspecified, but each
+value is compared at least once (even if there is just one).
+
+The values @var{x1}, ..., @var{xn} are pairwise unequal if:
+
+@example
+(not=? @var{compare} @var{xi} @var{xj})
+@end example
+
+@noindent
+for all @math{i} different from @math{j}.  In particular, this is the
+case for @math{n \in @{0, 1@}}.
+
+Since compare defines a total ordering on the values, the property can
+be checked in time @math{O(n log n)}.
+@end defun
+
+
+@defun compare-by< @var{lt-pred} [@var{x} @var{y}]
+@defunx compare-by> @var{gt-pred} [@var{x} @var{y}]
+@defunx compare-by<= @var{le-pred} [@var{x} @var{y}]
+@defunx compare-by>= @var{ge-pred} [@var{x} @var{y}]
+@defunx compare-by=/< @var{eq-pred} @var{lt-pred} [@var{x} @var{y}]
+@defunx compare-by=/> @var{eq-pred} @var{gt-pred} [@var{x} @var{y}]
+If optional arguments @var{x} and @var{y} are present then these are
+compared with respect to the total order defined by the predicate(s)
+given; the result is in @math{@{-1, 0, 1@}}.  If @var{x} and @var{y} are
+not present then a procedure comparing its two arguments using the
+predicate(s) given is constructed and returned.
+
+The predicate procedures mean the following:
+
+@table @var
+@item lt-pred
+Test if @math{x < y}.
+
+@item le-pred
+Test for @math{<=}.
+
+@item gt-pred
+Test for @math{>}.
+
+@item ge-pred
+Test for @math{>=}.
+
+@item eq-pred
+Test if @var{x} and @var{y} are equivalent.
+@end table
+
+The result returned by a predicate procedure is interpreted as a Scheme
+truth value (i.e. @false{} is false and non--@false{} is true).
+
+The purpose of the procedures compare-by-predicate(s) is to define a
+compare procedure from an order predicate, and possibly an additional
+equivalence predicate.  If an equivalence predicate eq-pred is given, it
+is called before the order predicate because the equivalence may be
+coarser than the total ordering, and it may also be cheaper.
+
+@quotation
+@strong{NOTE} @func{char-compare} could be defined in terms of
+@func{char<=?} as:
+
+@example
+(define char-compare
+  (compare-by<= char<=?))
+@end example
+@end quotation
+@end defun
+
+@c page
+@node comparisons minmax
+@subsection Minimum and maximum values
+
+
+@defun min-compare @var{compare} @var{x1} ...
+@defunx max-compare @var{compare} @var{x1} ...
+A minimum or maximum of the values @var{x1} ... (one or more values)
+with respect to the compare procedure compare.
+
+The result is the first value that is minimal (maximal, respectively).
+The order in which the values are compared is unspecified, but each
+value is compared at least once (even if there is just one value).
+@end defun
+
+
+@defun kth-largest @var{compare} @var{k} @var{x0} ...
+The @var{k}-th largest element of values @var{x0} ... (one or more
+values) with respect to the compare procedure @var{compare}.
+
+More precisely:
+
+@example
+(kth-largest @var{compare} @var{k} @var{x0} ... @var{xn-1})
+@end example
+
+@noindent
+returns the @code{(modulo k n)}-th element of the unique sequence
+obtained by stably sorting @var{x0}, @dots{}, @var{xn-1}.  (Recall that
+a sorting algorithm is stable if it does not permute items with equal
+key, i.e. equivalent w.r.t. @var{compare}).
+
+The argument @var{k} is an exact integer, and @math{n > 1}.  The order
+in which the values @var{xi} are compared is unspecified, but each value
+is compared at least once (even if there is just one value).
+
+@quotation
+@strong{NOTE} The @math{0}--th largest element is the minimum, the
+@math{(n-1)}-th largest element is the maximum.  The median is the
+@math{((n - 1)/2)}-th largest element if @math{n} is odd, and the
+average of the @math{(n/2 - 1)}-th and @math{n/2}-th largest elements if
+@math{n} is even.
+@end quotation
+@end defun
+
+@c page
+@node comparisons debug
+@subsection Debugging procedure
+
+
+@defun debug-compare @var{compare}
+Constructs a compare procedure equivalent to @var{compare} but with
+debugging code wrapped around the calls to compare.  The debugging code
+signals an error if it detects a violation of the axioms of a compare
+function.  For this it is assumed that @var{compare} has no
+side--effects.
+
+More specifically, @code{(debug-compare @var{compare})} evaluates to a
+compare procedure @var{compare1} which checks reflexivity, antisymmetry,
+and transitivity of compare based on the arguments on which
+@var{compare1} is called:
+
+The procedure @var{compare1} checks reflexivity on any value passed to
+compare, antisymmetry on any pair of values on which compare is called,
+and transitivity on triples where two of the arguments are from the
+current call to @var{compare1} and the third is a pseudo--random
+selection from the two arguments of the previous call to @var{compare1}.
+@end defun
+
+@c end of file

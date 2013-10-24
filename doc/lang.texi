@@ -8,10 +8,24 @@
 * include::                     Including source files at expand time.
 * coroutines::                  Running coroutines.
 * amb::                         McCarthy's @func{amb} operator.
+* increments::                  Numeric increment syntaxes.
 * infix::                       Infix to prefix transformer.
 * simple-match::                Simple destructuring match syntax.
+* sentinels::                   Sentinel values.
+* namespaces::                  Namespaces.
+* variables::                   Defining storage locations.
 * syntaxes::                    Language syntactic extensions.
+* makers::                      Maker syntaxes.
 * custom-ports::                Custom ports.
+* asciis::                      Utilities for @ascii{} characters.
+* hooks::                       Running lists of functions.
+* callables::                   Callable objects.
+* c-enums::                     C language flags and flags combinations.
+* streams::                     Streams.
+* loops::                       Loop constructs.
+* comparisons::                 Comparison functions.
+* identifier alists::           Utilities for alists of identifiers.
+* identifier properties::       Expand-time identifier properties.
 @end menu
 
 @c page
@@ -24,7 +38,7 @@
 
 
 Keywords are disjoint objects which can be read by @value{PRJNAME}'s
-reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
+reader in @code{#!vicare} mode, @vicareref{iklib reader stx}.  The core
 bindings and keyword objects handling is embedded in @value{PRJNAME}'s
 boot image, but additional facilities are required to make use of
 keywords.
@@ -59,7 +73,7 @@ list of arguments and options.
 @func{let-keywords} expands into a @func{let} syntax,
 @func{let*-keywords} expands into a @func{let*} syntax,
 @func{letrec-keywords} expands into a @func{letrec} syntax,
-@func{let-keywords} expands into a @func{let} syntax.
+@func{letrec*-keywords} expands into a @func{letrec*} syntax.
 
 @meta{input} must be an expression evaluating to a list of values and
 keywords; keywords must be compliant to the specification in
@@ -95,8 +109,7 @@ itself.
 
 @item
 The @func{without-argument} specification describes an optional keyword
-argument with mandatory value, which must @strong{not} be a keyword
-itself.
+argument without value.
 
 @item
 @meta{name} must be an identifier which will become the name of a
@@ -381,7 +394,7 @@ control to the ``next'' coroutine, it enqueues an escape function to its
 current continuation and causes the next escape function to be invoked.
 
 For discussions about other implementations of coroutines and
-continuations see @ref{HFWCoro, references}.
+continuations see @vicareref{HFWCoro, references}.
 
 @menu
 * coroutines examples::         Usage examples for coroutines.
@@ -760,7 +773,7 @@ fixnum generator referenced by @func{amb-random-fixnum-maker}.
 Hold a procedure accepting a fixnum as single argument: when applied to
 the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
 It is initialised with @func{random} from the library @library{vicare},
-@ref{iklib misc, random}.
+@vicareref{iklib misc, random}.
 @end deffn
 
 @c page
@@ -1333,6 +1346,120 @@ Run it:
 @end example
 
 @c page
+@node increments
+@section Numeric increment syntaxes
+
+
+@cindex Library @library{vicare language-extensions increments}
+@cindex @library{vicare language-extensions increments}, library
+
+
+The library @library{vicare language-extensions increments} exports
+syntaxes to ease incrementing and decrementing of numeric values.  The
+bindings whose name is prefixed with @code{$} are unsafe operations:
+they do @strong{not} validate their arguments before accessing them.
+
+
+@deffn Syntax incr! @meta{expr}
+@deffnx Syntax incr! @meta{expr} @meta{step}
+@deffnx Syntax $incr! @meta{expr}
+@deffnx Syntax $incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(incr! @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (+ @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-incr! @meta{expr}
+@deffnx Syntax pre-incr! @meta{expr} @meta{step}
+@deffnx Syntax $pre-incr! @meta{expr}
+@deffnx Syntax $pre-incr! @meta{expr} @meta{step}
+Aliases for @func{incr!} and @func{$incr!}.
+@end deffn
+
+
+@deffn Syntax post-incr! @meta{expr}
+@deffnx Syntax post-incr! @meta{expr} @meta{step}
+@deffnx Syntax $post-incr! @meta{expr}
+@deffnx Syntax $post-incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-incr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (+ @meta{id} @meta{step})))
+@end example
+@end deffn
+
+
+@deffn Syntax decr! @meta{expr}
+@deffnx Syntax decr! @meta{expr} @meta{step}
+@deffnx Syntax $decr! @meta{expr}
+@deffnx Syntax $decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(decr! @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (- @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-decr! @meta{expr}
+@deffnx Syntax pre-decr! @meta{expr} @meta{step}
+@deffnx Syntax $pre-decr! @meta{expr}
+@deffnx Syntax $pre-decr! @meta{expr} @meta{step}
+Aliases for @func{decr!} and @func{$decr!}.
+@end deffn
+
+
+@deffn Syntax post-decr! @meta{expr}
+@deffnx Syntax post-decr! @meta{expr} @meta{step}
+@deffnx Syntax $post-decr! @meta{expr}
+@deffnx Syntax $post-decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-decr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (- @meta{id} @meta{step})))
+@end example
+@end deffn
+
+@c page
 @node infix
 @section Infix to prefix transformer
 
@@ -1395,7 +1522,9 @@ and or xor
 
 @noindent
 remember that the Scheme comparison operators are meant to return a
-boolean value, rather than a number object.
+boolean value, rather than a number object.  @func{xor} is the binding
+exported by @library{vicare}.  @func{incr!} and @func{decr!} are the
+bindings exported by @library{vicare language-extensions increments}.
 
 @item
 All the operators are left--associative with the exception of
@@ -2191,6 +2320,298 @@ error.
 @error{} &error
 @end example
 
+@c page
+@node sentinels
+@section Sentinel values
+
+
+@cindex @library{vicare language-extensions sentinels}, library
+@cindex Library @library{vicare language-extensions sentinels}
+
+
+The library @library{vicare language-extensions sentinels} defines
+unique values and predicates to test them.  Sentinel values can be used
+as terminators for sequences or as values for uninitialised storage
+locations.
+
+
+@defvr Constant sentinel
+The sentinel value.
+@end defvr
+
+
+As usage example, the following form makes use of the sentinel as
+terminator for a list:
+
+@example
+(let ((ell (list 1 2 3 4 5 sentinel)))
+  (let loop ((ell ell)
+             (res '()))
+    (if (sentinel? (car ell))
+        res
+      (loop (cdr ell) (cons (car ell) res)))))
+@result{} (5 4 3 2 1))
+@end example
+
+@noindent
+the following form defines an iterator closure using the sentinel to
+signal the end of the iteration:
+
+@example
+(let* ((ell  '(1 2 3 4 5))
+       (iter (lambda ()
+               (let ((ell ell))
+                 (if (null? ell)
+                     sentinel
+                   (begin
+                     (car ell)
+                     (set! ell (cdr ell))))))))
+  (let loop ((res '()))
+    (let ((v (iter)))
+      (if (sentinel? v)
+          res
+        (loop (cons v res))))))
+@result{} (5 4 3 2 1)
+@end example
+
+
+@defun make-sentinel
+Return a new sentinel value.  @func{sentinel?} will return @true{} when
+applied to such a value, but new sentinel values are meant to be checked
+with @func{eq?}.
+
+New sentinels can be used in situations where a unique terminator is
+needed: when we need to distinguish @samp{sentinel} from a temporary
+sentinel we need for a specific operation.
+@end defun
+
+
+@defun sentinel? @var{obj}
+Return @true{} if @var{obj} a sentinel value.
+@end defun
+
+
+@defvr Constant undefined
+The undefined value.
+@end defvr
+
+
+@defun undefined? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{undefined}.
+@end defun
+
+
+@defvr Constant unspecified
+The unspecified value.
+@end defvr
+
+
+@defun unspecified? @var{obj}
+Return true if @var{obj} is @func{eq?} to @code{unspecified}.
+@end defun
+
+@c page
+@node namespaces
+@section Identifiers namespaces
+
+
+@cindex @library{vicare language-extensions namespaces}, library
+@cindex Library @library{vicare language-extensions namespaces}
+
+
+The library @library{vicare language-extensions namespaces} allows the
+definition of @dfn{namespaces}; Vicare's namespaces are similar to
+Vicare's modules, indeed a namespace definition expands into a module.
+In addition: namespaces are associated to a macro which can be used as
+``gate'' to access some of the bindings defined in, or visible from, the
+namespace.
+
+Here is a simple example of namespace:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos::
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(hellos:: ciao)         @result{} ciao
+(hellos:: salut)        @result{} salut
+@end example
+
+@noindent
+namespaces can be nested:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos::
+  (export ciao salut japanese::)
+  (define (ciao)
+    'ciao)
+  (define (salut)
+    'salut)
+  (define-namespace japanese::
+    (export ohayo)
+    (define (ohayo)
+      'ohayo)))
+
+(hellos:: ciao)                 @result{} ciao
+(hellos:: salut)                @result{} salut
+(hellos:: japanese:: ohayo)     @result{} ohayo
+@end example
+
+@noindent
+the syntax @func{using} can ``import'' bindings from a namespace into
+the current lexical context:
+
+@example
+(import (vicare)
+  (vicare language-extensions namespaces))
+
+(define-namespace hellos::
+  (export ciao salut)
+  (define (ciao)
+    'ciao)
+  (define-syntax salut
+    (syntax-rules ()
+      ((_)
+       'salut))))
+
+(using hellos::)
+(ciao)          @result{} ciao
+(salut)         @result{} salut
+@end example
+
+@noindent
+while not enforced it seems a good idea to suffix namespace names with
+@code{::}.
+
+The following bindings are exported by the library @library{vicare
+language-extensions namespaces}.
+
+
+@deffn Syntax define-namespace @meta{name} (export @meta{member} @dots{}) @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} export
+Define a new namespace wrapping a module and a gate syntax bound to
+@meta{name}.  The identifier @func{export} is the one exported by
+@library{vicare}.  The forms @meta{body} are evaluated inside the
+module.
+
+The identifiers @meta{member} are ``public'': they can be accessed with
+the syntax:
+
+@example
+(@meta{name} @meta{member} @meta{arg} ...)
+@end example
+
+@noindent
+where the optional arguments @meta{arg} are handed to @meta{member}
+untouched; only the ``application'' syntax is available.  Notice that,
+while we cannot access variables from a namespace with the normal
+variable access syntax, we can export parameter functions and also
+define variable setter and getter syntaxes as follows:
+
+@example
+(define-syntax-rule (define-variable ?name ?init-value)
+  (define the-variable ?init-value)
+  (define-syntax ?name
+    (syntax-rules ()
+      ((_)
+       the-variable)
+      ((_ ?new-value)
+       (set! the-variable ?new-value)))))
+
+(define-variable blue 123)
+(blue)          @result{} 123
+(blue 456)
+(blue)          @result{} 456
+@end example
+@end deffn
+
+
+@deffn Syntax using @metao{name} @meta{name} @dots{}
+Import public bindings from one or more namespaces into the current
+lexical context.
+@end deffn
+
+@c page
+@node variables
+@section Defining storage locations
+
+
+@cindex @library{vicare language-extensions variables}, library
+@cindex Library @library{vicare language-extensions variables}
+
+
+The library @library{vicare language-extensions variables} provides a
+way to define simple storage locations similar to the variables used in
+many languages.  The @objtype{variable} type is disjoint from the other
+types.
+
+The following bindings are exported by the library @library{vicare
+language-extensions variables}; the bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun make-variable
+@defunx make-variable @var{obj}
+Build and return a new @objtype{variable} object.  The
+@objtype{variable} is initialised to @var{obj}, which defaults to the
+return value of @code{(void)}.
+@end defun
+
+
+@defun variable? @var{obj}
+Return @true{} if @var{obj} is a @objtype{variable} object, else return
+@false{}.
+@end defun
+
+
+@defun variable-set! @var{variable} @var{obj}
+@defunx variable-ref @var{variable}
+@defunx $variable-set! @var{variable} @var{obj}
+@defunx $variable-ref @var{variable}
+Setter and getter for the value of @objtype{variable} objects.
+@end defun
+
+
+@deffn Syntax define-variable @meta{name}
+@deffnx Syntax define-variable @meta{name} @var{obj}
+@deffnx Syntax define-variable (@meta{name} . @meta{formals}) @meta{body}
+Like @func{define}, but store the value in a newly built
+@objtype{variable} object, which is then bound to @meta{name}.  Example:
+
+@example
+(import (vicare)
+  (vicare language-extensions variables))
+
+(define-variable v 123)
+v @result{} 123
+(set! v 456)
+v @result{} 456
+@end example
+
+While @func{define} defines a binding which, when exported by a library,
+cannot be modified, @func{define-variable} allocates a storage location,
+so the value bound to @meta{name} can be modified at will.
+@end deffn
+
+
+@deffn Syntax define-variable-alias @meta{name} @meta{variable-expr}
+@deffnx Syntax $define-variable-alias @meta{name} @meta{variable-expr}
+Like the second form of @func{define-variable}, but accept as second
+argument an expression which, when evaluated, returns a
+@objtype{variable} object.
+@end deffn
 
 @c page
 @node syntaxes
@@ -2421,6 +2842,19 @@ datums.  @func{else} must be the binding exported by @library{rnrs} and
 behaviour is undefined.
 @end deffn
 
+
+@deffn Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-identifiers @meta{expr} ((@metao{identifier} @meta{identifier} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only identifiers as
+datums; identifiers are compared with @func{free-identifier=?}.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to an identifier, else the
+behaviour is undefined.
+@end deffn
+
 @c page
 @node syntaxes args
 @subsection Arguments validation
@@ -2483,6 +2917,449 @@ Like @func{callet}, but define local @func{let*} bindings for the
       (printf string arg))
 @end example
 @end defmac
+
+@c page
+@node makers
+@section Maker syntaxes
+
+
+@cindex @library{vicare language-extensions makers}, library
+@cindex Library @library{vicare language-extensions makers}
+
+
+The library @library{vicare language-extensions makers} provides a
+constructor for macro definitions; its nominal purpose is to define
+macros which wrap constructors for records and similar entities,
+allowing the use of ``keywords'' to specify non--positional arguments.
+
+To avoid identifiers collision, it is suggested to import this library
+with prefix @samp{mk.}, as in:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+@end example
+
+@menu
+* makers intro::                Introduction to maker macros.
+* makers api::                  Defining makers.
+@end menu
+
+@c page
+@node makers intro
+@subsection Introduction to maker macros
+
+
+It happens to define a function or macro accepting a number of arguments
+greater than 3:
+
+@example
+(define (the-func a b c d e f g h i)
+  ...)
+@end example
+
+@noindent
+in these cases it can be difficult to remember the order of the
+arguments; it can also be desirable to define default values for some or
+all of the arguments, so that at the call site some arguments can be
+omitted in the source code.  The syntax @func{define-maker} implements a
+solution to this problem.
+
+The following examples show the expansion of a simple maker with neither
+fixed nor variable arguments, only optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      2)
+        (gamma:     3)))
+
+(doit)                  @expansion{} (list 1 2 3)
+
+(doit (alpha:   10))    @expansion{} (list 10 2 3)
+(doit (beta:    20))    @expansion{} (list 1 20 3)
+(doit (gamma:   30))    @expansion{} (list 1 2 30)
+
+(doit (alpha:   10)
+      (beta:    20))    @expansion{} (list 10 20 3)
+
+(doit (alpha:   10)
+      (gamma:   30))    @expansion{} (list 10 2 30)
+
+(doit (gamma:   30)
+      (beta:    20))    @expansion{} (list 1 20 30)
+
+(doit (alpha:   10)
+      (beta:    20)
+      (gamma:   30))    @expansion{} (list 10 20 30)
+
+(let ((b 7))
+  (doit (beta:  (+ 6 (* 2 b)))
+        (alpha: (+ 2 8)))
+  @expansion{} (list (+ 2 8)
+            (+ 6 (* 2 b))
+            3)
+  #f)
+
+(doit (alpha: 10 20 30))
+@expansion{} (list 1 (list 10 20 30) 3)
+@end example
+
+@noindent
+notice the last example: when multiple values are used in an argument's
+clause, they are enclosed in a @func{list} form; the following examples
+show the expansion of a maker with both fixed and variable arguments,
+plus optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker (doit a b)
+    (list #\a #\b)
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  3)))
+
+
+(doit #\p #\q)          @expansion{} (list #\a #\b #\p #\q 1 2 3)
+
+(doit #\p #\q
+      (alpha: 10))      @expansion{} (list #\a #\b #\p #\q 10 2 3)
+
+(doit #\p #\q
+      (beta: 20))       @expansion{} (list #\a #\b #\p #\q 1 20 3)
+
+(doit #\p #\q
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 1 2 30)
+
+(doit #\p #\q
+      (alpha: 10)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 10 20 3)
+
+(doit #\p #\q
+      (alpha: 10)
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 10 2 30)
+
+(doit #\p #\q
+      (gamma: 30)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 1 20 30)
+@end example
+
+Each default value can be any expression and it is evaluated every time
+the maker is used:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define g
+  (let ((counter 0))
+    (lambda ()
+      (set! counter (+ 1 counter))
+      counter)))
+
+(define default2 (- (/ 9 3) 1))
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      default2)
+        (gamma:     (g))))
+
+(doit)                  @result{} ( 1  2  1)
+(doit (alpha: 10))      @result{} (10  2  2)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+A maker invocation can expand itself into another macro use; this allows
+us to detect whether an optional argument was used or not:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+    subdoit
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  sentinel)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?alpha ?beta ?gamma)
+       (and (identifier? #'?gamma)
+            (free-identifier=? #'?gamma #'sentinel))
+       #'(list ?alpha ?beta 3))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit)                  @result{} ( 1  2  3)
+(doit (alpha: 10))      @result{} (10  2  3)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+@noindent
+and also to ``unpack'' multiple values used in the same argument clause:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  subdoit ((alpha:  1)
+           (beta:   2)
+           (gamma:  3)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx (list)
+      ((_ ?alpha (list ?beta0 ...) ?gamma)
+       #'(list ?alpha ?beta0 ... ?gamma))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit (alpha: 10)
+       (beta: #\a #\b #\c)
+       (gamma: 30))
+@result{} (10 #\a #\b #\c 30)
+@end example
+
+We can define a maker in the body of a library and export it; we just
+have to remember to export the auxiliary syntaxes, too:
+
+@example
+(library (the-lib)
+  (export doit alpha beta gamma)
+  (import (vicare)
+    (prefix (vicare language-extensions makers) mk.))
+  (define-auxiliary-syntaxes alpha beta gamma)
+  (define-maker doit
+    list ((alpha     1)
+          (beta      2)
+          (gamma     3))))
+
+(library (exec)
+  (export)
+  (import (rnrs)
+    (prefix (the-lib) lib.))
+  (lib.doit)                  @expansion{} (list 1 2 3)
+  (lib.doit (lib.alpha   10)) @expansion{} (list 10 2 3)
+  (lib.doit (lib.beta    20)) @expansion{} (list 1 20 3)
+  (lib.doit (lib.gamma   30)) @expansion{} (list 1 2 30)
+  )
+@end example
+
+A number of options can be specified to customise the parsing of
+clauses.  We can specify if a clause is mandatory or optional:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.mandatory))
+        (beta:      2 (mk.optional))
+        (gamma:     3)))
+
+(doit (alpha: 10))              @expansion{} (list 10 2 3)
+(doit (beta:  20))              @error{} missing clause "alpha:"
+@end example
+
+@noindent
+the default is for all the clauses to be optional.  We can specify that
+a clause must be used along one or more other clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.with beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @expansion{} (list 10 20 30)
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+
+(doit (alpha: 10)
+      (gamma: 30))              @error{} missing clause "beta:"
+@end example
+
+@noindent
+or we can specify that a clause must not be used along one or more other
+clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntax alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.without beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @error{} invalid clauses mix
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+@end example
+
+@c page
+@node makers api
+@subsection Defining makers
+
+
+The following bindings are exported by the @library{vicare
+language-extensions makers} library.
+
+
+@deffn Macro define-maker @var{name-spec} @var{maker-sexp} @var{keywords-defaults-options}
+@deffnx {Auxiliary Syntax} mandatory
+@deffnx {Auxiliary Syntax} optional
+@deffnx {Auxiliary Syntax} with @var{identifier} ...
+@deffnx {Auxiliary Syntax} without @var{identifier} ...
+Define a new maker macro.  @var{name-spec} has one of the forms:
+
+@example
+@var{name-identifier}
+(@var{name-identifier} @var{positional-arg} ...)
+@end example
+
+@noindent
+where @var{name-identifier} is the name of the defined macro and each
+@var{positional-arg} is an identifier, name of a mandatory positional
+argument for the macro.
+
+@var{maker-sexp} has one of the forms:
+
+@example
+@varo{maker-expr}
+(@varo{maker-expr} @var{maker-expr} ...)
+@end example
+
+@noindent
+where each @var{maker-expr} is a macro keyword or an expression
+evaluated in the lexical context of the @func{define-maker} macro use;
+the expressions are evaluated every time the maker is used.
+
+@var{keywords-defaults-options} defines optional arguments selected with an
+auxiliary syntax and a value; it has the form:
+
+@example
+(@var{clause-spec} ...)
+@end example
+
+@noindent
+where each @var{clause-spec} has the form:
+
+@example
+(@var{auxiliary-syntax} @var{default-expr})
+(@var{auxiliary-syntax} @var{default-expr} @var{option} ...)
+@end example
+
+@noindent
+where each @var{auxiliary-syntax} is an identifier and
+@var{default-expr} is an expression representing the default value for
+the argument; the expressions are all evaluated in the lexical context
+of the @func{define-maker} macro use, the expressions are evaluated
+every time the maker is used.
+
+Notice that the @var{auxiliary-syntax} identifiers are matched against
+the values in the macro use by comparing the syntax objects with
+@func{free-identifier=?}.
+
+Each of the @var{option} forms can be one among:
+
+@example
+(mandatory)
+(optional)
+(with @var{identifier} ...)
+(without @var{identifier} ...)
+@end example
+
+@noindent
+where the first two specify if the current clause is mandatory or
+optional; the @func{with} option selects a list of clauses that must be
+present when the current clause is used; the @func{without} option
+selects a list of clauses that must not be present when the current
+clause is used.  Each clause can be used at most once;
+@clause{mandatory} cannot appear along with @clause{optional}.
+
+When the new macro is used without optional auxiliary syntaxes, it is
+expanded to:
+
+@example
+;; single maker expression, no positional arguments
+(@var{maker-expr-result})
+
+;; single maker expression, positional arguments
+(@var{maker-expr-result}
+ @varo{positional-arg} @var{positional-arg} ...)
+
+;; multiple maker expressions, no positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...)
+
+;; multiple maker expressions, positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...
+ @varo{positional-arg} @var{positional-arg} ...)
+@end example
+
+When the new macro is defined with optional auxiliary syntaxes, the
+expressions in the given syntax clauses, or the default expressions, are
+appended to the output form in the same order as the corresponding
+syntaxes in @var{keywords-defaults-options}.
+
+It is an error if the generated maker is invoked with a clause used
+multiple times.
+
+When the clause of a generated maker is used with multiple values: the
+values are enclosed in a @func{list} form and the result is used as
+argument for the maker expression; for example:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-syntax alpha:)
+
+(mk.define-maker doit
+    vector
+  ((alpha: (list 1 2 3))))
+
+(doit)                   @expansion{} (vector (list 1 2 3))
+(doit (alpha: 10 20 30)) @expansion{} (vector (list 10 20 30))
+@end example
+@end deffn
 
 @c page
 @node custom-ports
@@ -2559,5 +3436,333 @@ input/output the second.  Such ports are connected together so that data
 written to one port is read from the other port.
 @end defun
 
+@c page
+@node asciis
+@section Utilities for @ascii{} characters
+
+
+@cindex @library{vicare language-extensions ascii-chars}, library
+@cindex Library @library{vicare language-extensions ascii-chars}
+
+
+The library @library{vicare language-extensions ascii-chars} provides a
+small number of functions dealing with fixnums representing characters
+in @ascii{} encoding range.  The identifiers whose name is prefixed with
+@samp{$} are bound to unsafe operations: they do @strong{not} validate
+the arguments and applying them to invalid arguments leads to undefined
+behaviour.
+
+
+@defun fixnum-in-ascii-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum representing a character in
+@ascii{} encoding.
+@end defun
+
+
+@defun ascii-upper-case? @var{fx}
+@defunx ascii-lower-case? @var{fx}
+@defunx ascii-title-case? @var{fx}
+@defunx $ascii-upper-case? @var{fx}
+@defunx $ascii-lower-case? @var{fx}
+@defunx $ascii-title-case? @var{fx}
+Return @true{} if @var{fx} represents an upper case or lower case letter
+character, otherwise return @false{}.
+@end defun
+
+
+@defun ascii-cased? @var{fx}
+@defunx $ascii-cased? @var{fx}
+Return @true{} if @var{fx} represents a letter character, which can be
+converted to upper or lower case, otherwise return @false{}.
+@end defun
+
+
+@defun ascii-alphabetic? @var{fx}
+@defunx $ascii-alphabetic? @var{fx}
+Return @true{} if @var{fx} represents a letter character, otherwise
+return @false{}.
+@end defun
+
+
+@defun ascii-numeric? @var{fx}
+@defunx $ascii-numeric? @var{fx}
+Return @true{} if @var{fx} represents a decimal digit character,
+otherwise return @false{}.
+@end defun
+
+
+@defun ascii-upcase @var{fx}
+@defunx ascii-downcase @var{fx}
+@defunx ascii-titlecase @var{fx}
+@defunx $ascii-upcase @var{fx}
+@defunx $ascii-downcase @var{fx}
+@defunx $ascii-titlecase @var{fx}
+Return a fixnum representing the upper case or lower case version of
+@var{fx}; return @var{fx} itself if it represents an uncased character.
+@end defun
+
+@c page
+@node hooks
+@section Running lists of functions
+
+
+@cindex @library{vicare language-extensions hooks}, library
+@cindex Library @library{vicare language-extensions hooks}
+
+
+The library @library{vicare language-extensions hooks} exports an @api{}
+defining @dfn{hooks}: opaque Scheme objects, disjoint from other types,
+referencing a list of functions which can be applied to arguments at a
+specified point in a program.  @value{PACKAGE} hooks are somewhat
+similar to @gnu{} Guile hooks.
+
+
+@defun make-hook
+Build and return a new hook object.
+@end defun
+
+
+@defun hook? @var{obj}
+Return @true{} if @var{obj} is a hook object, otherwise @false{}.
+@end defun
+
+
+@defun hook-empty? @var{hook}
+Return @true{} if @var{hook} is a hook object and it is empty, otherwise
+@false{}.
+@end defun
+
+
+@defun add-hook! @var{hook} @var{proc}
+@defunx add-hook! @var{hook} @var{proc} @var{last?}
+Register @var{proc} as hook function; return unspecified values.  If
+@var{last?} is @false{} or not used: the new function is registered as
+first, else it is registered as last.
+@end defun
+
+
+@defun remove-hook! @var{hook} @var{proc}
+Remove a previously registered hook function.  Return unspecified
+values.
+@end defun
+
+
+@defun reset-hook! @var{hook}
+Remove all the previously registered hooks.
+@end defun
+
+
+@defun hook->list @var{hook}
+Return the list of registered functions.
+@end defun
+
+
+@defun run-hook @var{hook} @var{arg} @dots{}
+Run all the hook functions applying them to the given arguments.  Return
+unspecified values.
+@end defun
+
+@c page
+@node callables
+@section Callable objects
+
+
+@cindex @library{vicare language-extensions callables}, library
+@cindex Library @library{vicare language-extensions callables}
+
+
+The library @library{vicare language-extensions callables} allows the
+definition of @dfn{callable objects}: closure objects associated to an
+object used as first argument in every call.  Here is an example of
+callable object:
+
+@example
+(import (vicare)
+  (vicare language-extensions callables))
+
+(define C
+  (callable 123 (lambda (self delta)
+                  (+ delta self))))
+
+(callable? C)           @result{} #t
+(callable-object C)     @result{} 123
+(C 9000)                @result{} 9123
+@end example
+
+
+@deffn Syntax callable @meta{object} @meta{function}
+Build and return a new callable object associated to @meta{object} and
+having @meta{function} as callable procedure.
+@end deffn
+
+
+@defun callable? @var{obj}
+Return @true{} if @var{obj} is a callable object, otherwise return
+@false{}.  Notice that a callable object satisfies @func{procedure?}.
+@end defun
+
+
+@deffn {Validation Clause} callable @var{obj}
+@deffnx {Validation Clause} callable/false @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is a
+callable object; the second clause also accepts @false{}.
+@end deffn
+
+
+@defun callable-object @var{callable}
+@defunx $callable-object @var{callable}
+Return the object associated to the callable object @var{callable}.
+@func{$callable-object} is the unsafe version which does not validate
+its argument prior to accessing its internal fields.
+@end defun
+
+@c page
+@node c-enums
+@section C language flags and flags combinations
+
+
+@cindex @library{vicare language-extensions c-enumerations}, library
+@cindex Library @library{vicare language-extensions c-enumerations}
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions c-enumerations}.
+
+
+@deffn Syntax define-c-flags @meta{name} (@metao{flag} @meta{flag} ...) (@metao{symbol} @meta{symbol} ...)
+Define a new enumeration type and a couple of functions to convert
+between enumeration sets of this type and other objects.  Usage example:
+
+@example
+(define A 1)
+(define B 2)
+(define C 3)
+
+(define-c-flags things
+  (A B C)
+  (a b c))
+
+(things->value (things a)) @result{} 1
+(things->value (things b)) @result{} 2
+(things->value (things c)) @result{} 3
+
+(value->things 1) @result{} (things a)
+(value->things 2) @result{} (things b)
+(value->things 3) @result{} (things c)
+@end example
+
+@noindent
+when used in a library, we can do the following to export the interface:
+
+@example
+(library (things)
+  (export things things->value value->things)
+  (import (rnrs))
+  (define A 1)
+  (define B 2)
+  (define C 3)
+  (define-c-flags things
+    (A B C)
+    (a b c)))
+@end example
+
+The typical use of this syntax is to define an interface for C language
+foreign constants.
+
+@meta{name} must be an identifier to which an enumeration set
+constructor syntax is bound; the syntax accepts only a single symbol as
+argument and it expands to an enumeration set with that symbol as
+element.
+
+The enumeration type is @code{enum-@meta{name}} and the original
+constructor syntax accepting any number of arguments is
+@code{%@meta{name}}.
+
+The @meta{flag} arguments are meant to be identifiers bound to any
+Scheme value, but they can be any value.  The @meta{symbol} arguments
+must be Scheme symbols which are used to define (in the given order) the
+universe of the enumeration.
+
+The function which converts from an enumeration set (holding a single
+argument) to the corresponding value is bound to
+@code{@meta{name}->value}.  The function which converts from a value to
+the enumeration set (holding a single argument) is bound to
+@code{value->@meta{name}}.
+@end deffn
+
+
+@deffn Syntax define-c-ior-flags @meta{name} (@metao{flag} @meta{flag} ...) (@metao{symbol} @meta{symbol} ...)
+Define a new enumeration type and a couple of functions to convert
+between enumeration sets of this type and a bitwise, inclusive, OR
+combination of exact integers.  Usage example:
+
+@example
+(define A (bitwise-arithmetic-shift-left 1 0))
+(define B (bitwise-arithmetic-shift-left 1 1))
+(define C (bitwise-arithmetic-shift-left 1 2))
+
+(define-c-ior-flags things
+  (A B C)
+  (a b c))
+
+(things->value (things a))      @result{} 1
+(things->value (things b))      @result{} 2
+(things->value (things a b))    @result{} 3
+(things->value (things c))      @result{} 4
+(things->value (things a c))    @result{} 5
+(things->value (things b c))    @result{} 6
+(things->value (things a b c))  @result{} 7
+
+(value->things 1) @result{} (things a)
+(value->things 2) @result{} (things b)
+(value->things 5) @result{} (things a c)
+@end example
+
+@noindent
+when used in a library, we can do the following to export the interface:
+
+@example
+(library (things)
+  (export things things->value value->things)
+  (import (rnrs))
+  (define A (bitwise-arithmetic-shift-left 1 0))
+  (define B (bitwise-arithmetic-shift-left 1 1))
+  (define C (bitwise-arithmetic-shift-left 1 2))
+  (define-c-ior-flags things
+    (A B C)
+    (a b c)))
+@end example
+
+The typical use of this syntax is to define an interface for C language
+foreign constants used as flags in inclusive OR combinations.
+
+@meta{name} must be an identifier to which an enumeration set
+constructor syntax is bound; the syntax accepts any number of symbols as
+arguments and it expands to an enumeration set with that symbols as
+elements.  The enumeration type is @code{enum-@meta{name}}.
+
+The @meta{flag} arguments must be identifiers bound to exact integers.
+The @meta{symbol} arguments must be Scheme symbols which are used to
+define (in the given order) the universe of the enumeration.
+
+The function which converts from an enumeration set to the corresponding
+bitwise, inclusive OR combination is bound to
+@code{@meta{name}->value}.  An assertion violation is raised if this
+function is applied to an enumeration set of the wrong type.
+
+The function which converts from a bitwise, inclusive OR combination to
+the enumeration set is bound to @code{value->@meta{name}}.  If this
+function is applied to an integer holding bits outside the ones coded in
+the definition of the enumeration, no error is raised.
+@end deffn
+
+@c page
+
+@include libs-streams.texi
+@include libs-loops.texi
+@include libs-comparisons.texi
+@include libs-identifier-alists.texi
+@include libs-identifier-properties.texi
 
 @c end of file

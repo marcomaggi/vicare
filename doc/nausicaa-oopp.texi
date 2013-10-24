@@ -1,0 +1,3284 @@
+@node oopp
+@chapter Object--Oriented Perfumed Programming
+
+
+@cindex @library{nausicaa language oopp}, library
+@cindex Library @library{nausicaa language oopp}
+
+
+The @library{nausicaa language oopp} library is an alternative to the
+@rsixlibrary{records syntactic} library; it is built upon
+@rsixlibrary{records syntactic} and @rsixlibrary{records procedural} and
+it adds some features like object--oriented perfumed programming
+(@oopp{}) notation to access fields and methods.
+
+The library is designed to work with type definitions imported for the
+@code{run} phase.  The facilities of the library work only on class
+types defined with @func{define-class} and label types defined by
+@func{define-label}.
+
+In code that defines new types: it is possible to use the facilities by
+just importing @library{nausicaa language oopp}, but the recommended
+way is to import the full @library{nausicaa} language.  Once a type is
+defined, it is possible to make full use of it by just importing its
+identifier.
+
+@menu
+* oopp overview::               Overview of labels and classes.
+* oopp notation::               Special syntax for labels and classes.
+* oopp define::                 Defining class and label types.
+* oopp parent::                 Type hierarchies.
+* oopp abstract::               Abstract class types.
+* oopp protocol::               Defining constructor protocols.
+* oopp maker::                  Defining custom makers.
+* oopp finaliser::              Defining custom finalisers.
+* oopp predicate::              Defining custom predicates.
+* oopp fields::                 Defining concrete and virtual fields.
+* oopp method::                 Defining classes having methods.
+* oopp setter::                 Defining classes having custom
+                                setters and getters.
+* oopp mixins::                 Composing with mixins.
+* oopp satisfy::                Verifying definition constraints.
+* oopp shadow::                 Label shadowing.
+* oopp is-a::                   Testing a value's type.
+* oopp slots::                  Accessors and mutators.
+* oopp inspect::                Tags and objects inspection.
+* oopp bindings::               Defining bindings in @oopp{} notation.
+@end menu
+
+@c page
+@node oopp overview
+@section Overview of labels and classes
+
+
+With the facilities of the library @rsixlibrary{records syntactic} we
+can define a new record type with the syntax:
+
+@example
+(define-record-type <alpha>
+  (fields (mutable a)
+          (immutable b)))
+
+(define (<alpha>-sum o)
+  (+ (<alpha>-a o)
+     (<alpha>-b o)))
+@end example
+
+@noindent
+and then use it with code like:
+
+@example
+(define o (make-<alpha> 1 2))
+(<alpha>? o)            @result{} #t
+(<alpha>-a o)           @result{} 1
+(<alpha>-b o)           @result{} 2
+(<alpha>-sum o)         @result{} 3
+@end example
+
+@noindent
+we notice that:
+
+@itemize
+@item
+If we define a type in a library and then we want to use it in another
+library, we have to export all the associated identifiers:
+@class{alpha}, @func{<alpha>?}, @func{<alpha>-a}, @func{<alpha>-b},
+@func{<alpha>-sum}.
+
+@item
+There is no way to define a function tied to this record type, neither a
+syntax to use such function: functions acting on @rnrs{6} records, like
+@func{<alpha>-sum}, are just ordinary Scheme functions.
+
+@item
+If we use @class{alpha} in a chunk of code and later we change the
+record type to something else: we have to change all the function names;
+there is no syntax to define interfaces implemented by multiple types.
+@end itemize
+
+Now let's look at the same definition using the facilities of
+@library{nausicaa language oopp} to define a class:
+
+@example
+(define-class <alpha>
+  (fields (mutable a)
+          (immutable b))
+  (method (sum (o <alpha>))
+     (+ (o a) (o b))))
+@end example
+
+@noindent
+it is pretty similar; we can use this type with code like:
+
+@example
+(<alpha> o (<> (1 2)))
+((<alpha>) o)           @result{} #t
+(o a)                   @result{} 1
+(o b)                   @result{} 2
+(o sum)                 @result{} 3
+@end example
+
+@noindent
+there are differences with the @rnrs{6} code:
+
+@itemize
+@item
+If we define a type in a library and then we want to use it in another
+library: we need to export only the type identifier @class{alpha}.
+
+@item
+It is possible to define methods associated to the class type and there
+is an @oopp{} syntax to use them.
+
+@item
+If we change the code to use a different type: we need to change only
+the type name, which appears in few places; it is possible to define
+interfaces implemented by multiple types.
+@end itemize
+
+Also notice that the @rnrs{6} bindings defined by
+@func{define-record-type} are available also with the facilities of
+@library{nausicaa language oopp}:
+
+@example
+(define-class <alpha>
+  (fields (mutable a)
+          (immutable b))
+  (method (sum (o <alpha>))
+     (+ (o a) (o b))))
+
+(define o (make-<alpha> 1 2))
+(<alpha>? o)            @result{} #t
+(<alpha>-a o)           @result{} 1
+(<alpha>-b o)           @result{} 2
+(<alpha>-sum o))        @result{} 3
+@end example
+
+@noindent
+so it is easy to convert existing record type definitions to classes
+definitions; notice, however, that it is not possible to just substitute
+@func{define-record-type} with @func{define-class}: some clauses of the
+former are not supported by the latter.
+
+So, classes can be used to define new record types when we would use
+@func{define-record-type} in plain @rnrs{6} code; @library{nausicaa
+language oopp} also allows us to define ``labels''.  Label
+definitions are similar to class definitions, but, while the latter
+defines a record type, the former only defines identifier syntaxes to
+handle any value.
+
+The following example defines a tag to handle immutable pair values:
+
+@example
+(define-label <pair>
+  (protocol (lambda ()
+              cons))
+  (predicate pair?)
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(<pair> P '(1 . 2))
+((<pair>) P)            @result{} #t
+(P car)                 @result{} 1
+(P cdr)                 @result{} 2
+@end example
+
+@c page
+@node oopp notation
+@section Special syntax for labels and classes
+
+
+@cindex @oopp{} notation
+@cindex Syntax of @oopp{} identifiers
+@cindex Tagged variable syntax
+@cindex Identifer syntax, @oopp{}
+@cindex @oopp{}, identifer syntax
+@cindex @oopp{}, tagged variable syntax
+
+
+After defining a class or label type with @library{nausicaa language
+oopp} we can ``tag'' variables to be of such type: the variable is an
+identifier syntax implementing @oopp{} notation.  To describe such
+syntax we assume the following definitions:
+
+@table @asis
+@item @meta{type}
+It is the identifier of the class or label.
+
+@item @meta{var}
+It is the identifier syntax we use to handle a type instance.
+
+@item @meta{expr}
+It is a generic expression.
+
+@item @code{<>}
+It is the auxiliary syntax exported by both @library{nausicaa language
+oopp} and @library{nausicaa language auxiliary-syntaxes}.
+
+@item @meta{id}
+It is an identifier used to select a type's method or field name.  When
+the syntax transformer attempts to match it against method and field
+names: the identifier is first converted to symbol, with
+@func{syntax->datum}, and then compared to method and field names with
+@func{eq?}.  Notice that methods and fields cannot have the same name in
+a type definition.
+
+@item @meta{form}
+It is a generic form: an expression, an auxiliary syntax, @dots{}.
+@end table
+
+@c ------------------------------------------------------------
+
+The @meta{type} syntax can be used as follows:
+
+@table @code
+@item (@meta{type} (@meta{form} ...))
+If @meta{type} implements a maker: apply the maker transformer function
+to the whole form.  If @meta{type} has no maker: this syntax expands to
+the public constructor function of @meta{type} applied to the results of
+evaluating the @meta{form} forms.  Examples with the public constructor:
+
+@example
+(define-label <pair>
+  (protocol (lambda () cons)))
+
+(define-label <list>
+  (protocol (lambda () list)))
+
+(<pair> (1 2))          @result{} (1 . 2)
+(<list> (1 2 3))        @result{} (1 2 3)
+@end example
+
+@noindent
+we can think of this syntax as implementing the following expansion:
+
+@example
+(<pair> (1 2)) @expansion{} (make-<pair> 1 2) @equiv{} (cons 1 2)
+@end example
+
+If the constructor takes no arguments: we just use null as second form
+in the syntax; example:
+
+@example
+(define-class <alpha>
+  (parent <top>)
+  (fields a b)
+  (protocol (lambda (make-top)
+              (lambda ()
+                ((make-top) 1 2)))))
+
+(define O (<alpha> ()))
+(<alpha>-a O)           @result{} 1
+(<alpha>-b O)           @result{} 2
+@end example
+
+Example using the maker transformer:
+
+@example
+(define-syntax pair
+  (syntax-rules ()))
+
+(define-label <pair>
+  (maker (lambda (stx)
+           (syntax-case stx (pair car cdr)
+             ((?type (pair (car ?a) (cdr ?d)))
+              #'(?type (?a ?d)))
+             ((?type (?a ?d))
+              #'(cons ?a ?d)))))
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(<pair> (pair
+          (car 1)
+          (cdr 2)))
+@result{} (1 . 2)
+
+(<pair> (1 2))
+@result{} (1 . 2)
+@end example
+
+@item (@meta{type})
+@itemx ((@meta{type}) @meta{expr})
+Expands to a reference to the type predicate, if any; when the type has
+no predicate: the result is a function taking one argument and always
+returning @true{}.  Examples:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(define-label <any>)  ;no predicate
+
+((<pair>) '(1 . 2))     @result{} #t
+((<pair>) "ciao")       @result{} #f
+
+((<any>) "ciao")        @result{} #t
+
+(for-all (<pair>)
+  '((1 . 2) (3 . 4)))   @result{} #t
+@end example
+
+@item (@meta{type} @meta{var})
+@itemx (@meta{type} @meta{var} @meta{expr})
+@itemx (@meta{type} @meta{var} (<> (@meta{form} ...)))
+These syntaxes expand to internal definitions that bind @meta{var} to
+intances of @meta{type}.  Notice that if values validation is turned on:
+the value of the binding must be an instance of @meta{type} according to
+its predicate (if any).
+
+@itemize
+@item
+The first syntax defines an identifier syntax for an uninitialised
+variable; example:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(<pair> O)
+@end example
+
+@noindent
+we can think of the last form as expanding to:
+
+@example
+(define G0)
+(define-syntax O
+  (make-variable-transformer
+    (lambda (stx)
+      --- #'G0 ---)))
+@end example
+
+@noindent
+where @code{G0} is an automatically generated identifier.
+
+@item
+The second syntax defines an identifier syntax for a variable
+initialised to the result of evaluating @meta{expr}; example:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(<pair> O '(1 . 2))
+@end example
+
+@noindent
+we can think of the last form as expanding to:
+
+@example
+(define G0 '(1 . 2))
+(define-syntax O
+  (make-variable-transformer
+    (lambda (stx)
+      --- #'G0 ---)))
+@end example
+
+@noindent
+where @code{G0} is an automatically generated identifier.
+
+@item
+The third syntax defines an identifier syntax for a variable initialised
+to the result of applying the maker transformer of @meta{type} to the
+syntax object:
+
+@example
+#'(@meta{type} (@meta{form} ...))
+@end example
+
+@noindent
+if @meta{type} has no maker transformer: the variable is initialised to
+the result of applying the public constructor of @meta{type} to the
+results of evaluating the @meta{form} forms.  Example with the public
+constructor:
+
+@example
+(define-label <pair>
+  (protocol (lambda () cons))
+  (predicate pair?))
+
+(<pair> O (<> (1 2)))
+@end example
+
+@noindent
+we can think of the last form as expanding to:
+
+@example
+(<pair> O (<pair> (1 2)))
+@end example
+
+@noindent
+and so to:
+
+@example
+(define G0 (make-<pair> 1 2))
+(define-syntax O
+  (make-variable-transformer
+    (lambda (stx)
+      --- #'G0 ---)))
+@end example
+
+@noindent
+where @code{G0} is an automatically generated identifier.
+@end itemize
+@end table
+
+@c ------------------------------------------------------------
+
+The @meta{var} identifier syntax can be used as follows:
+
+@table @code
+@item @meta{var}
+This syntax expands to a reference to the value.  Example:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(<pair> O '(1 . 2))
+
+O   @result{} '(1 . 2)
+@end example
+
+@item (set!/tags @meta{var} @meta{expr})
+This syntax expands to the use of @func{set!} as defined by @rnrs{6}:
+@meta{expr} becomes the new value of @meta{var}.  Notice that if values
+validation is turned on: the new value must be an instance of the type
+according to its predicate (if any).  Example:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(<pair> O '(1 . 2))
+(set!/tags O '(3 . 4))
+O                       @result{} '(3 . 4)
+
+(set!/tags O "ciao")    @error{} assertion violation
+@end example
+
+@item (@meta{var} @meta{id})
+Expands according to the following rules, in the given order:
+
+@enumerate
+@item
+If the type has a method named @meta{id}: this syntax expands to a call
+to such method with no arguments.
+
+@item
+If the type has a field named @meta{id}: this syntax expands to a call
+to the field accessor.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} field named @meta{id} with the @samp{$} stripped: this
+syntax expands to a call to the unsafe field accessor.
+@end enumerate
+
+Examples:
+
+@example
+(define-label <pair>
+  (virtual-fields (immutable car car))
+  (method (cdr O)
+    (cdr O)))
+
+(<pair> O '(1 . 2))
+(O car)         @result{} 1     ;field accessor application
+(O cdr)         @result{} 2     ;method application
+
+(define-class <alpha>
+  (fields a))
+
+(<alpha> A (1))
+(A a)           @result{} 1     ;field accessor application
+(A $a)          @result{} 1     ;unsafe field accessor application
+@end example
+
+@item (set!/tags (@meta{var} @meta{id}) @meta{expr})
+Expands according to the following rules, in the given order:
+
+@enumerate
+@item
+If the type has a field named @meta{id}: this syntax expands to a call
+to the field mutator.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} field named @meta{id} with the @samp{$} stripped: this
+syntax expands to a call to the unsafe field mutator.
+
+@item
+If @meta{id} is not the name of a field or it is the name of an
+immutable field: this syntax causes a syntax violation to be raised and
+expand time.
+@end enumerate
+
+Example:
+
+@example
+(define-label <pair>
+  (virtual-fields (mutable car car set-car!)
+                  (mutable cdr cdr set-cdr!)))
+
+(<alpha> O (cons 1 2))
+(O car)         @result{} 1
+(O cdr)         @result{} 2
+
+(set!/tags (o car) 77)
+(set!/tags (o cdr) 99)
+O               @result{} (77 . 99)
+
+(define-class <alpha>
+  (fields (mutable a)))
+
+(<alpha> A (1))
+(set!/tags (A a)  2)    ;field mutator application
+(set!/tags (A $a) 3)    ;unsafe field mutator application
+@end example
+
+@item (@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
+Expands to the result of applying the type's getter transformer to the
+syntax object (lookout for the parentheses):
+
+@example
+#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+@end example
+
+@noindent
+if the type has no getter: this syntax causes a syntax violation
+exception to be raised at expand time.  Examples:
+
+@example
+(define-label <vector>
+  (getter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)))
+               #'(vector-ref ?var ?idx))))))
+
+(define-label <matrix>
+  (getter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?row) (?col)))
+               #'(vector-ref
+                    (vector-ref ?var ?row)
+                    ?col))))))
+
+(<vector> V '#(1 2 3))
+(<matrix> M '#(#(1 2 3)
+               #(4 5 6)))
+
+(V[0])                  @result{} 1
+(V[1])                  @result{} 2
+(V[2])                  @result{} 3
+
+(M[0][2])               @result{} 3
+(M[1][1])               @result{} 5
+@end example
+
+@item (set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+@itemx (set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
+Expands to the result of applying the type's setter transformer to the
+syntax object (lookout for the parentheses):
+
+@example
+#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+@end example
+
+@noindent
+if the type has no setter transformer: this syntax causes a syntax
+violation exception to be raised at expand time.  Examples:
+
+@example
+(define-label <vector>
+  (setter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)) ?expr)
+               #'(vector-set! ?var ?idx ?expr))))))
+
+(define-label <matrix>
+  (setter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?row) (?col)) ?expr)
+               #'(vector-set!
+                    (vector-ref ?var ?row)
+                    ?col ?expr))))))
+
+(<vector> V (vector 1 2 3))
+(<matrix> M (vector (vector 1 2 3)
+                    (vector 4 5 6)))
+
+(set!/tags V[1] 77)
+(set!/tags (V[2]) 99)
+V               @result{} #(1 77 99)
+
+(set!/tags M[0][2] 77)
+(set!/tags (M[1][1]) 99)
+M               @result{} #(#(1 2 77) #(4 99 6))
+@end example
+
+@item (@meta{var} @meta{id} @metao{form} @meta{form} ...)
+This syntax allows the use of nested syntaxes for typed fields.  It is
+expanded according to the following rules, in the given order:
+
+@enumerate
+@item
+If the type has a method named @meta{id}: this syntax expands to a call
+to such method with arguments @metao{form}, @meta{form}, @dots{}.
+Example:
+
+@example
+(define-label <list>
+  (method (append3 a b c)
+    (append a b c)))
+
+(<list> A '(1 2))
+(define B '(3 4))
+(A append3 B '(5 6))    @result{} (1 2 3 4 5 6)
+@end example
+
+@item
+If the type has a @strong{tagged} field named @meta{id}: this syntax
+expands to a recursive reference to the members @metao{form},
+@meta{form}, @dots{} of the field's value.  Example:
+
+@example
+(define-label <list>
+  (virtual-fields (immutable (car <list>) car)
+                  (immutable (cdr <list>) cdr))
+  (method (length O)
+    (length O)))
+
+(<list> O '((1 . 2) . (3 . 4)))
+(<list> L '(1 2 3))
+
+(O car)                 @result{} (1 . 2)
+(O car car)             @result{} 1
+(O car cdr)             @result{} 2
+(O cdr)                 @result{} (3 . 4)
+(O cdr car)             @result{} 3
+(O cdr cdr)             @result{} 4
+
+(L car)                 @result{} 1
+(L cdr)                 @result{} (2 3)
+(L cdr cdr)             @result{} (3)
+(L length)              @result{} 3
+(L cdr length)          @result{} 2
+(L cdr cdr length)      @result{} 1
+@end example
+
+In other words, if @meta{id} is the name of a field with type
+@metai{type}, as in:
+
+@example
+(define-label @meta{type}
+  (virtual-fields (immutable (@meta{id} @metai{type}) @meta{accessor})))
+@end example
+
+@noindent
+we can think of the form:
+
+@example
+(@meta{var} @meta{id} @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+as expanding to:
+
+@example
+(let ()
+  (@metai{type} G0 (@meta{accessor} @meta{var}))
+  (G0 @metao{form} @meta{form} ...))
+@end example
+
+@noindent
+where @code{G0} is an automatically generated identifier; the syntax use
+@code{(G0 @metao{form} @meta{form} ...)} can be any of the syntaxes
+supported by @metai{type}.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} and @strong{tagged} field named @meta{id} with the
+@samp{$} stripped: this syntax expands to a recursive reference to the
+members @metao{form}, @meta{form}, @dots{} of the field's value which is
+extracted using the unsafe accessor.
+
+@item
+If the type has an @strong{untyped} field named @meta{id}: this syntax
+causes a syntax violation exception to be raised at expand time.
+Example:
+
+@example
+(define-label <pair>
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(<pair> O '(1 . 2))
+(O car)         @result{} 1
+(O cdr)         @result{} 2
+
+(O car car)     @error{} syntax violation
+@end example
+@end enumerate
+
+@item (set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
+This syntax allows the use of nested field mutator and setter syntaxes
+for typed fields.  It expands according to the following rules, in the
+given order:
+
+@enumerate
+@item
+If the type has a @strong{tagged} field named @meta{id}: this syntax
+expands to a recursive @func{set!/tags} syntax for the field's value.
+
+@item
+If @meta{id} has a string name prefixed with @samp{$} and the type has a
+@strong{concrete} and @strong{tagged} field named @meta{id} with the
+@samp{$} stripped: this syntax expands to a recursive @func{set!/tags}
+syntax for the field's value, which is extracted using the unsafe
+accessor.
+@end enumerate
+
+Example of nested field mutation:
+
+@example
+(define-class <alpha>
+  (fields (mutable v)))
+
+(define-class <beta>
+  (fields (immutable (a <alpha>))))
+
+(define-class <gamma>
+  (fields (immutable (b <beta>))))
+
+(<alpha> A (<> (1)))
+(<beta>  B (<> (A)))
+(<gamma> O (<> (B)))
+
+((<gamma>) O)           @result{} #t
+(O b)                   @result{} #<record <beta>>
+(O b a)                 @result{} #<record <alpha>>
+(O b a v)               @result{} 1
+
+(set!/tags (O b a v) 2)
+(O b a v)               @result{} 2
+@end example
+
+Example of nested field setter transformer invocation:
+
+@example
+(define-label <vector>
+  (getter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)))
+               #'(vector-ref ?var ?idx)))))
+  (setter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)) ?expr)
+               #'(vector-set! ?var ?idx ?expr))))))
+
+(define-class <alpha>
+  (fields (immutable (v <vector>))))
+
+(define-class <beta>
+  (fields (immutable (a <alpha>))))
+
+(define-class <gamma>
+  (fields (immutable (b <beta>))))
+
+(<alpha> A (<> ((vector 1 2 3))))
+(<beta>  B (<> (A)))
+(<gamma> O (<> (B)))
+
+((<gamma>) O)           @result{} #t
+(O b)                   @result{} #<record <beta>>
+(O b a)                 @result{} #<record <alpha>>
+(O b a v)               @result{} #(1 2 3)
+(O b a v[0])            @result{} 1
+(O b a v[1])            @result{} 2
+(O b a v[2])            @result{} 3
+
+(set!/tags (O b a v[0]) 10)
+(set!/tags (O b a v[1]) 20)
+(set!/tags (O b a v[2]) 30)
+(O b a v)               @result{} #(10 20 30)
+@end example
+@end table
+
+@c page
+@node oopp define
+@section Defining class and label types
+
+
+@cindex Class type definition
+@cindex Label type definition
+@cindex Type, class definition
+@cindex Type, label definition
+@cindex Definition of class types
+@cindex Definition of label types
+
+
+In the context of the library @library{nausicaa language oopp}:
+
+@itemize
+@item
+A @dfn{class type} is a regular record type as defined by
+@rsixlibrary{records syntactic}, with the constraints of being
+non--generative and derived only from record types defined with the
+syntax @func{define-syntax}.  New class types are defined by
+@func{define-class} which generates auxiliary syntaxes to allow for
+virtual fields, methods, @oopp{} notation and multiple construction
+protocols.
+
+@item
+A @dfn{label type} is a syntactic interface applicable to either a
+record or non--record value; a label type can have a class type as
+parent, but not vice versa.  Label types are defined by
+@func{define-label} which generates syntaxes to allow for virtual
+fields, methods, @oopp{} notation and simple construction protocol.
+@end itemize
+
+
+@defmac define-class @meta{name} @meta{clause} ...
+Define a new record type satisfying the constraints of a class
+definition; expand to a regular record type definition using
+@rsixlibrary{records syntactic} and some additional syntax definitions.
+
+There is some compatibility between the arguments of @func{define-class}
+and the arguments of @func{define-record-type} from @rsixlibrary{records
+syntactic}:
+
+@itemize
+@item
+The form @meta{name} is defined in the same way of the first argument of
+@func{define-record-type}, it can be one among:
+
+@example
+@meta{class-id}
+(@meta{class-id} @meta{constructor-id} @meta{predicate-id})
+@end example
+
+@noindent
+where: @meta{class-id} is the type identifier; @meta{constructor-id} is
+the identifier to which the public constructor function is bound;
+@meta{predicate-id} is the identifier to which the type predicate
+function is bound.
+
+@item
+The forms @meta{clause} are similar to the clauses of an @rnrs{6} record
+type definition, @func{define-class} accepts the following clauses:
+
+@example
+abstract        nongenerative           parent
+sealed          opaque
+fields          virtual-fields
+method          method-syntax           methods
+protocol        public-protocol         super-protocol
+getter          setter
+maker           satisfies
+@end example
+
+@noindent
+among these, the following clauses are basically defined in the same way
+of clauses for @func{define-record-type}, with some extensions for
+@code{fields}:
+
+@cindex @clause{nongenerative} clause in class definitions
+@cindex @clause{parent} clause in class definitions
+@cindex @clause{sealed} clause in class definitions
+@cindex @clause{opaque} clause in class definitions
+@cindex @clause{fields} clause in class definitions
+@cindex @clause{protocol} clause in class definitions
+@example
+nongenerative           parent
+sealed                  opaque
+fields                  protocol
+@end example
+
+@noindent
+so a @func{define-record-type} syntax use with only these forms can be
+converted to @func{define-class} by just changing the syntax keyword;
+notice that there is no @code{parent-rtd} clause.
+@end itemize
+
+Class types are always non--generative; when the @code{nongenerative}
+clause is not explicitly used, the @code{(nongenerative)} clause is
+implicitly added to the definition and a unique type identifier is
+automatically generated; however it is safer to explicitly specify the
+@uid{}.
+
+When the @code{(abstract)} clause is present: the class type cannot be
+instantiated.
+
+If the @func{parent} clause is not explicitly present: the clause
+@code{(parent <top>)} is implicitly added to the class definition, all
+the classes are derived from @class{top}.  Notice that the constructor
+of @class{top} accepts no arguments, so the protocol for a class derived
+from @class{top} should be something like:
+
+@example
+(protocol (lambda (make-top)
+            (lambda (field ...)
+              ((make-top) field ...))))
+@end example
+@end defmac
+
+
+@defmac define-label @meta{name} @meta{clause} ...
+Define a new label type; expand to a set of syntax definitions and some
+functions for constructors and predicates.
+
+There is some similarity between the arguments of @func{define-label}
+and the arguments of @func{define-class}:
+
+@itemize
+@item
+The form @meta{name} is defined in the same way of the first argument of
+@func{define-class}, it can be one among:
+
+@example
+@meta{label-id}
+(@meta{label-id} @meta{constructor-id} @meta{predicate-id})
+@end example
+
+@noindent
+where: @meta{label-id} is the type identifier; @meta{constructor-id} is
+the identifier to which the public constructor function is bound;
+@meta{predicate-id} is the identifier to which the type predicate
+function is bound.
+
+Label constructors are used to build Scheme values with the same syntax
+used to build class instances.  Predicates are used to check values
+using a custom function specified in the label definition.
+
+@item
+The forms @meta{clause} are similar to the clauses of a
+@func{define-class} definition, @func{define-label} accepts the
+following clauses:
+
+@example
+parent                  nongenerative
+predicate
+protocol                maker
+method                  method-syntax
+methods                 virtual-fields
+getter                  setter
+satisfies               shadows
+@end example
+@end itemize
+
+Label types are always associated to a unique identifier; such
+identifier has nothing to do with generative or non--generative record
+types, because a label is not a record type.  When the
+@code{nongenerative} clause is not explicitly used, the
+@code{(nongenerative)} clause is implicitly added to the definition and
+a unique type identifier is automatically generated; however it is safer
+to explicitly specify the @uid{}.
+
+If the @func{parent} clause is not explicitly present: the clause
+@code{(parent <top>)} is implicitly added to the label definition, all
+the labels are derived from @class{top}.  Notice that the semantics of
+label constructor protocols is @strong{not} the same as the semantics of
+class constructor protocols; a label protocol function does @strong{not}
+accept the parent's constructor function as argument.
+@end defmac
+
+@c page
+@node oopp parent
+@section Type hierarchies
+
+
+@cindex Defining inheritance for class types
+@cindex Defining inheritance for label types
+@cindex Class types, defining inheritance
+@cindex Label types, defining inheritance
+@cindex Inheritance, class types
+@cindex Inheritance, label types
+
+
+Type inheritance is defined by the @code{parent} clause of
+@func{define-class} and @func{define-label}; only single inheritance is
+supported.  Class types can only inherit from other class types,
+inheritance is not supported from record types defined by either the
+syntactic or procedural layers of @rnrs{6} libraries.  Label types can
+inherit from either a class or label type.
+
+
+@deffn {Auxiliary Syntax} parent @meta{type}
+The @code{parent} binding is the one exported by the
+@rsixlibrary{records syntactic} library.  This clause is accepted in
+both class and label types.  Make the type of the enclosing definition a
+subtype of @meta{type}, which must be a type identifier.
+
+When this clause is not present in a type definition: inheritance from
+@class{top} is implicitly assumed.
+@end deffn
+
+
+The following is an example of class definition inheriting from
+@class{top}:
+
+@example
+(define-class <alpha>
+  (fields a))
+
+(<alpha> O (1))
+((<alpha>) O)           @result{} #t
+((<top>) O)             @result{} #t
+@end example
+
+@noindent
+the following is an example of class definition inheriting from another
+class:
+
+@example
+(define-class <alpha>
+  (fields a))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields b))
+
+(<beta> O (1 2))
+
+((<beta>)  O)           @result{} #t
+((<alpha>) O)           @result{} #t
+((<top>)   O)           @result{} #t
+
+(O a)                   @result{} 1
+(O b)                   @result{} 2
+@end example
+
+@noindent
+the following is an example of label definition inheriting from
+@class{top}:
+
+@example
+(define-label <pair>
+  (protocol (lambda () cons))
+  (predicate pair?)
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(<pair> O (1 2))
+((<pair>) O)            @result{} #t
+((<top>)  O)            @result{} #t
+
+(O car)                 @result{} 1
+(O cdr)                 @result{} 2
+@end example
+
+@noindent
+the following is an example of label definitions inheriting from other
+labels:
+
+@example
+(define-label <car>
+  (virtual-fields (immutable car car)))
+
+(define-label <car-and-cdr>
+  (parent <car>)
+  (virtual-fields (immutable cdr cdr)))
+
+(define-label <pair>
+  (parent <car-and-cdr>)
+  (predicate pair?))
+
+(<pair> O '(1 . 2))
+
+((<pair>) O)            @result{} #t
+((<car-and-cdr>)  O)    @result{} #t
+((<car>)  O)            @result{} #t
+((<top>)  O)            @result{} #t
+
+(O car)                 @result{} 1
+(O cdr)                 @result{} 2
+@end example
+
+@noindent
+the following is an example of label inheriting from a class:
+
+@example
+(define-class <alpha>
+  (fields a b))
+
+(define-label <beta>
+  (parent <alpha>)
+  (predicate <alpha>?)
+  (protocol (lambda () make-<alpha>))
+  (virtual-fields (immutable sum
+                             (lambda/tags ((O <beta>))
+                               (+ (O a) (O b))))))
+
+(<beta> O (<> (1 2)))
+
+((<beta>)  O)           @result{} #t
+((<alpha>) O)           @result{} #t
+((<top>)   O)           @result{} #t
+
+(O a)                   @result{} 1
+(O b)                   @result{} 2
+(O sum)                 @result{} 3
+@end example
+
+@c page
+@node oopp abstract
+@section Abstract class types
+
+
+@deffn {Auxiliary Syntax} abstract
+Makes a class type non instantiable; it is meant to be used for class
+definitions in which some methods are generic functions and the
+subclasses are responsible to provide implementations.  This clause is
+accepted in class and mixins definitions.  This clause can be used only
+once.
+
+It is a syntax violation to specify a public or common protocol in the
+definition of an abstract class; only the super protocol is allowed.
+@end deffn
+
+@c page
+@node oopp protocol
+@section Defining constructor protocols
+
+
+@menu
+* oopp protocol classes::       Class construction protocols.
+* oopp protocol labels::        Labeled values construction protocols.
+@end menu
+
+@c page
+@node oopp protocol classes
+@subsection Class construction protocols
+
+
+Class types have explicitly defined construction protocols; the
+semantics of protocol functions is @strong{the same} as the one defined
+by @rnrs{6} for record protocols.  The following constructor functions
+are made available by @func{define-class}:
+
+@table @dfn
+@item Public constructor
+It is used when instantiating a class through the maker syntax.  The
+public constructor of a class @class{B}, derived from class @class{A},
+is built on top of the super constructor of @class{A}.  It is defined
+with the @clause{public-protocol} clause.
+
+@item Super constructor
+It is used when instantiating a subclass, it is the function handed as
+argument to the subclass' constructor protocol function.  The super
+constructor of a class @class{B}, derived from class @class{A}, is built
+on top of the super constructor of @class{A}.  It is defined with the
+@func{super-protocol} clause.
+
+@item Common constructor
+When the public constructor is not explicitly defined: the common
+constructor is used as public constructor.  When the super constructor
+is not explicitly defined: the common constructor is used as super
+constructor.  The common constructor of a class @class{B}, derived from
+class @class{A}, is built on top of the super constructor of @class{A}.
+It is defined with the @clause{protocol} clause.
+
+When no common constructor is explicitly defined: it defaults to the
+from--fields constructor.
+
+@item From--fields constructor
+It is always and automatically generated to be used by the macro
+@func{make-from-fields} and it builds instances from raw field values.
+The from--fields constructor of a class @class{B}, derived from class
+@class{A}, is built on top of the from--fields constructor of @class{A}.
+
+This constructor is equivalent to the default constructor generated by
+@func{define-record-type} when no @clause{protocol} clause is used.
+@end table
+
+
+@deffn {Auxiliary Syntax} protocol @meta{expression}
+Define the common constructor's protocol function.  @meta{expression}
+must evaluate to the protocol function.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} public-protocol @meta{expression}
+Define the public constructor's protocol function.  @meta{expression}
+must evaluate to the protocol function.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} super-protocol @meta{expression}
+Define the super constructor's protocol function.  @meta{expression}
+must evaluate to the protocol function.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples of building class instances
+
+Here is an example of default constructor usage; notice that no
+@clause{protocol} syntax is used, so the constructors accept the raw
+field values as arguments:
+
+@example
+(define-class <alpha>
+  (fields a b))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields c d))
+
+(<alpha> A (<> (1 2)))
+(A a)                   @result{} 1
+(A b)                   @result{} 2
+
+(<beta> B (<> (1 2 3 4)))
+(B a)                   @result{} 1
+(B b)                   @result{} 2
+(B c)                   @result{} 3
+(B d)                   @result{} 4
+@end example
+
+The following code makes use of explicitly defined common protocols
+completely equivalent to the default ones:
+
+@example
+(define-class <alpha>
+  (fields a b)
+  (protocol (lambda (make-top)
+              (lambda (a b)
+                ((make-top) a b)))))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields c d)
+  (protocol (lambda (make-alpha)
+              (lambda (a b c d)
+                ((make-alpha a b) c d)))))
+
+(<alpha> A (<> (1 2)))
+(A a)                   @result{} 1
+(A b)                   @result{} 2
+
+(<beta> B (<> (1 2 3 4)))
+(B a)                   @result{} 1
+(B b)                   @result{} 2
+(B c)                   @result{} 3
+(B d)                   @result{} 4
+@end example
+
+The following code makes use of the @func{make-from-fields} syntax:
+
+@example
+(define-class <alpha>
+  (fields a b))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields c d))
+
+(<alpha> A (make-from-fields <alpha> 1 2))
+(A a)                   @result{} 1
+(A b)                   @result{} 2
+
+(<beta> B (make-from-fields <beta> 1 2 3 4))
+(B a)                   @result{} 1
+(B b)                   @result{} 2
+(B c)                   @result{} 3
+(B d)                   @result{} 4
+@end example
+
+The following code defines a common protocol accepting only some of the
+fields' values:
+
+@example
+(define-class <alpha>
+  (fields a b)
+  (protocol (lambda (make-top)
+              (lambda (a)
+                ((make-top) a 2)))))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields c d)
+  (protocol (lambda (make-alpha)
+              (lambda (a c)
+                ((make-alpha a) c 4)))))
+
+(<alpha> A (<> (1)))
+(A a)                   @result{} 1
+(A b)                   @result{} 2
+
+(<beta> B (<> (1 3)))
+(B a)                   @result{} 1
+(B b)                   @result{} 2
+(B c)                   @result{} 3
+(B d)                   @result{} 4
+@end example
+
+The following code shows how to use the super and public protocols:
+
+@example
+(define-class <alpha>
+  (fields a b)
+  (public-protocol (lambda (make-top)
+                     (lambda ()
+                       ((make-top) 1 2))))
+  (super-protocol  (lambda (make-top)
+                     (lambda (a b)
+                       ((make-top) (* 10 a) (* 10 b))))))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields c d)
+  (public-protocol (lambda (make-alpha)
+                     (lambda (a b)
+                       ((make-alpha a b) 3 4)))))
+
+(<alpha> A (<> ()))
+(A a)                   @result{} 1
+(A b)                   @result{} 2
+
+(<beta> B (<> (1 2)))
+(B a)                   @result{} 10
+(B b)                   @result{} 20
+(B c)                   @result{} 3
+(B d)                   @result{} 4
+@end example
+
+@c page
+@node oopp protocol labels
+@subsection Labeled values construction protocols
+
+
+Labeled values have explicitly defined construction protocols; the
+semantics of protocol functions is @strong{different} from the one
+defined by @rnrs{6} for record protocols.  The following constructor
+functions are built by @func{define-label}:
+
+@table @dfn
+@item Public constructor
+It is used when building a labeled value through the maker syntax.  The
+public constructor is a standalone function: it does @strong{not} invoke
+the constructor of the superlabel or superclass.  It is defined with the
+@clause{public-protocol} clause.
+
+@item Common constructor
+When the public constructor is not explicitly defined: the common
+constructor is used as public constructor.  The common constructor is a
+standalone function: it does @strong{not} invoke the constructor of the
+superlabel or superclass.  It is defined with the @clause{protocol}
+clause.
+
+When no common constructor is explicitly defined: a default function is
+created accepting any number of arguments and always raising an
+@condition{assertion} exception.
+@end table
+
+
+Label protocol functions must accept no arguments and return a
+constructor function.
+
+
+@deffn {Auxiliary Syntax} protocol @meta{expression}
+Define the common constructor's protocol function.  @meta{expression} is
+evaluated only if the common protocol is used and it must evaluate to
+the protocol function.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} public-protocol @meta{expression}
+Define the public constructor's protocol function.  @meta{expression}
+must evaluate to the protocol function.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples of building labeled values
+
+Here is an example of common protocol definition for a labeled value:
+
+@example
+(define-label <the-pair>
+  (protocol (lambda () cons))
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(<the-pair> P (<> (1 2)))
+(P car)                 @result{} 1
+(P cdr)                 @result{} 2
+@end example
+
+@c page
+@node oopp maker
+@section Defining custom makers
+
+
+@deffn Syntax make-from-fields @meta{class} @meta{expression} ...
+Build and return an instance of @meta{class} from raw field values; each
+@meta{expression} is evaluated once and it must return a raw field
+value.  The order of the @meta{expression} arguments must match the
+order of the arguments to the from--fields constructor.  @ref{oopp
+protocol classes, From--fields constructor}.
+
+This macro @strong{cannot} be used to build labeled values.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} maker @meta{expression}
+Define the transformer function used by the maker syntax of classes and
+labels.  @meta{expression} is evaluated once at expand time and it must
+return a macro transformer function.
+
+When the maker syntax of @meta{type}:
+
+@example
+(@meta{type} (@meta{arg} @dots{}))
+@end example
+
+@noindent
+is expanded, the transformer is applied to a syntax object:
+
+@example
+#'(@meta{type} (@meta{arg} ...))
+@end example
+
+@noindent
+and it must return a syntax object representing an expression that,
+evaluated at run time, must return an instance of @meta{type} or raise
+an exception.
+
+Example:
+
+@example
+(define-class <rect-coords>
+  (fields x y)
+  (maker (lambda (stx)
+           (syntax-case stx (rec pol)
+             ((_ (pol ?rho ?theta))
+              #'(let ((rho   ?rho)
+                      (theta ?theta))
+                  (make-<rect-coords> (* rho (cos theta))
+                                      (* rho (sin theta)))))
+             ((_ (rec ?x ?y))
+              #'(make-<rect-coords> ?x ?y))))))
+
+(<rect-coords> R (<> (rec 1.0 2.0)))
+(R x)                   @result{} 1.0
+(R y)                   @result{} 2.0
+
+
+(<rect-coords> Q (<> (pol 1.0 2.0)))
+(R x)                   @result{} -0.4161468365471424
+(R y)                   @result{} +0.9092974268256817
+@end example
+@end deffn
+
+@c page
+@node oopp finaliser
+@section Defining custom finalisers
+
+
+@deffn {Auxiliary Syntax} finaliser @meta{expression}
+Optional clause selecting a finaliser function for class instances;
+@vicareref{iklib records final, Automatic finalisation of records}.
+This clause can be used in the body of @func{define-class} and
+@func{define-mixin}.
+
+@meta{expression}, evaluated at run--time, must return a function
+accepting a single argument; such function is used as second argument in
+a call to @func{record-destructor-set!} setting a destructor function
+for instances of the class type.
+@end deffn
+
+@c page
+@node oopp predicate
+@section Defining custom predicates
+
+
+Predicate clauses allow the definition of custom predicates for labeled
+values; they cannot be used in the definition of class types.
+
+
+@deffn {Auxiliary Syntax} predicate @meta{expression}
+Define a custom predicate function or syntax to be used to identify
+instances of labeled values with the predicate syntax or the
+@func{is-a?} macro.  This clause can be used in the body of
+@func{define-label} and @func{define-mixin}.
+
+@meta{expression} is evaluated once and it must return a predicate
+function.
+@end deffn
+
+
+Usage example:
+
+@example
+(define-label <pair>
+  (predicate pair?)
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+((<pair>) '(1 . 2))             @result{} #t
+((<pair>) 123)                  @result{} #f
+
+(is-a? '(1 . 2) <pair>)         @result{} #t
+(is-a? 123 <pair>)              @result{} #f
+@end example
+
+Custom predicates of sublabels are composed with the custom predicates
+of their superlabels, with the predicate of the superlabel applied
+first; example:
+
+@example
+(define-label <list>
+  (predicate list?)
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+(define-label <list-of-numbers>
+  (parent <list>)
+  (predicate (lambda (ell)
+               (for-all number? ell))))
+
+(define L '(1 2 3))
+(define M '(a b c))
+(define N "abc")
+
+((<list>) L)                 @result{} #t
+((<list-of-numbers>) L)      @result{} #t
+(<list>? L)                  @result{} #t
+(<list-of-numbers>? L)       @result{} #t
+
+((<list>) M)                 @result{} #t
+((<list-of-numbers>) M)      @result{} #f
+
+((<list>) N)                 @result{} #f
+((<list-of-numbers>) N)      @result{} #f
+@end example
+
+@noindent
+the predicate function of @class{list-of-numbers} is equivalent to:
+
+@example
+(define <list-of-numbers>-private-predicate
+  (lambda (ell)
+    (for-all number? ell)))
+
+(define (<list-of-numbers>? obj)
+  (and (list? obj)
+       (<list-of-numbers>-private-predicate obj)))
+@end example
+
+@c page
+@node oopp fields
+@section Defining concrete and virtual fields
+
+
+@deffn {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+Add concrete fields to the enclosing class or mixin definition; labels
+cannot have concrete fields.  This clause can be used multiple times in
+the same type definition.  We note explicitly that: for concrete fields
+the accessor and mutator are automatically generated, and we optionally
+have to select their names.
+
+@clause{fields} is the binding exported by the library
+@rsixlibrary{records syntactic} and reexported by the libraries
+@library{nausicaa language auxiliary-syntaxes} and @library{nausicaa
+language oopp}.
+
+The format of the @meta{field-spec} arguments is equal to the one
+defined by @rnrs{6} in the syntactic records layer, extended with type
+tags.  Each @meta{field-spec} argument can have one of the formats as
+specified by @rnrs{6}:
+
+@example
+@meta{name}
+(immutable @meta{name})
+(immutable @meta{name} @meta{accessor})
+(mutable @meta{name})
+(mutable @meta{name} @meta{accessor} @meta{mutator})
+@end example
+
+@noindent
+where:
+
+@table @asis
+@item @meta{name}
+Is an identifier representing the name of the field.
+
+@item @meta{accessor}
+Is an identifier representing the name of the accessor.
+
+@item @meta{mutator}
+Is an identifier representing the name of the mutator.
+@end table
+
+@noindent
+when the names of the accessor and mutator are omitted: default names
+are build as specified by @rnrs{6}.
+
+In addition the following formats are supported:
+
+@example
+(@meta{name} @meta{tag})
+(immutable (@meta{name} @meta{tag}))
+(immutable (@meta{name} @meta{tag}) @meta{accessor})
+(mutable (@meta{name} @meta{tag}))
+(mutable (@meta{name} @meta{tag}) @meta{accessor} @meta{mutator})
+@end example
+
+@noindent
+where @meta{tag} is a bound identifier representing a class or label
+name.
+@end deffn
+
+
+@deffn {Auxiliary Syntax} virtual-fields @meta{field-spec} @dots{}
+Add virtual fields to the enclosing class, label or mixin definition.
+This clause can be used multiple times in the same type definition.  We
+note explicitly that: for virtual fields the accessor and mutator must
+be explicitly defined as functions or syntaxes, and we optionally have
+to select their names.
+
+@clause{virtual-fields} is the binding exported by the library
+@library{nausicaa language auxiliary-syntaxes} and reexported by the
+library @library{nausicaa language oopp}.
+
+The @meta{field-spec} arguments have syntax similar to @func{fields}
+ones, but with different semantics:
+
+@itemize
+@item
+An immutable virtual field is defined by a field name and a field
+accessor which can be applied to a class instance to compute a value.
+
+@item
+A mutable virtual field is defined by a field name, a field accessor
+which can be applied to a class instance to compute a value, a field
+mutator which can be applied to a class instance to mutate its fields.
+@end itemize
+
+The format of the @meta{field-spec} arguments must be one among:
+
+@example
+@meta{name}
+(immutable @meta{name})
+(immutable @meta{name} @meta{accessor})
+(mutable @meta{name})
+(mutable @meta{name} @meta{accessor} @meta{mutator})
+(@meta{name} @meta{tag})
+(immutable (@meta{name} @meta{tag}))
+(immutable (@meta{name} @meta{tag}) @meta{accessor})
+(mutable (@meta{name} @meta{tag}))
+(mutable (@meta{name} @meta{tag}) @meta{accessor} @meta{mutator})
+@end example
+
+@noindent
+where:
+
+@table @asis
+@item @meta{name}
+Is an identifier representing the name of the field;
+
+@item @meta{tag}
+Is a bound identifier representing a class or label name.
+
+@item @meta{accessor}
+Is either an identifier representing the name of the accessor or an
+expression evaluating to the accessor function.  When @meta{accessor} is
+an identifier: it can be bound either to a function or to a syntax; in
+both cases, @meta{accessor} is used as follows to extract the value of
+the virtual field:
+
+@example
+(@meta{accessor} @var{instance})
+@end example
+
+@item @meta{mutator}
+Is either an identifier representing the name of the mutator or an
+expression evaluating to the mutator function.  When @meta{mutator} is
+an identifier: it can be bound either to a function or to a syntax; in
+both cases, @meta{mutator} is used as follows to set the new value of
+the virtual field:
+
+@example
+(@meta{mutator} @var{instance} @var{new-value})
+@end example
+@end table
+
+When @meta{accessor} or @meta{mutator} are @strong{not} present: an
+identifier is automatically generated for them following the same rules
+established by @rnrs{6} for the concrete fields of a record type.  It is
+our responsibility to define a function or syntax bound to such
+identifiers and suitable to be used as accessor or mutator.
+@end deffn
+
+
+The following is an example of class virtual fields usage in which the
+accessor and mutator are defined as expressions inlined in the class
+definition:
+
+@example
+(import (vicare numerics constants))
+
+(define-class <angle>
+  (fields (mutable (radians <real>)))
+  (virtual-fields
+    (mutable (degrees <real>)
+             (lambda/tags ((A <angle>))
+               (* (/ 180.0 greek-pi) (A radians)))
+             (lambda/tags ((A <angle>) (deg <real>))
+               (set! (A radians) (* (/ greek-pi 180.0) deg))))))
+
+(<angle> A (<> (greek-pi)))
+(A radians)             @result{} greek-pi
+(A degrees)             @result{} 180.0
+(set! (A degrees) 90.0)
+(A radians)             @result{} greek-pi/2
+@end example
+
+@noindent
+here is the same definition with accessor and mutator defined as
+functions and the default names:
+
+@example
+(import (vicare numerics constants))
+
+(define-class <angle>
+  (fields (mutable (radians <real>)))
+  (virtual-fields (mutable (degrees <real>))))
+
+(define (<angle>-degrees (A <angle>))
+  (* (/ 180.0 greek-pi) (A radians)))
+
+(define (<angle>-degrees-set! (A <angle>) (deg <real>))
+  (set! (A radians) (* (/ greek-pi 180.0) deg)))
+@end example
+
+@noindent
+and here is again the same definition with accessor and mutator defined
+as syntaxes:
+
+@example
+(import (vicare numerics constants))
+
+(define-class <angle>
+  (fields (mutable (radians <real>)))
+  (virtual-fields (mutable (degrees <real>))))
+
+(define-inline (<angle>-degrees A)
+  (let (((A <angle>) A))
+    (* (/ 180.0 greek-pi) (A radians))))
+
+(define-inline (<angle>-degrees-set! A deg)
+  (let (((A <angle>)  A)
+        ((deg <real>) deg))
+    (set! (A radians) (* (/ greek-pi 180.0) deg))))
+@end example
+
+@c page
+@node oopp method
+@section Defining classes having methods
+
+
+@deffn {Auxiliary Syntax} method (@meta{method-name} . @meta{formals}) . @meta{body}
+@deffnx {Auxiliary Syntax} method @meta{method-name} @meta{expression}
+Add a method to the enclosing class, label or mixin definition; the
+method is applicable only through a syntax use in @oopp{} notation.
+This clause can be used multiple times.
+
+@itemize
+@item
+When the first form is used, the method definition is added to the
+methods list as if the following clause had been used:
+
+@example
+(methods (@meta{method-name} function-name))
+@end example
+
+@noindent
+the function definition is expanded to:
+
+@example
+(define/tags (function-name . @meta{formals}) . @meta{body})
+@end example
+
+@noindent
+where @code{function-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name.  The
+first argument in @meta{formals} must be the type instance.
+
+@item
+When the second form is used, the method definition is added to the
+methods list as if the following clause had been used:
+
+@example
+(methods (@meta{method-name} function-name))
+@end example
+
+@noindent
+the function definition is expanded to:
+
+@example
+(define function-name @meta{expression})
+@end example
+
+@noindent
+where @code{function-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name; the
+@meta{expression} must evaluate to a function accepting at least one
+argument: the type instance.
+@end itemize
+
+Here is an example of the first form:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method (sum (S <stuff>))
+    (+ (S a) (S b))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+
+@noindent
+and an example of the second form:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method sum
+    (lambda/tags ((S <stuff>))
+      (+ (S a) (S b)))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} method-syntax @meta{method-name} @meta{transformer}
+Add a method to the enclosing class, label or mixin definition; the
+method is applicable only through a syntax use in @oopp{} notation.
+This clause can be used multiple times.
+
+The method definition is added to the methods list as if the following
+clause had been used:
+
+@example
+(methods (@meta{method-name} transformer-name))
+@end example
+
+@noindent
+the macro definition is expanded to:
+
+@example
+(define-syntax transformer-name @meta{transformer})
+@end example
+
+@noindent
+where @code{transformer-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name.
+@meta{transformer} must evaluate to a macro transformer: a function
+accepting a sintax object as single argument and returning a syntax
+object as single value.  The first argument to the macro will be the
+type instance.
+
+Here is an example of method syntax:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method-syntax sum
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ ?instance)
+         #'(let (((S <stuff>) ?instance))
+             (+ (S a) (S b))))))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} methods @meta{method-spec} @dots{}
+Add methods to the enclosing class, label or mixin definition; the
+methods are applicable only through a syntax use in @oopp{} notation.
+This clause can be used multiple times.
+
+The @meta{method-spec} arguments can be of the form:
+
+@example
+@meta{method-name}
+(@meta{method-name})
+(@meta{method-name} @meta{invokable-name})
+@end example
+
+@noindent
+where @meta{method-name} and @meta{invokable-name} must be identifiers;
+in the first two forms the invokable name is built in the same way the
+field accessor names are built: appending a dash and @meta{method-name}
+to the type name.  This clause can be used multiple times.
+
+@meta{invokable-name} must be an identifier bound to a Scheme function
+or syntax which will be invoked as method; it must accept as first
+argument the type instance which is the subject of the application.
+
+Here is a usage example of the first form:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (methods sum))
+
+(define/tags (<stuff>-sum (S <stuff>))
+  (+ (S a) (S b)))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+
+@noindent
+here is a usage example of the third form with a method function:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (methods (sum <stuff>-sum)))
+
+(define/tags (<stuff>-sum (S <stuff>))
+  (+ (S a) (S b)))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+
+@noindent
+and here is a usage example of the third form with a method syntax:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (methods (sum <stuff>-sum)))
+
+(define-syntax <stuff>-sum
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?instance)
+       #'(let (((S <stuff>) ?instance))
+           (+ (S a) (S b)))))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Method overloading
+
+There is no support for methods overloading in the @library{nausicaa
+language oopp} library, but we can do it using the facilities of the
+@library{nausicaa language generics} library.  Example:
+
+@example
+#!r6rs
+(import (nausicaa))
+
+(define-class <alpha>
+  (fields a)
+  (methods doit))
+
+(define-generic <alpha>-doit (o v))
+
+(define-method (<alpha>-doit (o <alpha>) (v <char>))
+  (cons 'char v))
+
+(define-method (<alpha>-doit (o <alpha>) (v <integer>))
+  (cons 'int  v))
+
+(<alpha> o (<> (1)))
+(o doit #\a)                    @result{} (char . #\a)
+(o doit 2)                      @result{} (int . 2)
+@end example
+
+@c page
+@node oopp setter
+@section Getter and setter syntaxes
+
+
+@deffn {Auxiliary Syntax} getter @meta{transformer}
+Add a getter syntax to instances of the enclosing class, label or mixin
+definition; this clause can be used only once.
+
+@meta{transformer} must be an expression evaluating to a syntax
+transformer: a function accepting a sintax object as single argument and
+returning a syntax object as single value.
+
+Whenever a tagged variable @meta{var} is used as follows (lookout for
+the parentheses):
+
+@example
+(@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
+@end example
+
+@noindent
+the getter transformer is applied to the syntax object (lookout for the
+parentheses):
+
+@example
+#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+@end example
+
+@noindent
+and the return value of the transformer is the result of the expansion.
+
+Getter definition examples:
+
+@example
+(define-label <vector>
+  (getter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)))
+               #'(vector-ref ?var ?idx))))))
+
+(define-label <matrix>
+  (getter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?row) (?col)))
+               #'(vector-ref
+                    (vector-ref ?var ?row)
+                    ?col))))))
+
+(<vector> V '#(1 2 3))
+(<matrix> M '#(#(1 2 3)
+               #(4 5 6)))
+
+(V[0])                  @result{} 1
+(V[1])                  @result{} 2
+(V[2])                  @result{} 3
+
+(M[0][2])               @result{} 3
+(M[1][1])               @result{} 5
+@end example
+@end deffn
+
+
+@deffn {Auxiliary Syntax} setter @meta{transformer}
+Add a setter syntax to instances of the enclosing class, label or mixin
+definition; this clause can be used only once.
+
+@meta{transformer} must be an expression evaluating to a syntax
+transformer: a function accepting a sintax object as single argument and
+returning a syntax object as single value.
+
+Whenever a tagged variable @meta{var} is used as follows (lookout for
+the parentheses):
+
+@example
+(set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+(set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
+@end example
+
+@noindent
+the setter transformer is applied to the syntax object (lookout for the
+parentheses):
+
+@example
+#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+@end example
+
+@noindent
+and the return value of the transformer is the result of the expansion.
+
+Setter definition examples:
+
+@example
+(define-label <vector>
+  (setter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?idx)) ?expr)
+               #'(vector-set! ?var ?idx ?expr))))))
+
+(define-label <matrix>
+  (setter (lambda (stx)
+            (syntax-case stx ()
+              ((?var ((?row) (?col)) ?expr)
+               #'(vector-set!
+                    (vector-ref ?var ?row)
+                    ?col ?expr))))))
+
+;;We can mutate only dynamically built objects.
+(<vector> V (vector 1 2 3))
+(<matrix> M (vector (vector 1 2 3)
+                    (vector 4 5 6)))
+
+(set!/tags V[1] 77)
+(set!/tags (V[2]) 99)
+V               @result{} #(1 77 99)
+
+(set!/tags M[0][2] 77)
+(set!/tags (M[1][1]) 99)
+M               @result{} #(#(1 2 77) #(4 99 6))
+@end example
+@end deffn
+
+
+@deffn Syntax set!/tags @meta{id} @meta{val}
+@deffnx Syntax set!/tags (@meta{var} @meta{field-name} @meta{arg} ...) @meta{val}
+@deffnx Syntax set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr}
+@deffnx Syntax set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr}
+A syntax that generalises @func{set!} as defined by @rnrs{6} to support
+@oopp{} notation.
+
+@itemize
+@item
+In the first form, in which @meta{id} is an identifier and @meta{val}
+and expression, it is equivalent to @func{set!} as defined by @rnrs{6}.
+
+@item
+In the second form, in which @meta{var} is a tagged variable, the
+mutator of the field @meta{field-name} is applied to the given arguments
+as documented in the @oopp{} syntax definition, @ref{oopp notation}.
+
+@item
+In the third and fourth forms, in which @meta{var} is a tagged variable,
+the setter transformer for @meta{var} is applied to the form as
+documented in the @oopp{} syntax definition, @ref{oopp notation}, and the
+setter clause.
+@end itemize
+@end deffn
+
+@c page
+@node oopp mixins
+@section Composing with mixins
+
+
+@dfn{Mixins} are a way to add definition clauses to classes and labels.
+Let's consider this situation:
+
+@example
+#!r6rs
+(import (nausicaa))
+
+(define-class <alpha>
+  (fields a))
+
+(define-class <beta>
+  (fields b))
+
+(define-class <delta>
+  (parent <alpha>)
+  (fields v)
+  (method (doit (o <delta>))
+    (+ 1 (o v))))
+
+(define-class <gamma>
+  (parent <beta>)
+  (fields v)
+  (method (doit (o <gamma>))
+    (+ 1 (o v))))
+@end example
+
+@noindent
+the definitions of @class{delta} and @class{gamma} share some clauses;
+both of them already have a parent class and multiple inheritance is not
+supported by @library{nausicaa language oopp}.  Is it possible to
+write the shared clauses only once and attach them to the class
+definitions?  Yes, with mixins.  The example above is equivalent to the
+following:
+
+@example
+#!r6rs
+(import (nausicaa))
+
+(define-class <alpha>
+  (field a))
+
+(define-class <beta>
+  (field b))
+
+(define-mixin <stuff>
+  (field v)
+  (method (doit (o <stuff>))
+    (+ 1 (o v))))
+
+(define-class <delta>
+  (parent <alpha>)
+  (mixins <stuff>))
+
+(define-class <gamma>
+  (parent <beta>)
+  (mixins <stuff>))
+@end example
+
+@noindent
+@func{define-mixin} associates a set of clauses to the identifier
+@class{stuff}; when the @clause{mixins} clause is used in the body of a
+class definition:
+
+@enumerate
+@item
+The clauses associated to the selected identifier are retrieved as
+syntax object.
+
+@item
+All the instances of the identifier @class{stuff} are substituted with
+the identifier of the enclosing class or label, @class{delta} and
+@class{gamma} in the example.
+
+@item
+The resulting clauses are added to the enclosing definition.
+@end enumerate
+
+
+@deffn {Auxiliary Syntax} mixins @meta{spec} @dots{}
+Compose the enclosing class, label or mixin definition with the given
+list of mixins.  This clause can be used multiple times.
+
+Each @meta{spec} element must have one of the forms:
+
+@example
+@meta{mixin-name}
+(@meta{mixin-name} (@meta{from} @meta{to}) ...)
+@end example
+
+@noindent
+in which @meta{mixin-name} is the identifier referencing the mixin,
+@meta{from} and @meta{to} are identifiers specifying the specialisation
+for this mixin.  To specialise a mixin's clauses for the receiving
+definition means the following:
+
+@enumerate
+@item
+All the occurrences of @meta{mixin-name} are replaced with the receiving
+definition's class, label or mixin name.
+
+@item
+All the occurrences of the @meta{from} identifiers are replaced with the
+@meta{to} identifiers.
+@end enumerate
+
+It is a syntax violation if a mixin identifier name is not already
+associated to a set of clauses at the time the receiving definition is
+expanded; it is a syntax violation if the same @meta{mixin-name} is used
+multiple times in the @clause{mixins} clauses of a definition.
+@end deffn
+
+
+@deffn Syntax define-mixin @meta{name} @metao{clause} @meta{clause} ...
+Associate a set of mixin clauses to the identifier @meta{name}, which
+can be later referenced by a @clause{mixins} clause in the body of a
+class or label definition.
+
+Right or wrong, @func{define-mixin} imposes no constraints on the given
+clauses; it is our responsibility to select the ones which are
+convenient for the application model.
+
+The @clause{mixins} clause can be used in the body of a mixin
+definition; the result is that the clauses of the selected mixins are
+added to the definition of the current mixin.
+@end deffn
+
+
+The @clause{mixins} clause can be used any number of times, each of them
+can list any number of mixin identifiers; the following clauses:
+
+@example
+(mixins <a> <b>)
+(mixins <c> <d>)
+(mixins <e> <f>)
+@end example
+
+@noindent
+are equivalent to the single clause:
+
+@example
+(mixins <a> <b> <c> <d> <e> <f>)
+@end example
+
+@noindent
+notice how the order is preserved from left to right and top to bottom.
+
+Mixin clauses are added to the receiving definition in a deterministic
+order: first the original clauses, then the mixin clauses in the same
+order in which the mixin identifiers appear in the @clause{mixins}
+clauses.  For example the following definitions:
+
+@example
+#!r6rs
+(import (nausicaa))
+
+(define-mixin <alpha>
+  (fields second))
+
+(define-mixin <beta>
+  (fields third))
+
+(define-mixin <gamma>
+  (fields fourth))
+
+(define-class <red>
+  (fields first)
+  (mixins <alpha> <beta> <gamma>)
+  (protocol
+    (lambda (make-top)
+      (lambda (first second third fourth)
+        ((make-top) first second third fourth)))))
+@end example
+
+@noindent
+are equivalent to the following single definition:
+
+@example
+#!r6rs
+(import (nausicaa))
+
+(define-class <red>
+  (fields first second third fourth)
+  (protocol
+    (lambda (make-top)
+      (lambda (first second third fourth)
+        ((make-top) first second third fourth)))))
+@end example
+
+@noindent
+notice how the order of the @clause{fields} clauses matches the order of
+the arguments to the constructor function.
+
+@c page
+@node oopp satisfy
+@section Verifying definition constraints
+
+
+@cindex Satisfaction functions for classes and labels
+@cindex Satisfying constraints in classes and labels
+@cindex Classes, satisfaction functions
+@cindex Labels, satisfaction functions
+
+
+It is useful to validate the definition of classes and labels against a
+set of requirements; this allows, for example, to verify if a class
+implements an @api{} (at least formally).
+
+
+@deffn {Auxiliary Syntax} satisfies @meta{satisfaction} @dots{}
+Add satisfaction constraints to the enclosing class, label or mixin
+definition.  This clause can be used any number of times.
+
+Each @meta{satisfaction} must be an identifier bound to a syntax; when
+the enclosing definition is used to define a type: the syntax is applied
+to the definition clauses and can do anything both at expand time and at
+run time.
+@end deffn
+
+
+If the enclosing definition ends being @func{define-class}, the
+following syntax, used as satisfaction, will be evaluated correctly:
+
+@example
+(define-syntax general-class-constraint
+  (lambda (stx)
+    (syntax-case stx (parent fields virtual-fields
+                      mutable immutable
+                      methods getter setter nongenerative
+                      sealed opaque abstract)
+      ((_ (?class-id ?constructor ?predicate ?record-type)
+          (parent ?parent)
+          (fields
+           (mutable (?cm-field ?cm-tag) ?cm-accessor ?cm-mutator)
+           ...)
+          (fields
+           (immutable (?ci-field ?ci-tag) ?ci-accessor #f)
+           ...)
+          (virtual-fields
+           (mutable (?vm-field ?vm-tag) ?vm-accessor ?vm-mutator)
+           ...)
+          (virtual-fields
+           (immutable (?vi-field ?vi-tag) ?vi-accessor #f)
+           ...)
+          (methods (?method-name . ?method-callable) ...)
+          (getter ?getter)
+          (setter ?setter)
+          (nongenerative ?uid)
+          (sealed ?sealed)
+          (opaque ?opaque)
+          (abstract ?abstract))
+       #f))))
+@end example
+
+If the enclosing definition ends being @func{define-label}, the
+following syntax, used as satisfaction, will be evaluated correctly:
+
+@example
+(define-syntax general-label-constraint
+  (lambda (stx)
+    (syntax-case stx (parent virtual-fields mutable immutable
+                      methods getter setter nongenerative
+                      shadows)
+      ((_ (?label-id ?constructor ?predicate)
+          (parent ?parent)
+          (virtual-fields
+           (mutable   (?vm-field ?vm-tag) ?vm-accessor ?vm-mutator)
+           ...)
+          (virtual-fields
+           (immutable (?vi-field ?vi-tag) ?vi-accessor #f)
+           ...)
+          (methods (?method-name . ?method-callable) ...)
+          (getter ?getter)
+          (setter ?setter)
+          (nongenerative ?uid)
+          (shadows ?shadows))
+       #f))))
+@end example
+
+@c page
+@node oopp shadow
+@section Label shadowing
+
+
+@deffn {Auxiliary Syntax} shadows @meta{identifier}
+Select an identifier shadowed by a label.
+@end deffn
+
+
+@deffn Syntax with-label-shadowing (@meta{label} ...) . @meta{body}
+Substitute every occurrence of @meta{label}, which must be a label type,
+in @meta{body} with the corresponding shadowed identifer.
+@end deffn
+
+
+Below is an example of label shadowing a condition object type; it works
+by redefining @func{define-condition-type} so that it creates both a
+condition object type and a corresponding label:
+
+@smallexample
+#!r6rs
+(import (except (nausicaa)
+                define-condition-type
+                &warning)
+  (prefix (only (rnrs)
+                define-condition-type
+                &warning)
+          rnrs.))
+
+(define-syntax (define-condition-type stx)
+  (syntax-case stx ()
+    ((_ ?type ?supertype ?constructor ?predicate (?field ?accessor) ...)
+     #'(begin
+         (with-label-shadowing (?supertype)
+           (rnrs.define-condition-type the-type
+             ?supertype ?constructor ?predicate
+             (?field ?accessor) ...))
+         (define-label ?type
+           (shadows the-type)
+           (maker (syntax-rules ()
+                    ((_ (?arg (... ...)))
+                     (?constructor ?arg (... ...)))))
+           (predicate ?predicate)
+           (virtual-fields (immutable ?field ?accessor) ...))))
+    (_
+     (synner "invalid syntax for condition type definition"))))
+
+(define-label &warning
+  (predicate warning?)
+  (shadows rnrs.&warning))
+
+(define-condition-type &warning-with-fields
+  &warning make-warning-with-fields warning-with-fields?
+  (a warning-with-fields-a)
+  (b warning-with-fields-b))
+
+(let ((E (&my-warning ())))
+  (warning? E)                  @result{} #t
+  ((&my-warning) E)             @result{} #t
+  (is-a? E &my-warning))        @result{} #t
+
+(let/tags (((E &warning-with-fields) (&warning-with-fields (1 2))))
+  (warning-with-fields? E)              @result{} #t
+  ((&warning-with-fields) E)            @result{} #t
+  (is-a? E &warning-with-fields)        @result{} #t
+  (warning? E)                          @result{} #t
+  (warning-with-fields-a E)             @result{} 1
+  (warning-with-fields-b E)             @result{} 2
+  (E a)                                 @result{} 1
+  (E b))                                @result{} 2
+@end smallexample
+
+@noindent
+we see that the type name we give to the redefined
+@func{define-condition-type} is actually the label type, while the
+condition type gets an automatically generated identifier name which is
+shadowed by the label.
+
+Such mechanism allows us to use @oopp{} notation to access the fields of
+a condition object and also to extend condition object types with
+sublabels.
+
+@c page
+@node oopp is-a
+@section Testing a value's type
+
+
+@deffn Syntax is-a? @meta{expression} @meta{tag}
+@deffnx Syntax is-a? <> @meta{tag}
+@deffnx {Auxiliary Syntax} <>
+In the first form: expand to the application of the class predicate of
+@meta{tag}, a class or label type, to the result of evaluating
+@meta{expression}, which can be any expression and is evaluated only
+once.  In the second form: returns the predicate function of @meta{tag}.
+
+For example, given:
+
+@example
+(define-class <alpha>
+  (fields a b c))
+@end example
+
+@noindent
+the following statement:
+
+@example
+(is-a? x <alpha>)
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+(<alpha>? x)
+@end example
+
+Another example, the following two forms are equivalent:
+
+@example
+(is-a? x <list>)
+((is-a? <> <list>) x)
+@end example
+
+@noindent
+this is especially useful when using @func{map} or @func{for-all}:
+
+@example
+(for-all (is-a? <> <list>) obj)
+@end example
+
+The @code{<>} auxiliary syntax is exported by the library
+@library{nausicaa language auxiliary-syntaxes} and reexported by
+@library{nausicaa language oopp}.
+@end deffn
+
+@c page
+@node oopp slots
+@section Accessors and mutators
+
+
+The following syntaxes provide a way to access concrete and virtual
+fields of class instances and labeled values; they also allow the
+extraction of accessor and mutator functions.
+
+
+@deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{tag}
+@deffnx {Auxiliary Syntax} <>
+Expand to the slot accessor of @meta{field-name} applied to @meta{expr},
+which can be any expression evaluating to an instance of @meta{tag}, a
+class or label type.  @meta{field-name} can be either the name of a
+concrete field or the name of a virtual field.
+
+When the auxiliary syntax @code{<>} is used in place of @meta{expr}: the
+macro expands to the accessor function itself; the following forms are
+equivalent:
+
+@example
+(slot-ref o car <pair>)
+((slot-ref <> car <pair>) o)
+@end example
+
+@noindent
+this is useful whenever the accessor has to be used as function
+argument, for example for @func{map} or @func{for-all}.  The @code{<>}
+auxiliary syntax is exported by the library @library{nausicaa language
+auxiliary-syntaxes} and reexported by @library{nausicaa language
+oopp}.
+@end deffn
+
+
+@deffn Syntax slot-set! @meta{obj-expr} @meta{field-name} @meta{tag} @meta{val-expr}
+@deffnx {Auxiliary Syntax} <>
+Expand to the slot mutator of @meta{field-name} applied to
+@meta{obj-expr} and @meta{val-expr}.  @meta{obj-expr} can be any
+expression evaluating to an instance of @meta{tag}, a class or label
+type; @meta{val-expr} can be any expression evaluating to the new field
+value.  @meta{field-name} can be either the name of a concrete field or
+the name of a virtual field.
+
+When the auxiliary syntax @code{<>} is used in place of @strong{both}
+@meta{obj-expr} and @meta{val-expr}: the macro expands to the mutator
+function itself; the following forms are equivalent:
+
+@example
+(slot-set! o car <pair> 1)
+((slot-set! <> car <pair> <>) o 1)
+@end example
+
+@noindent
+this is useful whenever the mutator has to be used as function argument.
+The @code{<>} auxiliary syntax is exported by the library
+@library{nausicaa language auxiliary-syntaxes} and reexported by
+@library{nausicaa language oopp}.
+@end deffn
+
+@c page
+@node oopp inspect
+@section Tags and objects inspection
+
+
+@deffn Syntax tag-unique-identifiers @meta{tag}
+Return the list of @uid{}s in the class hierarchy of @meta{tag}.
+
+@example
+(tag-unique-identifiers <top>)
+@result{} (nausicaa:builtin:<top>)
+
+(tag-unique-identifiers <pair>)
+@result{} (nausicaa:builtin:<pair>
+    nausicaa:builtin:<top>)
+
+(tag-unique-identifiers <textual-port>)
+@result{} (nausicaa:builtin:<textual-port>
+    nausicaa:builtin:<port>
+    nausicaa:builtin:<top>)
+@end example
+@end deffn
+
+@c page
+@node oopp bindings
+@section Defining bindings in @oopp{} notation
+
+
+The syntaxes described in this section allow the use of @oopp{} notation
+to access tag fields and to apply tag methods.
+
+@menu
+* oopp bindings overview::      Introduction to @oopp{} bindings.
+* oopp bindings let::           @oopp{} bindings: @func{let}--like syntaxes.
+* oopp bindings begin::         @oopp{} bindings: @func{begin}--like syntaxes.
+* oopp bindings lambda::        @oopp{} bindings: @func{lambda}--like syntaxes.
+* oopp bindings define::        @oopp{} bindings: @func{define}--like syntaxes.
+* oopp bindings do::            @oopp{} bindings: @func{do}--like syntaxes.
+@end menu
+
+@c page
+@node oopp bindings overview
+@subsection Introduction to @oopp{} bindings
+
+
+@oopp{} notation is available only for the members of tags defined by
+@func{define-class} and @func{define-label}, it cannot be used with
+types defined by @func{define-record-type}.
+
+The binding syntaxes exported by @library{nausicaa language oopp}
+match the @rnrs{6} ones exported by @rsixlibrary{base} and
+@rsixlibrary{control} and some Vicare--specific ones exported by
+@library{vicare}.
+
+Whenever in the original syntaxes a @meta{variable} identifier appears,
+in the @oopp{} syntaxes a @meta{tagged-variable} form appears;
+a use of @meta{tagged-variable} must have one of the formats:
+
+@example
+@meta{variable}
+(@meta{variable} @meta{tag})
+#(@meta{variable} @meta{tag})
+@end example
+
+@noindent
+where: @meta{variable} is an identifier representing the binding name,
+@meta{tag} is an identifier representing a class or label type.
+
+Whenever in the original syntaxes a @meta{bindings} form appears, in the
+@oopp{} syntaxes a @meta{tagged-bindings} form appears; a use of
+@meta{tagged-bindings} must have the format:
+
+@example
+((@meta{tagged-variable} @meta{init}) ...)
+@end example
+
+Whenever in the original syntaxes a @meta{mv-bindings} form appears, in
+the @oopp{} syntaxes a @meta{tagged-mv-bindings} form appears; a use of
+@meta{tagged-mv-bindings} must have the format:
+
+@example
+((@meta{tagged-formals} @meta{init}) ...)
+@end example
+
+Whenever in the original syntaxes a @meta{formals} form appears, in the
+@oopp{} syntaxes a @meta{tagged-formals} form appears; a use of
+@meta{tagged-formals} must have one of the formats:
+
+@example
+@meta{variable}
+#(@meta{variable} @meta{tag})
+(@meta{tagged-variable} ...)
+(@metao{tagged-variable} @meta{tagged-variable} ... . @metan{variable})
+(@metao{tagged-variable} @meta{tagged-variable} ... . #(@meta{variable} @meta{tag}))
+@end example
+
+@noindent
+notice that a tagged rest argument must be specified using the vector
+syntax @code{#(@meta{variable} @meta{tag})}, the list syntax
+@code{(@meta{variable} @meta{tag})} would be a syntax error.
+
+@c page
+@node oopp bindings let
+@subsection @oopp{} bindings: @func{let}--like syntaxes
+
+
+@deffn Syntax with-tags (@meta{tagged-variable} @dots{}) @metao{body} @meta{body} @dots{}
+The @func{with-tags} syntax is the basic tool to provide @oopp{}
+notation for objects use.  Expand into a @func{let-syntax} form which
+defines @oopp{} notation syntaxes for already existent bindings; the
+names of the new bindings are equal to the names of the already existent
+bindings.
+
+Each @meta{tagged-variable} must have one of the formats:
+
+@example
+(@meta{variable} @meta{tag})
+#(@meta{variable} @meta{tag})
+@end example
+
+@noindent
+where: @meta{variable} is an identifier representing the binding name,
+@meta{tag} is an identifier representing a class or label type.
+
+Usage example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define-class <alpha>
+  (fields a b))
+
+(define A (<alpha> (1 2)))
+
+(with-tags ((A <alpha>))
+  (A a))
+@result{} 1
+@end example
+@end deffn
+
+
+@deffn Syntax let/tags @meta{tagged-bindings} @metao{body} @meta{body} @dots{}
+@deffnx Syntax let/tags @meta{name} @meta{tagged-bindings} @metao{body} @meta{body} @dots{}
+Like @func{let} (both named and unnamed) and defines the @oopp{}
+bindings.  When all the bindings have no tags: this syntax is equivalent
+to @func{let} as defined by @rnrs{6}; an untagged binding is equivalent
+to a binding tagged with @class{top}.
+
+Usage example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(let/tags (((a <list>) '(1 2 3))
+           ((b <pair>) '(a . b)))
+  (a car)               @result{} 1
+  (b car))              @result{} a
+@end example
+@end deffn
+
+
+@deffn Syntax let*/tags @meta{tagged-bindings} @metao{body} @meta{body} @dots{}
+Like @func{let*} and defines the @oopp{} bindings.  When all the
+bindings have no tags: this syntax is equivalent to @func{let*} as
+defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.
+
+Usage example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(let*/tags (((a <number>) 123)
+            ((b <string>) (a string)))
+  b)                    @result{} "123"
+@end example
+@end deffn
+
+
+@deffn Syntax letrec/tags @meta{tagged-bindings} @metao{body} @meta{body} @dots{}
+Like @func{letrec} and defines the @oopp{} bindings.  When all the
+bindings have no tags: this syntax is equivalent to @func{letrec} as
+defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.
+@end deffn
+
+
+@deffn Syntax letrec*/tags @meta{tagged-bindings} @metao{body} @meta{body} @dots{}
+Like @func{letrec*} and defines the @oopp{} bindings.  When all the
+bindings have no tags: this syntax is equivalent to @func{letrec*} as
+defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.
+
+The only difference between @func{letrec/tags} and @func{letrec*/tags}
+is that the latter enforces the order of evaluation of the @meta{init}
+expressions.
+@end deffn
+
+
+@deffn Syntax let-values/tags @meta{tagged-mv-bindings} @metao{body} @meta{body} @dots{}
+Like @func{let-values} and defines the @oopp{} bindings.  When all the
+bindings have no tags: this syntax is equivalent to @func{let-values} as
+defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.
+@end deffn
+
+
+@deffn Syntax let*-values/tags @meta{tagged-mv-bindings} @metao{body} @meta{body} @dots{}
+Like @func{let*-values} and defines the @oopp{} bindings.  When all the
+bindings have no tags: this syntax is equivalent to @func{let*-values}
+as defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.
+@end deffn
+
+
+@deffn Syntax receive/tags @meta{tagged-formals} @meta{init} @metao{body} @meta{body} @dots{}
+Like @func{receive}, as defined by @library{vicare}, and defines the
+@oopp{} bindings.  When all the bindings have no tags: this syntax is
+equivalent to @func{receive} as defined by @library{vicare}; an untagged
+binding is equivalent to a binding tagged with @class{top}.
+
+Usage example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(receive/tags ((a <number>) (b <number>))
+    (values 1 2)
+  (a string)            @result{} "1"
+  (b string))           @result{} "2"
+@end example
+@end deffn
+
+
+@deffn Syntax receive-and-return/tags @meta{tagged-formals} @meta{init} @metao{body} @meta{body} @dots{}
+Like @func{receive-and-return}, as defined by @library{vicare}, and
+defines the @oopp{} bindings.  When all the bindings have no tags: this
+syntax is equivalent to @func{receive-and-return} as defined by
+@library{vicare}; an untagged binding is equivalent to a binding tagged
+with @class{top}.
+
+Usage example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(receive-and-return/tags ((a <number>) (b <number>))
+    (values 1 2)
+  (a string)            @result{} "1"
+  (b string)            @result{} "2"
+  )
+@result{} 1, 2 ;;two values
+@end example
+@end deffn
+
+@c page
+@node oopp bindings begin
+@subsection @oopp{} bindings: @func{begin}--like syntaxes
+
+
+@deffn Syntax begin/tags @metao{body} @meta{body} @dots{}
+@deffnx Syntax begin/tags (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
+When the auxiliary syntax @func{<-} is not used: @func{begin/tags}
+behaves like @func{begin} from @library{rnrs (6)}.  When the auxiliary
+syntax @func{<-} is used: it specifies one tag for each value returned
+by the last @meta{body} form; such tag is used to validate the
+corresponding return value with the tag's predicate.
+@end deffn
+
+@c page
+@node oopp bindings lambda
+@subsection @oopp{} bindings: @func{lambda}--like syntaxes
+
+
+@deffn Syntax lambda/tags @meta{tagged-formals} @metao{body} @meta{body} @dots{}
+@deffnx Syntax lambda/tags @meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
+Like @func{lambda} and defines the @oopp{} bindings for the arguments.
+When all the bindings have no tags: this syntax is equivalent to
+@func{lambda} as defined by @rnrs{6}; an untagged binding is equivalent
+to a binding tagged with @class{top}.
+
+If procedure arguments validation, as defined by @library{vicare
+arguments validation}, is enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+@end itemize
+
+Usage examples:
+
+@itemize
+@item
+Function with two tagged arguments:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((a <number>) (b <number>))
+    (list (a string) (b string))))
+
+(f 1 2)                 @result{} ("1" "2")
+@end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define g
+  (lambda/tags ((a <number>) (b <number>) . #(args <list>))
+    (list (a string)
+          (b string)
+          (args length))))
+
+(g 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a tagged rest argument must be specified using the vector
+syntax @code{#(args <list>)}, the list syntax @code{(args <list>)} would
+be a syntax error.
+
+@item
+Function with only the rest argument:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define g
+  (lambda/tags #(args <list>)
+    (args length)))
+
+(g 1 2 3)               @result{} 3
+@end example
+
+@item
+Functions with a single validated return value:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum>) val)
+    val))
+
+(define g
+  (lambda/tags (val)
+    (<- <fixnum>)
+    val))
+
+(f 1)                   @result{} 1
+(g 1)                   @result{} 1
+@end example
+
+@item
+Functions with multiple validated return values:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum> <string>) a b)
+    (values a b)))
+
+(define g
+  (lambda/tags (a b)
+    (<- <fixnum> <string>)
+    (values a b)))
+
+(f 1 "2")               @result{} 1, "2"
+(g 1 "2")               @result{} 1, "2"
+@end example
+@end itemize
+@end deffn
+
+
+@deffn Syntax case-lambda/tags @meta{cl-clause} @dots{}
+@deffnx {Auxiliary Syntax} <-
+Like @func{case-lambda} and defines the @oopp{} bindings for the
+arguments.  When all the bindings have no tags: this syntax is
+equivalent to @func{case-lambda} as defined by @rnrs{6}; an untagged
+binding is equivalent to a binding tagged with @class{top}.
+
+Each @meta{cl-clause} must have one of the formats:
+
+@example
+(@meta{tagged-formals} @metao{body} @meta{body} @dots{})
+(@meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{})
+@end example
+
+If procedure arguments validation, as defined by @library{vicare
+arguments validation}, is enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+@end itemize
+
+Usage examples:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (case-lambda/tags
+   (((a <number>))
+    (a string))))
+
+(define g
+  (case-lambda/tags
+   (#(args <list>)
+    (args length))))
+
+(f 123)                 @result{} "123"
+(g 1 2 3)               @result{} 3
+@end example
+@end deffn
+
+@c page
+@node oopp bindings define
+@subsection @oopp{} bindings: @func{define}--like syntaxes
+
+
+@deffn Syntax define/tags @meta{variable}
+@deffnx Syntax define/tags @meta{variable} @meta{expression}
+@deffnx Syntax define/tags #(@meta{variable} @meta{tag})
+@deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
+@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} <-
+Like @func{define} and defines the @oopp{} bindings for function
+arguments.  When all the bindings have no tags: this syntax is
+equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
+is equivalent to a binding tagged with @class{top}.
+
+When the syntax is used for function definition and procedure arguments
+validation, as defined by @library{vicare arguments validation}, is
+enabled:
+
+@itemize
+@item
+The function will validate its tagged arguments using the tag predicates
+and raise a @condition{procedure-argument-violation} exception in case
+of failure.
+
+@item
+If the auxiliary @func{<-} clause is present: the @meta{body} forms will
+be enclosed in a @func{begin/tags} syntax, and the returned values
+validated as specified by the @meta{tag} identifiers.
+
+@item
+If the @meta{variable} argument comes with @meta{tag} arguments: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
+@end itemize
+
+Usage examples:
+
+@itemize
+@item
+Function with two tagged arguments:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define/tags (f (a <number>) (b <number>))
+  (list (a string) (b string)))
+
+(f 1 2)                 @result{} ("1" "2")
+@end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define/tags (g (a <number>) (b <number>) . #(args <list>))
+  (list (a string)
+        (b string)
+        (args length)))
+
+(g 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a tagged rest argument must be specified using the vector
+syntax @code{#(args <list>)}, the list syntax @code{(args <list>)} would
+be a syntax error.
+
+@item
+Function with only the rest argument:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define/tags (g . #(args <list>))
+  (args length))
+
+(g 1 2 3)               @result{} 3
+@end example
+
+@item
+Tagged variable definition:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define/tags #(a <number>) 123)
+
+(a string)              @result{} "123"
+@end example
+
+@item
+Tagged variable definition initially left uninitialised:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define/tags #(a <number>))
+(set! a 123)
+(a string)              @result{} "123"
+@end example
+@end itemize
+@end deffn
+
+
+@deffn Syntax define-values/tags (@metao{tagged-variable} @meta{tagged-variable} @dots{}) @metao{form} @meta{form} @dots{}
+Like @func{define-values} from @library{vicare} and defines the @oopp{}
+bindings for function arguments.  When all the bindings have no tags:
+this syntax is equivalent to @func{define-values} from @library{vicare};
+an untagged binding is equivalent to a binding tagged with @class{top}.
+
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @meta{tagged-variables}.
+
+@example
+(define-values (a b c)
+  (values 1 2 3))
+
+(define-values ((A <integer>) (B <string>) (C <pair>))
+  (values 123 "ciao" '(1 . 2)))
+
+(list a b c)    @result{} (1 2 3)
+
+(A odd?)        @result{} #t
+(B length)      @result{} 4
+(C cdr)         @result{} 2
+@end example
+@end deffn
+
+@c page
+@node oopp bindings do
+@subsection @oopp{} bindings: @func{do}--like syntaxes
+
+
+@deffn Syntax do/tags ((@meta{tagged-variable} @meta{init} @meta{step}) ...) (@meta{test} @meta{expression} ...) @meta{command} ...
+Like @func{do} and defines the @oopp{} bindings for the arguments.  When
+all the bindings have no tags: this syntax is equivalent to @func{do} as
+defined by @rnrs{6}; an untagged binding is equivalent to a binding
+tagged with @class{top}.  The @meta{step}, @meta{expression} and
+@meta{command} expressions can use @oopp{} notation when accessing the
+bindings.
+@end deffn
+
+
+@deffn Syntax do*/tags ((@meta{tagged-variable} @meta{init} @meta{step}) ...) (@meta{test} @meta{expression} ...) @meta{command} ...
+Like @func{do} and defines the @oopp{} bindings for the arguments; in
+addition the bindings are created in a @func{let*} style.  When all the
+bindings have no tags: this syntax is equivalent to @func{do} as defined
+by @rnrs{6}; an untagged binding is equivalent to a binding tagged with
+@class{top}.  The @meta{step}, @meta{expression} and @meta{command}
+expressions can use @oopp{} notation when accessing the binding.
+@end deffn
+
+@c end of file

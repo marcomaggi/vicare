@@ -1,0 +1,465 @@
+@node containers iterators
+@section Iterating over sequences
+
+
+@cindex Library @library{nausicaa containers iterators}
+@cindex @library{nausicaa containers iterators}, library
+
+
+Iterators are objects used to visit values stored in sequences, like
+lists and vectors, or computed at the time they are requested; iterators
+are not compliant with the traditional Scheme language style, but many
+developers are used to them.  @value{PACKAGE}'s iterators @api{} is
+loosely inspired by Python's iterators.
+
+@menu
+* containers iterators base::              Basic iterators @api{}.
+* containers iterators conditions::        Condition object types.
+* containers iterators lists::             Iterating over lists.
+* containers iterators strings::           Iterating over strings.
+* containers iterators vectors::           Iterating over vectors.
+* containers iterators bytevectors::       Iterating over bytevectors.
+@end menu
+
+@c page
+@node containers iterators base
+@subsection Basic iterators @api{}
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp {Abstract Class} @aclass{iterator}
+Base type for all the iterators.
+@end deftp
+
+
+@defop {Superclass constructor} @aclass{iterator} constructor @var{subject}
+Build a new instance of @class{iterator}; return the constructor
+function for the subclass which invoked this protocol.
+
+Initialise the field @code{subject} with @var{subject} and the field
+@code{current} with a sentinel value, @libsref{sentinels, Sentinel
+values}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@defcv {Immutable field} @aclass{iterator} subject
+The container being the subject of the iteration.  This field is
+untagged; classes derived from @class{iterator} can shadow it with a
+tagged virtual field.
+@end defcv
+
+
+@defcv {Mutable protected field} @aclass{iterator} %current
+The last value extracted from the subject of the iteration.  Concrete
+implementations of the method @func{next} must update this field every
+time they extract a new value from the subject.
+@end defcv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defop Multimethod @aclass{iterator} next
+Advance the iteration, return the value extracted from the subject;
+memoize the extracted value in the @code{%current} field.
+@class{iterator} does @strong{not} provide an implementation of this
+method; this method is implemented by the generic function
+@func{iterator-next}.
+
+If the iteration is over: raise a non--continuable exception with
+condition object of type @condition{stop-iteration}, @ref{containers
+iterators conditions, Condition object types}.  Once the iteration is
+over, calling this method multiple times always causes
+@condition{stop-iteration} to be raised.
+@end defop
+
+
+@defop Multimethod @aclass{iterator} more?
+Return @true{} if more values can be extracted from the container,
+otherwise return @false{}.  @class{iterator} does @strong{not} provide
+an implementation of this method; this method is implemented by the
+generic function @func{iterator-more?}.
+
+Whenever possible, concrete implementations of this method must only
+test the availability of more values, they must @strong{not} actually
+perform the operation.
+@end defop
+
+
+@defop Method @aclass{iterator} current
+The last value extracted from the subject of the iteration.  This method
+can be called any number of times and will always return the same value
+after each invocation of the method @func{next}.
+@end defop
+
+
+@deffn {Generic Function} iterator-next @var{iterator}
+Advance the iteration, return the value extracted from the subject;
+memoize the extracted value in the @code{%current} field of @var{iterator}.
+@end deffn
+
+
+@deffn {Generic Function} iterator-more? @var{iterator}
+Return @true{} if more values can be extracted from the container,
+otherwise return @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples
+
+
+The following is an example definition for a simple left--to--right
+Scheme string iterator:
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa containers iterators))
+
+(define-class <simple-string-iterator>
+  (parent <iterator>)
+  (fields (mutable (index <nonnegative-fixnum>)))
+  (virtual-fields (immutable (subject <string>)
+                             (lambda ((I <iterator>))
+                               (I $subject))))
+  (protocol (lambda (make-iterator)
+              (lambda ((subject <string>))
+                ((make-iterator subject) 0)))))
+
+(define-method (iterator-more? (I <simple-string-iterator>))
+  (fx< (I index) (string-length (I subject))))
+
+(define-method (iterator-next (I <simple-string-iterator>))
+  (if (I more?)
+      (receive-and-return (retval)
+          (string-ref (I subject) (I index))
+        (set! (I %current) retval)
+        (set! (I index) (+ 1 (I index))))
+    (raise (&stop-iteration (I)))))
+
+(<string> S "ciao")
+(<simple-string-iterator> J (<> (S)))
+(<iterator> I J)
+
+(is-a? I <iterator>)                    @result{} #t
+(is-a? J <iterator>)                    @result{} #t
+(is-a? J <simple-string-iterator>)      @result{} #t
+(sentinel? (I current))                 @result{} #t
+
+(I subject)                             @result{} "ciao"
+(J subject length)                      @result{} 4
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\c
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\i
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\a
+
+(I more?)                               @result{} #t
+(I next)                                @result{} #\o
+
+(I more?)                               @result{} #f
+
+(try
+    (I next)
+  (catch E
+    (&stop-iteration     #t)
+    (else                E)))
+@result{} #t
+
+;;once it is over, it is over forever
+(try
+    (I next)
+  (catch E
+    (&stop-iteration    #t)
+    (else               E)))
+@result{} #t
+@end example
+
+@noindent
+notice the virtual field called @code{subject}: it references the
+untagged concrete field in @class{iterator}; its only purpose is to
+provide tagged access to the subject.
+
+@c page
+@node containers iterators conditions
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp {Condition type} &stop-iteration
+Condition type used to signal that the iteration over a subject is over;
+it is derived from @condition{serious}.
+
+This type is defined by @func{define-condition-type} from
+@library{nausicaa language conditions}, @ref{conditions define, Defining
+new condition types}.
+@end deftp
+
+
+@deftypecv {Immutable field} &stop-iteration @aclass{iterator} iterator
+The @class{iterator} instance which raised the condition object.
+@end deftypecv
+
+
+@defop Maker @acondition{stop-iteration} @acondition{stop-iteration} (@meta{iterator})
+Build and return a new instance of @condition{stop-iteration} using
+@meta{iterator} as value for the @code{iterator} field.
+@end defop
+
+@c page
+@node containers iterators lists
+@subsection Iterating over lists
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp Class @aclass{spine-iterator}
+A forward stride iterator for Scheme lists; it is derived from
+@class{iterator}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{spine-iterator} constructor @var{the-list} @var{stride}
+Build a new instance of @class{spine-iterator} using @var{the-list} as
+list upon which to iterate and @var{stride}, which must be an exact
+positive integer, as stride.  The stride is the number of elements in
+the list to jump forward to when iterating; it must be @math{1} when we
+want to visit all the elements.
+@end defop
+
+
+@defop Maker @aclass{spine-iterator} @aclass{spine-iterator} (@meta{clauses} @dots{})
+@defopx {Auxiliary Syntax} @aclass{spine-iterator} subject: @meta{the-list}
+@defopx {Auxiliary Syntax} @aclass{spine-iterator} stride: @meta{stride}
+Build and return a new class instance using the common constructor.  The
+clause @clause{subject:} is mandatory; the clause @clause{stride:} is
+optional, when not used the stride defaults to @math{1}.
+@end defop
+
+
+Example:
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa containers iterators))
+
+(let ()
+  (<spine>    L '(c i a o))
+  (<iterator> I  (<spine-iterator> ((subject: L))))
+
+  (I more?)     @result{} #t
+  (I next)      @result{} c
+  (I more?)     @result{} #t
+  (I next)      @result{} i
+  (I more?)     @result{} #t
+  (I next)      @result{} a
+  (I more?)     @result{} #t
+  (I next)      @result{} o
+  (I more?))    @result{} #f
+
+(let ()
+  (<spine>    L '(h e l L o))
+  (<iterator> I (<spine-iterator> ((subject: L)
+                                   (stride:  2))))
+  (I more?)     @result{} #t
+  (I next)      @result{} h
+  (I more?)     @result{} #t
+  (I next)      @result{} l
+  (I more?)     @result{} #t
+  (I next)      @result{} o
+  (I more?))    @result{} #f
+@end example
+
+@c page
+@node containers iterators strings
+@subsection Iterating over strings
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp Class @aclass{string-iterator}
+An iterator for Scheme strings; it is derived from @class{iterator}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{string-iterator} constructor @var{the-string} @var{start} @var{past} @var{stride}
+Build and return a new instance of @class{string-iterator} using
+@var{the-string} as string upon which to iterate, @var{start} as index
+of the first character, @var{past} as index of the character past the
+last one to return and @var{stride} as stride.
+
+The stride is the number of characters in the string to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the characters.
+
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
+
+@example
+0 <= @var{start} <= @var{past} <= (string-length @var{the-string})
+@end example
+
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (string-length @var{the-string})
+@end example
+@end defop
+
+
+@defop Maker @aclass{string-iterator} @aclass{string-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{string-iterator} subject: @meta{the-string}
+@defopx {Optional clause} @aclass{string-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{string-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{string-iterator} stride: @meta{stride}
+Build and return a new @class{string-iterator} instance using the common
+constructor.
+
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the string.  If the stride is negative: @meta{start} defaults one less
+than the length of the string and @meta{past} defaults to @math{-1}.
+@end defop
+
+
+@deftypecv {Immutable field} @aclass{string-iterator} @aclass{char} current
+Shadows the @code{current} member of @class{iterator} adding the
+@class{char} tag.
+@end deftypecv
+
+@c page
+@node containers iterators vectors
+@subsection Iterating over vectors
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp Class @aclass{vector-iterator}
+An iterator for Scheme vectors; it is derived from @class{iterator}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{vector-iterator} constructor @var{the-vector} @var{start} @var{past} @var{stride}
+Build and return a new instance of @class{vector-iterator} using
+@var{the-vector} as vector upon which to iterate, @var{start} as index
+of the first item, @var{past} as index of the item past the last one to
+return and @var{stride} as stride.
+
+The stride is the number of items in the vector to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the items.
+
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
+
+@example
+0 <= @var{start} <= @var{past} <= (vector-length @var{the-vector})
+@end example
+
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (vector-length @var{the-vector})
+@end example
+@end defop
+
+
+@defop Maker @aclass{vector-iterator} @aclass{vector-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{vector-iterator} subject: @meta{the-vector}
+@defopx {Optional clause} @aclass{vector-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{vector-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{vector-iterator} stride: @meta{stride}
+Build and return a new @class{vector-iterator} instance using the common
+constructor.
+
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the vector.  If the stride is negative: @meta{start} defaults one less
+than the length of the vector and @meta{past} defaults to @math{-1}.
+@end defop
+
+@c page
+@node containers iterators bytevectors
+@subsection Iterating over bytevectors
+
+
+The following bindings are exported by the library @library{nausicaa
+containers iterators}.
+
+
+@deftp Class @aclass{bytevector-u8-iterator}
+An iterator for Scheme bytevectors of octets; it is derived from
+@class{iterator}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{bytevector-u8-iterator} constructor @var{the-bytevector} @var{start} @var{past} @var{stride}
+Build and return a new instance of @class{bytevector-u8-iterator} using
+@var{the-bytevector} as bytevector upon which to iterate, @var{start} as
+index of the first octet, @var{past} as index of the octet past the last
+one to return and @var{stride} as stride.
+
+The stride is the number of octets in the bytevector to jump forward or
+backward to when iterating; it must be @math{+1} or @math{-1} when we
+want to visit all the octets.
+
+@var{start} and @var{past} must be fixnums greater than, or equal to,
+@math{-1}; @var{stride} must be a non--zero fixnum.  If @var{stride} is
+positive, it must be:
+
+@example
+0 <= @var{start} <= @var{past} <= (bytevector-length @var{the-bytevector})
+@end example
+
+@noindent
+if @var{stride} is negative, it must be:
+
+@example
+-1 <= @var{past} <= @var{start} < (bytevector-length @var{the-bytevector})
+@end example
+@end defop
+
+
+@defop Maker @aclass{bytevector-u8-iterator} @aclass{bytevector-u8-iterator} (@meta{clauses} @dots{})
+@defopx {Mandatory clause} @aclass{bytevector-u8-iterator} subject: @meta{the-bytevector-u8}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} start: @meta{start}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} past: @meta{past}
+@defopx {Optional clause} @aclass{bytevector-u8-iterator} stride: @meta{stride}
+Build and return a new @class{bytevector-u8-iterator} instance using the
+common constructor.
+
+@meta{stride} defaults to @math{+1}.  If the stride is positive:
+@meta{start} defaults to zero and @meta{past} defaults to the length of
+the bytevector.  If the stride is negative: @meta{start} defaults one
+less than the length of the bytevector and @meta{past} defaults to
+@math{-1}.
+@end defop
+
+@c end of file

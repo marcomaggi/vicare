@@ -75,6 +75,7 @@
 	  #(101		random-access-lists		,SRFI-ENABLED?)
 	  #(106		socket				,(and SRFI-ENABLED? POSIX-ENABLED?))
 	  #(111		boxes				,SRFI-ENABLED?)
+	  #(112		environment-inquiry		,SRFI-ENABLED?)
 	  )))
 
     (define (SRFI-names srfi-entry)

@@ -1753,12 +1753,14 @@ fx = IK_ITEM(s_vec, idx);
 
 
 @deftypefun ikptr ika_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
 @end deftypefun
 
 
 @deftypefun ikptr ika_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
@@ -2283,6 +2285,12 @@ point into a 32-bit integer representing a Scheme character to be stored
 into a string.
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} {unsigned long} IK_UNICODE_FROM_ASCII (char @var{ch})
+Return an unsigned integer representing the Unicode code point
+corresponding to the given @ascii{} character.
+@end deftypefn
+
 @c page
 @node objects strings
 @section String objects
@@ -2467,8 +2475,22 @@ ch = IK_CHAR32(s_str, idx);
 
 
 @deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+@deftypefunx ikptr iku_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
+@end deftypefun
+
+
+@deftypefun ikptr ika_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+@deftypefunx ikptr iku_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+Allocate a new string object and fill it with the @ascii{} characters
+from the given @asciiz{} string.
+@end deftypefun
+
+
+@deftypefun ikptr iku_string_to_symbol (ikpcb* @var{pcb}, ikptr @var{str})
+Return a Scheme symbol object whose name is the Scheme string
+@var{str}.  This function is the same as @cfunc{iku_symbol_from_string}.
 @end deftypefun
 
 @c page
@@ -2557,6 +2579,12 @@ specified field.
 
 @deftypefun int ik_is_symbol (ikptr @var{obj})
 Return true if @var{obj} is a symbol.
+@end deftypefun
+
+
+@deftypefun ikptr iku_symbol_from_string (ikpcb * @var{pcb}, ikptr @var{str})
+Return a Scheme symbol object whose name is the Scheme string
+@var{str}.  This function is the same as @cfunc{iku_string_to_symbol}.
 @end deftypefun
 
 @c page
@@ -5086,7 +5114,8 @@ When interfacing a C language foreign library with @value{PRJNAME}, it
 is often needed to convert Scheme objects to raw memory blocks, possibly
 containing @asciiz{} strings.  Generalised C buffers are meant to be
 used in interfaces to foreign C language libraries, when a pointer to
-raw data is required as argument.  @ref{cbuffers buffers} for details.
+raw data is required as argument.  @libsref{cbuffers buffers,
+Introduction to generalised C buffers} for details.
 
 Notice that at the C language level only general C buffers exist: Scheme
 strings should be converted to bytevectors at the Scheme level.

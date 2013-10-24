@@ -49,6 +49,10 @@
 		  ;; object properties
 		  getprop putprop remprop property-list
 
+		  ;; conversion functions
+		  string-or-symbol->string
+		  string-or-symbol->symbol
+
 		  ;; ???
 		  top-level-value top-level-bound? set-top-level-value!
 		  symbol-value symbol-bound? set-symbol-value!
@@ -67,11 +71,11 @@
 
 #;(define-argument-validation (gensym who obj)
   (symbol? obj)
-  (assertion-violation who "expected generated symbol as argument" obj))
+  (procedure-argument-violation who "expected generated symbol as argument" obj))
 
 (define-argument-validation (bound-symbol who obj)
   (not ($unbound-object? obj))
-  (assertion-violation who "expected bound symbol as argument" obj))
+  (procedure-argument-violation who "expected bound symbol as argument" obj))
 
 
 (define gensym
@@ -85,7 +89,7 @@
 	  ((symbol? s)
 	   ($make-symbol ($symbol-string s)))
 	  (else
-	   (assertion-violation who
+	   (procedure-argument-violation who
 	     "expected string or symbol as argument" s))))))
 
 (define (gensym? x)
@@ -108,7 +112,7 @@
       (cond ((string? us)
 	     us)
 	    ((not us)
-	     (assertion-violation who "expected generated symbol as argument" x))
+	     (procedure-argument-violation who "expected generated symbol as argument" x))
 	    (else
 	     (let f ((x x))
 	       (let ((id (uuid)))
@@ -123,7 +127,7 @@
     (lambda (x)
       (if (string? x)
 	  x
-	(assertion-violation 'gensym-prefix "not a string" x)))))
+	(procedure-argument-violation 'gensym-prefix "not a string" x)))))
 
 (define gensym-count
   (make-parameter
@@ -131,7 +135,7 @@
     (lambda (x)
       (if (and (fixnum? x) ($fx>= x 0))
 	  x
-	(assertion-violation 'gensym-count "not a valid count" x)))))
+	(procedure-argument-violation 'gensym-count "not a valid count" x)))))
 
 (define print-gensym
   (make-parameter
@@ -139,7 +143,7 @@
     (lambda (x)
       (if (or (boolean? x) (eq? x 'pretty))
 	  x
-	(assertion-violation 'print-gensym "not in #t|#f|pretty" x)))))
+	(procedure-argument-violation 'print-gensym "not in #t|#f|pretty" x)))))
 
 
 (define (top-level-value x)
@@ -192,7 +196,7 @@
     ($set-symbol-proc!  x (if (procedure? v)
 			      v
 			    (lambda args
-			      (assertion-violation 'apply
+			      (procedure-argument-violation 'apply
 				"not a procedure" ($symbol-value x)))))))
 
 (define (reset-symbol-proc! x)
@@ -203,7 +207,7 @@
       ($set-symbol-proc! x (if (procedure? v)
 			       v
 			     (lambda args
-			       (assertion-violation 'apply
+			       (procedure-argument-violation 'apply
 				 "not a procedure" (top-level-value x))))))))
 
 #;(define string->symbol
@@ -361,10 +365,10 @@
 	   => (lambda (g)
 		(let ((v ($symbol-value g)))
 		  (if ($unbound-object? v)
-		      (assertion-violation 'system-value "not a system symbol" x)
+		      (procedure-argument-violation 'system-value "not a system symbol" x)
 		    v))))
 	  (else
-	   (assertion-violation 'system-value "not a system symbol" x)))))
+	   (procedure-argument-violation 'system-value "not a system symbol" x)))))
 
 
 ;;;; done

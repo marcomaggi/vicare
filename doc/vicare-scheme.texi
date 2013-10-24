@@ -4,17 +4,13 @@
 @settitle Vicare Scheme
 @c %**end of header
 
-@include version.texi
+@include version-scheme.texi
 @include macros.texi
 
 @c page
 @c ------------------------------------------------------------
 @c Vicare specific macros.
 @c ------------------------------------------------------------
-
-@macro asciiz{}
-@acronym{ASCIIZ}
-@end macro
 
 @macro bub{}
 @acronym{BUB}
@@ -164,6 +160,16 @@ Copyright @copyright{} Michael Sperber, R. Kent Dybvig, Matthew Flatt and Anton 
 This document is derived from the original Ikarus documentation by the
 @value{PACKAGE} contributors, see the ``History'' appendix for details.
 
+The documentation of IrRegex is Copyright @copyright{} 2005-2012 Alex
+Shinn.  All rights reserved.
+
+The documentation of Pregexp is Copyright @copyright{} 1999-2005 Dorai
+Sitaram.  All rights reserved.
+
+The documentation of the library @library{vicare formations} is derived
+from the documentation of Guile.  Copyright @copyright{} 1996-2005,
+2009-2013 Free Software Foundation.
+
 @quotation
 This program is free software: you can redistribute it and/or modify it
 under the terms of the @gnu{} General Public License version 3 as
@@ -228,15 +234,8 @@ Trademarks used herein are the property of their respective owners.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
 * ffi::                         Foreign functions interface.
-* posix::                       The @posix{} interface.
-* glibc::                       The @gnu{} C Library interface.
-* iconv::                       The Libiconv interface.
-* linux::                       The @gnu{}+Linux interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
-* srfi::                        Scheme Requests For Implementation.
-* lang::                        Language extension libraries.
-* libs::                        Other libraries.
 
 Internals
 
@@ -254,7 +253,6 @@ Appendices
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
 * binfmt::                      Launching programs directly.
-* cre2::                        Binding to the library @cretwo{}.
 * Package License::             @gnu{} General Public License.
 * history::                     History.
 * references::                  Bibliography and references.
@@ -268,6 +266,8 @@ Indexes
 
 External documents
 
+* libs: (vicare-libs).          Bundled libraries for Vicare Scheme.
+* nausicaa: (nausicaa).         The language @library{nausicaa}.
 * libffi: (libffi).             Libffi documentation.
 
 @end menu
@@ -282,15 +282,9 @@ External documents
 @include stdlib.texi
 @include iklib.texi
 @include ffi.texi
-@include posix.texi
-@include glibc.texi
-@include iconv.texi
-@include linux.texi
 @include syslib.texi
 @include capi.texi
-@include srfi.texi
-@include lang.texi
-@include libs.texi
+
 @include objects.texi
 @include debug.texi
 @include machinery.texi
@@ -303,7 +297,6 @@ External documents
 @include fasl.texi
 @include shmem.texi
 @include binfmt.texi
-@include cre2.texi
 
 @include gpl-3.0.texi
 @include history.texi
