@@ -1814,8 +1814,9 @@
     (check (doit SUB ONE SUB TWO)	=> '(- (- 1) 2))
 
     ;;FIXME Commented  out because they  fail.  I dunno why  because the
-    ;;same  thing works  in the  calc example  in the  other test  file.
-    ;;(Marco Maggi; Wed Oct 23, 2013)
+    ;;same thing works in the calc example in the other test file.  This
+    ;;is Issue #58,  see the relative test file.  (Marco  Maggi; Wed Oct
+    ;;23, 2013)
     ;;
     ;; ;;precedence(UNARY) > precedence(MUL).
     ;; (check (doit SUB ONE MUL TWO)	=> '(* (- 1) 2))
