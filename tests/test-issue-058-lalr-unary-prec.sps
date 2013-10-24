@@ -86,7 +86,7 @@
    (lalr.expect: 0)
    ;;Output to a file the human  readable LALR table.  This file goes in
    ;;the directory "$(builddir)/test".
-   (lalr.dump-table: "issue-058-parser-tables.txt")
+   #;(lalr.dump-table: "issue-058-parser-tables.txt")
 
    (lalr.terminals: '(NUM		 ;precedence 0
 		      (left: ADD SUB)    ;precedence 1
