@@ -131,8 +131,8 @@ cparen		\\)
 		    ((%)	(%make-lt 'MOD mod len))
 		    ((^)	(%make-lt 'EXPT expt len))
 		    ((\\x5C;)	(%make-lt 'DIV div len))
-		    ((<)	(%make-lt 'LESS < len))
-		    ((>)	(%make-lt 'GREAT > len))
+		    ((<)	(%make-lt 'LESSER < len))
+		    ((>)	(%make-lt 'GREATER > len))
 		    ((<=)	(%make-lt 'LESSEQ <= len))
 		    ((>=)	(%make-lt 'GREATEQ >= len))
 		    ((==)	(%make-lt 'EQUAL = len))
@@ -196,36 +196,44 @@ cparen		\\)
 
  (lalr.parser-name:		'make-calc-parser)
  (lalr.library-spec:		'(libtest calc-parser))
- (lalr.library-imports:		'((libtest calc-parser-helper)
-				  (rnrs eval)))
+ (lalr.library-imports:		'((libtest calc-parser-helper)))
 
+ ;;Output to  a file the human  readable LALR table.  This  file goes in
+ ;;the directory "$(builddir)/test".
  (lalr.dump-table:		"calc-parser-tables.txt")
-		;output to a file the human readable LALR table
 
 ;;; (lalr.expect:		5)
 		;there should be no conflicts
 
  (lalr.terminals:	'(ID NUM ASSIGN LPAREN RPAREN NEWLINE COMMA
+			     ;;We want the  comparison operators to have
+			     ;;less   precedence  than   the  arithmetic
+			     ;;operators.
+			     (left: LESSER GREATER LESSEQ GREATEQ EQUAL)
 			     (left: + -)
-			     (left: * / DIV MOD EXPT LESS GREAT LESSEQ GREATEQ EQUAL)
+			     (left: * / DIV MOD)
 			     (nonassoc: uminus)
-			     (nonassoc: uplus)))
+			     (nonassoc: uplus)
+			     ;;Raising to power is right-associative and
+			     ;;has  higher  precedence  than  arithmetic
+			     ;;operators.
+			     (right: EXPT)))
 
  (lalr.rules:
   '((script	(lines)			: $1)
 
-    (lines	(lines line)		: (let ((result $2))
-					    (when result
+    (lines	(lines line)		: (begin
+					    ;;Return  the result  of the
+					    ;;last line.
+					    (receive-and-return (result)
+						$2
 					      (evaluated-expressions
-					       (cons result (evaluated-expressions))))
-					    result)
-		;this reports the result of the last line
-		(line)		: (let ((result $1))
-				    (when result
-				      (evaluated-expressions
-				       (cons result (evaluated-expressions))))
-				    result))
-		;this reports the result of all the lines but the last
+					       (cons result (evaluated-expressions)))))
+		(line)			: (begin
+					    (receive-and-return (result)
+						$1
+					      (evaluated-expressions
+					       (cons result (evaluated-expressions))))))
 
     (line	(assign NEWLINE)	: $1
 		(expr   NEWLINE)	: $1
@@ -235,38 +243,35 @@ cparen		\\)
 		;or it  is an  error; in case  of error discard  all the
 		;tokens up until the first newline
 
-    (assign   (ID ASSIGN expr)	: (begin
-				    (hashtable-set! (table-of-variables) $1 $3)
-				    #f))
+    ;;For debugging  purposes we  want variable  assignment to  return a
+    ;;value; we return the symbol "assignment".
+    (assign   (ID ASSIGN expr)		: (begin
+					    (hashtable-set! (table-of-variables) $1 $3)
+					    'assignment))
 
-    (expr     (expr + expr)	: (+ $1 $3)
-	      (expr - expr)	: (- $1 $3)
-	      (expr * expr)	: (* $1 $3)
-	      (expr / expr)	: (/ $1 $3)
-	      (+ expr (prec: uplus))
-	      : $2
-	      (- expr (prec: uminus))
-	      : (- $2)
-	      (expr DIV expr)	: (div $1 $3)
-	      (expr MOD expr)	: (mod $1 $3)
-	      (expr EXPT expr)	: (expt $1 $3)
-	      (expr LESS expr)	: (< $1 $3)
-	      (expr GREAT expr)	: (> $1 $3)
+    (expr     (expr + expr)		: (+ $1 $3)
+	      (expr - expr)		: (- $1 $3)
+	      (expr * expr)		: (* $1 $3)
+	      (expr / expr)		: (/ $1 $3)
+	      (+ expr (prec: uplus))	: $2
+	      (- expr (prec: uminus))	: (- $2)
+	      (expr DIV expr)		: (div $1 $3)
+	      (expr MOD expr)		: (mod $1 $3)
+	      (expr EXPT expr)		: (expt $1 $3)
+	      (expr LESSER expr)	: (< $1 $3)
+	      (expr GREATER expr)	: (> $1 $3)
 	      (expr LESSEQ expr)	: (<= $1 $3)
 	      (expr GREATEQ expr)	: (>= $1 $3)
-	      (expr EQUAL expr)	: (= $1 $3)
-	      (ID)		: (hashtable-ref (table-of-variables) $1 #f)
-	      (ID LPAREN args RPAREN)
-	      : (apply (eval $1 (environment '(rnrs))) $3)
-	      (NUM)		: $1
-	      (LPAREN expr RPAREN)
-	      : $2)
+	      (expr EQUAL expr)		: (= $1 $3)
+	      (ID)			: (hashtable-ref (table-of-variables) $1 #f)
+	      (ID LPAREN args RPAREN)	: (apply (eval $1 (environment '(rnrs))) $3)
+	      (NUM)			: $1
+	      (LPAREN expr RPAREN)	: $2)
 
     (args     ()			: '()
-	      (expr arg-rest)	: (cons $1 $2))
+	      (expr arg-rest)		: (cons $1 $2))
 
-    (arg-rest (COMMA expr arg-rest)
-	      : (cons $2 $3)
+    (arg-rest (COMMA expr arg-rest)	: (cons $2 $3)
 	      ()			: '()))))
 
 ;;; end of file
