@@ -84,7 +84,7 @@
   (check
       (doit "1 + 2 + 4 * 3 \n a = 2 \n a * 3 \n")
     => '((return-value 6)
-	 (expressions  (6 15))))
+	 (expressions  (6 assignment 15))))
 
   (check
       (doit "sin(1.2)\n")
@@ -172,6 +172,7 @@
   (check (doit "+1*2\n")	=> +2)
   (check (doit "+1/2\n")	=> 1/2)
 
+  ;;unary arithmetic operators
   (check (doit "-1+2\n")	=> +1)
   (check (doit "-1-2\n")	=> -3)
   (check (doit "-1*2\n")	=> -2)
@@ -188,11 +189,22 @@
 
   (check (doit "list(1+2, sin(2), 3, 4)\n")	=> (list 3 (sin 2) 3 4))
 
+;;; comparison operators
   (check (doit "1 < 3\n")	=> (<  1 3))
   (check (doit "1 > 3\n")	=> (>  1 3))
   (check (doit "1 <= 3\n")	=> (<= 1 3))
   (check (doit "1 >= 3\n")	=> (>= 1 3))
   (check (doit "1 == 3\n")	=> (=  1 3))
+
+  ;;Show  that   arithmetic  operators   have  higher   precedence  than
+  ;;comparison operators.
+  (check (doit "1+2 == 3-1\n")	=> (= (+ 1 2) (- 3 1)))
+  (check (doit "1+2 < 3-1\n")	=> (< (+ 1 2) (- 3 1)))
+  (check (doit "1+2 > 3-1\n")	=> (> (+ 1 2) (- 3 1)))
+  (check (doit "1+2 <= 3-1\n")	=> (<= (+ 1 2) (- 3 1)))
+  (check (doit "1+2 >= 3-1\n")	=> (>= (+ 1 2) (- 3 1)))
+  (check (doit "+2 < -3\n")	=> (< +2 -3))
+  (check (doit "+2 > -3\n")	=> (> +2 -3))
 
 ;;; --------------------------------------------------------------------
 
