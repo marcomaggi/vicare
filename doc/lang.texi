@@ -1758,7 +1758,7 @@ matching libraries by Alex Shinn and Andrew Wright.
 
 
 The following bindings are exported by the library @library{vicare
-languge-extensions simple-match}.  The auxiliary syntaxes are the
+languae-extensions simple-match}.  The auxiliary syntaxes are the
 bindings exported by the library @library{vicare}, which are reexported
 by this library.
 
