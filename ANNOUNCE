@@ -40,7 +40,14 @@ this project has a mailing list:
 Notes for revision 0.3d6
 ------------------------
 
-*
+* Added libraries:
+
+    (nausicaa language simple-match)
+    (nausicaa language infix)
+
+  with  similar API  of  the corresponding  libraries  in the  hierarchy
+  (vicare ---),  but recognising  identifiers exported by  the libraries
+  in the hierarchy (nausicaa language ---) as auxiliary syntaxes.
 
 
 Notes for revision 0.3d5
