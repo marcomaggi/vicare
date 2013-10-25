@@ -79,8 +79,8 @@ All the bindings are reexported.
 @item @library{vicare language-extensions sentinels}
 Sentinel values (@libsref{sentinels, The sentinel value}).
 
-@item @library{vicare language-extensions simple-match}
-Simple pattern matching syntax (@libsref{simple-match, Simple
+@item @library{nausicaa language simple-match}
+Simple pattern matching syntax (@nauref{simple-match, Simple
 destructuring match syntax}).
 
 @item @library{vicare language-extensions infix}

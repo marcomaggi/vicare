@@ -1,0 +1,594 @@
+@node simple-match
+@chapter Simple destructuring match syntax
+
+
+@cindex Library @library{nausicaa language simple-match}
+@cindex @library{nausicaa language simple-match}, library
+
+
+The library @library{nausicaa language simple-match} provides a simple
+implementation of the destructuring--bind @func{match} syntax; it is
+@strong{not} a fully featured @func{match} syntax.  The library has
+@api{} similar to @library{vicare language-extensions simple-match}, but
+it recognises the identifiers exported by the libraries in the hierarchy
+@library{nausicaa language ---} as auxiliary syntaxes.
+
+@menu
+* simple-match syntax::         Pattern matcher generator.
+@end menu
+
+@c page
+@node simple-match syntax
+@section Pattern matcher generator
+
+
+The following bindings are exported by the library @library{nausicaa
+language simple-match}.  The auxiliary syntaxes are the bindings
+exported by the library @library{vicare}, which are reexported by this
+library.
+
+
+@deffn Syntax match @meta{expr} @meta{clause} ...
+@deffnx {Auxiliary Syntax} =>
+@deffnx {Auxiliary Syntax} else
+@deffnx {Auxiliary Syntax} let
+@deffnx {Auxiliary Syntax} let/tags
+@deffnx {Auxiliary Syntax} quote
+@deffnx {Auxiliary Syntax} quasiquote
+@deffnx {Auxiliary Syntax} syntax
+@deffnx {Auxiliary Syntax} and
+@deffnx {Auxiliary Syntax} or
+@deffnx {Auxiliary Syntax} not
+@deffnx {Auxiliary Syntax} apply
+@deffnx {Auxiliary Syntax} eval
+@deffnx {Auxiliary Syntax} {...}
+@deffnx {Auxiliary Syntax} _
+Match the symbolic expression @meta{expr} against the @meta{clause}
+arguments.  Each clause must have one of the formats:
+
+@example
+(@meta{pattern} @meta{body} ...)
+(@meta{pattern} (=> @meta{next}) @meta{body} ...)
+(else @metao{body} @meta{body} ...)
+@end example
+
+@meta{expr} is evaluated once and the result is matched against each
+@meta{pattern} in turn; the first to succeed causes the corresponding
+@meta{body} forms to be evaluated as in @func{begin}, and the remaining
+patterns are ignored.  However, if the @meta{next} identifier is
+labeled, it may be used as a continuation to continue matching, allowing
+for additional runtime tests on the pattern.
+
+A clause with no body @code{(@meta{pattern})}, when matching the input
+expression, causes the evaluation of @code{(values)} (which returns zero
+values).
+
+The auxiliary syntaxes are the bindings exported by @library{rnrs}, with
+the exception of @func{let/tags} which is the one exported by
+@library{nausicaa language oopp}.
+@end deffn
+
+
+The syntax for the patterns is:
+
+@table @samp
+@item _
+The literal underscore is the wildcard: it matches anything, it does not
+reference any variable.
+
+@example
+(match "ciao"
+  (_            #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  (_            #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ _ _)      #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ 2 _)      #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((_ 0 _)      #t)
+  (else         #f))
+@result{} #f
+@end example
+
+@item @meta{datum}
+Matches if the input expression equals @meta{datum}.  The pattern
+@meta{datum} can be a boolean, character, fixnum, bignum, ratnum,
+flonum, cflonum, compnum, string or bytevector; such data is compared to
+the input expression using type--specific predicates and unsafe
+accessors.
+
+@example
+(match 1
+  (1            #t)
+  (else         #f))
+@result{} #t
+@end example
+
+@item @meta{variable}
+Variable reference: it matches the value bound to @meta{variable} using
+@func{equal?}.
+
+@example
+(let ((X 1))
+  (match 1
+    (X          #t)
+    (else       #f)))
+@result{} #t
+
+(let ((X 1))
+  (match 1
+    (X          X)
+    (else       #f)))
+@result{} 1
+@end example
+
+@item (let @meta{variable})
+@itemx (let/tags @meta{variable})
+Bind the value of the input expression to @meta{variable}, which must be
+an identifier; the variable is immediately available to be referenced in
+the following subpatterns.  The empty @code{let} pattern is a syntax
+error; the @code{let} pattern with multiple subpatterns is a syntax
+error, with the exception of the variable with ellipsis.
+
+@example
+(match 1
+  ((let X)      X)
+  (else         #f))
+@result{} 1
+
+(match 1
+  ((let X)      #\A)
+  (else         #f))
+@result{} #\A
+
+(match '(1)
+  ((let X)      X)
+  (else         #f))
+@result{} (1)
+
+(match '(1)
+  (((let X))    X)
+  (else         #f))
+@result{} 1
+
+(match '(1 2 3)
+  (((let X) (let Y) (let Z))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 3)
+
+(match '(1 2)
+  (((let X) (let Y) (let Z))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 (2 3))
+  (((let X) (let X) (let X))
+   X)
+  (else #f))
+@result{} 3
+
+(match 123
+  ((and (let X) (eval (positive? X)))
+   X)
+  (else #f))
+@result{} 123
+@end example
+
+@item (let @meta{variable} ...)
+@itemx (let/tas @meta{variable} ...)
+This pattern can appear only as last subpattern of a list or vector
+pattern.  Bind the rest of the input expression to @meta{variable},
+which must be an identifier, as a list; the variable is immediately
+available to be referenced in the following subpatterns.
+
+@example
+(match '(1 2 3 4 5)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 (3 4 5))
+
+(match '(1 2)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #(1 2 ())
+
+(match '(1 2 . 3)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3 4 . 5)
+  (((let X) (let Y) (let Z ...))
+   (vector X Y Z))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((let id ...)         #\A)
+   (else                #\B))
+@error{} &syntax
+@end example
+
+@item (quote @meta{datum})
+A quoted datum; it matches if it is equal to the input expression
+according to @func{equal?}.  As special case: if @meta{datum} is a
+symbol, it is compared to the input expression with @func{eq?}.
+
+@example
+(match '(1 2 3)
+  ('(1 2 3)     #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 X 3)
+  ('(1 X 3)     #t)
+  (else         #f))
+@result{} #t
+
+(match '(1 X 3)
+  ((1 'X 3)     #t)
+  (else         #f))
+@result{} #t
+@end example
+
+@item (quasiquote @meta{datum})
+A quasiquoted datum; it matches if it the result of the quasiquotation
+is equal to the input expression according to @func{equal?}.
+
+@example
+(let ((X 2))
+  (match '(2 2)
+    (`(1 ,X)    #\A)
+    (`(2 ,X)    #\B)
+    (`(3 ,X)    #\C)
+    (else       #f)))
+@result{} #\B
+@end example
+
+@item (syntax @meta{pattern})
+@itemx (syntax @meta{pattern} (@meta{literal} @dots{}))
+A @func{syntax-case} pattern with optional literal identifiers; the
+matching code is built as follows:
+
+@example
+(syntax-case input-expr (@meta{literal} @dots{})
+  (@meta{pattern}
+   #;success)
+  (_
+   #;failure))
+@end example
+
+@noindent
+the body of the clause can access pattern variables in the same way they
+are accessed from the output expression of a @func{syntax-case} use.
+
+@example
+(match '(1 2 3)
+  ((syntax (1 2 3))
+   #t)
+  (else #f))
+@result{} #t
+
+;;match an identifier
+(let ((ciao #f))
+  (match #'ciao
+    ((syntax ciao (ciao))
+     #t)
+    (else #f)))
+@result{} #t
+
+;;match pattern variables
+(let ((ciao #f))
+  (match '(1 2 3)
+    ((syntax (a b c))
+     (syntax->datum #'b))
+    (else #f)))
+@result{} 2
+@end example
+
+@item ()
+@itemx (@metai{pattern} --- @metan{pattern})
+Null or proper list of @math{N} elements.
+
+@example
+(match '()
+  (()
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (@metai{pattern} --- @metan{pattern} . @metani{pattern})
+Improper list of @math{N} or more elements.
+
+@example
+(match '(1 . 2)
+  ((1 . 2)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3 . 4)
+  ((1 2 3 . 4)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (@metai{pattern} --- @metan{pattern} @metani{pattern} ...)
+List of @math{N} or more elements with terminating ellipsis; each
+element of remainder must match @metani{pattern}.  The body is evaluated
+once for every element matched by the pattern before the ellipsis and
+the results are returned in a list.
+
+@example
+(match '(1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t)
+
+(match '(1 1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t #t)
+
+(match '(1 1 1)
+  ((1 ...)      #t)
+  (else         #f))
+@result{} (#t #t #t)
+
+(match '(1 2)
+  ((0 1 ...)    #t)
+  (else         #f))
+@result{} #f
+
+(match '(1 2 3)
+  (((let X) ...)
+   (+ 10 X))
+  (else #f))
+@result{} (11 12 13)
+
+(match '(1 2 3)
+  (((let X) (let Y) ...)
+   (vector X Y))
+  (else #f))
+@result{} (#(1 2) #(1 3))
+
+(match '((1 2 3) (4 5 6) (7 8 9))
+  ((((let X) (let Y) (let Z)) ...)
+   (vector X Y Z))
+  (else #f))
+@result{} (#(1 2 3) #(4 5 6) #(7 8 9))
+
+(match '((1 2 3)
+         (4 5 6)
+         (7 8 9))
+  ((((let X) (let Y) ...) ...)
+   (vector X Y))
+  (else #f))
+@result{} ((#(1 2) #(1 3))
+    (#(4 5) #(4 6))
+    (#(7 8) #(7 9)))
+@end example
+
+@item #(@metai{pattern} --- @metan{pattern})
+Vector of @math{N} elements.
+
+@example
+(match '#(1 2 3)
+  (#(1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item #(@metai{pattern} --- @metan{pattern} @metani{pattern} ...)
+Vector of @math{N} or more elements with terminating ellipsis; each
+element of remainder must match @metani{pattern}.  The body is evaluated
+once for every element matched by the pattern before the ellipsis and
+the results are returned in a list.
+
+@example
+(match '#(1 1 1)
+  (#(1 ...)       #t)
+  (else           #f))
+@result{} (#t #t #t)
+@end example
+
+@item (and @meta{pattern} ---)
+Matches if each @meta{pattern} matches the input expression.  The empty
+@code{and} succeeds.
+
+@example
+(match 123
+  ((and (apply fixnum?) (apply positive?))
+   #t)
+  (else #f))
+@result{} #t
+
+(match 123
+  ((and (apply fixnum?) (let X))
+   X)
+  (else #f))
+@result{} 123
+
+(match 123
+  ((and (let X) X)
+   X)
+  (else #f))
+@result{} 123
+@end example
+
+@item (or @meta{pattern} ---)
+Matches if at least one @meta{pattern} matches the input expression.
+The empty @code{or} fails.
+
+@example
+(match 1
+  ((or 1 2)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((or (apply fixnum?) (apply bignum?))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (not @meta{pattern})
+Matches if the subpattern @meta{pattern} does @strong{not} match the
+input expression.  The empty not fails.  The empty @code{not} pattern is
+a syntax error; the @code{not} pattern with multiple subpatterns is a
+syntax error.
+
+@example
+(match 9
+  ((not 1)
+   #t)
+  (else #f))
+@result{} #t
+
+(match "ciao"
+  ((not (apply fixnum?))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (apply @meta{pred} ---)
+Each @meta{pred} subpattern must be an expression; every time this
+pattern is matched against an input expression: @meta{pred} is
+evaluated; the value returned by @meta{pred} must be a predicate
+function.  This pattern matches if all the predicate functions return
+true when applied to the input expression; the empty @code{apply}
+pattern is a syntax error.
+
+@example
+(match 1
+  ((apply fixnum? positive?)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((apply (lambda (x)
+            (and (fixnum?   x)
+                 (positive? x))))
+   #t)
+  (else #f))
+@result{} #t
+@end example
+
+@item (eval @meta{expr})
+The subpattern @meta{expr} must be expression; every time this pattern
+is matched against an input expression: @meta{expr} is evaluated.  This
+pattern matches if the result of @meta{expr} is true.  The empty
+@code{eval} pattern is a syntax error; the @code{eval} pattern with
+multiple subpatterns is a syntax error.
+
+@example
+(match 1
+  ((eval #t)
+   #t)
+  (else #f))
+@result{} #t
+
+(match 1
+  ((eval #f)    #\A)
+  (else         #f))
+@result{} #t
+
+(match #t
+  ((and (let X) (eval X))
+   #t)
+  (else #f))
+@result{} #t
+
+(match #f
+  ((and (let X) (eval X))
+   #t)
+  (else #f))
+@result{} #f
+
+(match '(1 2)
+  (((let X) (eval X)) ;ignores 2, but consumes it
+   X)
+  (else #f))
+@result{} 1
+
+(match '(1 2 3)
+  (((let X) (eval X) (let Y)) ;ignores 2, but consumes it
+   (vector X Y))
+  (else #f))
+@result{} #(1 3)
+@end example
+@end table
+
+When the escape identifier is present, it is bound to a thunk to be
+evaluated to jump to matching the next pattern or to the ``no match''
+error.
+
+@example
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 0)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  ((1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape)))
+@error{} &error
+@end example
+

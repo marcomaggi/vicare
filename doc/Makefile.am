@@ -133,6 +133,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-builtins.texi					\
 	nausicaa-conditions.texi				\
 	nausicaa-increments.texi				\
+	nausicaa-simple-match.texi				\
 	\
 	nausicaa-containers-lists.texi				\
 	nausicaa-containers-vectors.texi			\
