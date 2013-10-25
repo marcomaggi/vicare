@@ -1504,6 +1504,7 @@
     greatest-negative-bignum
 
     ;; misc
+    set-cons!
     eval-for-expand
     record-type-field-ref
     record-type-field-set!
