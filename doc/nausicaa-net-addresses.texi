@@ -23,106 +23,145 @@ handle IPv4 addresses specifications, according to @rfc{} 5735.
 * net addresses ipv4 lexer::    Tokenising an IPv4 address.
 * net addresses ipv4 parser::   Parsing an IPv4 address.
 * net addresses ipv4 errors::   Condition objects and error handlers.
-* net addresses ipv4 class::    IPv4 address and address prefix
-                                class objects.
+* net addresses ipv4 aux::      IPv4 address auxiliary classes.
+* net addresses ipv4 address::  IPv4 address objects class.
+* net addresses ipv4 prefix::   IPv4 address prefix objects class.
 @end menu
 
 @c page
 @node net addresses ipv4 lexer
-@subsubsection Tokenising an Ipv4 address string
+@subsubsection Tokenising an IPv4 address string
 
 
-The following bindings are exported by the @library{nausicaa net helpers
-ipv4address-lexer} library.
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
 
 
 @defvr Constant ipv4-address-lexer-table
 A lexer table to be used by the library @library{vicare parser-tools
-silex lexer} to tokenise textual IPv4 address or IPv4 address prefix
-representations.
-@end defvr
+silex lexer} to tokenise IPv4 address or address prefix textual
+representations; the table is prepared to make use of all the counters.
+The token categories are:
 
+@table @code
+@item DOT
+Hold as semantic value the character @code{#\.}.
 
-To tokenise an IPv4 address string we can do:
+@item NUMBER
+Hold as semantic value a number in the input IPv4 address.
 
-@example
-(import (nausicaa)
-  (nausicaa net helpers ipv4address-lexer)
-  (prefix (nausicaa silex lexer) lex.)
-  (nausicaa parser-tools))
-
-(define (make-address-lexer address-string)
-  (let ((IS (lex.make-IS (string: address-string))))
-    (lex.make-lexer ipv4-address-lexer-table IS)))
-@end example
-
-@noindent
-every time the lexer thunk is evaluated, it returns an object of type
-@class{lexical-token}.
-
-The token categories are: @code{DOT}, @code{PREFIX-LENGTH},
-@code{NUMBER}.  The tokens of category @code{DOT} hold, as semantic
-value, the character @code{#\.}; tokens of category @code{NUMBER} hold
-as semantic value a number in the input IPv4 address; the tokens of
-category @code{PREFIX-LENGTH} hold as semantic value the number of bits
-in the prefix as exact integer.
+@item PREFIX-LENGTH
+Hold as semantic value the number of bits in the prefix as exact
+integer.
+@end table
 
 The longest IPv4 address string has: @math{4} numbers as address
 components, @math{3} separators between address components, a final
 slash and number to specify the address prefix length; the total is
 @math{4 + 3 + 1 = 8} tokens.  We may want to use
-@func{make-max-count-lexer} from @library{nausicaa silex utilities} to
-limit the number of returned tokens.
+@func{make-max-count-lexer} from @library{vicare parser-tools silex
+utilities} to limit the number of returned tokens.
+
+To tokenise an IPv4 address string we can do:
+
+@example
+(import (nausicaa)
+  (nausicaa net ipv4-addresses)
+  (prefix (vicare parser-tools silex lexer)        lex.)
+  (prefix (nausicaa parser-tools lexical-tokens)   lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(define (make-address-lexer address-string)
+  (let ((IS (lex.make-IS (lex.string: address-string))))
+    (lex.make-lexer ipv4-address-lexer-table IS)))
+@end example
+
+@noindent
+every time the lexer thunk is evaluated, it returns an object of type
+@class{lexical-token} as defined by the library @library{nausicaa
+parser-tools lexical-tokens}.  Here are some examples of tokenisation:
+
+@example
+"1.2.3.4"
+@result{} [NUMBER 1] [DOT .] [NUMBER 2] [DOT .]
+   [NUMBER 3] [DOT .] [NUMBER 4] [*eoi* #<eof>]
+
+"1.Zciao"
+@result{} [NUMBER 1] [DOT .] [*lexer-error* "Zciao"]
+@end example
+
+@noindent
+notice that the lexer will match numbers in the range @math{[0, 255]} as
+a single @code{NUMBER} token, but positive numbers outside this range
+are split into multiple tokens:
+
+@example
+"256" @result{} [NUMBER 25] [NUMBER 6] [*eoi* #<eof>]
+
+"500" @result{} [NUMBER 50] [NUMBER 0] [*eoi* #<eof>]
+@end example
+
+@noindent
+this is weird, but this is just a lexer: it is responsibility of the
+parser to recognise invalid sequences of tokens.
+@end defvr
+
+
+@deffn Syntax make-ipv4-address-lexer @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} string: @meta{string}
+@deffnx {Auxiliary Syntax} port: @meta{port}
+@deffnx {Auxiliary Syntax} procedure: @meta{proc}
+Build and return a SILex lexer function making use of the table
+@code{ipv4-address-lexer-table}; the input system is created as
+described by the given clauses; the table and the input system are
+prepared to make use of all the counters.
+
+The auxiliary syntaxes are the ones exported by @library{vicare
+parser-tools silex lexer}; their arguments are the same as the ones
+described for @func{make-IS}, @libsref{silex input}.
+@end deffn
 
 @c page
 @node net addresses ipv4 parser
 @subsubsection Parsing an IPv4 address
 
 
-The following bindings are exported by the @library{nausicaa net helpers
-ipv4address-parser} library.
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
 
 
 @defun make-ipv4-address-parser
-Return a parser function for textual IPv4 address or IPv4 address prefix
-representations, it works as described in @ref{lalr parser}; the lexer
-must work as described in @ref{net addresses ipv4 lexer}.
+Return a low level LALR parser function for IPv4 address or address
+prefix textual representations; it works as described in @ref{lalr
+parser, Running the parser}.
 
 The returned parser function, when applied to the lexer and error
 handler, returns a list of values representing the address; this list
 must be further parsed and validated as described below.
-@end defun
 
+The lexer thunk used as argument for the returned parser function must
+work as described in @ref{net addresses ipv4 lexer, Tokenising an IPv4
+address string}.
 
-To parse an IPv4 address string we can do:
+To parse an IPv4 address string with the low--level parser function we
+can do:
 
 @example
 (import (nausicaa)
-  (nausicaa net helpers ipv4address-lexer)
-  (nausicaa net helpers ipv4address-parser)
-  (prefix (nausicaa silex lexer) lex.)
-  (nausicaa parser-tools))
-
-(define (make-ipv4-address-parser-error-handler who string)
-  (lambda (message (token <lexical-token>))
-    (assertion-violation who
-      (let (((pos <source-location>) token.location))
-        (string-append "invalid IPv4 address input at column "
-                       pos.column.string ": " message))
-      string token.value)))
+  (nausicaa net ipv4-addresses))
 
 (define (parse-address string)
-  (let* ((IS      (lex.make-IS (string: string)))
-         (lexer   (lex.make-lexer
-                    ipv4-address-lexer-table IS))
-         (parser  (make-ipv4-address-parser)))
-    (parser lexer
-            (make-ipv4-address-parser-error-handler
-             'parse-address string))))
+  (define lexer
+    (make-ipv4-address-lexer (string: string)))
+  (define parser
+    (make-ipv4-address-parser))
+  (define error-handler
+    (make-ipv4-address-parser-error-handler
+      who (list string)))
+  (parser lexer error-handler))
 @end example
 
-@noindent
-here are some examples of address parsing:
+Here are some examples of address parsing:
 
 @example
 (parse-address "1.2.3.4")       @result{} (1 2 3 4)
@@ -150,37 +189,106 @@ contiguous bits of the address comprise the prefix.
 If the input is an address: the list has @math{4} elements and the last
 element is a number.
 @end enumerate
+@end defun
+
+
+@defun parse-ipv4-address-only @var{string}
+High--level parser function for IPv4 address textual representations.
+If successful: return a list of @math{4} elements representing the
+result of the parsing; otherwise raise an exception with compound
+condition object of types @condition{who}, @condition{error},
+@condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address-only "1.2.3.4")
+@result{} (1 2 3 4)
+
+(parse-ipv4-address-only "192.168.99.1")
+@result{} (192 168 99 1)
+@end example
+@end defun
+
+
+@defun parse-ipv4-address-prefix @var{string}
+High--level parser function for IPv4 address prefix textual
+representations.  If successful return @math{2} values: a list of
+@math{4} fixnums representing the address numbers and a fixnum
+representing the prefix length; otherwise raise an exception with
+compound condition object of types @condition{error}, @condition{who},
+@condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address-prefix "1.2.3.4/8")
+@result{} (1 2 3 4) 8
+
+(parse-ipv4-address-prefix "192.168.99.1/8")
+@result{} (192 168 99 1) 8
+@end example
+@end defun
+
+
+@defun parse-ipv4-address @var{string}
+High--level parser function for IPv4 address or address prefix textual
+representations.  If successful: return a list of @math{4} or @math{5}
+elements representing the result of the parsing; otherwise raise an
+exception with compound condition object of types @condition{who},
+@condition{error}, @condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address "1.2.3.4")
+@result{} (1 2 3 4)
+
+(parse-ipv4-address "192.168.99.1")
+@result{} (192 168 99 1)
+
+(parse-ipv4-address "1.2.3.4/8")
+@result{} (1 2 3 4 (8))
+
+(parse-ipv4-address "192.168.99.1/8")
+@result{} (192 168 99 1 (8))
+@end example
+@end defun
 
 @c page
 @node net addresses ipv4 errors
 @subsubsection Condition objects and error handlers
 
 
-The following bindings are exported by the @library{nausicaa net
-ipv4-addresses} library.
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
 
 
 @deftp {Condition Type} &ipv4-address-parser-error
-Tags compound condition objects as raised by the IPv4 parser or lexer.
-It is derived from @condition{condition}.
+Tags compound condition objects as raised by the IPv4 parser or lexer;
+it is derived from @condition{condition}.  This condition type can be
+used in Nausicaa's @oopp{} syntaxes.
+
+@example
+(import (nausicaa))
+
+(define C
+  (&ipv4-address-parser-error ()))
+
+((&ipv4-address-parser-error) C)
+@result{} #t
+
+(try
+    (raise C)
+  (catch E
+    (&ipv4-address-parser-error
+     #t)
+    (else #f)))
+@result{} #t
+@end example
 @end deftp
-
-
-@defun make-ipv4-address-parser-error-condition
-Return a new condition object of type
-@condition{ipv4-address-parser-error}.
-@end defun
-
-
-@defun ipv4-address-parser-error-condition? @var{obj}
-Return true if @var{obj} is a condtion object of type
-@condition{ipv4-address-parser-error}.
-@end defun
 
 
 @defun make-ipv4-address-parser-error-handler @var{who} @var{irritants}
 @defunx make-ipv4-address-parser-error-handler @var{who} @var{irritants} @var{condition-maker}
-Build and return a procedure to be used as error handler by the Ipv4
+Build and return a procedure to be used as error handler by the IPv4
 address and address prefix parsers.  It raises an exception with
 compound condition object of types:
 
@@ -199,51 +307,94 @@ to tag the compound object as @condition{error} or
 @end defun
 
 @c page
-@node net addresses ipv4 class
-@subsubsection IPv4 address and address prefix class objects
+@node net addresses ipv4 aux
+@subsubsection IPv4 address auxiliary classes
 
 
-The following bindings are exported by the @library{nausicaa net
-ipv4-addresses} library.
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
 
 
-@deftp Class @aclass{ipv4-address}
-Represents an IPv4 address.  Its constructor accepts as single argument
-the list of numbers returned by the IPv4 address parser, already
-validated.
-
-@example
-(let (((o <ipv4-address>)
-      (make* <ipv4-address>
-        (ipv4-address-parse "1.2.3.4"))))
-  (list o.third o.second o.first o.zeroth))
-@result{} (1 2 3 4)
-@end example
+@deftp Label @aclass{ipv4-address-fixnum}
+Label type whose predicate tests that the object is a non--negative
+fixnum in the range @math{[0, 255]}.  It is derived from
+@class{nonnegative-fixnum} as defined by @library{nausicaa language
+builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 
-@defcv {Immutable Field} @aclass{ipv4-address} zeroth
-@defcvx {Immutable Field} @aclass{ipv4-address} first
-@defcvx {Immutable Field} @aclass{ipv4-address} second
-@defcvx {Immutable Field} @aclass{ipv4-address} third
+@deftp Label @aclass{list-of-ipv4-address-fixnums}
+Label type whose predicate tests that the object is a list of @math{4}
+items all being of type @class{ipv4-address-fixnum}.  It is derived from
+@class{list} as defined by @library{nausicaa language builtins},
+@ref{builtins lists, List label}.
+@end deftp
+
+@c page
+@node net addresses ipv4 address
+@subsubsection IPv4 address objects class
+
+
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
+
+
+@deftp Class @aclass{ipv4-address}
+Represents an IPv4 address.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipv4-address} constructor @var{numbers}
+Build and return a new object of type @class{ipv4-address} using the
+given list of fixnums as numeric components.
+@end defop
+
+
+@defop Maker @aclass{ipv4-address} @aclass{ipv4-address} (@meta{numbers})
+Build and return a new object of type @class{ipv4-address} using the
+common constructor.  Accept as single argument the list of numbers
+returned by the IPv4 address parser, already validated.
+
+@example
+(<ipv4-address> O
+  (<> ((parse-ipv4-address-only "1.2.3.4"))))
+
+(list (O third) (O second) (O first) (O zeroth))
+@result{} (1 2 3 4)
+@end example
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@defcv {Immutable field} @aclass{ipv4-address} zeroth
+@defcvx {Immutable field} @aclass{ipv4-address} first
+@defcvx {Immutable field} @aclass{ipv4-address} second
+@defcvx {Immutable field} @aclass{ipv4-address} third
 The numeric components of the address, each representing @math{8} bits.
 @code{zeroth} is the rightmost component, @code{first} is the second
 from the right, etc.
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} bignum
+@defcv {Immutable virtual field} @aclass{ipv4-address} bignum
 A single exact integer of @math{32} bits representing the whole address
 number.
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} string
+@defcv {Immutable virtual field} @aclass{ipv4-address} string
 The string representation of the address.
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} private?
+@defcv {Immutable virtual field} @aclass{ipv4-address} private?
 True if the address' prefix is @code{10.0.0.0/8} or
 @code{172.16.0.0/12} or @code{192.168.0.0/16}.
 
@@ -252,7 +403,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} loopback?
+@defcv {Immutable virtual field} @aclass{ipv4-address} loopback?
 True if the address' prefix is @code{127.0.0.0/8}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -260,7 +411,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} localhost?
+@defcv {Immutable virtual field} @aclass{ipv4-address} localhost?
 True if the address is @code{127.0.0.1}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -268,7 +419,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} link-local?
+@defcv {Immutable virtual field} @aclass{ipv4-address} link-local?
 True if the address' prefix is @code{169.254.0.0/16}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -276,7 +427,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} reserved?
+@defcv {Immutable virtual field} @aclass{ipv4-address} reserved?
 True if the address' prefix is @code{192.0.0.0/24} or
 @code{240.0.0.0/4}.
 
@@ -285,7 +436,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} test-net-1?
+@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-1?
 True if the address' prefix is @code{192.0.2.0/24}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -293,7 +444,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} six-to-four-relay-anycast?
+@defcv {Immutable virtual field} @aclass{ipv4-address} six-to-four-relay-anycast?
 True if the address' prefix is @code{192.88.99.0/24}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -301,7 +452,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} benchmark-tests?
+@defcv {Immutable virtual field} @aclass{ipv4-address} benchmark-tests?
 True if the address' prefix is @code{198.18.0.0/15}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -309,7 +460,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} test-net-2?
+@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-2?
 True if the address' prefix is @code{198.51.100.0/24}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -317,7 +468,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} test-net-3?
+@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-3?
 True if the address' prefix is @code{203.0.113.0/24}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -325,7 +476,7 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} multicast?
+@defcv {Immutable virtual field} @aclass{ipv4-address} multicast?
 True if the address' prefix is @code{224.0.0.0/4}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
@@ -333,12 +484,20 @@ See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 @end defcv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address} limited-broadcast?
+@defcv {Immutable virtual field} @aclass{ipv4-address} limited-broadcast?
 True if the address prefix is @code{255.255.255.255}.
 
 See Section 3 ``Global and Other Specialized Address Blocks'' of @rfc{}
 5735.
 @end defcv
+
+@c page
+@node net addresses ipv4 prefix
+@subsubsection IPv4 address prefix objects class
+
+
+The following bindings are exported by the library @library{nausicaa net
+ipv4-addresses}.
 
 
 @deftp Class @aclass{ipv4-address-prefix}

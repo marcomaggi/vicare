@@ -31,39 +31,26 @@
 
     ;; conditions
     &ipv4-address-parser-error
-    make-ipv4-address-parser-error-condition
-    ipv4-address-parser-error-condition?
-
     make-ipv4-address-parser-error-handler
 
     ;; lexer and parser utilities
+    (rename (lexer.ipv4-address-lexer-table	ipv4-address-lexer-table))
     make-ipv4-address-lexer
-    make-ipv4-address-parser
-    ipv4-address-parse
-    ipv4-address-prefix-parse
+    (rename (lex.string:	string:)
+	    (lex.port:		port:)
+	    (lex.procedure:	procedure:))
 
-    ;; class
-    <ipv4-address>		<ipv4-address>?
-    make-<ipv4-address>
-    <ipv4-address>-zeroth
-    <ipv4-address>-first
-    <ipv4-address>-second
-    <ipv4-address>-third
+    (rename (parser.make-ipv4-address-parser	make-ipv4-address-parser))
+    parse-ipv4-address
+    parse-ipv4-address-only
+    parse-ipv4-address-prefix
 
-    <ipv4-address>-bignum
-    <ipv4-address>-string
-    ;; <ipv4-address>-unspecified?
-    ;; <ipv4-address>-loopback?
-    ;; <ipv4-address>-multicast?
-    ;; <ipv4-address>-link-local-unicast?
-    ;; <ipv4-address>-global-unicast?
-
-    <ipv4-address-prefix>	<ipv4-address-prefix>?
-    <ipv4-address-prefix>-prefix-length
-    <ipv4-address-prefix>-string
-    )
+    ;; classes
+    <ipv4-address>			<ipv4-address-prefix>
+    <ipv4-address-fixnum>		<list-of-ipv4-address-fixnums>)
   (import (nausicaa)
-    (nausicaa net helpers ipv4-address-lexer)
+    (vicare unsafe operations)
+    (prefix (nausicaa net helpers ipv4-address-lexer) lexer.)
     (prefix (nausicaa net helpers ipv4-address-parser) parser.)
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
@@ -92,97 +79,132 @@
 		  (make-irritants-condition (cons (token value) irritants))))))))
 
 
-;;;; lexer and parser utilities
+;;;; high-level lexer functions
 
 (mk.define-maker make-ipv4-address-lexer
     %make-ipv4-address-lexer
   ;;These  auxiliary   syntaxes  are   the  ones  exported   by  (vicare
   ;;parser-tools silex lexer).
-  ((lex.string:		sentinel)
-   (lex.port:		sentinel)
-   (lex.procedure:	sentinel)))
+  ((lex.string:		sentinel	(mk.without lex.port:   lex.procedure:))
+   (lex.port:		sentinel	(mk.without lex.string: lex.procedure:))
+   (lex.procedure:	sentinel	(mk.without lex.port:   lex.string:))))
 
 (define-syntax* (%make-ipv4-address-lexer stx)
   (syntax-case stx (sentinel)
 
     ((_ ?string sentinel sentinel)
-     #'(lex.make-lexer ipv4-address-lexer-table
+     #'(lex.make-lexer lexer.ipv4-address-lexer-table
 		       (lex.make-IS (lex.string: ?string) (lex.counters: 'all))))
 
     ((_ sentinel ?port sentinel)
-     #'(lex.make-lexer ipv4-address-lexer-table
+     #'(lex.make-lexer lexer.ipv4-address-lexer-table
 		       (lex.make-IS (lex.port: ?port) (lex.counters: 'all))))
 
     ((_ sentinel sentinel ?procedure)
-     #'(lex.make-lexer ipv4-address-lexer-table
+     #'(lex.make-lexer lexer.ipv4-address-lexer-table
 		       (lex.make-IS (lex.procedure: ?procedure) (lex.counters: 'all))))
 
     ((_ sentinel sentinel ?procedure)
      (synner "invalid or missing selection of input method"))
     ))
 
-(define (make-ipv4-address-parser who lexer irritants)
-  (lambda ()
-    ((parser.make-ipv4-address-parser) lexer
-     (make-ipv4-address-parser-error-handler who irritants))))
+
+;;;; low-level and high-level parser functions
 
-(define (ipv4-address-parse the-string)
-  (define who 'ipv4-address-parse)
-  (define irritants (list the-string))
-  (define (%error)
-    (raise (condition (make-ipv4-address-parser-error-condition)
-		      (make-who-condition who)
-		      (make-message-condition "invalid IPv4 address string")
-		      (make-irritants-condition irritants))))
-  (let* ((lexer		(make-ipv4-address-lexer  (lex.string: the-string)))
-	 (parser	(make-ipv4-address-parser who lexer irritants))
-	 (ell		(parser)))
-    (if (= 4 (length ell))
-	ell
-      (%error))))
+(module (parse-ipv4-address-only
+	 parse-ipv4-address-prefix
+	 parse-ipv4-address)
 
-(define (ipv4-address-prefix-parse the-string)
-  (define who 'ipv4-address-prefix-parse)
-  (define irritants (list the-string))
-  (define (%error)
-    (raise (condition (make-ipv4-address-parser-error-condition)
-		      (make-who-condition who)
-		      (make-message-condition "invalid IPv4 address prefix string")
-		      (make-irritants-condition irritants))))
-  (let* ((lexer		(make-ipv4-address-lexer  (lex.string: the-string)))
-	 (parser	(make-ipv4-address-parser who lexer irritants))
-	 (ell		(parser)))
-    (if (= 5 (length ell))
-	(let ((rell (reverse ell)))
-	  (values (reverse (cdr rell)) (caar rell)))
-      (%error))))
+  (define (parse-ipv4-address-only the-string)
+    (define who 'parse-ipv4-address-only)
+    (define irritants (list the-string))
+    (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv4-address-parser who lexer the-string))
+	   (ell		(parser)))
+      (if (= 4 (length ell))
+	  ell
+	(%raise-parser-error who the-string))))
+
+  (define (parse-ipv4-address-prefix the-string)
+    (define who 'parse-ipv4-address-prefix)
+    (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv4-address-parser who lexer the-string))
+	   (ell		(parser)))
+      (if (= 5 (length ell))
+	  (let ((rell (reverse ell)))
+	    (values (reverse (cdr rell)) (caar rell)))
+	(%raise-parser-error who the-string))))
+
+  (define (parse-ipv4-address the-string)
+    (define who 'parse-ipv4-address)
+    (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv4-address-parser who lexer the-string)))
+      (parser)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-ipv4-address-parser who lexer the-string)
+    (lambda ()
+      ((parser.make-ipv4-address-parser)
+       lexer
+       (make-ipv4-address-parser-error-handler who (list the-string)))))
+
+  (define (%raise-parser-error who the-string)
+    (raise
+     (condition (make-ipv4-address-parser-error-condition)
+		(make-who-condition who)
+		(make-message-condition "invalid IPv4 address string")
+		(make-irritants-condition (list the-string)))))
+
+  #| end of module |# )
+
+
+;;;; auxiliary labels
+
+(define-label <ipv4-address-fixnum>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (N)
+	       ($fx<= N 255))))
+
+(define-label <list-of-ipv4-address-fixnums>
+  (parent <list>)
+  (predicate (lambda ((obj <list>))
+	       (and (= 4 (obj length))
+		    (for-all (<ipv4-address-fixnum>) obj)))))
 
 
 (define-class <ipv4-address>
+  (nongenerative nausicaa:net:ipv4-address:<ipv4-address>)
+
   (protocol (lambda (make-top)
-	      (lambda (addr-ell)
+	      (lambda ((addr-ell <list-of-ipv4-address-fixnums>))
 		(apply (make-top) #f #f addr-ell))))
+
   (fields (mutable cached-bignum)
 	  (mutable cached-string)
-	  ;; (mutable cached-unspecified?)
-	  ;; (mutable cached-loopback?)
-	  ;; (mutable cached-global-unicast?)
-	  third second first zeroth)
-  (virtual-fields bignum string
-		  private?
-		  loopback?
-		  localhost?
-		  link-local?
-		  reserved?
-		  test-net-1?
-		  six-to-four-relay-anycast?
-		  benchmark-tests?
-		  test-net-2?
-		  test-net-3?
-		  multicast?
-		  limited-broadcast?
-		  )
-  (nongenerative nausicaa:net:ipv4-address:<ipv4-address>))
+	  (immutable (third	<ipv4-address-fixnum>))
+	  (immutable (second	<ipv4-address-fixnum>))
+	  (immutable (first	<ipv4-address-fixnum>))
+	  (immutable (zeroth	<ipv4-address-fixnum>)))
+
+  (virtual-fields
+   bignum
+   string
+   private?
+   loopback?
+   localhost?
+   link-local?
+   reserved?
+   test-net-1?
+   six-to-four-relay-anycast?
+   benchmark-tests?
+   test-net-2?
+   test-net-3?
+   multicast?
+   limited-broadcast?
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
 
 (define (<ipv4-address>-bignum (o <ipv4-address>))
   (or (o cached-bignum)
