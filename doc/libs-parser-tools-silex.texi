@@ -364,18 +364,31 @@ default.
 
 
 @deffn {Auxiliary Syntax} counters: @meta{which-ones}
-Instruct @func{lex} about which counters will be available to the lexer.
+Instruct @func{lex} about which counters will be available to the lexer;
+counters are managed by the input system, and can be used by the lexer.
+The following values for @meta{which-ones} are available:
 
-Counters are managed by the input system, and can be used by the lexer.
-The following values for @meta{which-ones} are available: @samp{all},
-@samp{line}, @samp{none}; @samp{line} is the default.  The more counters
-the input system maintains, the more it is slowed down.
+@table @code
+@item all
+Expect all the counters to be available from the input system:
+@code{yyline}, @code{yycolumn}, @code{yyoffset}.
 
-Notice that the same @samp{counters:} clause must be given to @func{lex}
-and to @func{make-IS}, a mismatch will result in undefined behaviour.
-This is because an input system is independent from a lexer table, and
-it is more efficient to build tables for a specific set of counters
-rather than to configure them at run time.
+@item line
+Expect only the counter @code{yyline} to be available from the input
+system.
+
+@item none
+Expect no counter to be available.
+@end table
+
+@noindent
+@samp{line} is the default.
+
+Notice that the same @clause{counters:} clause must be given to
+@func{lex} and to @func{make-IS}, a mismatch will result in undefined
+behaviour.  This is because an input system is independent from a lexer
+table, and it is more efficient to build tables for a specific set of
+counters rather than to configure them at run time.
 @end deffn
 
 @c page
@@ -447,19 +460,35 @@ This clause is mutually exclusive with @clause{string:} and
 
 
 @deffn {Auxiliary Syntax} counters: @meta{which-ones}
-Instruct @func{make-IS} about which counters to make available to
-the lexer.
+Instruct @func{make-IS} about which counters to make available to the
+lexer; counters are managed by the input system, and can be used by the
+lexer.  The following values for @meta{which-ones} are available:
 
-Counters are managed by the input system, and can be used by the lexer.
-The following values for @meta{which-ones} are available: @samp{all},
-@samp{line}, @samp{none}; @samp{all} is the default.  The more counters
-the input system maintains, the more it is slowed down.
+@table @code
+@item all
+Make available all the counters: @code{yyline}, @code{yycolumn},
+@code{yyoffset}.
 
-Notice that the same @samp{counters:} option must be given to @func{lex}
-and to @func{make-IS}, a mismatch will result in undefined behaviour.
-This is because an input system is independent from a lexer table, and
-it is more efficient to build tables for a specific set of counters
-rather than to configure them at run time.
+@item line
+Make avilable only the counter @code{yyline}.  Accessing any of the
+bindings @code{yycolumn}, @code{yyoffset} will raise an unbound
+identifier error.
+
+@item none
+Make available no counter.  Accessing any of the bindings:
+@code{yyline}, @code{yycolumn}, @code{yyoffset} will raise an unbound
+identifier error.
+@end table
+
+@noindent
+@samp{line} is the default.  The more counters the input system
+maintains, the more it is slowed down.
+
+Notice that the same @clause{counters:} option must be given to
+@func{lex} and to @func{make-IS}, a mismatch will result in undefined
+behaviour.  This is because an input system is independent from a lexer
+table, and it is more efficient to build tables for a specific set of
+counters rather than to configure them at run time.
 
 @example
 (import (vicare)
