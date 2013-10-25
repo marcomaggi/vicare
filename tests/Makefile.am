@@ -280,6 +280,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-multimethods-ordinary.sps				\
 	test-nausicaa-multimethods-starred.sps				\
 	test-nausicaa-conditions.sps					\
+	test-nausicaa-simple-match.sps					\
 	\
 	test-nausicaa-containers-lists.sps				\
 	test-nausicaa-containers-vectors.sps				\

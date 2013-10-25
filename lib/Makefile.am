@@ -300,6 +300,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/builtins.sls				\
 	nausicaa/language/conditions.sls			\
 	nausicaa/language/increments.sls			\
+	nausicaa/language/simple-match.sls			\
 	\
 	nausicaa.sls						\
 	\
