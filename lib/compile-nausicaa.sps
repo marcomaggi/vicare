@@ -5,6 +5,8 @@
   (only (nausicaa language multimethods))
   (only (nausicaa language builtins))
   (only (nausicaa language conditions))
+  (only (nausicaa language simple-match))
+  (only (nausicaa language infix))
   (only (nausicaa))
 
   (only (nausicaa containers lists))

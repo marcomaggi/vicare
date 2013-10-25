@@ -80,12 +80,12 @@ All the bindings are reexported.
 Sentinel values (@libsref{sentinels, The sentinel value}).
 
 @item @library{nausicaa language simple-match}
-Simple pattern matching syntax (@nauref{simple-match, Simple
-destructuring match syntax}).
+Simple pattern matching syntax (@ref{simple-match, Simple destructuring
+match syntax}).
 
-@item @library{vicare language-extensions infix}
-Syntax for infix--to--prefix notation conversion (@libsref{simple-match,
-Simple destructuring match syntax}).
+@item @library{nausicaa language infix}
+Syntax for infix--to--prefix notation conversion (@ref{infix, Infix to
+prefix transformer}.
 @end table
 
 @c end of file

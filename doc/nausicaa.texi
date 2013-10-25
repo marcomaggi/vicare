@@ -119,6 +119,7 @@ Libraries in the language @library{nausicaa}
 * conditions::                  Condition object types.
 * increments::                  Numeric increment syntaxes.
 * simple-match::                Simple destructuring match syntax.
+* infix::                       Infix to prefix transformer.
 
 Library groups
 
@@ -165,6 +166,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-conditions.texi
 @include nausicaa-increments.texi
 @include nausicaa-simple-match.texi
+@include nausicaa-infix.texi
 
 @c page
 @node containers
