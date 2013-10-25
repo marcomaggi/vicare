@@ -1472,10 +1472,10 @@ The library @library{vicare language-extensions infix} provides the
 @func{infix} macro which converts the traditional infix notation for
 expressions to the equivalent Scheme's prefix notation.
 
-To use the library just import @library{vicare infix} and use the
-@func{infix} macro: it expands to a prefix expression to be evaluated at
-runtime, in the lexical context of the macro use; as a special case
-@code{(infix)} is equivalent to @code{(values)}.
+To use the library just import @library{vicare language-extensions
+infix} and use the @func{infix} macro: it expands to a prefix expression
+to be evaluated at runtime, in the lexical context of the macro use; as
+a special case @code{(infix)} is equivalent to @code{(values)}.
 
 The macro allows us to evaluate forms like:
 
