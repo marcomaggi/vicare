@@ -298,6 +298,9 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-parser-tools-lalr-glr.sps				\
 	test-nausicaa-parser-tools-lalr-calc.sps			\
 	\
+	test-nausicaa-net-ipv4-address.sps				\
+	test-nausicaa-net-ipv6-address.sps				\
+	\
 	test-issue-058-lalr-unary-prec.sps
 
 VICARE_SCHEME_FFI_TESTS	= \

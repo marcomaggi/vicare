@@ -149,6 +149,8 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-lexical-tokens.texi		\
 	nausicaa-parser-tools-lalr.texi				\
 	\
+	nausicaa-net-addresses.texi				\
+	\
 	macros.texi						\
 	fdl-1.3.texi						\
 	gpl-3.0.texi
