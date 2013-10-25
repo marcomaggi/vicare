@@ -125,6 +125,7 @@ Library groups
 
 * parser tools::                Lexers and parsers.
 * containers::                  Containers libraries.
+* net::                         Networking.
 
 Appendices
 
@@ -207,6 +208,17 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-parser-tools-source-locations.texi
 @include nausicaa-parser-tools-lexical-tokens.texi
 @include nausicaa-parser-tools-lalr.texi
+
+@c page
+@node net
+@chapter Networking
+
+
+@menu
+* net addresses::               Network resource addresses.
+@end menu
+
+@include nausicaa-net-addresses.texi
 
 @c page
 

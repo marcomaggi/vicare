@@ -282,6 +282,11 @@ endif
 endif
 
 if WANT_NAUSICAA
+EXTRA_DIST			+= \
+	nausicaa/net/helpers/ipv4-address-lexer.l		\
+	nausicaa/net/helpers/ipv6-address-lexer.l		\
+	nausicaa/net/helpers/make-tables.sps
+
 nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/auxiliary-syntaxes.sls		\
 	nausicaa/language/symbols-tree.sls			\
@@ -319,7 +324,14 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/silex/default-error-handler.sls	\
 	nausicaa/parser-tools/lalr/lr-driver.sls		\
 	nausicaa/parser-tools/lalr/glr-driver.sls		\
-	nausicaa/parser-tools/lalr.sls
+	nausicaa/parser-tools/lalr.sls				\
+	\
+	nausicaa/net/helpers/ipv4-address-lexer.sls		\
+	nausicaa/net/helpers/ipv4-address-parser.sls		\
+	nausicaa/net/helpers/ipv6-address-lexer.sls		\
+	nausicaa/net/helpers/ipv6-address-parser.sls		\
+	nausicaa/net/ipv4-addresses.sls				\
+	nausicaa/net/ipv6-addresses.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif
@@ -377,7 +389,7 @@ nobase_dist_libvicare_DATA	+= vicare/cre2.sls
 dist_pkglibexec_SCRIPTS		+= compile-cre2.sps
 endif
 
-## --------------------------------------------------------------------
+#page
 
 VICARE_FASL_DIRECTORY		= $(builddir)/fasl
 VICARE_COMPILE_LIBRARY_PATH	= $(builddir):$(srcdir):$(VICARE_LIBRARY_PATH)
@@ -500,8 +512,9 @@ clean-local:
 #### SILex lexers building
 
 SILEX_SRCDIR	= $(srcdir)/vicare/parser-tools/silex
+NAUNET_SRCDIR	= $(srcdir)/nausicaa/net/helpers
 
-.PHONY: silex-internals silex-backup
+.PHONY: silex-internals silex-backup net-tables
 
 silex-internals:
 	@echo; echo "*** Special rule: rebuilding SILex internals lexer tables"; echo
@@ -510,5 +523,9 @@ silex-internals:
 silex-backup:
 	@echo; echo "*** Special rule: backup of SILex internals lexer tables"; echo
 	cp --verbose $(SILEX_SRCDIR)/*-l.sls $(SILEX_SRCDIR)/*.l $(SILEX_SRCDIR)/backup
+
+net-tables:
+	@echo; echo "*** Special rule: rebuilding net libraries tables"; echo
+	@export NAUNET_SRCDIR=$(NAUNET_SRCDIR); $(VICARE_RUN) $(NAUNET_SRCDIR)/make-tables.sps
 
 ### end of file
