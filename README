@@ -189,9 +189,9 @@ Autotools.
 There are  special makefile rules  to rebuild source code  files, mostly
 lexer and parser tables:
 
-net-tables	- rebuild the tables for the net libraries
-silex-test	- rebuild the tests for the SILex lexer
-lalr-test	- rebuild the tests for the LALR parser
+ip-address-tables	- rebuild the tables for the net libraries
+silex-test		- rebuild the tests for the SILex lexer
+lalr-test		- rebuild the tests for the LALR parser
 
 and the  following DANGEROUS  rule, use  only if you  know what  you are
 doing:
