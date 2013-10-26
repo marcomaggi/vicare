@@ -176,20 +176,48 @@
 (define-class <ipv4-address>
   (nongenerative nausicaa:net:ipv4-address:<ipv4-address>)
 
-  (protocol (lambda (make-top)
-	      (lambda ((addr-ell <list-of-ipv4-address-fixnums>))
-		(apply (make-top) #f #f addr-ell))))
+  (protocol
+   (lambda (make-top)
+     (define (%make-address third second first zeroth)
+       ((make-top) #f #f third second first zeroth))
+     (case-lambda
+      (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
+	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
+       (%make-address third second first zeroth))
+      (((addr-ell <list-of-ipv4-address-fixnums>))
+       (apply %make-address addr-ell))
+      )))
 
-  (fields (mutable cached-bignum)
-	  (mutable cached-string)
+  (fields (mutable memoized-bignum-rep)
+	  (mutable memoized-string-rep)
 	  (immutable (third	<ipv4-address-fixnum>))
 	  (immutable (second	<ipv4-address-fixnum>))
 	  (immutable (first	<ipv4-address-fixnum>))
 	  (immutable (zeroth	<ipv4-address-fixnum>)))
 
   (virtual-fields
-   bignum
-   string
+   (immutable (bignum <exact-integer>)
+	      (lambda ((o <ipv4-address>))
+		(or (o $memoized-bignum-rep)
+		    (receive-and-return (bn)
+			(+ (o $zeroth)
+			   (fxarithmetic-shift-left (o $first)   8)
+			   (fxarithmetic-shift-left (o $second) 16)
+			   (fxarithmetic-shift-left (o $third)  24))
+		      (set! (o $memoized-bignum-rep) bn)))))
+
+   (immutable (string <string>)
+	      (lambda ((o <ipv4-address>))
+		(or (o $memoized-string-rep)
+		    (receive-and-return (S)
+			(string-append (o $third  $string) "."
+				       (o $second $string) "."
+				       (o $first  $string) "."
+				       (o $zeroth $string))
+		      (set! (o $memoized-string-rep) S)))))
+
+   ;;;
+
    private?
    loopback?
    localhost?
@@ -202,26 +230,10 @@
    test-net-3?
    multicast?
    limited-broadcast?
+
    #| end of virtual-fields |# )
 
   #| end of class |# )
-
-(define (<ipv4-address>-bignum (o <ipv4-address>))
-  (or (o cached-bignum)
-      (receive-and-return (bn)
-	  (+ (o zeroth)
-	     (bitwise-arithmetic-shift-left (o first)    8)
-	     (bitwise-arithmetic-shift-left (o second)   16)
-	     (bitwise-arithmetic-shift-left (o third)    24))
-	(set! (o cached-bignum) bn))))
-
-(define (<ipv4-address>-string (o <ipv4-address>))
-  (receive-and-return (S)
-      (string-append (number->string (o third))  "."
-		     (number->string (o second)) "."
-		     (number->string (o first))  "."
-		     (number->string (o zeroth)))
-    (set! (o cached-string) S)))
 
 ;;; --------------------------------------------------------------------
 
@@ -291,17 +303,17 @@
 	      (lambda (addr-ell number-of-bits)
 		((make-address addr-ell) number-of-bits #f))))
 
-  (fields prefix-length
-	  (mutable cached-string))
+  (fields (immutable (prefix-length <nonnegative-fixnum>))
+	  (mutable   memoized-string-rep))
 
   (virtual-fields (immutable (string <string>)
 			     (lambda ((o <ipv4-address-prefix>))
-			       (or (o $cached-string)
+			       (or (o $memoized-string-rep)
 				   (receive-and-return (S)
 				       (string-append (slot-ref o string <ipv4-address>)
 						      "/"
-						      (number->string (o $prefix-length)))
-				     (set! (o $cached-string) S))))))
+						      (o $prefix-length $string))
+				     (set! (o $memoized-string-rep) S))))))
 
   #| end of class |# )
 
