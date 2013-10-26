@@ -30,6 +30,7 @@
   (only (nausicaa parser-tools ip-addresses ipv6-address-lexer))
   (only (nausicaa parser-tools ip-addresses ipv6-address-parser))
   (only (nausicaa parser-tools ipv4-addresses))
+  (only (nausicaa parser-tools ipv6-addresses))
 
   (only (nausicaa net addresses ipv4))
   (only (nausicaa net addresses ipv6))
