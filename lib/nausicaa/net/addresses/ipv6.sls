@@ -72,8 +72,8 @@
     <ipv6-address-prefix>-string
     )
   (import (nausicaa)
-    (nausicaa net addresses helpers ipv6-address-lexer)
-    (prefix (nausicaa net addresses helpers ipv6-address-parser) parser.)
+    (nausicaa parser-tools ip-addresses ipv6-address-lexer)
+    (prefix (nausicaa parser-tools ip-addresses ipv6-address-parser) parser.)
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens)   lt.)
