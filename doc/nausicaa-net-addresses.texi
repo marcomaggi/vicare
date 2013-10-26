@@ -330,6 +330,14 @@ items all being of type @class{ipv4-address-fixnum}.  It is derived from
 @ref{builtins lists, List label}.
 @end deftp
 
+
+@deftp Label @aclass{ipv4-address-prefix-length}
+Label type whose predicate tests that the object is a non--negative
+fixnum in the range @math{[0, 32]}.  It is derived from
+@class{nonnegative-fixnum} as defined by @library{nausicaa language
+builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
+@end deftp
+
 @c page
 @node net addresses ipv4 address
 @subsubsection IPv4 address objects class
@@ -397,78 +405,78 @@ The string representation of the address.
 @end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} private?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} private?
 True if the address' prefix is @code{10.0.0.0/8} or @code{172.16.0.0/12}
 or @code{192.168.0.0/16}.  See Section 3 ``Global and Other Specialized
 Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} loopback?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} loopback?
 True if the address' prefix is @code{127.0.0.0/8}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} localhost?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} localhost?
 True if the address is @code{127.0.0.1}.  See Section 3 ``Global and
 Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} link-local?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} link-local?
 True if the address' prefix is @code{169.254.0.0/16}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} reserved?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} reserved?
 True if the address' prefix is @code{192.0.0.0/24} or
 @code{240.0.0.0/4}.  See Section 3 ``Global and Other Specialized
 Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-1?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} test-net-1?
 True if the address' prefix is @code{192.0.2.0/24}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} six-to-four-relay-anycast?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} six-to-four-relay-anycast?
 True if the address' prefix is @code{192.88.99.0/24}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} benchmark-tests?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} benchmark-tests?
 True if the address' prefix is @code{198.18.0.0/15}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-2?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} test-net-2?
 True if the address' prefix is @code{198.51.100.0/24}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} test-net-3?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} test-net-3?
 True if the address' prefix is @code{203.0.113.0/24}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} multicast?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} multicast?
 True if the address' prefix is @code{224.0.0.0/4}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{ipv4-address} limited-broadcast?
+@deftypecv {Immutable virtual field} @aclass{ipv4-address} @aclass{boolean} limited-broadcast?
 True if the address prefix is @code{255.255.255.255}.  See Section 3
 ``Global and Other Specialized Address Blocks'' of @rfc{} 5735.
-@end defcv
+@end deftypecv
 
 @c page
 @node net addresses ipv4 prefix
@@ -481,22 +489,55 @@ ipv4-addresses}.
 
 @deftp Class @aclass{ipv4-address-prefix}
 Represents an IPv4 address prefix; it is derived from
-@class{ipv4-address}.  Its constructor accepts two arguments: the list
-of numbers returned by the IPv4 address parser, already validated; a
-number specifying how many of the leftmost contiguous bits of the
-address comprise the prefix.
+@class{ipv4-address}.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@defcv {Immutable Field} @aclass{ipv4-address-prefix} prefix-length
-A number specifying how many of the leftmost contiguous bits of the
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipv4-address-prefix} constructor @var{numbers} @var{prefix-length}
+Build and return a new object of type @class{ipv4-address-prefix}.
+@var{numbers} must be a list of @math{4} fixnums in the range @math{[0,
+255]}; @var{prefix-length} must be a non--negative fixnum specifying how
+many of the leftmost contiguous bits of the address comprise the prefix.
+@end defop
+
+
+@defop Maker @aclass{ipv4-address-prefix} @aclass{ipv4-address-prefix} (@meta{numbers} @meta{prefix-length})
+Build and return a new object of type @class{ipv4-address-prefix} using
+the common constructor.
+
+@example
+(<ipv4-address-prefix> O
+  (receive (numbers len)
+      (parse-ipv4-address-prefix "1.2.3.4/8")
+    (<ipv4-address-prefix> (numbers len))))
+
+(list (O third) (O second) (O first) (O zeroth))
+@result{} (1 2 3 4)
+
+(O prefix-length)
+@result{} 8
+@end example
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+
+@deftypecv {Immutable Field} @aclass{ipv4-address-prefix} @aclass{ipv4-address-prefix-length} prefix-length
+A fixnum specifying how many of the leftmost contiguous bits of the
 address comprise the prefix.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv4-address-prefix} string
+@deftypecv {Immutable Virtual Field} @aclass{ipv4-address-prefix} @aclass{string} string
 The string representation of the address prefix.
-@end defcv
+@end deftypecv
 
 @c page
 @node net addresses ipv6
