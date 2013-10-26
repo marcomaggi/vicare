@@ -1,0 +1,303 @@
+@node parser-tools ip-addresses
+@section Lexer and parser for IP addresses
+
+
+@menu
+* parser-tools ip-addresses v4::  IPv4 address lexer and parser.
+@end menu
+
+@c page
+@node parser-tools ip-addresses v4
+@subsection IPv4 address lexer and parser
+
+
+@cindex @library{nausicaa parser-tools ipv4-addresses}, library
+@cindex Library @library{nausicaa parser-tools ipv4-addresses}
+
+
+@menu
+* parser-tools ip-addresses v4 lexer::    Tokenising an IPv4 address.
+* parser-tools ip-addresses v4 parser::   Parsing an IPv4 address.
+* parser-tools ip-addresses v4 errors::   Condition objects and error handlers.
+@end menu
+
+@c page
+@node parser-tools ip-addresses v4 lexer
+@subsubsection Tokenising an IPv4 address string
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools ipv4-addresses}.
+
+
+@defvr Constant ipv4-address-lexer-table
+A lexer table to be used by the library @library{vicare parser-tools
+silex lexer} to tokenise IPv4 address or address prefix textual
+representations; the table is prepared to make use of all the counters.
+The token categories are:
+
+@table @code
+@item DOT
+Hold as semantic value the character @code{#\.}.
+
+@item NUMBER
+Hold as semantic value a number in the input IPv4 address.
+
+@item PREFIX-LENGTH
+Hold as semantic value the number of bits in the prefix as exact
+integer.
+@end table
+
+The longest IPv4 address string has: @math{4} numbers as address
+components, @math{3} separators between address components, a final
+slash and number to specify the address prefix length; the total is
+@math{4 + 3 + 1 = 8} tokens.  We may want to use
+@func{make-max-count-lexer} from @library{vicare parser-tools silex
+utilities} to limit the number of returned tokens.
+
+To tokenise an IPv4 address string we can do:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools ipv4-addresses)   ip.)
+  (prefix (vicare parser-tools silex lexer)        lex.)
+  (prefix (nausicaa parser-tools lexical-tokens)   lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(define (make-address-lexer address-string)
+  (let ((IS (lex.make-IS (lex.string: address-string))))
+    (lex.make-lexer ip.ipv4-address-lexer-table IS)))
+@end example
+
+@noindent
+every time the lexer thunk is evaluated, it returns an object of type
+@class{lexical-token} as defined by the library @library{nausicaa
+parser-tools lexical-tokens}.  Here are some examples of tokenisation:
+
+@example
+"1.2.3.4"
+@result{} [NUMBER 1] [DOT .] [NUMBER 2] [DOT .]
+   [NUMBER 3] [DOT .] [NUMBER 4] [*eoi* #<eof>]
+
+"1.Zciao"
+@result{} [NUMBER 1] [DOT .] [*lexer-error* "Zciao"]
+@end example
+
+@noindent
+notice that the lexer will match numbers in the range @math{[0, 255]} as
+a single @code{NUMBER} token, but positive numbers outside this range
+are split into multiple tokens:
+
+@example
+"256" @result{} [NUMBER 25] [NUMBER 6] [*eoi* #<eof>]
+
+"500" @result{} [NUMBER 50] [NUMBER 0] [*eoi* #<eof>]
+@end example
+
+@noindent
+this is weird, but this is just a lexer: it is responsibility of the
+parser to recognise invalid sequences of tokens.
+@end defvr
+
+
+@deffn Syntax make-ipv4-address-lexer @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} string: @meta{string}
+@deffnx {Auxiliary Syntax} port: @meta{port}
+@deffnx {Auxiliary Syntax} procedure: @meta{proc}
+Build and return a SILex lexer function making use of the table
+@code{ipv4-address-lexer-table}; the input system is created as
+described by the given clauses; the table and the input system are
+prepared to make use of all the counters.
+
+The auxiliary syntaxes are the ones exported by @library{vicare
+parser-tools silex lexer}; their arguments are the same as the ones
+described for @func{make-IS}, @libsref{silex input}.
+@end deffn
+
+@c page
+@node parser-tools ip-addresses v4 parser
+@subsubsection Parsing an IPv4 address
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools ipv4-addresses}.
+
+
+@defun make-ipv4-address-parser
+Return a low level LALR parser function for IPv4 address or address
+prefix textual representations; it works as described in @ref{lalr
+parser, Running the parser}.
+
+The returned parser function, when applied to the lexer and error
+handler, returns a list of values representing the address; this list
+must be further parsed and validated as described below.
+
+The lexer thunk used as argument for the returned parser function must
+work as described in @ref{parser-tools ip-addresses v4 lexer, Tokenising an IPv4
+address string}.
+
+To parse an IPv4 address string with the low--level parser function we
+can do:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools ipv4-addresses) ip.))
+
+(define (parse-address string)
+  (define lexer
+    (ip.make-ipv4-address-lexer (ip.string: string)))
+  (define parser
+    (ip.make-ipv4-address-parser))
+  (define error-handler
+    (ip.make-ipv4-address-parser-error-handler
+      who (list string)))
+  (parser lexer error-handler))
+@end example
+
+Here are some examples of address parsing:
+
+@example
+(parse-address "1.2.3.4")       @result{} (1 2 3 4)
+(parse-address "192.168.99.1")  @result{} (192 168 99 1)
+@end example
+
+@noindent
+and here are some examples of address prefix parsing:
+
+@example
+(parse-address "1.2.3.4/8")      @result{} (1 2 3 4 (8))
+(parse-address "192.168.99.1/8") @result{} (192 168 99 1 (8))
+@end example
+
+From the examples we see that:
+
+@enumerate
+@item
+If the input is an address prefix: the list has @math{5} elements and
+the last element of the returned list is a list of one value, the value
+being the prefix length: a number specifying how many of the leftmost
+contiguous bits of the address comprise the prefix.
+
+@item
+If the input is an address: the list has @math{4} elements and the last
+element is a number.
+@end enumerate
+@end defun
+
+
+@defun parse-ipv4-address-only @var{string}
+High--level parser function for IPv4 address textual representations.
+If successful: return a list of @math{4} elements representing the
+result of the parsing; otherwise raise an exception with compound
+condition object of types @condition{who}, @condition{error},
+@condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address-only "1.2.3.4")
+@result{} (1 2 3 4)
+
+(parse-ipv4-address-only "192.168.99.1")
+@result{} (192 168 99 1)
+@end example
+@end defun
+
+
+@defun parse-ipv4-address-prefix @var{string}
+High--level parser function for IPv4 address prefix textual
+representations.  If successful return @math{2} values: a list of
+@math{4} fixnums representing the address numbers and a fixnum
+representing the prefix length; otherwise raise an exception with
+compound condition object of types @condition{error}, @condition{who},
+@condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address-prefix "1.2.3.4/8")
+@result{} (1 2 3 4) 8
+
+(parse-ipv4-address-prefix "192.168.99.1/8")
+@result{} (192 168 99 1) 8
+@end example
+@end defun
+
+
+@defun parse-ipv4-address @var{string}
+High--level parser function for IPv4 address or address prefix textual
+representations.  If successful: return a list of @math{4} or @math{5}
+elements representing the result of the parsing; otherwise raise an
+exception with compound condition object of types @condition{who},
+@condition{error}, @condition{message}, @condition{irritants},
+@condition{ipv4-address-parser-error}.
+
+@example
+(parse-ipv4-address "1.2.3.4")
+@result{} (1 2 3 4)
+
+(parse-ipv4-address "192.168.99.1")
+@result{} (192 168 99 1)
+
+(parse-ipv4-address "1.2.3.4/8")
+@result{} (1 2 3 4 (8))
+
+(parse-ipv4-address "192.168.99.1/8")
+@result{} (192 168 99 1 (8))
+@end example
+@end defun
+
+@c page
+@node parser-tools ip-addresses v4 errors
+@subsubsection Condition objects and error handlers
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools ipv4-addresses}.
+
+
+@deftp {Condition Type} &ipv4-address-parser-error
+Tags compound condition objects as raised by the IPv4 parser or lexer;
+it is derived from @condition{condition}.  This condition type can be
+used in Nausicaa's @oopp{} syntaxes.
+
+@example
+(import (nausicaa)
+  (nausicaa parser-tools ipv4-addresses))
+
+(define C
+  (&ipv4-address-parser-error ()))
+
+((&ipv4-address-parser-error) C)
+@result{} #t
+
+(try
+    (raise C)
+  (catch E
+    (&ipv4-address-parser-error
+     #t)
+    (else #f)))
+@result{} #t
+@end example
+@end deftp
+
+
+@defun make-ipv4-address-parser-error-handler @var{who} @var{irritants}
+@defunx make-ipv4-address-parser-error-handler @var{who} @var{irritants} @var{condition-maker}
+Build and return a procedure to be used as error handler by the IPv4
+address and address prefix parsers.  It raises an exception with
+compound condition object of types:
+
+@example
+&ipv4-address-parser-error
+&who
+&message
+&irritants
+@end example
+
+The optional @var{condition-maker} must be a condition object
+constructor and defaults to @func{make-error}; its result is added to
+the raised compound object.  @var{condition-maker} is meant to be used
+to tag the compound object as @condition{error} or
+@condition{assertion}.
+@end defun
+
+@c end of file
