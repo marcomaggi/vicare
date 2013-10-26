@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa net ipv4-addresses)
+(library (nausicaa net addresses ipv4)
   (export
 
     ;; conditions
@@ -51,8 +51,8 @@
     <ipv4-address-prefix-length>)
   (import (nausicaa)
     (vicare unsafe operations)
-    (prefix (nausicaa net helpers ipv4-address-lexer) lexer.)
-    (prefix (nausicaa net helpers ipv4-address-parser) parser.)
+    (prefix (nausicaa net addresses helpers ipv4-address-lexer)  lexer.)
+    (prefix (nausicaa net addresses helpers ipv4-address-parser) parser.)
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens) lt.)

@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8 -*-
 ;;;
-;;;Part of: Vicare ausicaa/Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for IPv4 address object
 ;;;Date: Fri Jun 11, 2010
 ;;;
@@ -27,12 +27,10 @@
 
 #!r6rs
 (import (nausicaa)
-  (nausicaa net ipv4-addresses)
-  (nausicaa net helpers ipv4-address-lexer)
+  (nausicaa net addresses ipv4)
   (prefix (vicare parser-tools silex lexer) lex.)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)
   (prefix (nausicaa parser-tools source-locations) sl.)
-  (prefix (nausicaa net helpers ipv4-address-parser) parser.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -310,7 +308,7 @@
   (define (parse-address string)
     (let* ((IS		(lex.make-IS (lex.string: string) (lex.counters: 'all)))
 	   (lexer	(lex.make-lexer ipv4-address-lexer-table IS))
-	   (parser	(parser.make-ipv4-address-parser)))
+	   (parser	(make-ipv4-address-parser)))
       (parser lexer (make-ipv4-address-parser-error-handler 'parse-address string))))
 
 ;;; --------------------------------------------------------------------

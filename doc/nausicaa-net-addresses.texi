@@ -34,7 +34,7 @@ handle IPv4 addresses specifications, according to @rfc{} 5735.
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @defvr Constant ipv4-address-lexer-table
@@ -127,7 +127,7 @@ described for @func{make-IS}, @libsref{silex input}.
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @defun make-ipv4-address-parser
@@ -258,7 +258,7 @@ exception with compound condition object of types @condition{who},
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @deftp {Condition Type} &ipv4-address-parser-error
@@ -312,7 +312,7 @@ to tag the compound object as @condition{error} or
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @deftp Label @aclass{ipv4-address-fixnum}
@@ -344,7 +344,7 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @deftp Class @aclass{ipv4-address}
@@ -484,7 +484,7 @@ True if the address prefix is @code{255.255.255.255}.  See Section 3
 
 
 The following bindings are exported by the library @library{nausicaa net
-ipv4-addresses}.
+addresses ipv4}.
 
 
 @deftp Class @aclass{ipv4-address-prefix}
@@ -544,11 +544,11 @@ The string representation of the address prefix.
 @subsection IPv6 address objects
 
 
-@cindex @library{nausicaa net ipv6address}, library
-@cindex Library @library{nausicaa net ipv6address}
+@cindex @library{nausicaa net address ipv6}, library
+@cindex Library @library{nausicaa net address ipv6}
 
 
-The library @library{nausicaa net ipv6addresses} exports utilities to
+The library @library{nausicaa net addresses ipv6} exports utilities to
 handle IPv6 addresses specifications, according to @rfc{} 4291.
 
 @menu
@@ -565,8 +565,8 @@ handle IPv6 addresses specifications, according to @rfc{} 4291.
 @subsubsection Tokenising an IPv6 address string
 
 
-The following bindings are exported by the @library{nausicaa net helpers
-ipv6address-lexer} library.
+The following bindings are exported by the @library{nausicaa net
+addresses ipv6} library.
 
 
 @defvr Constant ipv6-address-lexer-table
@@ -754,7 +754,7 @@ all the bits not in the prefix must be zero.
 
 
 The following bindings are exported by the @library{nausicaa net
-ipv6-addresses} library.
+addresses ipv6} library.
 
 
 @defun ipv6-address-parsed-list-split @var{ell}
@@ -873,7 +873,7 @@ objects of types @condition{ipv6-address-parser-error},
 
 
 The following bindings are exported by the @library{nausicaa net
-ipv6-addresses} library.
+addresses ipv6} library.
 
 
 @deftp {Condition Type} &ipv6-address-parser-error
@@ -920,7 +920,7 @@ to tag the compound object as @condition{error} or
 
 
 The following bindings are exported by the @library{nausicaa net
-ipv6-addresses} library.
+addresses ipv6} library.
 
 
 @deftp Class @aclass{ipv6-address}

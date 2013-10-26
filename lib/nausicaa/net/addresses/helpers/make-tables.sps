@@ -43,7 +43,7 @@
 (%log "ipv6-address-lexer.sls")
 (lex.lex (lex.input-file:	(%prefix "ipv6-address-lexer.l"))
 	 (lex.output-file:	(%prefix "ipv6-address-lexer.sls"))
-	 (lex.library-spec:	'(nausicaa net helpers ipv6-address-lexer))
+	 (lex.library-spec:	'(nausicaa net addresses helpers ipv6-address-lexer))
 	 (lex.library-language:	'(nausicaa))
 	 (lex.library-imports:	'((nausicaa parser-tools silex default-error-handler)
 				  (prefix (nausicaa parser-tools lexical-tokens) lt.)
@@ -54,7 +54,7 @@
 (%log "ipv4-address-lexer.sls")
 (lex.lex (lex.input-file:	(%prefix "ipv4-address-lexer.l"))
 	 (lex.output-file:	(%prefix "ipv4-address-lexer.sls"))
-	 (lex.library-spec:	'(nausicaa net helpers ipv4-address-lexer))
+	 (lex.library-spec:	'(nausicaa net addresses helpers ipv4-address-lexer))
 	 (lex.library-language:	'(nausicaa))
 	 (lex.library-imports:	'((nausicaa parser-tools silex default-error-handler)
 				  (prefix (nausicaa parser-tools lexical-tokens) lt.)
@@ -68,7 +68,7 @@
 
  (lalr.output-file:		(%prefix "ipv4-address-parser.sls"))
  (lalr.parser-name:		'make-ipv4-address-parser)
- (lalr.library-spec:		'(nausicaa net helpers ipv4-address-parser))
+ (lalr.library-spec:		'(nausicaa net addresses helpers ipv4-address-parser))
 
  (lalr.terminals:		'(DOT NUMBER PREFIX-LENGTH))
 
@@ -86,7 +86,7 @@
 
  (lalr.output-file:		(%prefix "ipv6-address-parser.sls"))
  (lalr.parser-name:		'make-ipv6-address-parser)
- (lalr.library-spec:		'(nausicaa net helpers ipv6-address-parser))
+ (lalr.library-spec:		'(nausicaa net addresses helpers ipv6-address-parser))
 
  (lalr.terminals:		'(COLON DOT SLASH NUMBER))
 
