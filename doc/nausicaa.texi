@@ -123,7 +123,7 @@ Libraries in the language @library{nausicaa}
 
 Library groups
 
-* parser tools::                Lexers and parsers.
+* parser-tools::                Lexers and parsers.
 * containers::                  Containers libraries.
 * net::                         Networking.
 
@@ -195,7 +195,7 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-containers-iterators.texi
 
 @c page
-@node parser tools
+@node parser-tools
 @chapter Lexers and parsers
 
 
@@ -203,11 +203,13 @@ of object--oriented languages, but it just has the perfume of
 * source-locations::            Representing source locations.
 * lexical-tokens::              Describing lexical tokens.
 * lalr::                        A LALR(1) parser generator.
+* parser-tools ip-addresses::   Lexer and parser for IP addresses.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
 @include nausicaa-parser-tools-lexical-tokens.texi
 @include nausicaa-parser-tools-lalr.texi
+@include nausicaa-parser-tools-ip-addresses.texi
 
 @c page
 @node net
