@@ -591,6 +591,11 @@
 (parametrise ((check-test-name	'class-address))
 
   (check
+      (let (((o <ipv4-address>) (<ipv4-address> (1 2 3 4))))
+	(list (o third) (o second) (o first) (o zeroth)))
+    => '(1 2 3 4))
+
+  (check
       (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
 	(list (o third) (o second) (o first) (o zeroth)))
     => '(1 2 3 4))
