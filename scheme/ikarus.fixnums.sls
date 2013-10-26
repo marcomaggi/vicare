@@ -67,6 +67,8 @@
     $fxdiv-and-mod	$fxdiv0-and-mod0
     $fxabs
 
+    $fixnum->string
+
 ;;; --------------------------------------------------------------------
 
     error@fx+		error@fx*
@@ -126,7 +128,8 @@
 	    $fxdiv		$fxdiv0
 	    $fxmod		$fxmod0
 	    $fxdiv-and-mod	$fxdiv0-and-mod0
-	    $fxabs)
+	    $fxabs
+	    $fixnum->string)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
@@ -614,7 +617,8 @@
      (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
 
 
-(module (fixnum->string)
+(module (fixnum->string
+	 $fixnum->string)
   (import (ikarus.emergency))
 
   (define who 'fixnum->string)

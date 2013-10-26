@@ -1035,6 +1035,7 @@
     ($fxcopy-bit-field				$fx $vicare-fx)
     ($fxrotate-bit-field			$fx $vicare-fx)
     ($fxbit-field				$fx $vicare-fx)
+    ($fixnum->string				$fx $vicare-fx)
 ;;;
     ($make-symbol				$symbols $vicare-symbols)
     ($symbol-unique-string			$symbols $vicare-symbols)
