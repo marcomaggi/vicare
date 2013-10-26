@@ -28,6 +28,7 @@
 #!r6rs
 (import (nausicaa)
   (nausicaa net addresses ipv6)
+  (nausicaa parser-tools ipv6-addresses)
   (prefix (nausicaa parser-tools ip-addresses ipv6-address-lexer) lexer.)
   (prefix (nausicaa parser-tools ip-addresses ipv6-address-parser) parser.)
   (prefix (vicare parser-tools silex lexer) lex.)

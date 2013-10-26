@@ -331,6 +331,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls	\
 	nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls	\
 	nausicaa/parser-tools/ipv4-addresses.sls			\
+	nausicaa/parser-tools/ipv6-addresses.sls			\
 	\
 	nausicaa/net/addresses/ipv4.sls					\
 	nausicaa/net/addresses/ipv6.sls
