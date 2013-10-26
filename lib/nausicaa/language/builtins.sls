@@ -73,6 +73,10 @@
     (nausicaa language oopp)
     (nausicaa language multimethods)
     (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sat Oct 26, 2013)
+    (only (vicare system $fx)
+	  $fixnum->string)
     (only (vicare system $symbols)
 	  $symbol-value
 	  $set-symbol-value!
@@ -1354,10 +1358,20 @@
       ((_ ?fx)
        (fixnum->string ?fx))))
 
+  (method-syntax $string
+    (syntax-rules ()
+      ((_ ?fx)
+       ($fixnum->string ?fx 10))))
+
   (method-syntax flonum
     (syntax-rules ()
       ((_ ?fx)
        (fixnum->flonum ?fx))))
+
+  (method-syntax $flonum
+    (syntax-rules ()
+      ((_ ?fx)
+       ($fixnum->flonum ?fx))))
 
   ;; methods: arithmetic operations
   (method-syntax abs

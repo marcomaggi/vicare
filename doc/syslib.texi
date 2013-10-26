@@ -457,6 +457,32 @@ Unsafe version of @func{fxbit-field}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Conversion operations
+
+
+@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
+Return a string object representing @var{fx} in @var{base}.  @var{base}
+must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->char @var{fx}
+Return a new character value whose code point equals @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char->fixnum @var{ch}
+Return a fixnum representing the code point of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->flonum @var{fx}
+Convert the fixnum operand into a flonum and return a reference to the
+result.
+@end deffn
+
+@c ------------------------------------------------------------
+
 @subsubheading Miscellaneous operations
 
 @deffn {Unsafe Operation} $fxinthash @var{fx}
@@ -5250,6 +5276,12 @@ Assume the arguments have been already validated.
 
 @deffn {Unsafe Operation} $interned-strings
 Return a vector holding the currently interned strings.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
+Return a string object representing @var{fx} in @var{base}.  @var{base}
+must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
 @end deffn
 
 @c page

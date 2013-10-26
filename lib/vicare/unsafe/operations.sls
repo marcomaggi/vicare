@@ -143,6 +143,10 @@
     $flonum-u8-ref
     $flonum-set!
     $fixnum->flonum
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sat Oct 26, 2013)
+    #;$fixnum->string
+    #;$fixnum->char
     $fl+
     $fl-
     $fl*
