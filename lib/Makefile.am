@@ -283,9 +283,9 @@ endif
 
 if WANT_NAUSICAA
 EXTRA_DIST			+= \
-	nausicaa/net/helpers/ipv4-address-lexer.l		\
-	nausicaa/net/helpers/ipv6-address-lexer.l		\
-	nausicaa/net/helpers/make-tables.sps
+	nausicaa/net/addresses/helpers/ipv4-address-lexer.l	\
+	nausicaa/net/addresses/helpers/ipv6-address-lexer.l	\
+	nausicaa/net/addresses/helpers/make-tables.sps
 
 nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/auxiliary-syntaxes.sls		\
@@ -326,12 +326,12 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/lalr/glr-driver.sls		\
 	nausicaa/parser-tools/lalr.sls				\
 	\
-	nausicaa/net/helpers/ipv4-address-lexer.sls		\
-	nausicaa/net/helpers/ipv4-address-parser.sls		\
-	nausicaa/net/helpers/ipv6-address-lexer.sls		\
-	nausicaa/net/helpers/ipv6-address-parser.sls		\
-	nausicaa/net/ipv4-addresses.sls				\
-	nausicaa/net/ipv6-addresses.sls
+	nausicaa/net/addresses/helpers/ipv4-address-lexer.sls	\
+	nausicaa/net/addresses/helpers/ipv4-address-parser.sls	\
+	nausicaa/net/addresses/helpers/ipv6-address-lexer.sls	\
+	nausicaa/net/addresses/helpers/ipv6-address-parser.sls	\
+	nausicaa/net/addresses/ipv4.sls				\
+	nausicaa/net/addresses/ipv6.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif
@@ -512,7 +512,7 @@ clean-local:
 #### SILex lexers building
 
 SILEX_SRCDIR	= $(srcdir)/vicare/parser-tools/silex
-NAUNET_SRCDIR	= $(srcdir)/nausicaa/net/helpers
+NAUNET_SRCDIR	= $(srcdir)/nausicaa/net/addresses/helpers
 
 .PHONY: silex-internals silex-backup net-tables
 

@@ -27,12 +27,12 @@
 
 #!r6rs
 (import (nausicaa)
-  (nausicaa net ipv6-addresses)
+  (nausicaa net addresses ipv6)
+  (prefix (nausicaa net addresses helpers ipv6-address-lexer) lexer.)
+  (prefix (nausicaa net addresses helpers ipv6-address-parser) parser.)
   (prefix (vicare parser-tools silex lexer) lex.)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)
   (prefix (nausicaa parser-tools source-locations) sl.)
-  (nausicaa net helpers ipv6-address-lexer)
-  (prefix (nausicaa net helpers ipv6-address-parser) parser.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -43,7 +43,7 @@
 
   (define (tokenise-address string)
     (let* ((IS		(lex.make-IS (lex.string: string) (lex.counters: 'all)))
-	   (lexer	(lex.make-lexer ipv6-address-lexer-table IS))
+	   (lexer	(lex.make-lexer lexer.ipv6-address-lexer-table IS))
 	   (out		'()))
       (define (push-token! (T lt.<lexical-token>))
 	(set-cons! out (cons (T category) (T value))))
@@ -185,7 +185,7 @@
 
   (define (parse-address string)
     (let* ((IS		(lex.make-IS (lex.string: string) (lex.counters: 'all)))
-	   (lexer	(lex.make-lexer ipv6-address-lexer-table IS))
+	   (lexer	(lex.make-lexer lexer.ipv6-address-lexer-table IS))
 	   (parser	(parser.make-ipv6-address-parser)))
       (parser lexer (make-ipv6-address-parser-error-handler 'parse-address string))))
 

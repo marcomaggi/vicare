@@ -1,5 +1,5 @@
 #!r6rs
-(library (nausicaa net helpers ipv6-address-lexer)
+(library (nausicaa net addresses helpers ipv6-address-lexer)
   (export
     ipv6-address-lexer-table)
   (import (nausicaa)
@@ -11,7 +11,7 @@
 )
 
 ;
-; Table generated from the file ../../lib/nausicaa/net/helpers/ipv6-address-lexer.l by SILex 1.0
+; Table generated from the file ../../lib/nausicaa/net/addresses/helpers/ipv6-address-lexer.l by SILex 1.0
 ;
 
 (define ipv6-address-lexer-table

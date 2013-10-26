@@ -25,12 +25,12 @@
   (only (nausicaa parser-tools lalr glr-driver))
   (only (nausicaa parser-tools lalr))
 
-  (only (nausicaa net helpers ipv4-address-lexer))
-  (only (nausicaa net helpers ipv4-address-parser))
-  (only (nausicaa net ipv4-addresses))
-  (only (nausicaa net helpers ipv6-address-lexer))
-  (only (nausicaa net helpers ipv6-address-parser))
-  (only (nausicaa net ipv6-addresses))
+  (only (nausicaa net addresses helpers ipv4-address-lexer))
+  (only (nausicaa net addresses helpers ipv4-address-parser))
+  (only (nausicaa net addresses ipv4))
+  (only (nausicaa net addresses helpers ipv6-address-lexer))
+  (only (nausicaa net addresses helpers ipv6-address-parser))
+  (only (nausicaa net addresses ipv6))
 
   )
 

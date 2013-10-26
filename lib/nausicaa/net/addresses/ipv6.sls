@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa net ipv6-addresses)
+(library (nausicaa net addresses ipv6)
   (export
 
     ;; conditions
@@ -72,8 +72,8 @@
     <ipv6-address-prefix>-string
     )
   (import (nausicaa)
-    (nausicaa net helpers ipv6-address-lexer)
-    (prefix (nausicaa net helpers ipv6-address-parser) parser.)
+    (nausicaa net addresses helpers ipv6-address-lexer)
+    (prefix (nausicaa net addresses helpers ipv6-address-parser) parser.)
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens)   lt.)

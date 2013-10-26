@@ -1,5 +1,5 @@
 #!r6rs
-(library (nausicaa net helpers ipv6-address-parser)
+(library (nausicaa net addresses helpers ipv6-address-parser)
   (export make-ipv6-address-parser)
   (import
     (nausicaa)
