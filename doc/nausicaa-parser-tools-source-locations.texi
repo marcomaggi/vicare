@@ -1,4 +1,4 @@
-@node source-locations
+@node parser-tools source-locations
 @section Representing source locations
 
 
@@ -15,16 +15,16 @@ value, possibly in ``unspecified'' state when there is no consistent way
 to track the source location.
 
 @menu
-* source-locations objects::      Source location objects.
-* source-locations comparison::   Comparison methods.
-* source-locations update::       Updating the location.
-* source-locations unspecified::  Unspecified source locations.
-* source-locations misc::         Miscellaneous functions.
-* source-locations examples::     Some code examples.
+* parser-tools source-locations objects::      Source location objects.
+* parser-tools source-locations comparison::   Comparison methods.
+* parser-tools source-locations update::       Updating the location.
+* parser-tools source-locations unspecified::  Unspecified source locations.
+* parser-tools source-locations misc::         Miscellaneous functions.
+* parser-tools source-locations examples::     Some code examples.
 @end menu
 
 @c page
-@node source-locations objects
+@node parser-tools source-locations objects
 @subsection Source location objects
 
 
@@ -92,7 +92,7 @@ conventional starting position: line number @math{1}, column number
 @end deftypemethod
 
 @c page
-@node source-locations comparison
+@node parser-tools source-locations comparison
 @subsection Comparison methods
 
 
@@ -133,7 +133,7 @@ field greater than, or equal to, the one of @var{L}; otherwise return
 @end deftypemethod
 
 @c page
-@node source-locations update
+@node parser-tools source-locations update
 @subsection Updating the location
 
 
@@ -221,7 +221,7 @@ Hold a boolean value which causes the @func{update} method to honor a
 @end deffn
 
 @c page
-@node source-locations unspecified
+@node parser-tools source-locations unspecified
 @subsection Unspecified source locations
 
 
@@ -238,7 +238,7 @@ representing an unspecified source location.  It is initialised to
 @end deffn
 
 @c page
-@node source-locations misc
+@node parser-tools source-locations misc
 @subsection Miscellaneous methods and functions
 
 
@@ -262,7 +262,7 @@ Return a string representation of @var{O}.  It makes use of the method
 @end deffn
 
 @c page
-@node source-locations examples
+@node parser-tools source-locations examples
 @subsection Some code examples
 
 

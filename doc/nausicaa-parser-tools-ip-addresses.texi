@@ -73,8 +73,8 @@ To tokenise an IPv4 address string we can do:
 @noindent
 every time the lexer thunk is evaluated, it returns an object of type
 @class{lexical-token} as defined by the library @library{nausicaa
-parser-tools lexical-tokens}, @ref{lexical-tokens, Describing lexical
-tokens}.  Here are some examples of tokenisation:
+parser-tools lexical-tokens}, @ref{parser-tools lexical-tokens,
+Describing lexical tokens}.  Here are some examples of tokenisation:
 
 @example
 "1.2.3.4"
@@ -127,8 +127,8 @@ parser-tools ipv4-addresses}.
 
 @defun make-ipv4-address-parser
 Return a low level LALR parser function for IPv4 address or address
-prefix textual representations; it works as described in @ref{lalr
-parser, Running the parser}.
+prefix textual representations; it works as described in
+@ref{parser-tools lalr parser, Running the parser}.
 
 The returned parser function, when applied to the lexer and error
 handler, returns a list of values representing the address; this list
@@ -416,8 +416,8 @@ To tokenise an IPv6 address string we can do:
 @noindent
 every time the lexer thunk is evaluated, it returns an object of type
 @class{lexical-token} as defined by the library @library{nausicaa
-parser-tools lexical-tokens}, @ref{lexical-tokens, Describing lexical
-tokens}.  Here are some examples of tokenisation:
+parser-tools lexical-tokens}, @ref{parser-tools lexical-tokens,
+Describing lexical tokens}.  Here are some examples of tokenisation:
 
 @example
 "1:2:3:4:5:6:7:8"
@@ -463,8 +463,8 @@ helpers ipv6address-parser}.
 
 @defun make-ipv6-address-parser
 Return a new low--level LALR parser function for IPv6 address or address
-prefix textual representations; it works as described in @ref{lalr
-parser, Running the parser}.
+prefix textual representations; it works as described in
+@ref{parser-tools lalr parser, Running the parser}.
 
 The returned parser function, when applied to the lexer and error
 handler, returns a list of values representing the address; this list

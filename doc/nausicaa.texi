@@ -200,10 +200,10 @@ of object--oriented languages, but it just has the perfume of
 
 
 @menu
-* source-locations::            Representing source locations.
-* lexical-tokens::              Describing lexical tokens.
-* lalr::                        A LALR(1) parser generator.
-* parser-tools ip-addresses::   Lexer and parser for IP addresses.
+* parser-tools source-locations::  Representing source locations.
+* parser-tools lexical-tokens::    Describing lexical tokens.
+* parser-tools lalr::              A LALR(1) parser generator.
+* parser-tools ip-addresses::      Lexer and parser for IP addresses.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
