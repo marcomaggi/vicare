@@ -713,6 +713,52 @@ with compound condition object of types: @condition{who},
 @end example
 @end defun
 
+
+@defun parse-ipv6-address-only @var{string}
+High--level parser function for IPv6 address string representations;
+this function will fail if @var{string} represents an address prefix.
+If successful return a list of @math{8} elements representing the result
+of the parsing; otherwise raise an exception with compound condition
+object of types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{ipv6-address-parser-error}.
+
+@example
+(parse-ipv6-address-only "1:2:3:4:5:6:7:8")
+@result{} (1 2 3 4 5 6 7 8)
+
+(parse-ipv6-address-only "1:2:3:4::172.30.67.254")
+@result{} (1 2 3 4 0 0 #xac1e #x43fe)
+
+(parse-ipv6-address-only "1:2::3:4:172.30.67.254/60")
+@error{} &ipv6-address-parser-error
+@end example
+@end defun
+
+
+@defun parse-ipv6-address-prefix @var{string}
+High--level parser function for IPv6 address prefix string
+representations; this function will fail if @var{string} represents an
+address.  If successful return @math{2} values: a list of @math{8}
+elements representing the address components, a fixnum representing
+prefix length; otherwise raise an exception with compound condition
+object of types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{ipv6-address-parser-error}.
+
+@example
+(parse-ipv6-address-prefix "::/60")
+@result{} (0 0 0 0 0 0 0 0) 60
+
+(parse-ipv6-address-prefix "1:2:3::4:5:6/60")
+@result{} (1 2 3 0 0 4 5 6) 60
+
+(parse-ipv6-address-prefix "::1:2:3:4:172.30.67.254/60")
+@result{} (0 0 1 2 3 4 #xac1e #x43fe) 60
+
+(parse-ipv6-address-prefix "::192.168.99.1")
+@error{} &ipv6-address-parser-error
+@end example
+@end defun
+
 @c page
 @node parser-tools ip-addresses v6 utilities
 @subsubsection IPv6 address parsing utilities
