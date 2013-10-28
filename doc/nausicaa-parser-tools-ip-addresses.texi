@@ -113,7 +113,7 @@ prepared to make use of all the counters.
 
 The auxiliary syntaxes are the ones exported by @library{vicare
 parser-tools silex lexer}; their arguments are the same as the ones
-described for @func{make-IS}, @libsref{silex input}.
+described for @func{make-IS}, @libsref{silex input, Input systems}.
 @end deffn
 
 @c page
@@ -449,7 +449,7 @@ prepared to make use of all the counters.
 
 The auxiliary syntaxes are the ones exported by @library{vicare
 parser-tools silex lexer}; their arguments are the same as the ones
-described for @func{make-IS}, @libsref{silex input}.
+described for @func{make-IS}, @libsref{silex input, Input systems}.
 @end deffn
 
 @c page

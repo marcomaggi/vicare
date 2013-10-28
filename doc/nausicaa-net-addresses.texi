@@ -302,9 +302,9 @@ Represents an IPv6 address.
 @defopx {Common constructor} @aclass{ipv6-address} constructor @var{seventh} @var{sixth} @var{fifth} @var{fourth} @var{third} @var{second} @var{first} @var{zeroth}
 Build and return a new object of type @class{ipv6-address}.  When
 applied to a single argument: @var{numbers} must be a list of @math{8}
-fixnums in the range @math{[0, #xFFFF]} representing the address
+fixnums in the range @code{[0, #xFFFF]} representing the address
 components.  When applied to @math{8} arguments: each must be a fixnum
-in the range @math{[0, #xFFFF]} representing an address component.
+in the range @code{[0, #xFFFF]} representing an address component.
 @end defop
 
 
@@ -383,7 +383,7 @@ Represents an IPv6 address prefix; it is derived from
 
 @defop {Common constructor} @aclass{ipv6-address-prefix} constructor @var{numbers} @var{prefix-length}
 Build and return a new object of type @class{ipv6-address-prefix}.
-@var{numbers} must be a list of @math{8} fixnums in the range @math{[0,
+@var{numbers} must be a list of @math{8} fixnums in the range @code{[0,
 #xFFFF]} representing the address components.  @var{prefix-length} must
 be a non--negative fixnum specifying how many of the leftmost contiguous
 bits of the address comprise the prefix.
@@ -432,7 +432,7 @@ addresses ipv6}.
 
 @deftp Label @aclass{ipv6-address-fixnum}
 Label type whose predicate tests that the object is a non--negative
-fixnum in the range @math{[0, #xFFFF]}.  It is derived from
+fixnum in the range @code{[0, #xFFFF]}.  It is derived from
 @class{nonnegative-fixnum} as defined by @library{nausicaa language
 builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
