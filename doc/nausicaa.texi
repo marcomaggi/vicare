@@ -123,8 +123,8 @@ Libraries in the language @library{nausicaa}
 
 Library groups
 
-* parser-tools::                Lexers and parsers.
 * containers::                  Containers libraries.
+* parser-tools::                Lexers and parsers.
 * net::                         Networking.
 
 Appendices
