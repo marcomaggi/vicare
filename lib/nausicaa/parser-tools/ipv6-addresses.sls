@@ -30,29 +30,33 @@
   (export
     ;; conditions
     &ipv6-address-parser-error
-    make-ipv6-address-parser-error-condition
-    ipv6-address-parser-error-condition?
-
     make-ipv6-address-parser-error-handler
+
+    ;; lexer and parser utilities
+    (rename (lexer.ipv6-address-lexer-table	ipv6-address-lexer-table))
+    make-ipv6-address-lexer
+    (rename (lex.string:	string:)
+	    (lex.port:		port:)
+	    (lex.procedure:	procedure:))
+
+    (rename (parser.make-ipv6-address-parser	make-ipv6-address-parser))
+
+    parse-ipv6-address-only
+    parse-ipv6-address-prefix
+    parse-ipv6-address
 
     ;; validation utilities
     ipv6-address-parsed-list-split
     ipv6-address-parsed-list-expand
-    ipv6-address-parsed-list-validate-prefix
-
-    ;; lexer and parser utilities
-    make-ipv6-address-lexer
-    make-ipv6-address-parser
-    ipv6-address-parse
-    ipv6-address-prefix-parse
-    )
+    ipv6-address-parsed-list-validate-prefix)
   (import (nausicaa)
     (prefix (nausicaa parser-tools ip-addresses ipv6-address-lexer)  lexer.)
     (prefix (nausicaa parser-tools ip-addresses ipv6-address-parser) parser.)
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens)   lt.)
-    (prefix (nausicaa parser-tools source-locations) sl.))
+    (prefix (nausicaa parser-tools source-locations) sl.)
+    (vicare unsafe operations))
 
 
 ;;;; conditions and error handlers
@@ -65,7 +69,7 @@
    ((who irritants)
     (make-ipv6-address-parser-error-handler who irritants make-error))
    ((who irritants condition-maker)
-    (lambda (message (token lt.<lexical-token>))
+    (lambda ((message <string>) (token lt.<lexical-token>))
       (raise
        (condition (make-ipv6-address-parser-error-condition)
 		  (condition-maker)
@@ -75,15 +79,15 @@
 		  (make-irritants-condition (cons (token value) irritants))))))))
 
 
-;;;; lexer and parser utilities
+;;;; high-level lexer functions
 
 (mk.define-maker make-ipv6-address-lexer
     %make-ipv6-address-lexer
-  ;;These  auxiliary  keywords  are   the  ones  exported  by  (nausicaa
+  ;;These  auxiliary   syntaxes  are   the  ones  exported   by  (vicare
   ;;parser-tools silex lexer).
-  ((lex.string:		sentinel)
-   (lex.port:		sentinel)
-   (lex.procedure:	sentinel)))
+  ((lex.string:		sentinel	(mk.without lex.port:   lex.procedure:))
+   (lex.port:		sentinel	(mk.without lex.string: lex.procedure:))
+   (lex.procedure:	sentinel	(mk.without lex.port:   lex.string:))))
 
 (define-syntax* (%make-ipv6-address-lexer stx)
   (syntax-case stx (sentinel)
@@ -104,50 +108,73 @@
      (synner "invalid or missing selection of input method"))
     ))
 
-(define (make-ipv6-address-parser who lexer irritants)
-  (lambda ()
-    ((parser.make-ipv6-address-parser) lexer
-     (make-ipv6-address-parser-error-handler who irritants))))
+
+;;;; low-level and high-level parser functions
 
-(define (ipv6-address-parse the-string)
-  (let* ((who		'ipv6-address-parse)
-	 (irritants	(list the-string))
-	 (%error	(lambda ()
-			  (raise
-			   (condition (make-ipv6-address-parser-error-condition)
-				      (make-who-condition who)
-				      (make-message-condition "invalid IPv6 address string")
-				      (make-irritants-condition irritants))))))
-    (let* ((lexer	(make-ipv6-address-lexer  (lex.string: the-string)))
-	   (parser	(make-ipv6-address-parser who lexer irritants))
+(module (parse-ipv6-address-only
+	 parse-ipv6-address-prefix
+	 parse-ipv6-address)
+
+  (define (parse-ipv6-address the-string)
+    (define who 'parse-ipv6-address)
+    (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv6-address-parser who lexer the-string))
+	   (ell		(parser)))
+      (receive (addr-ell number-of-bits-in-prefix)
+	  (ipv6-address-parsed-list-split ell)
+	(receive-and-return (addr-ell^)
+	    (ipv6-address-parsed-list-expand addr-ell)
+	  (if addr-ell^
+	      ($set-last-pair! addr-ell^ (list (list number-of-bits-in-prefix)))
+	    (%raise-parser-error who the-string))))))
+
+  (define (parse-ipv6-address-only the-string)
+    (define who 'parse-ipv6-address-only)
+    (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv6-address-parser who lexer the-string))
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
 	(when number-of-bits-in-prefix
-	  (%error))
+	  (%raise-parser-error who the-string))
 	(let ((addr-ell (ipv6-address-parsed-list-expand addr-ell)))
-	  (or addr-ell (%error)))))))
+	  (or addr-ell (%raise-parser-error who the-string))))))
 
-(define (ipv6-address-prefix-parse the-string)
-  (let* ((who		'ipv6-address-prefix-parse)
-	 (irritants	(list the-string))
-	 (%error	(lambda ()
-			  (raise
-			   (condition (make-ipv6-address-parser-error-condition)
-				      (make-who-condition who)
-				      (make-message-condition "invalid IPv6 address prefix string")
-				      (make-irritants-condition irritants))))))
-    (let* ((lexer	(make-ipv6-address-lexer  (lex.string: the-string)))
-	   (parser	(make-ipv6-address-parser who lexer irritants))
+  (define (parse-ipv6-address-prefix the-string)
+    (define who 'parse-ipv6-address-prefix)
+    (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
+	   (parser	(%make-ipv6-address-parser who lexer the-string))
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
 	(unless number-of-bits-in-prefix
-	  (%error))
+	  (%raise-parser-error who the-string))
 	(let ((addr-ell (ipv6-address-parsed-list-expand addr-ell)))
-	  (unless addr-ell
-	    (%error))
-	  (values addr-ell number-of-bits-in-prefix))))))
+	  (if addr-ell
+	      (values addr-ell number-of-bits-in-prefix)
+	    (%raise-parser-error who the-string))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-ipv6-address-parser who lexer the-string)
+    (lambda ()
+      ((parser.make-ipv6-address-parser)
+       lexer
+       (make-ipv6-address-parser-error-handler who (list the-string)))))
+
+  (define (%raise-parser-error who the-string)
+    (raise
+     (condition (make-ipv6-address-parser-error-condition)
+		(make-who-condition who)
+		(make-message-condition "invalid IPv6 address or address-prefix string")
+		(make-irritants-condition (list the-string)))))
+
+  (define ($set-last-pair! ell pair)
+    (if (pair? ($cdr ell))
+	($set-last-pair! ($cdr ell) pair)
+      ($set-cdr! ell pair)))
+
+  #| end of module |# )
 
 
 ;;;; validation utilities
@@ -204,9 +231,6 @@
 	  (loop (cdr ell) (let ((n (- n 16)))
 			    (if (positive? n) n 0)))
 	#f))))
-
-
-
 
 
 ;;;; done

@@ -60,8 +60,8 @@ To tokenise an IPv4 address string we can do:
 
 @example
 (import (nausicaa)
-  (prefix (nausicaa parser-tools ipv4-addresses)   ip.)
   (prefix (vicare parser-tools silex lexer)        lex.)
+  (prefix (nausicaa parser-tools ipv4-addresses)   ip.)
   (prefix (nausicaa parser-tools lexical-tokens)   lt.)
   (prefix (nausicaa parser-tools source-locations) sl.))
 
@@ -73,7 +73,8 @@ To tokenise an IPv4 address string we can do:
 @noindent
 every time the lexer thunk is evaluated, it returns an object of type
 @class{lexical-token} as defined by the library @library{nausicaa
-parser-tools lexical-tokens}.  Here are some examples of tokenisation:
+parser-tools lexical-tokens}, @ref{lexical-tokens, Describing lexical
+tokens}.  Here are some examples of tokenisation:
 
 @example
 "1.2.3.4"
@@ -151,7 +152,7 @@ can do:
     (ip.make-ipv4-address-parser))
   (define error-handler
     (ip.make-ipv4-address-parser-error-handler
-      who (list string)))
+      'parse-address (list string)))
   (parser lexer error-handler))
 @end example
 
@@ -262,18 +263,18 @@ used in Nausicaa's @oopp{} syntaxes.
 
 @example
 (import (nausicaa)
-  (nausicaa parser-tools ipv4-addresses))
+  (prefix (nausicaa parser-tools ipv4-addresses) ip.))
 
 (define C
-  (&ipv4-address-parser-error ()))
+  (ip.&ipv4-address-parser-error ()))
 
-((&ipv4-address-parser-error) C)
+((ip.&ipv4-address-parser-error) C)
 @result{} #t
 
 (try
     (raise C)
   (catch E
-    (&ipv4-address-parser-error
+    (ip.&ipv4-address-parser-error
      #t)
     (else #f)))
 @result{} #t
@@ -310,6 +311,47 @@ to tag the compound object as @condition{error} or
 @cindex Library @library{nausicaa parser-tools ipv6-addresses}
 
 
+IPv6 addresses are defined by @rfc{} 4291 ``IP Version 6 Addressing
+Architecture'' as 128-bit words commonly represented as @math{8}
+components of @math{16} bits each in base @math{16}:
+
+@example
+0001:0002:0003:0004:0005:0006:0A07:0B08
+@end example
+
+@noindent
+the rightmost @math{2} components can optionally be represented as an
+IPv4 dotted quad, with numbers in base @math{10}:
+
+@example
+1:2:3:4:5:6:10.7.11.8
+@end example
+
+@noindent
+a single double colon sequence @samp{::} can be present in the address
+and it represents the number of zeros required to make the address
+numeric components of length @math{8}; so this address:
+
+@example
+1:2:3::6:0A07:0B08
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+1:2:3:0:0:6:0A07:0B08
+@end example
+
+@noindent
+the double colon sequence represents at least @math{1} zero component,
+so the following address is wrong because it would represent @math{9}
+components:
+
+@example
+1:2:3::4:5:6:7:8
+@end example
+
 @menu
 * parser-tools ip-addresses v6 lexer::     Tokenising an IPv6 address.
 * parser-tools ip-addresses v6 parser::    Parsing an IPv6 address.
@@ -322,92 +364,131 @@ to tag the compound object as @condition{error} or
 @subsubsection Tokenising an IPv6 address string
 
 
-The following bindings are exported by the @library{nausicaa parser-tools
-ipv6-addresses} library.
+The following bindings are exported by the @library{nausicaa
+parser-tools ipv6-addresses} library.
 
 
 @defvr Constant ipv6-address-lexer-table
-A lexer table to be used by the library @library{nausicaa silex lexer}
-to tokenise textual IPv6 address or IPv6 address prefix representations.
-@end defvr
+A lexer table to be used by the library @library{nausicaa parser-tools
+silex lexer} to tokenise IPv6 address or address prefix textual
+representations; the table is prepared to make use of all the counters.
+The token categories are:
 
+@table @code
+@item COLON
+Hold as semantic value the character @code{#\:}.
 
-To tokenise an IPv6 address string we can do:
+@item DOT
+Hold as semantic value the character @code{#\.}.
 
-@example
-(import (nausicaa)
-  (nausicaa net helpers ipv6address-lexer)
-  (prefix (nausicaa silex lexer) lex.)
-  (nausicaa parser-tools))
+@item SLASH
+Hold as semantic value the character @code{#\/}.
 
-(define (make-address-lexer address-string)
-  (let ((IS (lex.make-IS (string: address-string))))
-    (lex.make-lexer ipv6-address-lexer-table IS)))
-@end example
-
-@noindent
-every time the lexer thunk is evaluated, it returns an object of type
-@class{lexical-token}.
-
-The token categories are: @code{COLON}, @code{DOT}, @code{SLASH},
-@code{NUMBER}.  The tokens of category @code{COLON}, @code{DOT} and
-@code{SLASH} hold, as semantic value, the characters @code{#\:},
-@code{#\.} and @code{#\/} respectively; the tokens of category
-@code{NUMBER} hold as semantic value the string representing a value in
-the input IPv6 address.  The interpretation of numbers, especially their
-base, cannot be determined by the lexer.
+@item NUMBER
+Hold as semantic value the string representing a value in the input IPv6
+address, in base @math{10} or base @math{16}.  The interpretation of
+numbers, especially their base, cannot be determined by the lexer: any
+string representing a number in base @math{10} is also valid as number
+in base @math{16}.
+@end table
 
 The longest IPv6 address string has: @math{8} numbers as address
 components, @math{7} separators between address components, a final
 slash and number to specify the address prefix length; the total is
 @math{8 + 7 + 2 = 17} tokens.  We may want to use
-@func{make-max-count-lexer} from @library{nausicaa silex utilities} to
-limit the number of returned tokens.
+@func{make-max-count-lexer} from @library{vicare parser-tools silex
+utilities} to limit the number of returned tokens.
+
+To tokenise an IPv6 address string we can do:
+
+@example
+(import (nausicaa)
+  (prefix (vicare parser-tools silex lexer)        lex.)
+  (prefix (nausicaa parser-tools ipv6-addresses)   ip.)
+  (prefix (nausicaa parser-tools lexical-tokens)   lt.)
+  (prefix (nausicaa parser-tools source-locations) sl.))
+
+(define (make-address-lexer address-string)
+  (let ((IS (lex.make-IS (lex.string: address-string))))
+    (lex.make-lexer ip.ipv6-address-lexer-table IS)))
+@end example
+
+@noindent
+every time the lexer thunk is evaluated, it returns an object of type
+@class{lexical-token} as defined by the library @library{nausicaa
+parser-tools lexical-tokens}, @ref{lexical-tokens, Describing lexical
+tokens}.  Here are some examples of tokenisation:
+
+@example
+"1:2:3:4:5:6:7:8"
+@result{} [NUMBER "1"] [COLON  #\:] [NUMBER "2"] [COLON  #\:]
+   [NUMBER "3"] [COLON  #\:] [NUMBER "4"] [COLON  #\:]
+   [NUMBER "5"] [COLON  #\:] [NUMBER "6"] [COLON  #\:]
+   [NUMBER "7"] [COLON  #\:] [NUMBER "8"] [*eoi* #<eof>]
+
+"F:Zciao"
+@result{} [NUMBER "F"] [COLON  #\:] [*lexer-error* "Zciao"]
+
+"1:2:3:4:5.6.7.8"
+@result{} [NUMBER "1"] [COLON  #\:] [NUMBER "2"] [COLON  #\:]
+   [NUMBER "3"] [COLON  #\:] [NUMBER "4"] [COLON  #\:]
+   [NUMBER "5"] [DOT    #\.] [NUMBER "6"] [DOT    #\.]
+   [NUMBER "7"] [DOT    #\.] [NUMBER "8"] [*eoi* #<eof>]
+@end example
+@end defvr
+
+
+@deffn Syntax make-ipv6-address-lexer @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} string: @meta{string}
+@deffnx {Auxiliary Syntax} port: @meta{port}
+@deffnx {Auxiliary Syntax} procedure: @meta{proc}
+Build and return a SILex lexer function making use of the table
+@code{ipv6-address-lexer-table}; the input system is created as
+described by the given clauses; the table and the input system are
+prepared to make use of all the counters.
+
+The auxiliary syntaxes are the ones exported by @library{vicare
+parser-tools silex lexer}; their arguments are the same as the ones
+described for @func{make-IS}, @libsref{silex input}.
+@end deffn
 
 @c page
 @node parser-tools ip-addresses v6 parser
 @subsubsection Parsing an IPv6 address
 
 
-The following bindings are exported by the @library{nausicaa net helpers
-ipv6address-parser} library.
+The following bindings are exported by the library @library{nausicaa net
+helpers ipv6address-parser}.
 
 
 @defun make-ipv6-address-parser
-Return a parser function for textual IPv6 address or IPv6 address prefix
-representations, it works as described in @ref{lalr parser}; the lexer
-must work as described in @ref{parser-tools ip-addresses v6 lexer}.
+Return a new low--level LALR parser function for IPv6 address or address
+prefix textual representations; it works as described in @ref{lalr
+parser, Running the parser}.
 
 The returned parser function, when applied to the lexer and error
 handler, returns a list of values representing the address; this list
 must be further parsed and validated as described below.
-@end defun
 
+The lexer thunk used as argument for the returned parser function must
+work as described in @ref{parser-tools ip-addresses v6 lexer, Tokenising
+an IPv6 address string}.
 
 To parse an IPv6 address string we can do:
 
 @example
 (import (nausicaa)
-  (nausicaa net helpers ipv6address-lexer)
-  (nausicaa net helpers ipv6address-parser)
-  (prefix (nausicaa silex lexer) lex.)
-  (nausicaa parser-tools))
-
-(define (make-ipv6-address-parser-error-handler who string)
-  (lambda (message (token <lexical-token>))
-    (assertion-violation who
-      (let (((pos <source-location>) token.location))
-        (string-append "invalid IPv6 address input at column "
-                       pos.column-string ": " message))
-      string token.value)))
+  (prefix (nausicaa parser-tools ipv6-addresses) ip.))
 
 (define (parse-address string)
-  (let* ((IS      (lex.make-IS (string: string)))
-         (lexer   (lex.make-lexer ipv6-address-lexer-table IS))
-         (parser  (make-ipv6-address-parser)))
-    (parser lexer
-            (make-ipv6-address-parser-error-handler
-             'parse-address string))))
+  (define lexer
+    (ip.make-ipv6-address-lexer (ip.string: string)))
+  (define parser
+    (ip.make-ipv6-address-parser))
+  (define error-handler
+    (ip.make-ipv6-address-parser-error-handler
+      'parse-address string))
+  (parser lexer error-handler))
 @end example
 
 @noindent
@@ -463,7 +544,7 @@ and here are some examples of address prefix parsing:
 
 From the examples we see that:
 
-@enumerate
+@itemize
 @item
 If the input is an address prefix: the last element of the returned list
 is a list of one value, the value being the prefix length: a number
@@ -476,14 +557,15 @@ If the input is an address: the last element is a number or @false{}.
 @item
 Whenever the input has the double--colon sequence, the returned list has
 @false{}; the parser enforces the presence of only one double--colon
-sequence.
-@end enumerate
+sequence, so @samp{::2::3} and @samp{::::} are invalid and will cause
+the error handler to be called.
+@end itemize
 
 The list must be processed and validated as follows:
 
 @enumerate
 @item
-If the numeric address components are more than @math{8} the address is
+If the numeric address components are more than @math{8}: the address is
 invalid.
 
 @item
@@ -492,7 +574,7 @@ not present: the address is invalid.
 
 @item
 If the @false{} value is present and the numeric address components are
-more than @math{7} the address is invalid; @false{} represents at least
+more than @math{7}: the address is invalid; @false{} represents at least
 one implicit zero element.
 
 @item
@@ -505,19 +587,146 @@ The prefix length, if present, must be validated as explained in the
 all the bits not in the prefix must be zero.
 @end enumerate
 
+The library @library{nausicaa net helpers ipv6address-parser} provides
+utility functions to ease the validation of the returned value;
+@ref{parser-tools ip-addresses v6 utilities, IPv6 address parsing
+utilities}.
+@end defun
+
+
+@defun parse-ipv6-address @var{string}
+High--level parser function for IPv6 address or address prefix string
+representations.  If successful return a list of @math{9} elements
+representing the result of the parsing; otherwise raise an exception
+with compound condition object of types: @condition{who},
+@condition{message}, @condition{irritants},
+@condition{ipv6-address-parser-error}.
+
+@example
+(parse-ipv6-address "1:2:3:4:5:6:7:8")
+@result{} (1 2 3 4 5 6 7 8 (#f))
+
+(parse-ipv6-address "::")
+@result{} (0 0 0 0 0 0 0 0 (#f))
+
+(parse-ipv6-address "::1")
+@result{} (0 0 0 0 0 0 0 1 (#f))
+
+(parse-ipv6-address "1::")
+@result{} (1 0 0 0 0 0 0 0 (#f))
+
+(parse-ipv6-address "1::2")
+@result{} (1 0 0 0 0 0 0 2 (#f))
+
+(parse-ipv6-address "1:2::3")
+@result{} (1 2 0 0 0 0 0 3 (#f))
+
+(parse-ipv6-address "1::2:3")
+@result{} (1 0 0 0 0 0 2 3 (#f))
+
+(parse-ipv6-address "1:2::3:4")
+@result{} (1 2 0 0 0 0 3 4 (#f))
+
+(parse-ipv6-address "1:2:3::4:5:6")
+@result{} (1 2 3 0 0 4 5 6 (#f))
+
+(parse-ipv6-address "::192.168.99.1")
+@result{} (0 0 0 0 0 0 #xC0A8 #x6301 (#f))
+
+(parse-ipv6-address "1:2:3:4::172.30.67.254")
+@result{} (1 2 3 4 0 0 #xac1e #x43fe (#f))
+
+(parse-ipv6-address "::1:2:3:4:172.30.67.254")
+@result{} (0 0 1 2 3 4 #xac1e #x43fe (#f))
+
+(parse-ipv6-address "1:2::3:4:172.30.67.254")
+@result{} (1 2 0 0 3 4 #xac1e #x43fe (#f))
+
+(parse-ipv6-address "::ffff:192.168.99.1")
+@result{} (0 0 0 0 0 #xFFFF #xC0A8 #x6301 (#f))
+
+(parse-ipv6-address "::/60")
+@result{} (0 0 0 0 0 0 0 0 (60))
+
+(parse-ipv6-address "::1/60")
+@result{} (0 0 0 0 0 0 0 1 (60))
+
+(parse-ipv6-address "1::/60")
+@result{} (1 0 0 0 0 0 0 0 (60))
+
+(parse-ipv6-address "1::2/60")
+@result{} (1 0 0 0 0 0 0 2 (60))
+
+(parse-ipv6-address "1:2::3/60")
+@result{} (1 2 0 0 0 0 0 3 (60))
+
+(parse-ipv6-address "1::2:3/60")
+@result{} (1 0 0 0 0 0 2 3 (60))
+
+(parse-ipv6-address "1:2::3:4/60")
+@result{} (1 2 0 0 0 0 3 4 (60))
+
+(parse-ipv6-address "1:2:3::4:5:6/60")
+@result{} (1 2 3 0 0 4 5 6 (60))
+
+(parse-ipv6-address "::192.168.99.1/60")
+@result{} (0 0 0 0 0 0 #xC0A8 #x6301 (60))
+
+(parse-ipv6-address "1:2:3:4::172.30.67.254/60")
+@result{} (1 2 3 4 0 0 #xac1e #x43fe (60))
+
+(parse-ipv6-address "::1:2:3:4:172.30.67.254/60")
+@result{} (0 0 1 2 3 4 #xac1e #x43fe (60))
+
+(parse-ipv6-address "1:2::3:4:172.30.67.254/60")
+@result{} (1 2 0 0 3 4 #xac1e #x43fe (60))
+
+(parse-ipv6-address "::ffff:192.168.99.1/60")
+@result{} (0 0 0 0 0 #xFFFF #xC0A8 #x6301 (60))
+
+;;;
+
+(parse-ipv6-address "1,")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "1::2::3")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "1::2::")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "::2::3")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "ff")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "ff:ff")
+@error{} &ipv6-address-parser-error
+
+;;it represents 6 components, 16-bit each
+(parse-ipv6-address "1:2:3:4:172.30.67.254")
+@error{} &ipv6-address-parser-error
+
+(parse-ipv6-address "1:2:3:4:172.30.67.254/60")
+@error{} &ipv6-address-parser-error
+@end example
+@end defun
+
 @c page
 @node parser-tools ip-addresses v6 utilities
 @subsubsection IPv6 address parsing utilities
 
 
-The following bindings are exported by the @library{nausicaa parser-tools
-ipv6-addresses} library.
+The following bindings are exported by the library @library{nausicaa
+parser-tools ipv6-addresses}.
 
 
 @defun ipv6-address-parsed-list-split @var{ell}
-Given a list returned by the parser, return two values: the list of
-address components, the number of bits in the prefix length or @false{}
-if there is no prefix length.
+Given a list returned by the parser generated by
+@func{make-ipv6-address-parser}, or equivalent, return two values: the
+list of address components, the number of bits in the prefix length or
+@false{} if there is no prefix length.
 
 @example
 (ipv6-address-parsed-list-split '(1 2 3 #f 4 5))
@@ -525,16 +734,37 @@ if there is no prefix length.
 
 (ipv6-address-parsed-list-split '(1 2 3 #f 4 5 (60)))
 @result{} (1 2 3 #f 4 5) 60
+
+(ipv6-address-parsed-list-split '(#f (#f)))
+@result{} (#f) #f
+
+(ipv6-address-parsed-list-split '(1 (#f)))
+@result{} (1) #f
 @end example
+
+@noindent
+Notice the last example: @code{(1 (#f))} represents an @strong{invalid}
+address, but this function will split the list nevertheless; we must use
+@func{ipv6-address-parsed-list-expand} to check the first return value.
 @end defun
 
 
 @defun ipv6-address-parsed-list-expand @var{ell}
-Given a list returned by the parser, with the prefix length element
-stripped, expand the @false{} value if present.  Return the resulting
-list or @false{} if the list is invalid.
+Given a list returned by the parser generated by
+@func{make-ipv6-address-parser}, or equivalent, with the prefix length
+element stripped, expand the @false{} value if present.  Return the
+resulting list or @false{} if the list is invalid.
 
 @example
+(ipv6-address-parsed-list-expand '(1))
+@result{} #f
+
+(ipv6-address-parsed-list-expand '(#f))
+@result{} (0 0 0 0 0 0 0 0)
+
+(ipv6-address-parsed-list-expand '(1 #f))
+@result{} (1 0 0 0 0 0 0 0)
+
 (ipv6-address-parsed-list-expand '(1 2 3 4 5 6 7 8))
 @result{} (1 2 3 4 5 6 7 8)
 
@@ -560,8 +790,8 @@ list or @false{} if the list is invalid.
 
 @defun ipv6-address-parsed-list-validate-prefix @var{number-of-bits-in-prefix} @var{ell}
 Given the number of bits in the prefix and the expanded list returned by
-the parser (of length @math{8}): return true if all the unused bits are
-set to zero; else return false.
+the parser (of length @math{8}): return @true{} if all the unused bits
+are set to zero; else return @false{}.
 
 @example
 (ipv6-address-parsed-list-validate-prefix 60
@@ -578,52 +808,6 @@ set to zero; else return false.
 @end example
 @end defun
 
-
-@deffn Syntax make-ipv6-address-lexer @meta{clause}
-Evaluate to a IPv6 address and address prefix lexer, taking input as
-specified by @meta{clause}.
-
-@meta{clause} can be one of the @code{:string}, @code{:port},
-@code{:procedure} clauses of @func{make-IS} (@libsref{silex input}).
-@end deffn
-
-
-@defun make-ipv6-address-parser @var{who} @var{lexer} @var{irritants}
-Return a parser function which, when evaluated, returns a list
-representing a parsed IPv6 address or address prefix.  @var{lexer} must
-be an appropriate lexer function.
-
-@var{who} and @var{irritants} are used as condition object components
-when an error occurs.  If parsing fails: an exception is raised with
-compound condition objects of types
-@condition{ipv6-address-parser-error}, @condition{error},
-@condition{who}, @condition{message}, @condition{irritants}.
-@end defun
-
-
-@defun ipv6-address-parse @var{string}
-Parse @var{string} as IPv6 address and return a validated list of
-@math{8} numbers representing the numerical components of the address.
-
-If an error occurs: an exception is raised with compound condition
-objects of types @condition{ipv6-address-parser-error},
-@condition{error}, @condition{who}, @condition{message},
-@condition{irritants}.
-@end defun
-
-
-@defun ipv6-address-prefix-parse @var{string}
-Parse @var{string} as IPv6 address prefix and return two values: a
-validated list of @math{8} numbers representing the numerical components
-of the address, a number specifying how many of the leftmost contiguous
-bits of the address comprise the prefix.
-
-If an error occurs: an exception is raised with compound condition
-objects of types @condition{ipv6-address-parser-error},
-@condition{error}, @condition{who}, @condition{message},
-@condition{irritants}.
-@end defun
-
 @c page
 @node parser-tools ip-addresses v6 errors
 @subsubsection Condition objects and error handlers
@@ -634,21 +818,29 @@ parser-tools ipv6-addresses} library.
 
 
 @deftp {Condition Type} &ipv6-address-parser-error
-Tags compound condition objects as raised by the IPv6 parser or lexer.
-It is derived from @condition{condition}.
+Tags compound condition objects as raised by the IPv6 parser or lexer;
+it is derived from @condition{condition}.  This condition type can be
+used in Nausicaa's @oopp{} syntaxes.
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools ipv6-addresses) ip.))
+
+(define C
+  (ip.&ipv6-address-parser-error ()))
+
+((ip.&ipv6-address-parser-error) C)
+@result{} #t
+
+(try
+    (raise C)
+  (catch E
+    (ip.&ipv6-address-parser-error
+     #t)
+    (else #f)))
+@result{} #t
+@end example
 @end deftp
-
-
-@defun make-ipv6-address-parser-error-condition
-Return a new condition object of type
-@condition{ipv6-address-parser-error}.
-@end defun
-
-
-@defun ipv6-address-parser-error-condition? @var{obj}
-Return true if @var{obj} is a condtion object of type
-@condition{ipv6-address-parser-error}.
-@end defun
 
 
 @defun make-ipv6-address-parser-error-handler @var{who} @var{irritants}
@@ -658,7 +850,7 @@ address and address prefix parsers.  It raises an exception with
 compound condition object of types:
 
 @example
-&ipv4-address-parser-error
+&ipv6-address-parser-error
 &who
 &message
 &irritants
@@ -670,7 +862,5 @@ the raised compound object.  @var{condition-maker} is meant to be used
 to tag the compound object as @condition{error} or
 @condition{assertion}.
 @end defun
-
-
 
 @c end of file
