@@ -283,9 +283,9 @@ endif
 
 if WANT_NAUSICAA
 EXTRA_DIST			+= \
-	nausicaa/net/parser-tools/ip-addresses/ipv4-address-lexer.l	\
-	nausicaa/net/parser-tools/ip-addresses/ipv6-address-lexer.l	\
-	nausicaa/net/parser-tools/ip-addresses/make-tables.sps
+	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.l		\
+	nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.l		\
+	nausicaa/parser-tools/ip-addresses/make-tables.sps
 
 nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/auxiliary-syntaxes.sls			\
