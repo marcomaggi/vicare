@@ -49,6 +49,13 @@ Notes for revision 0.3d6
   (vicare ---),  but recognising  identifiers exported by  the libraries
   in the hierarchy (nausicaa language ---) as auxiliary syntaxes.
 
+* Imported IPv4 and IPv6 address libraries from Nausicaa as:
+
+    (nausicaa parser-tools ipv4-addresses)
+    (nausicaa parser-tools ipv6-addresses)
+    (nausicaa net addresses ipv4)
+    (nausicaa net addresses ipv6)
+
 
 Notes for revision 0.3d5
 ------------------------
