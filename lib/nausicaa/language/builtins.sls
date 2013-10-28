@@ -1356,12 +1356,18 @@
   (method-syntax string
     (syntax-rules ()
       ((_ ?fx)
-       (fixnum->string ?fx))))
+       (fixnum->string ?fx))
+      ((_ ?fx ?base)
+       (fixnum->string ?fx ?base))
+      ))
 
   (method-syntax $string
     (syntax-rules ()
       ((_ ?fx)
-       ($fixnum->string ?fx 10))))
+       ($fixnum->string ?fx 10))
+      ((_ ?fx ?base)
+       ($fixnum->string ?fx ?base))
+      ))
 
   (method-syntax flonum
     (syntax-rules ()

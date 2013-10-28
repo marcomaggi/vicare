@@ -2261,10 +2261,15 @@ fixnums}.
 
 
 @defmethod @aclass{fixnum} string
+@defmethodx @aclass{fixnum} string @var{base}
 @defmethodx @aclass{fixnum} $string
+@defmethodx @aclass{fixnum} $string @var{base}
 Calling @func{string} is like applying to the instance number the
 function @func{fixnum->string} from @library{vicare}.  Calling
 @func{$string} does the same without validating the argument.
+
+@var{base} must be one among @math{2}, @math{8}, @math{10}, @math{16};
+when not given it defaults to @math{10}.
 @end defmethod
 
 

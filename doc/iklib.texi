@@ -4932,7 +4932,10 @@ the sign of the fixnum @var{fx}.
 
 
 @defun fixnum->string @var{fx}
-Return a string representation of @var{fx}.
+@defunx fixnum->string @var{fx} @var{base}
+Return a string representation of @var{fx}.  @var{base} must be one
+among @math{2}, @math{8}, @math{10}, @math{16}; when not given it
+defaults to @math{10}.
 @end defun
 
 
