@@ -1347,6 +1347,7 @@
     time-nanosecond
     time-second
     top-level-value
+    let*-syntax
     trace-define
     trace-define-syntax
     trace-lambda
