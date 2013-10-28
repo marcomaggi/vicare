@@ -1,4 +1,4 @@
-@node lexical-tokens
+@node parser-tools lexical-tokens
 @section Describing lexical tokens
 
 
@@ -19,15 +19,15 @@ along with @library{nausicaa parser-tools source-locations}, which
 defines the class @class{source-location}.
 
 @menu
-* lexical-tokens intro::        Overview of lexical tokens.
-* lexical-tokens token::        Lexical token objects.
-* lexical-tokens eoi::          End-of-input objects.
-* lexical-tokens error::        Lexical error objects.
-* lexical-tokens silex::        SILex default semantic actions.
+* parser-tools lexical-tokens intro::  Overview of lexical tokens.
+* parser-tools lexical-tokens token::  Lexical token objects.
+* parser-tools lexical-tokens eoi::    End-of-input objects.
+* parser-tools lexical-tokens error::  Lexical error objects.
+* parser-tools lexical-tokens silex::  SILex default semantic actions.
 @end menu
 
 @c page
-@node lexical-tokens intro
+@node parser-tools lexical-tokens intro
 @subsection Overview of lexical tokens
 
 
@@ -74,7 +74,7 @@ from the input stream), it must return a token with category
 @end example
 
 @c page
-@node lexical-tokens token
+@node parser-tools lexical-tokens token
 @subsection Lexical token objects
 
 
@@ -166,7 +166,7 @@ Return @true{} if the token has category @samp{*eoi*} or
 @end deftypemethod
 
 @c page
-@node lexical-tokens eoi
+@node parser-tools lexical-tokens eoi
 @subsection End--of--input objects
 
 
@@ -200,7 +200,7 @@ parser-tools source-locations}.
 @end defop
 
 @c page
-@node lexical-tokens error
+@node parser-tools lexical-tokens error
 @subsection Lexical error class
 
 
@@ -243,7 +243,7 @@ A Scheme string describing the error.
 @end deftypecv
 
 @c page
-@node lexical-tokens silex
+@node parser-tools lexical-tokens silex
 @subsection SILex default semantic actions
 
 
