@@ -282,42 +282,59 @@ endif
 endif
 
 if WANT_NAUSICAA
+EXTRA_DIST			+= \
+	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.l		\
+	nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.l		\
+	nausicaa/parser-tools/ip-addresses/make-tables.sps
+
 nobase_dist_libvicare_DATA	+= \
-	nausicaa/language/auxiliary-syntaxes.sls		\
-	nausicaa/language/symbols-tree.sls			\
+	nausicaa/language/auxiliary-syntaxes.sls			\
+	nausicaa/language/symbols-tree.sls				\
 	\
-	nausicaa/language/oopp.sls				\
-	nausicaa/language/oopp/auxiliary-syntaxes.sls		\
-	nausicaa/language/oopp/configuration.sls		\
-	nausicaa/language/oopp/helpers.sls			\
+	nausicaa/language/oopp.sls					\
+	nausicaa/language/oopp/auxiliary-syntaxes.sls			\
+	nausicaa/language/oopp/configuration.sls			\
+	nausicaa/language/oopp/helpers.sls				\
 	\
-	nausicaa/language/multimethods.sls			\
-	nausicaa/language/multimethods/auxiliary-syntaxes.sls	\
-	nausicaa/language/multimethods/helpers-for-expand.sls	\
-	nausicaa/language/multimethods/methods-table.sls	\
-	nausicaa/language/multimethods/types.sls		\
+	nausicaa/language/multimethods.sls				\
+	nausicaa/language/multimethods/auxiliary-syntaxes.sls		\
+	nausicaa/language/multimethods/helpers-for-expand.sls		\
+	nausicaa/language/multimethods/methods-table.sls		\
+	nausicaa/language/multimethods/types.sls			\
 	\
-	nausicaa/language/builtins.sls				\
-	nausicaa/language/conditions.sls			\
-	nausicaa/language/increments.sls			\
+	nausicaa/language/builtins.sls					\
+	nausicaa/language/conditions.sls				\
+	nausicaa/language/increments.sls				\
+	nausicaa/language/simple-match.sls				\
+	nausicaa/language/infix.sls					\
 	\
-	nausicaa.sls						\
+	nausicaa.sls							\
 	\
-	nausicaa/containers/lists.sls				\
-	nausicaa/containers/vectors.sls				\
-	nausicaa/containers/strings.sls				\
-	nausicaa/containers/arrays.sls				\
-	nausicaa/containers/stacks.sls				\
-	nausicaa/containers/queues.sls				\
-	nausicaa/containers/bitvectors.sls			\
-	nausicaa/containers/iterators.sls			\
+	nausicaa/containers/lists.sls					\
+	nausicaa/containers/vectors.sls					\
+	nausicaa/containers/strings.sls					\
+	nausicaa/containers/arrays.sls					\
+	nausicaa/containers/stacks.sls					\
+	nausicaa/containers/queues.sls					\
+	nausicaa/containers/bitvectors.sls				\
+	nausicaa/containers/iterators.sls				\
 	\
-	nausicaa/parser-tools/source-locations.sls		\
-	nausicaa/parser-tools/lexical-tokens.sls		\
-	nausicaa/parser-tools/silex/default-error-handler.sls	\
-	nausicaa/parser-tools/lalr/lr-driver.sls		\
-	nausicaa/parser-tools/lalr/glr-driver.sls		\
-	nausicaa/parser-tools/lalr.sls
+	nausicaa/parser-tools/source-locations.sls			\
+	nausicaa/parser-tools/lexical-tokens.sls			\
+	nausicaa/parser-tools/silex/default-error-handler.sls		\
+	nausicaa/parser-tools/lalr/lr-driver.sls			\
+	nausicaa/parser-tools/lalr/glr-driver.sls			\
+	nausicaa/parser-tools/lalr.sls					\
+	\
+	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
+	nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
+	nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls	\
+	nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls	\
+	nausicaa/parser-tools/ipv4-addresses.sls			\
+	nausicaa/parser-tools/ipv6-addresses.sls			\
+	\
+	nausicaa/net/addresses/ipv4.sls					\
+	nausicaa/net/addresses/ipv6.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif
@@ -375,7 +392,7 @@ nobase_dist_libvicare_DATA	+= vicare/cre2.sls
 dist_pkglibexec_SCRIPTS		+= compile-cre2.sps
 endif
 
-## --------------------------------------------------------------------
+#page
 
 VICARE_FASL_DIRECTORY		= $(builddir)/fasl
 VICARE_COMPILE_LIBRARY_PATH	= $(builddir):$(srcdir):$(VICARE_LIBRARY_PATH)
@@ -497,9 +514,10 @@ clean-local:
 #page
 #### SILex lexers building
 
-SILEX_SRCDIR	= $(srcdir)/vicare/parser-tools/silex
+SILEX_SRCDIR		= $(srcdir)/vicare/parser-tools/silex
+NAUIPADDR_SRCDIR	= $(srcdir)/nausicaa/parser-tools/ip-addresses
 
-.PHONY: silex-internals silex-backup
+.PHONY: silex-internals silex-backup ip-address-tables
 
 silex-internals:
 	@echo; echo "*** Special rule: rebuilding SILex internals lexer tables"; echo
@@ -508,5 +526,9 @@ silex-internals:
 silex-backup:
 	@echo; echo "*** Special rule: backup of SILex internals lexer tables"; echo
 	cp --verbose $(SILEX_SRCDIR)/*-l.sls $(SILEX_SRCDIR)/*.l $(SILEX_SRCDIR)/backup
+
+ip-address-tables:
+	@echo; echo "*** Special rule: rebuilding net libraries tables"; echo
+	@export NAUIPADDR_SRCDIR=$(NAUIPADDR_SRCDIR); $(VICARE_RUN) $(NAUIPADDR_SRCDIR)/make-tables.sps
 
 ### end of file

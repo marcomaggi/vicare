@@ -118,11 +118,14 @@ Libraries in the language @library{nausicaa}
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
 * increments::                  Numeric increment syntaxes.
+* simple-match::                Simple destructuring match syntax.
+* infix::                       Infix to prefix transformer.
 
 Library groups
 
-* parser tools::                Lexers and parsers.
 * containers::                  Containers libraries.
+* parser-tools::                Lexers and parsers.
+* net::                         Networking.
 
 Appendices
 
@@ -163,6 +166,8 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-builtins.texi
 @include nausicaa-conditions.texi
 @include nausicaa-increments.texi
+@include nausicaa-simple-match.texi
+@include nausicaa-infix.texi
 
 @c page
 @node containers
@@ -190,19 +195,32 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-containers-iterators.texi
 
 @c page
-@node parser tools
+@node parser-tools
 @chapter Lexers and parsers
 
 
 @menu
-* source-locations::            Representing source locations.
-* lexical-tokens::              Describing lexical tokens.
-* lalr::                        A LALR(1) parser generator.
+* parser-tools source-locations::  Representing source locations.
+* parser-tools lexical-tokens::    Describing lexical tokens.
+* parser-tools lalr::              A LALR(1) parser generator.
+* parser-tools ip-addresses::      Lexer and parser for IP addresses.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
 @include nausicaa-parser-tools-lexical-tokens.texi
 @include nausicaa-parser-tools-lalr.texi
+@include nausicaa-parser-tools-ip-addresses.texi
+
+@c page
+@node net
+@chapter Networking
+
+
+@menu
+* net addresses::               Network resource addresses.
+@end menu
+
+@include nausicaa-net-addresses.texi
 
 @c page
 

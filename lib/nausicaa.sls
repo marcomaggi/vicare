@@ -27,7 +27,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa)
   (export
 
@@ -1347,6 +1347,7 @@
     time-nanosecond
     time-second
     top-level-value
+    let*-syntax
     trace-define
     trace-define-syntax
     trace-lambda
@@ -1504,6 +1505,7 @@
     greatest-negative-bignum
 
     ;; misc
+    set-cons!
     eval-for-expand
     record-type-field-ref
     record-type-field-set!
@@ -1679,6 +1681,18 @@
     $pre-incr!		$post-incr!
     $pre-decr!		$post-decr!
 
+;;;; bindings from (nausicaa language infix)
+    infix
+    % ? :
+    && !! ^^ ~~
+    ++ --
+    & ! ^ ~
+    << >>
+    fx& fx! fx^ fx~ fx<< fx>>
+
+;;;; bindings from (nausicaa language simple-match)
+    match
+
 
 ;;;; bindings from (vicare language-extensions namespaces)
     define-namespace		using
@@ -1688,12 +1702,6 @@
     make-sentinel		sentinel?
     undefined			undefined?
     unspecified			unspecified?
-
-;;;; bindings from (vicare language-extensions simple-match)
-    match
-
-;;;; bindings from (vicare language-extensions infix)
-    infix
 
 
 ;;;; done exports
@@ -1749,17 +1757,10 @@
     (for (nausicaa language builtins)			expand run)
     (for (nausicaa language conditions)			expand run)
     (for (nausicaa language increments)			expand run)
+    (for (nausicaa language simple-match)		expand run)
+    (for (nausicaa language infix)			expand run)
     (for (vicare language-extensions namespaces)	expand run)
     (for (vicare language-extensions sentinels)		expand run)
-    (for (vicare language-extensions simple-match)	expand run)
-    (for (except (vicare language-extensions infix)
-		 incr!		decr!
-		 pre-incr!		post-incr!
-		 pre-decr!		post-decr!
-		 $incr!		$decr!
-		 $pre-incr!		$post-incr!
-		 $pre-decr!		$post-decr!)
-      expand run)
     ))
 
 ;;; end of file

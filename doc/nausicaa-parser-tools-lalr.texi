@@ -1,4 +1,4 @@
-@node lalr
+@node parser-tools lalr
 @section A LALR(1) parser generator
 
 
@@ -38,16 +38,16 @@ The LALR libraries make use of the @class{lexical-token} and
 parser-tools source-locations}.
 
 @menu
-* lalr intro::                  Introduction to the LR parser.
-* lalr tables::                 Creating parser tables.
-* lalr lexer::                  Describing tokens.
-* lalr parser::                 Running the parser.
-* lalr grammar::                Defining the grammar.
-* lalr glr::                    Generalised LR parsing.
+* parser-tools lalr intro::     Introduction to the LR parser.
+* parser-tools lalr tables::    Creating parser tables.
+* parser-tools lalr lexer::     Describing tokens.
+* parser-tools lalr parser::    Running the parser.
+* parser-tools lalr grammar::   Defining the grammar.
+* parser-tools lalr glr::       Generalised LR parsing.
 @end menu
 
 @c page
-@node lalr intro
+@node parser-tools lalr intro
 @subsection Introduction to the LR parser
 
 
@@ -71,18 +71,18 @@ precedence.  We want to compute one--line expressions like:
 @end example
 
 @menu
-* lalr intro tokens::           Splitting expressions in
-                                semantic tokens.
-* lalr intro want::             What we want.
-* lalr intro simple::           Simplified parser behaviour.
-* lalr intro look::             Why the lookahead.
-* lalr intro states::           From symbol sequences to states.
-* lalr intro error::            Error recovering.
-* lalr intro nonterm::          Non--terminal categories.
+* parser-tools lalr intro tokens::   Splitting expressions in
+                                     semantic tokens.
+* parser-tools lalr intro want::     What we want.
+* parser-tools lalr intro simple::   Simplified parser behaviour.
+* parser-tools lalr intro look::     Why the lookahead.
+* parser-tools lalr intro states::   From symbol sequences to states.
+* parser-tools lalr intro error::    Error recovering.
+* parser-tools lalr intro nonterm::  Non--terminal categories.
 @end menu
 
 @c page
-@node lalr intro tokens
+@node parser-tools lalr intro tokens
 @subsubsection Splitting expressions in semantic tokens
 
 
@@ -241,7 +241,7 @@ O N A O N A N C C M N *eoi*
 @end example
 
 @c page
-@node lalr intro want
+@node parser-tools lalr intro want
 @subsubsection What we want
 
 
@@ -324,7 +324,7 @@ the value @samp{7} it left in the vector before.
 @end enumerate
 
 @c page
-@node lalr intro simple
+@node parser-tools lalr intro simple
 @subsubsection Simplified parser behaviour
 
 
@@ -502,7 +502,7 @@ the lookahead returns @samp{*eoi*} and the grammar says ``accept'' for
 @samp{S N *eoi*}.
 
 @c page
-@node lalr intro look
+@node parser-tools lalr intro look
 @subsubsection Why the lookahead
 
 
@@ -600,7 +600,7 @@ which puts the stacks in the following state:
 parser is ready to start a new line.
 
 @c page
-@node lalr intro states
+@node parser-tools lalr intro states
 @subsubsection From symbol sequences to states
 
 
@@ -741,7 +741,7 @@ the lookahead returns @samp{*eoi*} and the grammar associates @samp{[1,
 *eoi*]} with @samp{[11, accept]}.
 
 @c page
-@node lalr intro error
+@node parser-tools lalr intro error
 @subsubsection Error recovering
 
 
@@ -882,7 +882,7 @@ the lookahead returns @samp{N} and the action is a reduce:
 we have recovered from the error.
 
 @c page
-@node lalr intro nonterm
+@node parser-tools lalr intro nonterm
 @subsubsection Non--terminal categories
 
 
@@ -977,7 +977,7 @@ itself works, but it is the fundamental tool to describe the grammar.
 We can use any number of non--terminals to describe a grammar.
 
 @c page
-@node lalr tables
+@node parser-tools lalr tables
 @subsection Creating parser tables
 
 
@@ -1010,9 +1010,9 @@ this is a simple expression grammar:
   ---) ;other options
 @end example
 
-@ref{lalr grammar, Defining the parser}, for the definition of the
-grammar and the meaning of the @clause{terminals:} and @clause{rules:}
-options.
+@ref{parser-tools lalr grammar, Defining the parser}, for the definition
+of the grammar and the meaning of the @clause{terminals:} and
+@clause{rules:} options.
 
 The core of the output is a set of parser ``tables'': Scheme vectors
 representing the automaton.  There are three of them: action, goto,
@@ -1196,7 +1196,7 @@ are ignored when the output is a @func{define} form.
 @end deffn
 
 @c page
-@node lalr lexer
+@node parser-tools lalr lexer
 @subsection Describing tokens
 
 
@@ -1204,7 +1204,7 @@ The parser closure accepts as argument a lexer closure which, invoked
 with no arguments, must return the next token from the input.  Tokens
 are described using objects of type @class{lexical-token}, as defined by
 the library @library{nausicaa parser-tools lexical-tokens};
-@ref{lexical-tokens, Describing lexical tokens}.
+@ref{parser-tools lexical-tokens, Describing lexical tokens}.
 
 Once the lexer closure finds the end of input, it must return a token
 with category @samp{*eoi*}; it must continue to return such a token if
@@ -1215,7 +1215,7 @@ token with category @samp{*lexer-error*}; lexer errors are
 unrecoverable.
 
 @c page
-@node lalr parser
+@node parser-tools lalr parser
 @subsection Running the parser
 
 
@@ -1345,21 +1345,21 @@ if the end--of--input is found.
 @end itemize
 
 @c page
-@node lalr grammar
+@node parser-tools lalr grammar
 @subsection Defining the parser
 
 
 @menu
-* lalr grammar intro::          Introduction to grammar definition.
-* lalr grammar preamble::       Code preamble for all the examples.
-* lalr grammar clauses::        Writing semantic clauses.
-* lalr grammar examples::       Dummy examples of grammar definitions.
-* lalr grammar error::          Error recovery.
-* lalr grammar precedence::     Operator precedence and associativity.
+* parser-tools lalr grammar intro::       Introduction to grammar definition.
+* parser-tools lalr grammar preamble::    Code preamble for all the examples.
+* parser-tools lalr grammar clauses::     Writing semantic clauses.
+* parser-tools lalr grammar examples::    Dummy examples of grammar definitions.
+* parser-tools lalr grammar error::       Error recovery.
+* parser-tools lalr grammar precedence::  Operator precedence and associativity.
 @end menu
 
 @c page
-@node lalr grammar intro
+@node parser-tools lalr grammar intro
 @subsubsection Introduction to grammar definition
 
 
@@ -1453,7 +1453,7 @@ when such a rule matches a sequence of symbols, it generates the
 sentinel value; @libsref{sentinels, Sentinel values}.
 
 @c page
-@node lalr grammar preamble
+@node parser-tools lalr grammar preamble
 @subsubsection Code preamble for all the examples
 
 
@@ -1510,7 +1510,7 @@ the following preamble:
 @end example
 
 @c page
-@node lalr grammar clauses
+@node parser-tools lalr grammar clauses
 @subsubsection Writing semantic clauses
 
 
@@ -1559,13 +1559,13 @@ a continuation.
 @end defvar
 
 @c page
-@node lalr grammar examples
+@node parser-tools lalr grammar examples
 @subsubsection Dummy examples of grammar definitions
 
 
 In this section we examine some dummy parser definitions to understand
-some basic mechanism.  @ref{lalr grammar preamble, Code preamble for all
-the examples}.
+some basic mechanism.  @ref{parser-tools lalr grammar preamble, Code
+preamble for all the examples}.
 
 @c ------------------------------------------------------------
 
@@ -1605,7 +1605,7 @@ the following test raises an error:
 
 @noindent
 we will come back to this test when describing the error recovery
-mechanism; @ref{lalr grammar error, Error recovery}.
+mechanism; @ref{parser-tools lalr grammar error, Error recovery}.
 
 @c ------------------------------------------------------------
 
@@ -1636,8 +1636,8 @@ When the input is a single @samp{*eoi*} token: the parser returns the
 value of the semantic action in @samp{() : 0}.  When the input is the
 sequence @samp{A *eoi*}: the parser returns the value of the semantic
 action in @samp{(A) : $1}.  Let's understand why using the reasoning
-explained in the introduction (@pxref{lalr intro, Introduction to the LR
-parser}).
+explained in the introduction (@pxref{parser-tools lalr intro,
+Introduction to the LR parser}).
 
 @itemize
 @item
@@ -1910,7 +1910,7 @@ and we know that @samp{(2 . (1))} is @samp{(2 1)}; the fifth lookahead
 returns @samp{*eoi*} and the action is accept.
 
 @c page
-@node lalr grammar error
+@node parser-tools lalr grammar error
 @subsubsection Error recovery
 
 
@@ -1973,9 +1973,9 @@ returns, leaving the parser to handle everything.
      '((e (A) : $1)))))
 @end example
 
-We have already examined the correct usage of this grammar (@ref{lalr
-grammar examples, Dummy examples of grammar definitions}); we can now
-understand what happens in the following test:
+We have already examined the correct usage of this grammar
+(@ref{parser-tools lalr grammar examples, Dummy examples of grammar
+definitions}); we can now understand what happens in the following test:
 
 @example
 (example (make-token 'A 1)
@@ -1985,9 +1985,9 @@ understand what happens in the following test:
 @end example
 
 @noindent
-following the reasoning exposed in the introduction (@pxref{lalr intro,
-Introduction to the LR parser}), we can imagine the input tokens on the
-following stacks:
+following the reasoning exposed in the introduction (@pxref{parser-tools
+lalr intro, Introduction to the LR parser}), we can imagine the input
+tokens on the following stacks:
 
 @example
 #(#f  1  2  3  #<eof>)
@@ -2053,7 +2053,7 @@ parser closure.
 @end enumerate
 
 @c page
-@node lalr grammar precedence
+@node parser-tools lalr grammar precedence
 @subsubsection Operator precedence and associativity
 
 
@@ -2606,7 +2606,7 @@ last.  Operator precedence does matter.
 @end example
 
 @c page
-@node lalr glr
+@node parser-tools lalr glr
 @subsection Generalised LR parsing
 
 

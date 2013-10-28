@@ -2,7 +2,11 @@
 
 #AM_MAKEINFOFLAGS	= --no-split
 
-EXTRA_DIST		= QUEST-FOR-ISSUE-35
+EXTRA_DIST		= \
+	QUEST-FOR-ISSUE-35				\
+	\
+	RFC/rfc4291.ipv6-address-achitecture.txt	\
+	RFC/rfc5735.ipv4-special-use-addresses.txt
 
 info_TEXINFOS		= \
 	vicare-scheme.texi			\
@@ -133,6 +137,8 @@ nausicaa_TEXINFOS	= \
 	nausicaa-builtins.texi					\
 	nausicaa-conditions.texi				\
 	nausicaa-increments.texi				\
+	nausicaa-simple-match.texi				\
+	nausicaa-infix.texi					\
 	\
 	nausicaa-containers-lists.texi				\
 	nausicaa-containers-vectors.texi			\
@@ -146,6 +152,9 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-source-locations.texi		\
 	nausicaa-parser-tools-lexical-tokens.texi		\
 	nausicaa-parser-tools-lalr.texi				\
+	nausicaa-parser-tools-ip-addresses.texi			\
+	\
+	nausicaa-net-addresses.texi				\
 	\
 	macros.texi						\
 	fdl-1.3.texi						\

@@ -19,7 +19,8 @@ vicare_lib_RULES	= \
 	vfasl				\
 	vfasl-installed			\
 	silex-internals			\
-	silex-backup
+	silex-backup			\
+	ip-address-tables
 
 if WANT_BINFMT
 rcddir			= $(sysconfdir)/rc.d

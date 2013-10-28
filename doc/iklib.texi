@@ -486,6 +486,27 @@ Define auxiliary syntaxes to be used as literal identifiers by
 @end example
 @end deffn
 
+
+@deffn Syntax let*-syntax ((@meta{lhs} @meta{rhs}) @dots{}) @metao{form} @meta{form} @dots{}
+Similar to @func{let-syntax}, expands into nested @func{let-syntax}
+forms:
+
+@example
+(let*-syntax () @meta{body})
+@expansion{} (begin () @meta{body})
+
+(let*-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
+@expansion{} (let-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
+
+(let*-syntax ((@metao{lhs} @metao{rhs})
+              (@meta{lhs} @meta{rhs})
+              ...)
+  @meta{body})
+@expansion{} (let-syntax ((@metao{lhs} @metao{rhs}))
+      (let*-syntax ((@meta{lhs} @meta{rhs}) ...) @meta{body}))
+@end example
+@end deffn
+
 @c page
 @node iklib syntaxes control
 @subsection Additional control flow syntaxes
@@ -4932,7 +4953,10 @@ the sign of the fixnum @var{fx}.
 
 
 @defun fixnum->string @var{fx}
-Return a string representation of @var{fx}.
+@defunx fixnum->string @var{fx} @var{base}
+Return a string representation of @var{fx}.  @var{base} must be one
+among @math{2}, @math{8}, @math{10}, @math{16}; when not given it
+defaults to @math{10}.
 @end defun
 
 

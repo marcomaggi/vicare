@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d5
+Subject: [announce] Vicare Scheme revision 0.3d6
 
                              Vicare Scheme
                              =============
@@ -35,6 +35,38 @@ and at:
 this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
+
+
+Notes for revision 0.3d6
+------------------------
+
+* Added libraries:
+
+    (nausicaa language simple-match)
+    (nausicaa language infix)
+
+  with  similar API  of  the corresponding  libraries  in the  hierarchy
+  (vicare ---),  but recognising  identifiers exported by  the libraries
+  in the hierarchy (nausicaa language ---) as auxiliary syntaxes.
+
+* Imported IPv4 and IPv6 address libraries from Nausicaa as:
+
+    (nausicaa parser-tools ipv4-addresses)
+    (nausicaa parser-tools ipv6-addresses)
+    (nausicaa net addresses ipv4)
+    (nausicaa net addresses ipv6)
+
+* Added LET*-SYNTAX to (vicare):
+
+    (let*-syntax () ?body)
+    ==> (begin () ?body)
+
+    (let*-syntax ((?lhs ?rhs)) ?body)
+    ==> (let-syntax ((?lhs ?rhs)) ?body)
+
+    (let*-syntax ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body)
+    ==> (let-syntax ((?lhs0 ?rhs0))
+          (let*-syntax ((?lhs ?rhs) ...) ?body))
 
 
 Notes for revision 0.3d5

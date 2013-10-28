@@ -1472,10 +1472,10 @@ The library @library{vicare language-extensions infix} provides the
 @func{infix} macro which converts the traditional infix notation for
 expressions to the equivalent Scheme's prefix notation.
 
-To use the library just import @library{vicare infix} and use the
-@func{infix} macro: it expands to a prefix expression to be evaluated at
-runtime, in the lexical context of the macro use; as a special case
-@code{(infix)} is equivalent to @code{(values)}.
+To use the library just import @library{vicare language-extensions
+infix} and use the @func{infix} macro: it expands to a prefix expression
+to be evaluated at runtime, in the lexical context of the macro use; as
+a special case @code{(infix)} is equivalent to @code{(values)}.
 
 The macro allows us to evaluate forms like:
 
@@ -1600,53 +1600,58 @@ All the operators are left--associative with the exception of
 
 @item
 @func{incr!} and @func{decr!} are unary operators that can be applied to
-expressions both in prefix and suffix positions.  @library{vicare infix}
-exports the identifiers @func{++} and @func{--} as aliases for
-@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
-mode, but are allowed by the reader when in @code{#!vicare} mode.
+expressions both in prefix and suffix positions.  @library{vicare
+language-extensions infix} exports the identifiers @func{++} and
+@func{--} as aliases for @func{incr!} and @func{decr!}; such aliases are
+invalid in @code{#!r6rs} mode, but are allowed by the reader when in
+@code{#!vicare} mode.
 
 When applied in prefix position to an identifier, @func{incr!} expands
 to:
 
 @example
-(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
+(infix incr! @meta{id})
+@expansion{} (begin (set! @meta{id} (+ @meta{id} 1)) @meta{id})
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
+(infix decr! @meta{id})
+@expansion{} (begin (set! @meta{id} (- @meta{id} 1)) @meta{id})
 @end example
 
 When applied in suffix position to an identifier, @func{incr!} expands
 to:
 
 @example
-(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
+(infix @meta{id} incr!)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (+ @meta{id} 1)) v)
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
+(infix @meta{id} decr!)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (- @meta{id} 1)) v)
 @end example
 
 When applied to a non--identifier expression, both in prefix and suffix
 position, @func{incr!} expands to:
 
 @example
-(infix incr! ?expr) @expansion{} (+ ?expr 1)
-(infix ?expr incr!) @expansion{} (+ ?expr 1)
+(infix incr! @meta{expr}) @expansion{} (+ @meta{expr} 1)
+(infix @meta{expr} incr!) @expansion{} (+ @meta{expr} 1)
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix decr! ?expr) @expansion{} (- ?expr 1)
-(infix ?expr decr!) @expansion{} (- ?expr 1)
+(infix decr! @meta{expr}) @expansion{} (- @meta{expr} 1)
+(infix @meta{expr} decr!) @expansion{} (- @meta{expr} 1)
 @end example
 
 @item
@@ -1705,6 +1710,23 @@ expressions.
 
 @item
 The following binding aliases are exported by the library:
+@findex &&
+@findex !!
+@findex ^^
+@findex ~~
+@findex %
+@findex &
+@findex !
+@findex ^
+@findex ~
+@findex <<
+@findex >>
+@findex fx&
+@findex fx!
+@findex fx^
+@findex fx~
+@findex fx<<
+@findex fx>>
 
 @example
 and                               -> &&
@@ -1758,7 +1780,7 @@ matching libraries by Alex Shinn and Andrew Wright.
 
 
 The following bindings are exported by the library @library{vicare
-languge-extensions simple-match}.  The auxiliary syntaxes are the
+languae-extensions simple-match}.  The auxiliary syntaxes are the
 bindings exported by the library @library{vicare}, which are reexported
 by this library.
 

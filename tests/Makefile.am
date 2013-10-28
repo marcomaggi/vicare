@@ -280,6 +280,8 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-multimethods-ordinary.sps				\
 	test-nausicaa-multimethods-starred.sps				\
 	test-nausicaa-conditions.sps					\
+	test-nausicaa-simple-match.sps					\
+	test-nausicaa-language-infix.sps				\
 	\
 	test-nausicaa-containers-lists.sps				\
 	test-nausicaa-containers-vectors.sps				\
@@ -295,6 +297,9 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-parser-tools-lalr-lr.sps				\
 	test-nausicaa-parser-tools-lalr-glr.sps				\
 	test-nausicaa-parser-tools-lalr-calc.sps			\
+	\
+	test-nausicaa-net-ipv4-address.sps				\
+	test-nausicaa-net-ipv6-address.sps				\
 	\
 	test-issue-058-lalr-unary-prec.sps
 

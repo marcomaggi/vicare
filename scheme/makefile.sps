@@ -380,6 +380,7 @@
     (unquote-splicing			(macro . unquote-splicing))
     (unsyntax				(macro . unsyntax))
     (unsyntax-splicing			(macro . unsyntax-splicing))
+    (let*-syntax			(macro . let*-syntax))
     (trace-lambda			(macro . trace-lambda))
     (trace-let				(macro . trace-let))
     (trace-define			(macro . trace-define))
@@ -643,6 +644,7 @@
     (define-struct				i v $language)
     (stale-when					i v $language)
     (time					i v $language)
+    (let*-syntax				i v $language)
     (trace-lambda				i v $language)
     (trace-let					i v $language)
     (trace-define				i v $language)
@@ -1035,6 +1037,7 @@
     ($fxcopy-bit-field				$fx $vicare-fx)
     ($fxrotate-bit-field			$fx $vicare-fx)
     ($fxbit-field				$fx $vicare-fx)
+    ($fixnum->string				$fx $vicare-fx)
 ;;;
     ($make-symbol				$symbols $vicare-symbols)
     ($symbol-unique-string			$symbols $vicare-symbols)
