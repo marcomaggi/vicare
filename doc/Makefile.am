@@ -2,7 +2,11 @@
 
 #AM_MAKEINFOFLAGS	= --no-split
 
-EXTRA_DIST		= QUEST-FOR-ISSUE-35
+EXTRA_DIST		= \
+	QUEST-FOR-ISSUE-35				\
+	\
+	RFC/rfc4291.ipv6-address-achitecture.txt	\
+	RFC/rfc5735.ipv4-special-use-addresses.txt
 
 info_TEXINFOS		= \
 	vicare-scheme.texi			\

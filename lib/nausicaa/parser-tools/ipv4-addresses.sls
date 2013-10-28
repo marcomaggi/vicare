@@ -62,14 +62,13 @@
    ((who irritants)
     (make-ipv4-address-parser-error-handler who irritants make-error))
    ((who irritants condition-maker)
-    (lambda (message (token lt.<lexical-token>))
+    (lambda ((message <string>) (token lt.<lexical-token>))
       (raise
        (condition (make-ipv4-address-parser-error-condition)
 		  (condition-maker)
 		  (make-who-condition who)
-		  (make-message-condition (let (((pos sl.<source-location>) (token location)))
-					    (string-append "invalid Ipv4 address input at column "
-							   (pos column string) ": " message)))
+		  (make-message-condition (string-append "invalid IPv4 address input at column "
+							 (token location column string) ": " message))
 		  (make-irritants-condition (cons (token value) irritants))))))))
 
 
@@ -111,7 +110,6 @@
 
   (define (parse-ipv4-address-only the-string)
     (define who 'parse-ipv4-address-only)
-    (define irritants (list the-string))
     (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
 	   (parser	(%make-ipv4-address-parser who lexer the-string))
 	   (ell		(parser)))
