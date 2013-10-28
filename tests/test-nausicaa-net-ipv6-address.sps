@@ -942,7 +942,13 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'address-class))
+(parametrise ((check-test-name	'address-class))
+
+  (check
+      (let (((o <ipv6-address>) (<ipv6-address> (1 2 3 4 5 6 7 8))))
+	(list (o seventh) (o sixth)  (o fifth) (o fourth)
+	      (o third)   (o second) (o first) (o zeroth)))
+    => '(1 2 3 4 5 6 7 8))
 
   (check
       (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
@@ -1021,7 +1027,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'prefix-class))
+(parametrise ((check-test-name	'prefix-class))
 
   (check
       (let (((o <ipv6-address-prefix>) (receive (addr len)

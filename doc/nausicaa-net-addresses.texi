@@ -275,13 +275,14 @@ parse the string representation of IPv4 addresses we can use the library
 @library{nausicaa parser-tools ipv6-addresses}.
 
 @menu
-* net addresses ipv6 class::     IPv6 address and address prefix
-                                 class objects.
+* net addresses ipv6 address::  IPv6 address objects class.
+* net addresses ipv6 prefix::   IPv6 address prefix objects class.
+* net addresses ipv6 aux::      IPv6 address auxiliary classes.
 @end menu
 
 @c page
-@node net addresses ipv6 class
-@subsubsection IPv6 address and address prefix class objects
+@node net addresses ipv6 address
+@subsubsection IPv6 address objects class
 
 
 The following bindings are exported by the @library{nausicaa net
@@ -289,74 +290,167 @@ addresses ipv6} library.
 
 
 @deftp Class @aclass{ipv6-address}
-Represents an IPv6 address.  Its constructor accepts as single argument
-the list of numbers returned by the IPv6 address parser, already
-validated.
-
-@example
-(let (((o <ipv6-address>)
-      (make* <ipv6-address>
-        (ipv6-address-parse "1:2:3:4:5:6:7:8"))))
-  (list o.seventh o.sixth o.fifth o.fourth
-        o.third o.second o.first o.zeroth))
-@result{} (1 2 3 4 5 6 7 8)
-@end example
+Represents an IPv6 address.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@defcv {Immutable Field} @aclass{ipv6-address} zeroth
-@defcvx {Immutable Field} @aclass{ipv6-address} first
-@defcvx {Immutable Field} @aclass{ipv6-address} second
-@defcvx {Immutable Field} @aclass{ipv6-address} third
-@defcvx {Immutable Field} @aclass{ipv6-address} fourth
-@defcvx {Immutable Field} @aclass{ipv6-address} fifth
-@defcvx {Immutable Field} @aclass{ipv6-address} sixth
-@defcvx {Immutable Field} @aclass{ipv6-address} seventh
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipv6-address} constructor @var{numbers}
+@defopx {Common constructor} @aclass{ipv6-address} constructor @var{seventh} @var{sixth} @var{fifth} @var{fourth} @var{third} @var{second} @var{first} @var{zeroth}
+Build and return a new object of type @class{ipv6-address}.  When
+applied to a single argument: @var{numbers} must be a list of @math{8}
+fixnums in the range @math{[0, #xFFFF]} representing the address
+components.  When applied to @math{8} arguments: each must be a fixnum
+in the range @math{[0, #xFFFF]} representing an address component.
+@end defop
+
+
+@defop Maker @aclass{ipv6-address} @aclass{ipv6-address} (@meta{numbers})
+@defopx Maker @aclass{ipv6-address} @aclass{ipv6-address} (@meta{seventh} @meta{sixth} @meta{fifth} @meta{fourth} @meta{third} @meta{second} @meta{first} @meta{zeroth})
+Build and return a new object of type @class{ipv6-address} using the
+common constructor.
+
+@example
+(<ipv6-address> O
+  (<> (1 2 3 4 5 6 7 8)))
+
+(list (O third) (O second) (O first) (O zeroth))
+@result{} (5 6 7 8)
+@end example
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} zeroth
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} first
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} second
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} third
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} fourth
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} fifth
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} sixth
+@deftypecvx {Immutable field} @aclass{ipv6-address} @aclass{ipv6-address-fixnum} seventh
 The numeric components of the address, each representing @math{16} bits.
 @code{zeroth} is the rightmost component, @code{first} is the second
 from the right, etc.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv6-address} bignum
+@deftypecv {Immutable virtual field} @aclass{ipv6-address} @aclass{exact-integer} bignum
 A single big exact integer of @math{128} bits representing the whole
 address number.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv6-address} string
+@deftypecv {Immutable virtual field} @aclass{ipv6-address} @aclass{string} string
 The string representation of the address.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv6-address} unspecified?
-@defcvx {Immutable Virtual Field} @aclass{ipv6-address} loopback?
-@defcvx {Immutable Virtual Field} @aclass{ipv6-address} multicast?
-@defcvx {Immutable Virtual Field} @aclass{ipv6-address} link-local-unicast?
-@defcvx {Immutable Virtual Field} @aclass{ipv6-address} global-unicast?
+@deftypecv {Immutable virtual field} @aclass{ipv6-address} @aclass{boolean} unspecified?
+@deftypecvx {Immutable virtual field} @aclass{ipv6-address} @aclass{boolean} loopback?
+@deftypecvx {Immutable virtual field} @aclass{ipv6-address} @aclass{boolean} multicast?
+@deftypecvx {Immutable virtual field} @aclass{ipv6-address} @aclass{boolean} link-local-unicast?
+@deftypecvx {Immutable virtual field} @aclass{ipv6-address} @aclass{boolean} global-unicast?
 True if the address has type, respectively: unspecified, loopback,
 multicast, link--local unicast, global unicast.  See Section 2.4
 ``Address Type Identification'' of @rfc{} 4291.
-@end defcv
+@end deftypecv
+
+@c page
+@node net addresses ipv6 prefix
+@subsubsection IPv6 address prefix objects class
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses ipv6} library.
 
 
 @deftp Class @aclass{ipv6-address-prefix}
 Represents an IPv6 address prefix; it is derived from
-@class{ipv6-address}.  Its constructor accepts two arguments: the list
-of numbers returned by the IPv6 address parser, already validated; a
-number specifying how many of the leftmost contiguous bits of the
+@class{ipv6-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipv6-address-prefix} constructor @var{numbers} @var{prefix-length}
+Build and return a new object of type @class{ipv6-address-prefix}.
+@var{numbers} must be a list of @math{8} fixnums in the range @math{[0,
+#xFFFF]} representing the address components.  @var{prefix-length} must
+be a non--negative fixnum specifying how many of the leftmost contiguous
+bits of the address comprise the prefix.
+@end defop
+
+
+@defop Maker @aclass{ipv6-address-prefix} @aclass{ipv6-address-prefix} (@meta{numbers} @meta{prefix-length})
+Build and return a new object of type @class{ipv6-address-prefix} using
+the common constructor.
+
+@example
+(<ipv6-address-prefix> O
+  (<> ('(1 2 3 4 5 6 7 8) 10)))
+
+(list (O third) (O second) (O first) (O zeroth))
+@result{} (5 6 7 8)
+
+(O prefix-length)
+@result{} 10
+@end example
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-prefix-length} prefix-length
+A number specifying how many of the leftmost contiguous bits of the
 address comprise the prefix.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{ipv6-address-prefix} @aclass{string} string
+The string representation of the address prefix.
+@end deftypecv
+
+@c page
+@node net addresses ipv6 aux
+@subsubsection IPv6 address auxiliary classes
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ipv6}.
+
+
+@deftp Label @aclass{ipv6-address-fixnum}
+Label type whose predicate tests that the object is a non--negative
+fixnum in the range @math{[0, #xFFFF]}.  It is derived from
+@class{nonnegative-fixnum} as defined by @library{nausicaa language
+builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 
-@defcv {Immutable Field} @aclass{ipv6-address-prefix} prefix-length
-A number specifying how many of the leftmost contiguous bits of the
-address comprise the prefix.
-@end defcv
+@deftp Label @aclass{list-of-ipv6-address-fixnums}
+Label type whose predicate tests that the object is a list of @math{8}
+items all being of type @class{ipv6-address-fixnum}.  It is derived from
+@class{list} as defined by @library{nausicaa language builtins},
+@ref{builtins lists, List label}.
+@end deftp
 
 
-@defcv {Immutable Virtual Field} @aclass{ipv6-address-prefix} string
-The string representation of the address prefix.
-@end defcv
+@deftp Label @aclass{ipv6-address-prefix-length}
+Label type whose predicate tests that the object is a non--negative
+fixnum in the range @math{[0, 128]}.  It is derived from
+@class{nonnegative-fixnum} as defined by @library{nausicaa language
+builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
+@end deftp
 
 @c end of file
