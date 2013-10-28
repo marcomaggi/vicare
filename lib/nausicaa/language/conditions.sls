@@ -198,17 +198,19 @@
 	   (synner "expected identifiers as condition type field names" #'(?field ...)))
 	 (unless (all-identifiers? #'(?accessor ...))
 	   (synner "expected identifiers as condition type accessor names" #'(?accessor ...)))
-	 #'(begin
-	     (with-label-shadowing (?supertype)
-	       (rnrs.define-condition-type the-type
-		 ?supertype ?constructor ?predicate
-		 (?field ?accessor) ...))
-	     (define-label ?type
-	       (parent ?supertype)
-	       (shadows the-type)
-	       (protocol (lambda () ?constructor))
-	       (predicate ?predicate)
-	       (virtual-fields (immutable ?field ?accessor) ...)))))
+	 (with-syntax
+	     ((THE-TYPE (identifier-suffix #'?type "-record-type")))
+	   #'(begin
+	       (with-label-shadowing (?supertype)
+		 (rnrs.define-condition-type THE-TYPE
+		   ?supertype ?constructor ?predicate
+		   (?field ?accessor) ...))
+	       (define-label ?type
+		 (parent ?supertype)
+		 (shadows THE-TYPE)
+		 (protocol (lambda () ?constructor))
+		 (predicate ?predicate)
+		 (virtual-fields (immutable ?field ?accessor) ...))))))
 
       ;;Compressed  syntax with  parent  and fields.   Notice that  this
       ;;syntax allows for tagged fields.
@@ -221,17 +223,18 @@
 	   (synner "expected identifier as condition supertype name" #'(parent ?supertype)))
 	 (let ((name-str (%name-id->name-str #'?type)))
 	   (with-syntax
-	       ((CONSTRUCTOR	(%name-str->constructor-name-id #'?type name-str))
+	       ((THE-TYPE	(identifier-suffix #'?type "-record-type"))
+		(CONSTRUCTOR	(%name-str->constructor-name-id #'?type name-str))
 		(PREDICATE	(%name-str->predicate-name-id   #'?type name-str))
 		(((FIELD TAGGED-FIELD ACCESSOR) ...)
 		 (%fields-stx #'?type name-str #'(?field ...))))
 	     #'(begin
 		 (with-label-shadowing (?supertype)
-		   (rnrs.define-condition-type the-type
+		   (rnrs.define-condition-type THE-TYPE
 		     ?supertype CONSTRUCTOR PREDICATE
 		     (FIELD ACCESSOR) ...))
 		 (define-label ?type
-		   (shadows the-type)
+		   (shadows THE-TYPE)
 		   (parent ?supertype)
 		   (protocol (lambda () CONSTRUCTOR))
 		   (predicate PREDICATE)
