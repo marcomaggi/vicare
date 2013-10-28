@@ -2022,6 +2022,38 @@
   #t)
 
 
+(parametrise ((check-test-name	'let-star-syntax))
+
+  (check
+      (let*-syntax () 1 2)
+    => 2)
+
+  (check
+      (let*-syntax ((id (identifier-syntax 123)))
+	1 id)
+    => 123)
+
+  (check
+      (let*-syntax ((id1 (identifier-syntax 123))
+		    (id2 (identifier-syntax id1)))
+	(list id1 id2))
+    => '(123 123))
+
+  (check
+      (let*-syntax ((id1 (identifier-syntax 123))
+		    (id2 (identifier-syntax (+ 9000 id1))))
+	(list id1 id2))
+    => '(123 9123))
+
+  (check
+      (let*-syntax ((id (identifier-syntax 123))
+		    (id (identifier-syntax id)))
+	1 id)
+    => 123)
+
+  #t)
+
+
 ;; (parametrise ((check-test-name	'syntax-transpose))
 
 ;;   (define id #f)

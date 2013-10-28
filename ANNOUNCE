@@ -56,6 +56,18 @@ Notes for revision 0.3d6
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
 
+* Added LET*-SYNTAX to (vicare):
+
+    (let*-syntax () ?body)
+    ==> (begin () ?body)
+
+    (let*-syntax ((?lhs ?rhs)) ?body)
+    ==> (let-syntax ((?lhs ?rhs)) ?body)
+
+    (let*-syntax ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body)
+    ==> (let-syntax ((?lhs0 ?rhs0))
+          (let*-syntax ((?lhs ?rhs) ...) ?body))
+
 
 Notes for revision 0.3d5
 ------------------------

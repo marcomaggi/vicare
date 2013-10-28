@@ -3259,6 +3259,7 @@
 	     ((assert)				assert-macro)
 	     ((guard)				guard-macro)
 	     ((define-enumeration)		define-enumeration-macro)
+	     ((let*-syntax)			let*-syntax-macro)
 
 	     ((trace-lambda)			trace-lambda-macro)
 	     ((trace-define)			trace-define-macro)
@@ -4476,6 +4477,28 @@
 	      (others
 	       (syntax-violation #f "malformed bindings"
 				 stx others)))))))))))
+
+
+;;;; module non-core-macro-transformer: LET*-SYNTAX
+
+(define (let*-syntax-macro stx)
+  (syntax-match stx ()
+    ;;No bindings.
+    ((_ () ?body ?body* ...)
+     (bless
+      `(begin ,?body ,@?body*)))
+    ;;Single binding.
+    ((_ ((?lhs ?rhs)) ?body ?body* ...)
+     (bless
+      `(let-syntax ((,?lhs ,?rhs))
+	 ,?body ,@?body*)))
+    ;;Multiple bindings
+    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
+     (bless
+      `(let-syntax ((,?lhs ,?rhs))
+	 (let*-syntax ,(map list ?lhs* ?rhs*)
+	   ,?body ,@?body*))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
