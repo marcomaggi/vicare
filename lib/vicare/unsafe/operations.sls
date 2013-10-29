@@ -95,11 +95,11 @@
     $fxdiv0
     $fxmod
     $fxmod0
-    $fx<
-    $fx>
-    $fx>=
-    $fx<=
-    $fx=
+    $fx<	;multiple arguments
+    $fx>	;multiple arguments
+    $fx>=	;multiple arguments
+    $fx<=	;multiple arguments
+    $fx=	;multiple arguments
 
     $fxand	;multiple arguments AND
     $fxior	;multiple arguments inclusive OR
@@ -331,7 +331,19 @@
     (ikarus system $structs)
     (except (ikarus system $fx)
 	    $fxmax
-	    $fxmin)
+	    $fxmin
+	    $fx<
+	    $fx>
+	    $fx>=
+	    $fx<=
+	    $fx=)
+    (prefix (only (ikarus system $fx)
+		  $fx<
+		  $fx>
+		  $fx>=
+		  $fx<=
+		  $fx=)
+	    sys.)
     (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $flonums)
@@ -493,6 +505,24 @@
      ($fxlogxor ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
      ($fxlogxor ?op1 ($fxxor ?op2 . ?ops)))))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-fx-compar (syntax-rules ()
+				  ((_ ?proc sys.?proc)
+				   (define-syntax ?proc
+				    (syntax-rules ()
+				      ((_ ?op1 ?op2)
+				       (sys.?proc ?op1 ?op2))
+				      ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				       (and (sys.?proc ?op1 ?op2)
+					    (?proc ?op2 ?op3 ?op4 (... ...)))))))
+				 )))
+  (define-fx-compar $fx=  sys.$fx=)
+  (define-fx-compar $fx<  sys.$fx<)
+  (define-fx-compar $fx<= sys.$fx<=)
+  (define-fx-compar $fx>  sys.$fx>)
+  (define-fx-compar $fx>= sys.$fx>=))
 
 
 ;;;; bignums
