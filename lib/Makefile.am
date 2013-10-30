@@ -332,9 +332,11 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls	\
 	nausicaa/parser-tools/ipv4-addresses.sls			\
 	nausicaa/parser-tools/ipv6-addresses.sls			\
+	nausicaa/parser-tools/uri.sls					\
 	\
 	nausicaa/net/addresses/ipv4.sls					\
-	nausicaa/net/addresses/ipv6.sls
+	nausicaa/net/addresses/ipv6.sls					\
+	nausicaa/net/addresses/uri.sls
 
 dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
 endif

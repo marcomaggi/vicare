@@ -297,6 +297,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-parser-tools-lalr-lr.sps				\
 	test-nausicaa-parser-tools-lalr-glr.sps				\
 	test-nausicaa-parser-tools-lalr-calc.sps			\
+	test-nausicaa-parser-tools-uri.sps				\
 	\
 	test-nausicaa-net-ipv4-address.sps				\
 	test-nausicaa-net-ipv6-address.sps				\

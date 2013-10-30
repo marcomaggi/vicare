@@ -204,12 +204,14 @@ of object--oriented languages, but it just has the perfume of
 * parser-tools lexical-tokens::    Describing lexical tokens.
 * parser-tools lalr::              A LALR(1) parser generator.
 * parser-tools ip-addresses::      Lexer and parser for IP addresses.
+* parser-tools uri::               Parsing Uniform Resource Identifiers.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
 @include nausicaa-parser-tools-lexical-tokens.texi
 @include nausicaa-parser-tools-lalr.texi
 @include nausicaa-parser-tools-ip-addresses.texi
+@include nausicaa-parser-tools-uri.texi
 
 @c page
 @node net
