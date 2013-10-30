@@ -4951,6 +4951,12 @@ Store @var{value} in the car location of @var{P}.
 Store @var{value} in the cdr location of @var{P}.
 @end deffn
 
+
+@deffn {Unsafe Operation} $length @var{ell}
+Assume @var{ell} is a proper list, null included: compute and return the
+length of @var{ell}.
+@end deffn
+
 @c page
 @node syslib structs
 @section Low level structure operations
@@ -5221,6 +5227,11 @@ and @library{vicare system $strings}.
 @deffn {Unsafe Operation} $make-string @var{fx}
 Allocate a new string capable of holding @var{fx} characters and return
 a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string @var{ch} @dots{}
+Allocate a new string and initialise it with the given characters.
 @end deffn
 
 

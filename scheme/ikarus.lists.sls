@@ -22,7 +22,10 @@
           remq remv remove remp filter map for-each
 	  (rename (for-each for-each-in-order)) andmap ormap list-tail
           partition for-all exists fold-left fold-right
-	  make-queue-procs)
+	  make-queue-procs
+
+	  ;; unsafe bindings
+	  $length)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
@@ -32,7 +35,8 @@
 		  make-queue-procs)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (except (vicare unsafe operations)
+	    $length))
 
 
 ;;;; arguments validation
@@ -137,6 +141,13 @@
 	  (else
 	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls 0))
+
+(define ($length ell)
+  (let recur ((len 0)
+	      (ell ell))
+    (if (pair? ell)
+	(recur ($fxadd1 len) ($cdr ell))
+      len)))
 
 
 (define (list-ref the-list the-index)
