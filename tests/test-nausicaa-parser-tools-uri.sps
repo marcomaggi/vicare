@@ -628,7 +628,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-authority))
+(parametrise ((check-test-name	'parsing-authority))
 
 ;;; authority
 
@@ -707,8 +707,10 @@
 	(list authority rest))
     => '("marco@ciao.it:8080" "/salut"))
 
-;;; --------------------------------------------------------------------
-;;; userinfo
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-userinfo))
 
   (check
       (uri.parse-userinfo (%make-lexer-port ""))
@@ -777,8 +779,10 @@
 	(list userinfo rest))
     => '("ciao%3dciao" "host"))
 
-;;; --------------------------------------------------------------------
-;;; IPv4 address
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-ipv4-address))
 
   (check
       (receive (addr ell)
@@ -889,8 +893,11 @@
 	(list ell rest))
     => '((1 2 3 4) "ciao"))
 
-;;; --------------------------------------------------------------------
-;;; IPv6 address
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-ipv6-address))
 
   (check
       (receive (addr ell)
@@ -955,8 +962,10 @@
 	(list (ascii->string addr) ell rest))
     => '("::1" (0 0 0 0 0 0 0 1) "/60"))
 
-;;; --------------------------------------------------------------------
-;;; IP-literal
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-ip-literal))
 
   (check
       (uri.parse-ip-literal (%make-lexer-port ""))
@@ -984,8 +993,10 @@
 	(list ip rest))
     => '("::0:1:2" ":8080"))
 
-;;; --------------------------------------------------------------------
-;;; IPvFuture
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-ipvfuture))
 
   (check
       (call-with-values
@@ -1032,8 +1043,10 @@
 	  (list version (ascii->string bv))))
     => '(14 "ciao"))
 
-;;; --------------------------------------------------------------------
-;;; reg-name
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-reg-name))
 
   (check
       (ascii->string (uri.parse-reg-name (%make-lexer-port "")))
@@ -1101,8 +1114,10 @@
 	(list reg rest))
     => '("the-reg-name" "/ciao"))
 
-;;; --------------------------------------------------------------------
-;;; host
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-host))
 
   (check
       (let-values (((kind data) (uri.parse-host (%make-lexer-port ""))))
@@ -1158,8 +1173,10 @@
   	(list kind (car data) (ascii->string (cdr data)) rest))
     => '(ipvfuture 9 ",ciao,ciao" "/ciao"))
 
-;;; --------------------------------------------------------------------
-;;; port
+  #t)
+
+
+#;(parametrise ((check-test-name	'parsing-port))
 
   (check
       (uri.parse-port (%make-lexer-port ""))

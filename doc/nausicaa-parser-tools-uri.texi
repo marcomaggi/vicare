@@ -723,44 +723,44 @@ component, equal to a @code{reg-name} component which can be empty.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-authority (make-lexer-port ""))      @result{} #f
-(uri.parse-authority (make-lexer-port "ciao"))  @result{} #f
-(uri.parse-authority (make-lexer-port "/ciao")) @result{} #f
-(uri.parse-authority (make-lexer-port "?ciao")) @result{} #f
-(uri.parse-authority (make-lexer-port "#ciao")) @result{} #f
+(uri.parse-authority (mkport ""))       @result{} #f
+(uri.parse-authority (mkport "ciao"))   @result{} #f
+(uri.parse-authority (mkport "/ciao"))  @result{} #f
+(uri.parse-authority (mkport "?ciao"))  @result{} #f
+(uri.parse-authority (mkport "#ciao"))  @result{} #f
 
-(let ((P (make-lexer-port "//")))
+(let ((P (mkport "//")))
   (uri.to-string (uri.parse-authority P))  @result{} ""
   (eof-object? (lookahead-u8 P)))          @result{} #t
 
-(let ((P (make-lexer-port "///")))
+(let ((P (mkport "///")))
   (uri.to-string (uri.parse-authority P))  @result{} ""
   (uri.to-string (get-bytevector-some P))) @result{} "/"
 
-(let ((P (make-lexer-port "//?query")))
+(let ((P (mkport "//?query")))
   (uri.to-string (uri.parse-authority P))  @result{} ""
   (uri.to-string (get-bytevector-some P))) @result{} "?query"
 
-(let ((P (make-lexer-port "//#fragment")))
+(let ((P (mkport "//#fragment")))
   (uri.to-string (uri.parse-authority P))  @result{} ""
   (uri.to-string (get-bytevector-some P))) @result{} "#fragment"
 
-(let ((P (make-lexer-port "///ciao")))
+(let ((P (mkport "///ciao")))
   (uri.to-string (uri.parse-authority P))  @result{} ""
   (uri.to-string (get-bytevector-some P))) @result{} "/ciao"
 
-(let ((P (make-lexer-port "//ciao:8080/salut")))
+(let ((P (mkport "//ciao:8080/salut")))
   (uri.to-string (uri.parse-authority P))  @result{} "ciao:8080"
   (uri.to-string (get-bytevector-some P))) @result{} "/salut"
 
-(let ((P (make-lexer-port "//ciao.it:8080/salut")))
+(let ((P (mkport "//ciao.it:8080/salut")))
   (uri.to-string (uri.parse-authority P))  @result{} "ciao.it:8080"
   (uri.to-string (get-bytevector-some P))) @result{} "/salut"
 
-(let ((P (make-lexer-port "//marco@@ciao:8080/salut")))
+(let ((P (mkport "//marco@@ciao:8080/salut")))
   (uri.to-string (uri.parse-authority P))  @result{} "marco@@ciao:8080"
   (uri.to-string (get-bytevector-some P))) @result{} "/salut"
 @end example
@@ -785,44 +785,44 @@ preceded by nothing).
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-userinfo (make-lexer-port ""))   @result{} #f
+(uri.parse-userinfo (mkport ""))   @result{} #f
 
-(let ((P (make-lexer-port "ciao.it")))
+(let ((P (mkport "ciao.it")))
   (uri.parse-userinfo P)                    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "ciao.it"
 
-(let ((P (make-lexer-port ":8080")))
+(let ((P (mkport ":8080")))
   (uri.parse-userinfo P)                    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} ":8080"
 
-(let ((P (make-lexer-port "/hello")))
+(let ((P (mkport "/hello")))
   (uri.parse-userinfo P)                    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "/hello"
 
-(let ((P (make-lexer-port "?hello")))
+(let ((P (mkport "?hello")))
   (uri.parse-userinfo P)                    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "?hello"
 
-(let ((P (make-lexer-port "#hello")))
+(let ((P (mkport "#hello")))
   (uri.parse-userinfo P)                    @result{}
   (uri.to-string (get-bytevector-some P)))  @result{} "#hello"
 
-(let ((P (make-lexer-port "@@")))
+(let ((P (mkport "@@")))
   (uri.to-string (uri.parse-userinfo P))    @result{} ""
   (eof-object? (lookahead-u8 P)))           @result{} #t
 
-(let ((P (make-lexer-port "@@host")))
+(let ((P (mkport "@@host")))
   (uri.to-string (uri.parse-userinfo P))    @result{} ""
   (uri.to-string (get-bytevector-some P)))  @result{} "host"
 
-(let ((P (make-lexer-port "userinfo@@host")))
+(let ((P (mkport "userinfo@@host")))
   (uri.to-string (uri.parse-userinfo P))    @result{} "userinfo"
   (uri.to-string (get-bytevector-some P)))  @result{} "host"
 
-(let ((P (make-lexer-port "ciao%3dciao@@host")))
+(let ((P (mkport "ciao%3dciao@@host")))
   (uri.to-string (uri.parse-userinfo P))    @result{} "ciao%3dciao"
   (uri.to-string (get-bytevector-some P)))  @result{} "host"
 @end example
@@ -846,67 +846,67 @@ No validation is performed on the first byte after the address, if any.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-ipv4-address (make-lexer-port "")) @result{} #f #f
+(uri.parse-ipv4-address (mkport "")) @result{} #f #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (uri.parse-ipv4-address P)                 @result{} #f #f
   (uri.to-string (get-bytevector-some P)))   @result{} "ciao"
 
-(let ((P (make-lexer-port "1.2.3")))
+(let ((P (mkport "1.2.3")))
   (uri.parse-ipv4-address P)                 @result{} #f #f
   (uri.to-string (get-bytevector-some P)))   @result{} "1.2.3"
 
-(let ((P (make-lexer-port "1.2.3.4.5")))
+(let ((P (mkport "1.2.3.4.5")))
   (uri.parse-ipv4-address P)                 @result{} #f #f
   (uri.to-string (get-bytevector-some P)))   @result{} "1.2.3.4.5"
 
-(let ((P (make-lexer-port "123ciao")))
+(let ((P (mkport "123ciao")))
   (uri.parse-ipv4-address P)                 @result{} #f #f
   (uri.to-string (get-bytevector-some P)))   @result{} "123ciao"
 
-(let ((P (make-lexer-port "1.2.3.4")))
+(let ((P (mkport "1.2.3.4")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr)          @result{} "1.2.3.4"
     ell)                          @result{} (1 2 3 4)
   (eof-object? (lookahead-u8 P))  @result{} #t
 
-(let ((P (make-lexer-port "191.223.376.434")))
+(let ((P (mkport "191.223.376.434")))
   (uri.parse-ipv4-address P)   @result{} #f #f
   (uri.to-string
    (get-bytevector-some P)))   @result{} "191.223.376.434"
 
-(let ((P (make-lexer-port "191.223.76.255")))
+(let ((P (mkport "191.223.76.255")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr)          @result{} "191.223.76.255"
     ell))                         @result{} (191 223 76 255)
 
-(let ((P (make-lexer-port "1.2.3.4/5")))
+(let ((P (mkport "1.2.3.4/5")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr))         @result{} "1.2.3.4"
   (uri.to-string
    (get-bytevector-some P)))      @result{} "/5"
 
-(let ((P (make-lexer-port "1.2.3.4/ciao")))
+(let ((P (mkport "1.2.3.4/ciao")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr))         @result{} "1.2.3.4"
   (uri.to-string
    (get-bytevector-some P)))      @result{} "/ciao"
 
-(let ((P (make-lexer-port "1.2.3.4:8080")))
+(let ((P (mkport "1.2.3.4:8080")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr))         @result{} "1.2.3.4"
   (uri.to-string
    (get-bytevector-some P)))      @result{} ":8080"
 
-(let ((P (make-lexer-port "1.2.3.4ciao")))
+(let ((P (mkport "1.2.3.4ciao")))
   (receive (addr ell)
       (uri.parse-ipv4-address P)
     (uri.to-string addr))         @result{} "1.2.3.4"
@@ -933,46 +933,46 @@ No validation is performed on the first byte after the address, if any.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-ipv6-address (make-lexer-port "")) @result{} #f #f
+(uri.parse-ipv6-address (mkport "")) @result{} #f #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (uri.parse-ipv6-address P)            @result{} #f #f
   (uri.to-string
    (get-bytevector-some P)))            @result{} "ciao"
 
-(let ((P (make-lexer-port "1.2.3.ciao")))
+(let ((P (mkport "1.2.3.ciao")))
   (uri.parse-ipv6-address P)            @result{} #f #f
   (uri.to-string
    (get-bytevector-some P)))            @result{} "1.2.3.ciao"
 
-(let ((P (make-lexer-port "1:2:3:4:5:6:7:8")))
+(let ((P (mkport "1:2:3:4:5:6:7:8")))
   (uri.parse-ipv6-address P))
   @result{} "1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8)
 
-(let ((P (make-lexer-port "::1")))
+(let ((P (mkport "::1")))
   (uri.parse-ipv6-address P))
   @result{} "::1" (0 0 0 0 0 0 0 1)
 
-(let ((P (make-lexer-port "1::")))
+(let ((P (mkport "1::")))
   (uri.parse-ipv6-address P))
   @result{} "1::" (1 0 0 0 0 0 0 0)
 
-(let ((P (make-lexer-port "1:2::3")))
+(let ((P (mkport "1:2::3")))
   (uri.parse-ipv6-address P))
   @result{} "1:2::3" (1 2 0 0 0 0 0 3)
 
-(let ((P (make-lexer-port "1:2:3:4::172.30.67.254")))
+(let ((P (mkport "1:2:3:4::172.30.67.254")))
   (uri.parse-ipv6-address P))
   @result{} "1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe)
 
-(let ((P (make-lexer-port "::ffff:192.168.99.1")))
+(let ((P (mkport "::ffff:192.168.99.1")))
   (uri.parse-ipv6-address P))
   @result{} "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301)
 
-(let ((P (make-lexer-port "::1/60")))
+(let ((P (mkport "::1/60")))
   (uri.parse-ipv6-address P) @result{} "::1" (0 0 0 0 0 0 0 1)
   (uri.to-string
    (get-bytevector-some P))) @result{} "/60"
@@ -1002,25 +1002,25 @@ bytevector.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-ip-literal (make-lexer-port ""))
+(uri.parse-ip-literal (mkport ""))
 @result{} #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (uri.parse-ip-literal P)                  @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "ciao"
 
 (uri.to-string
- (uri.parse-ip-literal (make-lexer-port "[]")))
+ (uri.parse-ip-literal (mkport "[]")))
 @result{} ""
 
 (uri.to-string
- (uri.parse-ip-literal (make-lexer-port "[::0:1:2]")))
+ (uri.parse-ip-literal (mkport "[::0:1:2]")))
 @result{} "::0:1:2"
 
-(let ((P (make-lexer-port "[::0:1:2]:8080")))
+(let ((P (mkport "[::0:1:2]:8080")))
   (uri.to-string (uri.parse-ip-literal P))  @result{} "::0:1:2"
   (uri.to-string (get-bytevector-some P)))  @result{} ":8080"
 @end example
@@ -1050,37 +1050,37 @@ component cannot be of zero length inside the brackets.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
 (call-with-values
     (lambda ()
-      (uri.parse-ipvfuture (make-lexer-port "")))
+      (uri.parse-ipvfuture (mkport "")))
   list)
 @result{} (#f #f)
 
 (call-with-values
     (lambda ()
-      (uri.parse-ipvfuture (make-lexer-port "ciao")))
+      (uri.parse-ipvfuture (mkport "ciao")))
   list)
 @result{} (#f #f)
 
 (call-with-values
     (lambda ()
-      (uri.parse-ipvfuture (make-lexer-port "v1")))
+      (uri.parse-ipvfuture (mkport "v1")))
   list)
 @result{} (1 #vu8())
 
 (call-with-values
     (lambda ()
-      (uri.parse-ipvfuture (make-lexer-port "v9ciao")))
+      (uri.parse-ipvfuture (mkport "v9ciao")))
   (lambda (version bv)
     (list version (uri.to-string bv))))
 @result{} (9 "ciao")
 
 (call-with-values
     (lambda ()
-      (uri.parse-ipvfuture (make-lexer-port "vFciao")))
+      (uri.parse-ipvfuture (mkport "vFciao")))
   (lambda (version bv)
     (list version (uri.to-string bv))))
 @result{} (15 "ciao")
@@ -1107,45 +1107,45 @@ function returns false.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
 (uri.to-string
- (uri.parse-reg-name (make-lexer-port ""))) @result{} ""
+ (uri.parse-reg-name (mkport ""))) @result{} ""
 
-(let ((P (make-lexer-port ":80")))
+(let ((P (mkport ":80")))
   (uri.to-string (uri.parse-reg-name P))    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} ":80"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (uri.to-string (uri.parse-reg-name P))    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "/ciao"
 
-(let ((P (make-lexer-port "?query")))
+(let ((P (mkport "?query")))
   (uri.to-string (uri.parse-reg-name P))    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "?query"
 
-(let ((P (make-lexer-port "#fragment")))
+(let ((P (mkport "#fragment")))
   (uri.to-string (uri.parse-reg-name P))    @result{} #f
   (uri.to-string (get-bytevector-some P)))  @result{} "#fragment"
 
 (uri.to-string
- (uri.parse-reg-name (make-lexer-port "the-reg-name")))
+ (uri.parse-reg-name (mkport "the-reg-name")))
 @result{} "the-reg-name"
 
 (uri.to-string
- (uri.parse-reg-name (make-lexer-port "the.reg.name")))
+ (uri.parse-reg-name (mkport "the.reg.name")))
 @result{} "the.reg.name"
 
 (uri.to-string
- (uri.parse-reg-name (make-lexer-port "ciao%3dciao")))
+ (uri.parse-reg-name (mkport "ciao%3dciao")))
 @result{} "ciao%3dciao"
 
-(let ((P (make-lexer-port "the-reg-name:80")))
+(let ((P (mkport "the-reg-name:80")))
   (uri.to-string (uri.parse-reg-name P))    @result{} "the-reg-name"
   (uri.to-string (get-bytevector-some P)))  @result{} ":80"
 
-(let ((P (make-lexer-port "the-reg-name/ciao")))
+(let ((P (mkport "the-reg-name/ciao")))
   (uri.to-string (uri.parse-reg-name P))    @result{} "the-reg-name"
   (uri.to-string (get-bytevector-some P)))  @result{} "/ciao"
 @end example
@@ -1190,20 +1190,20 @@ port position to the one before this function call.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(let ((P (make-lexer-port "/")))
+(let ((P (mkport "/")))
   (uri.parse-host P)            @result{} reg-name #vu8()
   (uri.to-string
    (get-bytevector-some P)))    @result{} "/"
 
-(let ((P (make-lexer-port ":80")))
+(let ((P (mkport ":80")))
   (uri.parse-host P)            @result{} reg-name #vu8()
   (uri.to-string
    (get-bytevector-some P)))    @result{} ":80"
 
-(let ((P (make-lexer-port "1.2.3.4:80")))
+(let ((P (mkport "1.2.3.4:80")))
   (receive (kind data)
       (uri.parse-host P)
     kind                        @result{} ipv4-address
@@ -1212,7 +1212,7 @@ port position to the one before this function call.
   (uri.to-string
    (get-bytevector-some P)))    @result{} ":80"
 
-(let ((P (make-lexer-port "[::ffff:192.168.99.1]:80")))
+(let ((P (mkport "[::ffff:192.168.99.1]:80")))
   (receive (kind data)
       (uri.parse-host P)
     kind                        @result{} ipv6-address
@@ -1221,7 +1221,7 @@ port position to the one before this function call.
   (uri.to-string
    (get-bytevector-some P)))    @result{} ":80"
 
-(let ((P (make-lexer-port "[vF,ciao,ciao]/ciao")))
+(let ((P (mkport "[vF,ciao,ciao]/ciao")))
   (receive (kind data)
       (uri.parse-host P)
     kind                        @result{} ipvfuture
@@ -1252,18 +1252,18 @@ valid: in this case an empty bytevector is returned.
 (import (rnrs)
   (prefix (nausicaa uri low) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (uri.to-bytevector S)))
 
-(uri.parse-port (make-lexer-port ""))         @result{} #f
+(uri.parse-port (mkport ""))         @result{} #f
 (uri.to-string
- (uri.parse-port (make-lexer-port ":")))      @result{} ""
+ (uri.parse-port (mkport ":")))      @result{} ""
 (uri.to-string
- (uri.parse-port (make-lexer-port ":2")))     @result{} "2"
+ (uri.parse-port (mkport ":2")))     @result{} "2"
 (uri.to-string
- (uri.parse-port (make-lexer-port ":8080")))  @result{} "8080"
+ (uri.parse-port (mkport ":8080")))  @result{} "8080"
 
-(let ((P (make-lexer-port ":8080ciao")))
+(let ((P (mkport ":8080ciao")))
   (uri.to-string (uri.parse-port P))        @result{} "8080"
   (uri.to-string (get-bytevector-some P)))  @result{} "ciao"
 @end example
