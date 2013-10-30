@@ -60,6 +60,10 @@
     $struct-ref
     $struct-set!
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Wed Oct 30, 2013)
+    $length
+
     $caar
     $cadr
     $cdar
@@ -291,6 +295,9 @@
     $string-ref
     $string-set!
     $string=
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Wed Oct 30, 2013)
+    #;$string
 
     $string-copy
     $string-copy!

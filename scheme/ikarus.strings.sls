@@ -43,6 +43,7 @@
     uri-normalise-encoding
 
     ;; unsafe operations
+    $string
     $string=			$string-total-length
     $string-concatenate		$string-reverse-and-concatenate)
   (import (except (ikarus)
@@ -72,11 +73,13 @@
 		  uri-normalise-encoding)
     (vicare arguments validation)
     (except (vicare unsafe operations)
+	    $string
 	    $string=
 	    $string-total-length
 	    $string-concatenate
 	    $string-reverse-and-concatenate
-	    $string-empty?))
+	    $string-empty?)
+    (vicare system $pairs))
 
 
 ;;;; arguments validation
@@ -296,6 +299,63 @@
 	    (begin
 	      ($string-set! str idx ($car chars))
 	      (loop str ($fxadd1 idx) ($cdr chars))))))))))
+
+(module ($string)
+
+  (define $string
+    ;;Return a newly allocated string composed of the arguments.
+    ;;
+    (case-lambda
+     (()
+      ($make-string 0))
+     ((one)
+      (receive-and-return (str)
+	  ($make-string 1)
+	($string-set! str 0 one)))
+
+     ((one two)
+      (receive-and-return (str)
+	  ($make-string 2)
+	($string-set! str 0 one)
+	($string-set! str 1 two)))
+
+     ((one two three)
+      (receive-and-return (str)
+	  ($make-string 3)
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)))
+
+     ((one two three four)
+      (receive-and-return (str)
+	  ($make-string 4)
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
+	($string-set! str 3 four)))
+
+     ((one two three four . chars)
+      (receive-and-return (str)
+	  ($make-string ($fx+ 4 ($length chars)))
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
+	($string-set! str 3 four)
+	(let recur ((i   4)
+		    (ell chars))
+	  (when (pair? ell)
+	    ($string-set! str i ($car ell))
+	    (recur ($fxadd1 i) ($cdr ell))))))
+     ))
+
+  (define ($length ell)
+    (let recur ((len 0)
+		(ell ell))
+      (if (pair? ell)
+	  (recur ($fxadd1 len) ($cdr ell))
+	len)))
+
+  #| end of module |# )
 
 
 (define (substring str start end)

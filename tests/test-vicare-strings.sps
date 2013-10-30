@@ -314,6 +314,29 @@
 	(string #\a #\b #\c #\d #\e 1))
     => '(1))
 
+;;; --------------------------------------------------------------------
+;;; unsafe operations
+
+  (check
+      ($string)
+    => "")
+
+  (check
+      ($string #\a)
+    => "a")
+
+  (check
+      ($string #\a #\b #\c)
+    => "abc")
+
+  (check
+      ($string #\a #\b #\c #\d)
+    => "abcd")
+
+  (check
+      ($string #\a #\b #\c #\d #\e #\f #\g)
+    => "abcdefg")
+
   #t)
 
 

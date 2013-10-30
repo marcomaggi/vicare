@@ -64,6 +64,8 @@
 	     expand run)
   (lists)
   (prefix (vicare) six.)
+  (vicare unsafe operations)
+  (vicare system $pairs)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4961,6 +4963,23 @@ called with at least two arguments.
 	      (rv4 (empty?)))
 	  (six.list rv0 rv1 rv2 rv3 rv4)))
     => '(1 2 3 4 #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe))
+
+  (check
+      ($length '(1 2 3 4 5 6))
+    => 6)
+
+  (check
+      ($length '(1))
+    => 1)
+
+  (check
+      ($length '())
+    => 0)
 
   #t)
 
