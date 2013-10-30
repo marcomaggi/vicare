@@ -153,6 +153,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-lexical-tokens.texi		\
 	nausicaa-parser-tools-lalr.texi				\
 	nausicaa-parser-tools-ip-addresses.texi			\
+	nausicaa-parser-tools-uri.texi				\
 	\
 	nausicaa-net-addresses.texi				\
 	\

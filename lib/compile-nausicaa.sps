@@ -31,9 +31,11 @@
   (only (nausicaa parser-tools ip-addresses ipv6-address-parser))
   (only (nausicaa parser-tools ipv4-addresses))
   (only (nausicaa parser-tools ipv6-addresses))
+  (only (nausicaa parser-tools uri))
 
   (only (nausicaa net addresses ipv4))
   (only (nausicaa net addresses ipv6))
+  (only (nausicaa net addresses uri))
 
   )
 

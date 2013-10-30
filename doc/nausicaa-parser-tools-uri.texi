@@ -1,0 +1,2252 @@
+@node parser-tools uri
+@section Parsing Uniform resource identifiers
+
+
+@cindex @library{nausicaa parser-tools uri}, library
+@cindex Library @library{nausicaa parser-tools uri}
+
+
+The library @library{nausicaa parser-tools uri} library implements a
+parser to handle @uri{}s compliant with @rfc{} 3986:
+
+@center @url{http://datatracker.ietf.org/doc/rfc3986/}
+
+@noindent
+for an introduction to @uri{}s see:
+
+@center @url{http://en.wikipedia.org/wiki/Uniform_Resource_Identifier}
+
+The purpose of @library{nausicaa parser-tools uri} is to validate and
+convert a @uri{} representation as string or bytevector into a data
+structure in which the components are available as bytevectors; it is
+suggested to use the object types defined by the library
+@library{nausicaa net addresses uri}.
+
+When importing the library @library{nausicaa parser-tools uri}, it is
+suggested to prefix the bindings with @code{uri.}, as in:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools uri) uri.))
+@end example
+
+@menu
+* parser-tools uri intro::      Introduction to @uri{} elements.
+* parser-tools uri conditions:: Condition object types.
+* parser-tools uri percent::    Percent encoding of characters.
+* parser-tools uri parser::     @uri{} parser functions.
+* parser-tools uri class::      Class interfaces.
+* parser-tools uri misc::       Miscellaneous functions.
+@end menu
+
+@c page
+@node parser-tools uri intro
+@subsection Introduction to @uri{} elements
+
+
+@rfc{} 3986 defines the following @uri{} grammar (from ``Appendix A'');
+there are 4 main elements @code{URI}, @code{absolute-URI},
+@code{relative-ref}, @code{path}.
+
+An @code{URI} begins with a mandatory @code{scheme} component and has
+one of the following path types: @code{path-abempty},
+@code{path-absolute}, @code{path-rootless}, @code{path-empty}, with
+@code{path-abempty} present only when the @code{authority} is also
+present.  An @code{absolute-URI} is just an @code{URI} without
+@code{fragment} component.
+
+A @code{relative-ref} begins with no @code{scheme} component and has one
+of the following path types: @code{path-abempty}, @code{path-absolute},
+@code{path-noscheme}, @code{path-empty}, with @code{path-abempty}
+present only when the @code{authority} is also present.  Notice how a
+@code{relative-ref} has the @code{path-noscheme} component rather than
+the @code{path-rootless} component of the @code{URI}.
+
+@smallexample
+URI-reference = URI | relative-ref
+
+URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+
+relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
+
+absolute-URI  = scheme ":" hier-part [ "?" query ]
+
+hier-part     = "//" authority path-abempty
+              | path-absolute
+              | path-rootless
+              | path-empty
+
+relative-part = "//" authority path-abempty
+              | path-absolute
+              | path-noscheme
+              | path-empty
+
+scheme        = ALPHA *( ALPHA | DIGIT | "+" | "-" | "." )
+
+authority     = [ userinfo "@@" ] host [ ":" port ]
+userinfo      = *( unreserved | pct-encoded | sub-delims | ":" )
+host          = IP-literal | IPv4address | reg-name
+port          = *DIGIT
+
+IP-literal    = "[" ( IPv6address | IPvFuture  ) "]"
+
+IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved | sub-delims | ":" )
+
+IPv6address   =                            6( h16 ":" ) ls32
+              |                       "::" 5( h16 ":" ) ls32
+              | [               h16 ] "::" 4( h16 ":" ) ls32
+              | [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+              | [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+              | [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+              | [ *4( h16 ":" ) h16 ] "::"              ls32
+              | [ *5( h16 ":" ) h16 ] "::"              h16
+              | [ *6( h16 ":" ) h16 ] "::"
+
+h16           = 1*4HEXDIG
+ls32          = ( h16 ":" h16 ) | IPv4address
+IPv4address   = dec-octet "." dec-octet "." dec-octet "." dec-octet
+
+dec-octet     = DIGIT                 ; 0-9
+              | %x31-39 DIGIT         ; 10-99
+              | "1" 2DIGIT            ; 100-199
+              | "2" %x30-34 DIGIT     ; 200-249
+              | "25" %x30-35          ; 250-255
+
+reg-name      = *( unreserved | pct-encoded | sub-delims )
+
+path          = path-abempty    ; begins with "/" or is empty
+              | path-absolute   ; begins with "/" but not "//"
+              | path-noscheme   ; begins with a non-colon segment
+              | path-rootless   ; begins with a segment
+              | path-empty      ; zero characters
+
+path-abempty  = *( "/" segment )
+path-absolute = "/" [ segment-nz *( "/" segment ) ]
+path-noscheme = segment-nz-nc *( "/" segment )
+path-rootless = segment-nz *( "/" segment )
+path-empty    = 0<pchar>
+
+segment       = *pchar
+segment-nz    = 1*pchar
+segment-nz-nc = 1*( unreserved | pct-encoded | sub-delims | "@@" )
+              ; non-zero-length segment without any colon ":"
+
+pchar         = unreserved | pct-encoded | sub-delims | ":" | "@@"
+
+query         = *( pchar | "/" | "?" )
+
+fragment      = *( pchar | "/" | "?" )
+
+pct-encoded   = "%" HEXDIG HEXDIG
+
+unreserved    = ALPHA | DIGIT | "-" | "." | "_" | "~"
+reserved      = gen-delims | sub-delims
+gen-delims    = ":" | "/" | "?" | "#" | "[" | "]" | "@@"
+sub-delims    = "!" | "$" | "&" | "'" | "(" | ")"
+              | "*" | "+" | "," | ";" | "="
+@end smallexample
+
+Here are some notes on producing @uri{} references:
+
+@itemize
+@item
+Percent--encoded characters should be produced in upper case.
+
+@item
+The @code{scheme} component should be produced in lower case.
+
+@item
+The @code{host} component is case insensitive (including the @code{v}
+starting a @code{ipvfuture}), but should be produced in lower case.
+
+@item
+Quoting the @rfc{} regarding @code{host} components:
+
+@quotation
+Non--@ascii{} characters must first be encoded according to @utf{}-8,
+and then each octet of the corresponding @utf{}8 sequence must be
+percent--encoded to be represented as @uri{} characters.  @uri{}
+producing applications must not use percent--encoding in @code{host}
+unless it is used to represent a @utf{}-8 character sequence.
+@end quotation
+
+@item
+IPv6 addresses should be produced with hex digits in lower case.
+@end itemize
+
+@c page
+@node parser-tools uri conditions
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.
+
+
+@deftp {Condition Type} &uri-parser-error
+Tag a compound condition object as being a @uri{} parser error; it is
+derived from @condition{error}.  It has the following fields:
+
+@table @code
+@item offset
+Zero--based offset of the byte which caused the error from the beginning
+of the input.  Whether it is the offset from the beginning of a full
+@uri{} or @uri{} reference or other input depends on the function
+raising the exception.
+@end table
+
+This condition type can be used in Nausicaa's @oopp{} syntaxes.
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define C
+  (uri.&uri-parser-error (10)))
+
+((uri.&uri-parser-error) C)
+@result{} #t
+
+(try
+    (raise C)
+  (catch E
+    (uri.&uri-parser-error
+     #t)
+    (else #f)))
+@result{} #t
+@end example
+@end deftp
+
+
+@defun raise-uri-parser-error @var{who} @var{message} @var{offset} @var{irritant} @dots{}
+Raise a compound condition object with types @condition{who},
+@condition{message}, @condition{irritants},
+@condition{uri-parser-error}.  The argument @var{offset} is used as
+@code{offset} field for @condition{uri-parser-error}.
+@end defun
+
+@c page
+@node parser-tools uri percent
+@subsection Percent encoding of characters
+
+
+A bytevector, whose bytes are interpreted as @ascii{} characters, is
+valid as @uri{} component only if its characters match the following
+@library{vicare parser-tools silex} specification (@libsref{silex
+syntax, Syntax of the specification}):
+
+@example
+ALPHA           [a-zA-Z]
+DIGIT           [0-9]
+HEXDIG          [0-9a-fA-F]
+
+pct-encoded     %@{HEXDIG@}@{HEXDIG@}
+
+gen-delims      [:/\?#\[\]@@]
+sub-delims      [\!\$&\'()\*\+,\;=]
+
+reserved        @{gen-delims@}|@{sub-delims@}
+unreserved      @{ALPHA@}|@{DIGIT@}|[\-\._~]
+@end example
+
+@noindent
+all the characters which are not unreserved are meant to be
+percent--encoded in a @uri{} string; in particular the following must be
+encoded:
+
+@example
+: / ? # [ ] @ \ ! $ & ' ( ) * + , ; =
+@end example
+
+@noindent
+the characters in the unreserved set can, but should not, be encoded.
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.
+
+
+@defun unreserved-char? @var{obj}
+@defunx not-unreserved-char? @var{obj}
+The argument @var{obj} must be a character or fixnum representing a
+character according to @func{char->integer}.  @func{unreserved-char?}
+returns @true{} if @var{obj} represents an unreserved character
+according to @rfc{} 3986, otherwise return @false{}.
+@func{not-unreserved-char?} returns the negation of
+@func{unreserved-char?}.
+@end defun
+
+
+@deffn Syntax percent-encode @meta{obj} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} char-selector @meta{pred}
+@deffnx {Auxiliary Syntax} string-result? @meta{bool}
+Percent--encode the given object, return the result; characters outside
+a selected range are percent--encoded.
+
+@meta{obj} must be an expression evaluating to any character, string or
+bytevector; the character is converted to a string and the string is
+converted to a bytevector with @func{string->utf8}.
+
+The following clauses are supported:
+
+@table @code
+@item char-selector @meta{pred}
+@meta{pred} must be an expression evaluating to a predicate function
+which, applied to an integer representing a character according to
+@func{char->integer}, returns true if the character must be percent
+encoded, @false{} otherwise.  The default is to encode all the not
+unreserved characters.
+
+@item string-result? @meta{bool}
+If @meta{bool} evaluates to is true: return a string, else return a
+bytevector; the default is to return a bytevector.
+@end table
+
+Examples:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(uri.percent-encode #\.)        @result{} "."
+(uri.percent-encode #\-)        @result{} "-"
+(uri.percent-encode #\_)        @result{} "_"
+(uri.percent-encode #\~)        @result{} "~"
+(uri.percent-encode #\%)        @result{} "%25"
+(uri.percent-encode #\?)        @result{} "%3F"
+(uri.percent-encode #\=)        @result{} "%3D"
+(uri.percent-encode #\#)        @result{} "%23"
+
+(uri.percent-encode "")         @result{} ""
+(uri.percent-encode "ciao")     @result{} "ciao"
+(uri.percent-encode "cia=o")    @result{} "cia%3Do"
+(uri.percent-encode "ci?a=o")   @result{} "ci%3Fa%3Do"
+@end example
+@end deffn
+
+
+@deffn Syntax percent-decode @meta{obj} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} string-result? @meta{bool}
+Percent--decode the given @meta{obj}, return the result.
+
+@meta{obj} must be an expression evaluating to any string or bytevector;
+the string is converted to a bytevector with @func{string->utf8}.
+
+The following clauses are supported:
+
+@table @code
+@item string-result? @meta{bool}
+If @meta{bool} evaluates to true: return a string, else return a
+bytevector; the default is to return a bytevector.
+@end table
+
+Examples:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define (doit obj)
+  (uri.percent-decode obj (uri.string-result? #t)))
+
+(doit ".")      @result{} "."
+(doit "-")      @result{} "-"
+(doit "_")      @result{} "_"
+(doit "~")      @result{} "~"
+(doit "%25")    @result{} "%"
+(doit "%3F")    @result{} "?"
+(doit "%3D")    @result{} "="
+(doit "%23")    @result{} "#"
+
+(doit "")               @result{} ""
+(doit "ciao")           @result{} "ciao"
+(doit "cia%3Do")        @result{} "cia=o"
+(doit "ci%3Fa%3Do")     @result{} "ci?a=o"
+@end example
+@end deffn
+
+
+@defun normalise-percent-encoded-bytevector @var{bv}
+Normalise the given percent--encoded bytevector; bytes that are encoded
+but should not are decoded; return the normalised bytevector, in which
+percent--encoded characters are displayed in upper case.  Assume that
+@var{bv} is composed by bytes in the valid range for @uri{}s.
+
+Notice that this function does @strong{not} percent--encode bytes which
+are already not so.
+@end defun
+
+
+@defun normalise-percent-encoded-string @var{str}
+Normalise the given percent--encoded string; characters that are encoded
+but should not are decoded; return the normalised string, in which
+percent--encoded characters are displayed in upper case.  Assume that
+@var{str} is composed by characters in the valid range for @uri{}s.
+
+Notice that this function does @strong{not} percent--encode characters
+which are already not so.
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(uri.normalise-percent-encoded-string "ci%3Fa%3Do")
+@result{} "ci%3Fa%3Do"
+
+(uri.normalise-percent-encoded-string "%7Eciao")
+@result{} "~ciao"
+
+(uri.normalise-percent-encoded-string "ci%5Fao")
+@result{} "ci_ao"
+@end example
+@end defun
+
+@c page
+@node parser-tools uri parser
+@subsection @uri{} parser functions
+
+
+All the parser functions attempt to read a @uri{} component from a
+binary input port; all of them follow this protocol:
+
+@itemize
+@item
+If the result of the read operations matches the desired component or
+components: a possibly empty bytevector or a possibly empty list of
+bytevectors is returned; the operation is successful.  The port position
+is left referencing the first byte after the component.
+
+@item
+If the result of the read operations does not match the desired
+component: the return value is the boolean false.  The port position is
+left unchanged.
+
+@item
+If an invalid input is read, for example an incomplete percent--encoded
+sequence, an exception is raised with compound condition object of type
+@condition{&uri-parser-error}.  The port position is left unchanged.
+@end itemize
+
+@menu
+* parser-tools uri parser basic::     Basic component parser functions.
+* parser-tools uri parser authority:: Authority components parser functions.
+* parser-tools uri parser segment::   Path segment component parser
+                                      functions.
+* parser-tools uri parser path::      Path component parser functions.
+* parser-tools uri parser main::      Main components parser functions.
+* parser-tools uri parser misc::      Miscellaneous parser functions.
+@end menu
+
+@c page
+@node parser-tools uri parser basic
+@subsubsection Basic component parser functions
+
+
+The following functions will parse the elements of a @uri{}; all of them
+accept a @var{port} argument: it must be a binary input port drawing
+characters from a @uri{} bytevector.
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.
+
+
+@defun parse-scheme @var{port}
+Accumulate bytes from @var{port} while they are valid for the
+@code{scheme} component.  If a colon is found: return a bytevector
+holding the accumulated bytes, colon excluded; else return @false{}.
+
+When successful: leave the port position referencing the byte after the
+one representing the colon; if an error occurs: rewind the port position
+to the one before this function call.
+
+@example
+(import (vicare)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define (mkport S)
+  (open-bytevector-input-port (string->ascii S)))
+
+(define (doit S)
+  (cond ((uri.parse-scheme (mkport S))
+         => ascii->string)
+        (else #f)))
+
+(doit "")               @result{} #f
+(doit "hello")          @result{} #f
+(doit "hel/lo:")        @result{} #f
+
+(let ((P (mkport "http://ciao")))
+  (ascii->string (uri.parse-scheme P))      @result{} "http"
+  (ascii->string (get-bytevector-some P)))  @result{} "//ciao"
+
+(let ((P (mkport "A123+-.://ciao")))
+  (ascii->string (uri.parse-scheme P))      @result{} "A123+-."
+  (ascii->string (get-bytevector-some P)))  @result{} "//ciao"
+@end example
+@end defun
+
+
+@defun collect-hier-part @var{port}
+@defunx collect-relative-part @var{port}
+Accumulate bytes from @var{port} while they are acceptable for a
+@code{hier-part} component.  When @eof{} or a question mark or a
+number--sign is found: return a bytevector holding the accumulated
+bytes, question mark or number--sign excluded; leave the port position
+to the byte after the last byte of the @code{hier-part}.  An empty
+@code{hier-part} is not accepted: if the first value from the port is
+@eof{}, a question mark or a number--sign the return value is @false{};
+in this case the port position is left unchanged.
+
+No validation is performed on the returned bytevector.
+
+@example
+(import (vicare)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define (mkport S)
+  (open-bytevector-input-port (string->ascii S)))
+
+(define (HP0 S)
+  (let* ((P (mkport S))
+         (R (uri.collect-hier-part P))
+         (Q (ascii->string (get-bytevector-some P))))
+    (values R Q)))
+
+(define (HP1 S)
+  (let* ((P (mkport S))
+         (R (ascii->string (uri.collect-hier-part P)))
+         (E (eof-object? (lookahead-u8 P))))
+    (values R E)))
+
+(define (HP2 S)
+  (let* ((P (mkport S))
+         (R (ascii->string (uri.collect-hier-part P)))
+         (Q (ascii->string (get-bytevector-some P))))
+    (values R Q)))
+
+(uri.collect-hier-part (mkport ""))    @result{} #f
+
+(HP1 "//")             @result{} "//" #t
+(HP1 "//ciao")         @result{} "//ciao" #t
+(HP1 "//ciao/salut")   @result{} "//ciao/salut" #t
+
+(HP1 "/")              @result{} "/" #t
+(HP1 "/ciao")          @result{} "/ciao" #t
+(HP1 "/ciao/salut")    @result{} "/ciao/salut" #t
+
+(HP1 ".")              @result{} "." #t
+(HP1 "ciao")          @result{} "ciao" #t
+(HP1 "ciao/salut")    @result{} "ciao/salut" #t
+
+;; query
+(HP0 "?query")
+@result{} #f "?query"
+
+(HP2 "//?query")
+@result{} "//" "?query"
+
+(HP2 "//ciao?query")
+@result{} "//ciao" "?query"
+
+(HP2 "//ciao/salut?query")
+@result{} "//ciao/salut" "?query"
+
+(HP2 "/?query")
+@result{} "/" "?query"
+
+(HP2 "/ciao?query")
+@result{} "/ciao" "?query"
+
+(HP2 "/ciao/salut?query")
+@result{} "/ciao/salut" "?query"
+
+(HP2 "./?query")
+@result{} "." "?query"
+
+(HP2 "ciao?query")
+@result{} "ciao" "?query"
+
+(HP2 "ciao/salut?query")
+@result{} "ciao/salut" "?query"
+
+;; fragment
+(HP0 "#fragment")
+@result{} #f "#fragment"
+
+(HP2 "//#fragment")
+@result{} "//" "#fragment"
+
+(HP2 "//ciao#fragment")
+@result{} "//ciao" "#fragment"
+
+(HP2 "//ciao/salut#fragment")
+@result{} "//ciao/salut" "#fragment"
+
+(HP2 "/#fragment")
+@result{} "/" "#fragment"
+
+(HP2 "/ciao#fragment")
+@result{} "/ciao" "#fragment"
+
+(HP2 "/ciao/salut#fragment")
+@result{} "/ciao/salut" "#fragment"
+
+(HP2 ".#fragment")
+@result{} "." "#fragment"
+
+(HP2 "ciao#fragment")
+@result{} "ciao" "#fragment"
+
+(HP2 "ciao/salut#fragment")
+@result{} "ciao/salut" "#fragment"
+@end example
+@end defun
+
+
+@defun parse-query @var{port}
+Accumulate bytes from @var{port} while they are valid for a @code{query}
+@uri{} component; the first byte read from @var{port} must be a question
+mark.  If, after the question mark and possibly other bytes, @eof{} or a
+number--sign (@samp{#}) is read: return a bytevector holding the
+accumulated bytes, starting question mark excluded and ending
+number--sign excluded.  If @eof{} is read first or a byte different from
+a question mark is read first: return @false{}.
+
+If successful: leave the port position to the byte after the last byte
+of the @code{query} component; if an error occurs: rewind the port
+position to the one before this function call.
+
+Notice that an empty @code{query} component is valid (a question mark
+followed by @eof{}).
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define (mkport S)
+  (open-bytevector-input-port (string->ascii S)))
+
+(uri.parse-query (mkport ""))           @result{} #f
+(uri.parse-query (mkport "hello"))      @result{} #f
+(uri.parse-query (mkport "#hello"))     @result{} #f
+
+(ascii->string
+ (uri.parse-query (mkport "?")))
+@result{} ""
+
+(ascii->string
+ (uri.parse-query (mkport "?the-query???")))
+@result{} "the-query???"
+
+(let ((P (mkport "?ciao%3dciao#fragment")))
+  (ascii->string (uri.parse-query P))       @result{} "ciao%3dciao"
+  (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
+@end example
+@end defun
+
+
+@defun parse-fragment @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{fragment} component; the first byte read from @var{port} must be a
+number--sign.  If, after the number--sign and possibly other bytes are
+read, @eof{} is read: return a bytevector holding the accumulated bytes,
+starting number--sign excluded.  If the first byte is not a number--sign
+or @eof{} is read first: return @false{}.
+
+If successful: leave the port position to the byte after the last byte
+of the @code{fragment} component; if an error occurs: rewind the port
+position to the one before this function call.
+
+Notice that an empty @code{fragment} component is valid (a number--sign
+followed by @eof{}).
+
+@example
+(import (vicare)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define (mkport S)
+  (open-bytevector-input-port (string->ascii S)))
+
+(uri.parse-fragment (mkport ""))         @result{} #f
+(uri.parse-fragment (mkport "#hello#"))  @result{} #f
+(uri.parse-fragment (mkport "hello"))    @result{} #f
+(uri.parse-fragment (mkport "?hello"))   @result{} #f
+
+(ascii->string
+ (uri.parse-fragment (mkport "#")))
+@result{} ""
+
+(ascii->string
+ (uri.parse-fragment (mkport "#fragment???")))
+@result{} "fragment???"
+
+(ascii->string
+ (uri.parse-fragment (mkport "#ciao%3dciao")))
+@result{} "ciao%3dciao"
+@end example
+@end defun
+
+@c page
+@node parser-tools uri parser authority
+@subsubsection Authority components parser functions
+
+
+The following functions can be used to parse the elements of a @uri{};
+all the functions accept a @var{port} argument: it must be a binary
+input port drawing characters from a bytevector.  When parsing an
+@code{authority} component: we are meant to extract the full
+@code{authority} component and then parse it separately.
+
+The following bindings are exported by the @library{nausicaa
+parser-tools uri} library.
+
+
+@defun parse-authority @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{authority} component in the @code{hier-part} of a @uri{} or the
+@code{relative-part} of a @code{relative-ref}.  The first two bytes read
+must represent, in @ascii{} encoding, two slash characters; after the
+two slashes, if @eof{} or a byte representing a slash, a question mark
+or a number--sign is read: return a bytevector holding the accumulated
+bytes, ending slash, question mark or number--sign excluded; else return
+false.
+
+If successful: leave the port position to the byte after the last
+accumulated byte; if an error occurs: rewind the port position to the
+one before this function call.
+
+Notice that an empty @code{authority} (after the two leading slashes) is
+valid: it is the case of @code{authority} equal to a @code{host}
+component, equal to a @code{reg-name} component which can be empty.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-authority (make-lexer-port ""))      @result{} #f
+(uri.parse-authority (make-lexer-port "ciao"))  @result{} #f
+(uri.parse-authority (make-lexer-port "/ciao")) @result{} #f
+(uri.parse-authority (make-lexer-port "?ciao")) @result{} #f
+(uri.parse-authority (make-lexer-port "#ciao")) @result{} #f
+
+(let ((P (make-lexer-port "//")))
+  (uri.to-string (uri.parse-authority P))  @result{} ""
+  (eof-object? (lookahead-u8 P)))          @result{} #t
+
+(let ((P (make-lexer-port "///")))
+  (uri.to-string (uri.parse-authority P))  @result{} ""
+  (uri.to-string (get-bytevector-some P))) @result{} "/"
+
+(let ((P (make-lexer-port "//?query")))
+  (uri.to-string (uri.parse-authority P))  @result{} ""
+  (uri.to-string (get-bytevector-some P))) @result{} "?query"
+
+(let ((P (make-lexer-port "//#fragment")))
+  (uri.to-string (uri.parse-authority P))  @result{} ""
+  (uri.to-string (get-bytevector-some P))) @result{} "#fragment"
+
+(let ((P (make-lexer-port "///ciao")))
+  (uri.to-string (uri.parse-authority P))  @result{} ""
+  (uri.to-string (get-bytevector-some P))) @result{} "/ciao"
+
+(let ((P (make-lexer-port "//ciao:8080/salut")))
+  (uri.to-string (uri.parse-authority P))  @result{} "ciao:8080"
+  (uri.to-string (get-bytevector-some P))) @result{} "/salut"
+
+(let ((P (make-lexer-port "//ciao.it:8080/salut")))
+  (uri.to-string (uri.parse-authority P))  @result{} "ciao.it:8080"
+  (uri.to-string (get-bytevector-some P))) @result{} "/salut"
+
+(let ((P (make-lexer-port "//marco@@ciao:8080/salut")))
+  (uri.to-string (uri.parse-authority P))  @result{} "marco@@ciao:8080"
+  (uri.to-string (get-bytevector-some P))) @result{} "/salut"
+@end example
+@end defun
+
+
+@defun parse-userinfo @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{userinfo} component in the @code{authority} component.  If a byte
+representing a commercial at--sign (@samp{@@}), in @ascii{} encoding, is
+read: return a bytevector holding the accumulated bytes, ending at--sign
+excluded; else return false.
+
+If successful: leave the port position to the byte after the ending
+at--sign; if an error occurs: rewind the port position to the one before
+this function call.
+
+Notice that an empty @code{userinfo} component is valid (an at--sign
+preceded by nothing).
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-userinfo (make-lexer-port ""))   @result{} #f
+
+(let ((P (make-lexer-port "ciao.it")))
+  (uri.parse-userinfo P)                    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "ciao.it"
+
+(let ((P (make-lexer-port ":8080")))
+  (uri.parse-userinfo P)                    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} ":8080"
+
+(let ((P (make-lexer-port "/hello")))
+  (uri.parse-userinfo P)                    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "/hello"
+
+(let ((P (make-lexer-port "?hello")))
+  (uri.parse-userinfo P)                    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "?hello"
+
+(let ((P (make-lexer-port "#hello")))
+  (uri.parse-userinfo P)                    @result{}
+  (uri.to-string (get-bytevector-some P)))  @result{} "#hello"
+
+(let ((P (make-lexer-port "@@")))
+  (uri.to-string (uri.parse-userinfo P))    @result{} ""
+  (eof-object? (lookahead-u8 P)))           @result{} #t
+
+(let ((P (make-lexer-port "@@host")))
+  (uri.to-string (uri.parse-userinfo P))    @result{} ""
+  (uri.to-string (get-bytevector-some P)))  @result{} "host"
+
+(let ((P (make-lexer-port "userinfo@@host")))
+  (uri.to-string (uri.parse-userinfo P))    @result{} "userinfo"
+  (uri.to-string (get-bytevector-some P)))  @result{} "host"
+
+(let ((P (make-lexer-port "ciao%3dciao@@host")))
+  (uri.to-string (uri.parse-userinfo P))    @result{} "ciao%3dciao"
+  (uri.to-string (get-bytevector-some P)))  @result{} "host"
+@end example
+@end defun
+
+
+@defun parse-ipv4-address @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{IPv4address} component, then parse them as IPv4 address.  If
+successful return two values: a bytevector holding the accumulated
+bytes, a list holding the octets as exact integers; else return false
+and false.
+
+If successful: leave the port position to the byte after last one read
+from the port; if an error occurs: rewind the port position to the one
+before this function call.
+
+No validation is performed on the first byte after the address, if any.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-ipv4-address (make-lexer-port "")) @result{} #f #f
+
+(let ((P (make-lexer-port "ciao")))
+  (uri.parse-ipv4-address P)                 @result{} #f #f
+  (uri.to-string (get-bytevector-some P)))   @result{} "ciao"
+
+(let ((P (make-lexer-port "1.2.3")))
+  (uri.parse-ipv4-address P)                 @result{} #f #f
+  (uri.to-string (get-bytevector-some P)))   @result{} "1.2.3"
+
+(let ((P (make-lexer-port "1.2.3.4.5")))
+  (uri.parse-ipv4-address P)                 @result{} #f #f
+  (uri.to-string (get-bytevector-some P)))   @result{} "1.2.3.4.5"
+
+(let ((P (make-lexer-port "123ciao")))
+  (uri.parse-ipv4-address P)                 @result{} #f #f
+  (uri.to-string (get-bytevector-some P)))   @result{} "123ciao"
+
+(let ((P (make-lexer-port "1.2.3.4")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr)          @result{} "1.2.3.4"
+    ell)                          @result{} (1 2 3 4)
+  (eof-object? (lookahead-u8 P))  @result{} #t
+
+(let ((P (make-lexer-port "191.223.376.434")))
+  (uri.parse-ipv4-address P)   @result{} #f #f
+  (uri.to-string
+   (get-bytevector-some P)))   @result{} "191.223.376.434"
+
+(let ((P (make-lexer-port "191.223.76.255")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr)          @result{} "191.223.76.255"
+    ell))                         @result{} (191 223 76 255)
+
+(let ((P (make-lexer-port "1.2.3.4/5")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr))         @result{} "1.2.3.4"
+  (uri.to-string
+   (get-bytevector-some P)))      @result{} "/5"
+
+(let ((P (make-lexer-port "1.2.3.4/ciao")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr))         @result{} "1.2.3.4"
+  (uri.to-string
+   (get-bytevector-some P)))      @result{} "/ciao"
+
+(let ((P (make-lexer-port "1.2.3.4:8080")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr))         @result{} "1.2.3.4"
+  (uri.to-string
+   (get-bytevector-some P)))      @result{} ":8080"
+
+(let ((P (make-lexer-port "1.2.3.4ciao")))
+  (receive (addr ell)
+      (uri.parse-ipv4-address P)
+    (uri.to-string addr))         @result{} "1.2.3.4"
+  (uri.to-string
+   (get-bytevector-some P)))      @result{} "ciao"
+@end example
+@end defun
+
+
+@defun parse-ipv6-address @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{IPv6address} component, then parse them as IPv6 address.  If
+successful return two values: a bytevector holding the accumulated
+bytes, a list holding the 8 numeric address components as exact
+integers; else return false and false.
+
+If successful: leave the port position to the byte after last one read
+from the port; if an error occurs: rewind the port position to the one
+before this function call.
+
+No validation is performed on the first byte after the address, if any.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-ipv6-address (make-lexer-port "")) @result{} #f #f
+
+(let ((P (make-lexer-port "ciao")))
+  (uri.parse-ipv6-address P)            @result{} #f #f
+  (uri.to-string
+   (get-bytevector-some P)))            @result{} "ciao"
+
+(let ((P (make-lexer-port "1.2.3.ciao")))
+  (uri.parse-ipv6-address P)            @result{} #f #f
+  (uri.to-string
+   (get-bytevector-some P)))            @result{} "1.2.3.ciao"
+
+(let ((P (make-lexer-port "1:2:3:4:5:6:7:8")))
+  (uri.parse-ipv6-address P))
+  @result{} "1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8)
+
+(let ((P (make-lexer-port "::1")))
+  (uri.parse-ipv6-address P))
+  @result{} "::1" (0 0 0 0 0 0 0 1)
+
+(let ((P (make-lexer-port "1::")))
+  (uri.parse-ipv6-address P))
+  @result{} "1::" (1 0 0 0 0 0 0 0)
+
+(let ((P (make-lexer-port "1:2::3")))
+  (uri.parse-ipv6-address P))
+  @result{} "1:2::3" (1 2 0 0 0 0 0 3)
+
+(let ((P (make-lexer-port "1:2:3:4::172.30.67.254")))
+  (uri.parse-ipv6-address P))
+  @result{} "1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe)
+
+(let ((P (make-lexer-port "::ffff:192.168.99.1")))
+  (uri.parse-ipv6-address P))
+  @result{} "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301)
+
+(let ((P (make-lexer-port "::1/60")))
+  (uri.parse-ipv6-address P) @result{} "::1" (0 0 0 0 0 0 0 1)
+  (uri.to-string
+   (get-bytevector-some P))) @result{} "/60"
+@end example
+@end defun
+
+
+@defun parse-ip-literal @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{IP-literal} component in a @code{host} component.  The first byte
+must represent an open bracket (@samp{[}) character in @ascii{}
+encoding; if a byte representing a closed bracket (@samp{]}) is read:
+return a bytevector holding the accumulated bytes, brackets excluded;
+else return false.
+
+If successful: leave the port position to the byte after the closing
+bracket; if an error occurs: rewind the port position to the one before
+this function call.
+
+No validation is performed on the returned bytevector contents; the
+returned bytevector can be empty even though an @code{IP-literal}
+component cannot be of zero length inside the brackets: it is
+responsibility of the caller to check the length of the returned
+bytevector.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-ip-literal (make-lexer-port ""))
+@result{} #f
+
+(let ((P (make-lexer-port "ciao")))
+  (uri.parse-ip-literal P)                  @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "ciao"
+
+(uri.to-string
+ (uri.parse-ip-literal (make-lexer-port "[]")))
+@result{} ""
+
+(uri.to-string
+ (uri.parse-ip-literal (make-lexer-port "[::0:1:2]")))
+@result{} "::0:1:2"
+
+(let ((P (make-lexer-port "[::0:1:2]:8080")))
+  (uri.to-string (uri.parse-ip-literal P))  @result{} "::0:1:2"
+  (uri.to-string (get-bytevector-some P)))  @result{} ":8080"
+@end example
+@end defun
+
+
+@defun parse-ipvfuture @var{port}
+Accumulate bytes from @var{port} while they are valid for an
+@code{IPvFuture} component in the @code{IP-literal} component.  The
+first byte must represent the character @code{v} in @ascii{} encoding
+and the second byte must represent a single hexadecimal digit in
+@ascii{} encoding; after the prolog is read, bytes are accumulated until
+@eof{} is found.
+
+Return two values: an exact integer representing the hexadecimal digit
+in @ascii{} encoding, a bytevector holding the accumulated bytes; else
+return false and false.
+
+If an error occurs: rewind the port position to the one before this
+function call.
+
+No validation is performed on the returned bytevector contents; the
+returned bytevector can be empty even though an @code{IPvFuture}
+component cannot be of zero length inside the brackets.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(call-with-values
+    (lambda ()
+      (uri.parse-ipvfuture (make-lexer-port "")))
+  list)
+@result{} (#f #f)
+
+(call-with-values
+    (lambda ()
+      (uri.parse-ipvfuture (make-lexer-port "ciao")))
+  list)
+@result{} (#f #f)
+
+(call-with-values
+    (lambda ()
+      (uri.parse-ipvfuture (make-lexer-port "v1")))
+  list)
+@result{} (1 #vu8())
+
+(call-with-values
+    (lambda ()
+      (uri.parse-ipvfuture (make-lexer-port "v9ciao")))
+  (lambda (version bv)
+    (list version (uri.to-string bv))))
+@result{} (9 "ciao")
+
+(call-with-values
+    (lambda ()
+      (uri.parse-ipvfuture (make-lexer-port "vFciao")))
+  (lambda (version bv)
+    (list version (uri.to-string bv))))
+@result{} (15 "ciao")
+@end example
+@end defun
+
+
+@defun parse-reg-name @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{reg-name} (registered name) component in a @code{host} component.
+If @eof{} or a byte representing a colon, slash, question mark or
+number--sign, in @ascii{} encoding, is read: return a bytevector holding
+the accumulated bytes, ending byte excluded; else return false.
+
+If successful: leave the port position to the byte after last one read
+from the port, ending colon or slash excluded; if an error occurs:
+rewind the port position to the one before this function call.
+
+Notice that an empty @code{reg-name} component is valid; also, a
+@code{reg-name} cannot be longer than @math{255} bytes: if it is, this
+function returns false.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.to-string
+ (uri.parse-reg-name (make-lexer-port ""))) @result{} ""
+
+(let ((P (make-lexer-port ":80")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} ":80"
+
+(let ((P (make-lexer-port "/ciao")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "/ciao"
+
+(let ((P (make-lexer-port "?query")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "?query"
+
+(let ((P (make-lexer-port "#fragment")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} #f
+  (uri.to-string (get-bytevector-some P)))  @result{} "#fragment"
+
+(uri.to-string
+ (uri.parse-reg-name (make-lexer-port "the-reg-name")))
+@result{} "the-reg-name"
+
+(uri.to-string
+ (uri.parse-reg-name (make-lexer-port "the.reg.name")))
+@result{} "the.reg.name"
+
+(uri.to-string
+ (uri.parse-reg-name (make-lexer-port "ciao%3dciao")))
+@result{} "ciao%3dciao"
+
+(let ((P (make-lexer-port "the-reg-name:80")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} "the-reg-name"
+  (uri.to-string (get-bytevector-some P)))  @result{} ":80"
+
+(let ((P (make-lexer-port "the-reg-name/ciao")))
+  (uri.to-string (uri.parse-reg-name P))    @result{} "the-reg-name"
+  (uri.to-string (get-bytevector-some P)))  @result{} "/ciao"
+@end example
+@end defun
+
+
+@defun parse-host @var{port}
+Accumulate bytes from @var{port} while they are valid for a @code{host}
+component; parse the accumulated bytes as @code{host} and return two
+values, the first being one of the Scheme symbols: @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}, @code{reg-name}.
+
+The second returned value depends upon the first:
+
+@table @code
+@item ipv4-address
+The second value is a pair, whose car is a bytevector holding the
+accumulated bytes and whose cdr is a list of 4 exact integers
+representing the octets.
+
+@item ipv6-address
+The second value is a pair, whose car is a bytevector holding the
+accumulated bytes (without the enclosing square brackets) and whose cdr
+is a list of 8 exact integers representing the address components.
+
+@item ipvfuture
+The second value is a pair, whose car is the version number as exact
+integer in the range @math{[0, 15]} and whose cdr is a possibly empty
+bytevector holding the accumulated bytes (without the enclosing square
+brackets, the @code{v} and the version byte).
+
+@item reg-name
+The second value is a possibly empty bytevector holding the accumulated
+bytes.
+@end table
+
+If successful: leave the port position to the byte after last one read
+from the port; if an error occurs: return false and false, rewind the
+port position to the one before this function call.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(let ((P (make-lexer-port "/")))
+  (uri.parse-host P)            @result{} reg-name #vu8()
+  (uri.to-string
+   (get-bytevector-some P)))    @result{} "/"
+
+(let ((P (make-lexer-port ":80")))
+  (uri.parse-host P)            @result{} reg-name #vu8()
+  (uri.to-string
+   (get-bytevector-some P)))    @result{} ":80"
+
+(let ((P (make-lexer-port "1.2.3.4:80")))
+  (receive (kind data)
+      (uri.parse-host P)
+    kind                        @result{} ipv4-address
+    (uri.to-string (car data))  @result{} "1.2.3.4"
+    (cdr data))                 @result{} (1 2 3 4)
+  (uri.to-string
+   (get-bytevector-some P)))    @result{} ":80"
+
+(let ((P (make-lexer-port "[::ffff:192.168.99.1]:80")))
+  (receive (kind data)
+      (uri.parse-host P)
+    kind                        @result{} ipv6-address
+    (uri.to-string (car data))  @result{} "::ffff:192.168.99.1"
+    (cdr data))                 @result{} (0 0 0 0 0 #xFFFF #xC0A8 #x6301)
+  (uri.to-string
+   (get-bytevector-some P)))    @result{} ":80"
+
+(let ((P (make-lexer-port "[vF,ciao,ciao]/ciao")))
+  (receive (kind data)
+      (uri.parse-host P)
+    kind                        @result{} ipvfuture
+    (car data)                  @result{} 15
+    (uri.to-string (cdr data))) @result{} ",ciao,ciao"
+  (uri.to-string
+   (get-bytevector-some P)))    @result{} "/ciao"
+@end example
+@end defun
+
+
+@defun parse-port @var{port}
+Accumulate bytes from @var{port} while they are valid for a @code{port}
+component in the @code{authority} component.  The first byte must
+represent a colon in @ascii{} encoding; after that: if @eof{} or a byte
+not representing a decimal digit, in @ascii{} encoding, is read: return
+a bytevector holding the accumulated bytes, starting colon excluded;
+else return false.
+
+If successful: leave the port position to the byte after last one read
+from the port; if an error occurs: rewind the port position to the one
+before this function call.
+
+Notice that an empty @code{port} component after the mandatory colon is
+valid: in this case an empty bytevector is returned.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) uri.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (uri.to-bytevector S)))
+
+(uri.parse-port (make-lexer-port ""))         @result{} #f
+(uri.to-string
+ (uri.parse-port (make-lexer-port ":")))      @result{} ""
+(uri.to-string
+ (uri.parse-port (make-lexer-port ":2")))     @result{} "2"
+(uri.to-string
+ (uri.parse-port (make-lexer-port ":8080")))  @result{} "8080"
+
+(let ((P (make-lexer-port ":8080ciao")))
+  (uri.to-string (uri.parse-port P))        @result{} "8080"
+  (uri.to-string (get-bytevector-some P)))  @result{} "ciao"
+@end example
+@end defun
+
+@c page
+@node parser-tools uri parser segment
+@subsubsection Path segment component parser functions
+
+
+The following functions can be used to parse the @code{segment},
+@code{segment-nz} and @code{segment-nz-nc} components of a @uri{}; the
+relevant portion of the grammar is:
+
+@example
+segment       = *pchar
+segment-nz    = 1*pchar
+segment-nz-nc = 1*( unreserved | pct-encoded | sub-delims | "@@" )
+
+pchar         = unreserved | pct-encoded | sub-delims | ":" | "@@"
+
+unreserved    = ALPHA | DIGIT | "-" | "." | "_" | "~"
+pct-encoded   = "%" HEXDIG HEXDIG
+sub-delims    = "!" | "$" | "&" | "'" | "(" | ")"
+              | "*" | "+" | "," | ";" | "="
+@end example
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library; it is suggested to prefix them when importing this library.
+All the functions accept a @var{port} argument: it must be a binary
+input port drawing characters from a bytevector.
+
+
+@defun parse-segment @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If @eof{} or a byte not valid for a @code{segment} is read: return a
+bytevector holding the bytes accumulated so far, invalid byte excluded;
+the port position is left pointing to the byte after the last
+accumulated one.
+
+If an invalid percent--encoded sequence is read, an exception is raised
+with type @condition{parser-error}; the port position is rewind to the
+one before this function call.
+@end defun
+
+
+@defun parse-segment-nz @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment-nz} component; notice that an empty @code{segment-nz} is
+@strong{not} valid: @code{nz} stands for ``non--zero''.
+
+If the first read operation returns @eof{} or an invalid byte: the port
+position is restored to the one before this function call and the return
+value is false.
+
+If, after at least one valid byte is read, @eof{} or an invalid byte is
+read: return a bytevector holding the bytes accumulated so far, invalid
+byte excluded; the port position is left pointing to the byte after the
+last accumulated one.
+
+If an invalid percent--encoded sequence is read, an exception is raised
+with type @condition{parser-error}; the port position is rewind to the
+one before this function call.
+@end defun
+
+
+@defun parse-segment-nz-nc @var{port}
+Like @func{parse-segment-nz}, but parses the @code{segment-nz-nc}
+component which cannot be empty and cannot hold bytes representing colon
+characters in @ascii{} encoding: @code{nz-nc} stands for ``non--zero
+no--colon''.
+@end defun
+
+
+@defun parse-slash-and-segment @var{port}
+Attempt to read from @var{port} the sequence slash character plus
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If these components are successfully read: return a bytevector (possibly
+empty) holding the accumulated @code{segment} bytes; the port position
+is left pointing to the byte after the last accumulated byte from the
+@code{segment}.
+
+If @eof{} or a byte different from slash is read as first byte: return
+false; the port position is rewind to the one before this function call.
+
+If an invalid percent.-encoded sequence is read, an exception is raised
+with type @condition{parser-error}; the port position is rewind to the
+one before this function call.
+@end defun
+
+@c page
+@node parser-tools uri parser path
+@subsubsection Path component parser functions
+
+
+The following functions can be used to parse the @code{path-abempty},
+@code{path-absolute}, @code{path-noscheme}, @code{path-rootless} and
+@code{path-empty} components; the relevant portion of the grammar is:
+
+@example
+path-abempty  = *( "/" segment )
+path-absolute = "/" [ segment-nz *( "/" segment ) ]
+path-noscheme = segment-nz-nc *( "/" segment )
+path-rootless = segment-nz *( "/" segment )
+path-empty    = 0<pchar>
+@end example
+
+@noindent
+notice that all the @code{path-*} components appear in the grammar as
+last components of a @code{hier-part} or @code{relative-part} component,
+which in turn can be followed only by @eof{}, a query (starting with a
+@samp{?} byte) or a fragment (starting with a @samp{#} byte).
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library; it is suggested to prefix them when importing this library.
+All the functions accept a @var{port} argument: it must be a binary
+input port drawing characters from a bytevector.
+
+
+@defun parse-path-empty @var{port}
+Parse a @code{path-empty} component.  Lookahead one byte from
+@var{port}: if it is @eof{} or a question mark or number--sign in
+@ascii{} encoding: return null; else return false.
+
+In any case leave the port position where it was before the function
+call.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path-empty (make-lexer-port ""))
+@result{} ()
+
+(let ((P (make-lexer-port "ciao")))
+  (low.parse-path-empty P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))   @result{} "ciao"
+
+(let ((P (make-lexer-port "/ciao")))
+  (low.parse-path-empty P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))   @result{} "/ciao"
+
+(let ((P (make-lexer-port "?query")))
+  (low.parse-path-empty P)      @result{} ()
+  (low.to-string
+    (get-bytevector-some P)))   @result{} "?query"
+
+(let ((P (make-lexer-port "#fragment")))
+  (low.parse-path-empty P)      @result{} ()
+  (low.to-string
+    (get-bytevector-some P)))   @result{} "#fragment"
+@end example
+@end defun
+
+
+@defun parse-path-abempty @var{port}
+Parse from @var{port} a, possibly empty, sequence of sequences: byte
+representing the slash character in @ascii{} encoding, @code{segment}
+component.  Return a possibly empty list holding bytevectors
+representing the segments.
+
+If successful: leave the port position to the byte after the last read
+byte; if an error occurs: rewind the port position to the one before
+this function call.
+
+If an invalid percent--encoded sequence is read, an exception is raised
+with type @condition{parser-error}; the port position is rewind to the
+one before this function call.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path-abempty (make-lexer-port ""))   @result{} ()
+
+(let ((P (make-lexer-port "?query")))
+  (low.parse-path-abempty P)                @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "?query"
+
+(let ((P (make-lexer-port "#fragment")))
+  (low.parse-path-abempty P)                @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "#fragment"
+
+(let ((P (make-lexer-port "/ciao")))
+  (map low.to-string
+    (low.parse-path-abempty P))         @result{} ("ciao")
+  (eof-object? (lookahead-u8 P)))       @result{} #t
+
+(let ((P (make-lexer-port "/ciao?query")))
+  (map low.to-string
+    (low.parse-path-abempty P))             @result{} ("ciao")
+  (low.to-string (get-bytevector-some P)))  @result{} "?query"
+
+(let ((P (make-lexer-port "/ciao#fragment")))
+  (map low.to-string
+    (low.parse-path-abempty P))             @result{} ("ciao")
+  (low.to-string (get-bytevector-some P)))  @result{} "#fragment"
+
+(let ((P (make-lexer-port "/ciao/hello")))
+  (map low.to-string
+    (low.parse-path-abempty P))    @result{} ("ciao" "hello")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "/ciao/")))
+  (map low.to-string
+    (low.parse-path-abempty P))    @result{} ("ciao" "")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(map low.to-string
+  (low.parse-path-abempty (make-lexer-port "///")))
+@result{} ("" "" "")
+@end example
+@end defun
+
+
+@defun parse-path-absolute @var{port}
+Parse from @var{port} a @code{path-absolute} component; it is like
+@func{parse-path-abempty}, but expects a slash character as first byte
+and a non--slash as second byte.  Return a possibly empty list holding
+bytevectors representing the segments, or false.
+
+If successful: leave the port position to the byte after the last read
+byte; if an error occurs: rewind the port position to the one before
+this function call.
+
+Notice that a @code{path-absolute} can be just a slash character, with
+no segments attached.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path-absolute (make-lexer-port ""))
+@result{} #f
+
+(let ((P (make-lexer-port "ciao")))
+  (low.parse-path-absolute P)               @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "ciao"
+
+(let ((P (make-lexer-port "/")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("")
+    (eof-object? (lookahead-u8 P)))         @result{} #t
+
+(let ((P (make-lexer-port "//")))
+  (low.parse-path-absolute P)               @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "//"
+
+(let ((P (make-lexer-port "/ciao")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("ciao")
+  (eof-object? (lookahead-u8 P)))           @result{} #t
+
+(let ((P (make-lexer-port "/ciao/salut")))
+  (map low.to-string
+    (low.parse-path-absolute P))   @result{} ("ciao" "salut")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "/ciao/")))
+  (map low.to-string
+    (low.parse-path-absolute P))   @result{} ("ciao" "")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "/?query")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("")
+  (low.to-string (get-bytevector-some P)))  @result{} "?query"
+
+(let ((P (make-lexer-port "/ciao?query")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("ciao")
+  (low.to-string (get-bytevector-some P)))  @result{} "?query"
+
+(let ((P (make-lexer-port "/#fragment")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("")
+  (low.to-string (get-bytevector-some P)))  @result{} "#fragment"
+
+(let ((P (make-lexer-port "/ciao#fragment")))
+  (map low.to-string
+    (low.parse-path-absolute P))            @result{} ("ciao")
+  (low.to-string (get-bytevector-some P)))  @result{} "#fragment"
+@end example
+@end defun
+
+
+@defun parse-path-noscheme @var{port}
+Parse from @var{port} a @code{path-noscheme} component.  Return a
+non--empty list holding bytevectors representing the segments, or false.
+
+If successful: leave the port position to the byte after the last read
+byte; if an error occurs: rewind the port position to the one before
+this function call.
+
+Notice that a @code{path-noscheme} must not start with a slash
+character, and then it must have at least one non--empty @code{segment}
+component; the first @code{segment} must not contain a colon caracter.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path-noscheme (make-lexer-port "")) @result{} #f
+
+(let ((P (make-lexer-port "ciao")))
+  (map low.to-string
+    (low.parse-path-noscheme P))   @result{} ("ciao")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "/")))
+  (low.parse-path-noscheme P)               @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "/"
+
+(let ((P (make-lexer-port "/ciao")))
+  (low.parse-path-noscheme P)               @result{} #f
+  (low.to-string (get-bytevector-some P)))  @result{} "/"
+
+(let ((P (make-lexer-port "ciao/hello")))
+  (map low.to-string
+    (low.parse-path-noscheme P))   @result{} ("ciao" "hello")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "ciao/")))
+  (map low.to-string
+    (low.parse-path-noscheme P))  @result{} ("ciao" "")
+  (eof-object? (lookahead-u8 P))) @result{} #t
+
+(let ((P (make-lexer-port "ciao/he:llo")))
+  (map low.to-string
+   (low.parse-path-noscheme P))   @result{} ("ciao" "he:llo")
+  (eof-object? (lookahead-u8 P))) @result{} #t
+
+(let ((P (make-lexer-port "ci:ao/hello")))
+  (low.parse-path-noscheme P)     @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))     @result{} "ci:ao/hello"
+
+(let ((P (make-lexer-port "?query")))
+  (low.parse-path-noscheme P)     @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))     @result{} "?query"
+
+(let ((P (make-lexer-port "hello?ciao")))
+  (map low.to-string
+   (low.parse-path-noscheme P))   @result{} ("hello")
+  (low.to-string
+    (get-bytevector-some P)))     @result{} "?ciao"
+
+(let ((P (make-lexer-port "#fragment")))
+  (low.parse-path-noscheme P)     @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))     @result{} "#fragment"
+
+(let ((P (make-lexer-port "hello#fragment")))
+  (map low.to-string
+    (low.parse-path-noscheme P))  @result{} ("hello")
+  (low.to-string
+    (get-bytevector-some P)))     @result{} "#fragment"
+@end example
+@end defun
+
+
+@defun parse-path-rootless @var{port}
+Parse from @var{port} a @code{path-rootless} component; it is like
+@func{parse-path-abempty}, but expects a non--slash character as first
+byte.  Return a non--empty list holding bytevectors representing the
+segments, or false.
+
+If successful: leave the port position to the byte after the last read
+byte; if an error occurs: rewind the port position to the one before
+this function call.
+
+Notice that a @code{path-rootless} must not start with a slash
+character, and then it must have at least one non--empty @code{segment}
+component.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path-rootless (make-lexer-port ""))  @result{} #f
+
+(let ((P (make-lexer-port "ciao")))
+  (map low.to-string
+    (low.parse-path-rootless P))   @result{} ("ciao")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "/")))
+  (low.parse-path-rootless P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))      @result{} "/"
+
+(let ((P (make-lexer-port "/ciao")))
+  (low.parse-path-rootless P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P)))      @result{} "/ciao"
+
+(let ((P (make-lexer-port "ciao/hello")))
+  (map low.to-string
+    (low.parse-path-rootless P))   @result{} ("ciao" "hello")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "ciao/")))
+  (map low.to-string
+    (low.parse-path-rootless P))   @result{} ("ciao" "")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "ci:ao/hel:lo")))
+  (map low.to-string
+    (low.parse-path-rootless P))   @result{} ("ci:ao" "hel:lo")
+  (eof-object? (lookahead-u8 P)))  @result{} #t
+
+(let ((P (make-lexer-port "?query")))
+  (low.parse-path-rootless P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P))       @result{} "?query"
+
+(let ((P (make-lexer-port "ciao?query")))
+  (low.parse-path-rootless P)      @result{} ("ciao")
+  (low.to-string
+    (get-bytevector-some P))       @result{} "?query"
+
+(let ((P (make-lexer-port "#fragment")))
+  (low.parse-path-rootless P)      @result{} #f
+  (low.to-string
+    (get-bytevector-some P))       @result{} "#fragment"
+
+(let ((P (make-lexer-port "ciao#fragment")))
+  (low.parse-path-rootless P)      @result{} ("ciao")
+  (low.to-string
+    (get-bytevector-some P))       @result{} "#fragment"
+@end example
+@end defun
+
+@c page
+@node parser-tools uri parser main
+@subsubsection Main components parser functions
+
+
+The following functions can be used to parse the @code{URI},
+@code{absolute-URI}, @code{relative-ref} and @code{path} components; the
+relevant portion of the grammar is:
+
+@example
+URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+
+relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
+
+absolute-URI  = scheme ":" hier-part [ "?" query ]
+
+path          = path-abempty    ; begins with "/" or is empty
+              | path-absolute   ; begins with "/" but not "//"
+              | path-noscheme   ; begins with a non-colon segment
+              | path-rootless   ; begins with a segment
+              | path-empty      ; zero characters
+
+hier-part     = "//" authority path-abempty
+              | path-absolute
+              | path-rootless
+              | path-empty
+
+relative-part = "//" authority path-abempty
+              | path-absolute
+              | path-noscheme
+              | path-empty
+@end example
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library; it is suggested to prefix them when importing this library.
+All the functions accept a @var{port} argument: it must be a binary
+input port drawing characters from a bytevector.
+
+
+@defun parse-uri @var{port}
+Read bytes from @var{PORT} expecting to get, from the first byte to the
+@eof{}, a @code{URI} component; parse the input decomposing it into its
+subcomponents.  This function does not decode the percent--encoded
+bytes.
+
+Return multiple value being:
+
+@table @code
+@item scheme
+A bytevector representing the @code{scheme} component; false if the
+@code{scheme} is not present.  According to the @rfc{}: the
+@code{scheme} component is mandatory, but this function accepts its
+absence.
+
+@item authority
+A bytevector representing the @code{authority} component, not including
+the leading slashes; false if the @code{authority} is not present.
+
+@item userinfo
+A bytevector representing the @code{userinfo} component, not including
+the ending at--sign; false if the @code{userinfo} is not present.
+
+@item host-type
+One of the symbols: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+
+@item host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.
+
+@item port
+A bytevector representing the @code{port} component; false if the
+@code{port} is not present.
+
+@item path-type
+One of the symbols: @code{path-abempty}, @code{path-empty},
+@code{path-absolute}, @code{path-rootless}.  When the @code{authority}
+is present: this value is always @code{path-abempty}.
+
+@item path
+A possibly empty list representing the path segments.
+
+@item query
+A bytevector representing the @code{query} component; false when the
+@code{query} is not present.
+
+@item fragment
+A bytevector representing the @code{fragment} component; false when the
+@code{fragment} is not present.
+@end table
+
+If the host cannot be classified in @code{reg-name}, @code{ip-literal}
+or @code{ipvfuture}: an exception is raised with condition components
+@condition{parser-error}, @condition{who}, @condition{message},
+@condition{irritants}, the irritants being the input port.
+
+If the path cannot be classified: an exception is raised with condition
+components @condition{parser-error}, @condition{who},
+@condition{message}, @condition{irritants}, the irritants being the
+input port.
+@end defun
+
+
+@defun parse-relative-ref @var{port}
+Read bytes from @var{port} expecting to get, from the first byte to the
+@eof{}, a @code{relative-ref} component; parse the input decomposing it
+into its subcomponents.  This function does not decode the
+percent--encoded bytes.
+
+Return multiple value being:
+
+@table @code
+@item authority
+A bytevector representing the @code{authority} component, not including
+the leading slashes; false if the @code{authority} is not present.
+
+@item userinfo
+A bytevector representing the @code{userinfo} component, not including
+the ending at--sign; false if the @code{userinfo} is not present.
+
+@item host-type
+One of the symbols: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+
+@item host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.
+
+@item port
+A bytevector representing the @code{port} component; false if the
+@code{port} is not present.
+
+@item path-type
+One of the symbols: @code{path-abempty}, @code{path-empty},
+@code{path-absolute}, @code{path-noscheme}.  When the @code{authority}
+is present: this value is always @code{path-abempty}.
+
+@item path
+A possibly empty list representing the path segments.
+
+@item query
+A bytevector representing the @code{query} component; false when the
+@code{query} is not present.
+
+@item fragment
+A bytevector representing the @code{fragment} component; false when the
+@code{fragment} is not present.
+@end table
+
+If the host cannot be classified in @code{reg-name}, @code{ip-literal}
+or @code{ipvfuture}: an exception is raised with condition components
+@condition{parser-error}, @condition{who}, @condition{message},
+@condition{irritants}, the irritants being the input port.
+
+If the path cannot be classified: an exception is raised with condition
+components @condition{parser-error}, @condition{who},
+@condition{message}, @condition{irritants}, the irritants being the
+input port.
+@end defun
+
+
+@defun parse-path @var{port}
+Parse from @var{port} a @code{path} component.  Return two values: false
+or one of the symbols: @code{path-empty}, @code{path-absolute},
+@code{path-abempty}, @code{path-noscheme}, @code{path-rootless}; the
+list of bytevectors representing the segments, possibly null.
+
+If successful: leave the port position to the byte after the last read
+byte; if an error occurs: rewind the port position to the one before
+this function call.
+
+Notice that the @code{path} component can be followed only by @eof{}; if
+the path cannot be classified: an exception is raised with condition
+components @condition{parser-error}, @condition{who},
+@condition{message}, @condition{irritants}, the irritants being the
+input port.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define (make-lexer-port S)
+  (open-bytevector-input-port (low.to-bytevector S)))
+
+(low.parse-path (make-lexer-port ""))  @result{} path-empty ()
+
+(low.parse-path (make-lexer-port "?query"))  @error{} &parser-error
+(low.parse-path (make-lexer-port "#fragment"))  @error{} &parser-error
+
+(low.parse-path (make-lexer-port "/"))
+@result{} path-absolute (#vu8())
+
+(let*-values
+    (((P)          (make-lexer-port "/ciao/hello/salut"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-absolute
+  (map low.to-string path))    @result{} ("ciao" "hello" "salut")
+
+(let*-values
+    (((P)          (make-lexer-port "//"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-abempty
+  (map low.to-string path))    @result{} ("" "")
+
+(let*-values
+    (((P)          (make-lexer-port "///"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-abempty
+  (map low.to-string path))    @result{} ("" "" "")
+
+(let*-values
+    (((P)          (make-lexer-port "//ciao/"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-abempty
+  (map low.to-string path))    @result{} ("" "ciao" "")
+
+(let*-values
+    (((P)          (make-lexer-port "ciao/hello"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-noscheme
+  (map low.to-string path))    @result{} ("ciao" "hello")
+
+(let*-values
+    (((P)          (make-lexer-port "ci:ao/hello"))
+     ((type path)  (low.parse-path P)))
+  type                         @result{} path-rootless
+  (map low.to-string path))    @result{} ("ci:ao" "hello")
+@end example
+@end defun
+
+@c page
+@node parser-tools uri parser misc
+@subsubsection Miscellaneous parser functions
+
+
+The functions can be used to parse the elements of a @uri{}; all the
+functions accept a @var{port} argument: it must be a binary input port
+drawing characters from a bytevector.
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library; it is suggested to prefix them when importing this library.
+
+
+@defun valid-component? @var{port}
+Scan bytes from @var{port} until @eof{} or an invalid byte is found;
+return two values, when success: true and the port position of the last
+byte read; when failure: false and the port position of the invalid
+byte.  In any case: the port position is reverted to the state it had
+before the call to this function.
+
+Ensure that:
+
+@itemize
+@item
+A byte representing the percent character in @ascii{} encoding is
+followed by two bytes representing hexadecimal digits in @ascii{}
+encoding.
+
+@item
+All the non percent--encoded bytes are in the unreserved set defined by
+@rfc{} 3986.
+@end itemize
+@end defun
+
+@c page
+@node parser-tools uri class
+@subsection Class interfaces
+
+
+The class interface to @uri{} parsing and producing is really basic;
+this is because advanced handling of @uri{}s should be merged with
+requirements of specific @uri{} schemes, like @code{http:} and
+@code{file:}.
+
+@menu
+* parser-tools uri class uri::          The @class{uri} class.
+* parser-tools uri class relative-ref:: The @class{relative-ref} class.
+@end menu
+
+@c page
+@node parser-tools uri class uri
+@subsubsection The @class{uri} class
+
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library.
+
+
+@deftp Class @aclass{uri}
+Represents a parsed @code{URI} component.
+@end deftp
+
+
+@defcv {Mutable field} @aclass{uri} scheme
+The @code{scheme} component as a bytevector.  Remember that
+@code{scheme} is mandatory and does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} authority
+The @code{authority} component as a bytevector, or false if there is no
+@code{authority} component.  Percent--encoded characters are not decoded
+in this field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} userinfo
+The @code{userinfo} component as a percent--decoded bytevector
+@strong{not} containing the trailing at character, or false if there is
+no @code{userinfo} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host-type
+A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.  When @code{host-type} is
+@code{reg-name}: the value is a percent--decoded bytevector.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} port
+The @code{port} component as a bytevector, or false if no @code{port} is
+present.  Remember that @code{port} does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} path-type
+A Scheme symbol among: @code{path-abempty}, @code{path-empty},
+@code{path-rootless}, @code{path-absolute}; represents the type of the
+@code{path} field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} path
+A possibly empty list holding percent--decoded bytevectors representing
+the path segments.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} query
+The @code{query} component as a percent--decoded bytevector @strong{not}
+containing the leading question mark, or false if there is no
+@code{query} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} fragment
+The @code{fragment} component as a percent--decoded bytevector
+@strong{not} containing the leading number--sign, or false if there is
+no @code{fragment} component.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{uri} bytevector
+A bytevector representing the whole @uri{}.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{uri} string
+A string representing the whole @uri{}; it is built from the
+@code{bytevector} field with the @func{to-string} function.
+@end defcv
+
+
+@defop Syntax @aclass{uri} make* @aclass{uri} @meta{source-bytevector}
+Build and return a new @class{uri} instance holding fields from parsing
+@var{source-bytevector}; it relies on parsing with @func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{uri} make @aclass{uri} @meta{clause} ...
+@defopx {Auxiliary Syntax} @aclass{uri} source-bytevector @meta{expr}
+Build and return a new @class{uri} instance holding fields from parsing
+@var{expr}, which must be a bytevector; it relies on parsing with
+@func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{uri} is-a? @var{expr} @aclass{uri}
+Return true if @var{expr} evaluates to an instance of @class{uri}.
+@end defop
+
+@c page
+@node parser-tools uri class relative-ref
+@subsubsection The @class{relative-ref} class
+
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library.
+
+
+@deftp Class @aclass{relative-ref}
+Represents a parsed @code{relative-ref} component.
+@end deftp
+
+
+@defcv {Mutable field} @aclass{relative-ref} authority
+The @code{authority} component as a bytevector, or false if there is no
+@code{authority} component.  Percent--encoded characters are not decoded
+in this field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} userinfo
+The @code{userinfo} component as a percent--decoded bytevector
+@strong{not} containing the trailing at character, or false if there is
+no @code{userinfo} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host-type
+A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.  When @code{host-type} is
+@code{reg-name}: the value is a percent--decoded bytevector.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} port
+The @code{port} component as a bytevector, or false if no @code{port} is
+present.  Remember that @code{port} does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} path-type
+A Scheme symbol among: @code{path-abempty}, @code{path-empty},
+@code{path-noscheme}, @code{path-absolute}; represents the type of the
+@code{path} field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} path
+A possibly empty list holding percent--decoded bytevectors representing
+the path segments.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} query
+The @code{query} component as a percent--decoded bytevector @strong{not}
+containing the leading question mark, or false if there is no
+@code{query} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} fragment
+The @code{fragment} component as a percent--decoded bytevector
+@strong{not} containing the leading number--sign, or false if there is
+no @code{fragment} component.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{relative-ref} bytevector
+A bytevector representing the whole @uri{}.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{relative-ref} string
+A string representing the whole @uri{}; it is built from the
+@code{bytevector} field with the @func{to-string} function.
+@end defcv
+
+
+@defop Syntax @aclass{relative-ref} make* @aclass{relative-ref} @meta{source-bytevector}
+Build and return a new @class{relative-ref} instance holding fields from
+parsing @var{source-bytevector}; it relies on parsing with
+@func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{relative-ref} make @aclass{relative-ref} @meta{clause} ...
+@defopx {Auxiliary Syntax} @aclass{relative-ref} source-bytevector @meta{expr}
+Build and return a new @class{relative-ref} instance holding fields from
+parsing @var{expr}, which must be a bytevector; it relies on parsing
+with @func{parse-uri}.
+@end defop
+
+
+
+@defop Syntax @aclass{relative-ref} is-a? @var{expr} @aclass{relative-ref}
+Return true if @var{expr} evaluates to an instance of
+@class{relative-ref}.
+@end defop
+
+@c page
+@node parser-tools uri misc
+@subsection Miscellaneous functions
+
+
+@defun normalise-path @var{input}
+Normalise a list of bytevectors representing an absolute path;
+bytevectors holding single and double dots are removed.
+
+@example
+(import (rnrs)
+  (prefix (nausicaa uri low) low.))
+
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?input)
+     (map low.to-string
+       (low.normalise-path
+         (map low.to-bytevector
+           (quote ?input)))))))
+
+(doit ())       @result{} ()
+(doit ("a"))    @result{} ("a")
+(doit ("."))    @result{} ()
+(doit (".."))   @result{} ()
+(doit ("a" "b" "c" "." ".." ".." "g"))
+@result{} ("a" "g")
+@end example
+@end defun
+
+@c end of file
