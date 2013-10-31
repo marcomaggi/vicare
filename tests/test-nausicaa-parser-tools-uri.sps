@@ -46,6 +46,8 @@
 	(else
 	 (assertion-violation who "expecting string or bytevector" obj))))
 
+(define mkport %make-lexer-port)
+
 
 (parametrise ((check-test-name	'conditions))
 
@@ -630,159 +632,86 @@
 
 (parametrise ((check-test-name	'parsing-authority))
 
-;;; authority
+  (define (f0 str)
+    (uri.parse-authority (mkport str)))
 
-  (check
-      (uri.parse-authority (%make-lexer-port ""))
-    => #f)
+  (define (f1 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-authority P)))
+	   (E (eof-object? (lookahead-u8 P))))
+      (list R E)))
 
-  (check
-      (uri.parse-authority (%make-lexer-port "ciao"))
-    => #f)
+  (define (f2 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-authority P)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
 
-  (check
-      (uri.parse-authority (%make-lexer-port "/ciao"))
-    => #f)
+;;; --------------------------------------------------------------------
 
-  (check
-      (uri.parse-authority (%make-lexer-port "?ciao"))
-    => #f)
+  (check (f0 "")		=> #f)
+  (check (f0 "ciao")		=> #f)
+  (check (f0 "/ciao")		=> #f)
+  (check (f0 "?ciao")		=> #f)
+  (check (f0 "#ciao")		=> #f)
 
-  (check
-      (uri.parse-authority (%make-lexer-port "#ciao"))
-    => #f)
+  (check (f1 "//")			=> '("" #t))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "//"))
-	     (authority	(ascii->string (uri.parse-authority in-port))))
-	(list authority (eof-object? (lookahead-u8 in-port))))
-    => '("" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//?query"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//#fragment"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("" "#fragment"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "///"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("" "/"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao/salut"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("ciao" "/salut"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao:8080/salut"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("ciao:8080" "/salut"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao.it:8080/salut"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("ciao.it:8080" "/salut"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//marco@ciao.it:8080/salut"))
-	     (authority	(ascii->string (uri.parse-authority in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list authority rest))
-    => '("marco@ciao.it:8080" "/salut"))
+  (check (f2 "//?query")			=> '("" "?query"))
+  (check (f2 "//#fragment")			=> '("" "#fragment"))
+  (check (f2 "///")				=> '("" "/"))
+  (check (f2 "//ciao/salut")			=> '("ciao" "/salut"))
+  (check (f2 "//ciao:8080/salut")		=> '("ciao:8080" "/salut"))
+  (check (f2 "//ciao.it:8080/salut")		=> '("ciao.it:8080" "/salut"))
+  (check (f2 "//marco@ciao.it:8080/salut")	=> '("marco@ciao.it:8080" "/salut"))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-userinfo))
+(parametrise ((check-test-name	'parsing-userinfo))
 
-  (check
-      (uri.parse-userinfo (%make-lexer-port ""))
-    => #f)
+  (define (f0 str)
+    (uri.parse-userinfo (mkport str)))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao.it"))
-	     (info	(uri.parse-userinfo in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list info rest))
-    => '(#f "ciao.it"))
+  (define (f00 str)
+    (let* ((P (mkport str))
+	   (R (uri.parse-userinfo P))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
 
-  (check
-      (let* ((in-port	(%make-lexer-port ":8080"))
-	     (info	(uri.parse-userinfo in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list info rest))
-    => '(#f ":8080"))
+  (define (f1 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-userinfo P)))
+	   (E (eof-object? (lookahead-u8 P))))
+      (list R E)))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "/hello"))
-	     (info	(uri.parse-userinfo in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list info rest))
-    => '(#f "/hello"))
+  (define (f2 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-userinfo P)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "?hello"))
-	     (info	(uri.parse-userinfo in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list info rest))
-    => '(#f "?hello"))
+;;; --------------------------------------------------------------------
 
-  (check
-      (let* ((in-port	(%make-lexer-port "#hello"))
-	     (info	(uri.parse-userinfo in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list info rest))
-    => '(#f "#hello"))
+  (check (f0 "")		=> #f)
+  (check (f00 "ciao.it")	=> '(#f "ciao.it"))
+  (check (f00 ":8080")		=> '(#f ":8080"))
+  (check (f00 "/hello")		=> '(#f "/hello"))
+  (check (f00 "?hello")		=> '(#f "?hello"))
+  (check (f00 "#hello")		=> '(#f "#hello"))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "@"))
-	     (userinfo	(ascii->string (uri.parse-userinfo in-port)))
-	     (eof?	(eof-object? (lookahead-u8 in-port))))
-	(list userinfo eof?))
-    => '("" #t))
+  (check (f1 "@")		=> '("" #t))
 
-  (check
-      (let* ((in-port	(%make-lexer-port "@host"))
-	     (userinfo	(ascii->string (uri.parse-userinfo in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list userinfo rest))
-    => '("" "host"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "userinfo@host"))
-	     (userinfo	(ascii->string (uri.parse-userinfo in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list userinfo rest))
-    => '("userinfo" "host"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao%3dciao@host"))
-	     (userinfo	(ascii->string (uri.parse-userinfo in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list userinfo rest))
-    => '("ciao%3dciao" "host"))
+  (check (f2 "@host")		=> '("" "host"))
+  (check (f2 "userinfo@host")	=> '("userinfo" "host"))
+  (check (f2 "ciao%3dciao@host")=> '("ciao%3dciao" "host"))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-ipv4-address))
+(parametrise ((check-test-name	'parsing-ipv4-address))
+
+;;; --------------------------------------------------------------------
 
   (check
       (receive (addr ell)
@@ -892,7 +821,6 @@
 		    ((rest)	(ascii->string (get-bytevector-some in-port))))
 	(list ell rest))
     => '((1 2 3 4) "ciao"))
-
 
   #t)
 
