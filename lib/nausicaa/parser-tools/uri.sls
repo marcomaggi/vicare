@@ -359,7 +359,7 @@
       (do ((i 0 ($fxadd1 i)))
 	  (($fx= i ($bytevector-length bv))
 	   (if string-result?
-	       (%to-string (getter))
+	       (ascii->string (getter))
 	     (getter)))
 	(let ((chi ($bytevector-u8-ref bv i)))
 	  (if (char-encode? chi)
@@ -393,7 +393,7 @@
 		 (buf (make-string 2)))
 	(if ($fx= i ($bytevector-length bv))
 	    (if string-result?
-		(%to-string (getter))
+		(ascii->string (getter))
 	      (getter))
 	  (let ((chi ($bytevector-u8-ref bv i)))
 	    (put-u8 port (if ($fx= chi INT-PERCENT)
@@ -771,21 +771,21 @@
   (let ((chi (get-u8 in-port)))
     (cond ((eof-object? chi)
 	   (return-failure))
-	  ((not (= chi INT-SLASH))
+	  ((not ($fx= chi INT-SLASH))
 	   (return-failure))
 	  (else
 	   (let ((chi1 (get-u8 in-port)))
 	     (cond ((eof-object? chi1)
 		    (return-failure))
-		   ((= chi1 INT-SLASH)
+		   (($fx= chi1 INT-SLASH)
 		    (receive (ou-port getter)
 			(open-bytevector-output-port)
 		      (let process-next-byte ((chi (get-u8 in-port)))
 			(cond ((eof-object? chi)
 			       (getter))
-			      ((or (= chi INT-SLASH)
-				   (= chi INT-QUESTION-MARK)
-				   (= chi INT-NUMBER-SIGN))
+			      ((or ($fx= chi INT-SLASH)
+				   ($fx= chi INT-QUESTION-MARK)
+				   ($fx= chi INT-NUMBER-SIGN))
 			       (set-position-back-one! chi)
 			       (getter))
 			      (else
@@ -816,17 +816,19 @@
 	     (return-failure))
 
 	    ;;An at-sign terminates the "userinfo" component.
-	    ((= chi INT-AT-SIGN)
+	    (($fx= chi INT-AT-SIGN)
 	     (getter))
 
 	    ;;Characters   in    the   categories   "unreserved"   and
 	    ;;"sub-delims" or ":" are valid.
-	    ((or ($is-unreserved? chi) ($is-sub-delim? chi) (= chi INT-COLON))
+	    ((or ($is-unreserved? chi)
+		 ($is-sub-delim?  chi)
+		 ($fx= chi INT-COLON))
 	     (put-u8 ou-port chi)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    ((= chi INT-PERCENT)
+	    (($fx= chi INT-PERCENT)
 	     (let ((chi1 (get-u8 in-port)))
 	       (cond ((eof-object? chi1)
 		      (return-failure))
@@ -871,7 +873,7 @@
 	      (let process-next-byte ((chi (get-u8 in-port)))
 		(cond ((eof-object? chi)
 		       (getter))
-		      ((or ($is-dec-digit? chi) (= chi INT-DOT))
+		      ((or ($is-dec-digit? chi) ($fx= chi INT-DOT))
 		       (put-u8 host-port chi)
 		       (process-next-byte (get-u8 in-port)))
 		      (else
@@ -880,7 +882,7 @@
     (if (zero? (bytevector-length bv))
 	(%error)
       (try
-	  (values bv (ip.parse-ipv4-address-only (%to-string bv)))
+	  (values bv (ip.parse-ipv4-address-only (ascii->string bv)))
 	(catch E
 	  (ip.&ipv4-address-parser-error
 	   (%error))
@@ -909,7 +911,7 @@
 	      (let process-next-byte ((chi (get-u8 in-port)))
 		(cond ((eof-object? chi)
 		       (getter))
-		      ((or ($is-hex-digit? chi) (= chi INT-DOT) (= chi INT-COLON))
+		      ((or ($is-hex-digit? chi) ($fx= chi INT-DOT) ($fx= chi INT-COLON))
 		       (put-u8 host-port chi)
 		       (process-next-byte (get-u8 in-port)))
 		      (else
@@ -918,7 +920,7 @@
     (if (zero? (bytevector-length bv))
 	(%error)
       (try
-	  (values bv (ip.parse-ipv6-address-only (%to-string bv)))
+	  (values bv (ip.parse-ipv6-address-only (ascii->string bv)))
 	(catch E
 	  (ip.&ipv6-address-parser-error
 	   (%error))
@@ -944,14 +946,14 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not (= chi INT-OPEN-BRACKET)))
+    (if (or (eof-object? chi) (not ($fx= chi INT-OPEN-BRACKET)))
 	(return-failure)
       (receive (ou-port getter)
 	  (open-bytevector-output-port)
 	(let process-next-byte ((chi (get-u8 in-port)))
 	  (cond ((eof-object? chi)
 		 (return-failure))
-		((= chi INT-CLOSE-BRACKET)
+		(($fx= chi INT-CLOSE-BRACKET)
 		 (getter))
 		(else
 		 (put-u8 ou-port chi)
@@ -980,7 +982,7 @@
   (define (%error)
     (values (return-failure) #f))
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not (or (= chi INT-V) (= chi INT-V))))
+    (if (or (eof-object? chi) (not (or ($fx= chi INT-V) ($fx= chi INT-V))))
 	(%error)
       (let ((version-chi (get-u8 in-port)))
 	(if ($is-hex-digit? version-chi)
@@ -991,7 +993,7 @@
 		       (values ($ascii-hex->integer version-chi) (getter)))
 		      ((or ($is-unreserved? chi)
 			   ($is-sub-delim? chi)
-			   (= chi INT-COLON))
+			   ($fx= chi INT-COLON))
 		       (put-u8 ou-port chi)
 		       (process-next-byte (get-u8 in-port)))
 		      (else
@@ -1023,13 +1025,13 @@
       (cond ((eof-object? chi)
   	     (getter))
 
-  	    ((= 255 count)
+  	    (($fx= 255 count)
   	     (return-failure))
 
-  	    ((or (= chi INT-COLON)
-  		 (= chi INT-SLASH)
-  		 (= chi INT-QUESTION-MARK)
-  		 (= chi INT-NUMBER-SIGN))
+  	    ((or ($fx= chi INT-COLON)
+  		 ($fx= chi INT-SLASH)
+  		 ($fx= chi INT-QUESTION-MARK)
+  		 ($fx= chi INT-NUMBER-SIGN))
   	     (set-position-back-one! chi)
   	     (getter))
 
@@ -1040,7 +1042,7 @@
   	     (process-next-byte (get-u8 in-port) (+ 1 count)))
 
   	    ;;A percent-encoded sequence is valid.
-  	    ((= chi INT-PERCENT)
+  	    (($fx= chi INT-PERCENT)
   	     (let ((chi1 (get-u8 in-port)))
   	       (cond ((eof-object? chi1)
   		      (return-failure))
@@ -1135,7 +1137,7 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not (= chi INT-COLON)))
+    (if (or (eof-object? chi) (not ($fx= chi INT-COLON)))
 	(return-failure)
       (receive (ou-port getter)
 	  (open-bytevector-output-port)
@@ -1182,7 +1184,7 @@
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    ((= chi INT-PERCENT)
+	    (($fx= chi INT-PERCENT)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1229,7 +1231,7 @@
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    ((= chi INT-PERCENT)
+	    (($fx= chi INT-PERCENT)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1275,13 +1277,13 @@
 	    ;;or ":" or "@" are valid.
 	    ((or ($is-unreserved? chi)
 		 ($is-sub-delim? chi)
-		 (= chi INT-AT-SIGN))
+		 ($fx= chi INT-AT-SIGN))
 	     (put-u8 ou-port chi)
 	     (set! at-least-one? #t)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    ((= chi INT-PERCENT)
+	    (($fx= chi INT-PERCENT)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1315,7 +1317,7 @@
   (receive (ou-port getter)
       (open-bytevector-output-port)
     (let ((chi (get-u8 in-port)))
-      (if (or (eof-object? chi) (not (= chi INT-SLASH)))
+      (if (or (eof-object? chi) (not ($fx= chi INT-SLASH)))
 	  (return-failure)
 	;;In case of  failure from PARSE-SEGMENT: we do  not just return
 	;;its return value  because we have to rewind  the port position
@@ -1342,8 +1344,8 @@
   (define-parser-macros in-port)
   (let ((chi (lookahead-u8 in-port)))
     (if (or (eof-object? chi)
-	    (= chi INT-QUESTION-MARK)
-	    (= chi INT-NUMBER-SIGN))
+	    ($fx= chi INT-QUESTION-MARK)
+	    ($fx= chi INT-NUMBER-SIGN))
 	'()
       #f)))
 
@@ -1388,10 +1390,10 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not (= chi INT-SLASH)))
+    (if (or (eof-object? chi) (not ($fx= chi INT-SLASH)))
 	(return-failure)
       (let ((chi1 (lookahead-u8 in-port)))
-	(if (and (not (eof-object? chi1)) (= chi1 INT-SLASH))
+	(if (and (not (eof-object? chi1)) ($fx= chi1 INT-SLASH))
 	    (return-failure)
 	  (begin
 	    (set-position-back-one! chi)
@@ -1413,7 +1415,7 @@
   (define-parser-macros in-port)
   (let ((bv (parse-segment-nz-nc in-port)))
     (if (and bv (let ((chi (lookahead-u8 in-port)))
-		  (or (eof-object? chi) (not (= chi INT-COLON)))))
+		  (or (eof-object? chi) (not ($fx= chi INT-COLON)))))
 	(let ((segments (parse-path-abempty in-port)))
 	  (if segments
 	      (cons bv segments)
@@ -1465,7 +1467,7 @@
 	   => (lambda (segments)
 		(%check-eof)
 		(values 'path-absolute segments)))
-	  ((and (= chi INT-SLASH) (parse-path-abempty in-port))
+	  ((and ($fx= chi INT-SLASH) (parse-path-abempty in-port))
 	   => (lambda (segments)
 		(%check-eof)
 		(values 'path-abempty segments)))
@@ -1548,8 +1550,8 @@
 			  (values 'path-abempty (parse-path-abempty in-port))
 			(let ((chi (lookahead-u8 in-port)))
 			  (cond ((or (eof-object? chi)
-				     (= chi INT-QUESTION-MARK)
-				     (= chi INT-NUMBER-SIGN))
+				     ($fx= chi INT-QUESTION-MARK)
+				     ($fx= chi INT-NUMBER-SIGN))
 				 (values 'path-empty '()))
 				((parse-path-absolute in-port)
 				 => (lambda (segments)
@@ -1627,8 +1629,8 @@
 			  (values 'path-abempty (parse-path-abempty in-port))
 			(let ((chi (lookahead-u8 in-port)))
 			  (cond ((or (eof-object? chi)
-				     (= chi INT-QUESTION-MARK)
-				     (= chi INT-NUMBER-SIGN))
+				     ($fx= chi INT-QUESTION-MARK)
+				     ($fx= chi INT-NUMBER-SIGN))
 				 (values 'path-empty '()))
 				((parse-path-absolute in-port)
 				 => (lambda (segments)
@@ -1671,7 +1673,7 @@
 	  (let process-next-byte ((chi (get-u8 port)))
 	    (cond ((eof-object? chi)
 		   (return #t))
-		  ((= chi INT-PERCENT)
+		  (($fx= chi INT-PERCENT)
 		   (let ((chi1 (get-u8 port)))
 		     (cond ((eof-object? chi1)
 			    (return #f))
