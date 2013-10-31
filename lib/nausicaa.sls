@@ -1511,6 +1511,7 @@
     record-type-field-set!
     $record-type-field-ref
     $record-type-field-set!
+    values->list
 
 
 ;;;; bindings from (nausicaa language oopp)

@@ -2054,6 +2054,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'values-to-list))
+
+  (check
+      (values->list 123)
+    => '(123))
+
+  (check
+      (values->list (values 1 2 3))
+    => '(1 2 3))
+
+  #t)
+
+
 ;; (parametrise ((check-test-name	'syntax-transpose))
 
 ;;   (define id #f)

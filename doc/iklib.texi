@@ -894,6 +894,20 @@ Expand to:
 @end example
 @end deffn
 
+
+@deffn Syntax values->list @meta{expr}
+Evaluate the expression and return its return values as a list.
+Examples:
+
+@example
+(values->list 123)
+@result{} (123)
+
+(values->list (values 1 2 3))
+@result{} (1 2 3)
+@end example
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks

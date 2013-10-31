@@ -3246,6 +3246,7 @@
 	     ((let*)				let*-macro)
 	     ((let-values)			let-values-macro)
 	     ((let*-values)			let*-values-macro)
+	     ((values->list)			values->list-macro)
 	     ((syntax-rules)			syntax-rules-macro)
 	     ((quasiquote)			quasiquote-macro)
 	     ((quasisyntax)			quasisyntax-macro)
@@ -4477,6 +4478,17 @@
 	      (others
 	       (syntax-violation #f "malformed bindings"
 				 stx others)))))))))))
+
+
+;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
+
+(define (values->list-macro stx)
+  (syntax-match stx ()
+    ((_ expr)
+     (bless
+      `(call-with-values
+	   (lambda () ,expr)
+	 list)))))
 
 
 ;;;; module non-core-macro-transformer: LET*-SYNTAX
