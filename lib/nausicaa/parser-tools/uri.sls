@@ -71,6 +71,7 @@
     ;; (prefix (nausicaa net addresses ipv6) net.)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
+    (vicare system $numerics)
     (vicare arguments validation))
 
 
@@ -946,7 +947,8 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not ($fx= chi INT-OPEN-BRACKET)))
+    (if (or (eof-object? chi)
+	    (not ($fx= chi INT-OPEN-BRACKET)))
 	(return-failure)
       (receive (ou-port getter)
 	  (open-bytevector-output-port)
@@ -982,7 +984,9 @@
   (define (%error)
     (values (return-failure) #f))
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not (or ($fx= chi INT-V) ($fx= chi INT-V))))
+    (if (or (eof-object? chi)
+	    (not (or ($fx= chi INT-V)
+		     ($fx= chi INT-v))))
 	(%error)
       (let ((version-chi (get-u8 in-port)))
 	(if ($is-hex-digit? version-chi)
@@ -1037,9 +1041,10 @@
 
   	    ;;Characters in the categories "unreserved" and "sub-delims"
   	    ;;are valid.
-  	    ((or ($is-unreserved? chi) ($is-sub-delim? chi))
+  	    ((or ($is-unreserved? chi)
+		 ($is-sub-delim?  chi))
   	     (put-u8 ou-port chi)
-  	     (process-next-byte (get-u8 in-port) (+ 1 count)))
+  	     (process-next-byte (get-u8 in-port) ($add1-integer count)))
 
   	    ;;A percent-encoded sequence is valid.
   	    (($fx= chi INT-PERCENT)
@@ -1054,7 +1059,7 @@
   			       (put-u8 ou-port INT-PERCENT)
   			       (put-u8 ou-port chi1)
   			       (put-u8 ou-port chi2)
-  			       (process-next-byte (get-u8 in-port) (+ 1 count)))
+  			       (process-next-byte (get-u8 in-port) ($add1-integer count)))
   			      (else
   			       (return-failure)))))
   		     ;;Invalid byte in percent-encoded sequence.
@@ -1105,14 +1110,17 @@
   (let ((ip-literal.bv (parse-ip-literal in-port)))
     (if ip-literal.bv
 	(let ((ip-literal.port (open-bytevector-input-port ip-literal.bv)))
-	  (let-values (((ipv6.bv ipv6.ell) (parse-ipv6-address ip-literal.port)))
+	  (receive (ipv6.bv ipv6.ell)
+	      (parse-ipv6-address ip-literal.port)
 	    (if ipv6.bv
 		(values 'ipv6-address (cons ipv6.bv ipv6.ell))
-	      (let-values (((ipvfuture.version ipvfuture.bv) (parse-ipvfuture ip-literal.port)))
+	      (receive (ipvfuture.version ipvfuture.bv)
+		  (parse-ipvfuture ip-literal.port)
 		(if ipvfuture.version
 		    (values 'ipvfuture (cons ipvfuture.version ipvfuture.bv))
 		  (%error))))))
-      (let-values (((ipv4.bv ipv4.ell) (parse-ipv4-address in-port)))
+      (receive (ipv4.bv ipv4.ell)
+	  (parse-ipv4-address in-port)
 	(if ipv4.bv
 	    (values 'ipv4-address (cons ipv4.bv ipv4.ell))
 	  (let ((reg-name.bv (parse-reg-name in-port)))

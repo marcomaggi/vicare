@@ -762,97 +762,78 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-ipv6-address))
+(parametrise ((check-test-name	'parsing-ipv6-address))
 
-  (check
-      (receive (addr ell)
-	  (uri.parse-ipv6-address (%make-lexer-port ""))
-	addr)
-    => #f)
+  (define (f0 str)
+    (values->list (uri.parse-ipv6-address (mkport str))))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "ciao"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "ciao"))
+  (define (f00 str)
+    (let* ((P (mkport str))
+	   (R (values->list (uri.parse-ipv6-address P)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.ciao"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2.3.ciao"))
+  (define (f1 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((addr numbers)
+	  (receive (addr numbers)
+	      (uri.parse-ipv6-address P)
+	    (values (ascii->string addr) numbers)))
+	 ((E) (eof-object? (lookahead-u8 P))))
+      (list addr numbers E)))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1:2:3:4:5:6:7:8"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8) #t))
+  (define (f2 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((addr numbers)
+	  (receive (addr numbers)
+	      (uri.parse-ipv6-address P)
+	    (values (ascii->string addr) numbers)))
+	 ((Q) (ascii->string (get-bytevector-all P))))
+      (list addr numbers Q)))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "::1"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("::1" (0 0 0 0 0 0 0 1) #t))
+;;; --------------------------------------------------------------------
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1::"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("1::" (1 0 0 0 0 0 0 0) #t))
+  (check (f0 "")		=> '(#f #f))
+  (check (f00 "ciao")		=> '((#f #f) "ciao"))
+  (check (f00 "1.2.3.ciao")	=> '((#f #f) "1.2.3.ciao"))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1:2::3"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("1:2::3" (1 2 0 0 0 0 0 3) #t))
+  (check (f1 "1:2:3:4:5:6:7:8")		=> '("1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8) #t))
+  (check (f1 "::1")			=> '("::1" (0 0 0 0 0 0 0 1) #t))
+  (check (f1 "1::")			=> '("1::" (1 0 0 0 0 0 0 0) #t))
+  (check (f1 "1:2::3")			=> '("1:2::3" (1 2 0 0 0 0 0 3) #t))
+  (check (f1 "1:2:3:4::172.30.67.254")	=> '("1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe) #t))
+  (check (f1 "::ffff:192.168.99.1")	=> '("::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1:2:3:4::172.30.67.254"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe) #t))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "::ffff:192.168.99.1"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port)))
-	(list (ascii->string addr) ell (eof-object? (lookahead-u8 in-port))))
-    => '("::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "::1/60"))
-		    ((addr ell)	(uri.parse-ipv6-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list (ascii->string addr) ell rest))
-    => '("::1" (0 0 0 0 0 0 0 1) "/60"))
+  (check (f2 "::1/60")			=> '("::1" (0 0 0 0 0 0 0 1) "/60"))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-ip-literal))
+(parametrise ((check-test-name	'parsing-ip-literal))
 
   (check
-      (uri.parse-ip-literal (%make-lexer-port ""))
+      (uri.parse-ip-literal (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
 	     (ip	(uri.parse-ip-literal in-port))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list ip rest))
     => '(#f "ciao"))
 
   (check
-      (ascii->string (uri.parse-ip-literal (%make-lexer-port "[]")))
+      (ascii->string (uri.parse-ip-literal (mkport "[]")))
     => "")
 
   (check
-      (ascii->string (uri.parse-ip-literal (%make-lexer-port "[::0:1:2]")))
+      (ascii->string (uri.parse-ip-literal (mkport "[::0:1:2]")))
     => "::0:1:2")
 
   (check
-      (let* ((in-port	(%make-lexer-port "[::0:1:2]:8080"))
+      (let* ((in-port	(mkport "[::0:1:2]:8080"))
 	     (ip	(ascii->string (uri.parse-ip-literal in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list ip rest))
@@ -861,52 +842,29 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-ipvfuture))
+(parametrise ((check-test-name	'parsing-ipvfuture))
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "")))
-	list)
-    => '(#f #f))
+  (define (f0 str)
+    (values->list (uri.parse-ipvfuture (mkport str))))
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "ciao")))
-	list)
-    => '(#f #f))
+  (define (f1 str)
+    (values->list (uri.parse-ipvfuture (mkport str))))
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "v1")))
-	list)
-    => '(1 #vu8()))
+  (define (f2 str)
+    (receive (version data)
+	(uri.parse-ipvfuture (mkport str))
+      (list version (ascii->string data))))
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "v9ciao")))
-	(lambda (version bv)
-	  (list version (ascii->string bv))))
-    => '(9 "ciao"))
+;;; --------------------------------------------------------------------
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "vFciao")))
-	(lambda (version bv)
-	  (list version (ascii->string bv))))
-    => '(15 "ciao"))
+  (check (f0 "")		=> '(#f #f))
+  (check (f0 "ciao")		=> '(#f #f))
 
-  (check
-      (call-with-values
-	  (lambda ()
-	    (uri.parse-ipvfuture (%make-lexer-port "VEciao")))
-	(lambda (version bv)
-	  (list version (ascii->string bv))))
-    => '(14 "ciao"))
+  (check (f1 "v1")		=> '(1 #vu8()))
+
+  (check (f2 "v9ciao")		=> '(9 "ciao"))
+  (check (f2 "vFciao")		=> '(15 "ciao"))
+  (check (f2 "VEciao")		=> '(14 "ciao"))
 
   #t)
 
@@ -914,66 +872,66 @@
 #;(parametrise ((check-test-name	'parsing-reg-name))
 
   (check
-      (ascii->string (uri.parse-reg-name (%make-lexer-port "")))
+      (ascii->string (uri.parse-reg-name (mkport "")))
     => "")
 
   (check	;no more than 255 chars
-      (ascii->string (uri.parse-reg-name (%make-lexer-port (make-string 255 #\a))))
+      (ascii->string (uri.parse-reg-name (mkport (make-string 255 #\a))))
     => (make-string 255 #\a))
 
   (check	;no more than 256 chars
-      (uri.parse-reg-name (%make-lexer-port (make-string 256 #\a)))
+      (uri.parse-reg-name (mkport (make-string 256 #\a)))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port ":80"))
+      (let* ((in-port	(mkport ":80"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
     => '("" ":80"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
     => '("" "/ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?query"))
+      (let* ((in-port	(mkport "?query"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
     => '("" "?query"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#fragment"))
+      (let* ((in-port	(mkport "#fragment"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
     => '("" "#fragment"))
 
   (check
-      (ascii->string (uri.parse-reg-name (%make-lexer-port "the-reg-name")))
+      (ascii->string (uri.parse-reg-name (mkport "the-reg-name")))
     => "the-reg-name")
 
   (check
-      (ascii->string (uri.parse-reg-name (%make-lexer-port "the.reg.name")))
+      (ascii->string (uri.parse-reg-name (mkport "the.reg.name")))
     => "the.reg.name")
 
   (check
-      (ascii->string (uri.parse-reg-name (%make-lexer-port "ciao%3dciao")))
+      (ascii->string (uri.parse-reg-name (mkport "ciao%3dciao")))
     => "ciao%3dciao")
 
   (check
-      (let* ((in-port	(%make-lexer-port "the-reg-name:80"))
+      (let* ((in-port	(mkport "the-reg-name:80"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
     => '("the-reg-name" ":80"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "the-reg-name/ciao"))
+      (let* ((in-port	(mkport "the-reg-name/ciao"))
 	     (reg	(ascii->string (uri.parse-reg-name in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list reg rest))
@@ -985,54 +943,54 @@
 #;(parametrise ((check-test-name	'parsing-host))
 
   (check
-      (let-values (((kind data) (uri.parse-host (%make-lexer-port ""))))
+      (let-values (((kind data) (uri.parse-host (mkport ""))))
 	(list kind data))
     => '(reg-name #vu8()))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "/"))
+      (let*-values (((in-port)		(mkport "/"))
 		    ((kind data)	(uri.parse-host in-port))
 		    ((rest)		(ascii->string (get-bytevector-some in-port))))
 	(list kind data rest))
     => '(reg-name #vu8() "/"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port ":80"))
+      (let*-values (((in-port)		(mkport ":80"))
 		    ((kind data)	(uri.parse-host in-port))
 		    ((rest)		(ascii->string (get-bytevector-some in-port))))
 	(list kind data rest))
     => '(reg-name #vu8() ":80"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "1.2.3.4:80"))
+      (let*-values (((in-port)		(mkport "1.2.3.4:80"))
 		    ((kind data)	(uri.parse-host in-port))
 		    ((rest)		(ascii->string (get-bytevector-some in-port))))
 	(list kind (ascii->string (car data)) (cdr data) rest))
     => '(ipv4-address "1.2.3.4" (1 2 3 4) ":80"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "1.2.3.4/ciao"))
+      (let*-values (((in-port)		(mkport "1.2.3.4/ciao"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
     => '(ipv4-address "1.2.3.4" (1 2 3 4) "/ciao"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "[::ffff:192.168.99.1]:80"))
+      (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]:80"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
     => '(ipv6-address "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "[::ffff:192.168.99.1]/ciao"))
+      (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]/ciao"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
     => '(ipv6-address "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"))
 
   (check
-      (let*-values (((in-port)		(%make-lexer-port "[v9,ciao,ciao]/ciao"))
+      (let*-values (((in-port)		(mkport "[v9,ciao,ciao]/ciao"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (car data) (ascii->string (cdr data)) rest))
@@ -1044,23 +1002,23 @@
 #;(parametrise ((check-test-name	'parsing-port))
 
   (check
-      (uri.parse-port (%make-lexer-port ""))
+      (uri.parse-port (mkport ""))
     => #f)
 
   (check
-      (ascii->string (uri.parse-port (%make-lexer-port ":")))
+      (ascii->string (uri.parse-port (mkport ":")))
     => "")
 
   (check
-      (ascii->string (uri.parse-port (%make-lexer-port ":2")))
+      (ascii->string (uri.parse-port (mkport ":2")))
     => "2")
 
   (check
-      (ascii->string (uri.parse-port (%make-lexer-port ":8080")))
+      (ascii->string (uri.parse-port (mkport ":8080")))
     => "8080")
 
   (check
-      (let* ((in-port	(%make-lexer-port ":8080ciao"))
+      (let* ((in-port	(mkport ":8080ciao"))
 	     (port	(ascii->string (uri.parse-port in-port)))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list port rest))
@@ -1074,30 +1032,30 @@
 ;;; path segment
 
   (check
-      (ascii->string (uri.parse-segment (%make-lexer-port "")))
+      (ascii->string (uri.parse-segment (mkport "")))
     => "")
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
 	     (segment	(ascii->string (uri.parse-segment in-port)))
 	     (eof	(lookahead-u8 in-port)))
 	(list segment eof))
     => `("ciao" ,(eof-object)))
 
   (check
-      (ascii->string (uri.parse-segment (%make-lexer-port "ciao%3dciao")))
+      (ascii->string (uri.parse-segment (mkport "ciao%3dciao")))
     => "ciao%3dciao")
 
   (check
-      (ascii->string (uri.parse-segment (%make-lexer-port "ciao%3d%3dciao")))
+      (ascii->string (uri.parse-segment (mkport "ciao%3d%3dciao")))
     => "ciao%3d%3dciao")
 
   (check
-      (ascii->string (uri.parse-segment (%make-lexer-port "ciao!$&'()*+,;=:@-._~")))
+      (ascii->string (uri.parse-segment (mkport "ciao!$&'()*+,;=:@-._~")))
     => "ciao!$&'()*+,;=:@-._~")
 
   (check
-      (let* ((in-port	(%make-lexer-port "/hello"))
+      (let* ((in-port	(mkport "/hello"))
 	     (segment1	(ascii->string (uri.parse-segment in-port)))
 	     (slash	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment in-port))))
@@ -1105,7 +1063,7 @@
     => `("" #\/ "hello" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello"))
+      (let* ((in-port	(mkport "ciao/hello"))
 	     (segment1	(ascii->string (uri.parse-segment in-port)))
 	     (slash	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment in-port))))
@@ -1113,28 +1071,28 @@
     => `("ciao" #\/ "hello" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
 	     (segment	(uri.parse-segment in-port))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `(#vu8() "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello?ciao"))
+      (let* ((in-port	(mkport "hello?ciao"))
 	     (segment	(ascii->string (uri.parse-segment in-port)))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `("hello" "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
 	     (segment	(uri.parse-segment in-port))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
     => `(#vu8() "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello#ciao"))
+      (let* ((in-port	(mkport "hello#ciao"))
 	     (segment	(ascii->string (uri.parse-segment in-port)))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
@@ -1144,51 +1102,51 @@
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else E))
-	(ascii->string (uri.parse-segment (%make-lexer-port "ciao%3d%3,ciao"))))
+	(ascii->string (uri.parse-segment (mkport "ciao%3d%3,ciao"))))
     => #t)
 
   (check	;invalid percent-encoded sequence
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else E))
-	(ascii->string (uri.parse-segment (%make-lexer-port "ciao%,3%3dciao"))))
+	(ascii->string (uri.parse-segment (mkport "ciao%,3%3dciao"))))
     => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; path segment-nz
 
   (check
-      (uri.parse-segment-nz (%make-lexer-port ""))
+      (uri.parse-segment-nz (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "{"))
+      (let* ((in-port	(mkport "{"))
 	     (segment	(uri.parse-segment-nz in-port))
 	     (char	(integer->char (get-u8 in-port))))
 	(list segment char))
     => '(#f #\{))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
 	     (segment	(uri.parse-segment-nz in-port))
 	     (char	(integer->char (get-u8 in-port))))
 	(list segment char))
     => '(#f #\/))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao:ciao"))
+      (let* ((in-port	(mkport "ciao:ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao:ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello"))
+      (let* ((in-port	(mkport "ciao/hello"))
 	     (segment1	(ascii->string (uri.parse-segment-nz in-port)))
 	     (slash	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment-nz in-port))))
@@ -1196,41 +1154,41 @@
     => `("ciao" #\/ "hello" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao%3dciao"))
+      (let* ((in-port	(mkport "ciao%3dciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao%3dciao" ,(eof-object)))
 
   (let ((S "ciao%3d%3dciao"))
     (check
-	(let* ((in-port	(%make-lexer-port S))
+	(let* ((in-port	(mkport S))
 	       (segment	(ascii->string (uri.parse-segment-nz in-port))))
 	  (list segment (lookahead-u8 in-port)))
       => `(,S ,(eof-object))))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
 	     (segment	(uri.parse-segment-nz in-port))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `(#f "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
 	     (segment	(uri.parse-segment-nz in-port))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
     => `(#f "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello?ciao"))
+      (let* ((in-port	(mkport "hello?ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz in-port)))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `("hello" "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello#ciao"))
+      (let* ((in-port	(mkport "hello#ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz in-port)))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
@@ -1240,53 +1198,53 @@
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-segment-nz (%make-lexer-port "ciao%3d%3,ciao"))))
+	(ascii->string (uri.parse-segment-nz (mkport "ciao%3d%3,ciao"))))
     => #t)
 
   (check	;invalid percent-encoded sequence
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-segment-nz (%make-lexer-port "ciao%,3%3dciao"))))
+	(ascii->string (uri.parse-segment-nz (mkport "ciao%,3%3dciao"))))
     => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; path segment-nz-nc
 
   (check
-      (uri.parse-segment-nz-nc (%make-lexer-port ""))
+      (uri.parse-segment-nz-nc (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "{"))
+      (let* ((in-port	(mkport "{"))
 	     (segment	(uri.parse-segment-nz-nc in-port))
 	     (char	(integer->char (get-u8 in-port))))
 	(list segment char))
     => '(#f #\{))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
 	     (segment	(uri.parse-segment-nz-nc in-port))
 	     (char	(integer->char (get-u8 in-port))))
 	(list segment char))
     => '(#f #\/))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz-nc in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao" ,(eof-object)))
 
   (let ((S "ciao:ciao"))
     (check
-	(let* ((in-port	(%make-lexer-port S))
+	(let* ((in-port	(mkport S))
 	       (segment	(ascii->string (uri.parse-segment-nz-nc in-port)))
 	       (rest	(ascii->string (get-bytevector-some in-port))))
 	  (list segment rest))
       => '("ciao" ":ciao")))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello"))
+      (let* ((in-port	(mkport "ciao/hello"))
 	     (segment1	(ascii->string (uri.parse-segment-nz-nc in-port)))
 	     (char	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment-nz-nc in-port))))
@@ -1295,48 +1253,48 @@
 
   (let ((S "ciao%3dciao"))
     (check
-	(let* ((in-port	(%make-lexer-port S))
+	(let* ((in-port	(mkport S))
 	       (segment	(ascii->string (uri.parse-segment-nz-nc in-port))))
 	  (list segment (lookahead-u8 in-port)))
       => `(,S ,(eof-object))))
 
   (let ((S "ciao%3d%3dciao"))
     (check
-	(let* ((in-port	(%make-lexer-port S))
+	(let* ((in-port	(mkport S))
 	       (segment	(ascii->string (uri.parse-segment-nz-nc in-port))))
 	  (list segment (lookahead-u8 in-port)))
       => `(,S ,(eof-object))))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
 	     (segment	(uri.parse-segment-nz-nc in-port))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `(#f "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello?ciao"))
+      (let* ((in-port	(mkport "hello?ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz-nc in-port)))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query (lookahead-u8 in-port)))
     => `("hello" "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
 	     (segment	(uri.parse-segment-nz-nc in-port))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
     => `(#f "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello#ciao"))
+      (let* ((in-port	(mkport "hello#ciao"))
 	     (segment	(ascii->string (uri.parse-segment-nz-nc in-port)))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment (lookahead-u8 in-port)))
     => `("hello" "ciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port ":ciao"))
+      (let* ((in-port	(mkport ":ciao"))
 	     (segment	(uri.parse-segment-nz-nc in-port))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list segment rest))
@@ -1346,59 +1304,59 @@
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-segment-nz-nc (%make-lexer-port "ciao%3d%3,ciao"))))
+	(ascii->string (uri.parse-segment-nz-nc (mkport "ciao%3d%3,ciao"))))
     => #t)
 
   (check	;invalid percent-encoded sequence
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-segment-nz-nc (%make-lexer-port "ciao%,3%3dciao"))))
+	(ascii->string (uri.parse-segment-nz-nc (mkport "ciao%,3%3dciao"))))
     => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; slash and segment
 
   (check
-      (uri.parse-slash-and-segment (%make-lexer-port ""))
+      (uri.parse-slash-and-segment (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
 	     (segment	(uri.parse-slash-and-segment in-port))
 	     (rest	(ascii->string (get-bytevector-some in-port))))
 	(list segment rest))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
 	     (segment	(uri.parse-slash-and-segment in-port))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
 	     (segment	(uri.parse-slash-and-segment in-port))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
 	     (segment	(uri.parse-slash-and-segment in-port)))
 	(list segment (lookahead-u8 in-port)))
     => `(#vu8() ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello"))
+      (let* ((in-port	(mkport "/ciao/hello"))
 	     (segment1	(ascii->string (uri.parse-slash-and-segment in-port)))
 	     (segment2	(ascii->string (uri.parse-slash-and-segment in-port))))
 	(list segment1 segment2 (lookahead-u8 in-port)))
     => `("ciao" "hello" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/"))
+      (let* ((in-port	(mkport "/ciao/hello/"))
 	     (segment1	(ascii->string (uri.parse-slash-and-segment in-port)))
 	     (segment2	(ascii->string (uri.parse-slash-and-segment in-port)))
 	     (segment3	(ascii->string (uri.parse-slash-and-segment in-port))))
@@ -1406,26 +1364,26 @@
     => `("ciao" "hello" "" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao%3dciao"))
+      (let* ((in-port	(mkport "/ciao%3dciao"))
 	     (segment	(ascii->string (uri.parse-slash-and-segment in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao%3dciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao%3d%3dciao"))
+      (let* ((in-port	(mkport "/ciao%3d%3dciao"))
 	     (segment	(ascii->string (uri.parse-slash-and-segment in-port))))
 	(list segment (lookahead-u8 in-port)))
     => `("ciao%3d%3dciao" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/?ciao"))
+      (let* ((in-port	(mkport "/?ciao"))
 	     (segment	(ascii->string (uri.parse-slash-and-segment in-port)))
 	     (query	(ascii->string (uri.parse-query in-port))))
 	(list segment query))
     => '("" "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/#ciao"))
+      (let* ((in-port	(mkport "/#ciao"))
 	     (segment	(ascii->string (uri.parse-slash-and-segment in-port)))
 	     (fragment	(ascii->string (uri.parse-fragment in-port))))
 	(list segment fragment))
@@ -1435,14 +1393,14 @@
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-slash-and-segment (%make-lexer-port "/ciao%3d%3,ciao"))))
+	(ascii->string (uri.parse-slash-and-segment (mkport "/ciao%3d%3,ciao"))))
     => #t)
 
   (check	;invalid percent-encoded sequence
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else #f))
-	(ascii->string (uri.parse-slash-and-segment (%make-lexer-port "/ciao%,3%3dciao"))))
+	(ascii->string (uri.parse-slash-and-segment (mkport "/ciao%,3%3dciao"))))
     => #t)
 
   #t)
@@ -1453,32 +1411,32 @@
 ;;; path-empty
 
   (check
-      (uri.parse-path-empty (%make-lexer-port ""))
+      (uri.parse-path-empty (mkport ""))
     => '())
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-empty in-port))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(vector path query))
     => '#(() "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-empty in-port))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(vector path fragment))
     => '#(() "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
   	     (path	(uri.parse-path-empty in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-empty in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
@@ -1488,181 +1446,181 @@
 ;;; path-abempty
 
   (check
-      (uri.parse-path-abempty (%make-lexer-port ""))
+      (uri.parse-path-abempty (mkport ""))
     => '())
 
   (check
-      (let* ((in-port	(%make-lexer-port "?query"))
+      (let* ((in-port	(mkport "?query"))
   	     (path	(uri.parse-path-abempty in-port))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(() "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#fragment"))
+      (let* ((in-port	(mkport "#fragment"))
   	     (path	(uri.parse-path-abempty in-port))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(() "fragment" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao?query"))
+      (let* ((in-port	(mkport "/ciao?query"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao#fragment"))
+      (let* ((in-port	(mkport "/ciao#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao") "fragment" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello"))
+      (let* ((in-port	(mkport "/ciao/hello"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut"))
+      (let* ((in-port	(mkport "/ciao/hello/salut"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/"))
+      (let* ((in-port	(mkport "/ciao/hello/"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut?query"))
+      (let* ((in-port	(mkport "/ciao/hello/salut?query"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut/?query"))
+      (let* ((in-port	(mkport "/ciao/hello/salut/?query"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut" "") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut#fragment"))
+      (let* ((in-port	(mkport "/ciao/hello/salut#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") "fragment" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut/#fragment"))
+      (let* ((in-port	(mkport "/ciao/hello/salut/#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut" "") "fragment" ,(eof-object)))
 
   (check
-      (map uri.to-string (uri.parse-path-abempty (%make-lexer-port "///")))
+      (map uri.to-string (uri.parse-path-abempty (mkport "///")))
     => '("" "" ""))
 
 ;;; --------------------------------------------------------------------
 ;;; path-absolute
 
   (check
-      (uri.parse-path-absolute (%make-lexer-port ""))
+      (uri.parse-path-absolute (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
   	     (path	(uri.parse-path-absolute in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "//"))
+      (let* ((in-port	(mkport "//"))
   	     (path	(uri.parse-path-absolute in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => `(#f "//"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello"))
+      (let* ((in-port	(mkport "/ciao/hello"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/salut"))
+      (let* ((in-port	(mkport "/ciao/hello/salut"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/"))
+      (let* ((in-port	(mkport "/ciao/hello/"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/?query"))
+      (let* ((in-port	(mkport "/?query"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello?query"))
+      (let* ((in-port	(mkport "/ciao/hello?query"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/?query"))
+      (let* ((in-port	(mkport "/ciao/hello/?query"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") "query" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/#fragment"))
+      (let* ((in-port	(mkport "/#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("") "fragment" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello#fragment"))
+      (let* ((in-port	(mkport "/ciao/hello#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello") "fragment" ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao/hello/#fragment"))
+      (let* ((in-port	(mkport "/ciao/hello/#fragment"))
   	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
@@ -1672,117 +1630,117 @@
 ;;; path-noscheme
 
   (check
-      (uri.parse-path-noscheme (%make-lexer-port ""))
+      (uri.parse-path-noscheme (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
   	     (path	(uri.parse-path-noscheme in-port))
   	     (char	(integer->char (get-u8 in-port))))
   	(list path char))
     => '(#f #\/))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "/ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello"))
+      (let* ((in-port	(mkport "ciao/hello"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello/salut"))
+      (let* ((in-port	(mkport "ciao/hello/salut"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/"))
+      (let* ((in-port	(mkport "ciao/"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello/"))
+      (let* ((in-port	(mkport "ciao/hello/"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/he:llo"))
+      (let* ((in-port	(mkport "ciao/he:llo"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "he:llo") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ci:ao/hello"))
+      (let* ((in-port	(mkport "ci:ao/hello"))
   	     (path	(uri.parse-path-noscheme in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => `(#f "ci:ao/hello"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello?ciao"))
+      (let* ((in-port	(mkport "hello?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut?ciao"))
+      (let* ((in-port	(mkport "hello/salut?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut/?ciao"))
+      (let* ((in-port	(mkport "hello/salut/?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut" "") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello#ciao"))
+      (let* ((in-port	(mkport "hello#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut#ciao"))
+      (let* ((in-port	(mkport "hello/salut#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut/#ciao"))
+      (let* ((in-port	(mkport "hello/salut/#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
@@ -1792,116 +1750,116 @@
 ;;; path-rootless
 
   (check
-      (uri.parse-path-rootless (%make-lexer-port ""))
+      (uri.parse-path-rootless (mkport ""))
     => #f)
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
+      (let* ((in-port	(mkport "ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/"))
+      (let* ((in-port	(mkport "/"))
   	     (path	(uri.parse-path-rootless in-port))
   	     (char	(integer->char (get-u8 in-port))))
   	(list path char))
     => '(#f #\/))
 
   (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
+      (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-rootless in-port))
   	     (rest	(uri.to-string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "/ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello"))
+      (let* ((in-port	(mkport "ciao/hello"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello/salut"))
+      (let* ((in-port	(mkport "ciao/hello/salut"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hel:lo"))
+      (let* ((in-port	(mkport "ciao/hel:lo"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hel:lo") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ci:ao/hel:lo"))
+      (let* ((in-port	(mkport "ci:ao/hel:lo"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ci:ao" "hel:lo") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/"))
+      (let* ((in-port	(mkport "ciao/"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "ciao/hello/"))
+      (let* ((in-port	(mkport "ciao/hello/"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
-      (let* ((in-port	(%make-lexer-port "?ciao"))
+      (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-rootless in-port))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello?ciao"))
+      (let* ((in-port	(mkport "hello?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut?ciao"))
+      (let* ((in-port	(mkport "hello/salut?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut/?ciao"))
+      (let* ((in-port	(mkport "hello/salut/?ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (query	(uri.to-string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut" "") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "#ciao"))
+      (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-rootless in-port))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(#f "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello#ciao"))
+      (let* ((in-port	(mkport "hello#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut#ciao"))
+      (let* ((in-port	(mkport "hello/salut#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut") "ciao"))
 
   (check
-      (let* ((in-port	(%make-lexer-port "hello/salut/#ciao"))
+      (let* ((in-port	(mkport "hello/salut/#ciao"))
   	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
   	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
   	(list path fragment))
@@ -1914,7 +1872,7 @@
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port ""))
+	  (uri.parse-path (mkport ""))
 	(vector type (map uri.to-string segments)))
     => '#(path-empty ()))
 
@@ -1922,55 +1880,55 @@
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else E))
-	(uri.parse-path (%make-lexer-port "?query")))
+	(uri.parse-path (mkport "?query")))
     => #t)
 
   (check
       (guard (E ((uri.parser-error-condition? E)
 		 #t)
 		(else E))
-	(uri.parse-path (%make-lexer-port "#fragment")))
+	(uri.parse-path (mkport "#fragment")))
     => #t)
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "/ciao/hello/salut"))
+	  (uri.parse-path (mkport "/ciao/hello/salut"))
 	(vector type (map uri.to-string segments)))
     => '#(path-absolute ("ciao" "hello" "salut")))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "/"))
+	  (uri.parse-path (mkport "/"))
 	(vector type segments))
     => '#(path-absolute (#vu8())))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "//"))
+	  (uri.parse-path (mkport "//"))
 	(vector type (map uri.to-string segments)))
     => '#(path-abempty ("" "")))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "///"))
+	  (uri.parse-path (mkport "///"))
 	(vector type (map uri.to-string segments)))
     => '#(path-abempty ("" "" "")))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "//ciao/"))
+	  (uri.parse-path (mkport "//ciao/"))
 	(vector type (map uri.to-string segments)))
     => '#(path-abempty ("" "ciao" "")))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "ciao/hello/salut"))
+	  (uri.parse-path (mkport "ciao/hello/salut"))
 	(vector type (map uri.to-string segments)))
     => '#(path-noscheme ("ciao" "hello" "salut")))
 
   (check
       (receive (type segments)
-	  (uri.parse-path (%make-lexer-port "ci:ao/hello/salut"))
+	  (uri.parse-path (mkport "ci:ao/hello/salut"))
 	(vector type (map uri.to-string segments)))
     => '#(path-rootless ("ci:ao" "hello" "salut")))
 
@@ -1982,7 +1940,7 @@
   (define-inline (doit in-string expected-value)
     (check
 	(let-values (((scheme authority userinfo host-type host port path-type path query fragment)
-		      (uri.parse-uri (%make-lexer-port in-string))))
+		      (uri.parse-uri (mkport in-string))))
 	  (list (and scheme		(uri.to-string scheme))
 		(and authority		(uri.to-string authority))
 		(and userinfo		(uri.to-string userinfo))
@@ -2164,7 +2122,7 @@
   (define-inline (doit in-string expected-value)
     (check
 	(let-values (((authority userinfo host-type host port path-type path query fragment)
-		      (uri.parse-relative-ref (%make-lexer-port in-string))))
+		      (uri.parse-relative-ref (mkport in-string))))
 	  (list (and authority		(uri.to-string authority))
 		(and userinfo		(uri.to-string userinfo))
 		host-type
@@ -2266,7 +2224,7 @@
 ;;;(write (condition-message E))(newline)
 		   #t)
 		  (else E))
-	  (uri.parse-relative-ref (%make-lexer-port "ci:ao/")))
+	  (uri.parse-relative-ref (mkport "ci:ao/")))
       => #t)
 
   #t)
