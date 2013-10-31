@@ -820,8 +820,8 @@ preceded by nothing).
 Accumulate bytes from @var{port} while they are valid for an
 @code{IPv4address} component, then parse them as IPv4 address.  If
 successful return two values: a bytevector holding the accumulated
-bytes, a list holding the octets as exact integers; else return @false{}
-and @false{}.
+bytes, a list holding the @math{4} octets as exact integers; else return
+@false{} and @false{}.
 
 If successful: leave the port position to the byte after the last one
 read from the port; if an error occurs: rewind the port position to the
@@ -889,7 +889,7 @@ No validation is performed on the first byte after the address, if any.
 Accumulate bytes from @var{port} while they are valid for an
 @code{IPv6address} component, then parse them as IPv6 address.  If
 successful return two values: a bytevector holding the accumulated
-bytes, a list holding the 8 numeric address components as exact
+bytes, a list holding the 8 numeric address components as 16-bit exact
 integers; else return @false{} and @false{}.
 
 If successful: leave the port position to the byte after last one read
@@ -905,46 +905,59 @@ No validation is performed on the first byte after the address, if any.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-ipv6-address (mkport "")) @result{} #f #f
+(define (f0 str)
+  (values->list (uri.parse-ipv6-address (mkport str))))
 
-(let ((P (mkport "ciao")))
-  (uri.parse-ipv6-address P)            @result{} #f #f
-  (ascii->string
-   (get-bytevector-some P)))            @result{} "ciao"
+(define (f00 str)
+  (let* ((P (mkport str))
+         (R (values->list (uri.parse-ipv6-address P)))
+         (Q (ascii->string (get-bytevector-all P))))
+    (list R Q)))
 
-(let ((P (mkport "1.2.3.ciao")))
-  (uri.parse-ipv6-address P)            @result{} #f #f
-  (ascii->string
-   (get-bytevector-some P)))            @result{} "1.2.3.ciao"
+(define (f1 str)
+  (let*-values
+      (((P) (mkport str))
+       ((addr numbers)
+        (receive (addr numbers)
+            (uri.parse-ipv6-address P)
+          (values (ascii->string addr) numbers)))
+       ((E) (eof-object? (lookahead-u8 P))))
+    (list addr numbers E)))
 
-(let ((P (mkport "1:2:3:4:5:6:7:8")))
-  (uri.parse-ipv6-address P))
-  @result{} "1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8)
+(define (f2 str)
+  (let*-values
+      (((P) (mkport str))
+       ((addr numbers)
+        (receive (addr numbers)
+            (uri.parse-ipv6-address P)
+          (values (ascii->string addr) numbers)))
+       ((Q) (ascii->string (get-bytevector-all P))))
+    (list addr numbers Q)))
 
-(let ((P (mkport "::1")))
-  (uri.parse-ipv6-address P))
-  @result{} "::1" (0 0 0 0 0 0 0 1)
+(f0 "")                 @result{} #f #f
+(f00 "ciao")            @result{} (#f #f) "ciao"
+(f00 "1.2.3.ciao")      @result{} (#f #f) "1.2.3.ciao"
 
-(let ((P (mkport "1::")))
-  (uri.parse-ipv6-address P))
-  @result{} "1::" (1 0 0 0 0 0 0 0)
+(f1 "1:2:3:4:5:6:7:8")
+@result{} "1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8) #t
 
-(let ((P (mkport "1:2::3")))
-  (uri.parse-ipv6-address P))
-  @result{} "1:2::3" (1 2 0 0 0 0 0 3)
+(f1 "::1")
+@result{} "::1" (0 0 0 0 0 0 0 1) #t
 
-(let ((P (mkport "1:2:3:4::172.30.67.254")))
-  (uri.parse-ipv6-address P))
-  @result{} "1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe)
+(f1 "1::")
+@result{} "1::" (1 0 0 0 0 0 0 0) #t
 
-(let ((P (mkport "::ffff:192.168.99.1")))
-  (uri.parse-ipv6-address P))
-  @result{} "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301)
+(f1 "1:2::3")
+@result{} "1:2::3" (1 2 0 0 0 0 0 3) #t
 
-(let ((P (mkport "::1/60")))
-  (uri.parse-ipv6-address P) @result{} "::1" (0 0 0 0 0 0 0 1)
-  (ascii->string
-   (get-bytevector-some P))) @result{} "/60"
+(f1 "1:2:3:4::172.30.67.254")
+@result{} "1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe) #t
+
+(f1 "::ffff:192.168.99.1")
+@result{} "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t
+
+(f2 "::1/60")
+@result{} "::1" (0 0 0 0 0 0 0 1) "/60"
 @end example
 @end defun
 
@@ -1022,37 +1035,25 @@ component cannot be of zero length inside the brackets.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(call-with-values
-    (lambda ()
-      (uri.parse-ipvfuture (mkport "")))
-  list)
-@result{} (#f #f)
+(define (f0 str)
+  (values->list (uri.parse-ipvfuture (mkport str))))
 
-(call-with-values
-    (lambda ()
-      (uri.parse-ipvfuture (mkport "ciao")))
-  list)
-@result{} (#f #f)
+(define (f1 str)
+  (values->list (uri.parse-ipvfuture (mkport str))))
 
-(call-with-values
-    (lambda ()
-      (uri.parse-ipvfuture (mkport "v1")))
-  list)
-@result{} (1 #vu8())
+(define (f2 str)
+  (receive (version data)
+      (uri.parse-ipvfuture (mkport str))
+    (list version (ascii->string data))))
 
-(call-with-values
-    (lambda ()
-      (uri.parse-ipvfuture (mkport "v9ciao")))
-  (lambda (version bv)
-    (list version (ascii->string bv))))
-@result{} (9 "ciao")
+(f0 "")                @result{} #f #f
+(f0 "ciao")            @result{} #f #f
 
-(call-with-values
-    (lambda ()
-      (uri.parse-ipvfuture (mkport "vFciao")))
-  (lambda (version bv)
-    (list version (ascii->string bv))))
-@result{} (15 "ciao")
+(f1 "v1")              @result{} 1 #vu8()
+
+(f2 "v9ciao")          @result{} 9 "ciao"
+(f2 "vFciao")          @result{} 15 "ciao"
+(f2 "VEciao")          @result{} 14 "ciao"
 @end example
 @end defun
 
