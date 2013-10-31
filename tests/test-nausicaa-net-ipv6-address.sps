@@ -38,14 +38,6 @@
 (check-display "*** testing Nausicaa libraries: net IPv6 address\n")
 
 
-;;;; helpers
-
-(define-syntax-rule (values->list ?expr)
-  (call-with-values
-      (lambda () ?expr)
-    (lambda args args)))
-
-
 (parametrise ((check-test-name	'lexing-low-level))
 
   (define (tokenise-address string)
