@@ -62,7 +62,7 @@
 
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Wed Oct 30, 2013)
-    $length
+    #;$length
 
     $caar
     $cadr
