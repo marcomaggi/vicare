@@ -1055,8 +1055,8 @@ Return the reference to the imaginary part.
 @cindex Library @library{vicare system $numerics}
 
 
-The libraries @library{ikarus syslib $numerics} and @library{vicare
-syslib $numerics} export bindings for low level operations on numbers.
+The libraries @library{ikarus system $numerics} and @library{vicare
+system $numerics} export bindings for low level operations on numbers.
 
 @menu
 * syslib numerics neg::         Numbers negation.
