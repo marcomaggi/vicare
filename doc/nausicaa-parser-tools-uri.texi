@@ -892,9 +892,9 @@ successful return two values: a bytevector holding the accumulated
 bytes, a list holding the 8 numeric address components as 16-bit exact
 integers; else return @false{} and @false{}.
 
-If successful: leave the port position to the byte after last one read
-from the port; if an error occurs: rewind the port position to the one
-before this function call.
+If successful: leave the port position to the byte after the last one
+read from the port; if an error occurs: rewind the port position to the
+one before this function call.
 
 No validation is performed on the first byte after the address, if any.
 
@@ -1065,8 +1065,8 @@ If @eof{} or a byte representing a colon, slash, question mark or
 number--sign, in @ascii{} encoding, is read: return a bytevector holding
 the accumulated bytes, ending byte excluded; else return @false{}.
 
-If successful: leave the port position to the byte after last one read
-from the port, ending colon or slash excluded; if an error occurs:
+If successful: leave the port position to the byte after the last one
+read from the port, ending colon or slash excluded; if an error occurs:
 rewind the port position to the one before this function call.
 
 Notice that an empty @code{reg-name} component is valid; also, a
@@ -1080,44 +1080,36 @@ function returns @false{}.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(ascii->string
- (uri.parse-reg-name (mkport ""))) @result{} ""
+(define (f0 str)
+  (uri.parse-reg-name (mkport str)))
 
-(let ((P (mkport ":80")))
-  (ascii->string (uri.parse-reg-name P))    @result{} #f
-  (ascii->string (get-bytevector-some P)))  @result{} ":80"
+(define (f1 str)
+  (let* ((P (mkport str))
+         (R (ascii->string (uri.parse-reg-name P)))
+         (E (eof-object? (lookahead-u8 P))))
+    (list R E)))
 
-(let ((P (mkport "/ciao")))
-  (ascii->string (uri.parse-reg-name P))    @result{} #f
-  (ascii->string (get-bytevector-some P)))  @result{} "/ciao"
+(define (f2 str)
+  (let* ((P (mkport str))
+         (R (ascii->string (uri.parse-reg-name P)))
+         (Q (ascii->string (get-bytevector-all P))))
+    (list R Q)))
 
-(let ((P (mkport "?query")))
-  (ascii->string (uri.parse-reg-name P))    @result{} #f
-  (ascii->string (get-bytevector-some P)))  @result{} "?query"
+;;no more than 256 chars
+(f0 (make-string 256 #\a))     @result{} #f
 
-(let ((P (mkport "#fragment")))
-  (ascii->string (uri.parse-reg-name P))    @result{} #f
-  (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
 
-(ascii->string
- (uri.parse-reg-name (mkport "the-reg-name")))
-@result{} "the-reg-name"
+(f1 "")                        @result{} "" #t
+(f1 "the-reg-name")            @result{} "the-reg-name" #t
+(f1 "the.reg.name")            @result{} "the.reg.name" #t
+(f1 "ciao%3dciao")             @result{} "ciao%3dciao" #t
 
-(ascii->string
- (uri.parse-reg-name (mkport "the.reg.name")))
-@result{} "the.reg.name"
-
-(ascii->string
- (uri.parse-reg-name (mkport "ciao%3dciao")))
-@result{} "ciao%3dciao"
-
-(let ((P (mkport "the-reg-name:80")))
-  (ascii->string (uri.parse-reg-name P))    @result{} "the-reg-name"
-  (ascii->string (get-bytevector-some P)))  @result{} ":80"
-
-(let ((P (mkport "the-reg-name/ciao")))
-  (ascii->string (uri.parse-reg-name P))    @result{} "the-reg-name"
-  (ascii->string (get-bytevector-some P)))  @result{} "/ciao"
+(f2 ":80")                     @result{} "" ":80"
+(f2 "/ciao")                   @result{} "" "/ciao"
+(f2 "?query")                  @result{} "" "?query"
+(f2 "#fragment")               @result{} "" "#fragment"
+(f2 "the-reg-name:80")         @result{} "the-reg-name" ":80"
+(f2 "the-reg-name/ciao")       @result{} "the-reg-name" "/ciao"
 @end example
 @end defun
 
@@ -1152,9 +1144,9 @@ The second value is a possibly empty bytevector holding the accumulated
 bytes.
 @end table
 
-If successful: leave the port position to the byte after last one read
-from the port; if an error occurs: return @false{} and @false{}, rewind the
-port position to the one before this function call.
+If successful: leave the port position to the byte after the last one
+read from the port; if an error occurs: return @false{} and @false{},
+rewind the port position to the one before this function call.
 
 @example
 (import (vicare)
@@ -1211,9 +1203,9 @@ not representing a decimal digit, in @ascii{} encoding, is read: return
 a bytevector holding the accumulated bytes, starting colon excluded;
 else return @false{}.
 
-If successful: leave the port position to the byte after last one read
-from the port; if an error occurs: rewind the port position to the one
-before this function call.
+If successful: leave the port position to the byte after the last one
+read from the port; if an error occurs: rewind the port position to the
+one before this function call.
 
 Notice that an empty @code{port} component after the mandatory colon is
 valid: in this case an empty bytevector is returned.
@@ -1225,13 +1217,17 @@ valid: in this case an empty bytevector is returned.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
+(define (f1 str)
+  (let* ((P (mkport str))
+         (R (ascii->string (uri.parse-port P)))
+         (E (eof-object? (lookahead-u8 P))))
+    (values R E)))
+
 (uri.parse-port (mkport ""))         @result{} #f
-(ascii->string
- (uri.parse-port (mkport ":")))      @result{} ""
-(ascii->string
- (uri.parse-port (mkport ":2")))     @result{} "2"
-(ascii->string
- (uri.parse-port (mkport ":8080")))  @result{} "8080"
+
+(f1 ":")                @result{} "" #t
+(f1 ":2")               @result{} "2" #t
+(f1 ":8080")            @result{} "8080" #t
 
 (let ((P (mkport ":8080ciao")))
   (ascii->string (uri.parse-port P))        @result{} "8080"

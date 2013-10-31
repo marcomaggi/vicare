@@ -869,78 +869,47 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-reg-name))
+(parametrise ((check-test-name	'parsing-reg-name))
 
-  (check
-      (ascii->string (uri.parse-reg-name (mkport "")))
-    => "")
+  (define (f0 str)
+    (uri.parse-reg-name (mkport str)))
 
-  (check	;no more than 255 chars
-      (ascii->string (uri.parse-reg-name (mkport (make-string 255 #\a))))
-    => (make-string 255 #\a))
+  (define (f1 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-reg-name P)))
+	   (E (eof-object? (lookahead-u8 P))))
+      (list R E)))
 
-  (check	;no more than 256 chars
-      (uri.parse-reg-name (mkport (make-string 256 #\a)))
-    => #f)
+  (define (f2 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-reg-name P)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
 
-  (check
-      (let* ((in-port	(mkport ":80"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("" ":80"))
+;;; --------------------------------------------------------------------
 
-  (check
-      (let* ((in-port	(mkport "/ciao"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("" "/ciao"))
+  ;;no more than 256 chars
+  (check (f0 (make-string 256 #\a))	=> #f)
 
-  (check
-      (let* ((in-port	(mkport "?query"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("" "?query"))
 
-  (check
-      (let* ((in-port	(mkport "#fragment"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("" "#fragment"))
+  (check (f1 "")			=> '("" #t))
+  ;;no more than 255 chars
+  (check (f1 (make-string 255 #\a))	=> (list (make-string 255 #\a) #t))
+  (check (f1 "the-reg-name")		=> '("the-reg-name" #t))
+  (check (f1 "the.reg.name")		=> '("the.reg.name" #t))
+  (check (f1 "ciao%3dciao")		=> '("ciao%3dciao" #t))
 
-  (check
-      (ascii->string (uri.parse-reg-name (mkport "the-reg-name")))
-    => "the-reg-name")
-
-  (check
-      (ascii->string (uri.parse-reg-name (mkport "the.reg.name")))
-    => "the.reg.name")
-
-  (check
-      (ascii->string (uri.parse-reg-name (mkport "ciao%3dciao")))
-    => "ciao%3dciao")
-
-  (check
-      (let* ((in-port	(mkport "the-reg-name:80"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("the-reg-name" ":80"))
-
-  (check
-      (let* ((in-port	(mkport "the-reg-name/ciao"))
-	     (reg	(ascii->string (uri.parse-reg-name in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-	(list reg rest))
-    => '("the-reg-name" "/ciao"))
+  (check (f2 ":80")			=> '("" ":80"))
+  (check (f2 "/ciao")			=> '("" "/ciao"))
+  (check (f2 "?query")			=> '("" "?query"))
+  (check (f2 "#fragment")		=> '("" "#fragment"))
+  (check (f2 "the-reg-name:80")		=> '("the-reg-name" ":80"))
+  (check (f2 "the-reg-name/ciao")	=> '("the-reg-name" "/ciao"))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-host))
+(parametrise ((check-test-name	'parsing-host))
 
   (check
       (let-values (((kind data) (uri.parse-host (mkport ""))))
@@ -999,23 +968,23 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-port))
+(parametrise ((check-test-name	'parsing-port))
+
+  (define (f1 str)
+    (let* ((P (mkport str))
+	   (R (ascii->string (uri.parse-port P)))
+	   (E (eof-object? (lookahead-u8 P))))
+      (list R E)))
+
+;;; --------------------------------------------------------------------
 
   (check
       (uri.parse-port (mkport ""))
     => #f)
 
-  (check
-      (ascii->string (uri.parse-port (mkport ":")))
-    => "")
-
-  (check
-      (ascii->string (uri.parse-port (mkport ":2")))
-    => "2")
-
-  (check
-      (ascii->string (uri.parse-port (mkport ":8080")))
-    => "8080")
+  (check (f1 ":")		=> '("" #t))
+  (check (f1 ":2")		=> '("2" #t))
+  (check (f1 ":8080")		=> '("8080" #t))
 
   (check
       (let* ((in-port	(mkport ":8080ciao"))
