@@ -711,116 +711,53 @@
 
 (parametrise ((check-test-name	'parsing-ipv4-address))
 
+  (define (f0 str)
+    (values->list (uri.parse-ipv4-address (mkport str))))
+
+  (define (f00 str)
+    (let* ((P (mkport str))
+	   (R (values->list (uri.parse-ipv4-address P)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
+
+  (define (f1 str)
+    (let* ((P (mkport str))
+	   (R (receive (addr numbers)
+		  (uri.parse-ipv4-address P)
+		(list (ascii->string addr) numbers)))
+	   (E (eof-object? (lookahead-u8 P))))
+      (list R E)))
+
+  (define (f2 str)
+    (let* ((P (mkport str))
+	   (R (receive (addr numbers)
+		  (uri.parse-ipv4-address P)
+		(list (ascii->string addr) numbers)))
+	   (Q (ascii->string (get-bytevector-all P))))
+      (list R Q)))
+
 ;;; --------------------------------------------------------------------
 
-  (check
-      (receive (addr ell)
-	  (uri.parse-ipv4-address (%make-lexer-port ""))
-	addr)
-    => #f)
+  (check (f0 "")		=> '(#f #f))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "ciao"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "ciao"))
+  (check (f00 "ciao")		=> '((#f #f) "ciao"))
+  (check (f00 "1.")		=> '((#f #f) "1."))
+  (check (f00 "1.2")		=> '((#f #f) "1.2"))
+  (check (f00 "1.2.3")		=> '((#f #f) "1.2.3"))
+  (check (f00 "1.2.3.4.5")	=> '((#f #f) "1.2.3.4.5"))
+  (check (f00 "123ciao")	=> '((#f #f) "123ciao"))
+  (check (f00 "1.2.3.ciao")	=> '((#f #f) "1.2.3.ciao"))
+  (check (f00 "1.2.3.4.")	=> '((#f #f) "1.2.3.4."))
+  ;;number out of range
+  (check (f00 "191.223.376.434")=> '((#f #f) "191.223.376.434"))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1."))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1."))
+  (check (f1 "1.2.3.4")			=> '(("1.2.3.4" (1 2 3 4)) #t))
+  (check (f1 "191.223.76.255")		=> '(("191.223.76.255" (191 223 76 255)) #t))
 
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2.3"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4.5"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2.3.4.5"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "123ciao"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "123ciao"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.ciao"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2.3.ciao"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port)))
-	(list ell (eof-object? (lookahead-u8 in-port))))
-    => '((1 2 3 4) #t))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4."))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "1.2.3.4."))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "191.223.376.434"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list addr rest))
-    => '(#f "191.223.376.434"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "191.223.76.255"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port)))
-	(list ell (eof-object? (lookahead-u8 in-port))))
-    => '((191 223 76 255) #t))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4/5"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list (ascii->string addr) ell rest))
-    => '("1.2.3.4" (1 2 3 4) "/5"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4/ciao"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list ell rest))
-    => '((1 2 3 4) "/ciao"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4:8080"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list ell rest))
-    => '((1 2 3 4) ":8080"))
-
-  (check
-      (let*-values (((in-port)	(%make-lexer-port "1.2.3.4ciao"))
-		    ((addr ell)	(uri.parse-ipv4-address in-port))
-		    ((rest)	(ascii->string (get-bytevector-some in-port))))
-	(list ell rest))
-    => '((1 2 3 4) "ciao"))
+  (check (f2 "1.2.3.4/5")		=> '(("1.2.3.4" (1 2 3 4)) "/5"))
+  (check (f2 "1.2.3.4/ciao")		=> '(("1.2.3.4" (1 2 3 4)) "/ciao"))
+  (check (f2 "1.2.3.4:8080")		=> '(("1.2.3.4" (1 2 3 4)) ":8080"))
+  (check (f2 "1.2.3.4ciao")		=> '(("1.2.3.4" (1 2 3 4)) "ciao"))
 
   #t)
 

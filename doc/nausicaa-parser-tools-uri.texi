@@ -823,9 +823,9 @@ successful return two values: a bytevector holding the accumulated
 bytes, a list holding the octets as exact integers; else return @false{}
 and @false{}.
 
-If successful: leave the port position to the byte after last one read
-from the port; if an error occurs: rewind the port position to the one
-before this function call.
+If successful: leave the port position to the byte after the last one
+read from the port; if an error occurs: rewind the port position to the
+one before this function call.
 
 No validation is performed on the first byte after the address, if any.
 
@@ -836,69 +836,51 @@ No validation is performed on the first byte after the address, if any.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-ipv4-address (mkport "")) @result{} #f #f
+(define (f0 str)
+  (uri.parse-ipv4-address (mkport str)))
 
-(let ((P (mkport "ciao")))
-  (uri.parse-ipv4-address P)                 @result{} #f #f
-  (ascii->string (get-bytevector-some P)))   @result{} "ciao"
+(define (f00 str)
+  (let* ((P (mkport str))
+         (R (values->list (uri.parse-ipv4-address P)))
+         (Q (ascii->string (get-bytevector-all P))))
+    (values R Q)))
 
-(let ((P (mkport "1.2.3")))
-  (uri.parse-ipv4-address P)                 @result{} #f #f
-  (ascii->string (get-bytevector-some P)))   @result{} "1.2.3"
+(define (f1 str)
+  (let* ((P (mkport str))
+         (R (receive (addr numbers)
+                (uri.parse-ipv4-address P)
+              (list (ascii->string addr) numbers)))
+         (E (eof-object? (lookahead-u8 P))))
+    (values R E)))
 
-(let ((P (mkport "1.2.3.4.5")))
-  (uri.parse-ipv4-address P)                 @result{} #f #f
-  (ascii->string (get-bytevector-some P)))   @result{} "1.2.3.4.5"
+(define (f2 str)
+  (let* ((P (mkport str))
+         (R (receive (addr numbers)
+                (uri.parse-ipv4-address P)
+              (list (ascii->string addr) numbers)))
+         (Q (ascii->string (get-bytevector-all P))))
+    (values R Q)))
 
-(let ((P (mkport "123ciao")))
-  (uri.parse-ipv4-address P)                 @result{} #f #f
-  (ascii->string (get-bytevector-some P)))   @result{} "123ciao"
+(f0 "")                 @result{} #f #f
 
-(let ((P (mkport "1.2.3.4")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr)          @result{} "1.2.3.4"
-    ell)                          @result{} (1 2 3 4)
-  (eof-object? (lookahead-u8 P))  @result{} #t
+(f00 "ciao")            @result{} (#f #f) "ciao"
+(f00 "1.")              @result{} (#f #f) "1."
+(f00 "1.2")             @result{} (#f #f) "1.2"
+(f00 "1.2.3")           @result{} (#f #f) "1.2.3"
+(f00 "1.2.3.4.5")       @result{} (#f #f) "1.2.3.4.5"
+(f00 "123ciao")         @result{} (#f #f) "123ciao"
+(f00 "1.2.3.ciao")      @result{} (#f #f) "1.2.3.ciao"
+(f00 "1.2.3.4.")        @result{} (#f #f) "1.2.3.4."
+;;number out of range
+(f00 "191.223.376.434") @result{} (#f #f) "191.223.376.434"
 
-(let ((P (mkport "191.223.376.434")))
-  (uri.parse-ipv4-address P)   @result{} #f #f
-  (ascii->string
-   (get-bytevector-some P)))   @result{} "191.223.376.434"
+(f1 "1.2.3.4")          @result{} ("1.2.3.4" (1 2 3 4)) #t
+(f1 "191.223.76.255")   @result{} ("191.223.76.255" (191 223 76 255)) #t
 
-(let ((P (mkport "191.223.76.255")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr)          @result{} "191.223.76.255"
-    ell))                         @result{} (191 223 76 255)
-
-(let ((P (mkport "1.2.3.4/5")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr))         @result{} "1.2.3.4"
-  (ascii->string
-   (get-bytevector-some P)))      @result{} "/5"
-
-(let ((P (mkport "1.2.3.4/ciao")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr))         @result{} "1.2.3.4"
-  (ascii->string
-   (get-bytevector-some P)))      @result{} "/ciao"
-
-(let ((P (mkport "1.2.3.4:8080")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr))         @result{} "1.2.3.4"
-  (ascii->string
-   (get-bytevector-some P)))      @result{} ":8080"
-
-(let ((P (mkport "1.2.3.4ciao")))
-  (receive (addr ell)
-      (uri.parse-ipv4-address P)
-    (ascii->string addr))         @result{} "1.2.3.4"
-  (ascii->string
-   (get-bytevector-some P)))      @result{} "ciao"
+(f2 "1.2.3.4/5")        @result{} ("1.2.3.4" (1 2 3 4)) "/5"
+(f2 "1.2.3.4/ciao")     @result{} ("1.2.3.4" (1 2 3 4)) "/ciao"
+(f2 "1.2.3.4:8080")     @result{} ("1.2.3.4" (1 2 3 4)) ":8080"
+(f2 "1.2.3.4ciao")      @result{} ("1.2.3.4" (1 2 3 4)) "ciao"
 @end example
 @end defun
 
