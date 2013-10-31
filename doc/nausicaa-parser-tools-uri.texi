@@ -442,9 +442,9 @@ sequence, an exception is raised with compound condition object of type
 
 
 The following functions will parse the elements of a @uri{}; all of them
-accept a @var{port} argument: it must be a binary input port.  The
-following bindings are exported by the library @library{nausicaa
-parser-tools uri}.
+accept a @var{port} argument: it must be a binary input port supporting
+the port position.  The following bindings are exported by the library
+@library{nausicaa parser-tools uri}.
 
 
 @defun parse-scheme @var{port}
@@ -1257,9 +1257,9 @@ sub-delims    = "!" | "$" | "&" | "'" | "(" | ")"
               | "*" | "+" | "," | ";" | "="
 @end example
 
-The following bindings are exported by the @library{nausicaa
-parser-tools uri} library.  All the functions accept a @var{port}
-argument: it must be a binary input port.
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.  All the functions accept a @var{port} argument: it
+must be a binary input port supporting the port position.
 
 
 @defun parse-segment @var{port}
@@ -1317,9 +1317,9 @@ is left pointing to the byte after the last accumulated byte from the
 If @eof{} or a byte different from slash is read as first byte: return
 false; the port position is rewind to the one before this function call.
 
-If an invalid percent.-encoded sequence is read, an exception is raised
-with type @condition{parser-error}; the port position is rewind to the
-one before this function call.
+If an invalid percent--encoded sequence is read, an exception is raised
+with type @condition{uri-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 @c page
@@ -1347,7 +1347,7 @@ which in turn can be followed only by @eof{}, a query (starting with a
 
 The following bindings are exported by the library @library{nausicaa
 parser-tools uri}.  All the functions accept a @var{port} argument: it
-must be a binary input port.
+must be a binary input port supporting the port position.
 
 
 @defun parse-path-empty @var{port}
@@ -1717,7 +1717,7 @@ relative-part = "//" authority path-abempty
 
 The following bindings are exported by the @library{nausicaa
 parser-tools uri} library.  All the functions accept a @var{port}
-argument: it must be a binary input port.
+argument: it must be a binary input port supporting the port position.
 
 
 @defun parse-uri @var{port}
@@ -1919,9 +1919,9 @@ input port.
 
 
 The functions can be used to parse the elements of a @uri{}; all the
-functions accept a @var{port} argument: it must be a binary input port.
-The following bindings are exported by the @library{nausicaa
-parser-tools uri} library.
+functions accept a @var{port} argument: it must be a binary input port
+supporting the port position.  The following bindings are exported by
+the @library{nausicaa parser-tools uri} library.
 
 
 @defun valid-component? @var{port}
