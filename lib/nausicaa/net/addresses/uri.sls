@@ -33,14 +33,25 @@
     ;; auxiliary syntaxes
     source-bytevector)
   (import (nausicaa)
-    (prefix (nausicaa parser-tools uri) uri.)
-    (prefix (vicare language-extensions makers) mk.))
+    (nausicaa net addresses ipv4)
+    (nausicaa net addresses ipv6)
+    (prefix (vicare language-extensions makers) mk.)
+    (vicare unsafe operations))
 
 
 ;;;; helpers
 
 (define-auxiliary-syntaxes
-  source-bytevector)
+  scheme
+  authority
+  userinfo
+  host-type
+  host
+  port
+  path-type
+  path
+  query
+  fragment)
 
 (define-inline (integer->ascii-hex n)
   (if (<= 0 n 9)
@@ -48,8 +59,21 @@
     (+ 65 (- n 10)))) ;65 = #\A
 
 
+;;;; auxiliary labels
+
+(define-label <nonempty-bytevector>
+  (parent <bytevector>)
+  (predicate (lambda (bv)
+	       ($fxpositive? ($bytevector-length bv)))))
+
+(define-label <uri-scheme>
+  (parent <nonempty-bytevector>)
+  (predicate (lambda (bv)
+	       #f)))
+
+
 (define-class <uri>
-  (nongenerative nausicaa:uri:<uri>)
+  (nongenerative nausicaa:net:addresses:uri:<uri>)
 
   (maker (lambda (stx)
 	   (syntax-case stx ()
@@ -58,23 +82,17 @@
 
   (protocol
    (lambda (make-top)
-     (lambda (source-bytevector)
-       (let-values (((scheme authority userinfo host-type host port path-type path query fragment)
-		     (uri.parse-uri (open-bytevector-input-port source-bytevector))))
-	 (unless scheme
-	   (assertion-violation 'make-<uri>
-	     "missing mandatory scheme component in URI"
-	     source-bytevector))
-	 ((make-top) scheme authority
-	  (and userinfo (uri.percent-decode userinfo))
-	  host-type (if (eq? host-type 'reg-name)
-			(uri.percent-decode host)
-		      host)
-	  port path-type (map (lambda (p)
-				(uri.percent-decode p))
-			   path)
-	  (and query (uri.percent-decode query))
-	  (and fragment (uri.percent-decode fragment)))))))
+     (lambda (scheme authority userinfo host-type host port path-type path query fragment)
+       ((make-top) scheme authority
+	(and userinfo (uri.percent-decode userinfo))
+	host-type (if (eq? host-type 'reg-name)
+		      (uri.percent-decode host)
+		    host)
+	port path-type (map (lambda (p)
+			      (uri.percent-decode p))
+			 path)
+	(and query (uri.percent-decode query))
+	(and fragment (uri.percent-decode fragment))))))
 
    (fields (mutable scheme)
 	   (mutable authority)
@@ -87,115 +105,127 @@
 	   (mutable query)
 	   (mutable fragment))
 
-  (virtual-fields (immutable string)
-		  (immutable bytevector)))
+   (virtual-fields
+    (immutable (string <string>)
+	       (lambda ((O <uri>))
+		 (ascii->string (O $bytevector))))
+
+    (immutable (bytevector <bytevector>)
+	       (lambda ((O <uri>))
+		 (define who '<uri>-bytevector)
+		 (receive (port getter)
+		     (open-bytevector-output-port)
+		   (define-inline (%put-bv ?thing)
+		     (put-bytevector port ?thing))
+		   (define-inline (%put-u8 ?thing)
+		     (put-u8 port ?thing))
+
+		   (%put-bv (O $scheme))
+		   (%put-u8 58) ;58 = #\:
+
+		   (let ((authority (receive (authority-port authority-getter)
+					(open-bytevector-output-port)
+				      (define-inline (%put-bv ?thing)
+					(put-bytevector authority-port ?thing))
+				      (define-inline (%put-u8 ?thing)
+					(put-u8 authority-port ?thing))
+				      (when (O $userinfo)
+					(%put-bv (uri.percent-encode (O $userinfo)))
+					(%put-u8 64)) ;64 = #\@
+				      (case (O $host-type)
+					((reg-name)
+					 (%put-bv (uri.percent-encode (O $host))))
+					((ipv4-address)
+					 (%put-bv (car (O $host))))
+					((ipv6-address)
+					 (%put-u8 91) ;91 = #\[
+					 (%put-bv (car (O $host)))
+					 (%put-u8 93)) ;93 = #\]
+					((ipvfuture)
+					 (%put-u8 91)  ;91 = #\[
+					 (%put-u8 118) ;118 = #\v
+					 (%put-u8 (integer->ascii-hex (car (O $host))))
+					 (%put-bv (cdr (O $host)))
+					 (%put-u8 93)) ;93 = #\]
+					(else
+					 (assertion-violation who "invalid host type" o (O $host-type))))
+				      (when (O $port)
+					(%put-u8 58) ;58 = #\:
+					(%put-bv (O $port)))
+				      (authority-getter))))
+		     (when (or (not (zero? (bytevector-length authority)))
+			       (memq (O $path-type) '(path-abempty path-empty)))
+		       (%put-u8 47) ;47 = #\/
+		       (%put-u8 47) ;47 = #\/
+		       (%put-bv authority)))
+
+		   (unless (null? (O $path))
+		     (let ((first	(car (O $path)))
+			   (rest	(cdr (O $path))))
+		       (case (O $path-type)
+			 ((path-abempty path-absolute)
+			  (%put-u8 47) ;47 = /
+			  (%put-bv first))
+			 ((path-rootless)
+			  (%put-bv first))
+			 (else
+			  (assertion-violation who "invalid path type" o (O $path-type))))
+		       (for-each (lambda (bv)
+				   (%put-u8 47) ;47 = /
+				   (%put-bv bv))
+			 rest)))
+
+		   (when (O $query)
+		     (%put-u8 63) ;63 = ?
+		     (%put-bv (uri.percent-encode (O $query))))
+
+		   (when (O $fragment)
+		     (%put-u8 35) ;35 = #
+		     (%put-bv (uri.percent-encode (O $fragment))))
+
+		   (getter))))
+
+    #| end of virtual-fields |# )
+
+  #| end of class |# )
 
 (mk.define-maker %make-uri
     make-<uri>
-  ((source-bytevector	#f)))
-
-
-(define (<uri>-string (o <uri>))
-  (ascii->string (o bytevector)))
-
-(define (<uri>-bytevector (o <uri>))
-  (define who '<uri>-bytevector)
-  (receive (port getter)
-      (open-bytevector-output-port)
-    (define-inline (%put-bv ?thing)
-      (put-bytevector port ?thing))
-    (define-inline (%put-u8 ?thing)
-      (put-u8 port ?thing))
-
-    (%put-bv (o scheme))
-    (%put-u8 58) ;58 = #\:
-
-    (let ((authority (receive (authority-port authority-getter)
-			 (open-bytevector-output-port)
-		       (define-inline (%put-bv ?thing)
-			 (put-bytevector authority-port ?thing))
-		       (define-inline (%put-u8 ?thing)
-			 (put-u8 authority-port ?thing))
-		       (when (o userinfo)
-			 (%put-bv (uri.percent-encode (o userinfo)))
-			 (%put-u8 64)) ;64 = #\@
-		       (case (o host-type)
-			 ((reg-name)
-			  (%put-bv (uri.percent-encode (o host))))
-			 ((ipv4-address)
-			  (%put-bv (car (o host))))
-			 ((ipv6-address)
-			  (%put-u8 91) ;91 = #\[
-			  (%put-bv (car (o host)))
-			  (%put-u8 93)) ;93 = #\]
-			 ((ipvfuture)
-			  (%put-u8 91)	;91 = #\[
-			  (%put-u8 118) ;118 = #\v
-			  (%put-u8 (integer->ascii-hex (car (o host))))
-			  (%put-bv (cdr (o host)))
-			  (%put-u8 93)) ;93 = #\]
-			 (else
-			  (assertion-violation who "invalid host type" o (o host-type))))
-		       (when (o port)
-			 (%put-u8 58) ;58 = #\:
-			 (%put-bv (o port)))
-		       (authority-getter))))
-      (when (or (not (zero? (bytevector-length authority)))
-		(memq (o path-type) '(path-abempty path-empty)))
-	(%put-u8 47) ;47 = #\/
-	(%put-u8 47) ;47 = #\/
-	(%put-bv authority)))
-
-    (unless (null? (o path))
-      (let ((first	(car (o path)))
-	    (rest	(cdr (o path))))
-	(case (o path-type)
-	  ((path-abempty path-absolute)
-	   (%put-u8 47) ;47 = /
-	   (%put-bv first))
-	  ((path-rootless)
-	   (%put-bv first))
-	  (else
-	   (assertion-violation who "invalid path type" o (o path-type))))
-	(for-each (lambda (bv)
-		    (%put-u8 47) ;47 = /
-		    (%put-bv bv))
-	  rest)))
-
-    (when (o query)
-      (%put-u8 63) ;63 = ?
-      (%put-bv (uri.percent-encode (o query))))
-
-    (when (o fragment)
-      (%put-u8 35) ;35 = #
-      (%put-bv (uri.percent-encode (o fragment))))
-
-    (getter)))
+  ((scheme	#f)
+   (authority	#f)
+   (userinfo	#f)
+   (host-type	#f)
+   (host	#f)
+   (port	#f)
+   (path-type	#f)
+   (path	#f)
+   (query	#f)
+   (fragment	#f)))
 
 
 (define-class <relative-ref>
-  (nongenerative nausicaa:uri:<relative-ref>)
+  (nongenerative nausicaa:net:addresses:uri:<relative-ref>)
 
   (maker (lambda (stx)
 	   (syntax-case stx ()
 	     ((_ (?clause ...))
 	      #'(%make-relative-ref ?clause ...)))))
 
+;;;(uri.parse-relative-ref (open-bytevector-input-port source-bytevector))
+
   (protocol
    (lambda (make-top)
-     (lambda (source-bytevector)
-       (let-values (((authority userinfo host-type host port path-type path query fragment)
-		     (uri.parse-relative-ref (open-bytevector-input-port source-bytevector))))
-	 ((make-top) authority
-	  (and userinfo (uri.percent-decode userinfo))
-	  host-type (if (eq? host-type 'reg-name)
-			(uri.percent-decode host)
-		      host)
-	  port path-type (map (lambda (p)
-				(uri.percent-decode p))
-			   path)
-	  (and query (uri.percent-decode query))
-	  (and fragment (uri.percent-decode fragment)))))))
+     (lambda (authority userinfo host-type host port path-type path query fragment)
+       ((make-top) authority
+	(and userinfo (uri.percent-decode userinfo))
+	host-type (if (eq? host-type 'reg-name)
+		      (uri.percent-decode host)
+		    host)
+	port path-type (map (lambda (p)
+			      (uri.percent-decode p))
+			 path)
+	(and query (uri.percent-decode query))
+	(and fragment (uri.percent-decode fragment))))))
 
    (fields (mutable authority)
 	   (mutable userinfo)
@@ -207,87 +237,98 @@
 	   (mutable query)
 	   (mutable fragment))
 
-  (virtual-fields (immutable string)
-		  (immutable bytevector)))
+  (virtual-fields
+   (immutable (string <string>)
+	      (lambda ((O <relative-ref>))
+		(ascii->string (O $bytevector))))
+
+   (immutable (bytevector <bytevector>)
+	      (lambda ((O <relative-ref>))
+		(define who '<relative-ref>-bytevector)
+		(receive (port getter)
+		    (open-bytevector-output-port)
+		  (define-inline (%put-bv ?thing)
+		    (put-bytevector port ?thing))
+		  (define-inline (%put-u8 ?thing)
+		    (put-u8 port ?thing))
+
+		  (let ((authority (receive (authority-port authority-getter)
+				       (open-bytevector-output-port)
+				     (define-inline (%put-bv ?thing)
+				       (put-bytevector authority-port ?thing))
+				     (define-inline (%put-u8 ?thing)
+				       (put-u8 authority-port ?thing))
+				     (when (O $userinfo)
+				       (%put-bv (uri.percent-encode (O $userinfo)))
+				       (%put-u8 64)) ;64 = #\@
+				     (case (O $host-type)
+				       ((reg-name)
+					(%put-bv (uri.percent-encode (O $host))))
+				       ((ipv4-address)
+					(%put-bv (car (O $host))))
+				       ((ipv6-address)
+					(%put-u8 91) ;91 = #\[
+					(%put-bv (car (O $host)))
+					(%put-u8 93)) ;93 = #\]
+				       ((ipvfuture)
+					(%put-u8 91) ;91 = #\[
+					(%put-u8 118) ;118 = #\v
+					(%put-u8 (integer->ascii-hex (car (O $host))))
+					(%put-bv (cdr (O $host)))
+					(%put-u8 93)) ;93 = #\]
+				       (else
+					(assertion-violation who "invalid host type" o (O $host-type))))
+				     (when (O $port)
+				       (%put-u8 58) ;58 = #\:
+				       (%put-bv (O $port)))
+				     (authority-getter))))
+		    (when (or (not (zero? (bytevector-length authority)))
+			      (memq (O $path-type) '(path-abempty path-empty)))
+		      (%put-u8 47) ;47 = #\/
+		      (%put-u8 47) ;47 = #\/
+		      (%put-bv authority)))
+
+		  (unless (null? (O $path))
+		    (let ((first	(car (O $path)))
+			  (rest	(cdr (O $path))))
+		      (case (O $path-type)
+			((path-abempty path-absolute)
+			 (%put-u8 47) ;47 = /
+			 (%put-bv first))
+			((path-noscheme)
+			 (%put-bv first))
+			(else
+			 (assertion-violation who "invalid path type" o (O $path-type))))
+		      (for-each (lambda (bv)
+				  (%put-u8 47) ;47 = /
+				  (%put-bv bv))
+			rest)))
+
+		  (when (O $query)
+		    (%put-u8 63) ;63 = ?
+		    (%put-bv (uri.percent-encode (O $query))))
+
+		  (when (O $fragment)
+		    (%put-u8 35) ;35 = #
+		    (%put-bv (uri.percent-encode (O $fragment))))
+
+		  (getter))))
+
+   #| end of virtual-fields|# )
+
+  #| end of class |# )
 
 (mk.define-maker %make-relative-ref
     make-<relative-ref>
-  ((source-bytevector	#f)))
-
-
-(define (<relative-ref>-string (o <relative-ref>))
-  (ascii->string (o bytevector)))
-
-(define (<relative-ref>-bytevector (o <relative-ref>))
-  (define who '<relative-ref>-bytevector)
-  (receive (port getter)
-      (open-bytevector-output-port)
-    (define-inline (%put-bv ?thing)
-      (put-bytevector port ?thing))
-    (define-inline (%put-u8 ?thing)
-      (put-u8 port ?thing))
-
-    (let ((authority (receive (authority-port authority-getter)
-			 (open-bytevector-output-port)
-		       (define-inline (%put-bv ?thing)
-			 (put-bytevector authority-port ?thing))
-		       (define-inline (%put-u8 ?thing)
-			 (put-u8 authority-port ?thing))
-		       (when (o userinfo)
-			 (%put-bv (uri.percent-encode (o userinfo)))
-			 (%put-u8 64)) ;64 = #\@
-		       (case (o host-type)
-			 ((reg-name)
-			  (%put-bv (uri.percent-encode (o host))))
-			 ((ipv4-address)
-			  (%put-bv (car (o host))))
-			 ((ipv6-address)
-			  (%put-u8 91) ;91 = #\[
-			  (%put-bv (car (o host)))
-			  (%put-u8 93)) ;93 = #\]
-			 ((ipvfuture)
-			  (%put-u8 91)	;91 = #\[
-			  (%put-u8 118) ;118 = #\v
-			  (%put-u8 (integer->ascii-hex (car (o host))))
-			  (%put-bv (cdr (o host)))
-			  (%put-u8 93)) ;93 = #\]
-			 (else
-			  (assertion-violation who "invalid host type" o (o host-type))))
-		       (when (o port)
-			 (%put-u8 58) ;58 = #\:
-			 (%put-bv (o port)))
-		       (authority-getter))))
-      (when (or (not (zero? (bytevector-length authority)))
-		(memq (o path-type) '(path-abempty path-empty)))
-	(%put-u8 47) ;47 = #\/
-	(%put-u8 47) ;47 = #\/
-	(%put-bv authority)))
-
-    (unless (null? (o path))
-      (let ((first	(car (o path)))
-	    (rest	(cdr (o path))))
-	(case (o path-type)
-	  ((path-abempty path-absolute)
-	   (%put-u8 47) ;47 = /
-	   (%put-bv first))
-	  ((path-noscheme)
-	   (%put-bv first))
-	  (else
-	   (assertion-violation who "invalid path type" o (o path-type))))
-	(for-each (lambda (bv)
-		    (%put-u8 47) ;47 = /
-		    (%put-bv bv))
-	  rest)))
-
-    (when (o query)
-      (%put-u8 63) ;63 = ?
-      (%put-bv (uri.percent-encode (o query))))
-
-    (when (o fragment)
-      (%put-u8 35) ;35 = #
-      (%put-bv (uri.percent-encode (o fragment))))
-
-    (getter)))
+  ((authority		#f)
+   (userinfo		#f)
+   (host-type		#f)
+   (host		#f)
+   (port		#f)
+   (path-type		#f)
+   (path		#f)
+   (query		#f)
+   (fragment		#f)))
 
 
 ;;;; done
