@@ -390,6 +390,8 @@
 
   (define (parse-multiple-catch-clauses var-id clauses-stx)
     (syntax-case clauses-stx (else)
+      ;;Match when  there is no  ELSE clause.  Remember that  GUARD will
+      ;;reraise the exception when there is no ELSE clause.
       (()
        '())
       ;;The one with the ELSE clause must come first!!!
