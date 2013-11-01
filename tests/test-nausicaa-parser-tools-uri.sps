@@ -1928,9 +1928,9 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parse-uri))
+(parametrise ((check-test-name	'parse-uri))
 
-  (define-inline (doit in-string expected-value)
+  (define-syntax-rule (doit in-string expected-value)
     (check
 	(let-values (((scheme authority userinfo host-type host port path-type path query fragment)
 		      (uri.parse-uri (mkport in-string))))
@@ -1958,161 +1958,161 @@
 
 ;;; whith scheme
 
-    (doit "ci:ao/"
-    	  ("ci" #f #f reg-name "" #f path-rootless ("ao" "") #f #f))
+  (doit "ci:ao/"
+	("ci" #f #f reg-name "" #f path-rootless ("ao" "") #f #f))
 
-    (doit "ci:ao/a///"
-    	  ("ci" #f #f reg-name "" #f path-rootless ("ao" "a" "" "" "") #f #f))
+  (doit "ci:ao/a///"
+	("ci" #f #f reg-name "" #f path-rootless ("ao" "a" "" "" "") #f #f))
 
-    (doit "ci:ao/ciao"
-    	  ("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao") #f #f))
+  (doit "ci:ao/ciao"
+	("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao") #f #f))
 
-    (doit "ci:ao/ciao/hello/salut"
-    	  ("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao" "hello" "salut") #f #f))
+  (doit "ci:ao/ciao/hello/salut"
+	("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao" "hello" "salut") #f #f))
 
-    (doit "http://"
-	  ("http" "" #f reg-name "" #f path-abempty () #f #f))
+  (doit "http://"
+	("http" "" #f reg-name "" #f path-abempty () #f #f))
 
-    (doit "http://?query" ;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty () "query" #f))
+  (doit "http://?query" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty () "query" #f))
 
-    (doit "http://#fragment"	;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty () #f "fragment"))
+  (doit "http://#fragment" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty () #f "fragment"))
 
-    (doit "http:///"	;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty ("") #f #f))
+  (doit "http:///" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty ("") #f #f))
 
-    (doit "http:///?query" ;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty ("") "query" #f))
+  (doit "http:///?query" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty ("") "query" #f))
 
-    (doit "http:///#fragment" ;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty ("") #f "fragment"))
+  (doit "http:///#fragment" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty ("") #f "fragment"))
 
-    (doit "http:///ciao" ;empty authority
-    	  ("http" "" #f reg-name "" #f path-abempty ("ciao") #f #f))
+  (doit "http:///ciao" ;empty authority
+	("http" "" #f reg-name "" #f path-abempty ("ciao") #f #f))
 
-    (doit "http://ciao.com"
-    	  ("http" "ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
+  (doit "http://ciao.com"
+	("http" "ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
 
-    (doit "http://ciao.com:8080"
-    	  ("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "http://ciao.com:8080"
+	("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "http://marco@ciao.com:8080"
-    	  ("http" "marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "http://marco@ciao.com:8080"
+	("http" "marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "http://ciao.com:8080/"
-    	  ("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
+  (doit "http://ciao.com:8080/"
+	("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
 
-    (doit "http://ciao.com:8080/a"
-    	  ("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
+  (doit "http://ciao.com:8080/a"
+	("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
 
-    (doit "http://ciao.com/a/b/c"
-    	  ("http" "ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
+  (doit "http://ciao.com/a/b/c"
+	("http" "ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
 
-    (doit "http://ciao.com:8080/a/b/c"
-    	  ("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "http://ciao.com:8080/a/b/c"
+	("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
 
-    (doit "http://1.2.3.4:8080/a/b/c"
-    	  ("http" "1.2.3.4:8080" #f ipv4-address ("1.2.3.4" . (1 2 3 4))
-	   "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "http://1.2.3.4:8080/a/b/c"
+	("http" "1.2.3.4:8080" #f ipv4-address ("1.2.3.4" . (1 2 3 4))
+	 "8080" path-abempty ("a" "b" "c") #f #f))
 
-    (doit "http://[1:2:3:4:5:6:7:8]:8080/a/b/c"
-    	  ("http" "[1:2:3:4:5:6:7:8]:8080" #f ipv6-address ("1:2:3:4:5:6:7:8" . (1 2 3 4 5 6 7 8))
-	   "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "http://[1:2:3:4:5:6:7:8]:8080/a/b/c"
+	("http" "[1:2:3:4:5:6:7:8]:8080" #f ipv6-address ("1:2:3:4:5:6:7:8" . (1 2 3 4 5 6 7 8))
+	 "8080" path-abempty ("a" "b" "c") #f #f))
 
-    (doit "http://[vEciao]:8080/a/b/c"
-    	  ("http" "[vEciao]:8080" #f ipvfuture (14 . "ciao")
-	   "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "http://[vEciao]:8080/a/b/c"
+	("http" "[vEciao]:8080" #f ipvfuture (14 . "ciao")
+	 "8080" path-abempty ("a" "b" "c") #f #f))
 
 ;;; with authority, no scheme
 
-    (doit "//"
-	  (#f "" #f reg-name "" #f path-abempty () #f #f))
+  (doit "//"
+	(#f "" #f reg-name "" #f path-abempty () #f #f))
 
-    (doit "//?query" ;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty () "query" #f))
+  (doit "//?query" ;empty authority
+	(#f "" #f reg-name "" #f path-abempty () "query" #f))
 
-    (doit "//#fragment"	;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty () #f "fragment"))
+  (doit "//#fragment" ;empty authority
+	(#f "" #f reg-name "" #f path-abempty () #f "fragment"))
 
-    (doit "///"	;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty ("") #f #f))
+  (doit "///"	;empty authority
+	(#f "" #f reg-name "" #f path-abempty ("") #f #f))
 
-    (doit "///?query" ;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty ("") "query" #f))
+  (doit "///?query" ;empty authority
+	(#f "" #f reg-name "" #f path-abempty ("") "query" #f))
 
-    (doit "///#fragment" ;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty ("") #f "fragment"))
+  (doit "///#fragment" ;empty authority
+	(#f "" #f reg-name "" #f path-abempty ("") #f "fragment"))
 
-    (doit "///ciao" ;empty authority
-    	  (#f "" #f reg-name "" #f path-abempty ("ciao") #f #f))
+  (doit "///ciao" ;empty authority
+	(#f "" #f reg-name "" #f path-abempty ("ciao") #f #f))
 
-    (doit "//ciao.com"
-    	  (#f "ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
+  (doit "//ciao.com"
+	(#f "ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
 
-    (doit "//ciao.com:8080"
-    	  (#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "//ciao.com:8080"
+	(#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "//marco@ciao.com:8080"
-    	  (#f "marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "//marco@ciao.com:8080"
+	(#f "marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "//ciao.com:8080/"
-    	  (#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
+  (doit "//ciao.com:8080/"
+	(#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
 
-    (doit "//ciao.com:8080/a"
-    	  (#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
+  (doit "//ciao.com:8080/a"
+	(#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
 
-    (doit "//ciao.com/a/b/c"
-    	  (#f "ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
+  (doit "//ciao.com/a/b/c"
+	(#f "ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
 
-    (doit "//ciao.com:8080/a/b/c"
-    	  (#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "//ciao.com:8080/a/b/c"
+	(#f "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
 
 ;;; no authority, emtpy path
 
-    (doit ""
-    	  (#f #f #f reg-name "" #f path-empty () #f #f))
+  (doit ""
+	(#f #f #f reg-name "" #f path-empty () #f #f))
 
-    (doit "?query"
-    	  (#f #f #f reg-name "" #f path-empty () "query" #f))
+  (doit "?query"
+	(#f #f #f reg-name "" #f path-empty () "query" #f))
 
-    (doit "#fragment"
-    	  (#f #f #f reg-name "" #f path-empty () #f "fragment"))
+  (doit "#fragment"
+	(#f #f #f reg-name "" #f path-empty () #f "fragment"))
 
 ;;; no authority, absolute path
 
-    (doit "/"
-    	  (#f #f #f reg-name "" #f path-absolute ("") #f #f))
+  (doit "/"
+	(#f #f #f reg-name "" #f path-absolute ("") #f #f))
 
-    (doit "/a///"
-    	  (#f #f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
+  (doit "/a///"
+	(#f #f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
 
-    (doit "/ciao"
-    	  (#f #f #f reg-name "" #f path-absolute ("ciao") #f #f))
+  (doit "/ciao"
+	(#f #f #f reg-name "" #f path-absolute ("ciao") #f #f))
 
-    (doit "/ciao/hello/salut"
-    	  (#f #f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
+  (doit "/ciao/hello/salut"
+	(#f #f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
 
 ;;; no authority, relative path rootless
 
-    (doit "./"
-    	  (#f #f #f reg-name "" #f path-rootless ("." "") #f #f))
+  (doit "./"
+	(#f #f #f reg-name "" #f path-rootless ("." "") #f #f))
 
-    (doit "./a///"
-    	  (#f #f #f reg-name "" #f path-rootless ("." "a" "" "" "") #f #f))
+  (doit "./a///"
+	(#f #f #f reg-name "" #f path-rootless ("." "a" "" "" "") #f #f))
 
-    (doit "./ciao"
-    	  (#f #f #f reg-name "" #f path-rootless ("." "ciao") #f #f))
+  (doit "./ciao"
+	(#f #f #f reg-name "" #f path-rootless ("." "ciao") #f #f))
 
-    (doit "./ciao/hello/salut"
-    	  (#f #f #f reg-name "" #f path-rootless ("." "ciao" "hello" "salut") #f #f))
+  (doit "./ciao/hello/salut"
+	(#f #f #f reg-name "" #f path-rootless ("." "ciao" "hello" "salut") #f #f))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parse-relative-ref))
+(parametrise ((check-test-name	'parse-relative-ref))
 
-  (define-inline (doit in-string expected-value)
+  (define-syntax-rule (doit in-string expected-value)
     (check
 	(let-values (((authority userinfo host-type host port path-type path query fragment)
 		      (uri.parse-relative-ref (mkport in-string))))
@@ -2129,96 +2129,97 @@
 
 ;;; with authority, no scheme
 
-    (doit "//"
-	  ("" #f reg-name "" #f path-abempty () #f #f))
+  (doit "//"
+	("" #f reg-name "" #f path-abempty () #f #f))
 
-    (doit "//?query" ;empty authority
-    	  ("" #f reg-name "" #f path-abempty () "query" #f))
+  (doit "//?query" ;empty authority
+	("" #f reg-name "" #f path-abempty () "query" #f))
 
-    (doit "//#fragment"	;empty authority
-    	  ("" #f reg-name "" #f path-abempty () #f "fragment"))
+  (doit "//#fragment" ;empty authority
+	("" #f reg-name "" #f path-abempty () #f "fragment"))
 
-    (doit "///"	;empty authority
-    	  ("" #f reg-name "" #f path-abempty ("") #f #f))
+  (doit "///"	;empty authority
+	("" #f reg-name "" #f path-abempty ("") #f #f))
 
-    (doit "///?query" ;empty authority
-    	  ("" #f reg-name "" #f path-abempty ("") "query" #f))
+  (doit "///?query" ;empty authority
+	("" #f reg-name "" #f path-abempty ("") "query" #f))
 
-    (doit "///#fragment" ;empty authority
-    	  ("" #f reg-name "" #f path-abempty ("") #f "fragment"))
+  (doit "///#fragment" ;empty authority
+	("" #f reg-name "" #f path-abempty ("") #f "fragment"))
 
-    (doit "///ciao" ;empty authority
-    	  ("" #f reg-name "" #f path-abempty ("ciao") #f #f))
+  (doit "///ciao" ;empty authority
+	("" #f reg-name "" #f path-abempty ("ciao") #f #f))
 
-    (doit "//ciao.com"
-    	  ("ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
+  (doit "//ciao.com"
+	("ciao.com" #f reg-name "ciao.com" #f path-abempty () #f #f))
 
-    (doit "//ciao.com:8080"
-    	  ("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "//ciao.com:8080"
+	("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "//marco@ciao.com:8080"
-    	  ("marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
+  (doit "//marco@ciao.com:8080"
+	("marco@ciao.com:8080" "marco" reg-name "ciao.com" "8080" path-abempty () #f #f))
 
-    (doit "//ciao.com:8080/"
-    	  ("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
+  (doit "//ciao.com:8080/"
+	("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("") #f #f))
 
-    (doit "//ciao.com:8080/a"
-    	  ("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
+  (doit "//ciao.com:8080/a"
+	("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a") #f #f))
 
-    (doit "//ciao.com/a/b/c"
-    	  ("ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
+  (doit "//ciao.com/a/b/c"
+	("ciao.com" #f reg-name "ciao.com" #f path-abempty ("a" "b" "c") #f #f))
 
-    (doit "//ciao.com:8080/a/b/c"
-    	  ("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
+  (doit "//ciao.com:8080/a/b/c"
+	("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
 
-;;; no authority, emtpy path
+  ;;; no authority, emtpy path
 
-    (doit ""
-    	  (#f #f reg-name "" #f path-empty () #f #f))
+  (doit ""
+	(#f #f reg-name "" #f path-empty () #f #f))
 
-    (doit "?query"
-    	  (#f #f reg-name "" #f path-empty () "query" #f))
+  (doit "?query"
+	(#f #f reg-name "" #f path-empty () "query" #f))
 
-    (doit "#fragment"
-    	  (#f #f reg-name "" #f path-empty () #f "fragment"))
+  (doit "#fragment"
+	(#f #f reg-name "" #f path-empty () #f "fragment"))
 
-;;; no authority, absolute path
+  ;;; no authority, absolute path
 
-    (doit "/"
-    	  (#f #f reg-name "" #f path-absolute ("") #f #f))
+  (doit "/"
+	(#f #f reg-name "" #f path-absolute ("") #f #f))
 
-    (doit "/a///"
-    	  (#f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
+  (doit "/a///"
+	(#f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
 
-    (doit "/ciao"
-    	  (#f #f reg-name "" #f path-absolute ("ciao") #f #f))
+  (doit "/ciao"
+	(#f #f reg-name "" #f path-absolute ("ciao") #f #f))
 
-    (doit "/ciao/hello/salut"
-    	  (#f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
+  (doit "/ciao/hello/salut"
+	(#f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
 
 ;;; no authority, relative path rootless
 
-    (doit "./"
-    	  (#f #f reg-name "" #f path-noscheme ("." "") #f #f))
+  (doit "./"
+	(#f #f reg-name "" #f path-noscheme ("." "") #f #f))
 
-    (doit "./a///"
-    	  (#f #f reg-name "" #f path-noscheme ("." "a" "" "" "") #f #f))
+  (doit "./a///"
+	(#f #f reg-name "" #f path-noscheme ("." "a" "" "" "") #f #f))
 
-    (doit "./ciao"
-    	  (#f #f reg-name "" #f path-noscheme ("." "ciao") #f #f))
+  (doit "./ciao"
+	(#f #f reg-name "" #f path-noscheme ("." "ciao") #f #f))
 
-    (doit "./ciao/hello/salut"
-    	  (#f #f reg-name "" #f path-noscheme ("." "ciao" "hello" "salut") #f #f))
+  (doit "./ciao/hello/salut"
+	(#f #f reg-name "" #f path-noscheme ("." "ciao" "hello" "salut") #f #f))
 
 ;;; --------------------------------------------------------------------
 
-    (check	;whith scheme-like first segment
-	(guard (E ((uri.parser-error-condition? E)
-;;;(write (condition-message E))(newline)
-		   #t)
-		  (else E))
-	  (uri.parse-relative-ref (mkport "ci:ao/")))
-      => #t)
+  (check	;whith scheme-like first segment
+      (try
+	  (uri.parse-relative-ref (mkport "ci:ao/"))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
+    => #t)
 
   #t)
 

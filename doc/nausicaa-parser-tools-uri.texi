@@ -1717,9 +1717,9 @@ relative-part = "//" authority path-abempty
               | path-empty
 @end example
 
-The following bindings are exported by the @library{nausicaa
-parser-tools uri} library.  All the functions accept a @var{port}
-argument: it must be a binary input port supporting the port position.
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.  All the functions accept a @var{port} argument: it
+must be a binary input port supporting the port position.
 
 
 @defun parse-uri @var{port}
@@ -1728,22 +1728,22 @@ Read bytes from @var{PORT} expecting to get, from the first byte to the
 subcomponents.  This function does not decode the percent--encoded
 bytes.
 
-Return multiple value being:
+Return multiple values being:
 
-@table @code
+@table @var
 @item scheme
-A bytevector representing the @code{scheme} component; false if the
+A bytevector representing the @code{scheme} component; @false{} if the
 @code{scheme} is not present.  According to the @rfc{}: the
 @code{scheme} component is mandatory, but this function accepts its
 absence.
 
 @item authority
 A bytevector representing the @code{authority} component, not including
-the leading slashes; false if the @code{authority} is not present.
+the leading slashes; @false{} if the @code{authority} is not present.
 
 @item userinfo
 A bytevector representing the @code{userinfo} component, not including
-the ending at--sign; false if the @code{userinfo} is not present.
+the ending at--sign; @false{} if the @code{userinfo} is not present.
 
 @item host-type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
@@ -1755,7 +1755,7 @@ Host data represented as the second return value from @func{parse-host}
 and associated to the symbol above.
 
 @item port
-A bytevector representing the @code{port} component; false if the
+A bytevector representing the @code{port} component; @false{} if the
 @code{port} is not present.
 
 @item path-type
@@ -1767,21 +1767,21 @@ is present: this value is always @code{path-abempty}.
 A possibly empty list representing the path segments.
 
 @item query
-A bytevector representing the @code{query} component; false when the
+A bytevector representing the @code{query} component; @false{} when the
 @code{query} is not present.
 
 @item fragment
-A bytevector representing the @code{fragment} component; false when the
+A bytevector representing the @code{fragment} component; @false{} when the
 @code{fragment} is not present.
 @end table
 
 If the host cannot be classified in @code{reg-name}, @code{ip-literal}
 or @code{ipvfuture}: an exception is raised with condition components
-@condition{parser-error}, @condition{who}, @condition{message},
+@condition{uri-parser-error}, @condition{who}, @condition{message},
 @condition{irritants}, the irritants being the input port.
 
 If the path cannot be classified: an exception is raised with condition
-components @condition{parser-error}, @condition{who},
+components @condition{uri-parser-error}, @condition{who},
 @condition{message}, @condition{irritants}, the irritants being the
 input port.
 @end defun
@@ -1793,16 +1793,16 @@ Read bytes from @var{port} expecting to get, from the first byte to the
 into its subcomponents.  This function does not decode the
 percent--encoded bytes.
 
-Return multiple value being:
+Return multiple values being:
 
-@table @code
+@table @var
 @item authority
 A bytevector representing the @code{authority} component, not including
-the leading slashes; false if the @code{authority} is not present.
+the leading slashes; @false{} if the @code{authority} is not present.
 
 @item userinfo
 A bytevector representing the @code{userinfo} component, not including
-the ending at--sign; false if the @code{userinfo} is not present.
+the ending at--sign; @false{} if the @code{userinfo} is not present.
 
 @item host-type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
@@ -1814,7 +1814,7 @@ Host data represented as the second return value from @func{parse-host}
 and associated to the symbol above.
 
 @item port
-A bytevector representing the @code{port} component; false if the
+A bytevector representing the @code{port} component; @false{} if the
 @code{port} is not present.
 
 @item path-type
@@ -1826,29 +1826,29 @@ is present: this value is always @code{path-abempty}.
 A possibly empty list representing the path segments.
 
 @item query
-A bytevector representing the @code{query} component; false when the
+A bytevector representing the @code{query} component; @false{} when the
 @code{query} is not present.
 
 @item fragment
-A bytevector representing the @code{fragment} component; false when the
+A bytevector representing the @code{fragment} component; @false{} when the
 @code{fragment} is not present.
 @end table
 
 If the host cannot be classified in @code{reg-name}, @code{ip-literal}
 or @code{ipvfuture}: an exception is raised with condition components
-@condition{parser-error}, @condition{who}, @condition{message},
+@condition{uri-parser-error}, @condition{who}, @condition{message},
 @condition{irritants}, the irritants being the input port.
 
 If the path cannot be classified: an exception is raised with condition
-components @condition{parser-error}, @condition{who},
+components @condition{uri-parser-error}, @condition{who},
 @condition{message}, @condition{irritants}, the irritants being the
 input port.
 @end defun
 
 
 @defun parse-path @var{port}
-Parse from @var{port} a @code{path} component.  Return two values: false
-or one of the symbols: @code{path-empty}, @code{path-absolute},
+Parse from @var{port} a @code{path} component.  Return two values:
+@false{} or one of the symbols: @code{path-empty}, @code{path-absolute},
 @code{path-abempty}, @code{path-noscheme}, @code{path-rootless}; the
 list of bytevectors representing the segments, possibly null.
 
@@ -1858,7 +1858,7 @@ this function call.
 
 Notice that the @code{path} component can be followed only by @eof{}; if
 the path cannot be classified: an exception is raised with condition
-components @condition{parser-error}, @condition{who},
+components @condition{uri-parser-error}, @condition{who},
 @condition{message}, @condition{irritants}, the irritants being the
 input port.
 
@@ -1871,8 +1871,8 @@ input port.
 
 (uri.parse-path (mkport ""))  @result{} path-empty ()
 
-(uri.parse-path (mkport "?query"))  @error{} &parser-error
-(uri.parse-path (mkport "#fragment"))  @error{} &parser-error
+(uri.parse-path (mkport "?query"))  @error{} &uri-parser-error
+(uri.parse-path (mkport "#fragment"))  @error{} &uri-parser-error
 
 (uri.parse-path (mkport "/"))
 @result{} path-absolute (#vu8())
