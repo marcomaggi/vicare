@@ -29,7 +29,7 @@
 (library (nausicaa net addresses ipv6)
   (export
     <ipv6-address>			<ipv6-address-prefix>
-    <ipv6-address-fixnum>		<list-of-ipv6-address-fixnums>
+    <ipv6-address-fixnum>		<vector-of-ipv6-address-fixnums>
     <ipv6-address-prefix-length>)
   (import (nausicaa)
     (vicare unsafe operations))
@@ -42,11 +42,11 @@
   (predicate (lambda (N)
 	       ($fx<= N #xFFFF))))
 
-(define-label <list-of-ipv6-address-fixnums>
-  (parent <list>)
-  (predicate (lambda ((obj <list>))
-	       (and (= 8 (obj length))
-		    (for-all (<ipv6-address-fixnum>) obj)))))
+(define-label <vector-of-ipv6-address-fixnums>
+  (parent <vector>)
+  (predicate (lambda ((obj <vector>))
+	       (and ($fx= 8 (obj $length))
+		    (vector-for-all (<ipv6-address-fixnum>) obj)))))
 
 (define-label <ipv6-address-prefix-length>
   (parent <nonnegative-fixnum>)
@@ -68,8 +68,15 @@
 	(third   <ipv6-address-fixnum>) (second <ipv6-address-fixnum>)
 	(first   <ipv6-address-fixnum>) (zeroth <ipv6-address-fixnum>))
        (%make-address seventh sixth fifth fourth third second first zeroth))
-      (((addr-ell <list-of-ipv6-address-fixnums>))
-       (apply %make-address addr-ell))
+      (((addr <vector-of-ipv6-address-fixnums>))
+       (%make-address ($vector-ref addr 0)
+		      ($vector-ref addr 1)
+		      ($vector-ref addr 2)
+		      ($vector-ref addr 3)
+		      ($vector-ref addr 4)
+		      ($vector-ref addr 5)
+		      ($vector-ref addr 6)
+		      ($vector-ref addr 7)))
       )))
 
   (fields (mutable cached-bignum)
@@ -174,9 +181,9 @@
   (parent <ipv6-address>)
 
   (protocol (lambda (make-address)
-	      (lambda ((addr-ell       <list-of-ipv6-address-fixnums>)
+	      (lambda ((addr           <vector-of-ipv6-address-fixnums>)
 		  (number-of-bits <ipv6-address-prefix-length>))
-		((make-address addr-ell) number-of-bits #f))))
+		((make-address addr) number-of-bits #f))))
 
   (fields (immutable (prefix-length <ipv6-address-prefix-length>))
 	  (mutable cached-string))
