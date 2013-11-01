@@ -1272,8 +1272,8 @@ the port position is left pointing to the byte after the last
 accumulated one.
 
 If an invalid percent--encoded sequence is read, an exception is raised
-with type @condition{parser-error}; the port position is rewind to the
-one before this function call.
+with type @condition{uri-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 
@@ -1292,8 +1292,8 @@ byte excluded; the port position is left pointing to the byte after the
 last accumulated one.
 
 If an invalid percent--encoded sequence is read, an exception is raised
-with type @condition{parser-error}; the port position is rewind to the
-one before this function call.
+with type @condition{uri-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 
@@ -1353,7 +1353,7 @@ must be a binary input port supporting the port position.
 @defun parse-path-empty @var{port}
 Parse a @code{path-empty} component.  Lookahead one byte from
 @var{port}: if it is @eof{} or a question mark or number--sign in
-@ascii{} encoding: return null; else return false.
+@ascii{} encoding: return null; else return @false{}.
 
 In any case leave the port position where it was before the function
 call.
@@ -1362,28 +1362,28 @@ call.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path-empty (make-lexer-port ""))
+(uri.parse-path-empty (mkport ""))
 @result{} ()
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (uri.parse-path-empty P)      @result{} #f
   (ascii->string
     (get-bytevector-some P)))   @result{} "ciao"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (uri.parse-path-empty P)      @result{} #f
   (ascii->string
     (get-bytevector-some P)))   @result{} "/ciao"
 
-(let ((P (make-lexer-port "?query")))
+(let ((P (mkport "?query")))
   (uri.parse-path-empty P)      @result{} ()
   (ascii->string
     (get-bytevector-some P)))   @result{} "?query"
 
-(let ((P (make-lexer-port "#fragment")))
+(let ((P (mkport "#fragment")))
   (uri.parse-path-empty P)      @result{} ()
   (ascii->string
     (get-bytevector-some P)))   @result{} "#fragment"
@@ -1409,46 +1409,46 @@ one before this function call.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path-abempty (make-lexer-port ""))   @result{} ()
+(uri.parse-path-abempty (mkport ""))   @result{} ()
 
-(let ((P (make-lexer-port "?query")))
-  (uri.parse-path-abempty P)                @result{} #f
+(let ((P (mkport "?query")))
+  (uri.parse-path-abempty P)                @result{} ()
   (ascii->string (get-bytevector-some P)))  @result{} "?query"
 
-(let ((P (make-lexer-port "#fragment")))
-  (uri.parse-path-abempty P)                @result{} #f
+(let ((P (mkport "#fragment")))
+  (uri.parse-path-abempty P)                @result{} ()
   (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (map ascii->string
-    (uri.parse-path-abempty P))         @result{} ("ciao")
-  (eof-object? (lookahead-u8 P)))       @result{} #t
+    (uri.parse-path-abempty P))             @result{} ("ciao")
+  (eof-object? (lookahead-u8 P)))           @result{} #t
 
-(let ((P (make-lexer-port "/ciao?query")))
+(let ((P (mkport "/ciao?query")))
   (map ascii->string
     (uri.parse-path-abempty P))             @result{} ("ciao")
   (ascii->string (get-bytevector-some P)))  @result{} "?query"
 
-(let ((P (make-lexer-port "/ciao#fragment")))
+(let ((P (mkport "/ciao#fragment")))
   (map ascii->string
     (uri.parse-path-abempty P))             @result{} ("ciao")
   (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
 
-(let ((P (make-lexer-port "/ciao/hello")))
+(let ((P (mkport "/ciao/hello")))
   (map ascii->string
     (uri.parse-path-abempty P))    @result{} ("ciao" "hello")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "/ciao/")))
+(let ((P (mkport "/ciao/")))
   (map ascii->string
     (uri.parse-path-abempty P))    @result{} ("ciao" "")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
 (map ascii->string
-  (uri.parse-path-abempty (make-lexer-port "///")))
+  (uri.parse-path-abempty (mkport "///")))
 @result{} ("" "" "")
 @end example
 @end defun
@@ -1458,7 +1458,8 @@ one before this function call.
 Parse from @var{port} a @code{path-absolute} component; it is like
 @func{parse-path-abempty}, but expects a slash character as first byte
 and a non--slash as second byte.  Return a possibly empty list holding
-bytevectors representing the segments, or false.
+bytevectors representing the segments, or @false{} if invalid bytes are
+read from the port.
 
 If successful: leave the port position to the byte after the last read
 byte; if an error occurs: rewind the port position to the one before
@@ -1471,56 +1472,56 @@ no segments attached.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path-absolute (make-lexer-port ""))
+(uri.parse-path-absolute (mkport ""))
 @result{} #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (uri.parse-path-absolute P)               @result{} #f
   (ascii->string (get-bytevector-some P)))  @result{} "ciao"
 
-(let ((P (make-lexer-port "/")))
+(let ((P (mkport "/")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("")
     (eof-object? (lookahead-u8 P)))         @result{} #t
 
-(let ((P (make-lexer-port "//")))
+(let ((P (mkport "//")))
   (uri.parse-path-absolute P)               @result{} #f
   (ascii->string (get-bytevector-some P)))  @result{} "//"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("ciao")
   (eof-object? (lookahead-u8 P)))           @result{} #t
 
-(let ((P (make-lexer-port "/ciao/salut")))
+(let ((P (mkport "/ciao/salut")))
   (map ascii->string
     (uri.parse-path-absolute P))   @result{} ("ciao" "salut")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "/ciao/")))
+(let ((P (mkport "/ciao/")))
   (map ascii->string
     (uri.parse-path-absolute P))   @result{} ("ciao" "")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "/?query")))
+(let ((P (mkport "/?query")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("")
   (ascii->string (get-bytevector-some P)))  @result{} "?query"
 
-(let ((P (make-lexer-port "/ciao?query")))
+(let ((P (mkport "/ciao?query")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("ciao")
   (ascii->string (get-bytevector-some P)))  @result{} "?query"
 
-(let ((P (make-lexer-port "/#fragment")))
+(let ((P (mkport "/#fragment")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("")
   (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
 
-(let ((P (make-lexer-port "/ciao#fragment")))
+(let ((P (mkport "/ciao#fragment")))
   (map ascii->string
     (uri.parse-path-absolute P))            @result{} ("ciao")
   (ascii->string (get-bytevector-some P)))  @result{} "#fragment"
@@ -1530,7 +1531,8 @@ no segments attached.
 
 @defun parse-path-noscheme @var{port}
 Parse from @var{port} a @code{path-noscheme} component.  Return a
-non--empty list holding bytevectors representing the segments, or false.
+non--empty list holding bytevectors representing the segments, or
+@false{} if invalid bytes are read from the port.
 
 If successful: leave the port position to the byte after the last read
 byte; if an error occurs: rewind the port position to the one before
@@ -1544,61 +1546,61 @@ component; the first @code{segment} must not contain a colon caracter.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path-noscheme (make-lexer-port "")) @result{} #f
+(uri.parse-path-noscheme (mkport "")) @result{} #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (map ascii->string
     (uri.parse-path-noscheme P))   @result{} ("ciao")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "/")))
+(let ((P (mkport "/")))
   (uri.parse-path-noscheme P)               @result{} #f
   (ascii->string (get-bytevector-some P)))  @result{} "/"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (uri.parse-path-noscheme P)               @result{} #f
   (ascii->string (get-bytevector-some P)))  @result{} "/"
 
-(let ((P (make-lexer-port "ciao/hello")))
+(let ((P (mkport "ciao/hello")))
   (map ascii->string
     (uri.parse-path-noscheme P))   @result{} ("ciao" "hello")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "ciao/")))
+(let ((P (mkport "ciao/")))
   (map ascii->string
     (uri.parse-path-noscheme P))  @result{} ("ciao" "")
   (eof-object? (lookahead-u8 P))) @result{} #t
 
-(let ((P (make-lexer-port "ciao/he:llo")))
+(let ((P (mkport "ciao/he:llo")))
   (map ascii->string
    (uri.parse-path-noscheme P))   @result{} ("ciao" "he:llo")
   (eof-object? (lookahead-u8 P))) @result{} #t
 
-(let ((P (make-lexer-port "ci:ao/hello")))
+(let ((P (mkport "ci:ao/hello")))
   (uri.parse-path-noscheme P)     @result{} #f
   (ascii->string
     (get-bytevector-some P)))     @result{} "ci:ao/hello"
 
-(let ((P (make-lexer-port "?query")))
+(let ((P (mkport "?query")))
   (uri.parse-path-noscheme P)     @result{} #f
   (ascii->string
     (get-bytevector-some P)))     @result{} "?query"
 
-(let ((P (make-lexer-port "hello?ciao")))
+(let ((P (mkport "hello?ciao")))
   (map ascii->string
    (uri.parse-path-noscheme P))   @result{} ("hello")
   (ascii->string
     (get-bytevector-some P)))     @result{} "?ciao"
 
-(let ((P (make-lexer-port "#fragment")))
+(let ((P (mkport "#fragment")))
   (uri.parse-path-noscheme P)     @result{} #f
   (ascii->string
     (get-bytevector-some P)))     @result{} "#fragment"
 
-(let ((P (make-lexer-port "hello#fragment")))
+(let ((P (mkport "hello#fragment")))
   (map ascii->string
     (uri.parse-path-noscheme P))  @result{} ("hello")
   (ascii->string
@@ -1611,7 +1613,7 @@ component; the first @code{segment} must not contain a colon caracter.
 Parse from @var{port} a @code{path-rootless} component; it is like
 @func{parse-path-abempty}, but expects a non--slash character as first
 byte.  Return a non--empty list holding bytevectors representing the
-segments, or false.
+segments, or @false{} if invalid bytes are read from the port.
 
 If successful: leave the port position to the byte after the last read
 byte; if an error occurs: rewind the port position to the one before
@@ -1625,57 +1627,57 @@ component.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path-rootless (make-lexer-port ""))  @result{} #f
+(uri.parse-path-rootless (mkport ""))  @result{} #f
 
-(let ((P (make-lexer-port "ciao")))
+(let ((P (mkport "ciao")))
   (map ascii->string
     (uri.parse-path-rootless P))   @result{} ("ciao")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "/")))
+(let ((P (mkport "/")))
   (uri.parse-path-rootless P)      @result{} #f
   (ascii->string
     (get-bytevector-some P)))      @result{} "/"
 
-(let ((P (make-lexer-port "/ciao")))
+(let ((P (mkport "/ciao")))
   (uri.parse-path-rootless P)      @result{} #f
   (ascii->string
     (get-bytevector-some P)))      @result{} "/ciao"
 
-(let ((P (make-lexer-port "ciao/hello")))
+(let ((P (mkport "ciao/hello")))
   (map ascii->string
     (uri.parse-path-rootless P))   @result{} ("ciao" "hello")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "ciao/")))
+(let ((P (mkport "ciao/")))
   (map ascii->string
     (uri.parse-path-rootless P))   @result{} ("ciao" "")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "ci:ao/hel:lo")))
+(let ((P (mkport "ci:ao/hel:lo")))
   (map ascii->string
     (uri.parse-path-rootless P))   @result{} ("ci:ao" "hel:lo")
   (eof-object? (lookahead-u8 P)))  @result{} #t
 
-(let ((P (make-lexer-port "?query")))
+(let ((P (mkport "?query")))
   (uri.parse-path-rootless P)      @result{} #f
   (ascii->string
     (get-bytevector-some P))       @result{} "?query"
 
-(let ((P (make-lexer-port "ciao?query")))
+(let ((P (mkport "ciao?query")))
   (uri.parse-path-rootless P)      @result{} ("ciao")
   (ascii->string
     (get-bytevector-some P))       @result{} "?query"
 
-(let ((P (make-lexer-port "#fragment")))
+(let ((P (mkport "#fragment")))
   (uri.parse-path-rootless P)      @result{} #f
   (ascii->string
     (get-bytevector-some P))       @result{} "#fragment"
 
-(let ((P (make-lexer-port "ciao#fragment")))
+(let ((P (mkport "ciao#fragment")))
   (uri.parse-path-rootless P)      @result{} ("ciao")
   (ascii->string
     (get-bytevector-some P))       @result{} "#fragment"
@@ -1864,49 +1866,49 @@ input port.
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
-(define (make-lexer-port S)
+(define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path (make-lexer-port ""))  @result{} path-empty ()
+(uri.parse-path (mkport ""))  @result{} path-empty ()
 
-(uri.parse-path (make-lexer-port "?query"))  @error{} &parser-error
-(uri.parse-path (make-lexer-port "#fragment"))  @error{} &parser-error
+(uri.parse-path (mkport "?query"))  @error{} &parser-error
+(uri.parse-path (mkport "#fragment"))  @error{} &parser-error
 
-(uri.parse-path (make-lexer-port "/"))
+(uri.parse-path (mkport "/"))
 @result{} path-absolute (#vu8())
 
 (let*-values
-    (((P)          (make-lexer-port "/ciao/hello/salut"))
+    (((P)          (mkport "/ciao/hello/salut"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-absolute
   (map ascii->string path))    @result{} ("ciao" "hello" "salut")
 
 (let*-values
-    (((P)          (make-lexer-port "//"))
+    (((P)          (mkport "//"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-abempty
   (map ascii->string path))    @result{} ("" "")
 
 (let*-values
-    (((P)          (make-lexer-port "///"))
+    (((P)          (mkport "///"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-abempty
   (map ascii->string path))    @result{} ("" "" "")
 
 (let*-values
-    (((P)          (make-lexer-port "//ciao/"))
+    (((P)          (mkport "//ciao/"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-abempty
   (map ascii->string path))    @result{} ("" "ciao" "")
 
 (let*-values
-    (((P)          (make-lexer-port "ciao/hello"))
+    (((P)          (mkport "ciao/hello"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-noscheme
   (map ascii->string path))    @result{} ("ciao" "hello")
 
 (let*-values
-    (((P)          (make-lexer-port "ci:ao/hello"))
+    (((P)          (mkport "ci:ao/hello"))
      ((type path)  (uri.parse-path P)))
   type                         @result{} path-rootless
   (map ascii->string path))    @result{} ("ci:ao" "hello")
