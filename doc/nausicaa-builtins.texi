@@ -1046,9 +1046,29 @@ Conventional type for objects satisfying @func{bytevector?}.
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{nonempty-bytevector}
+Conventional type for objects satisfying @func{bytevector?} and having
+non--zero length.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Accessors
+
+
 @defcv {Immutable virtual field} @aclass{bytevector} length
+@defcvx {Immutable virtual field} @aclass{bytevector} $length
 Access the length of the bytevector.
 @end defcv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @aclass{bytevector} @aclass{bytevector} copy
+Build and return a copy of the instance.
+@end deftypemethod
 
 @c page
 @node builtins bytevectors 8
