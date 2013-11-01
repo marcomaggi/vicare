@@ -5,6 +5,7 @@
 @menu
 * net addresses ipv4::          IPv4 address objects.
 * net addresses ipv6::          IPv6 address objects.
+* net addresses uri::           Uniform Resource Identifier objects.
 @end menu
 
 @c page
@@ -453,5 +454,249 @@ fixnum in the range @math{[0, 128]}.  It is derived from
 @class{nonnegative-fixnum} as defined by @library{nausicaa language
 builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
+
+@c page
+@node net addresses uri
+@subsection Uniform Resource Identifier objects
+
+
+@cindex @library{nausicaa net address uri}, library
+@cindex Library @library{nausicaa net address uri}
+
+
+The library @library{nausicaa net addresses uri} exports utilities to
+handle Uniform Reource Identifiers (@uri{}) specifications, according to
+@rfc{} 2986.  To parse the string representation of @uri{}s we can use
+the library @library{nausicaa parser-tools uri}.
+
+The @oopp{} @api{} to @uri{} parsing and producing is really basic; this
+is because advanced handling of @uri{}s should be merged with
+requirements of specific @uri{} schemes, like @code{http:} and
+@code{file:}.
+
+@menu
+* net addresses uri uri::       Uniform Resource Identifiers objects.
+* net addresses uri ref::       Relative references objects.
+@end menu
+
+@c page
+@node net addresses uri uri
+@subsubsection Uniform Resource Identifiers objects
+
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library.
+
+
+@deftp Class @aclass{uri}
+Represents a parsed @code{URI} component.
+@end deftp
+
+
+@defcv {Mutable field} @aclass{uri} scheme
+The @code{scheme} component as a bytevector.  Remember that
+@code{scheme} is mandatory and does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} authority
+The @code{authority} component as a bytevector, or false if there is no
+@code{authority} component.  Percent--encoded characters are not decoded
+in this field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} userinfo
+The @code{userinfo} component as a percent--decoded bytevector
+@strong{not} containing the trailing at character, or false if there is
+no @code{userinfo} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host-type
+A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.  When @code{host-type} is
+@code{reg-name}: the value is a percent--decoded bytevector.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} port
+The @code{port} component as a bytevector, or false if no @code{port} is
+present.  Remember that @code{port} does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} path-type
+A Scheme symbol among: @code{path-abempty}, @code{path-empty},
+@code{path-rootless}, @code{path-absolute}; represents the type of the
+@code{path} field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} path
+A possibly empty list holding percent--decoded bytevectors representing
+the path segments.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} query
+The @code{query} component as a percent--decoded bytevector @strong{not}
+containing the leading question mark, or false if there is no
+@code{query} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} fragment
+The @code{fragment} component as a percent--decoded bytevector
+@strong{not} containing the leading number--sign, or false if there is
+no @code{fragment} component.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{uri} bytevector
+A bytevector representing the whole @uri{}.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{uri} string
+A string representing the whole @uri{}; it is built from the
+@code{bytevector} field with the @func{to-string} function.
+@end defcv
+
+
+@defop Syntax @aclass{uri} make* @aclass{uri} @meta{source-bytevector}
+Build and return a new @class{uri} instance holding fields from parsing
+@var{source-bytevector}; it relies on parsing with @func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{uri} make @aclass{uri} @meta{clause} ...
+@defopx {Auxiliary Syntax} @aclass{uri} source-bytevector @meta{expr}
+Build and return a new @class{uri} instance holding fields from parsing
+@var{expr}, which must be a bytevector; it relies on parsing with
+@func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{uri} is-a? @var{expr} @aclass{uri}
+Return true if @var{expr} evaluates to an instance of @class{uri}.
+@end defop
+
+@c page
+@node net addresses uri ref
+@subsubsection Relative references objects
+
+
+The following bindings are exported by the @library{nausicaa parser-tools uri}
+library.
+
+
+@deftp Class @aclass{relative-ref}
+Represents a parsed @code{relative-ref} component.
+@end deftp
+
+
+@defcv {Mutable field} @aclass{relative-ref} authority
+The @code{authority} component as a bytevector, or false if there is no
+@code{authority} component.  Percent--encoded characters are not decoded
+in this field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} userinfo
+The @code{userinfo} component as a percent--decoded bytevector
+@strong{not} containing the trailing at character, or false if there is
+no @code{userinfo} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host-type
+A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
+value is @code{reg-name}.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{uri} host
+Host data represented as the second return value from @func{parse-host}
+and associated to the symbol above.  When @code{host-type} is
+@code{reg-name}: the value is a percent--decoded bytevector.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} port
+The @code{port} component as a bytevector, or false if no @code{port} is
+present.  Remember that @code{port} does not contain percent--encoded
+characters.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} path-type
+A Scheme symbol among: @code{path-abempty}, @code{path-empty},
+@code{path-noscheme}, @code{path-absolute}; represents the type of the
+@code{path} field.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} path
+A possibly empty list holding percent--decoded bytevectors representing
+the path segments.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} query
+The @code{query} component as a percent--decoded bytevector @strong{not}
+containing the leading question mark, or false if there is no
+@code{query} component.
+@end defcv
+
+
+@defcv {Mutable field} @aclass{relative-ref} fragment
+The @code{fragment} component as a percent--decoded bytevector
+@strong{not} containing the leading number--sign, or false if there is
+no @code{fragment} component.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{relative-ref} bytevector
+A bytevector representing the whole @uri{}.
+@end defcv
+
+
+@defcv {Immutable virtual field} @aclass{relative-ref} string
+A string representing the whole @uri{}; it is built from the
+@code{bytevector} field with the @func{to-string} function.
+@end defcv
+
+
+@defop Syntax @aclass{relative-ref} make* @aclass{relative-ref} @meta{source-bytevector}
+Build and return a new @class{relative-ref} instance holding fields from
+parsing @var{source-bytevector}; it relies on parsing with
+@func{parse-uri}.
+@end defop
+
+
+@defop Syntax @aclass{relative-ref} make @aclass{relative-ref} @meta{clause} ...
+@defopx {Auxiliary Syntax} @aclass{relative-ref} source-bytevector @meta{expr}
+Build and return a new @class{relative-ref} instance holding fields from
+parsing @var{expr}, which must be a bytevector; it relies on parsing
+with @func{parse-uri}.
+@end defop
+
+
+
+@defop Syntax @aclass{relative-ref} is-a? @var{expr} @aclass{relative-ref}
+Return true if @var{expr} evaluates to an instance of
+@class{relative-ref}.
+@end defop
 
 @c end of file

@@ -28,7 +28,7 @@
 #!vicare
 (import (nausicaa)
   (prefix (nausicaa parser-tools uri)  uri.)
-  (prefix (nausicaa net addresses uri) uri.)
+  #;(prefix (nausicaa net addresses uri) uri.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
