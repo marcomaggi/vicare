@@ -48,7 +48,7 @@ Represents an IPv4 address.
 @defop {Common constructor} @aclass{ipv4-address} constructor @var{numbers}
 @defopx {Common constructor} @aclass{ipv4-address} constructor @var{third} @var{second} @var{first} @var{zeroth}
 Build and return a new object of type @class{ipv4-address}.  When
-applied to a single argument: @var{numbers} must be a list of @math{4}
+applied to a single argument: @var{numbers} must be a vector of @math{4}
 fixnums in the range @math{[0, 255]}.  When applied to @math{4}
 arguments: each one must be a fixnum in the range @math{[0, 255]}.
 @end defop
@@ -188,9 +188,10 @@ Represents an IPv4 address prefix; it is derived from
 
 @defop {Common constructor} @aclass{ipv4-address-prefix} constructor @var{numbers} @var{prefix-length}
 Build and return a new object of type @class{ipv4-address-prefix}.
-@var{numbers} must be a list of @math{4} fixnums in the range @math{[0,
-255]}; @var{prefix-length} must be a non--negative fixnum specifying how
-many of the leftmost contiguous bits of the address comprise the prefix.
+@var{numbers} must be a vector of @math{4} fixnums in the range
+@math{[0, 255]}; @var{prefix-length} must be a non--negative fixnum
+specifying how many of the leftmost contiguous bits of the address
+comprise the prefix.
 @end defop
 
 
@@ -245,11 +246,11 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 
-@deftp Label @aclass{list-of-ipv4-address-fixnums}
-Label type whose predicate tests that the object is a list of @math{4}
+@deftp Label @aclass{vector-of-ipv4-address-fixnums}
+Label type whose predicate tests that the object is a vector of @math{4}
 items all being of type @class{ipv4-address-fixnum}.  It is derived from
-@class{list} as defined by @library{nausicaa language builtins},
-@ref{builtins lists, List label}.
+@class{vector} as defined by @library{nausicaa language builtins},
+@ref{builtins vectors, Vector type}.
 @end deftp
 
 
@@ -301,7 +302,7 @@ Represents an IPv6 address.
 @defop {Common constructor} @aclass{ipv6-address} constructor @var{numbers}
 @defopx {Common constructor} @aclass{ipv6-address} constructor @var{seventh} @var{sixth} @var{fifth} @var{fourth} @var{third} @var{second} @var{first} @var{zeroth}
 Build and return a new object of type @class{ipv6-address}.  When
-applied to a single argument: @var{numbers} must be a list of @math{8}
+applied to a single argument: @var{numbers} must be a vector of @math{8}
 fixnums in the range @code{[0, #xFFFF]} representing the address
 components.  When applied to @math{8} arguments: each must be a fixnum
 in the range @code{[0, #xFFFF]} representing an address component.
@@ -383,10 +384,10 @@ Represents an IPv6 address prefix; it is derived from
 
 @defop {Common constructor} @aclass{ipv6-address-prefix} constructor @var{numbers} @var{prefix-length}
 Build and return a new object of type @class{ipv6-address-prefix}.
-@var{numbers} must be a list of @math{8} fixnums in the range @code{[0,
-#xFFFF]} representing the address components.  @var{prefix-length} must
-be a non--negative fixnum specifying how many of the leftmost contiguous
-bits of the address comprise the prefix.
+@var{numbers} must be a vector of @math{8} fixnums in the range
+@code{[0, #xFFFF]} representing the address components.
+@var{prefix-length} must be a non--negative fixnum specifying how many
+of the leftmost contiguous bits of the address comprise the prefix.
 @end defop
 
 
@@ -396,7 +397,7 @@ the common constructor.
 
 @example
 (<ipv6-address-prefix> O
-  (<> ('(1 2 3 4 5 6 7 8) 10)))
+  (<> ('#(1 2 3 4 5 6 7 8) 10)))
 
 (list (O third) (O second) (O first) (O zeroth))
 @result{} (5 6 7 8)
@@ -438,11 +439,11 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 
-@deftp Label @aclass{list-of-ipv6-address-fixnums}
-Label type whose predicate tests that the object is a list of @math{8}
+@deftp Label @aclass{vector-of-ipv6-address-fixnums}
+Label type whose predicate tests that the object is a vector of @math{8}
 items all being of type @class{ipv6-address-fixnum}.  It is derived from
-@class{list} as defined by @library{nausicaa language builtins},
-@ref{builtins lists, List label}.
+@class{vector} as defined by @library{nausicaa language builtins},
+@ref{builtins vectors, Vector type}.
 @end deftp
 
 

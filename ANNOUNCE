@@ -40,7 +40,13 @@ this project has a mailing list:
 Notes for revision 0.3d7
 ------------------------
 
-*
+* BACKWARDS  INCOMPATIBILITY Some  parser  functions for  IPv4 and  IPv6
+  addresses from the hierarchy (nausicaa  parser-tools ---) now return a
+  vector rather than a list.
+
+* BACKWARDS INCOMPATIBILITY Some constructor functions for IPv4 and IPv6
+  address labels  from the  hierarchy (nausicaa  net addresses  ---) now
+  accept a vector as argument rather than a list.
 
 
 Notes for revision 0.3d6

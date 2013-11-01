@@ -29,7 +29,7 @@
 (library (nausicaa net addresses ipv4)
   (export
     <ipv4-address>			<ipv4-address-prefix>
-    <ipv4-address-fixnum>		<list-of-ipv4-address-fixnums>
+    <ipv4-address-fixnum>		<vector-of-ipv4-address-fixnums>
     <ipv4-address-prefix-length>)
   (import (nausicaa)
     (vicare unsafe operations))
@@ -42,11 +42,11 @@
   (predicate (lambda (N)
 	       ($fx<= N 255))))
 
-(define-label <list-of-ipv4-address-fixnums>
-  (parent <list>)
-  (predicate (lambda ((obj <list>))
-	       (and (= 4 (obj length))
-		    (for-all (<ipv4-address-fixnum>) obj)))))
+(define-label <vector-of-ipv4-address-fixnums>
+  (parent <vector>)
+  (predicate (lambda ((obj <vector>))
+	       (and ($fx= 4 (obj $length))
+		    (vector-for-all (<ipv4-address-fixnum>) obj)))))
 
 (define-label <ipv4-address-prefix-length>
   (parent <nonnegative-fixnum>)
@@ -65,8 +65,11 @@
       (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
 	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
        (%make-address third second first zeroth))
-      (((addr-ell <list-of-ipv4-address-fixnums>))
-       (apply %make-address addr-ell))
+      (((addr <vector-of-ipv4-address-fixnums>))
+       (%make-address ($vector-ref addr 0)
+		      ($vector-ref addr 1)
+		      ($vector-ref addr 2)
+		      ($vector-ref addr 3)))
       )))
 
   (fields (mutable memoized-bignum-rep)
@@ -178,9 +181,9 @@
   (parent <ipv4-address>)
 
   (protocol (lambda (make-address)
-	      (lambda ((addr-ell <list-of-ipv4-address-fixnums>)
+	      (lambda ((addr <vector-of-ipv4-address-fixnums>)
 		  (number-of-bits <ipv4-address-prefix-length>))
-		((make-address addr-ell) number-of-bits #f))))
+		((make-address addr) number-of-bits #f))))
 
   (fields (immutable (prefix-length <ipv4-address-prefix-length>))
 	  (mutable   memoized-string-rep))

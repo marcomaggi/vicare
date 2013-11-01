@@ -49,7 +49,8 @@
     (prefix (vicare language-extensions makers) mk.)
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens) lt.)
-    (prefix (nausicaa parser-tools source-locations) sl.))
+    (prefix (nausicaa parser-tools source-locations) sl.)
+    (vicare unsafe operations))
 
 
 ;;;; conditions and error handlers
@@ -112,26 +113,25 @@
     (define who 'parse-ipv4-address-only)
     (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
 	   (parser	(%make-ipv4-address-parser who lexer the-string))
-	   (ell		(parser)))
-      (if (= 4 (length ell))
-	  ell
+	   (addr	(list->vector (parser))))
+      (if ($fx= 4 ($vector-length addr))
+	  addr
 	(%raise-parser-error who the-string))))
 
   (define (parse-ipv4-address-prefix the-string)
     (define who 'parse-ipv4-address-prefix)
     (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
 	   (parser	(%make-ipv4-address-parser who lexer the-string))
-	   (ell		(parser)))
-      (if (= 5 (length ell))
-	  (let ((rell (reverse ell)))
-	    (values (reverse (cdr rell)) (caar rell)))
+	   (addr	(list->vector (parser))))
+      (if ($fx= 5 ($vector-length addr))
+	  (values ($subvector addr 0 4) ($car ($vector-ref addr 4)))
 	(%raise-parser-error who the-string))))
 
   (define (parse-ipv4-address the-string)
     (define who 'parse-ipv4-address)
     (let* ((lexer	(make-ipv4-address-lexer (lex.string: the-string)))
 	   (parser	(%make-ipv4-address-parser who lexer the-string)))
-      (parser)))
+      (list->vector (parser))))
 
 ;;; --------------------------------------------------------------------
 

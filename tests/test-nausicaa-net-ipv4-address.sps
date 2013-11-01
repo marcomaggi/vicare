@@ -402,11 +402,11 @@
 
   (check
       (parse-ipv4-address-only "1.2.3.4")
-    => '(1 2 3 4))
+    => '#(1 2 3 4))
 
   (check
       (parse-ipv4-address-only "192.168.99.1")
-    => '(192 168 99 1))
+    => '#(192 168 99 1))
 
 ;;;
 
@@ -465,13 +465,13 @@
       (receive (N P)
 	  (parse-ipv4-address-prefix "1.2.3.4/8")
 	(list N P))
-    => '((1 2 3 4) 8))
+    => '(#(1 2 3 4) 8))
 
   (check
       (receive (N P)
 	  (parse-ipv4-address-prefix "192.168.99.1/8")
 	(list N P))
-    => '((192 168 99 1) 8))
+    => '(#(192 168 99 1) 8))
 
 ;;;
 
@@ -528,19 +528,19 @@
 
   (check
       (parse-ipv4-address "1.2.3.4")
-    => '(1 2 3 4))
+    => '#(1 2 3 4))
 
   (check
       (parse-ipv4-address "192.168.99.1")
-    => '(192 168 99 1))
+    => '#(192 168 99 1))
 
   (check
       (parse-ipv4-address "1.2.3.4/8")
-    => '(1 2 3 4 (8)))
+    => '#(1 2 3 4 (8)))
 
   (check
       (parse-ipv4-address "192.168.99.1/8")
-    => '(192 168 99 1 (8)))
+    => '#(192 168 99 1 (8)))
 
 ;;;
 

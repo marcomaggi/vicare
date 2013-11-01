@@ -122,10 +122,12 @@
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
-	(receive-and-return (addr-ell^)
+	(receive (addr-ell^)
 	    (ipv6-address-parsed-list-expand addr-ell)
 	  (if addr-ell^
-	      ($set-last-pair! addr-ell^ (list (list number-of-bits-in-prefix)))
+	      (begin
+		($set-last-pair! addr-ell^ (list (list number-of-bits-in-prefix)))
+		(list->vector addr-ell^))
 	    (%raise-parser-error who the-string))))))
 
   (define (parse-ipv6-address-only the-string)
@@ -137,8 +139,10 @@
 	  (ipv6-address-parsed-list-split ell)
 	(when number-of-bits-in-prefix
 	  (%raise-parser-error who the-string))
-	(let ((addr-ell (ipv6-address-parsed-list-expand addr-ell)))
-	  (or addr-ell (%raise-parser-error who the-string))))))
+	(cond ((ipv6-address-parsed-list-expand addr-ell)
+	       => list->vector)
+	      (else
+	       (%raise-parser-error who the-string))))))
 
   (define (parse-ipv6-address-prefix the-string)
     (define who 'parse-ipv6-address-prefix)
@@ -149,10 +153,11 @@
 	  (ipv6-address-parsed-list-split ell)
 	(unless number-of-bits-in-prefix
 	  (%raise-parser-error who the-string))
-	(let ((addr-ell (ipv6-address-parsed-list-expand addr-ell)))
-	  (if addr-ell
-	      (values addr-ell number-of-bits-in-prefix)
-	    (%raise-parser-error who the-string))))))
+	(cond ((ipv6-address-parsed-list-expand addr-ell)
+	       => (lambda (addr-ell)
+		    (values (list->vector addr-ell) number-of-bits-in-prefix)))
+	      (else
+	       (%raise-parser-error who the-string))))))
 
 ;;; --------------------------------------------------------------------
 

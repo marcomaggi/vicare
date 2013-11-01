@@ -477,123 +477,123 @@
 
   (check
       (parse-ipv6-address "1:2:3:4:5:6:7:8")
-    => '(1 2 3 4 5 6 7 8 (#f)))
+    => '#(1 2 3 4 5 6 7 8 (#f)))
 
 ;;; --------------------------------------------------------------------
 ;;; compressed format (omitting zeros)
 
   (check
       (parse-ipv6-address "::")
-    => '(0 0 0 0 0 0 0 0 (#f)))
+    => '#(0 0 0 0 0 0 0 0 (#f)))
 
   (check
       (parse-ipv6-address "::1")
-    => '(0 0 0 0 0 0 0 1 (#f)))
+    => '#(0 0 0 0 0 0 0 1 (#f)))
 
   (check
       (parse-ipv6-address "1::")
-    => '(1 0 0 0 0 0 0 0 (#f)))
+    => '#(1 0 0 0 0 0 0 0 (#f)))
 
   (check
       (parse-ipv6-address "1::2")
-    => '(1 0 0 0 0 0 0 2 (#f)))
+    => '#(1 0 0 0 0 0 0 2 (#f)))
 
   (check
       (parse-ipv6-address "1:2::3")
-    => '(1 2 0 0 0 0 0 3 (#f)))
+    => '#(1 2 0 0 0 0 0 3 (#f)))
 
   (check
       (parse-ipv6-address "1::2:3")
-    => '(1 0 0 0 0 0 2 3 (#f)))
+    => '#(1 0 0 0 0 0 2 3 (#f)))
 
   (check
       (parse-ipv6-address "1:2::3:4")
-    => '(1 2 0 0 0 0 3 4 (#f)))
+    => '#(1 2 0 0 0 0 3 4 (#f)))
 
   (check
       (parse-ipv6-address "1:2:3::4:5:6")
-    => '(1 2 3 0 0 4 5 6 (#f)))
+    => '#(1 2 3 0 0 4 5 6 (#f)))
 
 ;;; --------------------------------------------------------------------
 ;;; IPv4 tail address
 
   (check
       (parse-ipv6-address "::192.168.99.1")
-    => '(0 0 0 0 0 0 #xC0A8 #x6301 (#f)))
+    => '#(0 0 0 0 0 0 #xC0A8 #x6301 (#f)))
 
   (check
       (parse-ipv6-address "1:2:3:4::172.30.67.254")
-    => '(1 2 3 4 0 0 #xac1e #x43fe (#f)))
+    => '#(1 2 3 4 0 0 #xac1e #x43fe (#f)))
 
   (check
       (parse-ipv6-address "::1:2:3:4:172.30.67.254")
-    => '(0 0 1 2 3 4 #xac1e #x43fe (#f)))
+    => '#(0 0 1 2 3 4 #xac1e #x43fe (#f)))
 
   (check
       (parse-ipv6-address "1:2::3:4:172.30.67.254")
-    => '(1 2 0 0 3 4 #xac1e #x43fe (#f)))
+    => '#(1 2 0 0 3 4 #xac1e #x43fe (#f)))
 
   (check
       (parse-ipv6-address "::ffff:192.168.99.1")
-    => '(0 0 0 0 0 #xFFFF #xC0A8 #x6301 (#f)))
+    => '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301 (#f)))
 
 ;;; --------------------------------------------------------------------
 ;;; prefix, compressed format (omitting zeros)
 
   (check
       (parse-ipv6-address "::/60")
-    => '(0 0 0 0 0 0 0 0 (60)))
+    => '#(0 0 0 0 0 0 0 0 (60)))
 
   (check
       (parse-ipv6-address "::1/60")
-    => '(0 0 0 0 0 0 0 1 (60)))
+    => '#(0 0 0 0 0 0 0 1 (60)))
 
   (check
       (parse-ipv6-address "1::/60")
-    => '(1 0 0 0 0 0 0 0 (60)))
+    => '#(1 0 0 0 0 0 0 0 (60)))
 
   (check
       (parse-ipv6-address "1::2/60")
-    => '(1 0 0 0 0 0 0 2 (60)))
+    => '#(1 0 0 0 0 0 0 2 (60)))
 
   (check
       (parse-ipv6-address "1:2::3/60")
-    => '(1 2 0 0 0 0 0 3 (60)))
+    => '#(1 2 0 0 0 0 0 3 (60)))
 
   (check
       (parse-ipv6-address "1::2:3/60")
-    => '(1 0 0 0 0 0 2 3 (60)))
+    => '#(1 0 0 0 0 0 2 3 (60)))
 
   (check
       (parse-ipv6-address "1:2::3:4/60")
-    => '(1 2 0 0 0 0 3 4 (60)))
+    => '#(1 2 0 0 0 0 3 4 (60)))
 
   (check
       (parse-ipv6-address "1:2:3::4:5:6/60")
-    => '(1 2 3 0 0 4 5 6 (60)))
+    => '#(1 2 3 0 0 4 5 6 (60)))
 
 ;;; --------------------------------------------------------------------
 ;;; prefix, IPv4 tail address
 
   (check
       (parse-ipv6-address "::192.168.99.1/60")
-    => '(0 0 0 0 0 0 #xC0A8 #x6301 (60)))
+    => '#(0 0 0 0 0 0 #xC0A8 #x6301 (60)))
 
   (check
       (parse-ipv6-address "1:2:3:4::172.30.67.254/60")
-    => '(1 2 3 4 0 0 #xac1e #x43fe (60)))
+    => '#(1 2 3 4 0 0 #xac1e #x43fe (60)))
 
   (check
       (parse-ipv6-address "::1:2:3:4:172.30.67.254/60")
-    => '(0 0 1 2 3 4 #xac1e #x43fe (60)))
+    => '#(0 0 1 2 3 4 #xac1e #x43fe (60)))
 
   (check
       (parse-ipv6-address "1:2::3:4:172.30.67.254/60")
-    => '(1 2 0 0 3 4 #xac1e #x43fe (60)))
+    => '#(1 2 0 0 3 4 #xac1e #x43fe (60)))
 
   (check
       (parse-ipv6-address "::ffff:192.168.99.1/60")
-    => '(0 0 0 0 0 #xFFFF #xC0A8 #x6301 (60)))
+    => '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301 (60)))
 
 ;;; --------------------------------------------------------------------
 ;;; errors
@@ -629,65 +629,65 @@
 
   (check
       (parse-ipv6-address-only "1:2:3:4:5:6:7:8")
-    => '(1 2 3 4 5 6 7 8))
+    => '#(1 2 3 4 5 6 7 8))
 
 ;;; --------------------------------------------------------------------
 ;;; compressed format (omitting zeros)
 
   (check
       (parse-ipv6-address-only "::")
-    => '(0 0 0 0 0 0 0 0))
+    => '#(0 0 0 0 0 0 0 0))
 
   (check
       (parse-ipv6-address-only "::1")
-    => '(0 0 0 0 0 0 0 1))
+    => '#(0 0 0 0 0 0 0 1))
 
   (check
       (parse-ipv6-address-only "1::")
-    => '(1 0 0 0 0 0 0 0))
+    => '#(1 0 0 0 0 0 0 0))
 
   (check
       (parse-ipv6-address-only "1::2")
-    => '(1 0 0 0 0 0 0 2))
+    => '#(1 0 0 0 0 0 0 2))
 
   (check
       (parse-ipv6-address-only "1:2::3")
-    => '(1 2 0 0 0 0 0 3))
+    => '#(1 2 0 0 0 0 0 3))
 
   (check
       (parse-ipv6-address-only "1::2:3")
-    => '(1 0 0 0 0 0 2 3))
+    => '#(1 0 0 0 0 0 2 3))
 
   (check
       (parse-ipv6-address-only "1:2::3:4")
-    => '(1 2 0 0 0 0 3 4))
+    => '#(1 2 0 0 0 0 3 4))
 
   (check
       (parse-ipv6-address-only "1:2:3::4:5:6")
-    => '(1 2 3 0 0 4 5 6))
+    => '#(1 2 3 0 0 4 5 6))
 
 ;;; --------------------------------------------------------------------
 ;;; IPv4 tail address
 
   (check
       (parse-ipv6-address-only "::192.168.99.1")
-    => '(0 0 0 0 0 0 #xC0A8 #x6301))
+    => '#(0 0 0 0 0 0 #xC0A8 #x6301))
 
   (check
       (parse-ipv6-address-only "1:2:3:4::172.30.67.254")
-    => '(1 2 3 4 0 0 #xac1e #x43fe))
+    => '#(1 2 3 4 0 0 #xac1e #x43fe))
 
   (check
       (parse-ipv6-address-only "::1:2:3:4:172.30.67.254")
-    => '(0 0 1 2 3 4 #xac1e #x43fe))
+    => '#(0 0 1 2 3 4 #xac1e #x43fe))
 
   (check
       (parse-ipv6-address-only "1:2::3:4:172.30.67.254")
-    => '(1 2 0 0 3 4 #xac1e #x43fe))
+    => '#(1 2 0 0 3 4 #xac1e #x43fe))
 
   (check
       (parse-ipv6-address-only "::ffff:192.168.99.1")
-    => '(0 0 0 0 0 #xFFFF #xC0A8 #x6301))
+    => '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301))
 
 ;;; --------------------------------------------------------------------
 ;;; errors
@@ -737,58 +737,58 @@
 
   (check
       (values->list (parse-ipv6-address-prefix "::/60"))
-    => '((0 0 0 0 0 0 0 0) 60))
+    => '(#(0 0 0 0 0 0 0 0) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "::1/60"))
-    => '((0 0 0 0 0 0 0 1) 60))
+    => '(#(0 0 0 0 0 0 0 1) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1::/60"))
-    => '((1 0 0 0 0 0 0 0) 60))
+    => '(#(1 0 0 0 0 0 0 0) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1::2/60"))
-    => '((1 0 0 0 0 0 0 2) 60))
+    => '(#(1 0 0 0 0 0 0 2) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1:2::3/60"))
-    => '((1 2 0 0 0 0 0 3) 60))
+    => '(#(1 2 0 0 0 0 0 3) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1::2:3/60"))
-    => '((1 0 0 0 0 0 2 3) 60))
+    => '(#(1 0 0 0 0 0 2 3) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1:2::3:4/60"))
-    => '((1 2 0 0 0 0 3 4) 60))
+    => '(#(1 2 0 0 0 0 3 4) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1:2:3::4:5:6/60"))
-    => '((1 2 3 0 0 4 5 6) 60))
+    => '(#(1 2 3 0 0 4 5 6) 60))
 
 ;;; --------------------------------------------------------------------
 ;;; prefix, IPv4 tail address
 
   (check
       (values->list (parse-ipv6-address-prefix "::192.168.99.1/60"))
-    => '((0 0 0 0 0 0 #xC0A8 #x6301) 60))
+    => '(#(0 0 0 0 0 0 #xC0A8 #x6301) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1:2:3:4::172.30.67.254/60"))
-    => '((1 2 3 4 0 0 #xac1e #x43fe) 60))
+    => '(#(1 2 3 4 0 0 #xac1e #x43fe) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "::1:2:3:4:172.30.67.254/60"))
-    => '((0 0 1 2 3 4 #xac1e #x43fe) 60))
+    => '(#(0 0 1 2 3 4 #xac1e #x43fe) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "1:2::3:4:172.30.67.254/60"))
-    => '((1 2 0 0 3 4 #xac1e #x43fe) 60))
+    => '(#(1 2 0 0 3 4 #xac1e #x43fe) 60))
 
   (check
       (values->list (parse-ipv6-address-prefix "::ffff:192.168.99.1/60"))
-    => '((0 0 0 0 0 #xFFFF #xC0A8 #x6301) 60))
+    => '(#(0 0 0 0 0 #xFFFF #xC0A8 #x6301) 60))
 
 ;;; --------------------------------------------------------------------
 ;;; errors
