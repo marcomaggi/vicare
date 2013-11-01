@@ -31,11 +31,12 @@
     <uri> <relative-ref>
 
     ;; auxiliary syntaxes
-    source-bytevector)
+    )
   (import (nausicaa)
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
+    (prefix (nausicaa parser-tools uri) uri.)
     (vicare unsafe operations))
 
 
@@ -60,11 +61,6 @@
 
 
 ;;;; auxiliary labels
-
-(define-label <nonempty-bytevector>
-  (parent <bytevector>)
-  (predicate (lambda (bv)
-	       ($fxpositive? ($bytevector-length bv)))))
 
 (define-label <uri-scheme>
   (parent <nonempty-bytevector>)
@@ -108,7 +104,7 @@
    (virtual-fields
     (immutable (string <string>)
 	       (lambda ((O <uri>))
-		 (ascii->string (O $bytevector))))
+		 (ascii->string (O bytevector))))
 
     (immutable (bytevector <bytevector>)
 	       (lambda ((O <uri>))
@@ -148,7 +144,7 @@
 					 (%put-bv (cdr (O $host)))
 					 (%put-u8 93)) ;93 = #\]
 					(else
-					 (assertion-violation who "invalid host type" o (O $host-type))))
+					 (assertion-violation who "invalid host type" O (O $host-type))))
 				      (when (O $port)
 					(%put-u8 58) ;58 = #\:
 					(%put-bv (O $port)))
@@ -169,7 +165,7 @@
 			 ((path-rootless)
 			  (%put-bv first))
 			 (else
-			  (assertion-violation who "invalid path type" o (O $path-type))))
+			  (assertion-violation who "invalid path type" O (O $path-type))))
 		       (for-each (lambda (bv)
 				   (%put-u8 47) ;47 = /
 				   (%put-bv bv))
@@ -240,7 +236,7 @@
   (virtual-fields
    (immutable (string <string>)
 	      (lambda ((O <relative-ref>))
-		(ascii->string (O $bytevector))))
+		(ascii->string (O bytevector))))
 
    (immutable (bytevector <bytevector>)
 	      (lambda ((O <relative-ref>))
@@ -277,7 +273,7 @@
 					(%put-bv (cdr (O $host)))
 					(%put-u8 93)) ;93 = #\]
 				       (else
-					(assertion-violation who "invalid host type" o (O $host-type))))
+					(assertion-violation who "invalid host type" O (O $host-type))))
 				     (when (O $port)
 				       (%put-u8 58) ;58 = #\:
 				       (%put-bv (O $port)))
@@ -298,7 +294,7 @@
 			((path-noscheme)
 			 (%put-bv first))
 			(else
-			 (assertion-violation who "invalid path type" o (O $path-type))))
+			 (assertion-violation who "invalid path type" O (O $path-type))))
 		      (for-each (lambda (bv)
 				  (%put-u8 47) ;47 = /
 				  (%put-bv bv))
