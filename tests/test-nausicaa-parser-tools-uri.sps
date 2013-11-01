@@ -996,48 +996,40 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-path-segments))
+(parametrise ((check-test-name	'parsing-path-segments/segment))
 
-;;; path segment
+  (define (f0 str)
+    (ascii->string (uri.parse-segment (mkport str))))
 
-  (check
-      (ascii->string (uri.parse-segment (mkport "")))
-    => "")
+  (define (f1 str)
+    (let* ((in-port	(mkport str))
+	   (segment	(ascii->string (uri.parse-segment in-port)))
+	   (eof	(lookahead-u8 in-port)))
+      (values segment eof)))
 
-  (check
-      (let* ((in-port	(mkport "ciao"))
-	     (segment	(ascii->string (uri.parse-segment in-port)))
-	     (eof	(lookahead-u8 in-port)))
-	(list segment eof))
-    => `("ciao" ,(eof-object)))
+;;; --------------------------------------------------------------------
 
-  (check
-      (ascii->string (uri.parse-segment (mkport "ciao%3dciao")))
-    => "ciao%3dciao")
+  (check (f0 "")			=> "")
+  (check (f0 "ciao%3dciao")		=> "ciao%3dciao")
+  (check (f0 "ciao%3d%3dciao")		=> "ciao%3d%3dciao")
+  (check (f0 "ciao!$&'()*+,;=:@-._~")	=> "ciao!$&'()*+,;=:@-._~")
 
-  (check
-      (ascii->string (uri.parse-segment (mkport "ciao%3d%3dciao")))
-    => "ciao%3d%3dciao")
-
-  (check
-      (ascii->string (uri.parse-segment (mkport "ciao!$&'()*+,;=:@-._~")))
-    => "ciao!$&'()*+,;=:@-._~")
-
+  (check (f1 "ciao")			=> "ciao" (eof-object))
   (check
       (let* ((in-port	(mkport "/hello"))
 	     (segment1	(ascii->string (uri.parse-segment in-port)))
 	     (slash	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment in-port))))
-	(list segment1 slash segment2 (lookahead-u8 in-port)))
-    => `("" #\/ "hello" ,(eof-object)))
+	(values segment1 slash segment2 (lookahead-u8 in-port)))
+    => "" #\/ "hello" (eof-object))
 
   (check
       (let* ((in-port	(mkport "ciao/hello"))
 	     (segment1	(ascii->string (uri.parse-segment in-port)))
 	     (slash	(integer->char (get-u8 in-port)))
 	     (segment2	(ascii->string (uri.parse-segment in-port))))
-	(list segment1 slash segment2 (lookahead-u8 in-port)))
-    => `("ciao" #\/ "hello" ,(eof-object)))
+	(values segment1 slash segment2 (lookahead-u8 in-port)))
+    => "ciao" #\/ "hello" (eof-object))
 
   (check
       (let* ((in-port	(mkport "?ciao"))
@@ -1068,21 +1060,27 @@
     => `("hello" "ciao" ,(eof-object)))
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else E))
-	(ascii->string (uri.parse-segment (mkport "ciao%3d%3,ciao"))))
+      (try
+	  (ascii->string (uri.parse-segment (mkport "ciao%3d%3,ciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else E))
-	(ascii->string (uri.parse-segment (mkport "ciao%,3%3dciao"))))
+      (try
+	  (ascii->string (uri.parse-segment (mkport "ciao%,3%3dciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
-;;; --------------------------------------------------------------------
-;;; path segment-nz
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-segments/segment-nz))
 
   (check
       (uri.parse-segment-nz (mkport ""))
@@ -1164,21 +1162,27 @@
     => `("hello" "ciao" ,(eof-object)))
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-segment-nz (mkport "ciao%3d%3,ciao"))))
+      (try
+	  (ascii->string (uri.parse-segment-nz (mkport "ciao%3d%3,ciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-segment-nz (mkport "ciao%,3%3dciao"))))
+      (try
+	  (ascii->string (uri.parse-segment-nz (mkport "ciao%,3%3dciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
-;;; --------------------------------------------------------------------
-;;; path segment-nz-nc
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-segments/segment-nz-nc))
 
   (check
       (uri.parse-segment-nz-nc (mkport ""))
@@ -1270,21 +1274,27 @@
     => '(#f ":ciao"))
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-segment-nz-nc (mkport "ciao%3d%3,ciao"))))
+      (try
+	  (ascii->string (uri.parse-segment-nz-nc (mkport "ciao%3d%3,ciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-segment-nz-nc (mkport "ciao%,3%3dciao"))))
+      (try
+	  (ascii->string (uri.parse-segment-nz-nc (mkport "ciao%,3%3dciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
-;;; --------------------------------------------------------------------
-;;; slash and segment
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-segments/slash-and-segment))
 
   (check
       (uri.parse-slash-and-segment (mkport ""))
@@ -1359,25 +1369,27 @@
     => '("" "ciao"))
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-slash-and-segment (mkport "/ciao%3d%3,ciao"))))
+      (try
+	  (ascii->string (uri.parse-slash-and-segment (mkport "/ciao%3d%3,ciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check	;invalid percent-encoded sequence
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else #f))
-	(ascii->string (uri.parse-slash-and-segment (mkport "/ciao%,3%3dciao"))))
+      (try
+	  (ascii->string (uri.parse-slash-and-segment (mkport "/ciao%,3%3dciao")))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-path-types))
-
-;;; path-empty
+(parametrise ((check-test-name	'parsing-path-types/empty))
 
   (check
       (uri.parse-path-empty (mkport ""))
@@ -1386,33 +1398,35 @@
   (check
       (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-empty in-port))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(vector path query))
     => '#(() "ciao"))
 
   (check
       (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-empty in-port))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(vector path fragment))
     => '#(() "ciao"))
 
   (check
       (let* ((in-port	(mkport "ciao"))
   	     (path	(uri.parse-path-empty in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-empty in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "/ciao"))
 
-;;; --------------------------------------------------------------------
-;;; path-abempty
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-types/abempty))
 
   (check
       (uri.parse-path-abempty (mkport ""))
@@ -1421,89 +1435,91 @@
   (check
       (let* ((in-port	(mkport "?query"))
   	     (path	(uri.parse-path-abempty in-port))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(() "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "#fragment"))
   	     (path	(uri.parse-path-abempty in-port))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(() "fragment" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao?query"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao") "fragment" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut?query"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut/?query"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut" "") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") "fragment" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut/#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-abempty in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-abempty in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut" "") "fragment" ,(eof-object)))
 
   (check
-      (map uri.to-string (uri.parse-path-abempty (mkport "///")))
+      (map ascii->string (uri.parse-path-abempty (mkport "///")))
     => '("" "" ""))
 
-;;; --------------------------------------------------------------------
-;;; path-absolute
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-types/absolute))
 
   (check
       (uri.parse-path-absolute (mkport ""))
@@ -1512,91 +1528,93 @@
   (check
       (let* ((in-port	(mkport "ciao"))
   	     (path	(uri.parse-path-absolute in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "/"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "//"))
   	     (path	(uri.parse-path-absolute in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => `(#f "//"))
 
   (check
       (let* ((in-port	(mkport "/ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/salut"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/?query"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello?query"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/?query"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") "query" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("") "fragment" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello") "fragment" ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "/ciao/hello/#fragment"))
-  	     (path	(map uri.to-string (uri.parse-path-absolute in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-absolute in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") "fragment" ,(eof-object)))
 
-;;; --------------------------------------------------------------------
-;;; path-noscheme
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-types/noscheme))
 
   (check
       (uri.parse-path-noscheme (mkport ""))
@@ -1604,7 +1622,7 @@
 
   (check
       (let* ((in-port	(mkport "ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
@@ -1618,105 +1636,107 @@
   (check
       (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "/ciao"))
 
   (check
       (let* ((in-port	(mkport "ciao/hello"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/hello/salut"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/hello/"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/he:llo"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "he:llo") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ci:ao/hello"))
   	     (path	(uri.parse-path-noscheme in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => `(#f "ci:ao/hello"))
 
   (check
       (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut/?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut" "") "ciao"))
 
   (check
       (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-noscheme in-port))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut/#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-noscheme in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-noscheme in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut" "") "ciao"))
 
-;;; --------------------------------------------------------------------
-;;; path-rootless
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-path-types/rootless))
 
   (check
       (uri.parse-path-rootless (mkport ""))
@@ -1724,7 +1744,7 @@
 
   (check
       (let* ((in-port	(mkport "ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao") ,(eof-object)))
 
@@ -1738,131 +1758,135 @@
   (check
       (let* ((in-port	(mkport "/ciao"))
   	     (path	(uri.parse-path-rootless in-port))
-  	     (rest	(uri.to-string (get-bytevector-some in-port))))
+  	     (rest	(ascii->string (get-bytevector-some in-port))))
   	(list path rest))
     => '(#f "/ciao"))
 
   (check
       (let* ((in-port	(mkport "ciao/hello"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/hello/salut"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "salut") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/hel:lo"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hel:lo") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ci:ao/hel:lo"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ci:ao" "hel:lo") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "ciao/hello/"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port))))
   	(list path (lookahead-u8 in-port)))
     => `(("ciao" "hello" "") ,(eof-object)))
 
   (check
       (let* ((in-port	(mkport "?ciao"))
   	     (path	(uri.parse-path-rootless in-port))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut/?ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (query	(uri.to-string (uri.parse-query in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (query	(ascii->string (uri.parse-query in-port))))
   	(list path query))
     => '(("hello" "salut" "") "ciao"))
 
   (check
       (let* ((in-port	(mkport "#ciao"))
   	     (path	(uri.parse-path-rootless in-port))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(#f "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut") "ciao"))
 
   (check
       (let* ((in-port	(mkport "hello/salut/#ciao"))
-  	     (path	(map uri.to-string (uri.parse-path-rootless in-port)))
-  	     (fragment	(uri.to-string (uri.parse-fragment in-port))))
+  	     (path	(map ascii->string (uri.parse-path-rootless in-port)))
+  	     (fragment	(ascii->string (uri.parse-fragment in-port))))
   	(list path fragment))
     => '(("hello" "salut" "") "ciao"))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'parsing-path))
+(parametrise ((check-test-name	'parsing-path))
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport ""))
-	(vector type (map uri.to-string segments)))
-    => '#(path-empty ()))
+	(values type (map ascii->string segments)))
+    => 'path-empty '())
 
   (check
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else E))
-	(uri.parse-path (mkport "?query")))
+      (try
+	  (uri.parse-path (mkport "?query"))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check
-      (guard (E ((uri.parser-error-condition? E)
-		 #t)
-		(else E))
-	(uri.parse-path (mkport "#fragment")))
+      (try
+	  (uri.parse-path (mkport "#fragment"))
+	(catch E
+	  (uri.&uri-parser-error
+	   #t)
+	  (else E)))
     => #t)
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "/ciao/hello/salut"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-absolute ("ciao" "hello" "salut")))
 
   (check
@@ -1874,31 +1898,31 @@
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "//"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-abempty ("" "")))
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "///"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-abempty ("" "" "")))
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "//ciao/"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-abempty ("" "ciao" "")))
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "ciao/hello/salut"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-noscheme ("ciao" "hello" "salut")))
 
   (check
       (receive (type segments)
 	  (uri.parse-path (mkport "ci:ao/hello/salut"))
-	(vector type (map uri.to-string segments)))
+	(vector type (map ascii->string segments)))
     => '#(path-rootless ("ci:ao" "hello" "salut")))
 
   #t)
@@ -1910,26 +1934,26 @@
     (check
 	(let-values (((scheme authority userinfo host-type host port path-type path query fragment)
 		      (uri.parse-uri (mkport in-string))))
-	  (list (and scheme		(uri.to-string scheme))
-		(and authority		(uri.to-string authority))
-		(and userinfo		(uri.to-string userinfo))
+	  (list (and scheme		(ascii->string scheme))
+		(and authority		(ascii->string authority))
+		(and userinfo		(ascii->string userinfo))
 		host-type
 		(and host
 		     (case host-type
 		       ((reg-name)
-			(uri.to-string host))
+			(ascii->string host))
 		       ((ipv4-address)
-			(cons (uri.to-string (car host)) (cdr host)))
+			(cons (ascii->string (car host)) (cdr host)))
 		       ((ipv6-address)
-			(cons (uri.to-string (car host)) (cdr host)))
+			(cons (ascii->string (car host)) (cdr host)))
 		       ((ipvfuture)
-			(cons (car host) (uri.to-string (cdr host))))
+			(cons (car host) (ascii->string (cdr host))))
 		       (else #f)))
-		(and port		(uri.to-string port))
+		(and port		(ascii->string port))
 		path-type
-		(map uri.to-string path)
-		(and query		(uri.to-string query))
-		(and fragment		(uri.to-string fragment))))
+		(map ascii->string path)
+		(and query		(ascii->string query))
+		(and fragment		(ascii->string fragment))))
       => (quasiquote expected-value)))
 
 ;;; whith scheme
@@ -2092,15 +2116,15 @@
     (check
 	(let-values (((authority userinfo host-type host port path-type path query fragment)
 		      (uri.parse-relative-ref (mkport in-string))))
-	  (list (and authority		(uri.to-string authority))
-		(and userinfo		(uri.to-string userinfo))
+	  (list (and authority		(ascii->string authority))
+		(and userinfo		(ascii->string userinfo))
 		host-type
-		(and host		(uri.to-string host))
-		(and port		(uri.to-string port))
+		(and host		(ascii->string host))
+		(and port		(ascii->string port))
 		path-type
-		(map uri.to-string path)
-		(and query		(uri.to-string query))
-		(and fragment		(uri.to-string fragment))))
+		(map ascii->string path)
+		(and query		(ascii->string query))
+		(and fragment		(ascii->string fragment))))
       => (quote expected-value)))
 
 ;;; with authority, no scheme
@@ -2209,14 +2233,14 @@
        (begin
 	 (check
 	     (let (((o uri.<uri>) (make uri.<uri>
-				    (uri.source-bytevector (uri.to-bytevector ?input-string)))))
+				    (uri.source-bytevector (string->ascii ?input-string)))))
 	       o.string)
 	   => ?expected-string)
 	 (check
 	     (let (((o uri.<uri>) (make uri.<uri>
-				    (uri.source-bytevector (uri.to-bytevector ?input-string)))))
+				    (uri.source-bytevector (string->ascii ?input-string)))))
 	       o.bytevector)
-	   => (uri.to-bytevector ?expected-string))))))
+	   => (string->ascii ?expected-string))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2294,14 +2318,14 @@
        (begin
 	 (check
 	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
-					     (uri.source-bytevector (uri.to-bytevector ?input-string)))))
+					     (uri.source-bytevector (string->ascii ?input-string)))))
 	       o.string)
 	   => ?expected-string)
 	 (check
 	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
-					     (uri.source-bytevector (uri.to-bytevector ?input-string)))))
+					     (uri.source-bytevector (string->ascii ?input-string)))))
 	       o.bytevector)
-	   => (uri.to-bytevector ?expected-string))))))
+	   => (string->ascii ?expected-string))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2367,9 +2391,9 @@
     (syntax-rules ()
       ((_ ?input ?output)
        (check
-	   (map uri.to-string
+	   (map ascii->string
 	     (uri.normalise-path
-	      (map uri.to-bytevector
+	      (map string->ascii
 		(quote ?input))))
 	 => (quote ?output)))))
 
