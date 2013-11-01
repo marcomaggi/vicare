@@ -47,7 +47,7 @@
     <binary-port> <binary-input-port> <binary-output-port> <binary-input/output-port>
     <textual-port> <textual-input-port> <textual-output-port> <textual-input/output-port>
 
-    <bytevector>
+    <bytevector> <nonempty-bytevector>
     <bytevector-u8> <bytevector-s8>
     <bytevector-u16l> <bytevector-s16l> <bytevector-u16b> <bytevector-s16b> <bytevector-u16n> <bytevector-s16n>
     <bytevector-u32l> <bytevector-s32l> <bytevector-u32b> <bytevector-s32b> <bytevector-u32n> <bytevector-s32n>
@@ -608,6 +608,11 @@
     (syntax-rules ()
       ((_ ?bv)
        (bytevector-copy ?bv)))))
+
+(define-label <nonempty-bytevector>
+  (parent <bytevector>)
+  (predicate (lambda (bv)
+	       ($fxpositive? ($bytevector-length bv)))))
 
 (let-syntax
     ((define-bytevector-label
