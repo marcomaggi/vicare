@@ -238,7 +238,7 @@
 
 (parametrise ((check-test-name	'try-catch))
 
-  (let ()
+  (let ()	;with else clause
     (define-condition-type &this
 	&error
       make-this-condition
@@ -276,7 +276,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (let ()
+  (let ()	;with else clause
     (define-condition-type &that
       (parent &error)
       (fields a b c))
@@ -305,6 +305,45 @@
 	(doit (lambda ()
 		(raise 123)))
       => 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;without else clause
+    (define-condition-type &this
+	&error
+      make-this-condition
+      condition-this?
+      (a condition-this.a)
+      (b condition-this.b)
+      (c condition-this.c))
+
+    (define (doit thunk)
+      (guard (E (else
+		 (values 'reraised E)))
+	(try
+	    (thunk)
+	  (catch E
+	    (&this
+	     (list (E a) (E b) (E c)))
+	    (&message
+	     (E message))))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-this-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 'reraised 123)
 
     #f)
 

@@ -187,7 +187,7 @@ clause, it will expand to:
 @end example
 
 @noindent
-and with the @func{else} clause:
+and with the @clause{else} clause:
 
 @example
 (guard (@meta{var}
@@ -203,6 +203,10 @@ and with the @func{else} clause:
         ...))
   @meta{body})
 @end example
+
+@noindent
+remember that when no @clause{else} clause is present: the exception
+will be re--raised with @func{raise-continuable}.
 
 When the @clause{finally} clause is present: the same @func{guard} form
 is wrapped into a compensation stack:
