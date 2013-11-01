@@ -36,7 +36,6 @@ suggested to prefix the bindings with @code{uri.}, as in:
 * parser-tools uri percent::    Percent encoding of characters.
 * parser-tools uri parser::     @uri{} parser functions.
 * parser-tools uri class::      Class interfaces.
-* parser-tools uri misc::       Miscellaneous functions.
 @end menu
 
 @c page
@@ -820,8 +819,8 @@ preceded by nothing).
 Accumulate bytes from @var{port} while they are valid for an
 @code{IPv4address} component, then parse them as IPv4 address.  If
 successful return two values: a bytevector holding the accumulated
-bytes, a list holding the @math{4} octets as exact integers; else return
-@false{} and @false{}.
+bytes, a vector holding the @math{4} octets as exact integers; else
+return @false{} and @false{}.
 
 If successful: leave the port position to the byte after the last one
 read from the port; if an error occurs: rewind the port position to the
@@ -874,13 +873,13 @@ No validation is performed on the first byte after the address, if any.
 ;;number out of range
 (f00 "191.223.376.434") @result{} (#f #f) "191.223.376.434"
 
-(f1 "1.2.3.4")          @result{} ("1.2.3.4" (1 2 3 4)) #t
-(f1 "191.223.76.255")   @result{} ("191.223.76.255" (191 223 76 255)) #t
+(f1 "1.2.3.4")          @result{} ("1.2.3.4" #(1 2 3 4)) #t
+(f1 "191.223.76.255")   @result{} ("191.223.76.255" #(191 223 76 255)) #t
 
-(f2 "1.2.3.4/5")        @result{} ("1.2.3.4" (1 2 3 4)) "/5"
-(f2 "1.2.3.4/ciao")     @result{} ("1.2.3.4" (1 2 3 4)) "/ciao"
-(f2 "1.2.3.4:8080")     @result{} ("1.2.3.4" (1 2 3 4)) ":8080"
-(f2 "1.2.3.4ciao")      @result{} ("1.2.3.4" (1 2 3 4)) "ciao"
+(f2 "1.2.3.4/5")        @result{} ("1.2.3.4" #(1 2 3 4)) "/5"
+(f2 "1.2.3.4/ciao")     @result{} ("1.2.3.4" #(1 2 3 4)) "/ciao"
+(f2 "1.2.3.4:8080")     @result{} ("1.2.3.4" #(1 2 3 4)) ":8080"
+(f2 "1.2.3.4ciao")      @result{} ("1.2.3.4" #(1 2 3 4)) "ciao"
 @end example
 @end defun
 
@@ -889,7 +888,7 @@ No validation is performed on the first byte after the address, if any.
 Accumulate bytes from @var{port} while they are valid for an
 @code{IPv6address} component, then parse them as IPv6 address.  If
 successful return two values: a bytevector holding the accumulated
-bytes, a list holding the 8 numeric address components as 16-bit exact
+bytes, a vector holding the 8 numeric address components as 16-bit exact
 integers; else return @false{} and @false{}.
 
 If successful: leave the port position to the byte after the last one
@@ -939,25 +938,25 @@ No validation is performed on the first byte after the address, if any.
 (f00 "1.2.3.ciao")      @result{} (#f #f) "1.2.3.ciao"
 
 (f1 "1:2:3:4:5:6:7:8")
-@result{} "1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8) #t
+@result{} "1:2:3:4:5:6:7:8" #(1 2 3 4 5 6 7 8) #t
 
 (f1 "::1")
-@result{} "::1" (0 0 0 0 0 0 0 1) #t
+@result{} "::1" #(0 0 0 0 0 0 0 1) #t
 
 (f1 "1::")
-@result{} "1::" (1 0 0 0 0 0 0 0) #t
+@result{} "1::" #(1 0 0 0 0 0 0 0) #t
 
 (f1 "1:2::3")
-@result{} "1:2::3" (1 2 0 0 0 0 0 3) #t
+@result{} "1:2::3" #(1 2 0 0 0 0 0 3) #t
 
 (f1 "1:2:3:4::172.30.67.254")
-@result{} "1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe) #t
+@result{} "1:2:3:4::172.30.67.254" #(1 2 3 4 0 0 #xac1e #x43fe) #t
 
 (f1 "::ffff:192.168.99.1")
-@result{} "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t
+@result{} "::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t
 
 (f2 "::1/60")
-@result{} "::1" (0 0 0 0 0 0 0 1) "/60"
+@result{} "::1" #(0 0 0 0 0 0 0 1) "/60"
 @end example
 @end defun
 
@@ -1869,10 +1868,13 @@ input port.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(uri.parse-path (mkport ""))  @result{} path-empty ()
+(uri.parse-path (mkport ""))
+@result{} path-empty ()
 
-(uri.parse-path (mkport "?query"))  @error{} &uri-parser-error
-(uri.parse-path (mkport "#fragment"))  @error{} &uri-parser-error
+(uri.parse-path (mkport "?query"))
+@error{} &uri-parser-error
+(uri.parse-path (mkport "#fragment"))
+@error{} &uri-parser-error
 
 (uri.parse-path (mkport "/"))
 @result{} path-absolute (#vu8())
@@ -1920,18 +1922,17 @@ input port.
 @subsubsection Miscellaneous parser functions
 
 
-The functions can be used to parse the elements of a @uri{}; all the
-functions accept a @var{port} argument: it must be a binary input port
-supporting the port position.  The following bindings are exported by
-the @library{nausicaa parser-tools uri} library.
+The following bindings are exported by the library @library{nausicaa
+parser-tools uri}.
 
 
 @defun valid-component? @var{port}
-Scan bytes from @var{port} until @eof{} or an invalid byte is found;
-return two values, when success: true and the port position of the last
-byte read; when failure: false and the port position of the invalid
-byte.  In any case: the port position is reverted to the state it had
-before the call to this function.
+The argument @var{port} must be a binary input port supporting the port
+position.  Scan bytes from @var{port} until @eof{} or an invalid byte is
+found; return two values, when success: true and the port position of
+the last byte read; when failure: false and the port position of the
+invalid byte.  In any case: the port position is reverted to the state
+it had before the call to this function.
 
 Ensure that:
 
@@ -1945,6 +1946,34 @@ encoding.
 All the non percent--encoded bytes are in the unreserved set defined by
 @rfc{} 3986.
 @end itemize
+@end defun
+
+
+@defun normalise-path @var{input}
+Normalise a list of bytevectors representing an absolute path;
+bytevectors holding single and double dots are removed.
+
+@example
+(import (vicare)
+  (prefix (nausicaa parser-tools uri) uri.))
+
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?input)
+     (map ascii->string
+       (uri.normalise-path
+         (map string->ascii
+           (quote ?input)))))))
+
+(doit ())       @result{} ()
+(doit ("a"))    @result{} ("a")
+(doit ("."))    @result{} ()
+(doit ("a" "b" "c" "." ".." ".." "g"))
+@result{} ("a" "g")
+
+(doit (".."))                   @error{} &assertion
+(doit (".." ".." ".." "a"))     @error{} &assertion
+@end example
 @end defun
 
 @c page
@@ -2181,35 +2210,5 @@ with @func{parse-uri}.
 Return true if @var{expr} evaluates to an instance of
 @class{relative-ref}.
 @end defop
-
-@c page
-@node parser-tools uri misc
-@subsection Miscellaneous functions
-
-
-@defun normalise-path @var{input}
-Normalise a list of bytevectors representing an absolute path;
-bytevectors holding single and double dots are removed.
-
-@example
-(import (vicare)
-  (prefix (nausicaa parser-tools uri) uri.))
-
-(define-syntax doit
-  (syntax-rules ()
-    ((_ ?input)
-     (map ascii->string
-       (uri.normalise-path
-         (map string->ascii
-           (quote ?input)))))))
-
-(doit ())       @result{} ()
-(doit ("a"))    @result{} ("a")
-(doit ("."))    @result{} ()
-(doit (".."))   @result{} ()
-(doit ("a" "b" "c" "." ".." ".." "g"))
-@result{} ("a" "g")
-@end example
-@end defun
 
 @c end of file

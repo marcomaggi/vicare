@@ -751,13 +751,13 @@
   ;;number out of range
   (check (f00 "191.223.376.434")=> '((#f #f) "191.223.376.434"))
 
-  (check (f1 "1.2.3.4")			=> '(("1.2.3.4" (1 2 3 4)) #t))
-  (check (f1 "191.223.76.255")		=> '(("191.223.76.255" (191 223 76 255)) #t))
+  (check (f1 "1.2.3.4")		=> '(("1.2.3.4" #(1 2 3 4)) #t))
+  (check (f1 "191.223.76.255")	=> '(("191.223.76.255" #(191 223 76 255)) #t))
 
-  (check (f2 "1.2.3.4/5")		=> '(("1.2.3.4" (1 2 3 4)) "/5"))
-  (check (f2 "1.2.3.4/ciao")		=> '(("1.2.3.4" (1 2 3 4)) "/ciao"))
-  (check (f2 "1.2.3.4:8080")		=> '(("1.2.3.4" (1 2 3 4)) ":8080"))
-  (check (f2 "1.2.3.4ciao")		=> '(("1.2.3.4" (1 2 3 4)) "ciao"))
+  (check (f2 "1.2.3.4/5")	=> '(("1.2.3.4" #(1 2 3 4)) "/5"))
+  (check (f2 "1.2.3.4/ciao")	=> '(("1.2.3.4" #(1 2 3 4)) "/ciao"))
+  (check (f2 "1.2.3.4:8080")	=> '(("1.2.3.4" #(1 2 3 4)) ":8080"))
+  (check (f2 "1.2.3.4ciao")	=> '(("1.2.3.4" #(1 2 3 4)) "ciao"))
 
   #t)
 
@@ -799,14 +799,14 @@
   (check (f00 "ciao")		=> '((#f #f) "ciao"))
   (check (f00 "1.2.3.ciao")	=> '((#f #f) "1.2.3.ciao"))
 
-  (check (f1 "1:2:3:4:5:6:7:8")		=> '("1:2:3:4:5:6:7:8" (1 2 3 4 5 6 7 8) #t))
-  (check (f1 "::1")			=> '("::1" (0 0 0 0 0 0 0 1) #t))
-  (check (f1 "1::")			=> '("1::" (1 0 0 0 0 0 0 0) #t))
-  (check (f1 "1:2::3")			=> '("1:2::3" (1 2 0 0 0 0 0 3) #t))
-  (check (f1 "1:2:3:4::172.30.67.254")	=> '("1:2:3:4::172.30.67.254" (1 2 3 4 0 0 #xac1e #x43fe) #t))
-  (check (f1 "::ffff:192.168.99.1")	=> '("::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t))
+  (check (f1 "1:2:3:4:5:6:7:8")		=> '("1:2:3:4:5:6:7:8" #(1 2 3 4 5 6 7 8) #t))
+  (check (f1 "::1")			=> '("::1" #(0 0 0 0 0 0 0 1) #t))
+  (check (f1 "1::")			=> '("1::" #(1 0 0 0 0 0 0 0) #t))
+  (check (f1 "1:2::3")			=> '("1:2::3" #(1 2 0 0 0 0 0 3) #t))
+  (check (f1 "1:2:3:4::172.30.67.254")	=> '("1:2:3:4::172.30.67.254" #(1 2 3 4 0 0 #xac1e #x43fe) #t))
+  (check (f1 "::ffff:192.168.99.1")	=> '("::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) #t))
 
-  (check (f2 "::1/60")			=> '("::1" (0 0 0 0 0 0 0 1) "/60"))
+  (check (f2 "::1/60")			=> '("::1" #(0 0 0 0 0 0 0 1) "/60"))
 
   #t)
 
@@ -935,28 +935,28 @@
 		    ((kind data)	(uri.parse-host in-port))
 		    ((rest)		(ascii->string (get-bytevector-some in-port))))
 	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv4-address "1.2.3.4" (1 2 3 4) ":80"))
+    => '(ipv4-address "1.2.3.4" #(1 2 3 4) ":80"))
 
   (check
       (let*-values (((in-port)		(mkport "1.2.3.4/ciao"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv4-address "1.2.3.4" (1 2 3 4) "/ciao"))
+    => '(ipv4-address "1.2.3.4" #(1 2 3 4) "/ciao"))
 
   (check
       (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]:80"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv6-address "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80"))
+    => '(ipv6-address "::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80"))
 
   (check
       (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]/ciao"))
   		    ((kind data)	(uri.parse-host in-port))
   		    ((rest)		(ascii->string (get-bytevector-some in-port))))
   	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv6-address "::ffff:192.168.99.1" (0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"))
+    => '(ipv6-address "::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"))
 
   (check
       (let*-values (((in-port)		(mkport "[v9,ciao,ciao]/ciao"))
@@ -2013,11 +2013,11 @@
 	("http" "ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
 
   (doit "http://1.2.3.4:8080/a/b/c"
-	("http" "1.2.3.4:8080" #f ipv4-address ("1.2.3.4" . (1 2 3 4))
+	("http" "1.2.3.4:8080" #f ipv4-address ("1.2.3.4" . #(1 2 3 4))
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
   (doit "http://[1:2:3:4:5:6:7:8]:8080/a/b/c"
-	("http" "[1:2:3:4:5:6:7:8]:8080" #f ipv6-address ("1:2:3:4:5:6:7:8" . (1 2 3 4 5 6 7 8))
+	("http" "[1:2:3:4:5:6:7:8]:8080" #f ipv6-address ("1:2:3:4:5:6:7:8" . #(1 2 3 4 5 6 7 8))
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
   (doit "http://[vEciao]:8080/a/b/c"
@@ -2386,7 +2386,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'normalise-path))
+(parametrise ((check-test-name	'normalise-path))
 
   (define-syntax doit
     (syntax-rules ()
@@ -2398,16 +2398,28 @@
 		(quote ?input))))
 	 => (quote ?output)))))
 
+  (define-syntax-rule (err ?in ?out)
+    (check
+	(try
+	    (uri.normalise-path (map string->ascii (quote ?in)))
+	  (catch E
+	    (&assertion
+	     (condition-irritants E))
+	    (else E)))
+      => (quote ?out)))
+
   (doit () ())
 
   (doit ("a") ("a"))
 
   (doit (".") ())
 
-  (doit ("..") ())
-
   (doit ("a" "b" "c" "." ".." ".." "g")
 	("a" "g"))
+
+  (err ("..") ((#ve(ascii ".."))))
+  (err (".." ".." ".." "a")
+       ((#ve(ascii "..") #ve(ascii "..") #ve(ascii "..") #ve(ascii "a"))))
 
   #t)
 

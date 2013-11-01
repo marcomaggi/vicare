@@ -1703,6 +1703,7 @@
 
 
 (define (normalise-path input)
+  (define who 'normalise-path)
   (let next-segment ((input	input)
 		     (output	'()))
     (cond ((null? input)
@@ -1710,9 +1711,11 @@
 	  ((equal? '#vu8(46) (car input))
 	   (next-segment (cdr input) output))
 	  ((equal? '#vu8(46 46) (car input))
-	   (next-segment (cdr input) (if (null? output)
-					 output
-				       (cdr output))))
+	   (next-segment (cdr input)
+			 (if (null? output)
+			     (assertion-violation who
+			       "invalid path components referencing unexistent parent" input)
+			   (cdr output))))
 	  (else
 	   (next-segment (cdr input) (cons (car input) output))))))
 
