@@ -366,6 +366,7 @@
 
 (define-syntax check
   (syntax-rules (=>)
+
     ((_ ?expr => ?expected-result)
      (check ?expr (=> equal?) ?expected-result))
 
@@ -379,7 +380,42 @@
     ((_ ?name ?expr (=> ?equal) ?expected-result)
      (parameterize ((check-test-name ?name))
        (when (eval-this-test?)
-	 (srfi:check ?expr (=> ?equal) ?expected-result))))))
+	 (srfi:check ?expr (=> ?equal) ?expected-result))))
+
+    ;;; multiple values
+
+    ((_ ?expr => ?expected-result0 ?expected-result1 ?expected-result ...)
+     (check ?expr (=> equal?) ?expected-result0 ?expected-result1 ?expected-result ...))
+
+    ((_ ?expr (=> ?equal) ?expected-result0 ?expected-result1 ?expected-result ...)
+     (when (eval-this-test?)
+       (srfi:check (values->list ?expr) (=> ?equal) (list ?expected-result0 ?expected-result1 ?expected-result ...))))
+
+    ((_ ?name ?expr => ?expected-result0 ?expected-result1 ?expected-result ...)
+     (check ?name ?expr (=> equal?) ?expected-result0 ?expected-result1 ?expected-result ...))
+
+    ((_ ?name ?expr (=> ?equal) ?expected-result0 ?expected-result1 ?expected-result ...)
+     (parameterize ((check-test-name ?name))
+       (when (eval-this-test?)
+	 (srfi:check (values->list ?expr) (=> ?equal) (list ?expected-result0 ?expected-result1 ?expected-result ...)))))
+    ))
+
+;; (define-syntax check
+;;   (syntax-rules (=>)
+;;     ((_ ?expr => ?expected-result)
+;;      (check ?expr (=> equal?) ?expected-result))
+
+;;     ((_ ?expr (=> ?equal) ?expected-result)
+;;      (when (eval-this-test?)
+;;        (srfi:check ?expr (=> ?equal) ?expected-result)))
+
+;;     ((_ ?name ?expr => ?expected-result)
+;;      (check ?name ?expr (=> equal?) ?expected-result))
+
+;;     ((_ ?name ?expr (=> ?equal) ?expected-result)
+;;      (parameterize ((check-test-name ?name))
+;;        (when (eval-this-test?)
+;; 	 (srfi:check ?expr (=> ?equal) ?expected-result))))))
 
 
 ;;;; done
