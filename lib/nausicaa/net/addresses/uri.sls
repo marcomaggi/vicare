@@ -279,7 +279,8 @@
 					(%put-bv (O $port)))
 				      (authority-getter))))
 		     (when (or (not (zero? (bytevector-length authority)))
-			       (memq (O $path-type) '(path-abempty path-empty)))
+			       ((<uri-path-abempty>) O)
+			       ((<uri-path-empty>)   O))
 		       (%put-u8 47) ;47 = #\/
 		       (%put-u8 47) ;47 = #\/
 		       (%put-bv authority)))
@@ -393,7 +394,8 @@
 				       (%put-bv (O $port)))
 				     (authority-getter))))
 		    (when (or (not (zero? (bytevector-length authority)))
-			      (memq (O $path-type) '(path-abempty path-empty)))
+			      ((<uri-path-abempty>) O)
+			      ((<uri-path-empty>)   O))
 		      (%put-u8 47) ;47 = #\/
 		      (%put-u8 47) ;47 = #\/
 		      (%put-bv authority)))
