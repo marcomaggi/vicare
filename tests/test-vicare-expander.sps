@@ -2067,6 +2067,254 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-star))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+;;; without predicates
+
+  (check
+      (let ()
+	(define* (doit)
+	  123)
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define* (doit a)
+	  (vector 123 a))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define* (doit a b c)
+	  (vector 123 a b c))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define* (doit . rest)
+	  (vector 123 rest))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define* (doit a . rest)
+	  (vector 123 a rest))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define* (doit a b . rest)
+	  (vector 123 a b rest))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define* (doit a b c . rest)
+	  (vector 123 a b c rest))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, list spec, without retval predicate
+
+  (check
+      (let ()
+	(define* (doit (a fixnum?))
+	  (vector 123 a))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define* (doit . #(rest list-of-fixnums?))
+	  (vector 123 rest))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define* (doit (a fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a rest))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define* (doit (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b rest))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b c rest))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, vector spec, without retval predicate
+
+  (check
+      (let ()
+	(define* (doit #(a fixnum?))
+	  (vector 123 a))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define* (doit . #(rest list-of-fixnums?))
+	  (vector 123 rest))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define* (doit #(a fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a rest))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define* (doit #(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b rest))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b c rest))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, with retval predicate
+
+  (check
+      (let ()
+	(define* ((doit fixnum?))
+	  123)
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define* ((doit vector?) (a fixnum?))
+	  (vector 123 a))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define* ((doit vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define* ((doit vector?) . #(rest list-of-fixnums?))
+	  (vector 123 rest))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define* ((doit vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a rest))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define* ((doit vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b rest))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define* ((doit vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (vector 123 a b c rest))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define* ((doit list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (vector 123 a b c))
+	(doit 4 5 6))
+    => '(doit ((list? #(123 4 5 6)))))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define* (doit)
+	  __who__)
+	(doit))
+    => 'doit)
+
+  (check
+      (let ()
+	(define* ((doit symbol?))
+	  __who__)
+	(doit))
+    => 'doit)
+
+  #t)
+
+
 ;; (parametrise ((check-test-name	'syntax-transpose))
 
 ;;   (define id #f)

@@ -409,6 +409,7 @@
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
     (define-syntax*			(macro . define-syntax*))
+    (define*				(macro . define*))
     (define-integrable			(macro . define-integrable))
     (define-inline			(macro . define-inline))
     (define-constant			(macro . define-constant))
@@ -1172,6 +1173,7 @@
     (define					i v r ba se ne)
     (define-syntax				i v r ba se ne)
     (define-syntax*				i v $language)
+    (define*					i v $language)
     (define-fluid-syntax			i v $language)
     (identifier-syntax				i v r ba)
     (if						i v r ba se ne)
