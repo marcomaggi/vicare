@@ -2067,6 +2067,286 @@
   #t)
 
 
+(parametrise ((check-test-name	'lambda-star))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+;;; without predicates
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ()
+	    123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (a)
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (a b c)
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* rest
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (a . rest)
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (a b . rest)
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (a b c . rest)
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, list spec, without retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?))
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* #(rest list-of-fixnums?)
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(_ ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, vector spec, without retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?))
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* #(rest list-of-fixnums?)
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define doit
+	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(_ ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, with retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ fixnum?))
+	    123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) (a fixnum?))
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) . #(rest list-of-fixnums?))
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define doit
+	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(_ ((fixnum? b) #\5)))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define doit
+	  (lambda* ((_ list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '(_ ((list? #(123 4 5 6)))))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ()
+	    __who__))
+	(doit))
+    => '_)
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ symbol?))
+	    __who__))
+	(doit))
+    => '_)
+
+  #t)
+
+
 (parametrise ((check-test-name	'define-star))
 
   (define (list-of-fixnums? obj)

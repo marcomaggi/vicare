@@ -3262,6 +3262,7 @@
 	     ((define-enumeration)		define-enumeration-macro)
 	     ((let*-syntax)			let*-syntax-macro)
 	     ((define*)				define*-macro)
+	     ((lambda*)				lambda*-macro)
 
 	     ((trace-lambda)			trace-lambda-macro)
 	     ((trace-define)			trace-define-macro)
@@ -4514,9 +4515,9 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE*
+;;;; module non-core-macro-transformer: DEFINE* and LAMBDA*
 
-(module (define*-macro)
+(module (define*-macro lambda*-macro)
 
   (define (define*-macro stx)
     ;;Transformer function  used to expand Vicare's  DEFINE* macros from
@@ -4527,19 +4528,19 @@
       ;;No ret-pred.
       ((_ (?who . ?formals) ?body0 ?body* ...)
        (identifier? ?who)
-       (%generate-output-form/without-ret-pred ?who ?formals ?body0 ?body*))
+       (%generate-define-output-form/without-ret-pred ?who ?formals ?body0 ?body*))
 
       ;;Ret-pred with list spec.
       ((_ ((?who ?ret-pred) . ?formals) ?body0 ?body* ...)
        (and (identifier? ?who)
 	    (identifier? ?ret-pred))
-       (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
+       (%generate-define-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
 
       ;;Ret-pred with vector spec.
       ((_ (#(?who ?ret-pred) . ?formals) ?body0 ?body* ...)
        (and (identifier? ?who)
 	    (identifier? ?ret-pred))
-       (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
+       (%generate-define-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
 
       ((_ ?who ?expr)
        (identifier? ?who)
@@ -4553,7 +4554,35 @@
 
       ))
 
-  (define (%generate-output-form/without-ret-pred ?who ?formals ?body0 ?body*)
+  (define (lambda*-macro stx)
+    ;;Transformer function  used to expand Vicare's  LAMBDA* macros from
+    ;;the  top-level  built  in  environment.  Expand  the  contents  of
+    ;;EXPR-STX.  Return a symbolic expression in the core language.
+    ;;
+    (syntax-match stx ()
+      ;;Ret-pred with list spec.
+      ((?kwd ((?who ?ret-pred) . ?formals) ?body0 ?body* ...)
+       (and (identifier? ?who)
+	    (eq? '_ (syntax->datum ?who))
+	    (identifier? ?ret-pred))
+       (%generate-lambda-output-form/with-ret-pred ?kwd ?ret-pred ?formals ?body0 ?body*))
+
+      ;;Ret-pred with vector spec.
+      ((?kwd (#(?who ?ret-pred) . ?formals) ?body0 ?body* ...)
+       (and (identifier? ?who)
+	    (eq? '_ (syntax->datum ?who))
+	    (identifier? ?ret-pred))
+       (%generate-lambda-output-form/with-ret-pred ?kwd ?ret-pred ?formals ?body0 ?body*))
+
+      ;;No ret-pred.
+      ((?kwd ?formals ?body0 ?body* ...)
+       (%generate-lambda-output-form/without-ret-pred ?kwd ?formals ?body0 ?body*))
+
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-define-output-form/without-ret-pred ?who ?formals ?body0 ?body*)
     (receive (?formals ?arg-validation* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?who '__who__))
@@ -4571,7 +4600,7 @@
 	      ,@ARG-VALIDATIONS
 	      (let () ,?body0 ,@?body*)))))))
 
-  (define (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*)
+  (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*)
     (receive (?formals ?arg-validation* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?who '__who__))
@@ -4597,6 +4626,55 @@
 	      (receive-and-return (,RET)
 		  (let () ,?body0 ,@?body*)
 		,RET-VALIDATION)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-lambda-output-form/without-ret-pred ?ctx ?formals ?body0 ?body*)
+    (receive (?formals ?arg-validation* ?arg-id*)
+	(%parse-predicate-formals ?formals)
+      (let* ((WHO             (datum->syntax ?ctx '__who__))
+	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
+				  (map (lambda (?arg-validation ?arg-id)
+					 `(unless ,?arg-validation
+					    (procedure-argument-violation ,WHO
+					      "failed argument validation"
+					      (quote ,?arg-validation) ,?arg-id)))
+				    ?arg-validation* ?arg-id*)
+				'())))
+	(bless
+	 `(lambda ,?formals
+	    (let ((,WHO (quote _)))
+	      ,@ARG-VALIDATIONS
+	      (let () ,?body0 ,@?body*)))))))
+
+  (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred ?formals ?body0 ?body*)
+    (receive (?formals ?arg-validation* ?arg-id*)
+	(%parse-predicate-formals ?formals)
+      (let* ((WHO             (datum->syntax ?ctx '__who__))
+	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
+				  (map (lambda (?arg-validation ?arg-id)
+					 `(unless ,?arg-validation
+					    (procedure-argument-violation ,WHO
+					      "failed argument validation"
+					      (quote ,?arg-validation) ,?arg-id)))
+				    ?arg-validation* ?arg-id*)
+				'()))
+	     (RET             (car (generate-temporaries '(#f))))
+	     (RET-VALIDATION  (if (enable-arguments-validation?)
+				  `(unless (,?ret-pred ,RET)
+				     (expression-return-value-violation ,WHO
+				       "failed return value validation"
+				       (list (quote ,?ret-pred) ,RET)))
+				'(void))))
+	(bless
+	 `(lambda ,?formals
+	    (let ((,WHO (quote _)))
+	      ,@ARG-VALIDATIONS
+	      (receive-and-return (,RET)
+		  (let () ,?body0 ,@?body*)
+		,RET-VALIDATION)))))))
+
+;;; --------------------------------------------------------------------
 
   (define (%parse-predicate-formals ?formals)
     ;;Split formals from tags.  We rely  on the DEFINE syntax to further
