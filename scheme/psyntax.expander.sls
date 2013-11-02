@@ -4590,17 +4590,10 @@
 ;;; --------------------------------------------------------------------
 
   (define (%generate-define-output-form/without-ret-pred ?who ?formals ?body0 ?body*)
-    (receive (?formals ?arg-validation* ?arg-id*)
+    (receive (?formals ?arg-predicate* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?who '__who__))
-	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
-				  (map (lambda (?arg-validation ?arg-id)
-					 `(unless ,?arg-validation
-					    (procedure-argument-violation ,WHO
-					      "failed argument validation"
-					      (quote ,?arg-validation) ,?arg-id)))
-				    ?arg-validation* ?arg-id*)
-				'())))
+	     (ARG-VALIDATIONS (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id*)))
 	(bless
 	 `(define (,?who . ,?formals)
 	    (let ((,WHO (quote ,?who)))
@@ -4608,24 +4601,12 @@
 	      (let () ,?body0 ,@?body*)))))))
 
   (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*)
-    (receive (?formals ?arg-validation* ?arg-id*)
+    (receive (?formals ?arg-predicate* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?who '__who__))
-	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
-				  (map (lambda (?arg-validation ?arg-id)
-					 `(unless ,?arg-validation
-					    (procedure-argument-violation ,WHO
-					      "failed argument validation"
-					      (quote ,?arg-validation) ,?arg-id)))
-				    ?arg-validation* ?arg-id*)
-				'()))
+	     (ARG-VALIDATIONS (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id*))
 	     (RET             (car (generate-temporaries '(#f))))
-	     (RET-VALIDATION  (if (enable-arguments-validation?)
-				  `(unless (,?ret-pred ,RET)
-				     (expression-return-value-violation ,WHO
-				       "failed return value validation"
-				       (list (quote ,?ret-pred) ,RET)))
-				'(void))))
+	     (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred RET)))
 	(bless
 	 `(define (,?who . ,?formals)
 	    (let ((,WHO (quote ,?who)))
@@ -4637,17 +4618,10 @@
 ;;; --------------------------------------------------------------------
 
   (define (%generate-lambda-output-form/without-ret-pred ?ctx ?formals ?body0 ?body*)
-    (receive (?formals ?arg-validation* ?arg-id*)
+    (receive (?formals ?arg-predicate* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?ctx '__who__))
-	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
-				  (map (lambda (?arg-validation ?arg-id)
-					 `(unless ,?arg-validation
-					    (procedure-argument-violation ,WHO
-					      "failed argument validation"
-					      (quote ,?arg-validation) ,?arg-id)))
-				    ?arg-validation* ?arg-id*)
-				'())))
+	     (ARG-VALIDATIONS (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id*)))
 	(bless
 	 `(lambda ,?formals
 	    (let ((,WHO (quote _)))
@@ -4655,24 +4629,12 @@
 	      (let () ,?body0 ,@?body*)))))))
 
   (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred ?formals ?body0 ?body*)
-    (receive (?formals ?arg-validation* ?arg-id*)
+    (receive (?formals ?arg-predicate* ?arg-id*)
 	(%parse-predicate-formals ?formals)
       (let* ((WHO             (datum->syntax ?ctx '__who__))
-	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
-				  (map (lambda (?arg-validation ?arg-id)
-					 `(unless ,?arg-validation
-					    (procedure-argument-violation ,WHO
-					      "failed argument validation"
-					      (quote ,?arg-validation) ,?arg-id)))
-				    ?arg-validation* ?arg-id*)
-				'()))
+	     (ARG-VALIDATIONS (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id*))
 	     (RET             (car (generate-temporaries '(#f))))
-	     (RET-VALIDATION  (if (enable-arguments-validation?)
-				  `(unless (,?ret-pred ,RET)
-				     (expression-return-value-violation ,WHO
-				       "failed return value validation"
-				       (list (quote ,?ret-pred) ,RET)))
-				'(void))))
+	     (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred RET)))
 	(bless
 	 `(lambda ,?formals
 	    (let ((,WHO (quote _)))
@@ -4782,6 +4744,26 @@
 	     (else
 	      (%synner "invalid argument specification" ?rest-var))))))
       ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id*)
+    (if (enable-arguments-validation?)
+	(map (lambda (?arg-predicate ?arg-id)
+	       `(unless ,?arg-predicate
+		  (procedure-argument-violation ,WHO
+		    "failed argument validation"
+		    (quote ,?arg-predicate) ,?arg-id)))
+	  ?arg-predicate* ?arg-id*)
+      '()))
+
+  (define (%make-ret-validation-form WHO ?ret-pred RET)
+    (if (enable-arguments-validation?)
+	`(unless (,?ret-pred ,RET)
+	   (expression-return-value-violation ,WHO
+	     "failed return value validation"
+	     (list (quote ,?ret-pred) ,RET)))
+      '(void)))
 
   (define (%synner message subform)
     (syntax-violation 'define* message #f subform))
