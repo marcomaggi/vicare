@@ -338,7 +338,11 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/net/addresses/ipv6.sls					\
 	nausicaa/net/addresses/uri.sls
 
-dist_pkglibexec_SCRIPTS		+= compile-nausicaa.sps
+dist_pkglibexec_SCRIPTS		+= \
+	compile-nausicaa-language.sps		\
+	compile-nausicaa-containers.sps		\
+	compile-nausicaa-parser-tools.sps	\
+	compile-nausicaa-misc.sps
 endif
 
 if WANT_LIBFFI
@@ -430,7 +434,10 @@ if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
 if WANT_NAUSICAA
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-language.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-parser-tools.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-misc.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
@@ -470,7 +477,10 @@ if WANT_SRFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
 if WANT_NAUSICAA
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-nausicaa.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-language.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-parser-tools.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-misc.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
