@@ -375,6 +375,10 @@
     ;;Return a  percent-encoded bytevector  or string  representation of
     ;;OBJ, which can be a char or string or bytevector.
     ;;
+    ;;Notice that this function is  different form URI-ENCODE as defined
+    ;;by "(vicare)": it accepts a variety  of argument types and also it
+    ;;allows the selection of the characters to encode.
+    ;;
     (define who 'percent-encode)
     (define bv
       (cond ((bytevector? obj)
@@ -410,6 +414,9 @@
     ;;Percent-decode the given object;  return the decoded bytevector or
     ;;string.
     ;;
+    ;;Notice that this function is  different form URI-DECODE as defined
+    ;;by "(vicare)": it accepts a variety of argument types.
+    ;;
     (define who 'percent-decode)
     (define bv
       (cond ((string? obj)
@@ -430,9 +437,9 @@
 	  (let ((chi ($bytevector-u8-ref bv i)))
 	    (put-u8 port (if ($is-chi-percent? chi)
 			     (begin
-			       (incr! i)
+			       (set! i ($fxadd1 i))
 			       ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref bv i)))
-			       (incr! i)
+			       (set! i ($fxadd1 i))
 			       ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref bv i)))
 			       (string->number buf 16))
 			   chi))

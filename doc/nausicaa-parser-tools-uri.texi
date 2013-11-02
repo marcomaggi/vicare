@@ -319,6 +319,10 @@ Examples:
 (uri.percent-encode "cia=o")    @result{} "cia%3Do"
 (uri.percent-encode "ci?a=o")   @result{} "ci%3Fa%3Do"
 @end example
+
+Notice that this function is different form @func{uri-encode} as defined
+by @library{vicare}: it accepts a variety of argument types and it
+allows the selection of the characters to encode.
 @end deffn
 
 
@@ -360,6 +364,9 @@ Examples:
 (doit "cia%3Do")        @result{} "cia=o"
 (doit "ci%3Fa%3Do")     @result{} "ci?a=o"
 @end example
+
+Notice that this function is different form @func{uri-decode} as defined
+by @library{vicare}: it accepts a variety of argument types.
 @end deffn
 
 

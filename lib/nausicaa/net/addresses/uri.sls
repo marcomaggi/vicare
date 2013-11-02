@@ -36,7 +36,6 @@
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
-    (prefix (nausicaa parser-tools uri) uri.)
     (vicare unsafe operations))
 
 
@@ -63,9 +62,138 @@
 ;;;; auxiliary labels
 
 (define-label <uri-scheme>
-  (parent <nonempty-bytevector>)
-  (predicate (lambda (bv)
-	       #f)))
+  (parent <nonempty-bytevector>))
+
+(define-label <uri-authority>
+  (parent <bytevector>))
+
+(define-label <uri-userinfo>
+  (parent <bytevector>))
+
+(define-label <uri-host>
+  (parent <bytevector>))
+
+(define-label <uri-port>
+  (parent <bytevector>))
+
+(define-label <uri-query>
+  (parent <bytevector>))
+
+(define-label <uri-fragment>
+  (parent <bytevector>))
+
+
+;;;; path types
+
+(define-label <list-of-nonempty-bytevectors>
+  (parent <list>)
+  (predicate (lambda (self)
+	       (for-all (<nonempty-bytevector>) self)))
+  (protocol (lambda ()
+	      (lambda (path)
+		(map uri-decode path)))))
+
+(define-class <uri-path>
+  (nongenerative nausicaa:net:addresses:uri:<uri-path>)
+  (fields (immutable (path <list-of-nonempty-bytevectors>))
+	  (mutable   memoized-bytevector))
+  (protocol (lambda (make-top)
+	      (lambda (path)
+		((make-top) (map uri-decode path) #f))))
+
+  (virtual-fields
+   (immutable (bytevector <bytevector>)
+	      (lambda ((O <uri-path>))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (put-bytevector port (O $path $car))
+			  (for-each (lambda (bv)
+				      (put-u8 port 47) ;47 = (char->integer #\/)
+				      (put-bytevector port bv))
+			    (O $path $cdr))
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
+
+(define-class <uri-path-empty>
+  (nongenerative nausicaa:net:addresses:uri:<uri-path-empty>)
+  (parent <uri-path>)
+  (protocol (lambda (make-uri-path)
+	      (lambda ()
+		((make-uri-path '())))))
+  #| end of class |# )
+
+(define-class <uri-path-abempty>
+  (nongenerative nausicaa:net:addresses:uri:<uri-path-abempty>)
+  (parent <uri-path>)
+  (protocol (lambda (make-uri-path)
+	      (lambda (path)
+		((make-uri-path path)))))
+  (virtual-fields
+   (immutable (bytevector <bytevector>)
+	      (lambda ((O <uri-path>))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (for-each (lambda (bv)
+				      (put-u8 port 47) ;47 = (char->integer #\/)
+				      (put-bytevector port bv))
+			    (O $path))
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
+   #| end of virtual-fields |# )
+  #| end of class |# )
+
+(define-class <uri-path-absolute>
+  (nongenerative nausicaa:net:addresses:uri:<uri-path-absolute>)
+  (parent <uri-path>)
+  (protocol (lambda (make-uri-path)
+	      (lambda (path)
+		((make-uri-path path)))))
+  (virtual-fields
+   (immutable (bytevector <bytevector>)
+	      (lambda ((O <uri-path>))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (for-each (lambda (bv)
+				      (put-u8 port 47) ;47 = (char->integer #\/)
+				      (put-bytevector port bv))
+			    (O $path))
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
+   #| end of virtual-fields |# )
+  #| end of class |# )
+
+(define-class <uri-path-rootless>
+  (nongenerative nausicaa:net:addresses:uri:<uri-path-rootless>)
+  (parent <uri-path>)
+  (protocol (lambda (make-uri-path)
+	      (lambda (path)
+		((make-uri-path path)))))
+  #| end of class |# )
+
+;;; --------------------------------------------------------------------
+
+(define (make-uri-path (path-type <symbol>) path)
+  (case path-type
+    ((path-abempty)
+     (<uri-path-abempty> (path)))
+    ((path-absolute)
+     (<uri-path-absolute> (path)))
+    ((path-rootless)
+     (<uri-path-rootless> (path)))
+    ((path-empty)
+     (<uri-path-empty> ()))
+    (else
+     (procedure-argument-violation __who__
+       "invalid URI path type" path-type))))
 
 
 (define-class <uri>
@@ -78,28 +206,29 @@
 
   (protocol
    (lambda (make-top)
-     (lambda (scheme authority userinfo host-type host port path-type path query fragment)
+     (lambda ((scheme <uri-scheme>) (authority <uri-authority>) (userinfo <uri-userinfo>)
+	 (host-type <symbol>) (host <uri-host>) (port <uri-port>)
+	 (path-type <symbol>) (path <uri-path>)
+	 (query <uri-query>) (fragment <uri-fragment>))
        ((make-top) scheme authority
-	(and userinfo (uri.percent-decode userinfo))
+	(and userinfo (uri-decode userinfo))
 	host-type (if (eq? host-type 'reg-name)
-		      (uri.percent-decode host)
+		      (uri-decode host)
 		    host)
-	port path-type (map (lambda (p)
-			      (uri.percent-decode p))
-			 path)
-	(and query (uri.percent-decode query))
-	(and fragment (uri.percent-decode fragment))))))
+	port
+	(make-uri-path path-type path)
+	(and query (uri-decode query))
+	(and fragment (uri-decode fragment))))))
 
-   (fields (mutable scheme)
-	   (mutable authority)
-	   (mutable userinfo)
-	   (mutable host-type)
-	   (mutable host)
-	   (mutable port)
-	   (mutable path-type)
-	   (mutable path)
-	   (mutable query)
-	   (mutable fragment))
+  (fields (mutable (scheme	<uri-scheme>))
+	  (mutable (authority	<uri-authority>))
+	  (mutable (userinfo	<uri-userinfo>))
+	  (mutable (host-type	<symbol>))
+	  (mutable (host	<uri-host>))
+	  (mutable (port	<uri-port>))
+	  (mutable (path	<uri-path>))
+	  (mutable (query	<uri-query>))
+	  (mutable (fragment	<uri-fragment>)))
 
    (virtual-fields
     (immutable (string <string>)
@@ -126,11 +255,11 @@
 				      (define-inline (%put-u8 ?thing)
 					(put-u8 authority-port ?thing))
 				      (when (O $userinfo)
-					(%put-bv (uri.percent-encode (O $userinfo)))
+					(%put-bv (uri-encode (O $userinfo)))
 					(%put-u8 64)) ;64 = #\@
 				      (case (O $host-type)
 					((reg-name)
-					 (%put-bv (uri.percent-encode (O $host))))
+					 (%put-bv (uri-encode (O $host))))
 					((ipv4-address)
 					 (%put-bv (car (O $host))))
 					((ipv6-address)
@@ -155,29 +284,15 @@
 		       (%put-u8 47) ;47 = #\/
 		       (%put-bv authority)))
 
-		   (unless (null? (O $path))
-		     (let ((first	(car (O $path)))
-			   (rest	(cdr (O $path))))
-		       (case (O $path-type)
-			 ((path-abempty path-absolute)
-			  (%put-u8 47) ;47 = /
-			  (%put-bv first))
-			 ((path-rootless)
-			  (%put-bv first))
-			 (else
-			  (assertion-violation who "invalid path type" O (O $path-type))))
-		       (for-each (lambda (bv)
-				   (%put-u8 47) ;47 = /
-				   (%put-bv bv))
-			 rest)))
+		   (%put-bv (O $path bytevector))
 
 		   (when (O $query)
 		     (%put-u8 63) ;63 = ?
-		     (%put-bv (uri.percent-encode (O $query))))
+		     (%put-bv (uri-encode (O $query))))
 
 		   (when (O $fragment)
 		     (%put-u8 35) ;35 = #
-		     (%put-bv (uri.percent-encode (O $fragment))))
+		     (%put-bv (uri-encode (O $fragment))))
 
 		   (getter))))
 
@@ -207,31 +322,30 @@
 	     ((_ (?clause ...))
 	      #'(%make-relative-ref ?clause ...)))))
 
-;;;(uri.parse-relative-ref (open-bytevector-input-port source-bytevector))
-
   (protocol
    (lambda (make-top)
-     (lambda (authority userinfo host-type host port path-type path query fragment)
+     (lambda ((authority <uri-authority>) (userinfo <uri-userinfo>)
+	 (host-type <symbol>) (host <uri-host>) (port <uri-port>)
+	 (path-type <symbol>) (path <uri-path>)
+	 (query <uri-query>) (fragment <uri-fragment>))
        ((make-top) authority
-	(and userinfo (uri.percent-decode userinfo))
+	(and userinfo (uri-decode userinfo))
 	host-type (if (eq? host-type 'reg-name)
-		      (uri.percent-decode host)
+		      (uri-decode host)
 		    host)
-	port path-type (map (lambda (p)
-			      (uri.percent-decode p))
-			 path)
-	(and query (uri.percent-decode query))
-	(and fragment (uri.percent-decode fragment))))))
+	(make-uri-path path-type path)
+	(and query (uri-decode query))
+	(and fragment (uri-decode fragment))))))
 
-   (fields (mutable authority)
-	   (mutable userinfo)
-	   (mutable host-type)
-	   (mutable host)
-	   (mutable port)
-	   (mutable path-type)
-	   (mutable path)
-	   (mutable query)
-	   (mutable fragment))
+  (fields (mutable (authority	<uri-authority>))
+	  (mutable (userinfo	<uri-userinfo>))
+	  (mutable (host-type	<symbol>))
+	  (mutable (host	<uri-host>))
+	  (mutable (port	<uri-port>))
+	  (mutable (path-type	<symbol>))
+	  (mutable (path	<uri-path>))
+	  (mutable (query	<uri-query>))
+	  (mutable (fragment	<uri-fragment>)))
 
   (virtual-fields
    (immutable (string <string>)
@@ -255,11 +369,11 @@
 				     (define-inline (%put-u8 ?thing)
 				       (put-u8 authority-port ?thing))
 				     (when (O $userinfo)
-				       (%put-bv (uri.percent-encode (O $userinfo)))
+				       (%put-bv (uri-encode (O $userinfo)))
 				       (%put-u8 64)) ;64 = #\@
 				     (case (O $host-type)
 				       ((reg-name)
-					(%put-bv (uri.percent-encode (O $host))))
+					(%put-bv (uri-encode (O $host))))
 				       ((ipv4-address)
 					(%put-bv (car (O $host))))
 				       ((ipv6-address)
@@ -284,29 +398,15 @@
 		      (%put-u8 47) ;47 = #\/
 		      (%put-bv authority)))
 
-		  (unless (null? (O $path))
-		    (let ((first	(car (O $path)))
-			  (rest	(cdr (O $path))))
-		      (case (O $path-type)
-			((path-abempty path-absolute)
-			 (%put-u8 47) ;47 = /
-			 (%put-bv first))
-			((path-noscheme)
-			 (%put-bv first))
-			(else
-			 (assertion-violation who "invalid path type" O (O $path-type))))
-		      (for-each (lambda (bv)
-				  (%put-u8 47) ;47 = /
-				  (%put-bv bv))
-			rest)))
+		  (%put-bv (O $path bytevector))
 
 		  (when (O $query)
 		    (%put-u8 63) ;63 = ?
-		    (%put-bv (uri.percent-encode (O $query))))
+		    (%put-bv (uri-encode (O $query))))
 
 		  (when (O $fragment)
 		    (%put-u8 35) ;35 = #
-		    (%put-bv (uri.percent-encode (O $fragment))))
+		    (%put-bv (uri-encode (O $fragment))))
 
 		  (getter))))
 
