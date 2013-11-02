@@ -3126,9 +3126,23 @@ Usage examples:
 @deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
 @deffnx {Auxiliary Syntax} <-
 Like @func{define} and defines the @oopp{} bindings for function
-arguments.  When all the bindings have no tags: this syntax is
+arguments.  When all the bindings have no tags: this syntax is almost
 equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
 is equivalent to a binding tagged with @class{top}.
+
+@cindex @code{__who__}
+When the syntax is used for function definition, the @meta{body} forms
+are enclosed in a @func{let} syntax as follows:
+
+@example
+(let ((__who__ (quote @meta{id})))
+  @metao{body} @meta{body} @dots{})
+@end example
+
+@noindent
+so the binding @code{__who__} is available in the body forms to
+reference a symbol representing the function's name.  This is useful
+when raising exceptions with condition type @condition{who}.
 
 When the syntax is used for function definition and procedure arguments
 validation, as defined by @library{vicare arguments validation}, is

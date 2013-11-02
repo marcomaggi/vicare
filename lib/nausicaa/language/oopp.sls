@@ -1700,11 +1700,15 @@
     ;;
     ((_ (?who . ?formals) ?body0 ?body ...)
      (identifier? #'?who)
-     #'(define ?who (lambda/tags ?formals ?body0 ?body ...)))
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who (lambda/tags ?formals (let ((WHO '?who)) ?body0 ?body ...)))))
 
     ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
      (all-identifiers? #'(?who ?tag0 ?tag ...))
-     #'(define ?who (lambda/tags ?formals (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)))
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who (lambda/tags ?formals (aux.<- ?tag0 ?tag ...) (let ((WHO '?who)) ?body0 ?body ...)))))
 
     (_
      (synner "syntax error in DEFINE/TAGS"))))

@@ -40,6 +40,24 @@ this project has a mailing list:
 Notes for revision 0.3d7
 ------------------------
 
+* When  the syntax  DEFINE/TAGS  from (nausicaa)  is  used for  function
+  definition, the body forms are enclosed in a LET syntax as follows:
+
+    (let ((__who__ (quote ?id))) ?body0 ?body ...)
+
+  so the binding "__who__" is available in the body forms to reference a
+  symbol representing the  function's name; this is  useful when raising
+  exceptions with  condition type "&who".  Such  non-hygienic definition
+  looks  non-Schemey, but  in  many  places in  the  code  there is  the
+  pattern:
+
+    (define (doit . args)
+      (define who 'doit)
+      ---)
+
+  to make the  name of the function available; such  definitions can now
+  be cleared.
+
 * BACKWARDS  INCOMPATIBILITY Some  parser  functions for  IPv4 and  IPv6
   addresses from the hierarchy (nausicaa  parser-tools ---) now return a
   vector rather than a list.
