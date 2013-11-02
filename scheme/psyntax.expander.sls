@@ -3268,6 +3268,7 @@
 	     ((guard)				guard-macro)
 	     ((define-enumeration)		define-enumeration-macro)
 	     ((let*-syntax)			let*-syntax-macro)
+	     ((define*)				define*-macro)
 
 	     ((trace-lambda)			trace-lambda-macro)
 	     ((trace-define)			trace-define-macro)
@@ -4518,6 +4519,196 @@
 	 (let*-syntax ,(map list ?lhs* ?rhs*)
 	   ,?body ,@?body*))))
     ))
+
+
+;;;; module non-core-macro-transformer: DEFINE*
+
+(module (define*-macro)
+
+  (define (define*-macro stx)
+    ;;Transformer function  used to expand Vicare's  DEFINE* macros from
+    ;;the  top-level  built  in  environment.  Expand  the  contents  of
+    ;;EXPR-STX.  Return a symbolic expression in the core language.
+    ;;
+    (syntax-match stx ()
+      ;;No ret-pred.
+      ((_ (?who . ?formals) ?body0 ?body* ...)
+       (identifier? ?who)
+       (%generate-output-form/without-ret-pred ?who ?formals ?body0 ?body*))
+
+      ;;Ret-pred with list spec.
+      ((_ ((?who ?ret-pred) . ?formals) ?body0 ?body* ...)
+       (and (identifier? ?who)
+	    (identifier? ?ret-pred))
+       (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
+
+      ;;Ret-pred with vector spec.
+      ((_ (#(?who ?ret-pred) . ?formals) ?body0 ?body* ...)
+       (and (identifier? ?who)
+	    (identifier? ?ret-pred))
+       (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*))
+
+      ((_ ?who ?expr)
+       (identifier? ?who)
+       (bless
+	`(define ,?who ,?expr)))
+
+      ((_ ?who)
+       (identifier? ?who)
+       (bless
+	`(define ,?who (void))))
+
+      ))
+
+  (define (%generate-output-form/without-ret-pred ?who ?formals ?body0 ?body*)
+    (receive (?formals ?arg-validation* ?arg-id*)
+	(%parse-predicate-formals ?formals)
+      (let* ((WHO             (datum->syntax ?who '__who__))
+	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
+				  (map (lambda (?arg-validation ?arg-id)
+					 `(unless ,?arg-validation
+					    (procedure-argument-violation ,WHO
+					      "failed argument validation"
+					      (quote ,?arg-validation) ,?arg-id)))
+				    ?arg-validation* ?arg-id*)
+				'())))
+	(bless
+	 `(define (,?who . ,?formals)
+	    (let ((,WHO (quote ,?who)))
+	      ,@ARG-VALIDATIONS
+	      (let () ,?body0 ,@?body*)))))))
+
+  (define (%generate-output-form/with-ret-pred ?who ?ret-pred ?formals ?body0 ?body*)
+    (receive (?formals ?arg-validation* ?arg-id*)
+	(%parse-predicate-formals ?formals)
+      (let* ((WHO             (datum->syntax ?who '__who__))
+	     (ARG-VALIDATIONS (if (enable-arguments-validation?)
+				  (map (lambda (?arg-validation ?arg-id)
+					 `(unless ,?arg-validation
+					    (procedure-argument-violation ,WHO
+					      "failed argument validation"
+					      (quote ,?arg-validation) ,?arg-id)))
+				    ?arg-validation* ?arg-id*)
+				'()))
+	     (RET             (car (generate-temporaries '(#f))))
+	     (RET-VALIDATION  (if (enable-arguments-validation?)
+				  `(unless (,?ret-pred ,RET)
+				     (expression-return-value-violation ,WHO
+				       "failed return value validation"
+				       (list (quote ,?ret-pred) ,RET)))
+				'(void))))
+	(bless
+	 `(define (,?who . ,?formals)
+	    (let ((,WHO (quote ,?who)))
+	      ,@ARG-VALIDATIONS
+	      (receive-and-return (,RET)
+		  (let () ,?body0 ,@?body*)
+		,RET-VALIDATION)))))))
+
+  (define (%parse-predicate-formals ?formals)
+    ;;Split formals from tags.  We rely  on the DEFINE syntax to further
+    ;;validate the formals against duplicate bindings.
+    ;;
+    (syntax-match ?formals ()
+
+      ;;Untagged identifiers without rest argument.
+      ;;
+      ((?id* ...)
+       (for-all identifier? ?id*)
+       (values ?formals '() '()))
+
+      ;;Untagged identifiers with rest argument.
+      ;;
+      ((?id* ... . ?rest-id)
+       (and (for-all identifier? ?id*)
+	    (identifier? ?rest-id))
+       (values ?formals '() '()))
+
+      ;;Possibly tagged identifiers without rest argument.
+      ;;
+      ((?var* ...)
+       (let recur ((?var* ?var*))
+	 (if (pair? ?var*)
+	     (receive (?id* ?validation* ?validation-id*)
+		 (recur (cdr ?var*))
+	       (let ((?var (car ?var*)))
+		 (syntax-match ?var ()
+		   ;;Untagged argument.
+		   (?id
+		    (identifier? ?id)
+		    (values (cons ?id ?id*)
+			    ?validation*
+			    ?validation-id*))
+		   ;;Tagged argument, list spec.
+		   ((?id ?pred)
+		    (and (identifier? ?id)
+			 (identifier? ?pred))
+		    (values (cons ?id ?id*)
+			    (cons (list ?pred ?id) ?validation*)
+			    (cons ?id ?validation-id*)))
+		   ;;Tagged argument, vector spec.
+		   (#(?id ?pred)
+		    (and (identifier? ?id)
+			 (identifier? ?pred))
+		    (values (cons ?id ?id*)
+			    (cons (list ?pred ?id) ?validation*)
+			    (cons ?id ?validation-id*)))
+		   (else
+		    (%synner "invalid argument specification" ?var)))))
+	   (values '() '() '()))))
+
+      ;;Possibly tagged identifiers with rest argument.
+      ;;
+      ((?var* ... . ?rest-var)
+       (let recur ((?var* ?var*))
+	 (if (pair? ?var*)
+	     (receive (?id* ?validation* ?validation-id*)
+		 (recur (cdr ?var*))
+	       (let ((?var (car ?var*)))
+		 (syntax-match ?var ()
+		   ;;Untagged argument.
+		   (?id
+		    (identifier? ?id)
+		    (values (cons ?id ?id*)
+			    ?validation*
+			    ?validation-id*))
+		   ;;Tagged argument, list spec.
+		   ((?id ?pred)
+		    (and (identifier? ?id)
+			 (identifier? ?pred))
+		    (values (cons ?id ?id*)
+			    (cons (list ?pred ?id) ?validation*)
+			    (cons ?id ?validation-id*)))
+		   ;;Tagged argument, vector spec.
+		   (#(?id ?pred)
+		    (and (identifier? ?id)
+			 (identifier? ?pred))
+		    (values (cons ?id ?id*)
+			    (cons (list ?pred ?id) ?validation*)
+			    (cons ?id ?validation-id*)))
+		   (else
+		    (%synner "invalid argument specification" ?var)))))
+	   ;;Process rest argument.
+	   (syntax-match ?rest-var ()
+	     ;;Untagged rest argument.
+	     (?rest-id
+	      (identifier? ?rest-id)
+	      (values ?rest-id '() '()))
+	     ;;Tagged rest argument.
+	     (#(?rest-id ?rest-pred)
+	      (and (identifier? ?rest-id)
+		   (identifier? ?rest-pred))
+	      (values ?rest-id
+		      (list (list ?rest-pred ?rest-id))
+		      (list ?rest-id)))
+	     (else
+	      (%synner "invalid argument specification" ?rest-var))))))
+      ))
+
+  (define (%synner message subform)
+    (syntax-violation 'define* message #f subform))
+
+  #| end of module |# )
 
 
 ;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX

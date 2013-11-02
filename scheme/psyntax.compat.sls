@@ -33,6 +33,7 @@
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs
+    enable-arguments-validation?
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -116,6 +117,19 @@
 
 (define (remove-location x)
   ($unintern-gensym x))
+
+
+;;;; run-time configuration
+
+(module (enable-arguments-validation?)
+
+  (module (arguments-validation)
+    (include "ikarus.config.ss" #t))
+
+  (define (enable-arguments-validation?)
+    arguments-validation)
+
+  #| end of module |# )
 
 
 ;;;; done
