@@ -40,6 +40,15 @@ this project has a mailing list:
 Notes for revision 0.3d7
 ------------------------
 
+* Added convenience syntax CASE-DEFINE to (vicare).
+
+    (case-define who ?cl-clause0 cl-clause ...)
+    ==> (define who (case-lambda ?cl-clause0 ?cl-clause ...))
+
+* Added  to   (vicare)  the  experimental  syntaxes   LAMBDA*,  DEFINE*,
+  CASE-LAMBDA*,  CASE-DEFINE*.   See   the  documentation  nodes  "iklib
+  syntaxes lambdas" and "iklib syntaxes defines".
+
 * When  the syntax  DEFINE/TAGS  from (nausicaa)  is  used for  function
   definition, the body forms are enclosed in a LET syntax as follows:
 
