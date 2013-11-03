@@ -3262,6 +3262,7 @@
 	     ((define-enumeration)		define-enumeration-macro)
 	     ((let*-syntax)			let*-syntax-macro)
 	     ((define*)				define*-macro)
+	     ((case-define*)			case-define*-macro)
 	     ((lambda*)				lambda*-macro)
 	     ((case-lambda*)			case-lambda*-macro)
 
@@ -4516,9 +4517,12 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE* and LAMBDA*
+;;;; module non-core-macro-transformer: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
 
-(module (define*-macro lambda*-macro case-lambda*-macro)
+(module (lambda*-macro
+	 define*-macro
+	 case-lambda*-macro
+	 case-define*-macro)
 
   (module (define*-macro)
 
@@ -4591,6 +4595,75 @@
 
 ;;; --------------------------------------------------------------------
 
+  (module (case-define*-macro)
+
+    (define (case-define*-macro stx)
+      ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
+      ;;from the top-level built in environment.  Expand the contents of
+      ;;EXPR-STX.  Return a symbolic expression in the core language.
+      ;;
+      (define (%synner message subform)
+	(syntax-violation 'case-define* message stx subform))
+      (syntax-match stx ()
+	((_ ?who ?clause0 ?clause* ...)
+	 (identifier? ?who)
+	 (bless
+	  `(define ,?who
+	     (case-lambda
+	      ,@(map (lambda (?clause)
+		       (%generate-case-define-form ?who ?clause %synner))
+		  (cons ?clause0 ?clause*))))))
+	))
+
+    (define (%generate-case-define-form ?who ?clause synner)
+      (syntax-match ?clause ()
+	;;Ret-pred with list spec.
+	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
+	      (identifier? ?ret-pred0)
+	      (for-all identifier? ?ret-pred*))
+	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+
+	;;Ret-pred with vector spec.
+	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
+	      (identifier? ?ret-pred0)
+	      (for-all identifier? ?ret-pred*))
+	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+
+	;;No ret-pred.
+	((?formals ?body0 ?body* ...)
+	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner))
+	))
+
+    (define (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner)
+      (receive (?formals ?arg-predicate* ?arg-id*)
+	  (%parse-predicate-formals ?formals synner)
+	(let* ((WHO             (datum->syntax ?who '__who__))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
+	  `(,?formals
+	    (let ((,WHO (quote ,?who)))
+	      ,@ARG-VALIDATION*
+	      (let () ,?body0 ,@?body*))))))
+
+    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?formals ?body0 ?body* synner)
+      (receive (?formals ?arg-predicate* ?arg-id*)
+	  (%parse-predicate-formals ?formals synner)
+	(let* ((WHO             (datum->syntax ?who '__who__))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner))
+	       (RET*            (generate-temporaries ?ret-pred*))
+	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
+	  `(,?formals
+	    (let ((,WHO (quote ,?who)))
+	      ,@ARG-VALIDATION*
+	      (receive-and-return (,@RET*)
+		  (let () ,?body0 ,@?body*)
+		,RET-VALIDATION))))))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
   (module (lambda*-macro)
 
     (define (lambda*-macro stx)
@@ -4602,17 +4675,15 @@
 	(syntax-violation 'lambda* message stx subform))
       (syntax-match stx ()
 	;;Ret-pred with list spec.
-	((?kwd ((?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (eq? '_ (syntax->datum ?who))
+	((?kwd ((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
 
 	;;Ret-pred with vector spec.
-	((?kwd (#(?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (eq? '_ (syntax->datum ?who))
+	((?kwd (#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
@@ -4674,17 +4745,15 @@
     (define (%generate-case-lambda-form ?ctx ?clause synner)
       (syntax-match ?clause ()
 	;;Ret-pred with list spec.
-	((((?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (eq? '_ (syntax->datum ?who))
+	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
 
 	;;Ret-pred with vector spec.
-	(((#(?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (eq? '_ (syntax->datum ?who))
+	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
@@ -4844,6 +4913,10 @@
 			 (list (quote ,?ret-pred) ,RET))))
 	       ?ret-pred* RET*))
       '(void)))
+
+  (define (%underscore? stx)
+    (and (identifier? stx)
+	 (eq? '_ (syntax->datum stx))))
 
   #| end of module |# )
 

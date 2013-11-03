@@ -2964,25 +2964,303 @@
   #t)
 
 
-;; (parametrise ((check-test-name	'syntax-transpose))
+(parametrise ((check-test-name	'case-define-star))
 
-;;   (define id #f)
-;;   (define ciao 1)
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
 
-;;   (check
-;;       (let ((id 3))
-;; 	(define-syntax doit
-;; 	  (lambda (stx)
-;; 	    (syntax-case stx ()
-;; 	      ((_ ?id)
-;; 	       (begin
-;; 		 (check-pretty-print #'id)
-;; 		 (check-pretty-print #'?id)
-;; 		 (syntax-transpose #'ciao #'id #'?id))))))
-;; 	(doit id))
-;;     => #f)
+;;; --------------------------------------------------------------------
+;;; without predicates
 
-;;   #t)
+  (check
+      (let ()
+	(case-define* doit
+	  (()
+	   123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((a)
+	   (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((a b c)
+	   (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (rest
+	   (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((a . rest)
+	   (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((a b . rest)
+	   (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((a b c . rest)
+	   (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, list spec, without retval predicate
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((a fixnum?))
+	   (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (#(rest list-of-fixnums?)
+	   (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, vector spec, without retval predicate
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?))
+	   (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (#(rest list-of-fixnums?)
+	   (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(case-define* doit
+	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, with retval predicate
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ fixnum?))
+	   123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) (a fixnum?))
+	   (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) . #(rest list-of-fixnums?))
+	   (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	   (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(case-define* doit
+	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(doit ((fixnum? b) #\5)))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(case-define* doit
+	  (((_ list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	   (vector 123 a b c)))
+	(doit 4 5 6))
+    => '(doit ((list? #(123 4 5 6)))))
+
+;;; --------------------------------------------------------------------
+;;; multiple retval predicates
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ fixnum? string? char?))
+	   (values 1 "2" #\3)))
+	(doit))
+    => 1 "2" #\3)
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(case-define* doit
+	  (((_ fixnum? string? char?))
+	   (values 1 'a #\3)))
+	(doit))
+    => '(doit ((string? a))))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(case-define* doit
+	  (()
+	   __who__))
+	(doit))
+    => 'doit)
+
+  (check
+      (let ()
+	(case-define* doit
+	  (((_ symbol?))
+	   __who__))
+	(doit))
+    => 'doit)
+
+  #t)
 
 
 ;;;; done
