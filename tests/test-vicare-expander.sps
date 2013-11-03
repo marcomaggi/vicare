@@ -2326,6 +2326,25 @@
     => '(_ ((list? #(123 4 5 6)))))
 
 ;;; --------------------------------------------------------------------
+;;; multiple retval predicates
+
+  (check
+      (let ()
+	(define doit
+	  (lambda* ((_ fixnum? string? char?))
+	    (values 1 "2" #\3)))
+	(doit))
+    => 1 "2" #\3)
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define doit
+	  (lambda* ((_ fixnum? string? char?))
+	    (values 1 'a #\3)))
+	(doit))
+    => '(_ ((string? a))))
+
+;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
 
   (check
@@ -2574,6 +2593,23 @@
 	  (vector 123 a b c))
 	(doit 4 5 6))
     => '(doit ((list? #(123 4 5 6)))))
+
+;;; --------------------------------------------------------------------
+;;; multiple retval predicates
+
+  (check
+      (let ()
+	(define* ((doit fixnum? string? char?))
+	  (values 1 "2" #\3))
+	(doit))
+    => 1 "2" #\3)
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define* ((doit fixnum? string? char?))
+	  (values 1 'a #\3))
+	(doit))
+    => '(doit ((string? a))))
 
 ;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
