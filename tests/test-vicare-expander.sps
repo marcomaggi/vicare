@@ -2067,6 +2067,29 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-define))
+
+  (check
+      (let ()
+	(case-define doit
+	  (()
+	   123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(case-define doit
+	  ((a)
+	   (list a))
+	  ((a b)
+	   (vector a b)))
+	(list (doit 1) (doit 1 2)))
+    => '((1) #(1 2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'lambda-star))
 
   (define (list-of-fixnums? obj)
