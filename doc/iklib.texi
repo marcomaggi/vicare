@@ -409,6 +409,9 @@ predicate fails for its returned value, an exception is raised using
 @condition{expression-return-value-violation}.
 @end itemize
 
+In addition a non--hygienic binding is created: the identifier
+@code{__who__} is bound to the quoted symbol @code{_}.
+
 Usage examples:
 
 @itemize
@@ -507,6 +510,9 @@ selection of predicate functions to validate the arguments and the
 return value.  Clause by clause the formals are handled as explained for
 @func{lambda*}.
 
+In addition a non--hygienic binding is created in each clause: the
+identifier @code{__who__} is bound to the quoted symbol @code{_}.
+
 Usage examples:
 
 @example
@@ -532,10 +538,10 @@ Usage examples:
 @subsection @func{define}--like additional syntaxes
 
 
-@deffn Syntax define* @meta{id} @meta{expression}
-@deffnx Syntax define* @meta{id}
-@deffnx Syntax define* (@meta{id} . @meta{formals}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define* (@meta{var} . @meta{formals}) @metao{body} @meta{body} @dots{}
+@deffn Syntax define* @meta{who} @meta{expression}
+@deffnx Syntax define* @meta{who}
+@deffnx Syntax define* (@meta{who} . @meta{formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define* (@meta{pred-who} . @meta{formals}) @metao{body} @meta{body} @dots{}
 Like the standard @func{define} as defined by @rnrs{6}, but when
 defining a function: allow the selection of predicate functions to
 validate the arguments and the return value.
@@ -544,7 +550,11 @@ Predicates selections is performed as explained for the @func{lambda*}
 extended syntax, @ref{iklib syntaxes lambdas, @func{lambda}--like
 additional syntaxes}.  There is an exception, where @func{lambda*} uses
 the @code{_} symbol to select predicates for the returned values,
-@func{define*} uses the binding identifier.
+@func{define*} uses the binding identifier @meta{who}.
+
+In addition, when defining a function, a non--hygienic binding is
+created: the identifier @code{__who__} is bound to the quoted symbol
+@meta{who}.
 
 Usage examples:
 
@@ -629,7 +639,34 @@ Function with multiple validated return values:
 
 (f 1 "2")               @result{} 1, "2"
 @end example
+
+@item
+Accessing the function name:
+
+@example
+(import (vicare))
+
+(define* (f)
+  __who__)
+
+(f)     @result{} f
+@end example
 @end itemize
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax case-define* @meta{who} @metao{pred-cl-clause} @meta{case-clause} @dots{}
+Convenience syntax that expands to something similar to:
+
+@example
+(case-define* @meta{whoe} @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{})
+@expansion{} (define @meta{who}
+      (case-lambda* @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{}))
+@end example
+
+In addition a non--hygienic binding is created in each clause: the
+identifier @code{__who__} is bound to the quoted symbol @meta{who}.
 @end deffn
 
 @c ------------------------------------------------------------
