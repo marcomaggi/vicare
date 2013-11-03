@@ -538,6 +538,17 @@ Usage examples:
 @subsection @func{define}--like additional syntaxes
 
 
+@deffn Syntax case-define @meta{who} @metao{cl-clause} @meta{cl-clause} @dots{}
+Convenience syntax which expands as follows:
+
+@example
+(case-define @meta{who} @metao{cl-clause} @meta{cl-clause} @dots{})
+@expansion{} (define @meta{who}
+      (case-lambda @metao{cl-clause} @meta{cl-clause} @dots{}))
+@end example
+@end deffn
+
+
 @deffn Syntax define* @meta{who} @meta{expression}
 @deffnx Syntax define* @meta{who}
 @deffnx Syntax define* (@meta{who} . @meta{formals}) @metao{body} @meta{body} @dots{}

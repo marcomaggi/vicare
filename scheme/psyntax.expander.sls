@@ -3268,6 +3268,7 @@
 	     ((guard)				guard-macro)
 	     ((define-enumeration)		define-enumeration-macro)
 	     ((let*-syntax)			let*-syntax-macro)
+	     ((case-define)			case-define-macro)
 	     ((define*)				define*-macro)
 	     ((case-define*)			case-define*-macro)
 	     ((lambda*)				lambda*-macro)
@@ -4521,6 +4522,18 @@
       `(let-syntax ((,?lhs ,?rhs))
 	 (let*-syntax ,(map list ?lhs* ?rhs*)
 	   ,?body ,@?body*))))
+    ))
+
+
+;;;; module non-core-macro-transformer: CASE-DEFINE
+
+(define (case-define-macro stx)
+  (syntax-match stx ()
+    ((_ ?who ?cl-clause ?cl-clause* ...)
+     (identifier? ?who)
+     (bless
+      `(define ,?who
+	 (case-lambda ,?cl-clause ,@?cl-clause*))))
     ))
 
 

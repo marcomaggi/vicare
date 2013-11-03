@@ -409,6 +409,7 @@
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
     (define-syntax*			(macro . define-syntax*))
+    (case-define			(macro . case-define))
     (define*				(macro . define*))
     (case-define*			(macro . case-define*))
     (lambda*				(macro . lambda*))
@@ -1171,6 +1172,7 @@
     (lambda						i v r ba se ne)
     (lambda*					i v $language)
     (case-lambda*				i v $language)
+    (case-define				i v $language)
     (case-define*				i v $language)
     (and					i v r ba se ne)
     (begin					i v r ba se ne)
