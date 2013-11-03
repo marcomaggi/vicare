@@ -268,7 +268,10 @@ Example:
 
 
 @menu
-* iklib syntaxes defines::      Additional binding syntaxes.
+* iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
+* iklib syntaxes defines::      @func{define}-like additional syntaxes.
+* iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
+* iklib syntaxes bindings::     Additional binding syntaxes.
 * iklib syntaxes control::      Additional control flow syntaxes.
 * iklib syntaxes returnable::   Early return from code blocks.
 * iklib syntaxes integrable::   Integrable expressions and functions.
@@ -279,8 +282,443 @@ Example:
 @end menu
 
 @c page
+@node iklib syntaxes lambdas
+@subsection @func{lambda}--like additional syntaxes
+
+
+The syntaxes @func{lambda*} and @func{case-lambda*} are similar to
+@func{lambda} and @func{case-lambda} as defined by @rnrs{6}, but they
+allow the selection of predicate functions to validate the arguments and
+the return value; a predicate function accepts a single argument and
+returns true or @false{}.  Examples:
+
+@example
+(import (vicare)
+  (vicare system $fx))
+
+(define add
+  ;;Fail if called with a non-fixnum argument.
+  (lambda* ((a fixnum?) (b fixnum?))
+    ($fx+ a b)))
+
+(define vec
+  ;;Fail if attempting to return a non-vector.
+  (lambda* ((_ vector?) fun)
+    (fun 1 2)))
+
+(add 1 2)       @result{} 3
+(add 1 #\2)     @error{} &procedure-argument-violation
+
+(vec vector)    @result{} #(1 2)
+(vec list)      @error{} &expression-return-value-violation
+@end example
+
+@noindent
+in the definition of the function bound to @func{vec}: notice that
+@code{(_ vector?)} is not a function argument, it is a special notation
+used to select a predicate function to validate the return value.
+
+In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
+@meta{pred-formals} can have any of the forms:
+
+@example
+(@meta{var} ...)
+(@metao{var} @meta{var} ... . @meta{rest})
+@meta{args}
+@end example
+
+Where in the standard @func{lambda} and @func{case-lambda} syntaxes an
+identifier is used to name a formal argument, in the extended
+@func{lambda*} and @func{case-lambda*} syntaxes each formal argument
+@meta{var} can have any of the forms:
+
+@example
+@meta{id}
+(@meta{id} @meta{pred})
+#(@meta{id} @meta{pred})
+@end example
+
+@noindent
+where @meta{id} is an identifier naming the formal argument and
+@meta{pred} is an identifier which, at run time, must evaluate to a
+predicate function; the formal argument @meta{rest} can have only one of
+the following forms:
+
+@example
+@meta{rest-id}
+#(@meta{rest-id} @meta{pred})
+@end example
+
+@noindent
+and the formal argument @meta{args} can have only one of the following
+forms:
+
+@example
+@meta{args-id}
+#(@meta{args-id} @meta{pred})
+@end example
+
+The first item in the @meta{pred-formals} can have the special syntax:
+
+@example
+(_ @metao{pred} @meta{pred} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
+exported by @rsixlibrary{base}); in this case such item does
+@strong{not} represent a formal argument, it just selects predicates to
+validate the values returned by the last @meta{body} form.
+
+@c ------------------------------------------------------------
+
+@deffn Syntax lambda* @meta{pred-formals} @metao{body} @meta{body} @dots{}
+Like the standard @func{lambda} and additionally allows the selection of
+predicate functions to validate the arguments and the return value.  The
+formal arguments are handled according to the following rules:
+
+@itemize
+@item
+When all the items in @meta{pred-formals} are as specified for the
+standard @func{lambda}: this syntax is equivalent to @func{lambda} as
+defined by @rnrs{6}.
+
+@item
+If the boot image has been compiled with procedure arguments validation
+@strong{enabled}, and @meta{pred-formals} selects predicates to validate
+the arguments: if a predicate fails for its formal argument, an
+exception is raised using @condition{procedure-argument-violation}.
+
+@item
+If the boot image has been compiled with procedure arguments validation
+@strong{disabled}, the predicate selections in @meta{pred-formals} are
+ignored and @func{lambda*} behaves like the standard @func{lambda}.
+
+@item
+If the first element of @meta{pred-formals} has the format:
+
+@example
+(_ @metao{pred} @meta{pred} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
+exported by @rsixlibrary{base}), the values returned by the last
+@meta{body} form are validated using the given @meta{pred}: if a
+predicate fails for its returned value, an exception is raised using
+@condition{expression-return-value-violation}.
+@end itemize
+
+Usage examples:
+
+@itemize
+@item
+Function with two predicate arguments:
+
+@example
+(import (vicare))
+(define f
+  (lambda* ((a number?) (b number?))
+    (list (number->string a) (number->string b))))
+
+(f 1 2)         @result{} ("1" "2")
+@end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define f
+  (lambda* ((a number?) (b number?)
+            . #(rest list-of-numbers?))
+    (list (number->string a)
+          (number->string b)
+          (length rest))))
+
+(f 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a predicate rest argument must be specified using the vector
+syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
+list-of-numbers?)} would be interpreted as:
+
+@example
+((a number?) (b number?) . (rest list-of-numbers?))
+@expansion{} ((a number?) (b number?) rest list-of-numbers?)
+@end example
+
+@item
+Function with the @meta{args} argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define f
+  (lambda* #(args list-of-numbers?)
+    (length args)))
+
+(f 1 2 3)               @result{} 3
+@end example
+
+@item
+Function with a single validated return value:
+
+@example
+(import (vicare))
+
+(define f
+  (lambda* ((_ fixnum?) val)
+    val))
+
+(f 1)                   @result{} 1
+@end example
+
+@item
+Function with multiple validated return values:
+
+@example
+(import (vicare))
+
+(define f
+  (lambda* ((_ fixnum? string?) a b)
+    (values a b)))
+
+(f 1 "2")               @result{} 1, "2"
+@end example
+@end itemize
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax case-lambda* @meta{pred-cl-clause} @dots{}
+Like the standard @func{case-lambda} and additionally allows the
+selection of predicate functions to validate the arguments and the
+return value.  Clause by clause the formals are handled as explained for
+@func{lambda*}.
+
+Usage examples:
+
+@example
+(import (vicare))
+
+(define f
+  (case-lambda*
+   (((a number?))
+    (number->string a))))
+
+(define g
+  (case-lambda*
+   (#(args list?)
+    (length args))))
+
+(f 123)                 @result{} "123"
+(g 1 2 3)               @result{} 3
+@end example
+@end deffn
+
+@c page
 @node iklib syntaxes defines
-@subsection Additional binding syntaxes
+@subsection @func{define}--like additional syntaxes
+
+
+@deffn Syntax define* @meta{id} @meta{expression}
+@deffnx Syntax define* @meta{id}
+@deffnx Syntax define* (@meta{id} . @meta{formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define* (@meta{var} . @meta{formals}) @metao{body} @meta{body} @dots{}
+Like the standard @func{define} as defined by @rnrs{6}, but when
+defining a function: allow the selection of predicate functions to
+validate the arguments and the return value.
+
+Predicates selections is performed as explained for the @func{lambda*}
+extended syntax, @ref{iklib syntaxes lambdas, @func{lambda}--like
+additional syntaxes}.  There is an exception, where @func{lambda*} uses
+the @code{_} symbol to select predicates for the returned values,
+@func{define*} uses the binding identifier.
+
+Usage examples:
+
+@itemize
+@item
+Function with two predicate arguments:
+
+@example
+(import (vicare))
+
+(define* (f (a number?) (b number?))
+  (list (number->string a) (number->string b)))
+
+(f 1 2)         @result{} ("1" "2")
+@end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define* (f (a number?) (b number?)
+            . #(rest list-of-numbers?))
+  (list (number->string a)
+        (number->string b)
+        (length rest)))
+
+(f 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a predicate rest argument must be specified using the vector
+syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
+list-of-numbers?)} would be interpreted as:
+
+@example
+((a number?) (b number?) . (rest list-of-numbers?))
+@expansion{} ((a number?) (b number?) rest list-of-numbers?)
+@end example
+
+@item
+Function with the @meta{args} argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define* (f . #(args list-of-numbers?))
+  (length args))
+
+(f 1 2 3)               @result{} 3
+@end example
+
+@item
+Function with a single validated return value:
+
+@example
+(import (vicare))
+
+(define* ((f fixnum?) val)
+  val)
+
+(f 1)                   @result{} 1
+@end example
+
+@item
+Function with multiple validated return values:
+
+@example
+(import (vicare))
+
+(define* ((f fixnum? string?) a b)
+  (values a b))
+
+(f 1 "2")               @result{} 1, "2"
+@end example
+@end itemize
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @meta{var} identifiers.
+
+@example
+(define-values (a b c)
+  (values 1 2 3))
+
+(list a b c)    @result{} (1 2 3)
+@end example
+@end deffn
+
+
+@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @meta{var} identifiers.  Make the @meta{var}
+identifiers immutable.
+
+@example
+(define-constant-values (a b c)
+  (values 1 2 3))
+
+(list a b c)    @result{} (1 2 3)
+(set! a 99)     @error{} &syntax
+@end example
+@end deffn
+
+
+@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and can @strong{neither} be invoked recursively @strong{nor} used
+as function rgument.  This syntax only defines a syntax.
+
+@example
+(define-inline (incr x)
+  (+ x 1))
+
+(incr 2)        @result{} 3
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+(let ((x 2))
+  (+ x 1))
+@end example
+@end deffn
+
+
+@deffn Syntax define-inline-constant @meta{name} @meta{expr}
+@meta{expr} is evaluated only once at expand time, the result is
+returned by the macro transformer bound to @meta{name}.  It is
+impossible to modify the result of the expansion of @meta{name} by
+acting upon @meta{name}.
+@end deffn
+
+
+@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and @strong{can} be both invoked recursively and used as function
+argument.  This syntax defines both a syntax and a function.
+
+@example
+(define-integrable (incr x)
+  (+ x 1))
+
+(incr 2)
+@result{} 3
+
+(map incr '(10 20 30)))
+@result{} (11 21 31)
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+((lambda (x)
+   (+ x 1))
+ 2)
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes defstxs
+@subsection @func{define-syntax}--like additional syntaxes
 
 
 @deffn Syntax define-syntax @meta{name}
@@ -339,40 +777,35 @@ X               @result{} 1
 @end deffn
 
 
-@deffn Syntax define-inline-constant @meta{name} @meta{expr}
-@meta{expr} is evaluated only once at expand time, the result is
-returned by the macro transformer bound to @meta{name}.  It is
-impossible to modify the result of the expansion of @meta{name} by
-acting upon @meta{name}.
-@end deffn
-
-
-@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
-Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.
+@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Convenience syntax to define a @func{syntax-rules} transformer with a
+single clause.  Expand to:
 
 @example
-(define-values (a b c)
-  (values 1 2 3))
-
-(list a b c)    @result{} (1 2 3)
+(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
+  @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax @meta{name}
+      (syntax-rules ()
+        ((_ @meta{pattern} @dots{} . @meta{rest})
+         (begin @metao{body} @meta{body} @dots{}))))
 @end example
 @end deffn
 
 
-@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
-Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.  Make the @meta{var}
-identifiers immutable.
+@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
+Define auxiliary syntaxes to be used as literal identifiers by
+@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
 
 @example
-(define-constant-values (a b c)
-  (values 1 2 3))
-
-(list a b c)    @result{} (1 2 3)
-(set! a 99)     @error{} &syntax
+(define-syntax @metao{name} (syntax-rules ()))
+(define-syntax @meta{name}  (syntax-rules ()))
+@dots{}
 @end example
 @end deffn
+
+@c page
+@node iklib syntaxes bindings
+@subsection Additional binding syntaxes
 
 
 @deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} @dots{}
@@ -409,80 +842,6 @@ in the region of such bindings; return the values bound to
       (lambda (@meta{retval} @dots{})
         @metao{body} @meta{body} @dots{}
         (values @meta{retval} @dots{})))
-@end example
-@end deffn
-
-
-@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Similar to @func{define}, but create a binding that is always expanded
-inline and can @strong{neither} be invoked recursively @strong{nor} used
-as function rgument.  This syntax only defines a syntax.
-
-@example
-(define-inline (incr x)
-  (+ x 1))
-
-(incr 2)        @result{} 3
-@end example
-
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-(let ((x 2))
-  (+ x 1))
-@end example
-@end deffn
-
-
-@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Similar to @func{define}, but create a binding that is always expanded
-inline and @strong{can} be both invoked recursively and used as function
-argument.  This syntax defines both a syntax and a function.
-
-@example
-(define-integrable (incr x)
-  (+ x 1))
-
-(incr 2)
-@result{} 3
-
-(map incr '(10 20 30)))
-@result{} (11 21 31)
-@end example
-
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-((lambda (x)
-   (+ x 1))
- 2)
-@end example
-@end deffn
-
-
-@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Convenience syntax to define a @func{syntax-rules} transformer with a
-single clause.  Expand to:
-
-@example
-(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
-  @metao{body} @meta{body} @dots{})
-@expansion{} (define-syntax @meta{name}
-      (syntax-rules ()
-        ((_ @meta{pattern} @dots{} . @meta{rest})
-         (begin @metao{body} @meta{body} @dots{}))))
-@end example
-@end deffn
-
-
-@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
-Define auxiliary syntaxes to be used as literal identifiers by
-@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
-
-@example
-(define-syntax @metao{name} (syntax-rules ()))
-(define-syntax @meta{name}  (syntax-rules ()))
-@dots{}
 @end example
 @end deffn
 
