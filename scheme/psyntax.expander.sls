@@ -3261,6 +3261,10 @@
 	     ((guard)				guard-macro)
 	     ((define-enumeration)		define-enumeration-macro)
 	     ((let*-syntax)			let*-syntax-macro)
+	     ((let-constants)			let-constants-macro)
+	     ((let*-constants)			let*-constants-macro)
+	     ((letrec-constants)		letrec-constants-macro)
+	     ((letrec*-constants)		letrec*-constants-macro)
 	     ((case-define)			case-define-macro)
 	     ((define*)				define*-macro)
 	     ((case-define*)			case-define*-macro)
@@ -4518,6 +4522,88 @@
     ))
 
 
+;;;; module non-core-macro-transformer: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
+
+(define (let-constants-macro stx)
+  (syntax-match stx ()
+    ;;No bindings.
+    ((_ () ?body ?body* ...)
+     (bless
+      `(let () ,?body ,@?body*)))
+    ;;Multiple bindings
+    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
+     (let ((SHADOW* (generate-temporaries (cons ?lhs ?lhs*))))
+       (bless
+	`(let ,(map list SHADOW* (cons ?rhs ?rhs*))
+	   (let-syntax ,(map (lambda (lhs shadow)
+			       `(,lhs (identifier-syntax ,shadow)))
+			  (cons ?lhs ?lhs*) SHADOW*)
+	     ,?body ,@?body*)))))
+    ))
+
+(define (let*-constants-macro stx)
+  (syntax-match stx ()
+    ;;No bindings.
+    ((_ () ?body ?body* ...)
+     (bless
+      `(let () ,?body ,@?body*)))
+    ;;Multiple bindings
+    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
+     (bless
+      `(let-constants ((,?lhs ,?rhs))
+	 (let*-constants ,(map list ?lhs* ?rhs*)
+	   ,?body ,@?body*))))
+    ))
+
+(define (letrec-constants-macro stx)
+  (syntax-match stx ()
+    ((_ () ?body0 ?body* ...)
+     (bless
+      `(let () ,?body0 ,@?body*)))
+
+    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
+     (let ((TMP* (generate-temporaries ?lhs*))
+	   (VAR* (generate-temporaries ?lhs*)))
+       (bless
+	`(let ,(map (lambda (var)
+		      `(,var (void)))
+		 VAR*)
+	   (let-syntax ,(map (lambda (lhs var)
+			       `(,lhs (identifier-syntax ,var)))
+			  ?lhs* VAR*)
+	     ;;Do not enforce the order of evaluation of ?RHS.
+	     (let ,(map list TMP* ?rhs*)
+	       ,@(map (lambda (var tmp)
+			`(set! ,var ,tmp))
+		   VAR* TMP*)
+	       (let () ,?body0 ,@?body*)))))))
+    ))
+
+(define (letrec*-constants-macro stx)
+  (syntax-match stx ()
+    ((_ () ?body0 ?body* ...)
+     (bless
+      `(let () ,?body0 ,@?body*)))
+
+    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
+     (let ((TMP* (generate-temporaries ?lhs*))
+	   (VAR* (generate-temporaries ?lhs*)))
+       (bless
+	`(let ,(map (lambda (var)
+		      `(,var (void)))
+		 VAR*)
+	   (let-syntax ,(map (lambda (lhs var)
+			       `(,lhs (identifier-syntax ,var)))
+			  ?lhs* VAR*)
+	     ;;Do enforce the order of evaluation of ?RHS.
+	     (let* ,(map list TMP* ?rhs*)
+	       ,@(map (lambda (var tmp)
+			`(set! ,var ,tmp))
+		   VAR* TMP*)
+	       (let () ,?body0 ,@?body*)))))))
+    ))
+
+
 ;;;; module non-core-macro-transformer: CASE-DEFINE
 
 (define (case-define-macro stx)
@@ -4585,7 +4671,7 @@
 	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
 	  (bless
 	   `(define (,?who . ,?formals)
-	      (let ((,WHO (quote ,?who)))
+	      (let-constants ((,WHO (quote ,?who)))
 		,@ARG-VALIDATION*
 		(let () ,?body0 ,@?body*)))))))
 
@@ -4598,7 +4684,7 @@
 	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
 	  (bless
 	   `(define (,?who . ,?formals)
-	      (let ((,WHO (quote ,?who)))
+	      (let-constants ((,WHO (quote ,?who)))
 		,@ARG-VALIDATION*
 		(receive-and-return (,@RET*)
 		    (let () ,?body0 ,@?body*)
@@ -4655,7 +4741,7 @@
 	(let* ((WHO             (datum->syntax ?who '__who__))
 	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
 	  `(,?formals
-	    (let ((,WHO (quote ,?who)))
+	    (let-constants ((,WHO (quote ,?who)))
 	      ,@ARG-VALIDATION*
 	      (let () ,?body0 ,@?body*))))))
 
@@ -4667,7 +4753,7 @@
 	       (RET*            (generate-temporaries ?ret-pred*))
 	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
 	  `(,?formals
-	    (let ((,WHO (quote ,?who)))
+	    (let-constants ((,WHO (quote ,?who)))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
 		  (let () ,?body0 ,@?body*)
@@ -4714,7 +4800,7 @@
 	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
 	  (bless
 	   `(lambda ,?formals
-	      (let ((,WHO (quote _)))
+	      (let-constants ((,WHO (quote _)))
 		,@ARG-VALIDATION*
 		(let () ,?body0 ,@?body*)))))))
 
@@ -4727,7 +4813,7 @@
 	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
 	  (bless
 	   `(lambda ,?formals
-	      (let ((,WHO (quote _)))
+	      (let-constants ((,WHO (quote _)))
 		,@ARG-VALIDATION*
 		(receive-and-return (,@RET*)
 		    (let () ,?body0 ,@?body*)
@@ -4782,7 +4868,7 @@
 	(let* ((WHO             (datum->syntax ?ctx '__who__))
 	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
 	  `(,?formals
-	    (let ((,WHO (quote _)))
+	    (let-constants ((,WHO (quote _)))
 	      ,@ARG-VALIDATION*
 	      (let () ,?body0 ,@?body*))))))
 
@@ -4794,7 +4880,7 @@
 	       (RET*            (generate-temporaries ?ret-pred*))
 	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
 	  `(,?formals
-	    (let ((,WHO (quote _)))
+	    (let-constants ((,WHO (quote _)))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
 		  (let () ,?body0 ,@?body*)

@@ -78,8 +78,7 @@
   (import (vicare)
     (vicare arguments validation)
     (vicare unsafe operations)
-    (vicare language-extensions syntaxes)
-    (vicare language-extensions let-constants))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; helpers

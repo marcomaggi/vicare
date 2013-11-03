@@ -53,7 +53,6 @@
     procedure:		string:)
   (import (vicare)
     (vicare language-extensions case-identifiers)
-    (vicare language-extensions let-constants)
     (prefix (vicare language-extensions makers) mk.))
 
 

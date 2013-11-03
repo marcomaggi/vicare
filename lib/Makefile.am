@@ -45,7 +45,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/makers.sls				\
 	vicare/language-extensions/keywords.sls				\
-	vicare/language-extensions/let-constants.sls			\
 	vicare/language-extensions/loops.sls				\
 	vicare/language-extensions/namespaces.sls			\
 	vicare/language-extensions/sentinels.sls			\

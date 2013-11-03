@@ -32,7 +32,6 @@
     ;; auxiliary syntaxes
     mandatory optional with without)
   (import (except (vicare) with)
-    (for (vicare language-extensions let-constants) expand)
     (for (vicare language-extensions case-identifiers) expand))
 
 
