@@ -1348,6 +1348,10 @@
     time-second
     top-level-value
     let*-syntax
+    let-constants
+    let*-constants
+    letrec-constants
+    letrec*-constants
     trace-define
     trace-define-syntax
     trace-lambda

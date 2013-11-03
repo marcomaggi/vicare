@@ -914,6 +914,34 @@ forms:
 @end example
 @end deffn
 
+
+@deffn Syntax let-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{let} but create immutable bindings.  Attempting to mutate the
+bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
+
+
+@deffn Syntax let*-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{let*} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
+
+
+@deffn Syntax letrec-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{letrec} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
+
+
+@deffn Syntax letrec*-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{letrec*} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
+
 @c page
 @node iklib syntaxes control
 @subsection Additional control flow syntaxes

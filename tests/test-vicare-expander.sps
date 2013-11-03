@@ -457,6 +457,140 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-constant-values))
+
+  (define-syntax-rule (check-syntax-error ?form)
+    (check
+	(guard (E ((syntax-violation? E)
+		   #t)
+		  (else E))
+	  (eval '?form
+		(environment '(vicare))))
+      => #t))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let-constants ()
+	1)
+    => 1)
+
+  (check
+      (let-constants ((a 1))
+	a)
+    => 1)
+
+  (check
+      (let-constants ((a 1)
+		      (b 2)
+		      (c 3))
+	(values a b c))
+    => 1 2 3)
+
+  (check-syntax-error
+   (let-constants ((a 1))
+     (set! a 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let*-constants ()
+	1)
+    => 1)
+
+  (check
+      (let*-constants ((a 1))
+	a)
+    => 1)
+
+  (check
+      (let*-constants ((a 1)
+		       (b 2)
+		       (c 3))
+	(values a b c))
+    => 1 2 3)
+
+  (check
+      (let*-constants ((a 1)
+		       (b (cons a 2))
+		       (c 3))
+	(values a b c))
+    => 1 '(1 . 2) 3)
+
+  (check-syntax-error
+   (let*-constants ((a 1))
+     (set! a 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (letrec-constants ()
+	1)
+    => 1)
+
+  (check
+      (letrec-constants ((a 1))
+	a)
+    => 1)
+
+  (check
+      (letrec-constants ((a 1)
+			 (b 2)
+			 (c 3))
+	(values a b c))
+    => 1 2 3)
+
+  (check
+      (letrec-constants ((a 1)
+			 (b (lambda () (cons a 2)))
+			 (c 3))
+	(values a (b) c))
+    => 1 '(1 . 2) 3)
+
+  (check
+      (letrec-constants ((a (lambda () (b)))
+			 (b (lambda () 1))
+			 (c 3))
+	(values (a) (b) c))
+    => 1 1 3)
+
+  (check-syntax-error
+   (letrec-constants ((a 1))
+     (set! a 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (letrec*-constants ()
+	1)
+    => 1)
+
+  (check
+      (letrec*-constants ((a 1))
+	a)
+    => 1)
+
+  (check
+      (letrec*-constants ((a 1)
+			  (b 2)
+			  (c 3))
+	(values a b c))
+    => 1 2 3)
+
+  (check
+      (letrec*-constants ((a 1)
+			  (b (lambda () (cons a 2)))
+			  (c 3))
+	(values a (b) c))
+    => 1 '(1 . 2) 3)
+
+  (check-syntax-error
+   (letrec*-constants ((a 1))
+     (set! a 2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'receive))
 
   (check

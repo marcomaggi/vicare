@@ -1668,7 +1668,7 @@
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
 
 (define-syntax (define/tags stx)
-  (syntax-case stx ()
+  (syntax-case stx (aux.<-)
 
     ;;Untagged, uninitialised variable.
     ;;
@@ -1696,19 +1696,40 @@
 	  (identifier? #'?tag))
      #'(?tag ?who ?expr))
 
+    ;;Function definition with tagged return values through auxiliary syntax.
+    ;;
+    ((_ (?who . ?formals) (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
+     (identifier? #'?who)
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who
+	   (lambda/tags ?formals
+	     (aux.<- ?tag0 ?tag ...)
+	     (let-constants ((WHO '?who))
+	       ?body0 ?body ...)))))
+
+    ;;Function definition with tagged return values through tagged who.
+    ;;
+    ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
+     (all-identifiers? #'(?who ?tag0 ?tag ...))
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who
+	   (lambda/tags ?formals
+	     (aux.<- ?tag0 ?tag ...)
+	     (let-constants ((WHO '?who))
+	       ?body0 ?body ...)))))
+
     ;;Function definition.
     ;;
     ((_ (?who . ?formals) ?body0 ?body ...)
      (identifier? #'?who)
      (with-syntax
 	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who (lambda/tags ?formals (let ((WHO '?who)) ?body0 ?body ...)))))
-
-    ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
-     (all-identifiers? #'(?who ?tag0 ?tag ...))
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who (lambda/tags ?formals (aux.<- ?tag0 ?tag ...) (let ((WHO '?who)) ?body0 ?body ...)))))
+       #'(define ?who
+	   (lambda/tags ?formals
+	     (let-constants ((WHO '?who))
+	       ?body0 ?body ...)))))
 
     (_
      (synner "syntax error in DEFINE/TAGS"))))
