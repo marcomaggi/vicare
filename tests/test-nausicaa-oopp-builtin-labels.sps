@@ -921,6 +921,7 @@
 
   #t)
 
+
 (parametrise ((check-test-name	'ascii-bytevectors))
 
   (check
@@ -937,6 +938,52 @@
     => 29)
 
   #f)
+
+
+(parametrise ((check-test-name	'percent-encoded-bytevectors))
+
+  (check
+      ((<percent-encoded-bytevector>) '#vu8())
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ciao"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "cia%3do"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "cia%3Do"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ci%3fa%3do"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ci%3Fa%3Do"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "%7Eciao"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ci%5Fao"))
+    => #t)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ci%5"))
+    => #f)
+
+  (check
+      ((<percent-encoded-bytevector>) (string->ascii "ci%5Zao"))
+    => #f)
+
+  #t)
+
 
 (parametrise ((check-test-name	'bytevectors-u16))
 
