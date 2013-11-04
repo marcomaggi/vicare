@@ -5076,6 +5076,36 @@ Return the value at index @var{fx} in @var{vec}.
 Store @var{value} at index @var{fx} in @var{vec}.
 @end deffn
 
+
+@deffn {Unsafe Operation} $vector-map1 @var{func} @var{vec}
+Like @func{vector-map}, but for only one vector argument: build and
+return a new vector having the same size of @var{vec} and items equal to
+the result of applying @var{func} to the items of @var{vec}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-for-each1 @var{func} @var{vec}
+Like @func{vector-for-each}, but for only one vector argument: apply
+@var{func} to all the items of @var{vec} and discard the return values.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-for-all1 @var{func} @var{vec}
+Like @func{vector-for-all}, but for only one vector argument: return
+true if @var{func} returns true for all the items in @var{vec}.  If the
+application of @var{func} to the items of @var{vec} returns true up to
+the penultimate item, the last application is performed as tail call.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-for-exists1 @var{func} @var{vec}
+Like @func{vector-exists}, but for only one vector argument: return
+@false{} if @var{func} returns @false{} for all the items in @var{vec}.
+If the application of @var{func} to the items of @var{vec} returns
+@false{} up to the penultimate item, the last application is performed
+as tail call.
+@end deffn
+
 @c page
 @node syslib bytevectors
 @section Low level bytevector operations

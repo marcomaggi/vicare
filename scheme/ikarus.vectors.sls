@@ -19,14 +19,22 @@
   (export
     make-vector		vector
     subvector		vector-length
-    vector-empty?	$vector-empty?
+    vector-empty?
     vector-ref		vector-set!
     vector->list	list->vector
     vector-map		vector-for-each
     vector-for-all	vector-exists
     vector-fill!	vector-append
     vector-copy		vector-copy!
-    vector-resize)
+    vector-resize
+
+    ;; unsafe operations
+    $vector-empty?
+    $vector-map1
+    $vector-for-each1
+    $vector-for-all1
+    $vector-exists1
+    )
   (import (except (ikarus)
 		  make-vector		vector
 		  subvector		vector-length
@@ -40,7 +48,12 @@
 		  vector-resize)
     (vicare arguments validation)
     (except (vicare unsafe operations)
-	    $vector-empty?))
+	    $vector-empty?
+	    $vector-map1
+	    $vector-for-each1
+	    $vector-for-all1
+	    $vector-exists1
+	    ))
 
 
 ;;;; arguments validation
@@ -725,6 +738,63 @@
 ;;Tue Oct 8, 2013)
 (define ($vector-empty? vec)
   ($fxzero? ($vector-length vec)))
+
+
+;;;; simplified unsafe operations
+
+(define ($vector-map1 func src)
+  ;;Like VECTOR-MAP, but for only  one vector argument: build and return
+  ;;a new  vector having  the same size  of VEC and  items equal  to the
+  ;;result of applying FUNC to the items of VEC.
+  ;;
+  (let loop ((i   0)
+	     (dst ($make-clean-vector ($vector-length src))))
+    (if ($fx= i ($vector-length src))
+	src
+      (begin
+	($vector-set! dst i (func ($vector-ref src i)))
+	(loop ($fxadd1 i) dst)))))
+
+(define ($vector-for-each1 func vec)
+  ;;Like VECTOR-FOR-EACH, but  for only one vector  argument: apply FUNC
+  ;;to all the items of VEC and discard the return values.
+  ;;
+  (let loop ((i 0))
+    (or ($fx= i ($vector-length vec))
+	(begin
+	  (func ($vector-ref vec i))
+	  (loop ($fxadd1 i))))))
+
+(define ($vector-for-all1 func vec)
+  ;;Like VECTOR-FOR-ALL, but  for only one vector  argument: return true
+  ;;if FUNC returns  true for all the items in  VEC.  If the application
+  ;;of FUNC to the items of VEC returns true up to the penultimate item,
+  ;;the last application is performed as tail call.
+  ;;
+  (or ($fxzero? ($vector-length vec))
+      (let loop ((i     0)
+		 (len-1 ($fxsub1 ($vector-length vec))))
+	(if ($fx= i len-1)
+	    ;;Tail call.
+	    (func ($vector-ref vec i))
+	  (and (func ($vector-ref vec i))
+	       (loop ($fxadd1 i) len-1))))))
+
+(define ($vector-exists1 func vec)
+  ;;Like VECTOR-EXISTS, but  for only one vector  argument: return false
+  ;;if FUNC returns false for all  the items in VEC.  If the application
+  ;;of FUNC  to the  items of  VEC returns false  up to  the penultimate
+  ;;item, the last application is performed as tail call.
+  ;;
+  (if ($fxzero? ($vector-length vec))
+      #f
+    (let loop ((i     0)
+	       (len-1 ($fxsub1 ($vector-length vec))))
+      (if ($fx= i len-1)
+	  ;;Tail call.
+	  (func ($vector-ref vec i))
+	(or (func ($vector-ref vec i))
+	    (loop ($fxadd1 i) len-1))))))
 
 
 ;;;; done

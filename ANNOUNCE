@@ -40,6 +40,13 @@ this project has a mailing list:
 Notes for revision 0.3d7
 ------------------------
 
+* Added unsafe operations to (vicare system $vectors):
+
+    $vector-map1
+    $vector-for-each1
+    $vector-for-all1
+    $vector-exists1
+
 * Added convenience syntax CASE-DEFINE to (vicare).
 
     (case-define who ?cl-clause0 cl-clause ...)

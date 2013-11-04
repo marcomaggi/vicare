@@ -1009,6 +1009,10 @@
     ($vector-empty?				$vectors $vicare-vectors)
     ($vector-ref				$vectors $vicare-vectors)
     ($vector-set!				$vectors $vicare-vectors)
+    ($vector-map1				$vectors $vicare-vectors)
+    ($vector-for-each1				$vectors $vicare-vectors)
+    ($vector-for-all1				$vectors $vicare-vectors)
+    ($vector-exists1				$vectors $vicare-vectors)
 ;;;
     ($fxzero?					$fx $vicare-fx)
     ($fxpositive?				$fx $vicare-fx)
