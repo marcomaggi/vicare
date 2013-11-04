@@ -1091,6 +1091,14 @@ returns @true{} if all the octets in the bytevector are in the range
 validated this way.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{percent-encoded-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents represent a percent--encoded text as defined by @rfc{} 3986; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+involves applying @func{uri-encoded-bytevector?}.
+@end deftp
+
 @c ------------------------------------------------------------
 
 @subsubheading @oopp{} syntaxes

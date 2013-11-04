@@ -1577,13 +1577,14 @@
     <binary-port> <binary-input-port> <binary-output-port> <binary-input/output-port>
     <textual-port> <textual-input-port> <textual-output-port> <textual-input/output-port>
 
-    <bytevector> <nonempty-bytevector> <ascii-bytevector>
+    <bytevector> <nonempty-bytevector>
     <bytevector-u8> <bytevector-s8>
     <bytevector-u16l> <bytevector-s16l> <bytevector-u16b> <bytevector-s16b> <bytevector-u16n> <bytevector-s16n>
     <bytevector-u32l> <bytevector-s32l> <bytevector-u32b> <bytevector-s32b> <bytevector-u32n> <bytevector-s32n>
     <bytevector-u64l> <bytevector-s64l> <bytevector-u64b> <bytevector-s64b> <bytevector-u64n> <bytevector-s64n>
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
+    <ascii-bytevector> <percent-encoded-bytevector>
 
     <hashable-and-properties-clauses>
 
