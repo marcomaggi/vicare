@@ -33,6 +33,7 @@
     ;; auxiliary syntaxes
     )
   (import (nausicaa)
+    (nausicaa net addresses ip-address)
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
@@ -82,10 +83,9 @@
 (define-label <uri-fragment>
   (parent <bytevector>))
 
-
-;;;; path types
+;;; --------------------------------------------------------------------
 
-(define-label <list-of-nonempty-bytevectors>
+(define-label <decoded-list-of-segments>
   (parent <list>)
   (predicate (lambda (self)
 	       (for-all (<nonempty-bytevector>) self)))
@@ -93,9 +93,45 @@
 	      (lambda (path)
 		(map uri-decode path)))))
 
+
+;;;; host types
+
+(define (make-uri-host (host-type <symbol>) host-data)
+  (case host-type
+    ((reg-name)
+     (<reg-name-address> (host-data)))
+    ((ipv4-address)
+     (let (((vec <vector>) (cdr host-data)))
+       (<ipv4-address> (($vector-ref vec 0)
+			($vector-ref vec 1)
+			($vector-ref vec 2)
+			($vector-ref vec 3)))))
+    ((ipv6-address)
+     (let (((vec <vector>) (cdr host-data)))
+       (<ipv6-address> (($vector-ref vec 0)
+			($vector-ref vec 1)
+			($vector-ref vec 2)
+			($vector-ref vec 3)
+			($vector-ref vec 4)
+			($vector-ref vec 5)
+			($vector-ref vec 6)
+			($vector-ref vec 7)))))
+    ((ipvfuture)
+     (<ipvfuture-address> (host-data)))
+    (else
+     (procedure-argument-violation __who__
+       "invalid URI host type" host-type))))
+
+
+;;;; path types
+
+(define-generic uri-path->bytevector (uri))
+
+;;; --------------------------------------------------------------------
+
 (define-class <uri-path>
   (nongenerative nausicaa:net:addresses:uri:<uri-path>)
-  (fields (immutable (path <list-of-nonempty-bytevectors>))
+  (fields (immutable (path <decoded-list-of-segments>))
 	  (mutable   memoized-bytevector))
   (protocol (lambda (make-top)
 	      (lambda (path)
@@ -103,21 +139,25 @@
 
   (virtual-fields
    (immutable (bytevector <bytevector>)
-	      (lambda ((O <uri-path>))
-		(or (O $memoized-bytevector)
-		    (receive-and-return (bv)
-			(receive (port getter)
-			    (open-bytevector-output-port)
-			  (put-bytevector port (O $path $car))
-			  (for-each (lambda (bv)
-				      (put-u8 port 47) ;47 = (char->integer #\/)
-				      (put-bytevector port bv))
-			    (O $path $cdr))
-			  (getter))
-		      (set! (O $memoized-bytevector) bv)))))
+	      uri-path->bytevector)
    #| end of virtual-fields |# )
 
   #| end of class |# )
+
+(define-method (uri-path->bytevector (O <uri-path>))
+  (or (O $memoized-bytevector)
+      (receive-and-return (bv)
+	  (receive (port getter)
+	      (open-bytevector-output-port)
+	    (put-bytevector port (O $path $car))
+	    (for-each (lambda (bv)
+			(put-u8 port 47) ;47 = (char->integer #\/)
+			(put-bytevector port bv))
+	      (O $path $cdr))
+	    (getter))
+	(set! (O $memoized-bytevector) bv))))
+
+;;; --------------------------------------------------------------------
 
 (define-class <uri-path-empty>
   (nongenerative nausicaa:net:addresses:uri:<uri-path-empty>)
@@ -127,6 +167,8 @@
 		((make-uri-path '())))))
   #| end of class |# )
 
+;;; --------------------------------------------------------------------
+
 (define-class <uri-path-abempty>
   (nongenerative nausicaa:net:addresses:uri:<uri-path-abempty>)
   (parent <uri-path>)
@@ -135,19 +177,23 @@
 		((make-uri-path path)))))
   (virtual-fields
    (immutable (bytevector <bytevector>)
-	      (lambda ((O <uri-path>))
-		(or (O $memoized-bytevector)
-		    (receive-and-return (bv)
-			(receive (port getter)
-			    (open-bytevector-output-port)
-			  (for-each (lambda (bv)
-				      (put-u8 port 47) ;47 = (char->integer #\/)
-				      (put-bytevector port bv))
-			    (O $path))
-			  (getter))
-		      (set! (O $memoized-bytevector) bv)))))
+	      uri-path->bytevector)
    #| end of virtual-fields |# )
   #| end of class |# )
+
+(define-method (uri-path->bytevector (O <uri-path-abempty>))
+  (or (O $memoized-bytevector)
+      (receive-and-return (bv)
+	  (receive (port getter)
+	      (open-bytevector-output-port)
+	    (for-each (lambda (bv)
+			(put-u8 port 47) ;47 = (char->integer #\/)
+			(put-bytevector port bv))
+	      (O $path))
+	    (getter))
+	(set! (O $memoized-bytevector) bv))))
+
+;;; --------------------------------------------------------------------
 
 (define-class <uri-path-absolute>
   (nongenerative nausicaa:net:addresses:uri:<uri-path-absolute>)
@@ -157,19 +203,23 @@
 		((make-uri-path path)))))
   (virtual-fields
    (immutable (bytevector <bytevector>)
-	      (lambda ((O <uri-path>))
-		(or (O $memoized-bytevector)
-		    (receive-and-return (bv)
-			(receive (port getter)
-			    (open-bytevector-output-port)
-			  (for-each (lambda (bv)
-				      (put-u8 port 47) ;47 = (char->integer #\/)
-				      (put-bytevector port bv))
-			    (O $path))
-			  (getter))
-		      (set! (O $memoized-bytevector) bv)))))
+	      uri-path->bytevector)
    #| end of virtual-fields |# )
   #| end of class |# )
+
+(define-method (uri-path->bytevector (O <uri-path-absolute>))
+  (or (O $memoized-bytevector)
+      (receive-and-return (bv)
+	  (receive (port getter)
+	      (open-bytevector-output-port)
+	    (for-each (lambda (bv)
+			(put-u8 port 47) ;47 = (char->integer #\/)
+			(put-bytevector port bv))
+	      (O $path))
+	    (getter))
+	(set! (O $memoized-bytevector) bv))))
+
+;;; --------------------------------------------------------------------
 
 (define-class <uri-path-rootless>
   (nongenerative nausicaa:net:addresses:uri:<uri-path-rootless>)
