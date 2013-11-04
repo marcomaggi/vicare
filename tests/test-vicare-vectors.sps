@@ -26,8 +26,9 @@
 
 
 #!vicare
-(import (ikarus)
-  (vicare checks))
+(import (vicare)
+  (vicare checks)
+  (vicare system $vectors))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare vector functions\n")
@@ -738,6 +739,30 @@
 	(vector-for-each values '#() '#() '#() 123))
     => '(123))
 
+;;; --------------------------------------------------------------------
+;;; unsafe operation
+
+  (check
+      (with-result
+       ($vector-for-each1 (lambda (ch)
+			    (add-result ch))
+			  '#()))
+    => '(#t ()))
+
+  (check
+      (with-result
+       ($vector-for-each1 (lambda (ch)
+			    (add-result ch))
+			  '#(a)))
+    => '(#t (a)))
+
+  (check
+      (with-result
+       ($vector-for-each1 (lambda (ch)
+			    (add-result ch))
+			  '#(a b c)))
+    => '(#t (a b c)))
+
   #t)
 
 
@@ -914,7 +939,7 @@
 
   (check
       (vector-exists (lambda (n) (and (even? n) n))
-		     '#(2 1 4 14))
+	'#(2 1 4 14))
     => 2)
 
   (check
@@ -924,6 +949,46 @@
   (check
       (vector-exists > '#(1 2 3) '#(2 3 4))
     => #f)
+
+;;; --------------------------------------------------------------------
+;;; unsafe for-all
+
+  (check
+      ($vector-for-all1 even? '#())
+    => #t)
+
+  (check
+      ($vector-for-all1 even? '#(3 1 4 1 5 9))
+    => #f)
+
+  (check
+      ($vector-for-all1 even? '#(2 4 14))
+    => #t)
+
+  (check
+      ($vector-for-all1 (lambda (n) (and (even? n) n))
+			'#(2 4 14))
+    => 14)
+
+;;; --------------------------------------------------------------------
+;;; unsafe exists
+
+  (check
+      ($vector-exists1 even? '#(3 1 4 1 5 9))
+    => #t)
+
+  (check
+      ($vector-exists1 even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      ($vector-exists1 even? '#())
+    => #f)
+
+  (check
+      ($vector-exists1 (lambda (n) (and (even? n) n))
+		       '#(2 1 4 14))
+    => 2)
 
   #t)
 

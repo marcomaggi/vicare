@@ -259,10 +259,17 @@
 ;;; --------------------------------------------------------------------
 
     $make-vector
-    $vector-length
-    $vector-empty?
     $vector-ref
     $vector-set!
+    $vector-length
+    $vector-empty?
+
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Mon Nov 4, 2013)
+    ;; $vector-map1
+    ;; $vector-for-each1
+    ;; $vector-for-all1
+    ;; $vector-exists1
 
     $vector-copy
     $vector-copy!
