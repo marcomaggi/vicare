@@ -1130,13 +1130,14 @@ The second returned value depends upon the first:
 @table @code
 @item ipv4-address
 The second value is a pair, whose car is a bytevector holding the
-accumulated bytes and whose cdr is a list of 4 exact integers
+accumulated bytes and whose cdr is a vector of @math{4} exact integers
 representing the octets.
 
 @item ipv6-address
 The second value is a pair, whose car is a bytevector holding the
 accumulated bytes (without the enclosing square brackets) and whose cdr
-is a list of 8 exact integers representing the address components.
+is a vector of @math{8} exact integers representing the address
+components.
 
 @item ipvfuture
 The second value is a pair, whose car is the version number as exact
@@ -1175,7 +1176,7 @@ rewind the port position to the one before this function call.
       (uri.parse-host P)
     kind                        @result{} ipv4-address
     (ascii->string (car data))  @result{} "1.2.3.4"
-    (cdr data))                 @result{} (1 2 3 4)
+    (cdr data))                 @result{} #(1 2 3 4)
   (ascii->string
    (get-bytevector-some P)))    @result{} ":80"
 
@@ -1184,7 +1185,7 @@ rewind the port position to the one before this function call.
       (uri.parse-host P)
     kind                        @result{} ipv6-address
     (ascii->string (car data))  @result{} "::ffff:192.168.99.1"
-    (cdr data))                 @result{} (0 0 0 0 0 #xFFFF #xC0A8 #x6301)
+    (cdr data))                 @result{} #(0 0 0 0 0 #xFFFF #xC0A8 #x6301)
   (ascii->string
    (get-bytevector-some P)))    @result{} ":80"
 
