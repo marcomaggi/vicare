@@ -1121,38 +1121,37 @@ function returns @false{}.
 
 @defun parse-host @var{port}
 Accumulate bytes from @var{port} while they are valid for a @code{host}
-component; parse the accumulated bytes as @code{host} and return two
+component; parse the accumulated bytes as @code{host} and return 3
 values, the first being one of the Scheme symbols: @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}, @code{reg-name}.
 
-The second returned value depends upon the first:
+The second and third returned values depend upon the first:
 
 @table @code
 @item ipv4-address
-The second value is a pair, whose car is a bytevector holding the
-accumulated bytes and whose cdr is a vector of @math{4} exact integers
-representing the octets.
+The second value is a bytevector holding the accumulated bytes, the
+third value is a vector of @math{4} exact integers representing the
+address components.
 
 @item ipv6-address
-The second value is a pair, whose car is a bytevector holding the
-accumulated bytes (without the enclosing square brackets) and whose cdr
-is a vector of @math{8} exact integers representing the address
-components.
+The second value is a bytevector holding the accumulated bytes (without
+the enclosing square brackets), the third value is a vector of @math{8}
+exact integers representing the address components.
 
 @item ipvfuture
-The second value is a pair, whose car is the version number as exact
-integer in the range @math{[0, 15]} and whose cdr is a possibly empty
-bytevector holding the accumulated bytes (without the enclosing square
-brackets, the @code{v} and the version byte).
+The second value is a possibly empty bytevector holding the accumulated
+bytes (without the enclosing square brackets, the @code{v} and the
+version byte), the third value is the version number as exact integer in
+the range @math{[0, 15]}.
 
 @item reg-name
 The second value is a possibly empty bytevector holding the accumulated
-bytes.
+bytes, the third value is undefined.
 @end table
 
 If successful: leave the port position to the byte after the last one
-read from the port; if an error occurs: return @false{} and @false{},
-rewind the port position to the one before this function call.
+read from the port; if an error occurs: return @false{}, @false{} and
+@false{}, rewind the port position to the one before this function call.
 
 @example
 (import (vicare)
@@ -1161,42 +1160,47 @@ rewind the port position to the one before this function call.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(let ((P (mkport "/")))
-  (uri.parse-host P)            @result{} reg-name #vu8()
-  (ascii->string
-   (get-bytevector-some P)))    @result{} "/"
+(define (f1 str)
+  (let ((port (mkport str)))
+    (receive (kind bv data)
+        (uri.parse-host port)
+      (values kind (ascii->string bv) data
+              (eof-object? (get-bytevector-some port))))))
 
-(let ((P (mkport ":80")))
-  (uri.parse-host P)            @result{} reg-name #vu8()
-  (ascii->string
-   (get-bytevector-some P)))    @result{} ":80"
+(define (f2 str)
+  (let ((port (mkport str)))
+    (receive (kind bv data)
+        (uri.parse-host port)
+      (values kind (ascii->string bv) data
+              (ascii->string
+               (get-bytevector-some port))))))
 
-(let ((P (mkport "1.2.3.4:80")))
-  (receive (kind data)
-      (uri.parse-host P)
-    kind                        @result{} ipv4-address
-    (ascii->string (car data))  @result{} "1.2.3.4"
-    (cdr data))                 @result{} #(1 2 3 4)
-  (ascii->string
-   (get-bytevector-some P)))    @result{} ":80"
+(f1 "")
+@result{} reg-name "" (void) #t
 
-(let ((P (mkport "[::ffff:192.168.99.1]:80")))
-  (receive (kind data)
-      (uri.parse-host P)
-    kind                        @result{} ipv6-address
-    (ascii->string (car data))  @result{} "::ffff:192.168.99.1"
-    (cdr data))                 @result{} #(0 0 0 0 0 #xFFFF #xC0A8 #x6301)
-  (ascii->string
-   (get-bytevector-some P)))    @result{} ":80"
+(f2 "/")
+@result{} reg-name "" (void) "/"
 
-(let ((P (mkport "[vF,ciao,ciao]/ciao")))
-  (receive (kind data)
-      (uri.parse-host P)
-    kind                        @result{} ipvfuture
-    (car data)                  @result{} 15
-    (ascii->string (cdr data))) @result{} ",ciao,ciao"
-  (ascii->string
-   (get-bytevector-some P)))    @result{} "/ciao"
+(f2 ":80")
+@result{} reg-name "" (void) ":80"
+
+(f2 "1.2.3.4:80")
+@result{} ipv4-address "1.2.3.4" #(1 2 3 4) ":80"
+
+(f2 "1.2.3.4/ciao")
+@result{} ipv4-address "1.2.3.4" #(1 2 3 4) "/ciao"
+
+
+(f2 "[::ffff:192.168.99.1]:80")
+@result{} ipv6-address "::ffff:192.168.99.1"
+   #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80"
+
+(f2 "[::ffff:192.168.99.1]/ciao")
+@result{} ipv6-address "::ffff:192.168.99.1"
+   #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"
+
+(f2 "[v9,ciao,ciao]/ciao")
+@result{} ipvfuture ",ciao,ciao" 9 "/ciao"
 @end example
 @end defun
 
@@ -1751,14 +1755,15 @@ the leading slashes; @false{} if the @code{authority} is not present.
 A bytevector representing the @code{userinfo} component, not including
 the ending at--sign; @false{} if the @code{userinfo} is not present.
 
-@item host-type
+@item host.type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
 value is @code{reg-name}.
 
-@item host
-Host data represented as the second return value from @func{parse-host}
-and associated to the symbol above.
+@item host.bv
+@itemx host.data
+Host data represented as the second and third return value from
+@func{parse-host} and associated to the symbol above.
 
 @item port
 A bytevector representing the @code{port} component; @false{} if the
@@ -1810,14 +1815,15 @@ the leading slashes; @false{} if the @code{authority} is not present.
 A bytevector representing the @code{userinfo} component, not including
 the ending at--sign; @false{} if the @code{userinfo} is not present.
 
-@item host-type
+@item host.type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
 value is @code{reg-name}.
 
-@item host
-Host data represented as the second return value from @func{parse-host}
-and associated to the symbol above.
+@item host.bv
+@itemx host.data
+Host data represented as the second and third return value from
+@func{parse-host} and associated to the symbol above.
 
 @item port
 A bytevector representing the @code{port} component; @false{} if the

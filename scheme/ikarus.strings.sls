@@ -40,12 +40,14 @@
     bytevector->base64		base64->bytevector
     string->uri-encoding	uri-encoding->string
     uri-encode			uri-decode
-    uri-normalise-encoding
+    uri-normalise-encoding	uri-encoded-bytevector?
 
     ;; unsafe operations
     $string
     $string=			$string-total-length
-    $string-concatenate		$string-reverse-and-concatenate)
+    $string-concatenate		$string-reverse-and-concatenate
+    $uri-encode			$uri-decode
+    $uri-normalise-encoding	$uri-encoded-bytevector?)
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
@@ -1154,7 +1156,11 @@
 (define (uri-encoding->string bv)
   (utf8->string (uri-decode bv)))
 
-(module (uri-encode uri-decode uri-normalise-encoding)
+(module ( ;;
+	 uri-encode			$uri-encode
+	 uri-decode			$uri-decode
+	 uri-normalise-encoding		$uri-normalise-encoding
+	 uri-encoded-bytevector?	$uri-encoded-bytevector?)
 
   (define (uri-encode bv)
     ;;Return   a  percent-encoded   bytevector  representation   of  the
@@ -1166,109 +1172,193 @@
     (define who 'uri-encode)
     (with-arguments-validation (who)
 	((bytevector	bv))
-      (let-values (((port getter) (open-bytevector-output-port)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref bv i)))
-	    (if (is-unreserved? chi)
-		(put-u8 port chi)
-	      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi))))))))
+      ($uri-encode bv)))
+
+  (define ($uri-encode bv)
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (if ($is-unreserved? chi)
+	      (put-u8 port chi)
+	    (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))))
+
+;;; --------------------------------------------------------------------
 
   (define (uri-decode bv)
     ;;Percent-decode the given bytevector according to RFC 3986.
     ;;
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
-    ;;
     (define who 'uri-decode)
     (with-arguments-validation (who)
 	((bytevector	bv))
-      (let-values (((port getter) (open-bytevector-output-port))
-		   ((buf)         (make-string 2)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref bv i)))
-	    (put-u8 port
-		    (if ($fx= chi $int-percent)
-			(begin
-			  (set! i ($fxadd1 i))
-			  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref bv i)))
-			  (set! i ($fxadd1 i))
-			  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref bv i)))
-			  (string->number buf 16))
-		      chi)))))))
+      ($uri-decode bv)))
 
-  (define (uri-normalise-encoding in-bv)
+  (define ($uri-decode bv)
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who '$uri-decode)
+    (define (%percent-error ch)
+      (error who "invalid octet in percent-encoded bytevector, percent sequence" ch))
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((buf (make-string 2))
+	   (i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (put-u8 port
+		  (if ($fx= chi INT-PERCENT)
+		      (if ($two-more-octets-after-this? bv i)
+			  (begin
+			    (set! i ($fxadd1 i))
+			    (let* ((chi ($bytevector-u8-ref bv i))
+				   (ch  ($fixnum->char chi)))
+			      (if ($is-hex-digit? chi)
+				  ($string-set! buf 0 ch)
+				(%percent-error ch)))
+			    (set! i ($fxadd1 i))
+			    (let* ((chi ($bytevector-u8-ref bv i))
+				   (ch  ($fixnum->char chi)))
+			      (if ($is-hex-digit? chi)
+				  ($string-set! buf 1 ch)
+				(%percent-error ch)))
+			    (string->number buf 16))
+			(error who "incomplete percent sequence in percent-encoded bytevector" bv))
+		    chi))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (uri-normalise-encoding bv)
     ;;Normalise  the given  percent-encoded bytevector;  chars that  are
     ;;encoded  but  should  not  are  decoded.   Return  the  normalised
     ;;bytevector, in  which percent-encoded characters are  displayed in
     ;;upper case.
     ;;
-    ;;We  assume that  IN-BV is  composed by  integers corresponding  to
+    ;;We  assume  that  BV  is composed  by  integers  corresponding  to
     ;;characters in the valid range for URIs.
-    ;;
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
     ;;
     (define who 'uri-normalise-encoded)
     (with-arguments-validation (who)
-	((bytevector	in-bv))
-      (let-values (((port getter)	(open-bytevector-output-port))
-		   ((buf)		(make-string 2)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length in-bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref in-bv i)))
-	    (if ($fx= chi $int-percent)
-		(begin
-		  (set! i ($fxadd1 i))
-		  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref in-bv i)))
-		  (set! i ($fxadd1 i))
-		  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref in-bv i)))
-		  (let ((chi (string->number (string-upcase buf) 16)))
-		    (if (is-unreserved? chi)
-			(put-u8 port chi)
-		      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
-	      (put-u8 port chi)))))))
+	((bytevector	bv))
+      ($uri-normalise-encoding bv)))
+
+  (define ($uri-normalise-encoding bv)
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who '$uri-normalise-encoded)
+    (define (%percent-error ch)
+      (error who "invalid octet in percent-encoded bytevector, percent sequence" ch))
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((buf ($make-string 2))
+	   (i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (if ($fx= chi INT-PERCENT)
+	      (if ($two-more-octets-after-this? bv i)
+		  (begin
+		    (set! i ($fxadd1 i))
+		    (let* ((chi ($bytevector-u8-ref bv i))
+			   (ch  ($fixnum->char chi)))
+		      (if ($is-hex-digit? chi)
+			  ($string-set! buf 0 ch)
+			(%percent-error ch)))
+		    (set! i ($fxadd1 i))
+		    (let* ((chi ($bytevector-u8-ref bv i))
+			   (ch  ($fixnum->char chi)))
+		      (if ($is-hex-digit? chi)
+			  ($string-set! buf 1 ch)
+			(%percent-error ch)))
+		    (let ((chi (string->number (string-upcase buf) 16)))
+		      (if ($is-unreserved? chi)
+			  (put-u8 port chi)
+			(put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
+		(error who "incomplete percent sequence in percent-encoded bytevector" bv))
+	    (put-u8 port chi))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (is-unreserved? chi)
-    (or (is-alpha-digit? chi)
-	(= chi $int-dash)
-	(= chi $int-dot)
-	(= chi $int-underscore)
-	(= chi $int-tilde)))
+  (define (uri-encoded-bytevector? bv)
+    ;;Return  true   if  the   argument  is   correctly  percent-encoded
+    ;;bytevector according to RFC 3986.
+    ;;
+    (define who 'uri-encoded-bytevector?)
+    (with-arguments-validation (who)
+	((bytevector	bv))
+      ($uri-encoded-bytevector? bv)))
 
-  (define-inline (is-alpha-digit? chi)
-    (or (is-alpha? chi)
-	(is-dec-digit? chi)))
+  (define ($uri-encoded-bytevector? bv)
+    (let loop ((i 0))
+      (or ($fx= i ($bytevector-length bv))
+	  (let ((chi ($bytevector-u8-ref bv i)))
+	    (cond (($fx= chi INT-PERCENT)
+		   (and ($two-more-octets-after-this? bv i)
+			(begin
+			  ;;The  first octet  must  represent a  HEX
+			  ;;digit in ASCII encoding.
+			  (set! i ($fxadd1 i))
+			  (and ($is-hex-digit? ($bytevector-u8-ref bv i))
+			       (begin
+				 ;;The second octet must represent a
+				 ;;HEX digit in ASCII encoding.
+				 (set! i ($fxadd1 i))
+				 (and ($is-hex-digit? ($bytevector-u8-ref bv i))
+				      (loop ($fxadd1 i))))))))
+		  (($fx<= 0 chi 127)
+		   (loop ($fxadd1 i)))
+		  (else #f))))))
 
-  (define-inline (is-alpha? chi)
-    (or (<= $int-A chi $int-Z)
-	(<= $int-a chi $int-z)))
+;;; --------------------------------------------------------------------
 
-  (define-inline (is-dec-digit? chi)
-    (<= $int-0 chi $int-9))
+  (define-syntax-rule ($two-more-octets-after-this? bv i)
+    (< (+ 2 i) ($bytevector-length bv)))
 
-  (define-constant $int-a		(char->integer #\a))
-  (define-constant $int-f		(char->integer #\f))
-  (define-constant $int-z		(char->integer #\z))
-  (define-constant $int-A		(char->integer #\A))
-  (define-constant $int-F		(char->integer #\F))
-  (define-constant $int-Z		(char->integer #\Z))
-  (define-constant $int-0		(char->integer #\0))
-  (define-constant $int-9		(char->integer #\9))
+;;; --------------------------------------------------------------------
 
-  (define-constant $int-percent		(char->integer #\%))
+  (define-inline ($is-unreserved? chi)
+    (or ($is-alpha-digit? chi)
+	(= chi INT-DASH)
+	(= chi INT-DOT)
+	(= chi INT-UNDERSCORE)
+	(= chi INT-TILDE)))
+
+  (define-inline ($is-alpha-digit? chi)
+    (or ($is-alpha? chi)
+	($is-dec-digit? chi)))
+
+  (define-inline ($is-alpha? chi)
+    (or (<= INT-A chi INT-Z)
+	(<= INT-a chi INT-z)))
+
+  (define-inline ($is-dec-digit? chi)
+    (<= INT-0 chi INT-9))
+
+  (define-inline ($is-hex-digit? chi)
+    (or ($is-dec-digit? chi)
+	($fx<= INT-a chi INT-f)
+	($fx<= INT-A chi INT-F)))
+
+  (define-inline-constant INT-a			(char->integer #\a))
+  (define-inline-constant INT-f			(char->integer #\f))
+  (define-inline-constant INT-z			(char->integer #\z))
+  (define-inline-constant INT-A			(char->integer #\A))
+  (define-inline-constant INT-F			(char->integer #\F))
+  (define-inline-constant INT-Z			(char->integer #\Z))
+  (define-inline-constant INT-0			(char->integer #\0))
+  (define-inline-constant INT-9			(char->integer #\9))
+
+  (define-inline-constant INT-PERCENT		(char->integer #\%))
 
   ;; unreserved
-  (define-constant $int-dash		(char->integer #\-))
-  (define-constant $int-dot		(char->integer #\.))
-  (define-constant $int-underscore	(char->integer #\_))
-  (define-constant $int-tilde		(char->integer #\~))
+  (define-inline-constant INT-DASH		(char->integer #\-))
+  (define-inline-constant INT-DOT		(char->integer #\.))
+  (define-inline-constant INT-UNDERSCORE	(char->integer #\_))
+  (define-inline-constant INT-TILDE		(char->integer #\~))
 
 ;;; --------------------------------------------------------------------
 

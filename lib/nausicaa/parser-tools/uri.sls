@@ -1112,32 +1112,31 @@
 
 (define (parse-host in-port)
   ;;Accumulate  bytes from  IN-PORT while  they are  valid for  a "host"
-  ;;component;  parse the  accumulated bytes  as "host"  and  return two
-  ;;values,  the first being  one of  the Scheme  symbols: ipv4-address,
+  ;;component;  parse  the accumulated  bytes  as  "host" and  return  3
+  ;;values, the  first being  one of  the Scheme  symbols: ipv4-address,
   ;;ipv6-address, ipvfuture, reg-name.
   ;;
-  ;;The second returned value depends upon the first:
+  ;;The second and third returned values depend upon the first:
   ;;
-  ;;ipv4-address: the second value is  a pair, whose car is a bytevector
-  ;;holding the  accumulated input and  whose cdr is  a list of  4 exact
-  ;;integers representing the octets.
+  ;;ipv4-address:  the   second  value  is  a   bytevector  holding  the
+  ;;accumulated input, the  third value is a vector of  4 exact integers
+  ;;representing the address components.
   ;;
-  ;;ipv6-address: the second value is  a pair, whose car is a bytevector
-  ;;holding  the   accumulated  input  (without   the  enclosing  square
-  ;;brackets) and whose  cdr is a list of  8 exact integers representing
-  ;;the address components.
+  ;;ipv6-address: the second value is bytevector holding the accumulated
+  ;;input (without the enclosing square brackets), the thirdt value is a
+  ;;vector of 8 exact integers representing the address components.
   ;;
-  ;;ipvfuture:  the second value  is a  pair, whose  car is  the version
-  ;;number as  exact integer  in the range  [0, 15]  and whose cdr  is a
-  ;;possibly empty bytevector holding the accumulated input (without the
-  ;;enclosing square brackets).
+  ;;ipvfuture: the second  value is a possibly  empty bytevector holding
+  ;;the accumulated  input (without the enclosing  square brackets), the
+  ;;third value is the version number  as exact integer in the range [0,
+  ;;15].
   ;;
   ;;reg-name: the  second value is  a possibly empty  bytevector holding
-  ;;the accumulated bytes.
+  ;;the accumulated bytes, the third value is false.
   ;;
-  ;;If successful:  leave the port position  to the byte  after last one
-  ;;read from the port; if an  error occurs: rewind the port position to
-  ;;the one before this function call.
+  ;;If successful:  leave the port position  to the byte after  last one
+  ;;read from  the port; if an  error occurs: return 3  false values and
+  ;;rewind the port position to the one before this function call.
   ;;
   (define-parser-macros in-port)
   (define (%error)
@@ -1150,23 +1149,23 @@
   (let ((ip-literal.bv (parse-ip-literal in-port)))
     (if ip-literal.bv
 	(let ((ip-literal.port (open-bytevector-input-port ip-literal.bv)))
-	  (receive (ipv6.bv ipv6.ell)
+	  (receive (ipv6.bv ipv6.vec)
 	      (parse-ipv6-address ip-literal.port)
 	    (if ipv6.bv
-		(values 'ipv6-address (cons ipv6.bv ipv6.ell))
+		(values 'ipv6-address ipv6.bv ipv6.vec)
 	      (receive (ipvfuture.version ipvfuture.bv)
 		  (parse-ipvfuture ip-literal.port)
 		(if ipvfuture.version
-		    (values 'ipvfuture (cons ipvfuture.version ipvfuture.bv))
+		    (values 'ipvfuture ipvfuture.bv ipvfuture.version)
 		  (%error))))))
       (receive (ipv4.bv ipv4.ell)
 	  (parse-ipv4-address in-port)
 	(if ipv4.bv
-	    (values 'ipv4-address (cons ipv4.bv ipv4.ell))
+	    (values 'ipv4-address ipv4.bv ipv4.ell)
 	  (let ((reg-name.bv (parse-reg-name in-port)))
 	    (if reg-name.bv
-		(values 'reg-name reg-name.bv)
-	      (values #f #f))))))))
+		(values 'reg-name reg-name.bv (void))
+	      (values #f #f #f))))))))
 
 (define (parse-port in-port)
   ;;Accumulate  bytes from  IN-PORT while  they are  valid for  a "port"
@@ -1556,13 +1555,13 @@
   ;;host-type: one of the symbols: reg-name, ipv4-address, ipv6-address,
   ;;ipvfuture; when the host is empty: this value is reg-name.
   ;;
-  ;;host:  host  data  represented  as  the  second  return  value  from
-  ;;PARSE-HOST.
+  ;;host.bv, host.data:  host data represented  as the second  and third
+  ;;return values from PARSE-HOST.
   ;;
   ;;port:  a bytevector representing  the port  component; false  if the
   ;;port is not present.
   ;;
-  ;;path-type:   one   of   the   symbols:   path-abempty,   path-empty,
+  ;;path.type:   one   of   the   symbols:   path-abempty,   path-empty,
   ;;path-absolute, path-rootless.   When the authority  is present: this
   ;;value is always path-abempty.
   ;;
@@ -1589,33 +1588,33 @@
 	 (auth-port	(and authority (open-bytevector-input-port authority)))
 	 (userinfo	(and auth-port (parse-userinfo auth-port)))
 	 (host-position	(port-position in-port)))
-    (let-values (((host-type host)
-		  (if auth-port
-		      (parse-host auth-port)
-		    (values 'reg-name '#vu8()))))
+    (receive (host.type host.bv host.data)
+	(if auth-port
+	    (parse-host auth-port)
+	  (values 'reg-name '#vu8() (void)))
       (let ((port (and auth-port (parse-port auth-port))))
-	(let-values (((path-type path)
-		      (if authority
-			  (values 'path-abempty (parse-path-abempty in-port))
-			(let ((chi (lookahead-u8 in-port)))
-			  (cond ((or (eof-object? chi)
-				     ($is-chi-question-mark? chi)
-				     ($is-chi-number-sign? chi))
-				 (values 'path-empty '()))
-				((parse-path-absolute in-port)
-				 => (lambda (segments)
-				      (values 'path-absolute segments)))
-				((parse-path-rootless in-port)
-				 => (lambda (segments)
-				      (values 'path-rootless segments)))
-				(else
-				 (raise-uri-parser-error 'parse-uri
-				   "invalid path component while parsing URI"
-				   (port-position in-port) in-port)))))))
+	(receive (path.type path)
+	    (if authority
+		(values 'path-abempty (parse-path-abempty in-port))
+	      (let ((chi (lookahead-u8 in-port)))
+		(cond ((or (eof-object? chi)
+			   ($is-chi-question-mark? chi)
+			   ($is-chi-number-sign? chi))
+		       (values 'path-empty '()))
+		      ((parse-path-absolute in-port)
+		       => (lambda (segments)
+			    (values 'path-absolute segments)))
+		      ((parse-path-rootless in-port)
+		       => (lambda (segments)
+			    (values 'path-rootless segments)))
+		      (else
+		       (raise-uri-parser-error 'parse-uri
+			 "invalid path component while parsing URI"
+			 (port-position in-port) in-port)))))
 	  (let* ((query	(parse-query in-port))
 		 (fragment	(parse-fragment in-port)))
 	    (assert (eof-object? (lookahead-u8 in-port)))
-	    (values scheme authority userinfo host-type host port path-type path query fragment)))))))
+	    (values scheme authority userinfo host.type host.bv host.data port path.type path query fragment)))))))
 
 
 (define (parse-relative-ref in-port)
@@ -1633,16 +1632,16 @@
   ;;userinfo:  a  bytevector representing  the  userinfo component,  not
   ;;including the ending at-sign.
   ;;
-  ;;host-type: one of the symbols: reg-name, ipv4-address, ipv6-address,
+  ;;host.type: one of the symbols: reg-name, ipv4-address, ipv6-address,
   ;;ipvfuture; when the host is empty: this value is reg-name.
   ;;
-  ;;host:  host  data  represented  as  the  second  return  value  from
-  ;;PARSE-HOST.
+  ;;host.bv host.data:  host data  represented as  the second  and third
+  ;;return values from PARSE-HOST.
   ;;
   ;;port:  a bytevector representing  the port  component; false  if the
   ;;port is not present.
   ;;
-  ;;path-type:   one   of   the   symbols:   path-abempty,   path-empty,
+  ;;path.type:   one   of   the   symbols:   path-abempty,   path-empty,
   ;;path-absolute, path-noscheme.   When the authority  is present: this
   ;;value is always path-abempty.
   ;;
@@ -1668,33 +1667,33 @@
 	 (auth-port	(and authority (open-bytevector-input-port authority)))
 	 (userinfo	(and auth-port (parse-userinfo auth-port)))
 	 (host-position	(port-position in-port)))
-    (let-values (((host-type host)
-		  (if auth-port
-		      (parse-host auth-port)
-		    (values 'reg-name '#vu8()))))
+    (receive (host.type host.bv host.data)
+	(if auth-port
+	    (parse-host auth-port)
+	  (values 'reg-name '#vu8() (void)))
       (let ((port (and auth-port (parse-port auth-port))))
-	(let-values (((path-type path)
-		      (if authority
-			  (values 'path-abempty (parse-path-abempty in-port))
-			(let ((chi (lookahead-u8 in-port)))
-			  (cond ((or (eof-object? chi)
-				     ($is-chi-question-mark? chi)
-				     ($is-chi-number-sign? chi))
-				 (values 'path-empty '()))
-				((parse-path-absolute in-port)
-				 => (lambda (segments)
-				      (values 'path-absolute segments)))
-				((parse-path-noscheme in-port)
-				 => (lambda (segments)
-				      (values 'path-noscheme segments)))
-				(else
-				 (raise-uri-parser-error 'parse-uri
-				   "invalid path component while parsing relative-ref"
-				   (port-position in-port) in-port)))))))
+	(receive (path.type path)
+	    (if authority
+		(values 'path-abempty (parse-path-abempty in-port))
+	      (let ((chi (lookahead-u8 in-port)))
+		(cond ((or (eof-object? chi)
+			   ($is-chi-question-mark? chi)
+			   ($is-chi-number-sign? chi))
+		       (values 'path-empty '()))
+		      ((parse-path-absolute in-port)
+		       => (lambda (segments)
+			    (values 'path-absolute segments)))
+		      ((parse-path-noscheme in-port)
+		       => (lambda (segments)
+			    (values 'path-noscheme segments)))
+		      (else
+		       (raise-uri-parser-error 'parse-uri
+			 "invalid path component while parsing relative-ref"
+			 (port-position in-port) in-port)))))
 	  (let* ((query	(parse-query in-port))
 		 (fragment	(parse-fragment in-port)))
 	    (assert (eof-object? (lookahead-u8 in-port)))
-	    (values authority userinfo host-type host port path-type path query fragment)))))))
+	    (values authority userinfo host.type host.bv host.data port path.type path query fragment)))))))
 
 
 ;;;; validation

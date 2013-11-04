@@ -26,22 +26,25 @@
 
 
 #!r6rs
-(library (nausicaa net addresses ip-address)
+(library (nausicaa net addresses ip)
   (export
     <ip-address>
+    <ip-numeric-address>
     <reg-name-address>
     <ipvfuture-address>
 
     ;; multimethods
-    ip-address-string
-    ip-address-ascii)
+    ip-address-representation-string
+    ip-address-representation-ascii
+    ip-address-representation-bignum)
   (import (nausicaa))
 
 
 ;;;; generic functions
 
-(define-generic ip-address-string (ip-address))
-(define-generic ip-address-ascii  (ip-address))
+(define-generic ip-address-representation-string	(ip-address))
+(define-generic ip-address-representation-ascii		(ip-address))
+(define-generic ip-address-representation-bignum	(ip-address))
 
 
 ;;;; base IP address class
@@ -55,24 +58,55 @@
      (lambda ()
        ((make-top) #f #f))))
 
-  (fields (mutable memoized-string)
-	  (mutable memoized-ascii))
+  (fields (mutable memoized-representation-string)
+	  (mutable memoized-representation-ascii))
 
   (virtual-fields
 
    (immutable (string <string>)
 	      (lambda ((O <ip-address>))
-		(or (O $memoized-string)
-		    (receive-and-return (str)
-			(ip-address-string O)
-		      (set! (O $memoized-string) str)))))
+		(or (O $memoized-representation-string)
+		    (receive-and-return ((str <string>))
+			(ip-address-representation-string O)
+		      (set! (O $memoized-representation-string) str)))))
 
-   (immutable (ascii <bytevector>)
+   (immutable (ascii <ascii-bytevector>)
 	      (lambda ((O <ip-address>))
-		(or (O $memoized-ascii)
-		    (receive-and-return (bv)
-			(ip-address-ascii O)
-		      (set! (O $memoized-ascii) bv)))))
+		(or (O $memoized-representation-ascii)
+		    (receive-and-return ((bv <ascii-bytevector>))
+			(ip-address-representation-ascii O)
+		      (set! (O $memoized-representation-ascii) bv)))))
+
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
+
+(define-method (ip-address-representation-ascii (O <ip-address>))
+  (string->ascii (O string)))
+
+
+;;;; numeric IP address class
+
+(define-class <ip-numeric-address>
+  (nongenerative nausicaa:net:addresses:<ip-numeric-address>)
+  (parent <ip-address>)
+  (abstract)
+
+  (super-protocol
+   (lambda (make-ip-address)
+     (lambda ()
+       ((make-ip-address) #f))))
+
+  (fields (mutable memoized-representation-bignum))
+
+  (virtual-fields
+
+   (immutable (bignum <exact-integer>)
+	      (lambda ((O <ip-numeric-address>))
+		(or (O $memoized-representation-bignum)
+		    (receive-and-return (str)
+			(ip-address-representation-bignum O)
+		      (set! (O $memoized-representation-bignum) str)))))
 
    #| end of virtual-fields |# )
 
@@ -86,12 +120,15 @@
   (parent <ip-address>)
 
   (protocol (lambda (make-top)
-	      (lambda ((addr <bytevector>))
+	      (lambda ((addr <ascii-bytevector>))
 		(receive-and-return ((O <ip-address>))
 		    ((make-top))
-		  (set! (O $memoized-ascii) addr)))))
+		  (set! (O $memoized-representation-ascii) addr)))))
 
-  (fields (immutable (bytevector <bytevector>))))
+  #| end of class |# )
+
+(define-method (ip-address-representation-string (O <reg-name-address>))
+  (uri-encoding->string (O ascii)))
 
 
 ;;;; IP version "future" address class
@@ -101,10 +138,10 @@
   (parent <ip-address>)
 
   (protocol (lambda (make-top)
-	      (lambda ((addr <bytevector>))
+	      (lambda ((addr <ascii-bytevector>))
 		(receive-and-return ((O <ip-address>))
 		    ((make-top))
-		  (set! (O $memoized-ascii) addr)))))
+		  (set! (O $memoized-representation-ascii) addr)))))
 
   #| end of class |# )
 

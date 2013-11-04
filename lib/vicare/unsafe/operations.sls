@@ -318,6 +318,13 @@
     $string-concatenate
     $string-reverse-and-concatenate
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Mon Nov 4, 2013)
+    ;; $uri-encode
+    ;; $uri-decode
+    ;; $uri-normalise-encoding
+    ;; $uri-encoded-bytevector?
+
 ;;; --------------------------------------------------------------------
 
     $pointer?

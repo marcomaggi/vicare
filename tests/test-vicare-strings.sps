@@ -1584,6 +1584,20 @@
 
     #f)
 
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-decode (string->ascii "ci%5")))
+    => "incomplete percent sequence in percent-encoded bytevector")
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-decode (string->ascii "ci%5Zao")))
+    => "invalid octet in percent-encoded bytevector, percent sequence")
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -1617,6 +1631,62 @@
   (check
       (uri-normalise-encoding (string->ascii "ci%5Fao"))
     => (string->ascii "ci_ao"))
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-normalise-encoding (string->ascii "ci%5")))
+    => "incomplete percent sequence in percent-encoded bytevector")
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-normalise-encoding (string->ascii "ci%5Zao")))
+    => "invalid octet in percent-encoded bytevector, percent sequence")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (uri-encoded-bytevector? '#vu8())
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ciao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "cia%3do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "cia%3Do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%3fa%3do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%3Fa%3Do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "%7Eciao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5Fao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5"))
+    => #f)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5Zao"))
+    => #f)
 
   #t)
 
