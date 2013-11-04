@@ -33,7 +33,7 @@
     ;; auxiliary syntaxes
     )
   (import (nausicaa)
-    (nausicaa net addresses ip-address)
+    (nausicaa net addresses ip)
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
@@ -96,31 +96,54 @@
 
 ;;;; host types
 
-(define (make-uri-host (host-type <symbol>) host-data)
-  (case host-type
+(define (make-uri-host (host.type <symbol>) (host.ascii <bytevector>) host.data)
+  ;;Build  and return  a  new  instance a  specialised  object of  class
+  ;;"<ip-address>"  representing  the  host  component of  a  URI.   The
+  ;;possible  classes of  the returned  object are:  <reg-name-address>,
+  ;;<ipv4-address>, <ipv6-address>, <ipvfuture-address>.
+  ;;
+  ;;HOST.TYPE   must  be   a  symbol   among:  reg-name,   ipv4-address,
+  ;;ipv6-address, ipvfuture.
+  ;;
+  ;;HOST.ASCII   must   be   a   bytevector   representing   the   ASCII
+  ;;representation of the host component.
+  ;;
+  ;;HOST.DATA must be auxiliary data representing the host component:
+  ;;
+  ;;* For "reg-name": HOST.DATA is undefined.
+  ;;
+  ;;* For "ipv4-address": HOST.DATA must be a vector of 4 exact integers
+  ;;  representing the address components.
+  ;;
+  ;;* For "ipv6-address": HOST.DATA must be a vector of 8 exact integers
+  ;;  representing the address components.
+  ;;
+  ;;* For "ipvfuture":  HOST.DATA must be an  exact integer representing
+  ;;  the version number of the IP address.
+  ;;
+  ;;The arguments  are modeled after  the 3 return values  of PARSE-HOST
+  ;;from the library "(nausicaa parser-tools uri)".
+  ;;
+  (case host.type
     ((reg-name)
-     (<reg-name-address> (host-data)))
+     ;;The  constructor will  validate the  argument as  percent-encoded
+     ;;ASCII bytevector.
+     (<reg-name-address> (host.ascii)))
     ((ipv4-address)
-     (let (((vec <vector>) (cdr host-data)))
-       (<ipv4-address> (($vector-ref vec 0)
-			($vector-ref vec 1)
-			($vector-ref vec 2)
-			($vector-ref vec 3)))))
+     ;;The  constructor will  validate the  argument as  vector of  IPv4
+     ;;fixnums.
+     (<ipv4-address> (host.data)))
     ((ipv6-address)
-     (let (((vec <vector>) (cdr host-data)))
-       (<ipv6-address> (($vector-ref vec 0)
-			($vector-ref vec 1)
-			($vector-ref vec 2)
-			($vector-ref vec 3)
-			($vector-ref vec 4)
-			($vector-ref vec 5)
-			($vector-ref vec 6)
-			($vector-ref vec 7)))))
+     ;;The  constructor will  validate the  argument as  vector of  IPv6
+     ;;fixnums.
+     (<ipv6-address> (host.data)))
     ((ipvfuture)
-     (<ipvfuture-address> (host-data)))
+     ;;The  constructor will  validate the  argument as  percent-encoded
+     ;;ASCII bytevector.
+     (<ipvfuture-address> (host.data)))
     (else
      (procedure-argument-violation __who__
-       "invalid URI host type" host-type))))
+       "invalid URI host type" host.type))))
 
 
 ;;;; path types
@@ -257,14 +280,13 @@
   (protocol
    (lambda (make-top)
      (lambda ((scheme <uri-scheme>) (authority <uri-authority>) (userinfo <uri-userinfo>)
-	 (host-type <symbol>) (host <uri-host>) (port <uri-port>)
+	 (host.type <symbol>) (host.ascii <uri-host>) host.data
+	 (port <uri-port>)
 	 (path-type <symbol>) (path <uri-path>)
 	 (query <uri-query>) (fragment <uri-fragment>))
        ((make-top) scheme authority
 	(and userinfo (uri-decode userinfo))
-	host-type (if (eq? host-type 'reg-name)
-		      (uri-decode host)
-		    host)
+	(make-uri-host host.type host.ascii host.data)
 	port
 	(make-uri-path path-type path)
 	(and query (uri-decode query))
@@ -273,7 +295,6 @@
   (fields (mutable (scheme	<uri-scheme>))
 	  (mutable (authority	<uri-authority>))
 	  (mutable (userinfo	<uri-userinfo>))
-	  (mutable (host-type	<symbol>))
 	  (mutable (host	<uri-host>))
 	  (mutable (port	<uri-port>))
 	  (mutable (path	<uri-path>))
@@ -376,21 +397,18 @@
   (protocol
    (lambda (make-top)
      (lambda ((authority <uri-authority>) (userinfo <uri-userinfo>)
-	 (host-type <symbol>) (host <uri-host>) (port <uri-port>)
+	 (host.type <symbol>) (host <uri-host>) (port <uri-port>)
 	 (path-type <symbol>) (path <uri-path>)
 	 (query <uri-query>) (fragment <uri-fragment>))
        ((make-top) authority
 	(and userinfo (uri-decode userinfo))
-	host-type (if (eq? host-type 'reg-name)
-		      (uri-decode host)
-		    host)
+	(make-uri-host host.type host.ascii host.data)
 	(make-uri-path path-type path)
 	(and query (uri-decode query))
 	(and fragment (uri-decode fragment))))))
 
   (fields (mutable (authority	<uri-authority>))
 	  (mutable (userinfo	<uri-userinfo>))
-	  (mutable (host-type	<symbol>))
 	  (mutable (host	<uri-host>))
 	  (mutable (port	<uri-port>))
 	  (mutable (path-type	<symbol>))

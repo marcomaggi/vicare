@@ -47,7 +47,7 @@
     <binary-port> <binary-input-port> <binary-output-port> <binary-input/output-port>
     <textual-port> <textual-input-port> <textual-output-port> <textual-input/output-port>
 
-    <bytevector> <nonempty-bytevector>
+    <bytevector> <nonempty-bytevector> <ascii-bytevector>
     <bytevector-u8> <bytevector-s8>
     <bytevector-u16l> <bytevector-s16l> <bytevector-u16b> <bytevector-s16b> <bytevector-u16n> <bytevector-s16n>
     <bytevector-u32l> <bytevector-s32l> <bytevector-u32b> <bytevector-s32b> <bytevector-u32n> <bytevector-s32n>
@@ -678,7 +678,19 @@
   (define-bytevector-label <bytevector-doublel>	"ieee-double-litend")
   (define-bytevector-label <bytevector-doubleb>	"ieee-double-bigend")
   (define-bytevector-label <bytevector-doublen>	"ieee-double-native")
-  )
+
+  #| end of let-syntax |# )
+
+(define-label <ascii-bytevector>
+  (parent <bytevector-u8>)
+  (predicate
+   (lambda/tags ((bv <bytevector-u8>))
+     (let loop ((i 0))
+       (or ($fx= i (bv $length))
+	   (if ($fx<= 0 (bv[i]) 127)
+	       (loop ($fxadd1 i))
+	     #f)))))
+  #| end of label |# )
 
 
 ;;;; built-in types: hashtables

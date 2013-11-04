@@ -658,7 +658,7 @@
 		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
 		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
 		     (else
-		      (synner "unknown field name in :accessor-function tag-syntax" #'??field-name))))
+		      #'(THE-PARENT :mutator-function ??field-name))))
 
 		  ((_ :mutator-function ??field-name)
 		   (identifier? #'??field-name)
@@ -670,7 +670,7 @@
 		      (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
 		     ...
 		     (else
-		      (synner "unknown field name in :mutator-function tag-syntax" #'??field-name))))
+		      #'(THE-PARENT :mutator-function ??field-name))))
 
 		  ;;Replace  all  the  occurrences of  ??SRC-ID  in  the
 		  ;;??BODY  forms with  the identifier  selected by  the
@@ -1133,7 +1133,7 @@
 		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
 		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
 		     (else
-		      (synner "unknown field name in :accessor-function tag-syntax" #'??field-name))))
+		      #'(THE-PARENT :accessor-function ??field-name))))
 
 		  ((_ :mutator-function ??field-name)
 		   (identifier? #'??field-name)
@@ -1145,7 +1145,7 @@
 		      (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
 		     ...
 		     (else
-		      (synner "unknown field name in :mutator-function tag-syntax" #'??field-name))))
+		      #'(THE-PARENT :mutator-function ??field-name))))
 
 		  ;; public API: binding definition
 

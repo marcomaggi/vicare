@@ -883,6 +883,10 @@
     ($bytevector-total-length			$bytes $vicare-bytes)
     ($bytevector-concatenate			$bytes $vicare-bytes)
     ($bytevector-reverse-and-concatenate	$bytes $vicare-bytes)
+    ($uri-encode				$bytes $vicare-bytes)
+    ($uri-decode				$bytes $vicare-bytes)
+    ($uri-encoded-bytevector?			$bytes $vicare-bytes)
+    ($uri-normalise-encoding			$bytes $vicare-bytes)
 ;;;
     ($flonum-u8-ref				$flonums $vicare-flonums)
     ($make-flonum				$flonums $vicare-flonums)
@@ -1406,6 +1410,7 @@
     (uri-encode					i v $language)
     (uri-decode					i v $language)
     (uri-normalise-encoding			i v $language)
+    (uri-encoded-bytevector?			i v $language)
     (symbol->string				i v symbols r ba se)
     (symbol=?					i v symbols r ba)
     (symbol?					i v symbols r ba se)

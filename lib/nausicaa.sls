@@ -1377,6 +1377,7 @@
     uri-encode
     uri-encoding->string
     uri-normalise-encoding
+    uri-encoded-bytevector?
     utf-16be-codec
     utf16be->string
     utf-16le-codec
@@ -1576,7 +1577,7 @@
     <binary-port> <binary-input-port> <binary-output-port> <binary-input/output-port>
     <textual-port> <textual-input-port> <textual-output-port> <textual-input/output-port>
 
-    <bytevector> <nonempty-bytevector>
+    <bytevector> <nonempty-bytevector> <ascii-bytevector>
     <bytevector-u8> <bytevector-s8>
     <bytevector-u16l> <bytevector-s16l> <bytevector-u16b> <bytevector-s16b> <bytevector-u16n> <bytevector-s16n>
     <bytevector-u32l> <bytevector-s32l> <bytevector-u32b> <bytevector-s32b> <bytevector-u32n> <bytevector-s32n>

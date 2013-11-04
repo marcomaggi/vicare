@@ -1078,7 +1078,17 @@ Build and return a copy of the instance.
 @deftp {Builtin Label} @aclass{bytevector-u8}
 @deftpx {Builtin Label} @aclass{bytevector-s8}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as octets or bytes.
+contents must be accessed as octets or bytes.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{ascii-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as octets representing @ascii{} characters; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+returns @true{} if all the octets in the bytevector are in the range
+@math{[0, 127]}; long bytevectors may need significant time to be
+validated this way.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -1111,7 +1121,7 @@ selected byte or octet.
 @deftpx {Builtin Label} @aclass{bytevector-u16n}
 @deftpx {Builtin Label} @aclass{bytevector-s16n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 16-bit words.  The suffix @samp{l} stands
+contents must be accessed as 16-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1154,7 +1164,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-u32n}
 @deftpx {Builtin Label} @aclass{bytevector-s32n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 32-bit words.  The suffix @samp{l} stands
+contents must be accessed as 32-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1197,7 +1207,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-u64n}
 @deftpx {Builtin Label} @aclass{bytevector-s64n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 64-bit words.  The suffix @samp{l} stands
+contents must be accessed as 64-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1237,7 +1247,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-singleb}
 @deftpx {Builtin Label} @aclass{bytevector-singlen}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as @ieee{} single--precision floating--point
+contents must be accessed as @ieee{} single--precision floating--point
 numbers.  The suffix @samp{l} stands for little--endian; the suffix
 @samp{b} stands for big--endian; the suffix @samp{n} stands for native
 endianness.
@@ -1272,7 +1282,7 @@ the selected word.
 @deftpx {Builtin Label} @aclass{bytevector-doubleb}
 @deftpx {Builtin Label} @aclass{bytevector-doublen}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as @ieee{} double--precision floating--point
+contents must be accessed as @ieee{} double--precision floating--point
 numbers.  The suffix @samp{l} stands for little--endian; the suffix
 @samp{b} stands for big--endian; the suffix @samp{n} stands for native
 endianness.

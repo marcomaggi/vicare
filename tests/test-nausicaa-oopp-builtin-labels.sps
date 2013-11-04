@@ -921,6 +921,22 @@
 
   #t)
 
+(parametrise ((check-test-name	'ascii-bytevectors))
+
+  (check
+      (let* (((A <ascii-bytevector>) '#vu8(10 20 30 40 50 60 70 80))
+	     ((B <ascii-bytevector>) (A copy)))
+	(B[1]))
+    => 20)
+
+  (check
+      (let* (((A <ascii-bytevector>) '#vu8(10 20 30 40 50 60 70 80))
+	     ((B <ascii-bytevector>) (A copy)))
+	(set! B[1] 29)
+	(B[1]))
+    => 29)
+
+  #f)
 
 (parametrise ((check-test-name	'bytevectors-u16))
 

@@ -5236,6 +5236,34 @@ return the result.  The resulting bytevector must have length
 @var{total-len}.  Assume the arguments have been already validated.
 @end defun
 
+
+@defun $uri-encode @var{bytevector}
+@defunx $uri-decode @var{bytevector}
+Encode or decode a bytevector according to @rfc{} 3986 @uri{} percent
+encoding; return a bytevector.  All the octets are encoded except the
+ones having the following @ascii{} representation:
+
+@example
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+-._~
+@end example
+@end defun
+
+
+@defun $uri-normalise-encoding @var{bytevector}
+Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
+percent encoding: return an encoded and normalised bytevector, octets
+that are encoded but should not are decoded.
+@end defun
+
+
+@defun $uri-encoded-bytevector? @var{bv}
+Return @true{} if the argument is correctly percent--encoded bytevector
+according to @rfc{} 3986.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations

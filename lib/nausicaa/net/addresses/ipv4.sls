@@ -32,7 +32,12 @@
     <ipv4-address-fixnum>		<vector-of-ipv4-address-fixnums>
     <ipv4-address-prefix-length>)
   (import (nausicaa)
-    (vicare unsafe operations))
+    (nausicaa net addresses ip)
+    (vicare unsafe operations)
+    ;;FIXME This  import spec  should be removable  after the  next boot
+    ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
+    (except (vicare system $vectors)
+	    $vector-empty?))
 
 
 ;;;; auxiliary labels
@@ -46,7 +51,7 @@
   (parent <vector>)
   (predicate (lambda ((obj <vector>))
 	       (and ($fx= 4 (obj $length))
-		    (vector-for-all (<ipv4-address-fixnum>) obj)))))
+		    ($vector-for-all1 (<ipv4-address-fixnum>) obj)))))
 
 (define-label <ipv4-address-prefix-length>
   (parent <nonnegative-fixnum>)
@@ -56,11 +61,12 @@
 
 (define-class <ipv4-address>
   (nongenerative nausicaa:net:ipv4-address:<ipv4-address>)
+  (parent <ip-numeric-address>)
 
   (protocol
-   (lambda (make-top)
+   (lambda (make-ip-numeric-address)
      (define (%make-address third second first zeroth)
-       ((make-top) #f #f third second first zeroth))
+       ((make-ip-numeric-address) third second first zeroth))
      (case-lambda
       (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
 	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
@@ -72,35 +78,12 @@
 		      ($vector-ref addr 3)))
       )))
 
-  (fields (mutable memoized-bignum-rep)
-	  (mutable memoized-string-rep)
-	  (immutable (third	<ipv4-address-fixnum>))
+  (fields (immutable (third	<ipv4-address-fixnum>))
 	  (immutable (second	<ipv4-address-fixnum>))
 	  (immutable (first	<ipv4-address-fixnum>))
 	  (immutable (zeroth	<ipv4-address-fixnum>)))
 
   (virtual-fields
-   (immutable (bignum <exact-integer>)
-	      (lambda ((o <ipv4-address>))
-		(or (o $memoized-bignum-rep)
-		    (receive-and-return (bn)
-			(+ (o $zeroth)
-			   (fxarithmetic-shift-left (o $first)   8)
-			   (fxarithmetic-shift-left (o $second) 16)
-			   (fxarithmetic-shift-left (o $third)  24))
-		      (set! (o $memoized-bignum-rep) bn)))))
-
-   (immutable (string <string>)
-	      (lambda ((o <ipv4-address>))
-		(or (o $memoized-string-rep)
-		    (receive-and-return (S)
-			(string-append (o $third  $string) "."
-				       (o $second $string) "."
-				       (o $first  $string) "."
-				       (o $zeroth $string))
-		      (set! (o $memoized-string-rep) S)))))
-
-;;;
 
    (immutable (private?		<boolean>)
 	      (lambda ((O <ipv4-address>))
@@ -175,6 +158,18 @@
 
   #| end of class |# )
 
+(define-method (ip-address-representation-bignum (O <ipv4-address>))
+  (+ (O $zeroth)
+     (fxarithmetic-shift-left (O $first)   8)
+     (fxarithmetic-shift-left (O $second) 16)
+     (fxarithmetic-shift-left (O $third)  24)))
+
+(define-method (ip-address-representation-string (O <ipv4-address>))
+  (string-append (O $third  $string) "."
+		 (O $second $string) "."
+		 (O $first  $string) "."
+		 (O $zeroth $string)))
+
 
 (define-class <ipv4-address-prefix>
   (nongenerative nausicaa:net:ipv4-address:<ipv4-address-prefix>)
@@ -183,21 +178,16 @@
   (protocol (lambda (make-address)
 	      (lambda ((addr <vector-of-ipv4-address-fixnums>)
 		  (number-of-bits <ipv4-address-prefix-length>))
-		((make-address addr) number-of-bits #f))))
+		((make-address addr) number-of-bits))))
 
-  (fields (immutable (prefix-length <ipv4-address-prefix-length>))
-	  (mutable   memoized-string-rep))
-
-  (virtual-fields (immutable (string <string>)
-			     (lambda ((o <ipv4-address-prefix>))
-			       (or (o $memoized-string-rep)
-				   (receive-and-return (S)
-				       (string-append (slot-ref o string <ipv4-address>)
-						      "/"
-						      (o $prefix-length $string))
-				     (set! (o $memoized-string-rep) S))))))
+  (fields (immutable (prefix-length <ipv4-address-prefix-length>)))
 
   #| end of class |# )
+
+(define-method (ip-address-representation-string (O <ipv4-address-prefix>))
+  (string-append (slot-ref O string <ipv4-address>)
+		 "/"
+		 (O $prefix-length $string)))
 
 
 ;;;; done

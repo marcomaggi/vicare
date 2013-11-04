@@ -32,7 +32,12 @@
     <ipv6-address-fixnum>		<vector-of-ipv6-address-fixnums>
     <ipv6-address-prefix-length>)
   (import (nausicaa)
-    (vicare unsafe operations))
+    (nausicaa net addresses ip)
+    (vicare unsafe operations)
+    ;;FIXME This  import spec  should be removable  after the  next boot
+    ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
+    (except (vicare system $vectors)
+	    $vector-empty?))
 
 
 ;;;; auxiliary labels
@@ -46,7 +51,7 @@
   (parent <vector>)
   (predicate (lambda ((obj <vector>))
 	       (and ($fx= 8 (obj $length))
-		    (vector-for-all (<ipv6-address-fixnum>) obj)))))
+		    ($vector-for-all1 (<ipv6-address-fixnum>) obj)))))
 
 (define-label <ipv6-address-prefix-length>
   (parent <nonnegative-fixnum>)
@@ -56,11 +61,15 @@
 
 (define-class <ipv6-address>
   (nongenerative nausicaa:net:ipv6-addresses:<ipv6-address>)
+  (parent <ip-numeric-address>)
 
   (protocol
-   (lambda (make-top)
+   (lambda (make-ip-address)
      (define (%make-address seventh sixth fifth fourth third second first zeroth)
-       ((make-top) #f #f #f #f #f
+       ((make-ip-address)
+	;; memoized values
+	#f #f #f
+	;; address components
 	seventh sixth fifth fourth third second first zeroth))
      (case-lambda
       (((seventh <ipv6-address-fixnum>) (sixth  <ipv6-address-fixnum>)
@@ -79,11 +88,9 @@
 		      ($vector-ref addr 7)))
       )))
 
-  (fields (mutable cached-bignum)
-	  (mutable cached-string)
-	  (mutable cached-unspecified?)
-	  (mutable cached-loopback?)
-	  (mutable cached-global-unicast?)
+  (fields (mutable memoized-unspecified?)
+	  (mutable memoized-loopback?)
+	  (mutable memoized-global-unicast?)
 	  (immutable (seventh		<ipv6-address-fixnum>))
 	  (immutable (sixth		<ipv6-address-fixnum>))
 	  (immutable (fifth		<ipv6-address-fixnum>))
@@ -95,39 +102,9 @@
 
   (virtual-fields
 
-   (immutable (bignum <exact-integer>)
-	      (lambda ((o <ipv6-address>))
-		(or (o $cached-bignum)
-		    (receive-and-return (bn)
-			(+ (o $zeroth)
-			   (bitwise-arithmetic-shift-left (o $first)    16)
-			   (bitwise-arithmetic-shift-left (o $second)   32)
-			   (bitwise-arithmetic-shift-left (o $third)    48)
-			   (bitwise-arithmetic-shift-left (o $fourth)   64)
-			   (bitwise-arithmetic-shift-left (o $fifth)    80)
-			   (bitwise-arithmetic-shift-left (o $sixth)    96)
-			   (bitwise-arithmetic-shift-left (o $seventh) 112))
-		      (set! (o $cached-bignum) bn)))))
-
-   (immutable (string <string>)
-	      (lambda ((o <ipv6-address>))
-		(or (o $cached-string)
-		    (receive-and-return (S)
-			(string-append (o $seventh $string 16) ":"
-				       (o $sixth   $string 16) ":"
-				       (o $fifth   $string 16) ":"
-				       (o $fourth  $string 16) ":"
-				       (o $third   $string 16) ":"
-				       (o $second  $string 16) ":"
-				       (o $first   $string 16) ":"
-				       (o $zeroth  $string 16))
-		      (set! (o $cached-string) S)))))
-
-;;; --------------------------------------------------------------------
-
    (immutable (unspecified? <boolean>)
 	      (lambda ((o <ipv6-address>))
-		(or (o cached-unspecified?)
+		(or (o memoized-unspecified?)
 		    (receive-and-return (B)
 			(and ($fxzero? (o $zeroth))
 			     ($fxzero? (o $first))
@@ -137,11 +114,11 @@
 			     ($fxzero? (o $fifth))
 			     ($fxzero? (o $sixth))
 			     ($fxzero? (o $seventh)))
-		      (set! (o $cached-unspecified?) B)))))
+		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable (loopback? <boolean>)
 	      (lambda ((o <ipv6-address>))
-		(or (o $cached-unspecified?)
+		(or (o $memoized-unspecified?)
 		    (receive-and-return (B)
 			(and ($fx= 1   (o $zeroth))
 			     ($fxzero? (o $first))
@@ -151,7 +128,7 @@
 			     ($fxzero? (o $fifth))
 			     ($fxzero? (o $sixth))
 			     ($fxzero? (o $seventh)))
-		      (set! (o $cached-unspecified?) B)))))
+		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable (multicast? <boolean>)
 	      (lambda ((o <ipv6-address>))
@@ -165,7 +142,7 @@
 
    (immutable (global-unicast? <boolean>)
 	      (lambda ((o <ipv6-address>))
-		(or (o $cached-global-unicast?)
+		(or (o $memoized-global-unicast?)
 		    (not (or (o unspecified?)
 			     (o loopback?)
 			     (o multicast?)
@@ -175,6 +152,26 @@
 
   #| end of class |# )
 
+(define-method (ip-address-representation-bignum (O <ipv6-address>))
+  (+ (O $zeroth)
+     (bitwise-arithmetic-shift-left (O $first)    16)
+     (bitwise-arithmetic-shift-left (O $second)   32)
+     (bitwise-arithmetic-shift-left (O $third)    48)
+     (bitwise-arithmetic-shift-left (O $fourth)   64)
+     (bitwise-arithmetic-shift-left (O $fifth)    80)
+     (bitwise-arithmetic-shift-left (O $sixth)    96)
+     (bitwise-arithmetic-shift-left (O $seventh) 112)))
+
+(define-method (ip-address-representation-string (O <ipv6-address>))
+  (string-append (O $seventh $string 16) ":"
+		 (O $sixth   $string 16) ":"
+		 (O $fifth   $string 16) ":"
+		 (O $fourth  $string 16) ":"
+		 (O $third   $string 16) ":"
+		 (O $second  $string 16) ":"
+		 (O $first   $string 16) ":"
+		 (O $zeroth  $string 16)))
+
 
 (define-class <ipv6-address-prefix>
   (nongenerative nausicaa:net:ipv6-addresses:<ipv6-address-prefix>)
@@ -183,22 +180,16 @@
   (protocol (lambda (make-address)
 	      (lambda ((addr           <vector-of-ipv6-address-fixnums>)
 		  (number-of-bits <ipv6-address-prefix-length>))
-		((make-address addr) number-of-bits #f))))
+		((make-address addr) number-of-bits))))
 
-  (fields (immutable (prefix-length <ipv6-address-prefix-length>))
-	  (mutable cached-string))
-
-  (virtual-fields
-   (immutable (string <string>)
-	      (lambda ((o <ipv6-address-prefix>))
-		(or (o $cached-string)
-		    (receive-and-return (S)
-			(string-append (slot-ref o string <ipv6-address>)
-				       "/"
-				       (o $prefix-length $string))
-		      (set! (o $cached-string) S))))))
+  (fields (immutable (prefix-length <ipv6-address-prefix-length>)))
 
   #| end of class |# )
+
+(define-method (ip-address-representation-string (O <ipv6-address-prefix>))
+  (string-append (slot-ref O string <ipv6-address>)
+		 "/"
+		 (O $prefix-length $string)))
 
 
 ;;;; done

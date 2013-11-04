@@ -911,59 +911,32 @@
 
 (parametrise ((check-test-name	'parsing-host))
 
-  (check
-      (let-values (((kind data) (uri.parse-host (mkport ""))))
-	(list kind data))
-    => '(reg-name #vu8()))
+  (define (f1 str)
+    (let ((port (mkport str)))
+      (receive (kind bv data)
+	  (uri.parse-host port)
+	(values kind (ascii->string bv) data
+		(eof-object? (get-bytevector-some port))))))
 
-  (check
-      (let*-values (((in-port)		(mkport "/"))
-		    ((kind data)	(uri.parse-host in-port))
-		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-	(list kind data rest))
-    => '(reg-name #vu8() "/"))
+  (define (f2 str)
+    (let ((port (mkport str)))
+      (receive (kind bv data)
+	  (uri.parse-host port)
+	(values kind (ascii->string bv) data
+		(ascii->string (get-bytevector-some port))))))
 
-  (check
-      (let*-values (((in-port)		(mkport ":80"))
-		    ((kind data)	(uri.parse-host in-port))
-		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-	(list kind data rest))
-    => '(reg-name #vu8() ":80"))
+;;; --------------------------------------------------------------------
 
-  (check
-      (let*-values (((in-port)		(mkport "1.2.3.4:80"))
-		    ((kind data)	(uri.parse-host in-port))
-		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv4-address "1.2.3.4" #(1 2 3 4) ":80"))
+  (check (f1 "")		=> 'reg-name "" (void) #t)
 
-  (check
-      (let*-values (((in-port)		(mkport "1.2.3.4/ciao"))
-  		    ((kind data)	(uri.parse-host in-port))
-  		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-  	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv4-address "1.2.3.4" #(1 2 3 4) "/ciao"))
+  (check (f2 "/")		=> 'reg-name "" (void) "/")
+  (check (f2 ":80")		=> 'reg-name "" (void) ":80")
+  (check (f2 "1.2.3.4:80")	=> 'ipv4-address "1.2.3.4" '#(1 2 3 4) ":80")
+  (check (f2 "1.2.3.4/ciao")	=> 'ipv4-address "1.2.3.4" '#(1 2 3 4) "/ciao")
 
-  (check
-      (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]:80"))
-  		    ((kind data)	(uri.parse-host in-port))
-  		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-  	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv6-address "::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80"))
-
-  (check
-      (let*-values (((in-port)		(mkport "[::ffff:192.168.99.1]/ciao"))
-  		    ((kind data)	(uri.parse-host in-port))
-  		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-  	(list kind (ascii->string (car data)) (cdr data) rest))
-    => '(ipv6-address "::ffff:192.168.99.1" #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"))
-
-  (check
-      (let*-values (((in-port)		(mkport "[v9,ciao,ciao]/ciao"))
-  		    ((kind data)	(uri.parse-host in-port))
-  		    ((rest)		(ascii->string (get-bytevector-some in-port))))
-  	(list kind (car data) (ascii->string (cdr data)) rest))
-    => '(ipvfuture 9 ",ciao,ciao" "/ciao"))
+  (check (f2 "[::ffff:192.168.99.1]:80")	=> 'ipv6-address "::ffff:192.168.99.1" '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80")
+  (check (f2 "[::ffff:192.168.99.1]/ciao")	=> 'ipv6-address "::ffff:192.168.99.1" '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao")
+  (check (f2 "[v9,ciao,ciao]/ciao")		=> 'ipvfuture ",ciao,ciao" 9 "/ciao")
 
   #t)
 
@@ -1932,25 +1905,25 @@
 
   (define-syntax-rule (doit in-string expected-value)
     (check
-	(let-values (((scheme authority userinfo host-type host port path-type path query fragment)
-		      (uri.parse-uri (mkport in-string))))
+	(receive (scheme authority userinfo host.type host.bv host.data port path.type path query fragment)
+	    (uri.parse-uri (mkport in-string))
 	  (list (and scheme		(ascii->string scheme))
 		(and authority		(ascii->string authority))
 		(and userinfo		(ascii->string userinfo))
-		host-type
-		(and host
-		     (case host-type
+		host.type
+		(and host.bv
+		     (case host.type
 		       ((reg-name)
-			(ascii->string host))
+			(ascii->string host.bv))
 		       ((ipv4-address)
-			(cons (ascii->string (car host)) (cdr host)))
+			(cons (ascii->string host.bv) host.data))
 		       ((ipv6-address)
-			(cons (ascii->string (car host)) (cdr host)))
+			(cons (ascii->string host.bv) host.data))
 		       ((ipvfuture)
-			(cons (car host) (ascii->string (cdr host))))
+			(cons (ascii->string host.bv) host.data))
 		       (else #f)))
 		(and port		(ascii->string port))
-		path-type
+		path.type
 		(map ascii->string path)
 		(and query		(ascii->string query))
 		(and fragment		(ascii->string fragment))))
@@ -2021,7 +1994,7 @@
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
   (doit "http://[vEciao]:8080/a/b/c"
-	("http" "[vEciao]:8080" #f ipvfuture (14 . "ciao")
+	("http" "[vEciao]:8080" #f ipvfuture ("ciao" . 14)
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
 ;;; with authority, no scheme
@@ -2114,12 +2087,12 @@
 
   (define-syntax-rule (doit in-string expected-value)
     (check
-	(let-values (((authority userinfo host-type host port path-type path query fragment)
+	(let-values (((authority userinfo host.type host.bv host.data port path-type path query fragment)
 		      (uri.parse-relative-ref (mkport in-string))))
 	  (list (and authority		(ascii->string authority))
 		(and userinfo		(ascii->string userinfo))
-		host-type
-		(and host		(ascii->string host))
+		host.type
+		(and host.bv		(ascii->string host.bv))
 		(and port		(ascii->string port))
 		path-type
 		(map ascii->string path)
