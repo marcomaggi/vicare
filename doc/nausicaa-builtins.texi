@@ -1112,6 +1112,22 @@ Access the length of the bytevector.
 @end deftypecv
 
 
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} ascii-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $ascii-encoded?
+Accessing this field is like applying @func{ascii-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} latin1-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} latin1-encoded?
+Accessing this field is like applying @func{latin1-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded
 @deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded
 Accessing this field is like applying @func{percent-encode} to the
@@ -1126,8 +1142,8 @@ bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded?
-@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded?
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} percent-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $percent-encoded?
 Accessing this field is like applying @func{percent-encoded-bytevector?}
 to the bytevector, @vicareref{iklib bytevectors conv, Converting
 bytevectors}.
@@ -1597,6 +1613,16 @@ function @func{nan?} from @rsixlibrary{base}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Accessors: conversion
+
+
+@deftypecv @aclass{number} @aclass{string} string
+Accessing this field is like applying to the number the function
+@func{number->string} from @rsixlibrary{base} without other arguments.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
 @subsubheading Methods: arithmetic
 
 
@@ -1798,14 +1824,10 @@ Calling this method is like applying to the instance number the function
 @func{complex-conjugate} from @library{vicare}.
 @end defmethod
 
-@c ------------------------------------------------------------
 
-@subsubheading Conversion
-
-
-@defmethod @aclass{number} string
-@defmethodx @aclass{number} string @var{radix}
-@defmethodx @aclass{number} string @var{radix} @var{precision}
+@defmethod @aclass{number} string-radix
+@defmethodx @aclass{number} string-radix @var{radix}
+@defmethodx @aclass{number} string-radix @var{radix} @var{precision}
 Calling this method is like applying to the instance number, and the
 optional arguments @var{radix} and @var{precision}, the function
 @func{number->string} from @rsixlibrary{base}.
