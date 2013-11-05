@@ -623,12 +623,14 @@
   (predicate bytevector?)
 
   (virtual-fields
-   (immutable (length		<fixnum>)			bytevector-length)
-   (immutable ($length		<fixnum>)			$bytevector-length)
-   (immutable (percent-encoded	<percent-encoded-bytevector>)	percent-encode)
-   (immutable (percent-decoded	<bytevector>)			percent-decode)
-   (immutable ($percent-encoded	<percent-encoded-bytevector>)	$percent-encode)
-   (immutable ($percent-decoded	<bytevector>)			$percent-decode)
+   (immutable (length			<fixnum>)			bytevector-length)
+   (immutable ($length			<fixnum>)			$bytevector-length)
+   (immutable (percent-encoded		<percent-encoded-bytevector>)	percent-encode)
+   (immutable (percent-decoded		<bytevector>)			percent-decode)
+   (immutable ($percent-encoded		<percent-encoded-bytevector>)	$percent-encode)
+   (immutable ($percent-decoded		<bytevector>)			$percent-decode)
+   (immutable (percent-encoded?		<boolean>)			percent-encoded-bytevector?)
+   (immutable ($percent-encoded?	<boolean>)			$percent-encoded-bytevector?)
    #| end of virtual-fields|# )
 
   (method-syntax copy

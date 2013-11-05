@@ -1125,6 +1125,14 @@ Accessing this field is like applying @func{percent-decode} to the
 bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
 @end deftypecv
 
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded?
+Accessing this field is like applying @func{percent-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading Methods

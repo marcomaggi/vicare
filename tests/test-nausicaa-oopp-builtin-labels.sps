@@ -922,6 +922,16 @@
 	(O percent-decoded))
     => '#ve(ascii "ci?a=o"))
 
+  (check
+      (let (((O <bytevector>) '#ve(ascii "ci?a=o")))
+	(O percent-encoded?))
+    => #t)
+
+  (check
+      (let (((O <bytevector>) '#ve(ascii "c%3")))
+	(O percent-encoded?))
+    => #f)
+
 ;;; --------------------------------------------------------------------
 
   (check
