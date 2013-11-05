@@ -625,12 +625,20 @@
   (virtual-fields
    (immutable (length			<fixnum>)			bytevector-length)
    (immutable ($length			<fixnum>)			$bytevector-length)
+
    (immutable (percent-encoded		<percent-encoded-bytevector>)	percent-encode)
    (immutable (percent-decoded		<bytevector>)			percent-decode)
    (immutable ($percent-encoded		<percent-encoded-bytevector>)	$percent-encode)
    (immutable ($percent-decoded		<bytevector>)			$percent-decode)
    (immutable (percent-encoded?		<boolean>)			percent-encoded-bytevector?)
    (immutable ($percent-encoded?	<boolean>)			$percent-encoded-bytevector?)
+
+   (immutable (ascii-encoded?		<boolean>)			ascii-encoded-bytevector?)
+   (immutable ($ascii-encoded?		<boolean>)			$ascii-encoded-bytevector?)
+
+   (immutable (latin1-encoded?		<boolean>)			latin1-encoded-bytevector?)
+   (immutable ($latin1-encoded?		<boolean>)			$latin1-encoded-bytevector?)
+
    #| end of virtual-fields|# )
 
   (method-syntax copy
@@ -1133,15 +1141,11 @@
    (immutable (inexact?		<boolean>)	inexact?))
 
   ;; conversion
-  (method-syntax string
-    (syntax-rules ()
-      ((_ ?num)
-       (number->string ?num))
-      ((_ ?num ?radix)
-       (number->string ?num ?radix))
-      ((_ ?num ?radix ?precision)
-       (number->string ?num ?radix ?precision))
-      ))
+  (virtual-fields
+   (immutable (string		<string>)	number->string))
+
+  ;;This method supports the optional arguments of NUMBER->STRING.
+  (methods (string-radix number->string))
 
 ;;; math functions from (rnrs base (6)) and (vicare)
 
