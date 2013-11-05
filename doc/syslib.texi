@@ -5353,6 +5353,48 @@ Return a string object representing @var{fx} in @var{base}.  @var{base}
 must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Conversion function
+
+
+@defun $string->latin1 @var{string}
+@defunx $latin1->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+Latin-1 encoding of the characters.
+@end defun
+
+
+@defun $string->ascii @var{string}
+@defunx $ascii->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@ascii{} encoding of the characters.
+@end defun
+
+
+@defun $ascii-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered an @ascii{} code point if:
+
+@example
+(<= #x00 chi #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun $latin1-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as a Latin1
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered a Latin1 code point if:
+
+@example
+(or (<= #x20 chi #x7E)
+    (<= #xA0 chi #xFF))
+@result{} #t
+@end example
+@end defun
+
 @c page
 @node syslib ports
 @section Low level port structures

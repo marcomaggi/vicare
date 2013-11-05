@@ -1212,21 +1212,27 @@
 
 (parametrise ((check-test-name	'latin1))
 
+  (define (latin1-chi? chi)
+    (or (<= #x20 chi #x7E)
+	(<= #xA0 chi #xFF)))
+
   (define test-string
     (let* ((str.len 256)
-	   (str     (make-string str.len)))
+	   (str     (make-string str.len #\0)))
       (do ((i 0 (+ 1 i)))
 	  ((= i str.len)
 	   str)
-	(string-set! str i (integer->char i)))))
+	(when (latin1-chi? i)
+	  (string-set! str i (integer->char i))))))
 
   (define test-bytevector
     (let* ((bv.len 256)
-	   (bv     (make-bytevector bv.len)))
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
       (do ((i 0 (+ 1 i)))
 	  ((= i bv.len)
 	   bv)
-	(bytevector-u8-set! bv i i))))
+	(when (latin1-chi? i)
+	  (bytevector-u8-set! bv i i)))))
 
 ;;; --------------------------------------------------------------------
 ;;; argument check
@@ -1254,29 +1260,62 @@
     => test-bytevector)
 
   (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->latin1 "#\x80;"))
+    => '(#\x80 "#\x80;"))
+
+;;;
+
+  (check
       (latin1->string test-bytevector)
     => test-string)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(latin1->string '#vu8(#x80)))
+    => '(#\x80 #vu8(#x80)))
+
+;;;
+
+  (check
+      (latin1-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (latin1-encoded-bytevector? '#vu8(1 2 3 255 10))
+    => #f)
 
   #t)
 
 
 (parametrise ((check-test-name	'ascii))
 
+  (define (ascii-chi? chi)
+    (<= #x00 chi #x7F))
+
   (define test-string
     (let* ((str.len 128)
-	   (str     (make-string str.len)))
+	   (str     (make-string str.len #\0)))
       (do ((i 0 (+ 1 i)))
 	  ((= i str.len)
 	   str)
-	(string-set! str i (integer->char i)))))
+	(when (ascii-chi? i)
+	  (string-set! str i (integer->char i))))))
 
   (define test-bytevector
     (let* ((bv.len 128)
-	   (bv     (make-bytevector bv.len)))
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
       (do ((i 0 (+ 1 i)))
 	  ((= i bv.len)
 	   bv)
-	(bytevector-u8-set! bv i i))))
+	(when (ascii-chi? i)
+	  (bytevector-u8-set! bv i i)))))
 
 ;;; --------------------------------------------------------------------
 ;;; argument check
@@ -1304,8 +1343,36 @@
     => test-bytevector)
 
   (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->ascii "#\x80;"))
+    => '(#\x80 "#\x80;"))
+
+;;;
+
+  (check
       (ascii->string test-bytevector)
     => test-string)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(ascii->string '#vu8(#x80)))
+    => '(#\x80 #vu8(#x80)))
+
+;;;
+
+  (check
+      (ascii-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (ascii-encoded-bytevector? '#vu8(1 2 3 200 10))
+    => #f)
 
   #t)
 

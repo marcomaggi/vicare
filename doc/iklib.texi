@@ -4957,6 +4957,30 @@ part first.
 @end defun
 
 
+@defun ascii-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered an @ascii{} code point if:
+
+@example
+(<= #x00 chi #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun latin1-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as a Latin1
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered a Latin1 code point if:
+
+@example
+(or (<= #x20 chi #x7E)
+    (<= #xA0 chi #xFF))
+@result{} #t
+@end example
+@end defun
+
+
 @defun hex->bytevector @var{bytevector}
 @defunx bytevector->hex @var{bytevector}
 Convert to and from a Scheme bytevector containing octets and a Scheme

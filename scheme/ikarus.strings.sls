@@ -33,7 +33,11 @@
 
     ;; Vicare specific
     string->latin1		latin1->string
+    latin1-encoded-bytevector?
+
     string->ascii		ascii->string
+    ascii-encoded-bytevector?
+
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
     string-base64->bytevector	bytevector->string-base64
@@ -54,6 +58,13 @@
     $string
     $string=			$string-total-length
     $string-concatenate		$string-reverse-and-concatenate
+
+    $string->ascii		$ascii->string
+    $ascii-encoded-bytevector?
+
+    $string->latin1		$latin1->string
+    $latin1-encoded-bytevector?
+
     $uri-encode			$uri-decode
     $normalise-uri-encoding	$uri-encoded-bytevector?
     (rename ($uri-encode		$percent-encode)
@@ -78,7 +89,11 @@
 
 		  ;; Vicare specific
 		  string->latin1		latin1->string
+		  latin1-encoded-bytevector?
+
 		  string->ascii			ascii->string
+		  ascii-encoded-bytevector?
+
 		  bytevector->hex		hex->bytevector
 		  string-hex->bytevector	bytevector->string-hex
 		  string-base64->bytevector	bytevector->string-base64
@@ -156,19 +171,17 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (latin1 who code-point str)
-  (and ($fx>= code-point 0)
-       ($fx< code-point 256))
+(define-argument-validation (latin1 who code-point arg)
+  ($latin1-chi? code-point)
   (procedure-argument-violation who
-    "expected only Latin-1 characters in string argument"
-    ($fixnum->char code-point) str))
+    "expected only Latin-1 code points in argument"
+    (integer->char code-point) arg))
 
-(define-argument-validation (ascii who code-point str)
-  (and ($fx>= code-point 0)
-       ($fx<  code-point 128))
+(define-argument-validation (ascii who code-point arg)
+  ($ascii-chi? code-point)
   (procedure-argument-violation who
-    "expected only ASCII characters in string argument"
-    ($fixnum->char code-point) str))
+    "expected only ASCII code points in argument"
+    (integer->char code-point) arg))
 
 
 ;;;; constants
@@ -185,6 +198,13 @@
   ($string-copy! src.str src.start
 		 dst.str dst.start
 		 src.end))
+
+(define-inline ($latin1-chi? chi)
+  (or ($fx<= #x20 chi #x7E)
+      ($fx<= #xA0 chi #xFF)))
+
+(define-inline ($ascii-chi? chi)
+  ($fx<= #x00 chi #x7F))
 
 
 (define (string-length str)
@@ -990,16 +1010,22 @@
   (define who 'latin1->string)
   (with-arguments-validation (who)
       ((string str))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((bv.len ($string-length str))
-	   (bv	 ($make-bytevector bv.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i bv.len)
-	   bv)
-	(let ((code-point ($char->fixnum ($string-ref str i))))
-	  (with-arguments-validation (who)
-	      ((latin1 code-point str))
-	    ($bytevector-u8-set! bv i code-point)))))))
+    ($string->latin1 str)))
+
+(define ($string->latin1 str)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (define who 'latin1->string)
+  (let* ((bv.len ($string-length str))
+	 (bv	 ($make-bytevector bv.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i bv.len)
+	 bv)
+      (let ((code-point ($char->fixnum ($string-ref str i))))
+	(with-arguments-validation (who)
+	    ((latin1 code-point str))
+	  ($bytevector-u8-set! bv i code-point))))))
+
+;;; --------------------------------------------------------------------
 
 (define (latin1->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -1008,16 +1034,37 @@
   (define who 'latin1->string)
   (with-arguments-validation (who)
       ((bytevector bv))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((str.len ($bytevector-length bv))
-	   (str     ($make-string str.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i str.len)
-	   str)
-	(let ((code-point ($bytevector-u8-ref bv i)))
-	  (with-arguments-validation (who)
-	      ((latin1 code-point str))
-	    ($string-set! str i ($fixnum->char code-point))))))))
+    ($latin1->string bv)))
+
+(define ($latin1->string bv)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (define who '$latin1->string)
+  (let* ((str.len ($bytevector-length bv))
+	 (str     ($make-string str.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str.len)
+	 str)
+      (let ((code-point ($bytevector-u8-ref bv i)))
+	(with-arguments-validation (who)
+	    ((latin1 code-point bv))
+	  ($string-set! str i ($fixnum->char code-point)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (latin1-encoded-bytevector? bv)
+  ;;Return  true if  the  argument is  interpretable  as Latin1  encoded
+  ;;string.
+  ;;
+  (define who 'latin1-encoded-bytevector?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($latin1-encoded-bytevector? bv)))
+
+(define ($latin1-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+  	(and ($latin1-chi? ($bytevector-u8-ref bv i))
+  	     (loop ($fxadd1 i))))))
 
 
 ;;;; ASCII bytevectors to/from strings
@@ -1063,6 +1110,23 @@
 	(with-arguments-validation (who)
 	    ((ascii	code-point bv))
 	  ($string-set! str i ($fixnum->char code-point)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (ascii-encoded-bytevector? bv)
+  ;;Return  true  if the  argument  is  interpretable as  ASCII  encoded
+  ;;string.
+  ;;
+  (define who 'ascii-encoded-bytevector?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($ascii-encoded-bytevector? bv)))
+
+(define ($ascii-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+	(and ($ascii-chi? ($bytevector-u8-ref bv i))
+	     (loop ($fxadd1 i))))))
 
 
 ;;;; bytevectors to/from HEX strings

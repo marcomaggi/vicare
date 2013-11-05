@@ -738,7 +738,6 @@
     array-set-c-unsigned-long!
     array-set-c-unsigned-long-long!
     array-set-c-unsigned-short!
-    ascii->string
     asinh
     assembler-output
     atanh
@@ -988,7 +987,6 @@
     keyword->symbol
     lambda-returnable
     last-pair
-    latin1->string
     library
     library-extensions
     library-name<=?
@@ -1265,7 +1263,6 @@
     strdup*
     strerror
     string-empty?
-    string->ascii
     string-base64->bytevector
     string-copy!
     string->cstring
@@ -1275,7 +1272,6 @@
     string->guarded-cstring
     string->guarded-cstring*
     string-hex->bytevector
-    string->latin1
     string-or-symbol->string
     string-or-symbol->symbol
     string->pathname-func
@@ -1502,6 +1498,11 @@
     bignum-even?
     least-positive-bignum
     greatest-negative-bignum
+
+    ;; ASCII and latin1 encodings
+    ascii->string			string->ascii
+    latin1->string			string->latin1
+    ascii-encoded-bytevector?		latin1-encoded-bytevector?
 
     ;; URI/percent encoding
     string->uri-encoding		uri-encoding->string

@@ -319,6 +319,15 @@
     $string-reverse-and-concatenate
 
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Tue Nov 5, 2013)
+    ;; $string->ascii
+    ;; $ascii->string
+    ;; $ascii-encoded-bytevector?
+    ;; $string->latin1
+    ;; $latin1->string
+    ;; $latin1-encoded-bytevector?
+
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Mon Nov 4, 2013)
     ;; $uri-encode
     ;; $uri-decode
