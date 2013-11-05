@@ -37,7 +37,11 @@
     (nausicaa net addresses ipv4)
     (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Mon Nov 4, 2013)
+    (only (vicare system $bytevectors)
+	  $uri-encoded-bytevector?))
 
 
 ;;;; helpers
@@ -85,13 +89,15 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-label <decoded-list-of-segments>
+(define-label <encoded-list-of-segments>
   (parent <list>)
   (predicate (lambda (self)
-	       (for-all (<nonempty-bytevector>) self)))
+	       (for-all (lambda ((segment <percent-encoded-bytevector>))
+			  (not ($fxzero? (segment $length))))
+		 self)))
   (protocol (lambda ()
-	      (lambda (path)
-		(map uri-decode path)))))
+	      (lambda ((path))
+		(map uri-encode path)))))
 
 
 ;;;; host types
@@ -154,7 +160,7 @@
 
 (define-class <uri-path>
   (nongenerative nausicaa:net:addresses:uri:<uri-path>)
-  (fields (immutable (path <decoded-list-of-segments>))
+  (fields (immutable (path <encoded-list-of-segments>))
 	  (mutable   memoized-bytevector))
   (protocol (lambda (make-top)
 	      (lambda (path)
