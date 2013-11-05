@@ -64,7 +64,9 @@
 
     ;; auxiliary syntaxes
     char-selector		string-result?)
-  (import (nausicaa)
+  (import (except (nausicaa)
+		  percent-encode
+		  percent-decode)
     (prefix (nausicaa parser-tools ipv4-addresses) ip.)
     (prefix (nausicaa parser-tools ipv6-addresses) ip.)
     ;; (prefix (nausicaa net addresses ipv4) net.)
