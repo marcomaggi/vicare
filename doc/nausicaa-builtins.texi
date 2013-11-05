@@ -748,6 +748,53 @@ Accessing this field is like applying @func{string-foldcase} to the
 string.
 @end deftypecv
 
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u8} utf8
+Accessing this field is like applying @func{string->utf8} to the string,
+@vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16 @var{endianness}
+Accessing this field is like applying @func{string->utf16} to the
+string, @vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u16l} utf16le
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16b} utf16be
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16n
+Accessing these fields is like applying @func{string->utf16le},
+@func{string->utf16be}, @func{string->utf16n} to the string,
+@vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u32} utf32
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u32} utf32 @var{endianness}
+Accessing this field is like applying @func{string->utf32} to the
+string, @vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} ascii
+Accessing this field is like applying @func{string->ascii} to the
+string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} latin1
+Accessing this field is like applying @func{string->latin1} to the
+string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{percent-encoded-bytevector} percent-encoding
+Accessing this field is like applying @func{string->percent-encoding} to
+the string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading Unsafe accessors

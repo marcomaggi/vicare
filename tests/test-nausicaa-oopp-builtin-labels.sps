@@ -620,6 +620,48 @@
 	(vector (B a str[0]) (B a str[1])))
     => '#(#\c #\I))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O ascii))
+    => '#ve(ascii "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O latin1))
+    => '#ve(latin1 "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O utf8))
+    => '#ve(utf8 "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O utf16le))
+    => '#ve(utf16le "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O utf16be))
+    => '#ve(utf16be "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O utf16n))
+    => '#ve(utf16n "ciao"))
+
+  (check
+      (let (((O <string>) "ciao"))
+	(O utf16))
+    => '#ve(utf16be "ciao"))
+
+  (check
+      (let (((O <string>) "ci?a=o"))
+	(O percent-encoding))
+    => '#ve(ascii "ci%3Fa%3Do"))
+
   #t)
 
 
