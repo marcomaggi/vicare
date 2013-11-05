@@ -86,7 +86,9 @@
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Mon Nov 4, 2013)
     (only (vicare system $bytevectors)
-	  $uri-encoded-bytevector?))
+	  $uri-encoded-bytevector?
+	  $percent-encode
+	  $percent-decode))
 
 
 ;;;; helpers
@@ -619,12 +621,22 @@
 
 (define-builtin-label <bytevector>
   (predicate bytevector?)
-  (virtual-fields (immutable length bytevector-length)
-		  (immutable $length $bytevector-length))
+
+  (virtual-fields
+   (immutable (length		<fixnum>)			bytevector-length)
+   (immutable ($length		<fixnum>)			$bytevector-length)
+   (immutable (percent-encoded	<percent-encoded-bytevector>)	percent-encode)
+   (immutable (percent-decoded	<bytevector>)			percent-decode)
+   (immutable ($percent-encoded	<percent-encoded-bytevector>)	$percent-encode)
+   (immutable ($percent-decoded	<bytevector>)			$percent-decode)
+   #| end of virtual-fields|# )
+
   (method-syntax copy
     (syntax-rules ()
       ((_ ?bv)
-       (bytevector-copy ?bv)))))
+       (bytevector-copy ?bv))))
+
+  #| end of label |# )
 
 (define-label <nonempty-bytevector>
   (parent <bytevector>)
