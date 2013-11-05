@@ -1102,11 +1102,28 @@ non--zero length.
 
 @subsubheading Accessors
 
+Virtual field values whose name is prefixed by @code{$} are built using
+unsafe operations.
 
-@defcv {Immutable virtual field} @aclass{bytevector} length
-@defcvx {Immutable virtual field} @aclass{bytevector} $length
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{fixnum} length
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{fixnum} $length
 Access the length of the bytevector.
-@end defcv
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded
+Accessing this field is like applying @func{percent-encode} to the
+bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{bytevector} percent-decoded
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{bytevector} $percent-decoded
+Accessing this field is like applying @func{percent-decode} to the
+bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
+@end deftypecv
 
 @c ------------------------------------------------------------
 
