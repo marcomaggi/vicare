@@ -324,6 +324,10 @@
     ;; $uri-decode
     ;; $uri-normalise-encoding
     ;; $uri-encoded-bytevector?
+    ;; $percent-encode
+    ;; $percent-decode
+    ;; $percent-normalise-encoding
+    ;; $percent-encoded-bytevector?
 
 ;;; --------------------------------------------------------------------
 

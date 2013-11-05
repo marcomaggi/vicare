@@ -38,18 +38,29 @@
     bytevector->hex		hex->bytevector
     string-base64->bytevector	bytevector->string-base64
     bytevector->base64		base64->bytevector
+
     string->uri-encoding	uri-encoding->string
-    (rename (string->uri-encoding	string->percent-encoding)
-	    (uri-encoding->string	percent-encoding->string))
     uri-encode			uri-decode
-    uri-normalise-encoding	uri-encoded-bytevector?
+    normalise-uri-encoding	uri-encoded-bytevector?
+
+    (rename (string->uri-encoding	string->percent-encoding)
+	    (uri-encoding->string	percent-encoding->string)
+	    (uri-encode			percent-encode)
+	    (uri-decode			percent-decode)
+	    (normalise-uri-encoding	normalise-percent-encoding)
+	    (uri-encoded-bytevector?	percent-encoded-bytevector?))
 
     ;; unsafe operations
     $string
     $string=			$string-total-length
     $string-concatenate		$string-reverse-and-concatenate
     $uri-encode			$uri-decode
-    $uri-normalise-encoding	$uri-encoded-bytevector?)
+    $normalise-uri-encoding	$uri-encoded-bytevector?
+    (rename ($uri-encode		$percent-encode)
+	    ($uri-decode		$percent-decode)
+	    ($normalise-uri-encoding	$percent-normalise-encoding)
+	    ($uri-encoded-bytevector?	$percent-encoded-bytevector?))
+    #| end of export |# )
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
@@ -75,8 +86,11 @@
 
 		  string->uri-encoding		uri-encoding->string
 		  string->percent-encoding	percent-encoding->string
-		  uri-encode			uri-decode
-		  uri-normalise-encoding	uri-encoded-bytevector?)
+		  uri-encode			percent-encode
+		  uri-decode			percent-decode
+		  normalise-uri-encoding	normalise-percent-encoding
+		  uri-encoded-bytevector?	percent-encoded-bytevector?
+		  #| end of except |# )
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $string
@@ -1163,7 +1177,7 @@
 (module ( ;;
 	 uri-encode			$uri-encode
 	 uri-decode			$uri-decode
-	 uri-normalise-encoding		$uri-normalise-encoding
+	 normalise-uri-encoding		$normalise-uri-encoding
 	 uri-encoded-bytevector?	$uri-encoded-bytevector?)
 
   (define (uri-encode bv)
@@ -1238,7 +1252,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (uri-normalise-encoding bv)
+  (define (normalise-uri-encoding bv)
     ;;Normalise  the given  percent-encoded bytevector;  chars that  are
     ;;encoded  but  should  not  are  decoded.   Return  the  normalised
     ;;bytevector, in  which percent-encoded characters are  displayed in
@@ -1250,9 +1264,9 @@
     (define who 'uri-normalise-encoded)
     (with-arguments-validation (who)
 	((bytevector	bv))
-      ($uri-normalise-encoding bv)))
+      ($normalise-uri-encoding bv)))
 
-  (define ($uri-normalise-encoding bv)
+  (define ($normalise-uri-encoding bv)
     ;;FIXME This could be made significantly  faster, but I have no will
     ;;now.  (Marco Maggi; Tue Apr 9, 2013)
     ;;

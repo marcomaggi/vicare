@@ -4982,6 +4982,8 @@ If an error occurs in the conversion: the return value is @false{}.
 
 @defun uri-encode @var{bytevector}
 @defunx uri-decode @var{bytevector}
+@defunx percent-encode @var{bytevector}
+@defunx percent-decode @var{bytevector}
 Encode or decode a bytevector according to @rfc{} 3986 @acronym{URI}
 percent encoding; return a bytevector.  All the octets are encoded
 except the ones having the following @ascii{} representation:
@@ -4995,7 +4997,8 @@ abcdefghijklmnopqrstuvwxyz
 @end defun
 
 
-@defun uri-normalise-encoding @var{bytevector}
+@defun normalise-uri-encoding @var{bytevector}
+@defunx normalise-percent-encoding @var{bytevector}
 Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
 percent encoding: return an encoded and normalised bytevector, octets
 that are encoded but should not are decoded.
@@ -5003,6 +5006,7 @@ that are encoded but should not are decoded.
 
 
 @defun uri-encoded-bytevector? @var{bv}
+@defunx percent-encoded-bytevector? @var{bv}
 Return @true{} if the argument is correctly percent--encoded bytevector
 according to @rfc{} 3986.
 @end defun

@@ -1285,8 +1285,6 @@
     strings->argv*
     strings->guarded-argv
     strings->guarded-argv*
-    string->uri-encoding
-    string->percent-encoding
     string->utf16be
     string->utf16le
     string->utf16n
@@ -1374,12 +1372,6 @@
     uninstall-library
     until
     unwind-protect
-    uri-decode
-    uri-encode
-    uri-encoding->string
-    percent-encoding->string
-    uri-normalise-encoding
-    uri-encoded-bytevector?
     utf-16be-codec
     utf16be->string
     utf-16le-codec
@@ -1510,6 +1502,14 @@
     bignum-even?
     least-positive-bignum
     greatest-negative-bignum
+
+    ;; URI/percent encoding
+    string->uri-encoding		uri-encoding->string
+    string->percent-encoding		percent-encoding->string
+    uri-decode				percent-decode
+    uri-encode				percent-encode
+    normalise-uri-encoding		normalise-percent-encoding
+    uri-encoded-bytevector?		percent-encoded-bytevector?
 
     ;; misc
     set-cons!
