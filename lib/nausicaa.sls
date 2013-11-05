@@ -1286,6 +1286,7 @@
     strings->guarded-argv
     strings->guarded-argv*
     string->uri-encoding
+    string->percent-encoding
     string->utf16be
     string->utf16le
     string->utf16n
@@ -1376,6 +1377,7 @@
     uri-decode
     uri-encode
     uri-encoding->string
+    percent-encoding->string
     uri-normalise-encoding
     uri-encoded-bytevector?
     utf-16be-codec

@@ -1542,6 +1542,24 @@
 	(uri-decode '#vu8(99 105 97 111))
       => '#vu8(99 105 97 111))
 
+    #| end of let-syntax |# )
+
+  (check
+      (string->uri-encoding "ci?a=o")
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check
+      (uri-encoding->string '#ve(ascii "ci%3Fa%3Do"))
+    => "ci?a=o")
+
+  (check
+      (string->percent-encoding "ci?a=o")
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check
+      (percent-encoding->string '#ve(ascii "ci%3Fa%3Do"))
+    => "ci?a=o")
+
 ;;; --------------------------------------------------------------------
 
   (let ((all-octets '#vu8(0 1 2 3 4 5 6 7 8 9
@@ -1580,7 +1598,7 @@
 
       (check
 	  (uri-decode (string->ascii all-string))
-	=> all-octets))
+	=> all-octets)
 
     #f)
 

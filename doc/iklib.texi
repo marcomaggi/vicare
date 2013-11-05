@@ -5118,6 +5118,7 @@ occurs because of impossible generation: raise an error.
 
 
 @defun string->uri-encoding @var{str}
+@defunx string->percent-encoding @var{str}
 Convert the string @var{str} to its @utf{}-8 representation, then encode
 such representation according to @rfc{} 3986, @acronym{URI} percent
 encoding.
@@ -5125,6 +5126,7 @@ encoding.
 
 
 @defun uri-encoding->string @var{bytevector}
+@defunx percent-encoding->string @var{bytevector}
 Interpret the bytevector as encoded according to @rfc{} 3986,
 @acronym{URI} percent encoding, decode it and interpret the result as
 the @utf{}-8 representation of a string; return the string.

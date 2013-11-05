@@ -39,6 +39,8 @@
     string-base64->bytevector	bytevector->string-base64
     bytevector->base64		base64->bytevector
     string->uri-encoding	uri-encoding->string
+    (rename (string->uri-encoding	string->percent-encoding)
+	    (uri-encoding->string	percent-encoding->string))
     uri-encode			uri-decode
     uri-normalise-encoding	uri-encoded-bytevector?
 
@@ -70,9 +72,11 @@
 		  string-hex->bytevector	bytevector->string-hex
 		  string-base64->bytevector	bytevector->string-base64
 		  bytevector->base64		base64->bytevector
+
 		  string->uri-encoding		uri-encoding->string
+		  string->percent-encoding	percent-encoding->string
 		  uri-encode			uri-decode
-		  uri-normalise-encoding)
+		  uri-normalise-encoding	uri-encoded-bytevector?)
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $string
