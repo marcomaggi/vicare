@@ -91,6 +91,9 @@ Notes for revision 0.3d7
   address labels  from the  hierarchy (nausicaa  net addresses  ---) now
   accept a vector as argument rather than a list.
 
+* BACKWARDS INCOMPATIBILITY The function URI-NORMALISE-ENCODING has been
+  renamed to NORMALISE-URI-ENCODING.
+
 
 Notes for revision 0.3d6
 ------------------------
