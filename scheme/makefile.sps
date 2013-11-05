@@ -1408,6 +1408,8 @@
     (bytevector->string-base64			i v $language)
     (string->uri-encoding			i v $language)
     (uri-encoding->string			i v $language)
+    (string->percent-encoding			i v $language)
+    (percent-encoding->string			i v $language)
     (uri-encode					i v $language)
     (uri-decode					i v $language)
     (uri-normalise-encoding			i v $language)
