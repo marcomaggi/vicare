@@ -163,6 +163,22 @@
   #t)
 
 
+(parametrise ((check-test-name	'ipvfuture-address))
+
+  (check
+      (let ()
+	(ip.<ipvfuture-address> O (<> ('#ve(ascii "ci%3Fa%3Do"))))
+
+	(values (O string) (O string)
+		(O percent-encoded)  (O percent-encoded)
+		(O percent-encoded percent-decoded)))
+    => "ci%3Fa%3Do" "ci%3Fa%3Do"
+    '#ve(ascii "ci%3Fa%3Do") '#ve(ascii "ci%3Fa%3Do")
+    '#ve(ascii "ci?a=o"))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
