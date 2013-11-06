@@ -3,10 +3,280 @@
 
 
 @menu
+* net addresses ip::            Generic @ip{} addresses.
 * net addresses ipv4::          IPv4 address objects.
 * net addresses ipv6::          IPv6 address objects.
 * net addresses uri::           Uniform Resource Identifier objects.
 @end menu
+
+@c page
+@node net addresses ip
+@subsection Generic @ip{} addresses
+
+
+@cindex @library{nausicaa net addresses ip}, library
+@cindex Library @library{nausicaa net addresses ip}
+
+
+The library @library{nausicaa net addresses ip} exports facilities to
+handle generic @ip{} addresses specifications.
+
+@menu
+* net addresses ip funcs::      Generic functions for @ip{} address
+                                objects.
+* net addresses ip base::       Base @ip{} address objects.
+* net addresses ip numeric::    Numeric @ip{} address objects.
+* net addresses ip name::       Registered name @ip{} address objects.
+* net addresses ip future::     Future versions of @ip{} address
+                                objects.
+@end menu
+
+@c page
+@node net addresses ip funcs
+@subsubsection Generic functions for @ip{} address objects
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ip}.
+
+
+@deffn Multimethod ip-address-representation-string @var{ip-address}
+Given as argument an object type subclassed from @class{ip-address}
+build and return a string representation.  The returned value must
+represent the address string in percent--encoding as defined by @rfc{}
+3986; every character in the string can be directly converted to an
+@ascii{} encoded character.
+@end deffn
+
+
+@deffn Multimethod ip-address-representation-percent @var{ip-address}
+Given as argument an object type subclassed from @class{ip-address}
+build and return a bytevector representation.  The returned value must
+represent a string in percent--encoding as defined by @rfc{} 3986; every
+octet in the bytevector represents an @ascii{} encoded character.
+@end deffn
+
+
+@deffn Multimethod ip-address-representation-bignum @var{ip-address}
+Given as argument an object type subclassed from
+@class{ip-numeric-address} build and return an exact integer
+representation.
+@end deffn
+
+@c page
+@node net addresses ip base
+@subsubsection Generic @ip{} address objects
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ip}.
+
+
+@deftp {Abstract Class} @aclass{ip-address}
+Base class for all the address types representing @ip{} addresses.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Super constructor} @aclass{ip-address} constructor
+@defopx {Super constructor} @aclass{ip-address} constructor @var{option} @dots{}
+Supertype constructor for types derived from @class{ip-address}.  When
+called with some arguments it supports the following keyword values:
+
+@table @asis
+@item @keyword{string-rep} @var{obj}
+The argument @var{obj} must be @false{} or a string object
+representation of the address; it must represent the address string in
+percent--encoding as defined by @rfc{} 3986.
+
+@item @keyword{percent-rep} @var{obj}
+The argument @var{obj} must be @false{} or a bytevector object
+representation of the address; it must represent a string in
+percent--encoding as defined by @rfc{} 3986.
+@end table
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{string} string
+String object representation of the address.  It must represent the
+address string in percent--encoding as defined by @rfc{} 3986; every
+character in the string can be directly converted to an @ascii{} encoded
+character.  The value of this field is set by the constructor or
+computed by the multimethod @func{ip-address-representation-string} and
+it is memoized in the object.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-bytevector} percent-encoded
+Bytevector object representation of the address.  It must represent a
+string in percent--encoding as defined by @rfc{} 3986; every octet in
+the bytevector represents an @ascii{} encoded character.  The value of
+this field is set by the constructor or computed by the multimethod
+@func{ip-address-representation-percent} and it is memoized in the field
+@func{memoized-representation-percent}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ip-address})
+Build and return a bytevector representation of the address from its
+string representation; raise an error if a string representation cannot
+be built.  Expect all the characters in the field @code{string} of
+@var{addr} to be directly convertible to the corresponding @ascii{}
+encoding.
+@end deffn
+
+@c page
+@node net addresses ip numeric
+@subsubsection Generic @ip{} address objects
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ip}.
+
+
+@deftp {Abstract Class} @aclass{ip-numeric-address}
+Base class for all the address types representing numeric @ip{}
+addresses.  It is derived from @class{ip-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Super constructor} @aclass{ip-numeric-address} constructor
+@defopx {Super constructor} @aclass{ip-numeric-address} constructor @var{option} @dots{}
+Supertype constructor for types derived from @class{ip-numeric-address}.
+When called with some arguments it supports the following keyword
+values:
+
+@table @asis
+@item @keyword{bignum-rep} @var{obj}
+The argument @var{obj} must be @false{} or an exact integer
+representation of the address.
+@end table
+
+@noindent
+all the other values are handed to the constructor of
+@class{ip-address}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{ip-numeric-address} @aclass{exact-integer} bignum
+Exact integer object representation of the address.  The value of this
+field is set by the constructor or computed by the multimethod
+@func{ip-address-representation-bignum} and it is memoized in the
+object.
+@end deftypecv
+
+@c page
+@node net addresses ip name
+@subsubsection Registered name @ip{} address objects
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ip}.
+
+
+@deftp {Abstract Class} @aclass{reg-name-address}
+Type of @ip{} address representations as ``registered name''.  It is
+derived from @class{ip-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{reg-name-address} constructor @var{address}
+Common constructor for objects of type @class{reg-name-address}.  The
+argument @var{address} must be a bytevector object representation of the
+address; it must represent a string in percent--encoding as defined by
+@rfc{} 3986.
+@end defop
+
+
+@defop Maker @aclass{reg-name-address} @aclass{reg-name-address} (@meta{address})
+Build and return a new instance of @class{reg-name-address} using the
+common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{reg-name-address})
+Objects of type @class{reg-name-address} have a percent--encoded
+bytevector representation set by the constructor; this method uses that
+to build a string representation.
+
+Build and return a string representation of the address from its
+percent--encoded representation; the returned object still represents a
+percent--encoded string.
+@end deffn
+
+@c page
+@node net addresses ip future
+@subsubsection Future versions of @ip{} address objects
+
+
+The following bindings are exported by the library @library{nausicaa net
+addresses ip}.
+
+
+@deftp {Abstract Class} @aclass{ipvfuture-address}
+Type for future versions of @ip{} addresses.  It is derived from
+@class{ip-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipvfuture-address} constructor @var{address}
+Common constructor for objects of type @class{ipvfuture-address}.  The
+argument @var{address} must be a bytevector object representation of the
+address; it must represent a string in percent--encoding as defined by
+@rfc{} 3986.
+@end defop
+
+
+@defop Maker @aclass{ipvfuture-address} @aclass{ipvfuture-address} (@meta{address})
+Build and return a new instance of @class{ipvfuture-address} using the
+common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{ipvfuture-address})
+Objects of type @class{ipvfuture-address} have a percent--encoded
+bytevector representation set by the constructor; this method uses that
+to build a string representation.
+
+Build and return a string representation of the address from its
+percent--encoded representation; the returned object still represents a
+percent--encoded string.
+@end deffn
 
 @c page
 @node net addresses ipv4

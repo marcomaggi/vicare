@@ -50,15 +50,15 @@
 	(define-method (ip.ip-address-representation-string (O <one-address>))
 	  (O num string))
 
-	(define-method (ip.ip-address-representation-ascii (O <one-address>))
+	(define-method (ip.ip-address-representation-percent (O <one-address>))
 	  (O num string percent-encoding))
 
 	(<one-address> O (<> (123)))
 
 	(values (O num)
-		(O string)
-		(O ascii)))
-    => 123 "123" #ve(ascii "123"))
+		(O string) (O string)
+		(O percent-encoded)  (O percent-encoded)))
+    => 123 "123" "123" '#ve(ascii "123") '#ve(ascii "123"))
 
   ;;This  makes  use of  the  ascii  representation method  defined  for
   ;;"<ip-address>".
@@ -79,8 +79,8 @@
 
 	(values (O num)
 		(O string)
-		(O ascii)))
-    => 123 "123" #ve(ascii "123"))
+		(O percent-encoded)))
+    => 123 "123" '#ve(ascii "123"))
 
   #t)
 
@@ -101,7 +101,7 @@
 	(define-method (ip.ip-address-representation-string (O <one-address>))
 	  (O num string))
 
-	(define-method (ip.ip-address-representation-ascii (O <one-address>))
+	(define-method (ip.ip-address-representation-percent (O <one-address>))
 	  (O num string percent-encoding))
 
 	(define-method (ip.ip-address-representation-bignum (O <one-address>))
@@ -111,9 +111,12 @@
 
 	(values (O num)
 		(O string)
-		(O ascii)
+		(O string)
+		(O percent-encoded)
+		(O percent-encoded)
+		(O bignum)
 		(O bignum)))
-    => 123 "123" #ve(ascii "123") 123)
+    => 123 "123" "123" '#ve(ascii "123") '#ve(ascii "123") 123 123)
 
   ;;This  makes  use of  the  ascii  representation method  defined  for
   ;;"<ip-numeric-address>".
@@ -137,9 +140,25 @@
 
 	(values (O num)
 		(O string)
-		(O ascii)
+		(O percent-encoded)
 		(O bignum)))
-    => 123 "123" #ve(ascii "123") 123)
+    => 123 "123" '#ve(ascii "123") 123)
+
+  #t)
+
+
+(parametrise ((check-test-name	'reg-name-address))
+
+  (check
+      (let ()
+	(ip.<reg-name-address> O (<> ('#ve(ascii "ci%3Fa%3Do"))))
+
+	(values (O string) (O string)
+		(O percent-encoded)  (O percent-encoded)
+		(O percent-encoded percent-decoded)))
+    => "ci%3Fa%3Do" "ci%3Fa%3Do"
+    '#ve(ascii "ci%3Fa%3Do") '#ve(ascii "ci%3Fa%3Do")
+    '#ve(ascii "ci?a=o"))
 
   #t)
 
