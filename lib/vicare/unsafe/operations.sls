@@ -113,6 +113,7 @@
     $fxadd3
     $fxadd4
     $fxincr!
+    $fxdecr!
 
 ;;; --------------------------------------------------------------------
 
@@ -453,6 +454,8 @@
     ((_ ?op)
      ($fx- 0 ?op))))
 
+;;; --------------------------------------------------------------------
+
 (define-syntax $fxadd2
   (syntax-rules ()
     ((_ ?op)
@@ -480,9 +483,48 @@
      (set! ?op ($fxadd2 ?op)))
     ((_ ?op 3)
      (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
     ((_ ?op ?N)
      (set! ?op ($fx+ ?op ?N)))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $fxsub2
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- ?op 2))))
+
+(define-syntax $fxsub3
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- ?op 3))))
+
+(define-syntax $fxsub4
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- ?op 4))))
+
+(define-syntax $fxdecr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxdecr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxsub1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxsub2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxsub3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxsub4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax $fxmax
   (syntax-rules ()
