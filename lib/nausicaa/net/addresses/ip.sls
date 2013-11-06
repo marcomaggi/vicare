@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa net addresses ip)
   (export
     <ip-address>
@@ -35,15 +35,19 @@
 
     ;; multimethods
     ip-address-representation-string
-    ip-address-representation-ascii
+    ip-address-representation-percent
     ip-address-representation-bignum)
-  (import (nausicaa))
+  (import (nausicaa)
+    (vicare language-extensions keywords)
+    (only (vicare system $strings)
+	  $string->ascii
+	  $ascii->string))
 
 
 ;;;; generic functions
 
 (define-generic ip-address-representation-string	(ip-address))
-(define-generic ip-address-representation-ascii		(ip-address))
+(define-generic ip-address-representation-percent	(ip-address))
 (define-generic ip-address-representation-bignum	(ip-address))
 
 
@@ -55,14 +59,39 @@
 
   (super-protocol
    (lambda (make-top)
-     (lambda ()
-       ((make-top) #f #f))))
+     (case-lambda
+      (()
+       ((make-top) #f #f))
+      (args
+       (let-keywords args args #f
+	 ((with-argument	string-rep	#f	#:string-rep)
+	  (with-argument	percent-rep	#f	#:percent-rep))
+	 (assert (null? args))
+	 ((make-top) string-rep percent-rep)))
+      )))
 
-  (fields (mutable memoized-representation-string)
-	  (mutable memoized-representation-ascii))
+  (fields
+   (mutable memoized-representation-string)
+		;False or  string object representation of  the address.
+		;It    must   represent    the    address   string    in
+		;percent-encoding  as   defined  by  RFC   3986.   Every
+		;character in the string can be directly converted to an
+		;ASCII encoded character.
+		;
+		;FIXME This member should have access level "private".
+
+   (mutable memoized-representation-percent)
+		;False  or  bytevector   object  representation  of  the
+		;address.     It   must    represent    a   string    in
+		;percent-encoding as  defined by RFC 3986.   Every octet
+		;in   the  bytevector   represents   an  ASCII   encoded
+		;character.
+		;
+		;FIXME This member should have access level "private".
+
+   #| end of fields |# )
 
   (virtual-fields
-
    (immutable (string <string>)
 	      (lambda ((O <ip-address>))
 		(or (O $memoized-representation-string)
@@ -70,19 +99,24 @@
 			(ip-address-representation-string O)
 		      (set! (O $memoized-representation-string) str)))))
 
-   (immutable (ascii <ascii-bytevector>)
+   (immutable (percent-encoded <percent-encoded-bytevector>)
 	      (lambda ((O <ip-address>))
-		(or (O $memoized-representation-ascii)
-		    (receive-and-return ((bv <ascii-bytevector>))
-			(ip-address-representation-ascii O)
-		      (set! (O $memoized-representation-ascii) bv)))))
+		(or (O $memoized-representation-percent)
+		    (receive-and-return ((bv <percent-encoded-bytevector>))
+			(ip-address-representation-percent O)
+		      (set! (O $memoized-representation-percent) bv)))))
 
    #| end of virtual-fields |# )
 
   #| end of class |# )
 
-(define-method (ip-address-representation-ascii (O <ip-address>))
-  (string->ascii (O string)))
+(define-method (ip-address-representation-percent (O <ip-address>))
+  ;;Build and return a bytevector representation of the address from its
+  ;;string  representation.  Expects  all  the characters  in the  field
+  ;;"string"  to  be directly  convertible  to  the corresponding  ASCII
+  ;;encoding.
+  ;;
+  ($string->ascii (O string)))
 
 
 ;;;; numeric IP address class
@@ -94,19 +128,31 @@
 
   (super-protocol
    (lambda (make-ip-address)
-     (lambda ()
-       ((make-ip-address) #f))))
+     (case-lambda
+      (()
+       ((make-ip-address) #f))
+      (args
+       (let-keywords args args #t
+	 ((with-argument	bignum-rep	#f	#:bignum-rep))
+	 ((apply make-ip-address args) bignum-rep)))
+      )))
 
-  (fields (mutable memoized-representation-bignum))
+  (fields
+   (mutable memoized-representation-bignum)
+		;False  or exact  integer object  representation of  the
+		;address.
+		;
+		;FIXME This member should have access level "private".
+   #| end of fields |# )
 
   (virtual-fields
 
    (immutable (bignum <exact-integer>)
 	      (lambda ((O <ip-numeric-address>))
 		(or (O $memoized-representation-bignum)
-		    (receive-and-return (str)
+		    (receive-and-return ((num <exact-integer>))
 			(ip-address-representation-bignum O)
-		      (set! (O $memoized-representation-bignum) str)))))
+		      (set! (O $memoized-representation-bignum) num)))))
 
    #| end of virtual-fields |# )
 
@@ -119,16 +165,23 @@
   (nongenerative nausicaa:net:addresses:<reg-name-address>)
   (parent <ip-address>)
 
-  (protocol (lambda (make-top)
-	      (lambda ((addr <ascii-bytevector>))
-		(receive-and-return ((O <ip-address>))
-		    ((make-top))
-		  (set! (O $memoized-representation-ascii) addr)))))
+  (protocol
+   (lambda (make-ip-address)
+     (lambda ((addr <percent-encoded-bytevector>))
+       ((make-ip-address #:percent-rep addr)))))
 
   #| end of class |# )
 
 (define-method (ip-address-representation-string (O <reg-name-address>))
-  (uri-encoding->string (O ascii)))
+  ;;Objects   of  type   "<reg-name-address>"  have   a  percent-encoded
+  ;;bytevector representation  set by  the constructor;  we use  that to
+  ;;build a string representation.
+  ;;
+  ;;Build and  return a  string representation of  the address  from its
+  ;;percent-encoded   representation.    The   returned   object   still
+  ;;represents a percent-encoded string.
+  ;;
+  ($ascii->string (O percent-encoded)))
 
 
 ;;;; IP version "future" address class
@@ -137,13 +190,23 @@
   (nongenerative nausicaa:net:addresses:<ipvfuture-address>)
   (parent <ip-address>)
 
-  (protocol (lambda (make-top)
-	      (lambda ((addr <ascii-bytevector>))
-		(receive-and-return ((O <ip-address>))
-		    ((make-top))
-		  (set! (O $memoized-representation-ascii) addr)))))
+  (protocol
+   (lambda (make-ip-address)
+     (lambda ((addr <percent-encoded-bytevector>))
+       ((make-ip-address #:percent-rep addr)))))
 
   #| end of class |# )
+
+(define-method (ip-address-representation-string (O <ipvfuture-address>))
+  ;;Objects  of   type  "<ipvfuture-address>"  have   a  percent-encoded
+  ;;bytevector representation  set by  the constructor;  we use  that to
+  ;;build a string representation.
+  ;;
+  ;;Build and  return a  string representation of  the address  from its
+  ;;percent-encoded   representation.    The   returned   object   still
+  ;;represents a percent-encoded string.
+  ;;
+  ($ascii->string (O percent-encoded)))
 
 
 ;;;; done
