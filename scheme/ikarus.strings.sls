@@ -1007,14 +1007,14 @@
   ;;Defined by Vicare.  Convert the string STR into a bytevector holding
   ;;octects representing the character's Latin-1 code points.
   ;;
-  (define who 'latin1->string)
+  (define who 'string->latin1)
   (with-arguments-validation (who)
       ((string str))
     ($string->latin1 str)))
 
 (define ($string->latin1 str)
   ;;Both strings and bytevectors have length representable as fixnum.
-  (define who 'latin1->string)
+  (define who '$string->latin1)
   (let* ((bv.len ($string-length str))
 	 (bv	 ($make-bytevector bv.len)))
     (do ((i 0 ($fxadd1 i)))
@@ -1073,12 +1073,13 @@
   ;;Defined by Vicare.  Convert the string STR into a bytevector holding
   ;;octects representing the character's ASCII code points.
   ;;
-  (define who 'ascii->string)
+  (define who 'string->ascii)
   (with-arguments-validation (who)
       ((string	str))
-    ($string->ascii who str)))
+    ($string->ascii str)))
 
-(define ($string->ascii who str)
+(define ($string->ascii str)
+  (define who '$string->ascii)
   ;;Both strings and bytevectors have length representable as fixnum.
   (let* ((bv.len	($string-length str))
 	 (bv		($make-bytevector bv.len)))
@@ -1090,6 +1091,8 @@
 	    ((ascii	code-point str))
 	  ($bytevector-u8-set! bv i code-point))))))
 
+;;; --------------------------------------------------------------------
+
 (define (ascii->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
   ;;characters representing bytes interpreted as ASCII code points.
@@ -1097,9 +1100,10 @@
   (define who 'ascii->string)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    ($ascii->string who bv)))
+    ($ascii->string bv)))
 
-(define ($ascii->string who bv)
+(define ($ascii->string bv)
+  (define who '$ascii->string)
   ;;Both strings and bytevectors have length representable as fixnum.
   (let* ((str.len	($bytevector-length bv))
 	 (str		($make-string str.len)))
@@ -1169,7 +1173,7 @@
   (with-arguments-validation (who)
       ((bytevector	bv))
     (let ((rv (foreign-call "ikrt_bytevector_to_hex" bv)))
-      (and rv ($ascii->string who rv)))))
+      (and rv ($ascii->string rv)))))
 
 (define (string-hex->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
@@ -1178,7 +1182,7 @@
   (define who 'string-hex->bytevector)
   (with-arguments-validation (who)
       ((string	S))
-    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii who S))))
+    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii S))))
 
 
 ;;;; bytevectors to/from BASE64 strings
@@ -1218,7 +1222,7 @@
   (with-arguments-validation (who)
       ((bytevector	bv))
     (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
-      (and rv ($ascii->string who rv)))))
+      (and rv ($ascii->string rv)))))
 
 (define (string-base64->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
@@ -1227,7 +1231,7 @@
   (define who 'string-base64->bytevector)
   (with-arguments-validation (who)
       ((string	S))
-    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii who S))))
+    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S))))
 
 
 ;;;; bytevectors to/from RFC 3986 URI percent encoding
