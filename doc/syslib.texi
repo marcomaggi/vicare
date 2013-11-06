@@ -5264,6 +5264,14 @@ Return @true{} if the argument is correctly percent--encoded bytevector
 according to @rfc{} 3986.
 @end defun
 
+
+@defun $base64->bytevector @var{bytevector}
+@defunx $bytevector->base64 @var{bytevector}
+Convert to and from a Scheme bytevector containing octets and a Scheme
+bytevector containing the @ascii{} Base64 representation of the octets.
+If an error occurs in the conversion: the return value is @false{}.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations
@@ -5393,6 +5401,15 @@ considered a Latin1 code point if:
     (<= #xA0 chi #xFF))
 @result{} #t
 @end example
+@end defun
+
+
+@defun $string-base64->bytevector @var{string}
+@defunx $bytevector->string-base64 @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector.  The input
+string contains the @ascii{} Base64 representation of the octets.  The
+output string contains the @ascii{} Base64 representation of octets.  If
+an error occurs in the conversion: the return value is @false{}.
 @end defun
 
 @c page

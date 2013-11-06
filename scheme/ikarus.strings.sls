@@ -40,6 +40,7 @@
 
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
+
     string-base64->bytevector	bytevector->string-base64
     bytevector->base64		base64->bytevector
 
@@ -64,6 +65,9 @@
 
     $string->latin1		$latin1->string
     $latin1-encoded-bytevector?
+
+    $string-base64->bytevector	$bytevector->string-base64
+    $bytevector->base64		$base64->bytevector
 
     $uri-encode			$uri-decode
     $normalise-uri-encoding	$uri-encoded-bytevector?
@@ -1198,7 +1202,10 @@
   (define who 'bytevector->base64)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_to_base64" bv)))
+    ($bytevector->base64 bv)))
+
+(define ($bytevector->base64 bv)
+  (foreign-call "ikrt_bytevector_to_base64" bv))
 
 (define (base64->bytevector bv)
   ;;Defined  by Vicare.   Convert  a bytevector  representing the  ASCII
@@ -1210,7 +1217,10 @@
   (define who 'base64->bytevector)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_from_base64" bv)))
+    ($base64->bytevector bv)))
+
+(define ($base64->bytevector bv)
+  (foreign-call "ikrt_bytevector_from_base64" bv))
 
 ;;; --------------------------------------------------------------------
 
@@ -1221,8 +1231,13 @@
   (define who 'bytevector->string-base64)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
-      (and rv ($ascii->string rv)))))
+    ($bytevector->string-base64 bv)))
+
+(define ($bytevector->string-base64 bv)
+  (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
+    (and rv ($ascii->string rv))))
+
+;;; --------------------------------------------------------------------
 
 (define (string-base64->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
@@ -1231,7 +1246,10 @@
   (define who 'string-base64->bytevector)
   (with-arguments-validation (who)
       ((string	S))
-    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S))))
+    ($string-base64->bytevector S)))
+
+(define ($string-base64->bytevector S)
+  (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S)))
 
 
 ;;;; bytevectors to/from RFC 3986 URI percent encoding
