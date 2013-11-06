@@ -308,7 +308,9 @@ addresses ipv4}.
 
 
 @deftp Class @aclass{ipv4-address}
-Represents an IPv4 address.
+Represents an IPv4 address.  It is derived from
+@class{ip-numeric-address} as defined by @library{nausicaa net addresses
+ip}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -562,7 +564,9 @@ addresses ipv6} library.
 
 
 @deftp Class @aclass{ipv6-address}
-Represents an IPv6 address.
+Represents an IPv6 address.  It is derived from
+@class{ip-numeric-address} as defined by @library{nausicaa net addresses
+ip}.
 @end deftp
 
 @c ------------------------------------------------------------
