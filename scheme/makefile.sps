@@ -870,6 +870,8 @@
     ($string->latin1				$strings $vicare-strings)
     ($latin1->string				$strings $vicare-strings)
     ($latin1-encoded-bytevector?		$strings $vicare-strings)
+    ($string-base64->bytevector			$strings $vicare-strings)
+    ($bytevector->string-base64			$strings $vicare-strings)
 ;;
     ($make-bytevector				$bytes $vicare-bytes)
     ($bytevector-length				$bytes $vicare-bytes)
@@ -897,6 +899,8 @@
     ($percent-decode				$bytes $vicare-bytes)
     ($percent-encoded-bytevector?		$bytes $vicare-bytes)
     ($percent-normalise-encoding		$bytes $vicare-bytes)
+    ($bytevector->base64			$bytes $vicare-bytes)
+    ($base64->bytevector			$bytes $vicare-bytes)
 ;;;
     ($flonum-u8-ref				$flonums $vicare-flonums)
     ($make-flonum				$flonums $vicare-flonums)

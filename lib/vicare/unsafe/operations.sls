@@ -250,6 +250,11 @@
     $bytevector-concatenate
     $bytevector-reverse-and-concatenate
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Wed Nov 6, 2013)
+    #;$bytevector->base64
+    #;$base64->bytevector
+
 ;;; --------------------------------------------------------------------
 
     $car
@@ -338,6 +343,8 @@
     ;; $percent-decode
     ;; $percent-normalise-encoding
     ;; $percent-encoded-bytevector?
+    ;; $string-base64->bytevector
+    ;; $bytevector->string-base64
 
 ;;; --------------------------------------------------------------------
 
