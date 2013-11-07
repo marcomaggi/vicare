@@ -65,6 +65,9 @@ Notes for revision 0.3d7
   CASE-LAMBDA*,  CASE-DEFINE*.   See   the  documentation  nodes  "iklib
   syntaxes lambdas" and "iklib syntaxes defines".
 
+* Added  to  (vicare)  BYTEVECTOR-HASH   using  the  same  algorithm  of
+  STRING-HASH.
+
 * When  the syntax  DEFINE/TAGS  from (nausicaa)  is  used for  function
   definition, the body forms are enclosed in a LET syntax as follows:
 

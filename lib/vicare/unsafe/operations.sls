@@ -348,6 +348,15 @@
 
 ;;; --------------------------------------------------------------------
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    #;$string-hash
+    #;$string-ci-hash
+    #;$symbol-hash
+    #;$bytevector-hash
+
+;;; --------------------------------------------------------------------
+
     $pointer?
     $pointer=
 
@@ -409,6 +418,9 @@
 	    $string-empty?)
     (ikarus system $codes)
     (ikarus system $pointers)
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    #;(vicare system $hashtables)
     (for (prefix (only (vicare platform configuration)
 		       platform-endianness)
 		 config.)

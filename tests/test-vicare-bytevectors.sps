@@ -938,6 +938,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevector-hash))
+
+  (check
+      (fixnum? (bytevector-hash '#vu8()))
+    => #t)
+
+  (check
+      (fixnum? (bytevector-hash '#vu8(1 2 3)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'reverse-and-concatenate))
 
 ;;; arguments validation
