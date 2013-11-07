@@ -28,7 +28,10 @@
 #!r6rs
 (library (nausicaa net addresses uri)
   (export
-    <uri> <relative-ref>
+    ;; utility functions
+    make-uri-host
+
+    ;;<uri> <relative-ref>
 
     ;; auxiliary syntaxes
     )
@@ -56,7 +59,7 @@
   query
   fragment)
 
-(define-inline (integer->ascii-hex n)
+(define-inline ($fixnum->ascii-hex n)
   (if (<= 0 n 9)
       (+ 48 n)	      ;48 = #\0
     (+ 65 (- n 10)))) ;65 = #\A
@@ -142,9 +145,9 @@
      ;;fixnums.
      (<ipv6-address> (host.data)))
     ((ipvfuture)
-     ;;The  constructor will  validate the  argument as  percent-encoded
-     ;;ASCII bytevector.
-     (<ipvfuture-address> (host.data)))
+     ;;The constructor will validate the  argument as version tag number
+     ;;and percent-encoded ASCII bytevector.
+     (<ipvfuture-address> (host.data host.ascii)))
     (else
      (procedure-argument-violation __who__
        "invalid URI host type" host.type))))
@@ -273,7 +276,7 @@
        "invalid URI path type" path-type))))
 
 
-(define-class <uri>
+#;(define-class <uri>
   (nongenerative nausicaa:net:addresses:uri:<uri>)
 
   (maker (lambda (stx)
@@ -389,7 +392,7 @@
    (fragment	#f)))
 
 
-(define-class <relative-ref>
+#;(define-class <relative-ref>
   (nongenerative nausicaa:net:addresses:uri:<relative-ref>)
 
   (maker (lambda (stx)
@@ -455,7 +458,7 @@
 				       ((ipvfuture)
 					(%put-u8 91) ;91 = #\[
 					(%put-u8 118) ;118 = #\v
-					(%put-u8 (integer->ascii-hex (car (O $host))))
+					(%put-u8 ($fixnum->ascii-hex (car (O $host))))
 					(%put-bv (cdr (O $host)))
 					(%put-u8 93)) ;93 = #\]
 				       (else
