@@ -599,6 +599,9 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($compiler		(ikarus system $compiler)		#f	#t)
     ($numerics		(ikarus system $numerics)		#f	#t)
+    ;;FIXME To be made required at the next boot image rotation.  (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    ($hashtables	(ikarus system $hashtables)		#f	#f)
 ;;;
     ($vicare-pairs	(vicare system $pairs)			#f	#t)
     ($vicare-lists	(vicare system $lists)			#f	#t)
@@ -624,6 +627,9 @@
     ($vicare-for	(vicare system $foreign)		#f	#t)
     ($vicare-compiler	(vicare system $compiler)		#f	#t)
     ($vicare-numerics	(vicare system $numerics)		#f	#t)
+    ;;FIXME To be made required at the next boot image rotation.  (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    ($vicare-hashtables	(vicare system $hashtables)		#f	#f)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
@@ -2075,6 +2081,7 @@
     (string-hash				i v r ht)
     (string-ci-hash				i v r ht)
     (symbol-hash				i v r ht)
+    (bytevector-hash				i v $language)
     (list-sort					i v r sr)
     (vector-sort				i v r sr)
     (vector-sort!				i v r sr)
@@ -3384,6 +3391,13 @@
     ($bitwise-xor-bignum-fixnum			$numerics $vicare-numerics)
     ($bitwise-xor-bignum-bignum			$numerics $vicare-numerics)
 
+;;; --------------------------------------------------------------------
+;;; (vicare system $hashtables)
+
+    ($string-hash				$hashtables $vicare-hashtables)
+    ($string-ci-hash				$hashtables $vicare-hashtables)
+    ($symbol-hash				$hashtables $vicare-hashtables)
+    ($bytevector-hash				$hashtables $vicare-hashtables)
     ))
 
 

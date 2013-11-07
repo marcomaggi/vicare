@@ -5061,6 +5061,13 @@ the resulting bytevector.  It is an error if the sum of the bytevector
 lengths is not in the range of the maximum bytevector length.
 @end defun
 
+
+@defun bytevector-hash @var{bytevector}
+Return an integer hash value for @var{bytevector}, based on its current
+contents.  This hash function is suitable for use with
+@func{bytevector=?} as an equivalence function.
+@end defun
+
 @c page
 @node iklib strings
 @section Additional string functions

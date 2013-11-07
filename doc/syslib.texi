@@ -28,6 +28,7 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib ports::                Low level port structures.
 * syslib transcoders::          Low level transcoder operations.
 * syslib pointers::             Low level pointer operations.
+* syslib hashtables::           Low level hashtable objects operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
 * syslib compiler::             Interface to compiler passes.
@@ -5534,6 +5535,46 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @end deffn
 
 @c page
+@node syslib hashtables
+@section Low level hashtable objects operations
+
+
+@cindex @library{ikarus system hashtables}, library
+@cindex Library @library{ikarus system hashtables}
+@cindex @library{vicare system hashtables}, library
+@cindex Library @library{vicare system hashtables}
+
+
+The following bindings are exported by the libraries @library{ikarus
+system $hashtables} and @library{vicare system hashtables}.
+
+
+@deffn {Unsafe Operation} $string-hash @var{string}
+Return an integer hash value for @var{string}, based on its current
+contents.  This hash function is suitable for use with @func{string=?}
+as an equivalence function.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-ci-hash @var{string}
+Return an integer hash value for @var{string} based on its current
+contents, ignoring case.  This hash function is suitable for use with
+@func{string-ci=?} as an equivalence function.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-hash @var{symbol}
+Return an integer hash value for @var{symbol}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-hash @var{bytevector}
+Return an integer hash value for @var{bytevector}, based on its current
+contents.  This hash function is suitable for use with
+@func{bytevector=?} as an equivalence function.
+@end deffn
+
+@c page
 @node syslib codes
 @section Low level code objects operations
 
@@ -5546,7 +5587,7 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 
 In the following definitions: the @var{code} arguments must be code
 objects.  The following bindings are exported by the libraries
-@library{ikarus system $codes} and @library{ikarus system $codes}.
+@library{ikarus system $codes} and @library{vicare system $codes}.
 
 
 @defun code? @var{obj}
