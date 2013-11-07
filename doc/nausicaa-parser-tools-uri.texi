@@ -1017,14 +1017,20 @@ bytevector.
 @defun parse-ipvfuture @var{port}
 Accumulate bytes from @var{port} while they are valid for an
 @code{IPvFuture} component in the @code{IP-literal} component.  The
-first byte must represent the character @code{v} in @ascii{} encoding
-and the second byte must represent a single hexadecimal digit in
+first byte must represent the letter @code{v} in @ascii{} encoding, the
+second byte must represent a single hexadecimal digit in @ascii{}
+encoding, the third byte must represent the character @code{.} in
 @ascii{} encoding; after the prolog is read, bytes are accumulated until
 @eof{} is found.
 
-Return two values: an exact integer representing the hexadecimal digit
-in @ascii{} encoding, a bytevector holding the accumulated bytes; else
-return @false{} and @false{}.
+Return two values: an exact integer in the range @math{[0, 15]}
+representing the version flag, a bytevector holding the accumulated
+bytes; else return @false{} and @false{}.  Quoting the @rfc{}:
+
+@quotation
+The version flag does not indicate the @ip{} version; rather, it
+indicates future versions of the literal format.
+@end quotation
 
 If an error occurs: rewind the port position to the one before this
 function call.
@@ -1041,24 +1047,24 @@ component cannot be of zero length inside the brackets.
   (open-bytevector-input-port (string->ascii S)))
 
 (define (f0 str)
-  (values->list (uri.parse-ipvfuture (mkport str))))
+  (uri.parse-ipvfuture (mkport str)))
 
 (define (f1 str)
-  (values->list (uri.parse-ipvfuture (mkport str))))
+  (uri.parse-ipvfuture (mkport str)))
 
 (define (f2 str)
   (receive (version data)
       (uri.parse-ipvfuture (mkport str))
-    (list version (ascii->string data))))
+    (values version (ascii->string data))))
 
 (f0 "")                @result{} #f #f
 (f0 "ciao")            @result{} #f #f
+(f1 "v1")              @result{} #f #f
 
-(f1 "v1")              @result{} 1 #vu8()
-
-(f2 "v9ciao")          @result{} 9 "ciao"
-(f2 "vFciao")          @result{} 15 "ciao"
-(f2 "VEciao")          @result{} 14 "ciao"
+(f2 "v0.ciao")         @result{}  0 "ciao"
+(f2 "v9.ciao")         @result{}  9 "ciao"
+(f2 "VE.ciao")         @result{} 14 "ciao"
+(f2 "vF.ciao")         @result{} 15 "ciao"
 @end example
 @end defun
 
@@ -1199,7 +1205,7 @@ read from the port; if an error occurs: return @false{}, @false{} and
 @result{} ipv6-address "::ffff:192.168.99.1"
    #(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao"
 
-(f2 "[v9,ciao,ciao]/ciao")
+(f2 "[v9.,ciao,ciao]/ciao")
 @result{} ipvfuture ",ciao,ciao" 9 "/ciao"
 @end example
 @end defun

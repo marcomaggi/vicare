@@ -845,26 +845,46 @@
 (parametrise ((check-test-name	'parsing-ipvfuture))
 
   (define (f0 str)
-    (values->list (uri.parse-ipvfuture (mkport str))))
+    (uri.parse-ipvfuture (mkport str)))
 
   (define (f1 str)
-    (values->list (uri.parse-ipvfuture (mkport str))))
+    (uri.parse-ipvfuture (mkport str)))
 
   (define (f2 str)
     (receive (version data)
 	(uri.parse-ipvfuture (mkport str))
-      (list version (ascii->string data))))
+      (values version (ascii->string data))))
 
 ;;; --------------------------------------------------------------------
 
-  (check (f0 "")		=> '(#f #f))
-  (check (f0 "ciao")		=> '(#f #f))
+  (check (f0 "")		=> #f #f)
+  (check (f0 "ciao")		=> #f #f)
+  (check (f1 "v1")		=> #f #f)
 
-  (check (f1 "v1")		=> '(1 #vu8()))
+  (check (f2 "v0.ciao")		=>  0 "ciao")
+  (check (f2 "v1.ciao")		=>  1 "ciao")
+  (check (f2 "v2.ciao")		=>  2 "ciao")
+  (check (f2 "v3.ciao")		=>  3 "ciao")
+  (check (f2 "v4.ciao")		=>  4 "ciao")
+  (check (f2 "v5.ciao")		=>  5 "ciao")
+  (check (f2 "v6.ciao")		=>  6 "ciao")
+  (check (f2 "v7.ciao")		=>  7 "ciao")
+  (check (f2 "v8.ciao")		=>  8 "ciao")
+  (check (f2 "v9.ciao")		=>  9 "ciao")
 
-  (check (f2 "v9ciao")		=> '(9 "ciao"))
-  (check (f2 "vFciao")		=> '(15 "ciao"))
-  (check (f2 "VEciao")		=> '(14 "ciao"))
+  (check (f2 "vA.ciao")		=> 10 "ciao")
+  (check (f2 "vB.ciao")		=> 11 "ciao")
+  (check (f2 "vC.ciao")		=> 12 "ciao")
+  (check (f2 "vD.ciao")		=> 13 "ciao")
+  (check (f2 "vE.ciao")		=> 14 "ciao")
+  (check (f2 "vF.ciao")		=> 15 "ciao")
+
+  (check (f2 "va.ciao")		=> 10 "ciao")
+  (check (f2 "vb.ciao")		=> 11 "ciao")
+  (check (f2 "vc.ciao")		=> 12 "ciao")
+  (check (f2 "vd.ciao")		=> 13 "ciao")
+  (check (f2 "ve.ciao")		=> 14 "ciao")
+  (check (f2 "vf.ciao")		=> 15 "ciao")
 
   #t)
 
@@ -936,7 +956,7 @@
 
   (check (f2 "[::ffff:192.168.99.1]:80")	=> 'ipv6-address "::ffff:192.168.99.1" '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301) ":80")
   (check (f2 "[::ffff:192.168.99.1]/ciao")	=> 'ipv6-address "::ffff:192.168.99.1" '#(0 0 0 0 0 #xFFFF #xC0A8 #x6301) "/ciao")
-  (check (f2 "[v9,ciao,ciao]/ciao")		=> 'ipvfuture ",ciao,ciao" 9 "/ciao")
+  (check (f2 "[v9.,ciao,ciao]/ciao")		=> 'ipvfuture ",ciao,ciao" 9 "/ciao")
 
   #t)
 
@@ -1993,8 +2013,8 @@
 	("http" "[1:2:3:4:5:6:7:8]:8080" #f ipv6-address ("1:2:3:4:5:6:7:8" . #(1 2 3 4 5 6 7 8))
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
-  (doit "http://[vEciao]:8080/a/b/c"
-	("http" "[vEciao]:8080" #f ipvfuture ("ciao" . 14)
+  (doit "http://[vE.ciao]:8080/a/b/c"
+	("http" "[vE.ciao]:8080" #f ipvfuture ("ciao" . 14)
 	 "8080" path-abempty ("a" "b" "c") #f #f))
 
 ;;; with authority, no scheme
@@ -2276,8 +2296,8 @@
 
 ;;; ipvfuture
 
-  (doit "http://[v412345]/a/b/c")
-  (doit "http://[vF12345]/a/b/c")
+  (doit "http://[v4.12345]/a/b/c")
+  (doit "http://[vF.12345]/a/b/c")
 
   #t)
 
@@ -2353,8 +2373,8 @@
 
 ;;; ipvfuture
 
-  (doit "//[v412345]/a/b/c")
-  (doit "//[vF12345]/a/b/c")
+  (doit "//[v4.12345]/a/b/c")
+  (doit "//[vF.12345]/a/b/c")
 
   #t)
 

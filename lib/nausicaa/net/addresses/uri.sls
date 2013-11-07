@@ -50,10 +50,8 @@
   scheme
   authority
   userinfo
-  host-type
   host
   port
-  path-type
   path
   query
   fragment)
@@ -334,20 +332,19 @@
 				      (when (O $userinfo)
 					(%put-bv (uri-encode (O $userinfo)))
 					(%put-u8 64)) ;64 = #\@
+
 				      (case (O $host-type)
-					((reg-name)
-					 (%put-bv (uri-encode (O $host))))
-					((ipv4-address)
-					 (%put-bv (car (O $host))))
+					((reg-name ipv4-address)
+					 (%put-bv (O $host percent-encoded)))
 					((ipv6-address)
 					 (%put-u8 91) ;91 = #\[
-					 (%put-bv (car (O $host)))
+					 (%put-bv (O $host percent-encoded))
 					 (%put-u8 93)) ;93 = #\]
 					((ipvfuture)
 					 (%put-u8 91)  ;91 = #\[
 					 (%put-u8 118) ;118 = #\v
-					 (%put-u8 (integer->ascii-hex (car (O $host))))
-					 (%put-bv (cdr (O $host)))
+					 (%put-u8 (O $host ))
+					 (%put-bv (O $host percent-encoded))
 					 (%put-u8 93)) ;93 = #\]
 					(else
 					 (assertion-violation who "invalid host type" O (O $host-type))))

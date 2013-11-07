@@ -167,13 +167,13 @@
 
   (check
       (let ()
-	(ip.<ipvfuture-address> O (<> ('#ve(ascii "ci%3Fa%3Do"))))
+	(ip.<ipvfuture-address> O (<> (10 '#ve(ascii "ci%3Fa%3Do"))))
 
 	(values (O string) (O string)
 		(O percent-encoded)  (O percent-encoded)
-		(O percent-encoded percent-decoded)))
-    => "ci%3Fa%3Do" "ci%3Fa%3Do"
-    '#ve(ascii "ci%3Fa%3Do") '#ve(ascii "ci%3Fa%3Do")
+		(O literal percent-decoded)))
+    => "[vA.ci%3Fa%3Do]" "[vA.ci%3Fa%3Do]"
+    '#ve(ascii "[vA.ci%3Fa%3Do]") '#ve(ascii "[vA.ci%3Fa%3Do]")
     '#ve(ascii "ci?a=o"))
 
   #t)

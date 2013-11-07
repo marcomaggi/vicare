@@ -6,7 +6,8 @@ EXTRA_DIST		= \
 	QUEST-FOR-ISSUE-35				\
 	\
 	RFC/rfc4291.ipv6-address-achitecture.txt	\
-	RFC/rfc5735.ipv4-special-use-addresses.txt
+	RFC/rfc5735.ipv4-special-use-addresses.txt	\
+	RFC/rfc3986.uri.txt
 
 info_TEXINFOS		= \
 	vicare-scheme.texi			\

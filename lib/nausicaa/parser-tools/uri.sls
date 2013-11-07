@@ -189,7 +189,7 @@
 (define-inline ($integer->ascii-hex n)
   (if ($fx<= 0 n 9)
       ($fx+ INT-0 n)
-    ($fx+ INT-A n)))
+    ($fx+ INT-A ($fx- n 10))))
 
 (define-inline ($is-alpha-digit? chi)
   (or ($is-alpha? chi)
@@ -1010,9 +1010,12 @@
   ;;represent a  single hexadecimal digit  in ASCII encoding;  after the
   ;;prolog is read, bytes are accumulated until EOF is found.
   ;;
-  ;;Return  two values:  an exact  integer representing  the hexadecimal
-  ;;digit in ASCII encoding; a bytevector holding the accumulated bytes;
-  ;;else return false and false.
+  ;;Return  two  values:   an  exact  integer  in  the   range  [0,  15]
+  ;;representing the version flag;  a bytevector holding the accumulated
+  ;;bytes; else return false and false.  Quoting the RFC:
+  ;;
+  ;;   The  version flag does  not indicate  the IP version;  rather, it
+  ;;   indicates future versions of the literal format.
   ;;
   ;;If an error occurs: rewind the  port position to the one before this
   ;;function call.
@@ -1025,10 +1028,49 @@
   (define-parser-macros in-port)
   (define (%error)
     (values (return-failure) #f))
-  (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi)
-	    (not (or ($is-chi-V? chi)
-		     ($is-chi-v? chi))))
+  ;;The first octet must be the letter "v" in ASCII encoding.
+  (let ((v-chi (get-u8 in-port)))
+    (if (or (eof-object? v-chi)
+	    (not ($is-chi-v? v-chi)))
+	(%error)
+      ;;The  second  octet  must  be   a  character  in  ASCII  encoding
+      ;;representing a hex digit.
+      (let ((version-chi (get-u8 in-port)))
+	(if (or (eof-object? version-chi)
+		(not ($is-hex-digit? version-chi)))
+	    (%error)
+	  ;;The  third  octet  must  be  the  character  "."   in  ASCII
+	  ;;encoding.
+	  (let ((dot-chi (get-u8 in-port)))
+	    (if (or (eof-object? dot-chi)
+		    (not ($is-chi-dot? dot-chi)))
+		(%error)
+	      (receive (ou-port getter)
+		  (open-bytevector-output-port)
+		;;There  must  be  at  least one  character  in  the
+		;;literal address representation.
+		(let ((chi (get-u8 in-port)))
+		  (if (or (eof-object? chi)
+			  (not (or ($is-unreserved? chi)
+				   ($is-sub-delim? chi)
+				   ($is-chi-colon? chi))))
+		      (%error)
+		    (begin
+		      (put-u8 ou-port chi)
+		      ;;Read all the other octets until EOF.
+		      (let process-next-byte ((chi (get-u8 in-port)))
+			(cond ((eof-object? chi)
+			       (values ($ascii-hex->integer version-chi) (getter)))
+			      ((or ($is-unreserved? chi)
+				   ($is-sub-delim? chi)
+				   ($is-chi-colon? chi))
+			       (put-u8 ou-port chi)
+			       (process-next-byte (get-u8 in-port)))
+			      (else
+			       (%error))))))))))))))
+  #;(let ((vchar-chi (get-u8 in-port)))
+    (if (or (eof-object? vchar-chi)
+	    (not ($is-chi-v? vchar-chi)))
 	(%error)
       (let ((version-chi (get-u8 in-port)))
 	(if ($is-hex-digit? version-chi)
@@ -1044,7 +1086,8 @@
 		       (process-next-byte (get-u8 in-port)))
 		      (else
 		       (%error)))))
-	  (%error))))))
+	  (%error)))))
+  )
 
 (define (parse-reg-name in-port)
   ;;Accumulate bytes from IN-PORT while  they are valid for a "reg-name"
@@ -1142,7 +1185,7 @@
   ;;
   (define-parser-macros in-port)
   (define (%error)
-    (values (return-failure) #f))
+    (values (return-failure) #f #f))
   ;;We start by looking for an  "IP-literal" even though it is the least
   ;;probable; this is because once  we have verified that the first byte
   ;;is not a  "[" we can come back from  PARSE-IP-LITERAL: this is quick
