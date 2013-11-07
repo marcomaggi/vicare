@@ -39,6 +39,9 @@
     ip-address-representation-bignum)
   (import (nausicaa)
     (vicare language-extensions keywords)
+    (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Thu Nov 7, 2013)
     (only (vicare system $strings)
 	  $string->ascii
 	  $ascii->string))
@@ -186,25 +189,53 @@
 
 ;;;; IP version "future" address class
 
+(define-label <ipvfuture-version-flag>
+  (parent <fixnum>)
+  (predicate (lambda (fx)
+	       ($fx<= 0 fx 15))))
+
 (define-class <ipvfuture-address>
   (nongenerative nausicaa:net:addresses:<ipvfuture-address>)
   (parent <ip-address>)
 
+  (fields (immutable (version-flag	<ipvfuture-version-flag>))
+	  (immutable (literal		<percent-encoded-bytevector>)))
+
   (protocol
    (lambda (make-ip-address)
-     (lambda ((addr <percent-encoded-bytevector>))
-       ((make-ip-address #:percent-rep addr)))))
+     (lambda ((version-flag <ipvfuture-version-flag>) (literal <percent-encoded-bytevector>))
+       ((make-ip-address) version-flag literal))))
 
   #| end of class |# )
 
-(define-method (ip-address-representation-string (O <ipvfuture-address>))
-  ;;Objects  of   type  "<ipvfuture-address>"  have   a  percent-encoded
-  ;;bytevector representation  set by  the constructor;  we use  that to
-  ;;build a string representation.
+(define-method (ip-address-representation-percent (O <ipvfuture-address>))
+  ;;Build and return  a bytevector representation of the  address in the
+  ;;format specified for URIs by RFC 3986.
   ;;
-  ;;Build and  return a  string representation of  the address  from its
-  ;;percent-encoded   representation.    The   returned   object   still
-  ;;represents a percent-encoded string.
+  (define-inline-constant INT-OBRACKET	(char->integer #\[))
+  (define-inline-constant INT-CBRACKET	(char->integer #\]))
+  (define-inline-constant INT-DOT	(char->integer #\.))
+  (define-inline-constant INT-v		(char->integer #\v))
+  (define-inline-constant INT-0		(char->integer #\0))
+  (define-inline-constant INT-A		(char->integer #\A))
+  (define-inline ($fixnum->ascii-hex n)
+    (if ($fx<= 0 n 9)
+	($fx+ INT-0 n)
+      ($fx+ INT-A ($fx- n 10))))
+  (receive (port getter)
+      (open-bytevector-output-port)
+    (put-u8 port INT-OBRACKET)
+    (put-u8 port INT-v)
+    (put-u8 port ($fixnum->ascii-hex (O $version-flag)))
+    (put-u8 port INT-DOT)
+    (put-bytevector port (O $literal))
+    (put-u8 port INT-CBRACKET)
+    (getter)))
+
+(define-method (ip-address-representation-string (O <ipvfuture-address>))
+  ;;Build  and return  a string  representation  of the  address in  the
+  ;;format specified  for URIs by  RFC 3986.  The returned  object still
+  ;;represents the literal as percent-encoded string.
   ;;
   ($ascii->string (O percent-encoded)))
 
