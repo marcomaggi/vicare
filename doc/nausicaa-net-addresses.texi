@@ -695,6 +695,27 @@ multicast, link--local unicast, global unicast.  See Section 2.4
 ``Address Type Identification'' of @rfc{} 4291.
 @end deftypecv
 
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{ipv6-address})
+Build and return a string representation of the address in the format
+specified for @uri{}s by @rfc{} 3986.
+@end deffn
+
+
+@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ipv6-address})
+Build and return a bytevector representation of the address in the
+format specified for @uri{}s by @rfc{} 3986.
+@end deffn
+
+
+@deffn Multimethod ip-address-representation-bignum (@var{addr} @aclass{ipv6-address})
+Build and return an exact integer representation of the address.
+@end deffn
+
 @c page
 @node net addresses ipv6 prefix
 @subsubsection IPv6 address prefix objects class
@@ -705,8 +726,7 @@ addresses ipv6} library.
 
 
 @deftp Class @aclass{ipv6-address-prefix}
-Represents an IPv6 address prefix; it is derived from
-@class{ipv6-address}.
+Represents an IPv6 address prefix.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -714,12 +734,21 @@ Represents an IPv6 address prefix; it is derived from
 @subsubheading Constructors and makers
 
 
-@defop {Common constructor} @aclass{ipv6-address-prefix} constructor @var{numbers} @var{prefix-length}
+@defop {Common constructor} @aclass{ipv6-address-prefix} constructor @var{prefix-length} @var{numbers}
+@defopx {Common constructor} @aclass{ipv6-address-prefix} constructor @var{prefix-length} @var{seventh} @var{sixth} @var{fifth} @var{fourth} @var{third} @var{second} @var{first} @var{zeroth}
 Build and return a new object of type @class{ipv6-address-prefix}.
-@var{numbers} must be a vector of @math{8} fixnums in the range
-@code{[0, #xFFFF]} representing the address components.
-@var{prefix-length} must be a non--negative fixnum specifying how many
-of the leftmost contiguous bits of the address comprise the prefix.
+
+When called with two arguments: @var{prefix-length} must be a
+non--negative fixnum specifying how many of the leftmost contiguous bits
+of the address comprise the prefix; @var{numbers} must be a vector of
+@math{8} fixnums in the range @code{[0, #xFFFF]} representing the
+address components.
+
+When called with 9 arguments: @var{prefix-length} must be a
+non--negative fixnum specifying how many of the leftmost contiguous bits
+of the address comprise the prefix; each of the other arguments must be
+a fixnum in the range @code{[0, #xFFFF]} representing an address
+component.
 @end defop
 
 
@@ -729,13 +758,16 @@ the common constructor.
 
 @example
 (<ipv6-address-prefix> O
-  (<> ('#(1 2 3 4 5 6 7 8) 10)))
+  (<> (10 '#(1 2 3 4 5 6 7 8))))
 
 (list (O third) (O second) (O first) (O zeroth))
 @result{} (5 6 7 8)
 
 (O prefix-length)
 @result{} 10
+
+(O string)
+@result{} "1:2:3:4:0:0:0:0/50"
 @end example
 @end defop
 
@@ -750,8 +782,28 @@ address comprise the prefix.
 @end deftypecv
 
 
+@deftypecv {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} zeroth
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} first
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} second
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} third
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} fourth
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} fifth
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} sixth
+@deftypecvx {Immutable field} @aclass{ipv6-address-prefix} @aclass{ipv6-address-fixnum} seventh
+The numeric components of the address prefix, each representing
+@math{16} bits.  @code{zeroth} is the rightmost component, @code{first}
+is the second from the right, etc.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{ipv6-address-prefix} @aclass{string} string
 The string representation of the address prefix.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{ipv6-address-prefix} @aclass{ascii-bytevector} ascii
+The bytevector representation of the address prefix, in @ascii{}
+encoding.
 @end deftypecv
 
 @c page

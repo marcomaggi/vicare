@@ -34,6 +34,11 @@
   (import (nausicaa)
     (nausicaa net addresses ip)
     (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    (only (vicare system $strings)
+	  $string->ascii
+	  $ascii->string)
     ;;FIXME This  import spec  should be removable  after the  next boot
     ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
     (except (vicare system $vectors)
@@ -163,33 +168,74 @@
      (bitwise-arithmetic-shift-left (O $seventh) 112)))
 
 (define-method (ip-address-representation-string (O <ipv6-address>))
-  (string-append (O $seventh $string 16) ":"
+  (string-append "["
+		 (O $seventh $string 16) ":"
 		 (O $sixth   $string 16) ":"
 		 (O $fifth   $string 16) ":"
 		 (O $fourth  $string 16) ":"
 		 (O $third   $string 16) ":"
 		 (O $second  $string 16) ":"
 		 (O $first   $string 16) ":"
-		 (O $zeroth  $string 16)))
+		 (O $zeroth  $string 16) "]"))
+
+(define-method (ip-address-representation-percent (O <ipv6-address>))
+  ($string->ascii (O string)))
 
 
 (define-class <ipv6-address-prefix>
   (nongenerative nausicaa:net:ipv6-addresses:<ipv6-address-prefix>)
-  (parent <ipv6-address>)
 
-  (protocol (lambda (make-address)
-	      (lambda ((addr           <vector-of-ipv6-address-fixnums>)
-		  (number-of-bits <ipv6-address-prefix-length>))
-		((make-address addr) number-of-bits))))
+  (protocol (lambda (make-top)
+	      (case-lambda
+	       (((number-of-bits <ipv6-address-prefix-length>)
+		 (numbers        <vector-of-ipv6-address-fixnums>))
+		((make-top) number-of-bits
+		 ($vector-ref numbers 0)
+		 ($vector-ref numbers 1)
+		 ($vector-ref numbers 2)
+		 ($vector-ref numbers 3)
+		 ($vector-ref numbers 4)
+		 ($vector-ref numbers 5)
+		 ($vector-ref numbers 6)
+		 ($vector-ref numbers 7)))
+	       (((number-of-bits <ipv6-address-prefix-length>)
+		 (seventh <ipv6-address-fixnum>) (sixth  <ipv6-address-fixnum>)
+		 (fifth   <ipv6-address-fixnum>) (fourth <ipv6-address-fixnum>)
+		 (third   <ipv6-address-fixnum>) (second <ipv6-address-fixnum>)
+		 (first   <ipv6-address-fixnum>) (zeroth <ipv6-address-fixnum>))
+		((make-top) number-of-bits seventh sixth fifth fourth third second first zeroth))
+	       )))
 
-  (fields (immutable (prefix-length <ipv6-address-prefix-length>)))
+  (fields (immutable (prefix-length	<ipv6-address-prefix-length>))
+	  (immutable (seventh		<ipv6-address-fixnum>))
+	  (immutable (sixth		<ipv6-address-fixnum>))
+	  (immutable (fifth		<ipv6-address-fixnum>))
+	  (immutable (fourth		<ipv6-address-fixnum>))
+	  (immutable (third		<ipv6-address-fixnum>))
+	  (immutable (second		<ipv6-address-fixnum>))
+	  (immutable (first		<ipv6-address-fixnum>))
+	  (immutable (zeroth		<ipv6-address-fixnum>)))
+
+  (virtual-fields
+   (immutable (string <string>)
+	      (lambda ((O <ipv6-address-prefix>))
+		(string-append (O $seventh $string 16) ":"
+			       (O $sixth   $string 16) ":"
+			       (O $fifth   $string 16) ":"
+			       (O $fourth  $string 16) ":"
+			       (O $third   $string 16) ":"
+			       (O $second  $string 16) ":"
+			       (O $first   $string 16) ":"
+			       (O $zeroth  $string 16) "/"
+			       (O $prefix-length $string))))
+
+   (immutable (ascii <ascii-bytevector>)
+	      (lambda ((O <ipv6-address-prefix>))
+		($string->ascii (O string))))
+
+   #| end of virtual-fields |# )
 
   #| end of class |# )
-
-(define-method (ip-address-representation-string (O <ipv6-address-prefix>))
-  (string-append (slot-ref O string <ipv6-address>)
-		 "/"
-		 (O $prefix-length $string)))
 
 
 ;;;; done

@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (nausicaa net addresses ipv6)
   (nausicaa parser-tools ipv6-addresses)
@@ -962,7 +962,7 @@
   (check
       (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
 	(o string))
-    => "1:2:3:4:5:6:7:8")
+    => "[1:2:3:4:5:6:7:8]")
 
 ;;; --------------------------------------------------------------------
 
@@ -1024,7 +1024,7 @@
   (check
       (let (((o <ipv6-address-prefix>) (receive (addr len)
 					   (parse-ipv6-address-prefix "1:2:3:4::/55")
-					 (<ipv6-address-prefix> (addr len)))))
+					 (<ipv6-address-prefix> (len addr)))))
 	(list (o seventh) (o sixth) (o fifth) (o fourth)
 	      (o third) (o second) (o first) (o zeroth)
 	      (o prefix-length)))
@@ -1033,9 +1033,14 @@
   (check
       (let (((o <ipv6-address-prefix>) (receive (addr len)
 					   (parse-ipv6-address-prefix "1:2:3:4::/50")
-					 (<ipv6-address-prefix> (addr len)))))
-	(o string))
-    => "1:2:3:4:0:0:0:0/50")
+					 (<ipv6-address-prefix> (len addr)))))
+	(values (o string) (o ascii)))
+    => "1:2:3:4:0:0:0:0/50" '#ve(ascii "1:2:3:4:0:0:0:0/50"))
+
+  (check
+      (let (((o <ipv6-address-prefix>) (<ipv6-address-prefix> (50 1 2 3 4 5 6 7 8))))
+	(values (o string) (o ascii)))
+    => "1:2:3:4:5:6:7:8/50" '#ve(ascii "1:2:3:4:5:6:7:8/50"))
 
   #t)
 
