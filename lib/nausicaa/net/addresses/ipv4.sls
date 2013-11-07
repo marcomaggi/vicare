@@ -34,6 +34,11 @@
   (import (nausicaa)
     (nausicaa net addresses ip)
     (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Thu Nov 7, 2013)
+    (only (vicare system $strings)
+	  $string->ascii
+	  $ascii->string)
     ;;FIXME This  import spec  should be removable  after the  next boot
     ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
     (except (vicare system $vectors)
@@ -173,21 +178,44 @@
 
 (define-class <ipv4-address-prefix>
   (nongenerative nausicaa:net:ipv4-address:<ipv4-address-prefix>)
-  (parent <ipv4-address>)
 
-  (protocol (lambda (make-address)
-	      (lambda ((addr <vector-of-ipv4-address-fixnums>)
-		  (number-of-bits <ipv4-address-prefix-length>))
-		((make-address addr) number-of-bits))))
+  (protocol
+   (lambda (make-top)
+     (case-lambda
+      (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
+	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
+       ((make-top) third second first zeroth))
+      (((number-of-bits <ipv4-address-prefix-length>)
+	(addr <vector-of-ipv4-address-fixnums>))
+       ((make-top) number-of-bits
+	($vector-ref addr 0)
+	($vector-ref addr 1)
+	($vector-ref addr 2)
+	($vector-ref addr 3)))
+      )))
 
-  (fields (immutable (prefix-length <ipv4-address-prefix-length>)))
+  (fields (immutable (prefix-length	<ipv4-address-prefix-length>))
+	  (immutable (third		<ipv4-address-fixnum>))
+	  (immutable (second		<ipv4-address-fixnum>))
+	  (immutable (first		<ipv4-address-fixnum>))
+	  (immutable (zeroth		<ipv4-address-fixnum>)))
+
+  (virtual-fields
+   (immutable (string <string>)
+	      (lambda ((O <ipv4-address-prefix>))
+		(string-append (O $third   $string) "."
+			       (O $second  $string) "."
+			       (O $first   $string) "."
+			       (O $zeroth  $string) "/"
+			       (O $prefix-length $string))))
+
+   (immutable (ascii <ascii-bytevector>)
+	      (lambda ((O <ipv4-address-prefix>))
+		($string->ascii (O string))))
+
+   #| end of virtual-fields |# )
 
   #| end of class |# )
-
-(define-method (ip-address-representation-string (O <ipv4-address-prefix>))
-  (string-append (slot-ref O string <ipv4-address>)
-		 "/"
-		 (O $prefix-length $string)))
 
 
 ;;;; done

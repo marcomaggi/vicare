@@ -786,14 +786,14 @@
   (check
       (let (((o <ipv4-address-prefix>) (receive (addr len)
 					   (parse-ipv4-address-prefix "1.2.3.4/10")
-					 (<ipv4-address-prefix> (addr len)))))
+					 (<ipv4-address-prefix> (len addr)))))
 	(list (o third) (o second) (o first) (o zeroth) (o prefix-length)))
     => '(1 2 3 4 10))
 
   (check
       (let (((o <ipv4-address-prefix>) (receive (addr len)
 					   (parse-ipv4-address-prefix "1.2.3.4/8")
-					 (<ipv4-address-prefix> (addr len)))))
+					 (<ipv4-address-prefix> (len addr)))))
 	(o string))
     => "1.2.3.4/8")
 
