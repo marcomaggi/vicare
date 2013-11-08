@@ -334,8 +334,6 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/uri.sls					\
 	\
 	nausicaa/net/addresses/ip.sls					\
-	nausicaa/net/addresses/ipv4.sls					\
-	nausicaa/net/addresses/ipv6.sls					\
 	nausicaa/net/addresses/uri.sls
 
 dist_pkglibexec_SCRIPTS		+= \

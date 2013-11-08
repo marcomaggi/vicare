@@ -33,6 +33,14 @@
     <reg-name-address>
     <ipvfuture-address>
 
+    <ipv4-address>			<ipv4-address-prefix>
+    <ipv4-address-fixnum>		<vector-of-ipv4-address-fixnums>
+    <ipv4-address-prefix-length>
+
+    <ipv6-address>			<ipv6-address-prefix>
+    <ipv6-address-fixnum>		<vector-of-ipv6-address-fixnums>
+    <ipv6-address-prefix-length>
+
     ;; multimethods
     ip-address-representation-string
     ip-address-representation-percent
@@ -44,7 +52,11 @@
     ;;Maggi; Thu Nov 7, 2013)
     (only (vicare system $strings)
 	  $string->ascii
-	  $ascii->string))
+	  $ascii->string)
+    ;;FIXME This  import spec  should be removable  after the  next boot
+    ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
+    (except (vicare system $vectors)
+	    $vector-empty?))
 
 
 ;;;; generic functions
@@ -238,6 +250,380 @@
   ;;represents the literal as percent-encoded string.
   ;;
   ($ascii->string (O percent-encoded)))
+
+
+;;;; IPv4 auxiliary labels
+
+(define-label <ipv4-address-fixnum>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (N)
+	       ($fx<= N 255))))
+
+(define-label <vector-of-ipv4-address-fixnums>
+  (parent <vector>)
+  (predicate (lambda ((obj <vector>))
+	       (and ($fx= 4 (obj $length))
+		    ($vector-for-all1 (<ipv4-address-fixnum>) obj)))))
+
+(define-label <ipv4-address-prefix-length>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (N)
+	       ($fx<= N 32))))
+
+
+;;;; IPv4 address class
+
+(define-class <ipv4-address>
+  (nongenerative nausicaa:net:ipv4-address:<ipv4-address>)
+  (parent <ip-numeric-address>)
+
+  (protocol
+   (lambda (make-ip-numeric-address)
+     (define (%make-address third second first zeroth)
+       ((make-ip-numeric-address) third second first zeroth))
+     (case-lambda
+      (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
+	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
+       (%make-address third second first zeroth))
+      (((addr <vector-of-ipv4-address-fixnums>))
+       (%make-address ($vector-ref addr 0)
+		      ($vector-ref addr 1)
+		      ($vector-ref addr 2)
+		      ($vector-ref addr 3)))
+      )))
+
+  (fields (immutable (third	<ipv4-address-fixnum>))
+	  (immutable (second	<ipv4-address-fixnum>))
+	  (immutable (first	<ipv4-address-fixnum>))
+	  (immutable (zeroth	<ipv4-address-fixnum>)))
+
+  (virtual-fields
+
+   (immutable (private?		<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(or ($fx= 10 (O $third))
+		    (and ($fx= 172 (O $third)) ($fx= #b00010000 ($fxlogand #b11110000 (O $second))))
+		    (and ($fx= 192 (O $third)) ($fx= 168 (O $second))))))
+
+   (immutable (loopback?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		($fx= 127 (O $third))))
+
+   (immutable (localhost?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 127 (O $third))
+		     ($fx=   0 (O $second))
+		     ($fx=   0 (O $first))
+		     ($fx=   1 (O $zeroth)))))
+
+   (immutable (link-local?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 169 (O $third))
+		     ($fx= 254 (O $second)))))
+
+   (immutable (reserved?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(or (and ($fx= 192 (O $third))
+			 ($fx=   0 (O $second))
+			 ($fx=   0 (O $first)))
+		    ($fx= 240 ($fxlogand #b11110000 (O $third))))))
+
+   (immutable (test-net-1?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 192 (O $third))
+		     ($fx=   0 (O $second))
+		     ($fx=   2 (O $first)))))
+
+   (immutable (six-to-four-relay-anycast?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 192 (O $third))
+		     ($fx=  88 (O $second))
+		     ($fx=  99 (O $first)))))
+
+   (immutable (benchmark-tests?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 198 (O $third))
+		     ($fx=  18 ($fxlogand #b11111110 (O $second))))))
+
+   (immutable (test-net-2?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 198 (O $third))
+		     ($fx=  51 (O $second))
+		     ($fx= 100 (O $first)))))
+
+   (immutable (test-net-3?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 203 (O $third))
+		     ($fx=   0 (O $second))
+		     ($fx= 113 (O $first)))))
+
+   (immutable (multicast?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		($fx= 224 ($fxlogand #b11110000 (O $third)))))
+
+   (immutable (limited-broadcast?	<boolean>)
+	      (lambda ((O <ipv4-address>))
+		(and ($fx= 255 (O $third))
+		     ($fx= 255 (O $second))
+		     ($fx= 255 (O $first))
+		     ($fx= 255 (O $zeroth)))))
+
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
+
+(define-method (ip-address-representation-bignum (O <ipv4-address>))
+  (+ (O $zeroth)
+     (fxarithmetic-shift-left (O $first)   8)
+     (fxarithmetic-shift-left (O $second) 16)
+     (fxarithmetic-shift-left (O $third)  24)))
+
+(define-method (ip-address-representation-string (O <ipv4-address>))
+  (string-append (O $third  $string) "."
+		 (O $second $string) "."
+		 (O $first  $string) "."
+		 (O $zeroth $string)))
+
+
+;;;; IPv4 address prefix class
+
+(define-class <ipv4-address-prefix>
+  (nongenerative nausicaa:net:ipv4-address:<ipv4-address-prefix>)
+
+  (protocol
+   (lambda (make-top)
+     (case-lambda
+      (((third <ipv4-address-fixnum>) (second <ipv4-address-fixnum>)
+	(first <ipv4-address-fixnum>) (zeroth <ipv4-address-fixnum>))
+       ((make-top) third second first zeroth))
+      (((number-of-bits <ipv4-address-prefix-length>)
+	(addr <vector-of-ipv4-address-fixnums>))
+       ((make-top) number-of-bits
+	($vector-ref addr 0)
+	($vector-ref addr 1)
+	($vector-ref addr 2)
+	($vector-ref addr 3)))
+      )))
+
+  (fields (immutable (prefix-length	<ipv4-address-prefix-length>))
+	  (immutable (third		<ipv4-address-fixnum>))
+	  (immutable (second		<ipv4-address-fixnum>))
+	  (immutable (first		<ipv4-address-fixnum>))
+	  (immutable (zeroth		<ipv4-address-fixnum>)))
+
+  (virtual-fields
+   (immutable (string <string>)
+	      (lambda ((O <ipv4-address-prefix>))
+		(string-append (O $third   $string) "."
+			       (O $second  $string) "."
+			       (O $first   $string) "."
+			       (O $zeroth  $string) "/"
+			       (O $prefix-length $string))))
+
+   (immutable (ascii <ascii-bytevector>)
+	      (lambda ((O <ipv4-address-prefix>))
+		($string->ascii (O string))))
+
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
+
+
+;;;; IPv6 auxiliary labels
+
+(define-label <ipv6-address-fixnum>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (N)
+	       ($fx<= N #xFFFF))))
+
+(define-label <vector-of-ipv6-address-fixnums>
+  (parent <vector>)
+  (predicate (lambda ((obj <vector>))
+	       (and ($fx= 8 (obj $length))
+		    ($vector-for-all1 (<ipv6-address-fixnum>) obj)))))
+
+(define-label <ipv6-address-prefix-length>
+  (parent <nonnegative-fixnum>)
+  (predicate (lambda (N)
+	       ($fx<= N 128))))
+
+
+;;;; IPv6 address class
+
+(define-class <ipv6-address>
+  (nongenerative nausicaa:net:ipv6-addresses:<ipv6-address>)
+  (parent <ip-numeric-address>)
+
+  (protocol
+   (lambda (make-ip-address)
+     (define (%make-address seventh sixth fifth fourth third second first zeroth)
+       ((make-ip-address)
+	;; memoized values
+	#f #f #f
+	;; address components
+	seventh sixth fifth fourth third second first zeroth))
+     (case-lambda
+      (((seventh <ipv6-address-fixnum>) (sixth  <ipv6-address-fixnum>)
+	(fifth   <ipv6-address-fixnum>) (fourth <ipv6-address-fixnum>)
+	(third   <ipv6-address-fixnum>) (second <ipv6-address-fixnum>)
+	(first   <ipv6-address-fixnum>) (zeroth <ipv6-address-fixnum>))
+       (%make-address seventh sixth fifth fourth third second first zeroth))
+      (((addr <vector-of-ipv6-address-fixnums>))
+       (%make-address ($vector-ref addr 0)
+		      ($vector-ref addr 1)
+		      ($vector-ref addr 2)
+		      ($vector-ref addr 3)
+		      ($vector-ref addr 4)
+		      ($vector-ref addr 5)
+		      ($vector-ref addr 6)
+		      ($vector-ref addr 7)))
+      )))
+
+  (fields (mutable memoized-unspecified?)
+	  (mutable memoized-loopback?)
+	  (mutable memoized-global-unicast?)
+	  (immutable (seventh		<ipv6-address-fixnum>))
+	  (immutable (sixth		<ipv6-address-fixnum>))
+	  (immutable (fifth		<ipv6-address-fixnum>))
+	  (immutable (fourth		<ipv6-address-fixnum>))
+	  (immutable (third		<ipv6-address-fixnum>))
+	  (immutable (second		<ipv6-address-fixnum>))
+	  (immutable (first		<ipv6-address-fixnum>))
+	  (immutable (zeroth		<ipv6-address-fixnum>)))
+
+  (virtual-fields
+
+   (immutable (unspecified? <boolean>)
+	      (lambda ((o <ipv6-address>))
+		(or (o memoized-unspecified?)
+		    (receive-and-return (B)
+			(and ($fxzero? (o $zeroth))
+			     ($fxzero? (o $first))
+			     ($fxzero? (o $second))
+			     ($fxzero? (o $third))
+			     ($fxzero? (o $fourth))
+			     ($fxzero? (o $fifth))
+			     ($fxzero? (o $sixth))
+			     ($fxzero? (o $seventh)))
+		      (set! (o $memoized-unspecified?) B)))))
+
+   (immutable (loopback? <boolean>)
+	      (lambda ((o <ipv6-address>))
+		(or (o $memoized-unspecified?)
+		    (receive-and-return (B)
+			(and ($fx= 1   (o $zeroth))
+			     ($fxzero? (o $first))
+			     ($fxzero? (o $second))
+			     ($fxzero? (o $third))
+			     ($fxzero? (o $fourth))
+			     ($fxzero? (o $fifth))
+			     ($fxzero? (o $sixth))
+			     ($fxzero? (o $seventh)))
+		      (set! (o $memoized-unspecified?) B)))))
+
+   (immutable (multicast? <boolean>)
+	      (lambda ((o <ipv6-address>))
+;;;                                      012345678
+		(= #xFF00 (bitwise-and #b11111111100000000 (o $seventh)))))
+
+   (immutable (link-local-unicast? <boolean>)
+	      (lambda ((o <ipv6-address>))
+;;;                                      0123456789
+		(= #xFE80 (bitwise-and #b11111111110000000 (o $seventh)))))
+
+   (immutable (global-unicast? <boolean>)
+	      (lambda ((o <ipv6-address>))
+		(or (o $memoized-global-unicast?)
+		    (not (or (o unspecified?)
+			     (o loopback?)
+			     (o multicast?)
+			     (o link-local-unicast?))))))
+
+   #| end of virtual fields |# )
+
+  #| end of class |# )
+
+(define-method (ip-address-representation-bignum (O <ipv6-address>))
+  (+ (O $zeroth)
+     (bitwise-arithmetic-shift-left (O $first)    16)
+     (bitwise-arithmetic-shift-left (O $second)   32)
+     (bitwise-arithmetic-shift-left (O $third)    48)
+     (bitwise-arithmetic-shift-left (O $fourth)   64)
+     (bitwise-arithmetic-shift-left (O $fifth)    80)
+     (bitwise-arithmetic-shift-left (O $sixth)    96)
+     (bitwise-arithmetic-shift-left (O $seventh) 112)))
+
+(define-method (ip-address-representation-string (O <ipv6-address>))
+  (string-append "["
+		 (O $seventh $string 16) ":"
+		 (O $sixth   $string 16) ":"
+		 (O $fifth   $string 16) ":"
+		 (O $fourth  $string 16) ":"
+		 (O $third   $string 16) ":"
+		 (O $second  $string 16) ":"
+		 (O $first   $string 16) ":"
+		 (O $zeroth  $string 16) "]"))
+
+(define-method (ip-address-representation-percent (O <ipv6-address>))
+  ($string->ascii (O string)))
+
+
+;;;; IPv6 address prefix class
+
+(define-class <ipv6-address-prefix>
+  (nongenerative nausicaa:net:ipv6-addresses:<ipv6-address-prefix>)
+
+  (protocol (lambda (make-top)
+	      (case-lambda
+	       (((number-of-bits <ipv6-address-prefix-length>)
+		 (numbers        <vector-of-ipv6-address-fixnums>))
+		((make-top) number-of-bits
+		 ($vector-ref numbers 0)
+		 ($vector-ref numbers 1)
+		 ($vector-ref numbers 2)
+		 ($vector-ref numbers 3)
+		 ($vector-ref numbers 4)
+		 ($vector-ref numbers 5)
+		 ($vector-ref numbers 6)
+		 ($vector-ref numbers 7)))
+	       (((number-of-bits <ipv6-address-prefix-length>)
+		 (seventh <ipv6-address-fixnum>) (sixth  <ipv6-address-fixnum>)
+		 (fifth   <ipv6-address-fixnum>) (fourth <ipv6-address-fixnum>)
+		 (third   <ipv6-address-fixnum>) (second <ipv6-address-fixnum>)
+		 (first   <ipv6-address-fixnum>) (zeroth <ipv6-address-fixnum>))
+		((make-top) number-of-bits seventh sixth fifth fourth third second first zeroth))
+	       )))
+
+  (fields (immutable (prefix-length	<ipv6-address-prefix-length>))
+	  (immutable (seventh		<ipv6-address-fixnum>))
+	  (immutable (sixth		<ipv6-address-fixnum>))
+	  (immutable (fifth		<ipv6-address-fixnum>))
+	  (immutable (fourth		<ipv6-address-fixnum>))
+	  (immutable (third		<ipv6-address-fixnum>))
+	  (immutable (second		<ipv6-address-fixnum>))
+	  (immutable (first		<ipv6-address-fixnum>))
+	  (immutable (zeroth		<ipv6-address-fixnum>)))
+
+  (virtual-fields
+   (immutable (string <string>)
+	      (lambda ((O <ipv6-address-prefix>))
+		(string-append (O $seventh $string 16) ":"
+			       (O $sixth   $string 16) ":"
+			       (O $fifth   $string 16) ":"
+			       (O $fourth  $string 16) ":"
+			       (O $third   $string 16) ":"
+			       (O $second  $string 16) ":"
+			       (O $first   $string 16) ":"
+			       (O $zeroth  $string 16) "/"
+			       (O $prefix-length $string))))
+
+   (immutable (ascii <ascii-bytevector>)
+	      (lambda ((O <ipv6-address-prefix>))
+		($string->ascii (O string))))
+
+   #| end of virtual-fields |# )
+
+  #| end of class |# )
 
 
 ;;;; done
