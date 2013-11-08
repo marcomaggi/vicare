@@ -22,8 +22,7 @@ The library @library{nausicaa net addresses ip} exports facilities to
 handle generic @ip{} addresses specifications.
 
 @menu
-* net addresses ip funcs::      Generic functions for @ip{} address
-                                objects.
+* net addresses ip methods::    Multimethods for @ip{} address objects.
 * net addresses ip base::       Base @ip{} address objects.
 * net addresses ip numeric::    Numeric @ip{} address objects.
 * net addresses ip name::       Registered name @ip{} address objects.
@@ -33,8 +32,8 @@ handle generic @ip{} addresses specifications.
 @end menu
 
 @c page
-@node net addresses ip funcs
-@subsubsection Generic functions for @ip{} address objects
+@node net addresses ip methods
+@subsubsection Multimethods for @ip{} address objects
 
 
 The following bindings are exported by the library @library{nausicaa net

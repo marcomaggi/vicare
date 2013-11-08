@@ -184,6 +184,7 @@
     $make-bytevector
     $bytevector-length
     $bytevector-empty?
+    $bytevector-not-empty?
     $bytevector-u8-ref
     $bytevector-s8-ref
     $bytevector-u8-set!
@@ -1064,6 +1065,9 @@
 ;;Tue Oct 8, 2013)
 (define-inline ($bytevector-empty? ?bv)
   ($fxzero? ($bytevector-length ?bv)))
+
+(define-inline ($bytevector-not-empty? ?bv)
+  (not ($bytevector-empty? ?bv)))
 
 (define-inline ($bytevector-fill! ?bv ?index ?end ?fill)
   ;;Fill the  positions in ?BV  from ?INDEX inclusive to  ?END exclusive

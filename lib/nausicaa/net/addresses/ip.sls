@@ -41,6 +41,9 @@
     <ipv6-address-fixnum>		<vector-of-ipv6-address-fixnums>
     <ipv6-address-prefix-length>
 
+    ;; utility functions
+    make-host-object
+
     ;; multimethods
     ip-address-representation-string
     ip-address-representation-percent
@@ -624,6 +627,58 @@
    #| end of virtual-fields |# )
 
   #| end of class |# )
+
+
+;;;; host types
+
+(define (make-host-object (host.type <symbol>) (host.ascii <bytevector>) host.data)
+  ;;Build  and return  a  new  instance a  specialised  object of  class
+  ;;"<ip-address>"  representing  the  host  component of  a  URI.   The
+  ;;possible  classes of  the returned  object are:  <reg-name-address>,
+  ;;<ipv4-address>, <ipv6-address>, <ipvfuture-address>.
+  ;;
+  ;;HOST.TYPE   must  be   a  symbol   among:  reg-name,   ipv4-address,
+  ;;ipv6-address, ipvfuture.
+  ;;
+  ;;HOST.ASCII   must   be   a   bytevector   representing   the   ASCII
+  ;;representation of the host component.
+  ;;
+  ;;HOST.DATA must be auxiliary data representing the host component:
+  ;;
+  ;;* For "reg-name": HOST.DATA is undefined.
+  ;;
+  ;;* For "ipv4-address": HOST.DATA must be a vector of 4 exact integers
+  ;;  representing the address components.
+  ;;
+  ;;* For "ipv6-address": HOST.DATA must be a vector of 8 exact integers
+  ;;  representing the address components.
+  ;;
+  ;;* For "ipvfuture":  HOST.DATA must be an  exact integer representing
+  ;;  the version number of the IP address.
+  ;;
+  ;;The arguments  are modeled after  the 3 return values  of PARSE-HOST
+  ;;from the library "(nausicaa parser-tools uri)".
+  ;;
+  (case host.type
+    ((reg-name)
+     ;;The  constructor will  validate the  argument as  percent-encoded
+     ;;ASCII bytevector.
+     (<reg-name-address> (host.ascii)))
+    ((ipv4-address)
+     ;;The  constructor will  validate the  argument as  vector of  IPv4
+     ;;fixnums.
+     (<ipv4-address> (host.data)))
+    ((ipv6-address)
+     ;;The  constructor will  validate the  argument as  vector of  IPv6
+     ;;fixnums.
+     (<ipv6-address> (host.data)))
+    ((ipvfuture)
+     ;;The constructor will validate the  argument as version tag number
+     ;;and percent-encoded ASCII bytevector.
+     (<ipvfuture-address> (host.data host.ascii)))
+    (else
+     (procedure-argument-violation __who__
+       "invalid URI host type" host.type))))
 
 
 ;;;; done

@@ -73,6 +73,7 @@
     ;; (prefix (nausicaa net addresses ipv6) net.)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
+    (vicare language-extensions ascii-chars)
     (vicare system $numerics)
     (vicare arguments validation))
 
@@ -83,159 +84,8 @@
   char-selector
   string-result?)
 
-
-;;;; constants
-
-(define-inline-constant INT-a			(char->integer #\a))
-(define-inline-constant INT-f			(char->integer #\f))
-(define-inline-constant INT-z			(char->integer #\z))
-(define-inline-constant INT-A			(char->integer #\A))
-(define-inline-constant INT-F			(char->integer #\F))
-(define-inline-constant INT-Z			(char->integer #\Z))
-(define-inline-constant INT-0			(char->integer #\0))
-(define-inline-constant INT-9			(char->integer #\9))
-
-(define-inline-constant INT-v			(char->integer #\v))
-(define-inline-constant INT-V			(char->integer #\V))
-
-(define-inline-constant INT-PERCENT		(char->integer #\%))
-(define-inline-constant INT-MINUS		(char->integer #\-))
-
-;; gen-delims
-(define-inline-constant INT-COLON		(char->integer #\:))
-(define-inline-constant INT-SLASH		(char->integer #\/))
-(define-inline-constant INT-QUESTION-MARK	(char->integer #\?))
-(define-inline-constant INT-NUMBER-SIGN		(char->integer #\#))
-(define-inline-constant INT-OPEN-BRACKET	(char->integer #\[))
-(define-inline-constant INT-CLOSE-BRACKET	(char->integer #\]))
-(define-inline-constant INT-AT-SIGN		(char->integer #\@))
-
-;; sub-delims
-(define-inline-constant INT-BANG		(char->integer #\!))
-(define-inline-constant INT-DOLLAR		(char->integer #\$))
-(define-inline-constant INT-AMPERSAND		(char->integer #\&))
-(define-inline-constant INT-QUOTE		(char->integer #\'))
-(define-inline-constant INT-OPEN-PAREN		(char->integer #\())
-(define-inline-constant INT-CLOSE-PAREN		(char->integer #\)))
-(define-inline-constant INT-STAR		(char->integer #\*))
-(define-inline-constant INT-PLUS		(char->integer #\+))
-(define-inline-constant INT-COMMA		(char->integer #\,))
-(define-inline-constant INT-SEMICOLON		(char->integer #\;))
-(define-inline-constant INT-EQUAL		(char->integer #\=))
-
-;; unreserved
-(define-inline-constant INT-DASH		(char->integer #\-))
-(define-inline-constant INT-DOT			(char->integer #\.))
-(define-inline-constant INT-UNDERSCORE		(char->integer #\_))
-(define-inline-constant INT-TILDE		(char->integer #\~))
-
-
-;;;; char integer predicates
-
-(let-syntax ((define-chi-predicate (syntax-rules ()
-				     ((_ ?who ?const)
-				      (define-inline (?who chi)
-					($fx= chi ?const))))))
-  ;;lexicographically sorted, please
-  (define-chi-predicate $is-chi-V?		INT-V)
-  (define-chi-predicate $is-chi-ampersand?	INT-AMPERSAND)
-  (define-chi-predicate $is-chi-at-sign?	INT-AT-SIGN)
-  (define-chi-predicate $is-chi-bang?		INT-BANG)
-  (define-chi-predicate $is-chi-close-bracket?	INT-CLOSE-BRACKET)
-  (define-chi-predicate $is-chi-close-paren?	INT-CLOSE-PAREN)
-  (define-chi-predicate $is-chi-colon?		INT-COLON)
-  (define-chi-predicate $is-chi-comma?		INT-COMMA)
-  (define-chi-predicate $is-chi-dollar?		INT-DOLLAR)
-  (define-chi-predicate $is-chi-dot?		INT-DOT)
-  (define-chi-predicate $is-chi-equal?		INT-EQUAL)
-  (define-chi-predicate $is-chi-minus?		INT-MINUS)
-  (define-chi-predicate $is-chi-number-sign?	INT-NUMBER-SIGN)
-  (define-chi-predicate $is-chi-open-bracket?	INT-OPEN-BRACKET)
-  (define-chi-predicate $is-chi-open-paren?	INT-OPEN-PAREN)
-  (define-chi-predicate $is-chi-percent?	INT-PERCENT)
-  (define-chi-predicate $is-chi-plus?		INT-PLUS)
-  (define-chi-predicate $is-chi-question-mark?	INT-QUESTION-MARK)
-  (define-chi-predicate $is-chi-quote?		INT-QUOTE)
-  (define-chi-predicate $is-chi-semicolon?	INT-SEMICOLON)
-  (define-chi-predicate $is-chi-slash?		INT-SLASH)
-  (define-chi-predicate $is-chi-star?		INT-STAR)
-  (define-chi-predicate $is-chi-v?		INT-v))
-
-;;; --------------------------------------------------------------------
-
-(define-inline ($is-alpha? chi)
-  (or ($fx<= INT-a chi INT-z)
-      ($fx<= INT-A chi INT-Z)))
-
-(define-inline ($is-dec-digit? chi)
-  ($fx<= INT-0 chi INT-9))
-
-(define-inline ($is-hex-digit? chi)
-  (or ($is-dec-digit? chi)
-      ($fx<= INT-a chi INT-f)
-      ($fx<= INT-A chi INT-F)))
-
-(define-inline ($ascii-hex->integer chi)
-  ;;This must be used only after "$is-hex-digit?" has validated CHI.
-  ;;
-  (cond (($fx<= INT-0 chi INT-9)
-	 ($fx- chi INT-0))
-	(($fx<= INT-a chi INT-f)
-	 ($fx+ 10 ($fx- chi INT-a)))
-	(else
-	 #;(assert (<= INT-A chi INT-F))
-	 ($fx+ 10 ($fx- chi INT-A)))))
-
-(define-inline ($integer->ascii-hex n)
-  (if ($fx<= 0 n 9)
-      ($fx+ INT-0 n)
-    ($fx+ INT-A ($fx- n 10))))
-
-(define-inline ($is-alpha-digit? chi)
-  (or ($is-alpha? chi)
-      ($is-dec-digit? chi)))
-
-(define-inline ($is-gen-delim? chi)
-  (or ($is-chi-colon? chi)
-      ($fx= chi INT-SLASH)
-      ($fx= chi INT-QUESTION-MARK)
-      ($fx= chi INT-NUMBER-SIGN)
-      ($fx= chi INT-OPEN-BRACKET)
-      ($fx= chi INT-CLOSE-BRACKET)
-      ($fx= chi INT-AT-SIGN)))
-
-(define-inline ($is-sub-delim? chi)
-  (or ($fx= chi INT-BANG)
-      ($fx= chi INT-DOLLAR)
-      ($fx= chi INT-AMPERSAND)
-      ($fx= chi INT-QUOTE)
-      ($fx= chi INT-OPEN-PAREN)
-      ($fx= chi INT-CLOSE-PAREN)
-      ($fx= chi INT-STAR)
-      ($is-chi-plus? chi)
-      ($fx= chi INT-COMMA)
-      ($fx= chi INT-SEMICOLON)
-      ($fx= chi INT-EQUAL)))
-
-(define-inline ($is-reserved? chi)
-  (or ($is-gen-delim? chi)
-      ($is-sub-delim? chi)))
-
-(define-inline ($is-unreserved? chi)
-  (or ($is-alpha-digit? chi)
-      ($fx= chi INT-DASH)
-      ($is-chi-dot? chi)
-      ($fx= chi INT-UNDERSCORE)
-      ($fx= chi INT-TILDE)))
-
-(define-inline ($is-pchar-not-percent-encoded? chi)
-  ;;Evaluate  to true  if CHI  matches  the "pchar"  component with  the
-  ;;exception of the percent-encoded sequence.
-  ;;
-  (or ($is-unreserved? chi)
-      ($is-sub-delim? chi)
-      ($is-chi-colon? chi)
-      ($fx= chi INT-AT-SIGN)))
+(define-inline-constant FIXNUM-PERCENT
+  (char->integer #\%))
 
 
 ;;;; condition objects and exception raisers
@@ -355,9 +205,9 @@
   ;;
   (define who 'unreserved-char?)
   (cond ((char? obj)
-	 ($is-unreserved? ($char->fixnum obj)))
+	 ($ascii-uri-unreserved? ($char->fixnum obj)))
 	((fixnum? obj)
-	 ($is-unreserved? obj))
+	 ($ascii-uri-unreserved? obj))
 	(else
 	 (assertion-violation who "expected char or fixnum as argument" obj))))
 
@@ -437,7 +287,7 @@
 		(ascii->string (getter))
 	      (getter))
 	  (let ((chi ($bytevector-u8-ref bv i)))
-	    (put-u8 port (if ($is-chi-percent? chi)
+	    (put-u8 port (if ($ascii-chi-percent? chi)
 			     (begin
 			       (set! i ($fxadd1 i))
 			       ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref bv i)))
@@ -509,7 +359,7 @@
 	  ((= i ($bytevector-length in-bv))
 	   (getter))
 	(let ((chi ($bytevector-u8-ref in-bv i)))
-	  (if ($is-chi-percent? chi)
+	  (if ($ascii-chi-percent? chi)
 	      (begin
 		;;There must be at least 2 more bytes in the bytevector.
 		;;Beware of out of bounds bytevector indexes: do not use
@@ -573,12 +423,12 @@
   (let ((first-hexdig-byte (get-u8 in-port)))
     (cond ((eof-object? first-hexdig-byte)
 	   (%error))
-	  (($is-hex-digit? first-hexdig-byte)
+	  (($ascii-hex-digit? first-hexdig-byte)
 	   (let ((second-hexdig-byte (get-u8 in-port)))
 	     (cond ((eof-object? second-hexdig-byte)
 		    (%error))
-		   (($is-hex-digit? second-hexdig-byte)
-		    (put-u8 ou-port INT-PERCENT)
+		   (($ascii-hex-digit? second-hexdig-byte)
+		    (put-u8 ou-port FIXNUM-PERCENT)
 		    (put-u8 ou-port first-hexdig-byte)
 		    (put-u8 ou-port second-hexdig-byte))
 		   (else
@@ -607,18 +457,18 @@
 	     #f)
 	    ;;A "scheme" component starts with an alpha and goes on with
 	    ;;alpha, digit or "+", "-", ".".
-	    (($is-alpha? chi)
+	    (($ascii-alphabetic? chi)
 	     (put-u8 ou-port chi)
 	     (let process-next-byte ((chi (get-u8 in-port)))
 	       (cond ((eof-object? chi)
 		      (return-failure))
-		     ((or ($is-alpha-digit? chi)
-			  ($is-chi-plus? chi)
-			  ($is-chi-minus? chi)
-			  ($is-chi-dot? chi))
+		     ((or ($ascii-alpha-digit? chi)
+			  ($ascii-chi-plus? chi)
+			  ($ascii-chi-minus? chi)
+			  ($ascii-chi-dot? chi))
 		      (put-u8 ou-port chi)
 		      (process-next-byte (get-u8 in-port)))
-		     (($is-chi-colon? chi)
+		     (($ascii-chi-colon? chi)
 		      (getter))
 		     (else
 		      (return-failure)))))
@@ -641,8 +491,8 @@
       (open-bytevector-output-port)
     (let ((chi (lookahead-u8 in-port)))
       (if (or (eof-object? chi)
-	      ($is-chi-question-mark? chi)
-	      ($is-chi-number-sign?   chi))
+	      ($ascii-chi-question-mark? chi)
+	      ($ascii-chi-number-sign?   chi))
 	  #f
 	(begin
 	  (put-u8 ou-port chi)
@@ -650,8 +500,8 @@
 	  (let process-next-byte ((chi (lookahead-u8 in-port)))
 	    (cond ((eof-object? chi)
 		   (getter))
-		  ((or ($is-chi-question-mark? chi)
-		       ($is-chi-number-sign?   chi))
+		  ((or ($ascii-chi-question-mark? chi)
+		       ($ascii-chi-number-sign?   chi))
 		   (getter))
 		  (else
 		   (put-u8 ou-port chi)
@@ -678,7 +528,7 @@
 	   #f)
 
 	  ;;A "query" component must begin with a question mark.
-	  ((not ($is-chi-question-mark? chi))
+	  ((not ($ascii-chi-question-mark? chi))
 	   (return-failure))
 
 	  (else
@@ -690,32 +540,32 @@
 
 		     ;;A  number-sign terminates  the  "query" component
 		     ;;and starts a "fragment" component.
-		     (($is-chi-number-sign? chi)
+		     (($ascii-chi-number-sign? chi)
 		      (set-position-back-one! chi)
 		      (getter))
 
 		     ;;Characters     in     categories    "unreserved",
 		     ;;"sub-delim" or "/", "?", ":", "@" are valid.
-		     ((or ($is-unreserved? chi)
-			  ($is-sub-delim? chi)
-			  ($is-chi-slash? chi)
-			  ($is-chi-question-mark? chi)
-			  ($is-chi-colon? chi)
-			  ($is-chi-at-sign? chi))
+		     ((or ($ascii-uri-unreserved? chi)
+			  ($ascii-uri-sub-delim? chi)
+			  ($ascii-chi-slash? chi)
+			  ($ascii-chi-question-mark? chi)
+			  ($ascii-chi-colon? chi)
+			  ($ascii-chi-at-sign? chi))
 		      (put-u8 ou-port chi)
 		      (process-next-byte (get-u8 in-port)))
 
 		     ;;A percent-encoded sequence is valid.
-		     (($is-chi-percent? chi)
+		     (($ascii-chi-percent? chi)
 		      (let ((chi1 (get-u8 in-port)))
 			(cond ((eof-object? chi1)
 			       (return-failure))
-			      (($is-hex-digit? chi1)
+			      (($ascii-hex-digit? chi1)
 			       (let ((chi2 (get-u8 in-port)))
 				 (cond ((eof-object? chi2)
 					(return-failure))
-				       (($is-hex-digit? chi2)
-					(put-u8 ou-port INT-PERCENT)
+				       (($ascii-hex-digit? chi2)
+					(put-u8 ou-port FIXNUM-PERCENT)
 					(put-u8 ou-port chi1)
 					(put-u8 ou-port chi2)
 					(process-next-byte (get-u8 in-port)))
@@ -745,7 +595,7 @@
 	   #f)
 
 	  ;;A "fragment" component starts with a number sign.
-	  ((not ($is-chi-number-sign? chi))
+	  ((not ($ascii-chi-number-sign? chi))
 	   (return-failure))
 
 	  (else
@@ -757,26 +607,26 @@
 
 		     ;;Characters   in   the  categories   "unreserved",
 		     ;;"sub-delim" or "/", "?", ":", "@" are valid.
-		     ((or ($is-unreserved? chi)
-			  ($is-sub-delim? chi)
-			  ($is-chi-slash? chi)
-			  ($is-chi-question-mark? chi)
-			  ($is-chi-colon? chi)
-			  ($is-chi-at-sign? chi))
+		     ((or ($ascii-uri-unreserved? chi)
+			  ($ascii-uri-sub-delim? chi)
+			  ($ascii-chi-slash? chi)
+			  ($ascii-chi-question-mark? chi)
+			  ($ascii-chi-colon? chi)
+			  ($ascii-chi-at-sign? chi))
 		      (put-u8 ou-port chi)
 		      (process-next-byte (get-u8 in-port)))
 
 		     ;;A percent-encoded sequence is valid.
-		     (($is-chi-percent? chi)
+		     (($ascii-chi-percent? chi)
 		      (let ((chi1 (get-u8 in-port)))
 			(cond ((eof-object? chi1)
 			       (return-failure))
-			      (($is-hex-digit? chi1)
+			      (($ascii-hex-digit? chi1)
 			       (let ((chi2 (get-u8 in-port)))
 				 (cond ((eof-object? chi2)
 					(return-failure))
-				       (($is-hex-digit? chi2)
-					(put-u8 ou-port INT-PERCENT)
+				       (($ascii-hex-digit? chi2)
+					(put-u8 ou-port FIXNUM-PERCENT)
 					(put-u8 ou-port chi1)
 					(put-u8 ou-port chi2)
 					(process-next-byte (get-u8 in-port)))
@@ -812,21 +662,21 @@
   (let ((chi (get-u8 in-port)))
     (cond ((eof-object? chi)
 	   (return-failure))
-	  ((not ($is-chi-slash? chi))
+	  ((not ($ascii-chi-slash? chi))
 	   (return-failure))
 	  (else
 	   (let ((chi1 (get-u8 in-port)))
 	     (cond ((eof-object? chi1)
 		    (return-failure))
-		   (($is-chi-slash? chi1)
+		   (($ascii-chi-slash? chi1)
 		    (receive (ou-port getter)
 			(open-bytevector-output-port)
 		      (let process-next-byte ((chi (get-u8 in-port)))
 			(cond ((eof-object? chi)
 			       (getter))
-			      ((or ($is-chi-slash? chi)
-				   ($is-chi-question-mark? chi)
-				   ($is-chi-number-sign? chi))
+			      ((or ($ascii-chi-slash? chi)
+				   ($ascii-chi-question-mark? chi)
+				   ($ascii-chi-number-sign? chi))
 			       (set-position-back-one! chi)
 			       (getter))
 			      (else
@@ -857,28 +707,28 @@
 	     (return-failure))
 
 	    ;;An at-sign terminates the "userinfo" component.
-	    (($is-chi-at-sign? chi)
+	    (($ascii-chi-at-sign? chi)
 	     (getter))
 
 	    ;;Characters   in    the   categories   "unreserved"   and
 	    ;;"sub-delims" or ":" are valid.
-	    ((or ($is-unreserved? chi)
-		 ($is-sub-delim?  chi)
-		 ($is-chi-colon? chi))
+	    ((or ($ascii-uri-unreserved? chi)
+		 ($ascii-uri-sub-delim?  chi)
+		 ($ascii-chi-colon? chi))
 	     (put-u8 ou-port chi)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    (($is-chi-percent? chi)
+	    (($ascii-chi-percent? chi)
 	     (let ((chi1 (get-u8 in-port)))
 	       (cond ((eof-object? chi1)
 		      (return-failure))
-		     (($is-hex-digit? chi1)
+		     (($ascii-hex-digit? chi1)
 		      (let ((chi2 (get-u8 in-port)))
 			(cond ((eof-object? chi2)
 			       (return-failure))
-			      (($is-hex-digit? chi2)
-			       (put-u8 ou-port INT-PERCENT)
+			      (($ascii-hex-digit? chi2)
+			       (put-u8 ou-port FIXNUM-PERCENT)
 			       (put-u8 ou-port chi1)
 			       (put-u8 ou-port chi2)
 			       (process-next-byte (get-u8 in-port)))
@@ -914,7 +764,7 @@
 	      (let process-next-byte ((chi (get-u8 in-port)))
 		(cond ((eof-object? chi)
 		       (getter))
-		      ((or ($is-dec-digit? chi) ($is-chi-dot? chi))
+		      ((or ($ascii-dec-digit? chi) ($ascii-chi-dot? chi))
 		       (put-u8 host-port chi)
 		       (process-next-byte (get-u8 in-port)))
 		      (else
@@ -952,9 +802,9 @@
 	      (let process-next-byte ((chi (get-u8 in-port)))
 		(cond ((eof-object? chi)
 		       (getter))
-		      ((or ($is-hex-digit? chi)
-			   ($is-chi-dot? chi)
-			   ($is-chi-colon? chi))
+		      ((or ($ascii-hex-digit? chi)
+			   ($ascii-chi-dot? chi)
+			   ($ascii-chi-colon? chi))
 		       (put-u8 host-port chi)
 		       (process-next-byte (get-u8 in-port)))
 		      (else
@@ -990,14 +840,14 @@
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
     (if (or (eof-object? chi)
-	    (not ($is-chi-open-bracket? chi)))
+	    (not ($ascii-chi-open-bracket? chi)))
 	(return-failure)
       (receive (ou-port getter)
 	  (open-bytevector-output-port)
 	(let process-next-byte ((chi (get-u8 in-port)))
 	  (cond ((eof-object? chi)
 		 (return-failure))
-		(($is-chi-close-bracket? chi)
+		(($ascii-chi-close-bracket? chi)
 		 (getter))
 		(else
 		 (put-u8 ou-port chi)
@@ -1031,19 +881,19 @@
   ;;The first octet must be the letter "v" in ASCII encoding.
   (let ((v-chi (get-u8 in-port)))
     (if (or (eof-object? v-chi)
-	    (not ($is-chi-v? v-chi)))
+	    (not ($ascii-chi-v? v-chi)))
 	(%error)
       ;;The  second  octet  must  be   a  character  in  ASCII  encoding
       ;;representing a hex digit.
       (let ((version-chi (get-u8 in-port)))
 	(if (or (eof-object? version-chi)
-		(not ($is-hex-digit? version-chi)))
+		(not ($ascii-hex-digit? version-chi)))
 	    (%error)
 	  ;;The  third  octet  must  be  the  character  "."   in  ASCII
 	  ;;encoding.
 	  (let ((dot-chi (get-u8 in-port)))
 	    (if (or (eof-object? dot-chi)
-		    (not ($is-chi-dot? dot-chi)))
+		    (not ($ascii-chi-dot? dot-chi)))
 		(%error)
 	      (receive (ou-port getter)
 		  (open-bytevector-output-port)
@@ -1051,43 +901,23 @@
 		;;literal address representation.
 		(let ((chi (get-u8 in-port)))
 		  (if (or (eof-object? chi)
-			  (not (or ($is-unreserved? chi)
-				   ($is-sub-delim? chi)
-				   ($is-chi-colon? chi))))
+			  (not (or ($ascii-uri-unreserved? chi)
+				   ($ascii-uri-sub-delim? chi)
+				   ($ascii-chi-colon? chi))))
 		      (%error)
 		    (begin
 		      (put-u8 ou-port chi)
 		      ;;Read all the other octets until EOF.
 		      (let process-next-byte ((chi (get-u8 in-port)))
 			(cond ((eof-object? chi)
-			       (values ($ascii-hex->integer version-chi) (getter)))
-			      ((or ($is-unreserved? chi)
-				   ($is-sub-delim? chi)
-				   ($is-chi-colon? chi))
+			       (values ($ascii-hex->fixnum version-chi) (getter)))
+			      ((or ($ascii-uri-unreserved? chi)
+				   ($ascii-uri-sub-delim? chi)
+				   ($ascii-chi-colon? chi))
 			       (put-u8 ou-port chi)
 			       (process-next-byte (get-u8 in-port)))
 			      (else
-			       (%error))))))))))))))
-  #;(let ((vchar-chi (get-u8 in-port)))
-    (if (or (eof-object? vchar-chi)
-	    (not ($is-chi-v? vchar-chi)))
-	(%error)
-      (let ((version-chi (get-u8 in-port)))
-	(if ($is-hex-digit? version-chi)
-	    (receive (ou-port getter)
-		(open-bytevector-output-port)
-	      (let process-next-byte ((chi (get-u8 in-port)))
-		(cond ((eof-object? chi)
-		       (values ($ascii-hex->integer version-chi) (getter)))
-		      ((or ($is-unreserved? chi)
-			   ($is-sub-delim? chi)
-			   ($is-chi-colon? chi))
-		       (put-u8 ou-port chi)
-		       (process-next-byte (get-u8 in-port)))
-		      (else
-		       (%error)))))
-	  (%error)))))
-  )
+			       (%error)))))))))))))))
 
 (define (parse-reg-name in-port)
   ;;Accumulate bytes from IN-PORT while  they are valid for a "reg-name"
@@ -1117,31 +947,31 @@
   	    (($fx= 255 count)
   	     (return-failure))
 
-  	    ((or ($is-chi-colon? chi)
-  		 ($is-chi-slash? chi)
-  		 ($is-chi-question-mark? chi)
-  		 ($is-chi-number-sign?   chi))
+  	    ((or ($ascii-chi-colon? chi)
+  		 ($ascii-chi-slash? chi)
+  		 ($ascii-chi-question-mark? chi)
+  		 ($ascii-chi-number-sign?   chi))
   	     (set-position-back-one! chi)
   	     (getter))
 
   	    ;;Characters in the categories "unreserved" and "sub-delims"
   	    ;;are valid.
-  	    ((or ($is-unreserved? chi)
-		 ($is-sub-delim?  chi))
+  	    ((or ($ascii-uri-unreserved? chi)
+		 ($ascii-uri-sub-delim?  chi))
   	     (put-u8 ou-port chi)
   	     (process-next-byte (get-u8 in-port) ($add1-integer count)))
 
   	    ;;A percent-encoded sequence is valid.
-  	    (($is-chi-percent? chi)
+  	    (($ascii-chi-percent? chi)
   	     (let ((chi1 (get-u8 in-port)))
   	       (cond ((eof-object? chi1)
   		      (return-failure))
-  		     (($is-hex-digit? chi1)
+  		     (($ascii-hex-digit? chi1)
   		      (let ((chi2 (get-u8 in-port)))
   			(cond ((eof-object? chi2)
   			       (return-failure))
-  			      (($is-hex-digit? chi2)
-  			       (put-u8 ou-port INT-PERCENT)
+  			      (($ascii-hex-digit? chi2)
+  			       (put-u8 ou-port FIXNUM-PERCENT)
   			       (put-u8 ou-port chi1)
   			       (put-u8 ou-port chi2)
   			       (process-next-byte (get-u8 in-port) ($add1-integer count)))
@@ -1229,7 +1059,7 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not ($is-chi-colon? chi)))
+    (if (or (eof-object? chi) (not ($ascii-chi-colon? chi)))
 	(return-failure)
       (receive (ou-port getter)
 	  (open-bytevector-output-port)
@@ -1237,7 +1067,7 @@
 	  (cond ((eof-object? chi)
 		 (getter))
 
-		(($is-dec-digit? chi)
+		(($ascii-dec-digit? chi)
 		 (put-u8 ou-port chi)
 		 (process-next-byte (get-u8 in-port)))
 
@@ -1271,12 +1101,12 @@
 
 	    ;;Characters in the categories "unreserved" and "sub-delims"
 	    ;;or ":" or "@" are valid.
-	    (($is-pchar-not-percent-encoded? chi)
+	    (($ascii-uri-pchar-not-percent-encoded? chi)
 	     (put-u8 ou-port chi)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    (($is-chi-percent? chi)
+	    (($ascii-chi-percent? chi)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1317,13 +1147,13 @@
 
 	    ;;Characters in the categories "unreserved" and "sub-delims"
 	    ;;or ":" or "@" are valid.
-	    (($is-pchar-not-percent-encoded? chi)
+	    (($ascii-uri-pchar-not-percent-encoded? chi)
 	     (put-u8 ou-port chi)
 	     (set! at-least-one? #t)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    (($is-chi-percent? chi)
+	    (($ascii-chi-percent? chi)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1367,15 +1197,15 @@
 
 	    ;;Characters in the categories "unreserved" and "sub-delims"
 	    ;;or ":" or "@" are valid.
-	    ((or ($is-unreserved?  chi)
-		 ($is-sub-delim?   chi)
-		 ($is-chi-at-sign? chi))
+	    ((or ($ascii-uri-unreserved?  chi)
+		 ($ascii-uri-sub-delim?   chi)
+		 ($ascii-chi-at-sign? chi))
 	     (put-u8 ou-port chi)
 	     (set! at-least-one? #t)
 	     (process-next-byte (get-u8 in-port)))
 
 	    ;;A percent-encoded sequence is valid.
-	    (($is-chi-percent? chi)
+	    (($ascii-chi-percent? chi)
 	     (%parse-percent-encoded-sequence who in-port ou-port (lambda ()
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
@@ -1409,7 +1239,7 @@
   (receive (ou-port getter)
       (open-bytevector-output-port)
     (let ((chi (get-u8 in-port)))
-      (if (or (eof-object? chi) (not ($is-chi-slash? chi)))
+      (if (or (eof-object? chi) (not ($ascii-chi-slash? chi)))
 	  (return-failure)
 	;;In case of  failure from PARSE-SEGMENT: we do  not just return
 	;;its return value  because we have to rewind  the port position
@@ -1436,8 +1266,8 @@
   (define-parser-macros in-port)
   (let ((chi (lookahead-u8 in-port)))
     (if (or (eof-object? chi)
-	    ($is-chi-question-mark? chi)
-	    ($is-chi-number-sign?   chi))
+	    ($ascii-chi-question-mark? chi)
+	    ($ascii-chi-number-sign?   chi))
 	'()
       #f)))
 
@@ -1482,11 +1312,11 @@
   ;;
   (define-parser-macros in-port)
   (let ((chi (get-u8 in-port)))
-    (if (or (eof-object? chi) (not ($is-chi-slash? chi)))
+    (if (or (eof-object? chi) (not ($ascii-chi-slash? chi)))
 	(return-failure)
       (let ((chi1 (lookahead-u8 in-port)))
 	(if (and (not (eof-object? chi1))
-		 ($is-chi-slash? chi1))
+		 ($ascii-chi-slash? chi1))
 	    (return-failure)
 	  (begin
 	    (set-position-back-one! chi)
@@ -1508,7 +1338,7 @@
   (define-parser-macros in-port)
   (let ((bv (parse-segment-nz-nc in-port)))
     (if (and bv (let ((chi (lookahead-u8 in-port)))
-		  (or (eof-object? chi) (not ($is-chi-colon? chi)))))
+		  (or (eof-object? chi) (not ($ascii-chi-colon? chi)))))
 	(let ((segments (parse-path-abempty in-port)))
 	  (if segments
 	      (cons bv segments)
@@ -1560,7 +1390,7 @@
 	   => (lambda (segments)
 		(%check-eof)
 		(values 'path-absolute segments)))
-	  ((and ($is-chi-slash? chi) (parse-path-abempty in-port))
+	  ((and ($ascii-chi-slash? chi) (parse-path-abempty in-port))
 	   => (lambda (segments)
 		(%check-eof)
 		(values 'path-abempty segments)))
@@ -1643,8 +1473,8 @@
 		(values 'path-abempty (parse-path-abempty in-port))
 	      (let ((chi (lookahead-u8 in-port)))
 		(cond ((or (eof-object? chi)
-			   ($is-chi-question-mark? chi)
-			   ($is-chi-number-sign? chi))
+			   ($ascii-chi-question-mark? chi)
+			   ($ascii-chi-number-sign? chi))
 		       (values 'path-empty '()))
 		      ((parse-path-absolute in-port)
 		       => (lambda (segments)
@@ -1722,8 +1552,8 @@
 		(values 'path-abempty (parse-path-abempty in-port))
 	      (let ((chi (lookahead-u8 in-port)))
 		(cond ((or (eof-object? chi)
-			   ($is-chi-question-mark? chi)
-			   ($is-chi-number-sign? chi))
+			   ($ascii-chi-question-mark? chi)
+			   ($ascii-chi-number-sign? chi))
 		       (values 'path-empty '()))
 		      ((parse-path-absolute in-port)
 		       => (lambda (segments)
@@ -1766,21 +1596,21 @@
 	  (let process-next-byte ((chi (get-u8 port)))
 	    (cond ((eof-object? chi)
 		   (return #t))
-		  (($is-chi-percent? chi)
+		  (($ascii-chi-percent? chi)
 		   (let ((chi1 (get-u8 port)))
 		     (cond ((eof-object? chi1)
 			    (return #f))
-			   (($is-hex-digit? chi1)
+			   (($ascii-hex-digit? chi1)
 			    (let ((chi2 (get-u8 port)))
 			      (cond ((eof-object? chi2)
 				     (return #f))
-				    (($is-hex-digit? chi2)
+				    (($ascii-hex-digit? chi2)
 				     (process-next-byte (get-u8 port)))
 				    (else
 				     (return #f)))))
 			   (else
 			    (return #f)))))
-		  (($is-unreserved? chi)
+		  (($ascii-uri-unreserved? chi)
 		   (process-next-byte (get-u8 port)))
 		  (else
 		   (return #f)))))
