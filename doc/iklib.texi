@@ -4785,7 +4785,7 @@ complement representation as an octet.
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
 * iklib bytevectors conv::      Converting bytevectors.
-* iklib bytevectors generic::   Generic bytevectors operations.
+* iklib bytevectors generic::   Generic bytevector operations.
 @end menu
 
 @c page
@@ -5037,7 +5037,7 @@ according to @rfc{} 3986.
 
 @c page
 @node iklib bytevectors generic
-@subsection Generic bytevectors operations
+@subsection Generic bytevector operations
 
 
 The following bindings are exported by the library @library{vicare}.
