@@ -77,6 +77,10 @@
     ;; convenience labels
     <common-conditions>
 
+    ;; wrong type
+    &tagged-binding-violation
+    tagged-binding-violation
+
     ;; mismatch
     &mismatch make-mismatch-condition mismatch-condition?
 
@@ -167,7 +171,15 @@
 		  &i/o-eagain
 		  &out-of-memory-error)
 	    rnrs.)
-    (nausicaa language oopp)
+    (except (nausicaa language oopp)
+	    &tagged-binding-violation
+	    make-tagged-binding-violation
+	    tagged-binding-violation?)
+    (prefix (only (nausicaa language oopp)
+		  &tagged-binding-violation
+		  make-tagged-binding-violation
+		  tagged-binding-violation?)
+	    oopp.)
     (only (nausicaa language builtins)
 	  <condition>)
     (only (nausicaa language auxiliary-syntaxes)
@@ -693,7 +705,7 @@
 		       (make-wrong-num-args-condition ?procname ?expected ?given))))))
 
 (define-condition-type &unimplemented
-  (parent &error))
+    (parent &error))
 
 (define raise-unimplemented-error
   (case-lambda
@@ -705,6 +717,22 @@
 		(make-message-condition message)
 		(make-unimplemented-condition)
 		(make-irritants-condition irritants))))))
+
+;;; --------------------------------------------------------------------
+
+(define-label &tagged-binding-violation
+  (parent &assertion)
+  (shadows oopp.&tagged-binding-violation)
+  (protocol (lambda () oopp.make-tagged-binding-violation))
+  (predicate oopp.tagged-binding-violation?))
+
+(define (tagged-binding-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (&tagged-binding-violation ())
+	      (make-irritants-condition irritants))))
+
 
 ;;;; done
 

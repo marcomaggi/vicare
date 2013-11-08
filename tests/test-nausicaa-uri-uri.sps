@@ -53,6 +53,18 @@
    (let (((O uri.<scheme>) '#ve(ascii "http")))
      (fixnum? (O hash))))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (try
+	  (let (((O uri.<scheme>) '#vu8()))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
   #t)
 
 

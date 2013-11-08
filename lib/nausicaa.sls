@@ -1664,6 +1664,10 @@
     &i/o-eagain
     &out-of-memory-error
 
+    ;; wrong type
+    &tagged-binding-violation
+    tagged-binding-violation
+
     ;; mismatch
     &mismatch make-mismatch-condition mismatch-condition?
 
@@ -1762,7 +1766,11 @@
 		       &i/o-eagain
 		       &out-of-memory-error)
 	    expand run)
-    (for (nausicaa language oopp)			expand run)
+    (for (except (nausicaa language oopp)
+		 &tagged-binding-violation
+		 make-tagged-binding-violation
+		 tagged-binding-violation?)
+      expand run)
     (for (nausicaa language multimethods)		expand run)
     (for (nausicaa language builtins)			expand run)
     (for (nausicaa language conditions)			expand run)
