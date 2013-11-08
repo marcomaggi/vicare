@@ -28,10 +28,28 @@
 #!r6rs
 (library (nausicaa net addresses uri)
   (export
-    ;;<uri> <relative-ref>
+    <uri> <relative-ref>
+
+    ;; URI components
+    <scheme> <userinfo> <host> <port-number>
+    <query> <fragment>
+    <path> <path-empty> <path-abempty> <path-absolute> <path-rootless>
+
+    ;; auxiliary classes and labels
+    <segment-bytevector>
+    <list-of-segments>
+
+    ;; multimethods
+    uri-path->uri-representation
+    uri-path-put-uri-representation
+
+    ;; utility functions
+    make-path-object
 
     ;; auxiliary syntaxes
-    )
+    scheme		authority		userinfo
+    host		port-number
+    path		query			fragment)
   (import (nausicaa)
     (prefix (nausicaa net addresses ip) ip.)
     (prefix (vicare language-extensions makers) mk.)
@@ -40,7 +58,11 @@
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Mon Nov 4, 2013)
     (only (vicare system $bytevectors)
-	  $uri-encoded-bytevector?))
+	  $uri-encoded-bytevector?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Fri Nov 8, 2013)
+    (only (vicare system $lists)
+	  $for-all1))
 
 
 ;;;; helpers
@@ -50,7 +72,7 @@
   authority
   userinfo
   host
-  port
+  port-number
   path
   query
   fragment)
@@ -66,17 +88,10 @@
 		(loop bv ($fxadd1 i))))))
     ))
 
-(define ($for-all1 func ell)
-  (if (pair? ($cdr ell))
-      (and (func ($car ell))
-	   ($for-all1 func ($cdr ell)))
-    ;;Last call in tail position.
-    (func ($car ell))))
-
 
 ;;;; auxiliary labels and classes: scheme
 
-(define-label <uri-scheme>
+(define-label <scheme>
   (parent <nonempty-bytevector>)
 
   (predicate (lambda (bv)
@@ -89,13 +104,13 @@
 
   (virtual-fields
    (immutable (uri-representation <ascii-bytevector>)
-	      (lambda ((O <uri-scheme>))
+	      (lambda ((O <scheme>))
 		;;58 = #\:
 		(bytevector-append O '#vu8(58))))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <uri-scheme>) port)
+  (method (put-uri-representation (O <scheme>) port)
     (put-bytevector port O)
     ;;58 = #\:
     (put-u8         port 58))
@@ -105,7 +120,7 @@
 
 ;;;; auxiliary labels and classes: userinfo
 
-(define-label <uri-userinfo>
+(define-label <userinfo>
   (parent <percent-encoded-bytevector>)
 
   (virtual-fields
@@ -114,14 +129,14 @@
 		($bytevector-not-empty? bv)))
 
    (immutable (uri-representation <ascii-bytevector>)
-	      (lambda ((O <uri-userinfo>))
+	      (lambda ((O <userinfo>))
 		(if (O specified?)
 		    (bytevector-append O #vu8(64)) ;64 = #\@
 		  '#vu8())))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <uri-userinfo>) port)
+  (method (put-uri-representation (O <userinfo>) port)
     (when (O specified?)
       (put-bytevector port O)
       ;;64 = #\@
@@ -132,7 +147,7 @@
 
 ;;;; auxiliary labels and classes: host
 
-(define-label <uri-host>
+(define-label <host>
   (parent ip.<ip-address>)
 
   (virtual-fields
@@ -151,7 +166,7 @@
 
 ;;;; auxiliary labels and classes: port number
 
-(define-label <uri-port>
+(define-label <port-number>
   (parent <nonnegative-fixnum>)
   (predicate (lambda (fx)
 	       ($fx<= fx 65535)))
@@ -162,14 +177,14 @@
 		(not ($fxzero? fx))))
 
    (immutable (uri-representation <ascii-bytevector>)
-	      (lambda ((O <uri-port>))
+	      (lambda ((O <port-number>))
 		(if (O specified?)
 		    (bytevector-append (string->ascii (number->string O)) '#vu8(58)) ;58 = #\:
 		  '#vu8())))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <uri-port>) port)
+  (method (put-uri-representation (O <port-number>) port)
     (when (O specified?)
       (put-bytevector port (string->ascii (number->string O)))
       ;;58 = #\:
@@ -180,7 +195,7 @@
 
 ;;;; auxiliary labels and classes: query
 
-(define-label <uri-query>
+(define-label <query>
   (parent <percent-encoded-bytevector>)
   (virtual-fields
 
@@ -201,7 +216,7 @@
 
 ;;;; auxiliary labels and classes: fragment
 
-(define-label <uri-fragment>
+(define-label <fragment>
   (parent <percent-encoded-bytevector>)
   (virtual-fields
 
@@ -237,8 +252,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-class <uri-path>
-  (nongenerative nausicaa:net:addresses:uri:<uri-path>)
+(define-class <path>
+  (nongenerative nausicaa:net:addresses:uri:<path>)
   (fields (immutable (path <list-of-segments>))
 	  (mutable   memoized-bytevector))
   (protocol (lambda (make-top)
@@ -254,7 +269,7 @@
 
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <uri-path>))
+(define-method (uri-path->uri-representation (O <path>))
   (or (O $memoized-bytevector)
       (receive-and-return (rep)
 	  (receive (port getter)
@@ -267,14 +282,14 @@
 	    (getter))
 	(set! (O $memoized-bytevector) rep))))
 
-(define-method (uri-path-put-uri-representation (O <uri-path>) (port <binary-output-port>))
+(define-method (uri-path-put-uri-representation (O <path>) (port <binary-output-port>))
   (put-bytevector port (O uri-representation)))
 
 ;;; --------------------------------------------------------------------
 
-(define-class <uri-path-empty>
-  (nongenerative nausicaa:net:addresses:uri:<uri-path-empty>)
-  (parent <uri-path>)
+(define-class <path-empty>
+  (nongenerative nausicaa:net:addresses:uri:<path-empty>)
+  (parent <path>)
   (protocol (lambda (make-uri-path)
 	      (lambda ()
 		((make-uri-path '())))))
@@ -282,15 +297,15 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-class <uri-path-abempty>
-  (nongenerative nausicaa:net:addresses:uri:<uri-path-abempty>)
-  (parent <uri-path>)
+(define-class <path-abempty>
+  (nongenerative nausicaa:net:addresses:uri:<path-abempty>)
+  (parent <path>)
   (protocol (lambda (make-uri-path)
 	      (lambda (path)
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <uri-path-abempty>))
+(define-method (uri-path->uri-representation (O <path-abempty>))
   (or (O $memoized-bytevector)
       (receive-and-return (bv)
 	  (receive (port getter)
@@ -304,15 +319,15 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-class <uri-path-absolute>
-  (nongenerative nausicaa:net:addresses:uri:<uri-path-absolute>)
-  (parent <uri-path>)
+(define-class <path-absolute>
+  (nongenerative nausicaa:net:addresses:uri:<path-absolute>)
+  (parent <path>)
   (protocol (lambda (make-uri-path)
 	      (lambda (path)
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <uri-path-absolute>))
+(define-method (uri-path->uri-representation (O <path-absolute>))
   (or (O $memoized-bytevector)
       (receive-and-return (bv)
 	  (receive (port getter)
@@ -326,9 +341,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-class <uri-path-rootless>
-  (nongenerative nausicaa:net:addresses:uri:<uri-path-rootless>)
-  (parent <uri-path>)
+(define-class <path-rootless>
+  (nongenerative nausicaa:net:addresses:uri:<path-rootless>)
+  (parent <path>)
   (protocol (lambda (make-uri-path)
 	      (lambda (path)
 		((make-uri-path path)))))
@@ -336,16 +351,16 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-uri-path (path-type <symbol>) path)
+(define (make-path-object (path-type <symbol>) path)
   (case path-type
     ((path-abempty)
-     (<uri-path-abempty> (path)))
+     (<path-abempty> (path)))
     ((path-absolute)
-     (<uri-path-absolute> (path)))
+     (<path-absolute> (path)))
     ((path-rootless)
-     (<uri-path-rootless> (path)))
+     (<path-rootless> (path)))
     ((path-empty)
-     (<uri-path-empty> ()))
+     (<path-empty> ()))
     (else
      (procedure-argument-violation __who__
        "invalid URI path type" path-type))))
@@ -361,18 +376,18 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((scheme <uri-scheme>)
-         (userinfo <uri-userinfo>) (host ip.<ip-address>) (port <uri-port>)
-	 (path <uri-path>) (query <uri-query>) (fragment <uri-fragment>))
+     (lambda ((scheme <scheme>)
+         (userinfo <userinfo>) (host ip.<ip-address>) (port <port-number>)
+	 (path <path>) (query <query>) (fragment <fragment>))
        ((make-top) scheme userinfo host port path query fragment))))
 
-  (fields (mutable (scheme	<uri-scheme>))
-	  (mutable (userinfo	<uri-userinfo>))
-	  (mutable (host	<uri-host>))
-	  (mutable (port	<uri-port>))
-	  (mutable (path	<uri-path>))
-	  (mutable (query	<uri-query>))
-	  (mutable (fragment	<uri-fragment>)))
+  (fields (mutable (scheme	<scheme>))
+	  (mutable (userinfo	<userinfo>))
+	  (mutable (host	<host>))
+	  (mutable (port	<port-number>))
+	  (mutable (path	<path>))
+	  (mutable (query	<query>))
+	  (mutable (fragment	<fragment>)))
 
   (virtual-fields
    (immutable (string <string>)
@@ -392,8 +407,8 @@
 				     (O $port put-uri-representation authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
-			      ((<uri-path-abempty>) O)
-			      ((<uri-path-empty>)   O))
+			      ((<path-abempty>) O)
+			      ((<path-empty>)   O))
 		      (put-u8 47 port) ;47 = #\/
 		      (put-u8 47 port) ;47 = #\/
 		      (put-bytevector authority port)))
@@ -411,7 +426,7 @@
   ((scheme		#f)
    (userinfo		#f)
    (host		#f)
-   (port		#f)
+   (port-number		#f)
    (path		#f)
    (query		#f)
    (fragment		#f)))
@@ -427,16 +442,16 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((userinfo <uri-userinfo>) (host ip.<ip-address>) (port <uri-port>)
-	 (path <uri-path>) (query <uri-query>) (fragment <uri-fragment>))
+     (lambda ((userinfo <userinfo>) (host ip.<ip-address>) (port <port-number>)
+	 (path <path>) (query <query>) (fragment <fragment>))
        ((make-top) userinfo host port path query fragment))))
 
-  (fields (mutable (userinfo	<uri-userinfo>))
-	  (mutable (host	<uri-host>))
-	  (mutable (port	<uri-port>))
-	  (mutable (path	<uri-path>))
-	  (mutable (query	<uri-query>))
-	  (mutable (fragment	<uri-fragment>)))
+  (fields (mutable (userinfo	<userinfo>))
+	  (mutable (host	<host>))
+	  (mutable (port	<port-number>))
+	  (mutable (path	<path>))
+	  (mutable (query	<query>))
+	  (mutable (fragment	<fragment>)))
 
   (virtual-fields
    (immutable (string <string>)
@@ -455,8 +470,8 @@
 				     (O $port put-uri-representation authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
-			      ((<uri-path-abempty>) O)
-			      ((<uri-path-empty>)   O))
+			      ((<path-abempty>) O)
+			      ((<path-empty>)   O))
 		      (put-u8 47 port) ;47 = #\/
 		      (put-u8 47 port) ;47 = #\/
 		      (put-bytevector authority port)))
@@ -473,7 +488,7 @@
     make-<relative-ref>
   ((userinfo		#f)
    (host		#f)
-   (port		#f)
+   (port-number		#f)
    (path		#f)
    (query		#f)
    (fragment		#f)))
