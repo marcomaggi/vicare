@@ -3467,61 +3467,365 @@ written to one port is read from the other port.
 @cindex Library @library{vicare language-extensions ascii-chars}
 
 
-The library @library{vicare language-extensions ascii-chars} provides a
-small number of functions dealing with fixnums representing characters
-in @ascii{} encoding range.  The identifiers whose name is prefixed with
-@samp{$} are bound to unsafe operations: they do @strong{not} validate
-the arguments and applying them to invalid arguments leads to undefined
-behaviour.
+The library @library{vicare language-extensions ascii-chars} provides
+functions and macros dealing with fixnums representing characters in
+@ascii{} encoding range.
+
+@menu
+* asciis generic::              Generic utilities.
+* asciis conversion::           Conversion utilities.
+* asciis predicates::           Character predicates.
+* asciis uri::                  Character predicates related to @rfc{}
+                                3986, Uniform Resource Identifiers.
+@end menu
+
+@c page
+@node asciis generic
+@subsection Generic utilities
 
 
-@defun fixnum-in-ascii-range? @var{obj}
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Function fixnum-in-ascii-range? @var{obj}
+@deffnx Syntax $fixnum-in-ascii-range? @var{obj}
 Return @true{} if @var{obj} is a fixnum representing a character in
 @ascii{} encoding.
-@end defun
+@end deffn
 
 
-@defun ascii-upper-case? @var{fx}
-@defunx ascii-lower-case? @var{fx}
-@defunx ascii-title-case? @var{fx}
-@defunx $ascii-upper-case? @var{fx}
-@defunx $ascii-lower-case? @var{fx}
-@defunx $ascii-title-case? @var{fx}
+@deffn Function ascii-upper-case? @var{fx}
+@deffnx Function ascii-lower-case? @var{fx}
+@deffnx Function ascii-title-case? @var{fx}
+@deffnx Syntax $ascii-upper-case? @var{fx}
+@deffnx Syntax $ascii-lower-case? @var{fx}
+@deffnx Syntax $ascii-title-case? @var{fx}
 Return @true{} if @var{fx} represents an upper case or lower case letter
 character, otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-cased? @var{fx}
-@defunx $ascii-cased? @var{fx}
+@deffn Function ascii-cased? @var{fx}
+@deffnx Syntax $ascii-cased? @var{fx}
 Return @true{} if @var{fx} represents a letter character, which can be
 converted to upper or lower case, otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-alphabetic? @var{fx}
-@defunx $ascii-alphabetic? @var{fx}
+@deffn Function ascii-alphabetic? @var{fx}
+@deffnx Syntax $ascii-alphabetic? @var{fx}
 Return @true{} if @var{fx} represents a letter character, otherwise
 return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-numeric? @var{fx}
-@defunx $ascii-numeric? @var{fx}
+@deffn Function ascii-dec-digit? @var{fx}
+@deffnx Syntax $ascii-dec-digit? @var{fx}
 Return @true{} if @var{fx} represents a decimal digit character,
 otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-upcase @var{fx}
-@defunx ascii-downcase @var{fx}
-@defunx ascii-titlecase @var{fx}
-@defunx $ascii-upcase @var{fx}
-@defunx $ascii-downcase @var{fx}
-@defunx $ascii-titlecase @var{fx}
+@deffn Function ascii-hex-digit? @var{fx}
+@deffnx Syntax $ascii-hex-digit? @var{fx}
+Return @true{} if @var{fx} represents a hexadecimal digit character,
+otherwise return @false{}.
+@end deffn
+
+
+@deffn Function ascii-alpha-digit? @var{fx}
+@deffnx Syntax $ascii-alpha-digit? @var{fx}
+Return @true{} if @var{fx} represents a letter or a decimal digit
+character, otherwise return @false{}.
+@end deffn
+
+
+@deffn Function ascii-upcase @var{fx}
+@deffnx Function ascii-downcase @var{fx}
+@deffnx Function ascii-titlecase @var{fx}
+@deffnx Syntax $ascii-upcase @var{fx}
+@deffnx Syntax $ascii-downcase @var{fx}
+@deffnx Syntax $ascii-titlecase @var{fx}
 Return a fixnum representing the upper case or lower case version of
 @var{fx}; return @var{fx} itself if it represents an uncased character.
-@end defun
+@end deffn
+
+@c page
+@node asciis conversion
+@subsection Conversion utilities
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Function ascii-dec->fixnum @var{fx}
+@deffnx Syntax $ascii-dec->fixnum @var{fx}
+Given a fixnum representing a decimal digit in @ascii{} encoding: return
+the corresponding fixnum in the range @math{[0, 9]}.
+
+@example
+(ascii-dec->fixnum (char->integer #\5))
+@result{} 5
+@end example
+@end deffn
+
+
+@deffn Function fixnum->ascii-dec @var{fx}
+@deffnx Syntax $fixnum->ascii-dec @var{fx}
+Given a fixnum in the range @math{[0, 9]}: return the corresponding
+fixnum representing the decimal digit in @ascii{} encoding.
+
+@example
+(fixnum->ascii-dec 5)
+@result{} (char->integer #\5)
+@end example
+@end deffn
+
+
+@deffn Function ascii-hex->fixnum @var{fx}
+@deffnx Syntax $ascii-hex->fixnum @var{fx}
+Given a fixnum representing a hexadecimal digit in @ascii{} encoding:
+return the corresponding fixnum in the range @math{[0, 15]}.
+
+@example
+(ascii-hex->fixnum (char->integer #\5))
+@result{} 5
+
+(ascii-hex->fixnum (char->integer #\A))
+@result{} 10
+@end example
+@end deffn
+
+
+@deffn Function fixnum->ascii-hex @var{fx}
+@deffnx Syntax $fixnum->ascii-hex @var{fx}
+Given a fixnum in the range @math{[0, 15]}: return the corresponding
+fixnum representing the hexadecimal digit in @ascii{} encoding.
+
+@example
+(fixnum->ascii-hex 5)
+@result{} (char->integer #\5)
+
+(fixnum->ascii-hex 10)
+@result{} (char->integer #\A)
+@end example
+@end deffn
+
+@c page
+@node asciis predicates
+@subsection Character predicates
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Syntax $ascii-chi-V? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{V} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-v? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{v} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-ampersand? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{&} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-at-sign? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{@@} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-open-bracket? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{[} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-close-bracket? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{]} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-open-paren? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{(} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-close-paren? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{)} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-dot? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{.} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-comma? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{,} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-colon? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{:} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-semicolon? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{;} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-bang? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{!} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-dollar? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{$} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-question-mark? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{?} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-number-sign? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{#} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-percent? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{%} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-equal? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{=} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-plus? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{+} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-minus? @var{fx}
+@deffnx Syntax $ascii-chi-dash? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{-} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-underscore? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{_} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-tilde? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{~} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-quote? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{'} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-slash? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{/} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-star? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{*} in @ascii{} encoding.
+@end deffn
+
+@c page
+@node asciis uri
+@subsection Character predicates related to @rfc{} 3986, Uniform Resource Identifiers
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Syntax $ascii-uri-reserved? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a reserved
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-unreserved? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing an unreserved
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-gen-delim? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a @code{gen-delim}
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-sub-delim? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a @code{sub-delim}
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pchar-not-percent-encoded? @var{fx}
+Evaluate to true if @var{fx} is a fixnum matching the @code{pchar}
+component in @ascii{} encoding, with the exception of the
+percent--encoded sequence as defined by @rfc{} 3986.
+@end deffn
 
 @c page
 @node hooks

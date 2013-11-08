@@ -2218,84 +2218,10 @@
   #t)
 
 
-(parametrise ((check-test-name	'host-class))
+(parametrise ((check-test-name	'path-utils))
 
-;;; registered name
 
-  (check
-      (let* ((port (mkport "github.io"))
-	     ((host ip.<reg-name-address>) (receive (host.type host.ascii host.data)
-					       (uri.parse-host port)
-					     (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "github.io")
-
-  (check
-      (let* ((port (mkport "github.io"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
-					 (uri.parse-host port)
-				       (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "github.io")
-
-;;; --------------------------------------------------------------------
-;;; IPv4 address
-
-  (check
-      (let* ((port (mkport "1.2.3.4"))
-	     ((host ip.<ipv4-address>) (receive (host.type host.ascii host.data)
-					   (uri.parse-host port)
-					 (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "1.2.3.4")
-
-  (check
-      (let* ((port (mkport "1.2.3.4"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
-					 (uri.parse-host port)
-				       (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "1.2.3.4")
-
-;;; --------------------------------------------------------------------
-;;; IPv6 address
-
-  (check
-      (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
-	     ((host ip.<ipv6-address>) (receive (host.type host.ascii host.data)
-					   (uri.parse-host port)
-					 (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "[1:2:3:4:5:6:7:8]")
-
-  (check
-      (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
-					 (uri.parse-host port)
-				       (uri.make-uri-host host.type host.ascii host.data))))
-	(host string))
-    => "[1:2:3:4:5:6:7:8]")
-
-;;; --------------------------------------------------------------------
-;;; IPvFuture address
-
-    (check
-	(let* ((port (mkport "[v9.ciao]"))
-	       ((host ip.<ipvfuture-address>) (receive (host.type host.ascii host.data)
-						  (uri.parse-host port)
-						(uri.make-uri-host host.type host.ascii host.data))))
-	  (host string))
-      => "[v9.ciao]")
-
-    (check
-	(let* ((port (mkport "[v9.ciao]"))
-	       ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
-					   (uri.parse-host port)
-					 (uri.make-uri-host host.type host.ascii host.data))))
-	  (host string))
-      => "[v9.ciao]")
-
-    #t)
+  #t)
 
 
 #;(parametrise ((check-test-name	'class-uri))
