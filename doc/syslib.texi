@@ -21,6 +21,7 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib numerics::             Low level numerics operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
+* syslib lists::                Low level list operations.
 * syslib structs::              Low level structure operations.
 * syslib vectors::              Low level vector operations.
 * syslib bytevectors::          Low level bytevector operations.
@@ -4952,10 +4953,34 @@ Store @var{value} in the car location of @var{P}.
 Store @var{value} in the cdr location of @var{P}.
 @end deffn
 
+@c page
+@node syslib lists
+@section Low level list operations
+
+
+@cindex @library{ikarus system $lists}, library
+@cindex Library @library{ikarus system $lists}
+@cindex @library{vicare system $lists}, library
+@cindex Library @library{vicare system $lists}
+
 
 @deffn {Unsafe Operation} $length @var{ell}
 Assume @var{ell} is a proper list, null included: compute and return the
 length of @var{ell}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $for-all1 @var{proc} @var{ell}
+Assume @var{ell} is a proper list, null included, and @var{proc} is a
+unary function: execute the same algorithm of @func{for-all} from
+@rsixlibrary{lists}, but use unsafe operations.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exists1 @var{proc} @var{ell}
+Assume @var{ell} is a proper list, null included, and @var{proc} is a
+unary function: execute the same algorithm of @func{exists} from
+@rsixlibrary{lists}, but use unsafe operations.
 @end deffn
 
 @c page

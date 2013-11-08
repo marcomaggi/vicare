@@ -844,13 +844,19 @@
     (current-library-collection			$boot)
     (library-name				$boot)
     (find-library-by-name			$boot)
+
+;;; --------------------------------------------------------------------
     ($car					$pairs $vicare-pairs)
     ($cdr					$pairs $vicare-pairs)
     ($set-car!					$pairs $vicare-pairs)
     ($set-cdr!					$pairs $vicare-pairs)
-    ($length					$pairs $vicare-pairs)
+;;
+    ($length					$pairs $vicare-lists)
+    ($for-all1					$pairs $vicare-lists)
+    ($exists1					$pairs $vicare-lists)
     ($memq					$lists $vicare-lists)
     ($memv					$lists $vicare-lists)
+;;;
     ($char?					$chars $vicare-chars)
     ($char=					$chars $vicare-chars)
     ($char<					$chars $vicare-chars)
@@ -859,6 +865,7 @@
     ($char>=					$chars $vicare-chars)
     ($char->fixnum				$chars $vicare-chars)
     ($fixnum->char				$chars $vicare-chars)
+;;;
     ($make-string				$strings $vicare-strings)
     ($string					$strings $vicare-strings)
     ($string-ref				$strings $vicare-strings)
