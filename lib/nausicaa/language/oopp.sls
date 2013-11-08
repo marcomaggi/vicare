@@ -51,6 +51,11 @@
 
     <top> <top>? <top>-unique-identifiers
 
+    ;; conditions
+    &tagged-binding-violation
+    make-tagged-binding-violation
+    tagged-binding-violation?
+
     ;; auxiliary keywords
     (rename (aux.parent			parent)
 	    (aux.nongenerative		nongenerative)
@@ -138,6 +143,18 @@
 		   (syntax-violation '?name message ?stx subform))))
 	       ?body0 ?body ...))))
       )))
+
+(define-condition-type &tagged-binding-violation
+    &assertion
+  make-tagged-binding-violation
+  tagged-binding-violation?)
+
+(define (tagged-binding-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-tagged-binding-violation)
+	      (make-irritants-condition irritants))))
 
 
 (define-record-type (<top>-record-type make-<top> <top>?)
@@ -588,9 +605,10 @@
 		       #'(receive-and-return (val)
 			     ??expr
 			   (unless (THE-TAG :is-a? val)
-			     (assertion-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE
-						  '(expression: ??expr)
-						  `(result: ,val))))
+			     (tagged-binding-violation 'THE-TAG
+			       WRONG-TYPE-ERROR-MESSAGE
+			       '(expression: ??expr)
+			       `(result: ,val))))
 		     #'??expr))
 
 		  ((_ :assert-procedure-argument ??id)
@@ -1085,9 +1103,10 @@
 		       #'(receive-and-return (val)
 			     ??expr
 			   (unless (THE-TAG :is-a? val)
-			     (assertion-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE
-						  '(expression: ??expr)
-						  `(result: ,val))))
+			     (tagged-binding-violation 'THE-TAG
+			       WRONG-TYPE-ERROR-MESSAGE
+			       '(expression: ??expr)
+			       `(result: ,val))))
 		     #'??expr))
 
 		  ((_ :assert-procedure-argument ??id)
