@@ -65,7 +65,7 @@
   (lists)
   (prefix (vicare) six.)
   (vicare unsafe operations)
-  (vicare system $pairs)
+  (vicare system $lists)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4969,6 +4969,11 @@ called with at least two arguments.
 
 (parametrise ((check-test-name	'unsafe))
 
+  (define (even-value obj)
+    (and (even? obj) obj))
+
+;;; --------------------------------------------------------------------
+
   (check
       ($length '(1 2 3 4 5 6))
     => 6)
@@ -4980,6 +4985,34 @@ called with at least two arguments.
   (check
       ($length '())
     => 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($for-all1 even-value '())
+    => #t)
+
+  (check
+      ($for-all1 even-value '(2 4 6))
+    => 6)
+
+  (check
+      ($for-all1 even-value '(2 4 3))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($exists1 even-value '())
+    => #f)
+
+  (check
+      ($exists1 even-value '(1 2 3))
+    => 2)
+
+  (check
+      ($exists1 even-value '(1 3 5))
+    => #f)
 
   #t)
 

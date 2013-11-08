@@ -60,23 +60,7 @@
     $struct-ref
     $struct-set!
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Wed Oct 30, 2013)
-    #;$length
-
-    $caar
-    $cadr
-    $cdar
-    $cddr
-
-    $caaar
-    $caadr
-    $cadar
-    $cdaar
-    $cdadr
-    $cddar
-    $cdddr
-    $caddr
+;;; --------------------------------------------------------------------
 
     $fxzero?
     $fxnegative?
@@ -263,6 +247,28 @@
     $set-car!
     $set-cdr!
 
+    $caar
+    $cadr
+    $cdar
+    $cddr
+
+    $caaar
+    $caadr
+    $cadar
+    $cdaar
+    $cdadr
+    $cddar
+    $cdddr
+    $caddr
+
+;;; --------------------------------------------------------------------
+
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Wed Oct 30, 2013)
+    #;$length
+    #;$for-all1
+    #;$exists1
+
 ;;; --------------------------------------------------------------------
 
     $make-vector
@@ -401,6 +407,7 @@
     (ikarus system $flonums)
     (ikarus system $compnums)
     (ikarus system $pairs)
+    (vicare system $lists)
     (except (ikarus system $vectors)
 	    ;;FIXME This except  must be removed at the  next boot image
 	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)

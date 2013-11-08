@@ -25,7 +25,8 @@
 	  make-queue-procs
 
 	  ;; unsafe bindings
-	  $length)
+	  $length
+	  $for-all1	$exists1)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
@@ -36,7 +37,8 @@
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
-	    $length))
+	    $length
+	    $for-all1	$exists1))
 
 
 ;;;; arguments validation
@@ -1309,6 +1311,31 @@
 	(error 'dequeue! "no more items in queue")))
 
     (values empty-queue? enqueue! dequeue!))))
+
+
+;;;; unsafe functions
+
+(define ($for-all1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (if (pair? ($cdr ell))
+	  (and (func ($car ell))
+	       ($for-all1 func ($cdr ell)))
+	;;Last call in tail position.
+	(func ($car ell)))
+    #t))
+
+(define ($exists1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (if (pair? ($cdr ell))
+	  (or (func ($car ell))
+	      ($exists1 func ($cdr ell)))
+	;;Last call in tail position.
+	(func ($car ell)))
+    #f))
 
 
 ;;;; done
