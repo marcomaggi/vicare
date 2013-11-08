@@ -1158,6 +1158,14 @@ bytevectors}.
 Build and return a copy of the instance.
 @end deftypemethod
 
+
+@deftypemethod @aclass{bytevector} @aclass{exact-integer} hash
+@deftypemethodx @aclass{bytevector} @aclass{exact-integer} $hash
+Compute a hash value of bytevector instance using
+@func{bytevector-hash}, @vicareref{iklib bytevectors generic, Generic
+bytevector operations}.
+@end deftypemethod
+
 @c page
 @node builtins bytevectors 8
 @subsection Bytevector labels: 8-bit words

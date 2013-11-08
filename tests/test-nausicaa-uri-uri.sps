@@ -49,6 +49,10 @@
 	  (getter)))
     => '#ve(ascii "http:"))
 
+  (check-for-true
+   (let (((O uri.<scheme>) '#ve(ascii "http")))
+     (fixnum? (O hash))))
+
   #t)
 
 

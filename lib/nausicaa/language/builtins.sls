@@ -646,6 +646,16 @@
       ((_ ?bv)
        (bytevector-copy ?bv))))
 
+  (method-syntax hash
+    (syntax-rules ()
+      ((_ ?bv)
+       (bytevector-hash ?bv))))
+
+  (method-syntax $hash
+    (syntax-rules ()
+      ((_ ?bv)
+       ($bytevector-hash ?bv))))
+
   #| end of label |# )
 
 (define-label <nonempty-bytevector>
