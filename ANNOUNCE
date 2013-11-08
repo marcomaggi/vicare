@@ -97,6 +97,12 @@ Notes for revision 0.3d7
 * BACKWARDS INCOMPATIBILITY The function URI-NORMALISE-ENCODING has been
   renamed to NORMALISE-URI-ENCODING.
 
+* BACKWARDS  INCOMPATIBILITY The  following libraries  have been  merged
+  into (nausicaa net addresses ip):
+
+    (nausicaa net addresses ipv4)
+    (nausicaa net addresses ipv6)
+
 
 Notes for revision 0.3d6
 ------------------------

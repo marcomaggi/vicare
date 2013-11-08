@@ -29,8 +29,6 @@
 (import (nausicaa)
   (prefix (nausicaa parser-tools uri)  uri.)
   (prefix (nausicaa net addresses ip) ip.)
-  (prefix (nausicaa net addresses ipv4) ip.)
-  (prefix (nausicaa net addresses ipv6) ip.)
   (prefix (nausicaa net addresses uri) uri.)
   (vicare checks))
 

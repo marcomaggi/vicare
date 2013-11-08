@@ -340,11 +340,11 @@ The version flag must be in the range @math{[0, 15]}.
 @subsection Ipv4 address objects
 
 
-@cindex @library{nausicaa net addresses ipv4}, library
-@cindex Library @library{nausicaa net addresses ipv4}
+@cindex @library{nausicaa net addresses ip}, library
+@cindex Library @library{nausicaa net addresses ip}
 
 
-The library @library{nausicaa net addresses ipv4} exports utilities to
+The library @library{nausicaa net addresses ip} exports utilities to
 handle IPv4 addresses specifications, according to @rfc{} 5735.  To
 parse the string representation of IPv4 addresses we can use the library
 @library{nausicaa parser-tools ipv4-addresses}.
@@ -361,7 +361,7 @@ parse the string representation of IPv4 addresses we can use the library
 
 
 The following bindings are exported by the library @library{nausicaa net
-addresses ipv4}.
+addresses ip}.
 
 
 @deftp Class @aclass{ipv4-address}
@@ -513,7 +513,7 @@ Build and return an exact integer representation of the address.
 
 
 The following bindings are exported by the library @library{nausicaa net
-addresses ipv4}.
+addresses ip}.
 
 
 @deftp Class @aclass{ipv4-address-prefix}
@@ -631,11 +631,11 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @subsection IPv6 address objects
 
 
-@cindex @library{nausicaa net address ipv6}, library
-@cindex Library @library{nausicaa net address ipv6}
+@cindex @library{nausicaa net address ip}, library
+@cindex Library @library{nausicaa net address ip}
 
 
-The library @library{nausicaa net addresses ipv6} exports utilities to
+The library @library{nausicaa net addresses ip} exports utilities to
 handle IPv6 addresses specifications, according to @rfc{} 4291.  To
 parse the string representation of IPv4 addresses we can use the library
 @library{nausicaa parser-tools ipv6-addresses}.
@@ -652,7 +652,7 @@ parse the string representation of IPv4 addresses we can use the library
 
 
 The following bindings are exported by the @library{nausicaa net
-addresses ipv6} library.
+addresses ip} library.
 
 
 @deftp Class @aclass{ipv6-address}
@@ -746,7 +746,7 @@ Build and return an exact integer representation of the address.
 
 
 The following bindings are exported by the @library{nausicaa net
-addresses ipv6} library.
+addresses ip} library.
 
 
 @deftp Class @aclass{ipv6-address-prefix}
@@ -837,7 +837,7 @@ encoding.
 
 
 The following bindings are exported by the library @library{nausicaa net
-addresses ipv6}.
+addresses ip}.
 
 
 @deftp Label @aclass{ipv6-address-fixnum}

@@ -37,8 +37,6 @@
     )
   (import (nausicaa)
     (nausicaa net addresses ip)
-    (nausicaa net addresses ipv4)
-    (nausicaa net addresses ipv6)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
