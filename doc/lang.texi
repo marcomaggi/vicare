@@ -3498,6 +3498,18 @@ Return @true{} if @var{obj} is a fixnum representing a character in
 @end deffn
 
 
+@deffn Function fixnum-in-base10-range? @var{obj}
+@deffnx Syntax $fixnum-in-base10-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range @math{[0, 9]}.
+@end deffn
+
+
+@deffn Function fixnum-in-base16-range? @var{obj}
+@deffnx Syntax $fixnum-in-base16-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range @math{[0, 15]}.
+@end deffn
+
+
 @deffn Function ascii-upper-case? @var{fx}
 @deffnx Function ascii-lower-case? @var{fx}
 @deffnx Function ascii-title-case? @var{fx}

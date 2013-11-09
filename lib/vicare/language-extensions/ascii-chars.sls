@@ -28,7 +28,10 @@
 #!r6rs
 (library (vicare language-extensions ascii-chars)
   (export
-    fixnum-in-ascii-range?
+    fixnum-in-ascii-range?	$fixnum-in-ascii-range?
+    fixnum-in-base10-range?	$fixnum-in-base10-range?
+    fixnum-in-base16-range?	$fixnum-in-base16-range?
+
     ascii-cased?		$ascii-cased?
     ascii-upper-case?		$ascii-upper-case?
     ascii-lower-case?		$ascii-lower-case?
@@ -86,33 +89,6 @@
     (vicare unsafe operations))
 
 
-;;;; helpers
-
-(define-argument-validation (fixnum-in-ascii-range who obj)
-  (fixnum-in-ascii-range? obj)
-  (assertion-violation who "expected fixnum in ASCII range as argument" obj))
-
-(define-argument-validation (fixnum-in-ascii-dec-digit-range who obj)
-  (ascii-dec-digit? obj)
-  (assertion-violation who "expected fixnum in ASCII range representing decimal digit as argument" obj))
-
-(define-argument-validation (fixnum-in-ascii-hex-digit-range who obj)
-  (ascii-hex-digit? obj)
-  (assertion-violation who "expected fixnum in ASCII range representing hexadecimal digit as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (fixnum-in-base10-range who obj)
-  (and (fixnum? obj)
-       (fx<=? 0 obj 9))
-  (assertion-violation who "expected fixnum in range [0, 9] as argument" obj))
-
-(define-argument-validation (fixnum-in-base16-range who obj)
-  (and (fixnum? obj)
-       (fx<=? 0 obj 15))
-  (assertion-violation who "expected fixnum in range [0, 15] as argument" obj))
-
-
 ;;;; constants
 
 (define-inline-constant FIXNUM-0		(char->integer #\0))
@@ -164,10 +140,28 @@
 
 (define (fixnum-in-ascii-range? obj)
   (and (fixnum? obj)
-       (fixnum-in-ascii-range? obj)))
+       ($fixnum-in-ascii-range? obj)))
 
 (define-inline ($fixnum-in-ascii-range? obj)
   ($fx<= 0 obj 127))
+
+;;; --------------------------------------------------------------------
+
+(define (fixnum-in-base10-range? obj)
+  (and (fixnum? obj)
+       ($fixnum-in-base10-range? obj)))
+
+(define ($fixnum-in-base10-range? obj)
+  (fx<=? 0 obj 9))
+
+;;; --------------------------------------------------------------------
+
+(define (fixnum-in-base16-range? obj)
+  (and (fixnum? obj)
+       ($fixnum-in-base16-range? obj)))
+
+(define ($fixnum-in-base16-range? obj)
+  (fx<=? 0 obj 15))
 
 ;;; --------------------------------------------------------------------
 
@@ -219,11 +213,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (ascii-upcase fx)
-  (define who 'ascii-upcase)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-range	fx))
-    ($ascii-upcase fx)))
+(define* (ascii-upcase (fx fixnum-in-ascii-range?))
+  ($ascii-upcase fx))
 
 (define ($ascii-upcase fx)
   (if ($ascii-lower-case? fx)
@@ -232,11 +223,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (ascii-downcase fx)
-  (define who 'ascii-downcase)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-range	fx))
-    ($ascii-downcase fx)))
+(define* (ascii-downcase (fx fixnum-in-ascii-range?))
+  ($ascii-downcase fx))
 
 (define ($ascii-downcase fx)
   (if ($ascii-upper-case? fx)
@@ -256,33 +244,24 @@
 
 ;;;; conversion
 
-(define (ascii-dec->fixnum chi)
-  (define who 'ascii-dec->fixnum)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-dec-digit-range	chi))
-    ($ascii-dec->fixnum chi)))
+(define* (ascii-dec->fixnum (chi ascii-dec-digit?))
+  ($ascii-dec->fixnum chi))
 
 (define-inline ($ascii-dec->fixnum chi)
   ($fx- chi FIXNUM-0))
 
 ;;; --------------------------------------------------------------------
 
-(define (fixnum->ascii-dec chi)
-  (define who 'fixnum->ascii-dec)
-  (with-arguments-validation (who)
-      ((fixnum-in-base10-range	chi))
-    ($ascii-dec->fixnum chi)))
+(define* (fixnum->ascii-dec (chi fixnum-in-base10-range?))
+  ($ascii-dec->fixnum chi))
 
 (define-inline ($fixnum->ascii-dec n)
   ($fx+ FIXNUM-0 n))
 
 ;;; --------------------------------------------------------------------
 
-(define (ascii-hex->fixnum chi)
-  (define who 'ascii-hex->fixnum)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-hex-digit-range	chi))
-    ($ascii-hex->fixnum chi)))
+(define* (ascii-hex->fixnum (chi ascii-hex-digit?))
+  ($ascii-hex->fixnum chi))
 
 (define-inline ($ascii-hex->fixnum chi)
   ;;This must be used only after "$ascii-hex-digit?" has validated CHI.
@@ -297,11 +276,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (fixnum->ascii-hex chi)
-  (define who 'fixnum->ascii-hex)
-  (with-arguments-validation (who)
-      ((fixnum-in-base16-range	chi))
-    ($ascii-hex->fixnum chi)))
+(define* (fixnum->ascii-hex (chi fixnum-in-base16-range?))
+  ($ascii-hex->fixnum chi))
 
 (define-inline ($fixnum->ascii-hex n)
   (if ($fx<= 0 n 9)

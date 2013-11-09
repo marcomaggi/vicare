@@ -156,26 +156,25 @@
       (ascii-titlecase (char->integer #\0))
     => (char->integer #\0))
 
-
   #t)
 
 
 (parametrise ((check-test-name	'kind))
 
   (check
-      (ascii-numeric? (char->integer #\0))
+      (ascii-dec-digit? (char->integer #\0))
     => #t)
 
   (check
-      (ascii-numeric? (char->integer #\9))
+      (ascii-dec-digit? (char->integer #\9))
     => #t)
 
   (check
-      (ascii-numeric? (char->integer #\A))
+      (ascii-dec-digit? (char->integer #\A))
     => #f)
 
   (check
-      (ascii-numeric? (char->integer #\z))
+      (ascii-dec-digit? (char->integer #\z))
     => #f)
 
 ;;; --------------------------------------------------------------------
