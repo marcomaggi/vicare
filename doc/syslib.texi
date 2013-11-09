@@ -5286,6 +5286,7 @@ that are encoded but should not are decoded.
 
 
 @defun $uri-encoded-bytevector? @var{bv}
+@defunx $percent-encoded-bytevector? @var{bv}
 Return @true{} if the argument is correctly percent--encoded bytevector
 according to @rfc{} 3986.
 @end defun
@@ -5436,6 +5437,15 @@ Convert to and from a Scheme string and a Scheme bytevector.  The input
 string contains the @ascii{} Base64 representation of the octets.  The
 output string contains the @ascii{} Base64 representation of octets.  If
 an error occurs in the conversion: the return value is @false{}.
+@end defun
+
+
+@defun $uri-encoded-string? @var{string}
+@defunx $percent-encoded-string? @var{string}
+Return @true{} if the argument is correctly percent--encoded string
+according to @rfc{} 3986.  This means every character in the string is
+associated to a character in the @ascii{} encoding and additionally the
+constraints of @rfc{} 3986 are satisfied.
 @end defun
 
 @c page

@@ -46,14 +46,16 @@
 
     string->uri-encoding	uri-encoding->string
     uri-encode			uri-decode
-    normalise-uri-encoding	uri-encoded-bytevector?
+    normalise-uri-encoding
+    uri-encoded-bytevector?	uri-encoded-string?
 
     (rename (string->uri-encoding	string->percent-encoding)
 	    (uri-encoding->string	percent-encoding->string)
 	    (uri-encode			percent-encode)
 	    (uri-decode			percent-decode)
 	    (normalise-uri-encoding	normalise-percent-encoding)
-	    (uri-encoded-bytevector?	percent-encoded-bytevector?))
+	    (uri-encoded-bytevector?	percent-encoded-bytevector?)
+	    (uri-encoded-string?	percent-encoded-string?))
 
     ;; unsafe operations
     $string
@@ -70,11 +72,13 @@
     $bytevector->base64		$base64->bytevector
 
     $uri-encode			$uri-decode
-    $normalise-uri-encoding	$uri-encoded-bytevector?
+    $normalise-uri-encoding
+    $uri-encoded-bytevector?	$uri-encoded-string?
     (rename ($uri-encode		$percent-encode)
 	    ($uri-decode		$percent-decode)
 	    ($normalise-uri-encoding	$percent-normalise-encoding)
-	    ($uri-encoded-bytevector?	$percent-encoded-bytevector?))
+	    ($uri-encoded-bytevector?	$percent-encoded-bytevector?)
+	    ($uri-encoded-string?	$percent-encoded-string?))
     #| end of export |# )
   (import (except (ikarus)
 		  make-string			string
@@ -109,6 +113,7 @@
 		  uri-decode			percent-decode
 		  normalise-uri-encoding	normalise-percent-encoding
 		  uri-encoded-bytevector?	percent-encoded-bytevector?
+		  uri-encoded-string?		percent-encoded-string?
 		  #| end of except |# )
     (vicare arguments validation)
     (except (vicare unsafe operations)
@@ -1264,7 +1269,8 @@
 	 uri-encode			$uri-encode
 	 uri-decode			$uri-decode
 	 normalise-uri-encoding		$normalise-uri-encoding
-	 uri-encoded-bytevector?	$uri-encoded-bytevector?)
+	 uri-encoded-bytevector?	$uri-encoded-bytevector?
+	 uri-encoded-string?		$uri-encoded-string?)
 
   (define (uri-encode bv)
     ;;Return   a  percent-encoded   bytevector  representation   of  the
@@ -1426,8 +1432,46 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (uri-encoded-string? str)
+    ;;Return true  if the  argument is correctly  percent-encoded string
+    ;;according to RFC 3986.
+    ;;
+    (define who 'uri-encoded-string?)
+    (with-arguments-validation (who)
+	((string	str))
+      ($uri-encoded-string? str)))
+
+  (define ($uri-encoded-string? str)
+    (define-syntax-rule ($string-chi-ref str i)
+      ($char->fixnum ($string-ref str i)))
+    (let loop ((i 0))
+      (or ($fx= i ($string-length str))
+	  (let ((chi ($string-chi-ref str i)))
+	    (cond (($fx= chi INT-PERCENT)
+		   (and ($two-more-chars-after-this? str i)
+			(begin
+			  ;;The first char must represent a HEX digit in
+			  ;;ASCII encoding.
+			  ($fxincr! i)
+			  (and ($is-hex-digit? ($string-chi-ref str i))
+			       (begin
+				 ;;The second octet must represent a
+				 ;;HEX digit in ASCII encoding.
+				 ($fxincr! i)
+				 (and ($is-hex-digit? ($string-chi-ref str i))
+				      (loop ($fxadd1 i))))))))
+		  ((and ($fx<= 32 chi 126)
+			($is-unreserved? chi))
+		   (loop ($fxadd1 i)))
+		  (else #f))))))
+
+;;; --------------------------------------------------------------------
+
   (define-syntax-rule ($two-more-octets-after-this? bv i)
     (< (+ 2 i) ($bytevector-length bv)))
+
+  (define-syntax-rule ($two-more-chars-after-this? str i)
+    (< (+ 2 i) ($string-length str)))
 
 ;;; --------------------------------------------------------------------
 
