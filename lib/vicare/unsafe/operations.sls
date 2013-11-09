@@ -318,6 +318,7 @@
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Wed Oct 30, 2013)
     #;$string
+    #;$percent-encoded-string?
 
     $string-copy
     $string-copy!

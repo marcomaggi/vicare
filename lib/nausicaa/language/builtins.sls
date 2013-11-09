@@ -31,7 +31,7 @@
     <top>
     <boolean> <symbol> <keyword> <pointer>
     <pair> <mutable-pair> <spine> <list>
-    <char> <string> <mutable-string>
+    <char> <string> <percent-encoded-string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
     <fixnum> <positive-fixnum> <negative-fixnum>
@@ -88,7 +88,11 @@
     (only (vicare system $bytevectors)
 	  $uri-encoded-bytevector?
 	  $percent-encode
-	  $percent-decode))
+	  $percent-decode)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sat Nov 9, 2013)
+    (only (vicare system $strings)
+	  $percent-encoded-string?))
 
 
 ;;;; helpers
@@ -557,6 +561,11 @@
   (predicate string?)
   (method (set! (S <mutable-string>) (idx <fixnum>) (ch <char>))
     ($string-set! S (S %normalise-index idx) ch)))
+
+(define-builtin-label <percent-encoded-string>
+  (parent <string>)
+  (protocol (lambda () string))
+  (predicate $percent-encoded-string?))
 
 
 ;;;; built-in types: vector
