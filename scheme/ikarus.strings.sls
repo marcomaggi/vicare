@@ -1419,7 +1419,7 @@
 				 (set! i ($fxadd1 i))
 				 (and ($is-hex-digit? ($bytevector-u8-ref bv i))
 				      (loop ($fxadd1 i))))))))
-		  ((and ($fx<= 32 chi 127)
+		  ((and ($fx<= 32 chi 126)
 			($is-unreserved? chi))
 		   (loop ($fxadd1 i)))
 		  (else #f))))))
