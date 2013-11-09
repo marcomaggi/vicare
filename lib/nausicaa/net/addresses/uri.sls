@@ -152,7 +152,7 @@
 
   (virtual-fields
 
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (uri-representation <percent-encoded-bytevector>)
 	      (lambda ((O ip.<ip-address>))
 		(O percent-encoded)))
 

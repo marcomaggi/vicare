@@ -2218,12 +2218,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'path-utils))
-
-
-  #t)
-
-
 #;(parametrise ((check-test-name	'class-uri))
 
   (define-syntax doit

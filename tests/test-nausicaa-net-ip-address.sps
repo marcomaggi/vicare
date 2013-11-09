@@ -255,23 +255,23 @@
 ;;; --------------------------------------------------------------------
 ;;; IPvFuture address
 
-    (check
-	(let* ((port (mkport "[v9.ciao]"))
-	       ((host ip.<ipvfuture-address>) (receive (host.type host.ascii host.data)
-						  (uri.parse-host port)
-						(ip.make-host-object host.type host.ascii host.data))))
-	  (host string))
-      => "[v9.ciao]")
+  (check
+      (let* ((port (mkport "[v9.ciao]"))
+	     ((host ip.<ipvfuture-address>) (receive (host.type host.ascii host.data)
+						(uri.parse-host port)
+					      (ip.make-host-object host.type host.ascii host.data))))
+	(host string))
+    => "[v9.ciao]")
 
-    (check
-	(let* ((port (mkport "[v9.ciao]"))
-	       ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
-					   (uri.parse-host port)
-					 (ip.make-host-object host.type host.ascii host.data))))
-	  (host string))
-      => "[v9.ciao]")
+  (check
+      (let* ((port (mkport "[v9.ciao]"))
+	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
+					 (uri.parse-host port)
+				       (ip.make-host-object host.type host.ascii host.data))))
+	(host string))
+    => "[v9.ciao]")
 
-    #t)
+  #t)
 
 
 ;;;; done
