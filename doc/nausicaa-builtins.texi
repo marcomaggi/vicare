@@ -704,6 +704,16 @@ a sublabel of @aclass{string}.
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{percent-encoded-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{percent-encoded-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
 @deftypeop {Common constructor} @aclass{string} @aclass{string} constructor @var{ch} @dots{}
 @deftypeopx {Common constructor} @aclass{mutable-string} @aclass{mutable-string} constructor @var{ch} @dots{}
 Return the result of applying @func{string} to the @var{ch} arguments.

@@ -104,7 +104,7 @@ percent--encoding as defined by @rfc{} 3986.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{string} string
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-string} string
 String object representation of the address.  It must represent the
 address string in percent--encoding as defined by @rfc{} 3986; every
 character in the string can be directly converted to an @ascii{} encoded
