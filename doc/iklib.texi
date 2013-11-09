@@ -5168,6 +5168,15 @@ the @utf{}-8 representation of a string; return the string.
 @end defun
 
 
+@defun uri-encoded-string? @var{string}
+@defunx percent-encoded-string? @var{string}
+Return @true{} if the argument is correctly percent--encoded string
+according to @rfc{} 3986.  This means every character in the string is
+associated to a character in the @ascii{} encoding and additionally the
+constraints of @rfc{} 3986 are satisfied.
+@end defun
+
+
 @defun string-or-symbol->string @var{obj}
 If @var{obj} is a string return a copy of it; if it is a symbol return a
 new string object equal to its string name.

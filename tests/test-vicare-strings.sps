@@ -1824,6 +1824,58 @@
       (percent-encoded-bytevector? (string->ascii "ci%5Zao"))
     => #f)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (uri-encoded-string? "")
+    => #t)
+
+  (check
+      (uri-encoded-string?  "ciao")
+    => #t)
+
+  (check
+      (uri-encoded-string?  "cia%3do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "cia%3Do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%3fa%3do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%3Fa%3Do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "%7Eciao")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%5Fao")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%5")
+    => #f)
+
+  (check
+      (uri-encoded-string? "ci%5Zao")
+    => #f)
+
+;;;
+
+  (check
+      (percent-encoded-string? "ci%3Fa%3Do")
+    => #t)
+
+  (check
+      (percent-encoded-string? "ci%5Zao")
+    => #f)
+
   #t)
 
 

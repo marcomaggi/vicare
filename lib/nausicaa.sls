@@ -1511,6 +1511,7 @@
     uri-encode				percent-encode
     normalise-uri-encoding		normalise-percent-encoding
     uri-encoded-bytevector?		percent-encoded-bytevector?
+    uri-encoded-string?			percent-encoded-string?
 
     ;; misc
     set-cons!
