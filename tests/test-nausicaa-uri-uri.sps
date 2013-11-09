@@ -27,11 +27,36 @@
 
 #!vicare
 (import (nausicaa)
+  (prefix (nausicaa net addresses ip)  ip.)
   (prefix (nausicaa net addresses uri) uri.)
+  (prefix (nausicaa parser-tools uri) uri.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Nausicaa libraries: URI objects\n")
+
+
+;;;; helpers
+
+(define (mkport obj)
+  (cond ((string? obj)
+	 (open-bytevector-input-port (string->ascii obj)))
+	((bytevector? obj)
+	 (open-bytevector-input-port obj))
+	(else
+	 (assertion-violation __who__ "expecting string or bytevector" obj))))
+
+(define (string->host-object (str <string>))
+  (let ((port (open-bytevector-input-port (string->ascii str))))
+    (receive (host.type host.ascii host.data)
+	(uri.parse-host port)
+      (ip.make-host-object host.type host.ascii host.data))))
+
+(define (percent-encoded->host-object (bv <percent-encoded-bytevector>))
+  (let ((port (open-bytevector-input-port bv)))
+    (receive (host.type host.ascii host.data)
+	(uri.parse-host port)
+      (ip.make-host-object host.type host.ascii host.data))))
 
 
 (parametrise ((check-test-name	'scheme))
@@ -55,7 +80,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
+  (check	;empty "scheme" is invalid
       (try
 	  (let (((O uri.<scheme>) '#vu8()))
 	    #f)
@@ -64,6 +89,132 @@
 	   #t)
 	  (else E)))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'userinfo))
+
+  (check
+      (let (((O uri.<userinfo>) '#vu8()))
+        (O uri-representation))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+        (O uri-representation))
+    => '#ve(ascii "marco@"))
+
+  (check
+      (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
+        (O uri-representation))
+    => '#ve(ascii "ci%3Fa%3Do@"))
+
+  (check
+      (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
+        (O percent-decoded))
+    => '#ve(ascii "ci?a=o"))
+
+  (check
+      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-uri-representation port)
+	  (getter)))
+    => '#ve(ascii "marco@"))
+
+  (check-for-true
+   (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+     (fixnum? (O hash))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (try
+	  (let (((O uri.<userinfo>) '#vu8(0)))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'host/registered-name))
+
+  (check	;empty host is fine
+      (let (((O uri.<host>) (string->host-object "")))
+	(O string))
+    => "")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "github.io")))
+	(O string))
+    => "github.io")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+	(O percent-encoded))
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check	;member of <bytevector> through <ip-address>
+      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+        (O percent-encoded percent-decoded))
+    => '#ve(ascii "ci?a=o"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+        (O uri-representation))
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-uri-representation port)
+	  (getter)))
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'host/ipv4-address))
+
+  (check
+      (let* ((port (mkport "1.2.3.4"))
+	     ((host uri.<host>) (receive (host.type host.ascii host.data)
+				    (uri.parse-host port)
+				  (ip.make-host-object host.type host.ascii host.data))))
+	(host string))
+    => "1.2.3.4")
+
+  #t)
+
+
+(parametrise ((check-test-name	'host/ipv6-address))
+
+  (check
+      (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
+	     ((host uri.<host>) (receive (host.type host.ascii host.data)
+				    (uri.parse-host port)
+				  (ip.make-host-object host.type host.ascii host.data))))
+	(host string))
+    => "[1:2:3:4:5:6:7:8]")
+
+  #t)
+
+
+(parametrise ((check-test-name	'host/ipvfuture))
+
+  (check
+      (let* ((port (mkport "[v9.ciao]"))
+	     ((host uri.<host>) (receive (host.type host.ascii host.data)
+				    (uri.parse-host port)
+				  (ip.make-host-object host.type host.ascii host.data))))
+	(host string))
+    => "[v9.ciao]")
 
   #t)
 
