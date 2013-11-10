@@ -110,7 +110,7 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <scheme>) port)
+  (method (put-uri-representation (O <scheme>) (port <binary-output-port>))
     (put-bytevector port O)
     ;;58 = #\:
     (put-u8         port 58))
