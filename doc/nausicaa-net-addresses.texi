@@ -253,8 +253,12 @@ address representations.
 (ip.<ipvfuture-address> O
   (<> (10 '#ve(ascii "ci%3Fa%3Do"))))
 
-(O string)                      @result{} "[vA.ci%3Fa%3Do]"
-(O percent-encoded)             @result{} #ve(ascii "[vA.ci%3Fa%3Do]")
+(O percent-encoded-string)
+@result{} "[vA.ci%3Fa%3Do]"
+
+(O percent-encoded-bytevector)
+@result{} #ve(ascii "[vA.ci%3Fa%3Do]")
+
 (O version-flag)                @result{} 10
 (O literal percent-decoded)     @result{} #ve(ascii "ci?a=o")
 @end example
@@ -871,8 +875,8 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @subsection Uniform Resource Identifier objects
 
 
-@cindex @library{nausicaa net address uri}, library
-@cindex Library @library{nausicaa net address uri}
+@cindex @library{nausicaa net addresses uri}, library
+@cindex Library @library{nausicaa net addresses uri}
 
 
 The library @library{nausicaa net addresses uri} exports utilities to
@@ -886,16 +890,52 @@ requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
 @menu
+* net addresses uri scheme::    @uri{} scheme objects.
 * net addresses uri uri::       Uniform Resource Identifiers objects.
 * net addresses uri ref::       Relative references objects.
 @end menu
+
+@c page
+@node net addresses uri scheme
+@subsubsection @uri{} scheme objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{scheme}
+Represents the @code{scheme} component of @uri{}s; it is derived from
+@class{nonempty-bytevector}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{scheme} @aclass{ascii-bytevector} uri-representation
+A bytevector representing the @code{scheme} component in the format
+requested by @rfc{3986}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{scheme} put-uri-representation (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{scheme}
+component in the format requested by @rfc{3986}.
+@end defmethod
+
 
 @c page
 @node net addresses uri uri
 @subsubsection Uniform Resource Identifiers objects
 
 
-The following bindings are exported by the @library{nausicaa parser-tools uri}
+The following bindings are exported by the @library{nausicaa net addresses uri}
 library.
 
 
@@ -1007,8 +1047,8 @@ Return true if @var{expr} evaluates to an instance of @class{uri}.
 @subsubsection Relative references objects
 
 
-The following bindings are exported by the @library{nausicaa parser-tools uri}
-library.
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
 
 
 @deftp Class @aclass{relative-ref}
