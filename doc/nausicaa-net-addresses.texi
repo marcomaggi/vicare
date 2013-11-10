@@ -40,7 +40,7 @@ The following bindings are exported by the library @library{nausicaa net
 addresses ip}.
 
 
-@deffn Multimethod ip-address-representation-string @var{ip-address}
+@deffn Multimethod ip-address->percent-encoded-string @var{ip-address}
 Given as argument an object type subclassed from @class{ip-address}
 build and return a string representation.  The returned value must
 represent the address string in percent--encoding as defined by @rfc{}
@@ -49,7 +49,7 @@ represent the address string in percent--encoding as defined by @rfc{}
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-percent @var{ip-address}
+@deffn Multimethod ip-address->percent-encoded-bytevector @var{ip-address}
 Given as argument an object type subclassed from @class{ip-address}
 build and return a bytevector representation.  The returned value must
 represent a string in percent--encoding as defined by @rfc{} 3986; every
@@ -57,7 +57,7 @@ octet in the bytevector represents an @ascii{} encoded character.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-bignum @var{ip-address}
+@deffn Multimethod ip-address->bignum @var{ip-address}
 Given as argument an object type subclassed from
 @class{ip-numeric-address} build and return an exact integer
 representation.
@@ -87,12 +87,12 @@ Supertype constructor for types derived from @class{ip-address}.  When
 called with some arguments it supports the following keyword values:
 
 @table @asis
-@item @keyword{string-rep} @var{obj}
+@item @keyword{percent-encoded-string} @var{obj}
 The argument @var{obj} must be @false{} or a string object
 representation of the address; it must represent the address string in
 percent--encoding as defined by @rfc{} 3986.
 
-@item @keyword{percent-rep} @var{obj}
+@item @keyword{percent-encoded-bytevector} @var{obj}
 The argument @var{obj} must be @false{} or a bytevector object
 representation of the address; it must represent a string in
 percent--encoding as defined by @rfc{} 3986.
@@ -104,23 +104,27 @@ percent--encoding as defined by @rfc{} 3986.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-string} string
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-string} percent-encoded-string
 String object representation of the address.  It must represent the
 address string in percent--encoding as defined by @rfc{} 3986; every
 character in the string can be directly converted to an @ascii{} encoded
-character.  The value of this field is set by the constructor or
-computed by the multimethod @func{ip-address-representation-string} and
-it is memoized in the object.
+character.
+
+The value of this field is set by the constructor with the keyword
+@keyword{percent-encoded-string} or computed by the multimethod
+@func{ip-address->percent-encoded-string} and memoized in the object.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-bytevector} percent-encoded
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{percent-encoded-bytevector} percent-encoded-bytevector
 Bytevector object representation of the address.  It must represent a
 string in percent--encoding as defined by @rfc{} 3986; every octet in
-the bytevector represents an @ascii{} encoded character.  The value of
-this field is set by the constructor or computed by the multimethod
-@func{ip-address-representation-percent} and it is memoized in the field
-@func{memoized-representation-percent}.
+the bytevector represents an @ascii{} encoded character.
+
+The value of this field is set by the constructor with the keyword
+@keyword{percent-encoded-bytevector} or computed by the multimethod
+@func{ip-address->percent-encoded-bytevector} and memoized in the
+object.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -128,12 +132,12 @@ this field is set by the constructor or computed by the multimethod
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ip-address})
+@deffn Multimethod ip-address->percent-encoded-bytevector (@var{addr} @aclass{ip-address})
 Build and return a bytevector representation of the address from its
 string representation; raise an error if a string representation cannot
-be built.  Expect all the characters in the field @code{string} of
-@var{addr} to be directly convertible to the corresponding @ascii{}
-encoding.
+be built.  Expect all the characters in the field
+@code{percent-encoded-string} of @var{addr} to be directly convertible
+to the corresponding @ascii{} encoding.
 @end deffn
 
 @c page
@@ -180,7 +184,7 @@ all the other values are handed to the constructor of
 @deftypecv {Immutable virtual field} @aclass{ip-numeric-address} @aclass{exact-integer} bignum
 Exact integer object representation of the address.  The value of this
 field is set by the constructor or computed by the multimethod
-@func{ip-address-representation-bignum} and it is memoized in the
+@func{ip-address->bignum} and it is memoized in the
 object.
 @end deftypecv
 
@@ -221,7 +225,7 @@ common constructor.
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{reg-name-address})
+@deffn Multimethod ip-address->percent-encoded-string (@var{addr} @aclass{reg-name-address})
 Objects of type @class{reg-name-address} have a percent--encoded
 bytevector representation set by the constructor; this method uses that
 to build a string representation.
@@ -305,7 +309,7 @@ a string in percent--encoding as defined by @rfc{} 3986.
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{ipvfuture-address})
+@deffn Multimethod ip-address->percent-encoded-string (@var{addr} @aclass{ipvfuture-address})
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.  The returned object still
 represents the literal as percent--encoded string.  The returned object
@@ -314,7 +318,7 @@ characters @samp{[} and @samp{]}.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ipvfuture-address})
+@deffn Multimethod ip-address->percent-encoded-bytevector (@var{addr} @aclass{ipvfuture-address})
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.
 @end deffn
@@ -490,19 +494,19 @@ True if the address prefix is @code{255.255.255.255}.  See Section 3
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->percent-encoded-string (@var{addr} @aclass{ipv4-address})
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->percent-encoded-bytevector (@var{addr} @aclass{ipv4-address})
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-bignum (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->bignum (@var{addr} @aclass{ipv4-address})
 Build and return an exact integer representation of the address.
 @end deffn
 
@@ -723,19 +727,19 @@ multicast, link--local unicast, global unicast.  See Section 2.4
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address-representation-string (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->percent-encoded-string (@var{addr} @aclass{ipv6-address})
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-percent (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->percent-encoded-bytevector (@var{addr} @aclass{ipv6-address})
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address-representation-bignum (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->bignum (@var{addr} @aclass{ipv6-address})
 Build and return an exact integer representation of the address.
 @end deffn
 

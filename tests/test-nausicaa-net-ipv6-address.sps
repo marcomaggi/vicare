@@ -961,7 +961,7 @@
 
   (check
       (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
-	(o string))
+	(o percent-encoded-string))
     => "[1:2:3:4:5:6:7:8]")
 
 ;;; --------------------------------------------------------------------

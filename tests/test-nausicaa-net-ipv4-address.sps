@@ -601,7 +601,7 @@
 
   (check
       (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
-	(o string))
+	(o percent-encoded-string))
     => "1.2.3.4")
 
 ;;; --------------------------------------------------------------------

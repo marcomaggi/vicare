@@ -789,12 +789,14 @@ string, @vicareref{stdlib bytevector strings, Operations on strings}.
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} ascii
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} $ascii
 Accessing this field is like applying @func{string->ascii} to the
 string, @vicareref{iklib strings, Additional string functions}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} latin1
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} $latin1
 Accessing this field is like applying @func{string->latin1} to the
 string, @vicareref{iklib strings, Additional string functions}.
 @end deftypecv
@@ -2084,48 +2086,56 @@ Conventional type for objects satisfying @func{fixnum?} and
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} even?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $even?
 Accessing this field is like applying to the instance number the
 function @func{fxeven?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} odd?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $odd?
 Accessing this field is like applying to the instance number the
 function @func{fxodd?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} negative?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $negative?
 Accessing this field is like applying to the instance number the
 function @func{fxnegative?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} positive?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $positive?
 Accessing this field is like applying to the instance number the
 function @func{fxpositive?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-negative?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $non-negative?
 Accessing this field is like applying to the instance number the
 function @func{fxnonnegative?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-positive?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $non-positive?
 Accessing this field is like applying to the instance number the
 function @func{fxnonpositive?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} zero?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $zero?
 Accessing this field is like applying to the instance number the
 function @func{fxzero?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{fixnum} sign
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{fixnum} $sign
 Accessing this field is like applying to the instance number the
 function @func{fxsign} from @library{vicare}.
 @end deftypecv
@@ -2167,6 +2177,12 @@ fixnums}.
 @end defmethod
 
 
+@defmethod @aclass{fixnum} add1
+@defmethodx @aclass{fixnum} $add1
+Add @math{1} to the instance number.
+@end defmethod
+
+
 @defmethod @aclass{fixnum} - @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
@@ -2177,6 +2193,12 @@ argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx-/carry} from @rsixlibrary{arithmetic
 fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} sub1
+@defmethodx @aclass{fixnum} $sub1
+Subtract @math{1} from the instance number.
 @end defmethod
 
 

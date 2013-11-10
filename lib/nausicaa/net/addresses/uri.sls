@@ -154,12 +154,12 @@
 
    (immutable (uri-representation <percent-encoded-bytevector>)
 	      (lambda ((O ip.<ip-address>))
-		(O percent-encoded)))
+		(O percent-encoded-bytevector)))
 
    #| end of virtual-fields |# )
 
   (method (put-uri-representation (O ip.<ip-address>) port)
-    (put-bytevector port (O percent-encoded)))
+    (put-bytevector port (O percent-encoded-bytevector)))
 
   #| end of label |# )
 
@@ -403,7 +403,7 @@
 		  (let ((authority (receive (authority-port authority-getter)
 				       (open-bytevector-output-port)
 				     (O $userinfo put-uri-representation authority-port)
-				     (O $host percent-encoded)
+				     (O $host percent-encoded-bytevector)
 				     (O $port put-uri-representation authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
@@ -466,7 +466,7 @@
 		  (let ((authority (receive (authority-port authority-getter)
 				       (open-bytevector-output-port)
 				     (O $userinfo put-uri-representation authority-port)
-				     (O $host percent-encoded)
+				     (O $host percent-encoded-bytevector)
 				     (O $port put-uri-representation authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
