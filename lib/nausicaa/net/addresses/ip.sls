@@ -45,11 +45,12 @@
     make-host-object
 
     ;; multimethods
-    ip-address-representation-string
-    ip-address-representation-percent
-    ip-address-representation-bignum)
+    ip-address->percent-encoded-string
+    ip-address->percent-encoded-bytevector
+    ip-address->bignum)
   (import (nausicaa)
     (vicare language-extensions keywords)
+    (vicare language-extensions ascii-chars)
     (vicare unsafe operations)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Thu Nov 7, 2013)
@@ -64,9 +65,9 @@
 
 ;;;; generic functions
 
-(define-generic ip-address-representation-string	(ip-address))
-(define-generic ip-address-representation-percent	(ip-address))
-(define-generic ip-address-representation-bignum	(ip-address))
+(define-generic ip-address->percent-encoded-string	(ip-address))
+(define-generic ip-address->percent-encoded-bytevector	(ip-address))
+(define-generic ip-address->bignum			(ip-address))
 
 
 ;;;; base IP address class
@@ -82,8 +83,8 @@
        ((make-top) #f #f))
       (args
        (let-keywords args args #f
-	 ((with-argument	string-rep	#f	#:string-rep)
-	  (with-argument	percent-rep	#f	#:percent-rep))
+	 ((with-argument	string-rep	#f	#:percent-encoded-string)
+	  (with-argument	percent-rep	#f	#:percent-encoded-bytevector))
 	 (assert (null? args))
 	 ((make-top) string-rep percent-rep)))
       )))
@@ -98,7 +99,7 @@
 		;
 		;FIXME This member should have access level "private".
 
-   (mutable memoized-representation-percent)
+   (mutable memoized-representation-bytevector)
 		;False  or  bytevector   object  representation  of  the
 		;address.     It   must    represent    a   string    in
 		;percent-encoding as  defined by RFC 3986.   Every octet
@@ -110,31 +111,31 @@
    #| end of fields |# )
 
   (virtual-fields
-   (immutable (string <percent-encoded-string>)
+   (immutable (percent-encoded-string <percent-encoded-string>)
 	      (lambda ((O <ip-address>))
 		(or (O $memoized-representation-string)
 		    (receive-and-return ((str <string>))
-			(ip-address-representation-string O)
+			(ip-address->percent-encoded-string O)
 		      (set! (O $memoized-representation-string) str)))))
 
-   (immutable (percent-encoded <percent-encoded-bytevector>)
+   (immutable (percent-encoded-bytevector <percent-encoded-bytevector>)
 	      (lambda ((O <ip-address>))
-		(or (O $memoized-representation-percent)
+		(or (O $memoized-representation-bytevector)
 		    (receive-and-return ((bv <percent-encoded-bytevector>))
-			(ip-address-representation-percent O)
-		      (set! (O $memoized-representation-percent) bv)))))
+			(ip-address->percent-encoded-bytevector O)
+		      (set! (O $memoized-representation-bytevector) bv)))))
 
    #| end of virtual-fields |# )
 
   #| end of class |# )
 
-(define-method (ip-address-representation-percent (O <ip-address>))
+(define-method (ip-address->percent-encoded-bytevector (O <ip-address>))
   ;;Build and return a bytevector representation of the address from its
   ;;string  representation.  Expects  all  the characters  in the  field
-  ;;"string"  to  be directly  convertible  to  the corresponding  ASCII
-  ;;encoding.
+  ;;"percent-encoded-string"   to  be   directly   convertible  to   the
+  ;;corresponding ASCII encoding.
   ;;
-  ($string->ascii (O string)))
+  ($string->ascii (O percent-encoded-string)))
 
 
 ;;;; numeric IP address class
@@ -169,7 +170,7 @@
 	      (lambda ((O <ip-numeric-address>))
 		(or (O $memoized-representation-bignum)
 		    (receive-and-return ((num <exact-integer>))
-			(ip-address-representation-bignum O)
+			(ip-address->bignum O)
 		      (set! (O $memoized-representation-bignum) num)))))
 
    #| end of virtual-fields |# )
@@ -186,11 +187,11 @@
   (protocol
    (lambda (make-ip-address)
      (lambda ((addr <percent-encoded-bytevector>))
-       ((make-ip-address #:percent-rep addr)))))
+       ((make-ip-address #:percent-encoded-bytevector addr)))))
 
   #| end of class |# )
 
-(define-method (ip-address-representation-string (O <reg-name-address>))
+(define-method (ip-address->percent-encoded-string (O <reg-name-address>))
   ;;Objects   of  type   "<reg-name-address>"  have   a  percent-encoded
   ;;bytevector representation  set by  the constructor;  we use  that to
   ;;build a string representation.
@@ -199,7 +200,7 @@
   ;;percent-encoded   representation.    The   returned   object   still
   ;;represents a percent-encoded string.
   ;;
-  ($ascii->string (O percent-encoded)))
+  ($ascii->string (O percent-encoded-bytevector)))
 
 
 ;;;; IP version "future" address class
@@ -223,7 +224,7 @@
 
   #| end of class |# )
 
-(define-method (ip-address-representation-percent (O <ipvfuture-address>))
+(define-method (ip-address->percent-encoded-bytevector (O <ipvfuture-address>))
   ;;Build and return  a bytevector representation of the  address in the
   ;;format specified for URIs by RFC 3986.
   ;;
@@ -233,10 +234,6 @@
   (define-inline-constant INT-v		(char->integer #\v))
   (define-inline-constant INT-0		(char->integer #\0))
   (define-inline-constant INT-A		(char->integer #\A))
-  (define-inline ($fixnum->ascii-hex n)
-    (if ($fx<= 0 n 9)
-	($fx+ INT-0 n)
-      ($fx+ INT-A ($fx- n 10))))
   (receive (port getter)
       (open-bytevector-output-port)
     (put-u8 port INT-OBRACKET)
@@ -247,12 +244,12 @@
     (put-u8 port INT-CBRACKET)
     (getter)))
 
-(define-method (ip-address-representation-string (O <ipvfuture-address>))
+(define-method (ip-address->percent-encoded-string (O <ipvfuture-address>))
   ;;Build  and return  a string  representation  of the  address in  the
   ;;format specified  for URIs by  RFC 3986.  The returned  object still
   ;;represents the literal as percent-encoded string.
   ;;
-  ($ascii->string (O percent-encoded)))
+  ($ascii->string (O percent-encoded-bytevector)))
 
 
 ;;;; IPv4 auxiliary labels
@@ -375,13 +372,13 @@
 
   #| end of class |# )
 
-(define-method (ip-address-representation-bignum (O <ipv4-address>))
+(define-method (ip-address->bignum (O <ipv4-address>))
   (+ (O $zeroth)
      (fxarithmetic-shift-left (O $first)   8)
      (fxarithmetic-shift-left (O $second) 16)
      (fxarithmetic-shift-left (O $third)  24)))
 
-(define-method (ip-address-representation-string (O <ipv4-address>))
+(define-method (ip-address->percent-encoded-string (O <ipv4-address>))
   (string-append (O $third  $string) "."
 		 (O $second $string) "."
 		 (O $first  $string) "."
@@ -500,14 +497,14 @@
 	      (lambda ((o <ipv6-address>))
 		(or (o memoized-unspecified?)
 		    (receive-and-return (B)
-			(and ($fxzero? (o $zeroth))
-			     ($fxzero? (o $first))
-			     ($fxzero? (o $second))
-			     ($fxzero? (o $third))
-			     ($fxzero? (o $fourth))
-			     ($fxzero? (o $fifth))
-			     ($fxzero? (o $sixth))
-			     ($fxzero? (o $seventh)))
+			(and (o $zeroth  $zero?)
+			     (o $first   $zero?)
+			     (o $second  $zero?)
+			     (o $third   $zero?)
+			     (o $fourth  $zero?)
+			     (o $fifth   $zero?)
+			     (o $sixth   $zero?)
+			     (o $seventh $zero?))
 		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable (loopback? <boolean>)
@@ -515,13 +512,13 @@
 		(or (o $memoized-unspecified?)
 		    (receive-and-return (B)
 			(and ($fx= 1   (o $zeroth))
-			     ($fxzero? (o $first))
-			     ($fxzero? (o $second))
-			     ($fxzero? (o $third))
-			     ($fxzero? (o $fourth))
-			     ($fxzero? (o $fifth))
-			     ($fxzero? (o $sixth))
-			     ($fxzero? (o $seventh)))
+			     (o $first   $zero?)
+			     (o $second  $zero?)
+			     (o $third   $zero?)
+			     (o $fourth  $zero?)
+			     (o $fifth   $zero?)
+			     (o $sixth   $zero?)
+			     (o $seventh $zero?))
 		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable (multicast? <boolean>)
@@ -546,7 +543,7 @@
 
   #| end of class |# )
 
-(define-method (ip-address-representation-bignum (O <ipv6-address>))
+(define-method (ip-address->bignum (O <ipv6-address>))
   (+ (O $zeroth)
      (bitwise-arithmetic-shift-left (O $first)    16)
      (bitwise-arithmetic-shift-left (O $second)   32)
@@ -556,7 +553,7 @@
      (bitwise-arithmetic-shift-left (O $sixth)    96)
      (bitwise-arithmetic-shift-left (O $seventh) 112)))
 
-(define-method (ip-address-representation-string (O <ipv6-address>))
+(define-method (ip-address->percent-encoded-string (O <ipv6-address>))
   (string-append "["
 		 (O $seventh $string 16) ":"
 		 (O $sixth   $string 16) ":"
@@ -567,8 +564,8 @@
 		 (O $first   $string 16) ":"
 		 (O $zeroth  $string 16) "]"))
 
-(define-method (ip-address-representation-percent (O <ipv6-address>))
-  ($string->ascii (O string)))
+(define-method (ip-address->percent-encoded-bytevector (O <ipv6-address>))
+  ($string->ascii (O percent-encoded-string)))
 
 
 ;;;; IPv6 address prefix class

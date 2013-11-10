@@ -513,6 +513,10 @@
    (immutable (utf16n		<bytevector-u16n>)		string->utf16n)
    (immutable (utf32		<bytevector-u32>)		string->utf32)
    (immutable (percent-encoding	<percent-encoded-bytevector>)	string->uri-encoding)
+
+   (immutable ($ascii		<ascii-bytevector>)		$string->ascii)
+   (immutable ($latin1		<bytevector-u8>)		$string->latin1)
+
    #| end of virtual-fields |#)
 
   (method (ref (S <string>) (idx <fixnum>))
@@ -1425,7 +1429,17 @@
    (immutable (non-negative?	<boolean>)	fxnonnegative?)
    (immutable (non-positive?	<boolean>)	fxnonpositive?)
    (immutable (zero?		<boolean>)	fxzero?)
-   (immutable (sign		<fixnum>)	fxsign))
+   (immutable (sign		<fixnum>)	fxsign)
+
+   (immutable ($even?		<boolean>)	$fxeven?)
+   (immutable ($odd?		<boolean>)	$fxodd?)
+   (immutable ($negative?	<boolean>)	$fxnegative?)
+   (immutable ($positive?	<boolean>)	$fxpositive?)
+   (immutable ($non-negative?	<boolean>)	$fxnonnegative?)
+   (immutable ($non-positive?	<boolean>)	$fxnonpositive?)
+   (immutable ($zero?		<boolean>)	$fxzero?)
+   (immutable ($sign		<fixnum>)	$fxsign)
+   #| end of virtual-fields |# )
 
   ;; methods: conversion
   (method-syntax string
@@ -1480,6 +1494,16 @@
       ((_ ?fx1 ?fx2 ?fx3)
        (fx+/carry ?fx1 ?fx2 ?fx3))))
 
+  (method-syntax add1
+    (syntax-rules ()
+      ((_ ?fx)
+       (fx+ ?fx 1))))
+
+  (method-syntax $add1
+    (syntax-rules ()
+      ((_ ?fx)
+       ($fxadd1 ?fx))))
+
   (method-syntax -
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
@@ -1489,6 +1513,16 @@
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3)
        (fx-/carry ?fx1 ?fx2 ?fx3))))
+
+  (method-syntax sub1
+    (syntax-rules ()
+      ((_ ?fx)
+       (fx- ?fx 1))))
+
+  (method-syntax $sub1
+    (syntax-rules ()
+      ((_ ?fx)
+       ($fxsub1 ?fx))))
 
   (method-syntax div
     (syntax-rules ()

@@ -146,22 +146,27 @@
 
   (check	;empty host is fine
       (let (((O uri.<host>) (string->host-object "")))
-	(O string))
+	(O percent-encoded-string))
     => "")
 
   (check	;member of <ip-address>
       (let (((O uri.<host>) (string->host-object "github.io")))
-	(O string))
+	(O percent-encoded-string))
     => "github.io")
 
   (check	;member of <ip-address>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-	(O percent-encoded))
+	(O percent-encoded-string))
+    => "ci%3Fa%3Do")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+	(O percent-encoded-bytevector))
     => '#ve(ascii "ci%3Fa%3Do"))
 
   (check	;member of <bytevector> through <ip-address>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-        (O percent-encoded percent-decoded))
+        (O percent-encoded-bytevector percent-decoded))
     => '#ve(ascii "ci?a=o"))
 
   (check	;member of <host>
@@ -187,7 +192,7 @@
 	     ((host uri.<host>) (receive (host.type host.ascii host.data)
 				    (uri.parse-host port)
 				  (ip.make-host-object host.type host.ascii host.data))))
-	(host string))
+	(host percent-encoded-string))
     => "1.2.3.4")
 
   #t)
@@ -200,7 +205,7 @@
 	     ((host uri.<host>) (receive (host.type host.ascii host.data)
 				    (uri.parse-host port)
 				  (ip.make-host-object host.type host.ascii host.data))))
-	(host string))
+	(host percent-encoded-string))
     => "[1:2:3:4:5:6:7:8]")
 
   #t)
@@ -213,7 +218,7 @@
 	     ((host uri.<host>) (receive (host.type host.ascii host.data)
 				    (uri.parse-host port)
 				  (ip.make-host-object host.type host.ascii host.data))))
-	(host string))
+	(host percent-encoded-string))
     => "[v9.ciao]")
 
   #t)
