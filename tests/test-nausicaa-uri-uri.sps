@@ -61,6 +61,12 @@
 
 (parametrise ((check-test-name	'scheme))
 
+  (check	;constructor
+      (let ()
+	(uri.<scheme> O (<> ('#ve(ascii "http"))))
+        (O uri-representation))
+    => '#ve(ascii "http:"))
+
   (check
       (let (((O uri.<scheme>) '#ve(ascii "http")))
         (O uri-representation))
@@ -94,6 +100,12 @@
 
 
 (parametrise ((check-test-name	'userinfo))
+
+  (check	;constructor
+      (let ()
+	(uri.<userinfo> O (<> ('#ve(ascii "marco"))))
+        (O uri-representation))
+    => '#ve(ascii "marco@"))
 
   (check
       (let (((O uri.<userinfo>) '#vu8()))

@@ -905,9 +905,24 @@ addresses uri} library.
 
 
 @deftp Label @aclass{scheme}
-Represents the @code{scheme} component of @uri{}s; it is derived from
-@class{nonempty-bytevector}.
+Label used to tag bytevectors representing the @code{scheme} component
+of @uri{}s; it is derived from @class{nonempty-bytevector}.
 @end deftp
+
+
+@defop Constructor @aclass{scheme} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of @class{scheme}.
+@end defop
+
+
+@defop Predicate @aclass{scheme} predicate @var{obj}
+Return @true{} if @var{obj} is a non--empty bytevector in which every
+octet can be interpreted as character in @ascii{} encoding; the first
+octet must represent an alphabetic character, the other octets must
+represent one among: an alphabetic character, a base @math{10} numeric
+characters, the sign plus, the sign minus, the dot.
+@end defop
 
 @c ------------------------------------------------------------
 
@@ -928,7 +943,6 @@ requested by @rfc{3986}.
 Write to @var{port} a bytevector representing the @code{scheme}
 component in the format requested by @rfc{3986}.
 @end defmethod
-
 
 @c page
 @node net addresses uri uri
