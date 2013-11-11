@@ -891,6 +891,7 @@ requirements of specific @uri{} schemes, like @code{http:} and
 
 @menu
 * net addresses uri scheme::    @uri{} scheme objects.
+* net addresses uri userinfo::  @uri{} userinfo objects.
 * net addresses uri uri::       Uniform Resource Identifiers objects.
 * net addresses uri ref::       Relative references objects.
 @end menu
@@ -918,10 +919,8 @@ enabled: validate the argument with the predicate of @class{scheme}.
 
 @defop Predicate @aclass{scheme} predicate @var{obj}
 Return @true{} if @var{obj} is a non--empty bytevector in which every
-octet can be interpreted as character in @ascii{} encoding; the first
-octet must represent an alphabetic character, the other octets must
-represent one among: an alphabetic character, a base @math{10} numeric
-characters, the sign plus, the sign minus, the dot.
+octet can be interpreted as character in @ascii{} encoding and the
+sequence of characters is valid for a @code{scheme} @uri{} component.
 @end defop
 
 @c ------------------------------------------------------------
@@ -941,6 +940,53 @@ requested by @rfc{3986}.
 
 @defmethod @aclass{scheme} put-uri-representation (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{scheme}
+component in the format requested by @rfc{3986}.
+@end defmethod
+
+@c page
+@node net addresses uri userinfo
+@subsubsection @uri{} userinfo objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{userinfo}
+Label used to tag bytevectors representing the @code{userinfo} component
+of @uri{}s; it is derived from @class{bytevector}.
+@end deftp
+
+
+@defop Constructor @aclass{userinfo} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of @class{userinfo}.
+@end defop
+
+
+@defop Predicate @aclass{userinfo} predicate @var{obj}
+Return @true{} if @var{obj} is a non--empty bytevector in which every
+octet can be interpreted as character in @ascii{} encoding and the
+sequence of characters is valid for a @code{userinfo} @uri{} component.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} uri-representation
+A bytevector representing the @code{userinfo} component in the format
+requested by @rfc{3986}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{userinfo} put-uri-representation (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{userinfo}
 component in the format requested by @rfc{3986}.
 @end defmethod
 
