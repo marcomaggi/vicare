@@ -5031,8 +5031,25 @@ that are encoded but should not are decoded.
 
 @defun uri-encoded-bytevector? @var{bv}
 @defunx percent-encoded-bytevector? @var{bv}
-Return @true{} if the argument is correctly percent--encoded bytevector
-according to @rfc{} 3986.
+Return @true{} if the argument is a correctly percent--encoded
+bytevector according to @rfc{} 3986.  This means every octet represents
+either one of the following characters in @ascii{} encoding:
+
+@example
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+-._~
+@end example
+
+@noindent
+or it is part of a percent--encoded sequence defined by the following
+grammar:
+
+@example
+pct-encoded   = "%" HEXDIG HEXDIG
+HEXDIG        = [0-9a-fA-F]
+@end example
 @end defun
 
 @c page
