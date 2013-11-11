@@ -94,13 +94,20 @@
 (define-label <scheme>
   (parent <nonempty-bytevector>)
 
-  (predicate (lambda (bv)
-	       (and ($ascii-alphabetic? ($bytevector-u8-ref bv 0))
-		    ($bytevector-for-all ($ascii-alpha-digit?
-					  $ascii-chi-plus?
-					  $ascii-chi-minus?
-					  $ascii-chi-dot?)
-					 1 bv))))
+  (protocol
+   (lambda ()
+     ;;Apply the predicate, through the tagged argument, and return.
+     (lambda ((bv <scheme>))
+       bv)))
+
+  (predicate
+   (lambda (bv)
+     (and ($ascii-alphabetic? ($bytevector-u8-ref bv 0))
+	  ($bytevector-for-all ($ascii-alpha-digit?
+				$ascii-chi-plus?
+				$ascii-chi-minus?
+				$ascii-chi-dot?)
+			       1 bv))))
 
   (virtual-fields
    (immutable (uri-representation <ascii-bytevector>)
@@ -121,7 +128,25 @@
 ;;;; auxiliary labels and classes: userinfo
 
 (define-label <userinfo>
-  (parent <percent-encoded-bytevector>)
+  (parent <bytevector>)
+
+  (protocol
+   (lambda ()
+     ;;Apply the predicate, through the tagged argument, and return.
+     (lambda ((bv <userinfo>))
+       bv)))
+
+  (predicate
+   (lambda (bv)
+     (let loop ((bv bv)
+		(i  0))
+       (or ($fx= i ($bytevector-length bv))
+	   (let ((chi ($bytevector-u8-ref bv i)))
+	     (and (or ($ascii-uri-unreserved? chi)
+		      ($ascii-uri-sub-delim?  chi)
+		      ($ascii-chi-colon?      chi)
+		      ($ascii-uri-pct-encoded? chi bv i))
+		  (loop bv ($fxadd1 i))))))))
 
   (virtual-fields
    (immutable (specified? <boolean>)

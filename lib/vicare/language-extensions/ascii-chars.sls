@@ -83,7 +83,8 @@
     $ascii-uri-sub-delim?
     $ascii-uri-reserved?
     $ascii-uri-unreserved?
-    $ascii-uri-pchar-not-percent-encoded?)
+    $ascii-uri-pchar-not-percent-encoded?
+    $ascii-uri-pct-encoded?)
   (import (vicare)
     (vicare arguments validation)
     (vicare unsafe operations))
@@ -364,6 +365,28 @@
       ($ascii-uri-sub-delim? chi)
       ($ascii-chi-colon? chi)
       ($ascii-chi-at-sign? chi)))
+
+(define-syntax ($ascii-uri-pct-encoded? stx)
+  (syntax-case stx ()
+    ;;CHI must  be a  fixnum representing  the octet at  index I  in the
+    ;;bytevector BV.   Check that the  3 bytes  at offset I  represent a
+    ;;percent-encoded sequence  and increment  I to reference  the third
+    ;;octet.
+    ;;
+    ((_ ?chi ?bv ?i)
+     (and (identifier? #'?bv)
+	  (identifier? #'?i))
+     #'(and ($ascii-chi-percent? ?chi)
+	    ;;There must  be at  least 2 more  octets after  the percent
+	    ;;character.
+	    (< (+ 2 ?i) ($bytevector-length ?bv))
+	    (begin
+	      ($fxincr! ?i)
+	      (and ($ascii-hex-digit? ($bytevector-u8-ref ?bv ?i))
+		   (begin
+		     ($fxincr! ?i)
+		     ($ascii-hex-digit? ($bytevector-u8-ref ?bv ?i)))))))
+    ))
 
 
 ;;;; done

@@ -3839,6 +3839,65 @@ component in @ascii{} encoding, with the exception of the
 percent--encoded sequence as defined by @rfc{} 3986.
 @end deffn
 
+
+@deffn Syntax $ascii-uri-pct-encoded? @meta{chi} @meta{bv} @meta{i}
+The argument @meta{chi} must be a fixnum representing the octet at index
+@meta{i} in the bytevector @meta{bv}; @meta{bv} and @meta{i} must be
+identifiers.  Return @true{} if the @math{3} bytes at offset @meta{i}
+represent a percent--encoded sequence and increment @meta{i} to
+reference the third octet; otherwise return @false{} and set @meta{i} to
+the offset of the offending octet; If there are not enough octets:
+return @false{} and leave @meta{i} unchanged.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare language-extensions ascii-chars))
+
+(let* ((bv  '#ve(ascii "ciao"))
+       (i   0)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 0
+
+(let* ((bv  '#ve(ascii "c%ABo"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #t 3
+
+(let* ((bv  '#ve(ascii "c%AB"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R    ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #t 3
+
+(let* ((bv  '#ve(ascii "c%AZ"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 3
+
+(let* ((bv  '#ve(ascii "c%ZA"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 2
+
+(let* ((bv  '#ve(ascii "c%A"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 1
+@end example
+@end deffn
+
 @c page
 @node hooks
 @section Running lists of functions
