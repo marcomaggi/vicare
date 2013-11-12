@@ -32,11 +32,11 @@
     uuid
 
     ;; Vicare specific
-    string->latin1		latin1->string
-    latin1-encoded-bytevector?
-
     string->ascii		ascii->string
-    ascii-encoded-bytevector?
+    ascii-encoded-bytevector?	ascii-encoded-string?
+
+    string->latin1		latin1->string
+    latin1-encoded-bytevector?	latin1-encoded-string?
 
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
@@ -63,10 +63,10 @@
     $string-concatenate		$string-reverse-and-concatenate
 
     $string->ascii		$ascii->string
-    $ascii-encoded-bytevector?
+    $ascii-encoded-bytevector?	$ascii-encoded-string?
 
     $string->latin1		$latin1->string
-    $latin1-encoded-bytevector?
+    $latin1-encoded-bytevector?	$latin1-encoded-string?
 
     $string-base64->bytevector	$bytevector->string-base64
     $bytevector->base64		$base64->bytevector
@@ -96,11 +96,11 @@
 		  uuid
 
 		  ;; Vicare specific
-		  string->latin1		latin1->string
-		  latin1-encoded-bytevector?
-
 		  string->ascii			ascii->string
-		  ascii-encoded-bytevector?
+		  ascii-encoded-bytevector?	ascii-encoded-string?
+
+		  string->latin1		latin1->string
+		  latin1-encoded-bytevector?	latin1-encoded-string?
 
 		  bytevector->hex		hex->bytevector
 		  string-hex->bytevector	bytevector->string-hex
@@ -122,7 +122,23 @@
 	    $string-total-length
 	    $string-concatenate
 	    $string-reverse-and-concatenate
-	    $string-empty?)
+	    $string-empty?
+
+	    $string->ascii			$ascii->string
+	    $ascii-encoded-bytevector?		$ascii-encoded-string?
+
+	    $string->latin1			$latin1->string
+	    $latin1-encoded-bytevector?		$latin1-encoded-string?
+
+	    $string-base64->bytevector		$bytevector->string-base64
+	    $bytevector->base64			$base64->bytevector
+
+	    $uri-encode				$uri-decode
+	    $normalise-uri-encoding
+	    $uri-encoded-bytevector?		$uri-encoded-string?
+	    $percent-encode			$percent-decode
+	    $percent-normalise-encoding
+	    $percent-encoded-bytevector?	$percent-encoded-string?)
     (vicare system $pairs))
 
 
@@ -1075,6 +1091,23 @@
   	(and ($latin1-chi? ($bytevector-u8-ref bv i))
   	     (loop ($fxadd1 i))))))
 
+;;; --------------------------------------------------------------------
+
+(define (latin1-encoded-string? str)
+  ;;Return  true if  the  argument is  interpretable  as Latin1  encoded
+  ;;string.
+  ;;
+  (define who 'latin1-encoded-string?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($latin1-encoded-string? str)))
+
+(define ($latin1-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and ($latin1-chi? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
+
 
 ;;;; ASCII bytevectors to/from strings
 
@@ -1140,6 +1173,23 @@
     (or ($fx= i ($bytevector-length bv))
 	(and ($ascii-chi? ($bytevector-u8-ref bv i))
 	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define (ascii-encoded-string? str)
+  ;;Return  true if  the  argument is  interpretable  as Ascii  encoded
+  ;;string.
+  ;;
+  (define who 'ascii-encoded-string?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($ascii-encoded-string? str)))
+
+(define ($ascii-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and ($ascii-chi? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
 
 
 ;;;; bytevectors to/from HEX strings

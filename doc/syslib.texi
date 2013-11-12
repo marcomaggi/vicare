@@ -5263,6 +5263,30 @@ return the result.  The resulting bytevector must have length
 @end defun
 
 
+@defun $ascii-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered an @ascii{} code point if:
+
+@example
+(<= #x00 chi #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun $latin1-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as a Latin1
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered a Latin1 code point if:
+
+@example
+(or (<= #x20 chi #x7E)
+    (<= #xA0 chi #xFF))
+@result{} #t
+@end example
+@end defun
+
+
 @defun $uri-encode @var{bytevector}
 @defunx $uri-decode @var{bytevector}
 Encode or decode a bytevector according to @rfc{} 3986 @uri{} percent
@@ -5407,30 +5431,31 @@ Convert to and from a Scheme string and a Scheme bytevector holding the
 @end defun
 
 
-@defun $ascii-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered an @ascii{} code point if:
+@defun $ascii-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an @ascii{} encoded
+string, otherwise return @false{}.  An character is considered an
+@ascii{} code point if its integer representation @var{chi} satisfies:
 
 @example
-(<= #x00 chi #x7F)      @result{} #t
+(<= #x00 @var{chi} #x7F)      @result{} #t
 @end example
 @end defun
 
 
-@defun $latin1-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as a Latin1
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered a Latin1 code point if:
+@defun $latin1-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as a Latin1 encoded
+string, otherwise return @false{}.  An character in the string is
+considered a Latin1 code point if its integer representation @var{chi}
+satisfies:
 
 @example
-(or (<= #x20 chi #x7E)
-    (<= #xA0 chi #xFF))
+(or (<= #x20 @var{chi} #x7E)
+    (<= #xA0 @var{chi} #xFF))
 @result{} #t
 @end example
+
+
 @end defun
-
-
 @defun $string-base64->bytevector @var{string}
 @defunx $bytevector->string-base64 @var{bytevector}
 Convert to and from a Scheme string and a Scheme bytevector.  The input

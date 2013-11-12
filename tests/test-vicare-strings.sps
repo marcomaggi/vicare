@@ -1291,6 +1291,16 @@
       (latin1-encoded-bytevector? '#vu8(1 2 3 255 10))
     => #f)
 
+;;;
+
+  (check
+      (latin1-encoded-string? test-string)
+    => #t)
+
+  (check
+      (latin1-encoded-string? (utf8->string '#vu8(1 2 3 255 10)))
+    => #f)
+
   #t)
 
 
@@ -1372,6 +1382,16 @@
 
   (check
       (ascii-encoded-bytevector? '#vu8(1 2 3 200 10))
+    => #f)
+
+;;;
+
+  (check
+      (ascii-encoded-string? test-string)
+    => #t)
+
+  (check
+      (ascii-encoded-string? (utf8->string '#vu8(1 2 3 200 10)))
     => #f)
 
   #t)

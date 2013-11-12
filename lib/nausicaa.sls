@@ -1503,6 +1503,7 @@
     ascii->string			string->ascii
     latin1->string			string->latin1
     ascii-encoded-bytevector?		latin1-encoded-bytevector?
+    ascii-encoded-string?		latin1-encoded-string?
 
     ;; URI/percent encoding
     string->uri-encoding		uri-encoding->string
@@ -1566,7 +1567,9 @@
     ;; built-in types
     <top> <boolean> <symbol> <keyword> <pointer>
     <pair> <mutable-pair> <spine> <list>
-    <char> <string> <mutable-string> <vector>
+    <char>
+    <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
+    <vector>
     <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
     <fixnum> <positive-fixnum> <negative-fixnum>
@@ -1588,7 +1591,7 @@
     <bytevector-u64l> <bytevector-s64l> <bytevector-u64b> <bytevector-s64b> <bytevector-u64n> <bytevector-s64n>
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
-    <ascii-bytevector> <percent-encoded-bytevector>
+    <ascii-bytevector> <latin1-bytevector> <percent-encoded-bytevector>
 
     <hashable-and-properties-clauses>
 
