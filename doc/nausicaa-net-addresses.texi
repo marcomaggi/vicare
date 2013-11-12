@@ -947,6 +947,7 @@ requirements of specific @uri{} schemes, like @code{http:} and
 * net addresses uri host::        @uri{} host objects.
 * net addresses uri port-number:: @uri{} port-number objects.
 * net addresses uri query::       @uri{} query objects.
+* net addresses uri fragment::    @uri{} fragment objects.
 * net addresses uri uri::         Uniform Resource Identifiers objects.
 * net addresses uri ref::         Relative references objects.
 @end menu
@@ -1229,6 +1230,71 @@ requested by @rfc{} 3986.
 @defmethod @aclass{query} put-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{query} component
 in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri fragment
+@subsubsection @uri{} fragment objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{fragment}
+Label used to tag bytevectors representing the @code{fragment} component of
+@uri{}s; it is derived from @class{bytevector}.
+@end deftp
+
+
+@defop Constructor @aclass{fragment} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of @class{fragment}.
+@end defop
+
+
+@defop Maker @aclass{fragment} @aclass{fragment} (@var{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
+@defop Predicate @aclass{fragment} predicate @var{obj}
+Return @true{} if @var{obj} is a non--empty bytevector in which every
+octet can be interpreted as character in @ascii{} encoding and the
+sequence of characters is valid for a @code{fragment} @uri{} component.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{fragment} @aclass{boolean} specified?
+According to @rfc{} 3986 the @code{fragment} component of @uri{}s can be
+empty.  This field is @true{} if the bytevector has non--zero length,
+@false{} otherwise.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fragment} @aclass{ascii-bytevector} bytevector
+A bytevector representing the @code{fragment} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{fragment} @aclass{ascii-string} string
+A string representing the @code{fragment} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{fragment} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{fragment}
+component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
