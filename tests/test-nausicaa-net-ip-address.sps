@@ -62,17 +62,17 @@
 			((make-ip-address) num))))
 	  (fields (immutable (num <number>))))
 
-	(define-method (ip.ip-address->percent-encoded-string (O <one-address>))
+	(define-method (ip.ip-address->string (O <one-address>))
 	  (O num string))
 
-	(define-method (ip.ip-address->percent-encoded-bytevector (O <one-address>))
+	(define-method (ip.ip-address->bytevector (O <one-address>))
 	  (O num string percent-encoding))
 
 	(<one-address> O (<> (123)))
 
 	(values (O num)
-		(O percent-encoded-string) (O percent-encoded-string)
-		(O percent-encoded-bytevector)  (O percent-encoded-bytevector)))
+		(O string) (O string)
+		(O bytevector)  (O bytevector)))
     => 123 "123" "123" '#ve(ascii "123") '#ve(ascii "123"))
 
   ;;This  makes  use of  the  ascii  representation method  defined  for
@@ -87,14 +87,14 @@
 			((make-ip-address) num))))
 	  (fields (immutable (num <number>))))
 
-	(define-method (ip.ip-address->percent-encoded-string (O <two-address>))
+	(define-method (ip.ip-address->string (O <two-address>))
 	  (O num string))
 
 	(<two-address> O (<> (123)))
 
 	(values (O num)
-		(O percent-encoded-string)
-		(O percent-encoded-bytevector)))
+		(O string)
+		(O bytevector)))
     => 123 "123" '#ve(ascii "123"))
 
   #t)
@@ -113,10 +113,10 @@
 			((make-ip-numeric-address) num))))
 	  (fields (immutable (num <number>))))
 
-	(define-method (ip.ip-address->percent-encoded-string (O <one-address>))
+	(define-method (ip.ip-address->string (O <one-address>))
 	  (O num string))
 
-	(define-method (ip.ip-address->percent-encoded-bytevector (O <one-address>))
+	(define-method (ip.ip-address->bytevector (O <one-address>))
 	  (O num string percent-encoding))
 
 	(define-method (ip.ip-address->bignum (O <one-address>))
@@ -125,10 +125,10 @@
 	(<one-address> O (<> (123)))
 
 	(values (O num)
-		(O percent-encoded-string)
-		(O percent-encoded-string)
-		(O percent-encoded-bytevector)
-		(O percent-encoded-bytevector)
+		(O string)
+		(O string)
+		(O bytevector)
+		(O bytevector)
 		(O bignum)
 		(O bignum)))
     => 123 "123" "123" '#ve(ascii "123") '#ve(ascii "123") 123 123)
@@ -145,7 +145,7 @@
 			((make-ip-numeric-address) num))))
 	  (fields (immutable (num <number>))))
 
-	(define-method (ip.ip-address->percent-encoded-string (O <two-address>))
+	(define-method (ip.ip-address->string (O <two-address>))
 	  (O num string))
 
 	(define-method (ip.ip-address->bignum (O <two-address>))
@@ -154,8 +154,8 @@
 	(<two-address> O (<> (123)))
 
 	(values (O num)
-		(O percent-encoded-string)
-		(O percent-encoded-bytevector)
+		(O string)
+		(O bytevector)
 		(O bignum)))
     => 123 "123" '#ve(ascii "123") 123)
 
@@ -168,9 +168,9 @@
       (let ()
 	(ip.<reg-name-address> O (<> ('#ve(ascii "ci%3Fa%3Do"))))
 
-	(values (O percent-encoded-string) (O percent-encoded-string)
-		(O percent-encoded-bytevector)  (O percent-encoded-bytevector)
-		(O percent-encoded-bytevector percent-decoded)))
+	(values (O string) (O string)
+		(O bytevector)  (O bytevector)
+		(percent-decode (O bytevector))))
     => "ci%3Fa%3Do" "ci%3Fa%3Do"
     '#ve(ascii "ci%3Fa%3Do") '#ve(ascii "ci%3Fa%3Do")
     '#ve(ascii "ci?a=o"))
@@ -184,9 +184,9 @@
       (let ()
 	(ip.<ipvfuture-address> O (<> (10 '#ve(ascii "ci%3Fa%3Do"))))
 
-	(values (O percent-encoded-string) (O percent-encoded-string)
-		(O percent-encoded-bytevector) (O percent-encoded-bytevector)
-		(O literal percent-decoded)))
+	(values (O string) (O string)
+		(O bytevector) (O bytevector)
+		(percent-decode (O literal))))
     => "[vA.ci%3Fa%3Do]" "[vA.ci%3Fa%3Do]"
     '#ve(ascii "[vA.ci%3Fa%3Do]") '#ve(ascii "[vA.ci%3Fa%3Do]")
     '#ve(ascii "ci?a=o"))
@@ -203,7 +203,7 @@
 	     ((host ip.<reg-name-address>) (receive (host.type host.ascii host.data)
 					       (uri.parse-host port)
 					     (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "github.io")
 
   (check
@@ -211,7 +211,7 @@
 	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "github.io")
 
 ;;; --------------------------------------------------------------------
@@ -222,7 +222,7 @@
 	     ((host ip.<ipv4-address>) (receive (host.type host.ascii host.data)
 					   (uri.parse-host port)
 					 (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "1.2.3.4")
 
   (check
@@ -230,7 +230,7 @@
 	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "1.2.3.4")
 
 ;;; --------------------------------------------------------------------
@@ -241,7 +241,7 @@
 	     ((host ip.<ipv6-address>) (receive (host.type host.ascii host.data)
 					   (uri.parse-host port)
 					 (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "[1:2:3:4:5:6:7:8]")
 
   (check
@@ -249,7 +249,7 @@
 	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "[1:2:3:4:5:6:7:8]")
 
 ;;; --------------------------------------------------------------------
@@ -260,7 +260,7 @@
 	     ((host ip.<ipvfuture-address>) (receive (host.type host.ascii host.data)
 						(uri.parse-host port)
 					      (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "[v9.ciao]")
 
   (check
@@ -268,7 +268,7 @@
 	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+	(host string))
     => "[v9.ciao]")
 
   #t)
