@@ -59,6 +59,8 @@
     ;;Maggi; Mon Nov 4, 2013)
     (only (vicare system $bytevectors)
 	  $uri-encoded-bytevector?)
+    (only (vicare system $strings)
+	  $ascii->string)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Fri Nov 8, 2013)
     (only (vicare system $lists)
@@ -115,6 +117,10 @@
 		;;58 = #\:
 		(bytevector-append O '#vu8(58))))
 
+   (immutable (string <ascii-string>)
+	      (lambda ((O <scheme>))
+		($ascii->string (O bytevector))))
+
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <scheme>) (port <binary-output-port>))
@@ -158,6 +164,10 @@
 		(if (O specified?)
 		    (bytevector-append O #vu8(64)) ;64 = #\@
 		  '#vu8())))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <userinfo>))
+		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
