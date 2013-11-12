@@ -961,8 +961,13 @@
 
   (check
       (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
-	(o percent-encoded-string))
+	(o string))
     => "[1:2:3:4:5:6:7:8]")
+
+  (check
+      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
+	(o bytevector))
+    => '#ve(ascii "[1:2:3:4:5:6:7:8]"))
 
 ;;; --------------------------------------------------------------------
 
@@ -1034,12 +1039,12 @@
       (let (((o <ipv6-address-prefix>) (receive (addr len)
 					   (parse-ipv6-address-prefix "1:2:3:4::/50")
 					 (<ipv6-address-prefix> (len addr)))))
-	(values (o string) (o ascii)))
+	(values (o string) (o bytevector)))
     => "1:2:3:4:0:0:0:0/50" '#ve(ascii "1:2:3:4:0:0:0:0/50"))
 
   (check
       (let (((o <ipv6-address-prefix>) (<ipv6-address-prefix> (50 1 2 3 4 5 6 7 8))))
-	(values (o string) (o ascii)))
+	(values (o string) (o bytevector)))
     => "1:2:3:4:5:6:7:8/50" '#ve(ascii "1:2:3:4:5:6:7:8/50"))
 
   #t)

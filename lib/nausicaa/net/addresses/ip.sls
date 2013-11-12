@@ -422,7 +422,7 @@
 			       (O $zeroth  $string) "/"
 			       (O $prefix-length $string))))
 
-   (immutable (ascii <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <ipv4-address-prefix>))
 		($string->ascii (O string))))
 
@@ -625,7 +625,7 @@
 			       (O $zeroth  $string 16) "/"
 			       (O $prefix-length $string))))
 
-   (immutable (ascii <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <ipv6-address-prefix>))
 		($string->ascii (O string))))
 
