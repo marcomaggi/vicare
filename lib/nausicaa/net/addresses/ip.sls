@@ -111,7 +111,7 @@
    #| end of fields |# )
 
   (virtual-fields
-   (immutable (string <string>)
+   (immutable (string <ascii-string>)
 	      (lambda ((O <ip-address>))
 		(or (O $memoized-representation-string)
 		    (receive-and-return ((str <string>))

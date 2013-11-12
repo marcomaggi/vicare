@@ -110,7 +110,7 @@ representation of the address as defined by @rfc{} 3986.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{string} string
+@deftypecv {Immutable virtual field} @aclass{ip-address} @aclass{ascii-string} string
 String object representation of the address.  It must represent the
 address string as defined by @rfc{} 3986; every character in the string
 can be directly converted to an @ascii{} encoded character, some
@@ -986,7 +986,7 @@ sequence of characters is valid for a @code{scheme} @uri{} component.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{scheme} @aclass{ascii-bytevector} uri-representation
+@deftypecv {Immutable virtual field} @aclass{scheme} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{scheme} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
@@ -996,7 +996,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{scheme} put-uri-representation (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{scheme} put-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{scheme}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1038,7 +1038,14 @@ sequence of characters is valid for a @code{userinfo} @uri{} component.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} uri-representation
+@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{boolean} specified?
+According to @rfc{} 3986 the @code{userinfo} component of @uri{}s is can
+be empty.  This field is @true{} if the bytevector has non--zero length,
+@false{} otherwise.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{userinfo} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
@@ -1048,7 +1055,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{userinfo} put-uri-representation (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{userinfo} put-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{userinfo}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1073,7 +1080,7 @@ Label used to tag bytevectors representing the @code{host} component of
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{host} @aclass{ascii-bytevector} uri-representation
+@deftypecv {Immutable virtual field} @aclass{host} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{host} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
@@ -1083,7 +1090,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{host} put-uri-representation (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{host} put-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{host} component
 in the format requested by @rfc{} 3986.
 @end defmethod
