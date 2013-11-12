@@ -704,6 +704,18 @@ a sublabel of @aclass{string}.
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{ascii-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{ascii-encoded-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{latin1-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{latin1-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+
 @deftp {Builtin Label} @aclass{percent-encoded-string}
 Conventional type for mutable objects satisfying @func{string?} and
 @func{percent-encoded-string?}.  It is a sublabel of @aclass{string}.
@@ -1197,6 +1209,16 @@ is derived from @class{bytevector-u8}.  The predicate of this label
 returns @true{} if all the octets in the bytevector are in the range
 @math{[0, 127]}; long bytevectors may need significant time to be
 validated this way.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{latin1-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as octets representing Latin1 characters; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+returns @true{} if all the octets in the bytevector are in one of the
+ranges @code{[#x20, #x7E]} and @code{[#xA0, #xFF]}; long bytevectors may
+need significant time to be validated this way.
 @end deftp
 
 

@@ -337,9 +337,17 @@
     ;; $string->ascii
     ;; $ascii->string
     ;; $ascii-encoded-bytevector?
+    ;; $ascii-encoded-string?
+
     ;; $string->latin1
     ;; $latin1->string
     ;; $latin1-encoded-bytevector?
+    ;; $latin1-encoded-string?
+
+    ;; $string-base64->bytevector
+    ;; $bytevector->string-base64
+    ;; $bytevector->base64
+    ;; $base64->bytevector
 
     ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
     ;;Maggi; Mon Nov 4, 2013)
@@ -347,12 +355,12 @@
     ;; $uri-decode
     ;; $uri-normalise-encoding
     ;; $uri-encoded-bytevector?
+    ;; $uri-encoded-string?
     ;; $percent-encode
     ;; $percent-decode
     ;; $percent-normalise-encoding
     ;; $percent-encoded-bytevector?
-    ;; $string-base64->bytevector
-    ;; $bytevector->string-base64
+    ;; $percent-encoded-string?
 
 ;;; --------------------------------------------------------------------
 

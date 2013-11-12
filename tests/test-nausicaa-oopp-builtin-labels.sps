@@ -665,6 +665,28 @@
   #t)
 
 
+(parametrise ((check-test-name	'ascii-strings))
+
+  (check
+      (let* (((A <ascii-string>) "ciao")
+	     ((B <ascii-string>) (A copy)))
+	(B[1]))
+    => #\i)
+
+  #f)
+
+
+(parametrise ((check-test-name	'latin1-strings))
+
+  (check
+      (let* (((A <latin1-string>) "ciao")
+	     ((B <latin1-string>) (A copy)))
+	(B[1]))
+    => #\i)
+
+  #f)
+
+
 (parametrise ((check-test-name	'vectors))
 
 ;;; predicate
@@ -1000,6 +1022,24 @@
   (check
       (let* (((A <ascii-bytevector>) '#vu8(10 20 30 40 50 60 70 80))
 	     ((B <ascii-bytevector>) (A copy)))
+	(set! B[1] 29)
+	(B[1]))
+    => 29)
+
+  #f)
+
+
+(parametrise ((check-test-name	'latin1-bytevectors))
+
+  (check
+      (let* (((A <latin1-bytevector>) '#ve(latin1 "ciao"))
+	     ((B <latin1-bytevector>) (A copy)))
+	(B[1]))
+    => 105)
+
+  (check
+      (let* (((A <latin1-bytevector>) '#ve(latin1 "ciao"))
+	     ((B <latin1-bytevector>) (A copy)))
 	(set! B[1] 29)
 	(B[1]))
     => 29)

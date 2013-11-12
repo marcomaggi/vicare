@@ -5113,6 +5113,24 @@ not in the range of the maximum string length.
 @end defun
 
 
+@defun string->ascii @var{string}
+@defunx ascii->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@ascii{} encoding of the characters.
+@end defun
+
+
+@defun ascii-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an @ascii{} encoded
+string, otherwise return @false{}.  An character is considered an
+@ascii{} code point if its integer representation @var{chi} satisfies:
+
+@example
+(<= #x00 @var{chi} #x7F)      @result{} #t
+@end example
+@end defun
+
+
 @defun string->latin1 @var{string}
 @defunx latin1->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
@@ -5120,10 +5138,17 @@ Latin-1 encoding of the characters.
 @end defun
 
 
-@defun string->ascii @var{string}
-@defunx ascii->string @var{bytevevctor}
-Convert to and from a Scheme string and a Scheme bytevector holding the
-@ascii{} encoding of the characters.
+@defun latin1-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as a Latin1 encoded
+string, otherwise return @false{}.  An character in the string is
+considered a Latin1 code point if its integer representation @var{chi}
+satisfies:
+
+@example
+(or (<= #x20 @var{chi} #x7E)
+    (<= #xA0 @var{chi} #xFF))
+@result{} #t
+@end example
 @end defun
 
 

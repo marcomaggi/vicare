@@ -31,7 +31,8 @@
     <top>
     <boolean> <symbol> <keyword> <pointer>
     <pair> <mutable-pair> <spine> <list>
-    <char> <string> <percent-encoded-string> <mutable-string>
+    <char>
+    <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
     <fixnum> <positive-fixnum> <negative-fixnum>
@@ -54,7 +55,7 @@
     <bytevector-u64l> <bytevector-s64l> <bytevector-u64b> <bytevector-s64b> <bytevector-u64n> <bytevector-s64n>
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
-    <ascii-bytevector> <percent-encoded-bytevector>
+    <ascii-bytevector> <latin1-bytevector> <percent-encoded-bytevector>
 
     <hashable-and-properties-clauses>
 
@@ -86,12 +87,16 @@
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Mon Nov 4, 2013)
     (only (vicare system $bytevectors)
-	  $uri-encoded-bytevector?
+	  $ascii-encoded-bytevector?
+	  $latin1-encoded-bytevector?
+	  $percent-encoded-bytevector?
 	  $percent-encode
 	  $percent-decode)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Sat Nov 9, 2013)
     (only (vicare system $strings)
+	  $ascii-encoded-string?
+	  $latin1-encoded-string?
 	  $percent-encoded-string?))
 
 
@@ -571,6 +576,16 @@
   (protocol (lambda () string))
   (predicate $percent-encoded-string?))
 
+(define-builtin-label <ascii-string>
+  (parent <string>)
+  (protocol (lambda () string))
+  (predicate $ascii-encoded-string?))
+
+(define-builtin-label <latin1-string>
+  (parent <string>)
+  (protocol (lambda () string))
+  (predicate $latin1-encoded-string?))
+
 
 ;;;; built-in types: vector
 
@@ -745,18 +760,15 @@
 
 (define-label <ascii-bytevector>
   (parent <bytevector-u8>)
-  (predicate
-   (lambda/tags ((bv <bytevector-u8>))
-     (let loop ((i 0))
-       (or ($fx= i (bv $length))
-	   (if ($fx<= 0 (bv[i]) 127)
-	       (loop ($fxadd1 i))
-	     #f)))))
-  #| end of label |# )
+  (predicate $ascii-encoded-bytevector?))
+
+(define-label <latin1-bytevector>
+  (parent <bytevector-u8>)
+  (predicate $latin1-encoded-bytevector?))
 
 (define-label <percent-encoded-bytevector>
   (parent <bytevector-u8>)
-  (predicate $uri-encoded-bytevector?))
+  (predicate $percent-encoded-bytevector?))
 
 
 ;;;; built-in types: hashtables
