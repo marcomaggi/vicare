@@ -40,8 +40,8 @@
     <list-of-segments>
 
     ;; multimethods
-    uri-path->uri-representation
-    uri-path-put-uri-representation
+    uri-path->bytevector
+    uri-path-put-bytevector
 
     ;; utility functions
     make-path-object
@@ -110,14 +110,14 @@
 			       1 bv))))
 
   (virtual-fields
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <scheme>))
 		;;58 = #\:
 		(bytevector-append O '#vu8(58))))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <scheme>) (port <binary-output-port>))
+  (method (put-bytevector (O <scheme>) (port <binary-output-port>))
     (put-bytevector port O)
     ;;58 = #\:
     (put-u8         port 58))
@@ -153,7 +153,7 @@
 	      (lambda (bv)
 		($bytevector-not-empty? bv)))
 
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <userinfo>))
 		(if (O specified?)
 		    (bytevector-append O #vu8(64)) ;64 = #\@
@@ -161,7 +161,7 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <userinfo>) port)
+  (method (put-bytevector (O <userinfo>) port)
     (when (O specified?)
       (put-bytevector port O)
       ;;64 = #\@
@@ -175,16 +175,8 @@
 (define-label <host>
   (parent ip.<ip-address>)
 
-  (virtual-fields
-
-   (immutable (uri-representation <ascii-bytevector>)
-	      (lambda ((O ip.<ip-address>))
-		(O percent-encoded-bytevector)))
-
-   #| end of virtual-fields |# )
-
-  (method (put-uri-representation (O ip.<ip-address>) port)
-    (put-bytevector port (O percent-encoded-bytevector)))
+  (method (put-bytevector (O ip.<ip-address>) port)
+    (put-bytevector port (O bytevector)))
 
   #| end of label |# )
 
@@ -201,7 +193,7 @@
 	      (lambda (fx)
 		(not ($fxzero? fx))))
 
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <port-number>))
 		(if (O specified?)
 		    (bytevector-append (string->ascii (number->string O)) '#vu8(58)) ;58 = #\:
@@ -209,7 +201,7 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation (O <port-number>) port)
+  (method (put-bytevector (O <port-number>) port)
     (when (O specified?)
       (put-bytevector port (string->ascii (number->string O)))
       ;;58 = #\:
@@ -224,14 +216,14 @@
   (parent <percent-encoded-bytevector>)
   (virtual-fields
 
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda (O)
 		;;63 = ?
 		(bytevector-append '#vu8(63) O)))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation O port)
+  (method (put-bytevector O port)
     ;;63 = ?
     (put-u8 port 63)
     (put-bytevector port O))
@@ -245,14 +237,14 @@
   (parent <percent-encoded-bytevector>)
   (virtual-fields
 
-   (immutable (uri-representation <ascii-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda (O)
 		;;35 = #
 		(bytevector-append '#vu8(35) O)))
 
    #| end of virtual-fields |# )
 
-  (method (put-uri-representation O port)
+  (method (put-bytevector O port)
     ;;35 = #
     (put-u8 port 35)
     (put-bytevector port O))
@@ -262,8 +254,8 @@
 
 ;;;; path types
 
-(define-generic uri-path->uri-representation (uri))
-(define-generic uri-path-put-uri-representation (uri port))
+(define-generic uri-path->bytevector (uri))
+(define-generic uri-path-put-bytevector (uri port))
 
 (define-label <segment-bytevector>
   (parent <percent-encoded-bytevector>)
@@ -286,15 +278,15 @@
 		((make-top) (map uri-decode path) #f))))
 
   (virtual-fields
-   (immutable (uri-representation <bytevector>)
-	      uri-path->uri-representation)
+   (immutable (bytevector <bytevector>)
+	      uri-path->bytevector)
    #| end of virtual-fields |# )
 
-  (methods (put-uri-representation uri-path-put-uri-representation))
+  (methods (put-bytevector uri-path-put-bytevector))
 
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <path>))
+(define-method (uri-path->bytevector (O <path>))
   (or (O $memoized-bytevector)
       (receive-and-return (rep)
 	  (receive (port getter)
@@ -307,8 +299,8 @@
 	    (getter))
 	(set! (O $memoized-bytevector) rep))))
 
-(define-method (uri-path-put-uri-representation (O <path>) (port <binary-output-port>))
-  (put-bytevector port (O uri-representation)))
+(define-method (uri-path-put-bytevector (O <path>) (port <binary-output-port>))
+  (put-bytevector port (O bytevector)))
 
 ;;; --------------------------------------------------------------------
 
@@ -330,7 +322,7 @@
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <path-abempty>))
+(define-method (uri-path->bytevector (O <path-abempty>))
   (or (O $memoized-bytevector)
       (receive-and-return (bv)
 	  (receive (port getter)
@@ -352,7 +344,7 @@
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->uri-representation (O <path-absolute>))
+(define-method (uri-path->bytevector (O <path-absolute>))
   (or (O $memoized-bytevector)
       (receive-and-return (bv)
 	  (receive (port getter)
@@ -424,12 +416,12 @@
 		(define who '<uri>-bytevector)
 		(receive (port getter)
 		    (open-bytevector-output-port)
-		  (O $scheme put-uri-representation port)
+		  (O $scheme put-bytevector port)
 		  (let ((authority (receive (authority-port authority-getter)
 				       (open-bytevector-output-port)
-				     (O $userinfo put-uri-representation authority-port)
-				     (O $host percent-encoded-bytevector)
-				     (O $port put-uri-representation authority-port)
+				     (O $userinfo put-bytevector authority-port)
+				     (O $host     put-bytevector authority-port)
+				     (O $port     put-bytevector authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
 			      ((<path-abempty>) O)
@@ -437,9 +429,9 @@
 		      (put-u8 47 port) ;47 = #\/
 		      (put-u8 47 port) ;47 = #\/
 		      (put-bytevector authority port)))
-		  (O $path  put-uri-representation port)
-		  (O $query put-uri-representation port)
-		  (O $fragment put-uri-representation port)
+		  (O $path  put-bytevector port)
+		  (O $query put-bytevector port)
+		  (O $fragment put-bytevector port)
 		  (getter))))
 
    #| end of virtual-fields |# )
@@ -490,9 +482,9 @@
 		    (open-bytevector-output-port)
 		  (let ((authority (receive (authority-port authority-getter)
 				       (open-bytevector-output-port)
-				     (O $userinfo put-uri-representation authority-port)
-				     (O $host percent-encoded-bytevector)
-				     (O $port put-uri-representation authority-port)
+				     (O $userinfo put-bytevector authority-port)
+				     (O $host     put-bytevector authority-port)
+				     (O $port     put-bytevector authority-port)
 				     (authority-getter))))
 		    (when (or ($bytevector-not-empty? authority)
 			      ((<path-abempty>) O)
@@ -500,9 +492,9 @@
 		      (put-u8 47 port) ;47 = #\/
 		      (put-u8 47 port) ;47 = #\/
 		      (put-bytevector authority port)))
-		  (O $path  put-uri-representation port)
-		  (O $query put-uri-representation port)
-		  (O $fragment put-uri-representation port)
+		  (O $path  put-bytevector port)
+		  (O $query put-bytevector port)
+		  (O $fragment put-bytevector port)
 		  (getter))))
 
    #| end of virtual-fields|# )

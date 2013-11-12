@@ -64,19 +64,19 @@
   (check	;constructor
       (let ()
 	(uri.<scheme> O (<> ('#ve(ascii "http"))))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "http:"))
 
   (check
       (let (((O uri.<scheme>) '#ve(ascii "http")))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "http:"))
 
   (check
       (let (((O uri.<scheme>) '#ve(ascii "http")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
-	  (O put-uri-representation port)
+	  (O put-bytevector port)
 	  (getter)))
     => '#ve(ascii "http:"))
 
@@ -104,22 +104,22 @@
   (check	;constructor
       (let ()
 	(uri.<userinfo> O (<> ('#ve(ascii "marco"))))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "marco@"))
 
   (check
       (let (((O uri.<userinfo>) '#vu8()))
-        (O uri-representation))
+        (O bytevector))
     => '#vu8())
 
   (check
       (let (((O uri.<userinfo>) '#ve(ascii "marco")))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "marco@"))
 
   (check
       (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "ci%3Fa%3Do@"))
 
   (check
@@ -131,7 +131,7 @@
       (let (((O uri.<userinfo>) '#ve(ascii "marco")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
-	  (O put-uri-representation port)
+	  (O put-bytevector port)
 	  (getter)))
     => '#ve(ascii "marco@"))
 
@@ -158,39 +158,39 @@
 
   (check	;empty host is fine
       (let (((O uri.<host>) (string->host-object "")))
-	(O percent-encoded-string))
+	(O string))
     => "")
 
   (check	;member of <ip-address>
       (let (((O uri.<host>) (string->host-object "github.io")))
-	(O percent-encoded-string))
+	(O string))
     => "github.io")
 
   (check	;member of <ip-address>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-	(O percent-encoded-string))
+	(O string))
     => "ci%3Fa%3Do")
 
   (check	;member of <ip-address>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-	(O percent-encoded-bytevector))
+	(O bytevector))
     => '#ve(ascii "ci%3Fa%3Do"))
 
   (check	;member of <bytevector> through <ip-address>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-        (O percent-encoded-bytevector percent-decoded))
+        (percent-decode (O bytevector)))
     => '#ve(ascii "ci?a=o"))
 
   (check	;member of <host>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
-        (O uri-representation))
+        (O bytevector))
     => '#ve(ascii "ci%3Fa%3Do"))
 
   (check	;member of <host>
       (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
-	  (O put-uri-representation port)
+	  (O put-bytevector port)
 	  (getter)))
     => '#ve(ascii "ci%3Fa%3Do"))
 
@@ -199,39 +199,79 @@
 
 (parametrise ((check-test-name	'host/ipv4-address))
 
-  (check
-      (let* ((port (mkport "1.2.3.4"))
-	     ((host uri.<host>) (receive (host.type host.ascii host.data)
-				    (uri.parse-host port)
-				  (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+	(O string))
     => "1.2.3.4")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+	(O bytevector))
+    => '#ve(ascii "1.2.3.4"))
+
+  (check	;member of <bytevector> through <ip-address>
+      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+	(percent-decode (O bytevector)))
+    => '#ve(ascii "1.2.3.4"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+        (O bytevector))
+    => '#ve(ascii "1.2.3.4"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "1.2.3.4"))
 
   #t)
 
 
 (parametrise ((check-test-name	'host/ipv6-address))
 
-  (check
-      (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
-	     ((host uri.<host>) (receive (host.type host.ascii host.data)
-				    (uri.parse-host port)
-				  (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+	(O string))
     => "[1:2:3:4:5:6:7:8]")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+	(O bytevector))
+    => '#ve(ascii "[1:2:3:4:5:6:7:8]"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "[1:2:3:4:5:6:7:8]"))
 
   #t)
 
 
 (parametrise ((check-test-name	'host/ipvfuture))
 
-  (check
-      (let* ((port (mkport "[v9.ciao]"))
-	     ((host uri.<host>) (receive (host.type host.ascii host.data)
-				    (uri.parse-host port)
-				  (ip.make-host-object host.type host.ascii host.data))))
-	(host percent-encoded-string))
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+	(O string))
     => "[v9.ciao]")
+
+  (check	;member of <ip-address>
+      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+	(O bytevector))
+    => '#ve(ascii "[v9.ciao]"))
+
+  (check	;member of <host>
+      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "[v9.ciao]"))
 
   #t)
 

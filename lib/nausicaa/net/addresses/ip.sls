@@ -45,8 +45,8 @@
     make-host-object
 
     ;; multimethods
-    ip-address->percent-encoded-string
-    ip-address->percent-encoded-bytevector
+    ip-address->string
+    ip-address->bytevector
     ip-address->bignum)
   (import (nausicaa)
     (vicare language-extensions keywords)
@@ -65,9 +65,9 @@
 
 ;;;; generic functions
 
-(define-generic ip-address->percent-encoded-string	(ip-address))
-(define-generic ip-address->percent-encoded-bytevector	(ip-address))
-(define-generic ip-address->bignum			(ip-address))
+(define-generic ip-address->string	(ip-address))
+(define-generic ip-address->bytevector	(ip-address))
+(define-generic ip-address->bignum	(ip-address))
 
 
 ;;;; base IP address class
@@ -83,27 +83,27 @@
        ((make-top) #f #f))
       (args
        (let-keywords args args #f
-	 ((with-argument	string-rep	#f	#:percent-encoded-string)
-	  (with-argument	percent-rep	#f	#:percent-encoded-bytevector))
+	 ((with-argument	string-rep	#f	#:string-rep)
+	  (with-argument	percent-rep	#f	#:bytevector-rep))
 	 (assert (null? args))
 	 ((make-top) string-rep percent-rep)))
       )))
 
   (fields
    (mutable memoized-representation-string)
-		;False or  string object representation of  the address.
-		;It    must   represent    the    address   string    in
-		;percent-encoding  as   defined  by  RFC   3986.   Every
-		;character in the string can be directly converted to an
-		;ASCII encoded character.
+		;False or string object representation of the address as
+		;defined by RFC 3986.  Every character in the string can
+		;be directly  converted to  an ASCII  encoded character,
+		;some   sequences   of   characters  may   represent   a
+		;percent-encoded character.
 		;
 		;FIXME This member should have access level "private".
 
    (mutable memoized-representation-bytevector)
 		;False  or  bytevector   object  representation  of  the
-		;address.     It   must    represent    a   string    in
-		;percent-encoding as  defined by RFC 3986.   Every octet
-		;in   the  bytevector   represents   an  ASCII   encoded
+		;address as  defined by  RFC 3986.   Every octet  in the
+		;bytevector represents an  ASCII encoded character, some
+		;sequences  of octets  may  represent a  percent-encoded
 		;character.
 		;
 		;FIXME This member should have access level "private".
@@ -111,31 +111,31 @@
    #| end of fields |# )
 
   (virtual-fields
-   (immutable (percent-encoded-string <percent-encoded-string>)
+   (immutable (string <string>)
 	      (lambda ((O <ip-address>))
 		(or (O $memoized-representation-string)
 		    (receive-and-return ((str <string>))
-			(ip-address->percent-encoded-string O)
+			(ip-address->string O)
 		      (set! (O $memoized-representation-string) str)))))
 
-   (immutable (percent-encoded-bytevector <percent-encoded-bytevector>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <ip-address>))
 		(or (O $memoized-representation-bytevector)
-		    (receive-and-return ((bv <percent-encoded-bytevector>))
-			(ip-address->percent-encoded-bytevector O)
+		    (receive-and-return ((bv <ascii-bytevector>))
+			(ip-address->bytevector O)
 		      (set! (O $memoized-representation-bytevector) bv)))))
 
    #| end of virtual-fields |# )
 
   #| end of class |# )
 
-(define-method (ip-address->percent-encoded-bytevector (O <ip-address>))
+(define-method (ip-address->bytevector (O <ip-address>))
   ;;Build and return a bytevector representation of the address from its
-  ;;string  representation.  Expects  all  the characters  in the  field
-  ;;"percent-encoded-string"   to  be   directly   convertible  to   the
-  ;;corresponding ASCII encoding.
+  ;;string  representation.   Expect all  the  characters  in the  field
+  ;;"string"  to  be directly  convertible  to  the corresponding  ASCII
+  ;;encoding.
   ;;
-  ($string->ascii (O percent-encoded-string)))
+  ($string->ascii (O string)))
 
 
 ;;;; numeric IP address class
@@ -187,11 +187,11 @@
   (protocol
    (lambda (make-ip-address)
      (lambda ((addr <percent-encoded-bytevector>))
-       ((make-ip-address #:percent-encoded-bytevector addr)))))
+       ((make-ip-address #:bytevector-rep addr)))))
 
   #| end of class |# )
 
-(define-method (ip-address->percent-encoded-string (O <reg-name-address>))
+(define-method (ip-address->string (O <reg-name-address>))
   ;;Objects   of  type   "<reg-name-address>"  have   a  percent-encoded
   ;;bytevector representation  set by  the constructor;  we use  that to
   ;;build a string representation.
@@ -200,7 +200,7 @@
   ;;percent-encoded   representation.    The   returned   object   still
   ;;represents a percent-encoded string.
   ;;
-  ($ascii->string (O percent-encoded-bytevector)))
+  ($ascii->string (O bytevector)))
 
 
 ;;;; IP version "future" address class
@@ -215,7 +215,7 @@
   (parent <ip-address>)
 
   (fields (immutable (version-flag	<ipvfuture-version-flag>))
-	  (immutable (literal		<percent-encoded-bytevector>)))
+	  (immutable (literal		<ascii-bytevector>)))
 
   (protocol
    (lambda (make-ip-address)
@@ -224,7 +224,7 @@
 
   #| end of class |# )
 
-(define-method (ip-address->percent-encoded-bytevector (O <ipvfuture-address>))
+(define-method (ip-address->bytevector (O <ipvfuture-address>))
   ;;Build and return  a bytevector representation of the  address in the
   ;;format specified for URIs by RFC 3986.
   ;;
@@ -244,12 +244,11 @@
     (put-u8 port INT-CBRACKET)
     (getter)))
 
-(define-method (ip-address->percent-encoded-string (O <ipvfuture-address>))
+(define-method (ip-address->string (O <ipvfuture-address>))
   ;;Build  and return  a string  representation  of the  address in  the
-  ;;format specified  for URIs by  RFC 3986.  The returned  object still
-  ;;represents the literal as percent-encoded string.
+  ;;format specified for URIs by RFC 3986.
   ;;
-  ($ascii->string (O percent-encoded-bytevector)))
+  ($ascii->string (O bytevector)))
 
 
 ;;;; IPv4 auxiliary labels
@@ -378,7 +377,10 @@
      (fxarithmetic-shift-left (O $second) 16)
      (fxarithmetic-shift-left (O $third)  24)))
 
-(define-method (ip-address->percent-encoded-string (O <ipv4-address>))
+(define-method (ip-address->string (O <ipv4-address>))
+  ;;Build  and return  a string  representation  of the  address in  the
+  ;;format specified for URIs by RFC 3986.
+  ;;
   (string-append (O $third  $string) "."
 		 (O $second $string) "."
 		 (O $first  $string) "."
@@ -553,7 +555,10 @@
      (bitwise-arithmetic-shift-left (O $sixth)    96)
      (bitwise-arithmetic-shift-left (O $seventh) 112)))
 
-(define-method (ip-address->percent-encoded-string (O <ipv6-address>))
+(define-method (ip-address->string (O <ipv6-address>))
+  ;;Build  and return  a string  representation  of the  address in  the
+  ;;format specified for URIs by RFC 3986.
+  ;;
   (string-append "["
 		 (O $seventh $string 16) ":"
 		 (O $sixth   $string 16) ":"
@@ -564,8 +569,11 @@
 		 (O $first   $string 16) ":"
 		 (O $zeroth  $string 16) "]"))
 
-(define-method (ip-address->percent-encoded-bytevector (O <ipv6-address>))
-  ($string->ascii (O percent-encoded-string)))
+(define-method (ip-address->bytevector (O <ipv6-address>))
+  ;;Build and return  a bytevector representation of the  address in the
+  ;;format specified for URIs by RFC 3986.
+  ;;
+  ($string->ascii (O string)))
 
 
 ;;;; IPv6 address prefix class
