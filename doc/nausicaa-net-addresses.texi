@@ -991,6 +991,12 @@ A bytevector representing the @code{scheme} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
 
+
+@deftypecv {Immutable virtual field} @aclass{scheme} @aclass{ascii-string} string
+A string representing the @code{scheme} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading Methods
@@ -1047,6 +1053,12 @@ be empty.  This field is @true{} if the bytevector has non--zero length,
 
 @deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{userinfo} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-string} string
+A string representing the @code{userinfo} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
 

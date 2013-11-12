@@ -74,6 +74,11 @@
 
   (check
       (let (((O uri.<scheme>) '#ve(ascii "http")))
+        (O string))
+    => "http:")
+
+  (check
+      (let (((O uri.<scheme>) '#ve(ascii "http")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -113,9 +118,19 @@
     => '#vu8())
 
   (check
+      (let (((O uri.<userinfo>) '#vu8()))
+        (O string))
+    => "")
+
+  (check
       (let (((O uri.<userinfo>) '#ve(ascii "marco")))
         (O bytevector))
     => '#ve(ascii "marco@"))
+
+  (check
+      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+        (O string))
+    => "marco@")
 
   (check
       (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
