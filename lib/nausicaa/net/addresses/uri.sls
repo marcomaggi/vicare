@@ -193,31 +193,53 @@
 
 ;;;; auxiliary labels and classes: port number
 
-(define-label <port-number>
-  (parent <nonnegative-fixnum>)
-  (predicate (lambda (fx)
-	       ($fx<= fx 65535)))
+(module (<port-number>)
 
-  (virtual-fields
-   (immutable (specified? <boolean>)
-	      (lambda (fx)
-		(not ($fxzero? fx))))
+  (define-label <port-number>
+    (parent <nonnegative-fixnum>)
+    (predicate
+     (lambda (fx)
+       ($fx<= fx 65535)))
 
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <port-number>))
-		(if (O specified?)
-		    (bytevector-append (string->ascii (number->string O)) '#vu8(58)) ;58 = #\:
-		  '#vu8())))
+    (protocol
+     (lambda ()
+       ;;Validate the value through the tagged argument and return it.
+       (lambda ((fx <port-number>))
+	 fx)))
 
-   #| end of virtual-fields |# )
+    (virtual-fields
+     (immutable (specified? <boolean>)
+		(lambda (fx)
+		  (not ($fxzero? fx))))
 
-  (method (put-bytevector (O <port-number>) port)
-    (when (O specified?)
-      (put-bytevector port (string->ascii (number->string O)))
-      ;;58 = #\:
-      (put-u8 port 58)))
+     (immutable (bytevector <ascii-bytevector>)
+		(lambda ((O <port-number>))
+		  (if (O specified?)
+		      ;;58 = #\:
+		      (bytevector-append '#vu8(58) ($fixnum->bytevector O))
+		    '#vu8())))
 
-  #| end of label |# )
+     (immutable (string <ascii-string>)
+		(lambda ((O <port-number>))
+		  ($ascii->string (O bytevector))))
+
+     #| end of virtual-fields |# )
+
+    (method (put-bytevector (O <port-number>) port)
+      (when (O specified?)
+	;;58 = #\:
+	(put-u8 port 58)
+	(put-bytevector port (string->ascii (number->string O)))))
+
+    #| end of label |# )
+
+  (define-inline ($fixnum->bytevector fx)
+    (string->ascii (fixnum->string fx)))
+
+  (define-inline (fixnum->string fx)
+    (number->string fx))
+
+  #| end of module |# )
 
 
 ;;;; auxiliary labels and classes: query

@@ -291,6 +291,227 @@
   #t)
 
 
+(parametrise ((check-test-name	'port-number))
+
+  (check	;constructor
+      (let ()
+	(uri.<port-number> O (<> (8080)))
+        (O bytevector))
+    => '#ve(ascii ":8080"))
+
+  (check
+      (let (((O uri.<port-number>) 0))
+        (O bytevector))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<port-number>) 0))
+        (O string))
+    => "")
+
+  (check-for-false
+   (let (((O uri.<port-number>) 0))
+     (O specified?)))
+
+  (check-for-true
+   (let (((O uri.<port-number>) 8080))
+     (O specified?)))
+
+  (check
+      (let (((O uri.<port-number>) 8080))
+        (O bytevector))
+    => '#ve(ascii ":8080"))
+
+  (check
+      (let (((O uri.<port-number>) 8080))
+        (O string))
+    => ":8080")
+
+  (check
+      (let (((O uri.<port-number>) 8080))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii ":8080"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (try
+	  (let (((O uri.<port-number>) "ciao"))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'class-uri))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?string)
+       (doit ?string ?string))
+      ((_ ?input-string ?expected-string)
+       (begin
+	 (check
+	     (let (((o uri.<uri>) (make uri.<uri>
+				    (uri.source-bytevector (string->ascii ?input-string)))))
+	       o.string)
+	   => ?expected-string)
+	 (check
+	     (let (((o uri.<uri>) (make uri.<uri>
+				    (uri.source-bytevector (string->ascii ?input-string)))))
+	       o.bytevector)
+	   => (string->ascii ?expected-string))))))
+
+;;; --------------------------------------------------------------------
+
+  (doit "http://www.spiffy.org/the/path/name?question%3Danswer#anchor-point")
+
+  (doit "ci:ao/")
+  (doit "ci:ao/a///")
+  (doit "ci:ao/ciao")
+  (doit "ci:ao/ciao/hello/salut")
+  (doit "http://")
+  (doit "http://?query")
+  (doit "http://#fragment")
+  (doit "http:///")
+  (doit "http:///?query" )
+  (doit "http:///ciao" )
+  (doit "http://ciao.com:8080")
+  (doit "http://ciao.com:8080/")
+  (doit "http://ciao.com/a/b/c")
+
+;;; with authority
+
+  (doit "http://")
+  (doit "http://#fragment")
+  (doit "http:///?query")
+  (doit "http:///ciao")
+  (doit "http://ciao.com:8080")
+  (doit "http://ciao.com:8080/")
+  (doit "http://ciao.com/a/b/c")
+
+;;; no authority, emtpy path
+
+  (doit "http:" "http://")
+  (doit "http:?query" "http://?query")
+  (doit "http:#fragment" "http://#fragment")
+
+;;; no authority, absolute path
+
+  (doit "http:/")
+  (doit "http:/ciao")
+  (doit "http:/ciao/hello/salut")
+
+;;; no authority, relative path rootless
+
+  (doit "http:./")
+  (doit "http:./a///")
+  (doit "http:./ciao")
+  (doit "http:./ciao/hello/salut")
+
+;;; IPv4address
+
+  (doit "http://1.2.3.4/a/b/c")
+  (doit "http://10.20.30.40/a/b/c")
+
+;;; IPv6address
+
+  (doit "http://[1:2:3:4:5:6:7:8]/a/b/c")
+  (doit "http://[a:b:c:d:e:f:a:b]/a/b/c")
+  (doit "http://[1:2:3:4::172.30.67.254]/a/b/c")
+
+;;; ipvfuture
+
+  (doit "http://[v4.12345]/a/b/c")
+  (doit "http://[vF.12345]/a/b/c")
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'class-relative-ref))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?string)
+       (doit ?string ?string))
+      ((_ ?input-string ?expected-string)
+       (begin
+	 (check
+	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
+					     (uri.source-bytevector (string->ascii ?input-string)))))
+	       o.string)
+	   => ?expected-string)
+	 (check
+	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
+					     (uri.source-bytevector (string->ascii ?input-string)))))
+	       o.bytevector)
+	   => (string->ascii ?expected-string))))))
+
+;;; --------------------------------------------------------------------
+
+;;; with authority, no scheme
+
+  (doit "//")
+  (doit "//?query")
+  (doit "//#fragment")
+  (doit "///")
+  (doit "///?query")
+  (doit "///#fragment")
+  (doit "///ciao")
+  (doit "//ciao.com")
+  (doit "//ciao.com:8080")
+  (doit "//marco@ciao.com:8080")
+  (doit "//ciao.com:8080/")
+  (doit "//ciao.com:8080/a")
+  (doit "//ciao.com/a/b/c")
+  (doit "//ciao.com:8080/a/b/c")
+
+;;; no authority, emtpy path
+
+  (doit "" "//")
+  (doit "?query" "//?query")
+  (doit "#fragment" "//#fragment")
+
+;;; no authority, absolute path
+
+  (doit "/")
+  (doit "/a///")
+  (doit "/ciao")
+  (doit "/ciao/hello/salut")
+
+;;; no authority, relative path rootless
+
+  (doit "./")
+  (doit "./a///")
+  (doit "./ciao")
+  (doit "./ciao/hello/salut")
+
+;;; IPv4address
+
+  (doit "//1.2.3.4/a/b/c")
+  (doit "//10.20.30.40/a/b/c")
+
+;;; IPv6address
+
+  (doit "//[1:2:3:4:5:6:7:8]/a/b/c")
+  (doit "//[a:b:c:d:e:f:a:b]/a/b/c")
+  (doit "//[1:2:3:4::172.30.67.254]/a/b/c")
+
+;;; ipvfuture
+
+  (doit "//[v4.12345]/a/b/c")
+  (doit "//[vF.12345]/a/b/c")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
