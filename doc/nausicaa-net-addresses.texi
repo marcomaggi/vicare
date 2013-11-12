@@ -942,11 +942,12 @@ requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
 @menu
-* net addresses uri scheme::    @uri{} scheme objects.
-* net addresses uri userinfo::  @uri{} userinfo objects.
-* net addresses uri host::      @uri{} host objects.
-* net addresses uri uri::       Uniform Resource Identifiers objects.
-* net addresses uri ref::       Relative references objects.
+* net addresses uri scheme::      @uri{} scheme objects.
+* net addresses uri userinfo::    @uri{} userinfo objects.
+* net addresses uri host::        @uri{} host objects.
+* net addresses uri port-number:: @uri{} port-number objects.
+* net addresses uri uri::         Uniform Resource Identifiers objects.
+* net addresses uri ref::         Relative references objects.
 @end menu
 
 @c page
@@ -1045,8 +1046,8 @@ sequence of characters is valid for a @code{userinfo} @uri{} component.
 
 
 @deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{boolean} specified?
-According to @rfc{} 3986 the @code{userinfo} component of @uri{}s is can
-be empty.  This field is @true{} if the bytevector has non--zero length,
+According to @rfc{} 3986 the @code{userinfo} component of @uri{}s can be
+empty.  This field is @true{} if the bytevector has non--zero length,
 @false{} otherwise.
 @end deftypecv
 
@@ -1089,11 +1090,68 @@ Label used to tag bytevectors representing the @code{host} component of
 
 @c ------------------------------------------------------------
 
+@subsubheading Methods
+
+
+@defmethod @aclass{host} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{host} component
+in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri port-number
+@subsubsection @uri{} port--number objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{port-number}
+Label used to tag fixnums representing the @code{port-number} component
+of @uri{}s; it is derived from @class{nonnegative-fixnum}.  The value
+@samp{0} is conventionally assumed to mean ``unspecified port number''
+when used as @class{port-number} instance.
+@end deftp
+
+
+@defop Constructor @aclass{port-number} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of
+@class{port-number}.
+@end defop
+
+
+@defop Maker @aclass{port-number} @aclass{port-number} (@var{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
+@defop Predicate @aclass{port-number} predicate @var{obj}
+Return @true{} if @var{obj} is a non--negative fixnum in the range
+@math{[0, 65535]}.
+@end defop
+
+@c ------------------------------------------------------------
+
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{host} @aclass{ascii-bytevector} bytevector
-A bytevector representing the @code{host} component in the format
+@deftypecv {Immutable virtual field} @aclass{port-number} @aclass{boolean} specified?
+According to @rfc{} 3986 the @code{port-number} component of @uri{}s can
+be empty.  This field is @true{} if the fixnum is zero, @false{}
+otherwise.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port-number} @aclass{ascii-bytevector} bytevector
+A bytevector representing the @code{port-number} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{port-number} @aclass{ascii-string} string
+A string representing the @code{port-number} component in the format
 requested by @rfc{} 3986.
 @end deftypecv
 
@@ -1102,9 +1160,9 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{host} put-bytevector (@var{port} @aclass{binary-output-port})
-Write to @var{port} a bytevector representing the @code{host} component
-in the format requested by @rfc{} 3986.
+@defmethod @aclass{port-number} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{port-number}
+component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
