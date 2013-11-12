@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (nausicaa net addresses ip)
   (nausicaa parser-tools ipv4-addresses)
@@ -601,8 +601,13 @@
 
   (check
       (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
-	(o percent-encoded-string))
+	(o string))
     => "1.2.3.4")
+
+  (check
+      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
+	(o bytevector))
+    => '#ve(ascii "1.2.3.4"))
 
 ;;; --------------------------------------------------------------------
 
@@ -796,6 +801,13 @@
 					 (<ipv4-address-prefix> (len addr)))))
 	(o string))
     => "1.2.3.4/8")
+
+  (check
+      (let (((o <ipv4-address-prefix>) (receive (addr len)
+					   (parse-ipv4-address-prefix "1.2.3.4/8")
+					 (<ipv4-address-prefix> (len addr)))))
+	(o bytevector))
+    => '#ve(ascii "1.2.3.4/8"))
 
   #t)
 

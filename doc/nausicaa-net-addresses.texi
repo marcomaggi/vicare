@@ -648,7 +648,7 @@ The string representation of the address prefix.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{ipv4-address-prefix} @aclass{ascii-bytevector} ascii
+@deftypecv {Immutable virtual field} @aclass{ipv4-address-prefix} @aclass{ascii-bytevector} bytevector
 The bytevector representation of the address prefix, in @ascii{}
 encoding.
 @end deftypecv
@@ -885,7 +885,7 @@ The string representation of the address prefix.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{ipv6-address-prefix} @aclass{ascii-bytevector} ascii
+@deftypecv {Immutable virtual field} @aclass{ipv6-address-prefix} @aclass{ascii-bytevector} bytevector
 The bytevector representation of the address prefix, in @ascii{}
 encoding.
 @end deftypecv
