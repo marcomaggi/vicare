@@ -342,6 +342,42 @@ representations of @ip{} addresses.  It is derived from @class{fixnum}.
 The version flag must be in the range @math{[0, 15]}.
 @end deftp
 
+
+@defun make-host-object (@var{type} @aclass{symbol}) (@var{ascii} @aclass{bytevector}) @var{data}
+Build and return a new instance of specialised object of class
+@class{ip-address} representing the host component of a @uri{}.  The
+possible classes of the returned object are: @class{reg-name-address},
+@class{ipv4-address}, @class{ipv6-address}, @class{ipvfuture-address}.
+
+@var{type} must be a symbol among: @code{reg-name}, @code{ipv4-address}, @code{ipv6-address},
+@code{ipvfuture}.
+
+@var{ascii} must be a bytevector representing the @ascii{}
+representation of the host component.
+
+@var{data} must be auxiliary data representing the host component:
+
+@itemize
+@item
+For @code{reg-name}: @var{data} is undefined and unused.
+
+@item
+For @code{ipv4-address}: @var{data} must be a vector of @math{4} exact
+integers representing the address components.
+
+@item
+For @code{ipv6-address}: @var{data} must be a vector of @math{8} exact
+integers representing the address components.
+
+@item
+For @code{ipvfuture}: @var{data} must be an exact integer representing
+the version number of the @ip{} address literal representation.
+@end itemize
+
+The arguments are modeled after the @math{3} return values of
+@func{parse-host} from the library @library{nausicaa parser-tools uri}.
+@end defun
+
 @c page
 @node net addresses ipv4
 @subsection Ipv4 address objects
@@ -638,8 +674,8 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @subsection IPv6 address objects
 
 
-@cindex @library{nausicaa net address ip}, library
-@cindex Library @library{nausicaa net address ip}
+@cindex @library{nausicaa net addresses ip}, library
+@cindex Library @library{nausicaa net addresses ip}
 
 
 The library @library{nausicaa net addresses ip} exports utilities to
@@ -892,6 +928,7 @@ requirements of specific @uri{} schemes, like @code{http:} and
 @menu
 * net addresses uri scheme::    @uri{} scheme objects.
 * net addresses uri userinfo::  @uri{} userinfo objects.
+* net addresses uri host::      @uri{} host objects.
 * net addresses uri uri::       Uniform Resource Identifiers objects.
 * net addresses uri ref::       Relative references objects.
 @end menu
@@ -917,6 +954,11 @@ enabled: validate the argument with the predicate of @class{scheme}.
 @end defop
 
 
+@defop Maker @aclass{scheme} @aclass{scheme} (@meta{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
 @defop Predicate @aclass{scheme} predicate @var{obj}
 Return @true{} if @var{obj} is a non--empty bytevector in which every
 octet can be interpreted as character in @ascii{} encoding and the
@@ -930,7 +972,7 @@ sequence of characters is valid for a @code{scheme} @uri{} component.
 
 @deftypecv {Immutable virtual field} @aclass{scheme} @aclass{ascii-bytevector} uri-representation
 A bytevector representing the @code{scheme} component in the format
-requested by @rfc{3986}.
+requested by @rfc{} 3986.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -940,7 +982,7 @@ requested by @rfc{3986}.
 
 @defmethod @aclass{scheme} put-uri-representation (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{scheme}
-component in the format requested by @rfc{3986}.
+component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
@@ -964,6 +1006,11 @@ enabled: validate the argument with the predicate of @class{userinfo}.
 @end defop
 
 
+@defop Maker @aclass{userinfo} @aclass{userinfo} (@var{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
 @defop Predicate @aclass{userinfo} predicate @var{obj}
 Return @true{} if @var{obj} is a non--empty bytevector in which every
 octet can be interpreted as character in @ascii{} encoding and the
@@ -977,7 +1024,7 @@ sequence of characters is valid for a @code{userinfo} @uri{} component.
 
 @deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} uri-representation
 A bytevector representing the @code{userinfo} component in the format
-requested by @rfc{3986}.
+requested by @rfc{} 3986.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -987,7 +1034,42 @@ requested by @rfc{3986}.
 
 @defmethod @aclass{userinfo} put-uri-representation (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{userinfo}
-component in the format requested by @rfc{3986}.
+component in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri host
+@subsubsection @uri{} host objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{host}
+Label used to tag bytevectors representing the @code{host} component of
+@uri{}s; it is derived from @class{ip-address} defined by
+@library{nausicaa net addresses ip}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{host} @aclass{ascii-bytevector} uri-representation
+A bytevector representing the @code{host} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{host} put-uri-representation (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{host} component
+in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page

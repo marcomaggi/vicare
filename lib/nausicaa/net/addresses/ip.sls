@@ -629,7 +629,7 @@
 ;;;; host types
 
 (define (make-host-object (host.type <symbol>) (host.ascii <bytevector>) host.data)
-  ;;Build  and return  a  new  instance a  specialised  object of  class
+  ;;Build  and return  a new  instance  of specialised  object of  class
   ;;"<ip-address>"  representing  the  host  component of  a  URI.   The
   ;;possible  classes of  the returned  object are:  <reg-name-address>,
   ;;<ipv4-address>, <ipv6-address>, <ipvfuture-address>.
@@ -651,7 +651,7 @@
   ;;  representing the address components.
   ;;
   ;;* For "ipvfuture":  HOST.DATA must be an  exact integer representing
-  ;;  the version number of the IP address.
+  ;;  the version number of the IP address literal representation.
   ;;
   ;;The arguments  are modeled after  the 3 return values  of PARSE-HOST
   ;;from the library "(nausicaa parser-tools uri)".
