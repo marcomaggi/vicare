@@ -245,13 +245,44 @@
 ;;;; auxiliary labels and classes: query
 
 (define-label <query>
-  (parent <percent-encoded-bytevector>)
+  (parent <bytevector>)
+
+  (protocol
+   (lambda ()
+     ;;Apply the predicate, through the tagged argument, and return.
+     (lambda ((bv <query>))
+       bv)))
+
+  (predicate
+   (lambda (bv)
+     (let loop ((bv bv)
+		(i  0))
+       (or ($fx= i ($bytevector-length bv))
+	   (let ((chi ($bytevector-u8-ref bv i)))
+	     (and (or ($ascii-uri-unreserved? chi)
+		      ($ascii-uri-sub-delim?  chi)
+		      ($ascii-chi-colon?      chi)
+		      ($ascii-chi-at-sign?    chi)
+		      ($ascii-uri-pct-encoded? chi bv i))
+		  (loop bv ($fxadd1 i))))))))
+
   (virtual-fields
+   (immutable (specified? <boolean>)
+	      (lambda (bv)
+		($bytevector-not-empty? bv)))
 
    (immutable (bytevector <ascii-bytevector>)
-	      (lambda (O)
-		;;63 = ?
-		(bytevector-append '#vu8(63) O)))
+	      (lambda ((O <query>))
+		(if (O specified?)
+		    ;;63 = ?
+		    (bytevector-append '#vu8(63) O)
+		  '#vu8())))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <query>))
+		(if (O specified?)
+		    ($ascii->string (O bytevector))
+		  "")))
 
    #| end of virtual-fields |# )
 
@@ -267,12 +298,20 @@
 
 (define-label <fragment>
   (parent <percent-encoded-bytevector>)
+
   (virtual-fields
+   (immutable (specified? <boolean>)
+	      (lambda (bv)
+		($bytevector-not-empty? bv)))
 
    (immutable (bytevector <ascii-bytevector>)
 	      (lambda (O)
 		;;35 = #
 		(bytevector-append '#vu8(35) O)))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <fragment>))
+		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 

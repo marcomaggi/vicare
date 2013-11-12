@@ -350,6 +350,65 @@
   #t)
 
 
+(parametrise ((check-test-name	'query))
+
+  (check	;constructor
+      (let ()
+	(uri.<query> O (<> ('#ve(ascii "image"))))
+        (O bytevector))
+    => '#ve(ascii "?image"))
+
+  (check
+      (let (((O uri.<query>) '#vu8()))
+        (O bytevector))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<query>) '#vu8()))
+        (O string))
+    => "")
+
+  (check-for-false
+   (let (((O uri.<query>) '#vu8()))
+     (O specified?)))
+
+  (check-for-true
+   (let (((O uri.<query>) '#ve(ascii "image")))
+     (O specified?)))
+
+  (check
+      (let (((O uri.<query>) '#ve(ascii "image")))
+        (O bytevector))
+    => '#ve(ascii "?image"))
+
+  (check
+      (let (((O uri.<query>) '#ve(ascii "image")))
+        (O string))
+    => "?image")
+
+  (check
+      (let (((O uri.<query>) '#ve(ascii "image")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "?image"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (try
+	  (let (((O uri.<query>) "ciao%Z"))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
 #;(parametrise ((check-test-name	'class-uri))
 
   (define-syntax doit

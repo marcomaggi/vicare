@@ -946,6 +946,7 @@ requirements of specific @uri{} schemes, like @code{http:} and
 * net addresses uri userinfo::    @uri{} userinfo objects.
 * net addresses uri host::        @uri{} host objects.
 * net addresses uri port-number:: @uri{} port-number objects.
+* net addresses uri query::       @uri{} query objects.
 * net addresses uri uri::         Uniform Resource Identifiers objects.
 * net addresses uri ref::         Relative references objects.
 @end menu
@@ -1163,6 +1164,71 @@ requested by @rfc{} 3986.
 @defmethod @aclass{port-number} put-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{port-number}
 component in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri query
+@subsubsection @uri{} query objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{query}
+Label used to tag bytevectors representing the @code{query} component of
+@uri{}s; it is derived from @class{bytevector}.
+@end deftp
+
+
+@defop Constructor @aclass{query} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of @class{query}.
+@end defop
+
+
+@defop Maker @aclass{query} @aclass{query} (@var{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
+@defop Predicate @aclass{query} predicate @var{obj}
+Return @true{} if @var{obj} is a non--empty bytevector in which every
+octet can be interpreted as character in @ascii{} encoding and the
+sequence of characters is valid for a @code{query} @uri{} component.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{query} @aclass{boolean} specified?
+According to @rfc{} 3986 the @code{query} component of @uri{}s can be
+empty.  This field is @true{} if the bytevector has non--zero length,
+@false{} otherwise.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{query} @aclass{ascii-bytevector} bytevector
+A bytevector representing the @code{query} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{query} @aclass{ascii-string} string
+A string representing the @code{query} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{query} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{query} component
+in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
