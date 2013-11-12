@@ -409,6 +409,65 @@
   #t)
 
 
+(parametrise ((check-test-name	'fragment))
+
+  (check	;constructor
+      (let ()
+	(uri.<fragment> O (<> ('#ve(ascii "image"))))
+        (O bytevector))
+    => '#ve(ascii "#image"))
+
+  (check
+      (let (((O uri.<fragment>) '#vu8()))
+        (O bytevector))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<fragment>) '#vu8()))
+        (O string))
+    => "")
+
+  (check-for-false
+   (let (((O uri.<fragment>) '#vu8()))
+     (O specified?)))
+
+  (check-for-true
+   (let (((O uri.<fragment>) '#ve(ascii "image")))
+     (O specified?)))
+
+  (check
+      (let (((O uri.<fragment>) '#ve(ascii "image")))
+        (O bytevector))
+    => '#ve(ascii "#image"))
+
+  (check
+      (let (((O uri.<fragment>) '#ve(ascii "image")))
+        (O string))
+    => "#image")
+
+  (check
+      (let (((O uri.<fragment>) '#ve(ascii "image")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "#image"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (try
+	  (let (((O uri.<fragment>) "ciao%Z"))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
 #;(parametrise ((check-test-name	'class-uri))
 
   (define-syntax doit
