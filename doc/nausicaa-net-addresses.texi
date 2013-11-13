@@ -942,16 +942,21 @@ requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
 @menu
-* net addresses uri scheme::      @uri{} scheme objects.
-* net addresses uri userinfo::    @uri{} userinfo objects.
-* net addresses uri host::        @uri{} host objects.
-* net addresses uri port-number:: @uri{} port-number objects.
-* net addresses uri segment::     @uri{} segment objects.
-* net addresses uri listseg::     @uri{} list of segment objects.
-* net addresses uri query::       @uri{} query objects.
-* net addresses uri fragment::    @uri{} fragment objects.
-* net addresses uri uri::         Uniform Resource Identifiers objects.
-* net addresses uri ref::         Relative references objects.
+* net addresses uri scheme::        @uri{} scheme objects.
+* net addresses uri userinfo::      @uri{} userinfo objects.
+* net addresses uri host::          @uri{} host objects.
+* net addresses uri port-number::   @uri{} port-number objects.
+* net addresses uri segment::       @uri{} segment objects.
+* net addresses uri listseg::       @uri{} list of segment objects.
+* net addresses uri path::          @uri{} path objects.
+* net addresses uri path-empty::    @uri{} empty path objects.
+* net addresses uri path-abempty::  @uri{} abempty path objects.
+* net addresses uri path-absolute:: @uri{} absolute path objects.
+* net addresses uri path-rootless:: @uri{} rootless path objects.
+* net addresses uri query::         @uri{} query objects.
+* net addresses uri fragment::      @uri{} fragment objects.
+* net addresses uri uri::           Uniform Resource Identifiers objects.
+* net addresses uri ref::           Relative references objects.
 @end menu
 
 @c page
@@ -1320,6 +1325,140 @@ that @strong{no} leading slash is inserted.
 Write to @var{port} a bytevector representing the @code{segment}
 components in the format requested by @rfc{} 3986.
 @end defmethod
+
+@c page
+@node net addresses uri path
+@subsubsection @uri{} path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path}
+Base class representing @code{path} components of @uri{}s.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path} constructor (@var{obj} @aclass{list-of-segments})
+Build and return a new instance of @class{path}.  The argument must be a
+list of objects satisfying the requirements of @class{list-of-segments}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{path} @aclass{list-of-segments} path
+A possibly empty list of @class{segment} instances.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{path} @aclass{ascii-bytevector} bytevector
+A bytevector representing the @code{path} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{path} @aclass{ascii-string} string
+A string representing the @code{path} component in the format requested
+by @rfc{} 3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{path} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{path}
+component in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri path-empty
+@subsubsection @uri{} empty path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path-empty}
+Base class representing @code{path-empty} components of @uri{}s; it is
+derived from @class{path}.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path-empty} constructor ()
+Build and return an instance of @class{path-empty}; there is only one
+instance of @class{path-empty}: the constructor always returns the same
+object.
+@end defop
+
+@c page
+@node net addresses uri path-abempty
+@subsubsection @uri{} abempty path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path-abempty}
+Base class representing @code{path-abempty} components of @uri{}s; it is
+derived from @class{path}.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path-abempty} constructor (@var{obj} @aclass{list-of-segments})
+Build and return a new instance of @class{path-abempty}.  The argument
+must be a list of objects satisfying the requirements of
+@class{list-of-segments}.
+@end defop
+
+@c page
+@node net addresses uri path-absolute
+@subsubsection @uri{} absolute path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path-absolute}
+Base class representing @code{path-absolute} components of @uri{}s; it
+is derived from @class{path}.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path-absolute} constructor (@var{obj} @aclass{list-of-segments})
+Build and return a new instance of @class{path-absolute}.  The argument
+must be a non--empty list of objects satisfying the requirements of
+@class{list-of-segments}.
+@end defop
+
+@c page
+@node net addresses uri path-rootless
+@subsubsection @uri{} rootless path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path-rootless}
+Base class representing @code{path-rootless} components of @uri{}s; it
+is derived from @class{path}.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path-rootless} constructor (@var{obj} @aclass{list-of-segments})
+Build and return a new instance of @class{path-rootless}.  The argument
+must be a non--empty, list of objects satisfying the requirements of
+@class{list-of-segments}.
+@end defop
 
 @c page
 @node net addresses uri query

@@ -38,9 +38,6 @@
     ;; auxiliary classes and labels
     <segment>	<list-of-segments>
 
-    ;; multimethods
-    uri-path-put-bytevector
-
     ;; utility functions
     make-path-object
 
@@ -512,7 +509,7 @@
   (nongenerative nausicaa:net:addresses:uri:<path-rootless>)
   (parent <path>)
   (protocol (lambda (make-uri-path)
-	      (lambda (path)
+	      (lambda ((path <nonempty-list>))
 		((make-uri-path path)))))
   #| end of class |# )
 
