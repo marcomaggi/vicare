@@ -573,10 +573,143 @@
 
   (check	;invalid pct-encoded sequence
       (try
-	  (let (((O uri.<path-abempty>) '(#ve(ascii "ciao%Z"))))
-	    #f)
+	  (uri.<path-abempty> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&tagged-binding-violation
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'path-absolute))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-absolute> (ELL)))
+        ((uri.<path-absolute>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+        (O bytevector))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+        (O string))
+    => "/home/marco/src/devel")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+
+  (check	;empty list is invalid
+      (try
+	  (uri.<path-absolute> ('()))
+	(catch E
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (uri.<path-absolute> ('(#ve(ascii "ciao%Z"))))
+	(catch E
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'path-rootless))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-rootless> (ELL)))
+        ((uri.<path-rootless>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+        (O bytevector))
+    => '#ve(ascii "home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+        (O string))
+    => "home/marco/src/devel")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+;;; empty list
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-rootless> ('())))
+        ((uri.<path-rootless>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
+        (O bytevector))
+    => '#ve(ascii ""))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
+        (O string))
+    => "")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii ""))
+
+;;; --------------------------------------------------------------------
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (uri.<path-rootless> ('(#ve(ascii "ciao%Z"))))
+	(catch E
+	  (&procedure-argument-violation
 	   #t)
 	  (else E)))
     => #t)
