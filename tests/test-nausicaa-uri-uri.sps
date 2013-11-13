@@ -27,7 +27,6 @@
 
 #!vicare
 (import (nausicaa)
-  (prefix (nausicaa net addresses ip)  ip.)
   (prefix (nausicaa net addresses uri) uri.)
   (prefix (nausicaa parser-tools uri) uri.)
   (vicare checks))
@@ -50,13 +49,13 @@
   (let ((port (open-bytevector-input-port (string->ascii str))))
     (receive (host.type host.ascii host.data)
 	(uri.parse-host port)
-      (ip.make-host-object host.type host.ascii host.data))))
+      (uri.make-host-object host.type host.ascii host.data))))
 
 (define (percent-encoded->host-object (bv <percent-encoded-bytevector>))
   (let ((port (open-bytevector-input-port bv)))
     (receive (host.type host.ascii host.data)
 	(uri.parse-host port)
-      (ip.make-host-object host.type host.ascii host.data))))
+      (uri.make-host-object host.type host.ascii host.data))))
 
 
 (parametrise ((check-test-name	'scheme))
@@ -869,24 +868,43 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'class-uri))
+(parametrise ((check-test-name	'class-uri))
+
+  (define (string->uri str)
+    (bytevector->uri (string->ascii str)))
+
+  (define (bytevector->uri bv)
+    (read-uri (open-bytevector-input-port bv)))
+
+  (define (read-uri port)
+    (receive (scheme authority userinfo host.type host.bv host.data port path.type path query fragment)
+	(uri.parse-uri port)
+      (uri.<uri> ((uri.scheme		(uri.<scheme> (scheme)))
+		  (uri.userinfo		(if userinfo
+					    (uri.<userinfo> (userinfo))
+					  unspecified))
+		  (uri.host		(uri.make-host-object host.type host.bv host.data))
+		  (uri.port-number	(if port
+					    (uri.<port-number> (port))
+					  unspecified))
+		  (uri.path		(uri.make-path-object path.type path))
+		  (uri.query		(if query
+					    (uri.<query> (query))
+					  unspecified))
+		  (uri.fragment		(if fragment
+					    (uri.<fragment> (fragment))
+					  unspecified))))))
 
   (define-syntax doit
     (syntax-rules ()
       ((_ ?string)
        (doit ?string ?string))
       ((_ ?input-string ?expected-string)
-       (begin
-	 (check
-	     (let (((o uri.<uri>) (make uri.<uri>
-				    (uri.source-bytevector (string->ascii ?input-string)))))
-	       o.string)
-	   => ?expected-string)
-	 (check
-	     (let (((o uri.<uri>) (make uri.<uri>
-				    (uri.source-bytevector (string->ascii ?input-string)))))
-	       o.bytevector)
-	   => (string->ascii ?expected-string))))))
+       (check
+	   (let (((o uri.<uri>) (string->uri ?input-string)))
+	     (values (o string) (o bytevector)))
+	 => ?expected-string (string->ascii ?expected-string)))
+      ))
 
 ;;; --------------------------------------------------------------------
 

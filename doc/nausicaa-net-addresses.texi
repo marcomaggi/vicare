@@ -941,6 +941,9 @@ is because advanced handling of @uri{}s should be merged with
 requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
+The library @library{nausicaa net addresses uri} reexports all the
+bindings from @library{nausicaa net addresses ip}.
+
 @menu
 * net addresses uri scheme::        @uri{} scheme objects.
 * net addresses uri userinfo::      @uri{} userinfo objects.
@@ -1560,6 +1563,10 @@ Label used to tag bytevectors representing the @code{fragment} component of
 @uri{}s; it is derived from @class{bytevector}.
 @end deftp
 
+@c ------------------------------------------------------------
+
+@subsubheading Constructors, makers, predicates
+
 
 @defop Constructor @aclass{fragment} constructor @var{obj}
 Just return the given argument.  If tagged argument validation is
@@ -1616,13 +1623,17 @@ component in the format requested by @rfc{} 3986.
 @subsubsection Uniform Resource Identifiers objects
 
 
-The following bindings are exported by the @library{nausicaa net addresses uri}
-library.
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
 
 
 @deftp Class @aclass{uri}
 Represents a parsed @code{URI} component.
 @end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
 
 
 @defcv {Mutable field} @aclass{uri} scheme
@@ -1703,6 +1714,10 @@ A bytevector representing the whole @uri{}.
 A string representing the whole @uri{}; it is built from the
 @code{bytevector} field with the @func{to-string} function.
 @end defcv
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors, makers, predicates
 
 
 @defop Syntax @aclass{uri} make* @aclass{uri} @meta{source-bytevector}

@@ -44,9 +44,33 @@
     ;; auxiliary syntaxes
     scheme		authority		userinfo
     host		port-number
-    path		query			fragment)
+    path		query			fragment
+
+;;; --------------------------------------------------------------------
+;;; reexported from (nausicaa net addresses ip)
+
+    <ip-address>
+    <ip-numeric-address>
+    <reg-name-address>
+    <ipvfuture-address>
+
+    <ipv4-address>			<ipv4-address-prefix>
+    <ipv4-address-fixnum>		<vector-of-ipv4-address-fixnums>
+    <ipv4-address-prefix-length>
+
+    <ipv6-address>			<ipv6-address-prefix>
+    <ipv6-address-fixnum>		<vector-of-ipv6-address-fixnums>
+    <ipv6-address-prefix-length>
+
+    ;; utility functions
+    make-host-object
+
+    ;; multimethods
+    ip-address->string
+    ip-address->bytevector
+    ip-address->bignum)
   (import (nausicaa)
-    (prefix (nausicaa net addresses ip) ip.)
+    (nausicaa net addresses ip)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
     (vicare language-extensions ascii-chars)
@@ -178,9 +202,9 @@
 ;;;; auxiliary labels and classes: host
 
 (define-label <host>
-  (parent ip.<ip-address>)
+  (parent <ip-address>)
 
-  (method (put-bytevector (O ip.<ip-address>) port)
+  (method (put-bytevector (O <ip-address>) port)
     (put-bytevector port (O bytevector)))
 
   #| end of label |# )
@@ -540,10 +564,25 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((scheme <scheme>)
-         (userinfo <userinfo>) (host ip.<ip-address>) (port <port-number>)
-	 (path <path>) (query <query>) (fragment <fragment>))
-       ((make-top) scheme userinfo host port path query fragment))))
+     (lambda (scheme userinfo host port-number path query fragment)
+       (let (((scheme <scheme>)		scheme)
+	     ((userinfo <userinfo>)	(if (unspecified? userinfo)
+					    '#vu8()
+					  userinfo))
+	     ((host <ip-address>)	host)
+	     ((port <port-number>)	(if (unspecified? port-number)
+					    0
+					  port-number))
+	     ((path <path>)		(if (unspecified? path)
+					    (<path-empty> ())
+					  path))
+	     ((query <query>)		(if (unspecified? query)
+					    '#vu8()
+					  query))
+	     ((fragment <fragment>)	(if (unspecified? fragment)
+					    '#vu8()
+					  fragment)))
+	 ((make-top) scheme userinfo host port path query fragment)))))
 
   (fields (mutable (scheme	<scheme>))
 	  (mutable (userinfo	<userinfo>))
@@ -573,9 +612,9 @@
 		    (when (or ($bytevector-not-empty? authority)
 			      ((<path-abempty>) O)
 			      ((<path-empty>)   O))
-		      (put-u8 47 port) ;47 = #\/
-		      (put-u8 47 port) ;47 = #\/
-		      (put-bytevector authority port)))
+		      (put-u8 port 47) ;47 = #\/
+		      (put-u8 port 47) ;47 = #\/
+		      (put-bytevector port authority)))
 		  (O $path  put-bytevector port)
 		  (O $query put-bytevector port)
 		  (O $fragment put-bytevector port)
@@ -587,13 +626,13 @@
 
 (mk.define-maker %make-uri
     make-<uri>
-  ((scheme		#f)
-   (userinfo		#f)
-   (host		#f)
-   (port-number		#f)
-   (path		#f)
-   (query		#f)
-   (fragment		#f)))
+  ((scheme		unspecified)
+   (userinfo		unspecified)
+   (host		unspecified)
+   (port-number		unspecified)
+   (path		unspecified)
+   (query		unspecified)
+   (fragment		unspecified)))
 
 
 (define-class <relative-ref>
@@ -606,7 +645,7 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((userinfo <userinfo>) (host ip.<ip-address>) (port <port-number>)
+     (lambda ((userinfo <userinfo>) (host <ip-address>) (port <port-number>)
 	 (path <path>) (query <query>) (fragment <fragment>))
        ((make-top) userinfo host port path query fragment))))
 
@@ -650,12 +689,12 @@
 
 (mk.define-maker %make-relative-ref
     make-<relative-ref>
-  ((userinfo		#f)
+  ((userinfo		'#vu8())
    (host		#f)
-   (port-number		#f)
-   (path		#f)
-   (query		#f)
-   (fragment		#f)))
+   (port-number		0)
+   (path		(<path-empty> ()))
+   (query		'#vu8())
+   (fragment		'#vu8())))
 
 
 ;;;; done
