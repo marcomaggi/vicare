@@ -1484,10 +1484,19 @@
     os-version
 
     ;; condition types
-    &procedure-argument-violation
+;;; Redefined by (nausicaa language conditions)
+;;;
+;;; &procedure-argument-violation
     make-procedure-argument-violation
     procedure-argument-violation?
     procedure-argument-violation
+
+;;; Redefined by (nausicaa language conditions)
+;;;
+;;; &expression-return-value-violation
+    make-expression-return-value-violation
+    expression-return-value-violation?
+    expression-return-value-violation
 
     ;; bignums
     bignum-positive?
@@ -1667,6 +1676,8 @@
     &h_errno
     &i/o-eagain
     &out-of-memory-error
+    &procedure-argument-violation
+    &expression-return-value-violation
 
     ;; wrong type
     &tagged-binding-violation
@@ -1745,6 +1756,8 @@
 		       &lexical
 		       &syntax
 		       &undefined
+		       &procedure-argument-violation
+		       &expression-return-value-violation
 
 		       ;; redefined from (rnrs arithmetic flonums (6))
 		       &no-infinities

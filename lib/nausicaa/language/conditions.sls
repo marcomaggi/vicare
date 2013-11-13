@@ -73,6 +73,8 @@
     &h_errno
     &i/o-eagain
     &out-of-memory-error
+    &procedure-argument-violation
+    &expression-return-value-violation
 
     ;; convenience labels
     <common-conditions>
@@ -131,7 +133,9 @@
 		  &errno
 		  &h_errno
 		  &i/o-eagain
-		  &out-of-memory-error)
+		  &out-of-memory-error
+		  &procedure-argument-violation
+		  &expression-return-value-violation)
     (prefix (only (vicare)
 		  define-condition-type
 		  ;; (rnrs conditions (6))
@@ -169,7 +173,9 @@
 		  &errno
 		  &h_errno
 		  &i/o-eagain
-		  &out-of-memory-error)
+		  &out-of-memory-error
+		  &procedure-argument-violation
+		  &expression-return-value-violation)
 	    rnrs.)
     (except (nausicaa language oopp)
 	    &tagged-binding-violation
@@ -732,6 +738,20 @@
 	      (make-message-condition message)
 	      (&tagged-binding-violation ())
 	      (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+(define-label &procedure-argument-violation
+  (parent &assertion)
+  (shadows rnrs.&procedure-argument-violation)
+  (protocol (lambda () make-procedure-argument-violation))
+  (predicate procedure-argument-violation?))
+
+(define-label &expression-return-value-violation
+  (parent &assertion)
+  (shadows rnrs.&expression-return-value-violation)
+  (protocol (lambda () make-expression-return-value-violation))
+  (predicate expression-return-value-violation?))
 
 
 ;;;; done
