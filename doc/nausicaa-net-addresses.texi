@@ -1339,11 +1339,32 @@ addresses uri} library.
 Base class representing @code{path} components of @uri{}s.
 @end deftp
 
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
 
 @defop {Super constructor} @aclass{path} constructor (@var{obj} @aclass{list-of-segments})
 Build and return a new instance of @class{path}.  The argument must be a
 list of objects satisfying the requirements of @class{list-of-segments}.
 @end defop
+
+
+@defun make-path-object (@var{path-type} @aclass{symbol}) @var{path}
+Utility function returning a subclass of @class{path}.  @var{path-type}
+must be a symbol among: @code{path-empty}, @code{path-abempty},
+@code{path-absolute}, @code{path-noscheme}, @code{path-rootless}.
+@var{path} must be, a possibly empty, list of @class{segment} objects.
+
+Depending on the value of @var{path-type} the returned value is of
+class: @class{path-empty}, @class{path-abempty}, @class{path-absolute},
+@class{path-rootless}; if @var{path-type} is @code{path-noscheme} the
+returned value is of type @class{path-rootless}.
+
+The arguments of this function are modeled after the return values of
+@func{parse-path} from @library{nausicaa parser-tools uri},
+@ref{parser-tools uri parser main, parse-path}.
+@end defun
 
 @c ------------------------------------------------------------
 

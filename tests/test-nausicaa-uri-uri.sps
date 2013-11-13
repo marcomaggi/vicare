@@ -699,6 +699,58 @@
   #t)
 
 
+(parametrise ((check-test-name	'make-path))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-empty '())))
+        (O bytevector))
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-abempty ELL)))
+        (O bytevector))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-abempty '())))
+        (O bytevector))
+    => '#ve(ascii "/"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-absolute ELL)))
+        (O bytevector))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-rootless ELL)))
+        (O bytevector))
+    => '#ve(ascii "home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((O uri.<path>) (uri.make-path-object 'path-noscheme ELL)))
+        (O bytevector))
+    => '#ve(ascii "home/marco/src/devel"))
+
+  #t)
+
+
 (parametrise ((check-test-name	'query))
 
   (check	;constructor

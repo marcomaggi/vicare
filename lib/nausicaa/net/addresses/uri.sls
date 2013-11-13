@@ -521,7 +521,7 @@
      (<path-abempty>	(path)))
     ((path-absolute)
      (<path-absolute>	(path)))
-    ((path-rootless)
+    ((path-rootless path-noscheme)
      (<path-rootless>	(path)))
     ((path-empty)
      (<path-empty>	()))
