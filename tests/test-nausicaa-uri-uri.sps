@@ -677,33 +677,15 @@
     => '#ve(ascii "home/marco/src/devel"))
 
 ;;; --------------------------------------------------------------------
-;;; empty list
 
-  (check	;constructor
-      (let ()
-	(uri.<path> O (uri.<path-rootless> ('())))
-        ((uri.<path-rootless>) O))
+  (check	;empty list is invalid
+      (try
+	  (uri.<path-rootless> ('()))
+	(catch E
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
     => #t)
-
-  (check
-      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
-        (O bytevector))
-    => '#ve(ascii ""))
-
-  (check
-      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
-        (O string))
-    => "")
-
-  (check
-      (let (((O uri.<path>) (uri.<path-rootless> ('()))))
-	(receive (port getter)
-	    (open-bytevector-output-port)
-	  (O put-bytevector port)
-	  (getter)))
-    => '#ve(ascii ""))
-
-;;; --------------------------------------------------------------------
 
   (check	;invalid pct-encoded sequence
       (try
