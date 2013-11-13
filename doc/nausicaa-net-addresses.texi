@@ -946,6 +946,8 @@ requirements of specific @uri{} schemes, like @code{http:} and
 * net addresses uri userinfo::    @uri{} userinfo objects.
 * net addresses uri host::        @uri{} host objects.
 * net addresses uri port-number:: @uri{} port-number objects.
+* net addresses uri segment::     @uri{} segment objects.
+* net addresses uri listseg::     @uri{} list of segment objects.
 * net addresses uri query::       @uri{} query objects.
 * net addresses uri fragment::    @uri{} fragment objects.
 * net addresses uri uri::         Uniform Resource Identifiers objects.
@@ -1031,15 +1033,15 @@ enabled: validate the argument with the predicate of @class{userinfo}.
 @end defop
 
 
-@defop Maker @aclass{userinfo} @aclass{userinfo} (@var{obj})
+@defop Maker @aclass{userinfo} @aclass{userinfo} (@meta{obj})
 Filter the given argument using the label constructor.
 @end defop
 
 
 @defop Predicate @aclass{userinfo} predicate @var{obj}
-Return @true{} if @var{obj} is a non--empty bytevector in which every
-octet can be interpreted as character in @ascii{} encoding and the
-sequence of characters is valid for a @code{userinfo} @uri{} component.
+Return @true{} if @var{obj} is a bytevector in which every octet can be
+interpreted as character in @ascii{} encoding and the sequence of
+characters is valid for a @code{userinfo} @uri{} component.
 @end defop
 
 @c ------------------------------------------------------------
@@ -1124,7 +1126,7 @@ enabled: validate the argument with the predicate of
 @end defop
 
 
-@defop Maker @aclass{port-number} @aclass{port-number} (@var{obj})
+@defop Maker @aclass{port-number} @aclass{port-number} (@meta{obj})
 Filter the given argument using the label constructor.
 @end defop
 
@@ -1168,6 +1170,158 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
+@node net addresses uri segment
+@subsubsection @uri{} segment objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{segment}
+Label used to tag bytevectors representing path @code{segment}
+components of @uri{}s; it is derived from @class{bytevector}.
+@end deftp
+
+
+@defop Constructor @aclass{segment} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of @class{segment}.
+@end defop
+
+
+@defop Maker @aclass{segment} @aclass{segment} (@meta{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
+@defop Predicate @aclass{segment} predicate @var{obj}
+Return @true{} if @var{obj} is a non--empty bytevector in which every
+octet can be interpreted as character in @ascii{} encoding and the
+sequence of characters is valid for a @code{segment} @uri{} component.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{segment} @aclass{segment} bytevector
+A bytevector representing the @code{segment} component in the format
+requested by @rfc{} 3986.  Accessing this field just return the instance
+bytevector itself.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{segment} @aclass{ascii-string} string
+A string representing the @code{segment} component in the format
+requested by @rfc{} 3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{segment} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{segment}
+component in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
+@node net addresses uri listseg
+@subsubsection @uri{} list of segment objects
+
+
+The @code{path} component of @uri{}s is made of @code{segment}
+components, which are stored in lists by @library{nausicaa net addresses
+uri}:
+
+@example
+#!vicare
+(import (nausicaa)
+  (prefix (nausicaa net addresses uri) uri.))
+
+(define ell
+  '(#ve(ascii "home")
+    #ve(ascii "marco")
+    #ve(ascii "src")
+    #ve(ascii "devel")))
+
+(uri.<list-of-segments> O
+  (<> (ell)))
+
+(O bytevector)
+@result{} #ve(ascii "home/marco/src/devel")
+
+(O string)
+@result{} "home/marco/src/devel"
+
+(receive (port getter)
+    (open-bytevector-output-port)
+  (O put-bytevector port)
+  (getter))
+@result{} #ve(ascii "home/marco/src/devel")
+@end example
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp Label @aclass{list-of-segments}
+Label used to tag list of bytevectors representing path @code{segment}
+components of @uri{}s; it is derived from @class{list}.
+@end deftp
+
+
+@defop Constructor @aclass{list-of-segments} constructor @var{obj}
+Just return the given argument.  If tagged argument validation is
+enabled: validate the argument with the predicate of
+@class{list-of-segments}.
+@end defop
+
+
+@defop Maker @aclass{list-of-segments} @aclass{list-of-segments} (@meta{obj})
+Filter the given argument using the label constructor.
+@end defop
+
+
+@defop Predicate @aclass{list-of-segments} predicate @var{obj}
+Return @true{} if @var{obj} is a, possibly empty, list of non--empty
+bytevectors in which every octet can be interpreted as character in
+@ascii{} encoding and the sequence of characters is valid for a
+@code{segment} @uri{} component.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable virtual field} @aclass{list-of-segments} @aclass{ascii-bytevector} bytevector
+A bytevector representing the @code{segment} components in the format
+requested by @rfc{} 3986, with slash characters as separators; notice
+that @strong{no} leading slash is inserted.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{list-of-segments} @aclass{ascii-string} string
+A string representing the @code{segment} components in the format
+requested by @rfc{} 3986, with slash characters as separators; notice
+that @strong{no} leading slash is inserted.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{list-of-segments} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{segment}
+components in the format requested by @rfc{} 3986.
+@end defmethod
+
+@c page
 @node net addresses uri query
 @subsubsection @uri{} query objects
 
@@ -1194,9 +1348,9 @@ Filter the given argument using the label constructor.
 
 
 @defop Predicate @aclass{query} predicate @var{obj}
-Return @true{} if @var{obj} is a non--empty bytevector in which every
-octet can be interpreted as character in @ascii{} encoding and the
-sequence of characters is valid for a @code{query} @uri{} component.
+Return @true{} if @var{obj} is a bytevector in which every octet can be
+interpreted as character in @ascii{} encoding and the sequence of
+characters is valid for a @code{query} @uri{} component.
 @end defop
 
 @c ------------------------------------------------------------
@@ -1259,9 +1413,9 @@ Filter the given argument using the label constructor.
 
 
 @defop Predicate @aclass{fragment} predicate @var{obj}
-Return @true{} if @var{obj} is a non--empty bytevector in which every
-octet can be interpreted as character in @ascii{} encoding and the
-sequence of characters is valid for a @code{fragment} @uri{} component.
+Return @true{} if @var{obj} is a bytevector in which every octet can be
+interpreted as character in @ascii{} encoding and the sequence of
+characters is valid for a @code{fragment} @uri{} component.
 @end defop
 
 @c ------------------------------------------------------------

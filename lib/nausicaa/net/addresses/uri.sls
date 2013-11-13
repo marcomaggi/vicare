@@ -36,8 +36,7 @@
     <path> <path-empty> <path-abempty> <path-absolute> <path-rootless>
 
     ;; auxiliary classes and labels
-    <segment-bytevector>
-    <list-of-segments>
+    <segment>	<list-of-segments>
 
     ;; multimethods
     uri-path->bytevector
@@ -336,22 +335,87 @@
   #| end of label |# )
 
 
-;;;; path types
+;;;; path types: auxiliary label <segment>
 
-(define-generic uri-path->bytevector (uri))
-(define-generic uri-path-put-bytevector (uri port))
+(define-label <segment>
+  (parent <bytevector>)
 
-(define-label <segment-bytevector>
-  (parent <percent-encoded-bytevector>)
-  (predicate (lambda (O)
-	       ($bytevector-not-empty? O))))
+  (protocol
+   ;;Apply the predicate, through the tagged argument, and return.
+   (lambda ()
+     (lambda ((bv <fragment>)) bv)))
+
+  (predicate
+   (lambda (bv)
+     (and ($bytevector-not-empty? bv)
+	  (let loop ((bv bv)
+		     (i  0))
+	    (or ($fx= i ($bytevector-length bv))
+		(and ($ascii-uri-pchar? ($bytevector-u8-ref bv i) bv i)
+		     (loop bv ($fxadd1 i))))))))
+
+  (virtual-fields
+
+   (immutable (bytevector <segment>)
+	      (lambda (O) O))
+
+   (immutable (string <ascii-string>)
+	      $ascii->string)
+
+   #| end of virtual-fields |# )
+
+  (method-syntax put-bytevector
+    (syntax-rules ()
+      ((_ ?bv ?port)
+       (put-bytevector ?port ?bv))))
+
+  #| end of label |# )
+
+
+;;;; path types: auxiliary label <list-of-segments>
 
 (define-label <list-of-segments>
   (parent <list>)
-  (predicate (lambda (O)
-	       ($for-all1 (<segment-bytevector>) O))))
 
-;;; --------------------------------------------------------------------
+  (protocol
+   ;;Apply the predicate, through the tagged argument, and return.
+   (lambda ()
+     (lambda ((bv <list-of-segments>)) bv)))
+
+  (predicate (lambda (O)
+	       ($for-all1 (<segment>) O)))
+
+  (virtual-fields
+
+   (immutable (bytevector <ascii-bytevector>)
+	      (lambda ((O <list-of-segments>))
+		(receive (port getter)
+		    (open-bytevector-output-port)
+		  (O put-bytevector port)
+		  (getter))))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <list-of-segments>))
+		($ascii->string (O bytevector))))
+
+   #| end of virtual-fields |# )
+
+  (method (put-bytevector (O <list-of-segments>) port)
+    (and (pair? O)
+	   (put-bytevector port (O $car))
+	   (for-each (lambda (bv)
+		       ;;47 = (char->integer #\/)
+		       (put-u8 port 47)
+		       (put-bytevector port bv))
+	     (O $cdr))))
+
+  #| end of label |# )
+
+
+;;;; path types
+
+(define-generic uri-path->bytevector	(uri))
+(define-generic uri-path-put-bytevector	(uri port))
 
 (define-class <path>
   (nongenerative nausicaa:net:addresses:uri:<path>)
