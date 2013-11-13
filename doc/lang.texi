@@ -3833,20 +3833,13 @@ character in @ascii{} encoding according to @rfc{} 3986.
 @end deffn
 
 
-@deffn Syntax $ascii-uri-pchar-not-percent-encoded? @var{fx}
-Evaluate to true if @var{fx} is a fixnum matching the @code{pchar}
-component in @ascii{} encoding, with the exception of the
-percent--encoded sequence as defined by @rfc{} 3986.
-@end deffn
-
-
 @deffn Syntax $ascii-uri-pct-encoded? @meta{chi} @meta{bv} @meta{i}
 The argument @meta{chi} must be a fixnum representing the octet at index
 @meta{i} in the bytevector @meta{bv}; @meta{bv} and @meta{i} must be
 identifiers.  Return @true{} if the @math{3} bytes at offset @meta{i}
 represent a percent--encoded sequence and increment @meta{i} to
 reference the third octet; otherwise return @false{} and set @meta{i} to
-the offset of the offending octet; If there are not enough octets:
+the offset of the offending octet; if there are not enough octets:
 return @false{} and leave @meta{i} unchanged.
 
 @example
@@ -3896,6 +3889,25 @@ return @false{} and leave @meta{i} unchanged.
   (values R i))
 @result{} #f 1
 @end example
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pchar-not-percent-encoded? @var{fx}
+Evaluate to true if @var{fx} is a fixnum matching the @code{pchar}
+component in @ascii{} encoding, with the exception of the
+percent--encoded sequence as defined by @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pchar? @meta{chi} @meta{bv} @meta{i}
+The argument @meta{chi} must be a fixnum representing the octet at index
+@meta{i} in the bytevector @meta{bv}; @meta{bv} and @meta{i} must be
+identifiers.  Return @true{} if the octet @meta{chi} or the @math{3}
+bytes at offset @meta{i} represent @code{pchar} component in @ascii{}
+encoding; if successful increment @meta{i} to reference the last
+matching octet; otherwise return @false{} and set @meta{i} to the offset
+of the offending octet; if there are not enough octets: return @false{}
+and leave @meta{i} unchanged.
 @end deffn
 
 @c page

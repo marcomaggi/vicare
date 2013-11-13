@@ -258,13 +258,8 @@
      (let loop ((bv bv)
 		(i  0))
        (or ($fx= i ($bytevector-length bv))
-	   (let ((chi ($bytevector-u8-ref bv i)))
-	     (and (or ($ascii-uri-unreserved? chi)
-		      ($ascii-uri-sub-delim?  chi)
-		      ($ascii-chi-colon?      chi)
-		      ($ascii-chi-at-sign?    chi)
-		      ($ascii-uri-pct-encoded? chi bv i))
-		  (loop bv ($fxadd1 i))))))))
+	   (and ($ascii-uri-pchar? ($bytevector-u8-ref bv i) bv i)
+		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
    (immutable (specified? <boolean>)
@@ -310,13 +305,8 @@
      (let loop ((bv bv)
 		(i  0))
        (or ($fx= i ($bytevector-length bv))
-	   (let ((chi ($bytevector-u8-ref bv i)))
-	     (and (or ($ascii-uri-unreserved? chi)
-		      ($ascii-uri-sub-delim?  chi)
-		      ($ascii-chi-colon?      chi)
-		      ($ascii-chi-at-sign?    chi)
-		      ($ascii-uri-pct-encoded? chi bv i))
-		  (loop bv ($fxadd1 i))))))))
+	   (and ($ascii-uri-pchar? ($bytevector-u8-ref bv i) bv i)
+		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
    (immutable (specified? <boolean>)
@@ -399,11 +389,18 @@
 ;;; --------------------------------------------------------------------
 
 (define-class <path-empty>
+  ;;There  is only  one instance  of this  class: the  constrctor always
+  ;;returns the same object.
+  ;;
   (nongenerative nausicaa:net:addresses:uri:<path-empty>)
   (parent <path>)
   (protocol (lambda (make-uri-path)
-	      (lambda ()
-		((make-uri-path '())))))
+	      (let ((obj #f))
+		(lambda ()
+		  (or obj
+		      (receive-and-return (rv)
+			  (make-uri-path '())
+			(set! obj rv)))))))
   #| end of class |# )
 
 ;;; --------------------------------------------------------------------

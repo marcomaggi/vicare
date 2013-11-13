@@ -83,8 +83,9 @@
     $ascii-uri-sub-delim?
     $ascii-uri-reserved?
     $ascii-uri-unreserved?
-    $ascii-uri-pchar-not-percent-encoded?
-    $ascii-uri-pct-encoded?)
+    $ascii-uri-pct-encoded?
+    $ascii-uri-pchar?
+    $ascii-uri-pchar-not-percent-encoded?)
   (import (vicare)
     (vicare arguments validation)
     (vicare unsafe operations))
@@ -357,15 +358,6 @@
       ($ascii-chi-underscore?		chi)
       ($ascii-chi-tilde?		chi)))
 
-(define-inline ($ascii-uri-pchar-not-percent-encoded? chi)
-  ;;Evaluate  to true  if CHI  matches  the "pchar"  component with  the
-  ;;exception of the percent-encoded sequence.
-  ;;
-  (or ($ascii-uri-unreserved? chi)
-      ($ascii-uri-sub-delim? chi)
-      ($ascii-chi-colon? chi)
-      ($ascii-chi-at-sign? chi)))
-
 (define-syntax ($ascii-uri-pct-encoded? stx)
   (syntax-case stx ()
     ;;CHI must  be a  fixnum representing  the octet at  index I  in the
@@ -387,6 +379,29 @@
 		     ($fxincr! ?i)
 		     ($ascii-hex-digit? ($bytevector-u8-ref ?bv ?i)))))))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($ascii-uri-pchar-not-percent-encoded? chi)
+  ;;Evaluate  to true  if CHI  matches  the "pchar"  component with  the
+  ;;exception of the percent-encoded sequence.
+  ;;
+  (or ($ascii-uri-unreserved? chi)
+      ($ascii-uri-sub-delim? chi)
+      ($ascii-chi-colon? chi)
+      ($ascii-chi-at-sign? chi)))
+
+(define-syntax ($ascii-uri-pchar? stx)
+  (syntax-case stx ()
+    ;;CHI must  be a  fixnum representing  the octet at  index I  in the
+    ;;bytevector  BV.   Evaluate to  true  if  CHI matches  the  "pchar"
+    ;;component.
+    ;;
+    ((_ ?chi ?bv ?i)
+     (and (identifier? #'?bv)
+	  (identifier? #'?i))
+     #'(or ($ascii-uri-pchar-not-percent-encoded? ?chi)
+	   ($ascii-uri-pct-encoded? ?chi ?bv ?i)))))
 
 
 ;;;; done
