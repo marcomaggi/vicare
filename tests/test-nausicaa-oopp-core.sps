@@ -2858,7 +2858,7 @@
 
   (check
       (tag-unique-identifiers-of (current-output-port))
-    => '(nausicaa:builtin:<output-port> nausicaa:builtin:<port> nausicaa:builtin:<top>))
+    => '(nausicaa:builtin:<textual-output-port> nausicaa:builtin:<output-port> nausicaa:builtin:<port> nausicaa:builtin:<top>))
 
   (check
       (tag-unique-identifiers-of 123)

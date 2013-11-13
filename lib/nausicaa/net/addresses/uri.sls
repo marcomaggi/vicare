@@ -39,7 +39,6 @@
     <segment>	<list-of-segments>
 
     ;; multimethods
-    uri-path->bytevector
     uri-path-put-bytevector
 
     ;; utility functions
@@ -414,41 +413,50 @@
 
 ;;;; path types
 
-(define-generic uri-path->bytevector	(uri))
-(define-generic uri-path-put-bytevector	(uri port))
+(define-generic uri-path-put-bytevector	(path port))
+
+;;; --------------------------------------------------------------------
 
 (define-class <path>
   (nongenerative nausicaa:net:addresses:uri:<path>)
+  (abstract)
+
   (fields (immutable (path <list-of-segments>))
-	  (mutable   memoized-bytevector))
-  (protocol (lambda (make-top)
-	      (lambda (path)
-		((make-top) (map uri-decode path) #f))))
+	  (mutable   memoized-bytevector)
+	  (mutable   memoized-string))
+
+  (super-protocol
+   (lambda (make-top)
+     (lambda ((path <list-of-segments>))
+       ((make-top) path #f #f))))
 
   (virtual-fields
-   (immutable (bytevector <bytevector>)
-	      uri-path->bytevector)
+
+   (immutable (bytevector <ascii-bytevector>)
+	      (lambda ((O <path>))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (uri-path-put-bytevector O port)
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <path>))
+		(or (O $memoized-string)
+		    (receive-and-return (str)
+			($ascii->string (O bytevector))
+		      (set! (O $memoized-string) str)))))
+
    #| end of virtual-fields |# )
 
   (methods (put-bytevector uri-path-put-bytevector))
 
   #| end of class |# )
 
-(define-method (uri-path->bytevector (O <path>))
-  (or (O $memoized-bytevector)
-      (receive-and-return (rep)
-	  (receive (port getter)
-	      (open-bytevector-output-port)
-	    (put-bytevector port (O $path $car))
-	    (for-each (lambda (bv)
-			(put-u8 port 47) ;47 = (char->integer #\/)
-			(put-bytevector port bv))
-	      (O $path $cdr))
-	    (getter))
-	(set! (O $memoized-bytevector) rep))))
-
 (define-method (uri-path-put-bytevector (O <path>) (port <binary-output-port>))
-  (put-bytevector port (O bytevector)))
+  (O path put-bytevector port))
 
 ;;; --------------------------------------------------------------------
 
@@ -458,13 +466,14 @@
   ;;
   (nongenerative nausicaa:net:addresses:uri:<path-empty>)
   (parent <path>)
-  (protocol (lambda (make-uri-path)
-	      (let ((obj #f))
-		(lambda ()
-		  (or obj
-		      (receive-and-return (rv)
-			  (make-uri-path '())
-			(set! obj rv)))))))
+  (protocol
+   (lambda (make-uri-path)
+     (let ((singleton-instance #f))
+       (lambda ()
+	 (or singleton-instance
+	     (receive-and-return (rv)
+		 ((make-uri-path '()))
+	       (set! singleton-instance rv)))))))
   #| end of class |# )
 
 ;;; --------------------------------------------------------------------
@@ -477,17 +486,10 @@
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->bytevector (O <path-abempty>))
-  (or (O $memoized-bytevector)
-      (receive-and-return (bv)
-	  (receive (port getter)
-	      (open-bytevector-output-port)
-	    (for-each (lambda (bv)
-			(put-u8 port 47) ;47 = (char->integer #\/)
-			(put-bytevector port bv))
-	      (O $path))
-	    (getter))
-	(set! (O $memoized-bytevector) bv))))
+(define-method (uri-path-put-bytevector (O <path-abempty>) (port <binary-output-port>))
+  ;;47 = (char->integer #\/)
+  (put-u8 port 47)
+  (call-next-method))
 
 ;;; --------------------------------------------------------------------
 
@@ -495,21 +497,14 @@
   (nongenerative nausicaa:net:addresses:uri:<path-absolute>)
   (parent <path>)
   (protocol (lambda (make-uri-path)
-	      (lambda (path)
+	      (lambda ((path <nonempty-list>))
 		((make-uri-path path)))))
   #| end of class |# )
 
-(define-method (uri-path->bytevector (O <path-absolute>))
-  (or (O $memoized-bytevector)
-      (receive-and-return (bv)
-	  (receive (port getter)
-	      (open-bytevector-output-port)
-	    (for-each (lambda (bv)
-			(put-u8 port 47) ;47 = (char->integer #\/)
-			(put-bytevector port bv))
-	      (O $path))
-	    (getter))
-	(set! (O $memoized-bytevector) bv))))
+(define-method (uri-path-put-bytevector (O <path-absolute>) (port <binary-output-port>))
+  ;;47 = (char->integer #\/)
+  (put-u8 port 47)
+  (call-next-method))
 
 ;;; --------------------------------------------------------------------
 
@@ -526,13 +521,13 @@
 (define (make-path-object (path-type <symbol>) path)
   (case path-type
     ((path-abempty)
-     (<path-abempty> (path)))
+     (<path-abempty>	(path)))
     ((path-absolute)
-     (<path-absolute> (path)))
+     (<path-absolute>	(path)))
     ((path-rootless)
-     (<path-rootless> (path)))
+     (<path-rootless>	(path)))
     ((path-empty)
-     (<path-empty> ()))
+     (<path-empty>	()))
     (else
      (procedure-argument-violation __who__
        "invalid URI path type" path-type))))

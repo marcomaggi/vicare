@@ -30,7 +30,7 @@
   (export
     <top>
     <boolean> <symbol> <keyword> <pointer>
-    <pair> <mutable-pair> <spine> <list>
+    <pair> <mutable-pair> <spine> <list> <nonempty-list>
     <char>
     <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
@@ -434,10 +434,17 @@
 		  (mutable $car $car $set-car!)
 		  (mutable $cdr $cdr $set-cdr!)))
 
+;;; --------------------------------------------------------------------
+
 (define-builtin-label <list>
   (parent <spine>)
   (protocol (lambda () list))
   (predicate list?))
+
+(define-builtin-label <nonempty-list>
+  (parent <list>)
+  (protocol (lambda () list))
+  (predicate pair?))
 
 
 ;;;; built-in types: arrays common stuff
@@ -2046,12 +2053,16 @@
 
    ((port?		obj)
     ;;Order here is arbitrary.
-    (cond ((input/output-port?	obj)	(tag-unique-identifiers <input/output-port>))
-	  ((input-port?		obj)	(tag-unique-identifiers <input-port>))
-	  ((output-port?	obj)	(tag-unique-identifiers <output-port>))
-	  ((binary-port?	obj)	(tag-unique-identifiers <binary-port>))
-	  ((textual-port?	obj)	(tag-unique-identifiers <textual-port>))
-	  (else			(tag-unique-identifiers <port>))))
+    (cond ((input/output-port?	obj)	(if (binary-port? obj)
+					    (tag-unique-identifiers <binary-input/output-port>)
+					  (tag-unique-identifiers <textual-input/output-port>)))
+	  ((input-port?		obj)	(if (binary-port? obj)
+					    (tag-unique-identifiers <binary-input-port>)
+					  (tag-unique-identifiers <textual-input-port>)))
+	  (else				#;(assert (output-port? obj))
+					(if (binary-port? obj)
+					    (tag-unique-identifiers <binary-output-port>)
+					  (tag-unique-identifiers <textual-output-port>)))))
    ((transcoder?	obj)	(tag-unique-identifiers <transcoder>))
    ;;Remember that conditions are records by R6RS definition.
    ((condition?		obj)	(tag-unique-identifiers <condition>))
