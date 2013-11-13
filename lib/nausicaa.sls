@@ -1566,7 +1566,7 @@
 
     ;; built-in types
     <top> <boolean> <symbol> <keyword> <pointer>
-    <pair> <mutable-pair> <spine> <list>
+    <pair> <mutable-pair> <spine> <list> <nonempty-list>
     <char>
     <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
     <vector>

@@ -605,6 +605,12 @@ Conventional type of objects satisfying @func{list?}; it is derived from
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{nonempty-list}
+Conventional type of objects satisfying @func{list?} and @func{pair?};
+it is derived from @class{list}.
+@end deftp
+
+
 @deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
 Return the result of applying @func{list} to the @var{item} arguments.
 @end deftypeop

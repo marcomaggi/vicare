@@ -477,7 +477,111 @@
 
   #t)
 
+
+(parametrise ((check-test-name	'path-empty))
 
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-empty> ()))
+        ((uri.<path-empty>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+        (O bytevector))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+        (O string))
+    => "")
+
+  (check
+      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#vu8())
+
+  #t)
+
+
+(parametrise ((check-test-name	'path-abempty))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-abempty> (ELL)))
+        ((uri.<path-abempty>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+        (O bytevector))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+        (O string))
+    => "/home/marco/src/devel")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "/home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+;;; empty list
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-abempty> ('())))
+        ((uri.<path-abempty>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+        (O bytevector))
+    => '#ve(ascii "/"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+        (O string))
+    => "/")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "/"))
+
+;;; --------------------------------------------------------------------
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (let (((O uri.<path-abempty>) '(#ve(ascii "ciao%Z"))))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
 
 
 (parametrise ((check-test-name	'query))
