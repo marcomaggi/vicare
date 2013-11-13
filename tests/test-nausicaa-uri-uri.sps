@@ -350,6 +350,136 @@
   #t)
 
 
+(parametrise ((check-test-name	'segment))
+
+  (check	;constructor
+      (let ()
+	(uri.<segment> O (<> ('#ve(ascii "image"))))
+        O)
+    => '#ve(ascii "image"))
+
+  (check
+      (let (((O uri.<segment>) '#ve(ascii "image")))
+        (O bytevector))
+    => '#ve(ascii "image"))
+
+  (check
+      (let (((O uri.<segment>) '#ve(ascii "image")))
+        (O string))
+    => "image")
+
+  (check
+      (let (((O uri.<segment>) '#ve(ascii "image")))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "image"))
+
+;;; --------------------------------------------------------------------
+
+  (check	;empty segments are invalid
+      (try
+	  (let (((O uri.<segment>) '#vu8()))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (let (((O uri.<segment>) "ciao%Z"))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'list-of-segments))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check	;constructor
+      (let ()
+	(uri.<list-of-segments> O (<> (ELL)))
+        O)
+    => ELL)
+
+  (check
+      (let (((O uri.<list-of-segments>) ELL))
+        (O bytevector))
+    => '#ve(ascii "home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<list-of-segments>) ELL))
+        (O string))
+    => "home/marco/src/devel")
+
+  (check
+      (let (((O uri.<list-of-segments>) ELL))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "home/marco/src/devel"))
+
+;;; --------------------------------------------------------------------
+;;; empty list
+
+  (check	;constructor
+      (let ()
+	(uri.<list-of-segments> O (<> ('())))
+        O)
+    => '())
+
+  (check
+      (let (((O uri.<list-of-segments>) '()))
+        (O bytevector))
+    => '#vu8())
+
+  (check
+      (let (((O uri.<list-of-segments>) '()))
+        (O string))
+    => "")
+
+  (check
+      (let (((O uri.<list-of-segments>) '()))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (let (((O uri.<list-of-segments>) '(#ve(ascii "ciao%Z"))))
+	    #f)
+	(catch E
+	  (&tagged-binding-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+
+
 (parametrise ((check-test-name	'query))
 
   (check	;constructor
