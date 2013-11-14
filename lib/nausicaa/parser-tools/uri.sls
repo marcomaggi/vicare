@@ -662,12 +662,14 @@
   (let ((chi (get-u8 in-port)))
     (cond ((eof-object? chi)
 	   (return-failure))
+	  ;;The first octet must be a slash.
 	  ((not ($ascii-chi-slash? chi))
 	   (return-failure))
 	  (else
 	   (let ((chi1 (get-u8 in-port)))
 	     (cond ((eof-object? chi1)
 		    (return-failure))
+		   ;;The second octet must be a slash.
 		   (($ascii-chi-slash? chi1)
 		    (receive (ou-port getter)
 			(open-bytevector-output-port)
@@ -1623,7 +1625,8 @@
 		     (output	'()))
     (cond ((null? input)
 	   (reverse output))
-	  ((equal? '#vu8(46) (car input))
+	  ((or (bytevector-empty? (car input))
+	       (equal? '#vu8(46) (car input)))
 	   (next-segment (cdr input) output))
 	  ((equal? '#vu8(46 46) (car input))
 	   (next-segment (cdr input)
