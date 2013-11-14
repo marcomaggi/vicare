@@ -844,45 +844,82 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((userinfo <userinfo>) (host <ip-address>) (port <port-number>)
-	 (path <path>) (query <query>) (fragment <fragment>))
-       ((make-top) userinfo host port path query fragment))))
+     (lambda (specified-authority? userinfo host port-number path query fragment)
+       (let (((userinfo <userinfo>)	(if (unspecified? userinfo)
+					    '#vu8()
+					    userinfo))
+	     ((host <ip-address>)	host)
+	     ((port <port-number>)	(if (unspecified? port-number)
+					    0
+					  port-number))
+	     ((path <path>)		(if (unspecified? path)
+					    (<path-empty> ())
+					  path))
+	     ((query <query>)		(if (unspecified? query)
+					    '#vu8()
+					    query))
+	     ((fragment <fragment>)	(if (unspecified? fragment)
+					    '#vu8()
+					    fragment)))
+	 ((make-top) #f #f
+	  (if specified-authority? #t #f)
+	  userinfo host port path query fragment)))))
 
-  (fields (mutable (userinfo	<userinfo>))
-	  (mutable (host	<host>))
-	  (mutable (port	<port-number>))
-	  (mutable (path	<path>))
-	  (mutable (query	<query>))
-	  (mutable (fragment	<fragment>)))
+  (fields (mutable memoized-bytevector)
+	  (mutable memoized-string)
+	  (immutable (specified-authority?	<boolean>))
+		;True if the "authority" component is specified.  Notice
+		;that the authority  can be specified even  when all its
+		;sub-components are empty: it is the case of "authority"
+		;equal  to a  "host"  component, equal  to a  "reg-name"
+		;component which can be empty.
+	  (immutable (userinfo			<userinfo>))
+	  (immutable (host			<host>))
+	  (immutable (port			<port-number>))
+	  (immutable (path			<path>))
+	  (immutable (query			<query>))
+	  (immutable (fragment			<fragment>)))
 
   (virtual-fields
-   (immutable (string <string>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <relative-ref>))
-		(ascii->string (O bytevector))))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (O put-bytevector port)
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
 
-   (immutable (bytevector <bytevector>)
-	      (lambda ((O <uri>))
-		(define who '<uri>-bytevector)
-		(receive (port getter)
-		    (open-bytevector-output-port)
-		  (let ((authority (receive (authority-port authority-getter)
-				       (open-bytevector-output-port)
-				     (O $userinfo put-bytevector authority-port)
-				     (O $host     put-bytevector authority-port)
-				     (O $port     put-bytevector authority-port)
-				     (authority-getter))))
-		    (when (or ($bytevector-not-empty? authority)
-			      ((<path-abempty>) O)
-			      ((<path-empty>)   O))
-		      (put-u8 47 port) ;47 = #\/
-		      (put-u8 47 port) ;47 = #\/
-		      (put-bytevector authority port)))
-		  (O $path  put-bytevector port)
-		  (O $query put-bytevector port)
-		  (O $fragment put-bytevector port)
-		  (getter))))
+   (immutable (string <ascii-string>)
+	      (lambda ((O <relative-ref>))
+		(or (O $memoized-string)
+		    (receive-and-return (str)
+			($ascii->string (O bytevector))
+		      (set! (O $memoized-string) str)))))
 
-   #| end of virtual-fields|# )
+   #| end of virtual-fields |# )
+
+  (method (put-bytevector (O <relative-ref>) (port <binary-output-port>))
+    ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
+    ;;"Component Recomposition" of RFC 3986.
+    (define who '<relative-ref>-bytevector)
+    (let ((authority (receive (authority-port authority-getter)
+			 (open-bytevector-output-port)
+		       (O $userinfo put-bytevector authority-port)
+		       (O $host     put-bytevector authority-port)
+		       (O $port     put-bytevector authority-port)
+		       (authority-getter))))
+      (when (or ($bytevector-not-empty? authority)
+		((<path-abempty>) O)
+		((<path-empty>)   O)
+		(O $specified-authority?))
+	(put-u8 port 47)   ;47 = #\/
+	(put-u8 port 47)   ;47 = #\/
+	(put-bytevector port authority)))
+    (O $path  put-bytevector port)
+    (O $query put-bytevector port)
+    (O $fragment put-bytevector port))
 
   #| end of class |# )
 
