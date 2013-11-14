@@ -2225,7 +2225,7 @@
       ((_ ?input ?output)
        (check
 	   (map ascii->string
-	     (uri.normalise-path
+	     (uri.normalise-list-of-segments
 	      (map string->ascii
 		(quote ?input))))
 	 => (quote ?output)))))
@@ -2233,7 +2233,7 @@
   (define-syntax-rule (err ?in ?out)
     (check
 	(try
-	    (uri.normalise-path (map string->ascii (quote ?in)))
+	    (uri.normalise-list-of-segments (map string->ascii (quote ?in)))
 	  (catch E
 	    (&assertion
 	     (condition-irritants E))
@@ -2244,14 +2244,15 @@
 
   (doit ("a") ("a"))
 
-  (doit (".") ())
+  (doit (".") ("."))
 
   (doit ("a" "b" "c" "." ".." ".." "g")
 	("a" "g"))
 
-  (err ("..") ((#ve(ascii ".."))))
-  (err (".." ".." ".." "a")
-       ((#ve(ascii "..") #ve(ascii "..") #ve(ascii "..") #ve(ascii "a"))))
+  (doit ("..") ())
+
+  (doit (".." ".." ".." "a")
+	("a"))
 
   #t)
 

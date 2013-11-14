@@ -1402,7 +1402,7 @@ by @rfc{} 3986.
 @deftypecv {Immutable virtual fields} @aclass{path} @aclass{symbol} type
 A symbol among: @code{path-empty}, @code{path-abempty},
 @code{path-absolute}, @code{path-noscheme}, @code{path-rootless}.
-@end defmethod
+@end deftypecv
 
 @c ------------------------------------------------------------
 
