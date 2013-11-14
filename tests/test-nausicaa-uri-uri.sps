@@ -1068,39 +1068,58 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'class-relative-ref))
+(parametrise ((check-test-name	'class-relative-ref))
+
+  (define (string->relative-ref str)
+    (bytevector->relative-ref (string->ascii str)))
+
+  (define (bytevector->relative-ref bv)
+    (read-relative-ref (open-bytevector-input-port bv)))
+
+  (define (read-relative-ref port)
+    (receive (authority userinfo host.type host.bv host.data port path.type path query fragment)
+	(uri.parse-relative-ref port)
+      (uri.<relative-ref> ((uri.specified-authority? authority)
+			   (uri.userinfo	(if userinfo
+						    (uri.<userinfo> (userinfo))
+						  unspecified))
+			   (uri.host		(uri.make-host-object host.type host.bv host.data))
+			   (uri.port-number	(if port
+						    (uri.<port-number> ((string->number (ascii->string port))))
+						  unspecified))
+			   (uri.path		(uri.make-path-object path.type path))
+			   (uri.query		(if query
+						    (uri.<query> (query))
+						  unspecified))
+			   (uri.fragment	(if fragment
+						    (uri.<fragment> (fragment))
+						  unspecified))))))
 
   (define-syntax doit
     (syntax-rules ()
       ((_ ?string)
        (doit ?string ?string))
       ((_ ?input-string ?expected-string)
-       (begin
-	 (check
-	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
-					     (uri.source-bytevector (string->ascii ?input-string)))))
-	       o.string)
-	   => ?expected-string)
-	 (check
-	     (let (((o uri.<relative-ref>) (make uri.<relative-ref>
-					     (uri.source-bytevector (string->ascii ?input-string)))))
-	       o.bytevector)
-	   => (string->ascii ?expected-string))))))
+       (check
+	   (let (((o uri.<relative-ref>) (string->relative-ref ?input-string)))
+	     (values (o string) (o bytevector)))
+	 => ?expected-string (string->ascii ?expected-string)))
+      ))
 
 ;;; --------------------------------------------------------------------
 
-;;; with authority, no scheme
+;;; with authority
 
-  (doit "//")
-  (doit "//?query")
-  (doit "//#fragment")
-  (doit "///")
+  (doit "//"			"///")
+  (doit "//?query"		"///?query")
+  (doit "//#fragment"		"///#fragment")
+  (doit "///"			"///")
   (doit "///?query")
   (doit "///#fragment")
   (doit "///ciao")
-  (doit "//ciao.com")
-  (doit "//ciao.com:8080")
-  (doit "//marco@ciao.com:8080")
+  (doit "//ciao.com"		"//ciao.com/")
+  (doit "//ciao.com:8080"	"//ciao.com:8080/")
+  (doit "//marco@ciao.com:8080"	"//marco@ciao.com:8080/")
   (doit "//ciao.com:8080/")
   (doit "//ciao.com:8080/a")
   (doit "//ciao.com/a/b/c")
@@ -1108,23 +1127,23 @@
 
 ;;; no authority, emtpy path
 
-  (doit "" "//")
-  (doit "?query" "//?query")
-  (doit "#fragment" "//#fragment")
+  (doit ""			"")
+  (doit "?query"		"?query")
+  (doit "#fragment"		"#fragment")
 
 ;;; no authority, absolute path
 
   (doit "/")
-  (doit "/a///")
+  (doit "/a///"			"/a/")
   (doit "/ciao")
   (doit "/ciao/hello/salut")
 
 ;;; no authority, relative path rootless
 
-  (doit "./")
-  (doit "./a///")
-  (doit "./ciao")
-  (doit "./ciao/hello/salut")
+  (doit "./"				"")
+  (doit "./a///"			"a/")
+  (doit "./ciao"			"ciao")
+  (doit "./ciao/hello/salut"		"ciao/hello/salut")
 
 ;;; IPv4address
 
@@ -1134,8 +1153,8 @@
 ;;; IPv6address
 
   (doit "//[1:2:3:4:5:6:7:8]/a/b/c")
-  (doit "//[a:b:c:d:e:f:a:b]/a/b/c")
-  (doit "//[1:2:3:4::172.30.67.254]/a/b/c")
+  (doit "//[a:b:c:d:e:f:a:b]/a/b/c"		 "//[A:B:C:D:E:F:A:B]/a/b/c")
+  (doit "//[1:2:3:4::172.30.67.254]/a/b/c"	"//[1:2:3:4:0:0:AC1E:43FE]/a/b/c")
 
 ;;; ipvfuture
 
