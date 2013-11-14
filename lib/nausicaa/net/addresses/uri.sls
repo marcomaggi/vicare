@@ -34,6 +34,7 @@
     <scheme> <userinfo> <host> <port-number>
     <query> <fragment>
     <path> <path-empty> <path-abempty> <path-absolute> <path-rootless>
+    <path-noscheme>
 
     ;; auxiliary classes and labels
     <segment>	<list-of-segments>
@@ -42,7 +43,7 @@
     make-path-object
 
     ;; auxiliary syntaxes
-    scheme		authority		userinfo
+    scheme		specified-authority?	userinfo
     host		port-number
     path		query			fragment
 
@@ -90,7 +91,7 @@
 
 (define-auxiliary-syntaxes
   scheme
-  authority
+  specified-authority?
   userinfo
   host
   port-number
@@ -300,10 +301,11 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector O port)
-    ;;63 = ?
-    (put-u8 port 63)
-    (put-bytevector port O))
+  (method (put-bytevector (O <query>) port)
+    (when (O specified?)
+      ;;63 = ?
+      (put-u8 port 63)
+      (put-bytevector port O)))
 
   #| end of label |# )
 
@@ -347,10 +349,11 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector O port)
-    ;;35 = #
-    (put-u8 port 35)
-    (put-bytevector port O))
+  (method (put-bytevector (O <fragment>) port)
+    (when (O specified?)
+      ;;35 = #
+      (put-u8 port 35)
+      (put-bytevector port O)))
 
   #| end of label |# )
 
@@ -394,47 +397,190 @@
 
 ;;;; path types: auxiliary label <list-of-segments>
 
-(define-label <list-of-segments>
-  (parent <list>)
+(module (<list-of-segments>)
 
-  (protocol
-   ;;Apply the predicate, through the tagged argument, and return.
-   (lambda ()
-     (lambda ((bv <list-of-segments>)) bv)))
+  (define-label <list-of-segments>
+    (parent <list>)
 
-  (predicate (lambda (O)
-	       ($for-all1 (<segment>) O)))
+    (protocol
+     (lambda ()
+       (lambda (ell)
+	 (%normalise-list-of-segments ell))))
 
-  (virtual-fields
+    (predicate
+     (lambda (O)
+       (%normalised-list-of-segments? O)))
 
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <list-of-segments>))
-		(receive (port getter)
-		    (open-bytevector-output-port)
-		  (O put-bytevector port)
-		  (getter))))
+    (virtual-fields
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <list-of-segments>))
-		($ascii->string (O bytevector))))
+     (immutable (bytevector <ascii-bytevector>)
+		(lambda ((O <list-of-segments>))
+		  (receive (port getter)
+		      (open-bytevector-output-port)
+		    (O put-bytevector port)
+		    (getter))))
 
-   #| end of virtual-fields |# )
+     (immutable (string <ascii-string>)
+		(lambda ((O <list-of-segments>))
+		  ($ascii->string (O bytevector))))
 
-  (method (put-bytevector (O <list-of-segments>) port)
-    (and (pair? O)
-	   (put-bytevector port (O $car))
-	   (for-each (lambda (bv)
-		       ;;47 = (char->integer #\/)
-		       (put-u8 port 47)
-		       (put-bytevector port bv))
-	     (O $cdr))))
+     #| end of virtual-fields |# )
 
-  #| end of label |# )
+    (method (put-bytevector (O <list-of-segments>) port)
+      ;;We  know  that in  a  normalised  list  of segments:  a  segment
+      ;;representing the current directory can come only as last one; so
+      ;;if  we find  such  a segment  we stop  putting  after the  slash
+      ;;character.   This  way  when reconstructing  the  original  URIs
+      ;;"a/b/" and  "a/b/." we get  "a/b/".  As  a special case:  if the
+      ;;path  is composed  of  the current  directory  segment only,  we
+      ;;output nothing.
+      ;;
+      (when (pair? O)
+	(if (null? (O $cdr))
+	    (unless ($current-directory? (O $car))
+	      (put-bytevector port (O $car)))
+	  (begin
+	    (put-bytevector port (O $car))
+	    (let loop (((S <spine>) (O $cdr)))
+	      (when (pair? S)
+		;;47 = (char->integer #\/)
+		(put-u8 port 47)
+		(unless ($current-directory? (S $car))
+		  (put-bytevector port (S $car))
+		  (loop (S $cdr)))))))))
+
+    #| end of label |# )
+
+  (define (%normalise-list-of-segments list-of-segments)
+    ;;Given a proper list of bytevectors representing URI path segments:
+    ;;validate and  normalise it as  described in section  5.2.4 "Remove
+    ;;Dot  Segments" of  RFC  3986.  If  successful  return a,  possibly
+    ;;empty,  proper  list  of   bytevectors  representing  the  result;
+    ;;otherwise  raise an  exception with  compound condition  object of
+    ;;types:   "&procedure-argument-violation",    "&who",   "&message",
+    ;;"&irritants".
+    ;;
+    ;;We expect  the input list to  be "short".  We would  like to visit
+    ;;recursively the  argument, but to process  the "uplevel directory"
+    ;;segments we need  access to the previous item in  the list as well
+    ;;as the current one;  so we process it in a loop and  at the end we
+    ;;reverse the accumulated result.
+    ;;
+    ;;How do  we handle  segments representing the  "current directory"?
+    ;;When the original  URI string contains the  sequence of characters
+    ;;"a/./b", we expect it to be parsed as the list of segments:
+    ;;
+    ;;   (#ve(ascii "a") #ve(ascii ".") #ve(ascii "b"))
+    ;;
+    ;;when the original  URI string contains the  sequence of characters
+    ;;"a//b", we expect it to be parsed as the list of segments:
+    ;;
+    ;;   (#ve(ascii "a") #vu8() #ve(ascii "b"))
+    ;;
+    ;;so  we interpret  an empty  bytevector  as alias  for the  segment
+    ;;containing a standalone  dot.  We discard such  segment, unless it
+    ;;is the last one; this is  because when the original URI terminates
+    ;;with "a/b/" (slash  as last character), we want the  result of the
+    ;;path normalisation to be:
+    ;;
+    ;;   (#ve(ascii "a") #ve(ascii "b") #ve(ascii "."))
+    ;;
+    ;;so  that  reconstructing the  URI  we  get  "a/b/." which  can  be
+    ;;normalised to  "a/b/"; by discarding  the trailing dot  segment we
+    ;;would get "a/b" as reconstructed URI.
+    ;;
+    ;;How do  we handle  segments representing the  "uplevel directory"?
+    ;;If a segment  exists on the output stack: discard  both it and the
+    ;;uplevel  directory segment;  otherwise  just  discard the  uplevel
+    ;;directory segment.
+    ;;
+    (let next-segment ((input-stack  list-of-segments)
+		       (output-stack '()))
+      (cond ((pair? input-stack)
+	     (let ((head ($car input-stack))
+		   (tail ($cdr input-stack)))
+	       (if (bytevector? head)
+		   (cond (($current-directory? head)
+			  ;;Discard a  segment representing  the current
+			  ;;directory; unless  it is the last,  in which
+			  ;;case we normalise  it to "." and  push it on
+			  ;;the output stack.
+			  (if (pair? tail)
+			      (next-segment tail output-stack)
+			    (reverse (cons '#vu8(46) output-stack))))
+			 (($uplevel-directory? head)
+			  ;;Remove  the  previously pushed  segment,  if
+			  ;;any.
+			  (next-segment tail (if (null? output-stack)
+						 output-stack
+					       ($cdr output-stack))))
+			 (((<segment>) head)
+			  ;;Just  push  on  the output  stack  a  normal
+			  ;;segment.
+			  (next-segment tail (cons head output-stack)))
+			 (else
+			  (procedure-argument-violation __who__
+			    "expected URI segment bytevector as item in list argument"
+			    list-of-segments head)))
+		 (procedure-argument-violation __who__
+		   "expected bytevector as item in list argument"
+		   list-of-segments head))))
+	    ((null? input-stack)
+	     (reverse output-stack))
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected proper list as argument" list-of-segments)))))
+
+  (define (%normalised-list-of-segments? list-of-segments)
+    ;;Return  #t  if  the  argument  is a  proper  list  of  bytevectors
+    ;;representing URI path  segments as defined by  RFC 3986; otherwise
+    ;;return #f.
+    ;;
+    ;;Each   segment  must   be  a   non-empty  bytevector;   a  segment
+    ;;representing the current  directory "." is accepted only  if it is
+    ;;the  last one;  a segment  representing the  uplevel directory  is
+    ;;rejected.
+    ;;
+    (cond ((pair? list-of-segments)
+	   (let ((head ($car list-of-segments))
+		 (tail ($cdr list-of-segments)))
+	     (and (bytevector? head)
+		  (cond (($current-directory? head)
+			 ;;Accept  a  segment representing  the  current
+			 ;;directory only if it is the last one.
+			 (if (pair? tail)
+			     #f
+			   (%normalised-list-of-segments? tail)))
+			(($uplevel-directory? head)
+			 ;;Reject  a  segment representing  the  uplevel
+			 ;;directory.
+			 #f)
+			(((<segment>) head)
+			 (%normalised-list-of-segments? tail))
+			(else #f)))))
+	  ((null? list-of-segments)
+	   #t)
+	  (else #f)))
+
+  (define ($current-directory? bv)
+    (or ($bytevector-empty? bv)
+	(and ($fx= 1 ($bytevector-length bv))
+	     ;;46 = #\.
+	     ($fx= 46 ($bytevector-u8-ref bv 0)))))
+
+  (define ($uplevel-directory? bv)
+    (and ($fx= 2 ($bytevector-length bv))
+	 ;;46 = #\.
+	 ($fx= 46 ($bytevector-u8-ref bv 0))
+	 ($fx= 46 ($bytevector-u8-ref bv 1))))
+
+  #| end of module |# )
 
 
 ;;;; path types
 
 (define-generic uri-path-put-bytevector	(path port))
+(define-generic uri-path-symbol		(path))
 
 ;;; --------------------------------------------------------------------
 
@@ -448,8 +594,8 @@
 
   (super-protocol
    (lambda (make-top)
-     (lambda ((path <list-of-segments>))
-       ((make-top) path #f #f))))
+     (lambda (path)
+       ((make-top) (<list-of-segments> (path)) #f #f))))
 
   (virtual-fields
 
@@ -470,9 +616,12 @@
 			($ascii->string (O bytevector))
 		      (set! (O $memoized-string) str)))))
 
+   (immutable (type <symbol>)
+	      uri-path-symbol)
+
    #| end of virtual-fields |# )
 
-  (methods (put-bytevector uri-path-put-bytevector))
+  (methods (put-bytevector	uri-path-put-bytevector))
 
   #| end of class |# )
 
@@ -497,6 +646,9 @@
 	       (set! singleton-instance rv)))))))
   #| end of class |# )
 
+(define-method (uri-path-symbol (O <path-empty>))
+  'path-empty)
+
 ;;; --------------------------------------------------------------------
 
 (define-class <path-abempty>
@@ -511,6 +663,9 @@
   ;;47 = (char->integer #\/)
   (put-u8 port 47)
   (call-next-method))
+
+(define-method (uri-path-symbol (O <path-abempty>))
+  'path-abempty)
 
 ;;; --------------------------------------------------------------------
 
@@ -527,6 +682,9 @@
   (put-u8 port 47)
   (call-next-method))
 
+(define-method (uri-path-symbol (O <path-absolute>))
+  'path-absolute)
+
 ;;; --------------------------------------------------------------------
 
 (define-class <path-rootless>
@@ -537,6 +695,22 @@
 		((make-uri-path path)))))
   #| end of class |# )
 
+(define-method (uri-path-symbol (O <path-rootless>))
+  'path-rootless)
+
+;;; --------------------------------------------------------------------
+
+(define-class <path-noscheme>
+  (nongenerative nausicaa:net:addresses:uri:<path-noscheme>)
+  (parent <path>)
+  (protocol (lambda (make-uri-path)
+	      (lambda ((path <nonempty-list>))
+		((make-uri-path path)))))
+  #| end of class |# )
+
+(define-method (uri-path-symbol (O <path-noscheme>))
+  'path-noscheme)
+
 ;;; --------------------------------------------------------------------
 
 (define (make-path-object (path-type <symbol>) path)
@@ -545,8 +719,10 @@
      (<path-abempty>	(path)))
     ((path-absolute)
      (<path-absolute>	(path)))
-    ((path-rootless path-noscheme)
+    ((path-rootless)
      (<path-rootless>	(path)))
+    ((path-noscheme)
+     (<path-noscheme>	(path)))
     ((path-empty)
      (<path-empty>	()))
     (else
@@ -564,11 +740,11 @@
 
   (protocol
    (lambda (make-top)
-     (lambda (scheme userinfo host port-number path query fragment)
+     (lambda (scheme specified-authority? userinfo host port-number path query fragment)
        (let (((scheme <scheme>)		scheme)
 	     ((userinfo <userinfo>)	(if (unspecified? userinfo)
 					    '#vu8()
-					  userinfo))
+					    userinfo))
 	     ((host <ip-address>)	host)
 	     ((port <port-number>)	(if (unspecified? port-number)
 					    0
@@ -578,61 +754,84 @@
 					  path))
 	     ((query <query>)		(if (unspecified? query)
 					    '#vu8()
-					  query))
+					    query))
 	     ((fragment <fragment>)	(if (unspecified? fragment)
 					    '#vu8()
-					  fragment)))
-	 ((make-top) scheme userinfo host port path query fragment)))))
+					    fragment)))
+	 ((make-top) #f #f
+	  scheme (if specified-authority? #t #f)
+	  userinfo host port path query fragment)))))
 
-  (fields (mutable (scheme	<scheme>))
-	  (mutable (userinfo	<userinfo>))
-	  (mutable (host	<host>))
-	  (mutable (port	<port-number>))
-	  (mutable (path	<path>))
-	  (mutable (query	<query>))
-	  (mutable (fragment	<fragment>)))
+  (fields (mutable memoized-bytevector)
+	  (mutable memoized-string)
+	  (immutable (scheme			<scheme>))
+	  (immutable (specified-authority?	<boolean>))
+		;True if the "authority" component is specified.  Notice
+		;that the authority  can be specified even  when all its
+		;sub-components are empty: it is the case of "authority"
+		;equal  to a  "host"  component, equal  to a  "reg-name"
+		;component which can be empty.
+	  (immutable (userinfo			<userinfo>))
+	  (immutable (host			<host>))
+	  (immutable (port			<port-number>))
+	  (immutable (path			<path>))
+	  (immutable (query			<query>))
+	  (immutable (fragment			<fragment>)))
 
   (virtual-fields
-   (immutable (string <string>)
+   (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <uri>))
-		(ascii->string (O bytevector))))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (O put-bytevector port)
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
 
-   (immutable (bytevector <bytevector>)
+   (immutable (string <ascii-string>)
 	      (lambda ((O <uri>))
-		(define who '<uri>-bytevector)
-		(receive (port getter)
-		    (open-bytevector-output-port)
-		  (O $scheme put-bytevector port)
-		  (let ((authority (receive (authority-port authority-getter)
-				       (open-bytevector-output-port)
-				     (O $userinfo put-bytevector authority-port)
-				     (O $host     put-bytevector authority-port)
-				     (O $port     put-bytevector authority-port)
-				     (authority-getter))))
-		    (when (or ($bytevector-not-empty? authority)
-			      ((<path-abempty>) O)
-			      ((<path-empty>)   O))
-		      (put-u8 port 47) ;47 = #\/
-		      (put-u8 port 47) ;47 = #\/
-		      (put-bytevector port authority)))
-		  (O $path  put-bytevector port)
-		  (O $query put-bytevector port)
-		  (O $fragment put-bytevector port)
-		  (getter))))
+		(or (O $memoized-string)
+		    (receive-and-return (str)
+			($ascii->string (O bytevector))
+		      (set! (O $memoized-string) str)))))
 
    #| end of virtual-fields |# )
+
+  (method (put-bytevector (O <uri>) (port <binary-output-port>))
+    ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
+    ;;"Component Recomposition" of RFC 3986.
+    (define who '<uri>-bytevector)
+    (O $scheme put-bytevector port)
+    (let ((authority (receive (authority-port authority-getter)
+			 (open-bytevector-output-port)
+		       (O $userinfo put-bytevector authority-port)
+		       (O $host     put-bytevector authority-port)
+		       (O $port     put-bytevector authority-port)
+		       (authority-getter))))
+      (when (or ($bytevector-not-empty? authority)
+		((<path-abempty>) O)
+		((<path-empty>)   O)
+		(O $specified-authority?))
+	(put-u8 port 47)   ;47 = #\/
+	(put-u8 port 47)   ;47 = #\/
+	(put-bytevector port authority)))
+    (O $path  put-bytevector port)
+    (O $query put-bytevector port)
+    (O $fragment put-bytevector port))
 
   #| end of class |# )
 
 (mk.define-maker %make-uri
     make-<uri>
-  ((scheme		unspecified)
-   (userinfo		unspecified)
-   (host		unspecified)
-   (port-number		unspecified)
-   (path		unspecified)
-   (query		unspecified)
-   (fragment		unspecified)))
+  ((scheme			unspecified)
+   (specified-authority?	#f)
+   (userinfo			unspecified)
+   (host			unspecified)
+   (port-number			unspecified)
+   (path			unspecified)
+   (query			unspecified)
+   (fragment			unspecified)))
 
 
 (define-class <relative-ref>
@@ -689,12 +888,13 @@
 
 (mk.define-maker %make-relative-ref
     make-<relative-ref>
-  ((userinfo		'#vu8())
-   (host		#f)
-   (port-number		0)
-   (path		(<path-empty> ()))
-   (query		'#vu8())
-   (fragment		'#vu8())))
+  ((specified-authority?	#f)
+   (userinfo			unspecified)
+   (host			unspecified)
+   (port-number			unspecified)
+   (path			unspecified)
+   (query			unspecified)
+   (fragment			unspecified)))
 
 
 ;;;; done

@@ -486,22 +486,27 @@
     => #t)
 
   (check
-      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+      (let (((O uri.<path>) (uri.<path-empty> ())))
         (O bytevector))
     => '#vu8())
 
   (check
-      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+      (let (((O uri.<path>) (uri.<path-empty> ())))
         (O string))
     => "")
 
   (check
-      (let (((O uri.<path-empty>) (uri.<path-empty> ())))
+      (let (((O uri.<path>) (uri.<path-empty> ())))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
 	  (getter)))
     => '#vu8())
+
+  (check
+      (let (((O uri.<path>) (uri.<path-empty> ())))
+        (O type))
+    => 'path-empty)
 
   #t)
 
@@ -540,6 +545,11 @@
 	  (O put-bytevector port)
 	  (getter)))
     => '#ve(ascii "/home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+        (O type))
+    => 'path-abempty)
 
 ;;; --------------------------------------------------------------------
 ;;; empty list
@@ -617,6 +627,11 @@
 	  (getter)))
     => '#ve(ascii "/home/marco/src/devel"))
 
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+        (O type))
+    => 'path-absolute)
+
 ;;; --------------------------------------------------------------------
 
   (check	;empty list is invalid
@@ -675,6 +690,11 @@
 	  (getter)))
     => '#ve(ascii "home/marco/src/devel"))
 
+  (check
+      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+        (O type))
+    => 'path-rootless)
+
 ;;; --------------------------------------------------------------------
 
   (check	;empty list is invalid
@@ -689,6 +709,69 @@
   (check	;invalid pct-encoded sequence
       (try
 	  (uri.<path-rootless> ('(#ve(ascii "ciao%Z"))))
+	(catch E
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'path-noscheme))
+
+  (define-constant ELL
+    '( ;;
+      #ve(ascii "home")
+      #ve(ascii "marco")
+      #ve(ascii "src")
+      #ve(ascii "devel")))
+
+;;; --------------------------------------------------------------------
+
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-noscheme> (ELL)))
+        ((uri.<path-noscheme>) O))
+    => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+        (O bytevector))
+    => '#ve(ascii "home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+        (O string))
+    => "home/marco/src/devel")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "home/marco/src/devel"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+        (O type))
+    => 'path-noscheme)
+
+;;; --------------------------------------------------------------------
+
+  (check	;empty list is invalid
+      (try
+	  (uri.<path-noscheme> ('()))
+	(catch E
+	  (&procedure-argument-violation
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check	;invalid pct-encoded sequence
+      (try
+	  (uri.<path-noscheme> ('(#ve(ascii "ciao%Z"))))
 	(catch E
 	  (&procedure-argument-violation
 	   #t)
@@ -880,12 +963,13 @@
     (receive (scheme authority userinfo host.type host.bv host.data port path.type path query fragment)
 	(uri.parse-uri port)
       (uri.<uri> ((uri.scheme		(uri.<scheme> (scheme)))
+		  (uri.specified-authority? authority)
 		  (uri.userinfo		(if userinfo
 					    (uri.<userinfo> (userinfo))
 					  unspecified))
 		  (uri.host		(uri.make-host-object host.type host.bv host.data))
 		  (uri.port-number	(if port
-					    (uri.<port-number> (port))
+					    (uri.<port-number> ((string->number (ascii->string port))))
 					  unspecified))
 		  (uri.path		(uri.make-path-object path.type path))
 		  (uri.query		(if query
@@ -911,34 +995,36 @@
   (doit "http://www.spiffy.org/the/path/name?question%3Danswer#anchor-point")
 
   (doit "ci:ao/")
-  (doit "ci:ao/a///")
+  (doit "ci:ao/a///" "ci:ao/a/")
   (doit "ci:ao/ciao")
   (doit "ci:ao/ciao/hello/salut")
-  (doit "http://")
-  (doit "http://?query")
-  (doit "http://#fragment")
+  (doit "http://"			 "http:///")
+  (doit "http://?query"			"http:///?query")
+  (doit "http://#fragment"		"http:///#fragment")
   (doit "http:///")
   (doit "http:///?query" )
   (doit "http:///ciao" )
-  (doit "http://ciao.com:8080")
+  (doit "http://ciao.com:8080"		 "http://ciao.com:8080/")
   (doit "http://ciao.com:8080/")
   (doit "http://ciao.com/a/b/c")
 
-;;; with authority
+;;; with authority, the path is "path-abempty"
 
-  (doit "http://")
-  (doit "http://#fragment")
+  (doit "http://"			"http:///")
+  (doit "http://?query"			"http:///?query")
+  (doit "http://#fragment"		"http:///#fragment")
   (doit "http:///?query")
+  (doit "http:///#fragment")
   (doit "http:///ciao")
-  (doit "http://ciao.com:8080")
+  (doit "http://ciao.com:8080"		 "http://ciao.com:8080/")
   (doit "http://ciao.com:8080/")
   (doit "http://ciao.com/a/b/c")
 
 ;;; no authority, emtpy path
 
-  (doit "http:" "http://")
-  (doit "http:?query" "http://?query")
-  (doit "http:#fragment" "http://#fragment")
+  (doit "http:"			"http:")
+  (doit "http:?query"		"http:?query")
+  (doit "http:#fragment"	"http:#fragment")
 
 ;;; no authority, absolute path
 
@@ -948,10 +1034,20 @@
 
 ;;; no authority, relative path rootless
 
-  (doit "http:./")
-  (doit "http:./a///")
-  (doit "http:./ciao")
-  (doit "http:./ciao/hello/salut")
+  (doit "http:./"			"http:")
+  (doit "http:./a///"			"http:a/")
+  (doit "http:./ciao"			"http:ciao")
+  (doit "http:./ciao/hello/salut"	"http:ciao/hello/salut")
+
+  (doit "http:../"			"http:")
+  (doit "http:../a///"			"http:a/")
+  (doit "http:../ciao"			"http:ciao")
+  (doit "http:../ciao/hello/salut"	"http:ciao/hello/salut")
+
+  (doit "http:a/..//"			"http:")
+  (doit "http:a/.././."			"http:")
+  (doit "http:ciao/.."			"http:")
+  (doit "http:ciao/../hello/salut"	"http:hello/salut")
 
 ;;; IPv4address
 
@@ -961,8 +1057,8 @@
 ;;; IPv6address
 
   (doit "http://[1:2:3:4:5:6:7:8]/a/b/c")
-  (doit "http://[a:b:c:d:e:f:a:b]/a/b/c")
-  (doit "http://[1:2:3:4::172.30.67.254]/a/b/c")
+  (doit "http://[a:b:c:d:e:f:a:b]/a/b/c"	"http://[A:B:C:D:E:F:A:B]/a/b/c")
+  (doit "http://[1:2:3:4::172.30.67.254]/a/b/c"	"http://[1:2:3:4:0:0:AC1E:43FE]/a/b/c")
 
 ;;; ipvfuture
 

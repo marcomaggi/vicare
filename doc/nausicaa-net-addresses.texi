@@ -956,6 +956,7 @@ bindings from @library{nausicaa net addresses ip}.
 * net addresses uri path-abempty::  @uri{} abempty path objects.
 * net addresses uri path-absolute:: @uri{} absolute path objects.
 * net addresses uri path-rootless:: @uri{} rootless path objects.
+* net addresses uri path-noscheme:: @uri{} noscheme path objects.
 * net addresses uri query::         @uri{} query objects.
 * net addresses uri fragment::      @uri{} fragment objects.
 * net addresses uri uri::           Uniform Resource Identifiers objects.
@@ -1281,6 +1282,10 @@ Label used to tag list of bytevectors representing path @code{segment}
 components of @uri{}s; it is derived from @class{list}.
 @end deftp
 
+@c ------------------------------------------------------------
+
+@subsubheading Constructors, makers, predicates
+
 
 @defop Constructor @aclass{list-of-segments} constructor @var{obj}
 Just return the given argument.  If tagged argument validation is
@@ -1295,10 +1300,14 @@ Filter the given argument using the label constructor.
 
 
 @defop Predicate @aclass{list-of-segments} predicate @var{obj}
-Return @true{} if @var{obj} is a, possibly empty, list of non--empty
-bytevectors in which every octet can be interpreted as character in
-@ascii{} encoding and the sequence of characters is valid for a
-@code{segment} @uri{} component.
+Return @true{} if @var{obj} is a, possibly empty, list of bytevectors in
+which every octet can be interpreted as character in @ascii{} encoding
+and the sequence of characters is valid for a @code{segment} @uri{}
+component.
+
+An empty bytevector is allowed only as last component and only if it is
+preceded by another component; in this case the empty bytevector
+represents a segment with string representation @samp{.}.
 @end defop
 
 @c ------------------------------------------------------------
@@ -1361,8 +1370,7 @@ must be a symbol among: @code{path-empty}, @code{path-abempty},
 
 Depending on the value of @var{path-type} the returned value is of
 class: @class{path-empty}, @class{path-abempty}, @class{path-absolute},
-@class{path-rootless}; if @var{path-type} is @code{path-noscheme} the
-returned value is of type @class{path-rootless}.
+@class{path-rootless}, @class{path-noscheme}.
 
 The arguments of this function are modeled after the return values of
 @func{parse-path} from @library{nausicaa parser-tools uri},
@@ -1389,6 +1397,12 @@ requested by @rfc{} 3986.
 A string representing the @code{path} component in the format requested
 by @rfc{} 3986.
 @end deftypecv
+
+
+@deftypecv {Immutable virtual fields} @aclass{path} @aclass{symbol} type
+A symbol among: @code{path-empty}, @code{path-abempty},
+@code{path-absolute}, @code{path-noscheme}, @code{path-rootless}.
+@end defmethod
 
 @c ------------------------------------------------------------
 
@@ -1480,6 +1494,27 @@ is derived from @class{path}.
 
 @defop {Super constructor} @aclass{path-rootless} constructor (@var{obj} @aclass{list-of-segments})
 Build and return a new instance of @class{path-rootless}.  The argument
+must be a non--empty, list of objects satisfying the requirements of
+@class{list-of-segments}.
+@end defop
+
+@c page
+@node net addresses uri path-noscheme
+@subsubsection @uri{} noscheme path objects
+
+
+The following bindings are exported by the @library{nausicaa net
+addresses uri} library.
+
+
+@deftp {Abstract Class} @aclass{path-noscheme}
+Base class representing @code{path-noscheme} components of @uri{}s; it
+is derived from @class{path}.
+@end deftp
+
+
+@defop {Super constructor} @aclass{path-noscheme} constructor (@var{obj} @aclass{list-of-segments})
+Build and return a new instance of @class{path-noscheme}.  The argument
 must be a non--empty, list of objects satisfying the requirements of
 @class{list-of-segments}.
 @end defop
