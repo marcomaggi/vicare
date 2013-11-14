@@ -60,7 +60,8 @@
     parse-uri			parse-relative-ref
 
     ;; miscellaneous
-    valid-component?		normalise-path
+    valid-component?
+    normalise-list-of-segments	normalised-list-of-segments?
 
     ;; auxiliary syntaxes
     char-selector		string-result?)
@@ -1619,23 +1620,141 @@
       (set-port-position! port start-position))))
 
 
-(define (normalise-path input)
-  (define who 'normalise-path)
-  (let next-segment ((input	input)
-		     (output	'()))
-    (cond ((null? input)
-	   (reverse output))
-	  ((or (bytevector-empty? (car input))
-	       (equal? '#vu8(46) (car input)))
-	   (next-segment (cdr input) output))
-	  ((equal? '#vu8(46 46) (car input))
-	   (next-segment (cdr input)
-			 (if (null? output)
-			     (assertion-violation who
-			       "invalid path components referencing unexistent parent" input)
-			   (cdr output))))
-	  (else
-	   (next-segment (cdr input) (cons (car input) output))))))
+(module (normalise-list-of-segments
+	 normalised-list-of-segments?)
+
+  (define (normalise-list-of-segments list-of-segments)
+    ;;Given a proper list of bytevectors representing URI path segments:
+    ;;validate and  normalise it as  described in section  5.2.4 "Remove
+    ;;Dot  Segments" of  RFC  3986.  If  successful  return a,  possibly
+    ;;empty,  proper  list  of   bytevectors  representing  the  result;
+    ;;otherwise  raise an  exception with  compound condition  object of
+    ;;types:   "&procedure-argument-violation",    "&who",   "&message",
+    ;;"&irritants".
+    ;;
+    ;;We expect  the input list to  be "short".  We would  like to visit
+    ;;recursively the  argument, but to process  the "uplevel directory"
+    ;;segments we need  access to the previous item in  the list as well
+    ;;as the current one;  so we process it in a loop and  at the end we
+    ;;reverse the accumulated result.
+    ;;
+    ;;How do  we handle  segments representing the  "current directory"?
+    ;;When the original  URI string contains the  sequence of characters
+    ;;"a/./b", we expect it to be parsed as the list of segments:
+    ;;
+    ;;   (#ve(ascii "a") #ve(ascii ".") #ve(ascii "b"))
+    ;;
+    ;;when the original  URI string contains the  sequence of characters
+    ;;"a//b", we expect it to be parsed as the list of segments:
+    ;;
+    ;;   (#ve(ascii "a") #vu8() #ve(ascii "b"))
+    ;;
+    ;;so  we interpret  an empty  bytevector  as alias  for the  segment
+    ;;containing a standalone  dot.  We discard such  segment, unless it
+    ;;is the last one; this is  because when the original URI terminates
+    ;;with "a/b/" (slash  as last character), we want the  result of the
+    ;;path normalisation to be:
+    ;;
+    ;;   (#ve(ascii "a") #ve(ascii "b") #ve(ascii "."))
+    ;;
+    ;;so  that  reconstructing the  URI  we  get  "a/b/." which  can  be
+    ;;normalised to  "a/b/"; by discarding  the trailing dot  segment we
+    ;;would get "a/b" as reconstructed URI.
+    ;;
+    ;;How do  we handle  segments representing the  "uplevel directory"?
+    ;;If a segment  exists on the output stack: discard  both it and the
+    ;;uplevel  directory segment;  otherwise  just  discard the  uplevel
+    ;;directory segment.
+    ;;
+    (let next-segment ((input-stack  list-of-segments)
+		       (output-stack '()))
+      (cond ((pair? input-stack)
+	     (let ((head ($car input-stack))
+		   (tail ($cdr input-stack)))
+	       (if (bytevector? head)
+		   (cond (($current-directory? head)
+			  ;;Discard a  segment representing  the current
+			  ;;directory; unless  it is the last,  in which
+			  ;;case we normalise  it to "." and  push it on
+			  ;;the output stack.
+			  (if (pair? tail)
+			      (next-segment tail output-stack)
+			    (reverse (cons '#vu8(46) output-stack))))
+			 (($uplevel-directory? head)
+			  ;;Remove  the  previously pushed  segment,  if
+			  ;;any.
+			  (next-segment tail (if (null? output-stack)
+						 output-stack
+					       ($cdr output-stack))))
+			 (($segment? head)
+			  ;;Just  push  on  the output  stack  a  normal
+			  ;;segment.
+			  (next-segment tail (cons head output-stack)))
+			 (else
+			  (procedure-argument-violation __who__
+			    "expected URI segment bytevector as item in list argument"
+			    list-of-segments head)))
+		 (procedure-argument-violation __who__
+		   "expected bytevector as item in list argument"
+		   list-of-segments head))))
+	    ((null? input-stack)
+	     (reverse output-stack))
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected proper list as argument" list-of-segments)))))
+
+  (define (normalised-list-of-segments? list-of-segments)
+    ;;Return  #t  if  the  argument  is a  proper  list  of  bytevectors
+    ;;representing URI path  segments as defined by  RFC 3986; otherwise
+    ;;return #f.
+    ;;
+    ;;Each   segment  must   be  a   non-empty  bytevector;   a  segment
+    ;;representing the current  directory "." is accepted only  if it is
+    ;;the  last one;  a segment  representing the  uplevel directory  is
+    ;;rejected.
+    ;;
+    (cond ((pair? list-of-segments)
+	   (let ((head ($car list-of-segments))
+		 (tail ($cdr list-of-segments)))
+	     (and (bytevector? head)
+		  (cond (($current-directory? head)
+			 ;;Accept  a  segment representing  the  current
+			 ;;directory only if it is the last one.
+			 (if (pair? tail)
+			     #f
+			   (normalised-list-of-segments? tail)))
+			(($uplevel-directory? head)
+			 ;;Reject  a  segment representing  the  uplevel
+			 ;;directory.
+			 #f)
+			(($segment? head)
+			 (normalised-list-of-segments? tail))
+			(else #f)))))
+	  ((null? list-of-segments)
+	   #t)
+	  (else #f)))
+
+  (define ($current-directory? bv)
+    (or ($bytevector-empty? bv)
+	(and ($fx= 1 ($bytevector-length bv))
+	     ;;46 = #\.
+	     ($fx= 46 ($bytevector-u8-ref bv 0)))))
+
+  (define ($uplevel-directory? bv)
+    (and ($fx= 2 ($bytevector-length bv))
+	 ;;46 = #\.
+	 ($fx= 46 ($bytevector-u8-ref bv 0))
+	 ($fx= 46 ($bytevector-u8-ref bv 1))))
+
+  (define ($segment? bv)
+    (and ($bytevector-not-empty? bv)
+	 (let loop ((bv bv)
+		    (i  0))
+	   (or ($fx= i ($bytevector-length bv))
+	       (and ($ascii-uri-pchar? ($bytevector-u8-ref bv i) bv i)
+		    (loop bv ($fxadd1 i)))))))
+
+  #| end of module |# )
 
 
 ;;;; done

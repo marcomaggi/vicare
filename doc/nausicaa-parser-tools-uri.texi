@@ -1968,31 +1968,61 @@ All the non percent--encoded bytes are in the unreserved set defined by
 @end defun
 
 
-@defun normalise-path @var{input}
-Normalise a list of bytevectors representing an absolute path;
-bytevectors holding single and double dots are removed.
+@defun normalise-list-of-segments @var{list-of-segments}
+Given a proper list of bytevectors representing @uri{} path segments:
+validate and normalise it as described in section 5.2.4 ``Remove Dot
+Segments'' of @rfc{} 3986.  If successful return a, possibly empty,
+proper list of bytevectors representing the result; otherwise raise an
+exception with compound condition object of types:
+@condition{procedure-argument-violation}, @condition{who},
+@condition{message}, @condition{irritants}".
+
+How do we handle segments representing the ``current directory''?  When
+the original @uri{} string contains the sequence of characters
+@samp{a/./b}, we expect it to be parsed as the list of segments:
 
 @example
-(import (vicare)
-  (prefix (nausicaa parser-tools uri) uri.))
-
-(define-syntax doit
-  (syntax-rules ()
-    ((_ ?input)
-     (map ascii->string
-       (uri.normalise-path
-         (map string->ascii
-           (quote ?input)))))))
-
-(doit ())       @result{} ()
-(doit ("a"))    @result{} ("a")
-(doit ("."))    @result{} ()
-(doit ("a" "b" "c" "." ".." ".." "g"))
-@result{} ("a" "g")
-
-(doit (".."))                   @error{} &assertion
-(doit (".." ".." ".." "a"))     @error{} &assertion
+(#ve(ascii "a") #ve(ascii ".") #ve(ascii "b"))
 @end example
+
+@noindent
+when the original @uri{} string contains the sequence of characters
+@samp{a//b}, we expect it to be parsed as the list of segments:
+
+@example
+(#ve(ascii "a") #vu8() #ve(ascii "b"))
+@end example
+
+@noindent
+so we interpret an empty bytevector as alias for the segment containing
+a standalone dot.  We discard such segment, unless it is the last one;
+this is because when the original @uri{} terminates with @samp{a/b/}
+(slash as last character), we want the result of the path normalisation
+to be:
+
+@example
+(#ve(ascii "a") #ve(ascii "b") #ve(ascii "."))
+@end example
+
+@noindent
+so that reconstructing the @uri{} we get @samp{a/b/.} which can be
+normalised to @samp{a/b/}; by discarding the trailing dot segment we
+would get @samp{a/b} as reconstructed @uri{}.
+
+How do we handle segments representing the ``uplevel directory''?  If a
+segment exists on the output stack: discard both it and the uplevel
+directory segment; otherwise just discard the uplevel directory segment.
+@end defun
+
+
+@defun normalised-list-of-segments? @var{list-of-segments}
+Return @true{} if the argument is a proper list of bytevectors
+representing @uri{} path segments as defined by @rfc{} 3986; otherwise
+return @false{}.
+
+Each segment must be a non--empty bytevector; a segment representing the
+current directory @samp{.} is accepted only if it is the last one; a
+segment representing the uplevel directory is rejected.
 @end defun
 
 @c end of file
