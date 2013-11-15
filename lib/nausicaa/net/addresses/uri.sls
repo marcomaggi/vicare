@@ -758,12 +758,12 @@
        (define who 'make-<uri>)
        (when (and (specified? userinfo)
 		  (unspecified? host))
-	 (assertion-violation who
+	 (procedure-argument-violation who
 	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
 	   userinfo))
        (when (and (specified? port)
 		  (unspecified? host))
-	 (assertion-violation who
+	 (procedure-argument-violation who
 	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
 	   port))
        ((make-top)
@@ -922,12 +922,12 @@
        (define who 'make-<relative-ref>)
        (when (and (specified? userinfo)
 		  (unspecified? host))
-	 (assertion-violation who
+	 (procedure-argument-violation who
 	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
 	   userinfo))
        (when (and (specified? port)
 		  (unspecified? host))
-	 (assertion-violation who
+	 (procedure-argument-violation who
 	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
 	   port))
        ((make-top)
