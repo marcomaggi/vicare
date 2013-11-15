@@ -1663,115 +1663,221 @@ addresses uri} library.
 
 
 @deftp Class @aclass{uri}
-Represents a parsed @code{URI} component.
+Represents a @code{uri} component.
 @end deftp
-
-@c ------------------------------------------------------------
-
-@subsubheading Fields
-
-
-@defcv {Mutable field} @aclass{uri} scheme
-The @code{scheme} component as a bytevector.  Remember that
-@code{scheme} is mandatory and does not contain percent--encoded
-characters.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} authority
-The @code{authority} component as a bytevector, or false if there is no
-@code{authority} component.  Percent--encoded characters are not decoded
-in this field.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} userinfo
-The @code{userinfo} component as a percent--decoded bytevector
-@strong{not} containing the trailing at character, or false if there is
-no @code{userinfo} component.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} host-type
-A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
-@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
-value is @code{reg-name}.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} host
-Host data represented as the second return value from @func{parse-host}
-and associated to the symbol above.  When @code{host-type} is
-@code{reg-name}: the value is a percent--decoded bytevector.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} port
-The @code{port} component as a bytevector, or false if no @code{port} is
-present.  Remember that @code{port} does not contain percent--encoded
-characters.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} path-type
-A Scheme symbol among: @code{path-abempty}, @code{path-empty},
-@code{path-rootless}, @code{path-absolute}; represents the type of the
-@code{path} field.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} path
-A possibly empty list holding percent--decoded bytevectors representing
-the path segments.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} query
-The @code{query} component as a percent--decoded bytevector @strong{not}
-containing the leading question mark, or false if there is no
-@code{query} component.
-@end defcv
-
-
-@defcv {Mutable field} @aclass{uri} fragment
-The @code{fragment} component as a percent--decoded bytevector
-@strong{not} containing the leading number--sign, or false if there is
-no @code{fragment} component.
-@end defcv
-
-
-@defcv {Immutable virtual field} @aclass{uri} bytevector
-A bytevector representing the whole @uri{}.
-@end defcv
-
-
-@defcv {Immutable virtual field} @aclass{uri} string
-A string representing the whole @uri{}; it is built from the
-@code{bytevector} field with the @func{to-string} function.
-@end defcv
 
 @c ------------------------------------------------------------
 
 @subsubheading Constructors, makers, predicates
 
 
-@defop Syntax @aclass{uri} make* @aclass{uri} @meta{source-bytevector}
-Build and return a new @class{uri} instance holding fields from parsing
-@var{source-bytevector}; it relies on parsing with @func{parse-uri}.
+@defop {Common constructor} @aclass{uri} constructor @var{scheme} @var{userinfo} @var{host} @var{port} @var{path} @var{query} @var{fragment}
+Build and return a new @class{uri} instance.  Arguments description
+follows:
+
+@table @var
+@item scheme
+An instance of @class{scheme}; a @code{scheme} component is mandatory
+for @uri{} representations.
+
+@item userinfo
+An instance of @class{userinfo} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item host
+An instance of @class{host} or the value @code{unspecified} from
+@library{nausicaa}.  Notice that the @code{authority} component is
+specified only if the @code{host} component is specified, too; an empty
+but defined @code{host} component is possible as empty but defined
+@code{reg-name} component.
+
+@item port
+An instance of @class{port-number} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item path
+An instance of @class{path} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item query
+An instance of @class{query} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item fragment
+An instance of @class{fragment} or the value @code{unspecified} from
+@library{nausicaa}.
+@end table
+
+It is an assertion violation if the @code{userinfo} component or the
+@code{port} component are specified when the @code{host} component is
+not.
 @end defop
 
 
-@defop Syntax @aclass{uri} make @aclass{uri} @meta{clause} ...
-@defopx {Auxiliary Syntax} @aclass{uri} source-bytevector @meta{expr}
-Build and return a new @class{uri} instance holding fields from parsing
-@var{expr}, which must be a bytevector; it relies on parsing with
-@func{parse-uri}.
-@end defop
+@deffn Maker @aclass{uri} (@meta{clause} @dots{})
+@deffnx {Maker Clause} scheme @meta{scheme}
+@deffnx {Maker Clause} userinfo @meta{userinfo}
+@deffnx {Maker Clause} host @meta{host}
+@deffnx {Maker Clause} port-number @meta{port-number}
+@deffnx {Maker Clause} path @meta{path}
+@deffnx {Maker Clause} query @meta{query}
+@deffnx {Maker Clause} fragment @meta{fragment}
+Build and return a new @class{uri} instance using the common
+constructor.  When a clause is not used: the corresponding constructor
+argument is set to @code{undefined} from @library{nausicaa}.
+
+@table @asis
+@item @meta{scheme}
+An instance of @class{scheme}; a @code{scheme} component is mandatory
+for @uri{} representations.
+
+@item @meta{userinfo}
+An instance of @class{userinfo} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{host}
+An instance of @class{host} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{port-number}
+An instance of @class{port-number} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{path}
+An instance of @class{path} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to an instance of
+@class{path-empty}.
+
+@item @meta{query}
+An instance of @class{query} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{fragment}
+An instance of @class{fragment} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
 
 
-@defop Syntax @aclass{uri} is-a? @var{expr} @aclass{uri}
-Return true if @var{expr} evaluates to an instance of @class{uri}.
-@end defop
+@deftypecv {Immutable field} @aclass{uri} @aclass{scheme} scheme
+The @code{scheme} component as a bytevector.  The @code{scheme}
+component is mandatory and does not contain percent--encoded characters.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{uri} @aclass{path} path
+An object representing the @code{path} component.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Flag virtual fields
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-authority?
+@true{} if the @code{authority} component is defined.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-userinfo?
+@true{} if the @code{userinfo} component is defined.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-host?
+@true{} if the @code{host} component is defined.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-port?
+@true{} if the @code{port} component is defined.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-query?
+@true{} if the @code{query} component is defined.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{boolean} has-fragment?
+@true{} if the @code{fragment} component is defined.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Components virtual fields
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-bytevector} authority
+The @code{authority} component as a bytevector.  Accessing this field
+when the @code{authority} is unspecified causes an exception to be
+raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{userinfo} userinfo
+The @code{userinfo} component.  Accessing this field when the
+@code{userinfo} is unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{host} host
+The @code{host} component.  Accessing this field when the @code{host} is
+unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{port-number} port
+The @code{port} component.  Accessing this field when the @code{port} is
+unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{query} query
+The @code{query} component.  Accessing this field when the @code{query}
+is unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{fragment} fragment
+The @code{fragment} component.  Accessing this field when the
+@code{fragment} is unspecified causes an exception to be raised.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Serialised representations virtual fields
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} bytevector
+A bytevector representing the whole @uri{}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{uri} string
+A string representing the whole @uri{}; it is built from the
+@code{bytevector} field with the @func{to-string} function.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{uri} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{uri} component
+in the format requested by @rfc{} 3986.
+@end defmethod
+
+
+@defmethod @aclass{uri} put-authority-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{authority}
+component in the format requested by @rfc{} 3986.
+@end defmethod
 
 @c page
 @node net addresses uri ref
@@ -1783,102 +1889,205 @@ addresses uri} library.
 
 
 @deftp Class @aclass{relative-ref}
-Represents a parsed @code{relative-ref} component.
+Represents a @code{relative-ref} component.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@defcv {Mutable field} @aclass{relative-ref} authority
-The @code{authority} component as a bytevector, or false if there is no
-@code{authority} component.  Percent--encoded characters are not decoded
-in this field.
-@end defcv
+@subsubheading Constructors, makers, predicates
 
 
-@defcv {Mutable field} @aclass{relative-ref} userinfo
-The @code{userinfo} component as a percent--decoded bytevector
-@strong{not} containing the trailing at character, or false if there is
-no @code{userinfo} component.
-@end defcv
+@defop {Common constructor} @aclass{relative-ref} constructor @var{userinfo} @var{host} @var{port} @var{path} @var{query} @var{fragment}
+Build and return a new @class{relative-ref} instance.  Arguments description
+follows:
+
+@table @var
+@item userinfo
+An instance of @class{userinfo} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item host
+An instance of @class{host} or the value @code{unspecified} from
+@library{nausicaa}.  Notice that the @code{authority} component is
+specified only if the @code{host} component is specified, too; an empty
+but defined @code{host} component is possible as empty but defined
+@code{reg-name} component.
+
+@item port
+An instance of @class{port-number} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item path
+An instance of @class{path} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item query
+An instance of @class{query} or the value @code{unspecified} from
+@library{nausicaa}.
+
+@item fragment
+An instance of @class{fragment} or the value @code{unspecified} from
+@library{nausicaa}.
+@end table
+
+It is an assertion violation if the @code{userinfo} component or the
+@code{port} component are specified when the @code{host} component is
+not.
+@end defop
 
 
-@defcv {Mutable field} @aclass{uri} host-type
-A Scheme symbol among: @code{reg-name}, @code{ipv4-address},
-@code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
-value is @code{reg-name}.
-@end defcv
+@deffn Maker @aclass{relative-ref} (@meta{clause} @dots{})
+@deffnx {Maker Clause} userinfo @meta{userinfo}
+@deffnx {Maker Clause} host @meta{host}
+@deffnx {Maker Clause} port-number @meta{port-number}
+@deffnx {Maker Clause} path @meta{path}
+@deffnx {Maker Clause} query @meta{query}
+@deffnx {Maker Clause} fragment @meta{fragment}
+Build and return a new @class{relative-ref} instance using the common
+constructor.  When a clause is not used: the corresponding constructor
+argument is set to @code{undefined} from @library{nausicaa}.
+
+@table @asis
+@item @meta{userinfo}
+An instance of @class{userinfo} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{host}
+An instance of @class{host} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{port-number}
+An instance of @class{port-number} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{path}
+An instance of @class{path} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to an instance of
+@class{path-empty}.
+
+@item @meta{query}
+An instance of @class{query} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+
+@item @meta{fragment}
+An instance of @class{fragment} or the value @code{unspecified} from
+@library{nausicaa}.  When not used it defaults to @code{unspecified}.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
 
 
-@defcv {Mutable field} @aclass{uri} host
-Host data represented as the second return value from @func{parse-host}
-and associated to the symbol above.  When @code{host-type} is
-@code{reg-name}: the value is a percent--decoded bytevector.
-@end defcv
+@deftypecv {Immutable field} @aclass{relative-ref} @aclass{path} path
+An object representing the @code{path} component.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Flag virtual fields
 
 
-@defcv {Mutable field} @aclass{relative-ref} port
-The @code{port} component as a bytevector, or false if no @code{port} is
-present.  Remember that @code{port} does not contain percent--encoded
-characters.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-authority?
+@true{} if the @code{authority} component is defined.
+@end deftypecv
 
 
-@defcv {Mutable field} @aclass{relative-ref} path-type
-A Scheme symbol among: @code{path-abempty}, @code{path-empty},
-@code{path-noscheme}, @code{path-absolute}; represents the type of the
-@code{path} field.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-userinfo?
+@true{} if the @code{userinfo} component is defined.
+@end deftypecv
 
 
-@defcv {Mutable field} @aclass{relative-ref} path
-A possibly empty list holding percent--decoded bytevectors representing
-the path segments.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-host?
+@true{} if the @code{host} component is defined.
+@end deftypecv
 
 
-@defcv {Mutable field} @aclass{relative-ref} query
-The @code{query} component as a percent--decoded bytevector @strong{not}
-containing the leading question mark, or false if there is no
-@code{query} component.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-port?
+@true{} if the @code{port} component is defined.
+@end deftypecv
 
 
-@defcv {Mutable field} @aclass{relative-ref} fragment
-The @code{fragment} component as a percent--decoded bytevector
-@strong{not} containing the leading number--sign, or false if there is
-no @code{fragment} component.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-query?
+@true{} if the @code{query} component is defined.
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{relative-ref} bytevector
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{boolean} has-fragment?
+@true{} if the @code{fragment} component is defined.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Components virtual fields
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{ascii-bytevector} authority
+The @code{authority} component as a bytevector.  Accessing this field
+when the @code{authority} is unspecified causes an exception to be
+raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{userinfo} userinfo
+The @code{userinfo} component.  Accessing this field when the
+@code{userinfo} is unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{host} host
+The @code{host} component.  Accessing this field when the @code{host} is
+unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{port-number} port
+The @code{port} component.  Accessing this field when the @code{port} is
+unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{query} query
+The @code{query} component.  Accessing this field when the @code{query}
+is unspecified causes an exception to be raised.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{fragment} fragment
+The @code{fragment} component.  Accessing this field when the
+@code{fragment} is unspecified causes an exception to be raised.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Serialised representations virtual fields
+
+
+@deftypecv {Immutable virtual field} @aclass{relative-ref} bytevector
 A bytevector representing the whole @uri{}.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{relative-ref} string
+@deftypecv {Immutable virtual field} @aclass{relative-ref} string
 A string representing the whole @uri{}; it is built from the
 @code{bytevector} field with the @func{to-string} function.
-@end defcv
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
 
 
-@defop Syntax @aclass{relative-ref} make* @aclass{relative-ref} @meta{source-bytevector}
-Build and return a new @class{relative-ref} instance holding fields from
-parsing @var{source-bytevector}; it relies on parsing with
-@func{parse-uri}.
-@end defop
+@defmethod @aclass{relative-ref} put-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{relative-ref} component
+in the format requested by @rfc{} 3986.
+@end defmethod
 
 
-@defop Syntax @aclass{relative-ref} make @aclass{relative-ref} @meta{clause} ...
-@defopx {Auxiliary Syntax} @aclass{relative-ref} source-bytevector @meta{expr}
-Build and return a new @class{relative-ref} instance holding fields from
-parsing @var{expr}, which must be a bytevector; it relies on parsing
-with @func{parse-uri}.
-@end defop
-
-
-
-@defop Syntax @aclass{relative-ref} is-a? @var{expr} @aclass{relative-ref}
-Return true if @var{expr} evaluates to an instance of
-@class{relative-ref}.
-@end defop
+@defmethod @aclass{relative-ref} put-authority-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{authority}
+component in the format requested by @rfc{} 3986.
+@end defmethod
 
 @c end of file

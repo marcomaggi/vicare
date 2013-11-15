@@ -962,8 +962,8 @@
   (define (read-uri port)
     (receive (scheme authority userinfo host.type host.bv host.data port path.type path query fragment)
 	(uri.parse-uri port)
+;;;      (debug-print host.type host.bv)
       (uri.<uri> ((uri.scheme		(uri.<scheme> (scheme)))
-		  (uri.specified-authority? authority)
 		  (uri.userinfo		(if userinfo
 					    (uri.<userinfo> (userinfo))
 					  unspecified))
@@ -992,13 +992,17 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;; (let (((O uri.<uri>) (string->uri "ci:ao/")))
+  ;;   (debug-print (O host)))
+
   (doit "http://www.spiffy.org/the/path/name?question%3Danswer#anchor-point")
 
   (doit "ci:ao/")
+
   (doit "ci:ao/a///" "ci:ao/a/")
   (doit "ci:ao/ciao")
   (doit "ci:ao/ciao/hello/salut")
-  (doit "http://"			 "http:///")
+  (doit "http://"			"http:///")
   (doit "http://?query"			"http:///?query")
   (doit "http://#fragment"		"http:///#fragment")
   (doit "http:///")
@@ -1015,6 +1019,8 @@
   (doit "http://#fragment"		"http:///#fragment")
   (doit "http:///?query")
   (doit "http:///#fragment")
+  (doit "http:///?")
+  (doit "http:///#")
   (doit "http:///ciao")
   (doit "http://ciao.com:8080"		 "http://ciao.com:8080/")
   (doit "http://ciao.com:8080/")
@@ -1068,7 +1074,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'class-relative-ref))
+#;(parametrise ((check-test-name	'class-relative-ref))
 
   (define (string->relative-ref str)
     (bytevector->relative-ref (string->ascii str)))
@@ -1079,8 +1085,7 @@
   (define (read-relative-ref port)
     (receive (authority userinfo host.type host.bv host.data port path.type path query fragment)
 	(uri.parse-relative-ref port)
-      (uri.<relative-ref> ((uri.specified-authority? authority)
-			   (uri.userinfo	(if userinfo
+      (uri.<relative-ref> ((uri.userinfo	(if userinfo
 						    (uri.<userinfo> (userinfo))
 						  unspecified))
 			   (uri.host		(uri.make-host-object host.type host.bv host.data))
