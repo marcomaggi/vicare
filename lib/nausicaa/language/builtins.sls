@@ -59,6 +59,8 @@
 
     <hashable-and-properties-clauses>
 
+    <unspecified> <undefined>
+
     ;; multimethods
     define-generic		define-generic*
     tag-unique-identifiers-of	object->string
@@ -72,6 +74,7 @@
     put-single			put-multi-2
     put-multi-3			put-multi-4)
   (import (vicare)
+    (vicare language-extensions sentinels)
     (nausicaa language oopp)
     (nausicaa language multimethods)
     (vicare unsafe operations)
@@ -2004,6 +2007,17 @@
 
 (define-builtin-label <procedure>
   (predicate procedure?))
+
+
+;;;; built-in types: special values
+
+(define-label <unspecified>
+  (predicate unspecified?)
+  (protocol (lambda () (lambda () unspecified))))
+
+(define-label <undefined>
+  (predicate undefined?)
+  (protocol (lambda () (lambda () undefined))))
 
 
 (define (tag-unique-identifiers-of obj)
