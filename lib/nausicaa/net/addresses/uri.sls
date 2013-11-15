@@ -43,9 +43,9 @@
     make-path-object
 
     ;; auxiliary syntaxes
-    scheme		specified-authority?	userinfo
-    host		port-number
-    path		query			fragment
+    scheme
+    userinfo		host		port-number
+    path		query		fragment
 
 ;;; --------------------------------------------------------------------
 ;;; reexported from (nausicaa net addresses ip)
@@ -91,7 +91,6 @@
 
 (define-auxiliary-syntaxes
   scheme
-  specified-authority?
   userinfo
   host
   port-number
@@ -109,6 +108,13 @@
 		  (or (?pred0 chi) (?pred  chi) ...))
 		(loop bv ($fxadd1 i))))))
     ))
+
+(define-inline (%return-if-specified obj . irritants)
+  (if (specified? obj)
+      obj
+    (apply assertion-violation #f
+	   "attempt to access unspecified field"
+	   irritants)))
 
 
 ;;;; auxiliary labels and classes: scheme
@@ -740,43 +746,89 @@
 
   (protocol
    (lambda (make-top)
-     (lambda (scheme specified-authority? userinfo host port-number path query fragment)
-       (let (((scheme <scheme>)		scheme)
-	     ((userinfo <userinfo>)	(if (unspecified? userinfo)
-					    '#vu8()
-					    userinfo))
-	     ((host <ip-address>)	host)
-	     ((port <port-number>)	(if (unspecified? port-number)
-					    0
-					  port-number))
-	     ((path <path>)		(if (unspecified? path)
-					    (<path-empty> ())
-					  path))
-	     ((query <query>)		(if (unspecified? query)
-					    '#vu8()
-					    query))
-	     ((fragment <fragment>)	(if (unspecified? fragment)
-					    '#vu8()
-					    fragment)))
-	 ((make-top) #f #f
-	  scheme (if specified-authority? #t #f)
-	  userinfo host port path query fragment)))))
+     (lambda ((scheme	<scheme>)
+	 (userinfo	<top> #;(or <userinfo>		<unspecified>))
+	 (host		<top> #;(or <host>		<unspecified>))
+	 (port		<top> #;(or <port-number>	<unspecified>))
+	 (path		<path>)
+	 (query		<top> #;(or <query>		<unspecified>))
+	 (fragment	<top> #;(or <fragment>		<unspecified>)))
+       (define who 'make-<uri>)
+       (when (and (specified? userinfo)
+		  (unspecified? host))
+	 (assertion-violation who
+	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
+	   userinfo))
+       (when (and (specified? port)
+		  (unspecified? host))
+	 (assertion-violation who
+	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
+	   port))
+       ((make-top)
+	scheme userinfo host port
+	path query fragment
+	#f #;memoized-bytevector #f #;memoized-string ))))
 
-  (fields (mutable memoized-bytevector)
-	  (mutable memoized-string)
-	  (immutable (scheme			<scheme>))
-	  (immutable (specified-authority?	<boolean>))
-		;True if the "authority" component is specified.  Notice
-		;that the authority  can be specified even  when all its
-		;sub-components are empty: it is the case of "authority"
-		;equal  to a  "host"  component, equal  to a  "reg-name"
-		;component which can be empty.
-	  (immutable (userinfo			<userinfo>))
-	  (immutable (host			<host>))
-	  (immutable (port			<port-number>))
-	  (immutable (path			<path>))
-	  (immutable (query			<query>))
-	  (immutable (fragment			<fragment>)))
+  (fields
+   (immutable (scheme <scheme>))
+		;An  instance of  "<scheme>".  A  "scheme" component  is
+		;mandatory for URI objects.
+
+   (immutable userinfo-object)
+		;Unspecified or an instance of "<userinfo>".
+
+   (immutable host-object)
+		;Unspecified or an instance of "<host>".
+
+   (immutable port-object)
+		;Unspecified or an instance of "<port-number>".
+
+   (immutable (path <path>))
+		;An  instance  of  "<path>".  The  "path"  component  is
+		;mandatory for URI objects.   When no path is specified:
+		;it defaults to an instance of "<path-empty>".
+
+   (immutable query-object)
+		;Unspecified or an instance of "<query>".
+
+   (immutable fragment-object)
+		;Unspecified or an instance of "<fragment>".
+
+   (mutable memoized-bytevector)
+		;Memoized URI bytevector representation.
+
+   (mutable memoized-string)
+		;Memoized URI string representation.
+
+   #| end of fields |# )
+
+  (virtual-fields
+   (immutable (has-userinfo?	<boolean>)	(lambda ((O <uri>))
+						  (specified? (O $userinfo-object))))
+   (immutable (has-host?	<boolean>)	(lambda ((O <uri>))
+						  (specified? (O $host-object))))
+   (immutable (has-port?	<boolean>)	(lambda ((O <uri>))
+						  (specified? (O $port-object))))
+   (immutable (has-authority?	<boolean>)	(lambda ((O <uri>))
+						  (O has-host?)))
+   (immutable (has-query?	<boolean>)	(lambda ((O <uri>))
+						  (specified? (O $query-object))))
+   (immutable (has-fragment?	<boolean>)	(lambda ((O <uri>))
+						  (specified? (O $fragment-object))))
+   #| end of virtual-fields |# )
+
+  (virtual-fields
+   (immutable (userinfo	<userinfo>)	(lambda ((O <uri>))
+					  (%return-if-specified (O $userinfo-object) O)))
+   (immutable (host	<host>)		(lambda ((O <uri>))
+					  (%return-if-specified (O $host-object)     O)))
+   (immutable (port <port-number>)	(lambda ((O <uri>))
+					  (%return-if-specified (O $port-object)     O)))
+   (immutable (query	<query>)	(lambda ((O <uri>))
+					  (%return-if-specified (O $query-object)    O)))
+   (immutable (fragment	<fragment>)	(lambda ((O <uri>))
+					  (%return-if-specified (O $fragment-object) O)))
+   #| end of virtual-fields |# )
 
   (virtual-fields
    (immutable (bytevector <ascii-bytevector>)
@@ -796,6 +848,17 @@
 			($ascii->string (O bytevector))
 		      (set! (O $memoized-string) str)))))
 
+   (immutable (authority <ascii-bytevector>)
+	      (lambda ((O <uri>))
+		(if (O has-authority?)
+		    (receive (port getter)
+			(open-bytevector-output-port)
+		      (O put-authority-bytevector port)
+		      (getter))
+		  (assertion-violation #f
+		    "attempt to access unspecified field \"authority\""
+		    O))))
+
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <uri>) (port <binary-output-port>))
@@ -803,35 +866,36 @@
     ;;"Component Recomposition" of RFC 3986.
     (define who '<uri>-bytevector)
     (O $scheme put-bytevector port)
-    (let ((authority (receive (authority-port authority-getter)
-			 (open-bytevector-output-port)
-		       (O $userinfo put-bytevector authority-port)
-		       (O $host     put-bytevector authority-port)
-		       (O $port     put-bytevector authority-port)
-		       (authority-getter))))
-      (when (or ($bytevector-not-empty? authority)
-		((<path-abempty>) O)
-		((<path-empty>)   O)
-		(O $specified-authority?))
-	(put-u8 port 47)   ;47 = #\/
-	(put-u8 port 47)   ;47 = #\/
-	(put-bytevector port authority)))
-    (O $path  put-bytevector port)
-    (O $query put-bytevector port)
-    (O $fragment put-bytevector port))
+    (when (O has-authority?)
+      ;;47 = #\/
+      (put-bytevector port '#vu8(47 47))
+      (O put-authority-bytevector port))
+    (O $path put-bytevector port)
+    (when (O has-query?)
+      (O query put-bytevector port))
+    (when (O has-fragment?)
+      (O fragment put-bytevector port)))
+
+  (method (put-authority-bytevector (O <uri>) (port <binary-output-port>))
+    (when (O has-authority?)
+      (when (O has-userinfo?)
+	(O userinfo put-bytevector port))
+      ;;The authority is defined only when the host is defined.
+      (O host put-bytevector port)
+      (when (O has-port?)
+	(O port put-bytevector port))))
 
   #| end of class |# )
 
 (mk.define-maker %make-uri
     make-<uri>
-  ((scheme			unspecified)
-   (specified-authority?	#f)
-   (userinfo			unspecified)
-   (host			unspecified)
-   (port-number			unspecified)
-   (path			unspecified)
-   (query			unspecified)
-   (fragment			unspecified)))
+  ((scheme		unspecified	(mk.mandatory))
+   (userinfo		unspecified)
+   (host		unspecified)
+   (port-number		unspecified)
+   (path		(<path-empty> ()))
+   (query		unspecified)
+   (fragment		unspecified)))
 
 
 (define-class <relative-ref>
@@ -844,41 +908,84 @@
 
   (protocol
    (lambda (make-top)
-     (lambda (specified-authority? userinfo host port-number path query fragment)
-       (let (((userinfo <userinfo>)	(if (unspecified? userinfo)
-					    '#vu8()
-					    userinfo))
-	     ((host <ip-address>)	host)
-	     ((port <port-number>)	(if (unspecified? port-number)
-					    0
-					  port-number))
-	     ((path <path>)		(if (unspecified? path)
-					    (<path-empty> ())
-					  path))
-	     ((query <query>)		(if (unspecified? query)
-					    '#vu8()
-					    query))
-	     ((fragment <fragment>)	(if (unspecified? fragment)
-					    '#vu8()
-					    fragment)))
-	 ((make-top) #f #f
-	  (if specified-authority? #t #f)
-	  userinfo host port path query fragment)))))
+     (lambda ((userinfo	<top> #;(or <userinfo>		<unspecified>))
+	 (host		<top> #;(or <host>		<unspecified>))
+	 (port		<top> #;(or <port-number>	<unspecified>))
+	 (path		<path>)
+	 (query		<top> #;(or <query>		<unspecified>))
+	 (fragment	<top> #;(or <fragment>		<unspecified>)))
+       (define who 'make-<relative-ref>)
+       (when (and (specified? userinfo)
+		  (unspecified? host))
+	 (assertion-violation who
+	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
+	   userinfo))
+       (when (and (specified? port)
+		  (unspecified? host))
+	 (assertion-violation who
+	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
+	   port))
+       ((make-top)
+	userinfo host port
+	path query fragment
+	#f #;memoized-bytevector #f #;memoized-string ))))
 
-  (fields (mutable memoized-bytevector)
-	  (mutable memoized-string)
-	  (immutable (specified-authority?	<boolean>))
-		;True if the "authority" component is specified.  Notice
-		;that the authority  can be specified even  when all its
-		;sub-components are empty: it is the case of "authority"
-		;equal  to a  "host"  component, equal  to a  "reg-name"
-		;component which can be empty.
-	  (immutable (userinfo			<userinfo>))
-	  (immutable (host			<host>))
-	  (immutable (port			<port-number>))
-	  (immutable (path			<path>))
-	  (immutable (query			<query>))
-	  (immutable (fragment			<fragment>)))
+  (fields
+   (immutable userinfo-object)
+		;Unspecified or an instance of "<userinfo>".
+
+   (immutable host-object)
+		;Unspecified or an instance of "<host>".
+
+   (immutable port-object)
+		;Unspecified or an instance of "<port-number>".
+
+   (immutable (path <path>))
+		;An  instance  of  "<path>".  The  "path"  component  is
+		;mandatory for URI objects.   When no path is specified:
+		;it defaults to an instance of "<path-empty>".
+
+   (immutable query-object)
+		;Unspecified or an instance of "<query>".
+
+   (immutable fragment-object)
+		;Unspecified or an instance of "<fragment>".
+
+   (mutable memoized-bytevector)
+		;Memoized URI bytevector representation.
+
+   (mutable memoized-string)
+		;Memoized URI string representation.
+
+   #| end of fields |# )
+
+  (virtual-fields
+   (immutable (has-userinfo?	<boolean>)	(lambda ((O <relative-ref>))
+						  (specified? (O $userinfo-object))))
+   (immutable (has-host?	<boolean>)	(lambda ((O <relative-ref>))
+						  (specified? (O $host-object))))
+   (immutable (has-port?	<boolean>)	(lambda ((O <relative-ref>))
+						  (specified? (O $port-object))))
+   (immutable (has-authority?	<boolean>)	(lambda ((O <relative-ref>))
+						  (O has-host?)))
+   (immutable (has-query?	<boolean>)	(lambda ((O <relative-ref>))
+						  (specified? (O $query-object))))
+   (immutable (has-fragment?	<boolean>)	(lambda ((O <relative-ref>))
+						  (specified? (O $fragment-object))))
+   #| end of virtual-fields |# )
+
+  (virtual-fields
+   (immutable (userinfo	<userinfo>)	(lambda ((O <relative-ref>))
+					  (%return-if-specified (O $userinfo-object) O)))
+   (immutable (host	<host>)		(lambda ((O <relative-ref>))
+					  (%return-if-specified (O $host-object)     O)))
+   (immutable (port <port-number>)	(lambda ((O <relative-ref>))
+					  (%return-if-specified (O $port-object)     O)))
+   (immutable (query	<query>)	(lambda ((O <relative-ref>))
+					  (%return-if-specified (O $query-object)    O)))
+   (immutable (fragment	<fragment>)	(lambda ((O <relative-ref>))
+					  (%return-if-specified (O $fragment-object) O)))
+   #| end of virtual-fields |# )
 
   (virtual-fields
    (immutable (bytevector <ascii-bytevector>)
@@ -898,40 +1005,51 @@
 			($ascii->string (O bytevector))
 		      (set! (O $memoized-string) str)))))
 
+   (immutable (authority <ascii-bytevector>)
+	      (lambda ((O <relative-ref>))
+		(if (O has-authority?)
+		    (receive (port getter)
+			(open-bytevector-output-port)
+		      (O put-authority-bytevector port)
+		      (getter))
+		  (assertion-violation #f
+		    "attempt to access unspecified field \"authority\""
+		    O))))
+
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <relative-ref>) (port <binary-output-port>))
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
     (define who '<relative-ref>-bytevector)
-    (let ((authority (receive (authority-port authority-getter)
-			 (open-bytevector-output-port)
-		       (O $userinfo put-bytevector authority-port)
-		       (O $host     put-bytevector authority-port)
-		       (O $port     put-bytevector authority-port)
-		       (authority-getter))))
-      (when (or ($bytevector-not-empty? authority)
-		((<path-abempty>) O)
-		((<path-empty>)   O)
-		(O $specified-authority?))
-	(put-u8 port 47)   ;47 = #\/
-	(put-u8 port 47)   ;47 = #\/
-	(put-bytevector port authority)))
-    (O $path  put-bytevector port)
-    (O $query put-bytevector port)
-    (O $fragment put-bytevector port))
+    (O put-authority-bytevector port)
+    (O $path put-bytevector port)
+    (when (O has-query?)
+      (O query put-bytevector port))
+    (when (O has-fragment?)
+      (O fragment put-bytevector port)))
+
+  (method (put-authority-bytevector (O <relative-ref>) (port <binary-output-port>))
+    (when (O has-authority?)
+      ;;47 = #\/
+      (put-bytevector port '#vu8(47 47))
+      (when (O has-userinfo?)
+	(O userinfo put-bytevector port))
+      ;;The authority is defined only when the host is defined.
+      (O host put-bytevector port)
+      (when (O has-port?)
+	(O port put-bytevector port))))
 
   #| end of class |# )
 
 (mk.define-maker %make-relative-ref
     make-<relative-ref>
-  ((specified-authority?	#f)
-   (userinfo			unspecified)
-   (host			unspecified)
-   (port-number			unspecified)
-   (path			unspecified)
-   (query			unspecified)
-   (fragment			unspecified)))
+  ((userinfo		unspecified	(mk.mandatory))
+   (host		unspecified)
+   (port-number		unspecified)
+   (path		unspecified)
+   (query		unspecified)
+   (fragment		unspecified)))
 
 
 ;;;; done
