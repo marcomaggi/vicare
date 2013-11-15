@@ -39,7 +39,8 @@
     normalise-percent-encoded-string	normalise-percent-encoded-bytevector
 
     ;; parser functions
-    parse-scheme		collect-hier-part
+    parse-scheme
+    parse-hier-part		parse-relative-part
     parse-query			parse-fragment
     parse-authority		parse-userinfo
     parse-host
@@ -47,8 +48,6 @@
     parse-ipvfuture
     parse-ipv4-address		parse-ipv6-address
     parse-port
-
-    (rename (collect-hier-part	collect-relative-part))
 
     parse-segment		parse-segment-nz
     parse-segment-nz-nc		parse-slash-and-segment
@@ -476,39 +475,6 @@
 	    (else
 	     (return-failure))))))
 
-(define (collect-hier-part in-port)
-  ;;Accumulate  bytes  from IN-PORT  while  they  are acceptable  for  a
-  ;;"hier-part"  URI  component.  When  EOF  or  a  question mark  or  a
-  ;;number-sign is  found: return  a bytevector holding  the accumulated
-  ;;bytes,  question  mark  or  number-sign excluded.   Leave  the  port
-  ;;position to the byte after the last byte of the "hier-part".
-  ;;
-  ;;An empty hier-part is not accepted: if the first value from the port
-  ;;is EOF, the return value is false.
-  ;;
-  ;;This function does no validation of the returned bytevector.
-  ;;
-  (receive (ou-port getter)
-      (open-bytevector-output-port)
-    (let ((chi (lookahead-u8 in-port)))
-      (if (or (eof-object? chi)
-	      ($ascii-chi-question-mark? chi)
-	      ($ascii-chi-number-sign?   chi))
-	  #f
-	(begin
-	  (put-u8 ou-port chi)
-	  (get-u8 in-port)
-	  (let process-next-byte ((chi (lookahead-u8 in-port)))
-	    (cond ((eof-object? chi)
-		   (getter))
-		  ((or ($ascii-chi-question-mark? chi)
-		       ($ascii-chi-number-sign?   chi))
-		   (getter))
-		  (else
-		   (put-u8 ou-port chi)
-		   (get-u8 in-port)
-		   (process-next-byte (lookahead-u8 in-port))))))))))
-
 (define (parse-query in-port)
   ;;Accumulate bytes from IN-PORT while they are valid for a "query" URI
   ;;component; the first byte read from IN-PORT must be a question mark.
@@ -643,13 +609,15 @@
 
 (define (parse-authority in-port)
   ;;Accumulate  bytes from  IN-PORT  while they  are  acceptable for  an
-  ;;"authority"  component   in  the  "hier-part"  of  an   URI  or  the
-  ;;"relative-part" of a "relative-ref".   The first two bytes read must
-  ;;represent, in  ASCII encoding, two  slash characters; after  the two
-  ;;slashes, if EOF or a byte representing a slash, a question mark or a
-  ;;number-sign  is read:  return a  bytevector holding  the accumulated
-  ;;bytes,  ending slash,  question mark  or number-sign  excluded; else
-  ;;return false.
+  ;;"authority"  component  in   the  "hier-part"  of  an   URI  or  the
+  ;;"relative-part" of a  "relative-ref".  This function is  meant to be
+  ;;applied to the port right after the sequence "//" has been read from
+  ;;it.
+  ;;
+  ;;After the  two slashes,  if EOF  or a byte  representing a  slash, a
+  ;;question mark or a number-sign  is read: return a bytevector holding
+  ;;the accumulated  bytes, ending  slash, question mark  or number-sign
+  ;;excluded; else return false.
   ;;
   ;;If successful:  leave the port position  to the byte  after the last
   ;;accumulated byte;  if an error  occurs: rewind the port  position to
@@ -660,33 +628,19 @@
   ;;equal to a "reg-name" component which can be empty.
   ;;
   (define-parser-macros in-port)
-  (let ((chi (get-u8 in-port)))
-    (cond ((eof-object? chi)
-	   (return-failure))
-	  ;;The first octet must be a slash.
-	  ((not ($ascii-chi-slash? chi))
-	   (return-failure))
-	  (else
-	   (let ((chi1 (get-u8 in-port)))
-	     (cond ((eof-object? chi1)
-		    (return-failure))
-		   ;;The second octet must be a slash.
-		   (($ascii-chi-slash? chi1)
-		    (receive (ou-port getter)
-			(open-bytevector-output-port)
-		      (let process-next-byte ((chi (get-u8 in-port)))
-			(cond ((eof-object? chi)
-			       (getter))
-			      ((or ($ascii-chi-slash? chi)
-				   ($ascii-chi-question-mark? chi)
-				   ($ascii-chi-number-sign? chi))
-			       (set-position-back-one! chi)
-			       (getter))
-			      (else
-			       (put-u8 ou-port chi)
-			       (process-next-byte (get-u8 in-port)))))))
-		   (else
-		    (return-failure))))))))
+  (receive (ou-port getter)
+      (open-bytevector-output-port)
+    (let process-next-byte ((chi (get-u8 in-port)))
+      (cond ((eof-object? chi)
+	     (getter))
+	    ((or ($ascii-chi-slash? chi)
+		 ($ascii-chi-question-mark? chi)
+		 ($ascii-chi-number-sign? chi))
+	     (set-position-back-one! chi)
+	     (getter))
+	    (else
+	     (put-u8 ou-port chi)
+	     (process-next-byte (get-u8 in-port)))))))
 
 (define (parse-userinfo in-port)
   ;;Accumulate bytes from IN-PORT while they are valid for an "userinfo"
@@ -1411,6 +1365,145 @@
 	     (port-position in-port) in-port)))))
 
 
+(define (parse-hier-part in-port)
+  ;;Read bytes  from IN-PORT  expecting to  get, from  the first  byte a
+  ;;"hier-part"  component;  parse the  input  decomposing  it into  its
+  ;;subcomponents.
+  ;;
+  ;;The relevant section of grammar from RFC 3986 follows:
+  ;;
+  ;;  hier-part     = "//" authority path-abempty
+  ;;                / path-absolute
+  ;;                / path-rootless
+  ;;                / path-empty
+  ;;
+  ;;Return 3 values:
+  ;;
+  ;;1. False or a possibly empty bytevector representing the "authority"
+  ;;component.  When  the authority is  unspecified the return  value is
+  ;;false.
+  ;;
+  ;;2.   A  symbol   specifying  the   type  of   path:  "path-abempty",
+  ;;"path-absolute", "path-rootless", "path-empty".   When the authority
+  ;;is specified: the type is always "path-abempty".
+  ;;
+  ;;3. Null or a list of bytevectors representing the path segments.
+  ;;
+  ;;This function does not decode the percent-encoded bytes.
+  ;;
+  (define-parser-macros in-port)
+  (define (%error)
+    (values (return-failure) #f '()))
+  (let ((chi0 (lookahead-u8 in-port)))
+    (cond ((eof-object? chi0)
+	   (values #f 'path-empty '()))
+	  (($ascii-chi-slash? chi0)
+	   ;;Consume the previously looked-ahead octet.
+	   (get-u8 in-port)
+	   (let ((chi1 (lookahead-u8 in-port)))
+	     (cond ((eof-object? chi1)
+		    (values #f 'path-absolute '()))
+		   (($ascii-chi-slash? chi1)
+		    ;;Consume the previously looked-ahead octet.
+		    (get-u8 in-port)
+		    ;;The first  2 octets  are slashes:  the "authority"
+		    ;;component is defined and it  must be followed by a
+		    ;;"path-abempty".
+		    (let* ((authority (parse-authority    in-port))
+			   (path      (parse-path-abempty in-port)))
+		      (values authority 'path-abempty path)))
+		   (else
+		    ;;The first octet is a  slash: only an absolute path
+		    ;;is possible.
+		    (set-position-back-one! chi0)
+		    (cond ((parse-path-absolute in-port)
+			   => (lambda (path)
+				(values #f 'path-absolute path)))
+			  (else
+			   (%error)))))))
+	  (else
+	   ;;The first  octet is  *not* a slash:  only the  rootless and
+	   ;;empty paths are possible.
+	   (cond ((parse-path-rootless in-port)
+		  => (lambda (path)
+		       (values #f 'path-rootless path)))
+		 ((parse-path-empty in-port)
+		  => (lambda (path)
+		       (values #f 'path-empty    path)))
+		 (else
+		  (%error)))))))
+
+
+(define (parse-relative-part in-port)
+  ;;Read bytes  from IN-PORT  expecting to  get, from  the first  byte a
+  ;;"relative-part" component;  parse the input decomposing  it into its
+  ;;subcomponents.
+  ;;
+  ;;The relevant section of grammar from RFC 3986 follows:
+  ;;
+  ;;  relative-part = "//" authority path-abempty
+  ;;                / path-absolute
+  ;;                / path-noscheme
+  ;;                / path-empty
+  ;;
+  ;;Return 3 values:
+  ;;
+  ;;1. False or a possibly empty bytevector representing the "authority"
+  ;;subcomponent.  When the authority is unspecified the return value is
+  ;;false.
+  ;;
+  ;;2.   A  symbol  specifying  the   type  of  the  path  subcomponent:
+  ;;"path-abempty",   "path-absolute",  "path-noscheme",   "path-empty".
+  ;;When the authority is specified: the type is always "path-abempty".
+  ;;
+  ;;3. Null or a list of bytevectors representing the path segments.
+  ;;
+  ;;This function does not decode the percent-encoded bytes.
+  ;;
+  (define-parser-macros in-port)
+  (define (%error)
+    (values (return-failure) #f '()))
+  (let ((chi0 (lookahead-u8 in-port)))
+    (cond ((eof-object? chi0)
+	   (values #f 'path-empty '()))
+	  (($ascii-chi-slash? chi0)
+	   ;;Consume the previously looked-ahead octet.
+	   (get-u8 in-port)
+	   (let ((chi1 (lookahead-u8 in-port)))
+	     (cond ((eof-object? chi1)
+		    (values #f 'path-absolute '()))
+		   (($ascii-chi-slash? chi1)
+		    ;;Consume the previously looked-ahead octet.
+		    (get-u8 in-port)
+		    ;;The first  2 octets  are slashes:  the "authority"
+		    ;;component is defined and it  must be followed by a
+		    ;;"path-abempty".
+		    (let* ((authority (parse-authority    in-port))
+			   (path      (parse-path-abempty in-port)))
+		      (values authority 'path-abempty path)))
+		   (else
+		    ;;The first octet is a  slash: only an absolute path
+		    ;;is possible.
+		    (set-position-back-one! chi0)
+		    (cond ((parse-path-absolute in-port)
+			   => (lambda (path)
+				(values #f 'path-absolute path)))
+			  (else
+			   (%error)))))))
+	  (else
+	   ;;The first  octet is  *not* a slash:  only the  noscheme and
+	   ;;empty paths are possible.
+	   (cond ((parse-path-noscheme in-port)
+		  => (lambda (path)
+		       (values #f 'path-noscheme path)))
+		 ((parse-path-empty in-port)
+		  => (lambda (path)
+		       (values #f 'path-empty    path)))
+		 (else
+		  (%error)))))))
+
+
+
 (define (parse-uri in-port)
   ;;Read bytes from IN-PORT expecting to get, from the first byte to the
   ;;EOF,  a URI  component;  parse  the input  decomposing  it into  its
@@ -1436,14 +1529,14 @@
   ;;host.bv, host.data:  host data represented  as the second  and third
   ;;return values from PARSE-HOST.
   ;;
-  ;;port:  a bytevector representing  the port  component; false  if the
-  ;;port is not present.
+  ;;port-number: a bytevector representing  the port component; false if
+  ;;the port is not present.
   ;;
   ;;path.type:   one   of   the   symbols:   path-abempty,   path-empty,
   ;;path-absolute, path-rootless.   When the authority  is present: this
   ;;value is always path-abempty.
   ;;
-  ;;path: a possibly empty list representing the path segments.
+  ;;path.segments: a possibly empty list representing the path segments.
   ;;
   ;;query: a bytevector representing the query component; false when the
   ;;query is not present.
@@ -1461,38 +1554,28 @@
   ;;irritants being the input port.
   ;;
   (define-parser-macros in-port)
-  (let* ((scheme	(parse-scheme in-port))
-	 (authority	(parse-authority in-port))
-	 (auth-port	(and authority (open-bytevector-input-port authority)))
-	 (userinfo	(and auth-port (parse-userinfo auth-port)))
-	 (host-position	(port-position in-port)))
-    (receive (host.type host.bv host.data)
-	(if auth-port
-	    (parse-host auth-port)
-	  (values 'reg-name '#vu8() (void)))
-      (let ((port (and auth-port (parse-port auth-port))))
-	(receive (path.type path)
-	    (if authority
-		(values 'path-abempty (parse-path-abempty in-port))
-	      (let ((chi (lookahead-u8 in-port)))
-		(cond ((or (eof-object? chi)
-			   ($ascii-chi-question-mark? chi)
-			   ($ascii-chi-number-sign? chi))
-		       (values 'path-empty '()))
-		      ((parse-path-absolute in-port)
-		       => (lambda (segments)
-			    (values 'path-absolute segments)))
-		      ((parse-path-rootless in-port)
-		       => (lambda (segments)
-			    (values 'path-rootless segments)))
-		      (else
-		       (raise-uri-parser-error 'parse-uri
-			 "invalid path component while parsing URI"
-			 (port-position in-port) in-port)))))
-	  (let* ((query	(parse-query in-port))
-		 (fragment	(parse-fragment in-port)))
-	    (assert (eof-object? (lookahead-u8 in-port)))
-	    (values scheme authority userinfo host.type host.bv host.data port path.type path query fragment)))))))
+  (define scheme
+    (parse-scheme in-port))
+  (define-values (authority path.type path.segments)
+    (parse-hier-part in-port))
+  (define auth-port
+    (and authority (open-bytevector-input-port authority)))
+  (define userinfo
+    (and auth-port (parse-userinfo auth-port)))
+  (define-values (host.type host.bv host.data)
+    (if auth-port
+	(parse-host auth-port)
+      (values #f '#vu8() (void))))
+  (define port-number
+    (and auth-port (parse-port auth-port)))
+  (define query
+    (parse-query in-port))
+  (define fragment
+    (parse-fragment in-port))
+  (assert (eof-object? (lookahead-u8 in-port)))
+  (values scheme
+	  authority userinfo host.type host.bv host.data port-number
+	  path.type path.segments query fragment))
 
 
 (define (parse-relative-ref in-port)
@@ -1516,14 +1599,14 @@
   ;;host.bv host.data:  host data  represented as  the second  and third
   ;;return values from PARSE-HOST.
   ;;
-  ;;port:  a bytevector representing  the port  component; false  if the
-  ;;port is not present.
+  ;;port-number: a bytevector representing  the port component; false if
+  ;;the port is not present.
   ;;
   ;;path.type:   one   of   the   symbols:   path-abempty,   path-empty,
   ;;path-absolute, path-noscheme.   When the authority  is present: this
   ;;value is always path-abempty.
   ;;
-  ;;path: a possibly empty list representing the path segments.
+  ;;path.segments: a possibly empty list representing the path segments.
   ;;
   ;;query: a bytevector representing the query component; false when the
   ;;query is not present.
@@ -1541,37 +1624,27 @@
   ;;irritants being the input port.
   ;;
   (define-parser-macros in-port)
-  (let* ((authority	(parse-authority in-port))
-	 (auth-port	(and authority (open-bytevector-input-port authority)))
-	 (userinfo	(and auth-port (parse-userinfo auth-port)))
-	 (host-position	(port-position in-port)))
-    (receive (host.type host.bv host.data)
-	(if auth-port
-	    (parse-host auth-port)
-	  (values 'reg-name '#vu8() (void)))
-      (let ((port (and auth-port (parse-port auth-port))))
-	(receive (path.type path)
-	    (if authority
-		(values 'path-abempty (parse-path-abempty in-port))
-	      (let ((chi (lookahead-u8 in-port)))
-		(cond ((or (eof-object? chi)
-			   ($ascii-chi-question-mark? chi)
-			   ($ascii-chi-number-sign? chi))
-		       (values 'path-empty '()))
-		      ((parse-path-absolute in-port)
-		       => (lambda (segments)
-			    (values 'path-absolute segments)))
-		      ((parse-path-noscheme in-port)
-		       => (lambda (segments)
-			    (values 'path-noscheme segments)))
-		      (else
-		       (raise-uri-parser-error 'parse-uri
-			 "invalid path component while parsing relative-ref"
-			 (port-position in-port) in-port)))))
-	  (let* ((query	(parse-query in-port))
-		 (fragment	(parse-fragment in-port)))
-	    (assert (eof-object? (lookahead-u8 in-port)))
-	    (values authority userinfo host.type host.bv host.data port path.type path query fragment)))))))
+  (define scheme
+    (parse-scheme in-port))
+  (define-values (authority path.type path.segments)
+    (parse-relative-part in-port))
+  (define auth-port
+    (and authority (open-bytevector-input-port authority)))
+  (define userinfo
+    (and auth-port (parse-userinfo auth-port)))
+  (define-values (host.type host.bv host.data)
+    (if auth-port
+	(parse-host auth-port)
+      (values #f '#vu8() (void))))
+  (define port-number
+    (and auth-port (parse-port auth-port)))
+  (define query
+    (parse-query in-port))
+  (define fragment
+    (parse-fragment in-port))
+  (assert (eof-object? (lookahead-u8 in-port)))
+  (values authority userinfo host.type host.bv host.data port-number
+	  path.type path.segments query fragment))
 
 
 ;;;; validation

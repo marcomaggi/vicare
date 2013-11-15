@@ -488,120 +488,209 @@ to the one before this function call.
 @end defun
 
 
-@defun collect-hier-part @var{port}
-@defunx collect-relative-part @var{port}
-Accumulate bytes from @var{port} while they are acceptable for a
-@code{hier-part} component.  When @eof{} or a question mark or a
-number--sign is found: return a bytevector holding the accumulated
-bytes, question mark or number--sign excluded; leave the port position
-to the byte after the last byte of the @code{hier-part}.  An empty
-@code{hier-part} is not accepted: if the first value from the port is
-@eof{}, a question mark or a number--sign the return value is @false{};
-in this case the port position is left unchanged.
+@defun parse-hier-part @var{port}
+Read bytes from @var{port} expecting to get, from the first byte a
+@code{hier-part} component; parse the input decomposing it into its
+subcomponents.
 
-No validation is performed on the returned bytevector.
+The relevant section of grammar from @rfc{} 3986 follows:
 
 @example
+hier-part     = "//" authority path-abempty
+              / path-absolute
+              / path-rootless
+              / path-empty
+@end example
+
+Return 3 values:
+
+@enumerate
+@item
+@false{} or a possibly empty bytevector representing the
+@code{authority} subcomponent.  When the authority is unspecified the
+return value is @false{}.
+
+@item
+A symbol specifying the type of path subcomponent: @code{path-abempty},
+@code{path-absolute}, @code{path-rootless}, @code{path-empty}.  When the
+@code{authority} is specified: the type is always @code{path-abempty}.
+
+@item
+Null or a list of bytevectors representing the path segments.
+@end enumerate
+
+This function does not decode the percent--encoded bytes.
+
+@example
+#!vicare
 (import (vicare)
   (prefix (nausicaa parser-tools uri) uri.))
 
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(define (HP0 S)
-  (let* ((P (mkport S))
-         (R (uri.collect-hier-part P))
-         (Q (ascii->string (get-bytevector-some P))))
-    (values R Q)))
+(define (f1 str)
+  (let*-values
+      (((P) (mkport str))
+       ((authority path.type path.segments)
+        (uri.parse-hier-part P))
+       ((E) (eof-object? (lookahead-u8 P))))
+    (values (and authority (ascii->string authority))
+            path.type (map ascii->string path.segments)
+            E)))
 
-(define (HP1 S)
-  (let* ((P (mkport S))
-         (R (ascii->string (uri.collect-hier-part P)))
-         (E (eof-object? (lookahead-u8 P))))
-    (values R E)))
+(define (f2 str)
+  (let*-values
+      (((P) (mkport str))
+       ((authority path.type path.segments)
+        (uri.parse-hier-part P))
+       ((Q) (ascii->string (get-bytevector-all P))))
+    (values (and authority (ascii->string authority))
+            path.type (map ascii->string path.segments)
+            Q)))
 
-(define (HP2 S)
-  (let* ((P (mkport S))
-         (R (ascii->string (uri.collect-hier-part P)))
-         (Q (ascii->string (get-bytevector-some P))))
-    (values R Q)))
+;;; specified authority, empty path
 
-(uri.collect-hier-part (mkport ""))    @result{} #f
+(f1 "")
+@result{} #f 'path-empty '() #t
 
-(HP1 "//")             @result{} "//" #t
-(HP1 "//ciao")         @result{} "//ciao" #t
-(HP1 "//ciao/salut")   @result{} "//ciao/salut" #t
+(f1 "//")
+@result{} "" 'path-abempty '() #t
 
-(HP1 "/")              @result{} "/" #t
-(HP1 "/ciao")          @result{} "/ciao" #t
-(HP1 "/ciao/salut")    @result{} "/ciao/salut" #t
+(f1 "//ciao.it")
+@result{} "ciao.it" 'path-abempty '() #t
 
-(HP1 ".")              @result{} "." #t
-(HP1 "ciao")          @result{} "ciao" #t
-(HP1 "ciao/salut")    @result{} "ciao/salut" #t
+(f1 "//ciao.it/salut")
+@result{} "ciao.it" 'path-abempty '("salut") #t
 
-;; query
-(HP0 "?query")
-@result{} #f "?query"
+;;; unspecified authority, absolute path
 
-(HP2 "//?query")
-@result{} "//" "?query"
+(f1 "/")
+@result{} #f 'path-absolute '() #t
 
-(HP2 "//ciao?query")
-@result{} "//ciao" "?query"
+(f1 "/ciao")
+@result{} #f 'path-absolute '("ciao") #t
 
-(HP2 "//ciao/salut?query")
-@result{} "//ciao/salut" "?query"
+(f1 "/ciao/salut")
+@result{} #f 'path-absolute '("ciao" "salut") #t
 
-(HP2 "/?query")
-@result{} "/" "?query"
+;;; unspecified authority, rootless path
 
-(HP2 "/ciao?query")
-@result{} "/ciao" "?query"
+(f1 ".")
+@result{} #f 'path-rootless '(".") #t
 
-(HP2 "/ciao/salut?query")
-@result{} "/ciao/salut" "?query"
+(f1 "ciao")
+@result{} #f 'path-rootless '("ciao") #t
 
-(HP2 "./?query")
-@result{} "." "?query"
+(f1 "ciao/salut")
+@result{} #f 'path-rootless '("ciao" "salut") #t
 
-(HP2 "ciao?query")
-@result{} "ciao" "?query"
+;;; specified authority, query
 
-(HP2 "ciao/salut?query")
-@result{} "ciao/salut" "?query"
+(f2 "///?query")
+@result{} "" 'path-abempty '("") "?query"
 
-;; fragment
-(HP0 "#fragment")
-@result{} #f "#fragment"
+(f2 "//ciao.it/salut?query")
+@result{} "ciao.it" 'path-abempty '("salut") "?query"
 
-(HP2 "//#fragment")
-@result{} "//" "#fragment"
+(f2 "//ciao.it?query")
+@result{} "ciao.it" 'path-abempty '() "?query"
 
-(HP2 "//ciao#fragment")
-@result{} "//ciao" "#fragment"
+(f2 "//?query")
+@result{} "" 'path-abempty '() "?query"
 
-(HP2 "//ciao/salut#fragment")
-@result{} "//ciao/salut" "#fragment"
+;;; unspecified authority, query
 
-(HP2 "/#fragment")
-@result{} "/" "#fragment"
+(f2 "/?query")
+@result{} #f 'path-absolute '("") "?query"
 
-(HP2 "/ciao#fragment")
-@result{} "/ciao" "#fragment"
+(f2 "/ciao?query")
+@result{} #f 'path-absolute '("ciao") "?query"
 
-(HP2 "/ciao/salut#fragment")
-@result{} "/ciao/salut" "#fragment"
+(f2 "/ciao/salut?query")
+@result{} #f 'path-absolute '("ciao" "salut") "?query"
 
-(HP2 ".#fragment")
-@result{} "." "#fragment"
+(f2 "ciao?query")
+@result{} #f 'path-rootless '("ciao") "?query"
 
-(HP2 "ciao#fragment")
-@result{} "ciao" "#fragment"
+(f2 "ciao/salut/?query")
+@result{} #f 'path-rootless '("ciao" "salut" "") "?query"
 
-(HP2 "ciao/salut#fragment")
-@result{} "ciao/salut" "#fragment"
+(f2 "?query")
+@result{} #f 'path-empty '() "?query"
+
+(f2 ".?query")
+@result{} #f 'path-rootless '(".") "?query"
+
+(f2 "..?query")
+@result{} #f 'path-rootless '("..") "?query"
+
+(f2 "./?query")
+@result{} #f 'path-rootless '("." "") "?query"
+
+(f2 "./.?query")
+@result{} #f 'path-rootless '("." ".") "?query"
+
+;;; specified authority, fragment
+
+(f2 "///#fragment")
+@result{} "" 'path-abempty '("") "#fragment"
+
+(f2 "//ciao.it/salut#fragment")
+@result{} "ciao.it" 'path-abempty '("salut") "#fragment"
+
+(f2 "//ciao.it#fragment")
+@result{} "ciao.it" 'path-abempty '() "#fragment"
+
+(f2 "//#fragment")
+@result{} "" 'path-abempty '() "#fragment"
+
+;;; unspecified authority, fragment
+
+(f2 "/#fragment")
+@result{} #f 'path-absolute '("") "#fragment"
+
+(f2 "/ciao#fragment")
+@result{} #f 'path-absolute '("ciao") "#fragment"
+
+(f2 "/ciao/salut#fragment")
+@result{} #f 'path-absolute '("ciao" "salut") "#fragment"
+
+(f2 "/ciao/salut/#fragment")
+@result{} #f 'path-absolute '("ciao" "salut" "") "#fragment"
+
+(f2 "ciao#fragment")
+@result{} #f 'path-rootless '("ciao") "#fragment"
+
+(f2 "ciao/salut/#fragment")
+@result{} #f 'path-rootless '("ciao" "salut" "") "#fragment"
+
+(f2 "#fragment")
+@result{} #f 'path-empty '() "#fragment"
+
+(f2 ".#fragment")
+@result{} #f 'path-rootless '(".") "#fragment"
+
+(f2 "..#fragment")
+@result{} #f 'path-rootless '("..") "#fragment"
+
+(f2 "./#fragment")
+@result{} #f 'path-rootless '("." "") "#fragment"
+
+(f2 "./.#fragment")
+@result{} #f 'path-rootless '("." ".") "#fragment"
 @end example
+@end defun
+
+
+@defun parse-relative-part @var{port}
+Read bytes from @var{port} expecting to get, from the first byte a
+@code{relative-part} component; parse the input decomposing it into its
+subcomponents.
+
+This function works like @func{parse-hier-part} with the following
+exception: rather than returning paths of type @code{path-rootless}, it
+returns paths of type @code{path-noscheme}.
 @end defun
 
 
@@ -707,12 +796,14 @@ parser-tools uri} library.
 @defun parse-authority @var{port}
 Accumulate bytes from @var{port} while they are valid for an
 @code{authority} component in the @code{hier-part} of a @uri{} or the
-@code{relative-part} of a @code{relative-ref}.  The first two bytes read
-must represent, in @ascii{} encoding, two slash characters; after the
-two slashes, if @eof{} or a byte representing a slash, a question mark
-or a number--sign is read: return a bytevector holding the accumulated
-bytes, ending slash, question mark or number--sign excluded; else return
-@false{}.
+@code{relative-part} of a @code{relative-ref}.  This function is meant
+to be applied to the @var{port} right after the sequence @samp{//} has
+been read from it (two slash characters in @ascii{} encoding).
+
+After the two slashes: if @eof{} or a byte representing a slash, a
+question mark or a number--sign is read: return a bytevector holding the
+accumulated bytes, ending slash, question mark or number--sign excluded;
+else return @false{}.
 
 If successful: leave the port position to the byte after the last
 accumulated byte; if an error occurs: rewind the port position to the
@@ -729,9 +820,6 @@ component, equal to a @code{reg-name} component which can be empty.
 (define (mkport S)
   (open-bytevector-input-port (string->ascii S)))
 
-(define (f0 str)
-  (uri.parse-authority (mkport str)))
-
 (define (f1 str)
   (let* ((P (mkport str))
          (R (ascii->string (uri.parse-authority P)))
@@ -744,21 +832,50 @@ component, equal to a @code{reg-name} component which can be empty.
          (Q (ascii->string (get-bytevector-all P))))
     (values R Q)))
 
-(f0 "")         @result{} #f
-(f0 "ciao")     @result{} #f
-(f0 "/ciao")    @result{} #f
-(f0 "?ciao")    @result{} #f
-(f0 "#ciao")    @result{} #f
+(f1 "")
+@result{} "" #t
 
-(f1 "//")       @result{} "" #t
-(f1 "///")      @result{} "" "/"
+(f2 "?query")
+@result{} "" "?query"
 
-(f2 "//?query")                 @result{} "" "?query"
-(f2 "//#fragment")              @result{} "" "#fragment"
-(f2 "///ciao")                  @result{} "" "/ciao"
-(f2 "//ciao:8080/salut")        @result{} "ciao:8080" "/salut"
-(f2 "//ciao.it:8080/salut")     @result{} "ciao.it:8080" "/salut"
-(f2 "//marco@@ciao:8080/salut")  @result{} "marco@@ciao:8080" "/salut"
+(f2 "#fragment")
+@result{} "" "#fragment"
+
+(f2 "ciao.it?query")
+@result{} "ciao.it" "?query"
+
+(f2 "ciao.it#fragment")
+@result{} "ciao.it" "#fragment"
+
+(f2 "ciao.it/?query")
+@result{} "ciao.it" "/?query"
+
+(f2 "ciao.it/#fragment")
+@result{} "ciao.it" "/#fragment"
+
+(f2 "ciao.it/salut?query")
+@result{} "ciao.it" "/salut?query"
+
+(f2 "ciao.it/salut#fragment")
+@result{} "ciao.it" "/salut#fragment"
+
+(f2 "ciao.it/salut?query#fragment")
+@result{} "ciao.it" "/salut?query#fragment"
+
+(f2 "/")
+@result{} "" "/"
+
+(f2 "ciao.it/salut")
+@result{} "ciao.it" "/salut"
+
+(f2 "ciao.it:8080/salut")
+@result{} "ciao.it:8080" "/salut"
+
+(f2 "ciao.it:8080/salut")
+@result{} "ciao.it:8080" "/salut"
+
+(f2 "marco@@ciao.it:8080/salut")
+@result{} "marco@@ciao.it:8080" "/salut"
 @end example
 @end defun
 
@@ -1751,11 +1868,13 @@ Return multiple values being:
 A bytevector representing the @code{scheme} component; @false{} if the
 @code{scheme} is not present.  According to the @rfc{}: the
 @code{scheme} component is mandatory, but this function accepts its
-absence.
+absence without raising exceptions.
 
 @item authority
 A bytevector representing the @code{authority} component, not including
-the leading slashes; @false{} if the @code{authority} is not present.
+the leading slashes; @false{} if the @code{authority} is unspecified.
+The @code{authority} component is specified only if the @code{hier-part}
+component starts with @samp{//}.
 
 @item userinfo
 A bytevector representing the @code{userinfo} component, not including
@@ -1764,24 +1883,29 @@ the ending at--sign; @false{} if the @code{userinfo} is not present.
 @item host.type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
-value is @code{reg-name}.
+value is @code{reg-name}.  When the @code{authority} component is
+unspecified: this value is @false{}; notice that when the
+@code{authority} component is specified, the @code{host} component is
+specified too.
 
 @item host.bv
 @itemx host.data
 Host data represented as the second and third return value from
-@func{parse-host} and associated to the symbol above.
+@func{parse-host} and associated to the symbol returned as
+@var{host.type}.  If @var{host.type} is @false{}: these values are
+meaningless.
 
-@item port
+@item port-number
 A bytevector representing the @code{port} component; @false{} if the
 @code{port} is not present.
 
 @item path-type
 One of the symbols: @code{path-abempty}, @code{path-empty},
 @code{path-absolute}, @code{path-rootless}.  When the @code{authority}
-is present: this value is always @code{path-abempty}.
+is specified: this value is always @code{path-abempty}.
 
 @item path
-A possibly empty list representing the path segments.
+A possibly empty list of bytevectors representing the path segments.
 
 @item query
 A bytevector representing the @code{query} component; @false{} when the
@@ -1814,8 +1938,10 @@ Return multiple values being:
 
 @table @var
 @item authority
-A bytevector representing the @code{authority} component, not including
-the leading slashes; @false{} if the @code{authority} is not present.
+A bytevector representing the @code{authority} component; @false{} if
+the @code{authority} is not present.  The @code{authority} component is
+specified only if the @code{relative-part} component starts with
+@samp{//}.
 
 @item userinfo
 A bytevector representing the @code{userinfo} component, not including
@@ -1824,14 +1950,18 @@ the ending at--sign; @false{} if the @code{userinfo} is not present.
 @item host.type
 One of the symbols: @code{reg-name}, @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}; when the host is empty: this
-value is @code{reg-name}.
+value is @code{reg-name}.  When the @code{authority} component is
+unspecified: this value is @false{}; notice that when the
+@code{authority} component is specified, the @code{host} component is
+specified too.
 
 @item host.bv
 @itemx host.data
 Host data represented as the second and third return value from
-@func{parse-host} and associated to the symbol above.
+@func{parse-host} and associated to the symbol above.  If
+@var{host.type} is @false{}: these values are meaningless.
 
-@item port
+@item port-number
 A bytevector representing the @code{port} component; @false{} if the
 @code{port} is not present.
 
@@ -1841,7 +1971,7 @@ One of the symbols: @code{path-abempty}, @code{path-empty},
 is present: this value is always @code{path-abempty}.
 
 @item path
-A possibly empty list representing the path segments.
+A possibly empty list of bytevectors representing the path segments.
 
 @item query
 A bytevector representing the @code{query} component; @false{} when the
