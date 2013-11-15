@@ -26,9 +26,9 @@
 #!r6rs
 (library (vicare language-extensions sentinels)
   (export sentinel sentinel? make-sentinel
-	  undefined undefined?
-	  unspecified unspecified?)
-  (import (rnrs))
+	  undefined undefined? defined?
+	  unspecified unspecified? specified?)
+  (import (vicare))
   (define-record-type (:sentinel make-sentinel sentinel?)
     (opaque #t)
     (sealed #t)
@@ -36,9 +36,14 @@
   (define sentinel    (make-sentinel))
   (define undefined   (make-sentinel))
   (define unspecified (make-sentinel))
-  (define (undefined? obj)
+  (define-integrable (undefined? obj)
     (eq? obj undefined))
-  (define (unspecified? obj)
-    (eq? obj unspecified)))
+  (define-integrable (defined? obj)
+    (not (eq? obj undefined)))
+  (define-integrable (unspecified? obj)
+    (eq? obj unspecified))
+  (define-integrable (specified? obj)
+    (not (eq? obj unspecified)))
+  #| end of library |# )
 
 ;;; end of file

@@ -2412,15 +2412,30 @@ sentinel we need for a specific operation.
 Return @true{} if @var{obj} a sentinel value.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Undefined value
+
 
 @defvr Constant undefined
 The undefined value.
 @end defvr
 
 
-@defun undefined? @var{obj}
-Return true if @var{obj} is @func{eq?} to @code{undefined}.
-@end defun
+@deffn {Integrable Function} undefined? @var{obj}
+Return @true{} if @var{obj} is @func{eq?} to @code{undefined}; otherwise
+return @false{}.
+@end deffn
+
+
+@deffn {Integrable Function} defined? @var{obj}
+Return @true{} if @var{obj} is @strong{not} @func{eq?} to
+@code{undefined}; otherwise return @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Unspecified value
 
 
 @defvr Constant unspecified
@@ -2428,9 +2443,16 @@ The unspecified value.
 @end defvr
 
 
-@defun unspecified? @var{obj}
-Return true if @var{obj} is @func{eq?} to @code{unspecified}.
-@end defun
+@deffn {Integrable Function} unspecified? @var{obj}
+Return @true{} if @var{obj} is @func{eq?} to @code{unspecified};
+otherwise return @false{}.
+@end deffn
+
+
+@deffn {Integrable Function} specified? @var{obj}
+Return @true{} if @var{obj} is @strong{not} @func{eq?} to
+@code{unspecified}; otherwise return @false{}.
+@end deffn
 
 @c page
 @node namespaces

@@ -33,52 +33,97 @@
 (check-display "*** testing Vicare libraries: sentinels\n")
 
 
+(parametrise ((check-test-name	'sentinel))
 
-(check
-    (sentinel? sentinel)
-  => #t)
+  (check
+      (sentinel? sentinel)
+    => #t)
 
-(check
-    (sentinel? 123)
-  => #f)
+  (check
+      (sentinel? 123)
+    => #f)
 
-(check
-    (let ((ell (list 1 2 3 4 5 sentinel)))
-      (let loop ((ell ell)
-		 (res '()))
-	(if (sentinel? (car ell))
-	    res
-	  (loop (cdr ell) (cons (car ell) res)))))
-  => '(5 4 3 2 1))
-
-(check
-    (let* ((ell  '(1 2 3 4 5))
-	   (iter (let ((ell ell))
-		   (lambda ()
-		     (if (null? ell)
-			 sentinel
-		       (begin0
-			   (car ell)
-			 (set! ell (cdr ell))))))))
-      (let loop ((res '()))
-	(let ((v (iter)))
-	  (if (sentinel? v)
+  (check
+      (let ((ell (list 1 2 3 4 5 sentinel)))
+	(let loop ((ell ell)
+		   (res '()))
+	  (if (sentinel? (car ell))
 	      res
-	    (loop (cons v res))))))
-  => '(5 4 3 2 1))
-
-(let ((s (make-sentinel)))
-  (check
-      (sentinel? s)
-    => #t)
+	    (loop (cdr ell) (cons (car ell) res)))))
+    => '(5 4 3 2 1))
 
   (check
-      (eq? s s)
-    => #t)
+      (let* ((ell  '(1 2 3 4 5))
+	     (iter (let ((ell ell))
+		     (lambda ()
+		       (if (null? ell)
+			   sentinel
+			 (begin0
+			   (car ell)
+			   (set! ell (cdr ell))))))))
+	(let loop ((res '()))
+	  (let ((v (iter)))
+	    (if (sentinel? v)
+		res
+	      (loop (cons v res))))))
+    => '(5 4 3 2 1))
+
+  (let ((s (make-sentinel)))
+    (check
+	(sentinel? s)
+      => #t)
+
+    (check
+	(eq? s s)
+      => #t)
+
+    (check
+	(eq? s sentinel)
+      => #f))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unspecified))
+
+  (check-for-true
+   (unspecified? unspecified))
+
+  (check-for-false
+   (specified? unspecified))
+
+  (check-for-false
+   (unspecified? 123))
+
+  (check-for-true
+   (specified? 123))
 
   (check
-      (eq? s sentinel)
-    => #f))
+      unspecified
+    => unspecified)
+
+  #t)
+
+
+(parametrise ((check-test-name	'undefined))
+
+  (check-for-true
+   (undefined? undefined))
+
+  (check-for-false
+   (defined? undefined))
+
+  (check-for-false
+   (undefined? 123))
+
+  (check-for-true
+   (defined? 123))
+
+  (check
+      undefined
+    => undefined)
+
+  #t)
 
 
 ;;;; done
