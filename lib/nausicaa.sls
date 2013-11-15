@@ -1728,9 +1728,9 @@
 
 ;;;; bindings from (vicare language-extensions sentinels)
     sentinel
-    make-sentinel		sentinel?
-    undefined			undefined?
-    unspecified			unspecified?
+    make-sentinel	sentinel?
+    undefined		undefined?	defined?
+    unspecified		unspecified?	specified?
 
 
 ;;;; done exports
