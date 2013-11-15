@@ -288,242 +288,192 @@
   #t)
 
 
-(parametrise ((check-test-name	'parsing-splitting-uri/hier-part))
+(parametrise ((check-test-name	'parsing-hier-part))
 
-  (check
-      (uri.collect-hier-part (%make-lexer-port ""))
-    => #f)
+  (define (f1 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((authority path.type path.segments)
+	  (uri.parse-hier-part P))
+	 ((E) (eof-object? (lookahead-u8 P))))
+      (values (and authority (ascii->string authority))
+	      path.type (map ascii->string path.segments)
+	      E)))
 
-;;; --------------------------------------------------------------------
-;;; paths
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("//" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("//ciao" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao/salut"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("//ciao/salut" #t))
-
-;;;
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("/" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("/ciao" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao/salut"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("/ciao/salut" #t))
-
-;;;
-
-  (check
-      (let* ((in-port	(%make-lexer-port "."))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("." #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("ciao" #t))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao/salut"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port))))
-  	(list part (eof-object? (lookahead-u8 in-port))))
-    => '("ciao/salut" #t))
+  (define (f2 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((authority path.type path.segments)
+	  (uri.parse-hier-part P))
+	 ((Q) (ascii->string (get-bytevector-all P))))
+      (values (and authority (ascii->string authority))
+	      path.type (map ascii->string path.segments)
+	      Q)))
 
 ;;; --------------------------------------------------------------------
-;;; query
+;;; specified authority, empty path
 
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//ciao" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao/salut?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//ciao/salut" "?query"))
-
-;;;
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("/" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("/ciao" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao/salut?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("/ciao/salut" "?query"))
-
-;;;
-
-  (check
-      (let* ((in-port	(%make-lexer-port "?query"))
-  	     (part	(uri.collect-hier-part in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '(#f "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port ".?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("." "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("ciao" "?query"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao/salut?query"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("ciao/salut" "?query"))
+  (check (f1 "")			=> #f        'path-empty '() #t)
+  (check (f1 "//")			=> ""        'path-abempty '() #t)
+  (check (f1 "//ciao.it")		=> "ciao.it" 'path-abempty '() #t)
+  (check (f1 "//ciao.it/salut")		=> "ciao.it" 'path-abempty '("salut") #t)
 
 ;;; --------------------------------------------------------------------
-;;; fragment
+;;; unspecified authority, absolute path
 
-  (check
-      (let* ((in-port	(%make-lexer-port "//#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//" "#fragment"))
+  (check (f1 "/")			=> #f 'path-absolute '() #t)
+  (check (f1 "/ciao")			=> #f 'path-absolute '("ciao") #t)
+  (check (f1 "/ciao/salut")		=> #f 'path-absolute '("ciao" "salut") #t)
 
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//ciao" "#fragment"))
+;;; --------------------------------------------------------------------
+;;; unspecified authority, rootless path
 
-  (check
-      (let* ((in-port	(%make-lexer-port "//ciao/salut#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("//ciao/salut" "#fragment"))
+  (check (f1 ".")			=> #f 'path-rootless '(".") #t)
+  (check (f1 "ciao")			=> #f 'path-rootless '("ciao") #t)
+  (check (f1 "ciao/salut")		=> #f 'path-rootless '("ciao" "salut") #t)
 
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("/ciao" "#fragment"))
+;;; --------------------------------------------------------------------
+;;; specified authority, query
 
-  (check
-      (let* ((in-port	(%make-lexer-port "/ciao/salut#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("/ciao/salut" "#fragment"))
+  (check (f2 "///?query")		=> ""        'path-abempty '("") "?query")
+  (check (f2 "//ciao.it/salut?query")	=> "ciao.it" 'path-abempty '("salut") "?query")
+  (check (f2 "//ciao.it?query")		=> "ciao.it" 'path-abempty '() "?query")
+  (check (f2 "//?query")		=> ""        'path-abempty '() "?query")
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, query
+
+  (check (f2 "/?query")			=> #f 'path-absolute '("") "?query")
+  (check (f2 "/ciao?query")		=> #f 'path-absolute '("ciao") "?query")
+  (check (f2 "/ciao/salut?query")	=> #f 'path-absolute '("ciao" "salut") "?query")
+  (check (f2 "ciao?query")		=> #f 'path-rootless '("ciao") "?query")
+  (check (f2 "ciao/salut/?query")	=> #f 'path-rootless '("ciao" "salut" "") "?query")
+  (check (f2 "?query")			=> #f 'path-empty '() "?query")
+  (check (f2 ".?query")			=> #f 'path-rootless '(".") "?query")
+  (check (f2 "..?query")		=> #f 'path-rootless '("..") "?query")
+  (check (f2 "./?query")		=> #f 'path-rootless '("." "") "?query")
+  (check (f2 "./.?query")		=> #f 'path-rootless '("." ".") "?query")
+
+;;; --------------------------------------------------------------------
+;;; specified authority, fragment
+
+  (check (f2 "///#fragment")		=> ""        'path-abempty '("") "#fragment")
+  (check (f2 "//ciao.it/salut#fragment")=> "ciao.it" 'path-abempty '("salut") "#fragment")
+  (check (f2 "//ciao.it#fragment")	=> "ciao.it" 'path-abempty '() "#fragment")
+  (check (f2 "//#fragment")		=> ""        'path-abempty '() "#fragment")
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, fragment
+
+  (check (f2 "/#fragment")		=> #f 'path-absolute '("") "#fragment")
+  (check (f2 "/ciao#fragment")		=> #f 'path-absolute '("ciao") "#fragment")
+  (check (f2 "/ciao/salut#fragment")	=> #f 'path-absolute '("ciao" "salut") "#fragment")
+  (check (f2 "/ciao/salut/#fragment")	=> #f 'path-absolute '("ciao" "salut" "") "#fragment")
+  (check (f2 "ciao#fragment")		=> #f 'path-rootless '("ciao") "#fragment")
+  (check (f2 "ciao/salut/#fragment")	=> #f 'path-rootless '("ciao" "salut" "") "#fragment")
+  (check (f2 "#fragment")		=> #f 'path-empty '() "#fragment")
 
 ;;;
 
-  (check
-      (let* ((in-port	(%make-lexer-port "#fragment"))
-  	     (part	(uri.collect-hier-part in-port))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '(#f "#fragment"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port ".#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("." "#fragment"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("ciao" "#fragment"))
-
-  (check
-      (let* ((in-port	(%make-lexer-port "ciao/salut#fragment"))
-  	     (part	(ascii->string (uri.collect-hier-part in-port)))
-	     (rest	(ascii->string (get-bytevector-some in-port))))
-  	(list part rest))
-    => '("ciao/salut" "#fragment"))
+  (check (f2 ".#fragment")		=> #f 'path-rootless '(".") "#fragment")
+  (check (f2 "..#fragment")		=> #f 'path-rootless '("..") "#fragment")
+  (check (f2 "./#fragment")		=> #f 'path-rootless '("." "") "#fragment")
+  (check (f2 "./.#fragment")		=> #f 'path-rootless '("." ".") "#fragment")
 
   #t)
 
 
-(parametrise ((check-test-name	'parsing-splitting-uri/relative-part))
+(parametrise ((check-test-name	'parsing-relative-part))
 
-  (check
-      (uri.collect-relative-part (%make-lexer-port ""))
-    => #f)
+  (define (f1 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((authority path.type path.segments)
+	  (uri.parse-relative-part P))
+	 ((E) (eof-object? (lookahead-u8 P))))
+      (values (and authority (ascii->string authority))
+	      path.type (map ascii->string path.segments)
+	      E)))
 
-  (check
-      (ascii->string (uri.collect-relative-part (%make-lexer-port "//ciao")))
-    => "//ciao")
+  (define (f2 str)
+    (let*-values
+	(((P) (mkport str))
+	 ((authority path.type path.segments)
+	  (uri.parse-relative-part P))
+	 ((Q) (ascii->string (get-bytevector-all P))))
+      (values (and authority (ascii->string authority))
+	      path.type (map ascii->string path.segments)
+	      Q)))
 
-  (check
-      (let* ((p (%make-lexer-port "//ciao?query"))
-  	     (r (ascii->string (uri.collect-relative-part p))))
-  	(list r (get-u8 p)))
-    => `("//ciao" ,(char->integer #\?)))
+;;; --------------------------------------------------------------------
+;;; specified authority, empty path
 
-  (check
-      (let* ((p (%make-lexer-port "//ciao#fragment"))
-  	     (r (ascii->string (uri.collect-relative-part p))))
-  	(list r (get-u8 p)))
-    => `("//ciao" ,(char->integer #\#)))
+  (check (f1 "")			=> #f        'path-empty '() #t)
+  (check (f1 "//")			=> ""        'path-abempty '() #t)
+  (check (f1 "//ciao.it")		=> "ciao.it" 'path-abempty '() #t)
+  (check (f1 "//ciao.it/salut")		=> "ciao.it" 'path-abempty '("salut") #t)
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, absolute path
+
+  (check (f1 "/")			=> #f 'path-absolute '() #t)
+  (check (f1 "/ciao")			=> #f 'path-absolute '("ciao") #t)
+  (check (f1 "/ciao/salut")		=> #f 'path-absolute '("ciao" "salut") #t)
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, noscheme path
+
+  (check (f1 ".")			=> #f 'path-noscheme '(".") #t)
+  (check (f1 "ciao")			=> #f 'path-noscheme '("ciao") #t)
+  (check (f1 "ciao/salut")		=> #f 'path-noscheme '("ciao" "salut") #t)
+
+;;; --------------------------------------------------------------------
+;;; specified authority, query
+
+  (check (f2 "///?query")		=> ""        'path-abempty '("") "?query")
+  (check (f2 "//ciao.it/salut?query")	=> "ciao.it" 'path-abempty '("salut") "?query")
+  (check (f2 "//ciao.it?query")		=> "ciao.it" 'path-abempty '() "?query")
+  (check (f2 "//?query")		=> ""        'path-abempty '() "?query")
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, query
+
+  (check (f2 "/?query")			=> #f 'path-absolute '("") "?query")
+  (check (f2 "/ciao?query")		=> #f 'path-absolute '("ciao") "?query")
+  (check (f2 "/ciao/salut?query")	=> #f 'path-absolute '("ciao" "salut") "?query")
+  (check (f2 "ciao?query")		=> #f 'path-noscheme '("ciao") "?query")
+  (check (f2 "ciao/salut/?query")	=> #f 'path-noscheme '("ciao" "salut" "") "?query")
+  (check (f2 "?query")			=> #f 'path-empty '() "?query")
+  (check (f2 ".?query")			=> #f 'path-noscheme '(".") "?query")
+  (check (f2 "..?query")		=> #f 'path-noscheme '("..") "?query")
+  (check (f2 "./?query")		=> #f 'path-noscheme '("." "") "?query")
+  (check (f2 "./.?query")		=> #f 'path-noscheme '("." ".") "?query")
+
+;;; --------------------------------------------------------------------
+;;; specified authority, fragment
+
+  (check (f2 "///#fragment")		=> ""        'path-abempty '("") "#fragment")
+  (check (f2 "//ciao.it/salut#fragment")=> "ciao.it" 'path-abempty '("salut") "#fragment")
+  (check (f2 "//ciao.it#fragment")	=> "ciao.it" 'path-abempty '() "#fragment")
+  (check (f2 "//#fragment")		=> ""        'path-abempty '() "#fragment")
+
+;;; --------------------------------------------------------------------
+;;; unspecified authority, fragment
+
+  (check (f2 "/#fragment")		=> #f 'path-absolute '("") "#fragment")
+  (check (f2 "/ciao#fragment")		=> #f 'path-absolute '("ciao") "#fragment")
+  (check (f2 "/ciao/salut#fragment")	=> #f 'path-absolute '("ciao" "salut") "#fragment")
+  (check (f2 "/ciao/salut/#fragment")	=> #f 'path-absolute '("ciao" "salut" "") "#fragment")
+  (check (f2 "ciao#fragment")		=> #f 'path-noscheme '("ciao") "#fragment")
+  (check (f2 "ciao/salut/#fragment")	=> #f 'path-noscheme '("ciao" "salut" "") "#fragment")
+  (check (f2 "#fragment")		=> #f 'path-empty '() "#fragment")
+
+;;;
+
+  (check (f2 ".#fragment")		=> #f 'path-noscheme '(".") "#fragment")
+  (check (f2 "..#fragment")		=> #f 'path-noscheme '("..") "#fragment")
+  (check (f2 "./#fragment")		=> #f 'path-noscheme '("." "") "#fragment")
+  (check (f2 "./.#fragment")		=> #f 'path-noscheme '("." ".") "#fragment")
 
   #t)
 
@@ -633,38 +583,37 @@
 
 (parametrise ((check-test-name	'parsing-authority))
 
-  (define (f0 str)
-    (uri.parse-authority (mkport str)))
-
   (define (f1 str)
     (let* ((P (mkport str))
 	   (R (ascii->string (uri.parse-authority P)))
 	   (E (eof-object? (lookahead-u8 P))))
-      (list R E)))
+      (values R E)))
 
   (define (f2 str)
     (let* ((P (mkport str))
 	   (R (ascii->string (uri.parse-authority P)))
 	   (Q (ascii->string (get-bytevector-all P))))
-      (list R Q)))
+      (values R Q)))
 
 ;;; --------------------------------------------------------------------
 
-  (check (f0 "")		=> #f)
-  (check (f0 "ciao")		=> #f)
-  (check (f0 "/ciao")		=> #f)
-  (check (f0 "?ciao")		=> #f)
-  (check (f0 "#ciao")		=> #f)
+  (check (f1 "")				=> "" #t)
 
-  (check (f1 "//")			=> '("" #t))
+  (check (f2 "?query")				=> "" "?query")
+  (check (f2 "#fragment")			=> "" "#fragment")
+  (check (f2 "ciao.it?query")			=> "ciao.it" "?query")
+  (check (f2 "ciao.it#fragment")		=> "ciao.it" "#fragment")
+  (check (f2 "ciao.it/?query")			=> "ciao.it" "/?query")
+  (check (f2 "ciao.it/#fragment")		=> "ciao.it" "/#fragment")
+  (check (f2 "ciao.it/salut?query")		=> "ciao.it" "/salut?query")
+  (check (f2 "ciao.it/salut#fragment")		=> "ciao.it" "/salut#fragment")
+  (check (f2 "ciao.it/salut?query#fragment")	=> "ciao.it" "/salut?query#fragment")
 
-  (check (f2 "//?query")			=> '("" "?query"))
-  (check (f2 "//#fragment")			=> '("" "#fragment"))
-  (check (f2 "///")				=> '("" "/"))
-  (check (f2 "//ciao/salut")			=> '("ciao" "/salut"))
-  (check (f2 "//ciao:8080/salut")		=> '("ciao:8080" "/salut"))
-  (check (f2 "//ciao.it:8080/salut")		=> '("ciao.it:8080" "/salut"))
-  (check (f2 "//marco@ciao.it:8080/salut")	=> '("marco@ciao.it:8080" "/salut"))
+  (check (f2 "/")				=> "" "/")
+  (check (f2 "ciao.it/salut")			=> "ciao.it" "/salut")
+  (check (f2 "ciao.it:8080/salut")		=> "ciao.it:8080" "/salut")
+  (check (f2 "ciao.it:8080/salut")		=> "ciao.it:8080" "/salut")
+  (check (f2 "marco@ciao.it:8080/salut")	=> "marco@ciao.it:8080" "/salut")
 
   #t)
 
@@ -962,7 +911,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'parsing-port))
+(parametrise ((check-test-name	'parsing-port-number))
 
   (define (f1 str)
     (let* ((P (mkport str))
@@ -1932,17 +1881,16 @@
 		(and authority		(ascii->string authority))
 		(and userinfo		(ascii->string userinfo))
 		host.type
-		(and host.bv
-		     (case host.type
-		       ((reg-name)
-			(ascii->string host.bv))
-		       ((ipv4-address)
-			(cons (ascii->string host.bv) host.data))
-		       ((ipv6-address)
-			(cons (ascii->string host.bv) host.data))
-		       ((ipvfuture)
-			(cons (ascii->string host.bv) host.data))
-		       (else #f)))
+		(case host.type
+		  ((reg-name)
+		   (ascii->string host.bv))
+		  ((ipv4-address)
+		   (cons (ascii->string host.bv) host.data))
+		  ((ipv6-address)
+		   (cons (ascii->string host.bv) host.data))
+		  ((ipvfuture)
+		   (cons (ascii->string host.bv) host.data))
+		  (else #f))
 		(and port		(ascii->string port))
 		path.type
 		(map ascii->string path)
@@ -1953,16 +1901,16 @@
 ;;; whith scheme
 
   (doit "ci:ao/"
-	("ci" #f #f reg-name "" #f path-rootless ("ao" "") #f #f))
+	("ci" #f #f #f       #f #f path-rootless ("ao" "") #f #f))
 
   (doit "ci:ao/a///"
-	("ci" #f #f reg-name "" #f path-rootless ("ao" "a" "" "" "") #f #f))
+	("ci" #f #f #f       #f #f path-rootless ("ao" "a" "" "" "") #f #f))
 
   (doit "ci:ao/ciao"
-	("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao") #f #f))
+	("ci" #f #f #f       #f #f path-rootless ("ao" "ciao") #f #f))
 
   (doit "ci:ao/ciao/hello/salut"
-	("ci" #f #f reg-name "" #f path-rootless ("ao" "ciao" "hello" "salut") #f #f))
+	("ci" #f #f #f       #f #f path-rootless ("ao" "ciao" "hello" "salut") #f #f))
 
   (doit "http://"
 	("http" "" #f reg-name "" #f path-abempty () #f #f))
@@ -2065,41 +2013,41 @@
 ;;; no authority, emtpy path
 
   (doit ""
-	(#f #f #f reg-name "" #f path-empty () #f #f))
+	(#f #f #f #f       #f #f path-empty () #f #f))
 
   (doit "?query"
-	(#f #f #f reg-name "" #f path-empty () "query" #f))
+	(#f #f #f #f       #f #f path-empty () "query" #f))
 
   (doit "#fragment"
-	(#f #f #f reg-name "" #f path-empty () #f "fragment"))
+	(#f #f #f #f       #f #f path-empty () #f "fragment"))
 
 ;;; no authority, absolute path
 
   (doit "/"
-	(#f #f #f reg-name "" #f path-absolute ("") #f #f))
+	(#f #f #f #f       #f #f path-absolute () #f #f))
 
   (doit "/a///"
-	(#f #f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
+	(#f #f #f #f       #f #f path-absolute ("a" "" "" "") #f #f))
 
   (doit "/ciao"
-	(#f #f #f reg-name "" #f path-absolute ("ciao") #f #f))
+	(#f #f #f #f       #f #f path-absolute ("ciao") #f #f))
 
   (doit "/ciao/hello/salut"
-	(#f #f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
+	(#f #f #f #f       #f #f path-absolute ("ciao" "hello" "salut") #f #f))
 
 ;;; no authority, relative path rootless
 
   (doit "./"
-	(#f #f #f reg-name "" #f path-rootless ("." "") #f #f))
+	(#f #f #f #f       #f #f path-rootless ("." "") #f #f))
 
   (doit "./a///"
-	(#f #f #f reg-name "" #f path-rootless ("." "a" "" "" "") #f #f))
+	(#f #f #f #f       #f #f path-rootless ("." "a" "" "" "") #f #f))
 
   (doit "./ciao"
-	(#f #f #f reg-name "" #f path-rootless ("." "ciao") #f #f))
+	(#f #f #f #f       #f #f path-rootless ("." "ciao") #f #f))
 
   (doit "./ciao/hello/salut"
-	(#f #f #f reg-name "" #f path-rootless ("." "ciao" "hello" "salut") #f #f))
+	(#f #f #f #f       #f #f path-rootless ("." "ciao" "hello" "salut") #f #f))
 
   #t)
 
@@ -2108,12 +2056,12 @@
 
   (define-syntax-rule (doit in-string expected-value)
     (check
-	(let-values (((authority userinfo host.type host.bv host.data port path-type path query fragment)
-		      (uri.parse-relative-ref (mkport in-string))))
+	(receive (authority userinfo host.type host.bv host.data port path-type path query fragment)
+	    (uri.parse-relative-ref (mkport in-string))
 	  (list (and authority		(ascii->string authority))
 		(and userinfo		(ascii->string userinfo))
 		host.type
-		(and host.bv		(ascii->string host.bv))
+		(and host.type		(ascii->string host.bv))
 		(and port		(ascii->string port))
 		path-type
 		(map ascii->string path)
@@ -2165,55 +2113,44 @@
   (doit "//ciao.com:8080/a/b/c"
 	("ciao.com:8080" #f reg-name "ciao.com" "8080" path-abempty ("a" "b" "c") #f #f))
 
-  ;;; no authority, emtpy path
+;;; no authority, emtpy path
 
   (doit ""
-	(#f #f reg-name "" #f path-empty () #f #f))
+	(#f #f #f       #f #f path-empty () #f #f))
 
   (doit "?query"
-	(#f #f reg-name "" #f path-empty () "query" #f))
+	(#f #f #f       #f #f path-empty () "query" #f))
 
   (doit "#fragment"
-	(#f #f reg-name "" #f path-empty () #f "fragment"))
+	(#f #f #f       #f #f path-empty () #f "fragment"))
 
-  ;;; no authority, absolute path
+;;; no authority, absolute path
 
   (doit "/"
-	(#f #f reg-name "" #f path-absolute ("") #f #f))
+	(#f #f #f       #f #f path-absolute () #f #f))
 
   (doit "/a///"
-	(#f #f reg-name "" #f path-absolute ("a" "" "" "") #f #f))
+	(#f #f #f       #f #f path-absolute ("a" "" "" "") #f #f))
 
   (doit "/ciao"
-	(#f #f reg-name "" #f path-absolute ("ciao") #f #f))
+	(#f #f #f       #f #f path-absolute ("ciao") #f #f))
 
   (doit "/ciao/hello/salut"
-	(#f #f reg-name "" #f path-absolute ("ciao" "hello" "salut") #f #f))
+	(#f #f #f       #f #f path-absolute ("ciao" "hello" "salut") #f #f))
 
 ;;; no authority, relative path rootless
 
   (doit "./"
-	(#f #f reg-name "" #f path-noscheme ("." "") #f #f))
+	(#f #f #f       #f #f path-noscheme ("." "") #f #f))
 
   (doit "./a///"
-	(#f #f reg-name "" #f path-noscheme ("." "a" "" "" "") #f #f))
+	(#f #f #f       #f #f path-noscheme ("." "a" "" "" "") #f #f))
 
   (doit "./ciao"
-	(#f #f reg-name "" #f path-noscheme ("." "ciao") #f #f))
+	(#f #f #f       #f #f path-noscheme ("." "ciao") #f #f))
 
   (doit "./ciao/hello/salut"
-	(#f #f reg-name "" #f path-noscheme ("." "ciao" "hello" "salut") #f #f))
-
-;;; --------------------------------------------------------------------
-
-  (check	;whith scheme-like first segment
-      (try
-	  (uri.parse-relative-ref (mkport "ci:ao/"))
-	(catch E
-	  (uri.&uri-parser-error
-	   #t)
-	  (else E)))
-    => #t)
+	(#f #f #f       #f #f path-noscheme ("." "ciao" "hello" "salut") #f #f))
 
   #t)
 
