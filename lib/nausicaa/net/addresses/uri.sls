@@ -181,15 +181,10 @@
 		  (loop bv ($fxadd1 i))))))))
 
   (virtual-fields
-   (immutable (specified? <boolean>)
-	      (lambda (bv)
-		($bytevector-not-empty? bv)))
-
    (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <userinfo>))
-		(if (O specified?)
-		    (bytevector-append O #vu8(64)) ;64 = #\@
-		  '#vu8())))
+		;;64 = #\@
+		(bytevector-append O #vu8(64)) ))
 
    (immutable (string <ascii-string>)
 	      (lambda ((O <userinfo>))
@@ -198,10 +193,9 @@
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <userinfo>) port)
-    (when (O specified?)
-      (put-bytevector port O)
-      ;;64 = #\@
-      (put-u8         port 64)))
+    (put-bytevector port O)
+    ;;64 = #\@
+    (put-u8         port 64))
 
   #| end of class |# )
 
@@ -234,16 +228,10 @@
 	 fx)))
 
     (virtual-fields
-     (immutable (specified? <boolean>)
-		(lambda (fx)
-		  (not ($fxzero? fx))))
-
      (immutable (bytevector <ascii-bytevector>)
 		(lambda ((O <port-number>))
-		  (if (O specified?)
-		      ;;58 = #\:
-		      (bytevector-append '#vu8(58) ($fixnum->bytevector O))
-		    '#vu8())))
+		  ;;58 = #\:
+		  (bytevector-append '#vu8(58) ($fixnum->bytevector O))))
 
      (immutable (string <ascii-string>)
 		(lambda ((O <port-number>))
@@ -252,10 +240,9 @@
      #| end of virtual-fields |# )
 
     (method (put-bytevector (O <port-number>) port)
-      (when (O specified?)
-	;;58 = #\:
-	(put-u8 port 58)
-	(put-bytevector port (string->ascii (number->string O)))))
+      ;;58 = #\:
+      (put-u8 port 58)
+      (put-bytevector port (string->ascii (number->string O))))
 
     #| end of label |# )
 
@@ -288,30 +275,21 @@
 		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
-   (immutable (specified? <boolean>)
-	      (lambda (bv)
-		($bytevector-not-empty? bv)))
-
    (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <query>))
-		(if (O specified?)
-		    ;;63 = ?
-		    (bytevector-append '#vu8(63) O)
-		  '#vu8())))
+		;;63 = ?
+		(bytevector-append '#vu8(63) O)))
 
    (immutable (string <ascii-string>)
 	      (lambda ((O <query>))
-		(if (O specified?)
-		    ($ascii->string (O bytevector))
-		  "")))
+		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <query>) port)
-    (when (O specified?)
-      ;;63 = ?
-      (put-u8 port 63)
-      (put-bytevector port O)))
+    ;;63 = ?
+    (put-u8 port 63)
+    (put-bytevector port O))
 
   #| end of label |# )
 
@@ -336,30 +314,21 @@
 		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
-   (immutable (specified? <boolean>)
-	      (lambda (bv)
-		($bytevector-not-empty? bv)))
-
    (immutable (bytevector <ascii-bytevector>)
 	      (lambda ((O <fragment>))
-		(if (O specified?)
-		    ;;35 = #
-		    (bytevector-append '#vu8(35) O)
-		  '#vu8())))
+		;;35 = #
+		(bytevector-append '#vu8(35) O)))
 
    (immutable (string <ascii-string>)
 	      (lambda ((O <fragment>))
-		(if (O specified?)
-		    ($ascii->string (O bytevector))
-		  "")))
+		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <fragment>) port)
-    (when (O specified?)
-      ;;35 = #
-      (put-u8 port 35)
-      (put-bytevector port O)))
+    ;;35 = #
+    (put-u8 port 35)
+    (put-bytevector port O))
 
   #| end of label |# )
 
@@ -643,12 +612,12 @@
   (nongenerative nausicaa:net:addresses:uri:<path-empty>)
   (parent <path>)
   (protocol
-   (lambda (make-uri-path)
+   (lambda (make-path)
      (let ((singleton-instance #f))
        (lambda ()
 	 (or singleton-instance
 	     (receive-and-return (rv)
-		 ((make-uri-path '()))
+		 ((make-path '()))
 	       (set! singleton-instance rv)))))))
   #| end of class |# )
 
@@ -660,9 +629,9 @@
 (define-class <path-abempty>
   (nongenerative nausicaa:net:addresses:uri:<path-abempty>)
   (parent <path>)
-  (protocol (lambda (make-uri-path)
-	      (lambda (path)
-		((make-uri-path path)))))
+  (protocol (lambda (make-path)
+	      (lambda ((path <list>))
+		((make-path path)))))
   #| end of class |# )
 
 (define-method (uri-path-put-bytevector (O <path-abempty>) (port <binary-output-port>))
@@ -678,9 +647,9 @@
 (define-class <path-absolute>
   (nongenerative nausicaa:net:addresses:uri:<path-absolute>)
   (parent <path>)
-  (protocol (lambda (make-uri-path)
-	      (lambda ((path <nonempty-list>))
-		((make-uri-path path)))))
+  (protocol (lambda (make-path)
+	      (lambda ((path <list>))
+		((make-path path)))))
   #| end of class |# )
 
 (define-method (uri-path-put-bytevector (O <path-absolute>) (port <binary-output-port>))
@@ -696,9 +665,9 @@
 (define-class <path-rootless>
   (nongenerative nausicaa:net:addresses:uri:<path-rootless>)
   (parent <path>)
-  (protocol (lambda (make-uri-path)
+  (protocol (lambda (make-path)
 	      (lambda ((path <nonempty-list>))
-		((make-uri-path path)))))
+		((make-path path)))))
   #| end of class |# )
 
 (define-method (uri-path-symbol (O <path-rootless>))
@@ -709,9 +678,9 @@
 (define-class <path-noscheme>
   (nongenerative nausicaa:net:addresses:uri:<path-noscheme>)
   (parent <path>)
-  (protocol (lambda (make-uri-path)
+  (protocol (lambda (make-path)
 	      (lambda ((path <nonempty-list>))
-		((make-uri-path path)))))
+		((make-path path)))))
   #| end of class |# )
 
 (define-method (uri-path-symbol (O <path-noscheme>))
@@ -736,6 +705,39 @@
        "invalid URI path type" path-type))))
 
 
+;;;; auxiliary labels
+
+(define-label <userinfo/unspecified>
+  (predicate (lambda (O)
+	       (or ((<userinfo>) O)
+		   (unspecified? O)))))
+
+(define-label <host/unspecified>
+  (predicate (lambda (O)
+	       (or ((<host>) O)
+		   (unspecified? O)))))
+
+(define-label <port-number/unspecified>
+  (predicate (lambda (O)
+	       (or ((<port-number>) O)
+		   (unspecified?    O)))))
+
+(define-label <path/unspecified>
+  (predicate (lambda (O)
+	       (or ((<path>) O)
+		   (unspecified? O)))))
+
+(define-label <query/unspecified>
+  (predicate (lambda (O)
+	       (or ((<query>) O)
+		   (unspecified? O)))))
+
+(define-label <fragment/unspecified>
+  (predicate (lambda (O)
+	       (or ((<fragment>) O)
+		   (unspecified? O)))))
+
+
 (define-class <uri>
   (nongenerative nausicaa:net:addresses:uri:<uri>)
 
@@ -747,12 +749,12 @@
   (protocol
    (lambda (make-top)
      (lambda ((scheme	<scheme>)
-	 (userinfo	<top> #;(or <userinfo>		<unspecified>))
-	 (host		<top> #;(or <host>		<unspecified>))
-	 (port		<top> #;(or <port-number>	<unspecified>))
-	 (path		<path>)
-	 (query		<top> #;(or <query>		<unspecified>))
-	 (fragment	<top> #;(or <fragment>		<unspecified>)))
+	 (userinfo	<userinfo/unspecified>)
+	 (host		<host/unspecified>)
+	 (port		<port-number/unspecified>)
+	 (path		<path/unspecified>)
+	 (query		<query/unspecified>)
+	 (fragment	<fragment/unspecified>))
        (define who 'make-<uri>)
        (when (and (specified? userinfo)
 		  (unspecified? host))
@@ -766,7 +768,10 @@
 	   port))
        ((make-top)
 	scheme userinfo host port
-	path query fragment
+	(if (unspecified? path)
+	    (<path-empty> ())
+	  path)
+	query fragment
 	#f #;memoized-bytevector #f #;memoized-string ))))
 
   (fields
@@ -908,12 +913,12 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((userinfo	<top> #;(or <userinfo>		<unspecified>))
-	 (host		<top> #;(or <host>		<unspecified>))
-	 (port		<top> #;(or <port-number>	<unspecified>))
+     (lambda ((userinfo	<userinfo/unspecified>)
+	 (host		<host/unspecified>)
+	 (port		<port-number/unspecified>)
 	 (path		<path>)
-	 (query		<top> #;(or <query>		<unspecified>))
-	 (fragment	<top> #;(or <fragment>		<unspecified>)))
+	 (query		<query/unspecified>)
+	 (fragment	<fragment/unspecified>))
        (define who 'make-<relative-ref>)
        (when (and (specified? userinfo)
 		  (unspecified? host))

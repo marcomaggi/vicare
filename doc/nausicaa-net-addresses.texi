@@ -359,13 +359,16 @@ The version flag must be in the range @math{[0, 15]}.
 @end deftp
 
 
-@defun make-host-object (@var{type} @aclass{symbol}) (@var{ascii} @aclass{bytevector}) @var{data}
-Build and return a new instance of specialised object of class
+@defun make-host-object @var{type} (@var{ascii} @aclass{bytevector}) @var{data}
+Build and return a new instance of a specialised object of class
 @class{ip-address} representing the host component of a @uri{}.  The
 possible classes of the returned object are: @class{reg-name-address},
 @class{ipv4-address}, @class{ipv6-address}, @class{ipvfuture-address}.
+As a special case if @var{host.type} is @false{}: the other arguments
+are ignored and the return value is the value @code{unspecified} from
+@library{nausicaa}.
 
-@var{type} must be a symbol among: @code{reg-name}, @code{ipv4-address},
+@var{type} a symbol among: @code{reg-name}, @code{ipv4-address},
 @code{ipv6-address}, @code{ipvfuture}.
 
 @var{ascii} must be a bytevector representing the @ascii{}
@@ -1058,13 +1061,6 @@ characters is valid for a @code{userinfo} @uri{} component.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{boolean} specified?
-According to @rfc{} 3986 the @code{userinfo} component of @uri{}s can be
-empty.  This field is @true{} if the bytevector has non--zero length,
-@false{} otherwise.
-@end deftypecv
-
-
 @deftypecv {Immutable virtual field} @aclass{userinfo} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{userinfo} component in the format
 requested by @rfc{} 3986.
@@ -1122,9 +1118,7 @@ addresses uri} library.
 
 @deftp Label @aclass{port-number}
 Label used to tag fixnums representing the @code{port-number} component
-of @uri{}s; it is derived from @class{nonnegative-fixnum}.  The value
-@samp{0} is conventionally assumed to mean ``unspecified port number''
-when used as @class{port-number} instance.
+of @uri{}s; it is derived from @class{nonnegative-fixnum}.
 @end deftp
 
 
@@ -1148,13 +1142,6 @@ Return @true{} if @var{obj} is a non--negative fixnum in the range
 @c ------------------------------------------------------------
 
 @subsubheading Fields
-
-
-@deftypecv {Immutable virtual field} @aclass{port-number} @aclass{boolean} specified?
-According to @rfc{} 3986 the @code{port-number} component of @uri{}s can
-be empty.  This field is @true{} if the fixnum is zero, @false{}
-otherwise.
-@end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{port-number} @aclass{ascii-bytevector} bytevector
@@ -1473,7 +1460,7 @@ is derived from @class{path}.
 
 @defop {Super constructor} @aclass{path-absolute} constructor (@var{obj} @aclass{list-of-segments})
 Build and return a new instance of @class{path-absolute}.  The argument
-must be a non--empty list of objects satisfying the requirements of
+must be a list of objects satisfying the requirements of
 @class{list-of-segments}.
 @end defop
 
@@ -1556,13 +1543,6 @@ characters is valid for a @code{query} @uri{} component.
 @subsubheading Fields
 
 
-@deftypecv {Immutable virtual field} @aclass{query} @aclass{boolean} specified?
-According to @rfc{} 3986 the @code{query} component of @uri{}s can be
-empty.  This field is @true{} if the bytevector has non--zero length,
-@false{} otherwise.
-@end deftypecv
-
-
 @deftypecv {Immutable virtual field} @aclass{query} @aclass{ascii-bytevector} bytevector
 A bytevector representing the @code{query} component in the format
 requested by @rfc{} 3986.
@@ -1623,13 +1603,6 @@ characters is valid for a @code{fragment} @uri{} component.
 @c ------------------------------------------------------------
 
 @subsubheading Fields
-
-
-@deftypecv {Immutable virtual field} @aclass{fragment} @aclass{boolean} specified?
-According to @rfc{} 3986 the @code{fragment} component of @uri{}s can be
-empty.  This field is @true{} if the bytevector has non--zero length,
-@false{} otherwise.
-@end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fragment} @aclass{ascii-bytevector} bytevector
@@ -1696,8 +1669,7 @@ An instance of @class{port-number} or the value @code{unspecified} from
 @library{nausicaa}.
 
 @item path
-An instance of @class{path} or the value @code{unspecified} from
-@library{nausicaa}.
+An instance of @class{path}.
 
 @item query
 An instance of @class{query} or the value @code{unspecified} from

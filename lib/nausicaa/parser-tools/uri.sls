@@ -1068,7 +1068,8 @@
 								    (set-position-start!)))
 	     (process-next-byte (get-u8 in-port)))
 
-	    ;;Any other character terminates the segment.
+	    ;;Any other character terminates the segment.  This includes
+	    ;;the number sign #\# and the question mark #\?.
 	    (else
 	     (set-position-back-one! chi)
 	     (getter))))))

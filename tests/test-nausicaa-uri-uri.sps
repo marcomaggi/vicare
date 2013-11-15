@@ -114,12 +114,12 @@
   (check
       (let (((O uri.<userinfo>) '#vu8()))
         (O bytevector))
-    => '#vu8())
+    => '#ve(ascii "@"))
 
   (check
       (let (((O uri.<userinfo>) '#vu8()))
         (O string))
-    => "")
+    => "@")
 
   (check
       (let (((O uri.<userinfo>) '#ve(ascii "marco")))
@@ -301,20 +301,12 @@
   (check
       (let (((O uri.<port-number>) 0))
         (O bytevector))
-    => '#vu8())
+    => '#ve(ascii ":0"))
 
   (check
       (let (((O uri.<port-number>) 0))
         (O string))
-    => "")
-
-  (check-for-false
-   (let (((O uri.<port-number>) 0))
-     (O specified?)))
-
-  (check-for-true
-   (let (((O uri.<port-number>) 8080))
-     (O specified?)))
+    => ":0")
 
   (check
       (let (((O uri.<port-number>) 8080))
@@ -633,15 +625,33 @@
     => 'path-absolute)
 
 ;;; --------------------------------------------------------------------
+;;; empty list
 
-  (check	;empty list is invalid
-      (try
-	  (uri.<path-absolute> ('()))
-	(catch E
-	  (&procedure-argument-violation
-	   #t)
-	  (else E)))
+  (check	;constructor
+      (let ()
+	(uri.<path> O (uri.<path-absolute> ('())))
+        ((uri.<path-absolute>) O))
     => #t)
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+        (O bytevector))
+    => '#ve(ascii "/"))
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+        (O string))
+    => "/")
+
+  (check
+      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+	(receive (port getter)
+	    (open-bytevector-output-port)
+	  (O put-bytevector port)
+	  (getter)))
+    => '#ve(ascii "/"))
+
+;;; --------------------------------------------------------------------
 
   (check	;invalid pct-encoded sequence
       (try
@@ -844,20 +854,12 @@
   (check
       (let (((O uri.<query>) '#vu8()))
         (O bytevector))
-    => '#vu8())
+    => '#ve(ascii "?"))
 
   (check
       (let (((O uri.<query>) '#vu8()))
         (O string))
-    => "")
-
-  (check-for-false
-   (let (((O uri.<query>) '#vu8()))
-     (O specified?)))
-
-  (check-for-true
-   (let (((O uri.<query>) '#ve(ascii "image")))
-     (O specified?)))
+    => "?")
 
   (check
       (let (((O uri.<query>) '#ve(ascii "image")))
@@ -903,20 +905,12 @@
   (check
       (let (((O uri.<fragment>) '#vu8()))
         (O bytevector))
-    => '#vu8())
+    => '#ve(ascii "#"))
 
   (check
       (let (((O uri.<fragment>) '#vu8()))
         (O string))
-    => "")
-
-  (check-for-false
-   (let (((O uri.<fragment>) '#vu8()))
-     (O specified?)))
-
-  (check-for-true
-   (let (((O uri.<fragment>) '#ve(ascii "image")))
-     (O specified?)))
+    => "#")
 
   (check
       (let (((O uri.<fragment>) '#ve(ascii "image")))
@@ -951,7 +945,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'class-uri))
+(parametrise ((check-test-name	'uri))
 
   (define (string->uri str)
     (bytevector->uri (string->ascii str)))
@@ -992,8 +986,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;; (let (((O uri.<uri>) (string->uri "ci:ao/")))
-  ;;   (debug-print (O host)))
+  ;; (let (((O uri.<uri>) (string->uri "http:///?")))
+  ;;   (debug-print (O path) (O has-query?) (ascii->string (O query))
+  ;; 		 (O string)))
 
   (doit "http://www.spiffy.org/the/path/name?question%3Danswer#anchor-point")
 
@@ -1026,7 +1021,7 @@
   (doit "http://ciao.com:8080/")
   (doit "http://ciao.com/a/b/c")
 
-;;; no authority, emtpy path
+;;; no authority, empty path
 
   (doit "http:"			"http:")
   (doit "http:?query"		"http:?query")
@@ -1074,7 +1069,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'class-relative-ref))
+(parametrise ((check-test-name	'class-relative-ref))
 
   (define (string->relative-ref str)
     (bytevector->relative-ref (string->ascii str)))
