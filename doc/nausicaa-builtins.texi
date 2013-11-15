@@ -37,6 +37,7 @@ language multimethods}.
 * builtins records::            @rnrs{6} record labels.
 * builtins conditions::         Condition labels.
 * builtins procedures::         Procedure labels.
+* builtins special::            Special values.
 * builtins multimethods::       Predefined generic functions.
 * builtins mixins::             Predefined mixins.
 @end menu
@@ -3608,6 +3609,22 @@ when the requested key is not in the table.
 @deftp {Builtin Label} @aclass{procedure}
 Conventional type for objects satisfying @func{procedure?}.
 @end deftp
+
+@c page
+@node builtins special
+@section Special values
+
+
+@deffn {Builtin Label} @aclass{undefined}
+Conventional type for objects satisfying @func{undefined?} from
+@library{vicare language-extensions sentinels}.
+@end deffn
+
+
+@deffn {Builtin Label} @aclass{unspecified}
+Conventional type for objects satisfying @func{unspecified?} from
+@library{vicare language-extensions sentinels}.
+@end deffn
 
 @c page
 @node builtins multimethods

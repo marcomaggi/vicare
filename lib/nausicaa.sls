@@ -1604,6 +1604,8 @@
 
     <hashable-and-properties-clauses>
 
+    <undefined> <unspecified>
+
     ;; multimethods
     define-generic		define-generic*
     tag-unique-identifiers-of	object->string
