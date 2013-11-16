@@ -325,6 +325,9 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/lalr/glr-driver.sls			\
 	nausicaa/parser-tools/lalr.sls					\
 	\
+	nausicaa/uri/ip.sls						\
+	nausicaa/uri.sls						\
+	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
 	nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls	\
@@ -332,9 +335,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ipv4-addresses.sls			\
 	nausicaa/parser-tools/ipv6-addresses.sls			\
 	nausicaa/parser-tools/uri.sls					\
-	\
-	nausicaa/uri/ip.sls						\
-	nausicaa/uri.sls
+	nausicaa/parser-tools/uri/utilities.sls
 
 dist_pkglibexec_SCRIPTS		+= \
 	compile-nausicaa-language.sps		\

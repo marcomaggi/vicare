@@ -30,11 +30,16 @@ suggested to prefix the bindings with @code{uri.}, as in:
   (prefix (nausicaa parser-tools uri) uri.))
 @end example
 
+We might be interested in the facilities of the library
+@library{nausicaa parser-tools uri utilities}, @ref{parser-tools uri
+utilities, Utility @uri{} parser functions}.
+
 @menu
 * parser-tools uri intro::      Introduction to @uri{} elements.
 * parser-tools uri conditions:: Condition object types.
 * parser-tools uri percent::    Percent encoding of characters.
 * parser-tools uri parser::     @uri{} parser functions.
+* parser-tools uri utilities::  Utility @uri{} parser functions.
 @end menu
 
 @c page
@@ -2153,6 +2158,67 @@ return @false{}.
 Each segment must be a non--empty bytevector; a segment representing the
 current directory @samp{.} is accepted only if it is the last one; a
 segment representing the uplevel directory is rejected.
+@end defun
+
+@c page
+@node parser-tools uri utilities
+@subsection Utility @uri{} parser functions
+
+
+@cindex @library{nausicaa parser-tools uri utilities}, library
+@cindex Library @library{nausicaa parser-tools uri utilities}
+
+
+The library @library{nausicaa parser-tools uri utilities} implements
+utility functions to parse @uri{} components using the facilities of the
+library @library{nausicaa parser-tools uri} and represent the results
+with objects of the types defined by the library @library{nausicaa uri}.
+
+For all the functions: if an error occurs parsing the input, an
+exception is raised with compound condition object of types:
+@condition{procedure-argument-violation}, @condition{who},
+@condition{message}, @condition{irritants}.
+
+
+@defun string->uri @var{str}
+Parse the string @var{str} expecting it to represent a @code{URI}
+component.  If successful return an instance of @class{uri} defined by
+@library{nausicaa uri}.
+@end defun
+
+
+@defun bytevector->uri @var{bv}
+Parse the bytevector @var{bv} expecting it to represent a @code{URI}
+component.  If successful return an instance of @class{uri} defined by
+@library{nausicaa uri}.
+@end defun
+
+
+@defun read-uri @var{port}
+Read octets from the binary input port @var{port} expecting them to
+represent a @code{URI} component.  If successful return an instance of
+@class{uri} defined by @library{nausicaa uri}.
+@end defun
+
+
+@defun string->relative-ref @var{str}
+Parse the string @var{str} expecting it to represent a
+@code{relative-ref} component.  If successful return an instance of
+@class{relative-ref} defined by @library{nausicaa uri}.
+@end defun
+
+
+@defun bytevector->relative-ref @var{bv}
+Parse the bytevector @var{bv} expecting it to represent a
+@code{relative-ref} component.  If successful return an instance of
+@class{relative-ref} defined by @library{nausicaa uri}.
+@end defun
+
+
+@defun read-relative-ref @var{port}
+Read octets from the binary input port @var{port} expecting them to
+represent a @code{relative-ref} component.  If successful return an
+instance of @class{relative-ref} defined by @library{nausicaa uri}.
 @end defun
 
 @c end of file

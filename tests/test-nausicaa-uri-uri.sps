@@ -29,6 +29,7 @@
 (import (nausicaa)
   (prefix (nausicaa uri) uri.)
   (prefix (nausicaa parser-tools uri) uri.)
+  (nausicaa parser-tools uri utilities)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -947,32 +948,6 @@
 
 (parametrise ((check-test-name	'uri))
 
-  (define (string->uri str)
-    (bytevector->uri (string->ascii str)))
-
-  (define (bytevector->uri bv)
-    (read-uri (open-bytevector-input-port bv)))
-
-  (define (read-uri port)
-    (receive (scheme authority userinfo host.type host.bv host.data port path.type path query fragment)
-	(uri.parse-uri port)
-;;;      (debug-print host.type host.bv)
-      (uri.<uri> ((uri.scheme		(uri.<scheme> (scheme)))
-		  (uri.userinfo		(if userinfo
-					    (uri.<userinfo> (userinfo))
-					  unspecified))
-		  (uri.host		(uri.make-host-object host.type host.bv host.data))
-		  (uri.port-number	(if port
-					    (uri.<port-number> ((string->number (ascii->string port))))
-					  unspecified))
-		  (uri.path		(uri.make-path-object path.type path))
-		  (uri.query		(if query
-					    (uri.<query> (query))
-					  unspecified))
-		  (uri.fragment		(if fragment
-					    (uri.<fragment> (fragment))
-					  unspecified))))))
-
   (define-syntax doit
     (syntax-rules ()
       ((_ ?string)
@@ -1070,30 +1045,6 @@
 
 
 (parametrise ((check-test-name	'class-relative-ref))
-
-  (define (string->relative-ref str)
-    (bytevector->relative-ref (string->ascii str)))
-
-  (define (bytevector->relative-ref bv)
-    (read-relative-ref (open-bytevector-input-port bv)))
-
-  (define (read-relative-ref port)
-    (receive (authority userinfo host.type host.bv host.data port path.type path query fragment)
-	(uri.parse-relative-ref port)
-      (uri.<relative-ref> ((uri.userinfo	(if userinfo
-						    (uri.<userinfo> (userinfo))
-						  unspecified))
-			   (uri.host		(uri.make-host-object host.type host.bv host.data))
-			   (uri.port-number	(if port
-						    (uri.<port-number> ((string->number (ascii->string port))))
-						  unspecified))
-			   (uri.path		(uri.make-path-object path.type path))
-			   (uri.query		(if query
-						    (uri.<query> (query))
-						  unspecified))
-			   (uri.fragment	(if fragment
-						    (uri.<fragment> (fragment))
-						  unspecified))))))
 
   (define-syntax doit
     (syntax-rules ()
