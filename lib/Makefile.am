@@ -333,8 +333,8 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ipv6-addresses.sls			\
 	nausicaa/parser-tools/uri.sls					\
 	\
-	nausicaa/net/addresses/ip.sls					\
-	nausicaa/net/addresses/uri.sls
+	nausicaa/uri/ip.sls						\
+	nausicaa/uri.sls
 
 dist_pkglibexec_SCRIPTS		+= \
 	compile-nausicaa-language.sps		\

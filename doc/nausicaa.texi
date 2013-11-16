@@ -125,6 +125,7 @@ Library groups
 
 * containers::                  Containers libraries.
 * parser-tools::                Lexers and parsers.
+* uri::                         Uniform Resource Identifiers (@uri{}).
 * net::                         Networking.
 
 Appendices
@@ -214,15 +215,27 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-parser-tools-uri.texi
 
 @c page
+@node uri
+@chapter Uniform Resource Identifiers (@uri{})
+
+
+@menu
+* uri ip::            Generic @ip{} addresses.
+* uri uri::           Uniform Resource Identifier objects.
+@end menu
+
+@include nausicaa-uri-uri.texi
+
+@c page
 @node net
 @chapter Networking
 
 
-@menu
-* net addresses::               Network resource addresses.
-@end menu
+@c @menu
+@c * net addresses::               Network resource addresses.
+@c @end menu
 
-@include nausicaa-net-addresses.texi
+@c @include nausicaa-net-addresses.texi
 
 @c page
 

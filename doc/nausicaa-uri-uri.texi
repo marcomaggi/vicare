@@ -1,43 +1,33 @@
-@node net addresses
-@section Network--related libraries
+@node uri ip
+@section Generic @ip{} addresses
 
 
-@menu
-* net addresses ip::            Generic @ip{} addresses.
-* net addresses ipv4::          IPv4 address objects.
-* net addresses ipv6::          IPv6 address objects.
-* net addresses uri::           Uniform Resource Identifier objects.
-@end menu
-
-@c page
-@node net addresses ip
-@subsection Generic @ip{} addresses
+@cindex @library{nausicaa uri ip}, library
+@cindex Library @library{nausicaa uri ip}
 
 
-@cindex @library{nausicaa net addresses ip}, library
-@cindex Library @library{nausicaa net addresses ip}
-
-
-The library @library{nausicaa net addresses ip} exports facilities to
-handle generic @ip{} addresses specifications.
+The library @library{nausicaa uri ip} exports facilities to handle
+generic @ip{} addresses specifications.
 
 @menu
-* net addresses ip methods::    Multimethods for @ip{} address objects.
-* net addresses ip base::       Base @ip{} address objects.
-* net addresses ip numeric::    Numeric @ip{} address objects.
-* net addresses ip name::       Registered name @ip{} address objects.
-* net addresses ip future::     Future versions of @ip{} address
+* uri ip methods::              Multimethods for @ip{} address objects.
+* uri ip base::                 Base @ip{} address objects.
+* uri ip numeric::              Numeric @ip{} address objects.
+* uri ip v4::                   IPv4 address objects.
+* uri ip v6::                   IPv6 address objects.
+* uri ip name::                 Registered name @ip{} address objects.
+* uri ip future::               Future versions of @ip{} address
                                 objects.
-* net addresses ip misc::       Miscellaneous definitions.
+* uri ip misc::                 Miscellaneous definitions.
 @end menu
 
 @c page
-@node net addresses ip methods
-@subsubsection Multimethods for @ip{} address objects
+@node uri ip methods
+@subsection Multimethods for @ip{} address objects
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deffn Multimethod ip-address->string @var{ip-address}
@@ -72,12 +62,12 @@ representation.
 @end deffn
 
 @c page
-@node net addresses ip base
-@subsubsection Generic @ip{} address objects
+@node uri ip base
+@subsection Generic @ip{} address objects
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp {Abstract Class} @aclass{ip-address}
@@ -155,12 +145,12 @@ encoding.
 @end deffn
 
 @c page
-@node net addresses ip numeric
-@subsubsection Numeric @ip{} address objects
+@node uri ip numeric
+@subsection Numeric @ip{} address objects
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp {Abstract Class} @aclass{ip-numeric-address}
@@ -202,234 +192,34 @@ field is set by the constructor or computed by the multimethod
 @end deftypecv
 
 @c page
-@node net addresses ip name
-@subsubsection Registered name @ip{} address objects
-
-
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
-
-
-@deftp {Abstract Class} @aclass{reg-name-address}
-Type of @ip{} address representations as ``registered name''.  It is
-derived from @class{ip-address}.
-@end deftp
-
-@c ------------------------------------------------------------
-
-@subsubheading Constructors and makers
-
-
-@defop {Common constructor} @aclass{reg-name-address} constructor @var{address}
-Common constructor for objects of type @class{reg-name-address}.  The
-argument @var{address} must be a bytevector object representation of the
-address; it must represent a string in percent--encoding as defined by
-@rfc{} 3986.
-@end defop
-
-
-@defop Maker @aclass{reg-name-address} @aclass{reg-name-address} (@meta{address})
-Build and return a new instance of @class{reg-name-address} using the
-common constructor.
-@end defop
-
-@c ------------------------------------------------------------
-
-@subsubheading Multimethod implementations
-
-
-@deffn Multimethod ip-address->string (@var{addr} @aclass{reg-name-address})
-Objects of type @class{reg-name-address} have a percent--encoded
-bytevector representation set by the constructor; this method uses that
-to build a string representation.
-
-Build and return a string representation of the address from its
-percent--encoded representation; the returned object still represents a
-percent--encoded string.
-@end deffn
-
-@c page
-@node net addresses ip future
-@subsubsection Future versions of @ip{} address objects
-
-
-@rfc{} 3986 defines a syntax to specify future versions of address
-literals, beyond the one for registered names and numeric IPv4 and IPv6;
-the class @class{ipvfuture-address} is a container to represent such
-address representations.
-
-@example
-#!vicare
-(import (nausicaa)
-  (prefix (nausicaa net addresses ip) ip.))
-
-(ip.<ipvfuture-address> O
-  (<> (10 '#ve(ascii "ci%3Fa%3Do"))))
-
-(O string)
-@result{} "[vA.ci%3Fa%3Do]"
-
-(O bytevector)
-@result{} #ve(ascii "[vA.ci%3Fa%3Do]")
-
-(O version-flag)        @result{} 10
-(O literal)             @result{} #ve(ascii "ci%3Fa%3Do")
-@end example
-
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
-
-
-@deftp {Abstract Class} @aclass{ipvfuture-address}
-Type for future versions of @ip{} address literals.  It is derived from
-@class{ip-address}.
-@end deftp
-
-@c ------------------------------------------------------------
-
-@subsubheading Constructors and makers
-
-
-@defop {Common constructor} @aclass{ipvfuture-address} constructor @var{version-flag} @var{address}
-Common constructor for objects of type @class{ipvfuture-address}.
-@var{version-flag} must be a fixnum in the range @math{[0, 15]}
-representing the version number of the literal format, according to
-@rfc{} 3986.  @var{address} must be a bytevector object representation
-of the address as defined by @rfc{} 3986.
-@end defop
-
-
-@defop Maker @aclass{ipvfuture-address} @aclass{ipvfuture-address} (@meta{version-flag} @meta{address})
-Build and return a new instance of @class{ipvfuture-address} using the
-common constructor.
-@end defop
-
-@c ------------------------------------------------------------
-
-@subsubheading Fields
-
-
-@deftypecv {Immutable field} @aclass{ipvfuture-address} @aclass{ipvfuture-version-flag} version-flag
-A fixnum in the range @math{[0, 15]} representing the version of the
-literal format, according to @rfc{} 3986.
-@end deftypecv
-
-
-@deftypecv {Immutable field} @aclass{ipvfuture-address} @aclass{ascii-bytevector} literal
-A bytevector object representation of the address literal as defined by
-@rfc{} 3986.  Every octet represents a character in @ascii{} encoding,
-some sequences of octets may represent a percent--encoded character.
-
-Notice that the bytevector representation of the literal is, in general,
-@strong{invalid} as percent--encoded bytevector as defined by @rfc{}
-3986.
-@end deftypecv
-
-@c ------------------------------------------------------------
-
-@subsubheading Multimethod implementations
-
-
-@deffn Multimethod ip-address->string (@var{addr} @aclass{ipvfuture-address})
-Build and return a string representation of the address in the format
-specified for @uri{}s by @rfc{} 3986.  In general, the returned object
-is @strong{not} a valid percent--encoded string.
-@end deffn
-
-
-@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ipvfuture-address})
-Build and return a bytevector representation of the address in the
-format specified for @uri{}s by @rfc{} 3986.  In general, the returned
-object is @strong{not} a valid percent--encoded bytevector.
-@end deffn
-
-@c page
-@node net addresses ip misc
-@subsubsection Miscellaneous definitions
-
-
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
-
-
-@deftp Label @aclass{ipvfuture-version-flag}
-Type of exact integers representing version flags for future
-representations of @ip{} addresses.  It is derived from @class{fixnum}.
-The version flag must be in the range @math{[0, 15]}.
-@end deftp
-
-
-@defun make-host-object @var{type} (@var{ascii} @aclass{bytevector}) @var{data}
-Build and return a new instance of a specialised object of class
-@class{ip-address} representing the host component of a @uri{}.  The
-possible classes of the returned object are: @class{reg-name-address},
-@class{ipv4-address}, @class{ipv6-address}, @class{ipvfuture-address}.
-As a special case if @var{host.type} is @false{}: the other arguments
-are ignored and the return value is the value @code{unspecified} from
-@library{nausicaa}.
-
-@var{type} a symbol among: @code{reg-name}, @code{ipv4-address},
-@code{ipv6-address}, @code{ipvfuture}.
-
-@var{ascii} must be a bytevector representing the @ascii{}
-representation of the host component.
-
-@var{data} must be auxiliary data representing the host component:
-
-@itemize
-@item
-For @code{reg-name}: @var{data} is undefined and unused.
-
-@item
-For @code{ipv4-address}: @var{data} must be a vector of @math{4} exact
-integers representing the address components.
-
-@item
-For @code{ipv6-address}: @var{data} must be a vector of @math{8} exact
-integers representing the address components.
-
-@item
-For @code{ipvfuture}: @var{data} must be an exact integer representing
-the version number of the @ip{} address literal representation.
-@end itemize
-
-The arguments are modeled after the @math{3} return values of
-@func{parse-host} from the library @library{nausicaa parser-tools uri}.
-@end defun
-
-@c page
-@node net addresses ipv4
+@node uri ip v4
 @subsection Ipv4 address objects
 
 
-@cindex @library{nausicaa net addresses ip}, library
-@cindex Library @library{nausicaa net addresses ip}
-
-
-The library @library{nausicaa net addresses ip} exports utilities to
-handle IPv4 addresses specifications, according to @rfc{} 5735.  To
-parse the string representation of IPv4 addresses we can use the library
+The library @library{nausicaa uri ip} exports utilities to handle IPv4
+addresses specifications, according to @rfc{} 5735.  To parse the string
+representation of IPv4 addresses we can use the library
 @library{nausicaa parser-tools ipv4-addresses}.
 
 @menu
-* net addresses ipv4 address::  IPv4 address objects class.
-* net addresses ipv4 prefix::   IPv4 address prefix objects class.
-* net addresses ipv4 aux::      IPv4 address auxiliary classes.
+* uri ip v4 address::           IPv4 address objects class.
+* uri ip v4 prefix::            IPv4 address prefix objects class.
+* uri ip v4 aux::               IPv4 address auxiliary classes.
 @end menu
 
 @c page
-@node net addresses ipv4 address
+@node uri ip v4 address
 @subsubsection IPv4 address objects class
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp Class @aclass{ipv4-address}
 Represents an IPv4 address.  It is derived from
-@class{ip-numeric-address} as defined by @library{nausicaa net addresses
-ip}, @ref{net addresses ip numeric, Numeric @ip{} address object}.
+@class{ip-numeric-address} as defined by @library{nausicaa uri ip},
+@ref{uri ip numeric, Numeric @ip{} address object}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -570,12 +360,12 @@ Build and return an exact integer representation of the address.
 @end deffn
 
 @c page
-@node net addresses ipv4 prefix
+@node uri ip v4 prefix
 @subsubsection IPv4 address prefix objects class
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp Class @aclass{ipv4-address-prefix}
@@ -657,12 +447,12 @@ encoding.
 @end deftypecv
 
 @c page
-@node net addresses ipv4 aux
+@node uri ip v4 aux
 @subsubsection IPv4 address auxiliary classes
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ipv4}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp Label @aclass{ipv4-address-fixnum}
@@ -689,38 +479,34 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 @c page
-@node net addresses ipv6
+@node uri ip v6
 @subsection IPv6 address objects
 
 
-@cindex @library{nausicaa net addresses ip}, library
-@cindex Library @library{nausicaa net addresses ip}
-
-
-The library @library{nausicaa net addresses ip} exports utilities to
-handle IPv6 addresses specifications, according to @rfc{} 4291.  To
-parse the string representation of IPv4 addresses we can use the library
+The library @library{nausicaa uri ip} exports utilities to handle IPv6
+addresses specifications, according to @rfc{} 4291.  To parse the string
+representation of IPv4 addresses we can use the library
 @library{nausicaa parser-tools ipv6-addresses}.
 
 @menu
-* net addresses ipv6 address::  IPv6 address objects class.
-* net addresses ipv6 prefix::   IPv6 address prefix objects class.
-* net addresses ipv6 aux::      IPv6 address auxiliary classes.
+* uri ip v6 address::  IPv6 address objects class.
+* uri ip v6 prefix::   IPv6 address prefix objects class.
+* uri ip v6 aux::      IPv6 address auxiliary classes.
 @end menu
 
 @c page
-@node net addresses ipv6 address
+@node uri ip v6 address
 @subsubsection IPv6 address objects class
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses ip} library.
+The following bindings are exported by the @library{nausicaa uri ip}
+library.
 
 
 @deftp Class @aclass{ipv6-address}
 Represents an IPv6 address.  It is derived from
-@class{ip-numeric-address} as defined by @library{nausicaa net addresses
-ip}, @ref{net addresses ip numeric, Numeric @ip{} address object}.
+@class{ip-numeric-address} as defined by @library{nausicaa uri ip},
+@ref{uri ip numeric, Numeric @ip{} address object}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -803,12 +589,12 @@ Build and return an exact integer representation of the address.
 @end deffn
 
 @c page
-@node net addresses ipv6 prefix
+@node uri ip v6 prefix
 @subsubsection IPv6 address prefix objects class
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses ip} library.
+The following bindings are exported by the @library{nausicaa uri ip}
+library.
 
 
 @deftp Class @aclass{ipv6-address-prefix}
@@ -894,12 +680,12 @@ encoding.
 @end deftypecv
 
 @c page
-@node net addresses ipv6 aux
+@node uri ip v6 aux
 @subsubsection IPv6 address auxiliary classes
 
 
-The following bindings are exported by the library @library{nausicaa net
-addresses ip}.
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
 @deftp Label @aclass{ipv6-address-fixnum}
@@ -926,18 +712,214 @@ builtins}, @ref{builtins numbers fixnum, Fixnum number objects}.
 @end deftp
 
 @c page
-@node net addresses uri
-@subsection Uniform Resource Identifier objects
+@node uri ip name
+@subsection Registered name @ip{} address objects
 
 
-@cindex @library{nausicaa net addresses uri}, library
-@cindex Library @library{nausicaa net addresses uri}
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
 
 
-The library @library{nausicaa net addresses uri} exports utilities to
-handle Uniform Reource Identifiers (@uri{}) specifications, according to
-@rfc{} 3986.  To parse the string representation of @uri{}s we can use
-the library @library{nausicaa parser-tools uri}.
+@deftp {Abstract Class} @aclass{reg-name-address}
+Type of @ip{} address representations as ``registered name''.  It is
+derived from @class{ip-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{reg-name-address} constructor @var{address}
+Common constructor for objects of type @class{reg-name-address}.  The
+argument @var{address} must be a bytevector object representation of the
+address; it must represent a string in percent--encoding as defined by
+@rfc{} 3986.
+@end defop
+
+
+@defop Maker @aclass{reg-name-address} @aclass{reg-name-address} (@meta{address})
+Build and return a new instance of @class{reg-name-address} using the
+common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address->string (@var{addr} @aclass{reg-name-address})
+Objects of type @class{reg-name-address} have a percent--encoded
+bytevector representation set by the constructor; this method uses that
+to build a string representation.
+
+Build and return a string representation of the address from its
+percent--encoded representation; the returned object still represents a
+percent--encoded string.
+@end deffn
+
+@c page
+@node uri ip future
+@subsection Future versions of @ip{} address objects
+
+
+@rfc{} 3986 defines a syntax to specify future versions of address
+literals, beyond the one for registered names and numeric IPv4 and IPv6;
+the class @class{ipvfuture-address} is a container to represent such
+address representations.
+
+@example
+#!vicare
+(import (nausicaa)
+  (prefix (nausicaa uri ip) ip.))
+
+(ip.<ipvfuture-address> O
+  (<> (10 '#ve(ascii "ci%3Fa%3Do"))))
+
+(O string)
+@result{} "[vA.ci%3Fa%3Do]"
+
+(O bytevector)
+@result{} #ve(ascii "[vA.ci%3Fa%3Do]")
+
+(O version-flag)        @result{} 10
+(O literal)             @result{} #ve(ascii "ci%3Fa%3Do")
+@end example
+
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
+
+
+@deftp {Abstract Class} @aclass{ipvfuture-address}
+Type for future versions of @ip{} address literals.  It is derived from
+@class{ip-address}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
+@defop {Common constructor} @aclass{ipvfuture-address} constructor @var{version-flag} @var{address}
+Common constructor for objects of type @class{ipvfuture-address}.
+@var{version-flag} must be a fixnum in the range @math{[0, 15]}
+representing the version number of the literal format, according to
+@rfc{} 3986.  @var{address} must be a bytevector object representation
+of the address as defined by @rfc{} 3986.
+@end defop
+
+
+@defop Maker @aclass{ipvfuture-address} @aclass{ipvfuture-address} (@meta{version-flag} @meta{address})
+Build and return a new instance of @class{ipvfuture-address} using the
+common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Fields
+
+
+@deftypecv {Immutable field} @aclass{ipvfuture-address} @aclass{ipvfuture-version-flag} version-flag
+A fixnum in the range @math{[0, 15]} representing the version of the
+literal format, according to @rfc{} 3986.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{ipvfuture-address} @aclass{ascii-bytevector} literal
+A bytevector object representation of the address literal as defined by
+@rfc{} 3986.  Every octet represents a character in @ascii{} encoding,
+some sequences of octets may represent a percent--encoded character.
+
+Notice that the bytevector representation of the literal is, in general,
+@strong{invalid} as percent--encoded bytevector as defined by @rfc{}
+3986.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Multimethod implementations
+
+
+@deffn Multimethod ip-address->string (@var{addr} @aclass{ipvfuture-address})
+Build and return a string representation of the address in the format
+specified for @uri{}s by @rfc{} 3986.  In general, the returned object
+is @strong{not} a valid percent--encoded string.
+@end deffn
+
+
+@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ipvfuture-address})
+Build and return a bytevector representation of the address in the
+format specified for @uri{}s by @rfc{} 3986.  In general, the returned
+object is @strong{not} a valid percent--encoded bytevector.
+@end deffn
+
+@c page
+@node uri ip misc
+@subsection Miscellaneous definitions
+
+
+The following bindings are exported by the library @library{nausicaa uri
+ip}.
+
+
+@deftp Label @aclass{ipvfuture-version-flag}
+Type of exact integers representing version flags for future
+representations of @ip{} addresses.  It is derived from @class{fixnum}.
+The version flag must be in the range @math{[0, 15]}.
+@end deftp
+
+
+@defun make-host-object @var{type} (@var{ascii} @aclass{bytevector}) @var{data}
+Build and return a new instance of a specialised object of class
+@class{ip-address} representing the host component of a @uri{}.  The
+possible classes of the returned object are: @class{reg-name-address},
+@class{ipv4-address}, @class{ipv6-address}, @class{ipvfuture-address}.
+As a special case if @var{host.type} is @false{}: the other arguments
+are ignored and the return value is the value @code{unspecified} from
+@library{nausicaa}.
+
+@var{type} a symbol among: @code{reg-name}, @code{ipv4-address},
+@code{ipv6-address}, @code{ipvfuture}.
+
+@var{ascii} must be a bytevector representing the @ascii{}
+representation of the host component.
+
+@var{data} must be auxiliary data representing the host component:
+
+@itemize
+@item
+For @code{reg-name}: @var{data} is undefined and unused.
+
+@item
+For @code{ipv4-address}: @var{data} must be a vector of @math{4} exact
+integers representing the address components.
+
+@item
+For @code{ipv6-address}: @var{data} must be a vector of @math{8} exact
+integers representing the address components.
+
+@item
+For @code{ipvfuture}: @var{data} must be an exact integer representing
+the version number of the @ip{} address literal representation.
+@end itemize
+
+The arguments are modeled after the @math{3} return values of
+@func{parse-host} from the library @library{nausicaa parser-tools uri}.
+@end defun
+
+@c page
+@node uri uri
+@section Uniform Resource Identifier objects
+
+
+@cindex @library{nausicaa uri}, library
+@cindex Library @library{nausicaa uri}
+
+
+The library @library{nausicaa uri} exports utilities to handle Uniform
+Reource Identifiers (@uri{}) specifications, according to @rfc{} 3986.
+To parse the string representation of @uri{}s we can use the library
+@library{nausicaa parser-tools uri}.
 
 The @oopp{} @api{} to @uri{} parsing and producing is really basic; this
 is because advanced handling of @uri{}s should be merged with
@@ -945,34 +927,27 @@ requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
 The library @library{nausicaa net addresses uri} reexports all the
-bindings from @library{nausicaa net addresses ip}.
+bindings from @library{nausicaa uri ip}.
 
 @menu
-* net addresses uri scheme::        @uri{} scheme objects.
-* net addresses uri userinfo::      @uri{} userinfo objects.
-* net addresses uri host::          @uri{} host objects.
-* net addresses uri port-number::   @uri{} port-number objects.
-* net addresses uri segment::       @uri{} segment objects.
-* net addresses uri listseg::       @uri{} list of segment objects.
-* net addresses uri path::          @uri{} path objects.
-* net addresses uri path-empty::    @uri{} empty path objects.
-* net addresses uri path-abempty::  @uri{} abempty path objects.
-* net addresses uri path-absolute:: @uri{} absolute path objects.
-* net addresses uri path-rootless:: @uri{} rootless path objects.
-* net addresses uri path-noscheme:: @uri{} noscheme path objects.
-* net addresses uri query::         @uri{} query objects.
-* net addresses uri fragment::      @uri{} fragment objects.
-* net addresses uri uri::           Uniform Resource Identifiers objects.
-* net addresses uri ref::           Relative references objects.
+* uri uri scheme::        @uri{} scheme objects.
+* uri uri userinfo::      @uri{} userinfo objects.
+* uri uri host::          @uri{} host objects.
+* uri uri port-number::   @uri{} port-number objects.
+* uri uri path::          @uri{} path objects.
+* uri uri query::         @uri{} query objects.
+* uri uri fragment::      @uri{} fragment objects.
+* uri uri uri::           Uniform Resource Identifiers objects.
+* uri uri ref::           Relative references objects.
 @end menu
 
 @c page
-@node net addresses uri scheme
-@subsubsection @uri{} scheme objects
+@node uri uri scheme
+@subsection @uri{} scheme objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{scheme}
@@ -1025,12 +1000,12 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri userinfo
-@subsubsection @uri{} userinfo objects
+@node uri uri userinfo
+@subsection @uri{} userinfo objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{userinfo}
@@ -1083,18 +1058,18 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri host
-@subsubsection @uri{} host objects
+@node uri uri host
+@subsection @uri{} host objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{host}
 Label used to tag bytevectors representing the @code{host} component of
 @uri{}s; it is derived from @class{ip-address} defined by
-@library{nausicaa net addresses ip}.
+@library{nausicaa uri ip}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -1108,12 +1083,12 @@ in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri port-number
-@subsubsection @uri{} port--number objects
+@node uri uri port-number
+@subsection @uri{} port--number objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{port-number}
@@ -1166,12 +1141,28 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri segment
+@node uri uri path
+@subsection @uri{} path objects
+
+
+@menu
+* uri uri segment::       @uri{} segment objects.
+* uri uri listseg::       @uri{} list of segment objects.
+* uri uri path base::     Base @uri{} path objects.
+* uri uri path-empty::    @uri{} empty path objects.
+* uri uri path-abempty::  @uri{} abempty path objects.
+* uri uri path-absolute:: @uri{} absolute path objects.
+* uri uri path-rootless:: @uri{} rootless path objects.
+* uri uri path-noscheme:: @uri{} noscheme path objects.
+@end menu
+
+@c page
+@node uri uri segment
 @subsubsection @uri{} segment objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{segment}
@@ -1225,18 +1216,17 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri listseg
+@node uri uri listseg
 @subsubsection @uri{} list of segment objects
 
 
 The @code{path} component of @uri{}s is made of @code{segment}
-components, which are stored in lists by @library{nausicaa net addresses
-uri}:
+components, which are stored in lists by @library{nausicaa uri}:
 
 @example
 #!vicare
 (import (nausicaa)
-  (prefix (nausicaa net addresses uri) uri.))
+  (prefix (nausicaa uri) uri.))
 
 (define ell
   '(#ve(ascii "home")
@@ -1260,8 +1250,8 @@ uri}:
 @result{} #ve(ascii "home/marco/src/devel")
 @end example
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{list-of-segments}
@@ -1326,12 +1316,12 @@ components in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri path
-@subsubsection @uri{} path objects
+@node uri uri path base
+@subsubsection Base @uri{} path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path}
@@ -1402,12 +1392,12 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri path-empty
+@node uri uri path-empty
 @subsubsection @uri{} empty path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path-empty}
@@ -1423,12 +1413,12 @@ object.
 @end defop
 
 @c page
-@node net addresses uri path-abempty
+@node uri uri path-abempty
 @subsubsection @uri{} abempty path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path-abempty}
@@ -1444,12 +1434,12 @@ must be a list of objects satisfying the requirements of
 @end defop
 
 @c page
-@node net addresses uri path-absolute
+@node uri uri path-absolute
 @subsubsection @uri{} absolute path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path-absolute}
@@ -1465,12 +1455,12 @@ must be a list of objects satisfying the requirements of
 @end defop
 
 @c page
-@node net addresses uri path-rootless
+@node uri uri path-rootless
 @subsubsection @uri{} rootless path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path-rootless}
@@ -1486,12 +1476,12 @@ must be a non--empty, list of objects satisfying the requirements of
 @end defop
 
 @c page
-@node net addresses uri path-noscheme
+@node uri uri path-noscheme
 @subsubsection @uri{} noscheme path objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp {Abstract Class} @aclass{path-noscheme}
@@ -1507,12 +1497,12 @@ must be a non--empty, list of objects satisfying the requirements of
 @end defop
 
 @c page
-@node net addresses uri query
-@subsubsection @uri{} query objects
+@node uri uri query
+@subsection @uri{} query objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{query}
@@ -1565,12 +1555,12 @@ in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri fragment
-@subsubsection @uri{} fragment objects
+@node uri uri fragment
+@subsection @uri{} fragment objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Label @aclass{fragment}
@@ -1627,12 +1617,12 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri uri
-@subsubsection Uniform Resource Identifiers objects
+@node uri uri uri
+@subsection Uniform Resource Identifiers objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Class @aclass{uri}
@@ -1852,12 +1842,12 @@ component in the format requested by @rfc{} 3986.
 @end defmethod
 
 @c page
-@node net addresses uri ref
-@subsubsection Relative references objects
+@node uri uri ref
+@subsection Relative references objects
 
 
-The following bindings are exported by the @library{nausicaa net
-addresses uri} library.
+The following bindings are exported by the @library{nausicaa uri uri}
+library.
 
 
 @deftp Class @aclass{relative-ref}

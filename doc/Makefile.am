@@ -156,7 +156,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-ip-addresses.texi			\
 	nausicaa-parser-tools-uri.texi				\
 	\
-	nausicaa-net-addresses.texi				\
+	nausicaa-uri-uri.texi					\
 	\
 	macros.texi						\
 	fdl-1.3.texi						\
