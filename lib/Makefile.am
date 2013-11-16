@@ -29,6 +29,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls					\
 	\
 	vicare/language-extensions/amb.sls				\
+	vicare/language-extensions/ascii-chars/syntaxes.sls		\
 	vicare/language-extensions/ascii-chars.sls			\
 	vicare/language-extensions/c-enumerations.sls			\
 	vicare/language-extensions/callables.sls			\
