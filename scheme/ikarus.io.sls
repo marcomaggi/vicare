@@ -6898,79 +6898,136 @@
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
 
-(define-inline (%unsafe.read-char-from-port-with-fast-get-latin1-tag ?port ?who)
-  ;;PORT must be a textual input port with bytevector buffer and Latin-1
-  ;;transcoder.   Knowing that Latin-1  characters are  1 byte  wide: we
-  ;;process here  the simple case of  one char available  in the buffer,
-  ;;else  we   call  the   specialised  function  for   reading  Latin-1
-  ;;characters.
-  ;;
-  (let ((port ?port))
+(module (%unsafe.read-char-from-port-with-fast-get-latin1-tag
+	 %unsafe.peek-char-from-port-with-fast-get-latin1-tag
+	 %unsafe.read/peek-char-from-port-with-latin1-codec)
+
+  (define-inline (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)
+    ;;PORT  must be  a textual  input  port with  bytevector buffer  and
+    ;;Latin-1 transcoder.   Knowing that  Latin-1 characters are  1 byte
+    ;;wide: we process here the simple case of one char available in the
+    ;;buffer, else we call the  specialised function for reading Latin-1
+    ;;characters.
+    ;;
     (with-port-having-bytevector-buffer (port)
-      (let ((buffer.offset port.buffer.index))
+      (let recurse ((buffer.offset port.buffer.index))
 	(if ($fx< buffer.offset port.buffer.used-size)
 	    (begin
 	      (set! port.buffer.index ($fxadd1 buffer.offset))
-	      (let ((byte ($bytevector-u8-ref port.buffer buffer.offset)))
-		($fixnum->char byte)))
-	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 1 0))))))
+	      (let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
+		(if ($latin1-chi? octet)
+		    ($fixnum->char octet)
+		  (let ((mode (transcoder-error-handling-mode port.transcoder)))
+		    (case mode
+		      ((ignore)
+		       ;;To ignore means jump to the next.
+		       (recurse))
+		      ((replace)
+		       #\xFFFD)
+		      ((raise)
+		       (raise
+			(condition (make-i/o-decoding-error port)
+				   (make-who-condition who)
+				   (make-message-condition "invalid code point for Latin-1 coded")
+				   (make-irritants-condition (list octet ($fixnum->char octet))))))
+		      (else
+		       (assertion-violation who "vicare internal error: invalid error handling mode" port mode)))))))
+	  (%unsafe.read/peek-char-from-port-with-latin1-codec port who 1 0)))))
 
-(define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who)
-  ;;PORT must be a textual input port with bytevector buffer and Latin-1
-  ;;transcoder.   Knowing that Latin-1  characters are  1 byte  wide: we
-  ;;process here  the simple case of  one char available  in the buffer,
-  ;;else  we   call  the   specialised  function  for   peeking  Latin-1
-  ;;characters.
-  ;;
-  (let ((port ?port))
+  (define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who)
+    ;;PORT  must be  a textual  input  port with  bytevector buffer  and
+    ;;Latin-1 transcoder.   Knowing that  Latin-1 characters are  1 byte
+    ;;wide: we process here the simple case of one char available in the
+    ;;buffer, else we call the  specialised function for peeking Latin-1
+    ;;characters.
+    ;;
     (with-port-having-bytevector-buffer (port)
       (let ((buffer.offset-byte port.buffer.index))
 	(if ($fx< buffer.offset-byte port.buffer.used-size)
-	    ($fixnum->char ($bytevector-u8-ref port.buffer buffer.offset-byte))
-	  (%unsafe.read/peek-char-from-port-with-latin1-codec port ?who 0 0))))))
+	    (let ((octet ($bytevector-u8-ref port.buffer buffer.offset-byte)))
+	      (if ($latin1-chi? octet)
+		  ($fixnum->char octet)
+		(let ((mode (transcoder-error-handling-mode port.transcoder)))
+		  (case mode
+		    ((replace)
+		     #\xFFFD)
+		    ;;When peeking we cannot ignore.
+		    ((ignore raise)
+		     (raise
+		      (condition (make-i/o-decoding-error port)
+				 (make-who-condition who)
+				 (make-message-condition "invalid code point for Latin-1 coded")
+				 (make-irritants-condition (list octet ($fixnum->char octet))))))
+		    (else
+		     (assertion-violation who "vicare internal error: invalid error handling mode" port mode))))))
+	  (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 0)))))
 
-(define (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
-  ;;Subroutine of %DO-READ-CHAR or %DO-PEEK-CHAR.  PORT must be a textual
-  ;;input  port  with bytevector  buffer  and  Latin-1 transcoder;  such
-  ;;buffer must be already fully consumed.
-  ;;
-  ;;Refill  the input  buffer  reading from  the  underlying device  and
-  ;;return the a Scheme character from the buffer; if EOF is found while
-  ;;reading from the underlying device: return the EOF object.
-  ;;
-  ;;When  BUFFER-INDEX-INCREMENT=1 and  OFFSET=0 this  function  acts as
-  ;;GET-CHAR: it reads the next  character and consumes it advancing the
-  ;;port position.
-  ;;
-  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET=0 this  function  acts as
-  ;;PEEK-CHAR:  it  returns  the  next  character and  leaves  the  port
-  ;;position unchanged.
-  ;;
-  ;;When  BUFFER-INDEX-INCREMENT=0 and  OFFSET>0 this  function  acts as
-  ;;forwards PEEK-CHAR:  it reads the  the character at OFFSET  from the
-  ;;current buffer  index and leaves the port  position unchanged.  This
-  ;;usage is needed when converting EOL styles for PEEK-CHAR.  When this
-  ;;usage is desired: usually it is OFFSET=1.
-  ;;
-  ;;Other  combinations  of  BUFFER-INDEX-INCREMENT  and  OFFSET,  while
-  ;;possible, should not be needed.
-  ;;
-  (with-port-having-bytevector-buffer (port)
-    (define (%available-data buffer.offset)
-      (unless ($fxzero? buffer-index-increment)
-	(port.buffer.index.incr! buffer-index-increment))
-      ($fixnum->char ($bytevector-u8-ref port.buffer buffer.offset)))
-    (let ((buffer.offset ($fx+ offset port.buffer.index)))
-      (maybe-refill-bytevector-buffer-and-evaluate (port who)
-	(data-is-needed-at: buffer.offset)
-	(if-end-of-file: (eof-object))
-	(if-empty-buffer-and-refilling-would-block:
-	 WOULD-BLOCK-OBJECT)
-	(if-successful-refill:
-	 ;;After refilling we must reload buffer indexes.
-	 (%available-data ($fx+ offset port.buffer.index)))
-	(if-available-data: (%available-data buffer.offset))
-	))))
+  (define (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
+    ;;Subroutine  of %DO-READ-CHAR  or  %DO-PEEK-CHAR.  PORT  must be  a
+    ;;textual input port with  bytevector buffer and Latin-1 transcoder;
+    ;;such buffer must be already fully consumed.
+    ;;
+    ;;Refill the  input buffer  reading from  the underlying  device and
+    ;;return the  a Scheme character  from the  buffer; if EOF  is found
+    ;;while reading from the underlying device: return the EOF object.
+    ;;
+    ;;When BUFFER-INDEX-INCREMENT=1  and OFFSET=0 this function  acts as
+    ;;GET-CHAR: it  reads the next  character and consumes  it advancing
+    ;;the port position.
+    ;;
+    ;;When BUFFER-INDEX-INCREMENT=0  and OFFSET=0 this function  acts as
+    ;;PEEK-CHAR:  it returns  the  next character  and  leaves the  port
+    ;;position unchanged.
+    ;;
+    ;;When BUFFER-INDEX-INCREMENT=0  and OFFSET>0 this function  acts as
+    ;;forwards PEEK-CHAR: it reads the  the character at OFFSET from the
+    ;;current buffer index and leaves the port position unchanged.  This
+    ;;usage is  needed when converting  EOL styles for  PEEK-CHAR.  When
+    ;;this usage is desired: usually it is OFFSET=1.
+    ;;
+    ;;Other  combinations of  BUFFER-INDEX-INCREMENT  and OFFSET,  while
+    ;;possible, should not be needed.
+    ;;
+    (with-port-having-bytevector-buffer (port)
+      (define (%available-data buffer.offset)
+	(unless ($fxzero? buffer-index-increment)
+	  (port.buffer.index.incr! buffer-index-increment))
+	(let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
+	  (if ($latin1-chi? octet)
+	      ($fixnum->char octet)
+	    (let ((mode (transcoder-error-handling-mode port.transcoder)))
+	      (case mode
+		((ignore)
+		 ;;To ignore means jump to the next.
+		 (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset))
+		((replace)
+		 #\xFFFD)
+		((raise)
+		 (raise
+		  (condition (make-i/o-decoding-error port)
+			     (make-who-condition who)
+			     (make-message-condition "invalid code point for Latin-1 coded")
+			     (make-irritants-condition (list octet ($fixnum->char octet))))))
+		(else
+		 (assertion-violation who "vicare internal error: invalid error handling mode" port mode)))))))
+      (let ((buffer.offset ($fx+ offset port.buffer.index)))
+	(maybe-refill-bytevector-buffer-and-evaluate (port who)
+	  (data-is-needed-at: buffer.offset)
+	  (if-end-of-file: (eof-object))
+	  (if-empty-buffer-and-refilling-would-block:
+	   WOULD-BLOCK-OBJECT)
+	  (if-successful-refill:
+	   ;;After refilling we must reload buffer indexes.
+	   (%available-data ($fx+ offset port.buffer.index)))
+	  (if-available-data: (%available-data buffer.offset))
+	  ))))
+
+  (define-inline ($latin1-chi? chi)
+    (or ($fx<= #x00 chi #x1F) ;these are the control characters
+	($fx<= #x20 chi #x7E)
+	($fx<= #xA0 chi #xFF)))
+
+  #| end of module |# )
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string buffer
