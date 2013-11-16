@@ -1288,7 +1288,7 @@
     => #t)
 
   (check
-      (latin1-encoded-bytevector? '#vu8(1 2 3 255 10))
+      (latin1-encoded-bytevector? '#vu8(#x80 255 10))
     => #f)
 
 ;;;

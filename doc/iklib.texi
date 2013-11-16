@@ -4974,7 +4974,8 @@ encoded string, otherwise return @false{}.  An octet @var{chi} is
 considered a Latin1 code point if:
 
 @example
-(or (<= #x20 chi #x7E)
+(or (<= #x00 chi #x1F)
+    (<= #x20 chi #x7E)
     (<= #xA0 chi #xFF))
 @result{} #t
 @end example
@@ -5145,7 +5146,8 @@ considered a Latin1 code point if its integer representation @var{chi}
 satisfies:
 
 @example
-(or (<= #x20 @var{chi} #x7E)
+(or (<= #x00 @var{chi} #x1F)
+    (<= #x20 @var{chi} #x7E)
     (<= #xA0 @var{chi} #xFF))
 @result{} #t
 @end example

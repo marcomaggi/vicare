@@ -225,7 +225,8 @@
 		 src.end))
 
 (define-inline ($latin1-chi? chi)
-  (or ($fx<= #x20 chi #x7E)
+  (or ($fx<= #x00 chi #x1F) ;these are the control characters
+      ($fx<= #x20 chi #x7E)
       ($fx<= #xA0 chi #xFF)))
 
 (define-inline ($ascii-chi? chi)
