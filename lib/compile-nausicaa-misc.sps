@@ -1,6 +1,6 @@
 (import
-    (only (nausicaa net addresses ip))
-  (only (nausicaa net addresses uri))
+    (only (nausicaa uri ip))
+  (only (nausicaa uri))
   )
 
 ;;; end of file

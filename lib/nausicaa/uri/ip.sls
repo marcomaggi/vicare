@@ -26,7 +26,7 @@
 
 
 #!vicare
-(library (nausicaa net addresses ip)
+(library (nausicaa uri ip)
   (export
     <ip-address>
     <ip-numeric-address>

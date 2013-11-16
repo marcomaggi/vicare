@@ -27,7 +27,7 @@
 
 #!vicare
 (import (nausicaa)
-  (nausicaa net addresses ip)
+  (nausicaa uri ip)
   (nausicaa parser-tools ipv4-addresses)
   (prefix (vicare parser-tools silex lexer) lex.)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)

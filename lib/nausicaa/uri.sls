@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa net addresses uri)
+(library (nausicaa uri)
   (export
     <uri> <relative-ref>
 
@@ -71,7 +71,7 @@
     ip-address->bytevector
     ip-address->bignum)
   (import (nausicaa)
-    (nausicaa net addresses ip)
+    (nausicaa uri ip)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
     (vicare language-extensions ascii-chars)
