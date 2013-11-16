@@ -1815,12 +1815,12 @@ The @code{fragment} component.  Accessing this field when the
 @subsubheading Serialised representations virtual fields
 
 
-@deftypecv {Immutable virtual field} @aclass{uri} bytevector
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-bytevector} bytevector
 A bytevector representing the whole @uri{}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{uri} string
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-string} string
 A string representing the whole @uri{}; it is built from the
 @code{bytevector} field with the @func{to-string} function.
 @end deftypecv
@@ -2026,12 +2026,12 @@ The @code{fragment} component.  Accessing this field when the
 @subsubheading Serialised representations virtual fields
 
 
-@deftypecv {Immutable virtual field} @aclass{relative-ref} bytevector
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{ascii-bytevector} bytevector
 A bytevector representing the whole @uri{}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{relative-ref} string
+@deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{ascii-string} string
 A string representing the whole @uri{}; it is built from the
 @code{bytevector} field with the @func{to-string} function.
 @end deftypecv

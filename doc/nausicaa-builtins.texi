@@ -1665,7 +1665,7 @@ function @func{nan?} from @rsixlibrary{base}.
 @subsubheading Accessors: conversion
 
 
-@deftypecv @aclass{number} @aclass{string} string
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{string} string
 Accessing this field is like applying to the number the function
 @func{number->string} from @rsixlibrary{base} without other arguments.
 @end deftypecv
