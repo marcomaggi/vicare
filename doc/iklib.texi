@@ -2036,6 +2036,10 @@ Convert the Scheme string @var{data} to a bytevector using the function
 @item base64
 Convert the Scheme string @var{data} to a bytevector using the function
 @func{string-base64->bytevector}.
+
+@item percent-encoding
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->percent-encoding}.
 @end table
 @end deffn
 
