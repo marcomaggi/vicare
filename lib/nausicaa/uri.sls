@@ -71,20 +71,10 @@
     ip-address->bytevector
     ip-address->bignum)
   (import (nausicaa)
-    (nausicaa uri ip)
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
     (vicare language-extensions ascii-chars)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Mon Nov 4, 2013)
-    (only (vicare system $bytevectors)
-	  $uri-encoded-bytevector?)
-    (only (vicare system $strings)
-	  $ascii->string)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Fri Nov 8, 2013)
-    (only (vicare system $lists)
-	  $for-all1))
+    (nausicaa uri ip))
 
 
 ;;;; helpers

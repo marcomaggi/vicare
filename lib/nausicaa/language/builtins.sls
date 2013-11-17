@@ -78,29 +78,11 @@
     (nausicaa language oopp)
     (nausicaa language multimethods)
     (vicare unsafe operations)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sat Oct 26, 2013)
-    (only (vicare system $fx)
-	  $fixnum->string)
     (only (vicare system $symbols)
 	  $symbol-value
 	  $set-symbol-value!
 	  $unbound-object?)
-    (vicare containers bytevectors)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Mon Nov 4, 2013)
-    (only (vicare system $bytevectors)
-	  $ascii-encoded-bytevector?
-	  $latin1-encoded-bytevector?
-	  $percent-encoded-bytevector?
-	  $percent-encode
-	  $percent-decode)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sat Nov 9, 2013)
-    (only (vicare system $strings)
-	  $ascii-encoded-string?
-	  $latin1-encoded-string?
-	  $percent-encoded-string?))
+    (vicare containers bytevectors))
 
 
 ;;;; helpers
