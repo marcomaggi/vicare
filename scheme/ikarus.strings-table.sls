@@ -42,9 +42,6 @@
 (define ($initialize-interned-strings-table!)
   (set! STRING-TABLE (make-hashtable $string-hash $string=)))
 
-(define ($string-hash str)
-  (foreign-call "ikrt_string_hash" str))
-
 (define (intern-string str)
   (define who 'intern-string)
   (with-arguments-validation (who)
