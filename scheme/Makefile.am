@@ -49,7 +49,6 @@ ikarus.config.ss: Makefile ../config.h
 $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
-  VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(GDB) $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)	\
   $(user_flags) --r6rs-script $(srcdir)/makefile.sps
@@ -69,7 +68,6 @@ boot-image-32-bit:
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
-  VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
   --r6rs-script $(srcdir)/makefile.sps
@@ -86,7 +84,6 @@ boot-image-64-bit:
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
-  VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
   --r6rs-script $(srcdir)/makefile.sps
@@ -112,7 +109,6 @@ boot-image-64-bit:
 try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
    VICARE_BUILD_DIR=$(builddir)				\
-   VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY)	\
    VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
    $(NEW_EXECUTABLE) -b vicare.boot.try			\
    $(user_flags) --r6rs-script $(srcdir)/makefile.sps
