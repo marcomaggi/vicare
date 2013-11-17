@@ -132,10 +132,8 @@
     $flonum-u8-ref
     $flonum-set!
     $fixnum->flonum
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Oct 26, 2013)
-    #;$fixnum->string
-    #;$fixnum->char
+    $fixnum->string
+    $fixnum->char
     $fl+
     $fl-
     $fl*
@@ -235,10 +233,8 @@
     $bytevector-concatenate
     $bytevector-reverse-and-concatenate
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Wed Nov 6, 2013)
-    #;$bytevector->base64
-    #;$base64->bytevector
+    $bytevector->base64
+    $base64->bytevector
 
 ;;; --------------------------------------------------------------------
 
@@ -263,11 +259,9 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Wed Oct 30, 2013)
-    #;$length
-    #;$for-all1
-    #;$exists1
+    $length
+    $for-all1
+    $exists1
 
 ;;; --------------------------------------------------------------------
 
@@ -277,12 +271,10 @@
     $vector-length
     $vector-empty?
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Mon Nov 4, 2013)
-    ;; $vector-map1
-    ;; $vector-for-each1
-    ;; $vector-for-all1
-    ;; $vector-exists1
+    $vector-map1
+    $vector-for-each1
+    $vector-for-all1
+    $vector-exists1
 
     $vector-copy
     $vector-copy!
@@ -301,7 +293,6 @@
     $char>=
     $char<=
     $char->fixnum
-    $fixnum->char
 
     $char-is-single-char-line-ending?
     $char-is-carriage-return?
@@ -315,10 +306,9 @@
     $string-ref
     $string-set!
     $string=
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Wed Oct 30, 2013)
-    #;$string
-    #;$percent-encoded-string?
+    $string
+    $uri-encoded-string?
+    $percent-encoded-string?
 
     $string-copy
     $string-copy!
@@ -332,44 +322,34 @@
     $string-concatenate
     $string-reverse-and-concatenate
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 5, 2013)
-    ;; $string->ascii
-    ;; $ascii->string
-    ;; $ascii-encoded-bytevector?
-    ;; $ascii-encoded-string?
+    $string->ascii
+    $ascii->string
+    $ascii-encoded-bytevector?
+    $ascii-encoded-string?
 
-    ;; $string->latin1
-    ;; $latin1->string
-    ;; $latin1-encoded-bytevector?
-    ;; $latin1-encoded-string?
+    $string->latin1
+    $latin1->string
+    $latin1-encoded-bytevector?
+    $latin1-encoded-string?
 
-    ;; $string-base64->bytevector
-    ;; $bytevector->string-base64
-    ;; $bytevector->base64
-    ;; $base64->bytevector
+    $string-base64->bytevector
+    $bytevector->string-base64
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Mon Nov 4, 2013)
-    ;; $uri-encode
-    ;; $uri-decode
-    ;; $uri-normalise-encoding
-    ;; $uri-encoded-bytevector?
-    ;; $uri-encoded-string?
-    ;; $percent-encode
-    ;; $percent-decode
-    ;; $percent-normalise-encoding
-    ;; $percent-encoded-bytevector?
-    ;; $percent-encoded-string?
+    $uri-encode
+    $uri-decode
+    $uri-normalise-encoding
+    $uri-encoded-bytevector?
+    $percent-encode
+    $percent-decode
+    $percent-normalise-encoding
+    $percent-encoded-bytevector?
 
 ;;; --------------------------------------------------------------------
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Thu Nov 7, 2013)
-    #;$string-hash
-    #;$string-ci-hash
-    #;$symbol-hash
-    #;$bytevector-hash
+    $string-hash
+    $string-ci-hash
+    $symbol-hash
+    $bytevector-hash
 
 ;;; --------------------------------------------------------------------
 
@@ -417,27 +397,16 @@
     (ikarus system $compnums)
     (ikarus system $pairs)
     (vicare system $lists)
-    (except (ikarus system $vectors)
-	    ;;FIXME This except  must be removed at the  next boot image
-	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
-	    $vector-empty?)
-    (rename (except (ikarus system $bytevectors)
-		    ;;FIXME This except must be removed at the next boot
-		    ;;image rotation.  (Marco Maggi; Tue Oct 8, 2013)
-		    $bytevector-empty?)
+    (ikarus system $vectors)
+    (rename (ikarus system $bytevectors)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
-    (except (ikarus system $strings)
-	    ;;FIXME This except  must be removed at the  next boot image
-	    ;;rotation.  (Marco Maggi; Tue Oct 8, 2013)
-	    $string-empty?)
+    (ikarus system $strings)
     (ikarus system $codes)
     (ikarus system $pointers)
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Thu Nov 7, 2013)
-    #;(vicare system $hashtables)
+    (vicare system $hashtables)
     (for (prefix (only (vicare platform configuration)
 		       platform-endianness)
 		 config.)
@@ -1077,10 +1046,10 @@
 
 ;;;; miscellaneous bytevector operations
 
-;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
-;;Tue Oct 8, 2013)
-(define-inline ($bytevector-empty? ?bv)
-  ($fxzero? ($bytevector-length ?bv)))
+;;Commented out because implemented by the boot image.
+;;
+;; (define-inline ($bytevector-empty? ?bv)
+;;   ($fxzero? ($bytevector-length ?bv)))
 
 (define-inline ($bytevector-not-empty? ?bv)
   (not ($bytevector-empty? ?bv)))
@@ -1153,10 +1122,10 @@
 
 ;;;; miscellaneous string operations
 
-;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
-;;Tue Oct 8, 2013)
-(define-inline ($string-empty? vec)
-  ($fxzero? ($string-length vec)))
+;;Commented out because implemented by the boot image.
+;;
+;; (define-inline ($string-empty? vec)
+;;   ($fxzero? ($string-length vec)))
 
 (define-inline ($string-fill! ?str ?index ?end ?fill)
   ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive
@@ -1247,10 +1216,10 @@
 	 (vec ($make-vector ?len)))
     ($vector-clean! vec)))
 
-;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
-;;Tue Oct 8, 2013)
-(define-inline ($vector-empty? vec)
-  ($fxzero? ($vector-length vec)))
+;;Commented out because implemented by the boot image.
+;;
+;; (define-inline ($vector-empty? vec)
+;;   ($fxzero? ($vector-length vec)))
 
 (define-inline ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))
