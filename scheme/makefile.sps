@@ -599,9 +599,7 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($compiler		(ikarus system $compiler)		#f	#t)
     ($numerics		(ikarus system $numerics)		#f	#t)
-    ;;FIXME To be made required at the next boot image rotation.  (Marco
-    ;;Maggi; Thu Nov 7, 2013)
-    ($hashtables	(ikarus system $hashtables)		#f	#f)
+    ($hashtables	(ikarus system $hashtables)		#f	#t)
 ;;;
     ($vicare-pairs	(vicare system $pairs)			#f	#t)
     ($vicare-lists	(vicare system $lists)			#f	#t)
@@ -627,9 +625,7 @@
     ($vicare-for	(vicare system $foreign)		#f	#t)
     ($vicare-compiler	(vicare system $compiler)		#f	#t)
     ($vicare-numerics	(vicare system $numerics)		#f	#t)
-    ;;FIXME To be made required at the next boot image rotation.  (Marco
-    ;;Maggi; Thu Nov 7, 2013)
-    ($vicare-hashtables	(vicare system $hashtables)		#f	#f)
+    ($vicare-hashtables	(vicare system $hashtables)		#f	#t)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
