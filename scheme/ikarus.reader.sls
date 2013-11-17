@@ -3184,7 +3184,7 @@
 		 (finalise-tokenisation port locs kont token pos)))
 	     (unless (and (symbol? encoding)
 			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n
-						 hex base64)))
+						 hex base64 percent-encoding)))
 	       (die/ann encoding^ 'vicare-reader
 			"expected encoding symbol for this bytevector type" encoding))
 	     (let-values (((token pos) (start-tokenising/pos port)))
@@ -3208,14 +3208,15 @@
 				 (%error "unexpected EOF while reading a bytevector"))
 				((eq? token 'rparen)
 				 (let ((v (case encoding
-					    ((ascii)	(string->ascii		string))
-					    ((latin1)	(string->latin1		string))
-					    ((utf8)	(string->utf8		string))
-					    ((utf16be)	(string->utf16be	string))
-					    ((utf16le)	(string->utf16le	string))
-					    ((utf16n)	(string->utf16n		string))
-					    ((hex)	(string-hex->bytevector	string))
-					    ((base64)	(string-base64->bytevector string))
+					    ((ascii)		(string->ascii		string))
+					    ((latin1)		(string->latin1		string))
+					    ((utf8)		(string->utf8		string))
+					    ((utf16be)		(string->utf16be	string))
+					    ((utf16le)		(string->utf16le	string))
+					    ((utf16n)		(string->utf16n		string))
+					    ((hex)		(string-hex->bytevector	string))
+					    ((base64)		(string-base64->bytevector string))
+					    ((percent-encoding)	(string->percent-encoding string))
 					    (else
 					     (%error "invalid bytevector encoding" encoding)))))
 				   (values v v locs kont)))

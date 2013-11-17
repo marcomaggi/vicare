@@ -1023,6 +1023,7 @@
 		   ,(string-hex->bytevector "000102030405060708090A0B0C0D0E0F"))
   (read-bv-and-eof "#ve(base64  \"VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg\")"
 		   ,(string-base64->bytevector "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg"))
+  (read-bv-and-eof "#ve(percent-encoding \"\x00;ciao\")"	,(string->percent-encoding  "\x00;ciao"))
 
   #t)
 
