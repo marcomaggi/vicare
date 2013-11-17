@@ -51,16 +51,7 @@
   (import (nausicaa)
     (vicare language-extensions keywords)
     (vicare language-extensions ascii-chars)
-    (vicare unsafe operations)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Thu Nov 7, 2013)
-    (only (vicare system $strings)
-	  $string->ascii
-	  $ascii->string)
-    ;;FIXME This  import spec  should be removable  after the  next boot
-    ;;image rotation.  (Marco Maggi; Mon Nov 4, 2013)
-    (except (vicare system $vectors)
-	    $vector-empty?))
+    (vicare unsafe operations))
 
 
 ;;;; generic functions
