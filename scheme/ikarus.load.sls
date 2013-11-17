@@ -71,10 +71,16 @@
 
 (define DEFAULT-FASL-DIRECTORY
   (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
-    (if (and P (file-exists? P))
+    (if (and P
+	     ;;FILE-EXISTS? will raise an error if P is empty.
+	     (not (zero? (string-length P)))
+	     (file-exists? P))
 	(posix.real-pathname P)
       (let ((P (posix.getenv "HOME")))
-	(if (and P (file-exists? P))
+	(if (and P
+		 ;;FILE-EXISTS? will raise an error if P is empty.
+		 (not (zero? (string-length P)))
+		 (file-exists? P))
 	    (string-append (posix.real-pathname P) "/.vicare/precompiled")
 	  ""))))
   ;;The following  code was the  original in Ikarus.  (Marco  Maggi; Sat
