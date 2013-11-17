@@ -63,7 +63,8 @@
 	    hashtable-equivalence-function
 	    hashtable-hash-function
 	    string-hash			string-ci-hash
-	    symbol-hash			equal-hash)
+	    symbol-hash			bytevector-hash
+	    equal-hash)
     ;;This import spec must be the  last, else rebuilding the boot image
     ;;may fail.  (Marco Maggi; Sat Feb  9, 2013)
     (vicare arguments validation))
