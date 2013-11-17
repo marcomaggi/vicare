@@ -112,15 +112,7 @@
 	    capi.)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
-    (except (vicare arguments validation)
-	    ;;FIXME  This except  clause must  be removed  at the  next boot
-	    ;;image rotation.  (Marco Maggi; Wed Oct 9, 2013)
-	    file-pathname.vicare-arguments-validation
-	    file-string-pathname.vicare-arguments-validation
-	    file-bytevector-pathname.vicare-arguments-validation
-	    file-colon-search-path.vicare-arguments-validation
-	    file-string-colon-search-path.vicare-arguments-validation
-	    file-bytevector-colon-search-path.vicare-arguments-validation)
+    (vicare arguments validation)
     #;(ikarus.emergency))
 
 
@@ -129,45 +121,6 @@
 (define-argument-validation (boolean/fixnum who obj)
   (or (fixnum? obj) (boolean? obj))
   (procedure-argument-violation who "expected boolean or fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-;;;FIXME The following pathname validation clauses are duplicated in the
-;;;library (vicare  arguments validation); they  must be removed  at the
-;;;next boot image rotation.  (Marco Maggi; Wed Oct 9, 2013)
-
-(define-argument-validation (file-pathname who obj)
-  (file-pathname? obj)
-  (procedure-argument-violation who "expected string or bytevector as pathname argument" obj))
-
-(define-argument-validation (file-string-pathname who obj)
-  (file-string-pathname? obj)
-  (procedure-argument-violation who "expected file string pathname as argument" obj))
-
-(define-argument-validation (file-bytevector-pathname who obj)
-  (file-bytevector-pathname? obj)
-  (procedure-argument-violation who "expected file bytevector pathname as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-;;;FIXME The  following path  validation clauses  are duplicated  in the
-;;;library (vicare  arguments validation); they  must be removed  at the
-;;;next boot image rotation.  (Marco Maggi; Wed Oct 9, 2013)
-
-(define-argument-validation (file-colon-search-path who obj)
-  (file-colon-search-path? obj)
-  (procedure-argument-violation who
-    "expected valid string or bytevector as colon-separated file search path argument" obj))
-
-(define-argument-validation (file-string-colon-search-path who obj)
-  (file-string-colon-search-path? obj)
-  (procedure-argument-violation who
-    "expected valid string as colon-separated file search path argument" obj))
-
-(define-argument-validation (file-bytevector-colon-search-path who obj)
-  (file-bytevector-colon-search-path? obj)
-  (procedure-argument-violation who
-    "expected valid bytevector as colon-separated file search path argument" obj))
 
 ;;; --------------------------------------------------------------------
 
