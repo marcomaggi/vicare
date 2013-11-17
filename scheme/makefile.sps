@@ -2648,10 +2648,7 @@
 
     (ellipsis-map)
     (debug-call)
-
-    ;;FIXME  SYNTAX-ERROR  is to  be  removed  at  the next  boot  image
-    ;;rotation.  (Marco Maggi; Sat Aug 31, 2013)
-    (syntax-error				i)
+    (syntax-error				i v)
 
 ;;; --------------------------------------------------------------------
 
