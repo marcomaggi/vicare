@@ -727,6 +727,112 @@
 	       (or ((<fragment>) O)
 		   (unspecified? O)))))
 
+;;; --------------------------------------------------------------------
+
+(define-mixin <common-uri-clauses>
+  (fields
+   (immutable userinfo-object)
+		;Unspecified or an instance of "<userinfo>".
+
+   (immutable host-object)
+		;Unspecified or an instance of "<host>".
+
+   (immutable port-object)
+		;Unspecified or an instance of "<port-number>".
+
+   (immutable (path <path>))
+		;An  instance  of  "<path>".  The  "path"  component  is
+		;mandatory for URI objects.   When no path is specified:
+		;it defaults to an instance of "<path-empty>".
+
+   (immutable query-object)
+		;Unspecified or an instance of "<query>".
+
+   (immutable fragment-object)
+		;Unspecified or an instance of "<fragment>".
+
+   (mutable memoized-bytevector)
+		;Memoized URI bytevector representation.
+
+   (mutable memoized-string)
+		;Memoized URI string representation.
+
+   #| end of fields |# )
+
+  (virtual-fields
+   (immutable (has-userinfo?	<boolean>)	(lambda ((O <class>))
+						  (specified? (O $userinfo-object))))
+   (immutable (has-host?	<boolean>)	(lambda ((O <class>))
+						  (specified? (O $host-object))))
+   (immutable (has-port?	<boolean>)	(lambda ((O <class>))
+						  (specified? (O $port-object))))
+   (immutable (has-authority?	<boolean>)	(lambda ((O <class>))
+						  (O has-host?)))
+   (immutable (has-query?	<boolean>)	(lambda ((O <class>))
+						  (specified? (O $query-object))))
+   (immutable (has-fragment?	<boolean>)	(lambda ((O <class>))
+						  (specified? (O $fragment-object))))
+   #| end of virtual-fields |# )
+
+  (virtual-fields
+   (immutable (userinfo	<userinfo>)	(lambda ((O <class>))
+					  (%return-if-specified (O $userinfo-object) O)))
+   (immutable (host	<host>)		(lambda ((O <class>))
+					  (%return-if-specified (O $host-object)     O)))
+   (immutable (port	<port-number>)	(lambda ((O <class>))
+					  (%return-if-specified (O $port-object)     O)))
+   (immutable (query	<query>)	(lambda ((O <class>))
+					  (%return-if-specified (O $query-object)    O)))
+   (immutable (fragment	<fragment>)	(lambda ((O <class>))
+					  (%return-if-specified (O $fragment-object) O)))
+   #| end of virtual-fields |# )
+
+  (virtual-fields
+   (immutable (bytevector <ascii-bytevector>)
+	      (lambda ((O <class>))
+		(or (O $memoized-bytevector)
+		    (receive-and-return (bv)
+			(receive (port getter)
+			    (open-bytevector-output-port)
+			  (O put-bytevector port)
+			  (getter))
+		      (set! (O $memoized-bytevector) bv)))))
+
+   (immutable (string <ascii-string>)
+	      (lambda ((O <class>))
+		(or (O $memoized-string)
+		    (receive-and-return (str)
+			($ascii->string (O bytevector))
+		      (set! (O $memoized-string) str)))))
+
+   (immutable (authority <ascii-bytevector>)
+	      (lambda ((O <class>))
+		(if (O has-authority?)
+		    (receive (port getter)
+			(open-bytevector-output-port)
+		      (O put-authority-bytevector port)
+		      (getter))
+		  (assertion-violation #f
+		    "attempt to access unspecified field \"authority\""
+		    O))))
+
+   #| end of virtual-fields |# )
+
+  (method (put-authority-bytevector (O <class>) (port <binary-output-port>))
+    ;;Notice  that the  leading  "//"  is not  part  of the  "authority"
+    ;;component,  it  is  part  of the  "hier-part"  or  "relative-part"
+    ;;components.  So we do not print it here.
+    ;;
+    (when (O has-authority?)
+      (when (O has-userinfo?)
+	(O userinfo put-bytevector port))
+      ;;The authority is defined only when the host is defined.
+      (O host put-bytevector port)
+      (when (O has-port?)
+	(O port put-bytevector port))))
+
+  #| end of mixin |# )
+
 
 (define-class <uri>
   (nongenerative nausicaa:net:addresses:uri:<uri>)
@@ -764,96 +870,24 @@
 	query fragment
 	#f #;memoized-bytevector #f #;memoized-string ))))
 
-  (fields
-   (immutable (scheme <scheme>))
+  (fields (immutable (scheme <scheme>)))
 		;An  instance of  "<scheme>".  A  "scheme" component  is
 		;mandatory for URI objects.
 
-   (immutable userinfo-object)
-		;Unspecified or an instance of "<userinfo>".
-
-   (immutable host-object)
-		;Unspecified or an instance of "<host>".
-
-   (immutable port-object)
-		;Unspecified or an instance of "<port-number>".
-
-   (immutable (path <path>))
-		;An  instance  of  "<path>".  The  "path"  component  is
-		;mandatory for URI objects.   When no path is specified:
-		;it defaults to an instance of "<path-empty>".
-
-   (immutable query-object)
-		;Unspecified or an instance of "<query>".
-
-   (immutable fragment-object)
-		;Unspecified or an instance of "<fragment>".
-
-   (mutable memoized-bytevector)
-		;Memoized URI bytevector representation.
-
-   (mutable memoized-string)
-		;Memoized URI string representation.
-
-   #| end of fields |# )
+  (mixins (<common-uri-clauses>
+	   (<class>	<uri>)))
 
   (virtual-fields
-   (immutable (has-userinfo?	<boolean>)	(lambda ((O <uri>))
-						  (specified? (O $userinfo-object))))
-   (immutable (has-host?	<boolean>)	(lambda ((O <uri>))
-						  (specified? (O $host-object))))
-   (immutable (has-port?	<boolean>)	(lambda ((O <uri>))
-						  (specified? (O $port-object))))
-   (immutable (has-authority?	<boolean>)	(lambda ((O <uri>))
-						  (O has-host?)))
-   (immutable (has-query?	<boolean>)	(lambda ((O <uri>))
-						  (specified? (O $query-object))))
-   (immutable (has-fragment?	<boolean>)	(lambda ((O <uri>))
-						  (specified? (O $fragment-object))))
-   #| end of virtual-fields |# )
-
-  (virtual-fields
-   (immutable (userinfo	<userinfo>)	(lambda ((O <uri>))
-					  (%return-if-specified (O $userinfo-object) O)))
-   (immutable (host	<host>)		(lambda ((O <uri>))
-					  (%return-if-specified (O $host-object)     O)))
-   (immutable (port <port-number>)	(lambda ((O <uri>))
-					  (%return-if-specified (O $port-object)     O)))
-   (immutable (query	<query>)	(lambda ((O <uri>))
-					  (%return-if-specified (O $query-object)    O)))
-   (immutable (fragment	<fragment>)	(lambda ((O <uri>))
-					  (%return-if-specified (O $fragment-object) O)))
-   #| end of virtual-fields |# )
-
-  (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <uri>))
-		(or (O $memoized-bytevector)
-		    (receive-and-return (bv)
-			(receive (port getter)
-			    (open-bytevector-output-port)
-			  (O put-bytevector port)
-			  (getter))
-		      (set! (O $memoized-bytevector) bv)))))
-
-   (immutable (string <ascii-string>)
-	      (lambda ((O <uri>))
-		(or (O $memoized-string)
-		    (receive-and-return (str)
-			($ascii->string (O bytevector))
-		      (set! (O $memoized-string) str)))))
-
-   (immutable (authority <ascii-bytevector>)
+   (immutable (hier-part <ascii-bytevector>)
 	      (lambda ((O <uri>))
 		(if (O has-authority?)
 		    (receive (port getter)
 			(open-bytevector-output-port)
-		      (O put-authority-bytevector port)
+		      (O put-hier-part-bytevector port)
 		      (getter))
 		  (assertion-violation #f
-		    "attempt to access unspecified field \"authority\""
+		    "attempt to access unspecified field \"hier-part\""
 		    O))))
-
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <uri>) (port <binary-output-port>))
@@ -861,24 +895,19 @@
     ;;"Component Recomposition" of RFC 3986.
     (define who '<uri>-bytevector)
     (O $scheme put-bytevector port)
-    (when (O has-authority?)
-      ;;47 = #\/
-      (put-bytevector port '#vu8(47 47))
-      (O put-authority-bytevector port))
+    (O put-hier-part-bytevector port)
     (O $path put-bytevector port)
     (when (O has-query?)
       (O query put-bytevector port))
     (when (O has-fragment?)
       (O fragment put-bytevector port)))
 
-  (method (put-authority-bytevector (O <uri>) (port <binary-output-port>))
+  (method (put-hier-part-bytevector (O <uri>) (port <binary-output-port>))
+    ;;Notice that the leading "//" is part of the "hier-part" component.
     (when (O has-authority?)
-      (when (O has-userinfo?)
-	(O userinfo put-bytevector port))
-      ;;The authority is defined only when the host is defined.
-      (O host put-bytevector port)
-      (when (O has-port?)
-	(O port put-bytevector port))))
+      ;;47 = #\/
+      (put-bytevector port '#vu8(47 47))
+      (O put-authority-bytevector port)))
 
   #| end of class |# )
 
@@ -925,115 +954,39 @@
 	path query fragment
 	#f #;memoized-bytevector #f #;memoized-string ))))
 
-  (fields
-   (immutable userinfo-object)
-		;Unspecified or an instance of "<userinfo>".
-
-   (immutable host-object)
-		;Unspecified or an instance of "<host>".
-
-   (immutable port-object)
-		;Unspecified or an instance of "<port-number>".
-
-   (immutable (path <path>))
-		;An  instance  of  "<path>".  The  "path"  component  is
-		;mandatory for URI objects.   When no path is specified:
-		;it defaults to an instance of "<path-empty>".
-
-   (immutable query-object)
-		;Unspecified or an instance of "<query>".
-
-   (immutable fragment-object)
-		;Unspecified or an instance of "<fragment>".
-
-   (mutable memoized-bytevector)
-		;Memoized URI bytevector representation.
-
-   (mutable memoized-string)
-		;Memoized URI string representation.
-
-   #| end of fields |# )
+  (mixins (<common-uri-clauses>
+	   (<class>	<relative-ref>)))
 
   (virtual-fields
-   (immutable (has-userinfo?	<boolean>)	(lambda ((O <relative-ref>))
-						  (specified? (O $userinfo-object))))
-   (immutable (has-host?	<boolean>)	(lambda ((O <relative-ref>))
-						  (specified? (O $host-object))))
-   (immutable (has-port?	<boolean>)	(lambda ((O <relative-ref>))
-						  (specified? (O $port-object))))
-   (immutable (has-authority?	<boolean>)	(lambda ((O <relative-ref>))
-						  (O has-host?)))
-   (immutable (has-query?	<boolean>)	(lambda ((O <relative-ref>))
-						  (specified? (O $query-object))))
-   (immutable (has-fragment?	<boolean>)	(lambda ((O <relative-ref>))
-						  (specified? (O $fragment-object))))
-   #| end of virtual-fields |# )
-
-  (virtual-fields
-   (immutable (userinfo	<userinfo>)	(lambda ((O <relative-ref>))
-					  (%return-if-specified (O $userinfo-object) O)))
-   (immutable (host	<host>)		(lambda ((O <relative-ref>))
-					  (%return-if-specified (O $host-object)     O)))
-   (immutable (port <port-number>)	(lambda ((O <relative-ref>))
-					  (%return-if-specified (O $port-object)     O)))
-   (immutable (query	<query>)	(lambda ((O <relative-ref>))
-					  (%return-if-specified (O $query-object)    O)))
-   (immutable (fragment	<fragment>)	(lambda ((O <relative-ref>))
-					  (%return-if-specified (O $fragment-object) O)))
-   #| end of virtual-fields |# )
-
-  (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <relative-ref>))
-		(or (O $memoized-bytevector)
-		    (receive-and-return (bv)
-			(receive (port getter)
-			    (open-bytevector-output-port)
-			  (O put-bytevector port)
-			  (getter))
-		      (set! (O $memoized-bytevector) bv)))))
-
-   (immutable (string <ascii-string>)
-	      (lambda ((O <relative-ref>))
-		(or (O $memoized-string)
-		    (receive-and-return (str)
-			($ascii->string (O bytevector))
-		      (set! (O $memoized-string) str)))))
-
-   (immutable (authority <ascii-bytevector>)
+   (immutable (relative-part <ascii-bytevector>)
 	      (lambda ((O <relative-ref>))
 		(if (O has-authority?)
 		    (receive (port getter)
 			(open-bytevector-output-port)
-		      (O put-authority-bytevector port)
+		      (O put-relative-part-bytevector port)
 		      (getter))
 		  (assertion-violation #f
-		    "attempt to access unspecified field \"authority\""
+		    "attempt to access unspecified field \"relative-part\""
 		    O))))
-
    #| end of virtual-fields |# )
 
   (method (put-bytevector (O <relative-ref>) (port <binary-output-port>))
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
     (define who '<relative-ref>-bytevector)
-    (O put-authority-bytevector port)
+    (O put-relative-part-bytevector port)
     (O $path put-bytevector port)
     (when (O has-query?)
       (O query put-bytevector port))
     (when (O has-fragment?)
       (O fragment put-bytevector port)))
 
-  (method (put-authority-bytevector (O <relative-ref>) (port <binary-output-port>))
+  (method (put-relative-part-bytevector (O <relative-ref>) (port <binary-output-port>))
+    ;;Notice that the leading "//" is part of the "relative-part" component.
     (when (O has-authority?)
       ;;47 = #\/
       (put-bytevector port '#vu8(47 47))
-      (when (O has-userinfo?)
-	(O userinfo put-bytevector port))
-      ;;The authority is defined only when the host is defined.
-      (O host put-bytevector port)
-      (when (O has-port?)
-	(O port put-bytevector port))))
+      (O put-authority-bytevector port)))
 
   #| end of class |# )
 
