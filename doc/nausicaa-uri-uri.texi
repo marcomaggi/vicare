@@ -1774,6 +1774,13 @@ An object representing the @code{path} component.
 @subsubheading Components virtual fields
 
 
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-bytevector} hier-part
+The @code{hier-part} component as a bytevector.  Accessing this field
+when the @code{authority} is unspecified causes an exception to be
+raised.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-bytevector} authority
 The @code{authority} component as a bytevector.  Accessing this field
 when the @code{authority} is unspecified causes an exception to be
@@ -1838,7 +1845,19 @@ in the format requested by @rfc{} 3986.
 
 @defmethod @aclass{uri} put-authority-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{authority}
-component in the format requested by @rfc{} 3986.
+component in the format requested by @rfc{} 3986; notice that the
+@code{authority} component may be empty or unspecified.  If the
+@code{authority} component is empty or unspecified: nothing is put in
+the port.
+@end defmethod
+
+
+@defmethod @aclass{uri} put-hier-part-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{hier-part}
+component in the format requested by @rfc{} 3986; notice that the
+@code{hier-part} can be empty.  If the @code{hier-part} component is
+unspecified: nothing is put in the port.  If the @code{hier-part}
+component is empty: only the leading @samp{//} is put in the port.
 @end defmethod
 
 @c page
@@ -1985,6 +2004,13 @@ An object representing the @code{path} component.
 @subsubheading Components virtual fields
 
 
+@deftypecv {Immutable virtual field} @aclass{uri} @aclass{ascii-bytevector} relative-part
+The @code{relative-part} component as a bytevector.  Accessing this
+field when the @code{authority} is unspecified causes an exception to be
+raised.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{relative-ref} @aclass{ascii-bytevector} authority
 The @code{authority} component as a bytevector.  Accessing this field
 when the @code{authority} is unspecified causes an exception to be
@@ -2050,6 +2076,16 @@ in the format requested by @rfc{} 3986.
 @defmethod @aclass{relative-ref} put-authority-bytevector (@var{port} @aclass{binary-output-port})
 Write to @var{port} a bytevector representing the @code{authority}
 component in the format requested by @rfc{} 3986.
+@end defmethod
+
+
+@defmethod @aclass{uri} put-relative-part-bytevector (@var{port} @aclass{binary-output-port})
+Write to @var{port} a bytevector representing the @code{relative-part}
+component in the format requested by @rfc{} 3986; notice that the
+@code{relative-part} can be empty.  If the @code{relative-part}
+component is unspecified: nothing is put in the port.  If the
+@code{relative-part} component is empty: only the leading @samp{//} is
+put in the port.
 @end defmethod
 
 @c end of file

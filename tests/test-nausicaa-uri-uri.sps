@@ -1041,6 +1041,30 @@
   (doit "http://[v4.12345]/a/b/c")
   (doit "http://[vF.12345]/a/b/c")
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((o uri.<uri>) (string->uri "http://1.2.3.4/a/b/c")))
+	(ascii->string (o hier-part)))
+    => "//1.2.3.4")
+
+  (check
+      (let (((o uri.<uri>) (string->uri "http:///a/b/c")))
+	(ascii->string (o hier-part)))
+    => "//")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((o uri.<uri>) (string->uri "http://1.2.3.4/a/b/c")))
+	(ascii->string (o authority)))
+    => "1.2.3.4")
+
+  (check
+      (let (((o uri.<uri>) (string->uri "http:///a/b/c")))
+	(ascii->string (o authority)))
+    => "")
+
   #t)
 
 
@@ -1111,6 +1135,30 @@
 
   (doit "//[v4.12345]/a/b/c")
   (doit "//[vF.12345]/a/b/c")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((o uri.<relative-ref>) (string->relative-ref "//1.2.3.4/a/b/c")))
+	(ascii->string (o relative-part)))
+    => "//1.2.3.4")
+
+  (check
+      (let (((o uri.<relative-ref>) (string->relative-ref "///a/b/c")))
+	(ascii->string (o relative-part)))
+    => "//")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (((o uri.<relative-ref>) (string->relative-ref "//1.2.3.4/a/b/c")))
+	(ascii->string (o authority)))
+    => "1.2.3.4")
+
+  (check
+      (let (((o uri.<relative-ref>) (string->relative-ref "///a/b/c")))
+	(ascii->string (o authority)))
+    => "")
 
   #t)
 
