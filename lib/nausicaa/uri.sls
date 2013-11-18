@@ -48,7 +48,7 @@
     path		query		fragment
 
 ;;; --------------------------------------------------------------------
-;;; reexported from (nausicaa net addresses ip)
+;;; reexported from (nausicaa uri ip)
 
     <ip-address>
     <ip-numeric-address>
