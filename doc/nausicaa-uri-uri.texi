@@ -917,17 +917,27 @@ The arguments are modeled after the @math{3} return values of
 
 
 The library @library{nausicaa uri} exports utilities to handle Uniform
-Reource Identifiers (@uri{}) specifications, according to @rfc{} 3986.
-To parse the string representation of @uri{}s we can use the library
-@library{nausicaa parser-tools uri}.
+Resource Identifiers (@uri{}) specifications, according to @rfc{} 3986:
+``Uniform Resource Identifier (@uri{}): Generic Syntax''.  The @rfc{}
+defines @uri{}s as follows:
 
-The @oopp{} @api{} to @uri{} parsing and producing is really basic; this
-is because advanced handling of @uri{}s should be merged with
-requirements of specific @uri{} schemes, like @code{http:} and
-@code{file:}.
+@quotation
+A Uniform Resource Identifier (@uri{}) is a compact sequence of
+characters that identifies an abstract or physical resource.
+@end quotation
+
+In the context of the Nausicaa libraries: the proper representation of a
+@uri{} is the Scheme bytevector.  Such representation can be parsed to
+produce objects of type @class{uri} or @class{relative-ref}; the @oopp{}
+@api{} to @uri{} parsing and producing is really basic; this is because
+advanced handling of @uri{}s should be merged with requirements of
+specific @uri{} schemes, like @code{http:} and @code{file:}.
 
 The library @library{nausicaa uri} reexports all the bindings from
-@library{nausicaa uri ip}.
+@library{nausicaa uri ip}.  To parse a representation of @uri{}s we can
+use the library @library{nausicaa parser-tools uri} and its
+simplification trough the library @library{nausicaa parser-tools uri
+utilities}.
 
 @menu
 * uri uri scheme::        @uri{} scheme objects.
