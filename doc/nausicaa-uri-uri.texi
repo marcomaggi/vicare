@@ -926,8 +926,8 @@ is because advanced handling of @uri{}s should be merged with
 requirements of specific @uri{} schemes, like @code{http:} and
 @code{file:}.
 
-The library @library{nausicaa net addresses uri} reexports all the
-bindings from @library{nausicaa uri ip}.
+The library @library{nausicaa uri} reexports all the bindings from
+@library{nausicaa uri ip}.
 
 @menu
 * uri uri scheme::        @uri{} scheme objects.
