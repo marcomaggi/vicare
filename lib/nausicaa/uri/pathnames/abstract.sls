@@ -51,17 +51,7 @@
 
     pathname-tail		pathname-dirname
     pathname-rootname		pathname-name
-    pathname-extension		pathname-replace-extension
-
-    ;; condition object types
-    &pathname
-    &byte			raise-byte-error
-    &parser			raise-parser-error
-    &normalisation		raise-normalisation-error
-
-    ;; auxiliary syntaxes
-    string:			bytevector:
-    segments:)
+    pathname-extension		pathname-replace-extension)
   (import (nausicaa)
     (vicare unsafe operations))
 
@@ -85,11 +75,6 @@
 	  (else
 	   (previous-byte ($fxsub1 i))))))
 
-(define-auxiliary-syntaxes
-  string:
-  bytevector:
-  segments:)
-
 
 ;;;; multimethods
 
@@ -104,42 +89,6 @@
 (define-generic pathname-name			(absolute-self))
 (define-generic pathname-extension		(absolute-self))
 (define-generic pathname-replace-extension	(absolute-self source))
-
-
-;;;; condition object types
-
-(define-condition-type &pathname
-    (parent &error))
-
-(define-condition-type &byte
-    (parent &pathname)
-  (fields sequence offset))
-
-(define (raise-byte-error who message sequence offset)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-byte-condition sequence offset))))
-
-(define-condition-type &parser
-    (parent &pathname)
-  (fields port offset))
-
-(define (raise-parser-error who message port offset)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-parser-condition port offset))))
-
-(define-condition-type &normalisation
-    (parent &pathname)
-  (fields absolute original-segments))
-
-(define (raise-normalisation-error who message absolute original-segments)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-normalisation-condition absolute original-segments))))
 
 
 (define-class <pathname>
