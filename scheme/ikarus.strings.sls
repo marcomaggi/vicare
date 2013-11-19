@@ -1047,7 +1047,7 @@
 	(($fx= i bv.len)
 	 bv)
       (let ((code-point ($char->fixnum ($string-ref str i))))
-	(with-arguments-validation (who)
+	(with-dangerous-arguments-validation (who)
 	    ((latin1 code-point str))
 	  ($bytevector-u8-set! bv i code-point))))))
 
@@ -1130,7 +1130,7 @@
 	(($fx= i bv.len)
 	 bv)
       (let ((code-point ($char->fixnum ($string-ref str i))))
-	(with-arguments-validation (who)
+	(with-dangerous-arguments-validation (who)
 	    ((ascii	code-point str))
 	  ($bytevector-u8-set! bv i code-point))))))
 
