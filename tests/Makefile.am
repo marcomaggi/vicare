@@ -303,6 +303,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-uri-ipv4-address.sps				\
 	test-nausicaa-uri-ipv6-address.sps				\
 	test-nausicaa-uri-uri.sps					\
+	test-nausicaa-uri-pathnames-unix.sps				\
 	\
 	test-issue-058-lalr-unary-prec.sps
 

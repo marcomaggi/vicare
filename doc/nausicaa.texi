@@ -203,9 +203,11 @@ of object--oriented languages, but it just has the perfume of
 @menu
 * uri ip::            Generic @ip{} addresses.
 * uri uri::           Uniform Resource Identifier objects.
+* uri pathnames::     File pathnames.
 @end menu
 
 @include nausicaa-uri-uri.texi
+@include nausicaa-uri-pathnames.texi
 
 @c page
 @node parser-tools

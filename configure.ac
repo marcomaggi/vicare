@@ -130,6 +130,11 @@ VICARE_WITH_LIBRARY([PTHREAD],[pthread],[check],
   [pthread.h],[pthread],[main])
 AM_CONDITIONAL([WANT_PTHREAD],[test "x$vicare_with_PTHREAD" = xyes])
 
+dnl --------------------------------------------------------------------
+
+PLATFORM_PATHNAME=unix
+AC_SUBST([PLATFORM_PATHNAME])
+
 #page
 #### basic system inspection
 
@@ -1675,6 +1680,7 @@ AC_CONFIG_FILES(Makefile
                 lib/vicare/platform/constants.sls
                 lib/vicare/platform/errno.sls
                 lib/vicare/platform/words.sls
+                lib/nausicaa/uri/pathnames.sls
                 meta/slackware/doinst.sh)
 AC_OUTPUT
 
