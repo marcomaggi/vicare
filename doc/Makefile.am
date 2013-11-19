@@ -155,6 +155,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-lalr.texi				\
 	nausicaa-parser-tools-ip-addresses.texi			\
 	nausicaa-parser-tools-uri.texi				\
+	nausicaa-parser-tools-unix-pathnames.texi		\
 	\
 	nausicaa-uri-uri.texi					\
 	nausicaa-uri-pathnames.texi				\

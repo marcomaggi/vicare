@@ -26,11 +26,10 @@
 #!r6rs
 (library (nausicaa uri pathnames)
   (export
-    <pathname> <absolute-pathname> <relative-pathname>
-    pathname
-
-    ;; auxiliary syntaxes
-    string: bytevector: segments:)
+    <pathname>
+    <relative-pathname>
+    <absolute-pathname>
+    pathname)
   (import (nausicaa uri pathnames @PLATFORM_PATHNAME@)))
 
 ;;; end of file

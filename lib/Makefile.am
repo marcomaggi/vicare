@@ -341,7 +341,8 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ipv4-addresses.sls			\
 	nausicaa/parser-tools/ipv6-addresses.sls			\
 	nausicaa/parser-tools/uri.sls					\
-	nausicaa/parser-tools/uri/utilities.sls
+	nausicaa/parser-tools/uri/utilities.sls				\
+	nausicaa/parser-tools/unix-pathnames.sls
 
 dist_pkglibexec_SCRIPTS		+= \
 	compile-nausicaa-language.sps		\
