@@ -5184,13 +5184,10 @@ If an error occurs in the conversion: the return value is @false{}.
 
 @defun string-base64->bytevector @var{string}
 @defunx bytevector->string-base64 @var{bytevector}
-Convert to and from a Scheme string and a Scheme bytevector.
-
-The input string contains the @ascii{} Base64 representation of the
-octets.  The output string contains the @ascii{} Base64 representation
-of octets.
-
-If an error occurs in the conversion: the return value is @false{}.
+Convert to and from a Scheme string and a Scheme bytevector.  The input
+string contains the @ascii{} Base64 representation of the octets.  The
+output string contains the @ascii{} Base64 representation of octets.  If
+an error occurs in the conversion: an exception is raised.
 @end defun
 
 
