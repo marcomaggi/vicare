@@ -5420,14 +5420,18 @@ must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
 @defun $string->latin1 @var{string}
 @defunx $latin1->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
-Latin-1 encoding of the characters.
+Latin-1 encoding of the characters.  If a character in @var{string} is
+out of range: raise an exception; this validation is @strong{not}
+removed when arguments validation is disabled.
 @end defun
 
 
 @defun $string->ascii @var{string}
 @defunx $ascii->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
-@ascii{} encoding of the characters.
+@ascii{} encoding of the characters.  If a character in @var{string} is
+out of range: raise an exception; this validation is @strong{not}
+removed when arguments validation is disabled.
 @end defun
 
 
@@ -5453,9 +5457,9 @@ satisfies:
     (<= #xA0 @var{chi} #xFF))
 @result{} #t
 @end example
-
-
 @end defun
+
+
 @defun $string-base64->bytevector @var{string}
 @defunx $bytevector->string-base64 @var{bytevector}
 Convert to and from a Scheme string and a Scheme bytevector.  The input
@@ -5471,6 +5475,10 @@ Return @true{} if the argument is correctly percent--encoded string
 according to @rfc{} 3986.  This means every character in the string is
 associated to a character in the @ascii{} encoding and additionally the
 constraints of @rfc{} 3986 are satisfied.
+
+If the characters in @var{string} are invalid: raise an exception; this
+validation is @strong{not} removed when arguments validation is
+disabled.
 @end defun
 
 @c page
