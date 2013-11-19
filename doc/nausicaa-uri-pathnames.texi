@@ -1,0 +1,1173 @@
+@node uri pathnames
+@section File pathnames
+
+
+The library @library{nausicaa uri pathnames} provides basic operations
+on file system pathnames without actual access to the file system; other
+libraries, like @library{nausicaa uri pathnames unix}, add facilities
+for full pathname handling.
+
+@menu
+* uri pathnames intro::         Overview of the pathname model.
+* uri pathnames abstract::      Abstract class interface.
+* uri pathnames native::        Manipulating native pathnames.
+* uri pathnames unix::          Manipulating Unix pathnames.
+* uri pathnames errors::        Representing errors.
+@end menu
+
+@c page
+@node uri pathnames intro
+@subsection Overview of the pathname model
+
+
+In the context of the libraries @library{nausicaa uri pathname ---}, a
+@dfn{pathname} is a Scheme bytevector representing a file or directory
+on a file system.  To be interpreted as pathname a bytevector must
+adhere to the following conventions:
+
+@itemize
+@item
+Pathnames can be absolute or relative to other pathnames.
+
+@item
+A pathname can be split, using any separator, in a list of segment
+bytevectors representing its components.
+
+@item
+The list of segments alone does not specify if the pathname is absolute
+or relative.
+
+@item
+Some additional information can be needed along with the segments and
+the absolute/relative flag to fully specify a pathname (for example:
+drives on Windows(tm) platforms).
+
+@item
+A segment holding a single byte representing a dot in @ascii{} encoding
+represents the current directory.
+
+@item
+A segment holding two bytes each representing a dot in @ascii{} encoding
+represents the parent directory.
+@end itemize
+
+@c page
+@node uri pathnames abstract
+@subsection Abstract class interface
+
+
+@menu
+* uri pathnames abstract class::    Abstract class interface.
+* uri pathnames abstract methods::  Extending class methods.
+@end menu
+
+@c page
+@node uri pathnames abstract class
+@subsubsection Abstract class interface
+
+
+@cindex @library{nausicaa uri pathnames abstract}, library
+@cindex Library @library{nausicaa uri pathnames abstract}
+
+
+The classes documented below cannot be instantiated; we should
+instantiate platform--specific subclasses instead, like
+@class{relative-pathname} and @class{absolute-pathname} exported by
+@library{nausicaa uri pathnames unix}, @ref{uri pathnames unix,
+Manipulating Unix pathnames}.
+
+The following bindings are exported by the @library{nausicaa uri pathnames
+abstract} library.
+
+
+@deftp {Abstract Class} @aclass{pathname}
+Base type for pathnames.
+@end deftp
+
+
+@deftp {Abstract Class} @aclass{absolute-pathname}
+Base type for absolute pathnames; it is derived from @class{pathname}.
+@end deftp
+
+
+@deftp {Abstract Class} @aclass{relative-pathname}
+Base type for relative pathnames; it is derived from @class{pathname}.
+@end deftp
+
+
+@defop {Superclass constructor} @aclass{pathname} constructor @var{bytevector} @var{segments}
+Build a new pathname record using the @var{bytevector} and the
+associated list of @var{segments} already verified and normalised.
+@end defop
+
+
+@defop {Superclass constructor} @aclass{absolute-pathname} constructor @var{bytevector} @var{segments}
+@defopx {Superclass constructor} @aclass{relative-pathname} constructor @var{bytevector} @var{segments}
+Build a new absolute or relative pathname record; the arguments are the
+same as the ones of the @class{pathname} superclass constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Public fields
+
+
+@deftypecv {Immutable field} @aclass{pathname} @aclass{bytevector} bytevector
+Bytevector representing the pathname.  The value itself must not be
+mutated.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{pathname} @aclass{list} segments
+Possibly empty list of bytevectors representing the pathname segments;
+when the list is empty: if the pathname is absolute, it is the root; if
+the pathname is relative, it is the single dot.  The value itself must
+not be mutated.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{pathname} @aclass{pair} last-pair
+The last pair in the list of segments stored in the @code{segments}
+field, or @false{} if @code{segments} is null.
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{pathname} @aclass{string} string
+Scheme string representing the value of the @code{bytevector} field.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @aclass{pathname} @aclass{absolute-pathname} absolute (@var{prefix} @aclass{absolute-pathname})
+Return a record holding an absolute pathname representing the absolute
+version of this instance's pathname with respect to @var{prefix}.  If
+this instance is already absolute: the return value can be this instance
+itself.
+
+This method is implemented by the @func{absolute} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (absolute ptn)
+  (let* (((P <pathname>)
+          (pathname ptn))
+         ((Q <absolute-pathname>)
+          (P.absolute (pathname "/a/b/c"))))
+    Q.string))
+
+;; relative pathnames
+(absolute ".")                  @result{} "/a/b/c"
+(absolute "ciao")               @result{} "/a/b/c/ciao"
+(absolute "./ciao")             @result{} "/a/b/c/ciao"
+(absolute "../ciao")            @result{} "/a/b/ciao"
+(absolute "../../../ciao")      @result{} "/ciao"
+
+(absolute "../../../../ciao")   @error{} &normalisation
+
+;; already absolute pathnames
+(absolute "/")                  @result{} "/"
+(absolute "/ciao/hello")        @result{} "/ciao/hello"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{relative-pathname} @aclass{relative-pathname} prepend (@var{prefix} @aclass{relative-pathname})
+@deftypemethodx @aclass{relative-pathname} @aclass{absolute-pathname} prepend (@var{prefix} @aclass{absolute-pathname})
+Return a record holding a relative or absolute pathname representing the
+pathname of @var{prefix} with this instance's pathname appended.
+
+This method is implemented by the @func{prepend} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{relative-pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (prepend-absolute ptn)
+  (let* (((P <pathname>)
+          (pathname ptn))
+         ((Q <absolute-pathname>)
+          (P.prepend (pathname "/a/b"))))
+    Q.string))
+
+(prepend-absolute ".")          @result{} "/a/b"
+(prepend-absolute "c")          @result{} "/a/b/c"
+(prepend-absolute "c/d/e")      @result{} "/a/b/c/d/e"
+(prepend-absolute "..")         @result{} "/a"
+(prepend-absolute "../..")      @result{} "/"
+
+(doit "../../../")              @error{} &normalisation
+
+(define (prepend-relative ptn)
+  (let* (((P <pathname>)
+          (pathname ptn))
+         ((Q <relative-pathname>)
+          (P.prepend (pathname "./a/b"))))
+    Q.string))
+
+(prepend-relative ".")          @result{} "a/b"
+(prepend-relative "c")          @result{} "a/b/c"
+(prepend-relative "c/d/e")      @result{} "a/b/c/d/e"
+(prepend-relative "..")         @result{} "a"
+(prepend-relative "../..")      @result{} "."
+(prepend-relative "../../..")   @result{} ".."
+(prepend-relative "../../../..") @result{} "../.."
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} append (@var{suffix} @aclass{relative-pathname})
+@deftypemethodx @aclass{relative-pathname} @aclass{relative-pathname} append (@var{suffix} @aclass{relative-pathname})
+Return a record holding an absolute or relative pathname representing
+this instance's pathname with @var{suffix} appended.
+
+This method is implemented by the @func{append} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{absolute-pathname} and @class{relative-pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (append-relative ptn)
+  (let* (((P <pathname>)
+          (pathname ptn))
+         ((Q <relative-pathname>)
+          (P.append (pathname "./a/b"))))
+    Q.string))
+
+(append-relative ".")           @result{} "a/b"
+(append-relative "c")           @result{} "c/a/b"
+(append-relative "c/d/e")       @result{} "c/d/e/a/b"
+(append-relative "..")          @result{} "../a/b"
+(append-relative "../..")       @result{} "../../a/b"
+(append-relative "../../..")    @result{} "../../../a/b"
+(append-relative "../../../..") @result{} "../../../../a/b"
+
+(append-relative "/")           @result{} "/d/e"
+(append-relative "/a/b")        @result{} "/a/b/d/e"
+@end example
+@end deftypemethod
+
+
+The following methods extract components from an absolute pathname; they
+are not implemented for relative pathnames because some operations are
+undefined.  For example, what is the directory part of the relative
+pathname @samp{a/../..}?
+
+Some methods deal with the @dfn{extension} and the @dfn{name}; the
+extension of a pathname segment is the trailing subvector up to the
+first byte representing a dot in @ascii{} coding, dot byte included; the
+name of a segment is everything but the extension.  A segment having no
+dot byte, has no extension; a segment having the first byte representing
+a dot, and no other dots, has no extension.
+
+Here is a table of examples for Unix pathnames:
+
+@example
+pathname        dirname  rootname    tail       extension  name
+---------------------------------------------------------------
+/               /        /           .          #f         .
+/dir            /        /dir        dir        #f         dir
+/dir/file.ext   /dir     /dir/file   file.ext   .ext       file
+/dir/.file      /dir     /dir/.file  .file      #f         .file
+/dir/.file.ext  /dir     /dir/.file  .file.ext  .ext       .file
+@end example
+
+
+@deftypemethod @aclass{pathname} @aclass{relative-pathname} tail
+Return a new @class{relative-pathname} object representing the last
+segment of this instance.  If the instance represents the root
+directory: the returned value has a single segment representing the
+single--dot entry.
+
+This method is implemented by the @func{tail} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (tail ptn)
+  (let* (((P <absolute-pathname>) (pathname ptn))
+         ((Q <relative-pathname>) (P.tail)))
+    Q.string))
+
+(tail "/")      @result{} "."
+(tail "/a")     @result{} "a"
+(tail "/a/b/c") @result{} "c"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} dirname
+Return a new @class{absolute-pathname} object representing all the
+segments in this instance but the last.  If the instance represents the
+root directory: the returned value represents the root directory, too.
+
+This method is implemented by the @func{dirname} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{absolute-pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (dirname ptn)
+  (let* (((P <absolute-pathname>) (pathname ptn))
+         ((Q <absolute-pathname>) (P.dirname)))
+    Q.string))
+
+(dirname "/")           @result{} "/"
+(dirname "/a")          @result{} "/"
+(dirname "/a/b/c")      @result{} "/a/b"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} rootname
+Return a new @class{absolute-pathname} object representing the same
+pathname of this instance, but having the last segment trimmed of the
+extension.
+
+This method is implemented by the @func{rootname} generic function from
+@library{nausicaa uri pathnames methods}; it must be implemented by concrete
+subclasses of @class{absolute-pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(define (rootname ptn)
+  (let* (((P <absolute-pathname>) (pathname ptn))
+         ((Q <absolute-pathname>) (P.rootname)))
+    Q.string))
+
+(rootname "/")                  @result{} "/"
+(rootname "/a")                 @result{} "/a"
+(rootname "/a/b/c")             @result{} "/a/b/c"
+
+(rootname "/.ciao")             @result{} "/.ciao"
+(rootname "/a/.ciao")           @result{} "/a/.ciao"
+(rootname "/a/b/c/.ciao")       @result{} "/a/b/c/.ciao"
+
+(rootname "/the-file.ext")      @result{} "/the-file"
+(rootname "/a/the-file.ext")    @result{} "/a/the-file"
+
+(rootname "/.the-file.ext")     @result{} "/.the-file"
+(rootname "/a/.the-file.ext")   @result{} "/a/.the-file"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{bytevector} extension
+Return a new bytevector representing the extension of the last segment
+in this instance.  If the last segment has no extension: the return
+value is false.
+
+This method is implemented by the @func{extension} generic function from
+@library{nausicaa uri pathnames methods}; it has a concrete implementation
+for the @class{absolute-pathname} class.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix)
+  (prefix (nausicaa uri pathnames unix low) ul.))
+
+(define (extension ptn)
+  (let (((P <absolute-pathname>) (pathname ptn)))
+    (ul.to-string (P.extension))))
+
+(extension "/")                 @result{} #f
+(extension "/a")                @result{} #f
+(extension "/a/b/c")            @result{} #f
+
+(extension "/.ciao")            @result{} #f
+(extension "/a/.ciao")          @result{} #f
+(extension "/a/b/c/.ciao")      @result{} #f
+
+(extension "/file.ext")         @result{} ".ext"
+(extension "/a/file.ext")       @result{} ".ext"
+(extension "/a/b/c/file.ext")   @result{} ".ext"
+
+(extension "/.file.ext")        @result{} ".ext"
+(extension "/a/.file.ext")      @result{} ".ext"
+(extension "/a/b/c/.file.ext")  @result{} ".ext"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{bytevector} name
+Return a new bytevector representing the name of the last segment in
+this instance.  If the instance represents the root directory: the
+returned value represents a single dot in @ascii{} coding.
+
+This method is implemented by the @func{name} generic function from
+@library{nausicaa uri pathnames methods}; it has a concrete implementation
+for the @class{absolute-pathname} class.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix)
+  (prefix (nausicaa uri pathnames unix low) ul.))
+
+(define (name ptn)
+  (let (((P <absolute-pathname>) (pathname ptn)))
+    (ul.to-string (P.name))))
+
+(name "/")                      @result{} "."
+(name "/a")                     @result{} "a"
+(name "/a/b/c")                 @result{} "c"
+
+(name "/.ciao")                 @result{} ".ciao"
+(name "/a/.ciao")               @result{} ".ciao"
+(name "/a/b/c/.ciao")           @result{} ".ciao"
+
+(name "/file.ext")              @result{} "file"
+(name "/a/file.ext")            @result{} "file"
+(name "/a/b/c/file.ext")        @result{} "file"
+
+(name "/.file.ext")             @result{} ".file"
+(name "/a/.file.ext")           @result{} ".file"
+(name "/a/b/c/.file.ext")       @result{} ".file"
+@end example
+@end deftypemethod
+
+
+@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@deftypemethodx @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{ext} @aclass{string})
+@deftypemethodx @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{source} @aclass{absolute-pathname})
+Return a pathname record representing the same pathname of this
+instance, but with the extension replaced with the one from
+@var{source}, which can be a bytevector, string or pathname.  The
+bytevector and string @var{ext} arguments must represent only the
+extension, leading dot byte included.
+
+When the instance represents the root directory: the returned value can
+be the instance itself or a new pathname record representing the root
+directory; in all the other cases the return value is a new pathname
+record.
+
+If @var{source} has no extension: raise an exception violation with
+condition types: @condition{pathname}, @condition{error},
+@condition{who}, @condition{message}, @condition{irritants}.
+
+This method is implemented by the @func{replace-extension} generic
+function from @library{nausicaa uri pathnames methods}; it must be
+implemented by concrete subclasses of @class{absolute-pathname}.
+
+@example
+#!r6rs
+(import (nausicaa)
+  (nausicaa uri pathnames unix))
+
+(let (((o <absolute-pathname>)
+      (pathname "/a/b/file.ext")))
+   (is-a? (o.replace-extension ".zip")
+          <absolute-pathname>))
+@result{} #t
+
+(define (doit input)
+  (let* (((o <absolute-pathname>)
+          (pathname input))
+         ((p <pathname>)
+          (o.replace-extension ".zip")))
+    p.string))
+
+(doit "/a/b/file.ext")  @result{} "/a/b/file.zip"
+(doit "/a/b/file")      @result{} "/a/b/file.zip"
+(doit "/a/b/file.")     @result{} "/a/b/file.zip"
+(doit "/a/b/.")         @result{} "/a/b.zip"
+(doit "/a/b/..")        @result{} "/a.zip"
+(doit "/")              @result{} "/"
+(doit "/a/b/.file.ext") @result{} "/a/b/.file.zip"
+(doit "/a/b/.file")     @result{} "/a/b/.file.zip"
+
+(let* (((o <absolute-pathname>)
+        (pathname "/a/b/file.ext"))
+       ((p <pathname>)
+        (o.replace-extension (pathname "/d/e/other.zip"))))
+  p.string)
+@result{} "/a/b/file.zip"
+@end example
+@end deftypemethod
+
+@c page
+@node uri pathnames abstract methods
+@subsubsection Extending class methods
+
+
+@cindex @library{nausicaa uri pathnames methods}, library
+@cindex Library @library{nausicaa uri pathnames methods}
+
+
+The following bindings are exported by the @library{nausicaa uri pathnames
+methods} library; it is meant to be used only when extending the class
+interface with new types.
+
+
+@deffn {Generic Function} string @var{self}
+The implementation of the virtual field @code{string} of
+@class{pathname} from @library{nausicaa uri pathnames abstract}.  It is
+meant to return a string representation of the pathname in the
+@code{bytevector} field.
+@end deffn
+
+
+@deffn {Generic Function} absolute @var{self} @var{absolute-base}
+The implementation of the @func{absolute} method of @class{pathname}
+from @library{nausicaa uri pathnames abstract}.  It is meant to return a new
+pathname record representing the absolute version of @var{self}
+normalised with respect to @var{absolute-base}.
+
+If @var{self} is already absolute: the return value can be @var{self}.
+@end deffn
+
+
+@deffn {Generic Function} prepend @var{suffix} @var{prefix}
+Return a record holding a relative pathname representing the pathname of
+@var{prefix} with the pathname @var{suffix} appended; both @var{prefix}
+and @var{suffix} must be relative pathname records.
+@end deffn
+
+
+@deffn {Generic Function} append @var{prefix} @var{suffix}
+Return a record holding a pathname (absolute or relative depending on
+the arguments) representing the pathname of @var{prefix} with the
+pathname @var{suffix} appended; @var{prefix} can be absolute or
+relative, @var{suffix} must be relative.
+@end deffn
+
+
+@deffn {Generic Function} tail @var{absolute-self}
+Return a new relative pathname object representing the last segment of
+@var{absolute-self}.  If the instance represents the root directory: the
+returned value has a single segment representing the single--dot entry.
+@end deffn
+
+
+@deffn {Generic Function} dirname @var{absolute-self}
+Return a new absolute pathname object representing all the segments in
+@var{absolute-self} but the last.  If the instance represents the root
+directory: the returned value represents the root directory, too.
+@end deffn
+
+
+@deffn {Generic Function} rootname @var{absolute-self}
+Return a new absolute pathname object representing the same pathname of
+@var{absolute-self}, but having the last segment trimmed of the
+extension.
+@end deffn
+
+
+@deffn {Generic Function} extension @var{absolute-self}
+Return a new bytevector representing the extension of the last segment
+in @var{absolute-self}.  If the last segment has no extension: the
+return value is false.
+@end deffn
+
+
+@deffn {Generic Function} name @var{absolute-self}
+Return a new bytevector representing the name of the last segment in
+@var{absolute-self}.  If the instance represents the root directory: the
+returned value represents a single dot in @ascii{} coding.
+@end deffn
+
+
+@deffn {Generic Function} replace-extension @var{self} @var{source}
+Replace the extension of the @var{self} pathname with the one from
+@var{source}, which can be a bytevector, string or pathname instance.
+@end deffn
+
+@c page
+@node uri pathnames native
+@subsection Manipulating native pathnames
+
+
+@cindex @library{nausicaa uri pathnames}, library
+@cindex Library @library{nausicaa uri pathnames}
+
+
+The library @library{nausicaa uri pathnames} is meant to export an interface
+which always handles native pathnames for the current platform; for
+example, on Unix systems it reexports the bindings from
+@library{nausicaa uri pathnames unix}.
+
+The platform--specific library is selected at package configuration time
+using the @option{--with-platform-pathname} option, whose default value
+is @code{unix}.
+
+The following definitions are a description of the @api{} which must be
+made available by the platform--specific pathname libraries.
+Platform--specific pathname classes are free to augment this @api{} with
+additional features, but these features cannot be made available in the
+native pathnames library.
+
+
+@deftp Class @aclass{pathname}
+This is the same binding exported by @library{nausicaa uri pathnames
+abstract}.
+@end deftp
+
+
+@deftp Class @aclass{absolute-pathname}
+Concrete type of absolute pathnames; it is derived from
+@class{absolute-pathname} exported by @library{nausicaa uri pathnames
+abstract}.
+@end deftp
+
+
+@deftp Class @aclass{relative-pathname}
+Concrete type of relative pathnames; it is derived from
+@class{relative-pathname} exported by @library{nausicaa uri pathnames
+abstract}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{absolute-pathname} constructor @var{obj}
+@defopx {Common constructor} @aclass{relative-pathname} constructor @var{obj}
+Build a new pathname record from @var{obj}, which must be a string or
+bytevector representing the pathname.  Class's fields are initialised
+with newly built values.
+
+An attempt to instantiate @class{absolute-pathname} from an @var{obj}
+representing a relative pathname or to instantiate
+@class{relative-pathname} from an @var{obj} representing an absolute
+pathname results in an assertion violation.
+
+If @var{obj} is empty an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions}.
+@end defop
+
+
+@deffn Maker make @aclass{absolute-pathname} . @meta{clauses}
+@deffnx Maker make @aclass{relative-pathname} . @meta{clauses}
+@deffnx Clause string: @meta{str}
+@deffnx Clause bytevector: @meta{bv}
+@deffnx Clause segments: @meta{segs}
+Build and return a new concrete pathname record.  These makers allow the
+direct specification of the segments, already validated and normalised.
+
+The clauses @clause{string:}, @clause{bytevector:} and
+@clause{segments:} are mutually exclusive.
+
+When the @clause{string:} or @clause{bytevector:} clause is present:
+this maker reverts to the use of the common constructor.
+
+When the @clause{segments:} clause is present: @meta{segs} must be a
+list of bytevectors, already validated and normalised, representing the
+pathname; the list is @strong{not} validated.
+
+We must use with care the @clause{segments:} clause, because no
+validation is performed on its argument; on the other hand, it is often
+needed to create a new pathname record by decomposing and recomposing
+other pathnames and in this case the list of validated and normalised
+segments is already available.
+@end deffn
+
+
+@defun pathname @var{obj}
+Build and return a new concrete pathname record from @var{obj}, which
+must be a string or bytevector representing the pathname.  Everything
+works as documented for the class constructors.  In general, we can
+think of the returned value as an instance of @class{pathname}.
+@end defun
+
+@c page
+@node uri pathnames unix
+@subsection Manipulating Unix pathnames
+
+
+@cindex @library{nausicaa uri pathnames unix}, library
+@cindex Library @library{nausicaa uri pathnames unix}
+
+
+The library @library{nausicaa uri pathnames unix} specialises the pathnames
+@api{} defined by @library{nausicaa uri pathnames abstract} to handle
+Unix--style pathnames.  It implements all the methods required by the
+abstract base classes.
+
+The binding @class{pathname} from @library{nausicaa uri pathnames abstract}
+is reexported by @library{nausicaa uri pathnames unix}.
+
+@menu
+* uri pathnames unix intro::        Introduction to Unix pathnames.
+* uri pathnames unix class::        Class interface.
+* uri pathnames unix low::          Low level functions.
+@end menu
+
+@c page
+@node uri pathnames unix intro
+@subsubsection Introduction to Unix pathnames
+
+
+A Unix pathname has the following grammar:
+
+@example
+unix-pathname      = absolute-pathname
+                   | relative-pathname
+
+absolute-pathname  = "/" segment *( "/" segment )
+relative-pathname  = segment-nz *( "/" segment )
+
+segment            = *char
+segment-nz         = 1*char
+
+char               = [1, 255]
+@end example
+
+@noindent
+where @math{[1, 255]} represents the byte interval between @math{1}
+included and @math{255} included.
+
+When using the @library{nausicaa uri pathnames unix} library we assume that
+it is fine to process the whole input bytevector and break it into
+components; if we are looking for speed of processing, we should use
+bytevectors directly.
+
+@c page
+@node uri pathnames unix class
+@subsubsection Class interface
+
+
+@deftp Class @aclass{absolute-pathname}
+Type of absolute Unix pathnames; it is derived from
+@class{absolute-pathname} exported by @library{nausicaa uri pathnames
+abstract}.
+@end deftp
+
+
+@deftp Class @aclass{relative-pathname}
+Type of relative Unix pathnames; it is derived from
+@class{relative-pathname} exported by @library{nausicaa uri pathnames
+abstract}.
+@end deftp
+
+
+@defop {Common constructor} @aclass{absolute-pathname} constructor @var{obj}
+@defopx {Common constructor} @aclass{relative-pathname} constructor @var{obj}
+Build and return a new Unix pathname record from @var{obj}, which must
+be a string or bytevector representing the pathname.
+
+An attempt to instantiate @class{absolute-pathname} from an @var{obj}
+representing a relative pathname or to instantiate
+@class{relative-pathname} from an @var{obj} representing an absolute
+pathname results in an assertion violation.
+
+If @var{obj} is empty an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions}.
+After parsing the input is normalised with @func{normalise-pathname}
+from @library{nausicaa uri pathnames unix low}; if normalisation fails: an
+exception is raised using @func{raise-normalisation-error} from
+@library{nausicaa uri pathnames conditions}.
+
+The class fields are initialised with newly built values.
+@end defop
+
+
+@deffn Maker make @aclass{absolute-pathname} . @meta{clauses}
+@deffnx Maker make @aclass{relative-pathname} . @meta{clauses}
+@deffnx Clause string: @meta{str}
+@deffnx Clause bytevector: @meta{bv}
+@deffnx Clause segments: @meta{segs}
+Build and return a new Unix pathname record.  These makers allow the
+direct specification of the segments, already validated and normalised.
+
+The clauses @clause{string:}, @clause{bytevector:} and
+@clause{segments:} are mutually exclusive.
+
+When the @clause{string:} or @clause{bytevector:} clause is present:
+this maker reverts to the use of the common constructor.
+
+When the @clause{segments:} clause is present: @meta{segs} must be a
+list of bytevectors, already validated and normalised, representing the
+pathname; the list is @strong{not} validated.
+
+We must use with care the @clause{segments:} clause, because no
+validation is performed on its argument; on the other hand, it is often
+needed to create a new pathname record by decomposing and recomposing
+other pathnames and in this case the list of validated and normalised
+segments is already available.
+@end deffn
+
+
+@defun pathname @var{obj}
+Build and return a new Unix pathname record from @var{obj}, which must
+be a string or bytevector representing the pathname.  Everything works
+as documented for the class constructors.  In general, we can think of
+the returned value as an instance of @class{pathname}.
+@end defun
+
+@c page
+@node uri pathnames unix low
+@subsubsection Low level functions
+
+
+@cindex @library{nausicaa uri pathnames unix low}, library
+@cindex Library @library{nausicaa uri pathnames unix low}
+
+
+The following bindings are exported by the @library{nausicaa uri pathnames
+unix low} library; it is suggested to use a prefix when importing the
+library.
+
+
+@defun to-bytevector @var{obj}
+Convert the string @var{obj} to a bytevector representation; characters
+are taken from @var{obj} and inserted into the resulting bytevector
+after decoding them, char to byte, as @ascii{}.  If OBJ is already a
+bytevector: @var{obj} itself is returned.
+
+If a character or byte from the input is invalid for a Unix pathname:
+raise an exception using @func{raise-byte-error} from @library{nausicaa
+pathnames conditions}.
+@end defun
+
+
+@defun to-string @var{obj}
+Convert the bytevector @var{obj} to a string representation; bytes are
+taken from @var{obj} and inserted into the resulting string after
+encoding them, byte to char, as @ascii{}.  If @var{obj} is already a
+string: @var{obj} itself is returned.
+
+If a byte or character from the input is invalid for a Unix pathname:
+raise an exception using @func{raise-byte-error} from @library{nausicaa
+pathnames conditions}.
+@end defun
+
+
+@defun parse-segment @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If @eof{} or a slash character in @ascii{} coding is read: return a
+possibly empty bytevector holding the bytes accumulated so far; the port
+position is left pointing to the byte after the last accumulated one.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+the port position is rewind to the one before this function call.
+@end defun
+
+
+@defun parse-segment-nz @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment-nz} component; notice that an empty @code{segment-nz} is
+not valid.
+
+If the first read operation returns @eof{} or a slash character in
+@ascii{} coding: the port position is restored to the one before this
+function call and the return value is false.
+
+If, after at least one valid byte is read, @eof{} or a slash is read:
+return a bytevector holding the bytes accumulated so far; the port
+position is left pointing to the byte after the last accumulated one.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+the port position is rewind to the one before this function call.
+@end defun
+
+
+@defun parse-slash-and-segment @var{port}
+Attempt to read from @var{port} the sequence slash character plus
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If these components are successfully read: return a bytevector holding
+the accumulated @code{segment} bytes; if the @code{segment} component is
+empty: the returned bytevector is normalised to hold a single byte
+representing a dot in @ascii{} coding.  The port position is left
+pointing to the byte after the last accumulated byte from the
+@code{segment}.
+
+If @eof{} or a valid byte different from slash is read as first byte:
+return false; the port position is rewind to the one before this
+function call.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+the port position is rewind to the one before this function call.
+@end defun
+
+
+@defun parse-pathname @var{port}
+Parse from @var{port} an absolute or relative pathname until @eof{} is
+found; return two values: a boolean, true if the pathname is absolute;
+false if @eof{} is the first byte read or a, possibly empty, list of
+bytevectors representing the segments.  Empty @code{segment} components
+are represented by bytevectors holding a single byte representing a dot
+in @ascii{} coding.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+the port position is rewind to the one before this function call.
+@end defun
+
+
+@defun normalise-pathname @var{absolute?} @var{segments}
+Given a list of bytevectors representing segments: normalise them, as
+much as possible, removing segments representing single--dot and
+double--dot directory entries; if @var{absolute?} is true: normalise
+@var{segments} as an absolute pathname, else normalise it as a relative
+pathname.  Return two values:
+
+@enumerate
+@item
+A boolean, true if some change was made from @var{segments} to the
+second returned value; this allows us to detect if a normalised list of
+segments when serialised into a bytevector becomes different from the
+original bytevector.
+
+@item
+When the normalisation succeeds: a new, possibly empty, list of
+bytevectors representing the normalisation of @var{segments}.  Absolute
+pathname segments can hold neither single--dot nor double--dot segments:
+if a double--dot segment cannot be removed, this value is false (and the
+first too).
+
+Segments from the original @var{segments} argument are shared with this
+returned value.
+@end enumerate
+
+Notice that empty input bytevectors are not handled specially: they
+should be avoided, but no error is raised and they are @strong{not}
+interpreted as equivalent to bytevectors holding a single byte
+representing a dot in @ascii{} coding.
+@end defun
+
+
+@defun serialise-segments @var{absolute?} @var{segments}
+Given a possibly empty list of bytevectors representing pathname
+segments build and return a new bytevector representing the full
+pathname; if @var{absolute?} is true: the first byte of the result
+represents a slash in @ascii{} coding.
+
+If @var{segments} is empty and @var{absolute?} is true: the returned
+value is a bytevector holding a single byte representing a slash in
+@ascii{} coding.
+
+If @var{segments} is empty and @var{absolute?} is false: the returned
+value is a bytevector holding a single byte representing a dot in
+@ascii{} coding.
+@end defun
+
+@c page
+@node uri pathnames errors
+@subsection Representing errors
+
+
+@cindex @library{nausicaa uri pathnames conditions}, library
+@cindex Library @library{nausicaa uri pathnames conditions}
+
+
+Condition object types are exported only by the @library{nausicaa
+pathname conditions} library; it is suggested to add a prefix when
+importing this library.
+
+@menu
+* uri pathnames errors generic::    Base condition type.
+* uri pathnames errors byte::       Byte conversion error
+                                condition type.
+* uri pathnames errors parser::     Parser error condition type.
+* uri pathnames errors normalise::  Pathname normalisation error
+                                condition type.
+@end menu
+
+@c page
+@node uri pathnames errors generic
+@subsubsection Base condition type
+
+
+The following bindings are exported by the @library{nausicaa uri pathname
+conditions} library; it is suggested to add a prefix when importing the
+library.
+
+
+@deftp {Condition Type} &pathname
+Base type for all the condition types used by the @library{nausicaa
+pathname --} hierarchy of libraries; it is derived from
+@condition{error}.
+@end deftp
+
+
+@defun make-pathname-condition
+Build and return a new @condition{pathname} condition value.
+@end defun
+
+
+@defun pathname-condition? @var{obj}
+Return @true{} if @var{obj} is a condition value of type
+@condition{pathname}.
+@end defun
+
+@c page
+@node uri pathnames errors byte
+@subsubsection Byte conversion error condition type
+
+
+The following bindings are exported by the @library{nausicaa uri pathname
+conditions} library; it is suggested to add a prefix when importing the
+library.
+
+
+@deftp {Condition Type} &byte
+Condition type representing a byte--to--char or char--to--byte
+conversion error: it is used when converting to string a bytevector
+representing a pathname, or vice versa; it is derived from
+@condition{pathname}.
+
+It has the following fields:
+
+@table @code
+@item sequence
+The original string or bytevector.
+
+@item offset
+The offset of the byte or character who triggered the error.
+@end table
+@end deftp
+
+
+@defun make-byte-condition @var{sequence} @var{offset}
+Build and return a new @condition{byte} condition value.
+@end defun
+
+
+@defun byte-condition? @var{obj}
+Return @true{} if @var{obj} is a condition value of type
+@condition{byte}.
+@end defun
+
+
+@defun condition-byte/sequence @var{obj}
+@defunx condition-byte/offset @var{obj}
+Accessors for the fields of a condition value of type @condition{byte}.
+@end defun
+
+
+@deffn Syntax raise-byte-error @var{who} @var{message} @var{sequence} @var{offset}
+Raise an exception with compound condition object of types
+@condition{byte}, @condition{who}, @condition{message}.
+@end deffn
+
+@c page
+@node uri pathnames errors parser
+@subsubsection Parser error condition type
+
+
+The following bindings are exported by the @library{nausicaa uri pathname
+conditions} library; it is suggested to add a prefix when importing the
+library.
+
+
+@deftp {Condition Type} &parser
+Condition type representing a pathname parser error: it is used when
+parsing a bytevector representing a pathname through a bytevector--based
+binary input port; it is derived from @condition{pathname}.
+
+It has the following fields:
+
+@table @code
+@item port
+The binary input port drawing bytes from the bytevector.
+
+@item offset
+The offset of the byte who triggered the error.
+@end table
+@end deftp
+
+
+@defun make-parser-condition @var{port} @var{offset}
+Build and return a new @condition{parser} condition value.
+@end defun
+
+
+@defun parser-condition? @var{obj}
+Return @true{} if @var{obj} is a condition value of type
+@condition{parser}.
+@end defun
+
+
+@defun condition-parser/port @var{obj}
+@defunx condition-parser/offset @var{obj}
+Accessors for the fields of a condition value of type
+@condition{parser}.
+@end defun
+
+
+@deffn Syntax raise-parser-error @var{who} @var{message} @var{port} @var{offset}
+Raise an exception with compound condition object of types
+@condition{parser}, @condition{who}, @condition{message}.
+@end deffn
+
+@c page
+@node uri pathnames errors normalise
+@subsubsection Pathname normalisation error condition type
+
+
+The following bindings are exported by the @library{nausicaa uri pathname
+conditions} library; it is suggested to add a prefix when importing the
+library.
+
+
+@deftp {Condition Type} &normalisation
+Condition type representing a pathname normalisation error: it is used
+when an error occurs normalising a list of bytevectors representing
+pathname segments; it is derived from @condition{pathname}.
+
+It has the following fields:
+
+@table @code
+@item absolute?
+A boolean value, @true{} if the list of bytevectors represents an
+absolute pathname.
+
+@item original-segments
+A list of bytevectors representing pathname segments which originated
+the error; it is the list before any normalisation.
+@end table
+@end deftp
+
+
+@defun make-normalisation-condition @var{absolute?} @var{original-segments}
+Build and return a new @condition{normalisation} condition value.
+@end defun
+
+
+@defun normalisation-condition? @var{obj}
+Return @true{} if @var{obj} is a condition value of type
+@condition{normalisation}.
+@end defun
+
+
+@defun condition-normalisation/absolute? @var{obj}
+@defunx condition-normalisation/original-segments @var{obj}
+Accessors for the fields of a condition value of type
+@condition{normalisation}.
+@end defun
+
+
+@deffn Syntax raise-normalisation-error @var{who} @var{message} @var{absolute?} @var{original-segments}
+Raise an exception with compound condition object of types
+@condition{normalisation}, @condition{who}, @condition{message}.
+@end deffn
+
+
+@c end of file

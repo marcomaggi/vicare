@@ -157,6 +157,7 @@ nausicaa_TEXINFOS	= \
 	nausicaa-parser-tools-uri.texi				\
 	\
 	nausicaa-uri-uri.texi					\
+	nausicaa-uri-pathnames.texi				\
 	\
 	macros.texi						\
 	fdl-1.3.texi						\

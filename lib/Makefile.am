@@ -1,10 +1,11 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST = \
-	vicare/platform/configuration.sls.in	\
-	vicare/platform/constants.sls.in	\
-	vicare/platform/errno.sls.in		\
-	vicare/platform/words.sls.in
+	vicare/platform/configuration.sls.in				\
+	vicare/platform/constants.sls.in				\
+	vicare/platform/errno.sls.in					\
+	vicare/platform/words.sls.in					\
+	nausicaa/uri/pathnames.sls.in
 
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
@@ -143,11 +144,12 @@ nobase_dist_libvicare_DATA	= \
 	vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l
 
 nobase_nodist_libvicare_DATA	= \
-	vicare/platform/configuration.sls	\
-	vicare/platform/constants.sls		\
-	vicare/platform/errno.sls		\
-	vicare/platform/features.sls		\
-	vicare/platform/words.sls
+	vicare/platform/configuration.sls		\
+	vicare/platform/constants.sls			\
+	vicare/platform/errno.sls			\
+	vicare/platform/features.sls			\
+	vicare/platform/words.sls			\
+	nausicaa/uri/pathnames.sls
 
 if WANT_SRFI
 nobase_dist_libvicare_DATA	+= \
@@ -328,6 +330,9 @@ nobase_dist_libvicare_DATA	+= \
 	\
 	nausicaa/uri/ip.sls						\
 	nausicaa/uri.sls						\
+	nausicaa/uri/pathnames.sls					\
+	nausicaa/uri/pathnames/unix.sls					\
+	nausicaa/uri/pathnames/abstract.sls				\
 	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
