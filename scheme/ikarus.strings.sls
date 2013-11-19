@@ -1295,17 +1295,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (string-base64->bytevector S)
+(define* (string-base64->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
   ;;the byte representation of the Base64 sequences.
   ;;
-  (define who 'string-base64->bytevector)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((string	S))
     ($string-base64->bytevector S)))
 
-(define ($string-base64->bytevector S)
-  (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S)))
+(define* ($string-base64->bytevector S)
+  (let ((bv (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S))))
+    (or bv
+	(procedure-argument-violation __who__
+	  "invalid characters in string for base64 encoding" S))))
 
 
 ;;;; bytevectors to/from RFC 3986 URI percent encoding
