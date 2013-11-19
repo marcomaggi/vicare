@@ -3132,10 +3132,10 @@ is equivalent to a binding tagged with @class{top}.
 
 @cindex @code{__who__}
 When the syntax is used for function definition, the @meta{body} forms
-are enclosed in a @func{let} syntax as follows:
+are enclosed in a @func{let-constants} syntax as follows:
 
 @example
-(let ((__who__ (quote @meta{id})))
+(let-constants ((__who__ (quote @meta{id})))
   @metao{body} @meta{body} @dots{})
 @end example
 
