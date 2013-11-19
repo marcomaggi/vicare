@@ -538,6 +538,20 @@ identifiers.
 
 If a method is defined with the same signature of an already registered
 method: the old method is overwritten by the new one.
+
+@cindex @code{__who__}
+The @meta{body} forms are enclosed in a @func{let-constants} syntax as
+follows:
+
+@example
+(let-constants ((__who__ (quote @meta{generic})))
+  @metao{body} @meta{body} @dots{})
+@end example
+
+@noindent
+so the binding @code{__who__} is available in the body forms to
+reference a symbol representing the generic function's name.  This is
+useful when raising exceptions with condition type @condition{who}.
 @end deffn
 
 
