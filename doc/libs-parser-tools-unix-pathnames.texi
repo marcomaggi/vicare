@@ -18,9 +18,12 @@ When importing it, it is suggested to prefix the bindings with
 
 
 @menu
-* parser-tools unix-pathnames grammar::  Grammar of Unix pathnames.
-* parser-tools unix-pathnames preds::    Predicates for Unix pathnames.
-* parser-tools unix-pathnames conv::     Converting Unix pathnames.
+* parser-tools unix-pathnames grammar:: Grammar of Unix pathnames.
+* parser-tools unix-pathnames errors::  Condition object types.
+* parser-tools unix-pathnames preds::   Predicates for Unix pathnames.
+* parser-tools unix-pathnames conv::    Converting Unix pathnames.
+* parser-tools unix-pathnames parser::  Parsing Unix pathnames.
+* parser-tools unix-pathnames manip::   Manipulating Unix pathnames.
 @end menu
 
 @c page
@@ -45,9 +48,81 @@ char               = [1, 255]
 
 @noindent
 where @math{[1, 255]} represents the octet interval between @math{1}
-included and @math{255} included.  An empty @code{pathname} or
-@code{segment} is interpreted as equivalent to a pathname segment
-representing the current directory @samp{.}.
+included and @math{255} included.  Notice that: an empty @code{pathname}
+is invalid; an empty @code{segment} is valid and interpreted as
+equivalent to a pathname segment representing the current directory
+@samp{.}.
+
+@c page
+@node parser-tools unix-pathnames errors
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Parser errors
+
+
+@deftp {Condition Type} &unix-pathname-parser-error
+Signals an error while parsing a Unix pathname representation; it is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-unix-pathname-parser-error
+Build and return a new condition object of type
+@condition{unix-pathname-parser-error}.
+@end defun
+
+
+@defun unix-pathname-parser-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unix-pathname-parser-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Normalisation errors
+
+
+@deftp {Condition Type} &unix-pathname-normalisation-error
+Signals an error while normalising a Unix pathname representation; it is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-unix-pathname-normalisation-error
+Build and return a new condition object of type
+@condition{unix-pathname-normalisation-error}.
+@end defun
+
+
+@defun unix-pathname-normalisation-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unix-pathname-normalisation-error}; otherwise return
+@false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Raising exceptions
+
+
+@defun raise-unix-pathname-parser-error @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{unix-pathname-parser-error}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
+
+
+@defun raise-unix-pathname-normalisation-error @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{unix-pathname-normalisation-error}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
 
 @c page
 @node parser-tools unix-pathnames preds
@@ -100,7 +175,7 @@ When @var{obj} is a string: only characters whose Unicode code point is
 in the range @math{[1, 255]} are accepted, notice that zero is excluded;
 in this case a new bytevector is returned.  An empty string is
 equivalent to a pathname segment representing the current directory: the
-return value is #vu8(46).
+return value is @code{#vu8(46)}.
 
 When @var{obj} is a bytevector: all the octets are accepted, with the
 exception of the octet zero; in this case @var{obj} itself is returned.
@@ -116,11 +191,21 @@ pathname representation; when successful return a string, if an error
 occurs raise an exception with compound condition object of types:
 @condition{unix-pathname-parser-error}, @condition{who},
 @condition{message}, @condition{irritants} using the optional @var{who}
-as value for the condition object of type @condition{who}.
+as value for the condition object of type @condition{who}.  An empty
+bytevector is equivalent to a bytevector representing the current
+directory: the return value is @code{"."}.
 
 All the octets in the bytevector are considered valid, with the
 exception of the octet zero.
 @end defun
+
+@c page
+@node parser-tools unix-pathnames parser
+@subsection Parsing Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
 
 
 @defun parse-segment @var{port}
@@ -132,8 +217,8 @@ possibly empty bytevector holding the bytes accumulated so far; the port
 position is left pointing to the byte after the last accumulated one.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{vicare uri pathnames conditions};
-the port position is rewind to the one before this function call.
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 
@@ -151,8 +236,8 @@ return a bytevector holding the bytes accumulated so far; the port
 position is left pointing to the byte after the last accumulated one.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{vicare uri pathnames conditions};
-the port position is rewind to the one before this function call.
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 
@@ -172,8 +257,8 @@ return false; the port position is rewind to the one before this
 function call.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{vicare uri pathnames conditions};
-the port position is rewind to the one before this function call.
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
 
 
@@ -186,10 +271,17 @@ are represented by bytevectors holding a single byte representing a dot
 in @ascii{} coding.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames
-conditions}; the port position is rewind to the one before this function
-call.
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
 @end defun
+
+@c page
+@node parser-tools unix-pathnames manip
+@subsection Manipulating Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
 
 
 @defun normalise-pathname @var{absolute?} @var{segments}
