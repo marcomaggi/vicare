@@ -535,6 +535,202 @@
   #t)
 
 
+(parametrise ((check-test-name	'components/extension))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.pathname-extension ?pathname) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "ciao.it"			"it")
+  (doit "ciao"				"")
+  (doit "/path/to/file.ext"		"ext")
+  (doit "/path/to/file."		"")
+  (doit "/path/to/file"			"")
+  (doit "/path/to/file.ext/ab"		"")
+  (doit "/path/to/some.file.ext"	"ext")
+  (doit "a/"				"")
+
+;;; --------------------------------------------------------------------
+
+  (doit '#ve(ascii "ciao.it")			'#ve(ascii "it"))
+  (doit '#ve(ascii "ciao")			'#ve(ascii ""))
+  (doit '#ve(ascii "/path/to/file.ext")		'#ve(ascii "ext"))
+  (doit '#ve(ascii "/path/to/file.")		'#ve(ascii ""))
+  (doit '#ve(ascii "/path/to/file")		'#ve(ascii ""))
+  (doit '#ve(ascii "/path/to/file.ext/ab")	'#ve(ascii ""))
+  (doit '#ve(ascii "/path/to/some.file.ext")	'#ve(ascii "ext"))
+  (doit '#ve(ascii "a/")			'#ve(ascii ""))
+
+  #t)
+
+
+#|
+
+#PAGE
+
+file-dirname-1.1 () { mbfl_file_dirname /path/to/file.ext | dotest-output "/path/to"; }
+file-dirname-1.2 () { mbfl_file_dirname file.ext | dotest-output .; }
+file-dirname-1.3 () { mbfl_file_dirname /file.ext | dotest-output /; }
+file-dirname-1.4 () { mbfl_file_dirname //file.ext | dotest-output /; }
+file-dirname-1.5 () { mbfl_file_dirname /path/to///file.ext | dotest-output "/path/to"; }
+file-dirname-1.6 () { mbfl_file_dirname //////file.ext | dotest-output "/"; }
+file-dirname-1.7 () { mbfl_file_dirname a/b | dotest-output "a"; }
+file-dirname-1.8 () { mbfl_file_dirname a | dotest-output "."; }
+file-dirname-1.9 () { mbfl_file_dirname ../a | dotest-output ".."; }
+file-dirname-1.10 () { mbfl_file_dirname ./a | dotest-output "."; }
+file-dirname-1.11 () { mbfl_file_dirname ../abcd | dotest-output ".."; }
+file-dirname-1.12 () { mbfl_file_dirname ./abcd | dotest-output "."; }
+file-dirname-1.13 () { mbfl_file_dirname ../abcd/efgh | dotest-output "../abcd"; }
+file-dirname-1.14 () { mbfl_file_dirname ./abcd/efgh | dotest-output "./abcd"; }
+
+#PAGE
+
+function file-normalise-1.1 () {
+    local testdir=$(dotest-mkdir a/b)
+
+    {
+	dotest-cd-tmpdir
+	mbfl_file_normalise a/b
+	dotest-clean-files
+    } | dotest-output "${testdir}"
+}
+function file-normalise-1.2 () {
+    mbfl_file_normalise /path/to/file.ext | dotest-output "/path/to/file.ext"
+}
+function file-normalise-1.4 () {
+    local testdir=$(dotest-mkdir a/b)
+
+    {
+	dotest-cd-tmpdir
+	mbfl_file_normalise "a/b/.."
+	dotest-clean-files
+    } | dotest-output "$(dotest-echo-tmpdir)/a"
+}
+function file-normalise-1.5 () {
+    local testdir=`dotest-mkdir a/b/c`
+
+    {
+	dotest-cd-tmpdir
+	mbfl_file_normalise "a/./b/./c"
+	dotest-clean-files
+    } | dotest-output "${testdir}"
+}
+function file-normalise-1.6 () {
+    local testdir=`dotest-mkdir a/b/c`
+
+    {
+	dotest-cd-tmpdir
+	mbfl_file_normalise "a/b/c/../.."
+	dotest-clean-files
+    } | dotest-output "$(dotest-echo-tmpdir)/a"
+}
+function file-normalise-1.7 () {
+    local testdir=`dotest-mkdir a/b`
+
+    {
+	dotest-cd-tmpdir a/b
+	mbfl_file_normalise ../b
+	dotest-clean-files
+    } | dotest-output "${testdir}"
+}
+#page
+
+function file-normalise-2.3 () {
+    mbfl_file_normalise a/b wo | dotest-output wo/a/b
+}
+function file-normalise-2.4 () {
+    mbfl_file_normalise X/../Y abc/def/ghi/lmn/opq/rst | \
+	dotest-output abc/def/ghi/lmn/opq/rst/Y
+}
+function file-normalise-2.5 () {
+    mbfl_file_normalise X/Y/../Y abc/def/ghi/lmn/opq/rst | \
+	dotest-output abc/def/ghi/lmn/opq/rst/X/Y
+}
+function file-normalise-2.6 () {
+    mbfl_file_normalise X/Y/../Y abc/def/ghi/../lmn/opq/rst | \
+	dotest-output abc/def/lmn/opq/rst/X/Y
+}
+
+#page
+
+function file-subpathname-1.1 () {
+    mbfl_file_subpathname /a /a | dotest-output ./
+}
+
+function file-subpathname-2.1 () {
+    mbfl_file_subpathname /a/b/c /a/ | dotest-output ./b/c
+}
+function file-subpathname-2.2 () {
+    mbfl_file_subpathname /a/b/c /a | dotest-output ./b/c
+}
+
+function file-subpathname-3.1 () {
+    mbfl_file_subpathname /a/b/c /d || true
+}
+
+#PAGE
+
+function file-rootname-1.1 () {
+    mbfl_file_rootname /path/to/file.ext | dotest-output "/path/to/file"
+}
+function file-rootname-1.2 () {
+    mbfl_file_rootname /path/to/file | dotest-output "/path/to/file"
+}
+function file-rootname-1.3 () {
+    mbfl_file_rootname /path/to/ab.cd/file | dotest-output "/path/to/ab.cd/file"
+}
+function file-rootname-1.4 () {
+    mbfl_file_rootname .wow | dotest-output ".wow"
+}
+function file-rootname-1.5 () {
+    mbfl_file_rootname a | dotest-output "a"
+}
+
+#PAGE
+
+function file-split-1.1 () {
+    local SPLITPATH SPLITCOUNT; declare -a SPLITPATH
+
+    mbfl_file_split /path/to/file.ext
+    dotest-equal path "${SPLITPATH[0]}" && \
+        dotest-equal to "${SPLITPATH[1]}" && \
+        dotest-equal file.ext "${SPLITPATH[2]}" &&\
+	dotest-equal 3 $SPLITCOUNT
+}
+function file-split-1.2 () {
+    local SPLITPATH SPLITCOUNT; declare -a SPLITPATH
+
+    mbfl_file_split a
+    dotest-equal a "${SPLITPATH[0]}" && \
+    	dotest-equal 1 $SPLITCOUNT
+}
+function file-split-1.3 () {
+    local SPLITPATH SPLITCOUNT; declare -a SPLITPATH
+
+    mbfl_file_split ///path///////////to/file.ext
+    dotest-equal path "${SPLITPATH[0]}" && \
+        dotest-equal to "${SPLITPATH[1]}" && \
+        dotest-equal file.ext "${SPLITPATH[2]}" && \
+	dotest-equal 3 $SPLITCOUNT
+}
+
+#PAGE
+
+function file-tail-1.1 () {
+    mbfl_file_tail /path/to/file.ext | dotest-output "file.ext"
+}
+function file-tail-1.2 () {
+    mbfl_file_tail /path/to/ | dotest-output
+}
+function file-tail-1.3 () {
+    mbfl_file_tail file.ext | dotest-output "file.ext"
+}
+
+
+|#
+
+
 ;;;; done
 
 (check-report)

@@ -24,6 +24,7 @@ When importing it, it is suggested to prefix the bindings with
 * parser-tools unix-pathnames conv::    Converting Unix pathnames.
 * parser-tools unix-pathnames parser::  Parsing Unix pathnames.
 * parser-tools unix-pathnames manip::   Manipulating Unix pathnames.
+* parser-tools unix-pathnames comp::    Components of Unix pathnames.
 @end menu
 
 @c page
@@ -134,6 +135,8 @@ parser-tools unix-pathnames}.
 
 
 @defun pathname? @var{obj}
+@defunx bytevector-pathname? @var{obj}
+@defunx string-pathname? @var{obj}
 Return @true{} if @var{obj} is a string or bytevector acceptable as
 representation of a Unix pathname; otherwise return @false{}.  If
 @var{obj} is neither string nor bytevector: return @false{}.
@@ -319,5 +322,43 @@ If @var{segments} is null and @var{absolute?} is false: the returned
 value is a bytevector holding a single byte representing a dot in
 @ascii{} coding.
 @end defun
+
+@c page
+@node parser-tools unix-pathnames comp
+@subsection Components of Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun pathname-extension @var{obj}
+Return a new string or bytevector representing the extension of
+@var{obj}, which must be a valid Unix pathname string or bytevector
+representation.  The extension of a pathname is the sequence of
+characters from the end up to the first dot character before the first
+slash character; the returned value does @strong{not} include the dot
+character and can be empty.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.pathname-extension ?pathname))
+
+(doit "ciao.it"                 @result{} "it"
+(doit "ciao"                    @result{} ""
+(doit "/path/to/file.ext"       @result{} "ext"
+(doit "/path/to/file."          @result{} ""
+(doit "/path/to/file"           @result{} ""
+(doit "/path/to/file.ext/ab"    @result{} ""
+(doit "/path/to/some.file.ext"  @result{} "ext"
+(doit "ciao/"                   @result{} ""
+@end example
+@end defun
+
+
 
 @c end of file
