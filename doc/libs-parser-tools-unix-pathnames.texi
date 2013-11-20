@@ -2,44 +2,121 @@
 @section Parsing Unix file system pathnames
 
 
-@cindex @library{nausicaa parser-tools unix-pathnames}, library
-@cindex Library @library{nausicaa parser-tools unix-pathnames}
+@cindex @library{vicare parser-tools unix-pathnames}, library
+@cindex Library @library{vicare parser-tools unix-pathnames}
 
 
-The following bindings are exported by the library @library{nausicaa
-parser-tools unix-pathnames}; when importing it, it is suggested to
-prefix the bindings with @samp{pathnames.} as in:
+The library @library{vicare parser-tools unix-pathnames} implements
+facilities for parsing and manipulating Unix file system pathnames.
+When importing it, it is suggested to prefix the bindings with
+@samp{uxptn.} as in:
 
 @example
-(import (nausicaa)
-  (prefix (nausicaa parser-tools unix-pathnames) pathnames.))
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
 @end example
 
 
-@defun string/bytevector->pathname-bytevector @var{who} @var{obj}
+@menu
+* parser-tools unix-pathnames grammar::  Grammar of Unix pathnames.
+* parser-tools unix-pathnames preds::    Predicates for Unix pathnames.
+* parser-tools unix-pathnames conv::     Converting Unix pathnames.
+@end menu
+
+@c page
+@node parser-tools unix-pathnames grammar
+@subsection Grammar of Unix pathnames
+
+
+A Unix pathname has the following grammar:
+
+@example
+pathname           = absolute-pathname
+                   | relative-pathname
+
+absolute-pathname  = "/" segment *( "/" segment )
+relative-pathname  = segment-nz *( "/" segment )
+
+segment            = *char
+segment-nz         = 1*char
+
+char               = [1, 255]
+@end example
+
+@noindent
+where @math{[1, 255]} represents the octet interval between @math{1}
+included and @math{255} included.  An empty @code{pathname} or
+@code{segment} is interpreted as equivalent to a pathname segment
+representing the current directory @samp{.}.
+
+@c page
+@node parser-tools unix-pathnames preds
+@subsection Predicates for Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun pathname? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of a Unix pathname; otherwise return @false{}.  If
+@var{obj} is neither string nor bytevector: return @false{}.
+@end defun
+
+
+@defun segment? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of a Unix pathname segment; otherwise return @false{}.
+If @var{obj} is neither string nor bytevector: return @false{}.
+@end defun
+
+
+@defun list-of-segments? @var{obj}
+Return @true{} if @var{obj} is a null or a proper list of strings and/or
+bytevectors each acceptable as representation of a Unix pathname
+segment; otherwise return @false{}.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames conv
+@subsection Converting Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun string/bytevector->pathname-bytevector @var{obj}
+@defunx string/bytevector->pathname-bytevector @var{obj} @var{who}
 Convert the string or bytevector @var{obj} to a bytevector
 representation of a pathname; when successful return a bytevector, if an
 error occurs raise an exception with compound condition object of types:
 @condition{unix-pathname-parser-error}, @condition{who},
-@condition{message}, @condition{irritants} using @var{who} as value for
-the condition object of type @condition{who}.
+@condition{message}, @condition{irritants} using the optional @var{who}
+as value for the condition object of type @condition{who}.
 
 When @var{obj} is a string: only characters whose Unicode code point is
 in the range @math{[1, 255]} are accepted, notice that zero is excluded;
-in this case a new bytevector is returned.
+in this case a new bytevector is returned.  An empty string is
+equivalent to a pathname segment representing the current directory: the
+return value is #vu8(46).
 
 When @var{obj} is a bytevector: all the octets are accepted, with the
 exception of the octet zero; in this case @var{obj} itself is returned.
+An empty bytevector is equivalent to a pathname segment representing the
+current directory: the return value is @code{#vu8(46)}.
 @end defun
 
 
-@defun pathname-bytevector->string @var{who} @var{obj}
+@defun pathname-bytevector->string @var{obj}
+@defunx pathname-bytevector->string @var{obj} @var{who}
 Convert the bytevector pathname representation @var{obj} to a string
 pathname representation; when successful return a string, if an error
 occurs raise an exception with compound condition object of types:
 @condition{unix-pathname-parser-error}, @condition{who},
-@condition{message}, @condition{irritants} using @var{who} as value for
-the condition object of type @condition{who}.
+@condition{message}, @condition{irritants} using the optional @var{who}
+as value for the condition object of type @condition{who}.
 
 All the octets in the bytevector are considered valid, with the
 exception of the octet zero.
@@ -55,7 +132,7 @@ possibly empty bytevector holding the bytes accumulated so far; the port
 position is left pointing to the byte after the last accumulated one.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+@func{raise-parser-error} from @library{vicare uri pathnames conditions};
 the port position is rewind to the one before this function call.
 @end defun
 
@@ -74,7 +151,7 @@ return a bytevector holding the bytes accumulated so far; the port
 position is left pointing to the byte after the last accumulated one.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+@func{raise-parser-error} from @library{vicare uri pathnames conditions};
 the port position is rewind to the one before this function call.
 @end defun
 
@@ -95,7 +172,7 @@ return false; the port position is rewind to the one before this
 function call.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
+@func{raise-parser-error} from @library{vicare uri pathnames conditions};
 the port position is rewind to the one before this function call.
 @end defun
 
@@ -109,8 +186,9 @@ are represented by bytevectors holding a single byte representing a dot
 in @ascii{} coding.
 
 If an invalid byte is read: an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions};
-the port position is rewind to the one before this function call.
+@func{raise-parser-error} from @library{nausicaa uri pathnames
+conditions}; the port position is rewind to the one before this function
+call.
 @end defun
 
 
@@ -161,3 +239,4 @@ value is a bytevector holding a single byte representing a dot in
 @ascii{} coding.
 @end defun
 
+@c end of file

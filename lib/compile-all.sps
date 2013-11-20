@@ -117,6 +117,7 @@
   (only (vicare parser-tools silex lexer))
   (only (vicare parser-tools silex))
   (only (vicare parser-tools silex utilities))
+  (only (vicare parser-tools unix-pathnames))
 
   (only (vicare net channels))
 

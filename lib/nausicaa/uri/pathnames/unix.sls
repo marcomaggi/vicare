@@ -33,11 +33,13 @@
     <absolute-pathname>
     <relative-unix-pathname>
     <absolute-unix-pathname>
-    pathname)
+    pathname
+    &unix-pathname-parser-error
+    &unix-pathname-normalisation-error)
   (import (nausicaa)
     (vicare unsafe operations)
     (nausicaa uri pathnames abstract)
-    (prefix (nausicaa parser-tools unix-pathnames) parser.))
+    (prefix (vicare parser-tools unix-pathnames) parser.))
 
 
 ;;; helpers
@@ -58,6 +60,21 @@
   (if (null? (cdr ell))
       replacement
     (cons (car ell) (%replace-last-pair (cdr ell) replacement))))
+
+
+;;;; labels shadowing condition objects
+
+(define-label &unix-pathname-parser-error
+  (parent &error)
+  (shadows parser.&unix-pathname-parser-error)
+  (protocol (lambda () parser.make-unix-pathname-parser-error))
+  (predicate parser.unix-pathname-parser-error?))
+
+(define-label &unix-pathname-normalisation-error
+  (parent &error)
+  (shadows parser.&unix-pathname-normalisation-error)
+  (protocol (lambda () parser.make-unix-pathname-normalisation-error))
+  (predicate parser.unix-pathname-normalisation-error?))
 
 
 (module (<absolute-unix-pathname>)

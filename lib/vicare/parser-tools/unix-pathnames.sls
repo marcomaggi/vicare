@@ -26,15 +26,25 @@
 
 
 #!r6rs
-(library (nausicaa parser-tools unix-pathnames)
+(library (vicare parser-tools unix-pathnames)
   (export
+
+    ;; predicates
+    pathname?
+    segment?
+    list-of-segments?
+
+    ;; conversion
     string/bytevector->pathname-bytevector
     pathname-bytevector->string
-    list-of-segments?
+
+    ;; parser functions
     parse-segment
     parse-segment-nz
     parse-slash-and-segment
     parse-pathname
+
+    ;; pathname manipulation
     normalise-pathname
     serialise-segments
 
@@ -47,7 +57,7 @@
     unix-pathname-normalisation-error?
     raise-unix-pathname-parser-error
     raise-unix-pathname-normalisation-error)
-  (import (nausicaa)
+  (import (vicare)
     (vicare unsafe operations))
 
 
@@ -55,6 +65,12 @@
 
 (define-inline-constant CHI-SLASH	47) ;;(char->integer #\/)
 (define-inline-constant CHI-DOT		46) ;;(char->integer #\.)
+
+(define-inline-constant CURRENT-DIRECTORY-BV
+  '#vu8(46))
+
+(define-inline-constant UPLEVEL-DIRECTORY-BV
+  '#vu8(46 46))
 
 
 ;;;; helpers
@@ -92,6 +108,27 @@
        ($fx= 46 ($bytevector-u8-ref bv 0))
        ($fx= 46 ($bytevector-u8-ref bv 1))))
 
+(define-syntax (define-parser-macros stx)
+  (syntax-case stx ()
+    ((?k ?port)
+     (with-syntax
+	 ((SET-POSITION-START!		(datum->syntax #'?k 'set-position-start!))
+	  (SET-POSITION-BACK-ONE!	(datum->syntax #'?k 'set-position-back-one!))
+	  (RETURN-FAILURE		(datum->syntax #'?k 'return-failure)))
+       #'(begin
+	   (define start-position
+	     (port-position ?port))
+	   (define-inline (SET-POSITION-START!)
+	     (set-port-position! ?port start-position))
+	   (define-inline (SET-POSITION-BACK-ONE! last-read-byte)
+	     (unless (eof-object? last-read-byte)
+	       (set-port-position! ?port (- (port-position ?port) 1))))
+	   (define-inline (RETURN-FAILURE)
+	     (begin
+	       (SET-POSITION-START!)
+	       #f)))))
+    ))
+
 
 ;;;; condition objects
 
@@ -120,31 +157,62 @@
 	      (make-irritants-condition irritants))))
 
 
-(define-syntax (define-parser-macros stx)
-  (syntax-case stx ()
-    ((?k ?port)
-     (with-syntax
-	 ((SET-POSITION-START!	(datum->syntax #'?k 'set-position-start!))
-	  (SET-POSITION-BACK-ONE!	(datum->syntax #'?k 'set-position-back-one!))
-	  (RETURN-FAILURE		(datum->syntax #'?k 'return-failure)))
-       #'(begin
-	   (define start-position
-	     (port-position ?port))
-	   (define-inline (SET-POSITION-START!)
-	     (set-port-position! ?port start-position))
-	   (define-inline (SET-POSITION-BACK-ONE! last-read-byte)
-	     (unless (eof-object? last-read-byte)
-	       (set-port-position! ?port (- (port-position ?port) 1))))
-	   (define-inline (RETURN-FAILURE)
-	     (begin
-	       (SET-POSITION-START!)
-	       #f)))))
-    ))
+;;;; predicates
+
+(define (pathname? obj)
+  (cond ((bytevector? obj)
+	 (let loop ((bv obj)
+		    (i  0))
+	   (cond (($fx= i ($bytevector-length bv))
+		  #t)
+		 (($valid-chi-for-pathname? ($bytevector-u8-ref bv i))
+		  (loop bv ($fxadd1 i)))
+		 (else
+		  #f))))
+	((string? obj)
+	 (let loop ((obj obj)
+		    (i   0))
+	   (cond (($fx= i ($string-length obj))
+		  #t)
+		 (($valid-chi-for-pathname? ($char->fixnum ($string-ref obj i)))
+		  (loop obj ($fxadd1 i)))
+		 (else
+		  #f))))
+	(else #f)))
+
+(define (segment? obj)
+  (cond ((bytevector? obj)
+	 (let loop ((bv obj)
+		    (i  0))
+	   (cond (($fx= i ($bytevector-length bv))
+		  #t)
+		 (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
+		  (loop bv ($fxadd1 i)))
+		 (else
+		  #f))))
+	((string? obj)
+	 (let loop ((obj obj)
+		    (i   0))
+	   (cond (($fx= i ($string-length obj))
+		  #t)
+		 (($valid-chi-for-segment? ($char->fixnum ($string-ref obj i)))
+		  (loop obj ($fxadd1 i)))
+		 (else
+		  #f))))
+	(else #f)))
+
+(define (list-of-segments? obj)
+  (cond ((pair? obj)
+	 (and (segment? ($car obj))
+	      (list-of-segments? ($cdr obj))))
+	((null? obj)
+	 #t)
+	(else #f)))
 
 
 ;;;; plain string <-> bytevector conversion
 
-(define (string/bytevector->pathname-bytevector who obj)
+(case-define* string/bytevector->pathname-bytevector
   ;;Convert the string or bytevector  OBJ to a bytevector representation
   ;;of  a pathname;  when successful  return a  bytevector, if  an error
   ;;occurs  raise  an  exception  using  WHO as  value  for  the  "&who"
@@ -152,35 +220,46 @@
   ;;
   ;;When OBJ is a string: only characters whose Unicode code point is in
   ;;the range  [1, 255] are accepted,  notice that zero is  excluded; in
-  ;;this case a new bytevector is returned.
+  ;;this  case a  new bytevector  is returned.   An empty  bytevector is
+  ;;equivalent to  a bytevector representing the  current directory: the
+  ;;return value is #vu8(46).
   ;;
   ;;When OBJ  is a  bytevector: all  the octets  are accepted,  with the
-  ;;exception of the octet zero; in this case OBJ itself is returned.
+  ;;exception of  the octet zero; in  this case OBJ itself  is returned.
+  ;;An  empty string  is  equivalent to  a  bytevector representing  the
+  ;;current directory: the return value is #vu8(46).
   ;;
-  (cond ((bytevector? obj)
-	 (do ((i 0 ($fxadd1 i)))
-	     (($fx= i ($bytevector-length obj))
-	      obj)
-	   (unless ($valid-chi-for-pathname? ($bytevector-u8-ref obj i))
-	     (raise-unix-pathname-parser-error who
-	       "octet from bytevector out of range for pathname"
-	       obj ($bytevector-u8-ref obj i)))))
-	((string? obj)
-	 (do ((i  0 ($fxadd1 i))
-	      (bv (make-bytevector ($string-length obj))))
-	     (($fx= i ($string-length obj))
-	      bv)
-	   (let ((chi ($char->fixnum ($string-ref obj i))))
-	     (if ($valid-chi-for-pathname? chi)
-		 ($bytevector-u8-set! obj i chi)
-	       (raise-unix-pathname-parser-error who
-		 "character from string out of range for pathname"
-		 obj ($string-ref obj i))))))
-	(else
-	 (procedure-argument-violation who
-	   "expected string or bytevector as argument" obj))))
+  ((obj)
+   (string/bytevector->pathname-bytevector obj __who__))
+  ((obj who)
+   (cond ((bytevector? obj)
+	  (if ($bytevector-empty? obj)
+	      CURRENT-DIRECTORY-BV
+	    (do ((i 0 ($fxadd1 i)))
+		(($fx= i ($bytevector-length obj))
+		 obj)
+	      (unless ($valid-chi-for-pathname? ($bytevector-u8-ref obj i))
+		(raise-unix-pathname-parser-error who
+		  "octet from bytevector out of range for pathname"
+		  obj ($bytevector-u8-ref obj i))))))
+	 ((string? obj)
+	  (if ($string-empty? obj)
+	      CURRENT-DIRECTORY-BV
+	    (do ((i  0 ($fxadd1 i))
+		 (bv ($make-bytevector ($string-length obj))))
+		(($fx= i ($string-length obj))
+		 bv)
+	      (let ((chi ($char->fixnum ($string-ref obj i))))
+		(if ($valid-chi-for-pathname? chi)
+		    ($bytevector-u8-set! bv i chi)
+		  (raise-unix-pathname-parser-error who
+		    "character from string out of range for pathname"
+		    obj ($string-ref obj i)))))))
+	 (else
+	  (procedure-argument-violation who
+	    "expected string or bytevector as argument" obj)))))
 
-(define (pathname-bytevector->string who obj)
+(case-define* pathname-bytevector->string
   ;;Convert  the  bytevector pathname  representation  OBJ  to a  string
   ;;pathname  representation; when  successful  return a  string, if  an
   ;;error occurs  raise an exception using  WHO as value for  the "&who"
@@ -189,40 +268,27 @@
   ;;All  the octets  in the  bytevector are  considered valid,  with the
   ;;exception of the octet zero.
   ;;
-  (if (bytevector? obj)
-      (do ((i   0 ($fxadd1 i))
-	   (str (make-string ($bytevector-length obj))))
-	  (($fx= i ($bytevector-length obj))
-	   str)
-	(let ((chi ($bytevector-u8-ref obj i)))
-	  (if ($valid-chi-for-pathname? chi)
-	      ($string-set! obj i ($fixnum->char chi))
-	    (raise-unix-pathname-parser-error who
-	      "octet from bytevector out of range for pathname"
-	      obj ($bytevector-u8-ref obj i)))))
-    (procedure-argument-violation who
-      "expected pathname bytevector as argument" obj)))
-
-
-(define (list-of-segments? obj)
-  (cond ((and (pair? obj)
-	      (bytevector? ($car obj)))
-	 (let loop ((bv ($car obj))
-		    (i  0))
-	   (cond (($fx= i ($bytevector-length bv))
-		  (list-of-segments? ($cdr obj)))
-		 (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
-		  (loop bv ($fxadd1 i)))
-		 (else
-		  #f))))
-	((null? obj)
-	 #t)
-	(else #f)))
+  ((obj)
+   (pathname-bytevector->string obj __who__))
+  ((obj who)
+   (if (bytevector? obj)
+       (do ((i   0 ($fxadd1 i))
+	    (str (make-string ($bytevector-length obj))))
+	   (($fx= i ($bytevector-length obj))
+	    str)
+	 (let ((chi ($bytevector-u8-ref obj i)))
+	   (if ($valid-chi-for-pathname? chi)
+	       ($string-set! str i ($fixnum->char chi))
+	     (raise-unix-pathname-parser-error who
+	       "octet from bytevector out of range for pathname"
+	       obj ($bytevector-u8-ref obj i)))))
+     (procedure-argument-violation who
+       "expected pathname bytevector as argument" obj))))
 
 
 ;;;; segment component parsers
 
-(define (parse-segment in-port)
+(define* (parse-segment in-port)
   ;;Accumulate bytes from the binary  input port IN-PORT, while they are
   ;;valid  for a  "segment"  component; IN-PORT  must  support the  port
   ;;position.  Notice  that an empty  "segment" is valid:  it represents
@@ -244,7 +310,7 @@
   ;;function call.
   ;;
   (define-parser-macros in-port)
-  (define (%error)
+  (define* (%error)
     (let ((pos (port-position in-port)))
       (set-position-start!)
       (raise-unix-pathname-parser-error __who__
@@ -266,7 +332,7 @@
 	    (else
 	     (%error))))))
 
-(define (parse-segment-nz in-port)
+(define* (parse-segment-nz in-port)
   ;;Accumulate  bytes   from  IN-PORT  while   they  are  valid   for  a
   ;;"segment-nz"  component; notice  that an  empty "segment-nz"  is not
   ;;valid.
@@ -286,7 +352,7 @@
   ;;
   (define-parser-macros in-port)
   (define who 'parse-segment-nz)
-  (define (%error)
+  (define* (%error)
     (let ((pos (port-position in-port)))
       (set-position-start!)
       (raise-unix-pathname-parser-error __who__
@@ -314,7 +380,7 @@
 	    (else
 	     (%error))))))
 
-(define (parse-slash-and-segment in-port)
+(define* (parse-slash-and-segment in-port)
   ;;Attempt  to read  from  IN-PORT the  sequence  slash character  plus
   ;;"segment" component; notice that an empty "segment" is valid.
   ;;
@@ -332,7 +398,7 @@
   ;;function call.
   ;;
   (define-parser-macros in-port)
-  (define (%error)
+  (define* (%error)
     (let ((pos (port-position in-port)))
       (set-position-start!)
       (raise-unix-pathname-parser-error __who__
@@ -368,7 +434,7 @@
 
 ;;;; path components
 
-(define (parse-pathname in-port)
+(define* (parse-pathname in-port)
   ;;Parse from  IN-PORT an  absolute or relative  pathname until  EOF is
   ;;found;  return  two values:  a  boolean,  true  if the  pathname  is
   ;;absolute; false if EOF is the  first byte read or a, possibly empty,
@@ -400,7 +466,7 @@
 	       (raise-unix-pathname-parser-error __who__ "invalid input bytevector" in-port)))))))
 
 
-(define (normalise-pathname absolute? segments)
+(define* (normalise-pathname absolute? segments)
   ;;Given  a list  of bytevectors  representing Unix  pathname segments:
   ;;normalise them, as much  as possible, removing segments representing
   ;;single-dot and double-dot directory  entries; if ABSOLUTE?  is true:
@@ -455,7 +521,7 @@
 	     "expected list of bytevectors as argument" segments)))))
 
 
-(define (serialise-segments absolute? segments)
+(define* (serialise-segments absolute? segments)
   (if (null? segments)
       (if absolute? '#vu8(47) '#vu8(46))
     (receive (port getter)

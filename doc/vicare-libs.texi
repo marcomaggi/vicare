@@ -240,6 +240,10 @@ Adapted libraries
 * formations::                  Formatting strings.
 * silex::                       A lexical analyser generator.
 
+Library groups
+
+* parser-tools::                Lexers and parsers.
+
 Appendices
 
 * cre2::                        Binding to the library @cretwo{}.
@@ -303,6 +307,20 @@ External documents
 @include libs-pregexp.texi
 @include libs-formations.texi
 @include libs-parser-tools-silex.texi
+
+@c page
+@node parser-tools
+@chapter Lexers and parsers
+
+
+@menu
+* parser-tools unix-pathnames::    Parsing Unix file system pathnames.
+@end menu
+
+@include libs-parser-tools-unix-pathnames.texi
+
+@c page
+@c appendices
 
 @include cre2.texi
 

@@ -141,7 +141,9 @@ nobase_dist_libvicare_DATA	= \
 	vicare/parser-tools/silex/macros/identifier.macros.l		\
 	vicare/parser-tools/silex/macros/string.macros.l		\
 	vicare/parser-tools/silex/macros/unicode.macros.l		\
-	vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l
+	vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l	\
+	\
+	vicare/parser-tools/unix-pathnames.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls		\
@@ -341,8 +343,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/parser-tools/ipv4-addresses.sls			\
 	nausicaa/parser-tools/ipv6-addresses.sls			\
 	nausicaa/parser-tools/uri.sls					\
-	nausicaa/parser-tools/uri/utilities.sls				\
-	nausicaa/parser-tools/unix-pathnames.sls
+	nausicaa/parser-tools/uri/utilities.sls
 
 dist_pkglibexec_SCRIPTS		+= \
 	compile-nausicaa-language.sps		\

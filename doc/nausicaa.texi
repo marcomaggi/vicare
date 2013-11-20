@@ -220,7 +220,6 @@ of object--oriented languages, but it just has the perfume of
 * parser-tools lalr::              A LALR(1) parser generator.
 * parser-tools ip-addresses::      Lexer and parser for IP addresses.
 * parser-tools uri::               Parsing Uniform Resource Identifiers.
-* parser-tools unix-pathnames::    Parsing Unix file system pathnames.
 @end menu
 
 @include nausicaa-parser-tools-source-locations.texi
@@ -228,7 +227,6 @@ of object--oriented languages, but it just has the perfume of
 @include nausicaa-parser-tools-lalr.texi
 @include nausicaa-parser-tools-ip-addresses.texi
 @include nausicaa-parser-tools-uri.texi
-@include nausicaa-parser-tools-unix-pathnames.texi
 
 @c page
 @node net
