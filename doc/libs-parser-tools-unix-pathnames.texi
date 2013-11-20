@@ -264,15 +264,13 @@ the one before this function call.
 
 @defun parse-pathname @var{port}
 Parse from @var{port} an absolute or relative pathname until @eof{} is
-found; return two values: a boolean, true if the pathname is absolute;
-false if @eof{} is the first byte read or a, possibly empty, list of
-bytevectors representing the segments.  Empty @code{segment} components
-are represented by bytevectors holding a single byte representing a dot
-in @ascii{} coding.
+found; return two values: a boolean, @true{} if the pathname is
+absolute; a possibly empty list of bytevectors representing the
+segments.
 
-If an invalid byte is read: an exception is raised using
-@func{raise-unix-pathname-parser-error}; the port position is rewind to
-the one before this function call.
+If an invalid octet is read or @eof{} is read before any octet: an
+exception is raised with @func{raise-unix-pathname-parser-error}; the
+port position is rewind to the one before this function call.
 @end defun
 
 @c page
@@ -285,34 +283,25 @@ parser-tools unix-pathnames}.
 
 
 @defun normalise-pathname @var{absolute?} @var{segments}
-Given a list of bytevectors representing segments: normalise them, as
-much as possible, removing segments representing single--dot and
-double--dot directory entries; if @var{absolute?} is true: normalise
-@var{segments} as an absolute pathname, else normalise it as a relative
-pathname.  Return two values:
+Given a list of bytevectors representing Unix pathname segments:
+normalise them, as much as possible, removing segments representing
+single--dot and double--dot directory entries; if @var{absolute?}  is
+true: normalise @var{segments} as an absolute pathname, else normalise
+it as a relative pathname.  Return two values:
 
 @enumerate
 @item
-A boolean, true if some change was made from @var{segments} to the
-second returned value; this allows us to detect if a normalised list of
+A boolean, @true{} if some change was made from @var{segments} to the
+second return value; this allows us to detect if a normalised list of
 segments when serialised into a bytevector becomes different from the
-original bytevector.
+original bytevector that generated @var{segments}.
 
 @item
-When the normalisation succeeds: a new, possibly empty, list of
-bytevectors representing the normalisation of @var{segments}.  Absolute
-pathname segments can hold neither single--dot nor double--dot segments:
-if a double--dot segment cannot be removed, this value is false (and the
-first too).
-
-Segments from the original @var{segments} argument are shared with this
-returned value.
+A new, possibly empty, list of bytevectors representing the
+normalisation of @var{segments}.  Absolute pathname segments can hold
+neither single--dot nor double--dot segments: if a double--dot segment
+cannot annihilate its previous segment, it is just discarded.
 @end enumerate
-
-Notice that empty input bytevectors are not handled specially: they
-should be avoided, but no error is raised and they are @strong{not}
-interpreted as equivalent to bytevectors holding a single byte
-representing a dot in @ascii{} coding.
 @end defun
 
 
@@ -322,11 +311,11 @@ segments build and return a new bytevector representing the full
 pathname; if @var{absolute?} is true: the first byte of the result
 represents a slash in @ascii{} coding.
 
-If @var{segments} is empty and @var{absolute?} is true: the returned
+If @var{segments} is null and @var{absolute?} is true: the returned
 value is a bytevector holding a single byte representing a slash in
 @ascii{} coding.
 
-If @var{segments} is empty and @var{absolute?} is false: the returned
+If @var{segments} is null and @var{absolute?} is false: the returned
 value is a bytevector holding a single byte representing a dot in
 @ascii{} coding.
 @end defun
