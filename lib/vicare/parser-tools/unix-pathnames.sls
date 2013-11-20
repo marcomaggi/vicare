@@ -30,7 +30,7 @@
   (export
 
     ;; predicates
-    pathname?
+    pathname? bytevector-pathname? string-pathname?
     segment?
     list-of-segments?
 
@@ -47,6 +47,9 @@
     ;; pathname manipulation
     normalise-pathname
     serialise-segments
+
+    ;; components
+    pathname-extension
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -163,27 +166,34 @@
 ;;;; predicates
 
 (define (pathname? obj)
-  (cond ((bytevector? obj)
-	 (and ($bytevector-not-empty? obj)
-	      (let loop ((bv obj)
-			 (i  0))
-		(cond (($fx= i ($bytevector-length bv))
-		       #t)
-		      (($valid-chi-for-pathname? ($bytevector-u8-ref bv i))
-		       (loop bv ($fxadd1 i)))
-		      (else
-		       #f)))))
-	((string? obj)
-	 (and ($string-not-empty? obj)
-	      (let loop ((obj obj)
-			 (i   0))
-		(cond (($fx= i ($string-length obj))
-		       #t)
-		      (($valid-chi-for-pathname? ($char->fixnum ($string-ref obj i)))
-		       (loop obj ($fxadd1 i)))
-		      (else
-		       #f)))))
-	(else #f)))
+  (or (bytevector-pathname? obj)
+      (string-pathname?     obj)))
+
+(define (bytevector-pathname? obj)
+  (and (bytevector? obj)
+       ($bytevector-not-empty? obj)
+       (let loop ((bv obj)
+		  (i  0))
+	 (cond (($fx= i ($bytevector-length bv))
+		#t)
+	       (($valid-chi-for-pathname? ($bytevector-u8-ref bv i))
+		(loop bv ($fxadd1 i)))
+	       (else
+		#f)))))
+
+(define (string-pathname? obj)
+  (and (string? obj)
+       ($string-not-empty? obj)
+       (let loop ((obj obj)
+		  (i   0))
+	 (cond (($fx= i ($string-length obj))
+		#t)
+	       (($valid-chi-for-pathname? ($char->fixnum ($string-ref obj i)))
+		(loop obj ($fxadd1 i)))
+	       (else
+		#f)))))
+
+;;; --------------------------------------------------------------------
 
 (define (segment? obj)
   (cond ((bytevector? obj)
@@ -555,6 +565,168 @@
 		  (put-bytevector port segment))
 	(cdr segments))
       (getter))))
+
+
+;;;; pathname components
+
+(define* (pathname-extension obj)
+  ;;Return a new string or bytevector representing the extension of OBJ,
+  ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
+  ;;representation.   The extension  of a  pathname is  the sequence  of
+  ;;characters from  the end up  to the  first dot character  before the
+  ;;first slash character; the returned value does *not* include the dot
+  ;;character and can be empty.
+  ;;
+  (cond ((bytevector-pathname? obj)
+	 (let loop ((i ($bytevector-length obj)))
+	   ;;We know that if OBJ is a valid pathname: it cannot be empty.
+	   (cond ((or ($fxzero? i)
+		      ($fx= CHI-SLASH ($bytevector-u8-ref obj i)))
+		  '#vu8())
+		 (($fx= CHI-DOT ($bytevector-u8-ref obj i))
+		  (subbytevector-u8 obj ($fxadd1 i)))
+		 (else
+		  (loop ($fxsub1 i))))))
+	((string-pathname? obj)
+	 (let loop ((i ($string-length obj)))
+	   ;;We know that if OBJ is a valid pathname: it cannot be empty.
+	   (cond ((or ($fxzero? i)
+		      ($fx= CHI-SLASH ($char->fixnum ($string-ref obj i))))
+		  "")
+		 (($fx= CHI-DOT ($char->fixnum ($string-ref obj i)))
+		  ($substring obj ($fxadd1 i) ($string-length obj)))
+		 (else
+		  (loop ($fxsub1 i))))))
+	(else
+	 (procedure-argument-violation __who__
+	   "expected string or bytevector as argument" obj))))
+
+#|
+(define ( mbfl_file_dirname () {
+    mbfl_optional_parameter(PATHNAME, 1, '')
+    local i=
+    # Do not change "${PATHNAME:$i:1}" with "$ch"!! We need to extract the
+    # char at each loop iteration.
+    for ((i="${#PATHNAME}"; $i >= 0; --i))
+    do
+        test "${PATHNAME:$i:1}" = "/" && {
+            while test \( $i -gt 0 \) -a \( "${PATHNAME:$i:1}" = "/" \)
+            do let --i
+            done
+            if test $i = 0
+            then printf '%s\n' "${PATHNAME:$i:1}"
+            else
+                let ++i
+                printf '%s\n' "${PATHNAME:0:$i}"
+            fi
+            return 0
+        }
+    done
+    printf '.\n'
+    return 0
+}
+(define ( mbfl_file_subpathname () {
+    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
+    mbfl_mandatory_parameter(BASEDIR, 2, base directory)
+    test "${BASEDIR:$((${#BASEDIR}-1))}" = '/' && \
+        BASEDIR="${BASEDIR:0:$((${#BASEDIR}-1))}"
+    if test "${PATHNAME}" = "${BASEDIR}"
+    then
+        printf './\n'
+        return 0
+    elif test "${PATHNAME:0:${#BASEDIR}}" = "${BASEDIR}"
+    then
+        printf  './%s\n' "${PATHNAME:$((${#BASEDIR}+1))}"
+        return 0
+    else return 1
+    fi
+}
+(define ( mbfl_p_file_remove_dots_from_pathname () {
+    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
+    local item i
+    local SPLITPATH SPLITCOUNT; declare -a SPLITPATH
+    local output output_counter=0; declare -a output
+    local input_counter=0
+    mbfl_file_split "${PATHNAME}"
+    for ((input_counter=0; $input_counter < $SPLITCOUNT; ++input_counter))
+    do
+        case "${SPLITPATH[$input_counter]}" in
+            .)
+                ;;
+            ..)
+                let --output_counter
+                ;;
+            *)
+                output[$output_counter]="${SPLITPATH[$input_counter]}"
+                let ++output_counter
+                ;;
+        esac
+    done
+    PATHNAME="${output[0]}"
+    for ((i=1; $i < $output_counter; ++i))
+    do PATHNAME="${PATHNAME}/${output[$i]}"
+    done
+    printf '%s\n' "${PATHNAME}"
+}
+(define ( mbfl_file_rootname () {
+    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
+    local i="${#PATHNAME}"
+    test $i = 1 && {
+        printf '%s\n' "${PATHNAME}"
+        return 0
+    }
+    for ((i="${#PATHNAME}"; $i >= 0; --i))
+    do
+        ch="${PATHNAME:$i:1}"
+        if test "$ch" = "."
+        then
+            if test $i -gt 0
+            then
+                printf '%s\n' "${PATHNAME:0:$i}"
+                break
+            else printf '%s\n' "${PATHNAME}"
+            fi
+        elif test "$ch" = "/"
+        then
+            printf '%s\n' "${PATHNAME}"
+            break
+        fi
+    done
+    return 0
+}
+(define ( mbfl_file_split () {
+    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
+    local i=0 last_found=0
+    mbfl_string_skip "${PATHNAME}" i /
+    last_found=$i
+    for ((SPLITCOUNT=0; $i < "${#PATHNAME}"; ++i))
+    do
+        test "${PATHNAME:$i:1}" = / && {
+            SPLITPATH[$SPLITCOUNT]="${PATHNAME:$last_found:$(($i-$last_found))}"
+            let ++SPLITCOUNT; let ++i
+            mbfl_string_skip "${PATHNAME}" i /
+            last_found=$i
+        }
+    done
+    SPLITPATH[$SPLITCOUNT]="${PATHNAME:$last_found}"
+    let ++SPLITCOUNT
+    return 0
+}
+(define ( mbfl_file_tail () {
+    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
+    local i=
+    for ((i="${#PATHNAME}"; $i >= 0; --i))
+    do
+        test "${PATHNAME:$i:1}" = "/" && {
+            let ++i
+            printf '%s\n' "${PATHNAME:$i}"
+            return 0
+        }
+    done
+    printf '%s\n' "${PATHNAME}"
+    return 0
+}
+|#
 
 
 ;;;; done
