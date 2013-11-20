@@ -217,7 +217,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	test-vicare-parser-tools-silex-file.sps				\
 	test-vicare-parser-tools-silex-misc.sps				\
-	test-vicare-parser-tools-silex-online.sps
+	test-vicare-parser-tools-silex-online.sps			\
+	test-vicare-parser-tools-unix-pathnames.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	long-test-r6rs-run.sps						\
