@@ -303,6 +303,7 @@
     $make-string
     $string-length
     $string-empty?
+    $string-not-empty?
     $string-ref
     $string-set!
     $string=
@@ -1126,6 +1127,9 @@
 ;;
 ;; (define-inline ($string-empty? vec)
 ;;   ($fxzero? ($string-length vec)))
+
+(define-inline ($string-not-empty? ?bv)
+  (not ($string-empty? ?bv)))
 
 (define-inline ($string-fill! ?str ?index ?end ?fill)
   ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive

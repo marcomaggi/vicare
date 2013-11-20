@@ -66,6 +66,9 @@
 (define-inline-constant CHI-SLASH	47) ;;(char->integer #\/)
 (define-inline-constant CHI-DOT		46) ;;(char->integer #\.)
 
+(define-inline-constant ROOT-DIRECTORY-BV
+  '#vu8(47))
+
 (define-inline-constant CURRENT-DIRECTORY-BV
   '#vu8(46))
 
@@ -90,23 +93,23 @@
   ;;[48, 255]; that is: any byte with  the exclusion of the zero and 47,
   ;;which represents the slash character in ASCII encoding.
   ;;
-  (or ($fx<  0 chi 47) ;47 = #\/
-      ($fx< 47 chi 256)))
+  (or ($fx< 0         chi CHI-SLASH)
+      ($fx< CHI-SLASH chi 256)))
 
 (define-inline ($dot-bv? bv)
   ;;Assuming BV is  a bytevector: return true if it  holds a single byte
   ;;being the ASCII representation of the dot.
   ;;
   (and ($fx=  1 ($bytevector-length bv))
-       ($fx= 46 ($bytevector-u8-ref bv 0))))
+       ($fx= CHI-DOT ($bytevector-u8-ref bv 0))))
 
 (define-inline ($dot-dot-bv? bv)
   ;;Assuming BV is a bytevector: return  true if it holds two bytes both
   ;;being the ASCII representation of the dot.
   ;;
-  (and ($fx=  2 ($bytevector-length bv))
-       ($fx= 46 ($bytevector-u8-ref bv 0))
-       ($fx= 46 ($bytevector-u8-ref bv 1))))
+  (and ($fx= 2       ($bytevector-length bv))
+       ($fx= CHI-DOT ($bytevector-u8-ref bv 0))
+       ($fx= CHI-DOT ($bytevector-u8-ref bv 1))))
 
 (define-syntax (define-parser-macros stx)
   (syntax-case stx ()
@@ -161,23 +164,25 @@
 
 (define (pathname? obj)
   (cond ((bytevector? obj)
-	 (let loop ((bv obj)
-		    (i  0))
-	   (cond (($fx= i ($bytevector-length bv))
-		  #t)
-		 (($valid-chi-for-pathname? ($bytevector-u8-ref bv i))
-		  (loop bv ($fxadd1 i)))
-		 (else
-		  #f))))
+	 (and ($bytevector-not-empty? obj)
+	      (let loop ((bv obj)
+			 (i  0))
+		(cond (($fx= i ($bytevector-length bv))
+		       #t)
+		      (($valid-chi-for-pathname? ($bytevector-u8-ref bv i))
+		       (loop bv ($fxadd1 i)))
+		      (else
+		       #f)))))
 	((string? obj)
-	 (let loop ((obj obj)
-		    (i   0))
-	   (cond (($fx= i ($string-length obj))
-		  #t)
-		 (($valid-chi-for-pathname? ($char->fixnum ($string-ref obj i)))
-		  (loop obj ($fxadd1 i)))
-		 (else
-		  #f))))
+	 (and ($string-not-empty? obj)
+	      (let loop ((obj obj)
+			 (i   0))
+		(cond (($fx= i ($string-length obj))
+		       #t)
+		      (($valid-chi-for-pathname? ($char->fixnum ($string-ref obj i)))
+		       (loop obj ($fxadd1 i)))
+		      (else
+		       #f)))))
 	(else #f)))
 
 (define (segment? obj)
@@ -263,7 +268,8 @@
   ;;Convert  the  bytevector pathname  representation  OBJ  to a  string
   ;;pathname  representation; when  successful  return a  string, if  an
   ;;error occurs  raise an exception using  WHO as value for  the "&who"
-  ;;condition object.
+  ;;condition object.  An empty bytevector is equivalent to a bytevector
+  ;;representing the current directory: the return value is ".".
   ;;
   ;;All  the octets  in the  bytevector are  considered valid,  with the
   ;;exception of the octet zero.
@@ -272,16 +278,18 @@
    (pathname-bytevector->string obj __who__))
   ((obj who)
    (if (bytevector? obj)
-       (do ((i   0 ($fxadd1 i))
-	    (str (make-string ($bytevector-length obj))))
-	   (($fx= i ($bytevector-length obj))
-	    str)
-	 (let ((chi ($bytevector-u8-ref obj i)))
-	   (if ($valid-chi-for-pathname? chi)
-	       ($string-set! str i ($fixnum->char chi))
-	     (raise-unix-pathname-parser-error who
-	       "octet from bytevector out of range for pathname"
-	       obj ($bytevector-u8-ref obj i)))))
+       (if ($bytevector-empty? obj)
+	   "."
+	 (do ((i   0 ($fxadd1 i))
+	      (str (make-string ($bytevector-length obj))))
+	     (($fx= i ($bytevector-length obj))
+	      str)
+	   (let ((chi ($bytevector-u8-ref obj i)))
+	     (if ($valid-chi-for-pathname? chi)
+		 ($string-set! str i ($fixnum->char chi))
+	       (raise-unix-pathname-parser-error who
+		 "octet from bytevector out of range for pathname"
+		 obj ($bytevector-u8-ref obj i))))))
      (procedure-argument-violation who
        "expected pathname bytevector as argument" obj))))
 
@@ -523,14 +531,14 @@
 
 (define* (serialise-segments absolute? segments)
   (if (null? segments)
-      (if absolute? '#vu8(47) '#vu8(46))
+      (if absolute? ROOT-DIRECTORY-BV CURRENT-DIRECTORY-BV)
     (receive (port getter)
 	(open-bytevector-output-port)
       (when absolute?
-	(put-u8 port 47))
+	(put-u8 port CHI-SLASH))
       (put-bytevector port (car segments))
       (for-each (lambda (segment)
-		  (put-u8 port 47)
+		  (put-u8 port CHI-SLASH)
 		  (put-bytevector port segment))
 	(cdr segments))
       (getter))))
