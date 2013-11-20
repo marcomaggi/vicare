@@ -313,9 +313,9 @@
   ;;port  position  is  left  pointing   to  the  byte  after  the  last
   ;;accumulated one.
   ;;
-  ;;If  an invalid  byte  is  read: an  exception  is  raised with  type
-  ;;"&parser";  the port  position  is  rewind to  the  one before  this
-  ;;function call.
+  ;;If  an   invalid  byte  is   read:  an  exception  is   raised  with
+  ;;"raise-unix-pathname-parser-error"; the  port position is  rewind to
+  ;;the one before this function call.
   ;;
   (define-parser-macros in-port)
   (define* (%error)
@@ -354,9 +354,9 @@
   ;;position is  left pointing  to the byte  after the  last accumulated
   ;;one.
   ;;
-  ;;If  an invalid  byte  is  read: an  exception  is  raised with  type
-  ;;"&parser";  the port  position  is  rewind to  the  one before  this
-  ;;function call.
+  ;;If  an   invalid  byte  is   read:  an  exception  is   raised  with
+  ;;"raise-unix-pathname-parser-error"; the  port position is  rewind to
+  ;;the one before this function call.
   ;;
   (define-parser-macros in-port)
   (define who 'parse-segment-nz)
@@ -401,9 +401,9 @@
   ;;return false;  the port position  is rewind  to the one  before this
   ;;function call.
   ;;
-  ;;If  an invalid  byte  is  read: an  exception  is  raised with  type
-  ;;"&parser";  the port  position  is  rewind to  the  one before  this
-  ;;function call.
+  ;;If  an   invalid  byte  is   read:  an  exception  is   raised  with
+  ;;"raise-unix-pathname-parser-error"; the  port position is  rewind to
+  ;;the one before this function call.
   ;;
   (define-parser-macros in-port)
   (define* (%error)
@@ -423,9 +423,9 @@
 	    ((not ($fx= chi CHI-SLASH))
 	     (return-failure))
 
-	    ;;In case  of failure from  PARSE-SEGMENT: we do  not just
-	    ;;return its  return value because  we have to  rewind the
-	    ;;port position to the slash byte.
+	    ;;In  case of  failure from  PARSE-SEGMENT: we  do not  just
+	    ;;return its return value because we have to rewind the port
+	    ;;position to the slash byte.
 	    (else
 	     (let ((bv (with-exception-handler
 			   (lambda (E)
@@ -445,12 +445,12 @@
 (define* (parse-pathname in-port)
   ;;Parse from  IN-PORT an  absolute or relative  pathname until  EOF is
   ;;found;  return  two values:  a  boolean,  true  if the  pathname  is
-  ;;absolute; false if EOF is the  first byte read or a, possibly empty,
-  ;;list o bytevectors representing the segments.
+  ;;absolute;  a possibly  empty  list of  bytevectors representing  the
+  ;;segments.
   ;;
-  ;;If  an invalid  byte  is  read, an  exception  is  raised with  type
-  ;;"&parser";  the port  position  is  rewind to  the  one before  this
-  ;;function call.
+  ;;If an  invalid byte  is read  or EOF  is read  before any  octet: an
+  ;;exception  is  raised with  "raise-unix-pathname-parser-error";  the
+  ;;port position is rewind to the one before this function call.
   ;;
   (define-parser-macros in-port)
   (with-exception-handler
@@ -471,7 +471,8 @@
 	      ((not (null? segments))
 	       (values #t segments))
 	      (else
-	       (raise-unix-pathname-parser-error __who__ "invalid input bytevector" in-port)))))))
+	       (raise-unix-pathname-parser-error __who__
+		 "invalid input bytevector" in-port)))))))
 
 
 (define* (normalise-pathname absolute? segments)
@@ -530,6 +531,18 @@
 
 
 (define* (serialise-segments absolute? segments)
+  ;;Given  a possibly  empty list  of bytevectors  representing pathname
+  ;;segments build  and return  a new  bytevector representing  the full
+  ;;pathname;  if ABSOLUTE?   is  true:  the first  byte  of the  result
+  ;;represents a slash in ASCII encoding.
+  ;;
+  ;;If SEGMENTS is null and ABSOLUTE?   is true: the returned value is a
+  ;;bytevector  holding a  single  byte representing  a  slash in  ASCII
+  ;;encoding.
+  ;;
+  ;;If SEGMENTS is null and ABSOLUTE?  is false: the returned value is a
+  ;;bytevector holding a single byte representing a dot in ASCII coding.
+  ;;
   (if (null? segments)
       (if absolute? ROOT-DIRECTORY-BV CURRENT-DIRECTORY-BV)
     (receive (port getter)
