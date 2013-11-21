@@ -49,7 +49,10 @@
     serialise-segments
 
     ;; components
-    pathname-extension
+    extension		$bytevector-extension	$string-extension
+    dirname		$bytevector-dirname	$string-dirname
+    tailname		$bytevector-tailname	$string-tailname
+    rootname		$bytevector-rootname	$string-rootname
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -77,6 +80,15 @@
 
 (define-inline-constant UPLEVEL-DIRECTORY-BV
   '#vu8(46 46))
+
+(define-inline-constant ROOT-DIRECTORY-STR
+  "/")
+
+(define-inline-constant CURRENT-DIRECTORY-STR
+  ".")
+
+(define-inline-constant UPLEVEL-DIRECTORY-STR
+  "..")
 
 
 ;;;; helpers
@@ -113,6 +125,58 @@
   (and ($fx= 2       ($bytevector-length bv))
        ($fx= CHI-DOT ($bytevector-u8-ref bv 0))
        ($fx= CHI-DOT ($bytevector-u8-ref bv 1))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline ($bytevector-chi-slash? bv i)
+  ($fx= CHI-SLASH ($bytevector-u8-ref bv i)))
+
+(define-inline ($bytevector-chi-dot? bv i)
+  ($fx= CHI-DOT   ($bytevector-u8-ref bv i)))
+
+(define-inline ($string-chi-slash? str i)
+  ($fx= CHI-SLASH ($char->fixnum ($string-ref str i))))
+
+(define-inline ($string-chi-dot? str i)
+  ($fx= CHI-DOT   ($char->fixnum ($string-ref str i))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-backwards-index-of-slash str i)
+  ;;Examples:
+  ;;
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "ciao") 3)	=> 4
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "cia/") 3)	=> 3
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "ci//") 3)	=> 2
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "c///") 3)	=> 1
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "////") 3)	=> 0
+  ;;  ($bytevector-backwards-index-of-slash '#ve(ascii "////") 0)	=> 0
+  ;;
+  (cond (($fxnegative? i)
+	 0)
+	(($bytevector-chi-slash? str i)
+	 ($bytevector-backwards-index-of-slash str ($fxsub1 i)))
+	(else
+	 ($fxadd1 i))))
+
+(define ($string-backwards-index-of-slash str i)
+  ;;Examples:
+  ;;
+  ;;  ($string-backwards-index-of-slash "ciao" 3)	=> 4
+  ;;  ($string-backwards-index-of-slash "cia/" 3)	=> 3
+  ;;  ($string-backwards-index-of-slash "ci//" 3)	=> 2
+  ;;  ($string-backwards-index-of-slash "c///" 3)	=> 1
+  ;;  ($string-backwards-index-of-slash "////" 3)	=> 0
+  ;;  ($string-backwards-index-of-slash "////" 0)	=> 0
+  ;;
+  (cond (($fxnegative? i)
+	 0)
+	(($string-chi-slash? str i)
+	 ($string-backwards-index-of-slash str ($fxsub1 i)))
+	(else
+	 ($fxadd1 i))))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax (define-parser-macros stx)
   (syntax-case stx ()
@@ -567,9 +631,29 @@
       (getter))))
 
 
-;;;; pathname components
+;;;; pathname components: helpers
 
-(define* (pathname-extension obj)
+(define-syntax (define-pathname-operation stx)
+  (syntax-case stx (string bytevector)
+    ((_ ?who
+	((bytevector)	. ?bytevector-body)
+	((string)	. ?string-body))
+     (with-syntax
+	 ((OBJ (datum->syntax #'?who 'obj)))
+       #'(define (?who OBJ)
+	   (cond ((bytevector-pathname? OBJ)
+		  (begin . ?bytevector-body))
+		 ((string-pathname? OBJ)
+		  (begin . ?string-body))
+		 (else
+		  (procedure-argument-violation (quote ?who)
+		    "expected string or bytevector as argument" OBJ))))))
+    ))
+
+
+;;;; pathname components: extension
+
+(define-pathname-operation extension
   ;;Return a new string or bytevector representing the extension of OBJ,
   ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
   ;;representation.   The extension  of a  pathname is  the sequence  of
@@ -577,54 +661,235 @@
   ;;first slash character; the returned value does *not* include the dot
   ;;character and can be empty.
   ;;
-  (cond ((bytevector-pathname? obj)
-	 (let loop ((i ($bytevector-length obj)))
-	   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-	   (cond ((or ($fxzero? i)
-		      ($fx= CHI-SLASH ($bytevector-u8-ref obj i)))
-		  '#vu8())
-		 (($fx= CHI-DOT ($bytevector-u8-ref obj i))
-		  (subbytevector-u8 obj ($fxadd1 i)))
-		 (else
-		  (loop ($fxsub1 i))))))
-	((string-pathname? obj)
-	 (let loop ((i ($string-length obj)))
-	   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-	   (cond ((or ($fxzero? i)
-		      ($fx= CHI-SLASH ($char->fixnum ($string-ref obj i))))
-		  "")
-		 (($fx= CHI-DOT ($char->fixnum ($string-ref obj i)))
-		  ($substring obj ($fxadd1 i) ($string-length obj)))
-		 (else
-		  (loop ($fxsub1 i))))))
-	(else
-	 (procedure-argument-violation __who__
-	   "expected string or bytevector as argument" obj))))
+  ;;If the  dot is the first  character in the pathname's  last segment:
+  ;;return the  empty bytevector because  we interpret this  pathname as
+  ;;representing a Unix-style "hidden" filename or dirname.
+  ;;
+  ((bytevector)	($bytevector-extension obj))
+  ((string)	($string-extension     obj)))
+
+(define ($bytevector-extension obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-dot/slash ((i ($fxsub1 ($bytevector-length obj))))
+    (cond ((or ($fxzero? i)
+	       ($bytevector-chi-slash? obj i))
+	   '#vu8())
+	  (($bytevector-chi-dot? obj i)
+	   (let ((pre ($fxsub1 i)))
+	     (if (or ($fxnegative? pre)
+		     ($bytevector-chi-slash? obj pre))
+		 ;;The  dot is  the first  character in  the pathname's
+		 ;;last segment: return the empty bytevector because we
+		 ;;interpret this  pathname as representing  a "hidden"
+		 ;;filename.
+		 '#vu8()
+		 ($subbytevector-u8 obj ($fxadd1 i) ($bytevector-length obj)))))
+	  (else
+	   (backwards-search-dot/slash ($fxsub1 i))))))
+
+(define ($string-extension obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-dot/slash ((i ($fxsub1 ($string-length obj))))
+    (cond ((or ($fxzero? i)
+	       ($string-chi-slash? obj i))
+	   "")
+	  (($string-chi-dot? obj i)
+	   (let ((pre ($fxsub1 i)))
+	     (if (or ($fxnegative? pre)
+		     ($string-chi-slash? obj pre))
+		 ;;The  dot is  the first  character in  the pathname's
+		 ;;last  segment: return  the empty  string because  we
+		 ;;interpret this  pathname as representing  a "hidden"
+		 ;;filename.
+		 ""
+	       ($substring obj ($fxadd1 i) ($string-length obj)))))
+	  (else
+	   (backwards-search-dot/slash ($fxsub1 i))))))
+
+
+;;;; pathname components: directory part
+
+(define-pathname-operation dirname
+  ;;Return a new  string or bytevector representing the  dirname of OBJ,
+  ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
+  ;;representation.   The  dirname of  a  pathname  is the  sequence  of
+  ;;characters from  the beginning up  to the last slash  character; the
+  ;;returned value does  *not* include the slash character  and is never
+  ;;empty: when there is no directory part in the pathname, the returned
+  ;;value represents the current directory as single dot.
+  ;;
+  ((bytevector)	($bytevector-dirname obj))
+  ((string)	($string-dirname     obj)))
+
+(define ($bytevector-dirname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-slash ((i ($bytevector-u8-last-index obj)))
+    (cond (($fxnegative? i)
+	   ;;No slash found.
+	   CURRENT-DIRECTORY-BV)
+	  (($bytevector-chi-slash? obj i)
+	   ;;A slash is present.
+	   (let ((last-is-slash? ($fx= i ($bytevector-u8-last-index obj))))
+	     (let drop-contiguous-slashes ((j ($fxsub1 i)))
+	       (cond (($fxnegative? j)
+		      ;;The pathname  has slashes  up to  the beginning;
+		      ;;examples: "/file.ext", "///file.ext".
+		      ROOT-DIRECTORY-BV)
+		     (($bytevector-chi-slash? obj j)
+		      (drop-contiguous-slashes ($fxsub1 j)))
+		     (else
+		      ;;There  is  at   least  one  non-slash  character
+		      ;;between the beginning and the slash.
+		      (if last-is-slash?
+			  (backwards-search-slash ($fxsub1 j))
+			(let ((end ($fxadd1 j)))
+			  (if ($fxzero? end)
+			      ($subbytevector-u8 obj 0 0)
+			    ($subbytevector-u8 obj 0 end)))))))))
+	  (else
+	   (backwards-search-slash ($fxsub1 i))))))
+
+(define ($string-dirname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-slash ((i ($string-last-index obj)))
+    (cond (($fxnegative? i)
+	   ;;No slash found.
+	   CURRENT-DIRECTORY-STR)
+	  (($string-chi-slash? obj i)
+	   ;;A slash is present.
+	   (let ((last-is-slash? ($fx= i ($string-last-index obj))))
+	     (let drop-contiguous-slashes ((j ($fxsub1 i)))
+	       (cond (($fxnegative? j)
+		      ;;The pathname  has slashes  up to  the beginning;
+		      ;;examples: "/file.ext", "///file.ext".
+		      ROOT-DIRECTORY-STR)
+		     (($string-chi-slash? obj j)
+		      (drop-contiguous-slashes ($fxsub1 j)))
+		     (else
+		      ;;There  is  at   least  one  non-slash  character
+		      ;;between the beginning and the slash.
+		      (if last-is-slash?
+			  (backwards-search-slash ($fxsub1 j))
+			(let ((end ($fxadd1 j)))
+			  (if ($fxzero? end)
+			      ($substring obj 0 0)
+			    ($substring obj 0 end)))))))))
+	   (else
+	    (backwards-search-slash ($fxsub1 i))))))
+
+
+;;;; pathname components: tail part
+
+(define-pathname-operation tailname
+  ;;Return a new string or  bytevector representing the tailname of OBJ,
+  ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
+  ;;representation.  The tailname of a pathname is its last segment; the
+  ;;returned value  does *not* include  the leading slash  character, if
+  ;;any, and it  can be empty; when  the whole OBJ is  the tailname: the
+  ;;returned value is OBJ itself.
+  ;;
+  ((bytevector)	($bytevector-tailname obj))
+  ((string)	($string-tailname     obj)))
+
+(define ($bytevector-tailname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-slash ((i   ($bytevector-u8-last-index obj))
+			       (end ($bytevector-length obj)))
+    (cond (($fxnegative? i)
+	   ;;No leading slash found.
+	   (if ($fx= end ($bytevector-length obj))
+	       obj
+	     ;;Notice that this return value may be empty.
+	     ($subbytevector-u8 obj 0 end)))
+	  (($bytevector-chi-slash? obj i)
+	   ;;A slash is present.
+	   (let ((slash-index    ($bytevector-backwards-index-of-slash obj ($fxsub1 i)))
+		 (last-is-slash? ($fx= i ($bytevector-u8-last-index obj))))
+	     (if last-is-slash?
+		 (backwards-search-slash ($fxsub1 slash-index) slash-index)
+	       ($subbytevector-u8 obj ($fxadd1 i) end))))
+	  (else
+	   (backwards-search-slash ($fxsub1 i) end)))))
+
+(define ($string-tailname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-slash ((i   ($string-last-index obj))
+			       (end ($string-length obj)))
+    (cond (($fxnegative? i)
+	   ;;No leading slash found.
+	   (if ($fx= end ($string-length obj))
+	       obj
+	     ;;Notice that this return value may be empty.
+	     ($substring obj 0 end)))
+	  (($string-chi-slash? obj i)
+	   ;;A slash is present.
+	   (let ((slash-index    ($string-backwards-index-of-slash obj ($fxsub1 i)))
+		 (last-is-slash? ($fx= i ($string-last-index obj))))
+	     (if last-is-slash?
+		 (backwards-search-slash ($fxsub1 slash-index) slash-index)
+	       ($substring obj ($fxadd1 i) end))))
+	  (else
+	   (backwards-search-slash ($fxsub1 i) end)))))
+
+
+;;;; pathname components: rootname
+
+(define-pathname-operation rootname
+  ;;Return a new string or  bytevector representing the rootname of OBJ,
+  ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
+  ;;representation.   The rootname  of  a pathname  is  the sequence  of
+  ;;characters from  the beginning up  to the last dot  character before
+  ;;the extension,  in other  words: everything  but the  extension; the
+  ;;returned  value does  *not* include  the  dot character  and can  be
+  ;;empty.
+  ;;
+  ;;If the  dot is the first  character in the pathname's  last segment:
+  ;;return the  whole bytevector because  we interpret this  pathname as
+  ;;representing a Unix-style "hidden" filename or dirname.
+  ;;
+  ((bytevector)	($bytevector-rootname obj))
+  ((string)	($string-rootname     obj)))
+
+(define ($bytevector-rootname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-dot/slash ((i ($fxsub1 ($bytevector-length obj))))
+    (cond ((or ($fxzero? i)
+	       ($bytevector-chi-slash? obj i))
+	   obj)
+	  (($bytevector-chi-dot? obj i)
+	   (let ((pre ($fxsub1 i)))
+	     (if (or ($fxnegative? pre)
+		     ($bytevector-chi-slash? obj pre))
+		 ;;The dot is the first character in the pathname's last
+		 ;;segment:  return  the  whole  bytevector  because  we
+		 ;;interpret  this pathname  as representing  a "hidden"
+		 ;;filename.
+		 obj
+	       ($subbytevector-u8 obj 0 i))))
+	  (else
+	   (backwards-search-dot/slash ($fxsub1 i))))))
+
+(define ($string-rootname obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  (let backwards-search-dot/slash ((i ($fxsub1 ($string-length obj))))
+    (cond ((or ($fxzero? i)
+	       ($string-chi-slash? obj i))
+	   obj)
+	  (($string-chi-dot? obj i)
+	   (let ((pre ($fxsub1 i)))
+	     (if (or ($fxnegative? pre)
+		     ($string-chi-slash? obj pre))
+		 ;;The dot is the first character in the pathname's last
+		 ;;segment: return the whole string because we interpret
+		 ;;this pathname as representing a "hidden" filename.
+		 obj
+	       ($substring obj 0 i))))
+	  (else
+	   (backwards-search-dot/slash ($fxsub1 i))))))
+
+
 
 #|
-(define ( mbfl_file_dirname () {
-    mbfl_optional_parameter(PATHNAME, 1, '')
-    local i=
-    # Do not change "${PATHNAME:$i:1}" with "$ch"!! We need to extract the
-    # char at each loop iteration.
-    for ((i="${#PATHNAME}"; $i >= 0; --i))
-    do
-        test "${PATHNAME:$i:1}" = "/" && {
-            while test \( $i -gt 0 \) -a \( "${PATHNAME:$i:1}" = "/" \)
-            do let --i
-            done
-            if test $i = 0
-            then printf '%s\n' "${PATHNAME:$i:1}"
-            else
-                let ++i
-                printf '%s\n' "${PATHNAME:0:$i}"
-            fi
-            return 0
-        }
-    done
-    printf '.\n'
-    return 0
-}
 (define ( mbfl_file_subpathname () {
     mbfl_mandatory_parameter(PATHNAME, 1, pathname)
     mbfl_mandatory_parameter(BASEDIR, 2, base directory)
@@ -712,20 +977,7 @@
     let ++SPLITCOUNT
     return 0
 }
-(define ( mbfl_file_tail () {
-    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
-    local i=
-    for ((i="${#PATHNAME}"; $i >= 0; --i))
-    do
-        test "${PATHNAME:$i:1}" = "/" && {
-            let ++i
-            printf '%s\n' "${PATHNAME:$i}"
-            return 0
-        }
-    done
-    printf '%s\n' "${PATHNAME}"
-    return 0
-}
+
 |#
 
 

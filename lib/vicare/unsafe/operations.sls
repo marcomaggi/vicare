@@ -167,6 +167,7 @@
     $bytevector-length
     $bytevector-empty?
     $bytevector-not-empty?
+    $bytevector-u8-last-index
     $bytevector-u8-ref
     $bytevector-s8-ref
     $bytevector-u8-set!
@@ -228,6 +229,7 @@
     $bytevector-copy!/count
     $bytevector-self-copy-forwards!
     $bytevector-self-copy-backwards!
+    $subbytevector-u8
 
     $bytevector-total-length
     $bytevector-concatenate
@@ -304,6 +306,7 @@
     $string-length
     $string-empty?
     $string-not-empty?
+    $string-last-index
     $string-ref
     $string-set!
     $string=
@@ -1055,6 +1058,10 @@
 (define-inline ($bytevector-not-empty? ?bv)
   (not ($bytevector-empty? ?bv)))
 
+(define-inline ($bytevector-u8-last-index bv)
+  ;;To be called only if BV is not empty!!!
+  ($fxsub1 ($bytevector-length bv)))
+
 (define-inline ($bytevector-fill! ?bv ?index ?end ?fill)
   ;;Fill the  positions in ?BV  from ?INDEX inclusive to  ?END exclusive
   ;;with ?FILL.
@@ -1120,6 +1127,15 @@
 	($bytevector-u8-set! bv dst.start ($bytevector-u8-ref bv src.start))
 	(loop bv src.start dst.start src.end)))))
 
+(define-inline ($subbytevector-u8 src.bv src.start src.end)
+  (let* ((dst.len ($fx- src.end src.start))
+	 (dst.bv  ($make-bytevector dst.len)))
+    (do ((dst.index 0         ($fxadd1 dst.index))
+	 (src.index src.start ($fxadd1 src.index)))
+	(($fx= dst.index dst.len)
+	 dst.bv)
+      ($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
+
 
 ;;;; miscellaneous string operations
 
@@ -1130,6 +1146,10 @@
 
 (define-inline ($string-not-empty? ?bv)
   (not ($string-empty? ?bv)))
+
+(define-inline ($string-last-index str)
+  ;;To be called only if BV is not empty!!!
+  ($fxsub1 ($string-length str)))
 
 (define-inline ($string-fill! ?str ?index ?end ?fill)
   ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive
