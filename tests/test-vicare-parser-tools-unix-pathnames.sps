@@ -538,7 +538,7 @@
 (parametrise ((check-test-name	'components/extension))
 
   (define-syntax-rule (doit ?pathname ?expected)
-    (check (uxptn.pathname-extension ?pathname) => ?expected))
+    (check (uxptn.extension ?pathname) => ?expected))
 
 ;;; --------------------------------------------------------------------
 
@@ -550,6 +550,23 @@
   (doit "/path/to/file.ext/ab"		"")
   (doit "/path/to/some.file.ext"	"ext")
   (doit "a/"				"")
+  (doit "a."				"")
+  (doit "."				"")
+  (doit ".."				"")
+  (doit "..."				"")
+  (doit ".a"				"")
+  (doit ".emacsrc"			"")
+  (doit "..a"				"a")
+  (doit "...a"				"a")
+  (doit "..a.b"				"b")
+  (doit "~/."				"")
+  (doit "~/.."				"")
+  (doit "~/..."				"")
+  (doit "~/.a"				"")
+  (doit "~/.emacsrc"			"")
+  (doit "~/..a"				"a")
+  (doit "~/...a"			"a")
+  (doit "~/..a.b"			"b")
 
 ;;; --------------------------------------------------------------------
 
@@ -561,30 +578,215 @@
   (doit '#ve(ascii "/path/to/file.ext/ab")	'#ve(ascii ""))
   (doit '#ve(ascii "/path/to/some.file.ext")	'#ve(ascii "ext"))
   (doit '#ve(ascii "a/")			'#ve(ascii ""))
+  (doit '#ve(ascii ".")				'#ve(ascii ""))
+  (doit '#ve(ascii "..")			'#ve(ascii ""))
+  (doit '#ve(ascii "...")			'#ve(ascii ""))
+  (doit '#ve(ascii ".a")			'#ve(ascii ""))
+  (doit '#ve(ascii ".emacsrc")			'#ve(ascii ""))
+  (doit '#ve(ascii "..a")			'#ve(ascii "a"))
+  (doit '#ve(ascii "...a")			'#ve(ascii "a"))
+  (doit '#ve(ascii "..a.b")			'#ve(ascii "b"))
+  (doit '#ve(ascii "~/.")			'#ve(ascii ""))
+  (doit '#ve(ascii "~/..")			'#ve(ascii ""))
+  (doit '#ve(ascii "~/...")			'#ve(ascii ""))
+  (doit '#ve(ascii "~/.a")			'#ve(ascii ""))
+  (doit '#ve(ascii "~/.emacsrc")		'#ve(ascii ""))
+  (doit '#ve(ascii "~/..a")			'#ve(ascii "a"))
+  (doit '#ve(ascii "~/...a")			'#ve(ascii "a"))
+  (doit '#ve(ascii "~/..a.b")			'#ve(ascii "b"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/dirname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.dirname ?pathname) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"/path/to")
+  (doit "file.ext"			".")
+  (doit "/file.ext"			"/")
+  (doit "//file.ext"			"/")
+  (doit "/path/to///file.ext"		"/path/to")
+  (doit "//////file.ext"		"/")
+  (doit "a/b"				"a")
+  (doit "a"				".")
+  (doit "../a"				"..")
+  (doit "./a"				".")
+  (doit "../abcd"			"..")
+  (doit "./abcd"			".")
+  (doit "../abcd/efgh"			"../abcd")
+  (doit "./abcd/efgh"			"./abcd")
+  (doit "/ciao/"			"/")
+  (doit "ciao/"				".")
+  (doit "./ciao/"			".")
+  (doit "hello/ciao/"			"hello")
+  (doit "//////"			"/")
+  (doit "ciao//////"			".")
+
+;;; --------------------------------------------------------------------
+
+  (begin
+    (doit '#ve(ascii "/path/to/file.ext")	'#ve(ascii "/path/to"))
+    (doit '#ve(ascii "file.ext")		'#ve(ascii "."))
+    (doit '#ve(ascii "/file.ext")		'#ve(ascii "/"))
+    (doit '#ve(ascii "//file.ext")		'#ve(ascii "/"))
+    (doit '#ve(ascii "/path/to///file.ext")	'#ve(ascii "/path/to"))
+    (doit '#ve(ascii "//////file.ext")		'#ve(ascii "/"))
+    (doit '#ve(ascii "a/b")			'#ve(ascii "a"))
+    (doit '#ve(ascii "a")			'#ve(ascii "."))
+    (doit '#ve(ascii "../a")			'#ve(ascii ".."))
+    (doit '#ve(ascii "./a")			'#ve(ascii "."))
+    (doit '#ve(ascii "../abcd")			'#ve(ascii ".."))
+    (doit '#ve(ascii "./abcd")			'#ve(ascii "."))
+    (doit '#ve(ascii "../abcd/efgh")		'#ve(ascii "../abcd"))
+    (doit '#ve(ascii "./abcd/efgh")		'#ve(ascii "./abcd"))
+    (doit '#ve(ascii "/ciao/")			'#ve(ascii "/"))
+    (doit '#ve(ascii "ciao/")			'#ve(ascii "."))
+    (doit '#ve(ascii "./ciao/")			'#ve(ascii "."))
+    (doit '#ve(ascii "hello/ciao/")		'#ve(ascii "hello"))
+    (doit '#ve(ascii "//////")			'#ve(ascii "/"))
+    (doit '#ve(ascii "ciao//////")		'#ve(ascii "."))
+    (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/tailname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.tailname ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (ascii->string (uxptn.tailname (string->ascii ?pathname))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"file.ext")
+  (doit "file.ext"			"file.ext")
+  (doit "/file.ext"			"file.ext")
+  (doit "//file.ext"			"file.ext")
+  (doit "/path/to///file.ext"		"file.ext")
+  (doit "//////file.ext"		"file.ext")
+  (doit "a/b"				"b")
+  (doit "a"				"a")
+  (doit "../a"				"a")
+  (doit "./a"				"a")
+  (doit "../abcd"			"abcd")
+  (doit "./abcd"			"abcd")
+  (doit "../abcd/efgh"			"efgh")
+  (doit "./abcd/efgh"			"efgh")
+  (doit "/ciao/"			"ciao")
+  (doit "ciao/"				"ciao")
+  (doit "./ciao/"			"ciao")
+  (doit "hello/ciao/"			"ciao")
+  (doit "ciao//////"			"ciao")
+  (doit "//////"			"")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"		"file.ext")
+  (doit1 "file.ext"			"file.ext")
+  (doit1 "/file.ext"			"file.ext")
+  (doit1 "//file.ext"			"file.ext")
+  (doit1 "/path/to///file.ext"		"file.ext")
+  (doit1 "//////file.ext"		"file.ext")
+  (doit1 "a/b"				"b")
+  (doit1 "a"				"a")
+  (doit1 "../a"				"a")
+  (doit1 "./a"				"a")
+  (doit1 "../abcd"			"abcd")
+  (doit1 "./abcd"			"abcd")
+  (doit1 "../abcd/efgh"			"efgh")
+  (doit1 "./abcd/efgh"			"efgh")
+  (doit1 "/ciao/"			"ciao")
+  (doit1 "ciao/"				"ciao")
+  (doit1 "./ciao/"			"ciao")
+  (doit1 "hello/ciao/"			"ciao")
+  (doit1 "ciao//////"			"ciao")
+  (doit1 "//////"			"")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/rootname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.rootname ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (ascii->string (uxptn.rootname (string->ascii ?pathname))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "ciao.it"			"ciao")
+  (doit "ciao"				"ciao")
+  (doit "/path/to/file.ext"		"/path/to/file")
+  (doit "/path/to/file."		"/path/to/file")
+  (doit "/path/to/file"			"/path/to/file")
+  (doit "/path/to/file.ext/ab"		"/path/to/file.ext/ab")
+  (doit "/path/to/some.file.ext"	"/path/to/some.file")
+  (doit "a/"				"a")
+  (doit "a."				"a")
+  (doit "."				".")
+  (doit ".."				"..")
+  (doit "..."				"...")
+  (doit ".a"				".a")
+  (doit ".emacsrc"			".emacsrc")
+  (doit "..a"				"..a")
+  (doit "...a"				"...a")
+  (doit "..a.b"				"..a")
+  (doit "~/."				"~/.")
+  (doit "~/.."				"~/..")
+  (doit "~/..."				"~/...")
+  (doit "~/.a"				"~/.a")
+  (doit "~/.emacsrc"			"~/.emacsrc")
+  (doit "~/..a"				"~/.")
+  (doit "~/...a"			"~/..")
+  (doit "~/..a.b"			"~/..a")
+  (doit "///"				"/")
+  (doit "ciao///"			"ciao")
+  (doit "ciao.it///"			"ciao")
+  (doit "ciao.it.en///"			"ciao.it")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "ciao.it"			"ciao")
+  (doit1 "ciao"				"ciao")
+  (doit1 "/path/to/file.ext"		"/path/to/file")
+  (doit1 "/path/to/file."		"/path/to/file")
+  (doit1 "/path/to/file"		"/path/to/file")
+  (doit1 "/path/to/file.ext/ab"		"/path/to/file.ext/ab")
+  (doit1 "/path/to/some.file.ext"	"/path/to/some.file")
+  (doit1 "a/"				"a")
+  (doit1 "a."				"a")
+  (doit1 "."				".")
+  (doit1 ".."				"..")
+  (doit1 "..."				"...")
+  (doit1 ".a"				".a")
+  (doit1 ".emacsrc"			".emacsrc")
+  (doit1 "..a"				"..a")
+  (doit1 "...a"				"...a")
+  (doit1 "..a.b"				"..a")
+  (doit1 "~/."				"~/.")
+  (doit1 "~/.."				"~/..")
+  (doit1 "~/..."				"~/...")
+  (doit1 "~/.a"				"~/.a")
+  (doit1 "~/.emacsrc"			"~/.emacsrc")
+  (doit1 "~/..a"				"~/.")
+  (doit1 "~/...a"			"~/..")
+  (doit1 "~/..a.b"			"~/..a")
+  (doit1 "///"				"/")
+  (doit1 "ciao///"			"ciao")
+  (doit1 "ciao.it///"			"ciao")
+  (doit1 "ciao.it.en///"		"ciao.it")
 
   #t)
 
 
 #|
-
-#PAGE
-
-file-dirname-1.1 () { mbfl_file_dirname /path/to/file.ext | dotest-output "/path/to"; }
-file-dirname-1.2 () { mbfl_file_dirname file.ext | dotest-output .; }
-file-dirname-1.3 () { mbfl_file_dirname /file.ext | dotest-output /; }
-file-dirname-1.4 () { mbfl_file_dirname //file.ext | dotest-output /; }
-file-dirname-1.5 () { mbfl_file_dirname /path/to///file.ext | dotest-output "/path/to"; }
-file-dirname-1.6 () { mbfl_file_dirname //////file.ext | dotest-output "/"; }
-file-dirname-1.7 () { mbfl_file_dirname a/b | dotest-output "a"; }
-file-dirname-1.8 () { mbfl_file_dirname a | dotest-output "."; }
-file-dirname-1.9 () { mbfl_file_dirname ../a | dotest-output ".."; }
-file-dirname-1.10 () { mbfl_file_dirname ./a | dotest-output "."; }
-file-dirname-1.11 () { mbfl_file_dirname ../abcd | dotest-output ".."; }
-file-dirname-1.12 () { mbfl_file_dirname ./abcd | dotest-output "."; }
-file-dirname-1.13 () { mbfl_file_dirname ../abcd/efgh | dotest-output "../abcd"; }
-file-dirname-1.14 () { mbfl_file_dirname ./abcd/efgh | dotest-output "./abcd"; }
-
-#PAGE
 
 function file-normalise-1.1 () {
     local testdir=$(dotest-mkdir a/b)

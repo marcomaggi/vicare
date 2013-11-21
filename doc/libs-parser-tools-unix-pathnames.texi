@@ -329,10 +329,14 @@ value is a bytevector holding a single byte representing a dot in
 
 
 The following bindings are exported by the library @library{vicare
-parser-tools unix-pathnames}.
+parser-tools unix-pathnames}.  Identifiers whose name is prefixed with
+@code{$} are bound to unsafe operations which do not validate their
+arguments.
 
 
-@defun pathname-extension @var{obj}
+@defun extension @var{obj}
+@defunx $bytevector-extension @var{bv}
+@defunx $string-extension @var{str}
 Return a new string or bytevector representing the extension of
 @var{obj}, which must be a valid Unix pathname string or bytevector
 representation.  The extension of a pathname is the sequence of
@@ -340,13 +344,21 @@ characters from the end up to the first dot character before the first
 slash character; the returned value does @strong{not} include the dot
 character and can be empty.
 
+If the dot is the first character in the pathname's last segment: return
+the empty bytevector because we interpret this pathname as representing
+a Unix--style ``hidden'' filename or dirname.
+
+@func{$bytevector-extension} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-extension} assumes
+that @var{bv} satisfies the predicate @func{string-pathname?}.
+
 @example
 #!vicare
 (import (vicare)
   (prefix (vicare parser-tools unix-pathnames) uxptn.))
 
 (define-syntax-rule (doit ?pathname)
-  (uxptn.pathname-extension ?pathname))
+  (uxptn.extension ?pathname))
 
 (doit "ciao.it"                 @result{} "it"
 (doit "ciao"                    @result{} ""
@@ -355,10 +367,136 @@ character and can be empty.
 (doit "/path/to/file"           @result{} ""
 (doit "/path/to/file.ext/ab"    @result{} ""
 (doit "/path/to/some.file.ext"  @result{} "ext"
-(doit "ciao/"                   @result{} ""
+(doit "a/")                     @result{} ""
+(doit "a.")                     @result{} ""
+(doit ".")                      @result{} ""
+(doit "..")                     @result{} ""
+(doit "...")                    @result{} ""
+(doit ".a")                     @result{} ""
+(doit ".emacsrc")               @result{} ""
+(doit "..a")                    @result{} "a"
+(doit "...a")                   @result{} "a"
+(doit "..a.b")                  @result{} "b"
+(doit "~/.")                    @result{} ""
+(doit "~/..")                   @result{} ""
+(doit "~/...")                  @result{} ""
+(doit "~/.a")                   @result{} ""
+(doit "~/.emacsrc")             @result{} ""
+(doit "~/..a")                  @result{} "a"
+(doit "~/...a")                 @result{} "a"
+(doit "~/..a.b")                @result{} "b"
+
+(doit '#ve(ascii "/path/to/file.ext")
+@result{} #ve(ascii "ext")
 @end example
 @end defun
 
 
+@defun dirname @var{obj}
+@defunx $bytevector-dirname @var{bv}
+@defunx $string-dirname @var{str}
+Return a new string or bytevector representing the dirname of @var{obj},
+which must be a valid Unix pathname string or bytevector representation.
+The dirname of a pathname is the sequence of characters from the
+beginning up to the last slash character; the returned value does
+@strong{not} include the slash character and is never empty: when there
+is no directory part in the pathname, the returned value represents the
+current directory as single dot.  Notice that contiguous slashses are
+``collapsed'' into one slash.
+
+@func{$bytevector-dirname} assumes that @var{bv} satisfies the predicate
+@func{bytevector-pathname?}.  @func{$string-dirnameextension} assumes
+that @var{bv} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.dirname ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "/path/to"
+(doit "file.ext")               @result{} "."
+(doit "/file.ext")              @result{} "/"
+(doit "//file.ext")             @result{} "/"
+(doit "/path/to///file.ext")    @result{} "/path/to"
+(doit "//////file.ext")         @result{} "/"
+(doit "a/b")                    @result{} "a"
+(doit "a")                      @result{} "."
+(doit "../a")                   @result{} ".."
+(doit "./a")                    @result{} "."
+(doit "../abcd")                @result{} ".."
+(doit "./abcd")                 @result{} "."
+(doit "../abcd/efgh")           @result{} "../abcd"
+(doit "./abcd/efgh")            @result{} "./abcd"
+(doit "/ciao/")                 @result{} "/"
+(doit "ciao/")                  @result{} "."
+(doit "./ciao/")                @result{} "."
+(doit "hello/ciao/")            @result{} "hello"
+(doit "//////")                 @result{} "/"
+(doit "ciao//////")             @result{} "."
+
+(doit '#ve(ascii "/path/to/file.ext"))
+@result{} #ve(ascii "/path/to")
+@end example
+@end defun
+
+
+@defun tailname @var{obj}
+@defunx $bytevector-tailname @var{bv}
+@defunx $string-tailname @var{str}
+Return a new string or bytevector representing the tailname of
+@var{obj}, which must be a valid Unix pathname string or bytevector
+representation.  The tailname of a pathname is its last segment; the
+returned value does @strong{not} include the leading slash character, if
+any, and it can be empty; when the whole @var{obj} is the tailname: the
+returned value is @var{obj} itself.
+
+@func{$bytevector-tailname} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-tailname} assumes
+that @var{bv} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.tailname ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "file.ext"
+(doit "file.ext")               @result{} "file.ext"
+(doit "/file.ext")              @result{} "file.ext"
+(doit "//file.ext")             @result{} "file.ext"
+(doit "/path/to///file.ext")    @result{} "file.ext"
+(doit "//////file.ext")         @result{} "file.ext"
+(doit "a/b")                    @result{} "b"
+(doit "a")                      @result{} "a"
+(doit "../a")                   @result{} "a"
+(doit "./a")                    @result{} "a"
+(doit "../abcd")                @result{} "abcd"
+(doit "./abcd")                 @result{} "abcd"
+(doit "../abcd/efgh")           @result{} "efgh"
+(doit "./abcd/efgh")            @result{} "efgh"
+(doit "/ciao/")                 @result{} "ciao"
+(doit "ciao/")                  @result{} "ciao"
+(doit "./ciao/")                @result{} "ciao"
+(doit "hello/ciao/")            @result{} "ciao"
+(doit "ciao//////")             @result{} "ciao"
+(doit "//////")                 @result{} ""
+@end example
+@end defun
+
+
+@defun rootname @var{obj}
+@defunx $bytevector-rootname @var{bv}
+@defunx $string-rootname @var{str}
+
+@func{$bytevector-rootname} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-rootname} assumes
+that @var{bv} satisfies the predicate @func{string-pathname?}.
+
+@end defun
 
 @c end of file
