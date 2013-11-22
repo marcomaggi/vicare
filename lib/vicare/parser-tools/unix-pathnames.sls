@@ -55,6 +55,7 @@
     rootname			$bytevector-rootname			$string-rootname
     strip-trailing-slashes	$bytevector-strip-trailing-slashes	$string-strip-trailing-slashes
     split			$bytevector-split			$string-split
+    normalise			$bytevector-normalise			$string-normalise
     prefix?			$bytevector-prefix?			$string-prefix?
     suffix?			$bytevector-suffix?			$string-suffix?
 
@@ -1151,6 +1152,26 @@
 
 (define ($string-split obj)
   ($bytevector-split (string->utf8 obj)))
+
+
+;;;; pathname components: normalisation
+
+(define-pathname-operation normalise
+  ;;Normalise as  much as  possible the  argument OBJ,  which must  be a
+  ;;valid Unix pathname string or bytevector representation.
+  ;;
+  ((bytevector)	($bytevector-normalise obj))
+  ((string)	($string-normalise     obj)))
+
+(define ($bytevector-normalise obj)
+  (receive (absolute? segments)
+      ($bytevector-split obj)
+    (serialise-segments absolute? segments)))
+
+(define ($string-normalise obj)
+  (receive (absolute? segments)
+      ($string-split obj)
+    (utf8->string (serialise-segments absolute? segments))))
 
 
 ;;;; pathname components: subpathname predicate

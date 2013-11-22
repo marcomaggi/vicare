@@ -828,6 +828,43 @@
   #t)
 
 
+(parametrise ((check-test-name	'components/normalise))
+
+  (define-syntax-rule (doit ?pathname . ?expected)
+    (check (uxptn.normalise ?pathname) => . ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (ascii->string (uxptn.normalise (string->ascii ?pathname))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"/path/to/file.ext")
+  (doit "path/to/file.ext"		"path/to/file.ext")
+  (doit "ciao//"			"ciao")
+  (doit "/"				"/")
+  (doit "."				".")
+  (doit ".."				"..")
+  (doit "ciao/.."			".")
+  (doit "/."				"/")
+  (doit "/.."				"/")
+  (doit "/ciao/.."			"/")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"		"/path/to/file.ext")
+  (doit1 "path/to/file.ext"		"path/to/file.ext")
+  (doit1 "ciao//"			"ciao")
+  (doit1 "/"				"/")
+  (doit1 "."				".")
+  (doit1 ".."				"..")
+  (doit1 "ciao/.."			".")
+  (doit1 "/."				"/")
+  (doit1 "/.."				"/")
+  (doit1 "/ciao/.."			"/")
+
+  #t)
+
+
 (parametrise ((check-test-name	'components/prefix))
 
   (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
