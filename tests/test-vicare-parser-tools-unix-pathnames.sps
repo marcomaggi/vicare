@@ -732,15 +732,15 @@
   (doit "a."				"a")
   (doit "."				".")
   (doit ".."				"..")
-  (doit "..."				"...")
+  (doit "..."				"..")
   (doit ".a"				".a")
   (doit ".emacsrc"			".emacsrc")
-  (doit "..a"				"..a")
-  (doit "...a"				"...a")
+  (doit "..a"				".")
+  (doit "...a"				"..")
   (doit "..a.b"				"..a")
   (doit "~/."				"~/.")
   (doit "~/.."				"~/..")
-  (doit "~/..."				"~/...")
+  (doit "~/..."				"~/..")
   (doit "~/.a"				"~/.a")
   (doit "~/.emacsrc"			"~/.emacsrc")
   (doit "~/..a"				"~/.")
@@ -764,24 +764,66 @@
   (doit1 "a."				"a")
   (doit1 "."				".")
   (doit1 ".."				"..")
-  (doit1 "..."				"...")
+  (doit1 "..."				"..")
   (doit1 ".a"				".a")
   (doit1 ".emacsrc"			".emacsrc")
-  (doit1 "..a"				"..a")
-  (doit1 "...a"				"...a")
-  (doit1 "..a.b"				"..a")
+  (doit1 "..a"				".")
+  (doit1 "...a"				"..")
+  (doit1 "..a.b"			"..a")
   (doit1 "~/."				"~/.")
   (doit1 "~/.."				"~/..")
-  (doit1 "~/..."				"~/...")
+  (doit1 "~/..."			"~/..")
   (doit1 "~/.a"				"~/.a")
   (doit1 "~/.emacsrc"			"~/.emacsrc")
-  (doit1 "~/..a"				"~/.")
+  (doit1 "~/..a"			"~/.")
   (doit1 "~/...a"			"~/..")
   (doit1 "~/..a.b"			"~/..a")
   (doit1 "///"				"/")
   (doit1 "ciao///"			"ciao")
   (doit1 "ciao.it///"			"ciao")
   (doit1 "ciao.it.en///"		"ciao.it")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/strip-trailing-slashes))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.strip-trailing-slashes ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (ascii->string (uxptn.strip-trailing-slashes (string->ascii ?pathname))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"/path/to/file.ext")
+  (doit "ciao//"			"ciao")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"		"/path/to/file.ext")
+  (doit1 "ciao//"			"ciao")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/split))
+
+  (define-syntax-rule (doit ?pathname . ?expected)
+    (check (uxptn.split ?pathname) => . ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		#t '(#ve(ascii "path") #ve(ascii "to") #ve(ascii "file.ext")))
+  (doit "path/to/file.ext"		#f '(#ve(ascii "path") #ve(ascii "to") #ve(ascii "file.ext")))
+  (doit "ciao//"			#f '(#ve(ascii "ciao")))
+  (doit "/"				#t '())
+  (doit "."				#f '())
+  (doit ".."				#f '(#ve(ascii "..")))
+  (doit "ciao/.."			#f '())
+  (doit "/."				#t '())
+  (doit "/.."				#t '())
+  (doit "/ciao/.."			#t '())
 
   #t)
 

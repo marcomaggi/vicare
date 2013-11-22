@@ -49,10 +49,12 @@
     serialise-segments
 
     ;; components
-    extension		$bytevector-extension	$string-extension
-    dirname		$bytevector-dirname	$string-dirname
-    tailname		$bytevector-tailname	$string-tailname
-    rootname		$bytevector-rootname	$string-rootname
+    extension			$bytevector-extension			$string-extension
+    dirname			$bytevector-dirname			$string-dirname
+    tailname			$bytevector-tailname			$string-tailname
+    rootname			$bytevector-rootname			$string-rootname
+    strip-trailing-slashes	$bytevector-strip-trailing-slashes	$string-strip-trailing-slashes
+    split			$bytevector-split			$string-split
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -128,6 +130,26 @@
 
 ;;; --------------------------------------------------------------------
 
+(define ($subbytevector-or-full bv start past)
+  ;;If the fixnums START and PAST select the whole bytevector BV: return
+  ;;BV itself, otherwise return the selected subbytevector.
+  ;;
+  (if (and ($fxzero? start)
+	   ($fx= past ($bytevector-length bv)))
+      bv
+    ($subbytevector-u8 bv start past)))
+
+(define ($substring-or-full str start past)
+  ;;If the  fixnums START and PAST  select the whole string  STR: return
+  ;;STR itself, otherwise return the selected substring.
+  ;;
+  (if (and ($fxzero? start)
+	   ($fx= past ($string-length str)))
+      str
+    ($substring str start past)))
+
+;;; --------------------------------------------------------------------
+
 (define-inline ($bytevector-chi-slash? bv i)
   ($fx= CHI-SLASH ($bytevector-u8-ref bv i)))
 
@@ -175,6 +197,156 @@
 	 ($string-backwards-index-of-slash str ($fxsub1 i)))
 	(else
 	 ($fxadd1 i))))
+
+;;; --------------------------------------------------------------------
+
+(case-define $bytevector-index-past-last-segment
+  ((bv)
+   ($bytevector-index-past-last-segment bv (bytevector-length bv)))
+  ((bv past)
+   ;;This function assumes that:
+   ;;
+   ;;   (assert (and (bytevector? BV)
+   ;;                (positive? (bytevector-length BV))
+   ;;                (<= PAST (bytevector-length BV))))
+   ;;
+   ;;It is  a recursive function  which is meant  to be called  the first
+   ;;time with: LAST == (bytevector-length BV).
+   ;;
+   ;;Scan backwards the bytevector skipping the octets representing slash
+   ;;characters  in   ASCII  encoding;   return  a   non-negative  fixnum
+   ;;representing the index past the  last character in the last pathname
+   ;;segment; if PAST is zero: return zero.
+   ;;
+   ;;Examples:
+   ;;
+   ;;  ($bytevector-index-past-last-segment '#ve(ascii "ciao") 4) => 4
+   ;;  ($bytevector-index-past-last-segment '#ve(ascii "cia/") 4) => 3
+   ;;  ($bytevector-index-past-last-segment '#ve(ascii "ci//") 4) => 2
+   ;;  ($bytevector-index-past-last-segment '#ve(ascii "c///") 4) => 1
+   ;;  ($bytevector-index-past-last-segment '#ve(ascii "////") 4) => 0
+   ;;
+   (if ($fxzero? past)
+       past
+     (let ((i ($fxsub1 past)))
+       (if ($bytevector-chi-slash? bv i)
+	   ($bytevector-index-past-last-segment bv i)
+	 past)))))
+
+(case-define $string-index-past-last-segment
+  ((str)
+   ($string-index-past-last-segment str ($string-length str)))
+  ((str past)
+   ;;This function assumes that:
+   ;;
+   ;;   (assert (and (string? str)
+   ;;                (positive? (string-length str))
+   ;;                (<= past (string-length str))))
+   ;;
+   ;;It is  a recursive function  which is meant  to be called  the first
+   ;;time with: LAST == (string-length STR).
+   ;;
+   ;;Scan backwards  the string skipping  the slash characters;  return a
+   ;;non-negative fixnum  representing the index past  the last character
+   ;;in the last pathname segment; if PAST is zero: return zero.
+   ;;
+   ;;Examples:
+   ;;
+   ;;  ($string-index-past-last-segment "ciao" 4)	=> 4
+   ;;  ($string-index-past-last-segment "cia/" 4)	=> 3
+   ;;  ($string-index-past-last-segment "ci//" 4)	=> 2
+   ;;  ($string-index-past-last-segment "c///" 4)	=> 1
+   ;;  ($string-index-past-last-segment "////" 4)	=> 0
+   ;;
+   (if ($fxzero? past)
+       past
+     (let ((i ($fxsub1 past)))
+       (if ($string-chi-slash? str i)
+	   ($string-index-past-last-segment str i)
+	 past)))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-end-of-double-dot? bv i past)
+  ;;This function assumes that:
+  ;;
+  ;;   (assert (and (bytevector? bv)
+  ;;                (<= past (bytevector-length str))
+  ;;                (<  i    past)
+  ;;                ($bytevector-chi-dot? bv i)))
+  ;;
+  ;;Return true if I references the  second dot in a double-dot pathname
+  ;;segment.  Examples:
+  ;;
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii "..")     1 2)	=> #t
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii "/..")    2 3)	=> #t
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii "a..")    2 3)	=> #f
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii "a.")     1 2)	=> #f
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii ".emacs") 0 6)	=> #f
+  ;;  ($bytevector-end-of-double-dot? '#ve(ascii "..a")    1 3)	=> #f
+  ;;
+  (and ($fx= past ($fxadd1 i))
+       (let ((j ($fxsub1 i)))
+	 (cond (($fxnegative? j)
+		#f)
+	       (($bytevector-chi-dot? bv j)
+		(or ($fxzero? j)
+		    ($bytevector-chi-slash? bv ($fxsub1 j))))
+	       (else #f)))))
+
+(define ($string-end-of-double-dot? str i past)
+  ;;This function assumes that:
+  ;;
+  ;;   (assert (and (string? str)
+  ;;                (<= past (string-length str))
+  ;;                (<  i    past)
+  ;;                ($string-chi-dot? str i)))
+  ;;
+  ;;Return true if I references the  second dot in a double-dot pathname
+  ;;segment.  Examples:
+  ;;
+  ;;  ($string-end-of-double-dot? ".."     1 2)	=> #t
+  ;;  ($string-end-of-double-dot? "/.."    2 3)	=> #t
+  ;;  ($string-end-of-double-dot? "a.."    2 3)	=> #f
+  ;;  ($string-end-of-double-dot? "a."     1 2)	=> #f
+  ;;  ($string-end-of-double-dot? ".emacs" 0 6)	=> #f
+  ;;  ($string-end-of-double-dot? "..a"    1 3)	=> #f
+  ;;
+  (and ($fx= past ($fxadd1 i))
+       (let ((j ($fxsub1 i)))
+	 (cond (($fxnegative? j)
+		#f)
+	       (($string-chi-dot? str j)
+		(or ($fxzero? j)
+		    ($string-chi-slash? str ($fxsub1 j))))
+	       (else #f)))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-beginning-of-segment? bv i)
+  ;;This function assumes that:
+  ;;
+  ;;   (assert (and (bytevector? bv)
+  ;;                (< i (bytevector-length bv))
+  ;;                ($bytevector-chi-dot? bv i)))
+  ;;
+  ;;Return true if I references an  octet at the beginning of a pathname
+  ;;segment.
+  ;;
+  (or ($fxzero? i)
+      ($bytevector-chi-slash? bv ($fxsub1 i))))
+
+(define ($string-beginning-of-segment? str i)
+  ;;This function assumes that:
+  ;;
+  ;;   (assert (and (string? str)
+  ;;                (< i (string-length str))))
+  ;;
+  ;;Return  true if  I  references a  character at  the  beginning of  a
+  ;;pathname segment.
+  ;;
+  (or ($fxzero? i)
+      ($string-chi-slash? str ($fxsub1 i))))
 
 ;;; --------------------------------------------------------------------
 
@@ -654,7 +826,7 @@
 ;;;; pathname components: extension
 
 (define-pathname-operation extension
-  ;;Return a new string or bytevector representing the extension of OBJ,
+  ;;Return a  string or  bytevector representing  the extension  of OBJ,
   ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
   ;;representation.   The extension  of a  pathname is  the sequence  of
   ;;characters from  the end up  to the  first dot character  before the
@@ -710,13 +882,13 @@
 ;;;; pathname components: directory part
 
 (define-pathname-operation dirname
-  ;;Return a new  string or bytevector representing the  dirname of OBJ,
-  ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
-  ;;representation.   The  dirname of  a  pathname  is the  sequence  of
-  ;;characters from  the beginning up  to the last slash  character; the
-  ;;returned value does  *not* include the slash character  and is never
-  ;;empty: when there is no directory part in the pathname, the returned
-  ;;value represents the current directory as single dot.
+  ;;Return a string or bytevector representing the dirname of OBJ, which
+  ;;must be a  valid Unix pathname string  or bytevector representation.
+  ;;The dirname  of a pathname  is the  sequence of characters  from the
+  ;;beginning up  to the last  slash character; the returned  value does
+  ;;*not* include the slash character and  is never empty: when there is
+  ;;no directory part in the pathname, the returned value represents the
+  ;;current directory as single dot.
   ;;
   ((bytevector)	($bytevector-dirname obj))
   ((string)	($string-dirname     obj)))
@@ -781,7 +953,7 @@
 ;;;; pathname components: tail part
 
 (define-pathname-operation tailname
-  ;;Return a new string or  bytevector representing the tailname of OBJ,
+  ;;Return  a string  or bytevector  representing the  tailname of  OBJ,
   ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
   ;;representation.  The tailname of a pathname is its last segment; the
   ;;returned value  does *not* include  the leading slash  character, if
@@ -835,16 +1007,16 @@
 ;;;; pathname components: rootname
 
 (define-pathname-operation rootname
-  ;;Return a new string or  bytevector representing the rootname of OBJ,
+  ;;Return  a string  or bytevector  representing the  rootname of  OBJ,
   ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
   ;;representation.   The rootname  of  a pathname  is  the sequence  of
   ;;characters from  the beginning up  to the last dot  character before
   ;;the extension,  in other  words: everything  but the  extension; the
-  ;;returned  value does  *not* include  the  dot character  and can  be
+  ;;returned value  does *not* include  the dot character and  cannot be
   ;;empty.
   ;;
   ;;If the  dot is the first  character in the pathname's  last segment:
-  ;;return the  whole bytevector because  we interpret this  pathname as
+  ;;return the  whole bytevector because  we interpret such  pathname as
   ;;representing a Unix-style "hidden" filename or dirname.
   ;;
   ((bytevector)	($bytevector-rootname obj))
@@ -852,40 +1024,107 @@
 
 (define ($bytevector-rootname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-dot/slash ((i ($fxsub1 ($bytevector-length obj))))
-    (cond ((or ($fxzero? i)
-	       ($bytevector-chi-slash? obj i))
-	   obj)
-	  (($bytevector-chi-dot? obj i)
-	   (let ((pre ($fxsub1 i)))
-	     (if (or ($fxnegative? pre)
-		     ($bytevector-chi-slash? obj pre))
-		 ;;The dot is the first character in the pathname's last
-		 ;;segment:  return  the  whole  bytevector  because  we
-		 ;;interpret  this pathname  as representing  a "hidden"
-		 ;;filename.
-		 obj
-	       ($subbytevector-u8 obj 0 i))))
-	  (else
-	   (backwards-search-dot/slash ($fxsub1 i))))))
+  (define past
+    ($bytevector-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ROOT-DIRECTORY-BV
+    (let backwards-search-dot/slash ((i ($fxsub1 past)))
+      (cond ((or ($fxzero? i)
+		 ($bytevector-chi-slash? obj i))
+	     ;;Here we  are at the beginning  of the pathname or  at the
+	     ;;beginning of the last segment;  it means that there is no
+	     ;;extension to cut.
+	     ($subbytevector-or-full obj 0 past))
+	    (($bytevector-chi-dot? obj i)
+	     (if (or ($bytevector-beginning-of-segment? obj i)
+		     ($bytevector-end-of-double-dot? obj i past))
+		 ;;Either  the  dot  is   the  first  character  in  the
+		 ;;pathname's last  segment or  the last segment  is the
+		 ;;double-dot.   For the  first  case  return the  whole
+		 ;;pathname  because  we   interpret  this  pathname  as
+		 ;;representing  a "hidden"  filename.   For the  second
+		 ;;case return  the whole  pathname because there  is no
+		 ;;extension to cut.
+		 ($subbytevector-or-full obj 0 past)
+	       ;;The last  segment has an  extension: cut it  and return
+	       ;;the result.
+	       ($subbytevector-u8 obj 0 i)))
+	    (else
+	     (backwards-search-dot/slash ($fxsub1 i)))))))
 
 (define ($string-rootname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-dot/slash ((i ($fxsub1 ($string-length obj))))
-    (cond ((or ($fxzero? i)
-	       ($string-chi-slash? obj i))
-	   obj)
-	  (($string-chi-dot? obj i)
-	   (let ((pre ($fxsub1 i)))
-	     (if (or ($fxnegative? pre)
-		     ($string-chi-slash? obj pre))
-		 ;;The dot is the first character in the pathname's last
-		 ;;segment: return the whole string because we interpret
-		 ;;this pathname as representing a "hidden" filename.
-		 obj
-	       ($substring obj 0 i))))
-	  (else
-	   (backwards-search-dot/slash ($fxsub1 i))))))
+  (define past
+    ($string-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ROOT-DIRECTORY-STR
+    (let backwards-search-dot/slash ((i ($fxsub1 past)))
+      (cond ((or ($fxzero? i)
+		 ($string-chi-slash? obj i))
+	     ;;Here we  are at  the beginning  of the  string or  at the
+	     ;;beginning of the last segment;  it means that there is no
+	     ;;extension to cut.
+	     ($substring-or-full obj 0 past))
+	    (($string-chi-dot? obj i)
+	     (if (or ($string-beginning-of-segment? obj i)
+		     ($string-end-of-double-dot? obj i past))
+		 ;;Either  the  dot  is   the  first  character  in  the
+		 ;;pathname's last  segment or  the last segment  is the
+		 ;;double-dot.   For the  first  case  return the  whole
+		 ;;pathname  because  we   interpret  this  pathname  as
+		 ;;representing  a "hidden"  filename.   For the  second
+		 ;;case return  the whole  pathname because there  is no
+		 ;;extension to cut.
+		 ($substring-or-full obj 0 past)
+	       ;;The last  segment has an  extension: cut it  and return
+	       ;;the result.
+	       ($substring obj 0 i)))
+	    (else
+	     (backwards-search-dot/slash ($fxsub1 i)))))))
+
+
+;;;; pathname components: stripping trailing slashes
+
+(define-pathname-operation strip-trailing-slashes
+  ;;Return a  string or  bytevector representing  the argument  with the
+  ;;trailing  slashes  stripped,  if  any.  If  there  are  no  trailing
+  ;;slashes: return OBJ itself.
+  ;;
+  ((bytevector)	($bytevector-strip-trailing-slashes obj))
+  ((string)	($string-strip-trailing-slashes     obj)))
+
+(define ($bytevector-strip-trailing-slashes obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  ($subbytevector-or-full obj 0 ($bytevector-index-past-last-segment obj)))
+
+(define ($string-strip-trailing-slashes obj)
+  ;;We know that if OBJ is a valid pathname: it cannot be empty.
+  ($substring-or-full obj 0 ($string-index-past-last-segment obj)))
+
+
+;;;; pathname components: splitting
+
+(define-pathname-operation split
+  ;;Split into  segments the argument  OBJ, which  must be a  valid Unix
+  ;;pathname string  or bytevector  representation.  Return 2  values: a
+  ;;boolean, true if the pathname is  absolute; null or a proper list of
+  ;;bytevectors representing  the segments.   The returned  segments are
+  ;;normalised  by removing,  when possible,  segments representing  the
+  ;;current directory and segments representing the uplevel directory.
+  ;;
+  ((bytevector)	($bytevector-split obj))
+  ((string)	($string-split     obj)))
+
+(define ($bytevector-split obj)
+  (let ((port (open-bytevector-input-port obj)))
+    (receive (absolute? original-segments)
+	(parse-pathname port)
+      (receive (changed? normalised-segments)
+	  (normalise-pathname absolute? original-segments)
+	(values absolute? normalised-segments)))))
+
+(define ($string-split obj)
+  ($bytevector-split (string->utf8 obj)))
 
 
 
@@ -932,32 +1171,6 @@
     do PATHNAME="${PATHNAME}/${output[$i]}"
     done
     printf '%s\n' "${PATHNAME}"
-}
-(define ( mbfl_file_rootname () {
-    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
-    local i="${#PATHNAME}"
-    test $i = 1 && {
-        printf '%s\n' "${PATHNAME}"
-        return 0
-    }
-    for ((i="${#PATHNAME}"; $i >= 0; --i))
-    do
-        ch="${PATHNAME:$i:1}"
-        if test "$ch" = "."
-        then
-            if test $i -gt 0
-            then
-                printf '%s\n' "${PATHNAME:0:$i}"
-                break
-            else printf '%s\n' "${PATHNAME}"
-            fi
-        elif test "$ch" = "/"
-        then
-            printf '%s\n' "${PATHNAME}"
-            break
-        fi
-    done
-    return 0
 }
 (define ( mbfl_file_split () {
     mbfl_mandatory_parameter(PATHNAME, 1, pathname)
