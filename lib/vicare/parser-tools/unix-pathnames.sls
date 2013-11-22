@@ -869,41 +869,49 @@
 
 (define ($bytevector-extension obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-dot/slash ((i ($fxsub1 ($bytevector-length obj))))
-    (cond ((or ($fxzero? i)
-	       ($bytevector-chi-slash? obj i))
-	   '#vu8())
-	  (($bytevector-chi-dot? obj i)
-	   (let ((pre ($fxsub1 i)))
-	     (if (or ($fxnegative? pre)
-		     ($bytevector-chi-slash? obj pre))
-		 ;;The  dot is  the first  character in  the pathname's
-		 ;;last segment: return the empty bytevector because we
-		 ;;interpret this  pathname as representing  a "hidden"
-		 ;;filename.
-		 '#vu8()
-		 ($subbytevector-u8 obj ($fxadd1 i) ($bytevector-length obj)))))
-	  (else
-	   (backwards-search-dot/slash ($fxsub1 i))))))
+  (define past
+    ($bytevector-index-past-last-segment obj))
+  (if ($fxzero? past)
+      '#vu8()
+    (let backwards-search-dot/slash ((i ($fxsub1 past)))
+      (cond ((or ($fxzero? i)
+		 ($bytevector-chi-slash? obj i))
+	     '#vu8())
+	    (($bytevector-chi-dot? obj i)
+	     (let ((pre ($fxsub1 i)))
+	       (if (or ($fxnegative? pre)
+		       ($bytevector-chi-slash? obj pre))
+		   ;;The dot  is the  first character in  the pathname's
+		   ;;last segment:  return the empty  bytevector because
+		   ;;we  interpret  this   pathname  as  representing  a
+		   ;;"hidden" filename.
+		   '#vu8()
+		   ($subbytevector-u8 obj ($fxadd1 i) past))))
+	    (else
+	     (backwards-search-dot/slash ($fxsub1 i)))))))
 
 (define ($string-extension obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-dot/slash ((i ($fxsub1 ($string-length obj))))
-    (cond ((or ($fxzero? i)
-	       ($string-chi-slash? obj i))
-	   "")
-	  (($string-chi-dot? obj i)
-	   (let ((pre ($fxsub1 i)))
-	     (if (or ($fxnegative? pre)
-		     ($string-chi-slash? obj pre))
-		 ;;The  dot is  the first  character in  the pathname's
-		 ;;last  segment: return  the empty  string because  we
-		 ;;interpret this  pathname as representing  a "hidden"
-		 ;;filename.
-		 ""
-	       ($substring obj ($fxadd1 i) ($string-length obj)))))
-	  (else
-	   (backwards-search-dot/slash ($fxsub1 i))))))
+  (define past
+    ($string-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ""
+    (let backwards-search-dot/slash ((i ($fxsub1 past)))
+      (cond ((or ($fxzero? i)
+		 ($string-chi-slash? obj i))
+	     "")
+	    (($string-chi-dot? obj i)
+	     (let ((pre ($fxsub1 i)))
+	       (if (or ($fxnegative? pre)
+		       ($string-chi-slash? obj pre))
+		   ;;The  dot is  the first  character in  the pathname's
+		   ;;last  segment: return  the empty  string because  we
+		   ;;interpret this  pathname as representing  a "hidden"
+		   ;;filename.
+		   ""
+		 ($substring obj ($fxadd1 i) past))))
+	    (else
+	     (backwards-search-dot/slash ($fxsub1 i)))))))
 
 
 ;;;; pathname components: directory part
@@ -922,59 +930,47 @@
 
 (define ($bytevector-dirname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-slash ((i ($bytevector-u8-last-index obj)))
-    (cond (($fxnegative? i)
-	   ;;No slash found.
-	   CURRENT-DIRECTORY-BV)
-	  (($bytevector-chi-slash? obj i)
-	   ;;A slash is present.
-	   (let ((last-is-slash? ($fx= i ($bytevector-u8-last-index obj))))
-	     (let drop-contiguous-slashes ((j ($fxsub1 i)))
-	       (cond (($fxnegative? j)
+  (define past
+    ($bytevector-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ROOT-DIRECTORY-BV
+    (let backwards-search-slash ((i ($fxsub1 past)))
+      (cond (($fxnegative? i)
+	     ;;No slash found.
+	     CURRENT-DIRECTORY-BV)
+	    (($bytevector-chi-slash? obj i)
+	     ;;A slash is present.
+	     (let ((past ($bytevector-index-past-last-segment obj i)))
+	       (cond (($fxzero? past)
 		      ;;The pathname  has slashes  up to  the beginning;
 		      ;;examples: "/file.ext", "///file.ext".
 		      ROOT-DIRECTORY-BV)
-		     (($bytevector-chi-slash? obj j)
-		      (drop-contiguous-slashes ($fxsub1 j)))
 		     (else
-		      ;;There  is  at   least  one  non-slash  character
-		      ;;between the beginning and the slash.
-		      (if last-is-slash?
-			  (backwards-search-slash ($fxsub1 j))
-			(let ((end ($fxadd1 j)))
-			  (if ($fxzero? end)
-			      ($subbytevector-u8 obj 0 0)
-			    ($subbytevector-u8 obj 0 end)))))))))
-	  (else
-	   (backwards-search-slash ($fxsub1 i))))))
+		      ($subbytevector-or-full obj 0 past)))))
+	    (else
+	     (backwards-search-slash ($fxsub1 i)))))))
 
 (define ($string-dirname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-slash ((i ($string-last-index obj)))
-    (cond (($fxnegative? i)
-	   ;;No slash found.
-	   CURRENT-DIRECTORY-STR)
-	  (($string-chi-slash? obj i)
-	   ;;A slash is present.
-	   (let ((last-is-slash? ($fx= i ($string-last-index obj))))
-	     (let drop-contiguous-slashes ((j ($fxsub1 i)))
-	       (cond (($fxnegative? j)
+  (define past
+    ($string-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ROOT-DIRECTORY-STR
+    (let backwards-search-slash ((i ($fxsub1 past)))
+      (cond (($fxnegative? i)
+	     ;;No slash found.
+	     CURRENT-DIRECTORY-STR)
+	    (($string-chi-slash? obj i)
+	     ;;A slash is present.
+	     (let ((past ($string-index-past-last-segment obj i)))
+	       (cond (($fxzero? past)
 		      ;;The pathname  has slashes  up to  the beginning;
 		      ;;examples: "/file.ext", "///file.ext".
 		      ROOT-DIRECTORY-STR)
-		     (($string-chi-slash? obj j)
-		      (drop-contiguous-slashes ($fxsub1 j)))
 		     (else
-		      ;;There  is  at   least  one  non-slash  character
-		      ;;between the beginning and the slash.
-		      (if last-is-slash?
-			  (backwards-search-slash ($fxsub1 j))
-			(let ((end ($fxadd1 j)))
-			  (if ($fxzero? end)
-			      ($substring obj 0 0)
-			    ($substring obj 0 end)))))))))
-	   (else
-	    (backwards-search-slash ($fxsub1 i))))))
+		      ($substring-or-full obj 0 past)))))
+	    (else
+	     (backwards-search-slash ($fxsub1 i)))))))
 
 
 ;;;; pathname components: tail part
@@ -992,43 +988,27 @@
 
 (define ($bytevector-tailname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-slash ((i   ($bytevector-u8-last-index obj))
-			       (end ($bytevector-length obj)))
-    (cond (($fxnegative? i)
-	   ;;No leading slash found.
-	   (if ($fx= end ($bytevector-length obj))
-	       obj
-	     ;;Notice that this return value may be empty.
-	     ($subbytevector-u8 obj 0 end)))
-	  (($bytevector-chi-slash? obj i)
-	   ;;A slash is present.
-	   (let ((slash-index    ($bytevector-backwards-index-of-slash obj ($fxsub1 i)))
-		 (last-is-slash? ($fx= i ($bytevector-u8-last-index obj))))
-	     (if last-is-slash?
-		 (backwards-search-slash ($fxsub1 slash-index) slash-index)
-	       ($subbytevector-u8 obj ($fxadd1 i) end))))
-	  (else
-	   (backwards-search-slash ($fxsub1 i) end)))))
+  (define past
+    ($bytevector-index-past-last-segment obj))
+  (if ($fxzero? past)
+      '#vu8()
+    (let backwards-search-slash ((i ($fxsub1 past)))
+      (if (or ($fxnegative? i)
+	      ($bytevector-chi-slash? obj i))
+	  ($subbytevector-or-full obj ($fxadd1 i) past)
+	(backwards-search-slash ($fxsub1 i))))))
 
 (define ($string-tailname obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  (let backwards-search-slash ((i   ($string-last-index obj))
-			       (end ($string-length obj)))
-    (cond (($fxnegative? i)
-	   ;;No leading slash found.
-	   (if ($fx= end ($string-length obj))
-	       obj
-	     ;;Notice that this return value may be empty.
-	     ($substring obj 0 end)))
-	  (($string-chi-slash? obj i)
-	   ;;A slash is present.
-	   (let ((slash-index    ($string-backwards-index-of-slash obj ($fxsub1 i)))
-		 (last-is-slash? ($fx= i ($string-last-index obj))))
-	     (if last-is-slash?
-		 (backwards-search-slash ($fxsub1 slash-index) slash-index)
-	       ($substring obj ($fxadd1 i) end))))
-	  (else
-	   (backwards-search-slash ($fxsub1 i) end)))))
+  (define past
+    ($string-index-past-last-segment obj))
+  (if ($fxzero? past)
+      ""
+    (let backwards-search-slash ((i ($fxsub1 past)))
+      (if (or ($fxnegative? i)
+	      ($string-chi-slash? obj i))
+	  ($substring-or-full obj ($fxadd1 i) past)
+	(backwards-search-slash ($fxsub1 i))))))
 
 
 ;;;; pathname components: rootname
