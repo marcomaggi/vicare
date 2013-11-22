@@ -45,7 +45,7 @@
     parse-pathname
 
     ;; pathname manipulation
-    normalise-pathname
+    normalise-segments
     serialise-segments
 
     ;; components
@@ -55,6 +55,8 @@
     rootname			$bytevector-rootname			$string-rootname
     strip-trailing-slashes	$bytevector-strip-trailing-slashes	$string-strip-trailing-slashes
     split			$bytevector-split			$string-split
+    prefix?			$bytevector-prefix?			$string-prefix?
+    suffix?			$bytevector-suffix?			$string-suffix?
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -721,7 +723,7 @@
 		 "invalid input bytevector" in-port)))))))
 
 
-(define* (normalise-pathname absolute? segments)
+(define* (normalise-segments absolute? segments)
   ;;Given  a list  of bytevectors  representing Unix  pathname segments:
   ;;normalise them, as much  as possible, removing segments representing
   ;;single-dot and double-dot directory  entries; if ABSOLUTE?  is true:
@@ -819,7 +821,31 @@
 		  (begin . ?string-body))
 		 (else
 		  (procedure-argument-violation (quote ?who)
-		    "expected string or bytevector as argument" OBJ))))))
+		    "expected string or bytevector Unix pathname as argument" OBJ))))))
+    ))
+
+(define-syntax (define-pathname-operation-2 stx)
+  (syntax-case stx (string bytevector)
+    ((_ ?who
+	((bytevector)	. ?bytevector-body)
+	((string)	. ?string-body))
+     (with-syntax
+	 ((OBJ1 (datum->syntax #'?who 'obj1))
+	  (OBJ2 (datum->syntax #'?who 'obj2)))
+       #'(define (?who OBJ1 OBJ2)
+	   (cond ((bytevector-pathname? OBJ1)
+		  (if (bytevector-pathname? OBJ2)
+		      (begin . ?bytevector-body)
+		    (procedure-argument-violation (quote ?who)
+		      "expected bytevector Unix pathname as second argument" OBJ2)))
+		 ((string-pathname? OBJ1)
+		  (if (string-pathname? OBJ2)
+		      (begin . ?string-body)
+		    (procedure-argument-violation (quote ?who)
+		      "expected string Unix pathname as second argument" OBJ2)))
+		 (else
+		  (procedure-argument-violation (quote ?who)
+		    "expected string or bytevector Unix pathname as first argument" OBJ1))))))
     ))
 
 
@@ -1120,78 +1146,70 @@
     (receive (absolute? original-segments)
 	(parse-pathname port)
       (receive (changed? normalised-segments)
-	  (normalise-pathname absolute? original-segments)
+	  (normalise-segments absolute? original-segments)
 	(values absolute? normalised-segments)))))
 
 (define ($string-split obj)
   ($bytevector-split (string->utf8 obj)))
 
 
+;;;; pathname components: subpathname predicate
 
-#|
-(define ( mbfl_file_subpathname () {
-    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
-    mbfl_mandatory_parameter(BASEDIR, 2, base directory)
-    test "${BASEDIR:$((${#BASEDIR}-1))}" = '/' && \
-        BASEDIR="${BASEDIR:0:$((${#BASEDIR}-1))}"
-    if test "${PATHNAME}" = "${BASEDIR}"
-    then
-        printf './\n'
-        return 0
-    elif test "${PATHNAME:0:${#BASEDIR}}" = "${BASEDIR}"
-    then
-        printf  './%s\n' "${PATHNAME:$((${#BASEDIR}+1))}"
-        return 0
-    else return 1
-    fi
-}
-(define ( mbfl_p_file_remove_dots_from_pathname () {
-    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
-    local item i
-    local SPLITPATH SPLITCOUNT; declare -a SPLITPATH
-    local output output_counter=0; declare -a output
-    local input_counter=0
-    mbfl_file_split "${PATHNAME}"
-    for ((input_counter=0; $input_counter < $SPLITCOUNT; ++input_counter))
-    do
-        case "${SPLITPATH[$input_counter]}" in
-            .)
-                ;;
-            ..)
-                let --output_counter
-                ;;
-            *)
-                output[$output_counter]="${SPLITPATH[$input_counter]}"
-                let ++output_counter
-                ;;
-        esac
-    done
-    PATHNAME="${output[0]}"
-    for ((i=1; $i < $output_counter; ++i))
-    do PATHNAME="${PATHNAME}/${output[$i]}"
-    done
-    printf '%s\n' "${PATHNAME}"
-}
-(define ( mbfl_file_split () {
-    mbfl_mandatory_parameter(PATHNAME, 1, pathname)
-    local i=0 last_found=0
-    mbfl_string_skip "${PATHNAME}" i /
-    last_found=$i
-    for ((SPLITCOUNT=0; $i < "${#PATHNAME}"; ++i))
-    do
-        test "${PATHNAME:$i:1}" = / && {
-            SPLITPATH[$SPLITCOUNT]="${PATHNAME:$last_found:$(($i-$last_found))}"
-            let ++SPLITCOUNT; let ++i
-            mbfl_string_skip "${PATHNAME}" i /
-            last_found=$i
-        }
-    done
-    SPLITPATH[$SPLITCOUNT]="${PATHNAME:$last_found}"
-    let ++SPLITCOUNT
-    return 0
-}
+(define-pathname-operation-2 prefix?
+  ;;Given  two  strings  or   two  bytevectors  representing  valid  and
+  ;;normalised Unix  pathname representations: return true  if the first
+  ;;is the prefix of the second, otherwise return false.
+  ;;
+  ((bytevector)	($bytevector-prefix? obj1 obj2))
+  ((string)	($string-prefix?     obj1 obj2)))
 
-|#
+(define ($bytevector-prefix? obj1 obj2)
+  (and ($fx<= ($bytevector-length obj1)
+	      ($bytevector-length obj2))
+       (let compare-next-octet ((i 0))
+	 (or ($fx= i ($bytevector-length obj1))
+	     (and ($fx= ($bytevector-u8-ref obj1 i)
+			($bytevector-u8-ref obj2 i))
+		  (compare-next-octet ($fxadd1 i)))))))
+
+(define ($string-prefix? obj1 obj2)
+  (and ($fx<= ($string-length obj1)
+	      ($string-length obj2))
+       (let compare-next-octet ((i 0))
+	 (or ($fx= i ($string-length obj1))
+	     (and ($char= ($string-ref obj1 i)
+			  ($string-ref obj2 i))
+		  (compare-next-octet ($fxadd1 i)))))))
+
+;;; --------------------------------------------------------------------
+
+(define-pathname-operation-2 suffix?
+  ;;Given  two  strings  or   two  bytevectors  representing  valid  and
+  ;;normalised Unix  pathname representations: return true  if the first
+  ;;is the suffix of the second, otherwise return false.
+  ;;
+  ((bytevector)	($bytevector-suffix? obj1 obj2))
+  ((string)	($string-suffix?     obj1 obj2)))
+
+(define ($bytevector-suffix? obj1 obj2)
+  (and ($fx<= ($bytevector-length obj1)
+	      ($bytevector-length obj2))
+       (let compare-prev-octet ((i ($fxsub1 ($bytevector-length obj1)))
+				(j ($fxsub1 ($bytevector-length obj2))))
+	 (or ($fxnegative? i)
+	     (and ($fx= ($bytevector-u8-ref obj1 i)
+			($bytevector-u8-ref obj2 j))
+		  (compare-prev-octet ($fxsub1 i) ($fxsub1 j)))))))
+
+(define ($string-suffix? obj1 obj2)
+  (and ($fx<= ($string-length obj1)
+	      ($string-length obj2))
+       (let compare-prev-octet ((i ($fxsub1 ($string-length obj1)))
+				(j ($fxsub1 ($string-length obj2))))
+	 (or ($fxnegative? i)
+	     (and ($char= ($string-ref obj1 i)
+			  ($string-ref obj2 j))
+		  (compare-prev-octet ($fxsub1 i) ($fxsub1 j)))))))
 
 
 ;;;; done
