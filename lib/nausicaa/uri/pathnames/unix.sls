@@ -103,7 +103,7 @@
 	       (unless absolute?
 		 (assertion-violation __who__ "expected absolute pathname" obj))
 	       (receive (changed? normalised-segments)
-		   (parser.normalise-pathname absolute? original-segments)
+		   (parser.normalise-segments absolute? original-segments)
 		 ((make-absolute-pathname (if changed?
 					      (parser.serialise-segments absolute? normalised-segments)
 					    (bytevector-copy obj))
@@ -144,7 +144,7 @@
 	       (when absolute?
 		 (assertion-violation __who__ "expected relative pathname" obj))
 	       (receive (changed? normalised-segments)
-		   (parser.normalise-pathname absolute? original-segments)
+		   (parser.normalise-segments absolute? original-segments)
 		 ((make-relative-pathname (if changed?
 					      (parser.serialise-segments absolute? normalised-segments)
 					    (bytevector-copy obj))
@@ -174,7 +174,7 @@
 (define-method (pathname-absolute (o <relative-unix-pathname>) (absolute <absolute-unix-pathname>))
   (let ((original-segments (append (absolute segments) (o segments))))
     (receive (changed? normalised-segments)
-	(parser.normalise-pathname #t original-segments)
+	(parser.normalise-segments #t original-segments)
       (<absolute-unix-pathname> (normalised-segments)))))
 
 
@@ -188,26 +188,26 @@
 (define-method (pathname-prepend (suffix <relative-unix-pathname>) (prefix <relative-unix-pathname>))
   (let ((original-segments (append (prefix segments) (suffix segments))))
     (receive (changed? normalised-segments)
-	(parser.normalise-pathname #f original-segments)
+	(parser.normalise-segments #f original-segments)
       (<relative-unix-pathname> (normalised-segments)))))
 
 (define-method (pathname-prepend (suffix <relative-unix-pathname>) (prefix <absolute-unix-pathname>))
   (let ((original-segments (append (prefix segments) (suffix segments))))
     (receive (changed? normalised-segments)
-	(parser.normalise-pathname #t original-segments)
+	(parser.normalise-segments #t original-segments)
       (<absolute-unix-pathname> (normalised-segments)))))
 
 
 (define-method (pathname-append (prefix <relative-unix-pathname>) (suffix <relative-unix-pathname>))
   (let ((original-segments (append (prefix segments) (suffix segments))))
     (receive (changed? normalised-segments)
-	(parser.normalise-pathname #f original-segments)
+	(parser.normalise-segments #f original-segments)
       (<relative-unix-pathname> (normalised-segments)))))
 
 (define-method (pathname-append (prefix <absolute-unix-pathname>) (suffix <relative-unix-pathname>))
   (let ((original-segments (append (prefix segments) (suffix segments))))
     (receive (changed? normalised-segments)
-	(parser.normalise-pathname #f original-segments)
+	(parser.normalise-segments #f original-segments)
       (<absolute-unix-pathname> ((parser.serialise-segments #t normalised-segments))))))
 
 
@@ -237,7 +237,7 @@
 	  o
 	(let ((segments (%replace-last-pair (o segments) (list (bytevector-append name extension)))))
 	  (receive (changed? normalised-segments)
-	      (parser.normalise-pathname #t segments)
+	      (parser.normalise-segments #t segments)
 	    (<absolute-unix-pathname> (normalised-segments)))))))
 
   (define-method (pathname-replace-extension (o <absolute-unix-pathname>) (extension <string>))

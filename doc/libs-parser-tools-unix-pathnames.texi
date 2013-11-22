@@ -285,7 +285,7 @@ The following bindings are exported by the library @library{vicare
 parser-tools unix-pathnames}.
 
 
-@defun normalise-pathname @var{absolute?} @var{segments}
+@defun normalise-segments @var{absolute?} @var{segments}
 Given a list of bytevectors representing Unix pathname segments:
 normalise them, as much as possible, removing segments representing
 single--dot and double--dot directory entries; if @var{absolute?}  is
@@ -355,7 +355,7 @@ a Unix--style ``hidden'' filename or dirname.
 
 @func{$bytevector-extension} assumes that @var{bv} satisfies the
 predicate @func{bytevector-pathname?}.  @func{$string-extension} assumes
-that @var{bv} satisfies the predicate @func{string-pathname?}.
+that @var{str} satisfies the predicate @func{string-pathname?}.
 
 @example
 #!vicare
@@ -410,8 +410,8 @@ current directory as single dot.  Notice that contiguous slashses are
 ``collapsed'' into one slash.
 
 @func{$bytevector-dirname} assumes that @var{bv} satisfies the predicate
-@func{bytevector-pathname?}.  @func{$string-dirnameextension} assumes
-that @var{bv} satisfies the predicate @func{string-pathname?}.
+@func{bytevector-pathname?}.  @func{$string-dirname} assumes that
+@var{str} satisfies the predicate @func{string-pathname?}.
 
 @example
 #!vicare
@@ -460,7 +460,7 @@ empty; when the whole @var{obj} is the tailname: the returned value is
 
 @func{$bytevector-tailname} assumes that @var{bv} satisfies the
 predicate @func{bytevector-pathname?}.  @func{$string-tailname} assumes
-that @var{bv} satisfies the predicate @func{string-pathname?}.
+that @var{str} satisfies the predicate @func{string-pathname?}.
 
 @example
 #!vicare
@@ -512,7 +512,7 @@ full pathname.  The return value can be the argument itself.
 
 @func{$bytevector-rootname} assumes that @var{bv} satisfies the
 predicate @func{bytevector-pathname?}.  @func{$string-rootname} assumes
-that @var{bv} satisfies the predicate @func{string-pathname?}.
+that @var{str} satisfies the predicate @func{string-pathname?}.
 
 @example
 #!vicare
@@ -564,7 +564,7 @@ return @var{obj} itself.
 
 @func{$bytevector-strip-trailing-slashes} assumes that @var{bv}
 satisfies the predicate @func{bytevector-pathname?}.
-@func{$string-strip-trailing-slashes} assumes that @var{bv} satisfies
+@func{$string-strip-trailing-slashes} assumes that @var{str} satisfies
 the predicate @func{string-pathname?}.
 
 @example
@@ -592,8 +592,8 @@ normalised by removing, when possible, segments representing the current
 directory and segments representing the uplevel directory.
 
 @func{$bytevector-split} assumes that @var{bv} satisfies the predicate
-@func{bytevector-pathname?}.  @func{$string-split} assumes that @var{bv}
-satisfies the predicate @func{string-pathname?}.
+@func{bytevector-pathname?}.  @func{$string-split} assumes that
+@var{str} satisfies the predicate @func{string-pathname?}.
 
 @example
 #!vicare
@@ -624,5 +624,64 @@ satisfies the predicate @func{string-pathname?}.
 @end example
 @end defun
 
+
+@defun prefix? @vari{obj} @varii{obj}
+@defunx $bytevector-prefix? @vari{bv} @varii{bv}
+@defunx $string-prefix? @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid and
+@strong{normalised} Unix pathname representations: return @true{} if the
+first is the prefix of the second, otherwise return @false{}.  The
+result of this function is fully reliable only if the arguments are
+absolute pathnames resulting from the canonicalisation performed by a
+system function like the @posix{} @cfunc{realpath}.
+
+@func{$bytevector-prefix?} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-prefix?}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.prefix? ?pathname))
+
+(doit "/path/to/file.ext" "/path/to/file.ext") @result{} #t
+(doit "/path/to/"         "/path/to/file.ext") @result{} #t
+(doit "/path/from"        "/path/to/file.ext") @result{} #f
+@end example
+@end defun
+
+
+@defun suffix? @vari{obj} @varii{obj}
+@defunx $bytevector-suffix? @vari{bv} @varii{bv}
+@defunx $string-suffix? @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid and
+@strong{normalised} Unix pathname representations: return @true{} if the
+first is the suffix of the second, otherwise return @false{}.  The
+result of this function is fully reliable only if the arguments are
+absolute pathnames resulting from the canonicalisation performed by a
+system function like the @posix{} @cfunc{realpath}.
+
+@func{$bytevector-suffix?} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-suffix?}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.suffix? ?pathname))
+
+(doit "/path/to/file.ext" "/path/to/file.ext") @result{} #t
+(doit "/to/file.ext"      "/path/to/file.ext") @result{} #t
+(doit "/from/file.ext"    "/path/to/file.ext") @result{} #f
+@end example
+@end defun
 
 @c end of file
