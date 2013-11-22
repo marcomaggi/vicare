@@ -625,6 +625,42 @@ directory and segments representing the uplevel directory.
 @end defun
 
 
+@defun normalise @var{obj}
+@defunx $bytevector-normalise @var{bv}
+@defunx $string-normalise @var{str}
+Normalise the argument @var{obj}, which must be a valid Unix pathname
+string or bytevector representation, by removing, when possible,
+segments representing the current directory and segments representing
+the uplevel directory.  The result of this function is @strong{not} a
+full canonicalisation as can be performed by a system function like the
+@posix{} @cfunc{realpath}.
+
+@func{$bytevector-normalise} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-normalise} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (normalise (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.normalise ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "/path/to/file.ext"
+(doit "path/to/file.ext")       @result{} "path/to/file.ext"
+(doit "ciao//")                 @result{} "ciao"
+(doit "/")                      @result{} "/"
+(doit ".")                      @result{} "."
+(doit "..")                     @result{} ".."
+(doit "ciao/..")                @result{} "."
+(doit "/.")                     @result{} "/"
+(doit "/..")                    @result{} "/"
+(doit "/ciao/..")               @result{} "/"
+@end example
+@end defun
+
+
 @defun prefix? @vari{obj} @varii{obj}
 @defunx $bytevector-prefix? @vari{bv} @varii{bv}
 @defunx $string-prefix? @vari{str} @varii{str}
