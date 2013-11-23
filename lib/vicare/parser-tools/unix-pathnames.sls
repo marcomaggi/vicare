@@ -58,6 +58,8 @@
     normalise			$bytevector-normalise			$string-normalise
     prefix?			$bytevector-prefix?			$string-prefix?
     suffix?			$bytevector-suffix?			$string-suffix?
+    prepend			$bytevector-prepend			$string-prepend
+    append			$bytevector-append			$string-append
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -68,7 +70,8 @@
     unix-pathname-normalisation-error?
     raise-unix-pathname-parser-error
     raise-unix-pathname-normalisation-error)
-  (import (vicare)
+  (import (except (vicare)
+		  append)
     (vicare unsafe operations))
 
 
@@ -350,6 +353,14 @@
   ;;
   (or ($fxzero? i)
       ($string-chi-slash? str ($fxsub1 i))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-last-is-slash? bv)
+  ($fx= CHI-SLASH ($bytevector-u8-ref bv ($fxsub1 ($bytevector-length bv)))))
+
+(define ($string-last-is-slash? str)
+  ($char= #\/ ($string-ref str ($fxsub1 ($string-length str)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1102,11 +1113,17 @@
 
 (define ($bytevector-strip-trailing-slashes obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  ($subbytevector-or-full obj 0 ($bytevector-index-past-last-segment obj)))
+  (let ((past ($bytevector-index-past-last-segment obj)))
+    (if ($fxzero? past)
+	ROOT-DIRECTORY-BV
+      ($subbytevector-or-full obj 0 past))))
 
 (define ($string-strip-trailing-slashes obj)
   ;;We know that if OBJ is a valid pathname: it cannot be empty.
-  ($substring-or-full obj 0 ($string-index-past-last-segment obj)))
+  (let ((past ($string-index-past-last-segment obj)))
+    (if ($fxzero? past)
+	ROOT-DIRECTORY-STR
+      ($substring-or-full obj 0 past))))
 
 
 ;;;; pathname components: splitting
@@ -1154,7 +1171,7 @@
     (utf8->string (serialise-segments absolute? segments))))
 
 
-;;;; pathname components: subpathname predicate
+;;;; pathname components: subpathname predicates
 
 (define-pathname-operation-2 prefix?
   ;;Given  two  strings  or   two  bytevectors  representing  valid  and
@@ -1211,6 +1228,74 @@
 	     (and ($char= ($string-ref obj1 i)
 			  ($string-ref obj2 j))
 		  (compare-prev-octet ($fxsub1 i) ($fxsub1 j)))))))
+
+
+;;;; pathname components: subpathname composition
+
+(define-pathname-operation-2 prepend
+  ;;Given  two  strings  or  two  bytevectors  representing  valid  Unix
+  ;;pathnames: prepend the first to the second and return the result.
+  ;;
+  ((bytevector)	($bytevector-prepend obj1 obj2))
+  ((string)	($string-prepend     obj1 obj2)))
+
+(define* ($bytevector-prepend obj1 obj2)
+  (let* ((obj1   ($bytevector-strip-trailing-slashes obj1))
+	 (slash? ($bytevector-last-is-slash? obj1)))
+    (receive-and-return (result)
+	(let ((len (+ ($bytevector-length obj1)
+		      ($bytevector-length obj2)
+		      (if slash? 0 1))))
+	  (if (fixnum? len)
+	      ($make-bytevector len)
+	    (error __who__ "request to join pathnames leads to bytevector too big" obj1 obj2)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length obj1))
+	   (unless slash?
+	     ($bytevector-u8-set! result i CHI-SLASH)
+	     ($fxincr! i))
+	   (do ((j 0 ($fxadd1 j))
+		(k i ($fxadd1 k)))
+	       (($fx= j ($bytevector-length obj2)))
+	     ($bytevector-u8-set! result k ($bytevector-u8-ref obj2 j))))
+	($bytevector-u8-set! result i ($bytevector-u8-ref obj1 i))))))
+
+(define* ($string-prepend obj1 obj2)
+  (let* ((obj1   ($string-strip-trailing-slashes obj1))
+	 (slash? ($string-last-is-slash? obj1)))
+    (receive-and-return (result)
+	(let ((len (+ ($string-length obj1)
+		      ($string-length obj2)
+		      (if slash? 0 1))))
+	  (if (fixnum? len)
+	      (make-string len) #;($make-string len)
+	    (error __who__ "request to join pathnames leads to string too big" obj1 obj2)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i ($string-length obj1))
+	   (unless slash?
+	     ($string-set! result i #\/)
+	     ($fxincr! i))
+	   (do ((j 0 ($fxadd1 j))
+		(k i ($fxadd1 k)))
+	       (($fx= j ($string-length obj2)))
+	     ($string-set! result k ($string-ref obj2 j))))
+	($string-set! result i ($string-ref obj1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define-pathname-operation-2 append
+  ;;Given  two  strings  or   two  bytevectors  representing  valid  and
+  ;;normalised Unix pathnames: append the first to the second and return
+  ;;the result.
+  ;;
+  ((bytevector)	($bytevector-prepend obj2 obj1))
+  ((string)	($string-prepend     obj2 obj1)))
+
+(define ($bytevector-append obj1 obj2)
+  ($bytevector-prepend obj2 obj1))
+
+(define ($string-append obj1 obj2)
+  ($bytevector-prepend obj2 obj1))
 
 
 ;;;; done
