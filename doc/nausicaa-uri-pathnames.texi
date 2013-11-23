@@ -5,7 +5,7 @@
 The library @library{nausicaa uri pathnames} provides basic operations
 on file system pathnames without actual access to the file system; other
 libraries, like @library{nausicaa uri pathnames unix}, add facilities
-for full pathname handling.
+for platform--specific pathname handling.
 
 @menu
 * uri pathnames intro::         Overview of the pathname model.
@@ -22,8 +22,11 @@ for full pathname handling.
 
 In the context of the libraries @library{nausicaa uri pathname ---}, a
 @dfn{pathname} is a Scheme bytevector representing a file or directory
-on a file system.  To be interpreted as pathname a bytevector must
-adhere to the following conventions:
+on a file system.  To model pathnames: Nausicaa defines a hierarchy of
+classes that wrap the bytevectors; by using them we can be sure that a
+bytevector has already been validated as pathname representation.  To be
+interpreted as pathname a bytevector must adhere to the following
+conventions:
 
 @itemize
 @item
@@ -35,7 +38,8 @@ bytevectors representing its components.
 
 @item
 The list of segments alone does not specify if the pathname is absolute
-or relative.
+or relative; typically an absolute/relative flag is needed (a boolean,
+true if the pathname is absolute).
 
 @item
 Some additional information can be needed along with the segments and
@@ -56,55 +60,46 @@ represents the parent directory.
 @subsection Abstract class interface
 
 
-@menu
-* uri pathnames abstract class::    Abstract class interface.
-* uri pathnames abstract methods::  Extending class methods.
-@end menu
-
-@c page
-@node uri pathnames abstract class
-@subsubsection Abstract class interface
-
-
 @cindex @library{nausicaa uri pathnames abstract}, library
 @cindex Library @library{nausicaa uri pathnames abstract}
 
 
-The classes documented below cannot be instantiated; we should
-instantiate platform--specific subclasses instead, like
-@class{relative-pathname} and @class{absolute-pathname} exported by
-@library{nausicaa uri pathnames unix}, @ref{uri pathnames unix,
-Manipulating Unix pathnames}.
+The library @library{nausicaa uri pathnames abstract} defines an
+abstract @api{} to handle pathname objects in a way that is independent
+from the underlying platform.  The classes defined by this library
+cannot be instantiated; we must instantiate platform--specific
+subclasses instead, like @class{relative-unix-pathname} and
+@class{absolute-unix-pathname} exported by @library{nausicaa uri
+pathnames unix}, @ref{uri pathnames unix, Manipulating Unix pathnames}.
 
-The following bindings are exported by the @library{nausicaa uri pathnames
-abstract} library.
+@menu
+* uri pathnames abstract pathname::  Base pathname abstract class.
+* uri pathnames abstract absolute::  Absolute pathname abstract class.
+* uri pathnames abstract relative::  Relative pathname abstract class.
+* uri pathnames abstract methods::   Extending pathname class methods.
+@end menu
+
+@c page
+@node uri pathnames abstract pathname
+@subsubsection Base pathname abstract class
+
+
+The following bindings are exported by the @library{nausicaa uri
+pathnames abstract} library.
 
 
 @deftp {Abstract Class} @aclass{pathname}
-Base type for pathnames.
+Base type for file system pathname objects.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@deftp {Abstract Class} @aclass{absolute-pathname}
-Base type for absolute pathnames; it is derived from @class{pathname}.
-@end deftp
-
-
-@deftp {Abstract Class} @aclass{relative-pathname}
-Base type for relative pathnames; it is derived from @class{pathname}.
-@end deftp
+@subsubheading Constructors and predicates
 
 
-@defop {Superclass constructor} @aclass{pathname} constructor @var{bytevector} @var{segments}
+@defop {Superclass constructor} @aclass{pathname} constructor @var{bytevector}
 Build a new pathname record using the @var{bytevector} and the
 associated list of @var{segments} already verified and normalised.
-@end defop
-
-
-@defop {Superclass constructor} @aclass{absolute-pathname} constructor @var{bytevector} @var{segments}
-@defopx {Superclass constructor} @aclass{relative-pathname} constructor @var{bytevector} @var{segments}
-Build a new absolute or relative pathname record; the arguments are the
-same as the ones of the @class{pathname} superclass constructor.
 @end defop
 
 @c ------------------------------------------------------------
@@ -135,6 +130,28 @@ field, or @false{} if @code{segments} is null.
 @deftypecv {Immutable field} @aclass{pathname} @aclass{string} string
 Scheme string representing the value of the @code{bytevector} field.
 @end deftypecv
+
+@c page
+@node uri pathnames abstract absolute
+@subsubsection Absolute pathname abstract class
+
+
+The following bindings are exported by the @library{nausicaa uri
+pathnames abstract} library.
+
+
+@deftp {Abstract Class} @aclass{absolute-pathname}
+Base type for absolute pathnames; it is derived from @class{pathname}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and predicates
+
+
+@defop {Super constructor} @aclass{absolute-pathname} constructor @var{bytevector}
+Build a new absolute pathname object.
+@end defop
 
 @c ------------------------------------------------------------
 
@@ -177,6 +194,34 @@ subclasses of @class{pathname}.
 (absolute "/ciao/hello")        @result{} "/ciao/hello"
 @end example
 @end deftypemethod
+
+
+
+@c page
+@node uri pathnames abstract relative
+@subsubsection Relative pathname abstract class
+
+
+The following bindings are exported by the @library{nausicaa uri pathnames
+abstract} library.
+
+
+@deftp {Abstract Class} @aclass{relative-pathname}
+Base type for relative pathnames; it is derived from @class{pathname}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and predicates
+
+
+@defop {Super constructor} @aclass{relative-pathname} constructor @var{bytevector}
+Build a new relative pathname object.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
 
 
 @deftypemethod @aclass{relative-pathname} @aclass{relative-pathname} prepend (@var{prefix} @aclass{relative-pathname})
