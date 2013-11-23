@@ -158,6 +158,34 @@ bytevectors each acceptable as representation of a Unix pathname
 segment; otherwise return @false{}.
 @end defun
 
+
+@defun absolute? @var{obj}
+@defunx $bytevector-absolute? @var{bv}
+@defunx $string-absolute? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of absolute Unix pathname; otherwise return @false{}.  If
+@var{obj} is not a valid representation of Unix pathname: raise an
+exception.
+
+@func{$bytevector-absolute?} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-absolute?} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+@end defun
+
+
+@defun relative? @var{obj}
+@defunx $bytevector-relative? @var{bv}
+@defunx $string-relative? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of absolute Unix pathname; otherwise return @false{}.  If
+@var{obj} is not a valid representation of Unix pathname: raise an
+exception.
+
+@func{$bytevector-relative?} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-relative?} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+@end defun
+
 @c page
 @node parser-tools unix-pathnames conv
 @subsection Converting Unix pathnames

@@ -535,6 +535,60 @@
   #t)
 
 
+(parametrise ((check-test-name	'absolute))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.absolute? ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (uxptn.absolute? (string->ascii ?pathname)) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		#t)
+  (doit "path/to/file.ext"		#f)
+  (doit "/"				#t)
+  (doit "."				#f)
+  (doit ".."				#f)
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"		#t)
+  (doit1 "path/to/file.ext"		#f)
+  (doit1 "/"				#t)
+  (doit1 "."				#f)
+  (doit1 ".."				#f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'relative))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.relative? ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (uxptn.relative? (string->ascii ?pathname)) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		#f)
+  (doit "path/to/file.ext"		#t)
+  (doit "/"				#f)
+  (doit "."				#t)
+  (doit ".."				#t)
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"		#f)
+  (doit1 "path/to/file.ext"		#t)
+  (doit1 "/"				#f)
+  (doit1 "."				#t)
+  (doit1 ".."				#t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'components/extension))
 
   (define-syntax-rule (doit ?pathname ?expected)
