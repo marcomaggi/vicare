@@ -6,18 +6,6 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	List format:
-;;;
-;;;		(car name-as-list) -> "." or "/"
-;;;		(car (reverse name-as-list)) -> file name+extension
-;;;
-;;;	examples:
-;;;
-;;;		("." "alpha" "beta" "file.ext")
-;;;		("/" "alpha" "beta" "file.ext")
-;;;		("/" "alpha" ".." "file.ext")
-;;;		("/" "alpha" "." "file.ext")
-;;;		("." "alpha" "." ".." "..")
 ;;;
 ;;;
 ;;;Copyright (c) 2006-2007, 2010-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
@@ -56,26 +44,6 @@
     (vicare unsafe operations))
 
 
-;;; helpers
-
-(define-constant SINGLE-DOT-BV		'#vu8(46))
-(define-constant DOUBLE-DOT-BV		'#vu8(46 46))
-
-(define (%bytevector-find-last-dot-index (segment <bytevector-u8>))
-  ;;Given  a   bytevector,  find  the   index  of  the   rightmost  byte
-  ;;representing a dot  in ASCII coding, according to  the convention of
-  ;;dots separating extensions.
-  ;;
-  (let previous-byte ((i ($fx+ -1 (segment $length))))
-    (cond (($fxzero? i)
-	   #f)
-	  ;; (char->integer #\.) => 46
-	  (($fx= 46 (segment[i]))
-	   i)
-	  (else
-	   (previous-byte ($fxsub1 i))))))
-
-
 ;;;; multimethods
 
 (define-generic pathname-absolute		(self absolute-pathname))
@@ -97,24 +65,21 @@
 
   (super-protocol
    (lambda (make-top)
-     (lambda (bytevector segments)
-       ((make-top) bytevector segments (last-pair segments)))))
-
-  (fields
-   (immutable (bytevector	<bytevector>))
-		;Holds the pathname, verified and normalised.
-   (immutable (segments		<list>))
-		;The   list  of   bytevector   segments,  verified   and
-		;normalised.
-   (immutable (last-pair	<pair>))
-		;False of the last pair in SEGMENTS.
-   #| end of fields |# )
+     (lambda ()
+       ((make-top)))))
 
   (virtual-fields
-   (immutable (string <string>) pathname.string))
+   (immutable (bytevector	<bytevector>)	pathname-bytevector)
+   (immutable (string		<string>)	pathname-string))
 
-  (methods (absolute	pathname-absolute)
-	   (append	pathname-append))
+  (methods (absolute		pathname-absolute)
+	   (append		pathname-append)
+	   (dirname		pathname-dirname)
+	   (rootname		pathname-rootname)
+	   (tail		pathname-tail)
+	   (extension		pathname-extension)
+	   (name		pathname-name)
+	   (replace-extension	pathname-replace-extension))
 
   #| end of class |# )
 
@@ -127,26 +92,9 @@
   (super-protocol
    (lambda (make-pathname)
      (lambda (bytevector segments)
-       ((make-pathname bytevector segments) #f))))
+       ((make-pathname)))))
 
-  (fields (mutable memoized-last-dot-index-in-last-segment))
-
-  (virtual-fields
-   (immutable last-dot-index-in-last-segment
-	      (lambda ((O <absolute-pathname>))
-		(or (O $memoized-last-dot-index-in-last-segment)
-		    (and (O $last-pair)
-			 (receive-and-return (dot-index)
-			     (%bytevector-find-last-dot-index (O $last-pair $car))
-			   (set! (O $memoized-last-dot-index-in-last-segment) dot-index))))))
-   #| end of virtual-vields |# )
-
-  (methods (dirname		pathname-dirname)
-	   (rootname		pathname-rootname)
-	   (tail		pathname-tail)
-	   (extension		pathname-extension)
-	   (name		pathname-name)
-	   (replace-extension	pathname-replace-extension))
+  (methods (prepend	pathname-prepend))
 
   #| end of class |# )
 
@@ -159,36 +107,11 @@
   (super-protocol
    (lambda (make-pathname)
      (lambda (bytevector segments)
-       ((make-pathname bytevector segments)))))
+       ((make-pathname)))))
 
-  (methods (prepend	pathname-prepend))
+  (methods (append	pathname-append))
 
   #| end of class |# )
-
-
-;;The  following  method  implementations   are  here,  implemented  for
-;;abstract classes, because they do not  need to create a new <PATHNAME>
-;;instance.
-;;
-
-(define-method (pathname-extension (O <absolute-pathname>))
-  (and (O $last-pair)
-       (let (((last-segment <bytevector>) (O $last-pair $car))
-	     (dot-index (O last-dot-index-in-last-segment)))
-	 (and dot-index
-	      (receive-and-return ((extension <bytevector>))
-		  (make-bytevector ($fx- (last-segment $length) dot-index))
-		(bytevector-copy! last-segment dot-index extension 0 (extension length)))))))
-
-(define-method (pathname-name (O <absolute-pathname>))
-  (if (O $last-pair)
-      (let* (((last-segment <bytevector>) (O $last-pair $car))
-	     (dot-index		(O last-dot-index-in-last-segment))
-	     (name.len		(or dot-index (last-segment length))))
-	(receive-and-return ((name <bytevector>))
-	    (make-bytevector name.len)
-	  (bytevector-copy! last-segment 0 name 0 name.len)))
-    SINGLE-DOT-BV))
 
 
 ;;;; done
