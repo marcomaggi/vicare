@@ -982,6 +982,58 @@
   #t)
 
 
+(parametrise ((check-test-name	'components/append))
+
+  (define-syntax-rule (doit ?pathname ?extension ?expected)
+    (check (uxptn.replace-extension ?pathname ?extension) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?extension ?expected)
+    (check (ascii->string (uxptn.replace-extension (string->ascii ?pathname)
+						   (string->ascii ?extension))) => ?expected))
+
+  (define-syntax-rule (doit-special-pathname-error ?pathname)
+    (check
+	(guard (E ((uxptn.unix-pathname-normalisation-error? E)
+		   (condition-message E))
+		  (else E))
+	  (doit ?pathname "two" ""))
+      => "cannot append extension to special directory pathname"))
+
+  (define-syntax-rule (doit-special-pathname-error1 ?pathname)
+    (check
+	(guard (E ((uxptn.unix-pathname-normalisation-error? E)
+		   (condition-message E))
+		  (else E))
+	  (doit1 ?pathname "two" ""))
+      => "cannot append extension to special directory pathname"))
+
+;;; --------------------------------------------------------------------
+
+  (doit "file.one" "two"		"file.two")
+  (doit "/path/to/file.one" "two"	"/path/to/file.two")
+  (doit ".emacs" "elc"			".emacs.elc")
+  (doit "/path/to/.emacs" "elc"		"/path/to/.emacs.elc")
+
+  (doit-special-pathname-error "/")
+  (doit-special-pathname-error "///")
+  (doit-special-pathname-error ".")
+  (doit-special-pathname-error "..")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "file.one" "two"		"file.two")
+  (doit1 "/path/to/file.one" "two"	"/path/to/file.two")
+  (doit1 ".emacs" "elc"			".emacs.elc")
+  (doit1 "/path/to/.emacs" "elc"	"/path/to/.emacs.elc")
+
+  (doit-special-pathname-error1 "/")
+  (doit-special-pathname-error1 "///")
+  (doit-special-pathname-error1 ".")
+  (doit-special-pathname-error1 "..")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

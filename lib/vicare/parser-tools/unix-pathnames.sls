@@ -30,8 +30,8 @@
   (export
 
     ;; predicates
-    pathname? bytevector-pathname? string-pathname?
-    segment?
+    pathname?	bytevector-pathname?	string-pathname?
+    segment?	bytevector-segment?	string-segment?
     list-of-segments?
 
     ;; conversion
@@ -60,6 +60,7 @@
     suffix?			$bytevector-suffix?			$string-suffix?
     prepend			$bytevector-prepend			$string-prepend
     append			$bytevector-append			$string-append
+    replace-extension		$bytevector-replace-extension		$string-replace-extension
 
     ;; condition objects
     &unix-pathname-parser-error
@@ -119,12 +120,39 @@
   (or ($fx< 0         chi CHI-SLASH)
       ($fx< CHI-SLASH chi 256)))
 
+;;; --------------------------------------------------------------------
+
+(define-inline ($root-bv? bv)
+  ;;Assuming BV is  a bytevector: return true if it  holds a single byte
+  ;;being the ASCII representation of the slash.
+  ;;
+  (and ($fx= 1 ($bytevector-length bv))
+       ($fx= CHI-SLASH ($bytevector-u8-ref bv 0))))
+
+(define-inline ($root-str? str)
+  ;;Assuming STR is a string: return true if it holds a single character
+  ;;being the ASCII representation of the slash.
+  ;;
+  (and ($fx= 1 ($string-length str))
+       ($char= #\/ ($string-ref str 0))))
+
+;;; --------------------------------------------------------------------
+
 (define-inline ($dot-bv? bv)
   ;;Assuming BV is  a bytevector: return true if it  holds a single byte
   ;;being the ASCII representation of the dot.
   ;;
   (and ($fx=  1 ($bytevector-length bv))
        ($fx= CHI-DOT ($bytevector-u8-ref bv 0))))
+
+(define-inline ($dot-str? str)
+  ;;Assuming STR is a string: return true if it holds a single character
+  ;;being the ASCII representation of the dot.
+  ;;
+  (and ($fx=  1 ($string-length str))
+       ($char= #\. ($string-ref str 0))))
+
+;;; --------------------------------------------------------------------
 
 (define-inline ($dot-dot-bv? bv)
   ;;Assuming BV is a bytevector: return  true if it holds two bytes both
@@ -133,6 +161,14 @@
   (and ($fx= 2       ($bytevector-length bv))
        ($fx= CHI-DOT ($bytevector-u8-ref bv 0))
        ($fx= CHI-DOT ($bytevector-u8-ref bv 1))))
+
+(define-inline ($dot-dot-str? str)
+  ;;Assuming STR  is a string:  return true  if it holds  two characters
+  ;;both being the ASCII representation of the dot.
+  ;;
+  (and ($fx= 2     ($string-length str))
+       ($char= #\. ($string-ref str 0))
+       ($char= #\. ($string-ref str 1))))
 
 ;;; --------------------------------------------------------------------
 
@@ -446,25 +482,30 @@
 ;;; --------------------------------------------------------------------
 
 (define (segment? obj)
-  (cond ((bytevector? obj)
-	 (let loop ((bv obj)
-		    (i  0))
-	   (cond (($fx= i ($bytevector-length bv))
-		  #t)
-		 (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
-		  (loop bv ($fxadd1 i)))
-		 (else
-		  #f))))
-	((string? obj)
-	 (let loop ((obj obj)
-		    (i   0))
-	   (cond (($fx= i ($string-length obj))
-		  #t)
-		 (($valid-chi-for-segment? ($char->fixnum ($string-ref obj i)))
-		  (loop obj ($fxadd1 i)))
-		 (else
-		  #f))))
-	(else #f)))
+  (or (bytevector-segment? obj)
+      (string-segment?     obj)))
+
+(define (bytevector-segment? obj)
+  (and (bytevector? obj)
+       (let loop ((bv obj)
+		  (i  0))
+	 (cond (($fx= i ($bytevector-length bv))
+		#t)
+	       (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
+		(loop bv ($fxadd1 i)))
+	       (else #f)))))
+
+(define (string-segment? obj)
+  (and (string? obj)
+       (let loop ((obj obj)
+		  (i   0))
+	 (cond (($fx= i ($string-length obj))
+		#t)
+	       (($valid-chi-for-segment? ($char->fixnum ($string-ref obj i)))
+		(loop obj ($fxadd1 i)))
+	       (else #f)))))
+
+;;; --------------------------------------------------------------------
 
 (define (list-of-segments? obj)
   (cond ((pair? obj)
@@ -1296,6 +1337,82 @@
 
 (define ($string-append obj1 obj2)
   ($bytevector-prepend obj2 obj1))
+
+
+;;;; pathname components: replacing extension
+
+(define* (replace-extension ptn ext)
+  ;;Given  a string  representing a  valid  Unix pathname  and a  string
+  ;;representing  a  valid  Unix   pathname  segment,  or  a  bytevector
+  ;;representing a valid  Unix pathname and a  bytevector representing a
+  ;;valid Unix pathname  segment: strip the extension  from the pathname
+  ;;and append the segment to the result as new extension.
+  ;;
+  (cond ((bytevector-pathname? ptn)
+	 (if (bytevector-segment? ext)
+	     ($bytevector-replace-extension ptn ext)
+	   (procedure-argument-violation __who__
+	     "expected bytevector Unix pathname segment as argument" ext)))
+	((string-pathname? ptn)
+	 (if (string-segment? ext)
+	     ($string-replace-extension ptn ext)
+	   (procedure-argument-violation __who__
+	     "expected string Unix pathname segment as argument" ext)))
+	(else
+	 (procedure-argument-violation __who__
+	   "expected string or bytevector Unix pathname as argument" ptn))))
+
+(define* ($bytevector-replace-extension ptn ext)
+  (let ((ptn ($bytevector-strip-trailing-slashes ptn)))
+    (if (or ($dot-bv?     ptn)
+	    ($dot-dot-bv? ptn)
+	    ($root-bv?    ptn))
+	(raise-unix-pathname-normalisation-error __who__
+	  "cannot append extension to special directory pathname" ptn)
+      (let ((ptn ($bytevector-rootname ptn)))
+	(receive-and-return (result)
+	    (let ((len (+ ($bytevector-length ptn)
+			  ($bytevector-length ext)
+			  1)))
+	      (if (fixnum? len)
+		  ($make-bytevector len)
+		(raise-unix-pathname-normalisation-error __who__
+		  "request to append pathname extension leads to bytevector too big" ptn ext)))
+	  (do ((i 0 ($fxadd1 i)))
+	      (($fx= i ($bytevector-length ptn))
+	       ($bytevector-u8-set! result i CHI-DOT)
+	       ($fxincr! i)
+	       (do ((j 0 ($fxadd1 j))
+		    (k i ($fxadd1 k)))
+		   (($fx= j ($bytevector-length ext)))
+		 ($bytevector-u8-set! result k ($bytevector-u8-ref ext j))))
+	    ($bytevector-u8-set! result i ($bytevector-u8-ref ptn i))))))))
+
+(define* ($string-replace-extension ptn ext)
+  (let ((ptn ($string-strip-trailing-slashes ptn)))
+    (if (or ($dot-str?     ptn)
+	    ($dot-dot-str? ptn)
+	    ($root-str?    ptn))
+	(raise-unix-pathname-normalisation-error __who__
+	  "cannot append extension to special directory pathname" ptn)
+      (let ((ptn ($string-rootname ptn)))
+	(receive-and-return (result)
+	    (let ((len (+ ($string-length ptn)
+			  ($string-length ext)
+			  1)))
+	      (if (fixnum? len)
+		  ($make-string len)
+		(raise-unix-pathname-normalisation-error __who__
+		  "request to append pathname extension leads to string too big" ptn ext)))
+	  (do ((i 0 ($fxadd1 i)))
+	      (($fx= i ($string-length ptn))
+	       ($string-set! result i #\.)
+	       ($fxincr! i)
+	       (do ((j 0 ($fxadd1 j))
+		    (k i ($fxadd1 k)))
+		   (($fx= j ($string-length ext)))
+		 ($string-set! result k ($string-ref ext j))))
+	    ($string-set! result i ($string-ref ptn i))))))))
 
 
 ;;;; done
