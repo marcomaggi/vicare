@@ -144,6 +144,8 @@ representation of a Unix pathname; otherwise return @false{}.  If
 
 
 @defun segment? @var{obj}
+@defunx bytevector-segment? @var{obj}
+@defunx string-segment? @var{obj}
 Return @true{} if @var{obj} is a string or bytevector acceptable as
 representation of a Unix pathname segment; otherwise return @false{}.
 If @var{obj} is neither string nor bytevector: return @false{}.
@@ -773,6 +775,50 @@ assumes that @vari{str} and @varii{str} satisfy the predicate
 (doit "path/to/file.ext" "/")   @result{} "/path/to/file.ext"
 (doit "path/to/file.ext" ".")   @result{} "./path/to/file.ext"
 (doit "path/to/file.ext" "..")  @result{} "../path/to/file.ext"
+@end example
+@end defun
+
+
+@defun replace-extension @var{ptn} @var{ext}
+@defunx $bytevector-replace-extension @var{ptn-bv} @var{ext-bv}
+@defunx $string-replace-extension @var{ptn-str} @var{ext-str}
+Given a string representing a valid Unix pathname and a string
+representing a valid Unix pathname segment, or a bytevector representing
+a valid Unix pathname and a bytevector representing a valid Unix
+pathname segment: strip the extension from the pathname and append the
+segment to the result as new extension.
+
+@func{$bytevector-replace-extension} assumes that @var{ptn-bv} satisfies
+the predicate @func{bytevector-pathname?} and that @var{ext-bv}
+satisfies the predicate @func{bytevector-segment?}.
+@func{$string-replace-extension} assumes that @var{ptn-str} satisfies
+the predicate @func{string-pathname?} and that @var{ext-str} satisfies
+the predicate @func{string-segment?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname ?extension)
+  (uxptn.replace-extension ?pathname ?extension))
+
+(doit "file.one"          "two") @result{} "file.two"
+(doit "/path/to/file.one" "two") @result{} "/path/to/file.two"
+(doit ".emacs"            "elc") @result{} ".emacs.elc"
+(doit "/path/to/.emacs"   "elc") @result{} "/path/to/.emacs.elc"
+
+(doit "/"   "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit "///" "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit "."   "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit ".."  "ext")
+@error{} &unix-pathname-normalisation-error
 @end example
 @end defun
 
