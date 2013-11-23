@@ -30,9 +30,11 @@
   (export
 
     ;; predicates
-    pathname?	bytevector-pathname?	string-pathname?
-    segment?	bytevector-segment?	string-segment?
     list-of-segments?
+    pathname?			bytevector-pathname?			string-pathname?
+    segment?			bytevector-segment?			string-segment?
+    absolute?			$bytevector-absolute?			$string-absolute?
+    relative?			$bytevector-relative?			$string-relative?
 
     ;; conversion
     string/bytevector->pathname-bytevector
@@ -199,10 +201,10 @@
   ($fx= CHI-DOT   ($bytevector-u8-ref bv i)))
 
 (define-inline ($string-chi-slash? str i)
-  ($fx= CHI-SLASH ($char->fixnum ($string-ref str i))))
+  ($char= #\/ ($string-ref str i)))
 
 (define-inline ($string-chi-dot? str i)
-  ($fx= CHI-DOT   ($char->fixnum ($string-ref str i))))
+  ($char= #\. ($string-ref str i)))
 
 ;;; --------------------------------------------------------------------
 
@@ -900,6 +902,39 @@
 		  (procedure-argument-violation (quote ?who)
 		    "expected string or bytevector Unix pathname as first argument" OBJ1))))))
     ))
+
+
+;;;; pathname predicates: absolute? relative?
+
+(define-pathname-operation absolute?
+  ;;Return true  if the argument  OBJ, which must  be a valid  string or
+  ;;bytevector representation of a Unix pathname, is absolute; otherwise
+  ;;return false.
+  ;;
+  ((bytevector)	($bytevector-absolute? obj))
+  ((string)	($string-absolute?     obj)))
+
+(define ($bytevector-absolute? obj)
+  ($bytevector-chi-slash? obj 0))
+
+(define ($string-absolute? obj)
+  ($string-chi-slash? obj 0))
+
+;;; --------------------------------------------------------------------
+
+(define-pathname-operation relative?
+  ;;Return true  if the argument  OBJ, which must  be a valid  string or
+  ;;bytevector representation of a Unix pathname, is relative; otherwise
+  ;;return false.
+  ;;
+  ((bytevector)	($bytevector-relative? obj))
+  ((string)	($string-relative?     obj)))
+
+(define ($bytevector-relative? obj)
+  (not ($bytevector-absolute? obj)))
+
+(define ($string-relative? obj)
+  (not ($string-absolute? obj)))
 
 
 ;;;; pathname components: extension
