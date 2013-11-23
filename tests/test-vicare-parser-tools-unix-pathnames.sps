@@ -811,11 +811,15 @@
 
   (doit "/path/to/file.ext"		"/path/to/file.ext")
   (doit "ciao//"			"ciao")
+  (doit "/"				"/")
+  (doit "///"				"/")
 
 ;;; --------------------------------------------------------------------
 
   (doit1 "/path/to/file.ext"		"/path/to/file.ext")
   (doit1 "ciao//"			"ciao")
+  (doit1 "/"				"/")
+  (doit1 "///"				"/")
 
   #t)
 
@@ -922,6 +926,58 @@
   (doit1 "/path/to/file.ext" "/path/to/file.ext"	#t)
   (doit1 "/to/file.ext" "/path/to/file.ext"		#t)
   (doit1 "/from/file.ext" "/path/to/file.ext"		#f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/prepend))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check (uxptn.prepend ?pathname1 ?pathname2) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname1 ?pathname2 ?expected)
+    (check (ascii->string (uxptn.prepend (string->ascii ?pathname1)
+					 (string->ascii ?pathname2))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to" "file.ext"			"/path/to/file.ext")
+  (doit "/" "path/to/file.ext"			"/path/to/file.ext")
+  (doit "." "path/to/file.ext"			"./path/to/file.ext")
+  (doit ".." "path/to/file.ext"			"../path/to/file.ext")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to" "file.ext"			"/path/to/file.ext")
+  (doit1 "/" "path/to/file.ext"			"/path/to/file.ext")
+  (doit1 "." "path/to/file.ext"			"./path/to/file.ext")
+  (doit1 ".." "path/to/file.ext"		"../path/to/file.ext")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/append))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check (uxptn.append ?pathname1 ?pathname2) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname1 ?pathname2 ?expected)
+    (check (ascii->string (uxptn.append (string->ascii ?pathname1)
+					(string->ascii ?pathname2))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "file.ext" "/path/to"			"/path/to/file.ext")
+  (doit "path/to/file.ext" "/"			"/path/to/file.ext")
+  (doit "path/to/file.ext" "."			"./path/to/file.ext")
+  (doit "path/to/file.ext" ".."			"../path/to/file.ext")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "file.ext" "/path/to"			"/path/to/file.ext")
+  (doit1 "path/to/file.ext" "/"			"/path/to/file.ext")
+  (doit1 "path/to/file.ext" "."			"./path/to/file.ext")
+  (doit1 "path/to/file.ext" ".."		"../path/to/file.ext")
 
   #t)
 

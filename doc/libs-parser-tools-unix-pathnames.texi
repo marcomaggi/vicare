@@ -577,6 +577,8 @@ the predicate @func{string-pathname?}.
 
 (doit "/path/to/file.ext")      @result{} "/path/to/file.ext"
 (doit "/path/to/file.ext///")   @result{} "/path/to/file.ext"
+(doit "/")                      @result{} "/"
+(doit "///")                    @result{} "/"
 @end example
 @end defun
 
@@ -717,6 +719,60 @@ assumes that @vari{str} and @varii{str} satisfy the predicate
 (doit "/path/to/file.ext" "/path/to/file.ext") @result{} #t
 (doit "/to/file.ext"      "/path/to/file.ext") @result{} #t
 (doit "/from/file.ext"    "/path/to/file.ext") @result{} #f
+@end example
+@end defun
+
+
+@defun prepend @vari{obj} @varii{obj}
+@defunx $bytevector-prepend @vari{bv} @varii{bv}
+@defunx $string-prepend @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid Unix pathnames:
+prepend the first to the second and return the result.
+
+@func{$bytevector-prepend} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-prepend}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.prepend ?pathname))
+
+(doit "/path/to" "file.ext")    @result{} "/path/to/file.ext"
+(doit "/" "path/to/file.ext")   @result{} "/path/to/file.ext"
+(doit "." "path/to/file.ext")   @result{} "./path/to/file.ext"
+(doit ".." "path/to/file.ext")  @result{} "../path/to/file.ext"
+@end example
+@end defun
+
+
+@defun append @vari{obj} @varii{obj}
+@defunx $bytevector-append @vari{bv} @varii{bv}
+@defunx $string-append @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid Unix pathnames:
+append the first to the second and return the result.
+
+@func{$bytevector-append} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-append}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.append ?pathname))
+
+(doit "file.ext" "/path/to")    @result{} "/path/to/file.ext"
+(doit "path/to/file.ext" "/")   @result{} "/path/to/file.ext"
+(doit "path/to/file.ext" ".")   @result{} "./path/to/file.ext"
+(doit "path/to/file.ext" "..")  @result{} "../path/to/file.ext"
 @end example
 @end defun
 
