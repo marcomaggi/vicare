@@ -136,19 +136,34 @@ parser-tools unix-pathnames}.
 
 @defun pathname? @var{obj}
 @defunx bytevector-pathname? @var{obj}
+@defunx $bytevector-pathname? @var{bv}
 @defunx string-pathname? @var{obj}
+@defunx $string-pathname? @var{str}
 Return @true{} if @var{obj} is a string or bytevector acceptable as
 representation of a Unix pathname; otherwise return @false{}.  If
 @var{obj} is neither string nor bytevector: return @false{}.
+
+@func{bytevector-pathname?} returns @false{} if @var{obj} is not a
+bytevector.  @func{string-pathname?} returns @false{} if @var{obj} is
+not a string.  @func{$bytevector-pathname?} assumes that @var{bv} is a
+bytevector.  @func{$string-pathname?} assumes that @var{str} is a
+string.
 @end defun
 
 
 @defun segment? @var{obj}
 @defunx bytevector-segment? @var{obj}
+@defunx $bytevector-segment? @var{bv}
 @defunx string-segment? @var{obj}
+@defunx $string-segment? @var{str}
 Return @true{} if @var{obj} is a string or bytevector acceptable as
 representation of a Unix pathname segment; otherwise return @false{}.
 If @var{obj} is neither string nor bytevector: return @false{}.
+
+@func{bytevector-segment?} returns @false{} if @var{obj} is not a
+bytevector.  @func{string-segment?} returns @false{} if @var{obj} is not
+a string.  @func{$bytevector-segment?} assumes that @var{bv} is a
+bytevector.  @func{$string-segment?} assumes that @var{str} is a string.
 @end defun
 
 

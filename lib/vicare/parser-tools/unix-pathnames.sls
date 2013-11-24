@@ -32,7 +32,9 @@
     ;; predicates
     list-of-segments?
     pathname?			bytevector-pathname?			string-pathname?
+				$bytevector-pathname?			$string-pathname?
     segment?			bytevector-segment?			string-segment?
+				$bytevector-segment?			$string-segment?
     absolute?			$bytevector-absolute?			$string-absolute?
     relative?			$bytevector-relative?			$string-relative?
 
@@ -451,7 +453,7 @@
 	      (make-irritants-condition irritants))))
 
 
-;;;; predicates
+;;;; pathname predicates
 
 (define (pathname? obj)
   (or (bytevector-pathname? obj)
@@ -459,7 +461,10 @@
 
 (define (bytevector-pathname? obj)
   (and (bytevector? obj)
-       ($bytevector-not-empty? obj)
+       ($bytevector-pathname? obj)))
+
+(define ($bytevector-pathname? obj)
+  (and ($bytevector-not-empty? obj)
        (let loop ((bv obj)
 		  (i  0))
 	 (cond (($fx= i ($bytevector-length bv))
@@ -471,7 +476,10 @@
 
 (define (string-pathname? obj)
   (and (string? obj)
-       ($string-not-empty? obj)
+       ($string-pathname? obj)))
+
+(define ($string-pathname? obj)
+  (and ($string-not-empty? obj)
        (let loop ((obj obj)
 		  (i   0))
 	 (cond (($fx= i ($string-length obj))
@@ -481,7 +489,8 @@
 	       (else
 		#f)))))
 
-;;; --------------------------------------------------------------------
+
+;;;; segment predicates
 
 (define (segment? obj)
   (or (bytevector-segment? obj)
@@ -489,23 +498,29 @@
 
 (define (bytevector-segment? obj)
   (and (bytevector? obj)
-       (let loop ((bv obj)
-		  (i  0))
-	 (cond (($fx= i ($bytevector-length bv))
-		#t)
-	       (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
-		(loop bv ($fxadd1 i)))
-	       (else #f)))))
+       ($bytevector-segment? obj)))
+
+(define ($bytevector-segment? obj)
+  (let loop ((bv obj)
+	     (i  0))
+    (cond (($fx= i ($bytevector-length bv))
+	   #t)
+	  (($valid-chi-for-segment? ($bytevector-u8-ref bv i))
+	   (loop bv ($fxadd1 i)))
+	  (else #f))))
 
 (define (string-segment? obj)
   (and (string? obj)
-       (let loop ((obj obj)
-		  (i   0))
-	 (cond (($fx= i ($string-length obj))
-		#t)
-	       (($valid-chi-for-segment? ($char->fixnum ($string-ref obj i)))
-		(loop obj ($fxadd1 i)))
-	       (else #f)))))
+       ($string-segment? obj)))
+
+(define ($string-segment? obj)
+  (let loop ((obj obj)
+	     (i   0))
+    (cond (($fx= i ($string-length obj))
+	   #t)
+	  (($valid-chi-for-segment? ($char->fixnum ($string-ref obj i)))
+	   (loop obj ($fxadd1 i)))
+	  (else #f))))
 
 ;;; --------------------------------------------------------------------
 
