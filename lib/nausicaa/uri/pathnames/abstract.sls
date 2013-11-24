@@ -33,30 +33,42 @@
     <relative-pathname>
 
     ;; multimethods
-    pathname-absolute
-    pathname-prepend		pathname-append
+    pathname-bytevector
     pathname-string
 
-    pathname-tail		pathname-dirname
-    pathname-rootname		pathname-name
-    pathname-extension		pathname-replace-extension)
+    pathname-extension
+    pathname-dirname
+    pathname-tailname
+    pathname-rootname
+    pathname-strip-trailing-slashes
+    pathname-split
+    pathname-normalise
+    pathname-prefix?
+    pathname-suffix?
+    pathname-prepend
+    pathname-append
+    pathname-replace-extension)
   (import (nausicaa)
     (vicare unsafe operations))
 
 
 ;;;; multimethods
 
-(define-generic pathname-absolute		(self absolute-pathname))
-(define-generic pathname-prepend		(relative-self relative-pathname))
-(define-generic pathname-append			(relative-self relative-pathname))
+(define-generic pathname-bytevector		(self))
 (define-generic pathname-string			(self))
 
-(define-generic pathname-tail			(absolute-self))
-(define-generic pathname-dirname		(absolute-self))
-(define-generic pathname-rootname		(absolute-self))
-(define-generic pathname-name			(absolute-self))
-(define-generic pathname-extension		(absolute-self))
-(define-generic pathname-replace-extension	(absolute-self source))
+(define-generic pathname-extension		(self))
+(define-generic pathname-dirname		(self))
+(define-generic pathname-tailname		(self))
+(define-generic pathname-rootname		(self))
+(define-generic pathname-strip-trailing-slashes	(self))
+(define-generic pathname-split			(self))
+(define-generic pathname-normalise		(self))
+(define-generic pathname-prefix?		(self other))
+(define-generic pathname-suffix?		(self other))
+(define-generic pathname-prepend		(self other))
+(define-generic pathname-append			(self other))
+(define-generic pathname-replace-extension	(self extension))
 
 
 (define-class <pathname>
@@ -72,14 +84,19 @@
    (immutable (bytevector	<bytevector>)	pathname-bytevector)
    (immutable (string		<string>)	pathname-string))
 
-  (methods (absolute		pathname-absolute)
-	   (append		pathname-append)
-	   (dirname		pathname-dirname)
-	   (rootname		pathname-rootname)
-	   (tail		pathname-tail)
-	   (extension		pathname-extension)
-	   (name		pathname-name)
-	   (replace-extension	pathname-replace-extension))
+  (methods
+   (extension			pathname-extension)
+   (dirname			pathname-dirname)
+   (tailname			pathname-tailname)
+   (rootname			pathname-rootname)
+   (strip-trailing-slashes	pathname-strip-trailing-slashes)
+   (split			pathname-split)
+   (normalise			pathname-normalise)
+   (prefix?			pathname-prefix?)
+   (suffix?			pathname-suffix?)
+   (replace-extension		pathname-replace-extension)
+
+   #| end of methods |# )
 
   #| end of class |# )
 
@@ -91,14 +108,15 @@
 
   (super-protocol
    (lambda (make-pathname)
-     (lambda (bytevector segments)
+     (lambda ()
        ((make-pathname)))))
 
-  (methods (prepend	pathname-prepend))
+  (methods
+   (prepend			pathname-prepend)
+   #| end of methods |# )
 
   #| end of class |# )
 
-
 (define-class <relative-pathname>
   (nongenerative nausicaa:uri:pathnames:abstract:<relative-pathname>)
   (abstract)
@@ -106,10 +124,13 @@
 
   (super-protocol
    (lambda (make-pathname)
-     (lambda (bytevector segments)
+     (lambda ()
        ((make-pathname)))))
 
-  (methods (append	pathname-append))
+  (methods
+   (append			pathname-append)
+   (prepend			pathname-prepend)
+   #| end of methods |# )
 
   #| end of class |# )
 

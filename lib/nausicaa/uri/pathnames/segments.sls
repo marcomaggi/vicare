@@ -32,18 +32,9 @@
     <absolute-pathname>
     <relative-pathname>
     <absolute-segments-pathname>
-    <relative-segments-pathname>
-
-    ;; multimethods
-    pathname-absolute
-    pathname-prepend		pathname-append
-    pathname-string
-
-    pathname-tail		pathname-dirname
-    pathname-rootname		pathname-name
-    pathname-extension		pathname-replace-extension)
+    <relative-segments-pathname>)
   (import (nausicaa)
-    (nausicaa uri pathname abstract))
+    (nausicaa uri pathnames abstract))
 
 
 ;;; helpers
@@ -67,7 +58,6 @@
   (if (null? (cdr ell))
       replacement
     (cons (car ell) (%replace-last-pair (cdr ell) replacement))))
-
 
 (define (%bytevector-find-last-dot-index (segment <bytevector-u8>))
   ;;Given  a   bytevector,  find  the   index  of  the   rightmost  byte
@@ -118,9 +108,9 @@
   (mixins (<segments-pathname-clauses>
 	   (<segments-pathname>		<absolute-segments-pathname>)))
   (super-protocol
-   (lambda (make-top)
+   (lambda (make-absolute-pathname)
      (lambda (segments)
-       ((make-top) segments (last-pair segments) #f))))
+       ((make-absolute-pathname) segments (last-pair segments) #f))))
 
   #| end of class |# )
 
@@ -156,9 +146,9 @@
   (mixins (<segments-pathname-clauses>
 	   (<segments-pathname>		<relative-segments-pathname>)))
   (super-protocol
-   (lambda (make-top)
+   (lambda (make-relative-pathname)
      (lambda (segments)
-       ((make-top) segments (last-pair segments) #f))))
+       ((make-relative-pathname) segments (last-pair segments) #f))))
 
   #| end of class |# )
 
@@ -188,7 +178,7 @@
 	 (procedure-argument-violation __who__ "invalid argument type" obj))))
 
 
-(define-method (pathname-extension (O <absolute-pathname>))
+(define-method (pathname-extension (O <absolute-segments-pathname>))
   (and (O $last-pair)
        (let (((last-segment <bytevector>) (O $last-pair $car))
 	     (dot-index (O last-dot-index-in-last-segment)))
@@ -197,7 +187,7 @@
 		  (make-bytevector ($fx- (last-segment $length) dot-index))
 		(bytevector-copy! last-segment dot-index extension 0 (extension length)))))))
 
-(define-method (pathname-name (O <absolute-pathname>))
+(define-method (pathname-tailname (O <absolute-segments-pathname>))
   (if (O $last-pair)
       (let* (((last-segment <bytevector>) (O $last-pair $car))
 	     (dot-index		(O last-dot-index-in-last-segment))
@@ -216,13 +206,6 @@
     (receive (changed? normalised-segments)
 	(parser.normalise-segments #t original-segments)
       (<absolute-segments-pathname> (normalised-segments)))))
-
-
-(define-method (pathname-string (O <relative-segments-pathname>))
-  ($ascii->string (O bytevector)))
-
-(define-method (pathname-string (O <absolute-segments-pathname>))
-  ($ascii->string (O bytevector)))
 
 
 (define-method (pathname-prepend (suffix <relative-segments-pathname>) (prefix <relative-segments-pathname>))
