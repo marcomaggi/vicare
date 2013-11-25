@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Nausicaa libraries: file system pathnames, Unix library\n")
+(check-display "*** testing Nausicaa libraries: file system pathnames, Unix library\n")
 
 
 (parametrise ((check-test-name	'absolute/core))
@@ -339,6 +339,221 @@
   (doit "hello/ciao/"			"hello")
   (doit "//////"			"/")
   (doit "ciao//////"			".")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/tailname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (O tailname))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"file.ext")
+  (doit "file.ext"			"file.ext")
+  (doit "/file.ext"			"file.ext")
+  (doit "/file.ext//"			"file.ext")
+  (doit "//file.ext"			"file.ext")
+  (doit "/path/to///file.ext"		"file.ext")
+  (doit "//////file.ext"		"file.ext")
+  (doit "a/b"				"b")
+  (doit "a"				"a")
+  (doit "../a"				"a")
+  (doit "./a"				"a")
+  (doit "../abcd"			"abcd")
+  (doit "./abcd"			"abcd")
+  (doit "../abcd/efgh"			"efgh")
+  (doit "./abcd/efgh"			"efgh")
+  (doit "/ciao/"			"ciao")
+  (doit "ciao/"				"ciao")
+  (doit "./ciao/"			"ciao")
+  (doit "hello/ciao/"			"ciao")
+  (doit "ciao//////"			"ciao")
+;;; an empty tail name cannot be a pathname object!!!
+;;;  (doit "//////"			"")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/rootname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (O rootname))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "ciao.it"			"ciao")
+  (doit "ciao"				"ciao")
+  (doit "/path/to/file.ext"		"/path/to/file")
+  (doit "/path/to/file."		"/path/to/file")
+  (doit "/path/to/file"			"/path/to/file")
+  (doit "/path/to/file.ext/ab"		"/path/to/file.ext/ab")
+  (doit "/path/to/some.file.ext"	"/path/to/some.file")
+  (doit "a/"				"a")
+  (doit "a."				"a")
+  (doit "."				".")
+  (doit ".."				"..")
+  (doit "..."				"..")
+  (doit ".a"				".a")
+  (doit ".emacsrc"			".emacsrc")
+  (doit "..a"				".")
+  (doit "...a"				"..")
+  (doit "..a.b"				"..a")
+  (doit "~/."				"~/.")
+  (doit "~/.."				"~/..")
+  (doit "~/..."				"~/..")
+  (doit "~/.a"				"~/.a")
+  (doit "~/.emacsrc"			"~/.emacsrc")
+  (doit "~/..a"				"~/.")
+  (doit "~/...a"			"~/..")
+  (doit "~/..a.b"			"~/..a")
+  (doit "///"				"/")
+  (doit "ciao///"			"ciao")
+  (doit "ciao.it///"			"ciao")
+  (doit "ciao.it.en///"			"ciao.it")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/split))
+
+  (define-syntax-rule (doit ?pathname . ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (O split))
+      => . ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		#t '(#ve(ascii "path") #ve(ascii "to") #ve(ascii "file.ext")))
+  (doit "path/to/file.ext"		#f '(#ve(ascii "path") #ve(ascii "to") #ve(ascii "file.ext")))
+  (doit "ciao//"			#f '(#ve(ascii "ciao")))
+  (doit "/"				#t '())
+  (doit "."				#f '())
+  (doit ".."				#f '(#ve(ascii "..")))
+  (doit "ciao/.."			#f '())
+  (doit "/."				#t '())
+  (doit "/.."				#t '())
+  (doit "/ciao/.."			#t '())
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/prefix))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check
+	(let (((A <pathname>) (pathname ?pathname1))
+	      ((B <pathname>) (pathname ?pathname2)))
+	  (A prefix? B))
+      => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext" "/path/to/file.ext"		#t)
+  (doit "/path/to/"         "/path/to/file.ext"		#t)
+  (doit "/path/from"        "/path/to/file.ext"		#f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/suffix))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check
+	(let (((A <pathname>) (pathname ?pathname1))
+	      ((B <pathname>) (pathname ?pathname2)))
+	  (A suffix? B))
+      => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext" "/path/to/file.ext"		#t)
+  (doit "/to/file.ext" "/path/to/file.ext"		#t)
+  (doit "/from/file.ext" "/path/to/file.ext"		#f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/append))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check
+	(let (((A <relative-pathname>) (pathname ?pathname1))
+	      ((B <pathname>) (pathname ?pathname2)))
+	  (A append B))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "file.ext" "/path/to"			"/path/to/file.ext")
+  (doit "path/to/file.ext" "/"			"/path/to/file.ext")
+  (doit "path/to/file.ext" "."			"./path/to/file.ext")
+  (doit "path/to/file.ext" ".."			"../path/to/file.ext")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/prepend))
+
+  (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
+    (check
+	(let (((A <pathname>) (pathname ?pathname1))
+	      ((B <pathname>) (pathname ?pathname2)))
+	  (A prepend B))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to" "file.ext"			"/path/to/file.ext")
+  (doit "/" "path/to/file.ext"			"/path/to/file.ext")
+  (doit "." "path/to/file.ext"			"./path/to/file.ext")
+  (doit ".." "path/to/file.ext"			"../path/to/file.ext")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/replace-extension))
+
+  (define-syntax-rule (doit ?pathname ?extension ?expected)
+    (check
+	(let (((A <pathname>) (pathname ?pathname)))
+	  (A replace-extension ?extension))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+  (define-syntax-rule (doit-special-pathname-error ?pathname)
+    (check
+	(try
+	    (doit ?pathname "two" "nothing")
+	  (catch E
+	    (&unix-pathname-normalisation-error
+	     (condition-message E))
+	    (else E)))
+      => "cannot append extension to special directory pathname"))
+
+;;; --------------------------------------------------------------------
+
+  (doit "file.one" "two"		"file.two")
+  (doit "/path/to/file.one" "two"	"/path/to/file.two")
+  (doit ".emacs" "elc"			".emacs.elc")
+  (doit "/path/to/.emacs" "elc"		"/path/to/.emacs.elc")
+
+  (doit-special-pathname-error "/")
+  (doit-special-pathname-error "///")
+  (doit-special-pathname-error ".")
+  (doit-special-pathname-error "..")
 
   #t)
 

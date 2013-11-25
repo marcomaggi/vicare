@@ -98,6 +98,7 @@
    (normalise			pathname-normalise)
    (prefix?			pathname-prefix?)
    (suffix?			pathname-suffix?)
+   (prepend			pathname-prepend)
    (replace-extension		pathname-replace-extension)
 
    #| end of methods |# )
@@ -115,10 +116,6 @@
      (lambda ()
        ((make-pathname)))))
 
-  (methods
-   (prepend			pathname-prepend)
-   #| end of methods |# )
-
   #| end of class |# )
 
 (define-class <relative-pathname>
@@ -133,7 +130,6 @@
 
   (methods
    (append			pathname-append)
-   (prepend			pathname-prepend)
    #| end of methods |# )
 
   #| end of class |# )
