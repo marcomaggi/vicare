@@ -4,9 +4,9 @@
   (only (nausicaa parser-tools uri utilities))
 
   (only (nausicaa uri pathnames abstract))
-  (only (nausicaa uri pathnames segments))
+  #;(only (nausicaa uri pathnames segments))
   (only (nausicaa uri pathnames unix))
-  (only (nausicaa uri pathnames))
+  #;(only (nausicaa uri pathnames))
 
   #| end of import |# )
 
