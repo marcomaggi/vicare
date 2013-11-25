@@ -499,9 +499,11 @@ current directory as single dot.  Notice that contiguous slashses are
 Return a string or bytevector representing the tailname of @var{obj},
 which must be a valid Unix pathname string or bytevector representation.
 The tailname of a pathname is its last segment; the returned value does
-@strong{not} include the leading slash character, if any, and it can be
-empty; when the whole @var{obj} is the tailname: the returned value is
-@var{obj} itself.
+@strong{not} include the leading slash character, if any, and it cannot
+be empty; the only exception is when the argument represents the root
+directory, in which case the returned value is the dot segment.  When
+the whole @var{obj} is the tailname: the returned value is @var{obj}
+itself.
 
 @func{$bytevector-tailname} assumes that @var{bv} satisfies the
 predicate @func{bytevector-pathname?}.  @func{$string-tailname} assumes
@@ -534,7 +536,8 @@ that @var{str} satisfies the predicate @func{string-pathname?}.
 (doit "./ciao/")                @result{} "ciao"
 (doit "hello/ciao/")            @result{} "ciao"
 (doit "ciao//////")             @result{} "ciao"
-(doit "//////")                 @result{} ""
+(doit "/")                      @result{} "."
+(doit "//////")                 @result{} "."
 @end example
 @end defun
 
