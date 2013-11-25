@@ -1082,8 +1082,10 @@
   ;;which  must   be  a  valid   Unix  pathname  string   or  bytevector
   ;;representation.  The tailname of a pathname is its last segment; the
   ;;returned value  does *not* include  the leading slash  character, if
-  ;;any, and it  can be empty; when  the whole OBJ is  the tailname: the
-  ;;returned value is OBJ itself.
+  ;;any, and it cannot be empty; the only exception is when the argument
+  ;;represents the root  directory, in which case the  returned value is
+  ;;the dot segment.   When the whole OBJ is the  tailname: the returned
+  ;;value is OBJ itself.
   ;;
   ((bytevector)	($bytevector-tailname obj))
   ((string)	($string-tailname     obj)))
@@ -1093,7 +1095,7 @@
   (define past
     ($bytevector-index-past-last-segment obj))
   (if ($fxzero? past)
-      '#vu8()
+      CURRENT-DIRECTORY-BV
     (let backwards-search-slash ((i ($fxsub1 past)))
       (if (or ($fxnegative? i)
 	      ($bytevector-chi-slash? obj i))
@@ -1105,7 +1107,7 @@
   (define past
     ($string-index-past-last-segment obj))
   (if ($fxzero? past)
-      ""
+      CURRENT-DIRECTORY-STR
     (let backwards-search-slash ((i ($fxsub1 past)))
       (if (or ($fxnegative? i)
 	      ($string-chi-slash? obj i))

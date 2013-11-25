@@ -749,7 +749,8 @@
   (doit "./ciao/"			"ciao")
   (doit "hello/ciao/"			"ciao")
   (doit "ciao//////"			"ciao")
-  (doit "//////"			"")
+  (doit "/"				".")
+  (doit "//////"			".")
 
 ;;; --------------------------------------------------------------------
 
@@ -769,11 +770,12 @@
   (doit1 "../abcd/efgh"			"efgh")
   (doit1 "./abcd/efgh"			"efgh")
   (doit1 "/ciao/"			"ciao")
-  (doit1 "ciao/"				"ciao")
+  (doit1 "ciao/"			"ciao")
   (doit1 "./ciao/"			"ciao")
   (doit1 "hello/ciao/"			"ciao")
   (doit1 "ciao//////"			"ciao")
-  (doit1 "//////"			"")
+  (doit1 "/"				".")
+  (doit1 "//////"			".")
 
   #t)
 

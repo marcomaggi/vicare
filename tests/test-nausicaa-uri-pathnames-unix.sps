@@ -374,8 +374,8 @@
   (doit "./ciao/"			"ciao")
   (doit "hello/ciao/"			"ciao")
   (doit "ciao//////"			"ciao")
-;;; an empty tail name cannot be a pathname object!!!
-;;;  (doit "//////"			"")
+  (doit "/"				".")
+  (doit "//////"			".")
 
   #t)
 
