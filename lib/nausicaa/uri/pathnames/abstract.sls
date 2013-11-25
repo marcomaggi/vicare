@@ -33,6 +33,8 @@
     <relative-pathname>
 
     ;; multimethods
+    pathname=?
+
     pathname-bytevector
     pathname-string
 
@@ -53,6 +55,8 @@
 
 
 ;;;; multimethods
+
+(define-generic pathname=?			(A B))
 
 (define-generic pathname-bytevector		(self))
 (define-generic pathname-string			(self))
@@ -133,6 +137,18 @@
    #| end of methods |# )
 
   #| end of class |# )
+
+
+;;;; multimethods implementation
+
+(define-method (pathname=? (A <absolute-pathname>) (B <relative-pathname>))
+  #f)
+
+(define-method (pathname=? (A <relative-pathname>) (B <absolute-pathname>))
+  #f)
+
+(define-method (pathname=? (A <pathname>) (B <pathname>))
+  #f)
 
 
 ;;;; done

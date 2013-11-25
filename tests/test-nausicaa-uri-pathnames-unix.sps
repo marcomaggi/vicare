@@ -266,6 +266,83 @@
   #t)
 
 
+(parametrise ((check-test-name	'components/extension))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (O extension))
+      => (string->ascii ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "ciao.it"			"it")
+  (doit "ciao"				"")
+  (doit "/path/to/file.ext"		"ext")
+  (doit "/path/to/file."		"")
+  (doit "/path/to/file"			"")
+  (doit "/path/to/file.ext/ab"		"")
+  (doit "/path/to/some.file.ext"	"ext")
+  (doit "ciao.it//"			"it")
+  (doit "a/"				"")
+  (doit "a."				"")
+  (doit "."				"")
+  (doit ".."				"")
+  (doit "..."				"")
+  (doit ".a"				"")
+  (doit ".emacsrc"			"")
+  (doit "..a"				"a")
+  (doit "...a"				"a")
+  (doit "..a.b"				"b")
+  (doit "~/."				"")
+  (doit "~/.."				"")
+  (doit "~/..."				"")
+  (doit "~/.a"				"")
+  (doit "~/.emacsrc"			"")
+  (doit "~/..a"				"a")
+  (doit "~/...a"			"a")
+  (doit "~/..a.b"			"b")
+
+  #t)
+
+
+(parametrise ((check-test-name	'components/dirname))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (O dirname))
+      (=> pathname=?)
+      (pathname ?expected)))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"		"/path/to")
+  (doit "file.ext"			".")
+  (doit "/file.ext"			"/")
+  (doit "/file.ext//"			"/")
+  (doit "//file.ext"			"/")
+  (doit "/path/to///file.ext"		"/path/to")
+  (doit "//////file.ext"		"/")
+  (doit "//////file.ext//"		"/")
+  (doit "a/b"				"a")
+  (doit "a"				".")
+  (doit "../a"				"..")
+  (doit "./a"				".")
+  (doit "../abcd"			"..")
+  (doit "./abcd"			".")
+  (doit "../abcd/efgh"			"../abcd")
+  (doit "./abcd/efgh"			"./abcd")
+  (doit "/ciao/"			"/")
+  (doit "ciao/"				".")
+  (doit "./ciao/"			".")
+  (doit "hello/ciao/"			"hello")
+  (doit "//////"			"/")
+  (doit "ciao//////"			".")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -84,6 +84,9 @@
    (immutable (last-pair	<pair>))
 		;False of the last pair in SEGMENTS.
    (mutable memoized-last-dot-index-in-last-segment)
+		;False or  a non-negative fixnum representing  the index
+		;of the last  dot character in the last  segment.  It is
+		;used to easily separate the extension.
 
    #| end of fields |# )
 
