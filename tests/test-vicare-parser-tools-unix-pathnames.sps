@@ -1036,7 +1036,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'components/append))
+(parametrise ((check-test-name	'components/replace-extension))
 
   (define-syntax-rule (doit ?pathname ?extension ?expected)
     (check (uxptn.replace-extension ?pathname ?extension) => ?expected))

@@ -39,11 +39,7 @@
     &unix-pathname-normalisation-error)
   (import (nausicaa)
     (vicare unsafe operations)
-    (except (nausicaa uri pathnames abstract)
-	    pathname=?)
-    (prefix (only (nausicaa uri pathnames abstract)
-		  pathname=?)
-	    abstract.)
+    (nausicaa uri pathnames abstract)
     (prefix (vicare parser-tools unix-pathnames)
 	    uxptn.))
 
@@ -65,19 +61,28 @@
 
 ;;;; auxiliary labels
 
-(define-label <unix-segment>
+(define-label <bytevector-unix-segment>
+  (nongenerative nausicaa:uri:pathnames:unix:<bytevector-unix-segment>)
   (parent <bytevector-u8>)
   (predicate (lambda (obj)
 	       (uxptn.$bytevector-segment? obj))))
 
+(define-label <string-unix-segment>
+  (nongenerative nausicaa:uri:pathnames:unix:<string-unix-segment>)
+  (parent <string>)
+  (predicate (lambda (obj)
+	       (uxptn.$string-segment? obj))))
+
 ;;; --------------------------------------------------------------------
 
 (define-label <bytevector-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<bytevector-unix-pathname>)
   (parent <bytevector-u8>)
   (predicate (lambda (bv)
 	       (uxptn.$bytevector-pathname? bv))))
 
 (define-label <string-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<string-unix-pathname>)
   (parent <string>)
   (predicate (lambda (str)
 	       (uxptn.$string-pathname? str))))
@@ -85,11 +90,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-label <absolute-bytevector-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<absolute-bytevector-unix-pathname>)
   (parent <bytevector-unix-pathname>)
   (predicate (lambda (bv)
 	       (uxptn.$bytevector-absolute? bv))))
 
 (define-label <absolute-string-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<absolute-string-unix-pathname>)
   (parent <string-unix-pathname>)
   (predicate (lambda (str)
 	       (uxptn.$string-absolute? str))))
@@ -97,11 +104,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-label <relative-bytevector-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<relative-bytevector-unix-pathname>)
   (parent <bytevector-unix-pathname>)
   (predicate (lambda (bv)
 	       (uxptn.$bytevector-relative? bv))))
 
 (define-label <relative-string-unix-pathname>
+  (nongenerative nausicaa:uri:pathnames:unix:<relative-string-unix-pathname>)
   (parent <string-unix-pathname>)
   (predicate (lambda (str)
 	       (uxptn.$string-relative? str))))
@@ -172,8 +181,11 @@
 		 (else
 		  (tag-unique-identifiers-of obj))))
 
-	  (((<unix-segment>) obj)
-	   (tag-unique-identifiers <unix-segment>))
+	  (((<bytevector-unix-segment>) obj)
+	   (tag-unique-identifiers <bytevector-unix-segment>))
+
+	  (((<string-unix-segment>) obj)
+	   (tag-unique-identifiers <string-unix-segment>))
 
 	  (else
 	   (tag-unique-identifiers-of obj))))
@@ -182,14 +194,18 @@
 
   (define-generic pathname (representation))
 
+;;; bytevector argument implementations
+
   (define-method (pathname (O <absolute-bytevector-unix-pathname>))
     (<absolute-unix-pathname> (O)))
 
-  (define-method (pathname (O <absolute-string-unix-pathname>))
-    (<absolute-unix-pathname> ((uxptn.string/bytevector->pathname-bytevector O))))
-
   (define-method (pathname (O <relative-bytevector-unix-pathname>))
     (<relative-unix-pathname> (O)))
+
+;;; bytevector argument implementations
+
+  (define-method (pathname (O <absolute-string-unix-pathname>))
+    (<absolute-unix-pathname> ((uxptn.string/bytevector->pathname-bytevector O))))
 
   (define-method (pathname (O <relative-string-unix-pathname>))
     (<relative-unix-pathname> ((uxptn.string/bytevector->pathname-bytevector O))))
@@ -197,10 +213,7 @@
   #| end of module |# )
 
 
-;;;; other functions
-
-(define-generic pathname=? (A B)
-  (merge-with-multimethods abstract.pathname=?))
+;;;; some multimethods implementations
 
 (define-method (pathname=? (A <absolute-unix-pathname>) (B <absolute-unix-pathname>))
   ($bytevector= (A $pathname) (B $pathname)))
@@ -240,8 +253,13 @@
 (define-method (pathname-normalise (O <absolute-unix-pathname>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-normalise (O $pathname)))))
 
-(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <unix-segment>))
+(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <bytevector-unix-segment>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
+
+(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <string> #;<string-unix-segment>))
+  (<absolute-unix-pathname>
+   ((uxptn.$bytevector-replace-extension (O $pathname)
+					 (uxptn.string/bytevector->pathname-bytevector E)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -256,11 +274,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <relative-unix-pathname>))
-  (uxptn.$bytevector-suffix? (O $pathname) (R bytevector)))
-
 (define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <absolute-unix-pathname>))
-  #f)
+  (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
+
+(define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <relative-unix-pathname>))
+  (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
 
 (define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <bytevector>))
   (uxptn.$bytevector-suffix? (O $pathname) R))
@@ -315,8 +333,13 @@
 (define-method (pathname-normalise (O <relative-unix-pathname>))
   (<relative-unix-pathname> ((uxptn.$bytevector-normalise (O $pathname)))))
 
-(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <unix-segment>))
+(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <bytevector-unix-segment>))
   (<relative-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
+
+(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <string> #;<string-unix-segment>))
+  (<relative-unix-pathname>
+   ((uxptn.$bytevector-replace-extension (O $pathname)
+					 (uxptn.string/bytevector->pathname-bytevector E)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -332,10 +355,10 @@
 ;;; --------------------------------------------------------------------
 
 (define-method (pathname-suffix? (O <relative-unix-pathname>) (R <relative-unix-pathname>))
-  (uxptn.$bytevector-suffix? (O $pathname) (R bytevector)))
+  (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
 
 (define-method (pathname-suffix? (O <relative-unix-pathname>) (R <absolute-unix-pathname>))
-  (uxptn.$bytevector-suffix? (O $pathname) (R bytevector)))
+  (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
 
 (define-method (pathname-suffix? (O <relative-unix-pathname>) (R <bytevector>))
   (uxptn.$bytevector-suffix? (O $pathname) R))
