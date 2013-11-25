@@ -226,11 +226,11 @@
 		(list (GENERIC :number-of-arguments) ...))
 	      N))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   the-methods-alist the-method-add
+				   the-methods-alist-func the-method-add
 				   the-cache the-cache-store the-cache-ref
-				   (mt.merge-methods-alists (GENERIC :primary-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
 	  (define (implementation . arguments)
-	    (generic-function-implementation 'NAME the-methods-alist the-cache-store the-cache-ref
+	    (generic-function-implementation 'NAME the-methods-alist-func the-cache-store the-cache-ref
 					     UID-LIST-OF number-of-arguments arguments))
 	  (define-syntax NAME
 	    (lambda (stx)
@@ -241,12 +241,12 @@
 		  ((_ message subform)
 		   (syntax-violation 'NAME message (syntax->datum stx) (syntax->datum subform)))))
 	      (syntax-case stx ( ;;
-				:primary-method-add :primary-methods-alist
+				:primary-method-add :primary-methods-alist-func
 				:number-of-arguments :primary-cache)
 		((_ :primary-method-add signature closure)
 		 #'(the-method-add signature closure))
-		((_ :primary-methods-alist)
-		 #'the-methods-alist)
+		((_ :primary-methods-alist-func)
+		 #'the-methods-alist-func)
 		((_ :primary-cache)
 		 #'the-cache)
 		((_ :number-of-arguments)
@@ -260,9 +260,9 @@
                           to ordinary generic function" #'key))
 		((_ key)
 		 (and (identifier? #'key)
-		      (identifier-memq #'key (list #':before-methods-alist
-						   #':after-methods-alist
-						   #':around-methods-alist)))
+		      (identifier-memq #'key (list #':before-methods-alist-func
+						   #':after-methods-alist-func
+						   #':around-methods-alist-func)))
 		 (synner "attempt to extract method table of invalid category \
                           from ordinary generic function" #'key))
 		;;This  is the  reference to  the generic  function, for
@@ -290,7 +290,7 @@
   (%main stx))
 
 
-(define (generic-function-implementation who methods-alist cache-store cache-ref
+(define (generic-function-implementation who methods-alist-func cache-store cache-ref
 					 uid-list-of expected-number-of-arguments arguments)
 
   (define signature
@@ -306,7 +306,7 @@
       (map uid-list-of arguments)))
   (define applicable-methods
     (or (cache-ref signature)
-	(let ((methods (mt.compute-applicable-methods signature methods-alist)))
+	(let ((methods (mt.compute-applicable-methods signature methods-alist-func)))
 	  (cache-store signature methods)
 	  methods)))
   (define method-called? #f)
@@ -443,37 +443,37 @@
 		(list (GENERIC :number-of-arguments) ...))
 	      N))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   primary-methods-alist primary-method-add
+				   primary-methods-alist-func primary-method-add
 				   primary-cache primary-cache-store primary-cache-ref
-				   (mt.merge-methods-alists (GENERIC :primary-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   before-methods-alist before-method-add
+				   before-methods-alist-func before-method-add
 				   before-cache before-cache-store before-cache-ref
-				   (mt.merge-methods-alists (GENERIC :before-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :before-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   after-methods-alist after-method-add
+				   after-methods-alist-func after-method-add
 				   after-cache after-cache-store after-cache-ref
-				   (mt.merge-methods-alists (GENERIC :after-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :after-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   around-methods-alist around-method-add
+				   around-methods-alist-func around-method-add
 				   around-cache around-cache-store around-cache-ref
-				   (mt.merge-methods-alists (GENERIC :around-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :around-methods-alist-func) ...))
 	  (define reverse-before-methods REVERSE-BEFORE-METHODS)
 	  (define (implementation . arguments)
 	    (generic*-function-implementation
 	     'NAME
-	     primary-methods-alist primary-cache-ref primary-cache-store
-	     before-methods-alist  before-cache-ref  before-cache-store
-	     after-methods-alist   after-cache-ref   after-cache-store
-	     around-methods-alist  around-cache-ref  around-cache-store
+	     primary-methods-alist-func primary-cache-ref primary-cache-store
+	     before-methods-alist-func  before-cache-ref  before-cache-store
+	     after-methods-alist-func   after-cache-ref   after-cache-store
+	     around-methods-alist-func  around-cache-ref  around-cache-store
 	     UID-LIST-OF number-of-arguments reverse-before-methods arguments))
 	  (define-syntax NAME
 	    (lambda (stx)
 	      (syntax-case stx ( ;;
-				:primary-method-add :primary-methods-alist
-				:after-method-add   :after-methods-alist
-				:before-method-add  :before-methods-alist
-				:around-method-add  :around-methods-alist
+				:primary-method-add :primary-methods-alist-func
+				:after-method-add   :after-methods-alist-func
+				:before-method-add  :before-methods-alist-func
+				:around-method-add  :around-methods-alist-func
 				:primary-cache      :before-cache
 				:after-cache        :around-cache
 				:number-of-arguments)
@@ -486,10 +486,10 @@
 		((_ :around-method-add	signature closure)
 		 #'(around-method-add	signature closure))
 
-		((_ :primary-methods-alist)	#'primary-methods-alist)
-		((_ :before-methods-alist)	#'before-methods-alist)
-		((_ :after-methods-alist)	#'after-methods-alist)
-		((_ :around-methods-alist)	#'around-methods-alist)
+		((_ :primary-methods-alist-func)	#'primary-methods-alist-func)
+		((_ :before-methods-alist-func)		#'before-methods-alist-func)
+		((_ :after-methods-alist-func)		#'after-methods-alist-func)
+		((_ :around-methods-alist-func)		#'around-methods-alist-func)
 
 		((_ :primary-cache)		#'primary-cache)
 		((_ :before-cache)		#'before-cache)
@@ -527,10 +527,10 @@
 
 (define (generic*-function-implementation
 	 who
-	 primary-methods-alist primary-cache-ref primary-cache-store
-	 before-methods-alist  before-cache-ref  before-cache-store
-	 after-methods-alist   after-cache-ref   after-cache-store
-	 around-methods-alist  around-cache-ref  around-cache-store
+	 primary-methods-alist-func primary-cache-ref primary-cache-store
+	 before-methods-alist-func  before-cache-ref  before-cache-store
+	 after-methods-alist-func   after-cache-ref   after-cache-store
+	 around-methods-alist-func  around-cache-ref  around-cache-store
 	 uid-list-of expected-number-of-arguments reverse-before-methods
 	 arguments)
   (define signature
@@ -552,28 +552,28 @@
       (set! ?method-alist (cdr ?method-alist))))
   (define-syntax define-applicable-methods
     (syntax-rules ()
-      ((_ NAME ALIST STORE REF)
+      ((_ NAME ALIST-FUNC STORE REF)
        (define NAME
 	 (or (REF signature)
-	     (let ((methods (mt.compute-applicable-methods signature ALIST)))
+	     (let ((methods (mt.compute-applicable-methods signature ALIST-FUNC)))
 	       (STORE signature methods)
 	       methods))))
-      ((_ NAME ALIST STORE REF REVERSE?)
+      ((_ NAME ALIST-FUNC STORE REF REVERSE?)
        (define NAME
 	 (or (REF signature)
-	     (let* ((ell     (mt.compute-applicable-methods signature ALIST))
+	     (let* ((ell     (mt.compute-applicable-methods signature ALIST-FUNC))
 		    (methods (if REVERSE? (reverse ell) ell)))
 	       (STORE signature methods)
 	       methods))))
       ))
   (define-applicable-methods applicable-around-methods
-    around-methods-alist around-cache-store around-cache-ref)
+    around-methods-alist-func around-cache-store around-cache-ref)
   (define-applicable-methods applicable-primary-methods
-    primary-methods-alist primary-cache-store primary-cache-ref)
+    primary-methods-alist-func primary-cache-store primary-cache-ref)
   (define-applicable-methods applicable-before-methods
-    before-methods-alist before-cache-store before-cache-ref reverse-before-methods)
+    before-methods-alist-func before-cache-store before-cache-ref reverse-before-methods)
   (define-applicable-methods applicable-after-methods
-    after-methods-alist after-cache-store after-cache-ref #t)
+    after-methods-alist-func after-cache-store after-cache-ref #t)
   (define primary-method-called? #f)
   (define reject-recursive-calls? #f)
   (define (is-a-next-method-available?)
