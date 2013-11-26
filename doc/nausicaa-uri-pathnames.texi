@@ -83,8 +83,8 @@ pathnames unix}, @ref{uri pathnames unix, Manipulating Unix pathnames}.
 @subsubsection Base pathname abstract class
 
 
-The following bindings are exported by the @library{nausicaa uri
-pathnames abstract} library.
+The following bindings are exported by the library @library{nausicaa uri
+pathnames abstract}.
 
 
 @deftp {Abstract Class} @aclass{pathname}
@@ -96,9 +96,8 @@ Base type for file system pathname objects.
 @subsubheading Constructors and predicates
 
 
-@defop {Superclass constructor} @aclass{pathname} constructor @var{bytevector}
-Build a new pathname record using the @var{bytevector} and the
-associated list of @var{segments} already verified and normalised.
+@defop {Super constructor} @aclass{pathname} constructor
+Constructor to be used by the derived classes' constructors.
 @end defop
 
 @c ------------------------------------------------------------
@@ -106,37 +105,114 @@ associated list of @var{segments} already verified and normalised.
 @subsubheading Public fields
 
 
-@deftypecv {Immutable field} @aclass{pathname} @aclass{bytevector} bytevector
-Bytevector representing the pathname.  The value itself must not be
-mutated.
+@deftypecv {Immutable virtual field} @aclass{pathname} @aclass{bytevector} bytevector
+Bytevector representation of the pathname; the value itself must not be
+mutated.  The value of this field is produced by the multimethod
+@func{pathname-bytevector}, @ref{uri pathnames abstract methods,
+pathname-bytevector}.
 @end deftypecv
 
 
-@deftypecv {Immutable field} @aclass{pathname} @aclass{list} segments
-Possibly empty list of bytevectors representing the pathname segments;
-when the list is empty: if the pathname is absolute, it is the root; if
-the pathname is relative, it is the single dot.  The value itself must
-not be mutated.
+@deftypecv {Immutable virtual field} @aclass{pathname} @aclass{string} string
+String representation of the pathname; the value itself must not be
+mutated.  The value of this field is produced by the multimethod
+@func{pathname-string}, @ref{uri pathnames abstract methods,
+pathname-string}.
 @end deftypecv
 
 
-@deftypecv {Immutable field} @aclass{pathname} @aclass{pair} last-pair
-The last pair in the list of segments stored in the @code{segments}
-field, or @false{} if @code{segments} is null.
+@deftypecv {Immutable virtual field} @aclass{pathname} @aclass{bytevector} uri
+Bytevector representation of the pathname in the format specified by
+@rfc{} 3986; the value itself must not be mutated.  The value of this
+field is produced by the multimethod @func{pathname-uri-representation},
+@ref{uri pathnames abstract methods, pathname-uri-representation}.
 @end deftypecv
 
+@c ------------------------------------------------------------
 
-@deftypecv {Immutable field} @aclass{pathname} @aclass{string} string
-Scheme string representing the value of the @code{bytevector} field.
-@end deftypecv
+@subsubheading Methods
+
+
+@defmethod @aclass{pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.  This method
+is implemented by the multimethod @func{pathname-extension}, @ref{uri
+pathnames abstract methods, pathname-extension}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} dirname
+Return a pathname object representing the directory part of the instance
+pathname.  This method is implemented by the multimethod
+@func{pathname-dirname}, @ref{uri pathnames abstract methods,
+pathname-dirname}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} tailname
+Return a pathname object representing the last segment of the instance
+pathname.  This method is implemented by the multimethod
+@func{pathname-tailname}, @ref{uri pathnames abstract methods,
+pathname-tailname}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} rootname
+Return a pathname object representing the instance pathname with the
+extension of the last segment stripped, dot separator @strong{not}
+included.  This method is implemented by the multimethod
+@func{pathname-rootname}, @ref{uri pathnames abstract methods,
+pathname-rootname}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} split
+Return 2 values: a boolean, @true{} if the instance pathname is
+absolute; a list of bytevectors each representing a segment of the
+instance pathname.  This method is implemented by the multimethod
+@func{pathname-split}, @ref{uri pathnames abstract methods,
+pathname-split}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} prefix? (@var{ptn} @aclass{pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.  This method is implemented by the
+multimethod @func{pathname-prefix?}, @ref{uri pathnames abstract
+methods, pathname-prefix?}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} suffix? (@var{ptn} @aclass{pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.  This method is implemented by the
+multimethod @func{pathname-suffix?}, @ref{uri pathnames abstract
+methods, pathname-suffix?}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} prepend (@var{ptn} @aclass{pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.  This method is implemented by the multimethod
+@func{pathname-prepend}, @ref{uri pathnames abstract methods,
+pathname-prepend}.
+@end defmethod
+
+
+@defmethod @aclass{pathname} replace-extension @var{ext}
+Return a new pathname object representing the instance pathname with the
+extension of the last segment replaced by @var{ext}.  This method is
+implemented by the multimethod @func{pathname-replace-extension},
+@ref{uri pathnames abstract methods, pathname-replace-extension}.
+@end defmethod
 
 @c page
 @node uri pathnames abstract absolute
 @subsubsection Absolute pathname abstract class
 
 
-The following bindings are exported by the @library{nausicaa uri
-pathnames abstract} library.
+The following bindings are exported by the library @library{nausicaa uri
+pathnames abstract}.
 
 
 @deftp {Abstract Class} @aclass{absolute-pathname}
@@ -148,61 +224,17 @@ Base type for absolute pathnames; it is derived from @class{pathname}.
 @subsubheading Constructors and predicates
 
 
-@defop {Super constructor} @aclass{absolute-pathname} constructor @var{bytevector}
-Build a new absolute pathname object.
+@defop {Super constructor} @aclass{absolute-pathname} constructor
+Constructor to be used by the derived classes' constructors.
 @end defop
-
-@c ------------------------------------------------------------
-
-@subsubheading Methods
-
-
-@deftypemethod @aclass{pathname} @aclass{absolute-pathname} absolute (@var{prefix} @aclass{absolute-pathname})
-Return a record holding an absolute pathname representing the absolute
-version of this instance's pathname with respect to @var{prefix}.  If
-this instance is already absolute: the return value can be this instance
-itself.
-
-This method is implemented by the @func{absolute} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (absolute ptn)
-  (let* (((P <pathname>)
-          (pathname ptn))
-         ((Q <absolute-pathname>)
-          (P.absolute (pathname "/a/b/c"))))
-    Q.string))
-
-;; relative pathnames
-(absolute ".")                  @result{} "/a/b/c"
-(absolute "ciao")               @result{} "/a/b/c/ciao"
-(absolute "./ciao")             @result{} "/a/b/c/ciao"
-(absolute "../ciao")            @result{} "/a/b/ciao"
-(absolute "../../../ciao")      @result{} "/ciao"
-
-(absolute "../../../../ciao")   @error{} &normalisation
-
-;; already absolute pathnames
-(absolute "/")                  @result{} "/"
-(absolute "/ciao/hello")        @result{} "/ciao/hello"
-@end example
-@end deftypemethod
-
-
 
 @c page
 @node uri pathnames abstract relative
 @subsubsection Relative pathname abstract class
 
 
-The following bindings are exported by the @library{nausicaa uri pathnames
-abstract} library.
+The following bindings are exported by the library @library{nausicaa uri
+pathnames abstract}.
 
 
 @deftp {Abstract Class} @aclass{relative-pathname}
@@ -214,8 +246,8 @@ Base type for relative pathnames; it is derived from @class{pathname}.
 @subsubheading Constructors and predicates
 
 
-@defop {Super constructor} @aclass{relative-pathname} constructor @var{bytevector}
-Build a new relative pathname object.
+@defop {Super constructor} @aclass{relative-pathname} constructor
+Constructor to be used by the derived classes' constructors.
 @end defop
 
 @c ------------------------------------------------------------
@@ -223,422 +255,100 @@ Build a new relative pathname object.
 @subsubheading Methods
 
 
-@deftypemethod @aclass{relative-pathname} @aclass{relative-pathname} prepend (@var{prefix} @aclass{relative-pathname})
-@deftypemethodx @aclass{relative-pathname} @aclass{absolute-pathname} prepend (@var{prefix} @aclass{absolute-pathname})
-Return a record holding a relative or absolute pathname representing the
-pathname of @var{prefix} with this instance's pathname appended.
-
-This method is implemented by the @func{prepend} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{relative-pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (prepend-absolute ptn)
-  (let* (((P <pathname>)
-          (pathname ptn))
-         ((Q <absolute-pathname>)
-          (P.prepend (pathname "/a/b"))))
-    Q.string))
-
-(prepend-absolute ".")          @result{} "/a/b"
-(prepend-absolute "c")          @result{} "/a/b/c"
-(prepend-absolute "c/d/e")      @result{} "/a/b/c/d/e"
-(prepend-absolute "..")         @result{} "/a"
-(prepend-absolute "../..")      @result{} "/"
-
-(doit "../../../")              @error{} &normalisation
-
-(define (prepend-relative ptn)
-  (let* (((P <pathname>)
-          (pathname ptn))
-         ((Q <relative-pathname>)
-          (P.prepend (pathname "./a/b"))))
-    Q.string))
-
-(prepend-relative ".")          @result{} "a/b"
-(prepend-relative "c")          @result{} "a/b/c"
-(prepend-relative "c/d/e")      @result{} "a/b/c/d/e"
-(prepend-relative "..")         @result{} "a"
-(prepend-relative "../..")      @result{} "."
-(prepend-relative "../../..")   @result{} ".."
-(prepend-relative "../../../..") @result{} "../.."
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} append (@var{suffix} @aclass{relative-pathname})
-@deftypemethodx @aclass{relative-pathname} @aclass{relative-pathname} append (@var{suffix} @aclass{relative-pathname})
-Return a record holding an absolute or relative pathname representing
-this instance's pathname with @var{suffix} appended.
-
-This method is implemented by the @func{append} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{absolute-pathname} and @class{relative-pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (append-relative ptn)
-  (let* (((P <pathname>)
-          (pathname ptn))
-         ((Q <relative-pathname>)
-          (P.append (pathname "./a/b"))))
-    Q.string))
-
-(append-relative ".")           @result{} "a/b"
-(append-relative "c")           @result{} "c/a/b"
-(append-relative "c/d/e")       @result{} "c/d/e/a/b"
-(append-relative "..")          @result{} "../a/b"
-(append-relative "../..")       @result{} "../../a/b"
-(append-relative "../../..")    @result{} "../../../a/b"
-(append-relative "../../../..") @result{} "../../../../a/b"
-
-(append-relative "/")           @result{} "/d/e"
-(append-relative "/a/b")        @result{} "/a/b/d/e"
-@end example
-@end deftypemethod
-
-
-The following methods extract components from an absolute pathname; they
-are not implemented for relative pathnames because some operations are
-undefined.  For example, what is the directory part of the relative
-pathname @samp{a/../..}?
-
-Some methods deal with the @dfn{extension} and the @dfn{name}; the
-extension of a pathname segment is the trailing subvector up to the
-first byte representing a dot in @ascii{} coding, dot byte included; the
-name of a segment is everything but the extension.  A segment having no
-dot byte, has no extension; a segment having the first byte representing
-a dot, and no other dots, has no extension.
-
-Here is a table of examples for Unix pathnames:
-
-@example
-pathname        dirname  rootname    tail       extension  name
----------------------------------------------------------------
-/               /        /           .          #f         .
-/dir            /        /dir        dir        #f         dir
-/dir/file.ext   /dir     /dir/file   file.ext   .ext       file
-/dir/.file      /dir     /dir/.file  .file      #f         .file
-/dir/.file.ext  /dir     /dir/.file  .file.ext  .ext       .file
-@end example
-
-
-@deftypemethod @aclass{pathname} @aclass{relative-pathname} tail
-Return a new @class{relative-pathname} object representing the last
-segment of this instance.  If the instance represents the root
-directory: the returned value has a single segment representing the
-single--dot entry.
-
-This method is implemented by the @func{tail} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (tail ptn)
-  (let* (((P <absolute-pathname>) (pathname ptn))
-         ((Q <relative-pathname>) (P.tail)))
-    Q.string))
-
-(tail "/")      @result{} "."
-(tail "/a")     @result{} "a"
-(tail "/a/b/c") @result{} "c"
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} dirname
-Return a new @class{absolute-pathname} object representing all the
-segments in this instance but the last.  If the instance represents the
-root directory: the returned value represents the root directory, too.
-
-This method is implemented by the @func{dirname} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{absolute-pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (dirname ptn)
-  (let* (((P <absolute-pathname>) (pathname ptn))
-         ((Q <absolute-pathname>) (P.dirname)))
-    Q.string))
-
-(dirname "/")           @result{} "/"
-(dirname "/a")          @result{} "/"
-(dirname "/a/b/c")      @result{} "/a/b"
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} rootname
-Return a new @class{absolute-pathname} object representing the same
-pathname of this instance, but having the last segment trimmed of the
-extension.
-
-This method is implemented by the @func{rootname} generic function from
-@library{nausicaa uri pathnames methods}; it must be implemented by concrete
-subclasses of @class{absolute-pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(define (rootname ptn)
-  (let* (((P <absolute-pathname>) (pathname ptn))
-         ((Q <absolute-pathname>) (P.rootname)))
-    Q.string))
-
-(rootname "/")                  @result{} "/"
-(rootname "/a")                 @result{} "/a"
-(rootname "/a/b/c")             @result{} "/a/b/c"
-
-(rootname "/.ciao")             @result{} "/.ciao"
-(rootname "/a/.ciao")           @result{} "/a/.ciao"
-(rootname "/a/b/c/.ciao")       @result{} "/a/b/c/.ciao"
-
-(rootname "/the-file.ext")      @result{} "/the-file"
-(rootname "/a/the-file.ext")    @result{} "/a/the-file"
-
-(rootname "/.the-file.ext")     @result{} "/.the-file"
-(rootname "/a/.the-file.ext")   @result{} "/a/.the-file"
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{bytevector} extension
-Return a new bytevector representing the extension of the last segment
-in this instance.  If the last segment has no extension: the return
-value is false.
-
-This method is implemented by the @func{extension} generic function from
-@library{nausicaa uri pathnames methods}; it has a concrete implementation
-for the @class{absolute-pathname} class.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix)
-  (prefix (nausicaa uri pathnames unix low) ul.))
-
-(define (extension ptn)
-  (let (((P <absolute-pathname>) (pathname ptn)))
-    (ul.to-string (P.extension))))
-
-(extension "/")                 @result{} #f
-(extension "/a")                @result{} #f
-(extension "/a/b/c")            @result{} #f
-
-(extension "/.ciao")            @result{} #f
-(extension "/a/.ciao")          @result{} #f
-(extension "/a/b/c/.ciao")      @result{} #f
-
-(extension "/file.ext")         @result{} ".ext"
-(extension "/a/file.ext")       @result{} ".ext"
-(extension "/a/b/c/file.ext")   @result{} ".ext"
-
-(extension "/.file.ext")        @result{} ".ext"
-(extension "/a/.file.ext")      @result{} ".ext"
-(extension "/a/b/c/.file.ext")  @result{} ".ext"
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{bytevector} name
-Return a new bytevector representing the name of the last segment in
-this instance.  If the instance represents the root directory: the
-returned value represents a single dot in @ascii{} coding.
-
-This method is implemented by the @func{name} generic function from
-@library{nausicaa uri pathnames methods}; it has a concrete implementation
-for the @class{absolute-pathname} class.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix)
-  (prefix (nausicaa uri pathnames unix low) ul.))
-
-(define (name ptn)
-  (let (((P <absolute-pathname>) (pathname ptn)))
-    (ul.to-string (P.name))))
-
-(name "/")                      @result{} "."
-(name "/a")                     @result{} "a"
-(name "/a/b/c")                 @result{} "c"
-
-(name "/.ciao")                 @result{} ".ciao"
-(name "/a/.ciao")               @result{} ".ciao"
-(name "/a/b/c/.ciao")           @result{} ".ciao"
-
-(name "/file.ext")              @result{} "file"
-(name "/a/file.ext")            @result{} "file"
-(name "/a/b/c/file.ext")        @result{} "file"
-
-(name "/.file.ext")             @result{} ".file"
-(name "/a/.file.ext")           @result{} ".file"
-(name "/a/b/c/.file.ext")       @result{} ".file"
-@end example
-@end deftypemethod
-
-
-@deftypemethod @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@deftypemethodx @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{ext} @aclass{string})
-@deftypemethodx @aclass{absolute-pathname} @aclass{absolute-pathname} replace-extension (@var{source} @aclass{absolute-pathname})
-Return a pathname record representing the same pathname of this
-instance, but with the extension replaced with the one from
-@var{source}, which can be a bytevector, string or pathname.  The
-bytevector and string @var{ext} arguments must represent only the
-extension, leading dot byte included.
-
-When the instance represents the root directory: the returned value can
-be the instance itself or a new pathname record representing the root
-directory; in all the other cases the return value is a new pathname
-record.
-
-If @var{source} has no extension: raise an exception violation with
-condition types: @condition{pathname}, @condition{error},
-@condition{who}, @condition{message}, @condition{irritants}.
-
-This method is implemented by the @func{replace-extension} generic
-function from @library{nausicaa uri pathnames methods}; it must be
-implemented by concrete subclasses of @class{absolute-pathname}.
-
-@example
-#!r6rs
-(import (nausicaa)
-  (nausicaa uri pathnames unix))
-
-(let (((o <absolute-pathname>)
-      (pathname "/a/b/file.ext")))
-   (is-a? (o.replace-extension ".zip")
-          <absolute-pathname>))
-@result{} #t
-
-(define (doit input)
-  (let* (((o <absolute-pathname>)
-          (pathname input))
-         ((p <pathname>)
-          (o.replace-extension ".zip")))
-    p.string))
-
-(doit "/a/b/file.ext")  @result{} "/a/b/file.zip"
-(doit "/a/b/file")      @result{} "/a/b/file.zip"
-(doit "/a/b/file.")     @result{} "/a/b/file.zip"
-(doit "/a/b/.")         @result{} "/a/b.zip"
-(doit "/a/b/..")        @result{} "/a.zip"
-(doit "/")              @result{} "/"
-(doit "/a/b/.file.ext") @result{} "/a/b/.file.zip"
-(doit "/a/b/.file")     @result{} "/a/b/.file.zip"
-
-(let* (((o <absolute-pathname>)
-        (pathname "/a/b/file.ext"))
-       ((p <pathname>)
-        (o.replace-extension (pathname "/d/e/other.zip"))))
-  p.string)
-@result{} "/a/b/file.zip"
-@end example
-@end deftypemethod
+@defmethod @aclass{pathname} append (@var{ptn} @aclass{pathname})
+Return a new pathname object representing the instance pathname appended
+to @var{ptn}.  This method is implemented by the multimethod
+@func{pathname-append}, @ref{uri pathnames abstract methods,
+pathname-append}.
+@end defmethod
 
 @c page
 @node uri pathnames abstract methods
 @subsubsection Extending class methods
 
 
-@cindex @library{nausicaa uri pathnames methods}, library
-@cindex Library @library{nausicaa uri pathnames methods}
+The following bindings are exported by the library @library{nausicaa uri
+pathnames abstract}.
 
 
-The following bindings are exported by the @library{nausicaa uri pathnames
-methods} library; it is meant to be used only when extending the class
-interface with new types.
+@deftypefn Multimethod @aclass{bytevector} pathname-bytevector @var{ptn}
+Return a bytevector representation of the pathname; the returned value
+must not be mutated.
+@end deftypefn
 
 
-@deffn {Generic Function} string @var{self}
-The implementation of the virtual field @code{string} of
-@class{pathname} from @library{nausicaa uri pathnames abstract}.  It is
-meant to return a string representation of the pathname in the
-@code{bytevector} field.
+@deftypefn Multimethod @aclass{string} pathname-string @var{ptn}
+Return a string representation of the pathname; the returned value must
+not be mutated.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{bytevector} pathname-uri-representation @var{ptn}
+Return a bytevector representation of the pathname in the format
+specified by @rfc{} 3986; the returned value must not be mutated.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{pathname} pathname-extension @var{ptn}
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{pathname} pathname-dirname @var{ptn}
+Return a pathname object representing the directory part of the instance
+pathname.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{pathname} pathname-tailname @var{ptn}
+Return a pathname object representing the last segment of the instance
+pathname.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{pathname} pathname-rootname @var{ptn}
+Return a pathname object representing the instance pathname with the
+extension of the last segment stripped, dot separator @strong{not}
+included.
+@end deftypefn
+
+
+@deffn Multimethod pathname-split @var{ptn}
+Return 2 values: a boolean, @true{} if the instance pathname is
+absolute; a list of bytevectors each representing a segment of the
+instance pathname.
 @end deffn
 
 
-@deffn {Generic Function} absolute @var{self} @var{absolute-base}
-The implementation of the @func{absolute} method of @class{pathname}
-from @library{nausicaa uri pathnames abstract}.  It is meant to return a new
-pathname record representing the absolute version of @var{self}
-normalised with respect to @var{absolute-base}.
-
-If @var{self} is already absolute: the return value can be @var{self}.
-@end deffn
+@deftypefn Multimethod @aclass{boolean} pathname-prefix? @vari{ptn} @varii{ptn}
+Return @true{} if the pathname @vari{ptn} is a prefix of the pathname
+@varii{ptn}, otherwise return @false{}.
+@end deftypefn
 
 
-@deffn {Generic Function} prepend @var{suffix} @var{prefix}
-Return a record holding a relative pathname representing the pathname of
-@var{prefix} with the pathname @var{suffix} appended; both @var{prefix}
-and @var{suffix} must be relative pathname records.
-@end deffn
+@deftypefn Multimethod @aclass{boolean} pathname-suffix? @vari{ptn} @varii{ptn}
+Return @true{} if the pathname @vari{ptn} is a suffix of the pathname
+@varii{ptn}, otherwise return @false{}.
+@end deftypefn
 
 
-@deffn {Generic Function} append @var{prefix} @var{suffix}
-Return a record holding a pathname (absolute or relative depending on
-the arguments) representing the pathname of @var{prefix} with the
-pathname @var{suffix} appended; @var{prefix} can be absolute or
-relative, @var{suffix} must be relative.
-@end deffn
+@deftypefn Multimethod @aclass{pathname} pathname-prepend @vari{ptn} @varii{ptn}
+Return a new pathname object representing the pathname @vari{ptn}
+prepended to the pathname @varii{ptn}.
+@end deftypefn
 
 
-@deffn {Generic Function} tail @var{absolute-self}
-Return a new relative pathname object representing the last segment of
-@var{absolute-self}.  If the instance represents the root directory: the
-returned value has a single segment representing the single--dot entry.
-@end deffn
+@deftypefn Multimethod @aclass{pathname} pathname-append @vari{ptn} @varii{ptn}
+Return a new pathname object representing the pathname @vari{ptn}
+appended to the pathname @varii{ptn}.
+@end deftypefn
 
 
-@deffn {Generic Function} dirname @var{absolute-self}
-Return a new absolute pathname object representing all the segments in
-@var{absolute-self} but the last.  If the instance represents the root
-directory: the returned value represents the root directory, too.
-@end deffn
-
-
-@deffn {Generic Function} rootname @var{absolute-self}
-Return a new absolute pathname object representing the same pathname of
-@var{absolute-self}, but having the last segment trimmed of the
-extension.
-@end deffn
-
-
-@deffn {Generic Function} extension @var{absolute-self}
-Return a new bytevector representing the extension of the last segment
-in @var{absolute-self}.  If the last segment has no extension: the
-return value is false.
-@end deffn
-
-
-@deffn {Generic Function} name @var{absolute-self}
-Return a new bytevector representing the name of the last segment in
-@var{absolute-self}.  If the instance represents the root directory: the
-returned value represents a single dot in @ascii{} coding.
-@end deffn
-
-
-@deffn {Generic Function} replace-extension @var{self} @var{source}
-Replace the extension of the @var{self} pathname with the one from
-@var{source}, which can be a bytevector, string or pathname instance.
-@end deffn
+@deftypefn Multimethod @aclass{pathname} replace-extension @var{ptn} @var{ext}
+Return a new pathname object representing the pathname @var{ptn} with
+the extension of the last segment replaced by @var{ext}.
+@end deftypefn
 
 @c page
 @node uri pathnames native

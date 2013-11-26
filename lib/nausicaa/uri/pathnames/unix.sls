@@ -247,14 +247,8 @@
 (define-method (pathname-rootname (O <absolute-unix-pathname>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-rootname (O $pathname)))))
 
-(define-method (pathname-strip-trailing-slashes (O <absolute-unix-pathname>))
-  (<absolute-unix-pathname> ((uxptn.$bytevector-strip-trailing-slashes (O $pathname)))))
-
 (define-method (pathname-split (O <absolute-unix-pathname>))
   (uxptn.$bytevector-split (O $pathname)))
-
-(define-method (pathname-normalise (O <absolute-unix-pathname>))
-  (<absolute-unix-pathname> ((uxptn.$bytevector-normalise (O $pathname)))))
 
 (define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <bytevector-unix-segment>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
@@ -330,14 +324,8 @@
 (define-method (pathname-rootname (O <relative-unix-pathname>))
   (<relative-unix-pathname> ((uxptn.$bytevector-rootname (O $pathname)))))
 
-(define-method (pathname-strip-trailing-slashes (O <relative-unix-pathname>))
-  (<relative-unix-pathname> ((uxptn.$bytevector-strip-trailing-slashes (O $pathname)))))
-
 (define-method (pathname-split (O <relative-unix-pathname>))
   (uxptn.$bytevector-split (O $pathname)))
-
-(define-method (pathname-normalise (O <relative-unix-pathname>))
-  (<relative-unix-pathname> ((uxptn.$bytevector-normalise (O $pathname)))))
 
 (define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <bytevector-unix-segment>))
   (<relative-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
