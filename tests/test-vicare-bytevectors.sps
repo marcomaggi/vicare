@@ -28,6 +28,11 @@
 #!vicare
 (import (vicare)
   (prefix (vicare platform words) words.)
+  (vicare unsafe operations)
+  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
+  ;;Tue Nov 26, 2013)
+  (only (vicare system $bytevectors)
+	$bytevector-copy)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -283,6 +288,21 @@
       (catch #f
 	(bytevector-copy #\a))
     => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; unsafe operation
+
+  (check
+      ($bytevector-copy #vu8())
+    => #vu8())
+
+  (check
+      ($bytevector-copy #vu8(1))
+    => #vu8(1))
+
+  (check
+      ($bytevector-copy #vu8(1 2 3))
+    => #vu8(1 2 3))
 
   #t)
 

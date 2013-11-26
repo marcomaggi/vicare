@@ -225,6 +225,9 @@
 
     $bytevector=
     $bytevector-fill!
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    #;$bytevector-copy
     $bytevector-copy!
     $bytevector-copy!/count
     $bytevector-self-copy-forwards!
