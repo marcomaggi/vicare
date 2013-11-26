@@ -329,6 +329,12 @@
     $string-concatenate
     $string-reverse-and-concatenate
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    #;$string->octets
+    #;$octets->string
+    #;$octets-encoded-bytevector?
+
     $string->ascii
     $ascii->string
     $ascii-encoded-bytevector?
@@ -603,8 +609,9 @@
 				      ((_ ?op1 ?op2)
 				       (sys.?proc ?op1 ?op2))
 				      ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
-				       (and (sys.?proc ?op1 ?op2)
-					    (?proc ?op2 ?op3 ?op4 (... ...)))))))
+				       (let ((op2 ?op2))
+					 (and (sys.?proc ?op1 op2)
+					      (?proc op2 ?op3 ?op4 (... ...))))))))
 				 )))
   (define-fx-compar $fx=  sys.$fx=)
   (define-fx-compar $fx<  sys.$fx<)

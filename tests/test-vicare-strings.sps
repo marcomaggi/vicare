@@ -1210,6 +1210,95 @@
   #t)
 
 
+(parametrise ((check-test-name	'octets))
+
+  (define (octets-chi? chi)
+    (<= 0 chi 255))
+
+  (define test-string
+    (let* ((str.len 256)
+	   (str     (make-string str.len #\0)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i str.len)
+	   str)
+	(when (octets-chi? i)
+	  (string-set! str i (integer->char i))))))
+
+  (define test-bytevector
+    (let* ((bv.len 256)
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
+      (do ((i 0 (+ 1 i)))
+	  ((= i bv.len)
+	   bv)
+	(when (octets-chi? i)
+	  (bytevector-u8-set! bv i i)))))
+
+;;; --------------------------------------------------------------------
+;;; argument check
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->octets 123))
+    => '((string? str) 123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(octets->string 123))
+    => '((bytevector? bv) 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string->octets test-string)
+    => test-bytevector)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->octets "#\xFFFF;"))
+    => '(#\xFFFF "#\xFFFF;"))
+
+;;;
+
+  (check
+      (octets->string test-bytevector)
+    => test-string)
+
+;;;
+
+  (check
+      (octets-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (octets-encoded-bytevector? '#vu8(#x80 255 10))
+    => #t)
+
+;;;
+
+  (check
+      (octets-encoded-string? test-string)
+    => #t)
+
+  (check
+      (octets-encoded-string? (octets->string '#vu8(1 2 3 255 10)))
+    => #t)
+
+  (check
+      (octets-encoded-string? "\xFFFF;")
+    => #f)
+
+  #t)
+
+
 (parametrise ((check-test-name	'latin1))
 
   (define (latin1-chi? chi)

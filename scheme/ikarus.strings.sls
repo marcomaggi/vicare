@@ -32,6 +32,9 @@
     uuid
 
     ;; Vicare specific
+    string->octets		octets->string
+    octets-encoded-bytevector?	octets-encoded-string?
+
     string->ascii		ascii->string
     ascii-encoded-bytevector?	ascii-encoded-string?
 
@@ -61,6 +64,9 @@
     $string
     $string=			$string-total-length
     $string-concatenate		$string-reverse-and-concatenate
+
+    $string->octets		$octets->string
+    $octets-encoded-bytevector?	$octets-encoded-string?
 
     $string->ascii		$ascii->string
     $ascii-encoded-bytevector?	$ascii-encoded-string?
@@ -96,6 +102,9 @@
 		  uuid
 
 		  ;; Vicare specific
+		  string->octets		octets->string
+		  octets-encoded-bytevector?	octets-encoded-string?
+
 		  string->ascii			ascii->string
 		  ascii-encoded-bytevector?	ascii-encoded-string?
 
@@ -1025,6 +1034,55 @@
 ;;Tue Oct 8, 2013)
 (define ($string-empty? str)
   ($fxzero? ($string-length str)))
+
+
+;;;; octets bytevectors to/from strings
+
+(define* (octets-encoded-string? (str string?))
+  ($octets-encoded-string? str))
+
+(define ($octets-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+	(and ($fx<= 0 ($char->fixnum ($string-ref str i)) 255)
+	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets-encoded-bytevector? (bv bytevector?))
+  #t)
+
+(define ($octets-encoded-bytevector? bv)
+  #t)
+
+;;; --------------------------------------------------------------------
+
+(define* (string->octets (str string?))
+  ($string->octets str))
+
+(define* ($string->octets str)
+  (do ((i 0 ($fxadd1 i))
+       (bv ($make-bytevector ($string-length str))))
+      (($fx= i ($string-length str))
+       bv)
+    (let* ((ch  ($string-ref str i))
+	   (chi ($char->fixnum ch)))
+      (if ($fx<= 0 chi 255)
+	  ($bytevector-u8-set! bv i chi)
+	(procedure-argument-violation __who__
+	  "impossible conversion from character to octet" ch str)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets->string (bv bytevector?))
+  ($octets->string bv))
+
+(define ($octets->string bv)
+  (do ((i 0 ($fxadd1 i))
+       (str ($make-string ($bytevector-length bv))))
+      (($fx= i ($bytevector-length bv))
+       str)
+    ($string-set! str i ($fixnum->char ($bytevector-u8-ref bv i)))))
 
 
 ;;;; Latin-1 bytevectors to/from strings

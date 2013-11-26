@@ -4961,6 +4961,11 @@ part first.
 @end defun
 
 
+@defun octets-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} is a bytevector object.
+@end defun
+
+
 @defun ascii-encoded-bytevector? @var{bytevector}
 Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
 encoded string, otherwise return @false{}.  An octet @var{chi} is
@@ -5118,6 +5123,16 @@ not in the range of the maximum string length.
 @end defun
 
 
+@defun string->octets @var{string}
+@defunx octets->string @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+raw octets encoding of the characters.  Octets are converted to
+characters with @func{integer->char}; characters are converted to octets
+with @func{char->integer}.  Raise an exception if the conversion is not
+possible.
+@end defun
+
+
 @defun string->ascii @var{string}
 @defunx ascii->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
@@ -5125,9 +5140,20 @@ Convert to and from a Scheme string and a Scheme bytevector holding the
 @end defun
 
 
+@defun octets-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an octets encoded
+string, otherwise return @false{}.  A character is considered an
+octets--encoded if its integer representation @var{chi} satisfies:
+
+@example
+(<= 0 @var{chi} 255)      @result{} #t
+@end example
+@end defun
+
+
 @defun ascii-encoded-string? @var{string}
 Return @true{} if @var{string} can be interpreted as an @ascii{} encoded
-string, otherwise return @false{}.  An character is considered an
+string, otherwise return @false{}.  A character is considered an
 @ascii{} code point if its integer representation @var{chi} satisfies:
 
 @example
@@ -5145,7 +5171,7 @@ Latin-1 encoding of the characters.
 
 @defun latin1-encoded-string? @var{string}
 Return @true{} if @var{string} can be interpreted as a Latin1 encoded
-string, otherwise return @false{}.  An character in the string is
+string, otherwise return @false{}.  A character in the string is
 considered a Latin1 code point if its integer representation @var{chi}
 satisfies:
 
