@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa uri pathnames unix)
   (export
     <pathname>
@@ -228,12 +228,15 @@
   (O $pathname))
 
 (define-method (pathname-string (O <absolute-unix-pathname>))
-  (uxptn.pathname-bytevector->string (O bytevector)))
+  (uxptn.pathname-bytevector->string (O $pathname)))
+
+(define-method (pathname-uri-representation (O <absolute-unix-pathname>))
+  (uxptn.$bytevector-uri-representation (O $pathname)))
+
+;;; --------------------------------------------------------------------
 
 (define-method (pathname-extension (O <absolute-unix-pathname>))
   (uxptn.$bytevector-extension (O $pathname)))
-
-;;; --------------------------------------------------------------------
 
 (define-method (pathname-dirname (O <absolute-unix-pathname>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-dirname (O $pathname)))))
@@ -310,10 +313,13 @@
 (define-method (pathname-string (O <relative-unix-pathname>))
   (uxptn.pathname-bytevector->string (O $pathname)))
 
-(define-method (pathname-extension (O <relative-unix-pathname>))
-  (uxptn.$bytevector-extension (O $pathname)))
+(define-method (pathname-uri-representation (O <relative-unix-pathname>))
+  (uxptn.$bytevector-uri-representation (O $pathname)))
 
 ;;; --------------------------------------------------------------------
+
+(define-method (pathname-extension (O <relative-unix-pathname>))
+  (uxptn.$bytevector-extension (O $pathname)))
 
 (define-method (pathname-dirname (O <relative-unix-pathname>))
   (<relative-unix-pathname> ((uxptn.$bytevector-dirname (O $pathname)))))

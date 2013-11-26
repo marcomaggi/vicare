@@ -37,6 +37,7 @@
 
     pathname-bytevector
     pathname-string
+    pathname-uri-representation
 
     pathname-extension
     pathname-dirname
@@ -60,6 +61,7 @@
 
 (define-generic pathname-bytevector		(self))
 (define-generic pathname-string			(self))
+(define-generic pathname-uri-representation	(self))
 
 (define-generic pathname-extension		(self))
 (define-generic pathname-dirname		(self))
@@ -86,7 +88,8 @@
 
   (virtual-fields
    (immutable (bytevector	<bytevector>)	pathname-bytevector)
-   (immutable (string		<string>)	pathname-string))
+   (immutable (string		<string>)	pathname-string)
+   (immutable (uri		<bytevector>)	pathname-uri-representation))
 
   (methods
    (extension			pathname-extension)
@@ -141,9 +144,6 @@
   #f)
 
 (define-method (pathname=? (A <relative-pathname>) (B <absolute-pathname>))
-  #f)
-
-(define-method (pathname=? (A <pathname>) (B <pathname>))
   #f)
 
 
