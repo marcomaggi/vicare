@@ -1159,6 +1159,14 @@ bytevectors}.
 @end deftypecv
 
 
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} percent-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $percent-encoded?
+Accessing this field is like applying @func{percent-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded
 @deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded
 Accessing this field is like applying @func{percent-encode} to the
@@ -1173,11 +1181,45 @@ bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} percent-encoded?
-@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $percent-encoded?
-Accessing this field is like applying @func{percent-encoded-bytevector?}
-to the bytevector, @vicareref{iklib bytevectors conv, Converting
-bytevectors}.
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} ascii-string
+Accessing this field is like applying @func{ascii->string} to the
+bytevector, @vicareref{iklib strings, ascii->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} latin1-string
+Accessing this field is like applying @func{latin1->string} to the
+bytevector, @vicareref{iklib strings, latin1->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} uri-string
+Accessing this field is like applying @func{uri-encoding->string} to the
+bytevector, @vicareref{iklib strings, uri-encoding->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf8-string
+Accessing this field is like applying @func{utf8->string} to the
+bytevector, @vicareref{stdlib bytevector strings, utf8->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16be-string
+Accessing this field is like applying @func{utf16be->string} to the
+bytevector, @vicareref{iklib strings, utf16be->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16le-string
+Accessing this field is like applying @func{utf16le->string} to the
+bytevector, @vicareref{iklib strings, utf16le->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16n-string
+Accessing this field is like applying @func{utf16n->string} to the
+bytevector, @vicareref{iklib strings, utf16n->string}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -1186,6 +1228,7 @@ bytevectors}.
 
 
 @deftypemethod @aclass{bytevector} @aclass{bytevector} copy
+@deftypemethodx @aclass{bytevector} @aclass{bytevector} $copy
 Build and return a copy of the instance.
 @end deftypemethod
 
