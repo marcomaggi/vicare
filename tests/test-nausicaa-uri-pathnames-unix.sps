@@ -558,6 +558,41 @@
   #t)
 
 
+(parametrise ((check-test-name	'uri-representation))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check
+	(let (((O <pathname>) (pathname ?pathname)))
+	  (octets->string (O uri)))
+      => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "ciao.it"			"file:ciao.it")
+  (doit "ciao"				"file:ciao")
+  (doit "/path/to/file.ext"		"file:///path/to/file.ext")
+  (doit "/path/to/file."		"file:///path/to/file.")
+  (doit "/path/to/file"			"file:///path/to/file")
+  (doit "/path/to/file.ext/ab"		"file:///path/to/file.ext/ab")
+  (doit "/path/to/some.file.ext"	"file:///path/to/some.file.ext")
+  (doit "a/"				"file:a")
+  (doit "a."				"file:a.")
+  (doit "."				"file:.")
+  (doit ".."				"file:..")
+  (doit "..."				"file:...")
+  (doit ".a"				"file:.a")
+  (doit ".emacsrc"			"file:.emacsrc")
+  (doit "..a"				"file:..a")
+  (doit "...a"				"file:...a")
+  (doit "..a.b"				"file:..a.b")
+  (doit "///"				"file:///")
+  (doit "ciao///"			"file:ciao")
+  (doit "ciao.it///"			"file:ciao.it")
+  (doit "ciao.it.en///"			"file:ciao.it.en")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

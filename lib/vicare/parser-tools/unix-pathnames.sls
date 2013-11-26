@@ -1495,12 +1495,22 @@
       (put-bytevector port (if absolute?
 			       '#ve(ascii "file:///")
 			       '#ve(ascii "file:")))
-      (put-bytevector port ($percent-encode ($car segments)))
-      ($for-each1 (lambda (segment)
-		    ;; 47 = (char->integer #\/)
-		    (put-u8 port 47)
-		    (put-bytevector port ($percent-encode segment)))
-		  ($cdr segments))
+      ;;Remember:
+      ;;
+      ;;  (split "/")	=> #t ()
+      ;;  (split ".")	=> #f ()
+      ;;
+      (if (pair? segments)
+	  (begin
+	    (put-bytevector port ($percent-encode ($car segments)))
+	    ($for-each1 (lambda (segment)
+			  ;; 47 = (char->integer #\/)
+			  (put-u8 port 47)
+			  (put-bytevector port ($percent-encode segment)))
+			($cdr segments)))
+	(unless absolute?
+	  ;; 46 = (char->integer #\.)
+	  (put-u8 port 46)))
       (getter))))
 
 (define ($string-uri-representation obj)

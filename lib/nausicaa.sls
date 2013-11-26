@@ -1508,6 +1508,10 @@
     least-positive-bignum
     greatest-negative-bignum
 
+    ;; raw octets and strings
+    octets->string			string->octets
+    octets-encoded-bytevector?		octets-encoded-string?
+
     ;; ASCII and latin1 encodings
     ascii->string			string->ascii
     latin1->string			string->latin1

@@ -2,10 +2,9 @@
 @section File pathnames
 
 
-The library @library{nausicaa uri pathnames} provides basic operations
-on file system pathnames without actual access to the file system; other
-libraries, like @library{nausicaa uri pathnames unix}, add facilities
-for platform--specific pathname handling.
+The library hierarchy @library{nausicaa uri pathnames ---} provides
+operations on file system pathnames with and without access to the file
+system.
 
 @menu
 * uri pathnames intro::         Overview of the pathname model.
@@ -21,12 +20,12 @@ for platform--specific pathname handling.
 
 
 In the context of the libraries @library{nausicaa uri pathname ---}, a
-@dfn{pathname} is a Scheme bytevector representing a file or directory
-on a file system.  To model pathnames: Nausicaa defines a hierarchy of
-classes that wrap the bytevectors; by using them we can be sure that a
-bytevector has already been validated as pathname representation.  To be
-interpreted as pathname a bytevector must adhere to the following
-conventions:
+@dfn{file system pathname} is a Scheme bytevector representing a file or
+directory on a file system.  To model pathnames Nausicaa defines a
+hierarchy of classes that wrap the bytevectors; by using them we can
+write code assuming that a bytevector has already been validated as
+pathname representation.  To be interpreted as pathname a bytevector
+must adhere to the following conventions:
 
 @itemize
 @item
@@ -38,13 +37,13 @@ bytevectors representing its components.
 
 @item
 The list of segments alone does not specify if the pathname is absolute
-or relative; typically an absolute/relative flag is needed (a boolean,
-true if the pathname is absolute).
+or relative; typically an absolute/relative flag is needed (for example:
+a boolean, true if the pathname is absolute).
 
 @item
 Some additional information can be needed along with the segments and
 the absolute/relative flag to fully specify a pathname (for example:
-drives on Windows(tm) platforms).
+drive letters on Windows(tm) platforms).
 
 @item
 A segment holding a single byte representing a dot in @ascii{} encoding
