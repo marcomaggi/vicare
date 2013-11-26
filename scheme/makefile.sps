@@ -902,6 +902,7 @@
     ($bytevector-total-length			$bytes $vicare-bytes)
     ($bytevector-concatenate			$bytes $vicare-bytes)
     ($bytevector-reverse-and-concatenate	$bytes $vicare-bytes)
+    ($bytevector-copy				$bytes $vicare-bytes)
     ($uri-encode				$bytes $vicare-bytes)
     ($uri-decode				$bytes $vicare-bytes)
     ($uri-encoded-bytevector?			$bytes $vicare-bytes)

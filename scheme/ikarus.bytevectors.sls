@@ -96,7 +96,8 @@
 
     ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
     $bytevector=		$bytevector-total-length
-    $bytevector-concatenate	$bytevector-reverse-and-concatenate)
+    $bytevector-concatenate	$bytevector-reverse-and-concatenate
+    $bytevector-copy)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
 		  bytevector-empty?
@@ -541,6 +542,13 @@
 	  (begin
 	    ($bytevector-u8-set! dst.bv i ($bytevector-u8-ref src.bv i))
 	    (loop src.bv dst.bv ($fxadd1 i) src.len)))))))
+
+(define ($bytevector-copy src.bv)
+  (receive-and-return (dst.bv)
+      ($make-bytevector ($bytevector-length src.bv))
+    ($bytevector-copy! src.bv 0
+		       dst.bv 0
+		       ($bytevector-length src.bv))))
 
 (define (bytevector-copy! src src.start dst dst.start k)
   ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,

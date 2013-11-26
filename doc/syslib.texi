@@ -5323,6 +5323,11 @@ bytevector containing the @ascii{} Base64 representation of the octets.
 If an error occurs in the conversion: the return value is @false{}.
 @end defun
 
+
+@defun $bytevector-copy @var{bytevector}
+Build and return a copy of @var{bytevector}.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations
