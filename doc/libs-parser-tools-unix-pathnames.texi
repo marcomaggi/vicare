@@ -868,4 +868,30 @@ the predicate @func{string-segment?}.
 @end example
 @end defun
 
+
+@defun uri-representation @var{obj}
+@defunx $bytevector-uri-representation @var{bv}
+@defunx $string-uri-representation @var{str}
+Return a string or bytevector being the @uri{} representation of
+@var{obj}, which must be a valid Unix pathname string or bytevector
+representation.
+
+@func{$bytevector-uri-representation} assumes that @var{bv} satisfies
+the predicate @func{bytevector-pathname?}.
+@func{$string-uri-representation} assumes that @var{str} satisfies the
+predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.uri-representation ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "file:///path/to/file.ext"
+(doit "path/to/file.ext")       @result{} "file:path/to/file.ext"
+@end example
+@end defun
+
 @c end of file
