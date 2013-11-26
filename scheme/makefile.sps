@@ -847,9 +847,11 @@
     ($set-car!					$pairs $vicare-pairs)
     ($set-cdr!					$pairs $vicare-pairs)
 ;;
-    ($length					$pairs $vicare-lists)
-    ($for-all1					$pairs $vicare-lists)
-    ($exists1					$pairs $vicare-lists)
+    ($length					$lists $vicare-lists)
+    ($map1					$lists $vicare-lists)
+    ($for-each1					$lists $vicare-lists)
+    ($for-all1					$lists $vicare-lists)
+    ($exists1					$lists $vicare-lists)
     ($memq					$lists $vicare-lists)
     ($memv					$lists $vicare-lists)
 ;;;

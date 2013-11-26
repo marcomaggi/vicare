@@ -4989,6 +4989,28 @@ called with at least two arguments.
 ;;; --------------------------------------------------------------------
 
   (check
+      ($map1 even-value '())
+    => '())
+
+  (check
+      ($map1 even-value '(1 2 3 4))
+    => '(#f 2 #f 4))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       ($for-each1 add-result '()))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       ($for-each1 add-result '(2 4 6)))
+    => `(,(void) (2 4 6)))
+
+;;; --------------------------------------------------------------------
+
+  (check
       ($for-all1 even-value '())
     => #t)
 

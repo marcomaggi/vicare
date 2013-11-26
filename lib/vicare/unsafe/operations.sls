@@ -265,6 +265,10 @@
 ;;; --------------------------------------------------------------------
 
     $length
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    #;$map1
+    #;$for-each1
     $for-all1
     $exists1
 
