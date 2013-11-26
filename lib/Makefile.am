@@ -335,7 +335,6 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/uri/pathnames.sls					\
 	nausicaa/uri/pathnames/unix.sls					\
 	nausicaa/uri/pathnames/abstract.sls				\
-	nausicaa/uri/pathnames/segments.sls				\
 	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
 	nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
