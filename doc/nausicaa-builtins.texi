@@ -1181,6 +1181,12 @@ bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
 @end deftypecv
 
 
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} octets-string
+Accessing this field is like applying @func{octets->string} to the
+bytevector, @vicareref{iklib strings, octets->string}.
+@end deftypecv
+
+
 @deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} ascii-string
 Accessing this field is like applying @func{ascii->string} to the
 bytevector, @vicareref{iklib strings, ascii->string}.
