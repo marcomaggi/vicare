@@ -82,7 +82,11 @@
 	  $symbol-value
 	  $set-symbol-value!
 	  $unbound-object?)
-    (vicare containers bytevectors))
+    (vicare containers bytevectors)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    (only (vicare system $bytevectors)
+	  $bytevector-copy))
 
 
 ;;;; helpers
@@ -646,10 +650,6 @@
    (immutable (length			<fixnum>)			bytevector-length)
    (immutable ($length			<fixnum>)			$bytevector-length)
 
-   (immutable (percent-encoded		<percent-encoded-bytevector>)	percent-encode)
-   (immutable (percent-decoded		<bytevector>)			percent-decode)
-   (immutable ($percent-encoded		<percent-encoded-bytevector>)	$percent-encode)
-   (immutable ($percent-decoded		<bytevector>)			$percent-decode)
    (immutable (percent-encoded?		<boolean>)			percent-encoded-bytevector?)
    (immutable ($percent-encoded?	<boolean>)			$percent-encoded-bytevector?)
 
@@ -659,12 +659,31 @@
    (immutable (latin1-encoded?		<boolean>)			latin1-encoded-bytevector?)
    (immutable ($latin1-encoded?		<boolean>)			$latin1-encoded-bytevector?)
 
+   (immutable (percent-encoded		<percent-encoded-bytevector>)	percent-encode)
+   (immutable ($percent-encoded		<percent-encoded-bytevector>)	$percent-encode)
+
+   (immutable (percent-decoded		<bytevector>)			percent-decode)
+   (immutable ($percent-decoded		<bytevector>)			$percent-decode)
+
+   (immutable (ascii-string		<string>)			ascii->string)
+   (immutable (latin1-string		<string>)			latin1->string)
+   (immutable (uri-string		<string>)			uri-encoding->string)
+   (immutable (utf8-string		<string>)			utf8->string)
+   (immutable (utf16be-string		<string>)			utf16be->string)
+   (immutable (utf16le-string		<string>)			utf16le->string)
+   (immutable (utf16n-string		<string>)			utf16n->string)
+
    #| end of virtual-fields|# )
 
   (method-syntax copy
     (syntax-rules ()
       ((_ ?bv)
        (bytevector-copy ?bv))))
+
+  (method-syntax $copy
+    (syntax-rules ()
+      ((_ ?bv)
+       ($bytevector-copy ?bv))))
 
   (method-syntax hash
     (syntax-rules ()
