@@ -345,9 +345,19 @@ appended to the pathname @varii{ptn}.
 @end deftypefn
 
 
-@deftypefn Multimethod @aclass{pathname} replace-extension @var{ptn} @var{ext}
+@deftypefn Multimethod @aclass{pathname} pathname replace-extension @var{ptn} @var{ext}
 Return a new pathname object representing the pathname @var{ptn} with
 the extension of the last segment replaced by @var{ext}.
+@end deftypefn
+
+
+@deftypefn Multimethod @aclass{boolean} pathname=? @vari{ptn} @varii{ptn}
+@deftypefnx Multimethod @aclass{boolean} pathname=? (@vari{ptn} @aclass{absolute-pathname}) (@varii{ptn} @aclass{relative-pathname})
+@deftypefnx Multimethod @aclass{boolean} pathname=? (@vari{ptn} @aclass{relative-pathname}) (@varii{ptn} @aclass{absolute-pathname})
+Return @true{} if the pathname arguments are equal, otherwise return
+@false{}.  The two predefined implementations always return @false{}
+because, obviously, absolute pathnames cannot be equal to relative
+pathnames.
 @end deftypefn
 
 @c page
@@ -453,13 +463,20 @@ think of the returned value as an instance of @class{pathname}.
 @cindex Library @library{nausicaa uri pathnames unix}
 
 
-The library @library{nausicaa uri pathnames unix} specialises the pathnames
-@api{} defined by @library{nausicaa uri pathnames abstract} to handle
-Unix--style pathnames.  It implements all the methods required by the
-abstract base classes.
+The library @library{nausicaa uri pathnames unix} specialises the
+pathnames @api{} defined by @library{nausicaa uri pathnames abstract} to
+handle Unix--style pathnames.  It implements all the methods required by
+the abstract base classes.
 
-The binding @class{pathname} from @library{nausicaa uri pathnames abstract}
-is reexported by @library{nausicaa uri pathnames unix}.
+The following bindings from @library{nausicaa uri pathnames abstract}
+are reexported by @library{nausicaa uri pathnames unix}:
+
+@example
+<pathname>
+<relative-pathname>
+<absolute-pathname>
+pathname=?
+@end example
 
 @menu
 * uri pathnames unix intro::        Introduction to Unix pathnames.
