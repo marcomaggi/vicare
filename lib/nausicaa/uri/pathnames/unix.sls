@@ -165,27 +165,25 @@
     (argument-type-inspector extended-tag-unique-identifier-of))
 
   (define (extended-tag-unique-identifier-of obj)
-    (cond (((<bytevector-unix-pathname>) obj)
+    (cond ((bytevector? obj)
 	   (cond (((<absolute-bytevector-unix-pathname>) obj)
 		  (tag-unique-identifiers <absolute-bytevector-unix-pathname>))
 		 (((<relative-bytevector-unix-pathname>) obj)
 		  (tag-unique-identifiers <relative-bytevector-unix-pathname>))
+		 (((<bytevector-unix-segment>) obj)
+		  (tag-unique-identifiers <bytevector-unix-segment>))
 		 (else
 		  (tag-unique-identifiers-of obj))))
 
-	  (((<string-unix-pathname>) obj)
+	  ((string? obj)
 	   (cond (((<absolute-string-unix-pathname>) obj)
 		  (tag-unique-identifiers <absolute-string-unix-pathname>))
 		 (((<relative-string-unix-pathname>) obj)
 		  (tag-unique-identifiers <relative-string-unix-pathname>))
+		 (((<string-unix-segment>) obj)
+		  (tag-unique-identifiers <string-unix-segment>))
 		 (else
 		  (tag-unique-identifiers-of obj))))
-
-	  (((<bytevector-unix-segment>) obj)
-	   (tag-unique-identifiers <bytevector-unix-segment>))
-
-	  (((<string-unix-segment>) obj)
-	   (tag-unique-identifiers <string-unix-segment>))
 
 	  (else
 	   (tag-unique-identifiers-of obj))))
@@ -196,18 +194,18 @@
 
 ;;; bytevector argument implementations
 
-  (define-method (pathname (O <absolute-bytevector-unix-pathname>))
+  (define-method ((pathname <absolute-unix-pathname>) (O <absolute-bytevector-unix-pathname>))
     (<absolute-unix-pathname> (O)))
 
-  (define-method (pathname (O <relative-bytevector-unix-pathname>))
+  (define-method ((pathname <relative-unix-pathname>) (O <relative-bytevector-unix-pathname>))
     (<relative-unix-pathname> (O)))
 
 ;;; bytevector argument implementations
 
-  (define-method (pathname (O <absolute-string-unix-pathname>))
+  (define-method ((pathname <absolute-unix-pathname>) (O <absolute-string-unix-pathname>))
     (<absolute-unix-pathname> ((uxptn.string/bytevector->pathname-bytevector O))))
 
-  (define-method (pathname (O <relative-string-unix-pathname>))
+  (define-method ((pathname <relative-unix-pathname>) (O <relative-string-unix-pathname>))
     (<relative-unix-pathname> ((uxptn.string/bytevector->pathname-bytevector O))))
 
   #| end of module |# )
@@ -216,10 +214,12 @@
 ;;;; some multimethods implementations
 
 (define-method (pathname=? (A <absolute-unix-pathname>) (B <absolute-unix-pathname>))
-  ($bytevector= (A $pathname) (B $pathname)))
+  (or (eq? A B)
+      ($bytevector= (A $pathname) (B $pathname))))
 
 (define-method (pathname=? (A <relative-unix-pathname>) (B <relative-unix-pathname>))
-  ($bytevector= (A $pathname) (B $pathname)))
+  (or (eq? A B)
+      ($bytevector= (A $pathname) (B $pathname))))
 
 
 ;;;; absolute pathname multimethods
@@ -250,13 +250,24 @@
 (define-method (pathname-split (O <absolute-unix-pathname>))
   (uxptn.$bytevector-split (O $pathname)))
 
-(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <bytevector-unix-segment>))
-  (<absolute-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
+;;;NOTE Remember that the class method "replace-extension" is defined as
+;;;method   of  "<pathname>"   and   implemented   by  the   multimethod
+;;;"pathname-replace-extension"  defined  in  the  library  of  abstract
+;;;classes.    So   it  is   useles   to   define  a   new   multimethod
+;;;"pathname-replace-extension"  with extended  identification function,
+;;;because "<pathname>" cannot reference it.
 
-(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <string> #;<string-unix-segment>))
-  (<absolute-unix-pathname>
-   ((uxptn.$bytevector-replace-extension (O $pathname)
-					 (uxptn.string/bytevector->pathname-bytevector E)))))
+(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <bytevector>))
+  (with-tagged-arguments-validation (__who__)
+      ((<bytevector-unix-segment>	E))
+    (<absolute-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E)))))
+
+(define-method (pathname-replace-extension (O <absolute-unix-pathname>) (E <string>))
+  (with-tagged-arguments-validation (__who__)
+      ((<string-unix-segment>	E))
+    (<absolute-unix-pathname>
+     ((uxptn.$bytevector-replace-extension (O $pathname)
+					   (uxptn.string/bytevector->pathname-bytevector E))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -266,9 +277,6 @@
 (define-method (pathname-prefix? (O <absolute-unix-pathname>) (R <relative-unix-pathname>))
   #f)
 
-(define-method (pathname-prefix? (O <absolute-unix-pathname>) (R <bytevector>))
-  (uxptn.$bytevector-prefix? (O $pathname) R))
-
 ;;; --------------------------------------------------------------------
 
 (define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <absolute-unix-pathname>))
@@ -276,9 +284,6 @@
 
 (define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <relative-unix-pathname>))
   (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
-
-(define-method (pathname-suffix? (O <absolute-unix-pathname>) (R <bytevector>))
-  (uxptn.$bytevector-suffix? (O $pathname) R))
 
 ;;; --------------------------------------------------------------------
 
@@ -288,9 +293,6 @@
 (define-method (pathname-prepend (O <absolute-unix-pathname>) (R <absolute-unix-pathname>))
   (assertion-violation __who__
     "cannot prepend absolute pathname to absolute pathname" O R))
-
-(define-method (pathname-prepend (O <absolute-unix-pathname>) (R <bytevector>))
-  (<absolute-unix-pathname> ((uxptn.$bytevector-prepend (O $pathname) R))))
 
 ;;; --------------------------------------------------------------------
 
@@ -327,13 +329,24 @@
 (define-method (pathname-split (O <relative-unix-pathname>))
   (uxptn.$bytevector-split (O $pathname)))
 
-(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <bytevector-unix-segment>))
-  (<relative-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E))))
+;;;NOTE Remember that the class method "replace-extension" is defined as
+;;;method   of  "<pathname>"   and   implemented   by  the   multimethod
+;;;"pathname-replace-extension"  defined  in  the  library  of  abstract
+;;;classes.    So   it  is   useles   to   define  a   new   multimethod
+;;;"pathname-replace-extension"  with extended  identification function,
+;;;because "<pathname>" cannot reference it.
 
-(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <string> #;<string-unix-segment>))
-  (<relative-unix-pathname>
-   ((uxptn.$bytevector-replace-extension (O $pathname)
-					 (uxptn.string/bytevector->pathname-bytevector E)))))
+(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <bytevector>))
+  (with-tagged-arguments-validation (__who__)
+      ((<bytevector-unix-segment>	E))
+    (<relative-unix-pathname> ((uxptn.$bytevector-replace-extension (O $pathname) E)))))
+
+(define-method (pathname-replace-extension (O <relative-unix-pathname>) (E <string>))
+  (with-tagged-arguments-validation (__who__)
+      ((<string-unix-segment>	E))
+    (<relative-unix-pathname>
+     ((uxptn.$bytevector-replace-extension (O $pathname)
+					   (uxptn.string/bytevector->pathname-bytevector E))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -343,9 +356,6 @@
 (define-method (pathname-prefix? (O <relative-unix-pathname>) (R <relative-unix-pathname>))
   (uxptn.$bytevector-suffix? (O $pathname) (R bytevector)))
 
-(define-method (pathname-prefix? (O <relative-unix-pathname>) (R <bytevector>))
-  (uxptn.$bytevector-prefix? (O $pathname) R))
-
 ;;; --------------------------------------------------------------------
 
 (define-method (pathname-suffix? (O <relative-unix-pathname>) (R <relative-unix-pathname>))
@@ -353,9 +363,6 @@
 
 (define-method (pathname-suffix? (O <relative-unix-pathname>) (R <absolute-unix-pathname>))
   (uxptn.$bytevector-suffix? (O $pathname) (R $pathname)))
-
-(define-method (pathname-suffix? (O <relative-unix-pathname>) (R <bytevector>))
-  (uxptn.$bytevector-suffix? (O $pathname) R))
 
 ;;; --------------------------------------------------------------------
 
@@ -366,9 +373,6 @@
   (assertion-violation __who__
     "cannot prepend relative pathname to absolute pathname" O R))
 
-(define-method (pathname-prepend (O <relative-unix-pathname>) (R <bytevector>))
-  (<relative-unix-pathname> ((uxptn.$bytevector-prepend (O $pathname) R))))
-
 ;;; --------------------------------------------------------------------
 
 (define-method (pathname-append (O <relative-unix-pathname>) (R <relative-unix-pathname>))
@@ -376,9 +380,6 @@
 
 (define-method (pathname-append (O <relative-unix-pathname>) (R <absolute-unix-pathname>))
   (<absolute-unix-pathname> ((uxptn.$bytevector-append (O $pathname) (R bytevector)))))
-
-(define-method (pathname-append (O <relative-unix-pathname>) (R <bytevector>))
-  (pathname (uxptn.$bytevector-append (O $pathname) R)))
 
 
 ;;;; done

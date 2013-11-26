@@ -21,6 +21,13 @@
 @c Values.
 @c ------------------------------------------------------------
 
+@set PRJNAME                    Vicare
+
+@c To be used as @value{PACKAGE} whenever we need to include the full
+@c name of this package.
+@set PACKAGE                    Vicare Scheme
+
+
 @set TITLE                      Nausicaa for Vicare Scheme
 
 @c To be used as @value{PACKAGE} whenever we need to include the full
@@ -43,7 +50,6 @@
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
 @set COPYRIGHT_YEARS            2012, 2013
-
 
 @c page
 @c ------------------------------------------------------------

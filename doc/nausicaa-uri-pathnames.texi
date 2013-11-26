@@ -478,9 +478,16 @@ are reexported by @library{nausicaa uri pathnames unix}:
 pathname=?
 @end example
 
+The string and bytevector representations of Unix--pathnames used by
+@library{nausicaa uri pathnames unix} are the same as the ones defined
+by @library{vicare parser-tools unix-pathnames}, @libsref{parser-tools
+unix-pathnames, Parsing Unix file system pathnames}.
+
 @menu
-* uri pathnames unix intro::        Introduction to Unix pathnames.
-* uri pathnames unix class::        Class interface.
+* uri pathnames unix intro::    Introduction to Unix pathnames.
+* uri pathnames unix absolute:: Absolute Unix pathname objects.
+* uri pathnames unix relative:: Relative Unix pathname objects.
+* uri pathnames unix utils::    Unix pathname utilities.
 @end menu
 
 @c page
@@ -507,83 +514,291 @@ char               = [1, 255]
 where @math{[1, 255]} represents the byte interval between @math{1}
 included and @math{255} included.
 
-When using the @library{nausicaa uri pathnames unix} library we assume that
-it is fine to process the whole input bytevector and break it into
-components; if we are looking for speed of processing, we should use
-bytevectors directly.
+On Unix--system, which means @posix{} systems, the system functions
+accept pathnames as C strings: @asciiz{} strings; @value{PRJNAME}
+bytevectors are compatible with C strings and so the bytevector
+representation of Unix--specialised @class{pathname} objects is
+compatible, too.
 
 @c page
-@node uri pathnames unix class
-@subsubsection Class interface
+@node uri pathnames unix absolute
+@subsubsection Absolute Unix pathname objects
 
 
-@deftp Class @aclass{absolute-pathname}
+The following bindings are exported by the library @library{nausicaa uri
+pathnames unix}.
+
+
+@deftp Class @aclass{absolute-unix-pathname}
 Type of absolute Unix pathnames; it is derived from
 @class{absolute-pathname} exported by @library{nausicaa uri pathnames
 abstract}.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@deftp Class @aclass{relative-pathname}
+@subsubheading Makers, constructors, predicates
+
+
+@defop {Common constructor} @aclass{absolute-unix-pathname} constructor @var{pathname}
+Build and return a new Unix pathname record from @var{pathname}, which
+must be a string or bytevector representing an absolute Unix pathname
+according to the predicates @func{pathname?} and @func{absolute?}
+defined by @library{vicare parser-tools unix-pathnames}.
+
+@var{pathname} is converted to bytevector with the function
+@func{string/bytevector->pathname-bytevector} and normalised with the
+function @func{normalise-segments}, both defined by @library{vicare
+parser-tools unix-pathnames}.
+@end defop
+
+
+@defop Maker @aclass{absolute-unix-pathname} @aclass{absolute-unix-pathname} (@meta{pathname})
+Build and return a new instance of @class{absolute-unix-pathname} using
+the common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{absolute-unix-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.  This method
+is implemented with the function @func{extension} defined by
+@library{vicare parser-tools unix-pathnames}, @libsref{parser-tools
+unix-pathnames comp, extension}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} dirname
+Return an @class{absolute-unix-pathname} object representing the
+directory part of the instance pathname.  This method is implemented
+with the function @func{dirname} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp, dirname}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} tailname
+Return a @class{relative-unix-pathname} object representing the last
+segment of the instance pathname.  This method is implemented with the
+function @func{tailname} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp, tailname}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} rootname
+Return an @class{absolute-unix-pathname} object representing the
+instance pathname with the extension of the last segment stripped, dot
+separator @strong{not} included.  This method is implemented with the
+function @func{rootname} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp, rootname}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} split
+Return 2 values: a boolean, @true{} if the instance pathname is
+absolute; a list of bytevectors each representing a segment of the
+instance pathname.  This method is implemented with the function
+@func{split} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, split}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} prefix? (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{absolute-unix-pathname} prefix? (@var{ptn} @aclass{relative-unix-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.  This method is implemented with the function
+@func{prefix?} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, prefix?}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} suffix? (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{absolute-unix-pathname} suffix? (@var{ptn} @aclass{relative-unix-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.  This method is implemented with the function
+@func{suffix?} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, suffix?}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} prepend (@var{ptn} @aclass{absolute-unix-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.  This method is implemented with the function
+@func{prepend} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, prepend}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-unix-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{absolute-unix-pathname} replace-extension (@var{ext} @aclass{string})
+Return an @aclass{absolute-unix-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.  This method is implemented with the function
+@func{replace-extension} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp,
+replace-extension}.
+@end defmethod
+
+@c page
+@node uri pathnames unix relative
+@subsubsection Relative Unix pathname objects
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames unix}.
+
+
+@deftp Class @aclass{relative-unix-pathname}
 Type of relative Unix pathnames; it is derived from
 @class{relative-pathname} exported by @library{nausicaa uri pathnames
 abstract}.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@defop {Common constructor} @aclass{absolute-pathname} constructor @var{obj}
-@defopx {Common constructor} @aclass{relative-pathname} constructor @var{obj}
-Build and return a new Unix pathname record from @var{obj}, which must
-be a string or bytevector representing the pathname.
+@subsubheading Makers, constructors, predicates
 
-An attempt to instantiate @class{absolute-pathname} from an @var{obj}
-representing a relative pathname or to instantiate
-@class{relative-pathname} from an @var{obj} representing an absolute
-pathname results in an assertion violation.
 
-If @var{obj} is empty an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions}.
-After parsing the input is normalised with @func{normalise-pathname}
-from @library{nausicaa uri pathnames unix low}; if normalisation fails: an
-exception is raised using @func{raise-normalisation-error} from
-@library{nausicaa uri pathnames conditions}.
+@defop {Common constructor} @aclass{relative-unix-pathname} constructor @var{pathname}
+Build and return a new Unix pathname record from @var{pathname}, which
+must be a string or bytevector representing an relative Unix pathname
+according to the predicates @func{pathname?} and @func{relative?}
+defined by @library{vicare parser-tools unix-pathnames}.
 
-The class fields are initialised with newly built values.
+@var{pathname} is converted to bytevector with the function
+@func{string/bytevector->pathname-bytevector} and normalised with the
+function @func{normalise-segments}, both defined by @library{vicare
+parser-tools unix-pathnames}.
 @end defop
 
 
-@deffn Maker make @aclass{absolute-pathname} . @meta{clauses}
-@deffnx Maker make @aclass{relative-pathname} . @meta{clauses}
-@deffnx Clause string: @meta{str}
-@deffnx Clause bytevector: @meta{bv}
-@deffnx Clause segments: @meta{segs}
-Build and return a new Unix pathname record.  These makers allow the
-direct specification of the segments, already validated and normalised.
+@defop Maker @aclass{relative-unix-pathname} @aclass{relative-unix-pathname} (@meta{pathname})
+Build and return a new instance of @class{relative-unix-pathname} using
+the common constructor.
+@end defop
 
-The clauses @clause{string:}, @clause{bytevector:} and
-@clause{segments:} are mutually exclusive.
+@c ------------------------------------------------------------
 
-When the @clause{string:} or @clause{bytevector:} clause is present:
-this maker reverts to the use of the common constructor.
+@subsubheading Methods
 
-When the @clause{segments:} clause is present: @meta{segs} must be a
-list of bytevectors, already validated and normalised, representing the
-pathname; the list is @strong{not} validated.
 
-We must use with care the @clause{segments:} clause, because no
-validation is performed on its argument; on the other hand, it is often
-needed to create a new pathname record by decomposing and recomposing
-other pathnames and in this case the list of validated and normalised
-segments is already available.
+@defmethod @aclass{relative-unix-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.  This method
+is implemented with the function @func{extension} defined by
+@library{vicare parser-tools unix-pathnames}, @libsref{parser-tools
+unix-pathnames comp, extension}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} dirname
+Return a @class{absolute-unix-pathname} object representing the
+directory part of the instance pathname.  This method is implemented
+with the function @func{dirname} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp, dirname}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} tailname
+Return a @class{relative-unix-pathname} object representing the last
+segment of the instance pathname.  This method is implemented with the
+function @func{tailname} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp, tailname}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} rootname
+Return a @class{absolute-unix-pathname} object representing the instance
+pathname with the extension of the last segment stripped, dot separator
+@strong{not} included.  This method is implemented with the function
+@func{rootname} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, rootname}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} split
+Return 2 values: a boolean, @false{} if the instance pathname is
+relative; a list of bytevectors each representing a segment of the
+instance pathname.  This method is implemented with the function
+@func{split} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, split}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} prefix? (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{relative-unix-pathname} prefix? (@var{ptn} @aclass{relative-unix-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.  This method is implemented with the function
+@func{prefix?} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, prefix?}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} suffix? (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{relative-unix-pathname} suffix? (@var{ptn} @aclass{relative-unix-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.  This method is implemented with the function
+@func{suffix?} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, suffix?}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} prepend (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{relative-unix-pathname} prepend (@var{ptn} @aclass{relative-unix-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.  This method is implemented with the function
+@func{prepend} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, prepend}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} append (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethodx @aclass{relative-unix-pathname} append (@var{ptn} @aclass{relative-unix-pathname})
+Return a new pathname object representing the instance pathname appended
+to @var{ptn}.  This method is implemented with the function
+@func{append} defined by @library{vicare parser-tools unix-pathnames},
+@libsref{parser-tools unix-pathnames comp, append}.
+@end defmethod
+
+
+@defmethod @aclass{relative-unix-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{relative-unix-pathname} replace-extension (@var{ext} @aclass{string})
+Return a @aclass{relative-unix-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.  This method is implemented with the function
+@func{replace-extension} defined by @library{vicare parser-tools
+unix-pathnames}, @libsref{parser-tools unix-pathnames comp,
+replace-extension}.
+@end defmethod
+
+@c page
+@node uri pathnames unix utils
+@subsubsection Unix pathname utilities
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames unix}.
+
+
+@deffn Multimethod pathname (@var{ptn} @aclass{string})
+@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
+Build and return a new instance of @class{absolute-unix-pathname} or
+@class{relative-unix-pathname} from @var{ptn}, which must be a string or
+bytevector representing an absolute or relative Unix pathname according
+to the predicates @func{pathname?}, @func{absolute?} and
+@func{relative?} defined by @library{vicare parser-tools
+unix-pathnames}.
 @end deffn
 
 
-@defun pathname @var{obj}
-Build and return a new Unix pathname record from @var{obj}, which must
-be a string or bytevector representing the pathname.  Everything works
-as documented for the class constructors.  In general, we can think of
-the returned value as an instance of @class{pathname}.
-@end defun
+@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-unix-pathname}) (@varii{ptn} @aclass{absolute-unix-pathname})
+@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-unix-pathname}) (@varii{ptn} @aclass{relative-unix-pathname})
+Implementations for the multimethod @func{pathname=?} defined by
+@library{nausicaa uri pathnames abstract}.
+@end deffn
 
 @c page
 @node uri pathnames errors
