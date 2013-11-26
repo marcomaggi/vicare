@@ -43,9 +43,7 @@
     pathname-dirname
     pathname-tailname
     pathname-rootname
-    pathname-strip-trailing-slashes
     pathname-split
-    pathname-normalise
     pathname-prefix?
     pathname-suffix?
     pathname-prepend
@@ -67,9 +65,7 @@
 (define-generic pathname-dirname		(self))
 (define-generic pathname-tailname		(self))
 (define-generic pathname-rootname		(self))
-(define-generic pathname-strip-trailing-slashes	(self))
 (define-generic pathname-split			(self))
-(define-generic pathname-normalise		(self))
 (define-generic pathname-prefix?		(self other))
 (define-generic pathname-suffix?		(self other))
 (define-generic pathname-prepend		(self other))
@@ -96,9 +92,7 @@
    (dirname			pathname-dirname)
    (tailname			pathname-tailname)
    (rootname			pathname-rootname)
-   (strip-trailing-slashes	pathname-strip-trailing-slashes)
    (split			pathname-split)
-   (normalise			pathname-normalise)
    (prefix?			pathname-prefix?)
    (suffix?			pathname-suffix?)
    (prepend			pathname-prepend)
