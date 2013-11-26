@@ -5263,6 +5263,11 @@ return the result.  The resulting bytevector must have length
 @end defun
 
 
+@defun $octets-encoded-bytevector? @var{bytevector}
+Always return @true{}.
+@end defun
+
+
 @defun $ascii-encoded-bytevector? @var{bytevector}
 Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
 encoded string, otherwise return @false{}.  An octet @var{chi} is
@@ -5431,6 +5436,17 @@ removed when arguments validation is disabled.
 @end defun
 
 
+@defun $string->octets @var{string}
+@defunx $octets->string @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+raw octets encoding of the characters.  Octets are converted to
+characters with @func{$fixnum->char}; characters are converted to octets
+with @func{$char->fixnum}.  Raise an exception if the conversion is not
+possible; this validation is @strong{not} removed when arguments
+validation is disabled.
+@end defun
+
+
 @defun $string->ascii @var{string}
 @defunx $ascii->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
@@ -5440,9 +5456,20 @@ removed when arguments validation is disabled.
 @end defun
 
 
+@defun $octets-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an octets encoded
+string, otherwise return @false{}.  A character is considered
+octets--encoded if its integer representation @var{chi} satisfies:
+
+@example
+(<= 0 @var{chi} 255)      @result{} #t
+@end example
+@end defun
+
+
 @defun $ascii-encoded-string? @var{string}
 Return @true{} if @var{string} can be interpreted as an @ascii{} encoded
-string, otherwise return @false{}.  An character is considered an
+string, otherwise return @false{}.  A character is considered an
 @ascii{} code point if its integer representation @var{chi} satisfies:
 
 @example
@@ -5453,7 +5480,7 @@ string, otherwise return @false{}.  An character is considered an
 
 @defun $latin1-encoded-string? @var{string}
 Return @true{} if @var{string} can be interpreted as a Latin1 encoded
-string, otherwise return @false{}.  An character in the string is
+string, otherwise return @false{}.  A character in the string is
 considered a Latin1 code point if its integer representation @var{chi}
 satisfies:
 
