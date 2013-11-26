@@ -665,6 +665,7 @@
    (immutable (percent-decoded		<bytevector>)			percent-decode)
    (immutable ($percent-decoded		<bytevector>)			$percent-decode)
 
+   (immutable (octets-string		<string>)			octets->string)
    (immutable (ascii-string		<string>)			ascii->string)
    (immutable (latin1-string		<string>)			latin1->string)
    (immutable (uri-string		<string>)			uri-encoding->string)
