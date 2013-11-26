@@ -1090,6 +1090,27 @@
   #t)
 
 
+(parametrise ((check-test-name	'uri-representation))
+
+  (define-syntax-rule (doit ?pathname ?expected)
+    (check (uxptn.uri-representation ?pathname) => ?expected))
+
+  (define-syntax-rule (doit1 ?pathname ?expected)
+    (check (ascii->string (uxptn.uri-representation (string->ascii ?pathname))) => ?expected))
+
+;;; --------------------------------------------------------------------
+
+  (doit "/path/to/file.ext"	"file:///path/to/file.ext")
+  (doit "path/to/file.ext"	"file:path/to/file.ext")
+
+;;; --------------------------------------------------------------------
+
+  (doit1 "/path/to/file.ext"	"file:///path/to/file.ext")
+  (doit1 "path/to/file.ext"	"file:path/to/file.ext")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

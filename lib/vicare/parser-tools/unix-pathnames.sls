@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare parser-tools unix-pathnames)
   (export
 
@@ -66,6 +66,8 @@
     append			$bytevector-append			$string-append
     replace-extension		$bytevector-replace-extension		$string-replace-extension
 
+    uri-representation		$bytevector-uri-representation		$string-uri-representation
+
     ;; condition objects
     &unix-pathname-parser-error
     make-unix-pathname-parser-error
@@ -77,7 +79,16 @@
     raise-unix-pathname-normalisation-error)
   (import (except (vicare)
 		  append)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    (only (vicare system $strings)
+	  $string->octets
+	  $octets->string)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Tue Nov 26, 2013)
+    (only (vicare system $lists)
+	  $for-each1))
 
 
 ;;;; constants
@@ -1465,6 +1476,35 @@
 		   (($fx= j ($string-length ext)))
 		 ($string-set! result k ($string-ref ext j))))
 	    ($string-set! result i ($string-ref ptn i))))))))
+
+
+;;;; URI representation
+
+(define-pathname-operation uri-representation
+  ;;Return  a URI  representation of  OBJ, which  must be  a valid  Unix
+  ;;pathname string or bytevector representation.
+  ;;
+  ((bytevector)	($bytevector-uri-representation obj))
+  ((string)	($string-uri-representation     obj)))
+
+(define ($bytevector-uri-representation obj)
+  (receive (absolute? segments)
+      (split obj)
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (put-bytevector port (if absolute?
+			       '#ve(ascii "file:///")
+			       '#ve(ascii "file:")))
+      (put-bytevector port ($percent-encode ($car segments)))
+      ($for-each1 (lambda (segment)
+		    ;; 47 = (char->integer #\/)
+		    (put-u8 port 47)
+		    (put-bytevector port ($percent-encode segment)))
+		  ($cdr segments))
+      (getter))))
+
+(define ($string-uri-representation obj)
+  ($octets->string ($bytevector-uri-representation ($string->octets obj))))
 
 
 ;;;; done
