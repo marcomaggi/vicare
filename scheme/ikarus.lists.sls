@@ -26,6 +26,7 @@
 
 	  ;; unsafe bindings
 	  $length
+	  $map1		$for-each1
 	  $for-all1	$exists1)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
@@ -38,7 +39,8 @@
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $length
-	    $for-all1	$exists1))
+	    $for-all1		$exists1
+	    $map1		$for-each1))
 
 
 ;;;; arguments validation
@@ -1314,6 +1316,21 @@
 
 
 ;;;; unsafe functions
+
+(define ($map1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (cons (func ($car ell))
+	    ($map1 func ($cdr ell)))
+    '()))
+
+(define ($for-each1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (when (pair? ell)
+    (func ($car ell))
+    ($for-each1 func ($cdr ell))))
 
 (define ($for-all1 func ell)
   ;;Defined by Vicare.
