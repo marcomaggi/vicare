@@ -4,14 +4,15 @@
 
 The library hierarchy @library{nausicaa uri pathnames ---} provides
 operations on file system pathnames with and without access to the file
-system.
+system.  Among all the libraries in this hierarchy, the end user might
+be interested in @library{nausicaa uri pathnames}: it defines a
+platform--independent @api{}.
 
 @menu
 * uri pathnames intro::         Overview of the pathname model.
 * uri pathnames abstract::      Abstract class interface.
-* uri pathnames native::        Manipulating native pathnames.
 * uri pathnames unix::          Manipulating Unix pathnames.
-* uri pathnames errors::        Representing errors.
+* uri pathnames native::        Manipulating native pathnames.
 @end menu
 
 @c page
@@ -369,90 +370,250 @@ pathnames.
 @cindex Library @library{nausicaa uri pathnames}
 
 
-The library @library{nausicaa uri pathnames} is meant to export an interface
-which always handles native pathnames for the current platform; for
-example, on Unix systems it reexports the bindings from
-@library{nausicaa uri pathnames unix}.
+The library @library{nausicaa uri pathnames} defines an @api{} to handle
+pathname objects in a way that is independent from the underlying
+platform.  It does so by reexporting renamed bindings defined by a
+platform--dependent library; for example on Unix--like systems: it
+reexports bindings from @library{nausicaa uri pathnames unix}.
 
-The platform--specific library is selected at package configuration time
-using the @option{--with-platform-pathname} option, whose default value
-is @code{unix}.
+The selection of the platform--specific library happens at package
+configuration time; at present only Unix style pathnames are supported.
 
-The following definitions are a description of the @api{} which must be
-made available by the platform--specific pathname libraries.
-Platform--specific pathname classes are free to augment this @api{} with
-additional features, but these features cannot be made available in the
-native pathnames library.
+The following bindings defined by @library{nausicaa uri pathnames
+abstract} are reexported by @library{nausicaa uri pathnames}:
+
+@example
+<pathname>
+<absolute-pathname>
+<relative-pathname>
+@end example
+
+@menu
+* uri pathnames native absolute::  Absolute pathname native class.
+* uri pathnames native relative::  Relative pathname native class.
+* uri pathnames native utils::     Native pathname utilities.
+@end menu
+
+@c page
+@node uri pathnames native absolute
+@subsubsection Absolute pathname native class
 
 
-@deftp Class @aclass{pathname}
-This is the same binding exported by @library{nausicaa uri pathnames
-abstract}.
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deftp Class @aclass{absolute-native-pathname}
+Type of absolute native pathnames; it is derived from
+@class{absolute-pathname}.
 @end deftp
 
+@c ------------------------------------------------------------
 
-@deftp Class @aclass{absolute-pathname}
-Concrete type of absolute pathnames; it is derived from
-@class{absolute-pathname} exported by @library{nausicaa uri pathnames
-abstract}.
-@end deftp
+@subsubheading Makers, constructors, predicates
 
 
-@deftp Class @aclass{relative-pathname}
-Concrete type of relative pathnames; it is derived from
-@class{relative-pathname} exported by @library{nausicaa uri pathnames
-abstract}.
-@end deftp
-
-
-@defop {Common constructor} @aclass{absolute-pathname} constructor @var{obj}
-@defopx {Common constructor} @aclass{relative-pathname} constructor @var{obj}
-Build a new pathname record from @var{obj}, which must be a string or
-bytevector representing the pathname.  Class's fields are initialised
-with newly built values.
-
-An attempt to instantiate @class{absolute-pathname} from an @var{obj}
-representing a relative pathname or to instantiate
-@class{relative-pathname} from an @var{obj} representing an absolute
-pathname results in an assertion violation.
-
-If @var{obj} is empty an exception is raised using
-@func{raise-parser-error} from @library{nausicaa uri pathnames conditions}.
+@defop {Common constructor} @aclass{absolute-native-pathname} constructor @var{pathname}
+Build and return a new instance of @class{absolute-native-pathname} from
+@var{pathname}, which must be a string or bytevector representing an
+absolute native pathname.
 @end defop
 
 
-@deffn Maker make @aclass{absolute-pathname} . @meta{clauses}
-@deffnx Maker make @aclass{relative-pathname} . @meta{clauses}
-@deffnx Clause string: @meta{str}
-@deffnx Clause bytevector: @meta{bv}
-@deffnx Clause segments: @meta{segs}
-Build and return a new concrete pathname record.  These makers allow the
-direct specification of the segments, already validated and normalised.
+@defop Maker @aclass{absolute-native-pathname} @aclass{absolute-native-pathname} (@meta{pathname})
+Build and return a new instance of @class{absolute-native-pathname}
+using the common constructor.
+@end defop
 
-The clauses @clause{string:}, @clause{bytevector:} and
-@clause{segments:} are mutually exclusive.
+@c ------------------------------------------------------------
 
-When the @clause{string:} or @clause{bytevector:} clause is present:
-this maker reverts to the use of the common constructor.
+@subsubheading Methods
 
-When the @clause{segments:} clause is present: @meta{segs} must be a
-list of bytevectors, already validated and normalised, representing the
-pathname; the list is @strong{not} validated.
 
-We must use with care the @clause{segments:} clause, because no
-validation is performed on its argument; on the other hand, it is often
-needed to create a new pathname record by decomposing and recomposing
-other pathnames and in this case the list of validated and normalised
-segments is already available.
+@defmethod @aclass{absolute-native-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} dirname
+Return an @class{absolute-native-pathname} object representing the
+directory part of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} tailname
+Return a @class{relative-native-pathname} object representing the last
+segment of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} rootname
+Return an @class{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment stripped, dot
+separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} split
+Return 2 values: a boolean, @true{} if the instance pathname is
+absolute; a list of bytevectors each representing a segment of the
+instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{string})
+Return an @aclass{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.
+@end defmethod
+
+@c page
+@node uri pathnames native relative
+@subsubsection Relative pathname native class
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deftp Class @aclass{relative-native-pathname}
+Type of relative native pathnames; it is derived from
+@class{relative-pathname}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Makers, constructors, predicates
+
+
+@defop {Common constructor} @aclass{relative-native-pathname} constructor @var{pathname}
+Build and return a new instance of @class{relative-native-pathname} from
+@var{pathname}, which must be a string or bytevector representing an
+relative native pathname.
+@end defop
+
+
+@defop Maker @aclass{relative-native-pathname} @aclass{relative-native-pathname} (@meta{pathname})
+Build and return a new instance of @class{relative-native-pathname}
+using the common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{relative-native-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} dirname
+Return a @class{absolute-native-pathname} object representing the
+directory part of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} tailname
+Return a @class{relative-native-pathname} object representing the last
+segment of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} rootname
+Return a @class{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment stripped, dot
+separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} split
+Return 2 values: a boolean, @false{} if the instance pathname is
+relative; a list of bytevectors each representing a segment of the
+instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{relative-native-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} append (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} append (@var{ptn} @aclass{relative-native-pathname})
+Return a new pathname object representing the instance pathname appended
+to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{string})
+Return a @aclass{relative-native-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.
+@end defmethod
+
+@c page
+@node uri pathnames native utils
+@subsubsection Native pathname utilities
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deffn Multimethod pathname (@var{ptn} @aclass{string})
+@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
+Build and return a new instance of @class{absolute-native-pathname} or
+@class{relative-native-pathname} from @var{ptn}, which must be a string
+or bytevector representing an absolute or relative native pathname.
 @end deffn
 
 
-@defun pathname @var{obj}
-Build and return a new concrete pathname record from @var{obj}, which
-must be a string or bytevector representing the pathname.  Everything
-works as documented for the class constructors.  In general, we can
-think of the returned value as an instance of @class{pathname}.
-@end defun
+@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-native-pathname}) (@varii{ptn} @aclass{absolute-native-pathname})
+@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-native-pathname}) (@varii{ptn} @aclass{relative-native-pathname})
+Implementations for the multimethod @func{pathname=?} defined by
+@library{nausicaa uri pathnames abstract}.
+@end deffn
 
 @c page
 @node uri pathnames unix
@@ -488,6 +649,7 @@ unix-pathnames, Parsing Unix file system pathnames}.
 * uri pathnames unix absolute:: Absolute Unix pathname objects.
 * uri pathnames unix relative:: Relative Unix pathname objects.
 * uri pathnames unix utils::    Unix pathname utilities.
+* uri pathnames unix errors::   Condition object types.
 @end menu
 
 @c page
@@ -801,205 +963,30 @@ Implementations for the multimethod @func{pathname=?} defined by
 @end deffn
 
 @c page
-@node uri pathnames errors
-@subsection Representing errors
+@node uri pathnames unix errors
+@subsubsection Condition object types
 
 
-@cindex @library{nausicaa uri pathnames conditions}, library
-@cindex Library @library{nausicaa uri pathnames conditions}
+The library @library{nausicaa uri pathnames unix} is built on top of
+facilities defined by @library{vicare parser-tools unix-pathnames}; the
+latter library uses some condition object type to signal exceptions
+@libsref{parser-tools unix-pathnames errors, Condition object types}.
+@library{nausicaa uri pathnames unix} defines some labels to shadow the
+primitive condition types.
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames unix}.
 
 
-Condition object types are exported only by the @library{nausicaa
-pathname conditions} library; it is suggested to add a prefix when
-importing this library.
-
-@menu
-* uri pathnames errors generic::    Base condition type.
-* uri pathnames errors byte::       Byte conversion error
-                                condition type.
-* uri pathnames errors parser::     Parser error condition type.
-* uri pathnames errors normalise::  Pathname normalisation error
-                                condition type.
-@end menu
-
-@c page
-@node uri pathnames errors generic
-@subsubsection Base condition type
-
-
-The following bindings are exported by the @library{nausicaa uri pathname
-conditions} library; it is suggested to add a prefix when importing the
-library.
-
-
-@deftp {Condition Type} &pathname
-Base type for all the condition types used by the @library{nausicaa
-pathname --} hierarchy of libraries; it is derived from
-@condition{error}.
+@deftp {Condition Type} &unix-pathname-parser-error
+Signals an error while parsing a Unix pathname representation; it is
+derived from @condition{error}.
 @end deftp
 
 
-@defun make-pathname-condition
-Build and return a new @condition{pathname} condition value.
-@end defun
-
-
-@defun pathname-condition? @var{obj}
-Return @true{} if @var{obj} is a condition value of type
-@condition{pathname}.
-@end defun
-
-@c page
-@node uri pathnames errors byte
-@subsubsection Byte conversion error condition type
-
-
-The following bindings are exported by the @library{nausicaa uri pathname
-conditions} library; it is suggested to add a prefix when importing the
-library.
-
-
-@deftp {Condition Type} &byte
-Condition type representing a byte--to--char or char--to--byte
-conversion error: it is used when converting to string a bytevector
-representing a pathname, or vice versa; it is derived from
-@condition{pathname}.
-
-It has the following fields:
-
-@table @code
-@item sequence
-The original string or bytevector.
-
-@item offset
-The offset of the byte or character who triggered the error.
-@end table
+@deftp {Condition Type} &unix-pathname-normalisation-error
+Signals an error while normalising a Unix pathname representation; it is
+derived from @condition{error}.
 @end deftp
-
-
-@defun make-byte-condition @var{sequence} @var{offset}
-Build and return a new @condition{byte} condition value.
-@end defun
-
-
-@defun byte-condition? @var{obj}
-Return @true{} if @var{obj} is a condition value of type
-@condition{byte}.
-@end defun
-
-
-@defun condition-byte/sequence @var{obj}
-@defunx condition-byte/offset @var{obj}
-Accessors for the fields of a condition value of type @condition{byte}.
-@end defun
-
-
-@deffn Syntax raise-byte-error @var{who} @var{message} @var{sequence} @var{offset}
-Raise an exception with compound condition object of types
-@condition{byte}, @condition{who}, @condition{message}.
-@end deffn
-
-@c page
-@node uri pathnames errors parser
-@subsubsection Parser error condition type
-
-
-The following bindings are exported by the @library{nausicaa uri pathname
-conditions} library; it is suggested to add a prefix when importing the
-library.
-
-
-@deftp {Condition Type} &parser
-Condition type representing a pathname parser error: it is used when
-parsing a bytevector representing a pathname through a bytevector--based
-binary input port; it is derived from @condition{pathname}.
-
-It has the following fields:
-
-@table @code
-@item port
-The binary input port drawing bytes from the bytevector.
-
-@item offset
-The offset of the byte who triggered the error.
-@end table
-@end deftp
-
-
-@defun make-parser-condition @var{port} @var{offset}
-Build and return a new @condition{parser} condition value.
-@end defun
-
-
-@defun parser-condition? @var{obj}
-Return @true{} if @var{obj} is a condition value of type
-@condition{parser}.
-@end defun
-
-
-@defun condition-parser/port @var{obj}
-@defunx condition-parser/offset @var{obj}
-Accessors for the fields of a condition value of type
-@condition{parser}.
-@end defun
-
-
-@deffn Syntax raise-parser-error @var{who} @var{message} @var{port} @var{offset}
-Raise an exception with compound condition object of types
-@condition{parser}, @condition{who}, @condition{message}.
-@end deffn
-
-@c page
-@node uri pathnames errors normalise
-@subsubsection Pathname normalisation error condition type
-
-
-The following bindings are exported by the @library{nausicaa uri pathname
-conditions} library; it is suggested to add a prefix when importing the
-library.
-
-
-@deftp {Condition Type} &normalisation
-Condition type representing a pathname normalisation error: it is used
-when an error occurs normalising a list of bytevectors representing
-pathname segments; it is derived from @condition{pathname}.
-
-It has the following fields:
-
-@table @code
-@item absolute?
-A boolean value, @true{} if the list of bytevectors represents an
-absolute pathname.
-
-@item original-segments
-A list of bytevectors representing pathname segments which originated
-the error; it is the list before any normalisation.
-@end table
-@end deftp
-
-
-@defun make-normalisation-condition @var{absolute?} @var{original-segments}
-Build and return a new @condition{normalisation} condition value.
-@end defun
-
-
-@defun normalisation-condition? @var{obj}
-Return @true{} if @var{obj} is a condition value of type
-@condition{normalisation}.
-@end defun
-
-
-@defun condition-normalisation/absolute? @var{obj}
-@defunx condition-normalisation/original-segments @var{obj}
-Accessors for the fields of a condition value of type
-@condition{normalisation}.
-@end defun
-
-
-@deffn Syntax raise-normalisation-error @var{who} @var{message} @var{absolute?} @var{original-segments}
-Raise an exception with compound condition object of types
-@condition{normalisation}, @condition{who}, @condition{message}.
-@end deffn
-
 
 @c end of file

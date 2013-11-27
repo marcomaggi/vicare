@@ -27,9 +27,12 @@
 (library (nausicaa uri pathnames)
   (export
     <pathname>
-    <relative-pathname>
     <absolute-pathname>
-    pathname)
+    <relative-pathname>
+    (rename (<relative-unix-pathname>	<relative-native-pathname>)
+	    (<absolute-unix-pathname>	<absolute-native-pathname>))
+    pathname
+    pathname=?)
   (import (nausicaa uri pathnames @PLATFORM_PATHNAME@)))
 
 ;;; end of file
