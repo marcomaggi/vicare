@@ -1797,20 +1797,20 @@
 	     => map add1))
       => '(1 11 21))
 
-    ;; (check
-    ;; 	(let (((O <alpha>) 0))
-    ;; 	  (O one 10 20
-    ;; 	     => map add1
-    ;; 	     => fold-left 0 +))
-    ;;   => (+ 1 11 21))
+    (check
+    	(let (((O <alpha>) 0))
+    	  (O one 10 20
+    	     => map add1
+    	     => fold-left 0 +))
+      => (+ 1 11 21))
 
-    ;; (check
-    ;; 	(let (((O <alpha>) 0))
-    ;; 	  (O one 10 20
-    ;; 	     => map add1
-    ;; 	     => map -
-    ;; 	     => fold-left 0 +))
-    ;;   => (+ -1 -11 -21))
+    (check
+    	(let (((O <alpha>) 0))
+    	  (O one 10 20
+    	     => map add1
+    	     => map -
+    	     => fold-left 0 +))
+      => (+ -1 -11 -21))
 
     (void))
 
