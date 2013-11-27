@@ -40,6 +40,8 @@ this project has a mailing list:
 Notes for revision 0.3d7
 ------------------------
 
+* Boot images have been rotated.
+
 * Added unsafe operations to (vicare system $vectors):
 
     $vector-map1
@@ -99,6 +101,16 @@ Notes for revision 0.3d7
 
 * BACKWARDS INCOMPATIBILITY The libraries for parsing IP addressing have
   been reorganised and partly rewritten.
+
+* Imported URI libraries from Nausicaa as:
+
+     (nausicaa parser-tools uri ---)
+     (nausicaa uri ---)
+
+* Imported file system pathname libraries from Nausicaa as:
+
+     (nausicaa parser-tools unix-pathnames)
+     (nausicaa uri pathnames ---)
 
 
 Notes for revision 0.3d6
