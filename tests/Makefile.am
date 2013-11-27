@@ -264,7 +264,6 @@ VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	test-srfi-106-socket.sps
 
 VICARE_SCHEME_NAUSICAA_TESTS	= \
-	test-nausicaa-tags-helpers.sps					\
 	test-nausicaa-tags-core-classes.sps				\
 	test-nausicaa-tags-core-labels.sps				\
 	test-nausicaa-tags-docs.sps					\

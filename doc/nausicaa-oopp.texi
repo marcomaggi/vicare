@@ -1832,7 +1832,7 @@ one of the following formats:
 
 @example
 @meta{method-name}
-(@meta{method-name} @meta{rv-tag})
+#(@meta{method-name} @meta{rv-tag})
 @end example
 
 @noindent
