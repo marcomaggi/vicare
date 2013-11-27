@@ -2303,12 +2303,21 @@
        (<parsed-spec>-definitions-cons! parsed-spec `(,#'define ,method-implementation-id ,method-expr)))
 
      (syntax-case #'?arguments ()
-       (((?method-name . ?args) ?body0 ?body ...)
+       (((?method-name . ?formals) ?body0 ?body ...)
 	(identifier? #'?method-name)
 	(let* ((method-name-id			#'?method-name)
 	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
 	  (%add-method method-name-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?args ?body0 ?body ...))))
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?formals ?body0 ?body ...))))
+
+       ((((?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+	(let* ((method-name-id			#'?method-name)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
 
        ((?method-name ?lambda-expr)
 	(identifier? #'?method-name)
