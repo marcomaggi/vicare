@@ -1573,7 +1573,7 @@
     ;;Thunk definition.
     ;;
     ((_ () ?body0 ?body ...)
-     #'(lambda () (begin/tags ?body0 ?body ...)))
+     #'(lambda () ?body0 ?body ...))
 
     ;;Function with tagged return values.
     ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
@@ -1585,7 +1585,7 @@
     ;;
     ((_ ?formals ?body0 ?body ...)
      (identifier? #'?formals)
-     #'(lambda ?formals (begin/tags ?body0 ?body ...)))
+     #'(lambda ?formals ?body0 ?body ...))
 
     ;;Function with tagged args argument.
     ;;
@@ -1599,7 +1599,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and untagged rest argument.
     ;;
@@ -1612,7 +1612,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and tagged rest argument.
     ;;
@@ -1626,7 +1626,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
+	       ?body0 ?body ...)))))
 
     ;;Mandatory arguments and no rest argument.
     ;;
@@ -1638,7 +1638,7 @@
 	   (with-tagged-arguments-validation (who)
 	       VALIDATIONS
 	     (let-syntax (SYNTAX-BINDING ...)
-	       (begin/tags ?body0 ?body ...))))))
+	       ?body0 ?body ...)))))
 
     (_
      (synner "syntax error in LAMBDA/TAGS"))))
@@ -1674,7 +1674,7 @@
 			     (with-tagged-arguments-validation (who)
 				 VALIDATIONS
 			       (let-syntax (SYNTAX-BINDING ...)
-				 (begin/tags ?body0 ?body ...))))
+				 ?body0 ?body ...)))
 			  ou-clauses)))))
 
 	 ((?clause . ?other-clauses)
@@ -1687,7 +1687,7 @@
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
 
 (define-syntax (define/tags stx)
-  (syntax-case stx (aux.<-)
+  (syntax-case stx ()
 
     ;;Untagged, uninitialised variable.
     ;;
@@ -1715,18 +1715,6 @@
 	  (identifier? #'?tag))
      #'(?tag ?who ?expr))
 
-    ;;Function definition with tagged return values through auxiliary syntax.
-    ;;
-    ((_ (?who . ?formals) (aux.<- ?tag0 ?tag ...) ?body0 ?body ...)
-     (identifier? #'?who)
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who
-	   (lambda/tags ?formals
-	     (aux.<- ?tag0 ?tag ...)
-	     (let-constants ((WHO '?who))
-	       ?body0 ?body ...)))))
-
     ;;Function definition with tagged return values through tagged who.
     ;;
     ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
@@ -1734,8 +1722,7 @@
      (with-syntax
 	 ((WHO (datum->syntax #'?who '__who__)))
        #'(define ?who
-	   (lambda/tags ?formals
-	     (aux.<- ?tag0 ?tag ...)
+	   (lambda/tags ((_ ?tag0 ?tag ...) . ?formals)
 	     (let-constants ((WHO '?who))
 	       ?body0 ?body ...)))))
 

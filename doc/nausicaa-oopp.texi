@@ -2915,8 +2915,6 @@ corresponding return value with the tag's predicate.
 
 
 @deffn Syntax lambda/tags @meta{tagged-formals} @metao{body} @meta{body} @dots{}
-@deffnx Syntax lambda/tags @meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
-@deffnx {Auxiliary Syntax} <-
 Like @func{lambda} and defines the @oopp{} bindings for the arguments.
 When all the bindings have no tags: this syntax is equivalent to
 @func{lambda} as defined by @rnrs{6}; an untagged binding is equivalent
@@ -2941,11 +2939,6 @@ If the first element of @meta{tagged-formals} has the format:
 @noindent
 where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
 will be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
-
-@item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
 @end itemize
 
@@ -3016,13 +3009,7 @@ Functions with a single validated return value:
   (lambda/tags ((_ <fixnum>) val)
     val))
 
-(define g
-  (lambda/tags (val)
-    (<- <fixnum>)
-    val))
-
 (f 1)                   @result{} 1
-(g 1)                   @result{} 1
 @end example
 
 @item
@@ -3037,30 +3024,22 @@ Functions with multiple validated return values:
   (lambda/tags ((_ <fixnum> <string>) a b)
     (values a b)))
 
-(define g
-  (lambda/tags (a b)
-    (<- <fixnum> <string>)
-    (values a b)))
-
 (f 1 "2")               @result{} 1, "2"
-(g 1 "2")               @result{} 1, "2"
 @end example
 @end itemize
 @end deffn
 
 
 @deffn Syntax case-lambda/tags @meta{cl-clause} @dots{}
-@deffnx {Auxiliary Syntax} <-
 Like @func{case-lambda} and defines the @oopp{} bindings for the
 arguments.  When all the bindings have no tags: this syntax is
 equivalent to @func{case-lambda} as defined by @rnrs{6}; an untagged
 binding is equivalent to a binding tagged with @class{top}.
 
-Each @meta{cl-clause} must have one of the formats:
+Each @meta{cl-clause} must have the format:
 
 @example
 (@meta{tagged-formals} @metao{body} @meta{body} @dots{})
-(@meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{})
 @end example
 
 If procedure arguments validation, as defined by @library{vicare
@@ -3082,11 +3061,6 @@ If the first element of @meta{tagged-formals} has the format:
 @noindent
 where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
 will be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
-
-@item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
 @end itemize
 
@@ -3122,9 +3096,7 @@ Usage examples:
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag})
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
 @deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
-@deffnx {Auxiliary Syntax} <-
 Like @func{define} and defines the @oopp{} bindings for function
 arguments.  When all the bindings have no tags: this syntax is almost
 equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
@@ -3153,11 +3125,6 @@ enabled:
 The function will validate its tagged arguments using the tag predicates
 and raise a @condition{procedure-argument-violation} exception in case
 of failure.
-
-@item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
 
 @item
 If the @meta{variable} argument comes with @meta{tag} arguments: the

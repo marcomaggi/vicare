@@ -88,6 +88,40 @@ Notes for revision 0.3d7
   to make the  name of the function available; such  definitions can now
   be cleared.
 
+* BACKWARDS  INCOMPATIBILITY  In  the   (nausicaa)  language,  the  "<-"
+  auxiliary  syntax is  no  more used  by  DEFINE/TAGS, LAMBDA/TAGS  and
+  CASE-LAMBDA/TAGS to  specify validation tags for  returned values.  So
+  these are now syntax errors:
+
+    (define fun
+      (lambda ((O <pair>))
+        (<- <vector>)
+        (vector (O car) (O cdr))))
+
+    (define (fun (O <pair>))
+      (<- <vector>)
+      (vector (O car) (O cdr)))
+
+    (define fun
+      (case-lambda
+       (((O <pair>))
+        (<- <vector>)
+        (vector (O car) (O cdr)))))
+
+  we can use the following instead:
+
+    (define fun
+      (lambda ((_ <vector>) (O <pair>))
+        (vector (O car) (O cdr))))
+
+    (define ((fun <vector>) (O <pair>))
+      (vector (O car) (O cdr)))
+
+    (define fun
+      (case-lambda
+       (((_ <vector>) (O <pair>))
+        (vector (O car) (O cdr)))))
+
 * BACKWARDS  INCOMPATIBILITY Some  parser  functions for  IPv4 and  IPv6
   addresses from the hierarchy (nausicaa  parser-tools ---) now return a
   vector rather than a list.

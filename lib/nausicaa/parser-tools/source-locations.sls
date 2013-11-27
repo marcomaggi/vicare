@@ -75,10 +75,9 @@
 		(not (O $specified?)))))
 
   (protocol (lambda (make-top)
-	      (lambda ((specified? <boolean>)
+	      (lambda ((_ <source-location>) (specified? <boolean>)
 		  (line <positive-fixnum>) (column <positive-fixnum>)
 		  (offset <nonnegative-fixnum>))
-		(<- <source-location>)
 		((make-top) specified? line column offset))))
 
   (maker (lambda (stx)
@@ -97,8 +96,7 @@
 	 ($fx= 1 (L $line))
 	 ($fx= 1 (L $column))))
 
-  (method (string (L <source-location>))
-    (<- <string>)
+  (method ((string <string>) (L <source-location>))
     ;;If  the line  and  column numbers  are  non-positive: this  object
     ;;represents an unspecified source location.
     ;;
