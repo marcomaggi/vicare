@@ -411,7 +411,7 @@
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
 	(help.<parsed-spec>-mutable-fields-data spec))
 
-       (((METHOD-NAME . METHOD-IMPLEMENTATION) ...)
+       (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
 	(help.<parsed-spec>-methods-table spec))
 
        (SHADOWED-IDENTIFIER
@@ -551,7 +551,9 @@
 		   (and (identifier? #'??var)
 			(identifier? #'??id))
 		   (case-symbol (syntax->datum #'??id)
-		     ((METHOD-NAME) #'(METHOD-IMPLEMENTATION ??expr . ??args))
+		     ((METHOD-NAME)
+		      (help.process-method-application #'let/tags #'METHOD-RV-TAG
+						       #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr #'??var (cons #'??id #'??args)))))
@@ -814,7 +816,7 @@
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
 	(help.<parsed-spec>-mutable-fields-data spec))
 
-       (((METHOD-NAME . METHOD-IMPLEMENTATION) ...)
+       (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
 	(help.<parsed-spec>-methods-table spec))
 
        ((DEFINITION ...)
@@ -1068,7 +1070,9 @@
 		   (and (identifier? #'??var)
 			(identifier? #'??id))
 		   (case-symbol (syntax->datum #'??id)
-		     ((METHOD-NAME) #'(METHOD-IMPLEMENTATION ??expr . ??args))
+		     ((METHOD-NAME)
+		      (help.process-method-application #'let/tags #'METHOD-RV-TAG
+						       #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr #'??var (cons #'??id #'??args)))))

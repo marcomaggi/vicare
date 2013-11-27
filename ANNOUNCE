@@ -88,6 +88,31 @@ Notes for revision 0.3d7
   to make the  name of the function available; such  definitions can now
   be cleared.
 
+* Added   experimental  nested   method  invocation.    When  a   method
+  specification has a  single tagged return value,  the following syntax
+  is available:
+
+    (define-label <alpha>
+      (method ((one <list>) self a b)
+        (list self a b)))
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1))		=> '(1 11 21)
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1
+         => fold-left 0 +))	=> (+ 1 11 21)
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1
+         => map -
+         => fold-left 0 +))	=> (+ -1 -11 -21)
+
+  This is not Schemey at all, but many languages have similar syntaxes.
+
 * BACKWARDS  INCOMPATIBILITY  In  the   (nausicaa)  language,  the  "<-"
   auxiliary  syntax is  no  more used  by  DEFINE/TAGS, LAMBDA/TAGS  and
   CASE-LAMBDA/TAGS to  specify validation tags for  returned values.  So
