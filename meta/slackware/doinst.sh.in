@@ -19,16 +19,19 @@ install -m 0775 -d "$fasldir"
 # symbolic links are already there from the old package.
 
 for item in \
-    compile-all.sps             \
-    compile-srfi.sps            \
-    compile-nausicaa.sps        \
-    compile-ffi.sps             \
-    compile-posix.sps           \
-    compile-iconv.sps           \
-    compile-glibc.sps           \
-    compile-linux.sps           \
-    compile-gcc.sps             \
-    compile-readline.sps        \
+    compile-all.sps				\
+    compile-srfi.sps				\
+    compile-nausicaa-language.sps		\
+    compile-nausicaa-containers.sps		\
+    compile-nausicaa-parser-tools.sps		\
+    compile-nausicaa-misc.sps			\
+    compile-ffi.sps				\
+    compile-posix.sps				\
+    compile-iconv.sps				\
+    compile-glibc.sps				\
+    compile-linux.sps				\
+    compile-gcc.sps				\
+    compile-readline.sps			\
     compile-cre2.sps
 do
     item="$pkglibexecdir"/"$item"
