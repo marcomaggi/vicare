@@ -297,6 +297,8 @@ Example using the maker transformer:
 @result{} (1 . 2)
 @end example
 
+@c ------------------------------------------------------------
+
 @item (@meta{type})
 @itemx ((@meta{type}) @meta{expr})
 Expands to a reference to the type predicate, if any; when the type has
@@ -440,6 +442,8 @@ This syntax expands to a reference to the value.  Example:
 O   @result{} '(1 . 2)
 @end example
 
+@c ---------
+
 @item (set!/tags @meta{var} @meta{expr})
 This syntax expands to the use of @func{set!} as defined by @rnrs{6}:
 @meta{expr} becomes the new value of @meta{var}.  Notice that if values
@@ -457,13 +461,16 @@ O                       @result{} '(3 . 4)
 (set!/tags O "ciao")    @error{} assertion violation
 @end example
 
+@c ---------
+
 @item (@meta{var} @meta{id})
 Expands according to the following rules, in the given order:
 
 @enumerate
 @item
 If the type has a method named @meta{id}: this syntax expands to a call
-to such method with no arguments.
+to such method with no arguments.  The first argument of the method call
+is @meta{var} itself.
 
 @item
 If the type has a field named @meta{id}: this syntax expands to a call
@@ -494,6 +501,8 @@ Examples:
 (A a)           @result{} 1     ;field accessor application
 (A $a)          @result{} 1     ;unsafe field accessor application
 @end example
+
+@c ---------
 
 @item (set!/tags (@meta{var} @meta{id}) @meta{expr})
 Expands according to the following rules, in the given order:
@@ -537,6 +546,8 @@ O               @result{} (77 . 99)
 (set!/tags (A $a) 3)    ;unsafe field mutator application
 @end example
 
+@c ---------
+
 @item (@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
 Expands to the result of applying the type's getter transformer to the
 syntax object (lookout for the parentheses):
@@ -575,6 +586,8 @@ exception to be raised at expand time.  Examples:
 (M[0][2])               @result{} 3
 (M[1][1])               @result{} 5
 @end example
+
+@c ---------
 
 @item (set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
 @itemx (set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
@@ -617,6 +630,8 @@ V               @result{} #(1 77 99)
 M               @result{} #(#(1 2 77) #(4 99 6))
 @end example
 
+@c ---------
+
 @item (@meta{var} @meta{id} @metao{form} @meta{form} ...)
 This syntax allows the use of nested syntaxes for typed fields.  It is
 expanded according to the following rules, in the given order:
@@ -636,6 +651,21 @@ Example:
 (define B '(3 4))
 (A append3 B '(5 6))    @result{} (1 2 3 4 5 6)
 @end example
+
+If the invoked method has a tagged, single return value: nested method
+invocation syntax is available.  If one of the @meta{form} arguments is
+the auxiliary syntax @code{=>}, and the return value tag is @meta{tag},
+the call is split as follows:
+
+@example
+(@meta{var} @meta{id} @metao{form} => @metai{form} ...)
+@expansion{} (let (((R @meta{tag}) (@meta{var} @meta{id} @metao{form})))
+      (R @metai{form} ...))
+@end example
+
+@noindent
+if no return value tag is available or the method has multiple return
+values: this syntax is @strong{not} available.
 
 @item
 If the type has a @strong{tagged} field named @meta{id}: this syntax
@@ -720,6 +750,8 @@ Example:
 (O car car)     @error{} syntax violation
 @end example
 @end enumerate
+
+@c ---------
 
 @item (set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
 This syntax allows the use of nested field mutator and setter syntaxes
@@ -1780,11 +1812,37 @@ as syntaxes:
 @section Defining classes having methods
 
 
-@deffn {Auxiliary Syntax} method (@meta{method-name} . @meta{formals}) . @meta{body}
-@deffnx {Auxiliary Syntax} method @meta{method-name} @meta{expression}
+@deffn {Auxiliary Syntax} method (@meta{method-spec} . @meta{formals}) . @meta{body}
+@deffnx {Auxiliary Syntax} method @meta{method-spec} @meta{expression}
 Add a method to the enclosing class, label or mixin definition; the
 method is applicable only through a syntax use in @oopp{} notation.
 This clause can be used multiple times.
+
+When the first form is used, the argument @meta{method-spec} can have
+one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+@end example
+
+@noindent
+when the second form is used, the argument @meta{method-spec} can have
+one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of a
+return value.  When a single return value tag is specified: the method
+is available for nested method invocation according to @oopp{} syntax
+specifications.  When the first form is used: the return value tags are
+used to validate the returned arguments as described for
+@func{lambda/tags}.
 
 @itemize
 @item
@@ -1856,11 +1914,26 @@ and an example of the second form:
 @end example
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn {Auxiliary Syntax} method-syntax @meta{method-name} @meta{transformer}
+@deffn {Auxiliary Syntax} method-syntax @meta{method-spec} @meta{transformer}
 Add a method to the enclosing class, label or mixin definition; the
 method is applicable only through a syntax use in @oopp{} notation.
 This clause can be used multiple times.
+
+The argument @meta{method-spec} can have one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of a
+return value.  When the single return value tag is specified: the method
+is available for nested method invocation according to @oopp{} syntax
+specifications.
 
 The method definition is added to the methods list as if the following
 clause had been used:
@@ -1901,6 +1974,7 @@ Here is an example of method syntax:
 @end example
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn {Auxiliary Syntax} methods @meta{method-spec} @dots{}
 Add methods to the enclosing class, label or mixin definition; the
@@ -1913,13 +1987,17 @@ The @meta{method-spec} arguments can be of the form:
 @meta{method-name}
 (@meta{method-name})
 (@meta{method-name} @meta{invokable-name})
+((@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
 @end example
 
 @noindent
 where @meta{method-name} and @meta{invokable-name} must be identifiers;
 in the first two forms the invokable name is built in the same way the
 field accessor names are built: appending a dash and @meta{method-name}
-to the type name.  This clause can be used multiple times.
+to the type name.  When @meta{rv-tag} is used: it must be the tag
+identifier representing the type of a return value, the method is then
+available for nested method invocation according to @oopp{} syntax
+specifications.
 
 @meta{invokable-name} must be an identifier bound to a Scheme function
 or syntax which will be invoked as method; it must accept as first
