@@ -2408,7 +2408,7 @@
 	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
 
        ;;Tagged external lambda method definition.
-       (((?method-name ?rv-tag) ?lambda-expr)
+       ((#(?method-name ?rv-tag) ?lambda-expr)
 	(and (identifier? #'?method-name)
 	     (identifier? #'?rv-tag))
 	(let* ((method-name-id			#'?method-name)
