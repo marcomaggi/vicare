@@ -225,6 +225,11 @@ a type definition.
 
 @item @meta{form}
 It is a generic form: an expression, an auxiliary syntax, @dots{}.
+
+@item @code{=>}
+It is the auxiliary syntax exported by both @library{nausicaa language
+oopp} and @library{nausicaa language auxiliary-syntaxes}, it is the same
+one exported by @rsixlibrary{base}.
 @end table
 
 @c ------------------------------------------------------------
