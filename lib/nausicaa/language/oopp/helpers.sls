@@ -2377,7 +2377,8 @@
 	  (%add-method method-name-id method-rv-tag-id method-implementation-id
 		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?formals ?body0 ?body ...))))
 
-       ;;Tagged single return value method definition.
+       ;;Tagged  single  return  value   method  definition.   List  tag
+       ;;specification.
        ((((?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
 	(and (identifier? #'?method-name)
 	     (identifier? #'?rv-tag))
@@ -2388,8 +2389,33 @@
 		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
 			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
 
-       ;;Tagged multiple return values method definition.
+       ;;Tagged  single  return  value method  definition.   Vector  tag
+       ;;specification.
+       (((#(?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
+
+       ;;Tagged  multiple return  values  method  definition.  List  tag
+       ;;specification.
        ((((?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
+
+       ;;Tagged multiple  return values  method definition.   Vector tag
+       ;;specification.
+       (((#(?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
 	(and (identifier? #'?method-name)
 	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
 	(let* ((method-name-id			#'?method-name)
@@ -2449,8 +2475,17 @@
 	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
 	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
 
-       ;;Tagged return value method definition.
+       ;;Tagged return value method definition.  List tag specification.
        (((?method-name ?rv-tag) ?lambda-expr)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+
+       ;;Tagged return value method definition.  Vector tag specification.
+       ((#(?method-name ?rv-tag) ?lambda-expr)
 	(and (identifier? #'?method-name)
 	     (identifier? #'?rv-tag))
 	(let* ((method-name-id			#'?method-name)
@@ -2510,8 +2545,19 @@
 	    (%add-method #'?method-name #f #'?method-implementation)
 	    (loop #'?other-methods)))
 
-	 ;;Tagged return value method definition.
+	 ;;Tagged   return   value    method   definition.    List   tag
+	 ;;specification.
 	 ((((?method-name ?rv-tag) ?method-implementation) . ?other-methods)
+	  (and (identifier? #'?method-name)
+	       (identifier? #'?rv-tag)
+	       (identifier? #'?method-implementation))
+	  (begin
+	    (%add-method #'?method-name #'?rv-tag #'?method-implementation)
+	    (loop #'?other-methods)))
+
+	 ;;Tagged   return   value   method  definition.    Vector   tag
+	 ;;specification.
+	 (((#(?method-name ?rv-tag) ?method-implementation) . ?other-methods)
 	  (and (identifier? #'?method-name)
 	       (identifier? #'?rv-tag)
 	       (identifier? #'?method-implementation))

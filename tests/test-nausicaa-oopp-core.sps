@@ -1737,7 +1737,7 @@
 
 ;;; nested methods
 
-  (let ()
+  (let ()	;list tag specification
     (define-label <beta>
       (nongenerative nested-method-application.<beta>)
       (parent <list>)
@@ -1774,6 +1774,43 @@
 
     (void))
 
+  (let ()	;vector tag specification
+    (define-label <beta>
+      (nongenerative nested-method-application.<beta>)
+      (parent <list>)
+      (method (#(map <beta>) self func)
+	(map func self)))
+
+    (define-label <alpha>
+      (nongenerative nested-method-application.<alpha>)
+      (method (#(one <beta>) self a b)
+	(list self a b)))
+
+    ;; ----------
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1))
+      => '(1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => fold-left 0 +))
+      => (+ 1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => map -
+	     => fold-left 0 +))
+      => (+ -1 -11 -21))
+
+    (void))
+
 ;;; --------------------------------------------------------------------
 ;;; nested lambda methods
 
@@ -1781,13 +1818,15 @@
     (define-label <beta>
       (nongenerative nested-method-application.<beta>)
       (parent <list>)
-      (method #(map <beta>) (lambda (self func)
-			     (map func self))))
+      (method #(map <beta>)
+	(lambda (self func)
+	  (map func self))))
 
     (define-label <alpha>
       (nongenerative nested-method-application.<alpha>)
-      (method ((one <beta>) self a b)
-	(list self a b)))
+      (method #(one <beta>)
+	(lambda (self a b)
+	  (list self a b))))
 
     ;; ----------
 
@@ -1817,7 +1856,7 @@
 ;;; --------------------------------------------------------------------
 ;;; nested method syntaxes
 
-  (let ()
+  (let ()	;list tag specification.
     (define-label <beta>
       (nongenerative nested-method-application.<beta>)
       (parent <list>)
@@ -1828,8 +1867,51 @@
 
     (define-label <alpha>
       (nongenerative nested-method-application.<alpha>)
-      (method ((one <beta>) self a b)
-	(list self a b)))
+      (method-syntax (one <beta>)
+	(syntax-rules ()
+	  ((_ self a b)
+	   (list self a b)))))
+
+    ;; ----------
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1))
+      => '(1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => fold-left 0 +))
+      => (+ 1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => map -
+	     => fold-left 0 +))
+      => (+ -1 -11 -21))
+
+    (void))
+
+  (let ()	;vector tag specification.
+    (define-label <beta>
+      (nongenerative nested-method-application.<beta>)
+      (parent <list>)
+      (method-syntax #(map <beta>)
+	(syntax-rules ()
+	  ((_ self func)
+	   (map func self)))))
+
+    (define-label <alpha>
+      (nongenerative nested-method-application.<alpha>)
+      (method-syntax #(one <beta>)
+	(syntax-rules ()
+	  ((_ self a b)
+	   (list self a b)))))
 
     ;; ----------
 
@@ -1859,7 +1941,7 @@
 ;;; --------------------------------------------------------------------
 ;;; extern method definition
 
-  (let ()
+  (let ()	;list tag specification
     (define-label <beta>
       (nongenerative nested-method-application.<beta>)
       (parent <list>)
@@ -1870,8 +1952,51 @@
 
     (define-label <alpha>
       (nongenerative nested-method-application.<alpha>)
-      (method ((one <beta>) self a b)
-	(list self a b)))
+      (methods ((one <beta>) <alpha>-one)))
+
+    (define (<alpha>-one self a b)
+      (list self a b))
+
+    ;; ----------
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1))
+      => '(1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => fold-left 0 +))
+      => (+ 1 11 21))
+
+    (check
+	(let (((O <alpha>) 0))
+	  (O one 10 20
+	     => map add1
+	     => map -
+	     => fold-left 0 +))
+      => (+ -1 -11 -21))
+
+    (void))
+
+  (let ()	;vector tag specification
+    (define-label <beta>
+      (nongenerative nested-method-application.<beta>)
+      (parent <list>)
+      (methods (#(map <beta>) <beta>-map)))
+
+    (define (<beta>-map self func)
+      (map func self))
+
+    (define-label <alpha>
+      (nongenerative nested-method-application.<alpha>)
+      (methods (#(one <beta>) <alpha>-one)))
+
+    (define (<alpha>-one self a b)
+      (list self a b))
 
     ;; ----------
 

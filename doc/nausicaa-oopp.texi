@@ -1829,6 +1829,7 @@ one of the following formats:
 @example
 @meta{method-name}
 (@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+#(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
 @end example
 
 @noindent
@@ -1931,6 +1932,7 @@ The argument @meta{method-spec} can have one of the following formats:
 @example
 @meta{method-name}
 (@meta{method-name} @meta{rv-tag})
+#(@meta{method-name} @meta{rv-tag})
 @end example
 
 @noindent
@@ -1993,6 +1995,7 @@ The @meta{method-spec} arguments can be of the form:
 (@meta{method-name})
 (@meta{method-name} @meta{invokable-name})
 ((@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
+(#(@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
 @end example
 
 @noindent
