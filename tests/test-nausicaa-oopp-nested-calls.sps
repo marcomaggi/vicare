@@ -57,9 +57,7 @@
        . ?body))))
 
 
-(parametrise ((check-test-name	'nested-method-application))
-
-;;; nested methods
+(parametrise ((check-test-name	'methods/embedded-definition/nested-application))
 
   (let ()	;list tag specification
     (define-label <beta>
@@ -135,8 +133,10 @@
 
     (void))
 
-;;; --------------------------------------------------------------------
-;;; nested lambda methods
+  #t)
+
+
+(parametrise ((check-test-name	'methods/lambda-definition/nested-application))
 
   (let ()
     (define-label <beta>
@@ -177,8 +177,10 @@
 
     (void))
 
-;;; --------------------------------------------------------------------
-;;; nested method syntaxes
+  #t)
+
+
+(parametrise ((check-test-name	'methods/syntax-definition/nested-application))
 
   (let ()	;list tag specification.
     (define-label <beta>
@@ -262,8 +264,10 @@
 
     (void))
 
-;;; --------------------------------------------------------------------
-;;; extern method definition
+  #t)
+
+
+(parametrise ((check-test-name	'methods/extern-definition/nested-application))
 
   (let ()	;list tag specification
     (define-label <beta>
@@ -344,6 +348,73 @@
 	     => map -
 	     => fold-left 0 +))
       => (+ -1 -11 -21))
+
+    (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'getter/nested-application))
+
+  (let ()
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx)
+	 (syntax-case stx (=>)
+	   ((?var ((?index)))
+	    #'(vector-ref ?var ?index))
+	   ((?var ((?index)) => ?form0 ?form ...)
+	    #'(let (((fx <fixnum>) (vector-ref ?var ?index)))
+		(fx ?form0 ?form ...)))
+	   ))))
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[1] => string))
+      => "1")
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[1] => odd?))
+      => #t)
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[2] => * 10))
+      => 20)
+
+    (void))
+
+  (let ()	;nester ?var usage
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx)
+	 (syntax-case stx (=>)
+	   ((?var ((?index)))
+	    #'(vector-ref ?var ?index))
+	   ((?var ((?index)) => ?form0 ?form ...)
+	    #'(let (((fx <fixnum>) (?var[?index])))
+		(fx ?form0 ?form ...)))
+	   ))))
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[1] => string))
+      => "1")
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[1] => odd?))
+      => #t)
+
+    (check
+	(let (((O <fixnum-vector>) '#(0 1 2 3)))
+	  (O[2] => * 10))
+      => 20)
 
     (void))
 

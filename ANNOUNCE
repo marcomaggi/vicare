@@ -113,6 +113,34 @@ Notes for revision 0.3d7
 
   This is not Schemey at all, but many languages have similar syntaxes.
 
+* Added experimental nested getter syntax.  The getter transformer might
+  accept additional  forms to  use tag members  from the  runtime getter
+  value.
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx)
+         (syntax-case stx (=>)
+           ((?var ((?index)))
+            #'(vector-ref ?var ?index))
+           ((?var ((?index)) => ?form0 ?form ...)
+            #'(let (((fx <fixnum>) (?var[?index])))
+                (fx ?form0 ?form ...)))
+           ))))
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[1] => string))
+    => "1"
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[1] => odd?))
+    => #t
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[2] => * 10))
+    => 20
+
 * BACKWARDS  INCOMPATIBILITY  In  the   (nausicaa)  language,  the  "<-"
   auxiliary  syntax is  no  more used  by  DEFINE/TAGS, LAMBDA/TAGS  and
   CASE-LAMBDA/TAGS to  specify validation tags for  returned values.  So

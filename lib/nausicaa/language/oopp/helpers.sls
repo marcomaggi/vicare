@@ -1,5 +1,5 @@
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Nausicaa Scheme
 ;;;Contents: helpers for OOPP
 ;;;Date: Tue May  1, 2012
 ;;;
@@ -250,75 +250,120 @@
   (identifier-suffix id "-list-of-uids"))
 
 
-(define (make-tagged-variable-transformer tag-id src-var-id)
-  ;;Build  and   return  the   transformer  function   implementing  the
-  ;;identifier syntax  for tagged  variables.  When  we define  a tagged
-  ;;variable with:
-  ;;
-  ;;   (<integer> a 123)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (define src-var 123)
-  ;;   (define-syntax a
-  ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
-  ;;
-  ;;and when we define a tagged variable with:
-  ;;
-  ;;   (let/tags (((a <integer>) 123)) ---)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (let ((src-var 123))
-  ;;     (let-syntax
-  ;;         ((a (make-tagged-variable-transformer
-  ;;               #'<integer> #'src-var)))
-  ;;       ---))
-  ;;
-  ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
-  ;;DEFINE-LABEL or DEFINE-CLASS).
-  ;;
-  ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
-  ;;variable is bound.
-  ;;
-  (assert (identifier? tag-id))
-  (assert (identifier? src-var-id))
-  (make-variable-transformer
-   (lambda (stx)
-     (with-syntax ((TAG		tag-id)
-		   (SRC-VAR	src-var-id))
-       (syntax-case stx (set! :mutator :setter)
+(module (make-tagged-variable-transformer)
 
-	 ;;Syntax to reference the value of the binding.
-	 (??var
-	  (identifier? #'??var)
-	  src-var-id)
+  (define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))
+    ;;Build  and   return  the   transformer  function   implementing  the
+    ;;identifier syntax  for tagged  variables.  When  we define  a tagged
+    ;;variable with:
+    ;;
+    ;;   (<integer> a 123)
+    ;;
+    ;;we can imagine the following expansion:
+    ;;
+    ;;   (define src-var 123)
+    ;;   (define-syntax a
+    ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
+    ;;
+    ;;and when we define a tagged variable with:
+    ;;
+    ;;   (let/tags (((a <integer>) 123)) ---)
+    ;;
+    ;;we can imagine the following expansion:
+    ;;
+    ;;   (let ((src-var 123))
+    ;;     (let-syntax
+    ;;         ((a (make-tagged-variable-transformer
+    ;;               #'<integer> #'src-var)))
+    ;;       ---))
+    ;;
+    ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
+    ;;DEFINE-LABEL or DEFINE-CLASS).
+    ;;
+    ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
+    ;;variable is bound.
+    ;;
+    (make-variable-transformer
+     (lambda (stx)
+       (define (synner)
+	 (syntax-violation (syntax->datum tag-id)
+	   "invalid tagged-variable syntax use" stx))
+       (with-syntax ((TAG	tag-id)
+		     (SRC-VAR	src-var-id))
+	 (syntax-case stx (set! :mutator :setter)
 
-	 ;;Syntax to mutate the value of the binding.
-	 ((set! ??var ??val)
-	  #'(set! SRC-VAR (TAG :assert-type-and-return ??val)))
+	   ;;Syntax to reference the value of the binding.
+	   (??var
+	    (identifier? #'??var)
+	    src-var-id)
 
-	 ;;Syntax to apply the field mutator for the tag of ?VAR.
-	 ((??var :mutator (??field-name ??arg ...) ??value)
-	  (identifier? #'??field-name)
-	  #'(TAG :mutator SRC-VAR (??field-name ??arg ...) ??value))
+	   ;;Syntax to mutate the value of the binding.
+	   ((set! ??var ??val)
+	    #'(set! SRC-VAR (TAG :assert-type-and-return ??val)))
 
-	 ;;Syntax to apply the setter for the tag of ?VAR.
-	 ((??var :setter ((??key ...) ...) ??value)
-	  #'(TAG :setter SRC-VAR (??var ((??key ...) ...) ??value)))
+	   ;;Syntax to apply the field mutator for the tag of ?VAR.
+	   ((??var :mutator (??field-name ??arg ...) ??value)
+	    (identifier? #'??field-name)
+	    #'(TAG :mutator SRC-VAR (??field-name ??arg ...) ??value))
 
-	 ;;Syntax to apply the getter for the tag of ?VAR.
-	 ((??var (??key0 ...) (??key ...) ...)
-	  #'(TAG :getter SRC-VAR (??var ((??key0 ...) (??key ...) ...))))
+	   ;;Syntax to apply the setter for the tag of ?VAR.
+	   ((??var :setter ((??key ...) ...) ??value)
+	    #'(TAG :setter SRC-VAR (??var ((??key ...) ...) ??value)))
 
-	 ;;Syntax to apply a method or reference a field of the tag
-	 ;;of ?VAR.
-	 ((??var . ??stuff)
-	  #'(TAG :dispatch SRC-VAR (??var . ??stuff)))
+	   ;;Syntax to  apply the getter for  the tag of ?VAR.   A plain
+	   ;;getter syntax is as follows:
+	   ;;
+	   ;;  (??var (??key0 ...) (??key ...) ...)
+	   ;;
+	   ;;but it can  also contain other arguments  for nested member
+	   ;;use as follows:
+	   ;;
+	   ;;  (??var (??key0 ...) (??key ...) ... => ?form0 ?form ...)
+	   ;;
+	   ;;this latter case should be expanded to:
+	   ;;
+	   ;;  (let (((R <tag>) (??var (??key0 ...) (??key ...) ...)))
+	   ;;    (R ?form0 ?form ...))
+	   ;;
+	   ;;where "<tag>"  is the  tag assigned  to the  getter runtime
+	   ;;return value from the getter transformer function.
+	   ;;
+	   ((??var (??key0 ...) ?arg ...)
+	    (receive (keys-stx after-args-stx)
+		(%split-getter-keys-from-other-args #'(?arg ...) synner)
+	      (if (null? after-args-stx)
+		  #`(TAG :getter SRC-VAR (??var ((??key0 ...) #,@keys-stx)))
+		#`(TAG :getter SRC-VAR (??var ((??key0 ...) #,@keys-stx) => #,@after-args-stx)))))
 
-	 (_
-	  (syntax-violation '?var
-	    "invalid tagged-variable syntax use" stx)))))))
+	   ;;Syntax to apply a method or reference a field of the tag
+	   ;;of ?VAR.
+	   ((??var . ??stuff)
+	    #'(TAG :dispatch SRC-VAR (??var . ??stuff)))
+
+	   (_
+	    (synner))
+	   )))))
+
+  (define (%split-getter-keys-from-other-args args-stx synner)
+    (let loop ((args-stx args-stx)
+	       (keys-stx '()))
+      (syntax-case args-stx (=>)
+	;;There is no arrow, all the arguments are "keys".
+	(()
+	 (values keys-stx '()))
+
+	;;There is an arrow!
+	((=> ?after-arg0 ?after-arg ...)
+	 (values (reverse keys-stx) #'(?after-arg0 ?after-arg ...)))
+
+	;;A key argument.
+	(((?key ...) ?arg ...)
+	 (loop #'(?arg ...) (cons #'(?key ...) keys-stx)))
+
+	(_
+	 (synner)))))
+
+  #| end of module |# )
 
 
 (module (process-method-application)
