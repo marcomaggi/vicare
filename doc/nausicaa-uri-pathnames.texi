@@ -362,260 +362,6 @@ pathnames.
 @end deftypefn
 
 @c page
-@node uri pathnames native
-@subsection Manipulating native pathnames
-
-
-@cindex @library{nausicaa uri pathnames}, library
-@cindex Library @library{nausicaa uri pathnames}
-
-
-The library @library{nausicaa uri pathnames} defines an @api{} to handle
-pathname objects in a way that is independent from the underlying
-platform.  It does so by reexporting renamed bindings defined by a
-platform--dependent library; for example on Unix--like systems: it
-reexports bindings from @library{nausicaa uri pathnames unix}.
-
-The selection of the platform--specific library happens at package
-configuration time; at present only Unix style pathnames are supported.
-
-The following bindings defined by @library{nausicaa uri pathnames
-abstract} are reexported by @library{nausicaa uri pathnames}:
-
-@example
-<pathname>
-<absolute-pathname>
-<relative-pathname>
-@end example
-
-@menu
-* uri pathnames native absolute::  Absolute pathname native class.
-* uri pathnames native relative::  Relative pathname native class.
-* uri pathnames native utils::     Native pathname utilities.
-@end menu
-
-@c page
-@node uri pathnames native absolute
-@subsubsection Absolute pathname native class
-
-
-The following bindings are exported by the library @library{nausicaa uri
-pathnames}.
-
-
-@deftp Class @aclass{absolute-native-pathname}
-Type of absolute native pathnames; it is derived from
-@class{absolute-pathname}.
-@end deftp
-
-@c ------------------------------------------------------------
-
-@subsubheading Makers, constructors, predicates
-
-
-@defop {Common constructor} @aclass{absolute-native-pathname} constructor @var{pathname}
-Build and return a new instance of @class{absolute-native-pathname} from
-@var{pathname}, which must be a string or bytevector representing an
-absolute native pathname.
-@end defop
-
-
-@defop Maker @aclass{absolute-native-pathname} @aclass{absolute-native-pathname} (@meta{pathname})
-Build and return a new instance of @class{absolute-native-pathname}
-using the common constructor.
-@end defop
-
-@c ------------------------------------------------------------
-
-@subsubheading Methods
-
-
-@defmethod @aclass{absolute-native-pathname} extension
-Return a bytevector representing the extension of the last segment of
-the instance pathname, dot separator @strong{not} included.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} dirname
-Return an @class{absolute-native-pathname} object representing the
-directory part of the instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} tailname
-Return a @class{relative-native-pathname} object representing the last
-segment of the instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} rootname
-Return an @class{absolute-native-pathname} object representing the
-instance pathname with the extension of the last segment stripped, dot
-separator @strong{not} included.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} split
-Return 2 values: a boolean, @true{} if the instance pathname is
-absolute; a list of bytevectors each representing a segment of the
-instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
-Return @true{} if the instance pathname is a prefix of @var{ptn},
-otherwise return @false{}.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
-Return @true{} if the instance pathname is a suffix of @var{ptn},
-otherwise return @false{}.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
-Return a new pathname object representing the instance pathname
-prepended to @var{ptn}.
-@end defmethod
-
-
-@defmethod @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{string})
-Return an @aclass{absolute-native-pathname} object representing the
-instance pathname with the extension of the last segment replaced by
-@var{ext}.
-@end defmethod
-
-@c page
-@node uri pathnames native relative
-@subsubsection Relative pathname native class
-
-
-The following bindings are exported by the library @library{nausicaa uri
-pathnames}.
-
-
-@deftp Class @aclass{relative-native-pathname}
-Type of relative native pathnames; it is derived from
-@class{relative-pathname}.
-@end deftp
-
-@c ------------------------------------------------------------
-
-@subsubheading Makers, constructors, predicates
-
-
-@defop {Common constructor} @aclass{relative-native-pathname} constructor @var{pathname}
-Build and return a new instance of @class{relative-native-pathname} from
-@var{pathname}, which must be a string or bytevector representing an
-relative native pathname.
-@end defop
-
-
-@defop Maker @aclass{relative-native-pathname} @aclass{relative-native-pathname} (@meta{pathname})
-Build and return a new instance of @class{relative-native-pathname}
-using the common constructor.
-@end defop
-
-@c ------------------------------------------------------------
-
-@subsubheading Methods
-
-
-@defmethod @aclass{relative-native-pathname} extension
-Return a bytevector representing the extension of the last segment of
-the instance pathname, dot separator @strong{not} included.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} dirname
-Return a @class{absolute-native-pathname} object representing the
-directory part of the instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} tailname
-Return a @class{relative-native-pathname} object representing the last
-segment of the instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} rootname
-Return a @class{absolute-native-pathname} object representing the
-instance pathname with the extension of the last segment stripped, dot
-separator @strong{not} included.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} split
-Return 2 values: a boolean, @false{} if the instance pathname is
-relative; a list of bytevectors each representing a segment of the
-instance pathname.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
-Return @true{} if the instance pathname is a prefix of @var{ptn},
-otherwise return @false{}.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
-Return @true{} if the instance pathname is a suffix of @var{ptn},
-otherwise return @false{}.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{relative-native-pathname})
-Return a new pathname object representing the instance pathname
-prepended to @var{ptn}.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} append (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} append (@var{ptn} @aclass{relative-native-pathname})
-Return a new pathname object representing the instance pathname appended
-to @var{ptn}.
-@end defmethod
-
-
-@defmethod @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{string})
-Return a @aclass{relative-native-pathname} object representing the
-instance pathname with the extension of the last segment replaced by
-@var{ext}.
-@end defmethod
-
-@c page
-@node uri pathnames native utils
-@subsubsection Native pathname utilities
-
-
-The following bindings are exported by the library @library{nausicaa uri
-pathnames}.
-
-
-@deffn Multimethod pathname (@var{ptn} @aclass{string})
-@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
-Build and return a new instance of @class{absolute-native-pathname} or
-@class{relative-native-pathname} from @var{ptn}, which must be a string
-or bytevector representing an absolute or relative native pathname.
-@end deffn
-
-
-@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-native-pathname}) (@varii{ptn} @aclass{absolute-native-pathname})
-@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-native-pathname}) (@varii{ptn} @aclass{relative-native-pathname})
-Implementations for the multimethod @func{pathname=?} defined by
-@library{nausicaa uri pathnames abstract}.
-@end deffn
-
-@c page
 @node uri pathnames unix
 @subsection Manipulating Unix pathnames
 
@@ -988,5 +734,259 @@ derived from @condition{error}.
 Signals an error while normalising a Unix pathname representation; it is
 derived from @condition{error}.
 @end deftp
+
+@c page
+@node uri pathnames native
+@subsection Manipulating native pathnames
+
+
+@cindex @library{nausicaa uri pathnames}, library
+@cindex Library @library{nausicaa uri pathnames}
+
+
+The library @library{nausicaa uri pathnames} defines an @api{} to handle
+pathname objects in a way that is independent from the underlying
+platform.  It does so by reexporting renamed bindings defined by a
+platform--dependent library; for example on Unix--like systems: it
+reexports bindings from @library{nausicaa uri pathnames unix}.
+
+The selection of the platform--specific library happens at package
+configuration time; at present only Unix style pathnames are supported.
+
+The following bindings defined by @library{nausicaa uri pathnames
+abstract} are reexported by @library{nausicaa uri pathnames}:
+
+@example
+<pathname>
+<absolute-pathname>
+<relative-pathname>
+@end example
+
+@menu
+* uri pathnames native absolute::  Absolute pathname native class.
+* uri pathnames native relative::  Relative pathname native class.
+* uri pathnames native utils::     Native pathname utilities.
+@end menu
+
+@c page
+@node uri pathnames native absolute
+@subsubsection Absolute pathname native class
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deftp Class @aclass{absolute-native-pathname}
+Type of absolute native pathnames; it is derived from
+@class{absolute-pathname}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Makers, constructors, predicates
+
+
+@defop {Common constructor} @aclass{absolute-native-pathname} constructor @var{pathname}
+Build and return a new instance of @class{absolute-native-pathname} from
+@var{pathname}, which must be a string or bytevector representing an
+absolute native pathname.
+@end defop
+
+
+@defop Maker @aclass{absolute-native-pathname} @aclass{absolute-native-pathname} (@meta{pathname})
+Build and return a new instance of @class{absolute-native-pathname}
+using the common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{absolute-native-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} dirname
+Return an @class{absolute-native-pathname} object representing the
+directory part of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} tailname
+Return a @class{relative-native-pathname} object representing the last
+segment of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} rootname
+Return an @class{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment stripped, dot
+separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} split
+Return 2 values: a boolean, @true{} if the instance pathname is
+absolute; a list of bytevectors each representing a segment of the
+instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{string})
+Return an @aclass{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.
+@end defmethod
+
+@c page
+@node uri pathnames native relative
+@subsubsection Relative pathname native class
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deftp Class @aclass{relative-native-pathname}
+Type of relative native pathnames; it is derived from
+@class{relative-pathname}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Makers, constructors, predicates
+
+
+@defop {Common constructor} @aclass{relative-native-pathname} constructor @var{pathname}
+Build and return a new instance of @class{relative-native-pathname} from
+@var{pathname}, which must be a string or bytevector representing an
+relative native pathname.
+@end defop
+
+
+@defop Maker @aclass{relative-native-pathname} @aclass{relative-native-pathname} (@meta{pathname})
+Build and return a new instance of @class{relative-native-pathname}
+using the common constructor.
+@end defop
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@defmethod @aclass{relative-native-pathname} extension
+Return a bytevector representing the extension of the last segment of
+the instance pathname, dot separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} dirname
+Return a @class{absolute-native-pathname} object representing the
+directory part of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} tailname
+Return a @class{relative-native-pathname} object representing the last
+segment of the instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} rootname
+Return a @class{absolute-native-pathname} object representing the
+instance pathname with the extension of the last segment stripped, dot
+separator @strong{not} included.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} split
+Return 2 values: a boolean, @false{} if the instance pathname is
+relative; a list of bytevectors each representing a segment of the
+instance pathname.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a prefix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+Return @true{} if the instance pathname is a suffix of @var{ptn},
+otherwise return @false{}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{relative-native-pathname})
+Return a new pathname object representing the instance pathname
+prepended to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} append (@var{ptn} @aclass{absolute-native-pathname})
+@defmethodx @aclass{relative-native-pathname} append (@var{ptn} @aclass{relative-native-pathname})
+Return a new pathname object representing the instance pathname appended
+to @var{ptn}.
+@end defmethod
+
+
+@defmethod @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
+@defmethodx @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{string})
+Return a @aclass{relative-native-pathname} object representing the
+instance pathname with the extension of the last segment replaced by
+@var{ext}.
+@end defmethod
+
+@c page
+@node uri pathnames native utils
+@subsubsection Native pathname utilities
+
+
+The following bindings are exported by the library @library{nausicaa uri
+pathnames}.
+
+
+@deffn Multimethod pathname (@var{ptn} @aclass{string})
+@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
+Build and return a new instance of @class{absolute-native-pathname} or
+@class{relative-native-pathname} from @var{ptn}, which must be a string
+or bytevector representing an absolute or relative native pathname.
+@end deffn
+
+
+@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-native-pathname}) (@varii{ptn} @aclass{absolute-native-pathname})
+@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-native-pathname}) (@varii{ptn} @aclass{relative-native-pathname})
+Implementations for the multimethod @func{pathname=?} defined by
+@library{nausicaa uri pathnames abstract}.
+@end deffn
 
 @c end of file
