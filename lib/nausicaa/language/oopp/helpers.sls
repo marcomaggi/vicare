@@ -350,7 +350,7 @@
       (syntax-case args-stx (=>)
 	;;There is no arrow, all the arguments are "keys".
 	(()
-	 (values keys-stx '()))
+	 (values (reverse keys-stx) '()))
 
 	;;There is an arrow!
 	((=> ?after-arg0 ?after-arg ...)
@@ -411,7 +411,7 @@
       (syntax-case args-stx (=>)
 	;;There is no arrow, all the arguments are "before".
 	(()
-	 (values before-args-stx '()))
+	 (values (reverse before-args-stx) '()))
 
 	;;There is an arrow!
 	((=> ?after-arg0 ?after-arg ...)
