@@ -7,7 +7,16 @@ EXTRA_DIST = \
 	vicare/platform/words.sls.in					\
 	nausicaa/uri/pathnames.sls.in
 
-dist_pkglibexec_SCRIPTS	= compile-all.sps
+dist_pkglibexec_SCRIPTS	= \
+	compile-vicare-platform.sps					\
+	compile-vicare-unsafe.sps					\
+	compile-vicare-language-extensions.sps				\
+	compile-vicare-crypto.sps					\
+	compile-vicare-numerics.sps					\
+	compile-vicare-containers.sps					\
+	compile-vicare-parser-tools.sps					\
+	compile-vicare-net.sps						\
+	compile-vicare-misc.sps
 
 libvicaredir		= $(libdir)/vicare-scheme
 
@@ -436,7 +445,16 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
 vfasl:
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-language-extensions.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-crypto.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-numerics.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-containers.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-parser-tools.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-net.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-misc.sps
+
 if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
@@ -479,7 +497,15 @@ if WANT_CRE2
 endif
 
 vfasl-installed:
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-language-extensions.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-crypto.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-numerics.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-containers.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-parser-tools.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-net.sps
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-misc.sps
 if WANT_SRFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
