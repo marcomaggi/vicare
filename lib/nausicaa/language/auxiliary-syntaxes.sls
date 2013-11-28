@@ -73,12 +73,12 @@
     namespaces
 
     ;; miscellaneous
-    <> <...> -> <-)
+    <> <...> -> <- =>)
   (import (only (vicare)
 		define-auxiliary-syntaxes
 		;; bindings from (rnrs records syntactic (6))
 		parent sealed opaque parent-rtd nongenerative
-		protocol fields mutable immutable))
+		protocol fields mutable immutable =>))
 
 
 (define-auxiliary-syntaxes

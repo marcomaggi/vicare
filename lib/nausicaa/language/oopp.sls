@@ -56,7 +56,8 @@
     make-tagged-binding-violation
     tagged-binding-violation?
 
-    ;; auxiliary keywords
+    ;; auxiliary syntaxes
+    =>
     (rename (aux.parent			parent)
 	    (aux.nongenerative		nongenerative)
 	    (aux.abstract		abstract)
