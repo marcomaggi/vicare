@@ -53,6 +53,11 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/identifier-properties.sls		\
 	vicare/language-extensions/identifier-substitutions.sls		\
 	vicare/language-extensions/increments.sls			\
+	vicare/language-extensions/infix/auxiliary-syntaxes.sls		\
+	vicare/language-extensions/infix/lr-driver.sls			\
+	vicare/language-extensions/infix/parser-table.sls		\
+	vicare/language-extensions/infix/parser-utils.sls		\
+	vicare/language-extensions/infix/tokens.sls			\
 	vicare/language-extensions/infix.sls				\
 	vicare/language-extensions/makers.sls				\
 	vicare/language-extensions/keywords.sls				\

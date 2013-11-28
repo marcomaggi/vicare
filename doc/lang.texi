@@ -1562,8 +1562,8 @@ fxarithmetic-shift-left
 fxarithmetic-shift-right
 @end example
 
-All the operators are left-associative with the exception of FXNOT which
-is non-associative:
+All the operators are left--associative with the exception of
+@func{fxnot} which is non--associative:
 
 @example
 (infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
@@ -1680,6 +1680,18 @@ of the infix expression grammar.
 
 @item
 Numbers and all the other values are just put there as operands.
+
+@item
+The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
+@func{quasisyntax} are not subject to infix to prefix conversion; the
+use of such syntaxes just expands to the prefix object:
+
+@example
+(infix (quote       ciao))  @expansion{} (quote ciao)
+(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
+(infix (syntax      ciao))  @expansion{} (syntax ciao)
+(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
+@end example
 
 @item
 As a special exception: the binding @func{begin} from @library{vicare}
