@@ -229,18 +229,18 @@
   (define make-infix-transformer
     (case-lambda
      (()
-      (make-infix-transformer (lambda (atom kont) (kont atom))))
-     ((atom->token)
+      (make-infix-transformer (lambda (atom kont) (kont atom)) #'begin))
+     ((atom->token begin-id)
       (lambda (stx)
 	(syntax-case stx ()
 	  ((?infix ?operand ...)
-	   (let ((stx-lst (sexp->list #'(?operand ...))))
+	   (let ((stx-lst (sexp->list #'(?operand ...) begin-id)))
 	     (cond ((null? stx-lst)
 		    #'(values))
 		   ((not (pair? stx-lst))
 		    stx-lst)
 		   (else
-		    (let ((tokens (reverse (stx-list->reversed-tokens stx-lst '() atom->token))))
+		    (let ((tokens (reverse (stx-list->reversed-tokens stx-lst '() atom->token begin-id))))
 		      ((make-infix-sexp-parser) ;parser function
 		       (lambda ()			;lexer function
 			 (if (null? tokens)
@@ -256,21 +256,30 @@
 	  )))
      ))
 
-  (define (sexp->list stx)
+  (define (sexp->list stx begin-id)
     (syntax-case stx (begin syntax quasisyntax quote quasiquote)
-      (()		'())
-      ((begin . ?body)		stx)
+      (()			'())
       ((quote . ?body)		stx)
       ((quasiquote . ?body)	stx)
       ((syntax . ?body)		stx)
       ((quasisyntax . ?body)	stx)
-      ((?car . ?cdr)		(cons (sexp->list #'?car) (sexp->list #'?cdr)))
+
+      ((?begin . ?body)
+       (and (identifier? #'?begin)
+	    (free-identifier=? #'?begin begin-id))
+       stx)
+
+      ((?car . ?cdr)
+       (cons (sexp->list #'?car begin-id)
+	     (sexp->list #'?cdr begin-id)))
+
       (?atom
        (identifier? #'?atom)
        #'?atom)
+
       (?atom			(syntax->datum #'?atom))))
 
-  (define (stx-list->reversed-tokens sexp reversed-tokens atom->token)
+  (define (stx-list->reversed-tokens sexp reversed-tokens atom->token begin-id)
     ;;Convert a list  of syntax objects to the reversed  list of tokens.
     ;;This is a recursive function:  it recurses to process nested lists
     ;;in the  input SEXP; for this  reason we cannot reverse  the tokens
@@ -283,7 +292,7 @@
 	       (stx-list->reversed-tokens (cdr sexp)
 					  (cons (atom->token atom identifier->token)
 						reversed-tokens)
-					  atom->token))
+					  atom->token begin-id))
 
 	      ((pair? atom)
 	       (if (and (identifier? (car atom))
@@ -292,7 +301,7 @@
 		    (cdr sexp)
 		    (cons (make-<lexical-token> 'NUM (cons #'begin (cdr atom)))
 			  reversed-tokens)
-		    atom->token)
+		    atom->token begin-id)
 		 ;;Parentheses in reverse order  because the TOKENS will
 		 ;;be reversed!!!
 		 (stx-list->reversed-tokens
@@ -300,8 +309,8 @@
 		  (cons tok.right-paren
 			(stx-list->reversed-tokens atom
 						   (cons tok.left-paren reversed-tokens)
-						   atom->token))
-		  atom->token)))
+						   atom->token begin-id))
+		  atom->token begin-id)))
 
 	      (else
 	       ;;Everything else is just put  there as "NUM", that is as
@@ -309,7 +318,7 @@
 	       (stx-list->reversed-tokens (cdr sexp)
 					  (cons (make-<lexical-token> 'NUM atom)
 						reversed-tokens)
-					  atom->token))))))
+					  atom->token begin-id))))))
 
   #| end of module |# )
 
