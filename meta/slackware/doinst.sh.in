@@ -19,7 +19,15 @@ install -m 0775 -d "$fasldir"
 # symbolic links are already there from the old package.
 
 for item in \
-    compile-all.sps				\
+    compile-vicare-platform.sps			\
+    compile-vicare-unsafe.sps			\
+    compile-vicare-language-extensions.sps	\
+    compile-vicare-crypto.sps			\
+    compile-vicare-numerics.sps			\
+    compile-vicare-containers.sps		\
+    compile-vicare-parser-tools.sps		\
+    compile-vicare-net.sps			\
+    compile-vicare-misc.sps			\
     compile-srfi.sps				\
     compile-nausicaa-language.sps		\
     compile-nausicaa-containers.sps		\
