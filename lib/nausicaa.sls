@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8 -*-
 ;;;
-;;;Part of: Nausicaa/OOPP
+;;;Part of: Vicare Scheme
 ;;;Contents: augmented Scheme language around (rnrs)
 ;;;Date: Wed May 23, 2012
 ;;;

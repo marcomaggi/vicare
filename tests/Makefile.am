@@ -306,7 +306,14 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	test-nausicaa-uri-uri.sps					\
 	test-nausicaa-uri-pathnames-unix.sps				\
 	\
-	test-issue-058-lalr-unary-prec.sps
+	test-issue-058-lalr-unary-prec.sps				\
+	\
+	test-mehve-arithmetics.sps					\
+	test-mehve-infix.sps						\
+	test-mehve-input-output.sps					\
+	test-mehve-numeric-predicates.sps				\
+	test-mehve-parts.sps						\
+	test-mehve-transcendental.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\
