@@ -35,8 +35,8 @@ identifier.
 * oopp predicate::              Defining custom predicates.
 * oopp fields::                 Defining concrete and virtual fields.
 * oopp method::                 Defining classes having methods.
-* oopp setter::                 Defining classes having custom
-                                setters and getters.
+* oopp getter::                 Defining classes having custom getters.
+* oopp setter::                 Defining classes having custom setters.
 * oopp mixins::                 Composing with mixins.
 * oopp satisfy::                Verifying definition constraints.
 * oopp shadow::                 Label shadowing.
@@ -553,12 +553,15 @@ O               @result{} (77 . 99)
 
 @c ---------
 
-@item (@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
-Expands to the result of applying the type's getter transformer to the
-syntax object (lookout for the parentheses):
+@item (@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
+@itemx (@meta{var} (@metao{key} ...) (@meta{key} ...) ... => @metao{form} @meta{form} @dots{})
+Expands to the result of applying the type's getter transformer to one
+of the syntax objects (lookout for the parentheses):
 
 @example
-#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
+     => @metao{form} @meta{form} @dots{})
 @end example
 
 @noindent
@@ -590,6 +593,35 @@ exception to be raised at expand time.  Examples:
 
 (M[0][2])               @result{} 3
 (M[1][1])               @result{} 5
+@end example
+
+@noindent
+other examples:
+
+@example
+(define-label <fixnum-vector>
+  (parent <vector>)
+  (getter
+   (lambda (stx)
+     (syntax-case stx (=>)
+       ((?var ((?index)))
+        #'(vector-ref ?var ?index))
+       ((?var ((?index)) => ?form0 ?form ...)
+        #'(let (((fx <fixnum>) (?var[?index])))
+            (fx ?form0 ?form ...)))
+       ))))
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => string))
+@result{} "1"
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => odd?))
+@result{} #t
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[2] => * 10))
+@result{} 20
 @end example
 
 @c ---------
@@ -1960,7 +1992,7 @@ the macro definition is expanded to:
 where @code{transformer-name} is an automatically generated identifier
 built by appending a dash and @meta{method-name} to the type name.
 @meta{transformer} must evaluate to a macro transformer: a function
-accepting a sintax object as single argument and returning a syntax
+accepting a syntax object as single argument and returning a syntax
 object as single value.  The first argument to the macro will be the
 type instance.
 
@@ -2090,8 +2122,8 @@ language oopp} library, but we can do it using the facilities of the
 @end example
 
 @c page
-@node oopp setter
-@section Getter and setter syntaxes
+@node oopp getter
+@section Getter syntaxes
 
 
 @deffn {Auxiliary Syntax} getter @meta{transformer}
@@ -2099,30 +2131,60 @@ Add a getter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a sintax object as single argument and
+transformer: a function accepting a syntax object as single argument and
 returning a syntax object as single value.
 
-Whenever a tagged variable @meta{var} is used as follows (lookout for
-the parentheses):
+There are 2 possible forms (lookout for the parentheses!):
+
+@itemize
+@item
+Whenever a tagged variable @meta{var} is used as follows:
 
 @example
-(@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
+(@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
 @end example
 
 @noindent
-the getter transformer is applied to the syntax object (lookout for the
-parentheses):
+the getter transformer is applied to the syntax object:
 
 @example
-#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...))
 @end example
 
 @noindent
 and the return value of the transformer is the result of the expansion.
 
-Getter definition examples:
+@item
+Whenever a tagged variable @meta{var} is used as follows:
 
 @example
+(@meta{var} (@metao{key} ...) (@meta{key} ...) ...
+   => @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+the getter transformer is applied to the syntax object:
+
+@example
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
+   => @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+and the return value of the transformer is the result of the expansion.
+In this form @code{=>} is the auxiliary syntax exported by both
+@library{nausicaa language oopp} and @library{nausicaa language
+auxiliary-syntaxes}, it is the same one exported by @rsixlibrary{base}.
+
+The @meta{form} arguments are meant to be used as nested tag members
+usage for the value returned by the getter.
+@end itemize
+
+Getter definition examples without member composition:
+
+@example
+(import (nausicaa))
+
 (define-label <vector>
   (getter (lambda (stx)
             (syntax-case stx ()
@@ -2148,7 +2210,41 @@ Getter definition examples:
 (M[0][2])               @result{} 3
 (M[1][1])               @result{} 5
 @end example
+
+Getter definition examples with member composition:
+
+@example
+(import (nausicaa))
+
+(define-label <fixnum-vector>
+  (parent <vector>)
+  (getter
+   (lambda (stx)
+     (syntax-case stx (=>)
+       ((?var ((?index)))
+        #'(vector-ref ?var ?index))
+       ((?var ((?index)) => ?form0 ?form ...)
+        #'(let (((fx <fixnum>) (?var[?index])))
+            (fx ?form0 ?form ...)))
+       ))))
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => string))
+@result{} "1"
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => odd?))
+@result{} #t
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[2] => * 10))
+@result{} 20
+@end example
 @end deffn
+
+@c page
+@node oopp setter
+@section Setter syntaxes
 
 
 @deffn {Auxiliary Syntax} setter @meta{transformer}
@@ -2156,7 +2252,7 @@ Add a setter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a sintax object as single argument and
+transformer: a function accepting a syntax object as single argument and
 returning a syntax object as single value.
 
 Whenever a tagged variable @meta{var} is used as follows (lookout for

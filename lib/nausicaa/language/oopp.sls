@@ -585,6 +585,8 @@
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
+		  ;;Invoke  the  getter   transformer  function  without
+		  ;;nested member use.
 		  ((_ :getter ??expr (??var ((??key0 (... ...))
 					     (??key (... ...))
 					     (... ...))))
@@ -592,6 +594,17 @@
 		   (%the-getter #'(??var ((??key0 (... ...))
 					  (??key  (... ...))
 					  (... ...)))))
+		  ;;Invoke the  getter transformer function  with nested
+		  ;;member use.
+		  ((_ :getter ??expr (??var ((??key0 (... ...))
+					     (??key (... ...))
+					     (... ...))
+					    => ?form0 ?form (... ...)))
+		   (identifier? #'??var)
+		   (%the-getter #'(??var ((??key0 (... ...))
+					  (??key  (... ...))
+					  (... ...))
+					 => ?form0 ?form (... ...))))
 
 		  ((_ :setter ??expr (??var ((??key0 (... ...))
 					     (??key (... ...))
@@ -1085,6 +1098,8 @@
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
+		  ;;Invoke  the  getter   transformer  function  without
+		  ;;nested member use.
 		  ((_ :getter ??expr (??var ((??key0 (... ...))
 					     (??key (... ...))
 					     (... ...))))
@@ -1092,6 +1107,17 @@
 		   (%the-getter #'(??var ((??key0 (... ...))
 					  (??key  (... ...))
 					  (... ...)))))
+		  ;;Invoke the  getter transformer function  with nested
+		  ;;member use.
+		  ((_ :getter ??expr (??var ((??key0 (... ...))
+					     (??key (... ...))
+					     (... ...))
+					    => ?form0 ?form (... ...)))
+		   (identifier? #'??var)
+		   (%the-getter #'(??var ((??key0 (... ...))
+					  (??key  (... ...))
+					  (... ...))
+					 => ?form0 ?form (... ...))))
 
 		  ((_ :setter ??expr (??var ((??key0 (... ...))
 					     (??key (... ...))
