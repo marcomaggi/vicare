@@ -1738,6 +1738,8 @@
 
 ;;;; done exports
 
+   initialise-mehve
+
 )
 
 
@@ -1780,16 +1782,17 @@
 
 ;;;; component libraris initialisation
 
-;;These initialisation  function calls are needed  because, according to
-;;R6RS, the expander  might delay library instantiation  until a binding
-;;from an  imported library is actually  used.  This does not  play well
-;;with initialisation of multimethods.
-;;
-(initialise-mehve-numerics-predicates)
-(initialise-mehve-numerics-arithmetics)
-(initialise-mehve-numerics-parts)
-(initialise-mehve-numerics-transcendental)
-(initialise-mehve-input-output)
+(define (initialise-mehve)
+  ;;These initialisation function calls are needed because, according to
+  ;;R6RS, the expander might delay library instantiation until a binding
+  ;;from an imported library is actually  used.  This does not play well
+  ;;with initialisation of multimethods.
+  ;;
+  (initialise-mehve-numerics-predicates)
+  (initialise-mehve-numerics-arithmetics)
+  (initialise-mehve-numerics-parts)
+  (initialise-mehve-numerics-transcendental)
+  (initialise-mehve-input-output))
 
 
 ;;;; done
