@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Nausicaa/Scheme
-;;;Contents: tests for mehve input output functions
+;;;Part of: Vicare Scheme
+;;;Contents: tests for mehve input/output functions
 ;;;Date: Mon Jun 20, 2011
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,21 +27,23 @@
 
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve input-output) mehve.)
-  (nausicaa checks))
+  (prefix (nausicaa mehve language input-output) mehve.)
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing mehve, input output functions\n")
+(check-display "*** testing Mehve: input/output functions\n")
+
+(initialise-mehve)
 
 
 (parametrise ((check-test-name	'display))
 
   (define-method (mehve.display-2 (o <vector>) (p <port>))
-    (o.for-each (lambda (item)
+    (o for-each (lambda (item)
 		  (display item p))))
 
   (define-method (mehve.write-2 (o <vector>) (p <port>))
-    (o.for-each (lambda (item)
+    (o for-each (lambda (item)
 		  (write item p))))
 
 ;;; --------------------------------------------------------------------

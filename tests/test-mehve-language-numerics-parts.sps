@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for mehve language, part functions
 ;;;Date: Fri Jun 17, 2011
 ;;;
@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,12 +27,14 @@
 
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve parts) mehve.)
+  (prefix (nausicaa mehve language numerics-parts) mehve.)
   (prefix (rnrs) rnrs.)
-  (nausicaa checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Mehve language, parts\n")
+(check-display "*** testing Mehve language: numerics part functions\n")
+
+(initialise-mehve)
 
 
 ;;;; helpers
@@ -67,20 +69,20 @@
 (parametrise ((check-test-name	'part-rationals))
 
   (define-method (mehve.numerator (o <vector>))
-    (o.map numerator))
-  (define-method (mehve.numerator (o <list>))
-    (o.map numerator))
+    (o map numerator))
+  (define-method (mehve.numerator (o <spine>))
+    (o map numerator))
 
   (define-method (mehve.denominator (o <vector>))
-    (o.map denominator))
-  (define-method (mehve.denominator (o <list>))
-    (o.map denominator))
+    (o map denominator))
+  (define-method (mehve.denominator (o <spine>))
+    (o map denominator))
 
   (define-method (mehve.rationalize (a <vector>) (epsilon <real>))
-    (a.map (lambda (x)
+    (a map (lambda (x)
 	     (rationalize x epsilon))))
-  (define-method (mehve.rationalize (a <list>) (epsilon <real>))
-    (a.map (lambda (x)
+  (define-method (mehve.rationalize (a <spine>) (epsilon <real>))
+    (a map (lambda (x)
 	     (rationalize x epsilon))))
 
 ;;; --------------------------------------------------------------------
@@ -113,24 +115,24 @@
 (parametrise ((check-test-name	'part-rounding))
 
   (define-method (mehve.floor (o <vector>))
-    (o.map floor))
-  (define-method (mehve.floor (o <list>))
-    (o.map floor))
+    (o map floor))
+  (define-method (mehve.floor (o <spine>))
+    (o map floor))
 
   (define-method (mehve.ceiling (o <vector>))
-    (o.map ceiling))
-  (define-method (mehve.ceiling (o <list>))
-    (o.map ceiling))
+    (o map ceiling))
+  (define-method (mehve.ceiling (o <spine>))
+    (o map ceiling))
 
   (define-method (mehve.truncate (o <vector>))
-    (o.map truncate))
-  (define-method (mehve.truncate (o <list>))
-    (o.map truncate))
+    (o map truncate))
+  (define-method (mehve.truncate (o <spine>))
+    (o map truncate))
 
   (define-method (mehve.round (o <vector>))
-    (o.map round))
-  (define-method (mehve.round (o <list>))
-    (o.map round))
+    (o map round))
+  (define-method (mehve.round (o <spine>))
+    (o map round))
 
 ;;; --------------------------------------------------------------------
 
@@ -164,34 +166,34 @@
 (parametrise ((check-test-name	'part-complex))
 
   (define-method (mehve.real-part (o <vector>))
-    (o.map real-part))
-  (define-method (mehve.real-part (o <list>))
-    (o.map real-part))
+    (o map real-part))
+  (define-method (mehve.real-part (o <spine>))
+    (o map real-part))
 
   (define-method (mehve.imag-part (o <vector>))
-    (o.map imag-part))
-  (define-method (mehve.imag-part (o <list>))
-    (o.map imag-part))
+    (o map imag-part))
+  (define-method (mehve.imag-part (o <spine>))
+    (o map imag-part))
 
   (define-method (mehve.magnitude (o <vector>))
-    (o.map magnitude))
-  (define-method (mehve.magnitude (o <list>))
-    (o.map magnitude))
+    (o map magnitude))
+  (define-method (mehve.magnitude (o <spine>))
+    (o map magnitude))
 
   (define-method (mehve.angle (o <vector>))
-    (o.map angle))
-  (define-method (mehve.angle (o <list>))
-    (o.map angle))
+    (o map angle))
+  (define-method (mehve.angle (o <spine>))
+    (o map angle))
 
   (define-method (mehve.make-rectangular (R <vector>) (I <vector>))
-    (R.map make-rectangular I))
-  (define-method (mehve.make-rectangular (R <list>) (I <list>))
-    (R.map make-rectangular I))
+    (R map make-rectangular I))
+  (define-method (mehve.make-rectangular (R <spine>) (I <spine>))
+    (R map make-rectangular I))
 
   (define-method (mehve.make-polar (M <vector>) (A <vector>))
-    (M.map make-polar A))
-  (define-method (mehve.make-polar (M <list>) (A <list>))
-    (M.map make-polar A))
+    (M map make-polar A))
+  (define-method (mehve.make-polar (M <spine>) (A <spine>))
+    (M map make-polar A))
 
 ;;; --------------------------------------------------------------------
 
