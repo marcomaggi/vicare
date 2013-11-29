@@ -1,5 +1,5 @@
 @node mehve
-@chapter The @library{nausicaa mehve} language
+@chapter The language @library{nausicaa mehve}
 
 
 @cindex @library{nausicaa mehve}, library
@@ -9,10 +9,11 @@
 The library @library{nausicaa mehve} implements a language in the same
 way the library @library{nausicaa} does; in facts, it reexports all the
 bindings of @library{nausicaa}, redefining some, and it is a possible
-replacement for it.
+replacement for it.  Mehve is meant to make heavy use of multimethos.
 
 @menu
-* mehve intro::                 Generic functions and their
+* mehve intro::                 Using the language.
+* mehve multimethods::          Generic functions and their
                                 customisation.
 * mehve io::                    Input/output generic functions.
 
@@ -27,6 +28,28 @@ Mathematics
 
 @c page
 @node mehve intro
+@section Using the language
+
+
+The library @library{nausicaa mehve} exports the language for users;
+other component libraries in the hierarchy @library{nausicaa mehve
+language ---} export multimethod bindings that can be used to extend the
+generic functions.
+
+Before making use of the facilities of Mehve, we @strong{must} call the
+function @func{initialise-mehve}.
+
+
+@defun initialise-mehve
+Initialise the multimethods and the component libraries.  Calling this
+function is needed because, according to @rnrs{6}, a compliant Scheme
+implementation might instantiate a library only when an exported binding
+is actually accessed; this behaviour does not play well with
+multimethods.
+@end defun
+
+@c page
+@node mehve multimethods
 @section Generic functions and their customisation
 
 
