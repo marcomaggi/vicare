@@ -12,10 +12,6 @@
 @include version-nausicaa.texi
 @include macros.texi
 
-@macro oopp{}
-@acronym{OOPP}
-@end macro
-
 @c page
 @c ------------------------------------------------------------
 @c Values.
