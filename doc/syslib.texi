@@ -1083,6 +1083,7 @@ system $numerics} export bindings for low level operations on numbers.
 * syslib numerics sign::        Sign of real numbers.
 * syslib numerics expt::        Raising numbers to power.
 * syslib numerics sqrt::        Square root of numbers.
+* syslib numerics cbrt::        Cubic root of numbers.
 * syslib numerics log::         Logarithms of numbers.
 * syslib numerics exp::         Exponentials of numbers.
 * syslib numerics sin::         Trigonometric sine.
@@ -4095,6 +4096,45 @@ residual of @var{fx}.
 @deffn {Unsafe Operation} $exact-integer-sqrt-bignum @var{bn}
 Return two non--negative exact integer objects being the root and the
 residual of @var{bn}.
+@end deffn
+
+@c page
+@node syslib numerics cbrt
+@subsection Cubic root of numbers
+
+
+@deffn {Unsafe Operation} $cbrt-fixnum @var{fx}
+Compute the principal cubic root of @var{fx}; return an unspecified
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cbrt-bignum @var{bn}
+Compute the principal cubic root of @var{bn}; return an unspecified
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cbrt-ratnum @var{rt}
+Compute the principal cubic root of @var{rt}; return an unspecified
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cbrt-flonum @var{fl}
+Compute the principal cubic root of @var{fl}; return a flonum, compnum
+or cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cbrt-compnum @var{cn}
+Compute the principal cubic root of @var{cn}; return an unspecified
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cbrt-cflonum @var{cfl}
+Compute the principal cubic root of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page

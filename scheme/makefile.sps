@@ -3289,6 +3289,13 @@
     ($exact-integer-sqrt-fixnum			$numerics $vicare-numerics)
     ($exact-integer-sqrt-bignum			$numerics $vicare-numerics)
 
+    ($cbrt-fixnum				$numerics $vicare-numerics)
+    ($cbrt-flonum				$numerics $vicare-numerics)
+    ($cbrt-bignum				$numerics $vicare-numerics)
+    ($cbrt-ratnum				$numerics $vicare-numerics)
+    ($cbrt-compnum				$numerics $vicare-numerics)
+    ($cbrt-cflonum				$numerics $vicare-numerics)
+
     ($log-fixnum				$numerics $vicare-numerics)
     ($log-flonum				$numerics $vicare-numerics)
     ($log-bignum				$numerics $vicare-numerics)

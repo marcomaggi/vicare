@@ -112,6 +112,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-numerics-hyper-atanh.sps				\
 	test-vicare-numerics-complex-numbers.sps			\
 	test-vicare-numerics-sqrt.sps					\
+	test-vicare-numerics-cbrt.sps					\
 	test-vicare-numerics-bitwise.sps				\
 	test-vicare-parameters.sps					\
 	test-vicare-parser-logic.sps					\
@@ -308,12 +309,12 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	\
 	test-issue-058-lalr-unary-prec.sps				\
 	\
-	test-mehve-arithmetics.sps					\
-	test-mehve-infix.sps						\
-	test-mehve-input-output.sps					\
-	test-mehve-numeric-predicates.sps				\
-	test-mehve-parts.sps						\
-	test-mehve-transcendental.sps
+	test-mehve-language-numerics-arithmetics.sps			\
+	test-mehve-language-numerics-predicates.sps			\
+	test-mehve-language-numerics-parts.sps				\
+	test-mehve-language-numerics-transcendental.sps			\
+	test-mehve-language-infix.sps					\
+	test-mehve-language-input-output.sps
 
 VICARE_SCHEME_FFI_TESTS	= \
 	test-vicare-ffi-core.sps					\

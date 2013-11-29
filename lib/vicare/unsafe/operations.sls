@@ -67,6 +67,10 @@
     $fxpositive?
     $fxnonpositive?
     $fxnonnegative?
+    $fxodd?
+    $fxeven?
+    $fxsign
+    $fxabs
     $fxadd1	;increment
     $fxsub1	;decrement
     $fxneg	;negation
@@ -83,6 +87,8 @@
     $fxdiv0
     $fxmod
     $fxmod0
+    $fxdiv-and-mod
+    $fxdiv0-and-mod0
     $fx<	;multiple arguments
     $fx>	;multiple arguments
     $fx>=	;multiple arguments
@@ -151,6 +157,46 @@
     $flnegative?
     $flnonpositive?
     $flnonnegative?
+    $flodd?
+    $fleven?
+    $flnan?
+    $flfinite?
+    $flinfinite?
+
+    $flround
+    $flfloor
+    $flceiling
+    $fltruncate
+
+    $flnumerator
+    $fldenominator
+
+    $flmax
+    $flmin
+
+    $flabs
+    $flsin
+    $flcos
+    $fltan
+    $flasin
+    $flacos
+    $flatan		$flatan2
+    $flsinh
+    $flcosh
+    $fltanh
+    $flasinh
+    $flacosh
+    $flatanh
+    $flexp
+    $fllog		$fllog2
+    $flexpm1
+    $fllog1p
+    $flexpt
+    $flsquare
+    $flcube
+    $flsqrt
+    $flcbrt
+    $flhypot
 
 ;;; --------------------------------------------------------------------
 
