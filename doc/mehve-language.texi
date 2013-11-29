@@ -56,20 +56,24 @@ multimethods.
 There are two variants of ``generic functions'' in @library{nausicaa
 mehve}, both of them are in truth syntaxes.  The first kind is the one
 that generalises a function with fixed arity (fixed number of
-arguments); a function like:
+arguments); assuming the following prelude:
 
 @example
-(define (rnrs.sin x)
-  ---)
+(import (except (nausicaa)
+                sin)
+  (prefix (only (nausicaa)
+                sin)
+          nau.))
 @end example
 
 @noindent
-is generalised with:
+the function implementing the trigonometric sine is generalised with:
 
 @example
 (define-generic sin (x))
 
-(add-method sin (<number>) rnrs.sin)
+(add-method sin (<flonum>) $flsin x)
+(add-method sin (<number>) nau.sin)
 @end example
 
 @noindent
@@ -77,51 +81,57 @@ and allows us to specialise it for non--@class{number} arguments, for
 example:
 
 @example
-(define-method (sin (x <list>))
-  (x.map sin))
+(define-method (sin (x <spine>))
+  (x map sin))
 
 (define-method (sin (x <vector>))
-  (x.map sin))
+  (x map sin))
 @end example
 
 The other kind is a generalisation for variadic functions (which take an
-undefined number of arguments); a function like:
+undefined number of arguments); assuming the following prelude:
 
 @example
-(define (rnrs.+ . operands)
-  ---)
+(import (except (nausicaa)
+                +)
+  (prefix (only (nausicaa)
+                +)
+          nau.))
 @end example
 
 @noindent
-is redefined with this infrastructure:
+the addition function @func{+} is redefined with this infrastructure:
 
 @example
-(define-syntax +
-  (lambda (stx)
-    (syntax-case stx ()
-      (?id
-       (identifier? #'?id)
-       #'addition)
-      ((_)
-       #'(addition-0))
-      ((_ ?a)
-       #'(addition-1 ?a))
-      ((_ ?a ?b)
-       #'(addition-2 ?a ?b))
-      ((_ ?a ?b ?c)
-       #'(addition-2 (addition-2 ?a ?b) ?c))
-      ((_ . ?operands)
-       #'(addition . ?operands)))))
+(define-syntax (+ stx)
+  (syntax-case stx ()
+    (?id
+     (identifier? #'?id)
+     #'addition)
+    ((_)
+     #'(addition-0))
+    ((_ ?a)
+     #'(addition-1 ?a))
+    ((_ ?a ?b)
+     #'(addition-2 ?a ?b))
+    ((_ ?a ?b ?c)
+     #'(addition-2 (addition-2 ?a ?b) ?c))
+    ((_ . ?operands)
+     #'(addition . ?operands))))
 
-(define (addition . operands)
-  (if (null? operands)
-      (addition-0)
-    (let loop ((result   (car operands))
-               (operands (cdr operands)))
-      (if (null? operands)
-          result
-        (loop (addition-2 result (car operands))
-              (cdr operands))))))
+(define addition
+  (case-lambda
+   (()
+    (addition-0))
+   ((A)
+    (addition-1 A))
+   ((A B)
+    (addition-2 A B))
+   ((A B C)
+    (addition-2 (addition-2 A B) C))
+   ((A B C . args)
+    (fold-left addition-2 (addition-2 (addition-2 A B) C) args))
+   ))
 
 (define-generic addition-0 ())
 (define-generic addition-1 (a))
@@ -135,7 +145,7 @@ is redefined with this infrastructure:
 
 (add-method addition-2 (<fixnum> <fixnum>) fx+)
 (add-method addition-2 (<flonum> <flonum>) fl+)
-(add-method addition-2 (<number> <number>) rnrs.+)
+(add-method addition-2 (<number> <number>) nau.+)
 @end example
 
 @noindent
@@ -143,14 +153,20 @@ and specialised methods can be added to the generic functions
 @func{addition-0}, @func{addition-1} and @func{addition-2}.  In this
 case @library{nausicaa mehve} exports the binding for @func{+}, but the
 bindings for @func{addition-0}, @func{addition-1} and @func{addition-2}
-are exported by the auxiliary library @library{nausicaa mehve
-arithmetics}.
+are exported by the auxiliary library @library{nausicaa mehve language
+numerics-arithmetics}.
 
-If a binding @var{F} is not generalised by @library{nausicaa mehve}, it
-can only be generalised by writing a custom library which imports
-@library{nausicaa mehve} and reexports all its bindings and also
-redefines the binding @var{F}; the faster way to do this is to just copy
-and customise the source code of the @library{nausicaa mehve} library.
+@c ------------------------------------------------------------
+
+@subsubheading Generalising already defined ordinary functions
+
+
+If a binding @var{F} exported by @library{nausicaa mehve}, but not
+generalised by it, can only be generalised by writing a custom library
+which imports @library{nausicaa mehve} and reexports all its bindings
+and also redefines the binding @var{F}; the faster way to do this is to
+just copy and customise the source code of the library @library{nausicaa
+mehve}.
 
 This is annoying, but it is the only way of doing it because:
 
@@ -162,6 +178,10 @@ This is annoying, but it is the only way of doing it because:
 It makes no sense to have all the bindings to functions in
 @library{nausicaa} redefined as generics.
 @end itemize
+
+The only alternative is to import @library{nausicaa mehve} excluding the
+predefined binding, and import another library with the generalised
+version.
 
 In any case requests to generalise a binding to function can be
 submitted to the @value{PACKAGE} maintainer.
