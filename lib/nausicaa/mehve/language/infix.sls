@@ -97,8 +97,8 @@
     (define tok.ge		(make-<lexical-token> 'GE #'>=))
     (define tok.eq		(make-<lexical-token> 'EQ #'=))
 
-    ;; (define tok.incr!	(make-<lexical-token> 'INCR	(cons #'pre-incr! #'post-incr!)))
-    ;; (define tok.decr!	(make-<lexical-token> 'DECR	(cons #'pre-decr! #'post-decr!)))
+    (define tok.incr!	(make-<lexical-token> 'INCR	(cons #'pre-incr! #'post-incr!)))
+    (define tok.decr!	(make-<lexical-token> 'DECR	(cons #'pre-decr! #'post-decr!)))
 
     (define (atom->token atom kont)
       (case-stx atom
@@ -116,8 +116,8 @@
 	((<=)		tok.le)
 	((>=)		tok.ge)
 	((=)		tok.eq)
-	;; ((incr!)	tok.incr!)
-	;; ((decr!)	tok.decr!)
+	((incr!)	tok.incr!)
+	((decr!)	tok.decr!)
 	(else		(kont atom))))
 
     (make-infix-transformer atom->token #'begin)))

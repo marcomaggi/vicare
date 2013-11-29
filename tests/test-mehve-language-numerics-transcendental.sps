@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for mehve transcendental functions
 ;;;Date: Wed Jun 15, 2011
 ;;;
@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,12 +27,14 @@
 
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve transcendental) mehve.)
+  (prefix (nausicaa mehve language numerics-transcendental) mehve.)
   (prefix (rnrs) rnrs.)
-  (nausicaa checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Mehve language, transcendental\n")
+(check-display "*** testing Mehve language: numerics transcendental functions\n")
+
+(initialise-mehve)
 
 
 ;;;; helpers
@@ -66,27 +68,27 @@
 
 (parametrise ((check-test-name	'trigonometric))
 
-  (define-method (mehve.sin (o <vector>))	(o.map sin))
-  (define-method (mehve.sin (o <list>))	(o.map sin))
+  (define-method (mehve.sin (o <vector>))	(o map sin))
+  (define-method (mehve.sin (o <spine>))	(o map sin))
 
-  (define-method (mehve.cos (o <vector>))	(o.map cos))
-  (define-method (mehve.cos (o <list>))	(o.map cos))
+  (define-method (mehve.cos (o <vector>))	(o map cos))
+  (define-method (mehve.cos (o <spine>))	(o map cos))
 
-  (define-method (mehve.tan (o <vector>))	(o.map tan))
-  (define-method (mehve.tan (o <list>))	(o.map tan))
+  (define-method (mehve.tan (o <vector>))	(o map tan))
+  (define-method (mehve.tan (o <spine>))	(o map tan))
 
-  (define-method (mehve.asin (o <vector>))	(o.map asin))
-  (define-method (mehve.asin (o <list>))	(o.map asin))
+  (define-method (mehve.asin (o <vector>))	(o map asin))
+  (define-method (mehve.asin (o <spine>))	(o map asin))
 
-  (define-method (mehve.acos (o <vector>))	(o.map acos))
-  (define-method (mehve.acos (o <list>))	(o.map acos))
+  (define-method (mehve.acos (o <vector>))	(o map acos))
+  (define-method (mehve.acos (o <spine>))	(o map acos))
 
-  (define-method (mehve.atan-1 (o <vector>))	(o.map atan))
-  (define-method (mehve.atan-1 (o <list>))	(o.map atan))
+  (define-method (mehve.atan-1 (o <vector>))	(o map atan))
+  (define-method (mehve.atan-1 (o <spine>))	(o map atan))
   (define-method (mehve.atan-2 (x <vector>) (y <vector>))
-    (x.map atan y))
-  (define-method (mehve.atan-2 (x <list>) (y <list>))
-    (x.map atan y))
+    (x map atan y))
+  (define-method (mehve.atan-2 (x <spine>) (y <spine>))
+    (x map atan y))
 
 ;; (write (sin '(1.1 2.2 3.3)))(newline)
 ;; (write (cos '(1.1 2.2 3.3)))(newline)
@@ -140,30 +142,30 @@
 (parametrise ((check-test-name	'exponentiation))
 
   (define-method (mehve.expt (A <vector>) (B <vector>))
-    (A.map expt B))
-  (define-method (mehve.expt (A <list>) (B <list>))
-    (A.map expt B))
+    (A map expt B))
+  (define-method (mehve.expt (A <spine>) (B <spine>))
+    (A map expt B))
 
   (define-method (mehve.sqrt (A <vector>))
-    (A.map sqrt))
-  (define-method (mehve.sqrt (A <list>))
-    (A.map sqrt))
+    (A map sqrt))
+  (define-method (mehve.sqrt (A <spine>))
+    (A map sqrt))
 
   (define-method (mehve.exp (o <vector>))
-    (o.map exp))
-  (define-method (mehve.exp (o <list>))
-    (o.map exp))
+    (o map exp))
+  (define-method (mehve.exp (o <spine>))
+    (o map exp))
 
   (define-method (mehve.log-1 (o <vector>))
-    (o.map log))
-  (define-method (mehve.log-1 (o <list>))
-    (o.map log))
+    (o map log))
+  (define-method (mehve.log-1 (o <spine>))
+    (o map log))
 
   (define-method (mehve.log-2 (o <vector>) (base <complex>))
     (vector-map (lambda (x)
 		  (log x base))
 		o))
-  (define-method (mehve.log-2 (o <list>) (base <complex>))
+  (define-method (mehve.log-2 (o <spine>) (base <complex>))
     (map (lambda (x)
 	   (log x base))
       o))

@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: tests mehve infix macro
 ;;;Date: Mon Jun 20, 2011
 ;;;
@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,38 +27,16 @@
 
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (rnrs) rnrs.)
+  ;;This nausicaa import is to make sure that bindings from nausicaa are
+  ;;the same as bindings from mehve.
   (prefix (nausicaa) nau.)
-  (rename (only (nausicaa mehve)
-		bitwise-and
-		bitwise-ior
-		bitwise-xor
-		bitwise-not
-		bitwise-arithmetic-shift-left
-		bitwise-arithmetic-shift-right)
-	  (bitwise-and				&)
-	  (bitwise-ior				!)
-	  (bitwise-xor				^)
-	  (bitwise-not				~)
-	  (bitwise-arithmetic-shift-left	<<)
-	  (bitwise-arithmetic-shift-right	>>))
-  (rename (only (nausicaa mehve)
-		fxand
-		fxior
-		fxxor
-		fxnot
-		fxarithmetic-shift-left
-		fxarithmetic-shift-right)
-	  (fxand				fx&)
-	  (fxior				fx!)
-	  (fxxor				fx^)
-	  (fxnot				fx~)
-	  (fxarithmetic-shift-left		fx<<)
-	  (fxarithmetic-shift-right		fx>>))
-  (nausicaa checks))
+  (prefix (rnrs) rnrs.)
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing mehve, infix macro\n")
+(check-display "*** testing Mehve: infix macro\n")
+
+(initialise-mehve)
 
 
 (parameterise ((check-test-name 'syntax))
@@ -137,10 +115,10 @@
     (check (infix (1 + (- a)))	=> (+ 1 (- 2)))
     #f)
 
-  (check (infix incr! 10)	=> 11)
-  (check (infix 10 incr!)	=> 11)
-  (check (infix decr! 10)	=> 9)
-  (check (infix 10 decr!)	=> 9)
+  (check (let ((N  10)) (infix incr! N))	=> 11)
+  (check (let ((N  10)) (infix N incr!))	=> 10)
+  (check (let ((N  10)) (infix decr! N))	=> 9)
+  (check (let ((N  10)) (infix N decr!))	=> 10)
 
   (check
       (let ((x 10))
