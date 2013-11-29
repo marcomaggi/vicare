@@ -290,14 +290,13 @@
 
 	((flonum? x)
 	 (and (flonum? y)
-	      (if ($fl< x y)
-		  #f
-		(if ($fl> x y)
-		    #f
-		  (if ($fl= x 0.0)
-		      ;;To distinguish between +0.0 and -0.0?
-		      ($fl= ($fl/ 1.0 x) ($fl/ 1.0 y))
-		    #t)))))
+	      (cond (($fl< x y)		#f)
+		    (($fl> x y)		#f)
+		    ;;To distinguish between +0.0 and -0.0?
+		    (($fl= x 0.0)	($fl= ($fl/ 1.0 x) ($fl/ 1.0 y)))
+		    (($flnan? x)	($flnan? y))
+		    (($flnan? y)	#f)
+		    (else #t))))
 
 	((bignum? x)
 	 (and (bignum? y) (= x y)))

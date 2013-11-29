@@ -1884,20 +1884,18 @@ Compute the arc sine, arc cosine and arc tangent functions using
 @section Infix to prefix syntax
 
 
-@cindex @library{nausicaa mehve infix}, library
-@cindex Library @library{nausicaa mehve infix}
+@cindex @library{nausicaa mehve language infix}, library
+@cindex Library @library{nausicaa mehve language infix}
 @findex @func{infix}
 
 
-The @func{infix} syntax exported by @library{nausicaa mehve infix}, and
-reexported by @library{nausicaa mehve}, redefines the syntax exported by
-@library{nausicaa} to support generic function operators.
+The @func{infix} syntax exported by @library{nausicaa mehve language
+infix}, and reexported by @library{nausicaa mehve}, redefines the syntax
+exported by @library{nausicaa} to support generic function operators.
 
 All the bindings of @func{infix} from @library{nausicaa} are also
-supported by @func{infix} from @library{nausicaa mehve}.  The generic
+supported by @func{infix} from @library{nausicaa mehve}; the generic
 functions used as operators have the same precedence of the
 corresponding simple functions.
-
-
 
 @c end of file
