@@ -64,7 +64,7 @@
 	   ((OPERATOR-0	(identifier-suffix #'?stem "-0"))
 	    (OPERATOR-1	(identifier-suffix #'?stem "-1"))
 	    (OPERATOR-2	(identifier-suffix #'?stem "-2"))
-	    (OPERATOR-N	#'?stem))
+	    (OPERATOR	#'?stem))
 	 #'(begin
 	     (define-syntax (?operator stx)
 	       (syntax-case stx ()
@@ -88,6 +88,8 @@
 		 (OPERATOR-0))
 		((arg)
 		 (OPERATOR-1 arg))
+		((A B)
+		 (OPERATOR-2 A B))
 		((A B C)
 		 (OPERATOR-2 (OPERATOR-2 A B) C))
 		((A B C . args)
@@ -101,8 +103,6 @@
       ))
 
   (main stx))
-
-
 
 
 ;;;; arithmetics operators
@@ -169,8 +169,8 @@
   (add-method addition-2	(<flonum>	<flonum>)	(lambda (x y) ($fl+ x y)))
   (add-method addition-2	(<number>	<number>)	nau.+)
 
-  (add-method subtraction-1	(<fixnum>)			(lambda (x y) ($fx- x y)))
-  (add-method subtraction-1	(<flonum>)			(lambda (x y) ($fl- x y)))
+  (add-method subtraction-1	(<fixnum>)			(lambda (x) ($fx- x)))
+  (add-method subtraction-1	(<flonum>)			(lambda (x) ($fl- x)))
   (add-method subtraction-1	(<number>)			nau.-)
 
   (add-method subtraction-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx- x y)))
@@ -184,7 +184,7 @@
   ;;We want  to return exact rationals,  so we use the  following rather
   ;;than FXDIV.
   (add-method division-1	(<fixnum>)			nau./)
-  (add-method division-1	(<flonum>)			(lambda (x y) ($fl/ x y)))
+  (add-method division-1	(<flonum>)			(lambda (x) ($fl/ 1.0 x)))
   (add-method division-1	(<number>)			nau./)
 
   ;;We want  to return exact rationals,  so we use the  following rather

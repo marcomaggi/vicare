@@ -33,7 +33,9 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Mehve language: arithmetics\n")
+(check-display "*** testing Mehve language: arithmetics\n")
+
+(initialise-mehve)
 
 
 ;;;; helpers
