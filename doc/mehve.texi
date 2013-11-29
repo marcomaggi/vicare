@@ -140,6 +140,9 @@ methods, @nauref{multimethods, Multimethods dispatching}.
 Multimethods are significantly slower than functions, so, while more
 flexible, Mehve is not for every application.
 
+Before making use of the facilities of Mehve, we @strong{must} call the
+function @func{initialise-mehve}.
+
 @c page
 @c Libraries in the Mehve language
 
