@@ -12,7 +12,8 @@ EXTRA_DIST		= \
 info_TEXINFOS		= \
 	vicare-scheme.texi			\
 	vicare-libs.texi			\
-	nausicaa.texi
+	nausicaa.texi				\
+	mehve.texi
 
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi				\
@@ -159,6 +160,13 @@ nausicaa_TEXINFOS	= \
 	\
 	nausicaa-uri-uri.texi					\
 	nausicaa-uri-pathnames.texi				\
+	\
+	macros.texi						\
+	fdl-1.3.texi						\
+	gpl-3.0.texi
+
+mehve_TEXINFOS	= \
+	mehve-language.texi					\
 	\
 	macros.texi						\
 	fdl-1.3.texi						\

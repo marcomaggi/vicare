@@ -78,6 +78,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{CLOS}
 @end macro
 
+@macro oopp{}
+@acronym{OOPP}
+@end macro
+
 @macro library{SPEC}
 @code{(\SPEC\)}
 @end macro
@@ -414,6 +418,10 @@ Revised^6 Report on the algorithmic language Scheme
 
 @macro nauref{NODE, TITLE}
 @ref{\NODE\,\TITLE\,\TITLE\,nausicaa}
+@end macro
+
+@macro mehveref{NODE, TITLE}
+@ref{\NODE\,\TITLE\,\TITLE\,mehve}
 @end macro
 
 @macro manpage{NODE, TITLE}
