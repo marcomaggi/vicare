@@ -242,9 +242,7 @@ Apply to the arguments the function @func{write} exported by
 * mehve numerics predicates::   Numeric predicates generic functions.
 * mehve numerics arithmetics::  Arithmetics generic functions.
 * mehve numerics parts::        Parts generic functions.
-@ignore
 * mehve numerics trans::        Transcendental generic functions.
-@end ignore
 * mehve numerics infix::        Infix to prefix syntax.
 @end menu
 
@@ -971,41 +969,26 @@ for the argument; when the argument is real: return the argument itself.
 @end deffn
 
 @c page
-@ignore
-@node mehve trans
-@section Transcendental generic functions
+@node mehve numerics trans
+@subsection Transcendental generic functions
 
 
-@cindex @library{nausicaa mehve transcendental}, library
-@cindex Library @library{nausicaa mehve transcendental}
+@cindex @library{nausicaa mehve language numerics-transcendental}, library
+@cindex Library @library{nausicaa mehve language numerics-transcendental}
 
 
-The auxiliary library @library{nausicaa mehve transcendental} defines
-the generic functions behind the transcendental operations; we need to
-import it only if we desire to add specialised methods to transcendental
-functions.
-
-@menu
-* mehve trans intro::           Introduction to transcendental
-                                generic functions.
-* mehve trans log::             Exponentiation and logarithm
-                                generic functions.
-* mehve trans trig::            Trigonometric generic functions.
-@end menu
-
-@node mehve trans intro
-@subsection Introduction to transcendental generic functions
-
-
-The transcendental functions are the following:
+The auxiliary library @library{nausicaa mehve language
+numerics-transcendental} defines the generic functions behind the
+transcendental operations; we need to import it only if we desire to add
+specialised methods to transcendental functions.  The transcendental
+functions and the other functions exported by the library are the
+following:
 
 @example
-expt sqrt exp log sin cos tan asin acos atan
+expt sqrt cbrt square cube exp log
+sin cos tan asin acos atan
+sinh cosh tanh asinh acosh atanh
 @end example
-
-@noindent
-we intend ``transcendental'' in the sense that their implementation is
-exported by the library @library{nausicaa mehve transcendental}.
 
 As example we look at how to specialise the transcendental functions
 @func{sin}, @func{cos} and @func{tan} to operate on lists of items:
@@ -1013,16 +996,17 @@ As example we look at how to specialise the transcendental functions
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve transcendental) mehve.))
+  (prefix (nausicaa mehve language numerics-transcendental)
+          mehve.))
 
-(define-method (mehve.sin (o <list>))
-  (o.map sin))
+(define-method (mehve.sin (o <spine>))
+  (o map sin))
 
-(define-method (mehve.cos (o <list>))
-  (o.map cos))
+(define-method (mehve.cos (o <spine>))
+  (o map cos))
 
-(define-method (mehve.tan (o <list>))
-  (o.map tan))
+(define-method (mehve.tan (o <spine>))
+  (o map tan))
 
 (sin '(1.1 2.2 3.3))
 @result{} (0.8912073600614354 0.8084964038195901 -0.1577456941432482)
@@ -1039,197 +1023,256 @@ notice how the methods recursively call the generic functions in their
 body, this way the lists can hold any of the value types for which there
 are methods.
 
-@node mehve trans log
-@subsection Exponentiation and logarithm generic functions
+@c ------------------------------------------------------------
 
-
-The generic functions @func{expt}, @func{sqrt} and @func{exp} exported
-by @library{nausicaa mehve transcendental}, and reexported by
-@library{nausicaa mehve}, generalise the corresponding functions from
-@rsixlibrary{base}.
-
-The binding @func{log} is exported by @library{nausicaa mehve} and
-generalises the corresponding function from @rsixlibrary{base}; its
-implementation functions @func{log-1} and @func{log-2} are exported by
-@library{nausicaa mehve transcendental}.
+@subsubheading Exponentiation and logarithm generic functions
 
 
 @deffn {Generic Function} expt @var{A} @var{B}
-Compute @var{A} raised to the power of @var{B}.
+@deffnx Method expt (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method expt (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+Compute @var{A} raised to the power of @var{B}.  Use @func{expt} or one
+of its type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} sqrt @var{A}
-Compute square root of @var{A}.
+@deffnx Method sqrt (@var{A} @aclass{flonum})
+@deffnx Method sqrt (@var{A} @aclass{complex})
+Compute square root of @var{A}.  Use @func{sqrt} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cbrt @var{A}
+@deffnx Method cbrt (@var{A} @aclass{flonum})
+@deffnx Method cbrt (@var{A} @aclass{complex})
+Compute cubic root of @var{A}.  Use @func{cbrt} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} square @var{A}
+@deffnx Method square (@var{A} @aclass{fixnum})
+@deffnx Method square (@var{A} @aclass{bignum})
+@deffnx Method square (@var{A} @aclass{ratnum})
+@deffnx Method square (@var{A} @aclass{flonum})
+@deffnx Method square (@var{A} @aclass{cflonum})
+@deffnx Method square (@var{A} @aclass{compnum})
+@deffnx Method square (@var{A} @aclass{complex})
+Compute square of @var{A}.  Use @func{square} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cube @var{A}
+@deffnx Method cube (@var{A} @aclass{fixnum})
+@deffnx Method cube (@var{A} @aclass{bignum})
+@deffnx Method cube (@var{A} @aclass{ratnum})
+@deffnx Method cube (@var{A} @aclass{flonum})
+@deffnx Method cube (@var{A} @aclass{cflonum})
+@deffnx Method cube (@var{A} @aclass{compnum})
+@deffnx Method cube (@var{A} @aclass{complex})
+Compute cube of @var{A}.  Use @func{cube} or one of its type--specific
+variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} exp @var{A}
-Compute the base @math{e} exponential.
+@deffnx Method exp (@var{A} @aclass{flonum})
+@deffnx Method exp (@var{A} @aclass{complex})
+Compute the base @math{e} exponential.  Use @func{exp} or one of its
+type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} log-1 @var{A}
-Compute the base @math{e} logarithm.
+@deffnx Method log-1 (@var{A} @aclass{flonum})
+@deffnx Method log-1 (@var{A} @aclass{complex})
+Compute the base @math{e} logarithm.  Use @func{log} or one of its
+type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} log-2 @var{A} @var{B}
-Compute the base @var{B} logarithm of @var{A}.
+@deffnx Method log-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method log-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+Compute the base @var{B} logarithm of @var{A}.  Use @func{log} or one of
+its type--specific variants as appropriate for the argument.
 @end deffn
 
+@c ------------------------------------------------------------
 
-The following are the specialised methods.
-
-
-@deffn Method expt (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Compute @var{A} raised to the power of @var{B} using @func{flexpt} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{flexp}}.
-@end deffn
-
-
-@deffn Method expt (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Compute @var{A} raised to the power of @var{B} using @func{expt} from
-@rsixlibrary{base}, @vicareref{baselib math ops exponentiation,
-@func{expt}}.
-@end deffn
-
-
-@deffn Method sqrt (@var{A} @aclass{flonum})
-Compute the square root of @var{A} using @func{flsqrt} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{flexp}}.
-@end deffn
-
-
-@deffn Method sqrt (@var{A} @aclass{complex})
-Compute the square root of @var{A} using @func{sqrt} from
-@rsixlibrary{base}, @vicareref{baselib math ops exponentiation,
-@func{sqrt}}.
-@end deffn
-
-
-@deffn Method exp (@var{A} @aclass{flonum})
-Compute the base @math{e} exponential using @func{flexp} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{flexp}}.
-@end deffn
-
-
-@deffn Method exp (@var{A} @aclass{complex})
-Compute the base @math{e} exponential using @func{exp} from
-@rsixlibrary{base}, @vicareref{baselib math ops trascend, @func{exp}}.
-@end deffn
-
-
-@deffn Method log-1 (@var{A} @aclass{flonum})
-Compute the base @math{e} logarithm using @func{fllog} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fllog}}.
-@end deffn
-
-
-@deffn Method log-1 (@var{A} @aclass{complex})
-Compute the base @math{e} logarithm using @func{log} from
-@rsixlibrary{base}, @vicareref{baselib math ops trascend, @func{log}}.
-@end deffn
-
-
-@deffn Method log-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Compute the base @var{B} logarithm of @var{A} using @func{fllog} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{flexp}}.
-@end deffn
-
-
-@deffn Method log-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Compute the base @var{B} logarithm of @var{A} using @func{log} from
-@rsixlibrary{base}, @vicareref{baselib math ops trascend, @func{log}}.
-@end deffn
-
-@node mehve trans trig
-@subsection Trigonometric generic functions
-
-
-The generic functions @func{sin}, @func{cos}, @func{tan}, @func{asin}
-and @func{acos} exported by @library{nausicaa mehve transcendental}, and
-reexported by @library{nausicaa mehve}, generalise the corresponding
-functions from @rsixlibrary{base}.
-
-The binding @func{atan} is exported by @library{nausicaa mehve} and
-generalises the corresponding function from @rsixlibrary{base}; its
-implementation functions @func{atan-1} and @func{atan-2} are exported by
-@library{nausicaa mehve transcendental}.
+@subsubheading Trigonometric generic functions
 
 
 @deffn {Generic Function} sin @var{A}
-@deffnx {Generic Function} cos @var{A}
-@deffnx {Generic Function} tan @var{A}
-Compute the sine, cosine and tangent functions.
+@deffnx Method sin (@var{A} @aclass{fixnum})
+@deffnx Method sin (@var{A} @aclass{bignum})
+@deffnx Method sin (@var{A} @aclass{ratnum})
+@deffnx Method sin (@var{A} @aclass{flonum})
+@deffnx Method sin (@var{A} @aclass{cflonum})
+@deffnx Method sin (@var{A} @aclass{compnum})
+@deffnx Method sin (@var{A} @aclass{complex})
+Compute the trigonometric sine function.  Use @func{sin} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cos @var{A}
+@deffnx Method cos (@var{A} @aclass{fixnum})
+@deffnx Method cos (@var{A} @aclass{bignum})
+@deffnx Method cos (@var{A} @aclass{ratnum})
+@deffnx Method cos (@var{A} @aclass{flonum})
+@deffnx Method cos (@var{A} @aclass{cflonum})
+@deffnx Method cos (@var{A} @aclass{compnum})
+@deffnx Method cos (@var{A} @aclass{complex})
+Compute the trigonometric cosine function.  Use @func{cos} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} tan @var{A}
+@deffnx Method tan (@var{A} @aclass{fixnum})
+@deffnx Method tan (@var{A} @aclass{bignum})
+@deffnx Method tan (@var{A} @aclass{ratnum})
+@deffnx Method tan (@var{A} @aclass{flonum})
+@deffnx Method tan (@var{A} @aclass{cflonum})
+@deffnx Method tan (@var{A} @aclass{compnum})
+@deffnx Method tan (@var{A} @aclass{complex})
+Compute the trigonometric tangent function.  Use @func{tan} or one of
+its type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} asin @var{A}
-@deffnx {Generic Function} acos @var{A}
-Compute the arc sine, arc cosine and arc tangent functions.
+@deffnx Method asin (@var{A} @aclass{fixnum})
+@deffnx Method asin (@var{A} @aclass{bignum})
+@deffnx Method asin (@var{A} @aclass{ratnum})
+@deffnx Method asin (@var{A} @aclass{flonum})
+@deffnx Method asin (@var{A} @aclass{cflonum})
+@deffnx Method asin (@var{A} @aclass{compnum})
+@deffnx Method asin (@var{A} @aclass{complex})
+Compute the trigonometric arc sine function.  Use @func{asin} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} acos @var{A}
+@deffnx Method acos (@var{A} @aclass{fixnum})
+@deffnx Method acos (@var{A} @aclass{bignum})
+@deffnx Method acos (@var{A} @aclass{ratnum})
+@deffnx Method acos (@var{A} @aclass{flonum})
+@deffnx Method acos (@var{A} @aclass{cflonum})
+@deffnx Method acos (@var{A} @aclass{compnum})
+@deffnx Method acos (@var{A} @aclass{complex})
+Compute the trigonometric arc cosine function.  Use @func{acos} or one
+of its type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} atan-1 @var{A}
-Compute the arc tangent function when @func{atan} is called with one
-argument.
+@deffnx Method atan-1 (@var{A} @aclass{fixnum})
+@deffnx Method atan-1 (@var{A} @aclass{bignum})
+@deffnx Method atan-1 (@var{A} @aclass{ratnum})
+@deffnx Method atan-1 (@var{A} @aclass{flonum})
+@deffnx Method atan-1 (@var{A} @aclass{cflonum})
+@deffnx Method atan-1 (@var{A} @aclass{compnum})
+@deffnx Method atan-1 (@var{A} @aclass{complex})
+Compute the trigonometric arc tangent function.  Use @func{atan} or one
+of its type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} atan-2 @var{A} @var{B}
-Compute the arc tangent function when @func{atan} is called with two
-arguments.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method sin (@var{A} @aclass{flonum})
-@deffnx Method cos (@var{A} @aclass{flonum})
-@deffnx Method tan (@var{A} @aclass{flonum})
-Compute the sine, cosine and tangent functions using @func{flsin},
-@func{flcos} and @func{fltan} from @rsixlibrary{arithmetic flonums},
-@vicareref{stdlib arithmetic flonums, @func{flsin}}.
-@end deffn
-
-
-@deffn Method asin (@var{A} @aclass{flonum})
-@deffnx Method acos (@var{A} @aclass{flonum})
-@deffnx Method atan-1 (@var{A} @aclass{flonum})
 @deffnx Method atan-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Compute the arc sine, arc cosine and arc tangent functions using
-@func{flasin}, @func{flacos} and @func{flatan} from
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{flasin}}.
-@end deffn
-
-
-@deffn Method sin (@var{A} @aclass{complex})
-@deffnx Method cos (@var{A} @aclass{complex})
-@deffnx Method tan (@var{A} @aclass{complex})
-Compute the sine, cosine and tangent functions using @func{sin},
-@func{cos} and @func{tan} from @rsixlibrary{base}, @vicareref{baselib math
-ops trascend, @func{sin}}.
-@end deffn
-
-
-@deffn Method asin (@var{A} @aclass{complex})
-@deffnx Method acos (@var{A} @aclass{complex})
-@deffnx Method atan-1 (@var{A} @aclass{complex})
 @deffnx Method atan-2 (@var{A} @aclass{real}) (@var{B} @aclass{real})
-Compute the arc sine, arc cosine and arc tangent functions using
-@func{asin}, @func{acos} and @func{atan} from @rsixlibrary{base},
-@vicareref{baselib math ops trascend, @func{asin}}.
+Compute the arc tangent function when @func{atan} is called with two
+arguments.  Use @func{atan} or one of its type--specific variants as
+appropriate for the argument.
 @end deffn
 
-@end ignore
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic generic functions
+
+
+@deffn {Generic Function} sinh @var{A}
+@deffnx Method sinh (@var{A} @aclass{fixnum})
+@deffnx Method sinh (@var{A} @aclass{bignum})
+@deffnx Method sinh (@var{A} @aclass{ratnum})
+@deffnx Method sinh (@var{A} @aclass{flonum})
+@deffnx Method sinh (@var{A} @aclass{cflonum})
+@deffnx Method sinh (@var{A} @aclass{compnum})
+@deffnx Method sinh (@var{A} @aclass{complex})
+Compute the hyperbolic sine function.  Use @func{sinh} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cosh @var{A}
+@deffnx Method cosh (@var{A} @aclass{fixnum})
+@deffnx Method cosh (@var{A} @aclass{bignum})
+@deffnx Method cosh (@var{A} @aclass{ratnum})
+@deffnx Method cosh (@var{A} @aclass{flonum})
+@deffnx Method cosh (@var{A} @aclass{cflonum})
+@deffnx Method cosh (@var{A} @aclass{compnum})
+@deffnx Method cosh (@var{A} @aclass{complex})
+Compute the hyperbolic cosine function.  Use @func{cosh} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} tanh @var{A}
+@deffnx Method tanh (@var{A} @aclass{fixnum})
+@deffnx Method tanh (@var{A} @aclass{bignum})
+@deffnx Method tanh (@var{A} @aclass{ratnum})
+@deffnx Method tanh (@var{A} @aclass{flonum})
+@deffnx Method tanh (@var{A} @aclass{cflonum})
+@deffnx Method tanh (@var{A} @aclass{compnum})
+@deffnx Method tanh (@var{A} @aclass{complex})
+Compute the hyperbolic tangent function.  Use @func{tanh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} asinh @var{A}
+@deffnx Method asinh (@var{A} @aclass{fixnum})
+@deffnx Method asinh (@var{A} @aclass{bignum})
+@deffnx Method asinh (@var{A} @aclass{ratnum})
+@deffnx Method asinh (@var{A} @aclass{flonum})
+@deffnx Method asinh (@var{A} @aclass{cflonum})
+@deffnx Method asinh (@var{A} @aclass{compnum})
+@deffnx Method asinh (@var{A} @aclass{complex})
+Compute the hyperbolic arc sine function.  Use @func{asinh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} acosh @var{A}
+@deffnx Method acosh (@var{A} @aclass{fixnum})
+@deffnx Method acosh (@var{A} @aclass{bignum})
+@deffnx Method acosh (@var{A} @aclass{ratnum})
+@deffnx Method acosh (@var{A} @aclass{flonum})
+@deffnx Method acosh (@var{A} @aclass{cflonum})
+@deffnx Method acosh (@var{A} @aclass{compnum})
+@deffnx Method acosh (@var{A} @aclass{complex})
+Compute the hyperbolic arc cosine function.  Use @func{acosh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} atanh @var{A}
+@deffnx Method atanh (@var{A} @aclass{fixnum})
+@deffnx Method atanh (@var{A} @aclass{bignum})
+@deffnx Method atanh (@var{A} @aclass{ratnum})
+@deffnx Method atanh (@var{A} @aclass{flonum})
+@deffnx Method atanh (@var{A} @aclass{cflonum})
+@deffnx Method atanh (@var{A} @aclass{compnum})
+@deffnx Method atanh (@var{A} @aclass{complex})
+Compute the hyperbolic arc tangent function.  Use @func{atanh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
 
 @c page
 @node mehve numerics infix
