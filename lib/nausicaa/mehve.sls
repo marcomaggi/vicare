@@ -1585,8 +1585,9 @@
     <fixnum> <positive-fixnum> <negative-fixnum>
     <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
     <flonum>
-    <exact-integer> <integer> <integer-valued> <rational> <rational-valued>
-    <real> <real-valued> <complex> <number>
+    <bignum> <exact-integer> <integer> <integer-valued>
+    <ratnum> <rational> <rational-valued>
+    <real> <real-valued> <cflonum> <compnum> <complex> <number>
     <procedure>
 
     <transcoder> <port>

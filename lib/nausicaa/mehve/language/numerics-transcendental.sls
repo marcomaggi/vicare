@@ -45,9 +45,8 @@
 		  sin cos tan asin acos atan
 		  sinh cosh tanh asinh acosh atanh)
 	    nau.)
-    (vicare unsafe operations))
-
-
+    (vicare unsafe operations)
+    (vicare system $numerics))
 
 
 ;;;; transcendental: exponentials and logarithms
@@ -147,7 +146,9 @@
   (add-method exp (<flonum>)			$flexp)
   (add-method exp (<complex>)			nau.exp)
 
-  (add-method log-1 (<flonum>)			$fllog)
+  ;;We use $LOG-FLONUM, rather than $FLLOG,  because the result can be a
+  ;;real or a complex.
+  (add-method log-1 (<flonum>)			$log-flonum)
   (add-method log-1 (<complex>)			nau.log)
   (add-method log-2 (<flonum>	<flonum>)	$fllog2)
   (add-method log-2 (<complex>	<complex>)	nau.log)
@@ -165,11 +166,15 @@
   (add-method tan (<real>)			nau.tan)
   (add-method tan (<complex>)			nau.tan)
 
-  (add-method asin (<flonum>)			$flasin)
+  ;;We use $ASIN-FLONUM, rather than  $FLASIN, because the result can be
+  ;;a real or a complex.
+  (add-method asin (<flonum>)			$asin-flonum)
   (add-method asin (<real>)			nau.asin)
   (add-method asin (<complex>)			nau.asin)
 
-  (add-method acos (<flonum>)			$flacos)
+  ;;We use $ACOS-FLONUM, rather than  $FLACOS, because the result can be
+  ;;a real or a complex.
+  (add-method acos (<flonum>)			$acos-flonum)
   (add-method acos (<real>)			nau.acos)
   (add-method acos (<complex>)			nau.acos)
 
