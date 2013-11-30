@@ -1770,7 +1770,22 @@
    (immutable (zero?/positive	<boolean>)	flzero?/positive)
    (immutable (zero?/negative	<boolean>)	flzero?/negative)
    (immutable (even?		<boolean>)	fleven?)
-   (immutable (odd?		<boolean>)	flodd?))
+   (immutable (odd?		<boolean>)	flodd?)
+
+   (immutable ($integer?	<boolean>)	$flonum-integer?)
+   (immutable ($finite?		<boolean>)	$flfinite?)
+   (immutable ($infinite?	<boolean>)	$flinfinite?)
+   (immutable ($nan?		<boolean>)	$flnan?)
+   (immutable ($negative?	<boolean>)	$flnegative?)
+   (immutable ($positive?	<boolean>)	$flpositive?)
+   (immutable ($nonnegative?	<boolean>)	$flnonnegative?)
+   (immutable ($nonpositive?	<boolean>)	$flnonpositive?)
+   (immutable ($zero?		<boolean>)	$flzero?)
+   (immutable ($zero?/positive	<boolean>)	$flzero?/positive)
+   (immutable ($zero?/negative	<boolean>)	$flzero?/negative)
+   (immutable ($even?		<boolean>)	$fleven?)
+   (immutable ($odd?		<boolean>)	$flodd?)
+   #| end of virtual-fields |# )
 
   ;; methods: conversion
   (method-syntax string
@@ -1783,6 +1798,11 @@
     (syntax-rules ()
       ((_ ?fl)
        (flabs ?fl))))
+
+  (method-syntax $abs
+    (syntax-rules ()
+      ((_ ?fl)
+       ($flabs ?fl))))
 
   (method-syntax *
     (syntax-rules ()

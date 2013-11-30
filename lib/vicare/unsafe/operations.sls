@@ -140,6 +140,9 @@
     $fixnum->flonum
     $fixnum->string
     $fixnum->char
+    $flonum->exact
+    $flonum-integer?
+    $flonum-rational?
     $fl+
     $fl-
     $fl*
