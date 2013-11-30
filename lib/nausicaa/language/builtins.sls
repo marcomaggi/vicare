@@ -38,9 +38,10 @@
 
     <fixnum> <positive-fixnum> <negative-fixnum>
     <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
-    <bignum> <exact-integer> <integer> <integer-valued>
+    <positive-bignum> <negative-bignum> <bignum>
+    <exact-integer> <integer> <integer-valued>
     <ratnum> <rational> <rational-valued>
-    <flonum>
+    <integer-flonum> <rational-flonum> <flonum>
     <real> <real-valued> <cflonum> <compnum> <complex> <number>
     <procedure>
 
@@ -1460,6 +1461,14 @@
   (parent <exact-integer>)
   (predicate bignum?))
 
+(define-builtin-label <positive-bignum>
+  (parent <bignum>)
+  (predicate $bignum-positive?))
+
+(define-builtin-label <negative-bignum>
+  (parent <bignum>)
+  (predicate $bignum-negative?))
+
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <fixnum>
@@ -2045,6 +2054,14 @@
 
   #| end of label |# )
 
+(define-builtin-label <integer-flonum>
+  (parent <flonum>)
+  (predicate $flonum-integer?))
+
+(define-builtin-label <rational-flonum>
+  (parent <flonum>)
+  (predicate $flonum-rational?))
+
 
 ;;;; built-in types: procedure objects
 
@@ -2078,8 +2095,8 @@
 
    ;;Numeric object identification.  Order does matter here!!!
    ;;
-   ;;Notice that it is almost useless  to apply NUMBER? first and having
-   ;;a nested COND syntax with the various numeric predicates, as in:
+   ;;Notice that it is almost useless  to apply NUMBER? first and have a
+   ;;nested COND syntax with the various numeric predicates, as in:
    ;;
    ;;  ((number? obj)	(cond ((fixnum? obj) ...) ...))
    ;;
@@ -2092,22 +2109,18 @@
     (cond (($fxpositive? obj)	(tag-unique-identifiers <positive-fixnum>))
 	  (($fxnegative? obj)	(tag-unique-identifiers <negative-fixnum>))
 	  (else			(tag-unique-identifiers <fixnum>))))
-   ((bignum?		obj)	(tag-unique-identifiers <bignum>))
-   ((integer?		obj)	(tag-unique-identifiers <integer>))
-   ((flonum?		obj)	(tag-unique-identifiers <flonum>))
+   ((bignum?		obj)	(if ($bignum-positive? obj)
+				    (tag-unique-identifiers <positive-bignum>)
+				  (tag-unique-identifiers <negative-bignum>)))
+   ((flonum?		obj)	(cond (($flonum-integer? obj)
+				       (tag-unique-identifiers <integer-flonum>))
+				      (($flonum-rational? obj)
+				       (tag-unique-identifiers <rational-flonum>))
+				      (else
+				       (tag-unique-identifiers <flonum>))))
    ((ratnum?		obj)	(tag-unique-identifiers <ratnum>))
    ((cflonum?		obj)	(tag-unique-identifiers <cflonum>))
    ((compnum?		obj)	(tag-unique-identifiers <compnum>))
-   ;;These are  commented out because,  with the predicates  above, they
-   ;;will never happen.
-   ;;
-   ;;((rational?	obj)	(tag-unique-identifiers <rational>))
-   ;;((integer-valued?	obj)	(tag-unique-identifiers <integer-valued>))
-   ;;((rational-valued?	obj)	(tag-unique-identifiers <rational-valued>))
-   ;;((real?		obj)	(tag-unique-identifiers <real>))
-   ;;((real-valued?	obj)	(tag-unique-identifiers <real-valued>))
-   ;;((complex?		obj)	(tag-unique-identifiers <complex>))
-   ;;((number?		obj)	(tag-unique-identifiers <number>))
 
    ((char?		obj)		(tag-unique-identifiers <char>))
    ((string?		obj)		(tag-unique-identifiers <string>))
