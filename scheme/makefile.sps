@@ -1028,12 +1028,12 @@
     ($complex-conjugate-compnum			$numerics $vicare-numerics)
     ($complex-conjugate-cflonum			$numerics $vicare-numerics)
 
-    ($angle-fixnum?				$numerics $vicare-numerics)
-    ($angle-bignum?				$numerics $vicare-numerics)
-    ($angle-ratnum?				$numerics $vicare-numerics)
-    ($angle-flonum?				$numerics $vicare-numerics)
-    ($angle-compnum?				$numerics $vicare-numerics)
-    ($angle-cflonum?				$numerics $vicare-numerics)
+    ($angle-fixnum				$numerics $vicare-numerics)
+    ($angle-bignum				$numerics $vicare-numerics)
+    ($angle-ratnum				$numerics $vicare-numerics)
+    ($angle-flonum				$numerics $vicare-numerics)
+    ($angle-compnum				$numerics $vicare-numerics)
+    ($angle-cflonum				$numerics $vicare-numerics)
 
     ($magnitude-fixnum				$numerics $vicare-numerics)
     ($magnitude-bignum				$numerics $vicare-numerics)
