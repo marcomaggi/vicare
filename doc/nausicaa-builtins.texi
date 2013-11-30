@@ -1941,6 +1941,18 @@ Conventional type for objects satisfying @func{complex?}.  It is derived
 from @class{number}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{compnum}
+Conventional type for objects satisfying @func{compnum?}.  It is derived
+from @class{complex}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{cflonum}
+Conventional type for objects satisfying @func{cflonum?}.  It is derived
+from @class{complex}.
+@end deftp
+
 @c page
 @node builtins numbers realv
 @subsection Real--values number objects
@@ -2072,6 +2084,12 @@ Conventional type for objects satisfying @func{rational?}.  It is
 derived from @class{rational-valued}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{ratnum}
+Conventional type for objects satisfying @func{ratnum?}.  It is derived
+from @class{rational}.
+@end deftp
+
 @c page
 @node builtins numbers integerv
 @subsection Integer--valued number objects
@@ -2116,6 +2134,12 @@ function @func{even?} from @rsixlibrary{base}.
 @deftp {Builtin Label} @aclass{exact-integer}
 Conventional type for objects satisfying @func{exact-integer?}.  It is
 derived from @class{integer}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{bignum}
+Conventional type for objects satisfying @func{bignum?}.  It is derived
+from @class{exact-integer}.
 @end deftp
 
 @c page
