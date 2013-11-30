@@ -2786,8 +2786,7 @@
 
   (check
       (tag-unique-identifiers-of 1.2)
-    => '(nausicaa:builtin:<rational>
-	 nausicaa:builtin:<rational-valued>
+    => '(nausicaa:builtin:<flonum>
 	 nausicaa:builtin:<real>
 	 nausicaa:builtin:<real-valued>
 	 nausicaa:builtin:<complex>
@@ -2796,7 +2795,15 @@
 
   (check
       (tag-unique-identifiers-of +1.2i)
-    => '(nausicaa:builtin:<complex>
+    => '(nausicaa:builtin:<compnum>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of 3.4+1.2i)
+    => '(nausicaa:builtin:<cflonum>
+	 nausicaa:builtin:<complex>
 	 nausicaa:builtin:<number>
 	 nausicaa:builtin:<top>))
 

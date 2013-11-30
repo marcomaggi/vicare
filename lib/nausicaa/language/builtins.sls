@@ -35,12 +35,13 @@
     <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
     <vector> <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
+
     <fixnum> <positive-fixnum> <negative-fixnum>
     <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
+    <bignum> <exact-integer> <integer> <integer-valued>
+    <ratnum> <rational> <rational-valued>
     <flonum>
-    <exact-integer> <integer> <integer-valued>
-    <rational> <rational-valued>
-    <real> <real-valued> <complex> <number>
+    <real> <real-valued> <cflonum> <compnum> <complex> <number>
     <procedure>
 
     <transcoder> <port>
@@ -1357,6 +1358,14 @@
   (parent <number>)
   (predicate complex?))
 
+(define-builtin-label <cflonum>
+  (parent <complex>)
+  (predicate cflonum?))
+
+(define-builtin-label <compnum>
+  (parent <complex>)
+  (predicate compnum?))
+
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <real-valued>
@@ -1420,6 +1429,12 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-builtin-label <ratnum>
+  (parent <rational>)
+  (predicate ratnum?))
+
+;;; --------------------------------------------------------------------
+
 (define-builtin-label <integer-valued>
   (parent <rational-valued>)
   (predicate integer-valued?))
@@ -1438,6 +1453,12 @@
 (define-builtin-label <exact-integer>
   (parent <integer>)
   (predicate exact-integer?))
+
+;;; --------------------------------------------------------------------
+
+(define-builtin-label <bignum>
+  (parent <exact-integer>)
+  (predicate bignum?))
 
 ;;; --------------------------------------------------------------------
 
@@ -2035,24 +2056,38 @@
    ;;
    ((<top>? obj)			(<top>-unique-identifiers obj))
 
-   ((number? obj)
-    ;;Order does matter here!!!
-    (cond ((fixnum?		obj)
-	   ;;We  do  not  test   for  either  "<nonnegative-fixnum>"  or
-	   ;;"<nonpositive-fixnum>".
-	   (cond (($fxpositive? obj)	(tag-unique-identifiers <positive-fixnum>))
-		 (($fxnegative? obj)	(tag-unique-identifiers <negative-fixnum>))
-		 (else			(tag-unique-identifiers <fixnum>))))
-	  ((bignum?		obj)	(tag-unique-identifiers <exact-integer>))
-	  ((integer?		obj)	(tag-unique-identifiers <integer>))
-	  ((rational?		obj)	(tag-unique-identifiers <rational>))
-	  ((integer-valued?	obj)	(tag-unique-identifiers <integer-valued>))
-	  ((rational-valued?	obj)	(tag-unique-identifiers <rational-valued>))
-	  ((flonum?		obj)	(tag-unique-identifiers <flonum>))
-	  ((real?		obj)	(tag-unique-identifiers <real>))
-	  ((real-valued?	obj)	(tag-unique-identifiers <real-valued>))
-	  ((complex?		obj)	(tag-unique-identifiers <complex>))
-	  (else				(tag-unique-identifiers <number>))))
+   ;;Numeric object identification.  Order does matter here!!!
+   ;;
+   ;;Notice that it is almost useless  to apply NUMBER? first and having
+   ;;a nested COND syntax with the various numeric predicates, as in:
+   ;;
+   ;;  ((number? obj)	(cond ((fixnum? obj) ...) ...))
+   ;;
+   ;;because  NUMBER?  itself  is  implemented as  a  series of  numeric
+   ;;predicates applications.
+   ;;
+   ((fixnum?		obj)
+    ;;We  do  not  test   for  either  "<nonnegative-fixnum>"  or
+    ;;"<nonpositive-fixnum>".
+    (cond (($fxpositive? obj)	(tag-unique-identifiers <positive-fixnum>))
+	  (($fxnegative? obj)	(tag-unique-identifiers <negative-fixnum>))
+	  (else			(tag-unique-identifiers <fixnum>))))
+   ((bignum?		obj)	(tag-unique-identifiers <bignum>))
+   ((integer?		obj)	(tag-unique-identifiers <integer>))
+   ((flonum?		obj)	(tag-unique-identifiers <flonum>))
+   ((ratnum?		obj)	(tag-unique-identifiers <ratnum>))
+   ((cflonum?		obj)	(tag-unique-identifiers <cflonum>))
+   ((compnum?		obj)	(tag-unique-identifiers <compnum>))
+   ;;These are  commented out because,  with the predicates  above, they
+   ;;will never happen.
+   ;;
+   ;;((rational?	obj)	(tag-unique-identifiers <rational>))
+   ;;((integer-valued?	obj)	(tag-unique-identifiers <integer-valued>))
+   ;;((rational-valued?	obj)	(tag-unique-identifiers <rational-valued>))
+   ;;((real?		obj)	(tag-unique-identifiers <real>))
+   ;;((real-valued?	obj)	(tag-unique-identifiers <real-valued>))
+   ;;((complex?		obj)	(tag-unique-identifiers <complex>))
+   ;;((number?		obj)	(tag-unique-identifiers <number>))
 
    ((char?		obj)		(tag-unique-identifiers <char>))
    ((string?		obj)		(tag-unique-identifiers <string>))
