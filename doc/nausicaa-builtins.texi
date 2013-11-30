@@ -2570,61 +2570,72 @@ from @class{real}.
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} integer?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $integer?
 Accessing this field is like applying to the instance number the
 function @func{flinteger?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} finite?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $finite?
 Accessing this field is like applying to the instance number the
 function @func{flfinite?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} infinite?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $infinite?
 Accessing this field is like applying to the instance number the
 function @func{flinfinite?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nan?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nan?
 Accessing this field is like applying to the instance number the
 function @func{flnan?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} negative?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $negative?
 Accessing this field is like applying to the instance number the
 function @func{flnegative?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} positive?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $positive?
 Accessing this field is like applying to the instance number the
 function @func{flpositive?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonnegative?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nonnegative?
 Accessing this field is like applying to the instance number the
 function @func{flnonnegative?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonpositive?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nonpositive?
 Accessing this field is like applying to the instance number the
 function @func{flnonpositive?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?
 Accessing this field is like applying to the instance number the
 function @func{flzero?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/positive
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?/positive
 @deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/negative
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?/negative
 Accessing this field is like applying to the instance number,
 respectively, the functions @func{flzero?/positive} and
 @func{flzero?/negative} from @library{vicare}.
@@ -2632,12 +2643,14 @@ respectively, the functions @func{flzero?/positive} and
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} even?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $even?
 Accessing this field is like applying to the instance number the
 function @func{fleven?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} odd?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $odd?
 Accessing this field is like applying to the instance number the
 function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
@@ -2648,6 +2661,7 @@ function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
 
 
 @defmethod @aclass{flonum} abs
+@defmethodx @aclass{flonum} $abs
 Calling this method is like applying to the instance number the function
 @func{flabs} from @rsixlibrary{arithmetic flonums}.
 @end defmethod
