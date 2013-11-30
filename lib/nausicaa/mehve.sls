@@ -1774,10 +1774,10 @@
 		       ;; redefined by infix
 		       infix)
 	    expand run)
-    (for (nausicaa mehve language numerics-predicates)		expand run)
-    (for (nausicaa mehve language numerics-arithmetics)		expand run)
-    (for (nausicaa mehve language numerics-parts)		expand run)
-    (for (nausicaa mehve language numerics-transcendental)	expand run)
+    (for (nausicaa mehve language numerics predicates)		expand run)
+    (for (nausicaa mehve language numerics arithmetics)		expand run)
+    (for (nausicaa mehve language numerics parts)		expand run)
+    (for (nausicaa mehve language numerics transcendental)	expand run)
     (for (nausicaa mehve language infix)			expand run)
     (for (nausicaa mehve language input-output)			expand run))
 

@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa mehve language numerics-predicates)
+(library (nausicaa mehve language numerics predicates)
   (export
     initialise-mehve-numerics-predicates
 

@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa mehve language numerics-arithmetics)
+(library (nausicaa mehve language numerics arithmetics)
   (export
     initialise-mehve-numerics-arithmetics
 

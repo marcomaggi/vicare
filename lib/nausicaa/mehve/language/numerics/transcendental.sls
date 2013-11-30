@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa mehve language numerics-transcendental)
+(library (nausicaa mehve language numerics transcendental)
   (export
     initialise-mehve-numerics-transcendental
 
