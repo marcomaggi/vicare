@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve language numerics-predicates) mehve.)
+  (prefix (nausicaa mehve language numerics predicates) mehve.)
   (prefix (rnrs) rnrs.)
   (vicare checks))
 
