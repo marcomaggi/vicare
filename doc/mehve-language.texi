@@ -244,8 +244,8 @@ Apply to the arguments the function @func{write} exported by
 * mehve numerics parts::        Parts generic functions.
 @ignore
 * mehve numerics trans::        Transcendental generic functions.
-* mehve numerics infix::        Infix to prefix syntax.
 @end ignore
+* mehve numerics infix::        Infix to prefix syntax.
 @end menu
 
 @c page
@@ -993,7 +993,6 @@ functions.
 * mehve trans trig::            Trigonometric generic functions.
 @end menu
 
-@c page
 @node mehve trans intro
 @subsection Introduction to transcendental generic functions
 
@@ -1040,7 +1039,6 @@ notice how the methods recursively call the generic functions in their
 body, this way the lists can hold any of the value types for which there
 are methods.
 
-@c page
 @node mehve trans log
 @subsection Exponentiation and logarithm generic functions
 
@@ -1150,7 +1148,6 @@ Compute the base @var{B} logarithm of @var{A} using @func{log} from
 @rsixlibrary{base}, @vicareref{baselib math ops trascend, @func{log}}.
 @end deffn
 
-@c page
 @node mehve trans trig
 @subsection Trigonometric generic functions
 
@@ -1232,9 +1229,11 @@ Compute the arc sine, arc cosine and arc tangent functions using
 @vicareref{baselib math ops trascend, @func{asin}}.
 @end deffn
 
+@end ignore
+
 @c page
-@node mehve infix
-@section Infix to prefix syntax
+@node mehve numerics infix
+@subsection Infix to prefix syntax
 
 
 @cindex @library{nausicaa mehve language infix}, library
@@ -1250,7 +1249,5 @@ All the bindings of @func{infix} from @library{nausicaa} are also
 supported by @func{infix} from @library{nausicaa mehve}; the generic
 functions used as operators have the same precedence of the
 corresponding simple functions.
-
-@end ignore
 
 @c end of file
