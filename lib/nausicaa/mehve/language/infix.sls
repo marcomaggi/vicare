@@ -58,10 +58,10 @@
 		  infix)
     (vicare language-extensions infix parser-utils)
     (vicare language-extensions infix tokens)
-    (nausicaa mehve language numerics-predicates)
-    (nausicaa mehve language numerics-arithmetics)
-    (nausicaa mehve language numerics-parts)
-    (nausicaa mehve language numerics-transcendental))
+    (nausicaa mehve language numerics predicates)
+    (nausicaa mehve language numerics arithmetics)
+    (nausicaa mehve language numerics parts)
+    (nausicaa mehve language numerics transcendental))
 
 
 (define-syntax infix

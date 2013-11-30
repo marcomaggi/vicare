@@ -361,10 +361,10 @@ nobase_dist_libvicare_DATA	+= \
 
 nobase_dist_libvicare_DATA	+= \
 	nausicaa/mehve.sls						\
-	nausicaa/mehve/language/numerics-predicates.sls			\
-	nausicaa/mehve/language/numerics-arithmetics.sls		\
-	nausicaa/mehve/language/numerics-parts.sls			\
-	nausicaa/mehve/language/numerics-transcendental.sls		\
+	nausicaa/mehve/language/numerics/predicates.sls			\
+	nausicaa/mehve/language/numerics/arithmetics.sls		\
+	nausicaa/mehve/language/numerics/parts.sls			\
+	nausicaa/mehve/language/numerics/transcendental.sls		\
 	nausicaa/mehve/language/infix.sls				\
 	nausicaa/mehve/language/input-output.sls
 

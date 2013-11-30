@@ -150,7 +150,7 @@ and specialised methods can be added to the generic functions
 case @library{nausicaa mehve} exports the binding for @func{+}, but the
 bindings for @func{addition-0}, @func{addition-1} and @func{addition-2}
 are exported by the auxiliary library @library{nausicaa mehve language
-numerics-arithmetics}.
+numerics arithmetics}.
 
 @c ------------------------------------------------------------
 
@@ -254,12 +254,12 @@ Apply to the arguments the function @func{write} exported by
 @subsection Numeric predicates generic functions
 
 
-@cindex @library{nausicaa mehve language numerics-predicates}, library
-@cindex Library @library{nausicaa mehve language numerics-predicates}
+@cindex @library{nausicaa mehve language numerics predicates}, library
+@cindex Library @library{nausicaa mehve language numerics predicates}
 
 
 The component library @library{nausicaa mehve language
-numerics-predicates} defines the generic functions behind the numeric
+numerics predicates} defines the generic functions behind the numeric
 predicates; we need to import it only if we desire to add specialised
 methods to the numeric predicates.  The numeric predicate functions are
 the following:
@@ -277,7 +277,7 @@ lists of items:
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve language numerics-predicates)
+  (prefix (nausicaa mehve language numerics predicates)
           mehve.))
 
 (define-method (mehve.equal-predicate-1 (o <spine>))
@@ -543,12 +543,12 @@ Return @true{} if the argument is not--a--number.
 @subsection Arithmetics generic functions
 
 
-@cindex @library{nausicaa mehve language numerics-arithmetics}, library
-@cindex Library @library{nausicaa mehve language numerics-arithmetics}
+@cindex @library{nausicaa mehve language numerics arithmetics}, library
+@cindex Library @library{nausicaa mehve language numerics arithmetics}
 
 
 The auxiliary library @library{nausicaa mehve language
-numerics-arithmetics} defines the generic functions behind the
+numerics arithmetics} defines the generic functions behind the
 arithmetic operations; we need to import it only if we desire to add
 specialised methods to arithmetic functions.  The arithmetic functions
 are the following:
@@ -563,7 +563,7 @@ As example we look at how to specialise the arithmetic functions
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve language numerics-arithmetics)
+  (prefix (nausicaa mehve language numerics arithmetics)
           mehve.))
 
 (define-method (mehve.addition-1 (o <spine>))
@@ -734,11 +734,11 @@ arguments.
 @subsection Parts generic functions
 
 
-@cindex @library{nausicaa mehve language numerics-parts}, library
-@cindex Library @library{nausicaa mehve language numerics-parts}
+@cindex @library{nausicaa mehve language numerics parts}, library
+@cindex Library @library{nausicaa mehve language numerics parts}
 
 
-The auxiliary library @library{nausicaa mehve language numerics-parts}
+The auxiliary library @library{nausicaa mehve language numerics parts}
 defines the generic functions behind the parts operations; we need to
 import it only if we desire to add specialised methods to parts
 functions.  The parts functions are the following:
@@ -757,7 +757,7 @@ items:
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve language numerics-parts)
+  (prefix (nausicaa mehve language numerics parts)
           mehve.))
 
 (define-method
@@ -976,12 +976,12 @@ for the argument; when the argument is real: return the argument itself.
 @subsection Transcendental generic functions
 
 
-@cindex @library{nausicaa mehve language numerics-transcendental}, library
-@cindex Library @library{nausicaa mehve language numerics-transcendental}
+@cindex @library{nausicaa mehve language numerics transcendental}, library
+@cindex Library @library{nausicaa mehve language numerics transcendental}
 
 
 The auxiliary library @library{nausicaa mehve language
-numerics-transcendental} defines the generic functions behind the
+numerics transcendental} defines the generic functions behind the
 transcendental operations; we need to import it only if we desire to add
 specialised methods to transcendental functions.  The transcendental
 functions and the other functions exported by the library are the
@@ -999,7 +999,7 @@ As example we look at how to specialise the transcendental functions
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve language numerics-transcendental)
+  (prefix (nausicaa mehve language numerics transcendental)
           mehve.))
 
 (define-method (mehve.sin (o <spine>))

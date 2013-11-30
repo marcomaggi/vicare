@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa mehve language numerics-parts)
+(library (nausicaa mehve language numerics parts)
   (export
     initialise-mehve-numerics-parts
 
