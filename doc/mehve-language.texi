@@ -16,14 +16,7 @@ replacement for it.  Mehve is meant to make heavy use of multimethos.
 * mehve multimethods::          Generic functions and their
                                 customisation.
 * mehve io::                    Input/output generic functions.
-
-Mathematics
-
-* mehve num pred::              Numeric predicates generic functions.
-* mehve arith::                 Arithmetics generic functions.
-* mehve parts::                 Parts generic functions.
-* mehve trans::                 Transcendental generic functions.
-* mehve infix::                 Infix to prefix syntax.
+* mehve numerics::              Numerics generic functions.
 @end menu
 
 @c page
@@ -191,17 +184,17 @@ submitted to the @value{PACKAGE} maintainer.
 @section Input/output generic functions
 
 
-@cindex @library{nausicaa mehve input-output}, library
-@cindex Library @library{nausicaa mehve input-output}
+@cindex @library{nausicaa mehve language input-output}, library
+@cindex Library @library{nausicaa mehve language input-output}
 
 
-The auxiliary library @library{nausicaa mehve input-output} defines the
-generic functions for port input and output; we need to import it only
-if we desire to add specialised methods to the input/output functions.
+The component library @library{nausicaa mehve language input-output}
+defines the generic functions for port input and output through ports;
+we need to import it only if we desire to add specialised methods to the
+input/output functions.
 
 @menu
 * mehve io simple::             Simple input/output generic functions.
-
 @end menu
 
 @c page
@@ -210,32 +203,21 @@ if we desire to add specialised methods to the input/output functions.
 
 
 The bindings @func{display} and @func{write} exported by
-@library{nausicaa mehve input-output}, and reexported by
+@library{nausicaa mehve language input-output}, and reexported by
 @library{nausicaa mehve}, generalise the corresponding functions from
-@rsixlibrary{io simple}; they are implemented using the following
-generic functions exported by @library{nausicaa mehve}.
+@rsixlibrary{io simple}.
 
 
 @deffn {Generic Function} display-1 @var{obj}
-Used when @func{display} is applied to one argument.
-@end deffn
-
-@deffn {Generic Function} display-2 @var{obj} @var{port}
-Used when @func{display} is applied to tws arguments.
+@deffnx {Generic Function} display-2 @var{obj} @var{port}
+Invoked when @func{display} is applied to one or two arguments.
 @end deffn
 
 
 @deffn {Generic Function} write-1 @var{obj}
-Used when @func{write} is applied to one argument.
+@deffnx {Generic Function} write-2 @var{obj} @var{port}
+Invoked when @func{write} is applied to one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} write-2 @var{obj} @var{port}
-Used when @func{write} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method display-1 (@var{obj} @aclass{top})
@@ -252,42 +234,39 @@ Apply to the arguments the function @func{write} exported by
 @end deffn
 
 @c page
-@node mehve num pred
-@section Numeric predicates generic functions
+@node mehve numerics
+@section Numerics generic functions
 
-
-@cindex @library{nausicaa mehve numeric-predicates}, library
-@cindex Library @library{nausicaa mehve numeric-predicates}
-
-
-The auxiliary library @library{nausicaa mehve numeric-predicates}
-defines the generic functions behind the numeric predicates; we need to
-import it only if we desire to add specialised methods to the numeric
-predicates.
 
 @menu
-* mehve num pred intro::        Introduction to numeric predicates
-                                generic functions.
-* mehve num pred comp::         Numeric comparison generic functions.
-* mehve num pred sign::         Sign related generic functions.
-* mehve num pred odd::          Even and odd predicates
-                                generic functions.
-* mehve num pred inf::          Infinity and not--a--number predicates
-                                generic functions.
+* mehve numerics predicates::   Numeric predicates generic functions.
+* mehve numerics arithmetics::  Arithmetics generic functions.
+* mehve numerics parts::        Parts generic functions.
+@ignore
+* mehve numerics trans::        Transcendental generic functions.
+* mehve numerics infix::        Infix to prefix syntax.
+@end ignore
 @end menu
 
 @c page
-@node mehve num pred intro
-@subsection Introduction to numeric predicates generic functions
+@node mehve numerics predicates
+@subsection Numeric predicates generic functions
 
 
-The numeric predicate functions are the following:
+@cindex @library{nausicaa mehve language numerics-predicates}, library
+@cindex Library @library{nausicaa mehve language numerics-predicates}
+
+
+The component library @library{nausicaa mehve language
+numerics-predicates} defines the generic functions behind the numeric
+predicates; we need to import it only if we desire to add specialised
+methods to the numeric predicates.  The numeric predicate functions are
+the following:
 
 @example
 = < > <= >=
 zero? positive? negative? non-negative? non-positive?
-odd? even?
-finite? infinite? nan?
+odd? even? finite? infinite? nan?
 @end example
 
 As example we look at how to specialise the comparison predicates
@@ -297,46 +276,49 @@ lists of items:
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve numeric-predicates) mehve.))
+  (prefix (nausicaa mehve language numerics-predicates)
+          mehve.))
 
-(define-method (mehve.equal-predicate-1 (o <list>))
-  (o.for-all =))
-
-(define-method (mehve.equal-predicate-2 (a <list>) (b <list>))
-  (a.for-all = b))
-
-(define-method (mehve.less-than-predicate-1 (o <list>))
-  (o.for-all <))
+(define-method (mehve.equal-predicate-1 (o <spine>))
+  (o for-all =))
 
 (define-method
-    (mehve.less-than-predicate-2 (a <list>) (b <list>))
-  (a.for-all < b))
+    (mehve.equal-predicate-2 (a <spine>) (b <spine>))
+  (a for-all = b))
 
 (define-method
-    (mehve.greater-than-predicate-1 (o <list>))
-  (o.for-all >))
+    (mehve.less-than-predicate-1 (o <spine>))
+  (o for-all <))
 
 (define-method
-    (mehve.greater-than-predicate-2 (a <list>) (b <list>))
-  (a.for-all > b))
+    (mehve.less-than-predicate-2 (a <spine>) (b <spine>))
+  (a for-all < b))
 
 (define-method
-    (mehve.less-than-or-equal-to-predicate-1 (o <list>))
-  (o.for-all <=))
+    (mehve.greater-than-predicate-1 (o <spine>))
+  (o for-all >))
+
+(define-method
+    (mehve.greater-than-predicate-2 (a <spine>) (b <spine>))
+  (a for-all > b))
+
+(define-method
+    (mehve.less-than-or-equal-to-predicate-1 (o <spine>))
+  (o for-all <=))
 
 (define-method
     (mehve.less-than-or-equal-to-predicate-2
-        (a <list>) (b <list>))
-  (a.for-all <= b))
+        (a <spine>) (b <spine>))
+  (a for-all <= b))
 
 (define-method
-    (mehve.greater-than-or-equal-to-predicate-1 (o <list>))
-  (o.for-all >=))
+    (mehve.greater-than-or-equal-to-predicate-1 (o <spine>))
+  (o for-all >=))
 
 (define-method
     (mehve.greater-than-or-equal-to-predicate-2
-        (a <list>) (b <list>))
-  (a.for-all >= b))
+        (a <spine>) (b <spine>))
+  (a for-all >= b))
 
 (= '(1 2 3) '(1 2 3))  @result{} (#t #t #t)
 (= '(1 2 3) '(1 4 3))  @result{} (#t #f #t)
@@ -345,436 +327,156 @@ lists of items:
 (< '(1 5 3) '(4 2 6))  @result{} (#t #f #t)
 @end example
 
-@c page
-@node mehve num pred comp
-@subsection Numeric comparison generic functions
+@c ------------------------------------------------------------
 
-
-A numeric predicate method must always return a boolean value.  When a
-numeric predicate @func{op} is applied to more than two arguments, the
-operation is always equivalent to:
-
-@example
-(op @var{A} @var{B} @var{C} @var{D}) @equiv{} (and (op @var{A} @var{B}) (op @var{B} @var{C}) (op @var{C} @var{D}))
-@end example
-
-@menu
-* mehve num pred comp eq::      Numeric equality predicate.
-* mehve num pred comp lt::      Numeric less than predicate.
-* mehve num pred comp gt::      Numeric greater than predicate.
-* mehve num pred comp le::      Numeric less than or
-                                equal to predicate.
-* mehve num pred comp ge::      Numeric greater than or
-                                equal to predicate.
-@end menu
-
-@c page
-@node mehve num pred comp eq
-@subsubsection Equality predicate
-
-
-The binding @func{=} exported by @library{nausicaa mehve} generalises
-the corresponding function exported by @rsixlibrary{base}; it is
-implemented using the following generic functions exported by
-@library{nausicaa mehve numeric-predicates}.
+@subsubheading Comparison functions
 
 
 @deffn {Generic Function} equal-predicate-0
-Used when @func{=} is invoked with no arguments.
+@deffnx {Generic Function} equal-predicate-1 @var{A}
+@deffnx {Generic Function} equal-predicate-2 @var{A} @var{B}
+Used when @func{=} is invoked with zero, one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} equal-predicate-1 @var{A}
-Used when @func{=} is applied to one argument.
-@end deffn
-
-
-@deffn {Generic Function} equal-predicate-2 @var{A} @var{B}
-Used when @func{=} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method equal-predicate-0
-Return @true{}.
+@deffnx Method equal-predicate-1 (@var{A} @aclass{top})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx=?}, @func{fl=?} or @func{=} as appropriate for the
+arguments.
 @end deffn
-
-
-@deffn Method equal-predicate-1 (@var{A} @aclass{top})
-Return @true{}.
-@end deffn
-
-
-@deffn Method equal-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx=?} exported by
-@rsixlibrary{arithmetic fixnums}, @vicareref{stdlib arithmetic fixnums,
-@func{fx=?}}.
-@end deffn
-
-
-@deffn Method equal-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl=?} exported by
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fl=?}}.
-@end deffn
-
-
-@deffn Method equal-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Apply to the arguments the function @func{=} exported by
-@library{nausicaa}.
-@end deffn
-
-@c page
-@node mehve num pred comp lt
-@subsubsection Numeric less than predicate
-
-
-The binding @func{<} exported by @library{nausicaa mehve} generalises
-the corresponding function exported by @rsixlibrary{base}; it is
-implemented using the following generic functions exported by
-@library{nausicaa mehve numeric-predicates}.
 
 
 @deffn {Generic Function} less-than-predicate-0
-Used when @func{<} is invoked with no arguments.
+@deffnx {Generic Function} less-than-predicate-1 @var{A}
+@deffnx {Generic Function} less-than-predicate-2 @var{A} @var{B}
+Used when @func{<} is invoked with zero, one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} less-than-predicate-1 @var{A}
-Used when @func{<} is applied to one argument.
-@end deffn
-
-
-@deffn {Generic Function} less-than-predicate-2 @var{A} @var{B}
-Used when @func{<} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method less-than-predicate-0
-Return @false{}.
+@deffnx Method less-than-predicate-1 (@var{A} @aclass{top})
+@deffnx Method less-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method less-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+When zero or one arguments are used: return @false{}.  Otherwise use the
+functions @func{fx<?}, @func{fl<?} or @func{<} as appropriate for the
+arguments.
 @end deffn
-
-
-@deffn Method less-than-predicate-1 (@var{A} @aclass{top})
-Return @false{}.
-@end deffn
-
-
-@deffn Method less-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx<?} exported by
-@rsixlibrary{arithmetic fixnums}, @vicareref{stdlib arithmetic fixnums,
-@func{fx<?}}.
-@end deffn
-
-
-@deffn Method less-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl<?} exported by
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fl<?}}.
-@end deffn
-
-
-@deffn Method less-than-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Apply to the arguments the function @func{<} exported by
-@library{nausicaa}.
-@end deffn
-
-@c page
-@node mehve num pred comp gt
-@subsubsection Numeric greater than predicate
-
-
-The binding @func{>} exported by @library{nausicaa mehve} generalises
-the corresponding function exported by @rsixlibrary{base}; it is
-implemented using the following generic functions exported by
-@library{nausicaa mehve numeric-predicates}.
 
 
 @deffn {Generic Function} greater-than-predicate-0
-Used when @func{>} is invoked with no arguments.
+@deffnx {Generic Function} greater-than-predicate-1 @var{A}
+@deffnx {Generic Function} greater-than-predicate-2 @var{A} @var{B}
+Used when @func{>} is invoked with zero, one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} greater-than-predicate-1 @var{A}
-Used when @func{>} is applied to one argument.
-@end deffn
-
-
-@deffn {Generic Function} greater-than-predicate-2 @var{A} @var{B}
-Used when @func{>} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method greater-than-predicate-0
-Return @false{}.
+@deffnx Method greater-than-predicate-1 (@var{A} @aclass{top})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @false{}.  Otherwise use the
+functions @func{fx<?}, @func{fl<?} or @func{<} as appropriate for the
+arguments.
 @end deffn
-
-
-@deffn Method greater-than-predicate-1 (@var{A} @aclass{top})
-Return @false{}.
-@end deffn
-
-
-@deffn Method greater-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx>?} exported by
-@rsixlibrary{arithmetic fixnums}, @vicareref{stdlib arithmetic fixnums,
-@func{fx>?}}.
-@end deffn
-
-
-@deffn Method greater-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl>?} exported by
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fl>?}}.
-@end deffn
-
-
-@deffn Method greater-than-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Apply to the arguments the function @func{>} exported by
-@library{nausicaa}.
-@end deffn
-
-@c page
-@node mehve num pred comp le
-@subsubsection Numeric less than or equal to predicate
-
-
-The binding @func{<=} exported by @library{nausicaa mehve} generalises
-the corresponding function exported by @rsixlibrary{base}; it is
-implemented using the following generic functions exported by
-@library{nausicaa mehve numeric-predicates}.
 
 
 @deffn {Generic Function} less-than-or-equal-to-predicate-0
-Used when @func{<=} is invoked with no arguments.
+@deffnx {Generic Function} less-than-or-equal-to-predicate-1 @var{A}
+@deffnx {Generic Function} less-than-or-equal-to-predicate-2 @var{A} @var{B}
+Used when @func{<=} is invoked with zero, one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} less-than-or-equal-to-predicate-1 @var{A}
-Used when @func{<=} is applied to one argument.
-@end deffn
-
-
-@deffn {Generic Function} less-than-or-equal-to-predicate-2 @var{A} @var{B}
-Used when @func{<=} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method less-than-or-equal-to-predicate-0
-Return @true{}.
+@deffnx Method less-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx<=?}, @func{fl<=?} or @func{<=} as appropriate for the
+arguments.
 @end deffn
-
-
-@deffn Method less-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
-Return @true{}.
-@end deffn
-
-
-@deffn Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx<=?} exported by
-@rsixlibrary{arithmetic fixnums}, @vicareref{stdlib arithmetic fixnums,
-@func{fx<=?}}.
-@end deffn
-
-
-@deffn Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl<=?} exported by
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fl<=?}}.
-@end deffn
-
-
-@deffn Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Apply to the arguments the function @func{<=} exported by
-@library{nausicaa}.
-@end deffn
-
-@c page
-@node mehve num pred comp ge
-@subsubsection Numeric greater than or equal to predicate
-
-
-The binding @func{>=} exported by @library{nausicaa mehve} generalises
-the corresponding function exported by @rsixlibrary{base}; it is
-implemented using the following generic functions exported by
-@library{nausicaa mehve numeric-predicates}.
 
 
 @deffn {Generic Function} greater-than-or-equal-to-predicate-0
-Used when @func{>=} is invoked with no arguments.
+@deffnx {Generic Function} greater-than-or-equal-to-predicate-1 @var{A}
+@deffnx {Generic Function} greater-than-or-equal-to-predicate-2 @var{A} @var{B}
+Used when @func{>=} is invoked with zero, one or two arguments.
 @end deffn
-
-
-@deffn {Generic Function} greater-than-or-equal-to-predicate-1 @var{A}
-Used when @func{>=} is applied to one argument.
-@end deffn
-
-
-@deffn {Generic Function} greater-than-or-equal-to-predicate-2 @var{A} @var{B}
-Used when @func{>=} is applied to two arguments.
-@end deffn
-
-
-The following are the specialised methods.
 
 
 @deffn Method greater-than-or-equal-to-predicate-0
-Return @true{}.
+@deffnx Method greater-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx>=?}, @func{fl>=?} or @func{>=} as appropriate for the
+arguments.
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn Method greater-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
-Return @true{}.
-@end deffn
-
-
-@deffn Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx>=?} exported by
-@rsixlibrary{arithmetic fixnums}, @vicareref{stdlib arithmetic fixnums,
-@func{fx>=?}}.
-@end deffn
-
-
-@deffn Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl>=?} exported by
-@rsixlibrary{arithmetic flonums}, @vicareref{stdlib arithmetic flonums,
-@func{fl>=?}}.
-@end deffn
-
-
-@deffn Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
-Apply to the arguments the function @func{>=} exported by
-@library{nausicaa}.
-@end deffn
-
-@c page
-@node mehve num pred sign
-@subsection Sign related generic functions
-
-
-The generic functions @func{zero?}, @func{positive?}, @func{negative?},
-@func{non-positive?} and @func{non-negative?} exported by
-@library{nausicaa mehve numeric-predicates}, and reexported by
-@library{nausicaa mehve}, generalise the corresponding functions
-exported by @rsixlibrary{base} and @library{nausicaa}.
+@subsubsection Sign related generic functions
 
 
 @deffn {Generic Function} zero? @var{A}
-Return @true{} if the argument is zero.
+@deffnx Method zero? (@var{A} @aclass{fixnum})
+@deffnx Method zero? (@var{A} @aclass{flonum})
+@deffnx Method zero? (@var{A} @aclass{real})
+Return @true{} if the argument is zero.  Apply to the argument the
+function @func{fxzero?}, @func{flzero?} or @func{zero?} as appropriate
+for the argument.
 @end deffn
 
 
 @deffn {Generic Function} positive? @var{A}
-Return @true{} if the argument is positive.
+@deffnx Method positive? (@var{A} @aclass{fixnum})
+@deffnx Method positive? (@var{A} @aclass{flonum})
+@deffnx Method positive? (@var{A} @aclass{real})
+Return @true{} if the argument is positive.  Apply to the argument the
+function @func{fxpositive?}, @func{flpositive?} or @func{positive?} as
+appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} negative? @var{A}
-Return @true{} if the argument is negative.
+@deffnx Method negative? (@var{A} @aclass{fixnum})
+@deffnx Method negative? (@var{A} @aclass{flonum})
+@deffnx Method negative? (@var{A} @aclass{real})
+Return @true{} if the argument is negative.  Apply to the argument the
+function @func{fxnegative?}, @func{flnegative?} or @func{negative?} as
+appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} non-positive? @var{A}
-Return @true{} if the argument is non--positive.
+@deffnx Method non-positive? (@var{A} @aclass{fixnum})
+@deffnx Method non-positive? (@var{A} @aclass{flonum})
+@deffnx Method non-positive? (@var{A} @aclass{real})
+Return @true{} if the argument is non--positive.  Apply to the argument
+the function @func{fxnonpositive?}, @func{flnonpositive?} or
+@func{non-positive?} as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Function} non-negative? @var{A}
-Return @true{} if the argument is non--negative.
+@deffnx Method non-negative? (@var{A} @aclass{fixnum})
+@deffnx Method non-negative? (@var{A} @aclass{flonum})
+@deffnx Method non-negative? (@var{A} @aclass{real})
+Return @true{} if the argument is non--negative.  Apply to the argument
+the function @func{fxnonnegative?}, @func{flnonnegative?} or
+@func{non-negative?} as appropriate for the argument.
 @end deffn
 
+@c ------------------------------------------------------------
 
-The following are the specialised methods.
-
-
-@deffn Method zero? (@var{A} @aclass{fixnum})
-Apply to the argument the function @func{fxzero?} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fxzero?}}.
-@end deffn
-
-
-@deffn Method zero? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flzero?} exported by the
-@rsixlibrary{arithmetic flonums}, library @vicareref{stdlib arithmetic
-flonums, @func{flzero?}}.
-@end deffn
-
-
-@deffn Method zero? (@var{A} @aclass{real})
-Apply to the argument the function @func{zero?} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops value pred,
-@func{zero?}}.
-@end deffn
-
-
-@deffn Method positive? (@var{A} @aclass{fixnum})
-Apply to the argument the function @func{fxpositive?} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fxpositive?}}.
-@end deffn
-
-
-@deffn Method positive? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flpositive?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flpositive?}}.
-@end deffn
-
-
-@deffn Method positive? (@var{A} @aclass{real})
-Apply to the argument the function @func{positive?} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops value pred,
-@func{positive?}}.
-@end deffn
-
-
-@deffn Method negative? (@var{A} @aclass{fixnum})
-Apply to the argument the function @func{fxnegative?} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fxnegative?}}.
-@end deffn
-
-
-@deffn Method negative? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flnegative?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flnegative?}}.
-@end deffn
-
-
-@deffn Method negative? (@var{A} @aclass{real})
-Apply to the argument the function @func{negative?} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops value pred,
-@func{negative?}}.
-@end deffn
-
-
-@deffn Method non-positive? (@var{A} @aclass{real})
-Apply to the argument the function @func{non-positive?} exported by the
-@library{nausicaa} library.
-@end deffn
-
-
-@deffn Method non-negative? (@var{A} @aclass{real})
-Apply to the argument the function @func{non-negative?} exported by the
-@library{nausicaa} library.
-@end deffn
-
-@c page
-@node mehve num pred odd
-@subsection Even and odd predicates generic functions
+@subsubheading Even and odd predicates generic functions
 
 
 The generic functions @func{odd?} and @func{even?} exported by
@@ -784,68 +486,28 @@ exported by @rsixlibrary{base}.
 
 
 @deffn {Generic Function} odd? @var{A}
-Return @true{} if the argument is odd.
+@deffnx Method odd? (@var{A} @aclass{fixnum})
+@deffnx Method odd? (@var{A} @aclass{flonum})
+@deffnx Method odd? (@var{A} @aclass{real})
+Return @true{} if the argument is odd.  Apply to the argument the
+function @func{fxodd?}, @func{flodd?} or @func{odd?} as appropriate for
+the argument.
 @end deffn
 
 
 @deffn {Generic Function} even? @var{A}
-Return @true{} if the argument is even.
+@deffnx Method even? (@var{A} @aclass{fixnum})
+@deffnx Method even? (@var{A} @aclass{flonum})
+@deffnx Method even? (@var{A} @aclass{real})
+Return @true{} if the argument is even.  Apply to the argument the
+function @func{fxeven?}, @func{fleven?} or @func{even?} as appropriate
+for the argument.
 @end deffn
 
+@c ------------------------------------------------------------
 
-The following are the specialised methods.
+@subsubheading Infinity and not--a--number predicates generic functions
 
-
-@deffn Method odd? (@var{A} @aclass{fixnum})
-Apply to the argument the function @func{fxodd?} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fxodd?}}.
-@end deffn
-
-
-@deffn Method odd? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flodd?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flodd?}}.
-@end deffn
-
-
-@deffn Method odd? (@var{A} @aclass{real})
-Apply to the argument the function @func{odd?} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops value pred,
-@func{odd?}}.
-@end deffn
-
-
-@deffn Method even? (@var{A} @aclass{fixnum})
-Apply to the argument the function @func{fxeven?} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fxeven?}}.
-@end deffn
-
-
-@deffn Method even? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{fleven?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fleven?}}.
-@end deffn
-
-
-@deffn Method even? (@var{A} @aclass{real})
-Apply to the argument the function @func{even?} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops value pred,
-@func{even?}}.
-@end deffn
-
-@c page
-@node mehve num pred inf
-@subsection Infinity and not--a--number predicates generic functions
-
-
-The generic functions @func{finite?}, @func{infinite?} and @func{nan?}
-exported by @library{nausicaa mehve numeric-predicates}, and reexported
-by @library{nausicaa mehve}, generalise the corresponding functions
-exported by @rsixlibrary{base} and @library{nausicaa}.
 
 We have to remember that, according to @rnrs{6}, the only values
 satisfying the predicate @func{real?} and not the predicate
@@ -853,91 +515,42 @@ satisfying the predicate @func{real?} and not the predicate
 
 
 @deffn {Generic Function} finite? @var{A}
+@deffnx Method finite? (@var{A} @aclass{fixnum})
+@deffnx Method finite? (@var{A} @aclass{flonum})
+@deffnx Method finite? (@var{A} @aclass{complex})
 Return @true{} if the argument is finite and not not--a--number.
 @end deffn
 
 
 @deffn {Generic Function} infinite? @var{A}
+@deffnx Method infinite? (@var{A} @aclass{fixnum})
+@deffnx Method infinite? (@var{A} @aclass{flonum})
+@deffnx Method infinite? (@var{A} @aclass{complex})
 Return @true{} if the argument is infinite.
 @end deffn
 
 
 @deffn {Generic Function} nan? @var{A}
+@deffnx Method nan? (@var{A} @aclass{fixnum})
+@deffnx Method nan? (@var{A} @aclass{flonum})
+@deffnx Method nan? (@var{A} @aclass{complex})
 Return @true{} if the argument is not--a--number.
 @end deffn
 
-
-The following are the specialised methods.
-
-
-@deffn Method finite? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flfinite?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flfinite?}}.
-@end deffn
-
-
-@deffn Method finite? (@var{A} @aclass{complex})
-Apply to the argument the function @func{finite?} exported by the
-@library{nausicaa} library.
-@end deffn
-
-
-@deffn Method infinite? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flinfinite?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flinfinite?}}.
-@end deffn
-
-
-@deffn Method infinite? (@var{A} @aclass{complex})
-Apply to the argument the function @func{infinite?} exported by the
-@library{nausicaa} library.
-@end deffn
-
-
-@deffn Method nan? (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flnan?} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flnan?}}.
-@end deffn
-
-
-@deffn Method nan? (@var{A} @aclass{complex})
-Apply to the argument the function @func{nan?} exported by the
-@library{nausicaa} library.
-@end deffn
-
 @c page
-@node mehve arith
-@section Arithmetics generic functions
+@node mehve numerics arithmetics
+@subsection Arithmetics generic functions
 
 
-@cindex @library{nausicaa mehve arithmetics}, library
-@cindex Library @library{nausicaa mehve arithmetics}
+@cindex @library{nausicaa mehve language numerics-arithmetics}, library
+@cindex Library @library{nausicaa mehve language numerics-arithmetics}
 
 
-The auxiliary library @library{nausicaa mehve arithmetics} defines the
-generic functions behind the arithmetic operations; we need to import it
-only if we desire to add specialised methods to arithmetic functions.
-
-@menu
-* mehve arith intro::           Introduction to arithmetics
-                                generic functions.
-* mehve arith addition::        Addition generic function.
-* mehve arith subtraction::     Subtraction generic function.
-* mehve arith multiplication::  Multiplication generic function.
-* mehve arith division::        Division generic function.
-* mehve arith integer::         Integer operations generic functions.
-* mehve arith absolute::        Absolute value generic function.
-@end menu
-
-@c page
-@node mehve arith intro
-@subsection Introduction to arithmetics generic functions
-
-
-The arithmetic functions are the following:
+The auxiliary library @library{nausicaa mehve language
+numerics-arithmetics} defines the generic functions behind the
+arithmetic operations; we need to import it only if we desire to add
+specialised methods to arithmetic functions.  The arithmetic functions
+are the following:
 
 @example
 + - * / abs div div0 mod mod0 div-and-mod div0-and-mod0
@@ -949,26 +562,27 @@ As example we look at how to specialise the arithmetic functions
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve arithmetics) mehve.))
+  (prefix (nausicaa mehve language numerics-arithmetics)
+          mehve.))
 
-(define-method (mehve.addition-1 (o <list>))
+(define-method (mehve.addition-1 (o <spine>))
   o)
-(define-method (mehve.addition-2 (a <list>) (b <list>))
+(define-method (mehve.addition-2 (a <spine>) (b <spine>))
   (map + a b))
 
-(define-method (mehve.subtraction-1 (o <list>))
+(define-method (mehve.subtraction-1 (o <spine>))
   (map - o))
-(define-method (mehve.subtraction-2 (a <list>) (b <list>))
+(define-method (mehve.subtraction-2 (a <spine>) (b <spine>))
   (map - a b))
 
-(define-method (mehve.multiplication-1 (o <list>))
+(define-method (mehve.multiplication-1 (o <spine>))
   o)
-(define-method (mehve.multiplication-2 (a <list>) (b <list>))
+(define-method (mehve.multiplication-2 (a <spine>) (b <spine>))
   (map * a b))
 
-(define-method (mehve.division-1 (o <list>))
+(define-method (mehve.division-1 (o <spine>))
   (map / o))
-(define-method (mehve.division-2 (a <list>) (b <list>))
+(define-method (mehve.division-2 (a <spine>) (b <spine>))
   (map / a b))
 
 (+ '(1 2 3))                       @result{} (1 2 3)
@@ -993,424 +607,173 @@ notice how the methods recursively call the generic functions in their
 body, this way the lists can hold any of the value types for which there
 are methods.
 
-@c page
-@node mehve arith addition
-@subsection Addition generic function
-
-
-The generic function @func{+} exported by @library{nausicaa mehve} is
-implemented using the following bindings exported by @library{nausicaa
-mehve arithmetics}.  Notice that @func{+} is used also in the
-implementation of @func{-}.
-
 
 @deffn {Generic Function} addition-0
-It has a single method used when @func{+} is called with no arguments.
+@deffnx {Generic Function} addition-1 @var{A}
+@deffnx {Generic Function} addition-2 @var{A} @var{B}
+@deffnx Method addition-0
+@deffnx Method addition-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method addition-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method addition-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{+} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  When one argument is given:
+return @var{A} itself.  Otherwise use the function @func{fx+},
+@func{fl+} or @func{+} as appropriate for the arguments.
 @end deffn
-
-
-@deffn {Generic Function} addition-1 @var{A}
-Used when @func{+} is called with one argument.
-@end deffn
-
-
-@deffn {Generic Function} addition-2 @var{A} @var{B}
-Used when @func{+} is called with two arguments.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method addition-0
-Return the exact integer @math{0}.
-@end deffn
-
-
-@deffn Method addition-1 (@var{A} @aclass{number})
-Return @var{A} itself.
-@end deffn
-
-
-@deffn Method addition-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx+} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fx+}}.
-@end deffn
-
-
-@deffn Method addition-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl+} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fl+}}.
-@end deffn
-
-
-@deffn Method addition-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
-Apply to the arguments the function @func{+} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{+}}.
-@end deffn
-
-@c page
-@node mehve arith subtraction
-@subsection Subtraction generic function
-
-
-The generic function @func{-} exported by @library{nausicaa mehve} is
-implemented using the following bindings exported by @library{nausicaa
-mehve arithmetics}.  Notice that the generic function @func{+} is also
-used in the implementation of @func{-}.
 
 
 @deffn {Generic Function} subtraction-0
-It has a single method used when @func{-} is called with no arguments.
-@end deffn
-
-
-@deffn {Generic Function} subtraction-1 @var{A}
-Used when @func{-} is called with one argument.
-@end deffn
-
-
-@deffn {Generic Function} subtraction-2 @var{A} @var{B}
-Used when @func{-} is called with two arguments.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method subtraction-0
-Return the exact integer @math{0}.
-@end deffn
-
-
-@deffn Method subtraction-1 (@var{A} @aclass{fixnum})
+@deffnx {Generic Function} subtraction-1 @var{A}
+@deffnx {Generic Function} subtraction-2 @var{A} @var{B}
+@deffnx Method subtraction-0
 @deffnx Method subtraction-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx-} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fx-}}.
-@end deffn
-
-
-@deffn Method subtraction-1 (@var{A} @aclass{flonum})
 @deffnx Method subtraction-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl-} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fl-}}.
-@end deffn
-
-
-@deffn Method subtraction-1 (@var{A} @aclass{number})
 @deffnx Method subtraction-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
-Apply to the arguments the function @func{-} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{-}}.
+Used when @func{-} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  Otherwise use the function
+@func{fx-}, @func{fl-} or @func{-} as appropriate for the arguments.
 @end deffn
-
-@c page
-@node mehve arith multiplication
-@subsection Multiplication generic function
-
-
-The generic function @func{*} exported by @library{nausicaa mehve} is
-implemented using the following bindings exported by @library{nausicaa
-mehve arithmetics}.  Notice that @func{*} is used also in the
-implementation of @func{/}.
 
 
 @deffn {Generic Function} multiplication-0
-It has a single method used when @func{*} is called with no arguments.
+@deffnx {Generic Function} multiplication-1 @var{A}
+@deffnx {Generic Function} multiplication-2 @var{A} @var{B}
+@deffnx Method multiplication-0
+@deffnx Method multiplication-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method multiplication-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method multiplication-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{*} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  When one argument is given:
+return @var{A} itself.  Otherwise use the function @func{fx*},
+@func{fl*} or @func{*} as appropriate for the arguments.
 @end deffn
-
-
-@deffn {Generic Function} multiplication-1 @var{A}
-Used when @func{*} is called with one argument.
-@end deffn
-
-
-@deffn {Generic Function} multiplication-2 @var{A} @var{B}
-Used when @func{*} is called with two arguments.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method multiplication-0
-Return the exact integer @math{1}.
-@end deffn
-
-
-@deffn Method multiplication-1 (@var{A} @aclass{number})
-Return @var{A} itself.
-@end deffn
-
-
-@deffn Method multiplication-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fx*} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-fixnums, @func{fx*}}.
-@end deffn
-
-
-@deffn Method multiplication-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl*} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fl*}}.
-@end deffn
-
-
-@deffn Method multiplication-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
-Apply to the arguments the function @func{*} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{*}}.
-@end deffn
-
-@c page
-@node mehve arith division
-@subsection Division generic function
-
-
-The generic function @func{/} exported by @library{nausicaa mehve} is
-implemented using the following bindings exported by @library{nausicaa
-mehve arithmetics}.  Notice that the generic function @func{*} is also
-used in the implementation of @func{/}.
 
 
 @deffn {Generic Function} division-0
-It has a single method used when @func{/} is called with no arguments.
-@end deffn
-
-
-@deffn {Generic Function} division-1 @var{A}
-Used when @func{/} is called with one argument.
-@end deffn
-
-
-@deffn {Generic Function} division-2 @var{A} @var{B}
-Used when @func{/} is called with two arguments.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method division-0
-Return @math{+nan.0}.
-@end deffn
-
-
-@deffn Method division-1 (@var{A} @aclass{fixnum})
+@deffnx {Generic Function} division-1 @var{A}
+@deffnx {Generic Function} division-2 @var{A} @var{B}
+@deffnx Method division-0
 @deffnx Method division-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{/} exported by the
-@rsixlibrary{arithmetic fixnums} library, @vicareref{baselib math ops
-arithmetic, @func{/}}.
-
-It does not use @func{fxdiv}, so it will return exact rationals when
-needed.
-@end deffn
-
-
-@deffn Method division-1 (@var{A} @aclass{flonum})
 @deffnx Method division-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
-Apply to the arguments the function @func{fl/} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fl/}}.
-@end deffn
-
-
-@deffn Method division-1 (@var{A} @aclass{number})
 @deffnx Method division-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
-Apply to the arguments the function @func{/} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{/}}.
+Used when @func{/} is called with zero, one or two arguments.  When no
+arguments are given: return @code{+nan.0}.  Otherwise use the function
+@func{fxdiv}, @func{fl/} or @func{/} as appropriate for the arguments.
 @end deffn
-
-@c page
-@node mehve arith integer
-@subsection Integer operations generic functions
-
-
-The generic functions @func{div}, @func{div0}, @func{mod}, @func{mod0},
-@func{div-and-mod} and @func{div0-and-mod0} exported by
-@library{nausicaa mehve arithmetics}, and reexported by
-@library{nausicaa mehve}, generalise the corresponding functions from
-@rsixlibrary{base} and are meant to perform integer operations as
-explained in @vicareref{baselib math semantics integer, Integer division}.
 
 
 @deffn {Generic Function} div @var{a} @var{b}
-@deffnx {Generic Function} div0 @var{a} @var{b}
-Perform integer division.
+@deffnx Method div (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Perform integer division.  Use the function @func{fxdiv}, @func{fldiv}
+or @func{div} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} div0 @var{a} @var{b}
+@deffnx Method div0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Perform integer division.  Use the function @func{fxdiv0}, @func{fldiv0}
+or @func{div0} as appropriate for the arguments.
 @end deffn
 
 
 @deffn {Generic Function} mod @var{a} @var{b}
-@deffnx {Generic Function} mod0 @var{a} @var{b}
-Compute the modulus of integer division.
+@deffnx Method mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method mod (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the modulus of integer division.  Use the function @func{fxmod},
+@func{flmod} or @func{mod} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} mod0 @var{a} @var{b}
+@deffnx Method mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method mod0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method mod0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the modulus of integer division.  Use the function
+@func{fxmod0}, @func{flmod0} or @func{mod0} as appropriate for the
+arguments.
 @end deffn
 
 
 @deffn {Generic Function} div-and-mod @var{a} @var{b}
-@deffnx {Generic Function} div0-and-mod0 @var{a} @var{b}
-Compute the integer division and its modulus.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method div (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-@deffnx Method div0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fxdiv} or @func{fxdiv0}
-exported by the @rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib
-arithmetic fixnums, @func{fxdiv}}.
-@end deffn
-
-
-@deffn Method div (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
-@deffnx Method div (@var{A} @aclass{real}) (@var{B} @aclass{real})
-@deffnx Method div0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
-@deffnx Method div0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
-Apply to the arguments the function @func{div} or @func{div0} exported
-by the @rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{div}}.
-@end deffn
-
-
-@deffn Method mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-@deffnx Method mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fxmod} or @func{fxmod0}
-exported by the @rsixlibrary{arithmetic fixnums} library, @vicareref{stdlib
-arithmetic fixnums, @func{fxmod}}.
-@end deffn
-
-
-@deffn Method mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
-@deffnx Method mod (@var{A} @aclass{real}) (@var{B} @aclass{real})
-@deffnx Method mod0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
-@deffnx Method mod0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
-Apply to the arguments the function @func{mod} or @func{mod0} exported
-by the @rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{mod}}.
-@end deffn
-
-
-@deffn Method div-and-mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-@deffnx Method div0-and-mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
-Apply to the arguments the function @func{fxdiv-and-mod} or
-@func{fxdiv0-and-mod0} exported by the @rsixlibrary{arithmetic fixnums}
-library, @vicareref{stdlib arithmetic fixnums, @func{fxdiv-and-mod}}.
-@end deffn
-
-
-@deffn Method div-and-mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div-and-mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div-and-mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
 @deffnx Method div-and-mod (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the integer division and its modulus.  Use the function
+@func{fxdiv-and-mod}, @func{fldiv-and-mod} or @func{div-and-mod} as
+appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} div0-and-mod0 @var{a} @var{b}
+@deffnx Method div0-and-mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
 @deffnx Method div0-and-mod0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
 @deffnx Method div0-and-mod0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
-Apply to the arguments the function @func{div-and-mod} or
-@func{div0-and-mod0} exported by the @rsixlibrary{base} library,
-@vicareref{baselib math ops arithmetic, @func{div-and-mod}}.
+Compute the integer division and its modulus.  Use the function
+@func{fxdiv0-and-mod0}, @func{fldiv0-and-mod0} or @func{div0-and-mod0}
+as appropriate for the arguments.
 @end deffn
-
-@c page
-@node mehve arith absolute
-@subsection Absolute value generic function
-
-
-The generic function @func{abs} exported by @library{nausicaa mehve
-arithmetics}, and reexported by @library{nausicaa mehve}, is a
-generalisation of the corresponding function from @rsixlibrary{base}.
 
 
 @deffn {Generic Function} abs @var{A}
-Return the absolute value of its argument.
-@end deffn
-
-
-The following are the specialised methods.
-
-
-@deffn Method abs (@var{A} @aclass{fixnum})
-Return the absolute value of the fixnum argument.  It is implemented as:
-
-@example
-(define (%fxabs n)
-  (if (fxnegative? n)
-      (fx- n)
-    n))
-@end example
-@end deffn
-
-
-@deffn Method abs (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flabs} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flabs}}.
-@end deffn
-
-
-@deffn Method abs (@var{A} @aclass{real})
-Apply to the argument the function @func{abs} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops arithmetic,
-@func{abs}}.
+@deffnx Method abs (@var{A} @aclass{fixnum})
+@deffnx Method abs (@var{A} @aclass{flonum})
+@deffnx Method abs (@var{A} @aclass{real})
+Return the absolute value of its argument.  Use the function
+@func{fxabs}, @func{flabs} or @func{abs} as appropriate for the
+arguments.
 @end deffn
 
 @c page
-@node mehve parts
-@section Parts generic functions
+@node mehve numerics parts
+@subsection Parts generic functions
 
 
-@cindex @library{nausicaa mehve parts}, library
-@cindex Library @library{nausicaa mehve parts}
+@cindex @library{nausicaa mehve language numerics-parts}, library
+@cindex Library @library{nausicaa mehve language numerics-parts}
 
 
-The auxiliary library @library{nausicaa mehve parts} defines the generic
-functions behind the parts operations; we need to import it only if we
-desire to add specialised methods to parts functions.
-
-@menu
-* mehve parts intro::           Introduction to parts generic
-                                functions.
-* mehve parts rational::        Rational numbers generic functions.
-* mehve parts rounding::        Rounding generic functions.
-* mehve parts complex::         Complex numbers generic functions.
-@end menu
-
-@c page
-@node mehve parts intro
-@subsection Introduction to parts generic functions
-
-
-The parts functions are the following:
+The auxiliary library @library{nausicaa mehve language numerics-parts}
+defines the generic functions behind the parts operations; we need to
+import it only if we desire to add specialised methods to parts
+functions.  The parts functions are the following:
 
 @example
-numerator denominator rationalize
+numerator denominator rationalize sign
 floor ceiling truncate round
 real-part imag-part magnitude angle
-make-rectangular make-polar
+make-rectangular make-polar complex-conjugate
 @end example
 
-As example we look at how to specialise the transcendental functions
+As example we look at how to specialise the functions
 @func{make-rectangular} and @func{make-polar} to operate on lists of
 items:
 
 @example
 #!r6rs
 (import (nausicaa mehve)
-  (prefix (nausicaa mehve parts) mehve.))
+  (prefix (nausicaa mehve language numerics-parts)
+          mehve.))
 
-(define-method (mehve.make-rectangular (R <vector>) (I <vector>))
-  (R.map make-rectangular I))
-(define-method (mehve.make-rectangular (R <list>) (I <list>))
-  (R.map make-rectangular I))
+(define-method
+    (mehve.make-rectangular (R <vector>) (I <vector>))
+  (R map make-rectangular I))
 
-(define-method (mehve.make-polar (M <vector>) (A <vector>))
-  (M.map make-polar A))
-(define-method (mehve.make-polar (M <list>) (A <list>))
-  (M.map make-polar A))
+(define-method
+    (mehve.make-rectangular (R <spine>) (I <spine>))
+  (R map make-rectangular I))
+
+(define-method
+    (mehve.make-polar (M <vector>) (A <vector>))
+  (M map make-polar A))
+
+(define-method
+    (mehve.make-polar (M <spine>) (A <spine>))
+  (M map make-polar A))
 
 (make-rectangular '(1 2 3) '(4 5 6))
 @result{} (1+4i 2+5i 3+6i)
@@ -1421,247 +784,194 @@ items:
     2.880510859951098-0.8382464945967776i)
 @end example
 
-@c page
-@node mehve parts rational
-@subsection Rational numbers generic functions.
+@c ------------------------------------------------------------
 
-
-The generic functions @func{numerator}, @func{denominator} and
-@func{rationalize} exported by @library{nausicaa mehve parts}, and
-reexported by @library{nausicaa mehve}, generalise the corresponding
-functions from @rsixlibrary{base}.
+@subsubheading Rational numbers generic functions
 
 
 @deffn {Generic Function} numerator @var{A}
-@deffnx {Generic Function} denominator @var{A}
-Return the numerator or denominator of the argument.
+@deffnx Method numerator (@var{A} @aclass{fixnum})
+@deffnx Method numerator (@var{A} @aclass{bignum})
+@deffnx Method numerator (@var{A} @aclass{ratnum})
+@deffnx Method numerator (@var{A} @aclass{flonum})
+@deffnx Method numerator (@var{A} @aclass{integer})
+@deffnx Method numerator (@var{A} @aclass{real})
+Return the numerator of the argument.  Use the function
+@func{numerator}; when the argument is an integer: return the argument
+itself.
+@end deffn
+
+
+@deffn {Generic Function} denominator @var{A}
+@deffnx Method denominator (@var{A} @aclass{fixnum})
+@deffnx Method denominator (@var{A} @aclass{bignum})
+@deffnx Method denominator (@var{A} @aclass{ratnum})
+@deffnx Method denominator (@var{A} @aclass{flonum})
+@deffnx Method denominator (@var{A} @aclass{integer})
+@deffnx Method denominator (@var{A} @aclass{real})
+Return the denominator of the argument.  Use the function
+@func{denominator}; when the argument is an integer: return the fixum
+@code{1}.
 @end deffn
 
 
 @deffn {Generic Function} rationalize @var{A} @var{B}
+@deffnx Method rationalize (@var{A} @aclass{real}) (@var{B} @aclass{real})
 Return a rational number representation of @var{A} which differs from it
-by less than @var{B}.
+by less than @var{B}.  Use the function @func{rationalize}.
 @end deffn
 
+@c ------------------------------------------------------------
 
-The following are the specialised methods.
-
-
-@deffn Method numerator (@var{A} @aclass{rational})
-Apply to the argument the function @func{numerator} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part,
-@func{numerator}}.
-@end deffn
-
-
-@deffn Method numerator (@var{A} @aclass{integer})
-Return @var{A} itself.
-@end deffn
-
-
-@deffn Method denominator (@var{A} @aclass{rational})
-@deffnx Method denominator (@var{A} @aclass{integer})
-Apply to the argument the function @func{denominator} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part,
-@func{denominator}}.
-@end deffn
-
-
-@deffn Method rationalize (@var{A} @aclass{real}) (@var{B} @aclass{real})
-Apply to the arguments the function @func{rationalize} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part,
-@func{rationalize}}.
-@end deffn
-
-@c page
-@node mehve parts rounding
-@subsection Rounding generic functions
-
-
-The generic functions @func{floor}, @func{ceiling}, @func{truncate} and
-@func{round} exported by @library{nausicaa mehve parts}, and reexported
-by @library{nausicaa mehve}, generalise the corresponding functions from
-@rsixlibrary{base}.
+@subsubheading Rounding generic functions
 
 
 @deffn {Generic Function} floor @var{A}
+@deffnx Method floor (@var{A} @aclass{fixnum})
+@deffnx Method floor (@var{A} @aclass{bignum})
+@deffnx Method floor (@var{A} @aclass{flonum})
+@deffnx Method floor (@var{A} @aclass{real})
 Return an object representing the largest integer not larger than
-@var{A}.
+@var{A}.  Use the function @func{flfloor} or @func{floor} as appropriate
+for the argument; when the argument is an exact integer: return the
+argument itself.
 @end deffn
 
 
 @deffn {Generic Function} ceiling @var{A}
+@deffnx Method ceiling (@var{A} @aclass{fixnum})
+@deffnx Method ceiling (@var{A} @aclass{bignum})
+@deffnx Method ceiling (@var{A} @aclass{flonum})
+@deffnx Method ceiling (@var{A} @aclass{real})
 Return an object representing the smaller integer not larger than
-@var{A}.
+@var{A}.  Use the function @func{flceiling} or @func{ceiling} as
+appropriate for the argument; when the argument is an exact integer:
+return the argument itself.
 @end deffn
 
 
 @deffn {Generic Function} truncate @var{A}
+@deffnx Method truncate (@var{A} @aclass{fixnum})
+@deffnx Method truncate (@var{A} @aclass{bignum})
+@deffnx Method truncate (@var{A} @aclass{flonum})
+@deffnx Method truncate (@var{A} @aclass{real})
 Return the integer object closest to @var{A} whose absolute value is not
-larger than the absolute value of @var{A}.
+larger than the absolute value of @var{A}.  Use the function
+@func{fltruncate} or @func{truncate} as appropriate for the argument;
+when the argument is an exact integer: return the argument itself.
 @end deffn
 
 
 @deffn {Generic Function} round @var{A}
-Return the closest integer object to @var{A}.
+@deffnx Method round (@var{A} @aclass{fixnum})
+@deffnx Method round (@var{A} @aclass{bignum})
+@deffnx Method round (@var{A} @aclass{flonum})
+@deffnx Method round (@var{A} @aclass{real})
+Return the closest integer object to @var{A}.  Use the function
+@func{flround} or @func{round} as appropriate for the argument; when the
+argument is an exact integer: return the argument itself.
 @end deffn
 
 
-The following are the specialised methods.
-
-
-@deffn Method floor (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flfloor} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flfloor}}.
+@deffn {Generic Function} sign @var{A}
+@deffnx Method sign (@var{A} @aclass{fixnum})
+@deffnx Method sign (@var{A} @aclass{bignum})
+@deffnx Method sign (@var{A} @aclass{flonum})
+@deffnx Method sign (@var{A} @aclass{ratnum})
+@deffnx Method sign (@var{A} @aclass{real})
+Return an object representing the sign of the argument.  Use the
+function @func{sign} or its type--specific variants as appropriate for
+the argument.
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn Method floor (@var{A} @aclass{real})
-Apply to the argument the function @func{floor} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part, @func{floor}}.
-@end deffn
-
-
-@deffn Method ceiling (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flceiling} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flceiling}}.
-@end deffn
-
-
-@deffn Method ceiling (@var{A} @aclass{real})
-Apply to the argument the function @func{ceiling} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part,
-@func{ceiling}}.
-@end deffn
-
-
-@deffn Method truncate (@var{A} @aclass{flonum})
-Apply to the argument the function @func{fltruncate} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{fltruncate}}.
-@end deffn
-
-
-@deffn Method truncate (@var{A} @aclass{real})
-Apply to the argument the function @func{truncate} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part,
-@func{truncate}}.
-@end deffn
-
-
-@deffn Method round (@var{A} @aclass{flonum})
-Apply to the argument the function @func{flround} exported by the
-@rsixlibrary{arithmetic flonums} library, @vicareref{stdlib arithmetic
-flonums, @func{flround}}.
-@end deffn
-
-
-@deffn Method round (@var{A} @aclass{real})
-Apply to the argument the function @func{round} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops part, @func{round}}.
-@end deffn
-
-@c page
-@node mehve parts complex
-@subsection Complex numbers generic functions
-
-
-The generic functions @func{real-part}, @func{imag-part},
-@func{magnitude}, @func{angle}, @func{make-rectangular} and
-@func{make-polar} exported by @library{nausicaa mehve parts}, and
-reexported by @library{nausicaa mehve}, generalise the corresponding
-functions from @rsixlibrary{base}.
+@subsubheading Complex numbers generic functions
 
 
 @deffn {Generic Funcion} real-part @var{A}
-Return the real part of @var{A}.
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{complex})
+Return the real part of @var{A}.  Use the function @func{real-part} or
+its type--specific variants as appropriate for the argument; when the
+argument is a real number: return the argument itself.
 @end deffn
 
 
 @deffn {Generic Funcion} imag-part @var{A}
-Return the imaginary part of @var{A}.
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{complex})
+Return the imaginary part of @var{A}.  Use the function @func{imag-part}
+or its type--specific variants as appropriate for the argument; when the
+argument is a real number: return the fixnum @code{0}.
 @end deffn
 
 
 @deffn {Generic Funcion} magnitude @var{A}
-Return the magnitude of @var{A}.
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{complex})
+Return the magnitude of @var{A}.  Use the function @func{magnitude} or
+its type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Funcion} angle @var{A}
-Return the angle of @var{A}.
+@deffnx {Generic Funcion} angle (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{complex})
+Return the angle of @var{A}.  Use the function @func{angle} or its
+type--specific variants as appropriate for the argument.
 @end deffn
 
 
 @deffn {Generic Funcion} make-rectangular @var{R} @var{I}
+@deffnx Method make-rectangular (@var{R} @aclass{real}) (@var{I} @aclass{real})
 Return a complex having real part @var{R} and imaginary part @var{I}.
+Use the function @func{make-rectangular}.
 @end deffn
 
 
 @deffn {Generic Funcion} make-polar @var{M} @var{A}
-Return a complex having magnitude @var{M} and angle @var{A}.
+@deffnx Method make-polar (@var{M} @aclass{real}) (@var{A} @aclass{real})
+Return a complex having magnitude @var{M} and angle @var{A}.  Use the
+function @func{make-polar}.
 @end deffn
 
 
-The following are the specialised methods.
-
-
-@deffn {Generic Funcion} real-part (@var{A} @aclass{real})
-Return @var{A} itself.
-@end deffn
-
-
-@deffn {Generic Funcion} real-part (@var{A} @aclass{complex})
-Apply to the argument the function @func{real-part} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{real-part}}.
-@end deffn
-
-
-@deffn {Generic Funcion} imag-part (@var{A} @aclass{complex})
-Apply to the argument the function @func{imag-part} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{imag-part}}.
-@end deffn
-
-
-@deffn {Generic Funcion} magnitude (@var{A} @aclass{real})
-Apply to the argument the function @func{abs} exported by the
-@library{nausicaa mehve arithmetics} library, @pxref{mehve arith
-absolute, @func{abs}}.
-@end deffn
-
-
-@deffn {Generic Funcion} magnitude (@var{A} @aclass{complex})
-Apply to the argument the function @func{magnitude} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{magnitude}}.
-@end deffn
-
-
-@deffn {Generic Funcion} angle (@var{A} @aclass{complex})
-Apply to the argument the function @func{angle} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{angle}}.
-@end deffn
-
-
-@deffn {Generic Funcion} make-rectangular (@var{R} @aclass{real}) (@var{I} @aclass{real})
-Apply to the arguments the function @func{make-rectangular} exported by
-the @rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{make-rectangular}}.
-@end deffn
-
-
-@deffn {Generic Funcion} make-polar (@var{M} @aclass{real}) (@var{A} @aclass{real})
-Apply to the arguments the function @func{make-polar} exported by the
-@rsixlibrary{base} library, @vicareref{baselib math ops complex,
-@func{make-polar}}.
+@deffn {Generic Funcion} complex-conjugate @var{A}
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{complex})
+Return the complex-conjugate of @var{A}.  Use the function
+@func{complex-conjugate} or its type--specific variants as appropriate
+for the argument; when the argument is real: return the argument itself.
 @end deffn
 
 @c page
+@ignore
 @node mehve trans
 @section Transcendental generic functions
 
@@ -1940,5 +1250,7 @@ All the bindings of @func{infix} from @library{nausicaa} are also
 supported by @func{infix} from @library{nausicaa mehve}; the generic
 functions used as operators have the same precedence of the
 corresponding simple functions.
+
+@end ignore
 
 @c end of file
