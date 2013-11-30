@@ -1584,8 +1584,9 @@
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
     <fixnum> <positive-fixnum> <negative-fixnum>
     <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
-    <flonum>
-    <bignum> <exact-integer> <integer> <integer-valued>
+    <integer-flonum> <rational-flonum> <flonum>
+    <positive-bignum> <negative-bignum> <bignum>
+    <exact-integer> <integer> <integer-valued>
     <ratnum> <rational> <rational-valued>
     <real> <real-valued> <cflonum> <compnum> <complex> <number>
     <procedure>

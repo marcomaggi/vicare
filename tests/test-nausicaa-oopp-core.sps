@@ -2785,7 +2785,27 @@
 	 nausicaa:builtin:<top>))
 
   (check
+      (tag-unique-identifiers-of 1.0)
+    => '(nausicaa:builtin:<integer-flonum>
+	 nausicaa:builtin:<flonum>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
       (tag-unique-identifiers-of 1.2)
+    => '(nausicaa:builtin:<rational-flonum>
+	 nausicaa:builtin:<flonum>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of +inf.0)
     => '(nausicaa:builtin:<flonum>
 	 nausicaa:builtin:<real>
 	 nausicaa:builtin:<real-valued>

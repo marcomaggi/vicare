@@ -2142,6 +2142,18 @@ Conventional type for objects satisfying @func{bignum?}.  It is derived
 from @class{exact-integer}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{positive-bignum}
+Conventional type for objects satisfying @func{bignum?} and
+@func{positive?}.  It is derived from @class{bignum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-bignum}
+Conventional type for objects satisfying @func{bignum?} and
+@func{negative?}.  It is derived from @class{bignum}.
+@end deftp
+
 @c page
 @node builtins numbers fixnum
 @subsection Fixnum number objects
@@ -2562,6 +2574,18 @@ Calling @func{$flonum} does the same without validating the argument.
 @deftp {Builtin Label} @aclass{flonum}
 Conventional type for objects satisfying @func{flonum?}.  It is derived
 from @class{real}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{integer-flonum}
+Conventional type for objects satisfying @func{flonum?} and
+@func{integer?}.  It is derived from @class{flonum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{rational-flonum}
+Conventional type for objects satisfying @func{flonum?} and
+@func{rational?}.  It is derived from @class{flonum}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -3732,17 +3756,25 @@ Conventional type for objects satisfying @func{unspecified?} from
 Object--type inspector function; return the list of @uid{}s in the type
 hierarchy of @var{obj}.  When this function does not recognise an
 object's type: the return value just identifies @var{obj} as of type
-@class{top}.  This function can recognise:
+@class{top}.  This function can recognise automatically all the
+instances of classes declared by @func{define-class}, from
+@library{nausicaa language oopp}, defined in any library.  This function
+recognise only the following built--in labels:
 
-@enumerate
-@item
-All the built--in objects having conventional label type defined by the
-library @library{nausicaa language builtins}.
-
-@item
-All the instances of classes defined by @func{define-class} from the
-library @library{nausicaa language oopp}.
-@end enumerate
+@example
+<positive-fixnum> <negative-fixnum> <fixnum>
+<positive-bignum> <negative-bignum>
+<integer-flonum> <rational-flonum> <flonum>
+<ratnum> <cflonum> <compnum>
+<char> <string> <symbol> <vector> <bytevector>
+<spine> <pair>
+<binary-input/output-port> <textual-input/output-port>
+<binary-input-port>        <textual-input-port>
+<binary-output-port>       <textual-output-port>
+<transcoder>
+<condition> <record> <hashtable> <procedure>
+<top>
+@end example
 
 Whenever we define new label types with @func{define-label} from
 @library{nausicaa language oopp}, for example @class{alpha} and
