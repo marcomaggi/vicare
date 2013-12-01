@@ -2671,6 +2671,278 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-define-with))
+
+;;; untyped
+
+  (check
+      (let ()
+	(case-define f
+	  ((a)
+	   a))
+	(f 123))
+    => 123)
+
+  (check
+      (let ()
+	(case-define f
+	  ((a b)
+	   (list a b)))
+	(f 1 2))
+    => '(1 2))
+
+  (check
+      (let ()
+	(case-define f
+	  ((a b c)
+	   (list a b c)))
+	(f 1 2 3))
+    => '(1 2 3))
+
+  (let ()
+    (case-define f
+      (args
+       (list->vector args)))
+    (check (f) => '#())
+    (check (f 1) => '#(1))
+    (check (f 1 2) => '#(1 2))
+    (check (f 1 2 3) => '#(1 2 3))
+    (void))
+
+  (let ()
+    (case-define f
+      ((a . rest)
+       (vector a rest)))
+    (check (f 1) => '#(1 ()))
+    (check (f 1 2) => '#(1 (2)))
+    (check (f 1 2 3 4) => '#(1 (2 3 4)))
+    (void))
+
+  (let ()
+    (case-define f
+      ((a b . rest)
+       (vector a b rest)))
+    (check (f 1 2) => '#(1 2 ()))
+    (check (f 1 2 3) => '#(1 2 (3)))
+    (check (f 1 2 3 4) => '#(1 2 (3 4)))
+    (void))
+
+;;; --------------------------------------------------------------------
+;;; typed
+
+  (let ()
+
+    (define-class <fraction>
+      (fields (mutable number))
+      (virtual-fields (mutable numerator)
+		      (mutable denominator)))
+
+    (case-define <fraction>-numerator
+      (((o <fraction>))
+       (numerator (o number))))
+
+    (case-define <fraction>-numerator-set!
+      (((o <fraction>) v)
+       (set! (o number) (/ v (denominator (o number))))))
+
+    (case-define <fraction>-denominator
+      (((o <fraction>))
+       (denominator (o number))))
+
+    (case-define <fraction>-denominator-set!
+      (((o <fraction>) (v <top>))
+       (set! (o number) (/ (numerator (o number)) v))))
+
+    (check
+	(let ()
+	  (case-define f
+	    (((a <fraction>))
+	     (a numerator)))
+	  (f (make-<fraction> 2/3)))
+      => 2)
+
+    (check
+	(let ()
+	  (case-define f
+	    (((a <fraction>) (b <complex>))
+	     (list (a numerator) (b magnitude))))
+	  (f (make-<fraction> 2/3) -4))
+      => '(2 4))
+
+    (check
+	(let ()
+	  (case-define f
+	    (((a <fraction>) b (c <fraction>))
+	     (list (a numerator) b (c denominator))))
+	  (f (make-<fraction> 2/3) 4 (make-<fraction> 5/6)))
+      => '(2 4 6))
+
+    (let ()
+      (case-define f
+	(((a <fraction>) . rest)
+	 (vector (a numerator) rest)))
+      (check (f (make-<fraction> 11/12)) => '#(11 ()))
+      (check (f (make-<fraction> 11/12) 2) => '#(11 (2)))
+      (check (f (make-<fraction> 11/12) 2 3 4) => '#(11 (2 3 4)))
+      (void))
+
+    (let ()
+      (case-define f
+	(((a <fraction>) b . rest)
+	 (vector (a numerator) b rest)))
+      (check (f (make-<fraction> 11/12) 2) => '#(11 2 ()))
+      (check (f (make-<fraction> 11/12) 2 3) => '#(11 2 (3)))
+      (check (f (make-<fraction> 11/12) 2 3 4) => '#(11 2 (3 4)))
+      (void))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; multiple clauses
+
+  (let ()
+    (case-define f
+      ((a) a)
+      ((a b) (list a b)))
+    (check (f 1) => 1)
+    (check (f 1 2) => '(1 2))
+    (void))
+
+  (let ()
+    (case-define f
+      ((a)	a)
+      ((a b)	(list a b))
+      ((a b c)	(list a b c)))
+    (check (f 1) => 1)
+    (check (f 1 2) => '(1 2))
+    (check (f 1 2 3) => '(1 2 3))
+    #f)
+
+  (let ()
+
+    (define-class <fraction>
+      (fields (mutable number))
+      (virtual-fields (immutable numerator)
+		      (immutable denominator)))
+
+    (case-define <fraction>-numerator
+      (((o <fraction>))
+       (numerator (o number))))
+
+    (case-define <fraction>-denominator
+      (((o <fraction>))
+       (denominator (o number))))
+
+    (let ()
+      (case-define f
+	(((a <fraction>))
+	 (a numerator))
+	(((a <fraction>) (b <string>))
+	 (list (a numerator) (b length))))
+      (check (f (make-<fraction> 2/3)) => 2)
+      (check (f (make-<fraction> 2/3) "ciao") => '(2 4))
+      #f)
+
+    (let ()
+      (case-define f
+	(((a <fraction>))
+	 (a numerator))
+	(((a <fraction>) (b <string>))
+	 (list (a numerator) (b length)))
+	(((a <fraction>) (b <string>) (c <char>))
+	 (list (a numerator) (b length) (c upcase))))
+      (check (f (make-<fraction> 2/3)) => 2)
+      (check (f (make-<fraction> 2/3) "ciao") => '(2 4))
+      (check (f (make-<fraction> 2/3) "ciao" #\a) => '(2 4 #\A))
+      #f)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; use the records from (libtest classes-lib)
+
+  (check
+      (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+	(case-define f
+	  (((r test.<gamma>))
+	   (list (r a) (r b) (r c)
+		 (r d) (r e) (r f)
+		 (r g) (r h) (r i))))
+	(f r))
+    => '(1 2 3 4 5 6 7 8 9))
+
+  (check	;use the records from (libtest classes-lib)
+      (let ((r (test.<gamma> (1 2 3 4 5 6 7 8 9)))
+	    (s (test.<beta>  (10 20 30 40 50 60))))
+	(case-define f
+	  (((r test.<gamma>) (s test.<beta>))
+	   (list (r a) (r g) (s a) (s d))))
+	(f r s))
+    => '(1 7 10 40))
+
+;;; --------------------------------------------------------------------
+;;; validated return values
+
+  (check
+      (let ()
+	(case-define fun
+	  (((_ <vector>) (O <pair>))
+	   (vector (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(case-define fun
+	  (((_ <vector>) (O <pair>))
+	   (vector (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(case-define fun
+	  (((_ <fixnum> <fixnum>) (O <pair>))
+	   (values (O car) (O cdr))))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check	;no arguments
+      (let ()
+	(case-define fun
+	  (((_ <vector>))
+	   (vector 1 2)))
+	(fun))
+    => '#(1 2))
+
+  (check	;rest argument
+      (let ()
+	(case-define fun
+	  (((_ <vector>) . rest)
+	   (vector (car rest) (cadr rest))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check	;tagged argument
+      (let ()
+	(case-define fun
+	  (((_ <vector>) . #(rest <list>))
+	   (vector (car rest) (cadr rest))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(case-define fun
+	  (((_ <vector>) (O <pair>))
+	   (list (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
+  #t)
+
+
 (parametrise ((check-test-name 'list-of-uids))
 
   (check

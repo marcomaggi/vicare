@@ -29,7 +29,7 @@ Almost all the bindings are reexported with the exception of the
 following ones:
 
 @example
-define define-values
+define define-values case-define
 let let* letrec letrec*
 let-values let*-values
 lambda case-lambda set!
@@ -57,6 +57,7 @@ begin/tags              @equiv{} begin
 do/tags                 @equiv{} do
 do*/tags                @equiv{} do*
 case-lambda/tags        @equiv{} case-lambda
+case-define/tags        @equiv{} case-define
 @end example
 
 @item @library{nausicaa language builtins}

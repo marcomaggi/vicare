@@ -88,6 +88,9 @@ Notes for revision 0.3d7
   to make the  name of the function available; such  definitions can now
   be cleared.
 
+* Added  CASE-DEFINE to  (nausicaa)  and  CASE-DEFINE/TAGS to  (nausicaa
+  language oopp).
+
 * Added   experimental  nested   method  invocation.    When  a   method
   specification has a  single tagged return value,  the following syntax
   is available:
