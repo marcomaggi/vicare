@@ -199,7 +199,8 @@ Notes for revision 0.3d7
      (nausicaa parser-tools unix-pathnames)
      (nausicaa uri pathnames ---)
 
-* Imported the Mehve language.
+* Imported the Mehve language.  A new master documentation file has been
+  added, "mehve.texi".
 
 
 Notes for revision 0.3d6
