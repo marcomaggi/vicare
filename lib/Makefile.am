@@ -373,7 +373,7 @@ dist_pkglibexec_SCRIPTS		+= \
 	compile-nausicaa-containers.sps		\
 	compile-nausicaa-parser-tools.sps	\
 	compile-nausicaa-misc.sps		\
-	compile-mehve.sps
+	compile-mehve-language.sps
 endif
 
 if WANT_LIBFFI
@@ -478,7 +478,7 @@ if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-parser-tools.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-misc.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve-language.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
@@ -530,7 +530,7 @@ if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-parser-tools.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-misc.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve.sps
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve-language.sps
 endif
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
