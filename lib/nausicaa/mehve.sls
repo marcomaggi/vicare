@@ -1533,6 +1533,10 @@
     $record-type-field-ref
     $record-type-field-set!
     values->list
+    define*
+    lambda*
+    case-lambda*
+    case-define*
 
 
 ;;;; bindings from (nausicaa language oopp)
