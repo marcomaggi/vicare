@@ -807,6 +807,45 @@
 	(else #f))
     => 123)
 
+  (check	;predicate and binding
+      (match 123
+	((and (apply number?) (let N))
+	 (vector N))
+	(else #f))
+    => '#(123))
+
+  (check	;predicate and binding nested in list
+      (match '(123)
+	(((and (apply number?) (let N)))
+	 (vector N))
+	(else #f))
+    => '#(123))
+
+  (check	;multiple predicates and bindings nested in list
+      (match '(1 2 3)
+	(((and (apply number?) (let N1))
+	  (and (apply number?) (let N2))
+	  (and (apply number?) (let N3)))
+	 (vector N1 N2 N3))
+	(else #f))
+    => '#(1 2 3))
+
+  (check	;predicate and binding nested in vector
+      (match '#(123)
+	(#((and (apply number?) (let N)))
+	 (list N))
+	(else #f))
+    => '(123))
+
+  (check	;multiple predicates and bindings nested in vector
+      (match '#(1 2 3)
+	(#((and (apply number?) (let N1))
+	   (and (apply number?) (let N2))
+	   (and (apply number?) (let N3)))
+	 (list N1 N2 N3))
+	(else #f))
+    => '(1 2 3))
+
 ;;; --------------------------------------------------------------------
 ;;; nested bindings
 
@@ -848,6 +887,23 @@
 	 (vector X Y Z))
 	(else #f))
     => #f)
+
+  (check	;multiple predicates and bindings nested in list
+      (match '(1 2 3)
+	(((and (apply number?) (let N1))
+	  (and (apply number?) (let N))
+	  ...)
+	 (vector N1 N))
+	(else #f))
+    => '(#(1 2) #(1 3)))
+
+  (check	;multiple predicates and bindings nested in list
+      (match '(1 2 3)
+	(((and (apply number?) (let N1)) . (and (apply (lambda (obj) (for-all number? obj)))
+						(let N)))
+	 (vector N1 N))
+	(else #f))
+    => '#(1 (2 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; ellipsis in vector
