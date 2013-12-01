@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d7
+Subject: [announce] Vicare Scheme revision 0.3d8
 
                              Vicare Scheme
                              =============
@@ -35,6 +35,12 @@ and at:
 this project has a mailing list:
 
 	     <http://groups.google.com/group/vicare-users>
+
+
+Notes for revision 0.3d8
+------------------------
+
+*
 
 
 Notes for revision 0.3d7
@@ -87,6 +93,9 @@ Notes for revision 0.3d7
 
   to make the  name of the function available; such  definitions can now
   be cleared.
+
+* Added  CASE-DEFINE to  (nausicaa)  and  CASE-DEFINE/TAGS to  (nausicaa
+  language oopp).
 
 * Added   experimental  nested   method  invocation.    When  a   method
   specification has a  single tagged return value,  the following syntax
@@ -199,7 +208,8 @@ Notes for revision 0.3d7
      (nausicaa parser-tools unix-pathnames)
      (nausicaa uri pathnames ---)
 
-* Imported the Mehve language.
+* Imported the Mehve language.  A new master documentation file has been
+  added, "mehve.texi".
 
 
 Notes for revision 0.3d6

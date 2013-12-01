@@ -33,6 +33,7 @@ for item in \
     compile-nausicaa-containers.sps		\
     compile-nausicaa-parser-tools.sps		\
     compile-nausicaa-misc.sps			\
+    compile-mehve-language.sps			\
     compile-ffi.sps				\
     compile-posix.sps				\
     compile-iconv.sps				\

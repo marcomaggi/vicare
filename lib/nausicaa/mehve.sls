@@ -1533,6 +1533,10 @@
     $record-type-field-ref
     $record-type-field-set!
     values->list
+    define*
+    lambda*
+    case-lambda*
+    case-define*
 
 
 ;;;; bindings from (nausicaa language oopp)
@@ -1553,13 +1557,14 @@
     do
     do*
     case-lambda
+    case-define
 
     define-label		define-class		define-mixin
     make-from-fields		is-a?
     slot-set!			slot-ref
     tag-unique-identifiers
 
-    define/tags
+    define/tags			define-values/tags
     lambda/tags			case-lambda/tags
     with-tags
     let/tags			let*/tags

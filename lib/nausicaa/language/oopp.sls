@@ -38,7 +38,8 @@
     tag-unique-identifiers
 
     define/tags			define-values/tags
-    lambda/tags			case-lambda/tags
+    lambda/tags
+    case-lambda/tags		case-define/tags
     with-tags			begin/tags
     let/tags			let*/tags
     letrec/tags			letrec*/tags
@@ -1713,6 +1714,17 @@
 
     (_
      (synner "invalid syntax in case-lambda definition"))))
+
+(define-syntax (case-define/tags stx)
+  (syntax-case stx ()
+    ((_ ?who (?formals ?body0 ?body ...) ...)
+     (identifier? #'?who)
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who
+	   (let-constants ((WHO '?who))
+	     (case-lambda/tags
+	       (?formals ?body0 ?body ...) ...)))))))
 
 
 ;;;; convenience syntaxes with tags: DEFINE and LAMBDA
