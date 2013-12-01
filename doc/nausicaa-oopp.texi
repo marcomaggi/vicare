@@ -3395,6 +3395,26 @@ Tagged variable definition initially left uninitialised:
 @end itemize
 @end deffn
 
+@c ------------------------------------------------------------
+
+@deffn Syntax case-define/tags @meta{who} @meta{cl-clause} @dots{}
+Like @func{case-define} and defines the @oopp{} bindings for the
+arguments.  It expands as follows:
+
+@example
+(case-define/tags @meta{who}
+  @meta{cl-clause} ...)
+@expansion{} (define @meta{who}
+      (let-constants ((__who__ (quote @meta{who})))
+        (case-lambda/tags @meta{cl-clause} ...)))
+@end example
+
+@noindent
+so the identifier @code{__who__} is available as argument for
+@condition{who} condition objects.
+@end deffn
+
+@c ------------------------------------------------------------
 
 @deffn Syntax define-values/tags (@metao{tagged-variable} @meta{tagged-variable} @dots{}) @metao{form} @meta{form} @dots{}
 Like @func{define-values} from @library{vicare} and defines the @oopp{}
