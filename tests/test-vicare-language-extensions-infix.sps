@@ -216,11 +216,11 @@
 (check (infix 1 = 3)		=> (=  1 3))
 
 (check
-    (infix quote(a) eq? quote(a))
+    (infix 'a eq? 'a)
   => (eq? 'a 'a))
 
 (check
-    (infix quote(a) eq? quote(b))
+    (infix 'a eq? 'b)
   => (eq? 'a 'b))
 
 (check (infix 123 eqv? 123)	=> (eqv? 123 123))

@@ -187,7 +187,7 @@ clause, it will expand to:
 @end example
 
 @noindent
-and with the @func{else} clause:
+and with the @clause{else} clause:
 
 @example
 (guard (@meta{var}
@@ -203,6 +203,10 @@ and with the @func{else} clause:
         ...))
   @meta{body})
 @end example
+
+@noindent
+remember that when no @clause{else} clause is present: the exception
+will be re--raised with @func{raise-continuable}.
 
 When the @clause{finally} clause is present: the same @func{guard} form
 is wrapped into a compensation stack:
@@ -344,6 +348,7 @@ libraries.
 * conditions unimplemented::    Unimplemented error condition.
 * conditions mismatch::         General mismatch error.
 * conditions num-args::         Wrong number of arguments error.
+* conditions tagged::           Tagged binding violation.
 * conditions common::           Label type for common condition types.
 @end menu
 
@@ -536,6 +541,27 @@ Accessors for the fields of a condition object of type
 @deffn Syntax raise-wrong-num-args-error @var{who} @var{message} @var{procname} @var{expected} @var{given}
 Raise a non--continuable exception with compound condition object of
 type: @condition{wrong-num-args}, @condition{who}, @condition{message}.
+@end deffn
+
+@c page
+@node conditions tagged
+@subsection Tagged binding violation
+
+
+The following bindings are exported by the @library{nausicaa language
+conditions} library.
+
+
+@deftp {Condition Type Label} &tagged-binding-violation
+Condition type used to signal the assignment of a wrong type value to a
+tagged binding; it is derived from @condition{assertion}.
+@end deftp
+
+
+@deffn Syntax tagged-binding-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+type: @condition{tagged-binding-violation}, @condition{who},
+@condition{message}, @condition{irritants}.
 @end deffn
 
 @c page

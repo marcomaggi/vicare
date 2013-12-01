@@ -22,7 +22,12 @@
           remq remv remove remp filter map for-each
 	  (rename (for-each for-each-in-order)) andmap ormap list-tail
           partition for-all exists fold-left fold-right
-	  make-queue-procs)
+	  make-queue-procs
+
+	  ;; unsafe bindings
+	  $length
+	  $map1		$for-each1
+	  $for-all1	$exists1)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
@@ -32,7 +37,10 @@
 		  make-queue-procs)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (except (vicare unsafe operations)
+	    $length
+	    $for-all1		$exists1
+	    $map1		$for-each1))
 
 
 ;;;; arguments validation
@@ -137,6 +145,13 @@
 	  (else
 	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
   (%race ls ls ls 0))
+
+(define ($length ell)
+  (let recur ((len 0)
+	      (ell ell))
+    (if (pair? ell)
+	(recur ($fxadd1 len) ($cdr ell))
+      len)))
 
 
 (define (list-ref the-list the-index)
@@ -1298,6 +1313,46 @@
 	(error 'dequeue! "no more items in queue")))
 
     (values empty-queue? enqueue! dequeue!))))
+
+
+;;;; unsafe functions
+
+(define ($map1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (cons (func ($car ell))
+	    ($map1 func ($cdr ell)))
+    '()))
+
+(define ($for-each1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (when (pair? ell)
+    (func ($car ell))
+    ($for-each1 func ($cdr ell))))
+
+(define ($for-all1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (if (pair? ($cdr ell))
+	  (and (func ($car ell))
+	       ($for-all1 func ($cdr ell)))
+	;;Last call in tail position.
+	(func ($car ell)))
+    #t))
+
+(define ($exists1 func ell)
+  ;;Defined by Vicare.
+  ;;
+  (if (pair? ell)
+      (if (pair? ($cdr ell))
+	  (or (func ($car ell))
+	      ($exists1 func ($cdr ell)))
+	;;Last call in tail position.
+	(func ($car ell)))
+    #f))
 
 
 ;;;; done

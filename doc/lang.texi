@@ -15,6 +15,7 @@
 * namespaces::                  Namespaces.
 * variables::                   Defining storage locations.
 * syntaxes::                    Language syntactic extensions.
+* makers::                      Maker syntaxes.
 * custom-ports::                Custom ports.
 * asciis::                      Utilities for @ascii{} characters.
 * hooks::                       Running lists of functions.
@@ -1471,10 +1472,10 @@ The library @library{vicare language-extensions infix} provides the
 @func{infix} macro which converts the traditional infix notation for
 expressions to the equivalent Scheme's prefix notation.
 
-To use the library just import @library{vicare infix} and use the
-@func{infix} macro: it expands to a prefix expression to be evaluated at
-runtime, in the lexical context of the macro use; as a special case
-@code{(infix)} is equivalent to @code{(values)}.
+To use the library just import @library{vicare language-extensions
+infix} and use the @func{infix} macro: it expands to a prefix expression
+to be evaluated at runtime, in the lexical context of the macro use; as
+a special case @code{(infix)} is equivalent to @code{(values)}.
 
 The macro allows us to evaluate forms like:
 
@@ -1561,8 +1562,8 @@ fxarithmetic-shift-left
 fxarithmetic-shift-right
 @end example
 
-All the operators are left-associative with the exception of FXNOT which
-is non-associative:
+All the operators are left--associative with the exception of
+@func{fxnot} which is non--associative:
 
 @example
 (infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
@@ -1599,53 +1600,58 @@ All the operators are left--associative with the exception of
 
 @item
 @func{incr!} and @func{decr!} are unary operators that can be applied to
-expressions both in prefix and suffix positions.  @library{vicare infix}
-exports the identifiers @func{++} and @func{--} as aliases for
-@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
-mode, but are allowed by the reader when in @code{#!vicare} mode.
+expressions both in prefix and suffix positions.  @library{vicare
+language-extensions infix} exports the identifiers @func{++} and
+@func{--} as aliases for @func{incr!} and @func{decr!}; such aliases are
+invalid in @code{#!r6rs} mode, but are allowed by the reader when in
+@code{#!vicare} mode.
 
 When applied in prefix position to an identifier, @func{incr!} expands
 to:
 
 @example
-(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
+(infix incr! @meta{id})
+@expansion{} (begin (set! @meta{id} (+ @meta{id} 1)) @meta{id})
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
+(infix decr! @meta{id})
+@expansion{} (begin (set! @meta{id} (- @meta{id} 1)) @meta{id})
 @end example
 
 When applied in suffix position to an identifier, @func{incr!} expands
 to:
 
 @example
-(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
+(infix @meta{id} incr!)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (+ @meta{id} 1)) v)
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
+(infix @meta{id} decr!)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (- @meta{id} 1)) v)
 @end example
 
 When applied to a non--identifier expression, both in prefix and suffix
 position, @func{incr!} expands to:
 
 @example
-(infix incr! ?expr) @expansion{} (+ ?expr 1)
-(infix ?expr incr!) @expansion{} (+ ?expr 1)
+(infix incr! @meta{expr}) @expansion{} (+ @meta{expr} 1)
+(infix @meta{expr} incr!) @expansion{} (+ @meta{expr} 1)
 @end example
 
 @noindent
 and @func{decr!} expands to:
 
 @example
-(infix decr! ?expr) @expansion{} (- ?expr 1)
-(infix ?expr decr!) @expansion{} (- ?expr 1)
+(infix decr! @meta{expr}) @expansion{} (- @meta{expr} 1)
+(infix @meta{expr} decr!) @expansion{} (- @meta{expr} 1)
 @end example
 
 @item
@@ -1676,6 +1682,18 @@ of the infix expression grammar.
 Numbers and all the other values are just put there as operands.
 
 @item
+The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
+@func{quasisyntax} are not subject to infix to prefix conversion; the
+use of such syntaxes just expands to the prefix object:
+
+@example
+(infix (quote       ciao))  @expansion{} (quote ciao)
+(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
+(infix (syntax      ciao))  @expansion{} (syntax ciao)
+(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
+@end example
+
+@item
 As a special exception: the binding @func{begin} from @library{vicare}
 is recognised in the input form and allows us to nest prefix--notation
 expressions.
@@ -1704,6 +1722,23 @@ expressions.
 
 @item
 The following binding aliases are exported by the library:
+@findex &&
+@findex !!
+@findex ^^
+@findex ~~
+@findex %
+@findex &
+@findex !
+@findex ^
+@findex ~
+@findex <<
+@findex >>
+@findex fx&
+@findex fx!
+@findex fx^
+@findex fx~
+@findex fx<<
+@findex fx>>
 
 @example
 and                               -> &&
@@ -1757,7 +1792,7 @@ matching libraries by Alex Shinn and Andrew Wright.
 
 
 The following bindings are exported by the library @library{vicare
-languge-extensions simple-match}.  The auxiliary syntaxes are the
+languae-extensions simple-match}.  The auxiliary syntaxes are the
 bindings exported by the library @library{vicare}, which are reexported
 by this library.
 
@@ -2389,15 +2424,30 @@ sentinel we need for a specific operation.
 Return @true{} if @var{obj} a sentinel value.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Undefined value
+
 
 @defvr Constant undefined
 The undefined value.
 @end defvr
 
 
-@defun undefined? @var{obj}
-Return true if @var{obj} is @func{eq?} to @code{undefined}.
-@end defun
+@deffn {Integrable Function} undefined? @var{obj}
+Return @true{} if @var{obj} is @func{eq?} to @code{undefined}; otherwise
+return @false{}.
+@end deffn
+
+
+@deffn {Integrable Function} defined? @var{obj}
+Return @true{} if @var{obj} is @strong{not} @func{eq?} to
+@code{undefined}; otherwise return @false{}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Unspecified value
 
 
 @defvr Constant unspecified
@@ -2405,9 +2455,16 @@ The unspecified value.
 @end defvr
 
 
-@defun unspecified? @var{obj}
-Return true if @var{obj} is @func{eq?} to @code{unspecified}.
-@end defun
+@deffn {Integrable Function} unspecified? @var{obj}
+Return @true{} if @var{obj} is @func{eq?} to @code{unspecified};
+otherwise return @false{}.
+@end deffn
+
+
+@deffn {Integrable Function} specified? @var{obj}
+Return @true{} if @var{obj} is @strong{not} @func{eq?} to
+@code{unspecified}; otherwise return @false{}.
+@end deffn
 
 @c page
 @node namespaces
@@ -2917,12 +2974,446 @@ Like @func{callet}, but define local @func{let*} bindings for the
 @end example
 @end defmac
 
+@c page
+@node makers
+@section Maker syntaxes
 
-@deffn Syntax set-cons! @meta{who} @meta{obj}
-Expand to:
+
+@cindex @library{vicare language-extensions makers}, library
+@cindex Library @library{vicare language-extensions makers}
+
+
+The library @library{vicare language-extensions makers} provides a
+constructor for macro definitions; its nominal purpose is to define
+macros which wrap constructors for records and similar entities,
+allowing the use of ``keywords'' to specify non--positional arguments.
+
+To avoid identifiers collision, it is suggested to import this library
+with prefix @samp{mk.}, as in:
 
 @example
-(set! @meta{who} (cons @meta{obj} @meta{who}))
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+@end example
+
+@menu
+* makers intro::                Introduction to maker macros.
+* makers api::                  Defining makers.
+@end menu
+
+@c page
+@node makers intro
+@subsection Introduction to maker macros
+
+
+It happens to define a function or macro accepting a number of arguments
+greater than 3:
+
+@example
+(define (the-func a b c d e f g h i)
+  ...)
+@end example
+
+@noindent
+in these cases it can be difficult to remember the order of the
+arguments; it can also be desirable to define default values for some or
+all of the arguments, so that at the call site some arguments can be
+omitted in the source code.  The syntax @func{define-maker} implements a
+solution to this problem.
+
+The following examples show the expansion of a simple maker with neither
+fixed nor variable arguments, only optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      2)
+        (gamma:     3)))
+
+(doit)                  @expansion{} (list 1 2 3)
+
+(doit (alpha:   10))    @expansion{} (list 10 2 3)
+(doit (beta:    20))    @expansion{} (list 1 20 3)
+(doit (gamma:   30))    @expansion{} (list 1 2 30)
+
+(doit (alpha:   10)
+      (beta:    20))    @expansion{} (list 10 20 3)
+
+(doit (alpha:   10)
+      (gamma:   30))    @expansion{} (list 10 2 30)
+
+(doit (gamma:   30)
+      (beta:    20))    @expansion{} (list 1 20 30)
+
+(doit (alpha:   10)
+      (beta:    20)
+      (gamma:   30))    @expansion{} (list 10 20 30)
+
+(let ((b 7))
+  (doit (beta:  (+ 6 (* 2 b)))
+        (alpha: (+ 2 8)))
+  @expansion{} (list (+ 2 8)
+            (+ 6 (* 2 b))
+            3)
+  #f)
+
+(doit (alpha: 10 20 30))
+@expansion{} (list 1 (list 10 20 30) 3)
+@end example
+
+@noindent
+notice the last example: when multiple values are used in an argument's
+clause, they are enclosed in a @func{list} form; the following examples
+show the expansion of a maker with both fixed and variable arguments,
+plus optional clauses arguments:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker (doit a b)
+    (list #\a #\b)
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  3)))
+
+
+(doit #\p #\q)          @expansion{} (list #\a #\b #\p #\q 1 2 3)
+
+(doit #\p #\q
+      (alpha: 10))      @expansion{} (list #\a #\b #\p #\q 10 2 3)
+
+(doit #\p #\q
+      (beta: 20))       @expansion{} (list #\a #\b #\p #\q 1 20 3)
+
+(doit #\p #\q
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 1 2 30)
+
+(doit #\p #\q
+      (alpha: 10)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 10 20 3)
+
+(doit #\p #\q
+      (alpha: 10)
+      (gamma: 30))      @expansion{} (list #\a #\b #\p #\q 10 2 30)
+
+(doit #\p #\q
+      (gamma: 30)
+      (beta:  20))      @expansion{} (list #\a #\b #\p #\q 1 20 30)
+@end example
+
+Each default value can be any expression and it is evaluated every time
+the maker is used:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define g
+  (let ((counter 0))
+    (lambda ()
+      (set! counter (+ 1 counter))
+      counter)))
+
+(define default2 (- (/ 9 3) 1))
+
+(define-maker doit
+  list ((alpha:     1)
+        (beta:      default2)
+        (gamma:     (g))))
+
+(doit)                  @result{} ( 1  2  1)
+(doit (alpha: 10))      @result{} (10  2  2)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+A maker invocation can expand itself into another macro use; this allows
+us to detect whether an optional argument was used or not:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+    subdoit
+  ((alpha:  1)
+   (beta:   2)
+   (gamma:  sentinel)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?alpha ?beta ?gamma)
+       (and (identifier? #'?gamma)
+            (free-identifier=? #'?gamma #'sentinel))
+       #'(list ?alpha ?beta 3))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit)                  @result{} ( 1  2  3)
+(doit (alpha: 10))      @result{} (10  2  3)
+(doit (beta:  20))      @result{} ( 1 20  3)
+(doit (gamma: 30))      @result{} ( 1  2 30)
+@end example
+
+@noindent
+and also to ``unpack'' multiple values used in the same argument clause:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.)
+  (vicare language-extensions sentinels))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  subdoit ((alpha:  1)
+           (beta:   2)
+           (gamma:  3)))
+
+(define-syntax subdoit
+  (lambda (stx)
+    (syntax-case stx (list)
+      ((_ ?alpha (list ?beta0 ...) ?gamma)
+       #'(list ?alpha ?beta0 ... ?gamma))
+      ((_ ?alpha ?beta ?gamma)
+       #'(list ?alpha ?beta ?gamma))
+      )))
+
+(doit (alpha: 10)
+       (beta: #\a #\b #\c)
+       (gamma: 30))
+@result{} (10 #\a #\b #\c 30)
+@end example
+
+We can define a maker in the body of a library and export it; we just
+have to remember to export the auxiliary syntaxes, too:
+
+@example
+(library (the-lib)
+  (export doit alpha beta gamma)
+  (import (vicare)
+    (prefix (vicare language-extensions makers) mk.))
+  (define-auxiliary-syntaxes alpha beta gamma)
+  (define-maker doit
+    list ((alpha     1)
+          (beta      2)
+          (gamma     3))))
+
+(library (exec)
+  (export)
+  (import (rnrs)
+    (prefix (the-lib) lib.))
+  (lib.doit)                  @expansion{} (list 1 2 3)
+  (lib.doit (lib.alpha   10)) @expansion{} (list 10 2 3)
+  (lib.doit (lib.beta    20)) @expansion{} (list 1 20 3)
+  (lib.doit (lib.gamma   30)) @expansion{} (list 1 2 30)
+  )
+@end example
+
+A number of options can be specified to customise the parsing of
+clauses.  We can specify if a clause is mandatory or optional:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.mandatory))
+        (beta:      2 (mk.optional))
+        (gamma:     3)))
+
+(doit (alpha: 10))              @expansion{} (list 10 2 3)
+(doit (beta:  20))              @error{} missing clause "alpha:"
+@end example
+
+@noindent
+the default is for all the clauses to be optional.  We can specify that
+a clause must be used along one or more other clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntaxes alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.with beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @expansion{} (list 10 20 30)
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+
+(doit (alpha: 10)
+      (gamma: 30))              @error{} missing clause "beta:"
+@end example
+
+@noindent
+or we can specify that a clause must not be used along one or more other
+clauses:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-auxiliary-syntax alpha: beta: gamma:)
+
+(define-maker doit
+  list ((alpha:     1 (mk.without beta: gamma:))
+        (beta:      2)
+        (gamma:     3)))
+
+(doit (alpha: 10)
+      (beta:  20)
+      (gamma: 30))              @error{} invalid clauses mix
+
+(doit (beta: 20))               @expansion{} (list 1 20 3)
+@end example
+
+@c page
+@node makers api
+@subsection Defining makers
+
+
+The following bindings are exported by the @library{vicare
+language-extensions makers} library.
+
+
+@deffn Macro define-maker @var{name-spec} @var{maker-sexp} @var{keywords-defaults-options}
+@deffnx {Auxiliary Syntax} mandatory
+@deffnx {Auxiliary Syntax} optional
+@deffnx {Auxiliary Syntax} with @var{identifier} ...
+@deffnx {Auxiliary Syntax} without @var{identifier} ...
+Define a new maker macro.  @var{name-spec} has one of the forms:
+
+@example
+@var{name-identifier}
+(@var{name-identifier} @var{positional-arg} ...)
+@end example
+
+@noindent
+where @var{name-identifier} is the name of the defined macro and each
+@var{positional-arg} is an identifier, name of a mandatory positional
+argument for the macro.
+
+@var{maker-sexp} has one of the forms:
+
+@example
+@varo{maker-expr}
+(@varo{maker-expr} @var{maker-expr} ...)
+@end example
+
+@noindent
+where each @var{maker-expr} is a macro keyword or an expression
+evaluated in the lexical context of the @func{define-maker} macro use;
+the expressions are evaluated every time the maker is used.
+
+@var{keywords-defaults-options} defines optional arguments selected with an
+auxiliary syntax and a value; it has the form:
+
+@example
+(@var{clause-spec} ...)
+@end example
+
+@noindent
+where each @var{clause-spec} has the form:
+
+@example
+(@var{auxiliary-syntax} @var{default-expr})
+(@var{auxiliary-syntax} @var{default-expr} @var{option} ...)
+@end example
+
+@noindent
+where each @var{auxiliary-syntax} is an identifier and
+@var{default-expr} is an expression representing the default value for
+the argument; the expressions are all evaluated in the lexical context
+of the @func{define-maker} macro use, the expressions are evaluated
+every time the maker is used.
+
+Notice that the @var{auxiliary-syntax} identifiers are matched against
+the values in the macro use by comparing the syntax objects with
+@func{free-identifier=?}.
+
+Each of the @var{option} forms can be one among:
+
+@example
+(mandatory)
+(optional)
+(with @var{identifier} ...)
+(without @var{identifier} ...)
+@end example
+
+@noindent
+where the first two specify if the current clause is mandatory or
+optional; the @func{with} option selects a list of clauses that must be
+present when the current clause is used; the @func{without} option
+selects a list of clauses that must not be present when the current
+clause is used.  Each clause can be used at most once;
+@clause{mandatory} cannot appear along with @clause{optional}.
+
+When the new macro is used without optional auxiliary syntaxes, it is
+expanded to:
+
+@example
+;; single maker expression, no positional arguments
+(@var{maker-expr-result})
+
+;; single maker expression, positional arguments
+(@var{maker-expr-result}
+ @varo{positional-arg} @var{positional-arg} ...)
+
+;; multiple maker expressions, no positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...)
+
+;; multiple maker expressions, positional arguments
+(@varo{maker-expr-result} @var{maker-expr-result} ...
+ @varo{positional-arg} @var{positional-arg} ...)
+@end example
+
+When the new macro is defined with optional auxiliary syntaxes, the
+expressions in the given syntax clauses, or the default expressions, are
+appended to the output form in the same order as the corresponding
+syntaxes in @var{keywords-defaults-options}.
+
+It is an error if the generated maker is invoked with a clause used
+multiple times.
+
+When the clause of a generated maker is used with multiple values: the
+values are enclosed in a @func{list} form and the result is used as
+argument for the maker expression; for example:
+
+@example
+(import (vicare)
+  (prefix (vicare language-extensions makers) mk.))
+
+(define-syntax alpha:)
+
+(mk.define-maker doit
+    vector
+  ((alpha: (list 1 2 3))))
+
+(doit)                   @expansion{} (vector (list 1 2 3))
+(doit (alpha: 10 20 30)) @expansion{} (vector (list 10 20 30))
 @end example
 @end deffn
 
@@ -3010,61 +3501,448 @@ written to one port is read from the other port.
 @cindex Library @library{vicare language-extensions ascii-chars}
 
 
-The library @library{vicare language-extensions ascii-chars} provides a
-small number of functions dealing with fixnums representing characters
-in @ascii{} encoding range.  The identifiers whose name is prefixed with
-@samp{$} are bound to unsafe operations: they do @strong{not} validate
-the arguments and applying them to invalid arguments leads to undefined
-behaviour.
+The library @library{vicare language-extensions ascii-chars} provides
+functions and macros dealing with fixnums representing characters in
+@ascii{} encoding range.
+
+@menu
+* asciis generic::              Generic utilities.
+* asciis conversion::           Conversion utilities.
+* asciis predicates::           Character predicates.
+* asciis uri::                  Character predicates related to @rfc{}
+                                3986, Uniform Resource Identifiers.
+@end menu
+
+@c page
+@node asciis generic
+@subsection Generic utilities
 
 
-@defun fixnum-in-ascii-range? @var{obj}
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Function fixnum-in-ascii-range? @var{obj}
+@deffnx Syntax $fixnum-in-ascii-range? @var{obj}
 Return @true{} if @var{obj} is a fixnum representing a character in
 @ascii{} encoding.
-@end defun
+@end deffn
 
 
-@defun ascii-upper-case? @var{fx}
-@defunx ascii-lower-case? @var{fx}
-@defunx ascii-title-case? @var{fx}
-@defunx $ascii-upper-case? @var{fx}
-@defunx $ascii-lower-case? @var{fx}
-@defunx $ascii-title-case? @var{fx}
+@deffn Function fixnum-in-base10-range? @var{obj}
+@deffnx Syntax $fixnum-in-base10-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range @math{[0, 9]}.
+@end deffn
+
+
+@deffn Function fixnum-in-base16-range? @var{obj}
+@deffnx Syntax $fixnum-in-base16-range? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range @math{[0, 15]}.
+@end deffn
+
+
+@deffn Function ascii-upper-case? @var{fx}
+@deffnx Function ascii-lower-case? @var{fx}
+@deffnx Function ascii-title-case? @var{fx}
+@deffnx Syntax $ascii-upper-case? @var{fx}
+@deffnx Syntax $ascii-lower-case? @var{fx}
+@deffnx Syntax $ascii-title-case? @var{fx}
 Return @true{} if @var{fx} represents an upper case or lower case letter
 character, otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-cased? @var{fx}
-@defunx $ascii-cased? @var{fx}
+@deffn Function ascii-cased? @var{fx}
+@deffnx Syntax $ascii-cased? @var{fx}
 Return @true{} if @var{fx} represents a letter character, which can be
 converted to upper or lower case, otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-alphabetic? @var{fx}
-@defunx $ascii-alphabetic? @var{fx}
+@deffn Function ascii-alphabetic? @var{fx}
+@deffnx Syntax $ascii-alphabetic? @var{fx}
 Return @true{} if @var{fx} represents a letter character, otherwise
 return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-numeric? @var{fx}
-@defunx $ascii-numeric? @var{fx}
+@deffn Function ascii-dec-digit? @var{fx}
+@deffnx Syntax $ascii-dec-digit? @var{fx}
 Return @true{} if @var{fx} represents a decimal digit character,
 otherwise return @false{}.
-@end defun
+@end deffn
 
 
-@defun ascii-upcase @var{fx}
-@defunx ascii-downcase @var{fx}
-@defunx ascii-titlecase @var{fx}
-@defunx $ascii-upcase @var{fx}
-@defunx $ascii-downcase @var{fx}
-@defunx $ascii-titlecase @var{fx}
+@deffn Function ascii-hex-digit? @var{fx}
+@deffnx Syntax $ascii-hex-digit? @var{fx}
+Return @true{} if @var{fx} represents a hexadecimal digit character,
+otherwise return @false{}.
+@end deffn
+
+
+@deffn Function ascii-alpha-digit? @var{fx}
+@deffnx Syntax $ascii-alpha-digit? @var{fx}
+Return @true{} if @var{fx} represents a letter or a decimal digit
+character, otherwise return @false{}.
+@end deffn
+
+
+@deffn Function ascii-upcase @var{fx}
+@deffnx Function ascii-downcase @var{fx}
+@deffnx Function ascii-titlecase @var{fx}
+@deffnx Syntax $ascii-upcase @var{fx}
+@deffnx Syntax $ascii-downcase @var{fx}
+@deffnx Syntax $ascii-titlecase @var{fx}
 Return a fixnum representing the upper case or lower case version of
 @var{fx}; return @var{fx} itself if it represents an uncased character.
-@end defun
+@end deffn
+
+@c page
+@node asciis conversion
+@subsection Conversion utilities
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Function ascii-dec->fixnum @var{fx}
+@deffnx Syntax $ascii-dec->fixnum @var{fx}
+Given a fixnum representing a decimal digit in @ascii{} encoding: return
+the corresponding fixnum in the range @math{[0, 9]}.
+
+@example
+(ascii-dec->fixnum (char->integer #\5))
+@result{} 5
+@end example
+@end deffn
+
+
+@deffn Function fixnum->ascii-dec @var{fx}
+@deffnx Syntax $fixnum->ascii-dec @var{fx}
+Given a fixnum in the range @math{[0, 9]}: return the corresponding
+fixnum representing the decimal digit in @ascii{} encoding.
+
+@example
+(fixnum->ascii-dec 5)
+@result{} (char->integer #\5)
+@end example
+@end deffn
+
+
+@deffn Function ascii-hex->fixnum @var{fx}
+@deffnx Syntax $ascii-hex->fixnum @var{fx}
+Given a fixnum representing a hexadecimal digit in @ascii{} encoding:
+return the corresponding fixnum in the range @math{[0, 15]}.
+
+@example
+(ascii-hex->fixnum (char->integer #\5))
+@result{} 5
+
+(ascii-hex->fixnum (char->integer #\A))
+@result{} 10
+@end example
+@end deffn
+
+
+@deffn Function fixnum->ascii-hex @var{fx}
+@deffnx Syntax $fixnum->ascii-hex @var{fx}
+Given a fixnum in the range @math{[0, 15]}: return the corresponding
+fixnum representing the hexadecimal digit in @ascii{} encoding.
+
+@example
+(fixnum->ascii-hex 5)
+@result{} (char->integer #\5)
+
+(fixnum->ascii-hex 10)
+@result{} (char->integer #\A)
+@end example
+@end deffn
+
+@c page
+@node asciis predicates
+@subsection Character predicates
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Syntax $ascii-chi-V? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{V} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-v? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{v} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-ampersand? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{&} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-at-sign? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{@@} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-open-bracket? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{[} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-close-bracket? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{]} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-open-paren? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{(} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-close-paren? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{)} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-dot? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{.} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-comma? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{,} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-colon? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{:} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-semicolon? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{;} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-bang? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{!} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-dollar? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{$} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-question-mark? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{?} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-number-sign? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{#} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-percent? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{%} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-equal? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{=} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-plus? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{+} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-minus? @var{fx}
+@deffnx Syntax $ascii-chi-dash? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{-} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-underscore? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{_} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-tilde? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{~} in @ascii{} encoding.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax $ascii-chi-quote? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{'} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-slash? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{/} in @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax $ascii-chi-star? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing the character
+@samp{*} in @ascii{} encoding.
+@end deffn
+
+@c page
+@node asciis uri
+@subsection Character predicates related to @rfc{} 3986, Uniform Resource Identifiers
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions ascii-chars}.  The identifiers whose name is
+prefixed with @samp{$} are bound to unsafe operations: they do
+@strong{not} validate the arguments and applying them to invalid
+arguments leads to undefined behaviour.
+
+
+@deffn Syntax $ascii-uri-reserved? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a reserved
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-unreserved? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing an unreserved
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-gen-delim? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a @code{gen-delim}
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-sub-delim? @var{fx}
+Evaluate to true if @var{fx} is a fixnum representing a @code{sub-delim}
+character in @ascii{} encoding according to @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pct-encoded? @meta{chi} @meta{bv} @meta{i}
+The argument @meta{chi} must be a fixnum representing the octet at index
+@meta{i} in the bytevector @meta{bv}; @meta{bv} and @meta{i} must be
+identifiers.  Return @true{} if the @math{3} bytes at offset @meta{i}
+represent a percent--encoded sequence and increment @meta{i} to
+reference the third octet; otherwise return @false{} and set @meta{i} to
+the offset of the offending octet; if there are not enough octets:
+return @false{} and leave @meta{i} unchanged.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare language-extensions ascii-chars))
+
+(let* ((bv  '#ve(ascii "ciao"))
+       (i   0)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 0
+
+(let* ((bv  '#ve(ascii "c%ABo"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #t 3
+
+(let* ((bv  '#ve(ascii "c%AB"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R    ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #t 3
+
+(let* ((bv  '#ve(ascii "c%AZ"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 3
+
+(let* ((bv  '#ve(ascii "c%ZA"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 2
+
+(let* ((bv  '#ve(ascii "c%A"))
+       (i   1)
+       (chi (bytevector-u8-ref bv i))
+       (R   ($ascii-uri-pct-encoded? chi bv i)))
+  (values R i))
+@result{} #f 1
+@end example
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pchar-not-percent-encoded? @var{fx}
+Evaluate to true if @var{fx} is a fixnum matching the @code{pchar}
+component in @ascii{} encoding, with the exception of the
+percent--encoded sequence as defined by @rfc{} 3986.
+@end deffn
+
+
+@deffn Syntax $ascii-uri-pchar? @meta{chi} @meta{bv} @meta{i}
+The argument @meta{chi} must be a fixnum representing the octet at index
+@meta{i} in the bytevector @meta{bv}; @meta{bv} and @meta{i} must be
+identifiers.  Return @true{} if the octet @meta{chi} or the @math{3}
+bytes at offset @meta{i} represent @code{pchar} component in @ascii{}
+encoding; if successful increment @meta{i} to reference the last
+matching octet; otherwise return @false{} and set @meta{i} to the offset
+of the offending octet; if there are not enough octets: return @false{}
+and leave @meta{i} unchanged.
+@end deffn
 
 @c page
 @node hooks

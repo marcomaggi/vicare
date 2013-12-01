@@ -493,6 +493,7 @@ useful.
 
 
 @deffn Syntax define-method (@meta{generic} @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method ((@meta{generic} @metao{tag} @meta{tag} @dots{}) @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{qualifier} @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} @meta{qualifier} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
@@ -530,8 +531,27 @@ type to the conventional @class{top}, which is interpreted as parent of
 every other type (and so it has the least specificity).
 @end table
 
+If the @meta{generic} function name comes with @meta{tag} arguments: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
+
 If a method is defined with the same signature of an already registered
 method: the old method is overwritten by the new one.
+
+@cindex @code{__who__}
+The @meta{body} forms are enclosed in a @func{let-constants} syntax as
+follows:
+
+@example
+(let-constants ((__who__ (quote @meta{generic})))
+  @metao{body} @meta{body} @dots{})
+@end example
+
+@noindent
+so the binding @code{__who__} is available in the body forms to
+reference a symbol representing the generic function's name.  This is
+useful when raising exceptions with condition type @condition{who}.
 @end deffn
 
 

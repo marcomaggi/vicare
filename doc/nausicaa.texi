@@ -12,14 +12,17 @@
 @include version-nausicaa.texi
 @include macros.texi
 
-@macro oopp{}
-@acronym{OOPP}
-@end macro
-
 @c page
 @c ------------------------------------------------------------
 @c Values.
 @c ------------------------------------------------------------
+
+@set PRJNAME                    Vicare
+
+@c To be used as @value{PACKAGE} whenever we need to include the full
+@c name of this package.
+@set PACKAGE                    Vicare Scheme
+
 
 @set TITLE                      Nausicaa for Vicare Scheme
 
@@ -43,7 +46,6 @@
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
 @set COPYRIGHT_YEARS            2012, 2013
-
 
 @c page
 @c ------------------------------------------------------------
@@ -117,16 +119,16 @@ Libraries in the language @library{nausicaa}
 * multimethods::                Multimethods dispatching.
 * builtins::                    Conventional labels for built-in objects.
 * conditions::                  Condition object types.
+* increments::                  Numeric increment syntaxes.
+* simple-match::                Simple destructuring match syntax.
+* infix::                       Infix to prefix transformer.
 
-Containers libraries
+Library groups
 
-* lists::                       Extended lists processing.
-* vectors::                     Extended vectors processing.
-* strings::                     Extended strings processing.
-* arrays::                      Multidimensional arrays.
-* stacks::                      Simple stacks.
-* queues::                      Simple queues.
-* bitvectors::                  Bitvectors.
+* containers::                  Containers libraries.
+* uri::                         Uniform Resource Identifiers (@uri{}).
+* parser-tools::                Lexers and parsers.
+* net::                         Networking.
 
 Appendices
 
@@ -159,20 +161,87 @@ of object--oriented languages, but it just has the perfume of
 @acronym{OOP}.
 
 @c page
+@c Libraries in the Nausicaa language
 
 @include nausicaa-language.texi
 @include nausicaa-oopp.texi
 @include nausicaa-multimethods.texi
 @include nausicaa-builtins.texi
 @include nausicaa-conditions.texi
+@include nausicaa-increments.texi
+@include nausicaa-simple-match.texi
+@include nausicaa-infix.texi
 
-@include nausicaa-lists.texi
-@include nausicaa-vectors.texi
-@include nausicaa-strings.texi
-@include nausicaa-arrays.texi
-@include nausicaa-stacks.texi
-@include nausicaa-queues.texi
-@include nausicaa-bitvectors.texi
+@c page
+@node containers
+@chapter Containers libraries
+
+
+@menu
+* containers lists::            Extended lists processing.
+* containers vectors::          Extended vectors processing.
+* containers strings::          Extended strings processing.
+* containers arrays::           Multidimensional arrays.
+* containers stacks::           Simple stacks.
+* containers queues::           Simple queues.
+* containers bitvectors::       Bitvectors.
+* containers iterators::        Iterating over sequences.
+@end menu
+
+@include nausicaa-containers-lists.texi
+@include nausicaa-containers-vectors.texi
+@include nausicaa-containers-strings.texi
+@include nausicaa-containers-arrays.texi
+@include nausicaa-containers-stacks.texi
+@include nausicaa-containers-queues.texi
+@include nausicaa-containers-bitvectors.texi
+@include nausicaa-containers-iterators.texi
+
+@c page
+@node uri
+@chapter Uniform Resource Identifiers (@uri{})
+
+
+@menu
+* uri ip::            Generic @ip{} addresses.
+* uri uri::           Uniform Resource Identifier objects.
+* uri pathnames::     File pathnames.
+@end menu
+
+@include nausicaa-uri-uri.texi
+@include nausicaa-uri-pathnames.texi
+
+@c page
+@node parser-tools
+@chapter Lexers and parsers
+
+
+@menu
+* parser-tools source-locations::  Representing source locations.
+* parser-tools lexical-tokens::    Describing lexical tokens.
+* parser-tools lalr::              A LALR(1) parser generator.
+* parser-tools ip-addresses::      Lexer and parser for IP addresses.
+* parser-tools uri::               Parsing Uniform Resource Identifiers.
+@end menu
+
+@include nausicaa-parser-tools-source-locations.texi
+@include nausicaa-parser-tools-lexical-tokens.texi
+@include nausicaa-parser-tools-lalr.texi
+@include nausicaa-parser-tools-ip-addresses.texi
+@include nausicaa-parser-tools-uri.texi
+
+@c page
+@node net
+@chapter Networking
+
+
+@c @menu
+@c * net addresses::               Network resource addresses.
+@c @end menu
+
+@c @include nausicaa-net-addresses.texi
+
+@c page
 
 @include gpl-3.0.texi
 @include fdl-1.3.texi

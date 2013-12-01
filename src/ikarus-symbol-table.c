@@ -59,7 +59,7 @@ ikrt_get_symbol_table (ikpcb* pcb)
 
 
 static long
-compute_hash (ikptr str)
+compute_string_hash (ikptr str)
 /* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
 {
   long  len  = IK_UNFIX(IK_REF(str, off_string_length));
@@ -82,7 +82,7 @@ compute_hash (ikptr str)
 ikptr
 ikrt_string_hash (ikptr str)
 {
-  return (ikptr)(compute_hash(str) & (~ fx_mask));
+  return (ikptr)(compute_string_hash(str) & (~ fx_mask));
 }
 static int
 strings_eqp (ikptr str1, ikptr str2)
@@ -94,6 +94,26 @@ strings_eqp (ikptr str1, ikptr str2)
 			IK_UNFIX(len) * IK_STRING_CHAR_SIZE));
   } else
     return 0;
+}
+ikptr
+ikrt_bytevector_hash (ikptr bv)
+{
+  long		len  = IK_BYTEVECTOR_LENGTH(bv);
+  uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
+  int		h    = len;
+  uint8_t *	last = data + len;
+  /* one-at-a-time */
+  while (data < last) {
+    int c = (*data >> 8);
+    h = h + c;
+    h = h + (h << 10);
+    h = h ^ (h >> 6);
+    data++;
+  }
+  h = h + (h << 3);
+  h = h ^ (h >> 11);
+  h = h + (h << 15);
+  return (((h >= 0) ? h : (1 - h)) & (~ fx_mask));
 }
 
 
@@ -113,7 +133,7 @@ static ikptr
 intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
 /* Notice that all the memory allocations here are UNsafe. */
 {
-  int   hash_value    = compute_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
   ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
   { /* If a symbol having S_UNIQUE_STRING is already interned: return it
@@ -153,7 +173,7 @@ intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symb
 
    Notice that all the memory allocations here are UNsafe. */
 {
-  int   hash_value    = compute_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
   ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
   { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
@@ -198,7 +218,7 @@ ikrt_intern_gensym (ikptr s_sym, ikpcb* pcb)
     pcb->gensym_table = s_gensym_table = make_symbol_table(pcb);
   }
   ikptr s_unique_string = IK_REF(s_sym, off_symbol_record_ustring);
-  int   hash_value      = compute_hash(s_unique_string);
+  int   hash_value      = compute_string_hash(s_unique_string);
   int   bucket_index    = hash_value & (IK_VECTOR_LENGTH(s_gensym_table) - 1);
   ikptr s_bucket_list   = IK_ITEM(s_gensym_table, bucket_index);
   { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
@@ -242,7 +262,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
   if (IK_TAGOF(s_unique_string) != string_tag) {
     return IK_FALSE_OBJECT;
   }
-  int   hash_value    = compute_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(gensym_table) - 1);
 #if 0
   /* This  is the  original  Ikarus  code.  (Marco  Maggi;  Sun Mar  11,

@@ -1,6 +1,6 @@
 ;;; -*- coding: utf-8 -*-
 ;;;
-;;;Part of: Nausicaa/OOPP
+;;;Part of: Vicare Scheme
 ;;;Contents: augmented Scheme language around (rnrs)
 ;;;Date: Wed May 23, 2012
 ;;;
@@ -9,13 +9,6 @@
 ;;;	This  is a  compound  library re-exporting  bindings from  other
 ;;;	libraries.   It   defines  the  (nausicaa   oopp)  language:  an
 ;;;	augmented (rnrs) language.
-;;;
-;;;	  Bindings from the following libraries are NOT reexported:
-;;;
-;;;	   (rnrs eval (6))
-;;;	   (rnrs r5rs (6))
-;;;	   (rnrs mutable-pairs (6))
-;;;	   (rnrs mutable-strings (6))
 ;;;
 ;;;Copyright (c) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -34,7 +27,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa)
   (export
 
@@ -646,6 +639,31 @@
     string-normalize-nfc	string-normalize-nfkc
 
 
+;;;; (rnrs r5rs (6))
+
+    delay
+    exact->inexact
+    force
+    inexact->exact
+    modulo
+    remainder
+    null-environment
+    quotient
+    scheme-report-environment
+
+;;;; (rnrs eval (6))
+    eval
+    environment
+
+;;;; (rnrs mutable-pairs (6))
+    set-car!
+    set-cdr!
+
+;;;; (rnrs mutable-strings (6))
+    string-set!
+    string-fill!
+
+
 ;;;; bindings from (vicare language-extensions)
 ;;
 ;;The list  of these bindings can  be obtained by running  the following
@@ -720,7 +738,6 @@
     array-set-c-unsigned-long!
     array-set-c-unsigned-long-long!
     array-set-c-unsigned-short!
-    ascii->string
     asinh
     assembler-output
     atanh
@@ -732,6 +749,7 @@
     break
     bwp-object?
     bytevector-append
+    bytevector-empty?
     bytevector->base64
     bytevector->bignum
     bytevector->c4b-list
@@ -969,7 +987,6 @@
     keyword->symbol
     lambda-returnable
     last-pair
-    latin1->string
     library
     library-extensions
     library-name<=?
@@ -1245,7 +1262,7 @@
     strdup
     strdup*
     strerror
-    string->ascii
+    string-empty?
     string-base64->bytevector
     string-copy!
     string->cstring
@@ -1255,7 +1272,6 @@
     string->guarded-cstring
     string->guarded-cstring*
     string-hex->bytevector
-    string->latin1
     string-or-symbol->string
     string-or-symbol->symbol
     string->pathname-func
@@ -1265,7 +1281,6 @@
     strings->argv*
     strings->guarded-argv
     strings->guarded-argv*
-    string->uri-encoding
     string->utf16be
     string->utf16le
     string->utf16n
@@ -1327,6 +1342,11 @@
     time-nanosecond
     time-second
     top-level-value
+    let*-syntax
+    let-constants
+    let*-constants
+    letrec-constants
+    letrec*-constants
     trace-define
     trace-define-syntax
     trace-lambda
@@ -1348,10 +1368,6 @@
     uninstall-library
     until
     unwind-protect
-    uri-decode
-    uri-encode
-    uri-encoding->string
-    uri-normalise-encoding
     utf-16be-codec
     utf16be->string
     utf-16le-codec
@@ -1365,6 +1381,7 @@
     vector-append
     vector-copy
     vector-copy!
+    vector-empty?
     vector-exists
     vector-for-all
     vector-resize
@@ -1390,6 +1407,8 @@
 
     char-in-ascii-range?
     fixnum-in-character-range?
+
+    define-syntax*
 
     ;;; syntax utilities
     identifier->string
@@ -1421,6 +1440,7 @@
     syntax->vector
     syntax-unwrap
     syntax=?
+    identifier=symbol?
     #;quoted-syntax-object?
 
     syntax-clauses-unwrap
@@ -1446,6 +1466,7 @@
     syntax-clause-spec-mutually-exclusive
     syntax-clauses-single-spec
     syntax-clauses-fold-specs
+    syntax-clauses-validate-specs
 
     ;; environment inquiry
     uname
@@ -1463,10 +1484,19 @@
     os-version
 
     ;; condition types
-    &procedure-argument-violation
+;;; Redefined by (nausicaa language conditions)
+;;;
+;;; &procedure-argument-violation
     make-procedure-argument-violation
     procedure-argument-violation?
     procedure-argument-violation
+
+;;; Redefined by (nausicaa language conditions)
+;;;
+;;; &expression-return-value-violation
+    make-expression-return-value-violation
+    expression-return-value-violation?
+    expression-return-value-violation
 
     ;; bignums
     bignum-positive?
@@ -1478,12 +1508,33 @@
     least-positive-bignum
     greatest-negative-bignum
 
+    ;; raw octets and strings
+    octets->string			string->octets
+    octets-encoded-bytevector?		octets-encoded-string?
+
+    ;; ASCII and latin1 encodings
+    ascii->string			string->ascii
+    latin1->string			string->latin1
+    ascii-encoded-bytevector?		latin1-encoded-bytevector?
+    ascii-encoded-string?		latin1-encoded-string?
+
+    ;; URI/percent encoding
+    string->uri-encoding		uri-encoding->string
+    string->percent-encoding		percent-encoding->string
+    uri-decode				percent-decode
+    uri-encode				percent-encode
+    normalise-uri-encoding		normalise-percent-encoding
+    uri-encoded-bytevector?		percent-encoded-bytevector?
+    uri-encoded-string?			percent-encoded-string?
+
     ;; misc
+    set-cons!
     eval-for-expand
     record-type-field-ref
     record-type-field-set!
     $record-type-field-ref
     $record-type-field-set!
+    values->list
 
 
 ;;;; bindings from (nausicaa language oopp)
@@ -1520,7 +1571,7 @@
     receive/tags
     do/tags			do*/tags
     set!/tags
-    with-label-shadowing
+    with-label-shadowing	with-tagged-arguments-validation
     <-
 
 
@@ -1528,13 +1579,19 @@
 
     ;; built-in types
     <top> <boolean> <symbol> <keyword> <pointer>
-    <pair> <mutable-pair> <list>
-    <char> <string> <mutable-string> <vector>
+    <pair> <mutable-pair> <spine> <list> <nonempty-list>
+    <char>
+    <string> <ascii-string> <latin1-string> <percent-encoded-string> <mutable-string>
+    <vector>
     <record-type-descriptor> <record> <condition>
     <hashtable> <hashtable-eq> <hashtable-eqv> <string-hashtable> <string-ci-hashtable> <symbol-hashtable>
-    <fixnum> <flonum>
-    <exact-integer> <integer> <integer-valued> <rational> <rational-valued>
-    <real> <real-valued> <complex> <number>
+    <fixnum> <positive-fixnum> <negative-fixnum>
+    <nonzero-fixnum> <nonpositive-fixnum> <nonnegative-fixnum>
+    <integer-flonum> <rational-flonum> <flonum>
+    <positive-bignum> <negative-bignum> <bignum>
+    <exact-integer> <integer> <integer-valued>
+    <ratnum> <rational> <rational-valued>
+    <real> <real-valued> <cflonum> <compnum> <complex> <number>
     <procedure>
 
     <transcoder> <port>
@@ -1542,13 +1599,18 @@
     <binary-port> <binary-input-port> <binary-output-port> <binary-input/output-port>
     <textual-port> <textual-input-port> <textual-output-port> <textual-input/output-port>
 
-    <bytevector>
+    <bytevector> <nonempty-bytevector>
     <bytevector-u8> <bytevector-s8>
     <bytevector-u16l> <bytevector-s16l> <bytevector-u16b> <bytevector-s16b> <bytevector-u16n> <bytevector-s16n>
     <bytevector-u32l> <bytevector-s32l> <bytevector-u32b> <bytevector-s32b> <bytevector-u32n> <bytevector-s32n>
     <bytevector-u64l> <bytevector-s64l> <bytevector-u64b> <bytevector-s64b> <bytevector-u64n> <bytevector-s64n>
     ;;<bytevector-uintl> <bytevector-sintl> <bytevector-uintb> <bytevector-sintb> <bytevector-uintn> <bytevector-sintn>
     <bytevector-singlel> <bytevector-singleb> <bytevector-singlen> <bytevector-doublel> <bytevector-doubleb> <bytevector-doublen>
+    <ascii-bytevector> <latin1-bytevector> <percent-encoded-bytevector>
+
+    <hashable-and-properties-clauses>
+
+    <undefined> <unspecified>
 
     ;; multimethods
     define-generic		define-generic*
@@ -1622,6 +1684,12 @@
     &h_errno
     &i/o-eagain
     &out-of-memory-error
+    &procedure-argument-violation
+    &expression-return-value-violation
+
+    ;; wrong type
+    &tagged-binding-violation
+    tagged-binding-violation
 
     ;; mismatch
     &mismatch make-mismatch-condition mismatch-condition?
@@ -1641,20 +1709,36 @@
     <common-conditions>
 
 
+;;;; bindings from (nausicaa language increments)
+
+    incr!		decr!
+    pre-incr!		post-incr!
+    pre-decr!		post-decr!
+    $incr!		$decr!
+    $pre-incr!		$post-incr!
+    $pre-decr!		$post-decr!
+
+;;;; bindings from (nausicaa language infix)
+    infix
+    % ? :
+    && !! ^^ ~~
+    ++ --
+    & ! ^ ~
+    << >>
+    fx& fx! fx^ fx~ fx<< fx>>
+
+;;;; bindings from (nausicaa language simple-match)
+    match
+
+
 ;;;; bindings from (vicare language-extensions namespaces)
     define-namespace		using
 
 ;;;; bindings from (vicare language-extensions sentinels)
     sentinel
-    make-sentinel		sentinel?
-    undefined			undefined?
-    unspecified			unspecified?
-
-;;;; bindings from (vicare language-extensions simple-match)
-    match
-
-;;;; bindings from (vicare language-extensions infix)
-    infix
+    make-sentinel	sentinel?
+    undefined		undefined?	defined?
+    unspecified		unspecified?	specified?
 
 
 ;;;; done exports
@@ -1680,6 +1764,8 @@
 		       &lexical
 		       &syntax
 		       &undefined
+		       &procedure-argument-violation
+		       &expression-return-value-violation
 
 		       ;; redefined from (rnrs arithmetic flonums (6))
 		       &no-infinities
@@ -1705,14 +1791,19 @@
 		       &i/o-eagain
 		       &out-of-memory-error)
 	    expand run)
-    (for (nausicaa language oopp)			expand run)
+    (for (except (nausicaa language oopp)
+		 &tagged-binding-violation
+		 make-tagged-binding-violation
+		 tagged-binding-violation?)
+      expand run)
     (for (nausicaa language multimethods)		expand run)
     (for (nausicaa language builtins)			expand run)
     (for (nausicaa language conditions)			expand run)
+    (for (nausicaa language increments)			expand run)
+    (for (nausicaa language simple-match)		expand run)
+    (for (nausicaa language infix)			expand run)
     (for (vicare language-extensions namespaces)	expand run)
     (for (vicare language-extensions sentinels)		expand run)
-    (for (vicare language-extensions simple-match)	expand run)
-    (for (vicare language-extensions infix)		expand run)
     ))
 
 ;;; end of file

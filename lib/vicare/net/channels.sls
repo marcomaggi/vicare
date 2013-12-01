@@ -94,18 +94,9 @@
     make-maximum-message-size-exceeded-condition
     maximum-message-size-exceeded-condition?)
   (import (vicare)
-    (vicare arguments validation)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation)
     (vicare unsafe operations)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Fri May 17, 2013)
-    (only (ikarus system $bytevectors)
-	  $bytevector-reverse-and-concatenate)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Fri May 17, 2013)
-    (only (ikarus system $strings)
-	  $string-reverse-and-concatenate))
+    (vicare arguments validation)
+    (vicare language-extensions syntaxes))
 
 
 ;;;; data structures

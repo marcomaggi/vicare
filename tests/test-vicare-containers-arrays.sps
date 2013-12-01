@@ -65,19 +65,19 @@
       (with-arguments-validation (who)
 	  ((arrays.coordinate	-123))
 	#f)
-    '(-123))
+    => (list who '(-123)))
 
   (check-for-procedure-argument-violation
       (with-arguments-validation (who)
 	  ((arrays.list-of-coordinates	'(456 -123)))
 	#f)
-    '((456 -123)))
+    => (list who '((456 -123))))
 
   (check-for-procedure-argument-violation
       (with-arguments-validation (who)
 	  ((arrays.vector-of-coordinates	'#(456 -123)))
 	#f)
-    '(#(456 -123)))
+    => (list who '(#(456 -123))))
 
   #t)
 

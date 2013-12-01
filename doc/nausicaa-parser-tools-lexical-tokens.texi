@@ -1,0 +1,293 @@
+@node parser-tools lexical-tokens
+@section Describing lexical tokens
+
+
+@cindex @library{nausicaa parser-tools lexical-tokens}, library
+@cindex Library @library{nausicaa parser-tools lexical-tokens}
+
+
+It is an accepted design pattern to split the interpretation of a stream
+of text into a lexing step and a parsing step.  In such scenario a lexer
+function fragments the input into @dfn{tokens} each of which is assigned
+a @dfn{category}, the parser associates a semantic meaning to a sequence
+of token categories.
+
+The library @library{nausicaa parser-tools lexical-tokens} defines the
+class @class{lexical-token} which is meant to be used by all the lexers
+and parsers distributed with @value{PACKAGE}.  The library must be used
+along with @library{nausicaa parser-tools source-locations}, which
+defines the class @class{source-location}.
+
+@menu
+* parser-tools lexical-tokens intro::  Overview of lexical tokens.
+* parser-tools lexical-tokens token::  Lexical token objects.
+* parser-tools lexical-tokens eoi::    End-of-input objects.
+* parser-tools lexical-tokens error::  Lexical error objects.
+* parser-tools lexical-tokens silex::  SILex default semantic actions.
+@end menu
+
+@c page
+@node parser-tools lexical-tokens intro
+@subsection Overview of lexical tokens
+
+
+Lexical token records are meant to store informations about a token from
+the input stream; they should be produced by the lexer and consumed by
+the parser.  For example, when the lexer tokenises the number @math{123}
+from the string @samp{"123"}, it can build a @class{lexical-token}
+object with:
+
+@example
+(import (nausicaa)
+  (prefix (nausicaa parser-tools lexical-tokens)   lt.))
+
+(lt.<lexical-token>
+   ((lt.category: 'NUMBER)
+    (lt.value:    123)
+    (lt.length:   3)))
+@end example
+
+@noindent
+while when tokenising a string it can do:
+
+@example
+(lt.<lexical-token>
+   ((lt.category: STRING)
+    (lt.value:    "some text")
+    (lt.length:   9)))
+@end example
+
+When the lexer has to signal the end--of--input, it must return a token
+with category @samp{*eoi*}, and continue to return it if it is called
+again and again; it can do:
+
+@example
+(lt.<end-of-input-token> ())
+@end example
+
+When the lexer closure has to signal a lexer error (an invalid character
+from the input stream), it must return a token with category
+@samp{*lexer-error*}:
+
+@example
+(lt.<lexer-error> ((lt.error-message: "wrong input")))
+@end example
+
+@c page
+@node parser-tools lexical-tokens token
+@subsection Lexical token objects
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools lexical-tokens}.
+
+
+@deftp Class @aclass{lexical-token}
+Hold the informations about a token from the input stream.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@defop {Common constructor} @aclass{lexical-token} constructor @var{category} @var{location} @var{value} @var{length}
+Build and return a new instance of @class{lexical-token} using the given
+arguments as field values.
+@end defop
+
+
+@defop {Maker syntax} @aclass{lexical-token} @aclass{lexical-token} (@meta{clause} @dots{})
+@defopx {Auxiliary Syntax} @aclass{lexical-token} category: @meta{category}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} location: @meta{location}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} value: @meta{value}
+@defopx {Auxiliary Syntax} @aclass{lexical-token} length: @meta{length}
+Build and return a new instance of @class{lexical-token} using the
+default constructor.
+
+The clause @clause{category:} is mandatory: its value must be a symbol
+representing the token's category.
+
+@meta{location} defaults to the return value of
+@func{unspecified-source-location} from the library @library{nausicaa
+parser-tools source-locations}.
+
+@meta{value} can be any object and should represent the token's value;
+it defaults to @false{}.
+
+@meta{length} must be a non--negative fixnum representing the length in
+characters of the input string representing the token; it defaults to
+zero.
+@end defop
+
+@c ------------------------------------------------------------
+
+@deftypecv {Immutable field} @aclass{lexical-token} @aclass{symbol} category
+Represents the grammar's terminal symbol to which this token belongs.
+Every parser @api{} must provide an interface to specify the list of
+allowed terminal symbols.
+
+By convention: a token representing the end--of--input must have
+@code{category} set to @samp{*eoi*}; a token representing a lexer error
+must have @code{category} set to @samp{*lexer-error*};
+@end deftypecv
+
+
+@deftypecv {Immutable field} @aclass{lexical-token} @aclass{source-location} location
+Represents the location in the input from which the token was built.
+@end deftypecv
+
+
+@defcv {Immutable field} @aclass{lexical-token} value
+Represents the semantic value associated with the token; it can be any
+Scheme value.  When the token represents the end--of--input: this field
+is set to the return value of @code{(eof-object)}.
+@end defcv
+
+
+@defcv {Immutable Field} @aclass{lexical-token} @aclass{nonnegative-fixnum} length
+It is meant to be the length of the string which generated the token.
+When the token represents the end--of--input: this field is set to zero.
+@end defcv
+
+
+@deftypemethod @aclass{lexical-token} @aclass{boolean} end-of-input?
+Return @true{} if the token has category @samp{*eoi*}, otherwise return
+@false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{lexical-token} @aclass{boolean} lexer-error?
+Return @true{} if the token has category @samp{*lexer-error*}, otherwise
+return @false{}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{lexical-token} @aclass{boolean} special?
+Return @true{} if the token has category @samp{*eoi*} or
+@samp{*lexer-error*}, otherwise return @false{}.
+@end deftypemethod
+
+@c page
+@node parser-tools lexical-tokens eoi
+@subsection End--of--input objects
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools lexical-tokens}.
+
+
+@deftp Label @aclass{end-of-input}
+Hold the informations about a lexical token representing the
+end--of-input; it is derived from @class{lexical-token}.  The value of
+the @code{category} field is always @samp{*eoi*}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@defop {Common constructor} @aclass{end-of-input} constructor @var{location}
+Build and return a new instance of @class{end-of-input} using the given
+arguments as field values.
+@end defop
+
+
+@defop {Maker syntax} @aclass{end-of-input} @aclass{end-of-input} (@meta{clause} @dots{})
+@defopx {Auxiliary Syntax} @aclass{end-of-input} location: @meta{location}
+Build and return a new instance of @class{end-of-input} using the
+default constructor.
+
+@meta{location} must evaluate to an object of type
+@class{source-location}; it defaults to the return value of
+@func{unspecified-source-location} from the library @library{nausicaa
+parser-tools source-locations}.
+@end defop
+
+@c page
+@node parser-tools lexical-tokens error
+@subsection Lexical error class
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools lexical-tokens}.
+
+
+@deftp Class @aclass{lexer-error}
+Hold the informations about a lexer error; it is derived from
+@class{lexical-token}.  The value of the @code{category} field is always
+@samp{*lexer-error*}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@defop {Common constructor} @aclass{lexer-error} constructor @var{location} @var{error-message}
+Build and return a new instance of @class{lexer-error} using the given
+arguments as field values.
+@end defop
+
+
+@defop {Maker syntax} @aclass{lexer-error} @aclass{lexer-error} (@meta{clause} @dots{})
+@defopx {Auxiliary Syntax} @aclass{lexer-error} location: @meta{location}
+@defopx {Auxiliary Syntax} @aclass{lexer-error} error-message: @meta{message}
+Build and return a new instance of @class{lexer-error} using the default
+constructor.
+
+The clause @clause{error-message:} is mandatory and its value
+@meta{message} must evaluate to a string.
+
+@meta{location} defaults to the return value of
+@func{unspecified-source-location} from the library @library{nausicaa
+parser-tools source-locations}.
+@end defop
+
+@c ------------------------------------------------------------
+
+@deftypecv {Immutable field} @aclass{lexer-error} @aclass{string} message
+A Scheme string describing the error.
+@end deftypecv
+
+@c page
+@node parser-tools lexical-tokens silex
+@subsection SILex default semantic actions
+
+
+@cindex @library{nausicaa parser-tools silex default-error-handler}, library
+@cindex Library @library{nausicaa parser-tools silex default-error-handler}
+
+
+The following bindings are exported by the library @library{nausicaa
+parser-tools silex default-error-handler}.  The library is meant to be
+included in generated SILex table libraries using the
+@func{library-imports:} clause of @func{lex}, @vicareref{silex, A
+lexical analyser generator}.
+
+
+@deffn Syntax silex-default-error-handler
+@deffnx Syntax silex-default-error-handler @meta{yytext}
+Expand to a custom semantic action for the @samp{<<ERROR>>} rule; it is
+meant to be used in SILex table files as:
+
+@example
+<<ERROR>>       (silex-default-error-handler)
+@end example
+
+The semantic action builds and returns a record of type
+@class{lexical-token} with category @samp{*lexer-error*} and semantic
+value set to an error string describing the input that caused the error;
+the default @code{yytext} binding is used to build the error string.
+
+When the optional @meta{yytex} argument is present: this value is used
+in place of @code{yytext} to build the error message string.
+@end deffn
+
+
+@deffn Syntax silex-default-eof-handler
+Expand to a custom semantic action for the @samp{<<EOF>>} rule; it is
+meant to be used in SILex table files as:
+
+@example
+<<EOF>>         (silex-default-eof-handler)
+@end example
+
+The semantic action builds and returns a record of type
+@class{lexical-token} with category @samp{*eoi*}, semantic value set to
+@code{(eof-object)} and length set to zero.
+@end deffn
+
+@c end of file

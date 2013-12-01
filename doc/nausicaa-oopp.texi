@@ -35,8 +35,8 @@ identifier.
 * oopp predicate::              Defining custom predicates.
 * oopp fields::                 Defining concrete and virtual fields.
 * oopp method::                 Defining classes having methods.
-* oopp setter::                 Defining classes having custom
-                                setters and getters.
+* oopp getter::                 Defining classes having custom getters.
+* oopp setter::                 Defining classes having custom setters.
 * oopp mixins::                 Composing with mixins.
 * oopp satisfy::                Verifying definition constraints.
 * oopp shadow::                 Label shadowing.
@@ -225,6 +225,11 @@ a type definition.
 
 @item @meta{form}
 It is a generic form: an expression, an auxiliary syntax, @dots{}.
+
+@item @code{=>}
+It is the auxiliary syntax exported by both @library{nausicaa language
+oopp} and @library{nausicaa language auxiliary-syntaxes}, it is the same
+one exported by @rsixlibrary{base}.
 @end table
 
 @c ------------------------------------------------------------
@@ -296,6 +301,8 @@ Example using the maker transformer:
 (<pair> (1 2))
 @result{} (1 . 2)
 @end example
+
+@c ------------------------------------------------------------
 
 @item (@meta{type})
 @itemx ((@meta{type}) @meta{expr})
@@ -440,6 +447,8 @@ This syntax expands to a reference to the value.  Example:
 O   @result{} '(1 . 2)
 @end example
 
+@c ---------
+
 @item (set!/tags @meta{var} @meta{expr})
 This syntax expands to the use of @func{set!} as defined by @rnrs{6}:
 @meta{expr} becomes the new value of @meta{var}.  Notice that if values
@@ -457,13 +466,16 @@ O                       @result{} '(3 . 4)
 (set!/tags O "ciao")    @error{} assertion violation
 @end example
 
+@c ---------
+
 @item (@meta{var} @meta{id})
 Expands according to the following rules, in the given order:
 
 @enumerate
 @item
 If the type has a method named @meta{id}: this syntax expands to a call
-to such method with no arguments.
+to such method with no arguments.  The first argument of the method call
+is @meta{var} itself.
 
 @item
 If the type has a field named @meta{id}: this syntax expands to a call
@@ -494,6 +506,8 @@ Examples:
 (A a)           @result{} 1     ;field accessor application
 (A $a)          @result{} 1     ;unsafe field accessor application
 @end example
+
+@c ---------
 
 @item (set!/tags (@meta{var} @meta{id}) @meta{expr})
 Expands according to the following rules, in the given order:
@@ -537,12 +551,17 @@ O               @result{} (77 . 99)
 (set!/tags (A $a) 3)    ;unsafe field mutator application
 @end example
 
-@item (@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
-Expands to the result of applying the type's getter transformer to the
-syntax object (lookout for the parentheses):
+@c ---------
+
+@item (@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
+@itemx (@meta{var} (@metao{key} ...) (@meta{key} ...) ... => @metao{form} @meta{form} @dots{})
+Expands to the result of applying the type's getter transformer to one
+of the syntax objects (lookout for the parentheses):
 
 @example
-#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
+     => @metao{form} @meta{form} @dots{})
 @end example
 
 @noindent
@@ -575,6 +594,37 @@ exception to be raised at expand time.  Examples:
 (M[0][2])               @result{} 3
 (M[1][1])               @result{} 5
 @end example
+
+@noindent
+other examples:
+
+@example
+(define-label <fixnum-vector>
+  (parent <vector>)
+  (getter
+   (lambda (stx)
+     (syntax-case stx (=>)
+       ((?var ((?index)))
+        #'(vector-ref ?var ?index))
+       ((?var ((?index)) => ?form0 ?form ...)
+        #'(let (((fx <fixnum>) (?var[?index])))
+            (fx ?form0 ?form ...)))
+       ))))
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => string))
+@result{} "1"
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => odd?))
+@result{} #t
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[2] => * 10))
+@result{} 20
+@end example
+
+@c ---------
 
 @item (set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
 @itemx (set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
@@ -617,6 +667,8 @@ V               @result{} #(1 77 99)
 M               @result{} #(#(1 2 77) #(4 99 6))
 @end example
 
+@c ---------
+
 @item (@meta{var} @meta{id} @metao{form} @meta{form} ...)
 This syntax allows the use of nested syntaxes for typed fields.  It is
 expanded according to the following rules, in the given order:
@@ -636,6 +688,21 @@ Example:
 (define B '(3 4))
 (A append3 B '(5 6))    @result{} (1 2 3 4 5 6)
 @end example
+
+If the invoked method has a tagged, single return value: nested method
+invocation syntax is available.  If one of the @meta{form} arguments is
+the auxiliary syntax @code{=>}, and the return value tag is @meta{tag},
+the call is split as follows:
+
+@example
+(@meta{var} @meta{id} @metao{form} => @metai{form} ...)
+@expansion{} (let (((R @meta{tag}) (@meta{var} @meta{id} @metao{form})))
+      (R @metai{form} ...))
+@end example
+
+@noindent
+if no return value tag is available or the method has multiple return
+values: this syntax is @strong{not} available.
 
 @item
 If the type has a @strong{tagged} field named @meta{id}: this syntax
@@ -720,6 +787,8 @@ Example:
 (O car car)     @error{} syntax violation
 @end example
 @end enumerate
+
+@c ---------
 
 @item (set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
 This syntax allows the use of nested field mutator and setter syntaxes
@@ -1780,11 +1849,38 @@ as syntaxes:
 @section Defining classes having methods
 
 
-@deffn {Auxiliary Syntax} method (@meta{method-name} . @meta{formals}) . @meta{body}
-@deffnx {Auxiliary Syntax} method @meta{method-name} @meta{expression}
+@deffn {Auxiliary Syntax} method (@meta{method-spec} . @meta{formals}) . @meta{body}
+@deffnx {Auxiliary Syntax} method @meta{method-spec} @meta{expression}
 Add a method to the enclosing class, label or mixin definition; the
 method is applicable only through a syntax use in @oopp{} notation.
 This clause can be used multiple times.
+
+When the first form is used, the argument @meta{method-spec} can have
+one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+#(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+@end example
+
+@noindent
+when the second form is used, the argument @meta{method-spec} can have
+one of the following formats:
+
+@example
+@meta{method-name}
+#(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of a
+return value.  When a single return value tag is specified: the method
+is available for nested method invocation according to @oopp{} syntax
+specifications.  When the first form is used: the return value tags are
+used to validate the returned arguments as described for
+@func{lambda/tags}.
 
 @itemize
 @item
@@ -1856,11 +1952,27 @@ and an example of the second form:
 @end example
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn {Auxiliary Syntax} method-syntax @meta{method-name} @meta{transformer}
+@deffn {Auxiliary Syntax} method-syntax @meta{method-spec} @meta{transformer}
 Add a method to the enclosing class, label or mixin definition; the
 method is applicable only through a syntax use in @oopp{} notation.
 This clause can be used multiple times.
+
+The argument @meta{method-spec} can have one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @meta{rv-tag})
+#(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of a
+return value.  When the single return value tag is specified: the method
+is available for nested method invocation according to @oopp{} syntax
+specifications.
 
 The method definition is added to the methods list as if the following
 clause had been used:
@@ -1880,7 +1992,7 @@ the macro definition is expanded to:
 where @code{transformer-name} is an automatically generated identifier
 built by appending a dash and @meta{method-name} to the type name.
 @meta{transformer} must evaluate to a macro transformer: a function
-accepting a sintax object as single argument and returning a syntax
+accepting a syntax object as single argument and returning a syntax
 object as single value.  The first argument to the macro will be the
 type instance.
 
@@ -1901,6 +2013,7 @@ Here is an example of method syntax:
 @end example
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn {Auxiliary Syntax} methods @meta{method-spec} @dots{}
 Add methods to the enclosing class, label or mixin definition; the
@@ -1913,13 +2026,18 @@ The @meta{method-spec} arguments can be of the form:
 @meta{method-name}
 (@meta{method-name})
 (@meta{method-name} @meta{invokable-name})
+((@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
+(#(@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
 @end example
 
 @noindent
 where @meta{method-name} and @meta{invokable-name} must be identifiers;
 in the first two forms the invokable name is built in the same way the
 field accessor names are built: appending a dash and @meta{method-name}
-to the type name.  This clause can be used multiple times.
+to the type name.  When @meta{rv-tag} is used: it must be the tag
+identifier representing the type of a return value, the method is then
+available for nested method invocation according to @oopp{} syntax
+specifications.
 
 @meta{invokable-name} must be an identifier bound to a Scheme function
 or syntax which will be invoked as method; it must accept as first
@@ -2004,8 +2122,8 @@ language oopp} library, but we can do it using the facilities of the
 @end example
 
 @c page
-@node oopp setter
-@section Getter and setter syntaxes
+@node oopp getter
+@section Getter syntaxes
 
 
 @deffn {Auxiliary Syntax} getter @meta{transformer}
@@ -2013,30 +2131,60 @@ Add a getter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a sintax object as single argument and
+transformer: a function accepting a syntax object as single argument and
 returning a syntax object as single value.
 
-Whenever a tagged variable @meta{var} is used as follows (lookout for
-the parentheses):
+There are 2 possible forms (lookout for the parentheses!):
+
+@itemize
+@item
+Whenever a tagged variable @meta{var} is used as follows:
 
 @example
-(@meta{var} (@metao{form} ...) (@meta{form} ...) ...)
+(@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
 @end example
 
 @noindent
-the getter transformer is applied to the syntax object (lookout for the
-parentheses):
+the getter transformer is applied to the syntax object:
 
 @example
-#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...))
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...))
 @end example
 
 @noindent
 and the return value of the transformer is the result of the expansion.
 
-Getter definition examples:
+@item
+Whenever a tagged variable @meta{var} is used as follows:
 
 @example
+(@meta{var} (@metao{key} ...) (@meta{key} ...) ...
+   => @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+the getter transformer is applied to the syntax object:
+
+@example
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
+   => @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+and the return value of the transformer is the result of the expansion.
+In this form @code{=>} is the auxiliary syntax exported by both
+@library{nausicaa language oopp} and @library{nausicaa language
+auxiliary-syntaxes}, it is the same one exported by @rsixlibrary{base}.
+
+The @meta{form} arguments are meant to be used as nested tag members
+usage for the value returned by the getter.
+@end itemize
+
+Getter definition examples without member composition:
+
+@example
+(import (nausicaa))
+
 (define-label <vector>
   (getter (lambda (stx)
             (syntax-case stx ()
@@ -2062,7 +2210,41 @@ Getter definition examples:
 (M[0][2])               @result{} 3
 (M[1][1])               @result{} 5
 @end example
+
+Getter definition examples with member composition:
+
+@example
+(import (nausicaa))
+
+(define-label <fixnum-vector>
+  (parent <vector>)
+  (getter
+   (lambda (stx)
+     (syntax-case stx (=>)
+       ((?var ((?index)))
+        #'(vector-ref ?var ?index))
+       ((?var ((?index)) => ?form0 ?form ...)
+        #'(let (((fx <fixnum>) (?var[?index])))
+            (fx ?form0 ?form ...)))
+       ))))
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => string))
+@result{} "1"
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[1] => odd?))
+@result{} #t
+
+(let (((O <fixnum-vector>) '#(0 1 2 3)))
+  (O[2] => * 10))
+@result{} 20
+@end example
 @end deffn
+
+@c page
+@node oopp setter
+@section Setter syntaxes
 
 
 @deffn {Auxiliary Syntax} setter @meta{transformer}
@@ -2070,7 +2252,7 @@ Add a setter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a sintax object as single argument and
+transformer: a function accepting a syntax object as single argument and
 returning a syntax object as single value.
 
 Whenever a tagged variable @meta{var} is used as follows (lookout for
@@ -2735,7 +2917,7 @@ syntax @code{#(@meta{variable} @meta{tag})}, the list syntax
 @subsection @oopp{} bindings: @func{let}--like syntaxes
 
 
-@deffn Syntax with-tags (@meta{tagged-variable} ...) @metao{body} @meta{body} @dots{}
+@deffn Syntax with-tags (@meta{tagged-variable} @dots{}) @metao{body} @meta{body} @dots{}
 The @func{with-tags} syntax is the basic tool to provide @oopp{}
 notation for objects use.  Expand into a @func{let-syntax} form which
 defines @oopp{} notation syntaxes for already existent bindings; the
@@ -2745,16 +2927,13 @@ bindings.
 Each @meta{tagged-variable} must have one of the formats:
 
 @example
-@meta{variable}
 (@meta{variable} @meta{tag})
+#(@meta{variable} @meta{tag})
 @end example
 
 @noindent
 where: @meta{variable} is an identifier representing the binding name,
-@meta{tag} is an identifier representing a class or label type.  When a
-@meta{variable} has no type: we can use @class{top} as its conventional
-class type name; this can be useful when expanding macros making use of
-@func{with-tags}.
+@meta{tag} is an identifier representing a class or label type.
 
 Usage example:
 
@@ -2918,8 +3097,6 @@ corresponding return value with the tag's predicate.
 
 
 @deffn Syntax lambda/tags @meta{tagged-formals} @metao{body} @meta{body} @dots{}
-@deffnx Syntax lambda/tags @meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
-@deffnx {Auxiliary Syntax} <-
 Like @func{lambda} and defines the @oopp{} bindings for the arguments.
 When all the bindings have no tags: this syntax is equivalent to
 @func{lambda} as defined by @rnrs{6}; an untagged binding is equivalent
@@ -2935,8 +3112,15 @@ and raise a @condition{procedure-argument-violation} exception in case
 of failure.
 
 @item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
 @end itemize
 
@@ -2994,22 +3178,50 @@ Function with only the rest argument:
 
 (g 1 2 3)               @result{} 3
 @end example
+
+@item
+Functions with a single validated return value:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum>) val)
+    val))
+
+(f 1)                   @result{} 1
+@end example
+
+@item
+Functions with multiple validated return values:
+
+@example
+#!r6rs
+(import (rnrs)
+  (nausicaa language oopp))
+
+(define f
+  (lambda/tags ((_ <fixnum> <string>) a b)
+    (values a b)))
+
+(f 1 "2")               @result{} 1, "2"
+@end example
 @end itemize
 @end deffn
 
 
 @deffn Syntax case-lambda/tags @meta{cl-clause} @dots{}
-@deffnx {Auxiliary Syntax} <-
 Like @func{case-lambda} and defines the @oopp{} bindings for the
 arguments.  When all the bindings have no tags: this syntax is
 equivalent to @func{case-lambda} as defined by @rnrs{6}; an untagged
 binding is equivalent to a binding tagged with @class{top}.
 
-Each @meta{cl-clause} must have one of the formats:
+Each @meta{cl-clause} must have the format:
 
 @example
 (@meta{tagged-formals} @metao{body} @meta{body} @dots{})
-(@meta{tagged-formals} (<- @meta{tag} ...) @metao{body} @meta{body} @dots{})
 @end example
 
 If procedure arguments validation, as defined by @library{vicare
@@ -3022,8 +3234,15 @@ and raise a @condition{procedure-argument-violation} exception in case
 of failure.
 
 @item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
+If the first element of @meta{tagged-formals} has the format:
+
+@example
+(_ @metao{tag} @meta{tag} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
+will be enclosed in a @func{begin/tags} syntax, and the returned values
 validated as specified by the @meta{tag} identifiers.
 @end itemize
 
@@ -3059,12 +3278,25 @@ Usage examples:
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag})
 @deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
 @deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) (<- @meta{tag} ...) @metao{body} @meta{body} @dots{}
-@deffnx {Auxiliary Syntax} <-
+@deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
 Like @func{define} and defines the @oopp{} bindings for function
-arguments.  When all the bindings have no tags: this syntax is
+arguments.  When all the bindings have no tags: this syntax is almost
 equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
 is equivalent to a binding tagged with @class{top}.
+
+@cindex @code{__who__}
+When the syntax is used for function definition, the @meta{body} forms
+are enclosed in a @func{let-constants} syntax as follows:
+
+@example
+(let-constants ((__who__ (quote @meta{id})))
+  @metao{body} @meta{body} @dots{})
+@end example
+
+@noindent
+so the binding @code{__who__} is available in the body forms to
+reference a symbol representing the function's name.  This is useful
+when raising exceptions with condition type @condition{who}.
 
 When the syntax is used for function definition and procedure arguments
 validation, as defined by @library{vicare arguments validation}, is
@@ -3077,9 +3309,10 @@ and raise a @condition{procedure-argument-violation} exception in case
 of failure.
 
 @item
-If the auxiliary @func{<-} clause is present: the @meta{body} forms will
-be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
+If the @meta{variable} argument comes with @meta{tag} arguments: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
 @end itemize
 
 Usage examples:

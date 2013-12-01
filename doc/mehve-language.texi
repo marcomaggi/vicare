@@ -1,0 +1,1299 @@
+@node mehve
+@chapter The language @library{nausicaa mehve}
+
+
+@cindex @library{nausicaa mehve}, library
+@cindex Library @library{nausicaa mehve}
+
+
+The library @library{nausicaa mehve} implements a language in the same
+way the library @library{nausicaa} does; in facts, it reexports all the
+bindings of @library{nausicaa}, redefining some, and it is a possible
+replacement for it.  Mehve is meant to make heavy use of multimethos.
+
+@menu
+* mehve intro::                 Using the language.
+* mehve multimethods::          Generic functions and their
+                                customisation.
+* mehve io::                    Input/output generic functions.
+* mehve numerics::              Numerics generic functions.
+@end menu
+
+@c page
+@node mehve intro
+@section Using the language
+
+
+The library @library{nausicaa mehve} exports the language for users;
+other component libraries in the hierarchy @library{nausicaa mehve
+language ---} export multimethod bindings that can be used to extend the
+generic functions.
+
+Before making use of the facilities of Mehve, we @strong{must} call the
+function @func{initialise-mehve}.
+
+
+@defun initialise-mehve
+Initialise the multimethods and the component libraries; we can call
+this function any number of times, only the first time the library is
+initialised.
+
+Calling this function is needed because, according to @rnrs{6}, a
+compliant Scheme implementation might instantiate a library only when an
+exported binding is actually accessed; this behaviour does not play well
+with multimethods.
+@end defun
+
+@c page
+@node mehve multimethods
+@section Generic functions and their customisation
+
+
+There are two variants of ``generic functions'' in @library{nausicaa
+mehve}, both of them are in truth syntaxes.  The first kind is the one
+that generalises a function with fixed arity (fixed number of
+arguments); assuming the following prelude:
+
+@example
+(import (except (nausicaa)
+                sin)
+  (prefix (only (nausicaa)
+                sin)
+          nau.))
+@end example
+
+@noindent
+the function implementing the trigonometric sine is generalised with:
+
+@example
+(define-generic sin (x))
+
+(add-method sin (<flonum>) $flsin x)
+(add-method sin (<number>) nau.sin)
+@end example
+
+@noindent
+and allows us to specialise it for non--@class{number} arguments, for
+example:
+
+@example
+(define-method (sin (x <spine>))
+  (x map sin))
+
+(define-method (sin (x <vector>))
+  (x map sin))
+@end example
+
+The other kind is a generalisation for variadic functions (which take an
+undefined number of arguments); assuming the following prelude:
+
+@example
+(import (except (nausicaa)
+                +)
+  (prefix (only (nausicaa)
+                +)
+          nau.))
+@end example
+
+@noindent
+the addition function @func{+} is redefined with this infrastructure:
+
+@example
+(define-syntax (+ stx)
+  (syntax-case stx ()
+    (?id
+     (identifier? #'?id)
+     #'addition)
+    ((_)
+     #'(addition-0))
+    ((_ ?a)
+     #'(addition-1 ?a))
+    ((_ ?a ?b)
+     #'(addition-2 ?a ?b))
+    ((_ ?a ?b ?c)
+     #'(addition-2 (addition-2 ?a ?b) ?c))
+    ((_ . ?operands)
+     #'(addition . ?operands))))
+
+(define addition
+  (case-lambda
+   (()
+    (addition-0))
+   ((A)
+    (addition-1 A))
+   ((A B)
+    (addition-2 A B))
+   ((A B C)
+    (addition-2 (addition-2 A B) C))
+   ((A B C . args)
+    (fold-left addition-2 (addition-2 (addition-2 A B) C) args))
+   ))
+
+(define-generic addition-0 ())
+(define-generic addition-1 (a))
+(define-generic addition-2 (a b))
+
+(define-method (addition-0)
+  0)
+
+(define-method (addition-1 (a <number>))
+  a)
+
+(add-method addition-2 (<fixnum> <fixnum>) fx+)
+(add-method addition-2 (<flonum> <flonum>) fl+)
+(add-method addition-2 (<number> <number>) nau.+)
+@end example
+
+@noindent
+and specialised methods can be added to the generic functions
+@func{addition-0}, @func{addition-1} and @func{addition-2}.  In this
+case @library{nausicaa mehve} exports the binding for @func{+}, but the
+bindings for @func{addition-0}, @func{addition-1} and @func{addition-2}
+are exported by the auxiliary library @library{nausicaa mehve language
+numerics arithmetics}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Generalising already defined ordinary functions
+
+
+If a binding @var{F} exported by @library{nausicaa mehve}, but not
+generalised by it, can only be generalised by writing a custom library
+which imports @library{nausicaa mehve} and reexports all its bindings
+and also redefines the binding @var{F}; the faster way to do this is to
+just copy and customise the source code of the library @library{nausicaa
+mehve}.
+
+This is annoying, but it is the only way of doing it because:
+
+@itemize
+@item
+@rnrs{6} forbids to mutate an imported binding.
+
+@item
+It makes no sense to have all the bindings to functions in
+@library{nausicaa} redefined as generics.
+@end itemize
+
+The only alternative is to import @library{nausicaa mehve} excluding the
+predefined binding, and import another library with the generalised
+version.
+
+In any case requests to generalise a binding to function can be
+submitted to the @value{PACKAGE} maintainer.
+
+@c page
+@node mehve io
+@section Input/output generic functions
+
+
+@cindex @library{nausicaa mehve language input-output}, library
+@cindex Library @library{nausicaa mehve language input-output}
+
+
+The component library @library{nausicaa mehve language input-output}
+defines the generic functions for port input and output through ports;
+we need to import it only if we desire to add specialised methods to the
+input/output functions.
+
+@menu
+* mehve io simple::             Simple input/output generic functions.
+@end menu
+
+@c page
+@node mehve io simple
+@subsection Simple input/output generic functions
+
+
+The bindings @func{display} and @func{write} exported by
+@library{nausicaa mehve language input-output}, and reexported by
+@library{nausicaa mehve}, generalise the corresponding functions from
+@rsixlibrary{io simple}.
+
+
+@deffn {Generic Function} display-1 @var{obj}
+@deffnx {Generic Function} display-2 @var{obj} @var{port}
+Invoked when @func{display} is applied to one or two arguments.
+@end deffn
+
+
+@deffn {Generic Function} write-1 @var{obj}
+@deffnx {Generic Function} write-2 @var{obj} @var{port}
+Invoked when @func{write} is applied to one or two arguments.
+@end deffn
+
+
+@deffn Method display-1 (@var{obj} @aclass{top})
+@deffnx Method display-2 (@var{obj} @aclass{top}) (@var{port} @aclass{port})
+Apply to the arguments the function @func{display} exported by
+@rsixlibrary{io simple}, @vicareref{stdlib io simple, @func{display}}.
+@end deffn
+
+
+@deffn Method write-1 (@var{obj} @aclass{top})
+@deffnx Method write-2 (@var{obj} @aclass{top}) (@var{port} @aclass{port})
+Apply to the arguments the function @func{write} exported by
+@rsixlibrary{io simple}, @vicareref{stdlib io simple, @func{write}}.
+@end deffn
+
+@c page
+@node mehve numerics
+@section Numerics generic functions
+
+
+@menu
+* mehve numerics predicates::   Numeric predicates generic functions.
+* mehve numerics arithmetics::  Arithmetics generic functions.
+* mehve numerics parts::        Parts generic functions.
+* mehve numerics trans::        Transcendental generic functions.
+* mehve numerics infix::        Infix to prefix syntax.
+@end menu
+
+@c page
+@node mehve numerics predicates
+@subsection Numeric predicates generic functions
+
+
+@cindex @library{nausicaa mehve language numerics predicates}, library
+@cindex Library @library{nausicaa mehve language numerics predicates}
+
+
+The component library @library{nausicaa mehve language
+numerics predicates} defines the generic functions behind the numeric
+predicates; we need to import it only if we desire to add specialised
+methods to the numeric predicates.  The numeric predicate functions are
+the following:
+
+@example
+= < > <= >=
+zero? positive? negative? non-negative? non-positive?
+odd? even? finite? infinite? nan?
+@end example
+
+As example we look at how to specialise the comparison predicates
+@func{=}, @func{<}, @func{>}, @func{<=} and @func{>=} to operate on
+lists of items:
+
+@example
+#!r6rs
+(import (nausicaa mehve)
+  (prefix (nausicaa mehve language numerics predicates)
+          mehve.))
+
+(define-method (mehve.equal-predicate-1 (o <spine>))
+  (o for-all =))
+
+(define-method
+    (mehve.equal-predicate-2 (a <spine>) (b <spine>))
+  (a for-all = b))
+
+(define-method
+    (mehve.less-than-predicate-1 (o <spine>))
+  (o for-all <))
+
+(define-method
+    (mehve.less-than-predicate-2 (a <spine>) (b <spine>))
+  (a for-all < b))
+
+(define-method
+    (mehve.greater-than-predicate-1 (o <spine>))
+  (o for-all >))
+
+(define-method
+    (mehve.greater-than-predicate-2 (a <spine>) (b <spine>))
+  (a for-all > b))
+
+(define-method
+    (mehve.less-than-or-equal-to-predicate-1 (o <spine>))
+  (o for-all <=))
+
+(define-method
+    (mehve.less-than-or-equal-to-predicate-2
+        (a <spine>) (b <spine>))
+  (a for-all <= b))
+
+(define-method
+    (mehve.greater-than-or-equal-to-predicate-1 (o <spine>))
+  (o for-all >=))
+
+(define-method
+    (mehve.greater-than-or-equal-to-predicate-2
+        (a <spine>) (b <spine>))
+  (a for-all >= b))
+
+(= '(1 2 3) '(1 2 3))  @result{} (#t #t #t)
+(= '(1 2 3) '(1 4 3))  @result{} (#t #f #t)
+(< '(1 2 3) '(1 2 3))  @result{} (#f #f #f)
+(< '(1 2 3) '(4 5 6))  @result{} (#t #t #t)
+(< '(1 5 3) '(4 2 6))  @result{} (#t #f #t)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison functions
+
+
+@deffn {Generic Function} equal-predicate-0
+@deffnx {Generic Function} equal-predicate-1 @var{A}
+@deffnx {Generic Function} equal-predicate-2 @var{A} @var{B}
+Used when @func{=} is invoked with zero, one or two arguments.
+@end deffn
+
+
+@deffn Method equal-predicate-0
+@deffnx Method equal-predicate-1 (@var{A} @aclass{top})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method equal-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx=?}, @func{fl=?} or @func{=} as appropriate for the
+arguments.
+@end deffn
+
+
+@deffn {Generic Function} less-than-predicate-0
+@deffnx {Generic Function} less-than-predicate-1 @var{A}
+@deffnx {Generic Function} less-than-predicate-2 @var{A} @var{B}
+Used when @func{<} is invoked with zero, one or two arguments.
+@end deffn
+
+
+@deffn Method less-than-predicate-0
+@deffnx Method less-than-predicate-1 (@var{A} @aclass{top})
+@deffnx Method less-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method less-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+When zero or one arguments are used: return @false{}.  Otherwise use the
+functions @func{fx<?}, @func{fl<?} or @func{<} as appropriate for the
+arguments.
+@end deffn
+
+
+@deffn {Generic Function} greater-than-predicate-0
+@deffnx {Generic Function} greater-than-predicate-1 @var{A}
+@deffnx {Generic Function} greater-than-predicate-2 @var{A} @var{B}
+Used when @func{>} is invoked with zero, one or two arguments.
+@end deffn
+
+
+@deffn Method greater-than-predicate-0
+@deffnx Method greater-than-predicate-1 (@var{A} @aclass{top})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method greater-than-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @false{}.  Otherwise use the
+functions @func{fx<?}, @func{fl<?} or @func{<} as appropriate for the
+arguments.
+@end deffn
+
+
+@deffn {Generic Function} less-than-or-equal-to-predicate-0
+@deffnx {Generic Function} less-than-or-equal-to-predicate-1 @var{A}
+@deffnx {Generic Function} less-than-or-equal-to-predicate-2 @var{A} @var{B}
+Used when @func{<=} is invoked with zero, one or two arguments.
+@end deffn
+
+
+@deffn Method less-than-or-equal-to-predicate-0
+@deffnx Method less-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method less-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx<=?}, @func{fl<=?} or @func{<=} as appropriate for the
+arguments.
+@end deffn
+
+
+@deffn {Generic Function} greater-than-or-equal-to-predicate-0
+@deffnx {Generic Function} greater-than-or-equal-to-predicate-1 @var{A}
+@deffnx {Generic Function} greater-than-or-equal-to-predicate-2 @var{A} @var{B}
+Used when @func{>=} is invoked with zero, one or two arguments.
+@end deffn
+
+
+@deffn Method greater-than-or-equal-to-predicate-0
+@deffnx Method greater-than-or-equal-to-predicate-1 (@var{A} @aclass{top})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method greater-than-or-equal-to-predicate-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+When zero or one arguments are used: return @true{}.  Otherwise use the
+functions @func{fx>=?}, @func{fl>=?} or @func{>=} as appropriate for the
+arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubsection Sign related generic functions
+
+
+@deffn {Generic Function} zero? @var{A}
+@deffnx Method zero? (@var{A} @aclass{fixnum})
+@deffnx Method zero? (@var{A} @aclass{flonum})
+@deffnx Method zero? (@var{A} @aclass{real})
+Return @true{} if the argument is zero.  Apply to the argument the
+function @func{fxzero?}, @func{flzero?} or @func{zero?} as appropriate
+for the argument.
+@end deffn
+
+
+@deffn {Generic Function} positive? @var{A}
+@deffnx Method positive? (@var{A} @aclass{fixnum})
+@deffnx Method positive? (@var{A} @aclass{flonum})
+@deffnx Method positive? (@var{A} @aclass{real})
+Return @true{} if the argument is positive.  Apply to the argument the
+function @func{fxpositive?}, @func{flpositive?} or @func{positive?} as
+appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} negative? @var{A}
+@deffnx Method negative? (@var{A} @aclass{fixnum})
+@deffnx Method negative? (@var{A} @aclass{flonum})
+@deffnx Method negative? (@var{A} @aclass{real})
+Return @true{} if the argument is negative.  Apply to the argument the
+function @func{fxnegative?}, @func{flnegative?} or @func{negative?} as
+appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} non-positive? @var{A}
+@deffnx Method non-positive? (@var{A} @aclass{fixnum})
+@deffnx Method non-positive? (@var{A} @aclass{flonum})
+@deffnx Method non-positive? (@var{A} @aclass{real})
+Return @true{} if the argument is non--positive.  Apply to the argument
+the function @func{fxnonpositive?}, @func{flnonpositive?} or
+@func{non-positive?} as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} non-negative? @var{A}
+@deffnx Method non-negative? (@var{A} @aclass{fixnum})
+@deffnx Method non-negative? (@var{A} @aclass{flonum})
+@deffnx Method non-negative? (@var{A} @aclass{real})
+Return @true{} if the argument is non--negative.  Apply to the argument
+the function @func{fxnonnegative?}, @func{flnonnegative?} or
+@func{non-negative?} as appropriate for the argument.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Even and odd predicates generic functions
+
+
+The generic functions @func{odd?} and @func{even?} exported by
+@library{nausicaa mehve numeric-predicates}, and reexported by
+@library{nausicaa mehve}, generalise the corresponding functions
+exported by @rsixlibrary{base}.
+
+
+@deffn {Generic Function} odd? @var{A}
+@deffnx Method odd? (@var{A} @aclass{fixnum})
+@deffnx Method odd? (@var{A} @aclass{flonum})
+@deffnx Method odd? (@var{A} @aclass{real})
+Return @true{} if the argument is odd.  Apply to the argument the
+function @func{fxodd?}, @func{flodd?} or @func{odd?} as appropriate for
+the argument.
+@end deffn
+
+
+@deffn {Generic Function} even? @var{A}
+@deffnx Method even? (@var{A} @aclass{fixnum})
+@deffnx Method even? (@var{A} @aclass{flonum})
+@deffnx Method even? (@var{A} @aclass{real})
+Return @true{} if the argument is even.  Apply to the argument the
+function @func{fxeven?}, @func{fleven?} or @func{even?} as appropriate
+for the argument.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Infinity and not--a--number predicates generic functions
+
+
+We have to remember that, according to @rnrs{6}, the only values
+satisfying the predicate @func{real?} and not the predicate
+@func{rational?} are @samp{+inf.0}, @samp{-inf.0} and @samp{+nan.0}.
+
+
+@deffn {Generic Function} finite? @var{A}
+@deffnx Method finite? (@var{A} @aclass{fixnum})
+@deffnx Method finite? (@var{A} @aclass{flonum})
+@deffnx Method finite? (@var{A} @aclass{complex})
+Return @true{} if the argument is finite and not not--a--number.
+@end deffn
+
+
+@deffn {Generic Function} infinite? @var{A}
+@deffnx Method infinite? (@var{A} @aclass{fixnum})
+@deffnx Method infinite? (@var{A} @aclass{flonum})
+@deffnx Method infinite? (@var{A} @aclass{complex})
+Return @true{} if the argument is infinite.
+@end deffn
+
+
+@deffn {Generic Function} nan? @var{A}
+@deffnx Method nan? (@var{A} @aclass{fixnum})
+@deffnx Method nan? (@var{A} @aclass{flonum})
+@deffnx Method nan? (@var{A} @aclass{complex})
+Return @true{} if the argument is not--a--number.
+@end deffn
+
+@c page
+@node mehve numerics arithmetics
+@subsection Arithmetics generic functions
+
+
+@cindex @library{nausicaa mehve language numerics arithmetics}, library
+@cindex Library @library{nausicaa mehve language numerics arithmetics}
+
+
+The auxiliary library @library{nausicaa mehve language
+numerics arithmetics} defines the generic functions behind the
+arithmetic operations; we need to import it only if we desire to add
+specialised methods to arithmetic functions.  The arithmetic functions
+are the following:
+
+@example
++ - * / abs div div0 mod mod0 div-and-mod div0-and-mod0
+@end example
+
+As example we look at how to specialise the arithmetic functions
+@func{+}, @func{-}, @func{*} and @func{/} to operate on lists of items:
+
+@example
+#!r6rs
+(import (nausicaa mehve)
+  (prefix (nausicaa mehve language numerics arithmetics)
+          mehve.))
+
+(define-method (mehve.addition-1 (o <spine>))
+  o)
+(define-method (mehve.addition-2 (a <spine>) (b <spine>))
+  (map + a b))
+
+(define-method (mehve.subtraction-1 (o <spine>))
+  (map - o))
+(define-method (mehve.subtraction-2 (a <spine>) (b <spine>))
+  (map - a b))
+
+(define-method (mehve.multiplication-1 (o <spine>))
+  o)
+(define-method (mehve.multiplication-2 (a <spine>) (b <spine>))
+  (map * a b))
+
+(define-method (mehve.division-1 (o <spine>))
+  (map / o))
+(define-method (mehve.division-2 (a <spine>) (b <spine>))
+  (map / a b))
+
+(+ '(1 2 3))                       @result{} (1 2 3)
+(+ '(1 2 3) '(4 5 6))              @result{} (5 7 9)
+(+ '(1 2 3) '(4 5 6) '(-1 -1 -1))  @result{} (4 6 8)
+
+(- '(1 2 3))                       @result{} (-1 -2 -3)
+(- '(1 2 3) '(4 5 6))              @result{} (-3 -3 -3)
+(- '(1 2 3) '(4 5 6) '(-1 -1 -1))  @result{} (-2 -2 -2)
+
+(* '(1 2 3))                       @result{} (1 2 3)
+(* '(1 2 3) '(4 5 6))              @result{} (4 10 18)
+(* '(1 2 3) '(4 5 6) '(-1 -1 -1))  @result{} (-4 -10 -18)
+
+(/ '(1 2 3))                       @result{} (1 1/2 1/3)
+(/ '(1 2 3) '(4 5 6))              @result{} (1/4 2/5 1/2)
+(/ '(1 2 3) '(4 5 6) '(-1 -1 -1))  @result{} (-1/4 -2/5 -1/2)
+@end example
+
+@noindent
+notice how the methods recursively call the generic functions in their
+body, this way the lists can hold any of the value types for which there
+are methods.
+
+
+@deffn {Generic Function} addition-0
+@deffnx {Generic Function} addition-1 @var{A}
+@deffnx {Generic Function} addition-2 @var{A} @var{B}
+@deffnx Method addition-0
+@deffnx Method addition-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method addition-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method addition-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{+} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  When one argument is given:
+return @var{A} itself.  Otherwise use the function @func{fx+},
+@func{fl+} or @func{+} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} subtraction-0
+@deffnx {Generic Function} subtraction-1 @var{A}
+@deffnx {Generic Function} subtraction-2 @var{A} @var{B}
+@deffnx Method subtraction-0
+@deffnx Method subtraction-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method subtraction-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method subtraction-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{-} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  Otherwise use the function
+@func{fx-}, @func{fl-} or @func{-} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} multiplication-0
+@deffnx {Generic Function} multiplication-1 @var{A}
+@deffnx {Generic Function} multiplication-2 @var{A} @var{B}
+@deffnx Method multiplication-0
+@deffnx Method multiplication-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method multiplication-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method multiplication-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{*} is called with zero, one or two arguments.  When no
+arguments are given: return @math{0}.  When one argument is given:
+return @var{A} itself.  Otherwise use the function @func{fx*},
+@func{fl*} or @func{*} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} division-0
+@deffnx {Generic Function} division-1 @var{A}
+@deffnx {Generic Function} division-2 @var{A} @var{B}
+@deffnx Method division-0
+@deffnx Method division-2 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method division-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method division-2 (@var{A} @aclass{number}) (@var{B} @aclass{number})
+Used when @func{/} is called with zero, one or two arguments.  When no
+arguments are given: return @code{+nan.0}.  Otherwise use the function
+@func{fxdiv}, @func{fl/} or @func{/} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} div @var{a} @var{b}
+@deffnx Method div (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Perform integer division.  Use the function @func{fxdiv}, @func{fldiv}
+or @func{div} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} div0 @var{a} @var{b}
+@deffnx Method div0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Perform integer division.  Use the function @func{fxdiv0}, @func{fldiv0}
+or @func{div0} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} mod @var{a} @var{b}
+@deffnx Method mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method mod (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the modulus of integer division.  Use the function @func{fxmod},
+@func{flmod} or @func{mod} as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} mod0 @var{a} @var{b}
+@deffnx Method mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method mod0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method mod0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the modulus of integer division.  Use the function
+@func{fxmod0}, @func{flmod0} or @func{mod0} as appropriate for the
+arguments.
+@end deffn
+
+
+@deffn {Generic Function} div-and-mod @var{a} @var{b}
+@deffnx Method div-and-mod (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div-and-mod (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div-and-mod (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the integer division and its modulus.  Use the function
+@func{fxdiv-and-mod}, @func{fldiv-and-mod} or @func{div-and-mod} as
+appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} div0-and-mod0 @var{a} @var{b}
+@deffnx Method div0-and-mod0 (@var{A} @aclass{fixnum}) (@var{B} @aclass{fixnum})
+@deffnx Method div0-and-mod0 (@var{A} @aclass{integer}) (@var{B} @aclass{integer})
+@deffnx Method div0-and-mod0 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the integer division and its modulus.  Use the function
+@func{fxdiv0-and-mod0}, @func{fldiv0-and-mod0} or @func{div0-and-mod0}
+as appropriate for the arguments.
+@end deffn
+
+
+@deffn {Generic Function} abs @var{A}
+@deffnx Method abs (@var{A} @aclass{fixnum})
+@deffnx Method abs (@var{A} @aclass{flonum})
+@deffnx Method abs (@var{A} @aclass{real})
+Return the absolute value of its argument.  Use the function
+@func{fxabs}, @func{flabs} or @func{abs} as appropriate for the
+arguments.
+@end deffn
+
+@c page
+@node mehve numerics parts
+@subsection Parts generic functions
+
+
+@cindex @library{nausicaa mehve language numerics parts}, library
+@cindex Library @library{nausicaa mehve language numerics parts}
+
+
+The auxiliary library @library{nausicaa mehve language numerics parts}
+defines the generic functions behind the parts operations; we need to
+import it only if we desire to add specialised methods to parts
+functions.  The parts functions are the following:
+
+@example
+numerator denominator rationalize sign
+floor ceiling truncate round
+real-part imag-part magnitude angle
+make-rectangular make-polar complex-conjugate
+@end example
+
+As example we look at how to specialise the functions
+@func{make-rectangular} and @func{make-polar} to operate on lists of
+items:
+
+@example
+#!r6rs
+(import (nausicaa mehve)
+  (prefix (nausicaa mehve language numerics parts)
+          mehve.))
+
+(define-method
+    (mehve.make-rectangular (R <vector>) (I <vector>))
+  (R map make-rectangular I))
+
+(define-method
+    (mehve.make-rectangular (R <spine>) (I <spine>))
+  (R map make-rectangular I))
+
+(define-method
+    (mehve.make-polar (M <vector>) (A <vector>))
+  (M map make-polar A))
+
+(define-method
+    (mehve.make-polar (M <spine>) (A <spine>))
+  (M map make-polar A))
+
+(make-rectangular '(1 2 3) '(4 5 6))
+@result{} (1+4i 2+5i 3+6i)
+
+(make-polar '(1 2 3) '(4 5 6))
+@result{} (-0.6536436208636119-0.7568024953079282i
+    0.5673243709264525-1.917848549326277i
+    2.880510859951098-0.8382464945967776i)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Rational numbers generic functions
+
+
+@deffn {Generic Function} numerator @var{A}
+@deffnx Method numerator (@var{A} @aclass{fixnum})
+@deffnx Method numerator (@var{A} @aclass{bignum})
+@deffnx Method numerator (@var{A} @aclass{ratnum})
+@deffnx Method numerator (@var{A} @aclass{flonum})
+@deffnx Method numerator (@var{A} @aclass{integer})
+@deffnx Method numerator (@var{A} @aclass{real})
+Return the numerator of the argument.  Use the function
+@func{numerator}; when the argument is an integer: return the argument
+itself.
+@end deffn
+
+
+@deffn {Generic Function} denominator @var{A}
+@deffnx Method denominator (@var{A} @aclass{fixnum})
+@deffnx Method denominator (@var{A} @aclass{bignum})
+@deffnx Method denominator (@var{A} @aclass{ratnum})
+@deffnx Method denominator (@var{A} @aclass{flonum})
+@deffnx Method denominator (@var{A} @aclass{integer})
+@deffnx Method denominator (@var{A} @aclass{real})
+Return the denominator of the argument.  Use the function
+@func{denominator}; when the argument is an integer: return the fixum
+@code{1}.
+@end deffn
+
+
+@deffn {Generic Function} rationalize @var{A} @var{B}
+@deffnx Method rationalize (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Return a rational number representation of @var{A} which differs from it
+by less than @var{B}.  Use the function @func{rationalize}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Rounding generic functions
+
+
+@deffn {Generic Function} floor @var{A}
+@deffnx Method floor (@var{A} @aclass{fixnum})
+@deffnx Method floor (@var{A} @aclass{bignum})
+@deffnx Method floor (@var{A} @aclass{flonum})
+@deffnx Method floor (@var{A} @aclass{real})
+Return an object representing the largest integer not larger than
+@var{A}.  Use the function @func{flfloor} or @func{floor} as appropriate
+for the argument; when the argument is an exact integer: return the
+argument itself.
+@end deffn
+
+
+@deffn {Generic Function} ceiling @var{A}
+@deffnx Method ceiling (@var{A} @aclass{fixnum})
+@deffnx Method ceiling (@var{A} @aclass{bignum})
+@deffnx Method ceiling (@var{A} @aclass{flonum})
+@deffnx Method ceiling (@var{A} @aclass{real})
+Return an object representing the smaller integer not larger than
+@var{A}.  Use the function @func{flceiling} or @func{ceiling} as
+appropriate for the argument; when the argument is an exact integer:
+return the argument itself.
+@end deffn
+
+
+@deffn {Generic Function} truncate @var{A}
+@deffnx Method truncate (@var{A} @aclass{fixnum})
+@deffnx Method truncate (@var{A} @aclass{bignum})
+@deffnx Method truncate (@var{A} @aclass{flonum})
+@deffnx Method truncate (@var{A} @aclass{real})
+Return the integer object closest to @var{A} whose absolute value is not
+larger than the absolute value of @var{A}.  Use the function
+@func{fltruncate} or @func{truncate} as appropriate for the argument;
+when the argument is an exact integer: return the argument itself.
+@end deffn
+
+
+@deffn {Generic Function} round @var{A}
+@deffnx Method round (@var{A} @aclass{fixnum})
+@deffnx Method round (@var{A} @aclass{bignum})
+@deffnx Method round (@var{A} @aclass{flonum})
+@deffnx Method round (@var{A} @aclass{real})
+Return the closest integer object to @var{A}.  Use the function
+@func{flround} or @func{round} as appropriate for the argument; when the
+argument is an exact integer: return the argument itself.
+@end deffn
+
+
+@deffn {Generic Function} sign @var{A}
+@deffnx Method sign (@var{A} @aclass{fixnum})
+@deffnx Method sign (@var{A} @aclass{bignum})
+@deffnx Method sign (@var{A} @aclass{flonum})
+@deffnx Method sign (@var{A} @aclass{ratnum})
+@deffnx Method sign (@var{A} @aclass{real})
+Return an object representing the sign of the argument.  Use the
+function @func{sign} or its type--specific variants as appropriate for
+the argument.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Complex numbers generic functions
+
+
+@deffn {Generic Funcion} real-part @var{A}
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} real-part (@var{A} @aclass{complex})
+Return the real part of @var{A}.  Use the function @func{real-part} or
+its type--specific variants as appropriate for the argument; when the
+argument is a real number: return the argument itself.
+@end deffn
+
+
+@deffn {Generic Funcion} imag-part @var{A}
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} imag-part (@var{A} @aclass{complex})
+Return the imaginary part of @var{A}.  Use the function @func{imag-part}
+or its type--specific variants as appropriate for the argument; when the
+argument is a real number: return the fixnum @code{0}.
+@end deffn
+
+
+@deffn {Generic Funcion} magnitude @var{A}
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} magnitude (@var{A} @aclass{complex})
+Return the magnitude of @var{A}.  Use the function @func{magnitude} or
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Funcion} angle @var{A}
+@deffnx {Generic Funcion} angle (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} angle (@var{A} @aclass{complex})
+Return the angle of @var{A}.  Use the function @func{angle} or its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Funcion} make-rectangular @var{R} @var{I}
+@deffnx Method make-rectangular (@var{R} @aclass{real}) (@var{I} @aclass{real})
+Return a complex having real part @var{R} and imaginary part @var{I}.
+Use the function @func{make-rectangular}.
+@end deffn
+
+
+@deffn {Generic Funcion} make-polar @var{M} @var{A}
+@deffnx Method make-polar (@var{M} @aclass{real}) (@var{A} @aclass{real})
+Return a complex having magnitude @var{M} and angle @var{A}.  Use the
+function @func{make-polar}.
+@end deffn
+
+
+@deffn {Generic Funcion} complex-conjugate @var{A}
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{fixnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{bignum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{flonum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{ratnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{cflonum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{compnum})
+@deffnx {Generic Funcion} complex-conjugate (@var{A} @aclass{complex})
+Return the complex-conjugate of @var{A}.  Use the function
+@func{complex-conjugate} or its type--specific variants as appropriate
+for the argument; when the argument is real: return the argument itself.
+@end deffn
+
+@c page
+@node mehve numerics trans
+@subsection Transcendental generic functions
+
+
+@cindex @library{nausicaa mehve language numerics transcendental}, library
+@cindex Library @library{nausicaa mehve language numerics transcendental}
+
+
+The auxiliary library @library{nausicaa mehve language
+numerics transcendental} defines the generic functions behind the
+transcendental operations; we need to import it only if we desire to add
+specialised methods to transcendental functions.  The transcendental
+functions and the other functions exported by the library are the
+following:
+
+@example
+expt sqrt cbrt square cube exp log
+sin cos tan asin acos atan
+sinh cosh tanh asinh acosh atanh
+@end example
+
+As example we look at how to specialise the transcendental functions
+@func{sin}, @func{cos} and @func{tan} to operate on lists of items:
+
+@example
+#!r6rs
+(import (nausicaa mehve)
+  (prefix (nausicaa mehve language numerics transcendental)
+          mehve.))
+
+(define-method (mehve.sin (o <spine>))
+  (o map sin))
+
+(define-method (mehve.cos (o <spine>))
+  (o map cos))
+
+(define-method (mehve.tan (o <spine>))
+  (o map tan))
+
+(sin '(1.1 2.2 3.3))
+@result{} (0.8912073600614354 0.8084964038195901 -0.1577456941432482)
+
+(cos '(1.1 2.2 3.3))
+@result{} (0.4535961214255773 -0.5885011172553458 -0.9874797699088649)
+
+(tan '(1.1 2.2 3.3))
+@result{} (1.9647596572486523 -1.3738230567687946 0.15974574766003222)
+@end example
+
+@noindent
+notice how the methods recursively call the generic functions in their
+body, this way the lists can hold any of the value types for which there
+are methods.
+
+@c ------------------------------------------------------------
+
+@subsubheading Exponentiation and logarithm generic functions
+
+
+@deffn {Generic Function} expt @var{A} @var{B}
+@deffnx Method expt (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method expt (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+Compute @var{A} raised to the power of @var{B}.  Use @func{expt} or one
+of its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} sqrt @var{A}
+@deffnx Method sqrt (@var{A} @aclass{flonum})
+@deffnx Method sqrt (@var{A} @aclass{complex})
+Compute square root of @var{A}.  Use @func{sqrt} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cbrt @var{A}
+@deffnx Method cbrt (@var{A} @aclass{flonum})
+@deffnx Method cbrt (@var{A} @aclass{complex})
+Compute cubic root of @var{A}.  Use @func{cbrt} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} square @var{A}
+@deffnx Method square (@var{A} @aclass{fixnum})
+@deffnx Method square (@var{A} @aclass{bignum})
+@deffnx Method square (@var{A} @aclass{ratnum})
+@deffnx Method square (@var{A} @aclass{flonum})
+@deffnx Method square (@var{A} @aclass{cflonum})
+@deffnx Method square (@var{A} @aclass{compnum})
+@deffnx Method square (@var{A} @aclass{complex})
+Compute square of @var{A}.  Use @func{square} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cube @var{A}
+@deffnx Method cube (@var{A} @aclass{fixnum})
+@deffnx Method cube (@var{A} @aclass{bignum})
+@deffnx Method cube (@var{A} @aclass{ratnum})
+@deffnx Method cube (@var{A} @aclass{flonum})
+@deffnx Method cube (@var{A} @aclass{cflonum})
+@deffnx Method cube (@var{A} @aclass{compnum})
+@deffnx Method cube (@var{A} @aclass{complex})
+Compute cube of @var{A}.  Use @func{cube} or one of its type--specific
+variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} exp @var{A}
+@deffnx Method exp (@var{A} @aclass{flonum})
+@deffnx Method exp (@var{A} @aclass{complex})
+Compute the base @math{e} exponential.  Use @func{exp} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} log-1 @var{A}
+@deffnx Method log-1 (@var{A} @aclass{flonum})
+@deffnx Method log-1 (@var{A} @aclass{complex})
+Compute the base @math{e} logarithm.  Use @func{log} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} log-2 @var{A} @var{B}
+@deffnx Method log-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method log-2 (@var{A} @aclass{complex}) (@var{B} @aclass{complex})
+Compute the base @var{B} logarithm of @var{A}.  Use @func{log} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Trigonometric generic functions
+
+
+@deffn {Generic Function} sin @var{A}
+@deffnx Method sin (@var{A} @aclass{fixnum})
+@deffnx Method sin (@var{A} @aclass{bignum})
+@deffnx Method sin (@var{A} @aclass{ratnum})
+@deffnx Method sin (@var{A} @aclass{flonum})
+@deffnx Method sin (@var{A} @aclass{cflonum})
+@deffnx Method sin (@var{A} @aclass{compnum})
+@deffnx Method sin (@var{A} @aclass{complex})
+Compute the trigonometric sine function.  Use @func{sin} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cos @var{A}
+@deffnx Method cos (@var{A} @aclass{fixnum})
+@deffnx Method cos (@var{A} @aclass{bignum})
+@deffnx Method cos (@var{A} @aclass{ratnum})
+@deffnx Method cos (@var{A} @aclass{flonum})
+@deffnx Method cos (@var{A} @aclass{cflonum})
+@deffnx Method cos (@var{A} @aclass{compnum})
+@deffnx Method cos (@var{A} @aclass{complex})
+Compute the trigonometric cosine function.  Use @func{cos} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} tan @var{A}
+@deffnx Method tan (@var{A} @aclass{fixnum})
+@deffnx Method tan (@var{A} @aclass{bignum})
+@deffnx Method tan (@var{A} @aclass{ratnum})
+@deffnx Method tan (@var{A} @aclass{flonum})
+@deffnx Method tan (@var{A} @aclass{cflonum})
+@deffnx Method tan (@var{A} @aclass{compnum})
+@deffnx Method tan (@var{A} @aclass{complex})
+Compute the trigonometric tangent function.  Use @func{tan} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} asin @var{A}
+@deffnx Method asin (@var{A} @aclass{fixnum})
+@deffnx Method asin (@var{A} @aclass{bignum})
+@deffnx Method asin (@var{A} @aclass{ratnum})
+@deffnx Method asin (@var{A} @aclass{flonum})
+@deffnx Method asin (@var{A} @aclass{cflonum})
+@deffnx Method asin (@var{A} @aclass{compnum})
+@deffnx Method asin (@var{A} @aclass{complex})
+Compute the trigonometric arc sine function.  Use @func{asin} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} acos @var{A}
+@deffnx Method acos (@var{A} @aclass{fixnum})
+@deffnx Method acos (@var{A} @aclass{bignum})
+@deffnx Method acos (@var{A} @aclass{ratnum})
+@deffnx Method acos (@var{A} @aclass{flonum})
+@deffnx Method acos (@var{A} @aclass{cflonum})
+@deffnx Method acos (@var{A} @aclass{compnum})
+@deffnx Method acos (@var{A} @aclass{complex})
+Compute the trigonometric arc cosine function.  Use @func{acos} or one
+of its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} atan-1 @var{A}
+@deffnx Method atan-1 (@var{A} @aclass{fixnum})
+@deffnx Method atan-1 (@var{A} @aclass{bignum})
+@deffnx Method atan-1 (@var{A} @aclass{ratnum})
+@deffnx Method atan-1 (@var{A} @aclass{flonum})
+@deffnx Method atan-1 (@var{A} @aclass{cflonum})
+@deffnx Method atan-1 (@var{A} @aclass{compnum})
+@deffnx Method atan-1 (@var{A} @aclass{complex})
+Compute the trigonometric arc tangent function.  Use @func{atan} or one
+of its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} atan-2 @var{A} @var{B}
+@deffnx Method atan-2 (@var{A} @aclass{flonum}) (@var{B} @aclass{flonum})
+@deffnx Method atan-2 (@var{A} @aclass{real}) (@var{B} @aclass{real})
+Compute the arc tangent function when @func{atan} is called with two
+arguments.  Use @func{atan} or one of its type--specific variants as
+appropriate for the argument.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic generic functions
+
+
+@deffn {Generic Function} sinh @var{A}
+@deffnx Method sinh (@var{A} @aclass{fixnum})
+@deffnx Method sinh (@var{A} @aclass{bignum})
+@deffnx Method sinh (@var{A} @aclass{ratnum})
+@deffnx Method sinh (@var{A} @aclass{flonum})
+@deffnx Method sinh (@var{A} @aclass{cflonum})
+@deffnx Method sinh (@var{A} @aclass{compnum})
+@deffnx Method sinh (@var{A} @aclass{complex})
+Compute the hyperbolic sine function.  Use @func{sinh} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} cosh @var{A}
+@deffnx Method cosh (@var{A} @aclass{fixnum})
+@deffnx Method cosh (@var{A} @aclass{bignum})
+@deffnx Method cosh (@var{A} @aclass{ratnum})
+@deffnx Method cosh (@var{A} @aclass{flonum})
+@deffnx Method cosh (@var{A} @aclass{cflonum})
+@deffnx Method cosh (@var{A} @aclass{compnum})
+@deffnx Method cosh (@var{A} @aclass{complex})
+Compute the hyperbolic cosine function.  Use @func{cosh} or one of its
+type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} tanh @var{A}
+@deffnx Method tanh (@var{A} @aclass{fixnum})
+@deffnx Method tanh (@var{A} @aclass{bignum})
+@deffnx Method tanh (@var{A} @aclass{ratnum})
+@deffnx Method tanh (@var{A} @aclass{flonum})
+@deffnx Method tanh (@var{A} @aclass{cflonum})
+@deffnx Method tanh (@var{A} @aclass{compnum})
+@deffnx Method tanh (@var{A} @aclass{complex})
+Compute the hyperbolic tangent function.  Use @func{tanh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} asinh @var{A}
+@deffnx Method asinh (@var{A} @aclass{fixnum})
+@deffnx Method asinh (@var{A} @aclass{bignum})
+@deffnx Method asinh (@var{A} @aclass{ratnum})
+@deffnx Method asinh (@var{A} @aclass{flonum})
+@deffnx Method asinh (@var{A} @aclass{cflonum})
+@deffnx Method asinh (@var{A} @aclass{compnum})
+@deffnx Method asinh (@var{A} @aclass{complex})
+Compute the hyperbolic arc sine function.  Use @func{asinh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} acosh @var{A}
+@deffnx Method acosh (@var{A} @aclass{fixnum})
+@deffnx Method acosh (@var{A} @aclass{bignum})
+@deffnx Method acosh (@var{A} @aclass{ratnum})
+@deffnx Method acosh (@var{A} @aclass{flonum})
+@deffnx Method acosh (@var{A} @aclass{cflonum})
+@deffnx Method acosh (@var{A} @aclass{compnum})
+@deffnx Method acosh (@var{A} @aclass{complex})
+Compute the hyperbolic arc cosine function.  Use @func{acosh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+
+@deffn {Generic Function} atanh @var{A}
+@deffnx Method atanh (@var{A} @aclass{fixnum})
+@deffnx Method atanh (@var{A} @aclass{bignum})
+@deffnx Method atanh (@var{A} @aclass{ratnum})
+@deffnx Method atanh (@var{A} @aclass{flonum})
+@deffnx Method atanh (@var{A} @aclass{cflonum})
+@deffnx Method atanh (@var{A} @aclass{compnum})
+@deffnx Method atanh (@var{A} @aclass{complex})
+Compute the hyperbolic arc tangent function.  Use @func{atanh} or one of
+its type--specific variants as appropriate for the argument.
+@end deffn
+
+@c page
+@node mehve numerics infix
+@subsection Infix to prefix syntax
+
+
+@cindex @library{nausicaa mehve language infix}, library
+@cindex Library @library{nausicaa mehve language infix}
+@findex @func{infix}
+
+
+The @func{infix} syntax exported by @library{nausicaa mehve language
+infix}, and reexported by @library{nausicaa mehve}, redefines the syntax
+exported by @library{nausicaa} to support generic function operators.
+
+All the bindings of @func{infix} from @library{nausicaa} are also
+supported by @func{infix} from @library{nausicaa mehve}; the generic
+functions used as operators have the same precedence of the
+corresponding simple functions.
+
+@c end of file

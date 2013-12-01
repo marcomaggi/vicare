@@ -83,7 +83,8 @@
 		  argument-type-inspector
 		  reverse-before-methods?
 		  merge-with-multimethods
-		  :primary :before :after :around)
+		  :primary :before :after :around
+		  <-)
 	    aux.)
     (nausicaa language multimethods auxiliary-syntaxes))
 
@@ -225,11 +226,11 @@
 		(list (GENERIC :number-of-arguments) ...))
 	      N))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   the-methods-alist the-method-add
+				   the-methods-alist-func the-method-add
 				   the-cache the-cache-store the-cache-ref
-				   (mt.merge-methods-alists (GENERIC :primary-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
 	  (define (implementation . arguments)
-	    (generic-function-implementation 'NAME the-methods-alist the-cache-store the-cache-ref
+	    (generic-function-implementation 'NAME the-methods-alist-func the-cache-store the-cache-ref
 					     UID-LIST-OF number-of-arguments arguments))
 	  (define-syntax NAME
 	    (lambda (stx)
@@ -240,12 +241,12 @@
 		  ((_ message subform)
 		   (syntax-violation 'NAME message (syntax->datum stx) (syntax->datum subform)))))
 	      (syntax-case stx ( ;;
-				:primary-method-add :primary-methods-alist
+				:primary-method-add :primary-methods-alist-func
 				:number-of-arguments :primary-cache)
 		((_ :primary-method-add signature closure)
 		 #'(the-method-add signature closure))
-		((_ :primary-methods-alist)
-		 #'the-methods-alist)
+		((_ :primary-methods-alist-func)
+		 #'the-methods-alist-func)
 		((_ :primary-cache)
 		 #'the-cache)
 		((_ :number-of-arguments)
@@ -259,9 +260,9 @@
                           to ordinary generic function" #'key))
 		((_ key)
 		 (and (identifier? #'key)
-		      (identifier-memq #'key (list #':before-methods-alist
-						   #':after-methods-alist
-						   #':around-methods-alist)))
+		      (identifier-memq #'key (list #':before-methods-alist-func
+						   #':after-methods-alist-func
+						   #':around-methods-alist-func)))
 		 (synner "attempt to extract method table of invalid category \
                           from ordinary generic function" #'key))
 		;;This  is the  reference to  the generic  function, for
@@ -289,7 +290,7 @@
   (%main stx))
 
 
-(define (generic-function-implementation who methods-alist cache-store cache-ref
+(define (generic-function-implementation who methods-alist-func cache-store cache-ref
 					 uid-list-of expected-number-of-arguments arguments)
 
   (define signature
@@ -305,7 +306,7 @@
       (map uid-list-of arguments)))
   (define applicable-methods
     (or (cache-ref signature)
-	(let ((methods (mt.compute-applicable-methods signature methods-alist)))
+	(let ((methods (mt.compute-applicable-methods signature methods-alist-func)))
 	  (cache-store signature methods)
 	  methods)))
   (define method-called? #f)
@@ -442,37 +443,37 @@
 		(list (GENERIC :number-of-arguments) ...))
 	      N))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   primary-methods-alist primary-method-add
+				   primary-methods-alist-func primary-method-add
 				   primary-cache primary-cache-store primary-cache-ref
-				   (mt.merge-methods-alists (GENERIC :primary-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :primary-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   before-methods-alist before-method-add
+				   before-methods-alist-func before-method-add
 				   before-cache before-cache-store before-cache-ref
-				   (mt.merge-methods-alists (GENERIC :before-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :before-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   after-methods-alist after-method-add
+				   after-methods-alist-func after-method-add
 				   after-cache after-cache-store after-cache-ref
-				   (mt.merge-methods-alists (GENERIC :after-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :after-methods-alist-func) ...))
 	  (mt.define-methods-table NAME NUMBER-OF-ARGUMENTS
-				   around-methods-alist around-method-add
+				   around-methods-alist-func around-method-add
 				   around-cache around-cache-store around-cache-ref
-				   (mt.merge-methods-alists (GENERIC :around-methods-alist) ...))
+				   (mt.merge-methods-alists (GENERIC :around-methods-alist-func) ...))
 	  (define reverse-before-methods REVERSE-BEFORE-METHODS)
 	  (define (implementation . arguments)
 	    (generic*-function-implementation
 	     'NAME
-	     primary-methods-alist primary-cache-ref primary-cache-store
-	     before-methods-alist  before-cache-ref  before-cache-store
-	     after-methods-alist   after-cache-ref   after-cache-store
-	     around-methods-alist  around-cache-ref  around-cache-store
+	     primary-methods-alist-func primary-cache-ref primary-cache-store
+	     before-methods-alist-func  before-cache-ref  before-cache-store
+	     after-methods-alist-func   after-cache-ref   after-cache-store
+	     around-methods-alist-func  around-cache-ref  around-cache-store
 	     UID-LIST-OF number-of-arguments reverse-before-methods arguments))
 	  (define-syntax NAME
 	    (lambda (stx)
 	      (syntax-case stx ( ;;
-				:primary-method-add :primary-methods-alist
-				:after-method-add   :after-methods-alist
-				:before-method-add  :before-methods-alist
-				:around-method-add  :around-methods-alist
+				:primary-method-add :primary-methods-alist-func
+				:after-method-add   :after-methods-alist-func
+				:before-method-add  :before-methods-alist-func
+				:around-method-add  :around-methods-alist-func
 				:primary-cache      :before-cache
 				:after-cache        :around-cache
 				:number-of-arguments)
@@ -485,10 +486,10 @@
 		((_ :around-method-add	signature closure)
 		 #'(around-method-add	signature closure))
 
-		((_ :primary-methods-alist)	#'primary-methods-alist)
-		((_ :before-methods-alist)	#'before-methods-alist)
-		((_ :after-methods-alist)	#'after-methods-alist)
-		((_ :around-methods-alist)	#'around-methods-alist)
+		((_ :primary-methods-alist-func)	#'primary-methods-alist-func)
+		((_ :before-methods-alist-func)		#'before-methods-alist-func)
+		((_ :after-methods-alist-func)		#'after-methods-alist-func)
+		((_ :around-methods-alist-func)		#'around-methods-alist-func)
 
 		((_ :primary-cache)		#'primary-cache)
 		((_ :before-cache)		#'before-cache)
@@ -526,10 +527,10 @@
 
 (define (generic*-function-implementation
 	 who
-	 primary-methods-alist primary-cache-ref primary-cache-store
-	 before-methods-alist  before-cache-ref  before-cache-store
-	 after-methods-alist   after-cache-ref   after-cache-store
-	 around-methods-alist  around-cache-ref  around-cache-store
+	 primary-methods-alist-func primary-cache-ref primary-cache-store
+	 before-methods-alist-func  before-cache-ref  before-cache-store
+	 after-methods-alist-func   after-cache-ref   after-cache-store
+	 around-methods-alist-func  around-cache-ref  around-cache-store
 	 uid-list-of expected-number-of-arguments reverse-before-methods
 	 arguments)
   (define signature
@@ -551,28 +552,28 @@
       (set! ?method-alist (cdr ?method-alist))))
   (define-syntax define-applicable-methods
     (syntax-rules ()
-      ((_ NAME ALIST STORE REF)
+      ((_ NAME ALIST-FUNC STORE REF)
        (define NAME
 	 (or (REF signature)
-	     (let ((methods (mt.compute-applicable-methods signature ALIST)))
+	     (let ((methods (mt.compute-applicable-methods signature ALIST-FUNC)))
 	       (STORE signature methods)
 	       methods))))
-      ((_ NAME ALIST STORE REF REVERSE?)
+      ((_ NAME ALIST-FUNC STORE REF REVERSE?)
        (define NAME
 	 (or (REF signature)
-	     (let* ((ell     (mt.compute-applicable-methods signature ALIST))
+	     (let* ((ell     (mt.compute-applicable-methods signature ALIST-FUNC))
 		    (methods (if REVERSE? (reverse ell) ell)))
 	       (STORE signature methods)
 	       methods))))
       ))
   (define-applicable-methods applicable-around-methods
-    around-methods-alist around-cache-store around-cache-ref)
+    around-methods-alist-func around-cache-store around-cache-ref)
   (define-applicable-methods applicable-primary-methods
-    primary-methods-alist primary-cache-store primary-cache-ref)
+    primary-methods-alist-func primary-cache-store primary-cache-ref)
   (define-applicable-methods applicable-before-methods
-    before-methods-alist before-cache-store before-cache-ref reverse-before-methods)
+    before-methods-alist-func before-cache-store before-cache-ref reverse-before-methods)
   (define-applicable-methods applicable-after-methods
-    after-methods-alist after-cache-store after-cache-ref #t)
+    after-methods-alist-func after-cache-store after-cache-ref #t)
   (define primary-method-called? #f)
   (define reject-recursive-calls? #f)
   (define (is-a-next-method-available?)
@@ -637,19 +638,41 @@
   ;;generic function.
   ;;
   (define who 'define-method)
-  (define (main generic-function-id table-key formals-stx body-stx)
+  (define (main generic-function-spec table-key formals-stx body-stx)
     (let loop ((formals		formals-stx)
 	       (arg-ids		'())
 	       (type-ids	'()))
       (syntax-case formals ()
 	(()
-	 (with-syntax ((GF		generic-function-id)
-		       (TABLE-KEY	table-key)
-		       ((ARG ...)	(reverse arg-ids))
-		       ((TYPE ...)	(reverse type-ids))
-		       (BODY		body-stx))
-	   #'(define dummy ;to make it a definition
-	       (add-method GF TABLE-KEY (TYPE ...) (type.method-lambda ((ARG TYPE) ...) . BODY)))))
+	 (syntax-case generic-function-spec ()
+	   ;;Untagged return values.
+	   (?generic-function-id
+	    (identifier? #'?generic-function-id)
+	    (with-syntax ((TABLE-KEY	table-key)
+			  ((ARG ...)	(reverse arg-ids))
+			  ((TYPE ...)	(reverse type-ids))
+			  (BODY		body-stx)
+			  (WHO		(datum->syntax #'?generic-function-id '__who__)))
+	      #'(define dummy ;to make it a definition
+		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+			      (type.method-lambda ((ARG TYPE) ...)
+						  (let-constants ((WHO '?generic-function-id))
+						    . BODY))))))
+
+	   ;;Tagged return values.
+	   ((?generic-function-id ?rv-tag0 ?rv-tag ...)
+	    (all-identifiers? #'(?generic-function-id ?rv-tag0 ?rv-tag ...))
+	    (with-syntax ((TABLE-KEY	table-key)
+			  ((ARG ...)	(reverse arg-ids))
+			  ((TYPE ...)	(reverse type-ids))
+			  (BODY		body-stx)
+			  (WHO		(datum->syntax #'?generic-function-id '__who__)))
+	      #'(define dummy ;to make it a definition
+		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
+			      (type.method-lambda ((_ ?rv-tag0 ?rv-tag ...) (ARG TYPE) ...)
+						  (let-constants ((WHO '?generic-function-id))
+						    . BODY))))))
+	   ))
 	(((?arg ?type) . ?formals)
 	 (loop #'?formals (cons #'?arg arg-ids) (cons #'?type    type-ids)))
 	((?arg . ?formals)
@@ -664,50 +687,36 @@
       (syntax-violation who message stx subform))))
   (syntax-case stx (aux.:primary aux.:before aux.:after aux.:around)
     ((_ aux.:primary (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ aux.:primary ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ ?generic-function aux.:primary ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
 
     ((_ aux.:before (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
     ((_ aux.:before ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
     ((_ ?generic-function aux.:before ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:before #'?formals #'?body))
 
     ((_ aux.:after (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
     ((_ aux.:after ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
     ((_ ?generic-function aux.:after ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:after #'?formals #'?body))
 
     ((_ aux.:around (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
     ((_ aux.:around ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
     ((_ ?generic-function aux.:around ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:around #'?formals #'?body))
 
     ((_ (?generic-function . ?formals) . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
     ((_ ?generic-function ?formals . ?body)
-     (identifier? #'?generic-function)
      (main #'?generic-function #'aux.:primary #'?formals #'?body))
 
     (_

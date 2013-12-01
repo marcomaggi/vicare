@@ -1687,6 +1687,23 @@
 (parametrise ((check-test-name	'split-search-path))
 
   (check
+      (receive (root tail)
+	  (px.split-pathname-root-and-tail "a/b")
+	(list root tail))
+    => '("a" "b"))
+
+  (check
+      (receive (root tail)
+	  (px.split-pathname-root-and-tail "ciao")
+	(list root tail))
+    => '("" "ciao"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'split-search-path))
+
+  (check
       (px.split-search-path-bytevector '#vu8())
     => '())
 
@@ -1792,9 +1809,6 @@
 	     list)
 	 => '(?abs-result ?comp-result)))))
 
-  (doit (px.split-pathname-bytevector '#vu8())
-	=> #f ())
-
   (doit (px.split-pathname-bytevector '#ve(ascii "ciao"))
 	=> #f (#ve(ascii "ciao")))
 
@@ -1824,9 +1838,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit (px.split-pathname-string "")
-	=> #f ())
-
   (doit (px.split-pathname-string "ciao")
 	=> #f ("ciao"))
 
@@ -1853,12 +1864,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit (px.split-pathname "")
-	=> #f ())
-
-  (doit (px.split-pathname '#vu8())
-	=> #f ())
-
   (doit (px.split-pathname "ciao/hello/salut")
 	=> #f ("ciao" "hello" "salut"))
 
@@ -1869,6 +1874,7 @@
 	=> #f (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut")))
 
   #t)
+
 
 (parametrise ((check-test-name	'find-executable))
 

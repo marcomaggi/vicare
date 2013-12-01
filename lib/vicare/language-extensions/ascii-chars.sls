@@ -28,11 +28,13 @@
 #!r6rs
 (library (vicare language-extensions ascii-chars)
   (export
-    fixnum-in-ascii-range?
+    fixnum-in-ascii-range?	$fixnum-in-ascii-range?
+    fixnum-in-base10-range?	$fixnum-in-base10-range?
+    fixnum-in-base16-range?	$fixnum-in-base16-range?
+
     ascii-cased?		$ascii-cased?
     ascii-upper-case?		$ascii-upper-case?
     ascii-lower-case?		$ascii-lower-case?
-    ascii-numeric?		$ascii-numeric?
     (rename (ascii-upper-case?	ascii-title-case?)
 	    (ascii-cased?	ascii-alphabetic?)
 	    ($ascii-upper-case?	$ascii-title-case?)
@@ -41,32 +43,72 @@
     ascii-upcase		$ascii-upcase
     ascii-downcase		$ascii-downcase
     (rename (ascii-upcase	ascii-titlecase)
-	    ($ascii-upcase	$ascii-titlecase)))
+	    ($ascii-upcase	$ascii-titlecase))
+
+    ascii-dec-digit?		$ascii-dec-digit?
+    ascii-hex-digit?		$ascii-hex-digit?
+    ascii-alpha-digit?		$ascii-alpha-digit?
+
+    ascii-dec->fixnum		$ascii-dec->fixnum
+    ascii-hex->fixnum		$ascii-hex->fixnum
+    fixnum->ascii-dec		$fixnum->ascii-dec
+    fixnum->ascii-hex		$fixnum->ascii-hex
+
+    $ascii-chi-V?
+    $ascii-chi-ampersand?
+    $ascii-chi-at-sign?
+    $ascii-chi-bang?
+    $ascii-chi-close-bracket?
+    $ascii-chi-close-paren?
+    $ascii-chi-colon?
+    $ascii-chi-comma?
+    $ascii-chi-dollar?
+    $ascii-chi-dot?
+    $ascii-chi-dash?
+    $ascii-chi-equal?
+    $ascii-chi-minus?
+    $ascii-chi-number-sign?
+    $ascii-chi-open-bracket?
+    $ascii-chi-open-paren?
+    $ascii-chi-percent?
+    $ascii-chi-plus?
+    $ascii-chi-question-mark?
+    $ascii-chi-quote?
+    $ascii-chi-semicolon?
+    $ascii-chi-slash?
+    $ascii-chi-star?
+    $ascii-chi-v?
+
+    $ascii-uri-gen-delim?
+    $ascii-uri-sub-delim?
+    $ascii-uri-reserved?
+    $ascii-uri-unreserved?
+    $ascii-uri-pct-encoded?
+    $ascii-uri-pchar?
+    $ascii-uri-pchar-not-percent-encoded?)
   (import (vicare)
+    (vicare unsafe operations)
     (vicare arguments validation)
-    (vicare system $fx))
+    (vicare language-extensions ascii-chars syntaxes))
 
 
-;;;; helpers
-
-(define-argument-validation (fixnum-in-ascii-range who obj)
-  (fixnum-in-ascii-range? obj)
-  (assertion-violation who "expected fixnum in ASCII range as argument" obj))
-
-(define-constant FIXNUM-a (char->integer #\a))
-(define-constant FIXNUM-z (char->integer #\z))
-(define-constant FIXNUM-A (char->integer #\A))
-(define-constant FIXNUM-Z (char->integer #\Z))
-(define-constant FIXNUM-0 (char->integer #\0))
-(define-constant FIXNUM-9 (char->integer #\9))
-
-
-;;;; utilities
+;;;; generic utilities for ASCII encoded characters
 
 (define (fixnum-in-ascii-range? obj)
   (and (fixnum? obj)
-       (and ($fx>= obj 0)
-	    ($fx<= obj 127))))
+       ($fixnum-in-ascii-range? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (fixnum-in-base10-range? obj)
+  (and (fixnum? obj)
+       ($fixnum-in-base10-range? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (fixnum-in-base16-range? obj)
+  (and (fixnum? obj)
+       ($fixnum-in-base16-range? obj)))
 
 ;;; --------------------------------------------------------------------
 
@@ -74,19 +116,11 @@
   (and (fixnum? fx)
        ($ascii-upper-case? fx)))
 
-(define ($ascii-upper-case? fx)
-  (and ($fx>= fx FIXNUM-A)
-       ($fx<= fx FIXNUM-Z)))
-
 ;;; --------------------------------------------------------------------
 
 (define (ascii-lower-case? fx)
   (and (fixnum? fx)
        ($ascii-lower-case? fx)))
-
-(define ($ascii-lower-case? fx)
-  (and ($fx>= fx FIXNUM-a)
-       ($fx<= fx FIXNUM-z)))
 
 ;;; --------------------------------------------------------------------
 
@@ -94,45 +128,54 @@
   (and (fixnum? fx)
        ($ascii-cased? fx)))
 
-(define ($ascii-cased? fx)
-  (or ($ascii-upper-case? fx)
-      ($ascii-lower-case? fx)))
-
 ;;; --------------------------------------------------------------------
 
-(define (ascii-numeric? fx)
+(define (ascii-dec-digit? fx)
   (and (fixnum? fx)
-       ($ascii-numeric? fx)))
-
-(define ($ascii-numeric? fx)
-  (and ($fx>= fx FIXNUM-0)
-       ($fx<= fx FIXNUM-9)))
+       ($ascii-dec-digit? fx)))
 
 ;;; --------------------------------------------------------------------
 
-(define (ascii-upcase fx)
-  (define who 'ascii-upcase)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-range	fx))
-    ($ascii-upcase fx)))
-
-(define ($ascii-upcase fx)
-  (if ($ascii-lower-case? fx)
-      ($fx- fx 32)
-    fx))
+(define (ascii-hex-digit? fx)
+  (and (fixnum? fx)
+       ($ascii-hex-digit? fx)))
 
 ;;; --------------------------------------------------------------------
 
-(define (ascii-downcase fx)
-  (define who 'ascii-downcase)
-  (with-arguments-validation (who)
-      ((fixnum-in-ascii-range	fx))
-    ($ascii-downcase fx)))
+(define* (ascii-upcase (fx fixnum-in-ascii-range?))
+  ($ascii-upcase fx))
 
-(define ($ascii-downcase fx)
-  (if ($ascii-upper-case? fx)
-      ($fx+ 32 fx)
-    fx))
+;;; --------------------------------------------------------------------
+
+(define* (ascii-downcase (fx fixnum-in-ascii-range?))
+  ($ascii-downcase fx))
+
+;;; --------------------------------------------------------------------
+
+(define (ascii-alpha-digit? fx)
+  (and (fixnum? fx)
+       ($ascii-alpha-digit? fx)))
+
+
+;;;; conversion
+
+(define* (ascii-dec->fixnum (chi ascii-dec-digit?))
+  ($ascii-dec->fixnum chi))
+
+;;; --------------------------------------------------------------------
+
+(define* (fixnum->ascii-dec (chi fixnum-in-base10-range?))
+  ($ascii-dec->fixnum chi))
+
+;;; --------------------------------------------------------------------
+
+(define* (ascii-hex->fixnum (chi ascii-hex-digit?))
+  ($ascii-hex->fixnum chi))
+
+;;; --------------------------------------------------------------------
+
+(define* (fixnum->ascii-hex (chi fixnum-in-base16-range?))
+  ($ascii-hex->fixnum chi))
 
 
 ;;;; done

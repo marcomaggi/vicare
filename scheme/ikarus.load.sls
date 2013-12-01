@@ -30,7 +30,7 @@
     (prefix (only (ikarus.posix)
 		  getenv
 		  mkdir/parents
-		  split-file-name
+		  split-pathname-root-and-tail
 		  real-pathname
 		  file-modification-time)
 	    posix.)
@@ -71,10 +71,16 @@
 
 (define DEFAULT-FASL-DIRECTORY
   (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
-    (if (and P (file-exists? P))
+    (if (and P
+	     ;;FILE-EXISTS? will raise an error if P is empty.
+	     (not (zero? (string-length P)))
+	     (file-exists? P))
 	(posix.real-pathname P)
       (let ((P (posix.getenv "HOME")))
-	(if (and P (file-exists? P))
+	(if (and P
+		 ;;FILE-EXISTS? will raise an error if P is empty.
+		 (not (zero? (string-length P)))
+		 (file-exists? P))
 	    (string-append (posix.real-pathname P) "/.vicare/precompiled")
 	  ""))))
   ;;The following  code was the  original in Ikarus.  (Marco  Maggi; Sat
@@ -199,7 +205,7 @@
 	(%display "serialising ")
 	(%display ikfasl)
 	(%display " ... ")
-	(let-values (((dir name) (posix.split-file-name ikfasl)))
+	(let-values (((dir name) (posix.split-pathname-root-and-tail ikfasl)))
 	  (posix.mkdir/parents dir #o755))
 	(let ((port (open-file-output-port ikfasl (file-options no-fail))))
 	  (unwind-protect

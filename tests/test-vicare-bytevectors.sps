@@ -28,6 +28,11 @@
 #!vicare
 (import (vicare)
   (prefix (vicare platform words) words.)
+  (vicare unsafe operations)
+  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
+  ;;Tue Nov 26, 2013)
+  (only (vicare system $bytevectors)
+	$bytevector-copy)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -187,6 +192,16 @@
       (catch #f (bytevector-length #\a))
     => '(#\a))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-empty? '#vu8())
+    => #t)
+
+  (check
+      (bytevector-empty? '#vu8(1 2 3))
+    => #f)
+
   #t)
 
 
@@ -273,6 +288,21 @@
       (catch #f
 	(bytevector-copy #\a))
     => '(#\a))
+
+;;; --------------------------------------------------------------------
+;;; unsafe operation
+
+  (check
+      ($bytevector-copy #vu8())
+    => #vu8())
+
+  (check
+      ($bytevector-copy #vu8(1))
+    => #vu8(1))
+
+  (check
+      ($bytevector-copy #vu8(1 2 3))
+    => #vu8(1 2 3))
 
   #t)
 
@@ -924,6 +954,19 @@
   (check
       (bytevector-append '#vu8(1 2 3) '#vu8(4 5 6) '#vu8())
     => '#vu8(1 2 3 4 5 6))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-hash))
+
+  (check
+      (fixnum? (bytevector-hash '#vu8()))
+    => #t)
+
+  (check
+      (fixnum? (bytevector-hash '#vu8(1 2 3)))
+    => #t)
 
   #t)
 

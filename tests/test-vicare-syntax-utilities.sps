@@ -438,7 +438,7 @@
 					   (syntax-clauses-unwrap #'((a 123)
 								     (d 789))))
 
-    => ("missing mandatory clause" #'b #f))
+    => ("missing mandatory syntax clause" #'b #f))
 
 ;;; --------------------------------------------------------------------
 ;;; verify at most once
@@ -465,7 +465,7 @@
 								    (a 456)
 								    (d 789))))
 
-    => ("clause must be present at most once"
+    => ("syntax clause must be present at most once"
 	(list (list #'a 123)
 	      (list #'a 456))
 	#f))
@@ -486,7 +486,7 @@
       (syntax-clauses-verify-exactly-once (list #'a #'b)
 					  (syntax-clauses-unwrap #'((d 789)
 								    (a 123))))
-    => ("clause must be present exactly once" #'b #f))
+    => ("syntax clause must be present exactly once" #'b #f))
 
   (%guard-syntax-error
       (syntax-clauses-verify-exactly-once (list #'a #'b)
@@ -494,7 +494,7 @@
 								    (a 456)
 								    (d 789))))
 
-    => ("clause must be present exactly once"
+    => ("syntax clause must be present exactly once"
 	(list (list #'a 123)
 	      (list #'a 456))
 	#f))
@@ -525,7 +525,7 @@
       (syntax-clauses-verify-mutually-inclusive (list #'a #'b)
 						(syntax-clauses-unwrap #'((a 123)
 									  (d 789))))
-    => ("mutually inclusive clauses are missing" (list #'b) #f))
+    => ("mutually inclusive syntax clauses are missing" (list #'b) #f))
 
 ;;; --------------------------------------------------------------------
 ;;; verify mutually exclusive
@@ -569,7 +569,7 @@
 						(syntax-clauses-unwrap #'((a 1)
 									  (b 2)
 									  (d 4))))
-    => ("mutually exclusive clauses are present"
+    => ("mutually exclusive syntax clauses are present"
 	#'((a 1)
 	   (b 2)) #f))
 
@@ -580,7 +580,7 @@
 						(syntax-clauses-unwrap #'((a 1)
 									  (c 3)
 									  (d 4))))
-    => ("mutually exclusive clauses are present"
+    => ("mutually exclusive syntax clauses are present"
 	#'((a 1)
 	   (c 3)) #f))
 
@@ -591,7 +591,7 @@
 						(syntax-clauses-unwrap #'((b 2)
 									  (c 3)
 									  (d 4))))
-    => ("mutually exclusive clauses are present"
+    => ("mutually exclusive syntax clauses are present"
 	#'((b 2)
 	   (c 3)) #f))
 
@@ -603,7 +603,7 @@
 									  (b 2)
 									  (c 3)
 									  (d 4))))
-    => ("mutually exclusive clauses are present"
+    => ("mutually exclusive syntax clauses are present"
 	#'((a 1)
 	   (b 2)
 	   (c 3)) #f))
@@ -622,8 +622,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 456)
 								   (d 789)))))
-    (=> syntax=?)
-    '((456)))
+    => '#(#(456)))
 
   ;;Single occurrence, multiple values.
   ;;
@@ -632,8 +631,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 4 5 6)
 								   (d 789)))))
-    (=> syntax=?)
-    '((4 5 6)))
+    => '#(#(4 5 6)))
 
   ;;Multiple occurrences, single value.
   ;;
@@ -644,8 +642,7 @@
 								   (b 5)
 								   (b 6)
 								   (d 789)))))
-    (=> syntax=?)
-    '((4) (5) (6)))
+    => '#(#(4) #(5) #(6)))
 
   ;;Multiple occurrences, multiple values.
   ;;
@@ -658,7 +655,7 @@
 								   (b l m n)
 								   ))))
     (=> syntax=?)
-    #'((4 5 6) (x y z) (l m n)))
+    #'#(#(4 5 6) #(x y z) #(l m n)))
 
   ;;Not present.
   ;;
@@ -666,7 +663,7 @@
       (let ((spec (make-syntax-clause-spec #'b 1 1 1 1 '() '())))
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (d 789)))))
-    => ("clause must be present at least 1 times and at most 1 times"
+    => ("syntax clause must be present at least 1 times and at most 1 times"
 	#'b #f))
 
   ;;Too many clauses.
@@ -677,7 +674,7 @@
 								   (b 8)
 								   (b 9)
 								   (d 789)))))
-    => ("clause must be present at least 1 times and at most 1 times"
+    => ("syntax clause must be present at least 1 times and at most 1 times"
 	#'((b 8) (b 9)) #f))
 
   ;;No argument.
@@ -687,7 +684,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b)
 								   (d 789)))))
-    => ("clause must have at least 1 arguments and at most 1 arguments"
+    => ("syntax clause must have at least 1 arguments and at most 1 arguments"
 	#'(b) #f))
 
   ;;Too many arguments.
@@ -697,7 +694,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 8 9)
 								   (d 789)))))
-    => ("clause must have at least 1 arguments and at most 1 arguments"
+    => ("syntax clause must have at least 1 arguments and at most 1 arguments"
 	#'(b 8 9) #f))
 
   ;;Missing mutually inclusive.
@@ -707,7 +704,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 456)
 								   (d 789)))))
-    => ("missing mutually inclusive clause" (list #'b #'W) #f))
+    => ("missing mutually inclusive syntax clause" (list #'b #'W) #f))
 
   ;;Present mutually exclusive.
   ;;
@@ -716,7 +713,7 @@
 	(syntax-clauses-single-spec spec (syntax-clauses-unwrap #'((a 123)
 								   (b 456)
 								   (d 789)))))
-    => ("mutually exclusive clauses are present"
+    => ("mutually exclusive syntax clauses are present"
 	#'((b 456) (d 789))
 	#f))
 
@@ -726,14 +723,11 @@
   (check	;single spec
       (guard (E (else E))
 	(let ((specs    (list (make-syntax-clause-spec #'a 1 1 1 1 '() '())))
-	      (clauses  (syntax-clauses-unwrap #'((a 123)
-						  (b 456)
-						  (d 789)))))
+	      (clauses  (syntax-clauses-unwrap #'((a 123)))))
 	  (syntax-clauses-fold-specs (lambda (knil spec args)
 				       (cons args knil))
 				     '() specs clauses)))
-    (=> syntax=?)
-    #'(((123))))
+    => '(#(#(123))))
 
   (check	;multiple specs
       (guard (E (else E))
@@ -748,8 +742,7 @@
 						   args)
 					     knil))
 				     '() specs clauses)))
-    (=> syntax=?)
-    (reverse '(("a" (123)) ("b" (456)) ("d" (789)))))
+    => (reverse '(("a" . #(#(123))) ("b" . #(#(456))) ("d" . #(#(789))))))
 
   #t)
 

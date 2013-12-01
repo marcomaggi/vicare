@@ -268,7 +268,10 @@ Example:
 
 
 @menu
-* iklib syntaxes defines::      Additional binding syntaxes.
+* iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
+* iklib syntaxes defines::      @func{define}-like additional syntaxes.
+* iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
+* iklib syntaxes bindings::     Additional binding syntaxes.
 * iklib syntaxes control::      Additional control flow syntaxes.
 * iklib syntaxes returnable::   Early return from code blocks.
 * iklib syntaxes integrable::   Integrable expressions and functions.
@@ -279,49 +282,405 @@ Example:
 @end menu
 
 @c page
-@node iklib syntaxes defines
-@subsection Additional binding syntaxes
+@node iklib syntaxes lambdas
+@subsection @func{lambda}--like additional syntaxes
 
 
-@deffn Syntax define-syntax @meta{name}
-@deffnx Syntax define-syntax @meta{name} @meta{transformer}
-@deffnx Syntax define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
-Like @func{define-syntax} defined by @rnrs{6}, but additionally accepts
-the syntax:
+The syntaxes @func{lambda*} and @func{case-lambda*} are similar to
+@func{lambda} and @func{case-lambda} as defined by @rnrs{6}, but they
+allow the selection of predicate functions to validate the arguments and
+the return value; a predicate function accepts a single argument and
+returns true or @false{}.  Examples:
 
 @example
-(define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
-@expansion{} (define-syntax @meta{name} (lambda (@meta{arg}) @metao{body} @meta{body} @dots{}))
+(import (vicare)
+  (vicare system $fx))
+
+(define add
+  ;;Fail if called with a non-fixnum argument.
+  (lambda* ((a fixnum?) (b fixnum?))
+    ($fx+ a b)))
+
+(define vec
+  ;;Fail if attempting to return a non-vector.
+  (lambda* ((_ vector?) fun)
+    (fun 1 2)))
+
+(add 1 2)       @result{} 3
+(add 1 #\2)     @error{} &procedure-argument-violation
+
+(vec vector)    @result{} #(1 2)
+(vec list)      @error{} &expression-return-value-violation
 @end example
 
 @noindent
-and the syntax:
+in the definition of the function bound to @func{vec}: notice that
+@code{(_ vector?)} is not a function argument, it is a special notation
+used to select a predicate function to validate the return value.
+
+In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
+@meta{pred-formals} can have any of the forms:
 
 @example
-(define-syntax @meta{name})
-@expansion{} (define-syntax @meta{name} (syntax-rules ()))
+(@meta{var} ...)
+(@metao{var} @meta{var} ... . @meta{rest})
+@meta{args}
+@end example
+
+Where in the standard @func{lambda} and @func{case-lambda} syntaxes an
+identifier is used to name a formal argument, in the extended
+@func{lambda*} and @func{case-lambda*} syntaxes each formal argument
+@meta{var} can have any of the forms:
+
+@example
+@meta{id}
+(@meta{id} @meta{pred})
+#(@meta{id} @meta{pred})
+@end example
+
+@noindent
+where @meta{id} is an identifier naming the formal argument and
+@meta{pred} is an identifier which, at run time, must evaluate to a
+predicate function; the formal argument @meta{rest} can have only one of
+the following forms:
+
+@example
+@meta{rest-id}
+#(@meta{rest-id} @meta{pred})
+@end example
+
+@noindent
+and the formal argument @meta{args} can have only one of the following
+forms:
+
+@example
+@meta{args-id}
+#(@meta{args-id} @meta{pred})
+@end example
+
+The first item in the @meta{pred-formals} can have the special syntax:
+
+@example
+(_ @metao{pred} @meta{pred} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
+exported by @rsixlibrary{base}); in this case such item does
+@strong{not} represent a formal argument, it just selects predicates to
+validate the values returned by the last @meta{body} form.
+
+@c ------------------------------------------------------------
+
+@deffn Syntax lambda* @meta{pred-formals} @metao{body} @meta{body} @dots{}
+Like the standard @func{lambda} and additionally allows the selection of
+predicate functions to validate the arguments and the return value.  The
+formal arguments are handled according to the following rules:
+
+@itemize
+@item
+When all the items in @meta{pred-formals} are as specified for the
+standard @func{lambda}: this syntax is equivalent to @func{lambda} as
+defined by @rnrs{6}.
+
+@item
+If the boot image has been compiled with procedure arguments validation
+@strong{enabled}, and @meta{pred-formals} selects predicates to validate
+the arguments: if a predicate fails for its formal argument, an
+exception is raised using @condition{procedure-argument-violation}.
+
+@item
+If the boot image has been compiled with procedure arguments validation
+@strong{disabled}, the predicate selections in @meta{pred-formals} are
+ignored and @func{lambda*} behaves like the standard @func{lambda}.
+
+@item
+If the first element of @meta{pred-formals} has the format:
+
+@example
+(_ @metao{pred} @meta{pred} ...)
+@end example
+
+@noindent
+where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
+exported by @rsixlibrary{base}), the values returned by the last
+@meta{body} form are validated using the given @meta{pred}: if a
+predicate fails for its returned value, an exception is raised using
+@condition{expression-return-value-violation}.
+@end itemize
+
+In addition a non--hygienic binding is created: the identifier
+@code{__who__} is bound to the quoted symbol @code{_}.
+
+Usage examples:
+
+@itemize
+@item
+Function with two predicate arguments:
+
+@example
+(import (vicare))
+(define f
+  (lambda* ((a number?) (b number?))
+    (list (number->string a) (number->string b))))
+
+(f 1 2)         @result{} ("1" "2")
+@end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define f
+  (lambda* ((a number?) (b number?)
+            . #(rest list-of-numbers?))
+    (list (number->string a)
+          (number->string b)
+          (length rest))))
+
+(f 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a predicate rest argument must be specified using the vector
+syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
+list-of-numbers?)} would be interpreted as:
+
+@example
+((a number?) (b number?) . (rest list-of-numbers?))
+@expansion{} ((a number?) (b number?) rest list-of-numbers?)
+@end example
+
+@item
+Function with the @meta{args} argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define f
+  (lambda* #(args list-of-numbers?)
+    (length args)))
+
+(f 1 2 3)               @result{} 3
+@end example
+
+@item
+Function with a single validated return value:
+
+@example
+(import (vicare))
+
+(define f
+  (lambda* ((_ fixnum?) val)
+    val))
+
+(f 1)                   @result{} 1
+@end example
+
+@item
+Function with multiple validated return values:
+
+@example
+(import (vicare))
+
+(define f
+  (lambda* ((_ fixnum? string?) a b)
+    (values a b)))
+
+(f 1 "2")               @result{} 1, "2"
+@end example
+@end itemize
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax case-lambda* @meta{pred-cl-clause} @dots{}
+Like the standard @func{case-lambda} and additionally allows the
+selection of predicate functions to validate the arguments and the
+return value.  Clause by clause the formals are handled as explained for
+@func{lambda*}.
+
+In addition a non--hygienic binding is created in each clause: the
+identifier @code{__who__} is bound to the quoted symbol @code{_}.
+
+Usage examples:
+
+@example
+(import (vicare))
+
+(define f
+  (case-lambda*
+   (((a number?))
+    (number->string a))))
+
+(define g
+  (case-lambda*
+   (#(args list?)
+    (length args))))
+
+(f 123)                 @result{} "123"
+(g 1 2 3)               @result{} 3
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes defines
+@subsection @func{define}--like additional syntaxes
+
+
+@deffn Syntax case-define @meta{who} @metao{cl-clause} @meta{cl-clause} @dots{}
+Convenience syntax which expands as follows:
+
+@example
+(case-define @meta{who} @metao{cl-clause} @meta{cl-clause} @dots{})
+@expansion{} (define @meta{who}
+      (case-lambda @metao{cl-clause} @meta{cl-clause} @dots{}))
 @end example
 @end deffn
 
 
-@deffn Syntax define-constant @meta{var} @meta{expr}
-Like @func{define} but create an immutable binding.
+@deffn Syntax define* @meta{who} @meta{expression}
+@deffnx Syntax define* @meta{who}
+@deffnx Syntax define* (@meta{who} . @meta{formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define* (@meta{pred-who} . @meta{formals}) @metao{body} @meta{body} @dots{}
+Like the standard @func{define} as defined by @rnrs{6}, but when
+defining a function: allow the selection of predicate functions to
+validate the arguments and the return value.
+
+Predicates selections is performed as explained for the @func{lambda*}
+extended syntax, @ref{iklib syntaxes lambdas, @func{lambda}--like
+additional syntaxes}.  There is an exception, where @func{lambda*} uses
+the @code{_} symbol to select predicates for the returned values,
+@func{define*} uses the binding identifier @meta{who}.
+
+In addition, when defining a function, a non--hygienic binding is
+created: the identifier @code{__who__} is bound to the quoted symbol
+@meta{who}.
+
+Usage examples:
+
+@itemize
+@item
+Function with two predicate arguments:
 
 @example
-(define-constant X 1)
-X               @result{} 1
-(set! X 2)      @error{} &syntax
+(import (vicare))
+
+(define* (f (a number?) (b number?))
+  (list (number->string a) (number->string b)))
+
+(f 1 2)         @result{} ("1" "2")
 @end example
+
+@item
+Function with two mandatory arguments and the rest argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define* (f (a number?) (b number?)
+            . #(rest list-of-numbers?))
+  (list (number->string a)
+        (number->string b)
+        (length rest)))
+
+(f 1 2 3 4 5)           @result{} ("1" "2" 3)
+@end example
+
+@noindent
+notice that a predicate rest argument must be specified using the vector
+syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
+list-of-numbers?)} would be interpreted as:
+
+@example
+((a number?) (b number?) . (rest list-of-numbers?))
+@expansion{} ((a number?) (b number?) rest list-of-numbers?)
+@end example
+
+@item
+Function with the @meta{args} argument:
+
+@example
+(import (vicare))
+
+(define (list-of-numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define* (f . #(args list-of-numbers?))
+  (length args))
+
+(f 1 2 3)               @result{} 3
+@end example
+
+@item
+Function with a single validated return value:
+
+@example
+(import (vicare))
+
+(define* ((f fixnum?) val)
+  val)
+
+(f 1)                   @result{} 1
+@end example
+
+@item
+Function with multiple validated return values:
+
+@example
+(import (vicare))
+
+(define* ((f fixnum? string?) a b)
+  (values a b))
+
+(f 1 "2")               @result{} 1, "2"
+@end example
+
+@item
+Accessing the function name:
+
+@example
+(import (vicare))
+
+(define* (f)
+  __who__)
+
+(f)     @result{} f
+@end example
+@end itemize
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn Syntax define-inline-constant @meta{name} @meta{expr}
-@meta{expr} is evaluated only once at expand time, the result is
-returned by the macro transformer bound to @meta{name}.  It is
-impossible to modify the result of the expansion of @meta{name} by
-acting upon @meta{name}.
+@deffn Syntax case-define* @meta{who} @metao{pred-cl-clause} @meta{case-clause} @dots{}
+Convenience syntax that expands to something similar to:
+
+@example
+(case-define* @meta{whoe} @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{})
+@expansion{} (define @meta{who}
+      (case-lambda* @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{}))
+@end example
+
+In addition a non--hygienic binding is created in each clause: the
+identifier @code{__who__} is bound to the quoted symbol @meta{who}.
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
@@ -349,6 +708,152 @@ identifiers immutable.
 (set! a 99)     @error{} &syntax
 @end example
 @end deffn
+
+
+@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and can @strong{neither} be invoked recursively @strong{nor} used
+as function rgument.  This syntax only defines a syntax.
+
+@example
+(define-inline (incr x)
+  (+ x 1))
+
+(incr 2)        @result{} 3
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+(let ((x 2))
+  (+ x 1))
+@end example
+@end deffn
+
+
+@deffn Syntax define-inline-constant @meta{name} @meta{expr}
+@meta{expr} is evaluated only once at expand time, the result is
+returned by the macro transformer bound to @meta{name}.  It is
+impossible to modify the result of the expansion of @meta{name} by
+acting upon @meta{name}.
+@end deffn
+
+
+@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Similar to @func{define}, but create a binding that is always expanded
+inline and @strong{can} be both invoked recursively and used as function
+argument.  This syntax defines both a syntax and a function.
+
+@example
+(define-integrable (incr x)
+  (+ x 1))
+
+(incr 2)
+@result{} 3
+
+(map incr '(10 20 30)))
+@result{} (11 21 31)
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+((lambda (x)
+   (+ x 1))
+ 2)
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes defstxs
+@subsection @func{define-syntax}--like additional syntaxes
+
+
+@deffn Syntax define-syntax @meta{name}
+@deffnx Syntax define-syntax @meta{name} @meta{transformer}
+@deffnx Syntax define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
+Like @func{define-syntax} defined by @rnrs{6}, but additionally accepts
+the syntax:
+
+@example
+(define-syntax (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax @meta{name} (lambda (@meta{arg}) @metao{body} @meta{body} @dots{}))
+@end example
+
+@noindent
+and the syntax:
+
+@example
+(define-syntax @meta{name})
+@expansion{} (define-syntax @meta{name} (syntax-rules ()))
+@end example
+@end deffn
+
+
+@deffn Syntax define-syntax* @meta{name}
+@deffnx Syntax define-syntax* @meta{name} @meta{transformer}
+@deffnx Syntax define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{}
+Like @func{define-syntax} defined by Vicare.  Additionally, when the
+last form is used, the unhygienic bindings @code{__who__} and
+@func{synner} are introduced as follows:
+
+@example
+(define-syntax* (@meta{name} @meta{arg}) @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax* (@meta{name} @meta{arg})
+      (let-syntax
+          ((__who__ (identifier-syntax (quote @meta{name}))))
+        (letrec
+            ((synner (case-lambda
+                       ((message)
+                        (synner message #f))
+                       ((message subform)
+                        (syntax-violation __who__
+                           message @meta{arg} subform)))))
+          @metao{body} @meta{body} @dots{})))
+@end example
+@end deffn
+
+
+@deffn Syntax define-constant @meta{var} @meta{expr}
+Like @func{define} but create an immutable binding.
+
+@example
+(define-constant X 1)
+X               @result{} 1
+(set! X 2)      @error{} &syntax
+@end example
+@end deffn
+
+
+@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
+Convenience syntax to define a @func{syntax-rules} transformer with a
+single clause.  Expand to:
+
+@example
+(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
+  @metao{body} @meta{body} @dots{})
+@expansion{} (define-syntax @meta{name}
+      (syntax-rules ()
+        ((_ @meta{pattern} @dots{} . @meta{rest})
+         (begin @metao{body} @meta{body} @dots{}))))
+@end example
+@end deffn
+
+
+@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
+Define auxiliary syntaxes to be used as literal identifiers by
+@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
+
+@example
+(define-syntax @metao{name} (syntax-rules ()))
+(define-syntax @meta{name}  (syntax-rules ()))
+@dots{}
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes bindings
+@subsection Additional binding syntaxes
 
 
 @deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} @dots{}
@@ -389,77 +894,52 @@ in the region of such bindings; return the values bound to
 @end deffn
 
 
-@deffn Syntax define-inline (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Similar to @func{define}, but create a binding that is always expanded
-inline and can @strong{neither} be invoked recursively @strong{nor} used
-as function rgument.  This syntax only defines a syntax.
+@deffn Syntax let*-syntax ((@meta{lhs} @meta{rhs}) @dots{}) @metao{form} @meta{form} @dots{}
+Similar to @func{let-syntax}, expands into nested @func{let-syntax}
+forms:
 
 @example
-(define-inline (incr x)
-  (+ x 1))
+(let*-syntax () @meta{body})
+@expansion{} (begin () @meta{body})
 
-(incr 2)        @result{} 3
-@end example
+(let*-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
+@expansion{} (let-syntax ((@meta{lhs} @meta{rhs})) @meta{body})
 
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-(let ((x 2))
-  (+ x 1))
-@end example
-@end deffn
-
-
-@deffn Syntax define-integrable (@meta{name} @meta{arg} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Similar to @func{define}, but create a binding that is always expanded
-inline and @strong{can} be both invoked recursively and used as function
-argument.  This syntax defines both a syntax and a function.
-
-@example
-(define-integrable (incr x)
-  (+ x 1))
-
-(incr 2)
-@result{} 3
-
-(map incr '(10 20 30)))
-@result{} (11 21 31)
-@end example
-
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-((lambda (x)
-   (+ x 1))
- 2)
+(let*-syntax ((@metao{lhs} @metao{rhs})
+              (@meta{lhs} @meta{rhs})
+              ...)
+  @meta{body})
+@expansion{} (let-syntax ((@metao{lhs} @metao{rhs}))
+      (let*-syntax ((@meta{lhs} @meta{rhs}) ...) @meta{body}))
 @end example
 @end deffn
 
 
-@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest}) @metao{body} @meta{body} @dots{}
-Convenience syntax to define a @func{syntax-rules} transformer with a
-single clause.  Expand to:
-
-@example
-(define-syntax-rule (@meta{name} @meta{pattern} @dots{} . @meta{rest})
-  @metao{body} @meta{body} @dots{})
-@expansion{} (define-syntax @meta{name}
-      (syntax-rules ()
-        ((_ @meta{pattern} @dots{} . @meta{rest})
-         (begin @metao{body} @meta{body} @dots{}))))
-@end example
+@deffn Syntax let-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{let} but create immutable bindings.  Attempting to mutate the
+bindings with @func{set!} will result in an expand time syntax
+violation.
 @end deffn
 
 
-@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} @dots{}
-Define auxiliary syntaxes to be used as literal identifiers by
-@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
+@deffn Syntax let*-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{let*} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
 
-@example
-(define-syntax @metao{name} (syntax-rules ()))
-(define-syntax @meta{name}  (syntax-rules ()))
-@dots{}
-@end example
+
+@deffn Syntax letrec-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{letrec} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
+@end deffn
+
+
+@deffn Syntax letrec*-constants ((@meta{lhs} @meta{rhs}) @dots{}) @metao{body} @meta{body} @dots{}
+Like @func{letrec*} but create immutable bindings.  Attempting to mutate
+the bindings with @func{set!} will result in an expand time syntax
+violation.
 @end deffn
 
 @c page
@@ -840,6 +1320,29 @@ Notice that definitions in the body are @strong{not} visible by other
 code evaluated for expand.
 @end deffn
 
+
+@deffn Syntax set-cons! @meta{who} @meta{obj}
+Expand to:
+
+@example
+(set! @meta{who} (cons @meta{obj} @meta{who}))
+@end example
+@end deffn
+
+
+@deffn Syntax values->list @meta{expr}
+Evaluate the expression and return its return values as a list.
+Examples:
+
+@example
+(values->list 123)
+@result{} (123)
+
+(values->list (values 1 2 3))
+@result{} (1 2 3)
+@end example
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks
@@ -1137,6 +1640,7 @@ Push the given thunk on the current compensations stack.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
 * iklib conditions procarg::    Procedure argument violations.
+* iklib conditions exprret::    Expression return value violations.
 @end menu
 
 @c page
@@ -1275,6 +1779,36 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
 @condition{irritants}, @condition{procedure-argument-validation}.
+@end defun
+
+@c page
+@node iklib conditions exprret
+@subsection Expression return value violations
+
+
+@deftp {Condition Type} &expression-return-value-violation
+Condition object type representing invalid values returned from an
+expression; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-expression-return-value-violation
+Build and return a new condition object of type
+@condition{expression-return-value-validation}.
+@end defun
+
+
+@defun expression-return-value-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{expression-return-value-validation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{expression-return-value-validation}.
 @end defun
 
 @c page
@@ -1502,6 +2036,10 @@ Convert the Scheme string @var{data} to a bytevector using the function
 @item base64
 Convert the Scheme string @var{data} to a bytevector using the function
 @func{string-base64->bytevector}.
+
+@item percent-encoding
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->percent-encoding}.
 @end table
 @end deffn
 
@@ -3055,24 +3593,76 @@ Accessors for the fields of syntax clause specification objects.
 @defunx syntax-clauses-single-spec @var{spec} @var{unwrapped-clauses} @var{synner}
 Given a fully unwrapped syntax object holding a list of clauses (for
 example the return value of @func{syntax-clauses-unwrap}) verify if
-there are clauses conforming to the given specification @var{spec}.  If
-successful return a (possibly empty) list of syntax objects representing
-the cdrs of the clauses matching @var{spec}; if an invalid clause is
-found call @var{synner} or raise a @condition{syntax} object.
+there are clauses conforming to the given specification @var{spec}.
+
+If successful return a (possibly empty) vector of vectors of syntax
+objects; else call @var{synner} or raise a @condition{syntax} exception.
+The length of the returned vector is the number of clauses from
+@var{unwrapped-clauses} conforming to @var{spec}.  Each nested vector
+represents the cdr of a clause matching @var{spec}:
+
+@itemize
+@item
+If a clause has no arguments: the corresponding nested vector is empty.
+
+@item
+If a clause has @math{1} argument: the corresponding nested vector has
+@math{1} item being the syntax object representing the argument.
+
+@item
+If a clause has @math{N} arguments: the corresponding nested vector has
+@math{N} items being the syntax objects representing the arguments.
+@end itemize
+
+Examples:
 
 @example
 (import (vicare))
 
-(define spec
-  (make-syntax-clause-spec #'b 1 1 1 1 '() '()))
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 1 1 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 456)
+                             (d 789))))
+@result{} #(#(456))
 
-(define unwrapped-clauses
-  (syntax-clauses-unwrap #'((a 123) (b 456) (d 789))))
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b)
+                             (d 789))))
+@result{} #(#())
 
-(syntax=?
- (syntax-clauses-single-spec spec unwrapped-clauses)
- '((456)))
-@result{} #t
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 5 6)
+                             (d 789))))
+@result{} #(#(4 5 6))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4)
+                             (b 5)
+                             (b 6)
+                             (d 789))))
+@result{} #(#(4) #(5) #(6))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 4.1)
+                             (b 5 5.1)
+                             (d 789))))
+@result{} #(#(4 4.1) #(5 5.1))
+
+(syntax-clauses-single-spec
+   (make-syntax-clause-spec #'b 1 1 0 +inf.0 '() '())
+   (syntax-clauses-unwrap #'((a 123)
+                             (b 4 ciao 6)
+                             (d 789))))
+@result{} #(#(4 #<syntax-object expr=ciao> 6))
 @end example
 @end defun
 
@@ -3085,22 +3675,51 @@ the clauses conform to the given @var{specs}, which must be a list of
 syntax clause specification objects.
 
 Combine the clause arguments with the given @var{knil} in a
-@func{fold-left} fashion; if successful return the resulting @var{knil};
+@func{fold-left} fashion, if successful return the resulting @var{knil};
 if an invalid clause is found call @var{synner} or raise a
-@condition{syntax} object.  The operation is as follows:
+@condition{syntax} object.
+
+The operation is conceptually as follows:
 
 @example
 (fold-left
     (lambda (knil spec)
-      (@var{combine} knil spec
-        (syntax-clauses-single-spec spec
-          @var{unwrapped-clauses} @var{synner})))
+      (let ((args (syntax-clauses-single-spec spec
+                     @var{unwrapped-clauses} @var{synner})))
+        (if (fxzero? (vector-length args))
+            knil
+          (@var{combine} knil spec args))))
   @var{knil}
   @var{specs})
 @end example
 
-This function does @strong{not} check that all the clauses conform to a
-given specification.
+@noindent
+notice that @var{combine} is called only if a clause from @var{specs} is
+present in @var{unwrapped-clauses}; @var{combine} must return the new
+value for @var{knil}.
+@end defun
+
+
+@defun syntax-clauses-validate-specs @var{list-of-specs}
+Given a list of @objtype{syntax-clause-spec} objects: perform some
+validations among them.  If successful return @var{list-of-specs}
+itself, otherwise raise an assertion violation.
+
+The following checks are performed:
+
+@itemize
+@item
+For every identifier listed in the @code{mutually-inclusive} field of
+every @objtype{syntax-clause-spec}: check that such identifier is equal,
+according to @func{free-identifier=?}, to an identifier in the
+@code{keyword} field of another @objtype{syntax-clause-spec} object.
+
+@item
+For every identifier listed in the @code{mutually-exclusive} field of
+every @objtype{syntax-clause-spec}: check that such identifier is equal,
+according to @func{free-identifier=?}, to an identifier in the
+@code{keyword} field of another @objtype{syntax-clause-spec} object.
+@end itemize
 @end defun
 
 @c page
@@ -4170,7 +4789,7 @@ complement representation as an octet.
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
 * iklib bytevectors conv::      Converting bytevectors.
-* iklib bytevectors generic::   Generic bytevectors operations.
+* iklib bytevectors generic::   Generic bytevector operations.
 @end menu
 
 @c page
@@ -4342,6 +4961,36 @@ part first.
 @end defun
 
 
+@defun octets-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} is a bytevector object.
+@end defun
+
+
+@defun ascii-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered an @ascii{} code point if:
+
+@example
+(<= #x00 chi #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun latin1-encoded-bytevector? @var{bytevector}
+Return @true{} if @var{bytevector} can be interpreted as a Latin1
+encoded string, otherwise return @false{}.  An octet @var{chi} is
+considered a Latin1 code point if:
+
+@example
+(or (<= #x00 chi #x1F)
+    (<= #x20 chi #x7E)
+    (<= #xA0 chi #xFF))
+@result{} #t
+@end example
+@end defun
+
+
 @defun hex->bytevector @var{bytevector}
 @defunx bytevector->hex @var{bytevector}
 Convert to and from a Scheme bytevector containing octets and a Scheme
@@ -4367,6 +5016,8 @@ If an error occurs in the conversion: the return value is @false{}.
 
 @defun uri-encode @var{bytevector}
 @defunx uri-decode @var{bytevector}
+@defunx percent-encode @var{bytevector}
+@defunx percent-decode @var{bytevector}
 Encode or decode a bytevector according to @rfc{} 3986 @acronym{URI}
 percent encoding; return a bytevector.  All the octets are encoded
 except the ones having the following @ascii{} representation:
@@ -4380,18 +5031,49 @@ abcdefghijklmnopqrstuvwxyz
 @end defun
 
 
-@defun uri-normalise-encoding @var{bytevector}
+@defun normalise-uri-encoding @var{bytevector}
+@defunx normalise-percent-encoding @var{bytevector}
 Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
 percent encoding: return an encoded and normalised bytevector, octets
 that are encoded but should not are decoded.
 @end defun
 
+
+@defun uri-encoded-bytevector? @var{bv}
+@defunx percent-encoded-bytevector? @var{bv}
+Return @true{} if the argument is a correctly percent--encoded
+bytevector according to @rfc{} 3986.  This means every octet represents
+either one of the following characters in @ascii{} encoding:
+
+@example
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+-._~
+@end example
+
+@noindent
+or it is part of a percent--encoded sequence defined by the following
+grammar:
+
+@example
+pct-encoded   = "%" HEXDIG HEXDIG
+HEXDIG        = [0-9a-fA-F]
+@end example
+@end defun
+
 @c page
 @node iklib bytevectors generic
-@subsection Generic bytevectors operations
+@subsection Generic bytevector operations
 
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@defun bytevector-empty? @var{bytevector}
+Return @true{} if the bytevector @var{bytevector} has zero length,
+otherwise return @false{}.
+@end defun
 
 
 @defun bytevector-append @var{bytevector} ...
@@ -4406,12 +5088,25 @@ the resulting bytevector.  It is an error if the sum of the bytevector
 lengths is not in the range of the maximum bytevector length.
 @end defun
 
+
+@defun bytevector-hash @var{bytevector}
+Return an integer hash value for @var{bytevector}, based on its current
+contents.  This hash function is suitable for use with
+@func{bytevector=?} as an equivalence function.
+@end defun
+
 @c page
 @node iklib strings
 @section Additional string functions
 
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@defun string-empty? @var{str}
+Return @true{} if the string @var{str} is empty, otherwise return
+@false{}.
+@end defun
 
 
 @defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
@@ -4428,10 +5123,13 @@ not in the range of the maximum string length.
 @end defun
 
 
-@defun string->latin1 @var{string}
-@defunx latin1->string @var{bytevevctor}
+@defun string->octets @var{string}
+@defunx octets->string @var{bytevector}
 Convert to and from a Scheme string and a Scheme bytevector holding the
-Latin-1 encoding of the characters.
+raw octets encoding of the characters.  Octets are converted to
+characters with @func{integer->char}; characters are converted to octets
+with @func{char->integer}.  Raise an exception if the conversion is not
+possible.
 @end defun
 
 
@@ -4439,6 +5137,50 @@ Latin-1 encoding of the characters.
 @defunx ascii->string @var{bytevevctor}
 Convert to and from a Scheme string and a Scheme bytevector holding the
 @ascii{} encoding of the characters.
+@end defun
+
+
+@defun octets-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an octets encoded
+string, otherwise return @false{}.  A character is considered an
+octets--encoded if its integer representation @var{chi} satisfies:
+
+@example
+(<= 0 @var{chi} 255)      @result{} #t
+@end example
+@end defun
+
+
+@defun ascii-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as an @ascii{} encoded
+string, otherwise return @false{}.  A character is considered an
+@ascii{} code point if its integer representation @var{chi} satisfies:
+
+@example
+(<= #x00 @var{chi} #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun string->latin1 @var{string}
+@defunx latin1->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+Latin-1 encoding of the characters.
+@end defun
+
+
+@defun latin1-encoded-string? @var{string}
+Return @true{} if @var{string} can be interpreted as a Latin1 encoded
+string, otherwise return @false{}.  A character in the string is
+considered a Latin1 code point if its integer representation @var{chi}
+satisfies:
+
+@example
+(or (<= #x00 @var{chi} #x1F)
+    (<= #x20 @var{chi} #x7E)
+    (<= #xA0 @var{chi} #xFF))
+@result{} #t
+@end example
 @end defun
 
 
@@ -4468,13 +5210,10 @@ If an error occurs in the conversion: the return value is @false{}.
 
 @defun string-base64->bytevector @var{string}
 @defunx bytevector->string-base64 @var{bytevector}
-Convert to and from a Scheme string and a Scheme bytevector.
-
-The input string contains the @ascii{} Base64 representation of the
-octets.  The output string contains the @ascii{} Base64 representation
-of octets.
-
-If an error occurs in the conversion: the return value is @false{}.
+Convert to and from a Scheme string and a Scheme bytevector.  The input
+string contains the @ascii{} Base64 representation of the octets.  The
+output string contains the @ascii{} Base64 representation of octets.  If
+an error occurs in the conversion: an exception is raised.
 @end defun
 
 
@@ -4485,6 +5224,7 @@ occurs because of impossible generation: raise an error.
 
 
 @defun string->uri-encoding @var{str}
+@defunx string->percent-encoding @var{str}
 Convert the string @var{str} to its @utf{}-8 representation, then encode
 such representation according to @rfc{} 3986, @acronym{URI} percent
 encoding.
@@ -4492,9 +5232,19 @@ encoding.
 
 
 @defun uri-encoding->string @var{bytevector}
+@defunx percent-encoding->string @var{bytevector}
 Interpret the bytevector as encoded according to @rfc{} 3986,
 @acronym{URI} percent encoding, decode it and interpret the result as
 the @utf{}-8 representation of a string; return the string.
+@end defun
+
+
+@defun uri-encoded-string? @var{string}
+@defunx percent-encoded-string? @var{string}
+Return @true{} if the argument is correctly percent--encoded string
+according to @rfc{} 3986.  This means every character in the string is
+associated to a character in the @ascii{} encoding and additionally the
+constraints of @rfc{} 3986 are satisfied.
 @end defun
 
 
@@ -4528,6 +5278,12 @@ integer objects satisfying:
 Return a newly allocated vector formed from the items of @var{vec}
 beginning with index @var{start} (inclusive) and ending with index
 @var{end} (exclusive).
+@end defun
+
+
+@defun vector-empty? @var{vec}
+Return @true{} if the vector @var{vec} has zero length, otherwise return
+@false{}.
 @end defun
 
 
@@ -4769,7 +5525,10 @@ the sign of the fixnum @var{fx}.
 
 
 @defun fixnum->string @var{fx}
-Return a string representation of @var{fx}.
+@defunx fixnum->string @var{fx} @var{base}
+Return a string representation of @var{fx}.  @var{base} must be one
+among @math{2}, @math{8}, @math{10}, @math{16}; when not given it
+defaults to @math{10}.
 @end defun
 
 
@@ -6944,7 +7703,8 @@ example in the previous section):
 @value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
 
 @menu
-* iklib io pathnames::          Pathnames handling.
+* iklib io pathnames::          String and bytevector pathnames
+                                handling.
 * iklib io codecs::             Transcoders and additional codecs.
 * iklib io non-blocking::       Handling non--blocking devices.
 * iklib io binary::             Additional binary port features.
@@ -6956,14 +7716,15 @@ example in the previous section):
 
 @c page
 @node iklib io pathnames
-@subsection Pathnames handling
+@subsection String and bytevector pathnames handling
 
 
 All the file--related functions defined by @rnrs{6} accept a Scheme
 string as representing a file pathname; internally such string is
 converted to a bytevector to be handed to the underlying operating
-system.  The following bindings are exported by the @library{ikarus}
-library.
+system.
+
+The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Parameter string->filename-func
@@ -6980,6 +7741,73 @@ In @value{PRJNAME} the filename--to--string conversion is performed by
 the function returned by @func{filename->string-func}, which defaults to
 @func{utf8->string}.
 @end deffn
+
+
+The following bindings are exported by the library @library{vicare
+$posix}.
+
+
+@defun file-pathname? @var{obj}
+@defunx file-string-pathname? @var{obj}
+@defunx file-bytevector-pathname? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector, not empty, not
+including a character whose @ascii{} representation is the null byte.
+@end defun
+
+
+@defun file-absolute-pathname? @var{pathname}
+The argument @var{pathname} must be a string or bytevector.  Return
+@true{} if @var{pathname} starts with a @code{/} character, which means
+it is valid as Unix--style absolute pathname; otherwise return @false{}.
+
+This function only acts upon its argument, never accessing the file
+system.
+@end defun
+
+
+@defun file-relative-pathname? @var{pathname}
+The argument @var{pathname} must be a string or bytevector.  Return
+@true{} if @var{pathname} doest @strong{not} start with a @code{/}
+character, which means it is valid as Unix--style relative pathname;
+otherwise return @false{}.
+
+This function only acts upon its argument, never accessing the file
+system.
+@end defun
+
+
+@defun split-pathname-root-and-tail @var{pathname}
+Given a string representing a pathname: split it into the directory part
+and the tail part.  Return 2 values: a string representing the directory
+part and a string representing the tail name part.  If @var{pathname} is
+just the name of a file or directory relative to the current directory:
+the directory part is empty and the first returned value is the empty
+string.
+
+Assume the pathname components separator is @code{/}, which is
+Unix--specific.
+
+@example
+(receive (root tail)
+    (split-pathname-root-and-tail "a/b")
+  (list root tail))
+@result{} ("a" "b")
+
+(receive (root tail)
+    (split-pathname-root-and-tail "ciao")
+  (list root tail))
+@result{} ("" "ciao")
+@end example
+@end defun
+
+
+@defun file-colon-search-path? @var{obj}
+@defunx file-string-colon-search-path? @var{obj}
+@defunx file-bytevector-colon-search-path? @var{obj}
+Return @true{} if @var{obj} is a string or bytevector, possibly empty,
+not including a character whose @ascii{} representation is the null
+byte.
+@end defun
 
 
 @defun split-search-path @var{path}
@@ -7041,7 +7869,7 @@ Empty components are discarded.
 (import (vicare))
 
 (split-pathname-bytevector '#vu8())
-@result{} #f ()
+@error{} "invalid pathname"
 
 (split-pathname-bytevector '#ve(ascii "ciao/hello"))
 @result{} #f (#ve(ascii "ciao") #ve(ascii "hello"))
@@ -7050,7 +7878,7 @@ Empty components are discarded.
 @result{} #t ()
 
 (split-pathname-string "")
-@result{} #f ()
+@error{} "invalid pathname"
 
 (split-pathname-string "ciao/hello/salut")
 @result{} #f ("ciao" "hello" "salut")
@@ -7066,6 +7894,68 @@ Empty components are discarded.
 @end example
 @end defun
 
+
+@defun search-file-in-environment-path @var{pathname} @var{environment-variable}
+Search a file pathname (regular file or directory) in the given search
+path.
+
+@var{pathname} must be a string representing a file pathname;
+@var{environment-variable} must be a string representing a system
+environment variable.
+
+@itemize
+@item
+If @var{pathname} is absolute, test its existence: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+@item
+If @var{pathname} is relative and it has a directory part, test its
+existence: when found, return a string representing the real absolute
+file pathname; otherwise return @false{}.
+
+@item
+If @var{pathname} is relative and it has no directory part, read the
+environment variable as colon--separated list of directories and search
+the file in them, from the first to the last: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+Notice that the file is searched in the process' current working
+directory only if such directory is listed in the given path.
+@end itemize
+@end defun
+
+
+@defun search-file-in-list-path @var{pathname} @var{list-of-directories}
+Search a file pathname (regular file or directory) in the given search
+path.
+
+@var{pathname} must be a string representing a file pathname;
+@var{list-of-directories} must be a list of strings representing
+directory pathnames.
+
+@itemize
+@item
+If @var{pathname} is absolute, test its existence: when found, return a
+string representing the real absolute file pathname; otherwise return
+@false{}.
+
+@item
+If @var{pathname} is relative and it has a directory part, test its
+existence: when found, return a string representing the real absolute
+file pathname; otherwise return @false{}.
+
+@item
+If @var{pathname} is relative and it has no directory part, search the
+file in the given directories, from the first to the last: when found,
+return a string representing the real absolute file pathname; otherwise
+return @false{}.
+
+Notice that the file is searched in the process' current working
+directory only if such directory is listed in the given path.
+@end itemize
+@end defun
 
 @c page
 @node iklib io codecs

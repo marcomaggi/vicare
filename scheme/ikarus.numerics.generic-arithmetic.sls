@@ -94,6 +94,7 @@
     expt			square
     cube
     sqrt			exact-integer-sqrt
+    cbrt
 
     ;; logarithms and exponentials
     log				exp
@@ -318,6 +319,9 @@
 
     $exact-integer-sqrt-fixnum	$exact-integer-sqrt-bignum
 
+    $cbrt-fixnum		$cbrt-flonum		$cbrt-bignum
+    $cbrt-ratnum		$cbrt-compnum		$cbrt-cflonum
+
     $log-fixnum			$log-flonum		$log-bignum
     $log-ratnum			$log-compnum		$log-cflonum
 
@@ -415,6 +419,7 @@
 		expt				square
 		cube
 		sqrt				exact-integer-sqrt
+		cbrt
 
 		;; logarithms and exponentials
 		log exp
@@ -4939,6 +4944,73 @@
 	($make-cflonum R.rep R.imp))))
 
   #| end of module: sqrt |# )
+
+
+(module (cbrt
+	 $cbrt-fixnum		$cbrt-flonum		$cbrt-bignum
+	 $cbrt-ratnum		$cbrt-compnum		$cbrt-cflonum)
+  (define who 'cbrt)
+
+  (define (cbrt x)
+    (cond-numeric-operand x
+      ((fixnum?)	($cbrt-fixnum x))
+      ((bignum?)	($cbrt-bignum x))
+      ((ratnum?)	($cbrt-ratnum x))
+      ((flonum?)	($cbrt-flonum x))
+      ((compnum?)	($cbrt-compnum x))
+      ((cflonum?)	($cbrt-cflonum x))
+      (else
+       (%error-not-number x))))
+
+  (define ($cbrt-fixnum x)
+    (cond (($fxzero? x)		0)
+	  (($fx= +1 x)		+1)
+	  (($fx= -1 x)		-1)
+	  (else
+	   ($cbrt-flonum ($fixnum->flonum x)))))
+
+  (define ($cbrt-ratnum x)
+    ($cbrt-flonum ($ratnum->flonum x)))
+
+  (define ($cbrt-bignum x)
+    ($cbrt-flonum ($bignum->flonum x)))
+
+  (define ($cbrt-flonum x)
+    ($flcbrt x))
+
+  (define ($cbrt-compnum x)
+    (let ((mag ($magnitude-compnum x))
+	  (ang ($angle-compnum     x)))
+      (* (cbrt mag) (exp ($make-rectangular 0 ($div-number-fixnum ang 3))))))
+
+  (define ($cbrt-cflonum x)
+    (let ((mag ($magnitude-cflonum x))
+	  (ang ($angle-cflonum     x)))
+      ($mul-flonum-cflonum ($cbrt-flonum mag) ($exp-cflonum ($make-cflonum 0.0 ($fl/ ang 3.0))))))
+
+;;; --------------------------------------------------------------------
+;;; utilities
+
+  (define ($magnitude-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (sqrt (+ (square x.rep) (square x.imp)))))
+
+  (define ($magnitude-cflonum x)
+    ($flhypot ($cflonum-real x)
+	      ($cflonum-imag x)))
+
+  (define ($angle-compnum Z)
+    (let ((Z.rep ($compnum-real Z))
+	  (Z.imp ($compnum-imag Z)))
+      (atan Z.imp Z.rep)))
+
+  (define ($angle-cflonum Z)
+    (let ((Z.rep ($cflonum-real Z))
+	  (Z.imp ($cflonum-imag Z)))
+      ($atan2-real-real Z.imp Z.rep)))
+
+  #| end of module: cbrt |# )
 
 
 (module (exact-integer-sqrt

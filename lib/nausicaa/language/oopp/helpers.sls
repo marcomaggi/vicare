@@ -1,5 +1,5 @@
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Nausicaa Scheme
 ;;;Contents: helpers for OOPP
 ;;;Date: Tue May  1, 2012
 ;;;
@@ -33,8 +33,10 @@
     parse-mixin-definition		parse-mixin-clauses
     parse-tag-name-spec			filter-and-validate-mixins-clauses
 
+    parse-with-tags-bindings
     parse-let-bindings			parse-let-values-bindings
     parse-formals-bindings		make-tagged-variable-transformer
+    process-method-application
 
     ;; helpers
     case-symbol				case-identifier
@@ -84,14 +86,14 @@
   (import (for (vicare) run expand)
     (for (only (rnrs)
 	       lambda define define-syntax set!)
-	 (meta -1))
+      (meta -1))
     (vicare unsafe operations)
     (vicare language-extensions identifier-substitutions)
     (prefix (only (nausicaa language oopp configuration)
 		  enable-satisfactions)
 	    config.)
     (for (nausicaa language oopp auxiliary-syntaxes)
-	 (meta -1))
+      (meta -1))
     (for (prefix (only (nausicaa language auxiliary-syntaxes)
 		       parent		nongenerative
 		       sealed		opaque
@@ -105,7 +107,7 @@
 		       mixins
 		       maker		finaliser)
 		 aux.)
-	 (meta -1)))
+      (meta -1)))
 
 
 ;;;; private helpers
@@ -243,77 +245,240 @@
   (identifier-suffix id "-list-of-uids"))
 
 
-(define (make-tagged-variable-transformer tag-id src-var-id)
-  ;;Build  and   return  the   transformer  function   implementing  the
-  ;;identifier syntax  for tagged  variables.  When  we define  a tagged
-  ;;variable with:
-  ;;
-  ;;   (<integer> a 123)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (define src-var 123)
-  ;;   (define-syntax a
-  ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
-  ;;
-  ;;and when we define a tagged variable with:
-  ;;
-  ;;   (let/tags (((a <integer>) 123)) ---)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (let ((src-var 123))
-  ;;     (let-syntax
-  ;;         ((a (make-tagged-variable-transformer
-  ;;               #'<integer> #'src-var)))
-  ;;       ---))
-  ;;
-  ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
-  ;;DEFINE-LABEL or DEFINE-CLASS).
-  ;;
-  ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
-  ;;variable is bound.
-  ;;
-  (assert (identifier? tag-id))
-  (assert (identifier? src-var-id))
-  (make-variable-transformer
-   (lambda (stx)
-     (with-syntax ((TAG		tag-id)
-		   (SRC-VAR	src-var-id))
-       (syntax-case stx (set! :mutator :setter)
+(module (make-tagged-variable-transformer)
 
-	 ;;Syntax to reference the value of the binding.
-	 (??var
-	  (identifier? #'??var)
-	  src-var-id)
+  (define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))
+    ;;Build  and   return  the   transformer  function   implementing  the
+    ;;identifier syntax  for tagged  variables.  When  we define  a tagged
+    ;;variable with:
+    ;;
+    ;;   (<integer> a 123)
+    ;;
+    ;;we can imagine the following expansion:
+    ;;
+    ;;   (define src-var 123)
+    ;;   (define-syntax a
+    ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
+    ;;
+    ;;and when we define a tagged variable with:
+    ;;
+    ;;   (let/tags (((a <integer>) 123)) ---)
+    ;;
+    ;;we can imagine the following expansion:
+    ;;
+    ;;   (let ((src-var 123))
+    ;;     (let-syntax
+    ;;         ((a (make-tagged-variable-transformer
+    ;;               #'<integer> #'src-var)))
+    ;;       ---))
+    ;;
+    ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
+    ;;DEFINE-LABEL or DEFINE-CLASS).
+    ;;
+    ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
+    ;;variable is bound.
+    ;;
+    (make-variable-transformer
+     (lambda (stx)
+       (define (synner)
+	 (syntax-violation (syntax->datum tag-id)
+	   "invalid tagged-variable syntax use" stx))
+       (with-syntax ((TAG	tag-id)
+		     (SRC-VAR	src-var-id))
+	 (syntax-case stx (set! :mutator :setter)
 
-	 ;;Syntax to mutate the value of the binding.
-	 ((set! ??var ??val)
-	  #'(set! SRC-VAR (TAG :assert-type-and-return ??val)))
+	   ;;Syntax to reference the value of the binding.
+	   (??var
+	    (identifier? #'??var)
+	    src-var-id)
 
-	 ;;Syntax to apply the field mutator for the tag of ?VAR.
-	 ((??var :mutator (??field-name ??arg ...) ??value)
-	  (identifier? #'??field-name)
-	  #'(TAG :mutator SRC-VAR (??field-name ??arg ...) ??value))
+	   ;;Syntax to mutate the value of the binding.
+	   ((set! ??var ??val)
+	    #'(set! SRC-VAR (TAG :assert-type-and-return ??val)))
 
-	 ;;Syntax to apply the setter for the tag of ?VAR.
-	 ((??var :setter ((??key ...) ...) ??value)
-	  #'(TAG :setter SRC-VAR (??var ((??key ...) ...) ??value)))
+	   ;;Syntax to apply the field mutator for the tag of ?VAR.
+	   ((??var :mutator (??field-name ??arg ...) ??value)
+	    (identifier? #'??field-name)
+	    #'(TAG :mutator SRC-VAR (??field-name ??arg ...) ??value))
 
-	 ;;Syntax to apply the getter for the tag of ?VAR.
-	 ((??var (??key0 ...) (??key ...) ...)
-	  #'(TAG :getter SRC-VAR (??var ((??key0 ...) (??key ...) ...))))
+	   ;;Syntax to apply the setter for the tag of ?VAR.
+	   ((??var :setter ((??key ...) ...) ??value)
+	    #'(TAG :setter SRC-VAR (??var ((??key ...) ...) ??value)))
 
-	 ;;Syntax to apply a method or reference a field of the tag
-	 ;;of ?VAR.
-	 ((??var . ??stuff)
-	  #'(TAG :dispatch SRC-VAR (??var . ??stuff)))
+	   ;;Syntax to  apply the getter for  the tag of ?VAR.   A plain
+	   ;;getter syntax is as follows:
+	   ;;
+	   ;;  (??var (??key0 ...) (??key ...) ...)
+	   ;;
+	   ;;but it can  also contain other arguments  for nested member
+	   ;;use as follows:
+	   ;;
+	   ;;  (??var (??key0 ...) (??key ...) ... => ?form0 ?form ...)
+	   ;;
+	   ;;this latter case should be expanded to:
+	   ;;
+	   ;;  (let (((R <tag>) (??var (??key0 ...) (??key ...) ...)))
+	   ;;    (R ?form0 ?form ...))
+	   ;;
+	   ;;where "<tag>"  is the  tag assigned  to the  getter runtime
+	   ;;return value from the getter transformer function.
+	   ;;
+	   ((??var (??key0 ...) ?arg ...)
+	    (receive (keys-stx after-args-stx)
+		(%split-getter-keys-from-other-args #'(?arg ...) synner)
+	      (if (null? after-args-stx)
+		  #`(TAG :getter SRC-VAR (??var ((??key0 ...) #,@keys-stx)))
+		#`(TAG :getter SRC-VAR (??var ((??key0 ...) #,@keys-stx) => #,@after-args-stx)))))
 
-	 (_
-	  (syntax-violation '?var
-	    "invalid tagged-variable syntax use" stx)))))))
+	   ;;Syntax to apply a method or reference a field of the tag
+	   ;;of ?VAR.
+	   ((??var . ??stuff)
+	    #'(TAG :dispatch SRC-VAR (??var . ??stuff)))
+
+	   (_
+	    (synner))
+	   )))))
+
+  (define (%split-getter-keys-from-other-args args-stx synner)
+    (let loop ((args-stx args-stx)
+	       (keys-stx '()))
+      (syntax-case args-stx (=>)
+	;;There is no arrow, all the arguments are "keys".
+	(()
+	 (values (reverse keys-stx) '()))
+
+	;;There is an arrow!
+	((=> ?after-arg0 ?after-arg ...)
+	 (values (reverse keys-stx) #'(?after-arg0 ?after-arg ...)))
+
+	;;A key argument.
+	(((?key ...) ?arg ...)
+	 (loop #'(?arg ...) (cons #'(?key ...) keys-stx)))
+
+	(_
+	 (synner)))))
+
+  #| end of module |# )
 
 
+(module (process-method-application)
+
+  (define (process-method-application let/tags-id rv-tag-id application-stx)
+    (if (syntax->datum rv-tag-id)
+	;;There  is a  return-value tag,  so scan  the arguments  for an
+	;;arrow.
+	(syntax-case application-stx ()
+	  ;;No arguments, go with a plain application.
+	  ((?method-implementation ?expr)
+	   application-stx)
+
+	  ((?method-implementation ?expr ?arg ...)
+	   (receive (before-args-stx after-args-stx)
+	       (%split-arguments-across-arrow #'(?arg ...))
+	     (cond ((null? after-args-stx)
+		    ;;There is no arrow, go with a plain application.
+		    application-stx)
+		   (else
+		    ;;There is an arrow!!!  Compose the application.
+		    #`(#,let/tags-id (((R #,rv-tag-id)
+		    		       (?method-implementation ?expr #,@before-args-stx)))
+		    		     (R #,@after-args-stx))
+		    ;;NOTE The  following alternative  implementation of
+		    ;;the output form looks attractive because we do not
+		    ;;define a binding; but is  it correct not to define
+		    ;;a binding?   With a binding  we are sure  that all
+		    ;;the syntaxes present and future will work.
+		    ;;
+		    ;; #`(#,rv-tag-id :dispatch
+		    ;; 		   (?method-implementation ?expr #,@before-args-stx)
+		    ;; 		   (dummy #,@after-args-stx))
+		    ))))
+
+	  #| end of syntax-case |# )
+
+      ;;There is  not return-value tag, so  just go with a  plain method
+      ;;implementation application.
+      application-stx))
+
+  (define (%split-arguments-across-arrow args-stx)
+    (let loop ((args-stx        args-stx)
+	       (before-args-stx '()))
+      (syntax-case args-stx (=>)
+	;;There is no arrow, all the arguments are "before".
+	(()
+	 (values (reverse before-args-stx) '()))
+
+	;;There is an arrow!
+	((=> ?after-arg0 ?after-arg ...)
+	 (values (reverse before-args-stx) #'(?after-arg0 ?after-arg ...)))
+
+	;;A before argument.
+	((?before-arg ?arg ...)
+	 (loop #'(?arg ...) (cons #'?before-arg before-args-stx)))
+
+	)))
+
+  #| end of module |# )
+
+
+(define parse-with-tags-bindings
+  (case-lambda
+   ((bindings-stx synner)
+    (parse-with-tags-bindings bindings-stx synner '() '() '()))
+   ((bindings-stx synner vars tags syntax-bindings)
+    ;;Recursive   function.   Parse   the  syntax   object  BINDINGS-STX
+    ;;expecting it to be a  list of tagged WITH-TAGS bindings; supported
+    ;;syntaxes for the bindings are:
+    ;;
+    ;;   ()
+    ;;   (?var0 ?var ...)
+    ;;
+    ;;where each ?VAR must have the following syntax:
+    ;;
+    ;;   (?var-id ?tag-id)
+    ;;   #(?var-id ?tag-id)
+    ;;
+    ;;The return value is a syntax object with the structure:
+    ;;
+    ;;   ((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
+    ;;
+    ;;where each  VAR is an identifier  to be used to  create a binding,
+    ;;each TAG is the identifier of the type tag and each SYNTAX-BINDING
+    ;;is the  associated LET-SYNTAX  binding.
+    ;;
+    ;;SYNNER must be a closure to be used to raise syntax violations.
+    ;;
+    (syntax-case bindings-stx ()
+      ;;No more bindings.
+      (()
+       (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
+
+      ;;Tagged binding, parentheses envelope.
+      (((?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-with-tags-bindings #'?other-bindings synner
+				   (cons #'?var vars)
+				   (cons tag-id tags)
+				   (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+					 syntax-bindings))))
+
+      ;;Tagged binding, vector envelope.
+      ((#(?var ?tag) . ?other-bindings)
+       (and (identifier? #'?var)
+	    (identifier? #'?tag))
+       (let ((tag-id #'?tag))
+	 (parse-with-tags-bindings #'?other-bindings synner
+				   (cons #'?var vars)
+				   (cons tag-id tags)
+				   (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
+					 syntax-bindings))))
+
+      ;;Syntax error.
+      (_
+       (synner "invalid bindings syntax" bindings-stx))))))
+
 (define parse-let-bindings
   (case-lambda
    ((bindings-stx top-id synner)
@@ -660,11 +825,15 @@
 
 	  (mutable methods-table)
 		;Null  or   an  associative  list   having:  identifiers
-		;representing   method   names   as  keys,   identifiers
-		;representing the method function name or syntax name as
-		;values.
+		;representing method names as keys, alist as value.  The
+		;first item in  the list value is the  tag identifier of
+		;the  single return  value from  the adddress  or #f  if
+		;there  is no  such tag.   The second  item in  the list
+		;value is an identifier representing the method function
+		;name or syntax name as values.
 		;
-		;  ((?method-name-id . ?method-implementation-id) ...)
+		;  ((?method-name-id . (?rv-tag ?method-implementation-id))
+		;   ...)
 		;
 		;The  order  of  the  entries  is  the  reverse  of  the
 		;definition order.
@@ -827,12 +996,12 @@
   (assert (<parsed-spec>? parsed-spec))
   ($<parsed-spec>-virtual-fields-set! parsed-spec (cons field-record ($<parsed-spec>-virtual-fields parsed-spec))))
 
-(define-inline (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-implementation-id)
+(define-inline (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
   ;;Prepend a  method name  identifier to  the list  of method  names in
   ;;PARSED-SPEC.
   ;;
   (assert (<parsed-spec>? parsed-spec))
-  ($<parsed-spec>-methods-table-set! parsed-spec (cons (cons method-name-id method-implementation-id)
+  ($<parsed-spec>-methods-table-set! parsed-spec (cons (list method-name-id method-rv-tag-id method-implementation-id)
 						       ($<parsed-spec>-methods-table parsed-spec))))
 
 ;;; --------------------------------------------------------------------
@@ -2236,24 +2405,85 @@
   (body
    (let ((name-id (<parsed-spec>-name-id parsed-spec)))
 
-     (define (%add-method method-name-id method-implementation-id method-expr)
+     (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
        (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-implementation-id)
+       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
        (<parsed-spec>-definitions-cons! parsed-spec `(,#'define ,method-implementation-id ,method-expr)))
 
      (syntax-case #'?arguments ()
-       (((?method-name . ?args) ?body0 ?body ...)
+       ;;Untagged return value method definition.
+       (((?method-name . ?formals) ?body0 ?body ...)
 	(identifier? #'?method-name)
 	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
 	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?args ?body0 ?body ...))))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?formals ?body0 ?body ...))))
 
+       ;;Tagged  single  return  value   method  definition.   List  tag
+       ;;specification.
+       ((((?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
+
+       ;;Tagged  single  return  value method  definition.   Vector  tag
+       ;;specification.
+       (((#(?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
+
+       ;;Tagged  multiple return  values  method  definition.  List  tag
+       ;;specification.
+       ((((?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
+
+       ;;Tagged multiple  return values  method definition.   Vector tag
+       ;;specification.
+       (((#(?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+	(and (identifier? #'?method-name)
+	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id
+		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
+			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
+
+       ;;Untagged external lambda method definition.
        ((?method-name ?lambda-expr)
 	(identifier? #'?method-name)
 	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
 	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-implementation-id #'?lambda-expr)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+
+       ;;Tagged external lambda method definition.
+       ((#(?method-name ?rv-tag) ?lambda-expr)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
 
        ;;Syntax violation.
        (_
@@ -2273,18 +2503,38 @@
   (body
    (let ((name-id (<parsed-spec>-name-id parsed-spec)))
 
-     (define (%add-method method-name-id method-implementation-id method-expr)
+     (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
        (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-implementation-id)
+       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
        (<parsed-spec>-definitions-cons! parsed-spec
 					`(,#'define-syntax ,method-implementation-id ,method-expr)))
 
      (syntax-case #'?arguments ()
+       ;;Untagged return value method definition.
        ((?method-name ?lambda-expr)
 	(identifier? #'?method-name)
 	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#f)
 	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-implementation-id #'?lambda-expr)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+
+       ;;Tagged return value method definition.  List tag specification.
+       (((?method-name ?rv-tag) ?lambda-expr)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+
+       ;;Tagged return value method definition.  Vector tag specification.
+       ((#(?method-name ?rv-tag) ?lambda-expr)
+	(and (identifier? #'?method-name)
+	     (identifier? #'?rv-tag))
+	(let* ((method-name-id			#'?method-name)
+	       (method-rv-tag-id		#'?rv-tag)
+	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
+	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
 
        ;;Syntax violation.
        (_
@@ -2309,9 +2559,9 @@
   (body
    (let ((name-id (<parsed-spec>-name-id parsed-spec)))
 
-     (define (%add-method method-name-id method-implementation-id)
+     (define (%add-method method-name-id method-rv-tag-id method-implementation-id)
        (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-implementation-id))
+       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id))
 
      (let loop ((methods #'?arguments))
        (syntax-case methods ()
@@ -2321,20 +2571,41 @@
 	 ((?method-name . ?other-methods)
 	  (identifier? #'?method-name)
 	  (let ((method-name-id #'?method-name))
-	    (%add-method method-name-id (make-method-identifier name-id method-name-id))
+	    (%add-method method-name-id #f (make-method-identifier name-id method-name-id))
 	    (loop #'?other-methods)))
 
 	 (((?method-name) . ?other-methods)
 	  (identifier? #'?method-name)
 	  (let ((method-name-id #'?method-name))
-	    (%add-method method-name-id (make-method-identifier name-id method-name-id))
+	    (%add-method method-name-id #f (make-method-identifier name-id method-name-id))
 	    (loop #'?other-methods)))
 
+	 ;;Untagged return value method definition.
 	 (((?method-name ?method-implementation) . ?other-methods)
 	  (and (identifier? #'?method-name)
 	       (identifier? #'?method-implementation))
 	  (begin
-	    (%add-method #'?method-name #'?method-implementation)
+	    (%add-method #'?method-name #f #'?method-implementation)
+	    (loop #'?other-methods)))
+
+	 ;;Tagged   return   value    method   definition.    List   tag
+	 ;;specification.
+	 ((((?method-name ?rv-tag) ?method-implementation) . ?other-methods)
+	  (and (identifier? #'?method-name)
+	       (identifier? #'?rv-tag)
+	       (identifier? #'?method-implementation))
+	  (begin
+	    (%add-method #'?method-name #'?rv-tag #'?method-implementation)
+	    (loop #'?other-methods)))
+
+	 ;;Tagged   return   value   method  definition.    Vector   tag
+	 ;;specification.
+	 (((#(?method-name ?rv-tag) ?method-implementation) . ?other-methods)
+	  (and (identifier? #'?method-name)
+	       (identifier? #'?rv-tag)
+	       (identifier? #'?method-implementation))
+	  (begin
+	    (%add-method #'?method-name #'?rv-tag #'?method-implementation)
 	    (loop #'?other-methods)))
 
 	 ;;Syntax violation.

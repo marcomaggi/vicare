@@ -562,6 +562,21 @@
    LATIN-SMALL-LETTER-O-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-O-WITH-ACUTE-LATIN-1
    LATIN-SMALL-LETTER-U-WITH-GRAVE-LATIN-1 LATIN-SMALL-LETTER-U-WITH-ACUTE-LATIN-1))
 
+(define-constant LATIN-1-ALL-CHARS-STRING
+  (let* ((src.len (+ 2 (- #x7E #x20) (- #xFF #xA0)))
+	 (str     (make-string src.len)))
+    ;;;(debug-print src.len)
+    (let ((i1 (do ((i 0 (+ 1 i))
+		   (chi #x20 (+ 1 chi)))
+		  ((> chi #x7E)
+		   i)
+		(string-set! str i (integer->char chi)))))
+      (do ((i i1 (+ 1 i))
+	   (chi #xA0 (+ 1 chi)))
+	  ((> chi #xFF)
+	   str)
+	(string-set! str i (integer->char chi))))))
+
 ;;; --------------------------------------------------------------------
 
 (define TEST-STRING-FOR-UTF-8
@@ -6761,19 +6776,15 @@
 	(get-string-n port 10))
     => "ABCD")
 
-  (let* ((src.len 100)
-  	 (src.str (let ((str (make-string src.len)))
-  		    (do ((i 0 (+ 1 i)))
-  			((= i src.len)
-  			 str)
-  		      (string-set! str i (integer->char i)))))
+  (let* ((src.len (string-length LATIN-1-ALL-CHARS-STRING))
+	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
-    (check (doit 1)		=> "\x0;")
+    (check (doit 1)		=> "\x20;")
     (check (doit 10)		=> (substring src.str 0 10))
     (check (doit src.len)	=> src.str)
 
@@ -7175,12 +7186,8 @@
 	  (list (get-string-n! port dst.str dst.start count) dst.str)))
     => '(4 "ABCDZZZZZZ"))
 
-  (let* ((src.len 100)
-  	 (src.str (let ((str (make-string src.len)))
-  		    (do ((i 0 (+ 1 i)))
-  			((= i src.len)
-  			 str)
-  		      (string-set! str i (integer->char i)))))
+  (let* ((src.len (string-length LATIN-1-ALL-CHARS-STRING))
+	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count len)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
@@ -7189,7 +7196,7 @@
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
 
     (check (doit 0 10)			=> '(0 "ZZZZZZZZZZ"))
-    (check (doit 1 10)			=> '(1 "\x0;ZZZZZZZZZ"))
+    (check (doit 1 10)			=> '(1 "\x20;ZZZZZZZZZ"))
     (check (doit 10 10)			=> (list 10 (substring src.str 0 10)))
     (check (doit src.len src.len)	=> (list src.len src.str))
 
@@ -7405,12 +7412,8 @@
 	(get-string-all port))
     => "ABCD")
 
-  (let* ((src.len 100)
-  	 (src.str (let ((str (make-string src.len)))
-  		    (do ((i 0 (+ 1 i)))
-  			((= i src.len)
-  			 str)
-  		      (string-set! str i (integer->char i)))))
+  (let* ((src.len (string-length LATIN-1-ALL-CHARS-STRING))
+	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
 		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))

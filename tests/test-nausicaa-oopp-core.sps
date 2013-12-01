@@ -1877,6 +1877,7 @@
 	(with-result
 	 (parametrise ((record-guardian-logger (lambda (S E action)
 						 (add-result action))))
+	   ;;We want this expression with side effects.
 	   (pretty-print (make-<alpha> 1 2 3) (current-error-port))
 	   (collect)))
       => `(,(void) (registration
@@ -2196,29 +2197,60 @@
 
   (check
       (let ()
-	(define (fun (O <pair>))
-	  (<- <vector>)
-	  (vector (O car) (O cdr)))
-	(fun '(1 . 2)))
-    => '#(1 2))
-
-  (check
-      (let ()
 	(define fun
-	  (lambda ((O <pair>))
-	    (<- <vector>)
+	  (lambda ((_ <vector>) (O <pair>))
 	    (vector (O car) (O cdr))))
 	(fun '(1 . 2)))
     => '#(1 2))
 
   (check
       (let ()
-	(define (fun (O <pair>))
-	  (<- <fixnum> <fixnum>)
-	  (values (O car) (O cdr)))
+	(define fun
+	  (lambda ((_ <vector>) (O <pair>))
+	    (vector (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (lambda ((_ <fixnum> <fixnum>) (O <pair>))
+	    (values (O car) (O cdr))))
 	(let-values (((a b) (fun '(1 . 2))))
 	  (vector a b)))
     => '#(1 2))
+
+  (check	;no arguments
+      (let ()
+	(define fun
+	  (lambda ((_ <vector>))
+	    (vector 1 2)))
+	(fun))
+    => '#(1 2))
+
+  (check	;rest argument
+      (let ()
+	(define fun
+	  (lambda ((_ <vector>) . rest)
+	    (vector (car rest) (cadr rest))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check	;tagged argument
+      (let ()
+	(define fun
+	  (lambda ((_ <vector>) . #(rest <list>))
+	    (vector (car rest) (cadr rest))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define fun
+	  (lambda ((_ <vector>) (O <pair>))
+	    (list (O car) (O cdr))))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
 
   #t)
 
@@ -2338,6 +2370,38 @@
 	  (list (r a) (r g) (s a) (s d)))
 	(f r s))
     => '(1 7 10 40))
+
+;;; --------------------------------------------------------------------
+;;; validated return values, syntax 1
+
+  (check
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define ((fun <fixnum> <fixnum>) (O <pair>))
+	  (values (O car) (O cdr)))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (list (O car) (O cdr)))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
 
   #t)
 
@@ -2537,6 +2601,73 @@
 	(f r s))
     => '(1 7 10 40))
 
+;;; --------------------------------------------------------------------
+;;; validated return values
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (vector (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '#(1 2))
+
+  (check
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <fixnum> <fixnum>) (O <pair>))
+	    (values (O car) (O cdr)))))
+	(let-values (((a b) (fun '(1 . 2))))
+	  (vector a b)))
+    => '#(1 2))
+
+  (check	;no arguments
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>))
+	    (vector 1 2))))
+	(fun))
+    => '#(1 2))
+
+  (check	;rest argument
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) . rest)
+	    (vector (car rest) (cadr rest)))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check	;tagged argument
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) . #(rest <list>))
+	    (vector (car rest) (cadr rest)))))
+	(fun 1 2))
+    => '#(1 2))
+
+  (check-for-expression-return-value-violation
+      (let ()
+	(define fun
+	  (case-lambda
+	   (((_ <vector>) (O <pair>))
+	    (list (O car) (O cdr)))))
+	(fun '(1 . 2)))
+    => '(<vector> ((1 2))))
+
   #t)
 
 
@@ -2570,7 +2701,11 @@
 
   (check
       (tag-unique-identifiers-of '(1 2))
-    => '(nausicaa:builtin:<list> nausicaa:builtin:<top>))
+    => '(nausicaa:builtin:<spine> nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of '())
+    => '(nausicaa:builtin:<spine> nausicaa:builtin:<top>))
 
   (check
       (tag-unique-identifiers-of #\a)
@@ -2604,11 +2739,14 @@
 
   (check
       (tag-unique-identifiers-of (current-output-port))
-    => '(nausicaa:builtin:<output-port> nausicaa:builtin:<port> nausicaa:builtin:<top>))
+    => '(nausicaa:builtin:<textual-output-port> nausicaa:builtin:<output-port> nausicaa:builtin:<port> nausicaa:builtin:<top>))
 
   (check
       (tag-unique-identifiers-of 123)
-    => '(nausicaa:builtin:<fixnum>
+    => '(nausicaa:builtin:<positive-fixnum>
+	 nausicaa:builtin:<nonnegative-fixnum>
+	 nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
 	 nausicaa:builtin:<integer>
 	 nausicaa:builtin:<integer-valued>
 	 nausicaa:builtin:<rational-valued>
@@ -2619,8 +2757,13 @@
 	 nausicaa:builtin:<top>))
 
   (check
-      (tag-unique-identifiers-of 1.2)
-    => '(nausicaa:builtin:<rational>
+      (tag-unique-identifiers-of -123)
+    => '(nausicaa:builtin:<negative-fixnum>
+	 nausicaa:builtin:<nonpositive-fixnum>
+	 nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
+	 nausicaa:builtin:<integer>
+	 nausicaa:builtin:<integer-valued>
 	 nausicaa:builtin:<rational-valued>
 	 nausicaa:builtin:<real>
 	 nausicaa:builtin:<real-valued>
@@ -2629,8 +2772,58 @@
 	 nausicaa:builtin:<top>))
 
   (check
+      (tag-unique-identifiers-of 0)
+    => '(nausicaa:builtin:<fixnum>
+	 nausicaa:builtin:<exact-integer>
+	 nausicaa:builtin:<integer>
+	 nausicaa:builtin:<integer-valued>
+	 nausicaa:builtin:<rational-valued>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of 1.0)
+    => '(nausicaa:builtin:<integer-flonum>
+	 nausicaa:builtin:<flonum>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of 1.2)
+    => '(nausicaa:builtin:<rational-flonum>
+	 nausicaa:builtin:<flonum>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of +inf.0)
+    => '(nausicaa:builtin:<flonum>
+	 nausicaa:builtin:<real>
+	 nausicaa:builtin:<real-valued>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
       (tag-unique-identifiers-of +1.2i)
-    => '(nausicaa:builtin:<complex>
+    => '(nausicaa:builtin:<compnum>
+	 nausicaa:builtin:<complex>
+	 nausicaa:builtin:<number>
+	 nausicaa:builtin:<top>))
+
+  (check
+      (tag-unique-identifiers-of 3.4+1.2i)
+    => '(nausicaa:builtin:<cflonum>
+	 nausicaa:builtin:<complex>
 	 nausicaa:builtin:<number>
 	 nausicaa:builtin:<top>))
 

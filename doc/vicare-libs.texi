@@ -133,6 +133,10 @@ The documentation of the library @library{vicare formations} is derived
 from the documentation of Guile.  Copyright @copyright{} 1996-2005,
 2009-2013 Free Software Foundation.
 
+The documentation of the libraries @library{vicare parser-tools silex
+---} are derived form the documentation of SILex.  Copyright
+@copyright{} 2001, 2009 Danny Dube'.
+
 @quotation
 This program is free software: you can redistribute it and/or modify it
 under the terms of the @gnu{} General Public License version 3 as
@@ -234,6 +238,11 @@ Adapted libraries
 * irregex::                     IrRegular expressions.
 * pregexp::                     Portable regular expressions for Scheme.
 * formations::                  Formatting strings.
+* silex::                       A lexical analyser generator.
+
+Library groups
+
+* parser-tools::                Lexers and parsers.
 
 Appendices
 
@@ -297,6 +306,21 @@ External documents
 @include libs-irregex.texi
 @include libs-pregexp.texi
 @include libs-formations.texi
+@include libs-parser-tools-silex.texi
+
+@c page
+@node parser-tools
+@chapter Lexers and parsers
+
+
+@menu
+* parser-tools unix-pathnames::    Parsing Unix file system pathnames.
+@end menu
+
+@include libs-parser-tools-unix-pathnames.texi
+
+@c page
+@c appendices
 
 @include cre2.texi
 

@@ -410,7 +410,8 @@
 	  (fields a b))
 	(define A (<alpha> (1 2)))
 	(define V 123)
-	(with-tags ((A <alpha>) V)
+	(with-tags ((A <alpha>)
+		    (V <top>))
 	  (vector (A a) V)))
     => '#(1 123))
 

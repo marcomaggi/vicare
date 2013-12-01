@@ -19,6 +19,7 @@
 (library (ikarus bytevectors)
   (export
     make-bytevector		bytevector-length
+    bytevector-empty?		$bytevector-empty?
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
@@ -95,9 +96,11 @@
 
     ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
     $bytevector=		$bytevector-total-length
-    $bytevector-concatenate	$bytevector-reverse-and-concatenate)
+    $bytevector-concatenate	$bytevector-reverse-and-concatenate
+    $bytevector-copy)
   (import (except (ikarus)
 		  make-bytevector	bytevector-length
+		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!
 		  bytevector-copy	bytevector-append
 		  bytevector=?		native-endianness
@@ -178,7 +181,8 @@
 	    $bytevector=
 	    $bytevector-total-length
 	    $bytevector-concatenate
-	    $bytevector-reverse-and-concatenate)
+	    $bytevector-reverse-and-concatenate
+	    $bytevector-empty?)
     (vicare arguments validation))
 
   (module (platform-endianness)
@@ -488,6 +492,20 @@
       ((bytevector bv))
     ($bytevector-length bv)))
 
+(define (bytevector-empty? bv)
+  ;;Defined by  Vicare.  Return  true if BV  is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'bytevector-empty?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($bytevector-empty? bv)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($bytevector-empty? bv)
+  ($fxzero? ($bytevector-length bv)))
+
 (define (bytevector=? x y)
   ;;Defined by R6RS.  Return  #t if X and Y are equal;  that is, if they
   ;;have  the same  length and  equal bytes  at all  valid  indices.  It
@@ -524,6 +542,13 @@
 	  (begin
 	    ($bytevector-u8-set! dst.bv i ($bytevector-u8-ref src.bv i))
 	    (loop src.bv dst.bv ($fxadd1 i) src.len)))))))
+
+(define ($bytevector-copy src.bv)
+  (receive-and-return (dst.bv)
+      ($make-bytevector ($bytevector-length src.bv))
+    ($bytevector-copy! src.bv 0
+		       dst.bv 0
+		       ($bytevector-length src.bv))))
 
 (define (bytevector-copy! src src.start dst dst.start k)
   ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,

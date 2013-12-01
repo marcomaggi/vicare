@@ -239,6 +239,7 @@ When used without arguments or arguments validation disabled: expand to
                                    related arguments.
 * args predefined bytevectors::    Validating bytevector and related
                                    arguments.
+* args predefined pathnames::      String and bytevector pathnames.
 * args predefined symbols::        Validating symbols.
 * args predefined enum-sets::      Validating enum-sets.
 * args predefined pointers::       Validating pointers.
@@ -1015,6 +1016,49 @@ both @var{start} and @var{past} are fixnums satisfying the constraints:
 
 In other words: @var{start} and @var{past} select a subbytevector of
 @var{bv} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined pathnames
+@subsection String and bytevector pathnames
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} file-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{file-pathname?} from
+@library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-string-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-string-pathname?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-bytevector-pathname @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-bytevector-pathname?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-colon-search-path?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-string-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-string-colon-search-path?} from @library{vicare $posix}.
+@end deffn
+
+
+@deffn {Validation Clause} file-bytevector-colon-search-path @var{obj}
+Succeed if @var{obj} satisfies the predicate
+@func{file-bytevector-colon-search-path?} from @library{vicare $posix}.
 @end deffn
 
 @c page

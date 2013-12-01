@@ -1,0 +1,897 @@
+@node parser-tools unix-pathnames
+@section Parsing Unix file system pathnames
+
+
+@cindex @library{vicare parser-tools unix-pathnames}, library
+@cindex Library @library{vicare parser-tools unix-pathnames}
+
+
+The library @library{vicare parser-tools unix-pathnames} implements
+facilities for parsing and manipulating Unix file system pathnames.
+When importing it, it is suggested to prefix the bindings with
+@samp{uxptn.} as in:
+
+@example
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+@end example
+
+
+@menu
+* parser-tools unix-pathnames grammar:: Grammar of Unix pathnames.
+* parser-tools unix-pathnames errors::  Condition object types.
+* parser-tools unix-pathnames preds::   Predicates for Unix pathnames.
+* parser-tools unix-pathnames conv::    Converting Unix pathnames.
+* parser-tools unix-pathnames parser::  Parsing Unix pathnames.
+* parser-tools unix-pathnames manip::   Manipulating Unix pathnames.
+* parser-tools unix-pathnames comp::    Components of Unix pathnames.
+@end menu
+
+@c page
+@node parser-tools unix-pathnames grammar
+@subsection Grammar of Unix pathnames
+
+
+A Unix pathname has the following grammar:
+
+@example
+pathname           = absolute-pathname
+                   | relative-pathname
+
+absolute-pathname  = "/" segment *( "/" segment )
+relative-pathname  = segment-nz *( "/" segment )
+
+segment            = *char
+segment-nz         = 1*char
+
+char               = [1, 255]
+@end example
+
+@noindent
+where @math{[1, 255]} represents the octet interval between @math{1}
+included and @math{255} included.  Notice that: an empty @code{pathname}
+is invalid; an empty @code{segment} is valid and interpreted as
+equivalent to a pathname segment representing the current directory
+@samp{.}.
+
+@c page
+@node parser-tools unix-pathnames errors
+@subsection Condition object types
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Parser errors
+
+
+@deftp {Condition Type} &unix-pathname-parser-error
+Signals an error while parsing a Unix pathname representation; it is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-unix-pathname-parser-error
+Build and return a new condition object of type
+@condition{unix-pathname-parser-error}.
+@end defun
+
+
+@defun unix-pathname-parser-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unix-pathname-parser-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Normalisation errors
+
+
+@deftp {Condition Type} &unix-pathname-normalisation-error
+Signals an error while normalising a Unix pathname representation; it is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-unix-pathname-normalisation-error
+Build and return a new condition object of type
+@condition{unix-pathname-normalisation-error}.
+@end defun
+
+
+@defun unix-pathname-normalisation-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unix-pathname-normalisation-error}; otherwise return
+@false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Raising exceptions
+
+
+@defun raise-unix-pathname-parser-error @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{unix-pathname-parser-error}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
+
+
+@defun raise-unix-pathname-normalisation-error @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{unix-pathname-normalisation-error}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames preds
+@subsection Predicates for Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun pathname? @var{obj}
+@defunx bytevector-pathname? @var{obj}
+@defunx $bytevector-pathname? @var{bv}
+@defunx string-pathname? @var{obj}
+@defunx $string-pathname? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of a Unix pathname; otherwise return @false{}.  If
+@var{obj} is neither string nor bytevector: return @false{}.
+
+@func{bytevector-pathname?} returns @false{} if @var{obj} is not a
+bytevector.  @func{string-pathname?} returns @false{} if @var{obj} is
+not a string.  @func{$bytevector-pathname?} assumes that @var{bv} is a
+bytevector.  @func{$string-pathname?} assumes that @var{str} is a
+string.
+@end defun
+
+
+@defun segment? @var{obj}
+@defunx bytevector-segment? @var{obj}
+@defunx $bytevector-segment? @var{bv}
+@defunx string-segment? @var{obj}
+@defunx $string-segment? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of a Unix pathname segment; otherwise return @false{}.
+If @var{obj} is neither string nor bytevector: return @false{}.
+
+@func{bytevector-segment?} returns @false{} if @var{obj} is not a
+bytevector.  @func{string-segment?} returns @false{} if @var{obj} is not
+a string.  @func{$bytevector-segment?} assumes that @var{bv} is a
+bytevector.  @func{$string-segment?} assumes that @var{str} is a string.
+@end defun
+
+
+@defun list-of-segments? @var{obj}
+Return @true{} if @var{obj} is a null or a proper list of strings and/or
+bytevectors each acceptable as representation of a Unix pathname
+segment; otherwise return @false{}.
+@end defun
+
+
+@defun absolute? @var{obj}
+@defunx $bytevector-absolute? @var{bv}
+@defunx $string-absolute? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of absolute Unix pathname; otherwise return @false{}.  If
+@var{obj} is not a valid representation of Unix pathname: raise an
+exception.
+
+@func{$bytevector-absolute?} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-absolute?} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+@end defun
+
+
+@defun relative? @var{obj}
+@defunx $bytevector-relative? @var{bv}
+@defunx $string-relative? @var{str}
+Return @true{} if @var{obj} is a string or bytevector acceptable as
+representation of absolute Unix pathname; otherwise return @false{}.  If
+@var{obj} is not a valid representation of Unix pathname: raise an
+exception.
+
+@func{$bytevector-relative?} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-relative?} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames conv
+@subsection Converting Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun string/bytevector->pathname-bytevector @var{obj}
+@defunx string/bytevector->pathname-bytevector @var{obj} @var{who}
+Convert the string or bytevector @var{obj} to a bytevector
+representation of a pathname; when successful return a bytevector, if an
+error occurs raise an exception with compound condition object of types:
+@condition{unix-pathname-parser-error}, @condition{who},
+@condition{message}, @condition{irritants} using the optional @var{who}
+as value for the condition object of type @condition{who}.
+
+When @var{obj} is a string: only characters whose Unicode code point is
+in the range @math{[1, 255]} are accepted, notice that zero is excluded;
+in this case a new bytevector is returned.  An empty string is
+equivalent to a pathname segment representing the current directory: the
+return value is @code{#vu8(46)}.
+
+When @var{obj} is a bytevector: all the octets are accepted, with the
+exception of the octet zero; in this case @var{obj} itself is returned.
+An empty bytevector is equivalent to a pathname segment representing the
+current directory: the return value is @code{#vu8(46)}.
+@end defun
+
+
+@defun pathname-bytevector->string @var{obj}
+@defunx pathname-bytevector->string @var{obj} @var{who}
+Convert the bytevector pathname representation @var{obj} to a string
+pathname representation; when successful return a string, if an error
+occurs raise an exception with compound condition object of types:
+@condition{unix-pathname-parser-error}, @condition{who},
+@condition{message}, @condition{irritants} using the optional @var{who}
+as value for the condition object of type @condition{who}.  An empty
+bytevector is equivalent to a bytevector representing the current
+directory: the return value is @code{"."}.
+
+All the octets in the bytevector are considered valid, with the
+exception of the octet zero.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames parser
+@subsection Parsing Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun parse-segment @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If @eof{} or a slash character in @ascii{} coding is read: return a
+possibly empty bytevector holding the bytes accumulated so far; the port
+position is left pointing to the byte after the last accumulated one.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
+@end defun
+
+
+@defun parse-segment-nz @var{port}
+Accumulate bytes from @var{port} while they are valid for a
+@code{segment-nz} component; notice that an empty @code{segment-nz} is
+not valid.
+
+If the first read operation returns @eof{} or a slash character in
+@ascii{} coding: the port position is restored to the one before this
+function call and the return value is false.
+
+If, after at least one valid byte is read, @eof{} or a slash is read:
+return a bytevector holding the bytes accumulated so far; the port
+position is left pointing to the byte after the last accumulated one.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
+@end defun
+
+
+@defun parse-slash-and-segment @var{port}
+Attempt to read from @var{port} the sequence slash character plus
+@code{segment} component; notice that an empty @code{segment} is valid.
+
+If these components are successfully read: return a bytevector holding
+the accumulated @code{segment} bytes; if the @code{segment} component is
+empty: the returned bytevector is normalised to hold a single byte
+representing a dot in @ascii{} coding.  The port position is left
+pointing to the byte after the last accumulated byte from the
+@code{segment}.
+
+If @eof{} or a valid byte different from slash is read as first byte:
+return false; the port position is rewind to the one before this
+function call.
+
+If an invalid byte is read: an exception is raised using
+@func{raise-unix-pathname-parser-error}; the port position is rewind to
+the one before this function call.
+@end defun
+
+
+@defun parse-pathname @var{port}
+Parse from @var{port} an absolute or relative pathname until @eof{} is
+found; return two values: a boolean, @true{} if the pathname is
+absolute; a possibly empty list of bytevectors representing the
+segments.
+
+If an invalid octet is read or @eof{} is read before any octet: an
+exception is raised with @func{raise-unix-pathname-parser-error}; the
+port position is rewind to the one before this function call.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames manip
+@subsection Manipulating Unix pathnames
+
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.
+
+
+@defun normalise-segments @var{absolute?} @var{segments}
+Given a list of bytevectors representing Unix pathname segments:
+normalise them, as much as possible, removing segments representing
+single--dot and double--dot directory entries; if @var{absolute?}  is
+true: normalise @var{segments} as an absolute pathname, else normalise
+it as a relative pathname.  Return two values:
+
+@enumerate
+@item
+A boolean, @true{} if some change was made from @var{segments} to the
+second return value; this allows us to detect if a normalised list of
+segments when serialised into a bytevector becomes different from the
+original bytevector that generated @var{segments}.
+
+@item
+A new, possibly empty, list of bytevectors representing the
+normalisation of @var{segments}.  Absolute pathname segments can hold
+neither single--dot nor double--dot segments: if a double--dot segment
+cannot annihilate its previous segment, it is just discarded.
+@end enumerate
+@end defun
+
+
+@defun serialise-segments @var{absolute?} @var{segments}
+Given a possibly empty list of bytevectors representing pathname
+segments build and return a new bytevector representing the full
+pathname; if @var{absolute?} is true: the first byte of the result
+represents a slash in @ascii{} coding.
+
+If @var{segments} is null and @var{absolute?} is true: the returned
+value is a bytevector holding a single byte representing a slash in
+@ascii{} coding.
+
+If @var{segments} is null and @var{absolute?} is false: the returned
+value is a bytevector holding a single byte representing a dot in
+@ascii{} coding.
+@end defun
+
+@c page
+@node parser-tools unix-pathnames comp
+@subsection Components of Unix pathnames
+
+
+The following functions accept as argument a string or bytevector
+representing a Unix pathname and return a string or bytevector; the
+returned value is not always a newly built object, so we must
+@strong{not} mutate it.
+
+The following bindings are exported by the library @library{vicare
+parser-tools unix-pathnames}.  Identifiers whose name is prefixed with
+@code{$} are bound to unsafe operations which do not validate their
+arguments.
+
+
+@defun extension @var{obj}
+@defunx $bytevector-extension @var{bv}
+@defunx $string-extension @var{str}
+Return a string or bytevector representing the extension of @var{obj},
+which must be a valid Unix pathname string or bytevector representation.
+The extension of a pathname is the sequence of characters from the end
+up to the first dot character before the first slash character; the
+returned value does @strong{not} include the dot character and can be
+empty.
+
+If the dot is the first character in the pathname's last segment: return
+the empty bytevector because we interpret this pathname as representing
+a Unix--style ``hidden'' filename or dirname.
+
+@func{$bytevector-extension} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-extension} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.extension ?pathname))
+
+(doit "ciao.it")                @result{} "it"
+(doit "ciao")                   @result{} ""
+(doit "/path/to/file.ext")      @result{} "ext"
+(doit "/path/to/file.")         @result{} ""
+(doit "/path/to/file")          @result{} ""
+(doit "/path/to/file.ext/ab")   @result{} ""
+(doit "/path/to/some.file.ext") @result{} "ext"
+(doit "a/")                     @result{} ""
+(doit "a.")                     @result{} ""
+(doit ".")                      @result{} ""
+(doit "..")                     @result{} ""
+(doit "...")                    @result{} ""
+(doit ".a")                     @result{} ""
+(doit ".emacsrc")               @result{} ""
+(doit "..a")                    @result{} "a"
+(doit "...a")                   @result{} "a"
+(doit "..a.b")                  @result{} "b"
+(doit "~/.")                    @result{} ""
+(doit "~/..")                   @result{} ""
+(doit "~/...")                  @result{} ""
+(doit "~/.a")                   @result{} ""
+(doit "~/.emacsrc")             @result{} ""
+(doit "~/..a")                  @result{} "a"
+(doit "~/...a")                 @result{} "a"
+(doit "~/..a.b")                @result{} "b"
+
+(doit '#ve(ascii "/path/to/file.ext"))
+@result{} #ve(ascii "ext")
+@end example
+@end defun
+
+
+@defun dirname @var{obj}
+@defunx $bytevector-dirname @var{bv}
+@defunx $string-dirname @var{str}
+Return a string or bytevector representing the dirname of @var{obj},
+which must be a valid Unix pathname string or bytevector representation.
+The dirname of a pathname is the sequence of characters from the
+beginning up to the last slash character; the returned value does
+@strong{not} include the slash character and is never empty: when there
+is no directory part in the pathname, the returned value represents the
+current directory as single dot.  Notice that contiguous slashses are
+``collapsed'' into one slash.
+
+@func{$bytevector-dirname} assumes that @var{bv} satisfies the predicate
+@func{bytevector-pathname?}.  @func{$string-dirname} assumes that
+@var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.dirname ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "/path/to"
+(doit "file.ext")               @result{} "."
+(doit "/file.ext")              @result{} "/"
+(doit "//file.ext")             @result{} "/"
+(doit "/path/to///file.ext")    @result{} "/path/to"
+(doit "//////file.ext")         @result{} "/"
+(doit "a/b")                    @result{} "a"
+(doit "a")                      @result{} "."
+(doit "../a")                   @result{} ".."
+(doit "./a")                    @result{} "."
+(doit "../abcd")                @result{} ".."
+(doit "./abcd")                 @result{} "."
+(doit "../abcd/efgh")           @result{} "../abcd"
+(doit "./abcd/efgh")            @result{} "./abcd"
+(doit "/ciao/")                 @result{} "/"
+(doit "ciao/")                  @result{} "."
+(doit "./ciao/")                @result{} "."
+(doit "hello/ciao/")            @result{} "hello"
+(doit "//////")                 @result{} "/"
+(doit "ciao//////")             @result{} "."
+
+(doit '#ve(ascii "/path/to/file.ext"))
+@result{} #ve(ascii "/path/to")
+@end example
+@end defun
+
+
+@defun tailname @var{obj}
+@defunx $bytevector-tailname @var{bv}
+@defunx $string-tailname @var{str}
+Return a string or bytevector representing the tailname of @var{obj},
+which must be a valid Unix pathname string or bytevector representation.
+The tailname of a pathname is its last segment; the returned value does
+@strong{not} include the leading slash character, if any, and it cannot
+be empty; the only exception is when the argument represents the root
+directory, in which case the returned value is the dot segment.  When
+the whole @var{obj} is the tailname: the returned value is @var{obj}
+itself.
+
+@func{$bytevector-tailname} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-tailname} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.tailname ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "file.ext"
+(doit "file.ext")               @result{} "file.ext"
+(doit "/file.ext")              @result{} "file.ext"
+(doit "//file.ext")             @result{} "file.ext"
+(doit "/path/to///file.ext")    @result{} "file.ext"
+(doit "//////file.ext")         @result{} "file.ext"
+(doit "a/b")                    @result{} "b"
+(doit "a")                      @result{} "a"
+(doit "../a")                   @result{} "a"
+(doit "./a")                    @result{} "a"
+(doit "../abcd")                @result{} "abcd"
+(doit "./abcd")                 @result{} "abcd"
+(doit "../abcd/efgh")           @result{} "efgh"
+(doit "./abcd/efgh")            @result{} "efgh"
+(doit "/ciao/")                 @result{} "ciao"
+(doit "ciao/")                  @result{} "ciao"
+(doit "./ciao/")                @result{} "ciao"
+(doit "hello/ciao/")            @result{} "ciao"
+(doit "ciao//////")             @result{} "ciao"
+(doit "/")                      @result{} "."
+(doit "//////")                 @result{} "."
+@end example
+@end defun
+
+
+@defun rootname @var{obj}
+@defunx $bytevector-rootname @var{bv}
+@defunx $string-rootname @var{str}
+Return a string or bytevector representing the rootname of @var{obj},
+which must be a valid Unix pathname string or bytevector representation.
+The rootname of a pathname is the sequence of characters from the
+beginning up to the last dot character before the extension, in other
+words: everything but the extension; the returned value does
+@strong{not} include the dot character and cannot be empty.
+
+If the dot is the first character in the pathname's last segment: return
+the whole bytevector because we interpret such pathname as representing
+a Unix--style ``hidden'' filename or dirname.  If the last segment
+represents the uplevel directory (it is the double--dot): return the
+full pathname.  The return value can be the argument itself.
+
+@func{$bytevector-rootname} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-rootname} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.rootname ?pathname))
+
+(doit "ciao.it")                @result{} "ciao"
+(doit "ciao")                   @result{} "ciao"
+(doit "/path/to/file.ext")      @result{} "/path/to/file"
+(doit "/path/to/file.")         @result{} "/path/to/file"
+(doit "/path/to/file")          @result{} "/path/to/file"
+(doit "/path/to/file.ext/ab")   @result{} "/path/to/file.ext/ab"
+(doit "/path/to/some.file.ext") @result{} "/path/to/some.file"
+(doit "a/")                     @result{} "a"
+(doit "a.")                     @result{} "a"
+(doit ".")                      @result{} "."
+(doit "..")                     @result{} ".."
+(doit "...")                    @result{} ".."
+(doit ".a")                     @result{} ".a"
+(doit ".emacsrc")               @result{} ".emacsrc"
+(doit "..a")                    @result{} "."
+(doit "...a")                   @result{} ".."
+(doit "..a.b")                  @result{} "..a"
+(doit "~/.")                    @result{} "~/."
+(doit "~/..")                   @result{} "~/.."
+(doit "~/...")                  @result{} "~/.."
+(doit "~/.a")                   @result{} "~/.a"
+(doit "~/.emacsrc")             @result{} "~/.emacsrc"
+(doit "~/..a")                  @result{} "~/."
+(doit "~/...a")                 @result{} "~/.."
+(doit "~/..a.b")                @result{} "~/..a"
+(doit "///")                    @result{} "/"
+(doit "ciao///")                @result{} "ciao"
+(doit "ciao.it///")             @result{} "ciao"
+(doit "ciao.it.en///")          @result{} "ciao.it"
+@end example
+@end defun
+
+
+@defun strip-trailing-slashes @var{obj}
+@defunx $bytevector-strip-trailing-slashes @var{bv}
+@defunx $string-strip-trailing-slashes @var{str}
+Return a string or bytevector representing the argument with the
+trailing slashes stripped, if any.  If there are no trailing slashes:
+return @var{obj} itself.
+
+@func{$bytevector-strip-trailing-slashes} assumes that @var{bv}
+satisfies the predicate @func{bytevector-pathname?}.
+@func{$string-strip-trailing-slashes} assumes that @var{str} satisfies
+the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.strip-trailing-slashes ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "/path/to/file.ext"
+(doit "/path/to/file.ext///")   @result{} "/path/to/file.ext"
+(doit "/")                      @result{} "/"
+(doit "///")                    @result{} "/"
+@end example
+@end defun
+
+
+@defun split @var{obj}
+@defunx $bytevector-split @var{bv}
+@defunx $string-split @var{str}
+Split into segments the argument @var{obj}, which must be a valid Unix
+pathname string or bytevector representation.  Return 2 values: a
+boolean, true if the pathname is absolute; null or a proper list of
+bytevectors representing the segments.  The returned segments are
+normalised by removing, when possible, segments representing the current
+directory and segments representing the uplevel directory.
+
+@func{$bytevector-split} assumes that @var{bv} satisfies the predicate
+@func{bytevector-pathname?}.  @func{$string-split} assumes that
+@var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.split ?pathname))
+
+(doit "/path/to/file.ext")
+@result{} #t (#ve(ascii "path")
+       #ve(ascii "to")
+       #ve(ascii "file.ext"))
+
+(doit "path/to/file.ext")
+@result{} #f (#ve(ascii "path")
+       #ve(ascii "to")
+       #ve(ascii "file.ext"))
+
+(doit "ciao//")         @result{} #f (#ve(ascii "ciao"))
+(doit "/")              @result{} #t ()
+(doit ".")              @result{} #f ()
+(doit "..")             @result{} #f (#ve(ascii ".."))
+(doit "ciao/..")        @result{} #f ()
+(doit "/.")             @result{} #t ()
+(doit "/..")            @result{} #t ()
+(doit "/ciao/..")       @result{} #t ()
+@end example
+@end defun
+
+
+@defun normalise @var{obj}
+@defunx $bytevector-normalise @var{bv}
+@defunx $string-normalise @var{str}
+Normalise the argument @var{obj}, which must be a valid Unix pathname
+string or bytevector representation, by removing, when possible,
+segments representing the current directory and segments representing
+the uplevel directory.  The result of this function is @strong{not} a
+full canonicalisation as can be performed by a system function like the
+@posix{} @cfunc{realpath}.
+
+@func{$bytevector-normalise} assumes that @var{bv} satisfies the
+predicate @func{bytevector-pathname?}.  @func{$string-normalise} assumes
+that @var{str} satisfies the predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (normalise (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.normalise ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "/path/to/file.ext"
+(doit "path/to/file.ext")       @result{} "path/to/file.ext"
+(doit "ciao//")                 @result{} "ciao"
+(doit "/")                      @result{} "/"
+(doit ".")                      @result{} "."
+(doit "..")                     @result{} ".."
+(doit "ciao/..")                @result{} "."
+(doit "/.")                     @result{} "/"
+(doit "/..")                    @result{} "/"
+(doit "/ciao/..")               @result{} "/"
+@end example
+@end defun
+
+
+@defun prefix? @vari{obj} @varii{obj}
+@defunx $bytevector-prefix? @vari{bv} @varii{bv}
+@defunx $string-prefix? @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid and
+@strong{normalised} Unix pathname representations: return @true{} if the
+first is the prefix of the second, otherwise return @false{}.  The
+result of this function is fully reliable only if the arguments are
+absolute pathnames resulting from the canonicalisation performed by a
+system function like the @posix{} @cfunc{realpath}.
+
+@func{$bytevector-prefix?} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-prefix?}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.prefix? ?pathname))
+
+(doit "/path/to/file.ext" "/path/to/file.ext") @result{} #t
+(doit "/path/to/"         "/path/to/file.ext") @result{} #t
+(doit "/path/from"        "/path/to/file.ext") @result{} #f
+@end example
+@end defun
+
+
+@defun suffix? @vari{obj} @varii{obj}
+@defunx $bytevector-suffix? @vari{bv} @varii{bv}
+@defunx $string-suffix? @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid and
+@strong{normalised} Unix pathname representations: return @true{} if the
+first is the suffix of the second, otherwise return @false{}.  The
+result of this function is fully reliable only if the arguments are
+absolute pathnames resulting from the canonicalisation performed by a
+system function like the @posix{} @cfunc{realpath}.
+
+@func{$bytevector-suffix?} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-suffix?}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.suffix? ?pathname))
+
+(doit "/path/to/file.ext" "/path/to/file.ext") @result{} #t
+(doit "/to/file.ext"      "/path/to/file.ext") @result{} #t
+(doit "/from/file.ext"    "/path/to/file.ext") @result{} #f
+@end example
+@end defun
+
+
+@defun prepend @vari{obj} @varii{obj}
+@defunx $bytevector-prepend @vari{bv} @varii{bv}
+@defunx $string-prepend @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid Unix pathnames:
+prepend the first to the second and return the result.
+
+@func{$bytevector-prepend} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-prepend}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.prepend ?pathname))
+
+(doit "/path/to" "file.ext")    @result{} "/path/to/file.ext"
+(doit "/" "path/to/file.ext")   @result{} "/path/to/file.ext"
+(doit "." "path/to/file.ext")   @result{} "./path/to/file.ext"
+(doit ".." "path/to/file.ext")  @result{} "../path/to/file.ext"
+@end example
+@end defun
+
+
+@defun append @vari{obj} @varii{obj}
+@defunx $bytevector-append @vari{bv} @varii{bv}
+@defunx $string-append @vari{str} @varii{str}
+Given two strings or two bytevectors representing valid Unix pathnames:
+append the first to the second and return the result.
+
+@func{$bytevector-append} assumes that @vari{bv} and @varii{bv} satisfy
+the predicate @func{bytevector-pathname?}.  @func{$string-append}
+assumes that @vari{str} and @varii{str} satisfy the predicate
+@func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.append ?pathname))
+
+(doit "file.ext" "/path/to")    @result{} "/path/to/file.ext"
+(doit "path/to/file.ext" "/")   @result{} "/path/to/file.ext"
+(doit "path/to/file.ext" ".")   @result{} "./path/to/file.ext"
+(doit "path/to/file.ext" "..")  @result{} "../path/to/file.ext"
+@end example
+@end defun
+
+
+@defun replace-extension @var{ptn} @var{ext}
+@defunx $bytevector-replace-extension @var{ptn-bv} @var{ext-bv}
+@defunx $string-replace-extension @var{ptn-str} @var{ext-str}
+Given a string representing a valid Unix pathname and a string
+representing a valid Unix pathname segment, or a bytevector representing
+a valid Unix pathname and a bytevector representing a valid Unix
+pathname segment: strip the extension from the pathname and append the
+segment to the result as new extension.
+
+@func{$bytevector-replace-extension} assumes that @var{ptn-bv} satisfies
+the predicate @func{bytevector-pathname?} and that @var{ext-bv}
+satisfies the predicate @func{bytevector-segment?}.
+@func{$string-replace-extension} assumes that @var{ptn-str} satisfies
+the predicate @func{string-pathname?} and that @var{ext-str} satisfies
+the predicate @func{string-segment?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname ?extension)
+  (uxptn.replace-extension ?pathname ?extension))
+
+(doit "file.one"          "two") @result{} "file.two"
+(doit "/path/to/file.one" "two") @result{} "/path/to/file.two"
+(doit ".emacs"            "elc") @result{} ".emacs.elc"
+(doit "/path/to/.emacs"   "elc") @result{} "/path/to/.emacs.elc"
+
+(doit "/"   "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit "///" "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit "."   "ext")
+@error{} &unix-pathname-normalisation-error
+
+(doit ".."  "ext")
+@error{} &unix-pathname-normalisation-error
+@end example
+@end defun
+
+
+@defun uri-representation @var{obj}
+@defunx $bytevector-uri-representation @var{bv}
+@defunx $string-uri-representation @var{str}
+Return a string or bytevector being the @uri{} representation of
+@var{obj}, which must be a valid Unix pathname string or bytevector
+representation.
+
+@func{$bytevector-uri-representation} assumes that @var{bv} satisfies
+the predicate @func{bytevector-pathname?}.
+@func{$string-uri-representation} assumes that @var{str} satisfies the
+predicate @func{string-pathname?}.
+
+@example
+#!vicare
+(import (vicare)
+  (suffix (vicare parser-tools unix-pathnames) uxptn.))
+
+(define-syntax-rule (doit ?pathname)
+  (uxptn.uri-representation ?pathname))
+
+(doit "/path/to/file.ext")      @result{} "file:///path/to/file.ext"
+(doit "path/to/file.ext")       @result{} "file:path/to/file.ext"
+@end example
+@end defun
+
+@c end of file

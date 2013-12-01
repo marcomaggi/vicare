@@ -139,10 +139,25 @@
     directory-stream-pathname		directory-stream-pointer
     directory-stream-fd			directory-stream-closed?
 
-    split-file-name
-    split-search-path			split-pathname
-    split-search-path-bytevector	split-pathname-bytevector
-    split-search-path-string		split-pathname-string
+    ;; reexported from (vicare $posix)
+    (deprefix (posix.split-pathname-root-and-tail
+	       posix.search-file-in-environment-path
+	       posix.search-file-in-list-path
+	       posix.split-pathname
+	       posix.split-pathname-bytevector
+	       posix.split-pathname-string
+	       posix.split-search-path
+	       posix.split-search-path-bytevector
+	       posix.split-search-path-string
+	       posix.file-absolute-pathname?
+	       posix.file-relative-pathname?
+	       posix.file-pathname?
+	       posix.file-string-pathname?
+	       posix.file-bytevector-pathname?
+	       posix.file-colon-search-path?
+	       posix.file-string-colon-search-path?
+	       posix.file-bytevector-colon-search-path?)
+	      posix.)
 
     ;; file descriptors
     open				close
@@ -406,7 +421,24 @@
 		  read			write
 		  truncate)
     (prefix (only (vicare $posix)
-		  errno->string)
+		  errno->string
+		  split-pathname-root-and-tail
+		  search-file-in-environment-path
+		  search-file-in-list-path
+		  split-pathname
+		  split-pathname-bytevector
+		  split-pathname-string
+		  split-search-path
+		  split-search-path-bytevector
+		  split-search-path-string
+		  file-absolute-pathname?
+		  file-relative-pathname?
+		  file-pathname?
+		  file-string-pathname?
+		  file-bytevector-pathname?
+		  file-colon-search-path?
+		  file-string-colon-search-path?
+		  file-bytevector-colon-search-path?)
 	    posix.)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
@@ -4443,135 +4475,6 @@
 	  (%raise-errno-error who rv processes rusage)))))))
 
 
-;;;; splitting pathnames and search paths
-
-(module (split-search-path
-	 split-search-path-bytevector
-	 split-search-path-string
-	 split-pathname
-	 split-pathname-bytevector
-	 split-pathname-string)
-
-  (define (split-search-path path)
-    (define who 'split-search-path)
-    (with-arguments-validation (who)
-	((string-or-bytevector	path))
-      (if (string? path)
-	  (map ascii->string (split-search-path-bytevector (string->ascii path)))
-	(split-search-path-bytevector path))))
-
-  (define (split-search-path-string path)
-    (define who 'split-search-path-string)
-    (with-arguments-validation (who)
-	((string	path))
-      (map ascii->string (split-search-path-bytevector (string->ascii path)))))
-
-  (define (split-search-path-bytevector path)
-    (define who 'split-search-path-bytevector)
-    (with-arguments-validation (who)
-	((bytevector	path))
-      (let ((path.len ($bytevector-length path)))
-	(if ($fxzero? path.len)
-	    '()
-	  (let next-pathname ((path.index	0)
-			      (pathnames	'()))
-	    (if ($fx= path.index path.len)
-		(reverse pathnames)
-	      (let ((separator-index (%find-next-separator ASCII-COLON-FX
-							   path path.index path.len)))
-		(if separator-index
-		    (next-pathname ($fxadd1 separator-index)
-				   (if ($fx= path.index separator-index)
-				       pathnames
-				     (cons (%$subbytevector path path.index separator-index)
-					   pathnames)))
-		  (reverse (cons (%$subbytevector path path.index path.len)
-				 pathnames))))))))))
-
-  (define (split-pathname pathname)
-    (define who 'split-pathname)
-    (with-arguments-validation (who)
-	((string-or-bytevector	pathname))
-      (if (string? pathname)
-	  (split-pathname-string pathname)
-	(split-pathname-bytevector pathname))))
-
-  (define (split-pathname-string pathname)
-    (define who 'split-pathname-string)
-    (with-arguments-validation (who)
-	((string	pathname))
-      (let-values (((absolute? components)
-		    (split-pathname-bytevector (string->ascii pathname))))
-	(values absolute? (map ascii->string components)))))
-
-  (define (split-pathname-bytevector pathname)
-    (define who 'split-pathname-bytevector)
-    (with-arguments-validation (who)
-	((bytevector	pathname))
-      (let* ((pathname.len	($bytevector-length pathname))
-	     (components	(if ($fxzero? pathname.len)
-				    '()
-				  (%$bytevector-pathname-components pathname pathname.len))))
-	(cond ((null? components)
-	       (cond (($fxzero? pathname.len)
-		      (values #f '()))
-		     (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
-		      (values #t '()))
-		     (else
-		      (values #f '()))))
-	      (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
-	       (values #t components))
-	      (else
-	       (values #f components))))))
-
-  (define (%$bytevector-pathname-components pathname.bv pathname.len)
-    (let next-component ((pathname.index	0)
-			 (components		'()))
-      (if ($fx= pathname.index pathname.len)
-	  (reverse components)
-	(let ((separator-index (%find-next-separator ASCII-SLASH-FX
-						     pathname.bv pathname.index pathname.len)))
-	  (if separator-index
-	      (next-component ($fxadd1 separator-index)
-			      (if ($fx= pathname.index separator-index)
-				  components
-				(cons (%$subbytevector pathname.bv pathname.index separator-index)
-				      components)))
-	    (reverse (cons (%$subbytevector pathname.bv pathname.index pathname.len)
-			   components)))))))
-
-  (define (%find-next-separator separator bv bv.start bv.len)
-    ;;Scan BV, from BV.START included  to BV.LEN excluded, looking for a
-    ;;byte representing a slash in  ASCII encoding.  When found return a
-    ;;fixnum being the index of the slash, else return false.
-    ;;
-    (let next-byte ((bv.index bv.start))
-      (if ($fx= bv.index bv.len)
-	  #f
-	(if ($fx= separator ($bytevector-u8-ref bv bv.index))
-	    bv.index
-	  (next-byte ($fxadd1 bv.index))))))
-
-  (define-inline (%$subbytevector src.bv src.start src.end)
-    (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start)))
-
-  (define (%$subbytevector-u8/count src.bv src.start dst.len)
-    (let ((dst.bv ($make-bytevector dst.len)))
-      (do ((dst.index 0         ($fx+ 1 dst.index))
-	   (src.index src.start ($fx+ 1 src.index)))
-	  (($fx= dst.index dst.len)
-	   dst.bv)
-	($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
-
-  (define-inline-constant ASCII-COLON-FX
-    58 #;(char->integer #\:))
-
-  (define-inline-constant ASCII-SLASH-FX
-    47 #;(char->integer #\/))
-
-  #| end of module |# )
-
-
 ;;;; executable pathname
 
 (module (vicare-executable-as-bytevector
@@ -4645,7 +4548,7 @@
 	   (PATH-LIST	(if PATH
 			    (if ($fxzero? ($bytevector-length PATH))
 				'(#ve(ascii "."))
-			      (split-search-path-bytevector PATH))
+			      (posix.split-search-path-bytevector PATH))
 			  DEFAULT-PATH-LIST)))
       (let next-directory ((PATH-LIST PATH-LIST))
 	(if (null? PATH-LIST)

@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d5
+Subject: [announce] Vicare Scheme revision 0.3d7
 
                              Vicare Scheme
                              =============
@@ -37,6 +37,203 @@ this project has a mailing list:
 	     <http://groups.google.com/group/vicare-users>
 
 
+Notes for revision 0.3d7
+------------------------
+
+* Boot images have been rotated.
+
+* Added unsafe operations to (vicare system $vectors):
+
+    $vector-map1
+    $vector-for-each1
+    $vector-for-all1
+    $vector-exists1
+
+* Added convenience syntax CASE-DEFINE to (vicare).
+
+    (case-define who ?cl-clause0 cl-clause ...)
+    ==> (define who (case-lambda ?cl-clause0 ?cl-clause ...))
+
+* Added to (vicare) the syntaxes:
+
+    let-constants
+    let*-constants
+    letrec-constants
+    letrec*-constants
+
+  like LET, LET*, LETREC, LETREC* but create immutable bindings.
+
+* Added  to   (vicare)  the  experimental  syntaxes   LAMBDA*,  DEFINE*,
+  CASE-LAMBDA*,  CASE-DEFINE*.   See   the  documentation  nodes  "iklib
+  syntaxes lambdas" and "iklib syntaxes defines".
+
+* Added  to  (vicare)  BYTEVECTOR-HASH   using  the  same  algorithm  of
+  STRING-HASH.
+
+* When  the syntax  DEFINE/TAGS  from (nausicaa)  is  used for  function
+  definition, the body forms are enclosed in a LET syntax as follows:
+
+    (let-constants ((__who__ (quote ?id))) ?body0 ?body ...)
+
+  so the binding "__who__" is available in the body forms to reference a
+  symbol representing the  function's name; this is  useful when raising
+  exceptions with  condition type "&who".  Such  non-hygienic definition
+  looks  non-Schemey, but  in  many  places in  the  code  there is  the
+  pattern:
+
+    (define (doit . args)
+      (define who 'doit)
+      ---)
+
+  to make the  name of the function available; such  definitions can now
+  be cleared.
+
+* Added   experimental  nested   method  invocation.    When  a   method
+  specification has a  single tagged return value,  the following syntax
+  is available:
+
+    (define-label <alpha>
+      (method ((one <list>) self a b)
+        (list self a b)))
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1))		=> '(1 11 21)
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1
+         => fold-left 0 +))	=> (+ 1 11 21)
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1
+         => map -
+         => fold-left 0 +))	=> (+ -1 -11 -21)
+
+  This is not Schemey at all, but many languages have similar syntaxes.
+
+* Added experimental nested getter syntax.  The getter transformer might
+  accept additional  forms to  use tag members  from the  runtime getter
+  value.
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx)
+         (syntax-case stx (=>)
+           ((?var ((?index)))
+            #'(vector-ref ?var ?index))
+           ((?var ((?index)) => ?form0 ?form ...)
+            #'(let (((fx <fixnum>) (?var[?index])))
+                (fx ?form0 ?form ...)))
+           ))))
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[1] => string))
+    => "1"
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[1] => odd?))
+    => #t
+
+    (let (((O <fixnum-vector>) '#(0 1 2 3)))
+      (O[2] => * 10))
+    => 20
+
+* BACKWARDS  INCOMPATIBILITY  In  the   (nausicaa)  language,  the  "<-"
+  auxiliary  syntax is  no  more used  by  DEFINE/TAGS, LAMBDA/TAGS  and
+  CASE-LAMBDA/TAGS to  specify validation tags for  returned values.  So
+  these are now syntax errors:
+
+    (define fun
+      (lambda ((O <pair>))
+        (<- <vector>)
+        (vector (O car) (O cdr))))
+
+    (define (fun (O <pair>))
+      (<- <vector>)
+      (vector (O car) (O cdr)))
+
+    (define fun
+      (case-lambda
+       (((O <pair>))
+        (<- <vector>)
+        (vector (O car) (O cdr)))))
+
+  we can use the following instead:
+
+    (define fun
+      (lambda ((_ <vector>) (O <pair>))
+        (vector (O car) (O cdr))))
+
+    (define ((fun <vector>) (O <pair>))
+      (vector (O car) (O cdr)))
+
+    (define fun
+      (case-lambda
+       (((_ <vector>) (O <pair>))
+        (vector (O car) (O cdr)))))
+
+* BACKWARDS  INCOMPATIBILITY Some  parser  functions for  IPv4 and  IPv6
+  addresses from the hierarchy (nausicaa  parser-tools ---) now return a
+  vector rather than a list.
+
+* BACKWARDS INCOMPATIBILITY Some constructor functions for IPv4 and IPv6
+  address labels  from the  hierarchy (nausicaa  net addresses  ---) now
+  accept a vector as argument rather than a list.
+
+* BACKWARDS INCOMPATIBILITY The function URI-NORMALISE-ENCODING has been
+  renamed to NORMALISE-URI-ENCODING.
+
+* BACKWARDS INCOMPATIBILITY The libraries for parsing IP addressing have
+  been reorganised and partly rewritten.
+
+* Imported URI libraries from Nausicaa as:
+
+     (nausicaa parser-tools uri ---)
+     (nausicaa uri ---)
+
+* Imported file system pathname libraries from Nausicaa as:
+
+     (nausicaa parser-tools unix-pathnames)
+     (nausicaa uri pathnames ---)
+
+* Imported the Mehve language.
+
+
+Notes for revision 0.3d6
+------------------------
+
+* Added libraries:
+
+    (nausicaa language simple-match)
+    (nausicaa language infix)
+
+  with  similar API  of  the corresponding  libraries  in the  hierarchy
+  (vicare ---),  but recognising  identifiers exported by  the libraries
+  in the hierarchy (nausicaa language ---) as auxiliary syntaxes.
+
+* Imported IPv4 and IPv6 address libraries from Nausicaa as:
+
+    (nausicaa parser-tools ipv4-addresses)
+    (nausicaa parser-tools ipv6-addresses)
+    (nausicaa net addresses ipv4)
+    (nausicaa net addresses ipv6)
+
+* Added LET*-SYNTAX to (vicare):
+
+    (let*-syntax () ?body)
+    ==> (begin () ?body)
+
+    (let*-syntax ((?lhs ?rhs)) ?body)
+    ==> (let-syntax ((?lhs ?rhs)) ?body)
+
+    (let*-syntax ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body)
+    ==> (let-syntax ((?lhs0 ?rhs0))
+          (let*-syntax ((?lhs ?rhs) ...) ?body))
+
+
 Notes for revision 0.3d5
 ------------------------
 
@@ -46,14 +243,21 @@ Notes for revision 0.3d5
   been renamed MAKE-QUEUE-PROCS.
 
 * Imported libraries  from Nausicaa/OOPP.   Installation of  the library
-  hierarchy (nausicaa ---) is enabled by defult; it can be disables with
-  the option "--disable-nausicaa" of the script "configure".
+  hierarchy (nausicaa  ---) is  enabled by default;  it can  be disabled
+  with the option "--disable-nausicaa" of the script "configure".
 
 * Documentation  is  now  split   into  3  files:  "vicare-scheme.texi",
   "vicare-libs.texi", "nausicaa.texi".
 
 * Added   condition  object   type  "&procedure-argument-violation"   to
   (vicare).
+
+* Added  condition object  type "&expression-return-value-violation"  to
+  (vicare).
+
+* The validation  clauses of  the library (vicare  arguments validation)
+  now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
+  ASSERTION-VIOLATION.
 
 * Added  syntaxes to  (vicare) to  allow  access to  R6RS record  fields
   through the record type identifier only.
@@ -78,22 +282,53 @@ Notes for revision 0.3d5
     least-positive-bignum
     greatest-negative-bignum
 
+* Added  to (vicare)  the experimental  syntax "define-syntax*".   Still
+  undocumented.
+
+* Added to (vicare)  the function "vector-empty?" and  to (vicare system
+  $vectors) the operation "$vector-empty?".
+
+* Added to (vicare)  the function "string-empty?" and  to (vicare system
+  $strings) the operation "string-empty?".
+
+* Added  to (vicare)  the function  "bytevector-empty?"  and  to (vicare
+  system $bytevectors) the operation "$bytevector-empty?".
+
+* Added "eval-for-expand" to (vicare).
+
 * Added to (vicare system $numerics):
 
     $add1-integer	$add1-fixnum	$add1-bignum
     $sub1-integer	$sub1-fixnum	$sub1-bignum
 
-* Added EVAL-FOR-EXPAND to (vicare).
+* Fixes,  reorganisation  and  development   of  string  and  bytevector
+  pathname functions.  Added to (vicare $posix):
+
+    split-pathname-root-and-tail
+    search-file-in-environment-path
+    search-file-in-list-path
+    split-pathname
+    split-pathname-bytevector
+    split-pathname-string
+    split-search-path
+    split-search-path-bytevector
+    split-search-path-string
+    file-absolute-pathname?
+    file-relative-pathname?
+    file-pathname?
+    file-string-pathname?
+    file-bytevector-pathname?
+    file-colon-search-path?
+    file-string-colon-search-path?
+    file-bytevector-colon-search-path?
+
+  which are reexported by (vicare posix).
 
 * Added special validation clause:
 
     (or false ?validator)
 
   to the arguments validation library.
-
-* The validation  clauses of  the library (vicare  arguments validation)
-  now use  PROCEDURE-ARGUMENT-VIOLATION to raise the  error, rather than
-  ASSERTION-VIOLATION.
 
 * Added library (vicare language-extensions increments).
 
@@ -103,7 +338,7 @@ Notes for revision 0.3d5
 * Added to  Nausicaa the  validation of values  returned by  code forms,
   through "begin/tags", "lambda/tags" and "define/tags".
 
-* Added builtin "<exact-integer>" to (nausicaa).
+* Added builtin label "<exact-integer>" to (nausicaa).
 
 * Added containers libraries:
 
@@ -111,6 +346,9 @@ Notes for revision 0.3d5
      (nausicaa containers vectors)
      (nausicaa containers strings)
      (nausicaa containers arrays)
+
+  the multidimensional arrays library will  be rewritten with changes in
+  the API.
 
 * Added INFIX to the export list of (nausicaa).
 
@@ -121,16 +359,29 @@ Notes for revision 0.3d5
 
      (vicare language-extensions identifier-alists)
      (vicare language-extensions identifier-properties)
+     (vicare language-extensions makers)
 
-* Imported stacks library from nausicaa as libraries:
+* Imported stacks library from Nausicaa as libraries:
 
      (vicare containers stacks)
      (nausicaa containers stacks)
 
-* Imported queues library from nausicaa as libraries:
+* Imported queues library from Nausicaa as libraries:
 
      (vicare containers queues)
      (nausicaa containers queues)
+
+* Imported iterators library from Nausicaa as:
+
+     (nausicaa containers iterators)
+
+* Imported SILex libraries from Nausicaa as:
+
+     (vicare parser-tools silex ---)
+
+* Imported LALR libraries from Nausicaa as:
+
+     (nausicaa parser-tools lalr ---)
 
 
 Notes for revision 0.3d4

@@ -19,6 +19,7 @@
   (export
     make-string			string
     substring			string-length
+    string-empty?		$string-empty?
     string-ref			string-set!
     string->list		list->string
     string-append		string-for-each
@@ -31,22 +32,64 @@
     uuid
 
     ;; Vicare specific
-    string->latin1		latin1->string
+    string->octets		octets->string
+    octets-encoded-bytevector?	octets-encoded-string?
+
     string->ascii		ascii->string
+    ascii-encoded-bytevector?	ascii-encoded-string?
+
+    string->latin1		latin1->string
+    latin1-encoded-bytevector?	latin1-encoded-string?
+
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
+
     string-base64->bytevector	bytevector->string-base64
     bytevector->base64		base64->bytevector
+
     string->uri-encoding	uri-encoding->string
     uri-encode			uri-decode
-    uri-normalise-encoding
+    normalise-uri-encoding
+    uri-encoded-bytevector?	uri-encoded-string?
+
+    (rename (string->uri-encoding	string->percent-encoding)
+	    (uri-encoding->string	percent-encoding->string)
+	    (uri-encode			percent-encode)
+	    (uri-decode			percent-decode)
+	    (normalise-uri-encoding	normalise-percent-encoding)
+	    (uri-encoded-bytevector?	percent-encoded-bytevector?)
+	    (uri-encoded-string?	percent-encoded-string?))
 
     ;; unsafe operations
+    $string
     $string=			$string-total-length
-    $string-concatenate		$string-reverse-and-concatenate)
+    $string-concatenate		$string-reverse-and-concatenate
+
+    $string->octets		$octets->string
+    $octets-encoded-bytevector?	$octets-encoded-string?
+
+    $string->ascii		$ascii->string
+    $ascii-encoded-bytevector?	$ascii-encoded-string?
+
+    $string->latin1		$latin1->string
+    $latin1-encoded-bytevector?	$latin1-encoded-string?
+
+    $string-base64->bytevector	$bytevector->string-base64
+    $bytevector->base64		$base64->bytevector
+
+    $uri-encode			$uri-decode
+    $normalise-uri-encoding
+    $uri-encoded-bytevector?	$uri-encoded-string?
+    (rename ($uri-encode		$percent-encode)
+	    ($uri-decode		$percent-decode)
+	    ($normalise-uri-encoding	$percent-normalise-encoding)
+	    ($uri-encoded-bytevector?	$percent-encoded-bytevector?)
+	    ($uri-encoded-string?	$percent-encoded-string?))
+    #| end of export |# )
   (import (except (ikarus)
 		  make-string			string
 		  substring			string-length
+		  string-empty?
 		  string-ref			string-set!
 		  string->list			list->string
 		  string-append			string-for-each
@@ -59,22 +102,53 @@
 		  uuid
 
 		  ;; Vicare specific
-		  string->latin1		latin1->string
+		  string->octets		octets->string
+		  octets-encoded-bytevector?	octets-encoded-string?
+
 		  string->ascii			ascii->string
+		  ascii-encoded-bytevector?	ascii-encoded-string?
+
+		  string->latin1		latin1->string
+		  latin1-encoded-bytevector?	latin1-encoded-string?
+
 		  bytevector->hex		hex->bytevector
 		  string-hex->bytevector	bytevector->string-hex
 		  string-base64->bytevector	bytevector->string-base64
 		  bytevector->base64		base64->bytevector
+
 		  string->uri-encoding		uri-encoding->string
-		  uri-encode			uri-decode
-		  uri-normalise-encoding)
-    #;(vicare language-extensions syntaxes)
+		  string->percent-encoding	percent-encoding->string
+		  uri-encode			percent-encode
+		  uri-decode			percent-decode
+		  normalise-uri-encoding	normalise-percent-encoding
+		  uri-encoded-bytevector?	percent-encoded-bytevector?
+		  uri-encoded-string?		percent-encoded-string?
+		  #| end of except |# )
     (vicare arguments validation)
     (except (vicare unsafe operations)
+	    $string
 	    $string=
 	    $string-total-length
 	    $string-concatenate
-	    $string-reverse-and-concatenate))
+	    $string-reverse-and-concatenate
+	    $string-empty?
+
+	    $string->ascii			$ascii->string
+	    $ascii-encoded-bytevector?		$ascii-encoded-string?
+
+	    $string->latin1			$latin1->string
+	    $latin1-encoded-bytevector?		$latin1-encoded-string?
+
+	    $string-base64->bytevector		$bytevector->string-base64
+	    $bytevector->base64			$base64->bytevector
+
+	    $uri-encode				$uri-decode
+	    $normalise-uri-encoding
+	    $uri-encoded-bytevector?		$uri-encoded-string?
+	    $percent-encode			$percent-decode
+	    $percent-normalise-encoding
+	    $percent-encoded-bytevector?	$percent-encoded-string?)
+    (vicare system $pairs))
 
 
 ;;;; arguments validation
@@ -131,19 +205,17 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (latin1 who code-point str)
-  (and ($fx>= code-point 0)
-       ($fx< code-point 256))
+(define-argument-validation (latin1 who code-point arg)
+  ($latin1-chi? code-point)
   (procedure-argument-violation who
-    "expected only Latin-1 characters in string argument"
-    ($fixnum->char code-point) str))
+    "expected only Latin-1 code points in argument"
+    (integer->char code-point) arg))
 
-(define-argument-validation (ascii who code-point str)
-  (and ($fx>= code-point 0)
-       ($fx<  code-point 128))
+(define-argument-validation (ascii who code-point arg)
+  ($ascii-chi? code-point)
   (procedure-argument-violation who
-    "expected only ASCII characters in string argument"
-    ($fixnum->char code-point) str))
+    "expected only ASCII code points in argument"
+    (integer->char code-point) arg))
 
 
 ;;;; constants
@@ -160,6 +232,14 @@
   ($string-copy! src.str src.start
 		 dst.str dst.start
 		 src.end))
+
+(define-inline ($latin1-chi? chi)
+  (or ($fx<= #x00 chi #x1F) ;these are the control characters
+      ($fx<= #x20 chi #x7E)
+      ($fx<= #xA0 chi #xFF)))
+
+(define-inline ($ascii-chi? chi)
+  ($fx<= #x00 chi #x7F))
 
 
 (define (string-length str)
@@ -294,6 +374,63 @@
 	    (begin
 	      ($string-set! str idx ($car chars))
 	      (loop str ($fxadd1 idx) ($cdr chars))))))))))
+
+(module ($string)
+
+  (define $string
+    ;;Return a newly allocated string composed of the arguments.
+    ;;
+    (case-lambda
+     (()
+      ($make-string 0))
+     ((one)
+      (receive-and-return (str)
+	  ($make-string 1)
+	($string-set! str 0 one)))
+
+     ((one two)
+      (receive-and-return (str)
+	  ($make-string 2)
+	($string-set! str 0 one)
+	($string-set! str 1 two)))
+
+     ((one two three)
+      (receive-and-return (str)
+	  ($make-string 3)
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)))
+
+     ((one two three four)
+      (receive-and-return (str)
+	  ($make-string 4)
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
+	($string-set! str 3 four)))
+
+     ((one two three four . chars)
+      (receive-and-return (str)
+	  ($make-string ($fx+ 4 ($length chars)))
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
+	($string-set! str 3 four)
+	(let recur ((i   4)
+		    (ell chars))
+	  (when (pair? ell)
+	    ($string-set! str i ($car ell))
+	    (recur ($fxadd1 i) ($cdr ell))))))
+     ))
+
+  (define ($length ell)
+    (let recur ((len 0)
+		(ell ell))
+      (if (pair? ell)
+	  (recur ($fxadd1 len) ($cdr ell))
+	len)))
+
+  #| end of module |# )
 
 
 (define (substring str start end)
@@ -884,25 +1021,95 @@
       (error who "cannot obtain unique id"))))
 
 
+(define (string-empty? str)
+  ;;Defined by  Vicare.  Return true  if STR is empty,  otherwise return
+  ;;false.
+  ;;
+  (define who 'string-empty?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($string-empty? str)))
+
+;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
+;;Tue Oct 8, 2013)
+(define ($string-empty? str)
+  ($fxzero? ($string-length str)))
+
+
+;;;; octets bytevectors to/from strings
+
+(define* (octets-encoded-string? (str string?))
+  ($octets-encoded-string? str))
+
+(define ($octets-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+	(and ($fx<= 0 ($char->fixnum ($string-ref str i)) 255)
+	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets-encoded-bytevector? (bv bytevector?))
+  #t)
+
+(define ($octets-encoded-bytevector? bv)
+  #t)
+
+;;; --------------------------------------------------------------------
+
+(define* (string->octets (str string?))
+  ($string->octets str))
+
+(define* ($string->octets str)
+  (do ((i 0 ($fxadd1 i))
+       (bv ($make-bytevector ($string-length str))))
+      (($fx= i ($string-length str))
+       bv)
+    (let* ((ch  ($string-ref str i))
+	   (chi ($char->fixnum ch)))
+      (if ($fx<= 0 chi 255)
+	  ($bytevector-u8-set! bv i chi)
+	(procedure-argument-violation __who__
+	  "impossible conversion from character to octet" ch str)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets->string (bv bytevector?))
+  ($octets->string bv))
+
+(define ($octets->string bv)
+  (do ((i 0 ($fxadd1 i))
+       (str ($make-string ($bytevector-length bv))))
+      (($fx= i ($bytevector-length bv))
+       str)
+    ($string-set! str i ($fixnum->char ($bytevector-u8-ref bv i)))))
+
+
 ;;;; Latin-1 bytevectors to/from strings
 
 (define (string->latin1 str)
   ;;Defined by Vicare.  Convert the string STR into a bytevector holding
   ;;octects representing the character's Latin-1 code points.
   ;;
-  (define who 'latin1->string)
+  (define who 'string->latin1)
   (with-arguments-validation (who)
       ((string str))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((bv.len ($string-length str))
-	   (bv	 ($make-bytevector bv.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i bv.len)
-	   bv)
-	(let ((code-point ($char->fixnum ($string-ref str i))))
-	  (with-arguments-validation (who)
-	      ((latin1 code-point str))
-	    ($bytevector-u8-set! bv i code-point)))))))
+    ($string->latin1 str)))
+
+(define ($string->latin1 str)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (define who '$string->latin1)
+  (let* ((bv.len ($string-length str))
+	 (bv	 ($make-bytevector bv.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i bv.len)
+	 bv)
+      (let ((code-point ($char->fixnum ($string-ref str i))))
+	(with-dangerous-arguments-validation (who)
+	    ((latin1 code-point str))
+	  ($bytevector-u8-set! bv i code-point))))))
+
+;;; --------------------------------------------------------------------
 
 (define (latin1->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -911,16 +1118,54 @@
   (define who 'latin1->string)
   (with-arguments-validation (who)
       ((bytevector bv))
-    ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((str.len ($bytevector-length bv))
-	   (str     ($make-string str.len)))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i str.len)
-	   str)
-	(let ((code-point ($bytevector-u8-ref bv i)))
-	  (with-arguments-validation (who)
-	      ((latin1 code-point str))
-	    ($string-set! str i ($fixnum->char code-point))))))))
+    ($latin1->string bv)))
+
+(define ($latin1->string bv)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (define who '$latin1->string)
+  (let* ((str.len ($bytevector-length bv))
+	 (str     ($make-string str.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str.len)
+	 str)
+      (let ((code-point ($bytevector-u8-ref bv i)))
+	(with-arguments-validation (who)
+	    ((latin1 code-point bv))
+	  ($string-set! str i ($fixnum->char code-point)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (latin1-encoded-bytevector? bv)
+  ;;Return  true if  the  argument is  interpretable  as Latin1  encoded
+  ;;string.
+  ;;
+  (define who 'latin1-encoded-bytevector?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($latin1-encoded-bytevector? bv)))
+
+(define ($latin1-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+  	(and ($latin1-chi? ($bytevector-u8-ref bv i))
+  	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define (latin1-encoded-string? str)
+  ;;Return  true if  the  argument is  interpretable  as Latin1  encoded
+  ;;string.
+  ;;
+  (define who 'latin1-encoded-string?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($latin1-encoded-string? str)))
+
+(define ($latin1-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and ($latin1-chi? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
 
 
 ;;;; ASCII bytevectors to/from strings
@@ -929,12 +1174,13 @@
   ;;Defined by Vicare.  Convert the string STR into a bytevector holding
   ;;octects representing the character's ASCII code points.
   ;;
-  (define who 'ascii->string)
+  (define who 'string->ascii)
   (with-arguments-validation (who)
       ((string	str))
-    ($string->ascii who str)))
+    ($string->ascii str)))
 
-(define ($string->ascii who str)
+(define ($string->ascii str)
+  (define who '$string->ascii)
   ;;Both strings and bytevectors have length representable as fixnum.
   (let* ((bv.len	($string-length str))
 	 (bv		($make-bytevector bv.len)))
@@ -942,9 +1188,11 @@
 	(($fx= i bv.len)
 	 bv)
       (let ((code-point ($char->fixnum ($string-ref str i))))
-	(with-arguments-validation (who)
+	(with-dangerous-arguments-validation (who)
 	    ((ascii	code-point str))
 	  ($bytevector-u8-set! bv i code-point))))))
+
+;;; --------------------------------------------------------------------
 
 (define (ascii->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -953,9 +1201,10 @@
   (define who 'ascii->string)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    ($ascii->string who bv)))
+    ($ascii->string bv)))
 
-(define ($ascii->string who bv)
+(define ($ascii->string bv)
+  (define who '$ascii->string)
   ;;Both strings and bytevectors have length representable as fixnum.
   (let* ((str.len	($bytevector-length bv))
 	 (str		($make-string str.len)))
@@ -966,6 +1215,40 @@
 	(with-arguments-validation (who)
 	    ((ascii	code-point bv))
 	  ($string-set! str i ($fixnum->char code-point)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (ascii-encoded-bytevector? bv)
+  ;;Return  true  if the  argument  is  interpretable as  ASCII  encoded
+  ;;string.
+  ;;
+  (define who 'ascii-encoded-bytevector?)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ($ascii-encoded-bytevector? bv)))
+
+(define ($ascii-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+	(and ($ascii-chi? ($bytevector-u8-ref bv i))
+	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define (ascii-encoded-string? str)
+  ;;Return  true if  the  argument is  interpretable  as Ascii  encoded
+  ;;string.
+  ;;
+  (define who 'ascii-encoded-string?)
+  (with-arguments-validation (who)
+      ((string	str))
+    ($ascii-encoded-string? str)))
+
+(define ($ascii-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and ($ascii-chi? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
 
 
 ;;;; bytevectors to/from HEX strings
@@ -1008,7 +1291,7 @@
   (with-arguments-validation (who)
       ((bytevector	bv))
     (let ((rv (foreign-call "ikrt_bytevector_to_hex" bv)))
-      (and rv ($ascii->string who rv)))))
+      (and rv ($ascii->string rv)))))
 
 (define (string-hex->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
@@ -1017,7 +1300,7 @@
   (define who 'string-hex->bytevector)
   (with-arguments-validation (who)
       ((string	S))
-    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii who S))))
+    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii S))))
 
 
 ;;;; bytevectors to/from BASE64 strings
@@ -1033,7 +1316,10 @@
   (define who 'bytevector->base64)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_to_base64" bv)))
+    ($bytevector->base64 bv)))
+
+(define ($bytevector->base64 bv)
+  (foreign-call "ikrt_bytevector_to_base64" bv))
 
 (define (base64->bytevector bv)
   ;;Defined  by Vicare.   Convert  a bytevector  representing the  ASCII
@@ -1045,7 +1331,10 @@
   (define who 'base64->bytevector)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_from_base64" bv)))
+    ($base64->bytevector bv)))
+
+(define ($base64->bytevector bv)
+  (foreign-call "ikrt_bytevector_from_base64" bv))
 
 ;;; --------------------------------------------------------------------
 
@@ -1056,17 +1345,27 @@
   (define who 'bytevector->string-base64)
   (with-arguments-validation (who)
       ((bytevector	bv))
-    (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
-      (and rv ($ascii->string who rv)))))
+    ($bytevector->string-base64 bv)))
 
-(define (string-base64->bytevector S)
+(define ($bytevector->string-base64 bv)
+  (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
+    (and rv ($ascii->string rv))))
+
+;;; --------------------------------------------------------------------
+
+(define* (string-base64->bytevector S)
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
   ;;the byte representation of the Base64 sequences.
   ;;
-  (define who 'string-base64->bytevector)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((string	S))
-    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii who S))))
+    ($string-base64->bytevector S)))
+
+(define* ($string-base64->bytevector S)
+  (let ((bv (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S))))
+    (or bv
+	(procedure-argument-violation __who__
+	  "invalid characters in string for base64 encoding" S))))
 
 
 ;;;; bytevectors to/from RFC 3986 URI percent encoding
@@ -1077,7 +1376,12 @@
 (define (uri-encoding->string bv)
   (utf8->string (uri-decode bv)))
 
-(module (uri-encode uri-decode uri-normalise-encoding)
+(module ( ;;
+	 uri-encode			$uri-encode
+	 uri-decode			$uri-decode
+	 normalise-uri-encoding		$normalise-uri-encoding
+	 uri-encoded-bytevector?	$uri-encoded-bytevector?
+	 uri-encoded-string?		$uri-encoded-string?)
 
   (define (uri-encode bv)
     ;;Return   a  percent-encoded   bytevector  representation   of  the
@@ -1089,109 +1393,238 @@
     (define who 'uri-encode)
     (with-arguments-validation (who)
 	((bytevector	bv))
-      (let-values (((port getter) (open-bytevector-output-port)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref bv i)))
-	    (if (is-unreserved? chi)
-		(put-u8 port chi)
-	      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi))))))))
+      ($uri-encode bv)))
+
+  (define ($uri-encode bv)
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (if ($is-unreserved? chi)
+	      (put-u8 port chi)
+	    (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))))
+
+;;; --------------------------------------------------------------------
 
   (define (uri-decode bv)
     ;;Percent-decode the given bytevector according to RFC 3986.
     ;;
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
-    ;;
     (define who 'uri-decode)
     (with-arguments-validation (who)
 	((bytevector	bv))
-      (let-values (((port getter) (open-bytevector-output-port))
-		   ((buf)         (make-string 2)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref bv i)))
-	    (put-u8 port
-		    (if ($fx= chi $int-percent)
-			(begin
-			  (set! i ($fxadd1 i))
-			  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref bv i)))
-			  (set! i ($fxadd1 i))
-			  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref bv i)))
-			  (string->number buf 16))
-		      chi)))))))
+      ($uri-decode bv)))
 
-  (define (uri-normalise-encoding in-bv)
+  (define ($uri-decode bv)
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who '$uri-decode)
+    (define (%percent-error ch)
+      (error who "invalid octet in percent-encoded bytevector, percent sequence" bv ch))
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((buf (make-string 2))
+	   (i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (put-u8 port
+		  (cond (($fx= chi INT-PERCENT)
+			 (if ($two-more-octets-after-this? bv i)
+			     (begin
+			       (set! i ($fxadd1 i))
+			       (let* ((chi ($bytevector-u8-ref bv i))
+				      (ch  ($fixnum->char chi)))
+				 (if ($is-hex-digit? chi)
+				     ($string-set! buf 0 ch)
+				   (%percent-error ch)))
+			       (set! i ($fxadd1 i))
+			       (let* ((chi ($bytevector-u8-ref bv i))
+				      (ch  ($fixnum->char chi)))
+				 (if ($is-hex-digit? chi)
+				     ($string-set! buf 1 ch)
+				   (%percent-error ch)))
+			       (string->number buf 16))
+			   (error who "incomplete percent sequence in percent-encoded bytevector" bv)))
+			(($is-unreserved? chi)
+			 chi)
+			(else
+			 (error who "invalid octet in percent-encoded bytevector" bv chi))))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (normalise-uri-encoding bv)
     ;;Normalise  the given  percent-encoded bytevector;  chars that  are
     ;;encoded  but  should  not  are  decoded.   Return  the  normalised
     ;;bytevector, in  which percent-encoded characters are  displayed in
     ;;upper case.
     ;;
-    ;;We  assume that  IN-BV is  composed by  integers corresponding  to
+    ;;We  assume  that  BV  is composed  by  integers  corresponding  to
     ;;characters in the valid range for URIs.
-    ;;
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
     ;;
     (define who 'uri-normalise-encoded)
     (with-arguments-validation (who)
-	((bytevector	in-bv))
-      (let-values (((port getter)	(open-bytevector-output-port))
-		   ((buf)		(make-string 2)))
-	(do ((i 0 ($fxadd1 i)))
-	    (($fx= i ($bytevector-length in-bv))
-	     (getter))
-	  (let ((chi ($bytevector-u8-ref in-bv i)))
-	    (if ($fx= chi $int-percent)
-		(begin
-		  (set! i ($fxadd1 i))
-		  ($string-set! buf 0 ($fixnum->char ($bytevector-u8-ref in-bv i)))
-		  (set! i ($fxadd1 i))
-		  ($string-set! buf 1 ($fixnum->char ($bytevector-u8-ref in-bv i)))
-		  (let ((chi (string->number (string-upcase buf) 16)))
-		    (if (is-unreserved? chi)
-			(put-u8 port chi)
-		      (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
-	      (put-u8 port chi)))))))
+	((bytevector	bv))
+      ($normalise-uri-encoding bv)))
+
+  (define ($normalise-uri-encoding bv)
+    ;;FIXME This could be made significantly  faster, but I have no will
+    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;
+    (define who '$uri-normalise-encoded)
+    (define (%percent-error ch)
+      (error who "invalid octet in percent-encoded bytevector, percent sequence" ch))
+    (receive (port getter)
+	(open-bytevector-output-port)
+      (do ((buf ($make-string 2))
+	   (i 0 ($fxadd1 i)))
+	  (($fx= i ($bytevector-length bv))
+	   (getter))
+	(let ((chi ($bytevector-u8-ref bv i)))
+	  (cond (($fx= chi INT-PERCENT)
+		 (if ($two-more-octets-after-this? bv i)
+		     (begin
+		       (set! i ($fxadd1 i))
+		       (let* ((chi ($bytevector-u8-ref bv i))
+			      (ch  ($fixnum->char chi)))
+			 (if ($is-hex-digit? chi)
+			     ($string-set! buf 0 ch)
+			   (%percent-error ch)))
+		       (set! i ($fxadd1 i))
+		       (let* ((chi ($bytevector-u8-ref bv i))
+			      (ch  ($fixnum->char chi)))
+			 (if ($is-hex-digit? chi)
+			     ($string-set! buf 1 ch)
+			   (%percent-error ch)))
+		       (let ((chi (string->number (string-upcase buf) 16)))
+			 (if ($is-unreserved? chi)
+			     (put-u8 port chi)
+			   (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
+		   (error who "incomplete percent sequence in percent-encoded bytevector" bv)))
+		(($is-unreserved? chi)
+		 (put-u8 port chi))
+		(else
+		 (error who "invalid octet in percent-encoded bytevector" bv chi)))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (is-unreserved? chi)
-    (or (is-alpha-digit? chi)
-	(= chi $int-dash)
-	(= chi $int-dot)
-	(= chi $int-underscore)
-	(= chi $int-tilde)))
+  (define (uri-encoded-bytevector? bv)
+    ;;Return  true   if  the   argument  is   correctly  percent-encoded
+    ;;bytevector according to RFC 3986.
+    ;;
+    (define who 'uri-encoded-bytevector?)
+    (with-arguments-validation (who)
+	((bytevector	bv))
+      ($uri-encoded-bytevector? bv)))
 
-  (define-inline (is-alpha-digit? chi)
-    (or (is-alpha? chi)
-	(is-dec-digit? chi)))
+  (define ($uri-encoded-bytevector? bv)
+    (let loop ((i 0))
+      (or ($fx= i ($bytevector-length bv))
+	  (let ((chi ($bytevector-u8-ref bv i)))
+	    (cond (($fx= chi INT-PERCENT)
+		   (and ($two-more-octets-after-this? bv i)
+			(begin
+			  ;;The  first octet  must  represent a  HEX
+			  ;;digit in ASCII encoding.
+			  (set! i ($fxadd1 i))
+			  (and ($is-hex-digit? ($bytevector-u8-ref bv i))
+			       (begin
+				 ;;The second octet must represent a
+				 ;;HEX digit in ASCII encoding.
+				 (set! i ($fxadd1 i))
+				 (and ($is-hex-digit? ($bytevector-u8-ref bv i))
+				      (loop ($fxadd1 i))))))))
+		  ((and ($fx<= 32 chi 126)
+			($is-unreserved? chi))
+		   (loop ($fxadd1 i)))
+		  (else #f))))))
 
-  (define-inline (is-alpha? chi)
-    (or (<= $int-A chi $int-Z)
-	(<= $int-a chi $int-z)))
+;;; --------------------------------------------------------------------
 
-  (define-inline (is-dec-digit? chi)
-    (<= $int-0 chi $int-9))
+  (define (uri-encoded-string? str)
+    ;;Return true  if the  argument is correctly  percent-encoded string
+    ;;according to RFC 3986.
+    ;;
+    (define who 'uri-encoded-string?)
+    (with-arguments-validation (who)
+	((string	str))
+      ($uri-encoded-string? str)))
 
-  (define-constant $int-a		(char->integer #\a))
-  (define-constant $int-f		(char->integer #\f))
-  (define-constant $int-z		(char->integer #\z))
-  (define-constant $int-A		(char->integer #\A))
-  (define-constant $int-F		(char->integer #\F))
-  (define-constant $int-Z		(char->integer #\Z))
-  (define-constant $int-0		(char->integer #\0))
-  (define-constant $int-9		(char->integer #\9))
+  (define ($uri-encoded-string? str)
+    (define-syntax-rule ($string-chi-ref str i)
+      ($char->fixnum ($string-ref str i)))
+    (let loop ((i 0))
+      (or ($fx= i ($string-length str))
+	  (let ((chi ($string-chi-ref str i)))
+	    (cond (($fx= chi INT-PERCENT)
+		   (and ($two-more-chars-after-this? str i)
+			(begin
+			  ;;The first char must represent a HEX digit in
+			  ;;ASCII encoding.
+			  ($fxincr! i)
+			  (and ($is-hex-digit? ($string-chi-ref str i))
+			       (begin
+				 ;;The second octet must represent a
+				 ;;HEX digit in ASCII encoding.
+				 ($fxincr! i)
+				 (and ($is-hex-digit? ($string-chi-ref str i))
+				      (loop ($fxadd1 i))))))))
+		  ((and ($fx<= 32 chi 126)
+			($is-unreserved? chi))
+		   (loop ($fxadd1 i)))
+		  (else #f))))))
 
-  (define-constant $int-percent		(char->integer #\%))
+;;; --------------------------------------------------------------------
+
+  (define-syntax-rule ($two-more-octets-after-this? bv i)
+    (< (+ 2 i) ($bytevector-length bv)))
+
+  (define-syntax-rule ($two-more-chars-after-this? str i)
+    (< (+ 2 i) ($string-length str)))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline ($is-unreserved? chi)
+    (or ($is-alpha-digit? chi)
+	(= chi INT-DASH)
+	(= chi INT-DOT)
+	(= chi INT-UNDERSCORE)
+	(= chi INT-TILDE)))
+
+  (define-inline ($is-alpha-digit? chi)
+    (or ($is-alpha? chi)
+	($is-dec-digit? chi)))
+
+  (define-inline ($is-alpha? chi)
+    (or (<= INT-A chi INT-Z)
+	(<= INT-a chi INT-z)))
+
+  (define-inline ($is-dec-digit? chi)
+    (<= INT-0 chi INT-9))
+
+  (define-inline ($is-hex-digit? chi)
+    (or ($is-dec-digit? chi)
+	($fx<= INT-a chi INT-f)
+	($fx<= INT-A chi INT-F)))
+
+  (define-inline-constant INT-a			(char->integer #\a))
+  (define-inline-constant INT-f			(char->integer #\f))
+  (define-inline-constant INT-z			(char->integer #\z))
+  (define-inline-constant INT-A			(char->integer #\A))
+  (define-inline-constant INT-F			(char->integer #\F))
+  (define-inline-constant INT-Z			(char->integer #\Z))
+  (define-inline-constant INT-0			(char->integer #\0))
+  (define-inline-constant INT-9			(char->integer #\9))
+
+  (define-inline-constant INT-PERCENT		(char->integer #\%))
 
   ;; unreserved
-  (define-constant $int-dash		(char->integer #\-))
-  (define-constant $int-dot		(char->integer #\.))
-  (define-constant $int-underscore	(char->integer #\_))
-  (define-constant $int-tilde		(char->integer #\~))
+  (define-inline-constant INT-DASH		(char->integer #\-))
+  (define-inline-constant INT-DOT		(char->integer #\.))
+  (define-inline-constant INT-UNDERSCORE	(char->integer #\_))
+  (define-inline-constant INT-TILDE		(char->integer #\~))
 
 ;;; --------------------------------------------------------------------
 

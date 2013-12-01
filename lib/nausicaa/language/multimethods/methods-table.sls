@@ -41,15 +41,20 @@
 (library (nausicaa language multimethods methods-table)
   (export
     define-methods-table
-    add-method-to-methods-alist
     compute-applicable-methods
     applicable-method-signature?
     more-specific-signature?
-    merge-methods-alists)
+    merge-methods-alists
+
+    ;;Commented  out because  not  used by  outer code;  But  it can  be
+    ;;exported if there is the need.  (Marco Maggi; Mon Nov 25, 2013)
+    ;;
+    #;add-method-to-methods-alist)
   (import (vicare)
     (only (nausicaa language symbols-tree)
 	  tree-cons
-	  treeq))
+	  treeq)
+    (vicare unsafe operations))
 
 
 ;;;; helpers
@@ -57,7 +62,7 @@
 (define-syntax-rule (list-copy ?ell)
   (let loop ((ell ?ell))
     (if (pair? ell)
-	(cons (car ell) (loop (cdr ell)))
+	(cons ($car ell) (loop ($cdr ell)))
       ell)))
 
 
@@ -70,9 +75,21 @@
     ;;we do not do it for hygiene sake.
     ;;
     ((_ ?generic-function ?number-of-arguments
-	?table-name ?table-add ?cache-name ?cache-store ?cache-ref ?init)
+	?table-name-func ?table-add ?cache-name ?cache-store ?cache-ref ?init)
      (begin
-       (define ?table-name ?init)
+       (define ?table-name-func
+	 ;;We  need to  access the  table  through a  function; this  is
+	 ;;because the  table must be  mutated by code  across different
+	 ;;libraries  when  generic functions  are  merged.   It is  not
+	 ;;possible for code of a library to mutate a binding in another
+	 ;;library.
+	 ;;
+	 (let ((table ?init))
+	   (case-lambda
+	    (()
+	     table)
+	    ((new-table)
+	     (set! table new-table)))))
        (define ?cache-name '()) ;symbols tree
        (define (?cache-store signature methods)
 	 (set! ?cache-name (tree-cons (map car signature) methods ?cache-name)))
@@ -85,14 +102,14 @@
 	       (string-append
 		"attempt add method to generic function with wrong number of arguments, \
 		 generic function has " (number->string ?number-of-arguments)
-		 " method has " (number->string len))
+		" method has " (number->string len))
 	       signature)))
 	 (set! ?cache-name '())
-	 (set! ?table-name (add-method-to-methods-alist ?table-name signature closure)))
-       ))))
+	 (add-method-to-methods-alist ?table-name-func signature closure))
+     ))))
 
 
-(define (add-method-to-methods-alist methods-alist signature closure)
+(define (add-method-to-methods-alist methods-alist-func signature closure)
   ;;Add a  method's entry to the  alist of methods;  return the modified
   ;;method alist.
   ;;
@@ -100,20 +117,22 @@
   ;;signature already  exists.  If a  method with the  signature already
   ;;exists, its closure is overwritten with the new one.
   ;;
-  (cond ((find (lambda (method-entry)
-		 (for-all eq? signature (car method-entry)))
-	       methods-alist)
-	 => (lambda (method-entry)
-	      (set-cdr! method-entry closure)
-	      methods-alist))
-	(else
-	 (cons (cons signature closure) methods-alist))))
+  (methods-alist-func
+   (cond ((find (lambda (method-entry)
+		  (for-all eq? signature (car method-entry)))
+	    (methods-alist-func))
+	  => (lambda (method-entry)
+	       (set-cdr! method-entry closure)
+	       (methods-alist-func)))
+	 (else
+	  (cons (cons signature closure) (methods-alist-func))))))
 
-(define (compute-applicable-methods call-signature methods-alist)
-  ;;Filter out from METHODS-ALIST the  methods not applicable to a tuple
-  ;;of arguments with types in  the tuple CALL-SIGNATURE.  Then sort the
-  ;;list of applicable  methods so that the more  specific are the first
-  ;;ones.  Return the sorted list of applicable method entries.
+(define (compute-applicable-methods call-signature methods-alist-func)
+  ;;Filter out from the alist returned by METHODS-ALIST-FUNC the methods
+  ;;not  applicable to  a tuple  of arguments  with types  in the  tuple
+  ;;CALL-SIGNATURE.  Then  sort the list  of applicable methods  so that
+  ;;the more  specific are the  first ones.   Return the sorted  list of
+  ;;applicable method entries.
   ;;
   (list-sort
    (lambda (method-entry1 method-entry2)
@@ -121,7 +140,7 @@
    (filter
        (lambda (method-entry)
 	 (applicable-method-signature? call-signature (car method-entry)))
-     methods-alist)))
+     (methods-alist-func))))
 
 
 (define (applicable-method-signature? call-signature method-signature)
@@ -130,7 +149,7 @@
   ;;
   (and (= (length call-signature) (length method-signature))
        (for-all (lambda (maybe-parent maybe-child)
-		  (memq (car maybe-parent) maybe-child))
+		  (memq ($car maybe-parent) maybe-child))
 		method-signature call-signature)))
 
 (define (more-specific-signature? signature1 signature2 call-signature)
@@ -151,31 +170,31 @@
 	  "two methods with same signature in generic function"
 	  signature1)
 
-      (let ((uid-hierarchy-1 (car signature1))
-	    (uid-hierarchy-2 (car signature2)))
-	(cond ((eq? (car uid-hierarchy-1) (car uid-hierarchy-2))
-	       (next-argument-type (cdr signature1) (cdr signature2) (cdr call-signature)))
-	      ((memq (car uid-hierarchy-2) uid-hierarchy-1)
+      (let ((uid-hierarchy-1 ($car signature1))
+	    (uid-hierarchy-2 ($car signature2)))
+	(cond ((eq? ($car uid-hierarchy-1) ($car uid-hierarchy-2))
+	       (next-argument-type ($cdr signature1) ($cdr signature2) ($cdr call-signature)))
+	      ((memq ($car uid-hierarchy-2) uid-hierarchy-1)
 	       #t)
 	      (else
 	       #f))))))
 
 
-(define (merge-methods-alists . list-of-methods-alists)
-  ;;Given a list of methods a list: duplicate the first list, then merge
-  ;;the remaining ones into the copy and return the result.
+(define (merge-methods-alists . list-of-methods-alist-funcs)
+  ;;Given a list  of methods alist functions: duplicate  the first list,
+  ;;then merge the remaining ones into the copy and return the result.
   ;;
   ;;Merging is performed visiting the  list from left to right; when two
   ;;methods have  the same  signature, the one  from the  leftmost alist
   ;;takes precedence.
   ;;
   (define-inline (main)
-    (if (null? list-of-methods-alists)
+    (if (null? list-of-methods-alist-funcs)
 	'()
-      (fold-left (lambda (result-alist next-alist)
-		   (merge-two-methods-alists result-alist next-alist))
-		 (list-copy (car list-of-methods-alists))
-		 (cdr list-of-methods-alists))))
+      (fold-left (lambda (result-alist next-alist-func)
+		   (merge-two-methods-alists result-alist (next-alist-func)))
+		 (list-copy (($car list-of-methods-alist-funcs)))
+		 ($cdr list-of-methods-alist-funcs))))
 
   (define-inline (merge-two-methods-alists result-alist other-alist)
     ;;Merge OTHER-ALIST into RESULT-ALIST and return a new alist.
@@ -190,10 +209,10 @@
 		 ;;can be modified by ADD-METHOD.
 		 ;;
 		 (if (find (lambda (method-entry)
-			     (for-all eq? (car method-entry) (car next-method-entry)))
+			     (for-all eq? ($car method-entry) ($car next-method-entry)))
 		       result-alist)
 		     result-alist
-		   (cons (cons (car next-method-entry) (cdr next-method-entry))
+		   (cons (cons ($car next-method-entry) ($cdr next-method-entry))
 			 result-alist)))
 	       result-alist
 	       other-alist))

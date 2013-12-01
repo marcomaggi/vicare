@@ -68,6 +68,16 @@
 	(string-length 123))
     => '(123))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-empty? "")
+    => #t)
+
+  (check
+      (string-empty? "123")
+    => #f)
+
   #t)
 
 
@@ -303,6 +313,29 @@
       (catch #f
 	(string #\a #\b #\c #\d #\e 1))
     => '(1))
+
+;;; --------------------------------------------------------------------
+;;; unsafe operations
+
+  (check
+      ($string)
+    => "")
+
+  (check
+      ($string #\a)
+    => "a")
+
+  (check
+      ($string #\a #\b #\c)
+    => "abc")
+
+  (check
+      ($string #\a #\b #\c #\d)
+    => "abcd")
+
+  (check
+      ($string #\a #\b #\c #\d #\e #\f #\g)
+    => "abcdefg")
 
   #t)
 
@@ -1177,23 +1210,118 @@
   #t)
 
 
-(parametrise ((check-test-name	'latin1))
+(parametrise ((check-test-name	'octets))
+
+  (define (octets-chi? chi)
+    (<= 0 chi 255))
 
   (define test-string
     (let* ((str.len 256)
-	   (str     (make-string str.len)))
+	   (str     (make-string str.len #\0)))
       (do ((i 0 (+ 1 i)))
 	  ((= i str.len)
 	   str)
-	(string-set! str i (integer->char i)))))
+	(when (octets-chi? i)
+	  (string-set! str i (integer->char i))))))
 
   (define test-bytevector
     (let* ((bv.len 256)
-	   (bv     (make-bytevector bv.len)))
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
       (do ((i 0 (+ 1 i)))
 	  ((= i bv.len)
 	   bv)
-	(bytevector-u8-set! bv i i))))
+	(when (octets-chi? i)
+	  (bytevector-u8-set! bv i i)))))
+
+;;; --------------------------------------------------------------------
+;;; argument check
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->octets 123))
+    => '((string? str) 123))
+
+  (check
+      (guard (E ((assertion-violation? E)
+;;;		 (check-pretty-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(octets->string 123))
+    => '((bytevector? bv) 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string->octets test-string)
+    => test-bytevector)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->octets "#\xFFFF;"))
+    => '(#\xFFFF "#\xFFFF;"))
+
+;;;
+
+  (check
+      (octets->string test-bytevector)
+    => test-string)
+
+;;;
+
+  (check
+      (octets-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (octets-encoded-bytevector? '#vu8(#x80 255 10))
+    => #t)
+
+;;;
+
+  (check
+      (octets-encoded-string? test-string)
+    => #t)
+
+  (check
+      (octets-encoded-string? (octets->string '#vu8(1 2 3 255 10)))
+    => #t)
+
+  (check
+      (octets-encoded-string? "\xFFFF;")
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'latin1))
+
+  (define (latin1-chi? chi)
+    (or (<= #x20 chi #x7E)
+	(<= #xA0 chi #xFF)))
+
+  (define test-string
+    (let* ((str.len 256)
+	   (str     (make-string str.len #\0)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i str.len)
+	   str)
+	(when (latin1-chi? i)
+	  (string-set! str i (integer->char i))))))
+
+  (define test-bytevector
+    (let* ((bv.len 256)
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
+      (do ((i 0 (+ 1 i)))
+	  ((= i bv.len)
+	   bv)
+	(when (latin1-chi? i)
+	  (bytevector-u8-set! bv i i)))))
 
 ;;; --------------------------------------------------------------------
 ;;; argument check
@@ -1221,29 +1349,72 @@
     => test-bytevector)
 
   (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->latin1 "#\x80;"))
+    => '(#\x80 "#\x80;"))
+
+;;;
+
+  (check
       (latin1->string test-bytevector)
     => test-string)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(latin1->string '#vu8(#x80)))
+    => '(#\x80 #vu8(#x80)))
+
+;;;
+
+  (check
+      (latin1-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (latin1-encoded-bytevector? '#vu8(#x80 255 10))
+    => #f)
+
+;;;
+
+  (check
+      (latin1-encoded-string? test-string)
+    => #t)
+
+  (check
+      (latin1-encoded-string? (utf8->string '#vu8(1 2 3 255 10)))
+    => #f)
 
   #t)
 
 
 (parametrise ((check-test-name	'ascii))
 
+  (define (ascii-chi? chi)
+    (<= #x00 chi #x7F))
+
   (define test-string
     (let* ((str.len 128)
-	   (str     (make-string str.len)))
+	   (str     (make-string str.len #\0)))
       (do ((i 0 (+ 1 i)))
 	  ((= i str.len)
 	   str)
-	(string-set! str i (integer->char i)))))
+	(when (ascii-chi? i)
+	  (string-set! str i (integer->char i))))))
 
   (define test-bytevector
     (let* ((bv.len 128)
-	   (bv     (make-bytevector bv.len)))
+	   (bv     (make-bytevector bv.len (char->integer #\0))))
       (do ((i 0 (+ 1 i)))
 	  ((= i bv.len)
 	   bv)
-	(bytevector-u8-set! bv i i))))
+	(when (ascii-chi? i)
+	  (bytevector-u8-set! bv i i)))))
 
 ;;; --------------------------------------------------------------------
 ;;; argument check
@@ -1271,8 +1442,46 @@
     => test-bytevector)
 
   (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(string->ascii "#\x80;"))
+    => '(#\x80 "#\x80;"))
+
+;;;
+
+  (check
       (ascii->string test-bytevector)
     => test-string)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #;(debug-print (condition-message E))
+		 (condition-irritants E))
+		(else E))
+	(ascii->string '#vu8(#x80)))
+    => '(#\x80 #vu8(#x80)))
+
+;;;
+
+  (check
+      (ascii-encoded-bytevector? test-bytevector)
+    => #t)
+
+  (check
+      (ascii-encoded-bytevector? '#vu8(1 2 3 200 10))
+    => #f)
+
+;;;
+
+  (check
+      (ascii-encoded-string? test-string)
+    => #t)
+
+  (check
+      (ascii-encoded-string? (utf8->string '#vu8(1 2 3 200 10)))
+    => #f)
 
   #t)
 
@@ -1509,6 +1718,59 @@
 	(uri-decode '#vu8(99 105 97 111))
       => '#vu8(99 105 97 111))
 
+    #| end of let-syntax |# )
+
+  (let-syntax ((doit (syntax-rules ()
+		       ((_ raw encoded)
+			(begin
+			  (check
+			      (percent-encode (string->ascii raw))
+			    => (string->ascii encoded))
+			  (check
+			      (percent-decode (string->ascii encoded))
+			    => (string->ascii raw))
+			  )))))
+
+    (doit "." ".")
+    (doit "-" "-")
+    (doit "_" "_")
+    (doit "~" "~")
+    (doit "%" "%25")
+    (doit "?" "%3F")
+    (doit "=" "%3D")
+    (doit "#" "%23")
+
+    (doit "" "")
+    (doit "ciao" "ciao")
+    (doit "cia=o" "cia%3Do")
+    (doit "ci?a=o" "ci%3Fa%3Do")
+
+    (check
+	(uri-encode (string->ascii "ciao"))
+      => '#vu8(99 105 97 111))
+
+    (check
+	(uri-decode '#vu8(99 105 97 111))
+      => '#vu8(99 105 97 111))
+
+    #| end of let-syntax |# )
+
+  (check
+      (string->uri-encoding "ci?a=o")
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check
+      (uri-encoding->string '#ve(ascii "ci%3Fa%3Do"))
+    => "ci?a=o")
+
+  (check
+      (string->percent-encoding "ci?a=o")
+    => '#ve(ascii "ci%3Fa%3Do"))
+
+  (check
+      (percent-encoding->string '#ve(ascii "ci%3Fa%3Do"))
+    => "ci?a=o")
+
 ;;; --------------------------------------------------------------------
 
   (let ((all-octets '#vu8(0 1 2 3 4 5 6 7 8 9
@@ -1547,43 +1809,181 @@
 
       (check
 	  (uri-decode (string->ascii all-string))
-	=> all-octets))
+	=> all-octets)
 
     #f)
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-decode (string->ascii "ci%5")))
+    => "incomplete percent sequence in percent-encoded bytevector")
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(uri-decode (string->ascii "ci%5Zao")))
+    => "invalid octet in percent-encoded bytevector, percent sequence")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (uri-normalise-encoding '#vu8())
+      (normalise-uri-encoding '#vu8())
     => '#vu8())
 
   (check
-      (uri-normalise-encoding (string->ascii "ciao"))
+      (normalise-uri-encoding (string->ascii "ciao"))
     => (string->ascii "ciao"))
 
   (check
-      (uri-normalise-encoding (string->ascii "cia%3do"))
+      (normalise-uri-encoding (string->ascii "cia%3do"))
     => (string->ascii "cia%3Do"))
 
   (check
-      (uri-normalise-encoding (string->ascii "cia%3Do"))
+      (normalise-uri-encoding (string->ascii "cia%3Do"))
     => (string->ascii "cia%3Do"))
 
   (check
-      (uri-normalise-encoding (string->ascii "ci%3fa%3do"))
+      (normalise-uri-encoding (string->ascii "ci%3fa%3do"))
     => (string->ascii "ci%3Fa%3Do"))
 
   (check
-      (uri-normalise-encoding (string->ascii "ci%3Fa%3Do"))
+      (normalise-uri-encoding (string->ascii "ci%3Fa%3Do"))
     => (string->ascii "ci%3Fa%3Do"))
 
   (check
-      (uri-normalise-encoding (string->ascii "%7Eciao"))
+      (normalise-uri-encoding (string->ascii "%7Eciao"))
     => (string->ascii "~ciao"))
 
   (check
-      (uri-normalise-encoding (string->ascii "ci%5Fao"))
+      (normalise-uri-encoding (string->ascii "ci%5Fao"))
     => (string->ascii "ci_ao"))
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(normalise-uri-encoding (string->ascii "ci%5")))
+    => "incomplete percent sequence in percent-encoded bytevector")
+
+  (check
+      (guard (E ((error? E)
+		 (condition-message E))
+		(else E))
+	(normalise-uri-encoding (string->ascii "ci%5Zao")))
+    => "invalid octet in percent-encoded bytevector, percent sequence")
+
+;;;
+
+  (check
+      (normalise-percent-encoding (string->ascii "ci%5Fao"))
+    => (string->ascii "ci_ao"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (uri-encoded-bytevector? '#vu8())
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ciao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "cia%3do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "cia%3Do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%3fa%3do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%3Fa%3Do"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "%7Eciao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5Fao"))
+    => #t)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5"))
+    => #f)
+
+  (check
+      (uri-encoded-bytevector? (string->ascii "ci%5Zao"))
+    => #f)
+
+;;;
+
+  (check
+      (percent-encoded-bytevector? (string->ascii "ci%3Fa%3Do"))
+    => #t)
+
+  (check
+      (percent-encoded-bytevector? (string->ascii "ci%5Zao"))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (uri-encoded-string? "")
+    => #t)
+
+  (check
+      (uri-encoded-string?  "ciao")
+    => #t)
+
+  (check
+      (uri-encoded-string?  "cia%3do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "cia%3Do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%3fa%3do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%3Fa%3Do")
+    => #t)
+
+  (check
+      (uri-encoded-string? "%7Eciao")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%5Fao")
+    => #t)
+
+  (check
+      (uri-encoded-string? "ci%5")
+    => #f)
+
+  (check
+      (uri-encoded-string? "ci%5Zao")
+    => #f)
+
+;;;
+
+  (check
+      (percent-encoded-string? "ci%3Fa%3Do")
+    => #t)
+
+  (check
+      (percent-encoded-string? "ci%5Zao")
+    => #f)
 
   #t)
 

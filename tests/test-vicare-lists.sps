@@ -64,6 +64,8 @@
 	     expand run)
   (lists)
   (prefix (vicare) six.)
+  (vicare unsafe operations)
+  (vicare system $lists)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4961,6 +4963,78 @@ called with at least two arguments.
 	      (rv4 (empty?)))
 	  (six.list rv0 rv1 rv2 rv3 rv4)))
     => '(1 2 3 4 #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe))
+
+  (define (even-value obj)
+    (and (even? obj) obj))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($length '(1 2 3 4 5 6))
+    => 6)
+
+  (check
+      ($length '(1))
+    => 1)
+
+  (check
+      ($length '())
+    => 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($map1 even-value '())
+    => '())
+
+  (check
+      ($map1 even-value '(1 2 3 4))
+    => '(#f 2 #f 4))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       ($for-each1 add-result '()))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       ($for-each1 add-result '(2 4 6)))
+    => `(,(void) (2 4 6)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($for-all1 even-value '())
+    => #t)
+
+  (check
+      ($for-all1 even-value '(2 4 6))
+    => 6)
+
+  (check
+      ($for-all1 even-value '(2 4 3))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($exists1 even-value '())
+    => #f)
+
+  (check
+      ($exists1 even-value '(1 2 3))
+    => 2)
+
+  (check
+      ($exists1 even-value '(1 3 5))
+    => #f)
 
   #t)
 

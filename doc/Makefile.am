@@ -2,12 +2,18 @@
 
 #AM_MAKEINFOFLAGS	= --no-split
 
-EXTRA_DIST		= QUEST-FOR-ISSUE-35
+EXTRA_DIST		= \
+	QUEST-FOR-ISSUE-35				\
+	\
+	RFC/rfc4291.ipv6-address-achitecture.txt	\
+	RFC/rfc5735.ipv4-special-use-addresses.txt	\
+	RFC/rfc3986.uri.txt
 
 info_TEXINFOS		= \
 	vicare-scheme.texi			\
 	vicare-libs.texi			\
-	nausicaa.texi
+	nausicaa.texi				\
+	mehve.texi
 
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi				\
@@ -84,6 +90,9 @@ vicare_libs_TEXINFOS = \
 	libs-vectors.texi			\
 	libs-weak-hashtables.texi		\
 	\
+	libs-parser-tools-silex.texi		\
+	libs-parser-tools-unix-pathnames.texi	\
+	\
 	libs-net-channels.texi			\
 	\
 	srfi.texi				\
@@ -125,22 +134,42 @@ vicare_libs_TEXINFOS = \
 	srfi-functional-pairs.texi
 
 nausicaa_TEXINFOS	= \
-	nausicaa-language.texi			\
-	nausicaa-oopp.texi			\
-	nausicaa-multimethods.texi		\
-	nausicaa-builtins.texi			\
-	nausicaa-conditions.texi		\
+	nausicaa-language.texi					\
+	nausicaa-oopp.texi					\
+	nausicaa-multimethods.texi				\
+	nausicaa-builtins.texi					\
+	nausicaa-conditions.texi				\
+	nausicaa-increments.texi				\
+	nausicaa-simple-match.texi				\
+	nausicaa-infix.texi					\
 	\
-	nausicaa-lists.texi			\
-	nausicaa-vectors.texi			\
-	nausicaa-strings.texi			\
-	nausicaa-arrays.texi			\
-	nausicaa-stacks.texi			\
-	nausicaa-queues.texi			\
-	nausicaa-bitvectors.texi		\
+	nausicaa-containers-lists.texi				\
+	nausicaa-containers-vectors.texi			\
+	nausicaa-containers-strings.texi			\
+	nausicaa-containers-arrays.texi				\
+	nausicaa-containers-stacks.texi				\
+	nausicaa-containers-queues.texi				\
+	nausicaa-containers-bitvectors.texi			\
+	nausicaa-containers-iterators.texi			\
 	\
-	macros.texi				\
-	fdl-1.3.texi				\
+	nausicaa-parser-tools-source-locations.texi		\
+	nausicaa-parser-tools-lexical-tokens.texi		\
+	nausicaa-parser-tools-lalr.texi				\
+	nausicaa-parser-tools-ip-addresses.texi			\
+	nausicaa-parser-tools-uri.texi				\
+	\
+	nausicaa-uri-uri.texi					\
+	nausicaa-uri-pathnames.texi				\
+	\
+	macros.texi						\
+	fdl-1.3.texi						\
+	gpl-3.0.texi
+
+mehve_TEXINFOS	= \
+	mehve-language.texi					\
+	\
+	macros.texi						\
+	fdl-1.3.texi						\
 	gpl-3.0.texi
 
 ### end of file

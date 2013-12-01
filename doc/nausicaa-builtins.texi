@@ -23,6 +23,7 @@ language multimethods}.
 * builtins keywords::           Keyword label.
 * builtins pointers::           Pointer label.
 * builtins pairs::              Pair label.
+* builtins spines::             Spine label.
 * builtins lists::              List label.
 * builtins chars::              Character label.
 * builtins strings::            String label.
@@ -36,7 +37,9 @@ language multimethods}.
 * builtins records::            @rnrs{6} record labels.
 * builtins conditions::         Condition labels.
 * builtins procedures::         Procedure labels.
+* builtins special::            Special values.
 * builtins multimethods::       Predefined generic functions.
+* builtins mixins::             Predefined mixins.
 @end menu
 
 @c page
@@ -47,18 +50,26 @@ language multimethods}.
 @smallexample
 <top>
   |
-  +------+--------+---------+-------+---------+-----------
-  |      |        |         |       |         |           |
-  |      v        v         v       v         v           v
-  |  <boolean> <symbol> <keyword> <pair> <mutable-pair> <list>
+  +------+--------+---------+-------
+  |      |        |         |       |
+  |      v        v         v       v
+  |  <boolean> <symbol> <keyword> <char>
   |
-  +----+-------+--------+----------+------------
-  |    |       |        |          |            |
-  |    v       v        v          v            v
-  |  <char> <string> <vector> <bytevector> <hashtable>
-  |            |
-  |            v
-  |     <mutable-string>
+  +------+------------------
+  |      |                  |
+  |      v                  v
+  |   <pair>             <spine>
+  |      |                  |
+  |      v                  v
+  |  <mutable-pair>      <list>
+  |
+  +--------+--------+----------+------------
+  |        |        |          |            |
+  |        v        v          v            v
+  |     <string> <vector> <bytevector> <hashtable>
+  |        |
+  |        v
+  |  <mutable-string>
   |
   +-------+------------+----------
   |       |            |          |
@@ -102,7 +113,7 @@ language multimethods}.
 <rational-valued> --> <integer-valued>
   |
   v
-<rational> --> <integer> --> <fixnum>
+<rational> --> <integer> --> <exact-integer> --> <fixnum>
 @end smallexample
 
 @c page
@@ -338,7 +349,8 @@ meant to be used for immutable pairs.
 
 
 @deftp {Builtin Label} @aclass{mutable-pair}
-Conventional type of objects satisfying @func{pair?}.
+Conventional type of objects satisfying @func{pair?}; it is derived from
+@aclass{pair}.
 @end deftp
 
 
@@ -380,27 +392,25 @@ Access and mutate the cdr of the pair using @func{cdr} and
 
 @deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $car
 Access the car of the pair using the unsafe operation @func{$car} from
-@library{nausicaa language unsafe-operations}.
+@library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{pair} @aclass{top} $cdr
 Access the cdr of the pair using the unsafe operation @func{$cdr} from
-@library{nausicaa language unsafe-operations}.
+@library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $car
 Access and mutate the car of the pair using the unsafe operations
-@func{$car} and @func{$set-car!} from @library{nausicaa language
-unsafe-operations}.
+@func{$car} and @func{$set-car!} from @library{vicare system $pairs}.
 @end deftypecv
 
 
 @deftypecv {Mutable Virtual Field} @aclass{mutable-pair} @aclass{top} $cdr
 Access and mutate the cdr of the pair using the unsafe operations
-@func{$cdr} and @func{set-cdr!} from @library{nausicaa language
-unsafe-operations}.
+@func{$cdr} and @func{set-cdr!} from @library{vicare system $pairs}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -415,18 +425,24 @@ the expressions @meta{car} and @meta{cdr}.
 @end defop
 
 @c page
-@node builtins lists
-@section List label
+@node builtins spines
+@section Spine label
 
 
-@deftp {Builtin Label} @aclass{list}
-Conventional type of objects satisfying @func{list?}.  Both proper lists
-and nulls an be tagged with this label.
+A @dfn{spine} is the head of a proper list: null or a pair whose cdr is
+null or a pair.  It can be used to iterate over a proper list without
+fully validating it first.
+
+
+@deftp {Builtin Label} @aclass{spine}
+Conventional type of objects satisfying @func{null?} or @func{pair?}
+and, in the case of a pair, having null or a pair as cdr.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
-Return the result of applying @func{list} to the @var{item} arguments.
+@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @var{cdr}
+Return the result of applying @func{cons} to @var{car} and @var{cdr}.
+@var{cdr} must be a @class{spine}.
 @end deftypeop
 
 @c ------------------------------------------------------------
@@ -434,39 +450,48 @@ Return the result of applying @func{list} to the @var{item} arguments.
 @subsubheading Safe accessors
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{top} car
-Access the car of the list using @func{car}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using @func{car}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{list} cdr
-Access the cdr of the list using @func{cdr}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using @func{cdr}.
 @end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{list} length
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{exact-integer} length
 Access the length of the list.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{list} null?
-Return true if the list is empty.
-@end defcv
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} null?
+True if the spine is null.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{boolean} pair?
+True if the spine is a pair.
+@end deftypecv
 
 @c ------------------------------------------------------------
 
 @subsubheading Unsafe accessors
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{top} $car
-Access the car of the list using the unsafe operation @func{$car} from
-@library{nausicaa language unsafe-operations}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{top} $car
+To be accessed only if the instance is a pair.  Access the car of the
+pair using the unsafe operation @func{$car} from @library{vicare system
+$pairs}.
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{list} @aclass{list} $cdr
-Access the cdr of the list using the unsafe operation @func{$cdr} from
-@library{nausicaa language unsafe-operations}.
+@deftypecv {Immutable virtual field} @aclass{spine} @aclass{spine} $cdr
+To be accessed only if the instance is a pair.  Access the cdr of the
+pair using the unsafe operation @func{$cdr} from @library{vicare system
+$pairs}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -474,90 +499,122 @@ Access the cdr of the list using the unsafe operation @func{$cdr} from
 @subsubheading Methods
 
 
-@defmethod @aclass{list} caar
-@defmethodx @aclass{list} cadr
-@defmethodx @aclass{list} cdar
-@defmethodx @aclass{list} cddr
-@defmethodx @aclass{list} caaar
-@defmethodx @aclass{list} caadr
-@defmethodx @aclass{list} cadar
-@defmethodx @aclass{list} caddr
-@defmethodx @aclass{list} cdaar
-@defmethodx @aclass{list} cdadr
-@defmethodx @aclass{list} cddar
-@defmethodx @aclass{list} cdddr
+@defmethod @aclass{spine} caar
+@defmethodx @aclass{spine} cadr
+@defmethodx @aclass{spine} cdar
+@defmethodx @aclass{spine} cddr
+@defmethodx @aclass{spine} caaar
+@defmethodx @aclass{spine} caadr
+@defmethodx @aclass{spine} cadar
+@defmethodx @aclass{spine} caddr
+@defmethodx @aclass{spine} cdaar
+@defmethodx @aclass{spine} cdadr
+@defmethodx @aclass{spine} cddar
+@defmethodx @aclass{spine} cdddr
 Apply the corresponding function to the list.  Notice that calling these
 methods may raise an error if the list structure is not suitable.
 @end defmethod
 
 
-@defmethod @aclass{list} map @var{proc} . @var{lists}
+@defmethod @aclass{spine} map @var{proc} . @var{lists}
 Apply @func{map} to the instance list and the optional @var{lists}.
 @end defmethod
 
 
-@defmethod @aclass{list} for-each @var{proc} . @var{lists}
+@defmethod @aclass{spine} for-each @var{proc} . @var{lists}
 Apply @func{for-each} to the instance list and the optional @var{lists}.
 @end defmethod
 
 
-@defmethod @aclass{list} find @var{proc}
+@defmethod @aclass{spine} find @var{proc}
 Apply @func{find} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} reverse @var{proc}
+@defmethod @aclass{spine} reverse @var{proc}
 Apply @func{reverse} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} for-all @var{proc}
+@defmethod @aclass{spine} for-all @var{proc}
 @defmethodx @aclass{lits} exists @var{proc}
 Apply @func{for-all} and @func{exists} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} filter @var{proc}
-@defmethodx @aclass{list} partition @var{proc}
+@defmethod @aclass{spine} filter @var{proc}
+@defmethodx @aclass{spine} partition @var{proc}
 Apply @func{filter} and @func{partition} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} fold-left @var{nil} @var{combine}
+@defmethod @aclass{spine} fold-left @var{nil} @var{combine}
 Apply @func{fold-left} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} fold-right @var{nil} @var{combine}
+@defmethod @aclass{spine} fold-right @var{nil} @var{combine}
 Apply @func{fold-right} to the list.
 @end defmethod
 
 
-@defmethod @aclass{list} remp @var{proc}
-@defmethodx @aclass{list} remove @var{obj}
-@defmethodx @aclass{list} remv @var{obj}
-@defmethodx @aclass{list} remq @var{obj}
+@defmethod @aclass{spine} remp @var{proc}
+@defmethodx @aclass{spine} remove @var{obj}
+@defmethodx @aclass{spine} remv @var{obj}
+@defmethodx @aclass{spine} remq @var{obj}
 Apply @func{remp}, @func{remove}, @func{remv}, @func{remq} to the list
 and the given argument.
 @end defmethod
 
 
-@defmethod @aclass{list} memp @var{proc} @var{list}
-@defmethodx @aclass{list} member @var{obj} @var{list}
-@defmethodx @aclass{list} memv @var{obj} @var{list}
-@defmethodx @aclass{list} memq @var{obj} @var{list}
+@defmethod @aclass{spine} memp @var{proc} @var{list}
+@defmethodx @aclass{spine} member @var{obj} @var{list}
+@defmethodx @aclass{spine} memv @var{obj} @var{list}
+@defmethodx @aclass{spine} memq @var{obj} @var{list}
 Apply @func{memp}, @func{member}, @func{memv}, @func{memq} to the list
 and the given arguments.
 @end defmethod
 
 
-@defmethod @aclass{list} assp @var{proc}
-@defmethodx @aclass{list} assoc @var{obj}
-@defmethodx @aclass{list} assv @var{obj}
-@defmethodx @aclass{list} assq @var{obj}
+@defmethod @aclass{spine} assp @var{proc}
+@defmethodx @aclass{spine} assoc @var{obj}
+@defmethodx @aclass{spine} assv @var{obj}
+@defmethodx @aclass{spine} assq @var{obj}
 Apply @func{assp}, @func{assoc}, @func{assv}, @func{assq} to the list
 and the given argument.
 @end defmethod
+
+@c ------------------------------------------------------------
+
+@subsubheading @oopp{} syntaxes
+
+
+@defop Maker @aclass{spine} @aclass{spine} ()
+@defopx Maker @aclass{spine} @aclass{spine} (@meta{car} @meta{cdr})
+When the first form is used: return null.  When the second form is used:
+build and return a new @class{spine} object using the common protocol.
+@end defop
+
+@c page
+@node builtins lists
+@section List label
+
+
+@deftp {Builtin Label} @aclass{list}
+Conventional type of objects satisfying @func{list?}; it is derived from
+@class{spine}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonempty-list}
+Conventional type of objects satisfying @func{list?} and @func{pair?};
+it is derived from @class{list}.
+@end deftp
+
+
+@deftypeop {Common constructor} @aclass{list} @aclass{list} constructor @var{item} @dots{}
+Return the result of applying @func{list} to the @var{item} arguments.
+@end deftypeop
 
 @c ------------------------------------------------------------
 
@@ -654,6 +711,28 @@ a sublabel of @aclass{string}.
 @end deftp
 
 
+@deftp {Builtin Label} @aclass{ascii-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{ascii-encoded-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{latin1-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{latin1-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{percent-encoded-string}
+Conventional type for mutable objects satisfying @func{string?} and
+@func{percent-encoded-string?}.  It is a sublabel of @aclass{string}.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and makers
+
+
 @deftypeop {Common constructor} @aclass{string} @aclass{string} constructor @var{ch} @dots{}
 @deftypeopx {Common constructor} @aclass{mutable-string} @aclass{mutable-string} constructor @var{ch} @dots{}
 Return the result of applying @func{string} to the @var{ch} arguments.
@@ -698,20 +777,69 @@ Accessing this field is like applying @func{string-foldcase} to the
 string.
 @end deftypecv
 
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u8} utf8
+Accessing this field is like applying @func{string->utf8} to the string,
+@vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16 @var{endianness}
+Accessing this field is like applying @func{string->utf16} to the
+string, @vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u16l} utf16le
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16b} utf16be
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u16n} utf16n
+Accessing these fields is like applying @func{string->utf16le},
+@func{string->utf16be}, @func{string->utf16n} to the string,
+@vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{bytevector-u32} utf32
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{bytevector-u32} utf32 @var{endianness}
+Accessing this field is like applying @func{string->utf32} to the
+string, @vicareref{stdlib bytevector strings, Operations on strings}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} ascii
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} $ascii
+Accessing this field is like applying @func{string->ascii} to the
+string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} latin1
+@deftypecvx {Immutable virtual field} @aclass{string} @aclass{ascii-bytevector} $latin1
+Accessing this field is like applying @func{string->latin1} to the
+string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{string} @aclass{percent-encoded-bytevector} percent-encoding
+Accessing this field is like applying @func{string->percent-encoding} to
+the string, @vicareref{iklib strings, Additional string functions}.
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading Unsafe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{fixnum} $length
-Return the result of applying @func{$string-length} from
-@library{nausicaa language unsafe-operations} to the string.
+Return the result of applying @func{$string-length} from @library{vicare
+system $strings} to the string.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{string} @aclass{boolean} $empty?
 Return @true{} if the string length is zero.  Make use of unsafe
-operations from @library{nausicaa language unsafe-operations}.
+operations from @library{vicare system $strings}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -852,14 +980,14 @@ True if the vector length is zero.
 
 
 @deftypecv {Immutable virtual field} @aclass{vector} @aclass{fixnum} $length
-Return the result of applying @func{$vector-length} from
-@library{nausicaa language unsafe-operations} to the vector.
+Return the result of applying @func{$vector-length} from @library{vicare
+system $vectors} to the vector.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{vector} @aclass{boolean} $empty?
 Return @true{} if the vector length is zero.  Make use of unsafe
-operations from @library{nausicaa language unsafe-operations}.
+operations from @library{vicare system $vectors}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -996,9 +1124,127 @@ Conventional type for objects satisfying @func{bytevector?}.
 @end deftp
 
 
-@defcv {Immutable virtual field} @aclass{bytevector} length
+@deftp {Builtin Label} @aclass{nonempty-bytevector}
+Conventional type for objects satisfying @func{bytevector?} and having
+non--zero length.
+@end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Accessors
+
+Virtual field values whose name is prefixed by @code{$} are built using
+unsafe operations.
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{fixnum} length
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{fixnum} $length
 Access the length of the bytevector.
-@end defcv
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} ascii-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $ascii-encoded?
+Accessing this field is like applying @func{ascii-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} latin1-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} latin1-encoded?
+Accessing this field is like applying @func{latin1-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{boolean} percent-encoded?
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{boolean} $percent-encoded?
+Accessing this field is like applying @func{percent-encoded-bytevector?}
+to the bytevector, @vicareref{iklib bytevectors conv, Converting
+bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} percent-encoded
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{percent-encoded-bytevector} $percent-encoded
+Accessing this field is like applying @func{percent-encode} to the
+bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{bytevector} percent-decoded
+@deftypecvx {Immutable virtual field} @aclass{bytevector} @aclass{bytevector} $percent-decoded
+Accessing this field is like applying @func{percent-decode} to the
+bytevector, @vicareref{iklib bytevectors conv, Converting bytevectors}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} octets-string
+Accessing this field is like applying @func{octets->string} to the
+bytevector, @vicareref{iklib strings, octets->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} ascii-string
+Accessing this field is like applying @func{ascii->string} to the
+bytevector, @vicareref{iklib strings, ascii->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} latin1-string
+Accessing this field is like applying @func{latin1->string} to the
+bytevector, @vicareref{iklib strings, latin1->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} uri-string
+Accessing this field is like applying @func{uri-encoding->string} to the
+bytevector, @vicareref{iklib strings, uri-encoding->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf8-string
+Accessing this field is like applying @func{utf8->string} to the
+bytevector, @vicareref{stdlib bytevector strings, utf8->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16be-string
+Accessing this field is like applying @func{utf16be->string} to the
+bytevector, @vicareref{iklib strings, utf16be->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16le-string
+Accessing this field is like applying @func{utf16le->string} to the
+bytevector, @vicareref{iklib strings, utf16le->string}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{bytevector} @aclass{string} utf16n-string
+Accessing this field is like applying @func{utf16n->string} to the
+bytevector, @vicareref{iklib strings, utf16n->string}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods
+
+
+@deftypemethod @aclass{bytevector} @aclass{bytevector} copy
+@deftypemethodx @aclass{bytevector} @aclass{bytevector} $copy
+Build and return a copy of the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{bytevector} @aclass{exact-integer} hash
+@deftypemethodx @aclass{bytevector} @aclass{exact-integer} $hash
+Compute a hash value of bytevector instance using
+@func{bytevector-hash}, @vicareref{iklib bytevectors generic, Generic
+bytevector operations}.
+@end deftypemethod
 
 @c page
 @node builtins bytevectors 8
@@ -1008,7 +1254,35 @@ Access the length of the bytevector.
 @deftp {Builtin Label} @aclass{bytevector-u8}
 @deftpx {Builtin Label} @aclass{bytevector-s8}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as octets or bytes.
+contents must be accessed as octets or bytes.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{ascii-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as octets representing @ascii{} characters; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+returns @true{} if all the octets in the bytevector are in the range
+@math{[0, 127]}; long bytevectors may need significant time to be
+validated this way.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{latin1-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents must be accesses as octets representing Latin1 characters; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+returns @true{} if all the octets in the bytevector are in one of the
+ranges @code{[#x20, #x7E]} and @code{[#xA0, #xFF]}; long bytevectors may
+need significant time to be validated this way.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{percent-encoded-bytevector}
+Conventional type for objects satisfying @func{bytevector?} whose
+contents represent a percent--encoded text as defined by @rfc{} 3986; it
+is derived from @class{bytevector-u8}.  The predicate of this label
+involves applying @func{uri-encoded-bytevector?}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -1041,7 +1315,7 @@ selected byte or octet.
 @deftpx {Builtin Label} @aclass{bytevector-u16n}
 @deftpx {Builtin Label} @aclass{bytevector-s16n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 16-bit words.  The suffix @samp{l} stands
+contents must be accessed as 16-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1084,7 +1358,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-u32n}
 @deftpx {Builtin Label} @aclass{bytevector-s32n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 32-bit words.  The suffix @samp{l} stands
+contents must be accessed as 32-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1127,7 +1401,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-u64n}
 @deftpx {Builtin Label} @aclass{bytevector-s64n}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as 64-bit words.  The suffix @samp{l} stands
+contents must be accessed as 64-bit words.  The suffix @samp{l} stands
 for little--endian; the suffix @samp{b} stands for big--endian; the
 suffix @samp{n} stands for native endianness.
 @end deftp
@@ -1167,7 +1441,7 @@ selected word.
 @deftpx {Builtin Label} @aclass{bytevector-singleb}
 @deftpx {Builtin Label} @aclass{bytevector-singlen}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as @ieee{} single--precision floating--point
+contents must be accessed as @ieee{} single--precision floating--point
 numbers.  The suffix @samp{l} stands for little--endian; the suffix
 @samp{b} stands for big--endian; the suffix @samp{n} stands for native
 endianness.
@@ -1202,7 +1476,7 @@ the selected word.
 @deftpx {Builtin Label} @aclass{bytevector-doubleb}
 @deftpx {Builtin Label} @aclass{bytevector-doublen}
 Conventional type for objects satisfying @func{bytevector?} whose
-contents must be accesses as @ieee{} double--precision floating--point
+contents must be accessed as @ieee{} double--precision floating--point
 numbers.  The suffix @samp{l} stands for little--endian; the suffix
 @samp{b} stands for big--endian; the suffix @samp{n} stands for native
 endianness.
@@ -1295,28 +1569,28 @@ Access the keys and values.  Calling this method is like applying
 
 
 @defmethod @aclass{hashtable} delete! @var{key}
-Equivalent to applying @func{hashable-delete!} to the instance.
+Equivalent to applying @func{hashtable-delete!} to the instance.
 @end defmethod
 
 
 @deftypemethod @aclass{hashtable} @aclass{boolean} contains? @var{key}
-Equivalent to applying @func{hashable-contains?} to the instance.
+Equivalent to applying @func{hashtable-contains?} to the instance.
 @end deftypemethod
 
 
 @defmethod @aclass{hashtable} clear!
-Equivalent to applying @func{hashable-clear!} to the instance.
+Equivalent to applying @func{hashtable-clear!} to the instance.
 @end defmethod
 
 
 @defmethod @aclass{hashtable} update! @var{key} @var{proc} @var{default}
-Equivalent to applying @func{hashable-update!} to the instance.
+Equivalent to applying @func{hashtable-update!} to the instance.
 @end defmethod
 
 
 @defmethod @aclass{hashtable} copy
 @defmethodx @aclass{hashtable} copy @var{mutable?}
-Equivalent to applying @func{hashable-copy} to the instance.
+Equivalent to applying @func{hashtable-copy} to the instance.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -1437,6 +1711,16 @@ function @func{nan?} from @rsixlibrary{base}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Accessors: conversion
+
+
+@deftypecv {Immutable virtual field} @aclass{number} @aclass{string} string
+Accessing this field is like applying to the number the function
+@func{number->string} from @rsixlibrary{base} without other arguments.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
 @subsubheading Methods: arithmetic
 
 
@@ -1461,40 +1745,6 @@ the result.
 @defmethod @aclass{number} / @var{num} @dots{}
 Apply @func{/} to the instance and the given optional arguments; return
 the result.
-@end defmethod
-
-
-@defmethod @aclass{number} incr!
-@defmethodx @aclass{number} pre-incr!
-@defmethodx @aclass{number} incr! @var{step}
-@defmethodx @aclass{number} pre-incr! @var{step}
-Mutate the number by incrementing it of @var{step}, or @math{1} if
-@var{step} is not given; return the number @strong{after} the increment.
-@end defmethod
-
-
-@defmethod @aclass{number} decr!
-@defmethodx @aclass{number} pre-decr!
-@defmethodx @aclass{number} decr! @var{step}
-@defmethodx @aclass{number} pre-decr! @var{step}
-Mutate the number by decrementing it of @var{step}, or @math{1} if
-@var{step} is not given; return the number @strong{after} the decrement.
-@end defmethod
-
-
-@defmethod @aclass{number} post-incr!
-@defmethodx @aclass{number} post-incr! @var{step}
-Mutate the number by incrementing it of @var{step}, or @math{1} if
-@var{step} is not given; return the number @strong{before} the
-increment.
-@end defmethod
-
-
-@defmethod @aclass{number} post-decr!
-@defmethodx @aclass{number} post-decr! @var{step}
-Mutate the number by decrementing it of @var{step}, or @math{1} if
-@var{step} is not given; return the number @strong{before} the
-decrement.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -1672,14 +1922,10 @@ Calling this method is like applying to the instance number the function
 @func{complex-conjugate} from @library{vicare}.
 @end defmethod
 
-@c ------------------------------------------------------------
 
-@subsubheading Conversion
-
-
-@defmethod @aclass{number} string
-@defmethodx @aclass{number} string @var{radix}
-@defmethodx @aclass{number} string @var{radix} @var{precision}
+@defmethod @aclass{number} string-radix
+@defmethodx @aclass{number} string-radix @var{radix}
+@defmethodx @aclass{number} string-radix @var{radix} @var{precision}
 Calling this method is like applying to the instance number, and the
 optional arguments @var{radix} and @var{precision}, the function
 @func{number->string} from @rsixlibrary{base}.
@@ -1693,6 +1939,18 @@ optional arguments @var{radix} and @var{precision}, the function
 @deftp {Builtin Label} @aclass{complex}
 Conventional type for objects satisfying @func{complex?}.  It is derived
 from @class{number}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{compnum}
+Conventional type for objects satisfying @func{compnum?}.  It is derived
+from @class{complex}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{cflonum}
+Conventional type for objects satisfying @func{cflonum?}.  It is derived
+from @class{complex}.
 @end deftp
 
 @c page
@@ -1826,6 +2084,12 @@ Conventional type for objects satisfying @func{rational?}.  It is
 derived from @class{rational-valued}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{ratnum}
+Conventional type for objects satisfying @func{ratnum?}.  It is derived
+from @class{rational}.
+@end deftp
+
 @c page
 @node builtins numbers integerv
 @subsection Integer--valued number objects
@@ -1872,6 +2136,24 @@ Conventional type for objects satisfying @func{exact-integer?}.  It is
 derived from @class{integer}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{bignum}
+Conventional type for objects satisfying @func{bignum?}.  It is derived
+from @class{exact-integer}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{positive-bignum}
+Conventional type for objects satisfying @func{bignum?} and
+@func{positive?}.  It is derived from @class{bignum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-bignum}
+Conventional type for objects satisfying @func{bignum?} and
+@func{negative?}.  It is derived from @class{bignum}.
+@end deftp
+
 @c page
 @node builtins numbers fixnum
 @subsection Fixnum number objects
@@ -1879,7 +2161,37 @@ derived from @class{integer}.
 
 @deftp {Builtin Label} @aclass{fixnum}
 Conventional type for objects satisfying @func{fixnum?}.  It is derived
-from @class{integer}.
+from @class{exact-integer}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonzero-fixnum}
+Conventional type for objects satisfying @func{fixnum?} but not
+@func{fxzero?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonpositive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonpositive?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{nonnegative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnonnegative?}.  It is derived from @class{fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{positive-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxpositive?}.  It is derived from @class{nonnegative-fixnum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{negative-fixnum}
+Conventional type for objects satisfying @func{fixnum?} and
+@func{fxnegative?}.  It is derived from @class{nonpositive-fixnum}.
 @end deftp
 
 @c ------------------------------------------------------------
@@ -1888,48 +2200,56 @@ from @class{integer}.
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} even?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $even?
 Accessing this field is like applying to the instance number the
 function @func{fxeven?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} odd?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $odd?
 Accessing this field is like applying to the instance number the
 function @func{fxodd?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} negative?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $negative?
 Accessing this field is like applying to the instance number the
 function @func{fxnegative?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} positive?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $positive?
 Accessing this field is like applying to the instance number the
 function @func{fxpositive?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-negative?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $non-negative?
 Accessing this field is like applying to the instance number the
 function @func{fxnonnegative?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} non-positive?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $non-positive?
 Accessing this field is like applying to the instance number the
 function @func{fxnonpositive?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{boolean} zero?
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{boolean} $zero?
 Accessing this field is like applying to the instance number the
 function @func{fxzero?} from @rsixlibrary{arithmetic fixnums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{fixnum} @aclass{fixnum} sign
+@deftypecvx {Immutable virtual field} @aclass{fixnum} @aclass{fixnum} $sign
 Accessing this field is like applying to the instance number the
 function @func{fxsign} from @library{vicare}.
 @end deftypecv
@@ -1971,6 +2291,12 @@ fixnums}.
 @end defmethod
 
 
+@defmethod @aclass{fixnum} add1
+@defmethodx @aclass{fixnum} $add1
+Add @math{1} to the instance number.
+@end defmethod
+
+
 @defmethod @aclass{fixnum} - @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
@@ -1981,6 +2307,12 @@ argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx-/carry} from @rsixlibrary{arithmetic
 fixnums}.
+@end defmethod
+
+
+@defmethod @aclass{fixnum} sub1
+@defmethodx @aclass{fixnum} $sub1
+Subtract @math{1} from the instance number.
 @end defmethod
 
 
@@ -2215,14 +2547,23 @@ fixnums}.
 
 
 @defmethod @aclass{fixnum} string
-Calling this method is like applying to the instance number the function
-@func{fixnum->string} from @library{vicare}.
+@defmethodx @aclass{fixnum} string @var{base}
+@defmethodx @aclass{fixnum} $string
+@defmethodx @aclass{fixnum} $string @var{base}
+Calling @func{string} is like applying to the instance number the
+function @func{fixnum->string} from @library{vicare}.  Calling
+@func{$string} does the same without validating the argument.
+
+@var{base} must be one among @math{2}, @math{8}, @math{10}, @math{16};
+when not given it defaults to @math{10}.
 @end defmethod
 
 
 @defmethod @aclass{fixnum} flonum
-Calling this method is like applying to the instance number the function
-@func{fixnum->flonum} from @rsixlibrary{arithmetic fixnums}.
+@defmethodx @aclass{fixnum} $flonum
+Calling @func{flonum} is like applying to the instance number the
+function @func{fixnum->flonum} from @rsixlibrary{arithmetic fixnums}.
+Calling @func{$flonum} does the same without validating the argument.
 @end defmethod
 
 @c page
@@ -2235,67 +2576,90 @@ Conventional type for objects satisfying @func{flonum?}.  It is derived
 from @class{real}.
 @end deftp
 
+
+@deftp {Builtin Label} @aclass{integer-flonum}
+Conventional type for objects satisfying @func{flonum?} and
+@func{integer?}.  It is derived from @class{flonum}.
+@end deftp
+
+
+@deftp {Builtin Label} @aclass{rational-flonum}
+Conventional type for objects satisfying @func{flonum?} and
+@func{rational?}.  It is derived from @class{flonum}.
+@end deftp
+
 @c ------------------------------------------------------------
 
 @subsubheading Safe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} integer?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $integer?
 Accessing this field is like applying to the instance number the
 function @func{flinteger?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} finite?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $finite?
 Accessing this field is like applying to the instance number the
 function @func{flfinite?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} infinite?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $infinite?
 Accessing this field is like applying to the instance number the
 function @func{flinfinite?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nan?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nan?
 Accessing this field is like applying to the instance number the
 function @func{flnan?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} negative?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $negative?
 Accessing this field is like applying to the instance number the
 function @func{flnegative?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} positive?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $positive?
 Accessing this field is like applying to the instance number the
 function @func{flpositive?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonnegative?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nonnegative?
 Accessing this field is like applying to the instance number the
 function @func{flnonnegative?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} nonpositive?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $nonpositive?
 Accessing this field is like applying to the instance number the
 function @func{flnonpositive?} from @library{vicare}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?
 Accessing this field is like applying to the instance number the
 function @func{flzero?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/positive
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?/positive
 @deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} zero?/negative
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $zero?/negative
 Accessing this field is like applying to the instance number,
 respectively, the functions @func{flzero?/positive} and
 @func{flzero?/negative} from @library{vicare}.
@@ -2303,12 +2667,14 @@ respectively, the functions @func{flzero?/positive} and
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} even?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $even?
 Accessing this field is like applying to the instance number the
 function @func{fleven?} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{flonum} @aclass{boolean} odd?
+@deftypecvx {Immutable virtual field} @aclass{flonum} @aclass{boolean} $odd?
 Accessing this field is like applying to the instance number the
 function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
 @end deftypecv
@@ -2319,6 +2685,7 @@ function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
 
 
 @defmethod @aclass{flonum} abs
+@defmethodx @aclass{flonum} $abs
 Calling this method is like applying to the instance number the function
 @func{flabs} from @rsixlibrary{arithmetic flonums}.
 @end defmethod
@@ -3355,6 +3722,22 @@ Conventional type for objects satisfying @func{procedure?}.
 @end deftp
 
 @c page
+@node builtins special
+@section Special values
+
+
+@deffn {Builtin Label} @aclass{undefined}
+Conventional type for objects satisfying @func{undefined?} from
+@library{vicare language-extensions sentinels}.
+@end deffn
+
+
+@deffn {Builtin Label} @aclass{unspecified}
+Conventional type for objects satisfying @func{unspecified?} from
+@library{vicare language-extensions sentinels}.
+@end deffn
+
+@c page
 @node builtins multimethods
 @section Predefined generic functions
 
@@ -3373,17 +3756,25 @@ Conventional type for objects satisfying @func{procedure?}.
 Object--type inspector function; return the list of @uid{}s in the type
 hierarchy of @var{obj}.  When this function does not recognise an
 object's type: the return value just identifies @var{obj} as of type
-@class{top}.  This function can recognise:
+@class{top}.  This function can recognise automatically all the
+instances of classes declared by @func{define-class}, from
+@library{nausicaa language oopp}, defined in any library.  This function
+recognise only the following built--in labels:
 
-@enumerate
-@item
-All the built--in objects having conventional label type defined by the
-library @library{nausicaa language builtins}.
-
-@item
-All the instances of classes defined by @func{define-class} from the
-library @library{nausicaa language oopp}.
-@end enumerate
+@example
+<positive-fixnum> <negative-fixnum> <fixnum>
+<positive-bignum> <negative-bignum>
+<integer-flonum> <rational-flonum> <flonum>
+<ratnum> <cflonum> <compnum>
+<char> <string> <symbol> <vector> <bytevector>
+<spine> <pair>
+<binary-input/output-port> <textual-input/output-port>
+<binary-input-port>        <textual-input-port>
+<binary-output-port>       <textual-output-port>
+<transcoder>
+<condition> <record> <hashtable> <procedure>
+<top>
+@end example
 
 Whenever we define new label types with @func{define-label} from
 @library{nausicaa language oopp}, for example @class{alpha} and
@@ -3522,5 +3913,91 @@ Write @var{storage} to the port starting at offset @var{start}.
 Write @var{count} units of data from @var{storage} to the port, starting
 at offset @var{start}.
 @end deffn
+
+@c page
+@node builtins mixins
+@section Predefined mixins
+
+
+@menu
+* builtins mixins hashable::    Hashable and properties clauses.
+@end menu
+
+@c page
+@node builtins mixins hashable
+@subsection Hashable and properties clauses
+
+
+@deftp {Mixin} @aclass{hashable-and-properties-clauses}
+Mixin type implementing hash function and properties list for classes;
+this mixin cannot be used by labels.  When importing this mixin we must
+specialise the identifier @class{class} to the importing class type, as
+follows:
+
+@example
+(define-class <mine>
+  (mixins (<hashable-and-properties-clauses>
+           (<class>     <mine>))))
+@end example
+
+This mixin appends a single concrete field to the enclosing class; such
+field must be initialised to @false{}.
+@end deftp
+
+
+@deftypecv {Mutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} %uid
+Contains @false{} or a gensym.  This field should @strong{never} be
+accessed directly.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{symbol} uid
+Contains gensym.  The symbol is unique for the instance object.
+@end deftypecv
+
+
+@deftypecv {Virtual immutable field} @aclass{hashable-and-properties-clauses} @aclass{exact-integer} hash
+An exact integer to be used as hashtable key for the instance.
+Hashtables having a @class{hashable-and-properties-clauses} as key can
+be instantiated as follows:
+
+@example
+(make-hashtable
+  (lambda ((V <hashable-and-properties-clauses>))
+    (V hash))
+  eq?)
+@end example
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defmethod @aclass{hashable-and-properties-clauses} putprop @var{key} @var{value}
+Add a new property @var{key} to the property list of the instance;
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} getprop @var{key}
+Return the value of the property @var{key} in the property list of the
+instance; if @var{key} is not set: return @false{}.  @var{key} must be a
+symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} remprop @var{key}
+Remove the property @var{key} from the property list of the instance; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defmethod
+
+
+@defmethod @aclass{hashable-and-properties-clauses} property-list
+Return a new association list representing the property list of the
+instance.  The order of the entries is the same as the property creation
+order.
+@end defmethod
 
 @c end of file

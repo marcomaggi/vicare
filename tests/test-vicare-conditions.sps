@@ -69,6 +69,42 @@
   #t)
 
 
+(parametrise ((check-test-name	'expression-return-value-violation))
+
+  (check
+      (expression-return-value-violation? (make-expression-return-value-violation))
+    => #t)
+
+  (check
+      (assertion-violation? (make-expression-return-value-violation))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (condition-who E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
+    => 'ciao)
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (condition-message E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
+    => "message")
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (condition-irritants E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
+    => '(1 2 3))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

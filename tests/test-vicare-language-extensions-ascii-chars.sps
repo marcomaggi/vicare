@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare language-extensions ascii-chars)
   (vicare checks))
@@ -156,26 +156,25 @@
       (ascii-titlecase (char->integer #\0))
     => (char->integer #\0))
 
-
   #t)
 
 
 (parametrise ((check-test-name	'kind))
 
   (check
-      (ascii-numeric? (char->integer #\0))
+      (ascii-dec-digit? (char->integer #\0))
     => #t)
 
   (check
-      (ascii-numeric? (char->integer #\9))
+      (ascii-dec-digit? (char->integer #\9))
     => #t)
 
   (check
-      (ascii-numeric? (char->integer #\A))
+      (ascii-dec-digit? (char->integer #\A))
     => #f)
 
   (check
-      (ascii-numeric? (char->integer #\z))
+      (ascii-dec-digit? (char->integer #\z))
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -207,6 +206,53 @@
   (check
       (ascii-alphabetic? (char->integer #\"))
     => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'uri))
+
+  (check
+      (let* ((bv	'#ve(ascii "ciao"))
+	     (i		0)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #f 0)
+
+  (check
+      (let* ((bv	'#ve(ascii "c%ABo"))
+	     (i		1)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #t 3)
+
+  (check
+      (let* ((bv	'#ve(ascii "c%AB"))
+	     (i		1)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #t 3)
+
+  (check
+      (let* ((bv	'#ve(ascii "c%AZ"))
+	     (i		1)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #f 3)
+
+  (check
+      (let* ((bv	'#ve(ascii "c%ZA"))
+	     (i		1)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #f 2)
+
+  (check
+      (let* ((bv	'#ve(ascii "c%A"))
+	     (i		1)
+	     (result	($ascii-uri-pct-encoded? (bytevector-u8-ref bv i) bv i)))
+	(values result i))
+    => #f 1)
 
   #t)
 

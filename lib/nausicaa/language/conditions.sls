@@ -73,9 +73,15 @@
     &h_errno
     &i/o-eagain
     &out-of-memory-error
+    &procedure-argument-violation
+    &expression-return-value-violation
 
     ;; convenience labels
     <common-conditions>
+
+    ;; wrong type
+    &tagged-binding-violation
+    tagged-binding-violation
 
     ;; mismatch
     &mismatch make-mismatch-condition mismatch-condition?
@@ -127,7 +133,9 @@
 		  &errno
 		  &h_errno
 		  &i/o-eagain
-		  &out-of-memory-error)
+		  &out-of-memory-error
+		  &procedure-argument-violation
+		  &expression-return-value-violation)
     (prefix (only (vicare)
 		  define-condition-type
 		  ;; (rnrs conditions (6))
@@ -165,9 +173,19 @@
 		  &errno
 		  &h_errno
 		  &i/o-eagain
-		  &out-of-memory-error)
+		  &out-of-memory-error
+		  &procedure-argument-violation
+		  &expression-return-value-violation)
 	    rnrs.)
-    (nausicaa language oopp)
+    (except (nausicaa language oopp)
+	    &tagged-binding-violation
+	    make-tagged-binding-violation
+	    tagged-binding-violation?)
+    (prefix (only (nausicaa language oopp)
+		  &tagged-binding-violation
+		  make-tagged-binding-violation
+		  tagged-binding-violation?)
+	    oopp.)
     (only (nausicaa language builtins)
 	  <condition>)
     (only (nausicaa language auxiliary-syntaxes)
@@ -198,17 +216,19 @@
 	   (synner "expected identifiers as condition type field names" #'(?field ...)))
 	 (unless (all-identifiers? #'(?accessor ...))
 	   (synner "expected identifiers as condition type accessor names" #'(?accessor ...)))
-	 #'(begin
-	     (with-label-shadowing (?supertype)
-	       (rnrs.define-condition-type the-type
-		 ?supertype ?constructor ?predicate
-		 (?field ?accessor) ...))
-	     (define-label ?type
-	       (parent ?supertype)
-	       (shadows the-type)
-	       (protocol (lambda () ?constructor))
-	       (predicate ?predicate)
-	       (virtual-fields (immutable ?field ?accessor) ...)))))
+	 (with-syntax
+	     ((THE-TYPE (identifier-suffix #'?type "-record-type")))
+	   #'(begin
+	       (with-label-shadowing (?supertype)
+		 (rnrs.define-condition-type THE-TYPE
+		   ?supertype ?constructor ?predicate
+		   (?field ?accessor) ...))
+	       (define-label ?type
+		 (parent ?supertype)
+		 (shadows THE-TYPE)
+		 (protocol (lambda () ?constructor))
+		 (predicate ?predicate)
+		 (virtual-fields (immutable ?field ?accessor) ...))))))
 
       ;;Compressed  syntax with  parent  and fields.   Notice that  this
       ;;syntax allows for tagged fields.
@@ -221,17 +241,18 @@
 	   (synner "expected identifier as condition supertype name" #'(parent ?supertype)))
 	 (let ((name-str (%name-id->name-str #'?type)))
 	   (with-syntax
-	       ((CONSTRUCTOR	(%name-str->constructor-name-id #'?type name-str))
+	       ((THE-TYPE	(identifier-suffix #'?type "-record-type"))
+		(CONSTRUCTOR	(%name-str->constructor-name-id #'?type name-str))
 		(PREDICATE	(%name-str->predicate-name-id   #'?type name-str))
 		(((FIELD TAGGED-FIELD ACCESSOR) ...)
 		 (%fields-stx #'?type name-str #'(?field ...))))
 	     #'(begin
 		 (with-label-shadowing (?supertype)
-		   (rnrs.define-condition-type the-type
+		   (rnrs.define-condition-type THE-TYPE
 		     ?supertype CONSTRUCTOR PREDICATE
 		     (FIELD ACCESSOR) ...))
 		 (define-label ?type
-		   (shadows the-type)
+		   (shadows THE-TYPE)
 		   (parent ?supertype)
 		   (protocol (lambda () CONSTRUCTOR))
 		   (predicate PREDICATE)
@@ -387,6 +408,8 @@
 
   (define (parse-multiple-catch-clauses var-id clauses-stx)
     (syntax-case clauses-stx (else)
+      ;;Match when  there is no  ELSE clause.  Remember that  GUARD will
+      ;;reraise the exception when there is no ELSE clause.
       (()
        '())
       ;;The one with the ELSE clause must come first!!!
@@ -688,7 +711,7 @@
 		       (make-wrong-num-args-condition ?procname ?expected ?given))))))
 
 (define-condition-type &unimplemented
-  (parent &error))
+    (parent &error))
 
 (define raise-unimplemented-error
   (case-lambda
@@ -700,6 +723,36 @@
 		(make-message-condition message)
 		(make-unimplemented-condition)
 		(make-irritants-condition irritants))))))
+
+;;; --------------------------------------------------------------------
+
+(define-label &tagged-binding-violation
+  (parent &assertion)
+  (shadows oopp.&tagged-binding-violation)
+  (protocol (lambda () oopp.make-tagged-binding-violation))
+  (predicate oopp.tagged-binding-violation?))
+
+(define (tagged-binding-violation who message . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (&tagged-binding-violation ())
+	      (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+(define-label &procedure-argument-violation
+  (parent &assertion)
+  (shadows rnrs.&procedure-argument-violation)
+  (protocol (lambda () make-procedure-argument-violation))
+  (predicate procedure-argument-violation?))
+
+(define-label &expression-return-value-violation
+  (parent &assertion)
+  (shadows rnrs.&expression-return-value-violation)
+  (protocol (lambda () make-expression-return-value-violation))
+  (predicate expression-return-value-violation?))
+
 
 ;;;; done
 
