@@ -675,22 +675,22 @@
 
 ;;;; bignums
 
-(define-inline (%bnbncmp X Y fxcmp)
+(define-syntax-rule (%bnbncmp X Y fxcmp)
   (fxcmp (foreign-call "ikrt_bnbncomp" X Y) 0))
 
-(define-inline ($bnbn= X Y)
+(define-syntax-rule ($bnbn= X Y)
   (%bnbncmp X Y $fx=))
 
-(define-inline ($bnbn< X Y)
+(define-syntax-rule ($bnbn< X Y)
   (%bnbncmp X Y $fx<))
 
-(define-inline ($bnbn> X Y)
+(define-syntax-rule ($bnbn> X Y)
   (%bnbncmp X Y $fx>))
 
-(define-inline ($bnbn<= X Y)
+(define-syntax-rule ($bnbn<= X Y)
   (%bnbncmp X Y $fx<=))
 
-(define-inline ($bnbn>= X Y)
+(define-syntax-rule ($bnbn>= X Y)
   (%bnbncmp X Y $fx>=))
 
 
