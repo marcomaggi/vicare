@@ -5009,6 +5009,8 @@
 		    `(unless (,?ret-pred ,RET)
 		       (expression-return-value-violation ,WHO
 			 "failed return value validation"
+			 ;;This list  represents the application  of the
+			 ;;predicate to the offending value.
 			 (list (quote ,?ret-pred) ,RET))))
 	       ?ret-pred* RET*))
       '(void)))
