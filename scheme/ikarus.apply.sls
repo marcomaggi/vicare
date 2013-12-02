@@ -77,7 +77,7 @@
 	      (make-irritants-condition (list obj)))))
 
 
-(case-define* apply
+(case-define apply
   ;;Defined  by  R6RS.   LS  must  be  a list.   PROC  should  accept  N
   ;;arguments, where N is number of arguments A plus the length of LS.
   ;;
@@ -90,16 +90,30 @@
   ;;If a  call to APPLY occurs  in a tail  context, the call to  PROC is
   ;;also in a tail context.
   ;;
-  (((f procedure?) (ls %list-of-arguments?))
-   ($$apply f ls))
+  ;;NOTE In  case of  last argument being  a list too  long: we  want to
+  ;;raise   an   "&implementation-restriction-violation",  so   we   use
+  ;;"with-arguments-validation"   rather   than    the   predicates   of
+  ;;CASE-DEFINE*.
+  ;;
+  ((f ls)
+   (with-arguments-validation (who)
+       ((procedure		f)
+	(list-of-arguments	ls))
+     ($$apply f ls)))
 
-  (((f procedure?) a0 (ls %list-of-arguments?))
-   ($$apply f a0 ls))
+  ((f a0 ls)
+   (with-arguments-validation (who)
+       ((procedure		f)
+	(list-of-arguments	ls))
+     ($$apply f a0 ls)))
 
-  (((f procedure?) a0 a1 (ls %list-of-arguments?))
-   ($$apply f a0 a1 ls))
+  ((f a0 a1 ls)
+   (with-arguments-validation (who)
+       ((procedure f)
+	(list      ls))
+     ($$apply f a0 a1 ls)))
 
-  (((f procedure?) a0 a1 . ls)
+  ((f a0 a1 . ls)
    ;;Notice that LS is a list  of arguments terminated by a nested list
    ;;of arguments:
    ;;
@@ -109,16 +123,16 @@
    ;;
    ;;  (a2 a3 a4 ... An An+1 An+2 ...)
    ;;
-   (%fix-and-go f a0 a1 ls ls ($cdr ls))))
-
-(define (%fix-and-go f a0 a1 ls p d)
-  (if (null? ($cdr d))
-      (let ((last ($car d)))
-	($set-cdr! p last)
-	(with-arguments-validation (who)
-	    ((list-of-arguments	last))
-	  ($$apply f a0 a1 ls)))
-    (%fix-and-go f a0 a1 ls d ($cdr d))))
+   (define (%fix-and-go f a0 a1 ls p d)
+     (if (null? ($cdr d))
+	 (let ((last ($car d)))
+	   ($set-cdr! p last)
+	   (with-arguments-validation (who)
+	       ((list-of-arguments	last))
+	     ($$apply f a0 a1 ls)))
+       (%fix-and-go f a0 a1 ls d ($cdr d))))
+   (%fix-and-go f a0 a1 ls ls ($cdr ls)))
+  #| end of case-define |# )
 
 
 ;;;; done
