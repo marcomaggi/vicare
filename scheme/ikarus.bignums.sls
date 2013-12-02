@@ -63,11 +63,8 @@
 (define-syntax define-bn-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((bignum	x))
-	 (?unsafe-who x))))))
+     (define* (?safe-who (x bignum?))
+       (?unsafe-who x)))))
 
 (define-bn-operation/one bignum-positive?	$bignum-positive?)
 (define-bn-operation/one bignum-negative?	$bignum-negative?)
