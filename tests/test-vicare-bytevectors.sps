@@ -44,7 +44,7 @@
 (define-syntax catch
   (syntax-rules ()
     ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
+     (guard (E ((procedure-argument-violation? E)
 		(when print?
 		  (check-pretty-print (condition-message E)))
 		(condition-irritants E))
