@@ -870,6 +870,11 @@
 ;;; &errno
     errno-condition?
     exact-integer?
+    zero-exact-integer?
+    negative-exact-integer?
+    positive-exact-integer?
+    non-negative-exact-integer?
+    non-positive-exact-integer?
     exit-hooks
     expand-form-to-core-language
     expand-library
@@ -1505,6 +1510,10 @@
     bignum-even?
     least-positive-bignum
     greatest-negative-bignum
+
+    ;; bytevectors
+    bytevector-index?
+    bytevector-length?
 
     ;; raw octets and strings
     octets->string			string->octets
