@@ -400,6 +400,13 @@
 
 		non-positive?			non-negative?
 
+		;; exact integer sign predicates
+		zero-exact-integer?
+		negative-exact-integer?
+		positive-exact-integer?
+		non-negative-exact-integer?
+		non-positive-exact-integer?
+
 		;; exactness
 		exact->inexact			inexact
 
