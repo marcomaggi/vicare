@@ -57,11 +57,11 @@
 
 #!vicare
 (import (vicare)
-  (rnrs eval)
+  (vicare language-extensions try)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare expander\n")
+(check-display "*** testing Vicare: expander syntaxes\n")
 
 
 (parametrise ((check-test-name	'syntax-objects))
@@ -3416,6 +3416,172 @@
 	   __who__))
 	(doit))
     => 'doit)
+
+  #t)
+
+
+(parametrise ((check-test-name	'try))
+
+  (let ()	;with else clause
+    (define-condition-type &this
+	&error
+      make-this-condition
+      condition-this?
+      (a condition-this.a)
+      (b condition-this.b)
+      (c condition-this.c))
+
+    (define (doit thunk)
+      (try
+	  (thunk)
+	(catch E
+	  (&this
+	   (list (condition-this.a E)
+		 (condition-this.b E)
+		 (condition-this.c E)))
+	  (&message
+	   (condition-message E))
+	  (else E))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-this-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 123)
+
+    (check
+	(try
+	    (raise 123)
+	  (catch E
+	    ((&this)
+	     (list (condition-this.a E)
+		   (condition-this.b E)
+		   (condition-this.c E)))
+	    ((&message)
+	     (condition-message E))
+	    (else E)))
+      => 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;with else clause
+    (define-condition-type &that
+	&error
+      make-that-condition
+      condition-that?
+      (a condition-that.a)
+      (b condition-that.b)
+      (c condition-that.c))
+
+    (define (doit thunk)
+      (try
+	  (thunk)
+	(catch T
+	  (&that
+	   (list (condition-that.a T)
+		 (condition-that.b T)
+		 (condition-that.c T)))
+	  (&message
+	   (condition-message T))
+	  (else T))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-that-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;without else clause
+    (define-condition-type &those
+	&error
+      make-those-condition
+      condition-those?
+      (a condition-those.a)
+      (b condition-those.b)
+      (c condition-those.c))
+
+    (define (doit thunk)
+      (guard (E (else
+		 (values 'reraised E)))
+	(try
+	    (thunk)
+	  (catch E
+	    (&those
+	     (list (condition-those.a E)
+		   (condition-those.b E)
+		   (condition-those.c E)))
+	    (&message
+	     (condition-message E))))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-those-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 'reraised 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; finally
+
+  (check	;no exception
+      (let ((a 1))
+	(try
+	    (set! a (+ a 10))
+	  (catch E
+	    (&error	E)
+	    (&warning	E)
+	    (else	E))
+	  (finally
+	   (set! a (+ a 100))))
+	a)
+    => 111)
+
+  (check	;with exception
+      (let ((a 1))
+	(try
+	    (raise (make-warning))
+	  (catch E
+	    (&error	E)
+	    (&warning	(set! a (+ a 10)))
+	    (else	E))
+	  (finally
+	   (set! a (+ a 100))))
+	a)
+    => 111)
 
   #t)
 

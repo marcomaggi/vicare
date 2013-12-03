@@ -67,6 +67,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/simple-match.sls			\
 	vicare/language-extensions/streams.sls				\
 	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/try.sls				\
 	vicare/language-extensions/variables.sls			\
 	\
 	vicare/crypto/randomisations.sls				\

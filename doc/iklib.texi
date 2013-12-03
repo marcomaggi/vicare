@@ -278,6 +278,7 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 @end menu
 
@@ -1296,6 +1297,83 @@ the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
+@end deffn
+
+@c page
+@node iklib syntaxes try
+@subsection The @func{try}, @func{catch}, @func{finally} syntaxes
+
+
+@cindex Library @library{vicare language-extensions try}
+@cindex @library{vicare language-extensions try}, library
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions try} and are candidates to be included in the boot
+image.
+
+
+@deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
+@deffnx Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{}) (finally @metao{finally-body} @meta{finally-body} @dots{})
+@deffnx {Auxiliary Syntax} catch
+@deffnx {Auxiliary Syntax} finally
+@deffnx {Auxiliary Syntax} else
+This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
+Every @meta{catch-clause} has one of the forms:
+
+@example
+(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
+((@meta{tag}) @metao{tag-body} @meta{tag-body} @dots{})
+(else @metao{else-body} @meta{else-body} @dots{})
+@end example
+
+@noindent
+where the optional @clause{else} clause must appear only once as last
+one.
+
+When no @clause{finally} clause is present, and without the @func{else}
+clause, it will expand to:
+
+@example
+(guard (@meta{var}
+          ((record-type-and-record? @meta{tag} @meta{var})
+           @metao{tag-body}
+           @meta{tag-body}
+           ...)
+          ...)
+  @meta{body})
+@end example
+
+@noindent
+and with the @clause{else} clause:
+
+@example
+(guard (@meta{var}
+          ((record-type-and-record? @meta{tag} @meta{var})
+           @metao{tag-body}
+           @meta{tag-body}
+           ...)
+           ...
+          (else
+           @metao{else-body}
+           @meta{else-body}
+           ...))
+  @meta{body})
+@end example
+
+@noindent
+remember that when no @clause{else} clause is present: the exception
+will be re--raised with @func{raise-continuable}.
+
+When the @clause{finally} clause is present: the same @func{guard} form
+is wrapped into a compensation stack (@pxref{iklib compensations,
+Compensation stacks}):
+
+@example
+(with-compensations
+  (push-compensation @metao{finally-body} @meta{finally-body} ...)
+  (guard ---))
+@end example
 @end deffn
 
 @c page
