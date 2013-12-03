@@ -1514,8 +1514,9 @@
     greatest-negative-bignum
 
     ;; bytevectors
-    bytevector-index?
-    bytevector-length?
+    bytevector-length?			bytevector-index?
+    bytevector-word-size?		bytevector-word-count?
+    bytevector-index-for-word?
 
     ;; raw octets and strings
     octets->string			string->octets

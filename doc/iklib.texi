@@ -4789,6 +4789,7 @@ complement representation as an octet.
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
 * iklib bytevectors conv::      Converting bytevectors.
+* iklib bytevectors valpred::   Validation predicates for bytevector.
 * iklib bytevectors generic::   Generic bytevector operations.
 @end menu
 
@@ -5063,11 +5064,8 @@ HEXDIG        = [0-9a-fA-F]
 @end defun
 
 @c page
-@node iklib bytevectors generic
-@subsection Generic bytevector operations
-
-
-The following bindings are exported by the library @library{vicare}.
+@node iklib bytevectors valpred
+@subsection Validation predicates for bytevector
 
 
 @defun bytevector-length? @var{obj}
@@ -5077,9 +5075,42 @@ non--negative fixnum; otherwise return @false{}.
 
 
 @defun bytevector-index? @var{obj}
-Return @true{} if @var{obj} is valid as bytevector index: it is a
-non--negative fixnum; otherwise return @false{}.
+Return @true{} if @var{obj} is a Scheme object valid as bytevector
+index: it is a non--negative fixnum; otherwise return @false{}.  Before
+being used, @var{obj} needs further validation against a specific
+bytevector and word size.
 @end defun
+
+
+@defun bytevector-word-size? @var{obj}
+Return @true{} if @var{obj} is valid as word size to be accessed in a
+bytevector; otherwise return @false{}.  @var{obj} must be further
+validated for a specific bytevector word start offset.
+@end defun
+
+
+@defun bytevector-word-count? @var{obj}
+Return @true{} if @var{obj} is valid as word count for bytevector items,
+either a byte count, 16-bit words count, 32-bit words count, @dots{};
+otherwise return @false{}.  @var{obj} must be further validated for the
+specific bytevector and word size with which it is to be used.
+@end defun
+
+
+@defun bytevector-index-for-word? @var{bv} @var{idx} @var{word-size-in-bytes}
+Return @true{} if: @var{bv} is a bytevector, @var{idx} is a
+non--negative fixnum, @var{word-size-in-bytes} is a non--negative
+fixnum, @var{idx} is a valid index in @var{bv} to reference a word whose
+size is @var{word-size-in-bytes}; otherwise return @false{}.  This
+validation is for getter and setter indexes.
+@end defun
+
+@c page
+@node iklib bytevectors generic
+@subsection Generic bytevector operations
+
+
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun bytevector-empty? @var{bytevector}
