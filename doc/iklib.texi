@@ -5070,6 +5070,18 @@ HEXDIG        = [0-9a-fA-F]
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun bytevector-length? @var{obj}
+Return @true{} if @var{obj} is valid as bytevector length: it is a
+non--negative fixnum; otherwise return @false{}.
+@end defun
+
+
+@defun bytevector-index? @var{obj}
+Return @true{} if @var{obj} is valid as bytevector index: it is a
+non--negative fixnum; otherwise return @false{}.
+@end defun
+
+
 @defun bytevector-empty? @var{bytevector}
 Return @true{} if the bytevector @var{bytevector} has zero length,
 otherwise return @false{}.
@@ -5815,6 +5827,29 @@ Return @true{} if @var{obj} is a fixnum or bignum; otherwise return
 @defunx non-negative? @var{X}
 Return @true{} if @var{X} is a real number object and it is,
 respectively, non--positive or non--negative.
+@end defun
+
+
+@defun zero-exact-integer? @var{obj}
+Return @true{} if @var{obj} is an exact integer whose value is zero,
+otherwise return @false{}; only fixnums can be zero.  If @var{obj} is
+not a number object: return @false{}.
+@end defun
+
+
+@defun positive-exact-integer? @var{obj}
+@defunx negative-exact-integer? @var{obj}
+Return @true{} if @var{obj} is a positive or negative exact integer;
+otherwise return @false{}.  If @var{obj} is not a number object: return
+@false{}.
+@end defun
+
+
+@defun non-positive-exact-integer? @var{obj}
+@defunx non-negative-exact-integer? @var{obj}
+Return @true{} if @var{obj} is a non--positive or non--negative exact
+integer; otherwise return @false{}.  If @var{obj} is not a number
+object: return @false{}.
 @end defun
 
 @c page
