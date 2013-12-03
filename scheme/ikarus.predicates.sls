@@ -92,6 +92,8 @@
             (vector?		sys:vector?)))
 
 
+;;;; object type predicates
+
 (define (fixnum?  x) (sys:fixnum?  x))
 (define (bignum?  x) (sys:bignum?  x))
 (define (ratnum?  x) (sys:ratnum?  x))
@@ -156,6 +158,8 @@
 		    (rational? rep)
 		    ($flonum-rational? rep)))))
 	(else #f)))
+
+;;; --------------------------------------------------------------------
 
 (define (exact-integer? x)
   (cond ((sys:fixnum? x) #t)
