@@ -1488,6 +1488,15 @@
     os-name
     os-version
 
+    ;; configuration inspection
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
+    vicare-built-with-posix-enabled
+    vicare-built-with-glibc-enabled
+    vicare-built-with-linux-enabled
+    vicare-built-with-srfi-enabled
+    vicare-built-with-arguments-validation-enabled
+
     ;; condition types
 ;;; Redefined by (nausicaa language conditions)
 ;;;
