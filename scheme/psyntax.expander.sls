@@ -4623,6 +4623,26 @@
 	 case-lambda*-macro
 	 case-define*-macro)
 
+  (define-record argument-validation-spec
+    (arg-id
+		;Identifier representing the formal name of the argument
+		;being validated.
+     expr
+		;Syntax  object  representing   an  argument  validation
+		;expression.
+     ))
+
+  (define-record retval-validation-spec
+    (rv-id
+		;Identifier representing the internal formal name of the
+		;return value being validated.
+     pred
+		;Identifier bound to the predicate  to be applied to the
+		;return value.
+     ))
+
+;;; --------------------------------------------------------------------
+
   (module (define*-macro)
     ;;Transformer function  used to expand Vicare's  DEFINE* macros from
     ;;the  top-level  built  in  environment.  Expand  the  contents  of
@@ -4690,10 +4710,10 @@
 	))
 
     (define (%generate-define-output-form/without-ret-pred ?who ?predicate-formals ?body* synner)
-      (receive (?standard-formals ?arg-predicate* ?arg-id*)
+      (receive (?standard-formals arg-validation-spec*)
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?who '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner)))
 	  (bless
 	   `(define (,?who . ,?standard-formals)
 	      (let-constants ((,WHO (quote ,?who)))
@@ -4701,12 +4721,14 @@
 		(let () . ,?body*)))))))
 
     (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body* synner)
-      (receive (?standard-formals ?arg-predicate* ?arg-id*)
+      (receive (?standard-formals arg-validation-spec*)
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?who '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form WHO
+							   (map make-retval-validation-spec RET* ?ret-pred*)
+							   synner)))
 	  (bless
 	   `(define (,?who . ,?standard-formals)
 	      (let-constants ((,WHO (quote ,?who)))
@@ -4760,24 +4782,26 @@
 	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner))
 	))
 
-    (define (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-case-define-clause-form/without-ret-pred ?who ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?who '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
-	  `(,?formals
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner)))
+	  `(,?standard-formals
 	    (let-constants ((,WHO (quote ,?who)))
 	      ,@ARG-VALIDATION*
 	      (let () ,?body0 ,@?body*))))))
 
-    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?who '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
-	  `(,?formals
+	       (RET-VALIDATION  (%make-ret-validation-form WHO
+							   (map make-retval-validation-spec RET* ?ret-pred*)
+							   synner)))
+	  `(,?standard-formals
 	    (let-constants ((,WHO (quote ,?who)))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
@@ -4818,26 +4842,28 @@
 
 	))
 
-    (define (%generate-lambda-output-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-lambda-output-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?ctx '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner)))
 	  (bless
-	   `(lambda ,?formals
+	   `(lambda ,?standard-formals
 	      (let-constants ((,WHO (quote _)))
 		,@ARG-VALIDATION*
 		(let () ,?body0 ,@?body*)))))))
 
-    (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?ctx '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form WHO
+							   (map make-retval-validation-spec RET* ?ret-pred*)
+							   synner)))
 	  (bless
-	   `(lambda ,?formals
+	   `(lambda ,?standard-formals
 	      (let-constants ((,WHO (quote _)))
 		,@ARG-VALIDATION*
 		(receive-and-return (,@RET*)
@@ -4887,24 +4913,26 @@
 	 (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner))
 	))
 
-    (define (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?ctx '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)))
-	  `(,?formals
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner)))
+	  `(,?standard-formals
 	    (let-constants ((,WHO (quote _)))
 	      ,@ARG-VALIDATION*
 	      (let () ,?body0 ,@?body*))))))
 
-    (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?formals ?body0 ?body* synner)
-      (receive (?formals ?arg-predicate* ?arg-id*)
-	  (%parse-predicate-formals ?formals synner)
+    (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
+      (receive (?standard-formals arg-validation-spec*)
+	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((WHO             (datum->syntax ?ctx '__who__))
-	       (ARG-VALIDATION* (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner))
+	       (ARG-VALIDATION* (%make-arg-validation-forms WHO arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form WHO ?ret-pred* RET* synner)))
-	  `(,?formals
+	       (RET-VALIDATION  (%make-ret-validation-form WHO
+							   (map make-retval-validation-spec RET* ?ret-pred*)
+							   synner)))
+	  `(,?standard-formals
 	    (let-constants ((,WHO (quote _)))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
@@ -4947,13 +4975,8 @@
     ;;* A list  of syntax objects representing the  standard formals for
     ;;the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
     ;;
-    ;;*  A  list  of  syntax  objects  each  representing  a  validation
-    ;;predicate: an expression which, when evaluated, returns true if an
-    ;;argument is valid and false otherwise.
-    ;;
-    ;;* A  list of identifiers each  being the formal argument  which is
-    ;;the subject of validation in the corresponding item in the list of
-    ;;validation predicates.
+    ;;* A list of  ARGUMENT-VALIDATION-SPEC structures each representing
+    ;;a validation predicate.
     ;;
     (syntax-match ?predicate-formals ()
 
@@ -4961,77 +4984,75 @@
       ;;
       ((?id* ...)
        (for-all identifier? ?id*)
-       (values ?id* '() '()))
+       (values ?id* '()))
 
       ;;Untagged identifiers with rest argument.
       ;;
       ((?id* ... . ?rest-id)
        (and (for-all identifier? ?id*)
 	    (identifier? ?rest-id))
-       (values ?predicate-formals '() '()))
+       (values ?predicate-formals '()))
 
       ;;Possibly tagged identifiers without rest argument.
       ;;
       ((?pred-arg* ...)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?id* ?validation* ?validation-id*)
+	     (receive (?standard-formals arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg ()
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?id*)
-			    ?validation*
-			    ?validation-id*))
+		    (values (cons ?id ?standard-formals)
+			    arg-validation-spec*))
 		   ;;Tagged argument, list spec.
 		   ((?id ?pred)
 		    (and (identifier? ?id)
 			 (identifier? ?pred))
-		    (values (cons ?id ?id*)
-			    (cons (list ?pred ?id) ?validation*)
-			    (cons ?id ?validation-id*)))
+		    (values (cons ?id ?standard-formals)
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
+				  arg-validation-spec*)))
 		   ;;Tagged argument, vector spec.
 		   (#(?id ?pred)
 		    (and (identifier? ?id)
 			 (identifier? ?pred))
-		    (values (cons ?id ?id*)
-			    (cons (list ?pred ?id) ?validation*)
-			    (cons ?id ?validation-id*)))
+		    (values (cons ?id ?standard-formals)
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
-	   (values '() '() '()))))
+	   (values '() '()))))
 
       ;;Possibly tagged identifiers with rest argument.
       ;;
       ((?pred-arg* ... . ?rest-var)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?id* ?validation* ?validation-id*)
+	     (receive (?standard-formals arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg ()
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?id*)
-			    ?validation*
-			    ?validation-id*))
+		    (values (cons ?id ?standard-formals)
+			    arg-validation-spec*))
 		   ;;Tagged argument, list spec.
 		   ((?id ?pred)
 		    (and (identifier? ?id)
 			 (identifier? ?pred))
-		    (values (cons ?id ?id*)
-			    (cons (list ?pred ?id) ?validation*)
-			    (cons ?id ?validation-id*)))
+		    (values (cons ?id ?standard-formals)
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
+				  arg-validation-spec*)))
 		   ;;Tagged argument, vector spec.
 		   (#(?id ?pred)
 		    (and (identifier? ?id)
 			 (identifier? ?pred))
-		    (values (cons ?id ?id*)
-			    (cons (list ?pred ?id) ?validation*)
-			    (cons ?id ?validation-id*)))
+		    (values (cons ?id ?standard-formals)
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   ;;Process rest argument.
@@ -5039,41 +5060,44 @@
 	     ;;Untagged rest argument.
 	     (?rest-id
 	      (identifier? ?rest-id)
-	      (values ?rest-id '() '()))
+	      (values ?rest-id '()))
 	     ;;Tagged rest argument.
 	     (#(?rest-id ?rest-pred)
 	      (and (identifier? ?rest-id)
 		   (identifier? ?rest-pred))
 	      (values ?rest-id
-		      (list (list ?rest-pred ?rest-id))
-		      (list ?rest-id)))
+		      (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id)))))
 	     (else
 	      (synner "invalid argument specification" ?rest-var))))))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-arg-validation-forms WHO ?arg-predicate* ?arg-id* synner)
+  (define (%make-arg-validation-forms WHO arg-validation-spec* synner)
     (if (enable-arguments-validation?)
-	(map (lambda (?arg-predicate ?arg-id)
-	       `(unless ,?arg-predicate
-		  (procedure-argument-violation ,WHO
-		    "failed argument validation"
-		    (quote ,?arg-predicate) ,?arg-id)))
-	  ?arg-predicate* ?arg-id*)
+	(map (lambda (spec)
+	       (let ((?arg-expr (argument-validation-spec-expr   spec))
+		     (?arg-id   (argument-validation-spec-arg-id spec)))
+		 `(unless ,?arg-expr
+		    (procedure-argument-violation ,WHO
+		      "failed argument validation"
+		      (quote ,?arg-expr) ,?arg-id))))
+	  arg-validation-spec*)
       '()))
 
-  (define (%make-ret-validation-form WHO ?ret-pred* RET* synner)
+  (define (%make-ret-validation-form WHO retval-validation-spec* synner)
     (if (enable-arguments-validation?)
 	`(begin
-	   ,@(map (lambda (?ret-pred RET)
-		    `(unless (,?ret-pred ,RET)
-		       (expression-return-value-violation ,WHO
-			 "failed return value validation"
-			 ;;This list  represents the application  of the
-			 ;;predicate to the offending value.
-			 (list (quote ,?ret-pred) ,RET))))
-	       ?ret-pred* RET*))
+	   ,@(map (lambda (spec)
+		    (let ((?pred (retval-validation-spec-pred  spec))
+			  (?ret  (retval-validation-spec-rv-id spec)))
+		      `(unless (,?pred ,?ret)
+			 (expression-return-value-violation ,WHO
+			   "failed return value validation"
+			   ;;This list  represents the application  of the
+			   ;;predicate to the offending value.
+			   (list (quote ,?pred) ,?ret)))))
+	       retval-validation-spec*))
       '(void)))
 
   (define (%underscore? stx)
