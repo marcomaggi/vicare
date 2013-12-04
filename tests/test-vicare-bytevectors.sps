@@ -421,42 +421,44 @@
     (doit (bytevector-copy! #vu8() -1 #vu8()  0 1) -1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-index-for-word8? src src.start))
+      (bytevector-copy! (bytevector-start-index-and-count-for-word8? src src.start byte-count))
     ;;too high
-    (doit (bytevector-copy! #vu8() 1 #vu8() 0 1) #vu8() 1)
-    (doit (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10))
+    (doit (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
+    (doit (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1))
 
   (with-check-for-procedure-argument-validation
       (bytevector-copy! (bytevector-index? dst.start))
     ;;not a fixnum
     (doit (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
     ;;too low
-    (doit (bytevector-copy! #vu8()  0 #vu8() -2 1) -2))
+    (doit (bytevector-copy! #vu8() 0 #vu8() -2 1) -2))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-index-for-word8? dst dst.start))
+      (bytevector-copy! (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
     ;;too high
-    (doit (bytevector-copy! #vu8() 0 #vu8() 2 1) #vu8() 2)
-    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20))
+    (doit (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
+    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20 1))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: count
 
-  (check	;not a fixnum
-      (catch #f (bytevector-copy! #vu8() 0 #vu8() 0 #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! (bytevector-word-count? byte-count))
+    ;;not a fixnum
+    (doit (bytevector-copy! #vu8() 0 #vu8() 0 #\a) #\a)
+    ;;negative
+    (doit (bytevector-copy! #vu8() 0 #vu8() 0 -2)  -2)
+    (void))
 
-  (check	;negative
-      (catch #f (bytevector-copy! #vu8() 0 #vu8() 0 -2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! (bytevector-start-index-and-count-for-word8? src src.start byte-count))
+    ;;too big for source
+    (doit (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3))
 
-  (check	;too big for source
-      (catch #f (bytevector-copy! #vu8(1 2) 0 #vu8(1 2 3) 0 3))
-    => '(3))
-
-  (check	;too big for dest
-      (catch #f (bytevector-copy! #vu8(1 2 3) 0 #vu8(1 2) 0 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
+    ;;too big for dest
+    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1) 0 2)  #vu8(1) 0 2))
 
   #t)
 

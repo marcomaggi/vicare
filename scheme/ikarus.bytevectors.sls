@@ -682,19 +682,19 @@
 
 (define* (bytevector-copy! (src bytevector?) (src.start bytevector-index?)
 			   (dst bytevector?) (dst.start bytevector-index?)
-			   (word-count bytevector-word-count?))
+			   (byte-count bytevector-word-count?))
   ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,
-  ;;DST.START,  and WORD-COUNT must  be non-negative  exact integer  objects that
+  ;;DST.START,  and BYTE-COUNT must  be non-negative  exact integer  objects that
   ;;satisfy:
   ;;
-  ;;   0 <= SRC.START <= SRC.START + WORD-COUNT <= SRC.LEN
-  ;;   0 <= DST.START <= DST.START + WORD-COUNT <= DST.LEN
+  ;;   0 <= SRC.START <= SRC.START + BYTE-COUNT <= SRC.LEN
+  ;;   0 <= DST.START <= DST.START + BYTE-COUNT <= DST.LEN
   ;;
   ;;where SRC.LEN is the length of SRC and DST.LEN is the length of DST.
   ;;
   ;;The BYTEVECTOR-COPY! procedure copies the bytes from SRC at indices:
   ;;
-  ;;   SRC.START, ..., SRC.START + WORD-COUNT - 1
+  ;;   SRC.START, ..., SRC.START + BYTE-COUNT - 1
   ;;
   ;;to consecutive indices in DST starting at index DST.START.
   ;;
@@ -706,42 +706,36 @@
   ;;Return unspecified values.
   ;;
   (preconditions __who__
-   (bytevector-start-index-and-count-for-word8? src src.start word-count)
-   (bytevector-start-index-and-count-for-word8? dst dst.start word-count))
-  (with-arguments-validation (__who__)
-      ((start-index-for	src.start src 1)
-       (start-index-for	dst.start dst 1)
-       (count-for	word-count src src.start 1)
-       (count-for	word-count dst dst.start 1))
-    (if (eq? src dst)
-	(cond (($fx< dst.start src.start)
-	       (let loop ((src		src)
-			  (src.index	src.start)
-			  (dst.index	dst.start)
-			  (src.past	($fx+ src.start word-count)))
-		 (unless ($fx= src.index src.past)
+   (bytevector-start-index-and-count-for-word8? src src.start byte-count)
+   (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
+  (if (eq? src dst)
+      (cond (($fx< dst.start src.start)
+	     (let loop ((src.index	src.start)
+			(dst.index	dst.start)
+			(src.past	($fx+ src.start byte-count)))
+	       (unless ($fx= src.index src.past)
+		 ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
+		 (loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past))))
+
+	    (($fx> dst.start src.start)
+	     (let loop ((src.index	($fx+ src.start byte-count))
+			(dst.index	($fx+ dst.start byte-count))
+			(src.past	src.start))
+	       (unless ($fx= src.index src.past)
+		 (let ((src.index ($fxsub1 src.index))
+		       (dst.index ($fxsub1 dst.index)))
 		   ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
-		   (loop src ($fxadd1 src.index) ($fxadd1 dst.index) src.past))))
+		   (loop src.index dst.index src.past)))))
 
-	      (($fx> dst.start src.start)
-	       (let loop ((src		src)
-			  (src.index	($fx+ src.start word-count))
-			  (dst.index	($fx+ dst.start word-count))
-			  (src.past	src.start))
-		 (unless ($fx= src.index src.past)
-		   (let ((src.index ($fxsub1 src.index))
-			 (dst.index ($fxsub1 dst.index)))
-		     ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
-		     (loop src src.index dst.index src.past))))))
+	    #| If (= dst.start src.start) we need to do nothing. |# )
 
-      (let loop ((src		src)
-		 (src.index	src.start)
-		 (dst		dst)
-		 (dst.index	dst.start)
-		 (src.past	($fx+ src.start word-count)))
-	(unless ($fx= src.index src.past)
-	  ($bytevector-u8-set! dst dst.index ($bytevector-u8-ref src src.index))
-	  (loop src ($fxadd1 src.index) dst ($fxadd1 dst.index) src.past))))))
+    ;;Source and dest are different bytevectors.
+    (let loop ((src.index	src.start)
+	       (dst.index	dst.start)
+	       (src.past	($fx+ src.start byte-count)))
+      (unless ($fx= src.index src.past)
+	($bytevector-u8-set! dst dst.index ($bytevector-u8-ref src src.index))
+	(loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past)))))
 
 
 ;;;; subbytevectors, bytes
