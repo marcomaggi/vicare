@@ -51,11 +51,22 @@
 	       (else E))
        (begin . ?body)))))
 
+(define-syntax (with-check-for-procedure-argument-validation stx)
+  (syntax-case stx ()
+    ((?kwd ?expected-template ?test0 ?test ...)
+     (datum->syntax #'?kwd
+		    (syntax->datum
+		     #'(let-syntax ((doit (syntax-rules ()
+					    ((_ ?body ?arg)
+					     (check-for-procedure-argument-violation
+						 ?body
+					       => (quasiquote ?expected-template))
+					     ))))
+			 ?test0 ?test ...))))
+    ))
+
 
 ;;;; helpers
-
-(define BIGNUM
-  (+ 1 (greatest-fixnum)))
 
 (define (flonums=? a b)
   (for-all (lambda (x y)
@@ -89,36 +100,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: length
 
-  (check	;length is not an integer
-      (catch #f (make-bytevector #\a))
-    => '(#\a))
-
-  (check	;length is not an exact integer
-      (catch #f (make-bytevector 1.0))
-    => '(1.0))
-
-  (check	;length is not a fixnum
-      (catch #f (make-bytevector BIGNUM))
-    => (list BIGNUM))
-
-  (check	;length is negative
-      (catch #f (make-bytevector -2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (make-bytevector ((bytevector-length? bv.len) ?arg))
+    ;;length is not an integer
+    (doit (make-bytevector #\a) #\a)
+    ;;length is not an exact integer
+    (doit (make-bytevector 1.0) 1.0)
+    ;;length is not a fixnum
+    (doit (make-bytevector (least-positive-bignum)) ,(least-positive-bignum))
+    ;;length is negative
+    (doit (make-bytevector -2) -2)
+    (void))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
-  (check	;filler is not a fixnum
-      (catch #f (make-bytevector 3 #\a))
-    => '(#\a))
-
-  (check	;filler is too positive
-      (catch #f (make-bytevector 2 256))
-    => '(256))
-
-  (check	;filler is too negative
-      (catch #f (make-bytevector 2 -129))
-    => '(-129))
+  (with-check-for-procedure-argument-validation
+      (make-bytevector ((bytevector-byte-filler? fill) ?arg))
+    ;;filler is not a fixnum
+    (doit (make-bytevector 3 #\a) #\a)
+    ;;filler is too positive
+    (doit (make-bytevector 2 256) 256)
+    ;;filler is too negative
+    (doit (make-bytevector 2 -129) -129)
+    (void))
 
   #t)
 
@@ -146,24 +151,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f (bytevector-fill! #\a 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-fill! ((bytevector? bv) ?arg))
+    (doit (bytevector-fill! #\a 1) #\a)
+    (void))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
-  (check	;filler is not a fixnum
-      (catch #f (bytevector-fill! #vu8() #\a))
-    => '(#\a))
-
-  (check	;filler is too positive
-      (catch #f (bytevector-fill! #vu8() 256))
-    => '(256))
-
-  (check	;filler is too negative
-      (catch #f (bytevector-fill! #vu8() -129))
-    => '(-129))
+  (with-check-for-procedure-argument-validation
+      (bytevector-fill! ((bytevector-byte-filler? fill) ?arg))
+    ;;filler is not a fixnum
+    (doit (bytevector-fill! #vu8() #\a) #\a)
+    ;;filler is too positive
+    (doit (bytevector-fill! #vu8() 256) 256)
+    ;;filler is too negative
+    (doit (bytevector-fill! #vu8() -129) -129)
+    (void))
 
   #t)
 
@@ -188,11 +192,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f (bytevector-length #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-length ((bytevector? bv) ?arg))
+    (doit (bytevector-length #\a) #\a)
+    (void))
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-empty))
 
   (check
       (bytevector-empty? '#vu8())
@@ -201,6 +209,14 @@
   (check
       (bytevector-empty? '#vu8(1 2 3))
     => #f)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: bytevector
+
+  (with-check-for-procedure-argument-validation
+      (bytevector-empty? ((bytevector? bv) ?arg))
+    (doit (bytevector-empty? #\a) #\a)
+    (void))
 
   #t)
 
@@ -256,18 +272,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f (bytevector=? #\a #vu8()))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector=? ((bytevector? bv1) ?arg))
+    (doit (bytevector=? #\a #vu8()) #\a)
+    (void))
 
-  (check
-      (catch #f (bytevector=? #vu8() #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector=? ((bytevector? bv2) ?arg))
+    (doit (bytevector=? #vu8() #\a) #\a)
+    (void))
 
   #t)
 
 
-(parametrise ((check-test-name	'bytevector-copy))
+(parametrise ((check-test-name	'bytevector-copy-new))
 
   (check
       (bytevector-copy #vu8())
@@ -284,10 +302,10 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-copy #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy ((bytevector? src.bv) ?arg))
+    (doit (bytevector-copy #\a) #\a)
+    (void))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe operation
@@ -384,38 +402,36 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-copy! #\a 0 #vu8() 0 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! ((bytevector? src) ?arg))
+    (doit (bytevector-copy! #\a 0 #vu8() 0 1) #\a))
 
-  (check
-      (catch #f
-	(bytevector-copy! #vu8() 0 #\a 0 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! ((bytevector? dst) ?arg))
+    (doit (bytevector-copy! #vu8() 0 #\a 0 1) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: start index
 
-  (check	;not a fixnum
-      (append (catch #f (bytevector-copy! #vu8() #\a #vu8() 0 1))
-	      (catch #f (bytevector-copy! #vu8() 0 #vu8() #\b 1)))
-    => '(#\a #\b))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! ((bytevector-index? src.start) ?arg))
+    ;;not a fixnum
+    (doit (bytevector-copy! #vu8() #\a #vu8() 0 1) #\a)
+    ;;too low
+    (doit (bytevector-copy! #vu8() -1 #vu8()  0 1) -1)
+    ;;too high
+    (doit (bytevector-copy! #vu8() 1 #vu8() 0 1) 1)
+    (doit (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) 10))
 
-  (check	;too low
-      (append (catch #f (bytevector-copy! #vu8() -1 #vu8()  0 1))
-	      (catch #f (bytevector-copy! #vu8()  0 #vu8() -2 1)))
-    => '(-1 -2))
-
-  (check	;too high
-      (append (catch #f (bytevector-copy! #vu8() 1 #vu8() 0 1))
-	      (catch #f (bytevector-copy! #vu8() 0 #vu8() 2 1)))
-    => '(1 2))
-
-  (check	;too high
-      (append (catch #f (bytevector-copy! #vu8(1 2) 10 #vu8(1 2)  0 1))
-	      (catch #f (bytevector-copy! #vu8(1 2)  0 #vu8(1 2) 20 1)))
-    => '(10 20))
+  (with-check-for-procedure-argument-validation
+      (bytevector-copy! ((bytevector-index? dst.start) ?arg))
+    ;;not a fixnum
+    (doit (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
+    ;;too low
+    (doit (bytevector-copy! #vu8()  0 #vu8() -2 1) -2)
+    ;;too high
+    (doit (bytevector-copy! #vu8() 0 #vu8() 2 1) 2)
+    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) 20))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: count
@@ -3862,4 +3878,5 @@
 ;;; end of file
 ;;Local Variables:
 ;;eval: (put 'catch 'scheme-indent-function 1)
+;;eval: (put 'with-check-for-procedure-argument-validation 'scheme-indent-function 1)
 ;;End:
