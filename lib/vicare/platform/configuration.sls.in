@@ -56,8 +56,8 @@
 		   (string=? rv "0"))
 	       #f)
 	      (else
-	       (positive? @VICARE_ARGUMENTS_VALIDATION@)))
-      (positive? @VICARE_ARGUMENTS_VALIDATION@))))
+	       #@VICARE_ARGUMENTS_VALIDATION@))
+      #@VICARE_ARGUMENTS_VALIDATION@)))
 
 
 ;;;; done

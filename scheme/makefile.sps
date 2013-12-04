@@ -2386,6 +2386,8 @@
     (vicare-built-with-linux-enabled		i v $language)
     (vicare-built-with-srfi-enabled		i v $language)
 
+    (vicare-built-with-arguments-validation-enabled	i v $language)
+
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions
 

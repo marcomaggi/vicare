@@ -117,6 +117,12 @@ process.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun vicare-built-with-arguments-validation-enabled
+Return @true{} if the package was installed along with procedure
+arguments validation enabled; otherwise return @false{}.
+@end defun
+
+
 @defun vicare-built-with-srfi-enabled
 Return @true{} if the package was installed along with the @srfi{}
 libraries; otherwise return @false{}.
