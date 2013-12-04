@@ -51,10 +51,14 @@ VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
 AM_CONDITIONAL([WANT_ARGUMENTS_VALIDATION],
   [test "x$vicare_enable_ARGUMENTS_VALIDATION" = xyes])
 
-vicare_subst_ARGUMENTS_VALIDATION=1
+# We set  this variable to "t"  or to "f".  In  the corresponding Scheme
+# code: we need  to prefix the substitution directive with  "#", so that
+# the result is a literal Scheme boolean.
+#
+vicare_subst_ARGUMENTS_VALIDATION=t
 AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
-  [vicare_subst_ARGUMENTS_VALIDATION=1],
-  [vicare_subst_ARGUMENTS_VALIDATION=0])
+  [vicare_subst_ARGUMENTS_VALIDATION=t],
+  [vicare_subst_ARGUMENTS_VALIDATION=f])
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
   [$vicare_subst_ARGUMENTS_VALIDATION])
 
