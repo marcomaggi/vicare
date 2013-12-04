@@ -208,7 +208,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%byte-filler? obj)
+(define (bytevector-byte-filler? obj)
   ;;Return  #t if  OBJ  is valid  as byte  filler  for new  bytevectors;
   ;;otherwise return #f.
   ;;
@@ -341,7 +341,7 @@
     "total bytevector length exceeds the greatest fixnum" len))
 
 (define-argument-validation (byte-filler who fill)
-  (%byte-filler? fill)
+  (bytevector-byte-filler? fill)
   (procedure-argument-violation who
     "expected fixnum in range [-128, 255] as bytevector fill argument" fill))
 
@@ -554,10 +554,10 @@
   ;;
   (((bv.len bytevector-length?))
    ($make-bytevector bv.len))
-  (((bv.len bytevector-length?) (fill %byte-filler?))
+  (((bv.len bytevector-length?) (fill bytevector-byte-filler?))
    ($bytevector-fill! ($make-bytevector bv.len) 0 bv.len fill)))
 
-(define* (bytevector-fill! (bv bytevector?) (fill %byte-filler?))
+(define* (bytevector-fill! (bv bytevector?) (fill bytevector-byte-filler?))
   ;;Defined by R6RS.  The FILL argument  is as in the description of the
   ;;MAKE-BYTEVECTOR  procedure.  The BYTEVECTOR-FILL!   procedure stores
   ;;FILL in every element of BV and returns unspecified values.
@@ -585,21 +585,21 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (bytevector=? (x bytevector?) (y bytevector?))
-  ;;Defined by R6RS.  Return  #t if X and Y are equal;  that is, if they
-  ;;have  the same  length and  equal bytes  at all  valid  indices.  It
+(define* (bytevector=? (bv1 bytevector?) (bv2 bytevector?))
+  ;;Defined by R6RS.   Return #t if BV1  and BV2 are equal;  that is, if
+  ;;they have the same length and  equal bytes at all valid indices.  It
   ;;returns false otherwise.
   ;;
-  ($bytevector= x y))
+  ($bytevector= bv1 bv2))
 
-(define ($bytevector= x y)
-  (let ((x.len ($bytevector-length x)))
-    (and ($fx= x.len ($bytevector-length y))
-	 (let loop ((x x) (y y) (i 0) (len x.len))
+(define ($bytevector= bv1 bv2)
+  (let ((bv1.len ($bytevector-length bv1)))
+    (and ($fx= bv1.len ($bytevector-length bv2))
+	 (let loop ((bv1 bv1) (bv2 bv2) (i 0) (len bv1.len))
 	   (or ($fx= i len)
-	       (and ($fx= ($bytevector-u8-ref x i)
-			  ($bytevector-u8-ref y i))
-		    (loop x y ($fxadd1 i) len)))))))
+	       (and ($fx= ($bytevector-u8-ref bv1 i)
+			  ($bytevector-u8-ref bv2 i))
+		    (loop bv1 bv2 ($fxadd1 i) len)))))))
 
 ;;; --------------------------------------------------------------------
 
