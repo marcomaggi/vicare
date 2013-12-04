@@ -192,9 +192,6 @@
 	    $bytevector-empty?)
     (vicare arguments validation))
 
-  (module (platform-endianness)
-    (include "ikarus.config.ss" #t))
-
 
 ;;;; helpers
 
@@ -227,6 +224,12 @@
   (or (null? obj)
       (and (list? obj)
 	   (for-all bytevector? obj))))
+
+(define (bytevector-index-for-word8? bv idx)
+  (bytevector-index-for-word? bv idx 1))
+
+(define (bytevector-start-index-and-count-for-word8? bv idx count)
+  (bytevector-start-index-and-count-for-word? bv idx 1 count))
 
 ;;; --------------------------------------------------------------------
 
@@ -331,6 +334,44 @@
   (make-rectangular
     (bytevector-ieee-double-native-ref bv i)
     (bytevector-ieee-double-native-ref bv ($fx+ 8 i))))
+
+
+;;;; preconditions syntax
+
+;;FIXME Should this  syntax be included in the  expander?  (Marco Maggi;
+;;Wed Dec 4, 2013)
+(define-syntax (preconditions stx)
+  (module (vicare-built-with-arguments-validation-enabled)
+    (module (arguments-validation)
+      (include "ikarus.config.ss" #t))
+    (define (vicare-built-with-arguments-validation-enabled)
+      arguments-validation)
+    #| end of module |# )
+  (syntax-case stx ()
+    ;;Single precondition.
+    ;;
+    ((_ ?who (?predicate ?arg ...))
+     (and (identifier? #'?who)
+	  (all-identifiers? #'(?arg ...)))
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(unless (?predicate ?arg ...)
+	     (procedure-argument-violation ?who
+	       "failed precondition validation"
+	       ;;This way of composing the  "&irritants" is like the one
+	       ;;used by LAMBDA* and similar syntaxes.
+	       '(?predicate ?arg ...) ?arg ...))
+       #'(void)))
+
+    ;;Multiple preconditions.
+    ;;
+    ((_ ?who (?predicate ?arg ...) ...)
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(begin
+	     (preconditions ?who (?predicate ?arg ...))
+	     ...)
+       #'(void)))
+    ))
 
 
 ;;;; arguments validation
@@ -532,6 +573,26 @@
        (bytevector-word-size? word-size-in-bytes)
        ($fx<= idx ($fx- ($bytevector-length bv) word-size-in-bytes))))
 
+(define* (bytevector-start-index-and-count-for-word? bv idx word-size-in-bytes count)
+  ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
+  ;;non-negative    fixnum,   COUNT    is    a   non-negative    fixnum,
+  ;;WORD-SIZE-IN-BYTES is a non-negative fixnum, IDX is a valid index in
+  ;;BV  to reference  a COUNT  words whose  size is  WORD-SIZE-IN-BYTES;
+  ;;otherwise return  false.  Notice that if  COUNT is zero: it  is fine
+  ;;for IDX  to be equal  to the length of  BV.  This validation  is for
+  ;;getter and setter indexes.
+  ;;
+  (and (bytevector? bv)
+       (bytevector-index? idx)
+       ($fx<= idx ($bytevector-length bv))
+       (bytevector-word-size? word-size-in-bytes)
+       ;;Look out for overflowing fixnums with the product!!!
+       (let ((data-size (* count word-size-in-bytes)))
+	 (and (fixnum? data-size)
+	      (let ((past (+ idx data-size)))
+		(and (fixnum? past)
+		     ($fx<= past ($bytevector-length bv))))))))
+
 
 ;;;; main bytevector handling functions
 
@@ -541,6 +602,8 @@
   ;;underlying  machine  architecture).   This  may  be  any  endianness
   ;;symbol, including a symbol other than "big" and "little".
   ;;
+  (module (platform-endianness)
+    (include "ikarus.config.ss" #t))
   platform-endianness)
 
 (case-define* make-bytevector
@@ -619,19 +682,19 @@
 
 (define* (bytevector-copy! (src bytevector?) (src.start bytevector-index?)
 			   (dst bytevector?) (dst.start bytevector-index?)
-			   (k bytevector-word-count?))
+			   (word-count bytevector-word-count?))
   ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,
-  ;;DST.START,  and K must  be non-negative  exact integer  objects that
+  ;;DST.START,  and WORD-COUNT must  be non-negative  exact integer  objects that
   ;;satisfy:
   ;;
-  ;;   0 <= SRC.START <= SRC.START + K <= SRC.LEN
-  ;;   0 <= DST.START <= DST.START + K <= DST.LEN
+  ;;   0 <= SRC.START <= SRC.START + WORD-COUNT <= SRC.LEN
+  ;;   0 <= DST.START <= DST.START + WORD-COUNT <= DST.LEN
   ;;
   ;;where SRC.LEN is the length of SRC and DST.LEN is the length of DST.
   ;;
   ;;The BYTEVECTOR-COPY! procedure copies the bytes from SRC at indices:
   ;;
-  ;;   SRC.START, ..., SRC.START + K - 1
+  ;;   SRC.START, ..., SRC.START + WORD-COUNT - 1
   ;;
   ;;to consecutive indices in DST starting at index DST.START.
   ;;
@@ -642,25 +705,28 @@
   ;;
   ;;Return unspecified values.
   ;;
+  (preconditions __who__
+   (bytevector-start-index-and-count-for-word8? src src.start word-count)
+   (bytevector-start-index-and-count-for-word8? dst dst.start word-count))
   (with-arguments-validation (__who__)
       ((start-index-for	src.start src 1)
        (start-index-for	dst.start dst 1)
-       (count-for	k src src.start 1)
-       (count-for	k dst dst.start 1))
+       (count-for	word-count src src.start 1)
+       (count-for	word-count dst dst.start 1))
     (if (eq? src dst)
 	(cond (($fx< dst.start src.start)
 	       (let loop ((src		src)
 			  (src.index	src.start)
 			  (dst.index	dst.start)
-			  (src.past	($fx+ src.start k)))
+			  (src.past	($fx+ src.start word-count)))
 		 (unless ($fx= src.index src.past)
 		   ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
 		   (loop src ($fxadd1 src.index) ($fxadd1 dst.index) src.past))))
 
 	      (($fx> dst.start src.start)
 	       (let loop ((src		src)
-			  (src.index	($fx+ src.start k))
-			  (dst.index	($fx+ dst.start k))
+			  (src.index	($fx+ src.start word-count))
+			  (dst.index	($fx+ dst.start word-count))
 			  (src.past	src.start))
 		 (unless ($fx= src.index src.past)
 		   (let ((src.index ($fxsub1 src.index))
@@ -672,7 +738,7 @@
 		 (src.index	src.start)
 		 (dst		dst)
 		 (dst.index	dst.start)
-		 (src.past	($fx+ src.start k)))
+		 (src.past	($fx+ src.start word-count)))
 	(unless ($fx= src.index src.past)
 	  ($bytevector-u8-set! dst dst.index ($bytevector-u8-ref src src.index))
 	  (loop src ($fxadd1 src.index) dst ($fxadd1 dst.index) src.past))))))
