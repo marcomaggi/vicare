@@ -183,26 +183,32 @@
 (let-syntax
     ((make-errno-vector
       (lambda (stx)
+	(define who 'make-errno-vector)
 	(define (%mk-vector)
-	  (let* ((max	(fold-left (lambda (max pair)
-				     (let ((code (cdr pair)))
-				       (cond ((not code)
-					      max)
-					     ((< max (fx- code))
-					      (fx- code))
-					     (else
-					      max))))
-			  0 errno-alist))
-		 (vec.len	(fx+ 1 max))
-		 ;;All the unused positions are set to #f.
-		 (vec	(make-vector vec.len #f)))
-	    (for-each (lambda (pair)
-			(when (cdr pair)
-			  (vector-set! vec (fx- (cdr pair)) (car pair))))
-	      errno-alist)
-	    vec))
+	  (let* ((max-code (fold-left
+			       (lambda (max-code pair)
+				 (let ((code (cdr pair)))
+				   (cond ((fixnum? code)
+					  (let ((ncode (fx- code)))
+					    (if (< max-code ncode)
+						ncode
+					      max-code)))
+					 ((not code)
+					  max-code)
+					 (else
+					  (syntax-violation who
+					    "invalid errno code specification" pair)))))
+			     0 errno-alist)))
+	    (receive-and-return (vec)
+		;;All the unused positions are set to #f.
+		(make-vector (fx+ 1 max-code) #f)
+	      (for-each (lambda (pair)
+			  (when (cdr pair)
+			    (vector-set! vec (fx- (cdr pair)) (car pair))))
+		errno-alist))))
 	(define errno-alist
-	  `(("E2BIG"		. ,E2BIG)
+          `(;;;("EFAKE"		. ciao) ;for debugging purposes
+	    ("E2BIG"		. ,E2BIG)
 	    ("EACCES"		. ,EACCES)
 	    ("EADDRINUSE"	. ,EADDRINUSE)
 	    ("EADDRNOTAVAIL"	. ,EADDRNOTAVAIL)
