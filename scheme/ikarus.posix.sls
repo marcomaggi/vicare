@@ -193,7 +193,7 @@
 					    (if (< max-code ncode)
 						ncode
 					      max-code)))
-					 ((not code)
+					 ((boolean? code)
 					  max-code)
 					 (else
 					  (syntax-violation who
@@ -203,8 +203,9 @@
 		;;All the unused positions are set to #f.
 		(make-vector (fx+ 1 max-code) #f)
 	      (for-each (lambda (pair)
-			  (when (cdr pair)
-			    (vector-set! vec (fx- (cdr pair)) (car pair))))
+			  (let ((code (cdr pair)))
+			    (when (fixnum? code)
+			      (vector-set! vec (fx- code) (car pair)))))
 		errno-alist))))
 	(define errno-alist
           `(;;;("EFAKE"		. ciao) ;for debugging purposes
