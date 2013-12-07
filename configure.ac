@@ -149,12 +149,15 @@ AM_PROG_CC_C_O
 case "$target_os" in
   *linux*)
     LDFLAGS="-rdynamic $LDFLAGS"
+    vicare_target_os_uid=linux
     ;;
   *bsd*)
     LDFLAGS="-Wl,-E $LDFLAGS"
+    vicare_target_os_uid=bsd
     ;;
   *cygwin*)
     LDFLAGS="-Wl,-E -Wl,--export-all-symbols $LDFLAGS"
+    vicare_target_os_uid=cygwin
     ;;
   *darwin*)
     AC_DEFINE([LIBFFI_ON_DARWIN],[1],
@@ -162,8 +165,13 @@ case "$target_os" in
                libffi does not do that yet.  This so far is only
                important on Snow Leopard in 64-bit mode but we
                mark it on all darwins anyways.])
+    dnl This is needed to include the definitions of some functions
+    dnl like "lgamma_r()" from "math.h".
+    AC_DEFINE([_REENTRANT],[1],[Needed to include definitions on some OS])
+    vicare_target_os_uid=darwin
     ;;
-  esac
+esac
+AC_SUBST([VICARE_TARGET_OS_UID],[$vicare_target_os_uid])
 
 AC_CHECK_SIZEOF(void *)
 if test "$ac_cv_sizeof_void_p" = 4; then

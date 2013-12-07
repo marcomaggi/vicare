@@ -512,6 +512,7 @@ VICARE_ENV	= \
 	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
 	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex/macros; export SILEX_PATH;\
 	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
+	DYLD_LIBRARY_PATH=$(builddir)/../src/.libs; export DYLD_LIBRARY_PATH;
 VICARE_RUN	= $(VICARE_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs long-test long-tests
@@ -602,6 +603,7 @@ VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
 VICARE_INSTCHECK_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	LD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export DYLD_LIBRARY_PATH;	\
 	VICARE_CHECK_QUIET=no;					export VICARE_CHECK_QUIET;	\
 	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex;	export SILEX_PATH;
 VICARE_INSTCHECK_RUN	= \

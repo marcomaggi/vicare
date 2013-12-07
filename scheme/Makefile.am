@@ -32,6 +32,7 @@ ikarus.config.ss: Makefile ../config.h
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>$@
@@ -62,6 +63,7 @@ boot-image-32-bit:
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))' >>$@
 	echo '(define wordsize 4)' >>ikarus.config.ss
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>ikarus.config.ss
@@ -78,6 +80,7 @@ boot-image-64-bit:
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))' >>$@
 	echo '(define wordsize 8)' >>ikarus.config.ss
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>ikarus.config.ss
