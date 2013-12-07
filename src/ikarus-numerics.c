@@ -677,8 +677,8 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb)
   else {
     /* same sign */
     if (xlimbs == ylimbs) {
-      while((ref(x, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize) ==
-	     ref(y, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize))) {
+      while (IK_REF(x, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize) ==
+	     IK_REF(y, -vector_tag+disp_bignum_data+(xlimbs-1)*wordsize)) {
 	xlimbs -= 1;
 	if (xlimbs == 0) { return 0; }
       }

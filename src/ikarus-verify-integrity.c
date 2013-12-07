@@ -64,16 +64,20 @@ verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
   }
 }
 static void
-verify_object (ikptr x, char* base, unsigned* svec, unsigned* dvec)
+verify_object (ikptr x IK_UNUSED, char* base IK_UNUSED,
+	       unsigned* svec IK_UNUSED, unsigned* dvec IK_UNUSED)
 {
-  x=x; base=base; svec=svec; dvec=dvec; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* x=x; base=base; svec=svec; dvec=dvec; */
+  return;
 }
 static char*
-verify_code_small (char* p, int s, unsigned d,
+verify_code_small (char* p, int s IK_UNUSED, unsigned d IK_UNUSED,
 		   char* base, unsigned* svec, unsigned* dvec)
 {
   char* q = p + IK_PAGESIZE;
-  s=s; d=d; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
   while (p < q) {
     ikptr	fst = IK_REF(p, 0);
     if (code_tag == fst) {
@@ -101,10 +105,11 @@ verify_code_small (char* p, int s, unsigned d,
   return q;
 }
 static char *
-verify_code_large (char* p, unsigned s, unsigned d,
+verify_code_large (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
 		   char* base, unsigned* svec, unsigned* dvec)
 {
-  s=s; d=d; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
   ikptr fst = ref(p, 0);
   fst += 0;
   assert(fst == code_tag);
@@ -137,10 +142,11 @@ verify_code_page (char* p, unsigned s, unsigned d,
   return result;
 }
 static char *
-verify_pointers_page (char* p, unsigned s, unsigned d,
+verify_pointers_page (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
 		      char* base, unsigned* svec, unsigned* dvec)
 {
-  s=s; d=d; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
   {
     int i = 0;
     while(i < IK_PAGESIZE){
