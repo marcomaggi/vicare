@@ -74,13 +74,21 @@
   ;;process image, so that the macro FOREIGN-CALL can reference them.
   ;;
   (define who 'autoload-filename-foreign-library)
-  (define-inline (%make-unix-libname id)
-    (string-append "lib" id ".so"))
-  (define-inline (%make-win-libname id)
-    (string-append id ".dll"))
-  (define-inline (%make-macos-libname id)
-    (string-append id ".dylib"))
-  (let* ((libname	(%make-unix-libname libid))
+  (define-inline (%make-libname-unix   id)	(string-append "lib" id ".so"))
+  (define-inline (%make-libname-bsd    id)	(string-append "lib" id ".so"))
+  (define-inline (%make-libname-cygwin id)	(string-append id ".dll"))
+  (define-inline (%make-libname-darwin id)	(string-append "lib" id ".dylib"))
+  (module (target-os-uid)
+    (include "ikarus.config.ss"))
+  (let* ((libname	(case target-os-uid
+			  ((linux)	(%make-libname-unix   libid))
+			  ((bsd)	(%make-libname-bsd    libid))
+			  ((cygwin)	(%make-libname-cygwin libid))
+			  ((darwin)	(%make-libname-darwin libid))
+			  (else
+			   (error who
+			     "internal error: invalid target OS UID"
+			     target-os-uid))))
 	 (rv		(ffi.dlopen libname #t #t)))
     ;;FIXME The handle is lost: the library cannot be closed.
     (unless rv
