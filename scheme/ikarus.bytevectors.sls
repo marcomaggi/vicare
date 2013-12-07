@@ -593,6 +593,18 @@
 		(and (fixnum? past)
 		     ($fx<= past ($bytevector-length bv))))))))
 
+(define (bytevector-start-past-indexes? bv start past)
+  ;;Defined by Vicare.   Return true if: BV is a  bytevector, START is a
+  ;;non-negative fixnum, PAST  is a non-negative fixnum,  START and PAST
+  ;;are  valid indexes  for a  range of  bytes in  BV; otherwise  return
+  ;;false.
+  ;;
+  (and (bytevector? bv)
+       (bytevector-index? start)
+       (bytevector-index? past)
+       ($fx<= past ($bytevector-length bv))
+       ($fx<= start past)))
+
 
 ;;;; main bytevector handling functions
 
@@ -750,10 +762,9 @@
   (((src.bv bytevector?) src.start)
    (subbytevector-u8 src.bv src.start ($bytevector-length src.bv)))
   (((src.bv bytevector?) (src.start bytevector-index?) (src.end bytevector-index?))
-   (with-arguments-validation (__who__)
-       ((start-index-for	src.start src.bv 1)
-	(end-index-for		src.end   src.bv 1))
-     (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start)))))
+   (preconditions __who__
+     (bytevector-start-past-indexes? src.bv src.start src.end))
+   (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start))))
 
 (define* (subbytevector-u8/count (src.bv bytevector?) (src.start bytevector-index?)
 				 (dst.len bytevector-word-count?))
@@ -1922,4 +1933,5 @@
 ;;coding: utf-8-unix
 ;;eval: (put '%implementation-violation	'scheme-indent-function 1)
 ;;eval: (put 'case-endianness		'scheme-indent-function 1)
+;;eval: (put 'preconditions		'scheme-indent-function 1)
 ;;End:
