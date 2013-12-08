@@ -169,6 +169,10 @@ case "$target_os" in
     ;;
 esac
 AC_SUBST([VICARE_TARGET_OS_UID],[$vicare_target_os_uid])
+AM_CONDITIONAL([TARGET_OS_LINUX], [test x$vicare_target_os_uid=xlinux])
+AM_CONDITIONAL([TARGET_OS_BSD],   [test x$vicare_target_os_uid=xbsd])
+AM_CONDITIONAL([TARGET_OS_CYGWIN],[test x$vicare_target_os_uid=xcygwin])
+AM_CONDITIONAL([TARGET_OS_DARWIN],[test x$vicare_target_os_uid=xdarwin])
 
 AC_CHECK_SIZEOF(void *)
 if test "$ac_cv_sizeof_void_p" = 4; then
