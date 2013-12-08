@@ -146,6 +146,7 @@ AM_PROG_AS
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+vicare_target_os_uid=unknown
 case "$target_os" in
   *linux*)
     LDFLAGS="-rdynamic $LDFLAGS"
@@ -1477,18 +1478,25 @@ AM_COND_IF([WANT_GLIBC],[
   dnl   AC_CHECK_FUNCS([fdatasync])
   dnl
   dnl does not work.  The code for this check was shamelessly copied
-  dnl from:
+  dnl and adapted from:
   dnl
   dnl   <https://github.com/kr/beanstalkd/commit/68038c5>
   dnl
   AC_CACHE_CHECK([for fdatasync],[ac_cv_func_fdatasync],
-    [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([
       #include <unistd.h>
     ],[fdatasync(4);])],
     [ac_cv_func_fdatasync=yes],
     [ac_cv_func_fdatasync=no])])
   AS_IF([test "x${ac_cv_func_fdatasync}" = "xyes"],
-   [AC_DEFINE([HAVE_FDATASYNC],[1],[If the system defines fdatasync])])
+    [AC_DEFINE([HAVE_FDATASYNC],[1],[If the system defines fdatasync])])
+  dnl
+  dnl Alternatively we can explicitly exclude the OS X platform from
+  dnl this test.
+  dnl
+  dnl AS_IF([test "x${vicare_target_os_uid}" = "xdarwin"],[],
+  dnl       [AC_CHECK_FUNCS([fdatasync])])
+  dnl
 
   VICARE_CHECK_NETINET_IN_CLASS_MACROS([IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD IN_MULTICAST IN_EXPERIMENTAL IN_BADCLASS])
   VICARE_CHECK_NETINET_IN6_ADDR_MACROS([IN6_IS_ADDR_UNSPECIFIED IN6_IS_ADDR_LOOPBACK IN6_IS_ADDR_LINKLOCAL IN6_IS_ADDR_SITELOCAL IN6_IS_ADDR_V4MAPPED IN6_IS_ADDR_V4COMPAT IN6_IS_ADDR_MULTICAST IN6_IS_ADDR_MC_NODELOCAL IN6_IS_ADDR_MC_LINKLOCAL IN6_IS_ADDR_MC_SITELOCAL IN6_IS_ADDR_MC_ORGLOCAL IN6_IS_ADDR_MC_GLOBAL])
