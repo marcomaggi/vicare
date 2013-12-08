@@ -296,7 +296,7 @@ additionally recognises the features @func{write} and @func{display}:
 @end example
 
 The following bindings are exported by the library @library{vicare
-cond-expand helpers}.
+language-extensions cond-expand helpers}.
 
 
 @deffn Syntax define-cond-expand-identifiers-helper @meta{who} @meta{feature-clause} ...
