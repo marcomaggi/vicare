@@ -75,6 +75,17 @@
     (delete-file pathname)))
 
 
+(parametrise ((check-test-name	'cond-expand))
+
+  (check
+      (px.cond-expand
+       (px.read #t)
+       (else #f))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'errno-strings))
 
   (check
