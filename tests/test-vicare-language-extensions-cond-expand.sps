@@ -211,20 +211,8 @@
 
   (check
       (cond-expand
-       ((and linux posix)	#t)
+       ((or linux darwin)	#t)
        (else			#f))
-    => #t)
-
-  (check
-      (cond-expand
-       (linux		#t)
-       (else		#f))
-    => #t)
-
-  (check
-      (cond-expand
-       (posix		#t)
-       (else		#f))
     => #t)
 
   #t)
