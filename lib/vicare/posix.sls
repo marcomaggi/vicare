@@ -451,8 +451,7 @@
     (vicare unsafe operations)
     (prefix (vicare platform words)
 	    words.)
-    (vicare language-extensions cond-expand)
-    #;(vicare posix cond-expand))
+    (vicare language-extensions cond-expand))
 
 
 ;;;; helpers
