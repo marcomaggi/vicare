@@ -87,14 +87,21 @@ the archive then do:
    $ mkdir build
    $ cd build
    $ ../configure
-   $ make all vfasl
-   $ make check
+   $ make
    $ make install
 
 notice  that  the  "configure"  script  is  prepared  to  enable  shared
 libraries  and  disable static  libraries:  this  must not  be  changed,
 because  the package  is  meant to  install  a C  shared  library to  be
 dynamically loaded.
+
+  To run the test suite we do:
+
+   $ make vfasl
+   $ make check
+
+the  rule  "vfasl" precompiles  the  Scheme  libraries; precompiling  is
+optional but it greatly speeds up running the test suite.
 
   If, instead,  we have checked out  a revision from the  repository, we
 will have  to first build the  infrastructure by running a  Bourne shell
@@ -117,9 +124,13 @@ the "configure" script:
    $ mkdir build
    $ cd build
    $ ../configure --enable-maintainer-mode
-   $ make all vfasl
-   $ make check
+   $ make
    $ make install
+
+again to run the test suite with precompiled libraries we do:
+
+   $ make vfasl
+   $ make check
 
   To make use  of the POSIX semaphore functions, we  need to include the
 pthread library using the option:
@@ -151,11 +162,19 @@ the files under a temporary location; example:
    $ make install DESTDIR=/tmp/vicare
 
   After   installation,  the   makefile   rule  "vfasl-installed"   will
-precompile the libraries  installed in the hierarchies  (vicare ---) and
-(srfi ---).   By default, the  Scheme libraries are installed  under the
-directory:
+precompile  the libraries  installed  in the  hierarchies (vicare  ---),
+(srfi ---)  and (nausicaa  ---).  By default,  the Scheme  libraries are
+installed under the directory:
 
 			$(libdir)/vicare-scheme
+
+  To compile  the installed libraries by  hand, we must run  the scripts
+"compile-*.sps" installed along the package; for example:
+
+  $ sudo vicare \
+     --fasl-directory /var/cache/vicare-scheme \
+     --compile-dependencies \
+        /usr/local/libexec/vicare-scheme/compile-vicare-platform.sps
 
   The variable VFLAGS is available  to the user when running "configure"
 and "make" to add command line options to the execution of "vicare" when
