@@ -54,6 +54,17 @@
 	   (delete-file ptn)))))))
 
 
+(parametrise ((check-test-name	'cond-expand))
+
+  (check
+      (lx.cond-expand
+       (lx.waitid #t)
+       (else #f))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'termination-status))
 
   (check
