@@ -40,6 +40,18 @@
 (check-display "*** testing Vicare GNU C Library functions\n")
 
 
+(parametrise ((check-test-name	'cond-expand))
+
+  (check
+      (glibc.cond-expand
+       (glibc.fdatasync #t)
+       (glibc.fsync #t)
+       (else #f))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'directories))
 
   (check
