@@ -27,6 +27,8 @@
 
 (library (vicare glibc)
   (export
+    cond-expand
+
     ;; operating system environment variables
     clearenv
 
@@ -97,7 +99,8 @@
     (prefix (vicare platform words)
 	    words.)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare language-extensions cond-expand))
 
 
 ;;;; helpers
@@ -589,6 +592,94 @@
     (if (vector? rv)
 	(vector-map latin1->string rv)
       rv)))
+
+
+;;;; features cond-expand
+
+(define-cond-expand cond-expand
+  (let ()
+    (import (vicare platform features)
+      (only (vicare language-extensions cond-expand helpers)
+	    define-cond-expand-identifiers-helper))
+    (define-cond-expand-identifiers-helper vicare-glibc-features
+      (iconv				HAVE_ICONV)
+      (clearenv				HAVE_CLEARENV)
+      (dirfd				HAVE_DIRFD)
+      (mkstemp				HAVE_MKSTEMP)
+      (mkdtemp				HAVE_MKDTEMP)
+      (sync				HAVE_SYNC)
+      (fsync				HAVE_FSYNC)
+      (fdatasync			HAVE_FDATASYNC)
+      (if-nametoindex			HAVE_IF_NAMETOINDEX)
+      (if-indextoname			HAVE_IF_INDEXTONAME)
+      (if-nameindex			HAVE_IF_NAMEINDEX)
+      (IN_CLASSA			HAVE_IN_CLASSA)
+      (IN_CLASSB			HAVE_IN_CLASSB)
+      (IN_CLASSC			HAVE_IN_CLASSC)
+      (IN_CLASSD			HAVE_IN_CLASSD)
+      (IN_MULTICAST			HAVE_IN_MULTICAST)
+      (IN_EXPERIMENTAL			HAVE_IN_EXPERIMENTAL)
+      (IN_BADCLASS			HAVE_IN_BADCLASS)
+      (IN6_IS_ADDR_UNSPECIFIED		HAVE_IN6_IS_ADDR_UNSPECIFIED)
+      (IN6_IS_ADDR_LOOPBACK		HAVE_IN6_IS_ADDR_LOOPBACK)
+      (IN6_IS_ADDR_LINKLOCAL		HAVE_IN6_IS_ADDR_LINKLOCAL)
+      (IN6_IS_ADDR_SITELOCAL		HAVE_IN6_IS_ADDR_SITELOCAL)
+      (IN6_IS_ADDR_V4MAPPED		HAVE_IN6_IS_ADDR_V4MAPPED)
+      (IN6_IS_ADDR_V4COMPAT		HAVE_IN6_IS_ADDR_V4COMPAT)
+      (IN6_IS_ADDR_MULTICAST		HAVE_IN6_IS_ADDR_MULTICAST)
+      (IN6_IS_ADDR_MC_NODELOCAL		HAVE_IN6_IS_ADDR_MC_NODELOCAL)
+      (IN6_IS_ADDR_MC_LINKLOCAL		HAVE_IN6_IS_ADDR_MC_LINKLOCAL)
+      (IN6_IS_ADDR_MC_SITELOCAL		HAVE_IN6_IS_ADDR_MC_SITELOCAL)
+      (IN6_IS_ADDR_MC_ORGLOCAL		HAVE_IN6_IS_ADDR_MC_ORGLOCAL)
+      (IN6_IS_ADDR_MC_GLOBAL		HAVE_IN6_IS_ADDR_MC_GLOBAL)
+      (IN6_ARE_ADDR_EQUAL		HAVE_IN6_ARE_ADDR_EQUAL)
+      (bindresvport			HAVE_BINDRESVPORT)
+      (bindresvport6			HAVE_BINDRESVPORT6)
+      (csin				HAVE_CSIN)
+      (ccos				HAVE_CCOS)
+      (ctan				HAVE_CTAN)
+      (casin				HAVE_CASIN)
+      (cacos				HAVE_CACOS)
+      (catan				HAVE_CATAN)
+      (cexp				HAVE_CEXP)
+      (clog				HAVE_CLOG)
+      (clog10				HAVE_CLOG10)
+      (csqrt				HAVE_CSQRT)
+      (cpow				HAVE_CPOW)
+      (sinh				HAVE_SINH)
+      (cosh				HAVE_COSH)
+      (tanh				HAVE_TANH)
+      (csinh				HAVE_CSINH)
+      (ccosh				HAVE_CCOSH)
+      (ctanh				HAVE_CTANH)
+      (asinh				HAVE_ASINH)
+      (acosh				HAVE_ACOSH)
+      (atanh				HAVE_ATANH)
+      (casinh				HAVE_CASINH)
+      (cacosh				HAVE_CACOSH)
+      (catanh				HAVE_CATANH)
+      (erf				HAVE_ERF)
+      (erfc				HAVE_ERFC)
+      (lgamma				HAVE_LGAMMA_R)
+      (tgamma				HAVE_TGAMMA)
+      (y0				HAVE_Y0)
+      (y1				HAVE_Y1)
+      (j0				HAVE_J0)
+      (j1				HAVE_J1)
+      (yn				HAVE_YN)
+      (jn				HAVE_JN)
+      (rand				HAVE_RAND)
+      (rand				HAVE_RAND)
+      (fnmatch				HAVE_FNMATCH)
+      (glob				HAVE_GLOB)
+      (regcomp				HAVE_REGCOMP)
+      (regcomp				HAVE_REGCOMP)
+      (regcomp				HAVE_REGCOMP)
+      (wordexp				HAVE_WORDEXP)
+      (iconv				HAVE_ICONV)
+      #| define-cond-expand-identifiers-helper |# )
+
+    vicare-glibc-features))
 
 
 ;;;; done
