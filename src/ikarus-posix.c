@@ -616,7 +616,7 @@ ikrt_posix_lstat (ikptr filename_bv, ikptr s_stat_struct, ikpcb* pcb)
 ikptr
 ikrt_posix_fstat (ikptr s_fd, ikptr s_stat_struct, ikpcb* pcb)
 {
-#ifdef HAVE_fstat
+#ifdef HAVE_FSTAT
   struct stat	S;
   int		rv;
   errno = 0;
