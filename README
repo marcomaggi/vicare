@@ -87,7 +87,7 @@ the archive then do:
    $ mkdir build
    $ cd build
    $ ../configure
-   $ make
+   $ make all vfasl
    $ make check
    $ make install
 
@@ -117,7 +117,7 @@ the "configure" script:
    $ mkdir build
    $ cd build
    $ ../configure --enable-maintainer-mode
-   $ make
+   $ make all vfasl
    $ make check
    $ make install
 
