@@ -328,11 +328,7 @@ VICARE_SCHEME_POSIX_TESTS	= \
 	test-vicare-posix-mmap.sps					\
 	test-vicare-posix-bub.sps					\
 	test-vicare-posix-time.sps					\
-	test-vicare-posix-timers.sps					\
-	test-vicare-posix-message-queue.sps				\
 	test-vicare-posix-shared-memory.sps				\
-	test-vicare-posix-semaphores.sps				\
-	test-vicare-posix-sigwait.sps					\
 	\
 	test-vicare-posix-processes-shared-memory.sps			\
 	test-vicare-posix-sel.sps					\
@@ -342,6 +338,15 @@ VICARE_SCHEME_POSIX_TESTS	= \
 	\
 	test-vicare-posix-net-channels-binary.sps			\
 	test-vicare-posix-net-channels-textual.sps
+
+if TARGET_OS_DARWIN
+else
+VICARE_SCHEME_POSIX_TESTS	+= \
+	test-vicare-posix-message-queue.sps				\
+	test-vicare-posix-semaphores.sps				\
+	test-vicare-posix-sigwait.sps					\
+	test-vicare-posix-timers.sps
+endif
 
 VICARE_SCHEME_GLIBC_TESTS	= test-vicare-glibc.sps
 
