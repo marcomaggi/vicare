@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -39,11 +39,14 @@
 
 (parametrise ((check-test-name	'mmap))
 
+;;;On BSD and Darwin systems  only MAP_ANON is defined, MAP_ANONYMOUS is
+;;;undefined.
+
   (check
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(px.munmap ptr page-size)
 	(pointer? ptr))
@@ -53,7 +56,7 @@
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(px.msync ptr page-size 0)
 	(px.munmap ptr page-size)
@@ -64,7 +67,7 @@
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0))
 	     (ptr	(px.mremap ptr page-size (* 2 page-size) MREMAP_MAYMOVE)))
 	(px.munmap ptr page-size)
@@ -75,7 +78,7 @@
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(px.madvise ptr page-size MADV_NORMAL)
 	(px.munmap ptr page-size)
@@ -86,7 +89,7 @@
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(px.mlock ptr page-size)
 	(px.munlock ptr page-size)
@@ -105,7 +108,7 @@
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	     (ptr	(px.mmap #f page-size
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE MAP_ANONYMOUS)
+				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(px.mprotect ptr page-size PROT_READ)
 	(px.munmap ptr page-size)

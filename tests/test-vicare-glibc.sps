@@ -33,7 +33,6 @@
   (prefix (vicare ffi)
 	  ffi.)
   (vicare platform constants)
-  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -117,9 +116,17 @@
 (parametrise ((check-test-name	'sockets))
 
   (check (glibc.if-indextoname 0)	=> #f)
-  (check (glibc.if-indextoname 1)	=> "lo")
+  (check (glibc.if-indextoname 1)	=> (glibc.cond-expand
+					    (linux	"lo")
+					    (darwin	"lo0")
+					    (else	"unknown")))
 
-  (check (glibc.if-nametoindex "lo")	=> 1)
+  (check
+      (glibc.if-nametoindex (glibc.cond-expand
+			     (linux	"lo")
+			     (darwin	"lo0")
+			     (else	"unknown")))
+    => 1)
 
   ;;These are specific to the maintainer's system.
   (when #f

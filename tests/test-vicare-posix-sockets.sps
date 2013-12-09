@@ -27,10 +27,8 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare posix)
-	  px.)
+  (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -205,24 +203,24 @@
 ;;;      (check-pretty-print S)
       (list (px.struct-hostent? S)
 	    (utf8->string (px.struct-hostent-h_name S))
-	    (px.struct-hostent-h_aliases   S)
+	    (for-all bytevector? (px.struct-hostent-h_aliases S))
 	    (px.struct-hostent-h_addrtype  S)
 	    (px.struct-hostent-h_length    S)
 	    (px.struct-hostent-h_addr_list S)
 	    (px.struct-hostent-h_addr      S)))
-    => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+    => `(#t "localhost" #t ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
 
   (check
       (let ((S (px.gethostbyname2 "localhost" AF_INET)))
 ;;;(check-pretty-print S)
 	(list (px.struct-hostent? S)
 	      (utf8->string (px.struct-hostent-h_name S))
-	      (px.struct-hostent-h_aliases   S)
+	      (for-all bytevector? (px.struct-hostent-h_aliases S))
 	      (px.struct-hostent-h_addrtype  S)
 	      (px.struct-hostent-h_length    S)
 	      (px.struct-hostent-h_addr_list S)
 	      (px.struct-hostent-h_addr      S)))
-    => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+    => `(#t "localhost" #t ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
 
   (check
       (let ((S (px.gethostbyaddr '#vu8(127 0 0 1))))
@@ -362,7 +360,7 @@
   (define run-inet-tests? ;the firewall must allow it
     (or #f (px.getenv "RUN_INET_TESTS")))
 
-  (check	;socketpair, read, write
+  (check	;socketpair, read, write, shutdown
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	(px.write a '#vu8(1 2 3 4))
 	(let ((buf (make-bytevector 4)))
@@ -372,7 +370,7 @@
 	  buf))
     => '#vu8(1 2 3 4))
 
-  (check	;socketpair, send, recv
+  (check	;socketpair, send, recv, shutdown
       (let-values (((a b) (px.socketpair PF_LOCAL SOCK_DGRAM 0)))
 	(px.send a '#vu8(1 2 3 4) #f 0)
 	(let ((buf (make-bytevector 4)))
@@ -385,10 +383,13 @@
 ;;; --------------------------------------------------------------------
 ;;; options
 
+;;;Do not  use SHUTDOWN here  because the  socket may not  be connected.
+;;;Use CLOSE instead.
+
   (check
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_DEBUG)))
-	(px.shutdown sock SHUT_RDWR)
+	(px.close sock)
 	result)
     => 0)
 
@@ -396,7 +397,7 @@
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  result))
     => 1)
 
@@ -404,14 +405,14 @@
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #f)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  result))
     => 0)
 
   (check
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
-	(px.shutdown sock SHUT_RDWR)
+	(px.close sock)
 	result)
     => 0)
 
@@ -419,14 +420,14 @@
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/int sock SOL_SOCKET SO_KEEPALIVE #t)
 	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  result))
     => 1)
 
   (check
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
-	(px.shutdown sock SHUT_RDWR)
+	(px.close sock)
 	(and (integer?  result)
 	     (exact?    result)
 	     (positive? result)))
@@ -440,7 +441,7 @@
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
 	(let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  (and (integer?  result)
 	       (exact?    result)
 	       (positive? result))))
@@ -449,14 +450,14 @@
   (check
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/int sock SOL_SOCKET SO_TYPE)))
-	(px.shutdown sock SHUT_RDWR)
+	(px.close sock)
 	result)
     => SOCK_STREAM)
 
   (check
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(let-values (((onoff linger) (px.getsockopt/linger sock)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  (cons onoff linger)))
     => '(#f . 0))
 
@@ -464,7 +465,7 @@
       (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
 	(px.setsockopt/linger sock #t 123)
 	(let-values (((onoff linger) (px.getsockopt/linger sock)))
-	  (px.shutdown sock SHUT_RDWR)
+	  (px.close sock)
 	  (cons onoff linger)))
     => '(#t . 123))
 
