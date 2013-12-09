@@ -92,7 +92,7 @@
    (else (void)))
 
   (px.cond-expand
-   ((and px.mlock px.munlock)
+   ((and px.mlock px.munlock (not darwin))
     (check	;mlock, munlock
 	(let* ((page-size	(px.sysconf _SC_PAGESIZE))
 	       (ptr		(px.mmap #f page-size
@@ -107,7 +107,7 @@
    (else (void)))
 
   (px.cond-expand
-   ((and px.mlockall px.munlockall)
+   ((and px.mlockall px.munlockall (not darwin))
     (check	;mlockall, mulockall
 	(begin
 	  (px.mlockall MCL_FUTURE)

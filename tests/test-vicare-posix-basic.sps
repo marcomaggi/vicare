@@ -995,13 +995,13 @@
 	    (receive (r w e)
 		(px.select-fd in 0 0)
 	      (values r
-		      (px.cond-expand
-		       (darwin in)
-		       (else   w))
+		      (equal? w (px.cond-expand
+				 (darwin in)
+				 (else   #f)))
 		      e))
 	  (px.close in)
 	  (px.close ou)))
-    => #f #f #f)
+    => #f #t #f)
 
   (check	;read ready
       (receive (in ou)
