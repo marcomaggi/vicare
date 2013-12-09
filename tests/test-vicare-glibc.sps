@@ -479,13 +479,15 @@
       (glibc.fnmatch "ciao*" "ciao a tutti" 0)
     => #t)
 
-  (check
-      (glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
-    => #t)
+  (when FNM_EXTMATCH
+    (check
+	(glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
+      => #t))
 
-  (check
-      (glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
-    => #t)
+  (when FNM_EXTMATCH
+    (check
+	(glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
+      => #t))
 
 ;;; --------------------------------------------------------------------
 
@@ -558,19 +560,21 @@
 	rv)
     => '#((0 . 3)))
 
-  (check
-      (let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
-	     (rv  (glibc.regexec rex "abc" 0)))
-	(glibc.regfree rex)
-	rv)
-    => '#((0 . 3)))
+  (when REG_EXTENDED
+    (check
+	(let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
+	       (rv  (glibc.regexec rex "abc" 0)))
+	  (glibc.regfree rex)
+	  rv)
+      => '#((0 . 3))))
 
-  (check
-      (let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
-	     (rv  (glibc.regexec rex "abc" 0)))
-	(glibc.regfree rex)
-	rv)
-    => '#((0 . 3)))
+  (when REG_EXTENDED
+    (check
+	(let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
+	       (rv  (glibc.regexec rex "abc" 0)))
+	  (glibc.regfree rex)
+	  rv)
+      => '#((0 . 3))))
 
 ;;;  (check-pretty-print 'gc)
   (collect))
