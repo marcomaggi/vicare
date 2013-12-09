@@ -69,7 +69,7 @@
 				 (fxior PROT_READ PROT_WRITE)
 				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0))
-	     (ptr	(px.mremap ptr page-size (* 2 page-size) MREMAP_MAYMOVE)))
+	     (ptr	(px.mremap ptr page-size (* 2 page-size) (or MREMAP_MAYMOVE 0))))
 	(px.munmap ptr page-size)
 	(pointer? ptr))
     => #t)
