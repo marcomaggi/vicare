@@ -940,7 +940,8 @@
 		(px.cond-expand
 		 (darwin
 		  (values (equal? r '())
-			  (equal? w fds)
+			  (or (equal? w (list in ou))
+			      (equal? w (list ou in)))
 			  (equal? e '())))
 		 (else
 		  (values (equal? r '())
@@ -993,7 +994,11 @@
 	(unwind-protect
 	    (receive (r w e)
 		(px.select-fd in 0 0)
-	      (values r w e))
+	      (values r
+		      (px.cond-expand
+		       (darwin in)
+		       (else   w))
+		      e))
 	  (px.close in)
 	  (px.close ou)))
     => #f #f #f)
@@ -1006,10 +1011,14 @@
 	      (px.write ou '#vu8(1))
 	      (receive (r w e)
 		  (px.select-fd in 0 0)
-		(values (equal? r in) w e)))
+		(values (equal? r in)
+			(px.cond-expand
+			 (darwin (equal? w in))
+			 (else   (equal? w #f)))
+			e)))
 	(px.close in)
 	(px.close ou)))
-    => #t #f #f)
+    => #t #t #f)
 
   (check	;write ready
       (receive (in ou)
@@ -1118,14 +1127,8 @@
 	  (let ((oup (make-binary-file-descriptor-output-port* ou "oup")))
 	    (receive (r w e)
 		(px.select-port oup 0 0)
-	      (values (equal? r (px.cond-expand
-				 ;;On   Darwin    "pipe()"   returns   a
-				 ;;bidirectional pipe.
-				 (darwin	oup)
-				 (else		#f)))
-		      (equal? w oup)
-		      (equal? e #f))))))
-    => #t #t #t)
+	      (values r (equal? w oup) e)))))
+    => #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; poll
