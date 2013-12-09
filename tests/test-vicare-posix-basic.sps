@@ -32,7 +32,7 @@
   (prefix (vicare ffi)
 	  ffi.)
   (vicare platform constants)
-  (vicare language-extensions syntaxes)
+  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -552,7 +552,7 @@
 
   (check
       (with-temporary-file ("tmp")
-	(px.chown "tmp" 1000 1000))
+  	(px.chown "tmp" (px.getuid) (px.getgid)))
     => 0)
 
 ;;; --------------------------------------------------------------------
