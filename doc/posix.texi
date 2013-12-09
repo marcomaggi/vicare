@@ -2127,6 +2127,11 @@ integer in the range of the C language type @code{size_t}.
 @var{protect} and @var{flags} must fixnums of flags.  @var{fd} must be a
 fixnum representing a file descriptor.  @var{offset} must be an exact
 integer in the range of the C language type @code{off_t}.
+
+@quotation
+@strong{NOTE} On BSD and Darwin systems only @code{MAP_ANON} is defined,
+@code{MAP_ANONYMOUS} is undefined.
+@end quotation
 @end defun
 
 
