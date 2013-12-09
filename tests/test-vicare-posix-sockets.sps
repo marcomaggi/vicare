@@ -225,14 +225,14 @@
   (check
       (let ((S (px.gethostbyaddr '#vu8(127 0 0 1))))
 ;;;(check-pretty-print S)
-	(list (px.struct-hostent? S)
-	      (utf8->string (px.struct-hostent-h_name S))
-	      (px.struct-hostent-h_aliases   S)
-	      (px.struct-hostent-h_addrtype  S)
-	      (px.struct-hostent-h_length    S)
-	      (px.struct-hostent-h_addr_list S)
-	      (px.struct-hostent-h_addr      S)))
-    => `(#t "localhost" () ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+	(values (px.struct-hostent? S)
+		(utf8->string (px.struct-hostent-h_name S))
+		(for-all bytevector? (px.struct-hostent-h_aliases S))
+		(px.struct-hostent-h_addrtype  S)
+		(px.struct-hostent-h_length    S)
+		(px.struct-hostent-h_addr_list S)
+		(px.struct-hostent-h_addr      S)))
+    => #t "localhost" #t AF_INET 4 '(#vu8(127 0 0 1)) '#vu8(127 0 0 1))
 
   (check
       (for-all px.struct-hostent? (px.host-entries))
@@ -386,51 +386,67 @@
 ;;;Do not  use SHUTDOWN here  because the  socket may not  be connected.
 ;;;Use CLOSE instead.
 
-  (check
-      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
-	     (result (px.getsockopt/int sock SOL_SOCKET SO_DEBUG)))
-	(px.close sock)
-	result)
+  (check	;check an unset option
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.getsockopt/int sock SOL_SOCKET SO_DEBUG)))
     => 0)
 
-  (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
-	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
-	  (px.close sock)
-	  result))
-    => 1)
+  (check	;set the option and check it
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #t)
+	  (and (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)
+	       #t)))
+    => #t)
 
-  (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #f)
-	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
-	  (px.close sock)
-	  result))
+  (check	;unset the option and check it
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.setsockopt/int sock SOL_SOCKET SO_REUSEADDR #f)
+	  (px.getsockopt/int sock SOL_SOCKET SO_REUSEADDR)))
     => 0)
 
-  (check
-      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
-	     (result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
-	(px.close sock)
-	result)
+  (check	;check an unset option
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
     => 0)
 
-  (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/int sock SOL_SOCKET SO_KEEPALIVE #t)
-	(let ((result (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)))
-	  (px.close sock)
-	  result))
-    => 1)
+  (check	;set an option and check it
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.setsockopt/int sock SOL_SOCKET SO_KEEPALIVE #t)
+	  (and (px.getsockopt/int sock SOL_SOCKET SO_KEEPALIVE)
+	       #t)))
+    => #t)
 
   (check
-      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
-	     (result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
-	(px.close sock)
-	(and (integer?  result)
-	     (exact?    result)
-	     (positive? result)))
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (define result
+	    (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF))
+	  (and (integer?  result)
+	       (exact?    result)
+	       (positive? result))))
     => #t)
 
 ;;;This test behaves  like this for no documented  reason; it looks like
@@ -438,36 +454,45 @@
 ;;;system, rather than a strict order.
 ;;;
   (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
-	(let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
-	  (px.close sock)
-	  (and (integer?  result)
-	       (exact?    result)
-	       (positive? result))))
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
+	  (let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
+	    (and (integer?  result)
+		 (exact?    result)
+		 (positive? result)))))
     => #t)
 
   (check
-      (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
-	     (result (px.getsockopt/int sock SOL_SOCKET SO_TYPE)))
-	(px.close sock)
-	result)
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.getsockopt/int sock SOL_SOCKET SO_TYPE)))
     => SOCK_STREAM)
 
   (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(let-values (((onoff linger) (px.getsockopt/linger sock)))
-	  (px.close sock)
-	  (cons onoff linger)))
-    => '(#f . 0))
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.getsockopt/linger sock)))
+    => #f 0)
 
   (check
-      (let ((sock   (px.socket PF_LOCAL SOCK_STREAM 0)))
-	(px.setsockopt/linger sock #t 123)
-	(let-values (((onoff linger) (px.getsockopt/linger sock)))
-	  (px.close sock)
-	  (cons onoff linger)))
-    => '(#t . 123))
+      (with-compensations
+	(letrec ((sock (compensate
+			   (px.socket PF_LOCAL SOCK_STREAM 0)
+			 (with
+			  (px.close sock)))))
+	  (px.setsockopt/linger sock #t 123)
+	  (px.getsockopt/linger sock)))
+    => #t 123)
 
 ;;; --------------------------------------------------------------------
 ;;; PF_LOCAL, SOCK_STREAM
