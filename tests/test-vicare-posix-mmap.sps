@@ -63,46 +63,58 @@
 	(pointer? ptr))
     => #t)
 
-  (check	;mremap
-      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
-	     (ptr	(px.mmap #f page-size
-				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
-				 0 0))
-	     (ptr	(px.mremap ptr page-size (* 2 page-size) (or MREMAP_MAYMOVE 0))))
-	(px.munmap ptr page-size)
-	(pointer? ptr))
-    => #t)
+  (px.cond-expand
+   (px.mremap
+    (check	;mremap
+	(let* ((page-size	(px.sysconf _SC_PAGESIZE))
+	       (ptr		(px.mmap #f page-size
+					 (fxior PROT_READ PROT_WRITE)
+					 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
+					 0 0))
+	       (ptr		(px.mremap ptr page-size (* 2 page-size) (or MREMAP_MAYMOVE 0))))
+	  (px.munmap ptr page-size)
+	  (pointer? ptr))
+      => #t))
+   (else (void)))
 
-  (check	;madvise
-      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
-	     (ptr	(px.mmap #f page-size
-				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
-				 0 0)))
-	(px.madvise ptr page-size MADV_NORMAL)
-	(px.munmap ptr page-size)
-	(pointer? ptr))
-    => #t)
+  (px.cond-expand
+   (px.madvise
+    (check	;madvise
+	(let* ((page-size	(px.sysconf _SC_PAGESIZE))
+	       (ptr		(px.mmap #f page-size
+					 (fxior PROT_READ PROT_WRITE)
+					 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
+					 0 0)))
+	  (px.madvise ptr page-size MADV_NORMAL)
+	  (px.munmap ptr page-size)
+	  (pointer? ptr))
+      => #t))
+   (else (void)))
 
-  (check	;mlock, mulock
-      (let* ((page-size	(px.sysconf _SC_PAGESIZE))
-	     (ptr	(px.mmap #f page-size
-				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
-				 0 0)))
-	(px.mlock ptr page-size)
-	(px.munlock ptr page-size)
-	(px.munmap ptr page-size)
-	(pointer? ptr))
-    => #t)
+  (px.cond-expand
+   ((and px.mlock px.munlock)
+    (check	;mlock, munlock
+	(let* ((page-size	(px.sysconf _SC_PAGESIZE))
+	       (ptr		(px.mmap #f page-size
+					 (fxior PROT_READ PROT_WRITE)
+					 (fxior MAP_PRIVATE (or MAP_ANONYMOUS MAP_ANON 0))
+					 0 0)))
+	  (px.mlock ptr page-size)
+	  (px.munlock ptr page-size)
+	  (px.munmap ptr page-size)
+	  (pointer? ptr))
+      => #t))
+   (else (void)))
 
-  (check	;mlockall, mulockall
-      (begin
-	(px.mlockall MCL_FUTURE)
-	(px.munlockall)
-	#t)
-    => #t)
+  (px.cond-expand
+   ((and px.mlockall px.munlockall)
+    (check	;mlockall, mulockall
+	(begin
+	  (px.mlockall MCL_FUTURE)
+	  (px.munlockall)
+	  #t)
+      => #t))
+   (else (void)))
 
   (check	;mprotect
       (let* ((page-size	(px.sysconf _SC_PAGESIZE))
