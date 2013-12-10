@@ -616,7 +616,7 @@ ikrt_posix_lstat (ikptr filename_bv, ikptr s_stat_struct, ikpcb* pcb)
 ikptr
 ikrt_posix_fstat (ikptr s_fd, ikptr s_stat_struct, ikpcb* pcb)
 {
-#ifdef HAVE_fstat
+#ifdef HAVE_FSTAT
   struct stat	S;
   int		rv;
   errno = 0;
@@ -1424,7 +1424,7 @@ ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb *
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
   bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
   size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
-  if ((0 <= size) && (size <= bv_size)) {
+  if (size <= bv_size) {
     off	   = ik_integer_to_off_t(s_off);
     errno  = 0;
     rv     = pread(IK_NUM_TO_FD(s_fd), buffer, size, off);
@@ -1448,7 +1448,7 @@ ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
   buffer   = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
   bv_size  = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
   size	   = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
-  if ((0 <= size) && (size <= bv_size)) {
+  if (size <= bv_size) {
     errno = 0;
     rv	  = write(IK_NUM_TO_FD(s_fd), buffer, size);
   } else {
@@ -1472,7 +1472,7 @@ ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikp
   buffer  = IK_BYTEVECTOR_DATA_VOIDP(s_buffer);
   bv_size = (size_t)IK_BYTEVECTOR_LENGTH(s_buffer);
   size	  = (IK_FALSE_OBJECT != s_size)? ik_integer_to_size_t(s_size) : bv_size;
-  if ((0 <= size) && (size <= bv_size)) {
+  if (size <= bv_size) {
     off   = ik_integer_to_off_t(s_offset);
     errno = 0;
     rv	  = pwrite(IK_NUM_TO_FD(s_fd), buffer, size, off);
@@ -4841,6 +4841,8 @@ ikrt_posix_signal_bub_delivered (ikptr s_signum)
  ** Waiting for signals.
  ** ----------------------------------------------------------------- */
 
+#if ((defined HAVE_SIGEMPTYSET) && (defined HAVE_SIGADDSET) \
+     && ((defined HAVE_SIGWAITINFO) || (defined HAVE_SIGTIMEDWAIT)))
 static void
 posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
 {
@@ -4982,6 +4984,7 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
   }
   pcb->root9 = NULL;
 }
+#endif
 
 /* ------------------------------------------------------------------ */
 

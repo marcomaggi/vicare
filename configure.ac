@@ -146,15 +146,19 @@ AM_PROG_AS
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+vicare_target_os_uid=unknown
 case "$target_os" in
   *linux*)
     LDFLAGS="-rdynamic $LDFLAGS"
+    vicare_target_os_uid=linux
     ;;
   *bsd*)
     LDFLAGS="-Wl,-E $LDFLAGS"
+    vicare_target_os_uid=bsd
     ;;
   *cygwin*)
     LDFLAGS="-Wl,-E -Wl,--export-all-symbols $LDFLAGS"
+    vicare_target_os_uid=cygwin
     ;;
   *darwin*)
     AC_DEFINE([LIBFFI_ON_DARWIN],[1],
@@ -162,8 +166,17 @@ case "$target_os" in
                libffi does not do that yet.  This so far is only
                important on Snow Leopard in 64-bit mode but we
                mark it on all darwins anyways.])
+    dnl This is needed to include the definitions of some functions
+    dnl like "lgamma_r()" from "math.h".
+    AC_DEFINE([_REENTRANT],[1],[Needed to include definitions on some OS])
+    vicare_target_os_uid=darwin
     ;;
-  esac
+esac
+AC_SUBST([VICARE_TARGET_OS_UID],[$vicare_target_os_uid])
+AM_CONDITIONAL([TARGET_OS_LINUX], [test x$vicare_target_os_uid=xlinux])
+AM_CONDITIONAL([TARGET_OS_BSD],   [test x$vicare_target_os_uid=xbsd])
+AM_CONDITIONAL([TARGET_OS_CYGWIN],[test x$vicare_target_os_uid=xcygwin])
+AM_CONDITIONAL([TARGET_OS_DARWIN],[test x$vicare_target_os_uid=xdarwin])
 
 AC_CHECK_SIZEOF(void *)
 if test "$ac_cv_sizeof_void_p" = 4; then
@@ -1449,7 +1462,7 @@ AC_CACHE_SAVE
 #### tests for GNU C Library specific features
 
 AM_COND_IF([WANT_GLIBC],[
-  AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
+  AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync])
   AC_CHECK_FUNCS([if_nametoindex if_indextoname if_nameindex])
   AC_CHECK_FUNCS([creal cimag])
   AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
@@ -1460,6 +1473,34 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
   AC_CHECK_FUNCS([wordexp wordfree])
   AC_CHECK_FUNCS([bindresvport bindresvport6])
+
+  dnl We have to check for "fdatasync()" as follows because some
+  dnl brilliant mind at OS X dev team thought of making the symbol
+  dnl "fdatasync" visible in some system library, but the the
+  dnl function is not implemented; so testing for it with:
+  dnl
+  dnl   AC_CHECK_FUNCS([fdatasync])
+  dnl
+  dnl does not work.  The code for this check was shamelessly copied
+  dnl and adapted from:
+  dnl
+  dnl   <https://github.com/kr/beanstalkd/commit/68038c5>
+  dnl
+  AC_CACHE_CHECK([for fdatasync],[ac_cv_func_fdatasync],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([
+      #include <unistd.h>
+    ],[fdatasync(4);])],
+    [ac_cv_func_fdatasync=yes],
+    [ac_cv_func_fdatasync=no])])
+  AS_IF([test "x${ac_cv_func_fdatasync}" = "xyes"],
+    [AC_DEFINE([HAVE_FDATASYNC],[1],[If the system defines fdatasync])])
+  dnl
+  dnl Alternatively we can explicitly exclude the OS X platform from
+  dnl this test.
+  dnl
+  dnl AS_IF([test "x${vicare_target_os_uid}" = "xdarwin"],[],
+  dnl       [AC_CHECK_FUNCS([fdatasync])])
+  dnl
 
   VICARE_CHECK_NETINET_IN_CLASS_MACROS([IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD IN_MULTICAST IN_EXPERIMENTAL IN_BADCLASS])
   VICARE_CHECK_NETINET_IN6_ADDR_MACROS([IN6_IS_ADDR_UNSPECIFIED IN6_IS_ADDR_LOOPBACK IN6_IS_ADDR_LINKLOCAL IN6_IS_ADDR_SITELOCAL IN6_IS_ADDR_V4MAPPED IN6_IS_ADDR_V4COMPAT IN6_IS_ADDR_MULTICAST IN6_IS_ADDR_MC_NODELOCAL IN6_IS_ADDR_MC_LINKLOCAL IN6_IS_ADDR_MC_SITELOCAL IN6_IS_ADDR_MC_ORGLOCAL IN6_IS_ADDR_MC_GLOBAL])

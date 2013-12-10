@@ -40,6 +40,9 @@
 #ifdef HAVE_NETINET_ETHER_H
 #  include <netinet/ether.h>
 #endif
+#ifdef HAVE_NET_ETHERNET_H
+#  include <net/ethernet.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif
@@ -78,6 +81,9 @@
 #endif
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#  include <sys/socket.h>
 #endif
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>

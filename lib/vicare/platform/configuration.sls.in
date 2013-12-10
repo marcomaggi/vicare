@@ -30,8 +30,9 @@
   (export
     vicare-version
     target			wordsize
-    platform-endianness		arguments-validation)
-  (import (ikarus))
+    platform-endianness		arguments-validation
+    case-platform-os)
+  (import (vicare))
 
 
 (define-syntax vicare-version
@@ -58,6 +59,88 @@
 	      (else
 	       #@VICARE_ARGUMENTS_VALIDATION@))
       #@VICARE_ARGUMENTS_VALIDATION@)))
+
+(define-syntax* (case-platform-os stx)
+  (define (main stx)
+    (syntax-case stx ()
+      ((_ . ?clauses)
+       (receive (bsd-body cygwin-body darwin-body linux-body else-body)
+	   (%parse-clauses #'?clauses)
+	 (let ((target-os-uid (quote @VICARE_TARGET_OS_UID@)))
+	   (case target-os-uid
+	     ((linux)	#`(begin . #,(%normalise-body linux-body	else-body)))
+	     ((bsd)	#`(begin . #,(%normalise-body bsd-body		else-body)))
+	     ((cygwin)	#`(begin . #,(%normalise-body cygwin-body	else-body)))
+	     ((darwin)	#`(begin . #,(%normalise-body darwin-body	else-body)))
+	     (else
+	      (synner "internal error: invalid target OS UID" stx target-os-uid))))))
+      (_
+       (synner "invalid syntax"))))
+
+  (define (%normalise-body target-body else-body)
+    (cond ((and target-body
+		(not (null? (syntax->datum target-body))))
+	   target-body)
+	  ((and else-body
+		(not (null? (syntax->datum else-body))))
+	   else-body)
+	  (else
+	   #'((void)))))
+
+  (define (%parse-clauses clauses)
+    (let next-clause ((clauses		clauses)
+		      (bsd-body		#f)
+		      (cygwin-body	#f)
+		      (darwin-body	#f)
+		      (linux-body	#f)
+		      (else-body	#f))
+      (syntax-case clauses (else)
+	(()
+	 (values bsd-body cygwin-body darwin-body linux-body
+		 (or else-body #'((void)))))
+
+	(((else . ?else-body) . ?other-clauses)
+	 (if (not else-body)
+	     (next-clause #'?other-clauses
+			  bsd-body cygwin-body darwin-body linux-body #'?else-body)
+	   (synner "clause for OS given multiple times" #'(else . ?else-body))))
+
+	(((?bsd . ?bsd-body) . ?other-clauses)
+	 (and (identifier? #'?bsd)
+	      (identifier=symbol? #'?bsd 'bsd))
+	 (if (not bsd-body)
+	     (next-clause #'?other-clauses
+			  #'?bsd-body cygwin-body darwin-body linux-body else-body)
+	   (synner "clause for OS given multiple times" #'(?bsd . ?bsd-body))))
+
+	(((?cygwin . ?cygwin-body) . ?other-clauses)
+	 (and (identifier? #'?cygwin)
+	      (identifier=symbol? #'?cygwin 'cygwin))
+	 (if (not cygwin-body)
+	     (next-clause #'?other-clauses
+			  bsd-body #'?cygwin-body darwin-body linux-body else-body)
+	   (synner "clause for OS given multiple times" #'(?cygwin . ?cygwin-body))))
+
+	(((?darwin . ?darwin-body) . ?other-clauses)
+	 (and (identifier? #'?darwin)
+	      (identifier=symbol? #'?darwin 'darwin))
+	 (if (not darwin-body)
+	     (next-clause #'?other-clauses
+			  bsd-body cygwin-body #'?darwin-body linux-body else-body)
+	   (synner "clause for OS given multiple times" #'(?darwin . ?darwin-body))))
+
+	(((?linux . ?linux-body) . ?other-clauses)
+	 (and (identifier? #'?linux)
+	      (identifier=symbol? #'?linux 'linux))
+	 (if (not linux-body)
+	     (next-clause #'?other-clauses
+			  bsd-body cygwin-body darwin-body #'?linux-body else-body)
+	   (synner "clause for OS given multiple times" #'(?linux . ?linux-body))))
+
+	(_
+	 (synner "invalid clause" stx)))))
+
+  (main stx))
 
 
 ;;;; done

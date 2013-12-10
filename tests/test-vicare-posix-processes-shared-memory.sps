@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -42,7 +42,7 @@
       (let* ((shmem.len	(px.sysconf _SC_PAGESIZE))
 	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_SHARED MAP_ANONYMOUS)
+				 (fxior MAP_SHARED (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(unwind-protect
 	    (px.fork (lambda (child-pid) ;parent
@@ -61,7 +61,7 @@
       (let* ((shmem.len	(px.sysconf _SC_PAGESIZE))
 	     (shmem.ptr	(px.mmap #f shmem.len
 				 (fxior PROT_READ PROT_WRITE)
-				 (fxior MAP_SHARED MAP_ANONYMOUS)
+				 (fxior MAP_SHARED (or MAP_ANONYMOUS MAP_ANON 0))
 				 0 0)))
 	(unwind-protect
 	    (px.fork (lambda (child-pid) ;parent
@@ -92,7 +92,7 @@
 	(let* ((shmem.len (* 16 (px.sysconf _SC_PAGESIZE)))
 	       (shmem.ptr (px.mmap #f shmem.len
 				   (fxior PROT_READ PROT_WRITE)
-				   (fxior MAP_SHARED MAP_ANONYMOUS)
+				   (fxior MAP_SHARED (or MAP_ANONYMOUS MAP_ANON 0))
 				   0 0)))
 	  (unwind-protect
 	      (px.fork (lambda (child-pid) ;parent
