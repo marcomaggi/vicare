@@ -25,10 +25,20 @@
     bytevector=?		native-endianness
     bytevector-reverse-and-concatenate
 
+    ;; validation predicates
+    list-of-bytevectors?
     bytevector-length?		bytevector-index?
     bytevector-word-size?	bytevector-word-count?
     bytevector-index-for-word?
-
+    bytevector-index-for-word8?
+    bytevector-index-for-word16?
+    bytevector-index-for-word32?
+    bytevector-index-for-word64?
+    bytevector-start-index-and-count-for-word?
+    bytevector-start-index-and-count-for-word8?
+    bytevector-start-index-and-count-for-word16?
+    bytevector-start-index-and-count-for-word32?
+    bytevector-start-index-and-count-for-word64?
 
     bytevector-s8-ref		bytevector-s8-set!
     bytevector-u8-ref		bytevector-u8-set!
@@ -111,9 +121,19 @@
 		  bytevector=?		native-endianness
 		  bytevector-reverse-and-concatenate
 
+		  list-of-bytevectors?
 		  bytevector-length?		bytevector-index?
 		  bytevector-word-size?		bytevector-word-count?
 		  bytevector-index-for-word?
+		  bytevector-index-for-word8?
+		  bytevector-index-for-word16?
+		  bytevector-index-for-word32?
+		  bytevector-index-for-word64?
+		  bytevector-start-index-and-count-for-word?
+		  bytevector-start-index-and-count-for-word8?
+		  bytevector-start-index-and-count-for-word16?
+		  bytevector-start-index-and-count-for-word32?
+		  bytevector-start-index-and-count-for-word64?
 
 		  bytevector-s8-ref	bytevector-s8-set!
 		  bytevector-u8-ref	bytevector-u8-set!
@@ -219,28 +239,6 @@
   (cond ((fixnum? obj) ($fxnonnegative? obj))
 	((bignum? obj) ($bignum-non-negative? obj))
 	(else #f)))
-
-(define (list-of-bytevectors? obj)
-  (or (null? obj)
-      (and (list? obj)
-	   (for-all bytevector? obj))))
-
-;;; --------------------------------------------------------------------
-
-(define (bytevector-index-for-word8? bv idx)
-  (bytevector-index-for-word? bv idx 1))
-
-(define (bytevector-start-index-and-count-for-word8? bv idx count)
-  (bytevector-start-index-and-count-for-word? bv idx 1 count))
-
-(define (bytevector-index-for-word16? bv idx)
-  (bytevector-index-for-word? bv idx 2))
-
-(define (bytevector-index-for-word32? bv idx)
-  (bytevector-index-for-word? bv idx 4))
-
-(define (bytevector-index-for-word64? bv idx)
-  (bytevector-index-for-word? bv idx 8))
 
 ;;; --------------------------------------------------------------------
 
@@ -531,6 +529,15 @@
 
 ;;;; validation predicates
 
+(define (list-of-bytevectors? obj)
+  ;;Defined by Vicare.  Return  true if OBJ is null or  a proper list of
+  ;;bytevectors; otherwise return false.
+  ;;
+  (or (null? obj)
+      (and (pair? obj)
+	   (bytevector? ($car obj))
+	   (list-of-bytevectors? ($cdr obj)))))
+
 (define (bytevector-length? len)
   ;;Defined by Vicare.  Return #t if  LEN is valid as bytevector length,
   ;;otherwise return #f.
@@ -564,6 +571,8 @@
   (and (fixnum? obj)
        ($fxnonnegative? obj)))
 
+;;; --------------------------------------------------------------------
+
 (define (bytevector-index-for-word? bv idx word-size-in-bytes)
   ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
   ;;non-negative  fixnum, WORD-SIZE-IN-BYTES  is a  non-negative fixnum,
@@ -580,11 +589,25 @@
 	 (and (fixnum? end)
 	      ($fx<= idx end)))))
 
+(define (bytevector-index-for-word8? bv idx)
+  (bytevector-index-for-word? bv idx 1))
+
+(define (bytevector-index-for-word16? bv idx)
+  (bytevector-index-for-word? bv idx 2))
+
+(define (bytevector-index-for-word32? bv idx)
+  (bytevector-index-for-word? bv idx 4))
+
+(define (bytevector-index-for-word64? bv idx)
+  (bytevector-index-for-word? bv idx 8))
+
+;;; --------------------------------------------------------------------
+
 (define* (bytevector-start-index-and-count-for-word? bv idx word-size-in-bytes count)
   ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
   ;;non-negative    fixnum,   COUNT    is    a   non-negative    fixnum,
   ;;WORD-SIZE-IN-BYTES is a non-negative fixnum, IDX is a valid index in
-  ;;BV  to reference  a COUNT  words whose  size is  WORD-SIZE-IN-BYTES;
+  ;;BV  to  reference  COUNT  words whose  size  is  WORD-SIZE-IN-BYTES;
   ;;otherwise return  false.  Notice that if  COUNT is zero: it  is fine
   ;;for IDX  to be equal  to the length of  BV.  This validation  is for
   ;;getter and setter indexes.
@@ -600,6 +623,20 @@
 	      (let ((past (+ idx data-size)))
 		(and (fixnum? past)
 		     ($fx<= past ($bytevector-length bv))))))))
+
+(define (bytevector-start-index-and-count-for-word8? bv idx count)
+  (bytevector-start-index-and-count-for-word? bv idx 1 count))
+
+(define (bytevector-start-index-and-count-for-word16? bv idx count)
+  (bytevector-start-index-and-count-for-word? bv idx 2 count))
+
+(define (bytevector-start-index-and-count-for-word32? bv idx count)
+  (bytevector-start-index-and-count-for-word? bv idx 4 count))
+
+(define (bytevector-start-index-and-count-for-word64? bv idx count)
+  (bytevector-start-index-and-count-for-word? bv idx 8 count))
+
+;;; --------------------------------------------------------------------
 
 (define (bytevector-start-past-indexes? bv start past)
   ;;Defined by Vicare.   Return true if: BV is a  bytevector, START is a
@@ -1064,74 +1101,70 @@
 ;;;; 64-bit setters and getters
 
 (define* (bytevector-u64-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u64b-ref bv index))
-      ((little)
-       ($bytevector-u64l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word64? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u64b-ref bv index))
+    ((little)
+     ($bytevector-u64l-ref bv index))))
 
-(define* (bytevector-u64-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-u64?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u64b-set! bv index word))
-      ((little)
-       ($bytevector-u64l-set! bv index word)))))
+(define* (bytevector-u64-set! (bv bytevector?) (index bytevector-index?) (word words.word-u64?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word64? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u64b-set! bv index word))
+    ((little)
+     ($bytevector-u64l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s64-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s64b-ref bv index))
-      ((little)
-       ($bytevector-s64l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word64? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s64b-ref bv index))
+    ((little)
+     ($bytevector-s64l-ref bv index))))
 
-(define* (bytevector-s64-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-s64?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s64b-set! bv index word))
-      ((little)
-       ($bytevector-s64l-set! bv index word)))))
+(define* (bytevector-s64-set! (bv bytevector?) (index bytevector-index?) (word words.word-s64?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word64? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s64b-set! bv index word))
+    ((little)
+     ($bytevector-s64l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u64-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-u64n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-8? index)
+    (bytevector-index-for-word64? bv index))
+  ($bytevector-u64n-ref bv index))
 
-(define* (bytevector-u64-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-u64?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-u64n-set! bv index word)))
+(define* (bytevector-u64-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-u64?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-8? index)
+    (bytevector-index-for-word64? bv index))
+  ($bytevector-u64n-set! bv index word))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s64-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-s64n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-8? index)
+    (bytevector-index-for-word64? bv index))
+  ($bytevector-s64n-ref bv index))
 
-(define* (bytevector-s64-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-s64?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-s64n-set! bv index word)))
+(define* (bytevector-s64-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-s64?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-8? index)
+    (bytevector-index-for-word64? bv index))
+  ($bytevector-s64n-set! bv index word))
 
 
 ;;;; double-precision flonum bytevector functions

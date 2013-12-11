@@ -5152,6 +5152,12 @@ HEXDIG        = [0-9a-fA-F]
 @subsection Validation predicates for bytevector
 
 
+@defun list-of-bytevectors? @var{obj}
+Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
+return @false{}.
+@end defun
+
+
 @defun bytevector-length? @var{obj}
 Return @true{} if @var{obj} is valid as bytevector length: it is a
 non--negative fixnum; otherwise return @false{}.
@@ -5187,6 +5193,36 @@ non--negative fixnum, @var{word-size-in-bytes} is a non--negative
 fixnum, @var{idx} is a valid index in @var{bv} to reference a word whose
 size is @var{word-size-in-bytes}; otherwise return @false{}.  This
 validation is for getter and setter indexes.
+@end defun
+
+
+@defun bytevector-index-for-word8? @var{bv} @var{idx}
+@defunx bytevector-index-for-word16? @var{bv} @var{idx}
+@defunx bytevector-index-for-word32? @var{bv} @var{idx}
+@defunx bytevector-index-for-word64? @var{bv} @var{idx}
+Specialised variants of @func{bytevector-index-for-word?} for a specific
+word size in bits.
+@end defun
+
+
+@defun bytevector-start-index-and-count-for-word? @var{bv} @var{idx} @var{word-size-in-bytes} @var{count}
+Return @true{} if: @var{bv} is a bytevector, @var{idx} is a
+non--negative fixnum, @var{count} is a non--negative fixnum,
+@var{word-size-in-bytes} is a non--negative fixnum, @var{idx} is a valid
+index in @var{bv} to reference @var{count} words whose size is
+@var{word-size-in-bytes}; otherwise return @false{}.  Notice that if
+@var{count} is zero: it is fine for @var{idx} to be equal to the length
+of @var{bv}.  This validation is for getter and setter indexes.
+@end defun
+
+
+@defun bytevector-start-index-and-count-for-word8? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word16? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word32? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word64? @var{bv} @var{idx}
+Specialised variants of
+@func{bytevector-start-index-and-count-for-word?} for a specific word
+size in bits.
 @end defun
 
 @c page
