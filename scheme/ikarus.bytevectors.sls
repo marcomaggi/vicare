@@ -225,11 +225,22 @@
       (and (list? obj)
 	   (for-all bytevector? obj))))
 
+;;; --------------------------------------------------------------------
+
 (define (bytevector-index-for-word8? bv idx)
   (bytevector-index-for-word? bv idx 1))
 
 (define (bytevector-start-index-and-count-for-word8? bv idx count)
   (bytevector-start-index-and-count-for-word? bv idx 1 count))
+
+(define (bytevector-index-for-word16? bv idx)
+  (bytevector-index-for-word? bv idx 2))
+
+(define (bytevector-index-for-word32? bv idx)
+  (bytevector-index-for-word? bv idx 4))
+
+(define (bytevector-index-for-word64? bv idx)
+  (bytevector-index-for-word? bv idx 8))
 
 ;;; --------------------------------------------------------------------
 
@@ -916,7 +927,7 @@
 
 (define* (bytevector-u16-ref (bv bytevector?) (index bytevector-index?) endianness)
   (preconditions __who__
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
      ($bytevector-u16b-ref bv index))
@@ -925,7 +936,7 @@
 
 (define* (bytevector-u16-set! (bv bytevector?) (index bytevector-index?) (word words.word-u16?) endianness)
   (preconditions __who__
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
      ($bytevector-u16b-set! bv index word))
@@ -936,7 +947,7 @@
 
 (define* (bytevector-s16-ref (bv bytevector?) (index bytevector-index?) endianness)
   (preconditions __who__
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
      ($bytevector-s16b-ref bv index))
@@ -945,7 +956,7 @@
 
 (define* (bytevector-s16-set! (bv bytevector?) (index bytevector-index?) (word words.word-s16?) endianness)
   (preconditions __who__
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
      ($bytevector-s16b-set! bv index word))
@@ -957,13 +968,13 @@
 (define* (bytevector-u16-native-ref (bv bytevector?) (index bytevector-index?))
   (preconditions __who__
     (words.fixnum-aligned-to-2? index)
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-ref bv index))
 
 (define* (bytevector-u16-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-u16?))
   (preconditions __who__
     (words.fixnum-aligned-to-2? index)
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-set! bv index word))
 
 ;;; --------------------------------------------------------------------
@@ -971,87 +982,83 @@
 (define* (bytevector-s16-native-ref (bv bytevector?) (index bytevector-index?))
   (preconditions __who__
     (words.fixnum-aligned-to-2? index)
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-ref bv index))
 
 (define* (bytevector-s16-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-s16?))
   (preconditions __who__
     (words.fixnum-aligned-to-2? index)
-    (bytevector-index-for-word? bv index 2))
+    (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-set! bv index word))
 
 
 ;;;; 32-bit setters and getters
 
 (define* (bytevector-u32-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u32b-ref bv index))
-      ((little)
-       ($bytevector-u32l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word32? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u32b-ref bv index))
+    ((little)
+     ($bytevector-u32l-ref bv index))))
 
-(define* (bytevector-u32-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-u32?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u32b-set! bv index word))
-      ((little)
-       ($bytevector-u32l-set! bv index word)))))
+(define* (bytevector-u32-set! (bv bytevector?) (index bytevector-index?) (word words.word-u32?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word32? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u32b-set! bv index word))
+    ((little)
+     ($bytevector-u32l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s32-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s32b-ref bv index))
-      ((little)
-       ($bytevector-s32l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word32? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s32b-ref bv index))
+    ((little)
+     ($bytevector-s32l-ref bv index))))
 
-(define* (bytevector-s32-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-s32?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s32b-set! bv index word))
-      ((little)
-       ($bytevector-s32l-set! bv index word)))))
+(define* (bytevector-s32-set! (bv bytevector?) (index bytevector-index?) (word words.word-s32?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word32? bv index))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s32b-set! bv index word))
+    ((little)
+     ($bytevector-s32l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u32-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-u32n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-4? index)
+    (bytevector-index-for-word32? bv index))
+  ($bytevector-u32n-ref bv index))
 
-(define* (bytevector-u32-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-u32?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-u32n-set! bv index word)))
+(define* (bytevector-u32-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-u32?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-4? index)
+    (bytevector-index-for-word32? bv index))
+  ($bytevector-u32n-set! bv index word))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s32-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-s32n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-4? index)
+    (bytevector-index-for-word32? bv index))
+  ($bytevector-s32n-ref bv index))
 
-(define* (bytevector-s32-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-s32?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-s32n-set! bv index word)))
+(define* (bytevector-s32-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-s32?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-4? index)
+    (bytevector-index-for-word32? bv index))
+  ($bytevector-s32n-set! bv index word))
 
 
 ;;;; 64-bit setters and getters
