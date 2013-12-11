@@ -4503,8 +4503,16 @@ tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb * pcb)
     IK_ASS(IK_FIELD(s_dst, 6), ika_integer_from_long(pcb, (long)(src->tm_wday)));
     IK_ASS(IK_FIELD(s_dst, 7), ika_integer_from_long(pcb, (long)(src->tm_yday)));
     IK_FIELD(s_dst, 8) = (src->tm_isdst)? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+#ifdef HAVE_TM_TM_GMTOFF
     IK_ASS(IK_FIELD(s_dst, 9), ika_integer_from_long(pcb, src->tm_gmtoff));
+#else
+    IK_ASS(IK_FIELD(s_dst, 9), IK_FALSE);
+#endif
+#ifdef HAVE_TM_TM_ZONE
     IK_ASS(IK_FIELD(s_dst,10), ika_bytevector_from_cstring(pcb, src->tm_zone));
+#else
+    IK_ASS(IK_FIELD(s_dst,10), IK_FALSE);
+#endif
   }
   pcb->root9 = NULL;
   return s_dst;
@@ -4555,8 +4563,12 @@ struct_to_tm (ikptr s_src, struct tm * dst)
   dst->tm_wday	= ik_integer_to_long(IK_FIELD(s_src, 6));
   dst->tm_yday	= ik_integer_to_long(IK_FIELD(s_src, 7));
   dst->tm_isdst = (IK_TRUE_OBJECT == IK_FIELD(s_src, 8))? 1 : 0;
-  dst->tm_yday	= ik_integer_to_long(IK_FIELD(s_src, 9));
+#ifdef HAVE_TM_TM_GMTOFF
+  dst->tm_gmtoff= ik_integer_to_long(IK_FIELD(s_src, 9));
+#endif
+#ifdef HAVE_TM_TM_ZONE
   dst->tm_zone	= IK_BYTEVECTOR_DATA_CHARP(IK_FIELD(s_src, 10));
+#endif
 }
 #endif
 ikptr
