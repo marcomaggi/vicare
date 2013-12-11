@@ -37,6 +37,7 @@ expand--time with the clause @code{linux-enabled} of @func{cond-expand}
 from @ansrfi{0} (@pxref{srfi cond-expand vicare, linux-enabled}).
 
 @menu
+* linux cond-expand::           Feature-based expansion.
 * linux env::                   Operating system environment variables.
 * linux status::                Process termination status.
 * linux resources::             Resources usage and limits.
@@ -49,6 +50,37 @@ from @ansrfi{0} (@pxref{srfi cond-expand vicare, linux-enabled}).
 * linux daemonisation::         Turning a process into a daemon.
 * linux ether::                 Ethernet address manipulation routines.
 @end menu
+
+@c page
+@node linux cond-expand
+@section Feature--based expansion
+
+
+@deffn Syntax cond-expand (@meta{feature-requirement} @metao{body} @meta{body} @dots{}) @dots{}
+Process the given clauses in left--to--right order and expand to the
+sequence of @meta{body} forms from the first clause for which the
+@meta{feature-requirement} is satisfied.
+
+This syntax supports all the features defined by @func{cond-expand} from
+@ansrfi{0} (@pxref{srfi cond-expand vicare, Features supported by
+@value{PRJNAME}}), and in addition it supports a feature for each system
+function exported by @library{vicare linux}; such features use the
+identifier exported by the library as feature requirement.
+
+As example, if we want to run code whether or not @func{waitid} is
+implemented we write the following:
+
+@example
+(import (vicare)
+  (prefix (vicare linux) lx.))
+
+(lx.cond-expand
+  (lx.waitid
+   (do-something))
+  (else
+   (do-something-else)))
+@end example
+@end deffn
 
 @c page
 @node linux env

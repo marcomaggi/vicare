@@ -143,11 +143,11 @@ ikrt_get_last_revision (ikpcb * pcb)
 */
 
 static void
-handler (int signo, siginfo_t* info, void* uap)
+handler (int signo IK_UNUSED, siginfo_t* info IK_UNUSED, void* uap)
 {
   ikpcb *	pcb = ik_the_pcb();
   /* avoid compiler warnings on unused arguments */
-  signo=signo; info=info; uap=uap;
+  /* signo=signo; info=info; uap=uap; */
   pcb->engine_counter = IK_FIX(-1);
   pcb->interrupted    = 1;
 }

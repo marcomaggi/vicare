@@ -68,6 +68,13 @@
 
     non-positive?		non-negative?
 
+    ;; exact integer sign predicates
+    zero-exact-integer?
+    negative-exact-integer?
+    positive-exact-integer?
+    non-negative-exact-integer?
+    non-positive-exact-integer?
+
     ;; exactness
     exact->inexact		inexact
 
@@ -392,6 +399,13 @@
 		even?				odd?
 
 		non-positive?			non-negative?
+
+		;; exact integer sign predicates
+		zero-exact-integer?
+		negative-exact-integer?
+		positive-exact-integer?
+		non-negative-exact-integer?
+		non-positive-exact-integer?
 
 		;; exactness
 		exact->inexact			inexact
@@ -6478,6 +6492,8 @@
   (sub1 x))
 
 
+;;;; generic numbers sign predicates
+
 (define (zero? x)
   (cond-numeric-operand x
     ((fixnum?)	($fxzero? x))
@@ -6546,6 +6562,33 @@
     ((flonum?)	($flodd? x))
     (else
      (procedure-argument-violation 'odd? "expected integer as argument" x))))
+
+
+;;;; exact integer sign predicates
+
+(define (zero-exact-integer? obj)
+  (and (fixnum? obj)
+       ($fxzero? obj)))
+
+(define (negative-exact-integer? obj)
+  (cond ((fixnum? obj) ($fxnegative? obj))
+	((bignum? obj) ($bignum-negative? obj))
+	(else #f)))
+
+(define (positive-exact-integer? obj)
+  (cond ((fixnum? obj) ($fxpositive? obj))
+	((bignum? obj) ($bignum-positive? obj))
+	(else #f)))
+
+(define (non-negative-exact-integer? obj)
+  (cond ((fixnum? obj) ($fxnonnegative? obj))
+	((bignum? obj) ($bignum-non-negative? obj))
+	(else #f)))
+
+(define (non-positive-exact-integer? obj)
+  (cond ((fixnum? obj) ($fxnonpositive? obj))
+	((bignum? obj) ($bignum-non-positive? obj))
+	(else #f)))
 
 
 (module (log

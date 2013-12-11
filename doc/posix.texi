@@ -38,6 +38,7 @@ cond-expand vicare, posix-enabled}).
 @menu
 * posix conventions::           Conventions about the @posix{} @api{}.
 * posix conditions::            Condition object types.
+* posix cond-expand::           Feature-based expansion.
 * posix env::                   Operating system environment variables.
 * posix pid::                   Process identifier functions.
 * posix process::               Spawning processes and the like.
@@ -166,6 +167,51 @@ Return @true{} if @var{obj} is an instance of @condition{h_errno}.
 Accessor for the encoded @code{h_errno} value in @var{obj}, which must be
 an instance of @condition{h_errno}.
 @end defun
+
+@c page
+@node posix cond-expand
+@section Feature--based expansion
+
+
+@deffn Syntax cond-expand (@meta{feature-requirement} @metao{body} @meta{body} @dots{}) @dots{}
+Process the given clauses in left--to--right order and expand to the
+sequence of @meta{body} forms from the first clause for which the
+@meta{feature-requirement} is satisfied.
+
+This syntax supports all the features defined by @func{cond-expand} from
+@ansrfi{0} (@pxref{srfi cond-expand vicare, Features supported by
+@value{PRJNAME}}), and in addition it supports a feature for each system
+function exported by @library{vicare posix}; such features use the
+identifier exported by the library as feature requirement.
+
+As example, let's say we want to evaluate some code if @func{truncate}
+is supported, otherwise we do something else; we write the following:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.cond-expand
+  (px.truncate
+   (do-something))
+  (else
+   (do-something-else)))
+@end example
+
+@noindent
+and if we want to do it only on a @gnu{}+Linux host:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.cond-expand
+  ((or linux px.truncate)
+   (do-something))
+  (else
+   (do-something-else)))
+@end example
+@end deffn
 
 @c page
 @node posix env
@@ -2081,6 +2127,11 @@ integer in the range of the C language type @code{size_t}.
 @var{protect} and @var{flags} must fixnums of flags.  @var{fd} must be a
 fixnum representing a file descriptor.  @var{offset} must be an exact
 integer in the range of the C language type @code{off_t}.
+
+@quotation
+@strong{NOTE} On BSD and Darwin systems only @code{MAP_ANON} is defined,
+@code{MAP_ANONYMOUS} is undefined.
+@end quotation
 @end defun
 
 
@@ -2580,6 +2631,27 @@ in6_addr}.
 Bytevector, it is the first in the list @code{h_addr_list}.
 @end table
 @end deftp
+
+
+@defun make-struct-hostent @var{h_name} @var{h_aliases} @var{h_addrtype} @var{h_length} @var{h_addr_list} @var{h_addr}
+Build and return an instance of @code{struct-hostent}.
+@end defun
+
+
+@defun struct-hostent? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-hostent},
+otherwise return @false{}.
+@end defun
+
+
+@defun struct-hostent-h_name @var{hostent}
+@defunx struct-hostent-h_aliases @var{hostent}
+@defunx struct-hostent-h_addrtype @var{hostent}
+@defunx struct-hostent-h_length @var{hostent}
+@defunx struct-hostent-h_addr_list @var{hostent}
+@defunx struct-hostent-h_addr @var{hostent}
+Accessors for the fields of @code{struct-hostent} instances.
+@end defun
 
 
 @defun gethostbyname @var{hostname}

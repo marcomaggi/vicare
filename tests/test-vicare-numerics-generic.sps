@@ -52,6 +52,18 @@
   (check (positive? greatest-negative-bn)	=> #f)
   (check (negative? greatest-negative-bn)	=> #t)
 
+  (check-for-true  (positive-exact-integer? +123))
+  (check-for-false (positive-exact-integer? -123))
+  (check-for-true  (positive-exact-integer? (least-positive-bignum)))
+  (check-for-false (positive-exact-integer? (greatest-negative-bignum)))
+  (check-for-false (positive-exact-integer? "ciao"))
+
+  (check-for-false (negative-exact-integer? +123))
+  (check-for-true  (negative-exact-integer? -123))
+  (check-for-false (negative-exact-integer? (least-positive-bignum)))
+  (check-for-true  (negative-exact-integer? (greatest-negative-bignum)))
+  (check-for-false (negative-exact-integer? "ciao"))
+
   #t)
 
 
@@ -86,6 +98,20 @@
 
   (check (non-positive? greatest-negative-bn)	=> #t)
   (check (non-negative? greatest-negative-bn)	=> #f)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (non-positive-exact-integer? +123))
+  (check-for-true  (non-positive-exact-integer? -123))
+  (check-for-false (non-positive-exact-integer? (least-positive-bignum)))
+  (check-for-true  (non-positive-exact-integer? (greatest-negative-bignum)))
+  (check-for-false (non-positive-exact-integer? "ciao"))
+
+  (check-for-true  (non-negative-exact-integer? +123))
+  (check-for-false (non-negative-exact-integer? -123))
+  (check-for-true  (non-negative-exact-integer? (least-positive-bignum)))
+  (check-for-false (non-negative-exact-integer? (greatest-negative-bignum)))
+  (check-for-false (non-negative-exact-integer? "ciao"))
 
   #t)
 

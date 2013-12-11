@@ -636,13 +636,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector-hash s)
+(define* (bytevector-hash (bv bytevector?))
   ;;Defined by Vicare.
   ;;
-  (define who 'bytevector-hash)
-  (with-arguments-validation (who)
-      ((bytevector	s))
-    ($bytevector-hash s)))
+  ($bytevector-hash bv))
 
 (define ($bytevector-hash s)
   (foreign-call "ikrt_bytevector_hash" s))

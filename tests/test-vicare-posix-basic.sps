@@ -32,7 +32,7 @@
   (prefix (vicare ffi)
 	  ffi.)
   (vicare platform constants)
-  (vicare language-extensions syntaxes)
+  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -73,6 +73,17 @@
 (define (remove-tmp-file pathname)
   (when (file-exists? pathname)
     (delete-file pathname)))
+
+
+(parametrise ((check-test-name	'cond-expand))
+
+  (check
+      (px.cond-expand
+       (px.read #t)
+       (else #f))
+    => #t)
+
+  #t)
 
 
 (parametrise ((check-test-name	'errno-strings))
@@ -541,7 +552,7 @@
 
   (check
       (with-temporary-file ("tmp")
-	(px.chown "tmp" 1000 1000))
+  	(px.chown "tmp" (px.getuid) (px.getgid)))
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -916,78 +927,116 @@
 ;;; --------------------------------------------------------------------
 ;;; select
 
+;;;It  appears that  on Darwin  hosts "pipe()"  returns a  bidirectional
+;;;pipe, in which both the file descriptors are readable and writable.
+
   (check	;timeout
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
-	    (let-values (((r w e) (px.select #f `(,in) '() `(,in ,ou) 0 0)))
-	      (equal? (list r w e)
-		      '(() () ())))
+	    (let ((fds (list in ou)))
+	      (receive (r w e)
+		  (px.select #f fds fds fds 0 0)
+		(px.cond-expand
+		 (darwin
+		  (values (equal? r '())
+			  (or (equal? w (list in ou))
+			      (equal? w (list ou in)))
+			  (equal? e '())))
+		 (else
+		  (values (equal? r '())
+			  (equal? w (list ou))
+			  (equal? e '()))))))
 	  (px.close in)
 	  (px.close ou)))
-    => #t)
+    => #t #t #t)
 
   (check	;read ready
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1))
-	      (let-values (((r w e) (px.select #f `(,in) '() `(,in) 0 0)))
-		(equal? (list r w e)
-			`((,in) () ()))))
+	      (receive (r w e)
+		  (px.select #f (list in) '() '() 0 0)
+		(px.cond-expand
+		 (darwin
+		  (values (equal? r (list in))
+			  (equal? w '())
+			  (equal? e '())))
+		 (else
+		  (values (equal? r (list in))
+			  (equal? w '())
+			  (equal? e '()))))))
 	  (px.close in)
 	  (px.close ou)))
-    => #t)
+    => #t #t #t)
 
   (check	;write ready
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
-	    (let-values (((r w e) (px.select #f '() `(,ou) `(,ou) 0 0)))
-	      (equal? (list r w e)
-		      `(() (,ou) ())))
+	    (receive (r w e)
+		(px.select #f '() (list ou) (list ou) 0 0)
+	      (values (equal? r '())
+		      (equal? w (list ou))
+		      (equal? e '())))
 	  (px.close in)
 	  (px.close ou)))
-    => #t)
+    => #t #t #t)
 
 ;;; --------------------------------------------------------------------
 ;;; select-fd
 
   (check	;timeout
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
-	    (let-values (((r w e) (px.select-fd in 0 0)))
-	      (equal? (list r w e)
-		      '(#f #f #f)))
+	    (receive (r w e)
+		(px.select-fd in 0 0)
+	      (values r
+		      (equal? w (px.cond-expand
+				 (darwin in)
+				 (else   #f)))
+		      e))
 	  (px.close in)
 	  (px.close ou)))
-    => #t)
+    => #f #t #f)
 
   (check	;read ready
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1))
-	      (let-values (((r w e) (px.select-fd in 0 0)))
-		(equal? (list r w e)
-			`(,in #f #f))))
+	      (receive (r w e)
+		  (px.select-fd in 0 0)
+		(values (equal? r in)
+			(px.cond-expand
+			 (darwin (equal? w in))
+			 (else   (equal? w #f)))
+			e)))
 	(px.close in)
 	(px.close ou)))
-    => #t)
+    => #t #t #f)
 
   (check	;write ready
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
-	    (let-values (((r w e) (px.select-fd ou 0 0)))
-	      (equal? (list r w e)
-		      `(#f ,ou #f)))
+	    (receive (r w e)
+		(px.select-fd ou 0 0)
+	      (values r (equal? w ou) e))
 	  (px.close in)
 	  (px.close ou)))
-    => #t)
+    => #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; select-fd-readable?
 
   (check	;timeout
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (px.select-fd-readable? in 0 0)
 	  (px.close in)
@@ -995,7 +1044,8 @@
     => #f)
 
   (check	;read ready
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (begin
 	      (px.write ou '#vu8(1))
@@ -1008,15 +1058,20 @@
 ;;; select-fd-writable?
 
   (check	;timeout
-      (let-values (((in ou) (px.pipe)))
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (px.select-fd-writable? in 0 0)
 	  (px.close in)
 	  (px.close ou)))
-    => #f)
+    => (px.cond-expand
+	;;On Darwin "pipe()" returns a bidirectional pipe.
+	(darwin		#t)
+	(else		#f)))
 
-  (check	;read ready
-      (let-values (((in ou) (px.pipe)))
+  (check	;write ready
+      (receive (in ou)
+	  (px.pipe)
 	(unwind-protect
 	    (px.select-fd-writable? ou 0 0)
 	  (px.close in)
@@ -1035,8 +1090,14 @@
 	  (let ((inp (make-binary-file-descriptor-input-port* in "inp")))
 	    (receive (r w e)
 		(px.select-port inp 0 0)
-	      (list r w e)))))
-    => '(#f #f #f))
+	      (values (equal? r #f)
+		      (equal? w (px.cond-expand
+				 ;;On   Darwin    "pipe()"   returns   a
+				 ;;bidirectional pipe.
+				 (darwin	inp)
+				 (else		#f)))
+		      (equal? e #f))))))
+    => #t #t #t)
 
   (check	;read ready
       (with-compensations
@@ -1048,9 +1109,14 @@
 	    (px.write ou '#vu8(1))
 	    (receive (r w e)
 		(px.select-port inp 0 0)
-	      (equal? (list r w e)
-		      `(,inp #f #f))))))
-    => #t)
+	      (values (equal? r inp)
+		      (equal? w (px.cond-expand
+				 ;;On   Darwin    "pipe()"   returns   a
+				 ;;bidirectional pipe.
+				 (darwin	inp)
+				 (else		#f)))
+		      (equal? e #f))))))
+    => #t #t #t)
 
   (check	;write ready
       (with-compensations
@@ -1061,9 +1127,8 @@
 	  (let ((oup (make-binary-file-descriptor-output-port* ou "oup")))
 	    (receive (r w e)
 		(px.select-port oup 0 0)
-	      (equal? (list r w e)
-		      `(#f ,oup #f))))))
-    => #t)
+	      (values r (equal? w oup) e)))))
+    => #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; poll
@@ -1394,20 +1459,22 @@
 		   ((efds)  (px.make-fd-set-bytevector)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in rfds)
-	      (px.FD_SET in wfds)
 	      (px.FD_SET in efds)
-	      ;;OU is always writable
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou efds)
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r #f)
-		      (eq? w #f)
-		      (eq? e #f))))
+		(values (eq? r #f)
+			(eq? w #f)
+			(eq? e #f))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t))
+    => #t #t #t)
 
   (check	;read/write ready
       (let-values (((in ou) (px.pipe))
@@ -1423,16 +1490,17 @@
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
 	      (assert (= 1 (px.write ou '#vu8(1))))
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r rfds)
-		      (eq? w wfds)
-		      (eq? e efds)
-		      (px.FD_ISSET in rfds)
-		      (px.FD_ISSET ou wfds))))
+		(values (eq? r rfds)
+			(eq? w wfds)
+			(eq? e efds)
+			(px.FD_ISSET in rfds)
+			(px.FD_ISSET ou wfds))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t #t #t))
+    => #t #t #t #t #t)
 
 ;;; --------------------------------------------------------------------
 ;;; select-from-sets, pointers
@@ -1444,20 +1512,22 @@
 		   ((efds)  (px.make-fd-set-pointer)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in rfds)
-	      (px.FD_SET in wfds)
 	      (px.FD_SET in efds)
-	      ;;OU is always writable
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou efds)
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r #f)
-		      (eq? w #f)
-		      (eq? e #f))))
+		(values (eq? r #f)
+			(eq? w #f)
+			(eq? e #f))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t))
+    => #t #t #t)
 
   (check	;read/write ready
       (let-values (((in ou) (px.pipe))
@@ -1473,16 +1543,17 @@
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
 	      (assert (= 1 (px.write ou '#vu8(1))))
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r rfds)
-		      (eq? w wfds)
-		      (eq? e efds)
-		      (px.FD_ISSET in rfds)
-		      (px.FD_ISSET ou wfds))))
+		(values (eq? r rfds)
+			(eq? w wfds)
+			(eq? e efds)
+			(px.FD_ISSET in rfds)
+			(px.FD_ISSET ou wfds))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t #t #t))
+    => #t #t #t #t #t)
 
 ;;; --------------------------------------------------------------------
 ;;; select-from-sets, memory-blocks
@@ -1494,20 +1565,22 @@
 		   ((efds)  (px.make-fd-set-memory-block)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in rfds)
-	      (px.FD_SET in wfds)
 	      (px.FD_SET in efds)
-	      ;;OU is always writable
 	      (px.FD_SET ou rfds)
 	      (px.FD_SET ou efds)
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r #f)
-		      (eq? w #f)
-		      (eq? e #f))))
+		(values (eq? r #f)
+			(eq? w #f)
+			(eq? e #f))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t))
+    => #t #t #t)
 
   (check	;read/write ready
       (let-values (((in ou) (px.pipe))
@@ -1523,20 +1596,23 @@
 	      (px.FD_SET ou wfds)
 	      (px.FD_SET ou efds)
 	      (assert (= 1 (px.write ou '#vu8(1))))
-	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+	      (receive (r w e)
+		  (px.select-from-sets #f rfds wfds efds 0 0)
 ;;;		(check-pretty-print (list r w e))
-		(list (eq? r rfds)
-		      (eq? w wfds)
-		      (eq? e efds)
-		      (px.FD_ISSET in rfds)
-		      (px.FD_ISSET in wfds)
-		      (px.FD_ISSET in efds)
-		      (px.FD_ISSET ou rfds)
-		      (px.FD_ISSET ou wfds)
-		      (px.FD_ISSET ou efds))))
+		(values (eq? r rfds)
+			(eq? w wfds)
+			(eq? e efds)
+			(px.FD_ISSET in rfds)
+			(px.FD_ISSET in wfds)
+			(px.FD_ISSET in efds)
+			(px.FD_ISSET ou rfds)
+			(px.FD_ISSET ou wfds)
+			(px.FD_ISSET ou efds))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #t #t   #t #f #f  #f #t #f))
+    => #t #t #t
+    #t (px.cond-expand (darwin #t) (else #f)) #f
+    #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; select-from-sets-array, bytevectors
@@ -1546,10 +1622,11 @@
 		   ((fdsets) (px.make-fd-set-bytevector 3)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in fdsets 0)
-	      (px.FD_SET in fdsets 1)
 	      (px.FD_SET in fdsets 2)
-	      ;;OU is always writable
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 2)
 	      (px.select-from-sets-array #f fdsets 0 0))
@@ -1570,15 +1647,17 @@
 	      (px.FD_SET ou fdsets 2)
 	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
-		(list (px.FD_ISSET in fdsets 0)
-		      (px.FD_ISSET in fdsets 1)
-		      (px.FD_ISSET in fdsets 2)
-		      (px.FD_ISSET ou fdsets 0)
-		      (px.FD_ISSET ou fdsets 1)
-		      (px.FD_ISSET ou fdsets 2))))
+		(values (px.FD_ISSET in fdsets 0)
+			(px.FD_ISSET in fdsets 1)
+			(px.FD_ISSET in fdsets 2)
+			(px.FD_ISSET ou fdsets 0)
+			(px.FD_ISSET ou fdsets 1)
+			(px.FD_ISSET ou fdsets 2))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #f #f  #f #t #f))
+    =>
+    #t (px.cond-expand (darwin #t) (else #f)) #f
+    #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; select-from-sets-array, pointers
@@ -1588,10 +1667,11 @@
 		   ((fdsets) (px.make-fd-set-pointer 3)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in fdsets 0)
-	      (px.FD_SET in fdsets 1)
 	      (px.FD_SET in fdsets 2)
-	      ;;OU is always writable
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 2)
 	      (px.select-from-sets-array #f fdsets 0 0))
@@ -1612,15 +1692,17 @@
 	      (px.FD_SET ou fdsets 2)
 	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
-		(list (px.FD_ISSET in fdsets 0)
-		      (px.FD_ISSET in fdsets 1)
-		      (px.FD_ISSET in fdsets 2)
-		      (px.FD_ISSET ou fdsets 0)
-		      (px.FD_ISSET ou fdsets 1)
-		      (px.FD_ISSET ou fdsets 2))))
+		(values (px.FD_ISSET in fdsets 0)
+			(px.FD_ISSET in fdsets 1)
+			(px.FD_ISSET in fdsets 2)
+			(px.FD_ISSET ou fdsets 0)
+			(px.FD_ISSET ou fdsets 1)
+			(px.FD_ISSET ou fdsets 2))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #f #f  #f #t #f))
+    =>
+    #t (px.cond-expand (darwin #t) (else #f)) #f
+    #f #t #f)
 
 ;;; --------------------------------------------------------------------
 ;;; select-from-sets-array, memory-blocks
@@ -1630,10 +1712,11 @@
 		   ((fdsets) (px.make-fd-set-memory-block 3)))
 	(unwind-protect
 	    (begin
+	      ;;On some platforms "pipe"  returns bidirectional pipes in
+	      ;;which both the file  descriptors are always writable, so
+	      ;;here we do not set any fd into the writable set.
 	      (px.FD_SET in fdsets 0)
-	      (px.FD_SET in fdsets 1)
 	      (px.FD_SET in fdsets 2)
-	      ;;OU is always writable
 	      (px.FD_SET ou fdsets 0)
 	      (px.FD_SET ou fdsets 2)
 	      (px.select-from-sets-array #f fdsets 0 0))
@@ -1654,15 +1737,17 @@
 	      (px.FD_SET ou fdsets 2)
 	      (assert (= 1 (px.write ou '#vu8(1))))
 	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
-		(list (px.FD_ISSET in fdsets 0)
-		      (px.FD_ISSET in fdsets 1)
-		      (px.FD_ISSET in fdsets 2)
-		      (px.FD_ISSET ou fdsets 0)
-		      (px.FD_ISSET ou fdsets 1)
-		      (px.FD_ISSET ou fdsets 2))))
+		(values (px.FD_ISSET in fdsets 0)
+			(px.FD_ISSET in fdsets 1)
+			(px.FD_ISSET in fdsets 2)
+			(px.FD_ISSET ou fdsets 0)
+			(px.FD_ISSET ou fdsets 1)
+			(px.FD_ISSET ou fdsets 2))))
 	  (px.close in)
 	  (px.close ou)))
-    => '(#t #f #f  #f #t #f))
+    =>
+    #t (px.cond-expand (darwin #t) (else #f)) #f
+    #f #t #f)
 
   #t)
 
@@ -1677,9 +1762,12 @@
       (px.pathconf "Makefile" _PC_NAME_MAX)
     => NAME_MAX)
 
+  ;;FIXME Maybe this test should be removed.
   (check
       (px.confstr/string _CS_PATH)
-    => "/bin:/usr/bin")
+    => (px.cond-expand
+	(darwin		"/usr/bin:/bin:/usr/sbin:/sbin")
+	(else		"/bin:/usr/bin")))
 
   #t)
 
@@ -1878,13 +1966,19 @@
 
 (parametrise ((check-test-name	'find-executable))
 
-  (check	;first char is slash
-      (px.find-executable-as-string "/usr/bin/ls")
-    => "/usr/bin/ls")
+  (px.cond-expand
+   (darwin
+    (check	;first char is slash
+	(px.find-executable-as-string "/bin/ls")
+      => "/bin/ls"))
+   (else
+    (check	;first char is slash
+	(px.find-executable-as-string "/usr/bin/ls")
+      => "/usr/bin/ls")))
 
   (check
-      (px.find-executable-as-string "ls")
-    => "/usr/bin/ls")
+      (string? (px.find-executable-as-string "ls"))
+    => #t)
 
   (check
       (px.find-executable-as-string "this-cannot-exist")
@@ -1901,50 +1995,62 @@
 
 (parametrise ((check-test-name	'realtime-clock))
 
-  (check
-      (px.struct-timespec?
-       (px.clock-getres CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
-    => #t)
+  (when CLOCK_MONOTONIC
+    (check
+	(px.struct-timespec?
+	 (px.clock-getres CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
+      => #t))
 
-  (check
-      (px.struct-timespec?
-       (px.clock-gettime CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
-    => #t)
+  (when CLOCK_MONOTONIC
+    (check
+	(px.struct-timespec?
+	 (px.clock-gettime CLOCK_MONOTONIC (px.make-struct-timespec 0 0)))
+      => #t))
 
-  (check
-      (let ((cid (px.clock-getcpuclockid 0)))
+  (px.cond-expand
+   (px.clock-getcpuclockid
+    (check
+	(let ((cid (px.clock-getcpuclockid 0)))
 ;;;	(check-pretty-print (list 'process-clock-id cid))
-	(integer? cid))
-    => #t)
+	  (integer? cid))
+      => #t))
+   (else (void)))
 
-  (check
-      (px.struct-timespec?
-       (px.clock-gettime (px.clock-getcpuclockid 0)
-	 (px.make-struct-timespec 0 0)))
-    => #t)
+  (px.cond-expand
+   ((and px.clock-gettime px.clock-getcpuclockid)
+    (check
+	(px.struct-timespec?
+	 (px.clock-gettime (px.clock-getcpuclockid 0)
+	   (px.make-struct-timespec 0 0)))
+      => #t))
+   (else (void)))
+
   #t)
 
 
 (parametrise ((check-test-name	'resources))
 
-  (check
-      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(px.struct-rlimit? rlim))
-    => #t)
+	  (px.struct-rlimit? rlim))
+      => #t))
 
-  (check
-      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(px.setrlimit RLIMIT_SIGPENDING rlim)
-	#t)
-    => #t)
+	  (px.setrlimit RLIMIT_SIGPENDING rlim)
+	  #t)
+      => #t))
 
-  (check
-      (let ((rusa (px.getrusage RUSAGE_SELF)))
+  (when RUSAGE_SELF
+    (check
+	(let ((rusa (px.getrusage RUSAGE_SELF)))
 ;;;	(check-pretty-print rusa)
-	(px.struct-rusage? rusa))
-    => #t)
+	  (px.struct-rusage? rusa))
+      => #t))
 
   #t)
 
