@@ -542,83 +542,44 @@
 
 ;;; argument validation, bytevector
 
-  (check	;argument is not a bytevector
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count "ciao" 1 1))
-    => '("ciao"))
+  (with-check-for-procedure-argument-validation
+      (subbytevector-u8/count (bytevector? src.bv))
+    ;;argument is not a bytevector
+    (doit (subbytevector-u8/count "ciao" 1 1) "ciao"))
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
-  (check	;start index not an integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8() #\a 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (subbytevector-u8/count (bytevector-index? src.start))
+    ;;start index not an integer
+    (doit (subbytevector-u8/count '#vu8() #\a 1) #\a)
+    ;;start index not an exact integer
+    (doit (subbytevector-u8/count '#vu8() 1.0 1) 1.0)
+    ;;start index is negative
+    (doit (subbytevector-u8/count '#vu8() -1 1) -1))
 
-  (check	;start index not an exact integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8() 1.0 1))
-    => '(1.0))
-
-  (check	;start index is negative
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8() -1 1))
-    => '(-1))
-
-  (check	;start index too big
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8() 1 1))
-    => '(1))
+  (with-check-for-procedure-argument-validation
+      (subbytevector-u8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
+    ;;start index too big
+    (doit (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1))
 
 ;;; --------------------------------------------------------------------
-;;; argument validation, end index
+;;; argument validation, word count
 
-  (check	;end index not an integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8(1) 0 #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (subbytevector-u8/count (bytevector-word-count? dst.len))
+    ;;word count not an integer
+    (doit (subbytevector-u8/count '#vu8(1) 0 #\a) #\a)
+    ;;word count not an exact integer
+    (doit (subbytevector-u8/count '#vu8(1) 0 1.0) 1.0)
+    ;;word count is negative
+    (doit (subbytevector-u8/count '#vu8(1) 0 -1) -1))
 
-  (check	;end index not an exact integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8(1) 0 1.0))
-    => '(1.0))
-
-  (check	;end index is negative
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8(1) 0 -1))
-    => '(-1))
-
-  (check	;end index too big
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(subbytevector-u8/count '#vu8(1) 0 2))
-    => '(2))
+  (with-check-for-procedure-argument-validation
+      (subbytevector-u8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
+    ;;end index too big
+    (doit (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2))
 
 ;;; --------------------------------------------------------------------
 
