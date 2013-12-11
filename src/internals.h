@@ -51,21 +51,11 @@
 #  define __attribute__(...)	/* empty */
 #endif
 
-/* I found  the following chunk on  the Net.  (Marco Maggi;  Sun Feb 26,
-   2012) */
-#if defined _WIN32 || defined __CYGWIN__
-#  ifdef BUILDING_DLL
-#    ifdef __GNUC__
-#      define ik_decl		__attribute__((dllexport))
-#    else
-#      define ik_decl		__declspec(dllexport)
-#    endif
+#if (defined _WIN32 || defined __CYGWIN__)
+#  ifdef __GNUC__
+#    define ik_decl		__attribute__((dllexport))
 #  else
-#    ifdef __GNUC__
-#      define ik_decl		__attribute__((dllimport))
-#    else
-#      define ik_decl		__declspec(dllimport)
-#    endif
+#    define ik_decl		__declspec(dllexport)
 #  endif
 #  define ik_private_decl	extern
 #else
