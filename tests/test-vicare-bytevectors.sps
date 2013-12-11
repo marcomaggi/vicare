@@ -1052,7 +1052,7 @@
 
 (parametrise ((check-test-name	'bytevector-u16-set-bang))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1112,11 +1112,11 @@
     (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-u16-set! (bytevector-index-for-word? bv index 2))
+      (bytevector-u16-set! (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1143,7 +1143,7 @@
 
 (parametrise ((check-test-name	'bytevector-u16-ref))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1195,11 +1195,11 @@
     (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-u16-ref (bytevector-index-for-word? bv index 2))
+      (bytevector-u16-ref (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1214,7 +1214,7 @@
 
 (parametrise ((check-test-name	'bytevector-u16-native-set-bang))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1251,11 +1251,11 @@
     (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (bytevector-index-for-word? bv index 2))
+      (bytevector-u16-native-set! (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1274,7 +1274,7 @@
 
 (parametrise ((check-test-name	'bytevector-u16-native-ref))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1309,18 +1309,18 @@
     (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-ref (bytevector-index-for-word? bv index 2))
+      (bytevector-u16-native-ref (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-s16-set-bang))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1385,11 +1385,11 @@
     (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index-for-word? bv index 2))
+      (bytevector-s16-native-set! (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1416,7 +1416,7 @@
 
 (parametrise ((check-test-name	'bytevector-s16-ref))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1492,11 +1492,11 @@
     (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-s16-ref (bytevector-index-for-word? bv index 2))
+      (bytevector-s16-ref (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1511,7 +1511,7 @@
 
 (parametrise ((check-test-name	'bytevector-s16-native-set-bang))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1548,11 +1548,11 @@
     (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index-for-word? bv index 2))
+      (bytevector-s16-native-set! (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1571,7 +1571,7 @@
 
 (parametrise ((check-test-name	'bytevector-s16-native-ref))
 
-  (define bytes-per-word	2)
+  (define-constant bytes-per-word	2)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1622,18 +1622,19 @@
     (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1))
 
   (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-ref (bytevector-index-for-word? bv index 2))
+      (bytevector-s16-native-ref (bytevector-index-for-word16? bv index))
     ;;too high
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4))
     ;;too high
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
+    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-u32-set-bang))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1683,58 +1684,45 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u32-set! #\a 1 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-set! (bytevector? bv))
+    (doit (bytevector-u32-set! #\a 1 2 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1 2 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2 (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2 (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-set! (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-u32-set! TEST-BV-1 (mult 4) 2 (endianness little)) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 #\a (endianness little)))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.least-u32*) (endianness little)))
-    => `(,(words.least-u32*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.greatest-u32*) (endianness little)))
-    => `(,(words.greatest-u32*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-set! (words.word-u32? word))
+    ;;not a fixnum
+    (doit (bytevector-u32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+    ;;too low
+    (doit (bytevector-u32-set! TEST-BV-1 1 (words.least-u32*) (endianness little)) ,(words.least-u32*))
+    ;;too high
+    (doit (bytevector-u32-set! TEST-BV-1 1 (words.greatest-u32*) (endianness little)) ,(words.greatest-u32*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 0 'dummy))
+	(bytevector-u32-set! TEST-BV-1 1 0 'dummy))
     => '(dummy))
 
   #t)
@@ -1742,7 +1730,8 @@
 
 (parametrise ((check-test-name	'bytevector-u32-ref))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1791,33 +1780,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u32-ref #\a 1 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-ref (bytevector? bv))
+    (doit (bytevector-u32-ref #\a 1 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u32-ref TEST-BV-1 #\a (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-ref (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-u32-ref TEST-BV-1 (mult 4) (endianness little)) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1832,7 +1814,8 @@
 
 (parametrise ((check-test-name	'bytevector-u32-native-set-bang))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1849,63 +1832,51 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u32-native-set! #\a 1 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-set! (bytevector? bv))
+    (doit (bytevector-u32-native-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u32-native-set! TEST-BV-1 #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-u32-native-set! TEST-BV-1 -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2 2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-set! (words.fixnum-aligned-to-4? index))
+    ;;not aligned
+    (doit (bytevector-u32-native-set! TEST-BV-1 1 0) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-set! (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-u32-native-set! TEST-BV-1 (mult 5) 2) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-u32-native-set! TEST-BV-1 (mult 4) 2) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.least-u32*)))
-    => `(,(words.least-u32*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.greatest-u32*)))
-    => `(,(words.greatest-u32*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-set! (words.word-u32? word))
+    ;;not a fixnum
+    (doit (bytevector-u32-native-set! TEST-BV-1 1 #\a) #\a)
+    ;;too low
+    (doit (bytevector-u32-native-set! TEST-BV-1 1 (words.least-u32*)) ,(words.least-u32*))
+    ;;too high
+    (doit (bytevector-u32-native-set! TEST-BV-1 1 (words.greatest-u32*)) ,(words.greatest-u32*)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-u32-native-ref))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -1922,45 +1893,39 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u32-native-ref #\a 0))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-ref (bytevector? bv))
+    (doit (bytevector-u32-native-ref #\a 0) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u32-native-ref TEST-BV-1 #\a) #\a)
+    ;;negative
+    (doit (bytevector-u32-native-ref TEST-BV-1 -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1))
-    => '(-1))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-ref (words.fixnum-aligned-to-4? index))
+    ;;not aligned
+    (doit (bytevector-u32-native-ref TEST-BV-1 1) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4)))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-u32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u32-native-ref (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-u32-native-ref TEST-BV-1 (mult 5)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-u32-native-ref TEST-BV-1 (mult 4)) ,TEST-BV-1 ,(mult 4)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-s32-set-bang))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -2013,51 +1978,38 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s32-set! #\a 1 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-set! (bytevector? bv))
+    (doit (bytevector-s32-set! #\a 1 2 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1 2 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2 (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2 (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-set! (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-s32-set! TEST-BV-1 (mult 4) 2 (endianness little)) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 #\a (endianness little)))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.least-s32*) (endianness little)))
-    => `(,(words.least-s32*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.greatest-s32*) (endianness little)))
-    => `(,(words.greatest-s32*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-set! (words.word-s32? word))
+    ;;not a fixnum
+    (doit (bytevector-s32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+    ;;too low
+    (doit (bytevector-s32-set! TEST-BV-1 1 (words.least-s32*) (endianness little)) ,(words.least-s32*))
+    ;;too high
+    (doit (bytevector-s32-set! TEST-BV-1 1 (words.greatest-s32*) (endianness little)) ,(words.greatest-s32*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2072,7 +2024,8 @@
 
 (parametrise ((check-test-name	'bytevector-s32-ref))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -2139,33 +2092,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s32-ref #\a 1 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-ref (bytevector? bv))
+    (doit (bytevector-s32-ref #\a 1 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s32-ref TEST-BV-1 #\a (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -1 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-ref (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-s32-ref TEST-BV-1 (mult 4) (endianness little)) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2180,7 +2126,8 @@
 
 (parametrise ((check-test-name	'bytevector-s32-native-set-bang))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -2197,63 +2144,51 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s32-native-set! #\a 0 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-set! (bytevector? bv))
+    (doit (bytevector-s32-native-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s32-native-set! TEST-BV-1 #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-s32-native-set! TEST-BV-1 -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2 2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-set! (words.fixnum-aligned-to-4? index))
+    ;;not aligned
+    (doit (bytevector-s32-native-set! TEST-BV-1 1 0) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5) 2))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4) 2))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-set! (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-s32-native-set! TEST-BV-1 (mult 5) 2) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-s32-native-set! TEST-BV-1 (mult 4) 2) ,TEST-BV-1 ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.least-s32*)))
-    => `(,(words.least-s32*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.greatest-s32*)))
-    => `(,(words.greatest-s32*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-set! (words.word-s32? word))
+    ;;not a fixnum
+    (doit (bytevector-s32-native-set! TEST-BV-1 1 #\a) #\a)
+    ;;too low
+    (doit (bytevector-s32-native-set! TEST-BV-1 1 (words.least-s32*)) ,(words.least-s32*))
+    ;;too high
+    (doit (bytevector-s32-native-set! TEST-BV-1 1 (words.greatest-s32*)) ,(words.greatest-s32*)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-s32-native-ref))
 
-  (define bytes-per-word	4)
+  (define-constant bytes-per-word	4)
+  (define-constant TEST-BV-1		'#vu8(1 0 0 0 2 0 0 0 3 0 0 0))
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
@@ -2286,51 +2221,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s32-native-ref #\a 0))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-ref (bytevector? bv))
+    (doit (bytevector-s32-native-ref #\a 0) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s32-native-ref TEST-BV-1 #\a) #\a)
+    ;;negative
+    (doit (bytevector-s32-native-ref TEST-BV-1 -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) -2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-ref (words.fixnum-aligned-to-4? index))
+    ;;not aligned
+    (doit (bytevector-s32-native-ref TEST-BV-1 1) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 5)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) (mult 4)))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-s32-native-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s32-native-ref (bytevector-index-for-word32? bv index))
+    ;;too high
+    (doit (bytevector-s32-native-ref TEST-BV-1 (mult 5)) ,TEST-BV-1 ,(mult 5))
+    ;;too high
+    (doit (bytevector-s32-native-ref TEST-BV-1 (mult 4)) ,TEST-BV-1 ,(mult 4)))
 
   #t)
 
 
 (parametrise ((check-test-name	'bytevector-u64-set-bang))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv
+  (define-constant the-bv
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2488,20 +2416,20 @@
 
 (parametrise ((check-test-name	'bytevector-u64-ref))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2583,13 +2511,13 @@
 
 (parametrise ((check-test-name	'bytevector-u64-native-set-bang))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv
+  (define-constant the-bv
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2663,20 +2591,20 @@
 
 (parametrise ((check-test-name	'bytevector-u64-native-ref))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2733,20 +2661,20 @@
 
 (parametrise ((check-test-name	'bytevector-s64-set-bang))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
 	 30 0 0 0   0 0 0 0
 	 40 0 0 0   0 0 0 0))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2879,20 +2807,20 @@
 
 (parametrise ((check-test-name	'bytevector-s64-ref))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2974,20 +2902,20 @@
 
 (parametrise ((check-test-name	'bytevector-s64-native-set-bang))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
 	 30 0 0 0   0 0 0 0
 	 40 0 0 0   0 0 0 0))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -3079,20 +3007,20 @@
 
 (parametrise ((check-test-name	'bytevector-s64-native-ref))
 
-  (define bytes-per-word	8)
+  (define-constant bytes-per-word	8)
   (define-syntax mult
     (syntax-rules ()
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define the-bv-be
+  (define-constant the-bv-be
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define the-bv-le
+  (define-constant the-bv-le
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
