@@ -978,51 +978,38 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s8-set! #\a 1 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-set! (bytevector? bv))
+    (doit (bytevector-s8-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s8-set! #vs8(1 2 3) #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-s8-set! #vs8(1 2 3) -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) -1 2))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 4 2))
-    => '(4))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-set! (bytevector-index-for-word8? bv index))
+    ;;too high
+    (doit (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
+    ;;too high
+    (doit (bytevector-s8-set! #vs8(1 2 3) 3 2) #vs8(1 2 3) 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 1 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)))
-    => (list (words.least-s8*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)))
-    => (list (words.greatest-s8*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-set! (words.word-s8? byte))
+    ;;not a fixnum
+    (doit (bytevector-s8-set! #vs8(1 2 3) 1 #\a) #\a)
+    ;;too low
+    (doit (bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)) ,(words.least-s8*))
+    ;;too high
+    (doit (bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)) ,(words.greatest-s8*)))
 
   #t)
 
@@ -1039,33 +1026,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s8-ref #\a 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-ref (bytevector? bv))
+    (doit (bytevector-s8-ref #\a 1) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s8-ref #vs8(1 2 3) #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s8-ref #vs8(1 2 3) #\a) #\a)
+    ;;negative
+    (doit (bytevector-s8-ref #vs8(1 2 3) -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s8-ref #vs8(1 2 3) -1))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s8-ref #vs8(1 2 3) 4))
-    => '(4))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s8-ref #vs8(1 2 3) 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s8-ref (bytevector-index-for-word8? bv index))
+    ;;too high
+    (doit (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
+    ;;too high
+    (doit (bytevector-s8-ref #vs8(1 2 3) 3) #vs8(1 2 3) 3))
 
   #t)
 
