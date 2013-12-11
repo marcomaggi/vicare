@@ -1097,51 +1097,38 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u16-set! #\a 1 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-set! (bytevector? bv))
+    (doit (bytevector-u16-set! #\a 1 2 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little)))
-    => (list (mult 4)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little)))
-    => (list (mult 3)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-set! (bytevector-index-for-word? bv index 2))
+    ;;too high
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    ;;too high
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)))
-    => (list (words.least-u16*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)))
-    => `(,(words.greatest-u16*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-set! (words.word-u16? word))
+    ;;not a fixnum
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)) #\a)
+    ;;too low
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)) ,(words.least-u16*))
+    ;;too high
+    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)) ,(words.greatest-u16*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1193,33 +1180,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u16-ref #\a 1 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-ref (bytevector? bv))
+    (doit (bytevector-u16-ref #\a 1 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little)))
-    => (list (mult 4)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little)))
-    => (list (mult 3)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u16-ref (bytevector-index-for-word? bv index 2))
+    ;;too high
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4) 2)
+    ;;too high
+    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3) 2))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness

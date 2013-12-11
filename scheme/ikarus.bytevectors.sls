@@ -345,8 +345,7 @@
     ;;Single precondition.
     ;;
     ((_ ?who (?predicate ?arg ...))
-     (and (identifier? #'?who)
-	  (all-identifiers? #'(?arg ...)))
+     (identifier? #'?who)
      (if (vicare-built-with-arguments-validation-enabled)
 	 #'(unless (?predicate ?arg ...)
 	     (procedure-argument-violation ?who
@@ -496,18 +495,18 @@
   ;;the endianness is wrong.
   ;;
   (syntax-case stx (big little)
-    ((case-endianness (?who ?endianness)
-       ((little)	. ?lit-body)
-       ((big)		. ?big-body))
+    ((_ (?who ?endianness)
+	((little)	. ?lit-body)
+	((big)		. ?big-body))
      (and (identifier? #'?who)
 	  (identifier? #'?endianness))
      #'(case-endianness (?who ?endianness)
 	 ((big)		. ?big-body)
 	 ((little)	. ?lit-body)))
 
-    ((case-endianness (?who ?endianness)
-       ((big)		. ?big-body)
-       ((little)	. ?lit-body))
+    ((_ (?who ?endianness)
+	((big)		. ?big-body)
+	((little)	. ?lit-body))
      (and (identifier? #'?who)
 	  (identifier? #'?endianness))
      #'(case ?endianness
@@ -516,7 +515,6 @@
 	 (else
 	  (procedure-argument-violation ?who
 	    "expected endianness symbol as argument" ?endianness))))
-
     ))
 
 
@@ -565,7 +563,11 @@
   (and (bytevector? bv)
        (bytevector-index? idx)
        (bytevector-word-size? word-size-in-bytes)
-       ($fx<= idx ($fx- ($bytevector-length bv) word-size-in-bytes))))
+       ;;We want this operation to return a boolean even if it overflows
+       ;;or underflows the range of fixnums.
+       (let ((end (- ($bytevector-length bv) word-size-in-bytes)))
+	 (and (fixnum? end)
+	      ($fx<= idx end)))))
 
 (define* (bytevector-start-index-and-count-for-word? bv idx word-size-in-bytes count)
   ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
@@ -580,7 +582,8 @@
        (bytevector-index? idx)
        ($fx<= idx ($bytevector-length bv))
        (bytevector-word-size? word-size-in-bytes)
-       ;;Look out for overflowing fixnums with the product!!!
+       ;;We want this operation to return a boolean even if it overflows
+       ;;or underflows the range of fixnums.
        (let ((data-size (* count word-size-in-bytes)))
 	 (and (fixnum? data-size)
 	      (let ((past (+ idx data-size)))
@@ -912,44 +915,42 @@
 ;;;; 16-bit setters and getters
 
 (define* (bytevector-u16-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u16b-ref bv index))
-      ((little)
-       ($bytevector-u16l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word? bv index 2))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u16b-ref bv index))
+    ((little)
+     ($bytevector-u16l-ref bv index))))
 
-(define* (bytevector-u16-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-u16?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-u16b-set! bv index word))
-      ((little)
-       ($bytevector-u16l-set! bv index word)))))
+(define* (bytevector-u16-set! (bv bytevector?) (index bytevector-index?) (word words.word-u16?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word? bv index 2))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-u16b-set! bv index word))
+    ((little)
+     ($bytevector-u16l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s16-ref (bv bytevector?) (index bytevector-index?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s16b-ref bv index))
-      ((little)
-       ($bytevector-s16l-ref bv index)))))
+  (preconditions __who__
+    (bytevector-index-for-word? bv index 2))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s16b-ref bv index))
+    ((little)
+     ($bytevector-s16l-ref bv index))))
 
-(define* (bytevector-s16-set! (bv bytevector?) (index bytevector-index?)
-			      (word words.word-s16?) endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2))
-    (case-endianness (__who__ endianness)
-      ((big)
-       ($bytevector-s16b-set! bv index word))
-      ((little)
-       ($bytevector-s16l-set! bv index word)))))
+(define* (bytevector-s16-set! (bv bytevector?) (index bytevector-index?) (word words.word-s16?) endianness)
+  (preconditions __who__
+    (bytevector-index-for-word? bv index 2))
+  (case-endianness (__who__ endianness)
+    ((big)
+     ($bytevector-s16b-set! bv index word))
+    ((little)
+     ($bytevector-s16l-set! bv index word))))
 
 ;;; --------------------------------------------------------------------
 
