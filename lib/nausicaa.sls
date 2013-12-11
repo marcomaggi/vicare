@@ -1522,10 +1522,20 @@
     least-positive-bignum
     greatest-negative-bignum
 
-    ;; bytevectors
+    ;; bytevector validation predicates
+    list-of-bytevectors?
     bytevector-length?			bytevector-index?
     bytevector-word-size?		bytevector-word-count?
     bytevector-index-for-word?
+    bytevector-index-for-word8?
+    bytevector-index-for-word16?
+    bytevector-index-for-word32?
+    bytevector-index-for-word64?
+    bytevector-start-index-and-count-for-word?
+    bytevector-start-index-and-count-for-word8?
+    bytevector-start-index-and-count-for-word16?
+    bytevector-start-index-and-count-for-word32?
+    bytevector-start-index-and-count-for-word64?
 
     ;; raw octets and strings
     octets->string			string->octets

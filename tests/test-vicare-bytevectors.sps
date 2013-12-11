@@ -2258,7 +2258,7 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv
+  (define-constant THE-BV
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2352,63 +2352,47 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u64-set! #\a 1 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-set! (bytevector? bv))
+    (doit (bytevector-u64-set! #\a 1 2 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-set! the-bv #\a 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u64-set! THE-BV #\a 2 (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u64-set! THE-BV -1 2 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u64-set! the-bv -1 2 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-set! the-bv (mult 5) 2 (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-set! the-bv (mult 4) 2 (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-set! (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) ,THE-BV ,(mult 5))
+    ;;too high
+    (doit (bytevector-u64-set! THE-BV (mult 4) 2 (endianness little)) ,THE-BV ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-set! the-bv 1 #\a (endianness little)))
-    => '(#\a))
-
-  (check	;negative fixnum
-      (catch #f
-	(bytevector-u64-set! the-bv 1 -1 (endianness little)))
-    => '(-1))
-
-  (check	;negative bignum
-      (catch #f
-	(bytevector-u64-set! the-bv 1 (words.least-u64*) (endianness little)))
-    => `(,(words.least-u64*)))
-
-  (check 	;too high
-      (catch #f
-	(bytevector-u64-set! the-bv 1 (words.greatest-u64*) (endianness little)))
-    => `(,(words.greatest-u64*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-set! (words.word-u64? word))
+    ;;not a fixnum
+    (doit (bytevector-u64-set! THE-BV 1 #\a (endianness little)) #\a)
+    ;;negative fixnum
+    (doit (bytevector-u64-set! THE-BV 1 -1 (endianness little))  -1)
+    ;;negative bignum
+    (doit (bytevector-u64-set! THE-BV 1 (words.least-u64*) (endianness little)) ,(words.least-u64*))
+    ;;too high
+    (doit (bytevector-u64-set! THE-BV 1 (words.greatest-u64*) (endianness little)) ,(words.greatest-u64*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
   (check	;invalid endianness symbol
       (catch #f
-	(bytevector-u64-set! the-bv 1 0 'dummy))
+	(bytevector-u64-set! THE-BV 1 0 'dummy))
     => '(dummy))
 
   #t)
@@ -2422,14 +2406,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2454,56 +2438,49 @@
     => #x0102030405060708)
 
   (check
-      (list (bytevector-u64-ref the-bv-le (mult 0) (endianness little))
-	    (bytevector-u64-ref the-bv-le (mult 1) (endianness little))
-	    (bytevector-u64-ref the-bv-le (mult 2) (endianness little))
-	    (bytevector-u64-ref the-bv-le (mult 3) (endianness little)))
+      (list (bytevector-u64-ref THE-BV-LE (mult 0) (endianness little))
+	    (bytevector-u64-ref THE-BV-LE (mult 1) (endianness little))
+	    (bytevector-u64-ref THE-BV-LE (mult 2) (endianness little))
+	    (bytevector-u64-ref THE-BV-LE (mult 3) (endianness little)))
     => '(10 20 30 40))
 
   (check
-      (list (bytevector-u64-ref the-bv-be (mult 0) (endianness big))
-	    (bytevector-u64-ref the-bv-be (mult 1) (endianness big))
-	    (bytevector-u64-ref the-bv-be (mult 2) (endianness big))
-	    (bytevector-u64-ref the-bv-be (mult 3) (endianness big)))
+      (list (bytevector-u64-ref THE-BV-BE (mult 0) (endianness big))
+	    (bytevector-u64-ref THE-BV-BE (mult 1) (endianness big))
+	    (bytevector-u64-ref THE-BV-BE (mult 2) (endianness big))
+	    (bytevector-u64-ref THE-BV-BE (mult 3) (endianness big)))
     => '(10 20 30 40))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u64-ref #\a 1 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-ref (bytevector? bv))
+    (doit (bytevector-u64-ref #\a 1 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-ref the-bv-le #\a (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u64-ref THE-BV-BE #\a (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-u64-ref THE-BV-BE -1  (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u64-ref the-bv-le -1 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-ref the-bv-le (mult 5) (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-ref the-bv-le (mult 4) (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-ref (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-u64-ref THE-BV-BE (mult 4) (endianness little)) ,THE-BV-BE ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-u64-ref the-bv-le 1 'dummy))
+	(bytevector-u64-ref THE-BV-BE 1 'dummy))
     => '(dummy))
 
   #t)
@@ -2517,7 +2494,7 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv
+  (define-constant THE-BV
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2535,56 +2512,45 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u64-native-set! #\a 0 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-set! (bytevector? bv))
+    (doit (bytevector-u64-native-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-native-set! the-bv #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u64-native-set! THE-BV #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-u64-native-set! THE-BV -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u64-native-set! the-bv -8 2))
-    => '(-8))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-set! (words.fixnum-aligned-to-8? index))
+    ;;not aligned
+    (doit (bytevector-u64-native-set! THE-BV 1 2) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-u64-native-set! the-bv (mult 5) 2))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-native-set! the-bv (mult 4) 2))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-u64-native-set! the-bv 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-set! (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-u64-native-set! THE-BV (mult 5) 2) ,THE-BV ,(mult 5))
+    ;;too high
+    (doit (bytevector-u64-native-set! THE-BV (mult 4) 2) ,THE-BV ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-native-set! the-bv 0 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-u64-native-set! the-bv 0 (words.least-u64*)))
-    => `(,(words.least-u64*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-native-set! the-bv 0 (words.greatest-u64*)))
-    => `(,(words.greatest-u64*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-set! (words.word-u64? word))
+    ;;not a fixnum
+    (doit (bytevector-u64-native-set! THE-BV 1 #\a) #\a)
+    ;;negative fixnum
+    (doit (bytevector-u64-native-set! THE-BV 1 -1)  -1)
+    ;;negative bignum
+    (doit (bytevector-u64-native-set! THE-BV 1 (words.least-u64*)) ,(words.least-u64*))
+    ;;too high
+    (doit (bytevector-u64-native-set! THE-BV 1 (words.greatest-u64*)) ,(words.greatest-u64*)))
 
   #t)
 
@@ -2597,14 +2563,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2623,38 +2589,31 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u64-native-ref #\a 0))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector? bv))
+    (doit (bytevector-u64-native-ref #\a 0) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-native-ref the-bv-le #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+    ;;negative
+    (doit (bytevector-u64-native-ref THE-BV-BE -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u64-native-ref the-bv-le -2))
-    => '(-2))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (words.fixnum-aligned-to-8? index))
+    ;;not aligned
+    (doit (bytevector-u64-native-ref THE-BV-BE 1) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-u64-native-ref the-bv-le (mult 5)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u64-native-ref the-bv-le (mult 4)))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-u64-native-ref the-bv-le 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-u64-native-ref THE-BV-BE (mult 5)) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-u64-native-ref THE-BV-BE (mult 4)) ,THE-BV-BE ,(mult 4)))
 
   #t)
 
@@ -2667,14 +2626,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
 	 30 0 0 0   0 0 0 0
 	 40 0 0 0   0 0 0 0))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2710,7 +2669,7 @@
 	(bytevector-s64-set! bv (mult 2) 30 (endianness little))
 	(bytevector-s64-set! bv (mult 3) 40 (endianness little))
 	bv)
-    => the-bv-le)
+    => THE-BV-LE)
 
   (check
       (let ((bv (make-bytevector (mult 4) 0)))
@@ -2719,7 +2678,7 @@
 	(bytevector-s64-set! bv (mult 2) 30 (endianness big))
 	(bytevector-s64-set! bv (mult 3) 40 (endianness big))
 	bv)
-    => the-bv-be)
+    => THE-BV-BE)
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
@@ -2748,58 +2707,45 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s64-set! #\a 1 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-set! (bytevector? bv))
+    (doit (bytevector-s64-set! #\a 1 2 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-set! the-bv-le #\a 2 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s64-set! THE-BV-BE #\a 2 (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s64-set! the-bv-le -1 2 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-set! the-bv-le (mult 5) 2 (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-set! the-bv-le (mult 4) 2 (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-set! (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-s64-set! THE-BV-BE (mult 4) 2 (endianness little)) ,THE-BV-BE ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-set! the-bv-le 1 #\a (endianness little)))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-s64-set! the-bv-le 1 (words.least-s64*) (endianness little)))
-    => `(,(words.least-s64*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-set! the-bv-le 1 (words.greatest-s64*) (endianness little)))
-    => `(,(words.greatest-s64*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-set! (words.word-s64? word))
+    ;;not a fixnum
+    (doit (bytevector-s64-set! THE-BV-BE 1 #\a (endianness little)) #\a)
+    ;;negative bignum
+    (doit (bytevector-s64-set! THE-BV-BE 1 (words.least-s64*) (endianness little)) ,(words.least-s64*))
+    ;;too high
+    (doit (bytevector-s64-set! THE-BV-BE 1 (words.greatest-s64*) (endianness little)) ,(words.greatest-s64*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-s64-set! the-bv-le 1 0 'dummy))
+	(bytevector-s64-set! THE-BV-LE 1 0 'dummy))
     => '(dummy))
 
   #t)
@@ -2813,14 +2759,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -2845,56 +2791,49 @@
     => #x0102030405060708)
 
   (check
-      (list (bytevector-s64-ref the-bv-le (mult 0) (endianness little))
-	    (bytevector-s64-ref the-bv-le (mult 1) (endianness little))
-	    (bytevector-s64-ref the-bv-le (mult 2) (endianness little))
-	    (bytevector-s64-ref the-bv-le (mult 3) (endianness little)))
+      (list (bytevector-s64-ref THE-BV-LE (mult 0) (endianness little))
+	    (bytevector-s64-ref THE-BV-LE (mult 1) (endianness little))
+	    (bytevector-s64-ref THE-BV-LE (mult 2) (endianness little))
+	    (bytevector-s64-ref THE-BV-LE (mult 3) (endianness little)))
     => '(10 20 30 40))
 
   (check
-      (list (bytevector-s64-ref the-bv-be (mult 0) (endianness big))
-	    (bytevector-s64-ref the-bv-be (mult 1) (endianness big))
-	    (bytevector-s64-ref the-bv-be (mult 2) (endianness big))
-	    (bytevector-s64-ref the-bv-be (mult 3) (endianness big)))
+      (list (bytevector-s64-ref THE-BV-BE (mult 0) (endianness big))
+	    (bytevector-s64-ref THE-BV-BE (mult 1) (endianness big))
+	    (bytevector-s64-ref THE-BV-BE (mult 2) (endianness big))
+	    (bytevector-s64-ref THE-BV-BE (mult 3) (endianness big)))
     => '(10 20 30 40))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s64-ref #\a 1 (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-ref (bytevector? bv))
+    (doit (bytevector-s64-ref #\a 1 (endianness little)) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-ref the-bv-le #\a (endianness little)))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s64-ref THE-BV-BE #\a (endianness little)) #\a)
+    ;;negative
+    (doit (bytevector-s64-ref THE-BV-BE -1  (endianness little)) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s64-ref the-bv-le -1 (endianness little)))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-ref the-bv-le (mult 5) (endianness little)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-ref the-bv-le (mult 4) (endianness little)))
-    => (list (mult 4)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-ref (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-s64-ref THE-BV-BE (mult 4) (endianness little)) ,THE-BV-BE ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
   (check	;not a fixnum
       (catch #f
-	(bytevector-s64-ref the-bv-le 1 'dummy))
+	(bytevector-s64-ref THE-BV-LE 1 'dummy))
     => '(dummy))
 
   #t)
@@ -2908,14 +2847,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
 	 30 0 0 0   0 0 0 0
 	 40 0 0 0   0 0 0 0))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
@@ -2951,56 +2890,43 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s64-native-set! #\a 0 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-native-set! (bytevector? bv))
+    (doit (bytevector-s64-native-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-native-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-s64-native-set! THE-BV-BE #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-s64-native-set! THE-BV-BE -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le -8 2))
-    => '(-8))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-native-set! (words.fixnum-aligned-to-8? index))
+    ;;not aligned
+    (doit (bytevector-s64-native-set! THE-BV-BE 1 2) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le (mult 5) 2))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le (mult 4) 2))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-native-set! (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-s64-native-set! THE-BV-BE (mult 5) 2) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-s64-native-set! THE-BV-BE (mult 4) 2) ,THE-BV-BE ,(mult 4)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le 0 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le 0 (words.least-s64*)))
-    => `(,(words.least-s64*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-native-set! the-bv-le 0 (words.greatest-s64*)))
-    => `(,(words.greatest-s64*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-s64-native-set! (words.word-s64? word))
+    ;;not a fixnum
+    (doit (bytevector-s64-native-set! THE-BV-BE 1 #\a) #\a)
+    ;;negative bignum
+    (doit (bytevector-s64-native-set! THE-BV-BE 1 (words.least-s64*)) ,(words.least-s64*))
+    ;;too high
+    (doit (bytevector-s64-native-set! THE-BV-BE 1 (words.greatest-s64*)) ,(words.greatest-s64*)))
 
   #t)
 
@@ -3013,14 +2939,14 @@
       ((_ ?num)
        (* bytes-per-word ?num))))
 
-  (define-constant the-bv-be
+  (define-constant THE-BV-BE
     #vu8( ;;
 	 0 0 0 0   0 0 0 10
 	 0 0 0 0   0 0 0 20
 	 0 0 0 0   0 0 0 30
 	 0 0 0 0   0 0 0 40))
 
-  (define-constant the-bv-le
+  (define-constant THE-BV-LE
     #vu8( ;;
 	 10 0 0 0   0 0 0 0
 	 20 0 0 0   0 0 0 0
@@ -3039,38 +2965,31 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-s64-native-ref #\a 0))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector? bv))
+    (doit (bytevector-u64-native-ref #\a 0) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-native-ref the-bv-le #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+    ;;negative
+    (doit (bytevector-u64-native-ref THE-BV-BE -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-s64-native-ref the-bv-le -1))
-    => '(-1))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (words.fixnum-aligned-to-8? index))
+    ;;not aligned
+    (doit (bytevector-u64-native-ref THE-BV-BE 1) 1))
 
-  (check	;too high
-      (catch #f
-	(bytevector-s64-native-ref the-bv-le (mult 5)))
-    => (list (mult 5)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-s64-native-ref the-bv-le (mult 4)))
-    => (list (mult 4)))
-
-  (check	;not aligned
-      (catch #f
-	(bytevector-s64-native-ref the-bv-le 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u64-native-ref (bytevector-index-for-word64? bv index))
+    ;;too high
+    (doit (bytevector-u64-native-ref THE-BV-BE (mult 5)) ,THE-BV-BE ,(mult 5))
+    ;;too high
+    (doit (bytevector-u64-native-ref THE-BV-BE (mult 4)) ,THE-BV-BE ,(mult 4)))
 
   #t)
 
