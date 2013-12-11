@@ -268,7 +268,21 @@ AC_CHECK_FUNCS([stat lstat realpath unlink mkdir],,
    [AC_MSG_ERROR([missing needed platform function],[1])])
 AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime],,
    [AC_MSG_ERROR([missing needed platform function],[1])])
-AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
+
+AC_CHECK_TYPES([struct tm],
+   [VICARE_HAVE_STRUCT_TM=yes],
+   [VICARE_HAVE_STRUCT_TM=no],
+   [VICARE_INCLUDES])
+AS_IF([test "x$VICARE_HAVE_STRUCT_TM" = xyes],
+      [AC_CHECK_MEMBER([struct tm.tm_zone],
+          AC_DEFINE(HAVE_TM_TM_ZONE, 1,[tm struct has tm_zone]),
+          [],
+          [VICARE_INCLUDES])
+       AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+          AC_DEFINE(HAVE_TM_TM_GMTOFF, 1,[tm struct has tm_gmtoff]),
+          [],
+          [VICARE_INCLUDES])])
+
 AC_CHECK_FUNCS([getenv])
 AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])

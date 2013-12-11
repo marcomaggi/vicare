@@ -1,26 +1,25 @@
-# cygwin-configure.sh --
+# configure.sh --
 #
 
 set -xe
 
-prefix=/cygwin/usr/local
+prefix=/usr/local
+LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 
 ../configure \
-    --enable-maintainer-mode                    \
-    --config-cache                              \
-    --cache-file=../config.cache-bare           \
-    --prefix="${prefix}"                        \
-    --disable-binfmt                            \
-    --disable-time-tests                        \
-    --disable-posix                             \
-    --disable-glibc                             \
-    --disable-linux                             \
-    --without-pthread                           \
-    --without-libffi                            \
-    --without-libiconv                          \
-    --without-readline                          \
-    --without-cre2                              \
-    CFLAGS='-O3'				\
+    --enable-maintainer-mode				\
+    --config-cache					\
+    --cache-file=../config.cache			\
+    --prefix="${prefix}"				\
+    --disable-linux					\
+    --enable-time-tests					\
+    --with-pthread=check			        \
+    CFLAGS='-O3'					\
+    CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
+    LDFLAGS='-L/usr/local/lib -L/usr/local/lib64'	\
+    VFLAGS='-O3'					\
     "$@"
+
+## LDFLAGS='-L/usr/local/lib -lpthread'
 
 ### end of file
