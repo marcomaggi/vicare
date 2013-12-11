@@ -761,7 +761,7 @@
    (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start))))
 
 (define* (subbytevector-u8/count (src.bv bytevector?) (src.start bytevector-index?)
-				 (dst.len bytevector-word-count?))
+				 (dst.len bytevector-length?))
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
   ;;DST.LEN bytes in SRC.BV from index SRC.START (inclusive).  The start
   ;;index and the byte count must be such that:
@@ -780,6 +780,8 @@
        dst.bv)
     ($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))))
 
+;;; --------------------------------------------------------------------
+
 (case-define* subbytevector-s8
   ;;Defined by  Vicare.  Build and  return a new bytevector  holding the
   ;;bytes in  SRC.BV from index  SRC.START (inclusive) to  index SRC.END
@@ -790,10 +792,9 @@
   (((src.bv bytevector?) src.start)
    (subbytevector-s8 src.bv src.start ($bytevector-length src.bv)))
   (((src.bv bytevector?) (src.start bytevector-index?) (src.end bytevector-index?))
-   (with-arguments-validation (__who__)
-       ((start-index-for	src.start src.bv 1)
-	(end-index-for		src.end   src.bv 1))
-     (%$subbytevector-s8/count src.bv src.start ($fx- src.end src.start)))))
+   (preconditions __who__
+     (bytevector-start-past-indexes? src.bv src.start src.end))
+   (%$subbytevector-s8/count src.bv src.start ($fx- src.end src.start))))
 
 (define* (subbytevector-s8/count (src.bv bytevector?) (src.start bytevector-index?) (dst.len bytevector-length?))
   ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
@@ -802,10 +803,9 @@
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
-  (with-arguments-validation (__who__)
-      ((start-index-for	src.start src.bv 1)
-       (count-for	dst.len src.bv src.start 1))
-    (%$subbytevector-s8/count src.bv src.start dst.len)))
+  (preconditions __who__
+    (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
+  (%$subbytevector-s8/count src.bv src.start dst.len))
 
 (define (%$subbytevector-s8/count src.bv src.start dst.len)
   (do ((dst.bv ($make-bytevector dst.len))
