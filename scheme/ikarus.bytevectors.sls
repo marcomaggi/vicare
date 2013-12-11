@@ -955,32 +955,30 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u16-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2)
-       (aligned-index-2	index))
-    ($bytevector-u16n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-2? index)
+    (bytevector-index-for-word? bv index 2))
+  ($bytevector-u16n-ref bv index))
 
-(define* (bytevector-u16-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-u16?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2)
-       (aligned-index-2	index))
-    ($bytevector-u16n-set! bv index word)))
+(define* (bytevector-u16-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-u16?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-2? index)
+    (bytevector-index-for-word? bv index 2))
+  ($bytevector-u16n-set! bv index word))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s16-native-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2)
-       (aligned-index-2	index))
-    ($bytevector-s16n-ref bv index)))
+  (preconditions __who__
+    (words.fixnum-aligned-to-2? index)
+    (bytevector-index-for-word? bv index 2))
+  ($bytevector-s16n-ref bv index))
 
-(define* (bytevector-s16-native-set! (bv bytevector?) (index bytevector-index?)
-				     (word words.word-s16?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 2)
-       (aligned-index-2	index))
-    ($bytevector-s16n-set! bv index word)))
+(define* (bytevector-s16-native-set! (bv bytevector?) (index bytevector-index?) (word words.word-s16?))
+  (preconditions __who__
+    (words.fixnum-aligned-to-2? index)
+    (bytevector-index-for-word? bv index 2))
+  ($bytevector-s16n-set! bv index word))
 
 
 ;;;; 32-bit setters and getters
