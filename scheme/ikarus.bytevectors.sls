@@ -889,26 +889,24 @@
 ;;;; 8-bit setters and getters
 
 (define* (bytevector-s8-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 1))
-    ($bytevector-s8-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-word8? bv index))
+  ($bytevector-s8-ref bv index))
 
 (define* (bytevector-u8-ref (bv bytevector?) (index bytevector-index?))
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 1))
-    ($bytevector-u8-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-word8? bv index))
+  ($bytevector-u8-ref bv index))
 
-(define* (bytevector-s8-set! (bv bytevector?) (index bytevector-index?) byte)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 1)
-       (byte		byte))
-    ($bytevector-s8-set! bv index byte)))
+(define* (bytevector-s8-set! (bv bytevector?) (index bytevector-index?) (byte words.word-s8?))
+  (preconditions __who__
+    (bytevector-index-for-word8? bv index))
+  ($bytevector-s8-set! bv index byte))
 
-(define* (bytevector-u8-set! (bv bytevector?) (index bytevector-index?) octet)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 1)
-       (octet		octet))
-    ($bytevector-u8-set! bv index octet)))
+(define* (bytevector-u8-set! (bv bytevector?) (index bytevector-index?) (octet words.word-u8?))
+  (preconditions __who__
+    (bytevector-index-for-word8? bv index))
+  ($bytevector-u8-set! bv index octet))
 
 
 ;;;; 16-bit setters and getters

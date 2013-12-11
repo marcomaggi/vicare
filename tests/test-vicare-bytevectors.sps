@@ -769,13 +769,10 @@
 
 ;;; arguments validation
 
-  (check
-      (catch #f (bytevector-append 123))
-    => '((123)))
-
-  (check
-      (catch #f (bytevector-append '#vu8() 123))
-    => '((#vu8() 123)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-append (list-of-bytevectors? list-of-bytevectors))
+    (doit (bytevector-append 123) (123))
+    (doit (bytevector-append '#vu8() 123) (#vu8() 123)))
 
 ;;; --------------------------------------------------------------------
 
@@ -824,30 +821,14 @@
   #t)
 
 
-(parametrise ((check-test-name	'bytevector-hash))
-
-  (check
-      (fixnum? (bytevector-hash '#vu8()))
-    => #t)
-
-  (check
-      (fixnum? (bytevector-hash '#vu8(1 2 3)))
-    => #t)
-
-  #t)
-
-
 (parametrise ((check-test-name	'reverse-and-concatenate))
 
 ;;; arguments validation
 
-  (check
-      (catch #f (bytevector-reverse-and-concatenate 123))
-    => '(123))
-
-  (check
-      (catch #f (bytevector-reverse-and-concatenate '(123)))
-    => '((123)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-reverse-and-concatenate (list-of-bytevectors? list-of-bytevectors))
+    (doit (bytevector-reverse-and-concatenate 123) 123)
+    (doit (bytevector-reverse-and-concatenate '(123)) (123)))
 
 ;;; --------------------------------------------------------------------
 
@@ -880,6 +861,25 @@
   #t)
 
 
+(parametrise ((check-test-name	'bytevector-hash))
+
+  (with-check-for-procedure-argument-validation
+      (bytevector-hash (bytevector? bv))
+    (doit (bytevector-hash 123) 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (fixnum? (bytevector-hash '#vu8()))
+    => #t)
+
+  (check
+      (fixnum? (bytevector-hash '#vu8(1 2 3)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'bytevector-u8-set-bang))
 
   (check
@@ -893,51 +893,38 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u8-set! #\a 1 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-set! (bytevector? bv))
+    (doit (bytevector-u8-set! #\a 1 2) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) #\a 2))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-set! (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u8-set! #vu8(1 2 3) #\a 2) #\a)
+    ;;negative
+    (doit (bytevector-u8-set! #vu8(1 2 3) -1 2) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) -1 2))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 4 2))
-    => '(4))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 3 2))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-set! (bytevector-index-for-word8? bv index))
+    ;;too high
+    (doit (bytevector-u8-set! #vu8(1 2 3) 4 2) #vu8(1 2 3) 4)
+    ;;too high
+    (doit (bytevector-u8-set! #vu8(1 2 3) 3 2) #vu8(1 2 3) 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 1 #\a))
-    => '(#\a))
-
-  (check	;too low
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)))
-    => (list (words.least-u8*)))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)))
-    => (list (words.greatest-u8*)))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-set! (words.word-u8? octet))
+    ;;not a fixnum
+    (doit (bytevector-u8-set! #vu8(1 2 3) 1 #\a) #\a)
+    ;;too low
+    (doit (bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)) ,(words.least-u8*))
+    ;;too high
+    (doit (bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)) ,(words.greatest-u8*)))
 
   #t)
 
@@ -954,33 +941,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check
-      (catch #f
-	(bytevector-u8-ref #\a 1))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-ref (bytevector? bv))
+    (doit (bytevector-u8-ref #\a 1) #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u8-ref #vu8(1 2 3) #\a))
-    => '(#\a))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-ref (bytevector-index? index))
+    ;;not a fixnum
+    (doit (bytevector-u8-ref #vu8(1 2 3) #\a) #\a)
+    ;;negative
+    (doit (bytevector-u8-ref #vu8(1 2 3) -1) -1))
 
-  (check	;negative
-      (catch #f
-	(bytevector-u8-ref #vu8(1 2 3) -1))
-    => '(-1))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u8-ref #vu8(1 2 3) 4))
-    => '(4))
-
-  (check	;too high
-      (catch #f
-	(bytevector-u8-ref #vu8(1 2 3) 3))
-    => '(3))
+  (with-check-for-procedure-argument-validation
+      (bytevector-u8-ref (bytevector-index-for-word8? bv index))
+    ;;too high
+    (doit (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
+    ;;too high
+    (doit (bytevector-u8-ref #vu8(1 2 3) 3) #vu8(1 2 3) 3))
 
   #t)
 
