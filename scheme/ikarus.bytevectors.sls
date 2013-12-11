@@ -274,34 +274,28 @@
 ;;; --------------------------------------------------------------------
 
 (define-inline (bytevector-cflonum-single-le-set! bv i x)
-  (begin
-    (bytevector-ieee-single-set! bv i          (real-part x) (endianness little))
-    (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness little))))
+  (bytevector-ieee-single-set! bv i          (real-part x) (endianness little))
+  (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness little)))
 
 (define-inline (bytevector-cflonum-single-be-set! bv i x)
-  (begin
-    (bytevector-ieee-single-set! bv i          (real-part x) (endianness big))
-    (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness big))))
+  (bytevector-ieee-single-set! bv i          (real-part x) (endianness big))
+  (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness big)))
 
 (define-inline (bytevector-cflonum-single-ne-set! bv i x)
-  (begin
-    (bytevector-ieee-single-native-set! bv i          (real-part x))
-    (bytevector-ieee-single-native-set! bv ($fx+ 4 i) (imag-part x))))
+  (bytevector-ieee-single-native-set! bv i          (real-part x))
+  (bytevector-ieee-single-native-set! bv ($fx+ 4 i) (imag-part x)))
 
 (define-inline (bytevector-cflonum-double-le-set! bv i x)
-  (begin
-    (bytevector-ieee-double-set! bv i          (real-part x) (endianness little))
-    (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness little))))
+  (bytevector-ieee-double-set! bv i          (real-part x) (endianness little))
+  (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness little)))
 
 (define-inline (bytevector-cflonum-double-be-set! bv i x)
-  (begin
-    (bytevector-ieee-double-set! bv i          (real-part x) (endianness big))
-    (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness big))))
+  (bytevector-ieee-double-set! bv i          (real-part x) (endianness big))
+  (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness big)))
 
 (define-inline (bytevector-cflonum-double-ne-set! bv i x)
-  (begin
-    (bytevector-ieee-double-native-set! bv i          (real-part x))
-    (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x))))
+  (bytevector-ieee-double-native-set! bv i          (real-part x))
+  (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x)))
 
 ;;; --------------------------------------------------------------------
 
@@ -774,10 +768,9 @@
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
-  (with-arguments-validation (__who__)
-      ((start-index-for	src.start src.bv 1)
-       (count-for	dst.len src.bv src.start 1))
-    (%$subbytevector-u8/count src.bv src.start dst.len)))
+  (preconditions __who__
+    (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
+  (%$subbytevector-u8/count src.bv src.start dst.len))
 
 (define (%$subbytevector-u8/count src.bv src.start dst.len)
   (do ((dst.bv ($make-bytevector dst.len))
