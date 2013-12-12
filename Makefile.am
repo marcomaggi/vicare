@@ -3,6 +3,7 @@
 ACLOCAL_AMFLAGS		= -I autotools
 SUBDIRS			= src scheme doc lib tests demos
 EXTRA_DIST		= configure.sh configure32.sh	\
+			  bare-configure.sh cygwin-configure.sh \
 			  scripts/make-last-revision	\
 			  scripts/vie			\
 			  autotools/config.rpath
