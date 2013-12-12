@@ -42,6 +42,14 @@
 static int total_allocated_pages = 0;
 static int total_malloced = 0;
 
+#if 0
+#define IK_DIRTY_VECTOR_SLOT_SIZE	sizeof(uint32_t)
+#define IK_SEGMENT_VECTOR_SLOT_SIZE	sizeof(uint32_t)
+#else
+#define IK_DIRTY_VECTOR_SLOT_SIZE	IK_PAGESIZE
+#define IK_SEGMENT_VECTOR_SLOT_SIZE	IK_PAGESIZE
+#endif
+
 /* Must be multiple of IK_PAGESIZE. */
 #define CACHE_SIZE		(IK_PAGESIZE * 1)
 
@@ -104,6 +112,9 @@ set_segment_type (ikptr base, ik_ulong size, unsigned type, ikpcb* pcb)
 /* Set to TYPE all the entries in "pcb->segment_vector" corresponding to
    the memory block starting at BASE and SIZE bytes wide. */
 {
+  /* The fields  "memory_base" and "memory-end" delimit  the memory used
+     by  Scheme code;  obviously an  allocated segment  must be  in this
+     range. */
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
@@ -129,8 +140,10 @@ ik_mmap_typed (ik_ulong size, unsigned type, ikpcb* pcb)
 	 pages. */
       pages->next	  = pcb->uncached_pages;
       pcb->uncached_pages = pages;
-    } else
+    } else {
+      /* No cached page available: allocate a new segment. */
       segment = ik_mmap(size);
+    }
   } else {
     segment = ik_mmap(size);
   }
@@ -151,6 +164,9 @@ ik_mmap_data (ik_ulong size, int gen, ikpcb* pcb)
 ikptr
 ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
 {
+  /* EXPLAIN Why when allocating a code  object the first page is tagged
+     as code  and the subsequent pages  as data?  (Marco Maggi;  Thu Dec
+     12, 2013) */
   ikptr p = ik_mmap_typed(size, code_mt|gen, pcb);
   if (size > IK_PAGESIZE)
     set_segment_type(p+IK_PAGESIZE, size-IK_PAGESIZE, data_mt|gen, pcb);
@@ -167,7 +183,7 @@ ik_mmap_mixed (ik_ulong size, ikpcb* pcb)
 ikptr
 ik_mmap (ik_ulong size)
 {
-  ik_ulong pages   = (size + IK_PAGESIZE - 1) / IK_PAGESIZE;
+  ik_ulong pages   = IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(size);
   ik_ulong mapsize = pages * IK_PAGESIZE;
   total_allocated_pages += pages;
   // fprintf(stderr,
@@ -191,7 +207,7 @@ ik_mmap (ik_ulong size)
 void
 ik_munmap (ikptr mem, ik_ulong size)
 {
-  ik_ulong pages   = (size + IK_PAGESIZE - 1) / IK_PAGESIZE;
+  ik_ulong pages   = IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(size);
   ik_ulong mapsize = pages * IK_PAGESIZE;
   assert(size == mapsize);
   assert(((-IK_PAGESIZE) & (int)mem) == (int)mem);
@@ -332,7 +348,9 @@ ik_make_pcb (void)
   }
 
   /* Allocate  and initialise  the page  cache.  The  PCB references  an
-   * array of structures "ikpage" initialised as a linked list.
+   * array of  structures "ikpage" initialised  as a linked  list.  Such
+   * structures are used to reference allocated memory pages that are no
+   * more in use but might be recycled.
    *
    *          next            next
    *      -----------     -----------
@@ -390,16 +408,20 @@ ik_make_pcb (void)
    * The dirty vector
    * ----------------
    *
-   * The "dirty vector" is an array of "unsigned" integers, one for each
-   * memory page  allocated by  Vicare; given a  memory address  used by
-   * Vicare, it  is possible to  compute the index of  the corresponding
-   * slot in the dirty vector.  Each slot can be one of two states:
+   * The "dirty  vector" is an  array of "unsigned" integers  (which are
+   * meant to  be 32-bit words), one  for each memory page  allocated by
+   * Vicare; given  a memory address used  by Vicare, it is  possible to
+   * compute the  index of the  corresponding slot in the  dirty vector.
+   * Each slot can be one of two states:
    *
    *    0 -	The page is pure.
-   *   -1 -	The page is dirty: it has been mutated.
+   *   -1 -	The page is dirty: some Scheme object in it has been
+   *            mutated after the last garbage collection.
    *
    * such state is used by the garbage collector to decide which page to
-   * scan, see the function "scan_dirty_pages()".
+   * scan, see  the function "scan_dirty_pages()".  For  example: when a
+   * machine word location is  modified by "set-car!", the corresponding
+   * slot in the dirty vector is set to -1.
    *
    * Indexes in  the dirty vector  are *not* zero-based.  The  fields in
    * the PCB are:
@@ -428,12 +450,14 @@ ik_make_pcb (void)
    * The segment vector
    * ------------------
    *
-   * The "segment  vector" is an  array of "unsigned" integers,  one for
-   * each memory  segment allocated  by Vicare;  given a  memory address
-   * used  by  Vicare, it  is  possible  to  compute  the index  of  the
-   * corresponding slot in the  segment vector.  Each integer represents
-   * the  type of  usage Vicare  makes of  the page;  some of  the types
-   * (defined in the internal header file) are:
+   * The "segment vector" is an  array of "unsigned" integers (which are
+   * meant to  be 32-bit words), one  for each memory page  allocated by
+   * Vicare; given a memory address (tagged or untagged) used by Vicare,
+   * it is  possible to compute the  index of the corresponding  slot in
+   * the  segment vector.   Each integer  represents the  type of  usage
+   * Vicare makes  of the  page, the  garbage collection  generation the
+   * page is in, and other meta informations; some of the types (defined
+   * in the internal header file) are:
    *
    *   0            -	Unused memory.
    *   mainheap_mt  -	Scheme heap memory.
@@ -466,7 +490,7 @@ ik_make_pcb (void)
    */
   {
     ikptr	lo_mem, hi_mem;
-    ik_ulong	lo_seg,	hi_seg, vec_size;
+    ik_ulong	lo_seg,	hi_seg;
     if (pcb->heap_base < pcb->stack_base) {
       lo_mem = pcb->heap_base - IK_PAGESIZE;
       hi_mem = pcb->stack_base + pcb->stack_size + IK_PAGESIZE;
@@ -474,21 +498,41 @@ ik_make_pcb (void)
       lo_mem = pcb->stack_base - IK_PAGESIZE;
       hi_mem = pcb->heap_base + pcb->heap_size + IK_PAGESIZE;
     }
+    /* The page  index "lo_seg" is  the index  of the page  starting the
+     * first segment  (lowest address) of  used memory.  The  page index
+     * "hi_seg" is  the index of the  page right after the  last segment
+     * (highest address) of used memory.
+     *
+     *             segment        segment        segment
+     *        |--------------|--------------|--------------| used_memory
+     *    page page page page page page page page page page page
+     *   |----|----|----|----|----|----|----|----|----|----|----|
+     *         ^                                            ^
+     *         lo_seg                                       hi_seg
+     */
     lo_seg   = IK_SEGMENT_INDEX(lo_mem);
     hi_seg   = IK_SEGMENT_INDEX(hi_mem+IK_SEGMENT_SIZE-1);
-    vec_size = (hi_seg - lo_seg) * IK_PAGESIZE;
     {
-      ikptr	dvec = ik_mmap(vec_size);
-      bzero((char*)(long)dvec, vec_size);
-      pcb->dirty_vector_base   = (unsigned*)(long)dvec;
+      ik_ulong  dvec_size  = (hi_seg - lo_seg) * IK_DIRTY_VECTOR_SLOT_SIZE;
+      ikptr	dvec       = ik_mmap(dvec_size);
+      bzero((char*)dvec, dvec_size);
+      pcb->dirty_vector_base   = (unsigned*)dvec;
       pcb->dirty_vector        = (dvec - lo_seg * IK_PAGESIZE);
     }
     {
-      ikptr	svec = ik_mmap(vec_size);
-      bzero((char*)(long)svec, vec_size);
-      pcb->segment_vector_base = (unsigned*)(long)svec;
-      pcb->segment_vector      = (unsigned*)(long)(svec - lo_seg * IK_PAGESIZE);
+      ik_ulong  svec_size  = (hi_seg - lo_seg) * IK_SEGMENT_VECTOR_SLOT_SIZE;
+      ikptr	svec       = ik_mmap(svec_size);
+      bzero((char*)(long)svec, svec_size);
+      pcb->segment_vector_base = (unsigned*)svec;
+      pcb->segment_vector      = (unsigned*)(svec - lo_seg * IK_PAGESIZE);
     }
+    /* In the  whole system  memory we want  pointers to  delimiting the
+       interesting memory:
+
+          |---------------------------------------------| system_memory
+	         ^                        ^
+             memory_base              memory_end
+    */
     pcb->memory_base = (ikptr)(lo_seg * IK_SEGMENT_SIZE);
     pcb->memory_end  = (ikptr)(hi_seg * IK_SEGMENT_SIZE);
     set_segment_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
@@ -571,9 +615,12 @@ ik_delete_pcb (ikpcb* pcb)
       ik_munmap((ikptr)(i<<IK_PAGESHIFT), IK_PAGESIZE);
     }
   }
-  long vecsize = (IK_SEGMENT_INDEX(end) - IK_SEGMENT_INDEX(base)) * IK_PAGESIZE;
-  ik_munmap((ikptr)(long)pcb->dirty_vector_base, vecsize);
-  ik_munmap((ikptr)(long)pcb->segment_vector_base, vecsize);
+  ik_ulong	lo_seg   = IK_SEGMENT_INDEX(base);
+  ik_ulong	hi_seg   = IK_SEGMENT_INDEX(end);
+  ik_ulong	dvec_size = (hi_seg - lo_seg) * IK_DIRTY_VECTOR_SLOT_SIZE;
+  ik_ulong	svec_size = (hi_seg - lo_seg) * IK_SEGMENT_VECTOR_SLOT_SIZE;
+  ik_munmap((ikptr)(ik_ulong)pcb->dirty_vector_base,   dvec_size);
+  ik_munmap((ikptr)(ik_ulong)pcb->segment_vector_base, svec_size);
   ik_free(pcb, sizeof(ikpcb));
 }
 

@@ -262,6 +262,10 @@
       #include <unistd.h>
       long pagesize = sysconf(_SC_PAGESIZE);
 
+   like it or not we have to live with the ambiguity of calling "page" a
+   quantity that  is actually the "allocation  granularity", rather than
+   the system page size.
+
      IK_PAGESHIFT is the  number of bits to right-shift  a pointer value
    to obtain the index of the page (of size IK_PAGESIZE) it is in; it is
    the number for which:
@@ -300,18 +304,36 @@
    computation of a lot of constants and structure sizes.
 */
 
-/* Given  a memory  SIZE in  bytes:  compute the  size in  bytes of  the
-   smallest memory  block allocated  by "mmap()"  that can  contain such
-   SIZE. */
+/* Given the pointer X or tagged pointer X: evaluate to the index of the
+   memory page it  is in; notice that  the tag bits of  a tagged pointer
+   are not  influent.
+
+   Given a  number of bytes  X: evaluate  to the difference  between two
+   page indexes representing a region big enough to hold X bytes.
+*/
+#define IK_PAGE_INDEX(X)   (((ik_ulong)(X)) >> IK_PAGESHIFT)
+
+/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+   number of pages of size IK_PAGESIZE needed to hold it. */
+#define IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(SIZE) \
+  (((SIZE) + IK_PAGESIZE - 1) / IK_PAGESIZE)
+
+/* Given a memory SIZE in bytes as "ik_ulong": compute the size in bytes
+   of the smallest  memory block allocated by "mmap()"  that can contain
+   such SIZE. */
 #define IK_MMAP_MINIMUM_ALLOCATION_SIZE_FOR(SIZE) \
-  ((((SIZE) + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE)
+  (IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(SIZE) * IK_PAGESIZE)
 
 /* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
 
    Memory for use by the Scheme program is allocated through "mmap()" in
    blocks called "segments".  A segment's size is a fixed constant which
    must  be  defined as  an  exact  multiple  of the  memory  allocation
-   granularity used  by "mmap()".
+   granularity  used  by  "mmap()";  we define  the  preprocessor  macro
+   IK_SEGMENT_SIZE to be such constant.
+
+     We assume  that: when "mmap()"  allocates a block of  segments, the
+   returned memory pointer
 
      On Unix  platforms we  expect mmap's  allocation granularity  to be
    4096; on Windows platforms, under Cygwin, we expect mmap's allocation
@@ -328,7 +350,27 @@
            = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
            = 4194304 bytes
 
-     For garbage collection purposes:
+     IK_SEGMENT_SHIFT is the number of  bits to right-shift a pointer or
+   tagged pointer to obtain the index  of the page (of size IK_PAGESIZE)
+   starting the  segment containing the  pointer itself.  If,  as simple
+   example, a segment is 3 pages wide:
+
+           SEGMENT        SEGMENT        SEGMENT
+      |--------------|--------------|--------------|
+       PAGE PAGE PAGE PAGE PAGE PAGE PAGE PAGE PAGE
+      |----|----|----|----|----|----|----|----|----|
+                             ^
+                             X
+      |----|----|----|----|----|----|----|----|----| page indexes
+        N   N+1  N+2  N+3  N+4  N+5  N+6  N+7  N+7
+
+      |----|----|----|----|----|----|----|----|----| page indexes
+        N             N+3            N+6             starting a segment
+
+    we have:
+
+       X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == N+4
+       X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == N+3
 */
 #ifndef __CYGWIN__
 #  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * 1024)
@@ -364,13 +406,6 @@
 
 #define IK_PTR_PAGE_SIZE \
   ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
-
-/* Given the pointer X or tagged pointer X: evaluate to the index of the
-   memory page  it is in; notice that  the tag bits of  a tagged pointer
-   are not  influent.  Given a  number of bytes  X evaluate to  an index
-   offset. */
-#define IK_PAGE_INDEX(x)   \
-  (((ik_ulong)(x)) >> IK_PAGESHIFT)
 
 /* Record in  the dirty vector the  side effect of mutating  the machine
    word at POINTER.   This will make the garbage collector  do the right
