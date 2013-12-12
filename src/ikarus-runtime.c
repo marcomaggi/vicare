@@ -43,11 +43,9 @@ static int total_allocated_pages = 0;
 static int total_malloced = 0;
 
 #if 0
-#define IK_DIRTY_VECTOR_SLOT_SIZE	sizeof(uint32_t)
-#define IK_SEGMENT_VECTOR_SLOT_SIZE	sizeof(uint32_t)
+#define IK_PAGE_VECTOR_SLOT_SIZE	sizeof(uint32_t)
 #else
-#define IK_DIRTY_VECTOR_SLOT_SIZE	IK_PAGESIZE
-#define IK_SEGMENT_VECTOR_SLOT_SIZE	IK_PAGESIZE
+#define IK_PAGE_VECTOR_SLOT_SIZE	IK_PAGESIZE
 #endif
 
 /* Must be multiple of IK_PAGESIZE. */
@@ -490,7 +488,7 @@ ik_make_pcb (void)
    */
   {
     ikptr	lo_mem, hi_mem;
-    ik_ulong	lo_seg,	hi_seg;
+    ik_ulong	lo_seg,	hi_seg, vec_size;
     if (pcb->heap_base < pcb->stack_base) {
       lo_mem = pcb->heap_base - IK_PAGESIZE;
       hi_mem = pcb->stack_base + pcb->stack_size + IK_PAGESIZE;
@@ -512,19 +510,20 @@ ik_make_pcb (void)
      */
     lo_seg   = IK_SEGMENT_INDEX(lo_mem);
     hi_seg   = IK_SEGMENT_INDEX(hi_mem+IK_SEGMENT_SIZE-1);
+    /* This  is the  size in  bytes  of both  the dirty  vector and  the
+       segments vector. */
+    vec_size = (hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOT_SIZE;
     {
-      ik_ulong  dvec_size  = (hi_seg - lo_seg) * IK_DIRTY_VECTOR_SLOT_SIZE;
-      ikptr	dvec       = ik_mmap(dvec_size);
-      bzero((char*)dvec, dvec_size);
+      ikptr	dvec = ik_mmap(vec_size);
+      bzero((char*)dvec, vec_size);
       pcb->dirty_vector_base   = (unsigned*)dvec;
-      pcb->dirty_vector        = (dvec - lo_seg * IK_PAGESIZE);
+      pcb->dirty_vector        = (unsigned*)(dvec - lo_seg * IK_PAGE_VECTOR_SLOT_SIZE);
     }
     {
-      ik_ulong  svec_size  = (hi_seg - lo_seg) * IK_SEGMENT_VECTOR_SLOT_SIZE;
-      ikptr	svec       = ik_mmap(svec_size);
-      bzero((char*)(long)svec, svec_size);
+      ikptr	svec = ik_mmap(vec_size);
+      bzero((char*)(long)svec, vec_size);
       pcb->segment_vector_base = (unsigned*)svec;
-      pcb->segment_vector      = (unsigned*)(svec - lo_seg * IK_PAGESIZE);
+      pcb->segment_vector      = (unsigned*)(svec - lo_seg * IK_PAGE_VECTOR_SLOT_SIZE);
     }
     /* In the  whole system  memory we want  pointers to  delimiting the
        interesting memory:
@@ -617,10 +616,9 @@ ik_delete_pcb (ikpcb* pcb)
   }
   ik_ulong	lo_seg   = IK_SEGMENT_INDEX(base);
   ik_ulong	hi_seg   = IK_SEGMENT_INDEX(end);
-  ik_ulong	dvec_size = (hi_seg - lo_seg) * IK_DIRTY_VECTOR_SLOT_SIZE;
-  ik_ulong	svec_size = (hi_seg - lo_seg) * IK_SEGMENT_VECTOR_SLOT_SIZE;
-  ik_munmap((ikptr)(ik_ulong)pcb->dirty_vector_base,   dvec_size);
-  ik_munmap((ikptr)(ik_ulong)pcb->segment_vector_base, svec_size);
+  ik_ulong	vec_size = (hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOT_SIZE;
+  ik_munmap((ikptr)(ik_ulong)pcb->dirty_vector_base,   vec_size);
+  ik_munmap((ikptr)(ik_ulong)pcb->segment_vector_base, vec_size);
   ik_free(pcb, sizeof(ikpcb));
 }
 
