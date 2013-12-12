@@ -76,7 +76,7 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
     filesize = buf.st_size;
   }
-  mapsize	= ((filesize + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE;
+  mapsize	= IK_MMAP_MINIMUM_ALLOCATION_SIZE_FOR(filesize);
   if (DEBUG_FASL)
     ik_debug_message("boot image: filesize=%d, mapsize=%d, pagesize=%d", filesize, mapsize, IK_PAGESIZE);
   mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
