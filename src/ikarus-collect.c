@@ -36,10 +36,6 @@
 #define cardsize		512
 #define cards_per_page		8
 
-#define minimum_heap_size (IK_PAGESIZE * 1024 * 4)
-#define maximum_heap_size (IK_PAGESIZE * 1024 * 8)
-#define minimum_stack_size (IK_PAGESIZE * 128)
-
 #define meta_ptrs	0
 #define meta_code	1
 #define meta_data	2
@@ -132,7 +128,7 @@ static unsigned int meta_mt[meta_count] = {
 };
 
 static unsigned int
-next_gen_tag[generation_count] = {
+next_gen_tag[IK_GC_GENERATION_COUNT] = {
   (4 << meta_dirty_shift) | 1 | new_gen_tag,
   (2 << meta_dirty_shift) | 2 | new_gen_tag,
   (1 << meta_dirty_shift) | 3 | new_gen_tag,
@@ -691,7 +687,7 @@ is_live (ikptr x, gc_t* gc)
 static inline int
 next_gen (int i)
 {
-  return ((i == (generation_count-1)) ? i : (i+1));
+  return ((i == (IK_GC_GENERATION_COUNT-1)) ? i : (i+1));
 }
 static ik_ptr_page *
 move_tconc (ikptr tc, ik_ptr_page* ls)
@@ -2064,7 +2060,7 @@ fix_weak_pointers(gc_t* gc) {
   }
 }
 
-static unsigned int dirty_mask[generation_count] = {
+static unsigned int dirty_mask[IK_GC_GENERATION_COUNT] = {
   0x88888888,
   0xCCCCCCCC,
   0xEEEEEEEE,
@@ -2073,7 +2069,7 @@ static unsigned int dirty_mask[generation_count] = {
 };
 
 
-static unsigned int cleanup_mask[generation_count] = {
+static unsigned int cleanup_mask[IK_GC_GENERATION_COUNT] = {
   0x00000000,
   0x88888888,
   0xCCCCCCCC,

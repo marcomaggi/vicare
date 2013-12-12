@@ -135,6 +135,7 @@
  ** ----------------------------------------------------------------- */
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
+#define IK_GC_GENERATION_COUNT	5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
 /* This  definition must  be  kept  in sync  with  the primitive  Scheme
    operation $FORWARD-PTR? */
@@ -233,40 +234,133 @@
 
 /* ------------------------------------------------------------------ */
 
-/* This must be 4096: never change it!!! */
+/* This constant  is defined as  4096 = 4 *  1024 = 2^10.   Never change
+   it!!! */
 #define IK_CHUNK_SIZE		4096
+#define IK_DOUBLE_CHUNK_SIZE	(2 * IK_CHUNK_SIZE)
 
-/* The IK_PAGESIZE  is used  to determine the  size of memory  blocks to
-   allocate with "mmap()".
+/* *** DISCUSSION ABOUT "IK_PAGESIZE" AND "IK_PAGESHIFT" ***
 
-   IK_PAGESHIFT is the number of  bits to right-shift a pointer value to
-   obtain the index of the page (of size IK_PAGESIZE) it is in.
+   The   preprocessor  constants   IK_PAGESIZE   and  IK_PAGESHIFT   are
+   determined by the "configure" script and defined in the automatically
+   generated header file "config.h".
 
-       4000 >> 12 = 0
-       8000 >> 12 = 1
-      10000 >> 12 = 2
+     The   constant  IK_PAGESIZE   represents   the  memory   allocation
+   granularity  used by  "mmap()":  no  matter the  number  of bytes  we
+   request to "mmap()", it will always allocate the smallest multiple of
+   IK_PAGESIZE that can contain the requested bytes:
 
-   The  value   12  for   pageshift  is  correct   for  a   pagesize  of
-   IK_CHUNK_SIZE.
+      |----------------------------| requested_size
+      |-----------|-----------|-----------| allocated_size
+       IK_PAGESIZE IK_PAGESIZE IK_PAGESIZE
+
+     On some platforms the allocation granularity equals the system page
+   size (example  GNU+Linux), on  other platforms  it does  not (example
+   Cygwin).  We assume the allocation granularity can be obtained on any
+   platform with:
+
+      #include <unistd.h>
+      long pagesize = sysconf(_SC_PAGESIZE);
+
+     IK_PAGESHIFT is the  number of bits to right-shift  a pointer value
+   to obtain the index of the page (of size IK_PAGESIZE) it is in; it is
+   the number for which:
+
+      IK_PAGESIZE >> IK_PAGESHIFT = 1
+
+   remembering   that  we   have  defined   the  preprocessor   constant
+   IK_CHUNK_SIZE to  be 4096, the  value 12 for IK_PAGESHIFT  is correct
+   for a IK_PAGESIZE equal to IK_CHUNK_SIZE:
 
       #define IK_PAGESIZE	IK_CHUNK_SIZE
       #define IK_PAGESHIFT	12
 
+   assuming such values we have:
+
+      0 * 4096 <=  4000 < 1 * 4096		 4000 >> 12 = 0
+      1 * 4096 <=  8000 < 2 * 4096		 8000 >> 12 = 1
+      2 * 4096 <= 10000 < 3 * 4096		10000 >> 12 = 2
+
+   while, if  we have IK_PAGESIZE =  2^16 = 65536 =  16 * IK_CHUNK_SIZE,
+   the values must be:
+
+      #define IK_PAGESIZE	(16 * IK_CHUNK_SIZE)
+      #define IK_PAGESHIFT	16
+
+   and assuming such values we have:
+
+      0 * 65536 <=  40000 < 1 * 65536		 40000 >> 16 = 0
+      1 * 65536 <=  80000 < 2 * 65536		 80000 >> 16 = 1
+      2 * 65536 <= 150000 < 3 * 65536		150000 >> 16 = 2
+
    These values  are determined by  the "configure" script,  because the
-   page size  is platform-dependent.  In  truth we should  determine the
-   page size at run time, but it would slow down computation of a lot of
-   constants and structure sizes. */
+   allocation  granularity is  platform-dependent.  In  truth we  should
+   determine the  granularity at run time  (because it seems that  it is
+   not a static system constant), but  doing it that way would slow down
+   computation of a lot of constants and structure sizes.
+*/
 
-#define generation_count	5  /* generations 0 (nursery), 1, 2, 3, 4 */
+/* Given  a memory  SIZE in  bytes:  compute the  size in  bytes of  the
+   smallest memory  block allocated  by "mmap()"  that can  contain such
+   SIZE. */
+#define IK_MMAP_MINIMUM_ALLOCATION_SIZE_FOR(SIZE) \
+  ((((SIZE) + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE)
 
-#define IK_HEAP_EXT_SIZE	(32 * IK_CHUNK_SIZE)
-#define IK_HEAPSIZE		(1024 * IK_CHUNK_SIZE * ((wordsize==4)?1:2)) /* 4/8 MB */
+/* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
 
-#define IK_STACKSIZE		(1024 * IK_CHUNK_SIZE)
-/* #define IK_STACKSIZE		(256 * IK_CHUNK_SIZE) */
+   Memory for use by the Scheme program is allocated through "mmap()" in
+   blocks called "segments".  A segment's size is a fixed constant which
+   must  be  defined as  an  exact  multiple  of the  memory  allocation
+   granularity used  by "mmap()".
 
-#define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
-#define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
+     On Unix  platforms we  expect mmap's  allocation granularity  to be
+   4096; on Windows platforms, under Cygwin, we expect mmap's allocation
+   granularity to be 2^16 = 65536.
+
+     Remembering  that   we  have  defined  the   preprocessor  constant
+   IK_CHUNK_SIZE to be 4096, and assuming:
+
+     1 mebibyte = 1 MiB = 2^20 bytes = 1024 * 1024 bytes = 1048576 bytes
+
+   we want the segment size to be 4 MiB:
+
+     4 MiB = 4 * 1024 * 1024 = 64 * 2^16 = 64 * 65536
+           = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
+           = 4194304 bytes
+
+     For garbage collection purposes:
+*/
+#ifndef __CYGWIN__
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * 1024)
+#  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
+#else
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * 1024)
+#  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
+#endif
+#define IK_SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> IK_SEGMENT_SHIFT)
+
+/* On  32-bit platforms  we take  4 MiB  as heap  size, while  on 64-bit
+   platforms we take  8 MiB.  On 64-bit platforms  pairs and vector-like
+   objects have double the size.
+
+   NOTE We  double the  heap size  on 64-bit  platforms because  of some
+   criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013)
+*/
+#define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((wordsize==4)?1:2))
+/* This  is the  minimum  number of  bytes we  allocate,  to enlarge  an
+   existing Scheme  heap, when we  need to perform an  unsafe allocation
+   and the  heap is  nearly full.   Let's keep it  an exact  multiple of
+   mmap's allocation granularity.
+*/
+#ifndef __CYGWIN__
+#  define IK_HEAP_EXTENSION_SIZE	(32 * IK_PAGESIZE)
+#else
+#  define IK_HEAP_EXTENSION_SIZE	 (2 * IK_PAGESIZE)
+#endif
+
+/* Only machine  words go on the  Scheme stack, no Scheme  objects data.
+   So we are content with a single segment for the stack. */
+#define IK_STACKSIZE		(IK_SEGMENT_SIZE)
 
 #define IK_PTR_PAGE_SIZE \
   ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
@@ -291,8 +385,14 @@
 #define IK_ALIGN_TO_PREV_PAGE(x) \
   ((((ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
+/* ------------------------------------------------------------------ */
+
+/* Assign RIGHT to LEFT, but evaluate RIGHT first. */
 #define IK_ASS(LEFT,RIGHT)	\
   { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
+
+#define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
+#define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
 
 
 /** --------------------------------------------------------------------
@@ -420,7 +520,7 @@ typedef struct ikpcb {
      holds  references  to  Scheme  values  that  must  not  be  garbage
      collected  even   when  they   are  not  referenced,   for  example
      guardians. */
-  ik_ptr_page*		protected_list[generation_count];
+  ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
   ik_uint *		dirty_vector_base;
   ik_uint *		segment_vector_base;
   ikptr			memory_base;
