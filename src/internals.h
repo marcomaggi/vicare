@@ -392,6 +392,7 @@
    word at POINTER.   This will make the garbage collector  do the right
    thing when objects in an old  generation reference objects in a young
    generation. */
+#define IK_PURE_WORD	0x00000000
 #define IK_DIRTY_WORD	0xFFFFFFFF
 #define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
   (((uint32_t *)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = IK_DIRTY_WORD)

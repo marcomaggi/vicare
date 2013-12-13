@@ -143,28 +143,32 @@ next_gen_tag[IK_GC_GENERATION_COUNT] = {
 
 static void
 ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
-/* Given  a  block of  memory  starting at  BASE  and  SIZE bytes  wide:
-
-   - Mark all its pages as "holes" in the segment vector.
-
-   - Mark all its pages as pure in the dirty vector.
-
-   - Either register it in the uncached pages or unmap it. */
+/* Given a block of memory starting at BASE and SIZE bytes wide:
+ *
+ * - Mark all its pages as "holes" in the segment vector.
+ *
+ * - Mark all its pages as pure in the dirty vector.
+ *
+ * - Either register it in the uncached pages or unmap it.
+ */
 {
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  {
-    unsigned *	segme = ((unsigned *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
-    unsigned *	dirty = ((unsigned *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
-    unsigned *	past  = segme + IK_PAGE_INDEX(size);
+  { /* Mark all the pages as holes in  the segment vector and as pure in
+       the dirty vector. */
+    uint32_t *	segme = ((uint32_t *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
+    uint32_t *	dirty = ((uint32_t *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
+    uint32_t *	past  = segme + IK_PAGE_INDEX_RANGE(size);
     for (; segme < past; ++segme, ++dirty) {
       assert(*segme != hole_mt);
       *segme = hole_mt;
-      *dirty = 0;
+      *dirty = IK_PURE_WORD;
     }
   }
-  {
+  { /* If possible: store  the pages referenced by BASE  in the uncached
+       pages  linked list,  but  without allocating  new  nodes for  the
+       linked list itself. */
     ikpage *	UNcache = pcb->uncached_pages;
     if (UNcache) {
       ikpage *	cache = pcb->cached_pages;
@@ -593,32 +597,36 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     } while(p);
     old_heap_pages = 0;
   }
-  unsigned long free_space =
-    ((unsigned long)pcb->allocation_redline) -
-    ((unsigned long)pcb->allocation_pointer);
-  if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
+  { /* Release the old nursery heap and allocate a new one. */
+    unsigned long free_space =
+      ((unsigned long)pcb->allocation_redline) -
+      ((unsigned long)pcb->allocation_pointer);
+    if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-    fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
+      fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
-    long	memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
-    long	new_heap_size;
-    ikptr	ptr;
-    memsize	  = IK_ALIGN_TO_NEXT_PAGE(memsize);
-    new_heap_size = memsize + 2 * IK_PAGESIZE;
-    ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-    ptr = ik_mmap_mixed(new_heap_size, pcb);
-    pcb->allocation_pointer = ptr;
-    pcb->allocation_redline = ptr+memsize;
-    pcb->heap_base = ptr;
-    pcb->heap_size = new_heap_size;
-  }
+      long	memsize;
+      long	new_heap_size;
+      ikptr	ptr;
+      memsize       = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+      memsize	    = IK_ALIGN_TO_NEXT_PAGE(memsize);
+      new_heap_size = memsize + 2 * IK_PAGESIZE;
+      /* Release the old nursery heap. */
+      ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
+      ptr = ik_mmap_mixed(new_heap_size, pcb);
+      pcb->allocation_pointer = ptr;
+      pcb->allocation_redline = ptr+memsize;
+      pcb->heap_base = ptr;
+      pcb->heap_size = new_heap_size;
+    }
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  { /* reset the free space to a magic number */
-    ikptr	x;
-    for (x = pcb->allocation_pointer; x < pcb->allocation_redline; x += wordsize)
-      ref(x, 0) = (ikptr)(0x1234FFFF);
-  }
+    { /* reset the free space to a magic number */
+      ikptr	x;
+      for (x = pcb->allocation_pointer; x < pcb->allocation_redline; x += wordsize)
+	ref(x, 0) = (ikptr)(0x1234FFFF);
+    }
 #endif
+    /* Finished allocating a new nursery heap. */ }
 #if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "exit");
 #endif
