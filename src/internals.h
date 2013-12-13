@@ -622,24 +622,37 @@ typedef struct ikpcb {
   uint32_t *		segment_vector;
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
+
   /* Pointer to  and number of  bytes of  the current heap  memory.  New
      objects are allocated here. */
   ikptr			heap_base;
   ik_ulong		heap_size;
-  /* Pointer to first node in  linked list of allocated memory segments.
-     Initialised to  NULL when building  the PCB.  Whenever  the current
-     heap is full  and an unsafe allocation is requested:  a new node is
-     prepended to the list, initialised  with the fields "heap_base" and
-     "heap_size"; this  way the old and  full heap is "stored  away" and
-     can be referenced later. */
+  /* Pointer  to the  first  node in  a linked  list  of mmapped  memory
+     blocks; initialised  to NULL when  building the PCB.   Whenever the
+     current heap is  full and an unsafe allocation is  requested: a new
+     node  is  prepended  to  the  list,  initialised  with  the  fields
+     "heap_base"  and "heap_size";  this way  the old  and full  heap is
+     "stored away" and can be referenced later. */
   ikpages *		heap_pages;
-  /* Linked list of cached pages so that we don't map/unmap. */
-  ikpage *		cached_pages;
-  /* Linked list of cached ikpages so that we don't malloc/free. */
-  ikpage *		uncached_pages;
-  /* Pointer to and size of the cached pages array. */
+
+  /* Pointer and  size of the cached  pages array: an array  of "ikpage"
+     structures,  each   being  a   node  in   a  simply   linked  list.
+     "cached_pages_base" also references the first "ikpage" structure in
+     the array, which is not the first in the list. */
   ikptr			cached_pages_base;
   int			cached_pages_size;
+  /* Pointer  to the  first  used  "ikpage" struct  in  the linked  list
+     referenced  by "cached_pages_base";  initialised to  NULL when  the
+     cache is empty.  This pointer is the starting point when we need to
+     visit  all the  cached  pages  (for example  to  release them),  it
+     references the first node in the list. */
+  ikpage *		cached_pages;
+  /* Pointer  to the  first  free  "ikpage" struct  in  the linked  list
+     referenced  by "cached_pages_base".   This  pointer references  the
+     next  "ikpage"  to  be  filled;  the  node  next  to  this  one  is
+     "cached_pages". */
+  ikpage *		uncached_pages;
+
   /* Pointer to and number of bytes of the current stack memory. */
   ikptr			stack_base;
   ik_ulong		stack_size;

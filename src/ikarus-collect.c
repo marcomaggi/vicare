@@ -166,9 +166,10 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
       *dirty = IK_PURE_WORD;
     }
   }
-  { /* If possible: store  the pages referenced by BASE  in the uncached
-       pages  linked list,  but  without allocating  new  nodes for  the
-       linked list itself. */
+  { /* If possible: store the pages referenced by BASE in PCB's uncached
+       pages  linked  list.  If  the  page  cache  is already  full:  do
+       nothing.  Remember that  the page cache has constant  size: it is
+       never enlarged. */
     ikpage *	UNcache = pcb->uncached_pages;
     if (UNcache) {
       ikpage *	cache = pcb->cached_pages;
