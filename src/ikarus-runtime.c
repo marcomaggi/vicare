@@ -39,18 +39,42 @@
  ** Prototypes and internal definitions.
  ** ----------------------------------------------------------------- */
 
+/* Total number of Vicare pages currently allocated with "ik_mmap()". */
 static int total_allocated_pages = 0;
+
+/* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
 /* Must be multiple of IK_PAGESIZE. */
 #define CACHE_SIZE		(IK_PAGESIZE * 1)
 
-static void set_segment_type   (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
-static void extend_table_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
+static void set_page_range_type(ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
+static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
- ** Basic memory mapping.
+ ** C language like memory allocation.
+ ** ----------------------------------------------------------------- */
+
+void *
+ik_malloc (int size)
+{
+  void* x = malloc(size);
+  if (NULL == x)
+    ik_abort("malloc failed: %s", strerror(errno));
+  total_malloced += size;
+  return x;
+}
+void
+ik_free (void* x, int size)
+{
+  total_malloced -= size;
+  free(x);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Scheme language memory allocation, basic memory mapping.
  ** ----------------------------------------------------------------- */
 
 ikptr
@@ -102,34 +126,34 @@ ik_munmap (ikptr mem, ik_ulong size)
 
 
 /** --------------------------------------------------------------------
- ** Memory mapping and segments tagging.
+ ** Memory mapping and tagging for garbage collection.
  ** ----------------------------------------------------------------- */
 
 ikptr
 ik_mmap_typed (ik_ulong size, uint32_t type, ikpcb* pcb)
 {
-  ikptr		segment;
+  ikptr		base;
   if (size == IK_PAGESIZE) {
     /* If available, recycle a page from the cache. */
     ikpage *	pages = pcb->cached_pages;
     if (pages) {
       /* Extract the first page from the linked list of cached pages. */
-      segment		  = pages->base;
+      base		  = pages->base;
       pcb->cached_pages	  = pages->next;
       /* Prepend  the extracted  page  to the  linked  list of  uncached
 	 pages. */
       pages->next	  = pcb->uncached_pages;
       pcb->uncached_pages = pages;
     } else {
-      /* No cached page available: allocate a new segment. */
-      segment = ik_mmap(size);
+      /* No cached page available: allocate a new page. */
+      base = ik_mmap(size);
     }
   } else {
-    segment = ik_mmap(size);
+    base = ik_mmap(size);
   }
-  extend_table_maybe(segment, size, pcb);
-  set_segment_type(segment, size, type, pcb);
-  return segment;
+  extend_page_vectors_maybe(base, size, pcb);
+  set_page_range_type(base, size, type, pcb);
+  return base;
 }
 ikptr
 ik_mmap_ptr (ik_ulong size, int gen, ikpcb* pcb)
@@ -149,7 +173,7 @@ ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
      12, 2013) */
   ikptr p = ik_mmap_typed(size, code_mt|gen, pcb);
   if (size > IK_PAGESIZE)
-    set_segment_type(p+IK_PAGESIZE, size-IK_PAGESIZE, data_mt|gen, pcb);
+    set_page_range_type(p+IK_PAGESIZE, size-IK_PAGESIZE, data_mt|gen, pcb);
   return p;
 }
 ikptr
@@ -159,7 +183,7 @@ ik_mmap_mixed (ik_ulong size, ikpcb* pcb)
   return ik_mmap_typed(size, mainheap_mt, pcb);
 }
 static void
-set_segment_type (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb)
+set_page_range_type (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb)
 /* Set to TYPE all the entries in "pcb->segment_vector" corresponding to
    the memory block starting at BASE and SIZE bytes wide. */
 {
@@ -175,12 +199,29 @@ set_segment_type (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb)
     *p = type;
 }
 static void
-extend_table_maybe (ikptr p, ik_ulong size, ikpcb* pcb)
+extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
+/* For garbage  collection purposes we  keep track of every  Vicare page
+ * used by Scheme code in PCB's  dirty vector and segments vector.  When
+ * a new memory block is allocated we must check if such vectors need to
+ * be updated to reference it.
+ *
+ *   All the memory  used by Scheme code  must be in the  range from the
+ * PCB members"memory_base" and "memory_end":
+ *
+               Scheme used memory
+ *         |.......................|
+ *    |--------------------------------------------| system memory
+ *         ^                        ^
+ *      memory_base             memory_end
+ *
+ * the dirty vector and segments vector  contain a slot for each page in
+ * such range.
+ */
 {
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  ikptr q = p + size;
-  if (p < pcb->memory_base) {
-    ik_ulong new_lo_seg   = IK_SEGMENT_INDEX(p);
+  ikptr end_ptr = base_ptr + size;
+  if (base_ptr < pcb->memory_base) {
+    ik_ulong new_lo_seg   = IK_SEGMENT_INDEX(base_ptr);
     ik_ulong old_lo_seg   = IK_SEGMENT_INDEX(pcb->memory_base);
     ik_ulong hi_seg       = IK_SEGMENT_INDEX(pcb->memory_end); /* unchanged */
     ik_ulong new_vec_size = (hi_seg - new_lo_seg) * IK_PAGE_VECTOR_SLOT_SIZE;
@@ -206,10 +247,10 @@ extend_table_maybe (ikptr p, ik_ulong size, ikpcb* pcb)
       pcb->segment_vector      = (uint32_t *)(new_svec_base - new_lo_seg * IK_PAGE_VECTOR_SLOT_SIZE);
     }
     pcb->memory_base = new_lo_seg * IK_SEGMENT_SIZE;
-  } else if (q >= pcb->memory_end) {
+  } else if (end_ptr >= pcb->memory_end) {
     ik_ulong lo_seg       = IK_SEGMENT_INDEX(pcb->memory_base); /* unchanged */
     ik_ulong old_hi_seg   = IK_SEGMENT_INDEX(pcb->memory_end);
-    ik_ulong new_hi_seg   = IK_SEGMENT_INDEX(q+IK_SEGMENT_SIZE-1);
+    ik_ulong new_hi_seg   = IK_SEGMENT_INDEX(end_ptr + IK_SEGMENT_SIZE - 1);
     ik_ulong new_vec_size = (new_hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOT_SIZE;
     ik_ulong old_vec_size = (old_hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOT_SIZE;
     ik_ulong size_delta   = new_vec_size - old_vec_size;
@@ -234,23 +275,6 @@ extend_table_maybe (ikptr p, ik_ulong size, ikpcb* pcb)
     }
     pcb->memory_end = new_hi_seg * IK_SEGMENT_SIZE;
   }
-}
-
-
-void *
-ik_malloc (int size)
-{
-  void* x = malloc(size);
-  if (NULL == x)
-    ik_abort("malloc failed: %s", strerror(errno));
-  total_malloced += size;
-  return x;
-}
-void
-ik_free (void* x, int size)
-{
-  total_malloced -= size;
-  free(x);
 }
 
 
@@ -545,8 +569,8 @@ ik_make_pcb (void)
     */
     pcb->memory_base = (ikptr)(lo_seg_idx * IK_SEGMENT_SIZE);
     pcb->memory_end  = (ikptr)(hi_seg_idx * IK_SEGMENT_SIZE);
-    set_segment_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
-    set_segment_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
+    set_page_range_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
+    set_page_range_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
 #if 0
     fprintf(stderr, "\n*** Vicare debug:\n");
     fprintf(stderr, "*  pcb->heap_base  = #x%lX\n", pcb->heap_base);
@@ -905,7 +929,7 @@ ik_stack_overflow (ikpcb* pcb)
     kont->size = pcb->frame_base - pcb->frame_pointer - wordsize;
     kont->next = pcb->next_k;
     pcb->next_k = s_kont;
-    set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
+    set_page_range_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
     assert(0 != kont->size);
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
       /* Release the protection on the  first low-address memory page in
