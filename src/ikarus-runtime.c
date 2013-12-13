@@ -384,7 +384,9 @@ ik_make_pcb (void)
   }
 
   /* Allocate  and initialise  the page  cache.  The  PCB references  an
-   * array of  structures "ikpage" initialised  as a linked  list.  Such
+   * array of  structures "ikpage"  initialised as  a linked  list; such
+   * structures are all allocated contiguously in the same memory block;
+   * the  page cache  has  constant  size: it  is  never enlarged.   The
    * structures are used to reference allocated memory pages that are no
    * more in use but might be recycled.
    *
@@ -403,13 +405,17 @@ ik_make_pcb (void)
    * In the PCB:
    *
    * cached_pages_base -
-   *    Is a pointer to the first byte in the array.
+   *    Is a pointer to the first byte in the allocated array.
    *
    * cached_pages_size -
    *    Is the number of bytes allocated to the array.
    *
    * uncached_pages -
    *    Is a pointer to the first free "ikpage" struct.
+   *
+   * cached_pages  -
+   *    Is a pointer to the  first used "ikpage" struct.  Initialised to
+   *    NULL when the cache is empty.
    */
   {
     ikpage *	cur;
