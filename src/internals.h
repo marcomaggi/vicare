@@ -216,6 +216,9 @@
    computation of a lot of constants and structure sizes.
 */
 
+#define IK_PAGESIZE		IK_CHUNK_SIZE
+#define IK_PAGESHIFT		12
+
 /* Given the pointer X or tagged pointer X: evaluate to the index of the
    memory page it  is in; notice that  the tag bits of  a tagged pointer
    are not  influent. */
@@ -223,8 +226,6 @@
 /* Given a  number of bytes  X: evaluate  to the difference  between two
    page indexes representing a region big enough to hold X bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
-
-#define IK_MMAP_ALLOCATION_GRANULARITY	IK_PAGESIZE
 
 /* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
    number of bytes "mmap()" will allocate to hold it. */

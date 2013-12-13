@@ -240,10 +240,10 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
-VICARE_CHECK_PAGESIZE
-AC_DEFINE_UNQUOTED([IK_PAGESIZE],[$vicare_cv_pagesize],[Platform page size.])
-VICARE_CHECK_PAGESHIFT($vicare_cv_pagesize)
-AC_DEFINE_UNQUOTED([IK_PAGESHIFT],[$vicare_cv_pageshift],[Page shift bit count.])
+VICARE_CHECK_MMAP_ALLOCATION_GRANULARITY
+AC_DEFINE_UNQUOTED([IK_MMAP_ALLOCATION_GRANULARITY],
+  [$vicare_cv_mmap_allocation_granularity],
+  [Platform mmap allocation granularity.])
 
 dnl Declared obsolete by GNU Autoconf.
 dnl
