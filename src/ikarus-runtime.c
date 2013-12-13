@@ -376,7 +376,7 @@ ik_make_pcb (void)
        * This  configuration  must  be  repeated whenever  a  new  stack
        * segment is allocated because of detected stack overflow.
        */
-      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+      mprotect((void*)(ik_ulong)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE + IK_PAGESIZE;
     } else {
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE;
