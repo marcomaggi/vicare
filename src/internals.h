@@ -141,90 +141,90 @@
  *    |-----------|-----------|-----------| granularity_size
  *     granularity granularity granularity
  *
- * Notice that GRANULARITY is evaluateda multiple times!!!
+ * Notice that GRANULARITY is evaluated multiple times!!!
  */
 #define IK_SIZE_TO_GRANULARITY_SIZE(SIZE, GRANULARITY) \
   ((ik_ulong)(((((ik_ulong)(SIZE)) + GRANULARITY - 1) / GRANULARITY) * GRANULARITY))
 
-/* This constant  is defined as  4096 = 4 *  1024 = 2^10.   Never change
-   it!!! */
+/* This constant is defined as 4096 = 4 * 1024 = 4 * 2^10 = 2^12.  Never
+   change it!!! */
 #define IK_CHUNK_SIZE		4096
 #define IK_DOUBLE_CHUNK_SIZE	(2 * IK_CHUNK_SIZE)
 
 /* *** DISCUSSION ABOUT "IK_PAGESIZE" AND "IK_PAGESHIFT" ***
-
-   The   preprocessor  constants   IK_PAGESIZE   and  IK_PAGESHIFT   are
-   determined by the "configure" script and defined in the automatically
-   generated header file "config.h".
-
-     The   constant  IK_PAGESIZE   represents   the  memory   allocation
-   granularity  used by  "mmap()":  no  matter the  number  of bytes  we
-   request to "mmap()", it will always allocate the smallest multiple of
-   IK_PAGESIZE that can contain the requested bytes:
-
-      |----------------------------| requested_size
-      |-----------|-----------|-----------| allocated_size
-       IK_PAGESIZE IK_PAGESIZE IK_PAGESIZE
-
-     On some platforms the allocation granularity equals the system page
-   size (example  GNU+Linux), on  other platforms  it does  not (example
-   Cygwin).  We assume the allocation granularity can be obtained on any
-   platform with:
-
-      #include <unistd.h>
-      long pagesize = sysconf(_SC_PAGESIZE);
-
-   like it or not we have to live with the ambiguity of calling "page" a
-   quantity that  is actually the "allocation  granularity", rather than
-   the system page size.
-
-     IK_PAGESHIFT is the  number of bits to right-shift  a pointer value
-   to obtain the index of the page (of size IK_PAGESIZE) it is in; it is
-   the number for which:
-
-      IK_PAGESIZE >> IK_PAGESHIFT = 1
-
-   remembering   that  we   have  defined   the  preprocessor   constant
-   IK_CHUNK_SIZE to  be 4096, the  value 12 for IK_PAGESHIFT  is correct
-   for a IK_PAGESIZE equal to IK_CHUNK_SIZE:
-
-      #define IK_PAGESIZE	IK_CHUNK_SIZE
-      #define IK_PAGESHIFT	12
-
-   assuming such values we have:
-
-      0 * 4096 <=  4000 < 1 * 4096		 4000 >> 12 = 0
-      1 * 4096 <=  8000 < 2 * 4096		 8000 >> 12 = 1
-      2 * 4096 <= 10000 < 3 * 4096		10000 >> 12 = 2
-
-   while, if  we have IK_PAGESIZE =  2^16 = 65536 =  16 * IK_CHUNK_SIZE,
-   the values must be:
-
-      #define IK_PAGESIZE	(16 * IK_CHUNK_SIZE)
-      #define IK_PAGESHIFT	16
-
-   and assuming such values we have:
-
-      0 * 65536 <=  40000 < 1 * 65536		 40000 >> 16 = 0
-      1 * 65536 <=  80000 < 2 * 65536		 80000 >> 16 = 1
-      2 * 65536 <= 150000 < 3 * 65536		150000 >> 16 = 2
-
-   These values  are determined by  the "configure" script,  because the
-   allocation  granularity is  platform-dependent.  In  truth we  should
-   determine the  granularity at run time  (because it seems that  it is
-   not a static system constant), but  doing it that way would slow down
-   computation of a lot of constants and structure sizes.
-*/
-
+ *
+ * The    preprocessor   constant    IK_MMAP_ALLOCATION_GRANULARITY   is
+ * determined by the "configure" script and defined in the automatically
+ * generated  header file  "config.h".   The  constants IK_PAGESIZE  and
+ * IK_PAGESHIFT are hard-coded.
+ *
+ *   The constant  IK_MMAP_ALLOCATION_GRANULARITY represents  the memory
+ * allocation  granularity used  by "mmap()":  no matter  the number  of
+ * bytes we  request to "mmap()",  it will always allocate  the smallest
+ * multiple of the granularity that can contain the requested bytes:
+ *
+ *    |----------------------------| requested_size
+ *    |-----------|-----------|-----------| allocated_size
+ *     granularity granularity granularity
+ *
+ *   On some platforms the allocation granularity equals the system page
+ * size (example  GNU+Linux), on  other platforms  it does  not (example
+ * Cygwin).  We assume the allocation granularity can be obtained on any
+ * platform with:
+ *
+ *    #include <unistd.h>
+ *    long granularity = sysconf(_SC_PAGESIZE);
+ *
+ * which should "officially"  return the system page size,  but in truth
+ * it does not (see Cygwin's documentation).
+ *
+ *   To  mind its  own business,  Vicare defines  a "page  size" as  the
+ * preprocessor symbol IK_PAGESIZE, the number of bytes in Vicare's page
+ * size is 4096  = 4 * 1024 =  4 * 2^10 = 2^12 =  #x1000.  Vicare's page
+ * size is not defined to be equal to the system page size, but:
+ *
+ * - Most likely the system page size and Vicare's page size are equal.
+ *
+ * - We assume that in  any case the system page size is  equal to or an
+ *   exact multiple of Vicare's page size.
+ *
+ * - We assume  that "mmap()"  returns pointers  such that:  the pointer
+ *   references the first  byte of a system page, and  so also the first
+ *   byte of  a Vicare page;  the numeric address  of the pointer  is an
+ *   exact multiple of 4096 (the 12 least significant bits are zero).
+ *
+ * it is natural to assign a zero-based index to each Vicare page:
+ *
+ *       page     page     page     page     page     page
+ *    |--------|--------|--------|--------|--------|--------|
+ *     ^        ^        ^        ^        ^        ^
+ *    #x0000   #x1000   #x2000   #x3000   #x4000   #x5000
+ *    index 0  index 1  index 2  index 3  index 4  index 5
+ *
+ *   The  preprocessor symbol  IK_PAGESHIFT  is the  number  of bits  to
+ * right-shift a tagged  or untagged pointer to obtain the  index of the
+ * page it is in; it is the number for which:
+ *
+ *    IK_PAGESIZE >> IK_PAGESHIFT = 1
+ *    2^IK_PAGESHIFT = IK_PAGESIZE
+ *
+ * if IK_PAGESIZE is 4096, the value of IK_PAGESHIFT is 12; so we have:
+ *
+ *    0 * 4096 <=  4000 < 1 * 4096		 4000 >> 12 = 0
+ *    1 * 4096 <=  8000 < 2 * 4096		 8000 >> 12 = 1
+ *    2 * 4096 <= 10000 < 3 * 4096		10000 >> 12 = 2
+ *
+ */
 #define IK_PAGESIZE		IK_CHUNK_SIZE
 #define IK_PAGESHIFT		12
 
-/* Given the pointer X or tagged pointer X: evaluate to the index of the
-   memory page it  is in; notice that  the tag bits of  a tagged pointer
-   are not  influent. */
+/* Given the  tagged or untagged pointer  X as "ikptr": evaluate  to the
+   index of  the memory page  it is  in; notice that  the tag bits  of a
+   tagged pointer are not influent. */
 #define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
-/* Given a  number of bytes  X: evaluate  to the difference  between two
-   page indexes representing a region big enough to hold X bytes. */
+/* Given a number  of bytes X as "ik_ulong": evaluate  to the difference
+   between two page  indexes representing a region big enough  to hold X
+   bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
 
 /* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
@@ -242,6 +242,31 @@
 #define IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(NPAGES) \
   IK_MMAP_ALLOCATION_SIZE(((ik_ulong)(NPAGES)) * IK_PAGESIZE)
 
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the  page right after the one X belongs
+ * to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *                  ^   ^
+ *                  X   |
+ *                     returned_value
+ */
+#define IK_ALIGN_TO_NEXT_PAGE(X) \
+  ((((ik_ulong)(X) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the page X belongs to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *             ^    ^
+ *             |    X
+ *    returned_value
+ */
+#define IK_ALIGN_TO_PREV_PAGE(X) \
+  ((((ik_ulong)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+
 /* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
  *
  * Some  memory for  use  by  the Scheme  program  is allocated  through
@@ -252,9 +277,9 @@
  *
  *   On Unix  platforms we  expect mmap's  allocation granularity  to be
  * 4096; on Windows platforms, under Cygwin, we expect mmap's allocation
- * granularity to be 2^16 = 65536.  So the allocation granularity is not
- * always equal to the platform's system page size, and not always equal
- * to Vicare's page size.
+ * granularity to be 2^16 = 65536 = 16 * IK_PAGESIZE.  So the allocation
+ * granularity is  not always  equal to  the system  page size,  and not
+ * always equal to Vicare's page size.
  *
  *   Remembering  that   we  have  defined  the   preprocessor  constant
  * IK_CHUNK_SIZE to be 4096, and assuming:
@@ -279,10 +304,10 @@
  *   multiples  of  the  segment  size;   this  memory  is  composed  of
  *   "allocated segments".
  *
- * - We define a "logic segment" as a  region of memory whose size is an
- *   exact multiple of the segment size and whose starting address is an
- *   exact multiple of the segment size.   The segment size is 4 MiB so:
- *   a memory address referencing the first  byte of a logic segment has
+ * - We define  a "logic segment"  as a region  of memory whose  size is
+ *   equal to  the segment size and  whose starting address is  an exact
+ *   multiple of  the segment  size.  The  segment size is  4 MiB  so: a
+ *   memory address  referencing the first  byte of a logic  segment has
  *   the 22 least significant bits set  to zero; for example: the memory
  *   starting at address 0 is part of the first logic segment.
  *
@@ -307,8 +332,12 @@
  *
  *   IK_SEGMENT_SHIFT is the number of  bits to right-shift a pointer or
  * tagged pointer  to obtain the  index of the logic  segment containing
- * the pointer  itself.  If,  as simple  example, a  segment is  3 pages
- * wide:
+ * the pointer itself; it is the number for which:
+ *
+ *    IK_SEGMENT_SIZE >> IK_SEGMENT_SHIFT = 1
+ *    2^IK_SEGMENT_SHIFT = IK_SEGMENT_SIZE
+ *
+ * scenario:
  *
  *      logic segment  logic segment  logic segment
  *    |--------------|--------------|--------------|
@@ -361,33 +390,9 @@
    word at POINTER.   This will make the garbage collector  do the right
    thing when objects in an old  generation reference objects in a young
    generation. */
+#define IK_DIRTY_WORD	0xFFFFFFFF
 #define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
-  (((int32_t*)(long)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = -1)
-
-/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
- * referencing the first byte in the  page right after the one X belongs
- * to.
- *
- *      page     page     page
- *   |--------|--------|--------|
- *                  ^   ^
- *                  X   |
- *                     returned_value
- */
-#define IK_ALIGN_TO_NEXT_PAGE(X) \
-  ((((ik_ulong)(X) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
-
-/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
- * referencing the first byte in the page X belongs to.
- *
- *      page     page     page
- *   |--------|--------|--------|
- *             ^    ^
- *             |    X
- *    returned_value
- */
-#define IK_ALIGN_TO_PREV_PAGE(X) \
-  ((((ik_ulong)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+  (((uint32_t *)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = IK_DIRTY_WORD)
 
 
 /** --------------------------------------------------------------------
