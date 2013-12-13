@@ -689,24 +689,14 @@ next_gen (int i)
 {
   return ((i == (IK_GC_GENERATION_COUNT-1)) ? i : (i+1));
 }
-static ik_ptr_page *
-move_tconc (ikptr tc, ik_ptr_page* ls)
-/* Store TC in the  first node of the linked list LS.   If LS is NULL or
-   the first node of  LS is full: allocate a new node  and prepend it to
-   LS; then store TC in it.  Return the, possibly new, first node of the
-   linked list. */
-{
-  if ((NULL == ls) || (IK_PTR_PAGE_SIZE == ls->count)) {
-    ik_ptr_page* page = (ik_ptr_page*)ik_mmap(IK_PAGESIZE);
-    page->count = 0;
-    page->next  = ls;
-    ls = page;
-  }
-  ls->ptr[ls->count++] = tc;
-  return ls;
-}
 
 
+/** --------------------------------------------------------------------
+ ** Guardians handling.
+ ** ----------------------------------------------------------------- */
+
+static ik_ptr_page *	move_tconc (ikptr tc, ik_ptr_page* ls);
+
 static void
 handle_guardians (gc_t* gc)
 {
@@ -849,6 +839,23 @@ gc_finalize_guardians (gc_t* gc)
     ik_munmap((ikptr)ls, IK_PAGESIZE);
     ls = next;
   }
+}
+
+static ik_ptr_page *
+move_tconc (ikptr tc, ik_ptr_page* ls)
+/* Store TC in the  first node of the linked list LS.   If LS is NULL or
+   the first node of  LS is full: allocate a new node  and prepend it to
+   LS; then store TC in it.  Return the, possibly new, first node of the
+   linked list. */
+{
+  if ((NULL == ls) || (IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS == ls->count)) {
+    ik_ptr_page* page = (ik_ptr_page*)ik_mmap(IK_PAGESIZE);
+    page->count = 0;
+    page->next  = ls;
+    ls = page;
+  }
+  ls->ptr[ls->count++] = tc;
+  return ls;
 }
 
 
