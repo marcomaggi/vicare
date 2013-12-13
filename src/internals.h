@@ -216,6 +216,7 @@
  *
  */
 #define IK_PAGESIZE		IK_CHUNK_SIZE
+#define IK_DOUBLE_PAGESIZE	IK_DOUBLE_CHUNK_SIZE
 #define IK_PAGESHIFT		12
 
 /* Given the  tagged or untagged pointer  X as "ikptr": evaluate  to the
@@ -378,8 +379,9 @@
    criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013) */
 #define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((wordsize==4)?1:2))
 /* When we  need to perform an  unsafe Scheme object allocation  and the
-   Scheme heap  is nearly full: this  is the minimum number  of bytes we
-   allocate to enlarge the heap. */
+   Scheme heap is nearly full: the old heap is stored away in the PCB; a
+   new memory block  of at least this size is  allocated and becomes the
+   new heap.  This happens without garbage collections. */
 #define IK_HEAP_EXTENSION_SIZE	IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(32)
 
 /* Only machine  words go on the  Scheme stack, no Scheme  objects data.
@@ -624,10 +626,12 @@ typedef struct ikpcb {
   ikptr			heap_base;
   ik_ulong		heap_size;
   /* Pointer to first node in  linked list of allocated memory segments.
-     Initialised to  NULL when building	 the PCB.  Whenever  the current
-     heap is full: a new node is prepended to the list, initialised with
-     the fields "heap_base" and "heap_size". */
-  ikpages*		heap_pages;
+     Initialised to  NULL when building  the PCB.  Whenever  the current
+     heap is full  and an unsafe allocation is requested:  a new node is
+     prepended to the list, initialised  with the fields "heap_base" and
+     "heap_size"; this  way the old and  full heap is "stored  away" and
+     can be referenced later. */
+  ikpages *		heap_pages;
   /* Linked list of cached pages so that we don't map/unmap. */
   ikpage *		cached_pages;
   /* Linked list of cached ikpages so that we don't malloc/free. */

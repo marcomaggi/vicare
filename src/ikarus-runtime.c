@@ -294,10 +294,10 @@ ik_make_pcb (void)
    *         |.....................................| heap size
    *
    * when a Scheme  object is allocated on the heap  and its end crosses
-   * the "red line": the current heap segment is stored away in a linked
-   * list referenced by the PCB, a new memory a segment is allocated and
-   * installed   as  Scheme   heap.   See   for  example   the  function
-   * "ik_unsafe_alloc()". */
+   * the "red  line": either a garbage  collection runs, or the  heap is
+   * enlarged.     See     the    functions     "ik_safe_alloc()"    and
+   * "ik_unsafe_alloc()".
+   */
   {
     pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
     pcb->heap_size          = IK_HEAPSIZE;
@@ -760,7 +760,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       ikptr	heap_ptr;
       ik_ulong	new_size = (requested_size > IK_HEAP_EXTENSION_SIZE)? \
 	requested_size : IK_HEAP_EXTENSION_SIZE;
-      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_CHUNK_SIZE);
+      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
       heap_ptr			= ik_mmap_mixed(new_size, pcb);
       pcb->heap_base		= heap_ptr;
       pcb->heap_size		= new_size;
