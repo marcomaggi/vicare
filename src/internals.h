@@ -131,108 +131,20 @@
 
 
 /** --------------------------------------------------------------------
- ** Constants and preprocessor operations.
+ ** Preprocessor definitions: memory pages and segments.
  ** ----------------------------------------------------------------- */
 
-#define IK_GUARDIANS_GENERATION_NUMBER	0
-#define IK_GC_GENERATION_COUNT	5  /* generations 0 (nursery), 1, 2, 3, 4 */
-
-/* This  definition must  be  kept  in sync  with  the primitive  Scheme
-   operation $FORWARD-PTR? */
-#define IK_FORWARD_PTR		((ikptr)-1)
-
-#define IK_MOST_BYTES_IN_MINOR	0x10000000
-
-#define old_gen_mask		0x00000007
-#define new_gen_mask		0x00000008
-#define gen_mask		0x0000000F
-#define new_gen_tag		0x00000008
-#define meta_dirty_mask		0x000000F0
-#define type_mask		0x00000F00
-#define scannable_mask		0x0000F000
-#define dealloc_mask		0x000F0000
-#define large_object_mask	0x00100000
-#define meta_dirty_shift	4
-
-#define hole_type		0x00000000
-#define mainheap_type		0x00000100
-#define mainstack_type		0x00000200
-#define pointers_type		0x00000300
-#define dat_type		0x00000400
-#define code_type		0x00000500
-#define weak_pairs_type		0x00000600
-#define symbols_type		0x00000700
-
-#define scannable_tag		0x00001000
-#define unscannable_tag		0x00000000
-
-#define dealloc_tag_un		0x00010000
-#define dealloc_tag_at		0x00020000
-#define retain_tag		0x00000000
-
-#define large_object_tag	0x00100000
-
-#define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
-#define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
-#define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
-#define pointers_mt	(pointers_type	 | scannable_tag   | dealloc_tag_un)
-#define symbols_mt	(symbols_type	 | scannable_tag   | dealloc_tag_un)
-#define data_mt		(dat_type	 | unscannable_tag | dealloc_tag_un)
-#define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
-
-/*
- * When compiling Scheme code to  executable machine code: to generate a
- * "call" instruction to  a Scheme function, we need to  follow both the
- * protocol for  handling multiple  return values,  and the  protocol to
- * expose  informations  about  the  caller's stack  frame  for  garbage
- * collection purposes.
+/* Given  a  SIZE  compute  and  return the  minimum  size  multiple  of
+ * GRANULARITY that can hold it.
  *
- * This means generating the following chunk of pseudo-assembly:
+ *    |----------------------------| size
+ *    |-----------|-----------|-----------| granularity_size
+ *     granularity granularity granularity
  *
- *     jmp L0
- *     livemask-bytes		;array of bytes             |
- *     framesize		;data word, a "long"        | call
- *     rp_offset		;data word, a fixnum        | table
- *     multi-value-rp		;data word, assembly label  |
- *     pad-bytes                                            |
- *   L0:
- *     call scheme-function-address
- *   single-value-rp:		;single value return point
- *     ... instructions...
- *   multi-value-rp:		;multi value return point
- *     ... instructions...
- *
- * and  remember that  "call" pushes  on the  stack the  return address,
- * which is the label SINGLE-VALUE-RP.
- *
- * If the  callee function returns a  single value: it puts  such in the
- * CPU's  ARGC-REGISTER  and  performs  a  "ret";  this  will  make  the
- * execution flow jump back to the entry point SINGLE-VALUE-RP.
- *
- * If the callee  function wants to return zero or  2 or more arguments:
- * it retrieves the address SINGLE-VALUE-RP  from the Scheme stack, adds
- * to  it   the  constant   DISP_MULTIVALUE_RP  obtaining   the  address
- * MULTI-VALUE-RP, then  it performs a "jmp"  directly to MULTI-VALUE-RP
- * (without popping the return address from the stack).
- *
- * The constant data values (computed  at compile time) right before the
- * "call" assembly  instruction are the  "call table": a  data structure
- * representing  informations  about  this  function  call.   Given  the
- * address SINGLE-VALUE-RP  we can access  the fields of the  call table
- * using the following offsets.
+ * Notice that GRANULARITY is evaluateda multiple times!!!
  */
-#define IK_CALL_INSTRUCTION_SIZE	((wordsize == 4) ? 5 : 10)
-#define disp_call_table_size		(- (IK_CALL_INSTRUCTION_SIZE + 3 * wordsize))
-#define disp_call_table_offset		(- (IK_CALL_INSTRUCTION_SIZE + 2 * wordsize))
-#define disp_multivalue_rp		(- (IK_CALL_INSTRUCTION_SIZE + 1 * wordsize))
-
-#define IK_CALLTABLE_FRAMESIZE(RETURN_ADDRESS)	\
-		((long)IK_REF((RETURN_ADDRESS),disp_call_table_size))
-#define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
-		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
-
-/* ------------------------------------------------------------------ */
+#define IK_SIZE_TO_GRANULARITY_SIZE(SIZE, GRANULARITY) \
+  ((ik_ulong)(((((ik_ulong)(SIZE)) + GRANULARITY - 1) / GRANULARITY) * GRANULARITY))
 
 /* This constant  is defined as  4096 = 4 *  1024 = 2^10.   Never change
    it!!! */
@@ -306,121 +218,288 @@
 
 /* Given the pointer X or tagged pointer X: evaluate to the index of the
    memory page it  is in; notice that  the tag bits of  a tagged pointer
-   are not  influent.
+   are not  influent. */
+#define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
+/* Given a  number of bytes  X: evaluate  to the difference  between two
+   page indexes representing a region big enough to hold X bytes. */
+#define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
 
-   Given a  number of bytes  X: evaluate  to the difference  between two
-   page indexes representing a region big enough to hold X bytes.
-*/
-#define IK_PAGE_INDEX(X)   (((ik_ulong)(X)) >> IK_PAGESHIFT)
+#define IK_MMAP_ALLOCATION_GRANULARITY	IK_PAGESIZE
+
+/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+   number of bytes "mmap()" will allocate to hold it. */
+#define IK_MMAP_ALLOCATION_SIZE(SIZE) \
+  IK_SIZE_TO_GRANULARITY_SIZE((SIZE), IK_MMAP_ALLOCATION_GRANULARITY)
 
 /* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
    number of pages of size IK_PAGESIZE needed to hold it. */
-#define IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(SIZE) \
-  (((SIZE) + IK_PAGESIZE - 1) / IK_PAGESIZE)
+#define IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(SIZE) \
+  (IK_SIZE_TO_GRANULARITY_SIZE((SIZE),IK_PAGESIZE) / IK_PAGESIZE)
 
-/* Given a memory SIZE in bytes as "ik_ulong": compute the size in bytes
-   of the smallest  memory block allocated by "mmap()"  that can contain
-   such SIZE. */
-#define IK_MMAP_MINIMUM_ALLOCATION_SIZE_FOR(SIZE) \
-  (IK_MMAP_MINIMUM_PAGES_NUMBER_FOR(SIZE) * IK_PAGESIZE)
+/* Given a  number of Vicare pages  as "ik_ulong": return the  number of
+   bytes "mmap()" allocates to hold them. */
+#define IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(NPAGES) \
+  IK_MMAP_ALLOCATION_SIZE(((ik_ulong)(NPAGES)) * IK_PAGESIZE)
 
 /* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
-
-   Memory for use by the Scheme program is allocated through "mmap()" in
-   blocks called "segments".  A segment's size is a fixed constant which
-   must  be  defined as  an  exact  multiple  of the  memory  allocation
-   granularity  used  by  "mmap()";  we define  the  preprocessor  macro
-   IK_SEGMENT_SIZE to be such constant.
-
-     We assume  that: when "mmap()"  allocates a block of  segments, the
-   returned memory pointer
-
-     On Unix  platforms we  expect mmap's  allocation granularity  to be
-   4096; on Windows platforms, under Cygwin, we expect mmap's allocation
-   granularity to be 2^16 = 65536.
-
-     Remembering  that   we  have  defined  the   preprocessor  constant
-   IK_CHUNK_SIZE to be 4096, and assuming:
-
-     1 mebibyte = 1 MiB = 2^20 bytes = 1024 * 1024 bytes = 1048576 bytes
-
-   we want the segment size to be 4 MiB:
-
-     4 MiB = 4 * 1024 * 1024 = 64 * 2^16 = 64 * 65536
-           = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
-           = 4194304 bytes
-
-     IK_SEGMENT_SHIFT is the number of  bits to right-shift a pointer or
-   tagged pointer to obtain the index  of the page (of size IK_PAGESIZE)
-   starting the  segment containing the  pointer itself.  If,  as simple
-   example, a segment is 3 pages wide:
-
-           SEGMENT        SEGMENT        SEGMENT
-      |--------------|--------------|--------------|
-       PAGE PAGE PAGE PAGE PAGE PAGE PAGE PAGE PAGE
-      |----|----|----|----|----|----|----|----|----|
-                             ^
-                             X
-      |----|----|----|----|----|----|----|----|----| page indexes
-        N   N+1  N+2  N+3  N+4  N+5  N+6  N+7  N+7
-
-      |----|----|----|----|----|----|----|----|----| page indexes
-        N             N+3            N+6             starting a segment
-
-    we have:
-
-       X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == N+4
-       X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == N+3
-*/
+ *
+ * Some  memory for  use  by  the Scheme  program  is allocated  through
+ * "mmap()" in  blocks called "segments".   A segment's size is  a fixed
+ * constant which  must be defined  as an  exact multiple of  the memory
+ * allocation granularity  used by "mmap()"; we  define the preprocessor
+ * macro IK_SEGMENT_SIZE to be such constant.
+ *
+ *   On Unix  platforms we  expect mmap's  allocation granularity  to be
+ * 4096; on Windows platforms, under Cygwin, we expect mmap's allocation
+ * granularity to be 2^16 = 65536.  So the allocation granularity is not
+ * always equal to the platform's system page size, and not always equal
+ * to Vicare's page size.
+ *
+ *   Remembering  that   we  have  defined  the   preprocessor  constant
+ * IK_CHUNK_SIZE to be 4096, and assuming:
+ *
+ *   1 mebibyte = 1 MiB = 2^20 bytes = 1024 * 1024 bytes = 1048576 bytes
+ *
+ * we want the segment size to be 4 MiB:
+ *
+ *   4 MiB = 4 * 1024 * 1024 = 64 * 2^16 = 64 * 65536
+ *         = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
+ *         = 2^22 = 4194304 bytes
+ *
+ *   Vicare   distinguishes  among   "allocated  segments"   and  "logic
+ * segments":
+ *
+ * - We assume  that "mmap()"  returns pointers  such that:  the pointer
+ *   references the first byte of  a platform's system page; the numeric
+ *   address of the  pointer is an exact multiple of  4096 (the 12 least
+ *   significant bits  are zero).
+ *
+ * - We  request  to "mmap()"  to  allocate  memory  in sizes  that  are
+ *   multiples  of  the  segment  size;   this  memory  is  composed  of
+ *   "allocated segments".
+ *
+ * - We define a "logic segment" as a  region of memory whose size is an
+ *   exact multiple of the segment size and whose starting address is an
+ *   exact multiple of the segment size.   The segment size is 4 MiB so:
+ *   a memory address referencing the first  byte of a logic segment has
+ *   the 22 least significant bits set  to zero; for example: the memory
+ *   starting at address 0 is part of the first logic segment.
+ *
+ * so, typically, allocated segments are displaced from logic segments:
+ *
+ *           alloc segment  alloc segment  alloc segment
+ *    -----|--------------|--------------|--------------|----------
+ *      logic segment  logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|--------------|
+ *     page page page page page page page page page page page page
+ *    |----|----|----|----|----|----|----|----|----|----|----|----|
+ *
+ * logic segments are absolute portions of  the memory seen by a running
+ * system process.  It  is natural to assign a zero-based  index to each
+ * logic segment:
+ *
+ *      logic segment  logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|--------------|
+ *     ^              ^              ^              ^
+ *    #x000000       #x400000       #x800000       #xC00000
+ *    index 0        index 1        index 2        index 3
+ *
+ *   IK_SEGMENT_SHIFT is the number of  bits to right-shift a pointer or
+ * tagged pointer  to obtain the  index of the logic  segment containing
+ * the pointer  itself.  If,  as simple  example, a  segment is  3 pages
+ * wide:
+ *
+ *      logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|
+ *     page page page page page page page page page
+ *    |----|----|----|----|----|----|----|----|----|
+ *                           ^
+ *                           X
+ *    |----|----|----|----|----|----|----|----|----| page indexes
+ *      P   P+1  P+2  P+3  P+4  P+5  P+6  P+7  P+7
+ *
+ *    |----|----|----|----|----|----|----|----|----| segment indexes
+ *      S             S+1            S+2
+ *
+ *  we have:
+ *
+ *     X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == P+4
+ *     X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == S+1
+ */
+#define IK_NUMBER_OF_PAGES_PER_SEGMENT	1024
 #ifndef __CYGWIN__
-#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * 1024)
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * IK_NUMBER_OF_PAGES_PER_SEGMENT)
 #  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
 #else
-#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * 1024)
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * IK_NUMBER_OF_PAGES_PER_SEGMENT)
 #  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
 #endif
 #define IK_SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> IK_SEGMENT_SHIFT)
 
-/* On  32-bit platforms  we take  4 MiB  as heap  size, while  on 64-bit
-   platforms we take  8 MiB.  On 64-bit platforms  pairs and vector-like
-   objects have double the size.
+/* Slot size for both the PCB's dirty vector and the segments vector. */
+#define IK_PAGE_VECTOR_SLOT_SIZE	\
+  (sizeof(uint32_t) * IK_NUMBER_OF_PAGES_PER_SEGMENT)
+
+/* On 32-bit platforms  we allocate 4 MiB as heap  size, while on 64-bit
+   platforms  we  allocate  8  MiB.    On  64-bit  platforms  pairs  and
+   vector-like objects have double the size.
 
    NOTE We  double the  heap size  on 64-bit  platforms because  of some
-   criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013)
-*/
+   criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013) */
 #define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((wordsize==4)?1:2))
-/* This  is the  minimum  number of  bytes we  allocate,  to enlarge  an
-   existing Scheme  heap, when we  need to perform an  unsafe allocation
-   and the  heap is  nearly full.   Let's keep it  an exact  multiple of
-   mmap's allocation granularity.
-*/
-#ifndef __CYGWIN__
-#  define IK_HEAP_EXTENSION_SIZE	(32 * IK_PAGESIZE)
-#else
-#  define IK_HEAP_EXTENSION_SIZE	 (2 * IK_PAGESIZE)
-#endif
+/* When we  need to perform an  unsafe Scheme object allocation  and the
+   Scheme heap  is nearly full: this  is the minimum number  of bytes we
+   allocate to enlarge the heap. */
+#define IK_HEAP_EXTENSION_SIZE	IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(32)
 
 /* Only machine  words go on the  Scheme stack, no Scheme  objects data.
    So we are content with a single segment for the stack. */
 #define IK_STACKSIZE		(IK_SEGMENT_SIZE)
-
-#define IK_PTR_PAGE_SIZE \
-  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 
 /* Record in  the dirty vector the  side effect of mutating  the machine
    word at POINTER.   This will make the garbage collector  do the right
    thing when objects in an old  generation reference objects in a young
    generation. */
 #define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
-  (((int*)(long)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = -1)
+  (((int32_t*)(long)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = -1)
 
-#define IK_ALIGN_TO_NEXT_PAGE(x) \
-  (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the  page right after the one X belongs
+ * to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *                  ^   ^
+ *                  X   |
+ *                     returned_value
+ */
+#define IK_ALIGN_TO_NEXT_PAGE(X) \
+  ((((ik_ulong)(X) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
-#define IK_ALIGN_TO_PREV_PAGE(x) \
-  ((((ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the page X belongs to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *             ^    ^
+ *             |    X
+ *    returned_value
+ */
+#define IK_ALIGN_TO_PREV_PAGE(X) \
+  ((((ik_ulong)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: garbage collection stuff.
+ ** ----------------------------------------------------------------- */
+
+#define IK_GUARDIANS_GENERATION_NUMBER	0
+#define IK_GC_GENERATION_COUNT		5  /* generations 0 (nursery), 1, 2, 3, 4 */
+
+/* This  definition must  be  kept  in sync  with  the primitive  Scheme
+   operation $FORWARD-PTR? */
+#define IK_FORWARD_PTR		((ikptr)-1)
+
+#define IK_MOST_BYTES_IN_MINOR	0x10000000
+
+#define old_gen_mask		0x00000007
+#define new_gen_mask		0x00000008
+#define gen_mask		0x0000000F
+#define new_gen_tag		0x00000008
+#define meta_dirty_mask		0x000000F0
+#define type_mask		0x00000F00
+#define scannable_mask		0x0000F000
+#define dealloc_mask		0x000F0000
+#define large_object_mask	0x00100000
+#define meta_dirty_shift	4
+
+#define hole_type		0x00000000
+#define mainheap_type		0x00000100
+#define mainstack_type		0x00000200
+#define pointers_type		0x00000300
+#define dat_type		0x00000400
+#define code_type		0x00000500
+#define weak_pairs_type		0x00000600
+#define symbols_type		0x00000700
+
+#define scannable_tag		0x00001000
+#define unscannable_tag		0x00000000
+
+#define dealloc_tag_un		0x00010000
+#define dealloc_tag_at		0x00020000
+#define retain_tag		0x00000000
+
+#define large_object_tag	0x00100000
+
+#define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
+#define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
+#define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
+#define pointers_mt	(pointers_type	 | scannable_tag   | dealloc_tag_un)
+#define symbols_mt	(symbols_type	 | scannable_tag   | dealloc_tag_un)
+#define data_mt		(dat_type	 | unscannable_tag | dealloc_tag_un)
+#define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
+#define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
+
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: calling C from Scheme.
+ ** ----------------------------------------------------------------- */
+
+/*
+ * When compiling Scheme code to  executable machine code: to generate a
+ * "call" instruction to  a Scheme function, we need to  follow both the
+ * protocol for  handling multiple  return values,  and the  protocol to
+ * expose  informations  about  the  caller's stack  frame  for  garbage
+ * collection purposes.
+ *
+ * This means generating the following chunk of pseudo-assembly:
+ *
+ *     jmp L0
+ *     livemask-bytes		;array of bytes             |
+ *     framesize		;data word, a "long"        | call
+ *     rp_offset		;data word, a fixnum        | table
+ *     multi-value-rp		;data word, assembly label  |
+ *     pad-bytes                                            |
+ *   L0:
+ *     call scheme-function-address
+ *   single-value-rp:		;single value return point
+ *     ... instructions...
+ *   multi-value-rp:		;multi value return point
+ *     ... instructions...
+ *
+ * and  remember that  "call" pushes  on the  stack the  return address,
+ * which is the label SINGLE-VALUE-RP.
+ *
+ * If the  callee function returns a  single value: it puts  such in the
+ * CPU's  ARGC-REGISTER  and  performs  a  "ret";  this  will  make  the
+ * execution flow jump back to the entry point SINGLE-VALUE-RP.
+ *
+ * If the callee  function wants to return zero or  2 or more arguments:
+ * it retrieves the address SINGLE-VALUE-RP  from the Scheme stack, adds
+ * to  it   the  constant   DISP_MULTIVALUE_RP  obtaining   the  address
+ * MULTI-VALUE-RP, then  it performs a "jmp"  directly to MULTI-VALUE-RP
+ * (without popping the return address from the stack).
+ *
+ * The constant data values (computed  at compile time) right before the
+ * "call" assembly  instruction are the  "call table": a  data structure
+ * representing  informations  about  this  function  call.   Given  the
+ * address SINGLE-VALUE-RP  we can access  the fields of the  call table
+ * using the following offsets.
+ */
+#define IK_CALL_INSTRUCTION_SIZE	((wordsize == 4) ? 5 : 10)
+#define disp_call_table_size		(- (IK_CALL_INSTRUCTION_SIZE + 3 * wordsize))
+#define disp_call_table_offset		(- (IK_CALL_INSTRUCTION_SIZE + 2 * wordsize))
+#define disp_multivalue_rp		(- (IK_CALL_INSTRUCTION_SIZE + 1 * wordsize))
+
+#define IK_CALLTABLE_FRAMESIZE(RETURN_ADDRESS)	\
+		((long)IK_REF((RETURN_ADDRESS),disp_call_table_size))
+#define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
+		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
+
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: miscellaneous.
+ ** ----------------------------------------------------------------- */
 
 /* Assign RIGHT to LEFT, but evaluate RIGHT first. */
 #define IK_ASS(LEFT,RIGHT)	\
@@ -470,11 +549,17 @@ typedef struct ik_callback_locative {
   struct ik_callback_locative * next;	/* pointer to next link */
 } ik_callback_locative;
 
-/* Node in a linked list. */
+/* Node in a linked list used to store tagged pointers to guardians.  We
+   want  a  pointer  to  "ik_ptr_page"   to  reference  a  memory  block
+   IK_PAGESIZE wide; the first words of  such page are used by the first
+   members of the  data structure, while everything else is  used by the
+   array "ptr". */
+#define IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS \
+  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 typedef struct ik_ptr_page {
   long		count;
   struct ik_ptr_page* next;
-  ikptr		ptr[IK_PTR_PAGE_SIZE];
+  ikptr		ptr[IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS];
 } ik_ptr_page;
 
 /* For  more  documentation  on  the PCB  structure:  see  the  function
@@ -525,7 +610,7 @@ typedef struct ikpcb {
      callout. */
   int			last_errno;
 
-  ik_uint *		segment_vector;
+  uint32_t *		segment_vector;
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
   /* Pointer to  and number of  bytes of  the current heap  memory.  New
@@ -556,8 +641,8 @@ typedef struct ikpcb {
      collected  even   when  they   are  not  referenced,   for  example
      guardians. */
   ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
-  ik_uint *		dirty_vector_base;
-  ik_uint *		segment_vector_base;
+  uint32_t *		dirty_vector_base;
+  uint32_t *		segment_vector_base;
   ikptr			memory_base;
   ikptr			memory_end;
 
