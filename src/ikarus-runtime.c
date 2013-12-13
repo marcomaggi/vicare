@@ -423,6 +423,7 @@ ik_make_pcb (void)
       cur->next = prev;
       prev = cur;
     }
+    pcb->cached_pages   = NULL;
     pcb->uncached_pages = prev;
   }
 
@@ -619,14 +620,16 @@ ik_make_pcb (void)
 void
 ik_delete_pcb (ikpcb* pcb)
 {
-  ikpage* p = pcb->cached_pages;
-  pcb->cached_pages = 0;
-  pcb->uncached_pages = 0;
-  while (p) {
-    ik_munmap(p->base, IK_PAGESIZE);
-    p = p->next;
+  { /* Release the page cache. */
+    ikpage *	p = pcb->cached_pages;
+    while (p) {
+      ik_munmap(p->base, IK_PAGESIZE);
+      p = p->next;
+    }
+    pcb->cached_pages   = NULL;
+    pcb->uncached_pages = NULL;
+    ik_munmap(pcb->cached_pages_base, pcb->cached_pages_size);
   }
-  ik_munmap(pcb->cached_pages_base, pcb->cached_pages_size);
   {
     int i;
     for(i=0; i<IK_GC_GENERATION_COUNT; i++) {
