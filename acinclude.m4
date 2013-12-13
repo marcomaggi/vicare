@@ -406,6 +406,13 @@ int main (void)
     [whether the macro $1 is available])])
 
 dnl page
+AC_DEFUN([VICARE_CHECK_MMAP_ALLOCATION_GRANULARITY],
+  [AC_CACHE_CHECK([mmap allocation granularity],
+     [vicare_cv_mmap_allocation_granularity],
+     [AC_COMPUTE_INT([vicare_cv_mmap_allocation_granularity],[sysconf(_SC_PAGESIZE)],[
+       #include <unistd.h>
+     ],[vicare_cv_mmap_allocation_granularity=4096])])])
+
 AC_DEFUN([VICARE_CHECK_PAGESIZE],
   [AC_CACHE_CHECK([page size],
      [vicare_cv_pagesize],
