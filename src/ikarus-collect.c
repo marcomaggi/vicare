@@ -72,7 +72,7 @@ typedef struct gc_t {
   ikptr		tconc_ap;
   ikptr		tconc_ep;
   ikptr		tconc_base;
-  ikpages *	tconc_queue;
+  ikmemblock *	tconc_queue;
   ik_ptr_page *	forward_list;
 } gc_t;
 
@@ -369,7 +369,7 @@ add_to_collect_count(ikpcb* pcb, int bytes) {
 static void
 gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {
   if (gc->tconc_base) {
-    ikpages* p = ik_malloc(sizeof(ikpages));
+    ikmemblock* p = ik_malloc(sizeof(ikmemblock));
     p->base = gc->tconc_base;
     p->size = IK_PAGESIZE;
     p->next = gc->tconc_queue;
@@ -485,7 +485,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
-  ikpages *		old_heap_pages;
+  ikmemblock *		old_heap_pages;
   { /* initialise GC statistics */
     gettimeofday(&rt0, 0);
     getrusage(RUSAGE_SELF, &t0);
@@ -589,11 +589,11 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #endif
   /* delete all old heap pages */
   if (old_heap_pages) {
-    ikpages* p = old_heap_pages;
+    ikmemblock* p = old_heap_pages;
     do {
-      ikpages* next = p->next;
+      ikmemblock* next = p->next;
       ik_munmap_from_segment(p->base, p->size, pcb);
-      ik_free(p, sizeof(ikpages));
+      ik_free(p, sizeof(ikmemblock));
       p=next;
     } while(p);
     old_heap_pages = 0;
@@ -2309,7 +2309,7 @@ gc_add_tconcs(gc_t* gc) {
       p += 2*wordsize;
     }
   }
-  ikpages* qu = gc->tconc_queue;
+  ikmemblock* qu = gc->tconc_queue;
   while(qu) {
     ikptr p = qu->base;
     ikptr q = p + qu->size;
@@ -2317,8 +2317,8 @@ gc_add_tconcs(gc_t* gc) {
       add_one_tconc(pcb, p);
       p += 2*wordsize;
     }
-    ikpages* next = qu->next;
-    ik_free(qu, sizeof(ikpages));
+    ikmemblock* next = qu->next;
+    ik_free(qu, sizeof(ikmemblock));
     qu = next;
   }
 }

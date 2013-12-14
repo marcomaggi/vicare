@@ -533,17 +533,20 @@ typedef unsigned long long	ik_ullong;
 /* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
 typedef ik_ulong		ikptr;
 
+/* Node  in a  simply linked  list.  Used  to store  pointers to  memory
+   blocks of size IK_PAGESIZE.  */
 typedef struct ikpage {
   ikptr		 base;
   struct ikpage* next;
 } ikpage;
 
-/* Node for linked list of allocated pages. */
-typedef struct ikpages {
+/* Node in  a simply linked  list.  Used to  store pointers and  size of
+   memory blocks. */
+typedef struct ikmemblock {
   ikptr		base;
   int		size;
-  struct ikpages* next;
-} ikpages;
+  struct ikmemblock* next;
+} ikmemblock;
 
 /* Node in  a linked list  referencing all the generated  FFI callbacks.
    It is used  to allow the garbage collector not  to collect data still
@@ -630,7 +633,7 @@ typedef struct ikpcb {
      node  is  prepended  to  the  list,  initialised  with  the  fields
      "heap_base"  and "heap_size";  this way  the old  and full  heap is
      "stored away" and can be referenced later. */
-  ikpages *		heap_pages;
+  ikmemblock *		heap_pages;
 
   /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a
    * single memory  block; the array  is never reallocated: its  size is
