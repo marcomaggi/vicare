@@ -155,10 +155,11 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  { /* Mark all the pages as holes in  the segment vector and as pure in
-       the dirty vector. */
-    uint32_t *	segme = ((uint32_t *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
-    uint32_t *	dirty = ((uint32_t *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
+  /* Mark all the  pages as holes in  the segment vector and  as pure in
+     the dirty vector. */
+  {
+    uint32_t *	segme = ((uint32_t *)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
+    uint32_t *	dirty = ((uint32_t *)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
     uint32_t *	past  = segme + IK_PAGE_INDEX_RANGE(size);
     for (; segme < past; ++segme, ++dirty) {
       assert(*segme != hole_mt);
@@ -166,31 +167,34 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
       *dirty = IK_PURE_WORD;
     }
   }
-  { /* If possible: store the pages referenced by BASE in PCB's uncached
-       pages  linked  list.  If  the  page  cache  is already  full:  do
-       nothing.  Remember that  the page cache has constant  size: it is
-       never enlarged. */
-    ikpage *	UNcache = pcb->uncached_pages;
-    if (UNcache) {
-      ikpage *	cache = pcb->cached_pages;
-      ikpage *	next;
-      /* Split the BASE and SIZE block into cached pages. */
+  /* If  possible: store  the pages  referenced  by BASE  in PCB's  page
+     cache.  If the page cache is already full or we fill it: just unmap
+     the  leftover pages.   Remember that  the page  cache has  constant
+     size: it is never enlarged. */
+  {
+    ikpage *	free_cache_nodes = pcb->uncached_pages;
+    if (free_cache_nodes) {
+      ikpage *	used_cache_nodes = pcb->cached_pages;
+      ikpage *	next_free_node;
       do {
-	UNcache->base	= base;
-	next		= UNcache->next;
-	UNcache->next	= cache;
-	cache		= UNcache;
-	UNcache		= next;
-	base		+= IK_PAGESIZE;
-	size		-= IK_PAGESIZE;
-      } while (UNcache && size);
-      pcb->cached_pages   = cache;
-      pcb->uncached_pages = UNcache;
+	/* Split  the BASE  and SIZE  block  into cached  pages.  Pop  a
+	   struct from "free_cached_nodes", store  a pointer to the page
+	   in the struct, push the struct in "used_cache_nodes". */
+	free_cache_nodes->base	= base;
+	next_free_node		= free_cache_nodes->next;
+	free_cache_nodes->next	= used_cache_nodes;
+	used_cache_nodes	= free_cache_nodes;
+	free_cache_nodes	= next_free_node;
+	base			+= IK_PAGESIZE;
+	size			-= IK_PAGESIZE;
+      } while (free_cache_nodes && size);
+      pcb->cached_pages   = used_cache_nodes;
+      pcb->uncached_pages = free_cache_nodes;
     }
+    /* Unmap the leftovers. */
+    if (size)
+      ik_munmap(base, size);
   }
-  /* Unmap the leftovers. */
-  if (size)
-    ik_munmap(base, size);
 }
 
 
