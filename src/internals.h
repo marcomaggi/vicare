@@ -597,6 +597,22 @@ typedef struct ikpcb {
    * support the runtime system (GC, etc.)
    */
 
+  /* Additional roots for the garbage collector.  They are used to avoid
+     collecting objects  still in use while  they are in use  by C code.
+     DO NOT MOVE THEM AROUND!!!  These fields must match the ones in the
+     "ikpcb" struct defined in "vicare.h" */
+  ikptr*		root0;
+  ikptr*		root1;
+  ikptr*		root2;
+  ikptr*		root3;
+  ikptr*		root4;
+  ikptr*		root5;
+  ikptr*		root6;
+  ikptr*		root7;
+  ikptr*		root8;
+  ikptr*		root9;
+
+
   /* Untagged  pointers updated  (if needed)  after every  memory mapped
      allocation to  be lower  and greater  than all  the memory  used by
      Scheme programs.   They are  used for garbage  collection purposes.
@@ -748,19 +764,6 @@ typedef struct ikpcb {
   int			cached_pages_size;
   ikpage *		cached_pages;
   ikpage *		uncached_pages;
-
-  /* Additional roots for the garbage collector.  They are used to avoid
-     collecting objects still in use while they are in use by C code. */
-  ikptr*		root0;
-  ikptr*		root1;
-  ikptr*		root2;
-  ikptr*		root3;
-  ikptr*		root4;
-  ikptr*		root5;
-  ikptr*		root6;
-  ikptr*		root7;
-  ikptr*		root8;
-  ikptr*		root9;
 
   /* The value of "argv[0]" as handed to the "main()" function. */
   char *		argv0;
