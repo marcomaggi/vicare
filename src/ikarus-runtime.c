@@ -45,12 +45,6 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
-/* Must be multiple of IK_PAGESIZE. */
-#define IK_PAGE_CACHE_NUM_OF_SLOTS	(IK_PAGESIZE * 1)
-#define IK_PAGE_CACHE_SIZE_IN_BYTES	\
-  (IK_PAGE_CACHE_NUM_OF_SLOTS * sizeof(ikpage))
-
-
 static void set_page_range_type(ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
 static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
 
