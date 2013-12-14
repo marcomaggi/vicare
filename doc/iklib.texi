@@ -7379,13 +7379,14 @@ time you read this may vary.
 @end deffn
 
 
-@deffn Procedure time-it @var{who} @var{thunk}
+@deffn Procedure time-it @var{message} @var{thunk}
 The procedure @func{time-it} takes a datum denoting the name of the
 computation and a thunk (i.e. a procedure with no arguments), invokes
 the thunk, prints the stats, and returns the values obtained from
-invoking the thunk.  If the value of @var{who} is non--false, @var{who}
-is used when displaying the run--time statistics.  If the value of
-@var{who} is @false{}, then no name for the computation is displayed.
+invoking the thunk.  If the value of @var{message} is true,
+@var{message} is used when displaying the run--time statistics; if the
+value of @var{message} is @false{}, then no name for the computation is
+displayed.
 
 @example
 > (time-it "a very fast computation"
