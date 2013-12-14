@@ -725,27 +725,33 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
   ikptr alloc_ptr       = pcb->allocation_pointer;
   ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
   ikptr new_alloc_ptr   = alloc_ptr + requested_size;
-  /* If there  is room in the  current heap segment: update  the PCB and
-     return the offset. */
   if (new_alloc_ptr < end_ptr) {
+    /* There is  room in the  current heap  nursery: update the  PCB and
+       return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
     return alloc_ptr;
   } else {
-    /* No room in the current heap block: enlarge the heap by allocating
-       a new segment. */
+    /* No  room  in  the  current  heap nursery:  enlarge  the  heap  by
+       allocating new memory. */
     if (alloc_ptr) {
-      /* This is not the first heap segment allocation, so prepend a new
-	 "ikpages"  node to  the linked  list of  old heap  segments and
-	 initialise it with a reference to the current heap segment. */
+      /* This is not  the first heap block allocation, so  prepend a new
+	 "ikpages"  node to  the  linked  list of  old  heap blocks  and
+	 initialise it with a reference to the current heap block. */
       ikpages *	p = ik_malloc(sizeof(ikpages));
       p->base = pcb->heap_base;
       p->size = pcb->heap_size;
       p->next = pcb->heap_pages;
       pcb->heap_pages = p;
     }
-    { /* accounting */
-      long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
-      long minor = bytes + pcb->allocation_count_minor;
+    { /* Accounting.  We keep  count of all the bytes  allocated for the
+       * heap, so that:
+       *
+       *   total_allocated_bytes = \
+       *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
+       *     + pcb->allocation_count_minor
+       */
+      ik_ulong bytes = ((ik_ulong)pcb->allocation_pointer) - ((ik_ulong)pcb->heap_base);
+      ik_ulong minor = bytes + pcb->allocation_count_minor;
       while (minor >= IK_MOST_BYTES_IN_MINOR) {
 	minor -= IK_MOST_BYTES_IN_MINOR;
 	pcb->allocation_count_major++;
@@ -1196,9 +1202,9 @@ ikrt_stats_now (ikptr t, ikpcb* pcb)
   struct timeval s;
   gettimeofday(&s, 0);
   getrusage(RUSAGE_SELF, &r);
-  /* Do  not  change the  order  of the  fields!!!   It  must match  the
+  /* Do  not change  the  order  of the  fields!!!   It  must match  the
      implementation     of     the     record    type     "stats"     in
-     "scheme/ikarus.timer.ss". */
+     "scheme/ikarus.timer.sls". */
   IK_FIELD(t,  0) = IK_FIX(r.ru_utime.tv_sec);
   IK_FIELD(t,  1) = IK_FIX(r.ru_utime.tv_usec);
   IK_FIELD(t,  2) = IK_FIX(r.ru_stime.tv_sec);
@@ -1213,9 +1219,9 @@ ikrt_stats_now (ikptr t, ikpcb* pcb)
   IK_FIELD(t, 11) = IK_FIX(pcb->collect_rtime.tv_sec);
   IK_FIELD(t, 12) = IK_FIX(pcb->collect_rtime.tv_usec);
   { /* minor bytes */
-    long bytes_in_heap	= ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
-    long bytes		= bytes_in_heap + pcb->allocation_count_minor;
-    IK_FIELD(t, 13)	= IK_FIX(bytes);
+    ik_ulong bytes_in_heap	= ((ik_ulong)pcb->allocation_pointer) - ((ik_ulong)pcb->heap_base);
+    ik_ulong bytes		= bytes_in_heap + pcb->allocation_count_minor;
+    IK_FIELD(t, 13)		= IK_FIX(bytes);
   }
   /* major bytes */
   IK_FIELD(t, 14) = IK_FIX(pcb->allocation_count_major);
