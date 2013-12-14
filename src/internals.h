@@ -409,8 +409,6 @@
    operation $FORWARD-PTR? */
 #define IK_FORWARD_PTR		((ikptr)-1)
 
-#define IK_MOST_BYTES_IN_MINOR	0x10000000
-
 #define old_gen_mask		0x00000007
 #define new_gen_mask		0x00000008
 #define gen_mask		0x0000000F
@@ -619,7 +617,6 @@ typedef struct ikpcb {
      callout. */
   int			last_errno;
 
-  uint32_t *		segment_vector;
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
 
@@ -665,10 +662,30 @@ typedef struct ikpcb {
      collected  even   when  they   are  not  referenced,   for  example
      guardians. */
   ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
-  uint32_t *		dirty_vector_base;
-  uint32_t *		segment_vector_base;
+
+  /* Untagged pointers updated (if needed) after every memory allocation
+     to  be  lower and  greater  than  all  the  memory used  by  Scheme
+     programs.  They are used for garbage collection purposes. */
   ikptr			memory_base;
   ikptr			memory_end;
+
+  /* The segments  vector contains a slot  for every Vicare page  in the
+     region  of  memory  delimited   by  the  fields  "memory_base"  and
+     "memory_end"; it is  used to register the destination  use of every
+     page: heap,  stack, unused, etc.   "segment_vector_base" references
+     the  first allocated  slot; access  to the  vector with  zero-based
+     indexes is performed through "segment_vector". */
+  uint32_t *		segment_vector_base;
+  uint32_t *		segment_vector;
+
+  /* The  dirty vector  contains a  slot for  every Vicare  page in  the
+     region  of  memory  delimited   by  the  fields  "memory_base"  and
+     "memory_end"; it is  used to keep track of pages  that were mutated
+     at runtime.  This field references the first allocated slot; access
+     to  the vector  with zero-based  indexes is  performed through  the
+     field  "dirty_vector"   (which  is  also  accessible   from  Scheme
+     code). */
+  uint32_t *		dirty_vector_base;
 
   /* Number of garbage collections performed so far.  It is used: at the
      beginning of  a GC  run, to determine  which objects  generation to
@@ -676,6 +693,18 @@ typedef struct ikpcb {
      GCs where performed between two timestamps. */
   int			collection_id;
 
+  /* Memory  allocation accounting.   We  keep count  of  all the  bytes
+   * allocated for the heap, so that:
+   *
+   *   total_allocated_bytes = \
+   *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
+   *     + pcb->allocation_count_minor
+   *
+   * both  minor and  major  counters  must fit  into  a fixnum.   These
+   * counters  are   used  by  Scheme  procedures   like  "time-it"  and
+   * "time-and-gather".
+   */
+#define IK_MOST_BYTES_IN_MINOR	0x10000000
   int			allocation_count_minor;
   int			allocation_count_major;
 
