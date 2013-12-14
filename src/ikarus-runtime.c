@@ -634,11 +634,11 @@ ik_delete_pcb (ikpcb* pcb)
   }
   ikptr     base        = pcb->memory_base;
   ikptr     end         = pcb->memory_end;
-  unsigned* segment_vec = pcb->segment_vector;
+  uint32_t* segment_vec = pcb->segment_vector;
   long i = IK_PAGE_INDEX(base);
   long j = IK_PAGE_INDEX(end);
   for (; i < j; ++i) {
-    unsigned t = segment_vec[i];
+    uint32_t t = segment_vec[i];
     if (t != hole_mt) {
       ik_munmap((ikptr)(i<<IK_PAGESHIFT), IK_PAGESIZE);
     }
