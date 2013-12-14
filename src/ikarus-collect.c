@@ -841,8 +841,8 @@ gc_finalize_guardians (gc_t* gc)
       ref(p, off_car) = IK_FALSE_OBJECT;
       ref(p, off_cdr) = IK_FALSE_OBJECT;
       ref(tc, off_cdr) = p;
-      dirty_vec[IK_PAGE_INDEX(tc)] = -1;
-      dirty_vec[IK_PAGE_INDEX(last_pair)] = -1;
+      dirty_vec[IK_PAGE_INDEX(tc)]        = IK_DIRTY_WORD;
+      dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
     }
     ik_ptr_page* next = ls->next;
     ik_munmap((ikptr)ls, IK_PAGESIZE);
@@ -2291,8 +2291,8 @@ add_one_tconc(ikpcb* pcb, ikptr p) {
   ref(new_pair, off_cdr) = IK_FALSE_OBJECT;
   ref(tc, off_cdr) = new_pair;
   ref(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
-  ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(tc)] = -1;
-  ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(d)] = -1;
+  ((uint32_t *)pcb->dirty_vector)[IK_PAGE_INDEX(tc)] = IK_DIRTY_WORD;
+  ((uint32_t *)pcb->dirty_vector)[IK_PAGE_INDEX(d)]  = IK_DIRTY_WORD;
 }
 
 static void
