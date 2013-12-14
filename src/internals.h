@@ -592,9 +592,10 @@ typedef struct ikpcb {
   ikptr	  base_rtd;		/* offset = 11 * wordsize, 32-bit offset = 44 */
   ikptr	  collect_key;		/* offset = 12 * wordsize, 32-bit offset = 48 */
 
-  /* ------------------------------------------------------------------ */
-  /* The  following fields are	not used  by any  scheme code  they only
-     support the runtime system (GC, etc.) */
+  /* -------------------------------------------------------------------
+   * The following  fields are  not used  by any  scheme code  they only
+   * support the runtime system (GC, etc.)
+   */
 
   /* Additional roots for the garbage collector.  They are used to avoid
      collecting objects still in use while they are in use by C code. */
@@ -624,16 +625,56 @@ typedef struct ikpcb {
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
 
-  /* Pointer to  and number of  bytes of  the current heap  memory.  New
-     objects are allocated here. */
+  /* Scheme objects  created by  a Scheem program  are allocated  on the
+   * heap.  We can think of the Scheme  heap as the union of the nursery
+   * and a set of generational pages.
+   *
+   *   The nursery is a set of memory blocks in which new Scheme objects
+   * are allocated; it  is the generation 0.  The nursery  starts with a
+   * single  "hot"  memory  block  in   which  new  Scheme  objects  are
+   * allocated; whenever the hot block is full:
+   *
+   * - If  a  safe allocation  is  requested:  a garbage  collection  is
+   *   performed and  all the objects are  moved from the heap  into the
+   *   generational pages.
+   *
+   * - If an  unsafe allocation is  requested: the current hot  block is
+   *   stored in  a linked list  of heap blocks and  a new hot  block is
+   *   allocated.
+   *
+   *   The generational pages  are a set of Vicare  pages, referenced by
+   * the segments vector, in which  objects are moved after they survive
+   * a  garbage collection;  every generational  page is  tagged in  the
+   * segments vector with the index of the generation it belongs to.
+   *
+   * heap_base -
+   * heap_size -
+   *     Pointer and  size in  bytes of the  current nursery  hot memory
+   *     block; new Scheme objects are allocated here.  Initialised to a
+   *     memory  mapped block  of size  IK_HEAPSIZE.
+   *       When the previous block is full: to satisfy the request of an
+   *     unsafe allocation  it is set to  a memory mapped block  of size
+   *     IK_HEAP_EXTENSION_SIZE.
+   *       After  a garbage  collection is  performed:  it is  set to  a
+   *     memory mapped block of size IK_HEAPSIZE.
+   *
+   * allocation_pointer -
+   *     Pointer to  the first word  of available  data in the  heap hot
+   *     memory block; the next Scheme object to be allocated will start
+   *     there.
+   *
+   * allocation_redline -
+   *     Pointer to  the a word towards  the end of the  heap hot memory
+   *     block;  when the  allocation of  a Scheme  object crosses  this
+   *     pointer, the hot block is considered full.
+   *
+   * heap_pages -
+   *     Pointer to  the first node  in a  linked list of  memory blocks
+   *     that  once were  nursery hot  memory, and  are now  fully used;
+   *     initialised to NULL when building the PCB.
+   */
   ikptr			heap_base;
   ik_ulong		heap_size;
-  /* Pointer  to the  first  node in  a linked  list  of mmapped  memory
-     blocks; initialised  to NULL when  building the PCB.   Whenever the
-     current heap is  full and an unsafe allocation is  requested: a new
-     node  is  prepended  to  the  list,  initialised  with  the  fields
-     "heap_base"  and "heap_size";  this way  the old  and full  heap is
-     "stored away" and can be referenced later. */
   ikmemblock *		heap_pages;
 
   /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a

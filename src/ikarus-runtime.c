@@ -165,9 +165,11 @@ ik_mmap_data (ik_ulong size, int gen, ikpcb* pcb)
 ikptr
 ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
 {
-  /* EXPLAIN Why when allocating a code  object the first page is tagged
-     as code  and the subsequent pages  as data?  (Marco Maggi;  Thu Dec
-     12, 2013) */
+  /* Why when allocating a code object  the first page is tagged as code
+     and the subsequent pages as data?  Because we know that the all the
+     slots  in  a code  object  containing  references to  other  Scheme
+     objects are in  the first page, so when garbage  collecting we need
+     to scan only the first page. */
   ikptr p = ik_mmap_typed(size, code_mt|gen, pcb);
   if (size > IK_PAGESIZE)
     set_page_range_type(p+IK_PAGESIZE, size-IK_PAGESIZE, data_mt|gen, pcb);
