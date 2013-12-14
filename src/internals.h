@@ -774,6 +774,43 @@ typedef struct ikpcb {
      callout. */
   int			last_errno;
 
+  /* Weak pairs storage.  Weak pairs  are different from normal pairs: a
+   * weak pair has a "weak" reference to  object in its car and a strong
+   * reference to object  in its cdr; when an object  is referenced only
+   * by the car of one or more weak pairs it can be garbage collected.
+   *
+   * The memory storage for weak pairs  is in Vicare pages referenced by
+   * the  segments  vector, and  tagged  there  as "weak  pairs  pages".
+   * Whenever such a page is full:  we just allocate a new one, register
+   * it in the segments vector, and store references to it in the PCB.
+   *
+   * weak_pairs_ap -
+   *     Pointer to the first free word  in the current weak pairs page.
+   *     The next  created weak pair  object will  be stored in  the two
+   *     words referenced by this pointer.
+   *
+   * weak_pairs_ep -
+   *
+   *     Pointer to  the first word right  after the end of  the current
+   *     weak  pairs  page.   Whenever  "weak_pairs_ap"  surpasses  this
+   *     pointer: the current page is full.
+   *
+   *   This is the allocation scenario, before:
+   *
+   *          used words          free words
+   *      |...............|...................|
+   *      |---|---|---|---|---|---|---|---|---|---| weak pairs page
+   *                       ^                   ^
+   *                  weak_pair_ap           weak_pair_ep
+   *
+   *   after:
+   *
+   *          used words           free words
+   *      |.......................|...........|
+   *      |---|---|---|---|---|---|---|---|---|---| weak pairs page
+   *                               ^           ^
+   *                          weak_pair_ap   weak_pair_ep
+   */
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
 

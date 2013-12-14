@@ -24,11 +24,18 @@ ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
   ikptr nap = ap + pair_size;
   ikptr p;
   if (nap > pcb->weak_pairs_ep) {
+    /* There is  NOT enough room  for a new  pair object in  the current
+       page storage  for weak pairs.   Allocate a new  page (registering
+       its use destination  in the segments vector) and  use it.  Notice
+       that the old page is already referenced by a slot in the segments
+       vector. */
     ikptr mem = ik_mmap_typed(IK_PAGESIZE, weak_pairs_mt, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
     pcb->weak_pairs_ep = mem + IK_PAGESIZE;
     p = mem | pair_tag;
   } else {
+    /* There is  enough room for a  new pair object in  the current page
+       storage for weak pairs. */
     pcb->weak_pairs_ap = nap;
     p = ap | pair_tag;
   }
@@ -42,8 +49,8 @@ ikrt_is_weak_pair (ikptr x, ikpcb* pcb)
   if (IK_TAGOF(x) != pair_tag)
     return IK_FALSE_OBJECT;
   else {
-    unsigned t = pcb->segment_vector[IK_PAGE_INDEX(x)];
-    return ((t & type_mask) == weak_pairs_type)? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+    uint32_t tag = pcb->segment_vector[IK_PAGE_INDEX(x)];
+    return ((tag & type_mask) == weak_pairs_type)? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
   }
 }
 
