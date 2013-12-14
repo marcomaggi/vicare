@@ -438,6 +438,7 @@
 
 #define large_object_tag	0x00100000
 
+/* Notice that "hole_mt" is zero. */
 #define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
 #define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
 #define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
@@ -689,10 +690,12 @@ typedef struct ikpcb {
   /* Pointer to and number of bytes of the current stack memory. */
   ikptr			stack_base;
   ik_ulong		stack_size;
+
   /* The hash table holding interned symbols. */
   ikptr			symbol_table;
   /* The hash table holding interned generated symbols. */
   ikptr			gensym_table;
+
   /* Array of linked lists; one for each GC generation.  The linked list
      holds  references  to  Scheme  values  that  must  not  be  garbage
      collected  even   when  they   are  not  referenced,   for  example
@@ -706,21 +709,38 @@ typedef struct ikpcb {
   ikptr			memory_end;
 
   /* The segments  vector contains a slot  for every Vicare page  in the
-     region  of  memory  delimited   by  the  fields  "memory_base"  and
-     "memory_end"; it is  used to register the destination  use of every
-     page: heap,  stack, unused, etc.   "segment_vector_base" references
-     the  first allocated  slot; access  to the  vector with  zero-based
-     indexes is performed through "segment_vector". */
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to register the destination  use of every
+   * page: heap, stack, unused, etc.
+   *
+   *   "segment_vector_base" references the first allocated slot; access
+   * to  the  vector  with   zero-based  indexes  is  performed  through
+   * "segment_vector".
+   *
+   *   Notice that the segments vector is *not* itself registered in the
+   * segments  vector and  dirty vector:  if the  segments vector  falls
+   * inside the  region delimited by "memory_base"  and "memory_end", it
+   * is marked as "hole" and "pure".
+   */
   uint32_t *		segment_vector_base;
   uint32_t *		segment_vector;
 
   /* The  dirty vector  contains a  slot for  every Vicare  page in  the
-     region  of  memory  delimited   by  the  fields  "memory_base"  and
-     "memory_end"; it is  used to keep track of pages  that were mutated
-     at runtime.  This field references the first allocated slot; access
-     to  the vector  with zero-based  indexes is  performed through  the
-     field  "dirty_vector"   (which  is  also  accessible   from  Scheme
-     code). */
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to keep track of pages  that were mutated
+   * at runtime.   This allows us  to do the  right thing when  a Scheme
+   * object in an old generation is mutated to reference a Scheme object
+   * in a new generation.
+   *
+   *   "dirty_vector_base" references  the first allocated  slot; access
+   * to  the vector  with zero-based  indexes is  performed through  the
+   * field "dirty_vector" (which is also accessible from Scheme code).
+   *
+   *   Notice that  the dirty vector  is *not* itself registered  in the
+   * segments vector and dirty vector:  if the dirty vector falls inside
+   * the  region  delimited by  "memory_base"  and  "memory_end", it  is
+   * marked as "hole" and "pure".
+   */
   uint32_t *		dirty_vector_base;
 
   /* Number of garbage collections performed so far.  It is used: at the
