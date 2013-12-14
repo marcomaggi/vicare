@@ -597,33 +597,49 @@ typedef struct ikpcb {
    * support the runtime system (GC, etc.)
    */
 
-  /* Additional roots for the garbage collector.  They are used to avoid
-     collecting objects still in use while they are in use by C code. */
-  ikptr*		root0;
-  ikptr*		root1;
-  ikptr*		root2;
-  ikptr*		root3;
-  ikptr*		root4;
-  ikptr*		root5;
-  ikptr*		root6;
-  ikptr*		root7;
-  ikptr*		root8;
-  ikptr*		root9;
+  /* Untagged  pointers updated  (if needed)  after every  memory mapped
+     allocation to  be lower  and greater  than all  the memory  used by
+     Scheme programs.   They are  used for garbage  collection purposes.
+     Every Vicare page between this range  of pointers is described by a
+     slot in the segments vector and the dirty vector. */
+  ikptr			memory_base;
+  ikptr			memory_end;
 
-  /* The value of "argv[0]" as handed to the "main()" function. */
-  char *		argv0;
+  /* The segments  vector contains a slot  for every Vicare page  in the
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to register the destination  use of every
+   * page (heap, stack, unused, etc.), along with the garbage collection
+   * generation the page belongs to.
+   *
+   *   "segment_vector_base" references the first allocated slot; access
+   * to  the  vector  with   zero-based  indexes  is  performed  through
+   * "segment_vector".
+   *
+   *   Notice that the segments vector is *not* itself registered in the
+   * segments  vector and  dirty vector:  if the  segments vector  falls
+   * inside the  region delimited by "memory_base"  and "memory_end", it
+   * is marked as "hole" and "pure".
+   */
+  uint32_t *		segment_vector_base;
+  uint32_t *		segment_vector;
 
-  /* Linked  list of  FFI callback  support data.   Used by  the garbage
-     collector	not  to collect	 data  still  needed  by some  callbacks
-     registered in data structures handled by foreign libraries. */
-  ik_callback_locative * callbacks;
-
-  /* Value of  "errno" right after the	last call to  a foreign function
-     callout. */
-  int			last_errno;
-
-  ikptr			weak_pairs_ap;
-  ikptr			weak_pairs_ep;
+  /* The  dirty vector  contains a  slot for  every Vicare  page in  the
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to keep track of pages  that were mutated
+   * at runtime; it allows us to do the right thing when a Scheme object
+   * in an old  generation is mutated to reference a  Scheme object in a
+   * new generation.
+   *
+   *   "dirty_vector_base" references  the first allocated  slot; access
+   * to  the vector  with zero-based  indexes is  performed through  the
+   * field "dirty_vector" (which is also accessible from Scheme code).
+   *
+   *   Notice that  the dirty vector  is *not* itself registered  in the
+   * segments vector and dirty vector:  if the dirty vector falls inside
+   * the  region  delimited by  "memory_base"  and  "memory_end", it  is
+   * marked as "hole" and "pure".
+   */
+  uint32_t *		dirty_vector_base;
 
   /* Scheme objects  created by  a Scheem program  are allocated  on the
    * heap.  We can think of the Scheme  heap as the union of the nursery
@@ -677,6 +693,11 @@ typedef struct ikpcb {
   ik_ulong		heap_size;
   ikmemblock *		heap_pages;
 
+  /* Pointer to and number of bytes of the current Scheme stack memory.
+   */
+  ikptr			stack_base;
+  ik_ulong		stack_size;
+
   /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a
    * single memory  block; the array  is never reallocated: its  size is
    * fixed; each struct is a node in  a simply linked list.  At run time
@@ -728,9 +749,33 @@ typedef struct ikpcb {
   ikpage *		cached_pages;
   ikpage *		uncached_pages;
 
-  /* Pointer to and number of bytes of the current stack memory. */
-  ikptr			stack_base;
-  ik_ulong		stack_size;
+  /* Additional roots for the garbage collector.  They are used to avoid
+     collecting objects still in use while they are in use by C code. */
+  ikptr*		root0;
+  ikptr*		root1;
+  ikptr*		root2;
+  ikptr*		root3;
+  ikptr*		root4;
+  ikptr*		root5;
+  ikptr*		root6;
+  ikptr*		root7;
+  ikptr*		root8;
+  ikptr*		root9;
+
+  /* The value of "argv[0]" as handed to the "main()" function. */
+  char *		argv0;
+
+  /* Linked  list of  FFI callback  support data.   Used by  the garbage
+     collector	not  to collect	 data  still  needed  by some  callbacks
+     registered in data structures handled by foreign libraries. */
+  ik_callback_locative * callbacks;
+
+  /* Value of  "errno" right after the	last call to  a foreign function
+     callout. */
+  int			last_errno;
+
+  ikptr			weak_pairs_ap;
+  ikptr			weak_pairs_ep;
 
   /* The hash table holding interned symbols. */
   ikptr			symbol_table;
@@ -742,47 +787,6 @@ typedef struct ikpcb {
      collected  even   when  they   are  not  referenced,   for  example
      guardians. */
   ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
-
-  /* Untagged pointers updated (if needed) after every memory allocation
-     to  be  lower and  greater  than  all  the  memory used  by  Scheme
-     programs.  They are used for garbage collection purposes. */
-  ikptr			memory_base;
-  ikptr			memory_end;
-
-  /* The segments  vector contains a slot  for every Vicare page  in the
-   * region  of  memory  delimited   by  the  fields  "memory_base"  and
-   * "memory_end"; it is  used to register the destination  use of every
-   * page: heap, stack, unused, etc.
-   *
-   *   "segment_vector_base" references the first allocated slot; access
-   * to  the  vector  with   zero-based  indexes  is  performed  through
-   * "segment_vector".
-   *
-   *   Notice that the segments vector is *not* itself registered in the
-   * segments  vector and  dirty vector:  if the  segments vector  falls
-   * inside the  region delimited by "memory_base"  and "memory_end", it
-   * is marked as "hole" and "pure".
-   */
-  uint32_t *		segment_vector_base;
-  uint32_t *		segment_vector;
-
-  /* The  dirty vector  contains a  slot for  every Vicare  page in  the
-   * region  of  memory  delimited   by  the  fields  "memory_base"  and
-   * "memory_end"; it is  used to keep track of pages  that were mutated
-   * at runtime.   This allows us  to do the  right thing when  a Scheme
-   * object in an old generation is mutated to reference a Scheme object
-   * in a new generation.
-   *
-   *   "dirty_vector_base" references  the first allocated  slot; access
-   * to  the vector  with zero-based  indexes is  performed through  the
-   * field "dirty_vector" (which is also accessible from Scheme code).
-   *
-   *   Notice that  the dirty vector  is *not* itself registered  in the
-   * segments vector and dirty vector:  if the dirty vector falls inside
-   * the  region  delimited by  "memory_base"  and  "memory_end", it  is
-   * marked as "hole" and "pure".
-   */
-  uint32_t *		dirty_vector_base;
 
   /* Number of garbage collections performed so far.  It is used: at the
      beginning of  a GC  run, to determine  which objects  generation to
