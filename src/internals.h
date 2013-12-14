@@ -672,6 +672,8 @@ typedef struct ikpcb {
    * from "cached_pages",  the pointer  to the  page extracted  from the
    * struct, the struct pushed on "uncached_pages".
    */
+#define IK_PAGE_CACHE_NUM_OF_SLOTS	(IK_PAGESIZE * 1)
+#define IK_PAGE_CACHE_SIZE_IN_BYTES	(IK_PAGE_CACHE_NUM_OF_SLOTS * sizeof(ikpage))
   ikptr			cached_pages_base;
   int			cached_pages_size;
   ikpage *		cached_pages;
