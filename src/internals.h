@@ -874,7 +874,10 @@ typedef struct ikpcb {
    store references to  to "ikptr" values in data  structures managed by
    foreign C language libraries. */
 
-#define IK_GC_AVOIDANCE_ARRAY_LEN	((4096/sizeof(void *)) - 1)
+#define IK_GC_AVOIDANCE_ARRAY_LEN \
+  ((IK_PAGESIZE - sizeof(ik_gc_avoidance_collection_t *))/sizeof(ikptr))
+
+//  ((IK_PAGESIZE/sizeof(void *)) - 1)
 
 typedef struct ik_gc_avoidance_collection_t	ik_gc_avoidance_collection_t;
 struct ik_gc_avoidance_collection_t {
