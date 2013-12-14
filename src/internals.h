@@ -368,7 +368,7 @@
 #define IK_SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> IK_SEGMENT_SHIFT)
 
 /* Slot size for both the PCB's dirty vector and the segments vector. */
-#define IK_PAGE_VECTOR_SLOT_SIZE	\
+#define IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT	\
   (sizeof(uint32_t) * IK_NUMBER_OF_PAGES_PER_SEGMENT)
 
 /* On 32-bit platforms  we allocate 4 MiB as heap  size, while on 64-bit
@@ -674,6 +674,10 @@ typedef struct ikpcb {
    *   When a cached  page needs to be used: the  first struct is popped
    * from "cached_pages",  the pointer  to the  page extracted  from the
    * struct, the struct pushed on "uncached_pages".
+   *
+   *   Notice that  the page cache  is *not* registered in  the segments
+   * vector:  if  the  array  falls   inside  the  region  delimited  by
+   * "memory_base" and "memory_end", it is marked as "hole".
    */
 #define IK_PAGE_CACHE_NUM_OF_SLOTS	(IK_PAGESIZE * 1)
 #define IK_PAGE_CACHE_SIZE_IN_BYTES	(IK_PAGE_CACHE_NUM_OF_SLOTS * sizeof(ikpage))
