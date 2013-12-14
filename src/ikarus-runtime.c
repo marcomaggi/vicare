@@ -213,6 +213,9 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
  *
  * the dirty vector and segments vector  contain a slot for each page in
  * such range.
+ *
+ * This function only  updates the tracked range of memory,  it does NOT
+ * tag the new memory in any way.
  */
 {
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
@@ -225,7 +228,9 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
     ik_ulong old_vec_size = (hi_seg - old_lo_seg) * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     ik_ulong size_delta   = new_vec_size - old_vec_size;
     { /* Allocate a new  dirty vector.  The old slots go  to the tail of
-	 the new vector; the head of the new vector is set to zero. */
+	 the new  vector; the  head of  the new vector  is set  to zero,
+	 which   means  the   corresponding   pages   are  marked   with
+	 IK_PURE_WORD. */
       ikptr	new_dvec_base = ik_mmap(new_vec_size);
       bzero((char*)new_dvec_base, size_delta);
       memcpy((char*)(new_dvec_base + size_delta), (char*)pcb->dirty_vector_base, old_vec_size);
@@ -234,8 +239,9 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
       pcb->dirty_vector      = new_dvec_base - new_lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     }
     { /* Allocate a new  segments vector.  The old slots go  to the tail
-	 of  the new  vector;  the head  of  the new  vector  is set  to
-	 zero. */
+	 of the new vector;  the head of the new vector  is set to zero,
+	 which   means  the   corresponding   pages   are  marked   with
+	 "hole_mt". */
       ikptr	new_svec_base = ik_mmap(new_vec_size);
       bzero((char*)new_svec_base, size_delta);
       memcpy((char*)(new_svec_base + new_vec_size - old_vec_size), (char*)(pcb->segment_vector_base), old_vec_size);
@@ -252,7 +258,9 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
     ik_ulong old_vec_size = (old_hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     ik_ulong size_delta   = new_vec_size - old_vec_size;
     { /* Allocate a new  dirty vector.  The old slots go  to the head of
-	 the new vector; the tail of the new vector is set to zero. */
+	 the new  vector; the  tail of  the new vector  is set  to zero,
+	 which   means  the   corresponding   pages   are  marked   with
+	 IK_PURE_WORD. */
       ikptr new_dvec_base = ik_mmap(new_vec_size);
       memcpy((char*)new_dvec_base, (char*)pcb->dirty_vector_base, old_vec_size);
       bzero((char*)(new_dvec_base + old_vec_size), size_delta);
@@ -261,8 +269,9 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
       pcb->dirty_vector      = new_dvec_base - lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     }
     { /* Allocate a new  segments vector.  The old slots go  to the head
-	 of  the new  vector;  the tail  of  the new  vector  is set  to
-	 zero. */
+	 of the new vector;  the tail of the new vector  is set to zero,
+	 which   means  the   corresponding   pages   are  marked   with
+	 "hole_mt". */
       ikptr new_svec_base = ik_mmap(new_vec_size);
       memcpy((char*)new_svec_base, (char*)pcb->segment_vector_base, old_vec_size);
       bzero((char*)(new_svec_base + old_vec_size), size_delta);
