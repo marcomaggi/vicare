@@ -614,7 +614,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
       new_heap_size = memsize + 2 * IK_PAGESIZE;
       /* Release the old nursery heap. */
       ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-      ptr = ik_mmap_mixed(new_heap_size, pcb);
+      ptr = ik_mmap_mainheap(new_heap_size, pcb);
       pcb->allocation_pointer = ptr;
       pcb->allocation_redline = ptr+memsize;
       pcb->heap_base = ptr;
