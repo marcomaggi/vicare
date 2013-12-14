@@ -46,7 +46,10 @@ static int total_allocated_pages = 0;
 static int total_malloced = 0;
 
 /* Must be multiple of IK_PAGESIZE. */
-#define CACHE_SIZE		(IK_PAGESIZE * 1)
+#define IK_PAGE_CACHE_NUM_OF_SLOTS	(IK_PAGESIZE * 1)
+#define IK_PAGE_CACHE_SIZE_IN_BYTES	\
+  (IK_PAGE_CACHE_NUM_OF_SLOTS * sizeof(ikpage))
+
 
 static void set_page_range_type(ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
 static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
@@ -177,7 +180,7 @@ ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
   return p;
 }
 ikptr
-ik_mmap_mixed (ik_ulong size, ikpcb* pcb)
+ik_mmap_mainheap (ik_ulong size, ikpcb* pcb)
 /* Allocate a memory segment tagged as part of the Scheme heap. */
 {
   return ik_mmap_typed(size, mainheap_mt, pcb);
@@ -302,7 +305,9 @@ ik_make_pcb (void)
     pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
     pcb->heap_size          = IK_HEAPSIZE;
     pcb->allocation_pointer = pcb->heap_base;
-    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - IK_DOUBLE_CHUNK_SIZE;
+    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - IK_DOUBLE_PAGESIZE;
+    /* Notice that below we will register the heap block in the segments
+       vector. */
   }
 
   /* The Scheme  stack grows  from high memory  addresses to  low memory
@@ -377,24 +382,23 @@ ik_make_pcb (void)
        * segment is allocated because of detected stack overflow.
        */
       mprotect((void*)(ik_ulong)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
-      pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE + IK_PAGESIZE;
+      pcb->frame_redline= pcb->stack_base + IK_DOUBLE_PAGESIZE + IK_PAGESIZE;
     } else {
-      pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE;
+      pcb->frame_redline= pcb->stack_base + IK_DOUBLE_PAGESIZE;
     }
+    /* Notice  that  below we  will  register  the  stack block  in  the
+       segments vector. */
   }
 
-  /* Allocate  and initialise  the page  cache.  The  PCB references  an
-   * array of  structures "ikpage"  initialised as  a linked  list; such
-   * structures are all allocated contiguously in the same memory block;
-   * the  page cache  has  constant  size: it  is  never enlarged.   The
-   * structures are used to reference allocated memory pages that are no
-   * more in use but might be recycled.
+  /* Allocate and  initialise the page  cache; see the  documentation of
+   * the PCB  struct for details.  We  link all the structs  in a linked
+   * list, from the last slot to the first.
    *
    *          next            next
    *      -----------     -----------
    *     |           |   |           |
    *     v           |   v           |
-   *   |---+---|---+---|---+---|---+---|---+---|
+   *   |---+---|---+---|---+---|---+---|---+---| allocated array
    *         |   ^           |   ^           |
    *         v   |           |   |           |
    *       NULL   -----------     -----------
@@ -402,29 +406,13 @@ ik_make_pcb (void)
    *   |.......|.......|.......|.......|.......|
    *    ikpage0 ikpage1 ikpage2 ikpage3 ikpage4
    *
-   * In the PCB:
-   *
-   * cached_pages_base -
-   *    Is a pointer to the first byte in the allocated array.
-   *
-   * cached_pages_size -
-   *    Is the number of bytes allocated to the array.
-   *
-   * uncached_pages -
-   *    Is a pointer to the first free "ikpage" struct.
-   *
-   * cached_pages  -
-   *    Is a pointer to the  first used "ikpage" struct.  Initialised to
-   *    NULL when the cache is empty.
    */
   {
-    ikpage *	cur;
-    ikpage *	past;
+    ikpage *	cur  = (ikpage*)ik_mmap(IK_PAGE_CACHE_SIZE_IN_BYTES);
+    ikpage *	past = cur + IK_PAGE_CACHE_NUM_OF_SLOTS;
     ikpage *	prev = NULL;
-    cur = (ikpage*)(long)ik_mmap(CACHE_SIZE * sizeof(ikpage));
-    pcb->cached_pages_base = (ikptr)(long)cur;
-    pcb->cached_pages_size = CACHE_SIZE * sizeof(ikpage);
-    past = cur + CACHE_SIZE;
+    pcb->cached_pages_base = (ikptr)cur;
+    pcb->cached_pages_size = IK_PAGE_CACHE_SIZE_IN_BYTES;
     for (; cur < past; ++cur) {
       cur->next = prev;
       prev = cur;
@@ -529,7 +517,6 @@ ik_make_pcb (void)
    * the first slot is *not* "segment_vector[0]", rather some expression
    * like "segment_vector[734]", where 734 is the value computed here in
    * "lo_seg_idx".
-   *
    */
   {
     ikptr	lo_mem, hi_mem;
@@ -576,8 +563,13 @@ ik_make_pcb (void)
     */
     pcb->memory_base = (ikptr)(lo_seg_idx * IK_SEGMENT_SIZE);
     pcb->memory_end  = (ikptr)(hi_seg_idx * IK_SEGMENT_SIZE);
+
+    /* Register  the heap  block and  the  stack block  in the  segments
+       vector.   We  do this  here,  after  having  set the  PCB  fields
+       "memory_base" and "memory_end". */
     set_page_range_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
     set_page_range_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
+
 #if 0
     fprintf(stderr, "\n*** Vicare debug:\n");
     fprintf(stderr, "*  pcb->heap_base  = #x%lX\n", pcb->heap_base);
@@ -628,9 +620,8 @@ ik_delete_pcb (ikpcb* pcb)
 {
   { /* Release the page cache. */
     ikpage *	p = pcb->cached_pages;
-    while (p) {
+    for (; p; p = p->next) {
       ik_munmap(p->base, IK_PAGESIZE);
-      p = p->next;
     }
     pcb->cached_pages   = NULL;
     pcb->uncached_pages = NULL;
@@ -776,7 +767,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       ik_ulong	new_size = (requested_size > IK_HEAP_EXTENSION_SIZE)? \
 	requested_size : IK_HEAP_EXTENSION_SIZE;
       new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
-      heap_ptr			= ik_mmap_mixed(new_size, pcb);
+      heap_ptr			= ik_mmap_mainheap(new_size, pcb);
       pcb->heap_base		= heap_ptr;
       pcb->heap_size		= new_size;
       pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;

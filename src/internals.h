@@ -632,22 +632,49 @@ typedef struct ikpcb {
      "stored away" and can be referenced later. */
   ikpages *		heap_pages;
 
-  /* Pointer and  size of the cached  pages array: an array  of "ikpage"
-     structures,  each   being  a   node  in   a  simply   linked  list.
-     "cached_pages_base" also references the first "ikpage" structure in
-     the array, which is not the first in the list. */
+  /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a
+   * single memory  block; the array  is never reallocated: its  size is
+   * fixed; each struct is a node in  a simply linked list.  At run time
+   * the slots  are linked in two  lists managed as stacks:  the list of
+   * used nodes, each referencing a cached page; the list of free nodes,
+   * currently referencing nothing.
+   *
+   *   At  initialisation  time:  all  the  structs  in  the  array  are
+   * initialised  to reference  each other,  from the  last slot  to the
+   * first slot: the last array slot is  the first node in the list, the
+   * first array slot is the last node in the list.  This linked list is
+   * the list of free nodes; the list of used nodes is empty.
+   *
+   * cached_pages_base -
+   * cached_pages_size -
+   *     Pointer and size-in-bytes of the array.  The pointer references
+   *     the first  slot in  the array.   The size in  bytes must  be an
+   *     exact multiple of a Vicare page size.
+   *
+   * cached_pages -
+   *     Pointer to the first "ikpage" struct in the linked list of used
+   *     nodes; set to NULL at PCB initialisation time; set to NULL when
+   *     the cache is empty.  This pointer is the starting point when we
+   *     need  to visit  all the  cached pages  (for example  to release
+   *     them), or we need to pop a  cached page to be recycled for some
+   *     use.
+   *
+   * uncached_pages -
+   *     Pointer  to the  first "ikpage"  struct in  the linked  list of
+   *     unused nodes;  set to reference the  last slot in the  array at
+   *     PCB initialisation time; set to NULL when the cache is full.
+   *
+   *   When a  page needs to  be put in the  cache: the first  struct is
+   * popped from  "uncached_pages", a pointer  to the page is  stored in
+   * the struct, the struct pushed on "cached_pages".
+   *
+   *   When a cached  page needs to be used: the  first struct is popped
+   * from "cached_pages",  the pointer  to the  page extracted  from the
+   * struct, the struct pushed on "uncached_pages".
+   */
   ikptr			cached_pages_base;
   int			cached_pages_size;
-  /* Pointer  to the  first  used  "ikpage" struct  in  the linked  list
-     referenced  by "cached_pages_base";  initialised to  NULL when  the
-     cache is empty.  This pointer is the starting point when we need to
-     visit  all the  cached  pages  (for example  to  release them),  it
-     references the first node in the list. */
   ikpage *		cached_pages;
-  /* Pointer  to the  first  free  "ikpage" struct  in  the linked  list
-     referenced  by "cached_pages_base".   This  pointer references  the
-     next  "ikpage"  to  be  filled;  the  node  next  to  this  one  is
-     "cached_pages". */
   ikpage *		uncached_pages;
 
   /* Pointer to and number of bytes of the current stack memory. */
@@ -817,7 +844,7 @@ ik_private_decl ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*)
 ik_private_decl ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
 ik_private_decl ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
 ik_private_decl ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
-ik_private_decl ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
+ik_private_decl ikptr	ik_mmap_mainheap	(unsigned long size, ikpcb*);
 ik_private_decl void	ik_munmap		(ikptr, unsigned long);
 ik_private_decl ikpcb * ik_make_pcb		(void);
 ik_private_decl void	ik_delete_pcb		(ikpcb*);
