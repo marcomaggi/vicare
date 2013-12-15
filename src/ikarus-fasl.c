@@ -517,7 +517,7 @@ do_read (ikpcb* pcb, fasl_port* p)
       IK_REF(rtd, off_rtd_symbol)	= symb;
       IK_REF(rtd, off_rtd_destructor)	= IK_FALSE;
       IK_REF(symb, off_symbol_record_value) = rtd;
-      ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(symb+off_symbol_record_value)] = -1;
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, symb + off_symbol_record_value);
     } else {
       rtd = gensym_val;
     }

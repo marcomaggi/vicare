@@ -158,7 +158,7 @@ intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, bucket_slot_pointer);
   }
   return s_sym;
 }
@@ -198,7 +198,7 @@ intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symb
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb,bucket_slot_pointer);
   }
   return s_sym;
 }
@@ -242,7 +242,7 @@ ikrt_intern_gensym (ikptr s_sym, ikpcb* pcb)
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_gensym_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb,bucket_slot_pointer);
   }
   return IK_TRUE_OBJECT;
 }
