@@ -409,6 +409,7 @@ ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb * pcb)
   if (-1 != rv) {
     pcb->root0 = &s_info;
     {
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  0), ika_integer_from_uint32(pcb, info.ssi_signo));
       IK_ASS(IK_FIELD(s_info,  1), ika_integer_from_sint32(pcb, info.ssi_errno));
       IK_ASS(IK_FIELD(s_info,  2), ika_integer_from_sint32(pcb, info.ssi_code));
@@ -488,6 +489,7 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
     if (IK_FALSE_OBJECT != s_old) {
       pcb->root0 = &s_old;
       {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 0),
 	       ika_integer_from_long(pcb, (long)old.it_interval.tv_sec));
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 1),
@@ -524,6 +526,7 @@ ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
   if (0 == rv) {
     pcb->root0 = &s_curr;
     {
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 0),
 	     ika_integer_from_long(pcb, (long)curr.it_interval.tv_sec));
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 1),
@@ -603,6 +606,7 @@ ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
     case 4:
       pcb->root0 = &s_old_rlim;
       {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint32(pcb,old_rlim.rlim_cur));
 	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint32(pcb,old_rlim.rlim_max));
       }
@@ -611,6 +615,7 @@ ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
     case 8:
       pcb->root0 = &s_old_rlim;
       {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint64(pcb,old_rlim.rlim_cur));
 	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint64(pcb,old_rlim.rlim_max));
       }
@@ -727,6 +732,7 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
     struct inotify_event *ev = (void*)buffer;
     pcb->root0 = &s_event;
     {
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       IK_ASS(IK_FIELD(s_event,0), ika_integer_from_int(pcb, ev->wd));
       IK_ASS(IK_FIELD(s_event,1), ika_integer_from_uint32(pcb, ev->mask));
       IK_ASS(IK_FIELD(s_event,2), ika_integer_from_uint32(pcb, ev->cookie));
@@ -863,6 +869,7 @@ ikrt_linux_ether_line (ikptr s_line_str, ikptr s_line_len, ikpcb * pcb)
   rv = ether_line(line, &addr, hostname);
   if (0 == rv) {
     ikptr	s_pair = ika_pair_alloc(pcb);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
     pcb->root0 = &s_pair;
     {
       IK_ASS(IK_CAR(s_pair), ika_bytevector_from_memory_block(pcb, &addr, sizeof(struct ether_addr)));

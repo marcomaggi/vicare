@@ -82,7 +82,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
 	char *	s = argv[i];
 	int	n = strlen(s);
 	ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
-	ref(bv, off_bytevector_length) = IK_FIX(n);
+	IK_REF(bv, off_bytevector_length) = IK_FIX(n);
 	/* copy the bytes and the terminating zero */
 	memcpy((char*)(bv+off_bytevector_data), s, n+1);
 	ikptr p = ik_unsafe_alloc(pcb, pair_size);

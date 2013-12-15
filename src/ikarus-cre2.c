@@ -8,7 +8,7 @@
 	Built in  binding to the CRE2  library: a C wrapper  for the RE2
 	regular expressions library from Google.
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -121,6 +121,7 @@ ikrt_cre2_new (ikptr s_pattern, ikptr s_options, ikpcb * pcb)
     int  errcode = cre2_error_code(rex);
     if (errcode) {
       ikptr	s_pair = ika_pair_alloc(pcb);
+      ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
       pcb->root0 = &s_pair;
       {
 	IK_CAR(s_pair) = IK_FIX(errcode);
@@ -311,6 +312,7 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_
     int			i;
     cre2_strings_to_ranges(text_data, ranges, strings, nmatch);
     s_match = ika_vector_alloc_and_init(pcb, nmatch);
+    ik_signal_dirt_in_page_of_pointer(pcb, s_match);
     pcb->root0 = &s_match;
     {
       for (i=0; i<nmatch; ++i) {
