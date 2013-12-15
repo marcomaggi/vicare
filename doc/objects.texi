@@ -6,7 +6,7 @@ Built in Scheme objects are mostly implemented in the C language portion
 of the source code, but many core operations are also reimplemented at
 the Scheme level.  The overall definitions are in the C language file
 @file{vicare.h} (for the public @api{}) the C language file
-@file{internal.h} (for the private @api{}) and the definition of many
+@file{internals.h} (for the private @api{}) and the definition of many
 values is duplicated in the Scheme language compiler
 @file{ikarus.compiler.sls}.
 
@@ -472,6 +472,228 @@ attributes.
 @c page
 @node objects memory
 @section Memory allocation and collection
+
+
+@menu
+* objects memory cpre::         Interesting C preprocessor macros.
+* objects memory ikpcb::        Interesting @pcb{} fields.
+* objects memory misc::         Stuff.
+@end menu
+
+@c page
+@node objects memory cpre
+@subsection Interesting C preprocessor macros
+
+
+In this section we discuss some private C preprocessor symbols and
+related to memory allocation and garbage collection.
+
+The preprocessor constant @code{IK_MMAP_ALLOCATION_GRANULARITY} is
+determined by the @command{configure} script and defined in the
+automatically generated header file @file{config.h}.  The constants
+@code{IK_PAGESIZE} and @code{IK_PAGESHIFT} are hard--coded.
+
+The constant @code{IK_MMAP_ALLOCATION_GRANULARITY} represents the memory
+allocation granularity used by @cfunc{mmap}: no matter the number of
+bytes we request to @cfunc{mmap}, it will always allocate the smallest
+multiple of the granularity that can contain the requested bytes:
+
+@example
+|----------------------------| requested_size
+|-----------|-----------|-----------| allocated_size
+ granularity granularity granularity
+@end example
+
+On some platforms the allocation granularity equals the system page size
+(example @gnu{}+Linux), on other platforms it does not (example Cygwin).
+We assume the allocation granularity can be obtained on any platform
+with:
+
+@example
+#include <unistd.h>
+long granularity = sysconf(_SC_PAGESIZE);
+@end example
+
+@noindent
+which should ``officially'' return the system page size, but in truth it
+does not (see Cygwin's documentation).
+
+To mind its own business, Vicare defines a ``page size'' as the
+preprocessor symbol @code{IK_PAGESIZE}, the number of bytes in Vicare's
+page size is @code{4096 = 4 * 1024 = 4 * 2^10 = 2^12 = #x1000}.
+Vicare's page size is @strong{not} defined to be equal to the system
+page size, but:
+
+@itemize
+@item
+Most likely the system page size and Vicare's page size are equal.
+
+@item
+We assume that in any case the system page size is equal to or an exact
+multiple of Vicare's page size.
+
+@item
+We assume that @cfunc{mmap} returns pointers such that: the pointer
+references the first byte of a system page, and so also the first byte
+of a Vicare page; the numeric address of the pointer is an exact
+multiple of @math{4096} (the @math{12} least significant bits are zero).
+@end itemize
+
+@noindent
+it is natural to assign a zero--based index to each Vicare page:
+
+@example
+   page     page     page     page     page     page
+|--------|--------|--------|--------|--------|--------|
+ ^        ^        ^        ^        ^        ^
+#x0000   #x1000   #x2000   #x3000   #x4000   #x5000
+index 0  index 1  index 2  index 3  index 4  index 5
+@end example
+
+The preprocessor symbol @code{IK_PAGESHIFT} is the number of bits to
+right--shift a tagged or untagged pointer to obtain the index of the
+page it is in; it is the number for which:
+
+@example
+IK_PAGESIZE >> IK_PAGESHIFT = 1
+2^IK_PAGESHIFT = IK_PAGESIZE
+@end example
+
+@noindent
+if IK_PAGESIZE is @math{4096}, the value of @code{IK_PAGESHIFT} is
+@math{12}; so we have:
+
+@example
+0 * 4096 <=  4000 < 1 * 4096        4000 >> 12 = 0
+1 * 4096 <=  8000 < 2 * 4096        8000 >> 12 = 1
+2 * 4096 <= 10000 < 3 * 4096       10000 >> 12 = 2
+@end example
+
+
+@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX (ikptr @var{X})
+Given the tagged or untagged pointer @var{X}: evaluate to the index of
+the memory page it is in; notice that the tag bits of a tagged pointer
+are not influent.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX_RANGE (@var{size})
+Given a number of bytes @var{size}: evaluate to the difference between
+two page indexes representing a region big enough to hold @var{size}
+bytes.
+@end deftypefn
+
+@c page
+@node objects memory ikpcb
+@subsection Interesting @pcb{} fields
+
+
+In this section we discuss some private fields of the C data structure
+@code{ikpcb} related to memory allocation and garbage collection.
+
+@table @code
+@item ikptr memory_base
+@itemx ikptr memory_end
+Untagged pointers updated (if needed) after every memory mapped
+allocation to be lower and greater than all the memory used by Scheme
+programs.  They are used for garbage collection purposes: every Vicare
+page between this range of pointers is described by a slot in the
+segments vector and the dirty vector.
+
+@item uint32_t * segment_vector_base
+@itemx uint32_t * segment_vector
+The segments vector contains a slot for every Vicare page in the region
+of memory delimited by the fields @code{memory_base} and
+@code{memory_end}; it is used to register the destination use of every
+page (heap, stack, unused, etc.), along with the garbage collection
+generation the page belongs to.
+
+@code{segment_vector_base} references the first allocated slot; access
+to the vector with zero--based indexes is performed through
+@code{segment_vector}.
+
+Notice that the segments vector is @strong{not} itself registered in the
+segments vector and dirty vector: if the segments vector falls inside
+the region delimited by @code{memory_base} and @code{memory_end}, it is
+marked as unused and pure.
+
+@item uint32_t * dirty_vector_base
+@itemx ikptr dirty_vector
+The dirty vector contains a slot for every Vicare page in the region of
+memory delimited by the fields @code{memory_base} and @code{memory_end};
+it is used to keep track of pages that were mutated at runtime; it
+allows the garbage collector to do the right thing when a Scheme object
+in an old generation is mutated to reference a Scheme object in a new
+generation.
+
+When a Scheme object in a memory page is mutated at run--time: such page
+is said to be ``dirty''; otherwise it is ``pure''.
+
+@code{dirty_vector_base} references the first allocated slot; access to
+the vector with zero--based indexes is performed through the field
+@code{dirty_vector} (which is also accessible from Scheme code).
+
+Notice that the dirty vector is @strong{not} itself registered in the
+segments vector and dirty vector: if the dirty vector falls inside the
+region delimited by @code{memory_base} and @code{memory_end}, the pages
+it uses are marked as unused and pure.
+@end table
+
+Scheme objects created by a Scheme program are allocated on the heap.
+We can think of the Scheme heap as the union of the @dfn{nursery} and a
+set of @dfn{generational pages}.
+
+The nursery is a set of memory blocks in which new Scheme objects are
+allocated; it is the generation @code{0}.  The nursery starts with a
+single ``hot'' memory block in which new Scheme objects are allocated;
+whenever the hot block is full:
+
+@itemize
+@item
+If a safe allocation is requested (function @cfunc{ik_safe_alloc}): a
+garbage collection is performed and all the objects are moved from the
+heap into the generational pages.
+
+@item
+If an unsafe allocation is requested (function @cfunc{ik_unsafe_alloc}):
+the current hot block is stored in a linked list of heap blocks and a
+new hot block is allocated.
+@end itemize
+
+The generational pages are a set of Vicare pages, referenced by the
+segments vector, in which objects are moved after they survive a garbage
+collection; every generational page is tagged in the segments vector
+with the index of the generation it belongs to.
+
+@table @code
+@item heap_base
+@itemx heap_size
+Pointer and size in bytes of the current nursery hot memory block; new
+Scheme objects are allocated here.  Initialised to a memory mapped block
+of size @code{IK_HEAPSIZE}.  When the previous block is full: to satisfy
+the request of an unsafe allocation it is set to a memory mapped block
+of size @code{IK_HEAP_EXTENSION_SIZE}.  After a garbage collection is
+performed: it is set to a memory mapped block of size
+@code{IK_HEAPSIZE}.
+
+@item allocation_pointer
+Pointer to the first word of available data in the nursery hot memory
+block; the next Scheme object to be allocated will start there.
+
+@item allocation_redline
+Pointer to a word towards the end of the heap hot memory block; when the
+allocation of a Scheme object crosses this pointer, the hot block is
+considered full.
+
+@item heap_pages
+Pointer to the first node in a linked list of memory blocks that once
+were nursery hot memory, and are now fully used; initialised to @cnull{}
+when building the @pcb{}.
+@end table
+
+@c page
+@node objects memory misc
+@subsection Stuff
 
 
 In short, memory allocation which may trigger a garbage collection is
