@@ -657,7 +657,7 @@ typedef struct ikpcb {
    */
   uint32_t *		dirty_vector_base;
 
-  /* Scheme objects  created by  a Scheem program  are allocated  on the
+  /* Scheme objects  created by  a Scheme program  are allocated  on the
    * heap.  We can think of the Scheme  heap as the union of the nursery
    * and a set of generational pages.
    *
@@ -696,9 +696,9 @@ typedef struct ikpcb {
    *     there.
    *
    * allocation_redline -
-   *     Pointer to  the a word towards  the end of the  heap hot memory
-   *     block;  when the  allocation of  a Scheme  object crosses  this
-   *     pointer, the hot block is considered full.
+   *     Pointer to a word towards the end of the heap hot memory block;
+   *     when the  allocation of a  Scheme object crosses  this pointer,
+   *     the hot block is considered full.
    *
    * heap_pages -
    *     Pointer to  the first node  in a  linked list of  memory blocks
