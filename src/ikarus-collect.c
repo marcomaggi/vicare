@@ -829,9 +829,9 @@ handle_guardians (gc_t* gc)
 static void
 gc_finalize_guardians (gc_t* gc)
 {
-  ik_ptr_page* ls = gc->forward_list;
-  int tconc_count = 0;
-  unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
+  ik_ptr_page*	ls = gc->forward_list;
+  int		tconc_count = 0;
+  uint32_t *	dirty_vec = (uint32_t *)(long)(gc->pcb->dirty_vector);
   while(ls) {
     int i;
     for(i=0; i<ls->count; i++) {
@@ -2101,19 +2101,19 @@ static unsigned int cleanup_mask[IK_GC_GENERATION_COUNT] = {
 
 static void
 scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
-  unsigned int* segment_vec = (unsigned int*)(long)gc->segment_vector;
-  unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
-  unsigned int t = segment_vec[page_idx];
-  unsigned int d = dirty_vec[page_idx];
-  unsigned int masked_d = d & mask;
+  uint32_t* segment_vec = (uint32_t*)(long)gc->segment_vector;
+  uint32_t* dirty_vec = (uint32_t*)(long)gc->pcb->dirty_vector;
+  uint32_t t = segment_vec[page_idx];
+  uint32_t d = dirty_vec[page_idx];
+  uint32_t masked_d = d & mask;
   ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
   int j;
-  unsigned int new_d = 0;
+  uint32_t new_d = 0;
   for(j=0; j<cards_per_page; j++) {
     if (masked_d & (0xF << (j*meta_dirty_shift))) {
       /* dirty card */
       ikptr q = p + cardsize;
-      unsigned int card_d = 0;
+      uint32_t card_d = 0;
       while(p < q) {
         ikptr x = ref(p, 0);
         if (IK_IS_FIXNUM(x) || (IK_TAGOF(x) == immediate_tag)) {
@@ -2133,7 +2133,7 @@ scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
       new_d = new_d | (d & (0xF << (j*meta_dirty_shift)));
     }
   }
-  dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
+  dirty_vec = (uint32_t*)(long)gc->pcb->dirty_vector;
   new_d = new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
@@ -2144,12 +2144,12 @@ scan_dirty_code_page (gc_t* gc, long page_idx)
   ikptr		p		= (ikptr)(page_idx << IK_PAGESHIFT);
   ikptr		start		= p;
   ikptr		q		= p + IK_PAGESIZE;
-  unsigned *	segment_vec	= (unsigned *)(long)gc->segment_vector;
-  unsigned *	dirty_vec	= (unsigned *)(long)gc->pcb->dirty_vector;
-  //unsigned int d = dirty_vec[page_idx];
-  unsigned	t		= segment_vec[page_idx];
-  //unsigned int masked_d = d & mask;
-  unsigned	new_d		= 0;
+  uint32_t *	segment_vec	= (uint32_t *)(long)gc->segment_vector;
+  uint32_t *	dirty_vec	= (uint32_t *)(long)gc->pcb->dirty_vector;
+  //uint32_t int d = dirty_vec[page_idx];
+  uint32_t	t		= segment_vec[page_idx];
+  //uint32_t int masked_d = d & mask;
+  uint32_t	new_d		= 0;
   while (p < q) {
     if (IK_REF(p, 0) != code_tag) {
       p = q;
@@ -2177,7 +2177,7 @@ scan_dirty_code_page (gc_t* gc, long page_idx)
       p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec	= (unsigned int*)(long)gc->pcb->dirty_vector;
+  dirty_vec	= (uint32_t *)(long)gc->pcb->dirty_vector;
   new_d		= new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
@@ -2191,37 +2191,37 @@ scan_dirty_pages(gc_t* gc) {
   ikpcb* pcb = gc->pcb;
   long lo_idx = IK_PAGE_INDEX(pcb->memory_base);
   long hi_idx = IK_PAGE_INDEX(pcb->memory_end);
-  unsigned int* dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-  unsigned int* segment_vec = (unsigned int*)(long)pcb->segment_vector;
+  uint32_t* dirty_vec = (uint32_t*)(long)pcb->dirty_vector;
+  uint32_t* segment_vec = (uint32_t*)(long)pcb->segment_vector;
   int collect_gen = gc->collect_gen;
-  unsigned int mask = dirty_mask[collect_gen];
+  uint32_t mask = dirty_mask[collect_gen];
   long i = lo_idx;
   while(i < hi_idx) {
-    unsigned int d = dirty_vec[i];
+    uint32_t d = dirty_vec[i];
     if (d & mask) {
-      unsigned int t = segment_vec[i];
+      uint32_t t = segment_vec[i];
       int tgen = t & gen_mask;
       if (tgen > collect_gen) {
         int type = t & type_mask;
         if (type == pointers_type) {
           scan_dirty_pointers_page(gc, i, mask);
-          dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-          segment_vec = (unsigned int*)(long)pcb->segment_vector;
+          dirty_vec = (uint32_t*)(long)pcb->dirty_vector;
+          segment_vec = (uint32_t*)(long)pcb->segment_vector;
         }
         else if (type == symbols_type) {
           scan_dirty_pointers_page(gc, i, mask);
-          dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-          segment_vec = (unsigned int*)(long)pcb->segment_vector;
+          dirty_vec = (uint32_t*)(long)pcb->dirty_vector;
+          segment_vec = (uint32_t*)(long)pcb->segment_vector;
         }
         else if (type == weak_pairs_type) {
           scan_dirty_pointers_page(gc, i, mask);
-          dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-          segment_vec = (unsigned int*)(long)pcb->segment_vector;
+          dirty_vec = (uint32_t*)(long)pcb->dirty_vector;
+          segment_vec = (uint32_t*)(long)pcb->segment_vector;
         }
         else if (type == code_type) {
           scan_dirty_code_page(gc, i);
-          dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-          segment_vec = (unsigned int*)(long)pcb->segment_vector;
+          dirty_vec = (uint32_t*)(long)pcb->dirty_vector;
+          segment_vec = (uint32_t*)(long)pcb->segment_vector;
         }
         else if (t & scannable_mask)
           ik_abort("unhandled scan of type 0x%08x", t);
@@ -2295,8 +2295,8 @@ add_one_tconc(ikpcb* pcb, ikptr p) {
   ref(new_pair, off_cdr) = IK_FALSE_OBJECT;
   ref(tc, off_cdr) = new_pair;
   ref(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
-  ((uint32_t *)pcb->dirty_vector)[IK_PAGE_INDEX(tc)] = IK_DIRTY_WORD;
-  ((uint32_t *)pcb->dirty_vector)[IK_PAGE_INDEX(d)]  = IK_DIRTY_WORD;
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
 }
 
 static void
