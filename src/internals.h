@@ -1466,7 +1466,7 @@ ik_decl int   ik_is_vector		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_clean		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,
 					 ikptr s_src, ikptr s_src_start,
-					 ikptr s_count);
+					 ikptr s_count, ikpcb * pcb);
 
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))
@@ -1743,7 +1743,7 @@ ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 
 ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
-				 ikptr s_count);
+				 ikptr s_count, ikpcb * pcb);
 
 ik_decl void ik_enter_c_function (ikpcb* pcb);
 ik_decl void ik_leave_c_function (ikpcb* pcb);

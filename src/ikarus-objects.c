@@ -681,10 +681,11 @@ ikrt_vector_clean (ikptr s_vec)
 ikptr
 ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
 		  ikptr s_src, ikptr s_src_start,
-		  ikptr s_count)
+		  ikptr s_count, ikpcb * pcb)
 {
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (long)s_dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (long)s_src_start;
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
   memcpy(dst, src, (size_t)s_count);
   return IK_VOID_OBJECT;
 }
@@ -1527,14 +1528,14 @@ ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
 ikptr
 ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 		   ikptr s_src, ikptr s_src_start,
-		   ikptr s_count)
+		   ikptr s_count, ikpcb * pcb)
 {
   long		src_start = IK_UNFIX(s_src_start);
   long		dst_start = IK_UNFIX(s_dst_start);
   size_t	count     = (size_t)IK_UNFIX(s_count);
   uint8_t *	dst = NULL;
   uint8_t *	src = NULL;
-
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
   if (IK_IS_BYTEVECTOR(s_src)) {
     src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
   } else if (ikrt_is_pointer(s_src)) {
