@@ -121,6 +121,8 @@ static ikptr
 iku_make_symbol (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
 {
   ikptr s_sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
+  /* There is no need to update  the dirty vector about "s_sym", because
+     all the values are older. */
   IK_REF(s_sym, -record_tag)               = symbol_tag;
   IK_REF(s_sym, off_symbol_record_string)  = s_pretty_string;
   IK_REF(s_sym, off_symbol_record_ustring) = s_unique_string;

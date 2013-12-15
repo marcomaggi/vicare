@@ -39,6 +39,8 @@ ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
     pcb->weak_pairs_ap = nap;
     p = ap | pair_tag;
   }
+  /* There is no  need to update the dirty vector  aboud "p" because the
+     values are older. */
   IK_CAR(p) = a;
   IK_CDR(p) = d;
   return p;
