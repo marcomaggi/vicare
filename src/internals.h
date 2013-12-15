@@ -223,9 +223,9 @@
    index of  the memory page  it is  in; notice that  the tag bits  of a
    tagged pointer are not influent. */
 #define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
-/* Given a number  of bytes X as "ik_ulong": evaluate  to the difference
-   between two page  indexes representing a region big enough  to hold X
-   bytes. */
+/* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
+   difference between two page indexes  representing a region big enough
+   to hold X bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
 
 /* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
