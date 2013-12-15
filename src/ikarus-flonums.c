@@ -48,6 +48,8 @@ ikptr
 iku_cflonum_alloc_and_init (ikpcb * pcb, double re, double im)
 {
   IKU_DEFINE_AND_ALLOC_CFLONUM(F);
+  /* No  need  to  update  the  dirty vector  about  F  because  we  are
+     performing unsafe allocations. */
   IK_CFLONUM_REAL(F) = iku_flonum_alloc(pcb, re);
   IK_CFLONUM_IMAG(F) = iku_flonum_alloc(pcb, im);
   return F;
