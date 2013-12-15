@@ -601,6 +601,23 @@ ik_is_vector (ikptr s_vec)
 /* ------------------------------------------------------------------ */
 
 ikptr
+ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
+/* This  is   the  core   implementation  of  the   primitive  operation
+   MAKE-VECTOR, */
+{
+  int intlen = (int)s_len;
+  if (IK_IS_FIXNUM(s_len) && (intlen >= 0)) {
+    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
+    IK_REF(s, 0) = s_len;
+    memset((char*)(long)(s+disp_vector_data), 0, s_len);
+    return s | vector_tag;
+  } else
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
 ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
 {
   ikptr s_len      = IK_FIX(number_of_items);

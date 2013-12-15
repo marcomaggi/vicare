@@ -986,6 +986,7 @@ ik_private_decl void	ik_underflow_handler	(void);
  ** ----------------------------------------------------------------- */
 
 ik_decl ikpcb *	ik_the_pcb		(void);
+ik_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb* pcb, ikptr s_pointer);
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);

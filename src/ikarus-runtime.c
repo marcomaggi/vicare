@@ -665,6 +665,10 @@ ik_delete_pcb (ikpcb* pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Basic memory allocation for Scheme objects.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ik_safe_alloc (ikpcb * pcb, ik_ulong size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
@@ -703,8 +707,6 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong size)
   }
   return alloc_ptr;
 }
-
-
 ikptr
 ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
@@ -782,6 +784,11 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       return heap_ptr;
     }
   }
+}
+void
+ik_signal_dirt_in_page_of_pointer (ikpcb * pcb, ikptr s_pointer)
+{
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
 }
 
 
@@ -1029,6 +1036,10 @@ ik_uuid(ikptr bv)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Helper functions for debugging purposes.
+ ** ----------------------------------------------------------------- */
+
 static char*
 mtname (unsigned n)
 {
@@ -1086,6 +1097,10 @@ ik_dump_dirty_vector (ikpcb* pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Code objects constructor and auxiliary functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, ikpcb* pcb)
 /* Build a new code object and return a reference to it.
@@ -1193,6 +1208,10 @@ ikrt_register_guardian (ikptr tc, ikptr obj, ikpcb* pcb)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Garbage collections statistics.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_stats_now (ikptr t, ikpcb* pcb)
 {
@@ -1227,43 +1246,14 @@ ikrt_stats_now (ikptr t, ikpcb* pcb)
 }
 
 
-ikptr
-ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
-{
-  int intlen = (int)s_len;
-  if (IK_IS_FIXNUM(s_len) && (intlen >= 0)) {
-    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
-    IK_REF(s, 0) = s_len;
-    memset((char*)(long)(s+disp_vector_data), 0, s_len);
-    return s | vector_tag;
-  } else
-    return 0;
-}
-#if 0
-ikptr
-ikrt_make_vector2 (ikptr len, ikptr obj, ikpcb* pcb)
-{
-  if (IK_IS_FIXNUM(len) && ((len >> 31)!=0)) {
-    pcb->root0 = &obj;
-    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(((int)len) + disp_vector_data));
-    pcb->root0 = 0;
-    ref(s, 0) = len;
-    memset(s+disp_vector_data, 0, (int)len);
-    return s+vector_tag;
-  } else {
-    return IK_FALSE_OBJECT;
-  }
-}
-#endif
-
-
 /** --------------------------------------------------------------------
- ** Termination.
+ ** Process termination.
  ** ----------------------------------------------------------------- */
 
 ikptr
 ikrt_exit (ikptr status, ikpcb* pcb)
-/* This is not for the public API. */
+/* This function is the core of implementation of the EXIT proceure from
+   "(rnrs programs (6))". */
 {
   ik_delete_pcb(pcb);
   if (total_allocated_pages)
