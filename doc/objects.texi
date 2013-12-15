@@ -477,7 +477,8 @@ attributes.
 @menu
 * objects memory cpre::         Interesting C preprocessor macros.
 * objects memory ikpcb::        Interesting @pcb{} fields.
-* objects memory misc::         Stuff.
+* objects memory alloc::        Basic memory allocation functions.
+* objects memory usage::        Writing correct C language code.
 @end menu
 
 @c page
@@ -692,8 +693,8 @@ when building the @pcb{}.
 @end table
 
 @c page
-@node objects memory misc
-@subsection Stuff
+@node objects memory alloc
+@subsection Basic memory allocation functions
 
 
 In short, memory allocation which may trigger a garbage collection is
@@ -728,9 +729,8 @@ long    len = IK_ALIGN(the_number_of_bytes);
 ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
 @end example
 
-Objects subject to garbage collection are allocated on the Scheme heap,
-which is an array of contiguous memory segments; the next object is
-allocated in the ``current segment'' of the heap:
+Objects subject to garbage collection are allocated on the Scheme heap;
+the next object is allocated in the hot memory block:
 
 @example
     allocated  allocated      allocated
@@ -751,7 +751,7 @@ purposes:
 To make pointer indirection efficient for the underlying platform.
 
 @item
-To have pointer values with the @math{3} least significant bits set to
+To have pointer values: with the @math{3} least significant bits set to
 zero, so that such bits can be used to hold an object's type tag.
 @end enumerate
 
@@ -864,10 +864,10 @@ We can simulate the computation with:
 
 
 @deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the heap and return a reference to it as an
-@strong{untagged} pointer.  @var{pcb} must reference the process control
-block, @var{align_size} must be the requested number of bytes filtered
-through @cfunc{IK_ALIGN}.
+Allocate a memory block on the Scheme heap and return a reference to it
+as an @strong{untagged} pointer.  @var{pcb} must reference the process
+control block, @var{align_size} must be the requested number of bytes
+filtered through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the current heap segment: a garbage
 collection is triggered; then allocation is tried again: if it still
@@ -911,9 +911,10 @@ happen; the garbage collector will just do some useless work, slowing
 down the collection time a bit.
 @end deftypefun
 
-@c ------------------------------------------------------------
+@c page
+@node objects memory usage
+@subsection Writing correct C language code
 
-@subsubheading Writing correct C language code
 
 The garbage collector considers an object ``in use'' if at least one
 reference to it is reachable from the roots of the garbage collection;
@@ -1348,10 +1349,12 @@ s_cdr = IK_CDR(s_pair);
 the car and cdr of a pair are set as follows:
 
 @example
+ikpcb * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_REF(s_pair, off_car) = s_car;
 IK_REF(s_pair, off_cdr) = s_car;
 @end example
@@ -1360,10 +1363,12 @@ IK_REF(s_pair, off_cdr) = s_car;
 or as follows:
 
 @example
+ikpcb * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_CAR(s_pair) = s_car;
 IK_CDR(s_pair) = s_car;
 @end example
@@ -1437,6 +1442,9 @@ Allocate and return a new pair object using, respectively,
 @cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
 reference to it.  Both the car and cdr are initialised to
 @code{IK_VOID_OBJECT}.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -1471,6 +1479,9 @@ lengths.
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
 @asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
+
+This function takes care of calling
+@cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
 @end deftypefun
 
 
@@ -1479,6 +1490,9 @@ Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
 copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
 @code{pcb->root9}.
+
+This function takes care of calling
+@cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
 @end deftypefun
 
 @c ------------------------------------------------------------
@@ -1906,7 +1920,9 @@ IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
 @end example
 
 @noindent
-to retrieve the item at index @math{2} we do:
+in this case there is no need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} because the values are
+fixnums.  To retrieve the item at index @math{2} we do:
 
 @example
 ikptr  s_vec  = the_vector;
@@ -1993,6 +2009,9 @@ fx = IK_ITEM(s_vec, idx);
 @deftypefunx ikptr iku_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -2001,6 +2020,9 @@ the specified number of items.  Leave the data area uninitialised.
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -2017,7 +2039,7 @@ zero.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb * @var{pcb})
 Copy @var{count} items from vector @var{src} starting at offset
 @var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
@@ -2226,6 +2248,11 @@ ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 @}
 @end example
 
+@noindent
+notice that we do not need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_stru} because
+@var{s_rtd} is an older object.
+
 The allocation operation described above leaves the data area
 uninitialised: its content is undefined.  This is bad if the garbage
 collector moves the newly built record before the elements are
@@ -2251,6 +2278,7 @@ to store a value in field @math{2} of a structure we do:
 ikptr  s_stru  = the_structure;
 ikptr  s_field = the_field;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
 @end example
 
@@ -2346,6 +2374,8 @@ ikptr   s_stru = the_structure;
 ikptr   s_field;
 
 s_field = IK_FIELD(s_stru, 2);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_FIELD(s_stru, 2) = s_field;
 @end example
 @end deftypefn
@@ -3280,6 +3310,11 @@ IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
 @end example
 
+@noindent
+notice that in this special case we do not need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_rn} because the
+values of the numerator and denominator are older.
+
 To identify an object as ratnum we do:
 
 @example
@@ -3302,6 +3337,8 @@ ikptr  s_den;
 
 s_num = IK_REF(s_rn, off_ratnum_num);
 s_den = IK_REF(s_rn, off_ratnum_den);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
 @end example
@@ -3361,6 +3398,8 @@ ikptr  s_rn  = the_ratnum;
 ikptr  s_num;
 
 s_num = IK_NUMERATOR(s_rn);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_NUMERATOR(s_rn) = s_num;
 @end example
 @end deftypefn
@@ -3615,6 +3654,11 @@ IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
 @end example
 
+@noindent
+notice that in this case we do not call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cn} because the
+values of the real and imaginary parts are older.
+
 To identify an object as compnum we do:
 
 @example
@@ -3637,6 +3681,8 @@ ikptr  s_im;
 
 s_re = IK_REF(s_cn, off_compnum_real);
 s_im = IK_REF(s_cn, off_compnum_imag);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
 @end example
@@ -3696,6 +3742,8 @@ ikptr  s_cn = the_compnum;
 ikptr  s_re;
 
 s_re = IK_COMPNUM_REAL(s_cn);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_COMPNUM_REAL(s_cn) = s_re;
 @end example
 @end deftypefn
@@ -3759,10 +3807,10 @@ Cflonums are allocated on the Scheme heap as follows:
 
 @example
 ikpcb * pcb   = ik_the_pcb();
-ikptr   s_cn;
+ikptr   s_cf;
 
-s_cn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
-IK_REF(s_cn, off_cflonum_tag) = cflonum_tag;
+s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+IK_REF(s_cf, off_cflonum_tag) = cflonum_tag;
 @end example
 
 @noindent
@@ -3774,7 +3822,7 @@ allocation and initialisation is as follows:
 ikpcb * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
-ikptr   s_cn;
+ikptr   s_cf;
 
 pcb->root9 = &s_re;
 pcb->root8 = &s_im;
@@ -3784,10 +3832,15 @@ pcb->root8 = &s_im;
 pcb->root8 = NULL;
 pcb->root9 = NULL;
 
-IK_REF(s_cn, off_cflonum_tag)  = cflonum_tag;
-IK_REF(s_cn, off_cflonum_real) = s_re;
-IK_REF(s_cn, off_cflonum_imag) = s_im;
+IK_REF(s_cf, off_cflonum_tag)  = cflonum_tag;
+IK_REF(s_cf, off_cflonum_real) = s_re;
+IK_REF(s_cf, off_cflonum_imag) = s_im;
 @end example
+
+@noindent
+notice that in this case we do not call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cf} because the
+values of the real and imaginary parts are older.
 
 To identify an object as cflonum we do:
 
@@ -3805,14 +3858,16 @@ else
 to set or retrieve the real and imaginary parts we do:
 
 @example
-ikptr  s_cn = the_cflonum;
+ikptr  s_cf = the_cflonum;
 ikptr  s_re;
 ikptr  s_im;
 
-s_re = IK_REF(s_cn, off_cflonum_real);
-s_im = IK_REF(s_cn, off_cflonum_imag);
-IK_REF(s_cn, off_cflonum_real) = s_re;
-IK_REF(s_cn, off_cflonum_imag) = s_im;
+s_re = IK_REF(s_cf, off_cflonum_real);
+s_im = IK_REF(s_cf, off_cflonum_imag);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_REF(s_cf, off_cflonum_real) = s_re;
+IK_REF(s_cf, off_cflonum_imag) = s_im;
 @end example
 
 
@@ -3866,11 +3921,13 @@ memory block.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
-ikptr  s_cn = the_cflonum;
+ikptr  s_cf = the_cflonum;
 ikptr  s_re;
 
-s_re = IK_CFLONUM_REAL(s_cn);
-IK_CFLONUM_REAL(s_cn) = s_re;
+s_re = IK_CFLONUM_REAL(s_cf);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_CFLONUM_REAL(s_cf) = s_re;
 @end example
 @end deftypefn
 
@@ -5401,7 +5458,7 @@ macro accepts also @false{} as value and returns @cnull{}.
 @subsection Miscellaneous functions
 
 
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb  @var{pcb})
 Copy @var{count} items from @var{src} starting at offset
 @var{src_start}, to @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
