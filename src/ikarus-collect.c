@@ -2175,6 +2175,8 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
           /* do nothing */
         } else {
           ikptr y = add_object(gc, x, "nothing");
+	  /* The call to "add_object()" might have allocated new memory,
+	     so we must retake the segment vector. */
           segment_vec = gc->segment_vector;
           IK_REF(p, 0) = y;
           card_d = card_d | segment_vec[IK_PAGE_INDEX(y)];
