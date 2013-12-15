@@ -4170,7 +4170,8 @@
    ;;
    ;;ATTRS must be a struct instance representing recordized code which,
    ;;when  evaluated, must  return a  fixnum representing  the attribute
-   ;;bits.
+   ;;bits.  We  do not need to  update the dirty vector  because the new
+   ;;value is always a fixnum.
    ;;
    ((E port attrs)
     (prm 'mset (T port) (K off-port-attrs)
