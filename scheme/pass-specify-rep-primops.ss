@@ -131,17 +131,18 @@
  (module (mem-assign)
 
    (define (mem-assign v base offset)
-     ;;Store V at OFFSET from BASE.
+     ;;Generate low level recordized code  needed to store the result of
+     ;;evaluating V at OFFSET from the base heap address BASE.
      ;;
-     ;;V must be a struct instance representing recordized code.
+     ;;V must be  a struct instance representing recordized  code.  If V
+     ;;is recognised as fixnum or immediate  value (a value that fits in
+     ;;a single machine word): there is  no need to signal this mutation
+     ;;in the dirty vector.
      ;;
      ;;BASE must be  a struct instance representing  a (possibly tagged)
      ;;base address.
      ;;
      ;;OFFSET must be an exact integer representing an offset in bytes.
-     ;;
-     ;;Generate low level recordized code  needed to store the result of
-     ;;evaluating V at OFFSET from the base heap address BASE.
      ;;
      (struct-case v
        ((constant value)
@@ -159,6 +160,9 @@
 	(%slow-mem-assign v base offset))))
 
    (define (%slow-mem-assign v base offset)
+     ;;Generate recordised code to  perform the memory location mutation
+     ;;and to signal dirt in the corresponding slot of the dirty vector.
+     ;;
      (with-tmp ((t (prm 'int+ base (K offset))))
        (make-seq (prm 'mset t (K 0) (T v))
 		 (dirty-vector-set t))))
