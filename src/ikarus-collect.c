@@ -2151,47 +2151,53 @@ scan_dirty_pages (gc_t* gc)
 }
 static void
 scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
-/* Subroutine of "scan_dirty_pages()". */
+/* Subroutine  of   "scan_dirty_pages()".   This  function   might  call
+   "add_object()", which  means it  might allocate memory,  which means:
+   after  every call  the  dirty  and segments  vector  might have  been
+   reallocated. */
 {
-  uint32_t* segment_vec = (uint32_t*)(long)gc->segment_vector;
-  uint32_t* dirty_vec = (uint32_t*)(long)gc->pcb->dirty_vector;
-  uint32_t t = segment_vec[page_idx];
-  uint32_t d = dirty_vec[page_idx];
-  uint32_t masked_d = d & mask;
-  ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
-  int j;
-  uint32_t new_d = 0;
-  for(j=0; j<cards_per_page; j++) {
+  uint32_t *	segment_vec = gc->segment_vector;
+  uint32_t *	dirty_vec   = (uint32_t*)gc->pcb->dirty_vector;
+  uint32_t	t = segment_vec[page_idx];
+  uint32_t	d = dirty_vec[page_idx];
+  uint32_t	masked_d = d & mask;
+  ikptr		p = (ikptr)(page_idx << IK_PAGESHIFT);
+  int		j;
+  uint32_t	new_d = 0;
+  for (j=0; j<cards_per_page; j++) {
     if (masked_d & (0xF << (j*meta_dirty_shift))) {
       /* dirty card */
       ikptr q = p + cardsize;
       uint32_t card_d = 0;
-      while(p < q) {
-        ikptr x = ref(p, 0);
+      while (p < q) {
+        ikptr x = IK_REF(p, 0);
         if (IK_IS_FIXNUM(x) || (IK_TAGOF(x) == immediate_tag)) {
           /* do nothing */
         } else {
           ikptr y = add_object(gc, x, "nothing");
           segment_vec = gc->segment_vector;
-          ref(p, 0) = y;
+          IK_REF(p, 0) = y;
           card_d = card_d | segment_vec[IK_PAGE_INDEX(y)];
         }
         p += wordsize;
       }
       card_d = (card_d & meta_dirty_mask) >> meta_dirty_shift;
-      new_d = new_d | (card_d<<(j*meta_dirty_shift));
+      new_d  = new_d | (card_d<<(j*meta_dirty_shift));
     } else {
       p += cardsize;
       new_d = new_d | (d & (0xF << (j*meta_dirty_shift)));
     }
   }
-  dirty_vec = (uint32_t*)(long)gc->pcb->dirty_vector;
-  new_d = new_d & cleanup_mask[t & gen_mask];
+  dirty_vec = (uint32_t*)gc->pcb->dirty_vector;
+  new_d     = new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
 static void
 scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
-/* Subroutine of "scan_dirty_pages()". */
+/* Subroutine  of   "scan_dirty_pages()".   This  function   might  call
+   "add_object()", which  means it  might allocate memory,  which means:
+   after  every call  the  dirty  and segments  vector  might have  been
+   reallocated. */
 {
   ikptr		p		= (ikptr)(page_idx << IK_PAGESHIFT);
   ikptr		start		= p;
@@ -2213,8 +2219,8 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
       ikptr	rvec		= IK_REF(p, disp_code_reloc_vector);
       ikptr	len		= IK_REF(rvec, off_vector_length);
       assert(((long)len) >= 0);
-      unsigned long	i;
-      unsigned long	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
+      ik_ulong	i;
+      ik_ulong	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
       for (i=0; i<len; i+=wordsize) {
         ikptr		r = IK_REF(rvec, i+off_vector_data);
         if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
@@ -2229,7 +2235,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
       p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec	= (uint32_t *)(long)gc->pcb->dirty_vector;
+  dirty_vec	= (uint32_t *)gc->pcb->dirty_vector;
   new_d		= new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
