@@ -682,42 +682,45 @@ collection_id_to_gen (int id)
 }
 static void
 fix_weak_pointers (gc_t* gc)
+/* Subroutine of "ik_collect()".  Fix the cars of the weak pairs. */
 {
-  unsigned int* segment_vec = gc->segment_vector;
-  ikpcb* pcb = gc->pcb;
-  long lo_idx = IK_PAGE_INDEX(pcb->memory_base);
-  long hi_idx = IK_PAGE_INDEX(pcb->memory_end);
-  long i = lo_idx;
-  int collect_gen = gc->collect_gen;
-  while(i < hi_idx) {
-    unsigned int t = segment_vec[i];
-    if ((t & (type_mask|new_gen_mask)) ==
-        (weak_pairs_type|new_gen_tag)) {
+  uint32_t *	segment_vec = gc->segment_vector;
+  long		lo_idx      = IK_PAGE_INDEX(gc->pcb->memory_base);
+  long		hi_idx      = IK_PAGE_INDEX(gc->pcb->memory_end);
+  long		page_idx    = lo_idx;
+  int		collect_gen = gc->collect_gen;
+  /* Iterate over the pages referenced by the segments vector. */
+  for (; page_idx < hi_idx; ++page_idx) {
+    uint32_t	page_sbits = segment_vec[page_idx];
+    /* Visit this page if it is marked as containing weak pairs. */
+    if ((page_sbits & (type_mask|new_gen_mask)) == (weak_pairs_type|new_gen_tag)) {
       //int gen = t & gen_mask;
       if (1) { //(gen > collect_gen) {
-        ikptr p = (ikptr)(i << IK_PAGESHIFT);
-        ikptr q = p + IK_PAGESIZE;
-        while(p < q) {
-          ikptr x = IK_REF(p, 0);
-          if (! IK_IS_FIXNUM(x)) {
-            int tag = IK_TAGOF(x);
+        ikptr	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+        ikptr	q = p + IK_PAGESIZE;
+        for (; p < q; p += pair_size) {
+          ikptr X = IK_REF(p, 0);
+          if (! IK_IS_FIXNUM(X)) {
+            int tag = IK_TAGOF(X);
             if (tag != immediate_tag) {
-              ikptr fst = IK_REF(x, -tag);
-              if (fst == IK_FORWARD_PTR) {
-                IK_REF(p, 0) = IK_REF(x, wordsize-tag);
+              ikptr first_word = IK_REF(X, -tag);
+              if (first_word == IK_FORWARD_PTR) {
+		/* The car of this pair is still alive: retrieve its new
+		   tagged pointer and store it in the car slot. */
+                IK_REF(p, disp_car) = IK_REF(X, wordsize-tag);
               } else {
-                int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
-                if (x_gen <= collect_gen) {
-                  IK_REF(p, 0) = IK_BWP_OBJECT;
+                int X_gen = segment_vec[IK_PAGE_INDEX(X)] & gen_mask;
+                if (X_gen <= collect_gen) {
+		  /* The car of  this pair is dead: set the  car slot to
+		     the BWP object. */
+                  IK_REF(p, disp_car) = IK_BWP_OBJECT;
                 }
               }
             }
           }
-          p += (2*wordsize);
         }
       }
     }
-    i++;
   }
 }
 
