@@ -56,7 +56,10 @@ typedef struct qupages_t {
 } qupages_t;
 
 /* See the  documentation of the functions  "gc_alloc_new_*" for details
-   on this data structure. */
+   on this data structure.
+
+   FIXME Is the "base" field actually needed?  It seems to me that it is
+   always equal to "aq".  (Marco Maggi; Mon Dec 16, 2013) */
 typedef struct {
   ikptr ap;	/* allocation pointer, references the next free word */
   ikptr aq;	/* pointer to the first allocated word */
@@ -64,13 +67,22 @@ typedef struct {
   ikptr base;	/* pointer to the first allocated word */
 } meta_t;
 
+/* This structure represents the state of the garbage collector. */
 typedef struct gc_t {
   meta_t	meta[meta_count];
   qupages_t *	queues[meta_count];
+
   ikpcb *	pcb;
+
+  /* FIXME This field is always kept equal to the corresponding field in
+     the PCB;  IMHO it should be  safe to remove it.   (Marco Maggi; Mon
+     Dec 16, 2013) */
   uint32_t *	segment_vector;
+
   int		collect_gen;
   int		collect_gen_tag;
+
+  /* These fields are for the hash tables. */
   ikptr		tconc_ap;
   ikptr		tconc_ep;
   ikptr		tconc_base;
