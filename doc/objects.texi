@@ -909,8 +909,8 @@ lvalue resulting from evaluating @var{left}.
 Register in the dirty vector that the memory page containing the
 location referenced by @var{pointer} has been mutated.  This function
 must be called every time we mutate a pair, vector, structure, record,
-cflonum, compnum slot by storing in it a reference to another Scheme
-object that might be in a newer garbage collection generation.
+ratnum, cflonum, compnum slot by storing in it a reference to another
+Scheme object that might be in a newer garbage collection generation.
 
 If we call this function when there is no need for it: nothing bad will
 happen; the garbage collector will just do some useless work, slowing
