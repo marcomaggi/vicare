@@ -46,17 +46,22 @@
  ** Type definitions.
  ** ----------------------------------------------------------------- */
 
+/* See the  documentation of the functions  "gc_alloc_new_*" for details
+   on this  data structure.  This data  structure is a node  in a simply
+   linked list. */
 typedef struct qupages_t {
   ikptr p;    /* pointer to the scan start */
   ikptr q;    /* pointer to the scan end */
   struct qupages_t* next;
 } qupages_t;
 
+/* See the  documentation of the functions  "gc_alloc_new_*" for details
+   on this data structure. */
 typedef struct {
-  ikptr ap;
-  ikptr aq;
-  ikptr ep;
-  ikptr base;
+  ikptr ap;	/* allocation pointer, references the next free word */
+  ikptr aq;	/* pointer to the first allocated word */
+  ikptr ep;	/* end pointer, references a word past the end */
+  ikptr base;	/* pointer to the first allocated word */
 } meta_t;
 
 typedef struct gc_t {
@@ -86,7 +91,6 @@ static void	collect_stack(gc_t*, ikptr top, ikptr base);
 static void	collect_loop(gc_t*);
 static void	gc_add_tconcs(gc_t*);
 
-static ikptr	meta_alloc_extending	(long size, gc_t* gc, int meta_id);
 static void	ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
 
 static void	relocate_new_code (ikptr p_X, gc_t* gc);
@@ -111,15 +115,6 @@ static int continuation_count	= 0;
 static int string_count		= 0;
 static int htable_count		= 0;
 #endif
-
-static const int const extension_amount[meta_count] = {
-  1 * IK_PAGESIZE,
-  1 * IK_PAGESIZE,
-  1 * IK_PAGESIZE,
-  1 * IK_PAGESIZE,
-  1 * IK_PAGESIZE,
-  1 * IK_PAGESIZE,
-};
 
 static const unsigned int const meta_mt[meta_count] = {
   pointers_mt,
@@ -197,202 +192,6 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
     if (size)
       ik_munmap(base, size);
   }
-}
-
-
-/** --------------------------------------------------------------------
- ** Stuff.
- ** ----------------------------------------------------------------- */
-
-static inline ikptr	meta_alloc (long aligned_size, gc_t* gc, int meta_id);
-static ikptr		meta_alloc_extending (long size, gc_t* gc, int meta_id);
-
-static inline ikptr
-gc_alloc_new_ptr (int size, gc_t* gc)
-{
-  assert(size == IK_ALIGN(size));
-  return meta_alloc(size, gc, meta_ptrs);
-}
-static inline ikptr
-gc_alloc_new_large_ptr (int size, gc_t* gc)
-/* Alloc memory pages  in which a large object will  be stored; return a
-   pointer to  the first allocated  page.  The  pages are marked  in the
-   segments  vector as  "large  object", this  will  prevent later  such
-   object to be  moved around.  The object's data area  is registered in
-   the queues of objects to be scanned later by "collect_loop()". */
-{
-  int		memreq;
-  ikptr		mem;
-  memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-  mem    = ik_mmap_typed(memreq, pointers_mt | large_object_tag | gc->collect_gen_tag, gc->pcb);
-  /* Reset to zero  the portion of memory  that will not be  used by the
-     large object. */
-  bzero((char*)(long)(mem+size), memreq-size);
-  /* Retake   the   segment   vector   because   memory   allocated   by
-     "ik_mmap_typed()" might  have caused  the reallocation of  the page
-     vectors. */
-  gc->segment_vector = gc->pcb->segment_vector;
-  /* Push a new  node on the linked list of  meta pointer memory blocks.
-     This allows the function "collect_loop()" to scan the object. */
-  {
-    qupages_t *	qu;
-    qu       = ik_malloc(sizeof(qupages_t));
-    qu->p    = mem;
-    qu->q    = mem+size;
-    qu->next = gc->queues[meta_ptrs];
-    gc->queues[meta_ptrs] = qu;
-  }
-  return mem;
-}
-static inline void
-enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
-/* Assume that "mem" references a large object that is already stored in
-   memory pages  marked as "large  object".  Such objects are  not moved
-   around by the garbage collector, rather  we register the data area in
-   the queues of objects to be scanned later by "collect_loop()". */
-{
-  ik_ulong	page_idx = IK_PAGE_INDEX(mem);
-  ik_ulong	page_end = IK_PAGE_INDEX(mem+size-1);
-  for (; page_idx <= page_end; ++page_idx) {
-    gc->segment_vector[page_idx] = pointers_mt | large_object_tag | gc->collect_gen_tag;
-  }
-  {
-    qupages_t *	qu;
-    qu       = ik_malloc(sizeof(qupages_t));
-    qu->p    = mem;
-    qu->q    = mem+size;
-    qu->next = gc->queues[meta_ptrs];
-    gc->queues[meta_ptrs] = qu;
-  }
-}
-static inline ikptr
-gc_alloc_new_symbol_record (gc_t* gc)
-{
-  assert(symbol_record_size == IK_ALIGN(symbol_record_size));
-  return meta_alloc(symbol_record_size, gc, meta_symbol);
-}
-
-
-
-
-static inline ikptr
-gc_alloc_new_pair(gc_t* gc) {
-  return meta_alloc(pair_size, gc, meta_pair);
-}
-
-
-
-static inline ikptr
-gc_alloc_new_weak_pair(gc_t* gc) {
-  meta_t* meta = &gc->meta[meta_weak];
-  ikptr ap = meta->ap;
-  ikptr ep = meta->ep;
-  ikptr nap = ap + pair_size;
-  if (nap > ep) {
-      ikptr mem = ik_mmap_typed(IK_PAGESIZE,
-				meta_mt[meta_weak] | gc->collect_gen_tag,
-				gc->pcb);
-      gc->segment_vector = gc->pcb->segment_vector;
-      meta->ap = mem + pair_size;
-      meta->aq = mem;
-      meta->ep = mem + IK_PAGESIZE;
-      meta->base = mem;
-      return mem;
-  } else {
-    meta->ap = nap;
-    return ap;
-  }
-}
-
-static inline ikptr
-gc_alloc_new_data(int size, gc_t* gc) {
-  assert(size == IK_ALIGN(size));
-  return meta_alloc(size, gc, meta_data);
-}
-
-static inline ikptr
-gc_alloc_new_code (long aligned_size, gc_t* gc)
-/* Allocate a new memory block to be as code object; the allocated block
-   size is an  exact multiple of the page size;  allocation is performed
-   with "mmap()" to  have read, write and  execution protection.
-
-   Return an *untagged* pointer referencing  the first byte of allocated
-   memory. */
-{
-  assert(aligned_size == IK_ALIGN(aligned_size));
-  if (aligned_size < IK_PAGESIZE) {
-    return meta_alloc(aligned_size, gc, meta_code);
-  } else { /* More than one page needed. */
-    long	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
-    ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
-    qupages_t *	p;
-    /* FIXME In this function we never access the "segment_vector" field
-       of  "gc", do  we  need  this assignment?   (Marco  Maggi; Oct  5,
-       2012) */
-    gc->segment_vector = gc->pcb->segment_vector;
-    p    = ik_malloc(sizeof(qupages_t));
-    p->p = mem;
-    p->q = mem+aligned_size;
-    bzero((char*)(long)(mem+aligned_size), memreq-aligned_size);
-    p->next = gc->queues[meta_code];
-    gc->queues[meta_code] = p;
-    return mem;
-  }
-}
-
-
-/* ------------------------------------------------------------------ */
-
-static inline ikptr
-meta_alloc (long aligned_size, gc_t* gc, int meta_id)
-{
-  assert(aligned_size == IK_ALIGN(aligned_size));
-  meta_t *	meta = &gc->meta[meta_id];
-  ikptr		ap   = meta->ap;
-  ikptr		ep   = meta->ep;
-  ikptr		nap  = ap + aligned_size;
-  if (nap > ep) {
-    return meta_alloc_extending(aligned_size, gc, meta_id);
-  } else {
-    meta->ap = nap;
-    return ap;
-  }
-}
-static ikptr
-meta_alloc_extending (long size, gc_t* gc, int meta_id)
-{
-  long		mapsize;
-  meta_t *	meta;
-  ikptr		mem;
-  mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
-  if (mapsize < extension_amount[meta_id]) {
-    mapsize = extension_amount[meta_id];
-  }
-  meta = &gc->meta[meta_id];
-  if ((meta_id != meta_data) &&  meta->base) {
-    qupages_t *	p  = ik_malloc(sizeof(qupages_t));
-    ikptr	aq = meta->aq;
-    ikptr	ap = meta->ap;
-    ikptr	ep = meta->ep;
-    ikptr	x;
-    p->p = aq;
-    p->q = ap;
-    p->next = gc->queues[meta_id];
-    gc->queues[meta_id] = p;
-    for (x=ap; x<ep; x+=wordsize) {
-      IK_REF(x, 0) = 0;
-    }
-  }
-  mem = ik_mmap_typed(mapsize, meta_mt[meta_id] | gc->collect_gen_tag, gc->pcb);
-  /* Retake   the   segment   vector   because   memory   allocated   by
-     "ik_mmap_typed()" might  have caused  the reallocation of  the page
-     vectors. */
-  gc->segment_vector = gc->pcb->segment_vector;
-  meta->ap = mem + size;
-  meta->aq = mem;
-  meta->ep = mem + mapsize;
-  meta->base = mem;
-  return mem;
 }
 
 
@@ -1036,6 +835,15 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
 static void	add_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
 static ikptr	add_code_entry	(gc_t* gc, ikptr entry);
 
+static inline ikptr	gc_alloc_new_data	(int size, gc_t* gc);
+static inline ikptr	gc_alloc_new_ptr	(int size, gc_t* gc);
+static inline ikptr	gc_alloc_new_large_ptr	(int size, gc_t* gc);
+static inline void	enqueue_large_ptr	(ikptr mem, int size, gc_t* gc);
+static inline ikptr	gc_alloc_new_symbol_record (gc_t* gc);
+static inline ikptr	gc_alloc_new_pair	(gc_t* gc);
+static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
+static inline ikptr	gc_alloc_new_code	(long aligned_size, gc_t* gc);
+
 static ikptr
 #if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
 add_object_proc (gc_t* gc, ikptr X, char* caller)
@@ -1610,6 +1418,275 @@ add_code_entry (gc_t* gc, ikptr entry)
     IK_REF(x, wordsize)	= y | vector_tag;
     return y+disp_code_data;
   }
+}
+
+
+/** --------------------------------------------------------------------
+ ** Keeping alive objects: allocating memory for moved live objects.
+ ** ----------------------------------------------------------------- */
+
+/* Vicare implements a moving and compacting garbage collector; whenever
+ * the collector, while scanning memory pages from the GC roots, finds a
+ * live  Scheme  object: it  moves  its  data  area to  another  storage
+ * location.
+ *
+ *   Small Scheme objects are stored,  one after the other, in dedicated
+ * memory pages:  a page for  pairs, a page for  weak pairs, a  page for
+ * symbol records, a  page for code objects, a page  for pointer objects
+ * (that  hold  immediate  values  or tagged  pointers;  like:  vectors,
+ * structs, records, ratnums,  compnums, cflonums); a page  for raw data
+ * (the  data area  of  bytevectors, strings,  flonums,  etc.).  When  a
+ * dedicated page is full: a new one is allocated.
+ *
+ *   The  garbage collector  keeps references  to the  current dedicated
+ * pages in  the array field "meta"  of the struct "gc_t".   The garbage
+ * collection core  function will  scan the meta  pages by  calling thhe
+ * function "collect_loop()".
+ *
+ *   Some objects  are not  stored in  the meta  pages, rather  in pages
+ * allocated just for them; in this  case a reference to their data area
+ * is stored  in the "queues"  field of the  gc_t struct, so  that later
+ * such objects can be scanned by "collect_loop()".
+ */
+
+static inline ikptr	meta_alloc (long aligned_size, gc_t* gc, int meta_id);
+static ikptr		meta_alloc_extending (long size, gc_t* gc, int meta_id);
+
+static inline ikptr
+gc_alloc_new_ptr (int size, gc_t* gc)
+/* Reserve enough room in the current  meta page for pointers to hold an
+   object of SIZE  bytes.  Return an untagged pointer to  the first word
+   of reserved memory. */
+{
+  assert(size == IK_ALIGN(size));
+  return meta_alloc(size, gc, meta_ptrs);
+}
+static inline ikptr
+gc_alloc_new_large_ptr (int size, gc_t* gc)
+/* Alloc memory pages  in which a large object will  be stored; return a
+   pointer to  the first allocated  page.  The  pages are marked  in the
+   segments  vector as  "large  object", this  will  prevent later  such
+   object to be  moved around.  The object's data area  is registered in
+   the queues of objects to be scanned later by "collect_loop()". */
+{
+  int		memreq;
+  ikptr		mem;
+  memreq = IK_ALIGN_TO_NEXT_PAGE(size);
+  mem    = ik_mmap_typed(memreq, pointers_mt | large_object_tag | gc->collect_gen_tag, gc->pcb);
+  /* Reset to zero  the portion of memory  that will not be  used by the
+     large object. */
+  bzero((char*)(long)(mem+size), memreq-size);
+  /* Retake   the   segment   vector   because   memory   allocated   by
+     "ik_mmap_typed()" might  have caused  the reallocation of  the page
+     vectors. */
+  gc->segment_vector = gc->pcb->segment_vector;
+  /* Push a new  node on the linked list of  meta pointer memory blocks.
+     This allows the function "collect_loop()" to scan the object. */
+  {
+    qupages_t *	qu;
+    qu       = ik_malloc(sizeof(qupages_t));
+    qu->p    = mem;
+    qu->q    = mem+size;
+    qu->next = gc->queues[meta_ptrs];
+    gc->queues[meta_ptrs] = qu;
+  }
+  return mem;
+}
+static inline void
+enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
+/* Assume that "mem" references a large object that is already stored in
+   memory pages  marked as "large  object".  Such objects are  not moved
+   around by the garbage collector, rather  we register the data area in
+   the queues of objects to be scanned later by "collect_loop()". */
+{
+  ik_ulong	page_idx = IK_PAGE_INDEX(mem);
+  ik_ulong	page_end = IK_PAGE_INDEX(mem+size-1);
+  for (; page_idx <= page_end; ++page_idx) {
+    gc->segment_vector[page_idx] = pointers_mt | large_object_tag | gc->collect_gen_tag;
+  }
+  {
+    qupages_t *	qu;
+    qu       = ik_malloc(sizeof(qupages_t));
+    qu->p    = mem;
+    qu->q    = mem+size;
+    qu->next = gc->queues[meta_ptrs];
+    gc->queues[meta_ptrs] = qu;
+  }
+}
+static inline ikptr
+gc_alloc_new_symbol_record (gc_t* gc)
+/* Reserve enough  room in the current  meta page for symbols  to hold a
+   Scheme symbol's record.  Return an untagged pointer to the first word
+   of reserved memory. */
+{
+  assert(symbol_record_size == IK_ALIGN(symbol_record_size));
+  return meta_alloc(symbol_record_size, gc, meta_symbol);
+}
+static inline ikptr
+gc_alloc_new_pair(gc_t* gc)
+/* Reserve enough  room in  the current  meta page for  pairs to  hold a
+   Scheme pair object.  Return an untagged  pointer to the first word of
+   reserved memory. */
+{
+  return meta_alloc(pair_size, gc, meta_pair);
+}
+static inline ikptr
+gc_alloc_new_weak_pair(gc_t* gc)
+/* Reserve enough room in the current meta page for weak pairs to hold a
+   Scheme weak  pair object.   Return an untagged  pointer to  the first
+   word of reserved memory.
+
+     If the meta page is full: allocate  a new one, store a reference to
+   it in the GC  struct, reserve room for a pair in  it.  We perform the
+   allocation  of  a  new  meta   page  here  (rather  than  by  calling
+   "meta_alloc()")  because we  have to  tag the  page specially  in the
+   segments vector. */
+{
+  meta_t *	meta = &gc->meta[meta_weak];
+  ikptr		ap  = meta->ap;		/* meta page alloc pointer */
+  ikptr		ep  = meta->ep;		/* meta page end pointer */
+  ikptr		nap = ap + pair_size;	/* meta page new alloc pointer */
+  if (nap > ep) {
+    /* There is not  enough room, in the current meta  page, for another
+       pair; we have to allocate a new page. */
+    ikptr mem = ik_mmap_typed(IK_PAGESIZE, meta_mt[meta_weak] | gc->collect_gen_tag, gc->pcb);
+    /* Retake   the  segments   vector  because   memory  allocated   by
+       "ik_mmap_typed()" might have caused  the reallocation of the page
+       vectors. */
+    gc->segment_vector = gc->pcb->segment_vector;
+    /* Store references to the new meta page in the GC struct. */
+    meta->ap   = mem + pair_size;
+    meta->aq   = mem;
+    meta->ep   = mem + IK_PAGESIZE;
+    meta->base = mem;
+    return mem;
+  } else {
+    /* There  is enough  room, in  the  current meta  page, for  another
+       pair. */
+    meta->ap = nap;
+    return ap;
+  }
+}
+static inline ikptr
+gc_alloc_new_data (int size, gc_t* gc)
+/* Reserve enough room in  the current meta page for raw  data to hold a
+   data area  of SIZE bytes.   Return an  untagged pointer to  the first
+   word of reserved memory. */
+{
+  assert(size == IK_ALIGN(size));
+  return meta_alloc(size, gc, meta_data);
+}
+static inline ikptr
+gc_alloc_new_code (long aligned_size, gc_t* gc)
+/* Alloc memory  pages in which a  code object will be  stored; return a
+   pointer  to the  first allocated  page.   The object's  data area  is
+   registered  in  the  queues  of   objects  to  be  scanned  later  by
+   "collect_loop()". */
+{
+  assert(aligned_size == IK_ALIGN(aligned_size));
+  if (aligned_size < IK_PAGESIZE) {
+    return meta_alloc(aligned_size, gc, meta_code);
+  } else { /* More than one page needed. */
+    long	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
+    ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+    /* Reset to  zero the portion of  allocated memory that will  not be
+       used by the code object. */
+    bzero((char*)(long)(mem+aligned_size), memreq-aligned_size);
+    /* Retake   the  segment   vector   because   memory  allocated   by
+       "ik_mmap_code()" might  have caused the reallocation  of the page
+       vectors. */
+    gc->segment_vector = gc->pcb->segment_vector;
+    {
+      qupages_t *	qu = ik_malloc(sizeof(qupages_t));
+      qu->p    = mem;
+      qu->q    = mem+aligned_size;
+      qu->next = gc->queues[meta_code];
+      gc->queues[meta_code] = qu;
+    }
+    return mem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+static inline ikptr
+meta_alloc (long aligned_size, gc_t* gc, int meta_id)
+/* Reserve enough room in the current meta page of type "meta_id" for an
+   object of  size ALIGNED_SIZE  bytes.  Return a  pointer to  the first
+   word of reserved space.
+
+   If the meta page is full: allocate a new one. */
+{
+  assert(aligned_size == IK_ALIGN(aligned_size));
+  meta_t *	meta = &gc->meta[meta_id];
+  ikptr		ap   = meta->ap;		/* allocation pointer */
+  ikptr		ep   = meta->ep;		/* end pointer */
+  ikptr		nap  = ap + aligned_size;	/* new alloc pointer */
+  if (nap > ep) {
+    /* Not enough room. */
+    return meta_alloc_extending(aligned_size, gc, meta_id);
+  } else {
+    /* Enough room. */
+    meta->ap = nap;
+    return ap;
+  }
+}
+static ikptr
+meta_alloc_extending (long size, gc_t* gc, int meta_id)
+/* Allocate one or move new meta  pages of type "meta_id", so that there
+   is enough  room to  hold the data  area of an  object of  SIZE bytes.
+   Return a pointer to the first word of allocated memory. */
+{
+  static const int const EXTENSION_AMOUNT[meta_count] = {
+    1 * IK_PAGESIZE,
+    1 * IK_PAGESIZE,
+    1 * IK_PAGESIZE,
+    1 * IK_PAGESIZE,
+    1 * IK_PAGESIZE,
+    1 * IK_PAGESIZE,
+  };
+  long		mapsize;
+  meta_t *	meta;
+  ikptr		mem;
+  mapsize = IK_ALIGN_TO_NEXT_PAGE(size);
+  if (mapsize < EXTENSION_AMOUNT[meta_id]) {
+    mapsize = EXTENSION_AMOUNT[meta_id];
+  }
+  meta = &gc->meta[meta_id];
+  /* If the  old meta pages are  not of type  raw data: store it  in the
+     queues to be scanned by "collect_loop()". */
+  if ((meta_id != meta_data) && meta->base) {
+    ikptr	aq = meta->aq;
+    ikptr	ap = meta->ap;
+    ikptr	ep = meta->ep;
+    { /* Register the old meta pages  to be scanned by "collect_loop()";
+	 only the portion actually used needs to be registered. */
+      qupages_t *	qu  = ik_malloc(sizeof(qupages_t));
+      qu->p    = aq;
+      qu->q    = ap;
+      qu->next = gc->queues[meta_id];
+      gc->queues[meta_id] = qu;
+    }
+    { /* Reset to zero all the unused words in the old meta pages. */
+      ikptr	X;
+      for (X=ap; X<ep; X+=wordsize) {
+	IK_REF(X, 0) = 0;
+      }
+    }
+  }
+  /* Allocate one or more new meta pages. */
+  mem = ik_mmap_typed(mapsize, meta_mt[meta_id] | gc->collect_gen_tag, gc->pcb);
+  /* Retake   the   segment   vector   because   memory   allocated   by
+     "ik_mmap_typed()" might  have caused  the reallocation of  the page
+     vectors. */
+  gc->segment_vector = gc->pcb->segment_vector;
+  /* Store references to  the new meta pages in the  GC struct.  Reserve
+     SIZE bytes for the object. */
+  meta->ap   = mem + size;	/* alloc pointer */
+  meta->aq   = mem;		/* beginning of allocated meta pages */
+  meta->ep   = mem + mapsize;	/* end pointer */
+  meta->base = mem;		/* beginning of allocated meta pages */
+  return mem;
 }
 
 
