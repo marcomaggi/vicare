@@ -33,9 +33,6 @@
  ** Constants.
  ** ----------------------------------------------------------------- */
 
-#define cardsize		512
-#define cards_per_page		8
-
 #define meta_ptrs	0
 #define meta_code	1
 #define meta_data	2
@@ -2102,11 +2099,31 @@ static unsigned int cleanup_mask[IK_GC_GENERATION_COUNT] = {
  ** Scanning dirty pages.
  ** ----------------------------------------------------------------- */
 
+/* Notice that:
+ *
+ *   CARDSIZE * CARDS_PER_PAGE = 4098 = IK_PAGESIZE
+ */
+#define CARDSIZE		512
+#define CARDS_PER_PAGE		8
+
 static void scan_dirty_code_page     (gc_t* gc, ik_ulong page_idx);
 static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask);
 
 static void
 scan_dirty_pages (gc_t* gc)
+/* Iterate over the  dirty vector and operate on all  the page marked as
+   dirty.  The problem solved by marking pages as dirty is: what happens
+   when a Scheme object in an older generation is mutated to reference a
+   Scheme  object in  a newer  generation?  How  can the  younger object
+   survive a garbage  collection if the only reference to  it is from an
+   older object?
+
+   A  "dirty" page  is a  memory page  holding the  data area  of Scheme
+   objects  itself  composed  of  immediate  Scheme  objects  or  tagged
+   pointers (for  example: pairs,  vectors, structs,  records, compnums,
+   cflonums);  such  page  becomes  dirty  when a  word  is  mutated  at
+   run-time.
+*/
 {
   ikpcb *	pcb    = gc->pcb;
   ik_ulong	lo_idx = IK_PAGE_INDEX(pcb->memory_base);
@@ -2115,30 +2132,30 @@ scan_dirty_pages (gc_t* gc)
   uint32_t *	segment_vec = pcb->segment_vector;
   int		collect_gen = gc->collect_gen;
   uint32_t	mask        = dirty_mask[collect_gen];
-  ik_ulong	i;
-  for (i = lo_idx; i < hi_idx; ++i) {
-    if (dirty_vec[i] & mask) {
-      uint32_t sbits = segment_vec[i];
+  ik_ulong	page_idx;
+  for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) {
+    if (dirty_vec[page_idx] & mask) {
+      uint32_t sbits = segment_vec[page_idx];
       int      generation_number  = sbits & gen_mask;
       if (generation_number > collect_gen) {
         int type = sbits & type_mask;
         if (type == pointers_type) {
-          scan_dirty_pointers_page(gc, i, mask);
+          scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
         else if (type == symbols_type) {
-          scan_dirty_pointers_page(gc, i, mask);
+          scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
         else if (type == weak_pairs_type) {
-          scan_dirty_pointers_page(gc, i, mask);
+          scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
         else if (type == code_type) {
-          scan_dirty_code_page(gc, i);
+          scan_dirty_code_page(gc, page_idx);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
@@ -2164,10 +2181,10 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
   ikptr		p = (ikptr)(page_idx << IK_PAGESHIFT);
   int		j;
   uint32_t	new_d = 0;
-  for (j=0; j<cards_per_page; j++) {
+  for (j=0; j<CARDS_PER_PAGE; j++) {
     if (masked_d & (0xF << (j*meta_dirty_shift))) {
       /* dirty card */
-      ikptr q = p + cardsize;
+      ikptr q = p + CARDSIZE;
       uint32_t card_d = 0;
       while (p < q) {
         ikptr x = IK_REF(p, 0);
@@ -2186,7 +2203,7 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
       card_d = (card_d & meta_dirty_mask) >> meta_dirty_shift;
       new_d  = new_d | (card_d<<(j*meta_dirty_shift));
     } else {
-      p += cardsize;
+      p += CARDSIZE;
       new_d = new_d | (d & (0xF << (j*meta_dirty_shift)));
     }
   }
@@ -2214,7 +2231,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
     if (IK_REF(p, 0) != code_tag) {
       p = q;
     } else {
-      long	j		= ((long)p - (long)start) / cardsize;
+      long	j		= ((long)p - (long)start) / CARDSIZE;
       long	code_size	= IK_UNFIX(IK_REF(p, disp_code_code_size));
       relocate_new_code(p, gc);
       segment_vec = gc->segment_vector;
