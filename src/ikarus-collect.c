@@ -2198,15 +2198,15 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
 	       memory, so we must retake the segment vector. */
 	    segment_vec = gc->segment_vector;
 	    IK_REF(page_ptr, 0) = Y;
-	    card_dbits = card_dbits | segment_vec[IK_PAGE_INDEX(Y)];
+	    card_dbits |= segment_vec[IK_PAGE_INDEX(Y)];
 	  }
 	  page_ptr += wordsize;
 	}
 	card_dbits = (card_dbits & meta_dirty_mask) >> meta_dirty_shift;
-	new_page_dbits  = new_page_dbits | (card_dbits << (j * meta_dirty_shift));
+	new_page_dbits |= card_dbits << (j * meta_dirty_shift);
       } else {
 	page_ptr += CARDSIZE;
-	new_page_dbits = new_page_dbits | (page_dbits & (0xF << (j * meta_dirty_shift)));
+	new_page_dbits |= page_dbits & (0xF << (j * meta_dirty_shift));
       }
     }
   }
