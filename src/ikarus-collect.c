@@ -2111,7 +2111,7 @@ static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask);
 
 static void
 scan_dirty_pages (gc_t* gc)
-/* Iterate over the  dirty vector and operate on all  the page marked as
+/* Iterate over the dirty vector and  operate on all the pages marked as
    dirty.  The problem solved by marking pages as dirty is: what happens
    when a Scheme object in an older generation is mutated to reference a
    Scheme  object in  a newer  generation?  How  can the  younger object
@@ -2119,10 +2119,9 @@ scan_dirty_pages (gc_t* gc)
    older object?
 
    A  "dirty" page  is a  memory page  holding the  data area  of Scheme
-   objects  itself  composed  of  immediate  Scheme  objects  or  tagged
-   pointers (for  example: pairs,  vectors, structs,  records, compnums,
-   cflonums);  such  page  becomes  dirty  when a  word  is  mutated  at
-   run-time.
+   objects  themselves composed  of immediate  Scheme objects  or tagged
+   pointers (pairs, vectors, structs, records, compnums, cflonums); such
+   page becomes dirty when a word is mutated at run-time.
 */
 {
   ikpcb *	pcb         = gc->pcb;
@@ -2168,21 +2167,23 @@ scan_dirty_pages (gc_t* gc)
 }
 static void
 scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
-/* Subroutine  of   "scan_dirty_pages()".   This  function   might  call
-   "add_object()", which  means it  might allocate memory,  which means:
-   after  every call  the  dirty  and segments  vector  might have  been
-   reallocated. */
+/* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
+   containing  the data  area of  Scheme objects  composed of  immediate
+   objects or tagged pointers, but not code objects.
+
+   NOTE This  function might call  "add_object()", which means  it might
+   allocate memory, which means: after every call the dirty and segments
+   vector might have been reallocated. */
 {
-  uint32_t *	segment_vec = gc->segment_vector;
-  uint32_t *	dirty_vec   = (uint32_t*)gc->pcb->dirty_vector;
-  uint32_t	t = segment_vec[page_idx];
-  uint32_t	d = dirty_vec[page_idx];
-  uint32_t	masked_d = d & mask;
-  ikptr		p = (ikptr)(page_idx << IK_PAGESHIFT);
+  uint32_t *	segment_vec  = gc->segment_vector;
+  uint32_t *	dirty_vec    = (uint32_t*)gc->pcb->dirty_vector;
+  uint32_t	page_dbits   = dirty_vec[page_idx];
+  uint32_t	masked_dbits = page_dbits & mask;
+  ikptr		p            = IK_PAGE_POINTER_FROM_INDEX(page_idx);
   int		j;
-  uint32_t	new_d = 0;
+  uint32_t	new_page_dbits = 0;
   for (j=0; j<CARDS_PER_PAGE; j++) {
-    if (masked_d & (0xF << (j*meta_dirty_shift))) {
+    if (masked_dbits & (0xF << (j*meta_dirty_shift))) {
       /* dirty card */
       ikptr q = p + CARDSIZE;
       uint32_t card_d = 0;
@@ -2201,32 +2202,37 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
         p += wordsize;
       }
       card_d = (card_d & meta_dirty_mask) >> meta_dirty_shift;
-      new_d  = new_d | (card_d<<(j*meta_dirty_shift));
+      new_page_dbits  = new_page_dbits | (card_d<<(j*meta_dirty_shift));
     } else {
       p += CARDSIZE;
-      new_d = new_d | (d & (0xF << (j*meta_dirty_shift)));
+      new_page_dbits = new_page_dbits | (page_dbits & (0xF << (j*meta_dirty_shift)));
     }
   }
-  dirty_vec = (uint32_t*)gc->pcb->dirty_vector;
-  new_d     = new_d & cleanup_mask[t & gen_mask];
-  dirty_vec[page_idx] = new_d;
+  {
+    uint32_t *	dirty_vec  = (uint32_t*)gc->pcb->dirty_vector;
+    uint32_t	page_sbits = segment_vec[page_idx];
+    new_page_dbits = new_page_dbits & cleanup_mask[page_sbits & gen_mask];
+    dirty_vec[page_idx] = new_page_dbits;
+  }
 }
 static void
 scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
-/* Subroutine  of   "scan_dirty_pages()".   This  function   might  call
-   "add_object()", which  means it  might allocate memory,  which means:
-   after  every call  the  dirty  and segments  vector  might have  been
-   reallocated. */
+/* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
+   containing the data area of Scheme code objects.
+
+   NOTE This  function might call  "add_object()", which means  it might
+   allocate memory, which means: after every call the dirty and segments
+   vector might have been reallocated. */
 {
-  ikptr		p		= (ikptr)(page_idx << IK_PAGESHIFT);
+  ikptr		p		= IK_PAGE_POINTER_FROM_INDEX(page_idx);
   ikptr		start		= p;
   ikptr		q		= p + IK_PAGESIZE;
   uint32_t *	segment_vec	= (uint32_t *)(long)gc->segment_vector;
   uint32_t *	dirty_vec	= (uint32_t *)(long)gc->pcb->dirty_vector;
   //uint32_t int d = dirty_vec[page_idx];
   uint32_t	t		= segment_vec[page_idx];
-  //uint32_t int masked_d = d & mask;
-  uint32_t	new_d		= 0;
+  //uint32_t int masked_dbits = d & mask;
+  uint32_t	new_page_dbits		= 0;
   while (p < q) {
     if (IK_REF(p, 0) != code_tag) {
       p = q;
@@ -2250,13 +2256,13 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
           code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
         }
       }
-      new_d	= new_d | (code_d << (j * meta_dirty_shift));
+      new_page_dbits	= new_page_dbits | (code_d << (j * meta_dirty_shift));
       p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec	= (uint32_t *)gc->pcb->dirty_vector;
-  new_d		= new_d & cleanup_mask[t & gen_mask];
-  dirty_vec[page_idx] = new_d;
+  dirty_vec      = (uint32_t *)gc->pcb->dirty_vector;
+  new_page_dbits = new_page_dbits & cleanup_mask[t & gen_mask];
+  dirty_vec[page_idx] = new_page_dbits;
 }
 
 

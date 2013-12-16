@@ -228,6 +228,11 @@
    to hold X bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
 
+/* Given a  Vicare page index: return  an untagged pointer to  the first
+   word of the page. */
+#define IK_PAGE_POINTER_FROM_INDEX(IDX)	\
+  ((ikptr)(((ik_ulong)(IDX)) << IK_PAGESHIFT))
+
 /* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
    number of bytes "mmap()" will allocate to hold it. */
 #define IK_MMAP_ALLOCATION_SIZE(SIZE) \

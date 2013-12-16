@@ -584,6 +584,12 @@ two page indexes representing a region big enough to hold @var{size}
 bytes.
 @end deftypefn
 
+
+@deftypefn {C Preprocessor Macro} ikptr IK_PAGE_POINTER_FROM_INDEX (ik_ulong @var{idx})
+Given a Vicare page index @var{idx}: return an untagged pointer to the
+first word of the page.
+@end deftypefn
+
 @c page
 @node objects memory ikpcb
 @subsection Interesting @pcb{} fields
