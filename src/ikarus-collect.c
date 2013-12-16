@@ -78,8 +78,12 @@ typedef struct gc_t {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
+static void	scan_dirty_pages	(gc_t*);
+static void	deallocate_unused_pages	(gc_t*);
+static void	fix_new_pages		(gc_t* gc);
 static void	handle_guardians	(gc_t* gc);
 static void	gc_finalize_guardians	(gc_t* gc);
+
 static ikptr	meta_alloc_extending	(long size, gc_t* gc, int meta_id);
 static int	collection_id_to_gen	(int id);
 
@@ -106,7 +110,7 @@ static int string_count		= 0;
 static int htable_count		= 0;
 #endif
 
-static int extension_amount[meta_count] = {
+static const int const extension_amount[meta_count] = {
   1 * IK_PAGESIZE,
   1 * IK_PAGESIZE,
   1 * IK_PAGESIZE,
@@ -115,7 +119,7 @@ static int extension_amount[meta_count] = {
   1 * IK_PAGESIZE,
 };
 
-static unsigned int meta_mt[meta_count] = {
+static const unsigned int const meta_mt[meta_count] = {
   pointers_mt,
   code_mt,
   data_mt,
@@ -124,8 +128,7 @@ static unsigned int meta_mt[meta_count] = {
   symbols_mt
 };
 
-static unsigned int
-next_gen_tag[IK_GC_GENERATION_COUNT] = {
+static const unsigned int const next_gen_tag[IK_GC_GENERATION_COUNT] = {
   (4 << meta_dirty_shift) | 1 | new_gen_tag,
   (2 << meta_dirty_shift) | 2 | new_gen_tag,
   (1 << meta_dirty_shift) | 3 | new_gen_tag,
@@ -439,12 +442,6 @@ ik_collect_vararg(int req, ikpcb* pcb)
   return ik_collect(req, pcb);
 }
 */
-
-static void scan_dirty_pages(gc_t*);
-
-static void deallocate_unused_pages(gc_t*);
-
-static void fix_new_pages(gc_t* gc);
 
 ikptr
 ik_collect_check (unsigned long req, ikpcb* pcb)
