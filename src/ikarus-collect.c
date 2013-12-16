@@ -1878,7 +1878,10 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 static void zero_all_words_in_meta (meta_t * meta);
 
 static void
-collect_loop (gc_t* gc) {
+collect_loop (gc_t* gc)
+/* Keep alive  all the objects  referenced by  the memory blocks  in the
+   "queues" and "meta" fields of the struct GC. */
+{
   int done;
   do {
     done = 1;
@@ -1917,9 +1920,8 @@ collect_loop (gc_t* gc) {
         do {
           ikptr p_word = qu->p;
           ikptr p_end  = qu->q;
-          while (p_word < p_end) {
+          for (; p_word < p_end; p_word += wordsize) {
             IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "pending");
-            p_word += wordsize;
           }
           qupages_t * next = qu->next;
           ik_free(qu, sizeof(qupages_t));
@@ -1940,9 +1942,8 @@ collect_loop (gc_t* gc) {
         do {
           ikptr p_word = qu->p;
           ikptr p_end  = qu->q;
-          while (p_word < p_end) {
+          for (; p_word < p_end; p_word += wordsize) {
             IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "symbols");
-            p_word += wordsize;
           }
           qupages_t *	next = qu->next;
           ik_free(qu, sizeof(qupages_t));
@@ -1985,9 +1986,8 @@ collect_loop (gc_t* gc) {
           done = 0;
           do{
             meta->aq = q;
-            while(p < q) {
+            for (; p < q; p += pair_size) {
               IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem");
-              p += (2*wordsize);
             }
             p = meta->aq;
             q = meta->ap;
@@ -2002,10 +2002,9 @@ collect_loop (gc_t* gc) {
           done = 0;
           do{
             meta->aq = q;
-            while(p < q) {
+            for (; p < q; p += wordsize) {
               IK_REF(p,0) = add_object(gc, IK_REF(p,0), "sym");
-              p += wordsize;
-            }
+	    }
             p = meta->aq;
             q = meta->ap;
           } while (p < q);
@@ -2019,9 +2018,8 @@ collect_loop (gc_t* gc) {
           done = 0;
           do{
             meta->aq = q;
-            while(p < q) {
+            for (; p < q; p += wordsize) {
               IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem2");
-              p += wordsize;
             }
             p = meta->aq;
             q = meta->ap;
@@ -2034,9 +2032,9 @@ collect_loop (gc_t* gc) {
         ikptr q = meta->ap;
         if (p < q) {
           done = 0;
-          do{
+          do {
             meta->aq = q;
-            do{
+            do {
               alloc_code_count--;
               relocate_new_code(p, gc);
               p += IK_ALIGN(disp_code_data + IK_UNFIX(IK_REF(p, disp_code_code_size)));
