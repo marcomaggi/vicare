@@ -215,6 +215,11 @@ gc_alloc_new_ptr (int size, gc_t* gc)
 }
 static inline ikptr
 gc_alloc_new_large_ptr (int size, gc_t* gc)
+/* Alloc memory pages  in which a large object will  be stored; return a
+   pointer to  the first allocated  page.  The  pages are marked  in the
+   segments  vector as  "large  object", this  will  prevent later  such
+   object to be  moved around.  The object's data area  is registered in
+   the queues of objects to be scanned later by "collect_loop()". */
 {
   int		memreq;
   ikptr		mem;
@@ -241,17 +246,24 @@ gc_alloc_new_large_ptr (int size, gc_t* gc)
 }
 static inline void
 enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
+/* Assume that "mem" references a large object that is already stored in
+   memory pages  marked as "large  object".  Such objects are  not moved
+   around by the garbage collector, rather  we register the data area in
+   the queues of objects to be scanned later by "collect_loop()". */
 {
-  long		i;
-  long		j;
-  qupages_t *	p;
-  for (i = IK_PAGE_INDEX(mem), j = IK_PAGE_INDEX(mem+size-1); i<=j; ++i)
-    gc->segment_vector[i] = pointers_mt | large_object_tag | gc->collect_gen_tag;
-  p    = ik_malloc(sizeof(qupages_t));
-  p->p = mem;
-  p->q = mem+size;
-  p->next = gc->queues[meta_ptrs];
-  gc->queues[meta_ptrs] = p;
+  ik_ulong	page_idx = IK_PAGE_INDEX(mem);
+  ik_ulong	page_end = IK_PAGE_INDEX(mem+size-1);
+  for (; page_idx <= page_end; ++page_idx) {
+    gc->segment_vector[page_idx] = pointers_mt | large_object_tag | gc->collect_gen_tag;
+  }
+  {
+    qupages_t *	qu;
+    qu       = ik_malloc(sizeof(qupages_t));
+    qu->p    = mem;
+    qu->q    = mem+size;
+    qu->next = gc->queues[meta_ptrs];
+    gc->queues[meta_ptrs] = qu;
+  }
 }
 static inline ikptr
 gc_alloc_new_symbol_record (gc_t* gc)
@@ -1121,6 +1133,10 @@ add_object_proc (gc_t* gc, ikptr X)
       ikptr	memreq = IK_ALIGN(nbytes);
       if (memreq >= IK_PAGESIZE) { /* big vector */
         if (large_object_tag == (segment_bits & large_object_mask)) {
+	  /* This  large object  is already  stored in  pages markes  as
+	     "large  object".   We do  not  move  it around,  rather  we
+	     register  the data  area in  the  queues of  objects to  be
+	     scanned later by "collect_loop()". */
           enqueue_large_ptr(X - vector_tag, nbytes, gc);
           return X;
         } else {
