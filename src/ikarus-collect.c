@@ -62,8 +62,8 @@ typedef struct {
 typedef struct gc_t {
   meta_t	meta[meta_count];
   qupages_t *	queues[meta_count];
-  ikpcb*	pcb;
-  unsigned *	segment_vector;
+  ikpcb *	pcb;
+  uint32_t *	segment_vector;
   int		collect_gen;
   int		collect_gen_tag;
   ikptr		tconc_ap;
@@ -676,6 +676,45 @@ collection_id_to_gen (int id)
   if ((id &  15) == 15)  { return 2; }
   if ((id &   3) == 3)   { return 1; }
   return 0;
+}
+static void
+fix_weak_pointers(gc_t* gc) {
+  unsigned int* segment_vec = gc->segment_vector;
+  ikpcb* pcb = gc->pcb;
+  long lo_idx = IK_PAGE_INDEX(pcb->memory_base);
+  long hi_idx = IK_PAGE_INDEX(pcb->memory_end);
+  long i = lo_idx;
+  int collect_gen = gc->collect_gen;
+  while(i < hi_idx) {
+    unsigned int t = segment_vec[i];
+    if ((t & (type_mask|new_gen_mask)) ==
+        (weak_pairs_type|new_gen_tag)) {
+      //int gen = t & gen_mask;
+      if (1) { //(gen > collect_gen) {
+        ikptr p = (ikptr)(i << IK_PAGESHIFT);
+        ikptr q = p + IK_PAGESIZE;
+        while(p < q) {
+          ikptr x = IK_REF(p, 0);
+          if (! IK_IS_FIXNUM(x)) {
+            int tag = IK_TAGOF(x);
+            if (tag != immediate_tag) {
+              ikptr fst = IK_REF(x, -tag);
+              if (fst == IK_FORWARD_PTR) {
+                IK_REF(p, 0) = IK_REF(x, wordsize-tag);
+              } else {
+                int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
+                if (x_gen <= collect_gen) {
+                  IK_REF(p, 0) = IK_BWP_OBJECT;
+                }
+              }
+            }
+          }
+          p += (2*wordsize);
+        }
+      }
+    }
+    i++;
+  }
 }
 
 
@@ -1832,88 +1871,112 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Collect loop.
+ ** ----------------------------------------------------------------- */
+
+static void zero_all_words_in_meta (meta_t * meta);
+
 static void
-collect_loop(gc_t* gc) {
+collect_loop (gc_t* gc) {
   int done;
-  do{
+  do {
     done = 1;
-    { /* scan the pending pairs pages */
-      qupages_t* qu = gc->queues[meta_pair];
+
+    /* Scan the pending pairs pages.  QU  references the first node in a
+       simply linked list  of structures; each node  itself references a
+       memory range in  which Scheme pairs are stored.  We  want to keep
+       alive the cars of such pairs. */
+    {
+      qupages_t *	qu = gc->queues[meta_pair];
       if (qu) {
         done = 0;
-        gc->queues[meta_pair] = 0;
-        do{
-          ikptr p = qu->p;
-          ikptr q = qu->q;
-          while(p < q) {
-            ref(p,0) = add_object(gc, ref(p,0), "loop");
-            p += (2*wordsize);
-          }
-          qupages_t* next = qu->next;
+        gc->queues[meta_pair] = NULL;
+        do {
+          ikptr p_pair = qu->p;
+          ikptr p_end  = qu->q;
+          for (; p_pair < p_end; p_pair += pair_size) {
+            IK_REF(p_pair, disp_car) = add_object(gc, IK_REF(p_pair, disp_car), "loop");
+	  }
+          qupages_t * next = qu->next;
           ik_free(qu, sizeof(qupages_t));
           qu = next;
-        } while(qu);
+        } while (qu);
       }
     }
 
-    { /* scan the pending pointer pages */
-      qupages_t* qu = gc->queues[meta_ptrs];
+    /* Scan the pending pointer pages.   QU references the first node in
+       a simply linked list of structures; each node itself references a
+       memory  range in  which  tagged pointers  to  Scheme objects  are
+       stored.  We want to keep alive such objects. */
+    {
+      qupages_t *	qu = gc->queues[meta_ptrs];
       if (qu) {
         done = 0;
-        gc->queues[meta_ptrs] = 0;
-        do{
-          ikptr p = qu->p;
-          ikptr q = qu->q;
-          while(p < q) {
-            ref(p,0) = add_object(gc, ref(p,0), "pending");
-            p += wordsize;
+        gc->queues[meta_ptrs] = NULL;
+        do {
+          ikptr p_word = qu->p;
+          ikptr p_end  = qu->q;
+          while (p_word < p_end) {
+            IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "pending");
+            p_word += wordsize;
           }
-          qupages_t* next = qu->next;
+          qupages_t * next = qu->next;
           ik_free(qu, sizeof(qupages_t));
           qu = next;
-        } while(qu);
+        } while (qu);
       }
     }
 
-    { /* scan the pending symbol pages */
-      qupages_t* qu = gc->queues[meta_symbol];
+    /* Scan the pending symbols pages.   QU references the first node in
+       a simply linked list of structures; each node itself references a
+       memory  range in  which  tagged pointers  to  Scheme objects  are
+       stored.  We want to keep alive such objects. */
+    {
+      qupages_t *	qu = gc->queues[meta_symbol];
       if (qu) {
         done = 0;
-        gc->queues[meta_symbol] = 0;
-        do{
-          ikptr p = qu->p;
-          ikptr q = qu->q;
-          while(p < q) {
-            ref(p,0) = add_object(gc, ref(p,0), "symbols");
-            p += wordsize;
+        gc->queues[meta_symbol] = NULL;
+        do {
+          ikptr p_word = qu->p;
+          ikptr p_end  = qu->q;
+          while (p_word < p_end) {
+            IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "symbols");
+            p_word += wordsize;
           }
-          qupages_t* next = qu->next;
+          qupages_t *	next = qu->next;
           ik_free(qu, sizeof(qupages_t));
           qu = next;
-        } while(qu);
+        } while (qu);
       }
     }
 
-    { /* scan the pending code objects */
-      qupages_t* codes = gc->queues[meta_code];
+    /* Scan the  pending code  objects pages.   QU references  the first
+       node  in a  simply linked  list of  structures; each  node itself
+       references  a memory  range in  which tagged  pointers to  Scheme
+       objects are stored.  We want to keep alive such objects. */
+    {
+      qupages_t *	codes = gc->queues[meta_code];
       if (codes) {
-        gc->queues[meta_code] = 0;
         done = 0;
-        do{
-          ikptr p = codes->p;
-          ikptr q = codes->q;
-          while(p < q) {
-            relocate_new_code(p, gc);
+        gc->queues[meta_code] = NULL;
+        do {
+          ikptr p_code = codes->p;
+          ikptr p_end  = codes->q;
+          while (p_code < p_end) {
+            relocate_new_code(p_code, gc);
             alloc_code_count--;
-            p += IK_ALIGN(disp_code_data + IK_UNFIX(ref(p, disp_code_code_size)));
+            p_code += IK_ALIGN(disp_code_data + IK_UNFIX(IK_REF(p_code, disp_code_code_size)));
           }
-          qupages_t* next = codes->next;
+          qupages_t *	next = codes->next;
           ik_free(codes, sizeof(qupages_t));
           codes = next;
-        } while(codes);
+        } while (codes);
       }
     }
-    {/* see if there are any remaining in the main ptr segment */
+
+    /* See if there are any remaining in the main ptr segment. */
+    {
       {
         meta_t* meta = &gc->meta[meta_pair];
         ikptr p = meta->aq;
@@ -1923,7 +1986,7 @@ collect_loop(gc_t* gc) {
           do{
             meta->aq = q;
             while(p < q) {
-              ref(p,0) = add_object(gc, ref(p,0), "rem");
+              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem");
               p += (2*wordsize);
             }
             p = meta->aq;
@@ -1940,7 +2003,7 @@ collect_loop(gc_t* gc) {
           do{
             meta->aq = q;
             while(p < q) {
-              ref(p,0) = add_object(gc, ref(p,0), "sym");
+              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "sym");
               p += wordsize;
             }
             p = meta->aq;
@@ -1957,7 +2020,7 @@ collect_loop(gc_t* gc) {
           do{
             meta->aq = q;
             while(p < q) {
-              ref(p,0) = add_object(gc, ref(p,0), "rem2");
+              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem2");
               p += wordsize;
             }
             p = meta->aq;
@@ -1976,7 +2039,7 @@ collect_loop(gc_t* gc) {
             do{
               alloc_code_count--;
               relocate_new_code(p, gc);
-              p += IK_ALIGN(disp_code_data + IK_UNFIX(ref(p, disp_code_code_size)));
+              p += IK_ALIGN(disp_code_data + IK_UNFIX(IK_REF(p, disp_code_code_size)));
             } while (p < q);
             p = meta->aq;
             q = meta->ap;
@@ -1986,94 +2049,21 @@ collect_loop(gc_t* gc) {
     }
     /* phew */
   } while (! done);
-  {
-    /* zero out remaining pointers */
-    /* FIXME: did you hear of code reuse? */
-    {
-      meta_t* meta = &gc->meta[meta_pair];
-      ikptr p = meta->ap;
-      ikptr q = meta->ep;
-      while(p < q) {
-        ref(p, 0) = 0;
-        p += wordsize;
-      }
-    }
-    {
-      meta_t* meta = &gc->meta[meta_symbol];
-      ikptr p = meta->ap;
-      ikptr q = meta->ep;
-      while(p < q) {
-        ref(p, 0) = 0;
-        p += wordsize;
-      }
-    }
-    {
-      meta_t* meta = &gc->meta[meta_ptrs];
-      ikptr p = meta->ap;
-      ikptr q = meta->ep;
-      while(p < q) {
-        ref(p, 0) = 0;
-        p += wordsize;
-      }
-    }
-    {
-      meta_t* meta = &gc->meta[meta_weak];
-      ikptr p = meta->ap;
-      ikptr q = meta->ep;
-      while(p < q) {
-        ref(p, 0) = 0;
-        p += wordsize;
-      }
-    }
-    {
-      meta_t* meta = &gc->meta[meta_code];
-      ikptr p = meta->ap;
-      ikptr q = meta->ep;
-      while(p < q) {
-        ref(p, 0) = 0;
-        p += wordsize;
-      }
-    }
-  }
-}
 
+  /* Zero out remaining pointers. */
+  zero_all_words_in_meta(&gc->meta[meta_pair]);
+  zero_all_words_in_meta(&gc->meta[meta_symbol]);
+  zero_all_words_in_meta(&gc->meta[meta_ptrs]);
+  zero_all_words_in_meta(&gc->meta[meta_weak]);
+  zero_all_words_in_meta(&gc->meta[meta_code]);
+}
 static void
-fix_weak_pointers(gc_t* gc) {
-  unsigned int* segment_vec = gc->segment_vector;
-  ikpcb* pcb = gc->pcb;
-  long lo_idx = IK_PAGE_INDEX(pcb->memory_base);
-  long hi_idx = IK_PAGE_INDEX(pcb->memory_end);
-  long i = lo_idx;
-  int collect_gen = gc->collect_gen;
-  while(i < hi_idx) {
-    unsigned int t = segment_vec[i];
-    if ((t & (type_mask|new_gen_mask)) ==
-        (weak_pairs_type|new_gen_tag)) {
-      //int gen = t & gen_mask;
-      if (1) { //(gen > collect_gen) {
-        ikptr p = (ikptr)(i << IK_PAGESHIFT);
-        ikptr q = p + IK_PAGESIZE;
-        while(p < q) {
-          ikptr x = ref(p, 0);
-          if (! IK_IS_FIXNUM(x)) {
-            int tag = IK_TAGOF(x);
-            if (tag != immediate_tag) {
-              ikptr fst = ref(x, -tag);
-              if (fst == IK_FORWARD_PTR) {
-                ref(p, 0) = ref(x, wordsize-tag);
-              } else {
-                int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
-                if (x_gen <= collect_gen) {
-                  ref(p, 0) = IK_BWP_OBJECT;
-                }
-              }
-            }
-          }
-          p += (2*wordsize);
-        }
-      }
-    }
-    i++;
+zero_all_words_in_meta (meta_t * meta)
+{
+  ikptr p_word = meta->ap;
+  ikptr p_end  = meta->ep;
+  for (; p_word < p_end; p_word += wordsize) {
+    IK_REF(p_word, 0) = 0;
   }
 }
 
