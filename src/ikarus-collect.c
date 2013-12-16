@@ -84,6 +84,11 @@ static void	fix_new_pages		(gc_t* gc);
 static void	handle_guardians	(gc_t* gc);
 static void	gc_finalize_guardians	(gc_t* gc);
 
+static void	collect_stack(gc_t*, ikptr top, ikptr base);
+static void	collect_locatives(gc_t*, ik_callback_locative*);
+static void	collect_loop(gc_t*);
+static void	gc_add_tconcs(gc_t*);
+
 static ikptr	meta_alloc_extending	(long size, gc_t* gc, int meta_id);
 static int	collection_id_to_gen	(int id);
 
@@ -414,80 +419,65 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
 #define add_object(gc,x,caller) add_object_proc(gc,x)
 #endif
 
-static void collect_stack(gc_t*, ikptr top, ikptr base);
-static void collect_locatives(gc_t*, ik_callback_locative*);
-static void collect_loop(gc_t*);
-static void fix_weak_pointers(gc_t*);
-static void gc_add_tconcs(gc_t*);
-
-/* ik_collect is called from scheme under the following conditions:
- * 1. An attempt is made to allocate a small object and the ap is above
- *    the red line.
- * 2. The current frame of the call is dead, so, upon return from ik_collect,
- *    the caller returns to its caller.
- * 3. The frame-pointer of the caller to S_collect is saved at
- *    pcb->frame_pointer.  No variables are live at that frame except for
- *    the return point (at *(pcb->frame_pointer)).
- * 4. S_collect must return a new ap (in pcb->allocation_pointer) that has
- *    at least 2 pages of memory free.
- * 5. S_collect must also update pcb->allocaton_redline to be 2 pages below
- *    the real end of heap.
- * 6. ik_collect should not move the stack.
- */
-
-/* Commented out because unused.  (Marco Maggi; Wed Apr  3, 2013)
-ikpcb*
-ik_collect_vararg(int req, ikpcb* pcb)
-{
-  return ik_collect(req, pcb);
-}
-*/
-
-ikptr
-ik_collect_check (unsigned long req, ikpcb* pcb)
-/* Check if there  are REQ bytes already allocated and  available on the
-   heap; return #t if there are, run a GC and return #f otherwise. */
-{
-  long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
-  if (bytes >= req) {
-    return IK_TRUE_OBJECT;
-  } else {
-    ik_collect(req, pcb);
-    return IK_FALSE_OBJECT;
-  }
-}
-
 
-ikpcb *
-ik_collect (unsigned long mem_req, ikpcb* pcb)
-/* This is the entry point of garbage collection.
+/** --------------------------------------------------------------------
+ ** Main collect function.
+ ** ----------------------------------------------------------------- */
 
-   The roots are:
+static void	fix_weak_pointers (gc_t *gc);
 
-   0. dirty pages not collected in this run
-   1. the stack
-   2. the next continuation
-   3. the symbol-table
-   4. the "root" fields of the PCB
-
+/* This is the entry point of garbage collection.  The roots are:
+ *
+ * 0. dirty pages not collected in this run
+ * 1. the stack
+ * 2. the next continuation
+ * 3. the symbol-table
+ * 4. the "root" fields of the PCB
+ *
+ * "ik_collect()" is called from scheme under the following constraints:
+ *
+ * 1..An attempt is  made to allocate a small object  and the allocation
+ *    pointer is above the red line.
+ *
+ * 2..The  current frame  of  the call  is dead,  so,  upon return  from
+ *    "ik_collect()", the caller returns to its caller.
+ *
+ * 3..The  frame-pointer  of  the  caller   to  S_collect  is  saved  at
+ *    pcb->frame_pointer.  No  variables are  live at that  frame except
+ *    for the return point (at *(pcb->frame_pointer)).
+ *
+ * 4.."ik_collect()"   must  return   a  new   allocation  pointer   (in
+ *    "pcb->allocation_pointer") followed  by at  least 2 pages  of free
+ *    memory.
+ *
+ * 5.."ik_collect()" must update "pcb->allocaton_redline"  to be 2 pages
+ *    below the real end of heap.
+ *
+ * 6. "ik_collect()" must not move the stack.
  */
+ikpcb *
+ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
-  /* fprintf(stderr, "%s: enter\n", __func__); */
-#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  ik_verify_integrity(pcb, "entry");
-#endif
-  { /* accounting */
-    long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
-    add_to_collect_count(pcb, bytes);
-  }
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
   ikmemblock *		old_heap_pages;
+
+  /* fprintf(stderr, "%s: enter\n", __func__); */
+#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+  ik_verify_integrity(pcb, "entry");
+#endif
+
+  { /* accounting */
+    long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
+    add_to_collect_count(pcb, bytes);
+  }
+
   { /* initialise GC statistics */
     gettimeofday(&rt0, 0);
     getrusage(RUSAGE_SELF, &t0);
   }
+
   pcb->collect_key	= IK_FALSE_OBJECT;
   bzero(&gc, sizeof(gc_t));
   gc.pcb		= pcb;
@@ -500,46 +490,49 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 		   mem_req, pcb->allocation_redline - pcb->allocation_pointer,
 		   gc.collect_gen, pcb->collection_id-1);
 #endif
-  /* cache heap-pages to delete later */
-  old_heap_pages = pcb->heap_pages;
-  pcb->heap_pages = 0;
-  /* scan GC roots */
-  scan_dirty_pages(&gc);
-  collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
-  /* ik_print_stack_frame_code_objects(stderr, 3, pcb); */
-  collect_locatives(&gc, pcb->callbacks);
-  { /* Scan the collection of words not to be collected because they are
-       referenced somewhere outside the Scheme heap and stack. */
-    ik_gc_avoidance_collection_t *	C = pcb->not_to_be_collected;
-    while (C) {
-      int	i;
-      for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
-	if (C->slots[i])
-	  C->slots[i] = add_object(&gc, C->slots[i], "not_to_be_collected");
+
+  /* Save  the linked  list  referencing memory  blocks  that once  were
+     nursery hot  memory, and are now  fully used; they will  be deleted
+     later. */
+  old_heap_pages  = pcb->heap_pages;
+  pcb->heap_pages = NULL;
+
+  /* Scan GC roots. */
+  {
+    scan_dirty_pages(&gc);
+    collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
+    collect_locatives(&gc, pcb->callbacks);
+
+    { /* Scan the collection  of words not to be  collected because they
+	 are referenced somewhere outside the Scheme heap and stack. */
+      ik_gc_avoidance_collection_t *	C;
+      for (C = pcb->not_to_be_collected; C; C = C->next) {
+	int	i;
+	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	  if (C->slots[i])
+	    C->slots[i] = add_object(&gc, C->slots[i], "not_to_be_collected");
+	}
       }
-      C = C->next;
     }
-#if 0 /* This is the  old implementation, when the "not  to be collected
-	 list" was an actual Scheme list. */
-    pcb->not_to_be_collected =
-      add_object(&gc, pcb->not_to_be_collected, "not_to_be_collected");
-#endif
+
+    pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
+    pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
+    pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");
+    pcb->arg_list	= add_object(&gc, pcb->arg_list,	"args_list_foo");
+    pcb->base_rtd	= add_object(&gc, pcb->base_rtd,	"base_rtd");
+
+    if (pcb->root0) *(pcb->root0) = add_object(&gc, *(pcb->root0), "root0");
+    if (pcb->root1) *(pcb->root1) = add_object(&gc, *(pcb->root1), "root1");
+    if (pcb->root2) *(pcb->root2) = add_object(&gc, *(pcb->root2), "root2");
+    if (pcb->root3) *(pcb->root3) = add_object(&gc, *(pcb->root3), "root3");
+    if (pcb->root4) *(pcb->root4) = add_object(&gc, *(pcb->root4), "root4");
+    if (pcb->root5) *(pcb->root5) = add_object(&gc, *(pcb->root5), "root5");
+    if (pcb->root6) *(pcb->root6) = add_object(&gc, *(pcb->root6), "root6");
+    if (pcb->root7) *(pcb->root7) = add_object(&gc, *(pcb->root7), "root7");
+    if (pcb->root8) *(pcb->root8) = add_object(&gc, *(pcb->root8), "root8");
+    if (pcb->root9) *(pcb->root9) = add_object(&gc, *(pcb->root9), "root9");
   }
-  pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
-  pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
-  pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");
-  pcb->arg_list		= add_object(&gc, pcb->arg_list,	"args_list_foo");
-  pcb->base_rtd		= add_object(&gc, pcb->base_rtd,	"base_rtd");
-  if (pcb->root0) *(pcb->root0) = add_object(&gc, *(pcb->root0), "root0");
-  if (pcb->root1) *(pcb->root1) = add_object(&gc, *(pcb->root1), "root1");
-  if (pcb->root2) *(pcb->root2) = add_object(&gc, *(pcb->root2), "root2");
-  if (pcb->root3) *(pcb->root3) = add_object(&gc, *(pcb->root3), "root3");
-  if (pcb->root4) *(pcb->root4) = add_object(&gc, *(pcb->root4), "root4");
-  if (pcb->root5) *(pcb->root5) = add_object(&gc, *(pcb->root5), "root5");
-  if (pcb->root6) *(pcb->root6) = add_object(&gc, *(pcb->root6), "root6");
-  if (pcb->root7) *(pcb->root7) = add_object(&gc, *(pcb->root7), "root7");
-  if (pcb->root8) *(pcb->root8) = add_object(&gc, *(pcb->root8), "root8");
-  if (pcb->root9) *(pcb->root9) = add_object(&gc, *(pcb->root9), "root9");
+
   /* trace all live objects */
   collect_loop(&gc);
   /* next   all   guardian/guarded  objects,   the   procedure  does   a
@@ -585,7 +578,10 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("finished garbage collection");
 #endif
-  /* delete all old heap pages */
+
+  /* Delete the  linked list  referencing memory  blocks that  once were
+     nursery  hot memory,  and are  now fully  used; the  blocks' memory
+     pages are cached in the PCB. */
   if (old_heap_pages) {
     ikmemblock* p = old_heap_pages;
     do {
@@ -594,12 +590,12 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
       ik_free(p, sizeof(ikmemblock));
       p=next;
     } while(p);
-    old_heap_pages = 0;
+    old_heap_pages = NULL;
   }
-  { /* Release the old nursery heap and allocate a new one. */
-    unsigned long free_space =
-      ((unsigned long)pcb->allocation_redline) -
-      ((unsigned long)pcb->allocation_pointer);
+
+  /* Release the old nursery heap and allocate a new one. */
+  {
+    ik_ulong free_space = ((ik_ulong)pcb->allocation_redline) - ((ik_ulong)pcb->allocation_pointer);
     if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
@@ -711,6 +707,25 @@ fix_weak_pointers(gc_t* gc) {
       }
     }
     i++;
+  }
+}
+
+
+/** --------------------------------------------------------------------
+ ** Auxiliary collection function.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_collect_check (unsigned long req, ikpcb* pcb)
+/* Check if there  are REQ bytes already allocated and  available on the
+   heap; return #t if there are, run a GC and return #f otherwise. */
+{
+  long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
+  if (bytes >= req) {
+    return IK_TRUE_OBJECT;
+  } else {
+    ik_collect(req, pcb);
+    return IK_FALSE_OBJECT;
   }
 }
 
