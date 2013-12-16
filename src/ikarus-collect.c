@@ -1554,11 +1554,12 @@ gc_alloc_new_weak_pair(gc_t* gc)
        "ik_mmap_typed()" might have caused  the reallocation of the page
        vectors. */
     gc->segment_vector = gc->pcb->segment_vector;
-    /* Store references to the new meta page in the GC struct. */
-    meta->ap   = mem + pair_size;
-    meta->aq   = mem;
-    meta->ep   = mem + IK_PAGESIZE;
-    meta->base = mem;
+    /* Store references to the new meta  page in the GC struct.  Reserve
+       enough room at the beginning for a pair object. */
+    meta->ap   = mem + pair_size;	/* alloc pointer */
+    meta->aq   = mem;			/* pointer to first allocated word */
+    meta->ep   = mem + IK_PAGESIZE;	/* end pointer */
+    meta->base = mem;			/* pointer to first allocated word */
     return mem;
   } else {
     /* There  is enough  room, in  the  current meta  page, for  another
