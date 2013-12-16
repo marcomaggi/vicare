@@ -85,7 +85,6 @@ static void	handle_guardians	(gc_t* gc);
 static void	gc_finalize_guardians	(gc_t* gc);
 
 static void	collect_stack(gc_t*, ikptr top, ikptr base);
-static void	collect_locatives(gc_t*, ik_callback_locative*);
 static void	collect_loop(gc_t*);
 static void	gc_add_tconcs(gc_t*);
 
@@ -424,6 +423,7 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
 
 static int	collection_id_to_gen	(int id);
 static void	fix_weak_pointers	(gc_t *gc);
+static void	collect_locatives	(gc_t*, ik_callback_locative*);
 
 /* This is the entry point of garbage collection.  The roots are:
  *
@@ -681,6 +681,12 @@ collection_id_to_gen (int id)
   return 0;
 }
 static void
+collect_locatives (gc_t* gc, ik_callback_locative* loc) {
+  for (; loc; loc = loc->next) {
+    loc->data = add_object(gc, loc->data, "locative");
+  }
+}
+static void
 fix_weak_pointers (gc_t* gc)
 /* Subroutine of "ik_collect()".  Fix the cars of the weak pairs. */
 {
@@ -723,6 +729,24 @@ fix_weak_pointers (gc_t* gc)
     }
   }
 }
+static void
+fix_new_pages (gc_t* gc)
+{
+  ikpcb *	pcb         = gc->pcb;
+  uint32_t *	segment_vec = pcb->segment_vector;
+  ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
+  ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
+  ikptr		page_idx;
+  for (page_idx=lo_idx; page_idx<hi_idx; ++page_idx) {
+    segment_vec[page_idx] &= ~new_gen_mask;
+    /*
+      uint32_t t = segment_vec[i];
+      if (t & new_gen_mask) {
+      segment_vec[i] = t & ~new_gen_mask;
+      }
+    */
+  }
+}
 
 
 /** --------------------------------------------------------------------
@@ -744,33 +768,13 @@ ik_collect_check (unsigned long req, ikpcb* pcb)
 }
 
 
-static inline int
-is_live (ikptr x, gc_t* gc)
-{
-  int		tag;
-  int		gen;
-  if (IK_IS_FIXNUM(x))
-    return 1;
-  tag = IK_TAGOF(x);
-  if (tag == immediate_tag)
-    return 1;
-  if (IK_FORWARD_PTR == ref(x, -tag))
-    return 1;
-  gen = gc->segment_vector[IK_PAGE_INDEX(x)] & gen_mask;
-  return (gen > gc->collect_gen)? 1 : 0;
-}
-static inline int
-next_gen (int i)
-{
-  return ((i == (IK_GC_GENERATION_COUNT-1)) ? i : (i+1));
-}
-
-
 /** --------------------------------------------------------------------
  ** Guardians handling.
  ** ----------------------------------------------------------------- */
 
 static ik_ptr_page *	move_tconc (ikptr tc, ik_ptr_page* ls);
+static inline int	is_live (ikptr x, gc_t* gc);
+static inline int	next_gen (int i);
 
 static void
 handle_guardians (gc_t* gc)
@@ -915,7 +919,26 @@ gc_finalize_guardians (gc_t* gc)
     ls = next;
   }
 }
-
+static inline int
+is_live (ikptr x, gc_t* gc)
+{
+  int		tag;
+  int		gen;
+  if (IK_IS_FIXNUM(x))
+    return 1;
+  tag = IK_TAGOF(x);
+  if (tag == immediate_tag)
+    return 1;
+  if (IK_FORWARD_PTR == ref(x, -tag))
+    return 1;
+  gen = gc->segment_vector[IK_PAGE_INDEX(x)] & gen_mask;
+  return (gen > gc->collect_gen)? 1 : 0;
+}
+static inline int
+next_gen (int i)
+{
+  return ((i == (IK_GC_GENERATION_COUNT-1))? i : (i+1));
+}
 static ik_ptr_page *
 move_tconc (ikptr tc, ik_ptr_page* ls)
 /* Store TC in the  first node of the linked list LS.   If LS is NULL or
@@ -986,15 +1009,6 @@ add_code_entry (gc_t* gc, ikptr entry)
     IK_REF(x, 0)	= IK_FORWARD_PTR;
     IK_REF(x, wordsize)	= y | vector_tag;
     return y+disp_code_data;
-  }
-}
-
-
-static void
-collect_locatives(gc_t* gc, ik_callback_locative* loc) {
-  while(loc) {
-    loc->data = add_object(gc, loc->data, "locative");
-    loc = loc->next;
   }
 }
 
@@ -2322,49 +2336,16 @@ deallocate_unused_pages(gc_t* gc)
     i++;
   }
 }
+
+/** --------------------------------------------------------------------
+ ** Handle tconcs.
+ ** ----------------------------------------------------------------- */
 
-
-static void
-fix_new_pages(gc_t* gc) {
-  ikpcb* pcb = gc->pcb;
-  unsigned int* segment_vec = pcb->segment_vector;
-  ikptr memory_base = pcb->memory_base;
-  ikptr memory_end = pcb->memory_end;
-  ikptr lo_idx = IK_PAGE_INDEX(memory_base);
-  ikptr hi_idx = IK_PAGE_INDEX(memory_end);
-  ikptr i = lo_idx;
-  while(i < hi_idx) {
-    segment_vec[i] &= ~new_gen_mask;
-    /*
-    unsigned int t = segment_vec[i];
-    if (t & new_gen_mask) {
-      segment_vec[i] = t & ~new_gen_mask;
-    }
-    */
-    i++;
-  }
-}
+static void	add_one_tconc(ikpcb* pcb, ikptr p);
 
 static void
-add_one_tconc(ikpcb* pcb, ikptr p) {
-  ikptr tcbucket = ref(p,0);
-  ikptr tc = ref(tcbucket, off_tcbucket_tconc);
-  assert(IK_TAGOF(tc) == pair_tag);
-  ikptr d = ref(tc, off_cdr);
-  assert(IK_TAGOF(d) == pair_tag);
-  ikptr new_pair = p | pair_tag;
-  ref(d, off_car) = tcbucket;
-  ref(d, off_cdr) = new_pair;
-  ref(new_pair, off_car) = IK_FALSE_OBJECT;
-  ref(new_pair, off_cdr) = IK_FALSE_OBJECT;
-  ref(tc, off_cdr) = new_pair;
-  ref(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
-}
-
-static void
-gc_add_tconcs(gc_t* gc) {
+gc_add_tconcs(gc_t* gc)
+{
   if (gc->tconc_base == 0) {
     return;
   }
@@ -2389,6 +2370,24 @@ gc_add_tconcs(gc_t* gc) {
     ik_free(qu, sizeof(ikmemblock));
     qu = next;
   }
+}
+static void
+add_one_tconc(ikpcb* pcb, ikptr p)
+{
+  ikptr tcbucket = IK_REF(p,0);
+  ikptr tc = IK_REF(tcbucket, off_tcbucket_tconc);
+  assert(IK_TAGOF(tc) == pair_tag);
+  ikptr d = IK_REF(tc, off_cdr);
+  assert(IK_TAGOF(d) == pair_tag);
+  ikptr new_pair = p | pair_tag;
+  IK_REF(d, off_car) = tcbucket;
+  IK_REF(d, off_cdr) = new_pair;
+  IK_REF(new_pair, off_car) = IK_FALSE_OBJECT;
+  IK_REF(new_pair, off_cdr) = IK_FALSE_OBJECT;
+  IK_REF(tc, off_cdr) = new_pair;
+  IK_REF(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
 }
 
 /* end of file */
