@@ -132,21 +132,13 @@ static int string_count		= 0;
 static int htable_count		= 0;
 #endif
 
-static const unsigned int const meta_mt[meta_count] = {
+static const unsigned int const META_MT[meta_count] = {
   pointers_mt,
   code_mt,
   data_mt,
   weak_pairs_mt,
   pointers_mt,
   symbols_mt
-};
-
-static const unsigned int const next_gen_tag[IK_GC_GENERATION_COUNT] = {
-  (4 << meta_dirty_shift) | 1 | new_gen_tag,
-  (2 << meta_dirty_shift) | 2 | new_gen_tag,
-  (1 << meta_dirty_shift) | 3 | new_gen_tag,
-  (0 << meta_dirty_shift) | 4 | new_gen_tag,
-  (0 << meta_dirty_shift) | 4 | new_gen_tag
 };
 
 
@@ -266,6 +258,13 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
 ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
+  static const unsigned int const NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
+    (4 << meta_dirty_shift) | 1 | new_gen_tag,
+    (2 << meta_dirty_shift) | 2 | new_gen_tag,
+    (1 << meta_dirty_shift) | 3 | new_gen_tag,
+    (0 << meta_dirty_shift) | 4 | new_gen_tag,
+    (0 << meta_dirty_shift) | 4 | new_gen_tag
+  };
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
@@ -291,7 +290,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   gc.pcb		= pcb;
   gc.segment_vector	= pcb->segment_vector;
   gc.collect_gen	= collection_id_to_gen(pcb->collection_id);
-  gc.collect_gen_tag	= next_gen_tag[gc.collect_gen];
+  gc.collect_gen_tag	= NEXT_GEN_TAG[gc.collect_gen];
   pcb->collection_id++;
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("ik_collect entry %ld free=%ld (collect gen=%d/id=%d)",
@@ -1787,7 +1786,7 @@ gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
      PCB. */
   {
     ikptr	mem;
-    mem = ik_mmap_typed(IK_PAGESIZE, meta_mt[meta_ptrs] | gc->collect_gen_tag, gc->pcb);
+    mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_ptrs] | gc->collect_gen_tag, gc->pcb);
     bzero((char*)mem, IK_PAGESIZE);
     /* gc statistics */
     add_to_collect_count(gc->pcb, IK_PAGESIZE);
@@ -1935,7 +1934,7 @@ gc_alloc_new_weak_pair(gc_t* gc)
   if (nap > ep) {
     /* There is not  enough room, in the current meta  page, for another
        pair; we have to allocate a new page. */
-    ikptr mem = ik_mmap_typed(IK_PAGESIZE, meta_mt[meta_weak] | gc->collect_gen_tag, gc->pcb);
+    ikptr mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_weak] | gc->collect_gen_tag, gc->pcb);
     /* Retake   the  segments   vector  because   memory  allocated   by
        "ik_mmap_typed()" might have caused  the reallocation of the page
        vectors. */
@@ -2062,7 +2061,7 @@ meta_alloc_extending (long size, gc_t* gc, int meta_id)
     }
   }
   /* Allocate one or more new meta pages. */
-  mem = ik_mmap_typed(mapsize, meta_mt[meta_id] | gc->collect_gen_tag, gc->pcb);
+  mem = ik_mmap_typed(mapsize, META_MT[meta_id] | gc->collect_gen_tag, gc->pcb);
   /* Retake   the   segment   vector   because   memory   allocated   by
      "ik_mmap_typed()" might  have caused  the reallocation of  the page
      vectors. */
