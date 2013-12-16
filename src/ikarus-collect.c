@@ -90,9 +90,7 @@ static void	collect_loop(gc_t*);
 static void	gc_add_tconcs(gc_t*);
 
 static ikptr	meta_alloc_extending	(long size, gc_t* gc, int meta_id);
-static int	collection_id_to_gen	(int id);
-
-static void ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
+static void	ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
@@ -424,7 +422,8 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
  ** Main collect function.
  ** ----------------------------------------------------------------- */
 
-static void	fix_weak_pointers (gc_t *gc);
+static int	collection_id_to_gen	(int id);
+static void	fix_weak_pointers	(gc_t *gc);
 
 /* This is the entry point of garbage collection.  The roots are:
  *
@@ -533,18 +532,24 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
     if (pcb->root9) *(pcb->root9) = add_object(&gc, *(pcb->root9), "root9");
   }
 
-  /* trace all live objects */
+  /* Trace all live objects. */
   collect_loop(&gc);
-  /* next   all   guardian/guarded  objects,   the   procedure  does   a
-     "collect_loop()" at the end */
+
+  /* Next  all  guardian/guarded   objects.   "handle_guadians()"  calls
+     "collect_loop()" in its body. */
   handle_guardians(&gc);
+
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("finished scan of GC roots");
 #endif
+
   collect_loop(&gc);
-  /* does not allocate, only BWP's dead pointers */
+
+  /* Does  not  allocate,  only  sets  to  BWP  the  locations  of  dead
+     pointers. */
   fix_weak_pointers(&gc);
-  /* now deallocate all unused pages */
+
+  /* Now deallocate all unused pages. */
   deallocate_unused_pages(&gc);
 
   fix_new_pages(&gc);
@@ -558,6 +563,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 #endif
   pcb->weak_pairs_ap = 0;
   pcb->weak_pairs_ep = 0;
+
 #if ACCOUNTING
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("[%d cons|%d sym|%d cls|%d vec|%d rec|%d cck|%d str|%d htb]\n",
@@ -573,8 +579,10 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   continuation_count	= 0;
   string_count		= 0;
   htable_count		= 0;
-#endif
-  //ik_dump_metatable(pcb);
+#endif /* end of #if ACCOUNTING */
+
+  /* ik_dump_metatable(pcb); */
+
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_debug_message("finished garbage collection");
 #endif
@@ -593,7 +601,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
     old_heap_pages = NULL;
   }
 
-  /* Release the old nursery heap and allocate a new one. */
+  /* Release the old nursery heap hot block and allocate a new one. */
   {
     ik_ulong free_space = ((ik_ulong)pcb->allocation_redline) - ((ik_ulong)pcb->allocation_pointer);
     if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
@@ -602,29 +610,31 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 #endif
       long	memsize;
       long	new_heap_size;
-      ikptr	ptr;
-      memsize       = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+      ikptr	ap;
+      memsize       = (mem_req > IK_HEAPSIZE)? mem_req : IK_HEAPSIZE;
       memsize	    = IK_ALIGN_TO_NEXT_PAGE(memsize);
       new_heap_size = memsize + 2 * IK_PAGESIZE;
-      /* Release the old nursery heap. */
+      /* Release the old nursery heap hot block. */
       ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-      ptr = ik_mmap_mainheap(new_heap_size, pcb);
-      pcb->allocation_pointer = ptr;
-      pcb->allocation_redline = ptr+memsize;
-      pcb->heap_base = ptr;
+      ap = ik_mmap_mainheap(new_heap_size, pcb);
+      pcb->allocation_pointer = ap;
+      pcb->allocation_redline = ap + memsize;
+      pcb->heap_base = ap;
       pcb->heap_size = new_heap_size;
     }
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-    { /* reset the free space to a magic number */
-      ikptr	x;
-      for (x = pcb->allocation_pointer; x < pcb->allocation_redline; x += wordsize)
-	ref(x, 0) = (ikptr)(0x1234FFFF);
+    { /* Reset the free space to a magic number. */
+      ikptr	X;
+      for (X=pcb->allocation_pointer; X<pcb->allocation_redline; X+=wordsize)
+	IK_REF(X, 0) = (ikptr)(0x1234FFFF);
     }
 #endif
-    /* Finished allocating a new nursery heap. */ }
+  } /* Finished allocating a new nursery heap hot block. */
+
 #if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "exit");
 #endif
+
   { /* for GC statistics */
     getrusage(RUSAGE_SELF, &t1);
     gettimeofday(&rt1, 0);
@@ -671,7 +681,8 @@ collection_id_to_gen (int id)
   return 0;
 }
 static void
-fix_weak_pointers(gc_t* gc) {
+fix_weak_pointers (gc_t* gc)
+{
   unsigned int* segment_vec = gc->segment_vector;
   ikpcb* pcb = gc->pcb;
   long lo_idx = IK_PAGE_INDEX(pcb->memory_base);
