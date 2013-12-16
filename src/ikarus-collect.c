@@ -2226,45 +2226,49 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
    allocate memory, which means: after every call the dirty and segments
    vector might have been reallocated. */
 {
-  ikptr		p		= IK_PAGE_POINTER_FROM_INDEX(page_idx);
-  ikptr		start		= p;
-  ikptr		q		= p + IK_PAGESIZE;
-  uint32_t *	segment_vec	= (uint32_t *)(long)gc->segment_vector;
-  uint32_t *	dirty_vec	= (uint32_t *)(long)gc->pcb->dirty_vector;
-  //uint32_t int d = dirty_vec[page_idx];
-  uint32_t	t		= segment_vec[page_idx];
-  //uint32_t int masked_dbits = d & mask;
-  uint32_t	new_page_dbits		= 0;
-  while (p < q) {
-    if (IK_REF(p, 0) != code_tag) {
-      p = q;
-    } else {
-      long	j		= ((long)p - (long)start) / CARDSIZE;
-      long	code_size	= IK_UNFIX(IK_REF(p, disp_code_code_size));
-      relocate_new_code(p, gc);
-      segment_vec = gc->segment_vector;
-      ikptr	rvec		= IK_REF(p, disp_code_reloc_vector);
-      ikptr	len		= IK_REF(rvec, off_vector_length);
-      assert(((long)len) >= 0);
-      ik_ulong	i;
-      ik_ulong	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
-      for (i=0; i<len; i+=wordsize) {
-        ikptr		r = IK_REF(rvec, i+off_vector_data);
-        if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
-          /* do nothing */
-        } else {
-          r		= add_object(gc, r, "nothing2");
-          segment_vec	= gc->segment_vector;
-          code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
-        }
+  uint32_t	new_page_dbits  = 0;
+  {
+    uint32_t *	segment_vec = gc->segment_vector;
+    ikptr	s_code      = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+    ikptr	page_start  = s_code;
+    ikptr	page_end    = s_code + IK_PAGESIZE;
+    while (s_code < page_end) {
+      if (IK_REF(s_code, 0) != code_tag) {
+	s_code = page_end;
+      } else {
+	long	j		= ((ik_ulong)s_code - (ik_ulong)page_start) / CARDSIZE;
+	long	code_size	= IK_UNFIX(IK_REF(s_code, disp_code_code_size));
+	relocate_new_code(s_code, gc);
+	/* The  call to  "relocate_new_code()"  might  have allocated  new
+	   memory, so we must take the segment vector after it. */
+	segment_vec = gc->segment_vector;
+	ikptr	rvec		= IK_REF(s_code, disp_code_reloc_vector);
+	ikptr	len		= IK_REF(rvec, off_vector_length);
+	assert(((long)len) >= 0);
+	ik_ulong	i;
+	ik_ulong	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
+	for (i=0; i<len; i+=wordsize) {
+	  ikptr		r = IK_REF(rvec, i+off_vector_data);
+	  if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
+	    /* do nothing */
+	  } else {
+	    r		= add_object(gc, r, "nothing2");
+	    segment_vec	= gc->segment_vector;
+	    code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
+	  }
+	}
+	new_page_dbits	|= code_d << (j * meta_dirty_shift);
+	s_code		+= IK_ALIGN(code_size + disp_code_data);
       }
-      new_page_dbits	= new_page_dbits | (code_d << (j * meta_dirty_shift));
-      p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec      = (uint32_t *)gc->pcb->dirty_vector;
-  new_page_dbits = new_page_dbits & cleanup_mask[t & gen_mask];
-  dirty_vec[page_idx] = new_page_dbits;
+  /* Update the dirty vector bits for this page. */
+  {
+    uint32_t *	segment_vec = gc->segment_vector;
+    uint32_t	page_sbits  = segment_vec[page_idx];
+    uint32_t *	dirty_vec   = (uint32_t *)gc->pcb->dirty_vector;
+    dirty_vec[page_idx] = new_page_dbits & cleanup_mask[page_sbits & gen_mask];
+  }
 }
 
 
