@@ -83,6 +83,8 @@ typedef struct gc_t {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
+static ikptr	add_code_entry	(gc_t* gc, ikptr entry);
+
 static void	scan_dirty_pages	(gc_t*);
 static void	handle_guardians	(gc_t* gc);
 static void	gc_finalize_guardians	(gc_t* gc);
@@ -94,6 +96,8 @@ static void	gc_add_tconcs(gc_t*);
 static void	ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
 
 static void	relocate_new_code (ikptr p_X, gc_t* gc);
+
+static void	add_to_collect_count (ikpcb* pcb, int bytes);
 
 
 /** --------------------------------------------------------------------
@@ -191,52 +195,6 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
     /* Unmap the leftovers. */
     if (size)
       ik_munmap(base, size);
-  }
-}
-
-
-static void
-add_to_collect_count(ikpcb* pcb, int bytes) {
-  int	minor = bytes + pcb->allocation_count_minor;
-  while (minor >= IK_MOST_BYTES_IN_MINOR) {
-    minor -= IK_MOST_BYTES_IN_MINOR;
-    pcb->allocation_count_major++;
-  }
-  pcb->allocation_count_minor = minor;
-}
-
-static void
-gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {
-  if (gc->tconc_base) {
-    ikmemblock* p = ik_malloc(sizeof(ikmemblock));
-    p->base = gc->tconc_base;
-    p->size = IK_PAGESIZE;
-    p->next = gc->tconc_queue;
-    gc->tconc_queue = p;
-  }
-  ikptr ap = ik_mmap_typed(IK_PAGESIZE,
-			   meta_mt[meta_ptrs] | gc->collect_gen_tag,
-			   gc->pcb);
-  add_to_collect_count(gc->pcb, IK_PAGESIZE);
-  gc->segment_vector = gc->pcb->segment_vector;
-  bzero((char*)(long)ap, IK_PAGESIZE);
-  ikptr nap = ap + 2*wordsize;
-  gc->tconc_base = ap;
-  gc->tconc_ap = nap;
-  gc->tconc_ep = ap + IK_PAGESIZE;
-  ref(ap,0) = tcbucket;
-}
-
-
-static inline void
-gc_tconc_push(gc_t* gc, ikptr tcbucket) {
-  ikptr ap = gc->tconc_ap;
-  ikptr nap = ap + 2*wordsize;
-  if (nap > gc->tconc_ep) {
-    gc_tconc_push_extending(gc, tcbucket);
-  } else {
-    gc->tconc_ap = nap;
-    ref(ap,0) = tcbucket;
   }
 }
 
@@ -639,6 +597,365 @@ ik_collect_check (unsigned long req, ikpcb* pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Collection subroutines: Scheme stack.
+ ** ----------------------------------------------------------------- */
+
+#define DEBUG_STACK 0
+
+static void
+collect_stack (gc_t* gc, ikptr top, ikptr end)
+/* This function is used to scan for live objects both the current stack
+ * segment and  the array of  freezed stack frames referenced  by Scheme
+ * continuation objects.
+ *
+ * Let's remember  how the current Scheme  stack looks when it  has some
+ * frames in it:
+ *
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- pcb->frame_base
+ *  |----------------------|
+ *  | ik_underflow_handler | <- end
+ *  |----------------------|
+ *    ... other frames ...
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . upper frame
+ *  |----------------------|         .
+ *  |    return address    |         .
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . topmost frame
+ *  |----------------------|         .
+ *  |    return address    | <- top  .
+ *  |----------------------|         --
+ *     ... free words ...
+ *  |----------------------|
+ *  |                      | <- pcb->stack_base
+ *  |----------------------|
+ *  |                      |
+ *    low memory addresses
+ *
+ * now let's  remember how  the current  Scheme stack  looks when  it is
+ * empty (no frames):
+ *
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- pcb->frame_base
+ *  |----------------------|
+ *  | ik_underflow_handler | <- top = end
+ *  |----------------------|
+ *     ... free words ...
+ *  |----------------------|
+ *  |                      | <- pcb->stack_base
+ *  |----------------------|
+ *  |                      |
+ *    low memory addresses
+ *
+ * now let's  remember how the  freezed frames in a  continuation object
+ * look:
+ *
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- end
+ *  |----------------------|
+ *    ... other frames ...
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . upper freezed frame
+ *  |----------------------|         .
+ *  |    return address    |         .
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . topmost freezed frame
+ *  |----------------------|         .
+ *  |    return address    | <- top  .
+ *  |----------------------|         --
+ *  |                      |
+ *    low memory addresses
+ *
+ * a continuation  object is  never empty:  it always  has at  least one
+ * freezed frame.
+ *
+ * The argument END  is a raw memory pointer referencing  a machine word
+ * past the lowest frame on the region to scan.
+ *
+ * When the region to scan is the current Scheme stack: the argument TOP
+ * is "pcb->frame_pointer",  a raw memory  pointer.  When the  region to
+ * scan  the array  of  freezed  frames in  a  continuation object:  the
+ * argument TOP is the value of the field TOP in the continuation object
+ * data structure.
+ *
+ * TOP is used as iterator to climb  the stack, frame by frame, from low
+ * memory addresses to high memory addresses until END is reached.
+ *
+ *            frame   frame   frame   frame   frame
+ *   lo mem |-+-----|-+-----|-+-----|-+-----|-+-----|-| hi mem
+ *           ^       ^       ^       ^       ^       ^
+ *          top     top1    top2    top3     |       |
+ *                                         top4     end
+ */
+{
+  if (0 || DEBUG_STACK) {
+    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx to 0x%016lx",
+			   __func__, (long)end - (long)top, (long) top, (long) end);
+  }
+  while (top < end) {
+    /* A Scheme stack frame looks like this:
+     *
+     *          high memory
+     *   |----------------------|         --
+     *   |      local value     |         .
+     *   |----------------------|         .
+     *   |      local value     |         . framesize = 3 machine words
+     *   |----------------------|         .
+     *   |    single_value_rp   | <- top  .
+     *   |----------------------|         --
+     *   |                      |
+     *         low memory
+     *
+     * and the return address SINGLE_VALUE_RP  is an assembly label (for
+     * single  return values)  right after  the "call"  instruction that
+     * created this stack frame:
+     *
+     *     ;; low memory
+     *
+     *     subl framesize, FPR		;adjust FPR
+     *     jmp L0
+     *     livemask-bytes		;array of bytes
+     *     framesize			;data word, a "long"
+     *     offset_field			;data word, a fixnum
+     *     multi_value_rp		;data word, assembly label
+     *     pad-bytes
+     *   L0:
+     *     call function-address
+     *     addl framesize, FPR		;restore FPR
+     *   single_value_rp:		;single value return point
+     *     ... instructions...
+     *   multi_value_rp:		;multi value return point
+     *     ... instructions...
+     *
+     *     ;; high memory
+     *
+     * The "long"  word FRAMESIZE is an  offset to add to  TOP to obtain
+     * the  top  of  the  uplevel   frame;  interpreted  as  fixnum:  it
+     * represents  the number  of  machine words  on  this stack  frame;
+     * interpreted as an  integer: it represents the number  of bytes on
+     * this stack frame.
+     *
+     * Exception:  if the  data word  FRAMESIZE is  zero, then  the true
+     * frame size  could not be computed  at compile time, and  so it is
+     * stored on the stack itself:
+     *
+     *         high memory
+     *   |                      |
+     *   |----------------------|
+     *   |      framesize       | <-- top + wordsize
+     *   |----------------------|
+     *   |   single_value_rp    | <-- top
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     *
+     * also in this case all the words  on this frame are live, the live
+     * mask in the code object is unused.
+     *
+     * The fixnum "offset_field"  is the number of bytes  between the first
+     * byte of binary code in this code object and the location in which
+     * "offset_field" itself is stored:
+     *
+     *    metadata                    binary code
+     *   |--------|-------------+-+----------------------| code object
+     *            |.............|^
+     *             offset_field  |
+     *                  |        |
+     *                   --------
+     *
+     * NOTE The  preprocessor symbol  "disp_call_table_offset" is  a negative
+     * integer.
+     */
+    ikptr	single_value_rp	= IK_REF(top, 0);
+    long	offset_field	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
+    if (DEBUG_STACK) {
+      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, offset_field=%ld",
+		       (long) top, single_value_rp, offset_field);
+    }
+    if (offset_field <= 0) {
+      ik_abort("invalid offset_field %ld\n", offset_field);
+    }
+    /* Since the return point is alive,  we need to find the code object
+       containing it and  mark it live as well.   The SINGLE_VALUE_RP in
+       the stack frame is updated to reflect the new code object. */
+    long	code_offset	= offset_field - disp_call_table_offset;
+    ikptr	code_entry	= single_value_rp - code_offset;
+    ikptr	new_code_entry	= add_code_entry(gc, code_entry);
+    ikptr	new_sv_rp	= new_code_entry + code_offset;
+    IK_REF(top, 0) = new_sv_rp;
+    single_value_rp = new_sv_rp;
+
+    /* now for some livemask action.
+     * every return point has a live mark above it.  the live mask
+     * is a sequence of bytes (every byte for 8 frame cells).  the
+     * size of the live mask is determined by the size of the frame.
+     * this is how the call frame instruction sequence looks like:
+     *
+     *   |    ...     |
+     *   | code  junk |
+     *   +------------+
+     *   |   byte 0   |   for fv0 .. fv7
+     *   |   byte 1   |   for fv8 .. fv15
+     *   |    ...     |   ...
+     *   +------------+
+     *   |  framesize |
+     *   |    word    |
+     *   +------------+
+     *   | frameoffst |  the frame offset determines how far its
+     *   |    word    |  address is off from the start of the code
+     *   +------------+
+     *   | multivalue |
+     *   |    word    |
+     *   +------------+
+     *   |  padding   |  the size of this part is fixed so that we
+     *   |  and call  |  can correlate the frame info (above) with rp
+     *   +------------+
+     *   |   code     | <---- rp
+     *   |    ...     |
+     *
+     *   WITH ONE EXCEPTION:
+     *   if the framesize is 0, then the actual frame size is stored
+     *   on the stack immediately below the return point.
+     *   there is no live mask in this case, instead all values in the
+     *   frame are live.
+     */
+    long framesize =  IK_CALLTABLE_FRAMESIZE(single_value_rp);
+    if (DEBUG_STACK) {
+      ik_debug_message("fs=%ld", (long)framesize);
+    }
+    if (framesize < 0) {
+      ik_abort("invalid frame size %ld\n", (long)framesize);
+    } else if (0 == framesize) {
+      /* Keep alive all the objects on the stack. */
+      framesize = IK_REF(top, wordsize);
+      if (framesize <= 0) {
+        ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
+      }
+      /*
+       *       high memory
+       *   |----------------|
+       *   | return address | <-- uplevel top
+       *   |----------------|                                --
+       *   | Scheme object  | <-- top + framesize - wordsize .
+       *   |----------------|                                .
+       *   | Scheme object  |                                . framesize
+       *   |----------------|                                .
+       *   | return address | <-- top                        .
+       *   |----------------|                                --
+       *      low memory
+       */
+      ikptr base;
+      for (base=top+framesize-wordsize; base > top; base-=wordsize) {
+        ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
+        IK_REF(base,0) = new_obj;
+      }
+    } else {
+      /* Keep alive only the objects selected by the livemask. */
+      /* Number of Scheme objects on this stack frame. */
+      long	frame_cells	= framesize >> fx_shift;
+      /* Number of  bytes in the  livemask array, knowing that  there is
+	 one bit for  every frame cell.  When the framesize  is 4 (there
+	 is only one machine word on  the stack) the livemask array must
+	 contain a single byte. */
+      long	bytes_in_mask	= (frame_cells+7) >> 3;
+      /* Pointer to the livemask bytevector */
+      char *	mask = (char*)(long)(single_value_rp + disp_call_table_size - bytes_in_mask);
+      /* Pointer to the Scheme objects on the stack. */
+      ikptr *	fp   = (ikptr*)(long)(top + framesize);
+      long	i;
+      for (i=0; i<bytes_in_mask; i++, fp-=8) {
+        unsigned char m = mask[i];
+#if DEBUG_STACK
+        ik_debug_message("m[%ld]=0x%x", i, m);
+#endif
+        if (m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
+        if (m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
+        if (m & 0x04) { fp[-2] = add_object(gc, fp[-2], "frame2"); }
+        if (m & 0x08) { fp[-3] = add_object(gc, fp[-3], "frame3"); }
+        if (m & 0x10) { fp[-4] = add_object(gc, fp[-4], "frame4"); }
+        if (m & 0x20) { fp[-5] = add_object(gc, fp[-5], "frame5"); }
+        if (m & 0x40) { fp[-6] = add_object(gc, fp[-6], "frame6"); }
+        if (m & 0x80) { fp[-7] = add_object(gc, fp[-7], "frame7"); }
+      }
+    }
+    top += framesize;
+  }
+  if (top != end)
+    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long)top, (long)end);
+  if (DEBUG_STACK) {
+    ik_debug_message("%s: leave\n", __func__);
+  }
+}
+
+
+/** --------------------------------------------------------------------
+ ** Collection subroutines: tconcs for hash tables.
+ ** ----------------------------------------------------------------- */
+
+static void	add_one_tconc (ikpcb* pcb, ikptr p);
+
+static void
+gc_add_tconcs(gc_t* gc)
+{
+  if (gc->tconc_base == 0) {
+    return;
+  }
+  ikpcb* pcb = gc->pcb;
+  {
+    ikptr p = gc->tconc_base;
+    ikptr q = gc->tconc_ap;
+    for (; p<q; p+=pair_size) {
+      add_one_tconc(pcb, p);
+    }
+  }
+  ikmemblock* blk = gc->tconc_queue;
+  while (blk) {
+    ikptr p = blk->base;
+    ikptr q = p + blk->size;
+    for (; p<q; p+=pair_size) {
+      add_one_tconc(pcb, p);
+    }
+    ikmemblock* next = blk->next;
+    ik_free(blk, sizeof(ikmemblock));
+    blk = next;
+  }
+}
+static void
+add_one_tconc(ikpcb* pcb, ikptr p)
+{
+  ikptr tcbucket = IK_REF(p,0);
+  ikptr tc = IK_REF(tcbucket, off_tcbucket_tconc);
+  assert(IK_TAGOF(tc) == pair_tag);
+  ikptr d = IK_REF(tc, off_cdr);
+  assert(IK_TAGOF(d) == pair_tag);
+  ikptr new_pair = p | pair_tag;
+  IK_REF(d, off_car) = tcbucket;
+  IK_REF(d, off_cdr) = new_pair;
+  IK_REF(new_pair, off_car) = IK_FALSE_OBJECT;
+  IK_REF(new_pair, off_cdr) = IK_FALSE_OBJECT;
+  IK_REF(tc, off_cdr) = new_pair;
+  IK_REF(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
+}
+
+
+/** --------------------------------------------------------------------
  ** Collection subroutines: guardians handling.
  ** ----------------------------------------------------------------- */
 
@@ -832,8 +1149,8 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
  ** ----------------------------------------------------------------- */
 
 /* Prototypes for subroutines of "add_object()". */
-static void	add_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
-static ikptr	add_code_entry	(gc_t* gc, ikptr entry);
+static void		add_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
+static inline void	gc_tconc_push	(gc_t* gc, ikptr tcbucket);
 
 static inline ikptr	gc_alloc_new_data	(int size, gc_t* gc);
 static inline ikptr	gc_alloc_new_ptr	(int size, gc_t* gc);
@@ -1422,6 +1739,63 @@ add_code_entry (gc_t* gc, ikptr entry)
 
 
 /** --------------------------------------------------------------------
+ ** Keeping alive objects: tconcs for hash tables.
+ ** ----------------------------------------------------------------- */
+
+static void	gc_tconc_push_extending (gc_t* gc, ikptr tcbucket);
+
+static inline void
+gc_tconc_push (gc_t* gc, ikptr tcbucket)
+{
+  ikptr ap  = gc->tconc_ap;
+  ikptr nap = ap + pair_size;
+  if (nap > gc->tconc_ep) {
+    gc_tconc_push_extending(gc, tcbucket);
+  } else {
+    gc->tconc_ap = nap;
+    IK_REF(ap, disp_car) = tcbucket;
+    /* The cdr of the pair referenced  by AP is automatically set to the
+       fixnum zero  because tconc  memory pages are  reset to  zero when
+       allocated. */
+  }
+}
+static void
+gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
+{
+  if (gc->tconc_base) {
+    /* Push  a new  node in  the linked  list "pcb->tconc_queue".   Save
+       references to the current PCB tconc page in the new node. */
+    ikmemblock *	blk = ik_malloc(sizeof(ikmemblock));
+    blk->base = gc->tconc_base;
+    blk->size = IK_PAGESIZE;
+    blk->next = gc->tconc_queue;
+    gc->tconc_queue = blk;
+  }
+  /* Allocate a new page for tconc  pairs; store references to it in the
+     PCB. */
+  {
+    ikptr	mem;
+    mem = ik_mmap_typed(IK_PAGESIZE, meta_mt[meta_ptrs] | gc->collect_gen_tag, gc->pcb);
+    bzero((char*)mem, IK_PAGESIZE);
+    /* gc statistics */
+    add_to_collect_count(gc->pcb, IK_PAGESIZE);
+    /* Retake   the  segment   vector   because   memory  allocated   by
+       "ik_mmap_typed()" might have caused  the reallocation of the page
+       vectors. */
+    gc->segment_vector = gc->pcb->segment_vector;
+    /* Store references to the allocated page in the GC struct.  Reserve
+       room for a pair at the beginning of the page. */
+    gc->tconc_base = mem;		/* pointer to allocated page */
+    gc->tconc_ap   = mem + pair_size;	/* alloc pointer */
+    gc->tconc_ep   = mem + IK_PAGESIZE;	/* end pointer */
+    IK_REF(mem, disp_car) = tcbucket;
+    /* The cdr of the  first pair is set to the fixnum  zero by the call
+       to "bzero()" above. */
+  }
+}
+
+
+/** --------------------------------------------------------------------
  ** Keeping alive objects: allocating memory for moved live objects.
  ** ----------------------------------------------------------------- */
 
@@ -1688,313 +2062,6 @@ meta_alloc_extending (long size, gc_t* gc, int meta_id)
   meta->ep   = mem + mapsize;	/* end pointer */
   meta->base = mem;		/* beginning of allocated meta pages */
   return mem;
-}
-
-
-/** --------------------------------------------------------------------
- ** Collection subroutines: Scheme stack.
- ** ----------------------------------------------------------------- */
-
-#define DEBUG_STACK 0
-
-static void
-collect_stack (gc_t* gc, ikptr top, ikptr end)
-/* This function is used to scan for live objects both the current stack
- * segment and  the array of  freezed stack frames referenced  by Scheme
- * continuation objects.
- *
- * Let's remember  how the current Scheme  stack looks when it  has some
- * frames in it:
- *
- *    high memory addresses
- *  |                      |
- *  |----------------------|
- *  |                      | <- pcb->frame_base
- *  |----------------------|
- *  | ik_underflow_handler | <- end
- *  |----------------------|
- *    ... other frames ...
- *  |----------------------|         --
- *  |     local value      |         .
- *  |----------------------|         .
- *  |     local value      |         . upper frame
- *  |----------------------|         .
- *  |    return address    |         .
- *  |----------------------|         --
- *  |     local value      |         .
- *  |----------------------|         .
- *  |     local value      |         . topmost frame
- *  |----------------------|         .
- *  |    return address    | <- top  .
- *  |----------------------|         --
- *     ... free words ...
- *  |----------------------|
- *  |                      | <- pcb->stack_base
- *  |----------------------|
- *  |                      |
- *    low memory addresses
- *
- * now let's  remember how  the current  Scheme stack  looks when  it is
- * empty (no frames):
- *
- *    high memory addresses
- *  |                      |
- *  |----------------------|
- *  |                      | <- pcb->frame_base
- *  |----------------------|
- *  | ik_underflow_handler | <- top = end
- *  |----------------------|
- *     ... free words ...
- *  |----------------------|
- *  |                      | <- pcb->stack_base
- *  |----------------------|
- *  |                      |
- *    low memory addresses
- *
- * now let's  remember how the  freezed frames in a  continuation object
- * look:
- *
- *    high memory addresses
- *  |                      |
- *  |----------------------|
- *  |                      | <- end
- *  |----------------------|
- *    ... other frames ...
- *  |----------------------|         --
- *  |     local value      |         .
- *  |----------------------|         .
- *  |     local value      |         . upper freezed frame
- *  |----------------------|         .
- *  |    return address    |         .
- *  |----------------------|         --
- *  |     local value      |         .
- *  |----------------------|         .
- *  |     local value      |         . topmost freezed frame
- *  |----------------------|         .
- *  |    return address    | <- top  .
- *  |----------------------|         --
- *  |                      |
- *    low memory addresses
- *
- * a continuation  object is  never empty:  it always  has at  least one
- * freezed frame.
- *
- * The argument END  is a raw memory pointer referencing  a machine word
- * past the lowest frame on the region to scan.
- *
- * When the region to scan is the current Scheme stack: the argument TOP
- * is "pcb->frame_pointer",  a raw memory  pointer.  When the  region to
- * scan  the array  of  freezed  frames in  a  continuation object:  the
- * argument TOP is the value of the field TOP in the continuation object
- * data structure.
- *
- * TOP is used as iterator to climb  the stack, frame by frame, from low
- * memory addresses to high memory addresses until END is reached.
- *
- *            frame   frame   frame   frame   frame
- *   lo mem |-+-----|-+-----|-+-----|-+-----|-+-----|-| hi mem
- *           ^       ^       ^       ^       ^       ^
- *          top     top1    top2    top3     |       |
- *                                         top4     end
- */
-{
-  if (0 || DEBUG_STACK) {
-    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx to 0x%016lx",
-			   __func__, (long)end - (long)top, (long) top, (long) end);
-  }
-  while (top < end) {
-    /* A Scheme stack frame looks like this:
-     *
-     *          high memory
-     *   |----------------------|         --
-     *   |      local value     |         .
-     *   |----------------------|         .
-     *   |      local value     |         . framesize = 3 machine words
-     *   |----------------------|         .
-     *   |    single_value_rp   | <- top  .
-     *   |----------------------|         --
-     *   |                      |
-     *         low memory
-     *
-     * and the return address SINGLE_VALUE_RP  is an assembly label (for
-     * single  return values)  right after  the "call"  instruction that
-     * created this stack frame:
-     *
-     *     ;; low memory
-     *
-     *     subl framesize, FPR		;adjust FPR
-     *     jmp L0
-     *     livemask-bytes		;array of bytes
-     *     framesize			;data word, a "long"
-     *     offset_field			;data word, a fixnum
-     *     multi_value_rp		;data word, assembly label
-     *     pad-bytes
-     *   L0:
-     *     call function-address
-     *     addl framesize, FPR		;restore FPR
-     *   single_value_rp:		;single value return point
-     *     ... instructions...
-     *   multi_value_rp:		;multi value return point
-     *     ... instructions...
-     *
-     *     ;; high memory
-     *
-     * The "long"  word FRAMESIZE is an  offset to add to  TOP to obtain
-     * the  top  of  the  uplevel   frame;  interpreted  as  fixnum:  it
-     * represents  the number  of  machine words  on  this stack  frame;
-     * interpreted as an  integer: it represents the number  of bytes on
-     * this stack frame.
-     *
-     * Exception:  if the  data word  FRAMESIZE is  zero, then  the true
-     * frame size  could not be computed  at compile time, and  so it is
-     * stored on the stack itself:
-     *
-     *         high memory
-     *   |                      |
-     *   |----------------------|
-     *   |      framesize       | <-- top + wordsize
-     *   |----------------------|
-     *   |   single_value_rp    | <-- top
-     *   |----------------------|
-     *   |                      |
-     *         low memory
-     *
-     * also in this case all the words  on this frame are live, the live
-     * mask in the code object is unused.
-     *
-     * The fixnum "offset_field"  is the number of bytes  between the first
-     * byte of binary code in this code object and the location in which
-     * "offset_field" itself is stored:
-     *
-     *    metadata                    binary code
-     *   |--------|-------------+-+----------------------| code object
-     *            |.............|^
-     *             offset_field  |
-     *                  |        |
-     *                   --------
-     *
-     * NOTE The  preprocessor symbol  "disp_call_table_offset" is  a negative
-     * integer.
-     */
-    ikptr	single_value_rp	= IK_REF(top, 0);
-    long	offset_field	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
-    if (DEBUG_STACK) {
-      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, offset_field=%ld",
-		       (long) top, single_value_rp, offset_field);
-    }
-    if (offset_field <= 0) {
-      ik_abort("invalid offset_field %ld\n", offset_field);
-    }
-    /* Since the return point is alive,  we need to find the code object
-       containing it and  mark it live as well.   The SINGLE_VALUE_RP in
-       the stack frame is updated to reflect the new code object. */
-    long	code_offset	= offset_field - disp_call_table_offset;
-    ikptr	code_entry	= single_value_rp - code_offset;
-    ikptr	new_code_entry	= add_code_entry(gc, code_entry);
-    ikptr	new_sv_rp	= new_code_entry + code_offset;
-    IK_REF(top, 0) = new_sv_rp;
-    single_value_rp = new_sv_rp;
-
-    /* now for some livemask action.
-     * every return point has a live mark above it.  the live mask
-     * is a sequence of bytes (every byte for 8 frame cells).  the
-     * size of the live mask is determined by the size of the frame.
-     * this is how the call frame instruction sequence looks like:
-     *
-     *   |    ...     |
-     *   | code  junk |
-     *   +------------+
-     *   |   byte 0   |   for fv0 .. fv7
-     *   |   byte 1   |   for fv8 .. fv15
-     *   |    ...     |   ...
-     *   +------------+
-     *   |  framesize |
-     *   |    word    |
-     *   +------------+
-     *   | frameoffst |  the frame offset determines how far its
-     *   |    word    |  address is off from the start of the code
-     *   +------------+
-     *   | multivalue |
-     *   |    word    |
-     *   +------------+
-     *   |  padding   |  the size of this part is fixed so that we
-     *   |  and call  |  can correlate the frame info (above) with rp
-     *   +------------+
-     *   |   code     | <---- rp
-     *   |    ...     |
-     *
-     *   WITH ONE EXCEPTION:
-     *   if the framesize is 0, then the actual frame size is stored
-     *   on the stack immediately below the return point.
-     *   there is no live mask in this case, instead all values in the
-     *   frame are live.
-     */
-    long framesize =  IK_CALLTABLE_FRAMESIZE(single_value_rp);
-    if (DEBUG_STACK) {
-      ik_debug_message("fs=%ld", (long)framesize);
-    }
-    if (framesize < 0) {
-      ik_abort("invalid frame size %ld\n", (long)framesize);
-    } else if (0 == framesize) {
-      /* Keep alive all the objects on the stack. */
-      framesize = IK_REF(top, wordsize);
-      if (framesize <= 0) {
-        ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
-      }
-      /*
-       *       high memory
-       *   |----------------|
-       *   | return address | <-- uplevel top
-       *   |----------------|                                --
-       *   | Scheme object  | <-- top + framesize - wordsize .
-       *   |----------------|                                .
-       *   | Scheme object  |                                . framesize
-       *   |----------------|                                .
-       *   | return address | <-- top                        .
-       *   |----------------|                                --
-       *      low memory
-       */
-      ikptr base;
-      for (base=top+framesize-wordsize; base > top; base-=wordsize) {
-        ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
-        IK_REF(base,0) = new_obj;
-      }
-    } else {
-      /* Keep alive only the objects selected by the livemask. */
-      /* Number of Scheme objects on this stack frame. */
-      long	frame_cells	= framesize >> fx_shift;
-      /* Number of  bytes in the  livemask array, knowing that  there is
-	 one bit for  every frame cell.  When the framesize  is 4 (there
-	 is only one machine word on  the stack) the livemask array must
-	 contain a single byte. */
-      long	bytes_in_mask	= (frame_cells+7) >> 3;
-      /* Pointer to the livemask bytevector */
-      char *	mask = (char*)(long)(single_value_rp + disp_call_table_size - bytes_in_mask);
-      /* Pointer to the Scheme objects on the stack. */
-      ikptr *	fp   = (ikptr*)(long)(top + framesize);
-      long	i;
-      for (i=0; i<bytes_in_mask; i++, fp-=8) {
-        unsigned char m = mask[i];
-#if DEBUG_STACK
-        ik_debug_message("m[%ld]=0x%x", i, m);
-#endif
-        if (m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
-        if (m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
-        if (m & 0x04) { fp[-2] = add_object(gc, fp[-2], "frame2"); }
-        if (m & 0x08) { fp[-3] = add_object(gc, fp[-3], "frame3"); }
-        if (m & 0x10) { fp[-4] = add_object(gc, fp[-4], "frame4"); }
-        if (m & 0x20) { fp[-5] = add_object(gc, fp[-5], "frame5"); }
-        if (m & 0x40) { fp[-6] = add_object(gc, fp[-6], "frame6"); }
-        if (m & 0x80) { fp[-7] = add_object(gc, fp[-7], "frame7"); }
-      }
-    }
-    top += framesize;
-  }
-  if (top != end)
-    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long)top, (long)end);
-  if (DEBUG_STACK) {
-    ik_debug_message("%s: leave\n", __func__);
-  }
 }
 
 
@@ -2484,57 +2551,25 @@ relocate_new_code (ikptr p_X, gc_t* gc)
     } /* end of switch() */
   } /* end of while() */
 }
-
-
-/** --------------------------------------------------------------------
- ** Handle tconcs.
- ** ----------------------------------------------------------------- */
-
-static void	add_one_tconc(ikpcb* pcb, ikptr p);
-
 static void
-gc_add_tconcs(gc_t* gc)
+add_to_collect_count (ikpcb* pcb, int bytes)
+/* This is  for accounting  purposes.  We  keep count  of all  the bytes
+ * allocated for the heap, so that:
+ *
+ *   total_allocated_bytes = \
+ *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
+ *     + pcb->allocation_count_minor
+ *
+ * both minor and major counters must fit into a fixnum.  These counters
+ * are used by Scheme procedures like "time-it" and "time-and-gather".
+ */
 {
-  if (gc->tconc_base == 0) {
-    return;
+  int	minor = bytes + pcb->allocation_count_minor;
+  while (minor >= IK_MOST_BYTES_IN_MINOR) {
+    minor -= IK_MOST_BYTES_IN_MINOR;
+    pcb->allocation_count_major++;
   }
-  ikpcb* pcb = gc->pcb;
-  {
-    ikptr p = gc->tconc_base;
-    ikptr q = gc->tconc_ap;
-    for (; p<q; p+=pair_size) {
-      add_one_tconc(pcb, p);
-    }
-  }
-  ikmemblock* blk = gc->tconc_queue;
-  while (blk) {
-    ikptr p = blk->base;
-    ikptr q = p + blk->size;
-    for (; p<q; p+=pair_size) {
-      add_one_tconc(pcb, p);
-    }
-    ikmemblock* next = blk->next;
-    ik_free(blk, sizeof(ikmemblock));
-    blk = next;
-  }
-}
-static void
-add_one_tconc(ikpcb* pcb, ikptr p)
-{
-  ikptr tcbucket = IK_REF(p,0);
-  ikptr tc = IK_REF(tcbucket, off_tcbucket_tconc);
-  assert(IK_TAGOF(tc) == pair_tag);
-  ikptr d = IK_REF(tc, off_cdr);
-  assert(IK_TAGOF(d) == pair_tag);
-  ikptr new_pair = p | pair_tag;
-  IK_REF(d, off_car) = tcbucket;
-  IK_REF(d, off_cdr) = new_pair;
-  IK_REF(new_pair, off_car) = IK_FALSE_OBJECT;
-  IK_REF(new_pair, off_cdr) = IK_FALSE_OBJECT;
-  IK_REF(tc, off_cdr) = new_pair;
-  IK_REF(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
+  pcb->allocation_count_minor = minor;
 }
 
 /* end of file */
