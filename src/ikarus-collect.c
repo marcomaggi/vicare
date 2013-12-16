@@ -2240,7 +2240,6 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	ikptr		s_reloc_vec;
 	ikptr		s_reloc_vec_len;
 	long		card_idx    = ((ik_ulong)p_code - (ik_ulong)page_start) / CARDSIZE;
-	long		code_size   = IK_UNFIX(IK_REF(p_code, disp_code_code_size));
 	ik_ulong	i;
 	ik_ulong	code_d;
 	relocate_new_code(p_code, gc);
@@ -2251,18 +2250,25 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
 	assert(((long)s_reloc_vec_len) >= 0);
 	code_d          = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
+	/* Iterate over the words in the relocation vector. */
 	for (i=0; i<s_reloc_vec_len; i+=wordsize) {
 	  ikptr		r = IK_REF(s_reloc_vec, i+off_vector_data);
 	  if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
 	    r		= add_object(gc, r, "nothing2");
+	    /* The  call  to  "add_object()" might  have  allocated  new
+	       memory, so we must retake the segment vector after it. */
 	    segment_vec	= gc->segment_vector;
-	    code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
+	    code_d	|= segment_vec[IK_PAGE_INDEX(r)];
 	  }
 	}
 	new_page_dbits	|= code_d << (card_idx * meta_dirty_shift);
-	p_code		+= IK_ALIGN(code_size + disp_code_data);
+	{ /* Increment "p_code" to reference the next code object in the
+	     page. */
+	  long	code_size = IK_UNFIX(IK_REF(p_code, disp_code_code_size));
+	  p_code += IK_ALIGN(code_size + disp_code_data);
+	}
       }
     }
   }
