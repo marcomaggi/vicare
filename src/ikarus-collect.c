@@ -543,28 +543,25 @@ static void
 deallocate_unused_pages (gc_t* gc)
 /* Subroutine of "ik_collect()". */
 {
-  ikpcb* pcb = gc->pcb;
-  int collect_gen =  gc->collect_gen;
-  uint32_t* segment_vec = pcb->segment_vector;
-  ikptr memory_base = pcb->memory_base;
-  ikptr memory_end = pcb->memory_end;
-  ikptr lo_idx = IK_PAGE_INDEX(memory_base);
-  ikptr hi_idx = IK_PAGE_INDEX(memory_end);
-  ikptr i = lo_idx;
-  while(i < hi_idx) {
-    uint32_t t = segment_vec[i];
-    if (t & dealloc_mask) {
-      int gen = t & old_gen_mask;
+  ikpcb *	pcb         = gc->pcb;
+  int		collect_gen = gc->collect_gen;
+  uint32_t *	segment_vec = pcb->segment_vector;
+  ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
+  ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
+  ikptr		page_idx    = lo_idx;
+  for (; page_idx<hi_idx; ++page_idx) {
+    uint32_t	page_sbits = segment_vec[page_idx];
+    if (page_sbits & dealloc_mask) {
+      int gen = page_sbits & old_gen_mask;
       if (gen <= collect_gen) {
         /* we're interested */
-        if (t & new_gen_mask) {
+        if (page_sbits & new_gen_mask) {
           /* do nothing yet */
         } else {
-          ik_munmap_from_segment((ikptr)(i<<IK_PAGESHIFT),IK_PAGESIZE,pcb);
+          ik_munmap_from_segment(IK_PAGE_POINTER_FROM_INDEX(page_idx), IK_PAGESIZE, pcb);
         }
       }
     }
-    i++;
   }
 }
 static void
