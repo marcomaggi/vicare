@@ -2175,42 +2175,45 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
    allocate memory, which means: after every call the dirty and segments
    vector might have been reallocated. */
 {
-  uint32_t *	segment_vec  = gc->segment_vector;
-  uint32_t *	dirty_vec    = (uint32_t*)gc->pcb->dirty_vector;
-  uint32_t	page_dbits   = dirty_vec[page_idx];
-  uint32_t	masked_dbits = page_dbits & mask;
-  ikptr		p            = IK_PAGE_POINTER_FROM_INDEX(page_idx);
-  int		j;
   uint32_t	new_page_dbits = 0;
-  for (j=0; j<CARDS_PER_PAGE; j++) {
-    if (masked_dbits & (0xF << (j*meta_dirty_shift))) {
-      /* dirty card */
-      ikptr q = p + CARDSIZE;
-      uint32_t card_d = 0;
-      while (p < q) {
-        ikptr x = IK_REF(p, 0);
-        if (IK_IS_FIXNUM(x) || (IK_TAGOF(x) == immediate_tag)) {
-          /* do nothing */
-        } else {
-          ikptr y = add_object(gc, x, "nothing");
-	  /* The call to "add_object()" might have allocated new memory,
-	     so we must retake the segment vector. */
-          segment_vec = gc->segment_vector;
-          IK_REF(p, 0) = y;
-          card_d = card_d | segment_vec[IK_PAGE_INDEX(y)];
-        }
-        p += wordsize;
+  {
+    uint32_t *	segment_vec  = gc->segment_vector;
+    uint32_t *	dirty_vec    = (uint32_t*)gc->pcb->dirty_vector;
+    uint32_t	page_dbits   = dirty_vec[page_idx];
+    uint32_t	masked_dbits = page_dbits & mask;
+    ikptr	page_ptr     = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+    int		j;
+    for (j=0; j<CARDS_PER_PAGE; j++) {
+      if (masked_dbits & (0xF << (j * meta_dirty_shift))) {
+	/* dirty card */
+	ikptr q = page_ptr + CARDSIZE;
+	uint32_t card_dbits = 0;
+	while (page_ptr < q) {
+	  ikptr X = IK_REF(page_ptr, 0);
+	  if (IK_IS_FIXNUM(X) || (IK_TAGOF(X) == immediate_tag)) {
+	    /* do nothing */
+	  } else {
+	    ikptr Y = add_object(gc, X, "nothing");
+	    /* The  call  to  "add_object()" might  have  allocated  new
+	       memory, so we must retake the segment vector. */
+	    segment_vec = gc->segment_vector;
+	    IK_REF(page_ptr, 0) = Y;
+	    card_dbits = card_dbits | segment_vec[IK_PAGE_INDEX(Y)];
+	  }
+	  page_ptr += wordsize;
+	}
+	card_dbits = (card_dbits & meta_dirty_mask) >> meta_dirty_shift;
+	new_page_dbits  = new_page_dbits | (card_dbits << (j * meta_dirty_shift));
+      } else {
+	page_ptr += CARDSIZE;
+	new_page_dbits = new_page_dbits | (page_dbits & (0xF << (j * meta_dirty_shift)));
       }
-      card_d = (card_d & meta_dirty_mask) >> meta_dirty_shift;
-      new_page_dbits  = new_page_dbits | (card_d<<(j*meta_dirty_shift));
-    } else {
-      p += CARDSIZE;
-      new_page_dbits = new_page_dbits | (page_dbits & (0xF << (j*meta_dirty_shift)));
     }
   }
+  /* Update the dirty vector bits for this page. */
   {
-    uint32_t *	dirty_vec  = (uint32_t*)gc->pcb->dirty_vector;
-    uint32_t	page_sbits = segment_vec[page_idx];
+    uint32_t	page_sbits  = gc->segment_vector[page_idx];
+    uint32_t *	dirty_vec   = (uint32_t*)gc->pcb->dirty_vector;
     new_page_dbits = new_page_dbits & cleanup_mask[page_sbits & gen_mask];
     dirty_vec[page_idx] = new_page_dbits;
   }
