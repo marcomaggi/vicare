@@ -2228,27 +2228,31 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 {
   uint32_t	new_page_dbits  = 0;
   {
-    uint32_t *	segment_vec = gc->segment_vector;
-    ikptr	s_code      = IK_PAGE_POINTER_FROM_INDEX(page_idx);
-    ikptr	page_start  = s_code;
-    ikptr	page_end    = s_code + IK_PAGESIZE;
-    while (s_code < page_end) {
-      if (IK_REF(s_code, 0) != code_tag) {
-	s_code = page_end;
+    ikptr	page_start  = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+    ikptr	page_end    = page_start + IK_PAGESIZE;
+    ikptr	p_code      = page_start; /* untagged pointer to code object */
+    /* Iterate over all the code objects in the page. */
+    while (p_code < page_end) {
+      if (IK_REF(p_code, 0) != code_tag) {
+	p_code = page_end;
       } else {
-	long	j		= ((ik_ulong)s_code - (ik_ulong)page_start) / CARDSIZE;
-	long	code_size	= IK_UNFIX(IK_REF(s_code, disp_code_code_size));
-	relocate_new_code(s_code, gc);
-	/* The  call to  "relocate_new_code()"  might  have allocated  new
-	   memory, so we must take the segment vector after it. */
-	segment_vec = gc->segment_vector;
-	ikptr	rvec		= IK_REF(s_code, disp_code_reloc_vector);
-	ikptr	len		= IK_REF(rvec, off_vector_length);
-	assert(((long)len) >= 0);
+	uint32_t *	segment_vec;
+	ikptr		s_reloc_vec;
+	ikptr		s_reloc_vec_len;
+	long		card_idx    = ((ik_ulong)p_code - (ik_ulong)page_start) / CARDSIZE;
+	long		code_size   = IK_UNFIX(IK_REF(p_code, disp_code_code_size));
 	ik_ulong	i;
-	ik_ulong	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
-	for (i=0; i<len; i+=wordsize) {
-	  ikptr		r = IK_REF(rvec, i+off_vector_data);
+	ik_ulong	code_d;
+	relocate_new_code(p_code, gc);
+	/* The call  to "relocate_new_code()"  might have  allocated new
+	   memory, so we must take the segment vector after it. */
+	segment_vec     = gc->segment_vector;
+	s_reloc_vec     = IK_REF(p_code, disp_code_reloc_vector);
+	s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
+	assert(((long)s_reloc_vec_len) >= 0);
+	code_d          = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
+	for (i=0; i<s_reloc_vec_len; i+=wordsize) {
+	  ikptr		r = IK_REF(s_reloc_vec, i+off_vector_data);
 	  if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
@@ -2257,8 +2261,8 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	    code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
 	  }
 	}
-	new_page_dbits	|= code_d << (j * meta_dirty_shift);
-	s_code		+= IK_ALIGN(code_size + disp_code_data);
+	new_page_dbits	|= code_d << (card_idx * meta_dirty_shift);
+	p_code		+= IK_ALIGN(code_size + disp_code_data);
       }
     }
   }
