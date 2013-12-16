@@ -2077,23 +2077,6 @@ fix_weak_pointers(gc_t* gc) {
   }
 }
 
-static unsigned int dirty_mask[IK_GC_GENERATION_COUNT] = {
-  0x88888888,
-  0xCCCCCCCC,
-  0xEEEEEEEE,
-  0xFFFFFFFF,
-  0x00000000
-};
-
-
-static unsigned int cleanup_mask[IK_GC_GENERATION_COUNT] = {
-  0x00000000,
-  0x88888888,
-  0xCCCCCCCC,
-  0xEEEEEEEE,
-  0xFFFFFFFF
-};
-
 
 /** --------------------------------------------------------------------
  ** Scanning dirty pages.
@@ -2105,6 +2088,22 @@ static unsigned int cleanup_mask[IK_GC_GENERATION_COUNT] = {
  */
 #define CARDSIZE		512
 #define CARDS_PER_PAGE		8
+
+static const unsigned int DIRTY_MASK[IK_GC_GENERATION_COUNT] = {
+  0x88888888,
+  0xCCCCCCCC,
+  0xEEEEEEEE,
+  0xFFFFFFFF,
+  0x00000000
+};
+
+static const unsigned int CLEANUP_MASK[IK_GC_GENERATION_COUNT] = {
+  0x00000000,
+  0x88888888,
+  0xCCCCCCCC,
+  0xEEEEEEEE,
+  0xFFFFFFFF
+};
 
 static void scan_dirty_code_page     (gc_t* gc, ik_ulong page_idx);
 static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask);
@@ -2130,7 +2129,7 @@ scan_dirty_pages (gc_t* gc)
   uint32_t *	dirty_vec   = (uint32_t*)pcb->dirty_vector;
   uint32_t *	segment_vec = pcb->segment_vector;
   int		collect_gen = gc->collect_gen;
-  uint32_t	mask        = dirty_mask[collect_gen];
+  uint32_t	mask        = DIRTY_MASK[collect_gen];
   ik_ulong	page_idx;
   for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) {
     if (dirty_vec[page_idx] & mask) {
@@ -2214,7 +2213,7 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
   {
     uint32_t	page_sbits  = gc->segment_vector[page_idx];
     uint32_t *	dirty_vec   = (uint32_t*)gc->pcb->dirty_vector;
-    dirty_vec[page_idx] = new_page_dbits & cleanup_mask[page_sbits & gen_mask];
+    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & gen_mask];
   }
 }
 static void
@@ -2277,7 +2276,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
     uint32_t *	segment_vec = gc->segment_vector;
     uint32_t	page_sbits  = segment_vec[page_idx];
     uint32_t *	dirty_vec   = (uint32_t *)gc->pcb->dirty_vector;
-    dirty_vec[page_idx] = new_page_dbits & cleanup_mask[page_sbits & gen_mask];
+    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & gen_mask];
   }
 }
 
