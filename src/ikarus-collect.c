@@ -2502,22 +2502,20 @@ gc_add_tconcs(gc_t* gc)
   {
     ikptr p = gc->tconc_base;
     ikptr q = gc->tconc_ap;
-    while(p < q) {
+    for (; p<q; p+=pair_size) {
       add_one_tconc(pcb, p);
-      p += 2*wordsize;
     }
   }
-  ikmemblock* qu = gc->tconc_queue;
-  while(qu) {
-    ikptr p = qu->base;
-    ikptr q = p + qu->size;
-    while(p < q) {
+  ikmemblock* blk = gc->tconc_queue;
+  while (blk) {
+    ikptr p = blk->base;
+    ikptr q = p + blk->size;
+    for (; p<q; p+=pair_size) {
       add_one_tconc(pcb, p);
-      p += 2*wordsize;
     }
-    ikmemblock* next = qu->next;
-    ik_free(qu, sizeof(ikmemblock));
-    qu = next;
+    ikmemblock* next = blk->next;
+    ik_free(blk, sizeof(ikmemblock));
+    blk = next;
   }
 }
 static void
