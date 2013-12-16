@@ -220,17 +220,20 @@ gc_alloc_new_large_ptr (int size, gc_t* gc)
   ikptr		mem;
   memreq = IK_ALIGN_TO_NEXT_PAGE(size);
   mem    = ik_mmap_typed(memreq, pointers_mt | large_object_tag | gc->collect_gen_tag, gc->pcb);
-  /* Reset*/
+  /* Reset to zero  the portion of memory  that will not be  used by the
+     large object. */
   bzero((char*)(long)(mem+size), memreq-size);
   /* Retake   the   segment   vector   because   memory   allocated   by
      "ik_mmap_typed()" might  have caused  the reallocation of  the page
      vectors. */
   gc->segment_vector = gc->pcb->segment_vector;
+  /* Push a new  node on the linked list of  meta pointer memory blocks.
+     This allows the function "collect_loop()" to scan the object. */
   {
     qupages_t *	qu;
-    qu    = ik_malloc(sizeof(qupages_t));
-    qu->p = mem;
-    qu->q = mem+size;
+    qu       = ik_malloc(sizeof(qupages_t));
+    qu->p    = mem;
+    qu->q    = mem+size;
     qu->next = gc->queues[meta_ptrs];
     gc->queues[meta_ptrs] = qu;
   }
@@ -364,13 +367,14 @@ meta_alloc_extending (long size, gc_t* gc, int meta_id)
     p->q = ap;
     p->next = gc->queues[meta_id];
     gc->queues[meta_id] = p;
-    x = ap;
-    while (x < ep) {
-      ref(x, 0) = 0;
-      x += wordsize;
+    for (x=ap; x<ep; x+=wordsize) {
+      IK_REF(x, 0) = 0;
     }
   }
   mem = ik_mmap_typed(mapsize, meta_mt[meta_id] | gc->collect_gen_tag, gc->pcb);
+  /* Retake   the   segment   vector   because   memory   allocated   by
+     "ik_mmap_typed()" might  have caused  the reallocation of  the page
+     vectors. */
   gc->segment_vector = gc->pcb->segment_vector;
   meta->ap = mem + size;
   meta->aq = mem;
