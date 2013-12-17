@@ -1268,6 +1268,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   }
 
   case closure_tag: {
+    /* Closure object.  It goes in the pointers meta page. */
     ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
@@ -1758,54 +1759,80 @@ static int alloc_code_count = 0;
 
 static ikptr
 gather_live_code_entry (gc_t* gc, ikptr entry)
-/* Add a code object. */
+/* Move the data  area of the code  object referenced by ENTRY  to a new
+   memory location and return a  new untagged pointer which must replace
+   every  occurrence  of  ENTRY  in   the  memory  used  by  the  Scheme
+   program. */
 {
-  ikptr		x = entry - disp_code_data;
-  if (IK_FORWARD_PTR == IK_REF(x,0)) {
-    return IK_REF(x,wordsize) + off_code_data;
+  ikptr		X = entry - disp_code_data; /* tagged pointer to code object */
+  ik_ulong	page_idx;
+  /* If X  has already been moved  in a previous call  to this function:
+     the first  word in the data  area is IK_FORWARD_PTR and  the second
+     word is the new reference Y: compute the pointer to the entry point
+     of Y and return it. */
+  if (IK_FORWARD_PTR == IK_REF(X,0)) {
+    return IK_REF(X,wordsize) + off_code_data;
   }
-  long		idx	= IK_PAGE_INDEX(x);
-  unsigned	t	= gc->segment_vector[idx];
-  int		gen	= t & GEN_MASK;
-  if (gen > gc->collect_gen)
-    return entry;
+  /* If X does not belong to a generation examined in this GC run: leave
+     it alone. */
+  {
+    page_idx   = IK_PAGE_INDEX(X);
+    uint32_t	page_dbits = gc->segment_vector[page_idx];
+    int		generation = page_dbits & GEN_MASK;
+    if (generation > gc->collect_gen)
+      return entry;
+  }
+
   /* The number of bytes actually used in the allocated memory block. */
-  long		code_size	= IK_UNFIX(IK_REF(x, disp_code_code_size));
+  long		code_size	= IK_UNFIX(IK_REF(X, disp_code_code_size));
   /* The total number of allocated bytes. */
   long		required_mem	= IK_ALIGN(disp_code_data + code_size);
   /* The relocation vector. */
-  ikptr		s_reloc_vec	= IK_REF(x, disp_code_reloc_vector);
-  /* A fixnum representing th enumber of free variables. */
-  ikptr		s_freevars	= IK_REF(x, disp_code_freevars);
+  ikptr		s_reloc_vec	= IK_REF(X, disp_code_reloc_vector);
+  /* A fixnum representing the number of free variables. */
+  ikptr		s_freevars	= IK_REF(X, disp_code_freevars);
   /* An object that annotates the code object. */
-  ikptr		s_annotation	= IK_REF(x, disp_code_annotation);
+  ikptr		s_annotation	= IK_REF(X, disp_code_annotation);
   if (required_mem >= IK_PAGESIZE) {
-    int		new_tag	= gc->collect_gen_tag;
-    long	idx	= IK_PAGE_INDEX(x);
-    long	i;
-    gc->segment_vector[idx] = new_tag | CODE_MT;
-    for (i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
-      gc->segment_vector[idx] = new_tag | DATA_MT;
+    /* This is a "big" code object and we do not move it around.  */
+    { /* Tag all  the pages  in the  data area of  the code  object: the
+	 first  page as  code, the  subsequent  pages as  data; all  the
+	 tagged pointers  in a code object  are in the first  page.  The
+	 pages are already tagged in the segments vector, but we need to
+	 update the generation number. */
+      uint32_t	new_tag  = gc->collect_gen_tag;
+      long	page_idx = IK_PAGE_INDEX(X);
+      long	i;
+      gc->segment_vector[page_idx] = new_tag | CODE_MT;
+      for (i=IK_PAGESIZE, page_idx++; i<required_mem; i+=IK_PAGESIZE, page_idx++) {
+	gc->segment_vector[page_idx] = new_tag | DATA_MT;
+      }
     }
-    qupages_t *	p = ik_malloc(sizeof(qupages_t));
-    p->p = x;
-    p->q = x+required_mem;
-    p->next = gc->queues[meta_code];
-    gc->queues[meta_code] = p;
+    /* Push a new node on the  linked list of GC's queues pointer memory
+       blocks.  This  allows the  function "collect_loop()" to  scan the
+       object. */
+    {
+      qupages_t *	qu = ik_malloc(sizeof(qupages_t));
+      qu->p    = X;
+      qu->q    = X+required_mem;
+      qu->next = gc->queues[meta_code];
+      gc->queues[meta_code] = qu;
+    }
     return entry;
-  } else { /* Only one memory page allocated. */
-    ikptr	y = gc_alloc_new_code(required_mem, gc);
-    IK_REF(y, 0) = code_tag;
-    IK_REF(y, disp_code_code_size)	= IK_FIX(code_size);
-    IK_REF(y, disp_code_reloc_vector)	= s_reloc_vec;
-    IK_REF(y, disp_code_freevars)	= s_freevars;
-    IK_REF(y, disp_code_annotation)	= s_annotation;
-    memcpy((char*)(long)(y+disp_code_data),
-           (char*)(long)(x+disp_code_data),
+  } else {
+    /* Only one memory page allocated. */
+    ikptr	Y = gc_alloc_new_code(required_mem, gc);
+    IK_REF(Y, disp_code_tag)		= code_tag;
+    IK_REF(Y, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(Y, disp_code_reloc_vector)	= s_reloc_vec;
+    IK_REF(Y, disp_code_freevars)	= s_freevars;
+    IK_REF(Y, disp_code_annotation)	= s_annotation;
+    memcpy((char*)(long)(Y+disp_code_data),
+           (char*)(long)(X+disp_code_data),
            code_size);
-    IK_REF(x, 0)	= IK_FORWARD_PTR;
-    IK_REF(x, wordsize)	= y | vector_tag;
-    return y+disp_code_data;
+    IK_REF(X, 0)	= IK_FORWARD_PTR;
+    IK_REF(X, wordsize)	= Y | vector_tag;
+    return Y+disp_code_data;
   }
 }
 
