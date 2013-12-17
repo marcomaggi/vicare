@@ -1468,29 +1468,35 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
-/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
+
     default: {
-      if (IK_IS_FIXNUM(first_word)) { /* real vector */
-	/* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
-	   number of  bytes to allocate for  the data area  of the vector;
-	   this is  because the  fixnum tag is  composed of zero  bits and
-	   they are in  such a number that multiplying  the fixnum's value
-	   by the  wordsize is  equivalent to right-shifting  the fixnum's
+      if (IK_IS_FIXNUM(first_word)) {
+	/* Vector object.  It goes in the pointers meta page.
+
+	   Notice that FIRST_WORD is a fixnum  and we use it directly as
+	   number of bytes to allocate for  the data area of the vector;
+	   this is because  the fixnum tag is composed of  zero bits and
+	   they are in such a number that multiplying the fixnum's value
+	   by the wordsize is  equivalent to right-shifting the fixnum's
 	   value by the fixnum tag. */
 	ikptr	size   = first_word;
 	ikptr	nbytes = size + disp_vector_data; /* not aligned */
 	ikptr	memreq = IK_ALIGN(nbytes);
 	if (memreq >= IK_PAGESIZE) { /* big vector */
 	  if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
-	    /* This  large object  is already  stored in  pages markes  as
-	       "large  object".   We do  not  move  it around,  rather  we
-	       register  the data  area in  the  queues of  objects to  be
-	       scanned later by "collect_loop()". */
+	    /* Big  vector  already stored  in  pages  marked as  "large
+	       object".  We  do not move  it around, rather  we register
+	       the  data area  in the  queues of  objects to  be scanned
+	       later by "collect_loop()". */
 	    enqueue_large_ptr(X - vector_tag, nbytes, gc);
 	    return X;
 	  } else {
+	    /* Big  vector not  yet  stored in  pages  marked as  "large
+	       object". */
 	    ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
 	    IK_REF(Y, off_vector_length) = first_word;
+	    /* FIXME What  is this zeroed  word?  (Marco Maggi;  Tue Dec
+	       17, 2013) */
 	    IK_REF(Y, memreq - vector_tag - wordsize) = 0;
 	    memcpy((char*)(long)(Y + off_vector_data),
 		   (char*)(long)(X + off_vector_data),
@@ -1502,6 +1508,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	} else { /* small vector */
 	  ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
 	  IK_REF(Y, off_vector_length) = first_word;
+	  /* FIXME What is this zeroed  word?  (Marco Maggi; Tue Dec 17,
+	     2013) */
 	  IK_REF(Y, memreq - vector_tag - wordsize) = 0;
 	  memcpy((char*)(long)(Y + off_vector_data),
 		 (char*)(long)(X + off_vector_data),
@@ -1514,8 +1522,10 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	vector_count++;
 #endif
       }
+/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
       else if (IK_TAGOF(first_word) == rtd_tag) {
-	/* struct / record */
+	/* Vicare struct or  R6RS record.  It goes in  the pointers meta
+	   page. */
 	/* FIXME What the  hell is going on with  this moving operation?!?
 	   It  does not  look like  a legal  move operation  for  RTDs and
 	   struct instances.  (Marco Maggi; Jan 11, 2012) */
