@@ -1508,6 +1508,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
     else if (port_tag == (((long)first_word) & port_mask)) {
       ikptr	Y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
+#if 0
       ikptr	s_buffer	= IK_REF(X, off_port_buffer);
       ikptr	s_id		= IK_REF(X, off_port_id);
       ikptr	s_read		= IK_REF(X, off_port_read);
@@ -1516,6 +1517,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr	s_set_position	= IK_REF(X, off_port_set_position);
       ikptr	s_close		= IK_REF(X, off_port_close);
       ikptr	s_cookie	= IK_REF(X, off_port_cookie);
+#endif
       long	i;
       IK_REF(Y, -vector_tag) = first_word;
       for (i=wordsize; i<port_size; i+=wordsize) {
@@ -1523,6 +1525,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       }
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
+#if 0
       /* These calls were not in  the original Ikarus code (Marco Maggi;
 	 Jan 11, 2012). */
       IK_REF(Y, off_port_buffer)	= gather_live_object(gc, s_buffer,	 "port buffer");
@@ -1533,15 +1536,16 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_port_set_position)	= gather_live_object(gc, s_set_position, "port set_position");
       IK_REF(Y, off_port_close)		= gather_live_object(gc, s_close,	 "port close");
       IK_REF(Y, off_port_cookie)	= gather_live_object(gc, s_cookie,	 "port cookie");
+#endif
       return Y;
     }
     else if (flonum_tag == first_word) {
-      ikptr new = gc_alloc_new_data(flonum_size, gc) | vector_tag;
-      IK_REF(new,        - vector_tag) = flonum_tag;
-      IK_FLONUM_DATA(new)              = IK_FLONUM_DATA(X);
+      ikptr Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
+      IK_REF(Y,          - vector_tag) = flonum_tag;
+      IK_FLONUM_DATA(Y)                = IK_FLONUM_DATA(X);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-      IK_REF(X, wordsize - vector_tag) = new;
-      return new;
+      IK_REF(X, wordsize - vector_tag) = Y;
+      return Y;
     }
     else if (bignum_tag == (first_word & bignum_mask)) {
       long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
