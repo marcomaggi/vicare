@@ -419,8 +419,10 @@
  * logic  AND  the following  masks  to  such  32-bit words  to  extract
  * specific bit fields.
  *
- * GEN_MASK -	Extract the page generation number.
+ * GEN_MASK -		Extract the page generation number.
  *
+ * LARGE_OBJECT_MASK -	Extract the bit marking the page as holding a
+ *			large object.
  */
 #define GEN_MASK		0x0000000F
 #define META_DIRTY_MASK		0x000000F0
@@ -459,15 +461,15 @@
 #define LARGE_OBJECT_TAG	0x00100000
 
 /* These are precomputed  full values for the 32-bit words  in the PCB's
-   segments vector.  Notice that "hole_mt" is zero. */
-#define hole_mt		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
-#define mainheap_mt	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
-#define mainstack_mt	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
-#define pointers_mt	(POINTERS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
-#define symbols_mt	(SYMBOLS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
-#define data_mt		(DATA_TYPE	 | UNSCANNABLE_TAG | DEALLOC_TAG_UN)
-#define code_mt		(CODE_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
-#define weak_pairs_mt	(WEAK_PAIRS_TYPE | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+   segments vector.  Notice that "HOLE_MT" is zero. */
+#define HOLE_MT		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define MAINHEAP_MT	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define MAINSTACK_MT	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define POINTERS_MT	(POINTERS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define SYMBOLS_MT	(SYMBOLS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define DATA_MT		(DATA_TYPE	 | UNSCANNABLE_TAG | DEALLOC_TAG_UN)
+#define CODE_MT		(CODE_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define WEAK_PAIRS_MT	(WEAK_PAIRS_TYPE | SCANNABLE_TAG   | DEALLOC_TAG_UN)
 
 
 /** --------------------------------------------------------------------

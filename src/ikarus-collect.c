@@ -131,12 +131,12 @@ static int htable_count		= 0;
 #endif
 
 static const unsigned int const META_MT[meta_count] = {
-  pointers_mt,
-  code_mt,
-  data_mt,
-  weak_pairs_mt,
-  pointers_mt,
-  symbols_mt
+  POINTERS_MT,
+  CODE_MT,
+  DATA_MT,
+  WEAK_PAIRS_MT,
+  POINTERS_MT,
+  SYMBOLS_MT
 };
 
 
@@ -165,8 +165,8 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
     uint32_t *	dirty = ((uint32_t *)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
     uint32_t *	past  = segme + IK_PAGE_INDEX_RANGE(size);
     for (; segme < past; ++segme, ++dirty) {
-      assert(*segme != hole_mt);
-      *segme = hole_mt;
+      assert(*segme != HOLE_MT);
+      *segme = HOLE_MT;
       *dirty = IK_PURE_WORD;
     }
   }
@@ -1758,9 +1758,9 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
     int		new_tag	= gc->collect_gen_tag;
     long	idx	= IK_PAGE_INDEX(x);
     long	i;
-    gc->segment_vector[idx] = new_tag | code_mt;
+    gc->segment_vector[idx] = new_tag | CODE_MT;
     for (i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
-      gc->segment_vector[idx] = new_tag | data_mt;
+      gc->segment_vector[idx] = new_tag | DATA_MT;
     }
     qupages_t *	p = ik_malloc(sizeof(qupages_t));
     p->p = x;
@@ -1893,7 +1893,7 @@ gc_alloc_new_large_ptr (int size, gc_t* gc)
   int		memreq;
   ikptr		mem;
   memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-  mem    = ik_mmap_typed(memreq, pointers_mt | LARGE_OBJECT_TAG | gc->collect_gen_tag, gc->pcb);
+  mem    = ik_mmap_typed(memreq, POINTERS_MT | LARGE_OBJECT_TAG | gc->collect_gen_tag, gc->pcb);
   /* Reset to zero  the portion of memory  that will not be  used by the
      large object. */
   bzero((char*)(long)(mem+size), memreq-size);
@@ -1923,7 +1923,7 @@ enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
   ik_ulong	page_idx = IK_PAGE_INDEX(mem);
   ik_ulong	page_end = IK_PAGE_INDEX(mem+size-1);
   for (; page_idx <= page_end; ++page_idx) {
-    gc->segment_vector[page_idx] = pointers_mt | LARGE_OBJECT_TAG | gc->collect_gen_tag;
+    gc->segment_vector[page_idx] = POINTERS_MT | LARGE_OBJECT_TAG | gc->collect_gen_tag;
   }
   {
     qupages_t *	qu;
