@@ -1300,7 +1300,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr	nbytes = size + disp_vector_data; /* not aligned */
       ikptr	memreq = IK_ALIGN(nbytes);
       if (memreq >= IK_PAGESIZE) { /* big vector */
-        if (large_object_tag == (page_sbits & LARGE_OBJECT_MASK)) {
+        if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
 	  /* This  large object  is already  stored in  pages markes  as
 	     "large  object".   We do  not  move  it around,  rather  we
 	     register  the data  area in  the  queues of  objects to  be
@@ -1893,7 +1893,7 @@ gc_alloc_new_large_ptr (int size, gc_t* gc)
   int		memreq;
   ikptr		mem;
   memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-  mem    = ik_mmap_typed(memreq, pointers_mt | large_object_tag | gc->collect_gen_tag, gc->pcb);
+  mem    = ik_mmap_typed(memreq, pointers_mt | LARGE_OBJECT_TAG | gc->collect_gen_tag, gc->pcb);
   /* Reset to zero  the portion of memory  that will not be  used by the
      large object. */
   bzero((char*)(long)(mem+size), memreq-size);
@@ -1923,7 +1923,7 @@ enqueue_large_ptr (ikptr mem, int size, gc_t* gc)
   ik_ulong	page_idx = IK_PAGE_INDEX(mem);
   ik_ulong	page_end = IK_PAGE_INDEX(mem+size-1);
   for (; page_idx <= page_end; ++page_idx) {
-    gc->segment_vector[page_idx] = pointers_mt | large_object_tag | gc->collect_gen_tag;
+    gc->segment_vector[page_idx] = pointers_mt | LARGE_OBJECT_TAG | gc->collect_gen_tag;
   }
   {
     qupages_t *	qu;
