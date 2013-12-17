@@ -1260,7 +1260,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   switch (tag) {
 
   case pair_tag: {
-    /* Pair object.  It goes in the pairs meta page. */
+    /* Pair object,  either weak or strong.   It goes in the  pairs meta
+       page. */
     ikptr Y;
     gather_live_list(gc, page_sbits, X, &Y);
 #if ACCOUNTING
@@ -1299,26 +1300,24 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   }
 
   case vector_tag: {
-    /* Move an object whose reference  is tagged as vector; such objects
-       are "vector like" in that they are arrays of words. */
+    /* Gather  an  object whose  reference  is  tagged as  vector;  such
+       objects  are "vector  like" in  that they  are arrays  of machine
+       words each  representing an immediate  Scheme object or  a tagged
+       pointer to the data area of a Scheme object. */
 
     switch (first_word) {
 
     case symbol_tag: {
-      ikptr	Y		= gc_alloc_new_symbol_record(gc) | record_tag;
-      ikptr	s_string	= IK_REF(X, off_symbol_record_string);
-      ikptr	s_ustring	= IK_REF(X, off_symbol_record_ustring);
-      ikptr	s_value		= IK_REF(X, off_symbol_record_value);
-      ikptr	s_proc		= IK_REF(X, off_symbol_record_proc);
-      ikptr	s_plist		= IK_REF(X, off_symbol_record_plist);
+      /* Symbol object.  It goes in the symbols meta page. */
+      ikptr	Y = gc_alloc_new_symbol_record(gc) | record_tag;
+      IK_REF(Y, off_symbol_record_tag)	   = symbol_tag;
+      IK_REF(Y, off_symbol_record_string)  = IK_REF(X, off_symbol_record_string);
+      IK_REF(Y, off_symbol_record_ustring) = IK_REF(X, off_symbol_record_ustring);
+      IK_REF(Y, off_symbol_record_value)   = IK_REF(X, off_symbol_record_value);
+      IK_REF(Y, off_symbol_record_proc)    = IK_REF(X, off_symbol_record_proc);
+      IK_REF(Y, off_symbol_record_plist)   = IK_REF(X, off_symbol_record_plist);
       IK_REF(X,          - record_tag)     = IK_FORWARD_PTR;
       IK_REF(X, wordsize - record_tag)     = Y;
-      IK_REF(Y, off_symbol_record_tag)	   = symbol_tag;
-      IK_REF(Y, off_symbol_record_string)  = gather_live_object(gc, s_string,	"symbol string");
-      IK_REF(Y, off_symbol_record_ustring) = gather_live_object(gc, s_ustring,	"symbol ustring");
-      IK_REF(Y, off_symbol_record_value)   = gather_live_object(gc, s_value,	"symbol value");
-      IK_REF(Y, off_symbol_record_proc)    = gather_live_object(gc, s_proc,	"symbol proc");
-      IK_REF(Y, off_symbol_record_plist)   = gather_live_object(gc, s_plist,	"symbol proc");
 #if ACCOUNTING
       symbol_count++;
 #endif
