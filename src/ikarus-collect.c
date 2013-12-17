@@ -1607,11 +1607,12 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	return Y;
       }
       else if (IK_TAGOF(first_word) == pair_tag) {
-	/* tcbucket object.   The first word  of a tcbucket is  a tagged
-	   pointer to pair. */
-	ikptr Y = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
+	/* tcbucket object.  It goes in the pointers meta page.
+
+	   The first word of a tcbucket is a tagged pointer to pair. */
+	ikptr	Y   = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
+	ikptr	key = IK_REF(X, off_tcbucket_key);
 	IK_REF(Y, off_tcbucket_tconc) = first_word;
-	ikptr key = IK_REF(X, off_tcbucket_key);
 	IK_REF(Y, off_tcbucket_key)  = key;
 	IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
 	IK_REF(Y, off_tcbucket_next) = IK_REF(X, off_tcbucket_next);
@@ -1627,39 +1628,19 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	return Y;
       }
       else if (port_tag == (((long)first_word) & port_mask)) {
-	ikptr	Y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
-#if 0
-	ikptr	s_buffer	= IK_REF(X, off_port_buffer);
-	ikptr	s_id		= IK_REF(X, off_port_id);
-	ikptr	s_read		= IK_REF(X, off_port_read);
-	ikptr	s_write		= IK_REF(X, off_port_write);
-	ikptr	s_get_position	= IK_REF(X, off_port_get_position);
-	ikptr	s_set_position	= IK_REF(X, off_port_set_position);
-	ikptr	s_close		= IK_REF(X, off_port_close);
-	ikptr	s_cookie	= IK_REF(X, off_port_cookie);
-#endif
-	long	i;
+	/* Port object.  It goes in the pointers meta page. */
+	ikptr		Y = gc_alloc_new_ptr(port_size, gc) | vector_tag;
+	ik_ulong	i;
 	IK_REF(Y, -vector_tag) = first_word;
 	for (i=wordsize; i<port_size; i+=wordsize) {
 	  IK_REF(Y, i-vector_tag) = IK_REF(X, i-vector_tag);
 	}
 	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
 	IK_REF(X, wordsize - vector_tag) = Y;
-#if 0
-	/* These calls were not in  the original Ikarus code (Marco Maggi;
-	   Jan 11, 2012). */
-	IK_REF(Y, off_port_buffer)	= gather_live_object(gc, s_buffer,	 "port buffer");
-	IK_REF(Y, off_port_id)		= gather_live_object(gc, s_id,		 "port id");
-	IK_REF(Y, off_port_read)		= gather_live_object(gc, s_read,	 "port read");
-	IK_REF(Y, off_port_write)		= gather_live_object(gc, s_write,	 "port write");
-	IK_REF(Y, off_port_get_position)	= gather_live_object(gc, s_get_position, "port get_position");
-	IK_REF(Y, off_port_set_position)	= gather_live_object(gc, s_set_position, "port set_position");
-	IK_REF(Y, off_port_close)		= gather_live_object(gc, s_close,	 "port close");
-	IK_REF(Y, off_port_cookie)	= gather_live_object(gc, s_cookie,	 "port cookie");
-#endif
 	return Y;
       }
       else if (bignum_tag == (first_word & bignum_mask)) {
+	/* Bignum object.  It goes in the data meta page. */
 	long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
 	long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
 	ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
