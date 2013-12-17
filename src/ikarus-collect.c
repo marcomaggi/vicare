@@ -1336,10 +1336,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	 pointers meta page; the  referenced freezed Scheme stack frames
 	 go in the data meta pages.
 
-	 FIXME Why the  Scheme continuation object goes  in the pointers
+	 NOTE Why  the Scheme continuation  object goes in  the pointers
 	 meta page?  Putting aside the next continuation, all its fields
-	 are  raw values;  should  it not  go in  the  data meta  pages?
-	 (Marco Maggi; Tue Dec 17, 2013) */
+	 are raw values; should it not go in the data meta pages?  No it
+	 should not.   Objects stored in  the data meta pages  are never
+	 scanned,  and  the  Scheme continuation  objects  are  mutable:
+	 continuations  referencing  multiple  Scheme stack  frames  are
+	 split and  split until they  reference one stack frame  and the
+	 data structure representing a continuation is recycled.  (Marco
+	 Maggi; Tue Dec 17, 2013) */
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
