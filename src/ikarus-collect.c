@@ -1292,51 +1292,10 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   case vector_tag: {
     /* Move an object whose reference  is tagged as vector; such objects
        are "vector like" in that they are arrays of words. */
-    if (IK_IS_FIXNUM(first_word)) { /* real vector */
-      /* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
-	 number of  bytes to allocate for  the data area  of the vector;
-	 this is  because the  fixnum tag is  composed of zero  bits and
-	 they are in  such a number that multiplying  the fixnum's value
-	 by the  wordsize is  equivalent to right-shifting  the fixnum's
-	 value by the fixnum tag. */
-      ikptr	size   = first_word;
-      ikptr	nbytes = size + disp_vector_data; /* not aligned */
-      ikptr	memreq = IK_ALIGN(nbytes);
-      if (memreq >= IK_PAGESIZE) { /* big vector */
-        if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
-	  /* This  large object  is already  stored in  pages markes  as
-	     "large  object".   We do  not  move  it around,  rather  we
-	     register  the data  area in  the  queues of  objects to  be
-	     scanned later by "collect_loop()". */
-          enqueue_large_ptr(X - vector_tag, nbytes, gc);
-          return X;
-        } else {
-          ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
-          IK_REF(Y, off_vector_length) = first_word;
-          IK_REF(Y, memreq - vector_tag - wordsize) = 0;
-          memcpy((char*)(long)(Y + off_vector_data),
-                 (char*)(long)(X + off_vector_data),
-                 size);
-          IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-          IK_REF(X, wordsize - vector_tag) = Y;
-          return Y;
-        }
-      } else { /* small vector */
-        ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
-        IK_REF(Y, off_vector_length) = first_word;
-        IK_REF(Y, memreq - vector_tag - wordsize) = 0;
-        memcpy((char*)(long)(Y + off_vector_data),
-               (char*)(long)(X + off_vector_data),
-               size);
-        IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-        IK_REF(X, wordsize - vector_tag) = Y;
-        return Y;
-      }
-#if ACCOUNTING
-      vector_count++;
-#endif
-    }
-    else if (symbol_tag == first_word) {
+
+    switch (first_word) {
+
+    case symbol_tag: {
       ikptr	Y		= gc_alloc_new_symbol_record(gc) | record_tag;
       ikptr	s_string	= IK_REF(X, off_symbol_record_string);
       ikptr	s_ustring	= IK_REF(X, off_symbol_record_ustring);
@@ -1356,96 +1315,16 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 #endif
       return Y;
     }
-    else if (IK_TAGOF(first_word) == rtd_tag) {
-      /* struct / record */
-      /* FIXME What the  hell is going on with  this moving operation?!?
-	 It  does not  look like  a legal  move operation  for  RTDs and
-	 struct instances.  (Marco Maggi; Jan 11, 2012) */
-      /* The  layout  of   Vicare's  struct-type  descriptors  and  R6RS
-	 record-type descriptors is as follows:
 
-	 Vicare's struct-type descriptor:
-
-	 RTD  name size  other fields
-	 |----|----|----|------------
-
-	 R6RS record-type descriptor:
-
-	 RTD  name size  other fields
-	 |----|----|----|------------
-
-	 The layout  of Vicare's struct instances  R6RS record instances
-	 is as follows:
-
-	 Vicare's struct instance
-
-	 RTD   fields
-	 |----|---------
-
-	 R6RS record instance:
-
-	 RTD   fields
-	 |----|---------
-
-	 Both  Vicare's  struct-type  descriptors and  R6RS  record-type
-	 descriptors have the total number of fields at the same offset.
-	 The value  in the number-of-fields word  represents: as fixnum,
-	 the number of  fields in an instance; as  C integer, the number
-	 of bytes needed to store the fields of an instance. */
-      ikptr	s_number_of_fields = IK_REF(first_word, off_rtd_length);
-      ikptr	Y;
-      if (s_number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
-	// fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_number_of_fields));
-        /* The number of  fields is odd, which means  that the number of
-	   words needed to store this record is even.
-
-	   s_number_of_fields = n * object_alignment + 4
-	   => memreq = n * object_alignment + 8 = (n+1) * object_alignment
-	   => aligned */
-	Y = gc_alloc_new_ptr(s_number_of_fields+wordsize, gc) | vector_tag;
-        IK_REF(Y, off_record_rtd) = first_word;
-        {
-          ikptr i;
-          ikptr dst = Y + off_record_data; /* DST is untagged */
-          ikptr src = X + off_record_data; /* SRC is untagged */
-          IK_REF(dst, 0) = IK_REF(src, 0);
-          for (i=wordsize; i<s_number_of_fields; i+=(2*wordsize)) {
-            IK_REF(dst, i)          = IK_REF(src, i);
-            IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
-          }
-        }
-      } else {
-	// fprintf(stderr, "%lx padded size %ld\n", X, IK_UNFIX(s_number_of_fields));
-        /* The number of fields is  even, which means that the number of
-	   words needed to store this record is odd.
-
-	   s_number_of_fields = n * object_alignment
-	   => memreq = n * object_alignment + 4 + 4 (pad) */
-	Y = gc_alloc_new_ptr(s_number_of_fields+(2*wordsize), gc) | vector_tag;
-        IK_REF(Y, off_record_rtd) = first_word;
-        {
-          ikptr i;
-          ikptr dst = Y + off_record_data; /* DST is untagged */
-          ikptr src = X + off_record_data; /* SRC is untagged */
-          for (i=0; i<s_number_of_fields; i+=(2*wordsize)) {
-            IK_REF(dst, i)          = IK_REF(src, i);
-            IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
-          }
-        }
-        IK_REF(Y, s_number_of_fields + off_record_data) = 0;
-      }
-      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-      IK_REF(X, wordsize - vector_tag) = Y;
-      return Y;
-    }
-    else if (code_tag == first_word) {
+    case code_tag: {
       /* The memory block of a code object references a number of Scheme
 	 values. */
       ikptr	entry     = X + off_code_data;
       ikptr	new_entry = gather_live_code_entry(gc, entry);
       return new_entry - off_code_data;
     }
-    else if (continuation_tag == first_word) {
+
+    case continuation_tag: {
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -1478,7 +1357,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 #endif
       return Y;
     }
-    else if (system_continuation_tag == first_word) {
+
+    case system_continuation_tag: {
       /* We move the system continuation object in the "data" area. */
       ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
       ikptr	top  = IK_REF(X, off_system_continuation_top);
@@ -1490,59 +1370,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_system_continuation_next) = gather_live_object(gc, next, "next_k");
       return Y;
     }
-    else if (IK_TAGOF(first_word) == pair_tag) {
-      /* tcbucket */
-      ikptr Y = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
-      IK_REF(Y, off_tcbucket_tconc) = first_word;
-      ikptr key = IK_REF(X, off_tcbucket_key);
-      IK_REF(Y, off_tcbucket_key)  = key;
-      IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
-      IK_REF(Y, off_tcbucket_next) = IK_REF(X, off_tcbucket_next);
-      if ((! IK_IS_FIXNUM(key)) && (IK_TAGOF(key) != immediate_tag)) {
-        int gen = gc->segment_vector[IK_PAGE_INDEX(key)] & GEN_MASK;
-        if (gen <= gc->collect_gen) {
-          /* key will be moved */
-          gc_tconc_push(gc, Y);
-        }
-      }
-      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-      IK_REF(X, wordsize - vector_tag) = Y;
-      return Y;
-    }
-    else if (port_tag == (((long)first_word) & port_mask)) {
-      ikptr	Y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
-#if 0
-      ikptr	s_buffer	= IK_REF(X, off_port_buffer);
-      ikptr	s_id		= IK_REF(X, off_port_id);
-      ikptr	s_read		= IK_REF(X, off_port_read);
-      ikptr	s_write		= IK_REF(X, off_port_write);
-      ikptr	s_get_position	= IK_REF(X, off_port_get_position);
-      ikptr	s_set_position	= IK_REF(X, off_port_set_position);
-      ikptr	s_close		= IK_REF(X, off_port_close);
-      ikptr	s_cookie	= IK_REF(X, off_port_cookie);
-#endif
-      long	i;
-      IK_REF(Y, -vector_tag) = first_word;
-      for (i=wordsize; i<port_size; i+=wordsize) {
-        IK_REF(Y, i-vector_tag) = IK_REF(X, i-vector_tag);
-      }
-      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-      IK_REF(X, wordsize - vector_tag) = Y;
-#if 0
-      /* These calls were not in  the original Ikarus code (Marco Maggi;
-	 Jan 11, 2012). */
-      IK_REF(Y, off_port_buffer)	= gather_live_object(gc, s_buffer,	 "port buffer");
-      IK_REF(Y, off_port_id)		= gather_live_object(gc, s_id,		 "port id");
-      IK_REF(Y, off_port_read)		= gather_live_object(gc, s_read,	 "port read");
-      IK_REF(Y, off_port_write)		= gather_live_object(gc, s_write,	 "port write");
-      IK_REF(Y, off_port_get_position)	= gather_live_object(gc, s_get_position, "port get_position");
-      IK_REF(Y, off_port_set_position)	= gather_live_object(gc, s_set_position, "port set_position");
-      IK_REF(Y, off_port_close)		= gather_live_object(gc, s_close,	 "port close");
-      IK_REF(Y, off_port_cookie)	= gather_live_object(gc, s_cookie,	 "port cookie");
-#endif
-      return Y;
-    }
-    else if (flonum_tag == first_word) {
+
+    case flonum_tag: {
       ikptr Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = flonum_tag;
       IK_FLONUM_DATA(Y)                = IK_FLONUM_DATA(X);
@@ -1550,18 +1379,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
-    else if (bignum_tag == (first_word & bignum_mask)) {
-      long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
-      long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
-      ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
-      memcpy((char*)(long)(Y - vector_tag),
-             (char*)(long)(X - vector_tag),
-             memreq);
-      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
-      IK_REF(X, wordsize - vector_tag) = Y;
-      return Y;
-    }
-    else if (ratnum_tag == first_word) {
+
+    case ratnum_tag: {
       ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
       ikptr num = IK_REF(X, off_ratnum_num);
       ikptr den = IK_REF(X, off_ratnum_den);
@@ -1572,7 +1391,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_ratnum_den) = gather_live_object(gc, den, "den");
       return Y;
     }
-    else if (compnum_tag == first_word) {
+
+    case compnum_tag: {
       ikptr Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_compnum_real);
       ikptr im = IK_REF(X, off_compnum_imag);
@@ -1583,7 +1403,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_compnum_imag) = gather_live_object(gc, im, "imag");
       return Y;
     }
-    else if (cflonum_tag == first_word) {
+
+    case cflonum_tag: {
       ikptr Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_cflonum_real);
       ikptr im = IK_REF(X, off_cflonum_imag);
@@ -1594,15 +1415,212 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_cflonum_imag) = gather_live_object(gc, im, "imag");
       return Y;
     }
-    else if (pointer_tag == first_word) {
+
+    case pointer_tag: {
       ikptr Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = pointer_tag;
       IK_REF(Y, wordsize - vector_tag) = IK_REF(X, wordsize - vector_tag);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
-    } else
-      ik_abort("unhandled vector with first_word=0x%016lx\n", (long)first_word);
+    }
+
+    default: {
+      if (IK_IS_FIXNUM(first_word)) { /* real vector */
+	/* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
+	   number of  bytes to allocate for  the data area  of the vector;
+	   this is  because the  fixnum tag is  composed of zero  bits and
+	   they are in  such a number that multiplying  the fixnum's value
+	   by the  wordsize is  equivalent to right-shifting  the fixnum's
+	   value by the fixnum tag. */
+	ikptr	size   = first_word;
+	ikptr	nbytes = size + disp_vector_data; /* not aligned */
+	ikptr	memreq = IK_ALIGN(nbytes);
+	if (memreq >= IK_PAGESIZE) { /* big vector */
+	  if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
+	    /* This  large object  is already  stored in  pages markes  as
+	       "large  object".   We do  not  move  it around,  rather  we
+	       register  the data  area in  the  queues of  objects to  be
+	       scanned later by "collect_loop()". */
+	    enqueue_large_ptr(X - vector_tag, nbytes, gc);
+	    return X;
+	  } else {
+	    ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
+	    IK_REF(Y, off_vector_length) = first_word;
+	    IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+	    memcpy((char*)(long)(Y + off_vector_data),
+		   (char*)(long)(X + off_vector_data),
+		   size);
+	    IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	    IK_REF(X, wordsize - vector_tag) = Y;
+	    return Y;
+	  }
+	} else { /* small vector */
+	  ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
+	  IK_REF(Y, off_vector_length) = first_word;
+	  IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+	  memcpy((char*)(long)(Y + off_vector_data),
+		 (char*)(long)(X + off_vector_data),
+		 size);
+	  IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	  IK_REF(X, wordsize - vector_tag) = Y;
+	  return Y;
+	}
+#if ACCOUNTING
+	vector_count++;
+#endif
+      }
+      else if (IK_TAGOF(first_word) == rtd_tag) {
+	/* struct / record */
+	/* FIXME What the  hell is going on with  this moving operation?!?
+	   It  does not  look like  a legal  move operation  for  RTDs and
+	   struct instances.  (Marco Maggi; Jan 11, 2012) */
+	/* The  layout  of   Vicare's  struct-type  descriptors  and  R6RS
+	   record-type descriptors is as follows:
+
+	   Vicare's struct-type descriptor:
+
+	   RTD  name size  other fields
+	   |----|----|----|------------
+
+	   R6RS record-type descriptor:
+
+	   RTD  name size  other fields
+	   |----|----|----|------------
+
+	   The layout  of Vicare's struct instances  R6RS record instances
+	   is as follows:
+
+	   Vicare's struct instance
+
+	   RTD   fields
+	   |----|---------
+
+	   R6RS record instance:
+
+	   RTD   fields
+	   |----|---------
+
+	   Both  Vicare's  struct-type  descriptors and  R6RS  record-type
+	   descriptors have the total number of fields at the same offset.
+	   The value  in the number-of-fields word  represents: as fixnum,
+	   the number of  fields in an instance; as  C integer, the number
+	   of bytes needed to store the fields of an instance. */
+	ikptr	s_number_of_fields = IK_REF(first_word, off_rtd_length);
+	ikptr	Y;
+	if (s_number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
+	  // fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_number_of_fields));
+	  /* The number of  fields is odd, which means  that the number of
+	     words needed to store this record is even.
+
+	     s_number_of_fields = n * object_alignment + 4
+	     => memreq = n * object_alignment + 8 = (n+1) * object_alignment
+	     => aligned */
+	  Y = gc_alloc_new_ptr(s_number_of_fields+wordsize, gc) | vector_tag;
+	  IK_REF(Y, off_record_rtd) = first_word;
+	  {
+	    ikptr i;
+	    ikptr dst = Y + off_record_data; /* DST is untagged */
+	    ikptr src = X + off_record_data; /* SRC is untagged */
+	    IK_REF(dst, 0) = IK_REF(src, 0);
+	    for (i=wordsize; i<s_number_of_fields; i+=(2*wordsize)) {
+	      IK_REF(dst, i)          = IK_REF(src, i);
+	      IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
+	    }
+	  }
+	} else {
+	  // fprintf(stderr, "%lx padded size %ld\n", X, IK_UNFIX(s_number_of_fields));
+	  /* The number of fields is  even, which means that the number of
+	     words needed to store this record is odd.
+
+	     s_number_of_fields = n * object_alignment
+	     => memreq = n * object_alignment + 4 + 4 (pad) */
+	  Y = gc_alloc_new_ptr(s_number_of_fields+(2*wordsize), gc) | vector_tag;
+	  IK_REF(Y, off_record_rtd) = first_word;
+	  {
+	    ikptr i;
+	    ikptr dst = Y + off_record_data; /* DST is untagged */
+	    ikptr src = X + off_record_data; /* SRC is untagged */
+	    for (i=0; i<s_number_of_fields; i+=(2*wordsize)) {
+	      IK_REF(dst, i)          = IK_REF(src, i);
+	      IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
+	    }
+	  }
+	  IK_REF(Y, s_number_of_fields + off_record_data) = 0;
+	}
+	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	IK_REF(X, wordsize - vector_tag) = Y;
+	return Y;
+      }
+      else if (IK_TAGOF(first_word) == pair_tag) {
+	/* tcbucket object.   The first word  of a tcbucket is  a tagged
+	   pointer to pair. */
+	ikptr Y = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
+	IK_REF(Y, off_tcbucket_tconc) = first_word;
+	ikptr key = IK_REF(X, off_tcbucket_key);
+	IK_REF(Y, off_tcbucket_key)  = key;
+	IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
+	IK_REF(Y, off_tcbucket_next) = IK_REF(X, off_tcbucket_next);
+	if ((! IK_IS_FIXNUM(key)) && (IK_TAGOF(key) != immediate_tag)) {
+	  int gen = gc->segment_vector[IK_PAGE_INDEX(key)] & GEN_MASK;
+	  if (gen <= gc->collect_gen) {
+	    /* key will be moved */
+	    gc_tconc_push(gc, Y);
+	  }
+	}
+	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	IK_REF(X, wordsize - vector_tag) = Y;
+	return Y;
+      }
+      else if (port_tag == (((long)first_word) & port_mask)) {
+	ikptr	Y		= gc_alloc_new_ptr(port_size, gc) | vector_tag;
+#if 0
+	ikptr	s_buffer	= IK_REF(X, off_port_buffer);
+	ikptr	s_id		= IK_REF(X, off_port_id);
+	ikptr	s_read		= IK_REF(X, off_port_read);
+	ikptr	s_write		= IK_REF(X, off_port_write);
+	ikptr	s_get_position	= IK_REF(X, off_port_get_position);
+	ikptr	s_set_position	= IK_REF(X, off_port_set_position);
+	ikptr	s_close		= IK_REF(X, off_port_close);
+	ikptr	s_cookie	= IK_REF(X, off_port_cookie);
+#endif
+	long	i;
+	IK_REF(Y, -vector_tag) = first_word;
+	for (i=wordsize; i<port_size; i+=wordsize) {
+	  IK_REF(Y, i-vector_tag) = IK_REF(X, i-vector_tag);
+	}
+	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	IK_REF(X, wordsize - vector_tag) = Y;
+#if 0
+	/* These calls were not in  the original Ikarus code (Marco Maggi;
+	   Jan 11, 2012). */
+	IK_REF(Y, off_port_buffer)	= gather_live_object(gc, s_buffer,	 "port buffer");
+	IK_REF(Y, off_port_id)		= gather_live_object(gc, s_id,		 "port id");
+	IK_REF(Y, off_port_read)		= gather_live_object(gc, s_read,	 "port read");
+	IK_REF(Y, off_port_write)		= gather_live_object(gc, s_write,	 "port write");
+	IK_REF(Y, off_port_get_position)	= gather_live_object(gc, s_get_position, "port get_position");
+	IK_REF(Y, off_port_set_position)	= gather_live_object(gc, s_set_position, "port set_position");
+	IK_REF(Y, off_port_close)		= gather_live_object(gc, s_close,	 "port close");
+	IK_REF(Y, off_port_cookie)	= gather_live_object(gc, s_cookie,	 "port cookie");
+#endif
+	return Y;
+      }
+      else if (bignum_tag == (first_word & bignum_mask)) {
+	long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
+	long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
+	ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
+	memcpy((char*)(long)(Y - vector_tag),
+	       (char*)(long)(X - vector_tag),
+	       memreq);
+	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	IK_REF(X, wordsize - vector_tag) = Y;
+	return Y;
+      }
+      else {
+	ik_abort("unhandled vector with first_word=0x%016lx\n", (long)first_word);
+      }
+    } /* end of "default:" */
+    } /* end of "switch (first_word)" */
   } /* end of "case vector_tag:" */
 
   case string_tag: {
