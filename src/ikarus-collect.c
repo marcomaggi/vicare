@@ -95,7 +95,7 @@ typedef struct gc_t {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-static ikptr	add_code_entry	(gc_t* gc, ikptr entry);
+static ikptr	gather_live_code_entry	(gc_t* gc, ikptr entry);
 
 static void	scan_dirty_pages	(gc_t*);
 static void	handle_guardians	(gc_t* gc);
@@ -114,9 +114,9 @@ static void	register_to_collect_count (ikpcb* pcb, int bytes);
  ** Global variables.
  ** ----------------------------------------------------------------- */
 
-/* If accounting is defined  as true: "add_object_proc()" will increment
-   the  appropriate  counter whenever  it  moves  a  live object;  later
-   "ik_collect()"  will   print  a  report  to  stderr   and  reset  the
+/* If accounting  is defined  as true:  "gather_live_object_proc()" will
+   increment the  appropriate counter whenever  it moves a  live object;
+   later  "ik_collect()" will  print a  report to  stderr and  reset the
    counters. */
 #define ACCOUNTING 0
 #if ACCOUNTING
@@ -214,16 +214,16 @@ static void		fix_new_pages		(gc_t* gc);
 static void		gc_finalize_guardians	(gc_t* gc);
 static void		gc_add_tconcs		(gc_t*);
 
-/* The function "add_object_proc()" is the  one that moves a live Scheme
-   object from its pre-GC location  to its after-GC location.  The macro
-   "add_object()" is a convenience interface to it. */
-#undef DEBUG_ADD_OBJECT
-#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
-static ikptr add_object_proc(gc_t* gc, ikptr x, char* caller);
-#  define add_object(gc,x,caller) add_object_proc(gc,x,caller)
+/* The function "gather_live_object_proc()" is the one that moves a live
+   Scheme object from its pre-GC location to its after-GC location.  The
+   macro "gather_live_object()" is a convenience interface to it. */
+#undef DEBUG_GATHER_LIVE_OBJECT
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
+static ikptr gather_live_object_proc(gc_t* gc, ikptr x, char* caller);
+#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x,caller)
 #else
-static ikptr add_object_proc(gc_t* gc, ikptr x);
-#  define add_object(gc,x,caller) add_object_proc(gc,x)
+static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
+#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x)
 #endif
 
 /* This is the entry point of garbage collection.  The roots are:
@@ -317,27 +317,27 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 	int	i;
 	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
 	  if (C->slots[i])
-	    C->slots[i] = add_object(&gc, C->slots[i], "not_to_be_collected");
+	    C->slots[i] = gather_live_object(&gc, C->slots[i], "not_to_be_collected");
 	}
       }
     }
 
-    pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
-    pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
-    pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");
-    pcb->arg_list	= add_object(&gc, pcb->arg_list,	"args_list_foo");
-    pcb->base_rtd	= add_object(&gc, pcb->base_rtd,	"base_rtd");
+    pcb->next_k		= gather_live_object(&gc, pcb->next_k,		"next_k");
+    pcb->symbol_table	= gather_live_object(&gc, pcb->symbol_table,	"symbol_table");
+    pcb->gensym_table	= gather_live_object(&gc, pcb->gensym_table,	"gensym_table");
+    pcb->arg_list	= gather_live_object(&gc, pcb->arg_list,	"args_list_foo");
+    pcb->base_rtd	= gather_live_object(&gc, pcb->base_rtd,	"base_rtd");
 
-    if (pcb->root0) *(pcb->root0) = add_object(&gc, *(pcb->root0), "root0");
-    if (pcb->root1) *(pcb->root1) = add_object(&gc, *(pcb->root1), "root1");
-    if (pcb->root2) *(pcb->root2) = add_object(&gc, *(pcb->root2), "root2");
-    if (pcb->root3) *(pcb->root3) = add_object(&gc, *(pcb->root3), "root3");
-    if (pcb->root4) *(pcb->root4) = add_object(&gc, *(pcb->root4), "root4");
-    if (pcb->root5) *(pcb->root5) = add_object(&gc, *(pcb->root5), "root5");
-    if (pcb->root6) *(pcb->root6) = add_object(&gc, *(pcb->root6), "root6");
-    if (pcb->root7) *(pcb->root7) = add_object(&gc, *(pcb->root7), "root7");
-    if (pcb->root8) *(pcb->root8) = add_object(&gc, *(pcb->root8), "root8");
-    if (pcb->root9) *(pcb->root9) = add_object(&gc, *(pcb->root9), "root9");
+    if (pcb->root0) *(pcb->root0) = gather_live_object(&gc, *(pcb->root0), "root0");
+    if (pcb->root1) *(pcb->root1) = gather_live_object(&gc, *(pcb->root1), "root1");
+    if (pcb->root2) *(pcb->root2) = gather_live_object(&gc, *(pcb->root2), "root2");
+    if (pcb->root3) *(pcb->root3) = gather_live_object(&gc, *(pcb->root3), "root3");
+    if (pcb->root4) *(pcb->root4) = gather_live_object(&gc, *(pcb->root4), "root4");
+    if (pcb->root5) *(pcb->root5) = gather_live_object(&gc, *(pcb->root5), "root5");
+    if (pcb->root6) *(pcb->root6) = gather_live_object(&gc, *(pcb->root6), "root6");
+    if (pcb->root7) *(pcb->root7) = gather_live_object(&gc, *(pcb->root7), "root7");
+    if (pcb->root8) *(pcb->root8) = gather_live_object(&gc, *(pcb->root8), "root8");
+    if (pcb->root9) *(pcb->root9) = gather_live_object(&gc, *(pcb->root9), "root9");
   }
 
   /* Trace all live objects. */
@@ -493,7 +493,7 @@ collect_locatives (gc_t* gc, ik_callback_locative* loc)
 /* Subroutine of "ik_collect()". */
 {
   for (; loc; loc = loc->next) {
-    loc->data = add_object(gc, loc->data, "locative");
+    loc->data = gather_live_object(gc, loc->data, "locative");
   }
 }
 static void
@@ -830,7 +830,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
        the stack frame is updated to reflect the new code object. */
     long	code_offset	= offset_field - disp_call_table_offset;
     ikptr	code_entry	= single_value_rp - code_offset;
-    ikptr	new_code_entry	= add_code_entry(gc, code_entry);
+    ikptr	new_code_entry	= gather_live_code_entry(gc, code_entry);
     ikptr	new_sv_rp	= new_code_entry + code_offset;
     IK_REF(top, 0) = new_sv_rp;
     single_value_rp = new_sv_rp;
@@ -896,7 +896,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
        */
       ikptr base;
       for (base=top+framesize-wordsize; base > top; base-=wordsize) {
-        ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
+        ikptr new_obj = gather_live_object(gc,IK_REF(base,0), "frame");
         IK_REF(base,0) = new_obj;
       }
     } else {
@@ -918,14 +918,14 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 #if DEBUG_STACK
         ik_debug_message("m[%ld]=0x%x", i, m);
 #endif
-        if (m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
-        if (m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
-        if (m & 0x04) { fp[-2] = add_object(gc, fp[-2], "frame2"); }
-        if (m & 0x08) { fp[-3] = add_object(gc, fp[-3], "frame3"); }
-        if (m & 0x10) { fp[-4] = add_object(gc, fp[-4], "frame4"); }
-        if (m & 0x20) { fp[-5] = add_object(gc, fp[-5], "frame5"); }
-        if (m & 0x40) { fp[-6] = add_object(gc, fp[-6], "frame6"); }
-        if (m & 0x80) { fp[-7] = add_object(gc, fp[-7], "frame7"); }
+        if (m & 0x01) { fp[-0] = gather_live_object(gc, fp[-0], "frame0"); }
+        if (m & 0x02) { fp[-1] = gather_live_object(gc, fp[-1], "frame1"); }
+        if (m & 0x04) { fp[-2] = gather_live_object(gc, fp[-2], "frame2"); }
+        if (m & 0x08) { fp[-3] = gather_live_object(gc, fp[-3], "frame3"); }
+        if (m & 0x10) { fp[-4] = gather_live_object(gc, fp[-4], "frame4"); }
+        if (m & 0x20) { fp[-5] = gather_live_object(gc, fp[-5], "frame5"); }
+        if (m & 0x40) { fp[-6] = gather_live_object(gc, fp[-6], "frame6"); }
+        if (m & 0x80) { fp[-7] = gather_live_object(gc, fp[-7], "frame7"); }
       }
     }
     top += framesize;
@@ -1073,7 +1073,7 @@ handle_guardians (gc_t* gc)
 	  int i;
 	  for (i=0; i<ls->count; i++) {
 	    ikptr p = ls->ptr[i];
-	    gc->forward_list = move_tconc(add_object(gc, p, "guardian"), gc->forward_list);
+	    gc->forward_list = move_tconc(gather_live_object(gc, p, "guardian"), gc->forward_list);
 	  }
 	  ik_ptr_page* next = ls->next;
 	  ik_munmap((ikptr)ls, IK_PAGESIZE);
@@ -1103,7 +1103,7 @@ handle_guardians (gc_t* gc)
         tc = ref(np, off_car);
       }
       if (is_live(tc, gc)) {
-        target = move_tconc(add_object(gc, p, "guardian"), target);
+        target = move_tconc(gather_live_object(gc, p, "guardian"), target);
       }
     }
     ik_ptr_page* next = pend_hold_list->next;
@@ -1155,9 +1155,9 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
  ** Keeping alive objects: main function.
  ** ----------------------------------------------------------------- */
 
-/* Prototypes for subroutines of "add_object()". */
-static void		add_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
-static inline void	gc_tconc_push	(gc_t* gc, ikptr tcbucket);
+/* Prototypes for subroutines of "gather_live_object()". */
+static void		gather_live_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
+static inline void	gc_tconc_push		(gc_t* gc, ikptr tcbucket);
 
 static inline ikptr	gc_alloc_new_data	(int size, gc_t* gc);
 static inline ikptr	gc_alloc_new_ptr	(int size, gc_t* gc);
@@ -1169,10 +1169,10 @@ static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_code	(long aligned_size, gc_t* gc);
 
 static ikptr
-#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
-add_object_proc (gc_t* gc, ikptr X, char* caller IK_UNUSED)
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
+gather_live_object_proc (gc_t* gc, ikptr X, char* caller IK_UNUSED)
 #else
-add_object_proc (gc_t* gc, ikptr X)
+gather_live_object_proc (gc_t* gc, ikptr X)
 #endif
 /* Vicare implements a moving and compacting garbage collector; whenever
  * the collector, while scanning memory pages from the GC roots, finds a
@@ -1247,7 +1247,7 @@ add_object_proc (gc_t* gc, ikptr X)
      specific operation, so we branch by tag value. */
   if (pair_tag == tag) {
     ikptr Y;
-    add_list(gc, segment_bits, X, &Y);
+    gather_live_list(gc, segment_bits, X, &Y);
 #if ACCOUNTING
     pair_count++;
 #endif
@@ -1266,7 +1266,7 @@ add_object_proc (gc_t* gc, ikptr X)
     memcpy((char*)(long)(Y - closure_tag),
            (char*)(long)(X - closure_tag),
            size);
-    IK_REF(Y,          - closure_tag) = add_code_entry(gc, IK_REF(Y,-closure_tag));
+    IK_REF(Y,          - closure_tag) = gather_live_code_entry(gc, IK_REF(Y,-closure_tag));
     IK_REF(X,          - closure_tag) = IK_FORWARD_PTR;
     IK_REF(X, wordsize - closure_tag) = Y;
 #if ACCOUNTING
@@ -1331,11 +1331,11 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X,          - record_tag)     = IK_FORWARD_PTR;
       IK_REF(X, wordsize - record_tag)     = Y;
       IK_REF(Y, off_symbol_record_tag)	   = symbol_tag;
-      IK_REF(Y, off_symbol_record_string)  = add_object(gc, s_string,	"symbol string");
-      IK_REF(Y, off_symbol_record_ustring) = add_object(gc, s_ustring,	"symbol ustring");
-      IK_REF(Y, off_symbol_record_value)   = add_object(gc, s_value,	"symbol value");
-      IK_REF(Y, off_symbol_record_proc)    = add_object(gc, s_proc,	"symbol proc");
-      IK_REF(Y, off_symbol_record_plist)   = add_object(gc, s_plist,	"symbol proc");
+      IK_REF(Y, off_symbol_record_string)  = gather_live_object(gc, s_string,	"symbol string");
+      IK_REF(Y, off_symbol_record_ustring) = gather_live_object(gc, s_ustring,	"symbol ustring");
+      IK_REF(Y, off_symbol_record_value)   = gather_live_object(gc, s_value,	"symbol value");
+      IK_REF(Y, off_symbol_record_proc)    = gather_live_object(gc, s_proc,	"symbol proc");
+      IK_REF(Y, off_symbol_record_plist)   = gather_live_object(gc, s_plist,	"symbol proc");
 #if ACCOUNTING
       symbol_count++;
 #endif
@@ -1427,7 +1427,7 @@ add_object_proc (gc_t* gc, ikptr X)
       /* The memory block of a code object references a number of Scheme
 	 values. */
       ikptr	entry     = X + off_code_data;
-      ikptr	new_entry = add_code_entry(gc, entry);
+      ikptr	new_entry = gather_live_code_entry(gc, entry);
       return new_entry - off_code_data;
     }
     else if (continuation_tag == first_word) {
@@ -1452,7 +1452,7 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_continuation_top)  = new_top;
       IK_REF(Y, off_continuation_size) = (ikptr) size;
       /* The  "next"   continuation  object  is  not   filtered  through
-	 "add_object()". */
+	 "gather_live_object()". */
       IK_REF(Y, off_continuation_next) = next;
       if (0) {
 	ik_debug_message("gc compacted continuation 0x%016lx to 0x%016lx, next 0x%016lx",
@@ -1472,7 +1472,7 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
       IK_REF(Y, off_system_continuation_top)  = top;
-      IK_REF(Y, off_system_continuation_next) = add_object(gc, next, "next_k");
+      IK_REF(Y, off_system_continuation_next) = gather_live_object(gc, next, "next_k");
       return Y;
     }
     else if (IK_TAGOF(first_word) == pair_tag) {
@@ -1513,14 +1513,14 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X, wordsize - vector_tag) = Y;
       /* These calls were not in  the original Ikarus code (Marco Maggi;
 	 Jan 11, 2012). */
-      IK_REF(Y, off_port_buffer)	= add_object(gc, s_buffer,	 "port buffer");
-      IK_REF(Y, off_port_id)		= add_object(gc, s_id,		 "port id");
-      IK_REF(Y, off_port_read)		= add_object(gc, s_read,	 "port read");
-      IK_REF(Y, off_port_write)		= add_object(gc, s_write,	 "port write");
-      IK_REF(Y, off_port_get_position)	= add_object(gc, s_get_position, "port get_position");
-      IK_REF(Y, off_port_set_position)	= add_object(gc, s_set_position, "port set_position");
-      IK_REF(Y, off_port_close)		= add_object(gc, s_close,	 "port close");
-      IK_REF(Y, off_port_cookie)	= add_object(gc, s_cookie,	 "port cookie");
+      IK_REF(Y, off_port_buffer)	= gather_live_object(gc, s_buffer,	 "port buffer");
+      IK_REF(Y, off_port_id)		= gather_live_object(gc, s_id,		 "port id");
+      IK_REF(Y, off_port_read)		= gather_live_object(gc, s_read,	 "port read");
+      IK_REF(Y, off_port_write)		= gather_live_object(gc, s_write,	 "port write");
+      IK_REF(Y, off_port_get_position)	= gather_live_object(gc, s_get_position, "port get_position");
+      IK_REF(Y, off_port_set_position)	= gather_live_object(gc, s_set_position, "port set_position");
+      IK_REF(Y, off_port_close)		= gather_live_object(gc, s_close,	 "port close");
+      IK_REF(Y, off_port_cookie)	= gather_live_object(gc, s_cookie,	 "port cookie");
       return Y;
     }
     else if (flonum_tag == first_word) {
@@ -1549,8 +1549,8 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
-      IK_REF(Y, off_ratnum_num) = add_object(gc, num, "num");
-      IK_REF(Y, off_ratnum_den) = add_object(gc, den, "den");
+      IK_REF(Y, off_ratnum_num) = gather_live_object(gc, num, "num");
+      IK_REF(Y, off_ratnum_den) = gather_live_object(gc, den, "den");
       return Y;
     }
     else if (compnum_tag == first_word) {
@@ -1560,8 +1560,8 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
-      IK_REF(Y, off_compnum_real) = add_object(gc, rl, "real");
-      IK_REF(Y, off_compnum_imag) = add_object(gc, im, "imag");
+      IK_REF(Y, off_compnum_real) = gather_live_object(gc, rl, "real");
+      IK_REF(Y, off_compnum_imag) = gather_live_object(gc, im, "imag");
       return Y;
     }
     else if (cflonum_tag == first_word) {
@@ -1571,8 +1571,8 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
-      IK_REF(Y, off_cflonum_real) = add_object(gc, rl, "real");
-      IK_REF(Y, off_cflonum_imag) = add_object(gc, im, "imag");
+      IK_REF(Y, off_cflonum_real) = gather_live_object(gc, rl, "real");
+      IK_REF(Y, off_cflonum_imag) = gather_live_object(gc, im, "imag");
       return Y;
     }
     else if (pointer_tag == first_word) {
@@ -1624,13 +1624,13 @@ add_object_proc (gc_t* gc, ikptr X)
  ** ----------------------------------------------------------------- */
 
 static void
-add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
+gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 /* Move the spine of the proper of improper list object X (whose head is
    a pair) to a new location and store in LOC a new tagged pointer which
    must replace every occurrence of X.
 
    This function  processes only the  spine of  the list: it  does *not*
-   apply "add_object()" to the cars of the pairs.
+   apply "gather_live_object()" to the cars of the pairs.
 
    SEGMENT_BITS are  the bits describing  the segment in which  the pair
    referenced by X is allocated. */
@@ -1702,7 +1702,7 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     else {
       /* X is  a pair not  starting a list:  its cdr is  a non-immediate
 	 value (vector, record, port, ...). */
-      IK_CDR(Y) = add_object(gc, second_word, "add_list");
+      IK_CDR(Y) = gather_live_object(gc, second_word, "gather_live_list");
       return;
     }
   } /* end of for(;;) */
@@ -1716,7 +1716,7 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
 static int alloc_code_count = 0;
 
 static ikptr
-add_code_entry (gc_t* gc, ikptr entry)
+gather_live_code_entry (gc_t* gc, ikptr entry)
 /* Add a code object. */
 {
   ikptr		x = entry - disp_code_data;
@@ -2124,7 +2124,7 @@ collect_loop (gc_t* gc)
           ikptr p_pair = qu->p;
           ikptr p_end  = qu->q;
           for (; p_pair < p_end; p_pair += pair_size) {
-            IK_REF(p_pair, disp_car) = add_object(gc, IK_REF(p_pair, disp_car), "loop");
+            IK_REF(p_pair, disp_car) = gather_live_object(gc, IK_REF(p_pair, disp_car), "loop");
 	  }
           qupages_t * next = qu->next;
           ik_free(qu, sizeof(qupages_t));
@@ -2146,7 +2146,7 @@ collect_loop (gc_t* gc)
           ikptr p_word = qu->p;
           ikptr p_end  = qu->q;
           for (; p_word < p_end; p_word += wordsize) {
-            IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "pending");
+            IK_REF(p_word, 0) = gather_live_object(gc, IK_REF(p_word, 0), "pending");
           }
           qupages_t * next = qu->next;
           ik_free(qu, sizeof(qupages_t));
@@ -2168,7 +2168,7 @@ collect_loop (gc_t* gc)
           ikptr p_word = qu->p;
           ikptr p_end  = qu->q;
           for (; p_word < p_end; p_word += wordsize) {
-            IK_REF(p_word, 0) = add_object(gc, IK_REF(p_word, 0), "symbols");
+            IK_REF(p_word, 0) = gather_live_object(gc, IK_REF(p_word, 0), "symbols");
           }
           qupages_t *	next = qu->next;
           ik_free(qu, sizeof(qupages_t));
@@ -2212,7 +2212,7 @@ collect_loop (gc_t* gc)
           do{
             meta->aq = q;
             for (; p < q; p += pair_size) {
-              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem");
+              IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "rem");
             }
             p = meta->aq;
             q = meta->ap;
@@ -2228,7 +2228,7 @@ collect_loop (gc_t* gc)
           do{
             meta->aq = q;
             for (; p < q; p += wordsize) {
-              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "sym");
+              IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "sym");
 	    }
             p = meta->aq;
             q = meta->ap;
@@ -2244,7 +2244,7 @@ collect_loop (gc_t* gc)
           do{
             meta->aq = q;
             for (; p < q; p += wordsize) {
-              IK_REF(p,0) = add_object(gc, IK_REF(p,0), "rem2");
+              IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "rem2");
             }
             p = meta->aq;
             q = meta->ap;
@@ -2383,9 +2383,9 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
    containing  the data  area of  Scheme objects  composed of  immediate
    objects or tagged pointers, but not code objects.
 
-   NOTE This  function might call  "add_object()", which means  it might
-   allocate memory, which means: after every call the dirty and segments
-   vector might have been reallocated. */
+   NOTE This function might  call "gather_live_object()", which means it
+   might allocate  memory, which means:  after every call the  dirty and
+   segments vector might have been reallocated. */
 {
   uint32_t	new_page_dbits = 0;
   {
@@ -2405,9 +2405,9 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
 	  if (IK_IS_FIXNUM(X) || (IK_TAGOF(X) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
-	    ikptr Y = add_object(gc, X, "nothing");
-	    /* The  call  to  "add_object()" might  have  allocated  new
-	       memory, so we must retake the segment vector. */
+	    ikptr Y = gather_live_object(gc, X, "nothing");
+	    /* The call  to "gather_live_object()" might  have allocated
+	       new memory, so we must retake the segment vector. */
 	    segment_vec = gc->segment_vector;
 	    IK_REF(word_ptr, 0) = Y;
 	    card_dbits |= segment_vec[IK_PAGE_INDEX(Y)];
@@ -2434,9 +2434,9 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 /* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
    containing the data area of Scheme code objects.
 
-   NOTE This  function might call  "add_object()", which means  it might
-   allocate memory, which means: after every call the dirty and segments
-   vector might have been reallocated. */
+   NOTE This function might  call "gather_live_object()", which means it
+   might allocate  memory, which means:  after every call the  dirty and
+   segments vector might have been reallocated. */
 {
   uint32_t	new_page_dbits  = 0;
   {
@@ -2468,9 +2468,10 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	  if (IK_IS_FIXNUM(s_item) || (IK_TAGOF(s_item) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
-	    s_item = add_object(gc, s_item, "nothing2");
-	    /* The  call  to  "add_object()" might  have  allocated  new
-	       memory, so we must retake the segment vector after it. */
+	    s_item = gather_live_object(gc, s_item, "nothing2");
+	    /* The call  to "gather_live_object()" might  have allocated
+	       new memory,  so we must  retake the segment  vector after
+	       it. */
 	    segment_vec	= gc->segment_vector;
 	    code_d	|= segment_vec[IK_PAGE_INDEX(s_item)];
 	  }
@@ -2505,10 +2506,10 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 
   This function has similarities with "ik_relocate_code()". */
 {
-  const ikptr	s_reloc_vec = add_object(gc, IK_REF(p_X, disp_code_reloc_vector), "relocvec");
+  const ikptr	s_reloc_vec = gather_live_object(gc, IK_REF(p_X, disp_code_reloc_vector), "relocvec");
   IK_REF(p_X, disp_code_reloc_vector) = s_reloc_vec;
-  IK_REF(p_X, disp_code_annotation)   = add_object(gc, IK_REF(p_X, disp_code_annotation),
-						 "annotation");
+  IK_REF(p_X, disp_code_annotation)   = gather_live_object(gc, IK_REF(p_X, disp_code_annotation),
+							   "annotation");
   /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
      word in the data area of the relocation vector VEC. */
   ikptr		p_reloc_vec_cur = s_reloc_vec + off_vector_data;
@@ -2536,7 +2537,7 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 	      first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
 #endif
       ikptr	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
-      ikptr	s_new_object = add_object(gc, s_old_object, "reloc1");
+      ikptr	s_new_object = gather_live_object(gc, s_old_object, "reloc1");
       IK_REF(p_data, disp_code_word) = s_new_object;
       p_reloc_vec_cur += (2*wordsize);
       break;
@@ -2546,7 +2547,7 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 	 words wide. */
       long	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       ikptr	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      ikptr	s_new_object = add_object(gc, s_old_object, "reloc2");
+      ikptr	s_new_object = gather_live_object(gc, s_old_object, "reloc2");
       IK_REF(p_data, disp_code_word) = s_new_object + obj_off;
       p_reloc_vec_cur += (3 * wordsize);
       break;
@@ -2559,7 +2560,7 @@ relocate_new_code (ikptr p_X, gc_t* gc)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)s_obj, obj_off);
 #endif
-      s_obj = add_object(gc, s_obj, "reloc3");
+      s_obj = gather_live_object(gc, s_obj, "reloc3");
       ikptr	displaced_object  = s_obj + obj_off;
       long	next_word         = p_data + disp_code_word + 4;
       ikptr	relative_distance = displaced_object - (long)next_word;
