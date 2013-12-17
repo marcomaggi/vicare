@@ -1325,36 +1325,34 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case code_tag: {
-      /* The memory block of a code object references a number of Scheme
-	 values. */
+      /* Symbol object.  It goes in the code meta page. */
       ikptr	entry     = X + off_code_data;
       ikptr	new_entry = gather_live_code_entry(gc, entry);
       return new_entry - off_code_data;
     }
 
     case continuation_tag: {
+      /* Scheme  continuation object.   The  object itself  goes in  the
+	 pointers meta page; the  referenced freezed Scheme stack frames
+	 go in the data meta pages. */
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      if (size > IK_CHUNK_SIZE)
+      if (size > IK_PAGESIZE)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
       ikptr	next = IK_REF(X, off_continuation_next);
-      /* We move the Scheme continuation object in the "ptrs" area. */
       ikptr	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
+      /* Process the  old data area  BEFORE scanning the  current Scheme
+	 stack. */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
-      /* We move the freezed stack frames in the "data" area. */
       ikptr	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
-      memcpy((char*)(long)new_top,
-             (char*)(long)top,
-             size);
+      memcpy((char*)(long)new_top, (char*)(long)top, size);
       collect_stack(gc, new_top, new_top + size);
       IK_REF(Y, off_continuation_tag)  = continuation_tag;
       IK_REF(Y, off_continuation_top)  = new_top;
-      IK_REF(Y, off_continuation_size) = (ikptr) size;
-      /* The  "next"   continuation  object  is  not   filtered  through
-	 "gather_live_object()". */
+      IK_REF(Y, off_continuation_size) = size;
       IK_REF(Y, off_continuation_next) = next;
       if (0) {
 	ik_debug_message("gc compacted continuation 0x%016lx to 0x%016lx, next 0x%016lx",
@@ -1367,7 +1365,10 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case system_continuation_tag: {
-      /* We move the system continuation object in the "data" area. */
+      /* System (C language)  continuation object.  It goes  in the data
+	 meta pages.  Notice that we gather the next continuation object
+	 here,  because   "collect_loop()"  does  not  scan   data  meta
+	 pages. */
       ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
       ikptr	top  = IK_REF(X, off_system_continuation_top);
       ikptr	next = IK_REF(X, off_system_continuation_next);
