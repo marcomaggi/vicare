@@ -1394,8 +1394,17 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
-/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
+
     case ratnum_tag: {
+      /* Ratnum object.   It goes in  the data meta page,  the numerator
+	 and denominator objects are gathered here.
+
+         NOTE The only reason I can  think of for putting ratnums in the
+         data meta page (rather than the  pointers meta page) is that we
+         know that the numerator and denominator objects are numbers, so
+         they  do  not  further   reference  other  Scheme  objects;  by
+         gathering the numerator and denominator here we spare some work
+         to "collect_loop()".  (Marco Maggi; Tue Dec 17, 2013) */
       ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
       ikptr num = IK_REF(X, off_ratnum_num);
       ikptr den = IK_REF(X, off_ratnum_den);
@@ -1408,6 +1417,16 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case compnum_tag: {
+      /* Compnum object.   It goes in the  data meta page, the  real and
+	 imag part objects are gathered here.
+
+         NOTE The only reason I can think of for putting compnums in the
+         data meta page (rather than the  pointers meta page) is that we
+         know that the  real and imag part objects are  real numbers, so
+         even if  they do  further reference  other Scheme  objects, the
+         depth is  small; by gathering the  real and imag parts  here we
+         spare some work to "collect_loop()".  (Marco Maggi; Tue Dec 17,
+         2013) */
       ikptr Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_compnum_real);
       ikptr im = IK_REF(X, off_compnum_imag);
@@ -1420,6 +1439,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case cflonum_tag: {
+      /* Cflonum object.   It goes in the  data meta page, the  real and
+	 imag part objects are gathered here.
+
+         NOTE The only reason I can think of for putting cflonums in the
+         data meta page (rather than the  pointers meta page) is that we
+         know that the real and imag part objects are flonum numbers, so
+         they  do  not  further   reference  other  Scheme  objects;  by
+         gathering the  real and imag parts  here we spare some  work to
+         "collect_loop()".  (Marco Maggi; Tue Dec 17, 2013) */
       ikptr Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_cflonum_real);
       ikptr im = IK_REF(X, off_cflonum_imag);
@@ -1432,14 +1460,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case pointer_tag: {
-      ikptr Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
+      /* Foreign pointer object.  It goes in the data meta page. */
+      ikptr	Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = pointer_tag;
       IK_REF(Y, wordsize - vector_tag) = IK_REF(X, wordsize - vector_tag);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
-
+/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
     default: {
       if (IK_IS_FIXNUM(first_word)) { /* real vector */
 	/* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
