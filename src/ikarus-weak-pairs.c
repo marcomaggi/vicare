@@ -52,7 +52,7 @@ ikrt_is_weak_pair (ikptr x, ikpcb* pcb)
     return IK_FALSE_OBJECT;
   else {
     uint32_t tag = pcb->segment_vector[IK_PAGE_INDEX(x)];
-    return ((tag & type_mask) == weak_pairs_type)? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+    return IK_BOOLEAN_FROM_INT((tag & TYPE_MASK) == weak_pairs_type);
   }
 }
 

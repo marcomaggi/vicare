@@ -259,11 +259,11 @@ ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
   static const unsigned int const NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
-    (4 << meta_dirty_shift) | 1 | NEW_GEN_TAG,
-    (2 << meta_dirty_shift) | 2 | NEW_GEN_TAG,
-    (1 << meta_dirty_shift) | 3 | NEW_GEN_TAG,
-    (0 << meta_dirty_shift) | 4 | NEW_GEN_TAG,
-    (0 << meta_dirty_shift) | 4 | NEW_GEN_TAG
+    (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
+    (2 << META_DIRTY_SHIFT) | 2 | NEW_GEN_TAG,
+    (1 << META_DIRTY_SHIFT) | 3 | NEW_GEN_TAG,
+    (0 << META_DIRTY_SHIFT) | 4 | NEW_GEN_TAG,
+    (0 << META_DIRTY_SHIFT) | 4 | NEW_GEN_TAG
   };
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
@@ -509,7 +509,7 @@ fix_weak_pointers (gc_t* gc)
   for (; page_idx < hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
     /* Visit this page if it is marked as containing weak pairs. */
-    if ((page_sbits & (type_mask|NEW_GEN_MASK)) == (weak_pairs_type|NEW_GEN_TAG)) {
+    if ((page_sbits & (TYPE_MASK|NEW_GEN_MASK)) == (weak_pairs_type|NEW_GEN_TAG)) {
       //int gen = t & GEN_MASK;
       if (1) { //(gen > collect_gen) {
         ikptr	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
@@ -551,7 +551,7 @@ deallocate_unused_pages (gc_t* gc)
   ikptr		page_idx    = lo_idx;
   for (; page_idx<hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
-    if (page_sbits & dealloc_mask) {
+    if (page_sbits & DEALLOC_MASK) {
       int gen = page_sbits & OLD_GEN_MASK;
       if (gen <= collect_gen) {
         /* we're interested */
@@ -1300,7 +1300,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr	nbytes = size + disp_vector_data; /* not aligned */
       ikptr	memreq = IK_ALIGN(nbytes);
       if (memreq >= IK_PAGESIZE) { /* big vector */
-        if (large_object_tag == (page_sbits & large_object_mask)) {
+        if (large_object_tag == (page_sbits & LARGE_OBJECT_MASK)) {
 	  /* This  large object  is already  stored in  pages markes  as
 	     "large  object".   We do  not  move  it around,  rather  we
 	     register  the data  area in  the  queues of  objects to  be
@@ -1653,7 +1653,7 @@ gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     ikptr second_word     = IK_CDR(X);
     int   second_word_tag = IK_TAGOF(second_word);
     ikptr Y;
-    if ((segment_bits & type_mask) != weak_pairs_type)
+    if ((segment_bits & TYPE_MASK) != weak_pairs_type)
       Y = gc_alloc_new_pair(gc)      | pair_tag;
     else
       Y = gc_alloc_new_weak_pair(gc) | pair_tag;
@@ -2361,7 +2361,7 @@ scan_dirty_pages (gc_t* gc)
       uint32_t page_bits               = segment_vec[page_idx];
       int      page_generation_number  = page_bits & GEN_MASK;
       if (page_generation_number > collect_gen) {
-        int type = page_bits & type_mask;
+        int type = page_bits & TYPE_MASK;
         if (type == pointers_type) {
           scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
@@ -2382,7 +2382,7 @@ scan_dirty_pages (gc_t* gc)
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
-        else if (page_bits & scannable_mask) {
+        else if (page_bits & SCANNABLE_MASK) {
           ik_abort("unhandled dirty scan for page with segment bits 0x%08x", page_bits);
 	}
       }
@@ -2408,7 +2408,7 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
     ikptr	word_ptr     = IK_PAGE_POINTER_FROM_INDEX(page_idx);
     uint32_t	card_idx;
     for (card_idx=0; card_idx<CARDS_PER_PAGE; ++card_idx) {
-      if (masked_dbits & (0xF << (card_idx * meta_dirty_shift))) {
+      if (masked_dbits & (0xF << (card_idx * META_DIRTY_SHIFT))) {
 	/* This is a dirty card: let's process its words. */
 	uint32_t	card_dbits = 0;
 	ikptr		card_end   = word_ptr + CARDSIZE;
@@ -2425,12 +2425,12 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
 	    card_dbits |= segment_vec[IK_PAGE_INDEX(Y)];
 	  }
 	}
-	card_dbits      = (card_dbits & meta_dirty_mask) >> meta_dirty_shift;
-	new_page_dbits |= card_dbits << (card_idx * meta_dirty_shift);
+	card_dbits      = (card_dbits & META_DIRTY_MASK) >> META_DIRTY_SHIFT;
+	new_page_dbits |= card_dbits << (card_idx * META_DIRTY_SHIFT);
       } else {
 	/* This is a pure card: let's skip to the next card. */
 	word_ptr       += CARDSIZE;
-	new_page_dbits |= page_dbits & (0xF << (card_idx * meta_dirty_shift));
+	new_page_dbits |= page_dbits & (0xF << (card_idx * META_DIRTY_SHIFT));
       }
     }
   }
@@ -2488,7 +2488,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	    code_d	|= segment_vec[IK_PAGE_INDEX(s_item)];
 	  }
 	}
-	new_page_dbits	|= code_d << (card_idx * meta_dirty_shift);
+	new_page_dbits	|= code_d << (card_idx * META_DIRTY_SHIFT);
 	{ /* Increment "p_code" to reference the next code object in the
 	     page. */
 	  long	code_size = IK_UNFIX(IK_REF(p_code, disp_code_code_size));
