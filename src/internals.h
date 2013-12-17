@@ -431,14 +431,14 @@
 #define LARGE_OBJECT_MASK	0x00100000
 #define META_DIRTY_SHIFT	4
 
-#define hole_type		0x00000000
-#define mainheap_type		0x00000100
-#define mainstack_type		0x00000200
-#define pointers_type		0x00000300
-#define dat_type		0x00000400
-#define code_type		0x00000500
-#define weak_pairs_type		0x00000600
-#define symbols_type		0x00000700
+#define HOLE_TYPE		0x00000000
+#define MAINHEAP_TYPE		0x00000100
+#define MAINSTACK_TYPE		0x00000200
+#define POINTERS_TYPE		0x00000300
+#define DATA_TYPE		0x00000400
+#define CODE_TYPE		0x00000500
+#define WEAK_PAIRS_TYPE		0x00000600
+#define SYMBOLS_TYPE		0x00000700
 
 #define scannable_tag		0x00001000
 #define unscannable_tag		0x00000000
@@ -450,14 +450,14 @@
 #define large_object_tag	0x00100000
 
 /* Notice that "hole_mt" is zero. */
-#define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
-#define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
-#define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
-#define pointers_mt	(pointers_type	 | scannable_tag   | dealloc_tag_un)
-#define symbols_mt	(symbols_type	 | scannable_tag   | dealloc_tag_un)
-#define data_mt		(dat_type	 | unscannable_tag | dealloc_tag_un)
-#define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
+#define hole_mt		(HOLE_TYPE	 | unscannable_tag | retain_tag)
+#define mainheap_mt	(MAINHEAP_TYPE	 | unscannable_tag | retain_tag)
+#define mainstack_mt	(MAINSTACK_TYPE	 | unscannable_tag | retain_tag)
+#define pointers_mt	(POINTERS_TYPE	 | scannable_tag   | dealloc_tag_un)
+#define symbols_mt	(SYMBOLS_TYPE	 | scannable_tag   | dealloc_tag_un)
+#define data_mt		(DATA_TYPE	 | unscannable_tag | dealloc_tag_un)
+#define code_mt		(CODE_TYPE	 | scannable_tag   | dealloc_tag_un)
+#define weak_pairs_mt	(WEAK_PAIRS_TYPE | scannable_tag   | dealloc_tag_un)
 
 
 /** --------------------------------------------------------------------

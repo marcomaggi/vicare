@@ -1043,12 +1043,12 @@ ik_uuid(ikptr bv)
 static char*
 mtname (unsigned n)
 {
-  if (n == mainheap_type)  { return "HEAP_T"; }
-  if (n == mainstack_type) { return "STAK_T"; }
-  if (n == pointers_type)  { return "PTER_T"; }
-  if (n == dat_type)       { return "DATA_T"; }
-  if (n == code_type)      { return "CODE_T"; }
-  if (n == hole_type)      { return "      "; }
+  if (n == MAINHEAP_TYPE)  { return "HEAP_T"; }
+  if (n == MAINSTACK_TYPE) { return "STAK_T"; }
+  if (n == POINTERS_TYPE)  { return "PTER_T"; }
+  if (n == DATA_TYPE)      { return "DATA_T"; }
+  if (n == CODE_TYPE)      { return "CODE_T"; }
+  if (n == HOLE_TYPE)      { return "      "; }
   return "WHAT_T";
 }
 ikptr
