@@ -1222,7 +1222,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 {
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
-  uint32_t	page_sbits;	/* status bits for memory segment holding X */
+  uint32_t	page_sbits;	/* status bits for memory page holding X */
 
   /* Fixnums and other  immediate objects (self contained  in the single
      machine word  X) do  not need  to be moved.   So identify  them and
@@ -1255,8 +1255,14 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       return X;
   }
 
-  /* If we are here  X must be moved to a new  location.  This is a type
-     specific operation, so we branch by tag value. */
+  /* If we are  here X must be moved  to a new location; this  is a type
+     specific operation,  so we branch  by tag value.
+
+     FIXME The original Ikarus code  does not use a "switch()" construct
+     to branch because the tag bits  are not enough to identify the type
+     of an object,  for some types we also need  the first word.  Should
+     we move to  a "switch()" for the tag bits  and nest branching based
+     on the value of the first word?  (Marco Maggi; Tue Dec 17, 2013) */
   if (pair_tag == tag) {
     ikptr Y;
     gather_live_list(gc, page_sbits, X, &Y);
