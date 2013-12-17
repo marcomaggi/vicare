@@ -1258,7 +1258,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   /* If we are  here X must be moved  to a new location; this  is a type
      specific operation,  so we branch  by tag value. */
   switch (tag) {
+
   case pair_tag: {
+    /* Pair object.  It goes in the pairs meta page. */
     ikptr Y;
     gather_live_list(gc, page_sbits, X, &Y);
 #if ACCOUNTING
@@ -1268,7 +1270,13 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   }
 
   case closure_tag: {
-    /* Closure object.  It goes in the pointers meta page. */
+    /* Closure object.  It goes in the pointers meta page.
+
+       Notice that we visit here  the referenced code object, because it
+       needs some special handling; also  remember that a closure object
+       does not reference  the code object itself, rather  it contains a
+       raw memory pointer  to the entry point in the  executable code of
+       the code object. */
     ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
@@ -1666,16 +1674,25 @@ gather_live_object_proc (gc_t* gc, ikptr X)
  ** ----------------------------------------------------------------- */
 
 static void
-gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
-/* Move the spine of the proper of improper list object X (whose head is
+gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
+/* Move the spine of the proper or improper list object X (whose head is
    a pair) to a new location and store in LOC a new tagged pointer which
-   must replace every occurrence of X.
+   must  replace  every  occurrence  of X.   See  the  documentation  of
+   "gather_live_object_proc()" for the full details.
 
-   This function  processes only the  spine of  the list: it  does *not*
-   apply "gather_live_object()" to the cars of the pairs.
+     This function  takes care of  processing adequately the  weak pairs
+   and the strong pairs.
 
-   SEGMENT_BITS are  the bits describing  the segment in which  the pair
-   referenced by X is allocated. */
+     This function processes  only the spine of the list:  it does *not*
+   apply "gather_live_object()"  to the cars  of the pairs;  however, it
+   does apply "gather_live_object()"  to the cdr of the  last pair, when
+   the list is improper.  About  this: notice that when "collect_loop()"
+   scans a  page of pairs,  it scans only the  cars and leaves  the cdrs
+   alone.
+
+     PAGE_SBITS is the  word from the slot in the  PCB's segments vector
+   describing  the   page  in  which   the  pair  referenced  by   X  is
+   allocated. */
 {
   int collect_gen = gc->collect_gen;
   for (;;) {
@@ -1683,7 +1700,7 @@ gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     ikptr second_word     = IK_CDR(X);
     int   second_word_tag = IK_TAGOF(second_word);
     ikptr Y;
-    if ((segment_bits & TYPE_MASK) != WEAK_PAIRS_TYPE)
+    if ((page_sbits & TYPE_MASK) != WEAK_PAIRS_TYPE)
       Y = gc_alloc_new_pair(gc)      | pair_tag;
     else
       Y = gc_alloc_new_weak_pair(gc) | pair_tag;
@@ -1695,24 +1712,26 @@ gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     if (pair_tag == second_word_tag) {
       /* The cdr of Y is a pair, too. */
       if (IK_FORWARD_PTR == IK_CAR(second_word)) {
-	/* The cdr of Y has been already collected. */
+	/* The cdr of Y has been already collected.  This means the rest
+	   of the list has already been collected, too. */
         IK_CDR(Y) = IK_CDR(second_word);
         return;
       } else {
-        segment_bits = gc->segment_vector[IK_PAGE_INDEX(second_word)];
-        int gen = segment_bits & GEN_MASK;
+        uint32_t	generation;
+        page_sbits = gc->segment_vector[IK_PAGE_INDEX(second_word)];
+	generation = page_sbits & GEN_MASK;
 	/* If the cdr  of Y does not belong to  a generation examined in
 	   this GC run: leave it alone. */
-        if (gen > collect_gen) {
+        if (generation > collect_gen) {
           IK_CDR(Y) = second_word;
           return;
         } else {
 	  /* Prepare  for  the next  for(;;)  loop  iteration.  We  will
 	     process the cdr  of Y (a pair) and update  the reference to
 	     it in  the cdr slot of  Y.  Notice that the  next iteration
-	     will use the value of SEGMENT_BITS we have set above. */
+	     will use the value of PAGE_SBITS we have set above. */
           X   = second_word;
-          loc = (ikptr*)(long)(Y + off_cdr);
+          loc = (ikptr*)(ik_ulong)(Y + off_cdr);
         }
       }
     }
