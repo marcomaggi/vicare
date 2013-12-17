@@ -759,6 +759,12 @@ To make pointer indirection efficient for the underlying platform.
 @item
 To have pointer values: with the @math{3} least significant bits set to
 zero, so that such bits can be used to hold an object's type tag.
+
+@item
+To allocate a data area for Scheme objects at least @math{2} machine
+words wide; this is required for garbage collection purposes: the
+@math{2} words are used by the garbage collector to register
+informations when a live Scheme object is gathered.
 @end enumerate
 
 @noindent
