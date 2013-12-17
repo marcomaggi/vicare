@@ -509,7 +509,7 @@ fix_weak_pointers (gc_t* gc)
   for (; page_idx < hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
     /* Visit this page if it is marked as containing weak pairs. */
-    if ((page_sbits & (TYPE_MASK|NEW_GEN_MASK)) == (weak_pairs_type|NEW_GEN_TAG)) {
+    if ((page_sbits & (TYPE_MASK|NEW_GEN_MASK)) == (WEAK_PAIRS_TYPE|NEW_GEN_TAG)) {
       //int gen = t & GEN_MASK;
       if (1) { //(gen > collect_gen) {
         ikptr	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
@@ -1657,7 +1657,7 @@ gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     ikptr second_word     = IK_CDR(X);
     int   second_word_tag = IK_TAGOF(second_word);
     ikptr Y;
-    if ((segment_bits & TYPE_MASK) != weak_pairs_type)
+    if ((segment_bits & TYPE_MASK) != WEAK_PAIRS_TYPE)
       Y = gc_alloc_new_pair(gc)      | pair_tag;
     else
       Y = gc_alloc_new_weak_pair(gc) | pair_tag;
@@ -2366,22 +2366,22 @@ scan_dirty_pages (gc_t* gc)
       int      page_generation_number  = page_bits & GEN_MASK;
       if (page_generation_number > collect_gen) {
         int type = page_bits & TYPE_MASK;
-        if (type == pointers_type) {
+        if (type == POINTERS_TYPE) {
           scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
-        else if (type == symbols_type) {
+        else if (type == SYMBOLS_TYPE) {
           scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
-        else if (type == weak_pairs_type) {
+        else if (type == WEAK_PAIRS_TYPE) {
           scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;
         }
-        else if (type == code_type) {
+        else if (type == CODE_TYPE) {
           scan_dirty_code_page(gc, page_idx);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
           segment_vec = pcb->segment_vector;

@@ -167,31 +167,31 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   //    return p+IK_PAGESIZE;
   //  }
   int type = s & TYPE_MASK;
-  if(type == hole_type){
+  if(type == HOLE_TYPE){
     return p+IK_PAGESIZE;
   }
   assert((s & NEW_GEN_MASK) == 0);
-  if(type == code_type){
+  if(type == CODE_TYPE){
     return verify_code_page(p,s,d,base,svec,dvec);
   }
-  else if(type == pointers_type){
+  else if(type == POINTERS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == weak_pairs_type){
+  else if(type == WEAK_PAIRS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == symbols_type){
+  else if(type == SYMBOLS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == dat_type){
+  else if(type == DATA_TYPE){
     /* nothing to do for data */
     return p+IK_PAGESIZE;
   }
-  else if(type == mainheap_type){
+  else if(type == MAINHEAP_TYPE){
     /* nothing to do for main heap */
     return p+IK_PAGESIZE;
   }
-  else if(type == mainstack_type){
+  else if(type == MAINSTACK_TYPE){
     /* nothing to do for main stack */
     return p+IK_PAGESIZE;
   }
