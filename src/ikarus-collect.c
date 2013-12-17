@@ -1761,10 +1761,11 @@ static ikptr
 gather_live_code_entry (gc_t* gc, ikptr entry)
 /* Move the data  area of the code  object referenced by ENTRY  to a new
    memory location and return a  new untagged pointer which must replace
-   every  occurrence  of  ENTRY  in   the  memory  used  by  the  Scheme
-   program. */
+   every occurrence of  ENTRY in the memory used by  the Scheme program.
+   See  the documentation  of "gather_live_object_proc()"  for the  full
+   details. */
 {
-  ikptr		X = entry - disp_code_data; /* tagged pointer to code object */
+  ikptr		X = entry - disp_code_data; /* UNtagged pointer to code object */
   ik_ulong	page_idx;
   /* If X  has already been moved  in a previous call  to this function:
      the first  word in the data  area is IK_FORWARD_PTR and  the second
@@ -1820,8 +1821,10 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
     }
     return entry;
   } else {
-    /* Only one memory page allocated. */
-    ikptr	Y = gc_alloc_new_code(required_mem, gc);
+    /* Only one memory page allocated.  The object is moved like all the
+       others.   "gc_alloc_new_code()" registers  the  data  area to  be
+       scanned by the function "collect_loop()". */
+    ikptr	Y = gc_alloc_new_code(required_mem, gc); /* UNtagged pointer */
     IK_REF(Y, disp_code_tag)		= code_tag;
     IK_REF(Y, disp_code_code_size)	= IK_FIX(code_size);
     IK_REF(Y, disp_code_reloc_vector)	= s_reloc_vec;

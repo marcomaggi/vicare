@@ -1617,11 +1617,14 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define disp_code_annotation	(4 * wordsize)
 #define disp_code_unused	(5 * wordsize)
 #define disp_code_data		(6 * wordsize)
+
 #define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_code_size	(disp_code_code_size	- code_primary_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector	- code_primary_tag)
 #define off_code_freevars	(disp_code_freevars	- code_primary_tag)
 #define off_code_annotation	(disp_code_annotation	- code_primary_tag)
+#define off_code_unused		(disp_code_unused	- code_primary_tag)
 #define off_code_data		(disp_code_data		- code_primary_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
 
 #define IK_IS_CODE(X)		\
      ((code_primary_tag == (code_primary_mask & X)) && \
