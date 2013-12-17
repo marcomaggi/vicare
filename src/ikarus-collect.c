@@ -1256,14 +1256,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   }
 
   /* If we are  here X must be moved  to a new location; this  is a type
-     specific operation,  so we branch  by tag value.
-
-     FIXME The original Ikarus code  does not use a "switch()" construct
-     to branch because the tag bits  are not enough to identify the type
-     of an object,  for some types we also need  the first word.  Should
-     we move to  a "switch()" for the tag bits  and nest branching based
-     on the value of the first word?  (Marco Maggi; Tue Dec 17, 2013) */
-  if (pair_tag == tag) {
+     specific operation,  so we branch  by tag value. */
+  switch (tag) {
+  case pair_tag: {
     ikptr Y;
     gather_live_list(gc, page_sbits, X, &Y);
 #if ACCOUNTING
@@ -1271,7 +1266,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 #endif
     return Y;
   }
-  else if (closure_tag == tag) {
+
+  case closure_tag: {
     ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
@@ -1292,7 +1288,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 #endif
     return Y;
   }
-  else if (vector_tag == tag) {
+
+  case vector_tag: {
     /* Move an object whose reference  is tagged as vector; such objects
        are "vector like" in that they are arrays of words. */
     if (IK_IS_FIXNUM(first_word)) { /* real vector */
@@ -1606,8 +1603,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       return Y;
     } else
       ik_abort("unhandled vector with first_word=0x%016lx\n", (long)first_word);
-  }
-  else if (string_tag == tag) {
+  } /* end of "case vector_tag:" */
+
+  case string_tag: {
     if (IK_IS_FIXNUM(first_word)) {
       long	len    = IK_UNFIX(first_word);
       long	memreq = IK_ALIGN(len * IK_STRING_CHAR_SIZE + disp_string_data);
@@ -1625,7 +1623,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     } else
       ik_abort("unhandled string 0x%016lx with first_word=0x%016lx\n", (long)X, (long)first_word);
   }
-  else if (bytevector_tag == tag) {
+
+  case bytevector_tag: {
     long	len    = IK_UNFIX(first_word);
     long	memreq = IK_ALIGN(len + disp_bytevector_data + 1);
     ikptr	Y = gc_alloc_new_data(memreq, gc) | bytevector_tag;
@@ -1637,7 +1636,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     IK_REF(X, wordsize - bytevector_tag) = Y;
     return Y;
   }
-  return ik_abort("%s: unhandled tag: %d\n", __func__, tag);
+  default:
+    return ik_abort("%s: unhandled tag: %d\n", __func__, tag);
+  } /* end of "switch(tag)" */
 }
 
 
