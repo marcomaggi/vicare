@@ -99,17 +99,15 @@ static ikptr	add_code_entry	(gc_t* gc, ikptr entry);
 
 static void	scan_dirty_pages	(gc_t*);
 static void	handle_guardians	(gc_t* gc);
-static void	gc_finalize_guardians	(gc_t* gc);
 
 static void	collect_stack(gc_t*, ikptr top, ikptr base);
 static void	collect_loop(gc_t*);
-static void	gc_add_tconcs(gc_t*);
 
 static void	ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
 
 static void	relocate_new_code (ikptr p_X, gc_t* gc);
 
-static void	add_to_collect_count (ikpcb* pcb, int bytes);
+static void	register_to_collect_count (ikpcb* pcb, int bytes);
 
 
 /** --------------------------------------------------------------------
@@ -213,6 +211,8 @@ static void		fix_weak_pointers	(gc_t *gc);
 static inline void	collect_locatives	(gc_t*, ik_callback_locative*);
 static void		deallocate_unused_pages	(gc_t*);
 static void		fix_new_pages		(gc_t* gc);
+static void		gc_finalize_guardians	(gc_t* gc);
+static void		gc_add_tconcs		(gc_t*);
 
 /* The function "add_object_proc()" is the  one that moves a live Scheme
    object from its pre-GC location  to its after-GC location.  The macro
@@ -277,7 +277,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
-    add_to_collect_count(pcb, bytes);
+    register_to_collect_count(pcb, bytes);
   }
 
   { /* initialise GC statistics */
@@ -581,6 +581,33 @@ fix_new_pages (gc_t* gc)
       segment_vec[i] = t & ~new_gen_mask;
       }
     */
+  }
+}
+static void
+gc_finalize_guardians (gc_t* gc)
+{
+  ik_ptr_page*	ls = gc->forward_list;
+  int		tconc_count = 0;
+  uint32_t *	dirty_vec = (uint32_t *)(long)(gc->pcb->dirty_vector);
+  while(ls) {
+    int i;
+    for(i=0; i<ls->count; i++) {
+      tconc_count++;
+      ikptr p = ls->ptr[i];
+      ikptr tc = ref(p, off_car);
+      ikptr obj = ref(p, off_cdr);
+      ikptr last_pair = ref(tc, off_cdr);
+      ref(last_pair, off_car) = obj;
+      ref(last_pair, off_cdr) = p;
+      ref(p, off_car) = IK_FALSE_OBJECT;
+      ref(p, off_cdr) = IK_FALSE_OBJECT;
+      ref(tc, off_cdr) = p;
+      dirty_vec[IK_PAGE_INDEX(tc)]        = IK_DIRTY_WORD;
+      dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
+    }
+    ik_ptr_page* next = ls->next;
+    ik_munmap((ikptr)ls, IK_PAGESIZE);
+    ls = next;
   }
 }
 
@@ -1086,34 +1113,6 @@ handle_guardians (gc_t* gc)
   collect_loop(gc);
   pcb->protected_list[next_gen(gc->collect_gen)] = target;
 }
-
-static void
-gc_finalize_guardians (gc_t* gc)
-{
-  ik_ptr_page*	ls = gc->forward_list;
-  int		tconc_count = 0;
-  uint32_t *	dirty_vec = (uint32_t *)(long)(gc->pcb->dirty_vector);
-  while(ls) {
-    int i;
-    for(i=0; i<ls->count; i++) {
-      tconc_count++;
-      ikptr p = ls->ptr[i];
-      ikptr tc = ref(p, off_car);
-      ikptr obj = ref(p, off_cdr);
-      ikptr last_pair = ref(tc, off_cdr);
-      ref(last_pair, off_car) = obj;
-      ref(last_pair, off_cdr) = p;
-      ref(p, off_car) = IK_FALSE_OBJECT;
-      ref(p, off_cdr) = IK_FALSE_OBJECT;
-      ref(tc, off_cdr) = p;
-      dirty_vec[IK_PAGE_INDEX(tc)]        = IK_DIRTY_WORD;
-      dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
-    }
-    ik_ptr_page* next = ls->next;
-    ik_munmap((ikptr)ls, IK_PAGESIZE);
-    ls = next;
-  }
-}
 static inline int
 is_live (ikptr x, gc_t* gc)
 {
@@ -1169,9 +1168,6 @@ static inline ikptr	gc_alloc_new_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_code	(long aligned_size, gc_t* gc);
 
-static ikptr
-#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
-add_object_proc (gc_t* gc, ikptr X, char* caller)
 /* Move  the live  object X,  and all  its component  objects, to  a new
    location  and return  a new  machine  word which  must replace  every
    occurrence of X.
@@ -1188,12 +1184,13 @@ add_object_proc (gc_t* gc, ikptr X, char* caller)
    first  update the  memory block  referenced  by X,  then perform  the
    recursive  call; this  way  the  recursive call  will  see X  already
    collected.  */
-{
-  caller = caller;
+static ikptr
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
+add_object_proc (gc_t* gc, ikptr X, char* caller IK_UNUSED)
 #else
 add_object_proc (gc_t* gc, ikptr X)
-{
 #endif
+{
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
   unsigned	segment_bits;	/* status bits for memory segment holding X */
@@ -1786,7 +1783,7 @@ gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
     mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_ptrs] | gc->collect_gen_tag, gc->pcb);
     bzero((char*)mem, IK_PAGESIZE);
     /* gc statistics */
-    add_to_collect_count(gc->pcb, IK_PAGESIZE);
+    register_to_collect_count(gc->pcb, IK_PAGESIZE);
     /* Retake   the  segment   vector   because   memory  allocated   by
        "ik_mmap_typed()" might have caused  the reallocation of the page
        vectors. */
@@ -2560,7 +2557,7 @@ relocate_new_code (ikptr p_X, gc_t* gc)
   } /* end of while() */
 }
 static void
-add_to_collect_count (ikpcb* pcb, int bytes)
+register_to_collect_count (ikpcb* pcb, int bytes)
 /* This is  for accounting  purposes.  We  keep count  of all  the bytes
  * allocated for the heap, so that:
  *
