@@ -1334,7 +1334,12 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     case continuation_tag: {
       /* Scheme  continuation object.   The  object itself  goes in  the
 	 pointers meta page; the  referenced freezed Scheme stack frames
-	 go in the data meta pages. */
+	 go in the data meta pages.
+
+	 FIXME Why the  Scheme continuation object goes  in the pointers
+	 meta page?  Putting aside the next continuation, all its fields
+	 are  raw values;  should  it not  go in  the  data meta  pages?
+	 (Marco Maggi; Tue Dec 17, 2013) */
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -1381,14 +1386,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case flonum_tag: {
-      ikptr Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
+      /* Flonum object.  It goes in the data meta page. */
+      ikptr	Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = flonum_tag;
       IK_FLONUM_DATA(Y)                = IK_FLONUM_DATA(X);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
-
+/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
     case ratnum_tag: {
       ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
       ikptr num = IK_REF(X, off_ratnum_num);
