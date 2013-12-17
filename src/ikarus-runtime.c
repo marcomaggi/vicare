@@ -1058,11 +1058,11 @@ ik_dump_metatable (ikpcb* pcb)
   ikptr p = pcb->memory_base;
   ikptr hi = pcb->memory_end;
   while (p < hi) {
-    unsigned t = *s & type_mask;
+    unsigned t = *s & TYPE_MASK;
     ikptr start = p;
     p += IK_PAGESIZE;
     s++;
-    while ((p < hi) && ((*s & type_mask) == t)) {
+    while ((p < hi) && ((*s & TYPE_MASK) == t)) {
       p += IK_PAGESIZE;
       s++;
     }

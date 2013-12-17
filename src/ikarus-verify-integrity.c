@@ -166,7 +166,7 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   //  if(s & dealloc_mask){
   //    return p+IK_PAGESIZE;
   //  }
-  int type = s & type_mask;
+  int type = s & TYPE_MASK;
   if(type == hole_type){
     return p+IK_PAGESIZE;
   }

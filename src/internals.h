@@ -424,12 +424,12 @@
 #define NEW_GEN_MASK		0x00000008
 #define GEN_MASK		0x0000000F
 #define NEW_GEN_TAG		0x00000008
-#define meta_dirty_mask		0x000000F0
-#define type_mask		0x00000F00
-#define scannable_mask		0x0000F000
-#define dealloc_mask		0x000F0000
-#define large_object_mask	0x00100000
-#define meta_dirty_shift	4
+#define META_DIRTY_MASK		0x000000F0
+#define TYPE_MASK		0x00000F00
+#define SCANNABLE_MASK		0x0000F000
+#define DEALLOC_MASK		0x000F0000
+#define LARGE_OBJECT_MASK	0x00100000
+#define META_DIRTY_SHIFT	4
 
 #define hole_type		0x00000000
 #define mainheap_type		0x00000100
