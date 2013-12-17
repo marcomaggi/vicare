@@ -53,8 +53,8 @@ verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
 
   unsigned rs = svec[page_idx((void*)(long)rvec) - page_idx(base)];
   unsigned cs = svec[page_idx(x) - page_idx(base)];
-  int cgen = cs&gen_mask;
-  int rgen = rs&gen_mask;
+  int cgen = cs&GEN_MASK;
+  int rgen = rs&GEN_MASK;
   if(rgen < cgen){
     unsigned d = dvec[page_idx(x) - page_idx(base)];
     d = d & d;
@@ -170,7 +170,7 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   if(type == hole_type){
     return p+IK_PAGESIZE;
   }
-  assert((s & new_gen_mask) == 0);
+  assert((s & NEW_GEN_MASK) == 0);
   if(type == code_type){
     return verify_code_page(p,s,d,base,svec,dvec);
   }

@@ -414,10 +414,16 @@
    operation $FORWARD-PTR? */
 #define IK_FORWARD_PTR		((ikptr)-1)
 
-#define old_gen_mask		0x00000007
-#define new_gen_mask		0x00000008
-#define gen_mask		0x0000000F
-#define new_gen_tag		0x00000008
+/* Masks for values  from the slots of PCB's segments  vector.  We logic
+ * AND these masks to the segment bits to extract values.
+ *
+ * GEN_MASK -	Extract the page generation number.
+ *
+ */
+#define OLD_GEN_MASK		0x00000007
+#define NEW_GEN_MASK		0x00000008
+#define GEN_MASK		0x0000000F
+#define NEW_GEN_TAG		0x00000008
 #define meta_dirty_mask		0x000000F0
 #define type_mask		0x00000F00
 #define scannable_mask		0x0000F000
