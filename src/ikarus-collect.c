@@ -259,11 +259,11 @@ ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
   static const unsigned int const NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
-    (4 << meta_dirty_shift) | 1 | new_gen_tag,
-    (2 << meta_dirty_shift) | 2 | new_gen_tag,
-    (1 << meta_dirty_shift) | 3 | new_gen_tag,
-    (0 << meta_dirty_shift) | 4 | new_gen_tag,
-    (0 << meta_dirty_shift) | 4 | new_gen_tag
+    (4 << meta_dirty_shift) | 1 | NEW_GEN_TAG,
+    (2 << meta_dirty_shift) | 2 | NEW_GEN_TAG,
+    (1 << meta_dirty_shift) | 3 | NEW_GEN_TAG,
+    (0 << meta_dirty_shift) | 4 | NEW_GEN_TAG,
+    (0 << meta_dirty_shift) | 4 | NEW_GEN_TAG
   };
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
@@ -509,8 +509,8 @@ fix_weak_pointers (gc_t* gc)
   for (; page_idx < hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
     /* Visit this page if it is marked as containing weak pairs. */
-    if ((page_sbits & (type_mask|new_gen_mask)) == (weak_pairs_type|new_gen_tag)) {
-      //int gen = t & gen_mask;
+    if ((page_sbits & (type_mask|NEW_GEN_MASK)) == (weak_pairs_type|NEW_GEN_TAG)) {
+      //int gen = t & GEN_MASK;
       if (1) { //(gen > collect_gen) {
         ikptr	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
         ikptr	q = p + IK_PAGESIZE;
@@ -525,7 +525,7 @@ fix_weak_pointers (gc_t* gc)
 		   tagged pointer and store it in the car slot. */
                 IK_REF(p, disp_car) = IK_REF(X, wordsize-tag);
               } else {
-                int X_gen = segment_vec[IK_PAGE_INDEX(X)] & gen_mask;
+                int X_gen = segment_vec[IK_PAGE_INDEX(X)] & GEN_MASK;
                 if (X_gen <= collect_gen) {
 		  /* The car of  this pair is dead: set the  car slot to
 		     the BWP object. */
@@ -552,10 +552,10 @@ deallocate_unused_pages (gc_t* gc)
   for (; page_idx<hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
     if (page_sbits & dealloc_mask) {
-      int gen = page_sbits & old_gen_mask;
+      int gen = page_sbits & OLD_GEN_MASK;
       if (gen <= collect_gen) {
         /* we're interested */
-        if (page_sbits & new_gen_mask) {
+        if (page_sbits & NEW_GEN_MASK) {
           /* do nothing yet */
         } else {
           ik_munmap_from_segment(IK_PAGE_POINTER_FROM_INDEX(page_idx), IK_PAGESIZE, pcb);
@@ -574,11 +574,11 @@ fix_new_pages (gc_t* gc)
   ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
   ikptr		page_idx;
   for (page_idx=lo_idx; page_idx<hi_idx; ++page_idx) {
-    segment_vec[page_idx] &= ~new_gen_mask;
+    segment_vec[page_idx] &= ~NEW_GEN_MASK;
     /*
       uint32_t t = segment_vec[i];
-      if (t & new_gen_mask) {
-      segment_vec[i] = t & ~new_gen_mask;
+      if (t & NEW_GEN_MASK) {
+      segment_vec[i] = t & ~NEW_GEN_MASK;
       }
     */
   }
@@ -1125,7 +1125,7 @@ is_live (ikptr x, gc_t* gc)
     return 1;
   if (IK_FORWARD_PTR == IK_REF(x, -tag))
     return 1;
-  gen = gc->segment_vector[IK_PAGE_INDEX(x)] & gen_mask;
+  gen = gc->segment_vector[IK_PAGE_INDEX(x)] & GEN_MASK;
   return (gen > gc->collect_gen)? 1 : 0;
 }
 static inline int
@@ -1196,8 +1196,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
  *   old  data  area  is  no  more  used in  the  course  of  a  garbage
  *   collection, and its memory is released at the end of a GC.
  *
- * with this we can understand how the  old data area referenced by X is
- * mutated as follows:
+ * with this we can understand why the old data area referenced by X can
+ * be mutated as follows:
  *
  * - The first word  is set to the constant  IK_FORWARD_PTR: this allows
  *   future identification of references to already moved objects.
@@ -1222,10 +1222,12 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 {
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
-  uint32_t	segment_bits;	/* status bits for memory segment holding X */
-  int		generation;	/* generation index X is in */
-  { /* Fixnums and other immediate objects (self contained in the single
-       machine word X) do not need to be moved. */
+  uint32_t	page_sbits;	/* status bits for memory segment holding X */
+
+  /* Fixnums and other  immediate objects (self contained  in the single
+     machine word  X) do  not need  to be moved.   So identify  them and
+     return. */
+  {
     if (IK_IS_FIXNUM(X))
       return X;
     assert(IK_FORWARD_PTR != X);
@@ -1233,24 +1235,31 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     if (immediate_tag == tag)
       return X;
   }
-  { /* If X  has already been moved  in a previous call:  return its new
-       value. */
+
+  /* If X  has already been moved  in a previous call  to this function:
+     the first  word in the data  area is IK_FORWARD_PTR and  the second
+     word is the new reference Y: return the new reference Y. */
+  {
     first_word = IK_REF(X, -tag);
-    if (IK_FORWARD_PTR == first_word) /* already moved */
+    if (IK_FORWARD_PTR == first_word)
       return IK_REF(X, wordsize-tag);
   }
-  { /* If X  does not belong  to a generation  examined in this  GC run:
-       leave it alone. */
-    segment_bits = gc->segment_vector[IK_PAGE_INDEX(X)];
-    generation   = segment_bits & gen_mask;
+
+  /* If X does not belong to a generation examined in this GC run: leave
+     it alone. */
+  {
+    int		generation;
+    page_sbits = gc->segment_vector[IK_PAGE_INDEX(X)];
+    generation = page_sbits & GEN_MASK;
     if (generation > gc->collect_gen)
       return X;
   }
+
   /* If we are here  X must be moved to a new  location.  This is a type
      specific operation, so we branch by tag value. */
   if (pair_tag == tag) {
     ikptr Y;
-    gather_live_list(gc, segment_bits, X, &Y);
+    gather_live_list(gc, page_sbits, X, &Y);
 #if ACCOUNTING
     pair_count++;
 #endif
@@ -1291,7 +1300,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr	nbytes = size + disp_vector_data; /* not aligned */
       ikptr	memreq = IK_ALIGN(nbytes);
       if (memreq >= IK_PAGESIZE) { /* big vector */
-        if (large_object_tag == (segment_bits & large_object_mask)) {
+        if (large_object_tag == (page_sbits & large_object_mask)) {
 	  /* This  large object  is already  stored in  pages markes  as
 	     "large  object".   We do  not  move  it around,  rather  we
 	     register  the data  area in  the  queues of  objects to  be
@@ -1354,26 +1363,26 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
 	 Vicare's struct-type descriptor:
 
-	    RTD  name size  other fields
-	   |----|----|----|------------
+	 RTD  name size  other fields
+	 |----|----|----|------------
 
 	 R6RS record-type descriptor:
 
-	    RTD  name size  other fields
-	   |----|----|----|------------
+	 RTD  name size  other fields
+	 |----|----|----|------------
 
 	 The layout  of Vicare's struct instances  R6RS record instances
 	 is as follows:
 
 	 Vicare's struct instance
 
-	    RTD   fields
-	   |----|---------
+	 RTD   fields
+	 |----|---------
 
 	 R6RS record instance:
 
-	    RTD   fields
-	   |----|---------
+	 RTD   fields
+	 |----|---------
 
 	 Both  Vicare's  struct-type  descriptors and  R6RS  record-type
 	 descriptors have the total number of fields at the same offset.
@@ -1487,7 +1496,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
       IK_REF(Y, off_tcbucket_next) = IK_REF(X, off_tcbucket_next);
       if ((! IK_IS_FIXNUM(key)) && (IK_TAGOF(key) != immediate_tag)) {
-        int gen = gc->segment_vector[IK_PAGE_INDEX(key)] & gen_mask;
+        int gen = gc->segment_vector[IK_PAGE_INDEX(key)] & GEN_MASK;
         if (gen <= gc->collect_gen) {
           /* key will be moved */
           gc_tconc_push(gc, Y);
@@ -1661,7 +1670,7 @@ gather_live_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
         return;
       } else {
         segment_bits = gc->segment_vector[IK_PAGE_INDEX(second_word)];
-        int gen = segment_bits & gen_mask;
+        int gen = segment_bits & GEN_MASK;
 	/* If the cdr  of Y does not belong to  a generation examined in
 	   this GC run: leave it alone. */
         if (gen > collect_gen) {
@@ -1728,7 +1737,7 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
   }
   long		idx	= IK_PAGE_INDEX(x);
   unsigned	t	= gc->segment_vector[idx];
-  int		gen	= t & gen_mask;
+  int		gen	= t & GEN_MASK;
   if (gen > gc->collect_gen)
     return entry;
   /* The number of bytes actually used in the allocated memory block. */
@@ -2350,7 +2359,7 @@ scan_dirty_pages (gc_t* gc)
   for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) {
     if (dirty_vec[page_idx] & mask) {
       uint32_t page_bits               = segment_vec[page_idx];
-      int      page_generation_number  = page_bits & gen_mask;
+      int      page_generation_number  = page_bits & GEN_MASK;
       if (page_generation_number > collect_gen) {
         int type = page_bits & type_mask;
         if (type == pointers_type) {
@@ -2429,7 +2438,7 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
   {
     uint32_t	page_sbits  = gc->segment_vector[page_idx];
     uint32_t *	dirty_vec   = (uint32_t*)gc->pcb->dirty_vector;
-    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & gen_mask];
+    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & GEN_MASK];
   }
 }
 static void
@@ -2493,7 +2502,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
     uint32_t *	segment_vec = gc->segment_vector;
     uint32_t	page_sbits  = segment_vec[page_idx];
     uint32_t *	dirty_vec   = (uint32_t *)gc->pcb->dirty_vector;
-    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & gen_mask];
+    dirty_vec[page_idx] = new_page_dbits & CLEANUP_MASK[page_sbits & GEN_MASK];
   }
 }
 
