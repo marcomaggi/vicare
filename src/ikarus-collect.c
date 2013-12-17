@@ -1168,28 +1168,54 @@ static inline ikptr	gc_alloc_new_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_code	(long aligned_size, gc_t* gc);
 
-/* Move  the live  object X,  and all  its component  objects, to  a new
-   location  and return  a new  machine  word which  must replace  every
-   occurrence of X.
-
-   The first  word in  the memory block  referenced by  X is set  to the
-   constant  IK_FORWARD_PTR:   this  allows  future   identification  of
-   references to already moved objects.
-
-   The second  word in the  memory block referenced  by X is set  to the
-   reference to the moved object,  that is the return value: this allows
-   future substitutions of X values with the new reference.
-
-   *WARNING* When  this function is  called recursively: it is  safer to
-   first  update the  memory block  referenced  by X,  then perform  the
-   recursive  call; this  way  the  recursive call  will  see X  already
-   collected.  */
 static ikptr
 #if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_ADD_OBJECT))
 add_object_proc (gc_t* gc, ikptr X, char* caller IK_UNUSED)
 #else
 add_object_proc (gc_t* gc, ikptr X)
 #endif
+/* Vicare implements a moving and compacting garbage collector; whenever
+ * the collector, while scanning memory pages from the GC roots, finds a
+ * live  Scheme  object: it  moves  its  data  area to  another  storage
+ * location.
+ *
+ *   The argument  X must  be an  immediate object  or a  tagged pointer
+ * referencing a live  non-immediate object.  If X  is immediate nothing
+ * is  done.   If  X  is  a tagged  pointer:  this  function  moves  the
+ * referenced  data area  to a  new memory  location and  returns a  new
+ * tagged pointer  Y which  must replace  every occurrence  of X  in the
+ * memory used by the Scheme program.
+ *
+ *   Remember that:
+ *
+ * - Every  non-immediate  Scheme  object  is represented  by  a  tagged
+ *   pointer and a data area; the data area is always at least 2 machine
+ *   words wide.
+ *
+ * - The old data area of live objects is copied to a new data area; the
+ *   old  data  area  is  no  more  used in  the  course  of  a  garbage
+ *   collection, and its memory is released at the end of a GC.
+ *
+ * with this we can understand how the  old data area referenced by X is
+ * mutated as follows:
+ *
+ * - The first word  is set to the constant  IK_FORWARD_PTR: this allows
+ *   future identification of references to already moved objects.
+ *
+ * - The second  word is set  to Y, the tagged  pointer to the  new data
+ *   area: this allows future substitution  of the occurrences of X with
+ *   Y.
+ *
+ *   The new data area is reserved  in newly allocated memory pages; the
+ * allocation  and  bookkeeping  of  such  pages  is  performed  by  the
+ * "gc_alloc_new_*()" functions; see the documentation of such functions
+ * for more details.
+ *
+ *   *WARNING* When this function is  called recursively: it is safer to
+ * first  update the  memory block  referenced  by X,  then perform  the
+ * recursive  call; this  way  the  recursive call  will  see X  already
+ * collected.
+ */
 {
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
