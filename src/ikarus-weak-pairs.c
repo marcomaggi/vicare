@@ -30,7 +30,7 @@ ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
        its use destination  in the segments vector) and  use it.  Notice
        that the old page is already referenced by a slot in the segments
        vector. */
-    ikptr mem = ik_mmap_typed(IK_PAGESIZE, weak_pairs_mt, pcb);
+    ikptr mem = ik_mmap_typed(IK_PAGESIZE, WEAK_PAIRS_MT, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
     pcb->weak_pairs_ep = mem + IK_PAGESIZE;
     p = mem | pair_tag;

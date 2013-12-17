@@ -155,12 +155,12 @@ ik_mmap_typed (ik_ulong size, uint32_t type, ikpcb* pcb)
 ikptr
 ik_mmap_ptr (ik_ulong size, int gen, ikpcb* pcb)
 {
-  return ik_mmap_typed(size, pointers_mt|gen, pcb);
+  return ik_mmap_typed(size, POINTERS_MT|gen, pcb);
 }
 ikptr
 ik_mmap_data (ik_ulong size, int gen, ikpcb* pcb)
 {
-  return ik_mmap_typed(size, data_mt|gen, pcb);
+  return ik_mmap_typed(size, DATA_MT|gen, pcb);
 }
 ikptr
 ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
@@ -170,16 +170,16 @@ ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
      slots  in  a code  object  containing  references to  other  Scheme
      objects are in  the first page, so when garbage  collecting we need
      to scan only the first page. */
-  ikptr p = ik_mmap_typed(size, code_mt|gen, pcb);
+  ikptr p = ik_mmap_typed(size, CODE_MT|gen, pcb);
   if (size > IK_PAGESIZE)
-    set_page_range_type(p+IK_PAGESIZE, size-IK_PAGESIZE, data_mt|gen, pcb);
+    set_page_range_type(p+IK_PAGESIZE, size-IK_PAGESIZE, DATA_MT|gen, pcb);
   return p;
 }
 ikptr
 ik_mmap_mainheap (ik_ulong size, ikpcb* pcb)
 /* Allocate a memory segment tagged as part of the Scheme heap. */
 {
-  return ik_mmap_typed(size, mainheap_mt, pcb);
+  return ik_mmap_typed(size, MAINHEAP_MT, pcb);
 }
 static void
 set_page_range_type (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb)
@@ -243,7 +243,7 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
     { /* Allocate a new  segments vector.  The old slots go  to the tail
 	 of the new vector;  the head of the new vector  is set to zero,
 	 which   means  the   corresponding   pages   are  marked   with
-	 "hole_mt". */
+	 "HOLE_MT". */
       ikptr	new_svec_base = ik_mmap(new_vec_size);
       bzero((char*)new_svec_base, size_delta);
       memcpy((char*)(new_svec_base + new_vec_size - old_vec_size), (char*)(pcb->segment_vector_base), old_vec_size);
@@ -273,7 +273,7 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
     { /* Allocate a new  segments vector.  The old slots go  to the head
 	 of the new vector;  the tail of the new vector  is set to zero,
 	 which   means  the   corresponding   pages   are  marked   with
-	 "hole_mt". */
+	 "HOLE_MT". */
       ikptr new_svec_base = ik_mmap(new_vec_size);
       memcpy((char*)new_svec_base, (char*)pcb->segment_vector_base, old_vec_size);
       bzero((char*)(new_svec_base + old_vec_size), size_delta);
@@ -495,8 +495,8 @@ ik_make_pcb (void)
    * in the internal header file) are:
    *
    *   0            -	Unused memory.
-   *   mainheap_mt  -	Scheme heap memory.
-   *   mainstack_mt -	Scheme stack memory.
+   *   MAINHEAP_MT  -	Scheme heap memory.
+   *   MAINSTACK_MT -	Scheme stack memory.
    *
    * Indexes in the segment vector  are *not* zero-based.  The fields in
    * the PCB are:
@@ -571,8 +571,8 @@ ik_make_pcb (void)
     /* Register  the heap  block and  the  stack block  in the  segments
        vector.   We  do this  here,  after  having  set the  PCB  fields
        "memory_base" and "memory_end". */
-    set_page_range_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
-    set_page_range_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
+    set_page_range_type(pcb->heap_base,  pcb->heap_size,  MAINHEAP_MT,  pcb);
+    set_page_range_type(pcb->stack_base, pcb->stack_size, MAINSTACK_MT, pcb);
 
 #if 0
     fprintf(stderr, "\n*** Vicare debug:\n");
@@ -649,7 +649,7 @@ ik_delete_pcb (ikpcb* pcb)
     long	page_idx     = IK_PAGE_INDEX(base);
     long	page_idx_end = IK_PAGE_INDEX(end);
     for (; page_idx < page_idx_end; ++page_idx) {
-      if (hole_mt != segment_vec[page_idx]) {
+      if (HOLE_MT != segment_vec[page_idx]) {
 	ik_munmap((ikptr)(page_idx << IK_PAGESHIFT), IK_PAGESIZE);
       }
     }
@@ -949,7 +949,7 @@ ik_stack_overflow (ikpcb* pcb)
     kont->size = pcb->frame_base - pcb->frame_pointer - wordsize;
     kont->next = pcb->next_k;
     pcb->next_k = s_kont;
-    set_page_range_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
+    set_page_range_type(pcb->stack_base, pcb->stack_size, DATA_MT, pcb);
     assert(0 != kont->size);
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
       /* Release the protection on the  first low-address memory page in
@@ -961,7 +961,7 @@ ik_stack_overflow (ikpcb* pcb)
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
      the PCB accordingly. */
   {
-    pcb->stack_base	= ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
+    pcb->stack_base	= ik_mmap_typed(IK_STACKSIZE, MAINSTACK_MT, pcb);
     pcb->stack_size	= IK_STACKSIZE;
     pcb->frame_base	= pcb->stack_base + IK_STACKSIZE;
     pcb->frame_pointer	= pcb->frame_base - wordsize;
