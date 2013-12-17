@@ -414,23 +414,28 @@
    operation $FORWARD-PTR? */
 #define IK_FORWARD_PTR		((ikptr)-1)
 
-/* Masks for values  from the slots of PCB's segments  vector.  We logic
- * AND these masks to the segment bits to extract values.
+/* The PCB's segments  vector is an array of 32-bit  words, each being a
+ * bit field  representing the status  of an allocated memory  page.  We
+ * logic  AND  the following  masks  to  such  32-bit words  to  extract
+ * specific bit fields.
  *
  * GEN_MASK -	Extract the page generation number.
  *
  */
-#define OLD_GEN_MASK		0x00000007
-#define NEW_GEN_MASK		0x00000008
 #define GEN_MASK		0x0000000F
-#define NEW_GEN_TAG		0x00000008
 #define META_DIRTY_MASK		0x000000F0
 #define TYPE_MASK		0x00000F00
 #define SCANNABLE_MASK		0x0000F000
 #define DEALLOC_MASK		0x000F0000
 #define LARGE_OBJECT_MASK	0x00100000
+
+#define NEW_GEN_TAG		0x00000008
+#define OLD_GEN_MASK		0x00000007
+#define NEW_GEN_MASK		0x00000008
+
 #define META_DIRTY_SHIFT	4
 
+/* Possible values for the bit field extracted by TYPE_MASK. */
 #define HOLE_TYPE		0x00000000
 #define MAINHEAP_TYPE		0x00000100
 #define MAINSTACK_TYPE		0x00000200
@@ -440,24 +445,29 @@
 #define WEAK_PAIRS_TYPE		0x00000600
 #define SYMBOLS_TYPE		0x00000700
 
-#define scannable_tag		0x00001000
-#define unscannable_tag		0x00000000
+/* Possible values for the bit field extracted by SCANNABLE_MASK. */
+#define SCANNABLE_TAG		0x00001000
+#define UNSCANNABLE_TAG		0x00000000
 
-#define dealloc_tag_un		0x00010000
-#define dealloc_tag_at		0x00020000
-#define retain_tag		0x00000000
+/* Possible values for the bit field extracted by DEALLOC_MASK. */
+#define DEALLOC_TAG_UN		0x00010000
+#define DEALLOC_TAG_AT		0x00020000
+#define RETAIN_TAG		0x00000000
 
-#define large_object_tag	0x00100000
+/* Possible  values for  the bit  field extracted  by LARGE_OBJECT_MASK.
+   This is usually logically ORed to an already built _MT tag. */
+#define LARGE_OBJECT_TAG	0x00100000
 
-/* Notice that "hole_mt" is zero. */
-#define hole_mt		(HOLE_TYPE	 | unscannable_tag | retain_tag)
-#define mainheap_mt	(MAINHEAP_TYPE	 | unscannable_tag | retain_tag)
-#define mainstack_mt	(MAINSTACK_TYPE	 | unscannable_tag | retain_tag)
-#define pointers_mt	(POINTERS_TYPE	 | scannable_tag   | dealloc_tag_un)
-#define symbols_mt	(SYMBOLS_TYPE	 | scannable_tag   | dealloc_tag_un)
-#define data_mt		(DATA_TYPE	 | unscannable_tag | dealloc_tag_un)
-#define code_mt		(CODE_TYPE	 | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt	(WEAK_PAIRS_TYPE | scannable_tag   | dealloc_tag_un)
+/* These are precomputed  full values for the 32-bit words  in the PCB's
+   segments vector.  Notice that "hole_mt" is zero. */
+#define hole_mt		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define mainheap_mt	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define mainstack_mt	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define pointers_mt	(POINTERS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define symbols_mt	(SYMBOLS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define data_mt		(DATA_TYPE	 | UNSCANNABLE_TAG | DEALLOC_TAG_UN)
+#define code_mt		(CODE_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define weak_pairs_mt	(WEAK_PAIRS_TYPE | SCANNABLE_TAG   | DEALLOC_TAG_UN)
 
 
 /** --------------------------------------------------------------------
