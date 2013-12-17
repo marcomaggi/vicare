@@ -594,14 +594,14 @@ gc_finalize_guardians (gc_t* gc)
     for(i=0; i<ls->count; i++) {
       tconc_count++;
       ikptr p = ls->ptr[i];
-      ikptr tc = ref(p, off_car);
-      ikptr obj = ref(p, off_cdr);
-      ikptr last_pair = ref(tc, off_cdr);
-      ref(last_pair, off_car) = obj;
-      ref(last_pair, off_cdr) = p;
-      ref(p, off_car) = IK_FALSE_OBJECT;
-      ref(p, off_cdr) = IK_FALSE_OBJECT;
-      ref(tc, off_cdr) = p;
+      ikptr tc = IK_REF(p, off_car);
+      ikptr obj = IK_REF(p, off_cdr);
+      ikptr last_pair = IK_REF(tc, off_cdr);
+      IK_REF(last_pair, off_car) = obj;
+      IK_REF(last_pair, off_cdr) = p;
+      IK_REF(p, off_car) = IK_FALSE_OBJECT;
+      IK_REF(p, off_cdr) = IK_FALSE_OBJECT;
+      IK_REF(tc, off_cdr) = p;
       dirty_vec[IK_PAGE_INDEX(tc)]        = IK_DIRTY_WORD;
       dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
     }
@@ -1050,10 +1050,10 @@ handle_guardians (gc_t* gc)
 	int i;
 	for (i=0; i<ls->count; i++) {
 	  ikptr p = ls->ptr[i];
-	  ikptr tc = ref(p, off_car);
+	  ikptr tc = IK_REF(p, off_car);
 	  if (tc == IK_FORWARD_PTR) {
-	    ikptr np = ref(p, off_cdr);
-	    tc = ref(np, off_car);
+	    ikptr np = IK_REF(p, off_cdr);
+	    tc = IK_REF(np, off_car);
 	  }
 	  if (is_live(tc, gc)) {
 	    final_list = move_tconc(p, final_list);
@@ -1097,10 +1097,10 @@ handle_guardians (gc_t* gc)
     int i;
     for(i=0; i<pend_hold_list->count; i++) {
       ikptr p = pend_hold_list->ptr[i];
-      ikptr tc = ref(p, off_car);
+      ikptr tc = IK_REF(p, off_car);
       if (tc == IK_FORWARD_PTR) {
-        ikptr np = ref(p, off_cdr);
-        tc = ref(np, off_car);
+        ikptr np = IK_REF(p, off_cdr);
+        tc = IK_REF(np, off_car);
       }
       if (is_live(tc, gc)) {
         target = move_tconc(gather_live_object(gc, p, "guardian"), target);
@@ -1123,7 +1123,7 @@ is_live (ikptr x, gc_t* gc)
   tag = IK_TAGOF(x);
   if (tag == immediate_tag)
     return 1;
-  if (IK_FORWARD_PTR == ref(x, -tag))
+  if (IK_FORWARD_PTR == IK_REF(x, -tag))
     return 1;
   gen = gc->segment_vector[IK_PAGE_INDEX(x)] & gen_mask;
   return (gen > gc->collect_gen)? 1 : 0;
@@ -1222,7 +1222,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 {
   int		tag;		/* tag bits of X */
   ikptr		first_word;	/* first word in the block referenced by X */
-  unsigned	segment_bits;	/* status bits for memory segment holding X */
+  uint32_t	segment_bits;	/* status bits for memory segment holding X */
   int		generation;	/* generation index X is in */
   { /* Fixnums and other immediate objects (self contained in the single
        machine word X) do not need to be moved. */
@@ -1535,14 +1535,14 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       return new;
     }
     else if (bignum_tag == (first_word & bignum_mask)) {
-      long	len    = ((unsigned long)first_word) >> bignum_nlimbs_shift;
+      long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
       long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
       ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
       memcpy((char*)(long)(Y - vector_tag),
              (char*)(long)(X - vector_tag),
              memreq);
-      ref(X,          - vector_tag) = IK_FORWARD_PTR;
-      ref(X, wordsize - vector_tag) = Y;
+      IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+      IK_REF(X, wordsize - vector_tag) = Y;
       return Y;
     }
     else if (ratnum_tag == first_word) {

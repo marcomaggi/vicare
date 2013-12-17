@@ -34,19 +34,19 @@ isa_fixnum (ikptr x)
 static int
 isa_vector (ikptr x)
 {
-  return ((IK_TAGOF(x) == vector_tag) && isa_fixnum(ref(x, -vector_tag)));
+  return ((IK_TAGOF(x) == vector_tag) && isa_fixnum(IK_REF(x, -vector_tag)));
 }
 static void
 verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
 {
-  assert(ref(x, 0) == code_tag);
-  ikptr rvec = ref(x, disp_code_reloc_vector);
+  assert(IK_REF(x, 0) == code_tag);
+  ikptr rvec = IK_REF(x, disp_code_reloc_vector);
   assert(isa_vector(rvec));
-  ikptr codesize = ref(x, disp_code_code_size);
+  ikptr codesize = IK_REF(x, disp_code_code_size);
   codesize += 0;
   assert(IK_UNFIX(codesize) >= 0);
   assert(isa_fixnum(codesize));
-  ikptr freevars = ref(x, disp_code_freevars);
+  ikptr freevars = IK_REF(x, disp_code_freevars);
   freevars += 0;
   assert(isa_fixnum(freevars));
   assert(IK_UNFIX(freevars) >= 0);
@@ -110,10 +110,10 @@ verify_code_large (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
 {
   /* have the compiler shut up about unused variables */
   /* s=s; d=d; */
-  ikptr fst = ref(p, 0);
+  ikptr fst = IK_REF(p, 0);
   fst += 0;
   assert(fst == code_tag);
-  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(IK_REF(p, disp_code_code_size));
   assert(code_size >= 0);
   verify_code(p, base, svec, dvec);
   assert(IK_ALIGN(code_size+disp_code_data) >= IK_PAGESIZE);
@@ -124,12 +124,12 @@ static char*
 verify_code_page (char* p, unsigned s, unsigned d,
 		  char* base, unsigned* svec, unsigned* dvec)
 {
-  ikptr fst = ref(p, 0);
+  ikptr fst = IK_REF(p, 0);
   fst += 0;
   if (fst != code_tag) {
     ik_abort("non code object with tag %p found\n", (void*)(long)fst);
   }
-  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(IK_REF(p, disp_code_code_size));
   assert(code_size >= 0);
   int obj_size = IK_ALIGN(code_size + disp_code_data);
   char* result;
@@ -150,7 +150,7 @@ verify_pointers_page (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
   {
     int i = 0;
     while(i < IK_PAGESIZE){
-      verify_object(ref(p, i), base, svec, dvec);
+      verify_object(IK_REF(p, i), base, svec, dvec);
       i += wordsize;
     }
   }
