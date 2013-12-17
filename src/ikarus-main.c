@@ -85,10 +85,10 @@ ikarus_main (int argc, char** argv, char* boot_file)
 	IK_REF(bv, off_bytevector_length) = IK_FIX(n);
 	/* copy the bytes and the terminating zero */
 	memcpy((char*)(bv+off_bytevector_data), s, n+1);
-	ikptr p = ik_unsafe_alloc(pcb, pair_size);
-	ref(p, disp_car) = bv;
-	ref(p, disp_cdr) = arg_list;
-	arg_list = p+pair_tag;
+	ikptr p = iku_pair_alloc(pcb);
+	IK_CAR(p) = bv;
+	IK_CDR(p) = arg_list;
+	arg_list  = p;
       }
     }
     pcb->argv0    = argv[0];
