@@ -1209,7 +1209,10 @@ gather_live_object_proc (gc_t* gc, ikptr X)
  *   The new data area is reserved  in newly allocated memory pages; the
  * allocation  and  bookkeeping  of  such  pages  is  performed  by  the
  * "gc_alloc_new_*()" functions; see the documentation of such functions
- * for more details.
+ * for  more details.   The new  pages end  up referenced  by the  PCB's
+ * segments vector and are registered in  the GC struct; later they will
+ * be scanned  by the function  "collect_loop()", so we should  not scan
+ * them here.
  *
  *   *WARNING* When this function is  called recursively: it is safer to
  * first  update the  memory block  referenced  by X,  then perform  the
