@@ -46,17 +46,28 @@
  ** Type definitions.
  ** ----------------------------------------------------------------- */
 
-/* See the  documentation of the functions  "gc_alloc_new_*" for details
-   on this  data structure.  This data  structure is a node  in a simply
-   linked list. */
+/* This data structure is a node  in a simply linked list; it references
+   one or more generational pages in which live objects are moved during
+   a garbage collection run; such pages are also referenced by the PCB's
+   segments  vector.  When  generational  pages are  registered in  this
+   struct: they  are considered filled  with Scheme objects.   The pages
+   are scanned by the  function "collect_loop()".  See the documentation
+   of the  functions "gc_alloc_new_*" for  further details on  this data
+   structure.  */
 typedef struct qupages_t {
   ikptr p;    /* pointer to the scan start */
   ikptr q;    /* pointer to the scan end */
   struct qupages_t* next;
 } qupages_t;
 
-/* See the  documentation of the functions  "gc_alloc_new_*" for details
-   on this data structure.
+/* This struct references a generational  page in which live objects are
+   moved during a  garbage collection run; such page  is also referenced
+   by  the PCB's  segments vector.   The page  is gradually  filled, one
+   object  after  the other,  until  no  more  room is  available;  then
+   references to the  page are moved in a "qupages_t"  struct.  The page
+   is scanned  by the function "collect_loop()".   See the documentation
+   of the  functions "gc_alloc_new_*" for  further details on  this data
+   structure.
 
    FIXME Is the "base" field actually needed?  It seems to me that it is
    always equal to "aq".  (Marco Maggi; Mon Dec 16, 2013) */

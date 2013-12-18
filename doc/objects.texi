@@ -910,8 +910,8 @@ still fails the process is terminated with exit status
 The reserved memory is @strong{not} initialised to safe values: its
 contents have to be considered invalid.  However, notice that the heap
 is @strong{not} a garbage collection root; so if we leave some machine
-word uninitialised on the heap: nothing bad happens, because the garbage
-collector never sees them.
+words uninitialised on the heap, outside of Scheme objects: nothing bad
+happens, because the garbage collector never sees them.
 @end deftypefun
 
 
@@ -929,8 +929,8 @@ allocation fails: the process is terminated with exit status
 The reserved memory is @strong{not} initialised to safe values: its
 contents have to be considered invalid.  However, notice that the heap
 is @strong{not} a garbage collection root; so if we leave some machine
-word uninitialised on the heap: nothing bad happens, because the garbage
-collector never sees them.
+words uninitialised on the heap, outside of Scheme objects: nothing bad
+happens, because the garbage collector never sees them.
 
 We notice explicitly that this function @strong{does not} trigger a
 garbage collection run, so, when using it, it is not needed to register
