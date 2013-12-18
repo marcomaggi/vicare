@@ -721,8 +721,8 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
      The reserved memory is NOT initialised to safe values: its contents
    have to be considered invalid.  However,  notice that the heap is NOT
    a  garbage  collection  root;  so  if  we  leave  some  machine  word
-   uninitialised on the  heap: nothing bad happens,  because the garbage
-   collector never sees them. */
+   uninitialised on  the heap,  outside of  Scheme objects:  nothing bad
+   happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr		alloc_ptr;
@@ -765,8 +765,8 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
      The reserved memory is NOT initialised to safe values: its contents
    have to be considered invalid.  However,  notice that the heap is NOT
    a  garbage  collection  root;  so  if  we  leave  some  machine  word
-   uninitialised on the  heap: nothing bad happens,  because the garbage
-   collector never sees them. */
+   uninitialised on  the heap,  outside of  Scheme objects:  nothing bad
+   happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr alloc_ptr       = pcb->allocation_pointer;
