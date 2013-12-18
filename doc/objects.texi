@@ -151,7 +151,6 @@ Return an integer representing the @math{3} least significant bits of an
 
 
 @deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
-@deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
 Getter and setter for machine words.  Interpret @var{value_ref} as a
 pointer to an array of @ikptr{} values and locate the value at the
 zero--based @var{byte_offset}.  A use of this macro can appear both as
@@ -230,11 +229,6 @@ and so:
 @example
 s_vector + off_vector_length = p_vector + disp_vector_length
 @end example
-
-@quotation
-@strong{NOTE} @cfunc{ref} is defined only in the internal header file
-and its use is deprecated.
-@end quotation
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -291,6 +285,33 @@ unset.
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
 @end defmac
+
+
+@defmac IK_FORWARD_PTR ((ikptr)-1)
+When a Scheme object's memory block is moved by the garbage collector:
+the first word of the old memory block is overwritten with a special
+value, the ``forward pointer'', which is the symbol
+@code{IK_FORWARD_PTR}.
+
+Notice that when the garbage collector scans, word by word, memory that
+should contain the data area of a Scheme object: it interprets every
+machine word with all the bits set to @code{1} as @code{IK_FORWARD_PTR}.
+
+Newly allocated memory is initialised by Vicare to a sequence of
+@code{IK_FORWARD_PTR} words, which, most likely, will trigger an error
+if the garbage collector scans a machine word we have not explicitly
+initialised to something valid.  Whenever we reserve a portion of memory
+page, with aligned size, for a Scheme object we must initialise all its
+words to something valid.
+
+When we convert a requested size to an aligned size with
+@cfunc{IK_ALIGN}: either zero or one machine word is allocated beyond
+the requested size.  When such additional machine word is allocated: we
+have to initialise it to something valid.  Usually the safe value to
+which we should initialise memory is the fixnum zero: a machine word
+with all the bits set to @code{0}.
+@end defmac
+
 
 The variable values that fit in a single machine word are fixnums,
 characters and port transcoders.  The last byte of these machine words
