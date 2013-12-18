@@ -75,7 +75,13 @@ ikptr
 ik_mmap (ik_ulong size)
 /* Allocate new  memory pages.   All memory  allocation is  performed by
    this function.  The allocated memory  is initialised to a sequence of
-   IK_FORWARD_PTR words. */
+   IK_FORWARD_PTR words.
+
+     If  the allocated  memory  is  used for  the  Scheme  stack or  the
+   generational pages:  we must initialise  every word to a  safe value.
+   If the  allocated memory is  used for the  Scheme heap: we  can leave
+   some words uninitialised, because the heap is not a garbage collector
+   root. */
 {
   ik_ulong npages        = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
   ik_ulong mapsize       = IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(npages);
@@ -148,10 +154,15 @@ static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
 ikptr
 ik_mmap_typed (ik_ulong size, uint32_t type, ikpcb* pcb)
 /* Allocate new  memory pages  or recycle  an old  memory page  from the
-   PCB's cache and return a pointer  to it.  The allocated memory is NOT
-   initialised  to  safe values:  its  contents  have to  be  considered
-   invalid and  initialised to safe  values before being scanned  by the
-   garbage collector. */
+   PCB's cache and return a pointer to it.
+
+     The  allocated  memory  is  NOT initialised  to  safe  values:  its
+   contents have to be considered invalid and initialised to safe values
+   before  being scanned  by the  garbage collector.   If the  allocated
+   memory is  used for the  Scheme stack  or the generational  pages: we
+   must initialise every word to a  safe value.  If the allocated memory
+   is used for  the Scheme heap: we can leave  some words uninitialised,
+   because the heap is not a garbage collector root. */
 {
   ikptr		base;
   if (size == IK_PAGESIZE) {
@@ -697,7 +708,7 @@ ik_delete_pcb (ikpcb* pcb)
 
 ikptr
 ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
-/* Allocate a memory block on the  Scheme heap and return a reference to
+/* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
    through "IK_ALIGN()".
@@ -705,7 +716,13 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
      If not  enough memory is available  on the current heap  segment, a
    garbage collection is  triggered; then allocation is  tried again: if
    it  still   fails  the  process   is  terminated  with   exit  status
-   EXIT_FAILURE.  */
+   EXIT_FAILURE.
+
+     The reserved memory is NOT initialised to safe values: its contents
+   have to be considered invalid.  However,  notice that the heap is NOT
+   a  garbage  collection  root;  so  if  we  leave  some  machine  word
+   uninitialised on the  heap: nothing bad happens,  because the garbage
+   collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr		alloc_ptr;
@@ -735,7 +752,7 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
 }
 ikptr
 ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
-/* Allocate a memory block on the  Scheme heap and return a reference to
+/* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
    through "IK_ALIGN()".  This function is  meant to be used to allocate
@@ -745,9 +762,11 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
    new heap segment is allocated;  if such allocation fails: the process
    is terminated with exit status EXIT_FAILURE.
 
-     The  allocated  memory  is  NOT initialised  to  safe  values:  its
-   contents have to be considered invalid and initialised to safe values
-   before being scanned by the garbage collector. */
+     The reserved memory is NOT initialised to safe values: its contents
+   have to be considered invalid.  However,  notice that the heap is NOT
+   a  garbage  collection  root;  so  if  we  leave  some  machine  word
+   uninitialised on the  heap: nothing bad happens,  because the garbage
+   collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr alloc_ptr       = pcb->allocation_pointer;

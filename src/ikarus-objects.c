@@ -612,6 +612,12 @@ ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
     ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
     IK_REF(s, 0) = s_len;
     memset((char*)(long)(s+disp_vector_data), 0, s_len);
+    /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
+       memory is on  the Scheme heap, which is not  a garbage collection
+       root.   This   means  we  can  freely   leave  uninitialised  the
+       additional memory reserved when  converting the requested size to
+       the aligned  size, because the  garbage collector will  never see
+       it. */
     return s | vector_tag;
   } else
     return 0;
@@ -627,6 +633,11 @@ ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   long	align_size = IK_ALIGN(disp_vector_data + s_len);
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
+  /* "ik_safe_alloc()"  returns uninitialised  invalid memory;  but such
+     memory is  on the Scheme  heap, which  is not a  garbage collection
+     root.  This means we can  freely leave uninitialised the additional
+     memory reserved when  converting the requested size  to the aligned
+     size, because the garbage collector will never see it. */
   return s_vec;
 }
 ikptr
@@ -637,6 +648,11 @@ iku_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   long	align_size = IK_ALIGN(disp_vector_data + s_len);
   ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
+  /* "ik_unsafe_alloc()" returns uninitialised  invalid memory; but such
+     memory is  on the Scheme  heap, which  is not a  garbage collection
+     root.  This means we can  freely leave uninitialised the additional
+     memory reserved when  converting the requested size  to the aligned
+     size, because the garbage collector will never see it. */
   return s_vec;
 }
 
@@ -651,7 +667,11 @@ ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
+     fixnum zero.  We avoid setting to zero the additional word, if any,
+     reserved by  "ik_safe_alloc()" when  converting from  the requested
+     size to the aligned size; such word is on the Scheme heap, which is
+     not a garbage  collector root, so the garbage  collector will never
+     see it. */
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
@@ -664,7 +684,11 @@ iku_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
+     fixnum zero.  We avoid setting to zero the additional word, if any,
+     reserved by  "ik_safe_alloc()" when  converting from  the requested
+     size to the aligned size; such word is on the Scheme heap, which is
+     not a garbage  collector root, so the garbage  collector will never
+     see it. */
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
@@ -715,11 +739,12 @@ ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
     p_stru = ik_safe_alloc(pcb, align_size);
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
-    /* "ik_safe_alloc()" returns uninitialised invalid memory.  Reset to
-       the fixnum zero the last word memory reserved for this object, to
-       be safe  that, after initialising  the struct, all  the allocated
-       words have valid valued. */
-    memset((uint8_t*)(p_stru + (align_size - wordsize)), 0, wordsize);
+    /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
+       memory is on  the Scheme heap, which is not  a garbage collection
+       root.   This   means  we  can  freely   leave  uninitialised  the
+       additional memory reserved when  converting the requested size to
+       the aligned  size, because the  garbage collector will  never see
+       it. */
   }
   pcb->root9 = NULL;
   return p_stru | record_tag;
@@ -739,9 +764,13 @@ ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
     /* Set the  reserved data  area to zero;  remember that  the machine
-       word 0  is the fixnum  zero.  We want  to reset also  the machine
-       word  additionally reserved,  if  any, by  converting the  actual
-       requested size to the aligned size. */
+       word 0 is the fixnum zero.
+
+         We want to  reset also the machine  word additionally reserved,
+       if any,  by converting the  actual requested size to  the aligned
+       size.  Strictly speaking: this is  useless because this memory is
+       on the  heap, which is  not a  garbage collection root,  so words
+       left uninitialised are not seen by the garbage collector. */
     memset((uint8_t *)(p_stru + disp_record_data), 0, align_size - wordsize);
   }
   pcb->root9 = NULL;

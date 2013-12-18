@@ -896,10 +896,10 @@ We can simulate the computation with:
 @end deftypefn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the Scheme heap hot block and return a
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
+Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
-reference the process control block, @var{align_size} must be the
+reference the process control block, @var{aligned_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the current heap hot block: a
@@ -907,14 +907,16 @@ garbage collection is triggered; then allocation is tried again: if it
 still fails the process is terminated with exit status
 @code{EXIT_FAILURE}.
 
-The allocated memory is @strong{not} initialised to safe values: its
-contents have to be considered invalid and initialised to safe values
-before being scanned by the garbage collector.
+The reserved memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid.  However, notice that the heap
+is @strong{not} a garbage collection root; so if we leave some machine
+word uninitialised on the heap: nothing bad happens, because the garbage
+collector never sees them.
 @end deftypefun
 
 
 @deftypefun ikptr ik_unsafe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the Scheme heap hot block and return a
+Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{align_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
@@ -924,9 +926,11 @@ hot block is stored away and a new hot block is allocated; if such
 allocation fails: the process is terminated with exit status
 @code{EXIT_FAILURE}.
 
-The allocated memory is @strong{not} initialised to safe values: its
-contents have to be considered invalid and initialised to safe values
-before being scanned by the garbage collector.
+The reserved memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid.  However, notice that the heap
+is @strong{not} a garbage collection root; so if we leave some machine
+word uninitialised on the heap: nothing bad happens, because the garbage
+collector never sees them.
 
 We notice explicitly that this function @strong{does not} trigger a
 garbage collection run, so, when using it, it is not needed to register
