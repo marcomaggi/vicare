@@ -169,7 +169,7 @@ ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_co
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
+  buffer = ((uint8_t *)IK_BYTEVECTOR_DATA_VOIDP(buffer_bv)) + IK_UNFIX(buffer_offset);
   errno  = 0;
   rv     = read(IK_NUM_TO_FD(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
@@ -179,7 +179,7 @@ ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_c
 {
   ssize_t       rv;
   uint8_t *     buffer;
-  buffer = IK_BYTEVECTOR_DATA_VOIDP(buffer_bv) + IK_UNFIX(buffer_offset);
+  buffer = ((uint8_t*)IK_BYTEVECTOR_DATA_VOIDP(buffer_bv)) + IK_UNFIX(buffer_offset);
   errno  = 0;
   rv     = write(IK_NUM_TO_FD(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();

@@ -141,7 +141,7 @@ static int string_count		= 0;
 static int htable_count		= 0;
 #endif
 
-static const unsigned int const META_MT[meta_count] = {
+static const unsigned int META_MT[meta_count] = {
   POINTERS_MT,
   CODE_MT,
   DATA_MT,
@@ -275,7 +275,7 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
 ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
-  static const unsigned int const NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
+  static const unsigned int NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
     (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
     (2 << META_DIRTY_SHIFT) | 2 | NEW_GEN_TAG,
     (1 << META_DIRTY_SHIFT) | 3 | NEW_GEN_TAG,
@@ -2286,8 +2286,9 @@ collect_loop (gc_t* gc)
    object: such object must itself be  moved to a new generational page,
    and so on recursively.
 
-     After every single call or multiple calls to "gather_live_object()"
-   at least one call to this function must be performed.
+     After calling one or  multiple time "gather_live_object()" at least
+   one call  to this function must  be performed.  This function  can be
+   called any number of times.
 
      The new generational pages are  also referenced by the "queues" and
    "meta" fields  of the GC struct.   The "meta" pages are  half filled,
@@ -2346,7 +2347,7 @@ collect_loop (gc_t* gc)
 	   "gather_live_object()" in this function  might push new nodes
 	   in the "queues[meta_ptrs]" field; we will process these nodes
 	   later.  If no new  nodes are pushed: "queues[meta_ptrs]" will
-	   be left NULL.*/
+	   be left NULL. */
         gc->queues[meta_ptrs] = NULL;
         do {
           ikptr p_word = qu->p;

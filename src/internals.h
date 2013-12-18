@@ -1666,7 +1666,7 @@ ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 
 /* Least significant  bits tags  for the  first word  in records  of the
    relocation vector for code objects. */
-#define IK_RELOC_RECORD_MASK_TAG		0b11
+#define IK_RELOC_RECORD_MASK_TAG		0x3 /* = 0b11 */
 #define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
 #define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
 #define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
