@@ -236,6 +236,10 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
  * 3. the symbol-table
  * 4. the "root" fields of the PCB
  *
+ *   Notice that the heap is NOT a  GC root; so if we leave some machine
+ * word  uninitialised on  the heap:  nothing bad  happens, because  the
+ * garbage collector never sees them.
+ *
  * "ik_collect()" is called from scheme under the following constraints:
  *
  * 1..An attempt is  made to allocate a small object  and the allocation
@@ -399,7 +403,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 
   /* Delete the  linked list  referencing memory  blocks that  once were
      nursery  hot memory,  and are  now fully  used; the  blocks' memory
-     pages are cached in the PCB. */
+     pages are cached in the PCB to be recycled later. */
   if (old_heap_pages) {
     ikmemblock* p = old_heap_pages;
     do {
