@@ -1310,9 +1310,11 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     memcpy((char*)(long)(Y - closure_tag),
            (char*)(long)(X - closure_tag),
            size);
-    IK_REF(Y,          - closure_tag) = gather_live_code_entry(gc, IK_REF(Y,-closure_tag));
+    /* First     process      the     old     memory,      then     call
+       "gather_live_code_entry()". */
     IK_REF(X,          - closure_tag) = IK_FORWARD_PTR;
     IK_REF(X, wordsize - closure_tag) = Y;
+    IK_REF(Y,          - closure_tag) = gather_live_code_entry(gc, IK_REF(Y,-closure_tag));
 #if ACCOUNTING
     closure_count++;
 #endif
@@ -1345,7 +1347,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     }
 
     case code_tag: {
-      /* Symbol object.  It goes in the code meta page. */
+      /* Code object.  It goes in the code meta page. */
       ikptr	entry     = X + off_code_data;
       ikptr	new_entry = gather_live_code_entry(gc, entry);
       return new_entry - off_code_data;
@@ -1396,12 +1398,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
     case system_continuation_tag: {
       /* System (C language)  continuation object.  It goes  in the data
-	 meta pages.  Notice that we gather the next continuation object
-	 here,  because   "collect_loop()"  does  not  scan   data  meta
-	 pages. */
+	 meta pages.   Why it goes in  the data page?  Because  it is an
+	 immutable object with a single  field holding a tagged pointer.
+	 Notice  that  we  gather  the next  continuation  object  here,
+	 because "collect_loop()" does not scan data meta pages. */
       ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
       ikptr	top  = IK_REF(X, off_system_continuation_top);
       ikptr	next = IK_REF(X, off_system_continuation_next);
+      /* First     process     the     old     memory,     then     call
+	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
@@ -1433,6 +1438,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
       ikptr num = IK_REF(X, off_ratnum_num);
       ikptr den = IK_REF(X, off_ratnum_den);
+      /* First     process     the     old     memory,     then     call
+	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
@@ -1455,6 +1462,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_compnum_real);
       ikptr im = IK_REF(X, off_compnum_imag);
+      /* First     process     the     old     memory,     then     call
+	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
@@ -1476,6 +1485,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       ikptr Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
       ikptr rl = IK_REF(X, off_cflonum_real);
       ikptr im = IK_REF(X, off_cflonum_imag);
+      /* First     process     the     old     memory,     then     call
+	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
