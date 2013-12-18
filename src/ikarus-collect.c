@@ -1558,7 +1558,6 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	vector_count++;
 #endif
       }
-/* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
       else if (IK_TAGOF(first_word) == rtd_tag) {
 	/* Vicare  struct  or  R6RS   record,  including  the  structure
 	 * descriptor and  the record type  descriptor.  It goes  in the
@@ -1594,25 +1593,32 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	ikptr		s_rtd    = first_word;
 	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
 	ikptr		Y;
-#if 0
-	ik_ulong	memreq   = disp_record_data + s_length;
-	ik_ulong	memsize  = IK_ALIGN(memreq);
-	Y = gc_alloc_new_ptr(memsize, gc) | record_tag;
+	ik_ulong	requested_size = disp_record_data + s_length;
+	ik_ulong	aligned_size   = IK_ALIGN(requested_size);
+	Y = gc_alloc_new_ptr(aligned_size, gc) | record_tag;
 	IK_REF(Y, off_record_rtd) = s_rtd;
-	if (memreq != memsize) {
-	  ik_debug_message("%s: handling struct, length=%ld, req=%ld, ali=%ld, odd=%ld, even=%ld",
-	  __func__, IK_UNFIX(s_length), memreq, memsize,
-	  s_length+disp_record_data,
-	  s_length+(2*wordsize));
-	}
 	{
-	  uint8_t * dst = (uint8_t *)(Y + off_record_data);
-	  uint8_t * src = (uint8_t *)(X + off_record_data);
-	  memset(dst + (memsize - wordsize), 0, wordsize);
-	  memset(dst, 0, memsize);
+	  uint8_t * dst = (uint8_t *)(Y + off_record_data); /* untagged pointer */
+	  uint8_t * src = (uint8_t *)(X + off_record_data); /* untagged pointer */
+	  /* Copy the struct fields */
 	  memcpy(dst, src, s_length);
+	  /* Reset the  additional machine word, if  any, allocated when
+	     converting  from the  requested size  to the  aligned size;
+	     this memory is  part of the generational  pages (scanned by
+	     the collector), so we must do it. */
+	  if (requested_size < aligned_size)
+	    memset(dst + s_length, 0, wordsize);
 	}
-#else
+	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
+	IK_REF(X, wordsize - vector_tag) = Y;
+	return Y;
+#if 0 /* NOTE  The following,  excluded,  version of  the code  handling
+	 structs is derived  from the original Ikarus code.   It is more
+	 complicated, but more verified.  I am keeping it here as future
+	   reference.  (Marco Maggi; Wed Dec 18, 2013) */
+	ikptr		s_rtd    = first_word;
+	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
+	ikptr		Y;
 	if (s_length & ((1<<IK_ALIGN_SHIFT)-1)) {
 	  // fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_length));
 	  /* The number of  fields is odd, which means  that the number of
@@ -1653,10 +1659,10 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	  }
 	  IK_REF(Y, s_length + off_record_data) = 0;
 	}
-#endif
 	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
 	IK_REF(X, wordsize - vector_tag) = Y;
 	return Y;
+#endif /* end of excluded code handling structs */
       }
       else if (IK_TAGOF(first_word) == pair_tag) {
 	/* tcbucket object.  It goes in the pointers meta page.
