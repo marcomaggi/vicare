@@ -2433,7 +2433,7 @@ collect_loop (gc_t* gc)
 	  /* There  is  at least  one  object  in the  "meta[meta_pair]"
 	     field: we will have to perform another full iteration. */
           done = 0;
-          do{
+          do {
             meta->aq = q;
             for (; p < q; p += pair_size) {
               IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "rem");
@@ -2451,7 +2451,7 @@ collect_loop (gc_t* gc)
 	  /* There  is at  least one  object in  the "meta[meta_symbol]"
 	     field: we will have to perform another full iteration. */
           done = 0;
-          do{
+          do {
             meta->aq = q;
             for (; p < q; p += wordsize) {
               IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "sym");
@@ -2469,7 +2469,7 @@ collect_loop (gc_t* gc)
 	  /* There  is  at least  one  object  in the  "meta[meta_ptrs]"
 	     field: we will have to perform another full iteration. */
           done = 0;
-          do{
+          do {
             meta->aq = q;
             for (; p < q; p += wordsize) {
               IK_REF(p,0) = gather_live_object(gc, IK_REF(p,0), "rem2");
