@@ -1484,9 +1484,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	   they are in such a number that multiplying the fixnum's value
 	   by the wordsize is  equivalent to right-shifting the fixnum's
 	   value by the fixnum tag. */
-	ikptr	size   = first_word;
-	ikptr	nbytes = size + disp_vector_data; /* not aligned */
-	ikptr	memreq = IK_ALIGN(nbytes);
+	ikptr	s_length = first_word;
+	ikptr	nbytes   = s_length + disp_vector_data; /* not aligned */
+	ikptr	memreq   = IK_ALIGN(nbytes);
 	if (memreq >= IK_PAGESIZE) { /* big vector */
 	  if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
 	    /* Big  vector  already stored  in  pages  marked as  "large
@@ -1498,27 +1498,38 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	  } else {
 	    /* Big  vector not  yet  stored in  pages  marked as  "large
 	       object". */
+	    /* "gc_alloc_new_large_ptr()" wants the real number of bytes
+	       as argument, not the aligned size. */
 	    ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
 	    IK_REF(Y, off_vector_length) = first_word;
-	    /* FIXME What  is this zeroed  word?  (Marco Maggi;  Tue Dec
-	       17, 2013) */
+	    /* Set to  the fixum  zero the  last word  in the  data area
+	       reserved  for  the  vector.   This is  to  avoid  leaving
+	       uninitialised  a machine  word  right  after the  vector;
+	       setting this in any case is safe either the vector has an
+	       even or odd number of slots. */
 	    IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+	    /* Copy all the vector items from source to dest. */
 	    memcpy((char*)(long)(Y + off_vector_data),
 		   (char*)(long)(X + off_vector_data),
-		   size);
+		   s_length);
 	    IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
 	    IK_REF(X, wordsize - vector_tag) = Y;
 	    return Y;
 	  }
 	} else { /* small vector */
+	  /* "gc_alloc_new_ptr()" wants an aligned size as argument. */
 	  ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
 	  IK_REF(Y, off_vector_length) = first_word;
-	  /* FIXME What is this zeroed  word?  (Marco Maggi; Tue Dec 17,
-	     2013) */
+	  /* Set  to the  fixum  zero the  last word  in  the data  area
+	     reserved  for  the  vector.    This  is  to  avoid  leaving
+	     uninitialised  a  machine  word  right  after  the  vector;
+	     setting this in  any case is safe either the  vector has an
+	     even or odd number of slots. */
 	  IK_REF(Y, memreq - vector_tag - wordsize) = 0;
+	  /* Copy all the vector items from source to dest. */
 	  memcpy((char*)(long)(Y + off_vector_data),
 		 (char*)(long)(X + off_vector_data),
-		 size);
+		 s_length);
 	  IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
 	  IK_REF(X, wordsize - vector_tag) = Y;
 	  return Y;
@@ -1529,84 +1540,100 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       }
 /* SONO ARRIVATO QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII */
       else if (IK_TAGOF(first_word) == rtd_tag) {
-	/* Vicare struct or  R6RS record.  It goes in  the pointers meta
-	   page. */
-	/* FIXME What the  hell is going on with  this moving operation?!?
-	   It  does not  look like  a legal  move operation  for  RTDs and
-	   struct instances.  (Marco Maggi; Jan 11, 2012) */
-	/* The  layout  of   Vicare's  struct-type  descriptors  and  R6RS
-	   record-type descriptors is as follows:
-
-	   Vicare's struct-type descriptor:
-
-	   RTD  name size  other fields
-	   |----|----|----|------------
-
-	   R6RS record-type descriptor:
-
-	   RTD  name size  other fields
-	   |----|----|----|------------
-
-	   The layout  of Vicare's struct instances  R6RS record instances
-	   is as follows:
-
-	   Vicare's struct instance
-
-	   RTD   fields
-	   |----|---------
-
-	   R6RS record instance:
-
-	   RTD   fields
-	   |----|---------
-
-	   Both  Vicare's  struct-type  descriptors and  R6RS  record-type
-	   descriptors have the total number of fields at the same offset.
-	   The value  in the number-of-fields word  represents: as fixnum,
-	   the number of  fields in an instance; as  C integer, the number
-	   of bytes needed to store the fields of an instance. */
-	ikptr	s_number_of_fields = IK_REF(first_word, off_rtd_length);
-	ikptr	Y;
-	if (s_number_of_fields & ((1<<IK_ALIGN_SHIFT)-1)) {
-	  // fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_number_of_fields));
+	/* Vicare  struct  or  R6RS   record,  including  the  structure
+	 * descriptor and  the record type  descriptor.  It goes  in the
+	 * pointers meta page.
+	 *
+	 *   The  layout  of  Vicare struct-type  descriptors  and  R6RS
+	 * record-type descriptors is as follows:
+	 *
+	 *     RTD  name length  other fields
+	 *    |----|----|------|------------	struct descriptor
+	 *
+	 *     RTD  name length  other fields
+	 *    |----|----|------|------------	R6RS descriptor
+	 *
+	 * the  layout  of Vicare's  struct  instances  and R6RS  record
+	 * instances is as follows:
+	 *
+	 *     RTD   fields
+	 *    |----|---------			struct instance
+	 *
+	 *     RTD   fields
+	 *    |----|---------			R6RS record instance
+	 *
+	 * the type descriptors are special cases of struct instance.
+	 *
+	 *   Both  Vicare struct-type  descriptors and  R6RS record-type
+	 * descriptors have the  total number of fields  (length) at the
+	 * same offset.   The value  in the  length word  represents: as
+	 * fixnum, the  number of fields  in an instance; as  C integer,
+	 * the  number  of  bytes  needed  to store  the  fields  of  an
+	 * instance.
+	 */
+	ikptr		s_rtd    = first_word;
+	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
+	ikptr		Y;
+#if 0
+	ik_ulong	memreq   = disp_record_data + s_length;
+	ik_ulong	memsize  = IK_ALIGN(memreq);
+	Y = gc_alloc_new_ptr(memsize, gc) | record_tag;
+	IK_REF(Y, off_record_rtd) = s_rtd;
+	if (memreq != memsize) {
+	  ik_debug_message("%s: handling struct, length=%ld, req=%ld, ali=%ld, odd=%ld, even=%ld",
+	  __func__, IK_UNFIX(s_length), memreq, memsize,
+	  s_length+disp_record_data,
+	  s_length+(2*wordsize));
+	}
+	{
+	  uint8_t * dst = (uint8_t *)(Y + off_record_data);
+	  uint8_t * src = (uint8_t *)(X + off_record_data);
+	  memset(dst + (memsize - wordsize), 0, wordsize);
+	  memset(dst, 0, memsize);
+	  memcpy(dst, src, s_length);
+	}
+#else
+	if (s_length & ((1<<IK_ALIGN_SHIFT)-1)) {
+	  // fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_length));
 	  /* The number of  fields is odd, which means  that the number of
 	     words needed to store this record is even.
 
-	     s_number_of_fields = n * object_alignment + 4
+	     s_length = n * object_alignment + 4
 	     => memreq = n * object_alignment + 8 = (n+1) * object_alignment
 	     => aligned */
-	  Y = gc_alloc_new_ptr(s_number_of_fields+wordsize, gc) | vector_tag;
-	  IK_REF(Y, off_record_rtd) = first_word;
+	  Y = gc_alloc_new_ptr(s_length+disp_record_data, gc) | vector_tag;
+	  IK_REF(Y, off_record_rtd) = s_rtd;
 	  {
 	    ikptr i;
 	    ikptr dst = Y + off_record_data; /* DST is untagged */
 	    ikptr src = X + off_record_data; /* SRC is untagged */
 	    IK_REF(dst, 0) = IK_REF(src, 0);
-	    for (i=wordsize; i<s_number_of_fields; i+=(2*wordsize)) {
+	    for (i=wordsize; i<s_length; i+=(2*wordsize)) {
 	      IK_REF(dst, i)          = IK_REF(src, i);
 	      IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
 	    }
 	  }
 	} else {
-	  // fprintf(stderr, "%lx padded size %ld\n", X, IK_UNFIX(s_number_of_fields));
+	  // fprintf(stderr, "%lx padded size %ld\n", X, IK_UNFIX(s_length));
 	  /* The number of fields is  even, which means that the number of
 	     words needed to store this record is odd.
 
-	     s_number_of_fields = n * object_alignment
+	     s_length = n * object_alignment
 	     => memreq = n * object_alignment + 4 + 4 (pad) */
-	  Y = gc_alloc_new_ptr(s_number_of_fields+(2*wordsize), gc) | vector_tag;
-	  IK_REF(Y, off_record_rtd) = first_word;
+	  Y = gc_alloc_new_ptr(s_length+(2*wordsize), gc) | vector_tag;
+	  IK_REF(Y, off_record_rtd) = s_rtd;
 	  {
 	    ikptr i;
 	    ikptr dst = Y + off_record_data; /* DST is untagged */
 	    ikptr src = X + off_record_data; /* SRC is untagged */
-	    for (i=0; i<s_number_of_fields; i+=(2*wordsize)) {
+	    for (i=0; i<s_length; i+=(2*wordsize)) {
 	      IK_REF(dst, i)          = IK_REF(src, i);
 	      IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
 	    }
 	  }
-	  IK_REF(Y, s_number_of_fields + off_record_data) = 0;
+	  IK_REF(Y, s_length + off_record_data) = 0;
 	}
+#endif
 	IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
 	IK_REF(X, wordsize - vector_tag) = Y;
 	return Y;
@@ -2002,7 +2029,7 @@ gc_alloc_new_large_ptr (int size, gc_t* gc)
   /* Reset to zero  the portion of memory  that will not be  used by the
      large object. */
   bzero((char*)(long)(mem+size), memreq-size);
-  /* Retake   the   segment   vector   because   memory   allocated   by
+  /* Retake   the   segments   vector  because   memory   allocated   by
      "ik_mmap_typed()" might  have caused  the reallocation of  the page
      vectors. */
   gc->segment_vector = gc->pcb->segment_vector;

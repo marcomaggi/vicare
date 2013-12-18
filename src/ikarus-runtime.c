@@ -94,6 +94,23 @@ ik_mmap (ik_ulong size)
 #else
   char* mem = win_mmap(mapsize);
 #endif
+  /* Notice that when the garbage  collector scans, word by word, memory
+     that should contain the data area of a Scheme object: it interprets
+     every machine word with all the bits set to 1 as IK_FORWARD_PTR.
+
+       Here we initialise  every allocated memory page to  a sequence of
+     IK_FORWARD_PTR words, which, most likely,  will trigger an error if
+     the garbage collector  scans a machine word we  have not explicitly
+     initialised to something  valid.  Whenever we reserve  a portion of
+     memory  page,  with aligned  size,  for  a  Scheme object  we  must
+     initialise all its words to something valid.
+
+       When  we  convert  a  requested  size to  an  aligned  size  with
+     "IK_ALIGN()": either zero  or one machine word  is allocated beyond
+     the  requested   size.   When  such  additional   machine  word  is
+     allocated: we  have to initialise  it to something  valid.  Usually
+     the safe value  to which we should initialise memory  is the fixnum
+     zero: a machine word with all the bits set to 0. */
   memset(mem, -1, mapsize);
 #ifdef VICARE_DEBUGGING
   ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__, (long)mem, ((long)(mem))+mapsize-1);

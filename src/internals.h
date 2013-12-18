@@ -410,10 +410,6 @@
 #define IK_GUARDIANS_GENERATION_NUMBER	0
 #define IK_GC_GENERATION_COUNT		5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
-/* This  definition must  be  kept  in sync  with  the primitive  Scheme
-   operation $FORWARD-PTR? */
-#define IK_FORWARD_PTR		((ikptr)-1)
-
 /* The PCB's segments  vector is an array of 32-bit  words, each being a
  * bit field  representing the status  of an allocated memory  page.  We
  * logic  AND  the following  masks  to  such  32-bit words  to  extract
@@ -1026,6 +1022,18 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
  ** Basic object related macros.
  ** ----------------------------------------------------------------- */
 
+/* When  a  Scheme  object's  memory  block  is  moved  by  the  garbage
+   collector: the first word of the old memory block is overwritten with
+   a  special  value,  the  "forward   pointer",  which  is  the  symbol
+   IK_FORWARD_PTR.  See the garbage collector for details.
+
+     Notice that when the garbage collector scans memory: it interpretes
+   every machine word with all the bits set to 1 as IK_FORWARD_PTR.
+
+   NOTE This definition  must be kept in sync with  the primitive Scheme
+   operation "$forward-ptr?". */
+#define IK_FORWARD_PTR	((ikptr)-1)
+
 #define IK_ALIGN_SHIFT	(1 + wordshift)
 #define IK_ALIGN_SIZE	(2 * wordsize)
 #define immediate_tag	7
@@ -1034,9 +1042,17 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 
 #define IK_REF(X,N)	(((ikptr*)(((long)(X)) + ((long)(N))))[0])
 
-/* The smallest multiple of the wordsize which is greater than N. */
-#define IK_ALIGN(N) \
-  ((((N) + IK_ALIGN_SIZE - 1) >>  IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
+/* This  macro computes  the number  of  bytes to  reserve in  allocated
+   memory for the  data area of a Scheme object;  the reserved memory is
+   always  an even  number  of machine  words, at  least  2.  On  32-bit
+   platforms: the granularity of the aligned sizes is 8 bytes; on 64-bit
+   platforms: the granularity of the aligned sizes is 16 bytes.
+
+     This is: to satisfy the garbage  collector, which needs 2 words for
+   its machinery; to have untagged pointers to Scheme objects with the 3
+   least significant bits set to zero. */
+#define IK_ALIGN(NUMBER_OF_BYTES) \
+  ((((NUMBER_OF_BYTES) + IK_ALIGN_SIZE - 1) >> IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
 
 #define IK_FALSE_OBJECT		((ikptr)0x2F)
 #define IK_TRUE_OBJECT		((ikptr)0x3F)
