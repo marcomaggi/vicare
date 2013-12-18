@@ -897,26 +897,36 @@ We can simulate the computation with:
 
 
 @deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the Scheme heap and return a reference to it
-as an @strong{untagged} pointer.  @var{pcb} must reference the process
-control block, @var{align_size} must be the requested number of bytes
-filtered through @cfunc{IK_ALIGN}.
+Allocate a memory block on the Scheme heap hot block and return a
+reference to it as an @strong{untagged} pointer.  @var{pcb} must
+reference the process control block, @var{align_size} must be the
+requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap segment: a garbage
-collection is triggered; then allocation is tried again: if it still
-fails the process is terminated with exit status @code{EXIT_FAILURE}.
+If not enough memory is available on the current heap hot block: a
+garbage collection is triggered; then allocation is tried again: if it
+still fails the process is terminated with exit status
+@code{EXIT_FAILURE}.
+
+The allocated memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid and initialised to safe values
+before being scanned by the garbage collector.
 @end deftypefun
 
 
 @deftypefun ikptr ik_unsafe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the Scheme heap and return a reference to it
-as an @strong{untagged} pointer.  @var{pcb} must reference the process
-control block, @var{align_size} must be the requested number of bytes
-filtered through @cfunc{IK_ALIGN}.
+Allocate a memory block on the Scheme heap hot block and return a
+reference to it as an @strong{untagged} pointer.  @var{pcb} must
+reference the process control block, @var{align_size} must be the
+requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap segment: a new
-heap segment is allocated; if such allocation fails: the process is
-terminated with exit status @code{EXIT_FAILURE}.
+If not enough memory is available on the current heap hot block: such
+hot block is stored away and a new hot block is allocated; if such
+allocation fails: the process is terminated with exit status
+@code{EXIT_FAILURE}.
+
+The allocated memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid and initialised to safe values
+before being scanned by the garbage collector.
 
 We notice explicitly that this function @strong{does not} trigger a
 garbage collection run, so, when using it, it is not needed to register

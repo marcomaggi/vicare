@@ -152,7 +152,9 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
  *
  * - Mark all its pages as pure in the dirty vector.
  *
- * - Either register it in the uncached pages or unmap it.
+ * - Either register it  in the uncached pages or unmap  it.  The memory
+ *   in the cached pages  is NOT reset in any way:  its contents is what
+ *   it is.
  */
 {
   assert(base >= pcb->memory_base);
@@ -409,7 +411,10 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
     old_heap_pages = NULL;
   }
 
-  /* Release the old nursery heap hot block and allocate a new one. */
+  /* Release the  old nursery  heap hot  block and  allocate a  new one.
+     Notice that the allocated memory is NOT initialised to safe values:
+     its contents have to be  considered invalid and initialised to safe
+     values before being scanned by the garbage collector. */
   {
     ik_ulong free_space = ((ik_ulong)pcb->allocation_redline) - ((ik_ulong)pcb->allocation_pointer);
     if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {

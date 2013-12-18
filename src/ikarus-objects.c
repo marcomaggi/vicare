@@ -704,42 +704,48 @@ ik_is_struct (ikptr R)
 ikptr
 ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
-   descriptor.  All   the  fields  left  uninitialised.    Make  use  of
+   descriptor.   All the  fields are  left uninitialised.   Make use  of
    "pcb->root9". */
 {
-  long	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
-  /* Do not ask me why, but IK_ALIGN is needed here. */
-  long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr s_stru;
+  ik_ulong	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  ik_ulong	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
-    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_stru);
-    IK_REF(s_stru, off_record_rtd) = s_rtd;
+    p_stru = ik_safe_alloc(pcb, align_size);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
+    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    /* "ik_safe_alloc()" returns uninitialised invalid memory.  Reset to
+       the fixnum zero the last word memory reserved for this object, to
+       be safe  that, after initialising  the struct, all  the allocated
+       words have valid valued. */
+    memset((uint8_t*)(p_stru + (align_size - wordsize)), 0, wordsize);
   }
-  return s_stru;
+  pcb->root9 = NULL;
+  return p_stru | record_tag;
 }
 ikptr
 ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
-   descriptor. All the fields are  initialised to the fixnum zero.  Make
+   descriptor.  All the fields are initialised to the fixnum zero.  Make
    use of "pcb->root9". */
 {
-  ikptr	s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
-  /* Do not ask me why, but IK_ALIGN is needed here. */
-  long	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
-  ikptr s_stru;
+  ikptr		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
+  ik_ulong	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
+  ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
-    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_stru);
-    IK_REF(s_stru, off_record_rtd) = s_rtd;
+    p_stru = ik_safe_alloc(pcb, align_size);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
+    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    /* Set the  reserved data  area to zero;  remember that  the machine
+       word 0  is the fixnum  zero.  We want  to reset also  the machine
+       word  additionally reserved,  if  any, by  converting the  actual
+       requested size to the aligned size. */
+    memset((uint8_t *)(p_stru + disp_record_data), 0, align_size - wordsize);
   }
   pcb->root9 = NULL;
-  /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
-  memset((char*)(long)(s_stru + off_record_data), 0, s_num_of_fields);
-  return s_stru;
+  return p_stru | record_tag;
 }
 
 

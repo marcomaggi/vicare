@@ -45,9 +45,6 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
-static void set_page_range_type(ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
-static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
-
 
 /** --------------------------------------------------------------------
  ** C language like memory allocation.
@@ -76,7 +73,9 @@ ik_free (void* x, int size)
 
 ikptr
 ik_mmap (ik_ulong size)
-/* All memory allocation is performed by this function. */
+/* Allocate new  memory pages.   All memory  allocation is  performed by
+   this function.  The allocated memory  is initialised to a sequence of
+   IK_FORWARD_PTR words. */
 {
   ik_ulong npages        = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
   ik_ulong mapsize       = IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(npages);
@@ -143,12 +142,22 @@ ik_munmap (ikptr mem, ik_ulong size)
  ** Memory mapping and tagging for garbage collection.
  ** ----------------------------------------------------------------- */
 
+static void set_page_range_type       (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
+static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
+
 ikptr
 ik_mmap_typed (ik_ulong size, uint32_t type, ikpcb* pcb)
+/* Allocate new  memory pages  or recycle  an old  memory page  from the
+   PCB's cache and return a pointer  to it.  The allocated memory is NOT
+   initialised  to  safe values:  its  contents  have to  be  considered
+   invalid and  initialised to safe  values before being scanned  by the
+   garbage collector. */
 {
   ikptr		base;
   if (size == IK_PAGESIZE) {
-    /* If available, recycle a page from the cache. */
+    /* If available, recycle  a page from the cache.   Remember that the
+       memory in the cached pages is  NOT reset in any way: its contents
+       is what it is. */
     ikpage *	pages = pcb->cached_pages;
     if (pages) {
       /* Extract the first page from the linked list of cached pages. */
@@ -687,61 +696,63 @@ ik_delete_pcb (ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ik_safe_alloc (ikpcb * pcb, ik_ulong size)
+ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
-   block, SIZE  must be the  requested number of bytes  filtered through
-   "IK_ALIGN()".
+   block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
+   through "IK_ALIGN()".
 
-   If  not enough memory  is available  on the  current heap  segment, a
-   garbage collection  is triggered; then allocation is  tried again: if
+     If not  enough memory is available  on the current heap  segment, a
+   garbage collection is  triggered; then allocation is  tried again: if
    it  still   fails  the  process   is  terminated  with   exit  status
    EXIT_FAILURE.  */
 {
-  assert(size == IK_ALIGN(size));
+  assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr		alloc_ptr;
   ikptr		end_ptr;
   ikptr		new_alloc_ptr;
   alloc_ptr	= pcb->allocation_pointer;
   end_ptr	= pcb->heap_base + pcb->heap_size;
-  new_alloc_ptr	= alloc_ptr + size;
+  new_alloc_ptr	= alloc_ptr + aligned_size;
   if (new_alloc_ptr < end_ptr) {
     /* There is  room in the  current heap  segment: update the  PCB and
        return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
   } else {
     /* No room in the current heap block: run GC. */
-    ik_collect(size, pcb);
+    ik_collect(aligned_size, pcb);
     {
       alloc_ptr		= pcb->allocation_pointer;
       end_ptr		= pcb->heap_base + pcb->heap_size;
-      new_alloc_ptr	= alloc_ptr + size;
+      new_alloc_ptr	= alloc_ptr + aligned_size;
       if (new_alloc_ptr < end_ptr)
 	pcb->allocation_pointer = new_alloc_ptr;
       else
-	ik_abort("collector did not leave enough room for %lu bytes", size);
+	ik_abort("collector did not leave enough room for %lu bytes", aligned_size);
     }
   }
   return alloc_ptr;
 }
 ikptr
-ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
+ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
 /* Allocate a memory block on the  Scheme heap and return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
-   block, REQUESTED_SIZE must be  the requested number of bytes filtered
-   through "IK_ALIGN()".
+   block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
+   through "IK_ALIGN()".  This function is  meant to be used to allocate
+   "small" memory blocks.
 
-   If not enough memory is available  on the current heap segment: a new
-   heap segment is  allocated; if such allocation fails:  the process is
-   terminated with exit status EXIT_FAILURE.
+     If not  enough memory is available  on the current heap  segment: a
+   new heap segment is allocated;  if such allocation fails: the process
+   is terminated with exit status EXIT_FAILURE.
 
-   This  function  is  meant  to  be used  to  allocate  "small"  memory
-   blocks. */
+     The  allocated  memory  is  NOT initialised  to  safe  values:  its
+   contents have to be considered invalid and initialised to safe values
+   before being scanned by the garbage collector. */
 {
-  assert(requested_size == IK_ALIGN(requested_size));
+  assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr alloc_ptr       = pcb->allocation_pointer;
   ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
-  ikptr new_alloc_ptr   = alloc_ptr + requested_size;
+  ikptr new_alloc_ptr   = alloc_ptr + aligned_size;
   if (new_alloc_ptr < end_ptr) {
     /* There is  room in the  current heap  nursery: update the  PCB and
        return the offset. */
@@ -790,14 +801,14 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
        *                       heap_size
        */
       ikptr	heap_ptr;
-      ik_ulong	new_size = (requested_size > IK_HEAP_EXTENSION_SIZE)? \
-	requested_size : IK_HEAP_EXTENSION_SIZE;
+      ik_ulong	new_size = (aligned_size > IK_HEAP_EXTENSION_SIZE)? \
+	aligned_size : IK_HEAP_EXTENSION_SIZE;
       new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
       heap_ptr			= ik_mmap_mainheap(new_size, pcb);
       pcb->heap_base		= heap_ptr;
       pcb->heap_size		= new_size;
       pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
-      pcb->allocation_pointer	= heap_ptr + requested_size;
+      pcb->allocation_pointer	= heap_ptr + aligned_size;
       return heap_ptr;
     }
   }
