@@ -298,11 +298,11 @@ should contain the data area of a Scheme object: it interprets every
 machine word with all the bits set to @code{1} as @code{IK_FORWARD_PTR}.
 
 Newly allocated memory is initialised by Vicare to a sequence of
-@code{IK_FORWARD_PTR} words, which, most likely, will trigger an error
-if the garbage collector scans a machine word we have not explicitly
-initialised to something valid.  Whenever we reserve a portion of memory
-page, with aligned size, for a Scheme object we must initialise all its
-words to something valid.
+@code{IK_FORWARD_PTR} words, which, most likely, will trigger an
+assertion violation if the garbage collector scans a machine word we
+have not explicitly initialised to something valid.  Whenever we reserve
+a portion of memory page, with aligned size, for a Scheme object we must
+initialise all its words to something valid.
 
 When we convert a requested size to an aligned size with
 @cfunc{IK_ALIGN}: either zero or one machine word is allocated beyond

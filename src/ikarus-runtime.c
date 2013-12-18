@@ -99,11 +99,11 @@ ik_mmap (ik_ulong size)
      every machine word with all the bits set to 1 as IK_FORWARD_PTR.
 
        Here we initialise  every allocated memory page to  a sequence of
-     IK_FORWARD_PTR words, which, most likely,  will trigger an error if
-     the garbage collector  scans a machine word we  have not explicitly
-     initialised to something  valid.  Whenever we reserve  a portion of
-     memory  page,  with aligned  size,  for  a  Scheme object  we  must
-     initialise all its words to something valid.
+     IK_FORWARD_PTR words, which, most likely, will trigger an assertion
+     violation if the garbage collector scans a machine word we have not
+     explicitly initialised  to something valid.  Whenever  we reserve a
+     portion of memory  page, with aligned size, for a  Scheme object we
+     must initialise all its words to something valid.
 
        When  we  convert  a  requested  size to  an  aligned  size  with
      "IK_ALIGN()": either zero  or one machine word  is allocated beyond
