@@ -2274,25 +2274,50 @@ meta_alloc_extending (ik_ulong aligned_size, gc_t* gc, int meta_id)
  ** Collect loop.
  ** ----------------------------------------------------------------- */
 
-static void zero_all_words_in_meta (meta_t * meta);
-
 static void
 collect_loop (gc_t* gc)
-/* Keep alive  all the objects  referenced by  the memory blocks  in the
-   "queues" and "meta" fields of the struct GC. */
+/* The  garbage collector  main  function scans  the garbage  collection
+   roots  and moves  the live  Scheme objects  into newly  allocated (or
+   recycled) generational pages referenced by the PCB's segments vector.
+
+     The objects in the new pages have to be scanned, too, to keep alive
+   referenced Scheme  objects; this is  what this function  does.  Every
+   tagged  pointer found  while scanning  a new  page references  a live
+   object: such object must itself be  moved to a new generational page,
+   and so on recursively.
+
+     After every single call or multiple calls to "gather_live_object()"
+   at least one call to this function must be performed.
+
+     The new generational pages are  also referenced by the "queues" and
+   "meta" fields  of the GC struct.   The "meta" pages are  half filled,
+   while  the "queues"  pages are  full of  machine words  that must  be
+   scanned. */
 {
-  int done;
+  int	done;
   do {
     done = 1;
 
-    /* Scan the pending pairs pages.  QU  references the first node in a
-       simply linked list  of structures; each node  itself references a
-       memory range in  which Scheme pairs are stored.  We  want to keep
-       alive the cars of such pairs. */
+    /* First iterate  over all the  nodes in the "queues"  linked lists,
+       until there are no more of them. */
+
+    /* Scan the pending  pair pages.  QU references the first  node in a
+       simply linked list  of structures; each node  references a memory
+       range in  which live  Scheme pairs  are stored;  we want  to keep
+       alive the cars  of such pairs.  After scanning QU  we pop it from
+       the linked  list and  process the  next node,  until the  list is
+       empty. */
     {
       qupages_t *	qu = gc->queues[meta_pair];
       if (qu) {
+	/* There is at least one  node in the "queues[meta_pair]" field:
+	   we will have to perform another full iteration. */
         done = 0;
+	/* Remove  the  list   from  the  GC  struct.    Every  call  to
+	   "gather_live_object()" in this function  might push new nodes
+	   in the "queues[meta_pair]" field; we will process these nodes
+	   later.  If no new  nodes are pushed: "queues[meta_pair]" will
+	   be left NULL. */
         gc->queues[meta_pair] = NULL;
         do {
           ikptr p_pair = qu->p;
@@ -2314,7 +2339,14 @@ collect_loop (gc_t* gc)
     {
       qupages_t *	qu = gc->queues[meta_ptrs];
       if (qu) {
+	/* There is at least one  node in the "queues[meta_ptrs]" field:
+	   we will have to perform another full iteration. */
         done = 0;
+	/* Remove  the  list   from  the  GC  struct.    Every  call  to
+	   "gather_live_object()" in this function  might push new nodes
+	   in the "queues[meta_ptrs]" field; we will process these nodes
+	   later.  If no new  nodes are pushed: "queues[meta_ptrs]" will
+	   be left NULL.*/
         gc->queues[meta_ptrs] = NULL;
         do {
           ikptr p_word = qu->p;
@@ -2336,7 +2368,14 @@ collect_loop (gc_t* gc)
     {
       qupages_t *	qu = gc->queues[meta_symbol];
       if (qu) {
+	/* There  is  at least  one  node  in the  "queues[meta_symbol]"
+	   field: we will have to perform another full iteration. */
         done = 0;
+	/* Remove  the  list   from  the  GC  struct.    Every  call  to
+	   "gather_live_object()" in this function  might push new nodes
+	   in  the "queues[meta_symbol]"  field; we  will process  these
+	   nodes    later.     If    no   new    nodes    are    pushed:
+	   "queues[meta_symbol]" will be left NULL. */
         gc->queues[meta_symbol] = NULL;
         do {
           ikptr p_word = qu->p;
@@ -2358,7 +2397,14 @@ collect_loop (gc_t* gc)
     {
       qupages_t *	codes = gc->queues[meta_code];
       if (codes) {
+	/* There is at least one  node in the "queues[meta_code]" field:
+	   we will have to perform another full iteration. */
         done = 0;
+	/* Remove  the  list   from  the  GC  struct.    Every  call  to
+	   "gather_live_object()" in this function  might push new nodes
+	   in the "queues[meta_code]" field; we will process these nodes
+	   later.  If no new  nodes are pushed: "queues[meta_code]" will
+	   be left NULL. */
         gc->queues[meta_code] = NULL;
         do {
           ikptr p_code = codes->p;
@@ -2375,13 +2421,16 @@ collect_loop (gc_t* gc)
       }
     }
 
-    /* See if there are any remaining in the main ptr segment. */
+    /* Then  iterate  over  all  the half-filled  pages  in  the  "meta"
+       fields. */
     {
       {
         meta_t* meta = &gc->meta[meta_pair];
         ikptr p = meta->aq;
         ikptr q = meta->ap;
         if (p < q) {
+	  /* There  is  at least  one  object  in the  "meta[meta_pair]"
+	     field: we will have to perform another full iteration. */
           done = 0;
           do{
             meta->aq = q;
@@ -2398,6 +2447,8 @@ collect_loop (gc_t* gc)
         ikptr p = meta->aq;
         ikptr q = meta->ap;
         if (p < q) {
+	  /* There  is at  least one  object in  the "meta[meta_symbol]"
+	     field: we will have to perform another full iteration. */
           done = 0;
           do{
             meta->aq = q;
@@ -2414,6 +2465,8 @@ collect_loop (gc_t* gc)
         ikptr p = meta->aq;
         ikptr q = meta->ap;
         if (p < q) {
+	  /* There  is  at least  one  object  in the  "meta[meta_ptrs]"
+	     field: we will have to perform another full iteration. */
           done = 0;
           do{
             meta->aq = q;
@@ -2430,6 +2483,8 @@ collect_loop (gc_t* gc)
         ikptr p = meta->aq;
         ikptr q = meta->ap;
         if (p < q) {
+	  /* There  is  at least  one  object  in the  "meta[meta_code]"
+	     field: we will have to perform another full iteration. */
           done = 0;
           do {
             meta->aq = q;
@@ -2447,20 +2502,17 @@ collect_loop (gc_t* gc)
     /* phew */
   } while (! done);
 
-  /* Zero out remaining pointers. */
-  zero_all_words_in_meta(&gc->meta[meta_pair]);
-  zero_all_words_in_meta(&gc->meta[meta_symbol]);
-  zero_all_words_in_meta(&gc->meta[meta_ptrs]);
-  zero_all_words_in_meta(&gc->meta[meta_weak]);
-  zero_all_words_in_meta(&gc->meta[meta_code]);
-}
-static void
-zero_all_words_in_meta (meta_t * meta)
-{
-  ikptr p_word = meta->ap;
-  ikptr p_end  = meta->ep;
-  for (; p_word < p_end; p_word += wordsize) {
-    IK_REF(p_word, 0) = 0;
+  /* Reset to the  fixnum zero all the machine words  in the unused tail
+     of  the   meta  pages.   This  is   just  in  case  this   call  to
+     "collect_loop()" is the last one in this garbage collection run and
+     the meta pages will not be touched anymore. */
+  {
+    int		i;
+    for (i=0; i<meta_count; ++i) {
+      uint8_t *	begin = (uint8_t *)gc->meta[i].ap; /* allocation pointer */
+      uint8_t *	past  = (uint8_t *)gc->meta[i].ep; /* end pointer */
+      memset(begin, 0, past - begin);
+    }
   }
 }
 
