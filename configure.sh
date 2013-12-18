@@ -15,7 +15,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
     --enable-time-tests					\
     --with-pthread					\
     --with-cre2						\
-    CFLAGS='-O3'					\
+    CFLAGS='-O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
     LDFLAGS='-L/usr/local/lib -L/usr/local/lib64'	\
     VFLAGS='-O3'					\

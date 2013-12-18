@@ -141,7 +141,7 @@ typedef struct ik_ffi_cif_stru_t {
   type_id_t     retval_type_id; /* type identifier for return value */
   ffi_type **   arg_types;      /* Libffi's type structures for arguments */
   type_id_t *   arg_type_ids;   /* type identifiers for arguments */
-  uint8_t       data[0];        /* appended data */
+  uint8_t       data[];         /* appended data */
 } ik_ffi_cif_stru_t;
 
 typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;

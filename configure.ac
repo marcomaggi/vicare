@@ -144,6 +144,7 @@ AC_SUBST([PLATFORM_PATHNAME])
 
 AM_PROG_AS
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
 vicare_target_os_uid=unknown
