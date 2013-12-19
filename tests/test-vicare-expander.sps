@@ -3667,6 +3667,93 @@
   #t)
 
 
+(parametrise ((check-test-name	'splice-first-expand))
+
+  (check
+      (splice-first-expand 123)
+    => 123)
+
+  (check
+      (splice-first-expand (+ 1 2))
+    => 3)
+
+  (check
+      (list 8 (splice-first-expand (+ 1 2)) 9)
+    => '(8 3 9))
+
+  (check
+      (with-result
+       (begin
+	 (add-result 1)
+	 (splice-first-expand (add-result 2))
+	 (add-result 3)
+	 4))
+    => '(4 (1 2 3)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((splice-first-expand (+)) 1 2)
+    => 3)
+
+  (check
+      ((splice-first-expand (+ 1 2)) 3 4)
+    => (+ 1 2 3 4))
+
+  (check
+      (with-result
+       ((splice-first-expand (begin (add-result 1) (add-result 2)))
+	(add-result 3) 4))
+    => '(4 (1 2 3)))
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit 1 2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let-syntax ((arg1 (identifier-syntax 1))
+  		   (arg2 (identifier-syntax 2))
+  		   (doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit arg1 arg2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+			      (doit arg1 ?arg ...))))))
+  	((flop arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+			      (doit arg1 ?arg ...)))))
+  		    (flip (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (flop ?arg ...)))))
+  	((flip arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
