@@ -3408,10 +3408,20 @@
 		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
 
   (define (%build-one clause-stx k)
-    (syntax-match clause-stx ()
+    (syntax-match clause-stx (=>)
+      (((?datum* ...) => ?expr)
+       (if (strict-r6rs)
+	   (syntax-violation 'case
+	     "invalid usage of auxiliary keyword => in strict R6RS mode"
+	     clause-stx)
+	 `(if (memv t ',?datum*)
+	      (,?expr t)
+	    ,k)))
       (((?datum* ...) ?expr ?expr* ...)
        `(if (memv t ',?datum*)
-	    (begin ,?expr . ,?expr*) ,k))))
+	    (begin ,?expr . ,?expr*)
+	  ,k))
+      ))
 
   (define (%build-last clause)
     (syntax-match clause (else)
