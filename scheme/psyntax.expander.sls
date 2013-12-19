@@ -1,4 +1,4 @@
-;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
+;;;Copyright (c) 2006, 2007, 2013 Abdulaziz Ghuloum and Kent Dybvig
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -6197,6 +6197,7 @@
       ((record-type-field-ref)		record-type-field-ref-transformer)
       (($record-type-field-set!)	$record-type-field-set!-transformer)
       (($record-type-field-ref)		$record-type-field-ref-transformer)
+      ((splice-first-expand)		splice-first-expand-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       (else
        (assertion-violation who
@@ -6666,8 +6667,8 @@
   (syntax-match expr-stx ()
     ((_ ?name ?arg* ...)
      (build-foreign-call no-source
-			 (chi-expr  ?name lexenv.run lexenv.expand)
-			 (chi-expr* ?arg* lexenv.run lexenv.expand)))))
+       (chi-expr  ?name lexenv.run lexenv.expand)
+       (chi-expr* ?arg* lexenv.run lexenv.expand)))))
 
 
 ;;;; module core-macro-transformer: SYNTAX
@@ -7367,6 +7368,21 @@
 	  (syntax-error (car id*) "invalid " class)))))
 
   #| end of module: SYNTAX-CASE-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
+
+(define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  SPLICE-FIRST-EXPAND
+  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
+  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
+  ;;LEXENV.RUN and  LEXENV.EXPAND.  Return a symbolic  expression in the
+  ;;core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?form)
+     (cons 'internal-splice-first-expand ?form))
+    ))
 
 
 ;;; end of module: CORE-MACRO-TRANSFORMER
@@ -8082,176 +8098,199 @@
 
 ;;;; chi procedures: expressions
 
+(define (%internal-splice-first-expand? expr)
+  ;;Return true  if EXPR  is an  expression returned  by the  macro core
+  ;;transformer SPLICE-FIRST-EXPAND-TRANSFORMER; otherwise return false.
+  ;;
+  (and (pair? expr)
+       (eq? (car expr) 'internal-splice-first-expand)))
+
 (define (chi-expr* expr* lexenv.run lexenv.expand)
-  ;;Recursive function.  Expand the expressionsin EXPR* left to right.
+  ;;Recursive function.  Expand the expressions in EXPR* left to right.
   ;;
   (if (null? expr*)
       '()
-    (let ((expanded-first-expr (chi-expr (car expr*) lexenv.run lexenv.expand)))
+    (let* ((expanded-first-expr (chi-expr (car expr*) lexenv.run lexenv.expand))
+	   (expanded-first-expr (if (%internal-splice-first-expand? expanded-first-expr)
+				    (chi-expr (cdr expanded-first-expr) lexenv.run lexenv.expand)
+				  expanded-first-expr)))
       (cons expanded-first-expr
 	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
-(define (chi-application expr lexenv.run lexenv.expand)
-  ;;Expand a function application form.
-  ;;
-  (syntax-match expr ()
-    ((?rator ?rands* ...)
-     (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-       (build-application (syntax-annotation expr)
-	 rator
-	 (chi-expr* ?rands* lexenv.run lexenv.expand))))))
+(module (chi-expr)
 
-(define (chi-expr e lexenv.run lexenv.expand)
-  (receive (type value kwd)
-      (syntax-type e lexenv.run)
-    (case type
-      ((core-macro)
-       (let ((transformer (core-macro-transformer value)))
-	 (transformer e lexenv.run lexenv.expand)))
+  (define (chi-expr e lexenv.run lexenv.expand)
+    ;;Expand a single expression form.
+    ;;
+    (receive (type value kwd)
+	(syntax-type e lexenv.run)
+      (case type
+	((core-macro)
+	 (let ((transformer (core-macro-transformer value)))
+	   (transformer e lexenv.run lexenv.expand)))
 
-      ((global)
-       (let* ((lib (car value))
-	      (loc (cdr value)))
-	 ((inv-collector) lib)
-	 (build-global-reference no-source loc)))
+	((global)
+	 (let* ((lib (car value))
+		(loc (cdr value)))
+	   ((inv-collector) lib)
+	   (build-global-reference no-source loc)))
 
-      ((core-prim)
-       (let ((name value))
-	 (build-primref no-source name)))
+	((core-prim)
+	 (let ((name value))
+	   (build-primref no-source name)))
 
-      ((call)
-       (chi-application e lexenv.run lexenv.expand))
+	((call)
+	 (chi-application e lexenv.run lexenv.expand))
 
-      ((lexical)
-       (let ((lex (lexical-var value)))
-	 (build-lexical-reference no-source lex)))
+	((lexical)
+	 (let ((lex (lexical-var value)))
+	   (build-lexical-reference no-source lex)))
 
-      ((global-macro global-macro!)
-       (chi-expr (chi-global-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
+	((global-macro global-macro!)
+	 (chi-expr (chi-global-macro value e lexenv.run #f)
+		   lexenv.run lexenv.expand))
 
-      ((local-macro local-macro!)
-       (chi-expr (chi-local-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
+	((local-macro local-macro!)
+	 (chi-expr (chi-local-macro value e lexenv.run #f)
+		   lexenv.run lexenv.expand))
 
-      ((macro macro!)
-       (chi-expr (chi-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
+	((macro macro!)
+	 (chi-expr (chi-macro value e lexenv.run #f)
+		   lexenv.run lexenv.expand))
 
-      ((constant)
-       (let ((datum value))
-	 (build-data no-source datum)))
+	((constant)
+	 (let ((datum value))
+	   (build-data no-source datum)))
 
-      ((set!)
-       (chi-set! e lexenv.run lexenv.expand))
+	((set!)
+	 (chi-set! e lexenv.run lexenv.expand))
 
-      ((begin)
-       (syntax-match e ()
-	 ((_ x x* ...)
-	  (build-sequence no-source
-			  (chi-expr* (cons x x*) lexenv.run lexenv.expand)))))
-
-      ((stale-when)
-       ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
-       ;;expression  to  be  registered   in  the  current  stale-when
-       ;;collector.   When such  expression  evaluates  to false:  the
-       ;;compiled library is  stale with respect to  some source file.
-       ;;See for example the INCLUDE syntax.
-       (syntax-match e ()
-	 ((_ ?guard ?x ?x* ...)
-	  (begin
-	    (handle-stale-when ?guard lexenv.expand)
+	((begin)
+	 (syntax-match e ()
+	   ((_ x x* ...)
 	    (build-sequence no-source
-	      (chi-expr* (cons ?x ?x*)
-			 lexenv.run lexenv.expand))))))
+	      (chi-expr* (cons x x*) lexenv.run lexenv.expand)))))
 
-      ((let-syntax letrec-syntax)
-       (syntax-match e ()
-	 ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
-	  (unless (valid-bound-ids? xlhs*)
-	    (stx-error e "invalid identifiers"))
-	  (let* ((xlab* (map gensym-for-label xlhs*))
-		 (xrib  (make-full-rib xlhs* xlab*))
-		 (xb*   (map (lambda (x)
-			       (make-eval-transformer
-				(%expand-macro-transformer (if (eq? type 'let-syntax)
-							       x
-							     (push-lexical-contour xrib x))
-							   lexenv.expand)))
-			  xrhs*)))
-	    (build-sequence no-source
-	      (chi-expr* (map (lambda (x)
-				(push-lexical-contour xrib x))
-			   (cons xbody xbody*))
-			 (append (map cons xlab* xb*) lexenv.run)
-			 (append (map cons xlab* xb*) lexenv.expand)))))))
+	((stale-when)
+	 ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
+	 ;;expression  to  be  registered   in  the  current  stale-when
+	 ;;collector.   When such  expression  evaluates  to false:  the
+	 ;;compiled library is  stale with respect to  some source file.
+	 ;;See for example the INCLUDE syntax.
+	 (syntax-match e ()
+	   ((_ ?guard ?x ?x* ...)
+	    (begin
+	      (handle-stale-when ?guard lexenv.expand)
+	      (build-sequence no-source
+		(chi-expr* (cons ?x ?x*)
+			   lexenv.run lexenv.expand))))))
 
-      ((displaced-lexical)
-       (stx-error e "identifier out of context"))
+	((let-syntax letrec-syntax)
+	 (syntax-match e ()
+	   ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
+	    (unless (valid-bound-ids? xlhs*)
+	      (stx-error e "invalid identifiers"))
+	    (let* ((xlab* (map gensym-for-label xlhs*))
+		   (xrib  (make-full-rib xlhs* xlab*))
+		   (xb*   (map (lambda (x)
+				 (make-eval-transformer
+				  (%expand-macro-transformer (if (eq? type 'let-syntax)
+								 x
+							       (push-lexical-contour xrib x))
+							     lexenv.expand)))
+			    xrhs*)))
+	      (build-sequence no-source
+		(chi-expr* (map (lambda (x)
+				  (push-lexical-contour xrib x))
+			     (cons xbody xbody*))
+			   (append (map cons xlab* xb*) lexenv.run)
+			   (append (map cons xlab* xb*) lexenv.expand)))))))
 
-      ((syntax)
-       (stx-error e "reference to pattern variable outside a syntax form"))
+	((displaced-lexical)
+	 (stx-error e "identifier out of context"))
 
-      ((define define-syntax define-fluid-syntax module import library)
-       (stx-error e (string-append
-		     (case type
-		       ((define)              "a definition")
-		       ((define-syntax)       "a define-syntax")
-		       ((define-fluid-syntax) "a define-fluid-syntax")
-		       ((module)              "a module definition")
-		       ((library)             "a library definition")
-		       ((import)              "an import declaration")
-		       ((export)              "an export declaration")
-		       (else                  "a non-expression"))
-		     " was found where an expression was expected")))
+	((syntax)
+	 (stx-error e "reference to pattern variable outside a syntax form"))
 
-      ((mutable)
-       (if (and (pair? value)
-		(let ((lib (car value)))
-		  (eq? lib '*interaction*)))
-	   (let ((loc (cdr value)))
-	     (build-global-reference no-source loc))
-	 (stx-error e "attempt to reference an unexportable variable")))
+	((define define-syntax define-fluid-syntax module import library)
+	 (stx-error e (string-append
+		       (case type
+			 ((define)              "a definition")
+			 ((define-syntax)       "a define-syntax")
+			 ((define-fluid-syntax) "a define-fluid-syntax")
+			 ((module)              "a module definition")
+			 ((library)             "a library definition")
+			 ((import)              "an import declaration")
+			 ((export)              "an export declaration")
+			 (else                  "a non-expression"))
+		       " was found where an expression was expected")))
 
-      (else
-       ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
-       (stx-error e "invalid expression")))))
+	((mutable)
+	 (if (and (pair? value)
+		  (let ((lib (car value)))
+		    (eq? lib '*interaction*)))
+	     (let ((loc (cdr value)))
+	       (build-global-reference no-source loc))
+	   (stx-error e "attempt to reference an unexportable variable")))
 
-(define (chi-set! e lexenv.run lexenv.expand)
-  (syntax-match e ()
-    ((_ x v)
-     (identifier? x)
-     (receive (type value kwd)
-	 (syntax-type x lexenv.run)
-       (case type
-	 ((lexical)
-	  (set-lexical-mutable! value #t)
-	  (build-lexical-assignment no-source
-	    (lexical-var value)
-	    (chi-expr v lexenv.run lexenv.expand)))
-	 ((core-prim)
-	  (stx-error e "cannot modify imported core primitive"))
+	(else
+	 ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
+	 (stx-error e "invalid expression")))))
 
-	 ((global)
-	  (stx-error e "attempt to modify an immutable binding"))
 
-	 ((global-macro!)
-	  (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+  (define (chi-application expr lexenv.run lexenv.expand)
+    ;;Expand a function application form.
+    ;;
+    (syntax-match expr ()
+      ((?rator ?rands* ...)
+       (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
+	 (if (%internal-splice-first-expand? rator)
+	     (syntax-match (cdr rator) ()
+	       ((?rator ?int-rands* ...)
+		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
+			  lexenv.run lexenv.expand)))
+	   (build-application (syntax-annotation expr)
+	     rator
+	     (chi-expr* ?rands* lexenv.run lexenv.expand)))))
+      ))
 
-	 ((local-macro!)
-	  (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+  (define (chi-set! e lexenv.run lexenv.expand)
+    (syntax-match e ()
+      ((_ x v)
+       (identifier? x)
+       (receive (type value kwd)
+	   (syntax-type x lexenv.run)
+	 (case type
+	   ((lexical)
+	    (set-lexical-mutable! value #t)
+	    (build-lexical-assignment no-source
+	      (lexical-var value)
+	      (chi-expr v lexenv.run lexenv.expand)))
+	   ((core-prim)
+	    (stx-error e "cannot modify imported core primitive"))
 
-	 ((mutable)
-	  (if (and (pair? value)
-		   (let ((lib (car value)))
-		     (eq? lib '*interaction*)))
-	      (let ((loc (cdr value)))
-		(build-global-assignment no-source
-		  loc (chi-expr v lexenv.run lexenv.expand)))
-	    (stx-error e "attempt to modify an unexportable variable")))
+	   ((global)
+	    (stx-error e "attempt to modify an immutable binding"))
 
-	 (else
-	  (stx-error e)))))))
+	   ((global-macro!)
+	    (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	   ((local-macro!)
+	    (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	   ((mutable)
+	    (if (and (pair? value)
+		     (let ((lib (car value)))
+		       (eq? lib '*interaction*)))
+		(let ((loc (cdr value)))
+		  (build-global-assignment no-source
+		    loc (chi-expr v lexenv.run lexenv.expand)))
+	      (stx-error e "attempt to modify an unexportable variable")))
+
+	   (else
+	    (stx-error e)))))))
+
+  #| end of module |# )
 
 (define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
   (syntax-match fmls ()
@@ -9014,6 +9053,7 @@
 ;;eval: (put 'build-application		'scheme-indent-function 1)
 ;;eval: (put 'build-conditional		'scheme-indent-function 1)
 ;;eval: (put 'build-lambda		'scheme-indent-function 1)
+;;eval: (put 'build-foreign-call	'scheme-indent-function 1)
 ;;eval: (put 'build-sequence		'scheme-indent-function 1)
 ;;eval: (put 'build-global-assignment	'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment	'scheme-indent-function 1)
