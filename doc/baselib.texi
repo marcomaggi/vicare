@@ -523,20 +523,26 @@ the (implied) call to the procedure that results from the evaluation of
 is.
 @end deffn
 
+@c ------------------------------------------------------------
 
-@deffn Syntax case @meta{key} @metai{case-clause} @metaii{case-clause} @dots{}
+@deffn Syntax case @meta{key} @metai{case-clause} @meta{case-clause} @dots{}
+@deffnx {Auxiliary Syntax} {=>}
+@deffnx {Auxiliary Syntax} else
 @meta{key} must be an expression.  Each @meta{case-clause} must have
 one of the following forms:
 
 @example
 ((@metai{datum} @dots{}) @metai{expression} @metaii{expression} @dots{})
+((@metai{datum} @dots{}) => @meta{expression})
 (else @metai{expression} @metaii{expression} @dots{})
 @end example
 
-The second form, which specifies an ``@code{else} clause'', may only
-appear as the last @meta{case-clause}.  Each @meta{datum} is an
-external representation of some object.  The data represented by the
-@meta{datum}s need not be distinct.
+The second form is only available in non--strict @rnrs{6} mode,
+@ref{using invoking, @option{--no-strict-r6rs}}.  The third form, which
+specifies an ``@code{else} clause'', may only appear as the last
+@meta{case-clause}.  Each @meta{datum} is an external representation of
+some object.  The data represented by the @meta{datum}s need not be
+distinct.
 
 A @func{case} expression is evaluated as follows.
 
@@ -554,6 +560,12 @@ from left to right and the results of the last expression in the
 @meta{case-clause} are returned as the results of the @func{case}
 expression.  Otherwise, the comparison process continues.
 
+If the selected @meta{case-clause} uses the @samp{=>} alternate form,
+then the @meta{expression} is evaluated; its value must be a procedure;
+this procedure should accept one argument.  It is called on the value of
+the @meta{key} and the values returned by this procedure are returned by
+the @func{case} expression.
+
 @item
 If the result of evaluating @meta{key} is different from every datum in
 each set, then if there is an @code{else} clause its expressions are
@@ -566,13 +578,21 @@ values.
 (case (* 2 3)
   ((2 3 5 7) 'prime)
   ((1 4 6 8 9) 'composite))     @result{} composite
+
 (case (car '(c d))
   ((a) 'a)
   ((b) 'b))                     @result{} unspecified
+
 (case (car '(c d))
   ((a e i o u) 'vowel)
   ((w y) 'semivowel)
   (else 'consonant))            @result{} consonant
+
+(case 2
+  ((a b c)      'symbol)
+  ((1 2 3)      => (lambda (N) (vector N)))
+  (else         'else))
+@result{} #(2)
 @end example
 
 The last @meta{expression} of a @meta{case-clause} is in tail context

@@ -3586,6 +3586,87 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-with-arrow))
+
+  (check	;no arrow
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'fixnum)
+
+  (check	;no arrow
+      (case 'c
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'symbol)
+
+  (check	;no arrow
+      (case "c"
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'else)
+
+  (check	;no arrow, multiple values
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	(values 7 8 9))
+	(else		'else))
+    => 7 8 9)
+
+;;; --------------------------------------------------------------------
+
+  (check	;with arrow
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	=> (lambda (N) (vector N)))
+	(else		'else))
+    => '#(2))
+
+  (check	;with arrow
+      (case 'a
+	((a b c)	=> (lambda (N) (list N)))
+	((1 2 3)	=> (lambda (N) (vector N)))
+	(else		'else))
+    => '(a))
+
+  (check	;with arrow multiple values
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	=> (lambda (N) (values N N N)))
+	(else		'else))
+    => 2 2 2)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;invalid arrow in ELSE clause
+      (guard (E ((syntax-violation? E)
+		 (condition-message E))
+		(else E))
+	(eval '(case 2
+		 ((a b c)	'symbol)
+		 ((1 2 3)	=> (lambda (N) (vector N)))
+		 (else		=> 'else))
+	      (environment '(vicare))))
+    => "incorrect usage of auxiliary keyword")
+
+  (check	;receiver form does not evaluate to function
+      (guard (E ((error? E)
+		 (vector (condition-message E)
+			 (condition-irritants E)))
+		(else E))
+	(case 2
+	  ((a b c)	'symbol)
+	  ((1 2 3)	=> 123)
+	  (else		'else)))
+    => '#("not a procedure" (123)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
