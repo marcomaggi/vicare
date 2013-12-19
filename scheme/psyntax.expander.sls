@@ -6154,7 +6154,9 @@
 )
 
 
-(module (core-macro-transformer)
+(module (core-macro-transformer
+	 splice-first-expand-compound?
+	 splice-first-expand-form)
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
@@ -7371,15 +7373,26 @@
 
 (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  SPLICE-FIRST-EXPAND
-  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
-  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
-  ;;LEXENV.RUN and  LEXENV.EXPAND.  Return a symbolic  expression in the
-  ;;core language.
+  ;;syntaxes  from  the top-level  built  in  environment.  Rather  than
+  ;;expanding the input  form: return a key/value pair in  which the key
+  ;;is  the symbol  "internal-splice-first-expand"; such  symbol can  be
+  ;;later recognised  by the CHI-*  functions to  do what is  needed for
+  ;;SPLICE-FIRST-EXPAND.
   ;;
   (syntax-match expr-stx ()
     ((_ ?form)
      (cons 'internal-splice-first-expand ?form))
     ))
+
+(define (splice-first-expand-compound? expr)
+  ;;Return true  if EXPR  is an  expression returned  by the  macro core
+  ;;transformer SPLICE-FIRST-EXPAND-TRANSFORMER; otherwise return false.
+  ;;
+  (and (pair? expr)
+       (eq? (car expr) 'internal-splice-first-expand)))
+
+(define (splice-first-expand-form compound)
+  (cdr compound))
 
 
 ;;; end of module: CORE-MACRO-TRANSFORMER
@@ -8095,23 +8108,16 @@
 
 ;;;; chi procedures: expressions
 
-(define (%internal-splice-first-expand? expr)
-  ;;Return true  if EXPR  is an  expression returned  by the  macro core
-  ;;transformer SPLICE-FIRST-EXPAND-TRANSFORMER; otherwise return false.
-  ;;
-  (and (pair? expr)
-       (eq? (car expr) 'internal-splice-first-expand)))
-
 (define (chi-expr* expr* lexenv.run lexenv.expand)
   ;;Recursive function.  Expand the expressions in EXPR* left to right.
   ;;
   (if (null? expr*)
       '()
-    (let* ((expanded-first-expr (chi-expr (car expr*) lexenv.run lexenv.expand))
-	   (expanded-first-expr (if (%internal-splice-first-expand? expanded-first-expr)
-				    (chi-expr (cdr expanded-first-expr) lexenv.run lexenv.expand)
-				  expanded-first-expr)))
-      (cons expanded-first-expr
+    (let* ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand))
+	   (expr0 (if (splice-first-expand-compound? expr0)
+		      (chi-expr (splice-first-expand-form expr0) lexenv.run lexenv.expand)
+		    expr0)))
+      (cons expr0
 	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
 (module (chi-expr)
@@ -8241,11 +8247,17 @@
     (syntax-match expr ()
       ((?rator ?rands* ...)
        (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-	 (if (%internal-splice-first-expand? rator)
-	     (syntax-match (cdr rator) ()
+	 (if (splice-first-expand-compound? rator)
+	     ;;This    is   the    implementation    of   the    special
+	     ;;SPLICE-FIRST-EXPAND handling.
+	     (syntax-match (splice-first-expand-form rator) ()
 	       ((?rator ?int-rands* ...)
 		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
-			  lexenv.run lexenv.expand)))
+			  lexenv.run lexenv.expand))
+	       (_
+		(stx-error expr
+			   "expected list as argument of splice-first-expand"
+			   'splice-first-expand)))
 	   (build-application (syntax-annotation expr)
 	     rator
 	     (chi-expr* ?rands* lexenv.run lexenv.expand)))))
@@ -8869,6 +8881,8 @@
      (syntax-violation #f "invalid syntax" ?expr-stx))
     ((_ ?expr-stx ?msg)
      (syntax-violation #f ?msg ?expr-stx))
+    ((_ ?expr-stx ?msg ?who)
+     (syntax-violation ?who ?msg ?expr-stx))
     ))
 
 (module (syntax-error
