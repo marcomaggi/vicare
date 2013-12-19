@@ -3751,6 +3751,17 @@
   	((flip arg2) 3 4))
     => (+ (square 1) (square 2) (square 3) (square 4)))
 
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check
+      (guard (E ((syntax-violation? E)
+		 (condition-message E))
+		(else E))
+	(eval '((splice-first-expand 123))
+	      (environment '(vicare))))
+    => "expected list as argument of splice-first-expand")
+
   #t)
 
 
