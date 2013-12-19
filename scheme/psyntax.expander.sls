@@ -8079,96 +8079,118 @@
 
 ;;;; chi procedures: expressions
 
-(define chi-expr*
-  (lambda (e* r mr)
-      ;;; expand left to right
-    (cond
-     ((null? e*) '())
-     (else
-      (let ((e (chi-expr (car e*) r mr)))
-	(cons e (chi-expr* (cdr e*) r mr)))))))
+(define (chi-expr* expr* lexenv.run lexenv.expand)
+  ;;Recursive function.  Expand the expressionsin EXPR* left to right.
+  ;;
+  (if (null? expr*)
+      '()
+    (let ((expanded-first-expr (chi-expr (car expr*) lexenv.run lexenv.expand)))
+      (cons expanded-first-expr
+	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
-(define chi-application
-  (lambda (e r mr)
-    (syntax-match e  ()
-      ((rator rands ...)
-       (let ((rator (chi-expr rator r mr)))
-	 (build-application (syntax-annotation e)
-			    rator
-			    (chi-expr* rands r mr)))))))
+(define (chi-application expr lexenv.run lexenv.expand)
+  ;;Expand a function application form.
+  ;;
+  (syntax-match expr ()
+    ((?rator ?rands* ...)
+     (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
+       (build-application (syntax-annotation expr)
+	 rator
+	 (chi-expr* ?rands* lexenv.run lexenv.expand))))))
 
-(define chi-expr
-  (lambda (e r mr)
-    (let-values (((type value kwd) (syntax-type e r)))
-      (case type
-	((core-macro)
-	 (let ((transformer (core-macro-transformer value)))
-	   (transformer e r mr)))
-	((global)
-	 (let* ((lib (car value))
-		(loc (cdr value)))
-	   ((inv-collector) lib)
-	   (build-global-reference no-source loc)))
-	((core-prim)
-	 (let ((name value))
-	   (build-primref no-source name)))
-	((call) (chi-application e r mr))
-	((lexical)
-	 (let ((lex (lexical-var value)))
-	   (build-lexical-reference no-source lex)))
-	((global-macro global-macro!)
-	 (chi-expr (chi-global-macro value e r #f) r mr))
-	((local-macro local-macro!)
-	 (chi-expr (chi-local-macro value e r #f) r mr))
-	((macro macro!)
-	 (chi-expr (chi-macro value e r #f) r mr))
-	((constant)
-	 (let ((datum value))
-	   (build-data no-source datum)))
-	((set!) (chi-set! e r mr))
-	((begin)
-	 (syntax-match e ()
-	   ((_ x x* ...)
+(define (chi-expr e lexenv.run lexenv.expand)
+  (receive (type value kwd)
+      (syntax-type e lexenv.run)
+    (case type
+      ((core-macro)
+       (let ((transformer (core-macro-transformer value)))
+	 (transformer e lexenv.run lexenv.expand)))
+
+      ((global)
+       (let* ((lib (car value))
+	      (loc (cdr value)))
+	 ((inv-collector) lib)
+	 (build-global-reference no-source loc)))
+
+      ((core-prim)
+       (let ((name value))
+	 (build-primref no-source name)))
+
+      ((call)
+       (chi-application e lexenv.run lexenv.expand))
+
+      ((lexical)
+       (let ((lex (lexical-var value)))
+	 (build-lexical-reference no-source lex)))
+
+      ((global-macro global-macro!)
+       (chi-expr (chi-global-macro value e lexenv.run #f)
+		 lexenv.run lexenv.expand))
+
+      ((local-macro local-macro!)
+       (chi-expr (chi-local-macro value e lexenv.run #f)
+		 lexenv.run lexenv.expand))
+
+      ((macro macro!)
+       (chi-expr (chi-macro value e lexenv.run #f)
+		 lexenv.run lexenv.expand))
+
+      ((constant)
+       (let ((datum value))
+	 (build-data no-source datum)))
+
+      ((set!)
+       (chi-set! e lexenv.run lexenv.expand))
+
+      ((begin)
+       (syntax-match e ()
+	 ((_ x x* ...)
+	  (build-sequence no-source
+			  (chi-expr* (cons x x*) lexenv.run lexenv.expand)))))
+
+      ((stale-when)
+       ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
+       ;;expression  to  be  registered   in  the  current  stale-when
+       ;;collector.   When such  expression  evaluates  to false:  the
+       ;;compiled library is  stale with respect to  some source file.
+       ;;See for example the INCLUDE syntax.
+       (syntax-match e ()
+	 ((_ ?guard ?x ?x* ...)
+	  (begin
+	    (handle-stale-when ?guard lexenv.expand)
 	    (build-sequence no-source
-			    (chi-expr* (cons x x*) r mr)))))
-	((stale-when)
-	 ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
-	 ;;expression  to  be  registered   in  the  current  stale-when
-	 ;;collector.   When such  expression  evaluates  to false:  the
-	 ;;compiled library is  stale with respect to  some source file.
-	 ;;See for example the INCLUDE syntax.
-	 (syntax-match e ()
-	   ((_ guard x x* ...)
-	    (begin
-	      (handle-stale-when guard mr)
-	      (build-sequence no-source
-			      (chi-expr* (cons x x*) r mr))))))
-	((let-syntax letrec-syntax)
-	 (syntax-match e ()
-	   ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
-	    (unless (valid-bound-ids? xlhs*)
-	      (stx-error e "invalid identifiers"))
-	    (let* ((xlab* (map gensym-for-label xlhs*))
-		   (xrib (make-full-rib xlhs* xlab*))
-		   (xb* (map (lambda (x)
+	      (chi-expr* (cons ?x ?x*)
+			 lexenv.run lexenv.expand))))))
+
+      ((let-syntax letrec-syntax)
+       (syntax-match e ()
+	 ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
+	  (unless (valid-bound-ids? xlhs*)
+	    (stx-error e "invalid identifiers"))
+	  (let* ((xlab* (map gensym-for-label xlhs*))
+		 (xrib  (make-full-rib xlhs* xlab*))
+		 (xb*   (map (lambda (x)
 			       (make-eval-transformer
-				(%expand-macro-transformer
-				 (if (eq? type 'let-syntax)
-				     x
-				   (push-lexical-contour xrib x))
-				 mr)))
+				(%expand-macro-transformer (if (eq? type 'let-syntax)
+							       x
+							     (push-lexical-contour xrib x))
+							   lexenv.expand)))
 			  xrhs*)))
-	      (build-sequence no-source
-			      (chi-expr*
-			       (map (lambda (x) (push-lexical-contour xrib x)) (cons xbody xbody*))
-			       (append (map cons xlab* xb*) r)
-			       (append (map cons xlab* xb*) mr)))))))
-	((displaced-lexical)
-	 (stx-error e "identifier out of context"))
-	((syntax) (stx-error e "reference to pattern variable outside a syntax form"))
-	((define define-syntax define-fluid-syntax module import library)
-	 (stx-error e
-		    (string-append
+	    (build-sequence no-source
+	      (chi-expr* (map (lambda (x)
+				(push-lexical-contour xrib x))
+			   (cons xbody xbody*))
+			 (append (map cons xlab* xb*) lexenv.run)
+			 (append (map cons xlab* xb*) lexenv.expand)))))))
+
+      ((displaced-lexical)
+       (stx-error e "identifier out of context"))
+
+      ((syntax)
+       (stx-error e "reference to pattern variable outside a syntax form"))
+
+      ((define define-syntax define-fluid-syntax module import library)
+       (stx-error e (string-append
 		     (case type
 		       ((define)              "a definition")
 		       ((define-syntax)       "a define-syntax")
@@ -8179,126 +8201,146 @@
 		       ((export)              "an export declaration")
 		       (else                  "a non-expression"))
 		     " was found where an expression was expected")))
-	((mutable)
-	 (if (and (pair? value) (let ((lib (car value))) (eq? lib '*interaction*)))
-	     (let ((loc (cdr value))) (build-global-reference no-source loc))
-	   (stx-error e "attempt to reference an unexportable variable")))
-	(else
-		;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
-	 (stx-error e "invalid expression"))))))
 
-(define chi-set!
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ x v) (identifier? x)
-       (let-values (((type value kwd) (syntax-type x r)))
-	 (case type
-	   ((lexical)
-	    (set-lexical-mutable! value #t)
-	    (build-lexical-assignment no-source
-				      (lexical-var value)
-				      (chi-expr v r mr)))
-	   ((core-prim)
-	    (stx-error e "cannot modify imported core primitive"))
-	   ((global)
-	    (stx-error e "attempt to modify an immutable binding"))
-	   ((global-macro!)
-	    (chi-expr (chi-global-macro value e r #f) r mr))
-	   ((local-macro!)
-	    (chi-expr (chi-local-macro value e r #f) r mr))
-	   ((mutable)
-	    (if (and (pair? value) (let ((lib (car value))) (eq? lib '*interaction*)))
-		(let ((loc (cdr value)))
-		  (build-global-assignment no-source loc
-					   (chi-expr v r mr)))
-	      (stx-error e "attempt to modify an unexportable variable")))
-	   (else (stx-error e))))))))
+      ((mutable)
+       (if (and (pair? value)
+		(let ((lib (car value)))
+		  (eq? lib '*interaction*)))
+	   (let ((loc (cdr value)))
+	     (build-global-reference no-source loc))
+	 (stx-error e "attempt to reference an unexportable variable")))
 
-(define chi-lambda-clause
-  (lambda (stx fmls body* r mr)
-    (syntax-match fmls ()
-      ((x* ...)
-       (begin
-	 (%verify-formals-syntax fmls stx)
-	 (let ((lex* (map gensym-for-lexical-var x*))
-	       (lab* (map gensym-for-label x*)))
-	   (values
-	    lex*
-	    (chi-internal
-	     (push-lexical-contour (make-full-rib x* lab*) body*)
-	     (add-lexicals lab* lex* r)
-	     mr)))))
-      ((x* ... . x)
-       (begin
-	 (%verify-formals-syntax fmls stx)
-	 (let ((lex* (map gensym-for-lexical-var x*)) (lab* (map gensym-for-label x*))
-	       (lex (gensym-for-lexical-var x)) (lab (gensym-for-label x)))
-	   (values
-	    (append lex* lex)
-	    (chi-internal
-	     (push-lexical-contour
-	      (make-full-rib (cons x x*) (cons lab lab*))
-	      body*)
-	     (add-lexicals (cons lab lab*) (cons lex lex*) r)
-	     mr)))))
-      (_ (stx-error fmls "invalid syntax")))))
+      (else
+       ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
+       (stx-error e "invalid expression")))))
 
-(define chi-lambda-clause*
-  (lambda (stx fmls* body** r mr)
-    (cond
-     ((null? fmls*) (values '() '()))
-     (else
-      (let-values (((a b)
-		    (chi-lambda-clause stx (car fmls*) (car body**) r mr)))
-	(let-values (((a* b*)
-		      (chi-lambda-clause* stx (cdr fmls*) (cdr body**) r mr)))
-	  (values (cons a a*) (cons b b*))))))))
+(define (chi-set! e lexenv.run lexenv.expand)
+  (syntax-match e ()
+    ((_ x v)
+     (identifier? x)
+     (receive (type value kwd)
+	 (syntax-type x lexenv.run)
+       (case type
+	 ((lexical)
+	  (set-lexical-mutable! value #t)
+	  (build-lexical-assignment no-source
+	    (lexical-var value)
+	    (chi-expr v lexenv.run lexenv.expand)))
+	 ((core-prim)
+	  (stx-error e "cannot modify imported core primitive"))
 
-(define (chi-defun x r mr)
+	 ((global)
+	  (stx-error e "attempt to modify an immutable binding"))
+
+	 ((global-macro!)
+	  (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	 ((local-macro!)
+	  (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	 ((mutable)
+	  (if (and (pair? value)
+		   (let ((lib (car value)))
+		     (eq? lib '*interaction*)))
+	      (let ((loc (cdr value)))
+		(build-global-assignment no-source
+		  loc (chi-expr v lexenv.run lexenv.expand)))
+	    (stx-error e "attempt to modify an unexportable variable")))
+
+	 (else
+	  (stx-error e)))))))
+
+(define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
+  (syntax-match fmls ()
+    ((x* ...)
+     (begin
+       (%verify-formals-syntax fmls stx)
+       (let ((lex* (map gensym-for-lexical-var x*))
+	     (lab* (map gensym-for-label x*)))
+	 (values lex*
+		 (chi-internal (push-lexical-contour (make-full-rib x* lab*)
+						     body*)
+			       (add-lexicals lab* lex* lexenv.run)
+			       lexenv.expand)))))
+    ((x* ... . x)
+     (begin
+       (%verify-formals-syntax fmls stx)
+       (let ((lex* (map gensym-for-lexical-var x*))
+	     (lab* (map gensym-for-label x*))
+	     (lex  (gensym-for-lexical-var x))
+	     (lab  (gensym-for-label x)))
+	 (values (append lex* lex)
+		 (chi-internal (push-lexical-contour (make-full-rib (cons x   x*)
+								    (cons lab lab*))
+						     body*)
+			       (add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
+			       lexenv.expand)))))
+    (_
+     (stx-error fmls "invalid syntax"))))
+
+(define (chi-lambda-clause* stx fmls* body** lexenv.run lexenv.expand)
+  (if (null? fmls*)
+      (values '() '())
+    (receive (a b)
+	(chi-lambda-clause stx (car fmls*) (car body**) lexenv.run lexenv.expand)
+      (receive (a* b*)
+	  (chi-lambda-clause* stx (cdr fmls*) (cdr body**) lexenv.run lexenv.expand)
+	(values (cons a a*) (cons b b*))))))
+
+(define (chi-defun x lexenv.run lexenv.expand)
   (syntax-match x ()
     ((_ (ctxt . fmls) . body*)
-     (let-values (((fmls body)
-		   (chi-lambda-clause fmls fmls body* r mr)))
+     (receive (fmls body)
+	 (chi-lambda-clause fmls fmls body* lexenv.run lexenv.expand)
        (build-lambda (syntax-annotation ctxt) fmls body)))))
 
-(define chi-rhs
-  (lambda (rhs r mr)
-    (case (car rhs)
-      ((defun) (chi-defun (cdr rhs) r mr))
-      ((expr)
-       (let ((expr (cdr rhs)))
-	 (chi-expr expr r mr)))
-      ((top-expr)
-       (let ((expr (cdr rhs)))
-	 (build-sequence no-source
-			 (list (chi-expr expr r mr)
-			       (build-void)))))
-      (else (assertion-violation 'chi-rhs "BUG: invalid rhs" rhs)))))
+(define (chi-rhs rhs lexenv.run lexenv.expand)
+  (case (car rhs)
+    ((defun)
+     (chi-defun (cdr rhs) lexenv.run lexenv.expand))
 
-(define chi-rhs*
-  (lambda (rhs* r mr)
-    (let f ((ls rhs*))
-      (cond ;;; chi-rhs in order
-       ((null? ls) '())
-       (else
-	(let ((a (chi-rhs (car ls) r mr)))
-	  (cons a (f (cdr ls)))))))))
+    ((expr)
+     (let ((expr (cdr rhs)))
+       (chi-expr expr lexenv.run lexenv.expand)))
 
-(define chi-internal
-  (lambda (e* r mr)
-    (let ((rib (make-empty-rib)))
-      (let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
-		    (chi-body*
-		     (map (lambda (x) (push-lexical-contour rib x)) (syntax->list e*))
-		     r mr '() '() '() '() '() rib #f #t)))
-	(when (null? e*)
-	  (stx-error e* "no expression in body"))
-	(let* ((init*
-		(chi-expr* (append (apply append (reverse mod**)) e*) r mr))
-	       (rhs* (chi-rhs* rhs* r mr)))
-	  (build-letrec* no-source
-			 (reverse lex*) (reverse rhs*)
-			 (build-sequence no-source init*)))))))
+    ((top-expr)
+     (let ((expr (cdr rhs)))
+       (build-sequence no-source
+	 (list (chi-expr expr lexenv.run lexenv.expand)
+	       (build-void)))))
+
+    (else
+     (assertion-violation 'chi-rhs "BUG: invalid rhs" rhs))))
+
+(define (chi-rhs* rhs* lexenv.run lexenv.expand)
+  ;;Expand the right-hand side expressions in RHS*, left-to-right.
+  ;;
+  (let loop ((ls rhs*))
+    ;; chi-rhs in order
+    (if (null? ls)
+	'()
+      (let ((a (chi-rhs (car ls) lexenv.run lexenv.expand)))
+	(cons a
+	      (loop (cdr ls)))))))
+
+(define (chi-internal expr* lexenv.run lexenv.expand)
+  (let ((rib (make-empty-rib)))
+    (receive (expr*^ lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
+	(chi-body* (map (lambda (x)
+			  (push-lexical-contour rib x))
+		     (syntax->list expr*))
+		   lexenv.run lexenv.expand
+		   '() '() '() '() '() rib #f #t)
+      (when (null? expr*^)
+	(stx-error expr*^ "no expression in body"))
+      (let* ((init* (chi-expr* (append (apply append (reverse mod**))
+				       expr*^)
+			       lexenv.run lexenv.expand))
+	     (rhs*  (chi-rhs* rhs* lexenv.run lexenv.expand)))
+	(build-letrec* no-source
+	  (reverse lex*)
+	  (reverse rhs*)
+	  (build-sequence no-source init*))))))
 
 
 ;;;; chi procedures: body
@@ -8966,7 +9008,11 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'build-application 'scheme-indent-function 1)
-;;eval: (put 'build-conditional 'scheme-indent-function 1)
-;;eval: (put 'build-lambda 'scheme-indent-function 1)
+;;eval: (put 'build-application		'scheme-indent-function 1)
+;;eval: (put 'build-conditional		'scheme-indent-function 1)
+;;eval: (put 'build-lambda		'scheme-indent-function 1)
+;;eval: (put 'build-sequence		'scheme-indent-function 1)
+;;eval: (put 'build-global-assignment	'scheme-indent-function 1)
+;;eval: (put 'build-lexical-assignment	'scheme-indent-function 1)
+;;eval: (put 'build-letrec*		'scheme-indent-function 1)
 ;;End:
