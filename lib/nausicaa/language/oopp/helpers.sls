@@ -387,7 +387,6 @@
   ;;
   (if (syntax->datum rv-tag-id)
       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
-;;;      #`(splice-first-expand (#,rv-tag-id #:flat-oopp-syntax #,application-stx))
     application-stx))
 
 
