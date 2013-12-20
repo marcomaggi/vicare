@@ -2396,12 +2396,67 @@
 	  (vector a b)))
     => '#(1 2))
 
+  (check	;mapping
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(map fun '((1 . 2) (3 . 4) (5 . 6))))
+    => '(#(1 2) #(3 4) #(5 6)))
+
   (check-for-expression-return-value-violation
       (let ()
 	(define ((fun <vector>) (O <pair>))
 	  (list (O car) (O cdr)))
 	(fun '(1 . 2)))
     => '(<vector> ((1 2))))
+
+;;; --------------------------------------------------------------------
+;;; tagged return value members
+
+  (check	;return value virtual field
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(1 . 2)) length))
+    => 2)
+
+  (check	;return value method call
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(1 . 2)) subvector 0 1))
+    => '#(1))
+
+  (check	;return value getter
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(a . b)) [0]))
+    => 'a)
+
+  (check	;return value getter
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(a . b)) [1]))
+    => 'b)
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
+	  (methods a))
+	(define-label <beta>
+	  (methods b))
+	(define ((<alpha>-a <beta>) V)
+	  (* V 10))
+	(define (<beta>-b V)
+	  (/ V 3))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 1) a)
+	((<alpha>-a 1) b)
+	#;(((fun 1) a) b))
+    => 10/3)
 
   #t)
 
