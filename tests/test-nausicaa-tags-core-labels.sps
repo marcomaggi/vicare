@@ -78,11 +78,11 @@
 		  (immutable length length))
   (methods (reverse reverse)
 	   (append append))
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?index)))
 	       #'(list-ref ?var ?index)))))
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?index)) ?val)
 	       #'(%list-set! ?var ?index ?val))))))
@@ -402,11 +402,11 @@
   (define-label <a-vector>
     (predicate vector?)
     (virtual-fields (immutable length vector-length))
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?index)))
 		 #'(vector-ref ?var ?index)))))
-    (setter (lambda (stx)
+    (setter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?index)) ?val)
 		 #'(vector-set! ?var ?index ?val))))))
@@ -614,7 +614,7 @@
 
     (define-label <alpha>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -652,7 +652,7 @@
 
     (define-label <base>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -698,7 +698,7 @@
 
     (define-label <alpha>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))
@@ -734,7 +734,7 @@
 
     (define-label <base>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))

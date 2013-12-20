@@ -28,6 +28,7 @@
 #!r6rs
 (library (nausicaa language oopp auxiliary-syntaxes)
   (export
+    :oopp-syntax
     :define
     :let
     :bind-and-call
@@ -53,17 +54,10 @@
     :process-shadowed-identifier
 
     :insert-mixin-clauses)
-  (import (rnrs))
-
-  (define-syntax define-auxiliary-syntaxes
-    (syntax-rules ()
-      ((_ ?name ...)
-       (begin
-	 (define-syntax ?name (syntax-rules ()))
-	 ...))))
-
-  ;; Auxiliary syntaxes.
+  (import (only (vicare)
+		define-auxiliary-syntaxes))
   (define-auxiliary-syntaxes
+    :oopp-syntax
     :define
     :let
     :bind-and-call
@@ -87,9 +81,6 @@
     :accessor-function
     :mutator-function
     :process-shadowed-identifier
-
-    :insert-mixin-clauses)
-
-  )
+    :insert-mixin-clauses))
 
 ;;; end of file

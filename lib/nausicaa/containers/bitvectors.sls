@@ -233,16 +233,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?O ((?offset)) ?boolean)
-	       #'(?O bit-set! ?offset ?boolean))
+	       #`(#,tag #:oopp-syntax (?O bit-set! ?offset ?boolean)))
 	      )))
 
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?O ((?offset)))
-	       #'(?O bit-ref ?offset))
+	       #`(#,tag #:oopp-syntax (?O bit-ref ?offset)))
 	      )))
 
   (method (bit-set! (O <bitvector>) offset boolean-value)

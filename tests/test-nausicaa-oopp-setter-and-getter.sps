@@ -119,7 +119,7 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(<alpha>-setf ?var ?key ?val))))))
@@ -141,7 +141,7 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)) ?val)
 		   #'(<alpha>-setf ?var ?key0 ?key1 ?val))))))
@@ -161,11 +161,11 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)) ?val)
 		   #'(<alpha>-setf ?var ?key0 ?key1 ?val)))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)))
 		   #'(<alpha>-getf ?var ?key0 ?key1))))))
@@ -193,11 +193,11 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?value)
 		   #'(set! (?var a) (cons ?key ?value))))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'(vector ?key (?var a)))))))
@@ -205,14 +205,14 @@
     (define-class <beta>
       (fields (immutable (a <alpha>))
 	      (mutable   b))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?value)
 		   #'(set! (?var b) (cons ?key ?value)))
 		  ((?var ((?key0) (?key1)) ?value)
 		   #'(let (((tmp <alpha>) (?var a)))
 		       (set! tmp[?key1] ?value))))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0)))
 		   #'(vector ?key0 (?var b)))
@@ -255,22 +255,22 @@
   (let ()	;nested vectors, single label
 
     #;(define-label <row>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		((?var ((?col)) ?value)
 		 #'(vector-set! ?var (- ?col 1) ?value))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		((?var ((?col)))
 		 #'(vector-ref ?var (- ?col 1))))))
 
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)) ?value)
 		   #'(vector-set! ?var (- ?row 1) ?value))
 		  ((?var ((?row)(?col)) ?value)
 		   #'(vector-set! (vector-ref ?var (- ?row 1)) (- ?col 1) ?value))
 		  )))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)))
 		   #'(vector-ref ?var ?row))
@@ -313,17 +313,17 @@
   (let ()	;nested vectors, multiple labels
 
     (define-label <row>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?col)) ?value)
 		   #'(vector-set! ?var (- ?col 1) ?value)))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?col)))
 		   #'(vector-ref ?var (- ?col 1)))))))
 
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)) ?value)
 		   #'(vector-set! ?var (- ?row 1) ?value))
@@ -331,7 +331,7 @@
 		   #'(let (((R <row>) (vector-ref ?var (- ?row 1))))
 		       (set! R[?col] ?value)))
 		  )))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)))
 		   #'(vector-ref ?var ?row))

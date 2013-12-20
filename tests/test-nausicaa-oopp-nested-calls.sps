@@ -361,7 +361,7 @@
     (define-label <fixnum-vector>
       (parent <vector>)
       (getter
-       (lambda (stx)
+       (lambda (stx tag)
 	 (syntax-case stx (=>)
 	   ((?var ((?index)))
 	    #'(vector-ref ?var ?index))
@@ -392,7 +392,7 @@
     (define-label <fixnum-vector>
       (parent <vector>)
       (getter
-       (lambda (stx)
+       (lambda (stx tag)
 	 (syntax-case stx (=>)
 	   ((?var ((?index)))
 	    #'(vector-ref ?var ?index))

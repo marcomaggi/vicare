@@ -497,19 +497,19 @@
 
   (define-class <alpha>
     (fields a)
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key))))))
   (define-class <beta>
     (fields b)
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key))))))
   (define-class <gamma>
     (fields c)
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key))))))
@@ -553,33 +553,33 @@
 
   (define-class <alpha>
     (fields (mutable a))
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key)))))
-    (setter (lambda (stx)
+    (setter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)) ?val)
 		 #'(set! (?var ?key) ?val))))))
 
   (define-class <beta>
     (fields (mutable b))
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key)))))
-    (setter (lambda (stx)
+    (setter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)) ?val)
 		 #'(set! (?var ?key) ?val))))))
 
   (define-class <gamma>
     (fields (mutable c))
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
 		 #'(?var ?key)))))
-    (setter (lambda (stx)
+    (setter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)) ?val)
 		 #'(set! (?var ?key) ?val))))))

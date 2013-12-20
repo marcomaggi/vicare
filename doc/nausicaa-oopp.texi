@@ -570,13 +570,13 @@ exception to be raised at expand time.  Examples:
 
 @example
 (define-label <vector>
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)))
                #'(vector-ref ?var ?idx))))))
 
 (define-label <matrix>
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?row) (?col)))
                #'(vector-ref
@@ -602,7 +602,7 @@ other examples:
 (define-label <fixnum-vector>
   (parent <vector>)
   (getter
-   (lambda (stx)
+   (lambda (stx tag)
      (syntax-case stx (=>)
        ((?var ((?index)))
         #'(vector-ref ?var ?index))
@@ -641,13 +641,13 @@ violation exception to be raised at expand time.  Examples:
 
 @example
 (define-label <vector>
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)) ?expr)
                #'(vector-set! ?var ?idx ?expr))))))
 
 (define-label <matrix>
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?row) (?col)) ?expr)
                #'(vector-set!
@@ -837,11 +837,11 @@ Example of nested field setter transformer invocation:
 
 @example
 (define-label <vector>
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)))
                #'(vector-ref ?var ?idx)))))
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)) ?expr)
                #'(vector-set! ?var ?idx ?expr))))))
@@ -2131,8 +2131,9 @@ Add a getter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a syntax object as single argument and
-returning a syntax object as single value.
+transformer: a function accepting 2 arguments and returning a syntax
+object as single value; the arguments are: a syntax object described
+below, the tag identifier of the type for which the getter is invoked.
 
 There are 2 possible forms (lookout for the parentheses!):
 
@@ -2180,19 +2181,23 @@ The @meta{form} arguments are meant to be used as nested tag members
 usage for the value returned by the getter.
 @end itemize
 
+The tag argument is useful whenever we define a getter in a mixin: the
+tag argument will be the type tag of the class or label in which the
+mixin has been imported.
+
 Getter definition examples without member composition:
 
 @example
 (import (nausicaa))
 
 (define-label <vector>
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)))
                #'(vector-ref ?var ?idx))))))
 
 (define-label <matrix>
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?row) (?col)))
                #'(vector-ref
@@ -2219,7 +2224,7 @@ Getter definition examples with member composition:
 (define-label <fixnum-vector>
   (parent <vector>)
   (getter
-   (lambda (stx)
+   (lambda (stx tag)
      (syntax-case stx (=>)
        ((?var ((?index)))
         #'(vector-ref ?var ?index))
@@ -2252,8 +2257,9 @@ Add a setter syntax to instances of the enclosing class, label or mixin
 definition; this clause can be used only once.
 
 @meta{transformer} must be an expression evaluating to a syntax
-transformer: a function accepting a syntax object as single argument and
-returning a syntax object as single value.
+transformer: a function accepting 2 arguments and returning a syntax
+object as single value; the arguments are: a syntax object described
+below, the tag identifier of the type for which the setter is invoked.
 
 Whenever a tagged variable @meta{var} is used as follows (lookout for
 the parentheses):
@@ -2274,17 +2280,21 @@ parentheses):
 @noindent
 and the return value of the transformer is the result of the expansion.
 
+The tag argument is useful whenever we define a setter in a mixin: the
+tag argument will be the type tag of the class or label in which the
+mixin has been imported.
+
 Setter definition examples:
 
 @example
 (define-label <vector>
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?idx)) ?expr)
                #'(vector-set! ?var ?idx ?expr))))))
 
 (define-label <matrix>
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
             (syntax-case stx ()
               ((?var ((?row) (?col)) ?expr)
                #'(vector-set!
