@@ -2454,8 +2454,8 @@
 	(define ((fun <alpha>) N)
 	  N)
 	#;((fun 1) a)
-	((<alpha>-a 1) b)
-	#;(((fun 1) a) b))
+	#;((<alpha>-a 1) b)
+	(((fun 1) a) b))
     => 10/3)
 
   #t)

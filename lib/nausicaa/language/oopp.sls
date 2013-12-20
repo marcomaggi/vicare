@@ -528,8 +528,11 @@
 
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
 		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...))
-		   #'(THE-TAG :dispatch (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...)))
+
+		  ((_ #:flat-oopp-syntax ??expr)
+		   #'??expr)
+		  ((_ #:flat-oopp-syntax ??expr ??arg (... ...))
+		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -538,7 +541,7 @@
 		   (identifier? #'??id)
 		   (case-symbol (syntax->datum #'??id)
 		     ((METHOD-NAME)
-		      #'(METHOD-IMPLEMENTATION ??expr . ??args))
+		      (help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
@@ -1019,8 +1022,11 @@
 
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
 		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...))
-		   #'(THE-TAG :dispatch (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...)))
+
+		  ((_ #:flat-oopp-syntax ??expr)
+		   #'??expr)
+		  ((_ #:flat-oopp-syntax ??expr ??arg (... ...))
+		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
 
 		  ;; private API
 
@@ -1082,7 +1088,7 @@
 		   (identifier? #'??id)
 		   (case-symbol (syntax->datum #'??id)
 		     ((METHOD-NAME)
-		      #'(METHOD-IMPLEMENTATION ??expr . ??args))
+		      (help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
