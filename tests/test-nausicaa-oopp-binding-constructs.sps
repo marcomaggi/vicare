@@ -206,25 +206,25 @@
 
   (check
       (let loop ((a 0) (b 3))
-	(if (zero? b)
-	    a
-	  (loop (+ 1 a) (- b 1))))
+  	(if (zero? b)
+  	    a
+  	  (loop (+ 1 a) (- b 1))))
     => 3)
 
   (check
       (let loop ((a 0)
-		 ((b <integer>) 3))
-	(if (b zero?)
-	    a
-	  (loop (+ 1 a) (- b 1))))
+  		 ((b <integer>) 3))
+  	(if (b zero?)
+  	    a
+  	  (loop (+ 1 a) (- b 1))))
     => 3)
 
   (check
-      (let loop (((a <integer>) 0)
+      (let loop (((A <integer>) 0)
 		 ((b <integer>) 3))
 	(if (b zero?)
-	    (a odd?)
-	  (loop (+ 1 a) (- b 1))))
+	    (A odd?)
+	  (loop (+ 1 A) (- b 1))))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -1389,11 +1389,11 @@
 
   (check
       (let ()
-	(define-values ((a <integer>) (b <string>) (c <pair>))
-	  (values 123 "ciao" '(1 . 2)))
-	(list a (a odd?)
-	      b (b length)
-	      c (c cdr)))
+  	(define-values ((a <integer>) (b <string>) (c <pair>))
+  	  (values 123 "ciao" '(1 . 2)))
+  	(list a (a odd?)
+  	      b (b length)
+  	      c (c cdr)))
     => '(123 #t  "ciao" 4 (1 . 2) 2))
 
 
