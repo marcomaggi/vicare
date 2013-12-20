@@ -30,6 +30,7 @@
   (export
     :define
     :let
+    :bind-and-call
     :dispatch
     :accessor
     :mutator
@@ -65,6 +66,7 @@
   (define-auxiliary-syntaxes
     :define
     :let
+    :bind-and-call
     :make
     :make-from-fields
     :is-a?

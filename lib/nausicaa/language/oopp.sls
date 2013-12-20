@@ -215,7 +215,7 @@
   ;;dispatcher.
   ;;
   (syntax-case stx ( ;;
-		    :define :let :make :make-from-fields :is-a?
+		    :define :let :bind-and-call :make :make-from-fields :is-a?
 		    :dispatch :accessor :mutator :getter :setter
 		    :insert-parent-clause define-record-type
 		    :insert-constructor-fields lambda
@@ -232,9 +232,16 @@
      (identifier? #'?var)
      #'(define ?var))
 
-    ((_ :let ??expr ??var ??body0 ??body ...)
-     #'(let ((??var ??expr))
-	 ??body0 ??body ...))
+    ((_ :let ?expr ?var ?body0 ?body ...)
+     #'(let ((src-var ??expr))
+	 (let-syntax ((??var (help.make-tagged-variable-transformer #'<top> #'src-var)))
+	   ??body0 ??body (... ...))))
+
+    ;;Bind a tagged variable and call it with the given arguments.
+    ((_ :bind-and-call ??expr ??arg0 ??arg ...)
+     #'(<top> :let ??expr dummy (dummy ??arg0 ??arg ...)))
+    ((_ :bind-and-call ??expr)
+     #'??expr)
 
     ((_ :make . ?args)
      (synner "invalid maker call syntax for <top> tag"))
@@ -535,9 +542,9 @@
 	      (lambda (stx)
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
-
+(debug-print 'enter (syntax->datum stx))
 		(syntax-case stx ( ;;
-				  :define :let :make :is-a?
+				  :define :let :bind-and-call :make :is-a?
 				  :dispatch :accessor :mutator :getter :setter
 				  :assert-type-and-return
 				  :assert-procedure-argument :assert-expression-return-value
@@ -554,6 +561,7 @@
 			(identifier? #'??id))
 		   (case-symbol (syntax->datum #'??id)
 		     ((METHOD-NAME)
+(debug-print 'method-implementation (syntax->datum stx) (syntax->datum #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		      (help.process-method-application #'let/tags #'METHOD-RV-TAG
 						       #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
@@ -671,6 +679,12 @@
 		   #'(let ((src-var ??expr))
 		       (let-syntax ((??var (help.make-tagged-variable-transformer #'THE-TAG #'src-var)))
 			 ??body0 ??body (... ...))))
+
+                  ;;Bind a tagged variable and call it with the given arguments.
+		  ((_ :bind-and-call ??expr ??arg0 ??arg (... ...))
+		   #'(THE-TAG :let ??expr dummy (dummy ??arg0 ??arg (... ...))))
+		  ((_ :bind-and-call ??expr)
+		   #'??expr)
 
 		  ((_ :make . ??args)
 		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
@@ -1020,7 +1034,7 @@
 		  (syntax-violation 'THE-TAG message stx subform))
 
 		(syntax-case stx ( ;;
-				  :define :let :is-a? :make :make-from-fields
+				  :define :let :bind-and-call :is-a? :make :make-from-fields
 				  :dispatch :accessor :mutator :getter :setter
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
@@ -1077,6 +1091,12 @@
 		   #'(let ((src-var ??expr))
 		       (let-syntax ((??var (help.make-tagged-variable-transformer #'THE-TAG #'src-var)))
 			 ??body0 ??body (... ...))))
+
+		  ;;Bind a tagged variable and call it with the given arguments.
+		  ((_ :bind-and-call ??expr ??arg0 ??arg (... ...))
+		   #'(THE-TAG :let ??expr dummy (dummy ??arg0 ??arg (... ...))))
+		  ((_ :bind-and-call ??expr)
+		   #'??expr)
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -1597,7 +1617,7 @@
     ))
 
 
-;;;; convenience syntaxes with tags: LAMBDA
+;;;; convenience syntaxes with tags: LAMBDA, CASE-LAMBDA
 
 (define-syntax (lambda/tags stx)
   (syntax-case stx ()
@@ -1715,19 +1735,8 @@
     (_
      (synner "invalid syntax in case-lambda definition"))))
 
-(define-syntax (case-define/tags stx)
-  (syntax-case stx ()
-    ((_ ?who (?formals ?body0 ?body ...) ...)
-     (identifier? #'?who)
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who
-	   (let-constants ((WHO '?who))
-	     (case-lambda/tags
-	       (?formals ?body0 ?body ...) ...)))))))
-
 
-;;;; convenience syntaxes with tags: DEFINE and LAMBDA
+;;;; convenience syntaxes with tags: DEFINE, DEFINE-VALUES, CASE-DEFINE
 
 (define-syntax (define/tags stx)
   (syntax-case stx ()
@@ -1758,14 +1767,38 @@
 	  (identifier? #'?tag))
      #'(?tag ?who ?expr))
 
-    ;;Function definition with tagged return values through tagged who.
+    ;;Function definition with tagged single return value through tagged
+    ;;who.
     ;;
-    ((_ ((?who ?tag0 ?tag ...) . ?formals) ?body0 ?body ...)
-     (all-identifiers? #'(?who ?tag0 ?tag ...))
+    ((_ ((?who ?rv-tag) . ?formals) ?body0 ?body ...)
+     (all-identifiers? #'(?who ?rv-tag))
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__))
+	  (FUN (identifier-prefix "the-" #'?who)))
+       #'(module (?who)
+	   (define FUN
+	     (lambda/tags ((_ ?rv-tag) . ?formals)
+	       (let-constants ((WHO '?who))
+		 ?body0 ?body ...)))
+	   (define-syntax (?who stx)
+	     (syntax-case stx ()
+	       (?id
+		(identifier? #'?id)
+		#'FUN)
+	       ((_ ?arg (... ...))
+		#'(splice-first-expand (?rv-tag :bind-and-call (FUN ?arg (... ...)))))
+	       ))
+	   #| end of module |# )))
+
+    ;;Function  definition with  tagged multiple  return values  through
+    ;;tagged who.
+    ;;
+    ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+     (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
      (with-syntax
 	 ((WHO (datum->syntax #'?who '__who__)))
        #'(define ?who
-	   (lambda/tags ((_ ?tag0 ?tag ...) . ?formals)
+	   (lambda/tags ((_ ?rv-tag0 ?rv-tag ...) . ?formals)
 	     (let-constants ((WHO '?who))
 	       ?body0 ?body ...)))))
 
@@ -1822,6 +1855,17 @@
        (syntax-violation who "invalid binding definition syntax" stx #'?var0))))
 
   (%main stx))
+
+(define-syntax (case-define/tags stx)
+  (syntax-case stx ()
+    ((_ ?who (?formals ?body0 ?body ...) ...)
+     (identifier? #'?who)
+     (with-syntax
+	 ((WHO (datum->syntax #'?who '__who__)))
+       #'(define ?who
+	   (let-constants ((WHO '?who))
+	     (case-lambda/tags
+	       (?formals ?body0 ?body ...) ...)))))))
 
 
 ;;;; convenience syntaxes with tags: LET and similar

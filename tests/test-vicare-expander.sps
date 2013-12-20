@@ -3751,6 +3751,24 @@
   	((flip arg2) 3 4))
     => (+ (square 1) (square 2) (square 3) (square 4)))
 
+  (check	;nested intermixed splicing, 2 times
+      (let*-syntax ((one	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (+ (square ?arg) ...))))
+  		    (two	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (one 1 ?arg ...)))))
+  		    (three	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (two 2 ?arg ...))))
+  		    (four	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (three 3 ?arg ...))))))
+  	((four 4) 5))
+    => (+ (square 1) (square 2) (square 3) (square 4) (square 5)))
+
 ;;; --------------------------------------------------------------------
 ;;; errors
 
