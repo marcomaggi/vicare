@@ -1160,8 +1160,8 @@
 
 (define (<parsed-spec>-accessor-transformer spec)
   ;;Given  the "<parsed-spec>"  instance  SPEC: return  a syntax  object
-  ;;representing the accessor transformer function for the tag; whenever
-  ;;a tagged variable is referenced in a form like:
+  ;;representing  the   accessor  transformer  function  for   the  tag.
+  ;;Whenever a tagged variable is referenced in a form like:
   ;;
   ;;   (?var ?arg0 ?arg ...)
   ;;
@@ -1269,17 +1269,19 @@
 	   (case-symbol (syntax->datum #'??field-name)
 	     ;;Safe accessors.
 	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-ACCESSOR #,expr-stx))
+	      #`(IMMUTABLE-TAG #:nested-oopp-syntax (IMMUTABLE-ACCESSOR #,expr-stx)))
 	     ...
 	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-ACCESSOR   #,expr-stx))
+	      #`(MUTABLE-TAG   #:nested-oopp-syntax (MUTABLE-ACCESSOR   #,expr-stx)))
 	     ...
 	     ;;Unsafe accessors.
 	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx))
+	      #`(IMMUTABLE-CONCRETE-TAG #:nested-oopp-syntax
+					($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)))
 	     ...
 	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx))
+	      #`(MUTABLE-CONCRETE-TAG #:nested-oopp-syntax
+				      ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)))
 	     ...
 	     (else
 	      #`(THE-PARENT :dispatch (#,expr-stx ??field-name)))))
@@ -1291,17 +1293,19 @@
 	     (case-symbol (syntax->datum #'??field-name)
 	       ;;Safe accessors.
 	       ((IMMUTABLE-FIELD)
-		#`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o (o . KEYS)))
+		#`(IMMUTABLE-TAG #:oopp-syntax ((IMMUTABLE-ACCESSOR #,expr-stx) . KEYS)))
 	       ...
 	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o (o . KEYS)))
+		#`(MUTABLE-TAG   #:oopp-syntax ((MUTABLE-ACCESSOR   #,expr-stx) . KEYS)))
 	       ...
 	       ;;Unsafe accessors.
 	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-		#`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o (o . KEYS)))
+		#`(IMMUTABLE-CONCRETE-TAG #:oopp-syntax
+					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) . KEYS)))
 	       ...
 	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-		#`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o (o . KEYS)))
+		#`(MUTABLE-CONCRETE-TAG   #:oopp-syntax
+					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) . KEYS)))
 	       ...
 	       (else
 		#`(THE-PARENT :dispatch (#,expr-stx ??field-name . KEYS))))))
@@ -1312,17 +1316,19 @@
 	   (case-symbol (syntax->datum #'??field-name)
 	     ;;Safe accessors.
 	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o (o . ??args)))
+	      #`(IMMUTABLE-TAG #:oopp-syntax ((IMMUTABLE-ACCESSOR #,expr-stx) . ??args)))
 	     ...
 	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o (o . ??args)))
+	      #`(MUTABLE-TAG   #:oopp-syntax ((MUTABLE-ACCESSOR   #,expr-stx) . ??args)))
 	     ...
 	     ;;Unsafe accessors.
 	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o (o . ??args)))
+	      #`(IMMUTABLE-CONCRETE-TAG #:oopp-syntax
+					(($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
 	     ...
 	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o (o . ??args)))
+	      #`(MUTABLE-CONCRETE-TAG   #:oopp-syntax
+					(($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
 	     ...
 	     (else
 	      #`(THE-PARENT :dispatch (#,expr-stx ??field-name . ??args)))))

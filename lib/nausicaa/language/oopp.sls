@@ -196,15 +196,17 @@
 		    aux.<>)
 
     ((_ #:oopp-syntax (??expr ??arg ...))
-     (synner "undefined OOPP syntax"))
+     #'(??expr ??arg ...)
+     #;(synner "undefined OOPP syntax"))
 
     ((_ #:nested-oopp-syntax ??expr)
-     (synner "undefined OOPP syntax"))
+     #'(splice-first-expand (<top> :flat-oopp-syntax ??expr)))
 
     ((_ :flat-oopp-syntax ??expr)
      #'??expr)
     ((_ :flat-oopp-syntax ??expr ??arg ...)
-     (synner "undefined OOPP syntax"))
+     #'(??expr ??arg ...)
+     #;(synner "undefined OOPP syntax"))
 
     ((_ :define ?var ?expr)
      (identifier? #'?var)
