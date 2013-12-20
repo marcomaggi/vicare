@@ -342,64 +342,52 @@
      (synner "invalid OOPP syntax" form-stx))))
 
 
-(module (process-method-application)
-
-  (define (process-method-application let/tags-id rv-tag-id application-stx)
-    (if (syntax->datum rv-tag-id)
-	;;There  is a  return-value tag,  so scan  the arguments  for an
-	;;arrow.
-	(syntax-case application-stx ()
-	  ;;No arguments, go with a plain application.
-	  ((?method-implementation ?expr)
-	   application-stx)
-
-	  ((?method-implementation ?expr ?arg ...)
-	   (receive (before-args-stx after-args-stx)
-	       (%split-arguments-across-arrow #'(?arg ...))
-	     (cond ((null? after-args-stx)
-		    ;;There is no arrow, go with a plain application.
-		    application-stx)
-		   (else
-		    ;;There is an arrow!!!  Compose the application.
-		    #`(#,let/tags-id (((R #,rv-tag-id)
-		    		       (?method-implementation ?expr #,@before-args-stx)))
-		    		     (R #,@after-args-stx))
-		    ;;NOTE The  following alternative  implementation of
-		    ;;the output form looks attractive because we do not
-		    ;;define a binding; but is  it correct not to define
-		    ;;a binding?   With a binding  we are sure  that all
-		    ;;the syntaxes present and future will work.
-		    ;;
-		    ;; #`(#,rv-tag-id :dispatch
-		    ;; 		   (?method-implementation ?expr #,@before-args-stx)
-		    ;; 		   (dummy #,@after-args-stx))
-		    ))))
-
-	  #| end of syntax-case |# )
-
-      ;;There is  not return-value tag, so  just go with a  plain method
-      ;;implementation application.
-      application-stx))
-
-  (define (%split-arguments-across-arrow args-stx)
-    (let loop ((args-stx        args-stx)
-	       (before-args-stx '()))
-      (syntax-case args-stx (=>)
-	;;There is no arrow, all the arguments are "before".
-	(()
-	 (values (reverse before-args-stx) '()))
-
-	;;There is an arrow!
-	((=> ?after-arg0 ?after-arg ...)
-	 (values (reverse before-args-stx) #'(?after-arg0 ?after-arg ...)))
-
-	;;A before argument.
-	((?before-arg ?arg ...)
-	 (loop #'(?arg ...) (cons #'?before-arg before-args-stx)))
-
-	)))
-
-  #| end of module |# )
+(define (process-method-application rv-tag-id application-stx)
+  ;;Process a tag's method application.   RV-TAG-ID must be false of the
+  ;;tag   identifier   of   the   single   application   return   value.
+  ;;APPLICATION-STX  must be  a  syntax object  representing the  method
+  ;;application.
+  ;;
+  ;;When there  is no  return-value tag or  the method  returns multiple
+  ;;values: RV-TAG-ID  must be false.  In  this case we just  return the
+  ;;application syntax object.
+  ;;
+  ;;When the method  has a single tagged return value:  we want to allow
+  ;;OOPP syntax  for the returned  value.  For example, knowing  the the
+  ;;method SUBVECTOR of "<vector>" has return value with tag "<vector>":
+  ;;
+  ;;  (<vector> V '#(0 1 2 3))
+  ;;
+  ;;  (V subvector 0 2) => #(0 1)	;plain method application
+  ;;  ((V subvector 0 2) length) => 2	;return value OOPP syntax
+  ;;
+  ;;we want the expansion:
+  ;;
+  ;;  (V subvector 0 2)
+  ;;  ==> (splice-first-expand
+  ;;       (<vector> #:flat-oopp-syntax (subvector V 0 1)))
+  ;;
+  ;;so that  if the  application is  the first  subform of  an enclosing
+  ;;subform and there are arguments, the full expansion is:
+  ;;
+  ;;  ((V subvector 0 2) length)
+  ;;  ==> (<vector> #:flat-oopp-syntax (subvector V 0 1) length)
+  ;;  ==> (<vector> #:oopp-syntax ((subvector V 0 1) length))
+  ;;  ==> (vector-length (subvector V 0 1))
+  ;;
+  ;;otherwise the expansion is just:
+  ;;
+  ;;  (begin (V subvector 0 2))
+  ;;  ==> (begin
+  ;;       (splice-first-expand
+  ;;        (<vector> #:flat-oopp-syntax (subvector V 0 1))))
+  ;;  ==> (begin
+  ;;       (<vector> #:flat-oopp-syntax (subvector V 0 1)))
+  ;;  ==> (begin (subvector V 0 1))
+  ;;
+  (if (syntax->datum rv-tag-id)
+      #`(splice-first-expand (#,rv-tag-id #:flat-oopp-syntax #,application-stx))
+    application-stx))
 
 
 (define parse-with-tags-bindings
