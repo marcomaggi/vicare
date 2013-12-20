@@ -3684,11 +3684,23 @@
   (check
       (with-result
        (begin
-	 (add-result 1)
-	 (splice-first-expand (add-result 2))
-	 (add-result 3)
-	 4))
+  	 (add-result 1)
+  	 (splice-first-expand (add-result 2))
+  	 (add-result 3)
+  	 4))
     => '(4 (1 2 3)))
+
+  (check
+      (if (splice-first-expand 1)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 2)
+
+  (check
+      (if (splice-first-expand #f)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 3)
 
 ;;; --------------------------------------------------------------------
 
@@ -3703,7 +3715,7 @@
   (check
       (with-result
        ((splice-first-expand (begin (add-result 1) (add-result 2)))
-	(add-result 3) 4))
+  	(add-result 3) 4))
     => '(4 (1 2 3)))
 
   (check
@@ -3723,6 +3735,27 @@
     => (+ (square 1) (square 2) (square 3) (square 4)))
 
   (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand 123)))))
+  	(doit))
+    => 123)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	(doit))
+    => 3)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	((doit) 10))
+    => 13)
+
+  (check
       (let*-syntax ((arg1 (identifier-syntax 1))
   		    (arg2 (identifier-syntax 2))
   		    (doit (syntax-rules ()
@@ -3731,7 +3764,7 @@
   		    (flop (syntax-rules ()
   			    ((_ ?arg ...)
   			     (splice-first-expand
-			      (doit arg1 ?arg ...))))))
+  			      (doit arg1 ?arg ...))))))
   	((flop arg2) 3 4))
     => (+ (square 1) (square 2) (square 3) (square 4)))
 
@@ -3744,7 +3777,7 @@
   		    (flop (syntax-rules ()
   			    ((_ ?arg ...)
   			     (splice-first-expand
-			      (doit arg1 ?arg ...)))))
+  			      (doit arg1 ?arg ...)))))
   		    (flip (syntax-rules ()
   			    ((_ ?arg ...)
   			     (flop ?arg ...)))))
@@ -3774,10 +3807,10 @@
 
   (check
       (guard (E ((syntax-violation? E)
-		 (condition-message E))
-		(else E))
-	(eval '((splice-first-expand 123))
-	      (environment '(vicare))))
+  		 (condition-message E))
+  		(else E))
+  	(eval '((splice-first-expand 123))
+  	      (environment '(vicare))))
     => "expected list as argument of splice-first-expand")
 
   #t)
