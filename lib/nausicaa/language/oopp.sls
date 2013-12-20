@@ -184,8 +184,8 @@
   ;;dispatcher.
   ;;
   (syntax-case stx ( ;;
-		    :oopp-syntax
-		    :define :let :bind-and-call :make :make-from-fields :is-a?
+		    :flat-oopp-syntax
+		    :define :let :make :make-from-fields :is-a?
 		    :dispatch :accessor :mutator :getter :setter
 		    :insert-parent-clause define-record-type
 		    :insert-constructor-fields lambda
@@ -195,12 +195,15 @@
 		    :predicate-function :accessor-function :mutator-function
 		    aux.<>)
 
-    ;;Whenever  the  OOPP  syntax  is  used for  a  tagged  variable  or
-    ;;expression  of this  type, such  syntax  use must  expand to  this
-    ;;syntax.  The "<top>"  type has no fields, so here  we just raise a
-    ;;syntax violation.
-    ;;
-    ((_ :oopp-syntax (?expr ?arg ...) ?rv-arg ...)
+    ((_ #:oopp-syntax (??expr ??arg ...))
+     (synner "undefined OOPP syntax"))
+
+    ((_ #:nested-oopp-syntax ??expr)
+     (synner "undefined OOPP syntax"))
+
+    ((_ :flat-oopp-syntax ??expr)
+     #'??expr)
+    ((_ :flat-oopp-syntax ??expr ??arg ...)
      (synner "undefined OOPP syntax"))
 
     ((_ :define ?var ?expr)
@@ -217,9 +220,9 @@
 	   ?body0 ?body ...)))
 
     ;;Bind a tagged variable and call it with the given arguments.
-    ((_ :bind-and-call ?expr ?arg0 ?arg ...)
+    ((_ :flat-oopp-syntax ?expr ?arg0 ?arg ...)
      #'(<top> :let ?expr dummy (dummy ?arg0 ?arg ...)))
-    ((_ :bind-and-call ?expr)
+    ((_ :flat-oopp-syntax ?expr)
      #'?expr)
 
     ((_ :make . ?args)
@@ -517,7 +520,7 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :define :let :bind-and-call :make :is-a?
+				  :define :let :flat-oopp-syntax :make :is-a?
 				  :dispatch :accessor :mutator :getter :setter
 				  :assert-type-and-return
 				  :assert-procedure-argument :assert-expression-return-value
@@ -529,9 +532,12 @@
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
 		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
 
-		  ((_ #:flat-oopp-syntax ??expr)
+		  ((_ #:nested-oopp-syntax ??expr)
+		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
+
+		  ((_ :flat-oopp-syntax ??expr)
 		   #'??expr)
-		  ((_ #:flat-oopp-syntax ??expr ??arg (... ...))
+		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
 		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
@@ -655,9 +661,9 @@
 			 ??body0 ??body (... ...))))
 
                   ;;Bind a tagged variable and call it with the given arguments.
-		  ((_ :bind-and-call ??expr ??arg0 ??arg (... ...))
+		  ((_ :flat-oopp-syntax ??expr ??arg0 ??arg (... ...))
 		   #'(THE-TAG :let ??expr dummy (dummy ??arg0 ??arg (... ...))))
-		  ((_ :bind-and-call ??expr)
+		  ((_ :flat-oopp-syntax ??expr)
 		   #'??expr)
 
 		  ((_ :make . ??args)
@@ -1009,7 +1015,8 @@
 		  (syntax-violation 'THE-TAG message stx subform))
 
 		(syntax-case stx ( ;;
-				  :define :let :bind-and-call :is-a? :make :make-from-fields
+				  :flat-oopp-syntax
+				  :define :let :is-a? :make :make-from-fields
 				  :dispatch :accessor :mutator :getter :setter
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
@@ -1023,9 +1030,12 @@
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
 		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
 
-		  ((_ #:flat-oopp-syntax ??expr)
+		  ((_ #:nested-oopp-syntax ??expr)
+		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
+
+		  ((_ :flat-oopp-syntax ??expr)
 		   #'??expr)
-		  ((_ #:flat-oopp-syntax ??expr ??arg (... ...))
+		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
 		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
 
 		  ;; private API
@@ -1076,9 +1086,9 @@
 			 ??body0 ??body (... ...))))
 
 		  ;;Bind a tagged variable and call it with the given arguments.
-		  ((_ :bind-and-call ??expr ??arg0 ??arg (... ...))
+		  ((_ :flat-oopp-syntax ??expr ??arg0 ??arg (... ...))
 		   #'(THE-TAG :let ??expr dummy (dummy ??arg0 ??arg (... ...))))
-		  ((_ :bind-and-call ??expr)
+		  ((_ :flat-oopp-syntax ??expr)
 		   #'??expr)
 
 		  ;;Try  to match  the tagged-variable  use to  a method
@@ -1763,7 +1773,7 @@
 		(identifier? #'?id)
 		#'FUN)
 	       ((_ ?arg (... ...))
-		#'(splice-first-expand (?rv-tag :bind-and-call (FUN ?arg (... ...)))))
+		#'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...))))
 	       ))
 	   #| end of module |# )))
 
