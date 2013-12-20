@@ -28,7 +28,7 @@
 #!r6rs
 (library (nausicaa language oopp auxiliary-syntaxes)
   (export
-    :oopp-syntax
+    :flat-oopp-syntax
     :define
     :let
     :bind-and-call
@@ -52,12 +52,11 @@
     :accessor-function
     :mutator-function
     :process-shadowed-identifier
-
     :insert-mixin-clauses)
   (import (only (vicare)
 		define-auxiliary-syntaxes))
   (define-auxiliary-syntaxes
-    :oopp-syntax
+    :flat-oopp-syntax
     :define
     :let
     :bind-and-call

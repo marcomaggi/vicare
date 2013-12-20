@@ -322,7 +322,7 @@
        (lambda (stx tag)
 	 (syntax-case stx (=>)
 	   ((?var ((?index)))
-	    #'(splice-first-expand (<fixnum> #:flat-oopp-syntax (vector-ref ?var ?index))))
+	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?var ?index)))
 	   ))))
 
     (check
