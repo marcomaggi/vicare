@@ -364,14 +364,18 @@
   ;;we want the expansion:
   ;;
   ;;  (V subvector 0 2)
+  ;;  ==> (<vector> #:nested-oopp-syntax (subvector V 0 1)))
   ;;  ==> (splice-first-expand
-  ;;       (<vector> #:flat-oopp-syntax (subvector V 0 1)))
+  ;;       (<vector> :flat-oopp-syntax (subvector V 0 1)))
   ;;
   ;;so that  if the  application is  the first  subform of  an enclosing
   ;;subform and there are arguments, the full expansion is:
   ;;
   ;;  ((V subvector 0 2) length)
-  ;;  ==> (<vector> #:flat-oopp-syntax (subvector V 0 1) length)
+  ;;  ==> ((<vector> #:nested-oopp-syntax (subvector V 0 1)) length)
+  ;;  ==> ((splice-first-expand
+  ;;        (<vector> :flat-oopp-syntax (subvector V 0 1))) length)
+  ;;  ==> (<vector> :flat-oopp-syntax (subvector V 0 1) length)
   ;;  ==> (<vector> #:oopp-syntax ((subvector V 0 1) length))
   ;;  ==> (vector-length (subvector V 0 1))
   ;;
@@ -379,10 +383,12 @@
   ;;
   ;;  (begin (V subvector 0 2))
   ;;  ==> (begin
-  ;;       (splice-first-expand
-  ;;        (<vector> #:flat-oopp-syntax (subvector V 0 1))))
+  ;;       (<vector> #:nested-oopp-syntax (subvector V 0 1)))
   ;;  ==> (begin
-  ;;       (<vector> #:flat-oopp-syntax (subvector V 0 1)))
+  ;;       (splice-first-expand
+  ;;        (<vector> :flat-oopp-syntax (subvector V 0 1))))
+  ;;  ==> (begin
+  ;;       (<vector> :flat-oopp-syntax (subvector V 0 1)))
   ;;  ==> (begin (subvector V 0 1))
   ;;
   (if (syntax->datum rv-tag-id)
