@@ -349,7 +349,6 @@
     ($record-type-field-set!		(core-macro . $record-type-field-set!))
     ($record-type-field-ref		(core-macro . $record-type-field-ref))
     (splice-first-expand		(core-macro . splice-first-expand))
-    (internal-splice-first-expand	(core-macro . internal-splice-first-expand))
     (let-values				(macro . let-values))
     (let*-values			(macro . let*-values))
     (values->list			(macro . values->list))
