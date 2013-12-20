@@ -67,12 +67,12 @@
 	  (mutable b)
 	  (immutable c))
 
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var (()))
 	       #'(?var a)))))
 
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var (()) ?value)
 	       #'(set! (?var a) ?value)))))
@@ -529,7 +529,7 @@
 
     (define-class <alpha>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -567,7 +567,7 @@
 
     (define-class <base>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -613,7 +613,7 @@
 
     (define-class <alpha>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))
@@ -649,7 +649,7 @@
 
     (define-class <base>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))

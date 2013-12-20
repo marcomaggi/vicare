@@ -356,14 +356,14 @@
 	  dimensions (%compute-factors dimensions) #f
 	  (make-vector (vectors.vector-fold-left * 1 dimensions) fill-value))))))
 
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?position0) (?position) ...))
 	       ;;Build a POSITION object and hand it to ARRAY-REF.
 	       #'(array-ref ?var (array-position ?position0 ?position ...)))
 	      )))
 
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?position0) (?position) ...) ?value)
 	       ;;Build a POSITION object and hand it to ARRAY-SET!.

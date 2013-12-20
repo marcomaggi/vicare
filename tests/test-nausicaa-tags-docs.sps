@@ -156,11 +156,11 @@
   (let ()
 
     (define-label <vector>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)))
 		   #'(vector-ref ?var ?idx)))))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)) ?expr)
 		   #'(vector-set! ?var ?idx ?expr))))))
@@ -287,13 +287,13 @@
   (let ()	;getter
 
     (define-label <vector>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)))
 		   #'(vector-ref ?var ?idx))))))
 
     (define-label <matrix>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row) (?col)))
 		   #'(vector-ref
@@ -321,13 +321,13 @@
   (let ()	;setter
 
     (define-label <vector>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)) ?expr)
 		   #'(vector-set! ?var ?idx ?expr))))))
 
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row) (?col)) ?expr)
 		   #'(vector-set!

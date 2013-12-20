@@ -29,7 +29,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa language oopp)
   (export
     define-label		define-class		define-mixin
@@ -84,11 +84,7 @@
 	    (aux.mixins			mixins)
 	    (aux.<>			<>)
 	    (aux.<-			<-)))
-  (import (except (vicare)
-		  define-syntax)
-    (prefix (only (rnrs)
-		  define-syntax)
-	    rnrs.)
+  (import (vicare)
     (nausicaa language oopp auxiliary-syntaxes)
     (for (prefix (nausicaa language oopp helpers)
 		 help.)
@@ -118,33 +114,6 @@
 
 
 ;;;; helpers
-
-(rnrs.define-syntax define-syntax
-  ;;This is  like DEFINE-SYNTAX from  (vicare), but in  addition defines
-  ;;the function SYNNER as helper to raise syntax violations.
-  ;;
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?name)
-       (identifier? #'?name)
-       #'(rnrs.define-syntax ?name))
-      ((_ ?name ?lambda)
-       (identifier? #'?name)
-       #'(rnrs.define-syntax ?name ?lambda))
-      ((_ (?name ?stx) ?body0 ?body ...)
-       (and (identifier? #'?name)
-	    (identifier? #'?stx))
-       (with-syntax ((SYNNER (datum->syntax #'?name 'synner)))
-	 #'(rnrs.define-syntax ?name
-	     (lambda (?stx)
-	       (define SYNNER
-		 (case-lambda
-		  ((message)
-		   (SYNNER message #f))
-		  ((message subform)
-		   (syntax-violation '?name message ?stx subform))))
-	       ?body0 ?body ...))))
-      )))
 
 (define-condition-type &tagged-binding-violation
     &assertion
@@ -200,7 +169,7 @@
   ;;
   #t)
 
-(define-syntax (<top> stx)
+(define-syntax* (<top> stx)
   ;;Tag syntax  for "<top>",  all the operations  involving this  tag go
   ;;through this syntax.  This tag is  the supertag of all the class and
   ;;label tags.
@@ -215,6 +184,7 @@
   ;;dispatcher.
   ;;
   (syntax-case stx ( ;;
+		    :oopp-syntax
 		    :define :let :bind-and-call :make :make-from-fields :is-a?
 		    :dispatch :accessor :mutator :getter :setter
 		    :insert-parent-clause define-record-type
@@ -224,6 +194,15 @@
 		    :append-unique-id :list-of-unique-ids
 		    :predicate-function :accessor-function :mutator-function
 		    aux.<>)
+
+    ;;Whenever  the  OOPP  syntax  is  used for  a  tagged  variable  or
+    ;;expression  of this  type, such  syntax  use must  expand to  this
+    ;;syntax.  The "<top>"  type has no fields, so here  we just raise a
+    ;;syntax violation.
+    ;;
+    ((_ :oopp-syntax (?expr ?arg ...) ?rv-arg ...)
+     (synner "undefined OOPP syntax"))
+
     ((_ :define ?var ?expr)
      (identifier? #'?var)
      #'(define ?var ?expr))
@@ -233,15 +212,15 @@
      #'(define ?var))
 
     ((_ :let ?expr ?var ?body0 ?body ...)
-     #'(let ((src-var ??expr))
-	 (let-syntax ((??var (help.make-tagged-variable-transformer #'<top> #'src-var)))
-	   ??body0 ??body (... ...))))
+     #'(let ((src-var ?expr))
+	 (let-syntax ((?var (help.make-tagged-variable-transformer #'<top> #'src-var)))
+	   ?body0 ?body ...)))
 
     ;;Bind a tagged variable and call it with the given arguments.
-    ((_ :bind-and-call ??expr ??arg0 ??arg ...)
-     #'(<top> :let ??expr dummy (dummy ??arg0 ??arg ...)))
-    ((_ :bind-and-call ??expr)
-     #'??expr)
+    ((_ :bind-and-call ?expr ?arg0 ?arg ...)
+     #'(<top> :let ?expr dummy (dummy ?arg0 ?arg ...)))
+    ((_ :bind-and-call ?expr)
+     #'?expr)
 
     ((_ :make . ?args)
      (synner "invalid maker call syntax for <top> tag"))
@@ -256,29 +235,21 @@
 	 ?expr
 	 #t))
 
-    ;;If a "<top>" value receives a dispatch request: what do we do?
-    ;;
-    ;;Creative solution: just interpret it as a function application.
-    ;;
-    ;; ((_ :dispatch ?expr (?var . ?args))
-    ;;  (identifier? #'?var)
-    ;;  #'(?expr . ?args))
-    ;;
-    ;;Logic solution: raise an error.
-    ((_ :dispatch ?expr (?var . ?args))
-     (identifier? #'?var)
+    ;;If a  "<top>" value receives  a dispatch  request: what do  we do?
+    ;;Raise an error because "<top>" has no members.
+    ((_ :dispatch (?expr . ?args))
      (synner "invalid tag member"))
 
-    ((_ :accessor ?expr (?var . ?args))
+    ((_ :accessor (?expr . ?args))
      (synner "invalid tag-syntax field-accessor request"))
 
     ((_ :mutator ?expr ?keys ?value)
      (synner "invalid tag-syntax field-mutator request"))
 
-    ((_ :getter ?expr (?var . ?args))
+    ((_ :getter (?expr . ?args))
      (synner "invalid tag-syntax getter request"))
 
-    ((_ :setter ?expr (?var . ?args))
+    ((_ :setter (?expr . ?args))
      (synner "invalid tag-syntax setter request"))
 
     ;;Given an R6RS record type definition: insert an appropriate PARENT
@@ -379,7 +350,7 @@
      (synner "invalid tag syntax"))))
 
 
-(define-syntax (define-label stx)
+(define-syntax* (define-label stx)
   ;;Define a new label type.  After  all the processing: expand to a set
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
@@ -401,7 +372,7 @@
     (_
      (synner "invalid syntax in label definition"))))
 
-(define-syntax (define-label/after-mixins-processing stx)
+(define-syntax* (define-label/after-mixins-processing stx)
   (define spec   (help.parse-label-definition stx #'<top> #'lambda/tags synner))
   (define tag-id (help.<parsed-spec>-name-id spec))
   (with-syntax
@@ -498,20 +469,20 @@
 	  ;;of  the  parent.  The  getter  of  "<top>"  raises a  syntax
 	  ;;violation error.
 	  (or (help.<parsed-spec>-getter spec)
-	      #`(lambda (stx)
+	      #`(lambda (stx unused-tag)
 		  (syntax-case stx ()
 		    (?form
-		     #'(THE-PARENT :getter #f ?form))))))
+		     #'(THE-PARENT :getter ?form))))))
 
 	 (SETTER-TRANSFORMER
 	  ;;If no setter  syntax is defined for this  label: use the one
 	  ;;of  the  parent.  The  setter  of  "<top>"  raises a  syntax
 	  ;;violation error.
 	  (or (help.<parsed-spec>-setter spec)
-	      #`(lambda (stx)
+	      #`(lambda (stx unused-tag)
 		  (syntax-case stx ()
 		    (?form
-		     #'(THE-PARENT :setter #f ?form)))))))
+		     #'(THE-PARENT :setter ?form)))))))
       #'(begin
 
 	  (define THE-PUBLIC-CONSTRUCTOR
@@ -522,7 +493,7 @@
 	  (define THE-LIST-OF-UIDS
 	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
 
-	  (define-syntax THE-TAG
+	  (define-syntax* THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through this syntax.  For all the patterns:
 	    ;;
@@ -534,15 +505,17 @@
 	    ;;*  ??VAR must  be  the identifier  bound  to the  instance
 	    ;;syntax dispatcher.
 	    ;;
-	    (let ((%the-getter		GETTER-TRANSFORMER)
-		  (%the-setter		SETTER-TRANSFORMER)
+	    (let ((%the-getter		(lambda (stx)
+					  (GETTER-TRANSFORMER stx #'THE-TAG)))
+		  (%the-setter		(lambda (stx)
+					  (SETTER-TRANSFORMER stx #'THE-TAG)))
 		  (%the-accessor	ACCESSOR-TRANSFORMER)
 		  (%the-mutator		MUTATOR-TRANSFORMER)
 		  (%the-maker		MAKER-TRANSFORMER))
+
 	      (lambda (stx)
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
-(debug-print 'enter (syntax->datum stx))
 		(syntax-case stx ( ;;
 				  :define :let :bind-and-call :make :is-a?
 				  :dispatch :accessor :mutator :getter :setter
@@ -553,24 +526,25 @@
 				  :process-shadowed-identifier
 				  aux.<>)
 
+		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
+		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
+		  ((_ #:oopp-syntax (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...))
+		   #'(THE-TAG :dispatch (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...)))
+
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
 		  ;;try to match a field name.
-		  ((_ :dispatch ??expr (??var ??id . ??args))
-		   (and (identifier? #'??var)
-			(identifier? #'??id))
+		  ((_ :dispatch (??expr ??id . ??args))
+		   (identifier? #'??id)
 		   (case-symbol (syntax->datum #'??id)
 		     ((METHOD-NAME)
-(debug-print 'method-implementation (syntax->datum stx) (syntax->datum #'(METHOD-IMPLEMENTATION ??expr . ??args)))
-		      (help.process-method-application #'let/tags #'METHOD-RV-TAG
-						       #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		      #'(METHOD-IMPLEMENTATION ??expr . ??args))
 		     ...
 		     (else
-		      (%the-accessor stx #'??expr #'??var (cons #'??id #'??args)))))
+		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
 
-		  ((_ :accessor ??expr (??var . ??args))
-		   (identifier? #'??var)
-		   (%the-accessor stx #'??expr #'??var #'??args))
+		  ((_ :accessor (??expr . ??args))
+		   (%the-accessor stx #'??expr #'??args))
 
 		  ;;Invoke the  mutator syntax transformer.   The syntax
 		  ;;use:
@@ -596,34 +570,31 @@
 
 		  ;;Invoke  the  getter   transformer  function  without
 		  ;;nested member use.
-		  ((_ :getter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))))
-		   (identifier? #'??var)
-		   (%the-getter #'(??var ((??key0 (... ...))
-					  (??key  (... ...))
-					  (... ...)))))
+		  ((_ :getter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))))
+		   (%the-getter #'(??expr ((??key0 (... ...))
+					   (??key  (... ...))
+					   (... ...)))))
 		  ;;Invoke the  getter transformer function  with nested
 		  ;;member use.
-		  ((_ :getter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))
-					    => ?form0 ?form (... ...)))
-		   (identifier? #'??var)
-		   (%the-getter #'(??var ((??key0 (... ...))
-					  (??key  (... ...))
-					  (... ...))
-					 => ?form0 ?form (... ...))))
+		  ((_ :getter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))
+				      => ?form0 ?form (... ...)))
+		   (%the-getter #'(??expr ((??key0 (... ...))
+					   (??key  (... ...))
+					   (... ...))
+					  => ?form0 ?form (... ...))))
 
-		  ((_ :setter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))
-					    ??value))
-		   (identifier? #'??var)
-		   (%the-setter #'(??var ((??key0 (... ...))
-					  (??key (... ...))
-					  (... ...))
-					 ??value)))
+		  ((_ :setter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))
+				      ??value))
+		   (%the-setter #'(??expr ((??key0 (... ...))
+					   (??key (... ...))
+					   (... ...))
+					  ??value)))
 
 		  ((_ :assert-type-and-return ??expr)
 		   (if config.validate-tagged-values?
@@ -663,7 +634,7 @@
 		   (identifier? #'??var)
 		   #'(begin
 		       (define src-var)
-		       (define-syntax ??var
+		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
 
 		  ;;Define  internal  bindings  for a  tagged  variable.
@@ -672,7 +643,7 @@
 		   (identifier? #'??var)
 		   #'(begin
 		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax ??var
+		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
 
 		  ((_ :let ??expr ??var ??body0 ??body (... ...))
@@ -789,7 +760,7 @@
 	  ))))
 
 
-(define-syntax (define-class stx)
+(define-syntax* (define-class stx)
   ;;Define a new class type.  After  all the processing: expand to a set
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
@@ -811,7 +782,7 @@
     (_
      (synner "invalid syntax in class definition"))))
 
-(define-syntax (define-class/after-mixins-processing stx)
+(define-syntax* (define-class/after-mixins-processing stx)
   (define spec		(help.parse-class-definition stx #'<top> #'lambda/tags synner))
   (define tag-id	(help.<parsed-spec>-name-id spec))
   (define abstract?	(help.<parsed-spec>-abstract? spec))
@@ -928,18 +899,17 @@
 
 	 (GETTER-TRANSFORMER
 	  (or (help.<parsed-spec>-getter spec)
-	      #`(lambda (stx)
+	      #`(lambda (stx unused-tag)
 	      	  (syntax-case stx ()
 	      	    (?form
-	      	     #'(THE-PARENT :getter #f ?form))))))
+	      	     #'(THE-PARENT :getter ?form))))))
 
 	 (SETTER-TRANSFORMER
 	  (or (help.<parsed-spec>-setter spec)
-	      #`(lambda (stx)
+	      #`(lambda (stx unused-tag)
 		  (syntax-case stx ()
 		    (?form
-		     #'(THE-PARENT :setter #f ?form))))))
-	 )
+		     #'(THE-PARENT :setter ?form)))))))
       #'(begin
 
 	  (THE-PARENT :insert-parent-clause
@@ -1010,7 +980,7 @@
 	  ;; (define the-super-constructor
 	  ;;   (record-constructor the-super-constructor-descriptor))
 
-	  (define-syntax THE-TAG
+	  (define-syntax* THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through  this   syntax.   The  only   reason  this  syntax
 	    ;;dispatches to sub-syntaxes it to keep the code readable.
@@ -1023,8 +993,10 @@
 	    ;;??VAR must be the  identifier bound to the instance syntax
 	    ;;dispatcher.
 	    ;;
-	    (let ((%the-getter		GETTER-TRANSFORMER)
-		  (%the-setter		SETTER-TRANSFORMER)
+	    (let ((%the-getter		(lambda (stx)
+					  (GETTER-TRANSFORMER stx #'THE-TAG)))
+		  (%the-setter		(lambda (stx)
+					  (SETTER-TRANSFORMER stx #'THE-TAG)))
 		  (%the-accessor	ACCESSOR-TRANSFORMER)
 		  (%the-mutator		MUTATOR-TRANSFORMER)
 		  (%the-maker		MAKER-TRANSFORMER))
@@ -1044,6 +1016,11 @@
 				  :append-unique-id :list-of-unique-ids
 				  :predicate-function :accessor-function :mutator-function
 				  aux.<>)
+
+		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
+		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
+		  ((_ #:oopp-syntax (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...))
+		   #'(THE-TAG :dispatch (??expr ??arg (... ...)) ??rv-arg0 ??rv-arg (... ...)))
 
 		  ;; private API
 
@@ -1077,14 +1054,14 @@
 		   (identifier? #'??var)
 		   #'(begin
 		       (define src-var)
-		       (define-syntax ??var
+		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
 
 		  ((_ :define ??var ??expr)
 		   (identifier? #'??var)
 		   #'(begin
 		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax ??var
+		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
 
 		  ((_ :let ??expr ??var ??body0 ??body (... ...))
@@ -1101,54 +1078,48 @@
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
 		  ;;try to match a field name.
-		  ((_ :dispatch ??expr (??var ??id . ??args))
-		   (and (identifier? #'??var)
-			(identifier? #'??id))
+		  ((_ :dispatch (??expr ??id . ??args))
+		   (identifier? #'??id)
 		   (case-symbol (syntax->datum #'??id)
 		     ((METHOD-NAME)
-		      (help.process-method-application #'let/tags #'METHOD-RV-TAG
-						       #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		      #'(METHOD-IMPLEMENTATION ??expr . ??args))
 		     ...
 		     (else
-		      (%the-accessor stx #'??expr #'??var (cons #'??id #'??args)))))
+		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
 
-		  ((_ :accessor ??expr (??var . ??args))
-		   (identifier? #'??var)
-		   (%the-accessor stx #'??expr #'??var #'??args))
+		  ((_ :accessor (??expr . ??args))
+		   (%the-accessor stx #'??expr #'??args))
 
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
 		  ;;Invoke  the  getter   transformer  function  without
 		  ;;nested member use.
-		  ((_ :getter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))))
-		   (identifier? #'??var)
-		   (%the-getter #'(??var ((??key0 (... ...))
-					  (??key  (... ...))
-					  (... ...)))))
+		  ((_ :getter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))))
+		   (%the-getter #'(??expr ((??key0 (... ...))
+					   (??key  (... ...))
+					   (... ...)))))
 		  ;;Invoke the  getter transformer function  with nested
 		  ;;member use.
-		  ((_ :getter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))
-					    => ?form0 ?form (... ...)))
-		   (identifier? #'??var)
-		   (%the-getter #'(??var ((??key0 (... ...))
-					  (??key  (... ...))
-					  (... ...))
-					 => ?form0 ?form (... ...))))
+		  ((_ :getter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))
+				      => ?form0 ?form (... ...)))
+		   (%the-getter #'(??expr ((??key0 (... ...))
+					   (??key  (... ...))
+					   (... ...))
+					  => ?form0 ?form (... ...))))
 
-		  ((_ :setter ??expr (??var ((??key0 (... ...))
-					     (??key (... ...))
-					     (... ...))
-					    ??value))
-		   (identifier? #'??var)
-		   (%the-setter #'(??var ((??key0 (... ...))
-					  (??key (... ...))
-					  (... ...))
-					 ??value)))
+		  ((_ :setter (??expr ((??key0 (... ...))
+				       (??key (... ...))
+				       (... ...))
+				      ??value))
+		   (%the-setter #'(??expr ((??key0 (... ...))
+					   (??key (... ...))
+					   (... ...))
+					  ??value)))
 
 		  ((_ :assert-type-and-return ??expr)
 		   (if config.validate-tagged-values?
@@ -1300,7 +1271,7 @@
 ;;processing of the substitution maps) we can imagine that the mixin and
 ;;class definitions are first expanded to:
 ;;
-;;   (define-syntax <alpha>
+;;   (define-syntax* <alpha>
 ;;     (syntax-rules (:insert-mixin-clauses)
 ;;       ((_ :insert-mixin-clauses
 ;;           (?definer ?name ?clause ...)
@@ -1321,7 +1292,7 @@
 ;;from this we can understand how multiple mixin insertion is performed.
 ;;
 
-(define-syntax (define-mixin stx)
+(define-syntax* (define-mixin stx)
   (syntax-case stx ()
     ((_ ?name ?clause ...)
      (receive (mixins-clauses other-clauses)
@@ -1336,12 +1307,12 @@
     (_
      (synner "invalid syntax in mixin definition"))))
 
-(define-syntax (define-mixin/after-mixins-processing stx)
+(define-syntax* (define-mixin/after-mixins-processing stx)
   (define spec (help.parse-mixin-definition stx #'<top> #'lambda/tags synner))
   (with-syntax
       ((MIXIN-ID	(help.<parsed-spec>-name-id spec))
        (CLAUSES		(help.<mixin-spec>-clauses spec)))
-    #'(define-syntax (MIXIN-ID stx)
+    #'(define-syntax* (MIXIN-ID stx)
 	(define (synner message subform)
 	  (syntax-violation 'MIXIN-ID message stx subform))
 	(syntax-case stx (:insert-mixin-clauses)
@@ -1382,7 +1353,7 @@
 
 ;;;; companion syntaxes
 
-(define-syntax (make-from-fields stx)
+(define-syntax* (make-from-fields stx)
   (syntax-case stx ()
     ((_ ?tag . ?args)
      (identifier? #'?tag)
@@ -1390,7 +1361,7 @@
     (_
      (synner "invalid syntax in use of from-fields maker call"))))
 
-;; (define-syntax (make stx)
+;; (define-syntax* (make stx)
 ;;   (syntax-case stx ()
 ;;     ((_ ?tag . ?args)
 ;;      (identifier? #'?tag)
@@ -1398,7 +1369,7 @@
 ;;     (_
 ;;      (synner "invalid syntax in use of public maker call"))))
 
-(define-syntax (is-a? stx)
+(define-syntax* (is-a? stx)
   ;;Test if  a given object  matches a class  type using the  :is-a? tag
   ;;syntax.
   ;;
@@ -1419,7 +1390,7 @@
     (_
      (synner "invalid syntax in use of tag type predicate"))))
 
-(define-syntax (slot-ref stx)
+(define-syntax* (slot-ref stx)
   (syntax-case stx (aux.<>)
     ((_ ?object-expr ?slot-name ?class)
      (not (identifier? #'?slot-name))
@@ -1438,7 +1409,7 @@
     (_
      (synner "invalid syntax in slot-ref form"))))
 
-(define-syntax (slot-set! stx)
+(define-syntax* (slot-set! stx)
   (syntax-case stx (aux.<>)
     ((_ ?object-expr ?slot-name ?class ?value-expr)
      (not (identifier? #'?slot-name))
@@ -1457,7 +1428,7 @@
     (_
      (synner "invalid syntax in slot-set! form"))))
 
-(define-syntax (tag-unique-identifiers stx)
+(define-syntax* (tag-unique-identifiers stx)
   (syntax-case stx ()
     ((_ ?tag)
      (identifier? #'?tag)
@@ -1465,7 +1436,7 @@
     (_
      (synner "invalid syntax in use of tag list of UIDs"))))
 
-(define-syntax (with-label-shadowing stx)
+(define-syntax* (with-label-shadowing stx)
   (syntax-case stx (:process-shadowed-identifier)
     ((_ () ?body0 ?body ...)
      #'(begin ?body0 ?body ...))
@@ -1478,7 +1449,7 @@
      (synner "invalid syntax in request for labels shadowing"))))
 
 
-(define-syntax (set!/tags stx)
+(define-syntax* (set!/tags stx)
   (syntax-case stx ()
 
     ;;Main syntax to invoke the setter  for the tag of ?VAR; it supports
@@ -1512,7 +1483,7 @@
     ))
 
 
-(define-syntax (with-tagged-arguments-validation stx)
+(define-syntax* (with-tagged-arguments-validation stx)
   ;;Transform:
   ;;
   ;;  (with-tagged-arguments-validation (who)
@@ -1588,7 +1559,7 @@
 
 ;;;; tagged return value
 
-(define-syntax (begin/tags stx)
+(define-syntax* (begin/tags stx)
   (syntax-case stx (aux.<-)
     ((_ (aux.<- ?tag) ?body0 ?body ...)
      (identifier? #'?tag)
@@ -1619,7 +1590,7 @@
 
 ;;;; convenience syntaxes with tags: LAMBDA, CASE-LAMBDA
 
-(define-syntax (lambda/tags stx)
+(define-syntax* (lambda/tags stx)
   (syntax-case stx ()
 
     ;;Thunk definition.
@@ -1695,7 +1666,7 @@
     (_
      (synner "syntax error in LAMBDA/TAGS"))))
 
-(define-syntax (case-lambda/tags stx)
+(define-syntax* (case-lambda/tags stx)
   (syntax-case stx ()
     ((_)
      #'(case-lambda))
@@ -1738,7 +1709,7 @@
 
 ;;;; convenience syntaxes with tags: DEFINE, DEFINE-VALUES, CASE-DEFINE
 
-(define-syntax (define/tags stx)
+(define-syntax* (define/tags stx)
   (syntax-case stx ()
 
     ;;Untagged, uninitialised variable.
@@ -1780,7 +1751,7 @@
 	     (lambda/tags ((_ ?rv-tag) . ?formals)
 	       (let-constants ((WHO '?who))
 		 ?body0 ?body ...)))
-	   (define-syntax (?who stx)
+	   (define-syntax* (?who stx)
 	     (syntax-case stx ()
 	       (?id
 		(identifier? #'?id)
@@ -1816,7 +1787,7 @@
     (_
      (synner "syntax error in DEFINE/TAGS"))))
 
-(define-syntax (define-values/tags stx)
+(define-syntax* (define-values/tags stx)
   (define who 'define-values/tags)
 
   (define (%main stx)
@@ -1856,7 +1827,7 @@
 
   (%main stx))
 
-(define-syntax (case-define/tags stx)
+(define-syntax* (case-define/tags stx)
   (syntax-case stx ()
     ((_ ?who (?formals ?body0 ?body ...) ...)
      (identifier? #'?who)
@@ -1870,7 +1841,7 @@
 
 ;;;; convenience syntaxes with tags: LET and similar
 
-(define-syntax (with-tags stx)
+(define-syntax* (with-tags stx)
   (syntax-case stx ()
     ((_ (?var ...) ?body0 ?body ...)
      (with-syntax
@@ -1880,7 +1851,7 @@
     (_
      (synner "syntax error"))))
 
-(define-syntax (let/tags stx)
+(define-syntax* (let/tags stx)
   (syntax-case stx ()
     ;; no bindings
     ((_ () ?body0 ?body ...)
@@ -1911,7 +1882,7 @@
     (_
      (synner "syntax error"))))
 
-(define-syntax (let*/tags stx)
+(define-syntax* (let*/tags stx)
   (syntax-case stx ()
     ((_ () ?body0 ?body ...)
      #'(let () ?body0 ?body ...))
@@ -1924,7 +1895,7 @@
     (_
      (syntax-violation 'let*/tags "syntax error in let*/tags input form" stx #f))))
 
-(define-syntax (letrec/tags stx)
+(define-syntax* (letrec/tags stx)
   (syntax-case stx ()
     ((_ () ?body0 ?body ...)
      #'(let () ?body0 ?body ...))
@@ -1945,7 +1916,7 @@
     (_
      (syntax-violation 'letrec/tags "syntax error in letrec/tags input form" stx #f))))
 
-(define-syntax (letrec*/tags stx)
+(define-syntax* (letrec*/tags stx)
   (syntax-case stx ()
     ((_ () ?body0 ?body ...)
      #'(let () ?body0 ?body ...))
@@ -1967,14 +1938,14 @@
 
 ;;;; convenience syntaxes with tags: LET-VALUES and similar
 
-(define-syntax receive/tags
+(define-syntax* receive/tags
   (syntax-rules ()
     ((_ ?formals ?expression ?body0 ?body ...)
      (call-with-values
 	 (lambda () ?expression)
        (lambda/tags ?formals ?body0 ?body ...)))))
 
-(define-syntax (receive-and-return/tags stx)
+(define-syntax* (receive-and-return/tags stx)
   (syntax-case stx ()
     ((_ ?vars ?inits ?body0 ?body ...)
      (with-syntax
@@ -1987,7 +1958,7 @@
 	     (let-syntax (BINDING ...) ?body0 ?body ... (values . VARS))))))
     ))
 
-(define-syntax (let-values/tags stx)
+(define-syntax* (let-values/tags stx)
   (syntax-case stx ()
     ((_ () ?body0 ?body ...)
      #'(let () ?body0 ?body ...))
@@ -2004,7 +1975,7 @@
     (_
      (synner "syntax error"))))
 
-(define-syntax (let*-values/tags stx)
+(define-syntax* (let*-values/tags stx)
   (syntax-case stx ()
     ((_ () ?body0 ?body ...)
      #'(let () ?body0 ?body ...))
@@ -2022,7 +1993,7 @@
 
 ;;;; convenience syntaxes with tags: DO and similar
 
-(define-syntax do/tags
+(define-syntax* do/tags
   (syntax-rules ()
     ((_ ((?var ?init ?step ...) ...)
 	(?test ?expr ...)
@@ -2048,7 +2019,7 @@
 		     ?form ...
 		     (loop (the-step ?var ?step ...) ...))))))))
 
-(define-syntax (do*/tags stx)
+(define-syntax* (do*/tags stx)
   (define (%parse-var stx)
     (syntax-case stx ()
       (?id
@@ -2094,7 +2065,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'rnrs.define-syntax 'scheme-indent-function 1)
+;; eval: (put 'rnrs.define-syntax* 'scheme-indent-function 1)
 ;; eval: (put 'aux.method-syntax 'scheme-indent-function 1)
 ;; eval: (put 'aux.method 'scheme-indent-function 1)
 ;; eval: (put 'case-symbol 'scheme-indent-function 1)
