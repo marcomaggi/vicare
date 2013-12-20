@@ -8116,24 +8116,33 @@
   ;;
   (if (null? expr*)
       '()
-    (let* ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand))
-	   (expr0 (if (splice-first-expand-compound? expr0)
-		      (chi-expr (splice-first-expand-form expr0) lexenv.run lexenv.expand)
-		    expr0)))
+    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
+    ;;rest.
+    (let ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand)))
       (cons expr0
 	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
 (module (chi-expr)
 
-  (define (chi-expr e lexenv.run lexenv.expand)
+  (define chi-expr
     ;;Expand a single expression form.
     ;;
+    (case-lambda
+     ((e lexenv.run lexenv.expand)
+      (chi-expr e lexenv.run lexenv.expand #f))
+     ((e lexenv.run lexenv.expand return-splice-first?)
     (receive (type value kwd)
 	(syntax-type e lexenv.run)
       (case type
 	((core-macro)
-	 (let ((transformer (core-macro-transformer value)))
-	   (transformer e lexenv.run lexenv.expand)))
+	 (let ((rv (let ((transformer (core-macro-transformer value)))
+		     (transformer e lexenv.run lexenv.expand))))
+	   (if (eq? value 'splice-first-expand)
+	       (if return-splice-first?
+		   (begin
+		     rv)
+		 (chi-expr (splice-first-expand-form rv) lexenv.run lexenv.expand return-splice-first?))
+	     rv)))
 
 	((global)
 	 (let* ((lib (car value))
@@ -8154,15 +8163,15 @@
 
 	((global-macro global-macro!)
 	 (chi-expr (chi-global-macro value e lexenv.run #f)
-		   lexenv.run lexenv.expand))
+		   lexenv.run lexenv.expand return-splice-first?))
 
 	((local-macro local-macro!)
 	 (chi-expr (chi-local-macro value e lexenv.run #f)
-		   lexenv.run lexenv.expand))
+		   lexenv.run lexenv.expand return-splice-first?))
 
 	((macro macro!)
 	 (chi-expr (chi-macro value e lexenv.run #f)
-		   lexenv.run lexenv.expand))
+		   lexenv.run lexenv.expand return-splice-first?))
 
 	((constant)
 	 (let ((datum value))
@@ -8188,8 +8197,7 @@
 	    (begin
 	      (handle-stale-when ?guard lexenv.expand)
 	      (build-sequence no-source
-		(chi-expr* (cons ?x ?x*)
-			   lexenv.run lexenv.expand))))))
+		(chi-expr* (cons ?x ?x*) lexenv.run lexenv.expand))))))
 
 	((let-syntax letrec-syntax)
 	 (syntax-match e ()
@@ -8241,7 +8249,7 @@
 
 	(else
 	 ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
-	 (stx-error e "invalid expression")))))
+	 (stx-error e "invalid expression")))))))
 
 
   (define (chi-application expr lexenv.run lexenv.expand)
@@ -8249,22 +8257,20 @@
     ;;
     (syntax-match expr ()
       ((?rator ?rands* ...)
-       (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-	 (if (splice-first-expand-compound? rator)
-	     ;;This    is   the    implementation    of   the    special
-	     ;;SPLICE-FIRST-EXPAND handling.
-	     (syntax-match (splice-first-expand-form rator) ()
-	       ((?rator ?int-rands* ...)
-		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
-			  lexenv.run lexenv.expand))
-	       (_
-		(stx-error expr
-			   "expected list as argument of splice-first-expand"
-			   'splice-first-expand)))
-	   (build-application (syntax-annotation expr)
-	     rator
-	     (chi-expr* ?rands* lexenv.run lexenv.expand)))))
-      ))
+       (let ((rator (chi-expr ?rator lexenv.run lexenv.expand #t)))
+       	 (if (splice-first-expand-compound? rator)
+       	     (syntax-match (splice-first-expand-form rator) ()
+       	       ((?rator ?int-rands* ...)
+       		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
+       			  lexenv.run lexenv.expand))
+       	       (_
+       		(stx-error expr
+       			   "expected list as argument of splice-first-expand"
+       			   'splice-first-expand)))
+       	   (build-application (syntax-annotation expr)
+       	     rator
+       	     (chi-expr* ?rands* lexenv.run lexenv.expand))))
+       )))
 
   (define (chi-set! e lexenv.run lexenv.expand)
     (syntax-match e ()
