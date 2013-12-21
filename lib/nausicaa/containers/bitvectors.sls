@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa containers bitvectors)
   (export
     <bitvector>

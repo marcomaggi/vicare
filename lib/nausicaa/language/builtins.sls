@@ -466,13 +466,17 @@
   (getter (lambda (stx the-tag)
 	    (syntax-case stx ()
 	      ((?expr ((?idx)))
-	       #`(#,the-tag #:oopp-syntax (?expr ref ?idx)))))))
+	       #`(#,the-tag #:oopp-syntax (?expr ref ?idx))))))
+
+  #| end of mixin |# )
 
 (define-mixin <mutable-array>
   (setter (lambda (stx the-tag)
 	    (syntax-case stx ()
 	      ((?expr ((?index)) ?val)
-	       #`(#,the-tag #:oopp-syntax (?expr set! ?index ?val)))))))
+	       #`(#,the-tag #:oopp-syntax (?expr set! ?index ?val)))
+	      )))
+  #| end of mixin |# )
 
 
 ;;;; built-in types: characters and strings
@@ -2065,8 +2069,8 @@
 
 ;;;; built-in types: procedure objects
 
-(define-builtin-label <procedure>
-  (predicate procedure?))
+;; (define-builtin-label <procedure>
+;;   (predicate procedure?))
 
 
 ;;;; built-in types: special values

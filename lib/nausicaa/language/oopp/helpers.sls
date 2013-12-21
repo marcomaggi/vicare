@@ -312,7 +312,7 @@
   ;;
   ;;  (?tag #:oopp-syntax (?expr ?arg ...))
   ;;
-  (syntax-case form-stx ()
+  (syntax-case form-stx (:mutator :setter)
 
     ;;Syntax to apply the field mutator for the tag of ?VAR.
     ((?expr :mutator (?field-name ?arg ...) ?value)
@@ -1293,19 +1293,19 @@
 	     (case-symbol (syntax->datum #'??field-name)
 	       ;;Safe accessors.
 	       ((IMMUTABLE-FIELD)
-		#`(IMMUTABLE-TAG #:oopp-syntax ((IMMUTABLE-ACCESSOR #,expr-stx) . KEYS)))
+		#`(IMMUTABLE-TAG :getter ((IMMUTABLE-ACCESSOR #,expr-stx) KEYS)))
 	       ...
 	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   #:oopp-syntax ((MUTABLE-ACCESSOR   #,expr-stx) . KEYS)))
+		#`(MUTABLE-TAG   :getter ((MUTABLE-ACCESSOR   #,expr-stx) KEYS)))
 	       ...
 	       ;;Unsafe accessors.
 	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-		#`(IMMUTABLE-CONCRETE-TAG #:oopp-syntax
-					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) . KEYS)))
+		#`(IMMUTABLE-CONCRETE-TAG :getter
+					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) KEYS)))
 	       ...
 	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-		#`(MUTABLE-CONCRETE-TAG   #:oopp-syntax
-					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) . KEYS)))
+		#`(MUTABLE-CONCRETE-TAG   :getter
+					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) KEYS)))
 	       ...
 	       (else
 		#`(THE-PARENT :dispatch (#,expr-stx ??field-name . KEYS))))))
@@ -1316,18 +1316,18 @@
 	   (case-symbol (syntax->datum #'??field-name)
 	     ;;Safe accessors.
 	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG #:oopp-syntax ((IMMUTABLE-ACCESSOR #,expr-stx) . ??args)))
+	      #`(IMMUTABLE-TAG :dispatch ((IMMUTABLE-ACCESSOR #,expr-stx) . ??args)))
 	     ...
 	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   #:oopp-syntax ((MUTABLE-ACCESSOR   #,expr-stx) . ??args)))
+	      #`(MUTABLE-TAG   :dispatch ((MUTABLE-ACCESSOR   #,expr-stx) . ??args)))
 	     ...
 	     ;;Unsafe accessors.
 	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`(IMMUTABLE-CONCRETE-TAG #:oopp-syntax
+	      #`(IMMUTABLE-CONCRETE-TAG :dispatch
 					(($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
 	     ...
 	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`(MUTABLE-CONCRETE-TAG   #:oopp-syntax
+	      #`(MUTABLE-CONCRETE-TAG   :dispatch
 					(($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
 	     ...
 	     (else
@@ -1434,7 +1434,7 @@
 	      #`(THE-PARENT :mutator #,expr-stx (??field-name) #,value-stx))))
 
 	  ;;Try to  match a  field name followed  by the  getter syntax.
-	  ;;This is the setter syntax  with the keys *not* enclosed in a
+	  ;;This is the setter syntax with  the keys *not* enclosed in a
 	  ;;list.
 	  ((??field-name (??key0 (... ...)) (??key (... ...)) (... ...))
 	   (identifier? #'??field-name)
@@ -1442,21 +1442,21 @@
 	     (case-symbol (syntax->datum #'??field-name)
 	       ;;Safe mutators.
 	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   :let (MUTABLE-ACCESSOR   #,expr-stx) o
-				 (MUTABLE-TAG   :setter (o KEYS #,value-stx))))
+		#`(MUTABLE-TAG   :setter ((MUTABLE-ACCESSOR   #,expr-stx) KEYS #,value-stx)))
 	       ...
 	       ((IMMUTABLE-FIELD)
-		#`(IMMUTABLE-TAG :let (IMMUTABLE-ACCESSOR #,expr-stx) o
-				 (IMMUTABLE-TAG :setter (o KEYS #,value-stx))))
+		#`(IMMUTABLE-TAG :setter ((IMMUTABLE-ACCESSOR #,expr-stx) KEYS #,value-stx)))
 	       ...
 	       ;;Unsafe mutators.
 	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-		#`(MUTABLE-CONCRETE-TAG   :let ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) o
-					  (MUTABLE-CONCRETE-TAG   :setter (o KEYS #,value-stx))))
+		#`(MUTABLE-CONCRETE-TAG   :setter
+					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)
+					   KEYS #,value-stx)))
 	       ...
 	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-		#`(IMMUTABLE-CONCRETE-TAG :let ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) o
-					  (IMMUTABLE-CONCRETE-TAG :setter (o KEYS #,value-stx))))
+		#`(IMMUTABLE-CONCRETE-TAG :setter
+					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)
+					   KEYS #,value-stx)))
 	       ...
 	       (else
 		#`(THE-PARENT :mutator #,expr-stx #,keys-stx #,value-stx)))))
@@ -1467,12 +1467,10 @@
 	   (case-symbol (syntax->datum #'??field-name0)
 	     ;;Safe mutators.
 	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   :mutator (MUTABLE-ACCESSOR   #,expr-stx)
-			       (??arg (... ...)) #,value-stx))
+	      #`(MUTABLE-TAG   :mutator (MUTABLE-ACCESSOR   #,expr-stx) (??arg (... ...)) #,value-stx))
 	     ...
 	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG :mutator (IMMUTABLE-ACCESSOR #,expr-stx)
-			       (??arg (... ...)) #,value-stx))
+	      #`(IMMUTABLE-TAG :mutator (IMMUTABLE-ACCESSOR #,expr-stx) (??arg (... ...)) #,value-stx))
 	     ...
 	     ;;Unsafe mutators.
 	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
