@@ -33,7 +33,6 @@
     :let
     :bind-and-call
     :dispatch
-    :accessor
     :mutator
     :setter
     :getter
@@ -64,7 +63,6 @@
     :make-from-fields
     :is-a?
     :dispatch
-    :accessor
     :mutator
     :setter
     :getter
