@@ -301,7 +301,7 @@
 	(syntax-violation (syntax->datum tag-id)
 	  "invalid tagged-variable syntax use" stx))))))
 
-(define (oopp-syntax-transformer tag-id form-stx synner)
+(define (oopp-syntax-transformer tag-id form-stx set-bang-id synner)
   ;;This function is  called to expand the usage of  OOPP syntax, either
   ;;through a tagged variable:
   ;;
@@ -312,21 +312,52 @@
   ;;
   ;;  (?tag #:oopp-syntax (?expr ?arg ...))
   ;;
+  ;;Notice setter syntaxes are supported, too.
+  ;;
   (syntax-case form-stx (:mutator :setter)
 
-    ;;Syntax to apply the field mutator for the tag of ?VAR.
+    ;;Setter syntax.   Main syntax to invoke  the setter for the  tag of
+    ;;?VAR;  it  supports  multiple  sets  of  keys  for  nested  setter
+    ;;invocations.
+    ((?set (?expr (?key0 ...) (?key ...) ...) ?value)
+     (and (identifier? #'?set)
+	  (free-identifier=? #'?set set-bang-id))
+     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?value)))
+
+    ;;Setter syntax.   Alternative syntax to  invoke the setter  for the
+    ;;tag of ?EXPR; it supports multiple  sets of keys for nested setter
+    ;;invocations.
+    ((?set ?expr (?key0 ...) (?key ...) ... ?value)
+     (and (identifier? #'?set)
+	  (free-identifier=? #'?set set-bang-id))
+     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?value)))
+
+    ;;Setter syntax.  Syntax to invoke the  field mutator for the tag of
+    ;;?EXPR.  Notice that  this may also be a  nested setter invocation,
+    ;;as in:
+    ;;
+    ;;   (set!/tags (O a b c[777]) 999)
+    ;;
+    ;;for this reason we do not validate ?ARG in any way.
+    ;;
+    ((?set (?expr ?field-name ?arg ...) ?val)
+     (and (identifier? #'?set)
+	  (free-identifier=? #'?set set-bang-id))
+     #`(#,tag-id :mutator ?expr (?field-name ?arg ...) ?val))
+
+    ;;Syntax to apply the field mutator for the tag of ?EXPR.
     ((?expr :mutator (?field-name ?arg ...) ?value)
      (identifier? #'?field-name)
      #`(#,tag-id :mutator ?expr (?field-name ?arg ...) ?value))
 
-    ;;Syntax to apply the setter for the tag of ?VAR.
+    ;;Syntax to apply the setter for the tag of ?EXPR.
     ((?expr :setter ((?key ...) ...) ?value)
      #`(#,tag-id :setter (?expr ((?key ...) ...) ?value)))
 
-    ;;Syntax to  apply the getter for  the tag of ?VAR.   A plain getter
+    ;;Syntax to  apply the getter for  the tag of ?EXPR.   A plain getter
     ;;syntax is as follows:
     ;;
-    ;;  (?var (?key0 ...) (?key ...) ...)
+    ;;  (?expr (?key0 ...) (?key ...) ...)
     ;;
     ;;where "<tag>"  is the  tag assigned to  the getter  runtime return
     ;;value from the getter transformer function.
@@ -334,7 +365,7 @@
     ((?expr (?key0 ...) (?key ...) ...)
      #`(#,tag-id :getter (?expr ((?key0 ...) (?key ...) ...))))
 
-    ;;Syntax to apply a method or reference a field of the tag of ?VAR.
+    ;;Syntax to apply a method or reference a field of the tag of ?EXPR.
     ((?expr . ?stuff)
      #`(#,tag-id :dispatch (?expr . ?stuff)))
 
@@ -391,6 +422,11 @@
   ;;       (<vector> :flat-oopp-syntax (subvector V 0 1)))
   ;;  ==> (begin (subvector V 0 1))
   ;;
+  #;(debug-print 'process-method-application
+	       'return-value-tag (syntax->datum rv-tag-id)
+	       'method-call (syntax->datum (if (syntax->datum rv-tag-id)
+					       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
+					     application-stx)))
   (if (syntax->datum rv-tag-id)
       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
     application-stx))
@@ -1191,46 +1227,25 @@
   ;;should happen:
   ;;
   ;;   (O c)
-  ;;   ---> (<gamma>-c O)
+  ;;   ==> (<gamma>-c O)
   ;;
   ;;   (O c b)
-  ;;   ---> (<beta>-b (<gamma>-c O))
+  ;;   ==> (<beta>-b (<gamma>-c O))
   ;;
   ;;   (O c b a)
-  ;;   ---> (<alpha>-a (<beta>-b (<gamma>-c O)))
+  ;;   ==> (<alpha>-a (<beta>-b (<gamma>-c O)))
   ;;
   ;;we  also want  to support  nested  getter invocations,  that is  the
   ;;following expansion should happen:
   ;;
   ;;   (O c b[123])
-  ;;   ---> (<alpha> :let (<gamma>-c (<beta>-b O)) G0 (G0[123]))
+  ;;   ==> (<alpha> :getter ((<beta>-b (<gamma>-c O)) ([123])))
   ;;
   ;;we  also want  to support  nested  method invocations,  that is  the
   ;;following expansion should hapen:
   ;;
   ;;   (O c b do)
-  ;;   ---> (<alpha> :let (<beta>-b (<gamma>-c O)) G0 (G0 do))
-  ;;
-  ;;To make all of this happen the accessor transformer has to implement
-  ;;the following expansions:
-  ;;
-  ;;   (O c)
-  ;;   ---> (<gamma>-c O)
-  ;;
-  ;;   (O c b)
-  ;;   ---> (<beta> :let (<gamma>-c O) G0 (G0 b))
-  ;;
-  ;;   (O c b a)
-  ;;   ---> (<beta> :let (<gamma>-c O) G0 (G0 b a))
-  ;;
-  ;;   (O c b[123])
-  ;;   ---> (<beta> :let (<gamma>-c O) G0 (G0 b[123]))
-  ;;
-  ;;   (O c b do)
-  ;;   ---> (<beta> :let (<gamma>-c O) G0 (G0 b do))
-  ;;
-  ;;and then, recursively,  the tagged variable G0 (a  gensym) will take
-  ;;care of doing what is needed.
+  ;;   ==> (<alpha> :dispatch ((<beta>-b (<gamma>-c O)) do))
   ;;
   ;;Notice that the  getter syntax is handled by  the getter transformer
   ;;function, not by the accessor function.
@@ -1365,19 +1380,19 @@
   ;;should happen:
   ;;
   ;;   (set!/tags (O c) 99)
-  ;;   ---> (<gamma>-c-set! O 99)
+  ;;   ==> (<gamma>-c-set! O 99)
   ;;
   ;;   (set!/tags (O c b) 99)
-  ;;   ---> (<beta>-b-set! (<gamma>-c O) 99)
+  ;;   ==> (<beta>-b-set! (<gamma>-c O) 99)
   ;;
   ;;   (set!/tags (O c b a) 99)
-  ;;   ---> (<alpha>-a-set! (<beta>-b (<gamma>-c O)) 99)
+  ;;   ==> (<alpha>-a-set! (<beta>-b (<gamma>-c O)) 99)
   ;;
   ;;we  also want  to support  nested  setter invocations,  that is  the
   ;;following expansion should happen:
   ;;
   ;;   (set!/tags (O c b[77]) 99)
-  ;;   ---> (<alpha> :let (<gamma>-c (<beta>-b O)) G0 (set!/tags (G0[77]) 99))
+  ;;   ==> (<alpha> :setter ((<gamma>-c (<beta>-b O)) ([77]) 99))
   ;;
   (with-syntax
       ((THE-TAG

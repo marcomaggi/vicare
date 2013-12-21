@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (vicare checks))
 
@@ -499,20 +499,20 @@
     (fields a)
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)))
-		 #'(?var ?key))))))
+		((?expr ((?key)))
+		 #`(#,tag #:oopp-syntax (?expr ?key)))))))
   (define-class <beta>
     (fields b)
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)))
-		 #'(?var ?key))))))
+		((?expr ((?key)))
+		 #`(#,tag #:oopp-syntax (?expr ?key)))))))
   (define-class <gamma>
     (fields c)
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)))
-		 #'(?var ?key))))))
+		((?expr ((?key)))
+		 #`(#,tag #:oopp-syntax (?expr ?key)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -556,33 +556,33 @@
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
-		 #'(?var ?key)))))
+		 #`(#,tag #:oopp-syntax (?var ?key))))))
     (setter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)) ?val)
-		 #'(set! (?var ?key) ?val))))))
+		((?expr ((?key)) ?val)
+		 #`(#,tag #:oopp-syntax (set! (?expr ?key) ?val)))))))
 
   (define-class <beta>
     (fields (mutable b))
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
-		 #'(?var ?key)))))
+		 #`(#,tag #:oopp-syntax (?var ?key))))))
     (setter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)) ?val)
-		 #'(set! (?var ?key) ?val))))))
+		((?expr ((?key)) ?val)
+		 #`(#,tag #:oopp-syntax (set! (?expr ?key) ?val)))))))
 
   (define-class <gamma>
     (fields (mutable c))
     (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?key)))
-		 #'(?var ?key)))))
+		 #`(#,tag #:oopp-syntax (?var ?key))))))
     (setter (lambda (stx tag)
 	      (syntax-case stx ()
-		((?var ((?key)) ?val)
-		 #'(set! (?var ?key) ?val))))))
+		((?expr ((?key)) ?val)
+		 #`(#,tag #:oopp-syntax (set! (?expr ?key) ?val)))))))
 
 ;;; --------------------------------------------------------------------
 
