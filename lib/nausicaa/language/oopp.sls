@@ -186,7 +186,7 @@
   ;;
   (syntax-case stx ( ;;
 		    :flat-oopp-syntax
-		    :define :let :make :make-from-fields :is-a?
+		    :define :make :make-from-fields :is-a?
 		    :dispatch :mutator :getter :setter
 		    :insert-parent-clause define-record-type
 		    :insert-constructor-fields lambda
@@ -215,14 +215,9 @@
      (identifier? #'?var)
      #'(define ?var))
 
-    ((_ :let ?expr ?var ?body0 ?body ...)
-     #'(let ((src-var ?expr))
-	 (let-syntax ((?var (help.make-tagged-variable-transformer #'<top> #'src-var)))
-	   ?body0 ?body ...)))
-
     ;;Bind a tagged variable and call it with the given arguments.
     ((_ :flat-oopp-syntax ?expr ?arg0 ?arg ...)
-     #'(<top> :let ?expr dummy (dummy ?arg0 ?arg ...)))
+     #'(<top> #:oopp-syntax (?expr ?arg0 ?arg ...)))
     ((_ :flat-oopp-syntax ?expr)
      #'?expr)
 
@@ -355,7 +350,7 @@
 
 (define-syntax* (<procedure> stx)
   (syntax-case stx ( ;;
-		    :define :let :flat-oopp-syntax :make :is-a?
+		    :define :flat-oopp-syntax :make :is-a?
 		    :dispatch :mutator :getter :setter
 		    :assert-type-and-return
 		    :assert-procedure-argument :assert-expression-return-value
@@ -436,11 +431,6 @@
 	 (define src-var (<procedure> :assert-type-and-return ?expr))
 	 (define-syntax* ?var
 	   (help.make-tagged-variable-transformer #'<procedure> #'src-var))))
-
-    ((_ :let ?expr ?var ?body0 ?body ...)
-     #'(let ((src-var ?expr))
-	 (let-syntax ((?var (help.make-tagged-variable-transformer #'<procedure> #'src-var)))
-	   ?body0 ?body ...)))
 
     ;; public constructor
     ((_ :make ?arg)
@@ -670,7 +660,7 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :define :let :flat-oopp-syntax :make :is-a?
+				  :define :flat-oopp-syntax :make :is-a?
 				  :dispatch :mutator :getter :setter
 				  :assert-type-and-return
 				  :assert-procedure-argument :assert-expression-return-value
@@ -797,11 +787,6 @@
 		       (define src-var (THE-TAG :assert-type-and-return ??expr))
 		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :let ??expr ??var ??body0 ??body (... ...))
-		   #'(let ((src-var ??expr))
-		       (let-syntax ((??var (help.make-tagged-variable-transformer #'THE-TAG #'src-var)))
-			 ??body0 ??body (... ...))))
 
 		  ((_ :make . ??args)
 		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
@@ -1156,7 +1141,7 @@
 
 		(syntax-case stx ( ;;
 				  :flat-oopp-syntax
-				  :define :let :is-a? :make :make-from-fields
+				  :define :is-a? :make :make-from-fields
 				  :dispatch :mutator :getter :setter
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
@@ -1219,11 +1204,6 @@
 		       (define src-var (THE-TAG :assert-type-and-return ??expr))
 		       (define-syntax* ??var
 			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :let ??expr ??var ??body0 ??body (... ...))
-		   #'(let ((src-var ??expr))
-		       (let-syntax ((??var (help.make-tagged-variable-transformer #'THE-TAG #'src-var)))
-			 ??body0 ??body (... ...))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
