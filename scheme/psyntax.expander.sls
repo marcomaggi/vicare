@@ -6155,8 +6155,8 @@
 
 
 (module (core-macro-transformer
-	 splice-first-expand-compound?
-	 splice-first-expand-form)
+	 splice-first-envelope?
+	 splice-first-envelope-form)
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
@@ -7371,28 +7371,25 @@
 
 ;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
 
-(define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to  expand Vicare's  SPLICE-FIRST-EXPAND
-  ;;syntaxes  from  the top-level  built  in  environment.  Rather  than
-  ;;expanding the input  form: return a key/value pair in  which the key
-  ;;is  the symbol  "internal-splice-first-expand"; such  symbol can  be
-  ;;later recognised  by the CHI-*  functions to  do what is  needed for
-  ;;SPLICE-FIRST-EXPAND.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?form)
-     (cons 'internal-splice-first-expand ?form))
-    ))
+(module (splice-first-expand-transformer
+	 splice-first-envelope?
+	 splice-first-envelope-form)
 
-(define (splice-first-expand-compound? expr)
-  ;;Return true  if EXPR  is an  expression returned  by the  macro core
-  ;;transformer SPLICE-FIRST-EXPAND-TRANSFORMER; otherwise return false.
-  ;;
-  (and (pair? expr)
-       (eq? (car expr) 'internal-splice-first-expand)))
+  (define-record splice-first-envelope
+    (form))
 
-(define (splice-first-expand-form compound)
-  (cdr compound))
+  (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
+    ;;syntaxes  from the  top-level built  in environment.   Rather than
+    ;;expanding    the   input    form:    return    an   instance    of
+    ;;SPLICE-FIRST-ENVELOPE holding the non-expanded form.
+    ;;
+    (syntax-match expr-stx ()
+      ((_ ?form)
+       (make-splice-first-envelope ?form))
+      ))
+
+  #| end of module |# )
 
 
 ;;; end of module: CORE-MACRO-TRANSFORMER
@@ -8138,7 +8135,7 @@
 	       (if return-splice-first?
 		   (begin
 		     rv)
-		 (chi-expr (splice-first-expand-form rv) lexenv.run lexenv.expand return-splice-first?))
+		 (chi-expr (splice-first-envelope-form rv) lexenv.run lexenv.expand return-splice-first?))
 	     rv)))
 
 	((global)
@@ -8255,8 +8252,8 @@
     (syntax-match expr ()
       ((?rator ?rands* ...)
        (let ((rator (chi-expr ?rator lexenv.run lexenv.expand #t)))
-       	 (if (splice-first-expand-compound? rator)
-       	     (syntax-match (splice-first-expand-form rator) ()
+       	 (if (splice-first-envelope? rator)
+       	     (syntax-match (splice-first-envelope-form rator) ()
        	       ((?rator ?int-rands* ...)
        		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
        			  lexenv.run lexenv.expand))
