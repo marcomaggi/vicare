@@ -504,7 +504,7 @@
       (fields (immutable value)))
 
     (define-class <beta>
-      (fields (immutable proc)))
+      (fields (immutable (proc <procedure>))))
 
     (check
 	(letrec (((a <alpha>) (make-<alpha> 123))
@@ -518,11 +518,11 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (check
 	(letrec (((a <alpha>) (make-<alpha>
@@ -677,11 +677,11 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (check
 	(letrec* (((a <alpha>) (make-<alpha>
@@ -697,11 +697,11 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (check
 	(letrec* (((a <alpha>) (make-<alpha>
@@ -719,11 +719,11 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable proc)))
+	      (immutable (proc <procedure>))))
 
     (check
 	(letrec* (((a <alpha>) (make-<alpha>

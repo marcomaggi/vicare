@@ -24,9 +24,8 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
-  (rnrs eval)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -195,30 +194,33 @@
       (fields (mutable a))
       (setter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)) ?value)
-		   #'(set! (?var a) (cons ?key ?value))))))
+		  ((?expr ((?key)) ?value)
+		   #'(<alpha>-a-set! ?expr (cons ?key ?value))))))
       (getter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)))
-		   #'(vector ?key (?var a)))))))
+		  ((?expr ((?key)))
+		   #`(vector ?key (#,tag #:oopp-syntax (?expr a))))
+		  ))))
 
     (define-class <beta>
       (fields (immutable (a <alpha>))
 	      (mutable   b))
       (setter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)) ?value)
-		   #'(set! (?var b) (cons ?key ?value)))
-		  ((?var ((?key0) (?key1)) ?value)
-		   #'(let (((tmp <alpha>) (?var a)))
-		       (set! tmp[?key1] ?value))))))
+		  ((?expr ((?key)) ?value)
+		   #'(<beta>-b-set! ?expr (cons ?key ?value)))
+		  ((?expr ((?key0) (?key1)) ?value)
+		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		       (set! tmp[?key1] ?value)))
+		  )))
       (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0)))
 		   #'(vector ?key0 (?var b)))
-		  ((?var ((?key0) (?key1)))
-		   #'(let (((tmp <alpha>) (?var a)))
-		       (tmp[?key1])))))))
+		  ((?expr ((?key0) (?key1)))
+		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		       (tmp[?key1])))
+		  ))))
 
       (check	;one key set, setter syntax 1
 	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
@@ -253,14 +255,6 @@
       #f)
 
   (let ()	;nested vectors, single label
-
-    #;(define-label <row>
-      (setter (lambda (stx tag)
-		((?var ((?col)) ?value)
-		 #'(vector-set! ?var (- ?col 1) ?value))))
-      (getter (lambda (stx tag)
-		((?var ((?col)))
-		 #'(vector-ref ?var (- ?col 1))))))
 
     (define-label <matrix>
       (setter (lambda (stx tag)

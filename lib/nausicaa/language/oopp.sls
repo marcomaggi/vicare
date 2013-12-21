@@ -365,7 +365,7 @@
 		    aux.<>)
 
     ((_ #:oopp-syntax (?expr ?arg ...))
-     (help.oopp-syntax-transformer #'<procedure> #'(?expr ?arg ...) synner))
+     (help.oopp-syntax-transformer #'<procedure> #'(?expr ?arg ...) #'set!/tags synner))
 
     ((_ #:nested-oopp-syntax ?expr)
      #'?expr)
@@ -680,15 +680,21 @@
 				  aux.<>)
 
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
+		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
 
 		  ((_ #:nested-oopp-syntax ??expr)
-		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
+		   (begin
+		     #;(debug-print 'label-nested (syntax->datum #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
+		     #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
 
 		  ((_ :flat-oopp-syntax ??expr)
-		   #'??expr)
+		   (begin
+		     #;(debug-print 'label-flat-no-args (syntax->datum #'THE-TAG) (syntax->datum #'??expr))
+		     #'??expr))
 		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
-		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
+		   (begin
+		     #;(debug-print 'label-flat-with-args (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
+		     #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -1162,7 +1168,7 @@
 				  aux.<>)
 
 		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) synner))
+		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
 
 		  ((_ #:nested-oopp-syntax ??expr)
 		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
@@ -1888,7 +1894,11 @@
 		(identifier? #'?id)
 		#'FUN)
 	       ((_ ?arg (... ...))
-		#'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...))))
+		(begin
+		  #;(debug-print 'define/tags
+			       (syntax->datum #'?who)
+			       (syntax->datum #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
+		  #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
 	       ))
 	   #| end of module |# )))
 
