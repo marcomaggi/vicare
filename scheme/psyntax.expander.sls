@@ -397,8 +397,9 @@
 					      (inv-collector rtc)
 					      (vis-collector vtc)
 					      (imp-collector itc))
-				  (chi-expr expr.stx
-					    '() #;lexenv.run '() #;lexenv.expand))))
+				  (let ((lexenv.run	'())
+					(lexenv.expand	'()))
+				    (chi-expr expr.stx lexenv.run lexenv.expand)))))
 		 (seal-rib! rib)
 		 (values expr.core (rtc))))))
 	  ((interaction-env? env)
@@ -8256,7 +8257,7 @@
        	     (syntax-match (splice-first-envelope-form rator) ()
        	       ((?rator ?int-rands* ...)
        		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
-       			  lexenv.run lexenv.expand))
+			  lexenv.run lexenv.expand))
        	       (_
        		(stx-error expr
        			   "expected list as argument of splice-first-expand"
