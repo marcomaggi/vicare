@@ -3803,6 +3803,73 @@
     => (+ (square 1) (square 2) (square 3) (square 4) (square 5)))
 
 ;;; --------------------------------------------------------------------
+;;; syntaxes expanding into each other
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ ?arg ...)
+	     (the-gamma ?arg ...))))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ ?expr)
+	     ?expr)
+	    ((_ ?expr ?arg ...)
+	     (splice-first-expand (gamma (the-beta ?expr ?arg ...) 3)))))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta (the-alpha ?arg) 3)))))
+
+	(gamma 23 3)
+	(beta  20 3)
+	(alpha 2))
+    => 23/3)
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (gamma #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (the-gamma ?expr ?arg ...))
+	    ))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (beta #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (splice-first-expand (gamma #:splice (the-beta ?expr ?arg ...) 3)))
+	    ))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta #:splice (the-alpha ?arg) 3)))))
+
+	(gamma #:splice 23 3)
+	(beta  #:splice 20 3)
+	(alpha 2))
+    => 23/3)
+
+;;; --------------------------------------------------------------------
 ;;; errors
 
   (check
