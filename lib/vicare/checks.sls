@@ -122,7 +122,7 @@
 ;;; mode handling
 
 (define check:mode
-  (make-parameter 'report
+  (make-parameter 100
     (lambda (v)
       (case v
 	((off)           0)
