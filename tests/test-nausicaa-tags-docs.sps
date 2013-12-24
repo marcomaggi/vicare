@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (nausicaa language oopp)
   (nausicaa language builtins)
@@ -542,6 +542,37 @@
 	(set! a 123)
 	(a string))
     => "123")
+
+  #t)
+
+
+(parametrise ((check-test-name	'keywords))
+
+  (check
+      (<fixnum> #:oopp-syntax (123 positive?))
+    => #t)
+
+  (check
+      (<string> #:oopp-syntax ("123" length))
+    => 3)
+
+  (check
+      (<string> #:oopp-syntax ("01234" substring 1 3))
+    => "12")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((<fixnum> #:nested-oopp-syntax 123) positive?)
+    => #t)
+
+  (check
+      ((<string> #:nested-oopp-syntax "01234") length)
+    => 5)
+
+  (check
+      ((<string> #:nested-oopp-syntax "01234") [3])
+    => #\3)
 
   #t)
 
