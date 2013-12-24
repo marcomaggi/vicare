@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* The garbage collector has a mechanism similar to the one described in
- * the paper:
+/* The garbage collector has a mechanism similar (but not exactly equal)
+ * to the one described in the paper:
  *
  *    R. Kent Dybvig, David Eby, Carl Bruggeman.  "Don't Stop the BIBOP:
  *    Flexible and  Efficient Storage  Management for  Dynamically Typed
@@ -2550,7 +2550,7 @@ collect_loop (gc_t* gc)
 #define CARDSIZE		512
 #define CARDS_PER_PAGE		8
 
-static const unsigned int DIRTY_MASK[IK_GC_GENERATION_COUNT] = {
+static const uint32_t DIRTY_MASK[IK_GC_GENERATION_COUNT] = {
   0x88888888,
   0xCCCCCCCC,
   0xEEEEEEEE,
@@ -2558,7 +2558,7 @@ static const unsigned int DIRTY_MASK[IK_GC_GENERATION_COUNT] = {
   0x00000000
 };
 
-static const unsigned int CLEANUP_MASK[IK_GC_GENERATION_COUNT] = {
+static const uint32_t CLEANUP_MASK[IK_GC_GENERATION_COUNT] = {
   0x00000000,
   0x88888888,
   0xCCCCCCCC,
@@ -2567,7 +2567,7 @@ static const unsigned int CLEANUP_MASK[IK_GC_GENERATION_COUNT] = {
 };
 
 static void scan_dirty_code_page     (gc_t* gc, ik_ulong page_idx);
-static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask);
+static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask);
 
 static void
 scan_dirty_pages (gc_t* gc)
@@ -2589,15 +2589,15 @@ scan_dirty_pages (gc_t* gc)
   ik_ulong	hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
   uint32_t *	dirty_vec   = (uint32_t*)pcb->dirty_vector;
   uint32_t *	segment_vec = pcb->segment_vector;
-  int		collect_gen = gc->collect_gen;
+  uint32_t	collect_gen = gc->collect_gen;
   uint32_t	mask        = DIRTY_MASK[collect_gen];
   ik_ulong	page_idx;
   for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) {
     if (dirty_vec[page_idx] & mask) {
       uint32_t page_bits               = segment_vec[page_idx];
-      int      page_generation_number  = page_bits & GEN_MASK;
+      uint32_t page_generation_number  = page_bits & GEN_MASK;
       if (page_generation_number > collect_gen) {
-        int type = page_bits & TYPE_MASK;
+        uint32_t type = page_bits & TYPE_MASK;
         if (type == POINTERS_TYPE) {
           scan_dirty_pointers_page(gc, page_idx, mask);
           dirty_vec   = (uint32_t*)pcb->dirty_vector;
@@ -2626,7 +2626,7 @@ scan_dirty_pages (gc_t* gc)
   }
 }
 static void
-scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, int mask)
+scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask)
 /* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
    containing  the data  area of  Scheme objects  composed of  immediate
    objects or tagged pointers, but not code objects.
