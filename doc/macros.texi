@@ -78,6 +78,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{CLOS}
 @end macro
 
+@macro oop{}
+@acronym{OOP}
+@end macro
+
 @macro oopp{}
 @acronym{OOPP}
 @end macro

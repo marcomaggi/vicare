@@ -205,6 +205,7 @@ identifier syntax implementing @oopp{} notation.
 * oopp notation type::          @oopp{} syntax: how to use type tags.
 * oopp notation var::           @oopp{} syntax: how to use tagged
                                 variables.
+* oopp notation nesting::       @oopp{} syntax: nesting forms.
 @end menu
 
 @c page
@@ -1089,6 +1090,99 @@ Example of nested field setter transformer invocation:
 (set!/tags (O b a v[1]) 20)
 (set!/tags (O b a v[2]) 30)
 (O b a v)               @result{} #(10 20 30)
+@end example
+
+@c page
+@node oopp notation nesting
+@subsection @oopp{} syntax: nesting forms
+
+
+Whenever an expression in @oopp{} syntax appears as first subform, it
+has a single return value and such return value is tagged: the result of
+its expansion is spliced in the enclosing form; this allows a more
+natural @oop{}--like syntax to access supertag members.  It is clearly
+not ``Schemey''.
+
+Here are some examples:
+
+@example
+(<spine> L '(0 1 2 3 4))
+
+(L car)                              @result{} 0
+(L cdr)                              @result{} (1 2 3 4)
+((L cdr) car)                        @result{} 1
+((L cdr) cdr)                        @result{} (2 3 4)
+(((L cdr) cdr) car)                  @result{} 2
+(((L cdr) cdr) cdr)                  @result{} (3 4)
+((((L cdr) cdr) cdr) car)            @result{} 3
+((((L cdr) cdr) cdr) cdr)            @result{} (4)
+(((((L cdr) cdr) cdr) cdr) car)      @result{} 4
+(((((L cdr) cdr) cdr) cdr) cdr)      @result{} ()
+@end example
+
+@noindent
+here is an example of nested getter syntax:
+
+@example
+(define-label <vector-of-vectors>
+  (parent <vector>)
+  (getter
+   (lambda (stx tag)
+     (syntax-case stx ()
+       ((?expr ((?idx)))
+        #'(<vector> #:nested-oopp-syntax
+                    (vector-ref ?expr ?idx)))))))
+
+(<vector-of-vectors> V '#(#(11 12 13)
+                          #(21 22 23)
+                          #(31 32 33)))
+
+(V[0])          @result{} '#(11 12 13))
+(V[1])          @result{} '#(21 22 23))
+(V[2])          @result{} '#(31 32 33))
+
+((V[0]) [0])    @result{} 11)
+((V[0]) [1])    @result{} 12)
+((V[0]) [2])    @result{} 13)
+
+((V[2]) [2])    @result{} 33)
+@end example
+
+The tags @class{top} and @class{procedure} are special because they do
+@strong{not} splice, to allow a natural function invocation syntax:
+
+@example
+(define-class <alpha>
+  (fields (immutable (fun <procedure>))))
+
+(define-class <beta>
+  (fields (immutable (fun <top>))))
+
+(<alpha> A (<> (+)))
+(<beta>  B (<> (*)))
+
+((A fun) 1 2 3)         @result{} 6
+((B fun) 1 2 3)         @result{} 6
+@end example
+
+@noindent
+with splicing the expansion would have been:
+
+@example
+;; this does NOT happen
+((A fun) 1 2 3) @expansion{} (A fun 1 2 3)
+@end example
+
+An untagged member is equivalent to a member tagged with @class{top}, so
+it does not splice:
+
+@example
+(define-class <gamma>
+  (fields (immutable fun)))
+
+(<gamma> G (<> (*)))
+
+((G fun) 1 2 3)         @result{} 6
 @end example
 
 @c page

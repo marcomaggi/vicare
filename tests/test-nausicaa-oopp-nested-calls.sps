@@ -320,9 +320,9 @@
       (parent <vector>)
       (getter
        (lambda (stx tag)
-	 (syntax-case stx (=>)
-	   ((?var ((?index)))
-	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?var ?index)))
+	 (syntax-case stx ()
+	   ((?expr ((?index)))
+	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?expr ?index)))
 	   ))))
 
     (check
