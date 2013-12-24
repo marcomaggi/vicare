@@ -198,8 +198,21 @@ The following example defines a tag to handle immutable pair values:
 
 After defining a class or label type with @library{nausicaa language
 oopp} we can ``tag'' variables to be of such type: the variable is an
-identifier syntax implementing @oopp{} notation.  To describe such
-syntax we assume the following definitions:
+identifier syntax implementing @oopp{} notation.
+
+@menu
+* oopp notation conventions::   @oopp{} syntax: notation conventions.
+* oopp notation type::          @oopp{} syntax: how to use type tags.
+* oopp notation var::           @oopp{} syntax: how to use tagged
+                                variables.
+@end menu
+
+@c page
+@node oopp notation conventions
+@subsection @oopp{} syntax: notation conventions
+
+
+To describe the @oopp{} syntax we assume the following definitions:
 
 @table @asis
 @item @meta{type}
@@ -225,16 +238,15 @@ a type definition.
 
 @item @meta{form}
 It is a generic form: an expression, an auxiliary syntax, @dots{}.
-
-@item @code{=>}
-It is the auxiliary syntax exported by both @library{nausicaa language
-oopp} and @library{nausicaa language auxiliary-syntaxes}, it is the same
-one exported by @rsixlibrary{base}.
 @end table
 
-@c ------------------------------------------------------------
+@c page
+@node oopp notation type
+@subsection @oopp{} syntax: how to use type tags
 
-The @meta{type} syntax can be used as follows:
+
+The @meta{type} identifier representing a type tag can be used as
+follows:
 
 @table @code
 @item (@meta{type} (@meta{form} ...))
@@ -430,13 +442,42 @@ where @code{G0} is an automatically generated identifier.
 @end itemize
 @end table
 
-@c ------------------------------------------------------------
+@c page
+@node oopp notation var
+@subsection @oopp{} syntax: how to use tagged variables
 
-The @meta{var} identifier syntax can be used as follows:
 
-@table @code
-@item @meta{var}
-This syntax expands to a reference to the value.  Example:
+@menu
+* oopp notation var reference::         Referencing tagged variables.
+* oopp notation var mutation::          Mutating tagged variables.
+* oopp notation var member access::     Accessing tag members of tagged
+                                        variables.
+* oopp notation var member mutation::   Accessing tag members of tagged
+                                        variables.
+* oopp notation var getter::            Using the getter of tagged
+                                        variables.
+* oopp notation var setter::            Using the setter of tagged
+                                        variables.
+* oopp notation var supertag access::   Accessing supertag members of
+                                        tagged variables.
+* oopp notation var supertag mutation:: Mutating supertag members of
+                                        tagged variables.
+@end menu
+
+@c page
+@node oopp notation var reference
+@subsubsection Referencing tagged variables
+
+
+Referencing a tagged variable @meta{var} works just like referencing any
+Scheme variable, we just write its identifier:
+
+@example
+@meta{var}
+@end example
+
+@noindent
+example:
 
 @example
 (define-label <pair>
@@ -447,10 +488,21 @@ This syntax expands to a reference to the value.  Example:
 O   @result{} '(1 . 2)
 @end example
 
-@c ---------
+@c page
+@node oopp notation var mutation
+@subsubsection Mutating tagged variables
 
-@item (set!/tags @meta{var} @meta{expr})
-This syntax expands to the use of @func{set!} as defined by @rnrs{6}:
+
+Mutating a tagged variable @meta{var} works almost like mutating any
+Scheme variable, we just use the @func{set!/tags} syntax rather than
+the @func{set!} syntax:
+
+@example
+(set!/tags @meta{var} @meta{expr})
+@end example
+
+@noindent
+this syntax expands to the use of @func{set!} as defined by @rnrs{6}:
 @meta{expr} becomes the new value of @meta{var}.  Notice that if values
 validation is turned on: the new value must be an instance of the type
 according to its predicate (if any).  Example:
@@ -466,10 +518,24 @@ O                       @result{} '(3 . 4)
 (set!/tags O "ciao")    @error{} assertion violation
 @end example
 
-@c ---------
+In the language @library{nausicaa}: the syntax @func{set!/tags} is
+renamed to @func{set!}; this allows us to just use @func{set!} for all
+the variables, either tagged or not.
 
-@item (@meta{var} @meta{id})
-Expands according to the following rules, in the given order:
+@c page
+@node oopp notation var member access
+@subsubsection Accessing tag member of tagged variables
+
+
+To access a tag member from a tagged variable @meta{var} we write a form
+beginning with @meta{var} and followed by the member name:
+
+@example
+(@meta{var} @meta{id})
+@end example
+
+@noindent
+it expands according to the following rules, in the given order:
 
 @enumerate
 @item
@@ -479,12 +545,13 @@ is @meta{var} itself.
 
 @item
 If the type has a field named @meta{id}: this syntax expands to a call
-to the field accessor.
+to the field's accessor.
 
 @item
 If @meta{id} has a string name prefixed with @samp{$} and the type has a
 @strong{concrete} field named @meta{id} with the @samp{$} stripped: this
-syntax expands to a call to the unsafe field accessor.
+syntax expands to a call to the field's unsafe accessor (an accessor
+that does @strong{not} validate its argument).
 @end enumerate
 
 Examples:
@@ -507,24 +574,34 @@ Examples:
 (A $a)          @result{} 1     ;unsafe field accessor application
 @end example
 
-@c ---------
+@c page
+@node oopp notation var member mutation
+@subsubsection Accessing tag member of tagged variables
 
-@item (set!/tags (@meta{var} @meta{id}) @meta{expr})
-Expands according to the following rules, in the given order:
+
+To mutate a tag member from a tagged variable @meta{var} we write:
+
+@example
+(set!/tags (@meta{var} @meta{id}) @meta{expr})
+@end example
+
+@noindent
+it expands according to the following rules, in the given order:
 
 @enumerate
 @item
 If the type has a field named @meta{id}: this syntax expands to a call
-to the field mutator.
+to the field's mutator.
 
 @item
 If @meta{id} has a string name prefixed with @samp{$} and the type has a
 @strong{concrete} field named @meta{id} with the @samp{$} stripped: this
-syntax expands to a call to the unsafe field mutator.
+syntax expands to a call to the field's unsafe mutator (a mutator that
+does @strong{not} validate its first argument).
 
 @item
 If @meta{id} is not the name of a field or it is the name of an
-immutable field: this syntax causes a syntax violation to be raised and
+immutable field: this syntax causes a syntax violation to be raised at
 expand time.
 @end enumerate
 
@@ -548,20 +625,26 @@ O               @result{} (77 . 99)
 
 (<alpha> A (1))
 (set!/tags (A a)  2)    ;field mutator application
-(set!/tags (A $a) 3)    ;unsafe field mutator application
+(set!/tags (A $a) 3)    ;field unsafe mutator application
 @end example
 
-@c ---------
+@c page
+@node oopp notation var getter
+@subsubsection Using the getter of tagged variables
 
-@item (@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
-@itemx (@meta{var} (@metao{key} ...) (@meta{key} ...) ... => @metao{form} @meta{form} @dots{})
-Expands to the result of applying the type's getter transformer to one
-of the syntax objects (lookout for the parentheses):
+
+To use the getter of a tagged variable @meta{var} we write:
+
+@example
+(@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
+@end example
+
+@noindent
+it expands to the result of applying the type's getter transformer to
+the syntax object (lookout for the parentheses):
 
 @example
 #'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...))
-#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
-     => @metao{form} @meta{form} @dots{})
 @end example
 
 @noindent
@@ -572,15 +655,15 @@ exception to be raised at expand time.  Examples:
 (define-label <vector>
   (getter (lambda (stx tag)
             (syntax-case stx ()
-              ((?var ((?idx)))
-               #'(vector-ref ?var ?idx))))))
+              ((?expr ((?idx)))
+               #'(vector-ref ?expr ?idx))))))
 
 (define-label <matrix>
   (getter (lambda (stx tag)
             (syntax-case stx ()
-              ((?var ((?row) (?col)))
+              ((?expr ((?row) (?col)))
                #'(vector-ref
-                    (vector-ref ?var ?row)
+                    (vector-ref ?expr ?row)
                     ?col))))))
 
 (<vector> V '#(1 2 3))
@@ -595,6 +678,7 @@ exception to be raised at expand time.  Examples:
 (M[1][1])               @result{} 5
 @end example
 
+@ignore
 @noindent
 other examples:
 
@@ -604,10 +688,10 @@ other examples:
   (getter
    (lambda (stx tag)
      (syntax-case stx (=>)
-       ((?var ((?index)))
-        #'(vector-ref ?var ?index))
-       ((?var ((?index)) => ?form0 ?form ...)
-        #'(let (((fx <fixnum>) (?var[?index])))
+       ((?expr ((?index)))
+        #'(vector-ref ?expr ?index))
+       ((?expr ((?index)) => ?form0 ?form ...)
+        #'(let (((fx <fixnum>) (?expr[?index])))
             (fx ?form0 ?form ...)))
        ))))
 
@@ -623,13 +707,24 @@ other examples:
   (O[2] => * 10))
 @result{} 20
 @end example
+@end ignore
 
-@c ---------
+@c page
+@node oopp notation var setter
+@subsubsection Using the setter of tagged variables
 
-@item (set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
-@itemx (set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
-Expands to the result of applying the type's setter transformer to the
-syntax object (lookout for the parentheses):
+
+To use the setter of a tagged variable @meta{var} we write one of the
+following equivalent syntaxes:
+
+@example
+(set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+(set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
+@end example
+
+@noindent
+it expands to the result of applying the type's setter transformer to
+the syntax object (lookout for the parentheses):
 
 @example
 #'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
@@ -643,15 +738,15 @@ violation exception to be raised at expand time.  Examples:
 (define-label <vector>
   (setter (lambda (stx tag)
             (syntax-case stx ()
-              ((?var ((?idx)) ?expr)
-               #'(vector-set! ?var ?idx ?expr))))))
+              ((?expr ((?idx)) ?expr)
+               #'(vector-set! ?expr ?idx ?expr))))))
 
 (define-label <matrix>
   (setter (lambda (stx tag)
             (syntax-case stx ()
-              ((?var ((?row) (?col)) ?expr)
+              ((?expr ((?row) (?col)) ?expr)
                #'(vector-set!
-                    (vector-ref ?var ?row)
+                    (vector-ref ?expr ?row)
                     ?col ?expr))))))
 
 (<vector> V (vector 1 2 3))
@@ -667,11 +762,19 @@ V               @result{} #(1 77 99)
 M               @result{} #(#(1 2 77) #(4 99 6))
 @end example
 
-@c ---------
+@c page
+@node oopp notation var supertag access
+@subsubsection Accessing supertag members of tagged variables
 
-@item (@meta{var} @meta{id} @metao{form} @meta{form} ...)
-This syntax allows the use of nested syntaxes for typed fields.  It is
-expanded according to the following rules, in the given order:
+
+To access a supertag member from a tagged variable @meta{var} we write:
+
+@example
+(@meta{var} @meta{id} @metao{form} @meta{form} ...)
+@end example
+
+@noindent
+it is expanded according to the following rules, in the given order:
 
 @enumerate
 @item
@@ -689,6 +792,7 @@ Example:
 (A append3 B '(5 6))    @result{} (1 2 3 4 5 6)
 @end example
 
+@ignore
 If the invoked method has a tagged, single return value: nested method
 invocation syntax is available.  If one of the @meta{form} arguments is
 the auxiliary syntax @code{=>}, and the return value tag is @meta{tag},
@@ -703,6 +807,7 @@ the call is split as follows:
 @noindent
 if no return value tag is available or the method has multiple return
 values: this syntax is @strong{not} available.
+@end ignore
 
 @item
 If the type has a @strong{tagged} field named @meta{id}: this syntax
@@ -710,14 +815,14 @@ expands to a recursive reference to the members @metao{form},
 @meta{form}, @dots{} of the field's value.  Example:
 
 @example
-(define-label <list>
-  (virtual-fields (immutable (car <list>) car)
-                  (immutable (cdr <list>) cdr))
+(define-label <spine>
+  (virtual-fields (immutable (car <spine>) car)
+                  (immutable (cdr <spine>) cdr))
   (method (length O)
     (length O)))
 
-(<list> O '((1 . 2) . (3 . 4)))
-(<list> L '(1 2 3))
+(<spine> O '((1 . 2) . (3 . 4)))
+(<spine> L '(1 2 3))
 
 (O car)                 @result{} (1 . 2)
 (O car car)             @result{} 1
@@ -788,12 +893,19 @@ Example:
 @end example
 @end enumerate
 
-@c ---------
+@c page
+@node oopp notation var supertag mutation
+@subsubsection Mutating supertag members of tagged variables
 
-@item (set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
-This syntax allows the use of nested field mutator and setter syntaxes
-for typed fields.  It expands according to the following rules, in the
-given order:
+
+To mutate a supertag member from a tagged variable @meta{var} we write:
+
+@example
+(set!/tags (@meta{var} @meta{id} @metao{form} @meta{form} ...) @meta{expr})
+@end example
+
+@noindent
+it expands according to the following rules, in the given order:
 
 @enumerate
 @item
@@ -808,7 +920,7 @@ syntax for the field's value, which is extracted using the unsafe
 accessor.
 @end enumerate
 
-Example of nested field mutation:
+Example of supertag field mutation:
 
 @example
 (define-class <alpha>
@@ -872,7 +984,6 @@ Example of nested field setter transformer invocation:
 (set!/tags (O b a v[2]) 30)
 (O b a v)               @result{} #(10 20 30)
 @end example
-@end table
 
 @c page
 @node oopp define
