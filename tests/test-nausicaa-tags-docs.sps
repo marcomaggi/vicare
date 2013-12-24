@@ -577,6 +577,89 @@
   #t)
 
 
+(parametrise ((check-test-name	'nesting))
+
+  (let ()
+    (<spine> L '(0 1 2 3 4))
+
+    (check (L car)				=> 0)
+    (check (L cdr)				=> '(1 2 3 4))
+    (check ((L cdr) car)			=> 1)
+    (check ((L cdr) cdr)			=> '(2 3 4))
+    (check (((L cdr) cdr) car)			=> 2)
+    (check (((L cdr) cdr) cdr)			=> '(3 4))
+    (check ((((L cdr) cdr) cdr) car)		=> 3)
+    (check ((((L cdr) cdr) cdr) cdr)		=> '(4))
+    (check (((((L cdr) cdr) cdr) cdr) car)	=> 4)
+    (check (((((L cdr) cdr) cdr) cdr) cdr)	=> '())
+
+    (void))
+
+  (let ()
+    (define-label <vector-of-vectors>
+      (parent <vector>)
+      (getter
+       (lambda (stx tag)
+	 (syntax-case stx ()
+	   ((?expr ((?idx)))
+	    #'(<vector> #:nested-oopp-syntax
+			(vector-ref ?expr ?idx)))))))
+
+    (<vector-of-vectors> V '#(#(11 12 13)
+			      #(21 22 23)
+			      #(31 32 33)))
+
+    (check (V[0])				=> '#(11 12 13))
+    (check (V[1])				=> '#(21 22 23))
+    (check (V[2])				=> '#(31 32 33))
+
+    (check ((V[0]) [0])				=> 11)
+    (check ((V[0]) [1])				=> 12)
+    (check ((V[0]) [2])				=> 13)
+
+    (check ((V[2]) [2])				=> 33)
+
+    (void))
+
+  (let ()	;<procedure> does not splice
+    (define-class <alpha>
+      (fields (immutable (fun <procedure>))))
+
+    (<alpha> A (<> (+)))
+
+    (check
+	((A fun) 1 2 3)
+      => 6)
+
+    (void))
+
+  (let ()	;<top> does not splice
+    (define-class <beta>
+      (fields (immutable (fun <top>))))
+
+    (<beta> A (<> (*)))
+
+    (check
+	((A fun) 1 2 3)
+      => 6)
+
+    (void))
+
+  (let ()	;untagged is like <top> and does not splice
+    (define-class <gamma>
+      (fields (immutable fun)))
+
+    (<gamma> G (<> (*)))
+
+    (check
+	((G fun) 1 2 3)
+      => 6)
+
+    (void))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

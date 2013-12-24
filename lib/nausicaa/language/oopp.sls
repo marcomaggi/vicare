@@ -205,7 +205,7 @@
     ((_ :flat-oopp-syntax ??expr)
      #'??expr)
     ((_ :flat-oopp-syntax ??expr ??arg ...)
-     (synner "undefined OOPP syntax"))
+     #'(??expr ??arg ...))
 
     ((_ :define ?var ?expr)
      (identifier? #'?var)
