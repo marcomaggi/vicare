@@ -785,37 +785,6 @@ exception to be raised at expand time.  Examples:
 (M[1][1])               @result{} 5
 @end example
 
-@ignore
-@noindent
-other examples:
-
-@example
-(define-label <fixnum-vector>
-  (parent <vector>)
-  (getter
-   (lambda (stx tag)
-     (syntax-case stx (=>)
-       ((?expr ((?index)))
-        #'(vector-ref ?expr ?index))
-       ((?expr ((?index)) => ?form0 ?form ...)
-        #'(let (((fx <fixnum>) (?expr[?index])))
-            (fx ?form0 ?form ...)))
-       ))))
-
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[1] => string))
-@result{} "1"
-
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[1] => odd?))
-@result{} #t
-
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[2] => * 10))
-@result{} 20
-@end example
-@end ignore
-
 @c page
 @node oopp notation var setter
 @subsubsection Using the setter of tagged variables
@@ -898,23 +867,6 @@ Example:
 (define B '(3 4))
 (A append3 B '(5 6))    @result{} (1 2 3 4 5 6)
 @end example
-
-@ignore
-If the invoked method has a tagged, single return value: nested method
-invocation syntax is available.  If one of the @meta{form} arguments is
-the auxiliary syntax @code{=>}, and the return value tag is @meta{tag},
-the call is split as follows:
-
-@example
-(@meta{var} @meta{id} @metao{form} => @metai{form} ...)
-@expansion{} (let (((R @meta{tag}) (@meta{var} @meta{id} @metao{form})))
-      (R @metai{form} ...))
-@end example
-
-@noindent
-if no return value tag is available or the method has multiple return
-values: this syntax is @strong{not} available.
-@end ignore
 
 @item
 If the type has a @strong{tagged} field named @meta{id}: this syntax
@@ -2446,11 +2398,8 @@ transformer: a function accepting 2 arguments and returning a syntax
 object as single value; the arguments are: a syntax object described
 below, the tag identifier of the type for which the getter is invoked.
 
-There are 2 possible forms (lookout for the parentheses!):
-
-@itemize
-@item
-Whenever a tagged variable @meta{var} is used as follows:
+Whenever a tagged variable @meta{var} is used as follows (lookout for
+the parentheses!):
 
 @example
 (@meta{var} (@metao{key} ...) (@meta{key} ...) ...)
@@ -2465,38 +2414,16 @@ the getter transformer is applied to the syntax object:
 
 @noindent
 and the return value of the transformer is the result of the expansion.
-
-@item
-Whenever a tagged variable @meta{var} is used as follows:
-
-@example
-(@meta{var} (@metao{key} ...) (@meta{key} ...) ...
-   => @metao{form} @meta{form} ...)
-@end example
-
-@noindent
-the getter transformer is applied to the syntax object:
-
-@example
-#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...)
-   => @metao{form} @meta{form} ...)
-@end example
-
-@noindent
-and the return value of the transformer is the result of the expansion.
-In this form @code{=>} is the auxiliary syntax exported by both
-@library{nausicaa language oopp} and @library{nausicaa language
-auxiliary-syntaxes}, it is the same one exported by @rsixlibrary{base}.
-
-The @meta{form} arguments are meant to be used as nested tag members
-usage for the value returned by the getter.
-@end itemize
+Notice that when using the keyword @keyword{oopp-syntax} to expand an
+expression in @oopp{} syntax: @meta{var} can be any expression, not only
+an identifier; @ref{oopp notation type expr, Applying @oopp{} syntax to
+any expression}.
 
 The tag argument is useful whenever we define a getter in a mixin: the
 tag argument will be the type tag of the class or label in which the
 mixin has been imported.
 
-Getter definition examples without member composition:
+Getter definition examples:
 
 @example
 (import (nausicaa))
@@ -2527,7 +2454,7 @@ Getter definition examples without member composition:
 (M[1][1])               @result{} 5
 @end example
 
-Getter definition examples with member composition:
+Getter definition examples with nested syntax support:
 
 @example
 (import (nausicaa))
@@ -2536,25 +2463,16 @@ Getter definition examples with member composition:
   (parent <vector>)
   (getter
    (lambda (stx tag)
-     (syntax-case stx (=>)
-       ((?var ((?index)))
-        #'(vector-ref ?var ?index))
-       ((?var ((?index)) => ?form0 ?form ...)
-        #'(let (((fx <fixnum>) (?var[?index])))
-            (fx ?form0 ?form ...)))
-       ))))
+     (syntax-case stx ()
+       ((?expr ((?index)))
+        #'(<fixnum> #:nested-oopp-syntax
+                    (vector-ref ?expr ?index)))))))
 
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[1] => string))
-@result{} "1"
+(<fixnum-vector> O '#(0 1 2 3))
 
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[1] => odd?))
-@result{} #t
-
-(let (((O <fixnum-vector>) '#(0 1 2 3)))
-  (O[2] => * 10))
-@result{} 20
+((O[1]) string)         @result{} "1"
+((O[1]) odd?)           @result{} #t
+((O[2]) * 10)           @result{} 20
 @end example
 @end deffn
 
