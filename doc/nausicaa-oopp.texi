@@ -245,12 +245,28 @@ It is a generic form: an expression, an auxiliary syntax, @dots{}.
 @subsection @oopp{} syntax: how to use type tags
 
 
-The @meta{type} identifier representing a type tag can be used as
-follows:
+@menu
+* oopp notation type maker::    Instantiating a tag type.
+* oopp notation type pred::     Using the tag predicate.
+* oopp notation type define::   Internal definitions of tagged
+                                variables.
+* oopp notation type expr::     Applying @oopp{} syntax to any
+                                expression.
+@end menu
 
-@table @code
-@item (@meta{type} (@meta{form} ...))
-If @meta{type} implements a maker: apply the maker transformer function
+@c page
+@node oopp notation type maker
+@subsubsection Instantiating a tag type
+
+
+To build the intance of a tag @meta{type} we write:
+
+@example
+(@meta{type} (@meta{form} ...))
+@end example
+
+@noindent
+if @meta{type} implements a maker: apply the maker transformer function
 to the whole form.  If @meta{type} has no maker: this syntax expands to
 the public constructor function of @meta{type} applied to the results of
 evaluating the @meta{form} forms.  Examples with the public constructor:
@@ -314,13 +330,21 @@ Example using the maker transformer:
 @result{} (1 . 2)
 @end example
 
-@c ------------------------------------------------------------
+@c page
+@node oopp notation type pred
+@subsubsection Using the tag predicate
 
-@item (@meta{type})
-@itemx ((@meta{type}) @meta{expr})
-Expands to a reference to the type predicate, if any; when the type has
-no predicate: the result is a function taking one argument and always
-returning @true{}.  Examples:
+
+To use the type predicate we write:
+
+@example
+(@meta{type})
+@end example
+
+@noindent
+it expands to a reference to the type predicate, if any; when the type
+has no predicate: the result is a function taking one argument and
+always returning @true{}.  Examples:
 
 @example
 (define-label <pair>
@@ -337,10 +361,21 @@ returning @true{}.  Examples:
   '((1 . 2) (3 . 4)))   @result{} #t
 @end example
 
-@item (@meta{type} @meta{var})
-@itemx (@meta{type} @meta{var} @meta{expr})
-@itemx (@meta{type} @meta{var} (<> (@meta{form} ...)))
-These syntaxes expand to internal definitions that bind @meta{var} to
+@c page
+@node oopp notation type define
+@subsubsection Internal definitions of tagged variables
+
+
+To define a tagged variable we write:
+
+@example
+(@meta{type} @meta{var})
+(@meta{type} @meta{var} @meta{expr})
+(@meta{type} @meta{var} (<> (@meta{form} ...)))
+@end example
+
+@noindent
+these syntaxes expand to internal definitions that bind @meta{var} to
 intances of @meta{type}.  Notice that if values validation is turned on:
 the value of the binding must be an instance of @meta{type} according to
 its predicate (if any).
@@ -440,7 +475,78 @@ and so to:
 @noindent
 where @code{G0} is an automatically generated identifier.
 @end itemize
-@end table
+
+@c page
+@node oopp notation type expr
+@subsubsection Applying @oopp{} syntax to any expression
+
+
+It is possible to use the @oopp{} notation not only with tagged
+variables, but with any expression; for an introduction to @oopp{}
+syntax @ref{oopp notation var, How to use tagged variables}.  This is
+achieved by using some keyword objects as arguments for the type tag.
+
+@cindex oopp-syntax, keyword
+@cindex Keyword oopp-syntax
+The syntax:
+
+@example
+(@meta{type} #:oopp-syntax (@meta{expr} @meta{arg} ...))
+@end example
+
+@noindent
+will interpret @meta{expr} as an expression evaluating to a Scheme
+object of type @meta{type}; the form:
+
+@example
+(@meta{expr} @meta{arg} ...)
+@end example
+
+@noindent
+is expanded according to the rules of @oopp{} syntax.  Examples:
+
+@example
+(<fixnum> #:oopp-syntax (123 positive?))
+@result{} #t
+
+(<string> #:oopp-syntax ("123" length))
+@result{} 3
+
+(<string> #:oopp-syntax ("01234" substring 1 3))
+@result{} "12"
+@end example
+
+@cindex nested-oopp-syntax, keyword
+@cindex Keyword nested-oopp-syntax
+The syntax:
+
+@example
+(@meta{type} #:nested-oopp-syntax @meta{expr})
+@end example
+
+@noindent
+will interpret @meta{expr} as an expression evaluating to a Scheme
+object of type @meta{type}.  This syntax allows nested @oopp{} syntax
+expansion if it appears as first subform, with the following expansion:
+
+@example
+((@meta{type} #:nested-oopp-syntax @meta{expr}) @meta{arg} ...)
+@expansion{} (@meta{type} #:oopp-syntax (@meta{expr} @meta{arg} ...))
+@end example
+
+Examples:
+
+@example
+((<fixnum> #:nested-oopp-syntax 123) positive?)
+@result{} #t
+
+((<string> #:nested-oopp-syntax "01234") length)
+@result{} 5
+
+;; getter
+((<string> #:nested-oopp-syntax "01234") [3])
+@result{} #\3
+@end example
 
 @c page
 @node oopp notation var
