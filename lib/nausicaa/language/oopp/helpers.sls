@@ -422,11 +422,11 @@
   ;;       (<vector> :flat-oopp-syntax (subvector V 0 1)))
   ;;  ==> (begin (subvector V 0 1))
   ;;
-  #;(debug-print 'process-method-application
-	       'return-value-tag (syntax->datum rv-tag-id)
-	       'method-call (syntax->datum (if (syntax->datum rv-tag-id)
-					       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
-					     application-stx)))
+  ;; (debug-print 'process-method-application
+  ;; 	       'return-value-tag (syntax->datum rv-tag-id)
+  ;; 	       'method-call (syntax->datum (if (syntax->datum rv-tag-id)
+  ;; 					       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
+  ;; 					     application-stx)))
   (if (syntax->datum rv-tag-id)
       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
     application-stx))

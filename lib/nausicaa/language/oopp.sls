@@ -674,16 +674,22 @@
 
 		  ((_ #:nested-oopp-syntax ??expr)
 		   (begin
-		     #;(debug-print 'label-nested (syntax->datum #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
+		     ;; (debug-print 'label-nested
+		     ;; 		  (list 'from (syntax->datum stx))
+		     ;; 		  (list 'to   (syntax->datum #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))))
 		     #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
 
 		  ((_ :flat-oopp-syntax ??expr)
 		   (begin
-		     #;(debug-print 'label-flat-no-args (syntax->datum #'THE-TAG) (syntax->datum #'??expr))
+		     ;; (debug-print 'label-flat-no-args
+		     ;; 		  (list 'from (syntax->datum stx))
+		     ;; 		  (list 'to   (syntax->datum #'??expr)))
 		     #'??expr))
 		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
 		   (begin
-		     #;(debug-print 'label-flat-with-args (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
+		     ;; (debug-print 'label-flat-with-args
+		     ;; 		  (list 'from (syntax->datum stx))
+		     ;; 		  (list 'to   (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))))
 		     #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
@@ -1855,6 +1861,12 @@
 	  (identifier? #'?tag))
      #'(?tag ?who ?expr))
 
+    ;;Function definition with tagged  return values through tagged who,
+    ;;vector spec.
+    ;;
+    ((?kwd (#(?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+     #'(?kwd ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))
+
     ;;Function definition with tagged single return value through tagged
     ;;who.
     ;;
@@ -1875,9 +1887,9 @@
 		#'FUN)
 	       ((_ ?arg (... ...))
 		(begin
-		  #;(debug-print 'define/tags
-			       (syntax->datum #'?who)
-			       (syntax->datum #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
+		  ;; (debug-print 'define/tags
+		  ;; 	       (syntax->datum stx)
+		  ;; 	       (syntax->datum #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
 		  #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
 	       ))
 	   #| end of module |# )))
