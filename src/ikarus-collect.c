@@ -16,6 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* The garbage collector has a mechanism similar to the one described in
+ * the paper:
+ *
+ *    R. Kent Dybvig, David Eby, Carl Bruggeman.  "Don't Stop the BIBOP:
+ *    Flexible and  Efficient Storage  Management for  Dynamically Typed
+ *    Languages".   Indiana  University   Computer  Science  Department.
+ *    Technical Report #400.  March 1994.
+ *
+ */
+
 
 /** --------------------------------------------------------------------
  ** Headers.
