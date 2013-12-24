@@ -2444,6 +2444,21 @@
   (check	;return value method call of return value method call
       (let ()
 	(define-label <alpha>
+	  (method ((a <beta>) V)
+	    (* V 10)))
+	(define-label <beta>
+	  (method (b V)
+	    (/ V 3)))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 1) a)
+	#;((<alpha>-a 1) b)
+	(((fun 1) a) b))
+    => 10/3)
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
 	  (methods a))
 	(define-label <beta>
 	  (methods b))
@@ -2453,10 +2468,27 @@
 	  (/ V 3))
 	(define ((fun <alpha>) N)
 	  N)
-	#;((fun 1) a)
-	#;((<alpha>-a 1) b)
-	(((fun 1) a) b))
-    => 10/3)
+	#;((fun 2) a)
+	#;((<alpha>-a 2) b)
+	(((fun 2) a) b))
+    => 20/3) ;; (/ (* 2 10) 3) => 20/3
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
+	  (methods ((a <beta>) <alpha>-a)))
+	(define-label <beta>
+	  (methods b))
+	(define (<alpha>-a V)
+	  (* V 10))
+	(define (<beta>-b V)
+	  (/ V 3))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 3) a)
+	#;((<alpha>-a 3) b)
+	(((fun 3) a) b))
+    => 10) ;; (/ (* 3 10) 3) => 30/3 => 10
 
   #t)
 
