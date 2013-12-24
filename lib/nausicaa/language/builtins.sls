@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa language builtins)
   (export
     <top>
@@ -463,16 +463,20 @@
 	  (else
 	   (assertion-violation who "array index out of range" idx))))
 
-  (getter (lambda (stx)
+  (getter (lambda (stx the-tag)
 	    (syntax-case stx ()
-	      ((?var ((?idx)))
-	       #'(?var ref ?idx))))))
+	      ((?expr ((?idx)))
+	       #`(#,the-tag #:oopp-syntax (?expr ref ?idx))))))
+
+  #| end of mixin |# )
 
 (define-mixin <mutable-array>
-  (setter (lambda (stx)
+  (setter (lambda (stx the-tag)
 	    (syntax-case stx ()
-	      ((?var ((?index)) ?val)
-	       #'(?var set! ?index ?val))))))
+	      ((?expr ((?index)) ?val)
+	       #`(#,the-tag #:oopp-syntax (?expr set! ?index ?val)))
+	      )))
+  #| end of mixin |# )
 
 
 ;;;; built-in types: characters and strings
@@ -496,7 +500,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-builtin-label <string>
-  (mixins <array>)
+  (mixins <array> <mutable-array>)
   (protocol (lambda () string))
   (predicate string?)
   (virtual-fields
@@ -721,14 +725,14 @@
 		   (GETTER (%mkid "-scaled-ref")))
 		#'(define-builtin-label ?type
 		    (parent <bytevector>)
-		    (setter (lambda (stx)
+		    (setter (lambda (stx the-tag)
 			      (syntax-case stx ()
-				((?var ((?idx)) ?val)
-				 #'(SETTER ?var ?idx ?val)))))
-		    (getter (lambda (stx)
+				((?expr ((?idx)) ?val)
+				 #'(SETTER ?expr ?idx ?val)))))
+		    (getter (lambda (stx the-tag)
 			      (syntax-case stx ()
-				((?var ((?idx)))
-				 #'(GETTER ?var ?idx))))))
+				((?expr ((?idx)))
+				 #'(GETTER ?expr ?idx))))))
 		)))
 	   ))))
   (define-bytevector-label <bytevector-u8>	"u8-native")
@@ -793,18 +797,18 @@
 		  (immutable keys hashtable-keys)
 		  (immutable entries hashtable-entries)
 		  (immutable (mutable? <boolean>) hashtable-mutable?))
-  (getter (lambda (stx)
+  (getter (lambda (stx the-tag)
 	    (syntax-case stx ()
-	      ((?var ((?key)))
-	       #'(hashtable-ref ?var ?key (void)))
-	      ((?var ((?key) (?default)))
-	       #'(hashtable-ref ?var ?key ?default))
+	      ((?expr ((?key)))
+	       #'(hashtable-ref ?expr ?key (void)))
+	      ((?expr ((?key) (?default)))
+	       #'(hashtable-ref ?expr ?key ?default))
 	      )))
 
-  (setter (lambda (stx)
+  (setter (lambda (stx the-tag)
 	    (syntax-case stx ()
-	      ((?var ((?index)) ?val)
-	       #'(hashtable-set! ?var ?index ?val)))))
+	      ((?expr ((?index)) ?val)
+	       #'(hashtable-set! ?expr ?index ?val)))))
 
   (method-syntax delete!
     (syntax-rules ()
@@ -2065,8 +2069,8 @@
 
 ;;;; built-in types: procedure objects
 
-(define-builtin-label <procedure>
-  (predicate procedure?))
+;; (define-builtin-label <procedure>
+;;   (predicate procedure?))
 
 
 ;;;; built-in types: special values

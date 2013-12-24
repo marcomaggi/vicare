@@ -24,9 +24,8 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
-  (rnrs eval)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -119,7 +118,7 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(<alpha>-setf ?var ?key ?val))))))
@@ -141,7 +140,7 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)) ?val)
 		   #'(<alpha>-setf ?var ?key0 ?key1 ?val))))))
@@ -161,11 +160,11 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)) ?val)
 		   #'(<alpha>-setf ?var ?key0 ?key1 ?val)))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0 ?key1)))
 		   #'(<alpha>-getf ?var ?key0 ?key1))))))
@@ -193,32 +192,35 @@
 
     (define-class <alpha>
       (fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)) ?value)
-		   #'(set! (?var a) (cons ?key ?value))))))
-      (getter (lambda (stx)
+		  ((?expr ((?key)) ?value)
+		   #'(<alpha>-a-set! ?expr (cons ?key ?value))))))
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)))
-		   #'(vector ?key (?var a)))))))
+		  ((?expr ((?key)))
+		   #`(vector ?key (#,tag #:oopp-syntax (?expr a))))
+		  ))))
 
     (define-class <beta>
       (fields (immutable (a <alpha>))
 	      (mutable   b))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
-		  ((?var ((?key)) ?value)
-		   #'(set! (?var b) (cons ?key ?value)))
-		  ((?var ((?key0) (?key1)) ?value)
-		   #'(let (((tmp <alpha>) (?var a)))
-		       (set! tmp[?key1] ?value))))))
-      (getter (lambda (stx)
+		  ((?expr ((?key)) ?value)
+		   #'(<beta>-b-set! ?expr (cons ?key ?value)))
+		  ((?expr ((?key0) (?key1)) ?value)
+		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		       (set! tmp[?key1] ?value)))
+		  )))
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key0)))
 		   #'(vector ?key0 (?var b)))
-		  ((?var ((?key0) (?key1)))
-		   #'(let (((tmp <alpha>) (?var a)))
-		       (tmp[?key1])))))))
+		  ((?expr ((?key0) (?key1)))
+		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		       (tmp[?key1])))
+		  ))))
 
       (check	;one key set, setter syntax 1
 	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
@@ -254,23 +256,15 @@
 
   (let ()	;nested vectors, single label
 
-    #;(define-label <row>
-      (setter (lambda (stx)
-		((?var ((?col)) ?value)
-		 #'(vector-set! ?var (- ?col 1) ?value))))
-      (getter (lambda (stx)
-		((?var ((?col)))
-		 #'(vector-ref ?var (- ?col 1))))))
-
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)) ?value)
 		   #'(vector-set! ?var (- ?row 1) ?value))
 		  ((?var ((?row)(?col)) ?value)
 		   #'(vector-set! (vector-ref ?var (- ?row 1)) (- ?col 1) ?value))
 		  )))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)))
 		   #'(vector-ref ?var ?row))
@@ -313,17 +307,17 @@
   (let ()	;nested vectors, multiple labels
 
     (define-label <row>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?col)) ?value)
 		   #'(vector-set! ?var (- ?col 1) ?value)))))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?col)))
 		   #'(vector-ref ?var (- ?col 1)))))))
 
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)) ?value)
 		   #'(vector-set! ?var (- ?row 1) ?value))
@@ -331,7 +325,7 @@
 		   #'(let (((R <row>) (vector-ref ?var (- ?row 1))))
 		       (set! R[?col] ?value)))
 		  )))
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row)))
 		   #'(vector-ref ?var ?row))

@@ -3667,6 +3667,249 @@
   #t)
 
 
+(parametrise ((check-test-name	'splice-first-expand))
+
+  (check
+      (splice-first-expand 123)
+    => 123)
+
+  (check
+      (splice-first-expand (+ 1 2))
+    => 3)
+
+  (check
+      (list 8 (splice-first-expand (+ 1 2)) 9)
+    => '(8 3 9))
+
+  (check
+      (with-result
+       (begin
+  	 (add-result 1)
+  	 (splice-first-expand (add-result 2))
+  	 (add-result 3)
+  	 4))
+    => '(4 (1 2 3)))
+
+  (check
+      (if (splice-first-expand 1)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 2)
+
+  (check
+      (if (splice-first-expand #f)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((splice-first-expand (+)) 1 2)
+    => 3)
+
+  (check
+      ((splice-first-expand (+ 1 2)) 3 4)
+    => (+ 1 2 3 4))
+
+  (check
+      (with-result
+       ((splice-first-expand (begin (add-result 1) (add-result 2)))
+  	(add-result 3) 4))
+    => '(4 (1 2 3)))
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit 1 2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let-syntax ((arg1 (identifier-syntax 1))
+  		   (arg2 (identifier-syntax 2))
+  		   (doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit arg1 arg2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand 123)))))
+  	(doit))
+    => 123)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	(doit))
+    => 3)
+
+  (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	doit)
+    => 3)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	((doit) 10))
+    => 13)
+
+  (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	(doit 10))
+    => 13)
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...))))))
+  	((flop arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...)))))
+		    (flip (identifier-syntax
+			   (flop arg2))))
+  	(flip 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...)))))
+  		    (flip (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (flop ?arg ...)))))
+  	((flip arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check	;nested intermixed splicing, 2 times
+      (let*-syntax ((one	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (+ (square ?arg) ...))))
+  		    (two	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (one 1 ?arg ...)))))
+  		    (three	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (two 2 ?arg ...))))
+  		    (four	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (three 3 ?arg ...))))))
+  	((four 4) 5))
+    => (+ (square 1) (square 2) (square 3) (square 4) (square 5)))
+
+;;; --------------------------------------------------------------------
+;;; syntaxes expanding into each other
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ ?arg ...)
+	     (the-gamma ?arg ...))))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ ?expr)
+	     ?expr)
+	    ((_ ?expr ?arg ...)
+	     (splice-first-expand (gamma (the-beta ?expr ?arg ...) 3)))))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta (the-alpha ?arg) 3)))))
+
+	(gamma 23 3)
+	(beta  20 3)
+	(alpha 2))
+    => 23/3)
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (gamma #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (the-gamma ?expr ?arg ...))
+	    ))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (beta #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (splice-first-expand (gamma #:splice (the-beta ?expr ?arg ...) 3)))
+	    ))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta #:splice (the-alpha ?arg) 3)))))
+
+	(gamma #:splice 23 3)
+	(beta  #:splice 20 3)
+	(alpha 2))
+    => 23/3)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check
+      (guard (E ((syntax-violation? E)
+  		 (condition-message E))
+  		(else E))
+  	(eval '((splice-first-expand 123))
+  	      (environment '(vicare))))
+    => "expected list as argument of splice-first-expand")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

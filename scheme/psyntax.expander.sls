@@ -1,4 +1,4 @@
-;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
+;;;Copyright (c) 2006, 2007, 2013 Abdulaziz Ghuloum and Kent Dybvig
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -187,7 +187,9 @@
   ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
-  (newline (current-error-port)))
+  (newline (current-error-port))
+  (when (pair? args)
+    (car args)))
 
 
 ;;;; top-level environments
@@ -400,8 +402,9 @@
 					      (inv-collector rtc)
 					      (vis-collector vtc)
 					      (imp-collector itc))
-				  (chi-expr expr.stx
-					    '() #;lexenv.run '() #;lexenv.expand))))
+				  (let ((lexenv.run	'())
+					(lexenv.expand	'()))
+				    (chi-expr expr.stx lexenv.run lexenv.expand)))))
 		 (seal-rib! rib)
 		 (values expr.core (rtc))))))
 	  ((interaction-env? env)
@@ -605,7 +608,8 @@
 			 visit-proc invoke-proc
 			 visit-code invoke-code
 			 guard-code guard-req*
-			 #t #;visible? filename)
+			 #t #;visible?
+			 filename)
 	(values id name ver imp* vis* inv*
 		invoke-code visit-code
 		export-subst export-env
@@ -1875,7 +1879,10 @@
         (lambda (name label)
           (if (symbol? name)
 	      (extend-rib! rib
-			   (make-<stx> name top-mark* '() #;subst* '() #;ae* )
+			   (make-<stx> name top-mark*
+				       '() #;subst*
+				       '() #;ae*
+				       )
 			   label #t)
             (assertion-violation who
 	      "Vicare bug: expected symbol as binding name" name)))
@@ -2298,7 +2305,10 @@
 		  (list->vector (map recur (vector->list x))))
 		 ;;If we are here X is a self-evaluating datum.
 		 (else x)))
-	 '() #;mark* '() #;subst* '() #;ae* ))
+	 '() #;mark*
+	 '() #;subst*
+	 '() #;ae*
+	 ))
 
 
 ;;;; syntax objects and marks
@@ -2459,7 +2469,11 @@
   ;;later; the RIB will be pushed on the stack of substitutions in every
   ;;identifier in the fully unwrapped returned syntax object.
   ;;
-  (mkstx stx/expr '() #;mark* (list rib) '() #;ae* ))
+  (mkstx stx/expr
+	 '() #;mark*
+	 (list rib)
+	 '() #;ae*
+	 ))
 
 (define (add-mark mark subst expr ae)
   ;;Build and return  a new syntax object wrapping  EXPR and having MARK
@@ -2869,36 +2883,6 @@
 	       (values 'constant d #f)
 	     (values 'other #f #f))))))
 
-(define (sanitize-binding x src)
-  ;;When  the rhs  of a  syntax definition  is evaluated,  it should  be
-  ;;either a procedure, an identifier-syntax transformer or an:
-  ;;
-  ;;   ($rtd . #<rtd>)
-  ;;
-  ;;form (ikarus/chez).  SANITIZE-BINDING converts the output to one of:
-  ;;
-  ;;   (lacal-macro . procedure)
-  ;;   (local-macro! . procedure)
-  ;;   (local-ctv . compile-time-value)
-  ;;   ($rtd . $rtd)
-  ;;
-  ;;and signals an assertion-violation otherwise.
-  ;;
-  (cond ((procedure? x)
-	 (cons* 'local-macro x src))
-	((and (pair? x)
-	      (eq? (car x) 'macro!)
-	      (procedure? (cdr x)))
-	 (cons* 'local-macro! (cdr x) src))
-	((and (pair? x)
-	      (eq? (car x) '$rtd))
-	 x)
-	((and (pair? x)
-	      (eq? (car x) 'ctv))
-	 (cons* 'local-ctv (cdr x) src))
-	(else
-	 (assertion-violation 'expand "invalid transformer" x))))
-
 
 (define (make-variable-transformer x)
   ;;R6RS's make-variable-transformer.
@@ -2922,11 +2906,43 @@
       (cdr x)
     (assertion-violation who "not a variable transformer" x)))
 
-(define (make-eval-transformer x)
-  ;;Take  an  expanded  expression,  evaluate it  and  return  a  proper
-  ;;syntactic binding for the resulting object.
-  ;;
-  (sanitize-binding (eval-core (expanded->core x)) x))
+(module (make-eval-transformer)
+
+  (define (make-eval-transformer x)
+    ;;Take  an expanded  expression,  evaluate it  and  return a  proper
+    ;;syntactic binding for the resulting object.
+    ;;
+    (%sanitize-binding (eval-core (expanded->core x)) x))
+
+  (define (%sanitize-binding x src)
+    ;;When the  rhs of a  syntax definition  is evaluated, it  should be
+    ;;either a procedure, an identifier-syntax transformer or an:
+    ;;
+    ;;   ($rtd . #<rtd>)
+    ;;
+    ;;form.  SANITIZE-BINDING converts the output to one of:
+    ;;
+    ;;   (lacal-macro . procedure)
+    ;;   (local-macro! . procedure)
+    ;;   (local-ctv . compile-time-value)
+    ;;   ($rtd . $rtd)
+    ;;
+    ;;and signals an assertion-violation otherwise.
+    ;;
+    (cond ((procedure? x)
+	   (cons* 'local-macro x src))
+	  ((variable-transformer? x)
+	   (cons* 'local-macro! (cdr x) src))
+	  ((and (pair? x)
+		(eq? (car x) '$rtd))
+	   x)
+	  ((and (pair? x)
+		(eq? (car x) 'ctv))
+	   (cons* 'local-ctv (cdr x) src))
+	  (else
+	   (assertion-violation 'expand "invalid transformer" x))))
+
+  #| end of module |# )
 
 
 (define-syntax syntax-match
@@ -4241,20 +4257,22 @@
 			  (syntax-rules ()
 			    ((_ x)
 			     ($struct-ref x ,i))))
-		       #;(unquote (define ,unsafe-getter
-		       (lambda (x)
-		       ($struct-ref x ,i)))))
-	      unsafe-getters i*)
-	   ,@(map (lambda (unsafe-setter i)
-		    `(define-syntax ,unsafe-setter
-		       (syntax-rules ()
-			 ((_ x v)
-			  ($struct-set! x ,i v))))
-		    #;(unquote (define ,unsafe-setter
-		    (lambda (x v)
-		    ($struct-set! x ,i v)))))
-	   unsafe-setters i*))
-	)))))
+		       ;; (unquote (define ,unsafe-getter
+		       ;; 		  (lambda (x)
+		       ;; 		    ($struct-ref x ,i))))
+		       )
+		  unsafe-getters i*)
+	      ,@(map (lambda (unsafe-setter i)
+		       `(define-syntax ,unsafe-setter
+			  (syntax-rules ()
+			    ((_ x v)
+			     ($struct-set! x ,i v))))
+		       ;; (unquote (define ,unsafe-setter
+		       ;; 	       (lambda (x v)
+		       ;; 		 ($struct-set! x ,i v))))
+		       )
+		  unsafe-setters i*))
+	   )))))
    (lambda (stx)
      (stx-error stx "define-struct not supported"))))
 
@@ -4359,23 +4377,41 @@
 
 ;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
 
-(define identifier-syntax-macro
-  (lambda (stx)
-    (syntax-match stx (set!)
-      ((_ expr)
-       (bless `(lambda (x)
-		 (syntax-case x ()
-		   (id (identifier? (syntax id)) (syntax ,expr))
-		   ((id e* ...) (identifier? (syntax id))
-		    (cons (syntax ,expr) (syntax (e* ...))))))))
-      ((_ (id1 expr1) ((set! id2 expr2) expr3))
-       (and (identifier? id1) (identifier? id2) (identifier? expr2))
-       (bless `(cons 'macro!
-		     (lambda (x)
-		       (syntax-case x (set!)
-			 (id (identifier? (syntax id)) (syntax ,expr1))
-			 ((set! id ,expr2) (syntax ,expr3))
-			 ((id e* ...) (identifier? (syntax id)) (syntax (,expr1 e* ...)))))))))))
+(define (identifier-syntax-macro stx)
+  (syntax-match stx (set!)
+    ((_ expr)
+     (bless
+      `(lambda (x)
+	 (syntax-case x ()
+	   (id
+	    (identifier? (syntax id))
+	    (syntax ,expr))
+	   ((id e* ...)
+	    (identifier? (syntax id))
+	    (cons (syntax ,expr) (syntax (e* ...))))
+	   ))))
+    ((_ (id1
+	 expr1)
+	((set! id2 expr2)
+	 expr3))
+     (and (identifier? id1)
+	  (identifier? id2)
+	  (identifier? expr2))
+     ;;Return  a macro  transformer  as MAKE-VARIABLE-TRANSFORMER  would
+     ;;build.
+     (bless
+      `(cons 'macro!
+	     (lambda (x)
+	       (syntax-case x (set!)
+		 (id
+		  (identifier? (syntax id))
+		  (syntax ,expr1))
+		 ((set! id ,expr2)
+		  (syntax ,expr3))
+		 ((id e* ...)
+		  (identifier? (syntax id))
+		  (syntax (,expr1 e* ...))))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
@@ -6157,7 +6193,9 @@
 )
 
 
-(module (core-macro-transformer)
+(module (core-macro-transformer
+	 splice-first-envelope?
+	 splice-first-envelope-form)
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
@@ -6197,6 +6235,7 @@
       ((record-type-field-ref)		record-type-field-ref-transformer)
       (($record-type-field-set!)	$record-type-field-set!-transformer)
       (($record-type-field-ref)		$record-type-field-ref-transformer)
+      ((splice-first-expand)		splice-first-expand-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       (else
        (assertion-violation who
@@ -6303,8 +6342,7 @@
 	 (eq? (binding-type binding) '$fluid)))
 
   (define (%synner message subform)
-    (stx-error subform message)
-    #;(syntax-violation who message expr-stx subform))
+    (stx-error subform message))
 
   (transformer expr-stx))
 
@@ -6666,8 +6704,8 @@
   (syntax-match expr-stx ()
     ((_ ?name ?arg* ...)
      (build-foreign-call no-source
-			 (chi-expr  ?name lexenv.run lexenv.expand)
-			 (chi-expr* ?arg* lexenv.run lexenv.expand)))))
+       (chi-expr  ?name lexenv.run lexenv.expand)
+       (chi-expr* ?arg* lexenv.run lexenv.expand)))))
 
 
 ;;;; module core-macro-transformer: SYNTAX
@@ -7186,7 +7224,8 @@
       ;;
       (((?pattern ?output-expr) . ?next-clauses)
        (%gen-clause expr.id literals
-		    ?pattern #t #;fender ?output-expr
+		    ?pattern #t #;fender
+		    ?output-expr
 		    lexenv.run lexenv.expand
 		    ?next-clauses))
 
@@ -7367,6 +7406,31 @@
 	  (syntax-error (car id*) "invalid " class)))))
 
   #| end of module: SYNTAX-CASE-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
+
+(module (splice-first-expand-transformer
+	 splice-first-envelope?
+	 splice-first-envelope-form)
+
+  (define-record splice-first-envelope
+    (form))
+
+  (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
+    ;;syntaxes  from the  top-level built  in environment.   Rather than
+    ;;expanding    the   input    form:    return    an   instance    of
+    ;;SPLICE-FIRST-ENVELOPE holding the non-expanded form.
+    ;;
+    (syntax-match expr-stx ()
+      ((_ ?form)
+       (begin
+	 #;(debug-print 'splice-first-envelope-for (syntax->datum ?form))
+	 (make-splice-first-envelope ?form)))
+      ))
+
+  #| end of module |# )
 
 
 ;;; end of module: CORE-MACRO-TRANSFORMER
@@ -7756,8 +7820,12 @@
   ;;  #(atom <object>)                |  <object> with "equal?"
   ;;
   (define (syntax-dispatch expr pattern)
-    (%match expr pattern '() #;mark* '() #;subst* '() #;annotated-expr*
-	    '() #;pvar* ))
+    (%match expr pattern
+	    '() #;mark*
+	    '() #;subst*
+	    '() #;annotated-expr*
+	    '() #;pvar*
+	    ))
 
   (define (%match expr pattern mark* subst* annotated-expr* pvar*)
     (cond ((not pvar*)
@@ -8018,17 +8086,69 @@
   #| end of module: SYNTAX-DISPATCH |# )
 
 
+;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
+
+;;Set to true  whenever we are expanding the first  suborm in a function
+;;application.   This is  where the  syntax SPLICE-FIRST-EXPAND  must be
+;;used; in every other place it must be discarded.
+;;
+(define expanding-application-first-subform?
+  (make-parameter #f))
+
+(define-syntax while-expanding-application-first-subform
+  ;;Evaluate a body while the parameter is true.
+  ;;
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (parametrise ((expanding-application-first-subform? #t))
+       ?body0 ?body ...))))
+
+(define-syntax while-not-expanding-application-first-subform
+  ;;Evaluate a body while the parameter is false.
+  ;;
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (parametrise ((expanding-application-first-subform? #f))
+       ?body0 ?body ...))))
+
+(define (chi-drop-splice-first-envelope-maybe expr lexenv.run lexenv.expand)
+  ;;If we are expanding the first subform of an application: just return
+  ;;EXPR;  otherwise if  EXPR is  a splice-first  envelope: extract  its
+  ;;form, expand it and return the result.
+  ;;
+  (if (splice-first-envelope? expr)
+      (if (expanding-application-first-subform?)
+	  expr
+	(chi-drop-splice-first-envelope-maybe (chi-expr (splice-first-envelope-form expr) lexenv.run lexenv.expand)
+					      lexenv.run lexenv.expand))
+    expr))
+
+
 ;;;; chi procedures: macro calls
 
 (module (chi-macro chi-local-macro chi-global-macro)
 
-  (define (chi-macro p e r rib)
-    (%do-macro-call (non-core-macro-transformer p) e r rib))
+  (define (chi-macro procname expr lexenv.run rib)
+    ;;This  function is  used  to  expand macro  uses  for macros  whose
+    ;;transformer is defined by MAKE-VARIABLE-TRANSFORMER.
+    ;;
+    ;;PROCNAME is  a symbol  representing the name  of a  non-core macro
+    ;;transformer (examples: cond, and, or, define-record-type, ...).
+    ;;
+    ;;EXPR  is  the syntax  object  representing  the expression  to  be
+    ;;expanded.
+    ;;
+    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
+    ;;expression must be expanded.
+    ;;
+    ;;RIB is false or a struct of type "<rib>".
+    ;;
+    (%do-macro-call (non-core-macro-transformer procname) expr lexenv.run rib))
 
-  (define (chi-local-macro p e r rib)
-    (%do-macro-call (local-macro-transformer p) e r rib))
+  (define (chi-local-macro p expr lexenv.run rib)
+    (%do-macro-call (local-macro-transformer p) expr lexenv.run rib))
 
-  (define (chi-global-macro p e r rib)
+  (define (chi-global-macro p expr lexenv.run rib)
     (let ((lib (car p))
 	  (loc (cdr p)))
       (unless (eq? lib '*interaction*)
@@ -8036,16 +8156,14 @@
       (let ((x (symbol-value loc)))
 	(let ((transformer (cond ((procedure? x)
 				  x)
-				 ((and (pair? x)
-				       (eq? (car x) 'macro!)
-				       (procedure? (cdr x)))
+				 ((variable-transformer? x)
 				  (cdr x))
 				 (else
 				  (assertion-violation 'chi-global-macro
 				    "Vicare: internal error: not a procedure" x)))))
-	  (%do-macro-call transformer e r rib)))))
+	  (%do-macro-call transformer expr lexenv.run rib)))))
 
-  (define (%do-macro-call transformer expr r rib)
+  (define (%do-macro-call transformer expr lexenv.run rib)
     (define (return x)
       (let f ((x x))
 	;;Don't feed me cycles.
@@ -8065,7 +8183,7 @@
 		(unless (identifier? id)
 		  (assertion-violation 'rho "not an identifier" id))
 		(let ((label (id->label id)))
-		  (let ((binding (label->binding label r)))
+		  (let ((binding (label->binding label lexenv.run)))
 		    (case (car binding)
 		      ((local-ctv) (cadr binding))
 		      ((global-ctv)
@@ -8083,203 +8201,294 @@
 ;;;; chi procedures: expressions
 
 (define (chi-expr* expr* lexenv.run lexenv.expand)
-  ;;Recursive function.  Expand the expressionsin EXPR* left to right.
+  ;;Recursive function.  Expand the expressions in EXPR* left to right.
   ;;
   (if (null? expr*)
       '()
-    (let ((expanded-first-expr (chi-expr (car expr*) lexenv.run lexenv.expand)))
-      (cons expanded-first-expr
+    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
+    ;;rest.
+    (let ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand)))
+      (cons expr0
 	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
-(define (chi-application expr lexenv.run lexenv.expand)
-  ;;Expand a function application form.
-  ;;
-  (syntax-match expr ()
-    ((?rator ?rands* ...)
-     (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-       (build-application (syntax-annotation expr)
-	 rator
-	 (chi-expr* ?rands* lexenv.run lexenv.expand))))))
+(module (chi-expr)
 
-(define (chi-expr e lexenv.run lexenv.expand)
-  (receive (type value kwd)
-      (syntax-type e lexenv.run)
-    (case type
-      ((core-macro)
-       (let ((transformer (core-macro-transformer value)))
-	 (transformer e lexenv.run lexenv.expand)))
-
-      ((global)
-       (let* ((lib (car value))
-	      (loc (cdr value)))
-	 ((inv-collector) lib)
-	 (build-global-reference no-source loc)))
-
-      ((core-prim)
-       (let ((name value))
-	 (build-primref no-source name)))
-
-      ((call)
-       (chi-application e lexenv.run lexenv.expand))
-
-      ((lexical)
-       (let ((lex (lexical-var value)))
-	 (build-lexical-reference no-source lex)))
-
-      ((global-macro global-macro!)
-       (chi-expr (chi-global-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
-
-      ((local-macro local-macro!)
-       (chi-expr (chi-local-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
-
-      ((macro macro!)
-       (chi-expr (chi-macro value e lexenv.run #f)
-		 lexenv.run lexenv.expand))
-
-      ((constant)
-       (let ((datum value))
-	 (build-data no-source datum)))
-
-      ((set!)
-       (chi-set! e lexenv.run lexenv.expand))
-
-      ((begin)
-       (syntax-match e ()
-	 ((_ x x* ...)
-	  (build-sequence no-source
-			  (chi-expr* (cons x x*) lexenv.run lexenv.expand)))))
-
-      ((stale-when)
-       ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
-       ;;expression  to  be  registered   in  the  current  stale-when
-       ;;collector.   When such  expression  evaluates  to false:  the
-       ;;compiled library is  stale with respect to  some source file.
-       ;;See for example the INCLUDE syntax.
-       (syntax-match e ()
-	 ((_ ?guard ?x ?x* ...)
-	  (begin
-	    (handle-stale-when ?guard lexenv.expand)
-	    (build-sequence no-source
-	      (chi-expr* (cons ?x ?x*)
-			 lexenv.run lexenv.expand))))))
-
-      ((let-syntax letrec-syntax)
-       (syntax-match e ()
-	 ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
-	  (unless (valid-bound-ids? xlhs*)
-	    (stx-error e "invalid identifiers"))
-	  (let* ((xlab* (map gensym-for-label xlhs*))
-		 (xrib  (make-full-rib xlhs* xlab*))
-		 (xb*   (map (lambda (x)
-			       (make-eval-transformer
-				(%expand-macro-transformer (if (eq? type 'let-syntax)
-							       x
-							     (push-lexical-contour xrib x))
-							   lexenv.expand)))
-			  xrhs*)))
-	    (build-sequence no-source
-	      (chi-expr* (map (lambda (x)
-				(push-lexical-contour xrib x))
-			   (cons xbody xbody*))
-			 (append (map cons xlab* xb*) lexenv.run)
-			 (append (map cons xlab* xb*) lexenv.expand)))))))
-
-      ((displaced-lexical)
-       (stx-error e "identifier out of context"))
-
-      ((syntax)
-       (stx-error e "reference to pattern variable outside a syntax form"))
-
-      ((define define-syntax define-fluid-syntax module import library)
-       (stx-error e (string-append
-		     (case type
-		       ((define)              "a definition")
-		       ((define-syntax)       "a define-syntax")
-		       ((define-fluid-syntax) "a define-fluid-syntax")
-		       ((module)              "a module definition")
-		       ((library)             "a library definition")
-		       ((import)              "an import declaration")
-		       ((export)              "an export declaration")
-		       (else                  "a non-expression"))
-		     " was found where an expression was expected")))
-
-      ((mutable)
-       (if (and (pair? value)
-		(let ((lib (car value)))
-		  (eq? lib '*interaction*)))
-	   (let ((loc (cdr value)))
-	     (build-global-reference no-source loc))
-	 (stx-error e "attempt to reference an unexportable variable")))
-
-      (else
-       ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
-       (stx-error e "invalid expression")))))
-
-(define (chi-set! e lexenv.run lexenv.expand)
-  (syntax-match e ()
-    ((_ x v)
-     (identifier? x)
+  (define (chi-expr e lexenv.run lexenv.expand)
+    ;;Expand a single expression form.
+    ;;
+    (chi-drop-splice-first-envelope-maybe
      (receive (type value kwd)
-	 (syntax-type x lexenv.run)
+	 (syntax-type e lexenv.run)
+       ;; (debug-print 'chi-expr
+       ;; 		    (list 'type type)
+       ;; 		    (list 'expr (syntax->datum e))
+       ;; 		    (list 'fst? (expanding-application-first-subform?)))
        (case type
-	 ((lexical)
-	  (set-lexical-mutable! value #t)
-	  (build-lexical-assignment no-source
-	    (lexical-var value)
-	    (chi-expr v lexenv.run lexenv.expand)))
-	 ((core-prim)
-	  (stx-error e "cannot modify imported core primitive"))
+	 ((core-macro)
+	  (let ((transformer (core-macro-transformer value)))
+	    (transformer e lexenv.run lexenv.expand)))
 
 	 ((global)
-	  (stx-error e "attempt to modify an immutable binding"))
+	  (let* ((lib (car value))
+		 (loc (cdr value)))
+	    ((inv-collector) lib)
+	    (build-global-reference no-source loc)))
 
-	 ((global-macro!)
-	  (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+	 ((core-prim)
+	  (let ((name value))
+	    (build-primref no-source name)))
 
-	 ((local-macro!)
-	  (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+	 ((call)
+	  (chi-application e lexenv.run lexenv.expand))
+
+	 ((lexical)
+	  (let ((lex (lexical-var value)))
+	    (build-lexical-reference no-source lex)))
+
+	 ((global-macro global-macro!)
+	  #;(debug-print (vector type 'enter) (syntax->datum e))
+	  (let ((exp-e (while-not-expanding-application-first-subform
+			(chi-global-macro value e lexenv.run #f))))
+	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
+	    (chi-expr exp-e lexenv.run lexenv.expand)))
+
+	 ((local-macro local-macro!)
+	  ;;Here  we expand  uses  of macros  that are  local  in a  non
+	  ;;top-level region.
+	  ;;
+	  #;(debug-print (vector type 'enter) (syntax->datum e))
+	  (let ((exp-e (while-not-expanding-application-first-subform
+			(chi-local-macro value e lexenv.run #f))))
+	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
+	    (chi-expr exp-e lexenv.run lexenv.expand)))
+
+	 ((macro macro!)
+	  ;;Here we expand the transformer of macro definitions.
+	  ;;
+	  #;(debug-print (vector type 'enter) (syntax->datum e))
+	  (let ((exp-e (while-not-expanding-application-first-subform
+			(chi-macro value e lexenv.run #f))))
+	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
+	    (chi-expr exp-e lexenv.run lexenv.expand)))
+
+	 ((constant)
+	  (let ((datum value))
+	    (build-data no-source datum)))
+
+	 ((set!)
+	  (chi-set! e lexenv.run lexenv.expand))
+
+	 ((begin)
+	  (syntax-match e ()
+	    ((_ x x* ...)
+	     (build-sequence no-source
+	       (while-not-expanding-application-first-subform
+		(chi-expr* (cons x x*) lexenv.run lexenv.expand))))))
+
+	 ((stale-when)
+	  ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
+	  ;;expression  to  be  registered   in  the  current  stale-when
+	  ;;collector.   When such  expression  evaluates  to false:  the
+	  ;;compiled library is  stale with respect to  some source file.
+	  ;;See for example the INCLUDE syntax.
+	  (syntax-match e ()
+	    ((_ ?guard ?x ?x* ...)
+	     (begin
+	       (handle-stale-when ?guard lexenv.expand)
+	       (build-sequence no-source
+		 (while-not-expanding-application-first-subform
+		  (chi-expr* (cons ?x ?x*) lexenv.run lexenv.expand)))))))
+
+	 ((let-syntax letrec-syntax)
+	  (syntax-match e ()
+	    ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
+	     (unless (valid-bound-ids? xlhs*)
+	       (stx-error e "invalid identifiers"))
+	     (let* ((xlab* (map gensym-for-label xlhs*))
+		    (xrib  (make-full-rib xlhs* xlab*))
+		    (xb*   (map (lambda (x)
+				  (make-eval-transformer
+				   (%expand-macro-transformer (if (eq? type 'let-syntax)
+								  x
+								(push-lexical-contour xrib x))
+							      lexenv.expand)))
+			     xrhs*)))
+	       (build-sequence no-source
+		 (while-not-expanding-application-first-subform
+		  (chi-expr* (map (lambda (x)
+				    (push-lexical-contour xrib x))
+			       (cons xbody xbody*))
+			     (append (map cons xlab* xb*) lexenv.run)
+			     (append (map cons xlab* xb*) lexenv.expand))))))))
+
+	 ((displaced-lexical)
+	  (stx-error e "identifier out of context"))
+
+	 ((syntax)
+	  (stx-error e "reference to pattern variable outside a syntax form"))
+
+	 ((define define-syntax define-fluid-syntax module import library)
+	  (stx-error e (string-append
+			(case type
+			  ((define)              "a definition")
+			  ((define-syntax)       "a define-syntax")
+			  ((define-fluid-syntax) "a define-fluid-syntax")
+			  ((module)              "a module definition")
+			  ((library)             "a library definition")
+			  ((import)              "an import declaration")
+			  ((export)              "an export declaration")
+			  (else                  "a non-expression"))
+			" was found where an expression was expected")))
 
 	 ((mutable)
 	  (if (and (pair? value)
 		   (let ((lib (car value)))
 		     (eq? lib '*interaction*)))
 	      (let ((loc (cdr value)))
-		(build-global-assignment no-source
-		  loc (chi-expr v lexenv.run lexenv.expand)))
-	    (stx-error e "attempt to modify an unexportable variable")))
+		(build-global-reference no-source loc))
+	    (stx-error e "attempt to reference an unexportable variable")))
 
 	 (else
-	  (stx-error e)))))))
+	  ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
+	  (stx-error e "invalid expression"))))
+     lexenv.run lexenv.expand))
+
+  (define (chi-application expr lexenv.run lexenv.expand)
+    ;;Expand a function application form.   This is called when EXPR has
+    ;;the format:
+    ;;
+    ;;   (?rator ?rand ...)
+    ;;
+    ;;and ?RATOR is a pair or a non-macro identifier.  For example it is
+    ;;called when EXPR is:
+    ;;
+    ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
+    ;;
+    (define (%build-core-expression rator rands)
+      (build-application (syntax-annotation expr)
+	rator
+	(while-not-expanding-application-first-subform
+	 (chi-expr* rands lexenv.run lexenv.expand))))
+    ;; (debug-print 'chi-application/enter
+    ;; 		 (syntax->datum expr)
+    ;; 		 (expanding-application-first-subform?))
+    (syntax-match expr ()
+      ((?rator ?rands* ...)
+       (if (not (syntax-pair? ?rator))
+       	   ;;This  is a  common function  application: ?RATOR  is not  a
+       	   ;;syntax  keyword.  Let's  make  sure that  we expand  ?RATOR
+       	   ;;first.
+       	   (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
+	     ;; (debug-print 'chi-application/exit/common
+	     ;; 		  (syntax->datum rator))
+	     (%build-core-expression rator ?rands*))
+	 ;;This is a function application with the format:
+	 ;;
+	 ;;   ((?int-rator ?int-rand ...) ?rand ...)
+	 ;;
+	 ;;we  expand  it considering  the  case  of the  first  subform
+	 ;;expanding to a SPLICE-FIRST-EXPAND form.
+	 (let ((exp-rator (while-expanding-application-first-subform
+			   (chi-expr ?rator lexenv.run lexenv.expand))))
+	   (if (splice-first-envelope? exp-rator)
+	       (syntax-match (splice-first-envelope-form exp-rator) ()
+		 ((?int-rator ?int-rands* ...)
+		  (chi-expr (cons ?int-rator (append ?int-rands* ?rands*))
+			    lexenv.run lexenv.expand))
+		 (_
+		  (stx-error exp-rator
+			     "expected list as argument of splice-first-expand"
+			     'splice-first-expand)))
+	     (%build-core-expression exp-rator ?rands*)))))
+      ))
+
+  ;; (define (chi-application expr lexenv.run lexenv.expand)
+  ;;   ;;Expand a function application form.
+  ;;   ;;
+  ;;   (syntax-match expr ()
+  ;;     ((?rator ?rands* ...)
+  ;;      (let ((rator (chi-expr ?rator lexenv.run lexenv.expand #t)))
+  ;;      	 (if (splice-first-envelope? rator)
+  ;;      	     (syntax-match (splice-first-envelope-form rator) ()
+  ;;      	       ((?rator ?int-rands* ...)
+  ;;      		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
+  ;;      			  lexenv.run lexenv.expand))
+  ;;      	       (_
+  ;;      		(stx-error expr
+  ;;      			   "expected list as argument of splice-first-expand"
+  ;;      			   'splice-first-expand)))
+  ;;      	   (build-application (syntax-annotation expr)
+  ;;      	     rator
+  ;;      	     (chi-expr* ?rands* lexenv.run lexenv.expand))))
+  ;;      )))
+
+  (define (chi-set! e lexenv.run lexenv.expand)
+    (syntax-match e ()
+      ((_ x v)
+       (identifier? x)
+       (receive (type value kwd)
+	   (syntax-type x lexenv.run)
+	 (case type
+	   ((lexical)
+	    (set-lexical-mutable! value #t)
+	    (build-lexical-assignment no-source
+	      (lexical-var value)
+	      (chi-expr v lexenv.run lexenv.expand)))
+	   ((core-prim)
+	    (stx-error e "cannot modify imported core primitive"))
+
+	   ((global)
+	    (stx-error e "attempt to modify an immutable binding"))
+
+	   ((global-macro!)
+	    (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	   ((local-macro!)
+	    (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+
+	   ((mutable)
+	    (if (and (pair? value)
+		     (let ((lib (car value)))
+		       (eq? lib '*interaction*)))
+		(let ((loc (cdr value)))
+		  (build-global-assignment no-source
+		    loc (chi-expr v lexenv.run lexenv.expand)))
+	      (stx-error e "attempt to modify an unexportable variable")))
+
+	   (else
+	    (stx-error e)))))))
+
+  #| end of module |# )
 
 (define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
-  (syntax-match fmls ()
-    ((x* ...)
-     (begin
-       (%verify-formals-syntax fmls stx)
-       (let ((lex* (map gensym-for-lexical-var x*))
-	     (lab* (map gensym-for-label x*)))
-	 (values lex*
-		 (chi-internal (push-lexical-contour (make-full-rib x* lab*)
-						     body*)
-			       (add-lexicals lab* lex* lexenv.run)
-			       lexenv.expand)))))
-    ((x* ... . x)
-     (begin
-       (%verify-formals-syntax fmls stx)
-       (let ((lex* (map gensym-for-lexical-var x*))
-	     (lab* (map gensym-for-label x*))
-	     (lex  (gensym-for-lexical-var x))
-	     (lab  (gensym-for-label x)))
-	 (values (append lex* lex)
-		 (chi-internal (push-lexical-contour (make-full-rib (cons x   x*)
-								    (cons lab lab*))
-						     body*)
-			       (add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
-			       lexenv.expand)))))
-    (_
-     (stx-error fmls "invalid syntax"))))
+  (while-not-expanding-application-first-subform
+   (syntax-match fmls ()
+     ((x* ...)
+      (begin
+	(%verify-formals-syntax fmls stx)
+	(let ((lex* (map gensym-for-lexical-var x*))
+	      (lab* (map gensym-for-label x*)))
+	  (values lex*
+		  (chi-internal (push-lexical-contour (make-full-rib x* lab*)
+						      body*)
+				(add-lexicals lab* lex* lexenv.run)
+				lexenv.expand)))))
+     ((x* ... . x)
+      (begin
+	(%verify-formals-syntax fmls stx)
+	(let ((lex* (map gensym-for-lexical-var x*))
+	      (lab* (map gensym-for-label x*))
+	      (lex  (gensym-for-lexical-var x))
+	      (lab  (gensym-for-label x)))
+	  (values (append lex* lex)
+		  (chi-internal (push-lexical-contour (make-full-rib (cons x   x*)
+								     (cons lab lab*))
+						      body*)
+				(add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
+				lexenv.expand)))))
+     (_
+      (stx-error fmls "invalid syntax"))
+     )))
 
 (define (chi-lambda-clause* stx fmls* body** lexenv.run lexenv.expand)
   (if (null? fmls*)
@@ -8327,23 +8536,24 @@
 	      (loop (cdr ls)))))))
 
 (define (chi-internal expr* lexenv.run lexenv.expand)
-  (let ((rib (make-empty-rib)))
-    (receive (expr*^ lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
-	(chi-body* (map (lambda (x)
-			  (push-lexical-contour rib x))
-		     (syntax->list expr*))
-		   lexenv.run lexenv.expand
-		   '() '() '() '() '() rib #f #t)
-      (when (null? expr*^)
-	(stx-error expr*^ "no expression in body"))
-      (let* ((init* (chi-expr* (append (apply append (reverse mod**))
-				       expr*^)
-			       lexenv.run lexenv.expand))
-	     (rhs*  (chi-rhs* rhs* lexenv.run lexenv.expand)))
-	(build-letrec* no-source
-	  (reverse lex*)
-	  (reverse rhs*)
-	  (build-sequence no-source init*))))))
+  (while-not-expanding-application-first-subform
+   (let ((rib (make-empty-rib)))
+     (receive (expr*^ lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
+	 (chi-body* (map (lambda (x)
+			   (push-lexical-contour rib x))
+		      (syntax->list expr*))
+		    lexenv.run lexenv.expand
+		    '() '() '() '() '() rib #f #t)
+       (when (null? expr*^)
+	 (stx-error expr*^ "no expression in body"))
+       (let* ((init* (chi-expr* (append (apply append (reverse mod**))
+					expr*^)
+				lexenv.run lexenv.expand))
+	      (rhs*  (chi-rhs* rhs* lexenv.run lexenv.expand)))
+	 (build-letrec* no-source
+	   (reverse lex*)
+	   (reverse rhs*)
+	   (build-sequence no-source init*)))))))
 
 
 ;;;; chi procedures: body
@@ -8351,12 +8561,16 @@
 (module (chi-body*)
 
   (define (chi-body* e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
+    (while-not-expanding-application-first-subform
     (if (null? e*)
 	(values e* r mr lex* rhs* mod** kwd* exp*)
       (let ((e (car e*)))
 	(let-values (((type value kwd) (syntax-type e r)))
-	  (let ((kwd* (if (identifier? kwd) (cons kwd kwd*) kwd*)))
+	  (let ((kwd* (if (identifier? kwd)
+			  (cons kwd kwd*)
+			kwd*)))
 	    (case type
+
 	      ((define)
 	       (let-values (((id rhs) (parse-define e)))
 		 (when (bound-id-member? id kwd*)
@@ -8367,6 +8581,7 @@
 			      (add-lexical lab lex r) mr
 			      (cons lex lex*) (cons rhs rhs*)
 			      mod** kwd* exp* rib mix? sd?))))
+
 	      ((define-syntax)
 	       (let-values (((id rhs) (%parse-define-syntax e)))
 		 (when (bound-id-member? id kwd*)
@@ -8379,6 +8594,7 @@
 				(cons (cons lab b) r) (cons (cons lab b) mr)
 				lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
+
 	      ((define-fluid-syntax)
 	       (let-values (((id rhs) (%parse-define-syntax e)))
 		 (when (bound-id-member? id kwd*)
@@ -8394,6 +8610,7 @@
 				  (cons* t1 t2 r) (cons* t1 t2 mr)
 				  lex* rhs* mod** kwd* exp* rib
 				  mix? sd?))))))
+
 	      ((let-syntax letrec-syntax)
 	       (syntax-match e ()
 		 ((_ ((xlhs* xrhs*) ...) xbody* ...)
@@ -8409,18 +8626,19 @@
 					 (push-lexical-contour xrib x))
 				       mr)))
 				xrhs*)))
-		    (chi-body*
-		     (append (map (lambda (x) (push-lexical-contour xrib x)) xbody*) (cdr e*))
-		     (append (map cons xlab* xb*) r)
-		     (append (map cons xlab* xb*) mr)
-		     lex* rhs* mod** kwd* exp* rib
-		     mix? sd?)))))
+		    (chi-body* (append (map (lambda (x) (push-lexical-contour xrib x)) xbody*) (cdr e*))
+			       (append (map cons xlab* xb*) r)
+			       (append (map cons xlab* xb*) mr)
+			       lex* rhs* mod** kwd* exp* rib
+			       mix? sd?)))))
+
 	      ((begin)
 	       (syntax-match e ()
 		 ((_ x* ...)
 		  (chi-body* (append x* (cdr e*))
 			     r mr lex* rhs* mod** kwd* exp* rib
 			     mix? sd?))))
+
 	      ((stale-when)
 	       (syntax-match e ()
 		 ((_ guard x* ...)
@@ -8429,18 +8647,22 @@
 		    (chi-body* (append x* (cdr e*))
 			       r mr lex* rhs* mod** kwd* exp* rib
 			       mix? sd?)))))
+
 	      ((global-macro global-macro!)
 	       (chi-body*
 		(cons (chi-global-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
+
 	      ((local-macro local-macro!)
 	       (chi-body*
 		(cons (chi-local-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
+
 	      ((macro macro!)
 	       (chi-body*
 		(cons (chi-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
+
 	      ((module)
 	       (let-values (((lex* rhs* m-exp-id* m-exp-lab* r mr mod** kwd*)
 			     (chi-internal-module e r mr lex* rhs* mod** kwd*)))
@@ -8449,16 +8671,19 @@
 		   m-exp-id* m-exp-lab*)
 		 (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
 			    exp* rib mix? sd?)))
+
 	      ((library)
 	       (expand-library (syntax->datum e))
 	       (chi-body* (cdr e*) r mr lex* rhs* mod** kwd* exp*
 			  rib mix? sd?))
+
 	      ((export)
 	       (syntax-match e ()
 		 ((_ exp-decl* ...)
 		  (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
 			     (append exp-decl* exp*) rib
 			     mix? sd?))))
+
 	      ((import)
 	       (let ()
 		 (define (module-import? e)
@@ -8513,13 +8738,14 @@
 		     id* lab*))
 		 (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
 			    exp* rib mix? sd?)))
+
 	      (else
 	       (if mix?
 		   (chi-body* (cdr e*) r mr
 			      (cons (gensym-for-lexical-var 'dummy) lex*)
 			      (cons (cons 'top-expr e) rhs*)
 			      mod** kwd* exp* rib #t sd?)
-		 (values e* r mr lex* rhs* mod** kwd* exp*)))))))))
+		 (values e* r mr lex* rhs* mod** kwd* exp*))))))))))
 
   (define (parse-define x)
     ;;Syntax parser for R6RS's DEFINE.
@@ -8833,6 +9059,8 @@
      (syntax-violation #f "invalid syntax" ?expr-stx))
     ((_ ?expr-stx ?msg)
      (syntax-violation #f ?msg ?expr-stx))
+    ((_ ?expr-stx ?msg ?who)
+     (syntax-violation ?who ?msg ?expr-stx))
     ))
 
 (module (syntax-error
@@ -9014,6 +9242,7 @@
 ;;eval: (put 'build-application		'scheme-indent-function 1)
 ;;eval: (put 'build-conditional		'scheme-indent-function 1)
 ;;eval: (put 'build-lambda		'scheme-indent-function 1)
+;;eval: (put 'build-foreign-call	'scheme-indent-function 1)
 ;;eval: (put 'build-sequence		'scheme-indent-function 1)
 ;;eval: (put 'build-global-assignment	'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment	'scheme-indent-function 1)

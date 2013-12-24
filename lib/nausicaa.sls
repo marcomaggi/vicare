@@ -1563,6 +1563,7 @@
     record-type-field-set!
     $record-type-field-ref
     $record-type-field-set!
+    splice-first-expand
     values->list
     define*
     lambda*

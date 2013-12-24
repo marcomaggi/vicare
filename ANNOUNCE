@@ -40,7 +40,46 @@ this project has a mailing list:
 Notes for revision 0.3d8
 ------------------------
 
-*
+* BACKWARDS  INCOMPATIBILITY  Support  for  experimental  nested  method
+  invocation added  in release 0.3d7  has been  removed.  It is  no more
+  possible to use the auxiliary syntax "=>" to nest members invocation:
+
+    (define-label <alpha>
+      (method ((one <list>) self a b)
+        (list self a b)))
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1)) ;;; ERROR
+
+* Added syntax SPLICE-FIRST-EXPAND to (vicare).
+
+* It  makes  no   sense  to  develop  Vicare  Scheme  if   it  does  not
+  differentiate itself from other  implementations; so with this release
+  a somewhat bold syntax is introduced  for the Nausicaa language on top
+  of SPLICE-FIRST-EXPAND.
+
+    Whenever an expression  in OOPP syntax appears as  first subform, it
+  has a single return value and  such return value is tagged: the result
+  of its expansion is spliced in  the enclosing form; this allows a more
+  natural OOP--like  syntax to access  supertag members.  It  is clearly
+  not ``Schemey''.  Here are some examples:
+
+     (<spine> L '(0 1 2 3 4))
+
+     (L car)				=> 0
+     (L cdr)				=> (1 2 3 4)
+     ((L cdr) car)			=> 1
+     ((L cdr) cdr)			=> (2 3 4)
+     (((L cdr) cdr) car)		=> 2
+     (((L cdr) cdr) cdr)		=> (3 4)
+     ((((L cdr) cdr) cdr) car)		=> 3
+     ((((L cdr) cdr) cdr) cdr)		=> (4)
+     (((((L cdr) cdr) cdr) cdr) car)	=> 4
+     (((((L cdr) cdr) cdr) cdr) cdr)	=> ()
+
+  more details  in node  "oopp notation  nesting" of  documentation file
+  "nausicaa.*".
 
 
 Notes for revision 0.3d7

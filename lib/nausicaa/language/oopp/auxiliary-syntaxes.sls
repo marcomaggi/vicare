@@ -28,10 +28,10 @@
 #!r6rs
 (library (nausicaa language oopp auxiliary-syntaxes)
   (export
+    :flat-oopp-syntax
     :define
-    :let
+    :bind-and-call
     :dispatch
-    :accessor
     :mutator
     :setter
     :getter
@@ -50,26 +50,17 @@
     :accessor-function
     :mutator-function
     :process-shadowed-identifier
-
     :insert-mixin-clauses)
-  (import (rnrs))
-
-  (define-syntax define-auxiliary-syntaxes
-    (syntax-rules ()
-      ((_ ?name ...)
-       (begin
-	 (define-syntax ?name (syntax-rules ()))
-	 ...))))
-
-  ;; Auxiliary syntaxes.
+  (import (only (vicare)
+		define-auxiliary-syntaxes))
   (define-auxiliary-syntaxes
+    :flat-oopp-syntax
     :define
-    :let
+    :bind-and-call
     :make
     :make-from-fields
     :is-a?
     :dispatch
-    :accessor
     :mutator
     :setter
     :getter
@@ -85,9 +76,6 @@
     :accessor-function
     :mutator-function
     :process-shadowed-identifier
-
-    :insert-mixin-clauses)
-
-  )
+    :insert-mixin-clauses))
 
 ;;; end of file
