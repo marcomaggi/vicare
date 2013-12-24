@@ -849,10 +849,21 @@ typedef struct ikpcb {
      guardians. */
   ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
 
-  /* Number of garbage collections performed so far.  It is used: at the
-     beginning of  a GC  run, to determine  which objects  generation to
-     inspect; when reporting GC statistics to the user, to show how many
-     GCs where performed between two timestamps. */
+  /* Number of garbage collections performed so far.  We shamelessly let
+   * this integer overflow: it is fine.
+   *
+   *   It is  used: at  the beginning  of a GC  run, to  determine which
+   * objects generation to inspect; when  reporting GC statistics to the
+   * user, to show how many GCs where performed between two timestamps.
+   *
+   *   The Scheme objects  generation number to inspect at  the next run
+   * is determined as follows:
+   *
+   *    (0 != (collection_id & #b11111111)) => generation 4
+   *    (0 != (collection_id & #b00111111)) => generation 3
+   *    (0 != (collection_id & #b00001111)) => generation 2
+   *    (0 != (collection_id & #b00000011)) => generation 1
+   */
   int			collection_id;
 
   /* Memory  allocation accounting.   We  keep count  of  all the  bytes
