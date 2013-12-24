@@ -427,10 +427,12 @@
 #define DEALLOC_MASK		0x000F0000
 #define LARGE_OBJECT_MASK	0x00100000
 
-#define NEW_GEN_TAG		0x00000008
-#define OLD_GEN_MASK		0x00000007
-#define NEW_GEN_MASK		0x00000008
+#define NEW_GEN_TAG		0x00000008 /* == #b1000 */
+#define OLD_GEN_MASK		0x00000007 /* ==  #b111 */
+#define NEW_GEN_MASK		0x00000008 /* == #b1000 */
 
+/* How much  to shift  a nibble to  insert to or  extract from  a 32-bit
+   value for a slot of PCB's segments vector. */
 #define META_DIRTY_SHIFT	4
 
 /* Possible values for the bit field extracted by TYPE_MASK. */
