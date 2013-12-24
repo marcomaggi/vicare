@@ -512,10 +512,10 @@ collection_id_to_gen (int id)
 /* Subroutine  of "ik_collect()".   Convert  a collection  counter to  a
    generation number determining which objects generation to inspect. */
 {
-  if ((id & 255) == 255) { return 4; }
-  if ((id &  63) == 63)  { return 3; }
-  if ((id &  15) == 15)  { return 2; }
-  if ((id &   3) == 3)   { return 1; }
+  if ((id & 255) == 255) { return 4; }	/* 255 == #b11111111 */
+  if ((id &  63) == 63)  { return 3; }	/*  63 == #b00111111 */
+  if ((id &  15) == 15)  { return 2; }	/*  15 == #b00001111 */
+  if ((id &   3) == 3)   { return 1; }	/*   3 == #b00000011 */
   return 0;
 }
 static inline void
