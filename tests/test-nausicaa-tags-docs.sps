@@ -657,6 +657,26 @@
 
     (void))
 
+;;; --------------------------------------------------------------------
+
+  (let ()
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx tag)
+	 (syntax-case stx ()
+	   ((?expr ((?index)))
+	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?expr ?index)))))))
+
+    (<fixnum-vector> O '#(0 1 2 3))
+
+    (check ((O[1]) string)		=> "1")
+    (check ((O[1]) odd?)		=> #t)
+    (check ((O[2]) * 10)		=> 20)
+
+    (void))
+
   #t)
 
 
