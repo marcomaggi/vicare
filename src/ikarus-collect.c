@@ -2550,11 +2550,37 @@ collect_loop (gc_t* gc)
 #define CARDSIZE		512
 #define CARDS_PER_PAGE		8
 
+/* Every memory  page is divided into  8 cards, of 512  bytes each.  The
+ * dirty vector has slots of 32 bits, a nibble of 4 bits for every card.
+ *
+ *   If a nibble  in the dirty vector is set  to zero: the corresponding
+ * card  is clean,  it  has no  pointers to  Scheme  objects in  younger
+ * generations.
+ *
+ *   If a  nibble in the dirty  vector is set to  0xF: the corresponding
+ * card is  dirty, at least one  of its words  is a tagged pointer  to a
+ * Scheme object in a younger generation.
+ *
+ *   Bit twiddling:
+ *
+ * - If CARD_DBITS is  a nibble of bits (in the  least significant bits)
+ *   representing the  state of the  card at  index CARD_IDX in  a given
+ *   page, the operation:
+ *
+ *      card_dbits << (card_idx * META_DIRTY_SHIFT)
+ *
+ *   shifts CARD_DBITS in  the nibble associated to the card  in a value
+ *   for the dirty vector slots.
+ */
+
+#define SHIFT_NIBBLE_AT_CARD_SLOT(NIBBLE, CARD_IDX) \
+  ((NIBBLE) << ((CARD_IDX) * META_DIRTY_SHIFT))
+
 static const uint32_t DIRTY_MASK[IK_GC_GENERATION_COUNT] = {
-  0x88888888,
-  0xCCCCCCCC,
-  0xEEEEEEEE,
-  0xFFFFFFFF,
+  0x88888888,	/* #x8 = #b1000 */
+  0xCCCCCCCC,	/* #xC = #b1100 */
+  0xEEEEEEEE,	/* #xE = #b1110 */
+  0xFFFFFFFF,	/* #xF = #b1111 */
   0x00000000
 };
 
@@ -2644,9 +2670,9 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask)
     ikptr	word_ptr     = IK_PAGE_POINTER_FROM_INDEX(page_idx);
     uint32_t	card_idx;
     for (card_idx=0; card_idx<CARDS_PER_PAGE; ++card_idx) {
-      if (masked_dbits & (0xF << (card_idx * META_DIRTY_SHIFT))) {
+      if (masked_dbits & SHIFT_NIBBLE_AT_CARD_SLOT(0xF, card_idx)) {
 	/* This is a dirty card: let's process its words. */
-	uint32_t	card_dbits = 0;
+	uint32_t	card_sbits = 0;
 	ikptr		card_end   = word_ptr + CARDSIZE;
 	for (; word_ptr < card_end; word_ptr += wordsize) {
 	  ikptr X = IK_REF(word_ptr, 0);
@@ -2658,15 +2684,15 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask)
 	       new memory, so we must retake the segment vector. */
 	    segment_vec = gc->segment_vector;
 	    IK_REF(word_ptr, 0) = Y;
-	    card_dbits |= segment_vec[IK_PAGE_INDEX(Y)];
+	    card_sbits |= segment_vec[IK_PAGE_INDEX(Y)];
 	  }
 	}
-	card_dbits      = (card_dbits & META_DIRTY_MASK) >> META_DIRTY_SHIFT;
-	new_page_dbits |= card_dbits << (card_idx * META_DIRTY_SHIFT);
+	card_sbits      = (card_sbits & META_DIRTY_MASK) >> META_DIRTY_SHIFT;
+	new_page_dbits |= SHIFT_NIBBLE_AT_CARD_SLOT(card_sbits, card_idx);
       } else {
 	/* This is a pure card: let's skip to the next card. */
 	word_ptr       += CARDSIZE;
-	new_page_dbits |= page_dbits & (0xF << (card_idx * META_DIRTY_SHIFT));
+	new_page_dbits |= page_dbits & SHIFT_NIBBLE_AT_CARD_SLOT(0xF, card_idx);
       }
     }
   }
@@ -2700,18 +2726,16 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	ikptr		s_reloc_vec;
 	ikptr		s_reloc_vec_len;
 	long		card_idx    = ((ik_ulong)p_code - (ik_ulong)page_start) / CARDSIZE;
-	ik_ulong	i;
-	ik_ulong	code_d;
+	uint32_t	code_dbits;
 	relocate_new_code(p_code, gc);
 	/* The call  to "relocate_new_code()"  might have  allocated new
 	   memory, so we must take the segment vector after it. */
 	segment_vec     = gc->segment_vector;
 	s_reloc_vec     = IK_REF(p_code, disp_code_reloc_vector);
 	s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
-	assert(((long)s_reloc_vec_len) >= 0);
-	code_d          = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
+	code_dbits      = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
 	/* Iterate over the words in the relocation vector. */
-	for (i=0; i<s_reloc_vec_len; i+=wordsize) {
+	for (ik_ulong i=0; i<s_reloc_vec_len; i+=wordsize) {
 	  ikptr		s_item = IK_REF(s_reloc_vec, i+off_vector_data);
 	  if (IK_IS_FIXNUM(s_item) || (IK_TAGOF(s_item) == immediate_tag)) {
 	    /* do nothing */
@@ -2721,10 +2745,10 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	       new memory,  so we must  retake the segment  vector after
 	       it. */
 	    segment_vec	= gc->segment_vector;
-	    code_d	|= segment_vec[IK_PAGE_INDEX(s_item)];
+	    code_dbits	|= segment_vec[IK_PAGE_INDEX(s_item)];
 	  }
 	}
-	new_page_dbits	|= code_d << (card_idx * META_DIRTY_SHIFT);
+	new_page_dbits	|= SHIFT_NIBBLE_AT_CARD_SLOT(code_dbits, card_idx);
 	{ /* Increment "p_code" to reference the next code object in the
 	     page. */
 	  long	code_size = IK_UNFIX(IK_REF(p_code, disp_code_code_size));
