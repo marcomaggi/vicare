@@ -101,7 +101,7 @@ typedef struct gc_t {
   uint32_t *	segment_vector;
 
   int		collect_gen;
-  int		collect_gen_tag;
+  uint32_t	collect_gen_tag;
 
   /* These fields are for the hash tables. */
   ikptr		tconc_ap;
@@ -285,7 +285,7 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
 ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
-  static const unsigned int NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
+  static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
     (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
     (2 << META_DIRTY_SHIFT) | 2 | NEW_GEN_TAG,
     (1 << META_DIRTY_SHIFT) | 3 | NEW_GEN_TAG,
