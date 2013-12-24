@@ -3749,10 +3749,22 @@
     => 3)
 
   (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	doit)
+    => 3)
+
+  (check
       (let-syntax ((doit (syntax-rules ()
   			   ((_)
   			    (splice-first-expand (+ 1 2))))))
   	((doit) 10))
+    => 13)
+
+  (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	(doit 10))
     => 13)
 
   (check
@@ -3766,6 +3778,21 @@
   			     (splice-first-expand
   			      (doit arg1 ?arg ...))))))
   	((flop arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...)))))
+		    (flip (identifier-syntax
+			   (flop arg2))))
+  	(flip 3 4))
     => (+ (square 1) (square 2) (square 3) (square 4)))
 
   (check
