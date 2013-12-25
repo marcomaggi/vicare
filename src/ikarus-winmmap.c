@@ -52,6 +52,10 @@
  *
  * this API should completely shield Vicare from the underlying "mmap()"
  * behaviour.
+ *
+ *   The handling of  the table of vector is similar  (but not equal) to
+ * the  handling of  the segments  vector and  dirty vector  in the  PCB
+ * structure.
  */
 
 
@@ -94,141 +98,6 @@
  * its starting address as:
  *
  *    ADDR = IDX << 16		example: 0x1000 << 16 = 1
- */
-
-
-/* A DISCARDED SOLUTION
- * ====================
- *
- * It is attractive to organise the segments table in a way similar (but
- * not  equal) to  the one  used in  the PCB  structure to  organise the
- * segments vector and the dirty vector.  It would go like this:
- *
- * - We define the global variables:
- *
- *      static uint16_t * cygwin_segments    = NULL;
- *      static uint8_t *  cygwin_memory_base = NULL;
- *      static uint8_t *  cygwin_memory_end  = NULL;
- *
- *   in which "cygwin_segments"  is the vector of  Cygwin segments; each
- *   slot  represents the  state  of a  Cygwin segment;  each  bit in  a
- *   "uint16_t" slot represents the state of a Vicare page in the Cygwin
- *   segment: 0 free, 1 used.
- *
- *     The segments vector  contains a slot for every  Cygwin segment in
- *   the region of memory  delimited by the globals "cygwin_memory_base"
- *   (included) and "cygwin_memory_end" (excluded).
- *
- *     Notice that  the segments  vector *is*  itself registered  in the
- *   segments vector:  its memory falls  inside the region  delimited by
- *   "cygwin_memory_base" and  "cygwin_memory_end", and it is  marked as
- *   "used".
- *
- * - The first slot in the segments  vector holds the descriptor for the
- *   segment starting at "cygwin_memory_base".  Given a pointer ADDR the
- *   actual  index of  the slot  describing its  segment is  computed as
- *   follows:
- *
- *      base_segment_idx = cygwin_memory_base >> 16;
- *      addr_segment_idx = addr               >> 16;
- *      addr_slot_idx    = addr_segment_idx - base_segment_idx;
- *
- * - At start up we  preallocate a big slab of memory;  we might want 32
- *   MiB (where: 1 MiB = 1024 * 1024 bytes):
- *
- *      #define PREALLOCATED_MEMORY_SIZE (32 * (1024 * 1024))
- *      #define PREALLOCATED_NUMBER_OF_SEGMENTS \
- *         (PREALLOCATED_MEMORY_SIZE / CYGWIN_SEGMENT_SIZE)
- *      #define INITIAL_SEGVEC_SIZE \
- *         (sizeof(uint16_t) * PREALLOCATED_NUMBER_OF_SEGMENTS)
- *
- *      cygwin_memory_base = do_mmap(PREALLOCATED_MEMORY_SIZE);
- *      cygwin_memory_end  = cygwin_memory_base + PREALLOCATED_MEMORY_SIZE;
- *      cygwin_segments	   = (uint16_t*)cygwin_memory_base;
- *
- *   and mark all the pages as free:
- *
- *      memset(cygwin_segments, 0, INITIAL_SEGVEC_SIZE);
- *
- *   then mark as used all the pages in the segments vector itself:
- *
- *      base_idx = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
- *      range    = CYGWIN_SEGMENT_INDEX_RANGE(INITIAL_SEGVEC_SIZE);
- *      for (segment_idx=base_idx; segment_idx<range; ++segment_idx)
- *        cygwin_segments[segment_idx] = 0xFFFF;
- *
- * - We define the global variables:
- *
- *      static char *  ap = NULL;
- *      static size_t  as = 0;
- *
- *   and after preallocating memory we set them as:
- *
- *      ap = cygwin_memory_base;
- *      as = PREALLOCATED_MEMORY_SIZE - INITIAL_SEGVEC_SIZE;
- *
- *   AP references the next free word in the current allocation segment,
- *   AS is  the number  of bytes  available from  AP to  the end  of the
- *   segment:
- *
- *                               AS
- *                |................................|
- *      ----------|--------------------------------| current segment
- *                 ^
- *                 AP
- *
- * - Whenever we reserve a block of size SIZE, we do:
- *
- *      ptr  = ap;
- *      ap  += size;
- *      as  -= size;
- *
- *   and PTR references the first word in the reserved block.
- *
- * - When the current allocation segment has not enough room
- *
- *static void
- *extend_segments_vectors_maybe (uint8_t * base_ptr, ik_ulong size)
- *{
- *  uint8_t *     end_ptr = base_ptr + size;
- *  if (base_ptr < cygwin_memory_base) {
- *    ik_ulong new_lo_seg   = CYGWIN_SEGMENT_INDEX(base_ptr);
- *    ik_ulong old_lo_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
- *    ik_ulong hi_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_end); // unchanged
- *    ik_ulong new_vec_size = (hi_seg - new_lo_seg) * sizeof(uint16_t);
- *    ik_ulong old_vec_size = (hi_seg - old_lo_seg) * sizeof(uint16_t);
- *    ik_ulong size_delta   = new_vec_size - old_vec_size;
- *    { // Allocate a new Cygwin segments vector.  The old slots go to the
- *	// tail of the  new vector; the head  of the new vector  is set to
- *	// zero.
- *      uint16_t *        new_vec_base = (uint16_t*)do_mmap(CYGWIN_ALIGN(new_vec_size));
- *      memset((char*)new_vec_base, 0, size_delta);
- *      memcpy((char*)(new_vec_base + size_delta), (char*)cygwin_segments, old_vec_size);
- *      do_munmap((char*)cygwin_segments, old_vec_size);
- *      cygwin_segments = new_vec_base;
- *    }
- *    cygwin_memory_base = (uint8_t*)(new_lo_seg * CYGWIN_SEGMENT_SIZE);
- *  } else if (end_ptr >= cygwin_memory_end) {
- *    ik_ulong lo_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_base); // unchanged
- *    ik_ulong old_hi_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_end);
- *    ik_ulong new_hi_seg   = CYGWIN_SEGMENT_INDEX(end_ptr + CYGWIN_SEGMENT_SIZE - 1);
- *    ik_ulong new_vec_size = (new_hi_seg - lo_seg) * sizeof(uint16_t);
- *    ik_ulong old_vec_size = (old_hi_seg - lo_seg) * sizeof(uint16_t);
- *    ik_ulong size_delta   = new_vec_size - old_vec_size;
- *    { // Allocate a new new Cygwin segments vector.  The old slots go to
- *	// the head of the  new vector; the tail of the  new vector is set
- *	// to zero.
- *      uint16_t *        new_vec_base = (uint16_t*)do_mmap(CYGWIN_ALIGN(new_vec_size));
- *      memcpy((char*)new_vec_base, (char*)cygwin_segments, old_vec_size);
- *      memset((char*)(new_vec_base + old_vec_size), 0, size_delta);
- *      do_munmap((char*)cygwin_segments, old_vec_size);
- *      cygwin_segments = new_vec_base;
- *    }
- *    cygwin_memory_end = (uint8_t*)(new_hi_seg * CYGWIN_SEGMENT_SIZE);
- *  }
- *}
- *
- *
  */
 
 
@@ -277,14 +146,8 @@
 #define CYGWIN_SEGMENT_SIZE	(16 * IK_PAGESIZE)
 #define CYGWIN_SEGMENT_SHIFT	(4  + IK_PAGESHIFT)
 
-#define CYGWIN_ALIGN(SIZE) \
-  ((((ik_ulong)(SIZE) + CYGWIN_SEGMENT_SIZE - 1) >> CYGWIN_SEGMENT_SHIFT) << CYGWIN_SEGMENT_SHIFT)
-
 #define CYGWIN_SEGMENT_INDEX(X)	\
   (((ik_ulong)(X)) >> CYGWIN_SEGMENT_SHIFT)
-
-#define CYGWIN_SEGMENT_SLOT(X) \
-  (CYGWIN_SEGMENT_INDEX(X)  - CYGWIN_SEGMENT_INDEX(cygwin_memory_base))
 
 /* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
    difference between  two Cygwin segment indexes  representing a region
@@ -292,25 +155,33 @@
 #define CYGWIN_SEGMENT_INDEX_RANGE(SIZE) \
   CYGWIN_SEGMENT_INDEX(SIZE)
 
+/* Given  a  pointer return  the  slot  in the  array  "cygwin_segments"
+   describing the associated Cygwin segment. */
+#define CYGWIN_SEGMENT_SLOT(X) \
+  (CYGWIN_SEGMENT_INDEX(X)  - CYGWIN_SEGMENT_INDEX(cygwin_memory_base))
+
+#define MINIMUM_CYGWIN_SEGMENTS_NUMBER_FOR_SIZE(SIZE) \
+  (((ik_ulong)(SIZE) + CYGWIN_SEGMENT_SIZE - 1) >> CYGWIN_SEGMENT_SHIFT)
+
+/* Given  a  number of  bytes:  compute  the  minimum number  of  Cygwin
+   segments needed to  hold them and return the  corresponding number of
+   bytes. */
+#define CYGWIN_ALIGN(SIZE) \
+  (MINIMUM_CYGWIN_SEGMENTS_NUMBER_FOR_SIZE(SIZE) << CYGWIN_SEGMENT_SHIFT)
+
 #define CYGWIN_SEGMENT_INDEX_FROM_PAGE_INDEX(PAGE_IDX) \
   ((PAGE_IDX) / 16)
 
 #define CYGWIN_SEGMENT_INDEX_TO_POINTER(SEGMENT_IDX) \
   ((void*)((SEGMENT_IDX) * CYGWIN_SEGMENT_SIZE))
 
-#define MINIMUM_CYGWIN_SEGMENTS_NUMBER_FOR_SIZE(SIZE) \
-  (((SIZE) + CYGWIN_SEGMENT_SIZE - 1) >> CYGWIN_SEGMENT_SHIFT)
-
 
 /** --------------------------------------------------------------------
  ** Internal definitions: preallocated memory.
  ** ----------------------------------------------------------------- */
 
-/* Initial number of byes allocated.  We want 32 MiB, where:
- *
- *   1 MiB = 1024 * 1024 bytes
- *
- */
+/* Initial number  of byes allocated.   We want 32  MiB, where: 1  MiB =
+   1024 * 1024 bytes. */
 #ifndef PREALLOCATED_NUMBER_OF_MIBS
 #  define PREALLOCATED_NUMBER_OF_MIBS	32L
 #endif
@@ -339,9 +210,12 @@
  * region  of   memory  delimited  by  the   globals  CYGWIN_MEMORY_BASE
  * (included) and CYGWIN_MEMORY_END (excluded).
  *
- *   Notice  that the  segments  vector *is*  itself  registered in  the
- * segments  vector: its  memory falls  inside the  region delimited  by
- * CYGWIN_MEMORY_BASE and CYGWIN_MEMORY_END, and it is marked as "used".
+ *   Notice that the  segments vector *is not* itself  registered in the
+ * segments vector: even if its memory falls inside the region delimited
+ * by CYGWIN_MEMORY_BASE and CYGWIN_MEMORY_END,  it is marked as "free".
+ * This is not a problem because  "mmap()" will never return the address
+ * of  already  allocated memory,  so  we  will  never touch  the  slots
+ * describing the segments vector.
  *
  *   The first slot in the segments  vector holds the descriptor for the
  * segment  starting at  CYGWIN_MEMORY_BASE.  Given  a pointer  ADDR the
@@ -351,29 +225,33 @@
  *   base_segment_idx = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
  *   addr_segment_idx = CYGWIN_SEGMENT_INDEX(addr);
  *   addr_slot_idx    = addr_segment_idx - base_segment_idx;
+ *
+ * or shortly as:
+ *
+ *   addr_slot_idx    = CYGWIN_SEGMENT_SLOT(addr);
  */
-static uint16_t *	cygwin_segments;
+static uint16_t *	cygwin_segments    = NULL;
 static uint8_t *	cygwin_memory_base = NULL;
 static uint8_t *	cygwin_memory_end  = NULL;
 
 /* Allocation  pointer  and  size.  After  initialising  the  allocation
  * subsystem: AP references the next free word in the current allocation
- * segment, AS is te number of bytes available from AP to the end of the
- * segment.
+ * block, AS is te  number of bytes available from AP to  the end of the
+ * block.
  *
  *                               AS
  *              |................................|
- *    ----------|--------------------------------| current segment
+ *    ----------|--------------------------------| current block
  *               ^
  *               AP
  *
- *   Whenever we reserve a block of size SIZE, we do:
+ *   To reserve a chunk of SIZE bytes, we do:
  *
  *    ptr  = ap;
  *    ap  += size;
  *    as  -= size;
  *
- * and PTR references the first word in the reserved block.
+ * and PTR references the first word in the reserved chunk.
  */
 static char *	ap = NULL;
 static size_t	as = 0;
@@ -383,24 +261,19 @@ static size_t	as = 0;
  ** Fake memory mapped interface.
  ** ----------------------------------------------------------------- */
 
-/* For debugging purposes only, on Unix systems we can compile with:
+/* For debugging purposes only, on Unix systems, we can compile with:
  *
- *   $ make CFLAGS='-D__FAKE_CYGWIN__ -pedantic -g'
+ *   $ make CPPFLAGS='-D__FAKE_CYGWIN__'
  *
  * this  will enable  the use  of the  "win_*map()" API  along with  the
- * functions  below, which  fake system  memory allocation  by returning
+ * function  below, which  fakes system  memory allocation  by returning
  * pointers whose 16 least significant bits are set to zero.  This means
  * we fake allocation with granularity 2^16.
  */
 #ifdef __FAKE_CYGWIN__
 
-/* Given a  pointer PTR returned  by "mmap()": return the  least pointer
-   after it that references the first word in a Cygwin segment. */
-#define TOSEG(PTR) \
-  ((uint8_t *)CYGWIN_ALIGN(((ik_ulong)(PTR)) + CYGWIN_SEGMENT_SIZE))
-
 static void *
-fake_mmap (void * addr IK_UNUSED, size_t length IK_UNUSED,
+fake_mmap (void * addr IK_UNUSED, size_t length,
 	   int    prot IK_UNUSED, int    flags  IK_UNUSED,
 	   int    fd   IK_UNUSED, off_t  offset IK_UNUSED)
 {
@@ -487,13 +360,13 @@ win_mmap (size_t size)
 		       size, CYGWIN_SEGMENT_SLOT(x), CYGWIN_SEGMENT_SLOT(ap));
     return x;
   } else if (NULL == cygwin_segments) {
+    /* This is the first allocation,  the memory allocation subsystem is
+       not yet initialised. */
     /* Preallocate  memory and  initialise the  Cygwin segments  vector.
-       The segments  vector itself  is located at  the beginning  of the
-       preallocated memory; mark as used the pages in which the segments
-       vector is stored. */
+       The segments vector itself is allocated separately. */
+    cygwin_segments	= do_mmap(CYGWIN_ALIGN(INITIAL_SEGMENTS_VECTOR_SIZE));
     cygwin_memory_base  = do_mmap(PREALLOCATED_MEMORY_SIZE);
     cygwin_memory_end	= cygwin_memory_base + PREALLOCATED_MEMORY_SIZE;
-    cygwin_segments	= do_mmap(CYGWIN_ALIGN(INITIAL_SEGMENTS_VECTOR_SIZE));
     /* Mark all the pages as used. */
     memset(cygwin_segments, 0xFF, INITIAL_SEGMENTS_VECTOR_SIZE);
     /* The preallocated memory becomes the current allocation block. */
@@ -507,6 +380,8 @@ win_mmap (size_t size)
        this means AP is a pointer to the beginning of an absolute memory
        Cygwin segment. */
     assert(0 == (((ik_ulong)ap) & (CYGWIN_SEGMENT_SIZE-1)));
+    /* Reserve the requested bytes and  return a pointer to the reserved
+       chunk. */
     {
       char *	x = ap;
       ap += size;
@@ -533,7 +408,7 @@ win_mmap (size_t size)
 	  cygwin_segments[i + addr_slot_idx] = 0xFFFF;
 	}
       }
-      /* Set up the current allocation segment with the requested memory
+      /* Set up the  current allocation block with  the requested memory
 	 reserved. */
       ap = addr         + size;
       as = aligned_size - size;
