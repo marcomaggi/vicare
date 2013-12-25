@@ -134,6 +134,11 @@
  ** Preprocessor definitions: memory pages and segments.
  ** ----------------------------------------------------------------- */
 
+#if (defined _WIN32 || defined __CYGWIN__)
+#  undef IK_PROTECT_FROM_STACK_OVERFLOW
+#  define IK_PROTECT_FROM_STACK_OVERFLOW	0
+#endif
+
 /* Given  a  SIZE  compute  and  return the  minimum  size  multiple  of
  * GRANULARITY that can hold it.
  *
@@ -225,7 +230,7 @@
 #define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
 /* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
    difference between two page indexes  representing a region big enough
-   to hold X bytes. */
+   to hold SIZE bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
 
 /* Given a  Vicare page index: return  an untagged pointer to  the first
@@ -1991,7 +1996,7 @@ ik_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
 
 extern char **		environ;
 
-#ifdef __CYGWIN__
+#if ((defined __CYGWIN__) || (defined __FAKE_CYGWIN__))
 void	win_munmap(char* addr, size_t size);
 char*	win_mmap(size_t size);
 #endif

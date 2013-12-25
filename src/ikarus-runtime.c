@@ -83,21 +83,22 @@ ik_mmap (ik_ulong size)
    some words uninitialised, because the heap is not a garbage collector
    root. */
 {
-  ik_ulong npages        = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
-  ik_ulong mapsize       = IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(npages);
+  char *	mem;
+  ik_ulong	npages   = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
+  ik_ulong	mapsize  = npages * IK_PAGESIZE;
   total_allocated_pages += npages;
   if (0) {
     ik_debug_message("%s: size=%lu, pages=%lu, mapsize=%lu, size/PGSIZE=%lu, mapsize/PGSIZE=%lu\n",
 		     __func__, size, npages, mapsize, size/IK_PAGESIZE, mapsize/IK_PAGESIZE);
   }
   assert(size == mapsize);
-#ifndef __CYGWIN__
-  char* mem = mmap(0, mapsize, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
+#if ((defined __CYGWIN__) || (defined __FAKE_CYGWIN__))
+  mem = win_mmap(mapsize);
+#else
+  mem = mmap(0, mapsize, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
   /* FIXME Check if in range.  (Abdulaziz Ghuloum) */
   if (mem == MAP_FAILED)
     ik_abort("mapping (0x%lx bytes) failed: %s", size, strerror(errno));
-#else
-  char* mem = win_mmap(mapsize);
 #endif
   /* Notice that when the garbage  collector scans, word by word, memory
      that should contain the data area of a Scheme object: it interprets
@@ -126,17 +127,22 @@ void
 ik_munmap (ikptr mem, ik_ulong size)
 /* All memory relese is performed by this function. */
 {
-  ik_ulong pages   = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
-  ik_ulong mapsize = IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(pages);
+  ik_ulong	npages  = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
+  ik_ulong	mapsize = npages * IK_PAGESIZE;
   assert(size == mapsize);
+  /* Assert that the  12 least significant bits in MEM  are set to zero:
+     this means MEM is a pointer  to the beginning of an absolute memory
+     page. */
   assert(((-IK_PAGESIZE) & (int)mem) == (int)mem);
-  total_allocated_pages -= pages;
-#ifndef __CYGWIN__
-  int err = munmap((char*)mem, mapsize);
-  if (err)
-    ik_abort("ik_munmap failed: %s", strerror(errno));
-#else
+  total_allocated_pages -= npages;
+#if ((defined __CYGWIN__) || (defined __FAKE_CYGWIN__))
   win_munmap((char*)mem, mapsize);
+#else
+  {
+    int	err = munmap((char*)mem, mapsize);
+    if (err)
+      ik_abort("ik_munmap failed: %s", strerror(errno));
+  }
 #endif
 #ifdef VICARE_DEBUGGING
   ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__, (long)mem, ((long)(mem))+mapsize-1);
