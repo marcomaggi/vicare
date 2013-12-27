@@ -2,9 +2,10 @@
 
 ACLOCAL_AMFLAGS		= -I autotools
 SUBDIRS			= src scheme doc lib tests demos
-EXTRA_DIST		= configure.sh bare-configure.sh cygwin-configure.sh \
-			  scripts/make-last-revision	\
-			  scripts/vie			\
+EXTRA_DIST		= configure.sh configure32.sh		\
+			  bare-configure.sh cygwin-configure.sh \
+			  scripts/make-last-revision		\
+			  scripts/vie				\
 			  autotools/config.rpath
 dist_doc_DATA		= README COPYING GPL-3		\
 			  LICENSE.irregex LICENSE.pregexp LICENSE.srfi
