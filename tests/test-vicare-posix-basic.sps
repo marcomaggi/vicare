@@ -1921,24 +1921,27 @@
 
 (parametrise ((check-test-name	'resources))
 
-  (check
-      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(px.struct-rlimit? rlim))
-    => #t)
+	  (px.struct-rlimit? rlim))
+      => #t))
 
-  (check
-      (let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let ((rlim (px.getrlimit RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(px.setrlimit RLIMIT_SIGPENDING rlim)
-	#t)
-    => #t)
+	  (px.setrlimit RLIMIT_SIGPENDING rlim)
+	  #t)
+      => #t))
 
-  (check
-      (let ((rusa (px.getrusage RUSAGE_SELF)))
+  (when RUSAGE_SELF
+    (check
+	(let ((rusa (px.getrusage RUSAGE_SELF)))
 ;;;	(check-pretty-print rusa)
-	(px.struct-rusage? rusa))
-    => #t)
+	  (px.struct-rusage? rusa))
+      => #t))
 
   #t)
 
