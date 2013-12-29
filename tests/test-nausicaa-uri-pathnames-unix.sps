@@ -41,7 +41,7 @@
   (check
       (let ()
 	(<absolute-unix-pathname> O (<> ("/path/to/file.ext")))
-	((<absolute-unix-pathname>) O))
+	((<absolute-unix-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -62,7 +62,7 @@
   (check
       (let ()
 	(<absolute-unix-pathname> O (<> ('#ve(ascii "/path/to/file.ext"))))
-	((<absolute-unix-pathname>) O))
+	((<absolute-unix-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -83,7 +83,7 @@
   (check
       (let ()
 	(<absolute-pathname> O (<absolute-unix-pathname> ("/path/to/file.ext")))
-	((<absolute-pathname>) O))
+	((<absolute-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -104,7 +104,7 @@
   (check
       (let ()
 	(<pathname> O (<absolute-unix-pathname> ("/path/to/file.ext")))
-	((<pathname>) O))
+	((<pathname> #:predicate) O))
     => #t)
 
   (check
@@ -143,7 +143,7 @@
   (check
       (let ()
 	(<relative-unix-pathname> O (<> ("path/to/file.ext")))
-	((<relative-unix-pathname>) O))
+	((<relative-unix-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -164,7 +164,7 @@
   (check
       (let ()
 	(<relative-unix-pathname> O (<> ('#ve(ascii "path/to/file.ext"))))
-	((<relative-unix-pathname>) O))
+	((<relative-unix-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -185,7 +185,7 @@
   (check
       (let ()
 	(<relative-pathname> O (<relative-unix-pathname> ("path/to/file.ext")))
-	((<relative-pathname>) O))
+	((<relative-pathname> #:predicate) O))
     => #t)
 
   (check
@@ -206,7 +206,7 @@
   (check
       (let ()
 	(<pathname> O (<relative-unix-pathname> ("path/to/file.ext")))
-	((<pathname>) O))
+	((<pathname> #:predicate) O))
     => #t)
 
   (check
@@ -243,24 +243,24 @@
 
   (check
       (let ((O (pathname "/path/to/file.ext")))
-	((<absolute-unix-pathname>) O))
+	((<absolute-unix-pathname> #:predicate) O))
     => #t)
 
   (check
       (let ((O (pathname "path/to/file.ext")))
-	((<relative-unix-pathname>) O))
+	((<relative-unix-pathname> #:predicate) O))
     => #t)
 
 ;;; initialised with bytevector
 
   (check
       (let ((O (pathname '#ve(ascii "/path/to/file.ext"))))
-	((<absolute-unix-pathname>) O))
+	((<absolute-unix-pathname> #:predicate) O))
     => #t)
 
   (check
       (let ((O (pathname '#ve(ascii "path/to/file.ext"))))
-	((<relative-unix-pathname>) O))
+	((<relative-unix-pathname> #:predicate) O))
     => #t)
 
   #t)

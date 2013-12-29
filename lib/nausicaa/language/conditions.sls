@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa language conditions)
   (export
 
@@ -689,9 +689,9 @@
 		 (make-message-condition message)
 		 (make-irritants-condition irritants)))))
   (predicate (lambda (obj)
-	       (and ((&who) obj)
-		    ((&message) obj)
-		    ((&irritants) obj))))
+	       (and ((&who #:predicate) obj)
+		    ((&message #:predicate) obj)
+		    ((&irritants #:predicate) obj))))
   (virtual-fields (immutable (who	&who)		condition-who)
 		  (immutable (message	&message)	condition-message)
 		  (immutable (irritants &irritants)	condition-irritants)))
