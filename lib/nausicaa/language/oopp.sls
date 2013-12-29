@@ -890,8 +890,8 @@
 		  ;;constructor.
 		  ((_ (??arg (... ...)))
 		   (if %the-maker
-		       (%the-maker stx)
-		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
+		       #`(THE-TAG #:nested-oopp-syntax #,(%the-maker stx))
+		     #'(THE-TAG #:nested-oopp-syntax (THE-PUBLIC-CONSTRUCTOR ??arg (... ...)))))
 
 		  ;;Cast operator.  It is meant to be used as:
 		  ;;
@@ -1367,8 +1367,8 @@
 		  ;;Constructor call.
 		  ((_ (??arg (... ...)))
 		   (if %the-maker
-		       (%the-maker stx)
-		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
+		       #`(THE-TAG #:nested-oopp-syntax #,(%the-maker stx))
+		     #'(THE-TAG #:nested-oopp-syntax (THE-PUBLIC-CONSTRUCTOR ??arg (... ...)))))
 
 		  ;;Cast operator.  It is meant to be used as:
 		  ;;

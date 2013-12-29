@@ -860,6 +860,14 @@
 	(o cdr))
     => 2)
 
+  (check	;nested
+      ((<a-pair> (1 2)) cdr)
+    => 2)
+
+  (check	;nested
+      ((<a-pair> (1 2)) car)
+    => 1)
+
   #t)
 
 
