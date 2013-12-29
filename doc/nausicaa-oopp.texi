@@ -271,7 +271,10 @@ To build the intance of a tag @meta{type} we write:
 if @meta{type} implements a maker: apply the maker transformer function
 to the whole form.  If @meta{type} has no maker: this syntax expands to
 the public constructor function of @meta{type} applied to the results of
-evaluating the @meta{form} forms.  Examples with the public constructor:
+evaluating the @meta{form} forms.  If the maker syntax is used as first
+subform of an enclosing form, the nested @oopp{} syntax is available.
+
+Examples with the public constructor:
 
 @example
 (define-label <pair>
@@ -330,6 +333,18 @@ Example using the maker transformer:
 
 (<pair> (1 2))
 @result{} (1 . 2)
+@end example
+
+Example of using nested @oopp{} syntax:
+
+@example
+(define-label <a-pair>
+  (protocol (lambda () cons))
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+((<a-pair> (1 2)) car)  @result{} 1
+((<a-pair> (1 2)) cdr)  @result{} 2
 @end example
 
 @c page

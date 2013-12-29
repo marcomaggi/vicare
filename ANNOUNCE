@@ -127,6 +127,12 @@ Notes for revision 0.3d8
      (((<fixnum>) 123) <= 200)	=> #t
      (((<fixnum>) 123) <= 100)	=> #f
 
+* If the maker syntax is used as first subform of an enclosing form, the
+  nested OOPP syntax is available.
+
+     ((<pair> (1 2)) car)	=> 1
+     ((<pair> (1 2)) cdr)	=> 2
+
 
 Notes for revision 0.3d7
 ------------------------
