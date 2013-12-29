@@ -41,7 +41,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa parser-tools lalr lr-driver)
   (export lr-driver)
   (import (nausicaa)
@@ -105,7 +105,7 @@
 		(set! reuse-last-token #f)
 	      (begin
 		(set! last-token (true-lexer))
-		(unless ((lt.<lexical-token>) last-token)
+		(unless ((lt.<lexical-token> #:predicate) last-token)
 		  (error-handler "expected lexical token from lexer" last-token)
 		  (true-lexer))))
 ;;;	    (debug "~%lookahead ~s" last-token)

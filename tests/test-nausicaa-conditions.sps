@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (rnrs eval)
   (vicare checks))
@@ -425,7 +425,7 @@
   (check
       (let ()
 	(<common-conditions> C (<> ('ciao "ciao" '(ciao))))
-	(vector ((<common-conditions>) C)
+	(vector ((<common-conditions> #:predicate) C)
 		(is-a? C <common-conditions>)
 		(C who)
 		(C message)
@@ -447,7 +447,7 @@
 	 (lambda (who message irritants a b c)
 	   (condition (<common-conditions> (who message irritants))
 		      (&whatever (a b c))))))
-      (predicate (&whatever))
+      (predicate (&whatever #:predicate))
       (virtual-fields (immutable a (slot-ref <> a &whatever))
 		      (immutable b (slot-ref <> b &whatever))
 		      (immutable c (slot-ref <> c &whatever))))

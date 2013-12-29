@@ -166,21 +166,21 @@
 
   (define (extended-tag-unique-identifier-of obj)
     (cond ((bytevector? obj)
-	   (cond (((<absolute-bytevector-unix-pathname>) obj)
+	   (cond (((<absolute-bytevector-unix-pathname> #:predicate) obj)
 		  (tag-unique-identifiers <absolute-bytevector-unix-pathname>))
-		 (((<relative-bytevector-unix-pathname>) obj)
+		 (((<relative-bytevector-unix-pathname> #:predicate) obj)
 		  (tag-unique-identifiers <relative-bytevector-unix-pathname>))
-		 (((<bytevector-unix-segment>) obj)
+		 (((<bytevector-unix-segment> #:predicate) obj)
 		  (tag-unique-identifiers <bytevector-unix-segment>))
 		 (else
 		  (tag-unique-identifiers-of obj))))
 
 	  ((string? obj)
-	   (cond (((<absolute-string-unix-pathname>) obj)
+	   (cond (((<absolute-string-unix-pathname> #:predicate) obj)
 		  (tag-unique-identifiers <absolute-string-unix-pathname>))
-		 (((<relative-string-unix-pathname>) obj)
+		 (((<relative-string-unix-pathname> #:predicate) obj)
 		  (tag-unique-identifiers <relative-string-unix-pathname>))
-		 (((<string-unix-segment>) obj)
+		 (((<string-unix-segment> #:predicate) obj)
 		  (tag-unique-identifiers <string-unix-segment>))
 		 (else
 		  (tag-unique-identifiers-of obj))))

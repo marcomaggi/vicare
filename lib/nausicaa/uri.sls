@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa uri)
   (export
     <uri> <relative-ref>
@@ -479,7 +479,7 @@
 			  (next-segment tail (if (null? output-stack)
 						 output-stack
 					       ($cdr output-stack))))
-			 (((<segment>) head)
+			 (((<segment> #:predicate) head)
 			  ;;Just  push  on  the output  stack  a  normal
 			  ;;segment.
 			  (next-segment tail (cons head output-stack)))
@@ -520,7 +520,7 @@
 			 ;;Reject  a  segment representing  the  uplevel
 			 ;;directory.
 			 #f)
-			(((<segment>) head)
+			(((<segment> #:predicate) head)
 			 (%normalised-list-of-segments? tail))
 			(else #f)))))
 	  ((null? list-of-segments)
@@ -699,32 +699,32 @@
 
 (define-label <userinfo/unspecified>
   (predicate (lambda (O)
-	       (or ((<userinfo>) O)
+	       (or ((<userinfo> #:predicate) O)
 		   (unspecified? O)))))
 
 (define-label <host/unspecified>
   (predicate (lambda (O)
-	       (or ((<host>) O)
+	       (or ((<host> #:predicate) O)
 		   (unspecified? O)))))
 
 (define-label <port-number/unspecified>
   (predicate (lambda (O)
-	       (or ((<port-number>) O)
+	       (or ((<port-number> #:predicate) O)
 		   (unspecified?    O)))))
 
 (define-label <path/unspecified>
   (predicate (lambda (O)
-	       (or ((<path>) O)
+	       (or ((<path> #:predicate) O)
 		   (unspecified? O)))))
 
 (define-label <query/unspecified>
   (predicate (lambda (O)
-	       (or ((<query>) O)
+	       (or ((<query> #:predicate) O)
 		   (unspecified? O)))))
 
 (define-label <fragment/unspecified>
   (predicate (lambda (O)
-	       (or ((<fragment>) O)
+	       (or ((<fragment> #:predicate) O)
 		   (unspecified? O)))))
 
 ;;; --------------------------------------------------------------------

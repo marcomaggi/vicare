@@ -81,6 +81,52 @@ Notes for revision 0.3d8
   more details  in node  "oopp notation  nesting" of  documentation file
   "nausicaa.*".
 
+* BACKWARDS INCOMPATIBILITY For those who  care about Nausicaa (if any):
+  sorry  to introduce  this  backwards  incompatibility.  The  predicate
+  syntax:
+
+    (<tag>)			==> #<predicate function>
+
+  is no more supported.  To retrieve  the predicate function of a tag we
+  can now use the "#:predicate" keyword:
+
+    (<fixnum> #:predicate)	=> fixnum?
+
+  and we can also directly apply the predicate function to the result of
+  an expression with the keyword "#:is-a?":
+
+    (<fixnum> #:is-a? 123)	=> #t
+    (<fixnum> #:is-a? "123")	=> #f
+
+  the "is-a?" syntax is still available:
+
+    (is-a? 123 <fixnum>)	=> #t
+    (is-a? "123" <fixunm>)	=> #f
+
+* A  new "cast"  syntax replaces  the old  predicate syntax.   It is  as
+  follows:
+
+     ((?tag) ?expr)
+
+  whenever this  syntax appears as  first subform of an  enclosing form,
+  the following chain of expansions takes place:
+
+     (((?tag) ?expr) ?arg ...)
+     ==> ((?tag #:nested-oopp-syntax ?expr) ?arg ...)
+     ==> (?tag #:oopp-syntax (?expr ?arg ...))
+
+  otherwise the expansion is just:
+
+     ((?tag) ?expr)
+     ==> ?expr
+
+    This syntax allows expressions like:
+
+     ((<fixnum>) 123)		=> 123
+     (((<fixnum>) 123) add1)	=> 124
+     (((<fixnum>) 123) <= 200)	=> #t
+     (((<fixnum>) 123) <= 100)	=> #f
+
 
 Notes for revision 0.3d7
 ------------------------

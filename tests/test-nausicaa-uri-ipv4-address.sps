@@ -41,7 +41,7 @@
 (parametrise ((check-test-name	'conditions))
 
   (check
-      ((&ipv4-address-parser-error) (&ipv4-address-parser-error ()))
+      (is-a? (&ipv4-address-parser-error ()) &ipv4-address-parser-error)
     => #t)
 
   (check

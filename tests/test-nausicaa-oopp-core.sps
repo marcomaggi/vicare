@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (rnrs eval)
   (rnrs mutable-pairs)
@@ -127,7 +127,7 @@
   (check	;predicate
       (let ()
 	(define b '(1 2 3))
-	((<top>) b))
+	((<top> #:predicate) b))
     => #t)
 
   (check	;dispatch request
@@ -183,7 +183,7 @@
 
   (check	;predicate
       (let (((b <top>) '(1 2 3)))
-        ((<top>) b))
+        ((<top> #:predicate) b))
     => #t)
 
   (check	;dispatch request
@@ -332,7 +332,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1 2))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -347,7 +347,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -415,11 +415,11 @@
 			  #f))))
 
     (check
-	((<alpha>) (<alpha> (1 2)))
+	((<alpha> #:predicate) (<alpha> (1 2)))
       => #t)
 
     (check
-	((<alpha>) (<alpha> (1 2)))
+	((<alpha> #:predicate) (<alpha> (1 2)))
       => #t)
 
     #f)
@@ -460,11 +460,11 @@
 			  #f))))
 
     (check
-	((<beta>) (<beta> (1 2 3 4)))
+	((<beta> #:predicate) (<beta> (1 2 3 4)))
       => #t)
 
     (check
-	((<beta>) (<beta> (1 2 3 4)))
+	((<beta> #:predicate) (<beta> (1 2 3 4)))
       => #t)
 
     #f)
@@ -1963,7 +1963,7 @@
 	(define-class <alpha>
 	  (fields a))
 	(<alpha> A (<> [1]))
-	((<alpha>) (begin
+	((<alpha> #:predicate) (begin
 		     (<- <alpha>)
 		     A)))
     => #t)
@@ -1980,8 +1980,8 @@
 			      (<- <alpha> <beta>)
 			      (void)
 			      (values A B))))
-	  (list ((<alpha>) a)
-		((<beta>)  b))))
+	  (list ((<alpha> #:predicate) a)
+		((<beta> #:predicate)  b))))
     => '(#t #t))
 
   (check
@@ -1999,9 +1999,9 @@
 				(<- <alpha> <beta> <gamma>)
 				(void)
 				(values A B G))))
-	  (list ((<alpha>) a)
-		((<beta>)  b)
-		((<gamma>) g))))
+	  (list ((<alpha> #:predicate) a)
+		((<beta> #:predicate)  b)
+		((<gamma> #:predicate) g))))
     => '(#t #t #t))
 
   #t)

@@ -207,6 +207,14 @@
     ((_ :flat-oopp-syntax ??expr ??arg ...)
      #'(??expr ??arg ...))
 
+    ;;Predicate application.
+    ;;
+    ((_ #:is-a? ??expr)
+     #'(<top> :is-a? ??expr))
+
+    ((_ #:predicate)
+     #'(<top> :predicate-function))
+
     ((_ :define ?var ?expr)
      (identifier? #'?var)
      #'(define ?var ?expr))
@@ -335,12 +343,14 @@
     ((_ (?arg ...))
      (synner "invalid maker call syntax for <top> tag"))
 
-    ;;Predicate reference.  It is meant to be used as:
+    ;;Cast operator.  It is meant to be used as:
     ;;
-    ;;  ((<top>) ?expr) => #t
+    ;;  ((<top>) '#())
+    ;;  ==> ((splice-first-expand (<top> #:nested-oopp-syntax)) '#())
+    ;;  ==> (<top> #:nested-oopp-syntax '#())
     ;;
     ((_)
-     #'<top>-predicate)
+     #'(splice-first-expand (<top> #:nested-oopp-syntax)))
 
     (_
      (synner "invalid tag syntax"))))
@@ -364,6 +374,12 @@
 
     ((_ #:nested-oopp-syntax ?expr)
      #'?expr)
+
+    ((_ #:is-a? ?expr)
+     #'(procedure? ?expr))
+
+    ((?tag #:predicate)
+     #'(?tag :predicate-function))
 
     ((_ :flat-oopp-syntax ?expr)
      (synner "invalid OOPP syntax"))
@@ -480,13 +496,14 @@
     ((_ (?arg))
      #'?arg)
 
-    ;;Predicate reference.  It is meant to be used as:
+    ;;Cast operator.  It is meant to be used as:
     ;;
-    ;;  ((<vector>) '#()) => #t
-    ;;  ((<vector>) 1234) => #f
+    ;;  ((<procedure>) '#())
+    ;;  ==> ((splice-first-expand (<procedure> #:nested-oopp-syntax)) '#())
+    ;;  ==> (<procedure> #:nested-oopp-syntax '#())
     ;;
     ((_)
-     #'procedure?)
+     #'(splice-first-expand (<procedure> #:nested-oopp-syntax)))
 
     (_
      (synner "invalid tag syntax"))
@@ -692,6 +709,14 @@
 		     ;; 		  (list 'to   (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))))
 		     #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
 
+		  ;;Predicate application.
+		  ;;
+		  ((_ #:is-a? ??expr)
+		   #'(THE-TAG :is-a? ??expr))
+
+		  ((_ #:predicate)
+		   #'(THE-TAG :predicate-function))
+
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
 		  ;;try to match a field name.
@@ -868,13 +893,14 @@
 		       (%the-maker stx)
 		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
 
-		  ;;Predicate reference.  It is meant to be used as:
+		  ;;Cast operator.  It is meant to be used as:
 		  ;;
-		  ;;  ((<vector>) '#()) => #t
-		  ;;  ((<vector>) 1234) => #f
+		  ;;  ((THE-TAG) '#())
+		  ;;  ==> ((splice-first-expand (THE-TAG #:nested-oopp-syntax)) '#())
+		  ;;  ==> (THE-TAG #:nested-oopp-syntax '#())
 		  ;;
 		  ((_)
-		   #'THE-PUBLIC-PREDICATE)
+		   #'(splice-first-expand (THE-TAG #:nested-oopp-syntax)))
 
 		  (_
 		   (synner "invalid tag syntax" #f))))
@@ -1169,6 +1195,14 @@
 		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
 		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
 
+		  ;;Predicate application.
+		  ;;
+		  ((_ #:is-a? ??expr)
+		   #'(THE-TAG :is-a? ??expr))
+
+		  ((_ #:predicate)
+		   #'(THE-TAG :predicate-function))
+
 		  ;; private API
 
 		  ;;Given  an  R6RS record  type  definition: insert  an
@@ -1336,13 +1370,14 @@
 		       (%the-maker stx)
 		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
 
-		  ;;Predicate reference.  It is meant to be used as:
+		  ;;Cast operator.  It is meant to be used as:
 		  ;;
-		  ;;  ((<vector>) '#()) => #t
-		  ;;  ((<vector>) 1234) => #f
+		  ;;  ((THE-TAG) '#())
+		  ;;  ==> ((splice-first-expand (THE-TAG #:nested-oopp-syntax)) '#())
+		  ;;  ==> (THE-TAG #:nested-oopp-syntax '#())
 		  ;;
 		  ((_)
-		   #'THE-PREDICATE)
+		   #'(splice-first-expand (THE-TAG #:nested-oopp-syntax)))
 
 		  (_
 		   (synner "invalid tag syntax" #f))))))

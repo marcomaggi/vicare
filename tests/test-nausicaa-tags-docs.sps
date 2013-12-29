@@ -128,15 +128,15 @@
     (<gamma> O (<> (B)))
 
     (check
-	((<gamma>) O)
+	((<gamma> #:predicate) O)
       => #t)
 
     (check
-    	((<beta>) (O b))
+    	((<beta> #:predicate) (O b))
       => #t)
 
     (check
-    	((<alpha>) (O b a))
+    	((<alpha> #:predicate) (O b a))
       => #t)
 
     (check
@@ -179,13 +179,13 @@
     (<gamma> O (<> (B)))
 
     (check
-	((<gamma>) O)
+	((<gamma> #:predicate) O)
       => #t)
     (check
-	((<beta>) (O b))
+	((<beta> #:predicate) (O b))
       => #t)
     (check
-	((<alpha>) (O b a))
+	((<alpha> #:predicate) (O b a))
       => #t)
     (check
     	(O b a v)
@@ -230,10 +230,10 @@
 
     (<pair> O (<> (1 2)))
 
-    (check ((<pair>) O)            => #t)
-    (check ((<car-and-cdr>)  O)    => #t)
-    (check ((<car>)  O)            => #t)
-    (check ((<top>)  O)            => #t)
+    (check ((<pair> #:predicate) O)            => #t)
+    (check ((<car-and-cdr> #:predicate)  O)    => #t)
+    (check ((<car> #:predicate)  O)            => #t)
+    (check ((<top> #:predicate)  O)            => #t)
 
     (check (O car)                 => 1)
     (check (O cdr)                 => 2)
@@ -257,9 +257,9 @@
 
     (<beta> O (<> (1 2)))
 
-    (check ((<beta>)  O)           => #t)
-    (check ((<alpha>) O)           => #t)
-    (check ((<top>)   O)           => #t)
+    (check ((<beta> #:predicate)  O)           => #t)
+    (check ((<alpha> #:predicate) O)           => #t)
+    (check ((<top> #:predicate)   O)           => #t)
 
     (check (O a)                   => 1)
     (check (O b)                   => 2)
@@ -267,9 +267,9 @@
 
     (let/tags (((O <beta>) (make-<beta> 1 2)))
 
-      (check ((<beta>)  O)           => #t)
-      (check ((<alpha>) O)           => #t)
-      (check ((<top>)   O)           => #t)
+      (check ((<beta> #:predicate)  O)           => #t)
+      (check ((<alpha> #:predicate) O)           => #t)
+      (check ((<top> #:predicate)   O)           => #t)
 
       (check (O a)                   => 1)
       (check (O b)                   => 2)

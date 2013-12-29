@@ -253,7 +253,7 @@
   (parent <vector>)
   (predicate (lambda ((obj <vector>))
 	       (and ($fx= 4 (obj $length))
-		    ($vector-for-all1 (<ipv4-address-fixnum>) obj)))))
+		    ($vector-for-all1 (<ipv4-address-fixnum> #:predicate) obj)))))
 
 (define-label <ipv4-address-prefix-length>
   (parent <nonnegative-fixnum>)
@@ -433,7 +433,7 @@
   (parent <vector>)
   (predicate (lambda ((obj <vector>))
 	       (and ($fx= 8 (obj $length))
-		    ($vector-for-all1 (<ipv6-address-fixnum>) obj)))))
+		    ($vector-for-all1 (<ipv6-address-fixnum> #:predicate) obj)))))
 
 (define-label <ipv6-address-prefix-length>
   (parent <nonnegative-fixnum>)
