@@ -46,6 +46,7 @@
     let-values/tags		let*-values/tags
     receive/tags		receive-and-return/tags
     do/tags			do*/tags
+    tag-case
     set!/tags
     with-label-shadowing
     with-tagged-arguments-validation
@@ -1763,6 +1764,37 @@
 			   ?form ...
 			   (loop (the-step ID ?step ...) ...))))))
        ))))
+
+
+;;;; other syntaxes
+
+(define-syntax tag-case
+  (syntax-rules (else)
+    ((_ ?expr
+	((?tag0 ?tag ...)
+	 ?tag-body0 ?tag-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((E ?expr))
+       (cond ((or (?tag0 :is-a? E)
+		  (?tag :is-a? E)
+		  ...)
+	      ?tag-body0 ?tag-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?tag0 ?tag ...)
+	 ?tag-body0 ?tag-body ...)
+	...)
+     (let ((tag ?expr))
+       (cond ((or (?tag0 :is-a? E)
+		  (?tag :is-a? E)
+		  ...)
+	      ?tag-body0 ?tag-body ...)
+	     ...)))
+    ))
 
 
 ;;;; done
