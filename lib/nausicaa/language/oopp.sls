@@ -280,16 +280,18 @@
 
 ;;;; procedure label
 
+(define <procedure>-list-of-uids
+  ;;We really want a binding for this list.
+  ;;
+  (<top> :append-unique-id (nausicaa:builtin:<procedure>)))
+
 (define-syntax* (<procedure> stx)
+  (define (%the-setter-and-getter . args)
+    (synner "invalid OOPP syntax"))
   (syntax-case stx ( ;;
-		    :define :make :is-a?
-		    :dispatch :mutator :getter :setter
-		    :assert-type-and-return
-		    :assert-procedure-argument :assert-expression-return-value
-		    :append-unique-id :list-of-unique-ids
-		    :predicate-function :accessor-function :mutator-function
-		    :process-shadowed-identifier
-		    aux.<>)
+		    :make :dispatch :mutator :append-unique-id
+		    :accessor-function :mutator-function
+		    :process-shadowed-identifier)
 
     ;;This clause is special for "<procedure>".
     ((_ #:nested-oopp-syntax ?expr)
@@ -301,90 +303,27 @@
     ((_ :mutator ?expr ?keys ?value)
      (synner "invalid OOPP syntax"))
 
-    ((_ :getter (?expr ((?key0 ...) (?key ...) ...)))
-     (synner "invalid OOPP syntax"))
-
-    ((_ :setter (?expr ((?key0 ...) (?key ...) ...) ?value))
-     (synner "invalid OOPP syntax"))
-
-    ((_ :assert-type-and-return ?expr)
-     (if config.validate-tagged-values?
-	 #'(receive-and-return (val)
-	       ?expr
-	     (unless (procedure? val)
-	       (tagged-binding-violation '<procedure>
-		 "invalid expression result, expected value of type <procedure>"
-		 '(expression: ?expr)
-		 `(result: ,val))))
-       #'?expr))
-
-    ((_ :assert-procedure-argument ?id)
-     (identifier? #'?id)
-     ;;This DOES NOT return the value.
-     (if config.validate-tagged-values?
-	 #'(unless (<procedure> :is-a? ?id)
-	     (procedure-argument-violation '<procedure>
-	       "tagged procedure argument of invalid type" ?id))
-       #'(void)))
-
-    ((_ :assert-expression-return-value ?expr)
-     ;;This DOES return the value.
-     (if config.validate-tagged-values?
-	 #'(receive-and-return (val)
-	       ?expr
-	     (unless (<procedure> :is-a? val)
-	       (expression-return-value-violation '<procedure>
-		 "tagged expression return value of invalid type" val)))
-       #'?expr))
-
-    ;; public API: auxiliary syntaxes
-
-    ;;Define  internal   bindings  for   a  tagged   variable.   Without
-    ;;initialisation expression.
-    ((_ :define ?var)
-     (identifier? #'?var)
-     #'(begin
-	 (define src-var)
-	 (define-syntax* ?var
-	   (help.make-tagged-variable-transformer #'<procedure> #'src-var))))
-
-    ;;Define   internal   bindings   for  a   tagged   variable.    With
-    ;;initialisation expression.
-    ((_ :define ?var ?expr)
-     (identifier? #'?var)
-     #'(begin
-	 (define src-var (<procedure> :assert-type-and-return ?expr))
-	 (define-syntax* ?var
-	   (help.make-tagged-variable-transformer #'<procedure> #'src-var))))
-
-    ;; public constructor
-    ((_ :make ?arg)
-     #'?arg)
-
-    ((_ :is-a? ?arg)
-     #'(procedure? ?arg))
+    ((_ :make ?expr)
+     #'?expt)
 
     ((_ :append-unique-id (?id ...))
      #'(<top> :append-unique-id (?id ... nausicaa:builtin:<procedure>)))
-
-    ((_ :list-of-unique-ids)
-     #'(<top> :append-unique-id (nausicaa:builtin:<procedure>)))
-
-    ((_ :predicate-function)
-     #'procedure?)
 
     ((_ :accessor-function ?field-name)
      (synner "invalid OOPP syntax"))
 
     ((_ :mutator-function ?field-name)
-     (identifier? #'?field-name)
      (synner "invalid OOPP syntax"))
 
-    ((?src-id :process-shadowed-identifier ?body0 ?body ...)
+    ((_ :process-shadowed-identifier ?body0 ?body ...)
      (synner "invalid OOPP syntax"))
 
     (_
-     (help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
+     (help.tag-private-common-syntax-transformer
+      stx #'values #'procedure? #'<procedure>-list-of-uids
+      %the-setter-and-getter %the-setter-and-getter
+      (lambda ()
+	(help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
 
 
 (define-syntax* (define-label stx)
