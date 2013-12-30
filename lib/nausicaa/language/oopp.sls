@@ -547,8 +547,7 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :dispatch :mutator :getter :setter
-				  :append-unique-id
+				  :dispatch :mutator :append-unique-id
 				  :accessor-function :mutator-function
 				  :process-shadowed-identifier
 				  aux.<>)
@@ -586,24 +585,6 @@
 		  ;;
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
-
-		  ;;Invoke  the  getter   transformer  function  without
-		  ;;nested member use.
-		  ((_ :getter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))))
-		   (%the-getter #'(??expr ((??key0 (... ...))
-					   (??key  (... ...))
-					   (... ...)))))
-
-		  ((_ :setter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))
-				      ??value))
-		   (%the-setter #'(??expr ((??key0 (... ...))
-					   (??key (... ...))
-					   (... ...))
-					  ??value)))
 
 		  ((_ :append-unique-id (??id (... ...)))
 		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
@@ -645,6 +626,7 @@
 		  (_
 		   (help.tag-private-common-syntax-transformer
 		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
+		    %the-getter %the-setter
 		    (lambda ()
 		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
@@ -916,7 +898,7 @@
 
 		(syntax-case stx ( ;;
 				  :make-from-fields
-				  :dispatch :mutator :getter :setter
+				  :dispatch :mutator
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
 				  :super-constructor-descriptor lambda
@@ -924,9 +906,7 @@
 				  :accessor-function :mutator-function
 				  aux.<>)
 
-		  ;; private API
-
-		  ;;Given  an  R6RS record  type  definition: insert  an
+		  ;;Given  an R6RS  record  type  definition: insert  an
 		  ;;appropriate  PARENT  clause  so  that  the  type  is
 		  ;;derived from this tag's record type.  This is needed
 		  ;;because  only  the tag  identifier  is  part of  the
@@ -967,24 +947,6 @@
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
-		  ;;Invoke  the  getter   transformer  function  without
-		  ;;nested member use.
-		  ((_ :getter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))))
-		   (%the-getter #'(??expr ((??key0 (... ...))
-					   (??key  (... ...))
-					   (... ...)))))
-
-		  ((_ :setter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))
-				      ??value))
-		   (%the-setter #'(??expr ((??key0 (... ...))
-					   (??key (... ...))
-					   (... ...))
-					  ??value)))
-
 		  ((_ :make-from-fields . ??args)
 		   #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
 
@@ -1014,6 +976,7 @@
 		  (_
 		   (help.tag-private-common-syntax-transformer
 		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
+		    %the-getter %the-setter
 		    (lambda ()
 		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
