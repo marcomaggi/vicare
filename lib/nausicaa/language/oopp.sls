@@ -360,7 +360,7 @@
 
 (define-syntax* (<procedure> stx)
   (syntax-case stx ( ;;
-		    :define :flat-oopp-syntax :make :is-a?
+		    :define :make :is-a?
 		    :dispatch :mutator :getter :setter
 		    :assert-type-and-return
 		    :assert-procedure-argument :assert-expression-return-value
@@ -369,22 +369,9 @@
 		    :process-shadowed-identifier
 		    aux.<>)
 
-    ((_ #:oopp-syntax (?expr ?arg ...))
-     (help.oopp-syntax-transformer #'<procedure> #'(?expr ?arg ...) #'set!/tags synner))
-
+    ;;This clause is special for "<procedure>".
     ((_ #:nested-oopp-syntax ?expr)
      #'?expr)
-
-    ((_ #:is-a? ?expr)
-     #'(procedure? ?expr))
-
-    ((?tag #:predicate)
-     #'(?tag :predicate-function))
-
-    ((_ :flat-oopp-syntax ?expr)
-     (synner "invalid OOPP syntax"))
-    ((_ :flat-oopp-syntax ?expr ?arg ...)
-     (synner "invalid OOPP syntax"))
 
     ((_ :dispatch (?expr ?id . ?args))
      (synner "invalid OOPP syntax"))
@@ -459,7 +446,7 @@
      #'(<top> :append-unique-id (?id ... nausicaa:builtin:<procedure>)))
 
     ((_ :list-of-unique-ids)
-     #'<procedure>-list-of-uids)
+     #'(<top> :append-unique-id (nausicaa:builtin:<procedure>)))
 
     ((_ :predicate-function)
      #'procedure?)
@@ -474,43 +461,8 @@
     ((?src-id :process-shadowed-identifier ?body0 ?body ...)
      (synner "invalid OOPP syntax"))
 
-    ;;Define an  internal variable with initialisation  expression using
-    ;;the tag constructor.
-    ((?tag ?var (aux.<> (?arg ...)))
-     (identifier? #'?var)
-     #'(?tag ?var (?tag (?arg ...))))
-
-    ;;Internal definition with initialisation expression.
-    ((_ ?var ?expr)
-     (identifier? #'?var)
-     #'(<procedure> :define ?var ?expr))
-
-    ;;Internal     definition    without    initialisation
-    ;;expression.
-    ((_ ?var)
-     (identifier? #'?var)
-     #'(<procedure> :define ?var))
-
-    ;;Constructor call.   If a  maker transformer  was defined:  use it,
-    ;;otherwise default to the public constructor.
-    ((_ (?arg))
-     #'?arg)
-
-    ;;Cast operator.  It is meant to be used as:
-    ;;
-    ;;  ((<procedure>) '#())
-    ;;  ==> ((splice-first-expand (<procedure> #:nested-oopp-syntax)) '#())
-    ;;  ==> (<procedure> #:nested-oopp-syntax '#())
-    ;;
-    ((_)
-     #'(splice-first-expand (<procedure> #:nested-oopp-syntax)))
-
     (_
-     (synner "invalid tag syntax"))
-    ))
-
-(define <procedure>-list-of-uids
-  (<top> :append-unique-id (nausicaa:builtin:<procedure>)))
+     (help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
 
 
 (define-syntax* (define-label stx)
