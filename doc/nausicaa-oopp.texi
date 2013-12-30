@@ -44,6 +44,7 @@ identifier.
 * oopp slots::                  Accessors and mutators.
 * oopp inspect::                Tags and objects inspection.
 * oopp bindings::               Defining bindings in @oopp{} notation.
+* oopp misc::                   Miscellaneous syntaxes.
 @end menu
 
 @c page
@@ -3774,6 +3775,39 @@ bindings have no tags: this syntax is equivalent to @func{do} as defined
 by @rnrs{6}; an untagged binding is equivalent to a binding tagged with
 @class{top}.  The @meta{step}, @meta{expression} and @meta{command}
 expressions can use @oopp{} notation when accessing the binding.
+@end deffn
+
+@c page
+@node oopp misc
+@section Miscellaneous syntaxes
+
+
+@deffn Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ...
+@deffnx Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Syntax similar to @func{case}.  @func{else} must be the binding exported
+by @library{rnrs} and @library{vicare}.
+
+@meta{expr} must be an expression and it is evaluated once; its result
+is tested with the predicates of the specified tags and the body of the
+selected branch is evaluated.
+
+@example
+(tag-case 123
+  ((<string> <vector>)
+   #f)
+  ((<fixnum>)
+   #t))
+@result{} #t
+
+(tag-case 1.2
+  ((<string> <vector>)
+   #f)
+  ((<fixnum>)
+   #f)
+  (else #t))
+@result{} #t
+@end example
 @end deffn
 
 @c end of file
