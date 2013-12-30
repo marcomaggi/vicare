@@ -87,6 +87,7 @@
 	    (aux.<-			<-)))
   (import (vicare)
     (nausicaa language oopp auxiliary-syntaxes)
+    (nausicaa language oopp conditions)
     (for (prefix (nausicaa language oopp helpers)
 		 help.)
 	 expand)
@@ -112,21 +113,6 @@
 		  mixins		maker			finaliser)
 	    aux.)
     (vicare unsafe operations))
-
-
-;;;; helpers
-
-(define-condition-type &tagged-binding-violation
-    &assertion
-  make-tagged-binding-violation
-  tagged-binding-violation?)
-
-(define (tagged-binding-violation who message . irritants)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-tagged-binding-violation)
-	      (make-irritants-condition irritants))))
 
 
 (define-record-type (<top>-record-type make-<top> <top>?)
@@ -463,11 +449,7 @@
        ((SATISFACTION ...)
 	(help.<parsed-spec>-satisfactions spec))
        (SATISFACTION-CLAUSES
-	(help.<label-spec>-satisfaction-clauses spec))
-
-       (WRONG-TYPE-ERROR-MESSAGE
-	(string-append "invalid expression result, expected value of type "
-		       (symbol->string (syntax->datum tag-id)))))
+	(help.<label-spec>-satisfaction-clauses spec)))
     (with-syntax
 	((THE-PUBLIC-PROTOCOL-EXPR
 	  ;;Labels   have  no   record-type  descriptor,   so,  strictly
@@ -565,12 +547,9 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :define :make :is-a?
 				  :dispatch :mutator :getter :setter
-				  :assert-type-and-return
-				  :assert-procedure-argument :assert-expression-return-value
-				  :append-unique-id :list-of-unique-ids
-				  :predicate-function :accessor-function :mutator-function
+				  :append-unique-id
+				  :accessor-function :mutator-function
 				  :process-shadowed-identifier
 				  aux.<>)
 
@@ -626,71 +605,8 @@
 					   (... ...))
 					  ??value)))
 
-		  ((_ :assert-type-and-return ??expr)
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (tagged-binding-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
-		     #'??expr))
-
-		  ((_ :assert-procedure-argument ??id)
-		   (identifier? #'??id)
-		   ;;This DOES NOT return the value.
-		   (if config.validate-tagged-values?
-		       #'(unless (THE-TAG :is-a? ??id)
-			   (procedure-argument-violation 'THE-TAG
-			     "tagged procedure argument of invalid type" ??id))
-		     #'(void)))
-
-		  ((_ :assert-expression-return-value ??expr)
-		   ;;This DOES return the value.
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (expression-return-value-violation 'THE-TAG
-			       "tagged expression return value of invalid type" val)))
-		     #'??expr))
-
-		  ;; ----------------------------------------
-		  ;; public API: auxiliary syntaxes
-
-		  ;;Define  internal  bindings  for a  tagged  variable.
-		  ;;Without initialisation expression.
-		  ((_ :define ??var)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var)
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ;;Define  internal  bindings  for a  tagged  variable.
-		  ;;With initialisation expression.
-		  ((_ :define ??var ??expr)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :make . ??args)
-		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
-
-		  ((_ :is-a? . ??args)
-		   #'(THE-PUBLIC-PREDICATE . ??args))
-
 		  ((_ :append-unique-id (??id (... ...)))
 		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
-
-		  ((_ :list-of-unique-ids)
-		   #'THE-LIST-OF-UIDS)
-
-		  ((_ :predicate-function)
-		   #'THE-PUBLIC-PREDICATE)
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
@@ -727,7 +643,10 @@
 		       body)))
 
 		  (_
-		   (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))
+		   (help.tag-private-common-syntax-transformer
+		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
+		    (lambda ()
+		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
 
 	  DEFINITION ...
@@ -996,15 +915,13 @@
 		  (syntax-violation 'THE-TAG message stx subform))
 
 		(syntax-case stx ( ;;
-				  :define :is-a? :make :make-from-fields
+				  :make-from-fields
 				  :dispatch :mutator :getter :setter
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
 				  :super-constructor-descriptor lambda
-				  :assert-type-and-return
-				  :assert-procedure-argument :assert-expression-return-value
-				  :append-unique-id :list-of-unique-ids
-				  :predicate-function :accessor-function :mutator-function
+				  :append-unique-id
+				  :accessor-function :mutator-function
 				  aux.<>)
 
 		  ;; private API
@@ -1034,20 +951,6 @@
 
 		  ((_ :super-constructor-descriptor)
 		   #'the-super-constructor-descriptor)
-
-		  ((_ :define ??var)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var)
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :define ??var ??expr)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -1082,53 +985,11 @@
 					   (... ...))
 					  ??value)))
 
-		  ((_ :assert-type-and-return ??expr)
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (tagged-binding-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
-		     #'??expr))
-
-		  ((_ :assert-procedure-argument ??id)
-		   (identifier? #'??id)
-		   ;;This DOES NOT return the value.
-		   (if config.validate-tagged-values?
-		       #'(unless (THE-TAG :is-a? ??id)
-			   (procedure-argument-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE ??id))
-		     #'(void)))
-
-		  ((_ :assert-expression-return-value ??expr)
-		   ;;This DOES return the value.
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (expression-return-value-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE val)))
-		     #'??expr))
-
-		  ;; public API: auxiliary syntaxes
-
-		  ((_ :make . ??args)
-		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
-
 		  ((_ :make-from-fields . ??args)
 		   #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
 
-		  ((_ :is-a? . ??args)
-		   #'(THE-PREDICATE . ??args))
-
 		  ((_ :append-unique-id (??id (... ...)))
 		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
-
-		  ((_ :list-of-unique-ids)
-		   #'THE-LIST-OF-UIDS)
-
-		  ((_ :predicate-function)
-		   #'THE-PREDICATE)
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
@@ -1151,7 +1012,11 @@
 		      #'(THE-PARENT :mutator-function ??field-name))))
 
 		  (_
-		   (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+		   (help.tag-private-common-syntax-transformer
+		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
+		    (lambda ()
+		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+	      ))
 
 	  DEFINITION ...
 

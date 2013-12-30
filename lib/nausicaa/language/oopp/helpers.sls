@@ -43,7 +43,7 @@
     parse-formals-bindings		make-tagged-variable-transformer
     process-method-application		oopp-syntax-transformer
 
-    tag-public-syntax-transformer
+    tag-public-syntax-transformer	tag-private-common-syntax-transformer
 
     ;; helpers
     case-symbol				case-identifier
@@ -97,9 +97,13 @@
     (vicare unsafe operations)
     (vicare language-extensions identifier-substitutions)
     (prefix (only (nausicaa language oopp configuration)
+		  validate-tagged-values?
 		  enable-satisfactions)
 	    config.)
     (for (nausicaa language oopp auxiliary-syntaxes)
+      (meta -1))
+    (for (only (nausicaa language oopp conditions)
+	       tagged-binding-violation)
       (meta -1))
     (for (prefix (only (nausicaa language auxiliary-syntaxes)
 		       parent		nongenerative
@@ -253,6 +257,88 @@
   (identifier-suffix id "-list-of-uids"))
 
 
+(define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids kont)
+  ;;Transformer function  for the  private syntaxes available  through a
+  ;;tag identifier,  only the ones  common for both labels  and classes.
+  ;;STX is a syntax object representing the use of a tag identifier.
+  ;;
+  ;;KONT is  a continuation thunk to  be invoked if none  of the clauses
+  ;;defined here match.
+  ;;
+  ;;Notice that  "<procedure>" and "<top>" define  some special variants
+  ;;of these syntaxes; such variants are matched before this function is
+  ;;called.
+  ;;
+  (syntax-case stx ( ;;
+		    :define :make :is-a? :list-of-unique-ids :predicate-function
+		    :assert-type-and-return :assert-procedure-argument
+		    :assert-expression-return-value)
+
+    ;;Define  internal   bindings  for   a  tagged   variable.   Without
+    ;;initialisation expression.
+    ((?tag :define ?var)
+     (identifier? #'?var)
+     #'(begin
+	 (define src-var)
+	 (define-syntax ?var
+	   (make-tagged-variable-transformer #'?tag #'src-var))))
+
+    ;;Define   internal   bindings   for  a   tagged   variable.    With
+    ;;initialisation expression.
+    ((?tag :define ?var ?expr)
+     (identifier? #'?var)
+     #'(begin
+	 (define src-var (?tag :assert-type-and-return ?expr))
+	 (define-syntax ?var
+	   (make-tagged-variable-transformer #'?tag #'src-var))))
+
+    ((_ :make . ??args)
+     #`(#,the-public-constructor . ??args))
+
+    ((_ :is-a? . ??args)
+     #`(#,the-public-predicate . ??args))
+
+    ((_ :list-of-unique-ids)
+     the-list-of-uids)
+
+    ((_ :predicate-function)
+     the-public-predicate)
+
+    ((?tag :assert-type-and-return ?expr)
+     (if config.validate-tagged-values?
+	 #'(receive-and-return (val)
+	       ?expr
+	     (unless (?tag :is-a? val)
+	       (tagged-binding-violation '?tag
+		 (string-append "invalid expression result, expected value of type "
+				(symbol->string '?tag))
+		 '(expression: ?expr)
+		 `(result: ,val))))
+       #'?expr))
+
+    ((?tag :assert-procedure-argument ?id)
+     (identifier? #'?id)
+     ;;This DOES NOT return the value.
+     (if config.validate-tagged-values?
+	 #'(unless (?tag :is-a? ?id)
+	     (procedure-argument-violation '?tag
+	       "tagged procedure argument of invalid type" ?id))
+       #'(void)))
+
+    ((?tag :assert-expression-return-value ?expr)
+     ;;This DOES return the value.
+     (if config.validate-tagged-values?
+	 #'(receive-and-return (val)
+	       ?expr
+	     (unless (?tag :is-a? val)
+	       (expression-return-value-violation '?tag
+		 "tagged expression return value of invalid type" val)))
+       #'?expr))
+
+    (_
+     (kont))))
+
+
 (define (tag-public-syntax-transformer stx the-maker set-tags-id synner)
   ;;Transformer function for the public syntaxes available through a tag
   ;;identifier.  STX  is a syntax object  representing the use of  a tag
@@ -263,6 +349,10 @@
   ;;
   ;;SET-TAGS-ID must be the keyword  identifier of the syntax SET!/TAGS.
   ;;It is used to process the syntax with keyword #:oopp-syntax.
+  ;;
+  ;;Notice that  "<procedure>" and "<top>" define  some special variants
+  ;;of these syntaxes; such variants are matched before this function is
+  ;;called.
   ;;
   (syntax-case stx (:make :define :flat-oopp-syntax aux.<>)
 
