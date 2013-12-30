@@ -158,11 +158,6 @@
      (lambda ()
        (make-instance '())))))
 
-(define <top>-unique-ids
-  ;;This is the list of UIDs for the type "<top>".
-  ;;
-  '(nausicaa:builtin:<top>))
-
 (define (<top>-predicate obj)
   ;;This  function is  used as  predicate for  "<top>" in  place of  the
   ;;predefined  "<top>?".   By  convention:   all  the  objects  in  the
@@ -196,24 +191,17 @@
 		    :predicate-function :accessor-function :mutator-function
 		    aux.<>)
 
+    ;;This is special for "<top>":
+    ;;
     ((_ #:oopp-syntax (??expr ??arg ...))
      (synner "undefined OOPP syntax"))
 
-    ((_ #:nested-oopp-syntax ??expr)
-     #'(splice-first-expand (<top> :flat-oopp-syntax ??expr)))
-
+    ;;This is special for "<top>":
+    ;;
     ((_ :flat-oopp-syntax ??expr)
      #'??expr)
     ((_ :flat-oopp-syntax ??expr ??arg ...)
      #'(??expr ??arg ...))
-
-    ;;Predicate application.
-    ;;
-    ((_ #:is-a? ??expr)
-     #'(<top> :is-a? ??expr))
-
-    ((_ #:predicate)
-     #'(<top> :predicate-function))
 
     ((_ :define ?var ?expr)
      (identifier? #'?var)
@@ -222,12 +210,6 @@
     ((_ :define ?var)
      (identifier? #'?var)
      #'(define ?var))
-
-    ;;Bind a tagged variable and call it with the given arguments.
-    ((_ :flat-oopp-syntax ?expr ?arg0 ?arg ...)
-     #'(<top> #:oopp-syntax (?expr ?arg0 ?arg ...)))
-    ((_ :flat-oopp-syntax ?expr)
-     #'?expr)
 
     ((_ :make . ?args)
      (synner "invalid maker call syntax for <top> tag"))
@@ -290,7 +272,8 @@
      #'(quote (?id ... nausicaa:builtin:<top>)))
 
     ((_ :list-of-unique-ids)
-     #'<top>-unique-ids)
+     ;;This is the list of UIDs for the type "<top>".
+     #'(quote (nausicaa:builtin:<top>)))
 
     ((_ :predicate-function)
      #'<top>-predicate)
@@ -305,55 +288,8 @@
      (identifier? #'?field-name)
      (synner "invalid tag-syntax field mutator function request" #'?field-name))
 
-    ;;Define an  internal variable with initialisation  expression using
-    ;;the tag constructor.  The syntax use:
-    ;;
-    ;;   (<top> ?var (<> (?arg ...)))
-    ;;
-    ;;is equivalent to:
-    ;;
-    ;;   (define ?var (<top> (?arg ...)))
-    ;;
-    ;;and the constructor of "<top>" will raise an error.
-    ((?tag ?var (aux.<> (?arg ...)))
-     (identifier? #'?var)
-     #'(define ?var (?tag (?arg ...))))
-
-    ;;Define an  internal variable with initialisation  expression.  The
-    ;;syntax use:
-    ;;
-    ;;   (<top> ?var ?expr)
-    ;;
-    ;;just defines a common internal binding.
-    ((_ ?var ?expr)
-     (identifier? #'?var)
-     #'(define ?var ?expr))
-
-    ;;Define an  internal variable  without initialisation.   The syntax
-    ;;use:
-    ;;
-    ;;   (<top> ?var)
-    ;;
-    ;;just defines a common internal binding.
-    ((_ ?var)
-     (identifier? #'?var)
-     #'(define ?var))
-
-    ;;Constructor call syntax.
-    ((_ (?arg ...))
-     (synner "invalid maker call syntax for <top> tag"))
-
-    ;;Cast operator.  It is meant to be used as:
-    ;;
-    ;;  ((<top>) '#())
-    ;;  ==> ((splice-first-expand (<top> #:nested-oopp-syntax)) '#())
-    ;;  ==> (<top> #:nested-oopp-syntax '#())
-    ;;
-    ((_)
-     #'(splice-first-expand (<top> #:nested-oopp-syntax)))
-
     (_
-     (synner "invalid tag syntax"))))
+     (help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
 
 
 ;;;; procedure label
