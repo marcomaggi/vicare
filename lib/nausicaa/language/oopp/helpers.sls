@@ -257,7 +257,8 @@
   (identifier-suffix id "-list-of-uids"))
 
 
-(define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids kont)
+(define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids
+					       the-getter the-setter kont)
   ;;Transformer function  for the  private syntaxes available  through a
   ;;tag identifier,  only the ones  common for both labels  and classes.
   ;;STX is a syntax object representing the use of a tag identifier.
@@ -271,6 +272,7 @@
   ;;
   (syntax-case stx ( ;;
 		    :define :make :is-a? :list-of-unique-ids :predicate-function
+		    :setter :getter
 		    :assert-type-and-return :assert-procedure-argument
 		    :assert-expression-return-value)
 
@@ -303,6 +305,12 @@
 
     ((_ :predicate-function)
      the-public-predicate)
+
+    ((_ :getter (?expr ((?key0 ...) (?key ...) ...)))
+     (the-getter #'(?expr ((?key0 ...) (?key  ...) ...))))
+
+    ((_ :setter (?expr ((?key0 ...) (?key ...) ...) ?value))
+     (the-setter #'(?expr ((?key0 ...) (?key ...) ...) ?value)))
 
     ((?tag :assert-type-and-return ?expr)
      (if config.validate-tagged-values?
