@@ -43,6 +43,8 @@
     parse-formals-bindings		make-tagged-variable-transformer
     process-method-application		oopp-syntax-transformer
 
+    tag-public-syntax-transformer
+
     ;; helpers
     case-symbol				case-identifier
     single-identifier-subst		multi-identifier-subst
@@ -110,7 +112,8 @@
 		       getter		setter
 		       shadows		satisfies
 		       mixins
-		       maker		finaliser)
+		       maker		finaliser
+		       <>)
 		 aux.)
       (meta -1)))
 
@@ -248,6 +251,100 @@
 
 (define-inline (tag-id->list-of-uids-id id)
   (identifier-suffix id "-list-of-uids"))
+
+
+(define (tag-public-syntax-transformer stx the-maker set-tags-id synner)
+  ;;Transformer function for the public syntaxes available through a tag
+  ;;identifier.  STX  is a syntax object  representing the use of  a tag
+  ;;identifier.
+  ;;
+  ;;THE-MAKER is  the maker  transformer function or  false if  no maker
+  ;;transformer was defined.
+  ;;
+  ;;SET-TAGS-ID must be the keyword  identifier of the syntax SET!/TAGS.
+  ;;It is used to process the syntax with keyword #:oopp-syntax.
+  ;;
+  (syntax-case stx (:make :define :flat-oopp-syntax aux.<>)
+
+    ;;NOTE Put the clauses with literals and keyword objects first!!!
+
+    ;;OOPP syntax for arbitrary expression.
+    ;;
+    ((?tag #:oopp-syntax (?expr ?arg ...))
+     (oopp-syntax-transformer #'?tag #'(?expr ?arg ...) set-tags-id synner))
+
+    ;;OOPP syntax for arbitrary expression spliced when first subform.
+    ;;
+    ((?tag #:nested-oopp-syntax ?expr)
+     #'(splice-first-expand (?tag :flat-oopp-syntax ?expr)))
+
+    ;;Clauses to process spliced OOPP syntax forms.  These rules must be
+    ;;invoked only by the expansion of:
+    ;;
+    ;;   (?tag #:nested-oopp-syntax ?expr)
+    ;;
+    ;;if it  appears as  first subform  and there  are arguments  in the
+    ;;enclosing form, we want the expansion:
+    ;;
+    ;;   ((?tag #:nested-oopp-syntax ?expr) ?arg ...)
+    ;;   ==> (?tag #:oopp-syntax (?expr ?arg ...))
+    ;;
+    ;;otherwise we want the expansion:
+    ;;
+    ;;   (begin (?tag #:nested-oopp-syntax ?expr))
+    ;;   ==> (begin ?expr)
+    ;;
+    ((?tag :flat-oopp-syntax ?expr)
+     #'?expr)
+    ((?tag :flat-oopp-syntax ?expr ?arg ...)
+     #'(?tag #:oopp-syntax (?expr ?arg ...)))
+
+    ;;Predicate application.
+    ;;
+    ((?tag #:is-a? ?expr)
+     #'(?tag :is-a? ?expr))
+
+    ;;Reference to predicate function.
+    ;;
+    ((?tag #:predicate)
+     #'(?tag :predicate-function))
+
+    ;; ------------------------------------------------------------
+
+    ;;Define an internal variable with initialisation expression using
+    ;;the tag constructor.
+    ((?tag ?var (aux.<> (?arg ...)))
+     (identifier? #'?var)
+     #'(?tag ?var (?tag (?arg ...))))
+
+    ;;Internal definition with initialisation expression.
+    ((?tag ?var ?expr)
+     (identifier? #'?var)
+     #'(?tag :define ?var ?expr))
+
+    ;;Internal definition without initialisation expression.
+    ((?tag ?var)
+     (identifier? #'?var)
+     #'(?tag :define ?var))
+
+    ;;Constructor call.  If  a maker transformer was  defined: use it,
+    ;;otherwise default to the public constructor.
+    ((?tag (?arg ...))
+     #`(?tag #:nested-oopp-syntax #,(if the-maker
+					(the-maker stx)
+				      #'(?tag :make ?arg ...))))
+
+    ;;Cast operator.  It is meant to be used as:
+    ;;
+    ;;  ((?tag) '#())
+    ;;  ==> ((splice-first-expand (?tag #:nested-oopp-syntax)) '#())
+    ;;  ==> (?tag #:nested-oopp-syntax '#())
+    ;;
+    ((?tag)
+     #'(splice-first-expand (?tag #:nested-oopp-syntax)))
+
+    (_
+     (synner "invalid tag syntax" #f))))
 
 
 (define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))

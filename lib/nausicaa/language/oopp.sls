@@ -653,7 +653,7 @@
 	  (define THE-LIST-OF-UIDS
 	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
 
-	  (define-syntax* THE-TAG
+	  (define-syntax THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through this syntax.  For all the patterns:
 	    ;;
@@ -677,7 +677,7 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :define :flat-oopp-syntax :make :is-a?
+				  :define :make :is-a?
 				  :dispatch :mutator :getter :setter
 				  :assert-type-and-return
 				  :assert-procedure-argument :assert-expression-return-value
@@ -685,37 +685,6 @@
 				  :predicate-function :accessor-function :mutator-function
 				  :process-shadowed-identifier
 				  aux.<>)
-
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
-
-		  ((_ #:nested-oopp-syntax ??expr)
-		   (begin
-		     ;; (debug-print 'label-nested
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))))
-		     #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
-
-		  ((_ :flat-oopp-syntax ??expr)
-		   (begin
-		     ;; (debug-print 'label-flat-no-args
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'??expr)))
-		     #'??expr))
-		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
-		   (begin
-		     ;; (debug-print 'label-flat-with-args
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))))
-		     #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
-
-		  ;;Predicate application.
-		  ;;
-		  ((_ #:is-a? ??expr)
-		   #'(THE-TAG :is-a? ??expr))
-
-		  ((_ #:predicate)
-		   #'(THE-TAG :predicate-function))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -799,6 +768,7 @@
 			       "tagged expression return value of invalid type" val)))
 		     #'??expr))
 
+		  ;; ----------------------------------------
 		  ;; public API: auxiliary syntaxes
 
 		  ;;Define  internal  bindings  for a  tagged  variable.
@@ -868,42 +838,8 @@
 			 (help.single-identifier-subst #'??src-id dst-id body)
 		       body)))
 
-		  ;;Define  an  internal  variable  with  initialisation
-		  ;;expression using the tag constructor.
-		  ((??tag ??var (aux.<> (??arg (... ...))))
-		   (identifier? #'??var)
-		   #'(??tag ??var (??tag (??arg (... ...)))))
-
-		  ;;Internal definition with initialisation expression.
-		  ((_ ??var ??expr)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var ??expr))
-
-		  ;;Internal     definition    without    initialisation
-		  ;;expression.
-		  ((_ ??var)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var))
-
-		  ;;Constructor  call.   If   a  maker  transformer  was
-		  ;;defined:  use it,  otherwise default  to the  public
-		  ;;constructor.
-		  ((_ (??arg (... ...)))
-		   (if %the-maker
-		       #`(THE-TAG #:nested-oopp-syntax #,(%the-maker stx))
-		     #'(THE-TAG #:nested-oopp-syntax (THE-PUBLIC-CONSTRUCTOR ??arg (... ...)))))
-
-		  ;;Cast operator.  It is meant to be used as:
-		  ;;
-		  ;;  ((THE-TAG) '#())
-		  ;;  ==> ((splice-first-expand (THE-TAG #:nested-oopp-syntax)) '#())
-		  ;;  ==> (THE-TAG #:nested-oopp-syntax '#())
-		  ;;
-		  ((_)
-		   #'(splice-first-expand (THE-TAG #:nested-oopp-syntax)))
-
 		  (_
-		   (synner "invalid tag syntax" #f))))
+		   (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))
 	      ))
 
 	  DEFINITION ...
@@ -1146,7 +1082,7 @@
 	  ;; (define the-super-constructor
 	  ;;   (record-constructor the-super-constructor-descriptor))
 
-	  (define-syntax* THE-TAG
+	  (define-syntax THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through  this   syntax.   The  only   reason  this  syntax
 	    ;;dispatches to sub-syntaxes it to keep the code readable.
@@ -1172,7 +1108,6 @@
 		  (syntax-violation 'THE-TAG message stx subform))
 
 		(syntax-case stx ( ;;
-				  :flat-oopp-syntax
 				  :define :is-a? :make :make-from-fields
 				  :dispatch :mutator :getter :setter
 				  :insert-parent-clause define-record-type
@@ -1183,25 +1118,6 @@
 				  :append-unique-id :list-of-unique-ids
 				  :predicate-function :accessor-function :mutator-function
 				  aux.<>)
-
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
-
-		  ((_ #:nested-oopp-syntax ??expr)
-		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
-
-		  ((_ :flat-oopp-syntax ??expr)
-		   #'??expr)
-		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
-		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
-
-		  ;;Predicate application.
-		  ;;
-		  ((_ #:is-a? ??expr)
-		   #'(THE-TAG :is-a? ??expr))
-
-		  ((_ #:predicate)
-		   #'(THE-TAG :predicate-function))
 
 		  ;; private API
 
@@ -1346,41 +1262,8 @@
 		     (else
 		      #'(THE-PARENT :mutator-function ??field-name))))
 
-		  ;; public API: binding definition
-
-		  ;;Define  an  internal  variable  with  initialisation
-		  ;;expression using the tag constructor.
-		  ((??tag ??var (aux.<> (??arg (... ...))))
-		   (identifier? #'??var)
-		   #'(??tag ??var (??tag (??arg (... ...)))))
-
-		  ;;Internal definition with initialisation expression.
-		  ((_ ??var ??expr)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var ??expr))
-
-		  ;;Internal definition without initialisation expression.
-		  ((_ ??var)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var))
-
-		  ;;Constructor call.
-		  ((_ (??arg (... ...)))
-		   (if %the-maker
-		       #`(THE-TAG #:nested-oopp-syntax #,(%the-maker stx))
-		     #'(THE-TAG #:nested-oopp-syntax (THE-PUBLIC-CONSTRUCTOR ??arg (... ...)))))
-
-		  ;;Cast operator.  It is meant to be used as:
-		  ;;
-		  ;;  ((THE-TAG) '#())
-		  ;;  ==> ((splice-first-expand (THE-TAG #:nested-oopp-syntax)) '#())
-		  ;;  ==> (THE-TAG #:nested-oopp-syntax '#())
-		  ;;
-		  ((_)
-		   #'(splice-first-expand (THE-TAG #:nested-oopp-syntax)))
-
 		  (_
-		   (synner "invalid tag syntax" #f))))))
+		   (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 
 	  DEFINITION ...
 

@@ -30,7 +30,6 @@
   (export
     :flat-oopp-syntax
     :define
-    :bind-and-call
     :dispatch
     :mutator
     :setter
@@ -56,7 +55,6 @@
   (define-auxiliary-syntaxes
     :flat-oopp-syntax
     :define
-    :bind-and-call
     :make
     :make-from-fields
     :is-a?
