@@ -1278,7 +1278,6 @@
     (append					i v r ba se)
     (apply					i v r ba se)
     (assert					i v r ba)
-    (syntax-error				i v)
     (assertion-error) ;empty?!?
     (assertion-violation			i v r ba)
     (boolean=?					i v r ba)
@@ -2684,6 +2683,7 @@
 
     (ellipsis-map)
     (debug-call)
+    (syntax-error				i v)
 
 ;;; --------------------------------------------------------------------
 

@@ -456,6 +456,9 @@
   (ikarus system $pairs)
   (ikarus system $fx)
   (ikarus system $flonums)
+  ;;FIXME For  no reason I  can figure out now:  here we really  need to
+  ;;import  from "(ikarus  flonums)", rather  than from  "(ikarus system
+  ;;$flonums)".  (Marco Maggi; Thu Sep 19, 2013)
   (rename (only (ikarus flonums) #;(ikarus system $flonums)
 		$flexp
 		$flsin

@@ -99,6 +99,8 @@
 
     syntax-violation			assertion-error
 
+    ;;This must  be exported and that's  it.  I am unable  to remove it.
+    ;;Sue me.  (Marco Maggi; Sun Nov 17, 2013)
     syntax-error
 
     make-variable-transformer		variable-transformer?
