@@ -668,11 +668,11 @@
 
   (define-fluid-syntax continue
     (lambda (stx)
-      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
 
   (define-fluid-syntax break
     (lambda (stx)
-      (syntax-error 'continue "syntax \"break\" out of any loop")))
+      (syntax-violation 'continue "syntax \"break\" out of any loop" stx)))
 
   (define-syntax while
     (syntax-rules ()
@@ -829,11 +829,11 @@
 
   (define-fluid-syntax continue
     (lambda (stx)
-      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
 
   (define-fluid-syntax break
     (lambda (stx)
-      (syntax-error 'break "syntax \"break\" out of any loop")))
+      (syntax-violation 'break "syntax \"break\" out of any loop" stx)))
 
   (define-syntax until
     (syntax-rules ()
@@ -990,11 +990,11 @@
 
   (define-fluid-syntax continue
     (lambda (stx)
-      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
 
   (define-fluid-syntax break
     (lambda (stx)
-      (syntax-error 'break "syntax \"break\" out of any loop")))
+      (syntax-violation 'break "syntax \"break\" out of any loop" stx)))
 
   (define-syntax for
     (syntax-rules ()

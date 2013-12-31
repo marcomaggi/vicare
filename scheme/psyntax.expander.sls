@@ -99,8 +99,6 @@
 
     syntax-violation			assertion-error
 
-    ;;FIXME SYNTAX-ERROR  is to be removed  from the export list  at the
-    ;;next boot image rotation.  (Marco Maggi; Sat Aug 31, 2013)
     syntax-error
 
     make-variable-transformer		variable-transformer?
@@ -124,12 +122,7 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer
-
-		  ;;FIXME SYNTAX-ERROR is to  be removed from the export
-		  ;;list at the next boot image rotation.  (Marco Maggi;
-		  ;;Sat Aug 31, 2013)
-		  syntax-error
-		  )
+		  syntax-error)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (psyntax library-manager)

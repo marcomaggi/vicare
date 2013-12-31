@@ -19,6 +19,7 @@
   (export
     fxzero?
     fxpositive?		fxnegative?
+    fxnonnegative?	fxnonpositive?
     fxeven?		fxodd?
 
     fxadd1		fxsub1
@@ -55,6 +56,7 @@
 ;;; --------------------------------------------------------------------
 
     $fxpositive?	$fxnegative?
+    $fxnonpositive?	$fxnonnegative?
     $fxeven?		$fxodd?
     $fxmodulo		$fxremainder
     $fxsign
@@ -75,6 +77,7 @@
   (import (except (ikarus)
 		  fxzero?
 		  fxpositive?		fxnegative?
+		  fxnonnegative?	fxnonpositive?
 		  fxeven?		fxodd?
 
 		  fxquotient		fxremainder
@@ -115,6 +118,7 @@
 	    sys:)
     (except (ikarus system $fx)
 	    $fxpositive?	$fxnegative?
+	    $fxnonpositive?	$fxnonnegative?
 	    $fxeven?		$fxodd?
 	    $fxmodulo		$fxremainder
 	    $fxsign
@@ -208,8 +212,18 @@
 (define ($fxeven?     N)	($fxzero? ($fxlogand N 1)))
 (define ($fxodd?      N)	(not ($fxzero? ($fxlogand N 1))))
 
+(define ($fxnonpositive? x)
+  (or ($fxzero? x)
+      ($fxnegative? x)))
+
+(define ($fxnonnegative? x)
+  (or ($fxzero? x)
+      ($fxpositive? x)))
+
 (define-fx-operation/one fxpositive?	$fxpositive?)
 (define-fx-operation/one fxnegative?	$fxnegative?)
+(define-fx-operation/one fxnonpositive?	$fxnonpositive?)
+(define-fx-operation/one fxnonnegative?	$fxnonnegative?)
 (define-fx-operation/one fxeven?	$fxeven?)
 (define-fx-operation/one fxodd?		$fxodd?)
 

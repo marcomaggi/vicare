@@ -628,8 +628,16 @@
 		  port-remprop			port-property-list
 
 		  ;; networking
+		  make-binary-socket-input-port
+		  make-binary-socket-input-port*
+		  make-binary-socket-output-port
+		  make-binary-socket-output-port*
 		  make-binary-socket-input/output-port
 		  make-binary-socket-input/output-port*
+		  make-textual-socket-input-port
+		  make-textual-socket-input-port*
+		  make-textual-socket-output-port
+		  make-textual-socket-output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
     (only (vicare options)

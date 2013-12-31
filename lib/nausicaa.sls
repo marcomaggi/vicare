@@ -1297,7 +1297,6 @@
     symbol-bound?
     symbol->keyword
     symbol-value
-    syntax-error
     syntax-object?
     syntax-object-expression
     syntax-object-marks

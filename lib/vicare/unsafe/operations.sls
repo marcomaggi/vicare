@@ -114,11 +114,8 @@
 
     $bignum-positive?
     $bignum-negative?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $bignum-non-positive?
-    ;; $bignum-non-negative?
+    $bignum-non-positive?
+    $bignum-non-negative?
     $bignum-byte-ref
     $bignum-size
 
@@ -135,13 +132,10 @@
     $ratnum-d
     $ratnum-num
     $ratnum-den
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $ratnum-positive?
-    ;; $ratnum-negative?
-    ;; $ratnum-non-positive?
-    ;; $ratnum-non-negative?
+    $ratnum-positive?
+    $ratnum-negative?
+    $ratnum-non-positive?
+    $ratnum-non-negative?
 
 ;;; --------------------------------------------------------------------
 
@@ -164,11 +158,8 @@
     $flzero?/negative
     $flpositive?
     $flnegative?
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sat Aug 3, 2013)
-    ;;
-    ;; $flnonpositive?
-    ;; $flnonnegative?
+    $flnonpositive?
+    $flnonnegative?
 
 ;;; --------------------------------------------------------------------
 
@@ -246,11 +237,9 @@
     $bytevector-self-copy-forwards!
     $bytevector-self-copy-backwards!
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Fri May 17, 2013)
-    #;$bytevector-total-length
-    #;$bytevector-concatenate
-    #;$bytevector-reverse-and-concatenate
+    $bytevector-total-length
+    $bytevector-concatenate
+    $bytevector-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
 
@@ -305,11 +294,9 @@
     $string-fill!
     $substring
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Fri May 17, 2013)
-    #;$string-total-length
-    #;$string-concatenate
-    #;$string-reverse-and-concatenate
+    $string-total-length
+    $string-concatenate
+    $string-reverse-and-concatenate
 
 ;;; --------------------------------------------------------------------
 
@@ -338,11 +325,7 @@
     (ikarus system $structs)
     (except (ikarus system $fx)
 	    $fxmax
-	    $fxmin
-	    ;;FIXME  To be  removed  at the  next  boot image  rotation.
-	    ;;(Marco Maggi; Wed Sep 18, 2013)
-	    $fxnonpositive?
-	    $fxnonnegative?)
+	    $fxmin)
     (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $flonums)
@@ -401,16 +384,6 @@
 
 
 ;;;; fixnums
-
-;;; predicates
-
-(define-inline ($fxnonpositive? op)
-  (or ($fxzero? op)
-      ($fxnegative? op)))
-
-(define-inline ($fxnonnegative? op)
-  (or ($fxzero? op)
-      ($fxpositive? op)))
 
 ;;; arithmetic operations
 

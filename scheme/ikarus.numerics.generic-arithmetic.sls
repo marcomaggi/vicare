@@ -66,11 +66,7 @@
     positive?			negative?
     even?			odd?
 
-    fxnonnegative?		fxnonpositive?
-    flnonnegative?		flnonpositive?
-
-    non-positive? $fxnonpositive? $bignum-non-positive? $flnonpositive? $ratnum-non-positive?
-    non-negative? $fxnonnegative? $bignum-non-negative? $flnonnegative? $ratnum-non-negative?
+    non-positive?		non-negative?
 
     ;; exactness
     exact->inexact		inexact
@@ -388,6 +384,8 @@
 		positive?			negative?
 		even?				odd?
 
+		non-positive?			non-negative?
+
 		;; exactness
 		exact->inexact			inexact
 
@@ -405,7 +403,7 @@
 		bitwise-arithmetic-shift-right
 		bitwise-arithmetic-shift-left
 		bitwise-arithmetic-shift
-		bitwise-length		bitwise-copy-bit-field
+		bitwise-length			bitwise-copy-bit-field
 		bitwise-copy-bit		bitwise-bit-field
 		bitwise-reverse-bit-field	bitwise-rotate-bit-field
 		sra				sll
@@ -454,12 +452,7 @@
 	  ($flcosh	$cosh-flonum)
 	  ($fltanh	$tanh-flonum)
 	  ($flasinh	$asinh-flonum))
-  (except (ikarus system $ratnums)
-	  ;;FIXME At  the next  boot image  rotation the  definitions of
-	  ;;these functions  must be  moved to  "ikarus.ratnums.sls" and
-	  ;;this import clause removed.  (Marco Maggi; Sat Aug 3, 2013)
-	  $ratnum-non-positive?
-	  $ratnum-non-negative?)
+  (ikarus system $ratnums)
   (ikarus system $bignums)
   (ikarus system $compnums)
   (ikarus system $chars)
@@ -6399,98 +6392,25 @@
     (else
      (assertion-violation 'negative? "expected real number as argument" x))))
 
-(module (non-positive?
-	 fxnonpositive?
-	 flnonpositive?
-	 $fxnonpositive?
-	 $bignum-non-positive?
-	 $flnonpositive?
-	 $ratnum-non-positive?)
+(define (non-positive? x)
   (define who 'non-positive?)
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxnonpositive? x))
+    ((bignum?)	($bignum-non-positive? x))
+    ((flonum?)	($flnonpositive? x))
+    ((ratnum?)	($ratnum-non-positive? x))
+    (else
+     (%error-not-real-number x))))
 
-  (define (non-positive? x)
-    (cond-real-numeric-operand x
-      ((fixnum?)	($fxnonpositive? x))
-      ((bignum?)	($bignum-non-positive? x))
-      ((flonum?)	($flnonpositive? x))
-      ((ratnum?)	($ratnum-non-positive? x))
-      (else
-       (%error-not-real-number x))))
-
-  (define ($fxnonpositive? x)
-    (or ($fxzero? x)
-	($fxnegative? x)))
-
-  (define $bignum-non-positive? $bignum-negative?)
-
-  (define ($flnonpositive? x)
-    (or ($flzero?/negative x)
-	($flnegative? x)))
-
-  (define ($ratnum-non-positive? x)
-    ;;The denominator of a ratnum is always strictly positive.
-    (non-positive? ($ratnum-n x)))
-
-  (define (fxnonpositive? x)
-    (define who 'fxnonpositive?)
-    (with-arguments-validation (who)
-	((fixnum	x))
-      ($fxnonpositive? x)))
-
-  (define (flnonpositive? x)
-    (define who 'flnonpositive?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      ($flnonpositive? x)))
-
-  #| end of module: non-positive? |# )
-
-(module (non-negative?
-	 fxnonnegative?
-	 flnonnegative?
-	 $fxnonnegative?
-	 $bignum-non-negative?
-	 $flnonnegative?
-	 $ratnum-non-negative?)
+(define (non-negative? x)
   (define who 'non-negative?)
-
-  (define (non-negative? x)
-    (cond-real-numeric-operand x
-      ((fixnum?)	($fxnonnegative? x))
-      ((bignum?)	($bignum-non-negative? x))
-      ((flonum?)	($flnonnegative? x))
-      ((ratnum?)	($ratnum-non-negative? x))
-      (else
-       (%error-not-real-number x))))
-
-  (define ($fxnonnegative? x)
-    (or ($fxzero? x)
-	($fxpositive? x)))
-
-  (define $bignum-non-negative? $bignum-positive?)
-
-  (define ($flnonnegative? x)
-    (or ($flzero?/positive x)
-	($flpositive? x)))
-
-  (define ($ratnum-non-negative? x)
-    ;;The denominator of a ratnum is always strictly positive.
-    (non-negative? ($ratnum-n x)))
-
-
-  (define (fxnonnegative? x)
-    (define who 'fxnonnegative?)
-    (with-arguments-validation (who)
-	((fixnum	x))
-      ($fxnonnegative? x)))
-
-  (define (flnonnegative? x)
-    (define who 'flnonnegative?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      ($flnonnegative? x)))
-
-  #| end of module: non-negative? |# )
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxnonnegative? x))
+    ((bignum?)	($bignum-non-negative? x))
+    ((flonum?)	($flnonnegative? x))
+    ((ratnum?)	($ratnum-non-negative? x))
+    (else
+     (%error-not-real-number x))))
 
 (define (even? x)
   (cond-inexact-integer-operand x

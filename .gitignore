@@ -34,12 +34,14 @@ config.cache-bare
 configure
 depcomp
 test-driver
-tests/test-demo.sps
 doc/mdate-sh
 doc/stamp-vti
 doc/stamp-*
 doc/texinfo.tex
-doc/version*texi
+doc/version.texi
+doc/version-scheme.texi
+doc/version-libs.texi
+doc/version-nausicaa.texi
 install-sh
 missing
 mkinstalldirs
