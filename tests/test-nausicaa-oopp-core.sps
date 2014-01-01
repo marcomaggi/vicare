@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (rnrs eval)
   (rnrs mutable-pairs)
@@ -127,7 +127,7 @@
   (check	;predicate
       (let ()
 	(define b '(1 2 3))
-	((<top>) b))
+	((<top> #:predicate) b))
     => #t)
 
   (check	;dispatch request
@@ -183,7 +183,7 @@
 
   (check	;predicate
       (let (((b <top>) '(1 2 3)))
-        ((<top>) b))
+        ((<top> #:predicate) b))
     => #t)
 
   (check	;dispatch request
@@ -332,7 +332,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1 2))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -347,7 +347,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -415,11 +415,11 @@
 			  #f))))
 
     (check
-	((<alpha>) (<alpha> (1 2)))
+	((<alpha> #:predicate) (<alpha> (1 2)))
       => #t)
 
     (check
-	((<alpha>) (<alpha> (1 2)))
+	((<alpha> #:predicate) (<alpha> (1 2)))
       => #t)
 
     #f)
@@ -460,11 +460,11 @@
 			  #f))))
 
     (check
-	((<beta>) (<beta> (1 2 3 4)))
+	((<beta> #:predicate) (<beta> (1 2 3 4)))
       => #t)
 
     (check
-	((<beta>) (<beta> (1 2 3 4)))
+	((<beta> #:predicate) (<beta> (1 2 3 4)))
       => #t)
 
     #f)
@@ -1963,7 +1963,7 @@
 	(define-class <alpha>
 	  (fields a))
 	(<alpha> A (<> [1]))
-	((<alpha>) (begin
+	((<alpha> #:predicate) (begin
 		     (<- <alpha>)
 		     A)))
     => #t)
@@ -1980,8 +1980,8 @@
 			      (<- <alpha> <beta>)
 			      (void)
 			      (values A B))))
-	  (list ((<alpha>) a)
-		((<beta>)  b))))
+	  (list ((<alpha> #:predicate) a)
+		((<beta> #:predicate)  b))))
     => '(#t #t))
 
   (check
@@ -1999,9 +1999,9 @@
 				(<- <alpha> <beta> <gamma>)
 				(void)
 				(values A B G))))
-	  (list ((<alpha>) a)
-		((<beta>)  b)
-		((<gamma>) g))))
+	  (list ((<alpha> #:predicate) a)
+		((<beta> #:predicate)  b)
+		((<gamma> #:predicate) g))))
     => '(#t #t #t))
 
   #t)
@@ -2396,12 +2396,99 @@
 	  (vector a b)))
     => '#(1 2))
 
+  (check	;mapping
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	(map fun '((1 . 2) (3 . 4) (5 . 6))))
+    => '(#(1 2) #(3 4) #(5 6)))
+
   (check-for-expression-return-value-violation
       (let ()
 	(define ((fun <vector>) (O <pair>))
 	  (list (O car) (O cdr)))
 	(fun '(1 . 2)))
     => '(<vector> ((1 2))))
+
+;;; --------------------------------------------------------------------
+;;; tagged return value members
+
+  (check	;return value virtual field
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(1 . 2)) length))
+    => 2)
+
+  (check	;return value method call
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(1 . 2)) subvector 0 1))
+    => '#(1))
+
+  (check	;return value getter
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(a . b)) [0]))
+    => 'a)
+
+  (check	;return value getter
+      (let ()
+	(define ((fun <vector>) (O <pair>))
+	  (vector (O car) (O cdr)))
+	((fun '(a . b)) [1]))
+    => 'b)
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
+	  (method ((a <beta>) V)
+	    (* V 10)))
+	(define-label <beta>
+	  (method (b V)
+	    (/ V 3)))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 1) a)
+	#;((<alpha>-a 1) b)
+	(((fun 1) a) b))
+    => 10/3)
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
+	  (methods a))
+	(define-label <beta>
+	  (methods b))
+	(define ((<alpha>-a <beta>) V)
+	  (* V 10))
+	(define (<beta>-b V)
+	  (/ V 3))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 2) a)
+	#;((<alpha>-a 2) b)
+	(((fun 2) a) b))
+    => 20/3) ;; (/ (* 2 10) 3) => 20/3
+
+  (check	;return value method call of return value method call
+      (let ()
+	(define-label <alpha>
+	  (methods ((a <beta>) <alpha>-a)))
+	(define-label <beta>
+	  (methods b))
+	(define (<alpha>-a V)
+	  (* V 10))
+	(define (<beta>-b V)
+	  (/ V 3))
+	(define ((fun <alpha>) N)
+	  N)
+	#;((fun 3) a)
+	#;((<alpha>-a 3) b)
+	(((fun 3) a) b))
+    => 10) ;; (/ (* 3 10) 3) => 30/3 => 10
 
   #t)
 

@@ -53,7 +53,7 @@
 
   (check
       (let (((C uri.&uri-parser-error) (uri.&uri-parser-error (10))))
-	((uri.&uri-parser-error) C))
+	((uri.&uri-parser-error #:predicate) C))
     => #t)
 
   (check

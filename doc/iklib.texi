@@ -117,6 +117,12 @@ process.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun vicare-built-with-arguments-validation-enabled
+Return @true{} if the package was installed along with procedure
+arguments validation enabled; otherwise return @false{}.
+@end defun
+
+
 @defun vicare-built-with-srfi-enabled
 Return @true{} if the package was installed along with the @srfi{}
 libraries; otherwise return @false{}.
@@ -278,6 +284,8 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
+* iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 @end menu
 
@@ -1297,6 +1305,170 @@ happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
 @end deffn
+
+@c page
+@node iklib syntaxes try
+@subsection The @func{try}, @func{catch}, @func{finally} syntaxes
+
+
+@cindex Library @library{vicare language-extensions try}
+@cindex @library{vicare language-extensions try}, library
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions try} and are candidates to be included in the boot
+image.
+
+
+@deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
+@deffnx Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{}) (finally @metao{finally-body} @meta{finally-body} @dots{})
+@deffnx {Auxiliary Syntax} catch
+@deffnx {Auxiliary Syntax} finally
+@deffnx {Auxiliary Syntax} else
+This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
+Every @meta{catch-clause} has one of the forms:
+
+@example
+(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
+((@meta{tag}) @metao{tag-body} @meta{tag-body} @dots{})
+(else @metao{else-body} @meta{else-body} @dots{})
+@end example
+
+@noindent
+where the optional @clause{else} clause must appear only once as last
+one.
+
+When no @clause{finally} clause is present, and without the @func{else}
+clause, it will expand to:
+
+@example
+(guard (@meta{var}
+          ((record-type-and-record? @meta{tag} @meta{var})
+           @metao{tag-body}
+           @meta{tag-body}
+           ...)
+          ...)
+  @meta{body})
+@end example
+
+@noindent
+and with the @clause{else} clause:
+
+@example
+(guard (@meta{var}
+          ((record-type-and-record? @meta{tag} @meta{var})
+           @metao{tag-body}
+           @meta{tag-body}
+           ...)
+           ...
+          (else
+           @metao{else-body}
+           @meta{else-body}
+           ...))
+  @meta{body})
+@end example
+
+@noindent
+remember that when no @clause{else} clause is present: the exception
+will be re--raised with @func{raise-continuable}.
+
+When the @clause{finally} clause is present: the same @func{guard} form
+is wrapped into a compensation stack (@pxref{iklib compensations,
+Compensation stacks}):
+
+@example
+(with-compensations
+  (push-compensation @metao{finally-body} @meta{finally-body} ...)
+  (guard ---))
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes splice1st
+@subsection Splice first form syntax
+
+
+@deffn Syntax splice-first-expand @meta{form}
+When the use of a @func{splice-first-expand} syntax appears as first
+subform of an enclosing form, @meta{form} must have the format:
+
+@example
+(@meta{rator} @meta{rand} ...)
+@end example
+
+@noindent
+and it is spliced in the enclosing form, then the result is expanded:
+
+@example
+((splice-first-expand (@meta{rator} @meta{rand} ...) @meta{arg} ...)
+@expansion{} (@meta{rator} @meta{rand} ... @meta{arg} ...)
+@end example
+
+When the use of a @func{splice-first-expand} syntax appears as second or
+subsequent subform: it expands into @meta{form} itself, which is then
+expanded:
+
+@example
+(splice-first-expand @meta{form})
+@expansion{} @meta{form}
+@end example
+
+This syntax must be used with care.
+@end deffn
+
+
+Usage examples:
+
+@example
+(import (vicare))
+
+(splice-first-expand 123)               @result{} 123
+(splice-first-expand (+ 1 2))           @result{} 3
+
+((splice-first-expand (+)) 1 2)           @result{} 3
+((splice-first-expand (+) 1 2) 3 4)       @expansion{} (+ 1 2 3 4)
+
+(let-syntax ((doit (syntax-rules ()
+                     ((_ ?arg ...)
+                      (+ (square ?arg) ...)))))
+  ((splice-first-expand (doit 1 2)) 3 4))
+@expansion{} (+ (square 1) (square 2) (square 3) (square 4))
+
+(let-syntax ((arg1 (identifier-syntax 1))
+             (arg2 (identifier-syntax 2))
+             (doit (syntax-rules ()
+                     ((_ ?arg ...)
+                      (+ (square ?arg) ...)))))
+  ((splice-first-expand (doit arg1 arg2)) 3 4))
+@expansion{} (+ (square 1) (square 2) (square 3) (square 4))
+
+(let*-syntax ((arg1 (identifier-syntax 1))
+              (arg2 (identifier-syntax 2))
+              (doit (syntax-rules ()
+                      ((_ ?arg ...)
+                       (+ (square ?arg) ...))))
+              (flop (syntax-rules ()
+                      ((_ ?arg ...)
+                       (splice-first-expand
+                        (doit arg1 ?arg ...))))))
+  ((flop arg2) 3 4))
+@expansion{} (+ (square 1) (square 2) (square 3) (square 4))
+
+(let*-syntax ((arg1 (identifier-syntax 1))
+              (arg2 (identifier-syntax 2))
+              (doit (syntax-rules ()
+                      ((_ ?arg ...)
+                       (+ (square ?arg) ...))))
+              (flop (syntax-rules ()
+                      ((_ ?arg ...)
+                       (splice-first-expand
+                        (doit arg1 ?arg ...)))))
+              (flip (syntax-rules ()
+                      ((_ ?arg ...)
+                       (flop ?arg ...)))))
+  ((flip arg2) 3 4))
+@expansion{} (+ (square 1) (square 2) (square 3) (square 4))
+@end example
 
 @c page
 @node iklib syntaxes misc
@@ -4789,6 +4961,7 @@ complement representation as an octet.
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
 * iklib bytevectors conv::      Converting bytevectors.
+* iklib bytevectors valpred::   Validation predicates for bytevector.
 * iklib bytevectors generic::   Generic bytevector operations.
 @end menu
 
@@ -5060,6 +5233,84 @@ grammar:
 pct-encoded   = "%" HEXDIG HEXDIG
 HEXDIG        = [0-9a-fA-F]
 @end example
+@end defun
+
+@c page
+@node iklib bytevectors valpred
+@subsection Validation predicates for bytevector
+
+
+@defun list-of-bytevectors? @var{obj}
+Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
+return @false{}.
+@end defun
+
+
+@defun bytevector-length? @var{obj}
+Return @true{} if @var{obj} is valid as bytevector length: it is a
+non--negative fixnum; otherwise return @false{}.
+@end defun
+
+
+@defun bytevector-index? @var{obj}
+Return @true{} if @var{obj} is a Scheme object valid as bytevector
+index: it is a non--negative fixnum; otherwise return @false{}.  Before
+being used, @var{obj} needs further validation against a specific
+bytevector and word size.
+@end defun
+
+
+@defun bytevector-word-size? @var{obj}
+Return @true{} if @var{obj} is valid as word size to be accessed in a
+bytevector; otherwise return @false{}.  @var{obj} must be further
+validated for a specific bytevector word start offset.
+@end defun
+
+
+@defun bytevector-word-count? @var{obj}
+Return @true{} if @var{obj} is valid as word count for bytevector items,
+either a byte count, 16-bit words count, 32-bit words count, @dots{};
+otherwise return @false{}.  @var{obj} must be further validated for the
+specific bytevector and word size with which it is to be used.
+@end defun
+
+
+@defun bytevector-index-for-word? @var{bv} @var{idx} @var{word-size-in-bytes}
+Return @true{} if: @var{bv} is a bytevector, @var{idx} is a
+non--negative fixnum, @var{word-size-in-bytes} is a non--negative
+fixnum, @var{idx} is a valid index in @var{bv} to reference a word whose
+size is @var{word-size-in-bytes}; otherwise return @false{}.  This
+validation is for getter and setter indexes.
+@end defun
+
+
+@defun bytevector-index-for-word8? @var{bv} @var{idx}
+@defunx bytevector-index-for-word16? @var{bv} @var{idx}
+@defunx bytevector-index-for-word32? @var{bv} @var{idx}
+@defunx bytevector-index-for-word64? @var{bv} @var{idx}
+Specialised variants of @func{bytevector-index-for-word?} for a specific
+word size in bits.
+@end defun
+
+
+@defun bytevector-start-index-and-count-for-word? @var{bv} @var{idx} @var{word-size-in-bytes} @var{count}
+Return @true{} if: @var{bv} is a bytevector, @var{idx} is a
+non--negative fixnum, @var{count} is a non--negative fixnum,
+@var{word-size-in-bytes} is a non--negative fixnum, @var{idx} is a valid
+index in @var{bv} to reference @var{count} words whose size is
+@var{word-size-in-bytes}; otherwise return @false{}.  Notice that if
+@var{count} is zero: it is fine for @var{idx} to be equal to the length
+of @var{bv}.  This validation is for getter and setter indexes.
+@end defun
+
+
+@defun bytevector-start-index-and-count-for-word8? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word16? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word32? @var{bv} @var{idx}
+@defunx bytevector-start-index-and-count-for-word64? @var{bv} @var{idx}
+Specialised variants of
+@func{bytevector-start-index-and-count-for-word?} for a specific word
+size in bits.
 @end defun
 
 @c page
@@ -5815,6 +6066,29 @@ Return @true{} if @var{obj} is a fixnum or bignum; otherwise return
 @defunx non-negative? @var{X}
 Return @true{} if @var{X} is a real number object and it is,
 respectively, non--positive or non--negative.
+@end defun
+
+
+@defun zero-exact-integer? @var{obj}
+Return @true{} if @var{obj} is an exact integer whose value is zero,
+otherwise return @false{}; only fixnums can be zero.  If @var{obj} is
+not a number object: return @false{}.
+@end defun
+
+
+@defun positive-exact-integer? @var{obj}
+@defunx negative-exact-integer? @var{obj}
+Return @true{} if @var{obj} is a positive or negative exact integer;
+otherwise return @false{}.  If @var{obj} is not a number object: return
+@false{}.
+@end defun
+
+
+@defun non-positive-exact-integer? @var{obj}
+@defunx non-negative-exact-integer? @var{obj}
+Return @true{} if @var{obj} is a non--positive or non--negative exact
+integer; otherwise return @false{}.  If @var{obj} is not a number
+object: return @false{}.
 @end defun
 
 @c page
@@ -7193,13 +7467,14 @@ time you read this may vary.
 @end deffn
 
 
-@deffn Procedure time-it @var{who} @var{thunk}
+@deffn Procedure time-it @var{message} @var{thunk}
 The procedure @func{time-it} takes a datum denoting the name of the
 computation and a thunk (i.e. a procedure with no arguments), invokes
 the thunk, prints the stats, and returns the values obtained from
-invoking the thunk.  If the value of @var{who} is non--false, @var{who}
-is used when displaying the run--time statistics.  If the value of
-@var{who} is @false{}, then no name for the computation is displayed.
+invoking the thunk.  If the value of @var{message} is true,
+@var{message} is used when displaying the run--time statistics; if the
+value of @var{message} is @false{}, then no name for the computation is
+displayed.
 
 @example
 > (time-it "a very fast computation"

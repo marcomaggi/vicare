@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (nausicaa language oopp)
   (nausicaa language builtins)
@@ -128,15 +128,15 @@
     (<gamma> O (<> (B)))
 
     (check
-	((<gamma>) O)
+	((<gamma> #:predicate) O)
       => #t)
 
     (check
-    	((<beta>) (O b))
+    	((<beta> #:predicate) (O b))
       => #t)
 
     (check
-    	((<alpha>) (O b a))
+    	((<alpha> #:predicate) (O b a))
       => #t)
 
     (check
@@ -156,11 +156,11 @@
   (let ()
 
     (define-label <vector>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)))
 		   #'(vector-ref ?var ?idx)))))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)) ?expr)
 		   #'(vector-set! ?var ?idx ?expr))))))
@@ -179,32 +179,32 @@
     (<gamma> O (<> (B)))
 
     (check
-	((<gamma>) O)
+	((<gamma> #:predicate) O)
       => #t)
     (check
-	((<beta>) (O b))
+	((<beta> #:predicate) (O b))
       => #t)
     (check
-	((<alpha>) (O b a))
+	((<alpha> #:predicate) (O b a))
       => #t)
     (check
-	(O b a v)
+    	(O b a v)
       => '#(1 2 3))
     (check
-	(O b a v[0])
+    	(O b a v[0])
       => 1)
     (check
-	(O b a v[1])
+    	(O b a v[1])
       => 2)
     (check
-	(O b a v[2])
+    	(O b a v[2])
       => 3)
 
     (set!/tags (O b a v[0]) 10)
     (set!/tags (O b a v[1]) 20)
     (set!/tags (O b a v[2]) 30)
     (check
-	(O b a v)
+    	(O b a v)
       => '#(10 20 30))
 
     #f)
@@ -230,10 +230,10 @@
 
     (<pair> O (<> (1 2)))
 
-    (check ((<pair>) O)            => #t)
-    (check ((<car-and-cdr>)  O)    => #t)
-    (check ((<car>)  O)            => #t)
-    (check ((<top>)  O)            => #t)
+    (check ((<pair> #:predicate) O)            => #t)
+    (check ((<car-and-cdr> #:predicate)  O)    => #t)
+    (check ((<car> #:predicate)  O)            => #t)
+    (check ((<top> #:predicate)  O)            => #t)
 
     (check (O car)                 => 1)
     (check (O cdr)                 => 2)
@@ -257,9 +257,9 @@
 
     (<beta> O (<> (1 2)))
 
-    (check ((<beta>)  O)           => #t)
-    (check ((<alpha>) O)           => #t)
-    (check ((<top>)   O)           => #t)
+    (check ((<beta> #:predicate)  O)           => #t)
+    (check ((<alpha> #:predicate) O)           => #t)
+    (check ((<top> #:predicate)   O)           => #t)
 
     (check (O a)                   => 1)
     (check (O b)                   => 2)
@@ -267,9 +267,9 @@
 
     (let/tags (((O <beta>) (make-<beta> 1 2)))
 
-      (check ((<beta>)  O)           => #t)
-      (check ((<alpha>) O)           => #t)
-      (check ((<top>)   O)           => #t)
+      (check ((<beta> #:predicate)  O)           => #t)
+      (check ((<alpha> #:predicate) O)           => #t)
+      (check ((<top> #:predicate)   O)           => #t)
 
       (check (O a)                   => 1)
       (check (O b)                   => 2)
@@ -287,13 +287,13 @@
   (let ()	;getter
 
     (define-label <vector>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)))
 		   #'(vector-ref ?var ?idx))))))
 
     (define-label <matrix>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row) (?col)))
 		   #'(vector-ref
@@ -321,13 +321,13 @@
   (let ()	;setter
 
     (define-label <vector>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?idx)) ?expr)
 		   #'(vector-set! ?var ?idx ?expr))))))
 
     (define-label <matrix>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?row) (?col)) ?expr)
 		   #'(vector-set!
@@ -542,6 +542,140 @@
 	(set! a 123)
 	(a string))
     => "123")
+
+  #t)
+
+
+(parametrise ((check-test-name	'keywords))
+
+  (check
+      (<fixnum> #:oopp-syntax (123 positive?))
+    => #t)
+
+  (check
+      (<string> #:oopp-syntax ("123" length))
+    => 3)
+
+  (check
+      (<string> #:oopp-syntax ("01234" substring 1 3))
+    => "12")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((<fixnum> #:nested-oopp-syntax 123) positive?)
+    => #t)
+
+  (check
+      ((<string> #:nested-oopp-syntax "01234") length)
+    => 5)
+
+  (check
+      ((<string> #:nested-oopp-syntax "01234") [3])
+    => #\3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'nesting))
+
+  (let ()
+    (<spine> L '(0 1 2 3 4))
+
+    (check (L car)				=> 0)
+    (check (L cdr)				=> '(1 2 3 4))
+    (check ((L cdr) car)			=> 1)
+    (check ((L cdr) cdr)			=> '(2 3 4))
+    (check (((L cdr) cdr) car)			=> 2)
+    (check (((L cdr) cdr) cdr)			=> '(3 4))
+    (check ((((L cdr) cdr) cdr) car)		=> 3)
+    (check ((((L cdr) cdr) cdr) cdr)		=> '(4))
+    (check (((((L cdr) cdr) cdr) cdr) car)	=> 4)
+    (check (((((L cdr) cdr) cdr) cdr) cdr)	=> '())
+
+    (void))
+
+  (let ()
+    (define-label <vector-of-vectors>
+      (parent <vector>)
+      (getter
+       (lambda (stx tag)
+	 (syntax-case stx ()
+	   ((?expr ((?idx)))
+	    #'(<vector> #:nested-oopp-syntax
+			(vector-ref ?expr ?idx)))))))
+
+    (<vector-of-vectors> V '#(#(11 12 13)
+			      #(21 22 23)
+			      #(31 32 33)))
+
+    (check (V[0])				=> '#(11 12 13))
+    (check (V[1])				=> '#(21 22 23))
+    (check (V[2])				=> '#(31 32 33))
+
+    (check ((V[0]) [0])				=> 11)
+    (check ((V[0]) [1])				=> 12)
+    (check ((V[0]) [2])				=> 13)
+
+    (check ((V[2]) [2])				=> 33)
+
+    (void))
+
+  (let ()	;<procedure> does not splice
+    (define-class <alpha>
+      (fields (immutable (fun <procedure>))))
+
+    (<alpha> A (<> (+)))
+
+    (check
+	((A fun) 1 2 3)
+      => 6)
+
+    (void))
+
+  (let ()	;<top> does not splice
+    (define-class <beta>
+      (fields (immutable (fun <top>))))
+
+    (<beta> A (<> (*)))
+
+    (check
+	((A fun) 1 2 3)
+      => 6)
+
+    (void))
+
+  (let ()	;untagged is like <top> and does not splice
+    (define-class <gamma>
+      (fields (immutable fun)))
+
+    (<gamma> G (<> (*)))
+
+    (check
+	((G fun) 1 2 3)
+      => 6)
+
+    (void))
+
+;;; --------------------------------------------------------------------
+
+  (let ()
+
+    (define-label <fixnum-vector>
+      (parent <vector>)
+      (getter
+       (lambda (stx tag)
+	 (syntax-case stx ()
+	   ((?expr ((?index)))
+	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?expr ?index)))))))
+
+    (<fixnum-vector> O '#(0 1 2 3))
+
+    (check ((O[1]) string)		=> "1")
+    (check ((O[1]) odd?)		=> #t)
+    (check ((O[2]) * 10)		=> 20)
+
+    (void))
 
   #t)
 

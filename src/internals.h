@@ -51,21 +51,11 @@
 #  define __attribute__(...)	/* empty */
 #endif
 
-/* I found  the following chunk on  the Net.  (Marco Maggi;  Sun Feb 26,
-   2012) */
-#if defined _WIN32 || defined __CYGWIN__
-#  ifdef BUILDING_DLL
-#    ifdef __GNUC__
-#      define ik_decl		__attribute__((dllexport))
-#    else
-#      define ik_decl		__declspec(dllexport)
-#    endif
+#if (defined _WIN32 || defined __CYGWIN__)
+#  ifdef __GNUC__
+#    define ik_decl		__attribute__((dllexport))
 #  else
-#    ifdef __GNUC__
-#      define ik_decl		__attribute__((dllimport))
-#    else
-#      define ik_decl		__declspec(dllimport)
-#    endif
+#    define ik_decl		__declspec(dllexport)
 #  endif
 #  define ik_private_decl	extern
 #else
@@ -141,54 +131,348 @@
 
 
 /** --------------------------------------------------------------------
- ** Constants and preprocessor operations.
+ ** Preprocessor definitions: memory pages and segments.
+ ** ----------------------------------------------------------------- */
+
+/* Given  a  SIZE  compute  and  return the  minimum  size  multiple  of
+ * GRANULARITY that can hold it.
+ *
+ *    |----------------------------| size
+ *    |-----------|-----------|-----------| granularity_size
+ *     granularity granularity granularity
+ *
+ * Notice that GRANULARITY is evaluated multiple times!!!
+ */
+#define IK_SIZE_TO_GRANULARITY_SIZE(SIZE, GRANULARITY) \
+  ((ik_ulong)(((((ik_ulong)(SIZE)) + GRANULARITY - 1) / GRANULARITY) * GRANULARITY))
+
+/* This constant is defined as 4096 = 4 * 1024 = 4 * 2^10 = 2^12.  Never
+   change it!!! */
+#define IK_CHUNK_SIZE		4096
+#define IK_DOUBLE_CHUNK_SIZE	(2 * IK_CHUNK_SIZE)
+
+/* *** DISCUSSION ABOUT "IK_PAGESIZE" AND "IK_PAGESHIFT" ***
+ *
+ * The    preprocessor   constant    IK_MMAP_ALLOCATION_GRANULARITY   is
+ * determined by the "configure" script and defined in the automatically
+ * generated  header file  "config.h".   The  constants IK_PAGESIZE  and
+ * IK_PAGESHIFT are hard-coded.
+ *
+ *   The constant  IK_MMAP_ALLOCATION_GRANULARITY represents  the memory
+ * allocation  granularity used  by "mmap()":  no matter  the number  of
+ * bytes we  request to "mmap()",  it will always allocate  the smallest
+ * multiple of the granularity that can contain the requested bytes:
+ *
+ *    |----------------------------| requested_size
+ *    |-----------|-----------|-----------| allocated_size
+ *     granularity granularity granularity
+ *
+ *   On some platforms the allocation granularity equals the system page
+ * size (example  GNU+Linux), on  other platforms  it does  not (example
+ * Cygwin).  We assume the allocation granularity can be obtained on any
+ * platform with:
+ *
+ *    #include <unistd.h>
+ *    long granularity = sysconf(_SC_PAGESIZE);
+ *
+ * which should "officially"  return the system page size,  but in truth
+ * it does not (see Cygwin's documentation).
+ *
+ *   To  mind its  own business,  Vicare defines  a "page  size" as  the
+ * preprocessor symbol IK_PAGESIZE, the number of bytes in Vicare's page
+ * size is 4096  = 4 * 1024 =  4 * 2^10 = 2^12 =  #x1000.  Vicare's page
+ * size is not defined to be equal to the system page size, but:
+ *
+ * - Most likely the system page size and Vicare's page size are equal.
+ *
+ * - We assume that in  any case the system page size is  equal to or an
+ *   exact multiple of Vicare's page size.
+ *
+ * - We assume  that "mmap()"  returns pointers  such that:  the pointer
+ *   references the first  byte of a system page, and  so also the first
+ *   byte of  a Vicare page;  the numeric address  of the pointer  is an
+ *   exact multiple of 4096 (the 12 least significant bits are zero).
+ *
+ * it is natural to assign a zero-based index to each Vicare page:
+ *
+ *       page     page     page     page     page     page
+ *    |--------|--------|--------|--------|--------|--------|
+ *     ^        ^        ^        ^        ^        ^
+ *    #x0000   #x1000   #x2000   #x3000   #x4000   #x5000
+ *    index 0  index 1  index 2  index 3  index 4  index 5
+ *
+ *   The  preprocessor symbol  IK_PAGESHIFT  is the  number  of bits  to
+ * right-shift a tagged  or untagged pointer to obtain the  index of the
+ * page it is in; it is the number for which:
+ *
+ *    IK_PAGESIZE >> IK_PAGESHIFT = 1
+ *    2^IK_PAGESHIFT = IK_PAGESIZE
+ *
+ * if IK_PAGESIZE is 4096, the value of IK_PAGESHIFT is 12; so we have:
+ *
+ *    0 * 4096 <=  4000 < 1 * 4096		 4000 >> 12 = 0
+ *    1 * 4096 <=  8000 < 2 * 4096		 8000 >> 12 = 1
+ *    2 * 4096 <= 10000 < 3 * 4096		10000 >> 12 = 2
+ *
+ */
+#define IK_PAGESIZE		IK_CHUNK_SIZE
+#define IK_DOUBLE_PAGESIZE	IK_DOUBLE_CHUNK_SIZE
+#define IK_PAGESHIFT		12
+
+/* Given the  tagged or untagged pointer  X as "ikptr": evaluate  to the
+   index of  the memory page  it is  in; notice that  the tag bits  of a
+   tagged pointer are not influent. */
+#define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
+/* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
+   difference between two page indexes  representing a region big enough
+   to hold X bytes. */
+#define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
+
+/* Given a  Vicare page index: return  an untagged pointer to  the first
+   word of the page. */
+#define IK_PAGE_POINTER_FROM_INDEX(IDX)	\
+  ((ikptr)(((ik_ulong)(IDX)) << IK_PAGESHIFT))
+
+/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+   number of bytes "mmap()" will allocate to hold it. */
+#define IK_MMAP_ALLOCATION_SIZE(SIZE) \
+  IK_SIZE_TO_GRANULARITY_SIZE((SIZE), IK_MMAP_ALLOCATION_GRANULARITY)
+
+/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+   number of pages of size IK_PAGESIZE needed to hold it. */
+#define IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(SIZE) \
+  (IK_SIZE_TO_GRANULARITY_SIZE((SIZE),IK_PAGESIZE) / IK_PAGESIZE)
+
+/* Given a  number of Vicare pages  as "ik_ulong": return the  number of
+   bytes "mmap()" allocates to hold them. */
+#define IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(NPAGES) \
+  IK_MMAP_ALLOCATION_SIZE(((ik_ulong)(NPAGES)) * IK_PAGESIZE)
+
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the  page right after the one X belongs
+ * to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *                  ^   ^
+ *                  X   |
+ *                     returned_value
+ */
+#define IK_ALIGN_TO_NEXT_PAGE(X) \
+  ((((ik_ulong)(X) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+
+/* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
+ * referencing the first byte in the page X belongs to.
+ *
+ *      page     page     page
+ *   |--------|--------|--------|
+ *             ^    ^
+ *             |    X
+ *    returned_value
+ */
+#define IK_ALIGN_TO_PREV_PAGE(X) \
+  ((((ik_ulong)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+
+/* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
+ *
+ * Some  memory for  use  by  the Scheme  program  is allocated  through
+ * "mmap()" in  blocks called "segments".   A segment's size is  a fixed
+ * constant which  must be defined  as an  exact multiple of  the memory
+ * allocation granularity  used by "mmap()"; we  define the preprocessor
+ * macro IK_SEGMENT_SIZE to be such constant.
+ *
+ *   On Unix  platforms we  expect mmap's  allocation granularity  to be
+ * 4096; on Windows platforms, under Cygwin, we expect mmap's allocation
+ * granularity to be 2^16 = 65536 = 16 * IK_PAGESIZE.  So the allocation
+ * granularity is  not always  equal to  the system  page size,  and not
+ * always equal to Vicare's page size.
+ *
+ *   Remembering  that   we  have  defined  the   preprocessor  constant
+ * IK_CHUNK_SIZE to be 4096, and assuming:
+ *
+ *   1 mebibyte = 1 MiB = 2^20 bytes = 1024 * 1024 bytes = 1048576 bytes
+ *
+ * we want the segment size to be 4 MiB:
+ *
+ *   4 MiB = 4 * 1024 * 1024 = 64 * 2^16 = 64 * 65536
+ *         = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
+ *         = 2^22 = 4194304 bytes
+ *
+ *   Vicare   distinguishes  among   "allocated  segments"   and  "logic
+ * segments":
+ *
+ * - We assume  that "mmap()"  returns pointers  such that:  the pointer
+ *   references the first byte of  a platform's system page; the numeric
+ *   address of the  pointer is an exact multiple of  4096 (the 12 least
+ *   significant bits  are zero).
+ *
+ * - We  request  to "mmap()"  to  allocate  memory  in sizes  that  are
+ *   multiples  of  the  segment  size;   this  memory  is  composed  of
+ *   "allocated segments".
+ *
+ * - We define  a "logic segment"  as a region  of memory whose  size is
+ *   equal to  the segment size and  whose starting address is  an exact
+ *   multiple of  the segment  size.  The  segment size is  4 MiB  so: a
+ *   memory address  referencing the first  byte of a logic  segment has
+ *   the 22 least significant bits set  to zero; for example: the memory
+ *   starting at address 0 is part of the first logic segment.
+ *
+ * so, typically, allocated segments are displaced from logic segments:
+ *
+ *           alloc segment  alloc segment  alloc segment
+ *    -----|--------------|--------------|--------------|----------
+ *      logic segment  logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|--------------|
+ *     page page page page page page page page page page page page
+ *    |----|----|----|----|----|----|----|----|----|----|----|----|
+ *
+ * logic segments are absolute portions of  the memory seen by a running
+ * system process.  It  is natural to assign a zero-based  index to each
+ * logic segment:
+ *
+ *      logic segment  logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|--------------|
+ *     ^              ^              ^              ^
+ *    #x000000       #x400000       #x800000       #xC00000
+ *    index 0        index 1        index 2        index 3
+ *
+ *   IK_SEGMENT_SHIFT is the number of  bits to right-shift a pointer or
+ * tagged pointer  to obtain the  index of the logic  segment containing
+ * the pointer itself; it is the number for which:
+ *
+ *    IK_SEGMENT_SIZE >> IK_SEGMENT_SHIFT = 1
+ *    2^IK_SEGMENT_SHIFT = IK_SEGMENT_SIZE
+ *
+ * scenario:
+ *
+ *      logic segment  logic segment  logic segment
+ *    |--------------|--------------|--------------|
+ *     page page page page page page page page page
+ *    |----|----|----|----|----|----|----|----|----|
+ *                           ^
+ *                           X
+ *    |----|----|----|----|----|----|----|----|----| page indexes
+ *      P   P+1  P+2  P+3  P+4  P+5  P+6  P+7  P+7
+ *
+ *    |----|----|----|----|----|----|----|----|----| segment indexes
+ *      S             S+1            S+2
+ *
+ *  we have:
+ *
+ *     X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == P+4
+ *     X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == S+1
+ */
+#define IK_NUMBER_OF_PAGES_PER_SEGMENT	1024
+#ifndef __CYGWIN__
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * IK_NUMBER_OF_PAGES_PER_SEGMENT)
+#  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
+#else
+#  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * IK_NUMBER_OF_PAGES_PER_SEGMENT)
+#  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
+#endif
+#define IK_SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> IK_SEGMENT_SHIFT)
+
+/* Slot size for both the PCB's dirty vector and the segments vector. */
+#define IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT	\
+  (sizeof(uint32_t) * IK_NUMBER_OF_PAGES_PER_SEGMENT)
+
+/* On 32-bit platforms  we allocate 4 MiB as heap  size, while on 64-bit
+   platforms  we  allocate  8  MiB.    On  64-bit  platforms  pairs  and
+   vector-like objects have double the size.
+
+   NOTE We  double the  heap size  on 64-bit  platforms because  of some
+   criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013) */
+#define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((wordsize==4)?1:2))
+/* When we  need to perform an  unsafe Scheme object allocation  and the
+   Scheme heap is nearly full: the old heap is stored away in the PCB; a
+   new memory block  of at least this size is  allocated and becomes the
+   new heap.  This happens without garbage collections. */
+#define IK_HEAP_EXTENSION_SIZE	IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(32)
+
+/* Only machine  words go on the  Scheme stack, no Scheme  objects data.
+   So we are content with a single segment for the stack. */
+#define IK_STACKSIZE		(IK_SEGMENT_SIZE)
+
+/* Record in  the dirty vector the  side effect of mutating  the machine
+   word at POINTER.   This will make the garbage collector  do the right
+   thing when objects in an old  generation reference objects in a young
+   generation. */
+#define IK_PURE_WORD	0x00000000
+#define IK_DIRTY_WORD	0xFFFFFFFF
+#define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
+  (((uint32_t *)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = IK_DIRTY_WORD)
+
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: garbage collection stuff.
  ** ----------------------------------------------------------------- */
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
+#define IK_GC_GENERATION_COUNT		5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
-/* This  definition must  be  kept  in sync  with  the primitive  Scheme
-   operation $FORWARD-PTR? */
-#define IK_FORWARD_PTR		((ikptr)-1)
+/* The PCB's segments  vector is an array of 32-bit  words, each being a
+ * bit field  representing the status  of an allocated memory  page.  We
+ * logic  AND  the following  masks  to  such  32-bit words  to  extract
+ * specific bit fields.
+ *
+ * GEN_MASK -		Extract the page generation number.
+ *
+ * LARGE_OBJECT_MASK -	Extract the bit marking the page as holding a
+ *			large object.
+ */
+#define GEN_MASK		0x0000000F
+#define META_DIRTY_MASK		0x000000F0
+#define TYPE_MASK		0x00000F00
+#define SCANNABLE_MASK		0x0000F000
+#define DEALLOC_MASK		0x000F0000
+#define LARGE_OBJECT_MASK	0x00100000
 
-#define IK_MOST_BYTES_IN_MINOR	0x10000000
+#define NEW_GEN_TAG		0x00000008 /* == #b1000 */
+#define OLD_GEN_MASK		0x00000007 /* ==  #b111 */
+#define NEW_GEN_MASK		0x00000008 /* == #b1000 */
 
-#define old_gen_mask		0x00000007
-#define new_gen_mask		0x00000008
-#define gen_mask		0x0000000F
-#define new_gen_tag		0x00000008
-#define meta_dirty_mask		0x000000F0
-#define type_mask		0x00000F00
-#define scannable_mask		0x0000F000
-#define dealloc_mask		0x000F0000
-#define large_object_mask	0x00100000
-#define meta_dirty_shift	4
+/* How much  to shift  a nibble to  insert to or  extract from  a 32-bit
+   value for a slot of PCB's segments vector. */
+#define META_DIRTY_SHIFT	4
 
-#define hole_type		0x00000000
-#define mainheap_type		0x00000100
-#define mainstack_type		0x00000200
-#define pointers_type		0x00000300
-#define dat_type		0x00000400
-#define code_type		0x00000500
-#define weak_pairs_type		0x00000600
-#define symbols_type		0x00000700
+/* Possible values for the bit field extracted by TYPE_MASK. */
+#define HOLE_TYPE		0x00000000
+#define MAINHEAP_TYPE		0x00000100
+#define MAINSTACK_TYPE		0x00000200
+#define POINTERS_TYPE		0x00000300
+#define DATA_TYPE		0x00000400
+#define CODE_TYPE		0x00000500
+#define WEAK_PAIRS_TYPE		0x00000600
+#define SYMBOLS_TYPE		0x00000700
 
-#define scannable_tag		0x00001000
-#define unscannable_tag		0x00000000
+/* Possible values for the bit field extracted by SCANNABLE_MASK. */
+#define SCANNABLE_TAG		0x00001000
+#define UNSCANNABLE_TAG		0x00000000
 
-#define dealloc_tag_un		0x00010000
-#define dealloc_tag_at		0x00020000
-#define retain_tag		0x00000000
+/* Possible values for the bit field extracted by DEALLOC_MASK. */
+#define DEALLOC_TAG_UN		0x00010000
+#define DEALLOC_TAG_AT		0x00020000
+#define RETAIN_TAG		0x00000000
 
-#define large_object_tag	0x00100000
+/* Possible  values for  the bit  field extracted  by LARGE_OBJECT_MASK.
+   This is usually logically ORed to an already built _MT tag. */
+#define LARGE_OBJECT_TAG	0x00100000
 
-#define hole_mt		(hole_type	 | unscannable_tag | retain_tag)
-#define mainheap_mt	(mainheap_type	 | unscannable_tag | retain_tag)
-#define mainstack_mt	(mainstack_type	 | unscannable_tag | retain_tag)
-#define pointers_mt	(pointers_type	 | scannable_tag   | dealloc_tag_un)
-#define symbols_mt	(symbols_type	 | scannable_tag   | dealloc_tag_un)
-#define data_mt		(dat_type	 | unscannable_tag | dealloc_tag_un)
-#define code_mt		(code_type	 | scannable_tag   | dealloc_tag_un)
-#define weak_pairs_mt	(weak_pairs_type | scannable_tag   | dealloc_tag_un)
+/* These are precomputed  full values for the 32-bit words  in the PCB's
+   segments vector.  Notice that "HOLE_MT" is zero. */
+#define HOLE_MT		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define MAINHEAP_MT	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define MAINSTACK_MT	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
+#define POINTERS_MT	(POINTERS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define SYMBOLS_MT	(SYMBOLS_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define DATA_MT		(DATA_TYPE	 | UNSCANNABLE_TAG | DEALLOC_TAG_UN)
+#define CODE_MT		(CODE_TYPE	 | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+#define WEAK_PAIRS_MT	(WEAK_PAIRS_TYPE | SCANNABLE_TAG   | DEALLOC_TAG_UN)
+
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: calling C from Scheme.
+ ** ----------------------------------------------------------------- */
 
 /*
  * When compiling Scheme code to  executable machine code: to generate a
@@ -241,68 +525,17 @@
 #define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
 		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Preprocessor definitions: miscellaneous.
+ ** ----------------------------------------------------------------- */
 
-/* This must be 4096: never change it!!! */
-#define IK_CHUNK_SIZE		4096
-
-/* The IK_PAGESIZE  is used  to determine the  size of memory  blocks to
-   allocate with "mmap()".
-
-   IK_PAGESHIFT is the number of  bits to right-shift a pointer value to
-   obtain the index of the page (of size IK_PAGESIZE) it is in.
-
-       4000 >> 12 = 0
-       8000 >> 12 = 1
-      10000 >> 12 = 2
-
-   The  value   12  for   pageshift  is  correct   for  a   pagesize  of
-   IK_CHUNK_SIZE.
-
-      #define IK_PAGESIZE	IK_CHUNK_SIZE
-      #define IK_PAGESHIFT	12
-
-   These values  are determined by  the "configure" script,  because the
-   page size  is platform-dependent.  In  truth we should  determine the
-   page size at run time, but it would slow down computation of a lot of
-   constants and structure sizes. */
-
-#define generation_count	5  /* generations 0 (nursery), 1, 2, 3, 4 */
-
-#define IK_HEAP_EXT_SIZE	(32 * IK_CHUNK_SIZE)
-#define IK_HEAPSIZE		(1024 * IK_CHUNK_SIZE * ((wordsize==4)?1:2)) /* 4/8 MB */
-
-#define IK_STACKSIZE		(1024 * IK_CHUNK_SIZE)
-/* #define IK_STACKSIZE		(256 * IK_CHUNK_SIZE) */
+/* Assign RIGHT to LEFT, but evaluate RIGHT first. */
+#define IK_ASS(LEFT,RIGHT)	\
+  { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
 
 #define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
-
-#define IK_PTR_PAGE_SIZE \
-  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
-
-/* Given the pointer X or tagged pointer X: evaluate to the index of the
-   memory page  it is in; notice that  the tag bits of  a tagged pointer
-   are not  influent.  Given a  number of bytes  X evaluate to  an index
-   offset. */
-#define IK_PAGE_INDEX(x)   \
-  (((ik_ulong)(x)) >> IK_PAGESHIFT)
-
-/* Record in  the dirty vector the  side effect of mutating  the machine
-   word at POINTER.   This will make the garbage collector  do the right
-   thing when objects in an old  generation reference objects in a young
-   generation. */
-#define IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(PCB,POINTER)	\
-  (((int*)(long)((PCB)->dirty_vector))[IK_PAGE_INDEX(POINTER)] = -1)
-
-#define IK_ALIGN_TO_NEXT_PAGE(x) \
-  (((IK_PAGESIZE - 1 + (ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
-
-#define IK_ALIGN_TO_PREV_PAGE(x) \
-  ((((ik_ulong)(x)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
-
-#define IK_ASS(LEFT,RIGHT)	\
-  { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
 
 
 /** --------------------------------------------------------------------
@@ -322,17 +555,20 @@ typedef unsigned long long	ik_ullong;
 /* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
 typedef ik_ulong		ikptr;
 
+/* Node  in a  simply linked  list.  Used  to store  pointers to  memory
+   blocks of size IK_PAGESIZE.  */
 typedef struct ikpage {
   ikptr		 base;
   struct ikpage* next;
 } ikpage;
 
-/* Node for linked list of allocated pages. */
-typedef struct ikpages {
+/* Node in  a simply linked  list.  Used to  store pointers and  size of
+   memory blocks. */
+typedef struct ikmemblock {
   ikptr		base;
   int		size;
-  struct ikpages* next;
-} ikpages;
+  struct ikmemblock* next;
+} ikmemblock;
 
 /* Node in  a linked list  referencing all the generated  FFI callbacks.
    It is used  to allow the garbage collector not  to collect data still
@@ -345,11 +581,17 @@ typedef struct ik_callback_locative {
   struct ik_callback_locative * next;	/* pointer to next link */
 } ik_callback_locative;
 
-/* Node in a linked list. */
+/* Node in a linked list used to store tagged pointers to guardians.  We
+   want  a  pointer  to  "ik_ptr_page"   to  reference  a  memory  block
+   IK_PAGESIZE wide; the first words of  such page are used by the first
+   members of the  data structure, while everything else is  used by the
+   array "ptr". */
+#define IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS \
+  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr))
 typedef struct ik_ptr_page {
   long		count;
   struct ik_ptr_page* next;
-  ikptr		ptr[IK_PTR_PAGE_SIZE];
+  ikptr		ptr[IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS];
 } ik_ptr_page;
 
 /* For  more  documentation  on  the PCB  structure:  see  the  function
@@ -371,12 +613,15 @@ typedef struct ikpcb {
   ikptr	  base_rtd;		/* offset = 11 * wordsize, 32-bit offset = 44 */
   ikptr	  collect_key;		/* offset = 12 * wordsize, 32-bit offset = 48 */
 
-  /* ------------------------------------------------------------------ */
-  /* The  following fields are	not used  by any  scheme code  they only
-     support the runtime system (GC, etc.) */
+  /* -------------------------------------------------------------------
+   * The following  fields are  not used  by any  scheme code  they only
+   * support the runtime system (GC, etc.)
+   */
 
   /* Additional roots for the garbage collector.  They are used to avoid
-     collecting objects still in use while they are in use by C code. */
+     collecting objects  still in use while  they are in use  by C code.
+     DO NOT MOVE THEM AROUND!!!  These fields must match the ones in the
+     "ikpcb" struct defined in "vicare.h" */
   ikptr*		root0;
   ikptr*		root1;
   ikptr*		root2;
@@ -387,6 +632,159 @@ typedef struct ikpcb {
   ikptr*		root7;
   ikptr*		root8;
   ikptr*		root9;
+
+
+  /* Untagged  pointers updated  (if needed)  after every  memory mapped
+     allocation to  be lower  and greater  than all  the memory  used by
+     Scheme programs.   They are  used for garbage  collection purposes.
+     Every Vicare page between this range  of pointers is described by a
+     slot in the segments vector and the dirty vector. */
+  ikptr			memory_base;
+  ikptr			memory_end;
+
+  /* The segments  vector contains a slot  for every Vicare page  in the
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to register the destination  use of every
+   * page (heap, stack, unused, etc.), along with the garbage collection
+   * generation the page belongs to.
+   *
+   *   "segment_vector_base" references the first allocated slot; access
+   * to  the  vector  with   zero-based  indexes  is  performed  through
+   * "segment_vector".
+   *
+   *   Notice that the segments vector is *not* itself registered in the
+   * segments  vector and  dirty vector:  if the  segments vector  falls
+   * inside the  region delimited by "memory_base"  and "memory_end", it
+   * is marked as "hole" and "pure".
+   */
+  uint32_t *		segment_vector_base;
+  uint32_t *		segment_vector;
+
+  /* The  dirty vector  contains a  slot for  every Vicare  page in  the
+   * region  of  memory  delimited   by  the  fields  "memory_base"  and
+   * "memory_end"; it is  used to keep track of pages  that were mutated
+   * at runtime; it allows us to do the right thing when a Scheme object
+   * in an old  generation is mutated to reference a  Scheme object in a
+   * new generation.
+   *
+   *   "dirty_vector_base" references  the first allocated  slot; access
+   * to  the vector  with zero-based  indexes is  performed through  the
+   * field "dirty_vector" (which is also accessible from Scheme code).
+   *
+   *   Notice that  the dirty vector  is *not* itself registered  in the
+   * segments vector and dirty vector:  if the dirty vector falls inside
+   * the  region  delimited by  "memory_base"  and  "memory_end", it  is
+   * marked as "hole" and "pure".
+   */
+  uint32_t *		dirty_vector_base;
+
+  /* Scheme objects  created by  a Scheme program  are allocated  on the
+   * heap.  We can think of the Scheme  heap as the union of the nursery
+   * and a set of generational pages.
+   *
+   *   The nursery is a set of memory blocks in which new Scheme objects
+   * are allocated; it  is the generation 0.  The nursery  starts with a
+   * single  "hot"  memory  block  in   which  new  Scheme  objects  are
+   * allocated; whenever the hot block is full:
+   *
+   * - If  a  safe allocation  is  requested:  a garbage  collection  is
+   *   performed and  all the objects are  moved from the heap  into the
+   *   generational pages.
+   *
+   * - If an  unsafe allocation is  requested: the current hot  block is
+   *   stored in  a linked list  of heap blocks and  a new hot  block is
+   *   allocated.
+   *
+   *   The generational pages  are a set of Vicare  pages, referenced by
+   * the segments vector, in which  objects are moved after they survive
+   * a  garbage collection;  every generational  page is  tagged in  the
+   * segments vector with the index of the generation it belongs to.
+   *
+   * heap_base -
+   * heap_size -
+   *     Pointer and  size in  bytes of the  current nursery  hot memory
+   *     block; new Scheme objects are allocated here.  Initialised to a
+   *     memory  mapped block  of size  IK_HEAPSIZE.
+   *       When the previous block is full: to satisfy the request of an
+   *     unsafe allocation  it is set to  a memory mapped block  of size
+   *     IK_HEAP_EXTENSION_SIZE.
+   *       After  a garbage  collection is  performed:  it is  set to  a
+   *     memory mapped block of size IK_HEAPSIZE.
+   *
+   * allocation_pointer -
+   *     Pointer to  the first word  of available  data in the  heap hot
+   *     memory block; the next Scheme object to be allocated will start
+   *     there.
+   *
+   * allocation_redline -
+   *     Pointer to a word towards the end of the heap hot memory block;
+   *     when the  allocation of a  Scheme object crosses  this pointer,
+   *     the hot block is considered full.
+   *
+   * heap_pages -
+   *     Pointer to  the first node  in a  linked list of  memory blocks
+   *     that  once were  nursery hot  memory, and  are now  fully used;
+   *     initialised to NULL when building the PCB.
+   */
+  ikptr			heap_base;
+  ik_ulong		heap_size;
+  ikmemblock *		heap_pages;
+
+  /* Pointer to and number of bytes of the current Scheme stack memory.
+   */
+  ikptr			stack_base;
+  ik_ulong		stack_size;
+
+  /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a
+   * single memory  block; the array  is never reallocated: its  size is
+   * fixed; each struct is a node in  a simply linked list.  At run time
+   * the slots  are linked in two  lists managed as stacks:  the list of
+   * used nodes, each referencing a cached page; the list of free nodes,
+   * currently referencing nothing.
+   *
+   *   At  initialisation  time:  all  the  structs  in  the  array  are
+   * initialised  to reference  each other,  from the  last slot  to the
+   * first slot: the last array slot is  the first node in the list, the
+   * first array slot is the last node in the list.  This linked list is
+   * the list of free nodes; the list of used nodes is empty.
+   *
+   * cached_pages_base -
+   * cached_pages_size -
+   *     Pointer and size-in-bytes of the array.  The pointer references
+   *     the first  slot in  the array.   The size in  bytes must  be an
+   *     exact multiple of a Vicare page size.
+   *
+   * cached_pages -
+   *     Pointer to the first "ikpage" struct in the linked list of used
+   *     nodes; set to NULL at PCB initialisation time; set to NULL when
+   *     the cache is empty.  This pointer is the starting point when we
+   *     need  to visit  all the  cached pages  (for example  to release
+   *     them), or we need to pop a  cached page to be recycled for some
+   *     use.
+   *
+   * uncached_pages -
+   *     Pointer  to the  first "ikpage"  struct in  the linked  list of
+   *     unused nodes;  set to reference the  last slot in the  array at
+   *     PCB initialisation time; set to NULL when the cache is full.
+   *
+   *   When a  page needs to  be put in the  cache: the first  struct is
+   * popped from  "uncached_pages", a pointer  to the page is  stored in
+   * the struct, the struct pushed on "cached_pages".
+   *
+   *   When a cached  page needs to be used: the  first struct is popped
+   * from "cached_pages",  the pointer  to the  page extracted  from the
+   * struct, the struct pushed on "uncached_pages".
+   *
+   *   Notice that  the page cache  is *not* registered in  the segments
+   * vector:  if  the  array  falls   inside  the  region  delimited  by
+   * "memory_base" and "memory_end", it is marked as "hole".
+   */
+#define IK_PAGE_CACHE_NUM_OF_SLOTS	(IK_PAGESIZE * 1)
+#define IK_PAGE_CACHE_SIZE_IN_BYTES	(IK_PAGE_CACHE_NUM_OF_SLOTS * sizeof(ikpage))
+  ikptr			cached_pages_base;
+  int			cached_pages_size;
+  ikpage *		cached_pages;
+  ikpage *		uncached_pages;
 
   /* The value of "argv[0]" as handed to the "main()" function. */
   char *		argv0;
@@ -400,48 +798,86 @@ typedef struct ikpcb {
      callout. */
   int			last_errno;
 
-  ik_uint *		segment_vector;
+  /* Weak pairs storage.  Weak pairs  are different from normal pairs: a
+   * weak pair has a "weak" reference to  object in its car and a strong
+   * reference to object  in its cdr; when an object  is referenced only
+   * by the car of one or more weak pairs it can be garbage collected.
+   *
+   * The memory storage for weak pairs  is in Vicare pages referenced by
+   * the  segments  vector, and  tagged  there  as "weak  pairs  pages".
+   * Whenever such a page is full:  we just allocate a new one, register
+   * it in the segments vector, and store references to it in the PCB.
+   *
+   * weak_pairs_ap -
+   *     Pointer to the first free word  in the current weak pairs page.
+   *     The next  created weak pair  object will  be stored in  the two
+   *     words referenced by this pointer.
+   *
+   * weak_pairs_ep -
+   *
+   *     Pointer to  the first word right  after the end of  the current
+   *     weak  pairs  page.   Whenever  "weak_pairs_ap"  surpasses  this
+   *     pointer: the current page is full.
+   *
+   *   This is the allocation scenario, before:
+   *
+   *          used words          free words
+   *      |...............|...................|
+   *      |---|---|---|---|---|---|---|---|---|---| weak pairs page
+   *                       ^                   ^
+   *                  weak_pair_ap           weak_pair_ep
+   *
+   *   after:
+   *
+   *          used words           free words
+   *      |.......................|...........|
+   *      |---|---|---|---|---|---|---|---|---|---| weak pairs page
+   *                               ^           ^
+   *                          weak_pair_ap   weak_pair_ep
+   */
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
-  /* Pointer to  and number of  bytes of  the current heap  memory.  New
-     objects are allocated here. */
-  ikptr			heap_base;
-  ik_ulong		heap_size;
-  /* Pointer to first node in  linked list of allocated memory segments.
-     Initialised to  NULL when building	 the PCB.  Whenever  the current
-     heap is full: a new node is prepended to the list, initialised with
-     the fields "heap_base" and "heap_size". */
-  ikpages*		heap_pages;
-  /* Linked list of cached pages so that we don't map/unmap. */
-  ikpage *		cached_pages;
-  /* Linked list of cached ikpages so that we don't malloc/free. */
-  ikpage *		uncached_pages;
-  /* Pointer to and size of the cached pages array. */
-  ikptr			cached_pages_base;
-  int			cached_pages_size;
-  /* Pointer to and number of bytes of the current stack memory. */
-  ikptr			stack_base;
-  ik_ulong		stack_size;
+
   /* The hash table holding interned symbols. */
   ikptr			symbol_table;
   /* The hash table holding interned generated symbols. */
   ikptr			gensym_table;
+
   /* Array of linked lists; one for each GC generation.  The linked list
      holds  references  to  Scheme  values  that  must  not  be  garbage
      collected  even   when  they   are  not  referenced,   for  example
      guardians. */
-  ik_ptr_page*		protected_list[generation_count];
-  ik_uint *		dirty_vector_base;
-  ik_uint *		segment_vector_base;
-  ikptr			memory_base;
-  ikptr			memory_end;
+  ik_ptr_page*		protected_list[IK_GC_GENERATION_COUNT];
 
-  /* Number of garbage collections performed so far.  It is used: at the
-     beginning of  a GC  run, to determine  which objects  generation to
-     inspect; when reporting GC statistics to the user, to show how many
-     GCs where performed between two timestamps. */
+  /* Number of garbage collections performed so far.  We shamelessly let
+   * this integer overflow: it is fine.
+   *
+   *   It is  used: at  the beginning  of a GC  run, to  determine which
+   * objects generation to inspect; when  reporting GC statistics to the
+   * user, to show how many GCs where performed between two timestamps.
+   *
+   *   The Scheme objects  generation number to inspect at  the next run
+   * is determined as follows:
+   *
+   *    (0 != (collection_id & #b11111111)) => generation 4
+   *    (0 != (collection_id & #b00111111)) => generation 3
+   *    (0 != (collection_id & #b00001111)) => generation 2
+   *    (0 != (collection_id & #b00000011)) => generation 1
+   */
   int			collection_id;
 
+  /* Memory  allocation accounting.   We  keep count  of  all the  bytes
+   * allocated for the heap, so that:
+   *
+   *   total_allocated_bytes = \
+   *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
+   *     + pcb->allocation_count_minor
+   *
+   * both  minor and  major  counters  must fit  into  a fixnum.   These
+   * counters  are   used  by  Scheme  procedures   like  "time-it"  and
+   * "time-and-gather".
+   */
+#define IK_MOST_BYTES_IN_MINOR	0x10000000
   int			allocation_count_minor;
   int			allocation_count_major;
 
@@ -473,7 +909,10 @@ typedef struct ikpcb {
    store references to  to "ikptr" values in data  structures managed by
    foreign C language libraries. */
 
-#define IK_GC_AVOIDANCE_ARRAY_LEN	((4096/sizeof(void *)) - 1)
+#define IK_GC_AVOIDANCE_ARRAY_LEN \
+  ((IK_PAGESIZE - sizeof(ik_gc_avoidance_collection_t *))/sizeof(ikptr))
+
+//  ((IK_PAGESIZE/sizeof(void *)) - 1)
 
 typedef struct ik_gc_avoidance_collection_t	ik_gc_avoidance_collection_t;
 struct ik_gc_avoidance_collection_t {
@@ -533,13 +972,6 @@ typedef struct ikcont {
 
 
 /** --------------------------------------------------------------------
- ** Helper and legacy macros.
- ** ----------------------------------------------------------------- */
-
-#define ref(X,N)	IK_REF((X),(N))
-
-
-/** --------------------------------------------------------------------
  ** Internal function prototypes.
  ** ----------------------------------------------------------------- */
 
@@ -554,7 +986,7 @@ ik_private_decl ikptr	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb*)
 ik_private_decl ikptr	ik_mmap_ptr		(unsigned long size, int gen, ikpcb*);
 ik_private_decl ikptr	ik_mmap_data		(unsigned long size, int gen, ikpcb*);
 ik_private_decl ikptr	ik_mmap_code		(unsigned long size, int gen, ikpcb*);
-ik_private_decl ikptr	ik_mmap_mixed		(unsigned long size, ikpcb*);
+ik_private_decl ikptr	ik_mmap_mainheap	(unsigned long size, ikpcb*);
 ik_private_decl void	ik_munmap		(ikptr, unsigned long);
 ik_private_decl ikpcb * ik_make_pcb		(void);
 ik_private_decl void	ik_delete_pcb		(ikpcb*);
@@ -579,6 +1011,7 @@ ik_private_decl void	ik_underflow_handler	(void);
  ** ----------------------------------------------------------------- */
 
 ik_decl ikpcb *	ik_the_pcb		(void);
+ik_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb* pcb, ikptr s_pointer);
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
@@ -602,6 +1035,18 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
  ** Basic object related macros.
  ** ----------------------------------------------------------------- */
 
+/* When  a  Scheme  object's  memory  block  is  moved  by  the  garbage
+   collector: the first word of the old memory block is overwritten with
+   a  special  value,  the  "forward   pointer",  which  is  the  symbol
+   IK_FORWARD_PTR.  See the garbage collector for details.
+
+     Notice that when the garbage collector scans memory: it interpretes
+   every machine word with all the bits set to 1 as IK_FORWARD_PTR.
+
+   NOTE This definition  must be kept in sync with  the primitive Scheme
+   operation "$forward-ptr?". */
+#define IK_FORWARD_PTR	((ikptr)-1)
+
 #define IK_ALIGN_SHIFT	(1 + wordshift)
 #define IK_ALIGN_SIZE	(2 * wordsize)
 #define immediate_tag	7
@@ -610,9 +1055,17 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 
 #define IK_REF(X,N)	(((ikptr*)(((long)(X)) + ((long)(N))))[0])
 
-/* The smallest multiple of the wordsize which is greater than N. */
-#define IK_ALIGN(N) \
-  ((((N) + IK_ALIGN_SIZE - 1) >>  IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
+/* This  macro computes  the number  of  bytes to  reserve in  allocated
+   memory for the  data area of a Scheme object;  the reserved memory is
+   always  an even  number  of machine  words, at  least  2.  On  32-bit
+   platforms: the granularity of the aligned sizes is 8 bytes; on 64-bit
+   platforms: the granularity of the aligned sizes is 16 bytes.
+
+     This is: to satisfy the garbage  collector, which needs 2 words for
+   its machinery; to have untagged pointers to Scheme objects with the 3
+   least significant bits set to zero. */
+#define IK_ALIGN(NUMBER_OF_BYTES) \
+  ((((NUMBER_OF_BYTES) + IK_ALIGN_SIZE - 1) >> IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
 
 #define IK_FALSE_OBJECT		((ikptr)0x2F)
 #define IK_TRUE_OBJECT		((ikptr)0x3F)
@@ -1058,7 +1511,7 @@ ik_decl int   ik_is_vector		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_clean		(ikptr s_vec);
 ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,
 					 ikptr s_src, ikptr s_src_start,
-					 ikptr s_count);
+					 ikptr s_count, ikpcb * pcb);
 
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))
@@ -1193,11 +1646,14 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define disp_code_annotation	(4 * wordsize)
 #define disp_code_unused	(5 * wordsize)
 #define disp_code_data		(6 * wordsize)
+
 #define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_code_size	(disp_code_code_size	- code_primary_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector	- code_primary_tag)
 #define off_code_freevars	(disp_code_freevars	- code_primary_tag)
 #define off_code_annotation	(disp_code_annotation	- code_primary_tag)
+#define off_code_unused		(disp_code_unused	- code_primary_tag)
 #define off_code_data		(disp_code_data		- code_primary_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
 
 #define IK_IS_CODE(X)		\
      ((code_primary_tag == (code_primary_mask & X)) && \
@@ -1223,7 +1679,7 @@ ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 
 /* Least significant  bits tags  for the  first word  in records  of the
    relocation vector for code objects. */
-#define IK_RELOC_RECORD_MASK_TAG		0b11
+#define IK_RELOC_RECORD_MASK_TAG		0x3 /* = 0b11 */
 #define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
 #define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
 #define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
@@ -1335,7 +1791,7 @@ ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 
 ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
-				 ikptr s_count);
+				 ikptr s_count, ikpcb * pcb);
 
 ik_decl void ik_enter_c_function (ikpcb* pcb);
 ik_decl void ik_leave_c_function (ikpcb* pcb);

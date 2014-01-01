@@ -40,7 +40,98 @@ this project has a mailing list:
 Notes for revision 0.3d8
 ------------------------
 
-*
+* BACKWARDS  INCOMPATIBILITY  Support  for  experimental  nested  method
+  invocation added  in release 0.3d7  has been  removed.  It is  no more
+  possible to use the auxiliary syntax "=>" to nest members invocation:
+
+    (define-label <alpha>
+      (method ((one <list>) self a b)
+        (list self a b)))
+
+    (let (((O <alpha>) 0))
+      (O one 10 20
+         => map add1)) ;;; ERROR
+
+* Added syntax SPLICE-FIRST-EXPAND to (vicare).
+
+* It  makes  no   sense  to  develop  Vicare  Scheme  if   it  does  not
+  differentiate itself from other  implementations; so with this release
+  a somewhat bold syntax is introduced  for the Nausicaa language on top
+  of SPLICE-FIRST-EXPAND.
+
+    Whenever an expression  in OOPP syntax appears as  first subform, it
+  has a single return value and  such return value is tagged: the result
+  of its expansion is spliced in  the enclosing form; this allows a more
+  natural OOP--like  syntax to access  supertag members.  It  is clearly
+  not ``Schemey''.  Here are some examples:
+
+     (<spine> L '(0 1 2 3 4))
+
+     (L car)				=> 0
+     (L cdr)				=> (1 2 3 4)
+     ((L cdr) car)			=> 1
+     ((L cdr) cdr)			=> (2 3 4)
+     (((L cdr) cdr) car)		=> 2
+     (((L cdr) cdr) cdr)		=> (3 4)
+     ((((L cdr) cdr) cdr) car)		=> 3
+     ((((L cdr) cdr) cdr) cdr)		=> (4)
+     (((((L cdr) cdr) cdr) cdr) car)	=> 4
+     (((((L cdr) cdr) cdr) cdr) cdr)	=> ()
+
+  more details  in node  "oopp notation  nesting" of  documentation file
+  "nausicaa.*".
+
+* BACKWARDS INCOMPATIBILITY For those who  care about Nausicaa (if any):
+  sorry  to introduce  this  backwards  incompatibility.  The  predicate
+  syntax:
+
+    (<tag>)			==> #<predicate function>
+
+  is no more supported.  To retrieve  the predicate function of a tag we
+  can now use the "#:predicate" keyword:
+
+    (<fixnum> #:predicate)	=> fixnum?
+
+  and we can also directly apply the predicate function to the result of
+  an expression with the keyword "#:is-a?":
+
+    (<fixnum> #:is-a? 123)	=> #t
+    (<fixnum> #:is-a? "123")	=> #f
+
+  the "is-a?" syntax is still available:
+
+    (is-a? 123 <fixnum>)	=> #t
+    (is-a? "123" <fixunm>)	=> #f
+
+* A  new "cast"  syntax replaces  the old  predicate syntax.   It is  as
+  follows:
+
+     ((?tag) ?expr)
+
+  whenever this  syntax appears as  first subform of an  enclosing form,
+  the following chain of expansions takes place:
+
+     (((?tag) ?expr) ?arg ...)
+     ==> ((?tag #:nested-oopp-syntax ?expr) ?arg ...)
+     ==> (?tag #:oopp-syntax (?expr ?arg ...))
+
+  otherwise the expansion is just:
+
+     ((?tag) ?expr)
+     ==> ?expr
+
+    This syntax allows expressions like:
+
+     ((<fixnum>) 123)		=> 123
+     (((<fixnum>) 123) add1)	=> 124
+     (((<fixnum>) 123) <= 200)	=> #t
+     (((<fixnum>) 123) <= 100)	=> #f
+
+* If the maker syntax is used as first subform of an enclosing form, the
+  nested OOPP syntax is available.
+
+     ((<pair> (1 2)) car)	=> 1
+     ((<pair> (1 2)) cdr)	=> 2
 
 
 Notes for revision 0.3d7

@@ -13,10 +13,10 @@ bootexec_DATA		= $(NEW_BOOT_FILE)
 BOOT_IMAGE_SEARCH_PATH	= .:$(srcdir):$(srcdir)/../lib:$(builddir)/../lib
 VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
 
-#VICARE_SIZE_OF_VOIDP		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
-VICARE_SIZE_OF_VOIDP		= @VICARE_SIZE_OF_VOIDP@
-VICARE_PLATFORM_ENDIANNESS	= @VICARE_PLATFORM_ENDIANNESS@
-VICARE_ARGUMENTS_VALIDATION	= @VICARE_ARGUMENTS_VALIDATION@
+# #VICARE_SIZE_OF_VOIDP		= $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
+# VICARE_SIZE_OF_VOIDP		= @VICARE_SIZE_OF_VOIDP@
+# VICARE_PLATFORM_ENDIANNESS	= @VICARE_PLATFORM_ENDIANNESS@
+# VICARE_ARGUMENTS_VALIDATION	= @VICARE_ARGUMENTS_VALIDATION@
 
 IKARUS_PREBUILT_BOOT	= $(srcdir)/ikarus.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 VICARE_PREBUILT_BOOT	= $(srcdir)/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
@@ -32,9 +32,10 @@ ikarus.config.ss: Makefile ../config.h
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
-	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>$@
+	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
 
 #page
@@ -58,14 +59,15 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 .PHONY: boot-image-32-bit boot-image-64-bit
 
 boot-image-32-bit:
-	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
-	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
-	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
-	echo '(define wordsize 4)' >>ikarus.config.ss
-	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss
-	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>ikarus.config.ss
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>ikarus.config.ss
+	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.ss
+	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.ss
+	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.ss
+	echo '(define (host-info) "$(target)")'						>>ikarus.config.ss
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'			>>ikarus.config.ss
+	echo '(define wordsize 4)'							>>ikarus.config.ss
+	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.ss
+	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.ss
+	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
@@ -74,14 +76,15 @@ boot-image-32-bit:
 	cp $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
 boot-image-64-bit:
-	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
-	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
-	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
-	echo '(define wordsize 8)' >>ikarus.config.ss
-	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss
-	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>ikarus.config.ss
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>ikarus.config.ss
+	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.ss
+	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.ss
+	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.ss
+	echo '(define (host-info) "$(target)")'						>>ikarus.config.ss
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'			>>ikarus.config.ss
+	echo '(define wordsize 8)'							>>ikarus.config.ss
+	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.ss
+	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.ss
+	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\

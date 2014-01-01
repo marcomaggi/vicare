@@ -61,7 +61,7 @@ ik_list_length (ikptr s_list)
   long	 length;
   for (length = 0; pair_tag == IK_TAGOF(s_list); ++length) {
     if (LONG_MAX != length)
-      s_list = ref(s_list, off_cdr);
+      s_list = IK_REF(s_list, off_cdr);
     else
       ik_abort("size of list exceeds LONG_MAX");
   }
@@ -122,6 +122,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
     {
       int		i;
       for (i=0; argv[i];) {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
 	if (argv[++i]) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
@@ -153,6 +154,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
     {
       long	i;
       for (i=0; i<argc;) {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
 	if (++i < argc) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
@@ -595,7 +597,30 @@ ikrt_bytevector_from_base64 (ikptr s_in, ikpcb * pcb)
 int
 ik_is_vector (ikptr s_vec)
 {
-  return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(ref(s_vec, -vector_tag));
+  return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(IK_REF(s_vec, -vector_tag));
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
+/* This  is   the  core   implementation  of  the   primitive  operation
+   MAKE-VECTOR, */
+{
+  int intlen = (int)s_len;
+  if (IK_IS_FIXNUM(s_len) && (intlen >= 0)) {
+    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
+    IK_REF(s, 0) = s_len;
+    /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
+       memory is on  the Scheme heap, which is not  a garbage collection
+       root.   This   means  we  can  freely   leave  uninitialised  the
+       additional memory reserved when  converting the requested size to
+       the aligned  size, because the  garbage collector will  never see
+       it. */
+    memset((char*)(long)(s+disp_vector_data), 0, s_len);
+    return s | vector_tag;
+  } else
+    return 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -608,6 +633,11 @@ ika_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   long	align_size = IK_ALIGN(disp_vector_data + s_len);
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
+  /* "ik_safe_alloc()"  returns uninitialised  invalid memory;  but such
+     memory is  on the Scheme  heap, which  is not a  garbage collection
+     root.  This means we can  freely leave uninitialised the additional
+     memory reserved when  converting the requested size  to the aligned
+     size, because the garbage collector will never see it. */
   return s_vec;
 }
 ikptr
@@ -618,6 +648,11 @@ iku_vector_alloc_no_init (ikpcb * pcb, long number_of_items)
   long	align_size = IK_ALIGN(disp_vector_data + s_len);
   ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
+  /* "ik_unsafe_alloc()" returns uninitialised  invalid memory; but such
+     memory is  on the Scheme  heap, which  is not a  garbage collection
+     root.  This means we can  freely leave uninitialised the additional
+     memory reserved when  converting the requested size  to the aligned
+     size, because the garbage collector will never see it. */
   return s_vec;
 }
 
@@ -632,7 +667,11 @@ ika_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
+     fixnum zero.  We avoid setting to zero the additional word, if any,
+     reserved by  "ik_safe_alloc()" when  converting from  the requested
+     size to the aligned size; such word is on the Scheme heap, which is
+     not a garbage  collector root, so the garbage  collector will never
+     see it. */
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
@@ -645,7 +684,11 @@ iku_vector_alloc_and_init (ikpcb * pcb, long number_of_items)
   ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
+     fixnum zero.  We avoid setting to zero the additional word, if any,
+     reserved by  "ik_safe_alloc()" when  converting from  the requested
+     size to the aligned size; such word is on the Scheme heap, which is
+     not a garbage  collector root, so the garbage  collector will never
+     see it. */
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
@@ -662,10 +705,11 @@ ikrt_vector_clean (ikptr s_vec)
 ikptr
 ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
 		  ikptr s_src, ikptr s_src_start,
-		  ikptr s_count)
+		  ikptr s_count, ikpcb * pcb)
 {
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (long)s_dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (long)s_src_start;
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
   memcpy(dst, src, (size_t)s_count);
   return IK_VOID_OBJECT;
 }
@@ -684,40 +728,53 @@ ik_is_struct (ikptr R)
 ikptr
 ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
-   descriptor.  All   the  fields  left  uninitialised.    Make  use  of
+   descriptor.   All the  fields are  left uninitialised.   Make use  of
    "pcb->root9". */
 {
-  long	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
-  /* Do not ask me why, but IK_ALIGN is needed here. */
-  long	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr s_stru;
+  ik_ulong	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  ik_ulong	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
-    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    ref(s_stru, off_record_rtd) = s_rtd;
+    p_stru = ik_safe_alloc(pcb, align_size);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
+    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
+       memory is on  the Scheme heap, which is not  a garbage collection
+       root.   This   means  we  can  freely   leave  uninitialised  the
+       additional memory reserved when  converting the requested size to
+       the aligned  size, because the  garbage collector will  never see
+       it. */
   }
-  return s_stru;
+  pcb->root9 = NULL;
+  return p_stru | record_tag;
 }
 ikptr
 ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
-   descriptor. All the fields are  initialised to the fixnum zero.  Make
+   descriptor.  All the fields are initialised to the fixnum zero.  Make
    use of "pcb->root9". */
 {
-  ikptr	s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
-  /* Do not ask me why, but IK_ALIGN is needed here. */
-  long	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
-  ikptr s_stru;
+  ikptr		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
+  ik_ulong	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
+  ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
-    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    ref(s_stru, off_record_rtd) = s_rtd;
+    p_stru = ik_safe_alloc(pcb, align_size);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
+    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    /* Set the  reserved data  area to zero;  remember that  the machine
+       word 0 is the fixnum zero.
+
+         We avoid setting to zero  the additional word, if any, reserved
+       by "ik_safe_alloc()"  when converting from the  requested size to
+       the aligned size; such word is on the Scheme heap, which is not a
+       garbage collector root,  so the garbage collector  will never see
+       it. */
+    memset((uint8_t *)(p_stru + disp_record_data), 0, s_num_of_fields);
   }
   pcb->root9 = NULL;
-  /* Set the data area to zero.  Remember that the machine word 0 is the
-     fixnum zero. */
-  memset((char*)(long)(s_stru + off_record_data), 0, s_num_of_fields);
-  return s_stru;
+  return p_stru | record_tag;
 }
 
 
@@ -807,13 +864,13 @@ ika_integer_from_long (ikpcb * pcb, long N)
     /* wordsize == sizeof(long) */
     ikptr s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
     if (N > 0) { /* positive bignum */
-      ref(s_bn, off_bignum_tag)	 =
+      IK_REF(s_bn, off_bignum_tag)	 =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
-      ref(s_bn, off_bignum_data) = (ikptr)+N;
+      IK_REF(s_bn, off_bignum_data) = (ikptr)+N;
     } else { /* zero or negative bignum */
-      ref(s_bn, off_bignum_tag)	 =
+      IK_REF(s_bn, off_bignum_tag)	 =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
-      ref(s_bn, off_bignum_data) = (ikptr)-N;
+      IK_REF(s_bn, off_bignum_data) = (ikptr)-N;
     }
     return s_bn;
   }
@@ -831,11 +888,11 @@ ika_integer_from_llong (ikpcb * pcb, ik_llong N)
     int	  align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_llong));
     ikptr s_bn	     = ik_safe_alloc(pcb, align_size) | vector_tag;
     if (N > 0){
-      ref(s_bn, off_bignum_tag) =
+      IK_REF(s_bn, off_bignum_tag) =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = +N;
     } else {
-      ref(s_bn, off_bignum_tag) =
+      IK_REF(s_bn, off_bignum_tag) =
 	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = -N;
     }
@@ -856,8 +913,8 @@ ika_integer_from_ulong (ikpcb * pcb, ik_ulong N)
   } else {
     /* wordsize == sizeof(unsigned long) */
     ikptr	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
-    ref(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_nlimbs_shift));
-    ref(s_bn, off_bignum_data) = (ikptr)N;
+    IK_REF(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_nlimbs_shift));
+    IK_REF(s_bn, off_bignum_data) = (ikptr)N;
     return s_bn;
   }
 }
@@ -1067,7 +1124,7 @@ ikptr
 ika_flonum_from_double (ikpcb* pcb, double N)
 {
   ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
-  ref(x, off_flonum_tag) = flonum_tag;
+  IK_REF(x, off_flonum_tag) = flonum_tag;
   IK_FLONUM_DATA(x) = N;
   return x;
 }
@@ -1100,10 +1157,10 @@ ik_integer_to_int (ikptr x)
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
-      return (int)(-ref(x, off_bignum_data));
+    if (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))
+      return (int)(-IK_REF(x, off_bignum_data));
     else
-      return (int)(+ref(x, off_bignum_data));
+      return (int)(+IK_REF(x, off_bignum_data));
   }
 }
 long
@@ -1114,10 +1171,10 @@ ik_integer_to_long (ikptr x)
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
-      return (long)(-ref(x, off_bignum_data));
+    if (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))
+      return (long)(-IK_REF(x, off_bignum_data));
     else
-      return (long)(+ref(x, off_bignum_data));
+      return (long)(+IK_REF(x, off_bignum_data));
   }
 }
 ik_uint
@@ -1128,8 +1185,8 @@ ik_integer_to_uint (ikptr x)
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
-    return (ik_uint)(ref(x, off_bignum_data));
+    assert(! IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)));
+    return (ik_uint)(IK_REF(x, off_bignum_data));
   }
 }
 ik_ulong
@@ -1140,8 +1197,8 @@ ik_integer_to_ulong (ikptr x)
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
-    return (ik_ulong)(ref(x, off_bignum_data));
+    assert(! IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)));
+    return (ik_ulong)(IK_REF(x, off_bignum_data));
   }
 }
 ik_llong
@@ -1152,13 +1209,13 @@ ik_integer_to_llong (ikptr x)
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    ikptr fst		   = ref(x, -vector_tag);
+    ikptr fst		   = IK_REF(x, -vector_tag);
     ikptr pos_one_limb_tag = (ikptr)(bignum_tag	      | (1 << bignum_nlimbs_shift));
     ikptr neg_one_limb_tag = (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
     if (fst == pos_one_limb_tag)
-      return (ik_ulong)ref(x, off_bignum_data);
+      return (ik_ulong)IK_REF(x, off_bignum_data);
     else if (fst == neg_one_limb_tag)
-      return -(signed long)ref(x, off_bignum_data);
+      return -(signed long)IK_REF(x, off_bignum_data);
     else if (IK_BNFST_NEGATIVE(fst))
       return -(*((ik_llong*)(x+off_bignum_data)));
     else
@@ -1175,7 +1232,7 @@ ik_integer_to_ullong (ikptr x)
     return 0;
   else {
     ik_ullong *	 memory = (ik_ullong *)(x + off_bignum_data);
-    assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
+    assert(! IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)));
     return *memory;
   }
 }
@@ -1232,7 +1289,7 @@ ik_integer_to_uint32 (ikptr x)
     return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : IK_FALSE_OBJECT;
   } else {
     uint32_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 int32_t
@@ -1243,7 +1300,7 @@ ik_integer_to_sint32 (ikptr x)
     return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : IK_FALSE_OBJECT;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 
@@ -1257,7 +1314,7 @@ ik_integer_to_uint64 (ikptr x)
     return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : IK_FALSE_OBJECT;
   } else {
     uint64_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 int64_t
@@ -1268,7 +1325,7 @@ ik_integer_to_sint64 (ikptr x)
     return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : IK_FALSE_OBJECT;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
-    return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
+    return (IK_BNFST_NEGATIVE(IK_REF(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
 
@@ -1506,14 +1563,14 @@ ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
 ikptr
 ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 		   ikptr s_src, ikptr s_src_start,
-		   ikptr s_count)
+		   ikptr s_count, ikpcb * pcb)
 {
   long		src_start = IK_UNFIX(s_src_start);
   long		dst_start = IK_UNFIX(s_dst_start);
   size_t	count     = (size_t)IK_UNFIX(s_count);
   uint8_t *	dst = NULL;
   uint8_t *	src = NULL;
-
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
   if (IK_IS_BYTEVECTOR(s_src)) {
     src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
   } else if (ikrt_is_pointer(s_src)) {
@@ -1724,9 +1781,11 @@ ik_collection_avoidance_list (ikpcb * pcb)
 	  if (IK_VOID != collection->slots[i]) {
 	    if (IK_NULL == s_spine) {
 	      s_spine = ika_pair_alloc(pcb);
+	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    } else {
 	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	      s_spine = IK_CDR(s_spine);
+	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    }
 	    IK_CAR(s_spine) = collection->slots[i];
 	    if (IK_NULL == s_list)
@@ -1778,6 +1837,7 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
       pcb->root0 = &s_obj;
       {
 	ikptr	s_pair = ika_pair_alloc(pcb);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CAR(s_pair) = s_obj;
 	IK_CDR(s_pair) = pcb->not_to_be_collected;
 	pcb->not_to_be_collected = s_pair;

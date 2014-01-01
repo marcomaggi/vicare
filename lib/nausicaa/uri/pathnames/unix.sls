@@ -166,24 +166,26 @@
 
   (define (extended-tag-unique-identifier-of obj)
     (cond ((bytevector? obj)
-	   (cond (((<absolute-bytevector-unix-pathname>) obj)
-		  (tag-unique-identifiers <absolute-bytevector-unix-pathname>))
-		 (((<relative-bytevector-unix-pathname>) obj)
-		  (tag-unique-identifiers <relative-bytevector-unix-pathname>))
-		 (((<bytevector-unix-segment>) obj)
-		  (tag-unique-identifiers <bytevector-unix-segment>))
-		 (else
-		  (tag-unique-identifiers-of obj))))
+	   (tag-case obj
+	     ((<absolute-bytevector-unix-pathname>)
+	      (tag-unique-identifiers <absolute-bytevector-unix-pathname>))
+	     ((<relative-bytevector-unix-pathname>)
+	      (tag-unique-identifiers <relative-bytevector-unix-pathname>))
+	     ((<bytevector-unix-segment>)
+	      (tag-unique-identifiers <bytevector-unix-segment>))
+	     (else
+	      (tag-unique-identifiers-of obj))))
 
 	  ((string? obj)
-	   (cond (((<absolute-string-unix-pathname>) obj)
-		  (tag-unique-identifiers <absolute-string-unix-pathname>))
-		 (((<relative-string-unix-pathname>) obj)
-		  (tag-unique-identifiers <relative-string-unix-pathname>))
-		 (((<string-unix-segment>) obj)
-		  (tag-unique-identifiers <string-unix-segment>))
-		 (else
-		  (tag-unique-identifiers-of obj))))
+	   (tag-case obj
+	     ((<absolute-string-unix-pathname>)
+	      (tag-unique-identifiers <absolute-string-unix-pathname>))
+	     ((<relative-string-unix-pathname>)
+	      (tag-unique-identifiers <relative-string-unix-pathname>))
+	     ((<string-unix-segment>)
+	      (tag-unique-identifiers <string-unix-segment>))
+	     (else
+	      (tag-unique-identifiers-of obj))))
 
 	  (else
 	   (tag-unique-identifiers-of obj))))

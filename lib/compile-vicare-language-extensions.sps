@@ -31,6 +31,7 @@
   (only (vicare language-extensions identifier-properties))
   (only (vicare language-extensions identifier-substitutions))
   (only (vicare language-extensions makers))
+  (only (vicare language-extensions try))
 
   (only (vicare checks))
 

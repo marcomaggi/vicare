@@ -34,27 +34,27 @@ isa_fixnum (ikptr x)
 static int
 isa_vector (ikptr x)
 {
-  return ((IK_TAGOF(x) == vector_tag) && isa_fixnum(ref(x, -vector_tag)));
+  return ((IK_TAGOF(x) == vector_tag) && isa_fixnum(IK_REF(x, -vector_tag)));
 }
 static void
 verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
 {
-  assert(ref(x, 0) == code_tag);
-  ikptr rvec = ref(x, disp_code_reloc_vector);
+  assert(IK_REF(x, 0) == code_tag);
+  ikptr rvec = IK_REF(x, disp_code_reloc_vector);
   assert(isa_vector(rvec));
-  ikptr codesize = ref(x, disp_code_code_size);
+  ikptr codesize = IK_REF(x, disp_code_code_size);
   codesize += 0;
   assert(IK_UNFIX(codesize) >= 0);
   assert(isa_fixnum(codesize));
-  ikptr freevars = ref(x, disp_code_freevars);
+  ikptr freevars = IK_REF(x, disp_code_freevars);
   freevars += 0;
   assert(isa_fixnum(freevars));
   assert(IK_UNFIX(freevars) >= 0);
 
   unsigned rs = svec[page_idx((void*)(long)rvec) - page_idx(base)];
   unsigned cs = svec[page_idx(x) - page_idx(base)];
-  int cgen = cs&gen_mask;
-  int rgen = rs&gen_mask;
+  int cgen = cs&GEN_MASK;
+  int rgen = rs&GEN_MASK;
   if(rgen < cgen){
     unsigned d = dvec[page_idx(x) - page_idx(base)];
     d = d & d;
@@ -64,16 +64,20 @@ verify_code (char* x, char* base, unsigned* svec, unsigned* dvec)
   }
 }
 static void
-verify_object (ikptr x, char* base, unsigned* svec, unsigned* dvec)
+verify_object (ikptr x IK_UNUSED, char* base IK_UNUSED,
+	       unsigned* svec IK_UNUSED, unsigned* dvec IK_UNUSED)
 {
-  x=x; base=base; svec=svec; dvec=dvec; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* x=x; base=base; svec=svec; dvec=dvec; */
+  return;
 }
 static char*
-verify_code_small (char* p, int s, unsigned d,
+verify_code_small (char* p, int s IK_UNUSED, unsigned d IK_UNUSED,
 		   char* base, unsigned* svec, unsigned* dvec)
 {
   char* q = p + IK_PAGESIZE;
-  s=s; d=d; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
   while (p < q) {
     ikptr	fst = IK_REF(p, 0);
     if (code_tag == fst) {
@@ -101,14 +105,15 @@ verify_code_small (char* p, int s, unsigned d,
   return q;
 }
 static char *
-verify_code_large (char* p, unsigned s, unsigned d,
+verify_code_large (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
 		   char* base, unsigned* svec, unsigned* dvec)
 {
-  s=s; d=d; /* no warning */
-  ikptr fst = ref(p, 0);
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
+  ikptr fst = IK_REF(p, 0);
   fst += 0;
   assert(fst == code_tag);
-  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(IK_REF(p, disp_code_code_size));
   assert(code_size >= 0);
   verify_code(p, base, svec, dvec);
   assert(IK_ALIGN(code_size+disp_code_data) >= IK_PAGESIZE);
@@ -119,12 +124,12 @@ static char*
 verify_code_page (char* p, unsigned s, unsigned d,
 		  char* base, unsigned* svec, unsigned* dvec)
 {
-  ikptr fst = ref(p, 0);
+  ikptr fst = IK_REF(p, 0);
   fst += 0;
   if (fst != code_tag) {
     ik_abort("non code object with tag %p found\n", (void*)(long)fst);
   }
-  int code_size = IK_UNFIX(ref(p, disp_code_code_size));
+  int code_size = IK_UNFIX(IK_REF(p, disp_code_code_size));
   assert(code_size >= 0);
   int obj_size = IK_ALIGN(code_size + disp_code_data);
   char* result;
@@ -137,14 +142,15 @@ verify_code_page (char* p, unsigned s, unsigned d,
   return result;
 }
 static char *
-verify_pointers_page (char* p, unsigned s, unsigned d,
+verify_pointers_page (char* p, unsigned s IK_UNUSED, unsigned d IK_UNUSED,
 		      char* base, unsigned* svec, unsigned* dvec)
 {
-  s=s; d=d; /* no warning */
+  /* have the compiler shut up about unused variables */
+  /* s=s; d=d; */
   {
     int i = 0;
     while(i < IK_PAGESIZE){
-      verify_object(ref(p, i), base, svec, dvec);
+      verify_object(IK_REF(p, i), base, svec, dvec);
       i += wordsize;
     }
   }
@@ -160,32 +166,32 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
   //  if(s & dealloc_mask){
   //    return p+IK_PAGESIZE;
   //  }
-  int type = s & type_mask;
-  if(type == hole_type){
+  int type = s & TYPE_MASK;
+  if(type == HOLE_TYPE){
     return p+IK_PAGESIZE;
   }
-  assert((s & new_gen_mask) == 0);
-  if(type == code_type){
+  assert((s & NEW_GEN_MASK) == 0);
+  if(type == CODE_TYPE){
     return verify_code_page(p,s,d,base,svec,dvec);
   }
-  else if(type == pointers_type){
+  else if(type == POINTERS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == weak_pairs_type){
+  else if(type == WEAK_PAIRS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == symbols_type){
+  else if(type == SYMBOLS_TYPE){
     return verify_pointers_page(p,s,d,base,svec,dvec);
   }
-  else if(type == dat_type){
+  else if(type == DATA_TYPE){
     /* nothing to do for data */
     return p+IK_PAGESIZE;
   }
-  else if(type == mainheap_type){
+  else if(type == MAINHEAP_TYPE){
     /* nothing to do for main heap */
     return p+IK_PAGESIZE;
   }
-  else if(type == mainstack_type){
+  else if(type == MAINSTACK_TYPE){
     /* nothing to do for main stack */
     return p+IK_PAGESIZE;
   }

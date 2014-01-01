@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (rnrs mutable-pairs)
   (rnrs mutable-strings)
@@ -78,11 +78,11 @@
 		  (immutable length length))
   (methods (reverse reverse)
 	   (append append))
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?index)))
 	       #'(list-ref ?var ?index)))))
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?index)) ?val)
 	       #'(%list-set! ?var ?index ?val))))))
@@ -128,18 +128,24 @@
   (check	;predicate
       (let ()
   	(<the-list> b (<the-list> (1 2 3)))
-        ((<the-list>) b))
+        ((<the-list> #:predicate) b))
+    => #t)
+
+  (check	;predicate application
+      (let ()
+  	(<the-list> b (<the-list> (1 2 3)))
+        (<the-list> #:is-a? b))
     => #t)
 
   (check	;predicate
-      (for-all (<the-list>)
+      (for-all (<the-list> #:predicate)
 	'((1 2) (3 4) (5 6)))
     => #t)
 
   (check	;internal definition syntax
       (let ()
   	(<the-list> b (<> (1 2 3)))
-        ((<the-list>) b))
+        ((<the-list> #:predicate) b))
     => #t)
 
   (check	;access to fields
@@ -352,7 +358,7 @@
 
   (check	;predicate
       (let (((b <the-list>) (<the-list> (1 2 3))))
-        ((<the-list>) b))
+        ((<the-list> #:predicate) b))
     => #t)
 
   (check	;access to fields
@@ -402,11 +408,11 @@
   (define-label <a-vector>
     (predicate vector?)
     (virtual-fields (immutable length vector-length))
-    (getter (lambda (stx)
+    (getter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?index)))
 		 #'(vector-ref ?var ?index)))))
-    (setter (lambda (stx)
+    (setter (lambda (stx tag)
 	      (syntax-case stx ()
 		((?var ((?index)) ?val)
 		 #'(vector-set! ?var ?index ?val))))))
@@ -432,15 +438,15 @@
 
   (check (is-a? '(1 2 3) <a-vector>)			=> #f)
   (check (is-a? '#(1 2 3) <a-vector>)			=> #t)
-  (check ((<a-vector>) '(1 2 3))			=> #f)
-  (check ((<a-vector>) '#(1 2 3))			=> #t)
+  (check ((<a-vector> #:predicate) '(1 2 3))			=> #f)
+  (check ((<a-vector> #:predicate) '#(1 2 3))			=> #t)
 
   (check (is-a? '(1 2 3) <a-vector-of-numbers>)		=> #f)
   (check (is-a? '#(1 #\2 3) <a-vector-of-numbers>)	=> #f)
   (check (is-a? '#(1 2 3) <a-vector-of-numbers>)	=> #t)
-  (check ((<a-vector-of-numbers>) '(1 2 3))		=> #f)
-  (check ((<a-vector-of-numbers>) '#(1 #\2 3))		=> #f)
-  (check ((<a-vector-of-numbers>) '#(1 2 3))		=> #t)
+  (check ((<a-vector-of-numbers> #:predicate) '(1 2 3))		=> #f)
+  (check ((<a-vector-of-numbers> #:predicate) '#(1 #\2 3))		=> #f)
+  (check ((<a-vector-of-numbers> #:predicate) '#(1 2 3))		=> #t)
 
   (check (is-a? '(1 2 3) <a-vector-of-integers>)	=> #f)
   (check (is-a? '#(1 #\2 3) <a-vector-of-integers>)	=> #f)
@@ -504,7 +510,7 @@
   (check
       (let ((E (&my-warning ())))
 	(list (warning? E)
-	      ((&my-warning) E)
+	      ((&my-warning #:predicate) E)
 	      (is-a? E &my-warning)
 	      ))
     => '(#t #t #t))
@@ -512,7 +518,7 @@
   (check
       (let (((E &warning-with-fields) (&warning-with-fields (1 2))))
 	(list (warning-with-fields? E)
-	      ((&warning-with-fields) E)
+	      (&warning-with-fields #:is-a? E)
 	      (is-a? E &warning-with-fields)
 	      (warning? E)
 	      (warning-with-fields-a E)
@@ -614,7 +620,7 @@
 
     (define-label <alpha>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -652,7 +658,7 @@
 
     (define-label <base>
       (virtual-fields a)
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'123))))
@@ -698,7 +704,7 @@
 
     (define-label <alpha>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))
@@ -734,7 +740,7 @@
 
     (define-label <base>
       (virtual-fields (mutable a))
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(list 123 ?key ?val))))))
@@ -854,6 +860,14 @@
 	(o cdr))
     => 2)
 
+  (check	;nested
+      ((<a-pair> (1 2)) cdr)
+    => 2)
+
+  (check	;nested
+      ((<a-pair> (1 2)) car)
+    => 1)
+
   #t)
 
 
@@ -875,16 +889,16 @@
     (define M '(a b c))
     (define N "abc")
 
-    (check ((<list>) L)			=> #t)
-    (check ((<list-of-numbers>) L)	=> #t)
+    (check ((<list> #:predicate) L)		=> #t)
+    (check ((<list-of-numbers> #:predicate) L)	=> #t)
     (check (<list>? L)			=> #t)
     (check (<list-of-numbers>? L)	=> #t)
 
-    (check ((<list>) M)			=> #t)
-    (check ((<list-of-numbers>) M)	=> #f)
+    (check ((<list> #:predicate) M)			=> #t)
+    (check ((<list-of-numbers> #:predicate) M)	=> #f)
 
-    (check ((<list>) N)			=> #f)
-    (check ((<list-of-numbers>) N)	=> #f)
+    (check ((<list> #:predicate) N)			=> #f)
+    (check ((<list-of-numbers> #:predicate) N)	=> #f)
 
     #f)
 

@@ -29,8 +29,10 @@
   (export
     print-loaded-libraries
     report-errors-at-runtime
-    strict-r6rs)
-  (import (rnrs))
+    strict-r6rs
+    vicare-built-with-arguments-validation-enabled)
+  (import (except (vicare)
+		  vicare-built-with-arguments-validation-enabled))
 
   (define-syntax define-boolean-option
     (syntax-rules ()
@@ -47,7 +49,15 @@
   (define-boolean-option print-loaded-libraries   #f)
   (define-boolean-option report-errors-at-runtime #f)
   (define-boolean-option strict-r6rs              #f)
-  )
+
+  (module (vicare-built-with-arguments-validation-enabled)
+    (module (arguments-validation)
+      (include "ikarus.config.ss" #t))
+    (define (vicare-built-with-arguments-validation-enabled)
+      arguments-validation)
+    #| end of module |# )
+
+  #| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

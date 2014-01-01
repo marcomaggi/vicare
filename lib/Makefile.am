@@ -67,6 +67,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/simple-match.sls			\
 	vicare/language-extensions/streams.sls				\
 	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/try.sls				\
 	vicare/language-extensions/variables.sls			\
 	\
 	vicare/crypto/randomisations.sls				\
@@ -312,6 +313,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/oopp.sls					\
 	nausicaa/language/oopp/auxiliary-syntaxes.sls			\
 	nausicaa/language/oopp/configuration.sls			\
+	nausicaa/language/oopp/conditions.sls				\
 	nausicaa/language/oopp/helpers.sls				\
 	\
 	nausicaa/language/multimethods.sls				\
@@ -448,7 +450,8 @@ VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);		export VICARE_LIBRARY_PATH;	\
 		  VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);			export VICARE_FASL_PATH;	\
 		  SILEX_PATH=$(srcdir)/vicare/parser-tools/silex/macros;	export SILEX_PATH;		\
-		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);			export LD_LIBRARY_PATH;
+		  LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);			export LD_LIBRARY_PATH;		\
+		  DYLD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);			export DYLD_LIBRARY_PATH;
 VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 

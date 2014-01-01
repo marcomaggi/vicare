@@ -31,6 +31,7 @@ vicare-built-with-glibc-enabled}), and at expand--time with the clause
 cond-expand vicare, glibc-enabled}).
 
 @menu
+* glibc cond-expand::           Feature-based expansion.
 * glibc env::                   Operating system environment
                                 variables.
 * glibc dir::                   File system directories.
@@ -44,6 +45,39 @@ cond-expand vicare, glibc-enabled}).
                                 regular expressions.
 * glibc word::                  Performing word expansion.
 @end menu
+
+@c page
+@node glibc cond-expand
+@section Feature--based expansion
+
+
+@deffn Syntax cond-expand (@meta{feature-requirement} @metao{body} @meta{body} @dots{}) @dots{}
+Process the given clauses in left--to--right order and expand to the
+sequence of @meta{body} forms from the first clause for which the
+@meta{feature-requirement} is satisfied.
+
+This syntax supports all the features defined by @func{cond-expand} from
+@ansrfi{0} (@pxref{srfi cond-expand vicare, Features supported by
+@value{PRJNAME}}), and in addition it supports a feature for each system
+function exported by @library{vicare glibc}; such features use the
+identifier exported by the library as feature requirement.
+
+As example, some platforms implement @func{fdatasync} while others only
+have @func{fsync}, to select among them we write the following:
+
+@example
+(import (vicare)
+  (prefix (vicare glibc) glibc.))
+
+(glibc.cond-expand
+  (glibc.fdatasync
+   (do-something))
+  (glibc.fsync
+   (do-something-else))
+  (else
+   (raise-error)))
+@end example
+@end deffn
 
 @c page
 @node glibc env

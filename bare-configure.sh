@@ -20,7 +20,7 @@ prefix=/usr/local
     --without-libiconv                          \
     --without-readline                          \
     --without-cre2                              \
-    CFLAGS='-O3 -march=i686 -mtune=i686'        \
+    CFLAGS='-O3 -pedantic'			\
     "$@"
 
 ### end of file

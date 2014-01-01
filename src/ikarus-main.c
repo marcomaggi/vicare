@@ -82,13 +82,13 @@ ikarus_main (int argc, char** argv, char* boot_file)
 	char *	s = argv[i];
 	int	n = strlen(s);
 	ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
-	ref(bv, off_bytevector_length) = IK_FIX(n);
+	IK_REF(bv, off_bytevector_length) = IK_FIX(n);
 	/* copy the bytes and the terminating zero */
 	memcpy((char*)(bv+off_bytevector_data), s, n+1);
-	ikptr p = ik_unsafe_alloc(pcb, pair_size);
-	ref(p, disp_car) = bv;
-	ref(p, disp_cdr) = arg_list;
-	arg_list = p+pair_tag;
+	ikptr p = iku_pair_alloc(pcb);
+	IK_CAR(p) = bv;
+	IK_CDR(p) = arg_list;
+	arg_list  = p;
       }
     }
     pcb->argv0    = argv[0];
@@ -143,11 +143,11 @@ ikrt_get_last_revision (ikpcb * pcb)
 */
 
 static void
-handler (int signo, siginfo_t* info, void* uap)
+handler (int signo IK_UNUSED, siginfo_t* info IK_UNUSED, void* uap)
 {
   ikpcb *	pcb = ik_the_pcb();
   /* avoid compiler warnings on unused arguments */
-  signo=signo; info=info; uap=uap;
+  /* signo=signo; info=info; uap=uap; */
   pcb->engine_counter = IK_FIX(-1);
   pcb->interrupted    = 1;
 }

@@ -6,7 +6,7 @@ Built in Scheme objects are mostly implemented in the C language portion
 of the source code, but many core operations are also reimplemented at
 the Scheme level.  The overall definitions are in the C language file
 @file{vicare.h} (for the public @api{}) the C language file
-@file{internal.h} (for the private @api{}) and the definition of many
+@file{internals.h} (for the private @api{}) and the definition of many
 values is duplicated in the Scheme language compiler
 @file{ikarus.compiler.sls}.
 
@@ -151,7 +151,6 @@ Return an integer representing the @math{3} least significant bits of an
 
 
 @deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
-@deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
 Getter and setter for machine words.  Interpret @var{value_ref} as a
 pointer to an array of @ikptr{} values and locate the value at the
 zero--based @var{byte_offset}.  A use of this macro can appear both as
@@ -230,11 +229,6 @@ and so:
 @example
 s_vector + off_vector_length = p_vector + disp_vector_length
 @end example
-
-@quotation
-@strong{NOTE} @cfunc{ref} is defined only in the internal header file
-and its use is deprecated.
-@end quotation
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -291,6 +285,33 @@ unset.
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
 @end defmac
+
+
+@defmac IK_FORWARD_PTR ((ikptr)-1)
+When a Scheme object's memory block is moved by the garbage collector:
+the first word of the old memory block is overwritten with a special
+value, the ``forward pointer'', which is the symbol
+@code{IK_FORWARD_PTR}.
+
+Notice that when the garbage collector scans, word by word, memory that
+should contain the data area of a Scheme object: it interprets every
+machine word with all the bits set to @code{1} as @code{IK_FORWARD_PTR}.
+
+Newly allocated memory is initialised by Vicare to a sequence of
+@code{IK_FORWARD_PTR} words, which, most likely, will trigger an
+assertion violation if the garbage collector scans a machine word we
+have not explicitly initialised to something valid.  Whenever we reserve
+a portion of memory page, with aligned size, for a Scheme object we must
+initialise all its words to something valid.
+
+When we convert a requested size to an aligned size with
+@cfunc{IK_ALIGN}: either zero or one machine word is allocated beyond
+the requested size.  When such additional machine word is allocated: we
+have to initialise it to something valid.  Usually the safe value to
+which we should initialise memory is the fixnum zero: a machine word
+with all the bits set to @code{0}.
+@end defmac
+
 
 The variable values that fit in a single machine word are fixnums,
 characters and port transcoders.  The last byte of these machine words
@@ -474,6 +495,235 @@ attributes.
 @section Memory allocation and collection
 
 
+@menu
+* objects memory cpre::         Interesting C preprocessor macros.
+* objects memory ikpcb::        Interesting @pcb{} fields.
+* objects memory alloc::        Basic memory allocation functions.
+* objects memory usage::        Writing correct C language code.
+@end menu
+
+@c page
+@node objects memory cpre
+@subsection Interesting C preprocessor macros
+
+
+In this section we discuss some private C preprocessor symbols and
+related to memory allocation and garbage collection.
+
+The preprocessor constant @code{IK_MMAP_ALLOCATION_GRANULARITY} is
+determined by the @command{configure} script and defined in the
+automatically generated header file @file{config.h}.  The constants
+@code{IK_PAGESIZE} and @code{IK_PAGESHIFT} are hard--coded.
+
+The constant @code{IK_MMAP_ALLOCATION_GRANULARITY} represents the memory
+allocation granularity used by @cfunc{mmap}: no matter the number of
+bytes we request to @cfunc{mmap}, it will always allocate the smallest
+multiple of the granularity that can contain the requested bytes:
+
+@example
+|----------------------------| requested_size
+|-----------|-----------|-----------| allocated_size
+ granularity granularity granularity
+@end example
+
+On some platforms the allocation granularity equals the system page size
+(example @gnu{}+Linux), on other platforms it does not (example Cygwin).
+We assume the allocation granularity can be obtained on any platform
+with:
+
+@example
+#include <unistd.h>
+long granularity = sysconf(_SC_PAGESIZE);
+@end example
+
+@noindent
+which should ``officially'' return the system page size, but in truth it
+does not (see Cygwin's documentation).
+
+To mind its own business, Vicare defines a ``page size'' as the
+preprocessor symbol @code{IK_PAGESIZE}, the number of bytes in Vicare's
+page size is @code{4096 = 4 * 1024 = 4 * 2^10 = 2^12 = #x1000}.
+Vicare's page size is @strong{not} defined to be equal to the system
+page size, but:
+
+@itemize
+@item
+Most likely the system page size and Vicare's page size are equal.
+
+@item
+We assume that in any case the system page size is equal to or an exact
+multiple of Vicare's page size.
+
+@item
+We assume that @cfunc{mmap} returns pointers such that: the pointer
+references the first byte of a system page, and so also the first byte
+of a Vicare page; the numeric address of the pointer is an exact
+multiple of @math{4096} (the @math{12} least significant bits are zero).
+@end itemize
+
+@noindent
+it is natural to assign a zero--based index to each Vicare page:
+
+@example
+   page     page     page     page     page     page
+|--------|--------|--------|--------|--------|--------|
+ ^        ^        ^        ^        ^        ^
+#x0000   #x1000   #x2000   #x3000   #x4000   #x5000
+index 0  index 1  index 2  index 3  index 4  index 5
+@end example
+
+The preprocessor symbol @code{IK_PAGESHIFT} is the number of bits to
+right--shift a tagged or untagged pointer to obtain the index of the
+page it is in; it is the number for which:
+
+@example
+IK_PAGESIZE >> IK_PAGESHIFT = 1
+2^IK_PAGESHIFT = IK_PAGESIZE
+@end example
+
+@noindent
+if IK_PAGESIZE is @math{4096}, the value of @code{IK_PAGESHIFT} is
+@math{12}; so we have:
+
+@example
+0 * 4096 <=  4000 < 1 * 4096        4000 >> 12 = 0
+1 * 4096 <=  8000 < 2 * 4096        8000 >> 12 = 1
+2 * 4096 <= 10000 < 3 * 4096       10000 >> 12 = 2
+@end example
+
+
+@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX (ikptr @var{X})
+Given the tagged or untagged pointer @var{X}: evaluate to the index of
+the memory page it is in; notice that the tag bits of a tagged pointer
+are not influent.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX_RANGE (@var{size})
+Given a number of bytes @var{size}: evaluate to the difference between
+two page indexes representing a region big enough to hold @var{size}
+bytes.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikptr IK_PAGE_POINTER_FROM_INDEX (ik_ulong @var{idx})
+Given a Vicare page index @var{idx}: return an untagged pointer to the
+first word of the page.
+@end deftypefn
+
+@c page
+@node objects memory ikpcb
+@subsection Interesting @pcb{} fields
+
+
+In this section we discuss some private fields of the C data structure
+@code{ikpcb} related to memory allocation and garbage collection.
+
+@table @code
+@item ikptr memory_base
+@itemx ikptr memory_end
+Untagged pointers updated (if needed) after every memory mapped
+allocation to be lower and greater than all the memory used by Scheme
+programs.  They are used for garbage collection purposes: every Vicare
+page between this range of pointers is described by a slot in the
+segments vector and the dirty vector.
+
+@item uint32_t * segment_vector_base
+@itemx uint32_t * segment_vector
+The segments vector contains a slot for every Vicare page in the region
+of memory delimited by the fields @code{memory_base} and
+@code{memory_end}; it is used to register the destination use of every
+page (heap, stack, unused, etc.), along with the garbage collection
+generation the page belongs to.
+
+@code{segment_vector_base} references the first allocated slot; access
+to the vector with zero--based indexes is performed through
+@code{segment_vector}.
+
+Notice that the segments vector is @strong{not} itself registered in the
+segments vector and dirty vector: if the segments vector falls inside
+the region delimited by @code{memory_base} and @code{memory_end}, it is
+marked as unused and pure.
+
+@item uint32_t * dirty_vector_base
+@itemx ikptr dirty_vector
+The dirty vector contains a slot for every Vicare page in the region of
+memory delimited by the fields @code{memory_base} and @code{memory_end};
+it is used to keep track of pages that were mutated at runtime; it
+allows the garbage collector to do the right thing when a Scheme object
+in an old generation is mutated to reference a Scheme object in a new
+generation.
+
+When a Scheme object in a memory page is mutated at run--time: such page
+is said to be ``dirty''; otherwise it is ``pure''.
+
+@code{dirty_vector_base} references the first allocated slot; access to
+the vector with zero--based indexes is performed through the field
+@code{dirty_vector} (which is also accessible from Scheme code).
+
+Notice that the dirty vector is @strong{not} itself registered in the
+segments vector and dirty vector: if the dirty vector falls inside the
+region delimited by @code{memory_base} and @code{memory_end}, the pages
+it uses are marked as unused and pure.
+@end table
+
+Scheme objects created by a Scheme program are allocated on the heap.
+We can think of the Scheme heap as the union of the @dfn{nursery} and a
+set of @dfn{generational pages}.
+
+The nursery is a set of memory blocks in which new Scheme objects are
+allocated; it is the generation @code{0}.  The nursery starts with a
+single ``hot'' memory block in which new Scheme objects are allocated;
+whenever the hot block is full:
+
+@itemize
+@item
+If a safe allocation is requested (function @cfunc{ik_safe_alloc}): a
+garbage collection is performed and all the objects are moved from the
+heap into the generational pages.
+
+@item
+If an unsafe allocation is requested (function @cfunc{ik_unsafe_alloc}):
+the current hot block is stored in a linked list of heap blocks and a
+new hot block is allocated.
+@end itemize
+
+The generational pages are a set of Vicare pages, referenced by the
+segments vector, in which objects are moved after they survive a garbage
+collection; every generational page is tagged in the segments vector
+with the index of the generation it belongs to.
+
+@table @code
+@item heap_base
+@itemx heap_size
+Pointer and size in bytes of the current nursery hot memory block; new
+Scheme objects are allocated here.  Initialised to a memory mapped block
+of size @code{IK_HEAPSIZE}.  When the previous block is full: to satisfy
+the request of an unsafe allocation it is set to a memory mapped block
+of size @code{IK_HEAP_EXTENSION_SIZE}.  After a garbage collection is
+performed: it is set to a memory mapped block of size
+@code{IK_HEAPSIZE}.
+
+@item allocation_pointer
+Pointer to the first word of available data in the nursery hot memory
+block; the next Scheme object to be allocated will start there.
+
+@item allocation_redline
+Pointer to a word towards the end of the heap hot memory block; when the
+allocation of a Scheme object crosses this pointer, the hot block is
+considered full.
+
+@item heap_pages
+Pointer to the first node in a linked list of memory blocks that once
+were nursery hot memory, and are now fully used; initialised to @cnull{}
+when building the @pcb{}.
+@end table
+
+@c page
+@node objects memory alloc
+@subsection Basic memory allocation functions
+
+
 In short, memory allocation which may trigger a garbage collection is
 performed as follows:
 
@@ -506,9 +756,8 @@ long    len = IK_ALIGN(the_number_of_bytes);
 ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
 @end example
 
-Objects subject to garbage collection are allocated on the Scheme heap,
-which is an array of contiguous memory segments; the next object is
-allocated in the ``current segment'' of the heap:
+Objects subject to garbage collection are allocated on the Scheme heap;
+the next object is allocated in the hot memory block:
 
 @example
     allocated  allocated      allocated
@@ -529,8 +778,14 @@ purposes:
 To make pointer indirection efficient for the underlying platform.
 
 @item
-To have pointer values with the @math{3} least significant bits set to
+To have pointer values: with the @math{3} least significant bits set to
 zero, so that such bits can be used to hold an object's type tag.
+
+@item
+To allocate a data area for Scheme objects at least @math{2} machine
+words wide; this is required for garbage collection purposes: the
+@math{2} words are used by the garbage collector to register
+informations when a live Scheme object is gathered.
 @end enumerate
 
 @noindent
@@ -641,27 +896,41 @@ We can simulate the computation with:
 @end deftypefn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the heap and return a reference to it as an
-@strong{untagged} pointer.  @var{pcb} must reference the process control
-block, @var{align_size} must be the requested number of bytes filtered
-through @cfunc{IK_ALIGN}.
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
+Reserve a memory block on the Scheme heap hot block and return a
+reference to it as an @strong{untagged} pointer.  @var{pcb} must
+reference the process control block, @var{aligned_size} must be the
+requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap segment: a garbage
-collection is triggered; then allocation is tried again: if it still
-fails the process is terminated with exit status @code{EXIT_FAILURE}.
+If not enough memory is available on the current heap hot block: a
+garbage collection is triggered; then allocation is tried again: if it
+still fails the process is terminated with exit status
+@code{EXIT_FAILURE}.
+
+The reserved memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid.  However, notice that the heap
+is @strong{not} a garbage collection root; so if we leave some machine
+words uninitialised on the heap, outside of Scheme objects: nothing bad
+happens, because the garbage collector never sees them.
 @end deftypefun
 
 
 @deftypefun ikptr ik_unsafe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
-Allocate a memory block on the Scheme heap and return a reference to it
-as an @strong{untagged} pointer.  @var{pcb} must reference the process
-control block, @var{align_size} must be the requested number of bytes
-filtered through @cfunc{IK_ALIGN}.
+Reserve a memory block on the Scheme heap hot block and return a
+reference to it as an @strong{untagged} pointer.  @var{pcb} must
+reference the process control block, @var{align_size} must be the
+requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap segment: a new
-heap segment is allocated; if such allocation fails: the process is
-terminated with exit status @code{EXIT_FAILURE}.
+If not enough memory is available on the current heap hot block: such
+hot block is stored away and a new hot block is allocated; if such
+allocation fails: the process is terminated with exit status
+@code{EXIT_FAILURE}.
+
+The reserved memory is @strong{not} initialised to safe values: its
+contents have to be considered invalid.  However, notice that the heap
+is @strong{not} a garbage collection root; so if we leave some machine
+words uninitialised on the heap, outside of Scheme objects: nothing bad
+happens, because the garbage collector never sees them.
 
 We notice explicitly that this function @strong{does not} trigger a
 garbage collection run, so, when using it, it is not needed to register
@@ -676,9 +945,23 @@ then evaluate @var{left}, finally store the result of @var{right} in the
 lvalue resulting from evaluating @var{left}.
 @end deffn
 
-@c ------------------------------------------------------------
 
-@subsubheading Writing correct C language code
+@deftypefun void ik_signal_dirt_in_page_of_pointer (ikpcb * @var{pcb}, ikptr @var{pointer})
+Register in the dirty vector that the memory page containing the
+location referenced by @var{pointer} has been mutated.  This function
+must be called every time we mutate a pair, vector, structure, record,
+ratnum, cflonum, compnum slot by storing in it a reference to another
+Scheme object that might be in a newer garbage collection generation.
+
+If we call this function when there is no need for it: nothing bad will
+happen; the garbage collector will just do some useless work, slowing
+down the collection time a bit.
+@end deftypefun
+
+@c page
+@node objects memory usage
+@subsection Writing correct C language code
+
 
 The garbage collector considers an object ``in use'' if at least one
 reference to it is reachable from the roots of the garbage collection;
@@ -1113,10 +1396,12 @@ s_cdr = IK_CDR(s_pair);
 the car and cdr of a pair are set as follows:
 
 @example
+ikpcb * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_REF(s_pair, off_car) = s_car;
 IK_REF(s_pair, off_cdr) = s_car;
 @end example
@@ -1125,10 +1410,12 @@ IK_REF(s_pair, off_cdr) = s_car;
 or as follows:
 
 @example
+ikpcb * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_CAR(s_pair) = s_car;
 IK_CDR(s_pair) = s_car;
 @end example
@@ -1202,6 +1489,9 @@ Allocate and return a new pair object using, respectively,
 @cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
 reference to it.  Both the car and cdr are initialised to
 @code{IK_VOID_OBJECT}.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -1236,6 +1526,9 @@ lengths.
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
 @asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
+
+This function takes care of calling
+@cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
 @end deftypefun
 
 
@@ -1244,6 +1537,9 @@ Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
 copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
 @code{pcb->root9}.
+
+This function takes care of calling
+@cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
 @end deftypefun
 
 @c ------------------------------------------------------------
@@ -1259,6 +1555,7 @@ ikptr   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
 @{
+  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
   IK_ASS(IK_CAR(s_pair), allocate_and_build_the_car(pcb));
   IK_ASS(IK_CDR(s_pair), allocate_and_build_the_cdr(pcb));
 @}
@@ -1300,6 +1597,7 @@ if (argc) @{
   pcb->root1 = &s_spine;
   @{
     for (i=0; i<argc;) @{
+      ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
       IK_ASS(IK_CAR(s_spine),
              ika_bytevector_from_cstring(pcb, argv[i]));
       if (++i < argc) @{
@@ -1669,7 +1967,9 @@ IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
 @end example
 
 @noindent
-to retrieve the item at index @math{2} we do:
+in this case there is no need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} because the values are
+fixnums.  To retrieve the item at index @math{2} we do:
 
 @example
 ikptr  s_vec  = the_vector;
@@ -1756,6 +2056,9 @@ fx = IK_ITEM(s_vec, idx);
 @deftypefunx ikptr iku_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -1764,6 +2067,9 @@ the specified number of items.  Leave the data area uninitialised.
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
+
+These functions @strong{do not} call
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefun
 
 
@@ -1780,7 +2086,7 @@ zero.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb * @var{pcb})
 Copy @var{count} items from vector @var{src} starting at offset
 @var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
@@ -1989,6 +2295,11 @@ ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
 @}
 @end example
 
+@noindent
+notice that we do not need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_stru} because
+@var{s_rtd} is an older object.
+
 The allocation operation described above leaves the data area
 uninitialised: its content is undefined.  This is bad if the garbage
 collector moves the newly built record before the elements are
@@ -2014,6 +2325,7 @@ to store a value in field @math{2} of a structure we do:
 ikptr  s_stru  = the_structure;
 ikptr  s_field = the_field;
 
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
 @end example
 
@@ -2109,6 +2421,8 @@ ikptr   s_stru = the_structure;
 ikptr   s_field;
 
 s_field = IK_FIELD(s_stru, 2);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_FIELD(s_stru, 2) = s_field;
 @end example
 @end deftypefn
@@ -3043,6 +3357,11 @@ IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
 @end example
 
+@noindent
+notice that in this special case we do not need to call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_rn} because the
+values of the numerator and denominator are older.
+
 To identify an object as ratnum we do:
 
 @example
@@ -3065,6 +3384,8 @@ ikptr  s_den;
 
 s_num = IK_REF(s_rn, off_ratnum_num);
 s_den = IK_REF(s_rn, off_ratnum_den);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
 @end example
@@ -3124,6 +3445,8 @@ ikptr  s_rn  = the_ratnum;
 ikptr  s_num;
 
 s_num = IK_NUMERATOR(s_rn);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_NUMERATOR(s_rn) = s_num;
 @end example
 @end deftypefn
@@ -3378,6 +3701,11 @@ IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
 @end example
 
+@noindent
+notice that in this case we do not call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cn} because the
+values of the real and imaginary parts are older.
+
 To identify an object as compnum we do:
 
 @example
@@ -3400,6 +3728,8 @@ ikptr  s_im;
 
 s_re = IK_REF(s_cn, off_compnum_real);
 s_im = IK_REF(s_cn, off_compnum_imag);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
 @end example
@@ -3459,6 +3789,8 @@ ikptr  s_cn = the_compnum;
 ikptr  s_re;
 
 s_re = IK_COMPNUM_REAL(s_cn);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_COMPNUM_REAL(s_cn) = s_re;
 @end example
 @end deftypefn
@@ -3522,10 +3854,10 @@ Cflonums are allocated on the Scheme heap as follows:
 
 @example
 ikpcb * pcb   = ik_the_pcb();
-ikptr   s_cn;
+ikptr   s_cf;
 
-s_cn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
-IK_REF(s_cn, off_cflonum_tag) = cflonum_tag;
+s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+IK_REF(s_cf, off_cflonum_tag) = cflonum_tag;
 @end example
 
 @noindent
@@ -3537,7 +3869,7 @@ allocation and initialisation is as follows:
 ikpcb * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
-ikptr   s_cn;
+ikptr   s_cf;
 
 pcb->root9 = &s_re;
 pcb->root8 = &s_im;
@@ -3547,10 +3879,15 @@ pcb->root8 = &s_im;
 pcb->root8 = NULL;
 pcb->root9 = NULL;
 
-IK_REF(s_cn, off_cflonum_tag)  = cflonum_tag;
-IK_REF(s_cn, off_cflonum_real) = s_re;
-IK_REF(s_cn, off_cflonum_imag) = s_im;
+IK_REF(s_cf, off_cflonum_tag)  = cflonum_tag;
+IK_REF(s_cf, off_cflonum_real) = s_re;
+IK_REF(s_cf, off_cflonum_imag) = s_im;
 @end example
+
+@noindent
+notice that in this case we do not call
+@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cf} because the
+values of the real and imaginary parts are older.
 
 To identify an object as cflonum we do:
 
@@ -3568,14 +3905,16 @@ else
 to set or retrieve the real and imaginary parts we do:
 
 @example
-ikptr  s_cn = the_cflonum;
+ikptr  s_cf = the_cflonum;
 ikptr  s_re;
 ikptr  s_im;
 
-s_re = IK_REF(s_cn, off_cflonum_real);
-s_im = IK_REF(s_cn, off_cflonum_imag);
-IK_REF(s_cn, off_cflonum_real) = s_re;
-IK_REF(s_cn, off_cflonum_imag) = s_im;
+s_re = IK_REF(s_cf, off_cflonum_real);
+s_im = IK_REF(s_cf, off_cflonum_imag);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_REF(s_cf, off_cflonum_real) = s_re;
+IK_REF(s_cf, off_cflonum_imag) = s_im;
 @end example
 
 
@@ -3629,11 +3968,13 @@ memory block.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
-ikptr  s_cn = the_cflonum;
+ikptr  s_cf = the_cflonum;
 ikptr  s_re;
 
-s_re = IK_CFLONUM_REAL(s_cn);
-IK_CFLONUM_REAL(s_cn) = s_re;
+s_re = IK_CFLONUM_REAL(s_cf);
+
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_CFLONUM_REAL(s_cf) = s_re;
 @end example
 @end deftypefn
 
@@ -5164,7 +5505,7 @@ macro accepts also @false{} as value and returns @cnull{}.
 @subsection Miscellaneous functions
 
 
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb  @var{pcb})
 Copy @var{count} items from @var{src} starting at offset
 @var{src_start}, to @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative

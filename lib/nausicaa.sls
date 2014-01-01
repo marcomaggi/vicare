@@ -872,6 +872,11 @@
 ;;; &errno
     errno-condition?
     exact-integer?
+    zero-exact-integer?
+    negative-exact-integer?
+    positive-exact-integer?
+    non-negative-exact-integer?
+    non-positive-exact-integer?
     exit-hooks
     expand-form-to-core-language
     expand-library
@@ -1483,6 +1488,15 @@
     os-name
     os-version
 
+    ;; configuration inspection
+    vicare-built-with-ffi-enabled
+    vicare-built-with-iconv-enabled
+    vicare-built-with-posix-enabled
+    vicare-built-with-glibc-enabled
+    vicare-built-with-linux-enabled
+    vicare-built-with-srfi-enabled
+    vicare-built-with-arguments-validation-enabled
+
     ;; condition types
 ;;; Redefined by (nausicaa language conditions)
 ;;;
@@ -1507,6 +1521,21 @@
     bignum-even?
     least-positive-bignum
     greatest-negative-bignum
+
+    ;; bytevector validation predicates
+    list-of-bytevectors?
+    bytevector-length?			bytevector-index?
+    bytevector-word-size?		bytevector-word-count?
+    bytevector-index-for-word?
+    bytevector-index-for-word8?
+    bytevector-index-for-word16?
+    bytevector-index-for-word32?
+    bytevector-index-for-word64?
+    bytevector-start-index-and-count-for-word?
+    bytevector-start-index-and-count-for-word8?
+    bytevector-start-index-and-count-for-word16?
+    bytevector-start-index-and-count-for-word32?
+    bytevector-start-index-and-count-for-word64?
 
     ;; raw octets and strings
     octets->string			string->octets
@@ -1534,6 +1563,7 @@
     record-type-field-set!
     $record-type-field-ref
     $record-type-field-set!
+    splice-first-expand
     values->list
     define*
     lambda*
@@ -1576,6 +1606,7 @@
     let-values/tags		let*-values/tags
     receive/tags
     do/tags			do*/tags
+    tag-case
     set!/tags
     with-label-shadowing	with-tagged-arguments-validation
     <-

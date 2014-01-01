@@ -57,11 +57,11 @@
 
 #!vicare
 (import (vicare)
-  (rnrs eval)
+  (vicare language-extensions try)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare expander\n")
+(check-display "*** testing Vicare: expander syntaxes\n")
 
 
 (parametrise ((check-test-name	'syntax-objects))
@@ -3416,6 +3416,496 @@
 	   __who__))
 	(doit))
     => 'doit)
+
+  #t)
+
+
+(parametrise ((check-test-name	'try))
+
+  (let ()	;with else clause
+    (define-condition-type &this
+	&error
+      make-this-condition
+      condition-this?
+      (a condition-this.a)
+      (b condition-this.b)
+      (c condition-this.c))
+
+    (define (doit thunk)
+      (try
+	  (thunk)
+	(catch E
+	  (&this
+	   (list (condition-this.a E)
+		 (condition-this.b E)
+		 (condition-this.c E)))
+	  (&message
+	   (condition-message E))
+	  (else E))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-this-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 123)
+
+    (check
+	(try
+	    (raise 123)
+	  (catch E
+	    ((&this)
+	     (list (condition-this.a E)
+		   (condition-this.b E)
+		   (condition-this.c E)))
+	    ((&message)
+	     (condition-message E))
+	    (else E)))
+      => 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;with else clause
+    (define-condition-type &that
+	&error
+      make-that-condition
+      condition-that?
+      (a condition-that.a)
+      (b condition-that.b)
+      (c condition-that.c))
+
+    (define (doit thunk)
+      (try
+	  (thunk)
+	(catch T
+	  (&that
+	   (list (condition-that.a T)
+		 (condition-that.b T)
+		 (condition-that.c T)))
+	  (&message
+	   (condition-message T))
+	  (else T))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-that-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;without else clause
+    (define-condition-type &those
+	&error
+      make-those-condition
+      condition-those?
+      (a condition-those.a)
+      (b condition-those.b)
+      (c condition-those.c))
+
+    (define (doit thunk)
+      (guard (E (else
+		 (values 'reraised E)))
+	(try
+	    (thunk)
+	  (catch E
+	    (&those
+	     (list (condition-those.a E)
+		   (condition-those.b E)
+		   (condition-those.c E)))
+	    (&message
+	     (condition-message E))))))
+
+    (check
+	(doit (lambda ()
+		(raise (make-those-condition 1 2 3))))
+      => '(1 2 3))
+
+    (check
+	(doit (lambda ()
+		(raise (make-message-condition "ciao"))))
+      => "ciao")
+
+    (check
+	(doit (lambda ()
+		(raise 123)))
+      => 'reraised 123)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; finally
+
+  (check	;no exception
+      (let ((a 1))
+	(try
+	    (set! a (+ a 10))
+	  (catch E
+	    (&error	E)
+	    (&warning	E)
+	    (else	E))
+	  (finally
+	   (set! a (+ a 100))))
+	a)
+    => 111)
+
+  (check	;with exception
+      (let ((a 1))
+	(try
+	    (raise (make-warning))
+	  (catch E
+	    (&error	E)
+	    (&warning	(set! a (+ a 10)))
+	    (else	E))
+	  (finally
+	   (set! a (+ a 100))))
+	a)
+    => 111)
+
+  #t)
+
+
+(parametrise ((check-test-name	'case-with-arrow))
+
+  (check	;no arrow
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'fixnum)
+
+  (check	;no arrow
+      (case 'c
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'symbol)
+
+  (check	;no arrow
+      (case "c"
+	((a b c)	'symbol)
+	((1 2 3)	'fixnum)
+	(else		'else))
+    => 'else)
+
+  (check	;no arrow, multiple values
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	(values 7 8 9))
+	(else		'else))
+    => 7 8 9)
+
+;;; --------------------------------------------------------------------
+
+  (check	;with arrow
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	=> (lambda (N) (vector N)))
+	(else		'else))
+    => '#(2))
+
+  (check	;with arrow
+      (case 'a
+	((a b c)	=> (lambda (N) (list N)))
+	((1 2 3)	=> (lambda (N) (vector N)))
+	(else		'else))
+    => '(a))
+
+  (check	;with arrow multiple values
+      (case 2
+	((a b c)	'symbol)
+	((1 2 3)	=> (lambda (N) (values N N N)))
+	(else		'else))
+    => 2 2 2)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;invalid arrow in ELSE clause
+      (guard (E ((syntax-violation? E)
+		 (condition-message E))
+		(else E))
+	(eval '(case 2
+		 ((a b c)	'symbol)
+		 ((1 2 3)	=> (lambda (N) (vector N)))
+		 (else		=> 'else))
+	      (environment '(vicare))))
+    => "incorrect usage of auxiliary keyword")
+
+  (check	;receiver form does not evaluate to function
+      (guard (E ((error? E)
+		 (vector (condition-message E)
+			 (condition-irritants E)))
+		(else E))
+	(case 2
+	  ((a b c)	'symbol)
+	  ((1 2 3)	=> 123)
+	  (else		'else)))
+    => '#("not a procedure" (123)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'splice-first-expand))
+
+  (check
+      (splice-first-expand 123)
+    => 123)
+
+  (check
+      (splice-first-expand (+ 1 2))
+    => 3)
+
+  (check
+      (list 8 (splice-first-expand (+ 1 2)) 9)
+    => '(8 3 9))
+
+  (check
+      (with-result
+       (begin
+  	 (add-result 1)
+  	 (splice-first-expand (add-result 2))
+  	 (add-result 3)
+  	 4))
+    => '(4 (1 2 3)))
+
+  (check
+      (if (splice-first-expand 1)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 2)
+
+  (check
+      (if (splice-first-expand #f)
+  	  (splice-first-expand 2)
+  	(splice-first-expand 3))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((splice-first-expand (+)) 1 2)
+    => 3)
+
+  (check
+      ((splice-first-expand (+ 1 2)) 3 4)
+    => (+ 1 2 3 4))
+
+  (check
+      (with-result
+       ((splice-first-expand (begin (add-result 1) (add-result 2)))
+  	(add-result 3) 4))
+    => '(4 (1 2 3)))
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit 1 2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let-syntax ((arg1 (identifier-syntax 1))
+  		   (arg2 (identifier-syntax 2))
+  		   (doit (syntax-rules ()
+  			   ((_ ?arg ...)
+  			    (+ (square ?arg) ...)))))
+  	((splice-first-expand (doit arg1 arg2)) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand 123)))))
+  	(doit))
+    => 123)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	(doit))
+    => 3)
+
+  (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	doit)
+    => 3)
+
+  (check
+      (let-syntax ((doit (syntax-rules ()
+  			   ((_)
+  			    (splice-first-expand (+ 1 2))))))
+  	((doit) 10))
+    => 13)
+
+  (check
+      (let-syntax ((doit (identifier-syntax
+			  (splice-first-expand (+ 1 2)))))
+  	(doit 10))
+    => 13)
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...))))))
+  	((flop arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...)))))
+		    (flip (identifier-syntax
+			   (flop arg2))))
+  	(flip 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check
+      (let*-syntax ((arg1 (identifier-syntax 1))
+  		    (arg2 (identifier-syntax 2))
+  		    (doit (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (+ (square ?arg) ...))))
+  		    (flop (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (splice-first-expand
+  			      (doit arg1 ?arg ...)))))
+  		    (flip (syntax-rules ()
+  			    ((_ ?arg ...)
+  			     (flop ?arg ...)))))
+  	((flip arg2) 3 4))
+    => (+ (square 1) (square 2) (square 3) (square 4)))
+
+  (check	;nested intermixed splicing, 2 times
+      (let*-syntax ((one	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (+ (square ?arg) ...))))
+  		    (two	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (one 1 ?arg ...)))))
+  		    (three	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (two 2 ?arg ...))))
+  		    (four	(syntax-rules ()
+				  ((_ ?arg ...)
+				   (splice-first-expand
+				    (three 3 ?arg ...))))))
+  	((four 4) 5))
+    => (+ (square 1) (square 2) (square 3) (square 4) (square 5)))
+
+;;; --------------------------------------------------------------------
+;;; syntaxes expanding into each other
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ ?arg ...)
+	     (the-gamma ?arg ...))))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ ?expr)
+	     ?expr)
+	    ((_ ?expr ?arg ...)
+	     (splice-first-expand (gamma (the-beta ?expr ?arg ...) 3)))))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta (the-alpha ?arg) 3)))))
+
+	(gamma 23 3)
+	(beta  20 3)
+	(alpha 2))
+    => 23/3)
+
+  (check
+      (let ()
+	(define (the-alpha x)   (* 10 x))
+	(define (the-beta  x y) (+  x y))
+	(define (the-gamma x y) (/  x y))
+
+	(define-syntax gamma
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (gamma #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (the-gamma ?expr ?arg ...))
+	    ))
+
+	(define-syntax beta
+	  (syntax-rules ()
+	    ((_ #:splice ?expr)
+	     (quote ?expr))
+	    ((_ #:splice ?expr ?arg ...)
+	     (beta #:doit ?expr ?arg ...))
+	    ((_ #:doit ?expr ?arg ...)
+	     (splice-first-expand (gamma #:splice (the-beta ?expr ?arg ...) 3)))
+	    ))
+
+	(define-syntax alpha
+	  (syntax-rules ()
+	    ((_ ?arg)
+	     (splice-first-expand (beta #:splice (the-alpha ?arg) 3)))))
+
+	(gamma #:splice 23 3)
+	(beta  #:splice 20 3)
+	(alpha 2))
+    => 23/3)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check
+      (guard (E ((syntax-violation? E)
+  		 (condition-message E))
+  		(else E))
+  	(eval '((splice-first-expand 123))
+  	      (environment '(vicare))))
+    => "expected list as argument of splice-first-expand")
 
   #t)
 

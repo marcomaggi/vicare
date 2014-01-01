@@ -51,10 +51,14 @@ VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
 AM_CONDITIONAL([WANT_ARGUMENTS_VALIDATION],
   [test "x$vicare_enable_ARGUMENTS_VALIDATION" = xyes])
 
-vicare_subst_ARGUMENTS_VALIDATION=1
+# We set  this variable to "t"  or to "f".  In  the corresponding Scheme
+# code: we need  to prefix the substitution directive with  "#", so that
+# the result is a literal Scheme boolean.
+#
+vicare_subst_ARGUMENTS_VALIDATION=t
 AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
-  [vicare_subst_ARGUMENTS_VALIDATION=1],
-  [vicare_subst_ARGUMENTS_VALIDATION=0])
+  [vicare_subst_ARGUMENTS_VALIDATION=t],
+  [vicare_subst_ARGUMENTS_VALIDATION=f])
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
   [$vicare_subst_ARGUMENTS_VALIDATION])
 
@@ -140,17 +144,22 @@ AC_SUBST([PLATFORM_PATHNAME])
 
 AM_PROG_AS
 AC_PROG_CC
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
+vicare_target_os_uid=unknown
 case "$target_os" in
   *linux*)
     LDFLAGS="-rdynamic $LDFLAGS"
+    vicare_target_os_uid=linux
     ;;
   *bsd*)
     LDFLAGS="-Wl,-E $LDFLAGS"
+    vicare_target_os_uid=bsd
     ;;
   *cygwin*)
     LDFLAGS="-Wl,-E -Wl,--export-all-symbols $LDFLAGS"
+    vicare_target_os_uid=cygwin
     ;;
   *darwin*)
     AC_DEFINE([LIBFFI_ON_DARWIN],[1],
@@ -158,8 +167,17 @@ case "$target_os" in
                libffi does not do that yet.  This so far is only
                important on Snow Leopard in 64-bit mode but we
                mark it on all darwins anyways.])
+    dnl This is needed to include the definitions of some functions
+    dnl like "lgamma_r()" from "math.h".
+    AC_DEFINE([_REENTRANT],[1],[Needed to include definitions on some OS])
+    vicare_target_os_uid=darwin
     ;;
-  esac
+esac
+AC_SUBST([VICARE_TARGET_OS_UID],[$vicare_target_os_uid])
+AM_CONDITIONAL([TARGET_OS_LINUX], [test x$vicare_target_os_uid=xlinux])
+AM_CONDITIONAL([TARGET_OS_BSD],   [test x$vicare_target_os_uid=xbsd])
+AM_CONDITIONAL([TARGET_OS_CYGWIN],[test x$vicare_target_os_uid=xcygwin])
+AM_CONDITIONAL([TARGET_OS_DARWIN],[test x$vicare_target_os_uid=xdarwin])
 
 AC_CHECK_SIZEOF(void *)
 if test "$ac_cv_sizeof_void_p" = 4; then
@@ -223,10 +241,10 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
-VICARE_CHECK_PAGESIZE
-AC_DEFINE_UNQUOTED([IK_PAGESIZE],[$vicare_cv_pagesize],[Platform page size.])
-VICARE_CHECK_PAGESHIFT($vicare_cv_pagesize)
-AC_DEFINE_UNQUOTED([IK_PAGESHIFT],[$vicare_cv_pageshift],[Page shift bit count.])
+VICARE_CHECK_MMAP_ALLOCATION_GRANULARITY
+AC_DEFINE_UNQUOTED([IK_MMAP_ALLOCATION_GRANULARITY],
+  [$vicare_cv_mmap_allocation_granularity],
+  [Platform mmap allocation granularity.])
 
 dnl Declared obsolete by GNU Autoconf.
 dnl
@@ -251,7 +269,21 @@ AC_CHECK_FUNCS([stat lstat realpath unlink mkdir],,
    [AC_MSG_ERROR([missing needed platform function],[1])])
 AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime],,
    [AC_MSG_ERROR([missing needed platform function],[1])])
-AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
+
+AC_CHECK_TYPES([struct tm],
+   [VICARE_HAVE_STRUCT_TM=yes],
+   [VICARE_HAVE_STRUCT_TM=no],
+   [VICARE_INCLUDES])
+AS_IF([test "x$VICARE_HAVE_STRUCT_TM" = xyes],
+      [AC_CHECK_MEMBER([struct tm.tm_zone],
+          AC_DEFINE(HAVE_TM_TM_ZONE, 1,[tm struct has tm_zone]),
+          [],
+          [VICARE_INCLUDES])
+       AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+          AC_DEFINE(HAVE_TM_TM_GMTOFF, 1,[tm struct has tm_gmtoff]),
+          [],
+          [VICARE_INCLUDES])])
+
 AC_CHECK_FUNCS([getenv])
 AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
@@ -1445,7 +1477,7 @@ AC_CACHE_SAVE
 #### tests for GNU C Library specific features
 
 AM_COND_IF([WANT_GLIBC],[
-  AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync fdatasync])
+  AC_CHECK_FUNCS([clearenv dirfd mkstemp mkdtemp sync fsync])
   AC_CHECK_FUNCS([if_nametoindex if_indextoname if_nameindex])
   AC_CHECK_FUNCS([creal cimag])
   AC_CHECK_FUNCS([csin ccos ctan casin cacos catan])
@@ -1456,6 +1488,34 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
   AC_CHECK_FUNCS([wordexp wordfree])
   AC_CHECK_FUNCS([bindresvport bindresvport6])
+
+  dnl We have to check for "fdatasync()" as follows because some
+  dnl brilliant mind at OS X dev team thought of making the symbol
+  dnl "fdatasync" visible in some system library, but the the
+  dnl function is not implemented; so testing for it with:
+  dnl
+  dnl   AC_CHECK_FUNCS([fdatasync])
+  dnl
+  dnl does not work.  The code for this check was shamelessly copied
+  dnl and adapted from:
+  dnl
+  dnl   <https://github.com/kr/beanstalkd/commit/68038c5>
+  dnl
+  AC_CACHE_CHECK([for fdatasync],[ac_cv_func_fdatasync],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([
+      #include <unistd.h>
+    ],[fdatasync(4);])],
+    [ac_cv_func_fdatasync=yes],
+    [ac_cv_func_fdatasync=no])])
+  AS_IF([test "x${ac_cv_func_fdatasync}" = "xyes"],
+    [AC_DEFINE([HAVE_FDATASYNC],[1],[If the system defines fdatasync])])
+  dnl
+  dnl Alternatively we can explicitly exclude the OS X platform from
+  dnl this test.
+  dnl
+  dnl AS_IF([test "x${vicare_target_os_uid}" = "xdarwin"],[],
+  dnl       [AC_CHECK_FUNCS([fdatasync])])
+  dnl
 
   VICARE_CHECK_NETINET_IN_CLASS_MACROS([IN_CLASSA IN_CLASSB IN_CLASSC IN_CLASSD IN_MULTICAST IN_EXPERIMENTAL IN_BADCLASS])
   VICARE_CHECK_NETINET_IN6_ADDR_MACROS([IN6_IS_ADDR_UNSPECIFIED IN6_IS_ADDR_LOOPBACK IN6_IS_ADDR_LINKLOCAL IN6_IS_ADDR_SITELOCAL IN6_IS_ADDR_V4MAPPED IN6_IS_ADDR_V4COMPAT IN6_IS_ADDR_MULTICAST IN6_IS_ADDR_MC_NODELOCAL IN6_IS_ADDR_MC_LINKLOCAL IN6_IS_ADDR_MC_SITELOCAL IN6_IS_ADDR_MC_ORGLOCAL IN6_IS_ADDR_MC_GLOBAL])

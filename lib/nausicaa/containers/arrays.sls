@@ -340,12 +340,12 @@
   (parent <shape>)
   (fields (immutable (dimensions <xvector>))
 		;A vector holding the lengths of the dimensions.
-	  (immutable (factors <xvector>))
+	  (immutable (factors	<xvector>))
 		;A  vector  holding  the  factors used  to  compute  the
 		;absolute index in the underlying vector.
-	  (immutable mapper)
+	  (immutable (mapper	<procedure>))
 		;A mapper function for coordinates.
-	  (immutable (vector <xvector>)))
+	  (immutable (vector	<xvector>)))
 		;The underlying vector.
 
   (protocol
@@ -356,14 +356,14 @@
 	  dimensions (%compute-factors dimensions) #f
 	  (make-vector (vectors.vector-fold-left * 1 dimensions) fill-value))))))
 
-  (getter (lambda (stx)
+  (getter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?position0) (?position) ...))
 	       ;;Build a POSITION object and hand it to ARRAY-REF.
 	       #'(array-ref ?var (array-position ?position0 ?position ...)))
 	      )))
 
-  (setter (lambda (stx)
+  (setter (lambda (stx tag)
 	    (syntax-case stx ()
 	      ((?var ((?position0) (?position) ...) ?value)
 	       ;;Build a POSITION object and hand it to ARRAY-SET!.
@@ -481,7 +481,7 @@
     0
     (A factors)
     (if (A mapper)
-	(A mapper position)
+	((A mapper) position)
       position)))
 
 (define (array-ref (A <array>) position)

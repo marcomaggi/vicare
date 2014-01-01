@@ -119,16 +119,13 @@
   ($unintern-gensym x))
 
 
-;;;; run-time configuration
+;;;; configuration
 
 (module (enable-arguments-validation?)
-
   (module (arguments-validation)
     (include "ikarus.config.ss" #t))
-
   (define (enable-arguments-validation?)
     arguments-validation)
-
   #| end of module |# )
 
 

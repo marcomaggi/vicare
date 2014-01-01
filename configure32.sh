@@ -9,15 +9,14 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 ../configure \
     --enable-maintainer-mode				\
     --config-cache					\
-    --cache-file=../config.cache			\
+    --cache-file=config.cache				\
     --prefix="${prefix}"				\
     --enable-binfmt					\
     --enable-time-tests					\
     --with-pthread					\
-    --with-cre2						\
-    CFLAGS='-O3 -pedantic'				\
-    CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
-    LDFLAGS='-L/usr/local/lib -L/usr/local/lib64'	\
+    CFLAGS='-m32 -O3 -pedantic'				\
+    CPPFLAGS=""						\
+    LDFLAGS='-m32'					\
     VFLAGS='-O3'					\
     "$@"
 

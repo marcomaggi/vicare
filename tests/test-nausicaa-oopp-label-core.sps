@@ -242,7 +242,7 @@
   (let ()	;setter
 
     (define-label <alpha>
-      (setter (lambda (stx)
+      (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)) ?val)
 		   #'(<alpha>-setf ?var ?key ?val))
@@ -261,7 +261,7 @@
   (let ()	;getter
 
     (define-label <alpha>
-      (getter (lambda (stx)
+      (getter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?var ((?key)))
 		   #'(<alpha>-getf ?var ?key))

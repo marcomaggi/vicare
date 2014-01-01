@@ -36,11 +36,11 @@
 (parametrise ((check-test-name	'booleans))
 
   (check
-      ((<boolean>) #t)
+      ((<boolean> #:predicate) #t)
     => #t)
 
   (check
-      ((<boolean>) #f)
+      ((<boolean> #:predicate) #f)
     => #t)
 
   #t)
@@ -121,7 +121,7 @@
     => '#(1 2))
 
   (check	;predicate
-      ((<pair>) '(1 . 2))
+      ((<pair> #:predicate) '(1 . 2))
     => #t)
 
   (check	;virtual fields safe accessors
@@ -143,7 +143,7 @@
     => '#(1 2))
 
   (check	;predicate
-      ((<mutable-pair>) '(1 . 2))
+      ((<mutable-pair> #:predicate) '(1 . 2))
     => #t)
 
   (check	;virtual fields safe accessors
@@ -194,27 +194,27 @@
     => '#(1 (2)))
 
   (check	;predicate
-      ((<spine>) '())
+      ((<spine> #:predicate) '())
     => #t)
 
   (check	;predicate
-      ((<spine>) '(1))
+      ((<spine> #:predicate) '(1))
     => #t)
 
   (check	;predicate
-      ((<spine>) '(1 2))
+      ((<spine> #:predicate) '(1 2))
     => #t)
 
   (check	;predicate
-      ((<spine>) '(1 . 2))
+      ((<spine> #:predicate) '(1 . 2))
     => #f)
 
   (check	;predicate
-      ((<spine>) '(1 2 . 3))
+      ((<spine> #:predicate) '(1 2 . 3))
     => #t)
 
   (check	;predicate
-      ((<spine>) '())
+      ((<spine> #:predicate) '())
     => #t)
 
   (check	;virtual fields safe accessors
@@ -317,11 +317,11 @@
 (parametrise ((check-test-name	'chars))
 
   (check
-      ((<char>) #\a)
+      ((<char> #:predicate) #\a)
     => #t)
 
   (check
-      ((<char>) 123)
+      ((<char> #:predicate) 123)
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -923,15 +923,15 @@
 (parametrise ((check-test-name	'bytevectors))
 
   (check
-      ((<bytevector>) '#vu8(1 2))
+      ((<bytevector> #:predicate) '#vu8(1 2))
     => #t)
 
   (check
-      ((<bytevector>) '#vu8())
+      ((<bytevector> #:predicate) '#vu8())
     => #t)
 
   (check
-      ((<bytevector>) '(1 2))
+      ((<bytevector> #:predicate) '(1 2))
     => #f)
 
   (check
@@ -1055,43 +1055,43 @@
 (parametrise ((check-test-name	'percent-encoded-bytevectors))
 
   (check
-      ((<percent-encoded-bytevector>) '#vu8())
+      ((<percent-encoded-bytevector> #:predicate) '#vu8())
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ciao"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ciao"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "cia%3do"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "cia%3do"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "cia%3Do"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "cia%3Do"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ci%3fa%3do"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ci%3fa%3do"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ci%3Fa%3Do"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ci%3Fa%3Do"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "%7Eciao"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "%7Eciao"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ci%5Fao"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ci%5Fao"))
     => #t)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ci%5"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ci%5"))
     => #f)
 
   (check
-      ((<percent-encoded-bytevector>) (string->ascii "ci%5Zao"))
+      ((<percent-encoded-bytevector> #:predicate) (string->ascii "ci%5Zao"))
     => #f)
 
   #t)
@@ -1276,27 +1276,27 @@
 
   (check
       (let (((T <hashtable>) (<hashtable-eq> ((1 #\a) (2 #\b)))))
-	((<hashtable>) T))
+	((<hashtable> #:predicate) T))
     => #t)
 
   (check
       (let (((T <hashtable>) (<hashtable-eqv> ((1 #\a) (2 #\b)))))
-	((<hashtable>) T))
+	((<hashtable> #:predicate) T))
     => #t)
 
   (check
       (let (((T <hashtable>) (<string-hashtable> (("1" #\a) ("2" #\b)))))
-	((<hashtable>) T))
+	((<hashtable> #:predicate) T))
     => #t)
 
   (check
       (let (((T <hashtable>) (<string-ci-hashtable> (("1" #\a) ("2" #\b)))))
-	((<hashtable>) T))
+	((<hashtable> #:predicate) T))
     => #t)
 
   (check
       (let (((T <hashtable>) (<symbol-hashtable> (('a #\a) ('b #\b)))))
-	((<hashtable>) T))
+	((<hashtable> #:predicate) T))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -1371,7 +1371,7 @@
 
   (check
       (let (((T <record-type-descriptor>) (record-type-descriptor <alpha>)))
-	((<record-type-descriptor>) T))
+	((<record-type-descriptor> #:predicate) T))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -1468,7 +1468,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      ((<condition>) (make-ciao))
+      ((<condition> #:predicate) (make-ciao))
     => #t)
 
   (check
@@ -1487,7 +1487,7 @@
 (parametrise ((check-test-name	'transcoders))
 
   (check
-      ((<transcoder>) (native-transcoder))
+      ((<transcoder> #:predicate) (native-transcoder))
     => #t)
 
   (check
@@ -1529,30 +1529,30 @@
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
-  (check ((<port>) stdin)		=> #t)
-  (check ((<input-port>) stdin)		=> #t)
-  (check ((<output-port>) stdin)	=> #f)
-  (check ((<input/output-port>) stdin)	=> #f)
-  (check ((<textual-port>) stdin)	=> #t)
-  (check ((<binary-port>) stdin)	=> #f)
+  (check ((<port> #:predicate) stdin)			=> #t)
+  (check ((<input-port> #:predicate) stdin)		=> #t)
+  (check ((<output-port> #:predicate) stdin)		=> #f)
+  (check ((<input/output-port> #:predicate) stdin)	=> #f)
+  (check ((<textual-port> #:predicate) stdin)		=> #t)
+  (check ((<binary-port> #:predicate) stdin)		=> #f)
 
-  (check ((<textual-input-port>) stdin)		=> #t)
-  (check ((<textual-output-port>) stdout)	=> #t)
+  (check ((<textual-input-port> #:predicate) stdin)		=> #t)
+  (check ((<textual-output-port> #:predicate) stdout)	=> #t)
 
   (check
-      ((<binary-input-port>) (make-binary-input-port))
+      ((<binary-input-port> #:predicate) (make-binary-input-port))
     => #t)
 
   (check
-      ((<binary-output-port>) (make-binary-output-port))
+      ((<binary-output-port> #:predicate) (make-binary-output-port))
     => #t)
 
   (check
-      ((<textual-input-port>) (make-textual-input-port))
+      ((<textual-input-port> #:predicate) (make-textual-input-port))
     => #t)
 
   (check
-      ((<textual-output-port>) (make-textual-output-port))
+      ((<textual-output-port> #:predicate) (make-textual-output-port))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -1560,7 +1560,7 @@
 
   (check
       (let (((P <port>) stdin))
-	((<transcoder>) (P transcoder)))
+	((<transcoder> #:predicate) (P transcoder)))
     => #t)
 
   (check
@@ -1683,7 +1683,7 @@
 
   (check
       (let (((N <number>) 1.2))
-	((<number>) (N sin)))
+	((<number> #:predicate) (N sin)))
     => #t)
 
   (check
@@ -1740,7 +1740,7 @@
 (parametrise ((check-test-name	'pointers))
 
   (check
-      ((<pointer>) (<pointer> (123)))
+      ((<pointer> #:predicate) (<pointer> (123)))
     => #t)
 
   (check

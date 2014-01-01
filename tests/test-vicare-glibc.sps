@@ -33,11 +33,22 @@
   (prefix (vicare ffi)
 	  ffi.)
   (vicare platform constants)
-  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare GNU C Library functions\n")
+
+
+(parametrise ((check-test-name	'cond-expand))
+
+  (check
+      (glibc.cond-expand
+       (glibc.fdatasync #t)
+       (glibc.fsync #t)
+       (else #f))
+    => #t)
+
+  #t)
 
 
 (parametrise ((check-test-name	'directories))
@@ -105,9 +116,17 @@
 (parametrise ((check-test-name	'sockets))
 
   (check (glibc.if-indextoname 0)	=> #f)
-  (check (glibc.if-indextoname 1)	=> "lo")
+  (check (glibc.if-indextoname 1)	=> (glibc.cond-expand
+					    (linux	"lo")
+					    (darwin	"lo0")
+					    (else	"unknown")))
 
-  (check (glibc.if-nametoindex "lo")	=> 1)
+  (check
+      (glibc.if-nametoindex (glibc.cond-expand
+			     (linux	"lo")
+			     (darwin	"lo0")
+			     (else	"unknown")))
+    => 1)
 
   ;;These are specific to the maintainer's system.
   (when #f
@@ -250,77 +269,169 @@
 
 ;;; trigonometric functions
 
-  (check (cflonum? (glibc.csin 1.2+3.4i))	=> #t)
-  (check (glibc.csin 1.2+3.4i)	(=> almost=) (sin 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.csin
+    (check (cflonum? (glibc.csin 1.2+3.4i))	=> #t)
+    (check (glibc.csin 1.2+3.4i)	(=> almost=) (sin 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.ccos 1.2+3.4i))	=> #t)
-  (check (glibc.ccos 1.2+3.4i)	(=> almost=) 5.434909-13.948304i)
+  (glibc.cond-expand
+   (glibc.ccos
+    (check (cflonum? (glibc.ccos 1.2+3.4i))	=> #t)
+    (check (glibc.ccos 1.2+3.4i)	(=> almost=) 5.434909-13.948304i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.ctan 1.2+3.4i))	=> #t)
-  (check (glibc.ctan 1.2+3.4i)	(=> almost=) (tan 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.ctan
+    (check (cflonum? (glibc.ctan 1.2+3.4i))	=> #t)
+    (check (glibc.ctan 1.2+3.4i)	(=> almost=) (tan 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.casin 1.2+3.4i))	=> #t)
-  (check (glibc.casin 1.2+3.4i)	(=> almost=) (asin 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.casin
+    (check (cflonum? (glibc.casin 1.2+3.4i))	=> #t)
+    (check (glibc.casin 1.2+3.4i)	(=> almost=) (asin 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.cacos 1.2+3.4i))	=> #t)
-  (check (glibc.cacos 1.2+3.4i)	(=> almost=) (acos 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.cacos
+    (check (cflonum? (glibc.cacos 1.2+3.4i))	=> #t)
+    (check (glibc.cacos 1.2+3.4i)	(=> almost=) (acos 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.catan 1.2+3.4i))	=> #t)
-  (check (glibc.catan 1.2+3.4i)	(=> almost=) (atan 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.catan
+    (check (cflonum? (glibc.catan 1.2+3.4i))	=> #t)
+    (check (glibc.catan 1.2+3.4i)	(=> almost=) (atan 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.cexp 1.2+3.4i))	=> #t)
-  (check (glibc.cexp 1.2+3.4i)	(=> almost=) (exp 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.cexp
+    (check (cflonum? (glibc.cexp 1.2+3.4i))	=> #t)
+    (check (glibc.cexp 1.2+3.4i)	(=> almost=) (exp 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.clog 1.2+3.4i))	=> #t)
-  (check (glibc.clog 1.2+3.4i)	(=> almost=) (log 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.clog
+    (check (cflonum? (glibc.clog 1.2+3.4i))	=> #t)
+    (check (glibc.clog 1.2+3.4i)	(=> almost=) (log 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.clog10 1.2+3.4i))	=> #t)
-  (check (glibc.clog10 1.2+3.4i) (=> almost=) (log 1.2+3.4i 10.))
+  (glibc.cond-expand
+   (glibc.clog10
+    (check (cflonum? (glibc.clog10 1.2+3.4i))	=> #t)
+    (check (glibc.clog10 1.2+3.4i) (=> almost=) (log 1.2+3.4i 10.)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.csqrt 1.2+3.4i))	=> #t)
-  (check (glibc.csqrt 1.2+3.4i)	(=> almost=) (sqrt 1.2+3.4i))
+  (glibc.cond-expand
+   (glibc.csqrt
+    (check (cflonum? (glibc.csqrt 1.2+3.4i))	=> #t)
+    (check (glibc.csqrt 1.2+3.4i)	(=> almost=) (sqrt 1.2+3.4i)))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.cpow 1.2+3.4i 5.6+7.8i))	=> #t)
-  (check (glibc.cpow 1.2+3.4i 5.6+7.8i)	(=> almost=) (expt 1.2+3.4i 5.6+7.8i))
+  (glibc.cond-expand
+   (glibc.cpow
+    (check (cflonum? (glibc.cpow 1.2+3.4i 5.6+7.8i))	=> #t)
+    (check (glibc.cpow 1.2+3.4i 5.6+7.8i)	(=> almost=) (expt 1.2+3.4i 5.6+7.8i)))
+   (else
+    (void)))
 
 ;;; --------------------------------------------------------------------
 ;;; hyperbolic functions
 
-  (check (flonum? (glibc.sinh 1.2))	=> #t)
-  (check (glibc.sinh 1.2)	(=> almost=) 1.509461)
+  (glibc.cond-expand
+   (glibc.sinh
+    (check (flonum? (glibc.sinh 1.2))	=> #t)
+    (check (glibc.sinh 1.2)	(=> almost=) 1.509461))
+   (else
+    (void)))
 
-  (check (flonum? (glibc.cosh 1.2))	=> #t)
-  (check (glibc.cosh 1.2)	(=> almost=) 1.810656)
+  (glibc.cond-expand
+   (glibc.cosh
+    (check (flonum? (glibc.cosh 1.2))	=> #t)
+    (check (glibc.cosh 1.2)	(=> almost=) 1.810656))
+   (else
+    (void)))
 
-  (check (flonum? (glibc.tanh 1.2))	=> #t)
-  (check (glibc.tanh 1.2)	(=> almost=) 0.833655)
+  (glibc.cond-expand
+   (glibc.tanh
+    (check (flonum? (glibc.tanh 1.2))	=> #t)
+    (check (glibc.tanh 1.2)	(=> almost=) 0.833655))
+   (else
+    (void)))
 
-  (check (flonum? (glibc.asinh 1.2))	=> #t)
-  (check (glibc.asinh 1.2)	(=> almost=) 1.015973)
+  (glibc.cond-expand
+   (glibc.asinh
+    (check (flonum? (glibc.asinh 1.2))	=> #t)
+    (check (glibc.asinh 1.2)	(=> almost=) 1.015973))
+   (else
+    (void)))
 
-  (check (flonum? (glibc.acosh 1.2))	=> #t)
-  (check (glibc.acosh 1.2)	(=> almost=) 0.622363)
+  (glibc.cond-expand
+   (glibc.acosh
+    (check (flonum? (glibc.acosh 1.2))	=> #t)
+    (check (glibc.acosh 1.2)	(=> almost=) 0.622363))
+   (else
+    (void)))
 
-  (check (flonum? (glibc.atanh .2))	=> #t)
-  (check (glibc.atanh 0.2)	(=> almost=) 0.202733)
+  (glibc.cond-expand
+   (glibc.atanh
+    (check (flonum? (glibc.atanh .2))	=> #t)
+    (check (glibc.atanh 0.2)	(=> almost=) 0.202733))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.csinh 1.2+3.4i))	=> #t)
-  (check (glibc.csinh 1.2+3.4i)	(=> almost=) -1.459345-0.462697i)
+  (glibc.cond-expand
+   (glibc.csinh
+    (check (cflonum? (glibc.csinh 1.2+3.4i))	=> #t)
+    (check (glibc.csinh 1.2+3.4i)	(=> almost=) -1.459345-0.462697i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.ccosh 1.2+3.4i))	=> #t)
-  (check (glibc.ccosh 1.2+3.4i)	(=> almost=) -1.750539-0.385729i)
+  (glibc.cond-expand
+   (glibc.ccosh
+    (check (cflonum? (glibc.ccosh 1.2+3.4i))	=> #t)
+    (check (glibc.ccosh 1.2+3.4i)	(=> almost=) -1.750539-0.385729i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.ctanh 1.2+3.4i))	=> #t)
-  (check (glibc.ctanh 1.2+3.4i) (=> almost=) 0.850597+0.076889i)
+  (glibc.cond-expand
+   (glibc.ctanh
+    (check (cflonum? (glibc.ctanh 1.2+3.4i))	=> #t)
+    (check (glibc.ctanh 1.2+3.4i) (=> almost=) 0.850597+0.076889i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.casinh 1.2+3.4i))	=> #t)
-  (check (glibc.casinh 1.2+3.4i) (=> almost=) 1.960546+1.218869i)
+  (glibc.cond-expand
+   (glibc.casinh
+    (check (cflonum? (glibc.casinh 1.2+3.4i))	=> #t)
+    (check (glibc.casinh 1.2+3.4i) (=> almost=) 1.960546+1.218869i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.cacosh 1.2+3.4i))	=> #t)
-  (check (glibc.cacosh 1.2+3.4i) (=> almost=) 1.990465+1.243053i)
+  (glibc.cond-expand
+   (glibc.cacosh
+    (check (cflonum? (glibc.cacosh 1.2+3.4i))	=> #t)
+    (check (glibc.cacosh 1.2+3.4i) (=> almost=) 1.990465+1.243053i))
+   (else
+    (void)))
 
-  (check (cflonum? (glibc.catanh 1.2+3.4i))	=> #t)
-  (check (glibc.catanh 1.2+3.4i) (=> almost=) 0.086569+1.313022i)
+  (glibc.cond-expand
+   (glibc.catanh
+    (check (cflonum? (glibc.catanh 1.2+3.4i))	=> #t)
+    (check (glibc.catanh 1.2+3.4i) (=> almost=) 0.086569+1.313022i))
+   (else
+    (void)))
 
 ;;; --------------------------------------------------------------------
 ;;; special functions
@@ -368,13 +479,15 @@
       (glibc.fnmatch "ciao*" "ciao a tutti" 0)
     => #t)
 
-  (check
-      (glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
-    => #t)
+  (when FNM_EXTMATCH
+    (check
+	(glibc.fnmatch "*(Ciao)" "CiaoCiao" FNM_EXTMATCH)
+      => #t))
 
-  (check
-      (glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
-    => #t)
+  (when FNM_EXTMATCH
+    (check
+	(glibc.fnmatch "?(Ciao|Hello)" "Hello" FNM_EXTMATCH)
+      => #t))
 
 ;;; --------------------------------------------------------------------
 
@@ -447,19 +560,21 @@
 	rv)
     => '#((0 . 3)))
 
-  (check
-      (let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
-	     (rv  (glibc.regexec rex "abc" 0)))
-	(glibc.regfree rex)
-	rv)
-    => '#((0 . 3)))
+  (when REG_EXTENDED
+    (check
+	(let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
+	       (rv  (glibc.regexec rex "abc" 0)))
+	  (glibc.regfree rex)
+	  rv)
+      => '#((0 . 3))))
 
-  (check
-      (let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
-	     (rv  (glibc.regexec rex "abc" 0)))
-	(glibc.regfree rex)
-	rv)
-    => '#((0 . 3)))
+  (when REG_EXTENDED
+    (check
+	(let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
+	       (rv  (glibc.regexec rex "abc" 0)))
+	  (glibc.regfree rex)
+	  rv)
+      => '#((0 . 3))))
 
 ;;;  (check-pretty-print 'gc)
   (collect))

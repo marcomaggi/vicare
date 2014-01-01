@@ -121,6 +121,8 @@ static ikptr
 iku_make_symbol (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
 {
   ikptr s_sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
+  /* There is no need to update  the dirty vector about "s_sym", because
+     all the values are older. */
   IK_REF(s_sym, -record_tag)               = symbol_tag;
   IK_REF(s_sym, off_symbol_record_string)  = s_pretty_string;
   IK_REF(s_sym, off_symbol_record_ustring) = s_unique_string;
@@ -158,7 +160,7 @@ intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, bucket_slot_pointer);
   }
   return s_sym;
 }
@@ -198,7 +200,7 @@ intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symb
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb,bucket_slot_pointer);
   }
   return s_sym;
 }
@@ -242,7 +244,7 @@ ikrt_intern_gensym (ikptr s_sym, ikpcb* pcb)
   { /* Mark the  page containing  the bucket slot  to be scanned  by the
        garbage collector. */
     ik_ulong bucket_slot_pointer = s_gensym_table + off_vector_data + bucket_index * wordsize;
-    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb,bucket_slot_pointer);
   }
   return IK_TRUE_OBJECT;
 }

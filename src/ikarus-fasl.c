@@ -76,7 +76,7 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
     filesize = buf.st_size;
   }
-  mapsize	= ((filesize + IK_PAGESIZE - 1) / IK_PAGESIZE) * IK_PAGESIZE;
+  mapsize	= IK_MMAP_ALLOCATION_SIZE(filesize);
   if (DEBUG_FASL)
     ik_debug_message("boot image: filesize=%d, mapsize=%d, pagesize=%d", filesize, mapsize, IK_PAGESIZE);
   mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -517,7 +517,7 @@ do_read (ikpcb* pcb, fasl_port* p)
       IK_REF(rtd, off_rtd_symbol)	= symb;
       IK_REF(rtd, off_rtd_destructor)	= IK_FALSE;
       IK_REF(symb, off_symbol_record_value) = rtd;
-      ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(symb+off_symbol_record_value)] = -1;
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, symb + off_symbol_record_value);
     } else {
       rtd = gensym_val;
     }

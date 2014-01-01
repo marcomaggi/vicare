@@ -27,6 +27,8 @@
 
 (library (vicare linux)
   (export
+    cond-expand
+
     ;; process termination status
     waitid
     make-struct-siginfo_t		struct-siginfo_t?
@@ -127,7 +129,8 @@
 	    px.)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (vicare unsafe operations))
+    (vicare unsafe operations)
+    (vicare language-extensions cond-expand))
 
 
 ;;;; arguments validation
@@ -704,6 +707,42 @@
   (receive (addr hostname)
       (ether-line line.str line.len)
     (values addr (ascii->string hostname))))
+
+
+;;;; features cond-expand
+
+(define-cond-expand cond-expand
+  (let ()
+    (import (vicare platform features)
+      (only (vicare language-extensions cond-expand helpers)
+	    define-cond-expand-identifiers-helper))
+    (define-cond-expand-identifiers-helper vicare-linux-features
+      (wifcontinued			HAVE_WIFCONTINUED)
+      (waitid				HAVE_WAITID)
+      (epoll-create			HAVE_EPOLL_CREATE)
+      (epoll-create1			HAVE_EPOLL_CREATE1)
+      (epoll-ctl			HAVE_EPOLL_CTL)
+      (epoll-wait			HAVE_EPOLL_WAIT)
+      (signalfd				HAVE_SIGNALFD)
+      (timerfd-create			HAVE_TIMERFD_CREATE)
+      (timerfd-settime			HAVE_TIMERFD_SETTIME)
+      (timerfd-gettime			HAVE_TIMERFD_GETTIME)
+      (prlimit				HAVE_PRLIMIT)
+      (inotify-init			HAVE_INOTIFY_INIT)
+      (inotify-init1			HAVE_INOTIFY_INIT1)
+      (inotify-add-watch		HAVE_INOTIFY_ADD_WATCH)
+      (inotify-rm-watch			HAVE_INOTIFY_RM_WATCH)
+      (daemon				HAVE_DAEMON)
+      (ether-ntoa			HAVE_ETHER_NTOA)
+      (ether-aton			HAVE_ETHER_ATON)
+      (ether-ntoa			HAVE_ETHER_NTOA)
+      (ether-aton			HAVE_ETHER_ATON)
+      (ether-ntohost			HAVE_ETHER_NTOHOST)
+      (ether-hostton			HAVE_ETHER_HOSTTON)
+      (ether-line			HAVE_ETHER_LINE)
+      #| define-cond-expand-identifiers-helper |# )
+
+    vicare-linux-features))
 
 
 ;;;; done

@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (vicare checks))
 
@@ -74,24 +74,18 @@
     ;; ----------
 
     (check
-	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+    	(let (((O <alpha>) 0))
+    	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
-	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+    	(let (((O <alpha>) 0))
+    	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
-	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+    	(let (((O <alpha>) 0))
+    	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -112,23 +106,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -156,23 +144,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
     	(let (((O <alpha>) 0))
-    	  (O one 10 20
-    	     => map add1
-    	     => fold-left 0 +))
+    	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
     	(let (((O <alpha>) 0))
-    	  (O one 10 20
-    	     => map add1
-    	     => map -
-    	     => fold-left 0 +))
+    	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -202,23 +184,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -243,23 +219,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -289,23 +259,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -330,23 +294,17 @@
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1))
+	  ((O one 10 20) map add1))
       => '(1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => fold-left 0 +))
+	  (((O one 10 20) map add1) fold-left 0 +))
       => (+ 1 11 21))
 
     (check
 	(let (((O <alpha>) 0))
-	  (O one 10 20
-	     => map add1
-	     => map -
-	     => fold-left 0 +))
+	  ((((O one 10 20) map add1) map -) fold-left 0 +))
       => (+ -1 -11 -21))
 
     (void))
@@ -361,59 +319,25 @@
     (define-label <fixnum-vector>
       (parent <vector>)
       (getter
-       (lambda (stx)
-	 (syntax-case stx (=>)
-	   ((?var ((?index)))
-	    #'(vector-ref ?var ?index))
-	   ((?var ((?index)) => ?form0 ?form ...)
-	    #'(let (((fx <fixnum>) (vector-ref ?var ?index)))
-		(fx ?form0 ?form ...)))
+       (lambda (stx tag)
+	 (syntax-case stx ()
+	   ((?expr ((?index)))
+	    #'(<fixnum> #:nested-oopp-syntax (vector-ref ?expr ?index)))
 	   ))))
 
     (check
 	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[1] => string))
+	  ((O[1]) string))
       => "1")
 
     (check
 	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[1] => odd?))
+	  ((O[1]) odd?))
       => #t)
 
     (check
 	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[2] => * 10))
-      => 20)
-
-    (void))
-
-  (let ()	;nester ?var usage
-
-    (define-label <fixnum-vector>
-      (parent <vector>)
-      (getter
-       (lambda (stx)
-	 (syntax-case stx (=>)
-	   ((?var ((?index)))
-	    #'(vector-ref ?var ?index))
-	   ((?var ((?index)) => ?form0 ?form ...)
-	    #'(let (((fx <fixnum>) (?var[?index])))
-		(fx ?form0 ?form ...)))
-	   ))))
-
-    (check
-	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[1] => string))
-      => "1")
-
-    (check
-	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[1] => odd?))
-      => #t)
-
-    (check
-	(let (((O <fixnum-vector>) '#(0 1 2 3)))
-	  (O[2] => * 10))
+	  ((O[2]) * 10))
       => 20)
 
     (void))

@@ -237,14 +237,17 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
     pcb->root1 = &s_spine;
     {
       for (i=0; arry[i].if_index;) {
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	IK_ASS(IK_CAR(s_spine), ika_pair_alloc(pcb));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR(s_spine));
 	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
 	IK_ASS(IK_CDAR(s_spine), ika_bytevector_from_cstring(pcb, arry[i].if_name));
 	if (arry[++i].if_index) {
 	  IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
 	  s_spine = IK_CDR(s_spine);
-	} else
+	} else {
 	  IK_CDR(s_spine) = IK_NULL_OBJECT;
+	}
       }
     }
     pcb->root1 = NULL;
@@ -803,6 +806,7 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
   ikptr         s_pair = ika_pair_alloc(pcb);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
   pcb->root0 = &s_pair;
   {
     IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
@@ -1002,6 +1006,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 	s_retval = ika_pointer_alloc(pcb, (ik_ulong)rex);
       } else {
 	s_retval	  = ika_pair_alloc(pcb);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_retval);
 	error_message_len = regerror(rv, rex, NULL, 0);
 	IK_CAR(s_retval)  = IK_FIX(rv);
 	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (long)error_message_len-1));
@@ -1056,13 +1061,16 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
   case 0:
     {
       size_t      i;
-      ikptr       s_match_vector = ika_vector_alloc_and_init(pcb, 1+nmatch);
       ikptr       s_pair = IK_VOID_OBJECT;
+      ikptr       s_match_vector = ika_vector_alloc_and_init(pcb, 1+nmatch);
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_match_vector);
       pcb->root0 = &s_match_vector;
       pcb->root1 = &s_pair;
       {
         for (i=0; i<1+nmatch; ++i) {
 	  s_pair         = IKA_PAIR_ALLOC(pcb);
+	  /* No need to  update the dirty vector  about "s_pair" because
+	     the values are fixnums. */
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
           IK_ITEM(s_match_vector, i) = s_pair;
@@ -1087,6 +1095,12 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
       pcb->root0 = &s_error_msg;
       {
 	s_pair = IKA_PAIR_ALLOC(pcb);
+	/* There  should be  no need  to update  the dirty  vector about
+	   "s_pair" here, because we have allocated "s_error_msg" first.
+	   But  I want  to  be supercareful  until  I really  understand
+	   everything about  garbage collection.  (Marco Maggi;  Sun Dec
+	   15, 2013) */
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CAR(s_pair) = s_error_code;
 	IK_CDR(s_pair) = s_error_msg;
       }
@@ -1137,6 +1151,7 @@ ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
   rv = wordexp(pattern, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
     s_words    = ika_vector_alloc_and_init(pcb, (long)W.we_wordc);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_words);
     pcb->root0 = &s_words;
     {
       for (i=0; i<W.we_wordc; ++i) {
@@ -1265,6 +1280,8 @@ ikrt_glibc_iconv (ikptr s_handle,
     ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
     istart = ipast - isize;
     ostart = opast - osize;
+    /* No need  to update  the dirty vector  about "s_pair"  because the
+       values are fixnums. */
     IK_CAR(s_pair) = IK_FIX(istart);
     IK_CDR(s_pair) = IK_FIX(ostart);
     return s_pair;
