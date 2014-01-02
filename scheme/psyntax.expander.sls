@@ -124,7 +124,6 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer
-
 		  syntax-error)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
