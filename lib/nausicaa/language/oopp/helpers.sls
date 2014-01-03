@@ -8,7 +8,7 @@
 ;;;	This  library implements  helper  functions and  macros for  the
 ;;;	expand phase of the library (nausicaa language oopp).
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -932,10 +932,11 @@
 ;;;; data types: parsed clauses representation
 
 ;;This record type represents the parsing results of all the clauses for
-;;all the tag definitions.  Some  clauses apply only to classes and some
+;;all the tag definitions.  Some clauses  apply only to classes and some
 ;;clauses apply  only to  labels, but  we do not  represent them  in the
 ;;class and label specification record type: the mixins must support all
-;;the clauses, so all the parsing results go here for simplicity.
+;;the clauses, so  to use this record  type as base for  the mixin type:
+;;all the parsing results go here for simplicity.
 ;;
 (define-record-type <parsed-spec>
   (nongenerative nausicaa:language:oopp:<parsed-spec>)
