@@ -403,7 +403,7 @@
 
     ;; ------------------------------------------------------------
 
-    ;;Define an internal variable with initialisation expression using
+    ;;Define an  internal variable with initialisation  expression using
     ;;the tag constructor.
     ((?tag ?var (aux.<> (?arg ...)))
      (identifier? #'?var)
@@ -419,7 +419,7 @@
      (identifier? #'?var)
      #'(?tag :define ?var))
 
-    ;;Constructor call.  If  a maker transformer was  defined: use it,
+    ;;Constructor call.   If a  maker transformer  was defined:  use it,
     ;;otherwise default to the public constructor.
     ((?tag (?arg ...))
      #`(?tag #:nested-oopp-syntax #,(if the-maker
