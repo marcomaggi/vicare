@@ -313,6 +313,7 @@ nobase_dist_libvicare_DATA	+= \
 	nausicaa/language/oopp.sls					\
 	nausicaa/language/oopp/auxiliary-syntaxes.sls			\
 	nausicaa/language/oopp/configuration.sls			\
+	nausicaa/language/oopp/conditions.sls				\
 	nausicaa/language/oopp/helpers.sls				\
 	\
 	nausicaa/language/multimethods.sls				\

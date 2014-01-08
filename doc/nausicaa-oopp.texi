@@ -44,6 +44,7 @@ identifier.
 * oopp slots::                  Accessors and mutators.
 * oopp inspect::                Tags and objects inspection.
 * oopp bindings::               Defining bindings in @oopp{} notation.
+* oopp misc::                   Miscellaneous syntaxes.
 @end menu
 
 @c page
@@ -112,7 +113,7 @@ it is pretty similar; we can use this type with code like:
 
 @example
 (<alpha> o (<> (1 2)))
-((<alpha>) o)           @result{} #t
+(<alpha> #:is-a? o)     @result{} #t
 (o a)                   @result{} 1
 (o b)                   @result{} 2
 (o sum)                 @result{} 3
@@ -178,7 +179,7 @@ The following example defines a tag to handle immutable pair values:
                   (immutable cdr cdr)))
 
 (<pair> P '(1 . 2))
-((<pair>) P)            @result{} #t
+(is-a? P <pair>)        @result{} #t
 (P car)                 @result{} 1
 (P cdr)                 @result{} 2
 @end example
@@ -253,6 +254,8 @@ It is a generic form: an expression, an auxiliary syntax, @dots{}.
                                 variables.
 * oopp notation type expr::     Applying @oopp{} syntax to any
                                 expression.
+* oopp notation type cast::     Casting a value for @oopp{} syntax.
+* oopp notation type leaking::  @oopp{} syntax allows interface leaking.
 @end menu
 
 @c page
@@ -270,7 +273,10 @@ To build the intance of a tag @meta{type} we write:
 if @meta{type} implements a maker: apply the maker transformer function
 to the whole form.  If @meta{type} has no maker: this syntax expands to
 the public constructor function of @meta{type} applied to the results of
-evaluating the @meta{form} forms.  Examples with the public constructor:
+evaluating the @meta{form} forms.  If the maker syntax is used as first
+subform of an enclosing form, the nested @oopp{} syntax is available.
+
+Examples with the public constructor:
 
 @example
 (define-label <pair>
@@ -331,6 +337,18 @@ Example using the maker transformer:
 @result{} (1 . 2)
 @end example
 
+Example of using nested @oopp{} syntax:
+
+@example
+(define-label <a-pair>
+  (protocol (lambda () cons))
+  (virtual-fields (immutable car car)
+                  (immutable cdr cdr)))
+
+((<a-pair> (1 2)) car)  @result{} 1
+((<a-pair> (1 2)) cdr)  @result{} 2
+@end example
+
 @c page
 @node oopp notation type pred
 @subsubsection Using the tag predicate
@@ -339,7 +357,7 @@ Example using the maker transformer:
 To use the type predicate we write:
 
 @example
-(@meta{type})
+(@meta{type} #:predicate)
 @end example
 
 @noindent
@@ -353,13 +371,34 @@ always returning @true{}.  Examples:
 
 (define-label <any>)  ;no predicate
 
-((<pair>) '(1 . 2))     @result{} #t
-((<pair>) "ciao")       @result{} #f
+((<pair> #:predicate) '(1 . 2)) @result{} #t
+((<pair> #:predicate) "ciao")   @result{} #f
 
-((<any>) "ciao")        @result{} #t
+((<any> #:predicate) "ciao")    @result{} #t
 
-(for-all (<pair>)
-  '((1 . 2) (3 . 4)))   @result{} #t
+(for-all (<pair> #:predicate)
+  '((1 . 2) (3 . 4)))           @result{} #t
+@end example
+
+We can also directly apply the predicate to the result of an expression
+as follows:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(<pair> #:is-a? '(1 . 2))       @result{} #t
+(<pair> #:is-a? "12")           @result{} #f
+@end example
+
+Furthermore we can use the @func{is-a?} syntax:
+
+@example
+(define-label <pair>
+  (predicate pair?))
+
+(is-a? '(1 . 2) <pair>)       @result{} #t
+(is-a? "12"     <pair>)       @result{} #f
 @end example
 
 @c page
@@ -548,6 +587,81 @@ Examples:
 ((<string> #:nested-oopp-syntax "01234") [3])
 @result{} #\3
 @end example
+
+@c page
+@node oopp notation type cast
+@subsubsection Casting a value for @oopp{} syntax
+
+
+It is possible to use @oopp{} syntaxes with data values, too; we use the
+``cast'' syntax:
+
+@example
+((@meta{tag}) @meta{expr})
+@end example
+
+@noindent
+whenever this syntax appears as first subform of an enclosing form, the
+following chain of expansions takes place:
+
+@example
+(((@meta{tag}) @meta{expr}) @meta{arg} ...)
+@expansion{} ((@meta{tag} #:nested-oopp-syntax @meta{expr}) @meta{arg} ...)
+@expansion{} (@meta{tag} #:oopp-syntax (@meta{expr} @meta{arg} ...))
+@end example
+
+@noindent
+otherwise the expansion is just:
+
+@example
+((@meta{tag}) @meta{expr})
+@expansion{} @meta{expr}
+@end example
+
+This syntax allows expressions like:
+
+@example
+((<fixnum>) 123)                @result{} 123
+(((<fixnum>) 123) add1)         @result{} 124
+(((<fixnum>) 123) <= 200)       @result{} #t
+(((<fixnum>) 123) <= 100)       @result{} #f
+@end example
+
+@c page
+@node oopp notation type leaking
+@subsubsection @oopp{} syntax allows interface leaking
+
+
+It is possible to access the members of a class or label defined by a
+tag that is not imported in the current lexical environment; this
+constitutes, in practice, an @api{} leaking between contexts.  It
+happens as follows:
+
+@example
+(library (leaking-demo)
+  (export doit)
+  (import (nausicaa))
+  (define-class <alpha>
+    (fields a b))
+  (define ((doit <alpha>) a b)
+    (<alpha> (a b))))
+@end example
+
+@noindent
+the library @library{leaking-demo} exports the function @func{doit} but
+not the class identifier @class{alpha}.  Despite this, when we import
+the library and call @func{doit} we can access the members @code{a} and
+@code{b} of the returned @class{alpha} instance:
+
+@example
+(import (nausicaa)
+  (leaking-demo))
+
+((doit 1 2) a)          @result{} 1
+((doit 3 4) b)          @result{} 4
+@end example
+
+This behaviour may change in the future.
 
 @c page
 @node oopp notation var
@@ -995,7 +1109,7 @@ Example of supertag field mutation:
 (<beta>  B (<> (A)))
 (<gamma> O (<> (B)))
 
-((<gamma>) O)           @result{} #t
+(is-a? O <gamma>)       @result{} #t
 (O b)                   @result{} #<record <beta>>
 (O b a)                 @result{} #<record <alpha>>
 (O b a v)               @result{} 1
@@ -1030,7 +1144,7 @@ Example of nested field setter transformer invocation:
 (<beta>  B (<> (A)))
 (<gamma> O (<> (B)))
 
-((<gamma>) O)           @result{} #t
+(is-a? O <gamma>)       @result{} #t
 (O b)                   @result{} #<record <beta>>
 (O b a)                 @result{} #<record <alpha>>
 (O b a v)               @result{} #(1 2 3)
@@ -1355,8 +1469,8 @@ The following is an example of class definition inheriting from
   (fields a))
 
 (<alpha> O (1))
-((<alpha>) O)           @result{} #t
-((<top>) O)             @result{} #t
+(is-a? O <alpha>)       @result{} #t
+(is-a? O <top>)         @result{} #t
 @end example
 
 @noindent
@@ -1373,9 +1487,9 @@ class:
 
 (<beta> O (1 2))
 
-((<beta>)  O)           @result{} #t
-((<alpha>) O)           @result{} #t
-((<top>)   O)           @result{} #t
+(is-a? O <beta>)        @result{} #t
+(is-a? O <alpha>)       @result{} #t
+(is-a? O <top>)         @result{} #t
 
 (O a)                   @result{} 1
 (O b)                   @result{} 2
@@ -1393,8 +1507,8 @@ the following is an example of label definition inheriting from
                   (immutable cdr cdr)))
 
 (<pair> O (1 2))
-((<pair>) O)            @result{} #t
-((<top>)  O)            @result{} #t
+(is-a? O <pair>)        @result{} #t
+(is-a? O <top>)         @result{} #t
 
 (O car)                 @result{} 1
 (O cdr)                 @result{} 2
@@ -1418,10 +1532,10 @@ labels:
 
 (<pair> O '(1 . 2))
 
-((<pair>) O)            @result{} #t
-((<car-and-cdr>)  O)    @result{} #t
-((<car>)  O)            @result{} #t
-((<top>)  O)            @result{} #t
+(is-a? O <pair>)        @result{} #t
+(is-a? O <car-and-cdr>) @result{} #t
+(is-a? O <car>)         @result{} #t
+(is-a? O <top>)         @result{} #t
 
 (O car)                 @result{} 1
 (O cdr)                 @result{} 2
@@ -1444,9 +1558,9 @@ the following is an example of label inheriting from a class:
 
 (<beta> O (<> (1 2)))
 
-((<beta>)  O)           @result{} #t
-((<alpha>) O)           @result{} #t
-((<top>)   O)           @result{} #t
+(is-a? O <beta>)        @result{} #t
+(is-a? O <alpha>)       @result{} #t
+(is-a? O <top>)         @result{} #t
 
 (O a)                   @result{} 1
 (O b)                   @result{} 2
@@ -1849,11 +1963,8 @@ Usage example:
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-((<pair>) '(1 . 2))             @result{} #t
-((<pair>) 123)                  @result{} #f
-
 (is-a? '(1 . 2) <pair>)         @result{} #t
-(is-a? 123 <pair>)              @result{} #f
+(is-a? 123      <pair>)         @result{} #f
 @end example
 
 Custom predicates of sublabels are composed with the custom predicates
@@ -1875,16 +1986,16 @@ first; example:
 (define M '(a b c))
 (define N "abc")
 
-((<list>) L)                 @result{} #t
-((<list-of-numbers>) L)      @result{} #t
+(is-a? L <list>)             @result{} #t
+(is-a? L <list-of-numbers>)  @result{} #t
 (<list>? L)                  @result{} #t
 (<list-of-numbers>? L)       @result{} #t
 
-((<list>) M)                 @result{} #t
-((<list-of-numbers>) M)      @result{} #f
+(is-a? M <list>)             @result{} #t
+(is-a? M <list-of-numbers>)  @result{} #f
 
-((<list>) N)                 @result{} #f
-((<list-of-numbers>) N)      @result{} #f
+(is-a? N <list>)             @result{} #f
+(is-a? N <list-of-numbers>)  @result{} #f
 @end example
 
 @noindent
@@ -3701,6 +3812,39 @@ bindings have no tags: this syntax is equivalent to @func{do} as defined
 by @rnrs{6}; an untagged binding is equivalent to a binding tagged with
 @class{top}.  The @meta{step}, @meta{expression} and @meta{command}
 expressions can use @oopp{} notation when accessing the binding.
+@end deffn
+
+@c page
+@node oopp misc
+@section Miscellaneous syntaxes
+
+
+@deffn Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ...
+@deffnx Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Syntax similar to @func{case}.  @func{else} must be the binding exported
+by @library{rnrs} and @library{vicare}.
+
+@meta{expr} must be an expression and it is evaluated once; its result
+is tested with the predicates of the specified tags and the body of the
+selected branch is evaluated.
+
+@example
+(tag-case 123
+  ((<string> <vector>)
+   #f)
+  ((<fixnum>)
+   #t))
+@result{} #t
+
+(tag-case 1.2
+  ((<string> <vector>)
+   #f)
+  ((<fixnum>)
+   #f)
+  (else #t))
+@result{} #t
+@end example
 @end deffn
 
 @c end of file

@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (vicare numerics constants)
   (only (vicare language-extensions)
@@ -89,33 +89,33 @@
   (check	;access to binding
       (let ()
   	(<alpha> O (<alpha> (1 2 3)))
-        ((<alpha>) O))
+        ((<alpha> #:predicate) O))
     => #t)
 
   (check	;access to binding
       (let ()
   	(<alpha> O (<alpha> (1 2 3)))
-        ((<alpha>) O))
+        ((<alpha> #:predicate) O))
     => #t)
 
   (check	;internal definition syntax
       (let ()
   	(<alpha> O (<> (1 2 3)))
-        ((<alpha>) O))
+        ((<alpha> #:predicate) O))
     => #t)
 
   (check	;mutation of binding
       (let ()
   	(<alpha> O (<alpha> (1 2 3)))
   	(set! O (<alpha> (4 5 6)))
-	((<alpha>) O))
+	((<alpha> #:predicate) O))
     => #t)
 
   (check	;mutation of binding
       (let ()
   	(<alpha> O (<alpha> (1 2 3)))
   	(set! O (<alpha> (4 5 6)))
-	((<alpha>) O))
+	((<alpha> #:predicate) O))
     => #t)
 
   (check	;access to fields
@@ -177,13 +177,13 @@
 
   (check	;access to binding
       (let (((O <alpha>) (<alpha> (1 2 3))))
-	((<alpha>) O))
+	((<alpha> #:predicate) O))
     => #t)
 
   (check	;mutation of binding
       (let (((O <alpha>) (<alpha> (1 2 3))))
 	(set! O (<alpha> (4 5 6)))
-	((<alpha>) O))
+	((<alpha> #:predicate) O))
     => #t)
 
   (check	;access to fields
@@ -237,7 +237,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1 2))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -252,7 +252,7 @@
 
     (check
 	(let (((o <alpha>) (<alpha> (1 2))))
-	  ((<alpha>) o))
+	  ((<alpha> #:predicate) o))
       => #t)
 
     #f)
@@ -268,7 +268,7 @@
 
     (check
 	(let (((o <beta>) (<beta> (1 2 3 4))))
-	  ((<beta>) o))
+	  (<beta> #:is-a? o))
       => #t)
 
     #f)
@@ -290,7 +290,7 @@
 
     (check
 	(let (((o <beta>) (<beta> (1 2 3 4))))
-	  ((<beta>) o))
+	  (<beta> #:is-a? o))
       => #t)
 
     #f)
@@ -706,6 +706,10 @@
     (check
 	(let (((o <alpha>) (<alpha> (1 2))))
 	  (o b))
+      => 2)
+
+    (check	;nested
+	((<alpha> (1 2)) b)
       => 2)
 
     #f)

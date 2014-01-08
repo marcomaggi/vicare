@@ -1606,6 +1606,7 @@
     let-values/tags		let*-values/tags
     receive/tags
     do/tags			do*/tags
+    tag-case
     set!/tags
     with-label-shadowing	with-tagged-arguments-validation
     <-

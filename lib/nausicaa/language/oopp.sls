@@ -12,7 +12,7 @@
 ;;;	using "void  *" pointers in the  C language and  casting them to
 ;;;	some structure pointer type when needed.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -46,6 +46,7 @@
     let-values/tags		let*-values/tags
     receive/tags		receive-and-return/tags
     do/tags			do*/tags
+    tag-case
     set!/tags
     with-label-shadowing
     with-tagged-arguments-validation
@@ -87,6 +88,7 @@
 	    (aux.<-			<-)))
   (import (vicare)
     (nausicaa language oopp auxiliary-syntaxes)
+    (nausicaa language oopp conditions)
     (for (prefix (nausicaa language oopp helpers)
 		 help.)
 	 expand)
@@ -112,21 +114,6 @@
 		  mixins		maker			finaliser)
 	    aux.)
     (vicare unsafe operations))
-
-
-;;;; helpers
-
-(define-condition-type &tagged-binding-violation
-    &assertion
-  make-tagged-binding-violation
-  tagged-binding-violation?)
-
-(define (tagged-binding-violation who message . irritants)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-tagged-binding-violation)
-	      (make-irritants-condition irritants))))
 
 
 (define-record-type (<top>-record-type make-<top> <top>?)
@@ -157,11 +144,6 @@
    (lambda (make-instance)
      (lambda ()
        (make-instance '())))))
-
-(define <top>-unique-ids
-  ;;This is the list of UIDs for the type "<top>".
-  ;;
-  '(nausicaa:builtin:<top>))
 
 (define (<top>-predicate obj)
   ;;This  function is  used as  predicate for  "<top>" in  place of  the
@@ -196,12 +178,13 @@
 		    :predicate-function :accessor-function :mutator-function
 		    aux.<>)
 
+    ;;This is special for "<top>":
+    ;;
     ((_ #:oopp-syntax (??expr ??arg ...))
      (synner "undefined OOPP syntax"))
 
-    ((_ #:nested-oopp-syntax ??expr)
-     #'(splice-first-expand (<top> :flat-oopp-syntax ??expr)))
-
+    ;;This is special for "<top>":
+    ;;
     ((_ :flat-oopp-syntax ??expr)
      #'??expr)
     ((_ :flat-oopp-syntax ??expr ??arg ...)
@@ -214,12 +197,6 @@
     ((_ :define ?var)
      (identifier? #'?var)
      #'(define ?var))
-
-    ;;Bind a tagged variable and call it with the given arguments.
-    ((_ :flat-oopp-syntax ?expr ?arg0 ?arg ...)
-     #'(<top> #:oopp-syntax (?expr ?arg0 ?arg ...)))
-    ((_ :flat-oopp-syntax ?expr)
-     #'?expr)
 
     ((_ :make . ?args)
      (synner "invalid maker call syntax for <top> tag"))
@@ -282,7 +259,8 @@
      #'(quote (?id ... nausicaa:builtin:<top>)))
 
     ((_ :list-of-unique-ids)
-     #'<top>-unique-ids)
+     ;;This is the list of UIDs for the type "<top>".
+     #'(quote (nausicaa:builtin:<top>)))
 
     ((_ :predicate-function)
      #'<top>-predicate)
@@ -297,78 +275,28 @@
      (identifier? #'?field-name)
      (synner "invalid tag-syntax field mutator function request" #'?field-name))
 
-    ;;Define an  internal variable with initialisation  expression using
-    ;;the tag constructor.  The syntax use:
-    ;;
-    ;;   (<top> ?var (<> (?arg ...)))
-    ;;
-    ;;is equivalent to:
-    ;;
-    ;;   (define ?var (<top> (?arg ...)))
-    ;;
-    ;;and the constructor of "<top>" will raise an error.
-    ((?tag ?var (aux.<> (?arg ...)))
-     (identifier? #'?var)
-     #'(define ?var (?tag (?arg ...))))
-
-    ;;Define an  internal variable with initialisation  expression.  The
-    ;;syntax use:
-    ;;
-    ;;   (<top> ?var ?expr)
-    ;;
-    ;;just defines a common internal binding.
-    ((_ ?var ?expr)
-     (identifier? #'?var)
-     #'(define ?var ?expr))
-
-    ;;Define an  internal variable  without initialisation.   The syntax
-    ;;use:
-    ;;
-    ;;   (<top> ?var)
-    ;;
-    ;;just defines a common internal binding.
-    ((_ ?var)
-     (identifier? #'?var)
-     #'(define ?var))
-
-    ;;Constructor call syntax.
-    ((_ (?arg ...))
-     (synner "invalid maker call syntax for <top> tag"))
-
-    ;;Predicate reference.  It is meant to be used as:
-    ;;
-    ;;  ((<top>) ?expr) => #t
-    ;;
-    ((_)
-     #'<top>-predicate)
-
     (_
-     (synner "invalid tag syntax"))))
+     (help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
 
 
 ;;;; procedure label
 
+(define <procedure>-list-of-uids
+  ;;We really want a binding for this list.
+  ;;
+  (<top> :append-unique-id (nausicaa:builtin:<procedure>)))
+
 (define-syntax* (<procedure> stx)
+  (define (%the-setter-and-getter . args)
+    (synner "invalid OOPP syntax"))
   (syntax-case stx ( ;;
-		    :define :flat-oopp-syntax :make :is-a?
-		    :dispatch :mutator :getter :setter
-		    :assert-type-and-return
-		    :assert-procedure-argument :assert-expression-return-value
-		    :append-unique-id :list-of-unique-ids
-		    :predicate-function :accessor-function :mutator-function
-		    :process-shadowed-identifier
-		    aux.<>)
+		    :make :dispatch :mutator :append-unique-id
+		    :accessor-function :mutator-function
+		    :process-shadowed-identifier)
 
-    ((_ #:oopp-syntax (?expr ?arg ...))
-     (help.oopp-syntax-transformer #'<procedure> #'(?expr ?arg ...) #'set!/tags synner))
-
+    ;;This clause is special for "<procedure>".
     ((_ #:nested-oopp-syntax ?expr)
      #'?expr)
-
-    ((_ :flat-oopp-syntax ?expr)
-     (synner "invalid OOPP syntax"))
-    ((_ :flat-oopp-syntax ?expr ?arg ...)
-     (synner "invalid OOPP syntax"))
 
     ((_ :dispatch (?expr ?id . ?args))
      (synner "invalid OOPP syntax"))
@@ -376,124 +304,27 @@
     ((_ :mutator ?expr ?keys ?value)
      (synner "invalid OOPP syntax"))
 
-    ((_ :getter (?expr ((?key0 ...) (?key ...) ...)))
-     (synner "invalid OOPP syntax"))
-
-    ((_ :setter (?expr ((?key0 ...) (?key ...) ...) ?value))
-     (synner "invalid OOPP syntax"))
-
-    ((_ :assert-type-and-return ?expr)
-     (if config.validate-tagged-values?
-	 #'(receive-and-return (val)
-	       ?expr
-	     (unless (procedure? val)
-	       (tagged-binding-violation '<procedure>
-		 "invalid expression result, expected value of type <procedure>"
-		 '(expression: ?expr)
-		 `(result: ,val))))
-       #'?expr))
-
-    ((_ :assert-procedure-argument ?id)
-     (identifier? #'?id)
-     ;;This DOES NOT return the value.
-     (if config.validate-tagged-values?
-	 #'(unless (<procedure> :is-a? ?id)
-	     (procedure-argument-violation '<procedure>
-	       "tagged procedure argument of invalid type" ?id))
-       #'(void)))
-
-    ((_ :assert-expression-return-value ?expr)
-     ;;This DOES return the value.
-     (if config.validate-tagged-values?
-	 #'(receive-and-return (val)
-	       ?expr
-	     (unless (<procedure> :is-a? val)
-	       (expression-return-value-violation '<procedure>
-		 "tagged expression return value of invalid type" val)))
-       #'?expr))
-
-    ;; public API: auxiliary syntaxes
-
-    ;;Define  internal   bindings  for   a  tagged   variable.   Without
-    ;;initialisation expression.
-    ((_ :define ?var)
-     (identifier? #'?var)
-     #'(begin
-	 (define src-var)
-	 (define-syntax* ?var
-	   (help.make-tagged-variable-transformer #'<procedure> #'src-var))))
-
-    ;;Define   internal   bindings   for  a   tagged   variable.    With
-    ;;initialisation expression.
-    ((_ :define ?var ?expr)
-     (identifier? #'?var)
-     #'(begin
-	 (define src-var (<procedure> :assert-type-and-return ?expr))
-	 (define-syntax* ?var
-	   (help.make-tagged-variable-transformer #'<procedure> #'src-var))))
-
-    ;; public constructor
-    ((_ :make ?arg)
-     #'?arg)
-
-    ((_ :is-a? ?arg)
-     #'(procedure? ?arg))
+    ((_ :make ?expr)
+     #'?expt)
 
     ((_ :append-unique-id (?id ...))
      #'(<top> :append-unique-id (?id ... nausicaa:builtin:<procedure>)))
-
-    ((_ :list-of-unique-ids)
-     #'<procedure>-list-of-uids)
-
-    ((_ :predicate-function)
-     #'procedure?)
 
     ((_ :accessor-function ?field-name)
      (synner "invalid OOPP syntax"))
 
     ((_ :mutator-function ?field-name)
-     (identifier? #'?field-name)
      (synner "invalid OOPP syntax"))
 
-    ((?src-id :process-shadowed-identifier ?body0 ?body ...)
+    ((_ :process-shadowed-identifier ?body0 ?body ...)
      (synner "invalid OOPP syntax"))
-
-    ;;Define an  internal variable with initialisation  expression using
-    ;;the tag constructor.
-    ((?tag ?var (aux.<> (?arg ...)))
-     (identifier? #'?var)
-     #'(?tag ?var (?tag (?arg ...))))
-
-    ;;Internal definition with initialisation expression.
-    ((_ ?var ?expr)
-     (identifier? #'?var)
-     #'(<procedure> :define ?var ?expr))
-
-    ;;Internal     definition    without    initialisation
-    ;;expression.
-    ((_ ?var)
-     (identifier? #'?var)
-     #'(<procedure> :define ?var))
-
-    ;;Constructor call.   If a  maker transformer  was defined:  use it,
-    ;;otherwise default to the public constructor.
-    ((_ (?arg))
-     #'?arg)
-
-    ;;Predicate reference.  It is meant to be used as:
-    ;;
-    ;;  ((<vector>) '#()) => #t
-    ;;  ((<vector>) 1234) => #f
-    ;;
-    ((_)
-     #'procedure?)
 
     (_
-     (synner "invalid tag syntax"))
-    ))
-
-(define <procedure>-list-of-uids
-  (<top> :append-unique-id (nausicaa:builtin:<procedure>)))
+     (help.tag-private-common-syntax-transformer
+      stx #'values #'procedure? #'<procedure>-list-of-uids
+      %the-setter-and-getter %the-setter-and-getter
+      (lambda ()
+	(help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
 
 
 (define-syntax* (define-label stx)
@@ -558,11 +389,7 @@
        ((SATISFACTION ...)
 	(help.<parsed-spec>-satisfactions spec))
        (SATISFACTION-CLAUSES
-	(help.<label-spec>-satisfaction-clauses spec))
-
-       (WRONG-TYPE-ERROR-MESSAGE
-	(string-append "invalid expression result, expected value of type "
-		       (symbol->string (syntax->datum tag-id)))))
+	(help.<label-spec>-satisfaction-clauses spec)))
     (with-syntax
 	((THE-PUBLIC-PROTOCOL-EXPR
 	  ;;Labels   have  no   record-type  descriptor,   so,  strictly
@@ -636,7 +463,7 @@
 	  (define THE-LIST-OF-UIDS
 	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
 
-	  (define-syntax* THE-TAG
+	  (define-syntax THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through this syntax.  For all the patterns:
 	    ;;
@@ -660,37 +487,10 @@
 		(define (synner message subform)
 		  (syntax-violation 'THE-TAG message stx subform))
 		(syntax-case stx ( ;;
-				  :define :flat-oopp-syntax :make :is-a?
-				  :dispatch :mutator :getter :setter
-				  :assert-type-and-return
-				  :assert-procedure-argument :assert-expression-return-value
-				  :append-unique-id :list-of-unique-ids
-				  :predicate-function :accessor-function :mutator-function
+				  :dispatch :mutator :append-unique-id
+				  :accessor-function :mutator-function
 				  :process-shadowed-identifier
 				  aux.<>)
-
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
-
-		  ((_ #:nested-oopp-syntax ??expr)
-		   (begin
-		     ;; (debug-print 'label-nested
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))))
-		     #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr))))
-
-		  ((_ :flat-oopp-syntax ??expr)
-		   (begin
-		     ;; (debug-print 'label-flat-no-args
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'??expr)))
-		     #'??expr))
-		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
-		   (begin
-		     ;; (debug-print 'label-flat-with-args
-		     ;; 		  (list 'from (syntax->datum stx))
-		     ;; 		  (list 'to   (syntax->datum #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))))
-		     #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...)))))
 
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
@@ -726,88 +526,8 @@
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
-		  ;;Invoke  the  getter   transformer  function  without
-		  ;;nested member use.
-		  ((_ :getter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))))
-		   (%the-getter #'(??expr ((??key0 (... ...))
-					   (??key  (... ...))
-					   (... ...)))))
-
-		  ((_ :setter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))
-				      ??value))
-		   (%the-setter #'(??expr ((??key0 (... ...))
-					   (??key (... ...))
-					   (... ...))
-					  ??value)))
-
-		  ((_ :assert-type-and-return ??expr)
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (tagged-binding-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
-		     #'??expr))
-
-		  ((_ :assert-procedure-argument ??id)
-		   (identifier? #'??id)
-		   ;;This DOES NOT return the value.
-		   (if config.validate-tagged-values?
-		       #'(unless (THE-TAG :is-a? ??id)
-			   (procedure-argument-violation 'THE-TAG
-			     "tagged procedure argument of invalid type" ??id))
-		     #'(void)))
-
-		  ((_ :assert-expression-return-value ??expr)
-		   ;;This DOES return the value.
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (expression-return-value-violation 'THE-TAG
-			       "tagged expression return value of invalid type" val)))
-		     #'??expr))
-
-		  ;; public API: auxiliary syntaxes
-
-		  ;;Define  internal  bindings  for a  tagged  variable.
-		  ;;Without initialisation expression.
-		  ((_ :define ??var)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var)
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ;;Define  internal  bindings  for a  tagged  variable.
-		  ;;With initialisation expression.
-		  ((_ :define ??var ??expr)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :make . ??args)
-		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
-
-		  ((_ :is-a? . ??args)
-		   #'(THE-PUBLIC-PREDICATE . ??args))
-
 		  ((_ :append-unique-id (??id (... ...)))
 		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
-
-		  ((_ :list-of-unique-ids)
-		   #'THE-LIST-OF-UIDS)
-
-		  ((_ :predicate-function)
-		   #'THE-PUBLIC-PREDICATE)
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
@@ -843,41 +563,12 @@
 			 (help.single-identifier-subst #'??src-id dst-id body)
 		       body)))
 
-		  ;;Define  an  internal  variable  with  initialisation
-		  ;;expression using the tag constructor.
-		  ((??tag ??var (aux.<> (??arg (... ...))))
-		   (identifier? #'??var)
-		   #'(??tag ??var (??tag (??arg (... ...)))))
-
-		  ;;Internal definition with initialisation expression.
-		  ((_ ??var ??expr)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var ??expr))
-
-		  ;;Internal     definition    without    initialisation
-		  ;;expression.
-		  ((_ ??var)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var))
-
-		  ;;Constructor  call.   If   a  maker  transformer  was
-		  ;;defined:  use it,  otherwise default  to the  public
-		  ;;constructor.
-		  ((_ (??arg (... ...)))
-		   (if %the-maker
-		       (%the-maker stx)
-		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
-
-		  ;;Predicate reference.  It is meant to be used as:
-		  ;;
-		  ;;  ((<vector>) '#()) => #t
-		  ;;  ((<vector>) 1234) => #f
-		  ;;
-		  ((_)
-		   #'THE-PUBLIC-PREDICATE)
-
 		  (_
-		   (synner "invalid tag syntax" #f))))
+		   (help.tag-private-common-syntax-transformer
+		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
+		    %the-getter %the-setter
+		    (lambda ()
+		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
 
 	  DEFINITION ...
@@ -1120,7 +811,7 @@
 	  ;; (define the-super-constructor
 	  ;;   (record-constructor the-super-constructor-descriptor))
 
-	  (define-syntax* THE-TAG
+	  (define-syntax THE-TAG
 	    ;;Tag  syntax,  all the  operations  involving  this tag  go
 	    ;;through  this   syntax.   The  only   reason  this  syntax
 	    ;;dispatches to sub-syntaxes it to keep the code readable.
@@ -1146,32 +837,16 @@
 		  (syntax-violation 'THE-TAG message stx subform))
 
 		(syntax-case stx ( ;;
-				  :flat-oopp-syntax
-				  :define :is-a? :make :make-from-fields
-				  :dispatch :mutator :getter :setter
+				  :make-from-fields
+				  :dispatch :mutator
 				  :insert-parent-clause define-record-type
 				  :insert-constructor-fields
 				  :super-constructor-descriptor lambda
-				  :assert-type-and-return
-				  :assert-procedure-argument :assert-expression-return-value
-				  :append-unique-id :list-of-unique-ids
-				  :predicate-function :accessor-function :mutator-function
+				  :append-unique-id
+				  :accessor-function :mutator-function
 				  aux.<>)
 
-		  ((_ #:oopp-syntax (??expr ??arg (... ...)))
-		   (help.oopp-syntax-transformer #'THE-TAG #'(??expr ??arg (... ...)) #'set!/tags synner))
-
-		  ((_ #:nested-oopp-syntax ??expr)
-		   #'(splice-first-expand (THE-TAG :flat-oopp-syntax ??expr)))
-
-		  ((_ :flat-oopp-syntax ??expr)
-		   #'??expr)
-		  ((_ :flat-oopp-syntax ??expr ??arg (... ...))
-		   #'(THE-TAG #:oopp-syntax (??expr ??arg (... ...))))
-
-		  ;; private API
-
-		  ;;Given  an  R6RS record  type  definition: insert  an
+		  ;;Given  an R6RS  record  type  definition: insert  an
 		  ;;appropriate  PARENT  clause  so  that  the  type  is
 		  ;;derived from this tag's record type.  This is needed
 		  ;;because  only  the tag  identifier  is  part of  the
@@ -1197,20 +872,6 @@
 		  ((_ :super-constructor-descriptor)
 		   #'the-super-constructor-descriptor)
 
-		  ((_ :define ??var)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var)
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
-		  ((_ :define ??var ??expr)
-		   (identifier? #'??var)
-		   #'(begin
-		       (define src-var (THE-TAG :assert-type-and-return ??expr))
-		       (define-syntax* ??var
-			 (help.make-tagged-variable-transformer #'THE-TAG #'src-var))))
-
 		  ;;Try  to match  the tagged-variable  use to  a method
 		  ;;call for  the tag; if  no method name  matches ??ID,
 		  ;;try to match a field name.
@@ -1226,71 +887,11 @@
 		  ((_ :mutator ??expr ??keys ??value)
 		   (%the-mutator stx #'??expr #'??keys #'??value))
 
-		  ;;Invoke  the  getter   transformer  function  without
-		  ;;nested member use.
-		  ((_ :getter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))))
-		   (%the-getter #'(??expr ((??key0 (... ...))
-					   (??key  (... ...))
-					   (... ...)))))
-
-		  ((_ :setter (??expr ((??key0 (... ...))
-				       (??key (... ...))
-				       (... ...))
-				      ??value))
-		   (%the-setter #'(??expr ((??key0 (... ...))
-					   (??key (... ...))
-					   (... ...))
-					  ??value)))
-
-		  ((_ :assert-type-and-return ??expr)
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (tagged-binding-violation 'THE-TAG
-			       WRONG-TYPE-ERROR-MESSAGE
-			       '(expression: ??expr)
-			       `(result: ,val))))
-		     #'??expr))
-
-		  ((_ :assert-procedure-argument ??id)
-		   (identifier? #'??id)
-		   ;;This DOES NOT return the value.
-		   (if config.validate-tagged-values?
-		       #'(unless (THE-TAG :is-a? ??id)
-			   (procedure-argument-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE ??id))
-		     #'(void)))
-
-		  ((_ :assert-expression-return-value ??expr)
-		   ;;This DOES return the value.
-		   (if config.validate-tagged-values?
-		       #'(receive-and-return (val)
-			     ??expr
-			   (unless (THE-TAG :is-a? val)
-			     (expression-return-value-violation 'THE-TAG WRONG-TYPE-ERROR-MESSAGE val)))
-		     #'??expr))
-
-		  ;; public API: auxiliary syntaxes
-
-		  ((_ :make . ??args)
-		   #'(THE-PUBLIC-CONSTRUCTOR . ??args))
-
 		  ((_ :make-from-fields . ??args)
 		   #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
 
-		  ((_ :is-a? . ??args)
-		   #'(THE-PREDICATE . ??args))
-
 		  ((_ :append-unique-id (??id (... ...)))
 		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
-
-		  ((_ :list-of-unique-ids)
-		   #'THE-LIST-OF-UIDS)
-
-		  ((_ :predicate-function)
-		   #'THE-PREDICATE)
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
@@ -1312,40 +913,13 @@
 		     (else
 		      #'(THE-PARENT :mutator-function ??field-name))))
 
-		  ;; public API: binding definition
-
-		  ;;Define  an  internal  variable  with  initialisation
-		  ;;expression using the tag constructor.
-		  ((??tag ??var (aux.<> (??arg (... ...))))
-		   (identifier? #'??var)
-		   #'(??tag ??var (??tag (??arg (... ...)))))
-
-		  ;;Internal definition with initialisation expression.
-		  ((_ ??var ??expr)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var ??expr))
-
-		  ;;Internal definition without initialisation expression.
-		  ((_ ??var)
-		   (identifier? #'??var)
-		   #'(THE-TAG :define ??var))
-
-		  ;;Constructor call.
-		  ((_ (??arg (... ...)))
-		   (if %the-maker
-		       (%the-maker stx)
-		     #'(THE-PUBLIC-CONSTRUCTOR ??arg (... ...))))
-
-		  ;;Predicate reference.  It is meant to be used as:
-		  ;;
-		  ;;  ((<vector>) '#()) => #t
-		  ;;  ((<vector>) 1234) => #f
-		  ;;
-		  ((_)
-		   #'THE-PREDICATE)
-
 		  (_
-		   (synner "invalid tag syntax" #f))))))
+		   (help.tag-private-common-syntax-transformer
+		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
+		    %the-getter %the-setter
+		    (lambda ()
+		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+	      ))
 
 	  DEFINITION ...
 
@@ -1435,7 +1009,7 @@
   (with-syntax
       ((MIXIN-ID	(help.<parsed-spec>-name-id spec))
        (CLAUSES		(help.<mixin-spec>-clauses spec)))
-    #'(define-syntax* (MIXIN-ID stx)
+    #'(define-syntax (MIXIN-ID stx)
 	(define (synner message subform)
 	  (syntax-violation 'MIXIN-ID message stx subform))
 	(syntax-case stx (:insert-mixin-clauses)
@@ -2190,6 +1764,37 @@
 			   ?form ...
 			   (loop (the-step ID ?step ...) ...))))))
        ))))
+
+
+;;;; other syntaxes
+
+(define-syntax tag-case
+  (syntax-rules (else)
+    ((_ ?expr
+	((?tag0 ?tag ...)
+	 ?tag-body0 ?tag-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((E ?expr))
+       (cond ((or (?tag0 :is-a? E)
+		  (?tag :is-a? E)
+		  ...)
+	      ?tag-body0 ?tag-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?tag0 ?tag ...)
+	 ?tag-body0 ?tag-body ...)
+	...)
+     (let ((tag ?expr))
+       (cond ((or (?tag0 :is-a? E)
+		  (?tag :is-a? E)
+		  ...)
+	      ?tag-body0 ?tag-body ...)
+	     ...)))
+    ))
 
 
 ;;;; done

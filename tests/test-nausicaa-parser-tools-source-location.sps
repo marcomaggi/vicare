@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (prefix (nausicaa parser-tools source-locations) sl.)
   (vicare checks))
@@ -179,7 +179,7 @@
 (parametrise ((check-test-name 'unspecified))
 
   (check
-      ((sl.<source-location>) (sl.unspecified-source-location))
+      ((sl.<source-location> #:predicate) (sl.unspecified-source-location))
     => #t)
 
   (check

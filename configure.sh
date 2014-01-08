@@ -4,6 +4,10 @@
 set -xe
 
 prefix=/usr/local
+if test -d /lib64
+then libdir=${prefix}/lib64
+else libdir=${prefix}/lib
+fi
 LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 
 ../configure \
@@ -11,6 +15,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
     --config-cache					\
     --cache-file=../config.cache			\
     --prefix="${prefix}"				\
+    --libdir="${libdir}"				\
     --enable-binfmt					\
     --enable-time-tests					\
     --with-pthread					\

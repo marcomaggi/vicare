@@ -475,7 +475,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-empty> ()))
-        ((uri.<path-empty>) O))
+        ((uri.<path-empty> #:predicate) O))
     => #t)
 
   (check
@@ -518,7 +518,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-abempty> (ELL)))
-        ((uri.<path-abempty>) O))
+        ((uri.<path-abempty> #:predicate) O))
     => #t)
 
   (check
@@ -550,7 +550,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-abempty> ('())))
-        ((uri.<path-abempty>) O))
+        ((uri.<path-abempty> #:predicate) O))
     => #t)
 
   (check
@@ -599,7 +599,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-absolute> (ELL)))
-        ((uri.<path-absolute>) O))
+        ((uri.<path-absolute> #:predicate) O))
     => #t)
 
   (check
@@ -631,7 +631,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-absolute> ('())))
-        ((uri.<path-absolute>) O))
+        ((uri.<path-absolute> #:predicate) O))
     => #t)
 
   (check
@@ -680,7 +680,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-rootless> (ELL)))
-        ((uri.<path-rootless>) O))
+        ((uri.<path-rootless> #:predicate) O))
     => #t)
 
   (check
@@ -743,7 +743,7 @@
   (check	;constructor
       (let ()
 	(uri.<path> O (uri.<path-noscheme> (ELL)))
-        ((uri.<path-noscheme>) O))
+        ((uri.<path-noscheme> #:predicate) O))
     => #t)
 
   (check

@@ -93,20 +93,22 @@
 
 (parametrise ((check-test-name	'resources))
 
-  (check
-      (let ((rlim (lx.prlimit (px.getpid) RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let ((rlim (lx.prlimit (px.getpid) RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(lx.struct-rlimit? rlim))
-    => #t)
+	  (lx.struct-rlimit? rlim))
+      => #t))
 
-  (check
-      (let* ((pid  (px.getpid))
-	     (rlim (lx.prlimit pid RLIMIT_SIGPENDING)))
+  (when RLIMIT_SIGPENDING
+    (check
+	(let* ((pid  (px.getpid))
+	       (rlim (lx.prlimit pid RLIMIT_SIGPENDING)))
 ;;;	(check-pretty-print rlim)
-	(let ((old (lx.prlimit pid RLIMIT_SIGPENDING rlim)))
+	  (let ((old (lx.prlimit pid RLIMIT_SIGPENDING rlim)))
 ;;;	  (check-pretty-print old)
-	  (lx.struct-rlimit? old)))
-    => #t)
+	    (lx.struct-rlimit? old)))
+      => #t))
 
   #t)
 
