@@ -125,6 +125,10 @@
   body
   flag-accessor)
 
+(define (%false-or-identifier? obj)
+  (or (not obj)
+      (identifier? obj)))
+
 
 ;;;; public helpers
 
@@ -950,7 +954,7 @@
 	 #f  #;public-predicate-id	#f  #;private-predicate-id
 	 #f  #;common-protocol		#f  #;public-protocol
 	 #f  #;super-protocol
-	 #f  #;parent-id
+	 #f #;top-id #;parent-id
 	 '() #;concrete-fields		'() #;virtual-fields
 	 '() #;methods-table
 	 #f  #;sealed?			#f  #;opaque?
@@ -980,9 +984,10 @@
 		;accessors and mutators.
 
 	  (mutable abstract?)
-		;Boolean value.  When true  the class is abstract and it
-		;cannot  be  instantiated;   when  false  the  class  is
-		;concrete and it can be instantiated.
+		;Boolean  value.  It  is  used for  classes and  mixins.
+		;When  true  the class  is  abstract  and it  cannot  be
+		;instantiated; when  false the class is  concrete and it
+		;can be instantiated.
 		;
 		;An abstract  class cannot have a common  protocol nor a
 		;public protocol:  when this field is set  to true, both
@@ -1015,8 +1020,8 @@
 		;protocol.
 
 	  (mutable parent-id)
-		;False or an identifier  bound to the parent tag syntax.
-		;When false: the value will default to "<top>".
+		;Identifier bound to the parent tag syntax.  Initialised
+		;to "<top>".
 
 	  (mutable concrete-fields)
 		;Null or a proper list of <CONCRETE-FIELD-SPEC> records.
@@ -1025,45 +1030,50 @@
 		;come last.
 
 	  (mutable virtual-fields)
-		;Null or a  proper list of <VIRTUAL-FIELD-SPEC> records.
-		;The  order  of  the   record  is  the  reverse  of  the
+		;Null or a proper  list of <VIRTUAL-FIELD-SPEC> records.
+		;The  order  of  the  records  is  the  reverse  of  the
 		;definition order.
 
 	  (mutable methods-table)
 		;Null  or   an  associative  list   having:  identifiers
-		;representing method names as keys, alist as value.  The
-		;first item in  the list value is the  tag identifier of
-		;the  single return  value from  the adddress  or #f  if
-		;there  is no  such tag.   The second  item in  the list
-		;value is an identifier representing the method function
-		;name or syntax name as values.
+		;representing method names as keys, lists as values.
 		;
 		;  ((?method-name-id . (?rv-tag ?method-implementation-id))
 		;   ...)
+		;
+		;The first item in the  list value is the tag identifier
+		;of the single  return value from the adddress  or #f if
+		;there  is no  such tag.   The second  item in  the list
+		;value is  an identifier  representing the  method name,
+		;which is bound to a function or syntax.
 		;
 		;The  order  of  the  entries  is  the  reverse  of  the
 		;definition order.
 
 	  (mutable sealed?)
-		;Boolean value.  When true the record type is sealed.
+		;Boolean  value.  It  is  used for  classes and  mixins.
+		;When true the R6RS record  type associated to the class
+		;is sealed.
 
 	  (mutable opaque?)
-		;Boolean value.  When true the record type is opaque.
+		;Boolean  value.    When  true  the  R6RS   record  type
+		;associated to the class is opaque.
 
 	  (mutable getter)
 		;False or a syntax  object representing an expression to
 		;evaluate once,  at expand  time, to acquire  the getter
-		;syntax function.
+		;syntax transformer function.
 
 	  (mutable setter)
 		;False or a syntax  object representing an expression to
 		;evaluate once,  at expand  time, to acquire  the setter
-		;syntax function.
+		;syntax transformer function.
 
 	  (mutable nongenerative-uid)
 		;A symbol  uniquely identifying  this type in  the whole
-		;program.    When  non-false:   this   record  type   is
-		;nongenerative.
+		;program.   It is  used  for classes  and mixins.   When
+		;non-false: the R6RS record type associated to the class
+		;is nongenerative.
 
 	  (mutable maker-transformer)
 		;False  or   a  syntax  object   holding  an  expression
@@ -1071,13 +1081,16 @@
 		;the maker syntax.
 
 	  (mutable finaliser-expression)
-		;False  or   a  syntax  object  holding   an  expression
-		;evaluating to function to  be used as record destructor
-		;by the garbage collector.
+		;False or a  syntax object.  It is used  for classes and
+		;mixins.  When  a syntax object: it  holds an expression
+		;evaluating to  a function to  be used as  destructor by
+		;the garbage  collector when finalising the  R6RS record
+		;instance representing the class instance.
 
 	  (mutable shadowed-identifier)
-		;False or identifier.  It is the identifier to insert in
-		;place   of  the   label  tag   identifier   when  using
+		;False  or  identifier.   It  is  used  for  labels  and
+		;classes.  It  is the identifier  to insert in  place of
+		;the     label     tag     identifier     when     using
 		;WITH-LABEL-SHADOWING.
 
 	  (mutable satisfactions)
@@ -1089,8 +1102,9 @@
   (nongenerative nausicaa:language:oopp:<class-spec>)
   (parent <parsed-spec>)
   (fields (immutable record-type-id)
-		;Identifier to  be used for the actual  R6RS record type
-		;in the automatically composed DEFINE-RECORD-TYPE form.
+		;Identifier to be used as  name for the R6RS record type
+		;associated to the class,  in the automatically composed
+		;DEFINE-RECORD-TYPE form.
 	  #| end of fields |# )
   (protocol
    (lambda (make-spec)
@@ -1117,11 +1131,7 @@
   (nongenerative nausicaa:language:oopp:helpers:<field-spec>)
   (protocol
    (lambda (make-record)
-     (lambda (name acc mut tag)
-       (assert (identifier? name))
-       (assert (identifier? acc))
-       (assert (or (not mut) (identifier? mut)))
-       (assert (or (not tag) (identifier? tag)))
+     (lambda* ((name identifier?) (acc identifier?) (mut %false-or-identifier?) (tag %false-or-identifier?))
        (make-record name acc mut tag))))
   (fields (immutable name-id)
 		;Identifier representing the field name.
@@ -1130,7 +1140,7 @@
 		;automatically built when not specified.
 	  (immutable mutator-id)
 		;For an  immutable field:  false.  For a  mutable field:
-		;identifier  representing  the   accessor  name;  it  is
+		;identifier  representing   the  mutator  name;   it  is
 		;automatically built when not specified.
 	  (immutable tag-id)
 		;Identifier  representing the type  tag for  this field.
@@ -1141,19 +1151,11 @@
 
 (define-record-type <concrete-field-spec>
   (nongenerative nausicaa:language:oopp:helpers:<concrete-field-spec>)
-  (parent <field-spec>)
-  (protocol
-   (lambda (make-field-spec)
-     (lambda (name acc mut tag)
-       ((make-field-spec name acc mut tag))))))
+  (parent <field-spec>))
 
 (define-record-type <virtual-field-spec>
   (nongenerative nausicaa:language:oopp:helpers:<virtual-field-spec>)
-  (parent <field-spec>)
-  (protocol
-   (lambda (make-field-spec)
-     (lambda (name acc mut tag)
-       ((make-field-spec name acc mut tag))))))
+  (parent <field-spec>))
 
 
 ;;;; data type methods
