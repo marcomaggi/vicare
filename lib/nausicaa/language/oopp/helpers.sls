@@ -1158,57 +1158,52 @@
   (parent <field-spec>))
 
 
-;;;; data type methods
+;;;; data type methods: small functions
 
-(define (<parsed-spec>-member-identifiers-cons! parsed-spec id what-string synner)
+(define* (<parsed-spec>-member-identifiers-cons! (parsed-spec <parsed-spec>?) id what-string synner)
   ;;Add  the  identifier  ID  to  the  list  of  member  identifiers  in
   ;;PARSED-SPEC.  If such identifier  is already present: raise a syntax
   ;;violation.
   ;;
-  (let ((member-identifiers (<parsed-spec>-member-identifiers parsed-spec)))
+  (let ((member-identifiers ($<parsed-spec>-member-identifiers parsed-spec)))
     (cond ((identifier-memq id member-identifiers free-identifier=?)
-	   => (lambda (summy)
+	   => (lambda (dummy)
 		(synner (string-append what-string " conflicts with other member name") id)))
 	  (else
-	   (<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))))
+	   ($<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))))
 
-(define-inline (<parsed-spec>-definitions-cons! parsed-spec definition)
+(define* (<parsed-spec>-definitions-cons! (parsed-spec <parsed-spec>?) definition)
   ;;Prepend a definition form to the list of definitions in PARSED-SPEC.
   ;;
-  (assert (<parsed-spec>? parsed-spec))
   ($<parsed-spec>-definitions-set! parsed-spec (cons definition ($<parsed-spec>-definitions parsed-spec))))
 
-(define-inline (<parsed-spec>-concrete-fields-cons! parsed-spec field-record)
+(define* (<parsed-spec>-concrete-fields-cons! (parsed-spec <parsed-spec>?) field-record)
   ;;Prepend a  field record  to the  list of  concrete field  records in
   ;;PARSED-SPEC.
   ;;
-  (assert (<parsed-spec>? parsed-spec))
   ($<parsed-spec>-concrete-fields-set! parsed-spec (cons field-record ($<parsed-spec>-concrete-fields parsed-spec))))
 
-(define-inline (<parsed-spec>-virtual-fields-cons! parsed-spec field-record)
+(define* (<parsed-spec>-virtual-fields-cons! (parsed-spec <parsed-spec>?) field-record)
   ;;Prepend  a field  record to  the list  of virtual  field  records in
   ;;PARSED-SPEC.
   ;;
-  (assert (<parsed-spec>? parsed-spec))
   ($<parsed-spec>-virtual-fields-set! parsed-spec (cons field-record ($<parsed-spec>-virtual-fields parsed-spec))))
 
-(define-inline (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
-  ;;Prepend a  method name  identifier to  the list  of method  names in
-  ;;PARSED-SPEC.
+(define* (<parsed-spec>-methods-table-cons! (parsed-spec <parsed-spec>?)
+					    method-name-id method-rv-tag-id method-implementation-id)
+  ;;Prepend an entry in the methods table.
   ;;
-  (assert (<parsed-spec>? parsed-spec))
   ($<parsed-spec>-methods-table-set! parsed-spec (cons (list method-name-id method-rv-tag-id method-implementation-id)
 						       ($<parsed-spec>-methods-table parsed-spec))))
 
 ;;; --------------------------------------------------------------------
 
-(define (<parsed-spec>-mutable-fields-data spec)
+(define* (<parsed-spec>-mutable-fields-data (spec <parsed-spec>?))
   ;;Select the mutable fields among  the concrete and virtual fields and
   ;;return a list of lists with the format:
   ;;
   ;;	((?field-name ?accessor ?mutator ?tag) ...)
   ;;
-  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
 	 (list ($<field-spec>-name-id		field-record)
 	       ($<field-spec>-accessor-id	field-record)
@@ -1221,13 +1216,12 @@
 		  ($<parsed-spec>-virtual-fields spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define (<parsed-spec>-unsafe-mutable-fields-data spec)
+(define* (<parsed-spec>-unsafe-mutable-fields-data (spec <parsed-spec>?))
   ;;Select the  mutable fields  among the concrete  fields and  return a
   ;;list of lists with the format:
   ;;
   ;;	((?field-name ?unsafe-field-name ?tag) ...)
   ;;
-  (assert (<parsed-spec>? spec))
   (if (<class-spec>? spec)
       (map (lambda (field-record)
 	     (define field-name-id
@@ -1242,13 +1236,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (<parsed-spec>-immutable-fields-data spec)
+(define* (<parsed-spec>-immutable-fields-data (spec <parsed-spec>?))
   ;;Select the  immutable fields among  the concrete and  virtual fields
   ;;and return a list of lists with the format:
   ;;
   ;;	((?field-name ?unsafe-field-name ?accessor ?tag) ...)
   ;;
-  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
 	 (list ($<field-spec>-name-id		field-record)
 	       ($<field-spec>-accessor-id	field-record)
@@ -1260,13 +1253,12 @@
 		  ($<parsed-spec>-virtual-fields  spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define (<parsed-spec>-unsafe-immutable-fields-data spec)
+(define* (<parsed-spec>-unsafe-immutable-fields-data (spec <parsed-spec>?))
   ;;Select the immutable  fields among the concrete fields  and return a
   ;;list of lists with the format:
   ;;
   ;;	((?field-name ?unsafe-field-name ?tag) ...)
   ;;
-  (assert (<parsed-spec>? spec))
   (if (<class-spec>? spec)
       (map (lambda (field-record)
 	     (define field-name-id
@@ -1281,7 +1273,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (<parsed-spec>-concrete-fields-data spec)
+(define* (<parsed-spec>-concrete-fields-data (spec <parsed-spec>?))
   ;;Take the concrete fields and return a list of lists with the format:
   ;;
   ;;   (?field-spec ...)
@@ -1294,7 +1286,6 @@
   ;;The returned  list can  be used  as content for  a FIELDS  clause of
   ;;DEFINE-RECORD-TYPE as defined by R6RS.
   ;;
-  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
 	 (let ((name-id     ($<field-spec>-name-id     field-record))
 	       (accessor-id ($<field-spec>-accessor-id field-record))
@@ -1304,80 +1295,82 @@
 	     (list #'aux.immutable name-id accessor-id))))
     ($<parsed-spec>-concrete-fields spec)))
 
-(define (<parsed-spec>-concrete-fields-names spec)
+(define* (<parsed-spec>-concrete-fields-names (spec <parsed-spec>?))
   ;;Take the concrete fields and return a list with the format:
   ;;
   ;;   (?field-name ...)
   ;;
   ;;where ?FIELD-NAME is an identifier representing a field name.
   ;;
-  (assert (<parsed-spec>? spec))
   (map (lambda (field-record)
 	 ($<field-spec>-name-id field-record))
     ($<parsed-spec>-concrete-fields spec)))
 
 ;;; --------------------------------------------------------------------
 
-(define (<label-spec>-satisfaction-clauses spec)
-  (assert (<parsed-spec>? spec))
-  (let-values (((virtual-mutable-fields virtual-immutable-fields)
-		(%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields  spec))))
-    (list (list ($<parsed-spec>-name-id spec)
-		($<parsed-spec>-public-constructor-id spec)
-		($<parsed-spec>-public-predicate-id spec))
-	  (list #'aux.parent		($<parsed-spec>-parent-id spec))
-	  (cons #'aux.virtual-fields	virtual-mutable-fields)
-	  (cons #'aux.virtual-fields	virtual-immutable-fields)
-	  (cons #'aux.methods		($<parsed-spec>-methods-table spec))
-	  (list #'aux.getter		($<parsed-spec>-getter spec))
-	  (list #'aux.setter		($<parsed-spec>-setter spec))
-	  (list #'aux.nongenerative	($<parsed-spec>-nongenerative-uid spec))
-	  (list #'aux.shadows		($<parsed-spec>-shadowed-identifier spec))
-	  )))
+(module (<label-spec>-satisfaction-clauses
+	 <class-spec>-satisfaction-clauses)
 
-(define (<class-spec>-satisfaction-clauses spec)
-  (assert (<parsed-spec>? spec))
-  (let-values (((concrete-mutable-fields concrete-immutable-fields)
-		(%field-spec-satisfaction-clauses ($<parsed-spec>-concrete-fields spec)))
-	       ((virtual-mutable-fields virtual-immutable-fields)
-		(%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields  spec))))
-    (list (list ($<parsed-spec>-name-id spec)
-		($<parsed-spec>-public-constructor-id	spec)
-		($<parsed-spec>-public-predicate-id	spec)
-		($<class-spec>-record-type-id		spec))
-	  (list #'aux.parent		($<parsed-spec>-parent-id		spec))
-	  (cons #'aux.fields		concrete-mutable-fields)
-	  (cons #'aux.fields		concrete-immutable-fields)
-	  (cons #'aux.virtual-fields	virtual-mutable-fields)
-	  (cons #'aux.virtual-fields	virtual-immutable-fields)
-	  (cons #'aux.methods		($<parsed-spec>-methods-table		spec))
-	  (list #'aux.getter		($<parsed-spec>-getter			spec))
-	  (list #'aux.setter		($<parsed-spec>-setter			spec))
-	  (list #'aux.nongenerative	($<parsed-spec>-nongenerative-uid	spec))
-	  (list #'aux.sealed		($<parsed-spec>-sealed?			spec))
-	  (list #'aux.opaque		($<parsed-spec>-opaque?			spec))
-	  (list #'aux.abstract		($<parsed-spec>-abstract?		spec))
-	  )))
+  (define* (<label-spec>-satisfaction-clauses (spec <parsed-spec>?))
+    (receive (virtual-mutable-fields virtual-immutable-fields)
+	(%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields spec))
+      (list (list ($<parsed-spec>-name-id spec)
+		  ($<parsed-spec>-public-constructor-id spec)
+		  ($<parsed-spec>-public-predicate-id spec))
+	    (list #'aux.parent		($<parsed-spec>-parent-id spec))
+	    (cons #'aux.virtual-fields	virtual-mutable-fields)
+	    (cons #'aux.virtual-fields	virtual-immutable-fields)
+	    (cons #'aux.methods		($<parsed-spec>-methods-table spec))
+	    (list #'aux.getter		($<parsed-spec>-getter spec))
+	    (list #'aux.setter		($<parsed-spec>-setter spec))
+	    (list #'aux.nongenerative	($<parsed-spec>-nongenerative-uid spec))
+	    (list #'aux.shadows		($<parsed-spec>-shadowed-identifier spec))
+	    )))
 
-(define (%field-spec-satisfaction-clauses fields)
-  (receive (mutables immutables)
-      (partition <field-spec>-mutator-id fields)
-    (values (map (lambda (field-record)
-		   (let ((name     ($<field-spec>-name-id     field-record))
-			 (tag      ($<field-spec>-tag-id      field-record))
-			 (accessor ($<field-spec>-accessor-id field-record))
-			 (mutator  ($<field-spec>-mutator-id  field-record)))
-		     #`(aux.mutable (#,name #,tag) #,accessor #,mutator)))
-	      mutables)
-	    (map (lambda (field-record)
-		   (let ((name     ($<field-spec>-name-id     field-record))
-			 (tag      ($<field-spec>-tag-id      field-record))
-			 (accessor ($<field-spec>-accessor-id field-record)))
-		     #`(aux.immutable (#,name #,tag) #,accessor #f)))
-	      immutables))))
+  (define* (<class-spec>-satisfaction-clauses (spec <parsed-spec>?))
+    (let-values (((concrete-mutable-fields concrete-immutable-fields)
+		  (%field-spec-satisfaction-clauses ($<parsed-spec>-concrete-fields spec)))
+		 ((virtual-mutable-fields virtual-immutable-fields)
+		  (%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields  spec))))
+      (list (list ($<parsed-spec>-name-id spec)
+		  ($<parsed-spec>-public-constructor-id	spec)
+		  ($<parsed-spec>-public-predicate-id	spec)
+		  ($<class-spec>-record-type-id		spec))
+	    (list #'aux.parent		($<parsed-spec>-parent-id spec))
+	    (cons #'aux.fields		concrete-mutable-fields)
+	    (cons #'aux.fields		concrete-immutable-fields)
+	    (cons #'aux.virtual-fields	virtual-mutable-fields)
+	    (cons #'aux.virtual-fields	virtual-immutable-fields)
+	    (cons #'aux.methods		($<parsed-spec>-methods-table spec))
+	    (list #'aux.getter		($<parsed-spec>-getter spec))
+	    (list #'aux.setter		($<parsed-spec>-setter spec))
+	    (list #'aux.nongenerative	($<parsed-spec>-nongenerative-uid spec))
+	    (list #'aux.sealed		($<parsed-spec>-sealed? spec))
+	    (list #'aux.opaque		($<parsed-spec>-opaque? spec))
+	    (list #'aux.abstract	($<parsed-spec>-abstract? spec))
+	    )))
+
+  (define (%field-spec-satisfaction-clauses fields)
+    (receive (mutables immutables)
+	(partition <field-spec>-mutator-id fields)
+      (values (map (lambda (field-record)
+		     (let ((name     ($<field-spec>-name-id     field-record))
+			   (tag      ($<field-spec>-tag-id      field-record))
+			   (accessor ($<field-spec>-accessor-id field-record))
+			   (mutator  ($<field-spec>-mutator-id  field-record)))
+		       #`(aux.mutable (#,name #,tag) #,accessor #,mutator)))
+		mutables)
+	      (map (lambda (field-record)
+		     (let ((name     ($<field-spec>-name-id     field-record))
+			   (tag      ($<field-spec>-tag-id      field-record))
+			   (accessor ($<field-spec>-accessor-id field-record)))
+		       #`(aux.immutable (#,name #,tag) #,accessor #f)))
+		immutables))))
+
+  #| end of module |# )
 
 
-;;;; tag accessor and mutator transformers
+;;;; data type methods: tag accessor and mutator transformers
 
 (define (<parsed-spec>-accessor-transformer spec)
   ;;Given  the "<parsed-spec>"  instance  SPEC: return  a syntax  object
