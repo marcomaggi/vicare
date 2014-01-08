@@ -1372,19 +1372,24 @@
 
 ;;;; data type methods: tag accessor and mutator transformers
 
-(define (<parsed-spec>-accessor-transformer spec)
+(define* (<parsed-spec>-accessor-transformer (spec <parsed-spec>?))
   ;;Given  the "<parsed-spec>"  instance  SPEC: return  a syntax  object
-  ;;representing  the   accessor  transformer  function  for   the  tag.
+  ;;representing the accessor transformer function for the tag.
+  ;;
   ;;Whenever a tagged variable is referenced in a form like:
   ;;
   ;;   (?var ?arg0 ?arg ...)
   ;;
   ;;first the symbol ?ARG0 is compared  to the names of the tag methods:
-  ;;if it matches the form is  a method call; if no method name matches,
-  ;;the form is handed to the accessor transformer function to attempt a
-  ;;match between ?ARG0 and a field  name; if no field name matches, the
-  ;;form is handed to the parent  tag to attempt a match with the parent
-  ;;tag's members.
+  ;;
+  ;;1. If  it matches,  the form  is a  method call.
+  ;;
+  ;;2. If  no method name  matches, the form  is handed to  the accessor
+  ;;   transformer function to attempt a match between ?ARG0 and a field
+  ;;   name.
+  ;;
+  ;;3. If no field name matches, the form is handed to the parent tag to
+  ;;   attempt a match with the parent tag's members.
   ;;
   ;;Let's consider the example:
   ;;
@@ -1399,7 +1404,7 @@
   ;;   (define-label <gamma>
   ;;     (fields (c <beta>)))
   ;;
-  ;;   (<gamma> O)
+  ;;   (<gamma> O ---)
   ;;
   ;;where  O is  the tagged  variable; the  following  syntax expansions
   ;;should happen:
@@ -1430,12 +1435,12 @@
   ;;
   (with-syntax
       ((THE-TAG
-	(<parsed-spec>-name-id spec))
+	($<parsed-spec>-name-id spec))
        (THE-PARENT
-	(<parsed-spec>-parent-id spec))
+	($<parsed-spec>-parent-id spec))
        (THE-RECORD-TYPE
 	(if (<class-spec>? spec)
-	    (<class-spec>-record-type-id spec)
+	    ($<class-spec>-record-type-id spec)
 	  #f))
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
 	(<parsed-spec>-immutable-fields-data spec))
@@ -1529,16 +1534,18 @@
 	  (_
 	   (syntax-violation 'THE-TAG "invalid :accessor tag syntax" original-stx))))))
 
-(define (<parsed-spec>-mutator-transformer spec)
+(define* (<parsed-spec>-mutator-transformer (spec <parsed-spec>?))
   ;;Given  the "<parsed-spec>"  instance  SPEC: return  a syntax  object
-  ;;representing the mutator transformer  function for the tag; whenever
-  ;;a tagged variable is referenced in a form like:
+  ;;representing the mutator transformer function for the tag.
+  ;;
+  ;;Whenever a tagged variable is referenced in a form like:
   ;;
   ;;   (set!/tags (?var ?arg0 ?arg ...) ?val)
   ;;
-  ;;the is handed to the mutator transformer function to attempt a match
-  ;;between ?ARG0 and  a field name; if no field  name matches, the form
-  ;;is handed to the parent tag's mutator transformer.
+  ;;the  syntax  object  holding  the  form is  handed  to  the  mutator
+  ;;transformer function  to attempt a  match between ?ARG0 and  a field
+  ;;name; if  no field name  matches, the form  is handed to  the parent
+  ;;tag's mutator transformer.
   ;;
   ;;Let's consider the example:
   ;;
@@ -1552,7 +1559,7 @@
   ;;   (define-label <gamma>
   ;;     (fields (c <beta>)))
   ;;
-  ;;   (<gamma> O)
+  ;;   (<gamma> O ---)
   ;;
   ;;where  O is  the tagged  variable; the  following  syntax expansions
   ;;should happen:
@@ -1574,12 +1581,12 @@
   ;;
   (with-syntax
       ((THE-TAG
-	(<parsed-spec>-name-id spec))
+	($<parsed-spec>-name-id spec))
        (THE-PARENT
-	(<parsed-spec>-parent-id spec))
+	($<parsed-spec>-parent-id spec))
        (THE-RECORD-TYPE
 	(if (<class-spec>? spec)
-	    (<class-spec>-record-type-id spec)
+	    ($<class-spec>-record-type-id spec)
 	  #f))
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
 	(<parsed-spec>-immutable-fields-data spec))
@@ -1589,7 +1596,7 @@
 	(<parsed-spec>-unsafe-immutable-fields-data spec))
        (((MUTABLE-CONCRETE-FIELD UNSAFE-MUTABLE-CONCRETE-FIELD MUTABLE-CONCRETE-TAG) ...)
 	(<parsed-spec>-unsafe-mutable-fields-data spec)))
-    #'(lambda (stx expr-stx keys-stx value-stx)
+    #'(lambda (original-stx expr-stx keys-stx value-stx)
 	;;Process a mutator form equivalent to:
 	;;
 	;;   (set!/tags (?var ?field-name0 ?arg ...) ?value)
@@ -1613,7 +1620,7 @@
 	      #`(MUTABLE-MUTATOR #,expr-stx (MUTABLE-TAG :assert-type-and-return #,value-stx)))
 	     ...
 	     ((IMMUTABLE-FIELD)
-	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" stx #'IMMUTABLE-FIELD))
+	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-FIELD))
 	     ...
 	     ;;Unsafe mutators.
 	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
@@ -1621,7 +1628,7 @@
 					 (MUTABLE-CONCRETE-TAG :assert-type-and-return #,value-stx)))
 	     ...
 	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" stx #'IMMUTABLE-CONCRETE-FIELD))
+	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-CONCRETE-FIELD))
 	     ...
 	     (else
 	      #`(THE-PARENT :mutator #,expr-stx (??field-name) #,value-stx))))
@@ -1678,7 +1685,7 @@
 	      #`(THE-PARENT :mutator #,expr-stx (??field-name0 ??arg (... ...)) #,value-stx))))
 
 	  (_
-	   (syntax-violation 'THE-TAG "invalid :mutator tag syntax" stx))))))
+	   (syntax-violation 'THE-TAG "invalid :mutator tag syntax" original-stx))))))
 
 
 ;;;; common clause parser definer: at-most-once clause, single argument
