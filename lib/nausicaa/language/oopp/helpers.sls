@@ -563,14 +563,20 @@
 
 
 (define (process-method-application rv-tag-id application-stx)
-  ;;Process a tag's method application.   RV-TAG-ID must be false of the
-  ;;tag   identifier   of   the   single   application   return   value.
+  ;;Process a  tag's method application  to support spliced  OOPP syntax
+  ;;using the tag of a method's single return value.
+  ;;
+  ;;RV-TAG-ID must  be false to  indicate a method with  untagged return
+  ;;value or a  method with multiple return values; RV-TAG-ID  must be a
+  ;;tag identifier to indicate a method  with a single and tagged return
+  ;;value.
+  ;;
   ;;APPLICATION-STX  must be  a  syntax object  representing the  method
   ;;application.
   ;;
   ;;When there  is no  return-value tag or  the method  returns multiple
-  ;;values: RV-TAG-ID  must be false.  In  this case we just  return the
-  ;;application syntax object.
+  ;;values: RV-TAG-ID is false and we just return the application syntax
+  ;;object.
   ;;
   ;;When the method  has a single tagged return value:  we want to allow
   ;;OOPP syntax  for the returned  value.  For example, knowing  the the
