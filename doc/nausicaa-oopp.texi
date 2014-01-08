@@ -255,6 +255,7 @@ It is a generic form: an expression, an auxiliary syntax, @dots{}.
 * oopp notation type expr::     Applying @oopp{} syntax to any
                                 expression.
 * oopp notation type cast::     Casting a value for @oopp{} syntax.
+* oopp notation type leaking::  @oopp{} syntax allows interface leaking.
 @end menu
 
 @c page
@@ -625,6 +626,42 @@ This syntax allows expressions like:
 (((<fixnum>) 123) <= 200)       @result{} #t
 (((<fixnum>) 123) <= 100)       @result{} #f
 @end example
+
+@c page
+@node oopp notation type leaking
+@subsubsection @oopp{} syntax allows interface leaking
+
+
+It is possible to access the members of a class or label defined by a
+tag that is not imported in the current lexical environment; this
+constitutes, in practice, an @api{} leaking between contexts.  It
+happens as follows:
+
+@example
+(library (leaking-demo)
+  (export doit)
+  (import (nausicaa))
+  (define-class <alpha>
+    (fields a b))
+  (define ((doit <alpha>) a b)
+    (<alpha> (a b))))
+@end example
+
+@noindent
+the library @library{leaking-demo} exports the function @func{doit} but
+not the class identifier @class{alpha}.  Despite this, when we import
+the library and call @func{doit} we can access the members @code{a} and
+@code{b} of the returned @class{alpha} instance:
+
+@example
+(import (nausicaa)
+  (leaking-demo))
+
+((doit 1 2) a)          @result{} 1
+((doit 3 4) b)          @result{} 4
+@end example
+
+This behaviour may change in the future.
 
 @c page
 @node oopp notation var
