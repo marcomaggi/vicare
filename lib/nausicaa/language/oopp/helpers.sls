@@ -1092,7 +1092,7 @@
   (fields (immutable record-type-id)
 		;Identifier to  be used for the actual  R6RS record type
 		;in the automatically composed DEFINE-RECORD-TYPE form.
-	  )
+	  #| end of fields |# )
   (protocol
    (lambda (make-spec)
      (lambda (name-id top-id lambda-id)
@@ -1101,13 +1101,7 @@
 
 (define-record-type <label-spec>
   (nongenerative nausicaa:language:oopp:<label-spec>)
-  (parent <parsed-spec>)
-  (protocol
-   ;;R6RS mandates that a record type  with custom RCD must have a custom
-   ;;RCD, not a default one.
-   (lambda (make-spec)
-     (lambda (name-id top-id lambda-id)
-       ((make-spec name-id top-id lambda-id))))))
+  (parent <parsed-spec>))
 
 (define-record-type <mixin-spec>
   (nongenerative nausicaa:language:oopp:<mixin-spec>)
@@ -1115,13 +1109,7 @@
   (fields (immutable clauses)
 		;The  syntax  object  representing  the clauses  in  the
 		;DEFINE-MIXIN form.
-	  )
-  (protocol
-   ;;R6RS mandates that a record type  with custom RCD must have a custom
-   ;;RCD, not a default one.
-   (lambda (make-spec)
-     (lambda (name-id top-id lambda-id clauses)
-       ((make-spec name-id top-id lambda-id) clauses)))))
+	  #| end of fields |# ))
 
 
 ;;;; data types: field specification
