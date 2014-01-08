@@ -28,9 +28,8 @@
 #!vicare
 (library (nausicaa language oopp helpers)
   (export
-    parse-label-definition		parse-label-clauses
-    parse-class-definition		parse-class-clauses
-    parse-mixin-definition		parse-mixin-clauses
+    parse-label-definition		parse-class-definition
+    parse-mixin-definition
     parse-tag-name-spec			filter-and-validate-mixins-clauses
 
     parse-with-tags-bindings
@@ -960,8 +959,12 @@
 	 #f  #;shadowed-identifier	'() #;satisfactions
 	 ))))
   (fields (immutable name-id)
+		;The identifier representing the type name.
 	  (immutable top-id)
+		;An identifier bound to the "<top>" tag.
 	  (immutable lambda-id)
+		;An  identifier bound  to  the  LAMBDA macro  supporting
+		;tagged formal arguments.
 
 	  (mutable member-identifiers)
 		;Null or  a proper list of  identifiers representing the

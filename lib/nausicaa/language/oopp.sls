@@ -12,7 +12,7 @@
 ;;;	using "void  *" pointers in the  C language and  casting them to
 ;;;	some structure pointer type when needed.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1009,7 +1009,7 @@
   (with-syntax
       ((MIXIN-ID	(help.<parsed-spec>-name-id spec))
        (CLAUSES		(help.<mixin-spec>-clauses spec)))
-    #'(define-syntax* (MIXIN-ID stx)
+    #'(define-syntax (MIXIN-ID stx)
 	(define (synner message subform)
 	  (syntax-violation 'MIXIN-ID message stx subform))
 	(syntax-case stx (:insert-mixin-clauses)
