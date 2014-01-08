@@ -943,8 +943,7 @@
   (nongenerative nausicaa:language:oopp:<parsed-spec>)
   (protocol
    (lambda (make-instance)
-     (lambda (name-id top-id lambda-id)
-       (assert (identifier? name-id))
+     (lambda* ((name-id identifier?) (top-id identifier?) (lambda-id identifier?))
        (make-instance name-id top-id lambda-id
 	 '() #;member-identifiers	'() #;definitions
 	 #f  #;abstract?		#f  #;public-constructor-id
