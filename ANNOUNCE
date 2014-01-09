@@ -40,9 +40,13 @@ this project has a mailing list:
 Notes for revision 0.3d8
 ------------------------
 
-* BACKWARDS  INCOMPATIBILITY  Support  for  experimental  nested  method
-  invocation added  in release 0.3d7  has been  removed.  It is  no more
-  possible to use the auxiliary syntax "=>" to nest members invocation:
+* Added syntax  SPLICE-FIRST-EXPAND to (vicare).  See  the documentation
+  node "iklib syntaxes splice1st" for details.
+
+* BACKWARDS INCOMPATIBILITY  Nausicaa's support for  experimental nested
+  method invocation added  in release 0.3d7 has been removed.   It is no
+  more  possible  to use  the  auxiliary  syntax  "=>" to  nest  members
+  invocation:
 
     (define-label <alpha>
       (method ((one <list>) self a b)
@@ -51,8 +55,6 @@ Notes for revision 0.3d8
     (let (((O <alpha>) 0))
       (O one 10 20
          => map add1)) ;;; ERROR
-
-* Added syntax SPLICE-FIRST-EXPAND to (vicare).
 
 * It  makes  no   sense  to  develop  Vicare  Scheme  if   it  does  not
   differentiate itself from other  implementations; so with this release
