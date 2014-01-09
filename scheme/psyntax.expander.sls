@@ -2898,9 +2898,6 @@
       (cons 'macro! x)
     (assertion-violation who "not a procedure" x)))
 
-(define (make-compile-time-value x)
-  (cons 'ctv x))
-
 (define (variable-transformer? x)
   (and (pair? x)
        (eq? (car x) 'macro!)
@@ -2912,21 +2909,22 @@
       (cdr x)
     (assertion-violation who "not a variable transformer" x)))
 
-(module (make-eval-transformer)
+(define (make-compile-time-value x)
+  (cons 'ctv x))
 
-  (define (make-eval-transformer x)
-    ;;Take  an expanded  expression,  evaluate it  and  return a  proper
-    ;;syntactic binding for the resulting object.
-    ;;
-    (%sanitize-binding (eval-core (expanded->core x)) x))
-
-  (define (%sanitize-binding x src)
-    ;;When the  rhs of a  syntax definition  is evaluated, it  should be
-    ;;either a procedure, an identifier-syntax transformer or an:
-    ;;
-    ;;   ($rtd . #<rtd>)
-    ;;
-    ;;form.  SANITIZE-BINDING converts the output to one of:
+(define (make-eval-transformer expanded-expr)
+  ;;Given an expanded  expression representing the right-hand  side of a
+  ;;DEFINE-SYNTAX,  LET-SYNTAX,  LETREC-SYNTAX,  DEFINE-FLUID-SYNTAX  or
+  ;;FLUID-LET-SYNTAX binding:  convert it to core  language, evaluate it
+  ;;and return a proper syntactic binding for the resulting object.
+  ;;
+  ;;When  the RHS  of a  syntax  definition is  evaluated, the  returned
+  ;;object   should  be   either  a   procedure,  an   identifier-syntax
+  ;;transformer, a Vicare struct type  descriptor or an R6RS record type
+  ;;descriptor.
+  ;;
+  (let ((output-value (eval-core (expanded->core expanded-expr))))
+    ;;Here we convert the output value to one of:
     ;;
     ;;   (lacal-macro . procedure)
     ;;   (local-macro! . procedure)
@@ -2935,20 +2933,18 @@
     ;;
     ;;and signals an assertion-violation otherwise.
     ;;
-    (cond ((procedure? x)
-	   (cons* 'local-macro x src))
-	  ((variable-transformer? x)
-	   (cons* 'local-macro! (cdr x) src))
-	  ((and (pair? x)
-		(eq? (car x) '$rtd))
-	   x)
-	  ((and (pair? x)
-		(eq? (car x) 'ctv))
-	   (cons* 'local-ctv (cdr x) src))
+    (cond ((procedure? output-value)
+	   (cons* 'local-macro output-value expanded-expr))
+	  ((variable-transformer? output-value)
+	   (cons* 'local-macro! (cdr output-value) expanded-expr))
+	  ((and (pair? output-value)
+		(eq? (car output-value) '$rtd))
+	   output-value)
+	  ((and (pair? output-value)
+		(eq? (car output-value) 'ctv))
+	   (cons* 'local-ctv (cdr output-value) expanded-expr))
 	  (else
-	   (assertion-violation 'expand "invalid transformer" x))))
-
-  #| end of module |# )
+	   (assertion-violation 'expand "invalid transformer" output-value)))))
 
 
 (define-syntax syntax-match
