@@ -1670,6 +1670,22 @@
 ;;
 ;;  where ?LABEL is the gensym associated to the fluid syntax.
 ;;
+;;* A binding representin a local compile-time value has the format:
+;;
+;;     (local-ctv ?object . ?expanded-expr)
+;;
+;;  where:  ?OBJECT  is  the  actual  value  computed  at  expand  time;
+;;  ?EXPANDED-EXPR  is  the  result  of expanding  the  expression  that
+;;  generates the value.
+;;
+;;* A binding representin a global compile-time value has the format:
+;;
+;;     (global-ctv ?library . ?gensym)
+;;
+;;  where:  ?LIBRARY represents  the library  in which  the compile-time
+;;  value is defined, ?GENSYM is the symbol containing the actual object
+;;  in its "value" field.
+;;
 ;;* The following special binding represents an unbound label:
 ;;
 ;;     (displaced-lexical . #f)
@@ -1684,8 +1700,7 @@
 ;;
 (define make-binding cons)
 
-;;Given  a binding  return its  type: a  symbol.  Possible  symbols are:
-;;"lexical".
+;;Given a binding return its type: a symbol.
 ;;
 (define binding-type car)
 
@@ -1734,6 +1749,14 @@
 		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
 
 ;;; --------------------------------------------------------------------
+;;; Vicare struct type descriptor bindings
+;;; R6RS record type descriptors bindings
+
+(define (struct-or-record-type-descriptor-binding? binding)
+  (and (pair? binding)
+       (eq? '$rtd (binding-type binding))))
+
+;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
 
 (define (make-fluid-syntax-binding label)
@@ -1741,7 +1764,30 @@
 
 (define (fluid-syntax-binding? binding)
   (and (pair? binding)
-       (eq? (binding-type binding) '$fluid)))
+       (eq? '$fluid (binding-type binding))))
+
+;;; --------------------------------------------------------------------
+;;; compile-time values
+
+(define (make-local-compile-time-value-binding obj expanded-expr)
+  ;;Given as arguments:  the actual object computed  from a compile-time
+  ;;expression and recordised code  representing the original expression
+  ;;already expanded, build and return a syntax binding.
+  ;;
+  (cons* 'local-ctv obj expanded-expr))
+
+(define (local-compile-time-value-binding? binding)
+  ;;Given a binding object: return  true if it represents a compile-time
+  ;;value; otherwise return false.
+  ;;
+  (and (pair? binding)
+       (eq? 'local-ctv (binding-type binding))))
+
+(define local-compile-time-value-binding-object
+  ;;Given a binding representing a  local compile time value: return the
+  ;;actual compile-time object.
+  ;;
+  cadr)
 
 ;;; --------------------------------------------------------------------
 
@@ -2890,6 +2936,8 @@
 	     (values 'other #f #f))))))
 
 
+;;;; public interface: variable transformer
+
 (define (make-variable-transformer x)
   ;;R6RS's make-variable-transformer.
   ;;
@@ -2909,9 +2957,30 @@
       (cdr x)
     (assertion-violation who "not a variable transformer" x)))
 
-(define (make-compile-time-value x)
-  (cons 'ctv x))
+
+;;;; public interface: compile-time values
+;;
+;;Compile-time values are objects computed  at expand-time and stored in
+;;the lexical environment.  We can define a compile-time value with:
+;;
+;;   (define-syntax it
+;;     (make-compile-time-value (+ 1 2)))
+;;
 
+(define (make-compile-time-value obj)
+  (cons 'ctv obj))
+
+(define (compile-time-value? obj)
+  (and (pair? obj)
+       (eq? 'ctv (car obj))))
+
+(define compile-time-value-object
+  ;;Given  a compile-time  value datum:  return the  actual compile-time
+  ;;object.
+  ;;
+  cdr)
+
+
 (define (make-eval-transformer expanded-expr)
   ;;Given an expanded  expression representing the right-hand  side of a
   ;;DEFINE-SYNTAX,  LET-SYNTAX,  LETREC-SYNTAX,  DEFINE-FLUID-SYNTAX  or
@@ -2921,30 +2990,29 @@
   ;;When  the RHS  of a  syntax  definition is  evaluated, the  returned
   ;;object   should  be   either  a   procedure,  an   identifier-syntax
   ;;transformer, a Vicare struct type  descriptor or an R6RS record type
-  ;;descriptor.
+  ;;descriptor.  If  the return value is  not of such type:  we raise an
+  ;;assertion violation.
   ;;
-  (let ((output-value (eval-core (expanded->core expanded-expr))))
-    ;;Here we convert the output value to one of:
-    ;;
-    ;;   (lacal-macro . procedure)
-    ;;   (local-macro! . procedure)
-    ;;   (local-ctv . compile-time-value)
-    ;;   ($rtd . $rtd)
-    ;;
-    ;;and signals an assertion-violation otherwise.
-    ;;
-    (cond ((procedure? output-value)
-	   (cons* 'local-macro output-value expanded-expr))
-	  ((variable-transformer? output-value)
-	   (cons* 'local-macro! (cdr output-value) expanded-expr))
-	  ((and (pair? output-value)
-		(eq? (car output-value) '$rtd))
-	   output-value)
-	  ((and (pair? output-value)
-		(eq? (car output-value) 'ctv))
-	   (cons* 'local-ctv (cdr output-value) expanded-expr))
+  ;;We convert the expression's return value to:
+  ;;
+  ;;   (lacal-macro	. ?procedure)
+  ;;   (local-macro!	. ?procedure)
+  ;;   (local-ctv	. ?compile-time-value)
+  ;;   ($rtd		. ?type-descriptor)
+  ;;
+  (let ((rv (eval-core (expanded->core expanded-expr))))
+    (cond ((procedure? rv)
+	   (cons* 'local-macro rv expanded-expr))
+	  ((variable-transformer? rv)
+	   (cons* 'local-macro! (cdr rv) expanded-expr))
+	  ((struct-or-record-type-descriptor-binding? rv)
+	   rv)
+	  ((compile-time-value? rv)
+	   (make-local-compile-time-value-binding (compile-time-value-object rv) expanded-expr))
 	  (else
-	   (assertion-violation 'expand "invalid transformer" output-value)))))
+	   (assertion-violation 'expand
+	     "invalid return value from syntax transformer expression"
+	     rv)))))
 
 
 (define-syntax syntax-match
@@ -8201,8 +8269,9 @@
 		  (assertion-violation 'rho "not an identifier" id))
 		(let ((label (id->label id)))
 		  (let ((binding (label->binding label lexenv.run)))
-		    (case (car binding)
-		      ((local-ctv) (cadr binding))
+		    (case (binding-type binding)
+		      ((local-ctv)
+		       (local-compile-time-value-binding-object binding))
 		      ((global-ctv)
 		       (let ((lib (cadr binding))
 			     (loc (cddr binding)))
@@ -8944,6 +9013,11 @@
 		  global*
 		  (cons (cons loc (binding-value b)) macro*))))
 	    ((local-ctv)
+	     ;;Guessed  meaning:   when  we  define  a   binding  for  a
+	     ;;compile-time  value  (CTV), the  local  code  sees it  as
+	     ;;"local-ctv"; if we export such binding: the importer must
+	     ;;see it as a global CTV.
+	     ;;
 	     (let ((loc (gensym)))
 	       (f (cdr r)
 		  (cons (cons* label 'global-ctv loc) env)
