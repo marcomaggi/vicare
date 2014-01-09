@@ -2529,13 +2529,27 @@ debugging purposes.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun variable-transformer?
-Undocumented.
+@defun make-variable-transformer @var{func}
+Defined by @rnrs{6}.  Build and return a ``special'' value that, when
+used as right--hand side of a syntax definition, is recognised by the
+expander as a variable transformer as opposed to a normal transformer or
+a compile-time value.
+
+@func{func} must be the transformer function.
 @end defun
 
 
-@defun variable-transformer-procedure
-Undocumented.
+@defun variable-transformer? @var{obj}
+Return @true{} if @var{obj} is recognised by the expander as a variable
+transformer as opposed to a normal transformer or a compile--time value;
+otherwise return @false{}.
+@end defun
+
+
+@defun variable-transformer-procedure @var{var-trasf}
+If @var{var-trasf} is recognised by the expander as a variable
+transformer: return the actual transformer function, otherwise raise an
+assertion violation.
 @end defun
 
 

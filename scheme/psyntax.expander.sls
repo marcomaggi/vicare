@@ -2941,7 +2941,10 @@
 ;;;; public interface: variable transformer
 
 (define (make-variable-transformer x)
-  ;;R6RS's make-variable-transformer.
+  ;;R6RS's  make-variable-transformer.   Build  and return  a  "special"
+  ;;value that, when used as right-hand  side of a syntax definition, is
+  ;;recognised by the expander as a variable transformer as opposed to a
+  ;;normal transformer or a compile-time value.
   ;;
   (define who 'make-variable-transformer)
   (if (procedure? x)
@@ -2949,11 +2952,19 @@
     (assertion-violation who "not a procedure" x)))
 
 (define (variable-transformer? x)
+  ;;Return  true if  X  is  recognised by  the  expander  as a  variable
+  ;;transformer as  opposed to  a normal  transformer or  a compile-time
+  ;;value; otherwise return false.
+  ;;
   (and (pair? x)
        (eq? (car x) 'macro!)
        (procedure? (cdr x))))
 
 (define (variable-transformer-procedure x)
+  ;;If X is recognised by the expander as a variable transformer: return
+  ;;the  actual  transformer  function,  otherwise  raise  an  assertion
+  ;;violation.
+  ;;
   (define who 'variable-transformer-procedure)
   (if (variable-transformer? x)
       (cdr x)
