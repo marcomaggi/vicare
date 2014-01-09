@@ -1,4 +1,4 @@
-;;;Copyright (c) 2006, 2007, 2013 Abdulaziz Ghuloum and Kent Dybvig
+;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -6482,8 +6482,8 @@
     ;;Transformer function  used to expand  R6RS's RECORD-TYPE-FIELD-REF
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and  LEXENV.EXPAND.    Return  a  symbolic  expression
-    ;;evaluating to the record type descriptor.
+    ;;LEXENV.RUN  and   LEXENV.EXPAND.   Return  recordized   code  that
+    ;;accesses the value of a field from an R6RS record.
     ;;
     (define who 'record-type-field-ref)
     (syntax-match expr-stx ()
@@ -6507,8 +6507,8 @@
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-FIELD-SET!
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and  LEXENV.EXPAND.    Return  a  symbolic  expression
-    ;;evaluating to the record type descriptor.
+    ;;LEXENV.RUN and LEXENV.EXPAND.  Return recordized code that mutates
+    ;;the value of a field in an R6RS record.
     ;;
     (define who 'record-type-field-set!)
     (syntax-match expr-stx ()
@@ -6532,8 +6532,9 @@
     ;;Transformer function used  to expand R6RS's $RECORD-TYPE-FIELD-REF
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and  LEXENV.EXPAND.    Return  a  symbolic  expression
-    ;;evaluating to the record type descriptor.
+    ;;LEXENV.RUN  and   LEXENV.EXPAND.   Return  recordized   code  that
+    ;;accesses the value of a field from an R6RS record using the unsafe
+    ;;accessor.
     ;;
     (define who '$record-type-field-ref)
     (syntax-match expr-stx ()
@@ -6557,8 +6558,8 @@
     ;;Transformer function used to expand R6RS's $RECORD-TYPE-FIELD-SET!
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and  LEXENV.EXPAND.    Return  a  symbolic  expression
-    ;;evaluating to the record type descriptor.
+    ;;LEXENV.RUN and LEXENV.EXPAND.  Return recordized code that mutates
+    ;;the value of a field in an R6RS record using the unsafe mutator.
     ;;
     (define who '$record-type-field-set!)
     (syntax-match expr-stx ()
