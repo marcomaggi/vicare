@@ -3704,6 +3704,7 @@ syntax clause.
 
 
 @defun make-syntax-clause-spec @var{keyword} @var{min-occur} @var{max-occur} @var{min-args} @var{max-args} @var{mutually-inclusive} @var{mutually-exclusive}
+@defunx make-syntax-clause-spec @var{keyword} @var{min-occur} @var{max-occur} @var{min-args} @var{max-args} @var{mutually-inclusive} @var{mutually-exclusive} @var{custom-data}
 Build and return a new syntax clause specification object.  The
 arguments are:
 
@@ -3740,6 +3741,10 @@ with this one.
 @item mutually-exclusive
 A list identifiers representing clauses keywords that must not appear
 along with this one.
+
+@item custom-data
+Optional free value available for the user.  It is initialised to
+@false{}.
 @end table
 @end defun
 
@@ -3757,6 +3762,7 @@ otherwise return @false{}.
 @defunx syntax-clause-spec-max-number-of-arguments @var{spec}
 @defunx syntax-clause-spec-mutually-inclusive @var{spec}
 @defunx syntax-clause-spec-mutually-exclusive @var{spec}
+@defunx syntax-clause-spec-custom-data @var{spec}
 Accessors for the fields of syntax clause specification objects.
 @end defun
 
