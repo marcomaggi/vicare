@@ -1734,6 +1734,16 @@
 		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
 
 ;;; --------------------------------------------------------------------
+;;; fluid syntax bindings
+
+(define (make-fluid-syntax-binding label)
+  (cons '$fluid label))
+
+(define (fluid-syntax-binding? binding)
+  (and (pair? binding)
+       (eq? (binding-type binding) '$fluid)))
+
+;;; --------------------------------------------------------------------
 
 (define (label->binding label lexenv)
   ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
@@ -1748,11 +1758,8 @@
   ;;faster (it  uses a hash table,  while the lexical environment  is an
   ;;alist).
   ;;
-  (define (%fluid-syntax-binding? binding)
-    (and (pair? binding)
-	 (eq? (binding-type binding) '$fluid)))
   (let ((binding (label->binding/no-fluids label lexenv)))
-    (if (%fluid-syntax-binding? binding)
+    (if (fluid-syntax-binding? binding)
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
 	;;reversed  logic.   We  have  to  look them  up  in  the  local
 	;;environment first, and then in the global.
@@ -6349,14 +6356,10 @@
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
 	   (binding  (label->binding/no-fluids label lexenv.run)))
-      (cond ((%fluid-syntax-binding? binding)
+      (cond ((fluid-syntax-binding? binding)
 	     (binding-value binding))
 	    (else
 	     (%synner "not a fluid identifier" lhs)))))
-
-  (define (%fluid-syntax-binding? binding)
-    (and (pair? binding)
-	 (eq? (binding-type binding) '$fluid)))
 
   (define (%synner message subform)
     (stx-error subform message))
@@ -8614,20 +8617,22 @@
 				mix? sd?)))))
 
 	      ((define-fluid-syntax)
-	       (let-values (((id rhs) (%parse-define-syntax e)))
+	       (receive (id rhs)
+		   (%parse-define-syntax e)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error e "cannot redefine keyword"))
-		 (let* ((lab (gen-define-label id rib sd?))
-			(flab (gen-define-label id rib sd?))
+		 (let* ((lab          (gen-define-label id rib sd?))
+			(flab         (gen-define-label id rib sd?))
 			(expanded-rhs (%expand-macro-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
-		   (let ((b (make-eval-transformer expanded-rhs)))
-		     (let ((t1 (cons lab (cons '$fluid flab)))
-			   (t2 (cons flab b)))
-		       (chi-body* (cdr e*)
-				  (cons* t1 t2 r) (cons* t1 t2 mr)
-				  lex* rhs* mod** kwd* exp* rib
-				  mix? sd?))))))
+		   (let* ((b  (make-eval-transformer expanded-rhs))
+			  (t1 (cons lab (make-fluid-syntax-binding flab)))
+			  (t2 (cons flab b)))
+		     (chi-body* (cdr e*)
+				(cons* t1 t2 r)
+				(cons* t1 t2 mr)
+				lex* rhs* mod** kwd* exp* rib
+				mix? sd?)))))
 
 	      ((let-syntax letrec-syntax)
 	       (syntax-match e ()
