@@ -8252,7 +8252,7 @@
 	 chi-local-macro
 	 chi-global-macro)
 
-  (define (chi-macro func/procname expr lexenv.run rib)
+  (define (chi-macro func/procname input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
     ;;transformer is  readily available  as a  function.  There  are two
     ;;such cases:
@@ -8267,8 +8267,8 @@
     ;;   on  the   lexical  environment;  in  this   case  the  argument
     ;;  FUNC/PROCNAME is a procedure being the transformer itself.
     ;;
-    ;;EXPR  is  the syntax  object  representing  the expression  to  be
-    ;;expanded.
+    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
+    ;;to be expanded.
     ;;
     ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
     ;;expression must be expanded.
@@ -8278,29 +8278,46 @@
     (%do-macro-call (if (procedure? func/procname)
 			func/procname
 		      (non-core-macro-transformer func/procname))
-		    expr lexenv.run rib))
+		    input-form-expr lexenv.run rib))
 
-  (define (chi-local-macro procname expr lexenv.run rib)
+  (define (chi-local-macro procname input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
-    ;;transformer is defined by user code.
+    ;;transformer  is defined  by local  user code,  but not  identifier
+    ;;syntaxes;  these are  the lexical  environment entries  with types
+    ;;"local-macro" and "local-macro!".
     ;;
     ;;PROCNAME is a symbol representing the name of the macro.
     ;;
-    ;;EXPR  is  the syntax  object  representing  the expression  to  be
-    ;;expanded.
+    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
+    ;;to be expanded.
     ;;
     ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
     ;;expression must be expanded.
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (%do-macro-call (local-macro-transformer procname) expr lexenv.run rib))
+    (%do-macro-call (local-macro-transformer procname) input-form-expr lexenv.run rib))
 
   (define local-macro-transformer car)
 
-  (define (chi-global-macro p expr lexenv.run rib)
-    (let ((lib (car p))
-	  (loc (cdr p)))
+  (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
+    ;;This  function is  used  to  expand macro  uses  for macros  whose
+    ;;transformer is defined  by user code in  imported libraries; these
+    ;;are the lexical environment  entries with types "global-macro" and
+    ;;"global-macro!".
+    ;;
+    ;;BIND-VAL is the binding value of the global macro.
+    ;;
+    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
+    ;;to be expanded.
+    ;;
+    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
+    ;;expression must be expanded.
+    ;;
+    ;;RIB is false or a struct of type "<rib>".
+    ;;
+    (let ((lib (car bind-val))
+	  (loc (cdr bind-val)))
       ;;If this global binding use is  the first time a binding from LIB
       ;;is used: visit the library.
       (unless (eq? lib '*interaction*)
@@ -8313,41 +8330,42 @@
 				 (else
 				  (assertion-violation 'chi-global-macro
 				    "Vicare: internal error: not a procedure" x)))))
-	  (%do-macro-call transformer expr lexenv.run rib)))))
+	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
 
-  (define (%do-macro-call transformer expr lexenv.run rib)
+  (define (%do-macro-call transformer input-form-expr lexenv.run rib)
     (define (main)
-      (let ((x (transformer
-		;;Put the anti-mark on the input form.
-		(add-mark anti-mark #f expr #f))))
+      (let ((output-form-expr (transformer
+			       ;;Put the anti-mark on the input form.
+			       (add-mark anti-mark #f input-form-expr #f))))
 	;;If  the transformer  returns  a function:  we  must apply  the
 	;;returned function  to a function acting  as compile-time value
 	;;retriever.   Such  application  must   return  a  value  as  a
 	;;transformer would do.
-	(if (procedure? x)
-	    (return (x ctv-retriever))
-	  (return x))))
+	(if (procedure? output-form-expr)
+	    (return (output-form-expr ctv-retriever))
+	  (return output-form-expr))))
 
-    (define (return x)
+    (define (return output-form-expr)
       ;;Check that there are no raw symbols in the value returned by the
       ;;macro transformer.
-      (let f ((x x))
+      (let recur ((x output-form-expr))
 	;;Don't feed me cycles.
 	(unless (<stx>? x)
 	  (cond ((pair? x)
-		 (f (car x)) (f (cdr x)))
+		 (recur (car x))
+		 (recur (cdr x)))
 		((vector? x)
-		 (vector-for-each f x))
+		 (vector-for-each recur x))
 		((symbol? x)
 		 (syntax-violation #f
 		   "raw symbol encountered in output of macro"
-		   expr x)))))
+		   input-form-expr x)))))
       ;;Put a  new mark  on the  output form.   For all  the identifiers
       ;;already  present  in the  input  form:  this  new mark  will  be
       ;;annihilated  by  the  anti-mark  we put  before.   For  all  the
       ;;identifiers introduced  by the  transformer: this new  mark will
       ;;stay there.
-      (add-mark (gen-mark) rib x expr))
+      (add-mark (gen-mark) rib output-form-expr input-form-expr))
 
     (define (ctv-retriever id)
       ;;This is  the compile-time  values retriever function.   Given an
