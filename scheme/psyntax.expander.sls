@@ -1744,9 +1744,9 @@
   ;;   (displaced-lexical . #f)
   ;;
   ;;Since all labels are unique,  it doesn't matter which environment we
-  ;;consult first.  we lookup the  global environment first because it's
-  ;;faster  (uses a  hash table)  while  the lexical  environment is  an
-  ;;alist.
+  ;;consult first.  We lookup the  global environment first because it's
+  ;;faster (it  uses a hash table,  while the lexical environment  is an
+  ;;alist).
   ;;
   (define (%fluid-syntax-binding? binding)
     (and (pair? binding)
@@ -1771,7 +1771,7 @@
 
 	;;Each label in the boot  image environment and in every library
 	;;environment  is a  gensym in  which the  "value" field  of the
-	;;symbol object memory blcok contains the associated binding.
+	;;symbol object memory block contains the associated binding.
 	;;
 	;;So  if we  have  a label  we  can check  if  it references  an
 	;;imported binding  simply by checking its  "value" field.  This
@@ -3677,21 +3677,39 @@
 
   (define (%make-parent-rtd-code clause*)
     (syntax-match (get-clause 'parent clause*) ()
+      ;;If there is  a PARENT clause insert code that  retrieves the RTD
+      ;;from the parent type name.
       ((_ name)
        `(record-type-descriptor ,name))
+
+      ;;If  there is  no PARENT  clause try  to retrieve  the expression
+      ;;evaluating to the RTD.
       (#f
        (syntax-match (get-clause 'parent-rtd clause*) ()
-	 ((_ rtd rcd) rtd)
-	 (#f #f)))))
+	 ((_ rtd rcd)
+	  rtd)
+	 ;;If neither the PARENT nor the PARENT-RTD clauses are present:
+	 ;;just return false.
+	 (#f #f)))
+      ))
 
   (define (%make-parent-rcd-code clause*)
     (syntax-match (get-clause 'parent clause*) ()
+      ;;If there is  a PARENT clause insert code that  retrieves the RCD
+      ;;from the parent type name.
       ((_ name)
        `(record-constructor-descriptor ,name))
+
+      ;;If  there is  no PARENT  clause try  to retrieve  the expression
+      ;;evaluating to the RCD.
       (#f
        (syntax-match (get-clause 'parent-rtd clause*) ()
-	 ((_ rtd rcd)	rcd)
-	 (#f		#f)))))
+	 ((_ rtd rcd)
+	  rcd)
+	 ;;If neither the PARENT nor the PARENT-RTD clauses are present:
+	 ;;just return false.
+	 (#f #f)))
+      ))
 
   (define (%make-rcd-code clause* foo-rtd protocol parent-rcd-code)
     `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,protocol))
