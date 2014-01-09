@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -3908,6 +3908,37 @@
     => "expected list as argument of splice-first-expand")
 
   #t)
+
+
+(parametrise ((check-test-name	'splice-first-expand))
+
+  (check
+      (let ()
+	(define-syntax obj1
+	  (make-compile-time-value (+ 1 2 3)))
+
+	(define-syntax get-obj1
+	  (lambda (stx)
+	    (lambda (ctv-retriever)
+	      (ctv-retriever #'obj1))))
+
+	(get-obj1))
+    => 6)
+
+  (check
+      (let ()
+	(define-syntax obj2
+	  (make-compile-time-value (vector 1 2 3)))
+
+	(define-syntax get-obj2
+	  (lambda (stx)
+	    (lambda (ctv-retriever)
+	      #`(quote #,(ctv-retriever #'obj2)))))
+
+	(get-obj2))
+    => '#(1 2 3))
+
+  (void))
 
 
 ;;;; done

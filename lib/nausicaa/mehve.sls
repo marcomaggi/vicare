@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1026,6 +1026,8 @@
     make-binary-socket-input/output-port
     make-binary-socket-input/output-port*
     make-compile-time-value
+    compile-time-value?
+    compile-time-value-object
     make-errno-condition
     make-file-options
     make-guardian

@@ -3914,8 +3914,8 @@ insertion in which the value is a self--evaluating fixnum:
 
 (define-syntax get-obj1
   (lambda (stx)
-    (lambda (ctv-getter)
-      (ctv-getter #'it))))
+    (lambda (ctv-retriever)
+      (ctv-retriever #'obj1))))
 
 (get-obj1) @expansion{} 6
 @end example
@@ -3932,8 +3932,8 @@ and insertion in which the value is a non--self--evaluating vector:
 
 (define-syntax get-obj2
   (lambda (stx)
-    (lambda (ctv-getter)
-      #`(quote #,(ctv-getter #'obj2)))))
+    (lambda (ctv-retriever)
+      #`(quote #,(ctv-retriever #'obj2)))))
 
 (get-obj2) @expansion{} (quote #(1 2 3))
 @end example
@@ -3952,8 +3952,20 @@ currently on the lexical environment.
 
 
 @defun make-compile-time-value @var{obj}
-Return a ``special'' object that is recognised by the expander as a
-precomputed compile--time object.
+Build and return a ``special'' object that is recognised by the expander
+as holding @var{obj} as a precomputed compile--time object.
+@end defun
+
+
+@defun compile-time-value? @var{obj}
+Return @true{} if @var{obj} is a ``special'' object that is recognised
+by the expander as holding a precomputed compile--time object.
+@end defun
+
+
+@defun compile-time-value-object @var{ctv}
+Given a ``special'' object that is recognised by the expander as holding
+a precomputed compile--time object: return the actual value.
 @end defun
 
 @c ------------------------------------------------------------
@@ -4012,14 +4024,14 @@ lexical environment bound to the identifier @code{it}:
 @end example
 
 @noindent
-later we retrieve the struct instance, through the identifier @code{id},
+later we retrieve the struct instance, through the identifier @code{it},
 and use its fields to produce the output of a syntax use:
 
 @example
 (define-syntax get-it
   (lambda (stx)
-    (lambda (ctv-getter)
-      (let ((S (ctv-getter #'it)))
+    (lambda (ctv-retriever)
+      (let ((S (ctv-retriever #'it)))
         (with-syntax
             ((A (record-type-field-ref that a S))
              (B (record-type-field-ref that b S))

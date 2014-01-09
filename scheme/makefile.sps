@@ -2187,6 +2187,8 @@
     (variable-transformer?			i v $language)
     (variable-transformer-procedure		i v $language)
     (make-compile-time-value			i v $language)
+    (compile-time-value?			i v $language)
+    (compile-time-value-object			i v $language)
     (syntax-transpose				i v $language)
     (syntax-object?				i v $language)
     (syntax-object-expression			i v $language)

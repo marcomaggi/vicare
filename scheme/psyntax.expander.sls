@@ -91,7 +91,9 @@
     expand-form-to-core-language	expand-top-level
     expand-library
     compile-r6rs-top-level		boot-library-expand
-    make-compile-time-value
+
+    make-compile-time-value		compile-time-value?
+    compile-time-value-object
 
     generate-temporaries		identifier?
     free-identifier=?			bound-identifier=?
@@ -2961,10 +2963,20 @@
 ;;;; public interface: compile-time values
 ;;
 ;;Compile-time values are objects computed  at expand-time and stored in
-;;the lexical environment.  We can define a compile-time value with:
+;;the lexical environment.  We can  define a compile-time value and push
+;;it on the lexical environment with:
 ;;
 ;;   (define-syntax it
 ;;     (make-compile-time-value (+ 1 2)))
+;;
+;;later  we can  retrieve it  by  defining a  transformer function  that
+;;returns a function:
+;;
+;;   (define-syntax get-it
+;;     (lambda (stx)
+;;       (lambda (ctv-retriever)
+;;         (ctv-retriever #'it) => 3
+;;         )))
 ;;
 
 (define (make-compile-time-value obj)
