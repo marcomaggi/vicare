@@ -2495,6 +2495,7 @@ the character.
 * iklib expander fluids::           Fluid syntaxes.
 * iklib expander utils::            Utility functions for writing macro.
 * iklib expander clauses::          Syntax clauses helpers.
+* iklib expander ctv::              Compile-time values.
 @end menu
 
 @c page
@@ -2534,11 +2535,6 @@ Undocumented.
 
 
 @defun variable-transformer-procedure
-Undocumented.
-@end defun
-
-
-@defun make-compile-time-value
 Undocumented.
 @end defun
 
@@ -3899,6 +3895,139 @@ according to @func{free-identifier=?}, to an identifier in the
 @code{keyword} field of another @objtype{syntax-clause-spec} object.
 @end itemize
 @end defun
+
+@c page
+@node iklib expander ctv
+@subsection Compile--time values
+
+
+It is sometimes useful to precompute a value at expand--time and push it
+on the lexical environment to be later retrieved.  Here is an example of
+simple compile--time value (@acronym{CTV}) computation, retrieval and
+insertion in which the value is a self--evaluating fixnum:
+
+@example
+(import (vicare))
+
+(define-syntax obj1
+  (make-compile-time-value (+ 1 2 3)))
+
+(define-syntax get-obj1
+  (lambda (stx)
+    (lambda (ctv-getter)
+      (ctv-getter #'it))))
+
+(get-obj1) @expansion{} 6
+@end example
+
+@noindent
+here is an example of simple compile--time value computation, retrieval
+and insertion in which the value is a non--self--evaluating vector:
+
+@example
+(import (vicare))
+
+(define-syntax obj2
+  (make-compile-time-value (vector 1 2 3)))
+
+(define-syntax get-obj2
+  (lambda (stx)
+    (lambda (ctv-getter)
+      #`(quote #,(ctv-getter #'obj2)))))
+
+(get-obj2) @expansion{} (quote #(1 2 3))
+@end example
+
+@noindent
+we see that to produce a compile--time value we define a syntax bound to
+the result of @func{make-compile-time-value}.
+
+We can use a compile--time value in the body of a transformer function;
+whenever a syntax transformer function returns a function: such function
+is called by the expander with a single argument being a compile--time
+value retriever; the retriever can be called with a single value being
+the identifier to which the @acronym{CTV} is bound.  Once we have the
+@acronym{CTV} retriever: we can retrieve all the @acronym{CTV} objects
+currently on the lexical environment.
+
+
+@defun make-compile-time-value @var{obj}
+Return a ``special'' object that is recognised by the expander as a
+precomputed compile--time object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading What compile--time values are @strong{not} for
+
+
+We have to understand that the real use of compile--time values is not
+actually to precompute values and put them in compiled code; for this we
+can just use @func{define-inline-constant}, which in the end defines a
+``normal'' syntax transformer as the following:
+
+@example
+(import (vicare))
+
+(define-syntax obj1
+  (let ((const (vector 1 2 3)))
+    (lambda (stx)
+      (syntax-case stx ()
+        (?id
+         (identifier? #'?id)
+         #`(quote #,const))))))
+
+obj1    @expansion{} (quote #(1 2 3))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading What compile--time values are for
+
+
+Let's say we define a record type in a library (it must go in a library
+so that we can import it and use it at expand--time in the body of
+transformers):
+
+@example
+(library (ctv-demo)
+  (export that make-that)
+  (import (vicare))
+  (define-record-type that
+    (fields a b c)))
+@end example
+
+@noindent
+now we can instantiate a struct @code{that} and push the instance on the
+lexical environment bound to the identifier @code{it}:
+
+@example
+(import (vicare)
+  (for (proof)
+    expand))
+
+(define-syntax it
+  (make-compile-time-value
+   (make-that 1 2 3)))
+@end example
+
+@noindent
+later we retrieve the struct instance, through the identifier @code{id},
+and use its fields to produce the output of a syntax use:
+
+@example
+(define-syntax get-it
+  (lambda (stx)
+    (lambda (ctv-getter)
+      (let ((S (ctv-getter #'it)))
+        (with-syntax
+            ((A (record-type-field-ref that a S))
+             (B (record-type-field-ref that b S))
+             (C (record-type-field-ref that c S)))
+          #'(quote #(A B C)))))))
+
+(get-it)        @expansion{} (quote #(1 2 3))
+@end example
 
 @c page
 @node iklib shared

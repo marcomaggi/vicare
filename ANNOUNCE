@@ -40,6 +40,10 @@ this project has a mailing list:
 Notes for revision 0.3d8
 ------------------------
 
+* Added     documentation     for    the     previously     undocumented
+  MAKE-COMPILE-TIME-VALUE  and  a  general  explanation of  how  to  use
+  compile-time values.  See the documentation node "iklib expander ctv".
+
 * Added syntax  SPLICE-FIRST-EXPAND to (vicare).  See  the documentation
   node "iklib syntaxes splice1st" for details.
 
