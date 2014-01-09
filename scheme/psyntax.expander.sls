@@ -1603,6 +1603,20 @@
 ;;  representing the  name of  the binding in  the core  language forms;
 ;;  ?MUTABLE is a boolean, true if this binding is mutable.
 ;;
+;;* A binding  representing a non-core macro integrated  in the expander
+;;  has the format:
+;;
+;;     (macro . ?name)
+;;
+;;  where ?NAME is  a symbol representing the macro  name.  Such entries
+;;  are defined in the file "makefile.sps".
+;;
+;;* A binding representing an identifier syntax has the format:
+;;
+;;     (macro! . ?transformer)
+;;
+;;  where ?TRANSFORMER is
+;;
 ;;* A binding representing a pattern variable, as created by SYNTAX-CASE
 ;;  and SYNTAX-RULES, has the format:
 ;;
@@ -2939,6 +2953,18 @@
 
 
 ;;;; public interface: variable transformer
+;;
+;;As  specified  by  R6RS:  we   can  define  identifier  syntaxes  with
+;;IDENTIFIER-SYNTAX  and with  MAKE-VARIABLE-TRANSFORMER; both  of these
+;;return  a "special"  value that,  when used  as right-hand  side of  a
+;;syntax  definition,  is  recognised  by the  expander  as  a  variable
+;;transformer  as opposed  to  a normal  transformer  or a  compile-time
+;;value.
+;;
+;;Notice that this special value has a format similar, but not equal, to
+;;the  corresponding  syntax  binding  that is  pushed  on  the  lexical
+;;environment to represent the identifier syntax.
+;;
 
 (define (make-variable-transformer x)
   ;;R6RS's  make-variable-transformer.   Build  and return  a  "special"
@@ -3342,126 +3368,120 @@
     (define who 'non-core-macro-transformer)
     (define (%error-invalid-macro)
       (error who "Vicare: internal error: invalid macro" x))
-    (cond ((procedure? x)
-	   x)
-	  ((symbol? x)
-	   (case x
-	     ((define-record-type)		define-record-type-macro)
-	     ((record-type-and-record?)		record-type-and-record?-macro)
-	     ((define-struct)			define-struct-macro)
-	     ((define-condition-type)		define-condition-type-macro)
-	     ((cond)				cond-macro)
-	     ((let)				let-macro)
-	     ((do)				do-macro)
-	     ((or)				or-macro)
-	     ((and)				and-macro)
-	     ((let*)				let*-macro)
-	     ((let-values)			let-values-macro)
-	     ((let*-values)			let*-values-macro)
-	     ((values->list)			values->list-macro)
-	     ((syntax-rules)			syntax-rules-macro)
-	     ((quasiquote)			quasiquote-macro)
-	     ((quasisyntax)			quasisyntax-macro)
-	     ((with-syntax)			with-syntax-macro)
-	     ((when)				when-macro)
-	     ((unless)				unless-macro)
-	     ((case)				case-macro)
-	     ((identifier-syntax)		identifier-syntax-macro)
-	     ((time)				time-macro)
-	     ((delay)				delay-macro)
-	     ((assert)				assert-macro)
-	     ((guard)				guard-macro)
-	     ((define-enumeration)		define-enumeration-macro)
-	     ((let*-syntax)			let*-syntax-macro)
-	     ((let-constants)			let-constants-macro)
-	     ((let*-constants)			let*-constants-macro)
-	     ((letrec-constants)		letrec-constants-macro)
-	     ((letrec*-constants)		letrec*-constants-macro)
-	     ((case-define)			case-define-macro)
-	     ((define*)				define*-macro)
-	     ((case-define*)			case-define*-macro)
-	     ((lambda*)				lambda*-macro)
-	     ((case-lambda*)			case-lambda*-macro)
+    (assert (symbol? x))
+    (case x
+      ((define-record-type)		define-record-type-macro)
+      ((record-type-and-record?)	record-type-and-record?-macro)
+      ((define-struct)			define-struct-macro)
+      ((define-condition-type)		define-condition-type-macro)
+      ((cond)				cond-macro)
+      ((let)				let-macro)
+      ((do)				do-macro)
+      ((or)				or-macro)
+      ((and)				and-macro)
+      ((let*)				let*-macro)
+      ((let-values)			let-values-macro)
+      ((let*-values)			let*-values-macro)
+      ((values->list)			values->list-macro)
+      ((syntax-rules)			syntax-rules-macro)
+      ((quasiquote)			quasiquote-macro)
+      ((quasisyntax)			quasisyntax-macro)
+      ((with-syntax)			with-syntax-macro)
+      ((when)				when-macro)
+      ((unless)				unless-macro)
+      ((case)				case-macro)
+      ((identifier-syntax)		identifier-syntax-macro)
+      ((time)				time-macro)
+      ((delay)				delay-macro)
+      ((assert)				assert-macro)
+      ((guard)				guard-macro)
+      ((define-enumeration)		define-enumeration-macro)
+      ((let*-syntax)			let*-syntax-macro)
+      ((let-constants)			let-constants-macro)
+      ((let*-constants)			let*-constants-macro)
+      ((letrec-constants)		letrec-constants-macro)
+      ((letrec*-constants)		letrec*-constants-macro)
+      ((case-define)			case-define-macro)
+      ((define*)			define*-macro)
+      ((case-define*)			case-define*-macro)
+      ((lambda*)			lambda*-macro)
+      ((case-lambda*)			case-lambda*-macro)
 
-	     ((trace-lambda)			trace-lambda-macro)
-	     ((trace-define)			trace-define-macro)
-	     ((trace-let)			trace-let-macro)
-	     ((trace-define-syntax)		trace-define-syntax-macro)
-	     ((trace-let-syntax)		trace-let-syntax-macro)
-	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
+      ((trace-lambda)			trace-lambda-macro)
+      ((trace-define)			trace-define-macro)
+      ((trace-let)			trace-let-macro)
+      ((trace-define-syntax)		trace-define-syntax-macro)
+      ((trace-let-syntax)		trace-let-syntax-macro)
+      ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
-	     ((include)				include-macro)
-	     ((define-integrable)		define-integrable-macro)
-	     ((define-inline)			define-inline-macro)
-	     ((define-constant)			define-constant-macro)
-	     ((define-inline-constant)		define-inline-constant-macro)
-	     ((define-values)			define-values-macro)
-	     ((define-constant-values)		define-constant-values-macro)
-	     ((receive)				receive-macro)
-	     ((receive-and-return)		receive-and-return-macro)
-	     ((begin0)				begin0-macro)
-	     ((xor)				xor-macro)
-	     ((define-syntax-rule)		define-syntax-rule-macro)
-	     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
-	     ((define-syntax*)			define-syntax*-macro)
-	     ((unwind-protect)			unwind-protect-macro)
-	     ((with-implicits)			with-implicits-macro)
-	     ((set-cons!)			set-cons!-macro)
+      ((include)			include-macro)
+      ((define-integrable)		define-integrable-macro)
+      ((define-inline)			define-inline-macro)
+      ((define-constant)		define-constant-macro)
+      ((define-inline-constant)		define-inline-constant-macro)
+      ((define-values)			define-values-macro)
+      ((define-constant-values)		define-constant-values-macro)
+      ((receive)			receive-macro)
+      ((receive-and-return)		receive-and-return-macro)
+      ((begin0)				begin0-macro)
+      ((xor)				xor-macro)
+      ((define-syntax-rule)		define-syntax-rule-macro)
+      ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
+      ((define-syntax*)			define-syntax*-macro)
+      ((unwind-protect)			unwind-protect-macro)
+      ((with-implicits)			with-implicits-macro)
+      ((set-cons!)			set-cons!-macro)
 
-	     ((eval-for-expand)			eval-for-expand-macro)
+      ((eval-for-expand)		eval-for-expand-macro)
 
-	     ;; non-Scheme style syntaxes
-	     ((return)				return-macro)
-	     ((continue)			continue-macro)
-	     ((break)				break-macro)
-	     ((while)				while-macro)
-	     ((until)				until-macro)
-	     ((for)				for-macro)
-	     ((define-returnable)		define-returnable-macro)
-	     ((lambda-returnable)		lambda-returnable-macro)
-	     ((begin-returnable)		begin-returnable-macro)
+      ;; non-Scheme style syntaxes
+      ((return)				return-macro)
+      ((continue)			continue-macro)
+      ((break)				break-macro)
+      ((while)				while-macro)
+      ((until)				until-macro)
+      ((for)				for-macro)
+      ((define-returnable)		define-returnable-macro)
+      ((lambda-returnable)		lambda-returnable-macro)
+      ((begin-returnable)		begin-returnable-macro)
 
-	     ((parameterize)			parameterize-macro)
-	     ((parametrise)			parameterize-macro)
+      ((parameterize)			parameterize-macro)
+      ((parametrise)			parameterize-macro)
 
-	     ;; compensations
-	     ((with-compensations)		with-compensations-macro)
-	     ((with-compensations/on-error)	with-compensations/on-error-macro)
-	     ((compensate)			compensate-macro)
-	     ((with)				with-macro)
-	     ((push-compensation)		push-compensation-macro)
+      ;; compensations
+      ((with-compensations)		with-compensations-macro)
+      ((with-compensations/on-error)	with-compensations/on-error-macro)
+      ((compensate)			compensate-macro)
+      ((with)				with-macro)
+      ((push-compensation)		push-compensation-macro)
 
-	     ((eol-style)
-	      (lambda (x)
-		(%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
+      ((eol-style)
+       (lambda (x)
+	 (%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
 
-	     ((error-handling-mode)
-	      (lambda (x)
-		(%allowed-symbol-macro x '(ignore raise replace))))
+      ((error-handling-mode)
+       (lambda (x)
+	 (%allowed-symbol-macro x '(ignore raise replace))))
 
-	     ((buffer-mode)
-	      (lambda (x)
-		(%allowed-symbol-macro x '(none line block))))
+      ((buffer-mode)
+       (lambda (x)
+	 (%allowed-symbol-macro x '(none line block))))
 
-	     ((endianness)
-	      endianness-macro)
+      ((endianness)
+       endianness-macro)
 
-	     ((file-options)
-	      file-options-macro)
+      ((file-options)
+       file-options-macro)
 
-	     ((... => _ else unquote unquote-splicing
-		   unsyntax unsyntax-splicing
-		   fields mutable immutable parent protocol
-		   sealed opaque nongenerative parent-rtd)
-	      incorrect-usage-macro)
+      ((... => _ else unquote unquote-splicing
+	    unsyntax unsyntax-splicing
+	    fields mutable immutable parent protocol
+	    sealed opaque nongenerative parent-rtd)
+       (lambda (expr-stx)
+	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
-	     (else
-	      (%error-invalid-macro))))
-	  (else
-	   (%error-invalid-macro))))
-
-  (define (incorrect-usage-macro expr-stx)
-    (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx))
+      (else
+       (%error-invalid-macro))))
 
 
 ;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
@@ -7546,12 +7566,6 @@
 )
 
 
-;;;; local macro transformer
-
-(define (local-macro-transformer x)
-  (car x))
-
-
 ;;;; macro transformers helpers
 
 (define (%expand-macro-transformer expr-stx lexenv.expand)
@@ -8234,14 +8248,24 @@
 
 ;;;; chi procedures: macro calls
 
-(module (chi-macro chi-local-macro chi-global-macro)
+(module (chi-macro
+	 chi-local-macro
+	 chi-global-macro)
 
-  (define (chi-macro procname expr lexenv.run rib)
+  (define (chi-macro func/procname expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
-    ;;transformer is defined by MAKE-VARIABLE-TRANSFORMER.
+    ;;transformer is  readily available  as a  function.  There  are two
+    ;;such cases:
     ;;
-    ;;PROCNAME is  a symbol  representing the name  of a  non-core macro
-    ;;transformer (examples: cond, and, or, define-record-type, ...).
+    ;;* The macro has a non-core transformer integrated in the expander;
+    ;;  those  defined by the module  of NON-CORE-MACRO-TRANSFORMER.  In
+    ;;  this  case the argument  FUNC/PROCNAME is a  symbol representing
+    ;;    the   name   of   the  macro   (examples:   cond,   and,   or,
+    ;;  define-record-type, ...).
+    ;;
+    ;;* The macro  is an identifier syntax, whose  transformer is pushed
+    ;;   on  the   lexical  environment;  in  this   case  the  argument
+    ;;  FUNC/PROCNAME is a procedure being the transformer itself.
     ;;
     ;;EXPR  is  the syntax  object  representing  the expression  to  be
     ;;expanded.
@@ -8251,14 +8275,34 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (%do-macro-call (non-core-macro-transformer procname) expr lexenv.run rib))
+    (%do-macro-call (if (procedure? func/procname)
+			func/procname
+		      (non-core-macro-transformer func/procname))
+		    expr lexenv.run rib))
 
-  (define (chi-local-macro p expr lexenv.run rib)
-    (%do-macro-call (local-macro-transformer p) expr lexenv.run rib))
+  (define (chi-local-macro procname expr lexenv.run rib)
+    ;;This  function is  used  to  expand macro  uses  for macros  whose
+    ;;transformer is defined by user code.
+    ;;
+    ;;PROCNAME is a symbol representing the name of the macro.
+    ;;
+    ;;EXPR  is  the syntax  object  representing  the expression  to  be
+    ;;expanded.
+    ;;
+    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
+    ;;expression must be expanded.
+    ;;
+    ;;RIB is false or a struct of type "<rib>".
+    ;;
+    (%do-macro-call (local-macro-transformer procname) expr lexenv.run rib))
+
+  (define local-macro-transformer car)
 
   (define (chi-global-macro p expr lexenv.run rib)
     (let ((lib (car p))
 	  (loc (cdr p)))
+      ;;If this global binding use is  the first time a binding from LIB
+      ;;is used: visit the library.
       (unless (eq? lib '*interaction*)
 	(visit-library lib))
       (let ((x (symbol-value loc)))
@@ -8272,37 +8316,70 @@
 	  (%do-macro-call transformer expr lexenv.run rib)))))
 
   (define (%do-macro-call transformer expr lexenv.run rib)
+    (define (main)
+      (let ((x (transformer
+		;;Put the anti-mark on the input form.
+		(add-mark anti-mark #f expr #f))))
+	;;If  the transformer  returns  a function:  we  must apply  the
+	;;returned function  to a function acting  as compile-time value
+	;;retriever.   Such  application  must   return  a  value  as  a
+	;;transformer would do.
+	(if (procedure? x)
+	    (return (x ctv-retriever))
+	  (return x))))
+
     (define (return x)
+      ;;Check that there are no raw symbols in the value returned by the
+      ;;macro transformer.
       (let f ((x x))
 	;;Don't feed me cycles.
 	(unless (<stx>? x)
-	  (cond
-	   ((pair? x) (f (car x)) (f (cdr x)))
-	   ((vector? x) (vector-for-each f x))
-	   ((symbol? x)
-	    (syntax-violation #f
-	      "raw symbol encountered in output of macro"
-	      expr x)))))
+	  (cond ((pair? x)
+		 (f (car x)) (f (cdr x)))
+		((vector? x)
+		 (vector-for-each f x))
+		((symbol? x)
+		 (syntax-violation #f
+		   "raw symbol encountered in output of macro"
+		   expr x)))))
+      ;;Put a  new mark  on the  output form.   For all  the identifiers
+      ;;already  present  in the  input  form:  this  new mark  will  be
+      ;;annihilated  by  the  anti-mark  we put  before.   For  all  the
+      ;;identifiers introduced  by the  transformer: this new  mark will
+      ;;stay there.
       (add-mark (gen-mark) rib x expr))
-    (let ((x (transformer (add-mark anti-mark #f expr #f))))
-      (if (procedure? x)
-	  (return
-	   (x (lambda (id)
-		(unless (identifier? id)
-		  (assertion-violation 'rho "not an identifier" id))
-		(let ((label (id->label id)))
-		  (let ((binding (label->binding label lexenv.run)))
-		    (case (binding-type binding)
-		      ((local-ctv)
-		       (local-compile-time-value-binding-object binding))
-		      ((global-ctv)
-		       (let ((lib (cadr binding))
-			     (loc (cddr binding)))
-			 (unless (eq? lib '*interaction*)
-			   (visit-library lib))
-			 (symbol-value loc)))
-		      (else #f)))))))
-	(return x))))
+
+    (define (ctv-retriever id)
+      ;;This is  the compile-time  values retriever function.   Given an
+      ;;identifier:  search an  entry in  the lexical  environment; when
+      ;;found return its value, otherwise return false.
+      ;;
+      (unless (identifier? id)
+	(assertion-violation 'rho "not an identifier" id))
+      (let ((binding (label->binding (id->label id) lexenv.run)))
+	(case (binding-type binding)
+	  ;;The given identifier is bound to a local compile-time value.
+	  ;;The actual object is stored in the binding itself.
+	  ((local-ctv)
+	   (local-compile-time-value-binding-object binding))
+
+	  ;;The  given  identifier  is  bound to  a  compile-time  value
+	  ;;imported from  a library or the  top-level environment.  The
+	  ;;actual  object is  stored  in  the "value"  field  of a  loc
+	  ;;gensym.
+	  ((global-ctv)
+	   (let ((lib (cadr binding))
+		 (loc (cddr binding)))
+	     ;;If this  global binding use  is the first time  a binding
+	     ;;from LIB is used: visit the library.
+	     (unless (eq? lib '*interaction*)
+	       (visit-library lib))
+	     (symbol-value loc)))
+
+	  ;;The given identifier is not bound to a compile-time value.
+	  (else #f))))
+
+    (main))
 
   #| end of module |# )
 
@@ -8372,7 +8449,10 @@
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((macro macro!)
-	  ;;Here we expand the transformer of macro definitions.
+	  ;;Here we  expand the transformer of  macro definitions.  When
+	  ;;the type  is "macro":  the macro  is a  non-core transformer
+	  ;;integrated in the expander.  When  the type is "macro!": the
+	  ;;macro is an identifier syntax.
 	  ;;
 	  #;(debug-print (vector type 'enter) (syntax->datum e))
 	  (let ((exp-e (while-not-expanding-application-first-subform
@@ -9024,12 +9104,22 @@
 		    (cons (cons (lexical-var v) loc) global*)
 		    macro*))))
 	    ((local-macro)
+	     ;;Guessed meaning: when  we define a binding  for a syntax,
+	     ;;the local  code sees  it as  "local-macro"; if  we export
+	     ;;such   binding:   the  importer   must   see   it  as   a
+	     ;;"global-macro".
+	     ;;
 	     (let ((loc (gensym)))
 	       (f (cdr r)
 		  (cons (cons* label 'global-macro loc) env)
 		  global*
 		  (cons (cons loc (binding-value b)) macro*))))
 	    ((local-macro!)
+	     ;;Guessed meaning: when  we define a binding  for a syntax,
+	     ;;the local  code sees it  as "local-macro!"; if  we export
+	     ;;such   binding:   the  importer   must   see   it  as   a
+	     ;;"global-macro!".
+	     ;;
 	     (let ((loc (gensym)))
 	       (f (cdr r)
 		  (cons (cons* label 'global-macro! loc) env)

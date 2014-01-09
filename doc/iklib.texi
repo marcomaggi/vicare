@@ -3959,10 +3959,11 @@ the result of @func{make-compile-time-value}.
 We can use a compile--time value in the body of a transformer function;
 whenever a syntax transformer function returns a function: such function
 is called by the expander with a single argument being a compile--time
-value retriever; the retriever can be called with a single value being
-the identifier to which the @acronym{CTV} is bound.  Once we have the
-@acronym{CTV} retriever: we can retrieve all the @acronym{CTV} objects
-currently on the lexical environment.
+value retriever; if the retriever is applied to an identifier bound to a
+@acronym{CTV}: it returns the value itself or @false{} if the identifier
+is not bound to a @acronym{CTV}.  Once we have the @acronym{CTV}
+retriever: we can retrieve all the @acronym{CTV} objects currently on
+the lexical environment.
 
 
 @defun make-compile-time-value @var{obj}
