@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -613,6 +613,18 @@
 
 (parametrise ((check-test-name	'clauses-structs))
 
+;;; struct basics
+
+  (check-for-true ;no custom data
+   (let ((S (make-syntax-clause-spec #'b 1 1 1 1 (list #'a #'d) (list #'W))))
+     (syntax-clause-spec? S)))
+
+  (check-for-true ;with custom data
+   (let ((S (make-syntax-clause-spec #'b 1 1 1 1 (list #'a #'d) (list #'W) 'data)))
+     (syntax-clause-spec? S)))
+
+
+;;; --------------------------------------------------------------------
 ;;; single struct clauses validation
 
   ;;Single occurrence, single value.
@@ -876,7 +888,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'clauses-examples-fields))
+(parametrise ((check-test-name	'utility-functions))
 
   (check-for-true
    (identifier=symbol? #'ciao 'ciao))
