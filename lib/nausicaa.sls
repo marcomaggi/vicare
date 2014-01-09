@@ -1471,6 +1471,7 @@
     syntax-clause-spec-max-number-of-arguments
     syntax-clause-spec-mutually-inclusive
     syntax-clause-spec-mutually-exclusive
+    syntax-clause-spec-custom-data
     syntax-clauses-single-spec
     syntax-clauses-fold-specs
     syntax-clauses-validate-specs

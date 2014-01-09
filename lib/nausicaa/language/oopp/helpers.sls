@@ -1,5 +1,5 @@
 ;;;
-;;;Part of: Nausicaa Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: helpers for OOPP
 ;;;Date: Tue May  1, 2012
 ;;;
@@ -8,7 +8,7 @@
 ;;;	This  library implements  helper  functions and  macros for  the
 ;;;	expand phase of the library (nausicaa language oopp).
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -954,7 +954,7 @@
 	 #f  #;public-predicate-id	#f  #;private-predicate-id
 	 #f  #;common-protocol		#f  #;public-protocol
 	 #f  #;super-protocol
-	 #f #;top-id #;parent-id
+	 top-id #;parent-id
 	 '() #;concrete-fields		'() #;virtual-fields
 	 '() #;methods-table
 	 #f  #;sealed?			#f  #;opaque?
@@ -2022,50 +2022,34 @@
      (synner "invalid clause syntax" #'?input-clause))))
 
 
-;;;; parsers entry points: class definition
+;;;; parsers entry points
 
 (define (parse-class-definition stx top-id lambda-id synner)
-  ;;Parse the  full DEFINE-CLASS  form in the  syntax object  STX (after
-  ;;mixin  clauses insertion)  and  return an  instance  of record  type
+  ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
+  ;;mixin clauses  insertion) and  return an  instance of  record type
   ;;"<class-spec>".
   ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
+  ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
+  ;;must be an identifier bound  to the LAMBDA macro supporting tagged
+  ;;formal arguments.   SYNNER must be a  closure to be used  to raise
   ;;syntax violations.
   ;;
-  ;;Notice  how  we delegate  to  the  function PARSE-CLASS-CLAUSES  the
-  ;;responsibility of building the  "<class-spec>" record: this makes it
-  ;;easier to test the parser functions.
-  ;;
+  (define (%combine class-spec clause-spec args)
+    ((syntax-clause-spec-custom-data clause-spec) class-spec args synner)
+    class-spec)
   (syntax-case stx ()
     ((_ ?tag-spec ?clause ...)
      (receive (name-id public-constructor-id predicate-id)
 	 (parse-tag-name-spec #'?tag-spec synner)
-       (receive-and-return (spec)
-	   (parse-class-clauses #'(?clause ...) name-id top-id lambda-id synner)
-	 ($<parsed-spec>-public-constructor-id-set! spec public-constructor-id)
-	 ($<parsed-spec>-public-predicate-id-set!   spec predicate-id))))
+       (receive-and-return (class-spec)
+	   (make-<class-spec> name-id top-id lambda-id)
+	 ($<parsed-spec>-public-constructor-id-set! class-spec public-constructor-id)
+	 ($<parsed-spec>-public-predicate-id-set!   class-spec predicate-id)
+	 (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
+				    (syntax-clauses-unwrap #'(?clause ...) synner)
+				    synner))))
     (_
      (synner "syntax error in class definition"))))
-
-(define (parse-class-clauses clauses name-id top-id lambda-id synner)
-  ;;Parse the  clauses in a class  definition form in  the syntax object
-  ;;STX and return an instance of record type "<class-spec>".
-  ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
-  ;;syntax violations.
-  ;;
-  (($car class-parser-functions)
-   (make-<class-spec> name-id top-id lambda-id)
-   (%verify-and-partially-unwrap-clauses clauses synner)
-   ($cdr class-parser-functions)
-   synner '()))
-
-
-;;;; parsers entry points: label definition
 
 (define (parse-label-definition stx top-id lambda-id synner)
   ;;Parse the  full DEFINE-LABEL  form in the  syntax object  STX (after
@@ -2077,38 +2061,22 @@
   ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
   ;;syntax violations.
   ;;
-  ;;Notice  how  we delegate  to  the  function PARSE-LABEL-CLAUSES  the
-  ;;responsibility of building the  "<label-spec>" record: this makes it
-  ;;easiers to test the parser functions.
-  ;;
+  (define (%combine label-spec clause-spec args)
+    ((syntax-clause-spec-keyword clause-spec) label-spec args synner)
+    label-spec)
   (syntax-case stx ()
     ((_ ?tag-spec ?clause ...)
      (receive (name-id public-constructor-id predicate-id)
 	 (parse-tag-name-spec #'?tag-spec synner)
-       (receive-and-return (spec)
-	   (parse-label-clauses #'(?clause ...) name-id top-id lambda-id synner)
-	 (<parsed-spec>-public-constructor-id-set! spec public-constructor-id)
-	 (<parsed-spec>-public-predicate-id-set!   spec predicate-id))))
+       (receive-and-return (label-spec)
+	   (make-<label-spec> name-id top-id lambda-id)
+	 ($<parsed-spec>-public-constructor-id-set! label-spec public-constructor-id)
+	 ($<parsed-spec>-public-predicate-id-set!   label-spec predicate-id)
+	 (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
+				    (syntax-clauses-unwrap #'(?clause ...) synner)
+				    synner))))
     (_
      (synner "syntax error in label definition"))))
-
-(define (parse-label-clauses clauses name-id top-id lambda-id synner)
-  ;;Parse the  clauses in a label  definition form in  the syntax object
-  ;;STX and return an instance of record type "<label-spec>".
-  ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
-  ;;syntax violations.
-  ;;
-  (($car label-parser-functions)
-   (make-<label-spec> name-id top-id lambda-id)
-   (%verify-and-partially-unwrap-clauses clauses synner)
-   ($cdr label-parser-functions)
-   synner '()))
-
-
-;;;; parsers entry points: mixin definition
 
 (define (parse-mixin-definition stx top-id lambda-id synner)
   ;;Parse the  full DEFINE-MIXIN  form in the  syntax object  STX (after
@@ -2120,42 +2088,32 @@
   ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
   ;;syntax violations.
   ;;
-  ;;Notice  how  we delegate  to  the  function PARSE-MIXIN-CLAUSES  the
-  ;;responsibility of building the  "<mixin-spec>" record: this makes it
-  ;;easiers to test the parser functions.
+  ;;We perform the full parsing of the definition to catch errors early,
+  ;;but we discard  the results of such parsing: the  clauses in a mixin
+  ;;definition are  used by the  label or class definition  that imports
+  ;;them.
   ;;
+  (define (%combine mixin-spec clause-spec args)
+    ((syntax-clause-spec-keyword clause-spec) mixin-spec args synner)
+    mixin-spec)
   (syntax-case stx ()
-    ((_ ?tag-spec ?clause ...)
-     (receive (name-id public-constructor-id predicate-id)
-	 (parse-tag-name-spec #'?tag-spec synner)
-       (parse-mixin-clauses #'(?clause ...) name-id top-id lambda-id synner)))
+    ((_ ?mixin-name ?clause ...)
+     (identifier? #'?mixin-name)
+     (receive-and-return (mixin-spec)
+	 (make-<mixin-spec> #'?mixin-name top-id lambda-id #'(?clause ...))
+       (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS
+				  (syntax-clauses-unwrap #'(?clause ...) synner)
+				  synner)))
     (_
      (synner "syntax error in mixin definition"))))
-
-(define (parse-mixin-clauses clauses name-id top-id lambda-id synner)
-  ;;Parse the  clauses in a mixin  definition form in  the syntax object
-  ;;STX and return an instance of record type "<mixin-spec>".
-  ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
-  ;;syntax violations.
-  ;;
-  (($car mixin-parser-functions)
-   (make-<mixin-spec> name-id top-id lambda-id clauses)
-   (%verify-and-partially-unwrap-clauses clauses synner)
-   ($cdr mixin-parser-functions)
-   synner '()))
-
-
-;;;; parser functions helpers
 
 (define (parse-tag-name-spec stx synner)
   ;;Parse the first component of a class or label definition:
   ;;
-  ;;  (?definer ?tag-name-spec . ?clauses)
+  ;;  (define-class ?tag-name-spec . ?clauses)
+  ;;  (define-label ?tag-name-spec . ?clauses)
   ;;
-  ;;supported syntaxes are:
+  ;;supported syntaxes for ?TAG-NAME-SPEC are:
   ;;
   ;;  ?name-id
   ;;  (?name-id ?public-constructor-id ?predicate-id)
@@ -2257,13 +2215,8 @@
 	(let ((definitions (<parsed-spec>-definitions parsed-spec)))
 	  (unless (null? definitions)
 	    (<parsed-spec>-definitions-set! parsed-spec (reverse definitions))))
-	(unless (<parsed-spec>-parent-id parsed-spec)
-	  (<parsed-spec>-parent-id-set! parsed-spec (<parsed-spec>-top-id parsed-spec)))
 	(unless (<parsed-spec>-nongenerative-uid parsed-spec)
-	  ;;According to  R6RS: GENERATE-TEMPORARIES returns identifiers
-	  ;;which  are guaranteed to  be unique  in the  current process
-	  ;;run.
-	  (<parsed-spec>-nongenerative-uid-set! parsed-spec (car (generate-temporaries '(#f)))))
+	  (<parsed-spec>-nongenerative-uid-set! parsed-spec (gensym)))
 	(when (and (<class-spec>? parsed-spec)
 		   (<parsed-spec>-abstract? parsed-spec))
 	  (when (<parsed-spec>-common-protocol parsed-spec)
@@ -3116,6 +3069,21 @@
 
 ;;;; satisfactions
 
+;;Parser function for SATISFIES clauses;  this clause can be present any
+;;number of times and can have any number of arguments.
+;;
+(define (clause-arguments-parser:satisfies parsed-spec args synner)
+  (define-inline (%add-satisfaction id)
+    (<parsed-spec>-satisfactions-set! parsed-spec (cons id (<parsed-spec>-satisfactions parsed-spec))))
+
+  (define-inline (%add-definition definition-form)
+    (<parsed-spec>-definitions-cons! parsed-spec definition-form))
+
+  (syntax-case args ()
+
+    (_
+     (synner "invalid SATISFIES clause syntax"))))
+
 (define-clause-parser/zero-or-more-clauses/zero-or-more-arguments
     (parser-name %parse-clauses-satisfies)
   (clause-keyword aux.satisfies)
@@ -3143,11 +3111,6 @@
 	 (_
 	  (synner "invalid satisfaction specification" ($car input-clauses)))))
 
-     (define-inline (%add-satisfaction id)
-       (<parsed-spec>-satisfactions-set! parsed-spec (cons id (<parsed-spec>-satisfactions parsed-spec))))
-
-     (define-inline (%add-definition definition-form)
-       (<parsed-spec>-definitions-cons! parsed-spec definition-form))
 
      (%main #'?arguments))))
 
@@ -3161,12 +3124,12 @@
 ;;
 ;;where ?EXPR is an expression evaluating to a getter syntax function.
 ;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-getter)
-  (clause-keyword aux.getter)
-  (flag-accessor <parsed-spec>-getter)
-  (body
-   (<parsed-spec>-getter-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:getter parsed-spec args synner)
+  (syntax-case args ()
+    (#(#(?transformer-expr))
+     (<parsed-spec>-getter-set! parsed-spec #'?transformer-expr))
+    (_
+     (synner "invalid GETTER clause syntax"))))
 
 ;;Parser function for the SETTER  clause; this clause must be present at
 ;;most once.  The expected syntax for the clause is:
@@ -3175,96 +3138,178 @@
 ;;
 ;;where ?EXPR is an expression evaluating to a setter syntax function.
 ;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-setter)
-  (clause-keyword aux.setter)
-  (flag-accessor <parsed-spec>-setter)
-  (body
-   (<parsed-spec>-setter-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:setter parsed-spec args synner)
+  (syntax-case args ()
+    (#(#(?transformer-expr))
+     (<parsed-spec>-setter-set! parsed-spec #'?transformer-expr))
+    (_
+     (synner "invalid SETTER clause syntax"))))
+
+
+;;;; clause specifications
+
+(module (CLASS-CLAUSES-SPECS
+	 LABEL-CLAUSES-SPECS
+	 MIXIN-CLAUSES-SPECS)
+
+  ;;Remember the arguments of MAKE-SYNTAX-CLAUSE-SPEC:
+  ;;
+  ;; (make-syntax-clause-spec keyword
+  ;;    min-occur max-occur
+  ;;    min-args max-args
+  ;;    mutually-inclusive mutually-exclusive
+  ;;    custom-data)
+  ;;
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-NONGENERATIVE
+    (make-syntax-clause-spec #'aux.nongenerative	0 1 0 1 '() '()	clause-arguments-parser:nongenerative))
+
+  (define-constant CLAUSE-SPEC-SEALED
+    (make-syntax-clause-spec #'aux.sealed		0 1 1 1 '() '()	clause-arguments-parser:sealed))
+
+  (define-constant CLAUSE-SPEC-OPAQUE
+    (make-syntax-clause-spec #'aux.opaque		0 1 1 1 '() '()	clause-arguments-parser:opaque))
+
+  (define-constant CLAUSE-SPEC-ABSTRACT
+    (make-syntax-clause-spec #'aux.abstract		0 1 0 0 '() '()	clause-arguments-parser:abstract))
+
+  (define-constant CLAUSE-SPEC-PARENT
+    (make-syntax-clause-spec #'aux.parent		0 1 1 1 '() '()	clause-arguments-parser:parent))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-COMMON-PROTOCOL
+    (make-syntax-clause-spec #'aux.protocol		0 1 1 1 '() '()	clause-arguments-parser:common-protocol))
+
+  (define-constant CLAUSE-SPEC-PUBLIC-PROTOCOL
+    (make-syntax-clause-spec #'aux.public-protocol	0 1 1 1 '() '()	clause-arguments-parser:public-protocol))
+
+  (define-constant CLAUSE-SPEC-SUPER-PROTOCOL
+    (make-syntax-clause-spec #'aux.super-protocol	0 1 1 1 '() '()	clause-arguments-parser:super-protocol))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-PREDICATE
+    (make-syntax-clause-spec #'aux.predicate		0 1 1 1 '() '()	clause-arguments-parser:predicate))
+
+  (define-constant CLAUSE-SPEC-MAKER
+    (make-syntax-clause-spec #'aux.maker		0 1 1 1 '() '()	clause-arguments-parser:maker))
+
+  (define-constant CLAUSE-SPEC-FINALISER
+    (make-syntax-clause-spec #'aux.finaliser		0 1 1 1 '() '()	clause-arguments-parser:finaliser))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-CONCRETE-FIELDS
+    (make-syntax-clause-spec #'aux.fields		0 +inf.0 0 +inf.0 '() '()	clause-arguments-parser:concrete-fields))
+
+  (define-constant CLAUSE-SPEC-VIRTUAL-FIELDS
+    (make-syntax-clause-spec #'aux.virtual-fields	0 +inf.0 0 +inf.0 '() '()	clause-arguments-parser:virtual-fields))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-SINGLE-METHOD
+    (make-syntax-clause-spec #'aux.method		0 +inf.0 2 +inf.0 '() '()	clause-arguments-parser:single-method))
+
+  (define-constant CLAUSE-SPEC-SINGLE-METHOD-SYNTAX
+    (make-syntax-clause-spec #'aux.method-syntax	0 +inf.0 2 +inf.0 '() '()	clause-arguments-parser:method-syntax))
+
+  (define-constant CLAUSE-SPEC-MULTIPLE-METHODS
+    (make-syntax-clause-spec #'aux.methods		0 +inf.0 0 +inf.0 '() '()	clause-arguments-parser:multiple-methods))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-GETTER
+    (make-syntax-clause-spec #'aux.getter		0 1 1 1 '() '()	clause-arguments-parser:getter))
+
+  (define-constant CLAUSE-SPEC-SETTER
+    (make-syntax-clause-spec #'aux.setter		0 1 1 1 '() '()	clause-arguments-parser:setter))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant CLAUSE-SPEC-SATISFIES
+    (make-syntax-clause-spec #'aux.satisfies		0 +inf.0 0 +inf.0 '() '()	clause-arguments-parser:satisfies))
+
+  (define-constant CLAUSE-SPEC-SHADOWS
+    (make-syntax-clause-spec #'aux.shadows		0 1 1 1 '() '()	clause-arguments-parser:shadows))
+
+;;; --------------------------------------------------------------------
+
+  ;;Parser functions for the clauses of the DEFINE-LABEL syntax.
+  ;;
+  (define-constant LABEL-CLAUSES-SPECS
+    (syntax-clauses-validate-specs
+     (list CLAUSE-SPEC-SINGLE-METHOD
+	   CLAUSE-SPEC-VIRTUAL-FIELDS
+	   CLAUSE-SPEC-MULTIPLE-METHODS
+	   CLAUSE-SPEC-SINGLE-METHOD-SYNTAX
+	   CLAUSE-SPEC-COMMON-PROTOCOL
+	   CLAUSE-SPEC-PUBLIC-PROTOCOL
+	   CLAUSE-SPEC-PREDICATE
+	   CLAUSE-SPEC-GETTER
+	   CLAUSE-SPEC-SETTER
+	   CLAUSE-SPEC-NONGENERATIVE
+	   CLAUSE-SPEC-MAKER
+	   CLAUSE-SPEC-SATISFIES)))
+
+  ;;Parser functions for the clauses of the DEFINE-class syntax.
+  ;;
+  (define-constant CLASS-CLAUSES-SPECS
+    (syntax-clauses-validate-specs
+     (list
+      CLAUSE-SPEC-SINGLE-METHOD
+      CLAUSE-SPEC-CONCRETE-FIELDS
+      CLAUSE-SPEC-VIRTUAL-FIELDS
+      CLAUSE-SPEC-MULTIPLE-METHODS
+      CLAUSE-SPEC-SINGLE-METHOD-SYNTAX
+      CLAUSE-SPEC-NONGENERATIVE
+      CLAUSE-SPEC-PARENT
+      CLAUSE-SPEC-COMMON-PROTOCOL
+      CLAUSE-SPEC-PUBLIC-PROTOCOL
+      CLAUSE-SPEC-SUPER-PROTOCOL
+      CLAUSE-SPEC-GETTER
+      CLAUSE-SPEC-SETTER
+      CLAUSE-SPEC-MAKER
+      CLAUSE-SPEC-FINALISER
+      CLAUSE-SPEC-SATISFIES
+      CLAUSE-SPEC-SEALED
+      CLAUSE-SPEC-OPAQUE
+      CLAUSE-SPEC-ABSTRACT)))
+
+  ;;Parser functions for the clauses of the DEFINE-MIXIN syntax.
+  ;;
+  (define-constant MIXIN-CLAUSES-SPECS
+    (syntax-clauses-validate-specs
+     (LIST
+      CLAUSE-SPEC-SINGLE-METHOD
+      CLAUSE-SPEC-CONCRETE-FIELDS
+      CLAUSE-SPEC-VIRTUAL-FIELDS
+      CLAUSE-SPEC-MULTIPLE-METHODS
+      CLAUSE-SPEC-PARENT
+      CLAUSE-SPEC-COMMON-PROTOCOL
+      CLAUSE-SPEC-PUBLIC-PROTOCOL
+      CLAUSE-SPEC-GETTER
+      CLAUSE-SPEC-SETTER
+      CLAUSE-SPEC-NONGENERATIVE
+      CLAUSE-SPEC-MAKER
+      CLAUSE-SPEC-FINALISER
+      CLAUSE-SPEC-ABSTRACT
+      CLAUSE-SPEC-OPAQUE
+      CLAUSE-SPEC-PREDICATE
+      CLAUSE-SPEC-SATISFIES
+      CLAUSE-SPEC-SEALED
+      CLAUSE-SPEC-SHADOWS
+      CLAUSE-SPEC-SINGLE-METHOD-SYNTAX
+      CLAUSE-SPEC-SUPER-PROTOCOL)))
+
+  #| end of module |# )
 
 
 ;;;; done
 
-;;Parser functions for the clauses of the DEFINE-LABEL syntax.
-;;
-;;The  order of  invocation matters  only  in terms  of efficiency:  the
-;;clauses that appear most should be parsed first.
-;;
-(define-constant label-parser-functions
-  (list
-   %parse-clauses-single-method
-   %parse-clauses-virtual-fields
-   %parse-clauses-multiple-methods
-   %parse-clauses-single-method-syntax
-   %parse-clauses-parent
-   %parse-clauses-common-protocol
-   %parse-clauses-public-protocol
-   %parse-clauses-predicate
-   %parse-clauses-getter
-   %parse-clauses-setter
-   %parse-clauses-nongenerative
-   %parse-clauses-maker
-   %parse-clauses-satisfies
-   %parse-clauses-shadows
-   final-clauses-parser))
-
-;;Parser functions for the clauses of the DEFINE-CLASS syntax.
-;;
-;;The  order of  invocation matters  only  in terms  of efficiency:  the
-;;clauses that appear most should be parsed first.
-;;
-(define-constant class-parser-functions
-  (list
-   %parse-clauses-single-method
-   %parse-clauses-concrete-fields
-   %parse-clauses-virtual-fields
-   %parse-clauses-multiple-methods
-   %parse-clauses-single-method-syntax
-   %parse-clauses-nongenerative
-   %parse-clauses-parent
-   %parse-clauses-common-protocol
-   %parse-clauses-public-protocol
-   %parse-clauses-super-protocol
-   %parse-clauses-getter
-   %parse-clauses-setter
-   %parse-clauses-maker
-   %parse-clauses-finaliser
-   %parse-clauses-satisfies
-   %parse-clauses-sealed
-   %parse-clauses-opaque
-   %parse-clauses-abstract
-   final-clauses-parser))
-
-;;Parser functions for the clauses of the DEFINE-MIXIN syntax.
-;;
-;;The  order of  invocation matters  only  in terms  of efficiency:  the
-;;clauses that appear most should be parsed first.
-;;
-(define-constant mixin-parser-functions
-  (list
-   %parse-clauses-single-method
-   %parse-clauses-concrete-fields
-   %parse-clauses-virtual-fields
-   %parse-clauses-multiple-methods
-   %parse-clauses-parent
-   %parse-clauses-common-protocol
-   %parse-clauses-public-protocol
-   %parse-clauses-getter
-   %parse-clauses-setter
-   %parse-clauses-nongenerative
-   %parse-clauses-maker
-   %parse-clauses-finaliser
-   %parse-clauses-abstract
-   %parse-clauses-opaque
-   %parse-clauses-predicate
-   %parse-clauses-satisfies
-   %parse-clauses-sealed
-   %parse-clauses-shadows
-   %parse-clauses-single-method-syntax
-   %parse-clauses-super-protocol
-   final-clauses-parser))
-
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:
