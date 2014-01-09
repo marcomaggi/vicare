@@ -1617,6 +1617,40 @@
 ;;
 ;;  where ?TRANSFORMER is
 ;;
+;;* A  binding representing macro with  non-variable transformer defined
+;;  by code in an imported library has the format:
+;;
+;;     (global-macro ?library . ?gensym)
+;;
+;;  where:  ?LIBRARY represents  the library  in which  the compile-time
+;;  value is defined,  ?GENSYM is the symbol  containing the transformer
+;;  function in its "value" field.
+;;
+;;* A binding representing a  macro with variable transformer defined by
+;;  code in an imported library has the format:
+;;
+;;     (global-macro! ?library . ?gensym)
+;;
+;;  where:  ?LIBRARY represents  the library  in which  the compile-time
+;;  value is defined,  ?GENSYM is the symbol  containing the transformer
+;;  function in its "value" field.
+;;
+;;* A  binding representing macro with  non-variable transformer defined
+;;  by local code has the format:
+;;
+;;     (local-macro ?transformer . ?expanded-expr)
+;;
+;;  where: ?TRANSFORMER  is the transformer function,  ?EXPANDED-EXPR is
+;;  the expanded expression evaluating to the transformer.
+;;
+;;* A binding representing a  macro with variable transformer defined by
+;;  code in an imported library has the format:
+;;
+;;     (local-macro! ?transformer . ?expanded-expr)
+;;
+;;  where: ?TRANSFORMER  is the transformer function,  ?EXPANDED-EXPR is
+;;  the expanded expression evaluating to the transformer.
+;;
 ;;* A binding representing a pattern variable, as created by SYNTAX-CASE
 ;;  and SYNTAX-RULES, has the format:
 ;;
@@ -1763,6 +1797,18 @@
       lexenv
     (add-lexicals ($cdr label*) ($cdr lexvar*)
 		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
+
+;;; --------------------------------------------------------------------
+;;; local macro with non-variable transformer bindings
+
+(define (make-local-macro-binding transformer expanded-expr)
+  (cons* 'local-macro transformer expanded-expr))
+
+;;; --------------------------------------------------------------------
+;;; local macro with variable transformer bindings
+
+(define (make-local-identifier-macro-binding transformer expanded-expr)
+  (cons* 'local-macro! transformer expanded-expr))
 
 ;;; --------------------------------------------------------------------
 ;;; Vicare struct type descriptor bindings
@@ -3042,18 +3088,11 @@
   ;;descriptor.  If  the return value is  not of such type:  we raise an
   ;;assertion violation.
   ;;
-  ;;We convert the expression's return value to:
-  ;;
-  ;;   (lacal-macro	. ?procedure)
-  ;;   (local-macro!	. ?procedure)
-  ;;   (local-ctv	. ?compile-time-value)
-  ;;   ($rtd		. ?type-descriptor)
-  ;;
   (let ((rv (eval-core (expanded->core expanded-expr))))
     (cond ((procedure? rv)
-	   (cons* 'local-macro rv expanded-expr))
+	   (make-local-macro-binding rv expanded-expr))
 	  ((variable-transformer? rv)
-	   (cons* 'local-macro! (cdr rv) expanded-expr))
+	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) expanded-expr))
 	  ((struct-or-record-type-descriptor-binding? rv)
 	   rv)
 	  ((compile-time-value? rv)
@@ -8280,13 +8319,21 @@
 		      (non-core-macro-transformer func/procname))
 		    input-form-expr lexenv.run rib))
 
-  (define (chi-local-macro procname input-form-expr lexenv.run rib)
+  (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
     ;;transformer  is defined  by local  user code,  but not  identifier
     ;;syntaxes;  these are  the lexical  environment entries  with types
     ;;"local-macro" and "local-macro!".
     ;;
-    ;;PROCNAME is a symbol representing the name of the macro.
+    ;;BIND-VAL is the binding value of  the global macro.  The format of
+    ;;the bindings is:
+    ;;
+    ;;     (local-macro  ?transformer . ?expanded-expr)
+    ;;     (local-macro! ?transformer . ?expanded-expr)
+    ;;
+    ;;and the argument BIND-VAL is:
+    ;;
+    ;;     (?transformer . ?expanded-expr)
     ;;
     ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
     ;;to be expanded.
@@ -8296,9 +8343,7 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (%do-macro-call (local-macro-transformer procname) input-form-expr lexenv.run rib))
-
-  (define local-macro-transformer car)
+    (%do-macro-call (car bind-val) input-form-expr lexenv.run rib))
 
   (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
@@ -8306,7 +8351,15 @@
     ;;are the lexical environment  entries with types "global-macro" and
     ;;"global-macro!".
     ;;
-    ;;BIND-VAL is the binding value of the global macro.
+    ;;BIND-VAL is the binding value of  the global macro.  The format of
+    ;;the bindings is:
+    ;;
+    ;;     (global-macro ?library . ?gensym)
+    ;;     (global-macro! ?library . ?gensym)
+    ;;
+    ;;and the argument BIND-VAL is:
+    ;;
+    ;;     (?library . ?gensym)
     ;;
     ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
     ;;to be expanded.
