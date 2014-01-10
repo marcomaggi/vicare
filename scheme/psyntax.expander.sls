@@ -8974,19 +8974,36 @@
 				mix? sd?)))))
 
 	       ((global-macro global-macro!)
-		(chi-body*
-		 (cons (chi-global-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
+		;;The  body form  is a  macro  use, where  the macro  is
+		;;imported  from  a  library.    We  perform  the  macro
+		;;expansion,  then  recurse   on  the  resulting  syntax
+		;;object.
+		;;
+		(let ((body-expr^ (chi-global-macro bind-val body-expr lexenv.run rib)))
+		  (chi-body* (cons body-expr^ (cdr body-expr*))
+			     lexenv.run lexenv.expand
+			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((local-macro local-macro!)
-		(chi-body*
-		 (cons (chi-local-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
+		;;The  body form  is a  macro  use, where  the macro  is
+		;;locally defined.  We perform the macro expansion, then
+		;;recurse on the resulting syntax object.
+		;;
+		(let ((body-expr^ (chi-local-macro bind-val body-expr lexenv.run rib)))
+		  (chi-body* (cons body-expr^ (cdr body-expr*))
+			     lexenv.run lexenv.expand
+			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((macro)
-		(chi-body*
-		 (cons (chi-non-core-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
+		;;The body  form is a  macro use,  where the macro  is a
+		;;non-core macro integrated in the expander.  We perform
+		;;the  macro expansion,  then recurse  on the  resulting
+		;;syntax object.
+		;;
+		(let ((body-expr^ (chi-non-core-macro bind-val body-expr lexenv.run rib)))
+		  (chi-body* (cons body-expr^ (cdr body-expr*))
+			     lexenv.run lexenv.expand
+			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((module)
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
