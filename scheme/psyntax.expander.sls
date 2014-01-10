@@ -9270,18 +9270,22 @@
     ;;
     (receive (name export-id* internal-body-form*)
 	(%parse-module module-form-stx)
-      (let* ((rib         (make-empty-rib))
-	     (body-expr*  (map (lambda (x)
-				 (push-lexical-contour rib x))
-			    (syntax->list internal-body-form*))))
-	(receive (body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
+      (let* ((rib                      (make-empty-rib))
+	     (internal-body-form*/rib  (map (lambda (x)
+					      (push-lexical-contour rib x))
+					 (syntax->list internal-body-form*))))
+	(receive (leftover-body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
 	    ;;In a module: we do not want the trailing expressions to be
 	    ;;converted to dummy definitions; rather  we want them to be
 	    ;;accumulated in the MOD** argument, for later expansion and
 	    ;;evaluation.  So we set MIX? to false.
-	    (let ((mix? #f)
-		  (sd?  #t))
-	      (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* '() rib mix? sd?))
+	    (let ((empty-export-spec*	'())
+		  (mix?			#f)
+		  (sd?			#t))
+	      (chi-body* internal-body-form*/rib
+			 lexenv.run lexenv.expand
+			 lex* rhs* mod** kwd* empty-export-spec*
+			 rib mix? sd?))
 	  (let* ((export-id* (vector-append export-id* (list->vector _export-spec*)))
 		 (exp-lab*   (vector-map
 				 (lambda (x)
@@ -9291,7 +9295,7 @@
 							      '()))
 				       (stx-error x "cannot find module export")))
 			       export-id*))
-		 (mod**      (cons body-expr* mod**)))
+		 (mod**      (cons leftover-body-expr* mod**)))
 	    (if (not name) ;;; explicit export
 		(values lex* rhs* export-id* exp-lab* lexenv.run lexenv.expand mod** kwd*)
 	      (let ((lab   (gensym-for-label 'module))
@@ -9334,8 +9338,8 @@
 
   (module (module-interface-exp-id*)
 
-    (define (module-interface-exp-id* iface id)
-      (let ((diff   (%diff-marks (<stx>-mark* id)
+    (define (module-interface-exp-id* iface id-for-marks)
+      (let ((diff   (%diff-marks (<stx>-mark* id-for-marks)
 				 (module-interface-first-mark iface)))
 	    (id-vec (module-interface-exp-id-vec iface)))
 	(if (null? diff)
