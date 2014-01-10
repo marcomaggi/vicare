@@ -6435,8 +6435,8 @@
 		 (lexenv.run (add-lexicals lab* lex* lexenv.run)))
 	     ;;Create  the   lexical  contour  then  process   body  and
 	     ;;right-hand sides of bindings.
-	     (let ((body (chi-internal (push-lexical-contour rib (cons ?body ?body*))
-				       lexenv.run lexenv.expand))
+	     (let ((body (chi-internal-body (push-lexical-contour rib (cons ?body ?body*))
+					    lexenv.run lexenv.expand))
 		   (rhs* (chi-expr*    (map (lambda (rhs)
 					      (push-lexical-contour rib rhs))
 					 ?rhs*)
@@ -6470,9 +6470,9 @@
 				    (%eval-macro-transformer
 				     (%expand-macro-transformer rhs lexenv.expand)))
 			       ?rhs*)))
-	   (chi-internal (cons ?body ?body*)
-			 (append (map cons label* rhs-binding*) lexenv.run)
-			 (append (map cons label* rhs-binding*) lexenv.expand)))))))
+	   (chi-internal-body (cons ?body ?body*)
+			      (append (map cons label* rhs-binding*) lexenv.run)
+			      (append (map cons label* rhs-binding*) lexenv.expand)))))))
 
   (define (%lookup-binding-in-run-lexenv lhs)
     ;;Search  the  binding of  the  identifier  LHS in  LEXENV.RUN,  the
@@ -8262,12 +8262,15 @@
   #| end of module: SYNTAX-DISPATCH |# )
 
 
-;;;; chi procedures: module
-
+;;;; chi module
+;;
+;;The  "chi-*"  functions  are  the ones  visiting  syntax  objects  and
+;;performing the expansion process.
+;;
 (module (chi-expr
 	 chi-expr*
 	 chi-body*
-	 chi-internal
+	 chi-internal-body
 	 chi-rhs*
 	 chi-defun
 	 chi-lambda-clause
@@ -8768,10 +8771,10 @@
 	(let ((lex* (map gensym-for-lexical-var x*))
 	      (lab* (map gensym-for-label x*)))
 	  (values lex*
-		  (chi-internal (push-lexical-contour (make-full-rib x* lab*)
-						      body*)
-				(add-lexicals lab* lex* lexenv.run)
-				lexenv.expand)))))
+		  (chi-internal-body (push-lexical-contour (make-full-rib x* lab*)
+							   body*)
+				     (add-lexicals lab* lex* lexenv.run)
+				     lexenv.expand)))))
      ((x* ... . x)
       (begin
 	(%verify-formals-syntax fmls stx)
@@ -8780,11 +8783,11 @@
 	      (lex  (gensym-for-lexical-var x))
 	      (lab  (gensym-for-label x)))
 	  (values (append lex* lex)
-		  (chi-internal (push-lexical-contour (make-full-rib (cons x   x*)
-								     (cons lab lab*))
-						      body*)
-				(add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
-				lexenv.expand)))))
+		  (chi-internal-body (push-lexical-contour (make-full-rib (cons x   x*)
+									  (cons lab lab*))
+							   body*)
+				     (add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
+				     lexenv.expand)))))
      (_
       (stx-error fmls "invalid syntax")))))
 
@@ -8839,7 +8842,7 @@
 
 ;;;; chi procedures: internal body
 
-(define (chi-internal expr* lexenv.run lexenv.expand)
+(define (chi-internal-body expr* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
    (let ((rib (make-empty-rib)))
      (receive (expr*^ lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
