@@ -9099,7 +9099,7 @@
 		;;body.
 		;;
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		    (%chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
 		  (vector-for-each (lambda (id lab)
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
@@ -9187,43 +9187,6 @@
        (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
-  (define (%chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
-    (receive (name exp-id* body-expr*)
-	(parse-module body-expr)
-      (let* ((rib (make-empty-rib))
-	     (body-expr*  (map (lambda (x)
-				 (push-lexical-contour rib x))
-			    (syntax->list body-expr*))))
-	(receive (body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
-	    (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* '() rib #f #t)
-	  (let* ((exp-id*  (vector-append exp-id* (list->vector _export-spec*)))
-		 (exp-lab* (vector-map
-			       (lambda (x)
-				 (or (id->label (make-<stx> (identifier->symbol x)
-							    (<stx>-mark* x)
-							    (list rib)
-							    '()))
-				     (stx-error x "cannot find module export")))
-			     exp-id*))
-		 (mod** (cons body-expr* mod**)))
-	    (if (not name) ;;; explicit export
-		(values lex* rhs* exp-id* exp-lab* lexenv.run lexenv.expand mod** kwd*)
-	      (let ((lab (gensym-for-label 'module))
-		    (iface
-		     (make-module-interface
-		      (car (<stx>-mark* name))
-		      (vector-map
-			  (lambda (x)
-			    (make-<stx> (<stx>-expr x) (<stx>-mark* x) '() '()))
-			exp-id*)
-		      exp-lab*)))
-		(values lex* rhs*
-			(vector name) ;;; FIXME: module cannot
-			(vector lab)  ;;;  export itself yet
-			(cons (cons lab (cons '$module iface)) lexenv.run)
-			(cons (cons lab (cons '$module iface)) lexenv.expand)
-			mod** kwd*))))))))
-
 ;;; --------------------------------------------------------------------
 
   (module (%chi-import)
@@ -9291,53 +9254,113 @@
 
 ;;;; chi procedures: module processing
 
-(define (parse-module module-expr-stx)
-  ;;Parse  a syntax  object representing  a core  language MODULE  form.
-  ;;Return  3 values:  false or  an identifier  representing the  module
-  ;;name; a list of identifiers  selecting the exported bindings; a list
-  ;;of syntax objects representing the internal body forms.
-  ;;
-  (syntax-match module-expr-stx ()
-    ((_ (?export* ...) ?body* ...)
-     (begin
-       (unless (for-all identifier? ?export*)
-	 (stx-error module-expr-stx "module exports must be identifiers"))
-       (values #f (list->vector ?export*) ?body*)))
-    ((_ ?name (?export* ...) ?body* ...)
-     (begin
-       (unless (identifier? ?name)
-	 (stx-error module-expr-stx "module name must be an identifier"))
-       (unless (for-all identifier? ?export*)
-	 (stx-error module-expr-stx "module exports must be identifiers"))
-       (values ?name (list->vector ?export*) ?body*)))
-    ))
+(module (chi-internal-module
+	 module-interface-exp-id*
+	 module-interface-exp-lab-vec)
 
-(define-record module-interface
-  (first-mark exp-id-vec exp-lab-vec))
+  (define-record module-interface
+    (first-mark exp-id-vec exp-lab-vec))
 
-(module (module-interface-exp-id*)
+  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+    ;;Expand the  syntax object MODULE-FORM-STX which  represents a core
+    ;;langauge MODULE syntax use.
+    ;;
+    ;;LEXENV.RUN  and  LEXENV.EXPAND  must  be  lists  representing  the
+    ;;current lexical environment for run and expand times.
+    ;;
+    (receive (name export-id* internal-body-form*)
+	(%parse-module module-form-stx)
+      (let* ((rib         (make-empty-rib))
+	     (body-expr*  (map (lambda (x)
+				 (push-lexical-contour rib x))
+			    (syntax->list internal-body-form*))))
+	(receive (body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
+	    ;;In a module: we do not want the trailing expressions to be
+	    ;;converted to dummy definitions; rather  we want them to be
+	    ;;accumulated in the MOD** argument, for later expansion and
+	    ;;evaluation.  So we set MIX? to false.
+	    (let ((mix? #f)
+		  (sd?  #t))
+	      (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* '() rib mix? sd?))
+	  (let* ((export-id* (vector-append export-id* (list->vector _export-spec*)))
+		 (exp-lab*   (vector-map
+				 (lambda (x)
+				   (or (id->label (make-<stx> (identifier->symbol x)
+							      (<stx>-mark* x)
+							      (list rib)
+							      '()))
+				       (stx-error x "cannot find module export")))
+			       export-id*))
+		 (mod**      (cons body-expr* mod**)))
+	    (if (not name) ;;; explicit export
+		(values lex* rhs* export-id* exp-lab* lexenv.run lexenv.expand mod** kwd*)
+	      (let ((lab   (gensym-for-label 'module))
+		    (iface (make-module-interface (car (<stx>-mark* name))
+						  (vector-map
+						      (lambda (x)
+							(make-<stx> (<stx>-expr x) ;expression
+								    (<stx>-mark* x) ;list of marks
+								    '() ;list of substs
+								    '())) ;annotated expressions
+						    export-id*)
+						  exp-lab*)))
+		(values lex* rhs*
+			(vector name) ;;; FIXME: module cannot
+			(vector lab)  ;;;  export itself yet
+			(cons (cons lab (cons '$module iface)) lexenv.run)
+			(cons (cons lab (cons '$module iface)) lexenv.expand)
+			mod** kwd*))))))))
 
-  (define (module-interface-exp-id* iface id)
-    (let ((diff   (diff-marks (<stx>-mark* id)
-			      (module-interface-first-mark iface)))
-	  (id-vec (module-interface-exp-id-vec iface)))
-      (if (null? diff)
-	  id-vec
-	(vector-map
-	    (lambda (x)
-	      (make-<stx> (<stx>-expr x)		;expression
-			  (append diff (<stx>-mark* x)) ;list of marks
-			  '()				;list of substs
-			  '())) ;annotated expressions
-	  id-vec))))
+  (define (%parse-module module-form-stx)
+    ;;Parse a  syntax object representing  a core language  MODULE form.
+    ;;Return 3  values: false or  an identifier representing  the module
+    ;;name; a  list of  identifiers selecting  the exported  bindings; a
+    ;;list of syntax objects representing the internal body forms.
+    ;;
+    (syntax-match module-form-stx ()
+      ((_ (?export* ...) ?body* ...)
+       (begin
+	 (unless (for-all identifier? ?export*)
+	   (stx-error module-form-stx "module exports must be identifiers"))
+	 (values #f (list->vector ?export*) ?body*)))
+      ((_ ?name (?export* ...) ?body* ...)
+       (begin
+	 (unless (identifier? ?name)
+	   (stx-error module-form-stx "module name must be an identifier"))
+	 (unless (for-all identifier? ?export*)
+	   (stx-error module-form-stx "module exports must be identifiers"))
+	 (values ?name (list->vector ?export*) ?body*)))
+      ))
 
-  (define (diff-marks ls x)
-    (when (null? ls)
-      (error 'diff-marks "BUG: should not happen"))
-    (let ((a (car ls)))
-      (if (eq? a x)
-	  '()
-	(cons a (diff-marks (cdr ls) x)))))
+  (module (module-interface-exp-id*)
+
+    (define (module-interface-exp-id* iface id)
+      (let ((diff   (%diff-marks (<stx>-mark* id)
+				 (module-interface-first-mark iface)))
+	    (id-vec (module-interface-exp-id-vec iface)))
+	(if (null? diff)
+	    id-vec
+	  (vector-map
+	      (lambda (x)
+		(make-<stx> (<stx>-expr x)		  ;expression
+			    (append diff (<stx>-mark* x)) ;list of marks
+			    '()	  ;list of substs
+			    '())) ;annotated expressions
+	    id-vec))))
+
+    (define (%diff-marks mark* the-mark)
+      ;;MARK* must be  a non-empty list of marks; THE-MARK  must be a mark
+      ;;in MARK*.  Return  a list of the  elements of MARK* up  to and not
+      ;;including THE-MARK.
+      ;;
+      (when (null? mark*)
+	(error '%diff-marks "BUG: should not happen"))
+      (let ((a (car mark*)))
+	(if (eq? a the-mark)
+	    '()
+	  (cons a (%diff-marks (cdr mark*) the-mark)))))
+
+    #| end of module: MODULE-INTERFACE-EXP-ID* |# )
 
   #| end of module |# )
 
