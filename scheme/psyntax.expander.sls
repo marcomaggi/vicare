@@ -2953,55 +2953,6 @@
 	    (else #f))))
 
 
-(define (syntax-type expr-stx lexenv)
-  ;;The type of an expression is determined by two things:
-  ;;
-  ;;- The shape of the expression (identifier, pair, or datum).
-  ;;
-  ;;- The binding of  the identifier (for id-stx) or the  type of car of
-  ;;  the pair.
-  ;;
-  (cond ((identifier? expr-stx)
-	 (let* ((id    expr-stx)
-		(label (id->label/intern id)))
-	   (unless label
-	     (%raise-unbound-error #f id id))
-	   (let* ((binding (label->syntactic-binding label lexenv))
-		  (type    (syntactic-binding-type binding)))
-	     (case type
-	       ((lexical core-prim macro global local-macro
-			 local-macro! global-macro global-macro!
-			 displaced-lexical syntax import export $module
-			 $core-rtd library mutable local-ctv global-ctv)
-		(values type (syntactic-binding-value binding) id))
-	       (else
-		(values 'other #f #f))))))
-	((syntax-pair? expr-stx)
-	 (let ((id (syntax-car expr-stx)))
-	   (if (identifier? id)
-	       (let ((label (id->label/intern id)))
-		 (unless label
-		   (%raise-unbound-error #f id id))
-		 (let* ((binding (label->syntactic-binding label lexenv))
-			(type    (syntactic-binding-type binding)))
-		   (case type
-		     ((define define-syntax core-macro begin macro
-			local-macro local-macro! global-macro
-			global-macro! module library set! let-syntax
-			letrec-syntax import export $core-rtd
-			local-ctv global-ctv stale-when
-			define-fluid-syntax)
-		      (values type (syntactic-binding-value binding) id))
-		     (else
-		      (values 'call #f #f)))))
-	     (values 'call #f #f))))
-	(else
-	 (let ((datum (syntax->datum expr-stx)))
-	   (if (self-evaluating? datum)
-	       (values 'constant datum #f)
-	     (values 'other #f #f))))))
-
-
 ;;;; public interface: variable transformer
 ;;
 ;;As  specified  by  R6RS:  we   can  define  identifier  syntaxes  with
@@ -8311,6 +8262,71 @@
   #| end of module: SYNTAX-DISPATCH |# )
 
 
+;;;; chi procedures: module
+
+(module (chi-expr
+	 chi-expr*
+	 chi-body*
+	 chi-internal
+	 chi-rhs*
+	 chi-defun
+	 chi-lambda-clause
+	 chi-lambda-clause*)
+
+
+;;;; chi procedures: syntax object type inspection
+
+(define (syntax-type expr-stx lexenv)
+  ;;The type of an expression is determined by two things:
+  ;;
+  ;;- The shape of the expression (identifier, pair, or datum).
+  ;;
+  ;;- The binding of  the identifier (for id-stx) or the  type of car of
+  ;;  the pair.
+  ;;
+  (cond ((identifier? expr-stx)
+	 (let* ((id    expr-stx)
+		(label (id->label/intern id)))
+	   (unless label
+	     (%raise-unbound-error #f id id))
+	   (let* ((binding (label->syntactic-binding label lexenv))
+		  (type    (syntactic-binding-type binding)))
+	     (case type
+	       ((lexical core-prim macro global local-macro
+			 local-macro! global-macro global-macro!
+			 displaced-lexical syntax import export $module
+			 $core-rtd library mutable local-ctv global-ctv)
+		(values type (syntactic-binding-value binding) id))
+	       (else
+		(values 'other #f #f))))))
+	((syntax-pair? expr-stx)
+	 (let ((id (syntax-car expr-stx)))
+	   (if (identifier? id)
+	       (let ((label (id->label/intern id)))
+		 (unless label
+		   (%raise-unbound-error #f id id))
+		 (let* ((binding (label->syntactic-binding label lexenv))
+			(type    (syntactic-binding-type binding)))
+		   (case type
+		     ((define define-syntax core-macro begin macro
+			local-macro local-macro! global-macro
+			global-macro! module library set! let-syntax
+			letrec-syntax import export $core-rtd
+			local-ctv global-ctv stale-when
+			define-fluid-syntax)
+		      (values type (syntactic-binding-value binding) id))
+		     (else
+		      (values 'call #f #f)))))
+	     (values 'call #f #f))))
+	(else
+	 (let ((datum (syntax->datum expr-stx)))
+	   (if (self-evaluating? datum)
+	       (values 'constant datum #f)
+	     (values 'other #f #f))))))
+
+
+
+
 ;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
 
 ;;Set to true  whenever we are expanding the first  suborm in a function
@@ -8740,6 +8756,9 @@
       (cons expr0
 	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
+
+;;;; chi procedures: definitions and lambda clauses
+
 (define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
    (syntax-match fmls ()
@@ -8767,8 +8786,7 @@
 				(add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
 				lexenv.expand)))))
      (_
-      (stx-error fmls "invalid syntax"))
-     )))
+      (stx-error fmls "invalid syntax")))))
 
 (define (chi-lambda-clause* stx fmls* body** lexenv.run lexenv.expand)
   (if (null? fmls*)
@@ -8785,6 +8803,9 @@
      (receive (fmls body)
 	 (chi-lambda-clause fmls fmls body* lexenv.run lexenv.expand)
        (build-lambda (syntax-annotation ctxt) fmls body)))))
+
+
+;;;; chi procedures: bindings right-hand sides
 
 (define (chi-rhs rhs lexenv.run lexenv.expand)
   (case (car rhs)
@@ -8814,6 +8835,9 @@
       (let ((a (chi-rhs (car ls) lexenv.run lexenv.expand)))
 	(cons a
 	      (loop (cdr ls)))))))
+
+
+;;;; chi procedures: internal body
 
 (define (chi-internal expr* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
@@ -9106,6 +9130,8 @@
   #| end of module: CHI-BODY* |# )
 
 
+;;;; chi procedures: module processing
+
 (define parse-module
   (lambda (e)
     (syntax-match e ()
@@ -9122,7 +9148,8 @@
 	   (stx-error e "module exports must be identifiers"))
 	 (values name (list->vector export*) b*))))))
 
-(define-record module-interface (first-mark exp-id-vec exp-lab-vec))
+(define-record module-interface
+  (first-mark exp-id-vec exp-lab-vec))
 
 (define (module-interface-exp-id* iface id)
   (define (diff-marks ls x)
@@ -9140,6 +9167,11 @@
 	  (lambda (x)
 	    (make-<stx> (<stx>-expr x) (append diff (<stx>-mark* x)) '() '()))
 	id-vec))))
+
+
+;;;; chi procedures: end of module
+
+#| end of module |# )
 
 
 (define (rev-map-append f ls ac)
@@ -9534,7 +9566,7 @@
 ;;Register the expander with the library manager.
 (current-library-expander expand-library)
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
