@@ -8484,10 +8484,6 @@
     (chi-drop-splice-first-envelope-maybe
      (receive (type value kwd)
 	 (syntax-type e lexenv.run)
-       ;; (debug-print 'chi-expr
-       ;; 		    (list 'type type)
-       ;; 		    (list 'expr (syntax->datum e))
-       ;; 		    (list 'fst? (expanding-application-first-subform?)))
        (case type
 	 ((core-macro)
 	  (let ((transformer (core-macro-transformer value)))
@@ -8511,20 +8507,16 @@
 	    (build-lexical-reference no-source lex)))
 
 	 ((global-macro global-macro!)
-	  #;(debug-print (vector type 'enter) (syntax->datum e))
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-global-macro value e lexenv.run #f))))
-	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((local-macro local-macro!)
 	  ;;Here  we expand  uses  of macros  that are  local  in a  non
 	  ;;top-level region.
 	  ;;
-	  #;(debug-print (vector type 'enter) (syntax->datum e))
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-local-macro value e lexenv.run #f))))
-	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((macro macro!)
@@ -8533,10 +8525,8 @@
 	  ;;integrated in the expander.  When  the type is "macro!": the
 	  ;;macro is an identifier syntax.
 	  ;;
-	  #;(debug-print (vector type 'enter) (syntax->datum e))
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-macro value e lexenv.run #f))))
-	    #;(debug-print (vector type 'recur) (syntax->datum exp-e))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((constant)
@@ -8637,9 +8627,6 @@
 	rator
 	(while-not-expanding-application-first-subform
 	 (chi-expr* rands lexenv.run lexenv.expand))))
-    ;; (debug-print 'chi-application/enter
-    ;; 		 (syntax->datum expr)
-    ;; 		 (expanding-application-first-subform?))
     (syntax-match expr ()
       ((?rator ?rands* ...)
        (if (not (syntax-pair? ?rator))
@@ -8647,8 +8634,6 @@
        	   ;;syntax  keyword.  Let's  make  sure that  we expand  ?RATOR
        	   ;;first.
        	   (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-	     ;; (debug-print 'chi-application/exit/common
-	     ;; 		  (syntax->datum rator))
 	     (%build-core-expression rator ?rands*))
 	 ;;This is a function application with the format:
 	 ;;
@@ -8669,26 +8654,6 @@
 			     'splice-first-expand)))
 	     (%build-core-expression exp-rator ?rands*)))))
       ))
-
-  ;; (define (chi-application expr lexenv.run lexenv.expand)
-  ;;   ;;Expand a function application form.
-  ;;   ;;
-  ;;   (syntax-match expr ()
-  ;;     ((?rator ?rands* ...)
-  ;;      (let ((rator (chi-expr ?rator lexenv.run lexenv.expand #t)))
-  ;;      	 (if (splice-first-envelope? rator)
-  ;;      	     (syntax-match (splice-first-envelope-form rator) ()
-  ;;      	       ((?rator ?int-rands* ...)
-  ;;      		(chi-expr (cons ?rator (append ?int-rands* ?rands*))
-  ;;      			  lexenv.run lexenv.expand))
-  ;;      	       (_
-  ;;      		(stx-error expr
-  ;;      			   "expected list as argument of splice-first-expand"
-  ;;      			   'splice-first-expand)))
-  ;;      	   (build-application (syntax-annotation expr)
-  ;;      	     rator
-  ;;      	     (chi-expr* ?rands* lexenv.run lexenv.expand))))
-  ;;      )))
 
   (define (chi-set! e lexenv.run lexenv.expand)
     (syntax-match e ()
