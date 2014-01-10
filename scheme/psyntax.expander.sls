@@ -2185,8 +2185,7 @@
   (expr
    mark*
    subst*
-   ae*
-   )
+   ae*)
   (lambda (S port subwriter) ;record printer function
     (define-inline (%display thing)
       (display thing port))
@@ -9292,41 +9291,55 @@
 
 ;;;; chi procedures: module processing
 
-(define parse-module
-  (lambda (e)
-    (syntax-match e ()
-      ((_ (export* ...) b* ...)
-       (begin
-	 (unless (for-all identifier? export*)
-	   (stx-error e "module exports must be identifiers"))
-	 (values #f (list->vector export*) b*)))
-      ((_ name (export* ...) b* ...)
-       (begin
-	 (unless (identifier? name)
-	   (stx-error e "module name must be an identifier"))
-	 (unless (for-all identifier? export*)
-	   (stx-error e "module exports must be identifiers"))
-	 (values name (list->vector export*) b*))))))
+(define (parse-module module-expr-stx)
+  ;;Parse  a syntax  object representing  a core  language MODULE  form.
+  ;;Return  3 values:  false or  an identifier  representing the  module
+  ;;name; a list of identifiers  selecting the exported bindings; a list
+  ;;of syntax objects representing the internal body forms.
+  ;;
+  (syntax-match module-expr-stx ()
+    ((_ (?export* ...) ?body* ...)
+     (begin
+       (unless (for-all identifier? ?export*)
+	 (stx-error module-expr-stx "module exports must be identifiers"))
+       (values #f (list->vector ?export*) ?body*)))
+    ((_ ?name (?export* ...) ?body* ...)
+     (begin
+       (unless (identifier? ?name)
+	 (stx-error module-expr-stx "module name must be an identifier"))
+       (unless (for-all identifier? ?export*)
+	 (stx-error module-expr-stx "module exports must be identifiers"))
+       (values ?name (list->vector ?export*) ?body*)))
+    ))
 
 (define-record module-interface
   (first-mark exp-id-vec exp-lab-vec))
 
-(define (module-interface-exp-id* iface id)
+(module (module-interface-exp-id*)
+
+  (define (module-interface-exp-id* iface id)
+    (let ((diff   (diff-marks (<stx>-mark* id)
+			      (module-interface-first-mark iface)))
+	  (id-vec (module-interface-exp-id-vec iface)))
+      (if (null? diff)
+	  id-vec
+	(vector-map
+	    (lambda (x)
+	      (make-<stx> (<stx>-expr x)		;expression
+			  (append diff (<stx>-mark* x)) ;list of marks
+			  '()				;list of substs
+			  '())) ;annotated expressions
+	  id-vec))))
+
   (define (diff-marks ls x)
-    (when (null? ls) (error 'diff-marks "BUG: should not happen"))
+    (when (null? ls)
+      (error 'diff-marks "BUG: should not happen"))
     (let ((a (car ls)))
       (if (eq? a x)
 	  '()
 	(cons a (diff-marks (cdr ls) x)))))
-  (let ((diff
-	 (diff-marks (<stx>-mark* id) (module-interface-first-mark iface)))
-	(id-vec (module-interface-exp-id-vec iface)))
-    (if (null? diff)
-	id-vec
-      (vector-map
-	  (lambda (x)
-	    (make-<stx> (<stx>-expr x) (append diff (<stx>-mark* x)) '() '()))
-	id-vec))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: end of module
