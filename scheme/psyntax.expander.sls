@@ -1611,11 +1611,14 @@
 ;;  where ?NAME is  a symbol representing the macro  name.  Such entries
 ;;  are defined in the file "makefile.sps".
 ;;
-;;* A binding representing an identifier syntax has the format:
+;;* A binding  representing a macro with a variable  transformer has the
+;;  format:
 ;;
-;;     (macro! . ?transformer)
+;;     (identifier-macro! . ?transformer)
 ;;
-;;  where ?TRANSFORMER is
+;;  where  ?TRANSFORMER   is  recordised  code  in   the  core  language
+;;  representing the  transformer expression  ready to  be applied  to a
+;;  syntax object.
 ;;
 ;;* A  binding representing macro with  non-variable transformer defined
 ;;  by code in an imported library has the format:
@@ -2949,7 +2952,7 @@
 	    (else #f))))
 
 
-(define (syntax-type e r)
+(define (syntax-type expr-stx lexenv)
   ;;The type of an expression is determined by two things:
   ;;
   ;;- The shape of the expression (identifier, pair, or datum).
@@ -2957,44 +2960,44 @@
   ;;- The binding of  the identifier (for id-stx) or the  type of car of
   ;;  the pair.
   ;;
-  (cond ((identifier? e)
-	 (let ((id e))
-	   (let* ((label  (id->label/intern id))
-		  (b      (label->binding label r))
-		  (type   (binding-type b)))
-	     (unless label ;;fail early
-	       (%raise-unbound-error #f id id))
+  (cond ((identifier? expr-stx)
+	 (let* ((id    expr-stx)
+		(label (id->label/intern id)))
+	   (unless label
+	     (%raise-unbound-error #f id id))
+	   (let* ((binding (label->binding label lexenv))
+		  (type    (binding-type binding)))
 	     (case type
-	       ((lexical core-prim macro macro! global local-macro
+	       ((lexical core-prim macro identifier-macro! global local-macro
 			 local-macro! global-macro global-macro!
 			 displaced-lexical syntax import export $module
 			 $core-rtd library mutable ctv local-ctv global-ctv)
-		(values type (binding-value b) id))
+		(values type (binding-value binding) id))
 	       (else
 		(values 'other #f #f))))))
-	((syntax-pair? e)
-	 (let ((id (syntax-car e)))
+	((syntax-pair? expr-stx)
+	 (let ((id (syntax-car expr-stx)))
 	   (if (identifier? id)
-	       (let* ((label  (id->label/intern id))
-		      (b      (label->binding label r))
-		      (type   (binding-type b)))
-		 (unless label ;;fail early
+	       (let ((label (id->label/intern id)))
+		 (unless label
 		   (%raise-unbound-error #f id id))
-		 (case type
-		   ((define define-syntax core-macro begin macro
-		      macro! local-macro local-macro! global-macro
-		      global-macro! module library set! let-syntax
-		      letrec-syntax import export $core-rtd
-		      ctv local-ctv global-ctv stale-when
-		      define-fluid-syntax)
-		    (values type (binding-value b) id))
-		   (else
-		    (values 'call #f #f))))
+		 (let* ((binding (label->binding label lexenv))
+			(type    (binding-type binding)))
+		   (case type
+		     ((define define-syntax core-macro begin macro
+			identifier-macro! local-macro local-macro! global-macro
+			global-macro! module library set! let-syntax
+			letrec-syntax import export $core-rtd
+			ctv local-ctv global-ctv stale-when
+			define-fluid-syntax)
+		      (values type (binding-value binding) id))
+		     (else
+		      (values 'call #f #f)))))
 	     (values 'call #f #f))))
 	(else
-	 (let ((d (syntax->datum e)))
-	   (if (self-evaluating? d)
-	       (values 'constant d #f)
+	 (let ((datum (syntax->datum expr-stx)))
+	   (if (self-evaluating? datum)
+	       (values 'constant datum #f)
 	     (values 'other #f #f))))))
 
 
@@ -3020,7 +3023,7 @@
   ;;
   (define who 'make-variable-transformer)
   (if (procedure? x)
-      (cons 'macro! x)
+      (cons 'identifier-macro! x)
     (assertion-violation who "not a procedure" x)))
 
 (define (variable-transformer? x)
@@ -3029,7 +3032,7 @@
   ;;value; otherwise return false.
   ;;
   (and (pair? x)
-       (eq? (car x) 'macro!)
+       (eq? (car x) 'identifier-macro!)
        (procedure? (cdr x))))
 
 (define (variable-transformer-procedure x)
@@ -4543,7 +4546,7 @@
      ;;Return  a macro  transformer  as MAKE-VARIABLE-TRANSFORMER  would
      ;;build.
      (bless
-      `(cons 'macro!
+      `(cons 'identifier-macro!
 	     (lambda (x)
 	       (syntax-case x (set!)
 		 (id
@@ -8519,10 +8522,10 @@
 			(chi-local-macro value e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((macro macro!)
+	 ((macro identifier-macro!)
 	  ;;Here we  expand the transformer of  macro definitions.  When
 	  ;;the type  is "macro":  the macro  is a  non-core transformer
-	  ;;integrated in the expander.  When  the type is "macro!": the
+	  ;;integrated in the expander.  When  the type is "identifier-macro!": the
 	  ;;macro is an identifier syntax.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
@@ -8893,7 +8896,7 @@
 		(cons (chi-local-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
-	      ((macro macro!)
+	      ((macro identifier-macro!)
 	       (chi-body*
 		(cons (chi-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
