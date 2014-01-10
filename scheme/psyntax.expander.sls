@@ -3021,9 +3021,34 @@
 ;;transformer  as opposed  to  a normal  transformer  or a  compile-time
 ;;value.
 ;;
-;;Notice that this special value has a format similar, but not equal, to
-;;the  corresponding  syntax  binding  that is  pushed  on  the  lexical
-;;environment to represent the identifier syntax.
+;;Let's say we define an identifier syntax with:
+;;
+;;   (define-syntax ?kwd ?expression)
+;;
+;;where ?TRANSFORMER is:
+;;
+;;   (identifier-syntax ?stuff)
+;;
+;;here is what happen:
+;;
+;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
+;;
+;;      (syntax ?expression)
+;;
+;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
+;;   result is recordised code representing the expression.
+;;
+;;3..The  recordised code  is  compiled and  evaluated  by the  function
+;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
+;;   "special value" with format:
+;;
+;;      (identifier-macro! . ?transformer)
+;;
+;;   where ?TRANSFORMER is a transformer function.
+;;
+;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
+;;   VARIABLE-TRANSFORMER? and transforms it
+;;.
 ;;
 
 (define (make-variable-transformer x)
@@ -4554,20 +4579,18 @@
      (and (identifier? id1)
 	  (identifier? id2)
 	  (identifier? expr2))
-     ;;Return  a macro  transformer  as MAKE-VARIABLE-TRANSFORMER  would
-     ;;build.
      (bless
-      `(cons 'identifier-macro!
-	     (lambda (x)
-	       (syntax-case x (set!)
-		 (id
-		  (identifier? (syntax id))
-		  (syntax ,expr1))
-		 ((set! id ,expr2)
-		  (syntax ,expr3))
-		 ((id e* ...)
-		  (identifier? (syntax id))
-		  (syntax (,expr1 e* ...))))))))
+      `(make-variable-transformer
+	(lambda (x)
+	  (syntax-case x (set!)
+	    (id
+	     (identifier? (syntax id))
+	     (syntax ,expr1))
+	    ((set! id ,expr2)
+	     (syntax ,expr3))
+	    ((id e* ...)
+	     (identifier? (syntax id))
+	     (syntax (,expr1 e* ...))))))))
     ))
 
 
