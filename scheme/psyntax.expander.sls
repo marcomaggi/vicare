@@ -1619,16 +1619,6 @@
 ;;  NON-CORE-MACRO-TRANSFORMER,  which is  used  to  map non-core  macro
 ;;  names to transformer functions.
 ;;
-;;*  A binding  representing a  macro  with a  variable transformer  (as
-;;  defined by  R6RS's IDENTIFIER-SYNTAX  and MAKE-VARIABLE-TRANSFORMER)
-;;  has the format:
-;;
-;;     (identifier-macro! . ?transformer)
-;;
-;;  where  ?TRANSFORMER   is  recordised  code  in   the  core  language
-;;  representing the  transformer expression  ready to  be applied  to a
-;;  syntax object.
-;;
 ;;*  A binding  representing  a macro  with  a non-variable  transformer
 ;;  defined by code in an imported library has the format:
 ;;
@@ -1843,7 +1833,7 @@
        (eq? '$fluid (syntactic-binding-type binding))))
 
 ;;; --------------------------------------------------------------------
-;;; compile-time values
+;;; compile-time values bindings
 
 (define (make-local-compile-time-value-binding obj expanded-expr)
   ;;Given as arguments:  the actual object computed  from a compile-time
@@ -2979,7 +2969,7 @@
 	   (let* ((binding (label->syntactic-binding label lexenv))
 		  (type    (syntactic-binding-type binding)))
 	     (case type
-	       ((lexical core-prim macro identifier-macro! global local-macro
+	       ((lexical core-prim macro global local-macro
 			 local-macro! global-macro global-macro!
 			 displaced-lexical syntax import export $module
 			 $core-rtd library mutable ctv local-ctv global-ctv)
@@ -2996,7 +2986,7 @@
 			(type    (syntactic-binding-type binding)))
 		   (case type
 		     ((define define-syntax core-macro begin macro
-			identifier-macro! local-macro local-macro! global-macro
+			local-macro local-macro! global-macro
 			global-macro! module library set! let-syntax
 			letrec-syntax import export $core-rtd
 			ctv local-ctv global-ctv stale-when
@@ -3025,7 +3015,7 @@
 ;;
 ;;   (define-syntax ?kwd ?expression)
 ;;
-;;where ?TRANSFORMER is:
+;;where ?EXPRESSION is:
 ;;
 ;;   (identifier-syntax ?stuff)
 ;;
@@ -3047,8 +3037,8 @@
 ;;   where ?TRANSFORMER is a transformer function.
 ;;
 ;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
-;;   VARIABLE-TRANSFORMER? and transforms it
-;;.
+;;   VARIABLE-TRANSFORMER?  and   transforms  it  to   a  "local-macro!"
+;;   syntactic binding.
 ;;
 
 (define (make-variable-transformer x)
@@ -8334,8 +8324,7 @@
 
 (module (chi-non-core-macro
 	 chi-local-macro
-	 chi-global-macro
-	 chi-identifier-macro)
+	 chi-global-macro)
 
   (define* (chi-non-core-macro (procname symbol?) input-form-expr lexenv.run rib)
     ;;Expand an expression representing the use of a non-core macro; the
@@ -8421,20 +8410,6 @@
 				  (assertion-violation 'chi-global-macro
 				    "Vicare: internal error: not a procedure" x)))))
 	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
-
-  (define* (chi-identifier-macro (func procedure?) input-form-expr lexenv.run rib)
-    ;;Expand  the  special  value  representing the  transformer  of  an
-    ;;identifier syntax.
-    ;;
-    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
-    ;;to be expanded.
-    ;;
-    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
-    ;;expression must be expanded.
-    ;;
-    ;;RIB is false or a struct of type "<rib>".
-    ;;
-    (%do-macro-call func input-form-expr lexenv.run rib))
 
 ;;; --------------------------------------------------------------------
 
@@ -8559,14 +8534,6 @@
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-non-core-macro bind-val e lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
-
-	 ((identifier-macro!)
-	  ;;Here we expand the special value representing the expression
-	  ;;evaluating to the transformer of an identifier syntax.
-	  ;;
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-identifier-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((constant)
@@ -8947,11 +8914,6 @@
 	      ((macro)
 	       (chi-body*
 		(cons (chi-non-core-macro value e r rib) (cdr e*))
-		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
-
-	      ((identifier-macro!)
-	       (chi-body*
-		(cons (chi-identifier-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
 	      ((module)
