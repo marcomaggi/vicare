@@ -8496,33 +8496,33 @@
     ;;Expand a single expression form.
     ;;
     (chi-drop-splice-first-envelope-maybe
-     (receive (type value kwd)
+     (receive (type bind-val kwd)
 	 (syntax-type e lexenv.run)
        (case type
 	 ((core-macro)
-	  (let ((transformer (core-macro-transformer value)))
+	  (let ((transformer (core-macro-transformer bind-val)))
 	    (transformer e lexenv.run lexenv.expand)))
 
 	 ((global)
-	  (let* ((lib (car value))
-		 (loc (cdr value)))
+	  (let* ((lib (car bind-val))
+		 (loc (cdr bind-val)))
 	    ((inv-collector) lib)
 	    (build-global-reference no-source loc)))
 
 	 ((core-prim)
-	  (let ((name value))
+	  (let ((name bind-val))
 	    (build-primref no-source name)))
 
 	 ((call)
 	  (chi-application e lexenv.run lexenv.expand))
 
 	 ((lexical)
-	  (let ((lex (lexical-var value)))
+	  (let ((lex (lexical-var bind-val)))
 	    (build-lexical-reference no-source lex)))
 
 	 ((global-macro global-macro!)
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-global-macro value e lexenv.run #f))))
+			(chi-global-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((local-macro local-macro!)
@@ -8530,21 +8530,21 @@
 	  ;;top-level region.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-local-macro value e lexenv.run #f))))
+			(chi-local-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((macro identifier-macro!)
 	  ;;Here we  expand the transformer of  macro definitions.  When
 	  ;;the type  is "macro":  the macro  is a  non-core transformer
-	  ;;integrated in the expander.  When  the type is "identifier-macro!": the
-	  ;;macro is an identifier syntax.
+	  ;;integrated   in   the   expander.     When   the   type   is
+	  ;;"identifier-macro!": the macro is an identifier syntax.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-macro value e lexenv.run #f))))
+			(chi-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((constant)
-	  (let ((datum value))
+	  (let ((datum bind-val))
 	    (build-data no-source datum)))
 
 	 ((set!)
@@ -8613,10 +8613,10 @@
 			" was found where an expression was expected")))
 
 	 ((mutable)
-	  (if (and (pair? value)
-		   (let ((lib (car value)))
+	  (if (and (pair? bind-val)
+		   (let ((lib (car bind-val)))
 		     (eq? lib '*interaction*)))
-	      (let ((loc (cdr value)))
+	      (let ((loc (cdr bind-val)))
 		(build-global-reference no-source loc))
 	    (stx-error e "attempt to reference an unexportable variable")))
 
@@ -8673,13 +8673,13 @@
     (syntax-match e ()
       ((_ x v)
        (identifier? x)
-       (receive (type value kwd)
+       (receive (type bind-val kwd)
 	   (syntax-type x lexenv.run)
 	 (case type
 	   ((lexical)
-	    (set-lexical-mutable! value #t)
+	    (set-lexical-mutable! bind-val #t)
 	    (build-lexical-assignment no-source
-	      (lexical-var value)
+	      (lexical-var bind-val)
 	      (chi-expr v lexenv.run lexenv.expand)))
 	   ((core-prim)
 	    (stx-error e "cannot modify imported core primitive"))
@@ -8688,16 +8688,16 @@
 	    (stx-error e "attempt to modify an immutable binding"))
 
 	   ((global-macro!)
-	    (chi-expr (chi-global-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-global-macro bind-val e lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((local-macro!)
-	    (chi-expr (chi-local-macro value e lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-local-macro bind-val e lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((mutable)
-	    (if (and (pair? value)
-		     (let ((lib (car value)))
+	    (if (and (pair? bind-val)
+		     (let ((lib (car bind-val)))
 		       (eq? lib '*interaction*)))
-		(let ((loc (cdr value)))
+		(let ((loc (cdr bind-val)))
 		  (build-global-assignment no-source
 		    loc (chi-expr v lexenv.run lexenv.expand)))
 	      (stx-error e "attempt to modify an unexportable variable")))
