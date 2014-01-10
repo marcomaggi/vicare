@@ -1611,11 +1611,17 @@
 ;;
 ;;     (macro . ?name)
 ;;
-;;  where ?NAME is  a symbol representing the macro  name.  Such entries
+;;  where ?NAME  is a symbol  representing the macro name;  such entries
 ;;  are defined in the file "makefile.sps".
 ;;
-;;* A binding  representing a macro with a variable  transformer has the
-;;  format:
+;;    The non-core  macro transformer  functions are implemented  by the
+;;  expander     in     the     module    exporting     the     function
+;;  NON-CORE-MACRO-TRANSFORMER,  which is  used  to  map non-core  macro
+;;  names to transformer functions.
+;;
+;;*  A binding  representing a  macro  with a  variable transformer  (as
+;;  defined by  R6RS's IDENTIFIER-SYNTAX  and MAKE-VARIABLE-TRANSFORMER)
+;;  has the format:
 ;;
 ;;     (identifier-macro! . ?transformer)
 ;;
@@ -1623,10 +1629,10 @@
 ;;  representing the  transformer expression  ready to  be applied  to a
 ;;  syntax object.
 ;;
-;;* A  binding representing macro with  non-variable transformer defined
-;;  by code in an imported library has the format:
+;;*  A binding  representing  a macro  with  a non-variable  transformer
+;;  defined by code in an imported library has the format:
 ;;
-;;     (global-macro ?library . ?gensym)
+;;     (global-macro . (?library . ?gensym))
 ;;
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined,  ?GENSYM is the symbol  containing the transformer
@@ -1635,27 +1641,29 @@
 ;;* A binding representing a  macro with variable transformer defined by
 ;;  code in an imported library has the format:
 ;;
-;;     (global-macro! ?library . ?gensym)
+;;     (global-macro! . (?library . ?gensym))
 ;;
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined,  ?GENSYM is the symbol  containing the transformer
 ;;  function in its "value" field.
 ;;
-;;* A  binding representing macro with  non-variable transformer defined
+;;* A binding representing a macro with non-variable transformer defined
 ;;  by local code has the format:
 ;;
-;;     (local-macro ?transformer . ?expanded-expr)
+;;     (local-macro . (?transformer . ?expanded-expr))
 ;;
-;;  where: ?TRANSFORMER  is the transformer function,  ?EXPANDED-EXPR is
-;;  the expanded expression evaluating to the transformer.
+;;  where:   ?TRANSFORMER  is   a   function   implementing  the   macro
+;;  transformer; ?EXPANDED-EXPR is the expanded expression evaluating to
+;;  the transformer.
 ;;
 ;;* A binding representing a  macro with variable transformer defined by
-;;  code in an imported library has the format:
+;;  local code has the format:
 ;;
-;;     (local-macro! ?transformer . ?expanded-expr)
+;;     (local-macro! . (?transformer . ?expanded-expr))
 ;;
-;;  where: ?TRANSFORMER  is the transformer function,  ?EXPANDED-EXPR is
-;;  the expanded expression evaluating to the transformer.
+;;  where:   ?TRANSFORMER  is   a   function   implementing  the   macro
+;;  transformer; ?EXPANDED-EXPR is the expanded expression evaluating to
+;;  the transformer.
 ;;
 ;;* A binding representing a pattern variable, as created by SYNTAX-CASE
 ;;  and SYNTAX-RULES, has the format:
@@ -8342,8 +8350,8 @@
     ;;BIND-VAL is the binding value of  the global macro.  The format of
     ;;the bindings is:
     ;;
-    ;;     (local-macro  ?transformer . ?expanded-expr)
-    ;;     (local-macro! ?transformer . ?expanded-expr)
+    ;;     (local-macro  . (?transformer . ?expanded-expr))
+    ;;     (local-macro! . (?transformer . ?expanded-expr))
     ;;
     ;;and the argument BIND-VAL is:
     ;;
@@ -8368,8 +8376,8 @@
     ;;BIND-VAL is the binding value of  the global macro.  The format of
     ;;the bindings is:
     ;;
-    ;;     (global-macro ?library . ?gensym)
-    ;;     (global-macro! ?library . ?gensym)
+    ;;     (global-macro  . (?library . ?gensym))
+    ;;     (global-macro! . (?library . ?gensym))
     ;;
     ;;and the argument BIND-VAL is:
     ;;
