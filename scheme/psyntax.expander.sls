@@ -9259,7 +9259,11 @@
 	 module-interface-exp-lab-vec)
 
   (define-record module-interface
-    (first-mark exp-id-vec exp-lab-vec))
+    (first-mark
+     exp-id-vec
+		;A vector of
+     exp-lab-vec
+     ))
 
   (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* rhs* mod** kwd*)
     ;;Expand the  syntax object MODULE-FORM-STX which  represents a core
@@ -9270,9 +9274,9 @@
     ;;
     (receive (name export-id* internal-body-form*)
 	(%parse-module module-form-stx)
-      (let* ((rib                      (make-empty-rib))
+      (let* ((module-rib               (make-empty-rib))
 	     (internal-body-form*/rib  (map (lambda (x)
-					      (push-lexical-contour rib x))
+					      (push-lexical-contour module-rib x))
 					 (syntax->list internal-body-form*))))
 	(receive (leftover-body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
 	    ;;In a module: we do not want the trailing expressions to be
@@ -9285,41 +9289,56 @@
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
 			 lex* rhs* mod** kwd* empty-export-spec*
-			 rib mix? sd?))
-	  (let* ((export-id* (vector-append export-id* (list->vector _export-spec*)))
-		 (exp-lab*   (vector-map
-				 (lambda (x)
-				   (or (id->label (make-<stx> (identifier->symbol x)
-							      (<stx>-mark* x)
-							      (list rib)
-							      '()))
-				       (stx-error x "cannot find module export")))
-			       export-id*))
-		 (mod**      (cons leftover-body-expr* mod**)))
-	    (if (not name) ;;; explicit export
-		(values lex* rhs* export-id* exp-lab* lexenv.run lexenv.expand mod** kwd*)
-	      (let ((lab   (gensym-for-label 'module))
-		    (iface (make-module-interface (car (<stx>-mark* name))
-						  (vector-map
-						      (lambda (x)
-							(make-<stx> (<stx>-expr x) ;expression
-								    (<stx>-mark* x) ;list of marks
-								    '() ;list of substs
-								    '())) ;annotated expressions
-						    export-id*)
-						  exp-lab*)))
+			 module-rib mix? sd?))
+	  ;;The list  of exported identifiers  is not only the  one from
+	  ;;the MODULE  argument, but also  the one from all  the EXPORT
+	  ;;forms in the MODULE's body.
+	  (let* ((all-export-id*  (vector-append export-id* (list->vector _export-spec*)))
+		 (all-export-lab* (vector-map
+				      (lambda (id)
+					;;For every  exported identifier
+					;;there must be  a label already
+					;;in the rib.
+					(or (id->label (make-<stx> (identifier->symbol id)
+								   (<stx>-mark* id)
+								   (list module-rib)
+								   '()))
+					    (stx-error id "cannot find module export")))
+				    all-export-id*))
+		 (mod**           (cons leftover-body-expr* mod**)))
+	    (if (not name)
+		;;The module  has no name.  All  the exported identifier
+		;;will go in the enclosing lexical environment.
+		(values lex* rhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
+	      ;;The module has a name.  Only  the name itself will go in
+	      ;;the enclosing lexical environment.
+	      (let* ((name-label (gensym-for-label 'module))
+		     (iface      (make-module-interface (car (<stx>-mark* name))
+							(vector-map
+							    (lambda (x)
+							      (make-<stx> (<stx>-expr x) ;expression
+									  (<stx>-mark* x) ;list of marks
+									  '() ;list of substs
+									  '())) ;annotated expressions
+							  all-export-id*)
+							all-export-lab*))
+		     (binding    (cons '$module iface))
+		     (entry      (cons name-label binding)))
 		(values lex* rhs*
-			(vector name) ;;; FIXME: module cannot
-			(vector lab)  ;;;  export itself yet
-			(cons (cons lab (cons '$module iface)) lexenv.run)
-			(cons (cons lab (cons '$module iface)) lexenv.expand)
+			;;FIXME:  module   cannot  export   itself  yet.
+			;;Abdulaziz Ghuloum.
+			(vector name)
+			(vector name-label)
+			(cons entry lexenv.run)
+			(cons entry lexenv.expand)
 			mod** kwd*))))))))
 
   (define (%parse-module module-form-stx)
     ;;Parse a  syntax object representing  a core language  MODULE form.
     ;;Return 3  values: false or  an identifier representing  the module
-    ;;name; a  list of  identifiers selecting  the exported  bindings; a
-    ;;list of syntax objects representing the internal body forms.
+    ;;name; a list  of identifiers selecting the  exported bindings from
+    ;;the first MODULE  argument; a list of  syntax objects representing
+    ;;the internal body forms.
     ;;
     (syntax-match module-form-stx ()
       ((_ (?export* ...) ?body* ...)
