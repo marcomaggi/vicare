@@ -8869,194 +8869,207 @@
 
   (define (chi-body* e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
     (while-not-expanding-application-first-subform
-    (if (null? e*)
-	(values e* r mr lex* rhs* mod** kwd* exp*)
-      (let ((e (car e*)))
-	(let-values (((type value kwd) (syntax-type e r)))
-	  (let ((kwd* (if (identifier? kwd)
-			  (cons kwd kwd*)
-			kwd*)))
-	    (case type
+     (if (null? e*)
+	 (values e* r mr lex* rhs* mod** kwd* exp*)
+       (let ((e (car e*)))
+	 (receive (type value kwd)
+	     (syntax-type e r)
+	   (let ((kwd* (if (identifier? kwd)
+			   (cons kwd kwd*)
+			 kwd*)))
+	     (case type
 
-	      ((define)
-	       (let-values (((id rhs) (parse-define e)))
-		 (when (bound-id-member? id kwd*)
-		   (stx-error e "cannot redefine keyword"))
-		 (let-values (((lab lex) (gen-define-label+loc id rib sd?)))
-		   (extend-rib! rib id lab sd?)
-		   (chi-body* (cdr e*)
-			      (add-lexical lab lex r) mr
-			      (cons lex lex*) (cons rhs rhs*)
-			      mod** kwd* exp* rib mix? sd?))))
+	       ((define)
+		(receive (id rhs)
+		    (%parse-define e)
+		  (when (bound-id-member? id kwd*)
+		    (stx-error e "cannot redefine keyword"))
+		  (receive (lab lex)
+		      (gen-define-label+loc id rib sd?)
+		    (extend-rib! rib id lab sd?)
+		    (chi-body* (cdr e*)
+			       (add-lexical lab lex r) mr
+			       (cons lex lex*) (cons rhs rhs*)
+			       mod** kwd* exp* rib mix? sd?))))
 
-	      ((define-syntax)
-	       (let-values (((id rhs) (%parse-define-syntax e)))
-		 (when (bound-id-member? id kwd*)
-		   (stx-error e "cannot redefine keyword"))
-		 (let* ((lab (gen-define-label id rib sd?))
-			(expanded-rhs (%expand-macro-transformer rhs mr)))
-		   (extend-rib! rib id lab sd?)
-		   (let ((b (%eval-macro-transformer expanded-rhs)))
-		     (chi-body* (cdr e*)
-				(cons (cons lab b) r) (cons (cons lab b) mr)
+	       ((define-syntax)
+		(receive (id rhs)
+		    (%parse-define-syntax e)
+		  (when (bound-id-member? id kwd*)
+		    (stx-error e "cannot redefine keyword"))
+		  ;;We want order here!?!
+		  (let* ((lab          (gen-define-label id rib sd?))
+			 (expanded-rhs (%expand-macro-transformer rhs mr)))
+		    (extend-rib! rib id lab sd?)
+		    (let ((binding (%eval-macro-transformer expanded-rhs)))
+		      (chi-body* (cdr e*)
+				 (cons (cons lab binding) r)
+				 (cons (cons lab binding) mr)
+				 lex* rhs* mod** kwd* exp* rib
+				 mix? sd?)))))
+
+	       ((define-fluid-syntax)
+		(receive (id rhs)
+		    (%parse-define-syntax e)
+		  (when (bound-id-member? id kwd*)
+		    (stx-error e "cannot redefine keyword"))
+		  ;;We want order here!?!
+		  (let* ((lab          (gen-define-label id rib sd?))
+			 (flab         (gen-define-label id rib sd?))
+			 (expanded-rhs (%expand-macro-transformer rhs mr)))
+		    (extend-rib! rib id lab sd?)
+		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
+			   (t1       (cons lab (make-fluid-syntax-binding flab)))
+			   (t2       (cons flab binding)))
+		      (chi-body* (cdr e*)
+				 (cons* t1 t2 r)
+				 (cons* t1 t2 mr)
+				 lex* rhs* mod** kwd* exp* rib
+				 mix? sd?)))))
+
+	       ((let-syntax letrec-syntax)
+		(syntax-match e ()
+		  ((_ ((xlhs* xrhs*) ...) xbody* ...)
+		   (unless (valid-bound-ids? xlhs*)
+		     (stx-error e "invalid identifiers"))
+		   (let* ((xlab* (map gensym-for-label xlhs*))
+			  (xrib  (make-full-rib xlhs* xlab*))
+			  (xb*   (map (lambda (x)
+					(%eval-macro-transformer
+					 (%expand-macro-transformer
+					  (if (eq? type 'let-syntax)
+					      x
+					    (push-lexical-contour xrib x))
+					  mr)))
+				   xrhs*)))
+		     (chi-body* (append (map (lambda (x)
+					       (push-lexical-contour xrib x))
+					  xbody*)
+					(cdr e*))
+				(append (map cons xlab* xb*) r)
+				(append (map cons xlab* xb*) mr)
 				lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
 
-	      ((define-fluid-syntax)
-	       (receive (id rhs)
-		   (%parse-define-syntax e)
-		 (when (bound-id-member? id kwd*)
-		   (stx-error e "cannot redefine keyword"))
-		 (let* ((lab          (gen-define-label id rib sd?))
-			(flab         (gen-define-label id rib sd?))
-			(expanded-rhs (%expand-macro-transformer rhs mr)))
-		   (extend-rib! rib id lab sd?)
-		   (let* ((b  (%eval-macro-transformer expanded-rhs))
-			  (t1 (cons lab (make-fluid-syntax-binding flab)))
-			  (t2 (cons flab b)))
-		     (chi-body* (cdr e*)
-				(cons* t1 t2 r)
-				(cons* t1 t2 mr)
-				lex* rhs* mod** kwd* exp* rib
+	       ((begin)
+		(syntax-match e ()
+		  ((_ x* ...)
+		   (chi-body* (append x* (cdr e*))
+			      r mr lex* rhs* mod** kwd* exp* rib
+			      mix? sd?))))
+
+	       ((stale-when)
+		(syntax-match e ()
+		  ((_ guard x* ...)
+		   (begin
+		     (handle-stale-when guard mr)
+		     (chi-body* (append x* (cdr e*))
+				r mr lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
 
-	      ((let-syntax letrec-syntax)
-	       (syntax-match e ()
-		 ((_ ((xlhs* xrhs*) ...) xbody* ...)
-		  (unless (valid-bound-ids? xlhs*)
-		    (stx-error e "invalid identifiers"))
-		  (let* ((xlab* (map gensym-for-label xlhs*))
-			 (xrib (make-full-rib xlhs* xlab*))
-			 (xb* (map (lambda (x)
-				     (%eval-macro-transformer
-				      (%expand-macro-transformer
-				       (if (eq? type 'let-syntax)
-					   x
-					 (push-lexical-contour xrib x))
-				       mr)))
-				xrhs*)))
-		    (chi-body* (append (map (lambda (x) (push-lexical-contour xrib x)) xbody*) (cdr e*))
-			       (append (map cons xlab* xb*) r)
-			       (append (map cons xlab* xb*) mr)
-			       lex* rhs* mod** kwd* exp* rib
-			       mix? sd?)))))
+	       ((global-macro global-macro!)
+		(chi-body*
+		 (cons (chi-global-macro value e r rib) (cdr e*))
+		 r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
-	      ((begin)
-	       (syntax-match e ()
-		 ((_ x* ...)
-		  (chi-body* (append x* (cdr e*))
-			     r mr lex* rhs* mod** kwd* exp* rib
-			     mix? sd?))))
+	       ((local-macro local-macro!)
+		(chi-body*
+		 (cons (chi-local-macro value e r rib) (cdr e*))
+		 r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
-	      ((stale-when)
-	       (syntax-match e ()
-		 ((_ guard x* ...)
-		  (begin
-		    (handle-stale-when guard mr)
-		    (chi-body* (append x* (cdr e*))
-			       r mr lex* rhs* mod** kwd* exp* rib
-			       mix? sd?)))))
+	       ((macro)
+		(chi-body*
+		 (cons (chi-non-core-macro value e r rib) (cdr e*))
+		 r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
-	      ((global-macro global-macro!)
-	       (chi-body*
-		(cons (chi-global-macro value e r rib) (cdr e*))
-		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
-
-	      ((local-macro local-macro!)
-	       (chi-body*
-		(cons (chi-local-macro value e r rib) (cdr e*))
-		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
-
-	      ((macro)
-	       (chi-body*
-		(cons (chi-non-core-macro value e r rib) (cdr e*))
-		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
-
-	      ((module)
-	       (let-values (((lex* rhs* m-exp-id* m-exp-lab* r mr mod** kwd*)
-			     (chi-internal-module e r mr lex* rhs* mod** kwd*)))
-		 (vector-for-each
-		     (lambda (id lab) (extend-rib! rib id lab sd?))
-		   m-exp-id* m-exp-lab*)
-		 (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
-			    exp* rib mix? sd?)))
-
-	      ((library)
-	       (expand-library (syntax->datum e))
-	       (chi-body* (cdr e*) r mr lex* rhs* mod** kwd* exp*
-			  rib mix? sd?))
-
-	      ((export)
-	       (syntax-match e ()
-		 ((_ exp-decl* ...)
+	       ((module)
+		(receive (lex* rhs* m-exp-id* m-exp-lab* r mr mod** kwd*)
+		    (chi-internal-module e r mr lex* rhs* mod** kwd*)
+		  (vector-for-each (lambda (id lab)
+				     (extend-rib! rib id lab sd?))
+		    m-exp-id* m-exp-lab*)
 		  (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
-			     (append exp-decl* exp*) rib
-			     mix? sd?))))
+			     exp* rib mix? sd?)))
 
-	      ((import)
-	       (let ()
-		 (define (module-import? e)
-		   (syntax-match e ()
-		     ((_ id) (identifier? id) #t)
-		     ((_ imp* ...) #f)
-		     (_ (stx-error e "malformed import form"))))
-		 (define (module-import e r)
-		   (syntax-match e ()
-		     ((_ id) (identifier? id)
-		      (let-values (((type value kwd) (syntax-type id r)))
-			(case type
-			  (($module)
-			   (let ((iface value))
-			     (values
-			      (module-interface-exp-id* iface id)
-			      (module-interface-exp-lab-vec iface))))
-			  (else (stx-error e "invalid import")))))))
-		 (define (library-import e)
-		   (syntax-match e ()
-		     ((ctxt imp* ...)
-		      (receive (subst-names subst-labels)
-			  (parse-import-spec* (syntax->datum imp*))
-			(values (vector-map (lambda (name)
-					      (datum->stx ctxt name))
-				  subst-names)
-				subst-labels)))
-		     (_
-		      (stx-error e "invalid import form"))))
-		 (define (any-import ctxt e r)
-		   (if (identifier? e)
-		       (module-import (list ctxt e) r)
-		     (library-import (list ctxt e))))
-		 (define (any-import* ctxt e* r)
-		   (if (null? e*)
-		       (values '#() '#())
-		     (let-values (((t1 t2) (any-import ctxt (car e*) r))
-				  ((t3 t4) (any-import* ctxt (cdr e*) r)))
-		       (values (vector-append t1 t3)
-			       (vector-append t2 t4)))))
-		 (define (any-import*-checked e r)
-		   (syntax-match e ()
-		     ((ctxt e* ...) (any-import* ctxt e* r))
-		     (_ (stx-error e "invalid import form"))))
-		 (let-values (((id* lab*)
-			       ;;(if (module-import? e)
-			       ;;    (module-import e r)
-			       ;;  (library-import e))
-			       (any-import*-checked e r)))
-		   (vector-for-each
-		       (lambda (id lab) (extend-rib! rib id lab sd?))
-		     id* lab*))
-		 (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
-			    exp* rib mix? sd?)))
+	       ((library)
+		(expand-library (syntax->datum e))
+		(chi-body* (cdr e*) r mr lex* rhs* mod** kwd* exp*
+			   rib mix? sd?))
 
-	      (else
-	       (if mix?
-		   (chi-body* (cdr e*) r mr
-			      (cons (gensym-for-lexical-var 'dummy) lex*)
-			      (cons (cons 'top-expr e) rhs*)
-			      mod** kwd* exp* rib #t sd?)
-		 (values e* r mr lex* rhs* mod** kwd* exp*))))))))))
+	       ((export)
+		(syntax-match e ()
+		  ((_ exp-decl* ...)
+		   (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
+			      (append exp-decl* exp*) rib
+			      mix? sd?))))
 
-  (define (parse-define x)
+	       ((import)
+		(let ()
+		  (define (module-import? e)
+		    (syntax-match e ()
+		      ((_ id) (identifier? id) #t)
+		      ((_ imp* ...) #f)
+		      (_ (stx-error e "malformed import form"))))
+		  (define (module-import e r)
+		    (syntax-match e ()
+		      ((_ id) (identifier? id)
+		       (receive (type value kwd)
+			   (syntax-type id r)
+			 (case type
+			   (($module)
+			    (let ((iface value))
+			      (values (module-interface-exp-id* iface id)
+				      (module-interface-exp-lab-vec iface))))
+			   (else
+			    (stx-error e "invalid import")))))))
+		  (define (library-import e)
+		    (syntax-match e ()
+		      ((ctxt imp* ...)
+		       (receive (subst-names subst-labels)
+			   (parse-import-spec* (syntax->datum imp*))
+			 (values (vector-map (lambda (name)
+					       (datum->stx ctxt name))
+				   subst-names)
+				 subst-labels)))
+		      (_
+		       (stx-error e "invalid import form"))))
+		  (define (any-import ctxt e r)
+		    (if (identifier? e)
+			(module-import (list ctxt e) r)
+		      (library-import (list ctxt e))))
+		  (define (any-import* ctxt e* r)
+		    (if (null? e*)
+			(values '#() '#())
+		      (let-values (((t1 t2) (any-import  ctxt (car e*) r))
+				   ((t3 t4) (any-import* ctxt (cdr e*) r)))
+			(values (vector-append t1 t3)
+				(vector-append t2 t4)))))
+		  (define (any-import*-checked e r)
+		    (syntax-match e ()
+		      ((ctxt e* ...)
+		       (any-import* ctxt e* r))
+		      (_
+		       (stx-error e "invalid import form"))))
+		  (receive (id* lab*)
+		      ;;(if (module-import? e)
+		      ;;    (module-import e r)
+		      ;;  (library-import e))
+		      (any-import*-checked e r)
+		    (vector-for-each (lambda (id lab)
+				       (extend-rib! rib id lab sd?))
+		      id* lab*))
+		  (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
+			     exp* rib mix? sd?)))
+
+	       (else
+		(if mix?
+		    (chi-body* (cdr e*) r mr
+			       (cons (gensym-for-lexical-var 'dummy) lex*)
+			       (cons (cons 'top-expr e) rhs*)
+			       mod** kwd* exp* rib #t sd?)
+		  (values e* r mr lex* rhs* mod** kwd* exp*))))))))))
+
+  (define (%parse-define x)
     ;;Syntax parser for R6RS's DEFINE.
     ;;
     (syntax-match x ()
