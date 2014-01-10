@@ -8867,10 +8867,10 @@
 
 (module (chi-body*)
 
-  (define (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib mix? sd?)
+  (define (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?)
     (while-not-expanding-application-first-subform
      (if (null? body-expr*)
-	 (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* exp*)
+	 (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*)
        (let ((e (car body-expr*)))
 	 (receive (type bind-val kwd)
 	     (syntax-type e lexenv.run)
@@ -8890,7 +8890,7 @@
 		    (chi-body* (cdr body-expr*)
 			       (add-lexical lab lex lexenv.run) lexenv.expand
 			       (cons lex lex*) (cons rhs rhs*)
-			       mod** kwd* exp* rib mix? sd?))))
+			       mod** kwd* export-spec* rib mix? sd?))))
 
 	       ((define-syntax)
 		(receive (id rhs)
@@ -8905,7 +8905,7 @@
 		      (chi-body* (cdr body-expr*)
 				 (cons (cons lab binding) lexenv.run)
 				 (cons (cons lab binding) lexenv.expand)
-				 lex* rhs* mod** kwd* exp* rib
+				 lex* rhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
 	       ((define-fluid-syntax)
@@ -8930,7 +8930,7 @@
 		      (chi-body* (cdr body-expr*)
 				 (cons* entry1 entry2 lexenv.run)
 				 (cons* entry1 entry2 lexenv.expand)
-				 lex* rhs* mod** kwd* exp* rib
+				 lex* rhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
 	       ((let-syntax letrec-syntax)
@@ -8954,14 +8954,14 @@
 					(cdr body-expr*))
 				(append (map cons xlab* xbind*) lexenv.run)
 				(append (map cons xlab* xbind*) lexenv.expand)
-				lex* rhs* mod** kwd* exp* rib
+				lex* rhs* mod** kwd* export-spec* rib
 				mix? sd?)))))
 
 	       ((begin)
 		(syntax-match e ()
 		  ((_ ?expr* ...)
 		   (chi-body* (append ?expr* (cdr body-expr*))
-			      lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib
+			      lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib
 			      mix? sd?))))
 
 	       ((stale-when)
@@ -8970,23 +8970,23 @@
 		   (begin
 		     (handle-stale-when ?guard lexenv.expand)
 		     (chi-body* (append ?expr* (cdr body-expr*))
-				lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib
+				lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib
 				mix? sd?)))))
 
 	       ((global-macro global-macro!)
 		(chi-body*
 		 (cons (chi-global-macro bind-val e lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib mix? sd?))
+		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((local-macro local-macro!)
 		(chi-body*
 		 (cons (chi-local-macro bind-val e lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib mix? sd?))
+		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((macro)
 		(chi-body*
 		 (cons (chi-non-core-macro bind-val e lexenv.run rib) (cdr body-expr*))
-		 lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib mix? sd?))
+		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((module)
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
@@ -8995,24 +8995,24 @@
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
 		  (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			     exp* rib mix? sd?)))
+			     export-spec* rib mix? sd?)))
 
 	       ((library)
 		(expand-library (syntax->datum e))
-		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd* exp*
+		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*
 			   rib mix? sd?))
 
 	       ((export)
 		(syntax-match e ()
 		  ((_ ?export-spec* ...)
 		   (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			      (append ?export-spec* exp*) rib
+			      (append ?export-spec* export-spec*) rib
 			      mix? sd?))))
 
 	       ((import)
 		(%chi-import e lexenv.run rib sd?)
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			   exp* rib mix? sd?))
+			   export-spec* rib mix? sd?))
 
 	       (else
 		(if mix?
@@ -9020,8 +9020,8 @@
 			       lexenv.run lexenv.expand
 			       (cons (gensym-for-lexical-var 'dummy) lex*)
 			       (cons (cons 'top-expr e) rhs*)
-			       mod** kwd* exp* rib #t sd?)
-		  (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* exp*))))))))))
+			       mod** kwd* export-spec* rib #t sd?)
+		  (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*))))))))))
 
   (define (%parse-define x)
     ;;Syntax parser for R6RS's DEFINE.
@@ -9068,9 +9068,9 @@
 	     (body-expr*  (map (lambda (x)
 				 (push-lexical-contour rib x))
 			    (syntax->list body-expr*))))
-	(receive (body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
+	(receive (body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
 	    (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* '() rib #f #t)
-	  (let* ((exp-id*  (vector-append exp-id* (list->vector _exp*)))
+	  (let* ((exp-id*  (vector-append exp-id* (list->vector _export-spec*)))
 		 (exp-lab* (vector-map
 			       (lambda (x)
 				 (or (id->label (make-<stx> (identifier->symbol x)
