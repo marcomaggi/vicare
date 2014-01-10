@@ -1726,7 +1726,7 @@
 ;;
 ;;* A binding representin a local compile-time value has the format:
 ;;
-;;     (local-ctv ?object . ?expanded-expr)
+;;     (local-ctv . (?object . ?expanded-expr))
 ;;
 ;;  where:  ?OBJECT  is  the  actual  value  computed  at  expand  time;
 ;;  ?EXPANDED-EXPR  is  the  result  of expanding  the  expression  that
@@ -1734,7 +1734,7 @@
 ;;
 ;;* A binding representin a global compile-time value has the format:
 ;;
-;;     (global-ctv ?library . ?gensym)
+;;     (global-ctv . (?library . ?gensym))
 ;;
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined, ?GENSYM is the symbol containing the actual object
@@ -2972,7 +2972,7 @@
 	       ((lexical core-prim macro global local-macro
 			 local-macro! global-macro global-macro!
 			 displaced-lexical syntax import export $module
-			 $core-rtd library mutable ctv local-ctv global-ctv)
+			 $core-rtd library mutable local-ctv global-ctv)
 		(values type (syntactic-binding-value binding) id))
 	       (else
 		(values 'other #f #f))))))
@@ -2989,7 +2989,7 @@
 			local-macro local-macro! global-macro
 			global-macro! module library set! let-syntax
 			letrec-syntax import export $core-rtd
-			ctv local-ctv global-ctv stale-when
+			local-ctv global-ctv stale-when
 			define-fluid-syntax)
 		      (values type (syntactic-binding-value binding) id))
 		     (else
@@ -3089,6 +3089,35 @@
 ;;       (lambda (ctv-retriever)
 ;;         (ctv-retriever #'it) => 3
 ;;         )))
+;;
+;;Let's say we define a compile-time value with:
+;;
+;;   (define-syntax ?kwd ?expression)
+;;
+;;where ?EXPRESSION is:
+;;
+;;   (make-compile-time-value ?stuff)
+;;
+;;here is what happen:
+;;
+;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
+;;
+;;      (syntax ?expression)
+;;
+;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
+;;   result is recordised code representing the expression.
+;;
+;;3..The  recordised code  is  compiled and  evaluated  by the  function
+;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
+;;   "special value" with format:
+;;
+;;      (ctv! . ?obj)
+;;
+;;   where ?OBJ is the actual compile-time value.
+;;
+;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
+;;   COMPILE-TIME-VALUE?  and  transforms it to a  "local-ctv" syntactic
+;;   binding.
 ;;
 
 (define (make-compile-time-value obj)
