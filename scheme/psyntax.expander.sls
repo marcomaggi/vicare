@@ -9010,63 +9010,9 @@
 			      mix? sd?))))
 
 	       ((import)
-		(let ()
-		  (define (module-import? e)
-		    (syntax-match e ()
-		      ((_ id) (identifier? id) #t)
-		      ((_ imp* ...) #f)
-		      (_ (stx-error e "malformed import form"))))
-		  (define (module-import e lexenv.run)
-		    (syntax-match e ()
-		      ((_ id) (identifier? id)
-		       (receive (type bind-val kwd)
-			   (syntax-type id lexenv.run)
-			 (case type
-			   (($module)
-			    (let ((iface bind-val))
-			      (values (module-interface-exp-id* iface id)
-				      (module-interface-exp-lab-vec iface))))
-			   (else
-			    (stx-error e "invalid import")))))))
-		  (define (library-import e)
-		    (syntax-match e ()
-		      ((ctxt imp* ...)
-		       (receive (subst-names subst-labels)
-			   (parse-import-spec* (syntax->datum imp*))
-			 (values (vector-map (lambda (name)
-					       (datum->stx ctxt name))
-				   subst-names)
-				 subst-labels)))
-		      (_
-		       (stx-error e "invalid import form"))))
-		  (define (any-import ctxt e lexenv.run)
-		    (if (identifier? e)
-			(module-import (list ctxt e) lexenv.run)
-		      (library-import (list ctxt e))))
-		  (define (any-import* ctxt body-expr* lexenv.run)
-		    (if (null? body-expr*)
-			(values '#() '#())
-		      (let-values
-			  (((t1 t2) (any-import  ctxt (car body-expr*) lexenv.run))
-			   ((t3 t4) (any-import* ctxt (cdr body-expr*) lexenv.run)))
-			(values (vector-append t1 t3)
-				(vector-append t2 t4)))))
-		  (define (any-import*-checked e lexenv.run)
-		    (syntax-match e ()
-		      ((ctxt body-expr* ...)
-		       (any-import* ctxt body-expr* lexenv.run))
-		      (_
-		       (stx-error e "invalid import form"))))
-		  (receive (id* lab*)
-		      ;;(if (module-import? e)
-		      ;;    (module-import e lexenv.run)
-		      ;;  (library-import e))
-		      (any-import*-checked e lexenv.run)
-		    (vector-for-each (lambda (id lab)
-				       (extend-rib! rib id lab sd?))
-		      id* lab*))
-		  (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			     exp* rib mix? sd?)))
+		(%chi-import e lexenv.run rib sd?)
+		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
+			   exp* rib mix? sd?))
 
 	       (else
 		(if mix?
@@ -9151,6 +9097,74 @@
 			(cons (cons lab (cons '$module iface)) lexenv.run)
 			(cons (cons lab (cons '$module iface)) lexenv.expand)
 			mod** kwd*))))))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%chi-import)
+
+    (define (%chi-import e lexenv.run rib sd?)
+      (receive (id* lab*)
+	  ;;(if (module-import? e)
+	  ;;    (module-import e lexenv.run)
+	  ;;  (library-import e))
+	  (any-import*-checked e lexenv.run)
+	(vector-for-each (lambda (id lab)
+			   (extend-rib! rib id lab sd?))
+	  id* lab*)))
+
+    (define (module-import? e)
+      (syntax-match e ()
+	((_ id) (identifier? id) #t)
+	((_ imp* ...) #f)
+	(_ (stx-error e "malformed import form"))))
+
+    (define (module-import e lexenv.run)
+      (syntax-match e ()
+	((_ id) (identifier? id)
+	 (receive (type bind-val kwd)
+	     (syntax-type id lexenv.run)
+	   (case type
+	     (($module)
+	      (let ((iface bind-val))
+		(values (module-interface-exp-id* iface id)
+			(module-interface-exp-lab-vec iface))))
+	     (else
+	      (stx-error e "invalid import")))))))
+
+    (define (library-import e)
+      (syntax-match e ()
+	((ctxt imp* ...)
+	 (receive (subst-names subst-labels)
+	     (parse-import-spec* (syntax->datum imp*))
+	   (values (vector-map (lambda (name)
+				 (datum->stx ctxt name))
+		     subst-names)
+		   subst-labels)))
+	(_
+	 (stx-error e "invalid import form"))))
+
+    (define (any-import ctxt e lexenv.run)
+      (if (identifier? e)
+	  (module-import (list ctxt e) lexenv.run)
+	(library-import (list ctxt e))))
+
+    (define (any-import* ctxt body-expr* lexenv.run)
+      (if (null? body-expr*)
+	  (values '#() '#())
+	(let-values
+	    (((t1 t2) (any-import  ctxt (car body-expr*) lexenv.run))
+	     ((t3 t4) (any-import* ctxt (cdr body-expr*) lexenv.run)))
+	  (values (vector-append t1 t3)
+		  (vector-append t2 t4)))))
+
+    (define (any-import*-checked e lexenv.run)
+      (syntax-match e ()
+	((ctxt body-expr* ...)
+	 (any-import* ctxt body-expr* lexenv.run))
+	(_
+	 (stx-error e "invalid import form"))))
+
+    #| end of module: %CHI-IMPORT |# )
 
   #| end of module: CHI-BODY* |# )
 
