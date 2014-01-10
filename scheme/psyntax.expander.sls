@@ -1766,13 +1766,13 @@
 
 ;;Given a binding return its type: a symbol.
 ;;
-(define binding-type car)
+(define syntactic-binding-type car)
 
 ;;Given a binding return  is value: a pair.  The car of  the pair is the
 ;;lexical  variable; the  cdr  is  a boolean,  true  if  the binding  is
 ;;mutable.
 ;;
-(define binding-value cdr)
+(define syntactic-binding-value cdr)
 
 ;;Generate a  unique symbol to  represent the name  of a binding  in the
 ;;core language forms.
@@ -1830,7 +1830,7 @@
 
 (define (struct-or-record-type-descriptor-binding? binding)
   (and (pair? binding)
-       (eq? '$rtd (binding-type binding))))
+       (eq? '$rtd (syntactic-binding-type binding))))
 
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
@@ -1840,7 +1840,7 @@
 
 (define (fluid-syntax-binding? binding)
   (and (pair? binding)
-       (eq? '$fluid (binding-type binding))))
+       (eq? '$fluid (syntactic-binding-type binding))))
 
 ;;; --------------------------------------------------------------------
 ;;; compile-time values
@@ -1857,7 +1857,7 @@
   ;;value; otherwise return false.
   ;;
   (and (pair? binding)
-       (eq? 'local-ctv (binding-type binding))))
+       (eq? 'local-ctv (syntactic-binding-type binding))))
 
 (define local-compile-time-value-binding-object
   ;;Given a binding representing a  local compile time value: return the
@@ -1885,7 +1885,7 @@
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
 	;;reversed  logic.   We  have  to  look them  up  in  the  local
 	;;environment first, and then in the global.
-	(let ((label (binding-value binding)))
+	(let ((label (syntactic-binding-value binding)))
 	  (cond ((assq label lexenv)
 		 => cdr)
 		(else
@@ -2977,13 +2977,13 @@
 	   (unless label
 	     (%raise-unbound-error #f id id))
 	   (let* ((binding (label->syntactic-binding label lexenv))
-		  (type    (binding-type binding)))
+		  (type    (syntactic-binding-type binding)))
 	     (case type
 	       ((lexical core-prim macro identifier-macro! global local-macro
 			 local-macro! global-macro global-macro!
 			 displaced-lexical syntax import export $module
 			 $core-rtd library mutable ctv local-ctv global-ctv)
-		(values type (binding-value binding) id))
+		(values type (syntactic-binding-value binding) id))
 	       (else
 		(values 'other #f #f))))))
 	((syntax-pair? expr-stx)
@@ -2993,7 +2993,7 @@
 		 (unless label
 		   (%raise-unbound-error #f id id))
 		 (let* ((binding (label->syntactic-binding label lexenv))
-			(type    (binding-type binding)))
+			(type    (syntactic-binding-type binding)))
 		   (case type
 		     ((define define-syntax core-macro begin macro
 			identifier-macro! local-macro local-macro! global-macro
@@ -3001,7 +3001,7 @@
 			letrec-syntax import export $core-rtd
 			ctv local-ctv global-ctv stale-when
 			define-fluid-syntax)
-		      (values type (binding-value binding) id))
+		      (values type (syntactic-binding-value binding) id))
 		     (else
 		      (values 'call #f #f)))))
 	     (values 'call #f #f))))
@@ -6490,7 +6490,7 @@
 			 (%synner "unbound identifier" lhs)))
 	   (binding  (label->syntactic-binding/no-fluids label lexenv.run)))
       (cond ((fluid-syntax-binding? binding)
-	     (binding-value binding))
+	     (syntactic-binding-value binding))
 	    (else
 	     (%synner "not a fluid identifier" lhs)))))
 
@@ -6522,8 +6522,8 @@
   ;;
   (define who 'type-descriptor)
   (define (%struct-type-descriptor-binding? binding)
-    (and (eq? '$rtd (binding-type binding))
-	 (not (list? (binding-value binding)))))
+    (and (eq? '$rtd (syntactic-binding-type binding))
+	 (not (list? (syntactic-binding-value binding)))))
   (syntax-match expr-stx ()
     ((_ ?identifier)
      (identifier? ?identifier)
@@ -6533,7 +6533,7 @@
        (let ((binding (label->syntactic-binding label lexenv.run)))
 	 (unless (%struct-type-descriptor-binding? binding)
 	   (syntax-violation who "not a struct type" expr-stx ?identifier))
-	 (build-data no-source (binding-value binding)))))))
+	 (build-data no-source (syntactic-binding-value binding)))))))
 
 
 ;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR-TRANSFORMER
@@ -6584,8 +6584,8 @@
   ;;identifiers bound to the corresponding unsafe field mutators.
   ;;
   (define (%record-type-descriptor-binding? binding)
-    (and (eq? '$rtd (binding-type binding))
-	 (list? (binding-value binding))))
+    (and (eq? '$rtd (syntactic-binding-type binding))
+	 (list? (syntactic-binding-value binding))))
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
@@ -6605,7 +6605,7 @@
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?identifier))
-	   (chi-expr (car (binding-value binding))
+	   (chi-expr (car (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
@@ -6627,7 +6627,7 @@
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-error who "invalid type" expr-stx ?identifier))
-	   (chi-expr (cadr (binding-value binding))
+	   (chi-expr (cadr (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
 ;;; --------------------------------------------------------------------
@@ -6738,7 +6738,7 @@
     ;;the alist  of safe R6RS record  field accessors.  If the  alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (binding-value binding)))
+    (let ((val (syntactic-binding-value binding)))
       (if (<= 4 (length val))
 	  (list-ref val 2)
 	(syntax-violation who
@@ -6750,7 +6750,7 @@
     ;;the alist of safe R6RS record field mutators.  If the alist is not
     ;;present: raise a syntax violation.
     ;;
-    (let ((val (binding-value binding)))
+    (let ((val (syntactic-binding-value binding)))
       (if (<= 4 (length val))
 	  (list-ref val 3)
 	(syntax-violation who
@@ -6762,7 +6762,7 @@
     ;;the alist of unsafe R6RS record  field accessors.  If the alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (binding-value binding)))
+    (let ((val (syntactic-binding-value binding)))
       (if (<= 6 (length val))
 	  (list-ref val 4)
 	(syntax-violation who
@@ -6774,7 +6774,7 @@
     ;;the alist of  unsafe R6RS record field mutators.  If  the alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (binding-value binding)))
+    (let ((val (syntactic-binding-value binding)))
       (if (<= 6 (length val))
 	  (list-ref val 5)
 	(syntax-violation who
@@ -7085,10 +7085,10 @@
       (?id
        (identifier? ?id)
        (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
-	 (if (eq? (binding-type binding) 'syntax)
+	 (if (eq? (syntactic-binding-type binding) 'syntax)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
-		 (let* ((name.level  (binding-value binding))
+		 (let* ((name.level  (syntactic-binding-value binding))
 			(name        (car name.level))
 			(level       (cdr name.level)))
 		   (%gen-ref use-stx name level maps))
@@ -8309,24 +8309,18 @@
 
 ;;;; chi procedures: macro calls
 
-(module (chi-macro
+(module (chi-non-core-macro
 	 chi-local-macro
-	 chi-global-macro)
+	 chi-global-macro
+	 chi-identifier-macro)
 
-  (define (chi-macro func/procname input-form-expr lexenv.run rib)
-    ;;This  function is  used  to  expand macro  uses  for macros  whose
-    ;;transformer is  readily available  as a  function.  There  are two
-    ;;such cases:
+  (define* (chi-non-core-macro (procname symbol?) input-form-expr lexenv.run rib)
+    ;;Expand an expression representing the use of a non-core macro; the
+    ;;transformer function is integrated in the expander.
     ;;
-    ;;* The macro has a non-core transformer integrated in the expander;
-    ;;  those  defined by the module  of NON-CORE-MACRO-TRANSFORMER.  In
-    ;;  this  case the argument  FUNC/PROCNAME is a  symbol representing
-    ;;    the   name   of   the  macro   (examples:   cond,   and,   or,
-    ;;  define-record-type, ...).
-    ;;
-    ;;* The macro  is an identifier syntax, whose  transformer is pushed
-    ;;   on  the   lexical  environment;  in  this   case  the  argument
-    ;;  FUNC/PROCNAME is a procedure being the transformer itself.
+    ;;PROCNAME is a symbol representing  the name of the non-core macro;
+    ;;we can map  from such symbol to the transformer  function with the
+    ;;module of NON-CORE-MACRO-TRANSFORMER.
     ;;
     ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
     ;;to be expanded.
@@ -8336,9 +8330,7 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (%do-macro-call (if (procedure? func/procname)
-			func/procname
-		      (non-core-macro-transformer func/procname))
+    (%do-macro-call (non-core-macro-transformer procname)
 		    input-form-expr lexenv.run rib))
 
   (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
@@ -8407,6 +8399,22 @@
 				    "Vicare: internal error: not a procedure" x)))))
 	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
 
+  (define* (chi-identifier-macro (func procedure?) input-form-expr lexenv.run rib)
+    ;;Expand  the  special  value  representing the  transformer  of  an
+    ;;identifier syntax.
+    ;;
+    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
+    ;;to be expanded.
+    ;;
+    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
+    ;;expression must be expanded.
+    ;;
+    ;;RIB is false or a struct of type "<rib>".
+    ;;
+    (%do-macro-call func input-form-expr lexenv.run rib))
+
+;;; --------------------------------------------------------------------
+
   (define (%do-macro-call transformer input-form-expr lexenv.run rib)
     (define (main)
       (let ((output-form-expr (transformer
@@ -8417,10 +8425,10 @@
 	;;retriever.   Such  application  must   return  a  value  as  a
 	;;transformer would do.
 	(if (procedure? output-form-expr)
-	    (return (output-form-expr ctv-retriever))
-	  (return output-form-expr))))
+	    (%return (output-form-expr %ctv-retriever))
+	  (%return output-form-expr))))
 
-    (define (return output-form-expr)
+    (define (%return output-form-expr)
       ;;Check that there are no raw symbols in the value returned by the
       ;;macro transformer.
       (let recur ((x output-form-expr))
@@ -8442,7 +8450,7 @@
       ;;stay there.
       (add-mark (gen-mark) rib output-form-expr input-form-expr))
 
-    (define (ctv-retriever id)
+    (define (%ctv-retriever id)
       ;;This is  the compile-time  values retriever function.   Given an
       ;;identifier:  search an  entry in  the lexical  environment; when
       ;;found return its value, otherwise return false.
@@ -8450,7 +8458,7 @@
       (unless (identifier? id)
 	(assertion-violation 'rho "not an identifier" id))
       (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
-	(case (binding-type binding)
+	(case (syntactic-binding-type binding)
 	  ;;The given identifier is bound to a local compile-time value.
 	  ;;The actual object is stored in the binding itself.
 	  ((local-ctv)
@@ -8478,17 +8486,6 @@
 
 
 ;;;; chi procedures: expressions
-
-(define (chi-expr* expr* lexenv.run lexenv.expand)
-  ;;Recursive function.  Expand the expressions in EXPR* left to right.
-  ;;
-  (if (null? expr*)
-      '()
-    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
-    ;;rest.
-    (let ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand)))
-      (cons expr0
-	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
 (module (chi-expr)
 
@@ -8533,14 +8530,20 @@
 			(chi-local-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((macro identifier-macro!)
-	  ;;Here we  expand the transformer of  macro definitions.  When
-	  ;;the type  is "macro":  the macro  is a  non-core transformer
-	  ;;integrated   in   the   expander.     When   the   type   is
-	  ;;"identifier-macro!": the macro is an identifier syntax.
+	 ((macro)
+	  ;;Here we expand the use of a non-core macro.  Such macros are
+	  ;;integrated in the expander.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-macro bind-val e lexenv.run #f))))
+			(chi-non-core-macro bind-val e lexenv.run #f))))
+	    (chi-expr exp-e lexenv.run lexenv.expand)))
+
+	 ((identifier-macro!)
+	  ;;Here we expand the special value representing the expression
+	  ;;evaluating to the transformer of an identifier syntax.
+	  ;;
+	  (let ((exp-e (while-not-expanding-application-first-subform
+			(chi-identifier-macro bind-val e lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((constant)
@@ -8706,6 +8709,17 @@
 	    (stx-error e)))))))
 
   #| end of module |# )
+
+(define (chi-expr* expr* lexenv.run lexenv.expand)
+  ;;Recursive function.  Expand the expressions in EXPR* left to right.
+  ;;
+  (if (null? expr*)
+      '()
+    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
+    ;;rest.
+    (let ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand)))
+      (cons expr0
+	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
 
 (define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
@@ -8907,9 +8921,14 @@
 		(cons (chi-local-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
-	      ((macro identifier-macro!)
+	      ((macro)
 	       (chi-body*
-		(cons (chi-macro value e r rib) (cdr e*))
+		(cons (chi-non-core-macro value e r rib) (cdr e*))
+		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
+
+	      ((identifier-macro!)
+	       (chi-body*
+		(cons (chi-identifier-macro value e r rib) (cdr e*))
 		r mr lex* rhs* mod** kwd* exp* rib mix? sd?))
 
 	      ((module)
@@ -9150,9 +9169,9 @@
      (else
       (let ((x (car r)))
 	(let ((label (car x)) (b (cdr x)))
-	  (case (binding-type b)
+	  (case (syntactic-binding-type b)
 	    ((lexical)
-	     (let ((v (binding-value b)))
+	     (let ((v (syntactic-binding-value b)))
 	       (let ((loc (lookup (lexical-var v)))
 		     (type (if (lexical-mutable? v)
 			       'mutable
@@ -9171,7 +9190,7 @@
 	       (f (cdr r)
 		  (cons (cons* label 'global-macro loc) env)
 		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
+		  (cons (cons loc (syntactic-binding-value b)) macro*))))
 	    ((local-macro!)
 	     ;;Guessed meaning: when  we define a binding  for a syntax,
 	     ;;the local  code sees it  as "local-macro!"; if  we export
@@ -9182,7 +9201,7 @@
 	       (f (cdr r)
 		  (cons (cons* label 'global-macro! loc) env)
 		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
+		  (cons (cons loc (syntactic-binding-value b)) macro*))))
 	    ((local-ctv)
 	     ;;Guessed  meaning:   when  we  define  a   binding  for  a
 	     ;;compile-time  value  (CTV), the  local  code  sees it  as
@@ -9193,12 +9212,14 @@
 	       (f (cdr r)
 		  (cons (cons* label 'global-ctv loc) env)
 		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
+		  (cons (cons loc (syntactic-binding-value b)) macro*))))
 	    (($rtd $module $fluid)
 	     (f (cdr r) (cons x env) global* macro*))
 	    (else
-	     (assertion-violation 'expander "BUG: do not know how to export"
-				  (binding-type b) (binding-value b))))))))))
+	     (assertion-violation 'expander
+	       "BUG: do not know how to export"
+	       (syntactic-binding-type  b)
+	       (syntactic-binding-value b))))))))))
 
 (define generate-temporaries
   (lambda (ls)

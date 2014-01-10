@@ -17,6 +17,7 @@
 
 (library (psyntax compat)
   (export
+    define*
     define-record			make-struct-type
     make-parameter			parametrise
     format				gensym
