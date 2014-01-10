@@ -9102,15 +9102,38 @@
 ;;; --------------------------------------------------------------------
 
   (module (%chi-import)
-
+    ;;Process an IMPORT form.  The purpose of such forms is to push some
+    ;;new identifier-to-label association on the current RIB.
+    ;;
     (define (%chi-import e lexenv.run rib sd?)
       (receive (id* lab*)
-	  (any-import*-checked e lexenv.run)
+	  (%any-import*-checked e lexenv.run)
 	(vector-for-each (lambda (id lab)
 			   (extend-rib! rib id lab sd?))
 	  id* lab*)))
 
-    (define (module-import import-form lexenv.run)
+    (define (%any-import*-checked import-form lexenv.run)
+      (syntax-match import-form ()
+	((?ctxt ?import-spec* ...)
+	 (%any-import* ?ctxt ?import-spec* lexenv.run))
+	(_
+	 (stx-error import-form "invalid import form"))))
+
+    (define (%any-import* ctxt import-spec* lexenv.run)
+      (if (null? import-spec*)
+	  (values '#() '#())
+	(let-values
+	    (((t1 t2) (%any-import  ctxt (car import-spec*) lexenv.run))
+	     ((t3 t4) (%any-import* ctxt (cdr import-spec*) lexenv.run)))
+	  (values (vector-append t1 t3)
+		  (vector-append t2 t4)))))
+
+    (define (%any-import ctxt import-spec lexenv.run)
+      (if (identifier? import-spec)
+	  (%module-import (list ctxt import-spec) lexenv.run)
+	(%library-import (list ctxt import-spec))))
+
+    (define (%module-import import-form lexenv.run)
       (syntax-match import-form ()
 	((_ ?id)
 	 (identifier? ?id)
@@ -9124,7 +9147,7 @@
 	     (else
 	      (stx-error import-form "invalid import")))))))
 
-    (define (library-import import-form)
+    (define (%library-import import-form)
       (syntax-match import-form ()
 	((?ctxt ?imp* ...)
 	 (receive (subst-names subst-labels)
@@ -9133,27 +9156,6 @@
 				 (datum->stx ?ctxt name))
 		     subst-names)
 		   subst-labels)))
-	(_
-	 (stx-error import-form "invalid import form"))))
-
-    (define (any-import ctxt import-spec lexenv.run)
-      (if (identifier? import-spec)
-	  (module-import (list ctxt import-spec) lexenv.run)
-	(library-import (list ctxt import-spec))))
-
-    (define (any-import* ctxt import-spec* lexenv.run)
-      (if (null? import-spec*)
-	  (values '#() '#())
-	(let-values
-	    (((t1 t2) (any-import  ctxt (car import-spec*) lexenv.run))
-	     ((t3 t4) (any-import* ctxt (cdr import-spec*) lexenv.run)))
-	  (values (vector-append t1 t3)
-		  (vector-append t2 t4)))))
-
-    (define (any-import*-checked import-form lexenv.run)
-      (syntax-match import-form ()
-	((?ctxt ?import-spec* ...)
-	 (any-import* ?ctxt ?import-spec* lexenv.run))
 	(_
 	 (stx-error import-form "invalid import form"))))
 
