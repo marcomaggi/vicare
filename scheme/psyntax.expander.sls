@@ -8893,6 +8893,12 @@
 			       mod** kwd* export-spec* rib mix? sd?))))
 
 	       ((define-syntax)
+		;;The body  form is a core  language DEFINE-SYNTAX macro
+		;;use.    We  expand   and   evaluate  the   transformer
+		;;expression, build a syntactic binding for it, register
+		;;the label in the rib.   Finally we recurse on the rest
+		;;of the body.
+		;;
 		(receive (id rhs)
 		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
@@ -8909,6 +8915,12 @@
 				 mix? sd?)))))
 
 	       ((define-fluid-syntax)
+		;;The body  form is a core  language DEFINE-FLUID-SYNTAX
+		;;macro  use.  We  expand and  evaluate the  transformer
+		;;expression, build syntactic  bindings for it, register
+		;;the label in the rib.   Finally we recurse on the rest
+		;;of the body.
+		;;
 		(receive (id rhs)
 		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
@@ -8937,8 +8949,9 @@
 		;;The  body  form  is  a  core  language  LET-SYNTAX  or
 		;;LETREC-SYNTAX macro  use.  We expand and  evaluate the
 		;;transformer expressions, build  syntactic bindings for
-		;;them,  register  their  labels  in  a  new  rib.   The
-		;;internal forms  are spliced in  the body but  with the
+		;;them, register their labels in  a new rib because they
+		;;are visible  only in the internal  body.  The internal
+		;;forms are  spliced in the  external body but  with the
 		;;rib added to them.
 		;;
 		(syntax-match body-expr ()
