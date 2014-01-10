@@ -9105,23 +9105,10 @@
 
     (define (%chi-import e lexenv.run rib sd?)
       (receive (id* lab*)
-	  ;;(if (module-import? e)
-	  ;;    (module-import e lexenv.run)
-	  ;;  (library-import e))
 	  (any-import*-checked e lexenv.run)
 	(vector-for-each (lambda (id lab)
 			   (extend-rib! rib id lab sd?))
 	  id* lab*)))
-
-    (define (module-import? e)
-      (syntax-match e ()
-	((_ ?id)
-	 (identifier? ?id)
-	 #t)
-	((_ ?imp* ...)
-	 #f)
-	(_
-	 (stx-error e "malformed import form"))))
 
     (define (module-import import-form lexenv.run)
       (syntax-match import-form ()
