@@ -8935,41 +8935,41 @@
 
 	       ((let-syntax letrec-syntax)
 		(syntax-match e ()
-		  ((_ ((xlhs* xrhs*) ...) xbody* ...)
-		   (unless (valid-bound-ids? xlhs*)
+		  ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
+		   (unless (valid-bound-ids? ?xlhs*)
 		     (stx-error e "invalid identifiers"))
-		   (let* ((xlab* (map gensym-for-label xlhs*))
-			  (xrib  (make-full-rib xlhs* xlab*))
-			  (xb*   (map (lambda (x)
-					(%eval-macro-transformer
-					 (%expand-macro-transformer
-					  (if (eq? type 'let-syntax)
-					      x
-					    (push-lexical-contour xrib x))
-					  lexenv.expand)))
-				   xrhs*)))
+		   (let* ((xlab*  (map gensym-for-label ?xlhs*))
+			  (xrib   (make-full-rib ?xlhs* xlab*))
+			  (xbind* (map (lambda (x)
+					 (%eval-macro-transformer
+					  (%expand-macro-transformer
+					   (if (eq? type 'let-syntax)
+					       x
+					     (push-lexical-contour xrib x))
+					   lexenv.expand)))
+				    ?xrhs*)))
 		     (chi-body* (append (map (lambda (x)
 					       (push-lexical-contour xrib x))
-					  xbody*)
+					  ?xbody*)
 					(cdr body-expr*))
-				(append (map cons xlab* xb*) lexenv.run)
-				(append (map cons xlab* xb*) lexenv.expand)
+				(append (map cons xlab* xbind*) lexenv.run)
+				(append (map cons xlab* xbind*) lexenv.expand)
 				lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
 
 	       ((begin)
 		(syntax-match e ()
-		  ((_ x* ...)
-		   (chi-body* (append x* (cdr body-expr*))
+		  ((_ ?expr* ...)
+		   (chi-body* (append ?expr* (cdr body-expr*))
 			      lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib
 			      mix? sd?))))
 
 	       ((stale-when)
 		(syntax-match e ()
-		  ((_ guard x* ...)
+		  ((_ ?guard ?expr* ...)
 		   (begin
-		     (handle-stale-when guard lexenv.expand)
-		     (chi-body* (append x* (cdr body-expr*))
+		     (handle-stale-when ?guard lexenv.expand)
+		     (chi-body* (append ?expr* (cdr body-expr*))
 				lexenv.run lexenv.expand lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
 
@@ -9004,9 +9004,9 @@
 
 	       ((export)
 		(syntax-match e ()
-		  ((_ exp-decl* ...)
+		  ((_ ?export-spec* ...)
 		   (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			      (append exp-decl* exp*) rib
+			      (append ?export-spec* exp*) rib
 			      mix? sd?))))
 
 	       ((import)
