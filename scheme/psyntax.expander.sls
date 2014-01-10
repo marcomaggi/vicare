@@ -8866,7 +8866,54 @@
 ;;;; chi procedures: body
 
 (module (chi-body*)
-
+  ;;The  function CHI-BODY*  expands the  forms of  a body.   Here is  a
+  ;;description of the arguments.
+  ;;
+  ;;BODY-EXPR* must be null or a list of syntax objects representing the
+  ;;forms.
+  ;;
+  ;;LEXENV.RUN and LEXENV.EXPAND must  be lists representing the current
+  ;;lexical environment for run and expand times.
+  ;;
+  ;;LEX* must be  a list of gensyms  and RHS* must be a  list of special
+  ;;objects representing  right-hand side expressions for  DEFINE syntax
+  ;;uses;  they  are  meant  to  be processed  together  item  by  item.
+  ;;Whenever the  RHS expressions  will be  expanded and  evaluated: the
+  ;;result of the evaluation will be  stored in the "value" field of the
+  ;;associated LEX gensym.  The special values have the formats:
+  ;;
+  ;; (defun . ?full-form)
+  ;;		Represents  a  DEFINE  form which  defines  a  function.
+  ;;		?FULL-FORM is  the syntax  object representing  the full
+  ;;		DEFINE form.
+  ;;
+  ;; (expr  . ?val)
+  ;;		Represents a  DEFINE form  which defines  a non-function
+  ;;		variable.   ?VAL is  a  syntax  object representing  the
+  ;;		variable's value.
+  ;;
+  ;; (top-expr . ?body-expr)
+  ;;		Represents   a  dummy   DEFINE   form  introduced   when
+  ;;		processing an expression in a R6RS program.
+  ;;
+  ;;MOD**
+  ;;
+  ;;KWD*
+  ;;
+  ;;EXPORT-SPEC* is  null or a  list of syntax objects  representing the
+  ;;export specifications from this body.  It is to be processed later.
+  ;;
+  ;;RIB is the current lexical environment's rib.
+  ;;
+  ;;MIX? is interpreted  as boolean.  When false:  the expansion process
+  ;;visits all  the definition forms  and stops at the  first expression
+  ;;form; the expression  forms are returned to the  caller.  When true:
+  ;;the  expansion  process visits  all  the  definition and  expression
+  ;;forms, accepting  a mixed  sequence of them;  an expression  form is
+  ;;handled as a dummy definition form.
+  ;;
+  ;;SD?
+  ;;
   (define (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?)
     (while-not-expanding-application-first-subform
      (if (null? body-expr*)
@@ -8880,6 +8927,12 @@
 	     (case type
 
 	       ((define)
+		;;The body form is a core language DEFINE macro use.  We
+		;;create a label and a lex gensym in which the result of
+		;;evaluating  the right-hand  side  will  be stored;  we
+		;;register the label in the  rib.  Finally we recurse on
+		;;the rest of the body.
+		;;
 		(receive (id rhs)
 		    (%parse-define body-expr)
 		  (when (bound-id-member? id kwd*)
@@ -8993,8 +9046,8 @@
 		(syntax-match body-expr ()
 		  ((_ ?expr* ...)
 		   (chi-body* (append ?expr* (cdr body-expr*))
-			      lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib
-			      mix? sd?))))
+			      lexenv.run lexenv.expand
+			      lex* rhs* mod** kwd* export-spec* rib mix? sd?))))
 
 	       ((stale-when)
 		;;The body form is a STALE-WHEN syntax use.  Process the
@@ -9006,8 +9059,8 @@
 		   (begin
 		     (handle-stale-when ?guard lexenv.expand)
 		     (chi-body* (append ?expr* (cdr body-expr*))
-				lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib
-				mix? sd?)))))
+				lexenv.run lexenv.expand
+				lex* rhs* mod** kwd* export-spec* rib mix? sd?)))))
 
 	       ((global-macro global-macro!)
 		;;The  body form  is a  macro  use, where  the macro  is
@@ -9069,9 +9122,11 @@
 		;;
 		(syntax-match body-expr ()
 		  ((_ ?export-spec* ...)
-		   (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			      (append ?export-spec* export-spec*) rib
-			      mix? sd?))))
+		   (chi-body* (cdr body-expr*)
+			      lexenv.run lexenv.expand
+			      lex* rhs* mod** kwd*
+			      (append ?export-spec* export-spec*)
+			      rib mix? sd?))))
 
 	       ((import)
 		;;The body form is an  IMPORT form.  We just process the
@@ -9080,8 +9135,8 @@
 		;;on the rest of the body.
 		;;
 		(%chi-import body-expr lexenv.run rib sd?)
-		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			   export-spec* rib mix? sd?))
+		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand
+			   lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       (else
 		(if mix?
@@ -9091,6 +9146,8 @@
 			       (cons (cons 'top-expr body-expr) rhs*)
 			       mod** kwd* export-spec* rib #t sd?)
 		  (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*))))))))))
+
+;;; --------------------------------------------------------------------
 
   (define (%parse-define x)
     ;;Syntax parser for R6RS's DEFINE.
