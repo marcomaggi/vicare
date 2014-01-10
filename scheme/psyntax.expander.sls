@@ -8865,8 +8865,8 @@
 ;;;; chi procedures: body
 
 (module (chi-body*)
-  ;;The  function CHI-BODY*  expands the  forms of  a body.   Here is  a
-  ;;description of the arguments.
+  ;;The recursive function CHI-BODY* expands  the forms of a body.  Here
+  ;;is a description of the arguments.
   ;;
   ;;BODY-EXPR* must be null or a list of syntax objects representing the
   ;;forms.
@@ -8877,9 +8877,9 @@
   ;;LEX* must be  a list of gensyms  and RHS* must be a  list of special
   ;;objects representing  right-hand side expressions for  DEFINE syntax
   ;;uses;  they  are  meant  to  be processed  together  item  by  item.
-  ;;Whenever the  RHS expressions  will be  expanded and  evaluated: the
-  ;;result of the evaluation will be  stored in the "value" field of the
-  ;;associated LEX gensym.  The special values have the formats:
+  ;;Whenever the RHS  expressions are expanded: a  core language binding
+  ;;will be  created with a  LEX gensym  associate to a  RHS expression.
+  ;;The special values have the formats:
   ;;
   ;; (defun . ?full-form)
   ;;		Represents  a  DEFINE  form which  defines  a  function.
@@ -8895,9 +8895,20 @@
   ;;		Represents   a  dummy   DEFINE   form  introduced   when
   ;;		processing an expression in a R6RS program.
   ;;
-  ;;MOD**
+  ;;About the MOD** argument.  We  know that module definitions have the
+  ;;syntax:
   ;;
-  ;;KWD*
+  ;;   (module (?export-id ...) ?definition ... ?expression ...)
+  ;;
+  ;;and  the trailing  ?EXPRESSION  forms must  be  evaluated after  the
+  ;;right-hand sides  of the DEFINE syntaxes  of the module but  also of
+  ;;the  enclosing  lexical context.   So  when  expanding a  MODULE  we
+  ;;accumulate such expression syntax objects in the MOD** argument as:
+  ;;
+  ;;   MOD** == ((?expression ...) ...)
+  ;;
+  ;;KWD* is a  list of identifiers representing the  syntaxes defined in
+  ;;this body.  It is used to test for duplicate definitions.
   ;;
   ;;EXPORT-SPEC* is  null or a  list of syntax objects  representing the
   ;;export specifications from this body.  It is to be processed later.
@@ -8911,7 +8922,10 @@
   ;;forms, accepting  a mixed  sequence of them;  an expression  form is
   ;;handled as a dummy definition form.
   ;;
-  ;;SD?
+  ;;When SD? is false this body  is allowed to redefine bindings created
+  ;;by DEFINE;  this happens when expanding  for the Scheme REPL  in the
+  ;;interaction environment.  When SD? is true: attempting to redefine a
+  ;;DEFINE binding will raise an exception.
   ;;
   (define (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?)
     (while-not-expanding-application-first-subform
@@ -9100,18 +9114,23 @@
 		;;
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
 		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+		  ;;Extend the rib with  the syntactic bindings exported
+		  ;;by the module.
 		  (vector-for-each (lambda (id lab)
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
-		  (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
-			     export-spec* rib mix? sd?)))
+		  (chi-body* (cdr body-expr*) lexenv.run lexenv.expand
+			     lex* rhs* mod** kwd* export-spec*
+			     rib mix? sd?)))
 
 	       ((library)
 		;;The body form is a library definition.  We process the
 		;;library, then recurse on the rest of the body.
 		;;
 		(expand-library (syntax->datum body-expr))
-		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*
+		(chi-body* (cdr body-expr*)
+			   lexenv.run lexenv.expand
+			   lex* rhs* mod** kwd* export-spec*
 			   rib mix? sd?))
 
 	       ((export)
@@ -9260,9 +9279,13 @@
 
   (define-record module-interface
     (first-mark
+		;The first  mark in  the lexical  context of  the MODULE
+		;form.
      exp-id-vec
-		;A vector of
+		;A vector of identifiers exported by the module.
      exp-lab-vec
+		;A  vector   of  gensyms   acting  as  labels   for  the
+		;identifiers in the field EXP-ID-VEC.
      ))
 
   (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* rhs* mod** kwd*)
@@ -9313,15 +9336,18 @@
 	      ;;The module has a name.  Only  the name itself will go in
 	      ;;the enclosing lexical environment.
 	      (let* ((name-label (gensym-for-label 'module))
-		     (iface      (make-module-interface (car (<stx>-mark* name))
-							(vector-map
-							    (lambda (x)
-							      (make-<stx> (<stx>-expr x) ;expression
-									  (<stx>-mark* x) ;list of marks
-									  '() ;list of substs
-									  '())) ;annotated expressions
-							  all-export-id*)
-							all-export-lab*))
+		     (iface      (make-module-interface
+				  (car (<stx>-mark* name))
+				  (vector-map
+				      (lambda (x)
+					;;This   is   a  syntax   object
+					;;holding an identifier.
+					(make-<stx> (<stx>-expr x) ;expression
+						    (<stx>-mark* x) ;list of marks
+						    '() ;list of substs
+						    '())) ;annotated expressions
+				    all-export-id*)
+				  all-export-lab*))
 		     (binding    (cons '$module iface))
 		     (entry      (cons name-label binding)))
 		(values lex* rhs*
