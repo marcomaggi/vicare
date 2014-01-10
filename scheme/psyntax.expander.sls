@@ -8907,10 +8907,10 @@
 		  (let* ((lab          (gen-define-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
 		    (extend-rib! rib id lab sd?)
-		    (let ((binding (%eval-macro-transformer expanded-rhs)))
+		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs))))
 		      (chi-body* (cdr body-expr*)
-				 (cons (cons lab binding) lexenv.run)
-				 (cons (cons lab binding) lexenv.expand)
+				 (cons entry lexenv.run)
+				 (cons entry lexenv.expand)
 				 lex* rhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
