@@ -8871,9 +8871,9 @@
     (while-not-expanding-application-first-subform
      (if (null? body-expr*)
 	 (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*)
-       (let ((e (car body-expr*)))
+       (let ((body-expr (car body-expr*)))
 	 (receive (type bind-val kwd)
-	     (syntax-type e lexenv.run)
+	     (syntax-type body-expr lexenv.run)
 	   (let ((kwd* (if (identifier? kwd)
 			   (cons kwd kwd*)
 			 kwd*)))
@@ -8881,9 +8881,9 @@
 
 	       ((define)
 		(receive (id rhs)
-		    (%parse-define e)
+		    (%parse-define body-expr)
 		  (when (bound-id-member? id kwd*)
-		    (stx-error e "cannot redefine keyword"))
+		    (stx-error body-expr "cannot redefine keyword"))
 		  (receive (lab lex)
 		      (gen-define-label+loc id rib sd?)
 		    (extend-rib! rib id lab sd?)
@@ -8894,9 +8894,9 @@
 
 	       ((define-syntax)
 		(receive (id rhs)
-		    (%parse-define-syntax e)
+		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
-		    (stx-error e "cannot redefine keyword"))
+		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
@@ -8910,9 +8910,9 @@
 
 	       ((define-fluid-syntax)
 		(receive (id rhs)
-		    (%parse-define-syntax e)
+		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
-		    (stx-error e "cannot redefine keyword"))
+		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-label id rib sd?))
 			 (flab         (gen-define-label id rib sd?))
@@ -8934,10 +8934,10 @@
 				 mix? sd?)))))
 
 	       ((let-syntax letrec-syntax)
-		(syntax-match e ()
+		(syntax-match body-expr ()
 		  ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
 		   (unless (valid-bound-ids? ?xlhs*)
-		     (stx-error e "invalid identifiers"))
+		     (stx-error body-expr "invalid identifiers"))
 		   (let* ((xlab*  (map gensym-for-label ?xlhs*))
 			  (xrib   (make-full-rib ?xlhs* xlab*))
 			  (xbind* (map (lambda (x)
@@ -8958,14 +8958,14 @@
 				mix? sd?)))))
 
 	       ((begin)
-		(syntax-match e ()
+		(syntax-match body-expr ()
 		  ((_ ?expr* ...)
 		   (chi-body* (append ?expr* (cdr body-expr*))
 			      lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib
 			      mix? sd?))))
 
 	       ((stale-when)
-		(syntax-match e ()
+		(syntax-match body-expr ()
 		  ((_ ?guard ?expr* ...)
 		   (begin
 		     (handle-stale-when ?guard lexenv.expand)
@@ -8975,22 +8975,22 @@
 
 	       ((global-macro global-macro!)
 		(chi-body*
-		 (cons (chi-global-macro bind-val e lexenv.run rib) (cdr body-expr*))
+		 (cons (chi-global-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
 		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((local-macro local-macro!)
 		(chi-body*
-		 (cons (chi-local-macro bind-val e lexenv.run rib) (cdr body-expr*))
+		 (cons (chi-local-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
 		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((macro)
 		(chi-body*
-		 (cons (chi-non-core-macro bind-val e lexenv.run rib) (cdr body-expr*))
+		 (cons (chi-non-core-macro bind-val body-expr lexenv.run rib) (cdr body-expr*))
 		 lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((module)
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		    (chi-internal-module e lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
 		  (vector-for-each (lambda (id lab)
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
@@ -8998,19 +8998,19 @@
 			     export-spec* rib mix? sd?)))
 
 	       ((library)
-		(expand-library (syntax->datum e))
+		(expand-library (syntax->datum body-expr))
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*
 			   rib mix? sd?))
 
 	       ((export)
-		(syntax-match e ()
+		(syntax-match body-expr ()
 		  ((_ ?export-spec* ...)
 		   (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
 			      (append ?export-spec* export-spec*) rib
 			      mix? sd?))))
 
 	       ((import)
-		(%chi-import e lexenv.run rib sd?)
+		(%chi-import body-expr lexenv.run rib sd?)
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
 			   export-spec* rib mix? sd?))
 
@@ -9019,7 +9019,7 @@
 		    (chi-body* (cdr body-expr*)
 			       lexenv.run lexenv.expand
 			       (cons (gensym-for-lexical-var 'dummy) lex*)
-			       (cons (cons 'top-expr e) rhs*)
+			       (cons (cons 'top-expr body-expr) rhs*)
 			       mod** kwd* export-spec* rib #t sd?)
 		  (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*))))))))))
 
@@ -9062,9 +9062,9 @@
        (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
-  (define (chi-internal-module e lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+  (define (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
     (receive (name exp-id* body-expr*)
-	(parse-module e)
+	(parse-module body-expr)
       (let* ((rib (make-empty-rib))
 	     (body-expr*  (map (lambda (x)
 				 (push-lexical-contour rib x))
@@ -9105,9 +9105,9 @@
     ;;Process an IMPORT form.  The purpose of such forms is to push some
     ;;new identifier-to-label association on the current RIB.
     ;;
-    (define (%chi-import e lexenv.run rib sd?)
+    (define (%chi-import body-expr lexenv.run rib sd?)
       (receive (id* lab*)
-	  (%any-import*-checked e lexenv.run)
+	  (%any-import*-checked body-expr lexenv.run)
 	(vector-for-each (lambda (id lab)
 			   (extend-rib! rib id lab sd?))
 	  id* lab*)))
