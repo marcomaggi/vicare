@@ -3076,33 +3076,6 @@
   cdr)
 
 
-(define (make-eval-transformer expanded-expr)
-  ;;Given an expanded  expression representing the right-hand  side of a
-  ;;DEFINE-SYNTAX,  LET-SYNTAX,  LETREC-SYNTAX,  DEFINE-FLUID-SYNTAX  or
-  ;;FLUID-LET-SYNTAX binding:  convert it to core  language, evaluate it
-  ;;and return a proper syntactic binding for the resulting object.
-  ;;
-  ;;When  the RHS  of a  syntax  definition is  evaluated, the  returned
-  ;;object   should  be   either  a   procedure,  an   identifier-syntax
-  ;;transformer, a Vicare struct type  descriptor or an R6RS record type
-  ;;descriptor.  If  the return value is  not of such type:  we raise an
-  ;;assertion violation.
-  ;;
-  (let ((rv (eval-core (expanded->core expanded-expr))))
-    (cond ((procedure? rv)
-	   (make-local-macro-binding rv expanded-expr))
-	  ((variable-transformer? rv)
-	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) expanded-expr))
-	  ((struct-or-record-type-descriptor-binding? rv)
-	   rv)
-	  ((compile-time-value? rv)
-	   (make-local-compile-time-value-binding (compile-time-value-object rv) expanded-expr))
-	  (else
-	   (assertion-violation 'expand
-	     "invalid return value from syntax transformer expression"
-	     rv)))))
-
-
 (define-syntax syntax-match
   ;;The SYNTAX-MATCH macro is almost like SYNTAX-CASE macro.  Except that:
   ;;
@@ -6487,7 +6460,7 @@
 	   (%error-invalid-formals-syntax expr-stx ?lhs*)
 	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
 	       (rhs-binding* (map (lambda (rhs)
-				    (make-eval-transformer
+				    (%eval-macro-transformer
 				     (%expand-macro-transformer rhs lexenv.expand)))
 			       ?rhs*)))
 	   (chi-internal (cons ?body ?body*)
@@ -7600,16 +7573,22 @@
   #| end of module |# )
 
 
-;;; end of module: CORE-MACRO-TRANSFORMER
+;;;; module core-macro-transformer
 
-)
+#| end of module |# )
 
 
 ;;;; macro transformers helpers
 
 (define (%expand-macro-transformer expr-stx lexenv.expand)
-  ;;Called to expand the right-hand  side of syntax definitions.  Return
-  ;;the fully expanded right-hand side.
+  ;;Given a syntax  object representing the right-hand side  of a syntax
+  ;;definition      (DEFINE-SYNTAX,      LET-SYNTAX,      LETREC-SYNTAX,
+  ;;DEFINE-FLUID-SYNTAX,   FLUID-LET-SYNTAX):    expand   it,   invoking
+  ;;libraries as needed, and return recordised code in the core language
+  ;;representing transformer expression.
+  ;;
+  ;;Usually   the  return   value  of   this  function   is  handed   to
+  ;;%EVAL-MACRO-TRANSFORMER.
   ;;
   ;;For:
   ;;
@@ -7638,6 +7617,35 @@
 	    (mark-visit x)))
       (rtc))
     expanded-rhs))
+
+(define (%eval-macro-transformer expanded-expr)
+  ;;Given  recordised  code  in   the  core  language  representing  the
+  ;;expression  of a  macro transformer:  convert it  to core  language,
+  ;;evaluate it and return a  proper syntactic binding for the resulting
+  ;;object.
+  ;;
+  ;;Usually  this   function  is   applied  to   the  return   value  of
+  ;;%EXPAND-MACRO-TRANSFORMER.
+  ;;
+  ;;When  the RHS  of a  syntax  definition is  evaluated, the  returned
+  ;;object   should  be   either  a   procedure,  an   identifier-syntax
+  ;;transformer, a Vicare struct type  descriptor or an R6RS record type
+  ;;descriptor.  If  the return value is  not of such type:  we raise an
+  ;;assertion violation.
+  ;;
+  (let ((rv (eval-core (expanded->core expanded-expr))))
+    (cond ((procedure? rv)
+	   (make-local-macro-binding rv expanded-expr))
+	  ((variable-transformer? rv)
+	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) expanded-expr))
+	  ((struct-or-record-type-descriptor-binding? rv)
+	   rv)
+	  ((compile-time-value? rv)
+	   (make-local-compile-time-value-binding (compile-time-value-object rv) expanded-expr))
+	  (else
+	   (assertion-violation 'expand
+	     "invalid return value from syntax transformer expression"
+	     rv)))))
 
 
 ;;;; formals syntax validation
@@ -8567,7 +8575,7 @@
 	     (let* ((xlab* (map gensym-for-label xlhs*))
 		    (xrib  (make-full-rib xlhs* xlab*))
 		    (xb*   (map (lambda (x)
-				  (make-eval-transformer
+				  (%eval-macro-transformer
 				   (%expand-macro-transformer (if (eq? type 'let-syntax)
 								  x
 								(push-lexical-contour xrib x))
@@ -8849,7 +8857,7 @@
 		 (let* ((lab (gen-define-label id rib sd?))
 			(expanded-rhs (%expand-macro-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
-		   (let ((b (make-eval-transformer expanded-rhs)))
+		   (let ((b (%eval-macro-transformer expanded-rhs)))
 		     (chi-body* (cdr e*)
 				(cons (cons lab b) r) (cons (cons lab b) mr)
 				lex* rhs* mod** kwd* exp* rib
@@ -8864,7 +8872,7 @@
 			(flab         (gen-define-label id rib sd?))
 			(expanded-rhs (%expand-macro-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
-		   (let* ((b  (make-eval-transformer expanded-rhs))
+		   (let* ((b  (%eval-macro-transformer expanded-rhs))
 			  (t1 (cons lab (make-fluid-syntax-binding flab)))
 			  (t2 (cons flab b)))
 		     (chi-body* (cdr e*)
@@ -8881,7 +8889,7 @@
 		  (let* ((xlab* (map gensym-for-label xlhs*))
 			 (xrib (make-full-rib xlhs* xlab*))
 			 (xb* (map (lambda (x)
-				     (make-eval-transformer
+				     (%eval-macro-transformer
 				      (%expand-macro-transformer
 				       (if (eq? type 'let-syntax)
 					   x
