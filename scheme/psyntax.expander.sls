@@ -1583,16 +1583,19 @@
 ;;each entry is a pair, list or improper list and represents a binding.
 ;;
 ;;While  the  expansion proceeds,  visiting  the  code in  breadth-first
-;;order:  the lexical  environment  is updated  by  pushing new  binding
-;;entries on the stack.
+;;order: the  lexical environment is  updated by pushing new  entries on
+;;the stack.
 ;;
 ;;An entry in the lexical environment alist has the following format:
 ;;
-;;   (?label . (?binding-type . ?binding-value))
-;;             |..............................| binding
+;;   (?label . ?syntactic-binding)
 ;;
-;;where ?LABEL is a gensym, ?BINDING-TYPE is a symbol, ?BINDING-VALUE is
-;;a value whose format depends on the binding type.
+;;where ?SYNTACTIC-BINDING has the format:
+;;
+;;   (?binding-type . ?binding-value)
+;;
+;;where  ?BINDING-TYPE is  a  symbol and  the  format of  ?BINDING-VALUE
+;;depends on the binding type.
 ;;
 ;;* A  binding representing a  lexical variable,  as created by  LET and
 ;;  similar syntaxes, has the format:
