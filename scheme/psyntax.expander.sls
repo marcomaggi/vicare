@@ -8934,6 +8934,13 @@
 				 mix? sd?)))))
 
 	       ((let-syntax letrec-syntax)
+		;;The  body  form  is  a  core  language  LET-SYNTAX  or
+		;;LETREC-SYNTAX macro  use.  We expand and  evaluate the
+		;;transformer expressions, build  syntactic bindings for
+		;;them,  register  their  labels  in  a  new  rib.   The
+		;;internal forms  are spliced in  the body but  with the
+		;;rib added to them.
+		;;
 		(syntax-match body-expr ()
 		  ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
 		   (unless (valid-bound-ids? ?xlhs*)
@@ -8948,16 +8955,28 @@
 					     (push-lexical-contour xrib x))
 					   lexenv.expand)))
 				    ?xrhs*)))
-		     (chi-body* (append (map (lambda (x)
-					       (push-lexical-contour xrib x))
-					  ?xbody*)
-					(cdr body-expr*))
-				(append (map cons xlab* xbind*) lexenv.run)
-				(append (map cons xlab* xbind*) lexenv.expand)
-				lex* rhs* mod** kwd* export-spec* rib
-				mix? sd?)))))
+		     (chi-body*
+		      ;;Splice the internal body forms but add a lexical
+		      ;;contour to them.
+		      (append (map (lambda (internal-body-form)
+				     (push-lexical-contour xrib internal-body-form))
+				?xbody*)
+			      (cdr body-expr*))
+		      ;;Push   on   the  lexical   environment   entries
+		      ;;corresponding  to  the defined  syntaxes.   Such
+		      ;;entries  will  stay  there even  after  we  have
+		      ;;processed the internal body forms; this is not a
+		      ;;problem because the labels cannot be seen by the
+		      ;;rest of the body.
+		      (append (map cons xlab* xbind*) lexenv.run)
+		      (append (map cons xlab* xbind*) lexenv.expand)
+		      lex* rhs* mod** kwd* export-spec* rib
+		      mix? sd?)))))
 
 	       ((begin)
+		;;The body form is a  BEGIN syntax use.  Just splice the
+		;;expressions and recurse on them.
+		;;
 		(syntax-match body-expr ()
 		  ((_ ?expr* ...)
 		   (chi-body* (append ?expr* (cdr body-expr*))
@@ -8965,6 +8984,10 @@
 			      mix? sd?))))
 
 	       ((stale-when)
+		;;The body form is a STALE-WHEN syntax use.  Process the
+		;;stale-when  guard  expression,  then just  splice  the
+		;;internal expressions as we do for BEGIN and recurse.
+		;;
 		(syntax-match body-expr ()
 		  ((_ ?guard ?expr* ...)
 		   (begin
@@ -9006,8 +9029,12 @@
 			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((module)
+		;;The body  form is  an internal module  definition.  We
+		;;process the  module, then recurse  on the rest  of the
+		;;body.
+		;;
 		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+		    (%chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
 		  (vector-for-each (lambda (id lab)
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
@@ -9015,11 +9042,18 @@
 			     export-spec* rib mix? sd?)))
 
 	       ((library)
+		;;The body form is a library definition.  We process the
+		;;library, then recurse on the rest of the body.
+		;;
 		(expand-library (syntax->datum body-expr))
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*
 			   rib mix? sd?))
 
 	       ((export)
+		;;The body form  is an EXPORT form.   We just accumulate
+		;;the export specifications, to  be processed later, and
+		;;we recurse on the rest of the body.
+		;;
 		(syntax-match body-expr ()
 		  ((_ ?export-spec* ...)
 		   (chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
@@ -9027,6 +9061,11 @@
 			      mix? sd?))))
 
 	       ((import)
+		;;The body form is an  IMPORT form.  We just process the
+		;;form  which results  in  extending the  RIB with  more
+		;;identifier-to-label associations.   Finally we recurse
+		;;on the rest of the body.
+		;;
 		(%chi-import body-expr lexenv.run rib sd?)
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand lex* rhs* mod** kwd*
 			   export-spec* rib mix? sd?))
@@ -9079,7 +9118,7 @@
        (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
-  (define (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+  (define (%chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
     (receive (name exp-id* body-expr*)
 	(parse-module body-expr)
       (let* ((rib (make-empty-rib))
