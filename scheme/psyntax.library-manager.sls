@@ -1,4 +1,4 @@
-;;;Copyright (c) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -27,7 +27,7 @@
     ;; library inspection
     library-spec		library-name
     library-version		library-subst
-    imported-label->binding
+    imported-label->syntactic-binding
 
     ;; library installation
     install-library		uninstall-library
@@ -675,7 +675,7 @@
   #| end of module: INSTALL-LIBRARY |# )
 
 
-(define (imported-label->binding lab)
+(define (imported-label->syntactic-binding lab)
   (label-binding lab))
 
 (define (invoke-library lib)

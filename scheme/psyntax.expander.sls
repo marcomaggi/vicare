@@ -1856,7 +1856,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (label->binding label lexenv)
+(define (label->syntactic-binding label lexenv)
   ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
   ;;alist) as well  as in the global environment.  If  an entry with key
   ;;LABEL is found:  return the value of the entry  which is the binding
@@ -1869,7 +1869,7 @@
   ;;faster (it  uses a hash table,  while the lexical environment  is an
   ;;alist).
   ;;
-  (let ((binding (label->binding/no-fluids label lexenv)))
+  (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
     (if (fluid-syntax-binding? binding)
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
 	;;reversed  logic.   We  have  to  look them  up  in  the  local
@@ -1878,11 +1878,11 @@
 	  (cond ((assq label lexenv)
 		 => cdr)
 		(else
-		 (label->binding/no-fluids label '()))))
+		 (label->syntactic-binding/no-fluids label '()))))
       binding)))
 
-(define (label->binding/no-fluids label lexenv)
-  ;;Like LABEL->BINDING, but actually does the job.
+(define (label->syntactic-binding/no-fluids label lexenv)
+  ;;Like LABEL->SYNTACTIC-BINDING, but actually does the job.
   ;;
   (cond ((not (symbol? label))
 	 '(displaced-lexical))
@@ -1893,9 +1893,9 @@
 	;;
 	;;So  if we  have  a label  we  can check  if  it references  an
 	;;imported binding  simply by checking its  "value" field.  This
-	;;is what IMPORTED-LABEL->BINDING does.
+	;;is what IMPORTED-LABEL->SYNTACTIC-BINDING does.
 	;;
-	((imported-label->binding label)
+	((imported-label->syntactic-binding label)
 	 => (lambda (b)
 	      (cond ((and (pair? b)
 			  (eq? (car b) '$core-rtd))
@@ -2320,7 +2320,7 @@
 		  ;;binding: the data  structure implementing the symbol
 		  ;;object holds  informations about  the binding  in an
 		  ;;internal field; else such field is set to false.
-		  (if (imported-label->binding label)
+		  (if (imported-label->syntactic-binding label)
 		      ;;Create new label to shadow imported binding.
 		      (gensym)
 		    ;;Recycle old label.
@@ -2965,7 +2965,7 @@
 		(label (id->label/intern id)))
 	   (unless label
 	     (%raise-unbound-error #f id id))
-	   (let* ((binding (label->binding label lexenv))
+	   (let* ((binding (label->syntactic-binding label lexenv))
 		  (type    (binding-type binding)))
 	     (case type
 	       ((lexical core-prim macro identifier-macro! global local-macro
@@ -2981,7 +2981,7 @@
 	       (let ((label (id->label/intern id)))
 		 (unless label
 		   (%raise-unbound-error #f id id))
-		 (let* ((binding (label->binding label lexenv))
+		 (let* ((binding (label->syntactic-binding label lexenv))
 			(type    (binding-type binding)))
 		   (case type
 		     ((define define-syntax core-macro begin macro
@@ -6477,7 +6477,7 @@
     ;;
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
-	   (binding  (label->binding/no-fluids label lexenv.run)))
+	   (binding  (label->syntactic-binding/no-fluids label lexenv.run)))
       (cond ((fluid-syntax-binding? binding)
 	     (binding-value binding))
 	    (else
@@ -6519,7 +6519,7 @@
      (let ((label (id->label ?identifier)))
        (unless label
 	 (%raise-unbound-error who expr-stx ?identifier))
-       (let ((binding (label->binding label lexenv.run)))
+       (let ((binding (label->syntactic-binding label lexenv.run)))
 	 (unless (%struct-type-descriptor-binding? binding)
 	   (syntax-violation who "not a struct type" expr-stx ?identifier))
 	 (build-data no-source (binding-value binding)))))))
@@ -6591,7 +6591,7 @@
        (let ((label (id->label ?identifier)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?identifier))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?identifier))
 	   (chi-expr (car (binding-value binding))
@@ -6613,7 +6613,7 @@
        (let ((label (id->label ?identifier)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?identifier))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-error who "invalid type" expr-stx ?identifier))
 	   (chi-expr (cadr (binding-value binding))
@@ -6636,7 +6636,7 @@
        (let ((label (id->label ?type-name)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?type-name))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?type-name))
 	   (let* ((table    (%get-alist-of-safe-field-accessors who binding))
@@ -6661,7 +6661,7 @@
        (let ((label (id->label ?type-name)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?type-name))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?type-name))
 	   (let* ((table   (%get-alist-of-safe-field-mutators who binding))
@@ -6687,7 +6687,7 @@
        (let ((label (id->label ?type-name)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?type-name))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?type-name))
 	   (let* ((table    (%get-alist-of-unsafe-field-accessors who binding))
@@ -6712,7 +6712,7 @@
        (let ((label (id->label ?type-name)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?type-name))
-	 (let ((binding (label->binding label lexenv.run)))
+	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?type-name))
 	   (let* ((table   (%get-alist-of-unsafe-field-mutators who binding))
@@ -7073,7 +7073,7 @@
       ;;
       (?id
        (identifier? ?id)
-       (let ((binding (label->binding (id->label ?id) lexenv)))
+       (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
 	 (if (eq? (binding-type binding) 'syntax)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
@@ -8438,7 +8438,7 @@
       ;;
       (unless (identifier? id)
 	(assertion-violation 'rho "not an identifier" id))
-      (let ((binding (label->binding (id->label id) lexenv.run)))
+      (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
 	(case (binding-type binding)
 	  ;;The given identifier is bound to a local compile-time value.
 	  ;;The actual object is stored in the binding itself.
