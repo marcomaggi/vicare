@@ -369,6 +369,27 @@
 	  "expected environment object as argument" env))
       (set! current-env env)))))
 
+;;; --------------------------------------------------------------------
+;;; Substs.
+;;
+;;A "subst"  is an  alist whose  keys are "names"  and whose  values are
+;;"labels":
+;;
+;;* "Name" is an identifier representing  the public name of an imported
+;;  binding, the one we use to reference it in the code of a library.
+;;
+;;* "Label"  is a gensym uniquely  associated to the binding's  entry in
+;;  the lexical environment.
+
+;;Given the entry in a subst alist: return the name.
+;;
+(define subst-entry-name car)
+
+;;Given the entry in a subst alist: return the gensym acting as label.
+;;
+(define subst-entry-label cdr)
+
+
 
 (module (eval expand-form-to-core-language)
 
@@ -995,8 +1016,9 @@
   ;;Imported bindings are referenced by "substs".  A "subst" is an alist
   ;;whose keys are "names" and whose values are "labels":
   ;;
-  ;;* "Name"  is a symbol  representing the  public name of  an imported
-  ;;  binding, the one we use to reference it in the code of a library.
+  ;;*  "Name" is  a syntax  object representing  the public  name of  an
+  ;;  imported binding, the one we use  to reference it in the code of a
+  ;;  library.
   ;;
   ;;* "Label"  is a unique symbol  associated to the binding's  entry in
   ;;  the lexical environment.
@@ -1563,18 +1585,7 @@
 			  (export-subst  (%make-export-subst exp-name* exp-id*)))
 		      (receive (export-env global* macro*)
 			  (%make-export-env/macros lex* loc* lexenv.run)
-			(unless (%expanding-program? export-spec*)
-			  (for-each
-			      (lambda (s)
-				(let ((name  (car s))
-				      (label (cdr s)))
-				  (let ((entry (assq label export-env)))
-				    (when entry
-				      (let ((binding (cdr entry)))
-					(when (eq? 'mutable (syntactic-binding-type binding))
-					  (syntax-violation 'export
-					    "attempt to export mutated variable" name)))))))
-			    export-subst))
+			(%validate-exports export-spec* export-subst export-env)
 			(let ((invoke-body
 			       (build-library-letrec* no-source
 						      mix?
@@ -1684,6 +1695,26 @@
 		 (syntactic-binding-type  b)
 		 (syntactic-binding-value b)))))))))
 
+  (define (%validate-exports export-spec* export-subst export-env)
+    ;;We want to forbid code like the following:
+    ;;
+    ;;    (library (proof)
+    ;;      (export that doit)
+    ;;      (import (vicare))
+    ;;      (define that 123)
+    ;;      (define (doit a)
+    ;;	      (set! that a)))
+    ;;
+    ;;in which the mutable variable THAT is exported.
+    ;;
+    (unless (%expanding-program? export-spec*)
+      (for-each (lambda (subst)
+		  (cond ((assq (subst-entry-label subst) export-env)
+			 => (lambda (entry)
+			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding entry)))
+				(syntax-violation 'export
+				  "attempt to export mutated variable" (subst-entry-name subst)))))))
+	export-subst)))
 
   #| end of module: LIBRARY-BODY-EXPANDER |# )
 
@@ -1860,6 +1891,15 @@
 ;;
 ;;     (displaced-lexical . ())
 ;;
+
+;;Given the entry  from a lexical environment: return  the gensym acting
+;;as label.
+;;
+(define lexenv-entry-label car)
+
+;;Given the entry from a lexical environment: return the binding value.
+;;
+(define lexenv-entry-binding cdr)
 
 ;;Build and return a new binding.
 ;;
