@@ -1474,10 +1474,10 @@
   ;;Both the R6RS  programs expander and the R6RS  library expander make
   ;;use of this module to expand the body forms.
   ;;
-  ;;When  expanding  the  body  of a  library:  MAIN/EXPORT-SPEC*  is  a
+  ;;When expanding the body of a library: the argument EXPORT-SPEC* is a
   ;;SYNTAX-MATCH  input argument  representing a  set of  library export
-  ;;specifications.    When   expanding   the   body   of   a   program:
-  ;;MAIN/EXPORT-SPEC* is the symbol "main".
+  ;;specifications; when  expanding the body of  a program: EXPORT-SPEC*
+  ;;is the symbol "all".
   ;;
   ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
   ;;library import specifications.
@@ -1507,10 +1507,12 @@
   ;;
   ;;7. ...
   ;;
-  (define (library-body-expander main/export-spec* import-spec* body* mix?)
+  (define (library-body-expander export-spec* import-spec* body* mix?)
     (define itc (make-collector))
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
+      ;;SUBST-NAMES is a  vector of substs; SUBST-LABELS is  a vector of
+      ;;gensyms acting as labels.
       (receive (subst-names subst-labels)
 	  (parse-import-spec* import-spec*)
 	(let ((rib (make-top-rib subst-names subst-labels)))
@@ -1521,24 +1523,47 @@
 		(vtc    (make-collector)))
 	    (parametrise ((inv-collector  rtc)
 			  (vis-collector  vtc))
-	      (receive (init* lexenv.run lexenv.expand lex* rhs* internal-exp*)
+	      ;;INIT-FORM* is a list  of syntax objects representing the
+	      ;;trailing  non-definition  forms  from the  body  of  the
+	      ;;library.
+	      ;;
+	      ;;LEX*  is  a  list  of  gensyms to  be  used  in  binding
+	      ;;definitions  when  building   recordised  core  language
+	      ;;expressions for the DEFINE  forms in the library.  There
+	      ;;is a gensym for every item in RHS-FORM*.
+	      ;;
+	      ;;RHS-FORM* is  a list of syntax  objects representing the
+	      ;;right-hand side expressions in the DEFINE forms from the
+	      ;;body of the library.
+	      ;;
+	      ;;INTERNAL-EXPORT*  is  a  list  of  identifiers  exported
+	      ;;through  internal EXPORT  forms rather  than the  export
+	      ;;spec at the beginning of the library.
+	      (receive (init-form* lexenv.run lexenv.expand lex* rhs-form* internal-export*)
 		  (%chi-library-internal body* rib mix?)
 		(receive (exp-name* exp-id*)
-		    (parse-export-spec* (if (eq? main/export-spec* 'all)
+		    (parse-export-spec* (if (%expanding-program? export-spec*)
 					    (map wrap (top-marked-symbols rib))
-					  (append (map wrap main/export-spec*)
-						  internal-exp*)))
+					  (append (map wrap export-spec*)
+						  internal-export*)))
 		  (seal-rib! rib)
-		  (let* ((init*  (chi-expr* init* lexenv.run lexenv.expand))
-			 (rhs*   (chi-rhs*  rhs*  lexenv.run lexenv.expand)))
+		  ;;CORE-INIT-FORM*   is  a   list   of  core   language
+		  ;;recordised   code   expressions   representing   the
+		  ;;trailing init forms.
+		  ;;
+		  ;;CORE-RHS-FORM* is a list of core language recordised
+		  ;;code expressions representing  the DEFINE right-hand
+		  ;;sides.
+		  ;;
+		  ;;We want order here!?!
+		  (let* ((core-init-form*  (chi-expr* init-form* lexenv.run lexenv.expand))
+			 (core-rhs-form*   (chi-rhs*  rhs-form*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gen-global lex*))
-			  (export-subst  (make-export-subst exp-name* exp-id*)))
-		      (define errstr
-			"attempt to export mutated variable")
+			  (export-subst  (%make-export-subst exp-name* exp-id*)))
 		      (receive (export-env global* macro*)
 			  (make-export-env/macros lex* loc* lexenv.run)
-			(unless (eq? main/export-spec* 'all)
+			(unless (%expanding-program? export-spec*)
 			  (for-each
 			      (lambda (s)
 				(let ((name  (car s))
@@ -1548,28 +1573,40 @@
 				      (let ((b (cdr p)))
 					(let ((type (car b)))
 					  (when (eq? type 'mutable)
-					    (syntax-violation 'export errstr name))))))))
+					    (syntax-violation 'export
+					      "attempt to export mutated variable" name))))))))
 			    export-subst))
 			(let ((invoke-body
 			       (build-library-letrec* no-source
 						      mix?
-						      lex* loc* rhs*
-						      (if (null? init*)
+						      lex* loc* core-rhs-form*
+						      (if (null? core-init-form*)
 							  (build-void)
-							(build-sequence no-source init*))))
+							(build-sequence no-source core-init-form*))))
 			      (invoke-definitions
 			       (map build-global-define (map cdr global*))))
 			  (values (itc) (rtc) (vtc)
 				  (build-sequence no-source
-						  (append invoke-definitions
-							  (list invoke-body)))
+				    (append invoke-definitions
+					    (list invoke-body)))
 				  macro* export-subst export-env)))))))))))))
+
+  (define-syntax-rule (%expanding-program? ?export-spec*)
+    (eq? 'all ?export-spec*))
 
   (define-inline (%chi-library-internal e* rib mix?)
     (receive (e* lexenv.run lexenv.expand lex* rhs* mod** _kwd* exp*)
 	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
       (values (append (apply append (reverse mod**)) e*)
 	      lexenv.run lexenv.expand (reverse lex*) (reverse rhs*) exp*)))
+
+  (define (%make-export-subst name* id*)
+    (map (lambda (name id)
+	   (let ((label (id->label id)))
+	     (if label
+		 (cons name label)
+	       (stx-error id "cannot export unbound identifier"))))
+      name* id*))
 
   #| end of module: LIBRARY-BODY-EXPANDER |# )
 
@@ -9416,15 +9453,6 @@
 #| end of module |# )
 
 
-(define (make-export-subst name* id*)
-  (map
-      (lambda (name id)
-        (let ((label (id->label id)))
-          (unless label
-            (stx-error id "cannot export unbound identifier"))
-          (cons name label)))
-    name* id*))
-
 (define (make-export-env/macros lex* loc* r)
   (define (lookup x)
     (let f ((x x) (lex* lex*) (loc* loc*))
