@@ -1557,9 +1557,6 @@
 						      (if (null? init*)
 							  (build-void)
 							(build-sequence no-source init*))))
-			      ;;(invoke-body
-			      ;; (build-letrec* no-source lex* rhs*
-			      ;;    (build-exports global* init*)))
 			      (invoke-definitions
 			       (map build-global-define (map cdr global*))))
 			  (values (itc) (rtc) (vtc)
@@ -9419,23 +9416,6 @@
 #| end of module |# )
 
 
-(define (rev-map-append f ls ac)
-  (cond
-   ((null? ls) ac)
-   (else
-    (rev-map-append f (cdr ls)
-		    (cons (f (car ls)) ac)))))
-
-(define build-exports
-  (lambda (lex*+loc* init*)
-    (build-sequence no-source
-		    (cons (build-void)
-			  (rev-map-append
-			   (lambda (x)
-			     (build-global-assignment no-source (cdr x) (car x)))
-			   lex*+loc*
-			   init*)))))
-
 (define (make-export-subst name* id*)
   (map
       (lambda (name id)
