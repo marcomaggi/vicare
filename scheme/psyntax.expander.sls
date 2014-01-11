@@ -1583,23 +1583,20 @@
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gen-global lex*))
 			  (export-subst  (%make-export-subst exp-name* exp-id*)))
-		      (receive (export-env global* macro*)
+		      (receive (lexenv.export global* macro*)
 			  (%make-export-env/macros lex* loc* lexenv.run)
-			(%validate-exports export-spec* export-subst export-env)
-			(let ((invoke-body
-			       (build-library-letrec* no-source
-						      mix?
-						      lex* loc* core-rhs-form*
-						      (if (null? core-init-form*)
-							  (build-void)
-							(build-sequence no-source core-init-form*))))
-			      (invoke-definitions
-			       (map build-global-define (map cdr global*))))
+			(%validate-exports export-spec* export-subst lexenv.export)
+			(let ((invoke-body (build-library-letrec* no-source
+								  mix?
+								  lex* loc* core-rhs-form*
+								  (if (null? core-init-form*)
+								      (build-void)
+								    (build-sequence no-source core-init-form*))))
+			      (invoke-definitions (map build-global-define (map cdr global*))))
 			  (values (itc) (rtc) (vtc)
 				  (build-sequence no-source
-				    (append invoke-definitions
-					    (list invoke-body)))
-				  macro* export-subst export-env)))))))))))))
+				    (append invoke-definitions (list invoke-body)))
+				  macro* export-subst lexenv.export)))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1618,37 +1615,31 @@
 	       (stx-error id "cannot export unbound identifier"))))
       name* id*))
 
-  (define (%make-export-env/macros lex* loc* lexenv.run)
+  (module (%make-export-env/macros)
 
-    (define (lookup x)
-      (let recur ((x    x)
-		  (lex* lex*)
-		  (loc* loc*))
-	(if (pair? lex*)
-	    (if (eq? x (car lex*))
-		(car loc*)
-	      (recur x (cdr lex*) (cdr loc*)))
-	  (assertion-violation 'lookup-make-export "BUG"))))
-
-    (let f ((lexenv.run  lexenv.run)
-	    (env         '())
-	    (global*     '())
-	    (macro*      '()))
-      (if (null? lexenv.run)
-	  (values env global* macro*)
-	(let ((x (car lexenv.run)))
-	  (let ((label (car x)) (b (cdr x)))
-	    (case (syntactic-binding-type b)
+    (define (%make-export-env/macros lex* loc* lexenv.run)
+      (let f ((lexenv.run  lexenv.run)
+	      (env         '())
+	      (global*     '())
+	      (macro*      '()))
+	(if (null? lexenv.run)
+	    (values env global* macro*)
+	  (let* ((entry    (car lexenv.run))
+		 (label    (lexenv-entry-label   entry))
+		 (binding  (lexenv-entry-binding entry)))
+	    (case (syntactic-binding-type binding)
 	      ((lexical)
-	       (let ((v (syntactic-binding-value b)))
-		 (let ((loc (lookup (lexical-var v)))
-		       (type (if (lexical-mutable? v)
-				 'mutable
-			       'global)))
-		   (f (cdr lexenv.run)
-		      (cons (cons* label type loc) env)
-		      (cons (cons (lexical-var v) loc) global*)
-		      macro*))))
+	       ;;This binding is a lexical variable.
+	       ;;
+	       (let* ((bind-val  (syntactic-binding-value binding))
+		      (loc       (lookup (lexical-var bind-val) lex* loc*))
+		      (type      (if (lexical-mutable? bind-val)
+				     'mutable
+				   'global)))
+		 (f (cdr lexenv.run)
+		    (cons (cons* label type loc) env)
+		    (cons (cons (lexical-var bind-val) loc) global*)
+		    macro*)))
 
 	      ((local-macro)
 	       ;;Guessed meaning: when  we define a binding  for a syntax,
@@ -1660,7 +1651,7 @@
 		 (f (cdr lexenv.run)
 		    (cons (cons* label 'global-macro loc) env)
 		    global*
-		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-macro!)
 	       ;;Guessed meaning: when  we define a binding  for a syntax,
@@ -1672,7 +1663,7 @@
 		 (f (cdr lexenv.run)
 		    (cons (cons* label 'global-macro! loc) env)
 		    global*
-		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-ctv)
 	       ;;Guessed  meaning:   when  we  define  a   binding  for  a
@@ -1684,18 +1675,31 @@
 		 (f (cdr lexenv.run)
 		    (cons (cons* label 'global-ctv loc) env)
 		    global*
-		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid)
-	       (f (cdr lexenv.run) (cons x env) global* macro*))
+	       (f (cdr lexenv.run) (cons entry env) global* macro*))
 
 	      (else
 	       (assertion-violation 'expander
 		 "BUG: do not know how to export"
-		 (syntactic-binding-type  b)
-		 (syntactic-binding-value b)))))))))
+		 (syntactic-binding-type  binding)
+		 (syntactic-binding-value binding))))))))
 
-  (define (%validate-exports export-spec* export-subst export-env)
+    (define (lookup lexical-gensym lex* loc*)
+      ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
+      ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
+      ;;item in LEX*.
+      ;;
+      (if (pair? lex*)
+	  (if (eq? lexical-gensym (car lex*))
+	      (car loc*)
+	    (lookup lexical-gensym (cdr lex*) (cdr loc*)))
+	(assertion-violation 'lookup-make-export "BUG")))
+
+    #| end of module: %make-export-env/macros |# )
+
+  (define (%validate-exports export-spec* export-subst lexenv.export)
     ;;We want to forbid code like the following:
     ;;
     ;;    (library (proof)
@@ -1709,7 +1713,7 @@
     ;;
     (unless (%expanding-program? export-spec*)
       (for-each (lambda (subst)
-		  (cond ((assq (subst-entry-label subst) export-env)
+		  (cond ((assq (subst-entry-label subst) lexenv.export)
 			 => (lambda (entry)
 			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding entry)))
 				(syntax-violation 'export
