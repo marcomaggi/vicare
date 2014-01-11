@@ -1635,7 +1635,9 @@
 	       ;;   (?label . (?type . ?loc))
 	       ;;
 	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
-	       ;;"global".
+	       ;;"global".  Notice  that entries  of type  "mutable" are
+	       ;;forbidden; here  we add them nevertheless,  delaying to
+	       ;;later the validation of the LEXENV.EXPORT.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (lookup (lexical-var bind-val) lex* loc*))
