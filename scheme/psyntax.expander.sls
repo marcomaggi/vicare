@@ -1562,7 +1562,7 @@
 		    (let ((loc*          (map gen-global lex*))
 			  (export-subst  (%make-export-subst exp-name* exp-id*)))
 		      (receive (export-env global* macro*)
-			  (make-export-env/macros lex* loc* lexenv.run)
+			  (%make-export-env/macros lex* loc* lexenv.run)
 			(unless (%expanding-program? export-spec*)
 			  (for-each
 			      (lambda (s)
@@ -1607,6 +1607,84 @@
 		 (cons name label)
 	       (stx-error id "cannot export unbound identifier"))))
       name* id*))
+
+  (define (%make-export-env/macros lex* loc* lexenv.run)
+
+    (define (lookup x)
+      (let recur ((x    x)
+		  (lex* lex*)
+		  (loc* loc*))
+	(if (pair? lex*)
+	    (if (eq? x (car lex*))
+		(car loc*)
+	      (recur x (cdr lex*) (cdr loc*)))
+	  (assertion-violation 'lookup-make-export "BUG"))))
+
+    (let f ((lexenv.run  lexenv.run)
+	    (env         '())
+	    (global*     '())
+	    (macro*      '()))
+      (if (null? lexenv.run)
+	  (values env global* macro*)
+	(let ((x (car lexenv.run)))
+	  (let ((label (car x)) (b (cdr x)))
+	    (case (syntactic-binding-type b)
+	      ((lexical)
+	       (let ((v (syntactic-binding-value b)))
+		 (let ((loc (lookup (lexical-var v)))
+		       (type (if (lexical-mutable? v)
+				 'mutable
+			       'global)))
+		   (f (cdr lexenv.run)
+		      (cons (cons* label type loc) env)
+		      (cons (cons (lexical-var v) loc) global*)
+		      macro*))))
+
+	      ((local-macro)
+	       ;;Guessed meaning: when  we define a binding  for a syntax,
+	       ;;the local  code sees  it as  "local-macro"; if  we export
+	       ;;such   binding:   the  importer   must   see   it  as   a
+	       ;;"global-macro".
+	       ;;
+	       (let ((loc (gensym)))
+		 (f (cdr lexenv.run)
+		    (cons (cons* label 'global-macro loc) env)
+		    global*
+		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+
+	      ((local-macro!)
+	       ;;Guessed meaning: when  we define a binding  for a syntax,
+	       ;;the local  code sees it  as "local-macro!"; if  we export
+	       ;;such   binding:   the  importer   must   see   it  as   a
+	       ;;"global-macro!".
+	       ;;
+	       (let ((loc (gensym)))
+		 (f (cdr lexenv.run)
+		    (cons (cons* label 'global-macro! loc) env)
+		    global*
+		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+
+	      ((local-ctv)
+	       ;;Guessed  meaning:   when  we  define  a   binding  for  a
+	       ;;compile-time  value  (CTV), the  local  code  sees it  as
+	       ;;"local-ctv"; if we export such binding: the importer must
+	       ;;see it as a global CTV.
+	       ;;
+	       (let ((loc (gensym)))
+		 (f (cdr lexenv.run)
+		    (cons (cons* label 'global-ctv loc) env)
+		    global*
+		    (cons (cons loc (syntactic-binding-value b)) macro*))))
+
+	      (($rtd $module $fluid)
+	       (f (cdr lexenv.run) (cons x env) global* macro*))
+
+	      (else
+	       (assertion-violation 'expander
+		 "BUG: do not know how to export"
+		 (syntactic-binding-type  b)
+		 (syntactic-binding-value b)))))))))
+
 
   #| end of module: LIBRARY-BODY-EXPANDER |# )
 
@@ -1805,7 +1883,7 @@
 
 ;;Accessors for the pair value in a binding list.
 ;;
-(define lexical-var car)
+(define lexical-var      car)
 (define lexical-mutable? cdr)
 
 ;;Mutator for the mutable boolean in a pair value of a binding list.
@@ -9453,73 +9531,6 @@
 #| end of module |# )
 
 
-(define (make-export-env/macros lex* loc* r)
-  (define (lookup x)
-    (let f ((x x) (lex* lex*) (loc* loc*))
-      (cond
-       ((pair? lex*)
-	(if (eq? x (car lex*))
-	    (car loc*)
-	  (f x (cdr lex*) (cdr loc*))))
-       (else (assertion-violation 'lookup-make-export "BUG")))))
-  (let f ((r r) (env '()) (global* '()) (macro* '()))
-    (cond
-     ((null? r) (values env global* macro*))
-     (else
-      (let ((x (car r)))
-	(let ((label (car x)) (b (cdr x)))
-	  (case (syntactic-binding-type b)
-	    ((lexical)
-	     (let ((v (syntactic-binding-value b)))
-	       (let ((loc (lookup (lexical-var v)))
-		     (type (if (lexical-mutable? v)
-			       'mutable
-			     'global)))
-		 (f (cdr r)
-		    (cons (cons* label type loc) env)
-		    (cons (cons (lexical-var v) loc) global*)
-		    macro*))))
-	    ((local-macro)
-	     ;;Guessed meaning: when  we define a binding  for a syntax,
-	     ;;the local  code sees  it as  "local-macro"; if  we export
-	     ;;such   binding:   the  importer   must   see   it  as   a
-	     ;;"global-macro".
-	     ;;
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-macro loc) env)
-		  global*
-		  (cons (cons loc (syntactic-binding-value b)) macro*))))
-	    ((local-macro!)
-	     ;;Guessed meaning: when  we define a binding  for a syntax,
-	     ;;the local  code sees it  as "local-macro!"; if  we export
-	     ;;such   binding:   the  importer   must   see   it  as   a
-	     ;;"global-macro!".
-	     ;;
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-macro! loc) env)
-		  global*
-		  (cons (cons loc (syntactic-binding-value b)) macro*))))
-	    ((local-ctv)
-	     ;;Guessed  meaning:   when  we  define  a   binding  for  a
-	     ;;compile-time  value  (CTV), the  local  code  sees it  as
-	     ;;"local-ctv"; if we export such binding: the importer must
-	     ;;see it as a global CTV.
-	     ;;
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-ctv loc) env)
-		  global*
-		  (cons (cons loc (syntactic-binding-value b)) macro*))))
-	    (($rtd $module $fluid)
-	     (f (cdr r) (cons x env) global* macro*))
-	    (else
-	     (assertion-violation 'expander
-	       "BUG: do not know how to export"
-	       (syntactic-binding-type  b)
-	       (syntactic-binding-value b))))))))))
-
 (define generate-temporaries
   (lambda (ls)
     (syntax-match ls ()
