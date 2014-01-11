@@ -1866,33 +1866,35 @@
 ;;
 (define make-binding cons)
 
-;;Given a binding return its type: a symbol.
+;;Given a binding, return its type: a symbol.
 ;;
 (define syntactic-binding-type car)
 
-;;Given a binding return  is value: a pair.  The car of  the pair is the
-;;lexical  variable; the  cdr  is  a boolean,  true  if  the binding  is
-;;mutable.
+;;Given a binding, return its value: a pair.
 ;;
 (define syntactic-binding-value cdr)
+
+;;; --------------------------------------------------------------------
+;;; lexical variable bindings
 
 ;;Generate a  unique symbol to  represent the name  of a binding  in the
 ;;core language forms.
 ;;
 (define gensym-for-lexical-var %generate-unique-symbol)
 
-;;Accessors for the pair value in a binding list.
+;;Accessors for the value in a lexical variable binding.
 ;;
 (define lexical-var      car)
 (define lexical-mutable? cdr)
 
-;;Mutator for the mutable boolean in a pair value of a binding list.
+;;Mutator for the mutable boolean in a lexical variable binding.
 ;;
 (define set-lexical-mutable! set-cdr!)
 
-(define (add-lexical label lexvar lexenv)
-  ;;Push a  new entry on the  lexical environment LEXENV and  return the
-  ;;resulting lexical environment.
+(define (add-lexical-binding label lexvar lexenv)
+  ;;Push on the  lexical environment LEXENV a new  entry representing an
+  ;;immutable  lexical variable  binding; return  the resulting  lexical
+  ;;environment.
   ;;
   ;;LABEL must be a unique symbol identifying a binding.  LEXVAR must be
   ;;a symbol representing  the name of the binding in  the core language
@@ -1901,18 +1903,19 @@
   (cons (cons* label 'lexical lexvar #f)
 	lexenv))
 
-(define (add-lexicals label* lexvar* lexenv)
-  ;;Push multiple entries  to the lexical environment  LEXENV and return
-  ;;the resulting lexical environment.
+(define (add-lexical-bindings label* lexvar* lexenv)
+  ;;Push on the lexical environment LEXENV multiple entries representing
+  ;;immutable lexical  variable bindings;  return the  resulting lexical
+  ;;environment.
   ;;
   ;;LABEL*  must  be a  list  of  unique symbols  identifying  bindings.
   ;;LEXVAR* must  be a  list of  symbols representing  the names  of the
-  ;;binding in the core language forms.
+  ;;bindings in the core language forms.
   ;;
   (if (null? label*)
       lexenv
-    (add-lexicals ($cdr label*) ($cdr lexvar*)
-		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
+    (add-lexical-bindings ($cdr label*) ($cdr lexvar*)
+			  (add-lexical-binding ($car label*) ($car lexvar*) lexenv))))
 
 ;;; --------------------------------------------------------------------
 ;;; local macro with non-variable transformer bindings
@@ -2539,6 +2542,21 @@
 	 '() #;ae*
 	 ))
 
+;;; --------------------------------------------------------------------
+
+(define (expression-position x)
+  (if (<stx>? x)
+      (let ((x (<stx>-expr x)))
+	(if (annotation? x)
+	    (annotation-textual-position x)
+	  (condition)))
+    (condition)))
+
+(define (syntax-annotation x)
+  (if (<stx>? x)
+      (<stx>-expr x)
+    x))
+
 
 ;;;; syntax objects and marks
 
@@ -2888,6 +2906,35 @@
     (if (symbol? sym)
 	sym
       (%error))))
+
+(define (generate-temporaries list-stx)
+  (syntax-match list-stx ()
+    ((?item* ...)
+     (map (lambda (x)
+	    (make-<stx> (let ((x (syntax->datum x)))
+			  (if (or (symbol? x)
+				  (string? x))
+			      (gensym x)
+			    (gensym 't)))
+			top-mark* '() '()))
+       ?item*))
+    (_
+     (assertion-violation 'generate-temporaries
+       "not a list" list-stx))))
+
+(define (free-identifier=? x y)
+  (if (identifier? x)
+      (if (identifier? y)
+	  (free-id=? x y)
+	(assertion-violation 'free-identifier=? "not an identifier" y))
+    (assertion-violation 'free-identifier=? "not an identifier" x)))
+
+(define (bound-identifier=? x y)
+  (if (identifier? x)
+      (if (identifier? y)
+	  (bound-id=? x y)
+	(assertion-violation 'bound-identifier=? "not an identifier" y))
+    (assertion-violation 'bound-identifier=? "not an identifier" x)))
 
 
 ;;;; utilities for identifiers
@@ -6543,7 +6590,7 @@
 	   ;;Notice that the region of  all the LETREC bindings includes
 	   ;;all the right-hand sides.
 	   (let ((rib        (make-full-rib ?lhs* lab*))
-		 (lexenv.run (add-lexicals lab* lex* lexenv.run)))
+		 (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
 	     ;;Create  the   lexical  contour  then  process   body  and
 	     ;;right-hand sides of bindings.
 	     (let ((body (chi-internal-body (push-lexical-contour rib (cons ?body ?body*))
@@ -8884,7 +8931,7 @@
 	  (values lex*
 		  (chi-internal-body (push-lexical-contour (make-full-rib x* lab*)
 							   body*)
-				     (add-lexicals lab* lex* lexenv.run)
+				     (add-lexical-bindings lab* lex* lexenv.run)
 				     lexenv.expand)))))
      ((x* ... . x)
       (begin
@@ -8897,7 +8944,7 @@
 		  (chi-internal-body (push-lexical-contour (make-full-rib (cons x   x*)
 									  (cons lab lab*))
 							   body*)
-				     (add-lexicals (cons lab lab*) (cons lex lex*) lexenv.run)
+				     (add-lexical-bindings (cons lab lab*) (cons lex lex*) lexenv.run)
 				     lexenv.expand)))))
      (_
       (stx-error fmls "invalid syntax")))))
@@ -9066,7 +9113,7 @@
 		      (gen-define-label+loc id rib sd?)
 		    (extend-rib! rib id lab sd?)
 		    (chi-body* (cdr body-expr*)
-			       (add-lexical lab lex lexenv.run) lexenv.expand
+			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
 			       (cons lex lex*) (cons rhs rhs*)
 			       mod** kwd* export-spec* rib mix? sd?))))
 
@@ -9531,61 +9578,6 @@
 #| end of module |# )
 
 
-(define generate-temporaries
-  (lambda (ls)
-    (syntax-match ls ()
-      ((ls ...)
-       (map (lambda (x)
-	      (make-<stx>
-	       (let ((x (syntax->datum x)))
-		 (cond
-		  ((or (symbol? x) (string? x))
-		   (gensym x))
-		  (else (gensym 't))))
-	       top-mark* '() '()))
-	 ls))
-      (_
-       (assertion-violation 'generate-temporaries "not a list")))))
-
-(define free-identifier=?
-  (lambda (x y)
-    (if (identifier? x)
-	(if (identifier? y)
-	    (free-id=? x y)
-	  (assertion-violation 'free-identifier=? "not an identifier" y))
-      (assertion-violation 'free-identifier=? "not an identifier" x))))
-
-(define bound-identifier=?
-  (lambda (x y)
-    (if (identifier? x)
-	(if (identifier? y)
-	    (bound-id=? x y)
-	  (assertion-violation 'bound-identifier=? "not an identifier" y))
-      (assertion-violation 'bound-identifier=? "not an identifier" x))))
-
-(define (expression->source-position-condition x)
-  (expression-position x))
-
-(define (expression-position x)
-  (if (<stx>? x)
-      (let ((x (<stx>-expr x)))
-	(if (annotation? x)
-	    (annotation-textual-position x)
-	  (condition)))
-    (condition)))
-
-(define (syntax-annotation x)
-  (if (<stx>? x) (<stx>-expr x) x))
-
-		;  (define (syntax-annotation x)
-		;    (if (<stx>? x)
-		;        (let ((expr (<stx>-expr x)))
-		;          (if (annotation? x)
-		;              x
-		;              (syntax->datum x)))
-		;        (syntax->datum x)))
-
-
 ;;;; errors
 
 (define (assertion-error expr source-identifier
@@ -9724,6 +9716,9 @@
 	     (make-trace (make-<stx> x '() '() '())))
 	    (else
 	     (condition)))))
+
+  (define (expression->source-position-condition x)
+    (expression-position x))
 
   #| end of module |# )
 
