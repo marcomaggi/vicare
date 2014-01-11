@@ -1568,13 +1568,12 @@
 			      (lambda (s)
 				(let ((name  (car s))
 				      (label (cdr s)))
-				  (let ((p (assq label export-env)))
-				    (when p
-				      (let ((b (cdr p)))
-					(let ((type (car b)))
-					  (when (eq? type 'mutable)
-					    (syntax-violation 'export
-					      "attempt to export mutated variable" name))))))))
+				  (let ((entry (assq label export-env)))
+				    (when entry
+				      (let ((binding (cdr entry)))
+					(when (eq? 'mutable (syntactic-binding-type binding))
+					  (syntax-violation 'export
+					    "attempt to export mutated variable" name)))))))
 			    export-subst))
 			(let ((invoke-body
 			       (build-library-letrec* no-source
