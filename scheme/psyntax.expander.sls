@@ -570,7 +570,7 @@
   ;;core-form;  register  it  with   the  library  manager;  return  its
   ;;invoke-code, visit-code, subst and env.
   ;;
-  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
+  ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
   ;;   (library . _)
   ;;
@@ -591,8 +591,8 @@
   (case-lambda
    ((library-sexp filename verify-name)
     (define (build-visit-code macro*)
-      ;;Return a symbolic expression  representing MACRO* definitions in
-      ;;the core language.
+      ;;Return  a  sexp  representing  MACRO* definitions  in  the  core
+      ;;language.
       ;;
       (if (null? macro*)
 	  (build-void)
@@ -643,8 +643,8 @@
 
 
 (define (core-library-expander library-sexp verify-name)
-  ;;Given a SYNTAX-MATCH expression argument representing a LIBRARY form
-  ;;symbolic expression:
+  ;;Given  a SYNTAX-MATCH  expression  argument  representing a  LIBRARY
+  ;;form:
   ;;
   ;;   (library . _)
   ;;
@@ -1550,7 +1550,7 @@
 	      ;;library.
 	      ;;
 	      ;;LEX*  is  a  list  of  gensyms to  be  used  in  binding
-	      ;;definitions  when  building   recordised  core  language
+	      ;;definitions   when  building   core  language   symbolic
 	      ;;expressions for the DEFINE  forms in the library.  There
 	      ;;is a gensym for every item in RHS-FORM*.
 	      ;;
@@ -1569,12 +1569,11 @@
 					  (append (map wrap export-spec*)
 						  internal-export*)))
 		  (seal-rib! rib)
-		  ;;CORE-INIT-FORM*   is  a   list   of  core   language
-		  ;;recordised   code   expressions   representing   the
-		  ;;trailing init forms.
+		  ;;CORE-INIT-FORM* is a list  of core language symbolic
+		  ;;expressions representing the trailing init forms.
 		  ;;
-		  ;;CORE-RHS-FORM* is a list of core language recordised
-		  ;;code expressions representing  the DEFINE right-hand
+		  ;;CORE-RHS-FORM* is  a list of core  language symbolic
+		  ;;expressions   representing  the   DEFINE  right-hand
 		  ;;sides.
 		  ;;
 		  ;;We want order here!?!
@@ -1583,6 +1582,15 @@
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gen-global lex*))
 			  (export-subst  (%make-export-subst exp-name* exp-id*)))
+		      ;;LEXENV.EXPORT  is  the  lexical  environment  of
+		      ;;bindings exported by the library.
+		      ;;
+		      ;;GLOBAL* is an alist whose with an entry for each
+		      ;;DEFINE variable.  The keys are gensyms acting as
+		      ;;lexical  variables  in  core  language  symbolic
+		      ;;expressions.  The  values are gensyms  acting as
+		      ;;locations  in  which  the  variable's  value  is
+		      ;;stored.
 		      (receive (lexenv.export global* macro*)
 			  (%make-export-env/macros lex* loc* lexenv.run)
 			(%validate-exports export-spec* export-subst lexenv.export)
@@ -1640,7 +1648,7 @@
 	       ;;later the validation of the LEXENV.EXPORT.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
-		      (loc       (lookup (lexical-var bind-val) lex* loc*))
+		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
 		      (type      (if (lexical-mutable? bind-val)
 				     'mutable
 				   'global)))
@@ -1650,9 +1658,9 @@
 		       macro*)))
 
 	      ((local-macro)
-	       ;;Guessed meaning: when  we define a binding  for a syntax,
-	       ;;the local  code sees  it as  "local-macro"; if  we export
-	       ;;such   binding:   the  importer   must   see   it  as   a
+	       ;;When we  define a binding for  a non-identifier syntax:
+	       ;;the local code sees it  as "local-macro".  If we export
+	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro".
 	       ;;
 	       (let ((loc (gensym)))
@@ -1662,9 +1670,9 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-macro!)
-	       ;;Guessed meaning: when  we define a binding  for a syntax,
-	       ;;the local  code sees it  as "local-macro!"; if  we export
-	       ;;such   binding:   the  importer   must   see   it  as   a
+	       ;;When we define a binding  for an identifier syntax: the
+	       ;;local  code sees  it as  "local-macro!".  If  we export
+	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro!".
 	       ;;
 	       (let ((loc (gensym)))
@@ -1674,10 +1682,10 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-ctv)
-	       ;;Guessed  meaning:   when  we  define  a   binding  for  a
-	       ;;compile-time  value  (CTV), the  local  code  sees it  as
-	       ;;"local-ctv"; if we export such binding: the importer must
-	       ;;see it as a global CTV.
+	       ;;When  we  define a  binding  for  a compile-time  value
+	       ;;(CTV): the  local code sees  it as "local-ctv".   If we
+	       ;;export  such binding:  the importer  must see  it as  a
+	       ;;"global-ctv".
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
@@ -1686,7 +1694,11 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid)
-	       (loop (cdr lexenv.run) (cons entry lexenv.export) global* macro*))
+	       ;;Just the entry "as is" to the export lexenv.
+	       ;;
+	       (loop (cdr lexenv.run)
+		     (cons entry lexenv.export)
+		     global* macro*))
 
 	      (else
 	       (assertion-violation 'expander
@@ -1694,7 +1706,7 @@
 		 (syntactic-binding-type  binding)
 		 (syntactic-binding-value binding))))))))
 
-    (define (lookup lexical-gensym lex* loc*)
+    (define (%lookup lexical-gensym lex* loc*)
       ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
       ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
       ;;item in LEX*.
@@ -1702,7 +1714,7 @@
       (if (pair? lex*)
 	  (if (eq? lexical-gensym (car lex*))
 	      (car loc*)
-	    (lookup lexical-gensym (cdr lex*) (cdr loc*)))
+	    (%lookup lexical-gensym (cdr lex*) (cdr loc*)))
 	(assertion-violation 'lookup-make-export "BUG")))
 
     #| end of module: %make-export-env/macros |# )
@@ -2003,8 +2015,8 @@
 
 (define (make-local-compile-time-value-binding obj expanded-expr)
   ;;Given as arguments:  the actual object computed  from a compile-time
-  ;;expression and recordised code  representing the original expression
-  ;;already expanded, build and return a syntax binding.
+  ;;expression  and  a  core  language sexp  representing  the  original
+  ;;expression already expanded, build and return a syntax binding.
   ;;
   (cons* 'local-ctv obj expanded-expr))
 
@@ -2443,10 +2455,10 @@
   ;;Every identifier in the program will have a label associated with it
   ;;in its substitution; this function generates such labels.
   ;;
-  ;;The  labels  have to  have  read/write  EQ?   invariance to  support
-  ;;separate compilation (when we write the expanded symbolic expression
-  ;;to a  file and  then read it  back, the  labels must not  change and
-  ;;still be globally unique).
+  ;;The  labels  have to  have  read/write  EQ?  invariance  to  support
+  ;;separate compilation (when we write the  expanded sexp to a file and
+  ;;then read it back, the labels  must not change and still be globally
+  ;;unique).
   ;;
   (gensym))
 
@@ -2545,15 +2557,13 @@
 (define (mkstx stx/expr mark* subst* ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
-  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
-  ;;wrapped syntax object.  MARK* is a  list of marks.  SUBST* is a list
-  ;;of substs.
+  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;object.  MARK* is a list of marks.  SUBST* is a list of substs.
   ;;
   ;;AE* == annotated expressions???
   ;;
-  ;;When STX/EXPR is a raw symbolic  expression: just build and return a
-  ;;new syntax  object with the  lexical context described by  the given
-  ;;arguments.
+  ;;When STX/EXPR  is a  raw sexp:  just build and  return a  new syntax
+  ;;object with the lexical context described by the given arguments.
   ;;
   ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
   ;;given wraps, making sure that marks and anti-marks and corresponding
@@ -2567,15 +2577,14 @@
     (make-<stx> stx/expr mark* subst* ae*)))
 
 (define (bless x)
-  ;;Given a raw  symbolic expression, a single syntax  object, a wrapped
-  ;;syntax  object, an  unwrapped syntax  object or  a partly  unwrapped
-  ;;syntax  object X:  return a  syntax object  representing the  input,
-  ;;possibly X itself.
+  ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
+  ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
+  ;;return a syntax object representing the input, possibly X itself.
   ;;
-  ;;When X  is a symbolic  expression or a (partially)  unwrapped syntax
-  ;;object: raw  symbols in X  are considered references to  bindings in
-  ;;the core  language: they are  converted to identifiers  having empty
-  ;;lexical contexts.
+  ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
+  ;;symbols  in X  are considered  references  to bindings  in the  core
+  ;;language:  they are  converted to  identifiers having  empty lexical
+  ;;contexts.
   ;;
   (mkstx (let recur ((x x))
 	   (cond ((<stx>? x)
@@ -2760,8 +2769,8 @@
   ;;
   ;;RIB must be an instance of <RIB>.
   ;;
-  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
-  ;;wrapped syntax object.
+  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;object.
   ;;
   ;;This function prepares  a computation that will  be lazily performed
   ;;later; the RIB will be pushed on the stack of substitutions in every
@@ -3186,9 +3195,9 @@
 ;;      (syntax ?expression)
 ;;
 ;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
-;;   result is recordised code representing the expression.
+;;   result is a core language sexp representing the transformer.
 ;;
-;;3..The  recordised code  is  compiled and  evaluated  by the  function
+;;3..The   sexp   is   compiled    and   evaluated   by   the   function
 ;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
 ;;   "special value" with format:
 ;;
@@ -3265,9 +3274,9 @@
 ;;      (syntax ?expression)
 ;;
 ;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
-;;   result is recordised code representing the expression.
+;;   result is a core language sexp representing the right-hand side.
 ;;
-;;3..The  recordised code  is  compiled and  evaluated  by the  function
+;;3..The   sexp   is   compiled    and   evaluated   by   the   function
 ;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
 ;;   "special value" with format:
 ;;
@@ -3308,8 +3317,8 @@
   ;;
   ;;The actual matching between the input expression and the patterns is
   ;;performed  by   the  function   SYNTAX-DISPATCH;  the   patterns  in
-  ;;SYNTAX-MATCH are converted  to a symbolic expressions  and handed to
-  ;;SYNTAX-DISPATCH along with the input expression.
+  ;;SYNTAX-MATCH are converted to a  sexps and handed to SYNTAX-DISPATCH
+  ;;along with the input expression.
   ;;
   (let ()
     (define (transformer stx)
@@ -3389,7 +3398,7 @@
 	;;
 	;;Return 2 values:
 	;;
-	;;1. The pattern as symbolic expression.
+	;;1. The pattern as sexp.
 	;;
 	;;2.   An ordered  list of  pairs, each  representing a  pattern
 	;;   variable that must be bound whenever the body associated to
@@ -3751,9 +3760,9 @@
 ;;;; module non-core-macro-transformer: CASE
 
 (module (case-macro)
-  ;;Transformer function  used to expand  R6RS's CASE macros  from the
-  ;;top-level built in environment.   Expand the contents of EXPR-STX.
-  ;;Return a symbolic expression in the core language.
+  ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
+  ;;Return a sexp in the core language.
   ;;
   (define (case-macro expr-stx)
     (syntax-match expr-stx ()
@@ -4266,7 +4275,7 @@
 (define (record-type-and-record?-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;of EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?type-name ?record)
@@ -4368,7 +4377,7 @@
 (define (unwind-protect-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
   ;;make the body return continuations to  the caller and then come back
@@ -4394,7 +4403,7 @@
 (define (with-implicits-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (define (%make-bindings ctx ids)
     (map (lambda (id)
@@ -4427,7 +4436,7 @@
 (define (set-cons!-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
   ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?id ?obj)
@@ -4441,7 +4450,7 @@
 (define (eval-for-expand-macro expr-stx)
   ;;Transformer function used to  expand Vicare's EVAL-FOR-EXPAND macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
@@ -4676,7 +4685,7 @@
 (define (define-syntax*-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name)
@@ -5054,7 +5063,7 @@
   (module (define*-macro)
     ;;Transformer function  used to expand Vicare's  DEFINE* macros from
     ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;EXPR-STX.  Return a symbolic expression in the core language.
+    ;;EXPR-STX.  Return a sexp in the core language.
     ;;
     ;;We want to implement the following example expansions:
     ;;
@@ -5154,7 +5163,7 @@
     (define (case-define*-macro stx)
       ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
       ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a symbolic expression in the core language.
+      ;;EXPR-STX.  Return a sexp in the core language.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-define* message stx subform))
@@ -5225,7 +5234,7 @@
     (define (lambda*-macro stx)
       ;;Transformer function used to expand Vicare's LAMBDA* macros from
       ;;the  top-level built  in  environment.  Expand  the contents  of
-      ;;EXPR-STX.  Return a symbolic expression in the core language.
+      ;;EXPR-STX.  Return a sexp in the core language.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'lambda* message stx subform))
@@ -5287,7 +5296,7 @@
     (define (case-lambda*-macro stx)
       ;;Transformer function used to expand Vicare's CASE-LAMBDA* macros
       ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a symbolic expression in the core language.
+      ;;EXPR-STX.  Return a sexp in the core language.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-lambda* message stx subform))
@@ -6158,7 +6167,7 @@
 (define (define-values-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
@@ -6185,7 +6194,7 @@
 (define (define-constant-values-macro expr-stx)
   ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;of EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
@@ -6221,7 +6230,7 @@
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a symbolic expression in the core language.
+  ;;Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?form0 ?form* ...)
@@ -6234,7 +6243,7 @@
 (define (receive-and-return-macro expr-stx)
   ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;of EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
@@ -6249,7 +6258,7 @@
 (define (begin0-macro expr-stx)
   ;;Transformer function used to expand  Vicare's BEGIN0 macros from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a symbolic expression in the core language.
+  ;;Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?form0 ?form* ...)
@@ -6302,7 +6311,7 @@
 (define (define-inline-constant-macro expr-stx)
   ;;Transformer function used  to expand Vicare's DEFINE-INLINE-CONSTANT
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;of EXPR-STX.  Return a sexp in the core language.
   ;;
   ;;We want to allow a generic expression to generate the constant value
   ;;at expand time.
@@ -6322,7 +6331,7 @@
 (define (define-inline-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-INLINE macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;EXPR-STX.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
@@ -6353,7 +6362,7 @@
 (module (include-macro)
   ;;Transformer function used to expand Vicare's INCLUDE macros from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a symbolic expression in the core language.
+  ;;Return a sexp in the core language.
   ;;
   (define who 'include)
 
@@ -6609,8 +6618,8 @@
     ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
     ;;top-level built  in environment.  Expand the  contents of EXPR-STX
     ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
-    ;;LEXENV.EXPAND; return a  symbolic expression representing EXPR-STX
-    ;;fully expanded to the core language.
+    ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
+    ;;to the core language.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
 
@@ -6618,8 +6627,8 @@
     ;;Transformer  function used  to  expand LETREC*  syntaxes from  the
     ;;top-level built  in environment.  Expand the  contents of EXPR-STX
     ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
-    ;;LEXENV.EXPAND; return a  symbolic expression representing EXPR-STX
-    ;;fully expanded to the core language.
+    ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
+    ;;to the core language.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
 
@@ -6663,8 +6672,8 @@
   ;;Transformer function  used to expand FLUID-LET-SYNTAX  syntaxes from
   ;;the top-level built in environment.  Expand the contents of EXPR-STX
   ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND;  return a  symbolic expression  representing EXPR-STX
-  ;;fully expanded to the core language.
+  ;;LEXENV.EXPAND; return a sexp representing EXPR-STX fully expanded to
+  ;;the core language.
   ;;
   (define who 'expander)
 
@@ -6709,8 +6718,8 @@
   ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
   ;;contents  of EXPR-STX  in the  context of  the lexical  environments
   ;;LEXENV.RUN and LEXENV.EXPAND, the result must be a single identifier
-  ;;representing  a Vicare  struct type.   Return a  symbolic expression
-  ;;evaluating to the struct type descriptor.
+  ;;representing a Vicare struct type.   Return a sexp evaluating to the
+  ;;struct type descriptor.
   ;;
   ;;The binding in the lexical  environment representing the struct type
   ;;descriptor looks as follows:
@@ -6816,8 +6825,7 @@
     ;;in environment.  Expand the contents of EXPR-STX in the context of
     ;;the lexical environments LEXENV.RUN  and LEXENV.EXPAND, the result
     ;;must  be a  single  identifier representing  a  R6RS record  type.
-    ;;Return a  symbolic expression evaluating to  the record destructor
-    ;;descriptor.
+    ;;Return a sexp evaluating to the record destructor descriptor.
     ;;
     (define who 'record-constructor-descriptor-transformer)
     (syntax-match expr-stx ()
@@ -6838,7 +6846,7 @@
     ;;Transformer function  used to expand  R6RS's RECORD-TYPE-FIELD-REF
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and   LEXENV.EXPAND.   Return  recordized   code  that
+    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
     ;;accesses the value of a field from an R6RS record.
     ;;
     (define who 'record-type-field-ref)
@@ -6863,8 +6871,8 @@
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-FIELD-SET!
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and LEXENV.EXPAND.  Return recordized code that mutates
-    ;;the value of a field in an R6RS record.
+    ;;LEXENV.RUN  and LEXENV.EXPAND.   Return  core  language sexp  that
+    ;;mutates the value of a field in an R6RS record.
     ;;
     (define who 'record-type-field-set!)
     (syntax-match expr-stx ()
@@ -6888,7 +6896,7 @@
     ;;Transformer function used  to expand R6RS's $RECORD-TYPE-FIELD-REF
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and   LEXENV.EXPAND.   Return  recordized   code  that
+    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
     ;;accesses the value of a field from an R6RS record using the unsafe
     ;;accessor.
     ;;
@@ -6914,8 +6922,9 @@
     ;;Transformer function used to expand R6RS's $RECORD-TYPE-FIELD-SET!
     ;;syntax uses from  the top-level built in  environment.  Expand the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and LEXENV.EXPAND.  Return recordized code that mutates
-    ;;the value of a field in an R6RS record using the unsafe mutator.
+    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
+    ;;mutates the  value of a field  in an R6RS record  using the unsafe
+    ;;mutator.
     ;;
     (define who '$record-type-field-set!)
     (syntax-match expr-stx ()
@@ -6992,7 +7001,7 @@
   ;;Transformer  function used  to expand  R6RS's IF  syntaxes from  the
   ;;top-level built in environment.  Expand  the contents of EXPR-STX in
   ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;LEXENV.EXPAND.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?consequent ?alternate)
@@ -7013,7 +7022,7 @@
   ;;Transformer function used  to expand R6RS's QUOTE  syntaxes from the
   ;;top-level built in environment.  Expand  the contents of EXPR-STX in
   ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;LEXENV.EXPAND.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?datum)
@@ -7026,7 +7035,7 @@
   ;;Transformer function used to expand R6RS's CASE-LAMBDA syntaxes from
   ;;the top-level built in environment.  Expand the contents of EXPR-STX
   ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;LEXENV.EXPAND.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
@@ -7039,7 +7048,7 @@
   ;;Transformer function used to expand  R6RS's LAMBDA syntaxes from the
   ;;top-level built in environment.  Expand  the contents of EXPR-STX in
   ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;LEXENV.EXPAND.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?body ?body* ...)
@@ -7055,7 +7064,7 @@
   ;;Transformer function  used to expand Vicare's  FOREIGN-CALL syntaxes
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX in the  context of the lexical  environments LEXENV.RUN and
-  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;LEXENV.EXPAND.  Return a sexp in the core language.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name ?arg* ...)
@@ -7091,7 +7100,7 @@
   ;;?SUBTEMPLATE  is  a  template  followed by  zero  or  more  ellipsis
   ;;identifiers.
   ;;
-  ;;Return a symbolic expression representing  code in the core language
+  ;;Return a sexp representing  code in the core language
   ;;which, when evaluated, returns a  wrapped or unwrapped syntax object
   ;;containing an expression in which:
   ;;
@@ -7800,7 +7809,7 @@
   ;;Given a syntax  object representing the right-hand side  of a syntax
   ;;definition      (DEFINE-SYNTAX,      LET-SYNTAX,      LETREC-SYNTAX,
   ;;DEFINE-FLUID-SYNTAX,   FLUID-LET-SYNTAX):    expand   it,   invoking
-  ;;libraries as needed, and return recordised code in the core language
+  ;;libraries as needed, and return  a core language sexp
   ;;representing transformer expression.
   ;;
   ;;Usually   the  return   value  of   this  function   is  handed   to
@@ -7835,10 +7844,9 @@
     expanded-rhs))
 
 (define (%eval-macro-transformer expanded-expr)
-  ;;Given  recordised  code  in   the  core  language  representing  the
-  ;;expression  of a  macro transformer:  convert it  to core  language,
-  ;;evaluate it and return a  proper syntactic binding for the resulting
-  ;;object.
+  ;;Given a  core language sexp  representing the expression of  a macro
+  ;;transformer: evaluate it  and return a proper  syntactic binding for
+  ;;the resulting object.
   ;;
   ;;Usually  this   function  is   applied  to   the  return   value  of
   ;;%EXPAND-MACRO-TRANSFORMER.
@@ -7963,7 +7971,7 @@
   ;;   representing  the ellipsis  nesting  level  of the  corresponding
   ;;  pattern variable.  See SYNTAX-TRANSFORMER for details.
   ;;
-  ;;The returned  pattern for  SYNTAX-DISPATCH is a  symbolic expression
+  ;;The returned  pattern for  SYNTAX-DISPATCH is a  sexp
   ;;with the following format:
   ;;
   ;; P in pattern:                    |  matches:
