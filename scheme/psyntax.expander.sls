@@ -1595,11 +1595,17 @@
 			  (%make-export-env/macros lex* loc* lexenv.run)
 			(%validate-exports export-spec* export-subst lexenv.export)
 			(let ((invoke-body (build-library-letrec* no-source
-								  mix?
-								  lex* loc* core-rhs-form*
+								  mix? lex* loc* core-rhs-form*
 								  (if (null? core-init-form*)
 								      (build-void)
 								    (build-sequence no-source core-init-form*))))
+			      ;;Psyntax   was  originally   written  for
+			      ;;multiple Scheme implemenrations.  If the
+			      ;;implementation requires  that all global
+			      ;;variables  be   defined  before  they're
+			      ;;SET!ed, then INVOKE-DEFINITIONS contains
+			      ;;such definitions.
+			      ;;
 			      (invoke-definitions (map build-global-define (map cdr global*))))
 			  (values (itc) (rtc) (vtc)
 				  (build-sequence no-source
