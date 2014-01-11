@@ -1618,28 +1618,34 @@
   (module (%make-export-env/macros)
 
     (define (%make-export-env/macros lex* loc* lexenv.run)
-      (let f ((lexenv.run  lexenv.run)
-	      (env         '())
-	      (global*     '())
-	      (macro*      '()))
+      (let loop ((lexenv.run		lexenv.run)
+		 (lexenv.export		'())
+		 (global*		'())
+		 (macro*		'()))
 	(if (null? lexenv.run)
-	    (values env global* macro*)
+	    (values lexenv.export global* macro*)
 	  (let* ((entry    (car lexenv.run))
 		 (label    (lexenv-entry-label   entry))
 		 (binding  (lexenv-entry-binding entry)))
 	    (case (syntactic-binding-type binding)
 	      ((lexical)
-	       ;;This binding is a lexical variable.
+	       ;;This binding is a lexical  variable.  Add to the export
+	       ;;lexical environment an entry like:
+	       ;;
+	       ;;   (?label . (?type . ?loc))
+	       ;;
+	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
+	       ;;"global".
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (lookup (lexical-var bind-val) lex* loc*))
 		      (type      (if (lexical-mutable? bind-val)
 				     'mutable
 				   'global)))
-		 (f (cdr lexenv.run)
-		    (cons (cons* label type loc) env)
-		    (cons (cons (lexical-var bind-val) loc) global*)
-		    macro*)))
+		 (loop (cdr lexenv.run)
+		       (cons (cons* label type loc) lexenv.export)
+		       (cons (cons (lexical-var bind-val) loc) global*)
+		       macro*)))
 
 	      ((local-macro)
 	       ;;Guessed meaning: when  we define a binding  for a syntax,
@@ -1648,10 +1654,10 @@
 	       ;;"global-macro".
 	       ;;
 	       (let ((loc (gensym)))
-		 (f (cdr lexenv.run)
-		    (cons (cons* label 'global-macro loc) env)
-		    global*
-		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		 (loop (cdr lexenv.run)
+		       (cons (cons* label 'global-macro loc) lexenv.export)
+		       global*
+		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-macro!)
 	       ;;Guessed meaning: when  we define a binding  for a syntax,
@@ -1660,10 +1666,10 @@
 	       ;;"global-macro!".
 	       ;;
 	       (let ((loc (gensym)))
-		 (f (cdr lexenv.run)
-		    (cons (cons* label 'global-macro! loc) env)
-		    global*
-		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		 (loop (cdr lexenv.run)
+		       (cons (cons* label 'global-macro! loc) lexenv.export)
+		       global*
+		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-ctv)
 	       ;;Guessed  meaning:   when  we  define  a   binding  for  a
@@ -1672,13 +1678,13 @@
 	       ;;see it as a global CTV.
 	       ;;
 	       (let ((loc (gensym)))
-		 (f (cdr lexenv.run)
-		    (cons (cons* label 'global-ctv loc) env)
-		    global*
-		    (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		 (loop (cdr lexenv.run)
+		       (cons (cons* label 'global-ctv loc) lexenv.export)
+		       global*
+		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid)
-	       (f (cdr lexenv.run) (cons entry env) global* macro*))
+	       (loop (cdr lexenv.run) (cons entry lexenv.export) global* macro*))
 
 	      (else
 	       (assertion-violation 'expander
