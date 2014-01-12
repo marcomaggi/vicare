@@ -520,8 +520,8 @@
 	(%parse-top-level-program expr*)
       (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
 	  (begin
-	    (import LIBRARY-BODY-EXPANDER)
-	    (library-body-expander 'all import-spec* body* #t))
+	    (import CORE-BODY-EXPANDER)
+	    (core-body-expander 'all import-spec* body* #t))
 	(values invoke-req* invoke-code macro* export-subst export-env))))
 
   (define (%parse-top-level-program expr*)
@@ -676,8 +676,8 @@
 	  (receive (import-spec* invoke-req* visit-req* invoke-code visit-code export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
 		(begin
-		  (import LIBRARY-BODY-EXPANDER)
-		  (library-body-expander export-spec* import-spec* body* #f)))
+		  (import CORE-BODY-EXPANDER)
+		  (core-body-expander export-spec* import-spec* body* #f)))
 	    (receive (guard-code guard-req*)
 		(stale-clt)
 	      (values libname.ids libname.version
@@ -754,8 +754,8 @@
   #| end of module: CORE-LIBRARY-EXPANDER |# )
 
 
-(module LIBRARY-BODY-EXPANDER
-  (library-body-expander)
+(module CORE-BODY-EXPANDER
+  (core-body-expander)
   ;;Both the R6RS  programs expander and the R6RS  library expander make
   ;;use of this module to expand the body forms.
   ;;
@@ -792,7 +792,7 @@
   ;;
   ;;7. ...
   ;;
-  (define (library-body-expander export-spec* import-spec* body* mix?)
+  (define (core-body-expander export-spec* import-spec* body* mix?)
     (define itc (make-collector))
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
@@ -1013,7 +1013,7 @@
 				  "attempt to export mutated variable" (subst-entry-name subst)))))))
 	export-subst)))
 
-  #| end of module: LIBRARY-BODY-EXPANDER |# )
+  #| end of module: CORE-BODY-EXPANDER |# )
 
 
 (module PARSE-EXPORT-SPEC
@@ -6746,7 +6746,7 @@
   ;;
   ;;where "$rtd" is the symbol "$rtd".
   ;;
-  (define who 'type-descriptor)
+  (define-constant __who__ 'type-descriptor)
   (define (%struct-type-descriptor-binding? binding)
     (and (eq? '$rtd (syntactic-binding-type binding))
 	 (not (list? (syntactic-binding-value binding)))))
@@ -6755,10 +6755,10 @@
      (identifier? ?identifier)
      (let ((label (id->label ?identifier)))
        (unless label
-	 (%raise-unbound-error who expr-stx ?identifier))
+	 (%raise-unbound-error __who__ expr-stx ?identifier))
        (let ((binding (label->syntactic-binding label lexenv.run)))
 	 (unless (%struct-type-descriptor-binding? binding)
-	   (syntax-violation who "not a struct type" expr-stx ?identifier))
+	   (syntax-violation __who__ "not a struct type" expr-stx ?identifier))
 	 (build-data no-source (syntactic-binding-value binding)))))))
 
 
@@ -6821,16 +6821,16 @@
     ;;identifier  representing a  R6RS record  type.  Return  a symbolic
     ;;expression evaluating to the record type descriptor.
     ;;
-    (define who 'record-type-descriptor)
+    (define-constant __who__ 'record-type-descriptor)
     (syntax-match expr-stx ()
       ((_ ?identifier)
        (identifier? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?identifier))
+	   (%raise-unbound-error __who__ expr-stx ?identifier))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-violation who "not a record type" expr-stx ?identifier))
+	     (syntax-violation __who__ "not a record type" expr-stx ?identifier))
 	   (chi-expr (car (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
@@ -6842,16 +6842,16 @@
     ;;must  be a  single  identifier representing  a  R6RS record  type.
     ;;Return a sexp evaluating to the record destructor descriptor.
     ;;
-    (define who 'record-constructor-descriptor-transformer)
+    (define-constant __who__ 'record-constructor-descriptor-transformer)
     (syntax-match expr-stx ()
       ((_ ?identifier)
        (identifier? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?identifier))
+	   (%raise-unbound-error __who__ expr-stx ?identifier))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-error who "invalid type" expr-stx ?identifier))
+	     (syntax-error __who__ "invalid type" expr-stx ?identifier))
 	   (chi-expr (cadr (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
@@ -6864,21 +6864,21 @@
     ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
     ;;accesses the value of a field from an R6RS record.
     ;;
-    (define who 'record-type-field-ref)
+    (define-constant __who__ 'record-type-field-ref)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
        (let ((label (id->label ?type-name)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?type-name))
+	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-violation who "not a record type" expr-stx ?type-name))
-	   (let* ((table    (%get-alist-of-safe-field-accessors who binding))
+	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
+	   (let* ((table    (%get-alist-of-safe-field-accessors __who__ binding))
 		  (accessor (assq (syntax->datum ?field-name) table)))
 	     (unless accessor
-	       (syntax-violation who "unknown record field name" expr-stx ?field-name))
+	       (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
 	     (chi-expr (bless `(,(cdr accessor) ,?record))
 		       lexenv.run lexenv.expand)))))))
 
@@ -6889,21 +6889,21 @@
     ;;LEXENV.RUN  and LEXENV.EXPAND.   Return  core  language sexp  that
     ;;mutates the value of a field in an R6RS record.
     ;;
-    (define who 'record-type-field-set!)
+    (define-constant __who__ 'record-type-field-set!)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record ?new-value)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
        (let ((label (id->label ?type-name)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?type-name))
+	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-violation who "not a record type" expr-stx ?type-name))
-	   (let* ((table   (%get-alist-of-safe-field-mutators who binding))
+	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
+	   (let* ((table   (%get-alist-of-safe-field-mutators __who__ binding))
 		  (mutator (assq (syntax->datum ?field-name) table)))
 	     (unless mutator
-	       (syntax-violation who "unknown record field name or immutable field" expr-stx ?field-name))
+	       (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
 	     (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
 		       lexenv.run lexenv.expand)))))))
 
@@ -6915,21 +6915,21 @@
     ;;accesses the value of a field from an R6RS record using the unsafe
     ;;accessor.
     ;;
-    (define who '$record-type-field-ref)
+    (define-constant __who__ '$record-type-field-ref)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
        (let ((label (id->label ?type-name)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?type-name))
+	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-violation who "not a record type" expr-stx ?type-name))
-	   (let* ((table    (%get-alist-of-unsafe-field-accessors who binding))
+	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
+	   (let* ((table    (%get-alist-of-unsafe-field-accessors __who__ binding))
 		  (accessor (assq (syntax->datum ?field-name) table)))
 	     (unless accessor
-	       (syntax-violation who "unknown record field name" expr-stx ?field-name))
+	       (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
 	     (chi-expr (bless `(,(cdr accessor) ,?record))
 		       lexenv.run lexenv.expand)))))))
 
@@ -6941,21 +6941,21 @@
     ;;mutates the  value of a field  in an R6RS record  using the unsafe
     ;;mutator.
     ;;
-    (define who '$record-type-field-set!)
+    (define-constant __who__ '$record-type-field-set!)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record ?new-value)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
        (let ((label (id->label ?type-name)))
 	 (unless label
-	   (%raise-unbound-error who expr-stx ?type-name))
+	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
-	     (syntax-violation who "not a record type" expr-stx ?type-name))
-	   (let* ((table   (%get-alist-of-unsafe-field-mutators who binding))
+	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
+	   (let* ((table   (%get-alist-of-unsafe-field-mutators __who__ binding))
 		  (mutator (assq (syntax->datum ?field-name) table)))
 	     (unless mutator
-	       (syntax-violation who "unknown record field name or immutable field" expr-stx ?field-name))
+	       (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
 	     (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
 		       lexenv.run lexenv.expand)))))))
 
@@ -9743,9 +9743,9 @@
 			 (make-syntax-violation form subform)))))
 
   (define (%syntax-violation source-who msg form condition-object)
-    (define who 'syntax-violation)
+    (define-constant __who__ 'syntax-violation)
     (unless (string? msg)
-      (assertion-violation who "message is not a string" msg))
+      (assertion-violation __who__ "message is not a string" msg))
     (let ((source-who (cond ((or (string? source-who)
 				 (symbol? source-who))
 			     source-who)
@@ -9759,7 +9759,7 @@
 				(syntax->datum id))
 			       (_  #f)))
 			    (else
-			     (assertion-violation who "invalid who argument" source-who)))))
+			     (assertion-violation __who__ "invalid who argument" source-who)))))
       (raise
        (condition (if source-who
 		      (make-who-condition source-who)
