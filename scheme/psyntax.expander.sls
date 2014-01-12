@@ -2174,7 +2174,7 @@
 	      label*
 	      #f))
 
-(define (make-top-rib name* label*)
+(define* (make-top-rib name* label*)
   ;;A top <RIB> is constructed as follows: given a subst:
   ;;
   ;;   name* -> label*
@@ -2191,18 +2191,16 @@
   ;;so, a name in  a top <RIB> maps to its label if  and only if its set
   ;;of marks is TOP-MARK*.
   ;;
-  (define who 'make-top-rib)
   (let ((rib (make-empty-rib)))
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
 	      (extend-rib! rib
 			   (make-<stx> name top-mark*
-				       '() #;subst*
-				       '() #;ae*
-				       )
+				       '()  #;subst*
+				       '()) #;ae*
 			   label #t)
-            (assertion-violation who
+            (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
       name* label*)
     rib))
@@ -2973,12 +2971,12 @@
 		      (annotation-stripped expr)
 		    expr)))))
 
-(define (identifier->symbol x)
+(define* (identifier->symbol x)
   ;;Given an identifier return its symbol expression.
   ;;
-  (define who 'identifier->symbol)
   (define (%error)
-    (assertion-violation who "Vicare bug: expected identifier as argument" x))
+    (assertion-violation __who__
+      "Vicare bug: expected identifier as argument" x))
   (unless (<stx>? x)
     (%error))
   (let* ((expr ($<stx>-expr x))
@@ -3232,16 +3230,15 @@
 ;;   syntactic binding.
 ;;
 
-(define (make-variable-transformer x)
+(define* (make-variable-transformer x)
   ;;R6RS's  make-variable-transformer.   Build  and return  a  "special"
   ;;value that, when used as right-hand  side of a syntax definition, is
   ;;recognised by the expander as a variable transformer as opposed to a
   ;;normal transformer or a compile-time value.
   ;;
-  (define who 'make-variable-transformer)
   (if (procedure? x)
       (cons 'identifier-macro! x)
-    (assertion-violation who "not a procedure" x)))
+    (assertion-violation __who__ "not a procedure" x)))
 
 (define (variable-transformer? x)
   ;;Return  true if  X  is  recognised by  the  expander  as a  variable
@@ -3252,15 +3249,14 @@
        (eq? (car x) 'identifier-macro!)
        (procedure? (cdr x))))
 
-(define (variable-transformer-procedure x)
+(define* (variable-transformer-procedure x)
   ;;If X is recognised by the expander as a variable transformer: return
   ;;the  actual  transformer  function,  otherwise  raise  an  assertion
   ;;violation.
   ;;
-  (define who 'variable-transformer-procedure)
   (if (variable-transformer? x)
       (cdr x)
-    (assertion-violation who "not a variable transformer" x)))
+    (assertion-violation __who__ "not a variable transformer" x)))
 
 
 ;;;; public interface: compile-time values
@@ -3604,7 +3600,8 @@
 	    stx)))))
 
 
-(module (non-core-macro-transformer)
+(module NON-CORE-MACRO-TRANSFORMER
+  (non-core-macro-transformer)
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
@@ -3625,10 +3622,9 @@
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
   ;;
-  (define (non-core-macro-transformer x)
-    (define who 'non-core-macro-transformer)
+  (define* (non-core-macro-transformer x)
     (define (%error-invalid-macro)
-      (error who "Vicare: internal error: invalid macro" x))
+      (error __who__ "Vicare: internal error: invalid macro" x))
     (assert (symbol? x))
     (case x
       ((define-record-type)		define-record-type-macro)
@@ -3829,7 +3825,7 @@
 ;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
 
 (define (define-record-type-macro x)
-  (define who 'define-record-type)
+  (define-constant __who__ 'define-record-type)
 
   (define (main stx)
     (syntax-match stx ()
@@ -4284,7 +4280,7 @@
 							    ((identifier? x)
 							     (symbol->string (syntax->datum x)))
 							    (else
-							     (assertion-violation who "BUG"))))
+							     (assertion-violation __who__ "BUG"))))
 						 str*)))))
 
 ;;; --------------------------------------------------------------------
@@ -4550,9 +4546,9 @@
     ))
 
 (define (compensate-macro expr-stx)
-  (define who 'compensate)
+  (define-constant __who__ 'compensate)
   (define (%synner message subform)
-    (syntax-violation who message expr-stx subform))
+    (syntax-violation __who__ message expr-stx subform))
   (syntax-match expr-stx ()
     ((_ ?alloc0 ?form* ...)
      (let ()
@@ -5673,7 +5669,7 @@
 ;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
 
 (define (define-enumeration-macro stx)
-  (define who 'define-enumeration)
+  (define-constant __who__ 'define-enumeration)
   (define (set? x)
     (or (null? x)
 	(and (not (memq (car x) (cdr x)))
@@ -5687,13 +5683,13 @@
     ((_ name (id* ...) maker)
      (begin
        (unless (identifier? name)
-	 (syntax-violation who
+	 (syntax-violation __who__
 	   "expected identifier as enumeration type name" stx name))
        (unless (for-all identifier? id*)
-	 (syntax-violation who
+	 (syntax-violation __who__
 	   "expected list of symbols as enumeration elements" stx id*))
        (unless (identifier? maker)
-	 (syntax-violation who
+	 (syntax-violation __who__
 	   "expected identifier as enumeration constructor syntax name" stx maker))
        (let ((name*		(remove-dups (syntax->datum id*)))
 	     (the-constructor	(gensym)))
@@ -6386,11 +6382,11 @@
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
   ;;Return a sexp in the core language.
   ;;
-  (define who 'include)
+  (define-constant __who__ 'include)
 
   (define (include-macro expr-stx)
     (define (%synner message subform)
-      (syntax-violation who message expr-stx subform))
+      (syntax-violation __who__ message expr-stx subform))
     (syntax-match expr-stx ()
       ((?context ?filename)
        (%include-file ?filename ?context #f %synner))
@@ -6444,7 +6440,7 @@
     ;;
     (with-exception-handler
 	(lambda (E)
-	  (raise-continuable (condition (make-who-condition who) E)))
+	  (raise-continuable (condition (make-who-condition __who__) E)))
       (lambda ()
 	(with-input-from-file pathname
 	  (lambda ()
@@ -8629,6 +8625,7 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
+    (import NON-CORE-MACRO-TRANSFORMER)
     (%do-macro-call (non-core-macro-transformer procname)
 		    input-form-expr lexenv.run rib))
 
