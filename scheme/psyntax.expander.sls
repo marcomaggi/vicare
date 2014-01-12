@@ -597,7 +597,9 @@
     (let-values (((name ver imp* inv* vis*
 			invoke-code macro* export-subst export-env
 			guard-code guard-req*)
-		  (core-library-expander library-sexp verify-name)))
+		  (begin
+		    (import CORE-LIBRARY-EXPANDER)
+		    (core-library-expander library-sexp verify-name))))
       (let ((id            (gensym)) ;library UID
 	    (name          name)     ;list of name symbols
 	    (ver           ver)	     ;null or list of version numbers
@@ -634,7 +636,8 @@
     (expand-library library-sexp #f       (lambda (ids ver) (values))))))
 
 
-(module (core-library-expander)
+(module CORE-LIBRARY-EXPANDER
+  (core-library-expander)
   (define-constant __who__ 'core-library-expander)
 
   (define (core-library-expander library-sexp verify-name)
@@ -663,13 +666,12 @@
       (receive (libname.ids libname.version)
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
-	(let ((stale-c (make-stale-collector)))
-	  (receive (import-spec* invoke-req* visit-req*
-				 invoke-code visit-code export-subst export-env)
-	      (parametrise ((stale-when-collector stale-c))
+	(let ((stale-clt (make-stale-collector)))
+	  (receive (import-spec* invoke-req* visit-req* invoke-code visit-code export-subst export-env)
+	      (parametrise ((stale-when-collector stale-clt))
 		(library-body-expander export-spec* import-spec* body* #f))
 	    (receive (guard-code guard-req*)
-		(stale-c)
+		(stale-clt)
 	      (values libname.ids libname.version
 		      import-spec* invoke-req* visit-req*
 		      invoke-code visit-code export-subst
@@ -695,16 +697,16 @@
     ;;just validates the structure of the LIBRARY form.
     ;;
     (syntax-match library-sexp ()
-      ((library (?name* ...)
-	 (export ?exp* ...)
-	 (import ?imp* ...)
-	 ?body* ...)
-       (and (eq? (syntax->datum library) 'library)
-	    (eq? (syntax->datum export)  'export)
-	    (eq? (syntax->datum import)  'import))
+      ((?library (?name* ...)
+		 (?export ?exp* ...)
+		 (?import ?imp* ...)
+		 ?body* ...)
+       (and (eq? (syntax->datum ?library) 'library)
+	    (eq? (syntax->datum ?export)  'export)
+	    (eq? (syntax->datum ?import)  'import))
        (values ?name* ?exp* ?imp* ?body*))
       (_
-       (syntax-violation 'expander "malformed library" library-sexp))))
+       (syntax-violation __who__ "malformed library" library-sexp))))
 
   (define (%parse-library-name libname)
     ;;Given a  SYNTAX-MATCH expression  argument LIBNAME  representing a
@@ -723,11 +725,11 @@
 	(let recur ((sexp libname))
 	  (syntax-match sexp ()
 	    (((?vers* ...))
-	     (for-all library-version-number? (map syntax->datum ?vers*)) ;this is the fender
+	     (for-all library-version-number? (map syntax->datum ?vers*))
 	     (values '() (map syntax->datum ?vers*)))
 
 	    ((?id . ?rest)
-	     (symbol? (syntax->datum ?id)) ;this is the fender
+	     (symbol? (syntax->datum ?id))
 	     (receive (name* vers*)
 		 (recur ?rest)
 	       (values (cons (syntax->datum ?id) name*) vers*)))
