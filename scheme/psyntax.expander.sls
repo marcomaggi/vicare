@@ -163,24 +163,23 @@
 
 ;;; helpers
 
-;;This syntax can be used as standalone identifier andexpands to #f.  It
-;;is  used as  "annotated expression"  argument in  calls to  the BUILD-
+;;This syntax can be used as standalone identifier and it expands to #f.
+;;It is used  as "annotated expression" argument in calls  to the BUILD-
 ;;functions when there is no annotated expression to be given.
 ;;
 (define-syntax no-source
   (lambda (x) #f))
 
-(define (%generate-unique-symbol seed)
+(define* (%generate-unique-symbol seed)
   ;;Generate and return a fresh unique symbol.  SEED is used to seed the
   ;;generation: it must be a symbol or an identifier syntax object.
   ;;
-  (define who '%generate-unique-symbol)
   (cond ((symbol? seed)
 	 (gensym seed))
 	((<stx>? seed)
 	 (%generate-unique-symbol (identifier->symbol seed)))
 	(else
-	 (assertion-violation who
+	 (assertion-violation __who__
 	   "expected symbol or identifier as argument" seed))))
 
 (define (debug-print . args)
@@ -254,47 +253,43 @@
   (or (env? obj)
       (interaction-env? obj)))
 
-(define (environment-symbols x)
+(define* (environment-symbols x)
   ;;Return a list of symbols representing the names of the bindings from
   ;;the given environment.
   ;;
-  (define who 'environment-symbols)
   (cond ((env? x)
 	 (vector->list ($env-names x)))
 	((interaction-env? x)
 	 (map values ($<rib>-sym* ($interaction-env-rib x))))
 	(else
-	 (assertion-violation who "not an environment" x))))
+	 (assertion-violation __who__ "not an environment" x))))
 
-(define (environment-labels x)
+(define* (environment-labels x)
   ;;Return a  list of  symbols representing the  labels of  the bindings
   ;;from the given environment.
   ;;
-  (define who 'environment-labels)
   (unless (env? x)
-    (assertion-violation who
+    (assertion-violation __who__
       "expected non-interaction environment object as argument" x))
   (vector->list ($env-labels x)))
 
-(define (environment-libraries x)
+(define* (environment-libraries x)
   ;;Return  the  list  of  LIBRARY records  representing  the  libraries
   ;;forming the environment.
   ;;
-  (define who 'environment-libraries)
   (unless (env? x)
-    (assertion-violation who
+    (assertion-violation __who__
       "expected non-interaction environment object as argument" x))
   (($env-itc x)))
 
-(define (environment-binding sym env)
+(define* (environment-binding sym env)
   ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
   ;;is the public  name of a binding  in ENV return 2  values: the label
   ;;associated  to the  binding,  the list  of  values representing  the
   ;;binding.  If SYM is not present in ENV return false and false.
   ;;
-  (define who 'environment-binding)
   (unless (env? env)
-    (assertion-violation who
+    (assertion-violation __who__
       "expected non-interaction environment object as argument" env))
   (let ((P (vector-exists (lambda (name label)
 			    (import (ikarus system $symbols))
@@ -389,23 +384,22 @@
 ;;
 (define subst-entry-label cdr)
 
-
 
-(module (eval expand-form-to-core-language)
+(define* (eval x env)
+  ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
+  ;;expand the  expression, invoke  its invoke-required  libraries and
+  ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
+  ;;expansion.
+  ;;
+  (unless (environment? env)
+    (error __who__ "not an environment" env))
+  (receive (x invoke-req*)
+      (expand-form-to-core-language x env)
+    (for-each invoke-library invoke-req*)
+    (eval-core (expanded->core x))))
 
-  (define (eval x env)
-    ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
-    ;;expand the  expression, invoke  its invoke-required  libraries and
-    ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
-    ;;expansion.
-    ;;
-    (define who 'eval)
-    (unless (environment? env)
-      (error who "not an environment" env))
-    (receive (x invoke-req*)
-	(expand-form-to-core-language x env)
-      (for-each invoke-library invoke-req*)
-      (eval-core (expanded->core x))))
+(module (expand-form-to-core-language)
+  (define-constant __who__ 'expand-form-to-core-language)
 
   (define (expand-form-to-core-language expr env)
     ;;Interface to the internal expression expander (chi-expr).  Take an
@@ -413,7 +407,6 @@
     ;;core-expression, a list  of libraries that must  be invoked before
     ;;evaluating the core expr.
     ;;
-    (define who 'expand-form-to-core-language)
     (cond ((env? env)
 	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
 	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '()))
@@ -443,7 +436,7 @@
 		 (set-interaction-env-lexenv! env lexenv.run^)
 		 (values expr.core (rtc))))))
 	  (else
-	   (assertion-violation who "not an environment" env))))
+	   (assertion-violation __who__ "not an environment" env))))
 
   (define (%chi-interaction-expr expr.stx rib lexenv.run)
     (receive (e* lexenv.run^ lexenv.expand^ lex* rhs* mod** _kwd* _exp*)
@@ -464,7 +457,6 @@
   (define (%expand-interaction-rhs*/init* lhs* rhs* init* lexenv.run lexenv.expand)
     ;;Return a list of expressions in the core language.
     ;;
-    (define who 'expand-interaction)
     (let recur ((lhs* lhs*)
 		(rhs* rhs*))
       (if (null? lhs*)
@@ -487,7 +479,7 @@
 	     (let ((core-expr (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons core-expr)))
 	    (else
-	     (error who "invalid" rhs)))))))
+	     (error __who__ "invalid" rhs)))))))
 
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
 
@@ -642,107 +634,114 @@
     (expand-library library-sexp #f       (lambda (ids ver) (values))))))
 
 
-(define (core-library-expander library-sexp verify-name)
-  ;;Given  a SYNTAX-MATCH  expression  argument  representing a  LIBRARY
-  ;;form:
-  ;;
-  ;;   (library . _)
-  ;;
-  ;;parse  it  and  return  multiple  values  representing  the  library
-  ;;contents.
-  ;;
-  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
-  ;;unspecified values: the  first argument is a list of  symbols from a
-  ;;library  name; the  second  argument  is null  or  a  list of  exact
-  ;;integers representing the library  version.  VERIFY-NAME is meant to
-  ;;perform some validation  upon the library name  components and raise
-  ;;an exception if something is wrong; otherwise it should just return.
-  ;;
-  (receive (library-name* export-spec* import-spec* body*)
-      (parse-library library-sexp)
-    (receive (libname.ids libname.version)
-	(parse-library-name library-name*)
-      (verify-name libname.ids libname.version)
-      (let ((stale-c (make-stale-collector)))
-	(receive (import-spec* invoke-req* visit-req*
-			       invoke-code visit-code export-subst export-env)
-	    (parametrise ((stale-when-collector stale-c))
-	      (library-body-expander export-spec* import-spec* body* #f))
-	  (receive (guard-code guard-req*)
-	      (stale-c)
-	    (values libname.ids libname.version
-		    import-spec* invoke-req* visit-req*
-		    invoke-code visit-code export-subst
-		    export-env guard-code guard-req*)))))))
+(module (core-library-expander)
+  (define-constant __who__ 'core-library-expander)
 
-
-(define (parse-library library-sexp)
-  ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
-  ;;expression, return 4 values:
-  ;;
-  ;;1. The  name part.  A SYNTAX-MATCH  expression argument representing
-  ;;   parts of the library name.
-  ;;
-  ;;2.   The  export   specs.    A   SYNTAX-MATCH  expression   argument
-  ;;   representing the exports specification.
-  ;;
-  ;;3.   The  import   specs.    A   SYNTAX-MATCH  expression   argument
-  ;;   representing the imports specification.
-  ;;
-  ;;4.  The  body of  the library.   A SYNTAX-MATCH  expression argument
-  ;;   representing the body of the library.
-  ;;
-  ;;This function performs no validation of the returned values, it just
-  ;;validates the structure of the LIBRARY form.
-  ;;
-  (syntax-match library-sexp ()
-    ((library (?name* ...)
-       (export ?exp* ...)
-       (import ?imp* ...)
-       ?body* ...)
-     (and (eq? (syntax->datum library) 'library)
-	  (eq? (syntax->datum export)  'export)
-	  (eq? (syntax->datum import)  'import))
-     (values ?name* ?exp* ?imp* ?body*))
-    (_
-     (syntax-violation 'expander "malformed library" library-sexp))))
+  (define (core-library-expander library-sexp verify-name)
+    ;;Given a  SYNTAX-MATCH expression  argument representing  a LIBRARY
+    ;;form:
+    ;;
+    ;;   (library . _)
+    ;;
+    ;;parse  it  and return  multiple  values  representing the  library
+    ;;contents.
+    ;;
+    ;;VERIFY-NAME  must  be  a   procedure  accepting  2  arguments  and
+    ;;returning  unspecified values:
+    ;;
+    ;;* The first argument is a list of symbols from a library name.
+    ;;
+    ;;*  The  second argument  is  null  or  a  list of  exact  integers
+    ;;  representing the library version.
+    ;;
+    ;;VERIFY-NAME is meant  to perform some validation  upon the library
+    ;;name  components and  raise an  exception if  something is  wrong;
+    ;;otherwise it should just return.
+    ;;
+    (receive (library-name* export-spec* import-spec* body*)
+	(%parse-library library-sexp)
+      (receive (libname.ids libname.version)
+	  (%parse-library-name library-name*)
+	(verify-name libname.ids libname.version)
+	(let ((stale-c (make-stale-collector)))
+	  (receive (import-spec* invoke-req* visit-req*
+				 invoke-code visit-code export-subst export-env)
+	      (parametrise ((stale-when-collector stale-c))
+		(library-body-expander export-spec* import-spec* body* #f))
+	    (receive (guard-code guard-req*)
+		(stale-c)
+	      (values libname.ids libname.version
+		      import-spec* invoke-req* visit-req*
+		      invoke-code visit-code export-subst
+		      export-env guard-code guard-req*)))))))
 
-
-(define (parse-library-name libname)
-  ;;Given  a SYNTAX-MATCH  expression  argument  LIBNAME representing  a
-  ;;library name as defined by R6RS, return 2 values:
-  ;;
-  ;;1. A list of symbols representing the name identifiers.
-  ;;
-  ;;2. A list of fixnums representing the version of the library.
-  ;;
-  ;;Example:
-  ;;
-  ;;   (parse-library-name (foo bar (1 2 3)))
-  ;;   => (foo bar) (1 2 3)
-  ;;
-  (define who 'expander)
-  (receive (name* ver*)
-      (let recur ((sexp libname))
-	(syntax-match sexp ()
-	  (((?vers* ...))
-	   (for-all library-version-number? (map syntax->datum ?vers*)) ;this is the fender
-	   (values '() (map syntax->datum ?vers*)))
+  (define (%parse-library library-sexp)
+    ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
+    ;;expression, return 4 values:
+    ;;
+    ;;1..The name part.  A SYNTAX-MATCH expression argument representing
+    ;;   parts of the library name.
+    ;;
+    ;;2..The   export  specs.    A   SYNTAX-MATCH  expression   argument
+    ;;   representing the exports specification.
+    ;;
+    ;;3..The   import  specs.    A   SYNTAX-MATCH  expression   argument
+    ;;   representing the imports specification.
+    ;;
+    ;;4..The body  of the  library.  A SYNTAX-MATCH  expression argument
+    ;;   representing the body of the library.
+    ;;
+    ;;This function  performs no validation  of the returned  values, it
+    ;;just validates the structure of the LIBRARY form.
+    ;;
+    (syntax-match library-sexp ()
+      ((library (?name* ...)
+	 (export ?exp* ...)
+	 (import ?imp* ...)
+	 ?body* ...)
+       (and (eq? (syntax->datum library) 'library)
+	    (eq? (syntax->datum export)  'export)
+	    (eq? (syntax->datum import)  'import))
+       (values ?name* ?exp* ?imp* ?body*))
+      (_
+       (syntax-violation 'expander "malformed library" library-sexp))))
 
-	  ((?id . ?rest)
-	   (symbol? (syntax->datum ?id)) ;this is the fender
-	   (receive (name* vers*)
-	       (recur ?rest)
-	     (values (cons (syntax->datum ?id) name*) vers*)))
+  (define (%parse-library-name libname)
+    ;;Given a  SYNTAX-MATCH expression  argument LIBNAME  representing a
+    ;;library name as defined by R6RS, return 2 values:
+    ;;
+    ;;1. A list of symbols representing the name identifiers.
+    ;;
+    ;;2. A list of fixnums representing the version of the library.
+    ;;
+    ;;Example:
+    ;;
+    ;;   (%parse-library-name (foo bar (1 2 3)))
+    ;;   => (foo bar) (1 2 3)
+    ;;
+    (receive (name* ver*)
+	(let recur ((sexp libname))
+	  (syntax-match sexp ()
+	    (((?vers* ...))
+	     (for-all library-version-number? (map syntax->datum ?vers*)) ;this is the fender
+	     (values '() (map syntax->datum ?vers*)))
 
-	  (()
-	   (values '() '()))
+	    ((?id . ?rest)
+	     (symbol? (syntax->datum ?id)) ;this is the fender
+	     (receive (name* vers*)
+		 (recur ?rest)
+	       (values (cons (syntax->datum ?id) name*) vers*)))
 
-	  (_
-	   (syntax-violation who "invalid library name" libname))))
-    (when (null? name*)
-      (syntax-violation who "empty library name" libname))
-    (values name* ver*)))
+	    (()
+	     (values '() '()))
+
+	    (_
+	     (syntax-violation __who__ "invalid library name" libname))))
+      (when (null? name*)
+	(syntax-violation __who__ "empty library name" libname))
+      (values name* ver*)))
+
+  #| end of module: CORE-LIBRARY-EXPANDER |# )
 
 
 (module (parse-export-spec*)
