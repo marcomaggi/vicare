@@ -6464,7 +6464,8 @@
   (syntax-match expr-stx (lambda)
     ((_ (?name . ?formals) ?form0 ?form* ...)
      (identifier? ?name)
-     (bless `(define-integrable ,?name (lambda ,?formals ,?form0 ,@?form*))))
+     (bless
+      `(define-integrable ,?name (lambda ,?formals ,?form0 ,@?form*))))
 
     ((_ ?name (lambda ?formals ?form0 ?form* ...))
      (identifier? ?name)
@@ -6602,8 +6603,7 @@
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
   ;;
-  (define (core-macro-transformer name)
-    (define who 'core-macro-transformer)
+  (define* (core-macro-transformer name)
     (case name
       ((quote)				quote-transformer)
       ((lambda)				lambda-transformer)
@@ -6624,7 +6624,7 @@
       ((splice-first-expand)		splice-first-expand-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       (else
-       (assertion-violation who
+       (assertion-violation __who__
 	 "Vicare: internal error: cannot find transformer" name))))
 
 
@@ -8114,9 +8114,9 @@
   ;;
   ;;   ((primitive ellipsis-map) (primitive cons) ?a ?b)
   ;;
-  (define who '...)
+  (define-constant __who__ '...)
   (unless (list? ls)
-    (assertion-violation who "not a list" ls))
+    (assertion-violation __who__ "not a list" ls))
   ;;LS* must be a list of  sublists, each sublist having the same length
   ;;of LS.
   (unless (null? ls*)
@@ -8124,9 +8124,9 @@
       (for-each
           (lambda (x)
             (unless (list? x)
-              (assertion-violation who "not a list" x))
+              (assertion-violation __who__ "not a list" x))
             (unless (= (length x) n)
-              (assertion-violation who "length mismatch" ls x)))
+              (assertion-violation __who__ "length mismatch" ls x)))
 	ls*)))
   (apply map proc ls ls*))
 
@@ -8136,7 +8136,7 @@
   ;;such difference  on top of the  marks of OBJECT, return  the result.
   ;;What for?  (Marco Maggi; Sun May 5, 2013)
   ;;
-  (define who 'syntax-transpose)
+  (define-constant __who__ 'syntax-transpose)
 
   (define (syntax-transpose object base-id new-id)
     (unless (identifier? base-id)
@@ -8196,7 +8196,7 @@
 	    (final (cdr subst*)))))
 
   (define-syntax-rule (%synner ?message ?irritant ...)
-    (assertion-violation who ?message ?irritant ...))
+    (assertion-violation __who__ ?message ?irritant ...))
 
   #| end of module: SYNTAX-TRANSPOSE |# )
 
