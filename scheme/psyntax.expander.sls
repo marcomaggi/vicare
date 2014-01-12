@@ -6492,21 +6492,20 @@
 
 ;;;; module non-core-macro-transformer: miscellanea
 
-(define time-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ expr)
-       (let ((str
-	      (let-values (((p e) (open-string-output-port)))
-		(write (syntax->datum expr) p)
-		(e))))
-	 (bless `(time-it ,str (lambda () ,expr))))))))
+(define (time-macro stx)
+  (syntax-match stx ()
+    ((_ expr)
+     (let ((str (receive (port getter)
+		    (open-string-output-port)
+		  (write (syntax->datum expr) port)
+		  (getter))))
+       (bless `(time-it ,str (lambda () ,expr)))))))
 
-(define delay-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ expr)
-       (bless `(make-promise (lambda () ,expr)))))))
+(define (delay-macro stx)
+  (syntax-match stx ()
+    ((_ expr)
+     (bless
+      `(make-promise (lambda () ,expr))))))
 
 (define (assert-macro stx)
   ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
@@ -6693,8 +6692,6 @@
   ;;LEXENV.EXPAND; return a sexp representing EXPR-STX fully expanded to
   ;;the core language.
   ;;
-  (define who 'expander)
-
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -9675,49 +9672,6 @@
 					      byte-offset character-offset
 					      line-number column-number))))
 
-(define syntax-violation
-  ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
-  ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
-  ;;value.  SUBFORM must be a syntax object or a datum value.
-  ;;
-  ;;The  SYNTAX-VIOLATION procedure raises  an exception,  reporting a
-  ;;syntax violation.  WHO should  describe the macro transformer that
-  ;;detected the exception.  The  MESSAGE argument should describe the
-  ;;violation.  FORM should be the erroneous source syntax object or a
-  ;;datum value  representing a  form.  The optional  SUBFORM argument
-  ;;should be a syntax object  or datum value representing a form that
-  ;;more precisely locates the violation.
-  ;;
-  ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
-  ;;value for the  condition object (see below) as  follows: when FORM
-  ;;is  either  an  identifier  or  a  list-structured  syntax  object
-  ;;containing an  identifier as its first element,  then the inferred
-  ;;value is the identifier's symbol.   Otherwise, no value for WHO is
-  ;;provided as part of the condition object.
-  ;;
-  ;;The condition object provided with the exception has the following
-  ;;condition types:
-  ;;
-  ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
-  ;;condition type  "&who", with  WHO as the  value of its  field.  In
-  ;;that  case,  WHO should  identify  the  procedure  or entity  that
-  ;;detected the  exception.  If it  is false, the condition  does not
-  ;;have condition type "&who".
-  ;;
-  ;;* The condition has condition type "&message", with MESSAGE as the
-  ;;value of its field.
-  ;;
-  ;;* The condition has condition type "&syntax" with FORM and SUBFORM
-  ;;as the value of its fields.  If SUBFORM is not provided, the value
-  ;;of the subform field is false.
-  ;;
-  (case-lambda
-   ((who msg form)
-    (syntax-violation who msg form #f))
-   ((who msg form subform)
-    (%syntax-violation who msg form
-		       (make-syntax-violation form subform)))))
-
 (define-syntax stx-error
   ;;Convenience wrapper for raising syntax violations.
   ;;
@@ -9731,7 +9685,7 @@
     ))
 
 (module (syntax-error
-	 %syntax-violation
+	 syntax-violation
 	 %raise-unbound-error)
 
   (define (syntax-error x . args)
@@ -9742,8 +9696,51 @@
 					    "invalid syntax"
 					  (apply string-append args)))
 		(make-syntax-violation (syntax->datum x) #f)
-		(expression->source-position-condition x)
-		(extract-trace x))))
+		(%expression->source-position-condition x)
+		(%extract-trace x))))
+
+  (define syntax-violation
+    ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
+    ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
+    ;;value.  SUBFORM must be a syntax object or a datum value.
+    ;;
+    ;;The SYNTAX-VIOLATION  procedure raises  an exception,  reporting a
+    ;;syntax violation.  WHO should  describe the macro transformer that
+    ;;detected the exception.  The  MESSAGE argument should describe the
+    ;;violation.  FORM should be the erroneous source syntax object or a
+    ;;datum value  representing a  form.  The optional  SUBFORM argument
+    ;;should be a syntax object or  datum value representing a form that
+    ;;more precisely locates the violation.
+    ;;
+    ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
+    ;;value for the  condition object (see below) as  follows: when FORM
+    ;;is  either  an  identifier  or  a  list-structured  syntax  object
+    ;;containing an identifier  as its first element,  then the inferred
+    ;;value is the identifier's symbol.   Otherwise, no value for WHO is
+    ;;provided as part of the condition object.
+    ;;
+    ;;The condition object provided with the exception has the following
+    ;;condition types:
+    ;;
+    ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
+    ;;condition type  "&who", with WHO  as the  value of its  field.  In
+    ;;that  case,  WHO should  identify  the  procedure or  entity  that
+    ;;detected the  exception.  If it  is false, the condition  does not
+    ;;have condition type "&who".
+    ;;
+    ;;* The condition has condition type "&message", with MESSAGE as the
+    ;;value of its field.
+    ;;
+    ;;* The condition has condition type "&syntax" with FORM and SUBFORM
+    ;;as the value of its fields.  If SUBFORM is not provided, the value
+    ;;of the subform field is false.
+    ;;
+    (case-lambda
+     ((who msg form)
+      (syntax-violation who msg form #f))
+     ((who msg form subform)
+      (%syntax-violation who msg form
+			 (make-syntax-violation form subform)))))
 
   (define (%syntax-violation source-who msg form condition-object)
     (define who 'syntax-violation)
@@ -9769,8 +9766,8 @@
 		    (condition))
 		  (make-message-condition msg)
 		  condition-object
-		  (expression->source-position-condition form)
-		  (extract-trace form)))))
+		  (%expression->source-position-condition form)
+		  (%extract-trace form)))))
 
   (define (%raise-unbound-error source-who form id)
     (raise
@@ -9780,10 +9777,10 @@
 		(make-message-condition "unbound identifier")
 		(make-undefined-violation)
 		(make-syntax-violation form id)
-		(expression->source-position-condition id)
-		(extract-trace id))))
+		(%expression->source-position-condition id)
+		(%extract-trace id))))
 
-  (define (extract-trace x)
+  (define (%extract-trace x)
     (define-condition-type &trace &condition
       make-trace trace?
       (form trace-form))
@@ -9797,7 +9794,7 @@
 	    (else
 	     (condition)))))
 
-  (define (expression->source-position-condition x)
+  (define (%expression->source-position-condition x)
     (expression-position x))
 
   #| end of module |# )
