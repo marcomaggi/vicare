@@ -1050,12 +1050,11 @@
   (define-constant __who__ 'export)
 
   (define (parse-export-spec* export-spec*)
-    (define %synner
-      (case-lambda
-       ((message)
-	(syntax-violation __who__ message export-spec*))
-       ((message subform)
-	(syntax-violation __who__ message export-spec* subform))))
+    (case-define %synner
+      ((message)
+       (syntax-violation __who__ message export-spec*))
+      ((message subform)
+       (syntax-violation __who__ message export-spec* subform)))
     (let loop ((export-spec*          export-spec*)
 	       (internal-identifier*  '())
 	       (external-identifier*  '()))
@@ -1754,12 +1753,11 @@
   (define (%error-two-import-with-different-bindings name)
     (%synner "two imports with different bindings" name))
 
-  (define %synner
-    (case-lambda
-     ((message form)
-      (syntax-violation __who__ message form))
-     ((message form subform)
-      (syntax-violation __who__ message form subform))))
+  (case-define %synner
+    ((message form)
+     (syntax-violation __who__ message form))
+    ((message form subform)
+     (syntax-violation __who__ message form subform)))
 
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
@@ -3406,7 +3404,7 @@
 
     (module (%convert-single-pattern)
 
-      (define %convert-single-pattern
+      (case-define %convert-single-pattern
 	;;Recursive function.  Transform the PATTERN-STX into a symbolic
 	;;expression to be handed  to SYNTAX-DISPATCH.  PATTERN-STX must
 	;;be  a  syntax  object  holding  the  SYNTAX-MATCH  pattern  to
@@ -3424,112 +3422,111 @@
 	;;   pair is an exact  integer representing the nesting level of
 	;;   the pattern variable.
 	;;
-	(case-lambda
-	 ((pattern-stx literals)
-	  (%convert-single-pattern pattern-stx literals 0 '()))
+	((pattern-stx literals)
+	 (%convert-single-pattern pattern-stx literals 0 '()))
 
-	 ((pattern-stx literals nesting-level pattern-vars)
-	  (syntax-case pattern-stx ()
+	((pattern-stx literals nesting-level pattern-vars)
+	 (syntax-case pattern-stx ()
 
-	    ;;A literal identifier is encoded as:
-	    ;;
-	    ;;   #(scheme-id ?identifier)
-	    ;;
-	    ;;the wildcard underscore identifier is encoded as:
-	    ;;
-	    ;;   _
-	    ;;
-	    ;;any  other  identifier will  bind  a  variable and  it  is
-	    ;;encoded as:
-	    ;;
-	    ;;   any
-	    ;;
-	    (?identifier
-	     (sys.identifier? (syntax ?identifier))
-	     (cond ((%bound-identifier-member? pattern-stx literals)
-		    (values `#(scheme-id ,(sys.syntax->datum pattern-stx)) pattern-vars))
-		   ((sys.free-identifier=? pattern-stx (syntax _))
-		    (values '_ pattern-vars))
-		   (else
-		    (values 'any (cons (cons pattern-stx nesting-level)
-				       pattern-vars)))))
+	   ;;A literal identifier is encoded as:
+	   ;;
+	   ;;   #(scheme-id ?identifier)
+	   ;;
+	   ;;the wildcard underscore identifier is encoded as:
+	   ;;
+	   ;;   _
+	   ;;
+	   ;;any other identifier will bind a variable and it is encoded
+	   ;;as:
+	   ;;
+	   ;;   any
+	   ;;
+	   (?identifier
+	    (sys.identifier? (syntax ?identifier))
+	    (cond ((%bound-identifier-member? pattern-stx literals)
+		   (values `#(scheme-id ,(sys.syntax->datum pattern-stx)) pattern-vars))
+		  ((sys.free-identifier=? pattern-stx (syntax _))
+		   (values '_ pattern-vars))
+		  (else
+		   (values 'any (cons (cons pattern-stx nesting-level)
+				      pattern-vars)))))
 
-	    ;;A  tail  pattern  with  ellipsis which  does  not  bind  a
-	    ;;variable is encoded as:
-	    ;;
-	    ;;   #(each ?pattern)
-	    ;;
-	    ;;a tail pattern with ellipsis which does bind a variable is
-	    ;;encoded as:
-	    ;;
-	    ;;   each-any
-	    ;;
-	    ((?pattern ?dots)
-	     (%ellipsis? (syntax ?dots))
-	     (receive (pattern^ pattern-vars^)
-		 (%convert-single-pattern (syntax ?pattern) literals
-					  (+ nesting-level 1) pattern-vars)
-	       (values (if (eq? pattern^ 'any)
-			   'each-any
-			 `#(each ,pattern^))
-		       pattern-vars^)))
+	   ;;A  tail  pattern  with  ellipsis which  does  not  bind  a
+	   ;;variable is encoded as:
+	   ;;
+	   ;;   #(each ?pattern)
+	   ;;
+	   ;;a tail pattern with ellipsis which does bind a variable is
+	   ;;encoded as:
+	   ;;
+	   ;;   each-any
+	   ;;
+	   ((?pattern ?dots)
+	    (%ellipsis? (syntax ?dots))
+	    (receive (pattern^ pattern-vars^)
+		(%convert-single-pattern (syntax ?pattern) literals
+					 (+ nesting-level 1) pattern-vars)
+	      (values (if (eq? pattern^ 'any)
+			  'each-any
+			`#(each ,pattern^))
+		      pattern-vars^)))
 
-	    ;;A non-tail pattern with ellipsis is encoded as:
-	    ;;
-	    ;;  #(each+ ?pattern-ellipsis (?pattern-following ...) . ?tail-pattern)
-	    ;;
-	    ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
-	     (%ellipsis? (syntax ?dots))
-	     (let*-values
-		 (((pattern-z pattern-vars)
-		   (%convert-single-pattern (syntax ?pattern-z) literals
-					    nesting-level pattern-vars))
+	   ;;A non-tail pattern with ellipsis is encoded as:
+	   ;;
+	   ;;  #(each+ ?pattern-ellipsis (?pattern-following ...) . ?tail-pattern)
+	   ;;
+	   ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
+	    (%ellipsis? (syntax ?dots))
+	    (let*-values
+		(((pattern-z pattern-vars)
+		  (%convert-single-pattern (syntax ?pattern-z) literals
+					   nesting-level pattern-vars))
 
-		  ((pattern-y* pattern-vars)
-		   (%convert-multi-pattern  (syntax (?pattern-y ...)) literals
-					    nesting-level pattern-vars))
+		 ((pattern-y* pattern-vars)
+		  (%convert-multi-pattern  (syntax (?pattern-y ...)) literals
+					   nesting-level pattern-vars))
 
-		  ((pattern-x pattern-vars)
-		   (%convert-single-pattern (syntax ?pattern-x) literals
-					    (+ nesting-level 1) pattern-vars)))
-	       (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
-		       pattern-vars)))
+		 ((pattern-x pattern-vars)
+		  (%convert-single-pattern (syntax ?pattern-x) literals
+					   (+ nesting-level 1) pattern-vars)))
+	      (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
+		      pattern-vars)))
 
-	    ;;A pair is encoded as pair.
-	    ;;
-	    ((?car . ?cdr)
-	     (let*-values
-		 (((pattern-cdr pattern-vars)
-		   (%convert-single-pattern (syntax ?cdr) literals
-					    nesting-level pattern-vars))
+	   ;;A pair is encoded as pair.
+	   ;;
+	   ((?car . ?cdr)
+	    (let*-values
+		(((pattern-cdr pattern-vars)
+		  (%convert-single-pattern (syntax ?cdr) literals
+					   nesting-level pattern-vars))
 
-		  ((pattern-car pattern-vars)
-		   (%convert-single-pattern (syntax ?car) literals
-					    nesting-level pattern-vars)))
-	       (values (cons pattern-car pattern-cdr) pattern-vars)))
+		 ((pattern-car pattern-vars)
+		  (%convert-single-pattern (syntax ?car) literals
+					   nesting-level pattern-vars)))
+	      (values (cons pattern-car pattern-cdr) pattern-vars)))
 
-	    ;;Null is encoded as null.
-	    ;;
-	    (()
-	     (values '() pattern-vars))
+	   ;;Null is encoded as null.
+	   ;;
+	   (()
+	    (values '() pattern-vars))
 
-	    ;;A vector is encoded as:
-	    ;;
-	    ;;   #(vector ?datum)
-	    ;;
-	    (#(?item ...)
-	     (receive (pattern-item* pattern-vars)
-		 (%convert-single-pattern (syntax (?item ...)) literals
-					  nesting-level pattern-vars)
-	       (values `#(vector ,pattern-item*) pattern-vars)))
+	   ;;A vector is encoded as:
+	   ;;
+	   ;;   #(vector ?datum)
+	   ;;
+	   (#(?item ...)
+	    (receive (pattern-item* pattern-vars)
+		(%convert-single-pattern (syntax (?item ...)) literals
+					 nesting-level pattern-vars)
+	      (values `#(vector ,pattern-item*) pattern-vars)))
 
-	    ;;A datum is encoded as:
-	    ;;
-	    ;;   #(atom ?datum)
-	    ;;
-	    (?datum
-	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))
-	    ))))
+	   ;;A datum is encoded as:
+	   ;;
+	   ;;   #(atom ?datum)
+	   ;;
+	   (?datum
+	    (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))
+	   )))
 
       (define (%convert-multi-pattern pattern* literals nesting-level pattern-vars)
 	;;Recursive function.
@@ -9698,7 +9695,7 @@
 		(%expression->source-position-condition x)
 		(%extract-trace x))))
 
-  (define syntax-violation
+  (case-define syntax-violation
     ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
     ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
     ;;value.  SUBFORM must be a syntax object or a datum value.
@@ -9734,12 +9731,10 @@
     ;;as the value of its fields.  If SUBFORM is not provided, the value
     ;;of the subform field is false.
     ;;
-    (case-lambda
-     ((who msg form)
-      (syntax-violation who msg form #f))
-     ((who msg form subform)
-      (%syntax-violation who msg form
-			 (make-syntax-violation form subform)))))
+    ((who msg form)
+     (syntax-violation who msg form #f))
+    ((who msg form subform)
+     (%syntax-violation who msg form (make-syntax-violation form subform))))
 
   (define (%syntax-violation source-who msg form condition-object)
     (define-constant __who__ 'syntax-violation)
