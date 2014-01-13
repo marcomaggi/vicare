@@ -610,11 +610,13 @@
   ;;
   ;;VER is the list (1 2).
   ;;
-  ;;IMP* - a list representing  the import specifications.  Each item in
-  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;IMP* -  a list representing the  libraries that need to  be imported
+  ;;for the invoke  code.  Each item in  the list is the  content of the
+  ;;SPEC field of LIBRARY record.
   ;;
-  ;;VIS* - a list representing  the import specifications.  Each item in
-  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;VIS* -  a list representing the  libraries that need to  be imported
+  ;;for the  visit code.  Each  item in the list  is the content  of the
+  ;;SPEC field of LIBRARY record.
   ;;
   ;;INV* - a list representing  the import specifications.  Each item in
   ;;the list is the content of the SPEC field of LIBRARY record.
@@ -7989,11 +7991,16 @@
 	 (expanded-rhs  (parametrise ((inv-collector rtc)
 				      (vis-collector (lambda (x) (values))))
 			  (chi-expr expr-stx lexenv.expand lexenv.expand))))
+    ;;We  invoke all  the libraries  needed to  evaluate the  right-hand
+    ;;side.
     (for-each
-	(let ((mark-visit (vis-collector)))
-	  (lambda (x)
-	    (invoke-library x)
-	    (mark-visit x)))
+	(let ((mark-library-visit (vis-collector)))
+	  (lambda (lib)
+	    ;;LIB is  a record  of type "library".   Here we  invoke the
+	    ;;library, which means we  evaluate its run-time code.  Then
+	    ;;we mark the library as visited.
+	    (invoke-library lib)
+	    (mark-library-visit lib)))
       (rtc))
     expanded-rhs))
 
