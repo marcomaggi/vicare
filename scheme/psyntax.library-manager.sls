@@ -657,11 +657,13 @@
 
   (define (%install-library-record lib)
     (for-each
-	(lambda (lexical-environment-entry)
+	(lambda (export-environment-entry)
 	  ;;See the comments in the expander  code for the format of the
-	  ;;lexical environment.
-	  (let* ((label    (car lexical-environment-entry))
-		 (binding  (cdr lexical-environment-entry))
+	  ;;export environment.   Entries in the export  environment are
+	  ;;different from entries in  the lexical environments; here we
+	  ;;transform an export entry into a lexical entry.
+	  (let* ((label    (car export-environment-entry))
+		 (binding  (cdr export-environment-entry))
 		 (binding1 (case (car binding)
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
