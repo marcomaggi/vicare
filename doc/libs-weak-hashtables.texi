@@ -29,9 +29,10 @@ entries are weak pairs:
 
 Whenever a key in a weak hashtable is garbage collected: the
 corresponding location in the weak pair is set to the @acronym{BWP}
-object (a special unique object that has this exact purpose); whenever a
-bucket is accessed, it is first cleared of weak pairs holding
-@acronym{BWP} in key position.
+object (a special unique object that has this exact purpose,
+@acronym{BWP} stands for ``broken weak pointer''); whenever a bucket is
+accessed, it is first cleared of weak pairs holding @acronym{BWP} in key
+position.
 
 @quotation
 @strong{NOTE} Immediate values (those that fit into a single machine

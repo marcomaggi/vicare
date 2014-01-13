@@ -5040,7 +5040,8 @@ Return true if @var{obj} is a weak pair.
 
 @defun bwp-obejct? @var{obj}
 Return true if @var{obj} is a weak reference to a value which has been
-already garbage collected.  Example:
+already garbage collected (@samp{bwp} stands for ``broken weak
+pointer'').  Example:
 
 @example
 vicare> (define x (weak-cons (cons 1 2) #f))
