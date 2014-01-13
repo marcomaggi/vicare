@@ -565,8 +565,9 @@
 
 (module (expand-library)
   ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
-  ;;symbolic  expression  representing  a  LIBRARY  form  to  core-form;
-  ;;register it with the library manager.
+  ;;symbolic  expression representing  a LIBRARY  form to  core-form; it
+  ;;registers it  with the library  manager, in other words  it installs
+  ;;it.
   ;;
   ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
@@ -706,7 +707,9 @@
   ;;       '#t
   ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
   ;;
-  ;;GUARD-REQ* -
+  ;;GUARD-REQ* -  a list  representing the libraries  that need  for the
+  ;;STALE-WHEN code?  Each item in the list is the content of the "spec"
+  ;;field of a "library" record.
   ;;
   (case-define expand-library
     ((library-sexp)
