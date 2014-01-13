@@ -563,9 +563,10 @@
       (expand-library x)
     (values name invoke-code export-subst export-env)))
 
-(case-define expand-library
-  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
-  ;;core-form; register it with the library manager.
+(module (expand-library)
+  ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
+  ;;symbolic  expression  representing  a  LIBRARY  form  to  core-form;
+  ;;register it with the library manager.
   ;;
   ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
@@ -587,7 +588,7 @@
   ;;
   ;;The returned values are:
   ;;
-  ;;ID -
+  ;;ID - a gensym uniquely identifying this library.
   ;;
   ;;NAME - a list of symbols representing the library name.  For the
   ;;library:
@@ -609,11 +610,14 @@
   ;;
   ;;VER is the list (1 2).
   ;;
-  ;;IMP* - a list representing the import specifications
+  ;;IMP* - a list representing  the import specifications.  Each item in
+  ;;the list is the content of the SPEC field of LIBRARY record.
   ;;
-  ;;VIS* -
+  ;;VIS* - a list representing  the import specifications.  Each item in
+  ;;the list is the content of the SPEC field of LIBRARY record.
   ;;
-  ;;INV* -
+  ;;INV* - a list representing  the import specifications.  Each item in
+  ;;the list is the content of the SPEC field of LIBRARY record.
   ;;
   ;;INVOKE-CODE  - A  symbolic expression  representing the  code to  be
   ;;evaluated  to create  the run-time  bindings and  evaluate the  init
@@ -702,57 +706,82 @@
   ;;
   ;;GUARD-REQ* -
   ;;
-  ((library-sexp)
-   (expand-library library-sexp #f       (lambda (ids ver) (values))))
-  ((library-sexp filename)
-   (expand-library library-sexp filename (lambda (ids ver) (values))))
-  ((library-sexp filename verify-name)
-   (define (build-visit-code macro*)
-     ;;Return  a  sexp  representing  MACRO* definitions  in  the  core
-     ;;language.
-     ;;
-     (if (null? macro*)
-	 (build-void)
-       (build-sequence no-source
-	 (map (lambda (x)
-		(let ((loc (car x))
-		      (src (cddr x)))
-		  (build-global-assignment no-source loc src)))
-	   macro*))))
-   (receive (name ver imp* inv* vis* invoke-code macro* export-subst export-env guard-code guard-req*)
-       (begin
-	 (import CORE-LIBRARY-EXPANDER)
-	 (core-library-expander library-sexp verify-name))
-     (let ((id            (gensym)) ;library UID
-	   (name          name)     ;list of name symbols
-	   (ver           ver)	    ;null or list of version numbers
+  (case-define expand-library
+    ((library-sexp)
+     (expand-library library-sexp #f       (lambda (ids ver) (values))))
+    ((library-sexp filename)
+     (expand-library library-sexp filename (lambda (ids ver) (values))))
+    ((library-sexp filename verify-name)
+     (receive (name ver imp* inv* vis* invoke-code macro* export-subst export-env guard-code guard-req*)
+	 (begin
+	   (import CORE-LIBRARY-EXPANDER)
+	   (core-library-expander library-sexp verify-name))
+       (let ((id            (gensym)) ;library UID
+	     (name          name)     ;list of name symbols
+	     (ver           ver)      ;null or list of version numbers
 
-	   ;;From list  of LIBRARY  records to  list of  lists: library
-	   ;;UID, list of name symbols, list of version numbers.
-	   (imp*          (map library-spec imp*))
-	   (vis*          (map library-spec vis*))
-	   (inv*          (map library-spec inv*))
-	   (guard-req*    (map library-spec guard-req*))
+	     ;;From list  of LIBRARY records  to list of  lists: library
+	     ;;UID, list of name symbols, list of version numbers.
+	     (imp*          (map library-spec imp*))
+	     (vis*          (map library-spec vis*))
+	     (inv*          (map library-spec inv*))
+	     (guard-req*    (map library-spec guard-req*))
 
-	   ;;Thunk to eval to visit the library.
-	   (visit-proc    (lambda ()
-			    (initial-visit! macro*)))
-	   ;;Thunk to eval to invoke the library.
-	   (invoke-proc   (lambda ()
-			    (eval-core (expanded->core invoke-code))))
-	   (visit-code    (build-visit-code macro*))
-	   (invoke-code   invoke-code))
-       (install-library id name ver
-			imp* vis* inv* export-subst export-env
-			visit-proc invoke-proc
-			visit-code invoke-code
-			guard-code guard-req*
-			#t #;visible?
-			filename)
-       (values id name ver imp* vis* inv*
-	       invoke-code visit-code
-	       export-subst export-env
-	       guard-code guard-req*)))))
+	     ;;Thunk to eval to visit the library.
+	     (visit-proc    (lambda ()
+			      (initial-visit! macro*)))
+	     ;;Thunk to eval to invoke the library.
+	     (invoke-proc   (lambda ()
+			      (eval-core (expanded->core invoke-code))))
+	     (visit-code    (build-visit-code macro*))
+	     (invoke-code   invoke-code))
+	 (install-library id name ver
+			  imp* vis* inv* export-subst export-env
+			  visit-proc invoke-proc
+			  visit-code invoke-code
+			  guard-code guard-req*
+			  #t #;visible?
+			  filename)
+	 (values id name ver imp* vis* inv*
+		 invoke-code visit-code
+		 export-subst export-env
+		 guard-code guard-req*)))))
+
+  (define (build-visit-code macro*)
+    ;;Return a sexp  representing code that initialises  the bindings of
+    ;;macro  definitions in  the  core language:  the  visit code;  code
+    ;;evaluated whenever the library is visited; each library is visited
+    ;;only once the first time an exported binding is used.  MACRO* is a
+    ;;list of sublists, each having the format:
+    ;;
+    ;;   (?loc . (?obj . ?src-code))
+    ;;
+    ;;The returned sexp looks like this (one SET! for every macro):
+    ;;
+    ;;  (begin
+    ;;    (set! G3
+    ;;      (annotated-case-lambda
+    ;;	      (#<syntax expr=lambda mark*=(top)>
+    ;;	       (#<syntax expr=stx mark*=(top)>)
+    ;;         #<syntax expr=3 mark*=(top)>)
+    ;;	      ((stx) '3)))
+    ;;    (set! G5
+    ;;      (annotated-call
+    ;;	      (make-compile-time-value (+ 4 5))
+    ;;	      (primitive make-compile-time-value)
+    ;;	      (annotated-call (+ 4 5)
+    ;;          (primitive +) '4 '5))))
+    ;;
+    (if (null? macro*)
+	(build-void)
+      (build-sequence no-source
+	(map (lambda (x)
+	       (let ((loc (car x))
+		     (src (cddr x)))
+		 (build-global-assignment no-source loc src)))
+	  macro*))))
+
+  #| end of module: EXPAND-LIBRARY |# )
 
 
 (module CORE-LIBRARY-EXPANDER
