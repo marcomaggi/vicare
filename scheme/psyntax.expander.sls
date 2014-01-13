@@ -609,21 +609,96 @@
   ;;
   ;;VER is the list (1 2).
   ;;
-  ;;imp* -
+  ;;IMP* - a list representing the import specifications
   ;;
-  ;;vis* -
+  ;;VIS* -
   ;;
-  ;;inv* -
+  ;;INV* -
   ;;
-  ;;INVOKE-CODE -
+  ;;INVOKE-CODE  - A  symbolic expression  representing the  code to  be
+  ;;evaluated  to create  the run-time  bindings and  evaluate the  init
+  ;;expressions.  Examples:
   ;;
-  ;;VISIT-CODE -
+  ;;         library source          |     INVOKE-CODE
+  ;;   ------------------------------+-----------------------------
+  ;;   (library (ciao)               |  (library-letrec*
+  ;;     (export fun mac var)        |     ((var1 var2 '1)
+  ;;     (import (vicare))           |      (fun1 fun2 (annotated-case-lambda
+  ;;     (define var 1)              |                   fun (() '2))))
+  ;;     (define (fun) 2)            |   ((primitive void)))
+  ;;     (define-syntax (mac stx)    |
+  ;;       3)                        |
+  ;;     (define-syntax val          |
+  ;;       (make-compile-time-value  |
+  ;;         (+ 4 5))))              |
   ;;
-  ;;EXPORT-SUBST
+  ;;VISIT-CODE -  - A  symbolic expression representing  the code  to be
+  ;;evaluated to create the actual library's run-time code.  Examples:
   ;;
-  ;;EXPORT-ENV -
+  ;;         library source          |     VISIT-CODE
+  ;;   ------------------------------+-----------------------------
+  ;;   (library (ciao)               |  (begin
+  ;;     (export fun mac var)        |    (set! G3 (annotated-case-lambda
+  ;;     (import (vicare))           |	      (#<syntax expr=lambda mark*=(top)>
+  ;;     (define var 1)              |			(#<syntax expr=stx mark*=(top)>)
+  ;;     (define (fun) 2)            |			#<syntax expr=3 mark*=(top)>)
+  ;;     (define-syntax (mac stx)    |	      ((stx) '3)))
+  ;;       3)                        |    (set! G5 (annotated-call
+  ;;     (define-syntax val          |	      (make-compile-time-value (+ 4 5))
+  ;;       (make-compile-time-value  |	      (primitive make-compile-time-value)
+  ;;         (+ 4 5))))              |	      (annotated-call (+ 4 5)
+  ;;                                 |			      (primitive +) '4 '5))))
   ;;
-  ;;GUARD-CODE -
+  ;;EXPORT-SUBST  -  A  subst   representing  the  bindings  to  export.
+  ;;Exmpamples:
+  ;;
+  ;;         library source          |     EXPORT-SUBST
+  ;;   ------------------------------+-----------------------------
+  ;;   (library (ciao)               |  ((var . G0)
+  ;;     (export fun mac var)        |   (mac . G1)
+  ;;     (import (vicare))           |   (fun . G2))
+  ;;     (define var 1)              |
+  ;;     (define (fun) 2)            |
+  ;;     (define-syntax (mac stx)    |
+  ;;       3)                        |
+  ;;     (define-syntax val          |
+  ;;       (make-compile-time-value  |
+  ;;         (+ 4 5))))              |
+  ;;
+  ;;EXPORT-ENV  -  A list  representing  the  bindings exported  by  the
+  ;;library.  Examples:
+  ;;
+  ;;         library source          |     EXPORT-ENV
+  ;;   ------------------------------+-----------------------------
+  ;;   (library (ciao)               |  ((G0 global       . var2)
+  ;;     (export fun mac var)        |   (G1 global       . fun2)
+  ;;     (import (vicare))           |   (G2 global-macro . G3)
+  ;;     (define var 1)              |   (G4 global-ctv   . G5))
+  ;;     (define (fun) 2)            |
+  ;;     (define-syntax (mac stx)    |
+  ;;       3)                        |
+  ;;     (define-syntax val          |
+  ;;       (make-compile-time-value  |
+  ;;         (+ 4 5))))              |
+  ;;
+  ;;GUARD-CODE   -  A   predicate  expression   in  the   core  language
+  ;;representing the stale-when tests from the body of the library.  For
+  ;;the library:
+  ;;
+  ;;   (library (ciao (1 2))
+  ;;     (export doit)
+  ;;     (import (vicare))
+  ;;     (stale-when (< 1 2) (define a 123))
+  ;;     (stale-when (< 2 3) (define b 123))
+  ;;     (define (doit) 123))
+  ;;
+  ;;GUARD-CODE is:
+  ;;
+  ;;   (if (if '#f
+  ;;           '#t
+  ;;         (annotated-call (< 1 2) (primitive <) '1 '2))
+  ;;       '#t
+  ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
   ;;
   ;;GUARD-REQ* -
   ;;

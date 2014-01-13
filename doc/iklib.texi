@@ -2642,7 +2642,29 @@ For the library:
 @var{export-env}, to be documented.
 
 @item
-@var{guard-code}, to be documented.
+@var{guard-code}: a predicate expression in the core language
+representing the @func{stale-when} tests from the body of the library.
+For the library:
+
+@example
+(library (ciao (1 2))
+  (export doit)
+  (import (vicare))
+  (stale-when (< 1 2) (define a 123))
+  (stale-when (< 2 3) (define b 123))
+  (define (doit) 123))
+@end example
+
+@noindent
+@var{guard-code} is:
+
+@example
+(if (if '#f
+        '#t
+      (annotated-call (< 1 2) (primitive <) '1 '2))
+    '#t
+  (annotated-call (< 2 3) (primitive <) '2 '3))
+@end example
 
 @item
 @var{guard-req*}, to be documented.
