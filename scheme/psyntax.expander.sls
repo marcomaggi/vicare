@@ -565,8 +565,7 @@
 
 (case-define expand-library
   ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
-  ;;core-form;  register  it  with   the  library  manager;  return  its
-  ;;invoke-code, visit-code, subst and env.
+  ;;core-form; register it with the library manager.
   ;;
   ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
@@ -586,6 +585,48 @@
   ;;and raise  an exception if  something is wrong; otherwise  it should
   ;;just return.
   ;;
+  ;;The returned values are:
+  ;;
+  ;;ID -
+  ;;
+  ;;NAME - a list of symbols representing the library name.  For the
+  ;;library:
+  ;;
+  ;;   (library (c i a o)
+  ;;     (export A)
+  ;;     (import (rnrs))
+  ;;     (define A 123))
+  ;;
+  ;;NAME is the list (c i a o).
+  ;;
+  ;;VER -  a list  of exact integers  representing the  library version.
+  ;;For the library:
+  ;;
+  ;;   (library (ciao (1 2))
+  ;;     (export A)
+  ;;     (import (rnrs))
+  ;;     (define A 123))
+  ;;
+  ;;VER is the list (1 2).
+  ;;
+  ;;imp* -
+  ;;
+  ;;vis* -
+  ;;
+  ;;inv* -
+  ;;
+  ;;INVOKE-CODE -
+  ;;
+  ;;VISIT-CODE -
+  ;;
+  ;;EXPORT-SUBST
+  ;;
+  ;;EXPORT-ENV -
+  ;;
+  ;;GUARD-CODE -
+  ;;
+  ;;GUARD-REQ* -
+  ;;
   ((library-sexp)
    (expand-library library-sexp #f       (lambda (ids ver) (values))))
   ((library-sexp filename)
@@ -603,12 +644,10 @@
 		      (src (cddr x)))
 		  (build-global-assignment no-source loc src)))
 	   macro*))))
-   (let-values (((name ver imp* inv* vis*
-		       invoke-code macro* export-subst export-env
-		       guard-code guard-req*)
-		 (begin
-		   (import CORE-LIBRARY-EXPANDER)
-		   (core-library-expander library-sexp verify-name))))
+   (receive (name ver imp* inv* vis* invoke-code macro* export-subst export-env guard-code guard-req*)
+       (begin
+	 (import CORE-LIBRARY-EXPANDER)
+	 (core-library-expander library-sexp verify-name))
      (let ((id            (gensym)) ;library UID
 	   (name          name)     ;list of name symbols
 	   (ver           ver)	    ;null or list of version numbers
@@ -9872,13 +9911,13 @@
 
   #| end of module: MAKE-STALE-COLLECTOR |# )
 
-(define (handle-stale-when guard-expr mr)
-  (let ((stc (make-collector)))
-    (let ((core-expr (parametrise ((inv-collector stc))
-		       (chi-expr guard-expr mr mr))))
-      (cond ((stale-when-collector)
-	     => (lambda (c)
-		  (c core-expr (stc))))))))
+(define (handle-stale-when guard-expr lexenv.expand)
+  (let* ((stc       (make-collector))
+	 (core-expr (parametrise ((inv-collector stc))
+		      (chi-expr guard-expr lexenv.expand lexenv.expand))))
+    (cond ((stale-when-collector)
+	   => (lambda (c)
+		(c core-expr (stc)))))))
 
 
 ;;;; R6RS programs and libraries helpers

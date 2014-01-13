@@ -2593,10 +2593,32 @@ Return @math{12} values:
 @var{id}, to be documented.
 
 @item
-@var{name}, to be documented.
+@var{name}: a list of symbols representing the library name.  For the
+library:
+
+@example
+(library (c i a o)
+  (export A)
+  (import (rnrs))
+  (define A 123))
+@end example
+
+@noindent
+@var{name} is the list @code{(c i a o)}.
 
 @item
-@var{ver}, to be documented.
+@var{ver}: a list of exact integers representing the library version.
+For the library:
+
+@example
+(library (ciao (1 2))
+  (export A)
+  (import (rnrs))
+  (define A 123))
+@end example
+
+@noindent
+@var{ver} is the list @code{(1 2)}.
 
 @item
 @var{imp*}, to be documented.
