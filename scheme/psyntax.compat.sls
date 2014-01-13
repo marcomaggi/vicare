@@ -18,6 +18,7 @@
 (library (psyntax compat)
   (export
     define*				define-constant
+    case-define
     define-record			make-struct-type
     make-parameter			parametrise
     format				gensym
