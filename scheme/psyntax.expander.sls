@@ -1906,7 +1906,8 @@
 ;;depends on the binding type.
 ;;
 ;;* A  binding representing a  lexical variable,  as created by  LET and
-;;  similar syntaxes, has the format:
+;;  similar syntaxes,  LAMBDA, CASE-LAMBDA and internal  DEFINE, has the
+;;  format:
 ;;
 ;;     (lexical . (?lexvar . ?mutable))
 ;;
@@ -1935,6 +1936,15 @@
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined,  ?GENSYM is the symbol  containing the transformer
 ;;  function in its "value" field.
+;;
+;;*  A binding  representing a  lexical variable  imported from  another
+;;  library has the format:
+;;
+;;     (global . (?library . ?gensym))
+;;
+;;  where:  ?LIBRARY represents  the library  in which  the compile-time
+;;  value  bound to  the  variable  is defined,  ?GENSYM  is the  symbol
+;;  containing the value in its "value" field.
 ;;
 ;;* A binding representing a  macro with variable transformer defined by
 ;;  code in an imported library has the format:
@@ -2026,6 +2036,11 @@
 ;;  representing  the   mutable  field   names  and  whose   values  are
 ;;  identifiers bound to the corresponding unsafe field mutators.
 ;;
+;;* A binding representing R6RS's record type descriptor exported by the
+;;  boot image has the format:
+;;
+;;     ($core-rtd . (?rtd ?rcd))
+;;
 ;;* A binding representing a fluid syntax has the format:
 ;;
 ;;     ($fluid . ?label)
@@ -2047,6 +2062,12 @@
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined, ?GENSYM is the symbol containing the actual object
 ;;  in its "value" field.
+;;
+;;* A binding representing a module has the format:
+;;
+;;     ($module . ?iface)
+;;
+;;  where ?IFACE is an instance of "module-interface" struct.
 ;;
 ;;* The following special binding represents an unbound label:
 ;;
@@ -2174,6 +2195,12 @@
   ;;actual compile-time object.
   ;;
   cadr)
+
+;;; --------------------------------------------------------------------
+;;; module bindings
+
+(define (make-module-binding iface)
+  (cons '$module iface))
 
 ;;; --------------------------------------------------------------------
 
@@ -9708,7 +9735,7 @@
 						    '())) ;annotated expressions
 				    all-export-id*)
 				  all-export-lab*))
-		     (binding    (cons '$module iface))
+		     (binding    (make-module-binding iface))
 		     (entry      (cons name-label binding)))
 		(values lex* rhs*
 			;;FIXME:  module   cannot  export   itself  yet.
