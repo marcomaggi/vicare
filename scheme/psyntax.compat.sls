@@ -17,6 +17,8 @@
 
 (library (psyntax compat)
   (export
+    define*				define-constant
+    case-define
     define-record			make-struct-type
     make-parameter			parametrise
     format				gensym
@@ -53,7 +55,13 @@
     ;; error handlers
     library-version-mismatch-warning
     library-stale-warning
-    file-locator-resolution-error)
+    file-locator-resolution-error
+
+    ;; unsafe bindings
+    $car $cdr
+    $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+    $fxzero? $fxpositive? $fxnonnegative?
+    $vector-ref $vector-set! $vector-length)
   (import (ikarus)
     (only (ikarus.reader)
 	  ;;this is not in makefile.sps
@@ -67,7 +75,12 @@
 	  file-modification-time)
     (only (vicare options)
 	  report-errors-at-runtime
-	  strict-r6rs))
+	  strict-r6rs)
+    (only (vicare unsafe operations)
+	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+	  $fxzero? $fxpositive? $fxnonnegative?
+	  $car $cdr
+	  $vector-ref $vector-set! $vector-length))
 
 
 (define (library-version-mismatch-warning name depname filename)

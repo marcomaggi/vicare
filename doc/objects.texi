@@ -284,6 +284,7 @@ unset.
 @defmacx IK_BWP
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
+@samp{BWP} stands for ``broken weak pointer''.
 @end defmac
 
 

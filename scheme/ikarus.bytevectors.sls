@@ -114,6 +114,11 @@
     $bytevector-concatenate	$bytevector-reverse-and-concatenate
     $bytevector-copy)
   (import (except (ikarus)
+		  ;;FIXME This exception  has to be removed  at the next
+		  ;;boot  image rotation.   (Marco  Maggi;  Fri Jan  10,
+		  ;;2014)
+		  non-negative-exact-integer?
+
 		  make-bytevector	bytevector-length
 		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!

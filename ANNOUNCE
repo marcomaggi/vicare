@@ -140,6 +140,24 @@ Notes for revision 0.3d8
      ((<pair> (1 2)) cdr)	=> 2
 
 
+* Added documentation to explain that the following is a perfectly valid
+  Vicare program:
+
+     (import (vicare))
+     (let ()
+       (library (ciao)
+         (export a)
+         (import (rnrs))
+         (define a 1))
+       (library (hello)
+         (export b)
+         (import (rnrs))
+         (define b 1))
+       (import (ciao))
+       (import (hello))
+       (display (list a b)))
+
+
 Notes for revision 0.3d7
 ------------------------
 

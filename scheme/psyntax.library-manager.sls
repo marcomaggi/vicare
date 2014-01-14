@@ -1,4 +1,4 @@
-;;;Copyright (c) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -27,7 +27,7 @@
     ;; library inspection
     library-spec		library-name
     library-version		library-subst
-    imported-label->binding
+    imported-label->syntactic-binding
 
     ;; library installation
     install-library		uninstall-library
@@ -68,46 +68,10 @@
   (import (rnrs)
     (psyntax compat)
     (vicare arguments validation)
-    (vicare language-extensions syntaxes)
-    (vicare language-extensions simple-match)
-    (vicare unsafe operations))
+    (vicare language-extensions simple-match))
 
 
-;;;; helpers
-
-(define ($fx-non-negative? fx)
-  (or ($fxpositive? fx)
-      ($fxzero?     fx)))
-
-
-;;;; public configuration parameters
-
-(define library-path
-  ;;Hold a  list of strings  representing directory pathnames  being the
-  ;;search path.
-  ;;
-  (make-parameter
-      '(".")
-    (lambda (obj)
-      (define who 'library-path)
-      (with-arguments-validation (who)
-	  ((list-of-strings	obj))
-	obj))))
-
-(define library-extensions
-  ;;Hold a  list of strings  representing file name  extensions, leading
-  ;;dot included.
-  ;;
-  (make-parameter
-      '(".vicare.sls" ".sls")
-    (lambda (obj)
-      (define who 'library-extensions)
-      (with-arguments-validation (who)
-	  ((list-of-strings	obj))
-	obj))))
-
-
-;;;; type definitions
+;;;; type definitions: library record
 
 (define-record library
   (id
@@ -119,16 +83,54 @@
 		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
+		;A list of library specifications needed
    vis*
+		;A  list of  library specifications  selecting libraries
+		;needed by the visit code.
    inv*
+		;A  list of  library specifications  selecting libraries
+		;needed by the invoke code.
    subst
+		;A subst representing the exported bindings.
    env
+		;The  export   environment  representing   the  exported
+		;bindings.  It is a list of lists
+		;in which the run-time bindings have the format:
+		;
+		;   (?gensym global . ?internal-name)
+		;
+		;the non-identifier macros have the format:
+		;
+		;   (?gensym global-macro . ?internal-gensym)
+		;
+		;the identifier macros have the format:
+		;
+		;   (?gensym global-macro! . ?internal-gensym)
+		;
+		;the compile-time values have the format:
+		;
+		;   (?gensym global-ctv . ?internal-gensym)
+		;
    visit-state
+		;When set  to a procedure:  it is  the thunk to  call to
+		;compile  and  evaluate the  visit  code.   When set  to
+		;something else: this library has been already visited.
    invoke-state
+		;When set  to a procedure:  it is  the thunk to  call to
+		;compile  and evaluate  the  invoke code.   When set  to
+		;something else: this library has been already invoked.
    visit-code
+		;A  core language  symbolic expression  representing the
+		;visit code.
    invoke-code
+		;A  core language  symbolic expression  representing the
+		;invoke code.
    guard-code
+		;A  core language  symbolic expression  representing the
+		;test for stale-when code.
    guard-req*
+		;A  list of  library specifications  selecting libraries
+		;needed by the stale-when code.
    visible?
 		;A boolean determining if  the library is visible.  This
 		;attribute  is  used  by INSTALLED-LIBRARIES  to  select
@@ -160,6 +162,33 @@
 (define-argument-validation (library who obj)
   (library? obj)
   (assertion-violation who "expected instance of library struct as argument" obj))
+
+
+;;;; public configuration parameters
+
+(define library-path
+  ;;Hold a  list of strings  representing directory pathnames  being the
+  ;;search path.
+  ;;
+  (make-parameter
+      '(".")
+    (lambda (obj)
+      (define-constant __who__ 'library-path)
+      (with-arguments-validation (__who__)
+	  ((list-of-strings	obj))
+	obj))))
+
+(define library-extensions
+  ;;Hold a  list of strings  representing file name  extensions, leading
+  ;;dot included.
+  ;;
+  (make-parameter
+      '(".vicare.sls" ".sls")
+    (lambda (obj)
+      (define-constant __who__ 'library-extensions)
+      (with-arguments-validation (__who__)
+	  ((list-of-strings	obj))
+	obj))))
 
 
 ;;;; collection of already loaded libraries
@@ -351,8 +380,9 @@
 ;;precompiled or from source.
 ;;
 (module (library-loader)
+  (define-constant __who__ 'default-library-loader)
 
-  (define (%default-library-loader requested-libname)
+  (define* (default-library-loader requested-libname)
     ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
     ;;name  specification:  search  the  associated  file  pathname  and
     ;;attempt to load  the file.  Try first to load  a precompiled file,
@@ -361,10 +391,9 @@
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    (define who '%default-library-loader)
     (let ((filename ((library-file-locator) requested-libname)))
       (cond ((not filename)
-	     (assertion-violation who "cannot find library" requested-libname))
+	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    ;;If the  precompiled library  loader returns false:  try to
 	    ;;load the source file.
 	    (((current-precompiled-library-loader)
@@ -425,9 +454,8 @@
     ;;name.   FOUND-LIBRARY-NAME.VERSION is  null or  the list  of exact
     ;;integers representing the library version.
     ;;
-    (define who '%default-library-loader)
     (unless (equal? found-library-name.ids requested-libname)
-      (assertion-violation who
+      (assertion-violation __who__
 	(let-values (((port extract) (open-string-output-port)))
 	  (display "expected to find library " port)
 	  (write requested-libname port)
@@ -443,7 +471,7 @@
     ;;source.
     ;;
     (make-parameter
-	%default-library-loader
+	default-library-loader
       (lambda (f)
 	(define who 'library-loader)
 	(with-arguments-validation (who)
@@ -513,9 +541,9 @@
 	   (next-library-struct (cdr ls))))))
 
 (define (%find-library-in-collection-by-spec/die spec)
-  ;;Given a  library specification, being a  list whose car  is a unique
-  ;;symbol associated  to the library, return  the corresponding LIBRARY
-  ;;record or raise an assertion.
+  ;;Given a library specification, being the content of the "spec" field
+  ;;from a  "library" record, return the  corresponding "library" record
+  ;;or raise an assertion.
   ;;
   (let ((id (car spec)))
     (or (%find-library-in-collection-by (lambda (x)
@@ -616,27 +644,94 @@
 
 ;;;; installing libraries
 
-(define installed-libraries
+(case-define installed-libraries
   ;;Return a list  of LIBRARY structs being already  installed.  If ALL?
   ;;is true:  return all the  installed libraries, else return  only the
   ;;visible ones.
   ;;
-  (case-lambda
-   ((all?)
-    (let next-library-struct ((ls ((current-library-collection))))
-      (cond ((null? ls)
-	     '())
-	    ((or all? (library-visible? (car ls)))
-	     (cons (car ls) (next-library-struct (cdr ls))))
-	    (else
-	     (next-library-struct (cdr ls))))))
-   (()
-    (installed-libraries #f))))
+  (()
+   (installed-libraries #f))
+  ((all?)
+   (let next-library-struct ((ls ((current-library-collection))))
+     (cond ((null? ls)
+	    '())
+	   ((or all? (library-visible? (car ls)))
+	    (cons (car ls) (next-library-struct (cdr ls))))
+	   (else
+	    (next-library-struct (cdr ls)))))))
 
 (module (install-library)
-
-  (define (install-library id libname ver imp* vis* inv* exp-subst exp-env
-			   visit-proc invoke-proc visit-code invoke-code
+  ;;INSTALL-LIBRARY builds  a "library"  record and  installs it  in the
+  ;;internal collection of libraries; return unspecified values.  We can
+  ;;see  EXPAND-LIBRARY  for  a   more  detailed  description,  but  the
+  ;;arguments are:
+  ;;
+  ;;ID - a gensym uniquely identifying this library.
+  ;;
+  ;;NAME - a list of symbols representing the library name.
+  ;;
+  ;;VER - a list of exact integers representing the library version.
+  ;;
+  ;;IMP* -  a list representing the  libraries that need to  be imported
+  ;;for the invoke  code.  Each item in  the list is the  content of the
+  ;;SPEC field of LIBRARY record.
+  ;;
+  ;;VIS* -  a list representing the  libraries that need to  be imported
+  ;;for the  visit code.  Each  item in the list  is the content  of the
+  ;;SPEC field of LIBRARY record.
+  ;;
+  ;;INV* - a list representing  the import specifications.  Each item in
+  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;
+  ;;EXPORT-SUBST - A subst representing the bindings to export.
+  ;;
+  ;;EXPORT-ENV - The export lexical environment.   It is a list of lists
+  ;;in which the run-time bindings have the format:
+  ;;
+  ;;   (?gensym global . ?internal-name)
+  ;;
+  ;;the non-identifier macros have the format:
+  ;;
+  ;;   (?gensym global-macro . ?internal-gensym)
+  ;;
+  ;;the identifier macros have the format:
+  ;;
+  ;;   (?gensym global-macro! . ?internal-gensym)
+  ;;
+  ;;the compile-time values have the format:
+  ;;
+  ;;   (?gensym global-ctv . ?internal-gensym)
+  ;;
+  ;;VISIT-PROC - a thunk that  compiles the core language representation
+  ;;of the expand-time code into code objects and evaluates the result.
+  ;;
+  ;;INVOKE-PROC - a thunk that compiles the core language representation
+  ;;of the run-time code into code objects and evaluates the result.
+  ;;
+  ;;VISIT-CODE - - A symbolic  expression representing the core language
+  ;;code to be evaluated to create the expand-time code.
+  ;;
+  ;;INVOKE-CODE -  A symbolic expression representing  the core language
+  ;;code to  be evaluated to  create the run-time bindings  and evaluate
+  ;;the init expressions.  It is a LIBRARY-LETREC* core language form.
+  ;;
+  ;;GUARD-CODE   -  A   predicate  expression   in  the   core  language
+  ;;representing the stale-when tests from the body of the library.
+  ;;
+  ;;GUARD-REQ* -  a list  representing the libraries  that need  for the
+  ;;STALE-WHEN code?  Each item in the list is the content of the "spec"
+  ;;field of a "library" record.
+  ;;
+  ;;VISIBLE? - a boolean, true if this  library is to be made visible to
+  ;;the function INSTALLED-LIBRARIES.
+  ;;
+  ;;SOURCE-FILE-NAME - a string representing the source file name.
+  ;;
+  (define (install-library id libname ver
+			   imp* vis* inv*
+			   exp-subst exp-env
+			   visit-proc invoke-proc
+			   visit-code invoke-code
 			   guard-code guard-req*
 			   visible? source-file-name)
     (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
@@ -657,11 +752,13 @@
 
   (define (%install-library-record lib)
     (for-each
-	(lambda (lexical-environment-entry)
+	(lambda (export-environment-entry)
 	  ;;See the comments in the expander  code for the format of the
-	  ;;lexical environment.
-	  (let* ((label    (car lexical-environment-entry))
-		 (binding  (cdr lexical-environment-entry))
+	  ;;export environment.   Entries in the export  environment are
+	  ;;different from entries in  the lexical environments; here we
+	  ;;transform an export entry into a lexical entry.
+	  (let* ((label    (car export-environment-entry))
+		 (binding  (cdr export-environment-entry))
 		 (binding1 (case (car binding)
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
@@ -675,7 +772,7 @@
   #| end of module: INSTALL-LIBRARY |# )
 
 
-(define (imported-label->binding lab)
+(define (imported-label->syntactic-binding lab)
   (label-binding lab))
 
 (define (invoke-library lib)
@@ -708,13 +805,12 @@
       (visit)
       (set-library-visit-state! lib #t))))
 
-(define (library-spec lib)
+(define* (library-spec lib)
   ;;Given a library record return a list holding: the unique library id,
   ;;the  list of  symbols from  the library  name, null  or the  list of
   ;;version numbers from the library name.
   ;;
-  (define who 'library-spec)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((library		lib))
     (list ($library-id      lib)
 	  ($library-name    lib)
@@ -740,7 +836,7 @@
   ;;Return #t if OBJ is a version number according to R6RS.
   ;;
   (and (fixnum? obj)
-       ($fx-non-negative? obj)))
+       ($fxnonnegative? obj)))
 
 (define (library-name? sexp)
   ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
@@ -1027,7 +1123,7 @@
   ;;(Marco Maggi; Tue Apr 23, 2013)
   ;;
   (and (fixnum? obj)
-       ($fx-non-negative? obj)))
+       ($fxnonnegative? obj)))
 
 ;;; --------------------------------------------------------------------
 ;;; decomposition

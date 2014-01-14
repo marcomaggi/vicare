@@ -70,6 +70,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib hashtables::            Additional functions on hashtables.
 * iklib load::                  Loading source files.
 * iklib modules::               Local modules.
+* iklib libraries::             Local libraries.
 * iklib parameters::            Parameters.
 * iklib gensym::                Gensyms.
 * iklib printing::              Printing.
@@ -2592,10 +2593,32 @@ Return @math{12} values:
 @var{id}, to be documented.
 
 @item
-@var{name}, to be documented.
+@var{name}: a list of symbols representing the library name.  For the
+library:
+
+@example
+(library (c i a o)
+  (export A)
+  (import (rnrs))
+  (define A 123))
+@end example
+
+@noindent
+@var{name} is the list @code{(c i a o)}.
 
 @item
-@var{ver}, to be documented.
+@var{ver}: a list of exact integers representing the library version.
+For the library:
+
+@example
+(library (ciao (1 2))
+  (export A)
+  (import (rnrs))
+  (define A 123))
+@end example
+
+@noindent
+@var{ver} is the list @code{(1 2)}.
 
 @item
 @var{imp*}, to be documented.
@@ -2619,7 +2642,29 @@ Return @math{12} values:
 @var{export-env}, to be documented.
 
 @item
-@var{guard-code}, to be documented.
+@var{guard-code}: a predicate expression in the core language
+representing the @func{stale-when} tests from the body of the library.
+For the library:
+
+@example
+(library (ciao (1 2))
+  (export doit)
+  (import (vicare))
+  (stale-when (< 1 2) (define a 123))
+  (stale-when (< 2 3) (define b 123))
+  (define (doit) 123))
+@end example
+
+@noindent
+@var{guard-code} is:
+
+@example
+(if (if '#f
+        '#t
+      (annotated-call (< 1 2) (primitive <) '1 '2))
+    '#t
+  (annotated-call (< 2 3) (primitive <) '2 '3))
+@end example
 
 @item
 @var{guard-req*}, to be documented.
@@ -4995,7 +5040,8 @@ Return true if @var{obj} is a weak pair.
 
 @defun bwp-obejct? @var{obj}
 Return true if @var{obj} is a weak reference to a value which has been
-already garbage collected.  Example:
+already garbage collected (@samp{bwp} stands for ``broken weak
+pointer'').  Example:
 
 @example
 vicare> (define x (weak-cons (cons 1 2) #f))
@@ -6495,16 +6541,6 @@ difference between modules and @rnrs{6} libraries is that modules are
 defined in a single form nested into a library; so, in a way, they are
 sub--libraries.
 
-@ignore
-@quotation
-@strong{NOTE} In the official documentation of @value{PRJNAME} 0.0.3+
-(revision 1648) modules are yet not documented.  Please refer to Section
-10.5 of Chez Scheme User's Guide, Chapter 3 of Oscar Waddel's Ph.D
-Thesis, and its POPL99 paper for details on using the @func{module} and
-@func{import} keywords.  @value{PRJNAME}'s internal module system is
-similar in spirit to that of Chez Scheme.
-@end quotation
-@end ignore
 
 @deffn Syntax module @meta{interface} @meta{definition} ... @meta{expression} ...
 @deffnx Syntax module @meta{name} @meta{interface} @meta{definition} ... @meta{expression} ...
@@ -6850,6 +6886,40 @@ access definitions in a module without explicitly using the
            "calling ones: ~s ~s\n"
            ((in-module red one)   123)
            ((in-module green one) 456)))
+@end example
+
+@c page
+@node iklib libraries
+@section Local libraries
+
+
+@rnrs{6} defines libraries to be top--level symbolic expressions; the
+form @func{library} can appear only at the top--level; @ref{scheme
+library form, Library form}.  @value{PRJNAME} extends the notion of
+libraries by having the library @library{vicare} export a @func{library}
+syntax; such syntax can be used anywhere a definition can be used and
+the defined library can be imported in its region of visibility.
+
+The following is a perfectly valid Vicare program:
+
+@example
+(import (vicare))
+
+(let ()
+  (library (ciao)
+    (export a)
+    (import (rnrs))
+    (define a 1))
+
+  (library (hello)
+    (export b)
+    (import (rnrs))
+    (define b 1))
+
+  (import (ciao))
+  (import (hello))
+
+  (display (list a b)))
 @end example
 
 @c page

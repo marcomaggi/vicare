@@ -3910,7 +3910,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'splice-first-expand))
+(parametrise ((check-test-name	'compile-time-values))
 
   (check
       (let ()
