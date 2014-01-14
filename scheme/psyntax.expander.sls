@@ -136,31 +136,6 @@
     (psyntax internal))
 
 
-;;;; unsafe operations
-
-(module UNSAFE
-  ($car $cdr
-   $vector-ref $vector-set! $vector-length
-   $fx= $fxadd1)
-  #;(import (ikarus system $pairs))
-  (begin
-    (define $car car)
-    (define $cdr cdr))
-  #;(import (ikarus system $vectors))
-  (begin
-    (define $vector-ref vector-ref)
-    (define $vector-set! vector-set!)
-    (define $vector-length vector-length))
-  #;(import (ikarus system $fx))
-  (begin
-    (define $fx= =)
-    (define ($fxadd1 N)
-      (+ 1 N)))
-  #| end of module |# )
-
-(import UNSAFE)
-
-
 ;;; helpers
 
 ;;This syntax can be used as standalone identifier and it expands to #f.

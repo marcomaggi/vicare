@@ -68,46 +68,10 @@
   (import (rnrs)
     (psyntax compat)
     (vicare arguments validation)
-    (vicare language-extensions syntaxes)
-    (vicare language-extensions simple-match)
-    (vicare unsafe operations))
+    (vicare language-extensions simple-match))
 
 
-;;;; helpers
-
-(define ($fx-non-negative? fx)
-  (or ($fxpositive? fx)
-      ($fxzero?     fx)))
-
-
-;;;; public configuration parameters
-
-(define library-path
-  ;;Hold a  list of strings  representing directory pathnames  being the
-  ;;search path.
-  ;;
-  (make-parameter
-      '(".")
-    (lambda (obj)
-      (define who 'library-path)
-      (with-arguments-validation (who)
-	  ((list-of-strings	obj))
-	obj))))
-
-(define library-extensions
-  ;;Hold a  list of strings  representing file name  extensions, leading
-  ;;dot included.
-  ;;
-  (make-parameter
-      '(".vicare.sls" ".sls")
-    (lambda (obj)
-      (define who 'library-extensions)
-      (with-arguments-validation (who)
-	  ((list-of-strings	obj))
-	obj))))
-
-
-;;;; type definitions
+;;;; type definitions: library record
 
 (define-record library
   (id
@@ -119,16 +83,54 @@
 		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
+		;A list of library specifications needed
    vis*
+		;A  list of  library specifications  selecting libraries
+		;needed by the visit code.
    inv*
+		;A  list of  library specifications  selecting libraries
+		;needed by the invoke code.
    subst
+		;A subst representing the exported bindings.
    env
+		;The  export   environment  representing   the  exported
+		;bindings.  It is a list of lists
+		;in which the run-time bindings have the format:
+		;
+		;   (?gensym global . ?internal-name)
+		;
+		;the non-identifier macros have the format:
+		;
+		;   (?gensym global-macro . ?internal-gensym)
+		;
+		;the identifier macros have the format:
+		;
+		;   (?gensym global-macro! . ?internal-gensym)
+		;
+		;the compile-time values have the format:
+		;
+		;   (?gensym global-ctv . ?internal-gensym)
+		;
    visit-state
+		;When set  to a procedure:  it is  the thunk to  call to
+		;compile  and  evaluate the  visit  code.   When set  to
+		;something else: this library has been already visited.
    invoke-state
+		;When set  to a procedure:  it is  the thunk to  call to
+		;compile  and evaluate  the  invoke code.   When set  to
+		;something else: this library has been already invoked.
    visit-code
+		;A  core language  symbolic expression  representing the
+		;visit code.
    invoke-code
+		;A  core language  symbolic expression  representing the
+		;invoke code.
    guard-code
+		;A  core language  symbolic expression  representing the
+		;test for stale-when code.
    guard-req*
+		;A  list of  library specifications  selecting libraries
+		;needed by the stale-when code.
    visible?
 		;A boolean determining if  the library is visible.  This
 		;attribute  is  used  by INSTALLED-LIBRARIES  to  select
@@ -160,6 +162,33 @@
 (define-argument-validation (library who obj)
   (library? obj)
   (assertion-violation who "expected instance of library struct as argument" obj))
+
+
+;;;; public configuration parameters
+
+(define library-path
+  ;;Hold a  list of strings  representing directory pathnames  being the
+  ;;search path.
+  ;;
+  (make-parameter
+      '(".")
+    (lambda (obj)
+      (define-constant __who__ 'library-path)
+      (with-arguments-validation (__who__)
+	  ((list-of-strings	obj))
+	obj))))
+
+(define library-extensions
+  ;;Hold a  list of strings  representing file name  extensions, leading
+  ;;dot included.
+  ;;
+  (make-parameter
+      '(".vicare.sls" ".sls")
+    (lambda (obj)
+      (define-constant __who__ 'library-extensions)
+      (with-arguments-validation (__who__)
+	  ((list-of-strings	obj))
+	obj))))
 
 
 ;;;; collection of already loaded libraries
@@ -351,8 +380,9 @@
 ;;precompiled or from source.
 ;;
 (module (library-loader)
+  (define-constant __who__ 'default-library-loader)
 
-  (define (%default-library-loader requested-libname)
+  (define* (default-library-loader requested-libname)
     ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
     ;;name  specification:  search  the  associated  file  pathname  and
     ;;attempt to load  the file.  Try first to load  a precompiled file,
@@ -361,10 +391,9 @@
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    (define who '%default-library-loader)
     (let ((filename ((library-file-locator) requested-libname)))
       (cond ((not filename)
-	     (assertion-violation who "cannot find library" requested-libname))
+	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    ;;If the  precompiled library  loader returns false:  try to
 	    ;;load the source file.
 	    (((current-precompiled-library-loader)
@@ -425,9 +454,8 @@
     ;;name.   FOUND-LIBRARY-NAME.VERSION is  null or  the list  of exact
     ;;integers representing the library version.
     ;;
-    (define who '%default-library-loader)
     (unless (equal? found-library-name.ids requested-libname)
-      (assertion-violation who
+      (assertion-violation __who__
 	(let-values (((port extract) (open-string-output-port)))
 	  (display "expected to find library " port)
 	  (write requested-libname port)
@@ -443,7 +471,7 @@
     ;;source.
     ;;
     (make-parameter
-	%default-library-loader
+	default-library-loader
       (lambda (f)
 	(define who 'library-loader)
 	(with-arguments-validation (who)
@@ -777,13 +805,12 @@
       (visit)
       (set-library-visit-state! lib #t))))
 
-(define (library-spec lib)
+(define* (library-spec lib)
   ;;Given a library record return a list holding: the unique library id,
   ;;the  list of  symbols from  the library  name, null  or the  list of
   ;;version numbers from the library name.
   ;;
-  (define who 'library-spec)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((library		lib))
     (list ($library-id      lib)
 	  ($library-name    lib)
@@ -809,7 +836,7 @@
   ;;Return #t if OBJ is a version number according to R6RS.
   ;;
   (and (fixnum? obj)
-       ($fx-non-negative? obj)))
+       ($fxnonnegative? obj)))
 
 (define (library-name? sexp)
   ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
@@ -1096,7 +1123,7 @@
   ;;(Marco Maggi; Tue Apr 23, 2013)
   ;;
   (and (fixnum? obj)
-       ($fx-non-negative? obj)))
+       ($fxnonnegative? obj)))
 
 ;;; --------------------------------------------------------------------
 ;;; decomposition
