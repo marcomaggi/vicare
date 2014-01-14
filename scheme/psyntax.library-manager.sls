@@ -513,9 +513,9 @@
 	   (next-library-struct (cdr ls))))))
 
 (define (%find-library-in-collection-by-spec/die spec)
-  ;;Given a  library specification, being a  list whose car  is a unique
-  ;;symbol associated  to the library, return  the corresponding LIBRARY
-  ;;record or raise an assertion.
+  ;;Given a library specification, being the content of the "spec" field
+  ;;from a  "library" record, return the  corresponding "library" record
+  ;;or raise an assertion.
   ;;
   (let ((id (car spec)))
     (or (%find-library-in-collection-by (lambda (x)
@@ -616,27 +616,94 @@
 
 ;;;; installing libraries
 
-(define installed-libraries
+(case-define installed-libraries
   ;;Return a list  of LIBRARY structs being already  installed.  If ALL?
   ;;is true:  return all the  installed libraries, else return  only the
   ;;visible ones.
   ;;
-  (case-lambda
-   ((all?)
-    (let next-library-struct ((ls ((current-library-collection))))
-      (cond ((null? ls)
-	     '())
-	    ((or all? (library-visible? (car ls)))
-	     (cons (car ls) (next-library-struct (cdr ls))))
-	    (else
-	     (next-library-struct (cdr ls))))))
-   (()
-    (installed-libraries #f))))
+  (()
+   (installed-libraries #f))
+  ((all?)
+   (let next-library-struct ((ls ((current-library-collection))))
+     (cond ((null? ls)
+	    '())
+	   ((or all? (library-visible? (car ls)))
+	    (cons (car ls) (next-library-struct (cdr ls))))
+	   (else
+	    (next-library-struct (cdr ls)))))))
 
 (module (install-library)
-
-  (define (install-library id libname ver imp* vis* inv* exp-subst exp-env
-			   visit-proc invoke-proc visit-code invoke-code
+  ;;INSTALL-LIBRARY builds  a "library"  record and  installs it  in the
+  ;;internal collection of libraries; return unspecified values.  We can
+  ;;see  EXPAND-LIBRARY  for  a   more  detailed  description,  but  the
+  ;;arguments are:
+  ;;
+  ;;ID - a gensym uniquely identifying this library.
+  ;;
+  ;;NAME - a list of symbols representing the library name.
+  ;;
+  ;;VER - a list of exact integers representing the library version.
+  ;;
+  ;;IMP* -  a list representing the  libraries that need to  be imported
+  ;;for the invoke  code.  Each item in  the list is the  content of the
+  ;;SPEC field of LIBRARY record.
+  ;;
+  ;;VIS* -  a list representing the  libraries that need to  be imported
+  ;;for the  visit code.  Each  item in the list  is the content  of the
+  ;;SPEC field of LIBRARY record.
+  ;;
+  ;;INV* - a list representing  the import specifications.  Each item in
+  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;
+  ;;EXPORT-SUBST - A subst representing the bindings to export.
+  ;;
+  ;;EXPORT-ENV - The export lexical environment.   It is a list of lists
+  ;;in which the run-time bindings have the format:
+  ;;
+  ;;   (?gensym global . ?internal-name)
+  ;;
+  ;;the non-identifier macros have the format:
+  ;;
+  ;;   (?gensym global-macro . ?internal-gensym)
+  ;;
+  ;;the identifier macros have the format:
+  ;;
+  ;;   (?gensym global-macro! . ?internal-gensym)
+  ;;
+  ;;the compile-time values have the format:
+  ;;
+  ;;   (?gensym global-ctv . ?internal-gensym)
+  ;;
+  ;;VISIT-PROC - a thunk that  compiles the core language representation
+  ;;of the expand-time code into code objects and evaluates the result.
+  ;;
+  ;;INVOKE-PROC - a thunk that compiles the core language representation
+  ;;of the run-time code into code objects and evaluates the result.
+  ;;
+  ;;VISIT-CODE - - A symbolic  expression representing the core language
+  ;;code to be evaluated to create the expand-time code.
+  ;;
+  ;;INVOKE-CODE -  A symbolic expression representing  the core language
+  ;;code to  be evaluated to  create the run-time bindings  and evaluate
+  ;;the init expressions.  It is a LIBRARY-LETREC* core language form.
+  ;;
+  ;;GUARD-CODE   -  A   predicate  expression   in  the   core  language
+  ;;representing the stale-when tests from the body of the library.
+  ;;
+  ;;GUARD-REQ* -  a list  representing the libraries  that need  for the
+  ;;STALE-WHEN code?  Each item in the list is the content of the "spec"
+  ;;field of a "library" record.
+  ;;
+  ;;VISIBLE? - a boolean, true if this  library is to be made visible to
+  ;;the function INSTALLED-LIBRARIES.
+  ;;
+  ;;SOURCE-FILE-NAME - a string representing the source file name.
+  ;;
+  (define (install-library id libname ver
+			   imp* vis* inv*
+			   exp-subst exp-env
+			   visit-proc invoke-proc
+			   visit-code invoke-code
 			   guard-code guard-req*
 			   visible? source-file-name)
     (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))

@@ -640,7 +640,7 @@
   ;;         (+ 4 5))))              |
   ;;
   ;;VISIT-CODE -  - A  symbolic expression representing  the code  to be
-  ;;evaluated to create the actual library's run-time code.  Examples:
+  ;;evaluated to create the expand-time code.  Examples:
   ;;
   ;;         library source          |     VISIT-CODE
   ;;   ------------------------------+-----------------------------
@@ -657,7 +657,7 @@
   ;;                                 |			      (primitive +) '4 '5))))
   ;;
   ;;EXPORT-SUBST  -  A  subst   representing  the  bindings  to  export.
-  ;;Exmpamples:
+  ;;Examples:
   ;;
   ;;         library source          |     EXPORT-SUBST
   ;;   ------------------------------+-----------------------------
