@@ -129,6 +129,26 @@
   (or (not obj)
       (identifier? obj)))
 
+(define-syntax-rule (syntax->vector->list ?stx)
+  ;;Given a syntax  object representing a vector: unwrap  the vector and
+  ;;convert  it to  a list;  return the  list of  items in  teh original
+  ;;vector.
+  ;;
+  (vector->list (syntax->vector ?stx)))
+
+
+(define-syntax-rule (syntax->vector->list->flat ?stx)
+  ;;Given a syntax  object representing a vector of  vectors: unwrap the
+  ;;outer vector and the inner vectors  returning a list holding all the
+  ;;items.  Example:
+  ;;
+  ;;   (syntax->vector->list->flat (syntax #(#(a b) #(c d) #(e f))))
+  ;;   => (#'a #'b #'c #'d #'e #'f)
+  ;;
+  (apply append (map (lambda (item)
+		       (syntax->vector->list item))
+		  (syntax->vector->list ?stx))))
+
 
 ;;;; public helpers
 
@@ -2743,328 +2763,261 @@
 	  (synner "invalid method specification" ($car input-clauses))))))))
 
 
+;;;; concrete and virtual fields helpers
+
+(module FIELD-SPEC-PARSER
+  (%parse-field-spec)
+
+  (define* (%parse-field-spec (field-spec-stx syntax-object?)
+			      (parsed-spec <parsed-spec>?)
+			      (register-mutable-field   procedure?)
+			      (register-immutable-field procedure?)
+			      (synner procedure?))
+    ;;Parse  a concrete  or virtual  field specification  and apply  the
+    ;;proper function to the result.
+    ;;
+    (syntax-case field-spec-stx (aux.mutable aux.immutable)
+      ((aux.mutable ?field ?accessor ?mutator)
+       (receive (field-name-id type-tag-id)
+	   (%parse-field #'?field parsed-spec synner)
+	 (register-mutable-field field-name-id type-tag-id #'?accessor #'?mutator parsed-spec synner)))
+
+      ((aux.immutable ?field ?accessor)
+       (receive (field-name-id type-tag-id)
+	   (%parse-field #'?field parsed-spec synner)
+	 (register-immutable-field field-name-id type-tag-id #'?accessor parsed-spec synner)))
+
+      ((aux.mutable ?field)
+       (receive (field-name-id type-tag-id)
+	   (%parse-field #'?field parsed-spec synner)
+	 (register-mutable-field field-name-id type-tag-id #f #f parsed-spec synner)))
+
+      ((aux.immutable ?field)
+       (receive (field-name-id type-tag-id)
+	   (%parse-field #'?field parsed-spec synner)
+	 (register-immutable-field field-name-id type-tag-id #f parsed-spec synner)))
+
+      (?field
+       (receive (field-name-id type-tag-id)
+	   (%parse-field #'?field parsed-spec synner)
+	 (register-immutable-field field-name-id type-tag-id #f parsed-spec synner)))
+
+      (_
+       (synner "invalid virtual-field specification" field-spec-stx))))
+
+  (define (%parse-field field-stx parsed-spec synner)
+    (syntax-case field-stx ()
+      (?field-name-id
+       (identifier? #'?field-name-id)
+       (values #'?field-name-id (<parsed-spec>-top-id parsed-spec)))
+
+      ((?field-name-id ?type-tag-id)
+       (and (identifier? #'?field-name-id)
+	    (identifier? #'?type-tag-id))
+       (values #'?field-name-id #'?type-tag-id))
+
+      (#(?field-name-id ?type-tag-id)
+       (and (identifier? #'?field-name-id)
+	    (identifier? #'?type-tag-id))
+       (values #'?field-name-id #'?type-tag-id))
+
+      (_
+       (synner "invalid field name and type tag specification" field-stx))))
+
+  #| end of module: %PARSE-FIELD-SPEC |# )
+
+
 ;;;; concrete fields clauses
 
-;;Parser function for FIELDS clauses; this clause can be present zero or
-;;more  times; this  clause accepts  zero or  more arguments.   A FIELDS
-;;clause has the following syntax:
-;;
-;;  (fields ?field-spec ...)
-;;
-;;where ?FIELD-SPEC has one of the following syntaxes:
-;;
-;;  ?field-name-id
-;;  (mutable   ?field)
-;;  (mutable   ?field ?accessor-id ?mutator-id)
-;;  (immutable ?field)
-;;  (immutable ?field ?accessor-id)
-;;
-;;where ?FIELD has one of the following syntaxes:
-;;
-;;  ?field-name-id
-;;  (?field-name-id ?type-tag-id)
-;;  (?field-name-id)
-;;
-(define-clause-parser/zero-or-more-clauses/zero-or-more-arguments
-    (parser-name %parse-clauses-concrete-fields)
-  (clause-keyword aux.fields)
-  (body
-   (let ((name-id	(<parsed-spec>-name-id parsed-spec))
-	 (top-id	(<parsed-spec>-top-id  parsed-spec)))
+(module (clause-arguments-parser:concrete-fields)
+  ;;Parser function for FIELDS clauses;  this clause can be present zero
+  ;;or more times; this clause accepts zero or more arguments.  A FIELDS
+  ;;clause has the following syntax:
+  ;;
+  ;;  (fields ?field-spec ...)
+  ;;
+  ;;where ?FIELD-SPEC has one of the following syntaxes:
+  ;;
+  ;;  (mutable   ?field)
+  ;;  (mutable   ?field ?accessor ?mutator)
+  ;;  (immutable ?field)
+  ;;  (immutable ?field ?accessor)
+  ;;  ?field
+  ;;
+  ;;where ?FIELD has one of the following syntaxes:
+  ;;
+  ;;  ?field-name-id
+  ;;  (?field-name-id ?type-tag-id)
+  ;;  #(?field-name-id ?type-tag-id)
+  ;;
+  ;;both ?ACCESSOR and ?MUTATOR must be identifiers.
+  ;;
+  (define (clause-arguments-parser:concrete-fields parsed-spec args synner)
+    (syntax-case args ()
+      (#(#(?field-spec ...) ...)
+       (for-all (lambda (field-spec-stx)
+		  (import FIELD-SPEC-PARSER)
+		  (%parse-field-spec field-spec-stx parsed-spec
+				     %register-mutable-field %register-immutable-field synner))
+	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
+      (_
+       (synner "invalid FIELDS clause syntax"))))
 
-     (define (%main field-specs)
-       ;;Recursive function.  Parse  a FIELDS clause's arguments.  Return
-       ;;unspecified values.
-       ;;
-       (syntax-case field-specs ()
-	 ;;No more field specs.
-	 (() (values))
-	 ;;A field spec.
-	 ((?field-spec . ?other-specs)
-	  (begin
-	    (%add-field-record (%parse-single-field-spec #'?field-spec))
-	    (%main #'?other-specs)))
-	 ;;Invalid field specification
-	 (_
-	  (synner "invalid field specification" ($car input-clauses)))))
+  (define (%register-mutable-field field-name-id type-tag-id accessor-stx mutator-stx parsed-spec synner)
+    (define accessor-id
+      (%parse-concrete-field-acc/mut-spec field-name-id accessor-stx parsed-spec
+					  identifier-record-field-accessor synner))
+    (define mutator-id
+      (%parse-concrete-field-acc/mut-spec field-name-id mutator-stx parsed-spec
+					  identifier-record-field-mutator synner))
+    (define field-spec
+      (make-<concrete-field-spec> field-name-id accessor-id mutator-id type-tag-id))
+    (%add-field-record parsed-spec field-spec synner))
 
-     (define-inline (%add-field-record ?field-record)
-       ;;Add  a  record  representing   a  field  specification  to  the
-       ;;appropriate field in PARSED-SPEC.  Check for duplicate names in
-       ;;members.
-       ;;
-       (let ((field-record ?field-record))
-	 (<parsed-spec>-member-identifiers-cons! parsed-spec (<field-spec>-name-id field-record)
-						 "field name" synner)
-	 (<parsed-spec>-concrete-fields-cons! parsed-spec field-record)))
+  (define (%register-immutable-field field-name-id type-tag-id accessor-stx parsed-spec synner)
+    (define accessor-id
+      (%parse-concrete-field-acc/mut-spec field-name-id accessor-stx parsed-spec
+					  identifier-record-field-accessor synner))
+    (define field-spec
+      (make-<concrete-field-spec> field-name-id accessor-id #f type-tag-id))
+    (%add-field-record parsed-spec field-spec synner))
 
-     (define-inline (%parse-single-field-spec ?field-spec)
-       ;;Parse a  single field specification argument and  return a field
-       ;;record describing it.
-       ;;
-       (let ((field-spec ?field-spec))
-	 (syntax-case field-spec (aux.mutable aux.immutable)
+  (define* (%parse-concrete-field-acc/mut-spec (field-name-id identifier?)
+					       (acc/mut-stx syntax-object?)
+					       (parsed-spec <parsed-spec>?)
+					       make-default-id synner)
+    ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
+    ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
+    ;;specification,  the parsed  spec  record.   Support the  following
+    ;;cases:
+    ;;
+    ;;If ACC/MUT-STX is an identifier:  such identifier will be bound to
+    ;;the accessor or mutator function.
+    ;;
+    ;;If  ACC/MUT-STX  is  false:  it means  no  specification  for  the
+    ;;accessor or  mutator was present.   A default accessor  or mutator
+    ;;identifier is built  and returned.  Such identifier  will be bound
+    ;;to the accessor or mutator function.
+    ;;
+    (cond ((identifier? acc/mut-stx)
+	   acc/mut-stx)
+	  ((not acc/mut-stx)
+	   (make-default-id (<parsed-spec>-name-id parsed-spec) field-name-id))
+	  (else
+	   (synner "expected identifier as field accessor or mutator specification"
+		   acc/mut-stx))))
 
-	   ;;Immutable field, without accessor name.
-	   ((aux.immutable ?field)
-	    (%make-immutable-field-record field-spec #'?field #f))
+  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+    ;;Add a record representing a field specification to the appropriate
+    ;;field in PARSED-SPEC.  Check for duplicate names in members.
+    ;;
+    (<parsed-spec>-member-identifiers-cons! parsed-spec (<field-spec>-name-id field-record)
+					    "field name" synner)
+    (<parsed-spec>-concrete-fields-cons! parsed-spec field-record))
 
-	   ;;Immutable field, with accessor name.
-	   ((aux.immutable ?field ?accessor-name)
-	    (identifier? #'?accessor-name)
-	    (%make-immutable-field-record field-spec #'?field #'?accessor-name))
-
-	   ;;Mutable field, without accessor and mutator names.
-	   ((aux.mutable ?field)
-	    (%make-mutable-field-record field-spec #'?field #f #f))
-
-	   ;;Mutable field, with accessor and mutator names.
-	   ((aux.mutable ?field ?accessor-name ?mutator-name)
-	    (and (identifier? #'?accessor-name)
-		 (identifier? #'?mutator-name))
-	    (%make-mutable-field-record field-spec #'?field #'?accessor-name #'?mutator-name))
-
-	   ;;Immutable field, without IMMUTABLE keyword.
-	   (?field-name
-	    (identifier? #'?field-name)
-	    (%make-immutable-field-record field-spec field-spec #f))
-
-	   ;;Immutable field, without IMMUTABLE keyword, with tag.
-	   ((?field-name ?tag-id)
-	    (and (identifier? #'?field-name)
-		 (identifier? #'?tag-id))
-	    (%make-immutable-field-record field-spec field-spec #f))
-
-	   ;;Invalid field specification.
-	   (_
-	    (synner "invalid field specification" field-spec)))))
-
-     (define (%make-immutable-field-record field-spec field-name-and-tag-stx
-					   accessor-id)
-       ;;Parse  the field-and-tags  syntax  object.  Build  and return  a
-       ;;field record specifying an immutable field.
-       ;;
-       (let-values (((field-id tag-id)
-		     (if (identifier? field-name-and-tag-stx)
-			 (values field-name-and-tag-stx top-id)
-		       (%parse-field-id-and-tag field-spec field-name-and-tag-stx))))
-	 (make-<concrete-field-spec> field-id
-				     (or accessor-id (%make-accessor-id field-id))
-				     #f tag-id)))
-
-     (define (%make-mutable-field-record field-spec field-name-and-tag-stx
-					 accessor-id mutator-id)
-       ;;Parse  the field-and-tags  syntax  object.  Build  and return  a
-       ;;field record specifying a mutable field.
-       ;;
-       (let-values (((field-id tag-id)
-		     (if (identifier? field-name-and-tag-stx)
-			 (values field-name-and-tag-stx top-id)
-		       (%parse-field-id-and-tag field-spec field-name-and-tag-stx))))
-	 (make-<concrete-field-spec> field-id
-				     (or accessor-id (%make-accessor-id field-id))
-				     (or mutator-id  (%make-mutator-id  field-id))
-				     tag-id)))
-
-     (define (%parse-field-id-and-tag field-spec-stx field-name-and-tag-stx)
-       ;;Parse  a syntax  object representing  a list  whose car  is the
-       ;;field name identifier and  whose optional cdr is the identifier
-       ;;of the  field's type  tag.  Return two  values: the  field name
-       ;;identifier, the tag type identifier or false.
-       ;;
-       (syntax-case field-name-and-tag-stx ()
-	 ((?field-name ?tag-id)
-	  (and (identifier? #'?field-name)
-	       (identifier? #'?tag-id))
-	  (values #'?field-name #'?tag-id))
-	 ((?field-name)
-	  (identifier? #'?field-name)
-	  (values #'?field-name #f))
-	 (_
-	  (synner "invalid field specification" field-spec-stx))))
-
-     (define-inline (%make-accessor-id field-id)
-       (identifier-record-field-accessor name-id field-id))
-
-     (define-inline (%make-mutator-id field-id)
-       (identifier-record-field-mutator name-id field-id))
-
-     (%main #'?arguments))))
+  #| end of module |# )
 
 
 ;;;; virtual fields clauses
 
-;;Parser function for VIRTUAL-FIELDS clauses; this clause can be present
-;;zero or  more times;  this clause accepts  zero or more  arguments.  A
-;;VIRTUAL-FIELDS clause has the following syntax:
-;;
-;;  (fields ?field-spec ...)
-;;
-;;where ?FIELD-SPEC has one of the following syntaxes:
-;;
-;;  ?field-name-id
-;;  (mutable   ?field)
-;;  (mutable   ?field ?accessor ?mutator)
-;;  (immutable ?field)
-;;  (immutable ?field ?accessor)
-;;
-;;where ?FIELD has one of the following syntaxes:
-;;
-;;  ?field-name-id
-;;  (?field-name-id ?type-tag-id)
-;;  (?field-name-id)
-;;
-;;and ?ACCESSOR has one of the following syntaxes:
-;;
-;;  ?accessor-id
-;;  ?accessor-expr
-;;
-;;and ?MUTATOR has one of the following syntaxes:
-;;
-;;  ?mutator-id
-;;  ?mutator-expr
-;;
-(define-clause-parser/zero-or-more-clauses/zero-or-more-arguments
-    (parser-name %parse-clauses-virtual-fields)
-  (clause-keyword aux.virtual-fields)
-  (body
-   (let ((name-id	(<parsed-spec>-name-id parsed-spec))
-	 (top-id	(<parsed-spec>-top-id  parsed-spec)))
+(module (clause-arguments-parser:virtual-fields)
+  ;;Parser  function  for VIRTUAL-FIELDS  clauses;  this  clause can  be
+  ;;present  zero  or more  times;  this  clause  accepts zero  or  more
+  ;;arguments.  A VIRTUAL-FIELDS clause has the following syntax:
+  ;;
+  ;;  (virtual-fields ?field-spec ...)
+  ;;
+  ;;where ?FIELD-SPEC has one of the following syntaxes:
+  ;;
+  ;;  (mutable   ?field)
+  ;;  (mutable   ?field ?accessor ?mutator)
+  ;;  (immutable ?field)
+  ;;  (immutable ?field ?accessor)
+  ;;  ?field
+  ;;
+  ;;where ?FIELD has one of the following syntaxes:
+  ;;
+  ;;  ?field-name-id
+  ;;  (?field-name-id ?type-tag-id)
+  ;;  #(?field-name-id ?type-tag-id)
+  ;;
+  ;;both ?ACCESSOR  and ?MUTATOR can  be identifiers bound  to functions
+  ;;and syntaxes or arbitrary expressions evaluating to the accessor and
+  ;;mutator functions or syntax keyword.
+  ;;
+  (define (clause-arguments-parser:virtual-fields parsed-spec args synner)
+    (syntax-case args ()
+      (#(#(?field-spec ...) ...)
+       (for-all (lambda (field-spec-stx)
+		  (import FIELD-SPEC-PARSER)
+		  (%parse-field-spec field-spec-stx parsed-spec
+				     %register-mutable-field %register-immutable-field synner))
+	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
+      (_
+       (synner "invalid VIRTUAL-FIELDS clause syntax"))))
 
-     (define (%main field-specs)
-       ;;Recursive function.  Parse  a FIELDS clause's arguments.  Return
-       ;;unspecified values.
-       ;;
-       (syntax-case field-specs ()
-	 ;;No more field specs.
-	 (() (values))
-	 ;;A field spec.
-	 ((?field-spec . ?other-specs)
-	  (begin
-	    (%add-field-record (%parse-single-field-spec #'?field-spec))
-	    (%main #'?other-specs)))
-	 ;;Invalid field specification
-	 (_
-	  (synner "invalid field specification" ($car input-clauses)))))
+  (define (%register-mutable-field field-name-id type-tag-id accessor-stx mutator-stx parsed-spec synner)
+    (define accessor-id
+      (%parse-virtual-field-acc/mut-spec field-name-id accessor-stx parsed-spec
+					 identifier-record-field-accessor synner))
+    (define mutator-id
+      (%parse-virtual-field-acc/mut-spec field-name-id mutator-stx parsed-spec
+					 identifier-record-field-mutator synner))
+    (define field-spec
+      (make-<virtual-field-spec> field-name-id accessor-id mutator-id type-tag-id))
+    (%add-field-record parsed-spec field-spec synner))
 
-     (define-inline (%add-field-record ?field-record)
-       ;;Add  a  record  representing   a  field  specification  to  the
-       ;;appropriate field in PARSED-SPEC.  Check for duplicate names in
-       ;;members.
-       ;;
-       (let ((field-record ?field-record))
-	 (<parsed-spec>-member-identifiers-cons! parsed-spec (<field-spec>-name-id field-record)
-						 "field name" synner)
-	 (<parsed-spec>-virtual-fields-cons! parsed-spec field-record)))
+  (define (%register-immutable-field field-name-id type-tag-id accessor-stx parsed-spec synner)
+    (define accessor-id
+      (%parse-virtual-field-acc/mut-spec field-name-id accessor-stx parsed-spec
+					 identifier-record-field-accessor synner))
+    (define field-spec
+      (make-<virtual-field-spec> field-name-id accessor-id #f type-tag-id))
+    (%add-field-record parsed-spec field-spec synner))
 
-     (define-inline (%parse-single-field-spec ?field-spec)
-       ;;Parse a  single field specification argument and  return a field
-       ;;record describing it.
-       ;;
-       (let ((field-spec ?field-spec))
-	 (syntax-case field-spec (aux.mutable aux.immutable)
+  (define* (%parse-virtual-field-acc/mut-spec (field-name-id identifier?)
+					      (acc/mut-stx syntax-object?)
+					      (parsed-spec <parsed-spec>?)
+					      make-default-id synner)
+    ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
+    ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
+    ;;specification,  the parsed  spec  record.   Support the  following
+    ;;cases:
+    ;;
+    ;;If ACC/MUT-STX  is an identifier:  such identifier is meant  to be
+    ;;bound to a function or macro  performing the access or mutation on
+    ;;the instance.
+    ;;
+    ;;If  ACC/MUT-STX  is  false:  it means  no  specification  for  the
+    ;;accessor or mutator  was present.  We build a  default accessor or
+    ;;mutator identifier  and return  it.  It  is responsibility  of the
+    ;;user code to  define a function or macro performing  the access or
+    ;;mutation  on  the  instance,  and   to  bind  it  to  the  default
+    ;;identifier.
+    ;;
+    ;;Otherwise  ACC/MUT-STX  must  represent  an  arbitrary  expression
+    ;;which, evaluated at run-time, will  return a function.  We build a
+    ;;default accessor or mutator identifier  and return it; in addition
+    ;;we register in PARSED-SPEC a  definition binding the expression to
+    ;;the default identifier.
+    ;;
+    (if (identifier? acc/mut-stx)
+	acc/mut-stx
+      (let ((acc/mut-id (make-default-id (<parsed-spec>-name-id parsed-spec)
+					 field-name-id)))
+	(when acc/mut-stx
+	  (<parsed-spec>-definitions-cons! parsed-spec (list #'define acc/mut-id acc/mut-stx)))
+	acc/mut-id)))
 
-	   ;;Immutable field, without accessor name.
-	   ((aux.immutable ?field)
-	    (%make-immutable-field-record field-spec #'?field #f))
+  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+    ;;Add a record representing a field specification to the appropriate
+    ;;field in PARSED-SPEC.  Check for duplicate names in members.
+    ;;
+    (<parsed-spec>-member-identifiers-cons! parsed-spec (<field-spec>-name-id field-record)
+					    "field name" synner)
+    (<parsed-spec>-virtual-fields-cons! parsed-spec field-record))
 
-	   ;;Immutable field, with accessor name.
-	   ((aux.immutable ?field ?accessor-expr)
-	    (%make-immutable-field-record field-spec #'?field #'?accessor-expr))
-
-	   ;;Mutable field, without accessor and mutator names.
-	   ((aux.mutable ?field)
-	    (%make-mutable-field-record field-spec #'?field #f #f))
-
-	   ;;Mutable field, with accessor and mutator names.
-	   ((aux.mutable ?field ?accessor-expr ?mutator-expr)
-	    (%make-mutable-field-record field-spec #'?field #'?accessor-expr #'?mutator-expr))
-
-	   ;;Immutable field, without IMMUTABLE keyword.
-	   (?field-name
-	    (identifier? #'?field-name)
-	    (%make-immutable-field-record field-spec field-spec #f))
-
-	   ;;Immutable field, without IMMUTABLE keyword, with tag.
-	   ((?field-name ?tag-id)
-	    (and (identifier? #'?field-name)
-		 (identifier? #'?tag-id))
-	    (%make-immutable-field-record field-spec field-spec #f))
-
-	   ;;Invalid field specification.
-	   (_
-	    (synner "invalid field specification" field-spec)))))
-
-     (define (%make-immutable-field-record field-spec field-name-and-tag-stx
-					   accessor-expr)
-       ;;Parse  the field-and-tags  syntax  object.  Build  and return  a
-       ;;field record specifying an immutable field.
-       ;;
-       (let-values (((field-id tag-id)
-		     (if (identifier? field-name-and-tag-stx)
-			 (values field-name-and-tag-stx top-id)
-		       (%parse-field-id-and-tag field-spec field-name-and-tag-stx))))
-	 (make-<virtual-field-spec> field-id
-				    (if (identifier? accessor-expr)
-					accessor-expr
-				      (let ((accessor-id (%make-accessor-id field-id)))
-					(when accessor-expr
-					  (%add-definition (list #'define accessor-id accessor-expr)))
-					accessor-id))
-				    #f tag-id)))
-
-     (define (%make-mutable-field-record field-spec field-name-and-tag-stx
-					 accessor-expr mutator-expr)
-       ;;Parse  the field-and-tag  syntax  object.  Build  and return  a
-       ;;field record specifying a mutable field.
-       ;;
-       (let-values (((field-id tag-id)
-		     (if (identifier? field-name-and-tag-stx)
-			 (values field-name-and-tag-stx top-id)
-		       (%parse-field-id-and-tag field-spec field-name-and-tag-stx))))
-	 ;;We need to  impose the correct order to  definitions added to
-	 ;;the parsed spec record.
-	 (let ((accessor-id	(if (identifier? accessor-expr)
-				    accessor-expr
-				  (let ((accessor-id (%make-accessor-id field-id)))
-				    (when accessor-expr
-				      (%add-definition (list #'define accessor-id accessor-expr)))
-				    accessor-id)))
-	       (mutator-id	(if (identifier? mutator-expr)
-				    mutator-expr
-				  (let ((mutator-id (%make-mutator-id field-id)))
-				    (when mutator-expr
-				      (%add-definition (list #'define mutator-id mutator-expr)))
-				    mutator-id))))
-	   (make-<virtual-field-spec> field-id accessor-id mutator-id tag-id))))
-
-     (define (%parse-field-id-and-tag field-spec-stx field-name-and-tag-stx)
-       ;;Parse  a syntax  object representing  a list  whose car  is the
-       ;;field name identifier and  whose optional cdr is the identifier
-       ;;of the  field's type  tag.  Return two  values: the  field name
-       ;;identifier, the tag type identifier or false.
-       ;;
-       (syntax-case field-name-and-tag-stx ()
-	 ((?field-name ?tag-id)
-	  (and (identifier? #'?field-name)
-	       (identifier? #'?tag-id))
-	  (values #'?field-name #'?tag-id))
-	 ((?field-name)
-	  (identifier? #'?field-name)
-	  (values #'?field-name #f))
-	 (_
-	  (synner "invalid field specification" field-spec-stx))))
-
-     (define (%add-definition definition-form)
-       (<parsed-spec>-definitions-cons! parsed-spec definition-form))
-
-     (define-inline (%make-accessor-id field-id)
-       (identifier-record-field-accessor name-id field-id))
-
-     (define-inline (%make-mutator-id field-id)
-       (identifier-record-field-mutator name-id field-id))
-
-     (%main #'?arguments))))
+  #| end of module |# )
 
 
 ;;;; satisfactions
@@ -3074,45 +3027,18 @@
 ;;
 (define (clause-arguments-parser:satisfies parsed-spec args synner)
   (define-inline (%add-satisfaction id)
-    (<parsed-spec>-satisfactions-set! parsed-spec (cons id (<parsed-spec>-satisfactions parsed-spec))))
-
-  (define-inline (%add-definition definition-form)
-    (<parsed-spec>-definitions-cons! parsed-spec definition-form))
-
+    ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec))))
   (syntax-case args ()
-
+    (#(#(?satisfaction ...) ...)
+     (let loop ((sats (syntax->vector->list->flat #'#(#(?satisfaction ...) ...))))
+       (when (pair? sats)
+	 (let ((S (car sats)))
+	   (if (identifier? S)
+	       (when config.enable-satisfactions
+		 (%add-satisfaction S))
+	     (synner "expected identifier as satisfaction clause argument" S))))))
     (_
      (synner "invalid SATISFIES clause syntax"))))
-
-(define-clause-parser/zero-or-more-clauses/zero-or-more-arguments
-    (parser-name %parse-clauses-satisfies)
-  (clause-keyword aux.satisfies)
-  (body
-   (let ()
-
-     (define (%main satisfactions)
-       ;;Recursive  function.   Parse  a SATISFIES  clause's  arguments.
-       ;;Return unspecified values.
-       ;;
-       (syntax-case satisfactions ()
-	 (() (values))
-
-	 ((?satisfaction . ?other-satisfactions)
-	  (begin
-	    (when config.enable-satisfactions
-	      (let ((satis-stx #'?satisfaction))
-		(if (identifier? satis-stx)
-		    (%add-satisfaction satis-stx)
-		  (with-syntax (((ID) (generate-temporaries '(#f))))
-		    (%add-satisfaction #'ID)
-		    (%add-definition #'(define-syntax ID ?satisfaction))))))
-	    (%main #'?other-satisfactions)))
-
-	 (_
-	  (synner "invalid satisfaction specification" ($car input-clauses)))))
-
-
-     (%main #'?arguments))))
 
 
 ;;;; setter and getter clauses

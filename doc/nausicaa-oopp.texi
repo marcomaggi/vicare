@@ -2016,144 +2016,118 @@ the predicate function of @class{list-of-numbers} is equivalent to:
 @section Defining concrete and virtual fields
 
 
+Concrete and virtual fields are defined by the @clause{fields} and
+@clause{virtual-fields} clauses.  The clauses have the syntax:
+
+@example
+(fields         @meta{field-spec} ...)
+(virtual-fields @meta{field-spec} ...)
+@end example
+
+@noindent
+where @meta{field-spec} has one of the following syntaxes:
+
+@example
+(mutable   @meta{field})
+(mutable   @meta{field} @meta{accessor} @meta{mutator})
+(immutable @meta{field})
+(immutable @meta{field} @meta{accessor})
+@meta{field}
+@end example
+
+@noindent
+where @meta{field} has one of the following syntaxes:
+
+@example
+@meta{field-name-id}
+(@meta{field-name-id} @meta{type-tag-id})
+#(@meta{field-name-id} @meta{type-tag-id})
+@end example
+
+@noindent
+where @meta{field-name-id} is an identifier representing the field name
+and @meta{type-tag-id} is an identifier representing the field type tag.
+The format of the @meta{field-spec} arguments is similar to the one
+defined by @rnrs{6} in the syntactic records layer, extended with type
+tags.  When @meta{accessor} and @meta{mutator} are @strong{not}
+specified: a default identifier is built and registered in the enclosing
+definition as specified by @rnrs{6} for record types, @vicareref{stdlib
+records syntactic layer, fields}.
+
+@clause{fields}, @clause{mutable} and @clause{immutable} are the
+bindings exported by the library @rsixlibrary{records syntactic} and
+reexported by the libraries @library{nausicaa language
+auxiliary-syntaxes} and @library{nausicaa language oopp}.
+@clause{virtual-fields} is a binding exported by library
+@library{nausicaa language auxiliary-syntaxes} and reexported by
+@library{nausicaa language oopp}.
+
+
 @deffn {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+@deffnx {Auxiliary Syntax} mutable
+@deffnx {Auxiliary Syntax} immutable
 Add concrete fields to the enclosing class or mixin definition; labels
 cannot have concrete fields.  This clause can be used multiple times in
-the same type definition.  We note explicitly that: for concrete fields
-the accessor and mutator are automatically generated, and we optionally
-have to select their names.
+the same type definition.
 
-@clause{fields} is the binding exported by the library
-@rsixlibrary{records syntactic} and reexported by the libraries
-@library{nausicaa language auxiliary-syntaxes} and @library{nausicaa
-language oopp}.
-
-The format of the @meta{field-spec} arguments is equal to the one
-defined by @rnrs{6} in the syntactic records layer, extended with type
-tags.  Each @meta{field-spec} argument can have one of the formats as
-specified by @rnrs{6}:
-
-@example
-@meta{name}
-(immutable @meta{name})
-(immutable @meta{name} @meta{accessor})
-(mutable @meta{name})
-(mutable @meta{name} @meta{accessor} @meta{mutator})
-@end example
-
-@noindent
-where:
-
-@table @asis
-@item @meta{name}
-Is an identifier representing the name of the field.
-
-@item @meta{accessor}
-Is an identifier representing the name of the accessor.
-
-@item @meta{mutator}
-Is an identifier representing the name of the mutator.
-@end table
-
-@noindent
-when the names of the accessor and mutator are omitted: default names
-are build as specified by @rnrs{6}.
-
-In addition the following formats are supported:
-
-@example
-(@meta{name} @meta{tag})
-(immutable (@meta{name} @meta{tag}))
-(immutable (@meta{name} @meta{tag}) @meta{accessor})
-(mutable (@meta{name} @meta{tag}))
-(mutable (@meta{name} @meta{tag}) @meta{accessor} @meta{mutator})
-@end example
-
-@noindent
-where @meta{tag} is a bound identifier representing a class or label
-name.
+For concrete fields the accessor and mutator functions are automatically
+generated, and we optionally have to select their names.  When
+@meta{accessor} and @meta{mutator} are specified in a @clause{fields}
+clause: they must be identifiers and they will be bound to the concrete
+accessor and mutator functions.
 @end deffn
 
 
 @deffn {Auxiliary Syntax} virtual-fields @meta{field-spec} @dots{}
+@deffnx {Auxiliary Syntax} mutable
+@deffnx {Auxiliary Syntax} immutable
 Add virtual fields to the enclosing class, label or mixin definition.
-This clause can be used multiple times in the same type definition.  We
-note explicitly that: for virtual fields the accessor and mutator must
-be explicitly defined as functions or syntaxes, and we optionally have
-to select their names.
+This clause can be used multiple times in the same type definition.
 
-@clause{virtual-fields} is the binding exported by the library
-@library{nausicaa language auxiliary-syntaxes} and reexported by the
-library @library{nausicaa language oopp}.
-
-The @meta{field-spec} arguments have syntax similar to @func{fields}
-ones, but with different semantics:
+For virtual fields the accessor and mutator must be explicitly defined
+as functions or syntaxes.
 
 @itemize
 @item
-An immutable virtual field is defined by a field name and a field
-accessor which can be applied to a class instance to compute a value.
+When @meta{accessor} and @meta{mutator} are
+specified in a @clause{virtual-fields} clause they can be:
+
+@itemize -
+@item
+Identifiers representing the names of the accessor and mutator.  It is
+responsibility of the user code to bind such identifiers to functions or
+syntaxes that can be used to access or mutate the fields.  The
+identifiers are used as follows.
+
+@example
+(@meta{accessor} @meta{instance})
+(@meta{mutator}  @meta{instance} @meta{new-value})
+@end example
 
 @item
-A mutable virtual field is defined by a field name, a field accessor
-which can be applied to a class instance to compute a value, a field
-mutator which can be applied to a class instance to mutate its fields.
+Syntax objects representing expressions which, evaluated at run--time,
+must return the accessor and mutator function.  In this case a default
+identifier for the accessor and mutator is built and the expression
+bound to it as in:
+
+@example
+(define @meta{default-accessor-id} @meta{accessor})
+(define @meta{default-mutator-id}  @meta{mutator})
+@end example
 @end itemize
 
-The format of the @meta{field-spec} arguments must be one among:
-
-@example
-@meta{name}
-(immutable @meta{name})
-(immutable @meta{name} @meta{accessor})
-(mutable @meta{name})
-(mutable @meta{name} @meta{accessor} @meta{mutator})
-(@meta{name} @meta{tag})
-(immutable (@meta{name} @meta{tag}))
-(immutable (@meta{name} @meta{tag}) @meta{accessor})
-(mutable (@meta{name} @meta{tag}))
-(mutable (@meta{name} @meta{tag}) @meta{accessor} @meta{mutator})
-@end example
-
-@noindent
-where:
-
-@table @asis
-@item @meta{name}
-Is an identifier representing the name of the field;
-
-@item @meta{tag}
-Is a bound identifier representing a class or label name.
-
-@item @meta{accessor}
-Is either an identifier representing the name of the accessor or an
-expression evaluating to the accessor function.  When @meta{accessor} is
-an identifier: it can be bound either to a function or to a syntax; in
-both cases, @meta{accessor} is used as follows to extract the value of
-the virtual field:
-
-@example
-(@meta{accessor} @var{instance})
-@end example
-
-@item @meta{mutator}
-Is either an identifier representing the name of the mutator or an
-expression evaluating to the mutator function.  When @meta{mutator} is
-an identifier: it can be bound either to a function or to a syntax; in
-both cases, @meta{mutator} is used as follows to set the new value of
-the virtual field:
-
-@example
-(@meta{mutator} @var{instance} @var{new-value})
-@end example
-@end table
-
-When @meta{accessor} or @meta{mutator} are @strong{not} present: an
-identifier is automatically generated for them following the same rules
-established by @rnrs{6} for the concrete fields of a record type.  It is
-our responsibility to define a function or syntax bound to such
-identifiers and suitable to be used as accessor or mutator.
+@item
+When @meta{accessor} and @meta{mutator} are @strong{not} specified in a
+@clause{virtual-fields} clause: a default identifier is built and
+registered in the enclosing definition; it is responsibility of the user
+code to bind such identifiers to functions or syntaxes that can be used
+to access or mutate the fields.
+@end itemize
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples of concrete and virtual fields
 
 
 The following is an example of class virtual fields usage in which the
@@ -2161,16 +2135,18 @@ accessor and mutator are defined as expressions inlined in the class
 definition:
 
 @example
-(import (vicare numerics constants))
+(import (nausicaa)
+  (vicare numerics constants))
 
 (define-class <angle>
   (fields (mutable (radians <real>)))
   (virtual-fields
     (mutable (degrees <real>)
-             (lambda/tags ((A <angle>))
-               (* (/ 180.0 greek-pi) (A radians)))
-             (lambda/tags ((A <angle>) (deg <real>))
-               (set! (A radians) (* (/ greek-pi 180.0) deg))))))
+      (lambda ((A <angle>))
+        (* (/ 180.0 greek-pi) (A radians)))
+      (lambda ((A <angle>) (deg <real>))
+        (set! (A radians) (* (/ greek-pi 180.0) deg))))
+   ))
 
 (<angle> A (<> (greek-pi)))
 (A radians)             @result{} greek-pi
@@ -2184,7 +2160,8 @@ here is the same definition with accessor and mutator defined as
 functions and the default names:
 
 @example
-(import (vicare numerics constants))
+(import (nausicaa)
+  (vicare numerics constants))
 
 (define-class <angle>
   (fields (mutable (radians <real>)))
@@ -2202,7 +2179,8 @@ and here is again the same definition with accessor and mutator defined
 as syntaxes:
 
 @example
-(import (vicare numerics constants))
+(import (nausicaa)
+  (vicare numerics constants))
 
 (define-class <angle>
   (fields (mutable (radians <real>)))
@@ -2940,7 +2918,8 @@ following syntax, used as satisfaction, will be evaluated correctly:
        #f))))
 @end example
 
-If the enclosing definition ends being @func{define-label}, the
+@noindent
+if the enclosing definition ends being @func{define-label}, the
 following syntax, used as satisfaction, will be evaluated correctly:
 
 @example
@@ -2964,6 +2943,10 @@ following syntax, used as satisfaction, will be evaluated correctly:
           (shadows ?shadows))
        #f))))
 @end example
+
+@noindent
+in both cases when the getter and setter are not defined: @code{?getter}
+and @code{?setter} are @false{}.
 
 @c page
 @node oopp shadow
