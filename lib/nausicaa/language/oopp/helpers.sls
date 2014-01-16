@@ -129,26 +129,6 @@
   (or (not obj)
       (identifier? obj)))
 
-(define-syntax-rule (syntax->vector->list ?stx)
-  ;;Given a syntax  object representing a vector: unwrap  the vector and
-  ;;convert  it to  a list;  return the  list of  items in  teh original
-  ;;vector.
-  ;;
-  (vector->list (syntax->vector ?stx)))
-
-
-(define-syntax-rule (syntax->vector->list->flat ?stx)
-  ;;Given a syntax  object representing a vector of  vectors: unwrap the
-  ;;outer vector and the inner vectors  returning a list holding all the
-  ;;items.  Example:
-  ;;
-  ;;   (syntax->vector->list->flat (syntax #(#(a b) #(c d) #(e f))))
-  ;;   => (#'a #'b #'c #'d #'e #'f)
-  ;;
-  (apply append (map (lambda (item)
-		       (syntax->vector->list item))
-		  (syntax->vector->list ?stx))))
-
 
 ;;;; public helpers
 
@@ -1216,6 +1196,13 @@
   ($<parsed-spec>-methods-table-set! parsed-spec (cons (list method-name-id method-rv-tag-id method-implementation-id)
 						       ($<parsed-spec>-methods-table parsed-spec))))
 
+(define* (<parsed-spec>-satisfactions-cons! (parsed-spec <parsed-spec>?) id)
+  (when config.enable-satisfactions
+    ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec)))))
+
+(define (generate-unique-id parsed-spec)
+  (datum->syntax (<parsed-spec>-name-id parsed-spec) (gensym)))
+
 ;;; --------------------------------------------------------------------
 
 (define* (<parsed-spec>-mutable-fields-data (spec <parsed-spec>?))
@@ -1708,311 +1695,6 @@
 	   (syntax-violation 'THE-TAG "invalid :mutator tag syntax" original-stx))))))
 
 
-;;;; common clause parser definer: at-most-once clause, single argument
-
-(define-syntax define-clause-parser/at-most-once-clause/single-argument
-  (lambda (stx)
-    (syntax-case stx (parser-name clause-keyword next-who body flag-accessor)
-      ((_ (parser-name ?who)
-	  (clause-keyword ?clause-keyword)
-	  (flag-accessor ?flag-accessor)
-	  (body ?body0 ?body ...))
-       (let ((context #'?who))
-	 (define (stx->stx stx)
-	   (datum->syntax context (syntax->datum stx)))
-	 (define-syntax sym->stx
-	   (syntax-rules ()
-	     ((_ ?sym)
-	      (datum->syntax context ?sym))))
-	 (with-syntax
-	     ((BODY		(stx->stx #'(begin ?body0 ?body ...)))
-	      (PARSED-SPEC	(sym->stx 'parsed-spec))
-		;Identifier bound to the <PARSED-SPEC> record instance.
-	      (INPUT-CLAUSES	(sym->stx 'input-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially unwrapped input clauses.
-	      (OUTPUT-CLAUSES	(sym->stx 'output-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially  unwrapped  output  clauses;  these  are  the
-		;clauses to be handed to the next parser function.
-	      (SINGLE-ARGUMENT	(sym->stx '?single-argument))
-		;The  single  argument   from  the  successfully  parsed
-		;clause.
-	      (SYNNER		(sym->stx 'synner))
-		;Identifier bound to the  function used to report syntax
-		;violations.
-	      (%RECURSE		(sym->stx '%recurse))
-		;Identifier bound to the syntax used to recursively call
-		;this function.
-	      )
-	   #'(define (?who PARSED-SPEC INPUT-CLAUSES next-parsers SYNNER OUTPUT-CLAUSES)
-	       ;;Tail-recursive  function.  Parse  clauses  with keyword
-	       ;;?CLAUSE-KEYWORD  and mutate  the appropriate  fields of
-	       ;;PARSED-SPEC  with the  result;  raise an  error if  the
-	       ;;clause is  used multiple times; the clause  must have a
-	       ;;single argument.
-	       ;;
-	       ;;After parsing:
-	       ;;
-	       ;;* If no more clauses are present: return null.
-	       ;;
-	       ;;*  If more  clauses  are present:  tail-call the  first
-	       ;;function in  the NEXT-PARSERS list  to continue parsing
-	       ;;of clauses.
-	       ;;
-	       (define-inline (%RECURSE input-clauses output-clauses)
-		 (?who PARSED-SPEC input-clauses next-parsers SYNNER output-clauses))
-	       (cond
-		;;No more input clauses.
-		((null? INPUT-CLAUSES)
-		 (if (null? OUTPUT-CLAUSES)
-		     (final-clauses-parser PARSED-SPEC (reverse OUTPUT-CLAUSES) '() SYNNER '())
-		   ((car next-parsers) PARSED-SPEC (reverse OUTPUT-CLAUSES)
-		    (cdr next-parsers) SYNNER '())))
-		;;Parse matching clause.
-		((free-identifier=? #'?clause-keyword (caar INPUT-CLAUSES))
-		 (if (?flag-accessor PARSED-SPEC)
-		     (SYNNER "clause expected at most once is used multiple times, \
-                            or clauses specifying the same features are used together"
-			     ($car INPUT-CLAUSES))
-		   (syntax-case ($cdar INPUT-CLAUSES) ()
-		     ((SINGLE-ARGUMENT)
-		      (begin BODY (%RECURSE ($cdr INPUT-CLAUSES) OUTPUT-CLAUSES)))
-		     (_
-		      (SYNNER "a single-argument clause was expected" ($car INPUT-CLAUSES))))))
-		;;Parse non-matching clause.
-		(else
-		 (%RECURSE ($cdr INPUT-CLAUSES)
-			   (cons ($car INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-	   )))
-      )))
-
-
-;;;; common clause parser definer: at-most-once clause, no argument
-
-(define-syntax define-clause-parser/at-most-once-clause/no-argument
-  (lambda (stx)
-    (syntax-case stx (parser-name clause-keyword next-who body flag-accessor)
-      ((_ (parser-name ?who)
-	  (clause-keyword ?clause-keyword)
-	  (flag-accessor ?flag-accessor)
-	  (body ?body0 ?body ...))
-       (let ((context #'?who))
-	 (define (stx->stx stx)
-	   (datum->syntax context (syntax->datum stx)))
-	 (define-syntax sym->stx
-	   (syntax-rules ()
-	     ((_ ?sym)
-	      (datum->syntax context ?sym))))
-	 (with-syntax
-	     ((BODY		(stx->stx #'(begin ?body0 ?body ...)))
-	      (PARSED-SPEC	(sym->stx 'parsed-spec))
-		;Identifier bound to the <PARSED-SPEC> record instance.
-	      (INPUT-CLAUSES	(sym->stx 'input-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially unwrapped input clauses.
-	      (OUTPUT-CLAUSES	(sym->stx 'output-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially  unwrapped  output  clauses;  these  are  the
-		;clauses to be handed to the next parser function.
-	      (SYNNER		(sym->stx 'synner))
-		;Identifier bound to the  function used to report syntax
-		;violations.
-	      (%RECURSE		(sym->stx '%recurse))
-		;Identifier bound to the syntax used to recursively call
-		;this function.
-	      )
-	   #'(define (?who PARSED-SPEC INPUT-CLAUSES next-parsers SYNNER OUTPUT-CLAUSES)
-	       ;;Tail-recursive  function.  Parse  clauses  with keyword
-	       ;;?CLAUSE-KEYWORD  and mutate  the appropriate  fields of
-	       ;;PARSED-SPEC  with the  result;  raise an  error if  the
-	       ;;clause is used multiple  times; the clause must have no
-	       ;;arguments.
-	       ;;
-	       ;;After parsing:
-	       ;;
-	       ;;* If no more clauses are present: return null.
-	       ;;
-	       ;;*  If more  clauses  are present:  tail-call the  first
-	       ;;function in  the NEXT-PARSERS list  to continue parsing
-	       ;;of clauses.
-	       ;;
-	       (define-inline (%RECURSE input-clauses output-clauses)
-		 (?who PARSED-SPEC input-clauses next-parsers SYNNER output-clauses))
-	       (cond
-		;;No more input clauses.
-		((null? INPUT-CLAUSES)
-		 (if (null? OUTPUT-CLAUSES)
-		     (final-clauses-parser PARSED-SPEC (reverse OUTPUT-CLAUSES) '() SYNNER '())
-		   ((car next-parsers) PARSED-SPEC (reverse OUTPUT-CLAUSES)
-		    (cdr next-parsers) SYNNER '())))
-		;;Parse matching clause.
-		((free-identifier=? #'?clause-keyword (caar INPUT-CLAUSES))
-		 (if (?flag-accessor PARSED-SPEC)
-		     (SYNNER "clause expected at most once is used multiple times, \
-                              or clauses specifying the same features are used together"
-			     ($car INPUT-CLAUSES))
-		   (syntax-case ($cdar INPUT-CLAUSES) ()
-		     (()
-		      (begin BODY (%RECURSE ($cdr INPUT-CLAUSES) OUTPUT-CLAUSES)))
-		     (_
-		      (SYNNER "a single-argument clause was expected" ($car INPUT-CLAUSES))))))
-		;;Parse non-matching clause.
-		(else
-		 (%RECURSE ($cdr INPUT-CLAUSES)
-			   (cons ($car INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-	   )))
-      )))
-
-
-;;;; common clause parser definer: zero or more clauses with one or more arguments
-
-(define-syntax define-clause-parser/zero-or-more-clauses/zero-or-more-arguments
-  (lambda (stx)
-    (syntax-case stx (parser-name clause-keyword next-who body)
-      ((_ (parser-name ?who)
-	  (clause-keyword ?clause-keyword)
-	  (body ?body0 ?body ...))
-       (let ((context #'?who))
-	 (define (stx->stx stx)
-	   (datum->syntax context (syntax->datum stx)))
-	 (define-syntax sym->stx
-	   (syntax-rules ()
-	     ((_ ?sym)
-	      (datum->syntax context ?sym))))
-	 (with-syntax
-	     ((BODY		(stx->stx #'(begin ?body0 ?body ...)))
-	      (PARSED-SPEC	(sym->stx 'parsed-spec))
-		;Identifier bound to the <PARSED-SPEC> record instance.
-	      (INPUT-CLAUSES	(sym->stx 'input-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially unwrapped input clauses.
-	      (OUTPUT-CLAUSES	(sym->stx 'output-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially  unwrapped  output  clauses;  these  are  the
-		;clauses to be handed to the next parser function.
-	      (ARGUMENTS	(sym->stx '?arguments))
-		;The  multiple arguments  from  the successfully  parsed
-		;clause.
-	      (SYNNER		(sym->stx 'synner))
-		;Identifier bound to the  function used to report syntax
-		;violations.
-	      (%RECURSE		(sym->stx '%recurse))
-		;Identifier bound to the syntax used to recursively call
-		;this function.
-	      )
-	   #'(define (?who PARSED-SPEC INPUT-CLAUSES next-parsers SYNNER OUTPUT-CLAUSES)
-	       ;;Tail-recursive  function.  Parse  clauses  with keyword
-	       ;;?CLAUSE-KEYWORD  and mutate  the appropriate  fields of
-	       ;;PARSED-SPEC  with the  result; accept  multiple clauses
-	       ;;having multiple arguments.
-	       ;;
-	       ;;After parsing:
-	       ;;
-	       ;;* If no more clauses are present: return null.
-	       ;;
-	       ;;*  If more  clauses  are present:  tail-call the  first
-	       ;;function in  the NEXT-PARSERS list  to continue parsing
-	       ;;of clauses.
-	       ;;
-	       (define-inline (%RECURSE input-clauses output-clauses)
-		 (?who PARSED-SPEC input-clauses next-parsers SYNNER output-clauses))
-	       (cond
-		;;No more input clauses.
-		((null? INPUT-CLAUSES)
-		 (if (null? OUTPUT-CLAUSES)
-		     (final-clauses-parser PARSED-SPEC (reverse OUTPUT-CLAUSES) '() SYNNER '())
-		   ((car next-parsers) PARSED-SPEC (reverse OUTPUT-CLAUSES)
-		    (cdr next-parsers) SYNNER '())))
-		;;Parse matching clause.
-		((free-identifier=? #'?clause-keyword (caar INPUT-CLAUSES))
-		 (syntax-case ($cdar INPUT-CLAUSES) ()
-		   (()
-		    (%RECURSE ($cdr INPUT-CLAUSES) OUTPUT-CLAUSES))
-		   (ARGUMENTS
-		    (begin BODY (%RECURSE ($cdr INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-		;;Parse non-matching clause.
-		(else
-		 (%RECURSE ($cdr INPUT-CLAUSES)
-			   (cons ($car INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-	   )))
-      )))
-
-
-;;;; common clause parser definer: zero or more clauses with multiple arguments
-
-(define-syntax define-clause-parser/zero-or-more-clauses/multiple-mandatory-arguments
-  (lambda (stx)
-    (syntax-case stx (parser-name clause-keyword next-who body)
-      ((_ (parser-name ?who)
-	  (clause-keyword ?clause-keyword)
-	  (body ?body0 ?body ...))
-       (let ((context #'?who))
-	 (define (stx->stx stx)
-	   (datum->syntax context (syntax->datum stx)))
-	 (define-syntax sym->stx
-	   (syntax-rules ()
-	     ((_ ?sym)
-	      (datum->syntax context ?sym))))
-	 (with-syntax
-	     ((BODY		(stx->stx #'(begin ?body0 ?body ...)))
-	      (PARSED-SPEC	(sym->stx 'parsed-spec))
-		;Identifier bound to the <PARSED-SPEC> record instance.
-	      (INPUT-CLAUSES	(sym->stx 'input-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially unwrapped input clauses.
-	      (OUTPUT-CLAUSES	(sym->stx 'output-clauses))
-		;Identifier  bound  to  the  syntax object  holding  the
-		;partially  unwrapped  output  clauses;  these  are  the
-		;clauses to be handed to the next parser function.
-	      (ARGUMENTS	(sym->stx '?arguments))
-		;The  multiple arguments  from  the successfully  parsed
-		;clause.
-	      (SYNNER		(sym->stx 'synner))
-		;Identifier bound to the  function used to report syntax
-		;violations.
-	      (%RECURSE		(sym->stx '%recurse))
-		;Identifier bound to the syntax used to recursively call
-		;this function.
-	      )
-	   #'(define (?who PARSED-SPEC INPUT-CLAUSES next-parsers SYNNER OUTPUT-CLAUSES)
-	       ;;Tail-recursive  function.  Parse  clauses  with keyword
-	       ;;?CLAUSE-KEYWORD  and mutate  the appropriate  fields of
-	       ;;PARSED-SPEC  with the  result; accept  multiple clauses
-	       ;;having multiple arguments.
-	       ;;
-	       ;;After parsing:
-	       ;;
-	       ;;* If no more clauses are present: return null.
-	       ;;
-	       ;;*  If more  clauses  are present:  tail-call the  first
-	       ;;function in  the NEXT-PARSERS list  to continue parsing
-	       ;;of clauses.
-	       ;;
-	       (define-inline (%RECURSE input-clauses output-clauses)
-		 (?who PARSED-SPEC input-clauses next-parsers SYNNER output-clauses))
-	       (cond
-		;;No more input clauses.
-		((null? INPUT-CLAUSES)
-		 (if (null? OUTPUT-CLAUSES)
-		     (final-clauses-parser PARSED-SPEC (reverse OUTPUT-CLAUSES) '() SYNNER '())
-		   ((car next-parsers) PARSED-SPEC (reverse OUTPUT-CLAUSES)
-		    (cdr next-parsers) SYNNER '())))
-		;;Parse matching clause.
-		((free-identifier=? #'?clause-keyword (caar INPUT-CLAUSES))
-		 (syntax-case ($cdar INPUT-CLAUSES) ()
-		   (()
-		    (SYNNER "invalid empty clause" ($car INPUT-CLAUSES)))
-		   (ARGUMENTS
-		    (begin BODY (%RECURSE ($cdr INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-		;;Parse non-matching clause.
-		(else
-		 (%RECURSE ($cdr INPUT-CLAUSES)
-			   (cons ($car INPUT-CLAUSES) OUTPUT-CLAUSES)))))
-	   )))
-      )))
-
-
 ;;;; clauses verification and unwrapping
 
 (define (%verify-and-partially-unwrap-clauses clauses synner)
@@ -2044,120 +1726,149 @@
 
 ;;;; parsers entry points
 
-(define (parse-class-definition stx top-id lambda-id synner)
-  ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
-  ;;mixin clauses  insertion) and  return an  instance of  record type
-  ;;"<class-spec>".
-  ;;
-  ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
-  ;;must be an identifier bound  to the LAMBDA macro supporting tagged
-  ;;formal arguments.   SYNNER must be a  closure to be used  to raise
-  ;;syntax violations.
-  ;;
-  (define (%combine class-spec clause-spec args)
-    ((syntax-clause-spec-custom-data clause-spec) class-spec args synner)
-    class-spec)
-  (syntax-case stx ()
-    ((_ ?tag-spec ?clause ...)
-     (receive (name-id public-constructor-id predicate-id)
-	 (parse-tag-name-spec #'?tag-spec synner)
-       (receive-and-return (class-spec)
-	   (make-<class-spec> name-id top-id lambda-id)
-	 ($<parsed-spec>-public-constructor-id-set! class-spec public-constructor-id)
-	 ($<parsed-spec>-public-predicate-id-set!   class-spec predicate-id)
-	 (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
+(module (parse-class-definition
+	 parse-label-definition
+	 parse-mixin-definition
+	 parse-tag-name-spec)
+
+  (define (parse-class-definition stx top-id lambda-id synner)
+    ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
+    ;;mixin clauses  insertion) and  return an  instance of  record type
+    ;;"<class-spec>".
+    ;;
+    ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
+    ;;must be an identifier bound  to the LAMBDA macro supporting tagged
+    ;;formal arguments.   SYNNER must be a  closure to be used  to raise
+    ;;syntax violations.
+    ;;
+    (define (%combine class-spec clause-spec args)
+      ((syntax-clause-spec-custom-data clause-spec) class-spec args synner)
+      class-spec)
+    (syntax-case stx ()
+      ((_ ?tag-spec ?clause ...)
+       (receive (name-id public-constructor-id predicate-id)
+	   (parse-tag-name-spec #'?tag-spec synner)
+	 (receive-and-return (class-spec)
+	     (make-<class-spec> name-id top-id lambda-id)
+	   ($<parsed-spec>-public-constructor-id-set! class-spec public-constructor-id)
+	   ($<parsed-spec>-public-predicate-id-set!   class-spec predicate-id)
+	   (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
+				      (syntax-clauses-unwrap #'(?clause ...) synner)
+				      synner)
+	   (%finalise-clauses-parsing! class-spec synner))))
+      (_
+       (synner "syntax error in class definition"))))
+
+  (define (parse-label-definition stx top-id lambda-id synner)
+    ;;Parse the full  DEFINE-LABEL form in the syntax  object STX (after
+    ;;mixin clauses  insertion) and  return an  instance of  record type
+    ;;"<label-spec>".
+    ;;
+    ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
+    ;;must be an identifier bound  to the LAMBDA macro supporting tagged
+    ;;formal arguments.   SYNNER must be a  closure to be used  to raise
+    ;;syntax violations.
+    ;;
+    (define (%combine label-spec clause-spec args)
+      ((syntax-clause-spec-custom-data clause-spec) label-spec args synner)
+      label-spec)
+    (syntax-case stx ()
+      ((_ ?tag-spec ?clause ...)
+       (receive (name-id public-constructor-id predicate-id)
+	   (parse-tag-name-spec #'?tag-spec synner)
+	 (receive-and-return (label-spec)
+	     (make-<label-spec> name-id top-id lambda-id)
+	   ($<parsed-spec>-public-constructor-id-set! label-spec public-constructor-id)
+	   ($<parsed-spec>-public-predicate-id-set!   label-spec predicate-id)
+	   (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
+				      (syntax-clauses-unwrap #'(?clause ...) synner)
+				      synner)
+	   (%finalise-clauses-parsing! label-spec synner))))
+      (_
+       (synner "syntax error in label definition"))))
+
+  (define (parse-mixin-definition stx top-id lambda-id synner)
+    ;;Parse the full  DEFINE-MIXIN form in the syntax  object STX (after
+    ;;nested mixin clauses  insertion) and return an  instance of record
+    ;;type "<mixin-spec>".
+    ;;
+    ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
+    ;;must be an identifier bound  to the LAMBDA macro supporting tagged
+    ;;formal arguments.   SYNNER must be a  closure to be used  to raise
+    ;;syntax violations.
+    ;;
+    ;;We  perform the  full parsing  of the  definition to  catch errors
+    ;;early, but we discard the results  of such parsing: the clauses in
+    ;;a mixin definition are used by  the label or class definition that
+    ;;imports them.
+    ;;
+    (define (%combine mixin-spec clause-spec args)
+      ((syntax-clause-spec-custom-data clause-spec) mixin-spec args synner)
+      mixin-spec)
+    (syntax-case stx ()
+      ((_ ?mixin-name ?clause ...)
+       (identifier? #'?mixin-name)
+       (receive-and-return (mixin-spec)
+	   (make-<mixin-spec> #'?mixin-name top-id lambda-id #'(?clause ...))
+	 (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS
 				    (syntax-clauses-unwrap #'(?clause ...) synner)
-				    synner))))
-    (_
-     (synner "syntax error in class definition"))))
+				    synner)
+	 (%finalise-clauses-parsing! mixin-spec synner)))
+      (_
+       (synner "syntax error in mixin definition"))))
 
-(define (parse-label-definition stx top-id lambda-id synner)
-  ;;Parse the  full DEFINE-LABEL  form in the  syntax object  STX (after
-  ;;mixin  clauses insertion)  and  return an  instance  of record  type
-  ;;"<label-spec>".
-  ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
-  ;;syntax violations.
-  ;;
-  (define (%combine label-spec clause-spec args)
-    ((syntax-clause-spec-keyword clause-spec) label-spec args synner)
-    label-spec)
-  (syntax-case stx ()
-    ((_ ?tag-spec ?clause ...)
-     (receive (name-id public-constructor-id predicate-id)
-	 (parse-tag-name-spec #'?tag-spec synner)
-       (receive-and-return (label-spec)
-	   (make-<label-spec> name-id top-id lambda-id)
-	 ($<parsed-spec>-public-constructor-id-set! label-spec public-constructor-id)
-	 ($<parsed-spec>-public-predicate-id-set!   label-spec predicate-id)
-	 (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
-				    (syntax-clauses-unwrap #'(?clause ...) synner)
-				    synner))))
-    (_
-     (synner "syntax error in label definition"))))
+  (define (parse-tag-name-spec stx synner)
+    ;;Parse the first component of a class or label definition:
+    ;;
+    ;;  (define-class ?tag-name-spec . ?clauses)
+    ;;  (define-label ?tag-name-spec . ?clauses)
+    ;;
+    ;;supported syntaxes for ?TAG-NAME-SPEC are:
+    ;;
+    ;;  ?name-id
+    ;;  (?name-id ?public-constructor-id ?predicate-id)
+    ;;
+    ;;Return  3  values:  an  identifier  representing the  tag  name;  an
+    ;;identifier representing  the public constructor  name; an identifier
+    ;;representing the predicate name.
+    ;;
+    (syntax-case stx ()
+      (?name-id
+       (identifier? #'?name-id)
+       (let ((name-id #'?name-id))
+	 (values name-id
+		 (tag-id->constructor-id      name-id)
+		 (tag-id->public-predicate-id name-id))))
 
-(define (parse-mixin-definition stx top-id lambda-id synner)
-  ;;Parse the  full DEFINE-MIXIN  form in the  syntax object  STX (after
-  ;;nested mixin  clauses insertion)  and return  an instance  of record
-  ;;type "<mixin-spec>".
-  ;;
-  ;;TOP-ID must  be an identifier  bound to the "<top>"  tag.  LAMBDA-ID
-  ;;must be  an identifier bound  to the LAMBDA macro  supporting tagged
-  ;;formal  arguments.  SYNNER must  be a  closure to  be used  to raise
-  ;;syntax violations.
-  ;;
-  ;;We perform the full parsing of the definition to catch errors early,
-  ;;but we discard  the results of such parsing: the  clauses in a mixin
-  ;;definition are  used by the  label or class definition  that imports
-  ;;them.
-  ;;
-  (define (%combine mixin-spec clause-spec args)
-    ((syntax-clause-spec-keyword clause-spec) mixin-spec args synner)
-    mixin-spec)
-  (syntax-case stx ()
-    ((_ ?mixin-name ?clause ...)
-     (identifier? #'?mixin-name)
-     (receive-and-return (mixin-spec)
-	 (make-<mixin-spec> #'?mixin-name top-id lambda-id #'(?clause ...))
-       (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS
-				  (syntax-clauses-unwrap #'(?clause ...) synner)
-				  synner)))
-    (_
-     (synner "syntax error in mixin definition"))))
+      ((?name-id ?public-constructor-id ?predicate-id)
+       (and (identifier? #'?name-id)
+	    (identifier? #'?public-constructor-id)
+	    (identifier? #'?predicate-id))
+       (values #'?name-id #'?public-constructor-id #'?predicate-id))
 
-(define (parse-tag-name-spec stx synner)
-  ;;Parse the first component of a class or label definition:
-  ;;
-  ;;  (define-class ?tag-name-spec . ?clauses)
-  ;;  (define-label ?tag-name-spec . ?clauses)
-  ;;
-  ;;supported syntaxes for ?TAG-NAME-SPEC are:
-  ;;
-  ;;  ?name-id
-  ;;  (?name-id ?public-constructor-id ?predicate-id)
-  ;;
-  ;;Return  3  values:  an  identifier  representing the  tag  name;  an
-  ;;identifier representing  the public constructor  name; an identifier
-  ;;representing the predicate name.
-  ;;
-  (syntax-case stx ()
-    (?name-id
-     (identifier? #'?name-id)
-     (let ((name-id #'?name-id))
-       (values name-id
-	       (tag-id->constructor-id      name-id)
-	       (tag-id->public-predicate-id name-id))))
+      (_
+       (synner "invalid name specification in tag definition" stx))))
 
-    ((?name-id ?public-constructor-id ?predicate-id)
-     (and (identifier? #'?name-id)
-	  (identifier? #'?public-constructor-id)
-	  (identifier? #'?predicate-id))
-     (values #'?name-id #'?public-constructor-id #'?predicate-id))
+  (define* (%finalise-clauses-parsing! (parsed-spec <parsed-spec>?) synner)
+    ;;Normalise  the results  of parsing  class, label  or mixin  clauses.
+    ;;Mutate PARSED-SPEC.  Return unspecified values.
+    ;;
+    (when (<class-spec>? parsed-spec)
+      (let ((concrete-fields ($<parsed-spec>-concrete-fields parsed-spec)))
+	(unless (null? concrete-fields)
+	  ($<parsed-spec>-concrete-fields-set! parsed-spec (reverse concrete-fields))))
+      (when ($<parsed-spec>-abstract? parsed-spec)
+	(when (<parsed-spec>-common-protocol parsed-spec)
+	  (synner "common protocol clause forbidden in definition of abstract class"))
+	(when (<parsed-spec>-public-protocol parsed-spec)
+	  (synner "public protocol clause forbidden in definition of abstract class"))))
+    (let ((definitions ($<parsed-spec>-definitions parsed-spec)))
+      (unless (null? definitions)
+	($<parsed-spec>-definitions-set! parsed-spec (reverse definitions))))
+    (unless ($<parsed-spec>-nongenerative-uid parsed-spec)
+      ($<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec))))
 
-    (_
-     (synner "invalid name specification in tag definition" stx))))
+  #| end of module |# )
 
 
 ;;;; parsers entry points: mixins clauses filtering
@@ -2212,39 +1923,6 @@
      (else
       (%recurse ($cdr input-clauses)
 		(cons ($car input-clauses) output-clauses)))))))
-
-
-;;;; parsing finalisation
-
-(define (final-clauses-parser parsed-spec input-clauses next-parsers synner output-clauses)
-  ;;Last parser  function.  The  clause parser functions  tail-call each
-  ;;other in chain until all the input clauses are parsed; at the end of
-  ;;the chain this  function is used to:
-  ;;
-  ;;*  Raise  a  syntax  violation  if there  are  leftover  clauses  in
-  ;;INPUT-CLAUSES.
-  ;;
-  ;;* Finalise the PARSED-SPEC record and return it.
-  ;;
-  (if (null? input-clauses)
-      (begin
-	(when (<class-spec>? parsed-spec)
-	  (let ((concrete-fields (<parsed-spec>-concrete-fields parsed-spec)))
-	    (unless (null? concrete-fields)
-	      (<parsed-spec>-concrete-fields-set! parsed-spec (reverse concrete-fields)))))
-	(let ((definitions (<parsed-spec>-definitions parsed-spec)))
-	  (unless (null? definitions)
-	    (<parsed-spec>-definitions-set! parsed-spec (reverse definitions))))
-	(unless (<parsed-spec>-nongenerative-uid parsed-spec)
-	  (<parsed-spec>-nongenerative-uid-set! parsed-spec (gensym)))
-	(when (and (<class-spec>? parsed-spec)
-		   (<parsed-spec>-abstract? parsed-spec))
-	  (when (<parsed-spec>-common-protocol parsed-spec)
-	    (synner "common protocol clause forbidden in definition of abstract class"))
-	  (when (<parsed-spec>-public-protocol parsed-spec)
-	    (synner "public protocol clause forbidden in definition of abstract class")))
-	parsed-spec)
-    (synner "unknown or invalid clauses" input-clauses)))
 
 
 ;;;; some at-most-once clause parsers: parent, opaque, sealed, nongenerative, shadows, maker
@@ -2370,7 +2048,7 @@
     (_
      (synner "invalid FINALISER clause syntax"))))
 
-(define (clause-arguments-parser:finaliser parsed-spec args synner)
+(define (clause-arguments-parser:nongenerative parsed-spec args synner)
   ;;Parser function  for the NONGENERATIVE  clause; this clause  must be
   ;;present at  most once;  this clause  must have  zero arguments  or a
   ;;single argument:
@@ -2389,7 +2067,7 @@
        (synner "expected identifier as NONGENERATIVE clause argument" #'?unique-id)))
 
     (#(#())
-     (<parsed-spec>-nongenerative-uid-set! parsed-spec (gensym)))
+     (<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec)))
 
     (_
      (synner "invalid NONGENERATIVE clause syntax"))))
@@ -2534,15 +2212,15 @@
   ;;  ?rest-id
   ;;  #(?rest-id ?rest-tag-id)
   ;;
-  (define (clause-arguments-parser:single-methods parsed-spec args synner)
-    (syntax-case args ()
-      (#(#(?method-spec ...) ...)
-       (for-each-in-order
-	   (lambda (method-spec-stx)
-	     (%parse-method-spec method-spec-stx parsed-spec synner))
-	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
-      (_
-       (synner "invalid METHOD clause syntax"))))
+  (define (clause-arguments-parser:single-method parsed-spec args synner)
+    ;;We expect ARGS to have the format:
+    ;;
+    ;;  #(#(?method-spec ...) ...)
+    ;;
+    (vector-for-each
+	(lambda (method-spec-stx)
+	  (%parse-method-spec (vector->list method-spec-stx) parsed-spec synner))
+      args))
 
   (define (%parse-method-spec method-spec-stx parsed-spec synner)
     (define-syntax TOP-ID	(identifier-syntax (<parsed-spec>-top-id    parsed-spec)))
@@ -2551,61 +2229,70 @@
     (syntax-case method-spec-stx ()
       (((?method-name-id . ?formals) ?body0 ?body ...)
        (identifier? #'?method-name-id)
-       (%add-method #'?method-name-id TOP-ID
+       (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ?formals ?body0 ?body ...)))
+		    #`(#,LAMBDA-ID ?formals ?body0 ?body ...)
+		    synner))
 
       ;;Tagged  single   return  value  method  definition.    List  tag
       ;;specification.
       ((((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
-       (%add-method #'?method-name-id #'?rv-tag
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
 		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-id ((_ ?rv-tag) . ?formals) ?body0 ?body ...)))
+		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
+		    synner))
 
       ;;Tagged  single  return  value  method  definition.   Vector  tag
       ;;specification.
       (((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
-       (%add-method #'?method-name-id #'?rv-tag
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
 		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)))
+		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
+		    synner))
 
       ;;Tagged  multiple  return  values method  definition.   List  tag
       ;;specification.
       ((((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method #'?method-name-id TOP-ID
+       (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)))
+		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+		    synner))
 
       ;;Tagged  multiple return  values method  definition.  Vector  tag
       ;;specification.
       (((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method #'?method-name-id TOP-ID
+       (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)))
+		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+		    synner))
 
       ;;Untagged external lambda method definition.
       ((?method-name-id ?lambda-expr)
        (identifier? #'?method-name-id)
-       (%add-method #'?method-name-id TOP-ID (make-method-identifier NAME-ID #'?method-name-id) #'?lambda-expr))
+       (%add-method parsed-spec #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #'?lambda-expr synner))
 
       ;;Tagged external lambda method definition.
       ((#(?method-name-id ?rv-tag) ?lambda-expr)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
-       (%add-method #'?method-name-id #'?rv-tag (make-method-identifier NAME-ID #'?method-name-id) #'?lambda-expr))
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #'?lambda-expr synner))
 
       (_
        (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
 
-  (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
+  (define (%add-method parsed-spec method-name-id method-rv-tag-id method-implementation-id method-expr synner)
     (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
     (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id)
     (<parsed-spec>-definitions-cons!        parsed-spec `(,#'define ,method-implementation-id ,method-expr)))
@@ -2634,15 +2321,11 @@
   ;;which, evaluated at expand-time, must return the a macro transformer
   ;;representing the method implementation.
   ;;
-  (define (clause-arguments-parser:multiple-methods parsed-spec args synner)
-    (syntax-case args ()
-      (#(#(?method-spec ...) ...)
-       (for-each-in-order
-	   (lambda (method-spec-stx)
-	     (%parse-method-spec method-spec-stx parsed-spec synner))
-	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
-      (_
-       (synner "invalid METHOD-SYNTAX clause syntax"))))
+  (define (clause-arguments-parser:method-syntax parsed-spec args synner)
+    (vector-for-each
+	(lambda (method-spec-stx)
+	  (%parse-method-spec (vector->list method-spec-stx) parsed-spec synner))
+      args))
 
   (define (%parse-method-spec method-spec-stx parsed-spec synner)
     (define-syntax TOP-ID
@@ -2654,26 +2337,26 @@
       ;;
       ((?method-name ?transformer-expr)
        (identifier? #'?method-name)
-       (%add-method #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr))
+       (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       ;;Tagged return value method definition.  List tag specification.
       ;;
       (((?method-name ?rv-tag) ?transformer-expr)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag))
-       (%add-method #'?method-name #'?rv-tag (make-method-identifier name-id #'?method-name) #'?transformer-expr))
+       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       ;;Tagged return value method definition.  Vector tag specification.
       ;;
       ((#(?method-name ?rv-tag) ?transformer-expr)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag))
-       (%add-method #'?method-name #'?rv-tag (make-method-identifier name-id #'?method-name) #'?transformer-expr))
+       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       (_
        (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
 
-  (define (%add-method method-name-id method-rv-tag-id method-implementation-id transformer-expr-stx)
+  (define (%add-method parsed-spec method-name-id method-rv-tag-id method-implementation-id transformer-expr-stx synner)
     (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
     (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id)
     (<parsed-spec>-definitions-cons!        parsed-spec `(,#'define-syntax ,method-implementation-id ,transformer-expr-stx)))
@@ -2709,14 +2392,13 @@
   ;;and used in its place.
   ;;
   (define (clause-arguments-parser:multiple-methods parsed-spec args synner)
-    (syntax-case args ()
-      (#(#(?method-spec ...) ...)
-       (for-each-in-order
-	   (lambda (method-spec-stx)
-	     (%parse-method-spec method-spec-stx parsed-spec synner))
-	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
-      (_
-       (synner "invalid METHODS clause syntax"))))
+    (vector-for-each
+	(lambda (methods-clause-stx)
+	  (vector-for-each
+	      (lambda (method-spec-stx)
+		(%parse-method-spec method-spec-stx parsed-spec synner))
+	    methods-clause-stx))
+      args))
 
   (define (%parse-method-spec method-spec-stx parsed-spec synner)
     (define-syntax TOP-ID
@@ -2726,20 +2408,20 @@
     (syntax-case method-spec-stx ()
       (?method-name
        (identifier? #'?method-name)
-       (%add-method #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name)))
+       (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) synner))
 
       ;;Untagged return value method definition.
       ((?method-name ?invocable-name)
        (and (identifier? #'?method-name)
 	    (identifier? #'?invocable-name))
-       (%add-method #'?method-name TOP-ID #'?invocable-name))
+       (%add-method parsed-spec #'?method-name TOP-ID #'?invocable-name synner))
 
       ;;Tagged return value method definition.  List tag specification.
       (((?method-name ?rv-tag) ?invocable-name)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag)
 	    (identifier? #'?invocable-name))
-       (%add-method #'?method-name #'?rv-tag #'?invocable-name))
+       (%add-method parsed-spec #'?method-name #'?rv-tag #'?invocable-name synner))
 
       ;;Tagged   return    value   method   definition.     Vector   tag
       ;;specification.
@@ -2747,12 +2429,12 @@
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag)
 	    (identifier? #'?invocable-name))
-       (%add-method #'?method-name #'?rv-tag #'?invocable-name))
+       (%add-method parsed-spec #'?method-name #'?rv-tag #'?invocable-name synner))
 
       (_
        (synner "invalid method specification in METHODS clause" method-spec-stx))))
 
-  (define (%add-method method-name-id method-rv-tag-id method-implementation-id)
+  (define (%add-method parsed-spec method-name-id method-rv-tag-id method-implementation-id synner)
     (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
     (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id))
 
@@ -2764,7 +2446,7 @@
 (module FIELD-SPEC-PARSER
   (%parse-field-spec)
 
-  (define* (%parse-field-spec (field-spec-stx syntax-object?)
+  (define* (%parse-field-spec field-spec-stx
 			      (parsed-spec <parsed-spec>?)
 			      (register-mutable-field   procedure?)
 			      (register-immutable-field procedure?)
@@ -2849,16 +2531,15 @@
   ;;both ?ACCESSOR and ?MUTATOR must be identifiers.
   ;;
   (define (clause-arguments-parser:concrete-fields parsed-spec args synner)
-    (syntax-case args ()
-      (#(#(?field-spec ...) ...)
-       (for-each-in-order
-	   (lambda (field-spec-stx)
-	     (import FIELD-SPEC-PARSER)
-	     (%parse-field-spec field-spec-stx parsed-spec
-				%register-mutable-field %register-immutable-field synner))
-	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
-      (_
-       (synner "invalid FIELDS clause syntax"))))
+    (vector-for-each
+	(lambda (fields-clause-stx)
+	  (vector-for-each
+	      (lambda (field-spec-stx)
+		(import FIELD-SPEC-PARSER)
+		(%parse-field-spec field-spec-stx parsed-spec
+				   %register-mutable-field %register-immutable-field synner))
+	    fields-clause-stx))
+      args))
 
   (define (%register-mutable-field field-name-id type-tag-id accessor-stx mutator-stx parsed-spec synner)
     (define accessor-id
@@ -2880,7 +2561,7 @@
     (%add-field-record parsed-spec field-spec synner))
 
   (define* (%parse-concrete-field-acc/mut-spec (field-name-id identifier?)
-					       (acc/mut-stx syntax-object?)
+					       acc/mut-stx
 					       (parsed-spec <parsed-spec>?)
 					       make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
@@ -2943,16 +2624,15 @@
   ;;mutator functions or syntax keyword.
   ;;
   (define (clause-arguments-parser:virtual-fields parsed-spec args synner)
-    (syntax-case args ()
-      (#(#(?field-spec ...) ...)
-       (for-each-in-order
-	   (lambda (field-spec-stx)
-	     (import FIELD-SPEC-PARSER)
-	     (%parse-field-spec field-spec-stx parsed-spec
-				%register-mutable-field %register-immutable-field synner))
-	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
-      (_
-       (synner "invalid VIRTUAL-FIELDS clause syntax"))))
+    (vector-for-each
+	(lambda (virtual-fields-clause-stx)
+	  (vector-for-each
+	      (lambda (field-spec-stx)
+		(import FIELD-SPEC-PARSER)
+		(%parse-field-spec field-spec-stx parsed-spec
+				   %register-mutable-field %register-immutable-field synner))
+	    virtual-fields-clause-stx))
+      args))
 
   (define (%register-mutable-field field-name-id type-tag-id accessor-stx mutator-stx parsed-spec synner)
     (define accessor-id
@@ -2974,7 +2654,7 @@
     (%add-field-record parsed-spec field-spec synner))
 
   (define* (%parse-virtual-field-acc/mut-spec (field-name-id identifier?)
-					      (acc/mut-stx syntax-object?)
+					      acc/mut-stx
 					      (parsed-spec <parsed-spec>?)
 					      make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
@@ -3024,19 +2704,15 @@
 ;;number of times and can have any number of arguments.
 ;;
 (define (clause-arguments-parser:satisfies parsed-spec args synner)
-  (define-inline (%add-satisfaction id)
-    ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec))))
-  (syntax-case args ()
-    (#(#(?satisfaction ...) ...)
-     (let loop ((sats (syntax->vector->list->flat #'#(#(?satisfaction ...) ...))))
-       (when (pair? sats)
-	 (let ((S (car sats)))
-	   (if (identifier? S)
-	       (when config.enable-satisfactions
-		 (%add-satisfaction S))
-	     (synner "expected identifier as satisfaction clause argument" S))))))
-    (_
-     (synner "invalid SATISFIES clause syntax"))))
+  (vector-for-each
+      (lambda (satisfaction-clause-stx)
+	(vector-for-each
+	    (lambda (satisfaction-stx)
+	      (if (identifier? satisfaction-stx)
+		  (<parsed-spec>-satisfactions-cons! parsed-spec satisfaction-stx)
+		(synner "expected identifier as satisfaction clause argument" satisfaction-stx)))
+	  satisfaction-clause-stx))
+    args))
 
 
 ;;;; setter and getter clauses
@@ -3174,8 +2850,10 @@
 	   CLAUSE-SPEC-PREDICATE
 	   CLAUSE-SPEC-GETTER
 	   CLAUSE-SPEC-SETTER
+	   CLAUSE-SPEC-PARENT
 	   CLAUSE-SPEC-NONGENERATIVE
 	   CLAUSE-SPEC-MAKER
+	   CLAUSE-SPEC-SHADOWS
 	   CLAUSE-SPEC-SATISFIES)))
 
   ;;Parser functions for the clauses of the DEFINE-class syntax.
@@ -3206,7 +2884,7 @@
   ;;
   (define-constant MIXIN-CLAUSES-SPECS
     (syntax-clauses-validate-specs
-     (LIST
+     (list
       CLAUSE-SPEC-SINGLE-METHOD
       CLAUSE-SPEC-CONCRETE-FIELDS
       CLAUSE-SPEC-VIRTUAL-FIELDS
