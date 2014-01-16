@@ -2249,296 +2249,257 @@
 
 ;;;; some at-most-once clause parsers: parent, opaque, sealed, nongenerative, shadows, maker
 
-;;Parser function for the PARENT  clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (parent ?tag-id)
-;;
-;;where ?TAG-ID is the identifier bound  to the tag syntax of the parent
-;;type.
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-parent)
-  (clause-keyword aux.parent)
-  (flag-accessor <parsed-spec>-parent-id)
-  (body
-   (let ((parent-id #'?single-argument))
-     (if (identifier? parent-id)
-	 (<parsed-spec>-parent-id-set! parsed-spec parent-id)
-       (synner "invalid tag parent type specification" ($car input-clauses))))))
+(define (clause-arguments-parser:parent parsed-spec args synner)
+  ;;Parser function for  the PARENT clause; this clause  must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (parent ?parent-tag-id)
+  ;;
+  ;;where ?parent-TAG-ID  is the identifier  bound to the tag  syntax of
+  ;;the parent type.
+  ;;
+  (syntax-case args ()
+    (#(#(?parent-tag-id))
+     (if (identifier? #'?parent-tag-id)
+	 (<parsed-spec>-parent-id-set! parsed-spec #'?parent-tag-id)
+       (synner "invalid tag parent type specification" #'?parent-tag-id)))
+    (_
+     (synner "invalid PARENT clause syntax"))))
 
-;;Parser function for the SEALED  clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (sealed #t)
-;;   (sealed #f)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-sealed)
-  (clause-keyword aux.sealed)
-  (flag-accessor <parsed-spec>-sealed?)
-  (body
-   (let ((sealed? (syntax->datum #'?single-argument)))
-     (if (boolean? sealed?)
-	 (<parsed-spec>-sealed?-set! parsed-spec sealed?)
-       (synner "invalid tag type sealed specification" ($car input-clauses))))))
+(define (clause-arguments-parser:sealed parsed-spec args synner)
+  ;;Parser function for  the SEALED clause; this clause  must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (sealed #t)
+  ;;   (sealed #f)
+  ;;
+  (syntax-case args ()
+    (#(#(?sealed))
+     (let ((sealed? (syntax->datum #'?sealed)))
+       (if (boolean? sealed?)
+	   (<parsed-spec>-sealed?-set! parsed-spec sealed?)
+	 (synner "invalid tag type sealed specification" #'?sealed))))
+    (_
+     (synner "invalid SEALED clause syntax"))))
 
-;;Parser function for the OPAQUE  clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (opaque #t)
-;;   (opaque #f)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-opaque)
-  (clause-keyword aux.opaque)
-  (flag-accessor <parsed-spec>-opaque?)
-  (body
-   (let ((opaque? (syntax->datum #'?single-argument)))
-     (if (boolean? opaque?)
-	 (<parsed-spec>-opaque?-set! parsed-spec opaque?)
-       (synner "invalid tag type opaque specification" ($car input-clauses))))))
+(define (clause-arguments-parser:opaque parsed-spec args synner)
+  ;;Parser function for  the OPAQUE clause; this clause  must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (opaque #t)
+  ;;   (opaque #f)
+  ;;
+  (syntax-case args ()
+    (#(#(?opaque))
+     (let ((opaque? (syntax->datum #'?opaque)))
+       (if (boolean? opaque?)
+	   (<parsed-spec>-opaque?-set! parsed-spec opaque?)
+	 (synner "invalid tag type opaque specification" #'?opaque))))
+    (_
+     (synner "invalid OPAQUE clause syntax"))))
 
-;;Parser function for the SHADOWS clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (shadows ?id)
-;;
-;;where ?ID  is an identifier.  The  selected identifier is  used by the
-;;syntax WITH-LABEL-SHADOWING to hide some type definition with a label.
-;;For  example: this  mechanism it  allows  to shadow  a condition  type
-;;definition  with a  label type  and so  to use  the tag  syntaxes with
-;;condition objects.
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-shadows)
-  (clause-keyword aux.shadows)
-  (flag-accessor <parsed-spec>-shadowed-identifier)
-  (body
-   (let ((shadowed-id #'?single-argument))
-     (if (identifier? shadowed-id)
-	 (<parsed-spec>-shadowed-identifier-set! parsed-spec shadowed-id)
-       (synner "invalid tag type shadowed identifier specification" ($car input-clauses))))))
+(define (clause-arguments-parser:shadows parsed-spec args synner)
+  ;;Parser function for the SHADOWS  clause; this clause must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (shadows ?id)
+  ;;
+  ;;where ?ID is an identifier.  The  selected identifier is used by the
+  ;;syntax  WITH-LABEL-SHADOWING to  hide  some type  definition with  a
+  ;;label.  For  example: this  mechanism allows  to shadow  a condition
+  ;;type definition  with a label  type and so  to use the  tag syntaxes
+  ;;with condition objects.
+  ;;
+  (syntax-case args ()
+    (#(#(?shadowed-id))
+     (if (identifier? #'?shadowed-id)
+	 (<parsed-spec>-shadowed-identifier-set! parsed-spec #'?shadowed-id)
+       (synner "invalid tag type shadowed identifier specification" #'?shadowed-id)))
+    (_
+     (synner "invalid SHADOWS clause syntax"))))
 
-;;Parser function for  the MAKER clause; this clause  must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (maker ?transformer-expr)
-;;
-;;where  ?TRANSFORMER-EXPR  is  an  expression  evaluating  to  a  macro
-;;transformer to be used to parse  the maker syntax.  We can imagine the
-;;definition:
-;;
-;;   (define-class <alpha>
-;;     (fields a b)
-;;     (maker (lambda (stx)
-;;              (syntax-case stx ()
-;;                ((?tag (?a ?b))
-;;                 #'(make-<alpha> ?a ?b))))))
-;;
-;;to expand to:
-;;
-;;   (define-syntax <alpha>
-;;     (let ((the-maker (lambda (stx)
-;;                       (syntax-case stx ()
-;;                         ((?tag (?a ?b))
-;;                          #'(make-<alpha> ?a ?b))))))
-;;       (lambda (stx)
-;;         ---)))
-;;
-;;and so the following expansion happens:
-;;
-;;   (<alpha> (1 2))	---> (make-<alpha> 1 2)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-maker)
-  (clause-keyword aux.maker)
-  (flag-accessor <parsed-spec>-maker-transformer)
-  (body
-   (<parsed-spec>-maker-transformer-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:maker parsed-spec args synner)
+  ;;Parser function for the MAKER clause; this clause must be present at
+  ;;most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (maker ?transformer-expr)
+  ;;
+  ;;where  ?TRANSFORMER-EXPR  is an  expression  evaluating  to a  macro
+  ;;transformer to  be used to parse  the maker syntax.  We  can imagine
+  ;;the definition:
+  ;;
+  ;;   (define-class <alpha>
+  ;;     (fields a b)
+  ;;     (maker (lambda (stx)
+  ;;              (syntax-case stx ()
+  ;;                ((?tag (?a ?b))
+  ;;                 #'(make-<alpha> ?a ?b))))))
+  ;;
+  ;;to expand to:
+  ;;
+  ;;   (define-syntax <alpha>
+  ;;     (let ((the-maker (lambda (stx)
+  ;;                       (syntax-case stx ()
+  ;;                         ((?tag (?a ?b))
+  ;;                          #'(make-<alpha> ?a ?b))))))
+  ;;       (lambda (stx)
+  ;;         ---)))
+  ;;
+  ;;and so the following expansion happens:
+  ;;
+  ;;   (<alpha> (1 2))	---> (make-<alpha> 1 2)
+  ;;
+  (syntax-case args ()
+    (#(#(?transformer-expr))
+     (<parsed-spec>-maker-transformer-set! parsed-spec #'?transformer-expr))
+    (_
+     (synner "invalid MAKER clause syntax"))))
 
-;;Parser function for the FINALISER  clause; this clause must be present
-;;at most once.  The expected syntax for the clause is:
-;;
-;;   (finaliser ?function-expr)
-;;
-;;where ?FUNCTION-EXPR is  an expression evaluating to a  function to be
-;;used by the garbage collector to finalise the record.
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-finaliser)
-  (clause-keyword aux.finaliser)
-  (flag-accessor <parsed-spec>-finaliser-expression)
-  (body
-   (<parsed-spec>-finaliser-expression-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:finaliser parsed-spec args synner)
+  ;;Parser  function  for the  FINALISER  clause;  this clause  must  be
+  ;;present at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (finaliser ?lambda-expr)
+  ;;
+  ;;where ?LAMBDA-EXPR is  an expression evaluating to a  function to be
+  ;;used by the garbage collector to finalise the record.
+  ;;
+  (syntax-case args ()
+    (#(#(?lambda-expr))
+     (<parsed-spec>-finaliser-expression-set! parsed-spec #'?lambda-expr))
+    (_
+     (synner "invalid FINALISER clause syntax"))))
 
-;;; --------------------------------------------------------------------
-
-(define (%parse-clauses-nongenerative parsed-spec input-clauses next-parsers synner output-clauses)
-  ;;Tail-recursive function.   Parse clauses with  keyword NONGENERATIVE
-  ;;and mutate  the appropriate fields  of PARSED-SPEC with  the result;
-  ;;raise an error if the clause is used multiple times; the clause must
-  ;;have zero arguments or a single argument:
+(define (clause-arguments-parser:finaliser parsed-spec args synner)
+  ;;Parser function  for the NONGENERATIVE  clause; this clause  must be
+  ;;present at  most once;  this clause  must have  zero arguments  or a
+  ;;single argument:
   ;;
   ;;   (nongenerative)
   ;;   (nongenerative ?unique-id)
   ;;
-  ;;where ?UNIQUE-ID is the  symbol which uniquely identifies the record
+  ;;where ?UNIQUE-ID is the symbol  which uniquely identifies the record
   ;;type in a whole program.  If the clause has no argument: a unique id
   ;;is automatically generated.
   ;;
-  ;;After parsing:
-  ;;
-  ;;* If no more clauses are present: return null.
-  ;;
-  ;;* If  more clauses are  present: tail-call the next  parser function
-  ;;from ?NEXT-PARSERS to continue parsing of clauses.
-  ;;
-  (define-inline (%recurse input-clauses output-clauses)
-    (%parse-clauses-nongenerative parsed-spec input-clauses next-parsers synner output-clauses))
-  (cond
-   ;;No more input clauses.
-   ((null? input-clauses)
-    (if (null? output-clauses)
-	(final-clauses-parser parsed-spec (reverse output-clauses) '() synner '())
-      ((car next-parsers) parsed-spec (reverse output-clauses)
-       (cdr next-parsers) synner '())))
-   ;;Parse matching clause.
-   ((free-identifier=? #'aux.nongenerative (caar input-clauses))
-    (if (<parsed-spec>-nongenerative-uid parsed-spec)
-	(synner "clause expected at most once is used multiple times, \
-                 or clauses specifying the same features are used together"
-		($car input-clauses))
-      (syntax-case ($cdar input-clauses) ()
-	(()
-	 (begin
-	   (<parsed-spec>-nongenerative-uid-set! parsed-spec (car (generate-temporaries '(#f))))
-	   (%recurse ($cdr input-clauses) output-clauses)))
-	((?unique-id)
-	 (begin
-	   (let ((uid #'?unique-id))
-	     (if (identifier? uid)
-		 (<parsed-spec>-nongenerative-uid-set! parsed-spec uid)
-	       (synner "invalid tag type nongenerative specification" ($car input-clauses))))
-	   (%recurse ($cdr input-clauses) output-clauses)))
-	(_
-	 (synner "a single-argument clause was expected" ($car input-clauses))))))
-   ;;Parse non-matching clause.
-   (else
-    (%recurse ($cdr input-clauses)
-	      (cons ($car input-clauses) output-clauses)))))
+  (syntax-case args ()
+    (#(#(?unique-id))
+     (if (identifier? #'?unique-id)
+	 (<parsed-spec>-nongenerative-uid-set! parsed-spec #'?unique-id)
+       (synner "expected identifier as NONGENERATIVE clause argument" #'?unique-id)))
+
+    (#(#())
+     (<parsed-spec>-nongenerative-uid-set! parsed-spec (gensym)))
+
+    (_
+     (synner "invalid NONGENERATIVE clause syntax"))))
 
 
-;;;; some at-most-once clause parsers: protocols, abstract
+;;;; some at-most-once clause parsers: protocols, abstract, predicate
 
-;;Parser function for  the PROTOCOL clause; this clause  must be present
-;;at most once.  The expected syntax for the clause is:
-;;
-;;   (protocol ?expr)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-common-protocol)
-  (clause-keyword aux.protocol)
-  (flag-accessor <parsed-spec>-common-protocol)
-  (body
-   (<parsed-spec>-common-protocol-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:common-protocol parsed-spec args synner)
+  ;;Parser function for the PROTOCOL clause; this clause must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (protocol ?expr)
+  ;;
+  (syntax-case args ()
+    (#(#(?protocol-expr))
+     (<parsed-spec>-common-protocol-set! parsed-spec #'?protocol-expr))
+    (_
+     (synner "invalid PROTOCOL clause syntax"))))
 
-;;Parser function  for the PUBLIC-PROTOCOL  clause; this clause  must be
-;;present at most once.  The expected syntax for the clause is:
-;;
-;;   (public-protocol ?expr)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-public-protocol)
-  (clause-keyword aux.public-protocol)
-  (flag-accessor <parsed-spec>-public-protocol)
-  (body
-   (<parsed-spec>-public-protocol-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:public-protocol parsed-spec args synner)
+  ;;Parser function for the PUBLIC-PROTOCOL  clause; this clause must be
+  ;;present at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (public-protocol ?expr)
+  ;;
+  (syntax-case args ()
+    (#(#(?protocol-expr))
+     (<parsed-spec>-public-protocol-set! parsed-spec #'?protocol-expr))
+    (_
+     (synner "invalid PUBLIC-PROTOCOL clause syntax"))))
 
-;;Parser  function for the  SUPER-PROTOCOL clause;  this clause  must be
-;;present at most once.  The expected syntax for the clause is:
-;;
-;;   (super-protocol ?expr)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-super-protocol)
-  (clause-keyword aux.super-protocol)
-  (flag-accessor <parsed-spec>-super-protocol)
-  (body
-   (<parsed-spec>-super-protocol-set! parsed-spec #'?single-argument)))
+(define (clause-arguments-parser:super-protocol parsed-spec args synner)
+  ;;Parser function for  the SUPER-PROTOCOL clause; this  clause must be
+  ;;present at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (super-protocol ?expr)
+  ;;
+  (syntax-case args ()
+    (#(#(?protocol-expr))
+     (<parsed-spec>-super-protocol-set! parsed-spec #'?protocol-expr))
+    (_
+     (synner "invalid SUPER-PROTOCOL clause syntax"))))
 
-;;Parser function for  the ABSTRACT clause; this clause  must be present
-;;at most once and only in a DEFINE-CLASS or DEFINE-MIXIN.  The expected
-;;syntax for the clause is:
-;;
-;;   (abstract)
-;;
-(define-clause-parser/at-most-once-clause/no-argument
-    (parser-name %parse-clauses-abstract)
-  (clause-keyword aux.abstract)
-  (flag-accessor <parsed-spec>-abstract?)
-  (body
-   (<parsed-spec>-abstract?-set! parsed-spec #t)))
+(define (clause-arguments-parser:abstract parsed-spec args synner)
+  ;;Parser function for the ABSTRACT clause; this clause must be present
+  ;;at  most once  and  only  in a  DEFINE-CLASS  or DEFINE-MIXIN.   The
+  ;;expected syntax for the clause is:
+  ;;
+  ;;   (abstract)
+  ;;
+  (syntax-case args ()
+    (#(#())
+     (<parsed-spec>-abstract?-set! parsed-spec #t))
+    (_
+     (synner "invalid ABSTRACT clause syntax"))))
 
-
-;;;; some at-most-once clause parsers: predicate
-
-;;Parser function for the PREDICATE  clause; this clause must be present
-;;at most once.  The expected syntax for the clause is:
-;;
-;;   (predicate ?function-expr)
-;;
-;;When a function predicate expression is specified as an identifier:
-;;
-;;  (define-label <list>
-;;    (parent <pair>)
-;;    (predicate list?))
-;;
-;;the tag definition expands to:
-;;
-;;  (define (<list>? obj)
-;;    (and (<pair> :is-a? obj)
-;;         (list? obj)))
-;;
-;;and the following tag syntax expansion happen:
-;;
-;;  (<list> is-a? ?obj)		---> (<list>? ?obj)
-;;
-;;When a function predicate expression is specified as an expression:
-;;
-;;  (define-label <list-of-numbers>
-;;    (parent <pair>)
-;;    (predicate (lambda (obj)
-;;                 (and (list? obj)
-;;                      (for-all number? obj)))))
-;;
-;;the tag definition expands to:
-;;
-;;  (define <list-of-numbers>-private-predicate
-;;    (lambda (obj)
-;;      (and (list? obj)
-;;           (for-all number? obj))))
-;;  (define (<list-of-numbers>? obj)
-;;    (and (<pair> :is-a? obj)
-;;         (<list-of-numbers>-private-predicate obj)))
-;;
-;;and the following tag syntax expansion happen:
-;;
-;;  (<list-of-numbers> is-a? ?obj)	---> (<list-of-numbers>? ?obj)
-;;
-(define-clause-parser/at-most-once-clause/single-argument
-    (parser-name %parse-clauses-predicate)
-  (clause-keyword aux.predicate)
-  (flag-accessor <parsed-spec>-private-predicate-id)
-  (body
-   (let ((pred-expr-stx #'?single-argument))
-     (if (identifier? pred-expr-stx)
-	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-expr-stx)
-       (let* ((name-id (<parsed-spec>-name-id parsed-spec))
-	      (pred-id (tag-id->private-predicate-id name-id)))
-	 (<parsed-spec>-definitions-cons! parsed-spec
-					  (list #'define pred-id pred-expr-stx))
-	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-id))))))
+(define (clause-arguments-parser:predicate parsed-spec args synner)
+  ;;Parser  function  for the  PREDICATE  clause;  this clause  must  be
+  ;;present at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (predicate ?predicate)
+  ;;
+  ;;When a function predicate expression is specified as an identifier:
+  ;;
+  ;;  (define-label <list>
+  ;;    (parent <pair>)
+  ;;    (predicate list?))
+  ;;
+  ;;the tag definition expands to:
+  ;;
+  ;;  (define (<list>? obj)
+  ;;    (and (<pair> :is-a? obj)
+  ;;         (list? obj)))
+  ;;
+  ;;and the following tag syntax expansion happens:
+  ;;
+  ;;  (<list> is-a? ?obj) ==> (<list>? ?obj)
+  ;;
+  ;;When a function predicate expression is specified as an expression:
+  ;;
+  ;;  (define-label <list-of-numbers>
+  ;;    (parent <pair>)
+  ;;    (predicate (lambda (obj)
+  ;;                 (and (list? obj)
+  ;;                      (for-all number? obj)))))
+  ;;
+  ;;the tag definition expands to:
+  ;;
+  ;;  (define <list-of-numbers>-private-predicate
+  ;;    (lambda (obj)
+  ;;      (and (list? obj)
+  ;;           (for-all number? obj))))
+  ;;
+  ;;  (define (<list-of-numbers>? obj)
+  ;;    (and (<pair> :is-a? obj)
+  ;;         (<list-of-numbers>-private-predicate obj)))
+  ;;
+  ;;and the following tag syntax expansion happens:
+  ;;
+  ;;  (<list-of-numbers> is-a? ?obj) ==> (<list-of-numbers>? ?obj)
+  ;;
+  (syntax-case args ()
+    (#(#(?predicate))
+     (if (identifier? #'?predicate)
+	 (<parsed-spec>-private-predicate-id-set! parsed-spec #'?predicate)
+       (let ((pred-id (tag-id->private-predicate-id (<parsed-spec>-name-id parsed-spec))))
+	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-id)
+	 (<parsed-spec>-definitions-cons!         parsed-spec (list #'define pred-id #'?predicate)))))
+    (_
+     (synner "invalid PREDICATE clause syntax"))))
 
 
 ;;;; single method function clauses
