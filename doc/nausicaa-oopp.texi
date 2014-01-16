@@ -2201,182 +2201,15 @@ as syntaxes:
 @section Defining classes having methods
 
 
-@deffn {Auxiliary Syntax} method (@meta{method-spec} . @meta{formals}) . @meta{body}
-@deffnx {Auxiliary Syntax} method @meta{method-spec} @meta{expression}
-Add a method to the enclosing class, label or mixin definition; the
-method is applicable only through a syntax use in @oopp{} notation.
-This clause can be used multiple times.
-
-When the first form is used, the argument @meta{method-spec} can have
-one of the following formats:
-
-@example
-@meta{method-name}
-(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
-#(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
-@end example
-
-@noindent
-when the second form is used, the argument @meta{method-spec} can have
-one of the following formats:
-
-@example
-@meta{method-name}
-#(@meta{method-name} @meta{rv-tag})
-@end example
-
-@noindent
-where: @meta{method-name} must be an identifier representing the method
-name; @meta{rv-tag} must be a tag identifier representing the type of a
-return value.  When a single return value tag is specified: the method
-is available for nested method invocation according to @oopp{} syntax
-specifications.  When the first form is used: the return value tags are
-used to validate the returned arguments as described for
-@func{lambda/tags}.
-
-@itemize
-@item
-When the first form is used, the method definition is added to the
-methods list as if the following clause had been used:
-
-@example
-(methods (@meta{method-name} function-name))
-@end example
-
-@noindent
-the function definition is expanded to:
-
-@example
-(define/tags (function-name . @meta{formals}) . @meta{body})
-@end example
-
-@noindent
-where @code{function-name} is an automatically generated identifier
-built by appending a dash and @meta{method-name} to the type name.  The
-first argument in @meta{formals} must be the type instance.
-
-@item
-When the second form is used, the method definition is added to the
-methods list as if the following clause had been used:
-
-@example
-(methods (@meta{method-name} function-name))
-@end example
-
-@noindent
-the function definition is expanded to:
-
-@example
-(define function-name @meta{expression})
-@end example
-
-@noindent
-where @code{function-name} is an automatically generated identifier
-built by appending a dash and @meta{method-name} to the type name; the
-@meta{expression} must evaluate to a function accepting at least one
-argument: the type instance.
-@end itemize
-
-Here is an example of the first form:
-
-@example
-(define-class <stuff>
-  (fields a b)
-  (method (sum (S <stuff>))
-    (+ (S a) (S b))))
-
-(<stuff> S (<> (1 2)))
-(S sum)                 @result{} 3
-@end example
-
-@noindent
-and an example of the second form:
-
-@example
-(define-class <stuff>
-  (fields a b)
-  (method sum
-    (lambda/tags ((S <stuff>))
-      (+ (S a) (S b)))))
-
-(<stuff> S (<> (1 2)))
-(S sum)                 @result{} 3
-@end example
-@end deffn
-
-@c ------------------------------------------------------------
-
-@deffn {Auxiliary Syntax} method-syntax @meta{method-spec} @meta{transformer}
-Add a method to the enclosing class, label or mixin definition; the
-method is applicable only through a syntax use in @oopp{} notation.
-This clause can be used multiple times.
-
-The argument @meta{method-spec} can have one of the following formats:
-
-@example
-@meta{method-name}
-(@meta{method-name} @meta{rv-tag})
-#(@meta{method-name} @meta{rv-tag})
-@end example
-
-@noindent
-where: @meta{method-name} must be an identifier representing the method
-name; @meta{rv-tag} must be a tag identifier representing the type of a
-return value.  When the single return value tag is specified: the method
-is available for nested method invocation according to @oopp{} syntax
-specifications.
-
-The method definition is added to the methods list as if the following
-clause had been used:
-
-@example
-(methods (@meta{method-name} transformer-name))
-@end example
-
-@noindent
-the macro definition is expanded to:
-
-@example
-(define-syntax transformer-name @meta{transformer})
-@end example
-
-@noindent
-where @code{transformer-name} is an automatically generated identifier
-built by appending a dash and @meta{method-name} to the type name.
-@meta{transformer} must evaluate to a macro transformer: a function
-accepting a syntax object as single argument and returning a syntax
-object as single value.  The first argument to the macro will be the
-type instance.
-
-Here is an example of method syntax:
-
-@example
-(define-class <stuff>
-  (fields a b)
-  (method-syntax sum
-    (lambda (stx)
-      (syntax-case stx ()
-        ((_ ?instance)
-         #'(let (((S <stuff>) ?instance))
-             (+ (S a) (S b))))))))
-
-(<stuff> S (<> (1 2)))
-(S sum)                 @result{} 3
-@end example
-@end deffn
-
-@c ------------------------------------------------------------
-
-@deffn {Auxiliary Syntax} methods @meta{method-spec} @dots{}
+@deffn {Auxiliary Syntax} methods @meta{method} @dots{}
 Add methods to the enclosing class, label or mixin definition; the
 methods are applicable only through a syntax use in @oopp{} notation.
 This clause can be used multiple times.
 
-The @meta{method-spec} arguments can be of the form:
+The @meta{method} arguments can be of the form:
 
 @example
 @meta{method-name}
-(@meta{method-name})
 (@meta{method-name} @meta{invokable-name})
 ((@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
 (#(@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
@@ -2438,6 +2271,175 @@ and here is a usage example of the third form with a method syntax:
       ((_ ?instance)
        #'(let (((S <stuff>) ?instance))
            (+ (S a) (S b)))))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Auxiliary Syntax} method (@meta{method} . @meta{formals}) . @meta{body}
+@deffnx {Auxiliary Syntax} method @meta{method} @meta{expression}
+Add a method to the enclosing class, label or mixin definition; the
+method is applicable only through a syntax use in @oopp{} notation.
+This clause can be used multiple times.
+
+When the first form is used, the argument @meta{method} can have one of
+the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+#(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+@end example
+
+@noindent
+when the second form is used, the argument @meta{method} can have one of
+the following formats:
+
+@example
+@meta{method-name}
+#(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of a
+return value.  When a single return value tag is specified: the method
+is available for nested method invocation according to @oopp{} syntax
+specifications.  When the first form is used: the return value tags are
+used to validate the returned arguments as described for
+@func{lambda/tags}.
+
+@itemize
+@item
+When the first form is used, the method definition is added to the
+methods list as if the following clause had been used:
+
+@example
+(methods (@meta{method-name} function-name))
+@end example
+
+@noindent
+the function definition is expanded to:
+
+@example
+(define function-name
+  (lambda/tags ((_ @metao{rv-tag} @meta{rv-tag} ...) . @meta{formals})
+    . @meta{body})
+@end example
+
+@noindent
+where @code{function-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name.  The
+first argument in @meta{formals} must be the type instance.
+
+@item
+When the second form is used, the method definition is added to the
+methods list as if the following clause had been used:
+
+@example
+(methods (@meta{method-name} function-name))
+@end example
+
+@noindent
+the function definition is expanded to:
+
+@example
+(define function-name @meta{expression})
+@end example
+
+@noindent
+where @code{function-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name; the
+@meta{expression} must evaluate to a function accepting at least one
+argument: the type instance.
+@end itemize
+
+Here is an example of the first form:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method (sum (S <stuff>))
+    (+ (S a) (S b))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+
+@noindent
+and an example of the second form:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method sum
+    (lambda/tags ((S <stuff>))
+      (+ (S a) (S b)))))
+
+(<stuff> S (<> (1 2)))
+(S sum)                 @result{} 3
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Auxiliary Syntax} method-syntax @meta{method} @meta{transformer}
+Add a method to the enclosing class, label or mixin definition; the
+method is applicable only through a syntax use in @oopp{} notation.
+This clause can be used multiple times.
+
+The argument @meta{method} can have one of the following formats:
+
+@example
+@meta{method-name}
+(@meta{method-name} @meta{rv-tag})
+#(@meta{method-name} @meta{rv-tag})
+@end example
+
+@noindent
+where: @meta{method-name} must be an identifier representing the method
+name; @meta{rv-tag} must be a tag identifier representing the type of
+the single return value.  When the single return value tag is specified:
+the method is available for nested method invocation according to
+@oopp{} syntax specifications.  When the method returns multiple values:
+no type tag must be specified.
+
+The method definition is added to the methods list as if the following
+clause had been used:
+
+@example
+(methods (@meta{method-name} transformer-name))
+@end example
+
+@noindent
+the macro definition is expanded to:
+
+@example
+(define-syntax transformer-name @meta{transformer})
+@end example
+
+@noindent
+where @code{transformer-name} is an automatically generated identifier
+built by appending a dash and @meta{method-name} to the type name.
+@meta{transformer} must evaluate to a macro transformer: a function
+accepting a syntax object as single argument and returning a syntax
+object as single value.  The first argument to the macro will be the
+type instance.
+
+Here is an example of method syntax:
+
+@example
+(define-class <stuff>
+  (fields a b)
+  (method-syntax sum
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ ?instance)
+         #'(let (((S <stuff>) ?instance))
+             (+ (S a) (S b))))))))
 
 (<stuff> S (<> (1 2)))
 (S sum)                 @result{} 3

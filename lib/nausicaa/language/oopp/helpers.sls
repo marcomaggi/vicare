@@ -2541,226 +2541,261 @@
 	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-id))))))
 
 
-;;;; single method clauses
+;;;; single method function clauses
 
-;;Parser function for METHOD clauses; this clause can be present zero or
-;;more times.  A METHOD clause has one of the following syntaxes:
-;;
-;;  (method (?method-name ?arg ...) ?body0 ?body ...)
-;;  (method ?method-name ?lambda-expr)
-;;
-(define-clause-parser/zero-or-more-clauses/multiple-mandatory-arguments
-    (parser-name %parse-clauses-single-method)
-  (clause-keyword aux.method)
-  (body
-   (let ((name-id (<parsed-spec>-name-id parsed-spec)))
+(module (clause-arguments-parser:single-method)
+  ;;Parser function for METHOD clauses;  this clause can be present zero
+  ;;or more times.  A METHOD clause has one of the following syntaxes:
+  ;;
+  ;;  (method (?method-int ?arg ... . ?rest) ?body0 ?body ...)
+  ;;  (method ?method-ext ?lambda-expr)
+  ;;
+  ;;where ?METHOD-INT has one of the syntaxes:
+  ;;
+  ;;  ?method-name-id
+  ;;  (?method-name-id ?rv-tag0 ?rv-tag ...)
+  ;;  #(?method-name-id ?rv-tag0 ?rv-tag ...)
+  ;;
+  ;;where ?METHOD-EXT has one of the syntaxes:
+  ;;
+  ;;  ?method-name-id
+  ;;  #(?method-name-id ?rv-tag)
+  ;;
+  ;;?ARG has one of the syntaxes:
+  ;;
+  ;;  ?arg-id
+  ;;  (?arg-id ?arg-tag-id)
+  ;;  #(?arg-id ?arg-tag-id)
+  ;;
+  ;;?REST has one of the syntaxes:
+  ;;
+  ;;  ()
+  ;;  ?rest-id
+  ;;  #(?rest-id ?rest-tag-id)
+  ;;
+  (define (clause-arguments-parser:single-methods parsed-spec args synner)
+    (syntax-case args ()
+      (#(#(?method-spec ...) ...)
+       (for-each-in-order
+	   (lambda (method-spec-stx)
+	     (%parse-method-spec method-spec-stx parsed-spec synner))
+	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
+      (_
+       (synner "invalid METHOD clause syntax"))))
 
-     (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
-       (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
-       (<parsed-spec>-definitions-cons! parsed-spec `(,#'define ,method-implementation-id ,method-expr)))
+  (define (%parse-method-spec method-spec-stx parsed-spec synner)
+    (define-syntax TOP-ID	(identifier-syntax (<parsed-spec>-top-id    parsed-spec)))
+    (define-syntax NAME-ID	(identifier-syntax (<parsed-spec>-name-id   parsed-spec)))
+    (define-syntax LAMBDA-ID	(identifier-syntax (<parsed-spec>-lambda-id parsed-spec)))
+    (syntax-case method-spec-stx ()
+      (((?method-name-id . ?formals) ?body0 ?body ...)
+       (identifier? #'?method-name-id)
+       (%add-method #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ?formals ?body0 ?body ...)))
 
-     (syntax-case #'?arguments ()
-       ;;Untagged return value method definition.
-       (((?method-name . ?formals) ?body0 ?body ...)
-	(identifier? #'?method-name)
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#f)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec) ?formals ?body0 ?body ...))))
+      ;;Tagged  single   return  value  method  definition.    List  tag
+      ;;specification.
+      ((((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-id ((_ ?rv-tag) . ?formals) ?body0 ?body ...)))
 
-       ;;Tagged  single  return  value   method  definition.   List  tag
-       ;;specification.
-       ((((?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
-	(and (identifier? #'?method-name)
-	     (identifier? #'?rv-tag))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#'?rv-tag)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
-			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
+      ;;Tagged  single  return  value  method  definition.   Vector  tag
+      ;;specification.
+      (((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)))
 
-       ;;Tagged  single  return  value method  definition.   Vector  tag
-       ;;specification.
-       (((#(?method-name ?rv-tag) . ?formals) ?body0 ?body ...)
-	(and (identifier? #'?method-name)
-	     (identifier? #'?rv-tag))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#'?rv-tag)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
-			  ((_ ?rv-tag) . ?formals) ?body0 ?body ...))))
+      ;;Tagged  multiple  return  values method  definition.   List  tag
+      ;;specification.
+      ((((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+       (%add-method #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)))
 
-       ;;Tagged  multiple return  values  method  definition.  List  tag
-       ;;specification.
-       ((((?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-	(and (identifier? #'?method-name)
-	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#f)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
-			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
+      ;;Tagged  multiple return  values method  definition.  Vector  tag
+      ;;specification.
+      (((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+       (%add-method #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)))
 
-       ;;Tagged multiple  return values  method definition.   Vector tag
-       ;;specification.
-       (((#(?method-name ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-	(and (identifier? #'?method-name)
-	     (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#f)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id
-		       #`(#,(<parsed-spec>-lambda-id parsed-spec)
-			  ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))))
+      ;;Untagged external lambda method definition.
+      ((?method-name-id ?lambda-expr)
+       (identifier? #'?method-name-id)
+       (%add-method #'?method-name-id TOP-ID (make-method-identifier NAME-ID #'?method-name-id) #'?lambda-expr))
 
-       ;;Untagged external lambda method definition.
-       ((?method-name ?lambda-expr)
-	(identifier? #'?method-name)
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#f)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+      ;;Tagged external lambda method definition.
+      ((#(?method-name-id ?rv-tag) ?lambda-expr)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method #'?method-name-id #'?rv-tag (make-method-identifier NAME-ID #'?method-name-id) #'?lambda-expr))
 
-       ;;Tagged external lambda method definition.
-       ((#(?method-name ?rv-tag) ?lambda-expr)
-	(and (identifier? #'?method-name)
-	     (identifier? #'?rv-tag))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#'?rv-tag)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+      (_
+       (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
 
-       ;;Syntax violation.
-       (_
-	(synner "invalid method specification" ($car input-clauses)))))))
+  (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
+    (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
+    (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id)
+    (<parsed-spec>-definitions-cons!        parsed-spec `(,#'define ,method-implementation-id ,method-expr)))
+
+  #| end of module: clause-arguments-parser:single-method |# )
 
 
 ;;;; single method syntax clauses
 
-;;Parser function for METHOD-SYNTAX  clauses; this clause can be present
-;;zero or more times.  A METHOD-SYNTAX clause has the following syntax:
-;;
-;;  (method-syntax ?method-name ?transformer-expr)
-;;
-(define-clause-parser/zero-or-more-clauses/multiple-mandatory-arguments
-    (parser-name %parse-clauses-single-method-syntax)
-  (clause-keyword aux.method-syntax)
-  (body
-   (let ((name-id (<parsed-spec>-name-id parsed-spec)))
+(module (clause-arguments-parser:method-syntax)
+  ;;Parser  function  for  METHOD-SYNTAX  clauses; this  clause  can  be
+  ;;present  zero  or  more  times.   A  METHOD-SYNTAX  clause  has  the
+  ;;following syntax:
+  ;;
+  ;;  (method-syntax ?method ?transformer-expr)
+  ;;
+  ;;and ?METHOD has one of the following syntaxes:
+  ;;
+  ;;  ?method-name-id
+  ;;  (?method-name-id ?rv-tag)
+  ;;  #(?method-name-id ?rv-tag)
+  ;;
+  ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
+  ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
+  ;;method  single  return  value; ?TRANSFORMER-EXPR  is  an  expression
+  ;;which, evaluated at expand-time, must return the a macro transformer
+  ;;representing the method implementation.
+  ;;
+  (define (clause-arguments-parser:multiple-methods parsed-spec args synner)
+    (syntax-case args ()
+      (#(#(?method-spec ...) ...)
+       (for-each-in-order
+	   (lambda (method-spec-stx)
+	     (%parse-method-spec method-spec-stx parsed-spec synner))
+	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
+      (_
+       (synner "invalid METHOD-SYNTAX clause syntax"))))
 
-     (define (%add-method method-name-id method-rv-tag-id method-implementation-id method-expr)
-       (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id)
-       (<parsed-spec>-definitions-cons! parsed-spec
-					`(,#'define-syntax ,method-implementation-id ,method-expr)))
+  (define (%parse-method-spec method-spec-stx parsed-spec synner)
+    (define-syntax TOP-ID
+      (identifier-syntax (<parsed-spec>-top-id parsed-spec)))
+    (define-syntax NAME-ID
+      (identifier-syntax (<parsed-spec>-name-id parsed-spec)))
+    (syntax-case method-spec-stx ()
+      ;;Untagged return value method definition.
+      ;;
+      ((?method-name ?transformer-expr)
+       (identifier? #'?method-name)
+       (%add-method #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr))
 
-     (syntax-case #'?arguments ()
-       ;;Untagged return value method definition.
-       ((?method-name ?lambda-expr)
-	(identifier? #'?method-name)
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#f)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+      ;;Tagged return value method definition.  List tag specification.
+      ;;
+      (((?method-name ?rv-tag) ?transformer-expr)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag))
+       (%add-method #'?method-name #'?rv-tag (make-method-identifier name-id #'?method-name) #'?transformer-expr))
 
-       ;;Tagged return value method definition.  List tag specification.
-       (((?method-name ?rv-tag) ?lambda-expr)
-	(and (identifier? #'?method-name)
-	     (identifier? #'?rv-tag))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#'?rv-tag)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+      ;;Tagged return value method definition.  Vector tag specification.
+      ;;
+      ((#(?method-name ?rv-tag) ?transformer-expr)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag))
+       (%add-method #'?method-name #'?rv-tag (make-method-identifier name-id #'?method-name) #'?transformer-expr))
 
-       ;;Tagged return value method definition.  Vector tag specification.
-       ((#(?method-name ?rv-tag) ?lambda-expr)
-	(and (identifier? #'?method-name)
-	     (identifier? #'?rv-tag))
-	(let* ((method-name-id			#'?method-name)
-	       (method-rv-tag-id		#'?rv-tag)
-	       (method-implementation-id	(make-method-identifier name-id method-name-id)))
-	  (%add-method method-name-id method-rv-tag-id method-implementation-id #'?lambda-expr)))
+      (_
+       (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
 
-       ;;Syntax violation.
-       (_
-	(synner "invalid method syntax specification" ($car input-clauses)))))))
+  (define (%add-method method-name-id method-rv-tag-id method-implementation-id transformer-expr-stx)
+    (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
+    (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id)
+    (<parsed-spec>-definitions-cons!        parsed-spec `(,#'define-syntax ,method-implementation-id ,transformer-expr-stx)))
+
+  #| end of module: CLAUSE-ARGUMENTS-PARSER:MULTIPLE-METHODS |# )
 
 
 ;;;; multiple methods clauses
 
-;;Parser function for  METHODS clauses; this clause can  be present zero
-;;or more times.  A METHODS clause has the following syntaxe:
-;;
-;;  (methods ?method ...)
-;;
-;;where ?METHOD has one of the following syntaxes:
-;;
-;;  ?method-name-id
-;;  (?method-name-id ?method-implementation-id)
-;;
-(define-clause-parser/zero-or-more-clauses/multiple-mandatory-arguments
-    (parser-name %parse-clauses-multiple-methods)
-  (clause-keyword aux.methods)
-  (body
-   (let ((name-id (<parsed-spec>-name-id parsed-spec)))
+(module (clause-arguments-parser:multiple-methods)
+  ;;Parser function for METHODS clauses; this clause can be present zero
+  ;;or more times.  A METHODS clause has the following syntaxe:
+  ;;
+  ;;  (methods ?method-spec ...)
+  ;;
+  ;;where ?METHOD has one of the following syntaxes:
+  ;;
+  ;;  ?method
+  ;;  (?method ?invocable-name)
+  ;;
+  ;;and ?METHOD has one of the following syntaxes:
+  ;;
+  ;;  ?method-name-id
+  ;;  (?method-name-id ?rv-tag)
+  ;;  #(?method-name-id ?rv-tag)
+  ;;
+  ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
+  ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
+  ;;method single  return value; ?INVOCABLE-NAME is  an identifier bound
+  ;;to the method implementation, a function or macro.
+  ;;
+  ;;When ?INVOCABLE-NAME is not specified  a default identifier is built
+  ;;and used in its place.
+  ;;
+  (define (clause-arguments-parser:multiple-methods parsed-spec args synner)
+    (syntax-case args ()
+      (#(#(?method-spec ...) ...)
+       (for-each-in-order
+	   (lambda (method-spec-stx)
+	     (%parse-method-spec method-spec-stx parsed-spec synner))
+	 (syntax->vector->list->flat #'#(#(?method-spec ...) ...))))
+      (_
+       (synner "invalid METHODS clause syntax"))))
 
-     (define (%add-method method-name-id method-rv-tag-id method-implementation-id)
-       (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
-       (<parsed-spec>-methods-table-cons! parsed-spec method-name-id method-rv-tag-id method-implementation-id))
+  (define (%parse-method-spec method-spec-stx parsed-spec synner)
+    (define-syntax TOP-ID
+      (identifier-syntax (<parsed-spec>-top-id parsed-spec)))
+    (define-syntax NAME-ID
+      (identifier-syntax (<parsed-spec>-name-id parsed-spec)))
+    (syntax-case method-spec-stx ()
+      (?method-name
+       (identifier? #'?method-name)
+       (%add-method #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name)))
 
-     (let loop ((methods #'?arguments))
-       (syntax-case methods ()
-	 (()
-	  (values))
+      ;;Untagged return value method definition.
+      ((?method-name ?invocable-name)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?invocable-name))
+       (%add-method #'?method-name TOP-ID #'?invocable-name))
 
-	 ((?method-name . ?other-methods)
-	  (identifier? #'?method-name)
-	  (let ((method-name-id #'?method-name))
-	    (%add-method method-name-id #f (make-method-identifier name-id method-name-id))
-	    (loop #'?other-methods)))
+      ;;Tagged return value method definition.  List tag specification.
+      (((?method-name ?rv-tag) ?invocable-name)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag)
+	    (identifier? #'?invocable-name))
+       (%add-method #'?method-name #'?rv-tag #'?invocable-name))
 
-	 (((?method-name) . ?other-methods)
-	  (identifier? #'?method-name)
-	  (let ((method-name-id #'?method-name))
-	    (%add-method method-name-id #f (make-method-identifier name-id method-name-id))
-	    (loop #'?other-methods)))
+      ;;Tagged   return    value   method   definition.     Vector   tag
+      ;;specification.
+      ((#(?method-name ?rv-tag) ?invocable-name)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag)
+	    (identifier? #'?invocable-name))
+       (%add-method #'?method-name #'?rv-tag #'?invocable-name))
 
-	 ;;Untagged return value method definition.
-	 (((?method-name ?method-implementation) . ?other-methods)
-	  (and (identifier? #'?method-name)
-	       (identifier? #'?method-implementation))
-	  (begin
-	    (%add-method #'?method-name #f #'?method-implementation)
-	    (loop #'?other-methods)))
+      (_
+       (synner "invalid method specification in METHODS clause" method-spec-stx))))
 
-	 ;;Tagged   return   value    method   definition.    List   tag
-	 ;;specification.
-	 ((((?method-name ?rv-tag) ?method-implementation) . ?other-methods)
-	  (and (identifier? #'?method-name)
-	       (identifier? #'?rv-tag)
-	       (identifier? #'?method-implementation))
-	  (begin
-	    (%add-method #'?method-name #'?rv-tag #'?method-implementation)
-	    (loop #'?other-methods)))
+  (define (%add-method method-name-id method-rv-tag-id method-implementation-id)
+    (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
+    (<parsed-spec>-methods-table-cons!      parsed-spec method-name-id method-rv-tag-id method-implementation-id))
 
-	 ;;Tagged   return   value   method  definition.    Vector   tag
-	 ;;specification.
-	 (((#(?method-name ?rv-tag) ?method-implementation) . ?other-methods)
-	  (and (identifier? #'?method-name)
-	       (identifier? #'?rv-tag)
-	       (identifier? #'?method-implementation))
-	  (begin
-	    (%add-method #'?method-name #'?rv-tag #'?method-implementation)
-	    (loop #'?other-methods)))
-
-	 ;;Syntax violation.
-	 (_
-	  (synner "invalid method specification" ($car input-clauses))))))))
+  #| end of module: CLAUSE-ARGUMENTS-PARSER:MULTIPLE-METHODS |# )
 
 
 ;;;; concrete and virtual fields helpers
@@ -2855,10 +2890,11 @@
   (define (clause-arguments-parser:concrete-fields parsed-spec args synner)
     (syntax-case args ()
       (#(#(?field-spec ...) ...)
-       (for-all (lambda (field-spec-stx)
-		  (import FIELD-SPEC-PARSER)
-		  (%parse-field-spec field-spec-stx parsed-spec
-				     %register-mutable-field %register-immutable-field synner))
+       (for-each-in-order
+	   (lambda (field-spec-stx)
+	     (import FIELD-SPEC-PARSER)
+	     (%parse-field-spec field-spec-stx parsed-spec
+				%register-mutable-field %register-immutable-field synner))
 	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
       (_
        (synner "invalid FIELDS clause syntax"))))
@@ -2948,10 +2984,11 @@
   (define (clause-arguments-parser:virtual-fields parsed-spec args synner)
     (syntax-case args ()
       (#(#(?field-spec ...) ...)
-       (for-all (lambda (field-spec-stx)
-		  (import FIELD-SPEC-PARSER)
-		  (%parse-field-spec field-spec-stx parsed-spec
-				     %register-mutable-field %register-immutable-field synner))
+       (for-each-in-order
+	   (lambda (field-spec-stx)
+	     (import FIELD-SPEC-PARSER)
+	     (%parse-field-spec field-spec-stx parsed-spec
+				%register-mutable-field %register-immutable-field synner))
 	 (syntax->vector->list->flat #'#(#(?field-spec ...) ...))))
       (_
        (synner "invalid VIRTUAL-FIELDS clause syntax"))))
