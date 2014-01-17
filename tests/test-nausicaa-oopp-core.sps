@@ -535,6 +535,13 @@
 		  (sealed #f))))
     => '((sealed #t) (sealed #f)))
 
+  (check	;invalid number of aguments
+      (catch-syntax-violation #f
+	(%eval '(define-class <alpha>
+		  (sealed 1 2 3)
+		  (fields a b c))))
+    => '(sealed 1 2 3))
+
   #t)
 
 
