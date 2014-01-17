@@ -2225,11 +2225,11 @@
   (define (clause-arguments-parser:single-method parsed-spec args synner)
     ;;We expect ARGS to have the format:
     ;;
-    ;;  #(#( #'?method-spec ...) ...)
+    ;;  #(#( #'?method-spec-arg ...) ...)
     ;;
     (vector-for-each
 	(lambda (method-spec-stx)
-	  (%parse-method-spec (vector->list method-spec-stx) parsed-spec synner))
+	  (%parse-method-spec method-spec-stx parsed-spec synner))
       args))
 
   (define (%parse-method-spec method-spec-stx parsed-spec synner)
@@ -2237,7 +2237,7 @@
     (define-syntax NAME-ID	(identifier-syntax (<parsed-spec>-name-id   parsed-spec)))
     (define-syntax LAMBDA-ID	(identifier-syntax (<parsed-spec>-lambda-id parsed-spec)))
     (syntax-case method-spec-stx ()
-      (((?method-name-id . ?formals) ?body0 ?body ...)
+      (#((?method-name-id . ?formals) ?body0 ?body ...)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
@@ -2246,7 +2246,7 @@
 
       ;;Tagged  single   return  value  method  definition.    List  tag
       ;;specification.
-      ((((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+      (#(((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
        (%add-method parsed-spec #'?method-name-id #'?rv-tag
@@ -2256,7 +2256,7 @@
 
       ;;Tagged  single  return  value  method  definition.   Vector  tag
       ;;specification.
-      (((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+      (#((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
        (%add-method parsed-spec #'?method-name-id #'?rv-tag
@@ -2266,7 +2266,7 @@
 
       ;;Tagged  multiple  return  values method  definition.   List  tag
       ;;specification.
-      ((((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+      (#(((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
        (%add-method parsed-spec #'?method-name-id TOP-ID
@@ -2276,7 +2276,7 @@
 
       ;;Tagged  multiple return  values method  definition.  Vector  tag
       ;;specification.
-      (((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+      (#((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
        (and (identifier? #'?method-name-id)
 	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
        (%add-method parsed-spec #'?method-name-id TOP-ID
@@ -2285,14 +2285,14 @@
 		    synner))
 
       ;;Untagged external lambda method definition.
-      ((?method-name-id ?lambda-expr)
+      (#(?method-name-id ?lambda-expr)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
 		    #'?lambda-expr synner))
 
       ;;Tagged external lambda method definition.
-      ((#(?method-name-id ?rv-tag) ?lambda-expr)
+      (#(#(?method-name-id ?rv-tag) ?lambda-expr)
        (and (identifier? #'?method-name-id)
 	    (identifier? #'?rv-tag))
        (%add-method parsed-spec #'?method-name-id #'?rv-tag
@@ -2332,33 +2332,37 @@
   ;;representing the method implementation.
   ;;
   (define (clause-arguments-parser:method-syntax parsed-spec args synner)
+    ;;We expect ARGS to be:
+    ;;
+    ;;  #(#( #'?method #'?transformer-expr ...) ...)
+    ;;
     (vector-for-each
 	(lambda (method-spec-stx)
-	  (%parse-method-spec (vector->list method-spec-stx) parsed-spec synner))
+	  (%parse-method-spec method-spec-stx parsed-spec synner))
       args))
 
   (define (%parse-method-spec method-spec-stx parsed-spec synner)
     (define-syntax TOP-ID
-      (identifier-syntax (<parsed-spec>-top-id parsed-spec)))
+      (identifier-syntax ($<parsed-spec>-top-id parsed-spec)))
     (define-syntax NAME-ID
-      (identifier-syntax (<parsed-spec>-name-id parsed-spec)))
+      (identifier-syntax ($<parsed-spec>-name-id parsed-spec)))
     (syntax-case method-spec-stx ()
       ;;Untagged return value method definition.
       ;;
-      ((?method-name ?transformer-expr)
+      (#(?method-name ?transformer-expr)
        (identifier? #'?method-name)
        (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       ;;Tagged return value method definition.  List tag specification.
       ;;
-      (((?method-name ?rv-tag) ?transformer-expr)
+      (#((?method-name ?rv-tag) ?transformer-expr)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag))
        (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       ;;Tagged return value method definition.  Vector tag specification.
       ;;
-      ((#(?method-name ?rv-tag) ?transformer-expr)
+      (#(#(?method-name ?rv-tag) ?transformer-expr)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag))
        (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
@@ -2402,6 +2406,10 @@
   ;;and used in its place.
   ;;
   (define (clause-arguments-parser:multiple-methods parsed-spec args synner)
+    ;;We expect ARGS to be:
+    ;;
+    ;;  #(#( #'?method-spec ...) ...)
+    ;;
     (vector-for-each
 	(lambda (methods-clause-stx)
 	  (vector-for-each
@@ -2541,6 +2549,10 @@
   ;;both ?ACCESSOR and ?MUTATOR must be identifiers.
   ;;
   (define (clause-arguments-parser:concrete-fields parsed-spec args synner)
+    ;;We expect ARGS to be:
+    ;;
+    ;;  #(#( #'?field-spec ...) ...)
+    ;;
     (vector-for-each
 	(lambda (fields-clause-stx)
 	  (vector-for-each
@@ -2634,6 +2646,10 @@
   ;;mutator functions or syntax keyword.
   ;;
   (define (clause-arguments-parser:virtual-fields parsed-spec args synner)
+    ;;We expect ARGS to be:
+    ;;
+    ;;  #(#( #'?field-spec ...) ...)
+    ;;
     (vector-for-each
 	(lambda (virtual-fields-clause-stx)
 	  (vector-for-each
@@ -2710,17 +2726,24 @@
 
 ;;;; satisfactions
 
-;;Parser function for SATISFIES clauses;  this clause can be present any
-;;number of times and can have any number of arguments.
-;;
 (define (clause-arguments-parser:satisfies parsed-spec args synner)
+  ;;Parser function  for SATISFIES clauses;  this clause can  be present
+  ;;any  number of  times and  can have  any number  of arguments.   The
+  ;;expected syntax for the clause is:
+  ;;
+  ;;   (satisfies ?satisfaction-id ...)
+  ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?satisfaction-id ...) ...)
+  ;;
   (vector-for-each
       (lambda (satisfaction-clause-stx)
 	(vector-for-each
-	    (lambda (satisfaction-stx)
-	      (if (identifier? satisfaction-stx)
-		  (<parsed-spec>-satisfactions-cons! parsed-spec satisfaction-stx)
-		(synner "expected identifier as satisfaction clause argument" satisfaction-stx)))
+	    (lambda (satisfaction-id)
+	      (if (identifier? satisfaction-id)
+		  (<parsed-spec>-satisfactions-cons! parsed-spec satisfaction-id)
+		(synner "expected identifier as satisfaction clause argument" satisfaction-id)))
 	  satisfaction-clause-stx))
     args))
 
@@ -2730,30 +2753,32 @@
 ;;Parser function for the GETTER  clause; this clause must be present at
 ;;most once.  The expected syntax for the clause is:
 ;;
-;;   (getter ?expr)
+;;   (getter ?transformer-expr)
 ;;
-;;where ?EXPR is an expression evaluating to a getter syntax function.
+;;and the corresponding ARGS is:
+;;
+;;   #(#( #'?transformer-expr ))
+;;
+;;where ?TRANSFORMER-EXPR is an expression evaluating to a getter syntax
+;;function.
 ;;
 (define (clause-arguments-parser:getter parsed-spec args synner)
-  (syntax-case args ()
-    (#(#(?transformer-expr))
-     (<parsed-spec>-getter-set! parsed-spec #'?transformer-expr))
-    (_
-     (synner "invalid GETTER clause syntax"))))
+  ($<parsed-spec>-getter-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 ;;Parser function for the SETTER  clause; this clause must be present at
 ;;most once.  The expected syntax for the clause is:
 ;;
-;;   (setter ?expr)
+;;   (setter ?transformer-expr)
 ;;
-;;where ?EXPR is an expression evaluating to a setter syntax function.
+;;and the corresponding ARGS is:
+;;
+;;   #(#( #'?transformer-expr ))
+;;
+;;where ?TRANSFORMER-EXPR is an expression evaluating to a setter syntax
+;;function.
 ;;
 (define (clause-arguments-parser:setter parsed-spec args synner)
-  (syntax-case args ()
-    (#(#(?transformer-expr))
-     (<parsed-spec>-setter-set! parsed-spec #'?transformer-expr))
-    (_
-     (synner "invalid SETTER clause syntax"))))
+  ($<parsed-spec>-setter-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 
 ;;;; clause specifications
