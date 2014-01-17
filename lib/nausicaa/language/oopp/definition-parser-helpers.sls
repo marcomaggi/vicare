@@ -250,7 +250,7 @@
 	 #f  #;nongenerative-uid	#f  #;maker-transformer
 	 #f  #;finaliser-expression
 	 #f  #;shadowed-identifier	'() #;satisfactions
-	 '() #;mixins
+	 '() #;mixins-inclusions	'() #;mixins-ids
 	 ))))
   (fields (immutable name-id)
 		;The identifier representing the type name.
@@ -386,12 +386,16 @@
 		;Null or  list of identifiers being  syntax keywords for
 		;satisfactions.
 
-	  (mutable mixins)
+	  (mutable mixins-inclusions)
 		;Null or  list of mixin inclusion  specifications.  Each
 		;spec is itself a list with format:
 		;
 		;   (?mixin-name-id . #'((?from-id ?to-id) ...))
-		;
+
+	  (mutable mixins-ids)
+		;Null or list of mixin name identifiers representing all
+		;the mixins included in  this definition, at any nesting
+		;level.
 	  ))
 
 (define-record-type <class-spec>
@@ -427,6 +431,10 @@
 	  clauses
 		;A  fully  unwrapped   syntax  object  representing  the
 		;definition clauses of the mixin.
+
+	  nested-mixins-ids
+		;Null or  a list of identifiers  representing the mixins
+		;that were nested into this one.
 	  ))
 
 
@@ -505,8 +513,9 @@
   (when config.enable-satisfactions
     ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec)))))
 
-(define* (<parsed-spec>-mixins-cons! (parsed-spec <parsed-spec>?) mixin-inclusion-spec)
-  ($<parsed-spec>-mixins-set! parsed-spec (cons mixin-inclusion-spec ($<parsed-spec>-mixins parsed-spec))))
+(define* (<parsed-spec>-mixins-inclusions-cons! (parsed-spec <parsed-spec>?) mixin-inclusion-spec synner)
+  ($<parsed-spec>-mixins-inclusions-set! parsed-spec (cons mixin-inclusion-spec
+							   ($<parsed-spec>-mixins-inclusions parsed-spec))))
 
 (define (generate-unique-id parsed-spec)
   (datum->syntax (<parsed-spec>-name-id parsed-spec) (gensym)))
@@ -1103,7 +1112,9 @@
 				      included-clauses synner)
 	   (%finalise-clauses-parsing! mixin-spec synner)
 	   (values #'?mixin-name
-		   (make-<mixin-clauses-ctv> #'?mixin-name (append clauses included-clauses))))))
+		   (make-<mixin-clauses-ctv> #'?mixin-name
+					     (append clauses included-clauses)
+					     (<parsed-spec>-mixins-ids mixin-spec))))))
       (_
        (synner "syntax error in mixin definition"))))
 
@@ -1153,17 +1164,34 @@
 	  (let* ((mixin-name-id  (car mixin-inclusion-request))
 		 (mixin-id-map   (cdr mixin-inclusion-request))
 		 (mixin-ctv      (ctv-retriever mixin-name-id)))
-	    (if mixin-ctv
-		(append (multi-identifier-subst
-			 (cons (list mixin-name-id ($<parsed-spec>-name-id parsed-spec))
-			       mixin-id-map)
-			 ($<mixin-clauses-ctv>-clauses mixin-ctv))
-			clauses)
-	      (synner "unknown mixin name" mixin-name-id))))
+	    (cond ((<mixin-clauses-ctv>? mixin-ctv)
+		   ;;Check that a mixin is  not included twice, then add
+		   ;;the imported mixin identifiers in the parsed spec.
+		   (let ((imported-ids (cons mixin-name-id
+					     ($<mixin-clauses-ctv>-nested-mixins-ids mixin-ctv))))
+		     (for-each (lambda (id1)
+				 (for-each (lambda (id2)
+					     (when (free-identifier=? id1 id2)
+					       (synner "multiple inclusion of mixin" id1)))
+				   ($<parsed-spec>-mixins-ids parsed-spec)))
+		       imported-ids)
+		     ($<parsed-spec>-mixins-ids-set! parsed-spec
+						     (append ($<parsed-spec>-mixins-ids parsed-spec)
+							     imported-ids)))
+		   ;;Build and return the processed clauses.
+		   (append (multi-identifier-subst
+			    (cons (list mixin-name-id ($<parsed-spec>-name-id parsed-spec))
+				  mixin-id-map)
+			    ($<mixin-clauses-ctv>-clauses mixin-ctv))
+			   clauses))
+		  (mixin-ctv
+		   (synner "identifier is not a mixin name" mixin-name-id))
+		  (else
+		   (synner "unknown mixin name" mixin-name-id)))))
       '()
       ;;Remember that  these are in  reversed order with respect  to the
       ;;order in which they appear in the MIXINS clauses.
-      ($<parsed-spec>-mixins parsed-spec)))
+      ($<parsed-spec>-mixins-inclusions parsed-spec)))
 
   (define* (%finalise-clauses-parsing! (parsed-spec <parsed-spec>?) synner)
     ;;Normalise  the results  of parsing  class, label  or mixin  clauses.
@@ -2143,12 +2171,13 @@
 	      (syntax-case mixin-spec-stx ()
 		(?mixin-name-id
 		 (identifier? #'?mixin-name-id)
-		 (<parsed-spec>-mixins-cons! parsed-spec (list #'?mixin-name-id)))
+		 (<parsed-spec>-mixins-inclusions-cons! parsed-spec (list #'?mixin-name-id) synner))
 		((?mixin-name-id (?from-id ?to-id) ...)
 		 (and (identifier? #'?mixin-name-id)
 		      (all-identifiers? #'(?from-id ...))
 		      (all-identifiers? #'(?to-id   ...)))
-		 (<parsed-spec>-mixins-cons! parsed-spec (cons #'?mixin-name-id #'((?from-id ?to-id) ...))))
+		 (<parsed-spec>-mixins-inclusions-cons! parsed-spec (cons #'?mixin-name-id #'((?from-id ?to-id) ...))
+							synner))
 		(_
 		 (synner "invalid inclusion mixin specification" mixin-spec-stx))))
 	  mixin-clause-stx))

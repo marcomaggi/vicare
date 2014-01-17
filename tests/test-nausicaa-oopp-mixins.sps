@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -63,28 +63,12 @@
     ((_ ?form)
      (eval ?form test-environ))))
 
-(define (debug-pretty-print thing)
-  (pretty-print thing (current-error-port))
-  (flush-output-port (current-error-port)))
-
-(define (debug-write . args)
-  (for-each (lambda (thing)
-	      (write thing (current-error-port))
-	      (display #\space (current-error-port)))
-    args)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
-(define (debug-newline thing)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
 (define-syntax catch-syntax-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)
      (guard (E ((syntax-violation? E)
 		(when ?verbose
-		  (debug-write (condition-message E)
+		  (debug-print (condition-message E)
 			       (syntax-violation-subform E)))
 		(syntax->datum (syntax-violation-subform E)))
 	       (else E))
@@ -95,7 +79,7 @@
     ((_ ?verbose . ?body)
      (guard (E ((assertion-violation? E)
 		(when ?verbose
-		  (debug-write (condition-message E)
+		  (debug-print (condition-message E)
 			       (condition-irritants E)))
 		(condition-irritants E))
 	       (else E))
@@ -137,7 +121,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(let ()	;mixin accessing the fields of the receiving class
+  (let ()	;mixin accessing the fields of the receiving class
 
     (define-mixin <stuff1>
       (fields c)
@@ -313,8 +297,8 @@
 		    (mixins <beta12>)))))
     => 'A)
 
-  #;(check	;recursive mixin composition
-      (catch-syntax-violation #t
+  (check	;recursive mixin composition
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta13>
 		    (fields A)
@@ -323,8 +307,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(check	;same mixin multiple selection in class
-      (catch-syntax-violation #t
+  (check	;same mixin multiple selection in class
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta14>
 		    (fields A))
@@ -332,14 +316,26 @@
 		    (mixins <beta14> <beta14>)))))
     => '<beta14>)
 
-  #;(check	;same mixin multiple selection in label
-      (catch-syntax-violation #t
+  (check	;same mixin multiple selection in label
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta15>
 		    (fields A))
 		  (define-label <alpha15>
 		    (mixins <beta15> <beta15>)))))
     => '<beta15>)
+
+  (check	;same mixin multiple selection
+      (catch-syntax-violation #f
+	(%eval '(let ()
+		  (define-mixin <gamma16>
+		    (fields B))
+		  (define-mixin <beta16>
+		    (fields A)
+		    (mixins <gamma16>))
+		  (define-label <alpha16>
+		    (mixins <beta16> <gamma16>)))))
+    => '<gamma16>)
 
   #t)
 
