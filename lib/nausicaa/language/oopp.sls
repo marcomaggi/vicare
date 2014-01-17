@@ -12,7 +12,7 @@
 ;;;	using "void  *" pointers in the  C language and  casting them to
 ;;;	some structure pointer type when needed.
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -61,40 +61,24 @@
 
     ;; auxiliary syntaxes
     =>
-    (rename (aux.parent			parent)
-	    (aux.nongenerative		nongenerative)
-	    (aux.abstract		abstract)
-	    (aux.sealed			sealed)
-	    (aux.opaque			opaque)
-	    (aux.predicate		predicate)
-	    (aux.fields			fields)
-	    (aux.virtual-fields		virtual-fields)
-	    (aux.mutable		mutable)
-	    (aux.immutable		immutable)
-	    (aux.method			method)
-	    (aux.method-syntax		method-syntax)
-	    (aux.methods		methods)
-	    (aux.protocol		protocol)
-	    (aux.public-protocol	public-protocol)
-	    (aux.super-protocol		super-protocol)
-	    (aux.maker			maker)
-	    (aux.finaliser		finaliser)
-	    (aux.getter			getter)
-	    (aux.setter			setter)
-	    (aux.shadows		shadows)
-	    (aux.satisfies		satisfies)
-	    (aux.mixins			mixins)
-	    (aux.<>			<>)
-	    (aux.<-			<-)))
+    (deprefix (aux.parent		aux.nongenerative	aux.abstract
+	       aux.sealed		aux.opaque		aux.predicate
+	       aux.fields		aux.virtual-fields
+	       aux.mutable		aux.immutable		aux.method
+	       aux.method-syntax	aux.methods		aux.protocol
+	       aux.public-protocol	aux.super-protocol	aux.maker
+	       aux.finaliser		aux.getter		aux.setter
+	       aux.shadows		aux.satisfies		aux.mixins
+	       aux.<>			aux.<-)
+	      aux.))
   (import (vicare)
     (nausicaa language oopp auxiliary-syntaxes)
     (nausicaa language oopp conditions)
-    (for (prefix (nausicaa language oopp helpers)
-		 help.)
-	 expand)
-    (for (only (nausicaa language oopp helpers)
-	       case-symbol
-	       case-identifier)
+    (for (prefix (nausicaa language oopp oopp-syntax-helpers)
+    		 syntax-help.)
+    	 expand)
+    (for (prefix (nausicaa language oopp definition-parser-helpers)
+		 parser-help.)
 	 expand)
     (for (prefix (only (nausicaa language oopp configuration)
 		       validate-tagged-values?)
@@ -276,7 +260,7 @@
      (synner "invalid tag-syntax field mutator function request" #'?field-name))
 
     (_
-     (help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
+     (syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
 
 
 ;;;; procedure label
@@ -320,11 +304,11 @@
      (synner "invalid OOPP syntax"))
 
     (_
-     (help.tag-private-common-syntax-transformer
+     (syntax-help.tag-private-common-syntax-transformer
       stx #'values #'procedure? #'<procedure>-list-of-uids
       %the-setter-and-getter %the-setter-and-getter
       (lambda ()
-	(help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
+	(syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
 
 
 (define-syntax* (define-label stx)
@@ -338,7 +322,7 @@
   (syntax-case stx ()
     ((_ ?name ?clause ...)
      (receive (mixins-clauses other-clauses)
-	 (help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
+	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
        (if (null? mixins-clauses)
 	   #`(define-label/after-mixins-processing ?name . #,other-clauses)
 	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
@@ -350,46 +334,46 @@
      (synner "invalid syntax in label definition"))))
 
 (define-syntax* (define-label/after-mixins-processing stx)
-  (define spec   (help.parse-label-definition stx #'<top> #'lambda/tags synner))
-  (define tag-id (help.<parsed-spec>-name-id spec))
+  (define spec   (parser-help.parse-label-definition stx #'<top> #'lambda/tags synner))
+  (define tag-id (parser-help.<parsed-spec>-name-id spec))
   (with-syntax
       ((THE-TAG			tag-id)
-       (THE-PARENT		(help.<parsed-spec>-parent-id spec))
-       (THE-PUBLIC-CONSTRUCTOR	(help.<parsed-spec>-public-constructor-id spec))
-       (THE-PUBLIC-PREDICATE	(help.<parsed-spec>-public-predicate-id   spec))
-       (THE-PRIVATE-PREDICATE	(help.<parsed-spec>-private-predicate-id  spec))
+       (THE-PARENT		(parser-help.<parsed-spec>-parent-id spec))
+       (THE-PUBLIC-CONSTRUCTOR	(parser-help.<parsed-spec>-public-constructor-id spec))
+       (THE-PUBLIC-PREDICATE	(parser-help.<parsed-spec>-public-predicate-id   spec))
+       (THE-PRIVATE-PREDICATE	(parser-help.<parsed-spec>-private-predicate-id  spec))
 
-       (THE-LIST-OF-UIDS	(help.tag-id->list-of-uids-id tag-id))
-       (NONGENERATIVE-UID	(help.<parsed-spec>-nongenerative-uid     spec))
+       (THE-LIST-OF-UIDS	(parser-help.tag-id->list-of-uids-id tag-id))
+       (NONGENERATIVE-UID	(parser-help.<parsed-spec>-nongenerative-uid     spec))
 
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
-	(help.<parsed-spec>-immutable-fields-data spec))
+	(parser-help.<parsed-spec>-immutable-fields-data spec))
 
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(help.<parsed-spec>-mutable-fields-data spec))
+	(parser-help.<parsed-spec>-mutable-fields-data spec))
 
        (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
-	(help.<parsed-spec>-methods-table spec))
+	(parser-help.<parsed-spec>-methods-table spec))
 
        (SHADOWED-IDENTIFIER
-	(help.<parsed-spec>-shadowed-identifier spec))
+	(parser-help.<parsed-spec>-shadowed-identifier spec))
 
        ((DEFINITION ...)
-	(help.<parsed-spec>-definitions spec))
+	(parser-help.<parsed-spec>-definitions spec))
 
        (ACCESSOR-TRANSFORMER
-	(help.<parsed-spec>-accessor-transformer spec))
+	(parser-help.<parsed-spec>-accessor-transformer spec))
 
        (MUTATOR-TRANSFORMER
-	(help.<parsed-spec>-mutator-transformer  spec))
+	(parser-help.<parsed-spec>-mutator-transformer  spec))
 
        (MAKER-TRANSFORMER
-	(help.<parsed-spec>-maker-transformer spec))
+	(parser-help.<parsed-spec>-maker-transformer spec))
 
        ((SATISFACTION ...)
-	(help.<parsed-spec>-satisfactions spec))
+	(parser-help.<parsed-spec>-satisfactions spec))
        (SATISFACTION-CLAUSES
-	(help.<label-spec>-satisfaction-clauses spec)))
+	(parser-help.<label-spec>-satisfaction-clauses spec)))
     (with-syntax
 	((THE-PUBLIC-PROTOCOL-EXPR
 	  ;;Labels   have  no   record-type  descriptor,   so,  strictly
@@ -397,8 +381,8 @@
 	  ;;protocol of R6RS records; but uniformity makes understanding
 	  ;;easier, so  the label construction protocols  are similar to
 	  ;;those of proper records.
-	  (or (help.<parsed-spec>-public-protocol spec)
-	      (help.<parsed-spec>-common-protocol spec)
+	  (or (parser-help.<parsed-spec>-public-protocol spec)
+	      (parser-help.<parsed-spec>-common-protocol spec)
 	      #'(lambda ()
 		  (lambda args
 		    (assertion-violation 'THE-TAG
@@ -441,7 +425,7 @@
 	  ;;If no getter  syntax is defined for this  label: use the one
 	  ;;of  the  parent.  The  getter  of  "<top>"  raises a  syntax
 	  ;;violation error.
-	  (or (help.<parsed-spec>-getter spec)
+	  (or (parser-help.<parsed-spec>-getter spec)
 	      #'(lambda (stx unused-tag)
 		  #`(THE-PARENT :getter #,stx))))
 
@@ -449,7 +433,7 @@
 	  ;;If no setter  syntax is defined for this  label: use the one
 	  ;;of  the  parent.  The  setter  of  "<top>"  raises a  syntax
 	  ;;violation error.
-	  (or (help.<parsed-spec>-setter spec)
+	  (or (parser-help.<parsed-spec>-setter spec)
 	      #'(lambda (stx unused-tag)
 		  #`(THE-PARENT :setter #,stx)))))
 
@@ -497,9 +481,9 @@
 		  ;;try to match a field name.
 		  ((_ :dispatch (??expr ??id . ??args))
 		   (identifier? #'??id)
-		   (case-symbol (syntax->datum #'??id)
+		   (case (syntax->datum #'??id)
 		     ((METHOD-NAME)
-		      (help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		      (syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
@@ -531,7 +515,7 @@
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
-		   (case-symbol (syntax->datum #'??field-name)
+		   (case (syntax->datum #'??field-name)
 		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
 		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
 		     (else
@@ -539,7 +523,7 @@
 
 		  ((_ :mutator-function ??field-name)
 		   (identifier? #'??field-name)
-		   (case-symbol (syntax->datum #'??field-name)
+		   (case (syntax->datum #'??field-name)
 		     ((MUTABLE-FIELD)
 		      #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
 		     ...
@@ -560,15 +544,15 @@
 		   (let ((dst-id	#'SHADOWED-IDENTIFIER)
 			 (body		#'(begin ??body0 ??body (... ...))))
 		     (if (syntax->datum dst-id)
-			 (help.single-identifier-subst #'??src-id dst-id body)
+			 (parser-help.single-identifier-subst #'??src-id dst-id body)
 		       body)))
 
 		  (_
-		   (help.tag-private-common-syntax-transformer
+		   (syntax-help.tag-private-common-syntax-transformer
 		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
 		    %the-getter %the-setter
 		    (lambda ()
-		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+		      (syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
 
 	  DEFINITION ...
@@ -599,7 +583,7 @@
   (syntax-case stx ()
     ((_ ?name ?clause ...)
      (receive (mixins-clauses other-clauses)
-	 (help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
+	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
        (if (null? mixins-clauses)
 	   #`(define-class/after-mixins-processing ?name . #,other-clauses)
 	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
@@ -611,61 +595,61 @@
      (synner "invalid syntax in class definition"))))
 
 (define-syntax* (define-class/after-mixins-processing stx)
-  (define spec		(help.parse-class-definition stx #'<top> #'lambda/tags synner))
-  (define tag-id	(help.<parsed-spec>-name-id spec))
-  (define abstract?	(help.<parsed-spec>-abstract? spec))
+  (define spec		(parser-help.parse-class-definition stx #'<top> #'lambda/tags synner))
+  (define tag-id	(parser-help.<parsed-spec>-name-id spec))
+  (define abstract?	(parser-help.<parsed-spec>-abstract? spec))
   (with-syntax
       ((THE-TAG					tag-id)
-       (THE-RECORD-TYPE				(help.<class-spec>-record-type-id spec))
-       (THE-PREDICATE				(help.<parsed-spec>-public-predicate-id spec))
-       (THE-PARENT				(help.<parsed-spec>-parent-id spec))
-       (THE-DEFAULT-PROTOCOL			(help.tag-id->default-protocol-id tag-id))
-       (THE-FROM-FIELDS-CONSTRUCTOR		(help.tag-id->from-fields-constructor-id tag-id))
-       (THE-PUBLIC-CONSTRUCTOR			(help.<parsed-spec>-public-constructor-id spec))
+       (THE-RECORD-TYPE				(parser-help.<class-spec>-record-type-id spec))
+       (THE-PREDICATE				(parser-help.<parsed-spec>-public-predicate-id spec))
+       (THE-PARENT				(parser-help.<parsed-spec>-parent-id spec))
+       (THE-DEFAULT-PROTOCOL			(parser-help.tag-id->default-protocol-id tag-id))
+       (THE-FROM-FIELDS-CONSTRUCTOR		(parser-help.tag-id->from-fields-constructor-id tag-id))
+       (THE-PUBLIC-CONSTRUCTOR			(parser-help.<parsed-spec>-public-constructor-id spec))
 
-       (THE-LIST-OF-UIDS			(help.tag-id->list-of-uids-id tag-id))
-       (NONGENERATIVE-UID			(help.<parsed-spec>-nongenerative-uid spec))
+       (THE-LIST-OF-UIDS			(parser-help.tag-id->list-of-uids-id tag-id))
+       (NONGENERATIVE-UID			(parser-help.<parsed-spec>-nongenerative-uid spec))
 
        (SEALED?
-	(help.<parsed-spec>-sealed? spec))
+	(parser-help.<parsed-spec>-sealed? spec))
 
        (OPAQUE?
-	(help.<parsed-spec>-opaque? spec))
+	(parser-help.<parsed-spec>-opaque? spec))
 
        (((CONCRETE-FIELD-SPEC ...) ...)
-	(help.<parsed-spec>-concrete-fields-data spec))
+	(parser-help.<parsed-spec>-concrete-fields-data spec))
 
        ((CONCRETE-FIELD-NAME ...)
-	(help.<parsed-spec>-concrete-fields-names spec))
+	(parser-help.<parsed-spec>-concrete-fields-names spec))
 
        (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
-	(help.<parsed-spec>-immutable-fields-data spec))
+	(parser-help.<parsed-spec>-immutable-fields-data spec))
 
        (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(help.<parsed-spec>-mutable-fields-data spec))
+	(parser-help.<parsed-spec>-mutable-fields-data spec))
 
        (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
-	(help.<parsed-spec>-methods-table spec))
+	(parser-help.<parsed-spec>-methods-table spec))
 
        ((DEFINITION ...)
-	(help.<parsed-spec>-definitions spec))
+	(parser-help.<parsed-spec>-definitions spec))
 
        (ACCESSOR-TRANSFORMER
-	(help.<parsed-spec>-accessor-transformer spec))
+	(parser-help.<parsed-spec>-accessor-transformer spec))
 
        (MUTATOR-TRANSFORMER
-	(help.<parsed-spec>-mutator-transformer  spec))
+	(parser-help.<parsed-spec>-mutator-transformer  spec))
 
        (MAKER-TRANSFORMER
-	(help.<parsed-spec>-maker-transformer spec))
+	(parser-help.<parsed-spec>-maker-transformer spec))
 
        (FINALISER-EXPRESSION
-	(help.<parsed-spec>-finaliser-expression spec))
+	(parser-help.<parsed-spec>-finaliser-expression spec))
 
        ((SATISFACTION ...)
-	(help.<parsed-spec>-satisfactions spec))
+	(parser-help.<parsed-spec>-satisfactions spec))
        (SATISFACTION-CLAUSES
-	(help.<class-spec>-satisfaction-clauses spec))
+	(parser-help.<class-spec>-satisfaction-clauses spec))
 
        (WRONG-TYPE-ERROR-MESSAGE
 	(string-append "invalid expression result, expected value of type "
@@ -689,7 +673,7 @@
 						     (lambda args
 						       (assertion-violation 'THE-TAG
 							 "attempt to instantiate abstract class"))))
-						((help.<parsed-spec>-common-protocol spec))
+						((parser-help.<parsed-spec>-common-protocol spec))
 						(else
 						 #'THE-DEFAULT-PROTOCOL))))
 
@@ -702,7 +686,7 @@
 	  ;;the appropriately  built default protocol;  R6RS states that
 	  ;;when the parent's RCD has a custom protocol, the derived RCD
 	  ;;must have a custom protocol too.
-	  (let ((proto (help.<parsed-spec>-public-protocol spec)))
+	  (let ((proto (parser-help.<parsed-spec>-public-protocol spec)))
 	    (if (or abstract? (not proto))
 		#'the-common-constructor-descriptor
 	      (%compose-parent-rcd-with-proto proto))))
@@ -717,7 +701,7 @@
 	  ;;the appropriately  built default protocol;  R6RS states that
 	  ;;when the parent's RCD has a custom protocol, the derived RCD
 	  ;;must have a custom protocol too.
-	  (let ((proto (help.<parsed-spec>-super-protocol spec)))
+	  (let ((proto (parser-help.<parsed-spec>-super-protocol spec)))
 	    (cond (abstract?
 		   (%compose-parent-rcd-with-proto (or proto #'THE-DEFAULT-PROTOCOL)))
 		  (proto
@@ -729,7 +713,7 @@
 	  ;;If no getter  syntax is defined for this  label: use the one
 	  ;;of  the  parent.  The  getter  of  "<top>"  raises a  syntax
 	  ;;violation error.
-	  (or (help.<parsed-spec>-getter spec)
+	  (or (parser-help.<parsed-spec>-getter spec)
 	      #'(lambda (stx unused-tag)
 		  #`(THE-PARENT :getter #,stx))))
 
@@ -737,7 +721,7 @@
 	  ;;If no setter  syntax is defined for this  label: use the one
 	  ;;of  the  parent.  The  setter  of  "<top>"  raises a  syntax
 	  ;;violation error.
-	  (or (help.<parsed-spec>-setter spec)
+	  (or (parser-help.<parsed-spec>-setter spec)
 	      #'(lambda (stx unused-tag)
 		  #`(THE-PARENT :setter #,stx)))))
 
@@ -877,9 +861,9 @@
 		  ;;try to match a field name.
 		  ((_ :dispatch (??expr ??id . ??args))
 		   (identifier? #'??id)
-		   (case-symbol (syntax->datum #'??id)
+		   (case (syntax->datum #'??id)
 		     ((METHOD-NAME)
-		      (help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		      (syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		     ...
 		     (else
 		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
@@ -895,7 +879,7 @@
 
 		  ((_ :accessor-function ??field-name)
 		   (identifier? #'??field-name)
-		   (case-symbol (syntax->datum #'??field-name)
+		   (case (syntax->datum #'??field-name)
 		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
 		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
 		     (else
@@ -903,7 +887,7 @@
 
 		  ((_ :mutator-function ??field-name)
 		   (identifier? #'??field-name)
-		   (case-symbol (syntax->datum #'??field-name)
+		   (case (syntax->datum #'??field-name)
 		     ((MUTABLE-FIELD)
 		      #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
 		     ...
@@ -914,11 +898,11 @@
 		      #'(THE-PARENT :mutator-function ??field-name))))
 
 		  (_
-		   (help.tag-private-common-syntax-transformer
+		   (syntax-help.tag-private-common-syntax-transformer
 		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
 		    %the-getter %the-setter
 		    (lambda ()
-		      (help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+		      (syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
 	      ))
 
 	  DEFINITION ...
@@ -993,7 +977,7 @@
   (syntax-case stx ()
     ((_ ?name ?clause ...)
      (receive (mixins-clauses other-clauses)
-	 (help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
+	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
        (if (null? mixins-clauses)
 	   #`(define-mixin/after-mixins-processing ?name . #,other-clauses)
 	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
@@ -1005,10 +989,10 @@
      (synner "invalid syntax in mixin definition"))))
 
 (define-syntax* (define-mixin/after-mixins-processing stx)
-  (define spec (help.parse-mixin-definition stx #'<top> #'lambda/tags synner))
+  (define spec (parser-help.parse-mixin-definition stx #'<top> #'lambda/tags synner))
   (with-syntax
-      ((MIXIN-ID	(help.<parsed-spec>-name-id spec))
-       (CLAUSES		(help.<mixin-spec>-clauses spec)))
+      ((MIXIN-ID	(parser-help.<parsed-spec>-name-id spec))
+       (CLAUSES		(parser-help.<mixin-spec>-clauses spec)))
     #'(define-syntax (MIXIN-ID stx)
 	(define (synner message subform)
 	  (syntax-violation 'MIXIN-ID message stx subform))
@@ -1018,9 +1002,9 @@
 	      ((??from ??to) (... ...))
 	      ())
 	   (receive (entity-id unused-constructor unused-predicate)
-	       (help.parse-tag-name-spec #'??name synner)
+	       (parser-help.parse-tag-name-spec #'??name synner)
 	     (with-syntax
-		 ((SPECIALISED-CLAUSES (help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
+		 ((SPECIALISED-CLAUSES (parser-help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
 								       (??from ??to)
 								       (... ...))
 								    #'CLAUSES)))
@@ -1032,12 +1016,12 @@
 	       ??mixin-spec
 	       (... ...)))
 	   (receive (entity-id unused-constructor unused-predicate)
-	       (help.parse-tag-name-spec #'??name synner)
+	       (parser-help.parse-tag-name-spec #'??name synner)
 	     (with-syntax
-		 ((SPECIALISED-CLAUSES (help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
-								       (??from ??to)
-								       (... ...))
-								    #'CLAUSES)))
+		 ((SPECIALISED-CLAUSES (parser-help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
+									      (??from ??to)
+									      (... ...))
+									   #'CLAUSES)))
 	       #'(??next-mixin :insert-mixin-clauses
 			       (??definer ??name ??clause (... ...) . SPECIALISED-CLAUSES)
 			       ((??next-from ??next-to) (... ...))
@@ -1313,7 +1297,7 @@
      (and (identifier? #'?args-id)
 	  (identifier? #'?tag-id))
      (with-syntax ((((FORMAL) VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
+		    (syntax-help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
        #`(lambda FORMAL
 	   (define who 'lambda/tags)
 	   (with-tagged-arguments-validation (who)
@@ -1326,7 +1310,7 @@
     ((_ (?var0 ?var ... . ?args) ?body0 ?body ...)
      (identifier? #'?args)
      (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
+		    (syntax-help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
        #`(lambda FORMALS
 	   (define who 'lambda/tags)
 	   (with-tagged-arguments-validation (who)
@@ -1340,7 +1324,7 @@
      (and (identifier? #'?args)
 	  (identifier? #'?tag))
      (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
+		    (syntax-help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
        #`(lambda FORMALS
 	   (define who 'lambda/tags)
 	   (with-tagged-arguments-validation (who)
@@ -1352,7 +1336,7 @@
     ;;
     ((_ (?var0 ?var ...) ?body0 ?body ...)
      (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
+		    (syntax-help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
        #`(lambda FORMALS
 	   (define who 'lambda/tags)
 	   (with-tagged-arguments-validation (who)
@@ -1387,7 +1371,7 @@
 	 (((?formals ?body0 ?body ...) . ?other-clauses)
 	  (begin
 	    (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-			   (help.parse-formals-bindings #'?formals #'<top> synner)))
+			   (syntax-help.parse-formals-bindings #'?formals #'<top> synner)))
 	      (loop #'?other-clauses
 		    (cons #'(FORMALS
 			     (define who 'case-lambda/tags)
@@ -1553,7 +1537,7 @@
     ((_ (?var ...) ?body0 ?body ...)
      (with-syntax
 	 ((((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-with-tags-bindings #'(?var ...) synner)))
+	   (syntax-help.parse-with-tags-bindings #'(?var ...) synner)))
        #`(let-syntax (SYNTAX-BINDING ...) ?body0 ?body ...)))
     (_
      (synner "syntax error"))))
@@ -1568,7 +1552,7 @@
     ((_ ((?var ?init) ...) ?body0 ?body ...)
      (with-syntax
 	 ((((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-let-bindings #'(?var ...) #'<top> synner)))
+	   (syntax-help.parse-let-bindings #'(?var ...) #'<top> synner)))
        #`(let ((VAR (TAG :assert-type-and-return ?init)) ...)
 	   (let-syntax (SYNTAX-BINDING ...) ?body0 ?body ...))))
 
@@ -1582,7 +1566,7 @@
      (identifier? #'?name)
      (with-syntax
 	 ((((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-let-bindings #'(?var ...) #'<top> synner)))
+	   (syntax-help.parse-let-bindings #'(?var ...) #'<top> synner)))
        #`(let ?name ((VAR (TAG :assert-type-and-return ?init)) ...)
 	   (let-syntax (SYNTAX-BINDING ...) ?body0 ?body ...))))
 
@@ -1612,7 +1596,7 @@
 	 (((TMP ...)
 	   (generate-temporaries #'(?var ...)))
 	  (((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-let-bindings #'(?var ...) #'<top> synner)))
+	   (syntax-help.parse-let-bindings #'(?var ...) #'<top> synner)))
        #`(let ((VAR #f) ...)
 	   (let-syntax (SYNTAX-BINDING ...)
 	     ;;Do not enforce the order of evaluation of ?INIT.
@@ -1631,7 +1615,7 @@
     ((_ ((?var ?init) ...) ?body0 ?body ...)
      (with-syntax
 	 ((((VAR ...) (TAG ...) (SYNTAX-BINDING ...))
-	   (help.parse-let-bindings #'(?var ...) #'<top> synner)))
+	   (syntax-help.parse-let-bindings #'(?var ...) #'<top> synner)))
        #`(let ((VAR #f) ...)
 	   (let-syntax (SYNTAX-BINDING ...)
 	     ;;do enforce the order of evaluation of ?INIT
@@ -1657,7 +1641,7 @@
     ((_ ?vars ?inits ?body0 ?body ...)
      (with-syntax
 	 ((((VARS) (BINDING ...))
-	   (help.parse-let-values-bindings #'(?vars) #'<top> synner)))
+	   (syntax-help.parse-let-values-bindings #'(?vars) #'<top> synner)))
        (if (identifier? #'VARS)
 	   #`(let-values ((VARS ?inits))
 	       (let-syntax (BINDING ...) ?body0 ?body ... (apply values VARS)))
@@ -1673,7 +1657,7 @@
     ((_ ((?vars ?inits) ...) ?body0 ?body ...)
      (with-syntax
 	 ((((VARS ...) (BINDING ...))
-	   (help.parse-let-values-bindings #'(?vars ...) #'<top> synner)))
+	   (syntax-help.parse-let-values-bindings #'(?vars ...) #'<top> synner)))
        #`(let-values ((VARS ?inits) ...)
 	   (let-syntax (BINDING ...) ?body0 ?body ...))))
 
@@ -1806,8 +1790,6 @@
 ;; eval: (put 'rnrs.define-syntax* 'scheme-indent-function 1)
 ;; eval: (put 'aux.method-syntax 'scheme-indent-function 1)
 ;; eval: (put 'aux.method 'scheme-indent-function 1)
-;; eval: (put 'case-symbol 'scheme-indent-function 1)
-;; eval: (put 'case-identifier 'scheme-indent-function 1)
 ;; eval: (put 'THE-PARENT 'scheme-indent-function 1)
 ;; eval: (put 'receive-and-return/tags 'scheme-indent-function 2)
 ;; End:
