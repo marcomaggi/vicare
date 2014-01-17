@@ -1933,14 +1933,17 @@
   ;;
   ;;   (parent ?parent-tag-id)
   ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?parent-tag-id ))
+  ;;
   ;;where ?parent-TAG-ID  is the identifier  bound to the tag  syntax of
   ;;the parent type.
   ;;
-  (syntax-case args ()
-    (#(#(?parent-tag-id))
-     (if (identifier? #'?parent-tag-id)
-	 (<parsed-spec>-parent-id-set! parsed-spec #'?parent-tag-id)
-       (synner "invalid tag parent type specification" #'?parent-tag-id)))))
+  (let ((parent-tag-id ($vector-ref ($vector-ref args 0) 0)))
+    (if (identifier? parent-tag-id)
+	($<parsed-spec>-parent-id-set! parsed-spec parent-tag-id)
+      (synner "invalid tag parent type specification" parent-tag-id))))
 
 (define (clause-arguments-parser:sealed parsed-spec args synner)
   ;;Parser function for  the SEALED clause; this clause  must be present
@@ -1949,12 +1952,15 @@
   ;;   (sealed #t)
   ;;   (sealed #f)
   ;;
-  (syntax-case args ()
-    (#(#(?sealed))
-     (let ((sealed? (syntax->datum #'?sealed)))
-       (if (boolean? sealed?)
-	   (<parsed-spec>-sealed?-set! parsed-spec sealed?)
-	 (synner "invalid tag type sealed specification" #'?sealed))))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?bool ))
+  ;;
+  (let* ((bool-stx ($vector-ref ($vector-ref args 0) 0))
+	 (bool     (syntax->datum bool-stx)))
+    (if (boolean? bool)
+	($<parsed-spec>-sealed?-set! parsed-spec bool)
+      (synner "invalid tag type sealed specification" bool-stx))))
 
 (define (clause-arguments-parser:opaque parsed-spec args synner)
   ;;Parser function for  the OPAQUE clause; this clause  must be present
@@ -1963,30 +1969,36 @@
   ;;   (opaque #t)
   ;;   (opaque #f)
   ;;
-  (syntax-case args ()
-    (#(#(?opaque))
-     (let ((opaque? (syntax->datum #'?opaque)))
-       (if (boolean? opaque?)
-	   (<parsed-spec>-opaque?-set! parsed-spec opaque?)
-	 (synner "invalid tag type opaque specification" #'?opaque))))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?bool ))
+  ;;
+  (let* ((bool-stx ($vector-ref ($vector-ref args 0) 0))
+	 (bool     (syntax->datum bool-stx)))
+    (if (boolean? bool)
+	($<parsed-spec>-opaque?-set! parsed-spec bool)
+      (synner "invalid tag type opaque specification" bool-stx))))
 
 (define (clause-arguments-parser:shadows parsed-spec args synner)
   ;;Parser function for the SHADOWS  clause; this clause must be present
   ;;at most once.  The expected syntax for the clause is:
   ;;
-  ;;   (shadows ?id)
+  ;;   (shadows ?shadowed-id)
   ;;
-  ;;where ?ID is an identifier.  The  selected identifier is used by the
-  ;;syntax  WITH-LABEL-SHADOWING to  hide  some type  definition with  a
-  ;;label.  For  example: this  mechanism allows  to shadow  a condition
-  ;;type definition  with a label  type and so  to use the  tag syntaxes
-  ;;with condition objects.
+  ;;and the corresponding ARGS is:
   ;;
-  (syntax-case args ()
-    (#(#(?shadowed-id))
-     (if (identifier? #'?shadowed-id)
-	 (<parsed-spec>-shadowed-identifier-set! parsed-spec #'?shadowed-id)
-       (synner "invalid tag type shadowed identifier specification" #'?shadowed-id)))))
+  ;;   #(#( #'?shadowed-id ))
+  ;;
+  ;;where  ?SHADOWED-ID is  an identifier.   The selected  identifier is
+  ;;used by the syntax WITH-LABEL-SHADOWING to hide some type definition
+  ;;with  a label.   For  example:  this mechanism  allows  to shadow  a
+  ;;condition type  definition with a label  type and so to  use the tag
+  ;;syntaxes with condition objects.
+  ;;
+  (let ((shadowed-id ($vector-ref ($vector-ref args 0) 0)))
+    (if (identifier? shadowed-id)
+	($<parsed-spec>-shadowed-identifier-set! parsed-spec shadowed-id)
+      (synner "invalid tag type shadowed identifier specification" shadowed-id))))
 
 (define (clause-arguments-parser:maker parsed-spec args synner)
   ;;Parser function for the MAKER clause; this clause must be present at
@@ -1994,9 +2006,14 @@
   ;;
   ;;   (maker ?transformer-expr)
   ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?transformer-expr ))
+  ;;
   ;;where  ?TRANSFORMER-EXPR  is an  expression  evaluating  to a  macro
-  ;;transformer to  be used to parse  the maker syntax.  We  can imagine
-  ;;the definition:
+  ;;transformer to be used to parse the maker syntax.
+  ;;
+  ;;We can imagine the definition:
   ;;
   ;;   (define-class <alpha>
   ;;     (fields a b)
@@ -2019,9 +2036,7 @@
   ;;
   ;;   (<alpha> (1 2))	---> (make-<alpha> 1 2)
   ;;
-  (syntax-case args ()
-    (#(#(?transformer-expr))
-     (<parsed-spec>-maker-transformer-set! parsed-spec #'?transformer-expr))))
+  ($<parsed-spec>-maker-transformer-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 (define (clause-arguments-parser:finaliser parsed-spec args synner)
   ;;Parser  function  for the  FINALISER  clause;  this clause  must  be
@@ -2029,12 +2044,14 @@
   ;;
   ;;   (finaliser ?lambda-expr)
   ;;
+  ;;and the correspoding ARGS is:
+  ;;
+  ;;   #(#( #'?lambda-expr ))
+  ;;
   ;;where ?LAMBDA-EXPR is  an expression evaluating to a  function to be
   ;;used by the garbage collector to finalise the record.
   ;;
-  (syntax-case args ()
-    (#(#(?lambda-expr))
-     (<parsed-spec>-finaliser-expression-set! parsed-spec #'?lambda-expr))))
+  ($<parsed-spec>-finaliser-expression-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 (define (clause-arguments-parser:nongenerative parsed-spec args synner)
   ;;Parser function  for the NONGENERATIVE  clause; this clause  must be
@@ -2044,18 +2061,22 @@
   ;;   (nongenerative)
   ;;   (nongenerative ?unique-id)
   ;;
+  ;;and the corresponding ARGS are:
+  ;;
+  ;;   #(#())
+  ;;   #(#( #'?unique-id ))
+  ;;
   ;;where ?UNIQUE-ID is the symbol  which uniquely identifies the record
   ;;type in a whole program.  If the clause has no argument: a unique id
   ;;is automatically generated.
   ;;
-  (syntax-case args ()
-    (#(#(?unique-id))
-     (if (identifier? #'?unique-id)
-	 (<parsed-spec>-nongenerative-uid-set! parsed-spec #'?unique-id)
-       (synner "expected identifier as NONGENERATIVE clause argument" #'?unique-id)))
-
-    (#(#())
-     (<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec)))))
+  (let ((inner ($vector-ref args 0)))
+    (if ($fxzero? ($vector-length inner))
+	($<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec))
+      (let ((unique-id ($vector-ref inner 0)))
+	(if (identifier? unique-id)
+	    ($<parsed-spec>-nongenerative-uid-set! parsed-spec unique-id)
+	  (synner "expected identifier as NONGENERATIVE clause argument" unique-id))))))
 
 
 ;;;; some at-most-once clause parsers: protocols, abstract, predicate
