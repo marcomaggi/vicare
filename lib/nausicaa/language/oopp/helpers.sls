@@ -2085,31 +2085,37 @@
   ;;Parser function for the PROTOCOL clause; this clause must be present
   ;;at most once.  The expected syntax for the clause is:
   ;;
-  ;;   (protocol ?expr)
+  ;;   (protocol ?protocol-expr)
   ;;
-  (syntax-case args ()
-    (#(#(?protocol-expr))
-     (<parsed-spec>-common-protocol-set! parsed-spec #'?protocol-expr))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?protocol-expr ))
+  ;;
+  ($<parsed-spec>-common-protocol-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 (define (clause-arguments-parser:public-protocol parsed-spec args synner)
   ;;Parser function for the PUBLIC-PROTOCOL  clause; this clause must be
   ;;present at most once.  The expected syntax for the clause is:
   ;;
-  ;;   (public-protocol ?expr)
+  ;;   (public-protocol ?protocol-expr)
   ;;
-  (syntax-case args ()
-    (#(#(?protocol-expr))
-     (<parsed-spec>-public-protocol-set! parsed-spec #'?protocol-expr))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?protocol-expr ))
+  ;;
+  ($<parsed-spec>-public-protocol-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 (define (clause-arguments-parser:super-protocol parsed-spec args synner)
   ;;Parser function for  the SUPER-PROTOCOL clause; this  clause must be
   ;;present at most once.  The expected syntax for the clause is:
   ;;
-  ;;   (super-protocol ?expr)
+  ;;   (super-protocol ?protocol-expr)
   ;;
-  (syntax-case args ()
-    (#(#(?protocol-expr))
-     (<parsed-spec>-super-protocol-set! parsed-spec #'?protocol-expr))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?protocol-expr ))
+  ;;
+  ($<parsed-spec>-super-protocol-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
 (define (clause-arguments-parser:abstract parsed-spec args synner)
   ;;Parser function for the ABSTRACT clause; this clause must be present
@@ -2118,15 +2124,24 @@
   ;;
   ;;   (abstract)
   ;;
-  (syntax-case args ()
-    (#(#())
-     (<parsed-spec>-abstract?-set! parsed-spec #t))))
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#())
+  ;;
+  ;;Notice that this function is called only when the ABSTRACT clause is
+  ;;present.
+  ;;
+  ($<parsed-spec>-abstract?-set! parsed-spec #t))
 
 (define (clause-arguments-parser:predicate parsed-spec args synner)
   ;;Parser  function  for the  PREDICATE  clause;  this clause  must  be
   ;;present at most once.  The expected syntax for the clause is:
   ;;
   ;;   (predicate ?predicate)
+  ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?predicate ))
   ;;
   ;;When a function predicate expression is specified as an identifier:
   ;;
@@ -2167,13 +2182,12 @@
   ;;
   ;;  (<list-of-numbers> is-a? ?obj) ==> (<list-of-numbers>? ?obj)
   ;;
-  (syntax-case args ()
-    (#(#(?predicate))
-     (if (identifier? #'?predicate)
-	 (<parsed-spec>-private-predicate-id-set! parsed-spec #'?predicate)
-       (let ((pred-id (tag-id->private-predicate-id (<parsed-spec>-name-id parsed-spec))))
-	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-id)
-	 (<parsed-spec>-definitions-cons!         parsed-spec (list #'define pred-id #'?predicate)))))))
+  (let ((predicate-stx ($vector-ref ($vector-ref args 0) 0)))
+    (if (identifier? predicate-stx)
+	($<parsed-spec>-private-predicate-id-set! parsed-spec predicate-stx)
+      (let ((pred-id (tag-id->private-predicate-id ($<parsed-spec>-name-id parsed-spec))))
+	($<parsed-spec>-private-predicate-id-set! parsed-spec pred-id)
+	(<parsed-spec>-definitions-cons!          parsed-spec (list #'define pred-id predicate-stx))))))
 
 
 ;;;; single method function clauses
@@ -2211,7 +2225,7 @@
   (define (clause-arguments-parser:single-method parsed-spec args synner)
     ;;We expect ARGS to have the format:
     ;;
-    ;;  #(#(?method-spec ...) ...)
+    ;;  #(#( #'?method-spec ...) ...)
     ;;
     (vector-for-each
 	(lambda (method-spec-stx)
