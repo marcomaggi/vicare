@@ -1,5 +1,5 @@
 ;;;
-;;;Part of: Nausicaa/Scheme
+;;;Part of: Vicare Scheme
 ;;;Contents: tags implementation
 ;;;Date: Fri May 18, 2012
 ;;;
@@ -316,260 +316,244 @@
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
   ;;
-  ;;In this  macro transformer we  only process the MIXINS  clauses, the
-  ;;actual label definition is performed by another macro.
-  ;;
-  (syntax-case stx ()
-    ((_ ?name ?clause ...)
-     (receive (mixins-clauses other-clauses)
-	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
-       (if (null? mixins-clauses)
-	   #`(define-label/after-mixins-processing ?name . #,other-clauses)
-	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
-	   #`(MIXIN :insert-mixin-clauses
-		    (define-label/after-mixins-processing ?name . #,other-clauses)
-		    ((FROM TO) ...)
-		    (MIXIN-SPEC ...))))))
-    (_
-     (synner "invalid syntax in label definition"))))
-
-(define-syntax* (define-label/after-mixins-processing stx)
-  (define spec   (parser-help.parse-label-definition stx #'<top> #'lambda/tags synner))
-  (define tag-id (parser-help.<parsed-spec>-name-id spec))
-  (with-syntax
-      ((THE-TAG			tag-id)
-       (THE-PARENT		(parser-help.<parsed-spec>-parent-id spec))
-       (THE-PUBLIC-CONSTRUCTOR	(parser-help.<parsed-spec>-public-constructor-id spec))
-       (THE-PUBLIC-PREDICATE	(parser-help.<parsed-spec>-public-predicate-id   spec))
-       (THE-PRIVATE-PREDICATE	(parser-help.<parsed-spec>-private-predicate-id  spec))
-
-       (THE-LIST-OF-UIDS	(parser-help.tag-id->list-of-uids-id tag-id))
-       (NONGENERATIVE-UID	(parser-help.<parsed-spec>-nongenerative-uid     spec))
-
-       (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
-	(parser-help.<parsed-spec>-immutable-fields-data spec))
-
-       (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(parser-help.<parsed-spec>-mutable-fields-data spec))
-
-       (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
-	(parser-help.<parsed-spec>-methods-table spec))
-
-       (SHADOWED-IDENTIFIER
-	(parser-help.<parsed-spec>-shadowed-identifier spec))
-
-       ((DEFINITION ...)
-	(parser-help.<parsed-spec>-definitions spec))
-
-       (ACCESSOR-TRANSFORMER
-	(parser-help.<parsed-spec>-accessor-transformer spec))
-
-       (MUTATOR-TRANSFORMER
-	(parser-help.<parsed-spec>-mutator-transformer  spec))
-
-       (MAKER-TRANSFORMER
-	(parser-help.<parsed-spec>-maker-transformer spec))
-
-       ((SATISFACTION ...)
-	(parser-help.<parsed-spec>-satisfactions spec))
-       (SATISFACTION-CLAUSES
-	(parser-help.<label-spec>-satisfaction-clauses spec)))
+  (lambda (ctv-retriever)
+    (define spec   (parser-help.parse-label-definition stx #'<top> #'lambda/tags ctv-retriever synner))
+    (define tag-id (parser-help.<parsed-spec>-name-id spec))
     (with-syntax
-	((THE-PUBLIC-PROTOCOL-EXPR
-	  ;;Labels   have  no   record-type  descriptor,   so,  strictly
-	  ;;speaking,  we do not  need to  follow the  same construction
-	  ;;protocol of R6RS records; but uniformity makes understanding
-	  ;;easier, so  the label construction protocols  are similar to
-	  ;;those of proper records.
-	  (or (parser-help.<parsed-spec>-public-protocol spec)
-	      (parser-help.<parsed-spec>-common-protocol spec)
-	      #'(lambda ()
-		  (lambda args
-		    (assertion-violation 'THE-TAG
-		      "no constructor defined for label" 'THE-TAG args)))))
+	((THE-TAG			tag-id)
+	 (THE-PARENT			(parser-help.<parsed-spec>-parent-id spec))
+	 (THE-PUBLIC-CONSTRUCTOR	(parser-help.<parsed-spec>-public-constructor-id spec))
+	 (THE-PUBLIC-PREDICATE		(parser-help.<parsed-spec>-public-predicate-id   spec))
+	 (THE-PRIVATE-PREDICATE		(parser-help.<parsed-spec>-private-predicate-id  spec))
 
-	 (PREDICATE-EXPR
-	  ;;The  predicate  expression  must   evaluate  to  a  function
-	  ;;predicate for  instances of this  tag.  We must  check first
-	  ;;the  parent tag's  predicate,  then the  predicate for  this
-	  ;;label; the "<top>" tag has no predicate.
-	  ;;
-	  ;;NOTE Remember that the PREDICATE  clause can also select the
-	  ;;binding  of a  syntax;  we  have no  way  to distinguish  if
-	  ;;THE-PRIVATE-PREDICATE  is a  syntax's  keyword or  something
-	  ;;else, so we always have to create a function here, we cannot
-	  ;;just return THE-PRIVATE-PREDICATE when it is an identifier.
-	  (let ((has-priv-id? (syntax->datum #'THE-PRIVATE-PREDICATE)))
-	    (cond ((free-identifier=? #'THE-PARENT #'<top>)
-		   ;;The parent is  "<top>": we just use  for this tag's
-		   ;;predicate, if any was selected.
-		   (if has-priv-id?
-		       #'(lambda (obj)
-			   (THE-PRIVATE-PREDICATE obj))
-		     #'(lambda (obj) #t)))
-		  (has-priv-id?
-		   ;;The parent  is not "<top>" and  this tag definition
-		   ;;selects a  predicate: apply the  parent's predicate
-		   ;;first, than this tag's one.
-		   #'(lambda (obj)
-		       (and (THE-PARENT :is-a? obj)
-			    (THE-PRIVATE-PREDICATE obj))))
-		  (else
-		   ;;The parent  is not "<top>" and  this tag definition
-		   ;;does  not  select  a   predicate:  just  apply  the
-		   ;;parent's predicate.
-		   #'(lambda (obj)
-		       (THE-PARENT :is-a? obj))))))
+	 (THE-LIST-OF-UIDS		(parser-help.tag-id->list-of-uids-id tag-id))
+	 (NONGENERATIVE-UID		(parser-help.<parsed-spec>-nongenerative-uid     spec))
 
-	 (GETTER-TRANSFORMER
-	  ;;If no getter  syntax is defined for this  label: use the one
-	  ;;of  the  parent.  The  getter  of  "<top>"  raises a  syntax
-	  ;;violation error.
-	  (or (parser-help.<parsed-spec>-getter spec)
-	      #'(lambda (stx unused-tag)
-		  #`(THE-PARENT :getter #,stx))))
+	 (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
+	  (parser-help.<parsed-spec>-immutable-fields-data spec))
 
-	 (SETTER-TRANSFORMER
-	  ;;If no setter  syntax is defined for this  label: use the one
-	  ;;of  the  parent.  The  setter  of  "<top>"  raises a  syntax
-	  ;;violation error.
-	  (or (parser-help.<parsed-spec>-setter spec)
-	      #'(lambda (stx unused-tag)
-		  #`(THE-PARENT :setter #,stx)))))
+	 (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
+	  (parser-help.<parsed-spec>-mutable-fields-data spec))
 
-      #'(begin
+	 (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
+	  (parser-help.<parsed-spec>-methods-table spec))
 
-	  (define THE-PUBLIC-CONSTRUCTOR
-	    (THE-PUBLIC-PROTOCOL-EXPR))
+	 (SHADOWED-IDENTIFIER
+	  (parser-help.<parsed-spec>-shadowed-identifier spec))
 
-	  (define THE-PUBLIC-PREDICATE PREDICATE-EXPR)
+	 ((DEFINITION ...)
+	  (parser-help.<parsed-spec>-definitions spec))
 
-	  (define THE-LIST-OF-UIDS
-	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
+	 (ACCESSOR-TRANSFORMER
+	  (parser-help.<parsed-spec>-accessor-transformer spec))
 
-	  (define-syntax THE-TAG
-	    ;;Tag  syntax,  all the  operations  involving  this tag  go
-	    ;;through this syntax.  For all the patterns:
+	 (MUTATOR-TRANSFORMER
+	  (parser-help.<parsed-spec>-mutator-transformer  spec))
+
+	 (MAKER-TRANSFORMER
+	  (parser-help.<parsed-spec>-maker-transformer spec))
+
+	 ((SATISFACTION ...)
+	  (parser-help.<parsed-spec>-satisfactions spec))
+	 (SATISFACTION-CLAUSES
+	  (parser-help.<label-spec>-satisfaction-clauses spec)))
+      (with-syntax
+	  ((THE-PUBLIC-PROTOCOL-EXPR
+	    ;;Labels  have  no   record-type  descriptor,  so,  strictly
+	    ;;speaking, we do  not need to follow  the same construction
+	    ;;protocol   of   R6RS   records;   but   uniformity   makes
+	    ;;understanding easier, so  the label construction protocols
+	    ;;are similar to those of proper records.
+	    (or (parser-help.<parsed-spec>-public-protocol spec)
+		(parser-help.<parsed-spec>-common-protocol spec)
+		#'(lambda ()
+		    (lambda args
+		      (assertion-violation 'THE-TAG
+			"no constructor defined for label" 'THE-TAG args)))))
+
+	   (PREDICATE-EXPR
+	    ;;The  predicate  expression  must evaluate  to  a  function
+	    ;;predicate for instances of this  tag.  We must check first
+	    ;;the parent  tag's predicate,  then the predicate  for this
+	    ;;label; the "<top>" tag has no predicate.
 	    ;;
-	    ;;* ??EXPR must be an  expression to be evaluated only once;
-	    ;;its result  must be an  instance of the tag  type.  ??EXPR
-	    ;;can  be  an identifier  but  also  the  application of  an
-	    ;;accessor to an instance.
-	    ;;
-	    ;;*  ??VAR must  be  the identifier  bound  to the  instance
-	    ;;syntax dispatcher.
-	    ;;
-	    (let ((%the-getter		(lambda (stx)
+	    ;;NOTE Remember  that the  PREDICATE clause can  also select
+	    ;;the binding of a syntax; we  have no way to distinguish if
+	    ;;THE-PRIVATE-PREDICATE is  a syntax's keyword  or something
+	    ;;else,  so we  always have  to create  a function  here, we
+	    ;;cannot  just return  THE-PRIVATE-PREDICATE when  it is  an
+	    ;;identifier.
+	    (let ((has-priv-id? (syntax->datum #'THE-PRIVATE-PREDICATE)))
+	      (cond ((free-identifier=? #'THE-PARENT #'<top>)
+		     ;;The parent is "<top>": we just use for this tag's
+		     ;;predicate, if any was selected.
+		     (if has-priv-id?
+			 #'(lambda (obj)
+			     (THE-PRIVATE-PREDICATE obj))
+		       #'(lambda (obj) #t)))
+		    (has-priv-id?
+		     ;;The parent is not "<top>" and this tag definition
+		     ;;selects a predicate: apply the parent's predicate
+		     ;;first, than this tag's one.
+		     #'(lambda (obj)
+			 (and (THE-PARENT :is-a? obj)
+			      (THE-PRIVATE-PREDICATE obj))))
+		    (else
+		     ;;The parent is not "<top>" and this tag definition
+		     ;;does  not  select  a predicate:  just  apply  the
+		     ;;parent's predicate.
+		     #'(lambda (obj)
+			 (THE-PARENT :is-a? obj))))))
+
+	   (GETTER-TRANSFORMER
+	    ;;If no getter syntax is defined for this label: use the one
+	    ;;of  the parent.   The getter  of "<top>"  raises a  syntax
+	    ;;violation error.
+	    (or (parser-help.<parsed-spec>-getter spec)
+		#'(lambda (stx unused-tag)
+		    #`(THE-PARENT :getter #,stx))))
+
+	   (SETTER-TRANSFORMER
+	    ;;If no setter syntax is defined for this label: use the one
+	    ;;of  the parent.   The setter  of "<top>"  raises a  syntax
+	    ;;violation error.
+	    (or (parser-help.<parsed-spec>-setter spec)
+		#'(lambda (stx unused-tag)
+		    #`(THE-PARENT :setter #,stx)))))
+
+	#'(begin
+
+	    (define THE-PUBLIC-CONSTRUCTOR
+	      (THE-PUBLIC-PROTOCOL-EXPR))
+
+	    (define THE-PUBLIC-PREDICATE PREDICATE-EXPR)
+
+	    (define THE-LIST-OF-UIDS
+	      (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
+
+	    (define-syntax THE-TAG
+	      ;;Tag  syntax, all  the operations  involving this  tag go
+	      ;;through this syntax.  For all the patterns:
+	      ;;
+	      ;;*  ??EXPR must  be an  expression to  be evaluated  only
+	      ;;once; its  result must be  an instance of the  tag type.
+	      ;;??EXPR can be an identifier  but also the application of
+	      ;;an accessor to an instance.
+	      ;;
+	      ;;* ??VAR  must be  the identifier  bound to  the instance
+	      ;;syntax dispatcher.
+	      ;;
+	      (let ((%the-getter	(lambda (stx)
 					  (GETTER-TRANSFORMER stx #'THE-TAG)))
-		  (%the-setter		(lambda (stx)
+		    (%the-setter	(lambda (stx)
 					  (SETTER-TRANSFORMER stx #'THE-TAG)))
-		  (%the-accessor	ACCESSOR-TRANSFORMER)
-		  (%the-mutator		MUTATOR-TRANSFORMER)
-		  (%the-maker		MAKER-TRANSFORMER))
+		    (%the-accessor	ACCESSOR-TRANSFORMER)
+		    (%the-mutator		MUTATOR-TRANSFORMER)
+		    (%the-maker		MAKER-TRANSFORMER))
 
-	      (lambda (stx)
-		(define (synner message subform)
-		  (syntax-violation 'THE-TAG message stx subform))
-		(syntax-case stx ( ;;
-				  :dispatch :mutator :append-unique-id
-				  :accessor-function :mutator-function
-				  :process-shadowed-identifier
-				  aux.<>)
+		(lambda (stx)
+		  (define (synner message subform)
+		    (syntax-violation 'THE-TAG message stx subform))
+		  (syntax-case stx ( ;;
+				    :dispatch :mutator :append-unique-id
+				    :accessor-function :mutator-function
+				    :process-shadowed-identifier
+				    aux.<>)
 
-		  ;;Try  to match  the tagged-variable  use to  a method
-		  ;;call for  the tag; if  no method name  matches ??ID,
-		  ;;try to match a field name.
-		  ((_ :dispatch (??expr ??id . ??args))
-		   (identifier? #'??id)
-		   (case (syntax->datum #'??id)
-		     ((METHOD-NAME)
-		      (syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
-		     ...
-		     (else
-		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
+		    ;;Try to  match the tagged-variable use  to a method
+		    ;;call for the tag; if  no method name matches ??ID,
+		    ;;try to match a field name.
+		    ((_ :dispatch (??expr ??id . ??args))
+		     (identifier? #'??id)
+		     (case (syntax->datum #'??id)
+		       ((METHOD-NAME)
+			(syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		       ...
+		       (else
+			(%the-accessor stx #'??expr (cons #'??id #'??args)))))
 
-		  ;;Invoke the  mutator syntax transformer.   The syntax
-		  ;;use:
-		  ;;
-		  ;;   (set!/tags (?var ?field-name ?arg ...) ?val)
-		  ;;
-		  ;;is expanded to:
-		  ;;
-		  ;;   (?var :mutator (?field-name ?arg ...) ?val)
-		  ;;
-		  ;;and then to:
-		  ;;
-		  ;;   (THE-TAG :mutator SRC-VAR (?field-name ?arg ...) ?val)
-		  ;;
-		  ;;where SRC-VAR is the  identifier bound to the actual
-		  ;;instance.  Then,  depending on  the ?ARG  forms, the
-		  ;;mutator  can  expand  to:  a  simple  field  mutator
-		  ;;invocation, or to a  subfield mutator invocation, or
-		  ;;to a submethod invocation.
-		  ;;
-		  ((_ :mutator ??expr ??keys ??value)
-		   (%the-mutator stx #'??expr #'??keys #'??value))
+		    ;;Invoke the mutator syntax transformer.  The syntax
+		    ;;use:
+		    ;;
+		    ;;   (set!/tags (?var ?field-name ?arg ...) ?val)
+		    ;;
+		    ;;is expanded to:
+		    ;;
+		    ;;   (?var :mutator (?field-name ?arg ...) ?val)
+		    ;;
+		    ;;and then to:
+		    ;;
+		    ;;   (THE-TAG :mutator SRC-VAR (?field-name ?arg ...) ?val)
+		    ;;
+		    ;;where  SRC-VAR  is  the identifier  bound  to  the
+		    ;;actual  instance.   Then,  depending on  the  ?ARG
+		    ;;forms, the  mutator can expand to:  a simple field
+		    ;;mutator  invocation,  or  to  a  subfield  mutator
+		    ;;invocation, or to a submethod invocation.
+		    ;;
+		    ((_ :mutator ??expr ??keys ??value)
+		     (%the-mutator stx #'??expr #'??keys #'??value))
 
-		  ((_ :append-unique-id (??id (... ...)))
-		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
+		    ((_ :append-unique-id (??id (... ...)))
+		     #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
 
-		  ((_ :accessor-function ??field-name)
-		   (identifier? #'??field-name)
-		   (case (syntax->datum #'??field-name)
-		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
-		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
-		     (else
-		      #'(THE-PARENT :mutator-function ??field-name))))
+		    ((_ :accessor-function ??field-name)
+		     (identifier? #'??field-name)
+		     (case (syntax->datum #'??field-name)
+		       ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
+		       ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
+		       (else
+			#'(THE-PARENT :mutator-function ??field-name))))
 
-		  ((_ :mutator-function ??field-name)
-		   (identifier? #'??field-name)
-		   (case (syntax->datum #'??field-name)
-		     ((MUTABLE-FIELD)
-		      #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
-		     ...
-		     ((IMMUTABLE-FIELD)
-		      (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
-		     ...
-		     (else
-		      #'(THE-PARENT :mutator-function ??field-name))))
+		    ((_ :mutator-function ??field-name)
+		     (identifier? #'??field-name)
+		     (case (syntax->datum #'??field-name)
+		       ((MUTABLE-FIELD)
+			#'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
+		       ...
+		       ((IMMUTABLE-FIELD)
+			(synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
+		       ...
+		       (else
+			#'(THE-PARENT :mutator-function ??field-name))))
 
-		  ;;Replace  all  the  occurrences of  ??SRC-ID  in  the
-		  ;;??BODY  forms with  the identifier  selected by  the
-		  ;;SHADOWS clause.  This allows a  label tag to be used
-		  ;;to handle some other entity type.
-		  ;;
-		  ;;Notice  that we really  substitute ??SRC-ID  from the
-		  ;;input form rather than THE-TAG.
-		  ((??src-id :process-shadowed-identifier ??body0 ??body (... ...))
-		   (let ((dst-id	#'SHADOWED-IDENTIFIER)
-			 (body		#'(begin ??body0 ??body (... ...))))
-		     (if (syntax->datum dst-id)
-			 (parser-help.single-identifier-subst #'??src-id dst-id body)
-		       body)))
+		    ;;Replace  all the  occurrences of  ??SRC-ID in  the
+		    ;;??BODY forms  with the identifier selected  by the
+		    ;;SHADOWS  clause.  This  allows a  label tag  to be
+		    ;;used to handle some other entity type.
+		    ;;
+		    ;;Notice that we really substitute ??SRC-ID from the
+		    ;;input form rather than THE-TAG.
+		    ((??src-id :process-shadowed-identifier ??body0 ??body (... ...))
+		     (let ((dst-id	#'SHADOWED-IDENTIFIER)
+			   (body		#'(begin ??body0 ??body (... ...))))
+		       (if (syntax->datum dst-id)
+			   (parser-help.single-identifier-subst #'??src-id dst-id body)
+			 body)))
 
-		  (_
-		   (syntax-help.tag-private-common-syntax-transformer
-		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
-		    %the-getter %the-setter
-		    (lambda ()
-		      (syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
-	      ))
+		    (_
+		     (syntax-help.tag-private-common-syntax-transformer
+		      stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
+		      %the-getter %the-setter
+		      (lambda ()
+			(syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+		))
 
-	  DEFINITION ...
-	  (module () (SATISFACTION . SATISFACTION-CLAUSES) ...)
-	  ;;NOTE Just in case putting  the satisfactions into a module's
-	  ;;body turns  out not to  be right,  we can use  the following
-	  ;;definition  instead.  What's  important  is  that the  whole
-	  ;;sequence  of   forms  resulting  from  a   label  definition
-	  ;;expansion is  a sequence of definitions.   (Marco Maggi; Tue
-	  ;;Jul 16, 2013)
-	  ;;
-	  ;; (define dummy-for-satisfactions
-	  ;;   (let ()
-	  ;;     (SATISFACTION . SATISFACTION-CLAUSES) ...
-	  ;;     #f))
+	    DEFINITION ...
+	    (module () (SATISFACTION . SATISFACTION-CLAUSES) ...)
+	    ;;NOTE  Just  in  case  putting  the  satisfactions  into  a
+	    ;;module's body  turns out not to  be right, we can  use the
+	    ;;following  definition instead.   What's important  is that
+	    ;;the  whole  sequence  of  forms  resulting  from  a  label
+	    ;;definition expansion is a sequence of definitions.  (Marco
+	    ;;Maggi; Tue Jul 16, 2013)
+	    ;;
+	    ;; (define dummy-for-satisfactions
+	    ;;   (let ()
+	    ;;     (SATISFACTION . SATISFACTION-CLAUSES) ...
+	    ;;     #f))
 
-	  ))))
+	    )))))
 
 
 (define-syntax* (define-class stx)
@@ -577,350 +561,325 @@
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
   ;;
-  ;;In this  macro transformer we  only process the MIXINS  clauses, the
-  ;;actual class definition is performed by another macro.
-  ;;
-  (syntax-case stx ()
-    ((_ ?name ?clause ...)
-     (receive (mixins-clauses other-clauses)
-	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
-       (if (null? mixins-clauses)
-	   #`(define-class/after-mixins-processing ?name . #,other-clauses)
-	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
-	   #`(MIXIN :insert-mixin-clauses
-		    (define-class/after-mixins-processing ?name . #,other-clauses)
-		    ((FROM TO) ...)
-		    (MIXIN-SPEC ...))))))
-    (_
-     (synner "invalid syntax in class definition"))))
-
-(define-syntax* (define-class/after-mixins-processing stx)
-  (define spec		(parser-help.parse-class-definition stx #'<top> #'lambda/tags synner))
-  (define tag-id	(parser-help.<parsed-spec>-name-id spec))
-  (define abstract?	(parser-help.<parsed-spec>-abstract? spec))
-  (with-syntax
-      ((THE-TAG					tag-id)
-       (THE-RECORD-TYPE				(parser-help.<class-spec>-record-type-id spec))
-       (THE-PREDICATE				(parser-help.<parsed-spec>-public-predicate-id spec))
-       (THE-PARENT				(parser-help.<parsed-spec>-parent-id spec))
-       (THE-DEFAULT-PROTOCOL			(parser-help.tag-id->default-protocol-id tag-id))
-       (THE-FROM-FIELDS-CONSTRUCTOR		(parser-help.tag-id->from-fields-constructor-id tag-id))
-       (THE-PUBLIC-CONSTRUCTOR			(parser-help.<parsed-spec>-public-constructor-id spec))
-
-       (THE-LIST-OF-UIDS			(parser-help.tag-id->list-of-uids-id tag-id))
-       (NONGENERATIVE-UID			(parser-help.<parsed-spec>-nongenerative-uid spec))
-
-       (SEALED?
-	(parser-help.<parsed-spec>-sealed? spec))
-
-       (OPAQUE?
-	(parser-help.<parsed-spec>-opaque? spec))
-
-       (((CONCRETE-FIELD-SPEC ...) ...)
-	(parser-help.<parsed-spec>-concrete-fields-data spec))
-
-       ((CONCRETE-FIELD-NAME ...)
-	(parser-help.<parsed-spec>-concrete-fields-names spec))
-
-       (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
-	(parser-help.<parsed-spec>-immutable-fields-data spec))
-
-       (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
-	(parser-help.<parsed-spec>-mutable-fields-data spec))
-
-       (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
-	(parser-help.<parsed-spec>-methods-table spec))
-
-       ((DEFINITION ...)
-	(parser-help.<parsed-spec>-definitions spec))
-
-       (ACCESSOR-TRANSFORMER
-	(parser-help.<parsed-spec>-accessor-transformer spec))
-
-       (MUTATOR-TRANSFORMER
-	(parser-help.<parsed-spec>-mutator-transformer  spec))
-
-       (MAKER-TRANSFORMER
-	(parser-help.<parsed-spec>-maker-transformer spec))
-
-       (FINALISER-EXPRESSION
-	(parser-help.<parsed-spec>-finaliser-expression spec))
-
-       ((SATISFACTION ...)
-	(parser-help.<parsed-spec>-satisfactions spec))
-       (SATISFACTION-CLAUSES
-	(parser-help.<class-spec>-satisfaction-clauses spec))
-
-       (WRONG-TYPE-ERROR-MESSAGE
-	(string-append "invalid expression result, expected value of type "
-		       (symbol->string (syntax->datum tag-id)))))
-    (define (%compose-parent-rcd-with-proto proto)
-      #`(make-record-constructor-descriptor (record-type-descriptor THE-RECORD-TYPE)
-					    (THE-PARENT :super-constructor-descriptor)
-					    #,proto))
+  (lambda (ctv-retriever)
+    (define spec	(parser-help.parse-class-definition stx #'<top> #'lambda/tags ctv-retriever synner))
+    (define tag-id	(parser-help.<parsed-spec>-name-id spec))
+    (define abstract?	(parser-help.<parsed-spec>-abstract? spec))
     (with-syntax
-	((THE-COMMON-CONSTRUCTOR-EXPR
-	  ;;The common  protocol is the default  one to be used  when no
-	  ;;specialised  protocols  are   defined  by  the  DEFINE-CLASS
-	  ;;clauses.  Abstract classes cannot have a common protocol.
-	  ;;
-	  ;;If the class is concrete  and no protocol is defined, we use
-	  ;;the appropriately  built default protocol;  R6RS states that
-	  ;;when the parent's RCD has a custom protocol, the derived RCD
-	  ;;must have a custom protocol too.
-	  (%compose-parent-rcd-with-proto (cond (abstract?
-						 #'(lambda (make-superclass)
-						     (lambda args
-						       (assertion-violation 'THE-TAG
-							 "attempt to instantiate abstract class"))))
-						((parser-help.<parsed-spec>-common-protocol spec))
-						(else
-						 #'THE-DEFAULT-PROTOCOL))))
+	((THE-TAG				tag-id)
+	 (THE-RECORD-TYPE			(parser-help.<class-spec>-record-type-id spec))
+	 (THE-PREDICATE				(parser-help.<parsed-spec>-public-predicate-id spec))
+	 (THE-PARENT				(parser-help.<parsed-spec>-parent-id spec))
+	 (THE-DEFAULT-PROTOCOL			(parser-help.tag-id->default-protocol-id tag-id))
+	 (THE-FROM-FIELDS-CONSTRUCTOR		(parser-help.tag-id->from-fields-constructor-id tag-id))
+	 (THE-PUBLIC-CONSTRUCTOR		(parser-help.<parsed-spec>-public-constructor-id spec))
+	 (THE-LIST-OF-UIDS			(parser-help.tag-id->list-of-uids-id tag-id))
+	 (NONGENERATIVE-UID			(parser-help.<parsed-spec>-nongenerative-uid spec))
+	 (SEALED?				(parser-help.<parsed-spec>-sealed? spec))
+	 (OPAQUE?				(parser-help.<parsed-spec>-opaque? spec))
 
-	 (THE-PUBLIC-CONSTRUCTOR-EXPR
-	  ;;The public protocol is to be used by the maker of this class
-	  ;;type; when not defined,  it defaults to the common protocol;
-	  ;;abstract classes cannot have a public protocol.
-	  ;;
-	  ;;If the class is concrete  and no protocol is defined, we use
-	  ;;the appropriately  built default protocol;  R6RS states that
-	  ;;when the parent's RCD has a custom protocol, the derived RCD
-	  ;;must have a custom protocol too.
-	  (let ((proto (parser-help.<parsed-spec>-public-protocol spec)))
-	    (if (or abstract? (not proto))
-		#'the-common-constructor-descriptor
-	      (%compose-parent-rcd-with-proto proto))))
+	 (((CONCRETE-FIELD-SPEC ...) ...)	(parser-help.<parsed-spec>-concrete-fields-data spec))
+	 ((CONCRETE-FIELD-NAME ...)		(parser-help.<parsed-spec>-concrete-fields-names spec))
 
-	 (THE-SUPER-CONSTRUCTOR-EXPR
-	  ;;The  super  protocol is  to  be  used  when instantiating  a
-	  ;;subclass of this class type; when not defined, and the class
-	  ;;is concrete,  it defaults to the  common protocol.  Abstract
-	  ;;classes can have a super protocol.
-	  ;;
-	  ;;If the class is concrete  and no protocol is defined, we use
-	  ;;the appropriately  built default protocol;  R6RS states that
-	  ;;when the parent's RCD has a custom protocol, the derived RCD
-	  ;;must have a custom protocol too.
-	  (let ((proto (parser-help.<parsed-spec>-super-protocol spec)))
-	    (cond (abstract?
-		   (%compose-parent-rcd-with-proto (or proto #'THE-DEFAULT-PROTOCOL)))
-		  (proto
-		   (%compose-parent-rcd-with-proto proto))
-		  (else
-		   #'the-common-constructor-descriptor))))
+	 (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
+	  (parser-help.<parsed-spec>-immutable-fields-data spec))
 
-	 (GETTER-TRANSFORMER
-	  ;;If no getter  syntax is defined for this  label: use the one
-	  ;;of  the  parent.  The  getter  of  "<top>"  raises a  syntax
-	  ;;violation error.
-	  (or (parser-help.<parsed-spec>-getter spec)
-	      #'(lambda (stx unused-tag)
-		  #`(THE-PARENT :getter #,stx))))
+	 (((MUTABLE-FIELD MUTABLE-ACCESSOR MUTABLE-MUTATOR MUTABLE-TAG) ...)
+	  (parser-help.<parsed-spec>-mutable-fields-data spec))
 
-	 (SETTER-TRANSFORMER
-	  ;;If no setter  syntax is defined for this  label: use the one
-	  ;;of  the  parent.  The  setter  of  "<top>"  raises a  syntax
-	  ;;violation error.
-	  (or (parser-help.<parsed-spec>-setter spec)
-	      #'(lambda (stx unused-tag)
-		  #`(THE-PARENT :setter #,stx)))))
+	 (((METHOD-NAME METHOD-RV-TAG METHOD-IMPLEMENTATION) ...)
+	  (parser-help.<parsed-spec>-methods-table spec))
 
-      #'(begin
+	 ((DEFINITION ...)
+	  (parser-help.<parsed-spec>-definitions spec))
 
-	  (THE-PARENT :insert-parent-clause
-	    (define-record-type (THE-RECORD-TYPE the-automatic-constructor THE-PREDICATE)
-	      (nongenerative NONGENERATIVE-UID)
-	      (sealed SEALED?)
-	      (opaque OPAQUE?)
-	      (fields (CONCRETE-FIELD-SPEC ...)
-		      ...)))
+	 (ACCESSOR-TRANSFORMER
+	  (parser-help.<parsed-spec>-accessor-transformer spec))
 
-	  (define (THE-FROM-FIELDS-CONSTRUCTOR . args)
-	    (apply the-automatic-constructor
-		   (THE-TAG :list-of-unique-ids) ;this is the value of the "<top>" field
-		   args))
+	 (MUTATOR-TRANSFORMER
+	  (parser-help.<parsed-spec>-mutator-transformer  spec))
 
-	  (define THE-DEFAULT-PROTOCOL
-	    (THE-PARENT :insert-constructor-fields
-	      (lambda (make-parent)
-		(lambda (CONCRETE-FIELD-NAME ...)
-		  ((make-parent) CONCRETE-FIELD-NAME ...)))))
+	 (MAKER-TRANSFORMER
+	  (parser-help.<parsed-spec>-maker-transformer spec))
 
-	  (module ()
-	    (cond (FINALISER-EXPRESSION
-		   => (lambda (finaliser)
-			(record-destructor-set! (record-type-descriptor THE-RECORD-TYPE)
-						finaliser)))))
+	 (FINALISER-EXPRESSION
+	  (parser-help.<parsed-spec>-finaliser-expression spec))
 
-	  (define THE-LIST-OF-UIDS
-	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
+	 ((SATISFACTION ...)
+	  (parser-help.<parsed-spec>-satisfactions spec))
+	 (SATISFACTION-CLAUSES
+	  (parser-help.<class-spec>-satisfaction-clauses spec))
 
-	  ;;*NOTE*  (Marco  Maggi;  Thu  May  17, 2012)  Once  a  record
-	  ;;constructor  descriptor  (RCD)  has been  built:  everything
-	  ;;needed  to build  a  record constructor  function is  known;
-	  ;;applying RECORD-CONSTRUCTOR  to the RCD can  return the same
-	  ;;constructor function, memoised in  an internal field.  It is
-	  ;;not   clear   if,  according   to   R6RS,   every  call   to
-	  ;;RECORD-CONSTRUCTOR causes  all the protocol  functions to be
-	  ;;called a new time.
-	  ;;
-	  ;;This   is   the   business    of   the   underlying   Scheme
-	  ;;implementation,    so,   here,    we   shamelessly    invoke
-	  ;;RECORD-CONSTRUCTOR multiple times even  though we known that
-	  ;;all the RCDs may be the same (the common RCD).
-
-	  (define the-common-constructor-descriptor THE-COMMON-CONSTRUCTOR-EXPR)
-	  ;;This is commented out because unused at present.  The common
-	  ;;constructor  descriptor  is   used  when  other  constructor
-	  ;;descriptors are  not customised, but the  common constructor
-	  ;;function does not need to be defined.
-	  ;;
-	  ;; (define THE-COMMON-CONSTRUCTOR
-	  ;;   (record-constructor the-common-constructor-descriptor))
-
-	  (define the-public-constructor-descriptor THE-PUBLIC-CONSTRUCTOR-EXPR)
-	  (define THE-PUBLIC-CONSTRUCTOR
-	    (let ((constructor (record-constructor the-public-constructor-descriptor)))
-	      (lambda args
-		(receive-and-return (instance)
-		    (apply constructor args)
-		  (<top>-unique-identifiers-set! instance (THE-TAG :list-of-unique-ids))))))
-
-	  (define the-super-constructor-descriptor THE-SUPER-CONSTRUCTOR-EXPR)
-	  ;;This is commented out because  unused at present.  The super
-	  ;;constructor descriptor  is used by subclass  constructors to
-	  ;;build instances  of type THE-TAG, but  the super constructor
-	  ;;function does not need to be defined.
-	  ;;
-	  ;; (define the-super-constructor
-	  ;;   (record-constructor the-super-constructor-descriptor))
-
-	  (define-syntax THE-TAG
-	    ;;Tag  syntax,  all the  operations  involving  this tag  go
-	    ;;through  this   syntax.   The  only   reason  this  syntax
-	    ;;dispatches to sub-syntaxes it to keep the code readable.
+	 (WRONG-TYPE-ERROR-MESSAGE
+	  (string-append "invalid expression result, expected value of type "
+			 (symbol->string (syntax->datum tag-id)))))
+      (define (%compose-parent-rcd-with-proto proto)
+	#`(make-record-constructor-descriptor (record-type-descriptor THE-RECORD-TYPE)
+					      (THE-PARENT :super-constructor-descriptor)
+					      #,proto))
+      (with-syntax
+	  ((THE-COMMON-CONSTRUCTOR-EXPR
+	    ;;The common protocol is the default  one to be used when no
+	    ;;specialised  protocols  are  defined by  the  DEFINE-CLASS
+	    ;;clauses.  Abstract classes cannot have a common protocol.
 	    ;;
-	    ;;??EXPR must  be an expression  to be evaluated  only once;
-	    ;;its result  must be an  instance of the tag  type.  ??EXPR
-	    ;;can  be  an identifier  but  also  the  application of  an
-	    ;;accessor to an instance.
+	    ;;If the  class is concrete  and no protocol is  defined, we
+	    ;;use the appropriately built  default protocol; R6RS states
+	    ;;that  when the  parent's RCD  has a  custom protocol,  the
+	    ;;derived RCD must have a custom protocol too.
+	    (%compose-parent-rcd-with-proto (cond (abstract?
+						   #'(lambda (make-superclass)
+						       (lambda args
+							 (assertion-violation 'THE-TAG
+							   "attempt to instantiate abstract class"))))
+						  ((parser-help.<parsed-spec>-common-protocol spec))
+						  (else
+						   #'THE-DEFAULT-PROTOCOL))))
+
+	   (THE-PUBLIC-CONSTRUCTOR-EXPR
+	    ;;The public  protocol is to  be used  by the maker  of this
+	    ;;class type;  when not defined,  it defaults to  the common
+	    ;;protocol; abstract classes cannot have a public protocol.
 	    ;;
-	    ;;??VAR must be the  identifier bound to the instance syntax
-	    ;;dispatcher.
+	    ;;If the  class is concrete  and no protocol is  defined, we
+	    ;;use the appropriately built  default protocol; R6RS states
+	    ;;that  when the  parent's RCD  has a  custom protocol,  the
+	    ;;derived RCD must have a custom protocol too.
+	    (let ((proto (parser-help.<parsed-spec>-public-protocol spec)))
+	      (if (or abstract? (not proto))
+		  #'the-common-constructor-descriptor
+		(%compose-parent-rcd-with-proto proto))))
+
+	   (THE-SUPER-CONSTRUCTOR-EXPR
+	    ;;The  super protocol  is to  be used  when instantiating  a
+	    ;;subclass of  this class  type; when  not defined,  and the
+	    ;;class  is concrete,  it defaults  to the  common protocol.
+	    ;;Abstract classes can have a super protocol.
 	    ;;
-	    (let ((%the-getter		(lambda (stx)
+	    ;;If the  class is concrete  and no protocol is  defined, we
+	    ;;use the appropriately built  default protocol; R6RS states
+	    ;;that  when the  parent's RCD  has a  custom protocol,  the
+	    ;;derived RCD must have a custom protocol too.
+	    (let ((proto (parser-help.<parsed-spec>-super-protocol spec)))
+	      (cond (abstract?
+		     (%compose-parent-rcd-with-proto (or proto #'THE-DEFAULT-PROTOCOL)))
+		    (proto
+		     (%compose-parent-rcd-with-proto proto))
+		    (else
+		     #'the-common-constructor-descriptor))))
+
+	   (GETTER-TRANSFORMER
+	    ;;If no getter syntax is defined for this label: use the one
+	    ;;of  the parent.   The getter  of "<top>"  raises a  syntax
+	    ;;violation error.
+	    (or (parser-help.<parsed-spec>-getter spec)
+		#'(lambda (stx unused-tag)
+		    #`(THE-PARENT :getter #,stx))))
+
+	   (SETTER-TRANSFORMER
+	    ;;If no setter syntax is defined for this label: use the one
+	    ;;of  the parent.   The setter  of "<top>"  raises a  syntax
+	    ;;violation error.
+	    (or (parser-help.<parsed-spec>-setter spec)
+		#'(lambda (stx unused-tag)
+		    #`(THE-PARENT :setter #,stx)))))
+
+	#'(begin
+
+	    (THE-PARENT :insert-parent-clause
+	      (define-record-type (THE-RECORD-TYPE the-automatic-constructor THE-PREDICATE)
+		(nongenerative NONGENERATIVE-UID)
+		(sealed SEALED?)
+		(opaque OPAQUE?)
+		(fields (CONCRETE-FIELD-SPEC ...)
+			...)))
+
+	    (define (THE-FROM-FIELDS-CONSTRUCTOR . args)
+	      (apply the-automatic-constructor
+		     (THE-TAG :list-of-unique-ids) ;this is the value of the "<top>" field
+		     args))
+
+	    (define THE-DEFAULT-PROTOCOL
+	      (THE-PARENT :insert-constructor-fields
+		(lambda (make-parent)
+		  (lambda (CONCRETE-FIELD-NAME ...)
+		    ((make-parent) CONCRETE-FIELD-NAME ...)))))
+
+	    (module ()
+	      (cond (FINALISER-EXPRESSION
+		     => (lambda (finaliser)
+			  (record-destructor-set! (record-type-descriptor THE-RECORD-TYPE)
+						  finaliser)))))
+
+	    (define THE-LIST-OF-UIDS
+	      (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))
+
+	    ;;*NOTE*  (Marco Maggi;  Thu  May 17,  2012)  Once a  record
+	    ;;constructor  descriptor (RCD)  has been  built: everything
+	    ;;needed to  build a  record constructor function  is known;
+	    ;;applying RECORD-CONSTRUCTOR to the RCD can return the same
+	    ;;constructor function,  memoised in an internal  field.  It
+	    ;;is  not  clear  if,  according  to  R6RS,  every  call  to
+	    ;;RECORD-CONSTRUCTOR causes all the protocol functions to be
+	    ;;called a new time.
+	    ;;
+	    ;;This   is   the   business  of   the   underlying   Scheme
+	    ;;implementation,   so,   here,    we   shamelessly   invoke
+	    ;;RECORD-CONSTRUCTOR  multiple times  even  though we  known
+	    ;;that all the RCDs may be the same (the common RCD).
+
+	    (define the-common-constructor-descriptor THE-COMMON-CONSTRUCTOR-EXPR)
+	    ;;This  is commented  out  because unused  at present.   The
+	    ;;common   constructor  descriptor   is   used  when   other
+	    ;;constructor descriptors are not customised, but the common
+	    ;;constructor function does not need to be defined.
+	    ;;
+	    ;; (define THE-COMMON-CONSTRUCTOR
+	    ;;   (record-constructor the-common-constructor-descriptor))
+
+	    (define the-public-constructor-descriptor THE-PUBLIC-CONSTRUCTOR-EXPR)
+	    (define THE-PUBLIC-CONSTRUCTOR
+	      (let ((constructor (record-constructor the-public-constructor-descriptor)))
+		(lambda args
+		  (receive-and-return (instance)
+		      (apply constructor args)
+		    (<top>-unique-identifiers-set! instance (THE-TAG :list-of-unique-ids))))))
+
+	    (define the-super-constructor-descriptor THE-SUPER-CONSTRUCTOR-EXPR)
+	    ;;This  is commented  out  because unused  at present.   The
+	    ;;super   constructor  descriptor   is   used  by   subclass
+	    ;;constructors to  build instances of type  THE-TAG, but the
+	    ;;super constructor function does not need to be defined.
+	    ;;
+	    ;; (define the-super-constructor
+	    ;;   (record-constructor the-super-constructor-descriptor))
+
+	    (define-syntax THE-TAG
+	      ;;Tag  syntax, all  the operations  involving this  tag go
+	      ;;through  this  syntax.   The  only  reason  this  syntax
+	      ;;dispatches to sub-syntaxes it to keep the code readable.
+	      ;;
+	      ;;??EXPR must be an expression  to be evaluated only once;
+	      ;;its result must be an  instance of the tag type.  ??EXPR
+	      ;;can  be an  identifier but  also the  application of  an
+	      ;;accessor to an instance.
+	      ;;
+	      ;;??VAR  must  be the  identifier  bound  to the  instance
+	      ;;syntax dispatcher.
+	      ;;
+	      (let ((%the-getter	(lambda (stx)
 					  (GETTER-TRANSFORMER stx #'THE-TAG)))
-		  (%the-setter		(lambda (stx)
+		    (%the-setter	(lambda (stx)
 					  (SETTER-TRANSFORMER stx #'THE-TAG)))
-		  (%the-accessor	ACCESSOR-TRANSFORMER)
-		  (%the-mutator		MUTATOR-TRANSFORMER)
-		  (%the-maker		MAKER-TRANSFORMER))
+		    (%the-accessor	ACCESSOR-TRANSFORMER)
+		    (%the-mutator	MUTATOR-TRANSFORMER)
+		    (%the-maker		MAKER-TRANSFORMER))
 
-	      (lambda (stx)
-		(define (synner message subform)
-		  (syntax-violation 'THE-TAG message stx subform))
+		(lambda (stx)
+		  (define (synner message subform)
+		    (syntax-violation 'THE-TAG message stx subform))
 
-		(syntax-case stx ( ;;
-				  :make-from-fields
-				  :dispatch :mutator
-				  :insert-parent-clause define-record-type
-				  :insert-constructor-fields
-				  :super-constructor-descriptor lambda
-				  :append-unique-id
-				  :accessor-function :mutator-function
-				  aux.<>)
+		  (syntax-case stx ( ;;
+				    :make-from-fields
+				    :dispatch :mutator
+				    :insert-parent-clause define-record-type
+				    :insert-constructor-fields
+				    :super-constructor-descriptor lambda
+				    :append-unique-id
+				    :accessor-function :mutator-function
+				    aux.<>)
 
-		  ;;Given  an R6RS  record  type  definition: insert  an
-		  ;;appropriate  PARENT  clause  so  that  the  type  is
-		  ;;derived from this tag's record type.  This is needed
-		  ;;because  only  the tag  identifier  is  part of  the
-		  ;;public interface, but we still need to define record
-		  ;;types derived from this one.
-		  ((_ :insert-parent-clause (define-record-type ??name . ??clauses))
-		   #'(define-record-type ??name (parent THE-RECORD-TYPE) . ??clauses))
+		    ;;Given an  R6RS record  type definition:  insert an
+		    ;;appropriate  PARENT clause  so  that  the type  is
+		    ;;derived  from this  tag's  record  type.  This  is
+		    ;;needed because only the  tag identifier is part of
+		    ;;the public interface, but  we still need to define
+		    ;;record types derived from this one.
+		    ((_ :insert-parent-clause (define-record-type ??name . ??clauses))
+		     #'(define-record-type ??name (parent THE-RECORD-TYPE) . ??clauses))
 
-		  ;;Insert the  field names in  the appropriate position
-		  ;;in  the definition  of a  custom  protocol function.
-		  ;;This  is  used  by  subclasses to  build  their  own
-		  ;;default  protocol which  does  not need  to set  the
-		  ;;fields in "<top>".
-		  ((_ :insert-constructor-fields
-		      (lambda (make-parent1)
-			(lambda (V (... ...))
-			  ((make-parent2 W (... ...)) Z (... ...)))))
-		   #'(THE-PARENT :insert-constructor-fields
-		       (lambda (make-parent1)
-			 (lambda (CONCRETE-FIELD-NAME ... V (... ...))
-			   ((make-parent2 CONCRETE-FIELD-NAME ... W (... ...)) Z (... ...))))))
+		    ;;Insert the field names in the appropriate position
+		    ;;in the  definition of a custom  protocol function.
+		    ;;This  is used  by  subclasses to  build their  own
+		    ;;default protocol  which does  not need to  set the
+		    ;;fields in "<top>".
+		    ((_ :insert-constructor-fields
+			(lambda (make-parent1)
+			  (lambda (V (... ...))
+			    ((make-parent2 W (... ...)) Z (... ...)))))
+		     #'(THE-PARENT :insert-constructor-fields
+			 (lambda (make-parent1)
+			   (lambda (CONCRETE-FIELD-NAME ... V (... ...))
+			     ((make-parent2 CONCRETE-FIELD-NAME ... W (... ...)) Z (... ...))))))
 
-		  ((_ :super-constructor-descriptor)
-		   #'the-super-constructor-descriptor)
+		    ((_ :super-constructor-descriptor)
+		     #'the-super-constructor-descriptor)
 
-		  ;;Try  to match  the tagged-variable  use to  a method
-		  ;;call for  the tag; if  no method name  matches ??ID,
-		  ;;try to match a field name.
-		  ((_ :dispatch (??expr ??id . ??args))
-		   (identifier? #'??id)
-		   (case (syntax->datum #'??id)
-		     ((METHOD-NAME)
-		      (syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
-		     ...
-		     (else
-		      (%the-accessor stx #'??expr (cons #'??id #'??args)))))
+		    ;;Try to  match the tagged-variable use  to a method
+		    ;;call for the tag; if  no method name matches ??ID,
+		    ;;try to match a field name.
+		    ((_ :dispatch (??expr ??id . ??args))
+		     (identifier? #'??id)
+		     (case (syntax->datum #'??id)
+		       ((METHOD-NAME)
+			(syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
+		       ...
+		       (else
+			(%the-accessor stx #'??expr (cons #'??id #'??args)))))
 
-		  ((_ :mutator ??expr ??keys ??value)
-		   (%the-mutator stx #'??expr #'??keys #'??value))
+		    ((_ :mutator ??expr ??keys ??value)
+		     (%the-mutator stx #'??expr #'??keys #'??value))
 
-		  ((_ :make-from-fields . ??args)
-		   #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
+		    ((_ :make-from-fields . ??args)
+		     #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
 
-		  ((_ :append-unique-id (??id (... ...)))
-		   #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
+		    ((_ :append-unique-id (??id (... ...)))
+		     #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
 
-		  ((_ :accessor-function ??field-name)
-		   (identifier? #'??field-name)
-		   (case (syntax->datum #'??field-name)
-		     ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
-		     ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
-		     (else
-		      #'(THE-PARENT :accessor-function ??field-name))))
+		    ((_ :accessor-function ??field-name)
+		     (identifier? #'??field-name)
+		     (case (syntax->datum #'??field-name)
+		       ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
+		       ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
+		       (else
+			#'(THE-PARENT :accessor-function ??field-name))))
 
-		  ((_ :mutator-function ??field-name)
-		   (identifier? #'??field-name)
-		   (case (syntax->datum #'??field-name)
-		     ((MUTABLE-FIELD)
-		      #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
-		     ...
-		     ((IMMUTABLE-FIELD)
-		      (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
-		     ...
-		     (else
-		      #'(THE-PARENT :mutator-function ??field-name))))
+		    ((_ :mutator-function ??field-name)
+		     (identifier? #'??field-name)
+		     (case (syntax->datum #'??field-name)
+		       ((MUTABLE-FIELD)
+			#'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
+		       ...
+		       ((IMMUTABLE-FIELD)
+			(synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
+		       ...
+		       (else
+			#'(THE-PARENT :mutator-function ??field-name))))
 
-		  (_
-		   (syntax-help.tag-private-common-syntax-transformer
-		    stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
-		    %the-getter %the-setter
-		    (lambda ()
-		      (syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
-	      ))
+		    (_
+		     (syntax-help.tag-private-common-syntax-transformer
+		      stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
+		      %the-getter %the-setter
+		      (lambda ()
+			(syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
+		))
 
-	  DEFINITION ...
+	    DEFINITION ...
 
-	  (module () (SATISFACTION . SATISFACTION-CLAUSES) ...)
-	  ;;NOTE Just in case putting  the satisfactions into a module's
-	  ;;body turns  out not to  be right,  we can use  the following
-	  ;;definition  instead.  What's  important  is  that the  whole
-	  ;;sequence  of   forms  resulting  from  a   class  definition
-	  ;;expansion is  a sequence of definitions.   (Marco Maggi; Tue
-	  ;;Jul 16, 2013)
-	  ;;
-	  ;; (define dummy-for-satisfactions
-	  ;;   (let ()
-	  ;;     (SATISFACTION . SATISFACTION-CLAUSES) ...
-	  ;;     #f))
+	    (module () (SATISFACTION . SATISFACTION-CLAUSES) ...)
+	    ;;NOTE  Just  in  case  putting  the  satisfactions  into  a
+	    ;;module's body  turns out not to  be right, we can  use the
+	    ;;following  definition instead.   What's important  is that
+	    ;;the  whole  sequence  of  forms  resulting  from  a  class
+	    ;;definition expansion is a sequence of definitions.  (Marco
+	    ;;Maggi; Tue Jul 16, 2013)
+	    ;;
+	    ;; (define dummy-for-satisfactions
+	    ;;   (let ()
+	    ;;     (SATISFACTION . SATISFACTION-CLAUSES) ...
+	    ;;     #f))
 
-	  ))))
+	    )))))
 
 
 ;;;; mixins
@@ -948,88 +907,11 @@
 ;;
 ;;mixin clauses are added to the end of the enclosing entity definition.
 ;;
-;;Continuing  with  the  example  above  (and  simplifying  by  removing
-;;processing of the substitution maps) we can imagine that the mixin and
-;;class definitions are first expanded to:
-;;
-;;   (define-syntax* <alpha>
-;;     (syntax-rules (:insert-mixin-clauses)
-;;       ((_ :insert-mixin-clauses
-;;           (?definer ?name ?clause ...)
-;;           ())
-;;        (?definer ?name ?clause ... (fields d e f)))
-;;       ((_ :insert-mixin-clauses
-;;           (?definer ?name ?clause ...)
-;;           (?mixin0 ?mixin ...))
-;;        (?mixin0 :insert-mixin-clauses
-;;           (?definer ?name ?clause ... (fields d e f))
-;;           (?mixin ...)))
-;;       ))
-;;
-;;  (<alpha> :insert-mixin-clauses
-;;    (define-class <beta> (fields a b c))
-;;    ())
-;;
-;;from this we can understand how multiple mixin insertion is performed.
-;;
-
 (define-syntax* (define-mixin stx)
-  (syntax-case stx ()
-    ((_ ?name ?clause ...)
-     (receive (mixins-clauses other-clauses)
-	 (parser-help.filter-and-validate-mixins-clauses #'(?clause ...) synner)
-       (if (null? mixins-clauses)
-	   #`(define-mixin/after-mixins-processing ?name . #,other-clauses)
-	 (with-syntax ((((MIXIN (FROM TO) ...) MIXIN-SPEC ...) mixins-clauses))
-	   #`(MIXIN :insert-mixin-clauses
-		    (define-mixin/after-mixins-processing ?name . #,other-clauses)
-		    ((FROM TO) ...)
-		    (MIXIN-SPEC ...))))))
-    (_
-     (synner "invalid syntax in mixin definition"))))
-
-(define-syntax* (define-mixin/after-mixins-processing stx)
-  (define spec (parser-help.parse-mixin-definition stx #'<top> #'lambda/tags synner))
-  (with-syntax
-      ((MIXIN-ID	(parser-help.<parsed-spec>-name-id spec))
-       (CLAUSES		(parser-help.<mixin-spec>-clauses spec)))
-    #'(define-syntax (MIXIN-ID stx)
-	(define (synner message subform)
-	  (syntax-violation 'MIXIN-ID message stx subform))
-	(syntax-case stx (:insert-mixin-clauses)
-	  ((_ :insert-mixin-clauses
-	      (??definer ??name ??clause (... ...))
-	      ((??from ??to) (... ...))
-	      ())
-	   (receive (entity-id unused-constructor unused-predicate)
-	       (parser-help.parse-tag-name-spec #'??name synner)
-	     (with-syntax
-		 ((SPECIALISED-CLAUSES (parser-help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
-								       (??from ??to)
-								       (... ...))
-								    #'CLAUSES)))
-	       #'(??definer ??name ??clause (... ...) . SPECIALISED-CLAUSES))))
-	  ((_ :insert-mixin-clauses
-	      (??definer ??name ??clause (... ...))
-	      ((??from ??to) (... ...))
-	      ((??next-mixin (??next-from ??next-to) (... ...))
-	       ??mixin-spec
-	       (... ...)))
-	   (receive (entity-id unused-constructor unused-predicate)
-	       (parser-help.parse-tag-name-spec #'??name synner)
-	     (with-syntax
-		 ((SPECIALISED-CLAUSES (parser-help.multi-identifier-subst #`((MIXIN-ID #,entity-id)
-									      (??from ??to)
-									      (... ...))
-									   #'CLAUSES)))
-	       #'(??next-mixin :insert-mixin-clauses
-			       (??definer ??name ??clause (... ...) . SPECIALISED-CLAUSES)
-			       ((??next-from ??next-to) (... ...))
-			       (??mixin-spec (... ...))))))
-	  (_
-	   (synner "invalid syntax in mixin use" #f))
-	  ))
-    ))
+  (lambda (ctv-retriever)
+    (receive (mixin-name-id mixin-ctv)
+	(parser-help.parse-mixin-definition stx #'<top> #'lambda/tags ctv-retriever synner)
+      #`(define-syntax #,mixin-name-id (make-compile-time-value (quote #,mixin-ctv))))))
 
 
 ;;;; companion syntaxes

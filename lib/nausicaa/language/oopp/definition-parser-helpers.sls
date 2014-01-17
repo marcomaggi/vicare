@@ -33,8 +33,7 @@
     parse-tag-name-spec			filter-and-validate-mixins-clauses
 
     ;; helpers
-    case-symbol
-    single-identifier-subst		multi-identifier-subst
+    single-identifier-subst
 
     ;; special identifier builders
     tag-id->from-fields-constructor-id
@@ -65,17 +64,7 @@
     <class-spec>-record-type-id		<class-spec>-satisfaction-clauses
 
     <label-spec>?
-    <label-spec>-satisfaction-clauses
-
-    <mixin-spec>?
-    <mixin-spec>-clauses
-
-    <field-spec>?
-    <field-spec>-name-id		<field-spec>-tag-id
-    <field-spec>-accessor-id		<field-spec>-mutator-id
-
-    <concrete-field-spec>?		<virtual-field-spec>?
-    )
+    <label-spec>-satisfaction-clauses)
   (import (for (vicare) run expand)
     (for (only (rnrs)
 	       lambda define define-syntax set!)
@@ -261,6 +250,7 @@
 	 #f  #;nongenerative-uid	#f  #;maker-transformer
 	 #f  #;finaliser-expression
 	 #f  #;shadowed-identifier	'() #;satisfactions
+	 '() #;mixins
 	 ))))
   (fields (immutable name-id)
 		;The identifier representing the type name.
@@ -395,6 +385,13 @@
 	  (mutable satisfactions)
 		;Null or  list of identifiers being  syntax keywords for
 		;satisfactions.
+
+	  (mutable mixins)
+		;Null or  list of mixin inclusion  specifications.  Each
+		;spec is itself a list with format:
+		;
+		;   (?mixin-name-id . #'((?from-id ?to-id) ...))
+		;
 	  ))
 
 (define-record-type <class-spec>
@@ -417,11 +414,20 @@
 
 (define-record-type <mixin-spec>
   (nongenerative nausicaa:language:oopp:<mixin-spec>)
-  (parent <parsed-spec>)
-  (fields (immutable clauses)
-		;The  syntax  object  representing  the clauses  in  the
-		;DEFINE-MIXIN form.
-	  #| end of fields |# ))
+  (parent <parsed-spec>))
+
+
+;;;; data types: mixin clauses compile-time value
+
+(define-record-type <mixin-clauses-ctv>
+  (nongenerative nausicaa:language:oopp:<mixin-clauses-ctv>)
+  (fields name-id
+		;Identifier representing the name of the mixin.
+
+	  clauses
+		;A  fully  unwrapped   syntax  object  representing  the
+		;definition clauses of the mixin.
+	  ))
 
 
 ;;;; data types: field specification
@@ -498,6 +504,9 @@
 (define* (<parsed-spec>-satisfactions-cons! (parsed-spec <parsed-spec>?) id)
   (when config.enable-satisfactions
     ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec)))))
+
+(define* (<parsed-spec>-mixins-cons! (parsed-spec <parsed-spec>?) mixin-inclusion-spec)
+  ($<parsed-spec>-mixins-set! parsed-spec (cons mixin-inclusion-spec ($<parsed-spec>-mixins parsed-spec))))
 
 (define (generate-unique-id parsed-spec)
   (datum->syntax (<parsed-spec>-name-id parsed-spec) (gensym)))
@@ -994,35 +1003,6 @@
 	   (syntax-violation 'THE-TAG "invalid :mutator tag syntax" original-stx))))))
 
 
-;;;; clauses verification and unwrapping
-
-(define (%verify-and-partially-unwrap-clauses clauses synner)
-  ;;Non-tail  recursive  function.   Parse  the  syntax  object  CLAUSES
-  ;;validating  it as  list  of clauses;  return  a partially  unwrapped
-  ;;syntax object holding the same clauses.
-  ;;
-  ;;The structure of  the returned object is "list  of pairs" whose cars
-  ;;are identifiers  representing a clauses' keyword and  whose cdrs are
-  ;;syntax objects representing the clauses' arguments.  Input clauses:
-  ;;
-  ;;   #<syntax expr=((?id . ?args) ...)>
-  ;;
-  ;;output clauses:
-  ;;
-  ;;   ((#<syntax expr=?id> . #<syntax expr=?args>) ...)
-  ;;
-  (syntax-case clauses ()
-    (() '())
-
-    (((?keyword . ?args) . ?other-input-clauses)
-     (identifier? #'?keyword)
-     (cons (cons #'?keyword #'?args)
-	   (%verify-and-partially-unwrap-clauses #'?other-input-clauses synner)))
-
-    ((?input-clause . ?other-input-clauses)
-     (synner "invalid clause syntax" #'?input-clause))))
-
-
 ;;;; parsers entry points
 
 (module (parse-class-definition
@@ -1030,7 +1010,7 @@
 	 parse-mixin-definition
 	 parse-tag-name-spec)
 
-  (define (parse-class-definition stx top-id lambda-id synner)
+  (define (parse-class-definition stx top-id lambda-id ctv-retriever synner)
     ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
     ;;mixin clauses  insertion) and  return an  instance of  record type
     ;;"<class-spec>".
@@ -1054,11 +1034,14 @@
 	   (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
+	   (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
+				      (%process-mixin-inclusion-requests class-spec ctv-retriever synner)
+				      synner)
 	   (%finalise-clauses-parsing! class-spec synner))))
       (_
        (synner "syntax error in class definition"))))
 
-  (define (parse-label-definition stx top-id lambda-id synner)
+  (define (parse-label-definition stx top-id lambda-id ctv-retriever synner)
     ;;Parse the full  DEFINE-LABEL form in the syntax  object STX (after
     ;;mixin clauses  insertion) and  return an  instance of  record type
     ;;"<label-spec>".
@@ -1082,14 +1065,19 @@
 	   (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
+	   (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
+				      (%process-mixin-inclusion-requests label-spec ctv-retriever synner)
+				      synner)
 	   (%finalise-clauses-parsing! label-spec synner))))
       (_
        (synner "syntax error in label definition"))))
 
-  (define (parse-mixin-definition stx top-id lambda-id synner)
-    ;;Parse the full  DEFINE-MIXIN form in the syntax  object STX (after
-    ;;nested mixin clauses  insertion) and return an  instance of record
-    ;;type "<mixin-spec>".
+  (define (parse-mixin-definition stx top-id lambda-id ctv-retriever synner)
+    ;;Parse  the full  DEFINE-MIXIN form  in the  syntax object  STX and
+    ;;build  an instance  of record  type "<mixin-spec>"  for validation
+    ;;purposes.  Finally  return two values: the  mixin name identifier;
+    ;;an instance  of "<mixin-clauses-ctv>" to  be used later  for mixin
+    ;;inclusion into other definitions.
     ;;
     ;;TOP-ID must be an identifier  bound to the "<top>" tag.  LAMBDA-ID
     ;;must be an identifier bound  to the LAMBDA macro supporting tagged
@@ -1107,12 +1095,15 @@
     (syntax-case stx ()
       ((_ ?mixin-name ?clause ...)
        (identifier? #'?mixin-name)
-       (receive-and-return (mixin-spec)
-	   (make-<mixin-spec> #'?mixin-name top-id lambda-id #'(?clause ...))
-	 (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS
-				    (syntax-clauses-unwrap #'(?clause ...) synner)
-				    synner)
-	 (%finalise-clauses-parsing! mixin-spec synner)))
+       (let* ((clauses     (syntax-clauses-unwrap #'(?clause ...) synner))
+	      (mixin-spec  (make-<mixin-spec> #'?mixin-name top-id lambda-id)))
+	 (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS clauses synner)
+	 (let ((included-clauses (%process-mixin-inclusion-requests mixin-spec ctv-retriever synner)))
+	   (syntax-clauses-fold-specs %combine mixin-spec CLASS-CLAUSES-SPECS
+				      included-clauses synner)
+	   (%finalise-clauses-parsing! mixin-spec synner)
+	   (values #'?mixin-name
+		   (make-<mixin-clauses-ctv> #'?mixin-name (append clauses included-clauses))))))
       (_
        (synner "syntax error in mixin definition"))))
 
@@ -1147,6 +1138,32 @@
 
       (_
        (synner "invalid name specification in tag definition" stx))))
+
+  (define* (%process-mixin-inclusion-requests (parsed-spec <parsed-spec>?) ctv-retriever synner)
+    ;;For  each mixin  inclusion  request in  PARSED-SPEC: retrieve  the
+    ;;corresponding compile-time  value (CTV),  which is an  instance of
+    ;;"<mixin-clauses-ctv>",  and  apply  the  identifiers  map  to  the
+    ;;mixin's clauses.
+    ;;
+    ;;Return the list  of fully unwrapped clauses ready to  be parsed to
+    ;;update PARSED-SPEC.
+    ;;
+    (fold-left
+	(lambda (clauses mixin-inclusion-request)
+	  (let* ((mixin-name-id  (car mixin-inclusion-request))
+		 (mixin-id-map   (cdr mixin-inclusion-request))
+		 (mixin-ctv      (ctv-retriever mixin-name-id)))
+	    (if mixin-ctv
+		(append (multi-identifier-subst
+			 (cons (list mixin-name-id ($<parsed-spec>-name-id parsed-spec))
+			       mixin-id-map)
+			 ($<mixin-clauses-ctv>-clauses mixin-ctv))
+			clauses)
+	      (synner "unknown mixin name" mixin-name-id))))
+      '()
+      ;;Remember that  these are in  reversed order with respect  to the
+      ;;order in which they appear in the MIXINS clauses.
+      ($<parsed-spec>-mixins parsed-spec)))
 
   (define* (%finalise-clauses-parsing! (parsed-spec <parsed-spec>?) synner)
     ;;Normalise  the results  of parsing  class, label  or mixin  clauses.
@@ -1222,6 +1239,33 @@
      (else
       (%recurse ($cdr input-clauses)
 		(cons ($car input-clauses) output-clauses)))))))
+
+(define (%verify-and-partially-unwrap-clauses clauses synner)
+  ;;Non-tail  recursive  function.   Parse  the  syntax  object  CLAUSES
+  ;;validating  it as  list  of clauses;  return  a partially  unwrapped
+  ;;syntax object holding the same clauses.
+  ;;
+  ;;The structure of  the returned object is "list  of pairs" whose cars
+  ;;are identifiers  representing a clauses' keyword and  whose cdrs are
+  ;;syntax objects representing the clauses' arguments.  Input clauses:
+  ;;
+  ;;   #<syntax expr=((?id . ?args) ...)>
+  ;;
+  ;;output clauses:
+  ;;
+  ;;   ((#<syntax expr=?id> . #<syntax expr=?args>) ...)
+  ;;
+  (syntax-case clauses ()
+    (() '())
+
+    (((?keyword . ?args) . ?other-input-clauses)
+     (identifier? #'?keyword)
+     (cons (cons #'?keyword #'?args)
+	   (%verify-and-partially-unwrap-clauses #'?other-input-clauses synner)))
+
+    ((?input-clause . ?other-input-clauses)
+     (synner "invalid clause syntax" #'?input-clause))))
+
 
 
 ;;;; some at-most-once clause parsers: parent, opaque, sealed, nongenerative, shadows, maker
@@ -2023,7 +2067,7 @@
   #| end of module |# )
 
 
-;;;; satisfactions
+;;;; more clause parsers
 
 (define (clause-arguments-parser:satisfies parsed-spec args synner)
   ;;Parser function  for SATISFIES clauses;  this clause can  be present
@@ -2046,38 +2090,69 @@
 	  satisfaction-clause-stx))
     args))
 
-
-;;;; setter and getter clauses
-
-;;Parser function for the GETTER  clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (getter ?transformer-expr)
-;;
-;;and the corresponding ARGS is:
-;;
-;;   #(#( #'?transformer-expr ))
-;;
-;;where ?TRANSFORMER-EXPR is an expression evaluating to a getter syntax
-;;function.
-;;
 (define (clause-arguments-parser:getter parsed-spec args synner)
+  ;;Parser function for  the GETTER clause; this clause  must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (getter ?transformer-expr)
+  ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?transformer-expr ))
+  ;;
+  ;;where  ?TRANSFORMER-EXPR is  an  expression evaluating  to a  getter
+  ;;syntax function.
+  ;;
   ($<parsed-spec>-getter-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
 
-;;Parser function for the SETTER  clause; this clause must be present at
-;;most once.  The expected syntax for the clause is:
-;;
-;;   (setter ?transformer-expr)
-;;
-;;and the corresponding ARGS is:
-;;
-;;   #(#( #'?transformer-expr ))
-;;
-;;where ?TRANSFORMER-EXPR is an expression evaluating to a setter syntax
-;;function.
-;;
 (define (clause-arguments-parser:setter parsed-spec args synner)
+  ;;Parser function for  the SETTER clause; this clause  must be present
+  ;;at most once.  The expected syntax for the clause is:
+  ;;
+  ;;   (setter ?transformer-expr)
+  ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?transformer-expr ))
+  ;;
+  ;;where  ?TRANSFORMER-EXPR is  an  expression evaluating  to a  setter
+  ;;syntax function.
+  ;;
   ($<parsed-spec>-setter-set! parsed-spec ($vector-ref ($vector-ref args 0) 0)))
+
+(define (clause-arguments-parser:mixins parsed-spec args synner)
+  ;;Parser function  for the MIXINS  clause; this clause can  be present
+  ;;any number of times and have  any number of arguments.  The expected
+  ;;syntax for the clause is:
+  ;;
+  ;;   (mixins ?mixin-spec ...)
+  ;;
+  ;;and the corresponding ARGS is:
+  ;;
+  ;;   #(#( #'?mixin-spec ... ) ...)
+  ;;
+  ;;where ?MIXIN-SPEC has one of the forms:
+  ;;
+  ;;  ?mixin-name-id
+  ;;  (?mixin-name-id (?from-id ?to-id) ...)
+  ;;
+  (vector-for-each
+      (lambda (mixin-clause-stx)
+	(vector-for-each
+	    (lambda (mixin-spec-stx)
+	      (syntax-case mixin-spec-stx ()
+		(?mixin-name-id
+		 (identifier? #'?mixin-name-id)
+		 (<parsed-spec>-mixins-cons! parsed-spec (list #'?mixin-name-id)))
+		((?mixin-name-id (?from-id ?to-id) ...)
+		 (and (identifier? #'?mixin-name-id)
+		      (all-identifiers? #'(?from-id ...))
+		      (all-identifiers? #'(?to-id   ...)))
+		 (<parsed-spec>-mixins-cons! parsed-spec (cons #'?mixin-name-id #'((?from-id ?to-id) ...))))
+		(_
+		 (synner "invalid inclusion mixin specification" mixin-spec-stx))))
+	  mixin-clause-stx))
+    args))
 
 
 ;;;; clause specifications
@@ -2169,6 +2244,9 @@
   (define-constant CLAUSE-SPEC-SHADOWS
     (make-syntax-clause-spec #'aux.shadows		0 1 1 1 '() '()	clause-arguments-parser:shadows))
 
+  (define-constant CLAUSE-SPEC-MIXINS
+    (make-syntax-clause-spec #'aux.mixins		0 +inf.0 0 +inf.0 '() '()	clause-arguments-parser:mixins))
+
 ;;; --------------------------------------------------------------------
 
   ;;Parser functions for the clauses of the DEFINE-LABEL syntax.
@@ -2188,7 +2266,8 @@
 	   CLAUSE-SPEC-NONGENERATIVE
 	   CLAUSE-SPEC-MAKER
 	   CLAUSE-SPEC-SHADOWS
-	   CLAUSE-SPEC-SATISFIES)))
+	   CLAUSE-SPEC-SATISFIES
+	   CLAUSE-SPEC-MIXINS)))
 
   ;;Parser functions for the clauses of the DEFINE-class syntax.
   ;;
@@ -2212,7 +2291,8 @@
       CLAUSE-SPEC-SATISFIES
       CLAUSE-SPEC-SEALED
       CLAUSE-SPEC-OPAQUE
-      CLAUSE-SPEC-ABSTRACT)))
+      CLAUSE-SPEC-ABSTRACT
+      CLAUSE-SPEC-MIXINS)))
 
   ;;Parser functions for the clauses of the DEFINE-MIXIN syntax.
   ;;
@@ -2238,7 +2318,8 @@
       CLAUSE-SPEC-SEALED
       CLAUSE-SPEC-SHADOWS
       CLAUSE-SPEC-SINGLE-METHOD-SYNTAX
-      CLAUSE-SPEC-SUPER-PROTOCOL)))
+      CLAUSE-SPEC-SUPER-PROTOCOL
+      CLAUSE-SPEC-MIXINS)))
 
   #| end of module |# )
 
