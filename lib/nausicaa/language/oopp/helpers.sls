@@ -1940,9 +1940,7 @@
     (#(#(?parent-tag-id))
      (if (identifier? #'?parent-tag-id)
 	 (<parsed-spec>-parent-id-set! parsed-spec #'?parent-tag-id)
-       (synner "invalid tag parent type specification" #'?parent-tag-id)))
-    (_
-     (synner "invalid PARENT clause syntax"))))
+       (synner "invalid tag parent type specification" #'?parent-tag-id)))))
 
 (define (clause-arguments-parser:sealed parsed-spec args synner)
   ;;Parser function for  the SEALED clause; this clause  must be present
@@ -1956,9 +1954,7 @@
      (let ((sealed? (syntax->datum #'?sealed)))
        (if (boolean? sealed?)
 	   (<parsed-spec>-sealed?-set! parsed-spec sealed?)
-	 (synner "invalid tag type sealed specification" #'?sealed))))
-    (_
-     (synner "invalid SEALED clause syntax"))))
+	 (synner "invalid tag type sealed specification" #'?sealed))))))
 
 (define (clause-arguments-parser:opaque parsed-spec args synner)
   ;;Parser function for  the OPAQUE clause; this clause  must be present
@@ -1972,9 +1968,7 @@
      (let ((opaque? (syntax->datum #'?opaque)))
        (if (boolean? opaque?)
 	   (<parsed-spec>-opaque?-set! parsed-spec opaque?)
-	 (synner "invalid tag type opaque specification" #'?opaque))))
-    (_
-     (synner "invalid OPAQUE clause syntax"))))
+	 (synner "invalid tag type opaque specification" #'?opaque))))))
 
 (define (clause-arguments-parser:shadows parsed-spec args synner)
   ;;Parser function for the SHADOWS  clause; this clause must be present
@@ -1992,9 +1986,7 @@
     (#(#(?shadowed-id))
      (if (identifier? #'?shadowed-id)
 	 (<parsed-spec>-shadowed-identifier-set! parsed-spec #'?shadowed-id)
-       (synner "invalid tag type shadowed identifier specification" #'?shadowed-id)))
-    (_
-     (synner "invalid SHADOWS clause syntax"))))
+       (synner "invalid tag type shadowed identifier specification" #'?shadowed-id)))))
 
 (define (clause-arguments-parser:maker parsed-spec args synner)
   ;;Parser function for the MAKER clause; this clause must be present at
@@ -2029,9 +2021,7 @@
   ;;
   (syntax-case args ()
     (#(#(?transformer-expr))
-     (<parsed-spec>-maker-transformer-set! parsed-spec #'?transformer-expr))
-    (_
-     (synner "invalid MAKER clause syntax"))))
+     (<parsed-spec>-maker-transformer-set! parsed-spec #'?transformer-expr))))
 
 (define (clause-arguments-parser:finaliser parsed-spec args synner)
   ;;Parser  function  for the  FINALISER  clause;  this clause  must  be
@@ -2044,9 +2034,7 @@
   ;;
   (syntax-case args ()
     (#(#(?lambda-expr))
-     (<parsed-spec>-finaliser-expression-set! parsed-spec #'?lambda-expr))
-    (_
-     (synner "invalid FINALISER clause syntax"))))
+     (<parsed-spec>-finaliser-expression-set! parsed-spec #'?lambda-expr))))
 
 (define (clause-arguments-parser:nongenerative parsed-spec args synner)
   ;;Parser function  for the NONGENERATIVE  clause; this clause  must be
@@ -2067,10 +2055,7 @@
        (synner "expected identifier as NONGENERATIVE clause argument" #'?unique-id)))
 
     (#(#())
-     (<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec)))
-
-    (_
-     (synner "invalid NONGENERATIVE clause syntax"))))
+     (<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec)))))
 
 
 ;;;; some at-most-once clause parsers: protocols, abstract, predicate
@@ -2083,9 +2068,7 @@
   ;;
   (syntax-case args ()
     (#(#(?protocol-expr))
-     (<parsed-spec>-common-protocol-set! parsed-spec #'?protocol-expr))
-    (_
-     (synner "invalid PROTOCOL clause syntax"))))
+     (<parsed-spec>-common-protocol-set! parsed-spec #'?protocol-expr))))
 
 (define (clause-arguments-parser:public-protocol parsed-spec args synner)
   ;;Parser function for the PUBLIC-PROTOCOL  clause; this clause must be
@@ -2095,9 +2078,7 @@
   ;;
   (syntax-case args ()
     (#(#(?protocol-expr))
-     (<parsed-spec>-public-protocol-set! parsed-spec #'?protocol-expr))
-    (_
-     (synner "invalid PUBLIC-PROTOCOL clause syntax"))))
+     (<parsed-spec>-public-protocol-set! parsed-spec #'?protocol-expr))))
 
 (define (clause-arguments-parser:super-protocol parsed-spec args synner)
   ;;Parser function for  the SUPER-PROTOCOL clause; this  clause must be
@@ -2107,9 +2088,7 @@
   ;;
   (syntax-case args ()
     (#(#(?protocol-expr))
-     (<parsed-spec>-super-protocol-set! parsed-spec #'?protocol-expr))
-    (_
-     (synner "invalid SUPER-PROTOCOL clause syntax"))))
+     (<parsed-spec>-super-protocol-set! parsed-spec #'?protocol-expr))))
 
 (define (clause-arguments-parser:abstract parsed-spec args synner)
   ;;Parser function for the ABSTRACT clause; this clause must be present
@@ -2120,9 +2099,7 @@
   ;;
   (syntax-case args ()
     (#(#())
-     (<parsed-spec>-abstract?-set! parsed-spec #t))
-    (_
-     (synner "invalid ABSTRACT clause syntax"))))
+     (<parsed-spec>-abstract?-set! parsed-spec #t))))
 
 (define (clause-arguments-parser:predicate parsed-spec args synner)
   ;;Parser  function  for the  PREDICATE  clause;  this clause  must  be
@@ -2175,9 +2152,7 @@
 	 (<parsed-spec>-private-predicate-id-set! parsed-spec #'?predicate)
        (let ((pred-id (tag-id->private-predicate-id (<parsed-spec>-name-id parsed-spec))))
 	 (<parsed-spec>-private-predicate-id-set! parsed-spec pred-id)
-	 (<parsed-spec>-definitions-cons!         parsed-spec (list #'define pred-id #'?predicate)))))
-    (_
-     (synner "invalid PREDICATE clause syntax"))))
+	 (<parsed-spec>-definitions-cons!         parsed-spec (list #'define pred-id #'?predicate)))))))
 
 
 ;;;; single method function clauses
