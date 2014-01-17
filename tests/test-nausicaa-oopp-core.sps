@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -306,7 +306,7 @@
 	(%eval '(define-class <alpha>
 		  (parent 123)
 		  (fields a b c))))
-    => '(parent 123))
+    => 123)
 
   (check 	;multiple PARENT is bad
       (catch-syntax-violation #f
@@ -315,7 +315,7 @@
 		    (parent ciao)
 		    (parent hello))
 		  #f)))
-    => '(parent hello))
+    => '((parent ciao) (parent hello)))
 
   #t)
 
@@ -377,7 +377,7 @@
 	(%eval '(define-class <alpha>
 		  (protocol ciao)
 		  (protocol hello))))
-    => '(protocol hello))
+    => '((protocol ciao) (protocol hello)))
 
   (check   ;PROTOCOL expression argument does not evaluate to a function
       (catch-assertion #f
@@ -431,7 +431,7 @@
 	(%eval '(define-class <alpha>
 		  (public-protocol ciao)
 		  (public-protocol hello))))
-    => '(public-protocol hello))
+    => '((public-protocol ciao) (public-protocol hello)))
 
   #t)
 
@@ -477,7 +477,7 @@
 	(%eval '(define-class <alpha>
 		  (super-protocol ciao)
 		  (super-protocol hello))))
-    => '(super-protocol hello))
+    => '((super-protocol ciao) (super-protocol hello)))
 
   #t)
 
@@ -526,14 +526,14 @@
 	(%eval '(define-class <alpha>
 		  (sealed 123)
 		  (fields a b c))))
-    => '(sealed 123))
+    => 123)
 
   (check	;multiple SEALED is bad
       (catch-syntax-violation #f
 	(%eval '(define-class <alpha>
 		  (sealed #t)
 		  (sealed #f))))
-    => '(sealed #f))
+    => '((sealed #t) (sealed #f)))
 
   #t)
 
@@ -548,14 +548,14 @@
 	(%eval '(define-class <alpha>
 		  (opaque 123)
 		  (fields a b c))))
-    => '(opaque 123))
+    => 123)
 
   (check	;multiple OPAQUE is bad
       (catch-syntax-violation #f
 	(%eval '(define-class <alpha>
 		  (opaque #t)
 		  (opaque #f))))
-    => '(opaque #f))
+    => '((opaque #t) (opaque #f)))
 
   #t)
 
@@ -570,21 +570,21 @@
 	(%eval '(define-class <alpha>
 		  (nongenerative 123)
 		  (fields a b c))))
-    => '(nongenerative 123))
+    => 123)
 
   (check	;multiple non-empty NONGENERATIVE is bad
       (catch-syntax-violation #f
 	(%eval '(define-class <alpha>
 		  (nongenerative ciao)
 		  (nongenerative hello))))
-    => '(nongenerative hello))
+    => '((nongenerative ciao) (nongenerative hello)))
 
   (check	;multiple empty NONGENERATIVE is bad
       (catch-syntax-violation #f
 	(%eval '(define-class <alpha>
 		  (nongenerative)
 		  (nongenerative))))
-    => '(nongenerative))
+    => '((nongenerative) (nongenerative)))
 
   #t)
 
@@ -1420,8 +1420,8 @@
 
     (define-class <fraction>
       (fields (mutable number))
-      (methods (numerator)
-	       (denominator)))
+      (methods numerator
+	       denominator))
 
     (define (<fraction>-numerator o)
       (numerator (<fraction>-number o)))
@@ -1493,7 +1493,7 @@
     (define-class <fraction>
       (fields (mutable number))
       (virtual-fields (mutable numerator))
-      (methods (denominator)
+      (methods denominator
 	       product
 	       (the-list the-list-function)))
 
