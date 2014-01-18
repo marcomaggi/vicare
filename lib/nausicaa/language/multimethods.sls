@@ -37,7 +37,7 @@
 ;;;          nausicaa:builtin:<top>))   ;third argument
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 1996 Dorai Sitaram
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -76,9 +76,6 @@
     ;;See the source file for the customisable interface to types.
     (prefix (nausicaa language multimethods types) type.)
     (prefix (nausicaa language multimethods methods-table) mt.)
-    (for (prefix (nausicaa language multimethods helpers-for-expand)
-		 help.)
-      expand)
     (prefix (only (nausicaa language auxiliary-syntaxes)
 		  argument-type-inspector
 		  reverse-before-methods?
@@ -86,7 +83,8 @@
 		  :primary :before :after :around
 		  <-)
 	    aux.)
-    (nausicaa language multimethods auxiliary-syntaxes))
+    (nausicaa language multimethods auxiliary-syntaxes)
+    (vicare language-extensions case-identifiers))
 
 
 ;;;; next method implementation
@@ -734,7 +732,7 @@
   (syntax-case stx ()
     ((_ ?generic-function ?keyword (?type-id ...) ?closure)
      (all-identifiers? #'(?generic-function ?keyword ?type-id ...))
-     #`(?generic-function #,(help.case-identifier #'?keyword
+     #`(?generic-function #,(case-identifiers #'?keyword
 			      ((aux.:primary)	#':primary-method-add)
 			      ((aux.:before)	#':before-method-add)
 			      ((aux.:after)	#':after-method-add)
@@ -758,6 +756,6 @@
 
 ;;; end of file
 ;;Local Variables:
-;; coding: utf-8
-;;eval: (put 'help.case-identifier 'scheme-indent-function 1)
+;;coding: utf-8
+;;eval: (put 'case-identifiers 'scheme-indent-function 1)
 ;;End:

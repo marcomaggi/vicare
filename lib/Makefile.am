@@ -319,7 +319,6 @@ nobase_dist_libvicare_DATA	+= \
 	\
 	nausicaa/language/multimethods.sls				\
 	nausicaa/language/multimethods/auxiliary-syntaxes.sls		\
-	nausicaa/language/multimethods/helpers-for-expand.sls		\
 	nausicaa/language/multimethods/methods-table.sls		\
 	nausicaa/language/multimethods/types.sls			\
 	\
