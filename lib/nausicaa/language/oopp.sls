@@ -325,8 +325,7 @@
 	 (THE-PUBLIC-CONSTRUCTOR	(parser-help.<parsed-spec>-public-constructor-id spec))
 	 (THE-PUBLIC-PREDICATE		(parser-help.<parsed-spec>-public-predicate-id   spec))
 	 (THE-PRIVATE-PREDICATE		(parser-help.<parsed-spec>-private-predicate-id  spec))
-
-	 (THE-LIST-OF-UIDS		(parser-help.tag-id->list-of-uids-id tag-id))
+	 (THE-LIST-OF-UIDS		(parser-help.<parsed-spec>-list-of-uids-id       spec))
 	 (NONGENERATIVE-UID		(parser-help.<parsed-spec>-nongenerative-uid     spec))
 
 	 (((IMMUTABLE-FIELD IMMUTABLE-ACCESSOR IMMUTABLE-TAG) ...)
@@ -570,10 +569,10 @@
 	 (THE-RECORD-TYPE			(parser-help.<class-spec>-record-type-id spec))
 	 (THE-PREDICATE				(parser-help.<parsed-spec>-public-predicate-id spec))
 	 (THE-PARENT				(parser-help.<parsed-spec>-parent-id spec))
-	 (THE-DEFAULT-PROTOCOL			(parser-help.tag-id->default-protocol-id tag-id))
-	 (THE-FROM-FIELDS-CONSTRUCTOR		(parser-help.tag-id->from-fields-constructor-id tag-id))
+	 (THE-DEFAULT-PROTOCOL			(parser-help.<class-spec>-default-protocol-id spec))
+	 (THE-FROM-FIELDS-CONSTRUCTOR		(parser-help.<class-spec>-from-fields-constructor-id spec))
 	 (THE-PUBLIC-CONSTRUCTOR		(parser-help.<parsed-spec>-public-constructor-id spec))
-	 (THE-LIST-OF-UIDS			(parser-help.tag-id->list-of-uids-id tag-id))
+	 (THE-LIST-OF-UIDS			(parser-help.<parsed-spec>-list-of-uids-id spec))
 	 (NONGENERATIVE-UID			(parser-help.<parsed-spec>-nongenerative-uid spec))
 	 (SEALED?				(parser-help.<parsed-spec>-sealed? spec))
 	 (OPAQUE?				(parser-help.<parsed-spec>-opaque? spec))

@@ -5,8 +5,9 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This  library implements  helper  functions and  macros for  the
-;;;	expand phase of the library (nausicaa language oopp).
+;;;	This library implements parser functions to be used when parsing
+;;;	DEFINE-CLASS, DEFINE-LABEL and DEFINE-MIXIN  syntaxes.  It is to
+;;;	be imported for the expand phase by "(nausicaa language oopp)".
 ;;;
 ;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -30,18 +31,11 @@
   (export
     parse-label-definition		parse-class-definition
     parse-mixin-definition
-    parse-tag-name-spec			filter-and-validate-mixins-clauses
 
     ;; helpers
     single-identifier-subst
 
-    ;; special identifier builders
-    tag-id->from-fields-constructor-id
-    tag-id->default-protocol-id
-    tag-id->list-of-uids-id
-
     ;; data types
-
     <parsed-spec>?
     <parsed-spec>-name-id		<parsed-spec>-member-identifiers
     <parsed-spec>-definitions		<parsed-spec>-public-constructor-id
@@ -55,13 +49,16 @@
     <parsed-spec>-shadowed-identifier
     <parsed-spec>-nongenerative-uid	<parsed-spec>-mutable-fields-data
     <parsed-spec>-immutable-fields-data	<parsed-spec>-concrete-fields-data
-    <parsed-spec>-concrete-fields-names	<parsed-spec>-common-protocol
-    <parsed-spec>-public-protocol	<parsed-spec>-super-protocol
+    <parsed-spec>-concrete-fields-names
+    <parsed-spec>-common-protocol	<parsed-spec>-public-protocol
+    <parsed-spec>-super-protocol
     <parsed-spec>-satisfactions
     <parsed-spec>-accessor-transformer	<parsed-spec>-mutator-transformer
+    <parsed-spec>-list-of-uids-id
 
     <class-spec>?
     <class-spec>-record-type-id		<class-spec>-satisfaction-clauses
+    <class-spec>-default-protocol-id	<class-spec>-from-fields-constructor-id
 
     <label-spec>?
     <label-spec>-satisfaction-clauses)
@@ -519,6 +516,17 @@
 
 (define (generate-unique-id parsed-spec)
   (datum->syntax (<parsed-spec>-name-id parsed-spec) (gensym)))
+
+;;; --------------------------------------------------------------------
+
+(define* (<parsed-spec>-list-of-uids-id (parsed-spec <parsed-spec>?))
+  (tag-id->list-of-uids-id ($<parsed-spec>-name-id parsed-spec)))
+
+(define* (<class-spec>-default-protocol-id (class-spec <class-spec>?))
+  (tag-id->default-protocol-id ($<parsed-spec>-name-id class-spec)))
+
+(define* (<class-spec>-from-fields-constructor-id (class-spec <class-spec>?))
+  (tag-id->from-fields-constructor-id ($<parsed-spec>-name-id class-spec)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1016,8 +1024,7 @@
 
 (module (parse-class-definition
 	 parse-label-definition
-	 parse-mixin-definition
-	 parse-tag-name-spec)
+	 parse-mixin-definition)
 
   (define (parse-class-definition stx top-id lambda-id ctv-retriever synner)
     ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
@@ -1035,7 +1042,7 @@
     (syntax-case stx ()
       ((_ ?tag-spec ?clause ...)
        (receive (name-id public-constructor-id predicate-id)
-	   (parse-tag-name-spec #'?tag-spec synner)
+	   (%parse-tag-name-spec #'?tag-spec synner)
 	 (receive-and-return (class-spec)
 	     (make-<class-spec> name-id top-id lambda-id)
 	   ($<parsed-spec>-public-constructor-id-set! class-spec public-constructor-id)
@@ -1066,7 +1073,7 @@
     (syntax-case stx ()
       ((_ ?tag-spec ?clause ...)
        (receive (name-id public-constructor-id predicate-id)
-	   (parse-tag-name-spec #'?tag-spec synner)
+	   (%parse-tag-name-spec #'?tag-spec synner)
 	 (receive-and-return (label-spec)
 	     (make-<label-spec> name-id top-id lambda-id)
 	   ($<parsed-spec>-public-constructor-id-set! label-spec public-constructor-id)
@@ -1118,7 +1125,7 @@
       (_
        (synner "syntax error in mixin definition"))))
 
-  (define (parse-tag-name-spec stx synner)
+  (define (%parse-tag-name-spec stx synner)
     ;;Parse the first component of a class or label definition:
     ;;
     ;;  (define-class ?tag-name-spec . ?clauses)
@@ -1213,87 +1220,6 @@
       ($<parsed-spec>-nongenerative-uid-set! parsed-spec (generate-unique-id parsed-spec))))
 
   #| end of module |# )
-
-
-;;;; parsers entry points: mixins clauses filtering
-
-(define filter-and-validate-mixins-clauses
-  (case-lambda
-   ((input-clauses synner)
-    (filter-and-validate-mixins-clauses (%verify-and-partially-unwrap-clauses input-clauses synner) synner '() '()))
-   ((input-clauses synner collected-mixins output-clauses)
-    ;;Tail-recursive function.   Parse clauses  with keyword  MIXINS and
-    ;;prepend  the  mixin  identifiers to  COLLECTED-MIXINS.   Return  2
-    ;;values: a  list of identifiers  being the mixin identifiers  to be
-    ;;inserted in the given order, the list of other clauses.
-    ;;
-    (define-syntax %recurse
-      (syntax-rules ()
-	((_ ?input-clauses ?output-clauses)
-	 (filter-and-validate-mixins-clauses ?input-clauses synner collected-mixins ?output-clauses))
-	((_ ?collected-mixins ?input-clauses ?output-clauses)
-	 (filter-and-validate-mixins-clauses ?input-clauses synner ?collected-mixins ?output-clauses))))
-    (cond
-     ;;No more input clauses.
-     ((null? input-clauses)
-      (values (reverse collected-mixins)
-	      (reverse output-clauses)))
-     ;;Parse matching clause.
-     ((free-identifier=? #'aux.mixins (caar input-clauses))
-      (syntax-case ($cdar input-clauses) ()
-	(()
-	 (%recurse ($cdr input-clauses) output-clauses))
-	((?mixin ...)
-	 (let loop ((collected-mixins	collected-mixins)
-		    (new-mixins		#'(?mixin ...)))
-	   (syntax-case new-mixins ()
-	     (()
-	      (%recurse collected-mixins ($cdr input-clauses) output-clauses))
-	     ;;No substitutions.
-	     ((?mixin . ?other-mixins)
-	      (identifier? #'?mixin)
-	      (loop (cons #'(?mixin) collected-mixins) #'?other-mixins))
-	     ;;With map of substitutions.
-	     (((?mixin (?from ?to) ...) . ?other-mixins)
-	      (and (identifier? #'?mixin)
-		   (all-identifiers? #'(?from ... ?to ...)))
-	      (loop (cons #'(?mixin (?from ?to) ...) collected-mixins) #'?other-mixins))
-	     (_
-	      (synner "expected identifier as mixin" ($car input-clauses))))))
-	(_
-	 (synner "invalid mixins specification" ($car input-clauses)))))
-
-     ;;Parse non-matching clause.
-     (else
-      (%recurse ($cdr input-clauses)
-		(cons ($car input-clauses) output-clauses)))))))
-
-(define (%verify-and-partially-unwrap-clauses clauses synner)
-  ;;Non-tail  recursive  function.   Parse  the  syntax  object  CLAUSES
-  ;;validating  it as  list  of clauses;  return  a partially  unwrapped
-  ;;syntax object holding the same clauses.
-  ;;
-  ;;The structure of  the returned object is "list  of pairs" whose cars
-  ;;are identifiers  representing a clauses' keyword and  whose cdrs are
-  ;;syntax objects representing the clauses' arguments.  Input clauses:
-  ;;
-  ;;   #<syntax expr=((?id . ?args) ...)>
-  ;;
-  ;;output clauses:
-  ;;
-  ;;   ((#<syntax expr=?id> . #<syntax expr=?args>) ...)
-  ;;
-  (syntax-case clauses ()
-    (() '())
-
-    (((?keyword . ?args) . ?other-input-clauses)
-     (identifier? #'?keyword)
-     (cons (cons #'?keyword #'?args)
-	   (%verify-and-partially-unwrap-clauses #'?other-input-clauses synner)))
-
-    ((?input-clause . ?other-input-clauses)
-     (synner "invalid clause syntax" #'?input-clause))))
-
 
 
 ;;;; some at-most-once clause parsers: parent, opaque, sealed, nongenerative, shadows, maker
