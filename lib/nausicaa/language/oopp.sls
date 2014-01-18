@@ -344,10 +344,10 @@
 	  (parser-help.<parsed-spec>-definitions spec))
 
 	 (ACCESSOR-TRANSFORMER
-	  (parser-help.<parsed-spec>-accessor-transformer spec))
+	  (syntax-help.make-accessor-transformer spec))
 
 	 (MUTATOR-TRANSFORMER
-	  (parser-help.<parsed-spec>-mutator-transformer  spec))
+	  (syntax-help.make-mutator-transformer  spec))
 
 	 (MAKER-TRANSFORMER
 	  (parser-help.<parsed-spec>-maker-transformer spec))
@@ -594,10 +594,10 @@
 	  (parser-help.<parsed-spec>-definitions spec))
 
 	 (ACCESSOR-TRANSFORMER
-	  (parser-help.<parsed-spec>-accessor-transformer spec))
+	  (syntax-help.make-accessor-transformer spec))
 
 	 (MUTATOR-TRANSFORMER
-	  (parser-help.<parsed-spec>-mutator-transformer  spec))
+	  (syntax-help.make-mutator-transformer  spec))
 
 	 (MAKER-TRANSFORMER
 	  (parser-help.<parsed-spec>-maker-transformer spec))
