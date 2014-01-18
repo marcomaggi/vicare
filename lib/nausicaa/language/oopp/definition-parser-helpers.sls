@@ -669,7 +669,7 @@
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
 	   (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
-				      (%process-mixin-inclusion-requests class-spec ctv-retriever synner)
+				      (%process-mixin-inclusion-requests! class-spec ctv-retriever synner)
 				      synner)
 	   (%finalise-clauses-parsing! class-spec synner))))
       (_
@@ -700,7 +700,7 @@
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
 	   (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
-				      (%process-mixin-inclusion-requests label-spec ctv-retriever synner)
+				      (%process-mixin-inclusion-requests! label-spec ctv-retriever synner)
 				      synner)
 	   (%finalise-clauses-parsing! label-spec synner))))
       (_
@@ -732,7 +732,7 @@
        (let* ((clauses     (syntax-clauses-unwrap #'(?clause ...) synner))
 	      (mixin-spec  (make-<mixin-spec> #'?mixin-name top-id lambda-id)))
 	 (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS clauses synner)
-	 (let ((included-clauses (%process-mixin-inclusion-requests mixin-spec ctv-retriever synner)))
+	 (let ((included-clauses (%process-mixin-inclusion-requests! mixin-spec ctv-retriever synner)))
 	   (syntax-clauses-fold-specs %combine mixin-spec CLASS-CLAUSES-SPECS
 				      included-clauses synner)
 	   (%finalise-clauses-parsing! mixin-spec synner)
@@ -775,7 +775,7 @@
       (_
        (synner "invalid name specification in tag definition" stx))))
 
-  (define* (%process-mixin-inclusion-requests (parsed-spec <parsed-spec>?) ctv-retriever synner)
+  (define* (%process-mixin-inclusion-requests! (parsed-spec <parsed-spec>?) ctv-retriever synner)
     ;;For  each mixin  inclusion  request in  PARSED-SPEC: retrieve  the
     ;;corresponding compile-time  value (CTV),  which is an  instance of
     ;;"<mixin-clauses-ctv>",  and  apply  the  identifiers  map  to  the
