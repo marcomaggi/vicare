@@ -32,9 +32,6 @@
     parse-label-definition		parse-class-definition
     parse-mixin-definition
 
-    ;; helpers
-    single-identifier-subst
-
     ;; data types
     <parsed-spec>?
     <parsed-spec>-name-id		<parsed-spec>-member-identifiers
@@ -67,7 +64,8 @@
 	       lambda define define-syntax set!)
       (meta -1))
     (vicare unsafe operations)
-    (vicare language-extensions identifier-substitutions)
+    (only (vicare language-extensions identifier-substitutions)
+	  multi-identifier-subst)
     (prefix (only (nausicaa language oopp configuration)
 		  enable-satisfactions)
 	    config.)
@@ -377,7 +375,9 @@
 		;False  or  identifier.   It  is  used  for  labels  and
 		;classes.  It  is the identifier  to insert in  place of
 		;the     label     tag     identifier     when     using
-		;WITH-LABEL-SHADOWING.
+		;WITH-LABEL-SHADOWING.   This  field  is false  when  no
+		;shadowed   identifier  is   specified   in  the   label
+		;definition.
 
 	  (mutable satisfactions)
 		;Null or  list of identifiers being  syntax keywords for

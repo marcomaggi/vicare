@@ -523,12 +523,13 @@
 		    ;;
 		    ;;Notice that we really substitute ??SRC-ID from the
 		    ;;input form rather than THE-TAG.
+		    ;;
+		    ;;SHADOWED-IDENTIFIER has #f as datum if no shadowed
+		    ;;identifier was specified in the label definition.
+		    ;;
 		    ((??src-id :process-shadowed-identifier ??body0 ??body (... ...))
-		     (let ((dst-id	#'SHADOWED-IDENTIFIER)
-			   (body		#'(begin ??body0 ??body (... ...))))
-		       (if (syntax->datum dst-id)
-			   (parser-help.single-identifier-subst #'??src-id dst-id body)
-			 body)))
+		     (syntax-help.process-shadowed-identifier #'??src-id #'SHADOWED-IDENTIFIER
+							      #'(begin ??body0 ??body (... ...))))
 
 		    (_
 		     (syntax-help.tag-private-common-syntax-transformer

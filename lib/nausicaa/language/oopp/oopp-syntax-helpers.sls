@@ -33,7 +33,7 @@
 
     make-tagged-variable-transformer	oopp-syntax-transformer
     tag-public-syntax-transformer	tag-private-common-syntax-transformer
-    process-method-application)
+    process-method-application		process-shadowed-identifier)
   (import (vicare)
     (prefix (only (nausicaa language oopp configuration)
 		  validate-tagged-values?)
@@ -46,7 +46,9 @@
       (meta -1))
     (for (only (nausicaa language oopp conditions)
 	       tagged-binding-violation)
-      (meta -1)))
+      (meta -1))
+    (only (vicare language-extensions identifier-substitutions)
+	  single-identifier-subst))
 
 
 (define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids
@@ -423,6 +425,19 @@
   (if (syntax->datum rv-tag-id)
       #`(#,rv-tag-id #:nested-oopp-syntax #,application-stx)
     application-stx))
+
+
+(define (process-shadowed-identifier tag-id shadowed-id body-stx)
+  ;;Replace all the occurrences of TAG-ID in the BODY-STX forms with the
+  ;;identifier selected by the SHADOWS clause: SHADOWED-ID.  This allows
+  ;;a label tag to be used to handle some other entity type.
+  ;;
+  ;;SHADOWED-ID has #f as datum  if no shadowed identifier was specified
+  ;;in the label definition.
+  ;;
+  (if (syntax->datum shadowed-id)
+      (single-identifier-subst tag-id shadowed-id body-stx)
+    body-stx))
 
 
 (case-define parse-with-tags-bindings
