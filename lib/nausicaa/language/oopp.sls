@@ -447,7 +447,7 @@
 		    (%the-setter	(lambda (stx)
 					  (SETTER-TRANSFORMER stx #'THE-TAG)))
 		    (%the-accessor	ACCESSOR-TRANSFORMER)
-		    (%the-mutator		MUTATOR-TRANSFORMER)
+		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(lambda (stx)
@@ -500,7 +500,7 @@
 		     (identifier? #'??field-name)
 		     (case (syntax->datum #'??field-name)
 		       ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
-		       ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
+		       ((MUTABLE-FIELD)		#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
 		       (else
 			#'(THE-PARENT :mutator-function ??field-name))))
 
@@ -696,7 +696,8 @@
 
 	    (define (THE-FROM-FIELDS-CONSTRUCTOR . args)
 	      (apply the-automatic-constructor
-		     (THE-TAG :list-of-unique-ids) ;this is the value of the "<top>" field
+		     ;;This is the value of the hidden field in "<top>".
+		     (THE-TAG :list-of-unique-ids)
 		     args))
 
 	    (define THE-DEFAULT-PROTOCOL
@@ -743,7 +744,8 @@
 		(lambda args
 		  (receive-and-return (instance)
 		      (apply constructor args)
-		    (<top>-unique-identifiers-set! instance (THE-TAG :list-of-unique-ids))))))
+		    ($record-type-field-set! <top>-record-type unique-identifiers
+					     instance (THE-TAG :list-of-unique-ids))))))
 
 	    (define the-super-constructor-descriptor THE-SUPER-CONSTRUCTOR-EXPR)
 	    ;;This  is commented  out  because unused  at present.   The
