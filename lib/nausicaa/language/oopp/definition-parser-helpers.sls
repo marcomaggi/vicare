@@ -810,7 +810,7 @@
 			    ($<mixin-clauses-ctv>-clauses mixin-ctv))
 			   clauses))
 		  (mixin-ctv
-		   (synner "identifier is not a mixin name" mixin-name-id))
+		   (synner "identifier is not a mixin name" (list mixin-name-id mixin-ctv)))
 		  (else
 		   (synner "unknown mixin name" mixin-name-id)))))
       '()
