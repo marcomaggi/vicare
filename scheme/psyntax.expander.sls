@@ -768,14 +768,17 @@
 	 (begin
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-name))
-       (let ((id		(gensym)) ;library UID
+       (let ((uid		(gensym)) ;library unique-symbol identifier
 
-	     ;;From list  of LIBRARY records  to list of  lists: library
-	     ;;UID, list of name symbols, list of version numbers.
-	     (import-spec*	(map library-spec import-lib*))
-	     (visit-spec*	(map library-spec visit-lib*))
-	     (invoke-spec*	(map library-spec invoke-lib*))
-	     (guard-spec*	(map library-spec guard-lib*))
+	     ;;From  list   of  LIBRARY  records  to   list  of  library
+	     ;;descriptors; each descriptor is a list:
+	     ;;
+	     ;;   (?library-uid ?library-name-ids ?library-version)
+	     ;;
+	     (import-desc*	(map library-descriptor import-lib*))
+	     (visit-desc*	(map library-descriptor visit-lib*))
+	     (invoke-desc*	(map library-descriptor invoke-lib*))
+	     (guard-desc*	(map library-descriptor guard-lib*))
 
 	     ;;Thunk to eval to visit the library.
 	     (visit-proc	(lambda ()
@@ -784,19 +787,19 @@
 	     (invoke-proc	(lambda ()
 				  (eval-core (expanded->core invoke-code))))
 	     (visit-code	(%build-visit-code macro*)))
-	 (install-library id libname.ids libname.version
-			  import-spec* visit-spec* invoke-spec*
+	 (install-library uid libname.ids libname.version
+			  import-desc* visit-desc* invoke-desc*
 			  export-subst export-env
 			  visit-proc invoke-proc
 			  visit-code invoke-code
-			  guard-code guard-spec*
+			  guard-code guard-desc*
 			  #t #;visible?
 			  filename)
-	 (values id libname.ids libname.version
-		 import-spec* visit-spec* invoke-spec*
+	 (values uid libname.ids libname.version
+		 import-desc* visit-desc* invoke-desc*
 		 invoke-code visit-code
 		 export-subst export-env
-		 guard-code guard-spec*)))))
+		 guard-code guard-desc*)))))
 
   (define (%build-visit-code macro*)
     ;;Return a sexp  representing code that initialises  the bindings of

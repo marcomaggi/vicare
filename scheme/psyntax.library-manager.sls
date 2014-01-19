@@ -26,8 +26,8 @@
   (export
     ;; library inspection
     library?
-    library-spec		library-name
-    library-version		library-subst
+    library-name		library-version
+    library-descriptor		library-subst
     imported-label->syntactic-binding
 
     ;; library installation
@@ -597,18 +597,18 @@
 		 (list ($library-id lib)
 		       ($library-name lib)
 		       ($library-version lib)
-		       (map library-desc ($library-imp* lib))
-		       (map library-desc ($library-vis* lib))
-		       (map library-desc ($library-inv* lib))
+		       (map %library-symbols ($library-imp* lib))
+		       (map %library-symbols ($library-vis* lib))
+		       (map %library-symbols ($library-inv* lib))
 		       ($library-subst lib)
 		       ($library-env lib)
 		       (compile ($library-visit-code lib))
 		       (compile ($library-invoke-code lib))
 		       (compile ($library-guard-code lib))
-		       (map library-desc ($library-guard-req* lib))
+		       (map %library-symbols ($library-guard-req* lib))
 		       ($library-visible? lib)))))
 
-  (define (library-desc lib)
+  (define (%library-symbols lib)
     (list ($library-id   lib)
 	  ($library-name lib)))
 
@@ -808,7 +808,7 @@
       (visit)
       (set-library-visit-state! lib #t))))
 
-(define* (library-spec lib)
+(define* (library-descriptor lib)
   ;;Given a library record return a list holding: the unique library id,
   ;;the  list of  symbols from  the library  name, null  or the  list of
   ;;version numbers from the library name.
