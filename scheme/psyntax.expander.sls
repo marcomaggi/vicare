@@ -1227,26 +1227,26 @@
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gen-global lex*))
 			  (export-subst  (%make-export-subst exp-name* exp-id*)))
-		      ;;LEXENV.EXPORT  is  the  lexical  environment  of
+		      ;;EXPORT-ENV   is  the   lexical  environment   of
 		      ;;bindings exported by the library.
 		      ;;
-		      ;;GLOBAL* is an alist whose with an entry for each
-		      ;;DEFINE variable.  The keys are gensyms acting as
-		      ;;lexical  variables  in  core  language  symbolic
-		      ;;expressions.  The  values are gensyms  acting as
-		      ;;locations  in  which  the  variable's  value  is
-		      ;;stored.
-		      (receive (lexenv.export global* macro*)
+		      ;;GLOBAL*  is  an alist  with  an  entry for  each
+		      ;;DEFINE  global variable.   The keys  are gensyms
+		      ;;acting  as lexical  variables  in core  language
+		      ;;symbolic  expressions.  The  values are  gensyms
+		      ;;acting  as  locations  in which  the  variable's
+		      ;;value is stored.
+		      (receive (export-env global* macro*)
 			  (%make-export-env/macros lex* loc* lexenv.run)
-			(%validate-exports export-spec* export-subst lexenv.export)
+			(%validate-exports export-spec* export-subst export-env)
 			(values (itc) (rtc) (vtc)
-				;;This is the invoke-body.
+				;;This is the invoke-code.
 				(build-library-letrec* no-source
 				  mix? lex* loc* core-rhs-form*
 				  (if (null? core-init-form*)
 				      (build-void)
 				    (build-sequence no-source core-init-form*)))
-				macro* export-subst lexenv.export))))))))))))
+				macro* export-subst export-env))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1269,11 +1269,11 @@
 
     (define (%make-export-env/macros lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
-		 (lexenv.export		'())
+		 (export-env		'())
 		 (global*		'())
 		 (macro*		'()))
 	(if (null? lexenv.run)
-	    (values lexenv.export global* macro*)
+	    (values export-env global* macro*)
 	  (let* ((entry    (car lexenv.run))
 		 (label    (lexenv-entry-label   entry))
 		 (binding  (lexenv-entry-binding entry)))
@@ -1287,7 +1287,7 @@
 	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
 	       ;;"global".  Notice  that entries  of type  "mutable" are
 	       ;;forbidden; here  we add them nevertheless,  delaying to
-	       ;;later the validation of the LEXENV.EXPORT.
+	       ;;later the validation of the EXPORT-ENV.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
@@ -1295,7 +1295,7 @@
 				     'mutable
 				   'global)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label type loc) lexenv.export)
+		       (cons (cons* label type loc) export-env)
 		       (cons (cons (lexical-var bind-val) loc) global*)
 		       macro*)))
 
@@ -1307,7 +1307,7 @@
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-macro loc) lexenv.export)
+		       (cons (cons* label 'global-macro loc) export-env)
 		       global*
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
@@ -1319,7 +1319,7 @@
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-macro! loc) lexenv.export)
+		       (cons (cons* label 'global-macro! loc) export-env)
 		       global*
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
@@ -1335,7 +1335,7 @@
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-ctv loc) lexenv.export)
+		       (cons (cons* label 'global-ctv loc) export-env)
 		       global*
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
@@ -1343,7 +1343,7 @@
 	       ;;Just the entry "as is" to the export lexenv.
 	       ;;
 	       (loop (cdr lexenv.run)
-		     (cons entry lexenv.export)
+		     (cons entry export-env)
 		     global* macro*))
 
 	      (else
@@ -1365,7 +1365,7 @@
 
     #| end of module: %make-export-env/macros |# )
 
-  (define (%validate-exports export-spec* export-subst lexenv.export)
+  (define (%validate-exports export-spec* export-subst export-env)
     ;;We want to forbid code like the following:
     ;;
     ;;    (library (proof)
@@ -1379,7 +1379,7 @@
     ;;
     (unless (%expanding-program? export-spec*)
       (for-each (lambda (subst)
-		  (cond ((assq (subst-entry-label subst) lexenv.export)
+		  (cond ((assq (subst-entry-label subst) export-env)
 			 => (lambda (entry)
 			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding entry)))
 				(syntax-violation 'export
