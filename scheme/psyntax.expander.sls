@@ -201,11 +201,46 @@
 (define inv-collector
   ;;Invoked  libraries  collector.   Holds  a  collector  function  (see
   ;;MAKE-COLLECTOR)  filled with  the LIBRARY  records representing  the
-  ;;libraries defining "global" entries in the lexical environment.
+  ;;libraries defining "global" entries  in the lexical environment that
+  ;;are used in the code we are expanding.
   ;;
-  ;;Whenever the expander processes an expression containing a reference
-  ;;to a  "global" entry in  the lexical environment:  the corresponding
-  ;;LIBRARY record is added to this collection.
+  ;;The library:
+  ;;
+  ;;   (library (subdemo)
+  ;;     (export sub-var)
+  ;;     (import (vicare))
+  ;;     (define sub-var 456))
+  ;;
+  ;;is imported by the library:
+  ;;
+  ;;   (library (demo)
+  ;;     (export var sub-var)
+  ;;     (import (vicare) (subdemo))
+  ;;     (define var 123))
+  ;;
+  ;;which is imported by the program:
+  ;;
+  ;;   (import (vicare) (demo))
+  ;;   (define (doit)
+  ;;     (list var sub-var))
+  ;;   (doit)
+  ;;
+  ;;when the  body of the function  is expanded the identifiers  VAR and
+  ;;SUB-VAR are captured by bindings in the lexical environment with the
+  ;;format:
+  ;;
+  ;;   (global . (?library . ?gensym))
+  ;;
+  ;;where  ?LIBRARY  is the  record  of  type LIBRARY  representing  the
+  ;;library that  defines the variable  and ?GENSYM is a  symbol holding
+  ;;the variable's value in its  "value" slot.  Such LIBRARY records are
+  ;;added to the INV-COLLECTOR.
+  ;;
+  ;;For the  identifier VAR:  ?LIBRARY represents the  library "(demo)";
+  ;;for  the   identifier  SUB-VAR:  ?LIBRARY  represents   the  library
+  ;;"(subdemo)".  Notice  that while "(demo)"  is present in  the IMPORT
+  ;;specification, and  so it is  also registered in  the IMP-COLLECTOR,
+  ;;"(subdemo)" is not and it is only present in the INV-COLLECTOR.
   ;;
   (make-parameter
       (lambda args
@@ -216,14 +251,40 @@
       x)))
 
 (define vis-collector
-  ;;Visit  libraries   collector?   Holds  a  collector   function  (see
+  ;;Visit  libraries   collector.   Holds  a  collector   function  (see
   ;;MAKE-COLLECTOR)  which  is  meant  to be  filled  with  the  LIBRARY
-  ;;records.
+  ;;records.   This  collector  holds  the libraries  collected  by  the
+  ;;INV-COLLECTOR  when  expanding  the  right-hand  side  of  a  syntax
+  ;;definition.
   ;;
-  ;;FIXME This collector is initialised  here and there with PARAMETRISE
-  ;;syntaxes, but  then it is never  used: no LIBRARY records  appear to
-  ;;ever  be added  to this  collector.  Should  it be  removed?  (Marco
-  ;;Maggi; Sun Jan 19, 2014)
+  ;;The library:
+  ;;
+  ;;  (library (demo)
+  ;;    (export var)
+  ;;    (import (vicare))
+  ;;    (define var 123))
+  ;;
+  ;;is loaded by the program:
+  ;;
+  ;;  (import (vicare)
+  ;;    (for (demo) expand))
+  ;;  (define-syntax doit (lambda (stx) var))
+  ;;  (doit)
+  ;;
+  ;;the right-hand side of the syntax definition is the expression:
+  ;;
+  ;;  (lambda (stx) var)
+  ;;
+  ;;when such expression is expanded: the  identifier VAR is found to be
+  ;;captured by a binding in the lexical environment with the format:
+  ;;
+  ;;   (global . (?library . ?gensym))
+  ;;
+  ;;where  ?LIBRARY  is the  record  of  type LIBRARY  representing  the
+  ;;library "(demo)" and ?GENSYM is a  symbol holding 123 in its "value"
+  ;;slot.   The record  ?LIBRARY is  added first  to INV-COLLECTOR  and,
+  ;;after finishing the expansion of the right-hand side, it is moved to
+  ;;the INV-COLLECTOR.  See %EXPAND-MACRO-TRANSFORMER for details.
   ;;
   (make-parameter
       (lambda args
@@ -470,6 +531,7 @@
 				    (chi-expr expr.stx lexenv.run lexenv.expand)))))
 		 (seal-rib! rib)
 		 (values expr.core (rtc))))))
+
 	  ((interaction-env? env)
 	   (let ((rib         (interaction-env-rib env))
 		 (lexenv.run  (interaction-env-lexenv env))
@@ -483,6 +545,7 @@
 		     (%chi-interaction-expr expr.stx rib lexenv.run))
 		 (set-interaction-env-lexenv! env lexenv.run^)
 		 (values expr.core (rtc))))))
+
 	  (else
 	   (assertion-violation __who__ "not an environment" env))))
 
@@ -564,11 +627,11 @@
     ;;
     (receive (import-spec* body*)
 	(%parse-top-level-program expr*)
-      (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+      (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	  (begin
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* body* #t))
-	(values invoke-req* invoke-code macro* export-subst export-env))))
+	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
   (define (%parse-top-level-program expr*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
@@ -8095,7 +8158,7 @@
 
 ;;;; macro transformers helpers
 
-(define (%expand-macro-transformer expr-stx lexenv.expand)
+(define (%expand-macro-transformer rhs-expr-stx lexenv.expand)
   ;;Given a syntax  object representing the right-hand side  of a syntax
   ;;definition      (DEFINE-SYNTAX,      LET-SYNTAX,      LETREC-SYNTAX,
   ;;DEFINE-FLUID-SYNTAX,   FLUID-LET-SYNTAX):    expand   it,   invoking
@@ -8124,17 +8187,17 @@
   (let* ((rtc           (make-collector))
 	 (expanded-rhs  (parametrise ((inv-collector rtc)
 				      (vis-collector (lambda (x) (values))))
-			  (chi-expr expr-stx lexenv.expand lexenv.expand))))
+			  (chi-expr rhs-expr-stx lexenv.expand lexenv.expand))))
     ;;We  invoke all  the libraries  needed to  evaluate the  right-hand
     ;;side.
     (for-each
-	(let ((mark-library-visit (vis-collector)))
+	(let ((register-visited-library (vis-collector)))
 	  (lambda (lib)
 	    ;;LIB is  a record  of type "library".   Here we  invoke the
 	    ;;library, which means we  evaluate its run-time code.  Then
 	    ;;we mark the library as visited.
 	    (invoke-library lib)
-	    (mark-library-visit lib)))
+	    (register-visited-library lib)))
       (rtc))
     expanded-rhs))
 
