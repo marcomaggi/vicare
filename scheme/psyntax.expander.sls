@@ -167,6 +167,54 @@
     (car args)))
 
 
+;;;; library records collectors
+
+(define (make-collector)
+  (let ((ls '()))
+    (case-lambda
+     (()
+      ls)
+     ((x)
+      (unless (eq? x '*interaction*)
+	(assert (library? x))
+	;;Prepend  X to  the  list LS  if it  is  not already  contained
+	;;according to EQ?.
+	(set! ls (if (memq x ls)
+		     ls
+		   (cons x ls))))))))
+
+(define inv-collector
+  (make-parameter
+      (lambda args
+        (assertion-violation 'inv-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'inv-collector "BUG: not a procedure" x))
+      x)))
+
+(define vis-collector
+  (make-parameter
+      (lambda args
+        (assertion-violation 'vis-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'vis-collector "BUG: not a procedure" x))
+      x)))
+
+(define imp-collector
+  ;;Imported  libraries  collector.   Holds a  collector  function  (see
+  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
+  ;;libraries from an R6RS import specification.
+  ;;
+  (make-parameter
+      (lambda args
+        (assertion-violation 'imp-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'imp-collector "BUG: not a procedure" x))
+      x)))
+
+
 ;;;; top-level environments
 ;;
 ;;The result of  parsing a set of  import specs in an  IMPORT clause (as
@@ -206,7 +254,8 @@
    itc
 		;A collector  function (see MAKE-COLLECTOR)  holding the
 		;LIBRARY structs representing  the libraries selected by
-		;the source import specifications.
+		;the source IMPORT specifications.  These libraries have
+		;been installed.
    )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
@@ -692,19 +741,21 @@
     ((library-sexp filename)
      (expand-library library-sexp filename (lambda (ids ver) (values))))
     ((library-sexp filename verify-name)
-     (receive (name ver imp* inv* vis* invoke-code macro* export-subst export-env guard-code guard-req*)
+     (receive (libname.ids     ;list of library name symbols
+	       libname.version ;null or list of version numbers
+	       import-spec* invoke-req* visit-req*
+	       invoke-code macro*
+	       export-subst export-env guard-code guard-req*)
 	 (begin
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-name))
        (let ((id            (gensym)) ;library UID
-	     (name          name)     ;list of name symbols
-	     (ver           ver)      ;null or list of version numbers
 
 	     ;;From list  of LIBRARY records  to list of  lists: library
 	     ;;UID, list of name symbols, list of version numbers.
-	     (imp*          (map library-spec imp*))
-	     (vis*          (map library-spec vis*))
-	     (inv*          (map library-spec inv*))
+	     (imp*          (map library-spec import-spec*))
+	     (vis*          (map library-spec visit-req*))
+	     (inv*          (map library-spec invoke-req*))
 	     (guard-req*    (map library-spec guard-req*))
 
 	     ;;Thunk to eval to visit the library.
@@ -713,21 +764,22 @@
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc   (lambda ()
 			      (eval-core (expanded->core invoke-code))))
-	     (visit-code    (build-visit-code macro*))
+	     (visit-code    (%build-visit-code macro*))
 	     (invoke-code   invoke-code))
-	 (install-library id name ver
+	 (install-library id libname.ids libname.version
 			  imp* vis* inv* export-subst export-env
 			  visit-proc invoke-proc
 			  visit-code invoke-code
 			  guard-code guard-req*
 			  #t #;visible?
 			  filename)
-	 (values id name ver imp* vis* inv*
+	 (values id libname.ids libname.version
+		 imp* vis* inv*
 		 invoke-code visit-code
 		 export-subst export-env
 		 guard-code guard-req*)))))
 
-  (define (build-visit-code macro*)
+  (define (%build-visit-code macro*)
     ;;Return a sexp  representing code that initialises  the bindings of
     ;;macro  definitions in  the  core language:  the  visit code;  code
     ;;evaluated whenever the library is visited; each library is visited
@@ -795,7 +847,7 @@
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
 	(let ((stale-clt (make-stale-collector)))
-	  (receive (import-spec* invoke-req* visit-req* invoke-code visit-code export-subst export-env)
+	  (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
 		(begin
 		  (import CORE-BODY-EXPANDER)
@@ -804,7 +856,7 @@
 		(stale-clt)
 	      (values libname.ids libname.version
 		      import-spec* invoke-req* visit-req*
-		      invoke-code visit-code export-subst
+		      invoke-code macro* export-subst
 		      export-env guard-code guard-req*)))))))
 
   (define (%parse-library library-sexp)
@@ -9985,53 +10037,6 @@
     (expression-position x))
 
   #| end of module |# )
-
-
-;;;; miscellaneous collectors
-
-(define (make-collector)
-  (let ((ls '()))
-    (case-lambda
-     (()
-      ls)
-     ((x)
-      (unless (eq? x '*interaction*)
-	;;Prepend  X to  the  list LS  if it  is  not already  contained
-	;;according to EQ?.
-	(set! ls (if (memq x ls)
-		     ls
-		   (cons x ls))))))))
-
-(define inv-collector
-  (make-parameter
-      (lambda args
-        (assertion-violation 'inv-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'inv-collector "BUG: not a procedure" x))
-      x)))
-
-(define vis-collector
-  (make-parameter
-      (lambda args
-        (assertion-violation 'vis-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'vis-collector "BUG: not a procedure" x))
-      x)))
-
-(define imp-collector
-  ;;Imported  libraries  collector.   Holds a  collector  function  (see
-  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
-  ;;libraries from an R6RS import specification.
-  ;;
-  (make-parameter
-      (lambda args
-        (assertion-violation 'imp-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'imp-collector "BUG: not a procedure" x))
-      x)))
 
 
 ;;;; stale stuff

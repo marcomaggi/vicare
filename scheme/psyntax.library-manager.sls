@@ -25,6 +25,7 @@
 (library (psyntax library-manager)
   (export
     ;; library inspection
+    library?
     library-spec		library-name
     library-version		library-subst
     imported-label->syntactic-binding
@@ -83,7 +84,8 @@
 		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
-		;A list of library specifications needed
+		;A list of library specifications selected by the IMPORT
+		;syntax.
    vis*
 		;A  list of  library specifications  selecting libraries
 		;needed by the visit code.
@@ -435,14 +437,15 @@
 				     #f #f ''#f '() visible? #f)
 		    #t)))
 	    (else
-	     (let* ((d		(car deps))
-		    (label	(car d))
-		    (dname	(cadr d))
-		    (l		(find-library-by-name dname)))
-	       (if (and (library? l) (eq? label (library-id l)))
+	     (let* ((libspec	(car  deps))
+		    (label	(car  libspec))
+		    (libname	(cadr libspec))
+		    (lib	(find-library-by-name libname)))
+	       (if (and (library? lib)
+			(eq? label (library-id lib)))
 		   (loop (cdr deps))
 		 (begin
-		   (library-version-mismatch-warning name dname filename)
+		   (library-version-mismatch-warning name libname filename)
 		   #f)))))))
 
   (define (%verify-library requested-libname filename
