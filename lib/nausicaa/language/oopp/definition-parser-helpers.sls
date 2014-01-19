@@ -738,8 +738,8 @@
 	   (%finalise-clauses-parsing! mixin-spec synner)
 	   (values #'?mixin-name
 		   (make-<mixin-clauses-ctv> #'?mixin-name
-					     (append clauses included-clauses)
-					     (<parsed-spec>-mixins-ids mixin-spec))))))
+		   			     (append clauses included-clauses)
+		   			     (<parsed-spec>-mixins-ids mixin-spec))))))
       (_
        (synner "syntax error in mixin definition"))))
 

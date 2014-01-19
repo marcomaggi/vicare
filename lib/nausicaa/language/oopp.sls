@@ -913,7 +913,8 @@
   (lambda (ctv-retriever)
     (receive (mixin-name-id mixin-ctv)
 	(parser-help.parse-mixin-definition stx #'<top> #'lambda/tags ctv-retriever synner)
-      #`(define-syntax #,mixin-name-id (make-compile-time-value (quote #,mixin-ctv))))))
+      #`(define-syntax #,mixin-name-id
+	  (make-compile-time-value (quote #,mixin-ctv))))))
 
 
 ;;;; companion syntaxes
