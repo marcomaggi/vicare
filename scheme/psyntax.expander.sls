@@ -183,7 +183,30 @@
 		     ls
 		   (cons x ls))))))))
 
+(define imp-collector
+  ;;Imported  libraries  collector.   Holds a  collector  function  (see
+  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  records representing  the
+  ;;libraries from an R6RS import specification: every time the expander
+  ;;parses an IMPORT syntax, the selected libraries are represented by a
+  ;;LIBRARY record and such record is added to this collection.
+  ;;
+  (make-parameter
+      (lambda args
+        (assertion-violation 'imp-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'imp-collector "BUG: not a procedure" x))
+      x)))
+
 (define inv-collector
+  ;;Invoked  libraries  collector.   Holds  a  collector  function  (see
+  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  records representing  the
+  ;;libraries defining "global" entries in the lexical environment.
+  ;;
+  ;;Whenever the expander processes an expression containing a reference
+  ;;to a  "global" entry in  the lexical environment:  the corresponding
+  ;;LIBRARY record is added to this collection.
+  ;;
   (make-parameter
       (lambda args
         (assertion-violation 'inv-collector "BUG: not initialized"))
@@ -193,25 +216,21 @@
       x)))
 
 (define vis-collector
+  ;;Visit  libraries   collector?   Holds  a  collector   function  (see
+  ;;MAKE-COLLECTOR)  which  is  meant  to be  filled  with  the  LIBRARY
+  ;;records.
+  ;;
+  ;;FIXME This collector is initialised  here and there with PARAMETRISE
+  ;;syntaxes, but  then it is never  used: no LIBRARY records  appear to
+  ;;ever  be added  to this  collector.  Should  it be  removed?  (Marco
+  ;;Maggi; Sun Jan 19, 2014)
+  ;;
   (make-parameter
       (lambda args
         (assertion-violation 'vis-collector "BUG: not initialized"))
     (lambda (x)
       (unless (procedure? x)
 	(assertion-violation 'vis-collector "BUG: not a procedure" x))
-      x)))
-
-(define imp-collector
-  ;;Imported  libraries  collector.   Holds a  collector  function  (see
-  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
-  ;;libraries from an R6RS import specification.
-  ;;
-  (make-parameter
-      (lambda args
-        (assertion-violation 'imp-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'imp-collector "BUG: not a procedure" x))
       x)))
 
 
