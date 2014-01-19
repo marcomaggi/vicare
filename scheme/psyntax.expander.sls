@@ -762,41 +762,41 @@
     ((library-sexp filename verify-name)
      (receive (libname.ids     ;list of library name symbols
 	       libname.version ;null or list of version numbers
-	       import-spec* invoke-req* visit-req*
+	       import-lib* invoke-lib* visit-lib*
 	       invoke-code macro*
-	       export-subst export-env guard-code guard-req*)
+	       export-subst export-env guard-code guard-lib*)
 	 (begin
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-name))
-       (let ((id            (gensym)) ;library UID
+       (let ((id		(gensym)) ;library UID
 
 	     ;;From list  of LIBRARY records  to list of  lists: library
 	     ;;UID, list of name symbols, list of version numbers.
-	     (imp*          (map library-spec import-spec*))
-	     (vis*          (map library-spec visit-req*))
-	     (inv*          (map library-spec invoke-req*))
-	     (guard-req*    (map library-spec guard-req*))
+	     (import-spec*	(map library-spec import-lib*))
+	     (visit-spec*	(map library-spec visit-lib*))
+	     (invoke-spec*	(map library-spec invoke-lib*))
+	     (guard-spec*	(map library-spec guard-lib*))
 
 	     ;;Thunk to eval to visit the library.
-	     (visit-proc    (lambda ()
-			      (initial-visit! macro*)))
+	     (visit-proc	(lambda ()
+				  (initial-visit! macro*)))
 	     ;;Thunk to eval to invoke the library.
-	     (invoke-proc   (lambda ()
-			      (eval-core (expanded->core invoke-code))))
-	     (visit-code    (%build-visit-code macro*))
-	     (invoke-code   invoke-code))
+	     (invoke-proc	(lambda ()
+				  (eval-core (expanded->core invoke-code))))
+	     (visit-code	(%build-visit-code macro*)))
 	 (install-library id libname.ids libname.version
-			  imp* vis* inv* export-subst export-env
+			  import-spec* visit-spec* invoke-spec*
+			  export-subst export-env
 			  visit-proc invoke-proc
 			  visit-code invoke-code
-			  guard-code guard-req*
+			  guard-code guard-spec*
 			  #t #;visible?
 			  filename)
 	 (values id libname.ids libname.version
-		 imp* vis* inv*
+		 import-spec* visit-spec* invoke-spec*
 		 invoke-code visit-code
 		 export-subst export-env
-		 guard-code guard-req*)))))
+		 guard-code guard-spec*)))))
 
   (define (%build-visit-code macro*)
     ;;Return a sexp  representing code that initialises  the bindings of
@@ -866,7 +866,7 @@
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
 	(let ((stale-clt (make-stale-collector)))
-	  (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
 		(begin
 		  (import CORE-BODY-EXPANDER)
@@ -874,7 +874,7 @@
 	    (receive (guard-code guard-req*)
 		(stale-clt)
 	      (values libname.ids libname.version
-		      import-spec* invoke-req* visit-req*
+		      import-lib* invoke-lib* visit-lib*
 		      invoke-code macro* export-subst
 		      export-env guard-code guard-req*)))))))
 
@@ -1022,7 +1022,7 @@
 	      (receive (init-form* lexenv.run lexenv.expand lex* rhs-form* internal-export*)
 		  (%chi-library-internal body* rib mix?)
 		(receive (exp-name* exp-id*)
-		    (begin
+		    (let ()
 		      (import PARSE-EXPORT-SPEC)
 		      (parse-export-spec* (if (%expanding-program? export-spec*)
 					      (map wrap (top-marked-symbols rib))
