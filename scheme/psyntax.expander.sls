@@ -1239,23 +1239,14 @@
 		      (receive (lexenv.export global* macro*)
 			  (%make-export-env/macros lex* loc* lexenv.run)
 			(%validate-exports export-spec* export-subst lexenv.export)
-			(let ((invoke-body (build-library-letrec* no-source
-								  mix? lex* loc* core-rhs-form*
-								  (if (null? core-init-form*)
-								      (build-void)
-								    (build-sequence no-source core-init-form*))))
-			      ;;Psyntax   was  originally   written  for
-			      ;;multiple Scheme implemenrations.  If the
-			      ;;implementation requires  that all global
-			      ;;variables  be   defined  before  they're
-			      ;;SET!ed, then INVOKE-DEFINITIONS contains
-			      ;;such definitions.
-			      ;;
-			      (invoke-definitions (map build-global-define (map cdr global*))))
-			  (values (itc) (rtc) (vtc)
-				  (build-sequence no-source
-				    (append invoke-definitions (list invoke-body)))
-				  macro* export-subst lexenv.export)))))))))))))
+			(values (itc) (rtc) (vtc)
+				;;This is the invoke-body.
+				(build-library-letrec* no-source
+				  mix? lex* loc* core-rhs-form*
+				  (if (null? core-init-form*)
+				      (build-void)
+				    (build-sequence no-source core-init-form*)))
+				macro* export-subst lexenv.export))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -10273,6 +10264,7 @@
 
 ;;; end of file
 ;;Local Variables:
+;;eval: (put 'build-library-letrec*	'scheme-indent-function 1)
 ;;eval: (put 'build-application		'scheme-indent-function 1)
 ;;eval: (put 'build-conditional		'scheme-indent-function 1)
 ;;eval: (put 'build-lambda		'scheme-indent-function 1)

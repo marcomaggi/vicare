@@ -44,7 +44,7 @@
     build-primref			build-foreign-call
     build-data				build-sequence
     build-void				build-letrec
-    build-letrec*			build-global-define
+    build-letrec*			#;build-global-define
     build-library-letrec*)
   (import (rnrs)
     (psyntax compat)
