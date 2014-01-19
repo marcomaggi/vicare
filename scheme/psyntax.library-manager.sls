@@ -569,54 +569,37 @@
 	  ((procedure	obj))
 	obj))))
 
-(module (serialize-all)
-
-  (define (serialize-all serialize compile)
-    ;;Traverse  the current  collection of  libraries and  serialize the
-    ;;contents  of all  the LIBRARY  records having  a source  file (the
-    ;;records that  do not  have a source  file represent  the libraries
-    ;;built in the boot image).
-    ;;
-    ;;"Serializing" means to write in a FASL file.
-    ;;
-    ;;The   argument   SERIALIZE   should    be   a   closure   wrapping
-    ;;DO-SERIALIZE-LIBRARY.
-    ;;
-    ;;The argument  COMPILE should  be a  closure wrapping  the function
-    ;;COMPILE-CORE-EXPR.
-    ;;
-    (for-each (lambda (lib)
-		(%serialize-library lib serialize compile))
-      ((current-library-collection))))
-
-  (define (%serialize-library lib serialize compile)
-    ;;Serialize the contents of a LIBRARY record.
-    ;;
-    (when ($library-source-file-name lib)
-      (serialize ($library-source-file-name lib)
-		 (list ($library-id lib)
-		       ($library-name lib)
-		       ($library-version lib)
-		       (map library-descriptor ($library-imp* lib))
-		       (map library-descriptor ($library-vis* lib))
-		       (map library-descriptor ($library-inv* lib))
-		       ;; (map %library-symbols ($library-imp* lib))
-		       ;; (map %library-symbols ($library-vis* lib))
-		       ;; (map %library-symbols ($library-inv* lib))
-		       ($library-subst lib)
-		       ($library-env lib)
-		       (compile ($library-visit-code lib))
-		       (compile ($library-invoke-code lib))
-		       (compile ($library-guard-code lib))
-		       (map library-descriptor ($library-guard-req* lib))
-		       ;; (map %library-symbols ($library-guard-req* lib))
-		       ($library-visible? lib)))))
-
-  (define (%library-symbols lib)
-    (list ($library-id   lib)
-	  ($library-name lib)))
-
-  #| end of module: SERIALIZE-ALL |# )
+(define (serialize-all serialize compile)
+  ;;Traverse  the  current collection  of  libraries  and serialize  the
+  ;;contents  of all  the  LIBRARY  records having  a  source file  (the
+  ;;records that do not have a source file represent the libraries built
+  ;;in the boot image).
+  ;;
+  ;;"Serializing" means to write in a FASL file.
+  ;;
+  ;;The   argument    SERIALIZE   should    be   a    closure   wrapping
+  ;;DO-SERIALIZE-LIBRARY.
+  ;;
+  ;;The  argument COMPILE  should  be a  closure  wrapping the  function
+  ;;COMPILE-CORE-EXPR.
+  ;;
+  (for-each (lambda (lib)
+	      (when ($library-source-file-name lib)
+		(serialize ($library-source-file-name lib)
+			   (list ($library-id lib)
+				 ($library-name lib)
+				 ($library-version lib)
+				 (map library-descriptor ($library-imp* lib))
+				 (map library-descriptor ($library-vis* lib))
+				 (map library-descriptor ($library-inv* lib))
+				 ($library-subst lib)
+				 ($library-env lib)
+				 (compile ($library-visit-code lib))
+				 (compile ($library-invoke-code lib))
+				 (compile ($library-guard-code lib))
+				 (map library-descriptor ($library-guard-req* lib))
+				 ($library-visible? lib)))))
+    ((current-library-collection))))
 
 
 (define uninstall-library
