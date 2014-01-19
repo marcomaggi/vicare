@@ -1082,6 +1082,10 @@
 	       ;;export  such binding:  the importer  must see  it as  a
 	       ;;"global-ctv".
 	       ;;
+	       ;;The binding has the format:
+	       ;;
+	       ;;   (local-ctv . (?object . ?expanded-expr))
+	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-ctv loc) lexenv.export)
@@ -2047,7 +2051,7 @@
 ;;
 ;;  where ?LABEL is the gensym associated to the fluid syntax.
 ;;
-;;* A binding representin a local compile-time value has the format:
+;;* A binding representing a local compile-time value has the format:
 ;;
 ;;     (local-ctv . (?object . ?expanded-expr))
 ;;
@@ -2055,7 +2059,7 @@
 ;;  ?EXPANDED-EXPR  is  the  result  of expanding  the  expression  that
 ;;  generates the value.
 ;;
-;;* A binding representin a global compile-time value has the format:
+;;* A binding representing a global compile-time value has the format:
 ;;
 ;;     (global-ctv . (?library . ?gensym))
 ;;
@@ -8905,7 +8909,41 @@
 	     ;;from LIB is used: visit the library.
 	     (unless (eq? lib '*interaction*)
 	       (visit-library lib))
-	     (symbol-value loc)))
+	     ;;FIXME The following form should really be just:
+	     ;;
+	     ;;   (symbol-value loc)
+	     ;;
+	     ;;because   the  value   in  LOC   should  be   the  actual
+	     ;;compile-time value  object.  Instead there is  at least a
+	     ;;case in which  the value in LOC is  the full compile-time
+	     ;;value:
+	     ;;
+	     ;;   (ctv . ?obj)
+	     ;;
+	     ;;It happens when the library:
+	     ;;
+	     ;;   (library (demo)
+	     ;;     (export obj)
+	     ;;     (import (vicare))
+	     ;;     (define-syntax obj (make-compile-time-value 123)))
+	     ;;
+	     ;;is precompiled and then loaded by the program:
+	     ;;
+	     ;;   (import (vicare) (demo))
+	     ;;   (define-syntax (doit stx)
+	     ;;     (lambda (ctv-retriever) (ctv-retriever #'obj)))
+	     ;;   (doit)
+	     ;;
+	     ;;the expansion of "(doit)" fails with an error because the
+	     ;;value  returned by  the  transformer is  the CTV  special
+	     ;;value.  We  circumvent this problem by  testing below the
+	     ;;nature of  the value in LOC,  but it is just  a temporary
+	     ;;workaround.  (Marco Maggi; Sun Jan 19, 2014)
+	     ;;
+	     (let ((ctv (symbol-value loc)))
+	       (if (compile-time-value? ctv)
+		   (compile-time-value-object ctv)
+		 ctv))))
 
 	  ;;The given identifier is not bound to a compile-time value.
 	  (else #f))))
