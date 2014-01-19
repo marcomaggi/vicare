@@ -294,7 +294,75 @@
 	(assertion-violation 'vis-collector "BUG: not a procedure" x))
       x)))
 
+;;; --------------------------------------------------------------------
+
 (define stale-when-collector
+  ;;Collects  test  expressions  from STALE-WHEN  syntaxes  and  LIBRARY
+  ;;records needed for such expressions.  This parameter holds a special
+  ;;collector  function  (see  %MAKE-STALE-COLLECTOR)  which  handles  2
+  ;;collections:  one for  expanded expressions  representing STALE-WHEN
+  ;;test  expressions, one  for  LIBRARY records  defining the  imported
+  ;;variables needed by the test expressions.
+  ;;
+  ;;The library:
+  ;;
+  ;;   (library (subsubdemo)
+  ;;     (export sub-sub-var)
+  ;;     (import (vicare))
+  ;;     (define sub-sub-var 456))
+  ;;
+  ;;is imported by the library:
+  ;;
+  ;;   (library (subdemo)
+  ;;     (export sub-var sub-sub-var)
+  ;;     (import (vicare) (subsubdemo))
+  ;;     (define sub-var 456))
+  ;;
+  ;;which is imported by the library:
+  ;;
+  ;;   (library (demo)
+  ;;     (export var)
+  ;;     (import (vicare) (subdemo))
+  ;;     (define var
+  ;;       (stale-when (< sub-var sub-sub-var)
+  ;;         123)))
+  ;;
+  ;;which is imported by the program:
+  ;;
+  ;;   (import (vicare) (demo))
+  ;;   (debug-print var)
+  ;;
+  ;;when the test  expression of the STALE-WHEN syntax  is expanded, the
+  ;;identifiers SUB-VAR and SUB-SUB-VAR are  captured by bindings in the
+  ;;lexical environment with the format:
+  ;;
+  ;;   (global . (?library . ?gensym))
+  ;;
+  ;;where  ?LIBRARY  is the  record  of  type LIBRARY  representing  the
+  ;;library that  defines the variable  and ?GENSYM is a  symbol holding
+  ;;the variable's value in its  "value" slot.  Such LIBRARY records are
+  ;;added first to  INV-COLLECTOR and, after finishing  the expansion of
+  ;;the  STALE-WHEN test,  they are  moved to  the STALE-WHEN-COLLECTOR.
+  ;;See HANDLE-STALE-WHEN for details.
+  ;;
+  ;;For  the   identifier  SUB-VAR:  ?LIBRARY  represents   the  library
+  ;;"(subdemo)"; for the identifier SUB-SUB-VAR: ?LIBRARY represents the
+  ;;library "(subsubdemo)".  Notice that while "(subdemo)" is present in
+  ;;the  IMPORT specification,  and  so  it is  also  registered in  the
+  ;;IMP-COLLECTOR, "(subsubdemo)" is  not and it is only  present in the
+  ;;STALE-WHEN-COLLECTOR.
+  ;;
+  ;;The  collector  function  referenced  by this  parameter  returns  2
+  ;;values, which are usually named GUARD-CODE and GUARD-LIB*:
+  ;;
+  ;;GUARD-CODE  is  a single  core  language  expression representing  a
+  ;;composition of  all the STALE-WHEN  test expressions present  in the
+  ;;body  of  a library.   If  at  least  one  of the  test  expressions
+  ;;evaluates to true: the whole composite expression evaluates to true.
+  ;;
+  ;;GUARD-LIB* is a  list of LIBRARY records  representing the libraries
+  ;;needed to evaluate the composite test expression.
+  ;;
   (make-parameter #f))
 
 
