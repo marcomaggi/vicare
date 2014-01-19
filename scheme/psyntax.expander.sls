@@ -754,8 +754,10 @@
   ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
   ;;
   ;;GUARD-DESC*  - a  list representing  the libraries  that need  to be
-  ;;invoked  for the  STALE-WHEN  code?   Each item  in  the  list is  a
-  ;;"library descriptor" as built by the LIBRARY-DESCRIPTOR function.
+  ;;invoked for the STALE-WHEN code; these are the libraries accumulated
+  ;;by   the  INV-COLLECTOR   while   expanding   the  STALE-WHEN   test
+  ;;expressions.  Each  item in  the list is  a "library  descriptor" as
+  ;;built by the LIBRARY-DESCRIPTOR function.
   ;;
   (case-define expand-library
     ((library-sexp)
@@ -877,12 +879,12 @@
 		(begin
 		  (import CORE-BODY-EXPANDER)
 		  (core-body-expander export-spec* import-spec* body* #f)))
-	    (receive (guard-code guard-req*)
+	    (receive (guard-code guard-lib*)
 		(stale-clt)
 	      (values libname.ids libname.version
 		      import-lib* invoke-lib* visit-lib*
 		      invoke-code macro* export-subst
-		      export-env guard-code guard-req*)))))))
+		      export-env guard-code guard-lib*)))))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -951,16 +953,36 @@
       (values name* ver*)))
 
   (module (%make-stale-collector)
-
+    ;;When a library has code like:
+    ;;
+    ;;   (stale-when (< 1 2) (define a 123))
+    ;;   (stale-when (< 2 3) (define b 123))
+    ;;
+    ;;we build STALE-CODE as follows:
+    ;;
+    ;;   (if (if '#f
+    ;;           '#t
+    ;;         (annotated-call (< 1 2) (primitive <) '1 '2))
+    ;;       '#t
+    ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
+    ;;
+    ;;The value GUARD-LIB* is the list of LIBRARY records accumulated by
+    ;;the INV-COLLECTOR while expanding the STALE-WHEN test expressions.
+    ;;
     (define (%make-stale-collector)
-      (let ((code (build-data no-source #f))
-	    (req* '()))
+      (let ((accumulated-code           (build-data no-source #f))
+	    (accumulated-requested-lib* '()))
 	(case-lambda
 	 (()
-	  (values code req*))
-	 ((c r*)
-	  (set! code (build-conditional no-source code (build-data no-source #t) c))
-	  (set! req* (%set-union r* req*))))))
+	  (values accumulated-code accumulated-requested-lib*))
+	 ((new-test-code requested-lib*)
+	  (set! accumulated-code
+		(build-conditional no-source
+		  accumulated-code	    ;test
+		  (build-data no-source #t) ;consequent
+		  new-test-code))	    ;alternate
+	  (set! accumulated-requested-lib*
+		(%set-union requested-lib* accumulated-requested-lib*))))))
 
     (define (%set-union ls1 ls2)
       ;;Build and return a new list holding elements from LS1 and LS2 with
