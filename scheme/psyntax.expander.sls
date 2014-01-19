@@ -233,6 +233,9 @@
 	(assertion-violation 'vis-collector "BUG: not a procedure" x))
       x)))
 
+(define stale-when-collector
+  (make-parameter #f))
+
 
 ;;;; top-level environments
 ;;
@@ -632,38 +635,38 @@
   ;;
   ;;The returned values are:
   ;;
-  ;;ID - a gensym uniquely identifying this library.
+  ;;UID - a gensym uniquely identifying this library.
   ;;
-  ;;NAME - a list of symbols representing the library name.  For the
-  ;;library:
+  ;;LIBNAME.IDS - a list of  symbols representing the library name.  For
+  ;;the library:
   ;;
   ;;   (library (c i a o)
   ;;     (export A)
   ;;     (import (rnrs))
   ;;     (define A 123))
   ;;
-  ;;NAME is the list (c i a o).
+  ;;LIBNAME.IDS is the list (c i a o).
   ;;
-  ;;VER -  a list  of exact integers  representing the  library version.
-  ;;For the library:
+  ;;LIBNAME.VER  - a  list of  exact integers  representing the  library
+  ;;version.  For the library:
   ;;
   ;;   (library (ciao (1 2))
   ;;     (export A)
   ;;     (import (rnrs))
   ;;     (define A 123))
   ;;
-  ;;VER is the list (1 2).
+  ;;LIBNAME.VER is the list (1 2).
   ;;
-  ;;IMP* -  a list representing the  libraries that need to  be imported
-  ;;for the invoke  code.  Each item in  the list is the  content of the
-  ;;SPEC field of LIBRARY record.
+  ;;IMPORT-DESC* -  a list  representing the libraries  that need  to be
+  ;;imported for the  invoke code.  Each item in the  list is a "library
+  ;;descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;VIS* -  a list representing the  libraries that need to  be imported
-  ;;for the  visit code.  Each  item in the list  is the content  of the
-  ;;SPEC field of LIBRARY record.
+  ;;VISIT-DESC* - ???
   ;;
-  ;;INV* - a list representing  the import specifications.  Each item in
-  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;INVOKE-DESC* -  a list  representing the libraries  that need  to be
+  ;;invoked  to make  available the  values of  the imported  variables.
+  ;;Each item  in the  list is  a "library descriptor"  as built  by the
+  ;;LIBRARY-DESCRIPTOR function.
   ;;
   ;;INVOKE-CODE  - A  symbolic expression  representing the  code to  be
   ;;evaluated  to create  the run-time  bindings and  evaluate the  init
@@ -750,9 +753,9 @@
   ;;       '#t
   ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
   ;;
-  ;;GUARD-REQ* -  a list  representing the libraries  that need  for the
-  ;;STALE-WHEN code?  Each item in the list is the content of the "spec"
-  ;;field of a "library" record.
+  ;;GUARD-DESC*  - a  list representing  the libraries  that need  to be
+  ;;invoked  for the  STALE-WHEN  code?   Each item  in  the  list is  a
+  ;;"library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
   (case-define expand-library
     ((library-sexp)
@@ -868,7 +871,7 @@
       (receive (libname.ids libname.version)
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
-	(let ((stale-clt (make-stale-collector)))
+	(let ((stale-clt (%make-stale-collector)))
 	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
 		(begin
@@ -946,6 +949,32 @@
       (when (null? name*)
 	(syntax-violation __who__ "empty library name" libname))
       (values name* ver*)))
+
+  (module (%make-stale-collector)
+
+    (define (%make-stale-collector)
+      (let ((code (build-data no-source #f))
+	    (req* '()))
+	(case-lambda
+	 (()
+	  (values code req*))
+	 ((c r*)
+	  (set! code (build-conditional no-source code (build-data no-source #t) c))
+	  (set! req* (%set-union r* req*))))))
+
+    (define (%set-union ls1 ls2)
+      ;;Build and return a new list holding elements from LS1 and LS2 with
+      ;;duplicates removed.
+      ;;
+      (cond ((null? ls1)
+	     ls2)
+	    ((memq (car ls1) ls2)
+	     (%set-union (cdr ls1) ls2))
+	    (else
+	     (cons (car ls1)
+		   (%set-union (cdr ls1) ls2)))))
+
+    #| end of module: %MAKE-STALE-COLLECTOR |# )
 
   #| end of module: CORE-LIBRARY-EXPANDER |# )
 
@@ -9913,6 +9942,17 @@
   #| end of module |# )
 
 
+;;;; chi procedures: stale-when handling
+
+(define (handle-stale-when guard-expr lexenv.expand)
+  (let* ((stc       (make-collector))
+	 (core-expr (parametrise ((inv-collector stc))
+		      (chi-expr guard-expr lexenv.expand lexenv.expand))))
+    (cond ((stale-when-collector)
+	   => (lambda (c)
+		(c core-expr (stc)))))))
+
+
 ;;;; chi procedures: end of module
 
 #| end of module |# )
@@ -10059,46 +10099,6 @@
     (expression-position x))
 
   #| end of module |# )
-
-
-;;;; stale stuff
-
-(define stale-when-collector
-  (make-parameter #f))
-
-(module (make-stale-collector)
-
-  (define (make-stale-collector)
-    (let ((code (build-data no-source #f))
-	  (req* '()))
-      (case-lambda
-       (()
-	(values code req*))
-       ((c r*)
-	(set! code (build-conditional no-source code (build-data no-source #t) c))
-	(set! req* (%set-union r* req*))))))
-
-  (define (%set-union ls1 ls2)
-    ;;Build and return a new list holding elements from LS1 and LS2 with
-    ;;duplicates removed.
-    ;;
-    (cond ((null? ls1)
-	   ls2)
-	  ((memq (car ls1) ls2)
-	   (%set-union (cdr ls1) ls2))
-	  (else
-	   (cons (car ls1)
-		 (%set-union (cdr ls1) ls2)))))
-
-  #| end of module: MAKE-STALE-COLLECTOR |# )
-
-(define (handle-stale-when guard-expr lexenv.expand)
-  (let* ((stc       (make-collector))
-	 (core-expr (parametrise ((inv-collector stc))
-		      (chi-expr guard-expr lexenv.expand lexenv.expand))))
-    (cond ((stale-when-collector)
-	   => (lambda (c)
-		(c core-expr (stc)))))))
 
 
 ;;;; R6RS programs and libraries helpers
