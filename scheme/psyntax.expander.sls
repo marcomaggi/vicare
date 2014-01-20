@@ -313,11 +313,14 @@
 ;;depends on the binding type.
 ;;
 ;;
-;;LEXENV entry type: lexical variables
-;;------------------------------------
+;;LEXENV entry types
+;;==================
 ;;
-;;A  binding representing  a lexical  variable,  as created  by LET  and
-;;similar syntaxes, LAMBDA, CASE-LAMBDA or DEFINE, has the format:
+;;Library lexical variables
+;;-------------------------
+;;
+;;A syntactic binding representing a lexical variable, as created by LET
+;;and similar syntaxes, LAMBDA, CASE-LAMBDA or DEFINE, has the format:
 ;;
 ;;   (lexical . (?lexvar . ?mutated))
 ;;
@@ -326,168 +329,259 @@
 ;;code; ?MUTATED is  a boolean, true if somewhere in  the code the value
 ;;of this binding is mutated.
 ;;
+;;We want to keep  track of mutated variables because we  do not want to
+;;export from a library a mutable variable.
 ;;
 ;;
-;;*  A binding  representing a  lexical variable  imported from  another
-;;  library has the format:
+;;Imported lexical variables
+;;--------------------------
 ;;
-;;     (global . (?library . ?gensym))
+;;A  syntactic binding  representing  a lexical  variable imported  from
+;;another library has the format:
 ;;
-;;  where:  ?LIBRARY represents  the library  in which  the compile-time
-;;  value  bound to  the  variable  is defined,  ?GENSYM  is the  symbol
-;;  containing the value in its "value" field.
+;;   (global . (?library . ?loc))
 ;;
-;;* A binding  representing a non-core macro integrated  in the expander
-;;  has the format:
+;;where:  ?LIBRARY represents  the  library from  which  the binding  is
+;;exported, ?LOC  is the gensym  containing the variable's value  in its
+;;"value" field.
 ;;
-;;     (macro . ?name)
+;;When the  variable is defined  by an  imported library: ?LIBRARY  is a
+;;record of type  LIBRARY.  When the variable was defined  by a previous
+;;REPL expression: ?LIBRARY is the symbol "*interaction*".
 ;;
-;;  where ?NAME  is a symbol  representing the macro name;  such entries
-;;  are defined in the file "makefile.sps".
+;;Labels   associated  to   these  imported   bindings  have   the  list
+;;representing the binding itself stored in their "value" fields.
 ;;
-;;    The non-core  macro transformer  functions are implemented  by the
-;;  expander     in     the     module    exporting     the     function
-;;  NON-CORE-MACRO-TRANSFORMER,  which is  used  to  map non-core  macro
-;;  names to transformer functions.
 ;;
-;;*  A binding  representing  a macro  with  a non-variable  transformer
-;;  defined by code in an imported library has the format:
+;;Non-core macro
+;;--------------
 ;;
-;;     (global-macro . (?library . ?gensym))
+;;A binding representing a non-core macro integrated in the expander has
+;;the format:
 ;;
-;;  where:  ?LIBRARY represents  the library  in which  the compile-time
-;;  value is defined,  ?GENSYM is the symbol  containing the transformer
-;;  function in its "value" field.
+;;   (macro . ?name)
 ;;
-;;* A binding representing a  macro with variable transformer defined by
-;;  code in an imported library has the format:
+;;where ?NAME is a symbol representing  the macro name; such entries are
+;;defined in the file "makefile.sps".
 ;;
-;;     (global-macro! . (?library . ?gensym))
+;;The  non-core  macro  transformer  functions are  implemented  by  the
+;;expander     in     the      module     exporting     the     function
+;;NON-CORE-MACRO-TRANSFORMER, which is used  to map non-core macro names
+;;to transformer functions.
 ;;
-;;  where:  ?LIBRARY represents  the library  in which  the compile-time
-;;  value is defined,  ?GENSYM is the symbol  containing the transformer
-;;  function in its "value" field.
 ;;
-;;* A binding representing a macro with non-variable transformer defined
-;;  by local code has the format:
+;;Library non-identifier macro
+;;----------------------------
 ;;
-;;     (local-macro . (?transformer . ?expanded-expr))
+;;A binding  representing a macro with  non-variable transformer defined
+;;by the code being expanded has the format:
 ;;
-;;  where:   ?TRANSFORMER  is   a   function   implementing  the   macro
-;;  transformer; ?EXPANDED-EXPR is the expanded expression evaluating to
-;;  the transformer.
+;;   (local-macro . (?transformer . ?expanded-expr))
 ;;
-;;* A binding representing a  macro with variable transformer defined by
-;;  local code has the format:
+;;where: ?TRANSFORMER is a  function implementing the macro transformer;
+;;?EXPANDED-EXPR is  the expression in fully  expanded code representing
+;;the right-hand side of the  syntax definition.
 ;;
-;;     (local-macro! . (?transformer . ?expanded-expr))
+;;?TRANSFORMER is the result of compiling and evaluating ?EXPANDED-EXPR.
 ;;
-;;  where:   ?TRANSFORMER  is   a   function   implementing  the   macro
-;;  transformer; ?EXPANDED-EXPR is the expanded expression evaluating to
-;;  the transformer.
 ;;
-;;* A binding representing a pattern variable, as created by SYNTAX-CASE
-;;  and SYNTAX-RULES, has the format:
+;;Library identifier macro
+;;------------------------
 ;;
-;;     (syntax . (?name . ?level))
+;;A binding  representing a macro  with variable transformer  defined by
+;;the code being expanded has the format:
 ;;
-;;  where:  "syntax"  is  the  symbol  "syntax";  ?NAME  is  the  symbol
-;;  representing  the  name  of  the   pattern  variable;  ?LEVEL  is  a
-;;  non-negative exact integer representing the ellipsis nesting level.
+;;   (local-macro! . (?transformer . ?expanded-expr))
 ;;
-;;  The SYNTAX-CASE patterns below will generate the entries:
+;;where: ?TRANSFORMER is a  function implementing the macro transformer;
+;;?EXPANDED-EXPR is  the expression in fully  expanded code representing
+;;the right-hand side of the syntax definition.
 ;;
-;;     ?a			->  (syntax . (?a . 0))
-;;     (?a)			->  (syntax . (?a . 0))
-;;     (((?a)))			->  (syntax . (?a . 0))
-;;     (?a ...)			->  (syntax . (?a . 1))
-;;     ((?a) ...)		->  (syntax . (?a . 1))
-;;     ((((?a))) ...)		->  (syntax . (?a . 1))
-;;     ((?a ...) ...)		->  (syntax . (?a . 2))
-;;     (((?a ...) ...) ...)	->  (syntax . (?a . 3))
+;;?TRANSFORMER is the result of compiling and evaluating ?EXPANDED-EXPR.
 ;;
-;;* A  binding representing  a Vicare's struct  type descriptor  has the
-;;  format:
 ;;
-;;     ($rtd . #<type-descriptor-struct>)
+;;Imported non-identifier macro
+;;-----------------------------
 ;;
-;;  where "$rtd" is the symbol "$rtd".
+;;A binding representing a macro with a non-variable transformer defined
+;;by code in an imported library has the format:
 ;;
-;;*  A binding  representing an  R6RS's record  type descriptor  and the
-;;  default record constructor descriptor has the format:
+;;   (global-macro . (?library . ?loc))
 ;;
-;;     ($rtd . (?rtd-id ?rcd-id))
+;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
+;;from which  the macro is exported;  ?LOC is the gensym  containing the
+;;transformer function in its "value" field.
 ;;
-;;  where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
-;;  which the record type descriptor is bound, ?RCD-ID is the identifier
-;;  to which the default record constructor descriptor is bound.
+;;Labels   associated  to   these  imported   bindings  have   the  list
+;;representing the binding itself stored in their "value" fields.
 ;;
-;;  Optionally 2 or 4 additional fields are present:
 ;;
-;;     ($rtd . (?rtd-id ?rcd-id
-;;              ?safe-accessors-alist ?safe-mutators-alist))
+;;Imported identifier macro
+;;-------------------------
 ;;
-;;     ($rtd . (?rtd-id ?rcd-id
-;;              ?safe-accessors-alist ?safe-mutators-alist
-;;              ?unsafe-accessors-alist ?unsafe-mutators-alist))
+;;A binding  representing a macro  with variable transformer  defined by
+;;code in an imported library has the format:
 ;;
-;;  in which:
+;;   (global-macro! . (?library . ?loc))
 ;;
-;;  -  ?SAFE-ACCESSORS-ALIST   is  an  alist  whose   keys  are  symbols
-;;  representing  all  the   field  names  and  whose   values  are  the
-;;  identifiers bound to the corresponding safe field accessors.
+;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
+;;from which  the macro is exported;  ?LOC is the gensym  containing the
+;;transformer function in its "value" field.
 ;;
-;;  -  ?SAFE-FIELD-MUTATORS   is  an   alist  whose  keys   are  symbols
-;;  representing  the   mutable  field   names  and  whose   values  are
-;;  identifiers bound to the corresponding safe field mutators.
+;;Labels   associated  to   these  imported   bindings  have   the  list
+;;representing the binding itself stored in their "value" fields.
 ;;
-;;  -  ?UNSAFE-ACCESSORS-ALIST  is  an  alist  whose  keys  are  symbols
-;;  representing  all  the   field  names  and  whose   values  are  the
-;;  identifiers bound to the corresponding safe unfield accessors.
 ;;
-;;  -  ?UNSAFE-FIELD-MUTATORS  is  an   alist  whose  keys  are  symbols
-;;  representing  the   mutable  field   names  and  whose   values  are
-;;  identifiers bound to the corresponding unsafe field mutators.
+;;Library compile-time value
+;;--------------------------
 ;;
-;;* A binding representing R6RS's record type descriptor exported by the
-;;  boot image has the format:
+;;A binding representing a compile-time  value defined by the code being
+;;expanded has the format:
 ;;
-;;     ($core-rtd . (?rtd ?rcd))
+;;   (local-ctv . (?object . ?expanded-expr))
 ;;
-;;* A binding representing a fluid syntax has the format:
+;;where:  ?OBJECT  is   the  actual  value  computed   at  expand  time;
+;;?EXPANDED-EXPR is the result of fully expanding the right-hand side of
+;;the syntax definition.
 ;;
-;;     ($fluid . ?label)
+;;?OBJECT is the result of compiling and evaluating ?EXPANDED-EXPR.
 ;;
-;;  where ?LABEL is the gensym associated to the fluid syntax.
 ;;
-;;* A binding representing a local compile-time value has the format:
+;;Imported compile-time value
+;;---------------------------
 ;;
-;;     (local-ctv . (?object . ?expanded-expr))
+;;A  binding  representing  a  compile-time value  exported  by  another
+;;library has the format:
 ;;
-;;  where:  ?OBJECT  is  the  actual  value  computed  at  expand  time;
-;;  ?EXPANDED-EXPR  is  the  result  of expanding  the  expression  that
-;;  generates the value.
+;;   (global-ctv . (?library . ?loc))
 ;;
-;;* A binding representing a global compile-time value has the format:
+;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
+;;from which the binding is exported;  ?LOC is the gensym containing the
+;;actual object in its "value" field.
 ;;
-;;     (global-ctv . (?library . ?gensym))
+;;Labels   associated  to   these  imported   bindings  have   the  list
+;;representing the binding itself stored in their "value" fields.
 ;;
-;;  where:  ?LIBRARY represents  the library  in which  the compile-time
-;;  value is defined, ?GENSYM is the symbol containing the actual object
-;;  in its "value" field.
 ;;
-;;* A binding representing a module has the format:
+;;Module interface
+;;----------------
 ;;
-;;     ($module . ?iface)
+;;A binding representing the interface of a MODULE syntax defined by the
+;;code being expanded has the format:
 ;;
-;;  where ?IFACE is an instance of "module-interface" struct.
+;;   ($module . ?iface)
 ;;
-;;* The following special binding represents an unbound label:
+;;where ?IFACE is a record of type "module-interface".
+;;
+;;
+;;Pattern variable
+;;----------------
+;;
+;;A binding representing  a pattern variable, as  created by SYNTAX-CASE
+;;and SYNTAX-RULES, has the format:
+;;
+;;   (syntax . (?name . ?level))
+;;
+;;where:  "syntax"  is   the  symbol  "syntax";  ?NAME   is  the  symbol
+;;representing  the   name  of  the   pattern  variable;  ?LEVEL   is  a
+;;non-negative exact integer representing the ellipsis nesting level.
+;;
+;;The  SYNTAX-CASE  patterns below  will  generate  the given  syntactic
+;;bindings:
+;;
+;;   ?a				->  (syntax . (?a . 0))
+;;   (?a)			->  (syntax . (?a . 0))
+;;   (((?a)))			->  (syntax . (?a . 0))
+;;   (?a ...)			->  (syntax . (?a . 1))
+;;   ((?a) ...)			->  (syntax . (?a . 1))
+;;   ((((?a))) ...)		->  (syntax . (?a . 1))
+;;   ((?a ...) ...)		->  (syntax . (?a . 2))
+;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
+;;
+;;
+;;Library Vicare struct descriptor
+;;--------------------------------
+;;
+;;A binding  representing a Vicare's  struct type descriptor  defined by
+;;the code being expanded has the format:
+;;
+;;   ($rtd . #<type-descriptor-struct>)
+;;
+;;where "$rtd" is the symbol "$rtd".
+;;
+;;
+;;Library R6RS record type descriptor
+;;-----------------------------------
+;;
+;;A  binding  representing an  R6RS's  record  type descriptor  and  the
+;;default  record  constructor  descriptor  defined by  the  code  being
+;;expanded has the format:
+;;
+;;   ($rtd . (?rtd-id ?rcd-id))
+;;
+;;where: "$rtd" is the symbol "$rtd"; ?RTD-ID is the identifier to which
+;;the  record type  descriptor is  bound; ?RCD-ID  is the  identifier to
+;;which the default record constructor descriptor is bound.
+;;
+;;Optionally 2 or 4 additional items are present:
+;;
+;;   ($rtd . (?rtd-id ?rcd-id
+;;            ?safe-accessors-alist ?safe-mutators-alist))
+;;
+;;   ($rtd . (?rtd-id ?rcd-id
+;;            ?safe-accessors-alist ?safe-mutators-alist
+;;            ?unsafe-accessors-alist ?unsafe-mutators-alist))
+;;
+;;in which:
+;;
+;;-   ?SAFE-ACCESSORS-ALIST  is   an  alist   whose  keys   are  symbols
+;;representing all the field names  and whose values are the identifiers
+;;bound to the corresponding safe field accessors.
+;;
+;;- ?SAFE-FIELD-MUTATORS is an alist whose keys are symbols representing
+;;the mutable field names and whose  values are identifiers bound to the
+;;corresponding safe field mutators.
+;;
+;;-  ?UNSAFE-ACCESSORS-ALIST   is  an  alist  whose   keys  are  symbols
+;;representing all the field names  and whose values are the identifiers
+;;bound to the corresponding safe unfield accessors.
+;;
+;;-  ?UNSAFE-FIELD-MUTATORS   is  an   alist  whose  keys   are  symbols
+;;representing the mutable field names  and whose values are identifiers
+;;bound to the corresponding unsafe field mutators.
+;;
+;;
+;;Core R6RS record type descriptor
+;;--------------------------------
+;;
+;;A binding representing  R6RS's record type descriptor  exported by the
+;;boot image has the format:
+;;
+;;     ($core-rtd . (?rtd-id ?rcd-id))
+;;
+;;for example: these entries are  defined by "makefile.sps" to represent
+;;the predefined R6RS condition object types.
+;;
+;;
+;;Fluid syntax
+;;------------
+;;
+;;A binding representing a fluid syntax has the format:
+;;
+;;   ($fluid . ?label)
+;;
+;;where ?LABEL is the gensym associated to the fluid syntax.
+;;
+;;
+;;Displaced lexical
+;;-----------------
+;;
+;;The following special binding represents an unbound label:
 ;;
 ;;     (displaced-lexical . #f)
 ;;
-;;* The  following special  binding represents the  result of  a lexical
-;;  environment query with invalid label value (not a symbol):
+;;The  following special  binding  represents the  result  of a  lexical
+;;environment query with invalid label value (not a symbol):
 ;;
 ;;     (displaced-lexical . ())
 ;;
@@ -2788,26 +2882,25 @@
 ;;; --------------------------------------------------------------------
 
 (define (label->syntactic-binding label lexenv)
-  ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
-  ;;alist) as well  as in the global environment.  If  an entry with key
-  ;;LABEL is found:  return the value of the entry  which is the binding
-  ;;value; if no matching entry is found, return the special binding:
+  ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
+  ;;environment.   If an  entry  with  key LABEL  is  found: return  the
+  ;;associated binding value; if no  matching entry is found, return the
+  ;;special binding:
   ;;
   ;;   (displaced-lexical . #f)
   ;;
   ;;Since all labels are unique,  it doesn't matter which environment we
   ;;consult first.  We lookup the  global environment first because it's
-  ;;faster (it  uses a hash table,  while the lexical environment  is an
-  ;;alist).
+  ;;faster (it uses a hash table, while the LEXENV is an alist).
   ;;
   (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
     (if (fluid-syntax-binding? binding)
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
-	;;reversed  logic.   We  have  to  look them  up  in  the  local
-	;;environment first, and then in the global.
+	;;reversed logic.  We have to look  them up in the LEXENV first,
+	;;and then in the global environment.
 	(let ((label (syntactic-binding-value binding)))
 	  (cond ((assq label lexenv)
-		 => cdr)
+		 => syntactic-binding-value)
 		(else
 		 (label->syntactic-binding/no-fluids label '()))))
       binding)))
@@ -2838,10 +2931,10 @@
 		       (cons '$rtd (symbol-value loc))))
 		    (else b))))
 
-	;;Search the given lexical environment.
+	;;Search the given LEXENV.
 	;;
 	((assq label lexenv)
-	 => cdr)
+	 => syntactic-binding-value)
 
 	;;Search the interaction top-level environment, if any.
 	;;
@@ -2851,7 +2944,7 @@
 		     => (lambda (p)
 			  ;;Build and  return a binding  representing an
 			  ;;immutable lexical variable.
-			  (cons* 'lexical (cdr p) #f)))
+			  (cons* 'lexical (syntactic-binding-value p) #f)))
 		    (else
 		     '(displaced-lexical . #f)))))
 

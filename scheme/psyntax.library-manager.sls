@@ -742,13 +742,13 @@
 
   (define (%install-library-record lib)
     (for-each
-	(lambda (export-environment-entry)
+	(lambda (export-env-entry)
 	  ;;See the comments in the expander  code for the format of the
-	  ;;export environment.   Entries in the export  environment are
-	  ;;different from entries in  the lexical environments; here we
-	  ;;transform an export entry into a lexical entry.
-	  (let* ((label    (car export-environment-entry))
-		 (binding  (cdr export-environment-entry))
+	  ;;EXPORT-ENV.  Entries  in the  EXPORT-ENV are  different from
+	  ;;entries in the LEXENV; here we transform an EXPORT-ENV entry
+	  ;;into a LEXENV entry.
+	  (let* ((label    (car export-env-entry))
+		 (binding  (cdr export-env-entry))
 		 (binding1 (case (car binding)
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
@@ -756,6 +756,7 @@
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
 			     (else            binding))))
 	    (set-label-binding! label binding1)))
+      ;;This expression returns the EXPORT-ENV of the library LIB.
       (library-env lib))
     ((current-library-collection) lib))
 
