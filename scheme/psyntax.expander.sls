@@ -611,6 +611,45 @@
 ;;
 
 
+;;;; introduction: EXPORT-ENV
+;;
+;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
+;;exported  syntactic bindings  to  the  corresponding storage  location
+;;gensyms.
+;;
+;;An EXPORT-ENV is an alist whose entries have the format:
+;;
+;;   (?label . ?export-binding)
+;;
+;;and ?EXPORT-BINDING has the format:
+;;
+;;   (?type . ?loc)
+;;
+;;or shortly the entries have the format:
+;;
+;;   (?label ?type . ?loc)
+;;
+;;where: ?LABEL is the label gensym; ?TYPE is a type symbol; ?LOC is the
+;;storage location gensym.
+;;
+;;The symbol ?TYPE is one among:
+;;
+;;GLOBAL -
+;;   To  denote a  lexical variable.   In this  case the  loc holds  the
+;;   variable's value (immutable).
+;;
+;;GLOBAL-MACRO -
+;;   To denote a non-identifier macro.
+;;
+;;GLOBAL-MACRO! -
+;;   To denote an identifier macro.
+;;
+;;GLOBAL-CTV -
+;;   To denote  a compile-time value.   In this  case the loc  holds the
+;;   actual compile-time object.
+;;
+
+
 (library (psyntax expander)
   (export
     eval
@@ -3009,27 +3048,6 @@
 
 
 ;;;; EXPORT-ENV helpers
-;;
-;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
-;;exported  syntactic bindings  to  the  corresponding storage  location
-;;gensyms.
-;;
-;;An EXPORT-ENV is an alist whose entries have the format:
-;;
-;;   (?label . ?export-binding)
-;;
-;;and ?EXPORT-BINDING has the format:
-;;
-;;   (?type . ?loc)
-;;
-;;or shortly the entries have the format:
-;;
-;;   (?label ?type . ?loc)
-;;
-;;where: ?LABEL  is the label  gensym; ?TYPE  is a symbol  among GLOBAL,
-;;GLOBAL-MACRO,  GLOBAL-MACRO!   and  GLOBAL-CTV; ?LOC  is  the  storage
-;;location gensym.
-;;
 
 (define-syntax-rule (make-export-env-entry ?label ?type ?loc)
   ;;Given a  label gensym, a  symbol representing an EXPORT-ENV  type, a
