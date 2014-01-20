@@ -399,7 +399,7 @@
 		;libraries, already processed with the directives in the
 		;import sets (prefix, deprefix, only, except, rename).
    labels
-		;A vector of symbols representing the labels of bindings
+		;A vector of gensyms representing the labels of bindings
 		;from a set of import specifications as defined by R6RS.
 		;These labels are from the subst of the libraries.
    itc
@@ -1199,9 +1199,9 @@
   ;;      (?name . ?label)
   ;;
   ;;   where:  ?NAME is a  symbol representing  the external name  of an
-  ;;   exported  syntactic binding; ?LABEL  is the gensym  associated to
-  ;;   such exported syntactic binding.  For the library in the example,
-  ;;   EXPORT-SUBST is:
+  ;;    exported   syntactic  binding;  ?LABEL  is   a  gensym  uniquely
+  ;;    identifying such  syntactic  binding.  For  the  library in  the
+  ;;   example, EXPORT-SUBST is:
   ;;
   ;;      ((mac      . #{g2 |b78b07G2HAdd7zR6|})
   ;;       (the-var2 . #{g1 |PwmRW?UEJK48Q<tQ|})
@@ -1272,10 +1272,10 @@
 		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
 			 (rhs-form-core*   (chi-rhs*  rhs-form-stx*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
-		    (let ((loc*          (map gen-global lex*))
+		    (let ((loc*          (map gensym-for-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
 		      (receive (export-env macro*)
-			  (%make-export-env/macros lex* loc* lexenv.run)
+			  (%make-export-env/macro* lex* loc* lexenv.run)
 			(%validate-exports export-spec* export-subst export-env)
 			(let ((invoke-code (build-library-letrec* no-source
 					     mix? lex* loc* rhs-form-core*
@@ -1318,24 +1318,32 @@
 		;;at the beginning of the library.
 		internal-export*))))
 
-  (define (%make-export-subst name* id*)
+  (define (%make-export-subst export-name* export-id*)
     ;;For every  identifier in  ID: get  the rib of  ID and  extract the
     ;;lexical environment from it; search  the environment for a binding
-    ;;associated to ID and acquire its  label (a gensym).  Return a list
-    ;;of subslists, each sublist having the format:
+    ;;associated  to ID  and acquire  its label  (a gensym).   Return an
+    ;;alist with entries having the format:
     ;;
-    ;;   (?name ?label)
+    ;;   (?export-name . ?label)
     ;;
-    (map (lambda (name id)
-	   (let ((label (id->label id)))
+    ;;where ?EXPORT-NAME is  a symbol representing the  external name of
+    ;;an exported  binding, ?LABEL is the  corresponding gensym uniquely
+    ;;identifying the binding.
+    ;;
+    (map (lambda (export-name export-id)
+	   (let ((label (id->label export-id)))
 	     (if label
-		 (cons name label)
-	       (stx-error id "cannot export unbound identifier"))))
-      name* id*))
+		 (cons export-name label)
+	       (stx-error export-id "cannot export unbound identifier"))))
+      export-name* export-id*))
 
-  (module (%make-export-env/macros)
-
-    (define (%make-export-env/macros lex* loc* lexenv.run)
+  (module (%make-export-env/macro*)
+    ;;For each entry in the  lexical environment LEXENV.RUN: convert the
+    ;;syntactic  binding to  an export  environment entry,  accumulating
+    ;;EXPORT-ENV; if  the syntactic binding  is a macro  or compile-time
+    ;;value: accumulate the MACRO* alist.
+    ;;
+    (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
 		 (export-env		'())
 		 (macro*		'()))
@@ -1426,7 +1434,7 @@
 	    (%lookup lexical-gensym (cdr lex*) (cdr loc*)))
 	(assertion-violation 'lookup-make-export "BUG")))
 
-    #| end of module: %make-export-env/macros |# )
+    #| end of module: %MAKE-EXPORT-ENV/MACRO* |# )
 
   (define (%validate-exports export-spec* export-subst export-env)
     ;;We want to forbid code like the following:
@@ -2608,7 +2616,7 @@
 		;List of  lists of marks.   If the <RIB> is  sealed: the
 		;list is converted to a vector.
    label*
-		;List  of symbols  representing substitution  labels for
+		;List  of gensyms  representing substitution  labels for
 		;bindings.   If  the  <RIB>   is  sealed:  the  list  is
 		;converted to a vector.
    sealed/freq
@@ -2900,41 +2908,52 @@
 	     (recur (cdr sym*) (cdr mark**)))))))
 
 
-;;;; stuff about labels
+;;;; stuff about labels, lexical variables, location gensyms
 ;;
-;;Labels are gensyms.  After the expansion every binding has a gensym as
-;;name, so that its name is unique in the whole program.  For example:
+;;Labels are  gensyms uniquely  identifying a  syntactic binding  in the
+;;whole process.
+;;
+;;After the  expansion every binding has  a gensym as name,  so that its
+;;name is unique in the whole program.  For example:
 ;;
 ;;  (let ((a 1))
 ;;    (define-syntax b (identifier-syntax a))
 ;;    (let ((a 2))
 ;;      (list a b)))
 ;;
-;;is converted to:
+;;is converted to the core language expression:
 ;;
-;;  (let ((G1 1))
-;;    (let ((G2 2))
-;;      (G0 G1 G2)))
+;;  (let ((lex1 1))
+;;    (let ((lex2 2))
+;;      (list lex1 lex2)))
 ;;
-;;with the following table of substitutions:
+;;notice that  LIST is still there  because it is part  of the top-level
+;;environment; the code undergoes the following substitutions:
 ;;
-;;    name  | label
-;;  --------+------
-;;  list    |  G0
-;;  outer a |  G1
-;;  inner a |  G2
+;;    name  | lexical variables
+;;  --------+------------------
+;;  outer a | lex1
+;;  inner a | lex2
+;;
+;;the  LEX symbols  are  gensyms.   But where  is  the variable's  value
+;;stored?  The answer is: in the "value" slot of location gensyms.
 ;;
 
 (define top-level-context
   (make-parameter #f))
 
-;;Used to generate global names (e.g. locations for library exports).
-;;
-(define gen-global %generate-unique-symbol)
+(define (gensym-for-location lex)
+  ;;Build  and return  a gensym  to be  used as  location for  a lexical
+  ;;variable.  The "value" slot of such gensym is used to hold the value
+  ;;of the variable.  LEX must be  a gensym representing the name of the
+  ;;variable in the core language expressions.
+  ;;
+  (%generate-unique-symbol lex))
 
 (define (gensym-for-label _)
-  ;;Every identifier in the program will have a label associated with it
-  ;;in its substitution; this function generates such labels.
+  ;;Every  syntactic binding  has a  label  associated to  it as  unique
+  ;;identifier  in the  whole running  process; this  function generates
+  ;;such labels as gensyms.
   ;;
   ;;The  labels  have to  have  read/write  EQ?  invariance  to  support
   ;;separate compilation (when we write the  expanded sexp to a file and
