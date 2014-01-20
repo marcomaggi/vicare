@@ -77,7 +77,7 @@
 ;;;SOFTWARE.
 
 
-;;;; introduction: labels, lexical variables, location gensyms
+;;;; introduction: lexical variables, labels, location gensyms
 ;;
 ;;Let's consider the example library:
 ;;
@@ -102,9 +102,6 @@
 ;;lexical variables,  of which THIS is  also exported; outer A  as local
 ;;lexical variable; inner A as local lexical variable.
 ;;
-;;Renaming bindings
-;;-----------------
-;;
 ;;After the expansion process every syntactic binding is renamed so that
 ;;its name is unique in the whole library body.  For example:
 ;;
@@ -115,8 +112,8 @@
 ;;      (list lex.a.2 lex.this lex.that)))
 ;;
 ;;notice that  LIST is still there  because it is part  of the top-level
-;;environment; the  code undergoes  the following lexical  variable name
-;;substitutions:
+;;environment (it  is a binding  exported by  the boot image);  the code
+;;undergoes the following lexical variable name substitutions:
 ;;
 ;;  original name | lexical variable name
 ;;  --------------+----------------------
@@ -125,11 +122,14 @@
 ;;        outer a | lex.a.1
 ;;        inner a | lex.a.2
 ;;
-;;where the  "lex.*" symbols are  gensyms.  Renaming bindings is  one of
-;;the core purposes of the expansion process.
+;;where the "lex.*" symbols are gensyms.
 ;;
-;;The expansion  process is complicated and  can be described only  by a
-;;complicated data structure: the  lexical environment, a composite data
+;;Renaming  bindings  is one  of  the  core  purposes of  the  expansion
+;;process; it is  performed while visiting the source code  as a tree in
+;;breadth-first order.
+;;
+;;The expansion  process is complex  and can it  be described only  by a
+;;complex  data structure:  the  lexical environment,  a composite  data
 ;;structure  resulting from  the conceptual  union among  component data
 ;;structures.
 ;;
@@ -143,10 +143,26 @@
 ;;lexical  contour;  lexical  contours  can be  nested  by  nesting  LET
 ;;syntaxes; the library global namespace is a lexical contour itself.
 ;;
-;;A  unique  identifier  is  assigned  to  each  lexical  contour;  such
-;;identifiers are called "marks".  In practice each syntactic binding is
-;;associated to  the mark  representing its  visibility region.   So the
-;;original code is accompanied by the association:
+;;    -------------------------------------------------
+;;   | (define this 8)              ;top-level contour |
+;;   | (define that 9)                                 |
+;;   | (let ((a 1))                                    |
+;;   |  -----------------------------------------      |
+;;   | |                            ;contour 1   |     |
+;;   | | (let ((a 2))                            |     |
+;;   | |  -------------------------------------  |     |
+;;   | | |                          ;contour 2 | |     |
+;;   | | | (list a this that)                  | |     |
+;;   | |  -------------------------------------  |     |
+;;   | |   )                                     |     |
+;;   |  -----------------------------------------      |
+;;   |   )                                             |
+;;    -------------------------------------------------
+;;
+;;An EQ?-unique object is assigned to each lexical contour; such objects
+;;are called "marks".  In practice  each syntactic binding is associated
+;;to the mark representing its  visibility region.  So the original code
+;;is accompanied by the associations:
 ;;
 ;;  original name | lexical contour mark
 ;;  --------------+---------------------
@@ -155,10 +171,9 @@
 ;;        outer a |   1-mark
 ;;        inner a |   2-mark
 ;;
-;;such  associations  are  registered  in a  component  of  the  lexical
-;;environment:  a  record  of  type <RIB>.   Every  lexical  contour  is
-;;described  by a  rib;  the rib  for the  top-level  contour holds  the
-;;associations:
+;;which  are registered  in a  component of  the lexical  environment: a
+;;record of  type <RIB>.  Every lexical  contour is described by  a rib;
+;;the rib for the top-level contour holds the associations:
 ;;
 ;;  original name | lexical contour mark
 ;;  --------------+---------------------
@@ -177,11 +192,17 @@
 ;;  --------------+---------------------
 ;;        inner a |   2-mark
 ;;
+;;While the  code is being visited  by the expander: syntax  objects are
+;;created to  represent all the  binding names; such syntax  objects are
+;;called "identifiers".  Each identifier is a data structure holding the
+;;mark of its definition contour among its fields.
+;;
+;;
 ;;Label gensyms and ribs
 ;;----------------------
 ;;
-;;A unique  identifier is assigned  to each syntactic binding:  a gensym
-;;usually named  "label"; such associations  are also stored in  the rib
+;;An EQ?-unique object  is assigned to each syntactic  binding: a gensym
+;;indicated as  "label"; such  associations are also  stored in  the rib
 ;;representing a lexical contour:
 ;;
 ;;  original name | lexical contour mark | label
@@ -196,10 +217,10 @@
 ;;Lexical variable gensyms and LEXENV
 ;;-----------------------------------
 ;;
-;;The  fact that  the LEX  symbols are  syntactic bindings  representing
-;;lexical variables  is stored in  a portion of the  lexical environment
-;;usually named  LEXENV.RUN or LEXENV.EXPAND.   So the expanded  code is
-;;accompanied by the association:
+;;The fact that  the "lex.*" symbols in the expanded  code are syntactic
+;;bindings representing lexical variables is  registered in a portion of
+;;the lexical environment indicated LEXENV.RUN or LEXENV.EXPAND.  So the
+;;expanded code is accompanied by the association:
 ;;
 ;;    label  | lexical variables
 ;;  ---------+------------------
@@ -222,26 +243,36 @@
 ;;  Scheme stack, and it exists only while the code is being evaluated.
 ;;
 ;;*  The value  of global  bindings (those  created by  DEFINE) must  be
-;;  stored  somewhere, because  it must  exist  for the  whole time  the
-;;  library is loaded in a running Vicare process.
+;;  stored in  some persistent location,  because it must exist  for the
+;;  whole time the library is loaded in a running Vicare process.
 ;;
-;;But where is a global variable's  value stored?  The answer is: unique
-;;symbols  are  created  for  the  sole purpose  of  acting  as  storage
-;;locations  for global  lexical variables.   Under Vicare,  symbols are
-;;data structures having  a "value" slot: such slot  has SYMBOL-VALUE as
-;;accessor and  SET-SYMBOL-VALUE! as mutator  and it is used  as storage
-;;location.
+;;But where is a global variable's value stored?  The answer is: gensyms
+;;are created  for the sole purpose  of acting as storage  locations for
+;;global lexical variables, such gensyms  are indicated as "loc".  Under
+;;Vicare, symbols are  data structures having a "value"  slot: such slot
+;;has SYMBOL-VALUE as  accessor and SET-SYMBOL-VALUE! as  mutator and it
+;;is used as storage location.
 ;;
-;;To represent the association between the global lexical variable label
-;;gensyms (both the  exported ones and the non-exported  ones) and their
-;;storage location gensyms, the expander builds a data structure usually
-;;named EXPORT-ENV.
+;;So the expanded code is accompanied by the following association:
+;;
+;;    label  | location gensym
+;;  ---------+----------------
+;;  lab.this | loc.this
+;;  lab.that | loc.that
+;;  lab.a.1  | loc.a.1
+;;  lab.a.2  | loc.a.2
+;;
+;;where the "loc.*"  are gensyms.  To represent  the association between
+;;the global  lexical variable  labels (both the  exported ones  and the
+;;non-exported ones)  and their  storage location gensyms,  the expander
+;;builds a data structure indicated as EXPORT-ENV.
+;;
 ;;
 ;;Exported bindings and EXPORT-SUBST
 ;;----------------------------------
 ;;
 ;;Not all  the global lexical variables  are exported by a  library.  To
-;;list  those  that  are,  a  data  structure  is  built  usually  named
+;;list  those that  are,  a data  structure is  built  and indicated  as
 ;;EXPORT-SUBST;  such data  structure  associates the  external name  of
 ;;exported bindings to their label  gensym.  For the example library the
 ;;EXPORT-SUBST represents the association:
