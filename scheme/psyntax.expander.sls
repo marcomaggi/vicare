@@ -321,6 +321,21 @@
 ;;LEXENV entry types
 ;;==================
 ;;
+;;Core primitive
+;;--------------
+;;
+;;A syntactic binding representing a core primitive function exported by
+;;the boot image has the format:
+;;
+;;   (core-prim . ?name)
+;;
+;;where  "core-prim"  is  the  symbol "core-prim";  ?NAME  is  a  symbol
+;;representing  the  name  of  the core  primitive.   For  example:  the
+;;primitive function DISPLAY is described by a binding:
+;;
+;;   (core-prim . display)
+;;
+;;
 ;;Library lexical variables
 ;;-------------------------
 ;;
@@ -875,18 +890,18 @@
 
 ;;;; top-level environments
 ;;
-;;The result of  parsing a set of  import specs in an  IMPORT clause (as
-;;defined by R6RS and extended  by Vicare) and loading the corresponding
-;;libraries is an  ENV data structure; ENV data  structures represent an
-;;*immutable* top level environment.
+;;The  result  of  parsing  a  set  of  import  specs  and  loading  the
+;;corresponding libraries with the R6RS function ENVIRONMENT is a record
+;;of  type  ENV;   ENV  records  represent  an   *immutable*  top  level
+;;environment.
 ;;
 ;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
 ;;interaction environment is created to  serve as top level environment.
 ;;The  interaction  environment  is  initialised with  the  core  Vicare
 ;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
 ;;bindings can be added to it.  For this reason interaction environments
-;;are  represented by  data  structures of  type INTERACTION-ENV,  whose
-;;internal format allows adding new bindings.
+;;are  represented by  records of  type INTERACTION-ENV,  whose internal
+;;format allows adding new bindings.
 ;;
 ;;Let's  step back:  how does  the  REPL work?   Every time  we type  an
 ;;expression  and press  "Return":  the expression  is  expanded in  the
@@ -911,9 +926,9 @@
 		;These labels are from the subst of the libraries.
    itc
 		;A collector  function (see MAKE-COLLECTOR)  holding the
-		;LIBRARY structs representing  the libraries selected by
+		;LIBRARY records representing  the libraries selected by
 		;the source IMPORT specifications.  These libraries have
-		;been installed.
+		;already been installed.
    )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
@@ -923,8 +938,7 @@
 		;The top <RIB>  structure for the evaluation  of code in
 		;this environment.
    lexenv
-		;The lexical  environment for  both run time  and expand
-		;time.
+		;The LEXENV for both run time and expand time.
    locs
 		;???
    )
@@ -1185,12 +1199,15 @@
       (initial-visit! macro*)
       (eval-core (expanded->core invoke-code))
       (make-interaction-env (subst->rib export-subst)
-			    (map (lambda (x)
-				   (let* ((label    (car x))
-					  (binding  (cdr x))
-					  (type     (car binding))
-					  (val      (cdr binding)))
-				     (cons* label type '*interaction* val)))
+			    (map (lambda (export-env-entry)
+				   (let* ((label      (car export-env-entry))
+					  (binding    (cdr export-env-entry))
+					  (bind-type  (syntactic-binding-type  binding))
+					  (bind-val   (syntactic-binding-value binding)))
+				     ;;Here  we know  that BIND-TYPE  is
+				     ;;one among:  GLOBAL, GLOBAL-MACRO,
+				     ;;GLOBAL-MACRO!, GLOBAL-CTV.
+				     (cons* label bind-type '*interaction* bind-val)))
 			      export-env)
 			    '()))))
 
