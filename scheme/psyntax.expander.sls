@@ -576,11 +576,15 @@
 ;;Displaced lexical
 ;;-----------------
 ;;
-;;The following special binding represents an unbound label:
+;;These lists  have a format  similar to  a LEXENV entry  representing a
+;;syntactic binding, but they are used to represent a failed search into
+;;a LEXENV.
+;;
+;;The following special value represents an unbound label:
 ;;
 ;;     (displaced-lexical . #f)
 ;;
-;;The  following special  binding  represents the  result  of a  lexical
+;;The  following  special  value  represents the  result  of  a  lexical
 ;;environment query with invalid label value (not a symbol):
 ;;
 ;;     (displaced-lexical . ())
@@ -2806,19 +2810,18 @@
   (cons (cons* label 'lexical lexvar #f)
 	lexenv))
 
-(define (add-lexical-bindings label* lexvar* lexenv)
-  ;;Push on the lexical environment LEXENV multiple entries representing
-  ;;immutable lexical  variable bindings;  return the  resulting lexical
-  ;;environment.
+(define (add-lexical-bindings label* lex* lexenv)
+  ;;Push  on the  given LEXENV  multiple entries  representing immutated
+  ;;lexical variable bindings; return the resulting lexical environment.
   ;;
-  ;;LABEL*  must  be a  list  of  unique symbols  identifying  bindings.
-  ;;LEXVAR* must  be a  list of  symbols representing  the names  of the
-  ;;bindings in the core language forms.
+  ;;LABEL* must be  a list of syntactic binding labels.   LEX* must be a
+  ;;list of symbols  representing the names of lexical  variables in the
+  ;;expanded language forms.
   ;;
   (if (null? label*)
       lexenv
-    (add-lexical-bindings ($cdr label*) ($cdr lexvar*)
-			  (add-lexical-binding ($car label*) ($car lexvar*) lexenv))))
+    (add-lexical-bindings ($cdr label*) ($cdr lex*)
+			  (add-lexical-binding ($car label*) ($car lex*) lexenv))))
 
 ;;; --------------------------------------------------------------------
 ;;; local macro with non-variable transformer bindings
@@ -2839,6 +2842,13 @@
 (define (struct-or-record-type-descriptor-binding? binding)
   (and (pair? binding)
        (eq? '$rtd (syntactic-binding-type binding))))
+
+(define (make-struct-or-record-type-descriptor-binding bind-val)
+  (cons '$rtd bind-val))
+
+(define (core-rtd-binding? binding)
+  (and (pair? binding)
+       (eq? '$core-rtd (syntactic-binding-type binding))))
 
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
@@ -2890,14 +2900,19 @@
   ;;   (displaced-lexical . #f)
   ;;
   ;;Since all labels are unique,  it doesn't matter which environment we
-  ;;consult first.  We lookup the  global environment first because it's
-  ;;faster (it uses a hash table, while the LEXENV is an alist).
+  ;;consult first; we  lookup the global environment  first because it's
+  ;;faster.
   ;;
   (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
     (if (fluid-syntax-binding? binding)
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
-	;;reversed logic.  We have to look  them up in the LEXENV first,
+	;;reversed logic: we  have to look them up in  the LEXENV first,
 	;;and then in the global environment.
+	;;
+	;;This is  because we  can nest  at will  FLUID-LET-SYNTAX forms
+	;;that redefine the binding.  To reach for the innermost we must
+	;;query the LEXENV first.
+	;;
 	(let ((label (syntactic-binding-value binding)))
 	  (cond ((assq label lexenv)
 		 => syntactic-binding-value)
@@ -2911,25 +2926,21 @@
   (cond ((not (symbol? label))
 	 '(displaced-lexical))
 
-	;;Each label in the boot  image environment and in every library
-	;;environment  is a  gensym in  which the  "value" field  of the
-	;;symbol object memory block contains the associated binding.
+	;;If a label is associated to  a binding from the the boot image
+	;;environment or  to a binding  from a library's  EXPORT-ENV: it
+	;;has  the associated  binding in  its "value"  field; otherwise
+	;;such field is set to #f.
 	;;
-	;;So  if we  have  a label  we  can check  if  it references  an
-	;;imported binding  simply by checking its  "value" field.  This
-	;;is what IMPORTED-LABEL->SYNTACTIC-BINDING does.
+	;;So,  if we  have a  label, we  can check  if it  references an
+	;;imported binding simply by checking its "value" field; this is
+	;;what IMPORTED-LABEL->SYNTACTIC-BINDING does.
 	;;
 	((imported-label->syntactic-binding label)
-	 => (lambda (b)
-	      (cond ((and (pair? b)
-			  (eq? (car b) '$core-rtd))
-		     (cons '$rtd (map bless (cdr b))))
-		    ((and (pair? b)
-			  (eq? (car b) 'global-rtd))
-		     (let ((lib (cadr b))
-			   (loc (cddr b)))
-		       (cons '$rtd (symbol-value loc))))
-		    (else b))))
+	 => (lambda (binding)
+	      (if (core-rtd-binding? binding)
+		  (make-struct-or-record-type-descriptor-binding
+		   (map bless (syntactic-binding-value binding)))
+		binding)))
 
 	;;Search the given LEXENV.
 	;;
@@ -2941,11 +2952,12 @@
 	((top-level-context)
 	 => (lambda (env)
 	      (cond ((assq label (interaction-env-locs env))
-		     => (lambda (p)
+		     => (lambda (binding)
 			  ;;Build and  return a binding  representing an
-			  ;;immutable lexical variable.
-			  (cons* 'lexical (syntactic-binding-value p) #f)))
+			  ;;immutated lexical variable.
+			  (cons* 'lexical (syntactic-binding-value binding) #f)))
 		    (else
+		     ;;Unbound label.
 		     '(displaced-lexical . #f)))))
 
 	;;Unbound label.
