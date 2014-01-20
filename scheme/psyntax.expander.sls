@@ -98,9 +98,15 @@
 ;;     (let ((a 2))
 ;;       (list a this that)))
 ;;
-;;This  code defines  4  syntactic  bindings: THIS  and  THAT as  global
-;;lexical variables,  of which THIS is  also exported; outer A  as local
-;;lexical variable; inner A as local lexical variable.
+;;This   code  defines   4  syntactic   bindings:  THIS   and  THAT   as
+;;library-scoped  lexical variables,  of  which THIS  is also  exported;
+;;outer  A as  internal lexical  variable; inner  A as  internal lexical
+;;variable.
+;;
+;;NOTE We indicate  as "global variables" the lexical  bindings that are
+;;imported from another  library into the current scope;  we indicate as
+;;"local variables"  the lexical bindings  that are defined in  the code
+;;being expanded.
 ;;
 ;;After the expansion process every syntactic binding is renamed so that
 ;;its name is unique in the whole library body.  For example:
@@ -141,7 +147,7 @@
 ;;among  different  "lexical contours"  that  is:  different regions  of
 ;;visibility for a set of bindings.  Every LET-like syntax defines a new
 ;;lexical  contour;  lexical  contours  can be  nested  by  nesting  LET
-;;syntaxes; the library global namespace is a lexical contour itself.
+;;syntaxes; the library namespace is a lexical contour itself.
 ;;
 ;;    -------------------------------------------------
 ;;   | (define this 8)              ;top-level contour |
@@ -229,29 +235,30 @@
 ;;  lab.a.1  | lex.a.1
 ;;  lab.a.2  | lex.a.2
 ;;
-;;Notice  that, after  the expansion:  the original  names of  the local
+;;Notice that, after  the expansion: the original names  of the internal
 ;;bindings (those  defined by LET)  do not matter anymore;  the original
-;;names of the non-exported global  bindings do not matter anymore; only
-;;the original name of the exported global bindings is still important.
+;;names  of  the  non-exported  library-scoped bindings  do  not  matter
+;;anymore;  only  the  original  name  of  the  exported  library-scoped
+;;bindings is still important.
 ;;
 ;;Storage location gensyms and EXPORT-ENV
 ;;---------------------------------------
 ;;
 ;;About the value of lexical variables:
 ;;
-;;*  The value  of local  bindings (those  created by  LET) goes  on the
+;;* The  value of internal bindings  (those created by LET)  goes on the
 ;;  Scheme stack, and it exists only while the code is being evaluated.
 ;;
-;;*  The value  of global  bindings (those  created by  DEFINE) must  be
-;;  stored in  some persistent location,  because it must exist  for the
+;;* The value of library-scoped  bindings (those created by DEFINE) must
+;;  be stored in some persistent location, because it must exist for the
 ;;  whole time the library is loaded in a running Vicare process.
 ;;
-;;But where is a global variable's value stored?  The answer is: gensyms
-;;are created  for the sole purpose  of acting as storage  locations for
-;;global lexical variables, such gensyms  are indicated as "loc".  Under
-;;Vicare, symbols are  data structures having a "value"  slot: such slot
-;;has SYMBOL-VALUE as  accessor and SET-SYMBOL-VALUE! as  mutator and it
-;;is used as storage location.
+;;But where is a library-scoped variable's value stored?  The answer is:
+;;gensyms  are  created  for  the  sole purpose  of  acting  as  storage
+;;locations  for  library-scoped  lexical variables,  such  gensyms  are
+;;indicated as "loc".  Under Vicare,  symbols are data structures having
+;;a  "value"   slot:  such  slot   has  SYMBOL-VALUE  as   accessor  and
+;;SET-SYMBOL-VALUE! as mutator and it is used as storage location.
 ;;
 ;;So the expanded code is accompanied by the following association:
 ;;
@@ -259,13 +266,11 @@
 ;;  ---------+----------------
 ;;  lab.this | loc.this
 ;;  lab.that | loc.that
-;;  lab.a.1  | loc.a.1
-;;  lab.a.2  | loc.a.2
 ;;
 ;;where the "loc.*"  are gensyms.  To represent  the association between
-;;the global  lexical variable  labels (both the  exported ones  and the
-;;non-exported ones)  and their  storage location gensyms,  the expander
-;;builds a data structure indicated as EXPORT-ENV.
+;;the library-scoped lexical variable labels (both the exported ones and
+;;the  non-exported  ones)  and  their  storage  location  gensyms,  the
+;;expander builds a data structure indicated as EXPORT-ENV.
 ;;
 ;;
 ;;Exported bindings and EXPORT-SUBST
